@@ -1,5 +1,5 @@
 import { VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
-import { Clock } from "three";
+import { Clock } from "three/src/core/Clock.js";
 import { TalkManager, CurrentMora } from "../../RTC/TalkManager";
 
 type MouseVowel = "A" | "I" | "U" | "E" | "O" | "N";

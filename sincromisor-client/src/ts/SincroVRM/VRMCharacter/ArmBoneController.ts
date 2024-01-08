@@ -1,5 +1,6 @@
 import { VRM, VRMHumanBoneName } from '@pixiv/three-vrm';
-import { Object3D, MathUtils } from 'three';
+import { Object3D } from 'three/src/core/Object3D.js';
+import { MathUtils } from 'three/src/math/MathUtils.js';
 
 /* 
     Humanoid bones: https://docs.unity3d.com/ja/2019.4/ScriptReference/HumanBodyBones.html

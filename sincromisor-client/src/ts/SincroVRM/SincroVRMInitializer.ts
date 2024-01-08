@@ -19,6 +19,7 @@ export class SincroVRMInitializer {
         this.charCanvas = this.getCharCanvasRoot();
 
         this.getUserMediaAvailabilityCheck();
+        this.dialogManager.updateCharacterStatus(true);
         this.setStartButtonEvent();
 
         if ('obsstudio' in window) {
@@ -39,7 +40,6 @@ export class SincroVRMInitializer {
             this.dialogManager.updateUserMediaAvailabilityStatus(false);
         }
     }
-
 
     private setStartButtonEvent(): void {
         this.dialogManager.setRTCStartButtonEventListener(() => {

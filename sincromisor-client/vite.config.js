@@ -30,7 +30,7 @@ export default defineConfig({
                 character_glass: resolve(contents_src, 'character-glass/index.html'),
                 area360: resolve(contents_src, 'area360/index.html'),
                 simple_vrm: resolve(contents_src, 'simple-vrm/index.html'),
-
+                vrm360: resolve(contents_src, 'vrm360/index.html'),
             },
             output: {
                 manualChunks: {

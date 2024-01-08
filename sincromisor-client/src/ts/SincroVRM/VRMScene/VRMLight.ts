@@ -1,4 +1,4 @@
-import { DirectionalLight } from "three";
+import { DirectionalLight } from "three/src/lights/DirectionalLight.js";
 
 export class VRMLight {
     public readonly light: DirectionalLight;

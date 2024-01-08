@@ -1,10 +1,11 @@
 import { GLTF, GLTFLoader, GLTFParser } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { Clock, Scene } from 'three';
-// import { MathUtils, Object3D } from 'three';
+import { Scene } from 'three/src/scenes/Scene.js';
+import { Clock } from 'three/src/core/Clock.js';
 import { VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { HeadBoneController } from './HeadBoneController';
 import { ArmBoneController } from './ArmBoneController';
 import { FaceMorphController } from './FaceMorphController';
+import { VRMCamera } from '../VRMScene/VRMCamera';
 // import { MToonMaterialLoaderPlugin } from '@pixiv/three-vrm';
 // import { MToonNodeMaterial } from '@pixiv/three-vrm/nodes';
 
@@ -14,12 +15,14 @@ export class VRMCharacterManager {
     public vrm: VRM | null = null;
     public clock: Clock;
     private scene: Scene;
+    private vrmCamera: VRMCamera;
     public headBoneController: HeadBoneController | null = null;
     public armBoneController: ArmBoneController | null = null;
     public mouthMorphController: FaceMorphController | null = null;
 
-    constructor(scene: Scene, url: string) {
+    constructor(scene: Scene, vrmCamera: VRMCamera, url: string) {
         this.scene = scene;
+        this.vrmCamera = vrmCamera;
         this.clock = new Clock();
         this.clock.start();
         this.load(url);
@@ -41,7 +44,7 @@ export class VRMCharacterManager {
         loader.load(url,
             (gltf: GLTF) => {
                 this.vrm = gltf.userData.vrm as VRM;
-                this.headBoneController = new HeadBoneController(this.vrm);
+                this.headBoneController = new HeadBoneController(this.vrm, this.vrmCamera);
                 this.armBoneController = new ArmBoneController(this.vrm);
                 this.armBoneController.update();
                 if (this.vrm.expressionManager) {
@@ -60,6 +63,7 @@ export class VRMCharacterManager {
             },
             (error) => {
                 console.error(error);
+                throw new Error('Failed to load VRM model.');
             });
     }
 
