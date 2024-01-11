@@ -59,8 +59,7 @@ export class SincroVRMInitializer {
         });
 
         if (this.dialogManager.enableCharacter()) {
-            const sincroScene: VRMScene = this.initializeSincroScene();
-            sincroScene.animate();
+            this.initializeSincroScene();
         }
 
         this.dialogManager.closeDialog();

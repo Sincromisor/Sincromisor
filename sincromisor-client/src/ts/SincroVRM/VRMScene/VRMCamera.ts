@@ -15,7 +15,7 @@ export class VRMCamera {
         controls.minDistance = 0.75;
         // minPolarAngle: キャラクターを上から見下ろす際の角度
         // maxPolarAngle: キャラクターを下から見上げる際の角度
-        controls.minPolarAngle = Math.PI * 0.25;
+        controls.minPolarAngle = Math.PI * 0.15;
         controls.maxPolarAngle = Math.PI * 0.75;
         controls.screenSpacePanning = true;
         controls.target.set( 0.0, 1.4, 0.0 );

@@ -8,7 +8,7 @@ export class VRMScene {
     private readonly renderer: WebGLRenderer;
     private readonly vrmCharacterManager: VRMCharacterManager;
     private readonly vrmCamera: VRMCamera;
-    private readonly vrmLight: VRMLight;
+    protected readonly vrmLight: VRMLight;
 
     constructor(canvasRoot: HTMLDivElement) {
         this.scene = new Scene();
@@ -29,17 +29,19 @@ export class VRMScene {
         this.renderer.setPixelRatio(window.devicePixelRatio);
         canvasRoot.appendChild(this.renderer.domElement);
 
-        this.customizeScene();
+        this.animate();
     }
 
-    animate(): void {
+    private animate(): void {
         window.requestAnimationFrame(() => {
             this.animate()
         });
+        this.updateScene();
         this.vrmCharacterManager.update();
         this.renderer.render(this.scene, this.vrmCamera.camera);
     }
 
-    protected customizeScene(): void {
+    /* フレームごとのシーンの更新処理を記述する。 */
+    protected updateScene(): void {
     }
 }
