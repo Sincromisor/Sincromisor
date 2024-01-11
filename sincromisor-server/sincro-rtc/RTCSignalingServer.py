@@ -37,7 +37,7 @@ logging.config.dictConfig(
 
 class RTCSignalingServer:
     def __init__(self, args: RTCSignalingServerArgument):
-        self.__logger: Logger = logging.getLogger("sincro." + __name__)
+        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__logger.info("===== Starting SincromisorProcess =====")
         self.__args: RTCSignalingServerArgument = args
 

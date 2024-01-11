@@ -16,7 +16,7 @@ class RTCSessionProcessManagementThread(Thread):
         timeout: int,
     ):
         super().__init__()
-        self.__logger: Logger = logging.getLogger("sincro." + __name__)
+        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__session_id = session_id
         self.__process: RTCSessionProcess = process
         self.__rtc_finalize_event: Event = rtc_finalize_event

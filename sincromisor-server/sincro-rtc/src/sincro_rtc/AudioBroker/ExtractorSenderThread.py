@@ -19,7 +19,7 @@ class ExtractorSenderThread(Thread):
         frame_buffer: deque,
     ):
         super().__init__()
-        self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__ + f"[{session_id[21:26]}]")
         self.__ws: ClientConnection = ws
         self.__running: Event = running
         self.__session_id: str = session_id

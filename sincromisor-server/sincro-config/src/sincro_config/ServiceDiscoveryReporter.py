@@ -19,7 +19,7 @@ class ServiceDiscoveryReporter:
     ):
         super().__init__()
         self.__logger: Logger = logging.getLogger(
-            "sincro." + __name__ + f".{worker_type}",
+            "sincro." + self.__class__.__name__ + f".{worker_type}",
         )
         self.consul: Consul = Consul(host=consul_host, port=consul_port)
         self.public_bind_host: str = public_bind_host

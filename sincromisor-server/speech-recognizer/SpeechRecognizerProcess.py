@@ -23,7 +23,7 @@ logging.config.dictConfig(
 
 class SpeechRecognizerProcess:
     def __init__(self, args: SpeechRecognizerProcessArgument):
-        self.__logger: Logger = logging.getLogger("sincro." + __name__)
+        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__logger.info("===== Starting SpeechRecognizerProcess =====")
         self.__args: SpeechRecognizerProcessArgument = (
             SpeechRecognizerProcessArgument.argparse()

@@ -41,7 +41,9 @@ class AudioBrokerCommunicator:
 
     def close(self) -> None:
         logger: Logger = logging.getLogger(
-            f"{__name__}::{self.comm_type}[{self.session_id[21:26]}]",
+            "sincro."
+            + self.__class__.__name__
+            + f"::{self.comm_type}[{self.session_id[21:26]}]",
         )
 
         logger.info(f"{self.comm_type} - join sender_thread")
@@ -88,7 +90,7 @@ class AudioBrokerCommunicators:
 
 class AudioBrokerEvent(Event):
     def __init__(self):
-        self.__logger: Logger = logging.getLogger(__name__)
+        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         super().__init__()
 
     # どこできっかけでコケたのかが分かるよう、
@@ -108,7 +110,9 @@ class AudioBroker:
         consul_agent_host: str,
         consul_agent_port: int,
     ):
-        self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__logger: Logger = logging.getLogger(
+            "sincro." + self.__class__.__name__ + f"[{session_id[21:26]}]"
+        )
         self.__session_id: str = session_id
         self.__talk_mode: str = talk_mode
         self.__sd_refrrer: ServiceDiscoveryReferrer = ServiceDiscoveryReferrer(

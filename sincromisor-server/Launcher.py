@@ -56,7 +56,7 @@ class ProcessLauncher:
         self.process: sp.Popen
         self.stdout_t: Thread
         self.stderr_t: Thread
-        self.logger: Logger = logging.getLogger(name)
+        self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         # サブプロセスに環境変数を引き継ぐ。
         self.newenv = os.environ.copy()
         self.newenv |= envs
@@ -121,7 +121,7 @@ class SincroLauncher:
         logging.config.dictConfig(
             SincromisorLoggerConfig.generate(log_file=log_file, stdout=True),
         )
-        return logging.getLogger("sincro." + __name__)
+        return logging.getLogger("sincro." + self.__class__.__name__)
 
     def __get_envs(self, env_file: str) -> dict[str, str | None]:
         return dotenv_values(env_file)

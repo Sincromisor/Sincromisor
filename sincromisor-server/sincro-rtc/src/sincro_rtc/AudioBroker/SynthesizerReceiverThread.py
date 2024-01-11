@@ -26,7 +26,7 @@ class SynthesizerReceiverThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.__logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__logger = logging.getLogger("sincro." + self.__class__.__name__ + f"[{session_id[21:26]}]")
         self.__ws: ClientConnection = ws
         self.__voice_frame_queue: deque = voice_frame_queue
         self.__return_frame_format: dict = return_frame_format

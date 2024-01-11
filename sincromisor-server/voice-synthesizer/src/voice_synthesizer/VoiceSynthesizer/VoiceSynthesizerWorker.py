@@ -20,7 +20,7 @@ class VoiceSynthesizerWorker:
         redis_host: str,
         redis_port: int,
     ):
-        self.__logger: Logger = logging.getLogger(__name__)
+        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__vvox: VoiceCacheManager = VoiceCacheManager(
             voicevox_host=voicevox_host,
             voicevox_port=voicevox_port,

@@ -26,7 +26,7 @@ class VoiceCacheManager:
             host=voicevox_host,
             port=voicevox_port,
         )
-        self.logger: Logger = logging.getLogger(__name__)
+        self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
 
     def get_speaker_ids(self) -> dict:
         try:

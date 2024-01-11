@@ -43,7 +43,7 @@ class RTCSessionProcess(Process):
         consul_agent_port: int,
     ):
         Process.__init__(self)
-        self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__ + f"[{session_id[21:26]}]")
         self.__session_id: str = session_id
         self.__request_sdp: str = request_sdp
         self.__request_type: str = request_type

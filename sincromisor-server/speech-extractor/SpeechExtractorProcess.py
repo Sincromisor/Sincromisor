@@ -23,7 +23,7 @@ logging.config.dictConfig(
 
 class SpeechExtractorProcess:
     def __init__(self, args: SpeechExtractorProcessArgument):
-        self.__logger: Logger = logging.getLogger("sincro." + __name__)
+        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__logger.info("===== Starting SpeechExtractorProcess =====")
         self.__args: SpeechExtractorProcessArgument = args
         self.__sessions: int = 0

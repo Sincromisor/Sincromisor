@@ -16,7 +16,7 @@ from .RTCSessionProcessManagementThread import RTCSessionProcessManagementThread
 
 class RTCSessionManager:
     def __init__(self, consul_agent_host: str, consul_agent_port: int):
-        self.__logger: Logger = logging.getLogger("sincro." + __name__)
+        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__processes: dict[str, RTCSessionProcessDescription] = {}
         self.__join_timeout: int = 10
         self.__consul_agent_host: str = consul_agent_host

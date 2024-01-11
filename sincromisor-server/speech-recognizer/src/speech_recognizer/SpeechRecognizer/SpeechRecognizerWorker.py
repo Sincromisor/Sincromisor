@@ -12,7 +12,7 @@ from .SpeechRecognizer import SpeechRecognizer
 
 class SpeechRecognizerWorker:
     def __init__(self, voice_log_dir: str | None):
-        self.logger: Logger = logging.getLogger(__name__)
+        self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.s2t: SpeechRecognizer = SpeechRecognizer(
             decode_options={"max_new_tokens": 255},
         )

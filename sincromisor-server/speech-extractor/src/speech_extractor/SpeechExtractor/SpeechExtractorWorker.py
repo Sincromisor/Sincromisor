@@ -20,7 +20,7 @@ class SpeechExtractorWorker:
         voice_channels: int = 1,
         voice_sampling_rate: int = 16000,
     ):
-        self.logger: Logger = logging.getLogger(__name__)
+        self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.session_id: str = session_id
         self.voice_channels: int = voice_channels
         self.voice_sampling_rate: int = voice_sampling_rate

@@ -22,7 +22,7 @@ logging.config.dictConfig(
 
 class VoiceSynthesizerProcess:
     def __init__(self, args: VoiceSynthesizerProcessArgument):
-        self.__logger: Logger = logging.getLogger("sincro." + __name__)
+        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__logger.info("===== Starting VoiceSynthesizerProcess =====")
         self.__args: VoiceSynthesizerProcessArgument = args
         self.__sessions: int = 0

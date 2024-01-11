@@ -10,7 +10,7 @@ from sincro_models import TextProcessorRequest, TextProcessorResult
 # 新しい対話が始まるたびにインスタンスを生成する
 class TextProcessorWorker:
     def __init__(self):
-        self.logger: Logger = logging.getLogger("sincro." + __name__)
+        self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
 
         self.message_type: str = "system"
         self.speaker_id: str = "system"

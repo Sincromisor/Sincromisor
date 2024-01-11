@@ -26,7 +26,7 @@ logging.config.dictConfig(
 
 class TextProcessorProcess:
     def __init__(self, args: TextProcessorProcessArgument):
-        self.__logger: Logger = logging.getLogger("sincro." + __name__)
+        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__logger.info("===== Starting TextProcessorProcess =====")
         self.__args: TextProcessorProcessArgument = args
         self.__sessions: int = 0

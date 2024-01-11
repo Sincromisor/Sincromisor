@@ -25,7 +25,7 @@ class TextProcessorSenderThread(Thread):
     ):
         super().__init__()
         self.__session_id: str = session_id
-        self.__logger = logging.getLogger(__name__ + f"[{self.__session_id[21:26]}]")
+        self.__logger = logging.getLogger("sincro." + self.__class__.__name__ + f"[{self.__session_id[21:26]}]")
         self.__ws: ClientConnection = ws
         self.__recognizer_results: deque = recognizer_results
         self.__text_channel_queue: deque = text_channel_queue
