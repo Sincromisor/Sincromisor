@@ -30,12 +30,12 @@ export class GloriaGlass extends GloriaChan {
       depthiness: 1.0
     });
 
-    const startLGButton = document.createElement("button");
-    startLGButton.id = "startLG";
-    startLGButton.className = "formButton";
-    startLGButton.textContent = "Looking Glass";
-    document.querySelector("#optionBox").appendChild(startLGButton);
-
+    //const startLGButton = document.createElement("button");
+    //startLGButton.id = "startLG";
+    //startLGButton.className = "formButton";
+    //startLGButton.textContent = "Looking Glass";
+    //document.querySelector("#optionBox").appendChild(startLGButton);
+    const startLGButton = document.querySelector("#startLookingGlass");
     startLGButton.addEventListener("click", async () => {
       console.log("start Looking Glass!");
       const xrHelper = await WebXRExperienceHelper.CreateAsync(this.scene);

@@ -17,6 +17,7 @@
         "@babylonjs/post-processes": "^6.39.0",
         "@babylonjs/procedural-textures": "^6.39.0",
         "@babylonjs/serializers": "^6.39.0",
+        "@lookingglass/webxr": "^0.4.0",
         "@mediapipe/tasks-vision": "^0.10.9",
         "webpack": "^5.89.0",
         "webpack-cli": "^5.1.4"

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Sincromisor(Simple)</title>
+  <meta charset="UTF-8">
+  <link href="/styles/fonts.css" rel="stylesheet">
+  <link href="/styles/main.css" rel="stylesheet">
+  <link href="/styles/single.css" rel="stylesheet">
+  <link href="/styles/simple.css" rel="stylesheet">
+  <script type="module" src="dist/SincroGlass.js"></script>
+</head>
+
+<body>
+  <dialog id="configurationDialog">
+    <button id="rtcStart">はじめる</button>
+
+    <fieldset>
+      <legend>詳細設定</legend>
+      <div>
+        <input type="checkbox" id="enableCharacter" name="enableCharacter" disabled />
+        <label for="enableCharacter">キャラクターを表示する</label>
+      </div>
+      <div>
+        <input type="checkbox" id="enableGloriaEye" name="enableGloriaEye" disabled />
+        <label for="enableGloriaEye">顔認識機能を利用する(Webカメラが必要)</label>
+      </div>
+      <div>
+        <input type="checkbox" id="enableSTUN" name="enableSTUN" checked />
+        <label for="enableSTUN">WebRTCにSTUNを利用する</label>
+      </div>
+      <div>
+        <label for="enableSTUN">タイトル</label>
+        <input type="text" id="titleText" name="titleText" placeholder="ここにタイトルを入力" />
+      </div>
+    </fieldset>
+  </dialog>
+
+  <div id="obsBody">
+    <div id="obsHeaderBox">
+      <div id="headerDecoration"></div>
+      <div id="headerText">Sincromisor</div>
+      <img id="headerIcon" src="images/icon-user.webp" width="100" height="100">
+    </div>
+    <div id="obsVideo1">
+      Video1です。
+      1600x900
+    </div>
+    <div id="obsMessageBox">
+      <!--
+      <div id="msg1" class="obsMessage">
+        <img class="icon" src="assets/images/icon-user.webp">
+        <p class="message">1 私は　Glorious AI　です!<br>なんでも　質問してください!</p>
+      </div>
+      -->
+    </div>
+    <div id="obsCharacterBox">
+      <canvas id="gloriaCanvas"></canvas>
+    </div>
+    <div id="obsCharacterBackgroundBox">
+    </div>
+    <div id="obsFooterBox">
+    </div>
+  </div>
+
+  <div id="debugConsole">
+    <button id="startLookingGlass">Start Looking Glass</button>
+    <button id="rtcStop">RTC Stop</button>
+
+    <div id="media">
+      <h2>Media</h2>
+      <audio id="rtcVoice" autoplay="true"></audio>
+      <video id="gloriaEyeView" autoplay="true" playsinline="true"></video>
+    </div>
+
+    <h2>Data channel</h2>
+    <pre id="textChannel"></pre>
+    <pre id="telopChannel"></pre>
+
+    <h2>Face Position</h2>
+    <dl>
+      <dt>Status</dt>
+      <dd id="gloriaEyeStatus">みてない</dd>
+      <dt>X</dt>
+      <dd id="faceX"></dd>
+      <dt>Y</dt>
+      <dd id="faceY"></dd>
+      <dt>Facing</dt>
+      <dd id="facing"></dd>
+    </dl>
+
+    <h2>State</h2>
+    <p>
+      ICE gathering state: <span id="iceGatheringState"></span>
+    </p>
+    <p>
+      ICE connection state: <span id="iceConnectionState"></span>
+    </p>
+    <p>
+      Signaling state: <span id="signalingState"></span>
+    </p>
+    <h2>SDP</h2>
+
+    <h3>Offer</h3>
+    <pre id="offerSDP"></pre>
+
+    <h3>Answer</h3>
+    <pre id="answerSDP"></pre>
+  </div>
+</body>
+
+</html>
