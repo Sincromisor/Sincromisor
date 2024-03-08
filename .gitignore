@@ -1,0 +1,9 @@
+*.log
+config.yml
+samples
+src/dist
+src/log
+src/node_modules
+src/assets/characters
+src/assets/3rd_party
+src/static/3rd_party

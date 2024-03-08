@@ -1,0 +1,42 @@
+:root {
+    --canvasWidth: 100svw;
+    --canvasHeight: 100svh;
+    --canvasMinWidth: 650px;
+}
+
+body,
+div#obsBody {
+    min-width: var(--canvasMinWidth);
+}
+
+div#obsVideo1 {
+    display: none;
+}
+
+div#obsVideo2 {
+    display: none;
+}
+
+div#obsHeaderBox {
+    min-width: var(--canvasMinWidth);
+}
+
+div#obsMessageBox {
+    min-width: var(--canvasMinWidth);
+    grid-area: 2 / 1 / 4 / 4;
+}
+
+div#obsCharacterBox {
+    min-width: var(--canvasMinWidth);
+    grid-area: 2 / 1 / 5 / 4;
+}
+
+div#obsCharacterBackgroundBox {
+    grid-area: 3 / 1 / 4 / 4;
+}
+
+div#obsFooterBox {
+    min-width: var(--canvasMinWidth);
+    z-index: 256;
+    background-color: rgba(34, 34, 34, 0.5);
+}

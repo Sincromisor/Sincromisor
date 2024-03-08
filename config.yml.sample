@@ -1,0 +1,28 @@
+---
+VoiceSynthesizer:
+    VoiceVoxHost: localhost
+    VoiceVoxPort: 50021
+    EnableRedis: true
+    RedisHost: localhost
+    RedisPort: 6379
+    DefaultStyleID: 0
+    PrePhonemeLength: 0.1
+    PostPhonemeLength: 0.0
+Worker:
+    Sincromisor:
+        - host: 0.0.0.0
+          port: 8001
+          url: http://127.0.0.1:8001/
+          forwarded-allow-ips: 127.0.0.1
+    SpeechExtractor:
+        - host: 0.0.0.0
+          port: 8003
+          url: ws://127.0.0.1:8003/
+    SpeechRecognizer:
+        - host: 0.0.0.0
+          port: 8004
+          url: ws://127.0.0.1:8004/
+    VoiceSynthesizer:
+        - host: 0.0.0.0
+          port: 8005
+          url: ws://127.0.0.1:8005/

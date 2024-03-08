@@ -1,0 +1,38 @@
+:root {
+    --videoWidth: calc(var(--canvasWidth) / 2);
+    --videoHeight: calc(var(--canvasHeight) / 2);
+    --footerHeight: 90px;
+
+    --chatBoxHeight: calc(var(--canvasHeight) - var(--headerHeight) - var(--videoHeight) - var(--footerHeight));
+    --characterBoxHeight: calc(var(--chatBoxHeight) + var(--footerHeight));
+    --characterBoxWidth: var(--characterBoxHeight);
+
+    --chatMessageHeight: calc(var(--chatBoxHeight) / 5);
+    --chatIconSize: calc(var(--chatMessageHeight) * 0.8);
+}
+
+div#obsBody {
+    /* https://grid.layoutit.com/?id=aFLAWNI */
+    grid-template-columns: calc(var(--canvasWidth) / 2) calc(var(--canvasWidth) / 2 - var(--characterBoxWidth)) var(--characterBoxWidth);
+    grid-template-rows: var(--headerHeight) calc(var(--videoHeight) * 0.6) calc(var(--videoHeight) * 0.4) var(--chatBoxHeight) var(--footerHeight);
+}
+
+div#obsVideo1 {
+    grid-area: 2 / 1 / 4 / 2;
+}
+
+div#obsVideo2 {
+    grid-area: 2 / 2 / 4 / 4;
+}
+
+div#obsMessageBox {
+    grid-area: 4 / 1 / 5 / 3;
+}
+
+div#obsCharacterBox {
+    grid-area: 4 / 3 / 6 / 4;
+}
+
+div#obsFooterBox {
+    grid-area: 5 / 1 / 6 / 4;
+}
