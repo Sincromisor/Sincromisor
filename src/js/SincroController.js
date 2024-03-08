@@ -227,12 +227,12 @@ export class SincroController {
     setShortcutKeyEvent() {
         const debugConsole = document.querySelector("div#debugConsole");
         window.addEventListener("keydown", (e) => {
-            if (e.ctrlKey && e.altKey && e.key == 'd') {
+            // macOSのChromeではalt+dでkeyの値がδになる
+            if (e.ctrlKey && e.altKey && (e.key == 'd' || e.code == 'KeyD')) {
                 if (window.getComputedStyle(debugConsole).zIndex == -1) {
                     debugConsole.style.zIndex = 255;
                 } else {
                     debugConsole.style.zIndex = -1;
-
                 }
             }
         });
