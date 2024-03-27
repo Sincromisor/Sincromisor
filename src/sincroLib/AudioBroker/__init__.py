@@ -2,4 +2,3 @@ from .ExtractorThread import ExtractorSenderThread, ExtractorReceiverThread
 from .RecognizerThread import RecognizerSenderThread, RecognizerReceiverThread
 from .SynthesizerThread import SynthesizerSenderThread, SynthesizerReceiverThread
 from .AudioBroker import AudioBroker
-from .VoiceTransformTrack import VoiceTransformTrack

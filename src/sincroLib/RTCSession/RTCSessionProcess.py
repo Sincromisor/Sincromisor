@@ -9,8 +9,7 @@ from multiprocessing.connection import Connection
 from multiprocessing.sharedctypes import Synchronized
 from setproctitle import setproctitle
 from ..models import RTCVoiceChatSession
-from .AudioTransformTrack import AudioTransformTrack
-from ..AudioBroker import VoiceTransformTrack
+from .VoiceTransformTrack import VoiceTransformTrack
 
 
 class UnknownRTCTrack(Exception):

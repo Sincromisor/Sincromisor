@@ -10,7 +10,7 @@ from av.audio.resampler import AudioResampler
 from ..models import RTCVoiceChatSession
 from ..models import SpeechRecognizerResult
 from ..models import VoiceSynthesizerResultFrame
-from .AudioBroker import AudioBroker
+from ..AudioBroker import AudioBroker
 
 class VoiceTransformTrack(MediaStreamTrack):
     kind = "audio"
