@@ -12,6 +12,10 @@ from .SynthesizerThread import SynthesizerSenderThread, SynthesizerReceiverThrea
 from ..utils import ConfigManager
 
 
+class AudioBrokerError(Exception):
+    pass
+
+
 class AudioBroker:
     def __init__(
         self,
@@ -46,6 +50,8 @@ class AudioBroker:
 
         self.return_frame_format = {"sample_rate": 48000, "sample_size": 960}
 
+        # AudioBrokerもしくは子スレッドでなにかしらの問題が発生したら、
+        # runningをclearして全てを停止する。
         self.running: Event = Event()
         self.running.clear()
         self.threads: dict = {}
@@ -151,6 +157,9 @@ class AudioBroker:
         self.threads["synthesizer_receiver"].start()
 
     def add_frame(self, frame: bytes) -> None:
+        if not self.running.is_set():
+            raise AudioBrokerError("AudioBroker is not running.")
+
         self.frame_buffer.append(frame)
         if len(self.frame_buffer) >= 25:
             self.logger.warn("add_frame - overflow")
