@@ -62,15 +62,19 @@ def app_double(request: Request):
         "double.html", {"request": request}, media_type="text/html"
     )
 
+
 @app.get("/glass")
 def app_glass(request: Request):
     return templates.TemplateResponse(
         "glass.html", {"request": request}, media_type="text/html"
     )
 
+
 @app.post("/offer")
 async def offer(request: Request, offer_params: RTCSessionOffer):
-    return JSONResponse(rtcSPM.create_session(offer=offer_params))
+    session_info = rtcSPM.create_session(offer=offer_params)
+    logger.info(f"OfferSDP:\n{offer_params.sdp}\nResponseSDP:\n{session_info['sdp']}")
+    return JSONResponse(session_info)
 
 
 @app.get("/cleanup")
