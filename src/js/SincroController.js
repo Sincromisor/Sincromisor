@@ -18,6 +18,7 @@ export class SincroController {
         this.setShortcutKeyEvent();
         this.setConfigurationDialogButtonEvent();
         this.startConfigurationDialog();
+        this.setTitleText();
     }
 
     enableCharacter() {
@@ -213,13 +214,18 @@ export class SincroController {
             this.stopRTC();
         }
 
-        document.querySelector("input#titleText").oninput = (e) => {
-            if (e.target.value) {
-                document.querySelector("div#headerText").innerText = e.target.value;
-            } else {
-                /* 空欄の時はデフォルト値を設定 */
-                document.querySelector("div#headerText").innerText = "Sincromisor";
-            }
+        document.querySelector("input#titleText").oninput = () => {
+            this.setTitleText();
+        }
+    }
+
+    setTitleText(){
+        const titleText = document.querySelector("input#titleText").value;
+        if (titleText) {
+            document.querySelector("div#headerText").innerText = titleText;
+        } else {
+            /* 空欄の時はデフォルト値を設定 */
+            document.querySelector("div#headerText").innerText = "Sincromisor";
         }
     }
 
