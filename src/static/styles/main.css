@@ -245,12 +245,33 @@ div#debugConsole {
      SincroController.jsから255にする
     */
     z-index: -1;
-    font-size: 75%;
+    font-size: 100%;
+    overflow: hidden;
+    height: var(--canvasHeight);
+    width: var(--canvasWidth);
+    -webkit-text-stroke: 0.2px #ffffff;
 }
 
-div#debugConsole video#gloriaEyeView {
-    margin: 10px 0 10px 0;
+div#debugConsole div#gloriaEye {
+    z-index: -2;
     width: 30vw;
+    position: fixed;
+    top: 0;
+    right: 0;
+}
+
+div#debugConsole video#gloriaEyeVideo {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+div#debugConsole svg#gloriaEyeMarker {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
 div#gloriaEyeStatusBox {

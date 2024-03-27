@@ -136,7 +136,7 @@ export class GloriaEye {
         let deviation_x = 0.5 - this.movingAverage[2]["x"];
         let deviation_y = 0.5 - this.movingAverage[2]["y"];
         if (Math.abs(deviation_x) < 0.01 && Math.abs(deviation_y) < 0.01) { return; }
-        this.movingAverage[2]["x"] = this.movingAverage[2]["x"] + deviation_x / 60;
-        this.movingAverage[2]["y"] = this.movingAverage[2]["y"] + deviation_y / 60;
+        this.movingAverage[2]["x"] = this.movingAverage[2]["x"] + deviation_x / 30;
+        this.movingAverage[2]["y"] = this.movingAverage[2]["y"] + deviation_y / 30;
     }
 }

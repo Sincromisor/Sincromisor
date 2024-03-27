@@ -64,14 +64,20 @@
   </div>
 
   <div id="debugConsole">
-    <button id="startLookingGlass">Start Looking Glass</button>
-    <button id="rtcStop">RTC Stop</button>
-
-    <div id="media">
-      <h2>Media</h2>
-      <audio id="rtcVoice" autoplay="true"></audio>
-      <video id="gloriaEyeView" autoplay="true" playsinline="true"></video>
+    <div id="gloriaEye">
+      <video id="gloriaEyeVideo" autoplay="true" playsinline="true"></video>
+      <svg id="gloriaEyeMarker" viewBox="0 0 320 240" version="1.1" xmlns="http://www.w3.org/2000/svg">
+        <circle id="eyeTarget" cx="50%" cy="50%" r="5" fill="hsl(300 100% 50% / 50%)" />
+      </svg>
     </div>
+
+    <div id="gloriaVoice">
+      <audio id="rtcVoice" autoplay="true"></audio>
+    </div>
+
+    <button id="rtcStop">RTC Stop</button>
+    <button id="startLookingGlass">Start Looking Glass</button>
+
 
     <h2>Data channel</h2>
     <pre id="textChannel"></pre>

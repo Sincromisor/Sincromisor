@@ -134,8 +134,8 @@ export class SincroController {
     startGloriaEye(videoTrack) {
         if (!this.enableGloriaEye()) { return false; }
 
-        this.gloriaEyeView = document.querySelector('video#gloriaEyeView');
-        this.gloriaEye = new GloriaEye(this.gloriaEyeView);
+        this.gloriaEyeVideo = document.querySelector('video#gloriaEyeVideo');
+        this.gloriaEye = new GloriaEye(this.gloriaEyeVideo);
         this.gloriaEye.initVision();
 
         const startEye = () => {
@@ -145,11 +145,19 @@ export class SincroController {
                     startEye();
                 } else {
                     console.log("start GloriaEye");
+                    const eyeTargetElement = document.querySelector("#eyeTarget");
                     this.gloriaEye.initCamera(videoTrack, (detects) => {
                         document.querySelector("#faceX").textContent = this.gloriaEye.targetX();
                         document.querySelector("#faceY").textContent = this.gloriaEye.targetY();
                         document.querySelector("#facing").textContent = this.gloriaEye.facing();
                         this.gloriaChan.addRigQueue(-this.gloriaEye.targetX() + 0.5, this.gloriaEye.targetY() - 0.5);
+                        if (detects.length > 0) {
+                            eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 50%)");
+                            eyeTargetElement.setAttribute("cx", `${this.gloriaEye.targetX() * 100}%`);
+                            eyeTargetElement.setAttribute("cy", `${this.gloriaEye.targetY() * 100}%`);
+                        } else {
+                            eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 0%)");
+                        }
                     });
                 }
             }, 1000);
@@ -194,7 +202,9 @@ export class SincroController {
                 this.startRTC(audioTrack);
             }, (videoTrack) => {
                 this.startGloriaEye(videoTrack);
-            }, (err) => { })
+            }, (err) => {
+                this.chatMessage.writeSystemMessageText(`カメラまたはマイクが見つかりませんでした。 - ${err}`);
+            });
             this.startGloriaChan();
             this.closeConfigurationDialog();
         }
@@ -231,8 +241,10 @@ export class SincroController {
             if (e.ctrlKey && e.altKey && (e.key == 'd' || e.code == 'KeyD')) {
                 if (window.getComputedStyle(debugConsole).zIndex == -1) {
                     debugConsole.style.zIndex = 255;
+                    debugConsole.style.overflow = 'scroll';
                 } else {
                     debugConsole.style.zIndex = -1;
+                    debugConsole.style.overflow = 'hidden';
                 }
             }
         });

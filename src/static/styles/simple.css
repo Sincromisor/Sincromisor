@@ -1,6 +1,6 @@
 :root {
-    --canvasWidth: 100svw;
-    --canvasHeight: 100svh;
+    --canvasWidth: 100dvw;
+    --canvasHeight: 100dvh;
     --canvasMinWidth: 650px;
 }
 
