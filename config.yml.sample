@@ -26,3 +26,8 @@ Worker:
         - host: 0.0.0.0
           port: 8005
           url: ws://127.0.0.1:8005/
+RTCIceServers:
+    - urls: stun:stun.negix.org:3478
+    #- urls: turn:turn.negix.org:3478
+    #  username: gloria
+    #  credential: SECRET_KEY

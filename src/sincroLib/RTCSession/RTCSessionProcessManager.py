@@ -23,24 +23,18 @@ class RTCSessionProcessManager:
         cl_pipe: Connection
         sv_pipe, cl_pipe = Pipe()
         rtc_session_status: Synchronized = Value("b", 1)
-        speech_extractor_status: Synchronized = Value("b", 1)
-        voice_synthesizer_status: Synchronized = Value("b", 1)
         ps: RTCSessionProcess = RTCSessionProcess(
             session_id=session_id,
             request_sdp=offer.sdp,
             request_type=offer.type,
             sdp_pipe=cl_pipe,
             rtc_session_status=rtc_session_status,
-            speech_extractor_status=speech_extractor_status,
-            voice_synthesizer_status=voice_synthesizer_status,
         )
         ps.start()
         self.processes[session_id] = {
             "process": ps,
             "pipe": sv_pipe,
             "rtcSessionStatus": rtc_session_status,
-            "speechExtractorStatus": speech_extractor_status,
-            "voiceSynthesizerStatus": voice_synthesizer_status,
         }
         return sv_pipe.recv()
 
@@ -57,8 +51,6 @@ class RTCSessionProcessManager:
         for session_id, ps_info in self.processes.items():
             try:
                 ps_info["rtcSessionStatus"].value = -1
-                ps_info["speechExtractorStatus"].value = -1
-                ps_info["voiceSynthesizerStatus"].value = -1
             except:
                 self.logger.error(
                     f"[{session_id}] Change session status: UnknownError - {traceback.format_exc()}"

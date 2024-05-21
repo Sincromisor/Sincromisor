@@ -39,6 +39,11 @@ class ConfigManager:
             yield (worker_id, conf)
             worker_id += 1
 
+    # type: stun, turn
+    def get_ice_servers_conf(self, server_type: str):
+        for conf in ConfigManager.config["RTCIceServers"]:
+            if conf["urls"][0:5] == f'{server_type}:':
+                yield conf
 
 if __name__ == "__main__":
     config = ConfigManager()
