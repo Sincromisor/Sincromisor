@@ -10,7 +10,8 @@ from av.audio.resampler import AudioResampler
 from ..models import RTCVoiceChatSession
 from ..models import SpeechRecognizerResult
 from ..models import VoiceSynthesizerResultFrame
-from ..AudioBroker import AudioBroker
+from ..AudioBroker import AudioBroker, AudioBrokerError
+
 
 class VoiceTransformTrack(MediaStreamTrack):
     kind = "audio"
@@ -72,6 +73,11 @@ class VoiceTransformTrack(MediaStreamTrack):
             self.logger.error(
                 f"transform - AttributeError: {repr(e)}\n{traceback.format_exc()}"
             )
+        except AudioBrokerError as e:
+            self.logger.error(
+                f"transform - AudioBrokerError: {repr(e)}\n{traceback.format_exc()}"
+            )
+            raise e
         except Exception as e:
             self.logger.error(
                 f"transform - UnknownError: {repr(e)}\n{traceback.format_exc()}"
