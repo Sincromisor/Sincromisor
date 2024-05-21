@@ -1,13 +1,5 @@
 import logging
 from logging import Logger
-import traceback
-from setproctitle import setproctitle
-import numpy as np
-from fastapi import FastAPI, WebSocket, Depends, Request, WebSocketDisconnect
-from sincroLib.models import SpeechExtractorResult
-from sincroLib.SpeechRecognizer import SpeechRecognizerWorker
-
-setproctitle(f"SPRecognizer")
 
 logging.basicConfig(
     filename="log/SpeechRecognizerWorker.log",
@@ -16,8 +8,17 @@ logging.basicConfig(
     format=f"[%(asctime)s] {logging.BASIC_FORMAT}",
     datefmt="%Y/%m/%d %H:%M:%S",
 )
-logger: Logger = logging.getLogger(__name__)
 
+import traceback
+from setproctitle import setproctitle
+import numpy as np
+from fastapi import FastAPI, WebSocket, Depends, Request, WebSocketDisconnect
+from sincroLib.models import SpeechExtractorResult
+from sincroLib.SpeechRecognizer import SpeechRecognizerWorker
+
+setproctitle(f"SPRecognizer")
+logger: Logger = logging.getLogger(__name__)
+logger.info("===== Starting SpeechRecognizerWorkerProcess =====")
 app: FastAPI = FastAPI()
 speech_recognizer = SpeechRecognizerWorker()
 
@@ -37,7 +38,7 @@ async def websocket_chat_endpoint(ws: WebSocket):
                 # 一旦copy()しないとwriteableにできない点にも注意。
                 # (copy()すると自動的にwritableになる)
                 # UserWarning: The given NumPy array is not writable,
-                # and PyTorch does not support non-writable tensors. 
+                # and PyTorch does not support non-writable tensors.
                 # ~~~
                 # (Triggered internally at ../torch/csrc/utils/tensor_numpy.cpp:206.)
                 current_speech_buffer = extractor_result.voice.copy()

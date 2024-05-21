@@ -1,12 +1,5 @@
 import logging
 from logging import Logger
-import traceback
-from setproctitle import setproctitle
-from fastapi import FastAPI, WebSocket, Depends, Request, WebSocketDisconnect
-from sincroLib.models import SpeechRecognizerResult
-from sincroLib.VoiceSynthesizer import VoiceSynthesizerWorker
-
-setproctitle('VSynthesizer')
 
 logging.basicConfig(
     filename="log/VoiceSynthesizerWorker.log",
@@ -15,8 +8,16 @@ logging.basicConfig(
     format=f"[%(asctime)s] {logging.BASIC_FORMAT}",
     datefmt="%Y/%m/%d %H:%M:%S",
 )
-logger: Logger = logging.getLogger(__name__)
 
+import traceback
+from setproctitle import setproctitle
+from fastapi import FastAPI, WebSocket, Depends, Request, WebSocketDisconnect
+from sincroLib.models import SpeechRecognizerResult
+from sincroLib.VoiceSynthesizer import VoiceSynthesizerWorker
+
+setproctitle("VSynthesizer")
+logger: Logger = logging.getLogger(__name__)
+logger.info('===== Starting VoiceSynthesizerWorkerProcess =====')
 app: FastAPI = FastAPI()
 
 

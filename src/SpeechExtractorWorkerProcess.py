@@ -1,12 +1,5 @@
 import logging
 from logging import Logger
-import traceback
-from setproctitle import setproctitle
-from fastapi import FastAPI, WebSocket, Depends, Request, WebSocketDisconnect
-from sincroLib.models import SpeechExtractorInitializeRequest
-from sincroLib.SpeechExtractor import SpeechExtractorWorker
-
-setproctitle(f"SPExtractor")
 
 logging.basicConfig(
     filename="log/SpeechExtractorWorker.log",
@@ -15,8 +8,16 @@ logging.basicConfig(
     format=f"[%(asctime)s] {logging.BASIC_FORMAT}",
     datefmt="%Y/%m/%d %H:%M:%S",
 )
-logger: Logger = logging.getLogger(__name__)
 
+import traceback
+from setproctitle import setproctitle
+from fastapi import FastAPI, WebSocket, Depends, Request, WebSocketDisconnect
+from sincroLib.models import SpeechExtractorInitializeRequest
+from sincroLib.SpeechExtractor import SpeechExtractorWorker
+
+setproctitle(f"SPExtractor")
+logger: Logger = logging.getLogger(__name__)
+logger.info('===== Starting SpeechExtractorWorkerProcess. =====')
 app: FastAPI = FastAPI()
 SpeechExtractorWorker.setup_model()
 

@@ -72,7 +72,7 @@ def all_active():
     return True
 
 
-def stop_all():
+def stop_all_worker():
     global processes
     for process in processes:
         process.stop()
@@ -83,7 +83,7 @@ def trap_sigint(signum, frame):
     running = False
 
 
-signal.signal(signal.SIGINT, stop_all)
+signal.signal(signal.SIGINT, stop_all_worker)
 
 for worker_type in ["SpeechExtractor", "SpeechRecognizer", "VoiceSynthesizer"]:
     for worker_id, worker_conf in config.get_workers_conf(type=worker_type):
@@ -120,4 +120,4 @@ processes.append(web_p)
 while running and all_active():
     time.sleep(0.5)
 
-stop_all()
+stop_all_worker()
