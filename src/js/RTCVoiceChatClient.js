@@ -39,11 +39,11 @@ export class RTCVoiceChatClient {
         }
     }
 
-    start(audioTrack, stun = false) {
+    start(audioTrack, enableSTUN = false, stunURL = "stun:stun.negix.org:3478") {
         let config = this.config.rtcPeerConnectionConfig;
-        if (stun) {
+        if (enableSTUN) {
             //config["iceServers"] = [{ urls: ["stun:stun.l.google.com:19302"] }]
-            config["iceServers"] = [{ urls: ["stun:conoha.hachune.net:3478"] }]
+            config["iceServers"] = [{ urls: [stunURL] }];
         }
         console.log(config);
         this.peerConnection = new RTCPeerConnection(config);

@@ -42,6 +42,14 @@ export class SincroController {
         return false;
     }
 
+    getStunServerURL(){
+        const urlObj = document.querySelector("input#stunURL");
+        if (urlObj && urlObj.value){
+            return urlObj.value;
+        }
+        return "stun:stun.negix.org:3478";
+    }
+
     startRTC(audioTrack) {
         this.chatMessage.writeSystemMessageText("音声認識・合成システムに接続します。");
         this.rtcc = new RTCVoiceChatClient();
@@ -52,7 +60,7 @@ export class SincroController {
             this.setTelopChannelCallback(this.rtcc);
         }
         this.setConnectionStateChangeCallback(this.rtcc);
-        this.rtcc.start(audioTrack, this.enableSTUN());
+        this.rtcc.start(audioTrack, this.enableSTUN(), this.getStunServerURL());
     }
 
     stopRTC() {
