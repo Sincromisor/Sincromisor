@@ -48,10 +48,10 @@ class SpeechRecognizerWorker:
         write_dir = f"log/voice/{result.session_id}"
         write_path = f"{write_dir}/{result.speech_id:06d}_{time_text}.json"
         Path(write_dir).mkdir(parents=True, exist_ok=True)
-        with open(write_path, "w") as text:
+        with open(write_path, "w", encoding="utf-8") as text:
             json = result.to_json(dumps_opt={"indent": 4})
             text.write(json)
-        self.logger.info(f'Wrote: {write_path}')
+        self.logger.info(f"Wrote: {write_path}")
         return write_path
 
     def export_voice(self, result: SpeechExtractorResult) -> str:
@@ -66,5 +66,5 @@ class SpeechRecognizerWorker:
         else:
             write_path: str = f"{write_dir}/{result.speech_id:06d}_{time_text}.wav"
             result.to_wavfile(path=write_path)
-        self.logger.info(f'Wrote: {write_path}')
+        self.logger.info(f"Wrote: {write_path}")
         return write_path
