@@ -11,15 +11,15 @@
     "license": "Apache2",
     "private": true,
     "dependencies": {
-        "@babylonjs/core": "^6.39.0",
-        "@babylonjs/loaders": "^6.39.0",
-        "@babylonjs/materials": "^6.39.0",
-        "@babylonjs/post-processes": "^6.39.0",
-        "@babylonjs/procedural-textures": "^6.39.0",
-        "@babylonjs/serializers": "^6.39.0",
+        "@babylonjs/core": "^7.7.1",
+        "@babylonjs/loaders": "^7.7.1",
+        "@babylonjs/materials": "^7.7.1",
+        "@babylonjs/post-processes": "^7.7.1",
+        "@babylonjs/procedural-textures": "^7.7.1",
+        "@babylonjs/serializers": "^7.7.1",
         "@lookingglass/webxr": "^0.4.0",
-        "@mediapipe/tasks-vision": "^0.10.9",
-        "webpack": "^5.89.0",
+        "@mediapipe/tasks-vision": "^0.10.14",
+        "webpack": "^5.91.0",
         "webpack-cli": "^5.1.4"
     }
 }
