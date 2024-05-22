@@ -42,6 +42,7 @@ class RTCVoiceChatSession(BaseModel):
         self.closed = True
 
     async def delete(self) -> None:
+        del self.audio_transform_track
         del self.desc
         del self.peer
         del self.telop_ch
