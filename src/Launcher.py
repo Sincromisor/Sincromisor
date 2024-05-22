@@ -1,3 +1,14 @@
+import logging
+from logging import Logger
+
+logging.basicConfig(
+    filename="log/Launcher.log",
+    encoding="utf-8",
+    level=logging.INFO,
+    format=f"[%(asctime)s] {logging.BASIC_FORMAT}",
+    datefmt="%Y/%m/%d %H:%M:%S",
+)
+
 import time
 import shutil
 import signal
@@ -8,29 +19,31 @@ from setproctitle import setproctitle
 
 
 class ProcessStdOutReader(Thread):
-    def __init__(self, name: str, process: sp.Popen):
+    def __init__(self, name: str, process: sp.Popen, logger: Logger):
         super().__init__()
         self.name: str = name
         self.process: sp.Popen = process
+        self.logger: Logger = logger
 
     def run(self):
         line: bytes
         while line := self.process.stdout.readline():
             line_s: str = line.decode().rstrip("\r\n")
-            print(f"[{self.name}]O: {line_s}")
+            self.logger.info(line_s)
 
 
 class ProcessStdErrReader(Thread):
-    def __init__(self, name: str, process: sp.Popen):
+    def __init__(self, name: str, process: sp.Popen, logger: Logger):
         super().__init__()
         self.name: str = name
         self.process: sp.Popen = process
+        self.logger: Logger = logger
 
     def run(self):
         line: bytes
         while line := self.process.stderr.readline():
             line_s: str = line.decode().rstrip("\r\n")
-            print(f"[{self.name}]E: {line_s}")
+            self.logger.warning(line_s)
 
 
 class ProcessLouncher:
@@ -40,22 +53,28 @@ class ProcessLouncher:
         self.process: sp.Popen | None = None
         self.stdout_t: Thread | None = None
         self.stderr_t: Thread | None = None
+        self.logger: Logger = logging.getLogger(name)
 
     def start(self):
         self.process = sp.Popen(self.args, stdout=sp.PIPE, stderr=sp.PIPE)
-        self.stdout_t = ProcessStdOutReader(name=self.name, process=self.process)
+        self.stdout_t = ProcessStdOutReader(
+            name=self.name, process=self.process, logger=self.logger
+        )
         self.stdout_t.start()
-        self.stderr_t = ProcessStdErrReader(name=self.name, process=self.process)
+        self.stderr_t = ProcessStdErrReader(
+            name=self.name, process=self.process, logger=self.logger
+        )
         self.stderr_t.start()
 
     def active(self):
         return self.process.poll() is None
 
     def stop(self):
+        self.logger.info(f"Stopping {self.name}")
         self.process.send_signal(signal.SIGINT)
         self.stdout_t.join()
         self.stderr_t.join()
-        print(f"{self.name} is terminated.")
+        self.logger.info(f"{self.name} was terminated.")
 
 
 setproctitle("SincroLauncher")
@@ -72,7 +91,7 @@ def all_active():
     return True
 
 
-def stop_all_worker():
+def stop_all_workers():
     global processes
     for process in processes:
         process.stop()
@@ -83,7 +102,7 @@ def trap_sigint(signum, frame):
     running = False
 
 
-signal.signal(signal.SIGINT, stop_all_worker)
+signal.signal(signal.SIGINT, trap_sigint)
 
 for worker_type in ["SpeechExtractor", "SpeechRecognizer", "VoiceSynthesizer"]:
     for worker_id, worker_conf in config.get_workers_conf(type=worker_type):
@@ -120,4 +139,4 @@ processes.append(web_p)
 while running and all_active():
     time.sleep(0.5)
 
-stop_all_worker()
+stop_all_workers()
