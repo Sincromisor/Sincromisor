@@ -42,9 +42,9 @@ export class SincroController {
         return false;
     }
 
-    getStunServerURL(){
+    getStunServerURL() {
         const urlObj = document.querySelector("input#stunURL");
-        if (urlObj && urlObj.value){
+        if (urlObj && urlObj.value) {
             return urlObj.value;
         }
         return "stun:stun.negix.org:3478";
@@ -198,9 +198,14 @@ export class SincroController {
 
     setConfigurationDialogButtonEvent() {
         this.gloriaChan.availabilityCheck(() => {
+            // 3Dモデルが利用できる時
             document.querySelector('#enableCharacter').disabled = false;
             document.querySelector('#enableGloriaEye').disabled = false;
-        }, null);
+        }, () => {
+            // 3Dモデルが利用できない時
+            document.querySelector('#enableCharacter').disabled = true;
+            document.querySelector('#enableCharacter').checked = false;
+        });
 
         document.querySelector("button#rtcStart").onclick = () => {
             this.userMediaManager = new UserMediaManager();
@@ -227,7 +232,7 @@ export class SincroController {
         }
     }
 
-    setTitleText(){
+    setTitleText() {
         const titleText = document.querySelector("input#titleText").value;
         if (titleText) {
             document.querySelector("div#headerText").innerText = titleText;

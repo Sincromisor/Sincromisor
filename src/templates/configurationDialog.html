@@ -1,0 +1,27 @@
+<dialog id="configurationDialog">
+    <button id="rtcStart">はじめる</button>
+
+    <fieldset>
+        <legend>詳細設定</legend>
+        <div>
+            <input type="checkbox" id="enableCharacter" name="enableCharacter" checked disabled />
+            <label for="enableCharacter">キャラクターを表示する</label>
+        </div>
+        <div>
+            <input type="checkbox" id="enableGloriaEye" name="enableGloriaEye" checked disabled />
+            <label for="enableGloriaEye">顔認識機能を利用する(Webカメラが必要)</label>
+        </div>
+        <div>
+            <input type="checkbox" id="enableSTUN" name="enableSTUN" checked />
+            <label for="enableSTUN">WebRTCにSTUNを利用する</label>
+        </div>
+        <div>
+            <label for="stunURL">STUNサーバ</label>
+            <input type="text" id="stunURL" name="stunURL" value="stun:stun.negix.org:3478" />
+        </div>
+        <div>
+            <label for="enableSTUN">タイトル</label>
+            <input type="text" id="titleText" name="titleText" placeholder="ここにタイトルを入力" />
+        </div>
+    </fieldset>
+</dialog>
