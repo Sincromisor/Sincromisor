@@ -31,6 +31,7 @@ class ExtractorSenderThread(Thread):
                     self.ws.send(buffer)
                 except IndexError:
                     time.sleep(0.1)
+            self.logger.info("Cancelled by another thread.")
         except ConnectionClosed:
             self.logger.info("ConnectionClosed.")
         except Exception as e:

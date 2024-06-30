@@ -50,6 +50,7 @@ class RecognizerSenderThread(Thread):
                         self.ws.ping()
                         last_ping = time.time()
                     time.sleep(0.2)
+            self.logger.info("Cancelled by another thread.")
         except ConnectionClosed:
             self.logger.info("ConnectionClosed.")
         except Exception as e:

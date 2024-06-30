@@ -15,6 +15,17 @@ from ..utils import ConfigManager
 class AudioBrokerError(Exception):
     pass
 
+class AudioBrokerEvent(Event):
+    def __init__(self):
+        self.logger: Logger = logging.getLogger(__name__)
+        super().__init__()
+
+    # どこできっかけでコケたのかが分かるよう、
+    # 最初にclear()が実行された時にログに書き出すようにする。
+    def clear(self):
+        if super().is_set():
+            self.logger.info(f"AudioBrokerEventClear: {traceback.format_stack()}")
+        super().clear()
 
 class AudioBroker:
     def __init__(
@@ -52,7 +63,7 @@ class AudioBroker:
 
         # AudioBrokerもしくは子スレッドでなにかしらの問題が発生したら、
         # runningをclearして全てを停止する。
-        self.running: Event = Event()
+        self.running: Event = AudioBrokerEvent()
         self.running.clear()
         self.threads: dict = {}
         self.startable: bool = True
@@ -75,6 +86,7 @@ class AudioBroker:
             self.close()
 
     def stop(self) -> None:
+        self.logger.info("Stopping AudioBroker...")
         if not self.running.is_set():
             self.logger.warn("AudioBroker is not running.")
             return

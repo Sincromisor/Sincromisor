@@ -21,6 +21,7 @@ class SpeechExtractorWorker:
         self.voice_sampling_rate: int = voice_sampling_rate
         self.voice_dtype: type = np.int16
         self.voice_sample_bytes: int = np.dtype(self.voice_dtype).itemsize
+        self.logger.info("SpeechExtractorWorker is initialized.")
 
     @classmethod
     def setup_model(cls):
@@ -58,6 +59,7 @@ class SpeechExtractorWorker:
         ws: WebSocket,
         max_silence_ms: int = 600,
     ):
+        self.logger.info("Start Extractor.extract.")
         in_speech: bool = False
         silence_ms: int = 0
         result = SpeechExtractorResult(
@@ -97,15 +99,20 @@ class SpeechExtractorWorker:
                 # 実際にSpeechが始まる前のフレームを500ms分確保しておく。
                 # (Speechの先頭が欠けることがよくあるため)
                 result.cut_voice(-int(self.voice_sampling_rate / 2))
+        self.logger.info("End Extractor.extract.")
 
     def check_speech_exists(self, audio: np.ndarray) -> bool:
         audio_clip = containers.AudioData.create_from_array(
             audio.astype(float) / np.iinfo(self.voice_dtype).max,
             self.voice_sampling_rate,
         )
-        classification_result_list = SpeechExtractorWorker.classifier.classify(
-            audio_clip
-        )
+        try:
+            classification_result_list = SpeechExtractorWorker.classifier.classify(
+                audio_clip
+            )
+        except Exception as e:
+            self.logger.error(f"UnknownError: {repr(e)}")
+            raise e
         for category in classification_result_list[0].classifications[0].categories:
             # self.logger.info(f"{self.session_id}: {category.category_name}({category.score})")
             if category.category_name == "Speech" and category.score > 0.6:

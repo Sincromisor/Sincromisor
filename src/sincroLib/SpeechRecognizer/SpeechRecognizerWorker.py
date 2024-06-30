@@ -15,6 +15,7 @@ class SpeechRecognizerWorker:
         self.s2t: SpeechRecognizer = SpeechRecognizer(
             decode_options={"max_new_tokens": 255}
         )
+        self.logger.info("SpeechRecognizerWorker is initialized.")
 
     def transcribe(self, voice: np.ndarray) -> list:
         inputs, outputs = self.s2t.transcribe(

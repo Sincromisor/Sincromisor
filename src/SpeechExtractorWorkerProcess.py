@@ -24,6 +24,7 @@ SpeechExtractorWorker.setup_model()
 
 @app.websocket("/SpeechExtractor")
 async def websocket_chat_endpoint(ws: WebSocket):
+    logger.info("Start SpeechExtractorWebSocket")
     try:
         await ws.accept()
         pack = await ws.receive_bytes()
