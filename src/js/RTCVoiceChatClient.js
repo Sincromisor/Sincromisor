@@ -46,6 +46,9 @@ export class RTCVoiceChatClient {
             config["iceServers"] = [{ urls: [stunURL] }];
         }
         console.log(config);
+        this.audioTrack = audioTrack;
+        this.enableSTUN = enableSTUN;
+        this.stunURL = stunURL;
         this.peerConnection = new RTCPeerConnection(config);
         this.setupICEEventLog(this.peerConnection);
         this.setupTrack(this.peerConnection);
@@ -80,7 +83,7 @@ export class RTCVoiceChatClient {
     }
 
     reConnect() {
-        setTimeout(() => { this.start(this.textChannelCallback, this.telopChannelCallback); }, 5000);
+        setTimeout(() => { this.start(this.audioTrack, this.enableSTUN, this.stunURL); }, 10000);
     }
 
     setMute(mute) {
