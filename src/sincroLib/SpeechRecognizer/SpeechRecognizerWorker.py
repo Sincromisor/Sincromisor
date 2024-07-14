@@ -61,7 +61,7 @@ class SpeechRecognizerWorker:
         )
         write_dir: str = f"log/voice/{result.session_id}"
         Path(write_dir).mkdir(parents=True, exist_ok=True)
-        if not shutil.which("opusenc"):
+        if shutil.which("opusenc"):
             write_path: str = f"{write_dir}/{result.speech_id:06d}_{time_text}.opus"
             result.to_opusfile(path=write_path)
         else:
