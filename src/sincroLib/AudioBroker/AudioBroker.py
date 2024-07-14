@@ -15,6 +15,7 @@ from ..utils import ConfigManager
 class AudioBrokerError(Exception):
     pass
 
+
 class AudioBrokerEvent(Event):
     def __init__(self):
         self.logger: Logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ class AudioBrokerEvent(Event):
         if super().is_set():
             self.logger.info(f"AudioBrokerEventClear: {traceback.format_stack()}")
         super().clear()
+
 
 class AudioBroker:
     def __init__(

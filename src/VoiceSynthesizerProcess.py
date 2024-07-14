@@ -17,7 +17,7 @@ from sincroLib.VoiceSynthesizer import VoiceSynthesizerWorker
 
 setproctitle("VSynthesizer")
 logger: Logger = logging.getLogger(__name__)
-logger.info('===== Starting VoiceSynthesizerWorkerProcess =====')
+logger.info("===== Starting VoiceSynthesizerWorkerProcess =====")
 app: FastAPI = FastAPI()
 
 

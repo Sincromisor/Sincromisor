@@ -34,7 +34,7 @@ class ConfigManager:
         return ConfigManager.config["Worker"][type][worker_id]
 
     def get_workers_conf(self, type: str):
-        worker_id :int = 0
+        worker_id: int = 0
         for conf in ConfigManager.config["Worker"][type]:
             yield (worker_id, conf)
             worker_id += 1
@@ -42,8 +42,9 @@ class ConfigManager:
     # type: stun, turn
     def get_ice_servers_conf(self, server_type: str):
         for conf in ConfigManager.config["RTCIceServers"]:
-            if conf["urls"][0:5] == f'{server_type}:':
+            if conf["urls"][0:5] == f"{server_type}:":
                 yield conf
+
 
 if __name__ == "__main__":
     config = ConfigManager()

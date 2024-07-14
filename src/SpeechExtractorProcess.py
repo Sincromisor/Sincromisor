@@ -17,7 +17,7 @@ from sincroLib.SpeechExtractor import SpeechExtractorWorker
 
 setproctitle(f"SPExtractor")
 logger: Logger = logging.getLogger(__name__)
-logger.info('===== Starting SpeechExtractorWorkerProcess. =====')
+logger.info("===== Starting SpeechExtractorWorkerProcess. =====")
 app: FastAPI = FastAPI()
 SpeechExtractorWorker.setup_model()
 
