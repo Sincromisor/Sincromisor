@@ -25,7 +25,7 @@ class SynthesizerSenderThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[0:8]}]")
+        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         self.ws = ws
         self.recognizer_results = recognizer_results
         self.running = running
@@ -67,7 +67,7 @@ class SynthesizerReceiverThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.logger = logging.getLogger(__name__ + f"[{session_id[0:8]}]")
+        self.logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         self.ws = ws
         self.voice_frame_queue = voice_frame_queue
         self.return_frame_format = return_frame_format

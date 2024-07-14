@@ -14,7 +14,7 @@ class ExtractorSenderThread(Thread):
         self, ws: ClientConnection, running: Event, session_id: str, frame_buffer: deque
     ):
         super().__init__()
-        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[0:8]}]")
+        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         self.ws = ws
         self.running = running
         self.session_id = session_id
@@ -50,7 +50,7 @@ class ExtractorReceiverThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.logger = logging.getLogger(__name__ + f"[{session_id[0:8]}]")
+        self.logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         # self.extract_log = logging.getLogger(__name__ + f'[{session_id}]')
         # self.extract_log.addHandler(logging.FileHandler('log/Extractor.log', mode='a'))
         self.ws = ws

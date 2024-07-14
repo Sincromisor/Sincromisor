@@ -254,6 +254,8 @@ python-dotenv==1.0.1
     # via uvicorn
 python-multipart==0.0.9
     # via fastapi
+python-ulid==2.7.0
+    # via sincromisor
 pyyaml==6.0.1
     # via accelerate
     # via huggingface-hub

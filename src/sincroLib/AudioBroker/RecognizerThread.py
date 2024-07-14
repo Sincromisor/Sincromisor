@@ -18,7 +18,7 @@ class RecognizerSenderThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[0:8]}]")
+        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         self.ws = ws
         self.extractor_results = extractor_results
         self.running = running
@@ -70,7 +70,7 @@ class RecognizerReceiverThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.logger = logging.getLogger(__name__ + f"[{session_id[0:8]}]")
+        self.logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         self.ws = ws
         self.recognizer_results = recognizer_results
         self.text_channel_queue = text_channel_queue

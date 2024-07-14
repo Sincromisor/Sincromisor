@@ -38,7 +38,7 @@ class RTCSessionProcess(Process):
         rtc_session_status: Synchronized,
     ):
         Process.__init__(self)
-        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[0:8]}]")
+        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         self.session_id: str = session_id
         self.request_sdp: str = request_sdp
         self.request_type: str = request_type
@@ -70,7 +70,7 @@ class RTCSessionProcess(Process):
             desc=RTCSessionDescription(sdp=self.request_sdp, type=self.request_type),
             session_id=self.session_id,
         )
-        setproctitle(f"RTCSes[{self.session_id[0:5]}]")
+        setproctitle(f"RTCSes[{self.session_id[21:26]}]")
         self.relay = MediaRelay()
 
         # self.logger.info(f"Created for {request.client}")

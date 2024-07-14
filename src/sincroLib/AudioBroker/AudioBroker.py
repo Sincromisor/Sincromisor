@@ -32,7 +32,7 @@ class AudioBroker:
         self,
         session_id: str,
     ):
-        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[0:8]}]")
+        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
 
         self.session_id: str = session_id
         self.config = ConfigManager()

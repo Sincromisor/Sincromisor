@@ -1,8 +1,8 @@
 from pydantic import BaseModel, ConfigDict, Field
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from aiortc.rtcdatachannel import RTCDataChannel
-
-# from uuid import uuid4, UUID
+from ulid import ULID
+from datetime import datetime
 
 
 # class AudioTransformTrack(MediaStreamTrack):
@@ -11,8 +11,9 @@ from aiortc.rtcdatachannel import RTCDataChannel
 
 class RTCVoiceChatSession(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
+    # session_idはRTCSessionManagerで採番される。
     session_id: str
-    # session_id: UUID = Field(default_factory=uuid4)
+    # session_id: ULID = Field(default_factory=ULID)
     peer: RTCPeerConnection
     desc: RTCSessionDescription
     audio_transform_track: MediaStreamTrack | None = None
@@ -23,11 +24,8 @@ class RTCVoiceChatSession(BaseModel):
     def __hash__(self) -> int:
         return int(self.session_id)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: "RTCVoiceChatSession") -> bool:
         return self.session_id == other.session_id
-
-    # def track_id(self):
-    #    return str(self.session_id)[0:6]
 
     async def close(self) -> None:
         if self.closed:
@@ -47,3 +45,6 @@ class RTCVoiceChatSession(BaseModel):
         del self.peer
         del self.telop_ch
         del self.text_ch
+
+    def start_at(self) -> datetime:
+        return ULID.from_str(self.session_id).datetime

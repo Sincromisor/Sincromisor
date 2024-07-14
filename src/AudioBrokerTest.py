@@ -3,8 +3,9 @@ from sincroLib.AudioBroker import AudioBroker
 from threading import Thread
 import time
 import sys
+from ulid import ULID
 
-ab = AudioBroker(session_id=f"test{time.strftime("%y%m%d%H%M%S")}")
+ab = AudioBroker(session_id=ULID())
 
 
 def audio_sender_t(ab: AudioBroker) -> None:

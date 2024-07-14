@@ -22,7 +22,7 @@ class VoiceTransformTrack(MediaStreamTrack):
         vcs: RTCVoiceChatSession,
     ):
         super().__init__()
-        self.logger: Logger = logging.getLogger(__name__ + f"[{vcs.session_id[0:8]}]")
+        self.logger: Logger = logging.getLogger(__name__ + f"[{vcs.session_id[21:26]}]")
         self.session_id: str = vcs.session_id
         self.logger.info(f"Initialize VoiceTransformTrack.")
         self.track: MediaStreamTrack = track

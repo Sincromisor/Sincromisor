@@ -7,6 +7,7 @@ from multiprocessing.connection import Connection
 from multiprocessing.sharedctypes import Synchronized
 from . import RTCSessionProcess
 from ..models import RTCSessionOffer
+from ulid import ULID
 
 
 class RTCSessionManager:
@@ -18,7 +19,9 @@ class RTCSessionManager:
     # WebRTCのセッションを持つプロセスを新たに生成し、
     # そのプロセスが持つセッションのSDPをdictとして返す。
     def create_session(self, offer: RTCSessionOffer) -> dict:
-        session_id: str = str(uuid.uuid4())
+        # session_idはここで生成し、
+        # RTCVoiceChatSessionを持つRTCSessionProcessと共有する。
+        session_id: str = str(ULID())
         sv_pipe: Connection
         cl_pipe: Connection
         sv_pipe, cl_pipe = Pipe()
@@ -31,7 +34,7 @@ class RTCSessionManager:
             rtc_session_status=rtc_session_status,
         )
         ps.start()
-        self.processes[session_id] = {
+        self.processes[ps.session_id] = {
             "process": ps,
             "pipe": sv_pipe,
             "rtcSessionStatus": rtc_session_status,
