@@ -25,7 +25,7 @@ from fastapi.templating import Jinja2Templates
 from sincroLib.models import RTCSessionOffer
 
 # from sincroLib.SpeechRecognizer import SpeechRecognizerProcessManager
-from sincroLib.RTCSession import RTCSessionProcessManager
+from sincroLib.RTCSession import RTCSessionManager
 from sincroLib.utils import ConfigManager, MemoryProfiler
 
 
@@ -36,8 +36,8 @@ logger: Logger = logging.getLogger(__name__)
 logger.info("start Syncromisor")
 # SpeechRecognizerProcessManager.startProcess()
 
-rtcSPM = RTCSessionProcessManager()
-app = FastAPI(on_shutdown=[rtcSPM.shutdown])
+rtcSM = RTCSessionManager()
+app = FastAPI(on_shutdown=[rtcSM.shutdown])
 mem = MemoryProfiler()
 templates = Jinja2Templates(directory="templates")
 
@@ -79,7 +79,7 @@ def app_glass(request: Request):
 
 @app.post("/offer")
 async def offer(request: Request, offer_params: RTCSessionOffer):
-    session_info = rtcSPM.create_session(offer=offer_params)
+    session_info = rtcSM.create_session(offer=offer_params)
     logger.info(
         f"Client: {request.client}\n"
         + f"RequestHeaders: {request.headers}\n"
@@ -91,7 +91,7 @@ async def offer(request: Request, offer_params: RTCSessionOffer):
 
 @app.get("/cleanup")
 def app_cleanup(request: Request):
-    result = rtcSPM.cleanup_sessions()
+    result = rtcSM.cleanup_sessions()
     return JSONResponse({"status": True, "running": result})
 
 

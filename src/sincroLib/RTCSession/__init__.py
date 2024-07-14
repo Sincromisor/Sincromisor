@@ -1,3 +1,3 @@
 from .RTCSessionProcess import RTCSessionProcess
-from .RTCSessionProcessManager import RTCSessionProcessManager
+from .RTCSessionManager import RTCSessionManager
 from .VoiceTransformTrack import VoiceTransformTrack

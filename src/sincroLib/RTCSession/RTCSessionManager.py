@@ -5,11 +5,11 @@ from logging import Logger
 from multiprocessing import Pipe, Value
 from multiprocessing.connection import Connection
 from multiprocessing.sharedctypes import Synchronized
-from ..RTCSession import RTCSessionProcess
+from . import RTCSessionProcess
 from ..models import RTCSessionOffer
 
 
-class RTCSessionProcessManager:
+class RTCSessionManager:
     def __init__(self):
         self.logger: Logger = logging.getLogger(__name__)
         self.processes: dict = {}

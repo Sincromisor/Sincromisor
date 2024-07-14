@@ -110,7 +110,7 @@ for worker_type in ["SpeechExtractor", "SpeechRecognizer", "VoiceSynthesizer"]:
             name=f"{worker_type}({worker_id})",
             args=[
                 shutil.which("uvicorn"),
-                f"{worker_type}WorkerProcess:app",
+                f"{worker_type}Process:app",
                 f"--host={worker_conf['host']}",
                 f"--port={worker_conf['port']}",
             ],
