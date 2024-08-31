@@ -105,7 +105,7 @@ def trap_sigint(signum, frame):
 signal.signal(signal.SIGINT, trap_sigint)
 
 for worker_type in ["SpeechExtractor", "SpeechRecognizer", "VoiceSynthesizer"]:
-    for worker_id, worker_conf in config.get_workers_conf(type=worker_type):
+    for worker_id, worker_conf in config.get_launchable_workers_conf(type=worker_type):
         worker_p = ProcessLouncher(
             name=f"{worker_type}({worker_id})",
             args=[
@@ -120,21 +120,21 @@ for worker_type in ["SpeechExtractor", "SpeechRecognizer", "VoiceSynthesizer"]:
 
 # --proxy-headersを設定していても、X-Forwarded-Portが常に0になる問題がある模様
 # https://github.com/encode/uvicorn/discussions/1948
-web_conf = config.get_worker_conf(worker_id=0, type="Sincromisor")
-web_p = ProcessLouncher(
-    name="Sincromisor",
-    args=[
-        shutil.which("uvicorn"),
-        "Sincromisor:app",
-        f"--host={web_conf['host']}",
-        f"--port={web_conf['port']}",
-        "--proxy-headers",
-        f"--forwarded-allow-ips=\"{web_conf['forwarded-allow-ips']}\"",
-        # "--log-level=debug"
-    ],
-)
-web_p.start()
-processes.append(web_p)
+for worker_id, worker_conf in config.get_launchable_workers_conf(type="Sincromisor"):
+    web_p = ProcessLouncher(
+        name="Sincromisor",
+        args=[
+            shutil.which("uvicorn"),
+            "Sincromisor:app",
+            f"--host={worker_conf['host']}",
+            f"--port={worker_conf['port']}",
+            "--proxy-headers",
+            f"--forwarded-allow-ips=\"{worker_conf['forwarded-allow-ips']}\"",
+            # "--log-level=debug"
+        ],
+    )
+    web_p.start()
+    processes.append(web_p)
 
 while running and all_active():
     time.sleep(0.5)

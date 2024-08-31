@@ -39,6 +39,13 @@ class ConfigManager:
             yield (worker_id, conf)
             worker_id += 1
 
+    def get_launchable_workers_conf(self, type: str):
+        worker_id: int = 0
+        for conf in ConfigManager.config["Worker"][type]:
+            if conf['launch']:
+                yield (worker_id, conf)
+            worker_id += 1
+
     # type: stun, turn
     def get_ice_servers_conf(self, server_type: str):
         for conf in ConfigManager.config["RTCIceServers"]:

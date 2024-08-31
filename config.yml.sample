@@ -14,18 +14,22 @@ Worker:
           port: 8001
           url: http://127.0.0.1:8001/
           forwarded-allow-ips: 127.0.0.1
+          launch: true
     SpeechExtractor:
         - host: 0.0.0.0
           port: 8003
           url: ws://127.0.0.1:8003/
+          launch: true
     SpeechRecognizer:
         - host: 0.0.0.0
           port: 8004
           url: ws://127.0.0.1:8004/
+          launch: true
     VoiceSynthesizer:
         - host: 0.0.0.0
           port: 8005
           url: ws://127.0.0.1:8005/
+          launch: true
 RTCIceServers:
     - urls: stun:stun.negix.org:3478
     #- urls: turn:turn.negix.org:3478
