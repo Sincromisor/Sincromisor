@@ -23,6 +23,7 @@ from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sincroLib.models import RTCSessionOffer
+from starlette.middleware.cors import CORSMiddleware
 
 # from sincroLib.SpeechRecognizer import SpeechRecognizerProcessManager
 from sincroLib.RTCSession import RTCSessionManager
@@ -38,6 +39,13 @@ logger.info("start Syncromisor")
 
 rtcSM = RTCSessionManager()
 app = FastAPI(on_shutdown=[rtcSM.shutdown])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 mem = MemoryProfiler()
 templates = Jinja2Templates(directory="templates")
 
