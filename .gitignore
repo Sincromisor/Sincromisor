@@ -1,10 +1,13 @@
 *.log
+*.tflite
+*.woff2
 __pycache__
 config.yml
 samples
 src/dist
-src/log
+src/log/*.log
+src/log/voice
 src/node_modules
-src/assets/characters
-src/assets/3rd_party
-src/static/3rd_party
+src/assets/characters/*.jpg
+src/assets/characters/*.json
+src/assets/characters/*.glb
