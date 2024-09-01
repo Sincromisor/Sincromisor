@@ -36,7 +36,7 @@ tar xpf "node-${NODEJS_VERSION}.tar.xz"
 mv "node-${NODEJS_VERSION}" node
 PATH="$(pwd)/node/bin:${PATH}"
 
-if [ -e config.yml ]; then
+if [ ! -e config.yml ]; then
     cp examples/config.yml config.yml
 fi
 
