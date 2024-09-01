@@ -1,0 +1,14 @@
+[Unit]
+Description=sincromisor
+After=network.target
+
+[Service]
+Type=simple
+User=sincromisor
+WorkingDirectory=/opt/sincromisor
+ExecStart=/opt/sincromisor/start.sh
+TimeoutSec=15
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
