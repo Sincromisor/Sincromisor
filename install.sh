@@ -33,13 +33,13 @@ rye sync
 
 curl -O "https://nodejs.org/dist/v20.17.0/node-${NODEJS_VERSION}.tar.xz"
 tar xpf "node-${NODEJS_VERSION}.tar.xz"
-mv "node-${NODEJS_VERSION"} node
+mv "node-${NODEJS_VERSION}" node
 PATH="$(pwd)/node/bin:${PATH}"
 
 if [ -e config.yml ]; then
     cp examples/config.yml config.yml
 fi
 
-cd "$(dirname "${0}")/src"
+cd "$(dirname "${0}")"/src
 npm install
 npx webpack
