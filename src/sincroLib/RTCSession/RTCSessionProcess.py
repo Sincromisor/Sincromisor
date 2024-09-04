@@ -90,9 +90,7 @@ class RTCSessionProcess(Process):
             @channel.on("message")
             def on_message(message):
                 self.logger.info(f"on_message - {channel.label} {message}")
-                channel.send(json.dumps({"status": "pong", "label": channel.label}))
-
-            channel.send(json.dumps({"status": "hello", "label": channel.label}))
+                # channel.send(json.dumps({"response": f"pong - {message}"}))
 
         @self.vcs.peer.on("connectionstatechange")
         async def on_connectionstatechange():

@@ -35,6 +35,13 @@ export class SincroController {
         return false;
     }
 
+    enableAutoMute() {
+        if (document.querySelector("input#enableAutoMute")?.checked) {
+            return true;
+        }
+        return false;
+    }
+
     enableSTUN() {
         if (document.querySelector("input#enableSTUN")?.checked) {
             return true;
@@ -173,13 +180,15 @@ export class SincroController {
         }
         startEye();
 
-        this.gloriaEye.arriveCallback = () => {
-            document.querySelector('#gloriaEyeStatus').innerText = 'みてる';
-            this.rtcc.setMute(false);
-        }
-        this.gloriaEye.leaveCallback = () => {
-            document.querySelector('#gloriaEyeStatus').innerText = 'みてない';
-            this.rtcc.setMute(true);
+        if (this.enableAutoMute()) {
+            this.gloriaEye.arriveCallback = () => {
+                document.querySelector('#gloriaEyeStatus').innerText = 'みてる';
+                this.rtcc.setMute(false);
+            }
+            this.gloriaEye.leaveCallback = () => {
+                document.querySelector('#gloriaEyeStatus').innerText = 'みてない';
+                this.rtcc.setMute(true);
+            }
         }
     }
 
@@ -201,10 +210,12 @@ export class SincroController {
             // 3Dモデルが利用できる時
             document.querySelector('#enableCharacter').disabled = false;
             document.querySelector('#enableGloriaEye').disabled = false;
+            this.updateAutoMuteStatus();
         }, () => {
             // 3Dモデルが利用できない時
             document.querySelector('#enableCharacter').disabled = true;
             document.querySelector('#enableCharacter').checked = false;
+            this.updateAutoMuteStatus();
         });
 
         document.querySelector("button#rtcStart").onclick = () => {
@@ -229,6 +240,20 @@ export class SincroController {
 
         document.querySelector("input#titleText").oninput = () => {
             this.setTitleText();
+        }
+        document.querySelector("input#enableGloriaEye").onclick = () => {
+            this.updateAutoMuteStatus();
+        }
+    }
+
+    updateAutoMuteStatus(){
+        const eInput = document.querySelector('input#enableAutoMute');
+        if (this.enableGloriaEye()){
+            eInput.disabled = false;
+        } else {
+            eInput.disabled = true;
+            eInput.checked = false;
+
         }
     }
 
