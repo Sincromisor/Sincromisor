@@ -2,17 +2,16 @@
 <html>
 
 <head>
-  <title>Sincromisor(Simple)</title>
+  <title>Sincromisor(Single)</title>
   <meta charset="UTF-8">
-  <link href="/styles/fonts.css" rel="stylesheet">
-  <link href="/styles/main.css" rel="stylesheet">
-  <link href="/styles/single.css" rel="stylesheet">
-  <link href="/styles/simple.css" rel="stylesheet">
-  <script type="module" src="dist/SincroGlass.js"></script>
+  <link href="/src/styles/fonts.css" rel="stylesheet">
+  <link href="/src/styles/main.css" rel="stylesheet">
+  <link href="/src/styles/single.css" rel="stylesheet">
+  <script type="module" src="/src/js/main.js"></script>
 </head>
 
 <body>
-  {% include 'configurationDialog.html' %}
+  {{> configurationDialog}}
 
   <div id="obsBody">
     <div id="obsHeaderBox">
@@ -35,7 +34,7 @@
     </div>
   </div>
 
-  {% include 'debugConsole.html' %}
+  {{> debugConsole}}
 </body>
 
 </html>

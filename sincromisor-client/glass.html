@@ -2,16 +2,17 @@
 <html>
 
 <head>
-  <title>Sincromisor(Double)</title>
+  <title>Sincromisor(Simple)</title>
   <meta charset="UTF-8">
-  <link href="/styles/fonts.css" rel="stylesheet">
-  <link href="/styles/main.css" rel="stylesheet">
-  <link href="/styles/double.css" rel="stylesheet">
-  <script type="module" src="dist/Sincromisor.js"></script>
+  <link href="/src/styles/fonts.css" rel="stylesheet">
+  <link href="/src/styles/main.css" rel="stylesheet">
+  <link href="/src/styles/single.css" rel="stylesheet">
+  <link href="/src/styles/simple.css" rel="stylesheet">
+  <script type="module" src="/src/js/glass.js"></script>
 </head>
 
 <body>
-  {% include 'configurationDialog.html' %}
+  {{> configurationDialog}}
 
   <div id="obsBody">
     <div id="obsHeaderBox">
@@ -21,22 +22,20 @@
     </div>
     <div id="obsVideo1">
       Video1です。
-      960x540
-    </div>
-    <div id="obsVideo2">
-      Video2です。
-      960x540
+      1600x900
     </div>
     <div id="obsMessageBox">
     </div>
     <div id="obsCharacterBox">
       <canvas id="gloriaCanvas"></canvas>
     </div>
+    <div id="obsCharacterBackgroundBox">
+    </div>
     <div id="obsFooterBox">
     </div>
   </div>
 
-  {% include 'debugConsole.html' %}
+  {{> debugConsole}}
 </body>
 
 </html>
