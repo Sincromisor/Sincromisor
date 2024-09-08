@@ -1,36 +1,26 @@
-export class ChatMessage {
-    constructor(chatBoxID) {
+interface ChatMessage {
+    name: string,
+    message: string,
+    time: number
+}
+
+export class ChatMessageManager {
+    chatBox: HTMLDivElement;
+    messageID: number = 0;
+    systemUserName: string = "GloriousAI";
+    systemDisplayName: string = "Glorious AI";
+    /* 同じエラーメッセージが何度も表示されないようにするために使用 */
+    lastErrorMessage: string = '';
+
+    constructor(chatBoxID: HTMLDivElement) {
         this.chatBox = chatBoxID;
-        this.messageID = 0;
-        this.systemUserName = "GloriousAI";
-        this.systemDisplayName = "Glorious AI";
-
-        /* 同じエラーメッセージが何度も表示されないようにするために使用 */
-        this.lastErrorMessage = null;
-    }
-
-    writeAisatsu() {
-        this.writeUserMessage("こんにちは～");
-        this.writeSystemMessage(`私は　${this.systemDisplayName}　です!<br>なんでも　質問してください!`);
-        document.querySelector("title").innerText = `${this.systemDisplayName} Chat`;
-    }
-
-    /*
-        ユーザーの問い合わせとしてメッセージを出力する。
-        メッセージのdiv要素のIDを返す。
-    */
-    writeUserMessage(message, time = Date.now()) {
-        const request = { "name": "ユーザー", "message": message, "time": time }
-        return this.writeComment(request, "user",
-            document.querySelector("div#profile input#username").value,
-            document.querySelector("div#profile input#display_name").value);
     }
 
     /*
         システムの返信としてメッセージを出力する。
-        メッセージのdiv要素のIDを返す。
+        生成したメッセージのdiv要素を返す。
      */
-    writeSystemMessage(message) {
+    writeSystemMessage(message: string): HTMLDivElement {
         const response = { "name": "システム", "message": message, "time": Date.now() }
         return this.writeComment(response, "user", this.systemUserName, this.systemDisplayName, true);
     }
@@ -39,33 +29,39 @@ export class ChatMessage {
         システムの返信内容を更新する。
         メッセージのdiv要素のIDを返す。
     */
-    updateSystemMessage(msgID, message) {
-        const eMesg = document.querySelector(`#${msgID} p.message`);
-        eMesg.innerHTML = message;
+    updateSystemMessage(eMesg: HTMLDivElement, message: string): HTMLDivElement {
+        const ePara: HTMLParagraphElement | null = eMesg.querySelector('p.message');
+
+        if (ePara) {
+            ePara.innerHTML = message;
+        }
         //this.autoScroll();
-        return msgID;
+        return eMesg;
     }
 
-    writeSystemMessageText(message) {
+    writeSystemMessageText(message: string): HTMLDivElement {
         const response = { "name": "システム", "message": message, "time": Date.now() }
         return this.writeComment(response, "user", this.systemUserName, this.systemDisplayName, false);
     }
 
-    updateSystemMessageText(msgID, message) {
-        const eMesg = document.querySelector(`#${msgID} p.message`);
-        eMesg.innerText = message;
+    updateSystemMessageText(eMesg: HTMLDivElement, message: string): HTMLDivElement {
+        const ePara: HTMLParagraphElement | null = eMesg.querySelector('p.message');
+
+        if (ePara) {
+            ePara.innerText = message;
+        }
         //this.autoScroll();
-        return msgID;
+        return eMesg;
     }
 
     /*
         システムのエラーメッセージとしてメッセージを出力する。
         メッセージのdiv要素のIDを返す。
     */
-    writeErrorMessage(message) {
+    writeErrorMessage(message: string): HTMLDivElement | null {
         /* 同じエラーメッセージが何度も繰り返されないようにする。 */
         if (this.lastErrorMessage == message) {
-            return;
+            return null;
         }
         this.lastErrorMessage = message;
         const response = { "name": "システム", "message": message, "time": Date.now() }
@@ -76,13 +72,13 @@ export class ChatMessage {
         システムのリセットメッセージとしてメッセージを出力する。
         メッセージのdiv要素のIDを返す。
     */
-    writeResetMessage(message) {
+    writeResetMessage(message: string): HTMLDivElement {
         const response = { "name": "システム", "message": message, "time": Date.now() }
         return this.writeComment(response, "reset", this.systemUserName, this.systemDisplayName);
     }
 
     /* 投稿時と返信受信時に、要素の末尾にスクロールする。 */
-    autoScroll() {
+    autoScroll(): void {
         //const element = document.documentElement;
         //this.chatBox.scrollTo(0, this.chatBox.clientHeight);
         this.chatBox.scrollTo({
@@ -107,7 +103,7 @@ export class ChatMessage {
       display_name: ユーザID(例: @GloriousAI)
       isHTML: messageObjがhtmlの時はtrue、textの時はfalseを渡す。
     */
-    writeComment(messageObj, className, username, display_name, isHTML = false) {
+    writeComment(messageObj: ChatMessage, className: string, username: string, display_name: string, isHTML = false): HTMLDivElement {
         const eDisplayName = document.createElement("span");
         eDisplayName.className = "display_name";
         eDisplayName.innerText = display_name;
@@ -123,9 +119,9 @@ export class ChatMessage {
         const eMesg = document.createElement("p");
         eMesg.className = "message";
         if (isHTML) {
-            eMesg.innerHTML = messageObj["message"];
+            eMesg.innerHTML = messageObj.message;
         } else {
-            eMesg.innerText = messageObj["message"];
+            eMesg.innerText = messageObj.message;
         }
 
         const e = document.createElement("div");
@@ -136,12 +132,12 @@ export class ChatMessage {
         e.appendChild(eMesg);
 
         this.chatBox.prepend(e);
-        setTimeout(() => { e.style.opacity = 1; }, 100);
+        setTimeout(() => { e.style.opacity = '1'; }, 100);
         //this.autoScroll();
-        return e.id;
+        return e;
     }
 
-    removeOldMessage(count) {
+    removeOldMessage(count: number) {
         while (this.chatBox.childNodes.length >= count) {
             this.chatBox.childNodes[this.chatBox.childNodes.length - 1].remove();
         }

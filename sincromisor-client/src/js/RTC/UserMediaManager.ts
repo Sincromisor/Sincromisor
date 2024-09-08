@@ -1,4 +1,8 @@
 export class UserMediaManager {
+    audioTrack: MediaStreamTrack | null;
+    videoTrack: MediaStreamTrack | null;
+    config: MediaStreamConstraints;
+
     constructor() {
         this.videoTrack = null;
         this.audioTrack = null;
@@ -6,7 +10,11 @@ export class UserMediaManager {
         this.config = this.defaultConfig();
     }
 
-    defaultConfig() {
+    hasGetUserMedia(): boolean {
+        return !!navigator.mediaDevices?.getUserMedia;
+    }
+
+    defaultConfig(): MediaStreamConstraints {
         return {
             /*
                 ビデオを有効にし解像度を指定する場合は
@@ -17,7 +25,9 @@ export class UserMediaManager {
         }
     }
 
-    getUserMedia(audioTrackCallback, videoTrackCallback, errCallback) {
+    getUserMedia(audioTrackCallback: (audioTrack: MediaStreamTrack) => void,
+        videoTrackCallback: (videoTrack: MediaStreamTrack) => void,
+        errCallback: (err: any) => void): void {
         navigator.mediaDevices.getUserMedia(this.config)
             .then((mediaStream) => {
                 mediaStream.getTracks().forEach((track) => {
@@ -40,8 +50,19 @@ export class UserMediaManager {
             })
     }
 
-    disableVideo() {
+    disableVideo(): void {
         this.config["video"] = false;
+    }
+
+    close(): void {
+        if (this.videoTrack) {
+            this.videoTrack.stop();
+            this.videoTrack = null;
+        }
+        if (this.audioTrack) {
+            this.audioTrack.stop();
+            this.videoTrack = null;
+        }
     }
 }
 

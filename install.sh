@@ -15,13 +15,13 @@ BIZUDGothic-Bold.woff2"
 
 mkdir -p src/assets/3rd_party
 mkdir -p src/assets/3rd_party/characters
-mkdir -p src/static/3rd_party/fonts
+mkdir -p sincromisor-client/public/3rd_party/fonts
 
 for FONT_NAME in ${FONTS}; do
-    curl -o "src/static/3rd_party/fonts/${FONT_NAME}" "https://docs.negix.org/files/fonts/${FONT_NAME}"
+    curl -o "sincromisor-client/public/3rd_party/fonts/${FONT_NAME}" "https://docs.negix.org/files/fonts/${FONT_NAME}"
 done
 
-curl -o "src/static/3rd_party/blaze_face_short_range.tflite" \
+curl -o "sincromisor-client/public/3rd_party/blaze_face_short_range.tflite" \
     https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite
 
 curl -o "src/assets/3rd_party/yamnet.tflite" \
@@ -40,6 +40,8 @@ if [ ! -e config.yml ]; then
     cp examples/config.yml config.yml
 fi
 
-cd "$(dirname "${0}")"/src
+cd "$(dirname "${0}")"/sincromisor-client
 npm install
-npx webpack
+mkdir -p public/mediapipe-wasm
+cp -r node_modules/@mediapipe/tasks-vision/wasm/* public/mediapipe-wasm
+npm run build

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@babylonjs/core": "^7.24.0",
+    "@babylonjs/inspector": "^7.24.0",
     "@babylonjs/loaders": "^7.24.0",
     "@babylonjs/materials": "^7.24.0",
     "@babylonjs/post-processes": "^7.24.0",

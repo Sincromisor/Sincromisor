@@ -1,33 +1,53 @@
-import { FilesetResolver, FaceDetector } from "@mediapipe/tasks-vision";
+import { FilesetResolver, FaceDetector, Detection } from "@mediapipe/tasks-vision";
 
-export class GloriaEye {
-    constructor(targetVideoElement, width = 320, height = 240) {
-        this.faceDetector = undefined;
+declare interface NormalizedKeypoint {
+    /** X in normalized image coordinates. */
+    x: number;
+    /** Y in normalized image coordinates. */
+    y: number;
+    /** Optional label of the keypoint. */
+    label?: string;
+    /** Optional score of the keypoint. */
+    score?: number;
+}
+
+export class CharacterEye {
+    videoElement: HTMLVideoElement;
+    faceDetector: FaceDetector | null = null;
+    lastVideoTime: number = -1;
+    lastDetectedTime: number = -1;
+    detected: boolean = false;
+    videoWidth: number;
+    videoHeight: number;
+    movingAverage: Array<{ 'x': number, 'y': number }> = [...Array(6)].map(() => { return { 'x': 0.0, 'y': 0.0 } });
+    arriveCallback: () => void = () => { };
+    leaveCallback: () => void = () => { };
+
+    constructor(targetVideoElement: HTMLVideoElement, width: number = 320, height: number = 240) {
         this.videoElement = targetVideoElement;
-        this.lastVideoTime = -1;
-        this.lastDetectedTime = -1;
-        this.detected = false;
-        this.hasGetUserMedia = () => !!navigator.mediaDevices?.getUserMedia;
         this.videoWidth = width;
         this.videoHeight = height;
-        this.movingAverage = [...Array(6)].map((v, i) => { return { 'x': 0.0, 'y': 0.0 } })
         this.arriveCallback = () => { };
         this.leaveCallback = () => { };
     }
 
+    hasGetUserMedia(): boolean {
+        return !!navigator.mediaDevices?.getUserMedia;
+    }
+
     // 顔のkeypointは、右目、左目、鼻、口、右耳、左耳の順に6要素の配列になっている。
     // とりあえず鼻の位置を追跡する。
-    targetX() {
+    targetX(): number {
         return this.movingAverage[2]["x"];
     }
 
-    targetY() {
+    targetY(): number {
         return this.movingAverage[2]["y"];
     }
 
     // 右目-鼻、左目-鼻の距離を基に、顔がこちらを向いているかを0.0～1.0の値で返す。
     // 0.5に近ければ近いほど、正面を向いている可能性が高い。
-    facing() {
+    facing(): number {
         const rightEye = this.movingAverage[0];
         const leftEye = this.movingAverage[1];
         const nose = this.movingAverage[2];
@@ -37,39 +57,39 @@ export class GloriaEye {
     }
 
     // 5秒(5000ms)以内に顔が検知できていた場合はtrueを、それ以外はfalseを返す。
-    detecting() {
+    detecting(): boolean {
         if (performance.now() - this.lastDetectedTime < 5000) {
             return true;
         }
         return false;
     }
 
-    async initVision() {
+    async initVision(): Promise<void> {
         // https://developers.google.com/mediapipe/api/solutions/js/tasks-vision.facedetector
         // https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.js
         // https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.wasm
         const vision = await FilesetResolver.forVisionTasks(
-            "/mediapipe/tasks-vision/wasm"
+            "/mediapipe-wasm"
         );
         this.faceDetector = await FaceDetector.createFromOptions(
             vision,
             {
                 baseOptions: {
-                    modelAssetPath: "/3rd_party/blaze_face_short_range.tflite"
+                    modelAssetPath: "/3rd_party/blaze_face_short_range.tflite",
+                    delegate: "GPU"
                 },
                 runningMode: "VIDEO",
-                delegate: "GPU"
             });
     }
 
-    modelIsLoaded() {
+    modelIsLoaded(): boolean {
         if (!this.faceDetector) {
             return false;
         }
         return true;
     }
 
-    async initCamera(videoTrack, callback) {
+    async initCamera(videoTrack: MediaStreamTrack, callback: (detection: Detection[]) => void): Promise<boolean> {
         if (!this.hasGetUserMedia) {
             console.error("This browser does not support getUserMedia.");
             return false;
@@ -81,15 +101,18 @@ export class GloriaEye {
 
         const videoStream = new MediaStream();
         videoStream.addTrack(videoTrack);
-        this.videoElement.setAttribute("autoplay", true);
-        this.videoElement.setAttribute("playsinline", true);
-        this.videoElement.setAttribute("muted", true);
+        this.videoElement.setAttribute("autoplay", 'true');
+        this.videoElement.setAttribute("playsinline", 'true');
+        this.videoElement.setAttribute("muted", 'true');
         this.videoElement.srcObject = videoStream;
         this.videoElement.addEventListener("loadeddata", () => { this.predictCam(callback) });
         return true;
     }
 
-    async predictCam(callback) {
+    private async predictCam(callback: (detection: Detection[]) => void): Promise<void> {
+        if (!this.faceDetector) {
+            return;
+        }
         const startTimeMs = performance.now();
         if (this.videoElement.currentTime !== this.lastVideoTime) {
             this.lastVideoTime = this.videoElement.currentTime;
@@ -123,7 +146,7 @@ export class GloriaEye {
     }
 
     // keypointの指数移動平均値を更新する
-    updateKeypointsMovingAverage(keypoints) {
+    private updateKeypointsMovingAverage(keypoints: NormalizedKeypoint[]): void {
         for (let i = 0; i <= 5; i++) {
             this.movingAverage[i]["x"] = (keypoints[i]["x"] + this.movingAverage[i]["x"]) / 2;
             this.movingAverage[i]["y"] = (keypoints[i]["y"] + this.movingAverage[i]["y"]) / 2;
@@ -132,7 +155,7 @@ export class GloriaEye {
 
     // ニュートラルポジションにじわじわと戻す。
     // ToDo: 現状鼻だけ真ん中に戻ってしまうため、なんとかする。
-    updateKeypointsMovingAverageToNeutral() {
+    private updateKeypointsMovingAverageToNeutral(): void {
         let deviation_x = 0.5 - this.movingAverage[2]["x"];
         let deviation_y = 0.5 - this.movingAverage[2]["y"];
         if (Math.abs(deviation_x) < 0.01 && Math.abs(deviation_y) < 0.01) { return; }
