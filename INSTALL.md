@@ -1,6 +1,7 @@
-# Sincromisor実行環境のインストール
+# Sincromisor実行環境のインストールとサーバーの起動
 
 ## 依存パッケージのインストール
+
 Sincromisorの実行に必要なパッケージをインストールします。
 
 ```sh
@@ -61,5 +62,11 @@ maxmemory-policy allkeys-lru
 maxmemoryのサイズは、環境に合わせて適宜変更してください。
 
 ## Nginxの準備
+
 リバースプロキシサーバーとしてnginxを利用する場合、[nginx.confの例](examples/nginx.conf)を参考にしてください。
 クライアントとサーバー間のWebRTCの通信については、最初のSDP offerのやり取り以外はnginxを介さない点に注意してください。
+
+## Sincromisorサーバーの起動
+
+環境に合わせて`config.yml`を編集し、`./start.sh`を実行します。
+全て1台のPC上で動作させる場合は、`config.yml`の編集は不要です。

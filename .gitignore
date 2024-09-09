@@ -4,10 +4,9 @@
 __pycache__
 config.yml
 samples
-src/dist
-src/log/*.log
-src/log/voice
-src/node_modules
-src/assets/characters/*.jpg
-src/assets/characters/*.json
-src/assets/characters/*.glb
+sincromisor-server/log/*.log
+sincromisor-server/log/voice
+sincromisor-server/node_modules
+sincromisor-server/assets/characters/*.jpg
+sincromisor-server/assets/characters/*.json
+sincromisor-server/assets/characters/*.glb
