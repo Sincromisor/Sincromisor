@@ -52,6 +52,15 @@ class ConfigManager:
             if conf["urls"][0:5] == f"{server_type}:":
                 yield conf
 
+    def get_random_redis_conf(self):
+        server_count: int = len(ConfigManager.config['Redis'])
+        worker_id = random.randint(0, server_count - 1)
+        return ConfigManager.config['Redis'][worker_id]
+
+    def get_random_voicevox_conf(self):
+        server_count: int = len(ConfigManager.config['VoiceVox'])
+        worker_id = random.randint(0, server_count - 1)
+        return ConfigManager.config['VoiceVox'][worker_id]
 
 if __name__ == "__main__":
     config = ConfigManager()
