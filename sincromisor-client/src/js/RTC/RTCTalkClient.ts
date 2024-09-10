@@ -140,14 +140,17 @@ export class RTCTalkClient {
                 */
 
                 this.logger.offerSDP(offer.sdp);
-                console.log(offer);
-                console.log(offer.sdp);
-                console.log(offer.type);
                 console.log(JSON.stringify({
                     sdp: offer.sdp,
                     type: offer.type
                 }));
-                return fetch("https://sincromisor.negix.org/offer", {
+                let rtcServerURL: string | null = import.meta.env.RTC_SERVER_URL;
+                if (rtcServerURL){
+                    rtcServerURL = import.meta.env.RTC_SERVER_URL + '/offer';
+                } else {
+                    rtcServerURL = '/offer';
+                }
+                return fetch(rtcServerURL, {
                     body: JSON.stringify({
                         sdp: offer.sdp,
                         type: offer.type

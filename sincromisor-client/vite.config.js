@@ -1,6 +1,10 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import handlebars from 'vite-plugin-handlebars';
+import fs from 'fs';
+import yaml from 'js-yaml';
+
+const config = yaml.load(fs.readFileSync('../config.yml', 'utf-8'));
 
 export default defineConfig({
     appType: 'mpa',
@@ -22,5 +26,8 @@ export default defineConfig({
                 glass: resolve(__dirname, 'glass.html')
             }
         }
+    },
+    define: {
+        "import.meta.env.RTC_SERVER_URL": JSON.stringify(config['Worker']['Sincromisor'][0]['url'])
     }
 });
