@@ -1,12 +1,12 @@
-import { RTCTalkClient } from "./RTC/RTCTalkClient.ts";
-import { UserMediaManager } from "./RTC/UserMediaManager.ts";
-import { CharacterEye } from "./CharacterEye/CharacterEye.ts";
-import { ChatMessageManager } from "./Tools/ChatMessageManager.ts";
-import { DialogManager } from "./Tools/DialogManager.ts";
-import { SincroScene } from "./SincroScene.ts";
-import { TalkManager } from "./RTC/TalkManager.ts";
-import { CharacterEyeLogger } from "./CharacterEye/EyeLogger.ts";
-import { TelopChannelMessage, TextChannelMessage } from "./RTC/RTCMessage.ts";
+import { RTCTalkClient } from "./RTC/RTCTalkClient";
+import { UserMediaManager } from "./RTC/UserMediaManager";
+import { CharacterEye } from "./CharacterEye/CharacterEye";
+import { ChatMessageManager } from "./Tools/ChatMessageManager";
+import { DialogManager } from "./Tools/DialogManager";
+import { SincroScene } from "./SincroScene";
+import { TalkManager } from "./RTC/TalkManager";
+import { CharacterEyeLogger } from "./CharacterEye/EyeLogger";
+import { TelopChannelMessage, TextChannelMessage } from "./RTC/RTCMessage";
 
 export class SincroController {
     dialogManager: DialogManager;

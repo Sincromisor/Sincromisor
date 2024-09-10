@@ -1,9 +1,9 @@
-import { SincroController } from "./SincroController.js";
-import { DialogManager } from "./Tools/DialogManager.js";
-import { ChatMessageManager } from "./Tools/ChatMessageManager.js";
-import { CharacterLoader } from "./Character/CharacterLoader.js";
-import { SincroScene } from "./SincroScene.js";
-import { TalkManager } from "./RTC/TalkManager.js";
+import { SincroController } from "./SincroController";
+import { DialogManager } from "./Tools/DialogManager";
+import { ChatMessageManager } from "./Tools/ChatMessageManager";
+import { CharacterLoader } from "./Character/CharacterLoader";
+import { SincroScene } from "./SincroScene";
+import { TalkManager } from "./RTC/TalkManager";
 
 function startRTC(dialogManager: DialogManager) {
     const chatBox: HTMLDivElement | null = document.querySelector('div#obsMessageBox');
