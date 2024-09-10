@@ -7,5 +7,5 @@ if [ -e "${HOME}/.rye/shims" ]; then
     fi
 fi
 
-cd "$(dirname "${0}")/sisncromisor-server"
+cd "$(dirname "${0}")/sincromisor-server"
 rye run python3 Launcher.py
