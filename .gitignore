@@ -1,6 +1,10 @@
 *.log
 *.tflite
 *.woff2
+*.tar.gz
+*.tar.xz
+*.7z
+*.zip
 __pycache__
 config.yml
 samples

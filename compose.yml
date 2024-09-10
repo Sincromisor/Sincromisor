@@ -1,0 +1,97 @@
+services:
+  sincromisor-server-base:
+    build:
+      context: .
+      dockerfile: ./Docker/sincromisor-server-base/Dockerfile
+    image: sincromisor-server-base
+    volumes:
+      - type: volume
+        source: huggingface-cache
+        target: /opt/sincromisor/.cache
+        volume:
+          nocopy: true
+
+  sincromisor-client-base:
+    build:
+      context: .
+      dockerfile: ./Docker/sincromisor-client-base/Dockerfile
+    image: sincromisor-client-base
+
+  sincromisor-server:
+    build:
+      context: .
+      dockerfile: ./Docker/sincromisor-server/Dockerfile
+    image: sincromisor-server:latest
+    ports:
+      - 8001:8001/tcp
+      - 8003:8003/tcp
+      - 8004:8004/tcp
+      - 8005:8005/tcp
+    volumes:
+      - type: volume
+        source: huggingface-cache
+        target: /opt/sincromisor/.cache
+        volume:
+          nocopy: true
+    networks:
+      - sincromisor-net
+    env_file:
+      - ./Docker/env_vars/.env
+    deploy:
+      restart_policy:
+        condition: on-failure
+    stdin_open: true
+    tty: true
+
+  sincromisor-client:
+    build:
+      context: .
+      dockerfile: ./Docker/sincromisor-client/Dockerfile
+    image: sincromisor-client:latest
+    ports:
+      - 8000:8000/tcp
+    networks:
+      - sincromisor-net
+    env_file:
+      - ./Docker/env_vars/.env
+    deploy:
+      restart_policy:
+        condition: on-failure
+    stdin_open: true
+    tty: true
+
+  voicevox:
+    image: voicevox:latest
+    build:
+      context: .
+      dockerfile: ./Docker/voicevox/Dockerfile
+    ports:
+      - 50021:50021/tcp
+    networks:
+      - sincromisor-net
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  voice-cache:
+    image: voice-cache:latest
+    build:
+      context: .
+      dockerfile: ./Docker/voice-cache/Dockerfile
+    ports:
+      - 6379:6379/tcp
+    networks:
+      - sincromisor-net
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+networks:
+  sincromisor-net:
+
+volumes:
+  huggingface-cache:
+
+secrets:
+  .config.yml:
+    file: ./Docker/env_vars/.config.yml
