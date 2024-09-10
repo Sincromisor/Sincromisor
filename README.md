@@ -2,6 +2,8 @@
 
 Webブラウザ上でかわいいキャラになっておしゃべりできるよ!
 
+![配信画面の例](examples/sincromisor-example.png)
+
 ## 必要なもの
 
 * サーバー側
