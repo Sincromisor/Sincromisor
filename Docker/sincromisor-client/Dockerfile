@@ -3,6 +3,7 @@ FROM sincromisor-client-base:latest
 EXPOSE 8000/tcp
 
 ARG USER_ID=sincromisor
+ENV PATH=/opt/npm/bin:$PATH
 
 COPY --chown=${USER_ID}:${USER_ID} \
     ./sincromisor-client/ /opt/${USER_ID}/sincromisor-client/
