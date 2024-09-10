@@ -55,7 +55,7 @@ services:
       dockerfile: ./Docker/sincromisor-client/Dockerfile
     image: sincromisor-client:latest
     ports:
-      - 8000:8000/tcp
+      - 8002:8002/tcp
     networks:
       - sincromisor-net
     env_file:

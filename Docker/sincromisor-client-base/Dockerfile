@@ -3,6 +3,8 @@ FROM ubuntu:24.04
 ARG USER_ID=sincromisor
 ARG NODEJS_VERSION=v20.17.0
 ARG NODEJS_ARCH=linux-x64
+ARG CADDY_VERSION=2.8.4
+ARG CADDY_ARCH=linux_amd64
 
 RUN apt-get update && \
     apt-get install -y curl xz-utils git && \
@@ -15,7 +17,10 @@ RUN apt-get update && \
     curl -O "https://nodejs.org/dist/${NODEJS_VERSION}/node-${NODEJS_VERSION}-${NODEJS_ARCH}.tar.xz" && \
     tar xpf "node-${NODEJS_VERSION}-${NODEJS_ARCH}.tar.xz" && \
     mv "node-${NODEJS_VERSION}-${NODEJS_ARCH}" node && \
-    rm "node-${NODEJS_VERSION}-${NODEJS_ARCH}.tar.xz"
+    rm "node-${NODEJS_VERSION}-${NODEJS_ARCH}.tar.xz" && \
+    curl -O "https://github.com/caddyserver/caddy/releases/download/v${CADDY_VERSION}/caddy_${CADDY_VERSION}_${CADDY_ARCH}.tar.gz" && \
+    mkdir /opt/caddy && \
+    tar xpf "caddy_${CADDY_VERSION}_${CADDY_ARCH}.tar.gz" -C /opt/caddy
 
 COPY --chown=${USER_ID}:${USER_ID} \
   ./sincromisor-client/package.json ./sincromisor-client/package-lock.json \

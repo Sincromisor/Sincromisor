@@ -1,6 +1,6 @@
 FROM sincromisor-client-base:latest
 
-EXPOSE 8000/tcp
+EXPOSE 8002/tcp
 
 ARG USER_ID=sincromisor
 ENV PATH=/opt/node/bin:$PATH
@@ -10,6 +10,7 @@ COPY --chown=${USER_ID}:${USER_ID} \
 
 COPY --chown=${USER_ID}:${USER_ID} \
     ./examples/config.yml \
+    ./examples/caddy.json \
     ./install-client-assets.sh \
     /opt/${USER_ID}/
 
