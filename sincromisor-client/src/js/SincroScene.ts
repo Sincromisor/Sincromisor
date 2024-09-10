@@ -79,11 +79,15 @@ export class SincroScene {
             this.character = character;
         }
         new StageFloor(this.scene);
+        this.customizeScehe();
     }
 
     dispose(): void {
         this.engine.stopRenderLoop();
         this.scene.dispose();
         this.engine.dispose();
+    }
+
+    customizeScehe(): void {
     }
 }
