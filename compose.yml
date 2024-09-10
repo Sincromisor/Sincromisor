@@ -40,6 +40,12 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     stdin_open: true
     tty: true
 

@@ -1,9 +1,9 @@
-FROM ubuntu:24.04
+FROM nvidia/cuda:12.6.1-cudnn-devel-ubuntu24.04
 
 ARG USER_ID=sincromisor
 
 RUN apt-get update && \
-    apt-get install -y curl xz-utils git fdkaac opus-tools libgl1 libglib2.0-bin && \
+    apt-get install -y curl xz-utils git fdkaac opus-tools libgl1 libglib2.0-bin libaio-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     useradd -u 1001 -s /bin/bash -d /opt/${USER_ID} -m ${USER_ID} && \
