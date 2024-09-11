@@ -10,7 +10,7 @@ COPY --chown=${USER_ID}:${USER_ID} \
 
 COPY --chown=${USER_ID}:${USER_ID} \
     ./examples/config.yml \
-    ./examples/caddy.json \
+    ./examples/Caddyfile \
     ./install-client-assets.sh \
     /opt/${USER_ID}/
 

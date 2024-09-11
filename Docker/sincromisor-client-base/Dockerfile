@@ -18,7 +18,7 @@ RUN apt-get update && \
     tar xpf "node-${NODEJS_VERSION}-${NODEJS_ARCH}.tar.xz" && \
     mv "node-${NODEJS_VERSION}-${NODEJS_ARCH}" node && \
     rm "node-${NODEJS_VERSION}-${NODEJS_ARCH}.tar.xz" && \
-    curl -O "https://github.com/caddyserver/caddy/releases/download/v${CADDY_VERSION}/caddy_${CADDY_VERSION}_${CADDY_ARCH}.tar.gz" && \
+    curl -L -O "https://github.com/caddyserver/caddy/releases/download/v${CADDY_VERSION}/caddy_${CADDY_VERSION}_${CADDY_ARCH}.tar.gz" && \
     mkdir /opt/caddy && \
     tar xpf "caddy_${CADDY_VERSION}_${CADDY_ARCH}.tar.gz" -C /opt/caddy
 
