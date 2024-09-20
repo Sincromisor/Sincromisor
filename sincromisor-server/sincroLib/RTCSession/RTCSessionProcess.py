@@ -1,7 +1,6 @@
 import logging
 from logging import Logger
 import asyncio
-import json
 import socket
 import traceback
 from aiortc import (
@@ -107,8 +106,9 @@ class RTCSessionProcess(Process):
             self.logger.info(f"Track {track.kind} received.")
             if track.kind == "audio":
                 self.vcs.audio_transform_track = VoiceTransformTrack(
-                    self.relay.subscribe(track),
+                    track=self.relay.subscribe(track),
                     vcs=self.vcs,
+                    rtc_session_status=self.rtc_session_status,
                 )
                 self.vcs.peer.addTrack(self.vcs.audio_transform_track)
             else:

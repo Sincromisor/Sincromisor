@@ -46,7 +46,7 @@ class ProcessStdErrReader(Thread):
             self.logger.warning(line_s)
 
 
-class ProcessLouncher:
+class ProcessLauncher:
     def __init__(self, name: str, args: list):
         self.args: list = args
         self.name: str = name
@@ -106,7 +106,7 @@ signal.signal(signal.SIGINT, trap_sigint)
 
 for worker_type in ["SpeechExtractor", "SpeechRecognizer", "VoiceSynthesizer"]:
     for worker_id, worker_conf in config.get_launchable_workers_conf(type=worker_type):
-        worker_p = ProcessLouncher(
+        worker_p = ProcessLauncher(
             name=f"{worker_type}({worker_id})",
             args=[
                 shutil.which("uvicorn"),
@@ -121,7 +121,7 @@ for worker_type in ["SpeechExtractor", "SpeechRecognizer", "VoiceSynthesizer"]:
 # --proxy-headersを設定していても、X-Forwarded-Portが常に0になる問題がある模様
 # https://github.com/encode/uvicorn/discussions/1948
 for worker_id, worker_conf in config.get_launchable_workers_conf(type="Sincromisor"):
-    web_p = ProcessLouncher(
+    web_p = ProcessLauncher(
         name="Sincromisor",
         args=[
             shutil.which("uvicorn"),

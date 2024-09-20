@@ -3,6 +3,8 @@ from logging import Logger
 import traceback
 import numpy as np
 from asyncio.exceptions import CancelledError
+from multiprocessing.sharedctypes import Synchronized
+from fractions import Fraction
 from aiortc import MediaStreamTrack
 from aiortc.mediastreams import MediaStreamError
 from av.audio.frame import AudioFrame
@@ -20,9 +22,11 @@ class VoiceTransformTrack(MediaStreamTrack):
         self,
         track: MediaStreamTrack,
         vcs: RTCVoiceChatSession,
+        rtc_session_status: Synchronized,
     ):
         super().__init__()
         self.logger: Logger = logging.getLogger(__name__ + f"[{vcs.session_id[21:26]}]")
+        self.rtc_session_status = rtc_session_status
         self.session_id: str = vcs.session_id
         self.logger.info(f"Initialize VoiceTransformTrack.")
         self.track: MediaStreamTrack = track
@@ -48,6 +52,9 @@ class VoiceTransformTrack(MediaStreamTrack):
                 f"recv - UnknownError: {repr(e)}\n{traceback.format_exc()}"
             )
             traceback.print_exc()
+        # 何らかの例外が発生した時はrtcをshutdownする
+        self.rtc_session_status = -1
+        return self.generate_dummy_frame()
 
     def transform(self, frame: AudioFrame) -> AudioFrame:
         try:
@@ -67,7 +74,7 @@ class VoiceTransformTrack(MediaStreamTrack):
                 newframe.pts = frame.pts
                 newframe.rate = frame.sample_rate
             else:
-                newframe = self.generate_dummy_frame(frame)
+                newframe = self.convert_dummy_frame(frame)
             return newframe
         except AttributeError as e:
             self.logger.error(
@@ -82,6 +89,8 @@ class VoiceTransformTrack(MediaStreamTrack):
             self.logger.error(
                 f"transform - UnknownError: {repr(e)}\n{traceback.format_exc()}"
             )
+        # 何らかの例外が発生した時はrtcをshutdownする
+        self.rtc_session_status = -1
         return frame
 
     def get_recognized_text(self) -> SpeechRecognizerResult | None:
@@ -100,13 +109,26 @@ class VoiceTransformTrack(MediaStreamTrack):
             return vs_result
         return None
 
-    def generate_dummy_frame(self, frame) -> np.ndarray:
+    def convert_dummy_frame(self, frame) -> AudioFrame:
         # opus/48000Hz/2chで1920フレームらしい
         zero_frame = np.zeros((frame.to_ndarray().shape), dtype=np.int16)
         newframe = frame.from_ndarray(zero_frame, format="s16", layout="stereo")
         newframe.pts = frame.pts
         newframe.rate = 48000
         return newframe
+
+    def generate_dummy_frame(self) -> AudioFrame:
+        samplerate = 48000
+        blocksize = 960
+        byte_frame: bytes = b"\0" * blocksize * 2
+        np_frame: np.ndarray = np.frombuffer(byte_frame, dtype=np.int16)
+        frame = AudioFrame.from_ndarray(
+            np_frame.reshape(1, 960), format="s16", layout="mono"
+        )
+        frame.pts = 0
+        frame.time_base = Fraction(1, 48000)
+        frame.sample_rate = samplerate
+        return frame
 
     def close(self) -> None:
         self.logger.info(f"Closing VoiceTransformTrack.")
