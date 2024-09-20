@@ -6,11 +6,12 @@ import numpy as np
 from mediapipe.tasks import python
 from mediapipe.tasks.python.components import containers
 from mediapipe.tasks.python import audio
+from mediapipe.tasks.python.audio.audio_classifier import AudioClassifier
 from ..models import SpeechExtractorResult
 
 
 class SpeechExtractorWorker:
-    classifier: audio.AudioClassifier
+    classifier: AudioClassifier
 
     def __init__(
         self, session_id: str, voice_channels: int = 1, voice_sampling_rate: int = 16000
@@ -30,7 +31,7 @@ class SpeechExtractorWorker:
         )
         options = audio.AudioClassifierOptions(base_options=base_options, max_results=1)
         # これが実行された瞬間VSZが32TBになる。
-        SpeechExtractorWorker.classifier: audio.AudioClassifier = (
+        SpeechExtractorWorker.classifier: AudioClassifier = (
             audio.AudioClassifier.create_from_options(options)
         )
 
