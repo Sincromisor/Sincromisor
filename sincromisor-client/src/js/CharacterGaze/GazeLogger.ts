@@ -1,4 +1,4 @@
-export class CharacterEyeLogger {
+export class CharacterGazeLogger {
     faceXLog: HTMLElement | null;
     faceYLog: HTMLElement | null;
     facing: HTMLElement | null;

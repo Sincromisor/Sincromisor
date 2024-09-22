@@ -1,12 +1,13 @@
 import { RTCTalkClient } from "./RTC/RTCTalkClient";
 import { UserMediaManager } from "./RTC/UserMediaManager";
-import { CharacterEye } from "./CharacterEye/CharacterEye";
+import { CharacterGaze } from "./CharacterGaze/CharacterGaze";
 import { ChatMessageManager } from "./Tools/ChatMessageManager";
 import { DialogManager } from "./Tools/DialogManager";
 import { SincroScene } from "./SincroScene";
 import { TalkManager } from "./RTC/TalkManager";
-import { CharacterEyeLogger } from "./CharacterEye/EyeLogger";
+import { CharacterGazeLogger } from "./CharacterGaze/GazeLogger";
 import { TelopChannelMessage, TextChannelMessage } from "./RTC/RTCMessage";
+import { CharacterBone } from "./Character/CharacterBone";
 
 export class SincroController {
     dialogManager: DialogManager;
@@ -16,6 +17,7 @@ export class SincroController {
     sincroScene: SincroScene | null = null;
     talkManager: TalkManager;
     userMediaManager: UserMediaManager;
+    characterBone: CharacterBone | null = null;
 
     constructor(dialogManager: DialogManager, chatMessageManager: ChatMessageManager, talkManager: TalkManager) {
         this.dialogManager = dialogManager;
@@ -31,7 +33,7 @@ export class SincroController {
         this.userMediaManager.getUserMedia((audioTrack: MediaStreamTrack) => {
             this.startRTC(audioTrack);
         }, (videoTrack: MediaStreamTrack) => {
-            this.startGloriaEye(videoTrack);
+            this.startCharacterGaze(videoTrack);
         }, (err) => {
             this.chatMessageManager.writeSystemMessageText(`カメラまたはマイクが見つかりませんでした。 - ${err}`);
         });
@@ -50,7 +52,11 @@ export class SincroController {
         this.rtcc?.stop();
     }
 
-    setTextChannelCallback(rtcc: RTCTalkClient) {
+    setCharacterBone(characterBone: CharacterBone){
+        this.characterBone = characterBone;
+    }
+
+    private setTextChannelCallback(rtcc: RTCTalkClient) {
         rtcc.textChannelCallback = (tcMsg:TextChannelMessage) => {
             console.log(tcMsg);
             this.talkManager.addTextChannelMessage(tcMsg);
@@ -66,14 +72,14 @@ export class SincroController {
         }
     }
 
-    setTelopChannelCallback(rtcc: RTCTalkClient) {
+    private setTelopChannelCallback(rtcc: RTCTalkClient) {
         rtcc.telopChannelCallback = (vcMsg:TelopChannelMessage) => {
             this.talkManager.addTelopChannelMessage(vcMsg);
             this.addTelopChar(vcMsg.text);
         }
     }
 
-    setConnectionStateChangeCallback(rtcc: RTCTalkClient) {
+    private setConnectionStateChangeCallback(rtcc: RTCTalkClient) {
         rtcc.connectionStateChangeCallback = (state) => {
             /* new -> checking -> connected、disconnected -> failed */
             switch (state) {
@@ -95,34 +101,36 @@ export class SincroController {
         }
     }
 
-    startGloriaEye(videoTrack: MediaStreamTrack) {
+    private startCharacterGaze(videoTrack: MediaStreamTrack) {
         if (!this.dialogManager.enableGloriaEye()) { return false; }
 
         const gloriaEyeVideo: HTMLVideoElement | null = document.querySelector('video#gloriaEyeVideo');
         if (!gloriaEyeVideo) { return; }
-        const gloriaEye = new CharacterEye(gloriaEyeVideo);
-        const eyeLogger = new CharacterEyeLogger();
+        const characterGaze = new CharacterGaze(gloriaEyeVideo);
+        const eyeLogger = new CharacterGazeLogger();
 
-        gloriaEye.initVision();
+        characterGaze.initVision();
 
         const startEye = () => {
             setTimeout(() => {
-                if (!gloriaEye.modelIsLoaded()) {
+                if (!characterGaze.modelIsLoaded()) {
                     console.log("Face detector is still loading. wait 1000ms...");
                     startEye();
                 } else {
                     console.log("start GloriaEye");
                     const eyeTargetElement = document.querySelector("#eyeTarget");
-                    gloriaEye.initCamera(videoTrack, (detects) => {
-                        eyeLogger.updateFaceXLog(gloriaEye.targetX());
-                        eyeLogger.updateFaceYLog(gloriaEye.targetY());
-                        eyeLogger.updateFacing(gloriaEye.facing());
+                    characterGaze.initCamera(videoTrack, (detects) => {
+                        eyeLogger.updateFaceXLog(characterGaze.targetX());
+                        eyeLogger.updateFaceYLog(characterGaze.targetY());
+                        eyeLogger.updateFacing(characterGaze.facing());
+                        const eyeAngles = characterGaze.eyeAngles();
+                        this.characterBone?.setEyeTarget(eyeAngles[0], eyeAngles[1], 0);
                         //this.gloriaChan.addRigQueue(-gloriaEye.targetX() + 0.5, gloriaEye.targetY() - 0.5);
                         if (eyeTargetElement) {
                             if (detects.length > 0) {
                                 eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 50%)");
-                                eyeTargetElement.setAttribute("cx", `${gloriaEye.targetX() * 100}%`);
-                                eyeTargetElement.setAttribute("cy", `${gloriaEye.targetY() * 100}%`);
+                                eyeTargetElement.setAttribute("cx", `${characterGaze.targetX() * 100}%`);
+                                eyeTargetElement.setAttribute("cy", `${characterGaze.targetY() * 100}%`);
                             } else {
                                 eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 0%)");
                             }
@@ -134,18 +142,18 @@ export class SincroController {
         startEye();
 
         if (this.dialogManager.enableAutoMute()) {
-            gloriaEye.arriveCallback = () => {
+            characterGaze.arriveCallback = () => {
                 eyeLogger.updateCharacterEyeStatus(true);
                 this.rtcc?.setMute(false);
             }
-            gloriaEye.leaveCallback = () => {
+            characterGaze.leaveCallback = () => {
                 eyeLogger.updateCharacterEyeStatus(false);
                 this.rtcc?.setMute(true);
             }
         }
     }
 
-    addTelopChar(char: string) {
+    private addTelopChar(char: string) {
         const telopText: HTMLDivElement | null = document.querySelector("div#obsFooterBox");
         if (!telopText) {
             return;

@@ -4,7 +4,7 @@ import { Color4 } from '@babylonjs/core/Maths';
 import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
 import { WebXRDefaultExperience } from '@babylonjs/core/XR/webXRDefaultExperience';
 import { ScenePerformancePriority } from '@babylonjs/core/scene';
-import { StageFloor } from './Stage/StageFloor';
+//import { StageFloor } from './Stage/StageFloor';
 import { SceneLogger } from './Stage/SceneLogger';
 import { CharacterLoader } from './Character/CharacterLoader';
 import { Inspector } from '@babylonjs/inspector';
@@ -78,7 +78,7 @@ export class SincroScene {
             character.loadModel();
             this.character = character;
         }
-        new StageFloor(this.scene);
+        //new StageFloor(this.scene);
         this.customizeScehe();
     }
 

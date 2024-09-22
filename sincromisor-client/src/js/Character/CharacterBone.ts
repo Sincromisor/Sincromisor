@@ -68,9 +68,9 @@ export class CharacterBone {
         const forearm = scene.getBoneByName("c_forearm_fk.l").getTransformNode();
         */
         if (bone) {
-            bone.rotation = new Vector3(0, Tools.ToRadians(-110), 0);
-            bone.position = new Vector3(0, -50, 10); // yはFloorの高さに合わせる(50)
-            bone.scaling = new Vector3(35, 35, 35);
+            bone.rotation = new Vector3(0, Tools.ToRadians(-90), 0);
+            //bone.position = new Vector3(0, -50, 10); // yはFloorの高さに合わせる(50)
+            //bone.scaling = new Vector3(35, 35, 35);
         }
 
         scene.registerBeforeRender(() => {

@@ -161,8 +161,13 @@ export class RTCTalkClient {
                     method: "POST"
                 });
             }).then((response) => {
+                if(response.status != 200){
+                    console.error(response);
+                    throw 'Invalid offer response.';
+                }
                 return response.json();
             }).then((answer) => {
+                console.log(answer);
                 this.logger.answerSDP(answer.sdp);
                 return peerConnection.setRemoteDescription(answer);
             }).catch((e) => {

@@ -98,7 +98,7 @@ export class CharacterLoader {
                 this.morph.eye.setupMorph(scene);
                 this.morph.mouse.setupMorph(scene);
                 this.morph.mayu.setupMorph(scene);
-                this.eyeCameraTracking();
+                //this.eyeCameraTracking();
             } catch (e) {
                 console.error(e);
             }
@@ -111,6 +111,8 @@ export class CharacterLoader {
         });
     }
 
+    /* キャラクターがカメラのほうを向くようにする */
+    /*
     private eyeCameraTracking() {
         this.scene.registerBeforeRender(() => {
             const cameraDirection = this.camera.camera.getTarget().subtract(this.camera.camera.position).normalize();
@@ -121,6 +123,7 @@ export class CharacterLoader {
             );
         });
     }
+    */
 
     private setupMaterial(matName: string, matFile: string, mesh: AbstractMesh | null) {
         if (mesh == null) { return };
@@ -171,7 +174,7 @@ export class CharacterLoader {
             // アウトライン
             //mesh.skeleton.enableBlending(0.01);
             mesh.renderOutline = true;
-            mesh.outlineWidth = 0.001;
+            mesh.outlineWidth = 0.0001;
             mesh.outlineColor = Color3.Black();
             //mesh.overlayColor = BABYLON.Color3.Green();
             //mesh.renderOverlay = true;

@@ -14,3 +14,8 @@ sincromisor-server/node_modules
 sincromisor-server/assets/characters/*.jpg
 sincromisor-server/assets/characters/*.json
 sincromisor-server/assets/characters/*.glb
+sincromisor-client/public/mediapipe-wasm/
+sincromisor-client/public/characters/*.jpg
+sincromisor-client/public/characters/*.json
+sincromisor-client/public/characters/*.glb
+sincromisor-client/public/characters/*.png

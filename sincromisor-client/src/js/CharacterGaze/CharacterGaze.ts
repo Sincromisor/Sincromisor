@@ -11,7 +11,7 @@ declare interface NormalizedKeypoint {
     score?: number;
 }
 
-export class CharacterEye {
+export class CharacterGaze {
     videoElement: HTMLVideoElement;
     faceDetector: FaceDetector | null = null;
     lastVideoTime: number = -1;
@@ -44,6 +44,28 @@ export class CharacterEye {
     targetY(): number {
         return this.movingAverage[2]["y"];
     }
+
+
+    // 鼻の座標から、相手の目線の角度を計算する。
+    eyeAngles(): [number, number]{
+        const cameraPos: [number, number, number] = [0, 0, 0];
+        const [faceX, faceY, faceZ] = [this.movingAverage[2]["x"] - 0.5, this.movingAverage[2]["y"] - 0.5, 1];
+
+        // カメラから点cへのベクトル
+        const vector: [number, number, number] = [faceX - cameraPos[0], faceY - cameraPos[1], faceZ - cameraPos[2]];
+
+        // z軸に対する深さ
+        const depth = vector[2];
+
+        // 横方向の角度
+        const alpha = Math.atan2(vector[0], depth) * (180 / Math.PI);
+
+        // 縦方向の角度
+        const beta = Math.atan2(vector[1], depth) * (180 / Math.PI);
+
+        return [alpha, beta];
+    }
+
 
     // 右目-鼻、左目-鼻の距離を基に、顔がこちらを向いているかを0.0～1.0の値で返す。
     // 0.5に近ければ近いほど、正面を向いている可能性が高い。
@@ -146,6 +168,8 @@ export class CharacterEye {
     }
 
     // keypointの指数移動平均値を更新する
+    // keypointsの値は0.0～1.0
+    // 画像左端がX=0、上がY=0
     private updateKeypointsMovingAverage(keypoints: NormalizedKeypoint[]): void {
         for (let i = 0; i <= 5; i++) {
             this.movingAverage[i]["x"] = (keypoints[i]["x"] + this.movingAverage[i]["x"]) / 2;

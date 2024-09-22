@@ -30,6 +30,9 @@ function startRTC(dialogManager: DialogManager) {
         );
         sincroScene.createScene();
         sincroScene.run();
+        if (sincroScene.character){
+            sincroController.setCharacterBone(sincroScene.character?.bones.root);
+        }
     }
     dialogManager.setRTCStopButtonEventListener(() => {
         sincroController.stopRTC();
