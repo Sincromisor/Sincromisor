@@ -2,13 +2,13 @@ export class CharacterGazeLogger {
     faceXLog: HTMLElement | null;
     faceYLog: HTMLElement | null;
     facing: HTMLElement | null;
-    characterEyeStatus: HTMLElement | null;
+    characterGazeStatus: HTMLElement | null;
 
     constructor() {
         this.faceXLog = document.querySelector('dd#faceX');
         this.faceYLog = document.querySelector('dd#faceY');
         this.facing = document.querySelector('dd#facing');
-        this.characterEyeStatus = document.querySelector('dd#gloriaEyeStatus');
+        this.characterGazeStatus = document.querySelector('dd#characterGazeStatus');
     }
 
     updateFaceXLog(value: number){
@@ -30,13 +30,13 @@ export class CharacterGazeLogger {
     }
 
     updateCharacterEyeStatus(watching:boolean){
-        if (!this.characterEyeStatus){
+        if (!this.characterGazeStatus){
             return;
         }
         if (watching){
-            this.characterEyeStatus.innerText = 'みてる';
+            this.characterGazeStatus.innerText = 'みてる';
         } else {
-            this.characterEyeStatus.innerText = 'みてない';
+            this.characterGazeStatus.innerText = 'みてない';
         }
     }
 }

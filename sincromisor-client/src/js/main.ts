@@ -14,9 +14,9 @@ function startRTC(dialogManager: DialogManager) {
     chatMessageManager.writeSystemMessage("こんにちは～!");
     chatMessageManager.autoScroll();
 
-    const charCanvas: HTMLCanvasElement | null = document.querySelector('canvas#gloriaCanvas');
+    const charCanvas: HTMLCanvasElement | null = document.querySelector('canvas#characterCanvas');
     if (!charCanvas) {
-        throw 'canvas#gloriaCanvas is not found.';
+        throw 'canvas#characterCanvas is not found.';
     }
     const talkManager: TalkManager = new TalkManager();
     const sincroController: SincroController = new SincroController(dialogManager, chatMessageManager, talkManager);

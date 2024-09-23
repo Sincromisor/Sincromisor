@@ -40,8 +40,8 @@ export class DialogManager {
         return eC.checked;
     }
 
-    enableGloriaEye() {
-        const eC: HTMLInputElement | null = document.querySelector("input#enableGloriaEye");
+    enableCharacterGaze() {
+        const eC: HTMLInputElement | null = document.querySelector("input#enableCharacterGaze");
         if (eC?.checked) {
             return true;
         }
@@ -98,7 +98,7 @@ export class DialogManager {
 
     updateCharacterStatus(available: boolean) {
         this.updateEnableCharacterStatus(available);
-        this.updateEnableGloriaEyeStatus(available);
+        this.updateEnableCharacterGazeStatus(available);
         this.updateAutoMuteStatus();
     }
 
@@ -115,8 +115,8 @@ export class DialogManager {
         }
     }
 
-    private updateEnableGloriaEyeStatus(available: boolean) {
-        const eC: HTMLInputElement | null = document.querySelector('#enableCharacter');
+    private updateEnableCharacterGazeStatus(available: boolean) {
+        const eC: HTMLInputElement | null = document.querySelector('#enableCharacterGaze');
         if (!eC) {
             return;
         }
@@ -126,7 +126,6 @@ export class DialogManager {
             eC.disabled = true;
             eC.checked = false;
         }
-
     }
 
     private updateAutoMuteStatus() {
@@ -134,7 +133,7 @@ export class DialogManager {
         if (!eInput) {
             return;
         }
-        if (this.enableGloriaEye()) {
+        if (this.enableCharacterGaze()) {
             eInput.disabled = false;
         } else {
             eInput.disabled = true;
@@ -169,9 +168,9 @@ export class DialogManager {
         }
 
         // 顔認識の有効/無効化設定と自動ミュート設定の同期
-        const enableGloriaEyeBox: HTMLInputElement | null = document.querySelector("input#enableGloriaEye");
-        if (enableGloriaEyeBox) {
-            enableGloriaEyeBox.onclick = () => {
+        const enablecharacterGazeBox: HTMLInputElement | null = document.querySelector("input#enableCharacterGaze");
+        if (enablecharacterGazeBox) {
+            enablecharacterGazeBox.onclick = () => {
                 this.updateAutoMuteStatus();
             }
         }

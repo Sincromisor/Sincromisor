@@ -24,10 +24,8 @@ export class SincroController {
         this.chatMessageManager = chatMessageManager;
         this.talkManager = talkManager;
 
-        //this.gloriaChan = new GloriaChan();
-
         this.userMediaManager = new UserMediaManager();
-        if (!this.dialogManager.enableGloriaEye()) {
+        if (!this.dialogManager.enableCharacterGaze()) {
             this.userMediaManager.disableVideo();
         }
         this.userMediaManager.getUserMedia((audioTrack: MediaStreamTrack) => {
@@ -102,11 +100,11 @@ export class SincroController {
     }
 
     private startCharacterGaze(videoTrack: MediaStreamTrack) {
-        if (!this.dialogManager.enableGloriaEye()) { return false; }
+        if (!this.dialogManager.enableCharacterGaze()) { return false; }
 
-        const gloriaEyeVideo: HTMLVideoElement | null = document.querySelector('video#gloriaEyeVideo');
-        if (!gloriaEyeVideo) { return; }
-        const characterGaze = new CharacterGaze(gloriaEyeVideo);
+        const chracterGazeVideo: HTMLVideoElement | null = document.querySelector('video#characterGazeVideo');
+        if (!chracterGazeVideo) { return; }
+        const characterGaze = new CharacterGaze(chracterGazeVideo);
         const eyeLogger = new CharacterGazeLogger();
 
         characterGaze.initVision();
@@ -117,7 +115,7 @@ export class SincroController {
                     console.log("Face detector is still loading. wait 1000ms...");
                     startEye();
                 } else {
-                    console.log("start GloriaEye");
+                    console.log("start CharacterGaze");
                     const eyeTargetElement = document.querySelector("#eyeTarget");
                     characterGaze.initCamera(videoTrack, (detects) => {
                         eyeLogger.updateFaceXLog(characterGaze.targetX());
@@ -129,7 +127,6 @@ export class SincroController {
                         // 横方向
                         const eyeAngleY = -eyeAngles[0] * (Math.PI / 180);
                         this.characterBone?.setEyeTarget(eyeAngleX, eyeAngleY, 0);
-                        //this.gloriaChan.addRigQueue(-gloriaEye.targetX() + 0.5, gloriaEye.targetY() - 0.5);
                         if (eyeTargetElement) {
                             if (detects.length > 0) {
                                 eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 50%)");
