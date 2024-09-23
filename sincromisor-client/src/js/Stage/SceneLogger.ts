@@ -1,5 +1,6 @@
 import { AdvancedDynamicTexture, TextBlock, Control } from "@babylonjs/gui/2D";
 
+// canvas上にオーバーレイテキストを表示する
 export class SceneLogger {
     logText: string;
     textBlock: TextBlock;
@@ -9,9 +10,9 @@ export class SceneLogger {
         // メッセージボックスにテキストを追加
         const advancedTexture: AdvancedDynamicTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
         this.textBlock = new TextBlock();
-        this.textBlock.text = "Samples in development. \n";
+        this.textBlock.text = "\n";
         this.textBlock.color = "#ff00ff7f";
-        this.textBlock.fontSize = 24;
+        this.textBlock.fontSize = 18;
         this.textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
         this.textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
         advancedTexture.addControl(this.textBlock);
