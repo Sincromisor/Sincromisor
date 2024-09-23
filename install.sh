@@ -6,7 +6,9 @@ set -x
 cd "$(dirname "${0}")"
 
 if [ ! -e config.yml ]; then
-    cp examples/config.yml config.yml
+    echo First create a config.yml
+    echo You can use examples/config.yml as a reference.
+    exit 1
 fi
 
 ./install-client-toolchain.sh

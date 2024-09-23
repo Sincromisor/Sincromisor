@@ -1,6 +1,7 @@
 http://:8002 {
     log {
         output stdout
+        level info
     }
 
     root /opt/sincromisor/sincromisor-client/dist
