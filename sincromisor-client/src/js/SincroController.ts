@@ -3,7 +3,6 @@ import { UserMediaManager } from "./RTC/UserMediaManager";
 import { CharacterGaze } from "./CharacterGaze/CharacterGaze";
 import { ChatMessageManager } from "./Tools/ChatMessageManager";
 import { DialogManager } from "./Tools/DialogManager";
-import { SincroScene } from "./SincroScene";
 import { TalkManager } from "./RTC/TalkManager";
 import { CharacterGazeLogger } from "./CharacterGaze/GazeLogger";
 import { TelopChannelMessage, TextChannelMessage } from "./RTC/RTCMessage";
@@ -14,7 +13,6 @@ export class SincroController {
     chatMessageManager: ChatMessageManager;
     currentMessageElement: HTMLDivElement | null = null;
     rtcc: RTCTalkClient | null = null;
-    sincroScene: SincroScene | null = null;
     talkManager: TalkManager;
     userMediaManager: UserMediaManager;
     characterBone: CharacterBone | null = null;

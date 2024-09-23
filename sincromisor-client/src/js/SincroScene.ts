@@ -53,6 +53,7 @@ export class SincroScene {
         //this.scene.performancePriority = ScenePerformancePriority.Aggressive;
         this.scene.performancePriority = ScenePerformancePriority.BackwardCompatible;
         this.scene.clearColor = new Color4(0, 0, 0, 0.01); // Background color
+        this.setResizeEvent();
     }
 
     run(): void {
@@ -61,8 +62,10 @@ export class SincroScene {
         });
     }
 
-    resize(): void {
-        this.engine.resize();
+    private setResizeEvent(): void {
+        window.addEventListener('resize', () => {
+            this.engine.resize();
+        });
     }
 
     async createScene(): Promise<void> {
