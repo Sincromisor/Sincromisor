@@ -124,7 +124,11 @@ export class SincroController {
                         eyeLogger.updateFaceYLog(characterGaze.targetY());
                         eyeLogger.updateFacing(characterGaze.facing());
                         const eyeAngles = characterGaze.eyeAngles();
-                        this.characterBone?.setEyeTarget(eyeAngles[0], eyeAngles[1], 0);
+                        // 縦方向
+                        const eyeAngleX = eyeAngles[1] * (Math.PI / 180);
+                        // 横方向
+                        const eyeAngleY = -eyeAngles[0] * (Math.PI / 180);
+                        this.characterBone?.setEyeTarget(eyeAngleX, eyeAngleY, 0);
                         //this.gloriaChan.addRigQueue(-gloriaEye.targetX() + 0.5, gloriaEye.targetY() - 0.5);
                         if (eyeTargetElement) {
                             if (detects.length > 0) {
