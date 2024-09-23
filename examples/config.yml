@@ -8,7 +8,7 @@ Worker:
     Sincromisor:
         - host: 0.0.0.0
           port: 8001
-          url: http://127.0.0.1:8001/
+          url: /offer
           forwarded-allow-ips: 127.0.0.1
           launch: true
     SpeechExtractor:

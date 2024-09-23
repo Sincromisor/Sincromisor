@@ -145,9 +145,7 @@ export class RTCTalkClient {
                     type: offer.type
                 }));
                 let rtcServerURL: string | null = import.meta.env.RTC_SERVER_URL;
-                if (rtcServerURL){
-                    rtcServerURL = import.meta.env.RTC_SERVER_URL + '/offer';
-                } else {
+                if (!rtcServerURL){
                     rtcServerURL = '/offer';
                 }
                 return fetch(rtcServerURL, {
