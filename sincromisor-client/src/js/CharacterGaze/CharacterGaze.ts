@@ -47,7 +47,7 @@ export class CharacterGaze {
 
 
     // 鼻の座標から、相手の目線の角度を計算する。
-    eyeAngles(): [number, number]{
+    eyeAngles(): [number, number] {
         const cameraPos: [number, number, number] = [0, 0, 0];
         const [faceX, faceY, faceZ] = [this.movingAverage[2]["x"] - 0.5, this.movingAverage[2]["y"] - 0.5, 1];
 

@@ -145,7 +145,7 @@ export class RTCTalkClient {
                     type: offer.type
                 }));
                 let rtcServerURL: string | null = import.meta.env.RTC_SERVER_URL;
-                if (!rtcServerURL){
+                if (!rtcServerURL) {
                     rtcServerURL = '/offer';
                 }
                 return fetch(rtcServerURL, {
@@ -159,7 +159,7 @@ export class RTCTalkClient {
                     method: "POST"
                 });
             }).then((response) => {
-                if(response.status != 200){
+                if (response.status != 200) {
                     console.error(response);
                     throw 'Invalid offer response.';
                 }
@@ -242,11 +242,15 @@ export class RTCTalkClient {
                 const rtcVideo: HTMLVideoElement | null = document.querySelector("video#rtcVideo");
                 if (rtcVideo) {
                     rtcVideo.srcObject = evt.streams[0];
+                } else {
+                    throw "video#rtcVideo is not found.";
                 }
             } else {
                 const rtcAudio: HTMLAudioElement | null = document.querySelector("audio#rtcAudio");
                 if (rtcAudio) {
                     rtcAudio.srcObject = evt.streams[0];
+                } else {
+                    throw "audio#rtcAudio is not found.";
                 }
             }
         });
