@@ -12,9 +12,9 @@ export class StageCamera {
         Beta: 垂直方向の回転,
         Radius: 中心からの距離
     */
-    defaultAlpha: number = 0.0;//Tools.ToRadians(-90);//0.0;
+    defaultAlpha: number = 0.0;
     defaultBeta: number = Math.PI / 2;
-    defaultRadius: number = 80.0;
+    defaultRadius: number = 2.0;
     cameraDistance: number = 0.75;
     cameraTarget: Vector3 = new Vector3(0, 1.25, 0);
 
@@ -25,23 +25,22 @@ export class StageCamera {
             this.camera = this.createVRCamera();
         } else {
             this.camera = this.createCamera();
-            this.updateCameraDistance();
+            this.reconfigure();
         }
     }
 
     private createCamera(): ArcRotateCamera {
         const camera: ArcRotateCamera = new ArcRotateCamera('camera',
             this.defaultAlpha, this.defaultBeta, this.defaultRadius, this.cameraTarget, this.scene);
+        camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
         camera.attachControl(this.canvas, true);
-        camera.lowerAlphaLimit = -1; // 左回転の制御
-        camera.upperAlphaLimit = 4; // 右回転の制御
+        camera.lowerAlphaLimit = Tools.ToRadians(-180); // 左回転の制御
+        camera.upperAlphaLimit = Tools.ToRadians(180); // 右回転の制御
         camera.upperBetaLimit = Tools.ToRadians(135);
         camera.lowerBetaLimit = Tools.ToRadians(0);
         camera.lowerRadiusLimit = 0.3; // キャラクターの中身が見えないところまで
         camera.upperRadiusLimit = 5.0; // 離れすぎないようにする
-        camera.fov = 0.95;
-
-        camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
+        camera.fov = 0.4;
         camera.minZ = 0.001;
         // ctrl + マウスドラッグの慣性をひかえめに
         camera.panningInertia = 0.3;
@@ -52,14 +51,14 @@ export class StageCamera {
         camera.wheelDeltaPercentage = 0.005; // カメラの拡大・縮小速度
         camera.speed = 0.5; // カメラの回転速度
 
-        this.canvas.addEventListener("wheel", (e:WheelEvent) => {
+        this.canvas.addEventListener("wheel", (e: WheelEvent) => {
             this.cameraDistance += e.deltaY / 1000;
             if (this.cameraDistance > 5.0) {
                 this.cameraDistance = 5.0;
             } else if (this.cameraDistance < 0.3) {
                 this.cameraDistance = 0.3;
             }
-            this.updateCameraDistance();
+            this.reconfigure();
         });
 
         return camera;
@@ -76,7 +75,8 @@ export class StageCamera {
         return camera;
     }
 
-    private updateCameraDistance(): void {
+    // canvasリサイズ時にORTHOGRAPHIC_CAMERAを再設定
+    reconfigure(): void {
         const ratio = this.canvas.height / this.canvas.width;
         this.camera.orthoLeft = -this.cameraDistance / 2;
         this.camera.orthoRight = this.cameraDistance / 2;

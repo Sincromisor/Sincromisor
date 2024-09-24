@@ -64,6 +64,7 @@ export class SincroScene {
 
     private setResizeEvent(): void {
         window.addEventListener('resize', () => {
+            this.camera.reconfigure();
             this.engine.resize();
         });
     }
@@ -82,7 +83,7 @@ export class SincroScene {
             this.character = character;
         }
         //new StageFloor(this.scene);
-        this.customizeScehe();
+        this.customizeScene();
     }
 
     dispose(): void {
@@ -91,6 +92,6 @@ export class SincroScene {
         this.engine.dispose();
     }
 
-    customizeScehe(): void {
+    customizeScene(): void {
     }
 }

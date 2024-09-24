@@ -7,7 +7,7 @@ import { LookingGlassWebXRPolyfill } from "@lookingglass/webxr";
 
 // https://docs.lookingglassfactory.com/developer-tools/webxr
 export class SincroGlassScene extends SincroScene {
-    customizeScehe(): void {
+    customizeScene(): void {
         new EnvironmentHelper({
             skyboxSize: 30,
             groundColor: new Color3(0.5, 0.5, 0.5),
