@@ -7,7 +7,7 @@ function start() {
     if (!charCanvas) {
         throw 'canvas#characterCanvas is not found.';
     }
-    const talkManager: TalkManager = new TalkManager();
+    const talkManager: TalkManager = TalkManager.getManager();
 
     const sincroScene: SincroScene = new SincroScene(
         charCanvas, talkManager,

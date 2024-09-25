@@ -6,22 +6,18 @@ import { SincroScene } from "./SincroScene";
 import { TalkManager } from "./RTC/TalkManager";
 
 function startRTC(dialogManager: DialogManager) {
-    const chatBox: HTMLDivElement | null = document.querySelector('div#obsMessageBox');
-    if (!chatBox) {
-        throw 'div#obsMessageBox is not found.';
-    }
     const chatMessageManager: ChatMessageManager = ChatMessageManager.getManager();
     chatMessageManager.writeSystemMessage("こんにちは～!");
     chatMessageManager.autoScroll();
 
-    const charCanvas: HTMLCanvasElement | null = document.querySelector('canvas#characterCanvas');
-    if (!charCanvas) {
-        throw 'canvas#characterCanvas is not found.';
-    }
     const talkManager: TalkManager = TalkManager.getManager();
     const sincroController: SincroController = new SincroController(dialogManager, chatMessageManager, talkManager);
 
     if (dialogManager.enableCharacter()) {
+        const charCanvas: HTMLCanvasElement | null = document.querySelector('canvas#characterCanvas');
+        if (!charCanvas) {
+            throw 'canvas#characterCanvas is not found.';
+        }
         const sincroScene: SincroScene = new SincroScene(
             charCanvas, talkManager,
             dialogManager.enableVR(),
@@ -30,7 +26,7 @@ function startRTC(dialogManager: DialogManager) {
         );
         sincroScene.createScene();
         sincroScene.run();
-        if (sincroScene.character){
+        if (sincroScene.character) {
             sincroController.setCharacterBone(sincroScene.character?.bones.root);
         }
     }
