@@ -1,11 +1,11 @@
 import { RTCTalkClient } from "./RTC/RTCTalkClient";
 import { UserMediaManager } from "./RTC/UserMediaManager";
 import { CharacterGaze } from "./CharacterGaze/CharacterGaze";
-import { ChatMessageManager } from "./Tools/ChatMessageManager";
-import { DialogManager } from "./Tools/DialogManager";
+import { ChatMessageManager } from "./UI/ChatMessageManager";
+import { DialogManager } from "./UI/DialogManager";
 import { TalkManager } from "./RTC/TalkManager";
 //import { CharacterGazeLogger } from "./CharacterGaze/GazeLogger";
-import { DebugConsoleManager } from "./Tools/DebugConsoleManager";
+import { DebugConsoleManager } from "./UI/DebugConsoleManager";
 import { TelopChannelMessage, TextChannelMessage } from "./RTC/RTCMessage";
 import { CharacterBone } from "./Character/CharacterBone";
 

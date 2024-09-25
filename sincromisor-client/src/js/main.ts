@@ -1,6 +1,6 @@
 import { SincroController } from "./SincroController";
-import { DialogManager } from "./Tools/DialogManager";
-import { ChatMessageManager } from "./Tools/ChatMessageManager";
+import { DialogManager } from "./UI/DialogManager";
+import { ChatMessageManager } from "./UI/ChatMessageManager";
 import { CharacterLoader } from "./Character/CharacterLoader";
 import { SincroScene } from "./SincroScene";
 import { TalkManager } from "./RTC/TalkManager";

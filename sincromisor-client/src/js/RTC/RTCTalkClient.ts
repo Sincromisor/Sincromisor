@@ -1,4 +1,4 @@
-import { DebugConsoleManager } from "../Tools/DebugConsoleManager";
+import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { TelopChannelMessage, TextChannelMessage } from "./RTCMessage";
 
 export class RTCTalkClient {
