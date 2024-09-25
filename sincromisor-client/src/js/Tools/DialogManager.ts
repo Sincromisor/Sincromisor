@@ -1,5 +1,14 @@
 export class DialogManager {
-    constructor() {
+    private static instance: DialogManager
+
+    static getManager() {
+        if (!DialogManager.instance) {
+            DialogManager.instance = new DialogManager();
+        }
+        return DialogManager.instance;
+    }
+
+    private constructor() {
         this.setMiscEvent();
         this.updateTitleText();
         this.setShortcutKeyEvent();

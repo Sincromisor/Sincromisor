@@ -41,7 +41,7 @@ function startRTC(dialogManager: DialogManager) {
 }
 
 window.addEventListener('load', () => {
-    const dialogManager: DialogManager = new DialogManager();
+    const dialogManager: DialogManager = DialogManager.getManager();
     CharacterLoader.availabilityCheck(() => {
         dialogManager.updateCharacterStatus(true);
     }, () => {
