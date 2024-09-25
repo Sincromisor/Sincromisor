@@ -7,10 +7,10 @@ import { Color3 } from "@babylonjs/core/Maths/math";
 import { IShadowLight, ShadowGenerator } from "@babylonjs/core/Lights";
 import { NodeMaterial } from "@babylonjs/core/Materials/Node";
 import { GLTFFileLoader } from "@babylonjs/loaders/glTF";
-import { CharacterBody } from "./Morph/CharacterBody";
-import { CharacterEye } from "./Morph/CharacterEye";
-import { CharacterMayu } from "./Morph/CharacterMayu";
-import { CharacterMouse } from "./Morph/CharacterMouse";
+import { BodyMorph } from "./Morph/BodyMorph";
+import { EyeMorph } from "./Morph/EyeMorph";
+import { MayuMorph } from "./Morph/MayuMorph";
+import { MouseMorph } from "./Morph/MouseMorph";
 import { CharacterBone } from "./CharacterBone";
 import { StageCamera } from "../Stage/StageCamera";
 import { StageLight } from "../Stage/StageLight";
@@ -20,17 +20,17 @@ import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
 SceneLoader.RegisterPlugin(new GLTFFileLoader());
 
 interface CharacterMorph {
-    body: CharacterBody,
-    eye: CharacterEye,
-    mayu: CharacterMayu,
-    mouse: CharacterMouse
+    body: BodyMorph,
+    eye: EyeMorph,
+    mayu: MayuMorph,
+    mouse: MouseMorph
 }
 
 interface CharacterBones {
     root: CharacterBone
 }
 
-export class CharacterLoader {
+export class CharacterManager {
     static readonly BASE_PATH = '/characters/';
     scene: Scene;
     light: StageLight;
@@ -45,10 +45,10 @@ export class CharacterLoader {
         this.camera = camera;
         this.talk = talk;
         this.morph = {
-            body: new CharacterBody(),
-            eye: new CharacterEye(),
-            mayu: new CharacterMayu(),
-            mouse: new CharacterMouse(talk)
+            body: new BodyMorph(),
+            eye: new EyeMorph(),
+            mayu: new MayuMorph(),
+            mouse: new MouseMorph(talk)
         }
         this.bones = {
             root: new CharacterBone()
@@ -56,7 +56,7 @@ export class CharacterLoader {
     }
 
     static availabilityCheck(onSuccess: () => void, onFailure: () => void) {
-        fetch(CharacterLoader.BASE_PATH + "gloria.glb", { "method": "HEAD" }).then((res) => {
+        fetch(CharacterManager.BASE_PATH + "gloria.glb", { "method": "HEAD" }).then((res) => {
             if (res.status == 200) {
                 onSuccess();
             } else {
@@ -70,25 +70,25 @@ export class CharacterLoader {
             Append(rootUrl, sceneFilename?, scene?, onSuccess?, onProgress?, onError?, 
                    pluginExtension?, name?): Nullable<ISceneLoaderPlugin | ISceneLoaderPluginAsync>
         */
-        SceneLoader.Append(CharacterLoader.BASE_PATH, "gloria.glb", this.scene, (scene) => {
+        SceneLoader.Append(CharacterManager.BASE_PATH, "gloria.glb", this.scene, (scene) => {
             try {
 
 
                 //this.meshVisibility(false);
-                this.setupMaterial("Dress", CharacterLoader.BASE_PATH + "dressMaterial.json", scene.getMeshByName("MarnieDress"));
-                this.setupMaterial("Hat", CharacterLoader.BASE_PATH + "hatMaterial.json", scene.getMeshByName("Hat"));
-                this.setupMaterial("Hair", CharacterLoader.BASE_PATH + "hairMaterial.json", scene.getMeshByName("Hair"));
+                this.setupMaterial("Dress", CharacterManager.BASE_PATH + "dressMaterial.json", scene.getMeshByName("MarnieDress"));
+                this.setupMaterial("Hat", CharacterManager.BASE_PATH + "hatMaterial.json", scene.getMeshByName("Hat"));
+                this.setupMaterial("Hair", CharacterManager.BASE_PATH + "hairMaterial.json", scene.getMeshByName("Hair"));
                 // 頭
-                this.setupMaterial("Head", CharacterLoader.BASE_PATH + "headMaterial.json", scene.getMeshByName("Head_primitive0"));
+                this.setupMaterial("Head", CharacterManager.BASE_PATH + "headMaterial.json", scene.getMeshByName("Head_primitive0"));
                 // 顔
-                this.setupMaterial("Face", CharacterLoader.BASE_PATH + "faceMaterial.json", scene.getMeshByName("Head_primitive1"));
+                this.setupMaterial("Face", CharacterManager.BASE_PATH + "faceMaterial.json", scene.getMeshByName("Head_primitive1"));
                 // 眉毛
-                this.setupMaterial("Mayu", CharacterLoader.BASE_PATH + "mayuMaterial.json", scene.getMeshByName("Head_primitive2"));
+                this.setupMaterial("Mayu", CharacterManager.BASE_PATH + "mayuMaterial.json", scene.getMeshByName("Head_primitive2"));
                 // 左目
-                this.setupMaterial("Eye.l", CharacterLoader.BASE_PATH + "bodyMaterial.json", scene.getMeshByName("Head_primitive3"));
+                this.setupMaterial("Eye.l", CharacterManager.BASE_PATH + "bodyMaterial.json", scene.getMeshByName("Head_primitive3"));
                 // 右目
-                this.setupMaterial("Eye.r", CharacterLoader.BASE_PATH + "bodyMaterial.json", scene.getMeshByName("Head_primitive4"));
-                this.setupMaterial("Body", CharacterLoader.BASE_PATH + "bodyMaterial.json", scene.getMeshByName("Body"));
+                this.setupMaterial("Eye.r", CharacterManager.BASE_PATH + "bodyMaterial.json", scene.getMeshByName("Head_primitive4"));
+                this.setupMaterial("Body", CharacterManager.BASE_PATH + "bodyMaterial.json", scene.getMeshByName("Body"));
                 //this.setupTexture(scene);
                 // ロード中に中途半端な状態で見えてしまう問題に対する暫定的な対策
                 //setTimeout(() => { this.meshVisibility(true) }, 5000);

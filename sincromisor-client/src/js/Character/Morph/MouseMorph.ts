@@ -12,7 +12,7 @@ type MouseMorphValues = {
     "Mouse.O": number
 }
 
-export class CharacterMouse {
+export class MouseMorph {
     morphValues: MouseMorphValues;
     talk: TalkManager
 

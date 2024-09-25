@@ -8,7 +8,7 @@ type MayuMorphValues = {
     "Mayu.r": number, // 右上瞼
 }
 
-export class CharacterMayu {
+export class MayuMorph {
     morphValues: MayuMorphValues;
 
     constructor() {

@@ -7,7 +7,7 @@ type BodyMorphValues = {
     "rig": number
 }
 
-export class CharacterBody {
+export class BodyMorph {
     morphValues: BodyMorphValues;
 
     constructor() {

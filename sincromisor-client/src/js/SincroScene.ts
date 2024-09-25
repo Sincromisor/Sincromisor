@@ -6,7 +6,7 @@ import { WebXRDefaultExperience } from '@babylonjs/core/XR/webXRDefaultExperienc
 import { ScenePerformancePriority } from '@babylonjs/core/scene';
 //import { StageFloor } from './Stage/StageFloor';
 import { SceneLogger } from './Stage/SceneLogger';
-import { CharacterLoader } from './Character/CharacterLoader';
+import { CharacterManager } from './Character/CharacterManager';
 import { Inspector } from '@babylonjs/inspector';
 import { StageLight } from './Stage/StageLight';
 import { StageCamera } from './Stage/StageCamera';
@@ -25,7 +25,7 @@ export class SincroScene {
     logger: SceneLogger;
     light: StageLight;
     camera: StageCamera;
-    character?: CharacterLoader;
+    character?: CharacterManager;
     talk: TalkManager;
 
     constructor(canvas: HTMLCanvasElement, talk: TalkManager,
@@ -78,7 +78,7 @@ export class SincroScene {
         }
 
         if (this.withCharacter) {
-            const character: CharacterLoader = new CharacterLoader(this.scene, this.light, this.camera, this.talk);
+            const character: CharacterManager = new CharacterManager(this.scene, this.light, this.camera, this.talk);
             character.loadModel();
             this.character = character;
         }

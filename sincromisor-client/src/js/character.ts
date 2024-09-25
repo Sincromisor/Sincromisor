@@ -1,4 +1,4 @@
-import { CharacterLoader } from "./Character/CharacterLoader";
+import { CharacterManager } from "./Character/CharacterManager";
 import { SincroScene } from "./SincroScene";
 import { TalkManager } from "./RTC/TalkManager";
 
@@ -20,7 +20,7 @@ function start() {
 }
 
 window.addEventListener('load', () => {
-    CharacterLoader.availabilityCheck(() => {
+    CharacterManager.availabilityCheck(() => {
         start();
     }, () => {
         console.error('Character is not available.');

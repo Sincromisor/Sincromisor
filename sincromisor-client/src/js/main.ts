@@ -1,7 +1,7 @@
 import { SincroController } from "./SincroController";
 import { DialogManager } from "./UI/DialogManager";
 import { ChatMessageManager } from "./UI/ChatMessageManager";
-import { CharacterLoader } from "./Character/CharacterLoader";
+import { CharacterManager } from "./Character/CharacterManager";
 import { SincroScene } from "./SincroScene";
 import { TalkManager } from "./RTC/TalkManager";
 
@@ -42,7 +42,7 @@ function startRTC(dialogManager: DialogManager) {
 
 window.addEventListener('load', () => {
     const dialogManager: DialogManager = DialogManager.getManager();
-    CharacterLoader.availabilityCheck(() => {
+    CharacterManager.availabilityCheck(() => {
         dialogManager.updateCharacterStatus(true);
     }, () => {
         dialogManager.updateCharacterStatus(false);

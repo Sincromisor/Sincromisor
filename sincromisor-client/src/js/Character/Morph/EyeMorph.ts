@@ -10,7 +10,7 @@ type EyeMorphValues = {
     "EyeD.r": number  // 右下瞼
 }
 
-export class CharacterEye {
+export class EyeMorph {
     morphValues: EyeMorphValues;
 
     constructor() {
