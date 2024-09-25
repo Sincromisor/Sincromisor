@@ -1,4 +1,7 @@
-export class RTCLogger {
+export class DebugConsoleManager {
+    private static instance: DebugConsoleManager
+
+    /* RTC */
     telopChannelLog: HTMLPreElement | null;
     textChannelLog: HTMLPreElement | null;
     iceConnectionLog: HTMLSpanElement | null;
@@ -7,7 +10,21 @@ export class RTCLogger {
     offerSDPLog: HTMLPreElement | null;
     answerSDPLog: HTMLPreElement | null;
 
-    constructor() {
+    /* CharacterGaze */
+    faceXLog: HTMLElement | null;
+    faceYLog: HTMLElement | null;
+    facing: HTMLElement | null;
+    characterGazeStatus: HTMLElement | null;
+
+    static getManager(){
+        if (!DebugConsoleManager.instance){
+            DebugConsoleManager.instance = new DebugConsoleManager();
+        }
+        return DebugConsoleManager.instance;
+    }
+
+    private constructor() {
+        /* RTC */
         this.telopChannelLog = document.querySelector("pre#telopChannel");
         this.textChannelLog = document.querySelector("pre#textChannel");
         this.iceConnectionLog = document.querySelector("span#iceConnectionState");
@@ -15,8 +32,37 @@ export class RTCLogger {
         this.signalingLog = document.querySelector("span#signalingState");
         this.offerSDPLog = document.querySelector("pre#offerSDP");
         this.answerSDPLog = document.querySelector("pre#answerSDP");
+
+        /* CharacterGaze */
+        this.faceXLog = document.querySelector('dd#faceX');
+        this.faceYLog = document.querySelector('dd#faceY');
+        this.facing = document.querySelector('dd#facing');
+        this.characterGazeStatus = document.querySelector('dd#characterGazeStatus');
+
+        this.setShortcutKeyEvent();
     }
 
+    /* ctrl + alt + dでデバッグコンソールを表示 */
+    private setShortcutKeyEvent(): void {
+        const debugConsole: HTMLDivElement | null = document.querySelector("div#debugConsole");
+        if (!debugConsole) {
+            return;
+        }
+        window.addEventListener("keydown", (e) => {
+            // macOSのChromeではalt+dでkeyの値がδになる
+            if (e.ctrlKey && e.altKey && (e.key == 'd' || e.code == 'KeyD')) {
+                if (window.getComputedStyle(debugConsole).zIndex == '-1') {
+                    debugConsole.style.zIndex = '255';
+                    debugConsole.style.overflow = 'scroll';
+                } else {
+                    debugConsole.style.zIndex = '-1';
+                    debugConsole.style.overflow = 'hidden';
+                }
+            }
+        });
+    }
+
+    /* RTC */
     private trimTextContent(text: string, lines: number): string {
         return text.split("\n").slice(-lines).join("\n");
     }
@@ -84,6 +130,36 @@ export class RTCLogger {
     answerSDP(msg: string): void {
         if (this.answerSDPLog) {
             this.answerSDPLog.textContent = msg;
+        }
+    }
+
+    /* CharacterGaze */
+    updateFaceXLog(value: number){
+        if(this.faceXLog){
+            this.faceXLog.textContent = `${value}`;
+        }
+    }
+
+    updateFaceYLog(value: number){
+        if(this.faceYLog){
+            this.faceYLog.textContent = `${value}`;
+        }
+    }
+
+    updateFacing(value: number){
+        if (this.facing){
+            this.facing.textContent = `${value}`;
+        }
+    }
+
+    updateCharacterEyeStatus(watching:boolean){
+        if (!this.characterGazeStatus){
+            return;
+        }
+        if (watching){
+            this.characterGazeStatus.innerText = 'みてる';
+        } else {
+            this.characterGazeStatus.innerText = 'みてない';
         }
     }
 }

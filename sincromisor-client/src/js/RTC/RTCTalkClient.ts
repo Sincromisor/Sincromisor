@@ -1,8 +1,8 @@
-import { RTCLogger } from "./RTCLogger"
+import { DebugConsoleManager } from "../Tools/DebugConsoleManager";
 import { TelopChannelMessage, TextChannelMessage } from "./RTCMessage";
 
 export class RTCTalkClient {
-    logger: RTCLogger;
+    logger: DebugConsoleManager;
     peerConnection: RTCPeerConnection;
     telopChannel: RTCDataChannel;
     textChannel: RTCDataChannel;
@@ -28,7 +28,7 @@ export class RTCTalkClient {
     connectionStateChangeCallback: (state: RTCIceConnectionState) => void = () => { };
 
     constructor(audioTrack: MediaStreamTrack, enableSTUN: boolean = false, stunURL = "stun:stun.negix.org:3478") {
-        this.logger = new RTCLogger();
+        this.logger = DebugConsoleManager.getManager();
         this.audioTrack = audioTrack;
         this.enableSTUN = enableSTUN;
         this.stunURL = stunURL;

@@ -4,7 +4,8 @@ import { CharacterGaze } from "./CharacterGaze/CharacterGaze";
 import { ChatMessageManager } from "./Tools/ChatMessageManager";
 import { DialogManager } from "./Tools/DialogManager";
 import { TalkManager } from "./RTC/TalkManager";
-import { CharacterGazeLogger } from "./CharacterGaze/GazeLogger";
+//import { CharacterGazeLogger } from "./CharacterGaze/GazeLogger";
+import { DebugConsoleManager } from "./Tools/DebugConsoleManager";
 import { TelopChannelMessage, TextChannelMessage } from "./RTC/RTCMessage";
 import { CharacterBone } from "./Character/CharacterBone";
 
@@ -103,7 +104,7 @@ export class SincroController {
         const chracterGazeVideo: HTMLVideoElement | null = document.querySelector('video#characterGazeVideo');
         if (!chracterGazeVideo) { return; }
         const characterGaze = new CharacterGaze(chracterGazeVideo);
-        const eyeLogger = new CharacterGazeLogger();
+        const eyeLogger = DebugConsoleManager.getManager();
 
         characterGaze.initVision();
 
