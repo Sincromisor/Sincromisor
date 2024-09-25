@@ -1,4 +1,5 @@
 import { TelopChannelMessage, TextChannelMessage } from "./RTCMessage";
+import { ChatMessageManager } from "../UI/ChatMessageManager";
 
 export interface CurrentMora {
     'moraID': number,
@@ -8,22 +9,42 @@ export interface CurrentMora {
 }
 
 export class TalkManager {
+    private static instance: TalkManager;
+    chatMessageManager: ChatMessageManager;
     telopChannelMessage: Array<TelopChannelMessage> = [];
     textChannelMessage: Array<TextChannelMessage> = [];
     confirmedText: { 'startAt': number, 'text': string }[] = []
     currentTelopChannelMessage: CurrentMora | null = null;
     mora_id: number = 0;
+    currentMessageElement: HTMLDivElement | null = null;
 
-    constructor() {
+    static getManager() {
+        if (!TalkManager.instance) {
+            TalkManager.instance = new TalkManager();
+        }
+        return TalkManager.instance;
+    }
+
+    private constructor() {
+        this.chatMessageManager = ChatMessageManager.getManager();
     }
 
     addTextChannelMessage(msg: TextChannelMessage): void {
         this.textChannelMessage.push(msg);
+
+        if (this.currentMessageElement) {
+            this.chatMessageManager.updateSystemMessageText(this.currentMessageElement, msg.resultText);
+        } else {
+            this.currentMessageElement = this.chatMessageManager.writeSystemMessageText(msg.resultText);
+        }
+
         if (msg.confirmed) {
             this.confirmedText.push({
                 'startAt': msg.start_at,
                 'text': msg.resultText
             });
+            this.currentMessageElement = null;
+            this.chatMessageManager.removeOldMessage(30);
         }
     }
 
@@ -38,6 +59,7 @@ export class TalkManager {
                 'endTime': performance.now() + msg.length * 1000
             };
             this.mora_id += 1;
+            this.addTelopChar(msg.text);
         }
     }
 
@@ -54,6 +76,19 @@ export class TalkManager {
 
     currentText(): string {
         return this.textChannelMessage[this.textChannelMessage.length - 1]['resultText'];
+    }
+
+    private addTelopChar(char: string) {
+        const telopText: HTMLDivElement | null = document.querySelector("div#obsFooterBox");
+        if (!telopText) {
+            return;
+        }
+        const fontSize = parseFloat(window.getComputedStyle(telopText, null).getPropertyValue("font-size"));
+        const maxLength = telopText.clientWidth / fontSize - 1;
+        while (telopText.innerText.length > maxLength) {
+            telopText.innerText = telopText.innerText.slice(1);
+        }
+        telopText.innerText += (char || "　");
     }
 }
 

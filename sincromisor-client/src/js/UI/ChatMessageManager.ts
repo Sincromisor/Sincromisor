@@ -5,6 +5,7 @@ interface ChatMessage {
 }
 
 export class ChatMessageManager {
+    private static instance: ChatMessageManager;
     chatBox: HTMLDivElement;
     messageID: number = 0;
     systemUserName: string = "GloriousAI";
@@ -12,7 +13,18 @@ export class ChatMessageManager {
     /* 同じエラーメッセージが何度も表示されないようにするために使用 */
     lastErrorMessage: string = '';
 
-    constructor(chatBoxID: HTMLDivElement) {
+    static getManager() {
+        if (!ChatMessageManager.instance) {
+            const e: HTMLDivElement | null = document.querySelector("div#obsMessageBox");
+            if (!e) {
+                throw 'div#obsMessageBox is not found.';
+            }
+            ChatMessageManager.instance = new ChatMessageManager(e);
+        }
+        return ChatMessageManager.instance;
+    }
+
+    private constructor(chatBoxID: HTMLDivElement) {
         this.chatBox = chatBoxID;
     }
 

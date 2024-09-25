@@ -10,7 +10,7 @@ function startRTC(dialogManager: DialogManager) {
     if (!chatBox) {
         throw 'div#obsMessageBox is not found.';
     }
-    const chatMessageManager: ChatMessageManager = new ChatMessageManager(chatBox);
+    const chatMessageManager: ChatMessageManager = ChatMessageManager.getManager();
     chatMessageManager.writeSystemMessage("こんにちは～!");
     chatMessageManager.autoScroll();
 
@@ -18,7 +18,7 @@ function startRTC(dialogManager: DialogManager) {
     if (!charCanvas) {
         throw 'canvas#characterCanvas is not found.';
     }
-    const talkManager: TalkManager = new TalkManager();
+    const talkManager: TalkManager = TalkManager.getManager();
     const sincroController: SincroController = new SincroController(dialogManager, chatMessageManager, talkManager);
 
     if (dialogManager.enableCharacter()) {

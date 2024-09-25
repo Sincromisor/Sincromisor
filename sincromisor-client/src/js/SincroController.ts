@@ -4,7 +4,6 @@ import { CharacterGaze } from "./CharacterGaze/CharacterGaze";
 import { ChatMessageManager } from "./UI/ChatMessageManager";
 import { DialogManager } from "./UI/DialogManager";
 import { TalkManager } from "./RTC/TalkManager";
-//import { CharacterGazeLogger } from "./CharacterGaze/GazeLogger";
 import { DebugConsoleManager } from "./UI/DebugConsoleManager";
 import { TelopChannelMessage, TextChannelMessage } from "./RTC/RTCMessage";
 import { CharacterBone } from "./Character/CharacterBone";
@@ -49,30 +48,20 @@ export class SincroController {
         this.rtcc?.stop();
     }
 
-    setCharacterBone(characterBone: CharacterBone){
+    setCharacterBone(characterBone: CharacterBone) {
         this.characterBone = characterBone;
     }
 
     private setTextChannelCallback(rtcc: RTCTalkClient) {
-        rtcc.textChannelCallback = (tcMsg:TextChannelMessage) => {
+        rtcc.textChannelCallback = (tcMsg: TextChannelMessage) => {
             console.log(tcMsg);
             this.talkManager.addTextChannelMessage(tcMsg);
-            if (this.currentMessageElement) {
-                this.chatMessageManager.updateSystemMessageText(this.currentMessageElement, tcMsg.resultText);
-            } else {
-                this.currentMessageElement = this.chatMessageManager.writeSystemMessageText(tcMsg.resultText);
-            }
-            if (tcMsg.confirmed) {
-                this.currentMessageElement = null;
-                this.chatMessageManager.removeOldMessage(10);
-            }
         }
     }
 
     private setTelopChannelCallback(rtcc: RTCTalkClient) {
-        rtcc.telopChannelCallback = (vcMsg:TelopChannelMessage) => {
+        rtcc.telopChannelCallback = (vcMsg: TelopChannelMessage) => {
             this.talkManager.addTelopChannelMessage(vcMsg);
-            this.addTelopChar(vcMsg.text);
         }
     }
 
@@ -151,18 +140,5 @@ export class SincroController {
                 this.rtcc?.setMute(true);
             }
         }
-    }
-
-    private addTelopChar(char: string) {
-        const telopText: HTMLDivElement | null = document.querySelector("div#obsFooterBox");
-        if (!telopText) {
-            return;
-        }
-        const fontSize = parseFloat(window.getComputedStyle(telopText, null).getPropertyValue("font-size"));
-        const maxLength = telopText.clientWidth / fontSize - 1;
-        while (telopText.innerText.length > maxLength) {
-            telopText.innerText = telopText.innerText.slice(1);
-        }
-        telopText.innerText += (char || "　");
     }
 }
