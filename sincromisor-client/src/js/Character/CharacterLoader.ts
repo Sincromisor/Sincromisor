@@ -1,5 +1,5 @@
 // https://sandbox.babylonjs.com/
-import { AbstractMesh } from "@babylonjs/core/Meshes";
+import { AbstractMesh, Mesh } from "@babylonjs/core/Meshes";
 import { Scene } from "@babylonjs/core/scene";
 import { } from "@babylonjs/core/Rendering/outlineRenderer"; // これがないとAbstractMesh.renderOutlineがundefinedになる
 import { SceneLoader } from "@babylonjs/core/Loading";
@@ -15,6 +15,7 @@ import { CharacterBone } from "./CharacterBone";
 import { StageCamera } from "../Stage/StageCamera";
 import { StageLight } from "../Stage/StageLight";
 import { TalkManager } from "../RTC/TalkManager";
+import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
 
 SceneLoader.RegisterPlugin(new GLTFFileLoader());
 
@@ -98,6 +99,8 @@ export class CharacterLoader {
                 this.morph.eye.setupMorph(scene);
                 this.morph.mouse.setupMorph(scene);
                 this.morph.mayu.setupMorph(scene);
+                this.fixHeadPosition();
+                this.setHighlightLayer();
                 //this.eyeCameraTracking();
             } catch (e) {
                 console.error(e);
@@ -173,13 +176,17 @@ export class CharacterLoader {
 
             // アウトライン
             //mesh.skeleton.enableBlending(0.01);
+
+            /*
             mesh.renderOutline = true;
             mesh.outlineWidth = 0.0001;
             mesh.outlineColor = Color3.Black();
+            */
             //mesh.overlayColor = BABYLON.Color3.Green();
             //mesh.renderOverlay = true;
+
             // 影
-            const shadowGenerator: ShadowGenerator = new ShadowGenerator(2048, this.light.characterLight as IShadowLight, true);
+            const shadowGenerator: ShadowGenerator = new ShadowGenerator(512, this.light.characterLight as IShadowLight, true);
             shadowGenerator.getShadowMap()?.renderList?.push(mesh)
             shadowGenerator.setDarkness(0.2);
             shadowGenerator.filter = ShadowGenerator.FILTER_PCSS;
@@ -198,29 +205,30 @@ export class CharacterLoader {
         });
     }
 
-    /*
-    private setupHeadMorph() {
+    // アウトライン(highlight layer版)
+    private setHighlightLayer() {
+        const highlightColor = new Color3(200, 200, 200);
+        const hl01 = new HighlightLayer('HighlightLayer01', this.scene, { isStroke: true, mainTextureFixedSize: 1024, mainTextureRatio: 0.1, blurHorizontalSize: 0.5, blurVerticalSize: 0.5});
+        hl01.innerGlow = false;
+        hl01.outerGlow = true;
+        this.scene.meshes.forEach((mesh: AbstractMesh) => {
+            console.log(mesh);
+            hl01.addMesh(mesh as Mesh, highlightColor);
+        });
+    }
+
+    /* 頭と首の継ぎ目がはっきり見えてしまう問題をごまかす */
+    private fixHeadPosition() {
         ["Head_primitive0", "Head_primitive1", "Head_primitive2", "Head_primitive3", "Head_primitive4"].forEach((mName) => {
-            let headMesh: Nullable<AbstractMesh> = this.scene.getMeshByName(mName);
+            let headMesh: AbstractMesh | null = this.scene.getMeshByName(mName);
             if (headMesh == null) { return; };
             let morphTargetManager = headMesh.morphTargetManager;
             if (morphTargetManager == null) { return; };
 
-            // 首が微妙にズレて隙間が空く問題を修正
-            headMesh.position.x = -0.00155;  // 左右(マイナスで左に)
-            headMesh.position.y = -0.00085; // 高さ(マイナスで低く)
-            headMesh.position.z = -0.0001; // 前後(マイナスで前に)
-
-            this.scene.registerBeforeRender(() => {
-                // this.updateMabataki();
-                //this.randomMouse();
-                for (let i = 0; i < morphTargetManager.numTargets; i++) {
-                    //let target = morphTargetManager.getTarget(i);
-                    //target.influence = Math.sin((window.performance.now() / 180) * Math.PI);
-                    //target.influence = this.headMorphValue[target.name];
-                }
-            });
+            headMesh.position.x = 0.00;  // 前後
+            headMesh.position.y = 0.00; // 高さ
+            headMesh.position.z = -0.00128; // 左右
+            //eadMesh.rotation.x = -0.0001;
         });
     }
-    */
 }
