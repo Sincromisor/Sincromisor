@@ -5,12 +5,12 @@ import { SceneLoader } from '@babylonjs/core/Loading/sceneLoader';
 import { WebXRDefaultExperience } from '@babylonjs/core/XR/webXRDefaultExperience';
 import { ScenePerformancePriority } from '@babylonjs/core/scene';
 //import { StageFloor } from './Stage/StageFloor';
-import { SceneLogger } from './Stage/SceneLogger';
-import { CharacterManager } from './Character/CharacterManager';
+import { SceneLogger } from './SceneLogger';
+import { CharacterManager } from '../Character/CharacterManager';
 import { Inspector } from '@babylonjs/inspector';
-import { StageLight } from './Stage/StageLight';
-import { StageCamera } from './Stage/StageCamera';
-import { TalkManager } from './RTC/TalkManager';
+import { StageLight } from './SceneLight';
+import { StageCamera } from './SceneCamera';
+import { TalkManager } from '../RTC/TalkManager';
 
 // https://learn.microsoft.com/ja-jp/windows/mixed-reality/develop/javascript/tutorials/babylonjs-webxr-helloworld/introduction-01
 // https://doc.babylonjs.com/features/featuresDeepDive/scene/optimize_your_scene

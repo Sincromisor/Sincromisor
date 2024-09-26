@@ -1,5 +1,5 @@
 import { CharacterManager } from "./Character/CharacterManager";
-import { SincroScene } from "./SincroScene";
+import { SincroScene } from "./Scene/SincroScene";
 import { TalkManager } from "./RTC/TalkManager";
 
 function start() {

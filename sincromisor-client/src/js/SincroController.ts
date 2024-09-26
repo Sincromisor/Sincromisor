@@ -17,10 +17,10 @@ export class SincroController {
     userMediaManager: UserMediaManager;
     characterBone: CharacterBone | null = null;
 
-    constructor(dialogManager: DialogManager, chatMessageManager: ChatMessageManager, talkManager: TalkManager) {
-        this.dialogManager = dialogManager;
-        this.chatMessageManager = chatMessageManager;
-        this.talkManager = talkManager;
+    constructor() {
+        this.dialogManager = DialogManager.getManager();
+        this.chatMessageManager = ChatMessageManager.getManager();
+        this.talkManager = TalkManager.getManager();
 
         this.userMediaManager = new UserMediaManager();
         if (!this.dialogManager.enableCharacterGaze()) {

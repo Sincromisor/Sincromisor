@@ -1,52 +1,16 @@
-import { SincroController } from "./SincroController";
-import { DialogManager } from "./UI/DialogManager";
-import { ChatMessageManager } from "./UI/ChatMessageManager";
-import { CharacterManager } from "./Character/CharacterManager";
-import { SincroGlassScene } from "./SincroGlassScene";
-import { TalkManager } from "./RTC/TalkManager";
+import { SincroScene } from "./Scene/SincroScene";
+import { SincroGlassScene } from "./Scene/SincroGlassScene";
+import { SincroInitializer } from "./SincroInitializer";
 
-function startRTC(dialogManager: DialogManager) {
-    const chatMessageManager: ChatMessageManager = ChatMessageManager.getManager();
-    chatMessageManager.writeSystemMessage("こんにちは～!");
-    chatMessageManager.autoScroll();
-
-    const talkManager: TalkManager = TalkManager.getManager();
-    const sincroController: SincroController = new SincroController(dialogManager, chatMessageManager, talkManager);
-
-    if (dialogManager.enableCharacter()) {
-        const charCanvas: HTMLCanvasElement | null = document.querySelector('canvas#characterCanvas');
-        if (!charCanvas) {
-            throw 'canvas#characterCanvas is not found.';
-        }
-        const sincroScene: SincroGlassScene = new SincroGlassScene(
-            charCanvas, talkManager,
-            dialogManager.enableVR(),
-            dialogManager.enableCharacter(),
-            dialogManager.enableInspector()
+class SincroGlassInitializer extends SincroInitializer {
+    initializeSincroController(): SincroScene {
+        return new SincroGlassScene(this.charCanvas, this.talkManager,
+            this.dialogManager.enableVR(),
+            this.dialogManager.enableCharacter(),
+            this.dialogManager.enableInspector()
         );
-        sincroScene.createScene();
-        sincroScene.run();
-        if (sincroScene.character) {
-            sincroController.setCharacterBone(sincroScene.character?.bones.root);
-        }
     }
-    dialogManager.setRTCStopButtonEventListener(() => {
-        sincroController.stopRTC();
-    });
-    dialogManager.closeDialog();
 }
-
 window.addEventListener('load', () => {
-    const dialogManager: DialogManager = DialogManager.getManager();
-    CharacterManager.availabilityCheck(() => {
-        dialogManager.updateCharacterStatus(true);
-    }, () => {
-        dialogManager.updateCharacterStatus(false);
-    });
-    dialogManager.setRTCStartButtonEventListener(() => {
-        startRTC(dialogManager);
-    });
-    if ('obsstudio' in window) {
-        startRTC(dialogManager);
-    }
+    new SincroGlassInitializer();
 });

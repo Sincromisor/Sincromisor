@@ -12,8 +12,8 @@ import { EyeMorph } from "./Morph/EyeMorph";
 import { MayuMorph } from "./Morph/MayuMorph";
 import { MouseMorph } from "./Morph/MouseMorph";
 import { CharacterBone } from "./CharacterBone";
-import { StageCamera } from "../Stage/StageCamera";
-import { StageLight } from "../Stage/StageLight";
+import { StageCamera } from "../Scene/SceneCamera";
+import { StageLight } from "../Scene/SceneLight";
 import { TalkManager } from "../RTC/TalkManager";
 import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
 
