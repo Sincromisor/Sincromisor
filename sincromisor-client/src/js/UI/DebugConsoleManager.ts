@@ -16,8 +16,8 @@ export class DebugConsoleManager {
     facing: HTMLElement | null;
     characterGazeStatus: HTMLElement | null;
 
-    static getManager(){
-        if (!DebugConsoleManager.instance){
+    static getManager(): DebugConsoleManager {
+        if (!DebugConsoleManager.instance) {
             DebugConsoleManager.instance = new DebugConsoleManager();
         }
         return DebugConsoleManager.instance;
@@ -134,29 +134,29 @@ export class DebugConsoleManager {
     }
 
     /* CharacterGaze */
-    updateFaceXLog(value: number){
-        if(this.faceXLog){
+    updateFaceXLog(value: number): void {
+        if (this.faceXLog) {
             this.faceXLog.textContent = `${value}`;
         }
     }
 
-    updateFaceYLog(value: number){
-        if(this.faceYLog){
+    updateFaceYLog(value: number): void {
+        if (this.faceYLog) {
             this.faceYLog.textContent = `${value}`;
         }
     }
 
-    updateFacing(value: number){
-        if (this.facing){
+    updateFacing(value: number): void {
+        if (this.facing) {
             this.facing.textContent = `${value}`;
         }
     }
 
-    updateCharacterEyeStatus(watching:boolean){
-        if (!this.characterGazeStatus){
+    updateCharacterEyeStatus(watching: boolean): void {
+        if (!this.characterGazeStatus) {
             return;
         }
-        if (watching){
+        if (watching) {
             this.characterGazeStatus.innerText = 'みてる';
         } else {
             this.characterGazeStatus.innerText = 'みてない';

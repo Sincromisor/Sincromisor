@@ -1,7 +1,7 @@
 export class DialogManager {
     private static instance: DialogManager
 
-    static getManager() {
+    static getManager(): DialogManager {
         if (!DialogManager.instance) {
             DialogManager.instance = new DialogManager();
         }
@@ -49,7 +49,7 @@ export class DialogManager {
         return eC.checked;
     }
 
-    enableCharacterGaze() {
+    enableCharacterGaze(): boolean {
         const eC: HTMLInputElement | null = document.querySelector("input#enableCharacterGaze");
         if (eC?.checked) {
             return true;
@@ -105,7 +105,7 @@ export class DialogManager {
         headerElement.innerText = this.getTitleText();
     }
 
-    updateCharacterStatus(available: boolean) {
+    updateCharacterStatus(available: boolean): void {
         this.updateEnableCharacterStatus(available);
         this.updateEnableCharacterGazeStatus(available);
         this.updateAutoMuteStatus();
@@ -124,7 +124,7 @@ export class DialogManager {
         }
     }
 
-    private updateEnableCharacterGazeStatus(available: boolean) {
+    private updateEnableCharacterGazeStatus(available: boolean): void {
         const eC: HTMLInputElement | null = document.querySelector('#enableCharacterGaze');
         if (!eC) {
             return;
@@ -137,7 +137,7 @@ export class DialogManager {
         }
     }
 
-    private updateAutoMuteStatus() {
+    private updateAutoMuteStatus(): void {
         const eInput: HTMLInputElement | null = document.querySelector('input#enableAutoMute');
         if (!eInput) {
             return;
@@ -151,7 +151,7 @@ export class DialogManager {
         }
     }
 
-    setRTCStartButtonEventListener(startFunction: () => void) {
+    setRTCStartButtonEventListener(startFunction: () => void): void {
         const startBtn: HTMLButtonElement | null = document.querySelector('button#rtcStart');
         if (!startBtn) {
             throw 'button#rtcStart is not found.';
@@ -159,7 +159,7 @@ export class DialogManager {
         startBtn.addEventListener('click', startFunction);
     }
 
-    setRTCStopButtonEventListener(stopFunction: () => void) {
+    setRTCStopButtonEventListener(stopFunction: () => void): void {
         const startBtn: HTMLButtonElement | null = document.querySelector('button#rtcStop');
         if (!startBtn) {
             throw 'button#rtcStart is not found.';
@@ -167,7 +167,7 @@ export class DialogManager {
         startBtn.addEventListener('click', stopFunction);
     }
 
-    private setMiscEvent() {
+    private setMiscEvent(): void {
         // 入力されたタイトルに合わせたヘッダの更新
         const titleText: HTMLInputElement | null = document.querySelector("input#titleText");
         if (titleText) {

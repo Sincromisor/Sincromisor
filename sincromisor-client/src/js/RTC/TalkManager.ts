@@ -18,7 +18,7 @@ export class TalkManager {
     mora_id: number = 0;
     currentMessageElement: HTMLDivElement | null = null;
 
-    static getManager() {
+    static getManager(): TalkManager {
         if (!TalkManager.instance) {
             TalkManager.instance = new TalkManager();
         }
@@ -78,7 +78,7 @@ export class TalkManager {
         return this.textChannelMessage[this.textChannelMessage.length - 1]['resultText'];
     }
 
-    private addTelopChar(char: string) {
+    private addTelopChar(char: string): void {
         const telopText: HTMLDivElement | null = document.querySelector("div#obsFooterBox");
         if (!telopText) {
             return;

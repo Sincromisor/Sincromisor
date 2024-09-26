@@ -55,7 +55,7 @@ export class CharacterManager {
         }
     }
 
-    static availabilityCheck(onSuccess: () => void, onFailure: () => void) {
+    static availabilityCheck(onSuccess: () => void, onFailure: () => void): void {
         fetch(CharacterManager.BASE_PATH + "gloria.glb", { "method": "HEAD" }).then((res) => {
             if (res.status == 200) {
                 onSuccess();
@@ -65,7 +65,7 @@ export class CharacterManager {
         });
     }
 
-    loadModel(onLoad: () => void) {
+    loadModel(onLoad: () => void): void {
         /* 
             Append(rootUrl, sceneFilename?, scene?, onSuccess?, onProgress?, onError?, 
                    pluginExtension?, name?): Nullable<ISceneLoaderPlugin | ISceneLoaderPluginAsync>
@@ -104,7 +104,7 @@ export class CharacterManager {
         }, () => { console.log('SceneLoader loading...'); }, () => { console.error('SceneLoader failed.'); });
     }
 
-    meshVisibility(visible: boolean) {
+    meshVisibility(visible: boolean): void {
         this.scene.meshes.forEach((mesh) => {
             mesh.setEnabled(visible);
         });
@@ -124,7 +124,7 @@ export class CharacterManager {
     }
     */
 
-    private setupMaterial(matName: string, matFile: string, mesh: AbstractMesh | null) {
+    private setupMaterial(matName: string, matFile: string, mesh: AbstractMesh | null): void {
         if (mesh == null) { return };
         mesh.renderingGroupId = 1;
         NodeMaterial.ParseFromFileAsync(matName, matFile, this.scene).then((nMat) => {
@@ -202,7 +202,7 @@ export class CharacterManager {
     }
 
     // アウトライン(highlight layer版)
-    private setHighlightLayer() {
+    private setHighlightLayer(): void {
         const highlightColor = new Color3(200, 200, 200);
         const hl01 = new HighlightLayer('HighlightLayer01', this.scene, {
             isStroke: true,
@@ -218,7 +218,7 @@ export class CharacterManager {
     }
 
     /* 頭と首の継ぎ目がはっきり見えてしまう問題をごまかす */
-    private fixHeadPosition() {
+    private fixHeadPosition(): void {
         ["Head_primitive0", "Head_primitive1", "Head_primitive2", "Head_primitive3", "Head_primitive4"].forEach((mName) => {
             let headMesh: AbstractMesh | null = this.scene.getMeshByName(mName);
             if (headMesh == null) { return; };

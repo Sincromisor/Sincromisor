@@ -44,28 +44,28 @@ export class SincroController {
         this.rtcc.start();
     }
 
-    stopRTC() {
+    stopRTC(): void {
         this.rtcc?.stop();
     }
 
-    setCharacterBone(characterBone: CharacterBone) {
+    setCharacterBone(characterBone: CharacterBone): void {
         this.characterBone = characterBone;
     }
 
-    private setTextChannelCallback(rtcc: RTCTalkClient) {
+    private setTextChannelCallback(rtcc: RTCTalkClient): void {
         rtcc.textChannelCallback = (tcMsg: TextChannelMessage) => {
             console.log(tcMsg);
             this.talkManager.addTextChannelMessage(tcMsg);
         }
     }
 
-    private setTelopChannelCallback(rtcc: RTCTalkClient) {
+    private setTelopChannelCallback(rtcc: RTCTalkClient): void {
         rtcc.telopChannelCallback = (vcMsg: TelopChannelMessage) => {
             this.talkManager.addTelopChannelMessage(vcMsg);
         }
     }
 
-    private setConnectionStateChangeCallback(rtcc: RTCTalkClient) {
+    private setConnectionStateChangeCallback(rtcc: RTCTalkClient): void {
         rtcc.connectionStateChangeCallback = (state) => {
             /* new -> checking -> connected、disconnected -> failed */
             switch (state) {
@@ -87,8 +87,8 @@ export class SincroController {
         }
     }
 
-    private startCharacterGaze(videoTrack: MediaStreamTrack) {
-        if (!this.dialogManager.enableCharacterGaze()) { return false; }
+    private startCharacterGaze(videoTrack: MediaStreamTrack): void {
+        if (!this.dialogManager.enableCharacterGaze()) { return; }
 
         const chracterGazeVideo: HTMLVideoElement | null = document.querySelector('video#characterGazeVideo');
         if (!chracterGazeVideo) { return; }

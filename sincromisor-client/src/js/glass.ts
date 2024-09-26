@@ -3,7 +3,7 @@ import { SincroGlassScene } from "./Scene/SincroGlassScene";
 import { SincroInitializer } from "./SincroInitializer";
 
 class SincroGlassInitializer extends SincroInitializer {
-    initializeSincroController(): SincroScene {
+    override initializeSincroScene(): SincroScene {
         return new SincroGlassScene(this.charCanvas, this.talkManager,
             this.dialogManager.enableVR(),
             this.dialogManager.enableCharacter(),

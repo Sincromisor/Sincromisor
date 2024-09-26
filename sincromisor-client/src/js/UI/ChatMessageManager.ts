@@ -13,7 +13,7 @@ export class ChatMessageManager {
     /* 同じエラーメッセージが何度も表示されないようにするために使用 */
     lastErrorMessage: string = '';
 
-    static getManager() {
+    static getManager(): ChatMessageManager {
         if (!ChatMessageManager.instance) {
             const e: HTMLDivElement | null = document.querySelector("div#obsMessageBox");
             if (!e) {
