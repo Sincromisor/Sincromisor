@@ -65,16 +65,15 @@ export class CharacterManager {
         });
     }
 
-    loadModel() {
+    loadModel(onLoad: () => void) {
         /* 
             Append(rootUrl, sceneFilename?, scene?, onSuccess?, onProgress?, onError?, 
                    pluginExtension?, name?): Nullable<ISceneLoaderPlugin | ISceneLoaderPluginAsync>
         */
         SceneLoader.Append(CharacterManager.BASE_PATH, "gloria.glb", this.scene, (scene) => {
             try {
+                this.meshVisibility(false);
 
-
-                //this.meshVisibility(false);
                 this.setupMaterial("Dress", CharacterManager.BASE_PATH + "dressMaterial.json", scene.getMeshByName("MarnieDress"));
                 this.setupMaterial("Hat", CharacterManager.BASE_PATH + "hatMaterial.json", scene.getMeshByName("Hat"));
                 this.setupMaterial("Hair", CharacterManager.BASE_PATH + "hairMaterial.json", scene.getMeshByName("Hair"));
@@ -89,11 +88,7 @@ export class CharacterManager {
                 // 右目
                 this.setupMaterial("Eye.r", CharacterManager.BASE_PATH + "bodyMaterial.json", scene.getMeshByName("Head_primitive4"));
                 this.setupMaterial("Body", CharacterManager.BASE_PATH + "bodyMaterial.json", scene.getMeshByName("Body"));
-                //this.setupTexture(scene);
-                // ロード中に中途半端な状態で見えてしまう問題に対する暫定的な対策
-                //setTimeout(() => { this.meshVisibility(true) }, 5000);
 
-                //const charBone: CharacterBone = new CharacterBone();
                 this.bones.root.setupBone(scene);
                 this.morph.body.setupMorph(scene);
                 this.morph.eye.setupMorph(scene);
@@ -101,14 +96,15 @@ export class CharacterManager {
                 this.morph.mayu.setupMorph(scene);
                 this.fixHeadPosition();
                 this.setHighlightLayer();
-                //this.eyeCameraTracking();
+                onLoad();
+                this.meshVisibility(true);
             } catch (e) {
                 console.error(e);
             }
         }, () => { console.log('SceneLoader loading...'); }, () => { console.error('SceneLoader failed.'); });
     }
 
-    meshVisibility(visible = true) {
+    meshVisibility(visible: boolean) {
         this.scene.meshes.forEach((mesh) => {
             mesh.setEnabled(visible);
         });
@@ -208,7 +204,11 @@ export class CharacterManager {
     // アウトライン(highlight layer版)
     private setHighlightLayer() {
         const highlightColor = new Color3(200, 200, 200);
-        const hl01 = new HighlightLayer('HighlightLayer01', this.scene, { isStroke: true, mainTextureFixedSize: 1024, mainTextureRatio: 0.1, blurHorizontalSize: 0.5, blurVerticalSize: 0.5});
+        const hl01 = new HighlightLayer('HighlightLayer01', this.scene, {
+            isStroke: true,
+            mainTextureFixedSize: 1024, mainTextureRatio: 0.1,
+            blurHorizontalSize: 1.0, blurVerticalSize: 1.0
+        });
         hl01.innerGlow = false;
         hl01.outerGlow = true;
         this.scene.meshes.forEach((mesh: AbstractMesh) => {

@@ -63,10 +63,15 @@ export class SincroScene {
     }
 
     private setResizeEvent(): void {
-        window.addEventListener('resize', () => {
-            this.camera.reconfigure();
-            this.engine.resize();
+        const rObserver:ResizeObserver = new ResizeObserver(()=>{
+            this.applyCanvasSize();
         });
+        rObserver.observe(this.canvas);
+    }
+
+    applyCanvasSize(): void {
+        this.camera.reconfigure();
+        this.engine.resize();
     }
 
     async createScene(): Promise<void> {
@@ -74,12 +79,13 @@ export class SincroScene {
             const xrHelper: WebXRDefaultExperience = await WebXRDefaultExperience.CreateAsync(this.scene);
             //const xrHelper: WebXRDefaultExperience = await this.scene.createDefaultXRExperienceAsync();
             console.log(xrHelper);
-        } else {
         }
 
         if (this.withCharacter) {
             const character: CharacterManager = new CharacterManager(this.scene, this.light, this.camera, this.talk);
-            character.loadModel();
+            character.loadModel(() => {
+                this.applyCanvasSize();
+            });
             this.character = character;
         }
         //new StageFloor(this.scene);
