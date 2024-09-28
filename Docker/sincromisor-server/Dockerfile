@@ -8,9 +8,9 @@ COPY --chown=${USER_ID}:${USER_ID} \
     ./sincromisor-server/ /opt/${USER_ID}/sincromisor-server/
 
 COPY --chown=${USER_ID}:${USER_ID} \
-    ./examples/config.yml ./start.sh ./install-server-assets.sh \
+    ./examples/config.yml ./start-server.sh ./install-server-assets.sh \
     /opt/${USER_ID}/
 
 VOLUME ["/opt/sincromisor/.cache"]
 ENTRYPOINT [ "/opt/sincromisor/docker-entrypoint.sh" ]
-# CMD ["/opt/sincromisor/start.sh"]
+CMD ["/opt/sincromisor/start-server.sh"]

@@ -16,16 +16,16 @@ RUN --mount=type=cache,target=/opt/${USER_ID}/.cache \
     chown ${USER_ID}:${USER_ID} /opt/${USER_ID}/.cache
 
 COPY --chown=${USER_ID}:${USER_ID} \
-  ./pyproject.toml ./requirements.lock ./requirements-dev.lock \
+  ./pyproject.toml ./uv.lock \
   ./README.md ./Docker/sincromisor-server-base/docker-entrypoint.sh \
   /opt/${USER_ID}/
 
 USER $USER_ID
 RUN --mount=type=cache,target=/opt/${USER_ID}/.cache \
     cd /opt/${USER_ID} && \
-    curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION='--yes' RYE_TOOLCHAIN_VERSION=cpython@3.10.14 bash && \
-    PATH="/opt/sincromisor/.rye/shims:$PATH" rye sync
+    curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    PATH="/opt/sincromisor/.cargo/bin:$PATH" uv sync
 
 VOLUME ["/opt/sincromisor/.cache"]
 ENTRYPOINT [ "/opt/sincromisor/docker-entrypoint.sh" ]
-# CMD ["/opt/sincromisor/start.sh"]
+# CMD ["/opt/sincromisor/start-server.sh"]

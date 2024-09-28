@@ -5,8 +5,8 @@ set -x
 
 cd "$(dirname "${0}")"
 
-if ! which rye > /dev/null; then
-    curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION='--yes' RYE_TOOLCHAIN_VERSION=cpython@3.10.14 bash
-    . "$HOME/.rye/env"
+if ! which uv > /dev/null; then
+    curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astral-sh/uv/releases/download/0.4.17/uv-installer.sh | sh
+    source $HOME/.cargo/env
 fi
-rye sync
+uv sync

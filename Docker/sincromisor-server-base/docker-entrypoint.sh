@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PATH="/opt/sincromisor/.rye/shims:${PATH}"
+PATH="/opt/sincromisor/.cargo/bin:${PATH}"
 
 cd /opt/sincromisor
 exec "$@"
