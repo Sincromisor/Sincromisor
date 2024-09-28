@@ -7,6 +7,7 @@ Webブラウザ上でかわいいキャラになっておしゃべりできる�
 ## 必要なもの
 
 * サーバー側
+  * Linuxサーバー
   * Transformersが動作するNVIDIA GPU
   * VRAM 8GBは必須、12GB以上推奨
   * VOICEVOXとそれが動作する環境
@@ -16,11 +17,12 @@ Webブラウザ上でかわいいキャラになっておしゃべりできる�
   * GPUがそこそこの性能のPC、スマートフォン、タブレット
   * マイク
   * カメラ
+  * Webブラウザ
 
 ## 検証済み環境
 
 * サーバー側
-  * ubuntu 22.04
+  * ubuntu 24.04
     * Core i5-12600K
     * RTX3060(12GB)
     * DDR4-3200 64GB
@@ -36,8 +38,13 @@ Webブラウザ上でかわいいキャラになっておしゃべりできる�
 
 ## クライアント側のつかいかた
 
-サーバーを実行したら、`https://サーバー名:8001` にアクセスするだけです。
-リバースプロキシサーバーを建てている場合、そちらの設定に従ってアクセスしてください。
+サーバーを実行したら、`https://サーバーのドメイン名` にアクセスします。
+
+* `Simple Interface`: キャラクターとテロップ、タイムラインのみが表示
+* `Single Display`: Simpleの内容に加え、画面はめ込み用のプレースホルダがひとつ
+* `Double Display`: Simpleの内容に加え、画面はめ込み用のプレースホルダがふたつ
+* `Looking Glass`:  キャラクターを[Looking Glass](https://lookingglassfactory.com/looking-glass-portrait)で表示
+* `Character Test`: キャラクターの動作テスト(音声認識・合成なし)
 
 ## ログについて
 

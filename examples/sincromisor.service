@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=sincromisor
 WorkingDirectory=/opt/sincromisor
-ExecStart=/opt/sincromisor/start.sh
+ExecStart=/opt/sincromisor/start-server.sh
 TimeoutSec=15
 Restart=always
 
