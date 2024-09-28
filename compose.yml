@@ -28,6 +28,7 @@ services:
       - 8004:8004/tcp
       - 8005:8005/tcp
     volumes:
+      - config.yml:/opt/sincromisor/config.yml:ro
       - type: volume
         source: huggingface-cache
         target: /opt/sincromisor/.cache
@@ -56,6 +57,8 @@ services:
     image: sincromisor-client:latest
     ports:
       - 8002:8002/tcp
+    volumes:
+      - config.yml:/opt/sincromisor/config.yml:ro
     networks:
       - sincromisor-net
     env_file:
@@ -112,7 +115,3 @@ networks:
 
 volumes:
   huggingface-cache:
-
-secrets:
-  .config.yml:
-    file: ./Docker/env_vars/.config.yml

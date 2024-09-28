@@ -9,7 +9,7 @@ COPY --chown=${USER_ID}:${USER_ID} \
     ./sincromisor-client/ /opt/${USER_ID}/sincromisor-client/
 
 COPY --chown=${USER_ID}:${USER_ID} \
-    ./examples/config.yml \
+    ./config.yml \
     ./examples/Caddyfile.client \
     ./install-client-assets.sh \
     /opt/${USER_ID}/
@@ -20,4 +20,4 @@ RUN ln -s /opt/${USER_ID}/node_modules /opt/${USER_ID}/sincromisor-client/node_m
     npm run build
 
 ENTRYPOINT [ "/opt/sincromisor/docker-entrypoint.sh" ]
-# CMD ["/opt/sincromisor/start.sh"]
+CMD ["/opt/caddy/caddy", "run"]
