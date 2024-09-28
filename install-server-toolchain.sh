@@ -7,6 +7,7 @@ cd "$(dirname "${0}")"
 
 if ! which uv > /dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    source $HOME/.cargo/env
+    . "${HOME}/.cargo/env"
 fi
+
 uv sync
