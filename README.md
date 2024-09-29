@@ -74,3 +74,8 @@ Chromeの設定を変えると、Chromium Embedded Framework側にも反映さ�
 
 * <chrome://settings/content/camera>
 * [chrome://settings/content/microphone](chrome://settings/content/camera)
+
+## 音声認識・合成をコマンドラインで使いたい
+
+[SincromisorCLI](https://github.com/Phenomer/SincromisorCLI)を用いると、
+コマンドライン経由での音声認識・合成・テロップ用テキストの取得ができます。
