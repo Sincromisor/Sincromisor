@@ -6,3 +6,12 @@ from .VoiceSynthesizerRequest import VoiceSynthesizerRequest
 from .VoiceSynthesizerResult import VoiceSynthesizerResult
 from .VoiceSynthesizerResultFrame import VoiceSynthesizerResultFrame
 from .SpeechExtractorInitializeRequest import SpeechExtractorInitializeRequest
+from .SincromisorConfig import (
+    SincromisorConfig,
+    WorkerConfig,
+    RedisConfig,
+    VoiceVoxConfig,
+    VoiceSynthesizerConfig,
+    RTCIceServerConfig,
+    VoiceSynthesizerConfig,
+)

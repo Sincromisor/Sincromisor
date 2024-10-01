@@ -14,8 +14,7 @@ from multiprocessing import Process
 from multiprocessing.connection import Connection
 from multiprocessing.sharedctypes import Synchronized
 from setproctitle import setproctitle
-from ..utils import ConfigManager
-from ..models import RTCVoiceChatSession
+from ..models import RTCVoiceChatSession, SincromisorConfig
 from .VoiceTransformTrack import VoiceTransformTrack
 
 
@@ -46,16 +45,16 @@ class RTCSessionProcess(Process):
         self.session_id: str = session_id
 
     def get_ice_servers(self):
-        config = ConfigManager()
+        config = SincromisorConfig.from_yaml()
         ice_servers = []
         for stun_conf in config.get_ice_servers_conf(server_type="stun"):
-            ice_servers.append(RTCIceServer(urls=stun_conf["urls"]))
+            ice_servers.append(RTCIceServer(urls=stun_conf.Urls))
         for turn_conf in config.get_ice_servers_conf(server_type="turn"):
             ice_servers.append(
                 RTCIceServer(
-                    urls=turn_conf["urls"],
-                    username=turn_conf["username"],
-                    credential=["credential"],
+                    urls=turn_conf.Urls,
+                    username=turn_conf.UserName,
+                    credential=turn_conf.Credential,
                 )
             )
         self.logger.debug(f"IceServers: {ice_servers}")

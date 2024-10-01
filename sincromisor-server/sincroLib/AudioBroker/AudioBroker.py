@@ -9,7 +9,7 @@ from websockets.exceptions import ConnectionClosed
 from .ExtractorThread import ExtractorSenderThread, ExtractorReceiverThread
 from .RecognizerThread import RecognizerSenderThread, RecognizerReceiverThread
 from .SynthesizerThread import SynthesizerSenderThread, SynthesizerReceiverThread
-from ..utils import ConfigManager
+from ..models import SincromisorConfig
 
 
 class AudioBrokerError(Exception):
@@ -37,17 +37,17 @@ class AudioBroker:
         self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
 
         self.session_id: str = session_id
-        self.config = ConfigManager()
+        self.config = SincromisorConfig.from_yaml()
         self.extractor_url: str = urljoin(
-            self.config.get_random_worker_conf(type="SpeechExtractor")["url"],
+            self.config.get_random_worker_conf(type="SpeechExtractor").Url,
             "SpeechExtractor",
         )
         self.recognizer_url: str = urljoin(
-            self.config.get_random_worker_conf(type="SpeechRecognizer")["url"],
+            self.config.get_random_worker_conf(type="SpeechRecognizer").Url,
             "SpeechRecognizer",
         )
         self.synthesizer_url: str = urljoin(
-            self.config.get_random_worker_conf(type="VoiceSynthesizer")["url"],
+            self.config.get_random_worker_conf(type="VoiceSynthesizer").Url,
             "VoiceSynthesizer",
         )
         # 内部で利用
@@ -72,7 +72,7 @@ class AudioBroker:
 
     def start(self) -> None:
         if not self.startable:
-            self.logger.warn("AudioBroker is already running.")
+            self.logger.warning("AudioBroker is already running.")
             return
         self.startable = False
         self.running.set()

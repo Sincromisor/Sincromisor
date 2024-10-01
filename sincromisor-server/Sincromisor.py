@@ -19,15 +19,14 @@ from setproctitle import setproctitle
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
-from sincroLib.models import RTCSessionOffer
+from sincroLib.models import RTCSessionOffer, SincromisorConfig
 from starlette.middleware.cors import CORSMiddleware
-
 from sincroLib.RTCSession import RTCSessionManager
-from sincroLib.utils import ConfigManager, MemoryProfiler
+from sincroLib.utils import MemoryProfiler
 
 
 setproctitle(f"Sincromisor")
-ConfigManager.load()
+SincromisorConfig.from_yaml()
 
 logger: Logger = logging.getLogger(__name__)
 logger.info("start Syncromisor")
@@ -39,7 +38,7 @@ app.add_middleware(
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 mem = MemoryProfiler()
 templates = Jinja2Templates(directory="templates")

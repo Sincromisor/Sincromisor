@@ -39,6 +39,8 @@ class VoiceTransformTrack(MediaStreamTrack):
 
     # デコード済みのオーディオフレームを受け取って、何らかの処理を行った上でフレームを返す。
     # 返却するフレームは、同じフォーマット、かつ同じサンプル数でなければならない。
+    # ここでフレームを返さないと、aiortc/rtcrtpsender.pyのnext_encoded_frameの
+    # await self.__track.recv()がデッドロックしてしまう。
     async def recv(self) -> AudioFrame:
         try:
             frame: AudioFrame = await self.track.recv()

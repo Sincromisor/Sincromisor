@@ -7,34 +7,34 @@ VoiceSynthesizer:
     PostPhonemeLength: 0.0
 Worker:
     Sincromisor:
-        - host: 0.0.0.0
-          port: 8001
-          url: /offer
-          forwarded-allow-ips: 127.0.0.1
-          launch: true
+        - Host: 0.0.0.0
+          Port: 8001
+          Url: /offer
+          forwardedAllowIps: 127.0.0.1
+          Launch: true
     SpeechExtractor:
-        - host: 0.0.0.0
-          port: 8003
-          url: ws://127.0.0.1:8003/
-          launch: true
+        - Host: 0.0.0.0
+          Port: 8003
+          Url: ws://127.0.0.1:8003/
+          Launch: true
     SpeechRecognizer:
-        - host: 0.0.0.0
-          port: 8004
-          url: ws://127.0.0.1:8004/
-          launch: true
+        - Host: 0.0.0.0
+          Port: 8004
+          Url: ws://127.0.0.1:8004/
+          Launch: true
     VoiceSynthesizer:
-        - host: 0.0.0.0
-          port: 8005
-          url: ws://127.0.0.1:8005/
-          launch: true
+        - Host: 0.0.0.0
+          Port: 8005
+          Url: ws://127.0.0.1:8005/
+          Launch: true
 Redis:
-    - host: localhost
-      port: 6379
+    - Host: localhost
+      Port: 6379
 VoiceVox:
-    - host: localhost
-      port: 50021
+    - Host: localhost
+      Port: 50021
 RTCIceServers:
-    - urls: stun:stun.negix.org:3478
-    #- urls: turn:turn.negix.org:3478
-    #  username: gloria
-    #  credential: SECRET_KEY
+    - Urls: stun:stun.negix.org:3478
+    #- Urls: turn:turn.negix.org:3478
+    #  UserName: gloria
+    #  Credential: SECRET_KEY

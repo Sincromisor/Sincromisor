@@ -67,7 +67,7 @@ $ sudo -u sincromisor ./install.sh
 
 ## VOICEVOX Engineの準備
 
-下記WebサイトからVOICEVOXを動かしたい環境向けのバイナリをダウンとロードし、実行してください。
+下記WebサイトからVOICEVOXを動かしたい環境向けのバイナリをダウンロードし、実行してください。
 一般にGPU版のほうがレスポンスタイムが早くなることが多いですが、
 NVIDIAのGPU、もしくはWindowsとDirectML対応のGPUが必要となります。
 

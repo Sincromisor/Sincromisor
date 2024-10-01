@@ -14,7 +14,8 @@ import shutil
 import signal
 import subprocess as sp
 from threading import Thread
-from sincroLib.utils import ConfigManager
+from typing import List
+from sincroLib.models import SincromisorConfig
 from setproctitle import setproctitle
 
 
@@ -78,13 +79,13 @@ class ProcessLauncher:
 
 
 setproctitle("SincroLauncher")
-ConfigManager.load()
-config = ConfigManager()
-running = True
-processes = []
+config: SincromisorConfig = SincromisorConfig.from_yaml()
+running: bool = True
+processes: List[ProcessLauncher] = []
 
 
 def all_active():
+    global processes
     for process in processes:
         if not process.active():
             return False
@@ -106,13 +107,13 @@ signal.signal(signal.SIGINT, trap_sigint)
 
 for worker_type in ["SpeechExtractor", "SpeechRecognizer", "VoiceSynthesizer"]:
     for worker_id, worker_conf in config.get_launchable_workers_conf(type=worker_type):
-        worker_p = ProcessLauncher(
+        worker_p: ProcessLauncher = ProcessLauncher(
             name=f"{worker_type}({worker_id})",
             args=[
                 shutil.which("uvicorn"),
                 f"{worker_type}Process:app",
-                f"--host={worker_conf['host']}",
-                f"--port={worker_conf['port']}",
+                f"--host={worker_conf.Host}",
+                f"--port={worker_conf.Port}",
             ],
         )
         worker_p.start()
@@ -121,15 +122,15 @@ for worker_type in ["SpeechExtractor", "SpeechRecognizer", "VoiceSynthesizer"]:
 # --proxy-headersを設定していても、X-Forwarded-Portが常に0になる問題がある模様
 # https://github.com/encode/uvicorn/discussions/1948
 for worker_id, worker_conf in config.get_launchable_workers_conf(type="Sincromisor"):
-    web_p = ProcessLauncher(
+    web_p: ProcessLauncher = ProcessLauncher(
         name="Sincromisor",
         args=[
             shutil.which("uvicorn"),
             "Sincromisor:app",
-            f"--host={worker_conf['host']}",
-            f"--port={worker_conf['port']}",
+            f"--host={worker_conf.Host}",
+            f"--port={worker_conf.Port}",
             "--proxy-headers",
-            f"--forwarded-allow-ips=\"{worker_conf['forwarded-allow-ips']}\"",
+            f'--forwarded-allow-ips="{worker_conf.ForwardedAllowIps}"',
             # "--log-level=debug"
         ],
     )
