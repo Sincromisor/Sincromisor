@@ -142,7 +142,11 @@ class AudioBroker:
             return
         self.__logger.info("STOP AudioBroker...")
         self.__running.clear()
-        self.__communicators.close()
+        try:
+            self.__communicators.close()
+        except AttributeError:
+            self.__logger.error('__communicators is not defined.')
+        self.__logger.info('AudioBroker closed.')
 
     def __extractor(self) -> None:
         ws_url: str = urljoin(

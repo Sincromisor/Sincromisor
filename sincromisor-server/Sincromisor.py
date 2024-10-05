@@ -46,7 +46,7 @@ templates = Jinja2Templates(directory="templates")
 
 @app.post("/offer")
 async def offer(request: Request, offer_params: RTCSessionOffer):
-    if rtcSM.session_count > config.WebRTC.MaxSessions:
+    if rtcSM.session_count() > config.WebRTC.MaxSessions:
         res = JSONResponse({'error': 'Too many requests.'})
         res.status_code = status.HTTP_429_TOO_MANY_REQUESTS
         return res
