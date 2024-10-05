@@ -41,7 +41,7 @@ class RTCSessionManager:
         )
         ps.start()
 
-        self.__processes[ps.__session_id] = RTCProcessDescriptor(
+        self.__processes[session_id] = RTCProcessDescriptor(
             process=ps, pipe=sv_pipe, rtc_session_status=rtc_session_status
         )
         return sv_pipe.recv()
