@@ -14,31 +14,33 @@ class ExtractorSenderThread(Thread):
         self, ws: ClientConnection, running: Event, session_id: str, frame_buffer: deque
     ):
         super().__init__()
-        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
-        self.ws = ws
-        self.running = running
-        self.session_id = session_id
-        self.frame_buffer = frame_buffer
+        self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__ws: ClientConnection = ws
+        self.__running: Event = running
+        self.__session_id: str = session_id
+        self.__frame_buffer: deque = frame_buffer
 
     def run(self):
-        self.logger.info(f"Thread start.")
+        self.__logger.info(f"Thread start.")
         try:
-            init_request = SpeechExtractorInitializeRequest(session_id=self.session_id)
-            self.ws.send(init_request.to_msgpack())
-            while self.running.is_set():
+            init_request = SpeechExtractorInitializeRequest(
+                session_id=self.__session_id
+            )
+            self.__ws.send(init_request.to_msgpack())
+            while self.__running.is_set():
                 try:
-                    buffer = self.frame_buffer.popleft()
-                    self.ws.send(buffer)
+                    buffer: bytes = self.__frame_buffer.popleft()
+                    self.__ws.send(buffer)
                 except IndexError:
                     time.sleep(0.1)
-            self.logger.info("Cancelled by another thread.")
+            self.__logger.info("Cancelled by another thread.")
         except ConnectionClosed:
-            self.logger.info("ConnectionClosed.")
+            self.__logger.info("ConnectionClosed.")
         except Exception as e:
-            self.logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
+            self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
             traceback.print_exc()
-        self.logger.info("Thread terminated.")
-        self.running.clear()
+        self.__logger.info("Thread terminated.")
+        self.__running.clear()
 
 
 class ExtractorReceiverThread(Thread):
@@ -50,30 +52,34 @@ class ExtractorReceiverThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         # self.extract_log = logging.getLogger(__name__ + f'[{session_id}]')
         # self.extract_log.addHandler(logging.FileHandler('log/Extractor.log', mode='a'))
-        self.ws = ws
-        self.extractor_results = extractor_results
-        self.running = running
-        self.session_id = session_id
+        self.__ws: ClientConnection = ws
+        self.__extractor_results: deque = extractor_results
+        self.__running: Event = running
+        self.__session_id: str = session_id
 
     def run(self):
-        self.logger.info(f"Thread start.")
-        while self.running.is_set():
+        self.__logger.info(f"Thread start.")
+        while self.__running.is_set():
             try:
-                pack = self.ws.recv(timeout=5)
-                se_result = SpeechExtractorResult.from_msgpack(pack)
-                self.logger.info(se_result)
-                self.extractor_results.append(se_result)
+                pack: bytes = self.__ws.recv(timeout=5)
+                se_result: SpeechExtractorResult = SpeechExtractorResult.from_msgpack(
+                    pack
+                )
+                self.__logger.info(se_result)
+                self.__extractor_results.append(se_result)
             except TimeoutError:
                 pass  # タイムアウトした時のみやり直す。
             except ConnectionClosed:
-                self.logger.info("ConnectionClosed.")
+                self.__logger.info("ConnectionClosed.")
                 break
             except Exception as e:
-                self.logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
+                self.__logger.error(
+                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                )
                 traceback.print_exc()
                 break
-        self.logger.info("Thread terminated.")
-        self.running.clear()
+        self.__logger.info("Thread terminated.")
+        self.__running.clear()

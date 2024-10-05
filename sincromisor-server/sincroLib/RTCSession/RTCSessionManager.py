@@ -1,4 +1,3 @@
-import uuid
 import traceback
 import logging
 from logging import Logger
@@ -8,13 +7,20 @@ from multiprocessing.sharedctypes import Synchronized
 from . import RTCSessionProcess
 from ..models import RTCSessionOffer
 from ulid import ULID
+from pydantic import BaseModel
+
+
+class RTCProcessDescriptor(BaseModel):
+    process: RTCSessionProcess
+    pipe: Connection
+    rtc_session_status: Synchronized
 
 
 class RTCSessionManager:
     def __init__(self):
-        self.logger: Logger = logging.getLogger(__name__)
-        self.processes: dict = {}
-        self.join_timeout: int = 10
+        self.__logger: Logger = logging.getLogger(__name__)
+        self.__processes: dict = {}
+        self.__join_timeout: int = 10
 
     # WebRTCのセッションを持つプロセスを新たに生成し、
     # そのプロセスが持つセッションのSDPをdictとして返す。
@@ -34,39 +40,42 @@ class RTCSessionManager:
             rtc_session_status=rtc_session_status,
         )
         ps.start()
-        self.processes[ps.session_id] = {
-            "process": ps,
-            "pipe": sv_pipe,
-            "rtcSessionStatus": rtc_session_status,
-        }
+
+        self.__processes[ps.__session_id] = RTCProcessDescriptor(
+            process=ps, pipe=sv_pipe, rtc_session_status=rtc_session_status
+        )
         return sv_pipe.recv()
 
     def cleanup_sessions(self) -> list[str]:
-        for session_id, psInfo in list(self.processes.items()):
-            if psInfo["rtcSessionStatus"].value <= -1:
-                psInfo["pipe"].close()
-                psInfo["process"].join(self.join_timeout)
-                psInfo["process"].close()
-                del self.processes[session_id]
-        return list(self.processes.keys())
+        session_id: str
+        ps_desc: RTCProcessDescriptor
+        for session_id, ps_desc in list(self.__processes.items()):
+            if ps_desc.rtc_session_status.value <= -1:
+                ps_desc.pipe.close()
+                ps_desc.process.join(self.__join_timeout)
+                ps_desc.process.close()
+                del self.__processes[session_id]
+        return list(self.__processes.keys())
 
     def shutdown(self) -> None:
-        for session_id, ps_info in self.processes.items():
+        session_id: str
+        ps_desc: RTCProcessDescriptor
+        for session_id, ps_desc in self.__processes.items():
             try:
-                ps_info["rtcSessionStatus"].value = -1
+                ps_desc.rtc_session_status.value = -1
             except:
-                self.logger.error(
+                self.__logger.error(
                     f"[{session_id}] Change session status: UnknownError - {traceback.format_exc()}"
                 )
                 traceback.print_exc()
 
-        for session_id, ps_info in self.processes.items():
+        for session_id, ps_desc in self.__processes.items():
             try:
-                ps_info["pipe"].close()
-                ps_info["process"].join(self.join_timeout)
-                ps_info["process"].close()
+                ps_desc.pipe.close()
+                ps_desc.process.join(self.__join_timeout)
+                ps_desc.process.close()
             except:
-                self.logger.error(
+                self.__logger.error(
                     f"[{session_id}] RTC session close: UnknownError - {traceback.format_exc()}"
                 )
                 traceback.print_exc()

@@ -10,6 +10,48 @@ from .ExtractorThread import ExtractorSenderThread, ExtractorReceiverThread
 from .RecognizerThread import RecognizerSenderThread, RecognizerReceiverThread
 from .SynthesizerThread import SynthesizerSenderThread, SynthesizerReceiverThread
 from ..models import SincromisorConfig
+from pydantic import BaseModel
+
+
+class AudioBrokerCommunicatorThread(BaseModel):
+    comm_type: str
+    session_id: str
+    ws_url: str
+    ws: ClientConnection
+    sender_thread: ExtractorSenderThread
+    receiver_thread: ExtractorReceiverThread
+
+    def close(self):
+        logger: Logger = logging.getLogger(
+            f"{__name__}::{self.comm_type}[{self.session_id[21:26]}]"
+        )
+
+        logger.info("join sender_thread")
+        try:
+            self.sender_thread.join()
+        except Exception as e:
+            logger.error(f"Unknown Error: {repr(e)}")
+
+        logger.info("join receiver_thread")
+        try:
+            self.receiver_thread.join()
+        except Exception as e:
+            logger.error(f"Unknown Error: {repr(e)}")
+
+        logger.info("closing WebSocket")
+        self.ws.close()
+        logger.info("done.")
+
+
+class AudioBrokerCommunicators(BaseModel):
+    extractor: AudioBrokerCommunicatorThread
+    recognizer: AudioBrokerCommunicatorThread
+    synthesizer: AudioBrokerCommunicatorThread
+
+    def close(self):
+        self.extractor.close()
+        self.recognizer.close()
+        self.synthesizer.close()
 
 
 class AudioBrokerError(Exception):
@@ -18,14 +60,14 @@ class AudioBrokerError(Exception):
 
 class AudioBrokerEvent(Event):
     def __init__(self):
-        self.logger: Logger = logging.getLogger(__name__)
+        self.__logger: Logger = logging.getLogger(__name__)
         super().__init__()
 
     # どこできっかけでコケたのかが分かるよう、
-    # 最初にclear()が実行された時にログに書き出すようにする。
+    # 最初にclear()が実行された時にスタックトレースをログに書き出すようにする。
     def clear(self):
         if super().is_set():
-            self.logger.info(f"AudioBrokerEventClear: {traceback.format_stack()}")
+            self.__logger.info(f"AudioBrokerEventClear: {traceback.format_stack()}")
         super().clear()
 
 
@@ -34,146 +76,148 @@ class AudioBroker:
         self,
         session_id: str,
     ):
-        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__session_id: str = session_id
+        self.__config = SincromisorConfig.from_yaml()
 
-        self.session_id: str = session_id
-        self.config = SincromisorConfig.from_yaml()
-        self.extractor_url: str = urljoin(
-            self.config.get_random_worker_conf(type="SpeechExtractor").Url,
-            "SpeechExtractor",
-        )
-        self.recognizer_url: str = urljoin(
-            self.config.get_random_worker_conf(type="SpeechRecognizer").Url,
-            "SpeechRecognizer",
-        )
-        self.synthesizer_url: str = urljoin(
-            self.config.get_random_worker_conf(type="VoiceSynthesizer").Url,
-            "VoiceSynthesizer",
-        )
-        # 内部で利用
-        self.frame_buffer: deque = deque([], 25)
-        self.extractor_results: deque = deque([], 3)
-        self.recognizer_results: deque = deque([], 3)
+        # AudioBrokerもしくは子スレッドでなにかしらの問題が発生したら、
+        # runningをclearして全てを停止する。
+        self.__running: Event = AudioBrokerEvent()
+        self.__running.set()
+
+        # VoiceTransformTrack -> ExtractorSenderThread: bytes
+        self.__frame_buffer: deque = deque([], 25)
+        # ExtractorReceiverThread -> RecognizerSenderThread: SpeechExtractorResult
+        self.__extractor_results: deque = deque([], 3)
+        # RecognizerReceiverThread -> SynthesizerSenderThread: SpeechRecognizerResult
+        self.__recognizer_results: deque = deque([], 3)
 
         # VoiceTransformTrackから利用
-        # SpeechExtractorResultのdeque
+        # RecognizerReceiverThread -> VoiceTransformTrack: SpeechRecognizerResult
         self.text_channel_queue: deque = deque([])
-        # SpeechRecognizerResultのdeque
+        # SynthesizerReceiverThread -> VoiceTransformTrack: VoiceSynthesizerResultFrame
         self.voice_frame_queue: deque = deque([])
 
         self.return_frame_format = {"sample_rate": 48000, "sample_size": 960}
 
-        # AudioBrokerもしくは子スレッドでなにかしらの問題が発生したら、
-        # runningをclearして全てを停止する。
-        self.running: Event = AudioBrokerEvent()
-        self.running.clear()
-        self.threads: dict = {}
-        self.startable: bool = True
-
-    def start(self) -> None:
-        if not self.startable:
-            self.logger.warning("AudioBroker is already running.")
-            return
-        self.startable = False
-        self.running.set()
         try:
-            self.extractor()
-            self.recognizer()
-            self.synthesizer()
+            self.__communicators: AudioBrokerCommunicators = AudioBrokerCommunicators(
+                extractor=self.__extractor(),
+                recognizer=self.__recognizer(),
+                synthesizer=self.__synthesizer(),
+            )
         except ConnectionRefusedError:
-            self.logger.error(f"ConnectionRefusedError: {traceback.format_exc()}")
+            self.__logger.error(f"ConnectionRefusedError: {traceback.format_exc()}")
             self.close()
         except Exception as e:
-            self.logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
+            self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
             self.close()
 
-    def stop(self) -> None:
-        self.logger.info("Stopping AudioBroker...")
-        if not self.running.is_set():
-            self.logger.warn("AudioBroker is not running.")
-            return
-        self.logger.info("STOP AudioBroker...")
-        self.running.clear()
-
-    def join(self) -> None:
-        for name, thread in self.threads.items():
-            thread.join()
-            self.logger.info(f"Join: {name}")
-        try:
-            self.extractor_ws.close()
-        except AttributeError:
-            self.logger.error("extractor_ws is not initialized.")
-        try:
-            self.recognizer_ws.close()
-        except AttributeError:
-            self.logger.error("recognizer_ws is not initialized.")
-        try:
-            self.synthesizer_ws.close()
-        except AttributeError:
-            self.logger.error("synthesizer_ws is not initialized.")
-        self.startable = True
+    def is_running(self):
+        return self.__running.is_set()
 
     def close(self) -> None:
-        self.stop()
-        self.join()
+        self.__logger.info("Stopping AudioBroker...")
+        if not self.__running.is_set():
+            self.__logger.warning("AudioBroker is not running.")
+            return
+        self.__logger.info("STOP AudioBroker...")
+        self.__running.clear()
+        self.__communicators.close()
 
-    def extractor(self) -> None:
-        self.extractor_ws: ClientConnection = connect(self.extractor_url)
-        self.threads["extractor_sender"] = ExtractorSenderThread(
-            ws=self.extractor_ws,
-            running=self.running,
-            session_id=self.session_id,
-            frame_buffer=self.frame_buffer,
+    def __extractor(self) -> None:
+        ws_url: str = urljoin(
+            self.__config.get_random_worker_conf(type="SpeechExtractor").Url,
+            "SpeechExtractor",
         )
-        self.threads["extractor_sender"].start()
-        self.threads["extractor_receiver"] = ExtractorReceiverThread(
-            ws=self.extractor_ws,
-            extractor_results=self.extractor_results,
-            running=self.running,
-            session_id=self.session_id,
+        ws: ClientConnection = connect(ws_url)
+        sender_t: ExtractorSenderThread = ExtractorSenderThread(
+            ws=ws,
+            running=self.__running,
+            session_id=self.__session_id,
+            frame_buffer=self.__frame_buffer,
         )
-        self.threads["extractor_receiver"].start()
+        sender_t.start()
+        receiver_t: ExtractorReceiverThread = ExtractorReceiverThread(
+            ws=ws,
+            extractor_results=self.__extractor_results,
+            running=self.__running,
+            session_id=self.__session_id,
+        )
+        receiver_t.start()
+        return AudioBrokerCommunicatorThread(
+            session_id=self.__session_id,
+            comm_type="Extractor",
+            ws_url=ws_url,
+            ws=ws,
+            sender_thread=sender_t,
+            receiver_thread=receiver_t,
+        )
 
-    def recognizer(self) -> None:
-        self.recognizer_ws: ClientConnection = connect(self.recognizer_url)
-        self.threads["recognizer_sender"] = RecognizerSenderThread(
-            ws=self.recognizer_ws,
-            extractor_results=self.extractor_results,
-            running=self.running,
-            session_id=self.session_id,
+    def __recognizer(self) -> None:
+        ws_url: str = urljoin(
+            self.__config.get_random_worker_conf(type="SpeechRecognizer").Url,
+            "SpeechRecognizer",
         )
-        self.threads["recognizer_sender"].start()
-        self.threads["recognizer_receiver"] = RecognizerReceiverThread(
-            ws=self.recognizer_ws,
-            recognizer_results=self.recognizer_results,
+        ws: ClientConnection = connect(ws_url)
+        sender_t: RecognizerSenderThread = RecognizerSenderThread(
+            ws=ws,
+            extractor_results=self.__extractor_results,
+            running=self.__running,
+            session_id=self.__session_id,
+        )
+        sender_t.start()
+        receiver_t: RecognizerReceiverThread = RecognizerReceiverThread(
+            ws=ws,
+            recognizer_results=self.__recognizer_results,
             text_channel_queue=self.text_channel_queue,
-            running=self.running,
-            session_id=self.session_id,
+            running=self.__running,
+            session_id=self.__session_id,
         )
-        self.threads["recognizer_receiver"].start()
+        receiver_t.start()
+        return AudioBrokerCommunicatorThread(
+            session_id=self.__session_id,
+            comm_type="Recognizer",
+            ws_url=ws_url,
+            ws=ws,
+            sender_thread=sender_t,
+            receiver_thread=receiver_t,
+        )
 
-    def synthesizer(self) -> None:
-        self.synthesizer_ws: ClientConnection = connect(self.synthesizer_url)
-        self.threads["synthesizer_sender"] = SynthesizerSenderThread(
-            ws=self.synthesizer_ws,
-            recognizer_results=self.recognizer_results,
-            running=self.running,
-            session_id=self.session_id,
+    def __synthesizer(self) -> None:
+        ws_url: str = urljoin(
+            self.__config.get_random_worker_conf(type="VoiceSynthesizer").Url,
+            "VoiceSynthesizer",
         )
-        self.threads["synthesizer_sender"].start()
-        self.threads["synthesizer_receiver"] = SynthesizerReceiverThread(
-            ws=self.synthesizer_ws,
+        ws: ClientConnection = connect(ws_url)
+        sender_t: SynthesizerSenderThread = SynthesizerSenderThread(
+            ws=ws,
+            recognizer_results=self.__recognizer_results,
+            running=self.__running,
+            session_id=self.__session_id,
+        )
+        sender_t.start()
+        receiver_t: SynthesizerReceiverThread = SynthesizerReceiverThread(
+            ws=ws,
             voice_frame_queue=self.voice_frame_queue,
             return_frame_format=self.return_frame_format,
-            running=self.running,
-            session_id=self.session_id,
+            running=self.__running,
+            session_id=self.__session_id,
         )
-        self.threads["synthesizer_receiver"].start()
+        receiver_t.start()
+        return AudioBrokerCommunicatorThread(
+            comm_type="Synthesizer",
+            session_id=self.__session_id,
+            ws_url=ws_url,
+            ws=ws,
+            sender_thread=sender_t,
+            receiver_thread=receiver_t,
+        )
 
     def add_frame(self, frame: bytes) -> None:
-        if not self.running.is_set():
+        if not self.__running.is_set():
             raise AudioBrokerError("AudioBroker is not running.")
 
-        self.frame_buffer.append(frame)
-        if len(self.frame_buffer) >= 25:
-            self.logger.warn("add_frame - overflow")
+        self.__frame_buffer.append(frame)
+        if len(self.__frame_buffer) >= 25:
+            self.__logger.warn("add_frame - overflow")

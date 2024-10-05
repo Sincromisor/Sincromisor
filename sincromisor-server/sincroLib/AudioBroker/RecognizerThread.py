@@ -18,20 +18,20 @@ class RecognizerSenderThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
-        self.ws = ws
-        self.extractor_results = extractor_results
-        self.running = running
-        self.session_id = session_id
+        self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__ws: ClientConnection = ws
+        self.__extractor_results: deque = extractor_results
+        self.__running: Event = running
+        self.__session_id: str = session_id
 
-    def pop_extractor_result(self):
-        base_e_result: SpeechExtractorResult = self.extractor_results.popleft()
+    def __pop_extractor_result(self) -> bytes:
+        base_e_result: SpeechExtractorResult = self.__extractor_results.popleft()
 
         # 音声認識に時間が掛かった場合、Extractorから複数の音声パケットが届いている
         # 場合がある。この場合は、各パケットの音声データを結合する。
         # パケットに音声の末端である(confirmed=Trueである)場合は、そこで結合を終了し返す。
-        while len(self.extractor_results) > 0:
-            e_result: SpeechExtractorResult = self.extractor_results.popleft()
+        while len(self.__extractor_results) > 0:
+            e_result: SpeechExtractorResult = self.__extractor_results.popleft()
             base_e_result.append_voice(e_result.voice)
             base_e_result.sequence_id = e_result.sequence_id
             if e_result.confirmed:
@@ -39,25 +39,25 @@ class RecognizerSenderThread(Thread):
         return base_e_result.to_msgpack()
 
     def run(self):
-        self.logger.info(f"Thread start.")
+        self.__logger.info(f"Thread start.")
         try:
-            last_ping = time.time()
-            while self.running.is_set():
-                if len(self.extractor_results) > 0:
-                    self.ws.send(self.pop_extractor_result())
+            last_ping: float = time.time()
+            while self.__running.is_set():
+                if len(self.__extractor_results) > 0:
+                    self.__ws.send(self.__pop_extractor_result())
                 else:
                     if last_ping < time.time() + 10:
-                        self.ws.ping()
+                        self.__ws.ping()
                         last_ping = time.time()
                     time.sleep(0.2)
-            self.logger.info("Cancelled by another thread.")
+            self.__logger.info("Cancelled by another thread.")
         except ConnectionClosed:
-            self.logger.info("ConnectionClosed.")
+            self.__logger.info("ConnectionClosed.")
         except Exception as e:
-            self.logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
+            self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
             traceback.print_exc()
-        self.logger.info("Thread terminated.")
-        self.running.clear()
+        self.__logger.info("Thread terminated.")
+        self.__running.clear()
 
 
 class RecognizerReceiverThread(Thread):
@@ -70,32 +70,36 @@ class RecognizerReceiverThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
-        self.ws = ws
-        self.recognizer_results = recognizer_results
-        self.text_channel_queue = text_channel_queue
-        self.running = running
-        self.session_id = session_id
+        self.__logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__ws: ClientConnection = ws
+        self.__recognizer_results: deque = recognizer_results
+        self.__text_channel_queue: deque = text_channel_queue
+        self.__running: Event = running
+        self.__session_id: str = session_id
 
     def run(self):
-        self.logger.info(f"Thread start.")
-        while self.running.is_set():
+        self.__logger.info(f"Thread start.")
+        while self.__running.is_set():
             try:
-                pack = self.ws.recv(timeout=5)
-                sr_result = SpeechRecognizerResult.from_msgpack(pack)
+                pack: bytes = self.__ws.recv(timeout=5)
+                sr_result: SpeechRecognizerResult = SpeechRecognizerResult.from_msgpack(
+                    pack
+                )
 
                 # to SynthesizerThread
-                self.recognizer_results.append(sr_result)
+                self.__recognizer_results.append(sr_result)
                 # to TextChannel
-                self.text_channel_queue.append(sr_result)
+                self.__text_channel_queue.append(sr_result)
             except TimeoutError:
                 pass  # タイムアウトした時のみやり直す。
             except ConnectionClosed:
-                self.logger.info("ConnectionClosed.")
+                self.__logger.info("ConnectionClosed.")
                 break
             except Exception as e:
-                self.logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
+                self.__logger.error(
+                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                )
                 traceback.print_exc()
                 break
-        self.logger.info("Thread terminated.")
-        self.running.clear()
+        self.__logger.info("Thread terminated.")
+        self.__running.clear()
