@@ -30,7 +30,7 @@ class AudioBrokerCommunicator:
         self.sender_thread: Thread = sender_thread
         self.receiver_thread: Thread = receiver_thread
 
-    def close(self):
+    def close(self) -> None:
         logger: Logger = logging.getLogger(
             f"{__name__}::{self.comm_type}[{self.session_id[21:26]}]"
         )
@@ -67,7 +67,7 @@ class AudioBrokerCommunicators:
         self.recognizer = recognizer
         self.synthesizer = synthesizer
 
-    def close(self):
+    def close(self) -> None:
         self.extractor.close()
         self.recognizer.close()
         self.synthesizer.close()
@@ -84,7 +84,7 @@ class AudioBrokerEvent(Event):
 
     # どこできっかけでコケたのかが分かるよう、
     # 最初にclear()が実行された時にスタックトレースをログに書き出すようにする。
-    def clear(self):
+    def clear(self) -> None:
         if super().is_set():
             self.__logger.info(f"AudioBrokerEventClear: {traceback.format_stack()}")
         super().clear()
@@ -132,7 +132,7 @@ class AudioBroker:
             self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
             self.close()
 
-    def is_running(self):
+    def is_running(self) -> bool:
         return self.__running.is_set()
 
     def close(self) -> None:

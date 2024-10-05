@@ -20,7 +20,7 @@ class ExtractorSenderThread(Thread):
         self.__session_id: str = session_id
         self.__frame_buffer: deque = frame_buffer
 
-    def run(self):
+    def run(self) -> None:
         self.__logger.info(f"Thread start.")
         try:
             init_request = SpeechExtractorInitializeRequest(
@@ -60,7 +60,7 @@ class ExtractorReceiverThread(Thread):
         self.__running: Event = running
         self.__session_id: str = session_id
 
-    def run(self):
+    def run(self) -> None:
         self.__logger.info(f"Thread start.")
         while self.__running.is_set():
             try:
