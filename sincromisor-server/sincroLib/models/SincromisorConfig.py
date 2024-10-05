@@ -29,6 +29,11 @@ class RTCIceServerConfig(BaseModel):
     Credential: str | None = None
 
 
+class WebRTCConfig(BaseModel):
+    MaxSessions: int
+    RTCIceServers: List[RTCIceServerConfig]
+
+
 class VoiceSynthesizerConfig(BaseModel):
     EnableRedis: bool
     DefaultStyleID: int
@@ -42,7 +47,7 @@ class SincromisorConfig(BaseModel):
     Worker: dict[str, List[WorkerConfig]]
     Redis: List[RedisConfig]
     VoiceVox: List[VoiceVoxConfig]
-    RTCIceServers: List[RTCIceServerConfig]
+    WebRTC: WebRTCConfig
 
     @classmethod
     def from_yaml(cls, filename: str | None = None) -> "SincromisorConfig":
@@ -88,7 +93,7 @@ class SincromisorConfig(BaseModel):
     def get_ice_servers_conf(
         self, server_type: str
     ) -> Generator[RTCIceServerConfig, None, None]:
-        for conf in self.RTCIceServers:
+        for conf in self.WebRTC.RTCIceServers:
             if conf.Urls[0:5] == f"{server_type}:":
                 yield conf
 

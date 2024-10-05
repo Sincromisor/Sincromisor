@@ -20,7 +20,7 @@ class RTCProcessDescription:
         self.pipe: Connection = pipe
         self.rtc_session_status: Synchronized = rtc_session_status
 
-    def close(self, join_timeout: int = 10):
+    def close(self, join_timeout: int = 10) -> None:
         self.pipe.close()
         self.process.join(join_timeout)
         self.process.close()
@@ -55,6 +55,9 @@ class RTCSessionManager:
             process=ps, pipe=sv_pipe, rtc_session_status=rtc_session_status
         )
         return sv_pipe.recv()
+
+    def session_count(self) -> int:
+        return len(self.__processes)
 
     def cleanup_sessions(self) -> list[str]:
         session_id: str

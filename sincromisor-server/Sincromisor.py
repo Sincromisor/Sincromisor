@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 
 from setproctitle import setproctitle
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from sincroLib.models import RTCSessionOffer, SincromisorConfig
@@ -26,7 +26,7 @@ from sincroLib.utils import MemoryProfiler
 
 
 setproctitle(f"Sincromisor")
-SincromisorConfig.from_yaml()
+config = SincromisorConfig.from_yaml()
 
 logger: Logger = logging.getLogger(__name__)
 logger.info("start Syncromisor")
@@ -46,6 +46,11 @@ templates = Jinja2Templates(directory="templates")
 
 @app.post("/offer")
 async def offer(request: Request, offer_params: RTCSessionOffer):
+    if rtcSM.session_count > config.WebRTC.MaxSessions:
+        res = JSONResponse({'error': 'Too many requests.'})
+        res.status_code = status.HTTP_429_TOO_MANY_REQUESTS
+        return res
+
     session_info = rtcSM.create_session(offer=offer_params)
     logger.info(
         f"Client: {request.client}\n"

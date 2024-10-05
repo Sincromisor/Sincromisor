@@ -33,8 +33,10 @@ Redis:
 VoiceVox:
     - Host: localhost
       Port: 50021
-RTCIceServers:
-    - Urls: stun:stun.negix.org:3478
-    #- Urls: turn:turn.negix.org:3478
-    #  UserName: gloria
-    #  Credential: SECRET_KEY
+WebRTC:
+    MaxSessions: 5
+    RTCIceServers:
+        - Urls: stun:stun.negix.org:3478
+        #- Urls: turn:turn.negix.org:3478
+        #  UserName: gloria
+        #  Credential: SECRET_KEY
