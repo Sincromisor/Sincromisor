@@ -38,7 +38,7 @@ class RecognizerSenderThread(Thread):
                 return base_e_result.to_msgpack()
         return base_e_result.to_msgpack()
 
-    def run(self):
+    def run(self) -> None:
         self.__logger.info(f"Thread start.")
         try:
             last_ping: float = time.time()
@@ -77,7 +77,7 @@ class RecognizerReceiverThread(Thread):
         self.__running: Event = running
         self.__session_id: str = session_id
 
-    def run(self):
+    def run(self) -> None:
         self.__logger.info(f"Thread start.")
         while self.__running.is_set():
             try:

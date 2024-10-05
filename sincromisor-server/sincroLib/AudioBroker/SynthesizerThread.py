@@ -33,7 +33,7 @@ class SynthesizerSenderThread(Thread):
         self.__running: Event = running
         self.__session_id: str = session_id
 
-    def run(self):
+    def run(self) -> None:
         self.__logger.info(f"Thread start.")
         try:
             last_ping: float = time.time()
@@ -76,7 +76,7 @@ class SynthesizerReceiverThread(Thread):
         self.__running: Event = running
         self.__session_id: str = session_id
 
-    def run(self):
+    def run(self) -> None:
         self.__logger.info(f"Thread start.")
         while self.__running.is_set():
             try:
