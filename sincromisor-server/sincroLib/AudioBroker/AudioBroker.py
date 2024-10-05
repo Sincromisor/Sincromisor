@@ -10,16 +10,25 @@ from .ExtractorThread import ExtractorSenderThread, ExtractorReceiverThread
 from .RecognizerThread import RecognizerSenderThread, RecognizerReceiverThread
 from .SynthesizerThread import SynthesizerSenderThread, SynthesizerReceiverThread
 from ..models import SincromisorConfig
-from pydantic import BaseModel
+from threading import Thread
 
 
-class AudioBrokerCommunicatorThread(BaseModel):
-    comm_type: str
-    session_id: str
-    ws_url: str
-    ws: ClientConnection
-    sender_thread: ExtractorSenderThread
-    receiver_thread: ExtractorReceiverThread
+class AudioBrokerCommunicator:
+    def __init__(
+        self,
+        comm_type: str,
+        session_id: str,
+        ws_url: str,
+        ws: ClientConnection,
+        sender_thread: Thread,
+        receiver_thread: Thread,
+    ):
+        self.comm_type: str = comm_type
+        self.session_id: str = session_id
+        self.ws_url: str = ws_url
+        self.ws: ClientConnection = ws
+        self.sender_thread: Thread = sender_thread
+        self.receiver_thread: Thread = receiver_thread
 
     def close(self):
         logger: Logger = logging.getLogger(
@@ -43,10 +52,20 @@ class AudioBrokerCommunicatorThread(BaseModel):
         logger.info("done.")
 
 
-class AudioBrokerCommunicators(BaseModel):
-    extractor: AudioBrokerCommunicatorThread
-    recognizer: AudioBrokerCommunicatorThread
-    synthesizer: AudioBrokerCommunicatorThread
+class AudioBrokerCommunicators:
+    extractor: AudioBrokerCommunicator
+    recognizer: AudioBrokerCommunicator
+    synthesizer: AudioBrokerCommunicator
+
+    def __init__(
+        self,
+        extractor: AudioBrokerCommunicator,
+        recognizer: AudioBrokerCommunicator,
+        synthesizer: AudioBrokerCommunicator,
+    ):
+        self.extractor = extractor
+        self.recognizer = recognizer
+        self.synthesizer = synthesizer
 
     def close(self):
         self.extractor.close()
@@ -145,7 +164,7 @@ class AudioBroker:
             session_id=self.__session_id,
         )
         receiver_t.start()
-        return AudioBrokerCommunicatorThread(
+        return AudioBrokerCommunicator(
             session_id=self.__session_id,
             comm_type="Extractor",
             ws_url=ws_url,
@@ -175,7 +194,7 @@ class AudioBroker:
             session_id=self.__session_id,
         )
         receiver_t.start()
-        return AudioBrokerCommunicatorThread(
+        return AudioBrokerCommunicator(
             session_id=self.__session_id,
             comm_type="Recognizer",
             ws_url=ws_url,
@@ -205,7 +224,7 @@ class AudioBroker:
             session_id=self.__session_id,
         )
         receiver_t.start()
-        return AudioBrokerCommunicatorThread(
+        return AudioBrokerCommunicator(
             comm_type="Synthesizer",
             session_id=self.__session_id,
             ws_url=ws_url,
