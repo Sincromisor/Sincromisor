@@ -7,13 +7,23 @@ from multiprocessing.sharedctypes import Synchronized
 from . import RTCSessionProcess
 from ..models import RTCSessionOffer
 from ulid import ULID
-from pydantic import BaseModel
 
 
-class RTCProcessDescriptor(BaseModel):
-    process: RTCSessionProcess
-    pipe: Connection
-    rtc_session_status: Synchronized
+class RTCProcessDescription:
+    def __init__(
+        self,
+        process: RTCSessionProcess,
+        pipe: Connection,
+        rtc_session_status: Synchronized,
+    ):
+        self.process: RTCSessionProcess = process
+        self.pipe: Connection = pipe
+        self.rtc_session_status: Synchronized = rtc_session_status
+
+    def close(self, join_timeout: int = 10):
+        self.pipe.close()
+        self.process.join(join_timeout)
+        self.process.close()
 
 
 class RTCSessionManager:
@@ -41,25 +51,23 @@ class RTCSessionManager:
         )
         ps.start()
 
-        self.__processes[ps.__session_id] = RTCProcessDescriptor(
+        self.__processes[ps.__session_id] = RTCProcessDescription(
             process=ps, pipe=sv_pipe, rtc_session_status=rtc_session_status
         )
         return sv_pipe.recv()
 
     def cleanup_sessions(self) -> list[str]:
         session_id: str
-        ps_desc: RTCProcessDescriptor
+        ps_desc: RTCProcessDescription
         for session_id, ps_desc in list(self.__processes.items()):
             if ps_desc.rtc_session_status.value <= -1:
-                ps_desc.pipe.close()
-                ps_desc.process.join(self.__join_timeout)
-                ps_desc.process.close()
+                ps_desc.close(self.__join_timeout)
                 del self.__processes[session_id]
         return list(self.__processes.keys())
 
     def shutdown(self) -> None:
         session_id: str
-        ps_desc: RTCProcessDescriptor
+        ps_desc: RTCProcessDescription
         for session_id, ps_desc in self.__processes.items():
             try:
                 ps_desc.rtc_session_status.value = -1
@@ -71,9 +79,7 @@ class RTCSessionManager:
 
         for session_id, ps_desc in self.__processes.items():
             try:
-                ps_desc.pipe.close()
-                ps_desc.process.join(self.__join_timeout)
-                ps_desc.process.close()
+                ps_desc.close(self.__join_timeout)
             except:
                 self.__logger.error(
                     f"[{session_id}] RTC session close: UnknownError - {traceback.format_exc()}"
