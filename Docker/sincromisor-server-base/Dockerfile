@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/opt/${USER_ID}/.cache \
     chown ${USER_ID}:${USER_ID} /opt/${USER_ID}/.cache
 
 COPY --chown=${USER_ID}:${USER_ID} \
-  ./pyproject.toml ./uv.lock \
+  ./pyproject.toml ./uv.lock ./.python-version \
   ./README.md ./Docker/sincromisor-server-base/docker-entrypoint.sh \
   /opt/${USER_ID}/
 
