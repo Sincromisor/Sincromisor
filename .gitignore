@@ -1,5 +1,4 @@
 *.log
-*.tflite
 *.woff2
 *.tar.gz
 *.tar.xz

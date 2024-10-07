@@ -11,7 +11,6 @@ if [ ! -e config.yml ]; then
     exit 1
 fi
 
+./install-client-assets.sh
 ./install-client-toolchain.sh
 ./install-server-toolchain.sh
-./install-client-assets.sh
-./install-server-assets.sh
