@@ -119,9 +119,13 @@ export class DialogManager {
         if (available) {
             eC.disabled = false;
             eC.textContent = 'はじめる';
+            this.updateEnableCharacterGazeStatus(true);
+            this.updateAutoMuteStatus();
         } else {
             eC.disabled = true;
             eC.textContent = 'マイクが利用できません';
+            this.updateEnableCharacterGazeStatus(false);
+            this.updateAutoMuteStatus();
         }
     }
 
