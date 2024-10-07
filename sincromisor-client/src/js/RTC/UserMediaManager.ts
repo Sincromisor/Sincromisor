@@ -6,11 +6,10 @@ export class UserMediaManager {
     constructor() {
         this.videoTrack = null;
         this.audioTrack = null;
-        this.hasGetUserMedia = () => !!navigator.mediaDevices?.getUserMedia;
         this.config = this.defaultConfig();
     }
 
-    hasGetUserMedia(): boolean {
+    static hasGetUserMedia(): boolean {
         return !!navigator.mediaDevices?.getUserMedia;
     }
 

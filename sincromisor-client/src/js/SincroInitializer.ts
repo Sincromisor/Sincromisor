@@ -4,6 +4,7 @@ import { ChatMessageManager } from "./UI/ChatMessageManager";
 import { CharacterManager } from "./Character/CharacterManager";
 import { SincroScene } from "./Scene/SincroScene";
 import { TalkManager } from "./RTC/TalkManager";
+import { UserMediaManager } from "./RTC/UserMediaManager";
 
 export class SincroInitializer {
     dialogManager: DialogManager;
@@ -17,6 +18,7 @@ export class SincroInitializer {
         this.talkManager = TalkManager.getManager();
         this.charCanvas = this.getCharCanvas();
 
+        this.getUserMediaAvailabilityCheck();
         this.characterAvailabilityCheck();
         this.setStartButtonEvent();
 
@@ -26,11 +28,17 @@ export class SincroInitializer {
     }
 
     private getCharCanvas(): HTMLCanvasElement {
-        const charCanvas: HTMLCanvasElement | null = document.querySelector('canvas#characterCanvas');
+        const charCanvas: HTMLCanvasElement | null = document.querySelector('canvas#characterCanvas') as HTMLCanvasElement | null;
         if (!charCanvas) {
             throw 'canvas#characterCanvas is not found.';
         }
         return charCanvas;
+    }
+
+    private getUserMediaAvailabilityCheck(): void {
+        if (!UserMediaManager.hasGetUserMedia()) {
+            this.dialogManager.updateUserMediaAvailabilityStatus(false);
+        }
     }
 
     private characterAvailabilityCheck(): void {

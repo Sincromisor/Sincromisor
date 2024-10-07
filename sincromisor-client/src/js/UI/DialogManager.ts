@@ -111,6 +111,20 @@ export class DialogManager {
         this.updateAutoMuteStatus();
     }
 
+    updateUserMediaAvailabilityStatus(available: boolean): void {
+        const eC: HTMLButtonElement | null = document.querySelector('button#rtcStart');
+        if (!eC) {
+            return;
+        }
+        if (available) {
+            eC.disabled = false;
+            eC.textContent = 'はじめる';
+        } else {
+            eC.disabled = true;
+            eC.textContent = 'マイクが利用できません';
+        }
+    }
+
     private updateEnableCharacterStatus(available: boolean) {
         const eC: HTMLInputElement | null = document.querySelector('#enableCharacter');
         if (!eC) {
