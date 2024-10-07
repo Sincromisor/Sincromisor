@@ -4,6 +4,13 @@ import handlebars from 'vite-plugin-handlebars';
 import fs from 'fs';
 import yaml from 'js-yaml';
 
+function toLowerCaseKeys(arr) {
+    return arr.map(obj => {
+        return Object.fromEntries(
+            Object.entries(obj).map(([key, value]) => [key.toLowerCase(), value])
+        );
+    });
+}
 const config = yaml.load(fs.readFileSync('../config.yml', 'utf-8'));
 
 export default defineConfig({
@@ -29,6 +36,7 @@ export default defineConfig({
         }
     },
     define: {
-        "import.meta.env.RTC_SERVER_URL": JSON.stringify(config['Worker']['Sincromisor'][0]['url'])
+        'import.meta.env.RTC_SERVER_URL': JSON.stringify(config['Worker']['Sincromisor'][0]['url']),
+        'import.meta.env.RTC_ICE_SERVERS': JSON.stringify(toLowerCaseKeys(config['WebRTC']['RTCIceServers']))
     }
 });

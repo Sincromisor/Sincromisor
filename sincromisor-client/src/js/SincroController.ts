@@ -36,7 +36,7 @@ export class SincroController {
     }
 
     startRTC(audioTrack: MediaStreamTrack): void {
-        this.rtcc = new RTCTalkClient(audioTrack, this.dialogManager.enableSTUN(), this.dialogManager.getStunServerURL());
+        this.rtcc = new RTCTalkClient(audioTrack);
         this.setTextChannelCallback(this.rtcc);
         this.setTelopChannelCallback(this.rtcc);
         this.rtcc.start();

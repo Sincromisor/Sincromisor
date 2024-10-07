@@ -75,20 +75,6 @@ export class DialogManager {
         return eC.checked;
     }
 
-    enableSTUN(): boolean {
-        const eC: HTMLInputElement | null = document.querySelector('input#enableSTUN');
-        if (eC == null) { return false; }
-        return eC.checked;
-    }
-
-    getStunServerURL(): string {
-        const urlObj: HTMLInputElement | null = document.querySelector("input#stunURL");
-        if (urlObj && urlObj.value) {
-            return urlObj.value;
-        }
-        return "stun:stun.negix.org:3478";
-    }
-
     private getTitleText(): string {
         const titleInputElement: HTMLInputElement | null = document.querySelector("input#titleText");
         if (titleInputElement && titleInputElement.value) {

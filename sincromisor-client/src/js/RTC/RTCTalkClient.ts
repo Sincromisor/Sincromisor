@@ -2,14 +2,18 @@ import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { TelopChannelMessage, TextChannelMessage } from "./RTCMessage";
 import { ChatMessageManager } from "../UI/ChatMessageManager";
 
+interface IceServerConfig {
+    urls: string;
+    username?: string;
+    credential?: string;
+}
+
 export class RTCTalkClient {
     logger: DebugConsoleManager;
     peerConnection: RTCPeerConnection;
     telopChannel: RTCDataChannel;
     textChannel: RTCDataChannel;
     audioTrack: MediaStreamTrack;
-    enableSTUN: boolean;
-    stunURL: string;
     config: RTCConfiguration;
     chatMessageManager: ChatMessageManager;
 
@@ -29,18 +33,18 @@ export class RTCTalkClient {
     telopChannelCallback: (msg: TelopChannelMessage) => void = () => { };
     textChannelCallback: (msg: TextChannelMessage) => void = () => { };
 
-    constructor(audioTrack: MediaStreamTrack, enableSTUN: boolean = false, stunURL = "stun:stun.negix.org:3478") {
+    constructor(audioTrack: MediaStreamTrack) {
         this.logger = DebugConsoleManager.getManager();
         this.chatMessageManager = ChatMessageManager.getManager();
         this.audioTrack = audioTrack;
-        this.enableSTUN = enableSTUN;
-        this.stunURL = stunURL;
         this.config = this.defaultConfig();
-        if (enableSTUN) {
-            //config["iceServers"] = [{ urls: ["stun:stun.l.google.com:19302"] }]
-            this.config["iceServers"] = [{ urls: [stunURL] }];
+        const rtcIceServers: IceServerConfig[] | null = import.meta.env.RTC_ICE_SERVERS;
+        if (rtcIceServers) {
+            this.config["iceServers"] = rtcIceServers;
+        } else {
+            //this.config["iceServers"] = [{ urls: ["stun:stun.l.google.com:19302"] }];
         }
-        console.log(this.config);
+        console.dir(this.config);
         this.peerConnection = new RTCPeerConnection(this.config);
         this.setupICEEventLog(this.peerConnection);
         this.setupTrack(this.peerConnection);
@@ -53,8 +57,6 @@ export class RTCTalkClient {
     defaultConfig(): RTCConfiguration {
         return {
             /*"sdpSemantics": "unified-plan",*/
-            /* stunを利用する際にコメントを外す。 */
-            /*iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }]*/
         }
     }
 
