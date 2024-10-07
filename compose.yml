@@ -1,5 +1,7 @@
 services:
   sincromisor-server-base:
+    profiles:
+      - base-image
     build:
       context: .
       dockerfile: ./Docker/sincromisor-server-base/Dockerfile
@@ -12,12 +14,17 @@ services:
           nocopy: true
 
   sincromisor-client-base:
+    profiles:
+      - base-image
     build:
       context: .
       dockerfile: ./Docker/sincromisor-client-base/Dockerfile
     image: sincromisor-client-base
 
   sincromisor-server:
+    profiles:
+      - full-service
+      - without-webclient
     build:
       context: .
       dockerfile: ./Docker/sincromisor-server/Dockerfile
@@ -28,7 +35,7 @@ services:
       - 8004:8004/tcp
       - 8005:8005/tcp
     volumes:
-      - config.yml:/opt/sincromisor/config.yml:ro
+      - ./config.yml:/opt/sincromisor/config.yml:ro
       - type: volume
         source: huggingface-cache
         target: /opt/sincromisor/.cache
@@ -51,6 +58,9 @@ services:
     tty: true
 
   sincromisor-client:
+    profiles:
+      - full-service
+      - webclient-only
     build:
       context: .
       dockerfile: ./Docker/sincromisor-client/Dockerfile
@@ -70,6 +80,9 @@ services:
     tty: true
 
   voicevox:
+    profiles:
+      - full-service
+      - without-webclient
     image: voicevox:latest
     build:
       context: .
@@ -83,6 +96,9 @@ services:
         condition: on-failure
 
   voice-cache:
+    profiles:
+      - full-service
+      - without-webclient
     image: voice-cache:latest
     build:
       context: .
@@ -96,6 +112,8 @@ services:
         condition: on-failure
 
   sincromisor-rproxy:
+    profiles:
+      - full-service
     image: sincromisor-rproxy:latest
     build:
       context: .

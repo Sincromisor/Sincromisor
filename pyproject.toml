@@ -23,7 +23,7 @@ dependencies = [
     "sudachidict-full>=20240409",
     "nue-asr @ git+https://github.com/rinnakk/nue-asr.git",
     "numpy==1.26.4",
-    "google-crc32c @ https://files.pythonhosted.org/packages/a9/d0/04f2846f0af1c683eb3b664c9de9543da1e66a791397456a65073b6054a2/google_crc32c-1.5.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "google-crc32c>=1.6.0",
     "setuptools>=70.1.1",
     "python-ulid>=2.7.0",
 ]
