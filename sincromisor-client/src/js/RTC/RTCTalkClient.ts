@@ -1,5 +1,6 @@
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { TelopChannelMessage, TextChannelMessage } from "./RTCMessage";
+import { ChatMessageManager } from "../UI/ChatMessageManager";
 
 export class RTCTalkClient {
     logger: DebugConsoleManager;
@@ -10,6 +11,8 @@ export class RTCTalkClient {
     enableSTUN: boolean;
     stunURL: string;
     config: RTCConfiguration;
+    chatMessageManager: ChatMessageManager;
+
     /*
         default     Default codecs
         VP8/90000   VP8
@@ -25,10 +28,10 @@ export class RTCTalkClient {
     audioCodec: string = "default";
     telopChannelCallback: (msg: TelopChannelMessage) => void = () => { };
     textChannelCallback: (msg: TextChannelMessage) => void = () => { };
-    connectionStateChangeCallback: (state: RTCIceConnectionState) => void = () => { };
 
     constructor(audioTrack: MediaStreamTrack, enableSTUN: boolean = false, stunURL = "stun:stun.negix.org:3478") {
         this.logger = DebugConsoleManager.getManager();
+        this.chatMessageManager = ChatMessageManager.getManager();
         this.audioTrack = audioTrack;
         this.enableSTUN = enableSTUN;
         this.stunURL = stunURL;
@@ -56,6 +59,7 @@ export class RTCTalkClient {
     }
 
     start(): Promise<void> {
+        this.chatMessageManager.writeSystemMessageText("音声認識・合成システムに接続します。");
         return this.negotiate(this.peerConnection);
     }
 
@@ -83,7 +87,7 @@ export class RTCTalkClient {
     }
 
     reConnect(): void {
-        setTimeout(() => { this.start(); }, 10000);
+        setTimeout(() => { this.start(); }, Math.random() * 20000 + 10000);
     }
 
     setMute(mute: boolean): void {
@@ -97,23 +101,16 @@ export class RTCTalkClient {
     private async negotiate(peerConnection: RTCPeerConnection): Promise<void> {
         return peerConnection.createOffer()
             .then((offer) => {
-                console.log('negotiate: 1');
                 return peerConnection.setLocalDescription(offer);
             })
             .then(() => {
-                console.log('negotiate: 2');
                 // wait for ICE gathering to complete
                 return new Promise<void>((resolve) => {
-                    console.log('negotiate: 3');
                     if (peerConnection.iceGatheringState === "complete") {
-                        console.log('negotiate: 4');
                         resolve();
                     } else {
-                        console.log('negotiate: 5');
                         function checkState() {
-                            console.log('negotiate: 6');
                             if (peerConnection.iceGatheringState === "complete") {
-                                console.log('negotiate: 7');
                                 peerConnection.removeEventListener("icegatheringstatechange", checkState);
                                 resolve();
                             }
@@ -125,7 +122,7 @@ export class RTCTalkClient {
             .then(() => {
                 console.log('negotiate: complate.');
 
-                const offer = peerConnection.localDescription;
+                const offer: RTCSessionDescription | null = peerConnection.localDescription;
                 if (offer == null) {
                     throw "Offer is null.";
                 }
@@ -159,9 +156,15 @@ export class RTCTalkClient {
                     method: "POST"
                 });
             }).then((response) => {
-                if (response.status != 200) {
-                    console.error(response);
-                    throw 'Invalid offer response.';
+                switch (response.status) {
+                    case 200:
+                        break;
+                    case 429:
+                        console.error(response);
+                        throw `Too many requests - ${response.status} ${response.statusText}`;
+                    default:
+                        console.error(response);
+                        throw `Invalid response - ${response.status} ${response.statusText}`;
                 }
                 return response.json();
             }).then((answer) => {
@@ -169,6 +172,7 @@ export class RTCTalkClient {
                 this.logger.answerSDP(answer.sdp);
                 return peerConnection.setRemoteDescription(answer);
             }).catch((e) => {
+                this.chatMessageManager.writeErrorMessage(`RTCサーバーへの接続に失敗しました...。\n${e}`, true);
                 console.error(e);
                 this.reConnect();
             });
@@ -221,7 +225,7 @@ export class RTCTalkClient {
         /* 接続の確立はnew -> checking -> connected、切断されたらdisconnected -> failed */
         peerConnection.addEventListener("iceconnectionstatechange", () => {
             this.logger.updateIceConnectionState(peerConnection.iceConnectionState);
-            this.connectionStateChangeCallback(peerConnection.iceConnectionState);
+            this.connectionStateChecker(peerConnection.iceConnectionState);
             if (peerConnection.iceConnectionState == 'failed') {
                 this.reConnect();
             }
@@ -233,6 +237,33 @@ export class RTCTalkClient {
         }, false);
         this.logger.newSignalingState(peerConnection.signalingState);
         return peerConnection;
+    }
+
+    private connectionStateChecker(state: RTCIceConnectionState) {
+        /* new -> checking -> connected、disconnected -> failed */
+        switch (state) {
+            case "new":
+                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムに接続します。");
+                break;
+            case "checking":
+                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムへの接続を確認しています。");
+                break;
+            case "connected":
+                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムに接続しました。");
+                break;
+            case "completed":
+                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムとのセッションの確立に成功しました。");
+                break;
+            case "disconnected":
+                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムから切断されました。");
+                break;
+            case "failed":
+                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムへの接続に失敗しました。");
+                break;
+            default:
+                this.chatMessageManager.writeSystemMessageText(`Unknown ICE Connection State - ${state}`);
+                console.error(state);
+        }
     }
 
     private setupTrack(peerConnection: RTCPeerConnection): RTCPeerConnection {

@@ -70,9 +70,9 @@ export class ChatMessageManager {
         システムのエラーメッセージとしてメッセージを出力する。
         メッセージのdiv要素のIDを返す。
     */
-    writeErrorMessage(message: string): HTMLDivElement | null {
+    writeErrorMessage(message: string, force: boolean = false): HTMLDivElement | null {
         /* 同じエラーメッセージが何度も繰り返されないようにする。 */
-        if (this.lastErrorMessage == message) {
+        if (!force && this.lastErrorMessage == message) {
             return null;
         }
         this.lastErrorMessage = message;

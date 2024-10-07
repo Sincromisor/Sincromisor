@@ -36,11 +36,9 @@ export class SincroController {
     }
 
     startRTC(audioTrack: MediaStreamTrack): void {
-        this.chatMessageManager.writeSystemMessageText("音声認識・合成システムに接続します。");
         this.rtcc = new RTCTalkClient(audioTrack, this.dialogManager.enableSTUN(), this.dialogManager.getStunServerURL());
         this.setTextChannelCallback(this.rtcc);
         this.setTelopChannelCallback(this.rtcc);
-        this.setConnectionStateChangeCallback(this.rtcc);
         this.rtcc.start();
     }
 
@@ -54,7 +52,6 @@ export class SincroController {
 
     private setTextChannelCallback(rtcc: RTCTalkClient): void {
         rtcc.textChannelCallback = (tcMsg: TextChannelMessage) => {
-            console.log(tcMsg);
             this.talkManager.addTextChannelMessage(tcMsg);
         }
     }
@@ -62,28 +59,6 @@ export class SincroController {
     private setTelopChannelCallback(rtcc: RTCTalkClient): void {
         rtcc.telopChannelCallback = (vcMsg: TelopChannelMessage) => {
             this.talkManager.addTelopChannelMessage(vcMsg);
-        }
-    }
-
-    private setConnectionStateChangeCallback(rtcc: RTCTalkClient): void {
-        rtcc.connectionStateChangeCallback = (state) => {
-            /* new -> checking -> connected、disconnected -> failed */
-            switch (state) {
-                case "checking":
-                    this.chatMessageManager.writeSystemMessageText("音声認識・合成システムへの接続を確認しています。");
-                    break;
-                case "connected":
-                    this.chatMessageManager.writeSystemMessageText("音声認識・合成システムに接続しました。");
-                    break;
-                case "disconnected":
-                    this.chatMessageManager.writeSystemMessageText("音声認識・合成システムから切断されました。");
-                    break;
-                case "failed":
-                    this.chatMessageManager.writeSystemMessageText("音声認識・合成システムへの接続に失敗しました。");
-                    break;
-                default:
-                    this.chatMessageManager.writeSystemMessageText(`Unknown Error - ${state}`);
-            }
         }
     }
 
