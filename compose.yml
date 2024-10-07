@@ -68,7 +68,7 @@ services:
     ports:
       - 8002:8002/tcp
     volumes:
-      - config.yml:/opt/sincromisor/config.yml:ro
+      - ./config.yml:/opt/sincromisor/config.yml:ro
     networks:
       - sincromisor-net
     env_file:
