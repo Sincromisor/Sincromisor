@@ -4,40 +4,40 @@
 	font-family: 'UDPGothic';
 	font-weight: 100 500;
 	font-style: normal;
-	src: url('/3rd_party/fonts/BIZUDPGothic-Regular.woff2') format('woff2');
+	src: url('/3rd_party/fonts/SUBUDPGothic-Regular.woff2') format('woff2');
 }
 
 @font-face {
 	font-family: 'UDPGothic';
 	font-weight: 501 1000;
 	font-style: normal;
-	src: url('/3rd_party/fonts/BIZUDPGothic-Bold.woff2') format('woff2');
+	src: url('/3rd_party/fonts/SUBUDPGothic-Bold.woff2') format('woff2');
 }
 
 @font-face {
 	font-family: 'UDSerif';
 	font-weight: 100 500;
 	font-style: normal;
-	src: url('/3rd_party/fonts/BIZUDPMincho-Regular.woff2') format('woff2');
+	src: url('/3rd_party/fonts/SUBUDPMincho-Regular.woff2') format('woff2');
 }
 
 @font-face {
 	font-family: 'UDSerif';
 	font-weight: 501 1000;
 	font-style: bold;
-	src: url('/3rd_party/fonts/BIZUDMincho-Regular.woff2') format('woff2');
+	src: url('/3rd_party/fonts/SUBUDMincho-Regular.woff2') format('woff2');
 }
 
 @font-face {
 	font-family: 'UDCode';
 	font-weight: 100 500;
 	font-style: normal;
-	src: url('/3rd_party/fonts/BIZUDGothic-Regular.woff2') format('woff2');
+	src: url('/3rd_party/fonts/SUBUDGothic-Regular.woff2') format('woff2');
 }
 
 @font-face {
 	font-family: 'UDCode';
 	font-weight: 501 1000;
 	font-style: normal;
-	src: url('/3rd_party/fonts/BIZUDGothic-Bold.woff2') format('woff2');
+	src: url('/3rd_party/fonts/SUBUDGothic-Bold.woff2') format('woff2');
 }

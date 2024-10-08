@@ -7,5 +7,4 @@ if [ ! -e config.yml ]; then
     exit 1
 fi
 
-./install-client-assets.sh
 docker compose --profile full-service create --build --force-recreate

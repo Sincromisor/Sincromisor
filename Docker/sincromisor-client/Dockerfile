@@ -11,7 +11,6 @@ COPY --chown=${USER_ID}:${USER_ID} \
 COPY --chown=${USER_ID}:${USER_ID} \
     ./config.yml \
     ./examples/Caddyfile.client \
-    ./install-client-assets.sh \
     /opt/${USER_ID}/
 
 RUN ln -s /opt/${USER_ID}/node_modules /opt/${USER_ID}/sincromisor-client/node_modules && \
