@@ -20,7 +20,7 @@
     margin: 0 auto;
     padding: 0;
     overflow: clip;
-    font-family: 'UDPGothic';
+    font-family: 'BIZ UDPGothic', 'UDPGothic', sans-serif;
     font-feature-settings: "palt" 1;
     line-height: 150%;
     box-sizing: border-box;
