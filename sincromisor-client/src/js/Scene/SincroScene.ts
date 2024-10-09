@@ -50,8 +50,10 @@ export class SincroScene {
             Inspector.Show(this.scene, {});
         }
         this.logger = new SceneLogger();
-        //this.scene.performancePriority = ScenePerformancePriority.Aggressive;
-        this.scene.performancePriority = ScenePerformancePriority.BackwardCompatible;
+        // https://doc.babylonjs.com/features/featuresDeepDive/scene/optimize_your_scene#intermediate-mode
+        this.scene.performancePriority = ScenePerformancePriority.Aggressive;
+        this.scene.autoClear = true;
+        // this.scene.performancePriority = ScenePerformancePriority.BackwardCompatible;
         this.scene.clearColor = new Color4(0, 0, 0, 0.01); // Background color
         this.setResizeEvent();
     }
@@ -63,10 +65,10 @@ export class SincroScene {
     }
 
     private setResizeEvent(): void {
-        const rObserver:ResizeObserver = new ResizeObserver(()=>{
+        const rObserver: ResizeObserver = new ResizeObserver(() => {
             this.applyCanvasSize();
         });
-        rObserver.observe(this.canvas);
+        rObserver.observe(this.canvas as unknown as Element);
     }
 
     applyCanvasSize(): void {
