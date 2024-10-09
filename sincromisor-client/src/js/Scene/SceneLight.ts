@@ -29,9 +29,10 @@ export class StageLight {
     private createCharacterLight(): PointLight {
         //const light = new BABYLON.HemisphericLight("light01", new BABYLON.Vector3(0, 1, 0), this.scene);
         //light.intensity = 0.7;
-        const light: PointLight = new PointLight("light", new Vector3(-30, 0, 0), this.scene);
+        // Vector3(左右, 上下, 前後)
+        const light: PointLight = new PointLight("light", new Vector3(2.5, 5, 5), this.scene);
 
-        light.intensity = 0.5;
+        light.intensity = 0.7;
 
         light.diffuse = new Color3(1, 1, 0.7);
         // light2.intensity = 1;
