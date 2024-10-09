@@ -212,8 +212,10 @@ export class CharacterManager {
         hl01.innerGlow = false;
         hl01.outerGlow = true;
         this.scene.meshes.forEach((mesh: AbstractMesh) => {
-            console.log(mesh);
-            hl01.addMesh(mesh as Mesh, highlightColor);
+            console.log(mesh.name);
+            if (mesh.name.split('.')[0] != 'env') {
+                hl01.addMesh(mesh as Mesh, highlightColor);
+            }
         });
     }
 

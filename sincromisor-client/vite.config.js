@@ -31,7 +31,8 @@ export default defineConfig({
                 single: resolve(__dirname, 'single.html'),
                 double: resolve(__dirname, 'double.html'),
                 glass: resolve(__dirname, 'glass.html'),
-                character: resolve(__dirname, 'character.html')
+                character: resolve(__dirname, 'character.html'),
+                character_glass: resolve(__dirname, 'character-glass.html')
             }
         }
     },

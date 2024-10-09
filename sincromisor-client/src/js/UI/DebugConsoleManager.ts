@@ -42,6 +42,24 @@ export class DebugConsoleManager {
         this.setShortcutKeyEvent();
     }
 
+    showDebugConsole(): void {
+        const debugConsole: HTMLDivElement | null = document.querySelector("div#debugConsole");
+        if (!debugConsole) {
+            return;
+        }
+        debugConsole.style.zIndex = '255';
+        debugConsole.style.overflow = 'scroll';
+    }
+
+    hideDebugConsole(): void {
+        const debugConsole: HTMLDivElement | null = document.querySelector("div#debugConsole");
+        if (!debugConsole) {
+            return;
+        }
+        debugConsole.style.zIndex = '-1';
+        debugConsole.style.overflow = 'hidden';
+    }
+
     /* ctrl + alt + dでデバッグコンソールを表示 */
     private setShortcutKeyEvent(): void {
         const debugConsole: HTMLDivElement | null = document.querySelector("div#debugConsole");
@@ -52,11 +70,9 @@ export class DebugConsoleManager {
             // macOSのChromeではalt+dでkeyの値がδになる
             if (e.ctrlKey && e.altKey && (e.key == 'd' || e.code == 'KeyD')) {
                 if (window.getComputedStyle(debugConsole).zIndex == '-1') {
-                    debugConsole.style.zIndex = '255';
-                    debugConsole.style.overflow = 'scroll';
+                    this.showDebugConsole();
                 } else {
-                    debugConsole.style.zIndex = '-1';
-                    debugConsole.style.overflow = 'hidden';
+                    this.hideDebugConsole();
                 }
             }
         });
