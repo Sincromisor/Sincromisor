@@ -12,9 +12,7 @@ import { EyeMorph } from "./Morph/EyeMorph";
 import { MayuMorph } from "./Morph/MayuMorph";
 import { MouseMorph } from "./Morph/MouseMorph";
 import { CharacterBone } from "./CharacterBone";
-import { StageCamera } from "../Scene/SceneCamera";
 import { StageLight } from "../Scene/SceneLight";
-import { TalkManager } from "../RTC/TalkManager";
 import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
 
 SceneLoader.RegisterPlugin(new GLTFFileLoader());
@@ -31,24 +29,20 @@ interface CharacterBones {
 }
 
 export class CharacterManager {
-    static readonly BASE_PATH = '/characters/';
-    scene: Scene;
-    light: StageLight;
-    camera: StageCamera;
-    talk: TalkManager;
-    public morph: CharacterMorph;
-    public bones: CharacterBones;
+    private static readonly BASE_PATH = '/characters/';
+    private readonly scene: Scene;
+    private readonly light: StageLight;
+    public readonly morph: CharacterMorph;
+    public readonly bones: CharacterBones;
 
-    constructor(scene: Scene, light: StageLight, camera: StageCamera, talk: TalkManager) {
+    constructor(scene: Scene, light: StageLight) {
         this.scene = scene;
         this.light = light;
-        this.camera = camera;
-        this.talk = talk;
         this.morph = {
             body: new BodyMorph(),
             eye: new EyeMorph(),
             mayu: new MayuMorph(),
-            mouse: new MouseMorph(talk)
+            mouse: new MouseMorph()
         }
         this.bones = {
             root: new CharacterBone()

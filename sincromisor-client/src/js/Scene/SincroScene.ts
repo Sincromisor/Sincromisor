@@ -16,17 +16,17 @@ import { TalkManager } from '../RTC/TalkManager';
 // https://doc.babylonjs.com/features/featuresDeepDive/scene/optimize_your_scene
 
 export class SincroScene {
-    canvas: HTMLCanvasElement;
-    vrMode: boolean;
-    withCharacter: boolean;
-    withInspector: boolean;
-    engine: Engine;
-    scene: Scene;
-    logger: SceneLogger;
-    light: StageLight;
-    camera: StageCamera;
+    protected readonly canvas: HTMLCanvasElement;
+    protected readonly vrMode: boolean;
+    protected readonly withCharacter: boolean;
+    protected readonly withInspector: boolean;
+    protected readonly engine: Engine;
+    protected readonly scene: Scene;
+    protected readonly logger: SceneLogger;
+    protected readonly light: StageLight;
+    protected readonly camera: StageCamera;
+    protected readonly talk: TalkManager;
     character?: CharacterManager;
-    talk: TalkManager;
 
     constructor(canvas: HTMLCanvasElement, talk: TalkManager,
         vrMode: boolean, withCharacter: boolean, withInspector: boolean) {
@@ -51,9 +51,10 @@ export class SincroScene {
         }
         this.logger = new SceneLogger();
         // https://doc.babylonjs.com/features/featuresDeepDive/scene/optimize_your_scene#intermediate-mode
-        this.scene.performancePriority = ScenePerformancePriority.Aggressive;
+        // this.scene.performancePriority = ScenePerformancePriority.Aggressive;
+        // this.scene.performancePriority = ScenePerformancePriority.Intermediate;
+        this.scene.performancePriority = ScenePerformancePriority.BackwardCompatible;
         this.scene.autoClear = true;
-        // this.scene.performancePriority = ScenePerformancePriority.BackwardCompatible;
         this.scene.clearColor = new Color4(0, 0, 0, 0.01); // Background color
         this.setResizeEvent();
     }
@@ -84,7 +85,7 @@ export class SincroScene {
         }
 
         if (this.withCharacter) {
-            const character: CharacterManager = new CharacterManager(this.scene, this.light, this.camera, this.talk);
+            const character: CharacterManager = new CharacterManager(this.scene, this.light);
             character.loadModel(() => {
                 this.applyCanvasSize();
             });
@@ -100,6 +101,6 @@ export class SincroScene {
         this.engine.dispose();
     }
 
-    customizeScene(): void {
+    protected customizeScene(): void {
     }
 }

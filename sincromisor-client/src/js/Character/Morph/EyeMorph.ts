@@ -11,7 +11,7 @@ type EyeMorphValues = {
 }
 
 export class EyeMorph {
-    morphValues: EyeMorphValues;
+    private readonly morphValues: EyeMorphValues;
 
     constructor() {
         this.morphValues = {
@@ -22,7 +22,7 @@ export class EyeMorph {
         }
     }
 
-    updateEyeClose(value: number): void {
+    private updateEyeClose(value: number): void {
         this.morphValues["EyeU.l"] = value;
         this.morphValues["EyeU.r"] = value;
         this.morphValues["EyeD.l"] = value;

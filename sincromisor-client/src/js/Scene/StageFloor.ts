@@ -5,7 +5,7 @@ import { ShaderMaterial, StandardMaterial, Effect } from '@babylonjs/core/Materi
 import { Tools } from '@babylonjs/core/Misc';
 
 export class StageFloor {
-    scene: Scene;
+    private readonly scene: Scene;
 
     constructor(scene: Scene) {
         this.scene = scene;

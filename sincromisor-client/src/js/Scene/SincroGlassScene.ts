@@ -9,7 +9,7 @@ import { LookingGlassWebXRPolyfill, LookingGlassConfig } from "@lookingglass/web
 
 // https://docs.lookingglassfactory.com/developer-tools/webxr
 export class SincroGlassScene extends SincroScene {
-    override customizeScene(): void {
+    protected override customizeScene(): void {
         this.scene.performancePriority = ScenePerformancePriority.BackwardCompatible;
 
         // 矢印を描画する関数

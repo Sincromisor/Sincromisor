@@ -1,11 +1,9 @@
 export class UserMediaManager {
-    audioTrack: MediaStreamTrack | null;
-    videoTrack: MediaStreamTrack | null;
+    audioTrack?: MediaStreamTrack;
+    videoTrack?: MediaStreamTrack;
     config: MediaStreamConstraints;
 
     constructor() {
-        this.videoTrack = null;
-        this.audioTrack = null;
         this.config = this.defaultConfig();
     }
 
@@ -56,11 +54,9 @@ export class UserMediaManager {
     close(): void {
         if (this.videoTrack) {
             this.videoTrack.stop();
-            this.videoTrack = null;
         }
         if (this.audioTrack) {
             this.audioTrack.stop();
-            this.videoTrack = null;
         }
     }
 }

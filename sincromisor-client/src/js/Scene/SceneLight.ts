@@ -5,9 +5,9 @@ import { HemisphericLight, PointLight } from '@babylonjs/core/Lights';
 import { Vector3, Color3 } from '@babylonjs/core/Maths';
 
 export class StageLight {
-    scene: Scene;
-    characterLight: PointLight;
-    hemisphericLight: HemisphericLight;
+    private readonly scene: Scene;
+    readonly characterLight: PointLight;
+    readonly hemisphericLight: HemisphericLight;
 
     constructor(scene: Scene) {
         this.scene = scene;
@@ -70,5 +70,9 @@ export class StageLight {
 
     setCharacterLightIntensity(intensity: number) {
         this.characterLight.intensity = intensity;
+    }
+
+    setHemisphericLightIntensity(intensity: number) {
+        this.hemisphericLight.intensity = intensity;
     }
 }

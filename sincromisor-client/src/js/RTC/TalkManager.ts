@@ -10,13 +10,13 @@ export interface CurrentMora {
 
 export class TalkManager {
     private static instance: TalkManager;
-    chatMessageManager: ChatMessageManager;
-    telopChannelMessage: Array<TelopChannelMessage> = [];
-    textChannelMessage: Array<TextChannelMessage> = [];
-    confirmedText: { 'startAt': number, 'text': string }[] = []
-    currentTelopChannelMessage: CurrentMora | null = null;
-    mora_id: number = 0;
-    currentMessageElement: HTMLDivElement | null = null;
+    private readonly chatMessageManager: ChatMessageManager;
+    private telopChannelMessage: Array<TelopChannelMessage> = [];
+    private textChannelMessage: Array<TextChannelMessage> = [];
+    private confirmedText: { 'startAt': number, 'text': string }[] = []
+    private currentTelopChannelMessage: CurrentMora | null = null;
+    private moraID: number = 0;
+    private currentMessageElement: HTMLDivElement | null = null;
 
     static getManager(): TalkManager {
         if (!TalkManager.instance) {
@@ -53,12 +53,12 @@ export class TalkManager {
         if (msg.new_text) {
             console.log(msg.new_text);
             this.currentTelopChannelMessage = {
-                'moraID': this.mora_id,
+                'moraID': this.moraID,
                 'mora': msg,
                 'msec': msg.length * 1000,
                 'endTime': performance.now() + msg.length * 1000
             };
-            this.mora_id += 1;
+            this.moraID += 1;
             this.addTelopChar(msg.text);
         }
     }

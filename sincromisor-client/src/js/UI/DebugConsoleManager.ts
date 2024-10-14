@@ -2,19 +2,19 @@ export class DebugConsoleManager {
     private static instance: DebugConsoleManager
 
     /* RTC */
-    telopChannelLog: HTMLPreElement | null;
-    textChannelLog: HTMLPreElement | null;
-    iceConnectionLog: HTMLSpanElement | null;
-    iceGatheringLog: HTMLSpanElement | null;
-    signalingLog: HTMLSpanElement | null;
-    offerSDPLog: HTMLPreElement | null;
-    answerSDPLog: HTMLPreElement | null;
+    private readonly telopChannelLog: HTMLPreElement | null;
+    private readonly textChannelLog: HTMLPreElement | null;
+    private readonly iceConnectionLog: HTMLSpanElement | null;
+    private readonly iceGatheringLog: HTMLSpanElement | null;
+    private readonly signalingLog: HTMLSpanElement | null;
+    private readonly offerSDPLog: HTMLPreElement | null;
+    private readonly answerSDPLog: HTMLPreElement | null;
 
     /* CharacterGaze */
-    faceXLog: HTMLElement | null;
-    faceYLog: HTMLElement | null;
-    facing: HTMLElement | null;
-    characterGazeStatus: HTMLElement | null;
+    private readonly faceXLog: HTMLElement | null;
+    private readonly faceYLog: HTMLElement | null;
+    private readonly facing: HTMLElement | null;
+    private readonly characterGazeStatus: HTMLElement | null;
 
     static getManager(): DebugConsoleManager {
         if (!DebugConsoleManager.instance) {

@@ -4,19 +4,19 @@ import { Vector3 } from '@babylonjs/core/Maths';
 import { Tools } from '@babylonjs/core/Misc/tools';
 
 export class StageCamera {
-    canvas: HTMLCanvasElement;
-    scene: Scene;
-    camera: ArcRotateCamera;
+    private readonly canvas: HTMLCanvasElement;
+    private readonly scene: Scene;
+    private readonly camera: ArcRotateCamera;
     /*
         Alpha: 水平方向の回転.
         Beta: 垂直方向の回転,
         Radius: 中心からの距離
     */
-    defaultAlpha: number = 0.0;
-    defaultBeta: number = Math.PI / 2;
-    defaultRadius: number = 2.0;
-    cameraDistance: number = 0.75;
-    cameraTarget: Vector3 = new Vector3(0, 1.25, 0);
+    private readonly defaultAlpha: number = 0.0;
+    private readonly defaultBeta: number = Math.PI / 2;
+    private readonly defaultRadius: number = 2.0;
+    private readonly cameraTarget: Vector3 = new Vector3(0, 1.25, 0);
+    private cameraDistance: number = 0.75;
 
     constructor(canvas: HTMLCanvasElement, scene: Scene, vrMode: boolean) {
         this.canvas = canvas;
@@ -65,19 +65,19 @@ export class StageCamera {
     }
 
     private createVRCamera(): ArcRotateCamera {
-        const scale = 0.015;
-        this.defaultAlpha = 3 * Math.PI / 2;
-        this.defaultBeta = Math.PI / 50;
-        this.defaultRadius = 220 * scale;
-        const camera = new ArcRotateCamera("Camera",
-            this.defaultAlpha, this.defaultBeta, this.defaultRadius, Vector3.Zero(), this.scene);
+        const scale: number = 0.015;
+        const defaultVRAlpha: number = 3 * Math.PI / 2;
+        const defaultVRBeta: number = Math.PI / 50;
+        const defaultVRRadius: number = 220 * scale;
+        const camera: ArcRotateCamera = new ArcRotateCamera("Camera",
+            defaultVRAlpha, defaultVRBeta, defaultVRRadius, Vector3.Zero(), this.scene);
         camera.attachControl(this.canvas, true);
         return camera;
     }
 
     // canvasリサイズ時にORTHOGRAPHIC_CAMERAを再設定
     reconfigure(): void {
-        const ratio = this.canvas.height / this.canvas.width;
+        const ratio: number = this.canvas.height / this.canvas.width;
         this.camera.orthoLeft = -this.cameraDistance / 2;
         this.camera.orthoRight = this.cameraDistance / 2;
         this.camera.orthoTop = this.camera.orthoRight * ratio;

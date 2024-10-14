@@ -7,15 +7,15 @@ import { TalkManager } from "./RTC/TalkManager";
 import { DebugConsoleManager } from "./UI/DebugConsoleManager";
 import { TelopChannelMessage, TextChannelMessage } from "./RTC/RTCMessage";
 import { CharacterBone } from "./Character/CharacterBone";
+import { Detection } from "@mediapipe/tasks-vision";
 
 export class SincroController {
-    dialogManager: DialogManager;
-    chatMessageManager: ChatMessageManager;
-    currentMessageElement: HTMLDivElement | null = null;
-    rtcc: RTCTalkClient | null = null;
-    talkManager: TalkManager;
-    userMediaManager: UserMediaManager;
-    characterBone: CharacterBone | null = null;
+    private readonly dialogManager: DialogManager;
+    private readonly chatMessageManager: ChatMessageManager;
+    private readonly talkManager: TalkManager;
+    private readonly userMediaManager: UserMediaManager;
+    private rtcc?: RTCTalkClient;
+    private characterBone?: CharacterBone;
 
     constructor() {
         this.dialogManager = DialogManager.getManager();
@@ -80,7 +80,7 @@ export class SincroController {
                 } else {
                     console.log("start CharacterGaze");
                     const eyeTargetElement = document.querySelector("#eyeTarget");
-                    characterGaze.initCamera(videoTrack, (detects) => {
+                    characterGaze.initCamera(videoTrack, (detects: Detection[]) => {
                         eyeLogger.updateFaceXLog(characterGaze.targetX());
                         eyeLogger.updateFaceYLog(characterGaze.targetY());
                         eyeLogger.updateFacing(characterGaze.facing());

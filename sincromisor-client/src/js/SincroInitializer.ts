@@ -7,10 +7,10 @@ import { TalkManager } from "./RTC/TalkManager";
 import { UserMediaManager } from "./RTC/UserMediaManager";
 
 export class SincroInitializer {
-    dialogManager: DialogManager;
-    chatMessageManager: ChatMessageManager;
-    talkManager: TalkManager;
-    charCanvas: HTMLCanvasElement;
+    protected readonly dialogManager: DialogManager;
+    protected readonly chatMessageManager: ChatMessageManager;
+    protected readonly talkManager: TalkManager;
+    protected readonly charCanvas: HTMLCanvasElement;
 
     constructor() {
         this.dialogManager = DialogManager.getManager();
@@ -76,7 +76,7 @@ export class SincroInitializer {
         this.dialogManager.closeDialog();
     }
 
-    initializeSincroScene(): SincroScene {
+    protected initializeSincroScene(): SincroScene {
         return new SincroScene(
             this.charCanvas, this.talkManager,
             this.dialogManager.enableVR(),

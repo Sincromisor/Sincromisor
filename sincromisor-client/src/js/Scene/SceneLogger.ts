@@ -3,7 +3,7 @@ import { AdvancedDynamicTexture, TextBlock, Control } from "@babylonjs/gui/2D";
 // canvas上にオーバーレイテキストを表示する
 export class SceneLogger {
     logText: string;
-    textBlock: TextBlock;
+    private textBlock: TextBlock;
 
     constructor() {
         this.logText = '';

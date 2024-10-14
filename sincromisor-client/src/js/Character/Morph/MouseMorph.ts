@@ -13,11 +13,11 @@ type MouseMorphValues = {
 }
 
 export class MouseMorph {
-    morphValues: MouseMorphValues;
-    talk: TalkManager
+    private readonly morphValues: MouseMorphValues;
+    private readonly talk: TalkManager
 
-    constructor(talk: TalkManager) {
-        this.talk = talk;
+    constructor() {
+        this.talk = TalkManager.getManager();
         this.morphValues = {
             "Mouse.A": 0.0,
             "Mouse.I": 0.0,

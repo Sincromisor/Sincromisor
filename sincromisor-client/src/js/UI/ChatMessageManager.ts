@@ -6,10 +6,11 @@ interface ChatMessage {
 
 export class ChatMessageManager {
     private static instance: ChatMessageManager;
-    chatBox: HTMLDivElement;
-    messageID: number = 0;
-    systemUserName: string = "GloriousAI";
-    systemDisplayName: string = "Glorious AI";
+    private readonly chatBox: HTMLDivElement;
+    private readonly systemUserName: string = "GloriousAI";
+    private readonly systemDisplayName: string = "Glorious AI";
+    private messageID: number = 0;
+
     /* 同じエラーメッセージが何度も表示されないようにするために使用 */
     lastErrorMessage: string = '';
 

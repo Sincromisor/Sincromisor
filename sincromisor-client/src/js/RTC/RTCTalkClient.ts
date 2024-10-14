@@ -9,13 +9,12 @@ interface IceServerConfig {
 }
 
 export class RTCTalkClient {
-    logger: DebugConsoleManager;
-    peerConnection: RTCPeerConnection;
-    telopChannel: RTCDataChannel;
-    textChannel: RTCDataChannel;
-    audioTrack: MediaStreamTrack;
-    config: RTCConfiguration;
-    chatMessageManager: ChatMessageManager;
+    private readonly logger: DebugConsoleManager;
+    private readonly peerConnection: RTCPeerConnection;
+    private readonly telopChannel: RTCDataChannel;
+    private readonly textChannel: RTCDataChannel;
+    private readonly chatMessageManager: ChatMessageManager;
+    private config: RTCConfiguration;
 
     /*
         default     Default codecs
@@ -36,7 +35,6 @@ export class RTCTalkClient {
     constructor(audioTrack: MediaStreamTrack) {
         this.logger = DebugConsoleManager.getManager();
         this.chatMessageManager = ChatMessageManager.getManager();
-        this.audioTrack = audioTrack;
         this.config = this.defaultConfig();
         const rtcIceServers: IceServerConfig[] | null = import.meta.env.RTC_ICE_SERVERS;
         if (rtcIceServers) {

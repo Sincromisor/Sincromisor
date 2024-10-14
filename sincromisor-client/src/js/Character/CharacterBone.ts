@@ -11,9 +11,9 @@ type BoneRotation = {
 }
 
 export class CharacterBone {
-    rotation: BoneRotation;
-    maxSamples: int;
-    neckRotation: Vector3;
+    private rotation: BoneRotation;
+    private readonly maxSamples: int;
+    private readonly neckRotation: Vector3;
 
     constructor() {
         this.neckRotation = new Vector3(0.0, 0.0, 0.0);

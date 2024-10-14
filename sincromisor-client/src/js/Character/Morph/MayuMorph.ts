@@ -9,7 +9,7 @@ type MayuMorphValues = {
 }
 
 export class MayuMorph {
-    morphValues: MayuMorphValues;
+    private readonly morphValues: MayuMorphValues;
 
     constructor() {
         this.morphValues = {

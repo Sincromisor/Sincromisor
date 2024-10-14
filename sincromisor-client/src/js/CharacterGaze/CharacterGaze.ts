@@ -12,21 +12,17 @@ declare interface NormalizedKeypoint {
 }
 
 export class CharacterGaze {
-    videoElement: HTMLVideoElement;
-    faceDetector: FaceDetector | null = null;
-    lastVideoTime: number = -1;
-    lastDetectedTime: number = -1;
-    detected: boolean = false;
-    videoWidth: number;
-    videoHeight: number;
+    private readonly videoElement: HTMLVideoElement;
+    private faceDetector?: FaceDetector;
+    private lastVideoTime: number = -1;
+    private lastDetectedTime: number = -1;
+    private detected: boolean = false;
     movingAverage: Array<{ 'x': number, 'y': number }> = [...Array(6)].map(() => { return { 'x': 0.0, 'y': 0.0 } });
     arriveCallback: () => void = () => { };
     leaveCallback: () => void = () => { };
 
-    constructor(targetVideoElement: HTMLVideoElement, width: number = 320, height: number = 240) {
+    constructor(targetVideoElement: HTMLVideoElement) {
         this.videoElement = targetVideoElement;
-        this.videoWidth = width;
-        this.videoHeight = height;
         this.arriveCallback = () => { };
         this.leaveCallback = () => { };
     }

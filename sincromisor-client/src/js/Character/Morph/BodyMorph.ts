@@ -8,7 +8,7 @@ type BodyMorphValues = {
 }
 
 export class BodyMorph {
-    morphValues: BodyMorphValues;
+    private readonly morphValues: BodyMorphValues;
 
     constructor() {
         this.morphValues = {
