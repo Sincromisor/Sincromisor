@@ -3,6 +3,7 @@
 *.tar.xz
 *.7z
 *.zip
+.vscode
 __pycache__
 config.yml
 samples
