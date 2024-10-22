@@ -1,11 +1,11 @@
 services:
-  sincromisor-server-base:
+  sincro-server-base:
     profiles:
       - base-image
     build:
       context: .
-      dockerfile: ./Docker/sincromisor-server-base/Dockerfile
-    image: sincromisor-server-base
+      dockerfile: ./Docker/sincro-server-base/Dockerfile
+    image: sincromisor/sincro-server-base
     volumes:
       - type: volume
         source: huggingface-cache
@@ -13,22 +13,22 @@ services:
         volume:
           nocopy: true
 
-  sincromisor-client-base:
+  sincro-client-base:
     profiles:
       - base-image
     build:
       context: .
-      dockerfile: ./Docker/sincromisor-client-base/Dockerfile
-    image: sincromisor-client-base
+      dockerfile: ./Docker/sincro-client-base/Dockerfile
+    image: sincromisor/sincro-client-base
 
-  sincromisor-server:
+  sincro-server:
     profiles:
       - full-service
       - without-webclient
     build:
       context: .
-      dockerfile: ./Docker/sincromisor-server/Dockerfile
-    image: sincromisor-server:latest
+      dockerfile: ./Docker/sincro-server/Dockerfile
+    image: sincromisor/sincro-server:latest
     ports:
       - 8001:8001/tcp
       - 8003:8003/tcp
@@ -57,14 +57,14 @@ services:
     stdin_open: true
     tty: true
 
-  sincromisor-client:
+  sincro-client:
     profiles:
       - full-service
       - webclient-only
     build:
       context: .
-      dockerfile: ./Docker/sincromisor-client/Dockerfile
-    image: sincromisor-client:latest
+      dockerfile: ./Docker/sincro-client/Dockerfile
+    image: sincromisor/sincro-client:latest
     ports:
       - 8002:8002/tcp
     volumes:
@@ -79,11 +79,11 @@ services:
     stdin_open: true
     tty: true
 
-  voicevox:
+  sincro-voicevox:
     profiles:
       - full-service
       - without-webclient
-    image: voicevox:latest
+    image: sincromisor/voicevox:latest
     build:
       context: .
       dockerfile: ./Docker/voicevox/Dockerfile
@@ -95,11 +95,11 @@ services:
       restart_policy:
         condition: on-failure
 
-  voice-cache:
+  sincro-voice-cache:
     profiles:
       - full-service
       - without-webclient
-    image: voice-cache:latest
+    image: sincromisor/voice-cache:latest
     build:
       context: .
       dockerfile: ./Docker/voice-cache/Dockerfile
@@ -111,13 +111,13 @@ services:
       restart_policy:
         condition: on-failure
 
-  sincromisor-rproxy:
+  sincro-rproxy:
     profiles:
       - full-service
-    image: sincromisor-rproxy:latest
+    image: sincromisor/rproxy:latest
     build:
       context: .
-      dockerfile: ./Docker/sincromisor-rproxy/Dockerfile
+      dockerfile: ./Docker/rproxy/Dockerfile
     ports:
       - 80:80/tcp
       - 443:443/tcp

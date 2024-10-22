@@ -1,4 +1,4 @@
-FROM sincromisor-server-base:latest
+FROM sincromisor/server-base:latest
 
 EXPOSE 8001/tcp 8003/tcp 8004/tcp 8005/tcp
 

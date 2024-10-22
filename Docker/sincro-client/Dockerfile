@@ -1,4 +1,4 @@
-FROM sincromisor-client-base:latest
+FROM sincromisor/sincro-client-base:latest
 
 EXPOSE 8002/tcp
 
