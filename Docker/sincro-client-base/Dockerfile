@@ -23,13 +23,13 @@ RUN apt-get update && \
     tar xpf "caddy_${CADDY_VERSION}_${CADDY_ARCH}.tar.gz" -C /opt/caddy
 
 COPY --chown=${USER_ID}:${USER_ID} \
-  ./sincromisor-client/package.json ./sincromisor-client/package-lock.json \
-  ./README.md ./Docker/sincromisor-client-base/docker-entrypoint.sh \
-  /opt/${USER_ID}/
+    ./sincromisor-client/package.json ./sincromisor-client/package-lock.json \
+    ./README.md ./Docker/sincro-client-base/docker-entrypoint.sh \
+    /opt/${USER_ID}/
 
 USER $USER_ID
 RUN cd /opt/sincromisor && \
-  PATH=/opt/node/bin:${PATH} npm install
+    PATH=/opt/node/bin:${PATH} npm install
 
 ENTRYPOINT [ "/opt/sincromisor/docker-entrypoint.sh" ]
 # CMD ["/opt/sincromisor/start.sh"]

@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.6.1-cudnn-devel-ubuntu24.04
+FROM nvidia/cuda:12.6.2-cudnn-devel-ubuntu24.04
 
 ARG USER_ID=sincromisor
 
@@ -16,9 +16,9 @@ RUN --mount=type=cache,target=/opt/${USER_ID}/.cache \
     chown ${USER_ID}:${USER_ID} /opt/${USER_ID}/.cache
 
 COPY --chown=${USER_ID}:${USER_ID} \
-  ./pyproject.toml ./uv.lock ./.python-version \
-  ./README.md ./Docker/sincromisor-server-base/docker-entrypoint.sh \
-  /opt/${USER_ID}/
+    ./pyproject.toml ./uv.lock ./.python-version \
+    ./README.md ./Docker/sincro-server-base/docker-entrypoint.sh \
+    /opt/${USER_ID}/
 
 USER $USER_ID
 RUN --mount=type=cache,target=/opt/${USER_ID}/.cache \
