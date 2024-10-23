@@ -127,7 +127,7 @@ export class ChatMessageManager {
 
         const eIcon = document.createElement("img");
         eIcon.className = "icon";
-        eIcon.src = `images/icon-${className}.webp`;
+        eIcon.src = `../images/icon-${className}.webp`;
 
         const eMesg = document.createElement("p");
         eMesg.className = "message";
