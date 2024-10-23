@@ -1,4 +1,4 @@
-SERVER_NAME {
+sincromisor.example.org {
     log {
         output stdout
         level info
