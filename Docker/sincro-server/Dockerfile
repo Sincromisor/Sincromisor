@@ -8,7 +8,7 @@ COPY --chown=${USER_ID}:${USER_ID} \
     ./sincromisor-server/ /opt/${USER_ID}/sincromisor-server/
 
 COPY --chown=${USER_ID}:${USER_ID} \
-    ./config.yml ./start-server.sh \
+    ./Docker/env_vars/config.yml ./start-server.sh \
     /opt/${USER_ID}/
 
 VOLUME ["/opt/sincromisor/.cache"]

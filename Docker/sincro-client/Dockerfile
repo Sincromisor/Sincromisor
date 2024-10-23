@@ -9,7 +9,7 @@ COPY --chown=${USER_ID}:${USER_ID} \
     ./sincromisor-client/ /opt/${USER_ID}/sincromisor-client/
 
 COPY --chown=${USER_ID}:${USER_ID} \
-    ./config.yml \
+    ./Docker/env_vars/config.yml \
     ./examples/Caddyfile.client \
     /opt/${USER_ID}/
 
