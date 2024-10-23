@@ -2,7 +2,7 @@ FROM ubuntu:24.04
 
 EXPOSE 50021
 
-ARG VOICEVOX_VERSION=0.20.0
+ARG VOICEVOX_VERSION=0.21.0
 
 RUN apt-get update && \
     apt-get install -y curl p7zip libsndfile1 && \
