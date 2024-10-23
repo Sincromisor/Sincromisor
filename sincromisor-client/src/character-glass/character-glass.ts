@@ -1,7 +1,7 @@
-import { CharacterManager } from "./Character/CharacterManager";
-import { SincroGlassScene } from "./Scene/SincroGlassScene";
-import { TalkManager } from "./RTC/TalkManager";
-import { DebugConsoleManager } from "./UI/DebugConsoleManager";
+import { CharacterManager } from "../ts/Character/CharacterManager";
+import { SincroGlassScene } from "../ts/Scene/SincroGlassScene";
+import { TalkManager } from "../ts/RTC/TalkManager";
+import { DebugConsoleManager } from "../ts/UI/DebugConsoleManager";
 
 function start() {
     const charCanvas: HTMLCanvasElement | null = document.querySelector('canvas#characterCanvas') as HTMLCanvasElement | null;

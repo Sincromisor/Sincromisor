@@ -12,6 +12,7 @@ function toLowerCaseKeys(arr) {
     });
 }
 const config = yaml.load(fs.readFileSync('../config.yml', 'utf-8'));
+const contents_src = resolve(__dirname, 'src');
 
 export default defineConfig({
     appType: 'mpa',
@@ -23,16 +24,20 @@ export default defineConfig({
             partialDirectory: resolve(__dirname, 'src/partials')
         })
     ],
+    root: contents_src,
+    publicDir: resolve(__dirname, 'public'),
     build: {
+        emptyOutDir: true,
+        outDir: resolve(__dirname, 'dist'),
         rollupOptions: {
             input: {
-                main: resolve(__dirname, 'index.html'),
-                simple: resolve(__dirname, 'simple.html'),
-                single: resolve(__dirname, 'single.html'),
-                double: resolve(__dirname, 'double.html'),
-                glass: resolve(__dirname, 'glass.html'),
-                character: resolve(__dirname, 'character.html'),
-                character_glass: resolve(__dirname, 'character-glass.html')
+                main: resolve(contents_src, 'index.html'),
+                simple: resolve(contents_src, 'simple/index.html'),
+                single: resolve(contents_src, 'single/index.html'),
+                double: resolve(contents_src, 'double/index.html'),
+                glass: resolve(contents_src, 'glass/index.html'),
+                character: resolve(contents_src, 'character/index.html'),
+                character_glass: resolve(contents_src, 'character-glass/index.html')
             }
         }
     },
