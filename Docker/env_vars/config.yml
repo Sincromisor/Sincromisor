@@ -1,0 +1,42 @@
+---
+ServerName: sincromisor.example.org
+VoiceSynthesizer:
+    EnableRedis: true
+    DefaultStyleID: 0
+    PrePhonemeLength: 0.1
+    PostPhonemeLength: 0.0
+Worker:
+    Sincromisor:
+        - Host: 0.0.0.0
+          Port: 8001
+          Url: /offer
+          forwardedAllowIps: sincro-rproxy
+          Launch: true
+    SpeechExtractor:
+        - Host: 0.0.0.0
+          Port: 8003
+          Url: ws://sincro-server:8003/
+          Launch: true
+    SpeechRecognizer:
+        - Host: 0.0.0.0
+          Port: 8004
+          Url: ws://sincro-server:8004/
+          Launch: true
+    VoiceSynthesizer:
+        - Host: 0.0.0.0
+          Port: 8005
+          Url: ws://sincro-server:8005/
+          Launch: true
+Redis:
+    - Host: sincro-voice-cache
+      Port: 6379
+VoiceVox:
+    - Host: sincro-voicevox
+      Port: 50021
+WebRTC:
+    MaxSessions: 5
+    RTCIceServers:
+        - Urls: stun:stun.negix.org:3478
+        #- Urls: turn:turn.negix.org:3478
+        #  UserName: gloria
+        #  Credential: SECRET_KEY

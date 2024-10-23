@@ -5,7 +5,7 @@
 *.zip
 .vscode
 __pycache__
-config.yml
+/config.yml
 samples
 sincromisor-server/log/*.log
 sincromisor-server/log/voice
