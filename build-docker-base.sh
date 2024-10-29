@@ -9,4 +9,4 @@ if [ ! -e ./Docker/env_vars/config.yml ]; then
     exit 1
 fi
 
-docker compose --profile base-image --build --force-recreate
+docker compose --profile base-image create --build --force-recreate
