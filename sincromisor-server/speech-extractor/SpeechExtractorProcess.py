@@ -1,10 +1,11 @@
 import logging
+import logging.config
 from logging import Logger
-from sincro_config import SincromisorConfig, LoggerConfig
+from sincro_config import SincromisorConfig, SincromisorLoggerConfig
 
 config = SincromisorConfig.from_yaml()
 logging.config.dictConfig(
-    LoggerConfig.generate(
+    SincromisorLoggerConfig.generate(
         log_file=config.get_log_path("SpeechExtractorWorker"), stdout=True
     )
 )

@@ -2,7 +2,7 @@ import os
 import logging
 from logging import Logger
 from setproctitle import setproctitle
-from sincro_config import SincromisorConfig, LoggerConfig
+from sincro_config import SincromisorConfig, SincromisorLoggerConfig
 
 
 if os.environ.get("SINCROMISOR_MODE") == "development":
@@ -12,7 +12,9 @@ if os.environ.get("SINCROMISOR_MODE") == "development":
 
 config = SincromisorConfig.from_yaml()
 logging.config.dictConfig(
-    LoggerConfig.generate(log_file=config.get_log_path("Sincromisor"), stdout=True)
+    SincromisorLoggerConfig.generate(
+        log_file=config.get_log_path("Sincromisor"), stdout=True
+    )
 )
 
 from fastapi import FastAPI, Request, status

@@ -7,4 +7,4 @@ from .SincromisorConfig import (
     RTCIceServerConfig,
     VoiceSynthesizerConfig,
 )
-from .LoggerConfig import LoggerConfig
+from .SincromisorLoggerConfig import SincromisorLoggerConfig

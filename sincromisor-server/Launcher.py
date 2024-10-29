@@ -1,16 +1,14 @@
 import os
 import logging
+import logging.config
 from logging import Logger
-from sincro_config import SincromisorConfig
+from sincro_config import SincromisorConfig, SincromisorLoggerConfig
 
 config = SincromisorConfig.from_yaml()
-
-logging.basicConfig(
-    filename=config.get_log_path("Launcher.log"),
-    encoding="utf-8",
-    level=logging.INFO,
-    format=f"[%(asctime)s] {logging.BASIC_FORMAT}",
-    datefmt="%Y/%m/%d %H:%M:%S",
+logging.config.dictConfig(
+    SincromisorLoggerConfig.generate(
+        log_file=config.get_log_path("Launcher"), stdout=True
+    )
 )
 
 import time
@@ -63,7 +61,7 @@ class ProcessLauncher:
         # 環境変数SINCROMISOR_CONFで明示的に設定ファイルの絶対パスを渡す。
         self.newenv = os.environ.copy()
         self.newenv["SINCROMISOR_CONF"] = config.config_path()
-        self.newenv["SINCROMISOR_WORKER_ID"] = self.worker_id
+        self.newenv["SINCROMISOR_WORKER_ID"] = str(self.worker_id)
 
     def start(self):
         self.process = sp.Popen(

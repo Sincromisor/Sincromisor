@@ -1,4 +1,4 @@
-class LoggerConfig:
+class SincromisorLoggerConfig:
     DefaultConfig: dict = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -63,4 +63,4 @@ class LoggerConfig:
 if __name__ == "__main__":
     from pprint import pprint
 
-    pprint(LoggerConfig.generate(log_file="Sincromisor.1.log"))
+    pprint(SincromisorLoggerConfig.generate(log_file="Sincromisor.1.log"))
