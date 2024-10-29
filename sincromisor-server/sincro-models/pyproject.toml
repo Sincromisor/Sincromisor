@@ -1,0 +1,22 @@
+[project]
+name = "sincro-models"
+version = "2.0.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "sincro-config",
+    "pydantic>=2.9.2",
+    "msgpack>=1.1.0",
+    "numpy==1.26.4",
+]
+
+[tool.uv.sources]
+sincro-config = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sincro_models"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

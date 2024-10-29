@@ -24,7 +24,7 @@ USER $USER_ID
 RUN --mount=type=cache,target=/opt/${USER_ID}/.cache \
     cd /opt/${USER_ID} && \
     curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    PATH="/opt/sincromisor/.cargo/bin:$PATH" uv sync
+    PATH="/opt/sincromisor/.cargo/bin:$PATH" uv sync --group sincro-rtc --group speech-extractor --group speech-recognizer --group voice-synthesizer
 
 VOLUME ["/opt/sincromisor/.cache"]
 ENTRYPOINT [ "/opt/sincromisor/docker-entrypoint.sh" ]

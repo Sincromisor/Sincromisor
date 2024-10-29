@@ -1,50 +1,71 @@
 [project]
 name = "sincromisor"
-version = "0.1.0"
-description = "Sincromisor-0.1.0 dayo."
+version = "2.0.0"
+description = "Sincromisor-2.0.0"
 authors = [
     { name = "Akito Miura", email = "phenomer@g.hachune.net" }
 ]
 dependencies = [
-    "uvicorn>=0.30.6",
-    "fastapi>=0.112.2",
-    "websockets>=13.0.1",
-    "redis[hiredis]>=5.0.8",
-    "setproctitle>=1.3.3",
-    "aiortc>=1.9.0",
-    "av>=12.3.0",
-    "torch>=2.3.1",
-    "transformers==4.37.2",
-    "accelerate>=0.31.0",
-    "deepspeed>=0.14.4",
-    "sentencepiece>=0.2.0",
-    "mediapipe==0.10.15",
-    "sudachipy>=0.6.8",
-    "sudachidict-full>=20240409",
-    "nue-asr @ git+https://github.com/rinnakk/nue-asr.git",
-    "numpy==1.26.4",
-    "google-crc32c>=1.6.0",
     "setuptools>=70.1.1",
-    "python-ulid>=2.7.0",
 ]
+
 readme = "README.md"
 requires-python = ">= 3.10"
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.rye]
-managed = true
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "mypy>=1.10.1",
     "types-psutil>=6.0.0.20240621",
     "types-pyyaml>=6.0.12.20240311",
     "types-requests>=2.32.0.20240622",
 ]
 
+sincro-rtc = [
+    "sincro-rtc",
+]
+
+speech-extractor = [
+    "speech-extractor",
+]
+
+speech-recognizer = [
+    "speech-recognizer",
+]
+
+voice-synthesizer = [
+    "voice-synthesizer",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+default-groups = []
+
+[tool.uv.workspace]
+members = [
+    "sincromisor-server/sincro-config",
+    "sincromisor-server/sincro-models",
+    "sincromisor-server/sincro-rtc",
+    "sincromisor-server/speech-recognizer",
+    "sincromisor-server/speech-extractor",
+    "sincromisor-server/voice-synthesizer",
+    "sincromisor-server/text-processor",
+    "sincromisor-server/sincro-models"
+]
+
+[tool.uv.sources]
+sincro-config = { workspace = true }
+sincro-models = { workspace = true }
+sincro-rtc = { workspace = true }
+speech-extractor = { workspace = true }
+speech-recognizer = { workspace = true }
+voice-synthesizer = { workspace = true }
+text-processor = { workspace = true }
+
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["sincromisor-server/sincromisor"]
+packages = ["sincromisor-server"]

@@ -1,0 +1,6 @@
+from .SpeechExtractorInitializeRequest import SpeechExtractorInitializeRequest
+from .SpeechExtractorResult import SpeechExtractorResult
+from .SpeechRecognizerResult import SpeechRecognizerResult
+from .VoiceSynthesizerRequest import VoiceSynthesizerRequest
+from .VoiceSynthesizerResult import VoiceSynthesizerResult
+from .VoiceSynthesizerResultFrame import VoiceSynthesizerResultFrame

@@ -1,8 +1,12 @@
+import os
 import logging
 from logging import Logger
+from sincro_config import SincromisorConfig
+
+config = SincromisorConfig.from_yaml()
 
 logging.basicConfig(
-    filename="log/Launcher.log",
+    filename=config.get_log_path("Launcher.log"),
     encoding="utf-8",
     level=logging.INFO,
     format=f"[%(asctime)s] {logging.BASIC_FORMAT}",
@@ -15,7 +19,6 @@ import signal
 import subprocess as sp
 from threading import Thread
 from typing import List
-from sincroLib.models import SincromisorConfig
 from setproctitle import setproctitle
 
 
@@ -48,16 +51,24 @@ class ProcessStdErrReader(Thread):
 
 
 class ProcessLauncher:
-    def __init__(self, name: str, args: list):
+    def __init__(self, name: str, worker_id: int, args: list):
         self.args: list = args
         self.name: str = name
         self.process: sp.Popen | None = None
         self.stdout_t: Thread | None = None
         self.stderr_t: Thread | None = None
+        self.worker_id: int = worker_id
         self.logger: Logger = logging.getLogger(name)
+        # サブプロセスに環境変数を引き継ぐ。
+        # 環境変数SINCROMISOR_CONFで明示的に設定ファイルの絶対パスを渡す。
+        self.newenv = os.environ.copy()
+        self.newenv["SINCROMISOR_CONF"] = config.config_path()
+        self.newenv["SINCROMISOR_WORKER_ID"] = self.worker_id
 
     def start(self):
-        self.process = sp.Popen(self.args, stdout=sp.PIPE, stderr=sp.PIPE)
+        self.process = sp.Popen(
+            self.args, stdout=sp.PIPE, stderr=sp.PIPE, env=self.newenv
+        )
         self.stdout_t = ProcessStdOutReader(
             name=self.name, process=self.process, logger=self.logger
         )
@@ -79,7 +90,6 @@ class ProcessLauncher:
 
 
 setproctitle("SincroLauncher")
-config: SincromisorConfig = SincromisorConfig.from_yaml()
 running: bool = True
 processes: List[ProcessLauncher] = []
 
@@ -105,13 +115,18 @@ def trap_sigint(signum, frame):
 
 signal.signal(signal.SIGINT, trap_sigint)
 
-for worker_type in ["SpeechExtractor", "SpeechRecognizer", "VoiceSynthesizer"]:
+for dir_name, worker_type in [
+    ["speech-extractor", "SpeechExtractor"],
+    ["speech-recognizer", "SpeechRecognizer"],
+    ["voice-synthesizer", "VoiceSynthesizer"],
+]:
     for worker_id, worker_conf in config.get_launchable_workers_conf(type=worker_type):
         worker_p: ProcessLauncher = ProcessLauncher(
             name=f"{worker_type}({worker_id})",
+            worker_id=worker_id,
             args=[
                 shutil.which("uvicorn"),
-                f"{worker_type}Process:app",
+                f"{dir_name}.{worker_type}Process:app",
                 f"--host={worker_conf.Host}",
                 f"--port={worker_conf.Port}",
             ],
@@ -121,12 +136,14 @@ for worker_type in ["SpeechExtractor", "SpeechRecognizer", "VoiceSynthesizer"]:
 
 # --proxy-headersを設定していても、X-Forwarded-Portが常に0になる問題がある模様
 # https://github.com/encode/uvicorn/discussions/1948
-for worker_id, worker_conf in config.get_launchable_workers_conf(type="Sincromisor"):
+worker_type = "Sincromisor"
+for worker_id, worker_conf in config.get_launchable_workers_conf(type=worker_type):
     web_p: ProcessLauncher = ProcessLauncher(
-        name="Sincromisor",
+        name=worker_type,
+        worker_id=worker_id,
         args=[
             shutil.which("uvicorn"),
-            "Sincromisor:app",
+            "sincro-rtc.Sincromisor:app",
             f"--host={worker_conf.Host}",
             f"--port={worker_conf.Port}",
             "--proxy-headers",
