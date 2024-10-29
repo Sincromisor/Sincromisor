@@ -7,12 +7,12 @@ requires-python = ">=3.10"
 dependencies = [
     "sincro-config",
     "sincro-models",
-    #"torch>=2.3.1",
-    #"transformers==4.37.2",
-    #"accelerate>=0.31.0",
-    #"deepspeed>=0.14.4",
-    #"sentencepiece>=0.2.0",
-    #"nue-asr @ git+https://github.com/rinnakk/nue-asr.git",
+    "torch>=2.3.1",
+    "transformers==4.37.2",
+    "accelerate>=0.31.0",
+    "deepspeed>=0.14.4",
+    "sentencepiece>=0.2.0",
+    "nue-asr @ git+https://github.com/rinnakk/nue-asr.git",
     "pydantic>=2.9.2",
     "numpy==1.26.4",
     "uvicorn>=0.30.6",
@@ -26,6 +26,9 @@ sincro-models = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/speech_recognizer"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [build-system]
 requires = ["hatchling"]
