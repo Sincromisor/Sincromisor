@@ -8,7 +8,7 @@ NODEJS_ARCH='linux-x64'
 
 cd "$(dirname "${0}")"
 
-if which npm > /dev/null; then
+if which npm >/dev/null; then
     echo 'npm found.'
 elif [ -x "$(pwd)/node/bin/npm" ]; then
     PATH="$(pwd)/node/bin:${PATH}"
