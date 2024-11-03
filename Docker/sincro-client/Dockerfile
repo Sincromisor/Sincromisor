@@ -1,24 +1,69 @@
-FROM sincromisor/sincro-client-base:latest
+FROM node:22 AS builder
 
-EXPOSE 8002/tcp
+ARG SINCRO_USER_ID=sincromisor
+ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
+ARG SINCRO_NODE_OPTIONS="--max-old-space-size=2048"
+ENV NODE_OPTIONS=${SINCRO_NODE_OPTIONS}
 
-ARG USER_ID=sincromisor
-ENV PATH=/opt/node/bin:$PATH
+WORKDIR ${SINCRO_USER_DIR}
 
-COPY --chown=${USER_ID}:${USER_ID} \
-    ./sincromisor-client/ /opt/${USER_ID}/sincromisor-client/
+RUN useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
+    mkdir ${SINCRO_USER_DIR}/sincromisor-client && \
+    chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
-COPY --chown=${USER_ID}:${USER_ID} \
+RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm \
+    chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./README.md ./Docker/sincro-client-base/docker-entrypoint.sh \
+    ${SINCRO_USER_DIR}/
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-client/package.json ./sincromisor-client/package-lock.json \
+    ${SINCRO_USER_DIR}/sincromisor-client/
+
+WORKDIR ${SINCRO_USER_DIR}/sincromisor-client
+USER $SINCRO_USER_ID
+RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm \
+    chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR} && \
+    npm install
+
+RUN \
+    mkdir -p ${SINCRO_USER_DIR}/sincromisor-client/public/mediapipe-wasm && \
+    cp -r ${SINCRO_USER_DIR}/sincromisor-client/node_modules/@mediapipe/tasks-vision/wasm/* \
+    ${SINCRO_USER_DIR}/sincromisor-client/public/mediapipe-wasm
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-client/tsconfig.json \
+    ./sincromisor-client/vite.config.js \
+    ${SINCRO_USER_DIR}/sincromisor-client/
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-client/src \
+    ${SINCRO_USER_DIR}/sincromisor-client/src
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-client/public \
+    ${SINCRO_USER_DIR}/sincromisor-client/public
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./Docker/env_vars/config.yml \
-    ./examples/Caddyfile.client \
-    /opt/${USER_ID}/
+    ${SINCRO_USER_DIR}/
 
-RUN ln -s /opt/${USER_ID}/node_modules /opt/${USER_ID}/sincromisor-client/node_modules && \
-    mv /opt/${USER_ID}/Caddyfile.client /opt/${USER_ID}/Caddyfile && \
-    cd /opt/${USER_ID}/sincromisor-client && \
-    mkdir -p public/mediapipe-wasm && \
-    cp -r node_modules/@mediapipe/tasks-vision/wasm/* public/mediapipe-wasm && \
-    NODE_OPTIONS="--max-old-space-size=2048" npm run build
+RUN npm run build
 
-ENTRYPOINT [ "/opt/sincromisor/docker-entrypoint.sh" ]
-CMD ["/opt/caddy/caddy", "run"]
+# ENTRYPOINT [ "/opt/sincromisor/docker-entrypoint.sh" ]
+
+
+FROM caddy:latest AS runner
+
+EXPOSE 80/tcp
+
+COPY --from=builder --chown=root:root \
+    /opt/sincromisor/sincromisor-client/dist /srv/sincromisor-client
+
+COPY --chown=root:root \
+    ./Docker/env_vars/Caddyfile \
+    /etc/caddy/Caddyfile
+
+CMD ["/usr/bin/caddy", "run", "-c", "/etc/caddyCaddyfile"]

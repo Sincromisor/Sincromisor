@@ -13,14 +13,6 @@ services:
         volume:
           nocopy: true
 
-  sincro-client-base:
-    profiles:
-      - base-image
-    build:
-      context: .
-      dockerfile: ./Docker/sincro-client-base/Dockerfile
-    image: sincromisor/sincro-client-base
-
   sincro-server:
     profiles:
       - full-service
@@ -66,7 +58,9 @@ services:
       dockerfile: ./Docker/sincro-client/Dockerfile
     image: sincromisor/sincro-client:latest
     ports:
-      - 8002:8002/tcp
+      - 80:80/tcp
+      - 443:443/tcp
+      - 443:443/udp
     volumes:
       - ./Docker/env_vars/config.yml:/opt/sincromisor/config.yml:ro
     networks:
@@ -105,23 +99,6 @@ services:
       dockerfile: ./Docker/voice-cache/Dockerfile
     ports:
       - 6379:6379/tcp
-    networks:
-      - sincromisor-net
-    deploy:
-      restart_policy:
-        condition: on-failure
-
-  sincro-rproxy:
-    profiles:
-      - full-service
-    image: sincromisor/rproxy:latest
-    build:
-      context: .
-      dockerfile: ./Docker/rproxy/Dockerfile
-    ports:
-      - 80:80/tcp
-      - 443:443/tcp
-      - 443:443/udp
     networks:
       - sincromisor-net
     deploy:
