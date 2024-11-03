@@ -1,0 +1,98 @@
+FROM nvidia/cuda:12.6.2-cudnn-devel-ubuntu24.04
+
+ARG SINCRO_USER_ID=sincromisor
+ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
+ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${PATH}
+ENV SINCROMISOR_CONF=/opt/sincromisor/config.yml
+ENV SINCROMISOR_WORKER_ID=1
+
+WORKDIR ${SINCRO_USER_DIR}
+
+RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache \
+    useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
+    mkdir ${SINCRO_USER_DIR}/sincromisor-server && \
+    chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
+
+RUN --mount=type=cache,target=/var/lib/apt/lists \
+    --mount=type=cache,target=/var/cache/apt/archives \
+    apt-get update \
+    && apt-get install -y curl
+
+USER ${SINCRO_USER_ID}
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# nue-asrのビルド時依存
+# git
+USER root
+RUN --mount=type=cache,target=/var/lib/apt/lists \
+    --mount=type=cache,target=/var/cache/apt/archives \
+    apt-get install -y git
+
+USER ${SINCRO_USER_ID}
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./pyproject.toml \
+    ./uv.lock \
+    ./.python-version \
+    ./README.md \
+    ./Docker/sincro-rtc/docker-entrypoint.sh \
+    ${SINCRO_USER_DIR}/
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/sincro-config/pyproject.toml \
+    ./sincromisor-server/sincro-config/README.md \
+    ./sincromisor-server/sincro-config/.python-version \
+    ${SINCRO_USER_DIR}/sincromisor-server/sincro-config/
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/sincro-models/pyproject.toml \
+    ./sincromisor-server/sincro-models/README.md \
+    ./sincromisor-server/sincro-models/.python-version \
+    ${SINCRO_USER_DIR}/sincromisor-server/sincro-models/
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/sincro-rtc/pyproject.toml \
+    ./sincromisor-server/sincro-rtc/README.md \
+    ./sincromisor-server/sincro-rtc/.python-version \
+    ${SINCRO_USER_DIR}/sincromisor-server/sincro-rtc/
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/speech-extractor/pyproject.toml \
+    ./sincromisor-server/speech-extractor/README.md \
+    ./sincromisor-server/speech-extractor/.python-version \
+    ${SINCRO_USER_DIR}/sincromisor-server/speech-extractor/
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/speech-recognizer/pyproject.toml \
+    ./sincromisor-server/speech-recognizer/README.md \
+    ./sincromisor-server/speech-recognizer/.python-version \
+    ${SINCRO_USER_DIR}/sincromisor-server/speech-recognizer/
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/text-processor/pyproject.toml \
+    ./sincromisor-server/text-processor/README.md \
+    ./sincromisor-server/text-processor/.python-version \
+    ${SINCRO_USER_DIR}/sincromisor-server/text-processor/
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/voice-synthesizer/pyproject.toml \
+    ./sincromisor-server/voice-synthesizer/README.md \
+    ./sincromisor-server/voice-synthesizer/.python-version \
+    ${SINCRO_USER_DIR}/sincromisor-server/voice-synthesizer/
+
+# 一旦依存ライブラリをsyncする
+# sincromisor-serverのモジュールは、空のまま依存関係だけ解決される
+RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache \
+    uv sync --group speech-recognizer
+
+# sincromisor-serverのソースコード一式をここでコピー
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server \
+    ${SINCRO_USER_DIR}/sincromisor-server
+
+# sincromisor-serverのモジュールをビルドし直す
+RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache \
+    uv sync --group speech-recognizer
+
+WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
+# VOLUME ["/opt/sincromisor/.cache"]
+CMD ["uv", "run", "uvicorn", "speech-recognizer.SpeechRecognizerProcess:app", "--host=0.0.0.0", "--port=8004"]

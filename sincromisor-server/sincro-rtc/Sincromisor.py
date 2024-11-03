@@ -19,7 +19,6 @@ logging.config.dictConfig(
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
-from fastapi.templating import Jinja2Templates
 from sincro_rtc.models import RTCSessionOffer
 from starlette.middleware.cors import CORSMiddleware
 from sincro_rtc.RTCSession import RTCSessionManager
@@ -41,7 +40,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 mem = MemoryProfiler()
-templates = Jinja2Templates(directory="templates")
 
 
 @app.post("/offer")
