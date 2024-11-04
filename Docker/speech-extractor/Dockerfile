@@ -35,7 +35,6 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./uv.lock \
     ./.python-version \
     ./README.md \
-    ./Docker/sincro-rtc/docker-entrypoint.sh \
     ${SINCRO_USER_DIR}/
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
