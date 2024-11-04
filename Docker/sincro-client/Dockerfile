@@ -15,10 +15,6 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./README.md ./Docker/sincro-client-base/docker-entrypoint.sh \
-    ${SINCRO_USER_DIR}/
-
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-client/package.json ./sincromisor-client/package-lock.json \
     ${SINCRO_USER_DIR}/sincromisor-client/
 
@@ -52,8 +48,6 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 
 RUN npm run build
 
-# ENTRYPOINT [ "/opt/sincromisor/docker-entrypoint.sh" ]
-
 
 FROM caddy:latest AS runner
 
@@ -66,4 +60,4 @@ COPY --chown=root:root \
     ./Docker/env_vars/Caddyfile \
     /etc/caddy/Caddyfile
 
-CMD ["/usr/bin/caddy", "run", "-c", "/etc/caddyCaddyfile"]
+CMD ["/usr/bin/caddy", "run", "-c", "/etc/caddy/Caddyfile"]

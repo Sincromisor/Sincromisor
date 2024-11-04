@@ -1,4 +1,20 @@
 services:
+  service-initializer:
+    profiles:
+      - full-service
+      - without-webclient
+      - webclient-only
+    build:
+      context: .
+      dockerfile: ./Docker/service-initializer/Dockerfile
+    image: sincromisor/service-initializer
+    volumes:
+      - ./Docker/env_vars/config.yml:/opt/sincromisor/config.yml:ro
+      - type: volume
+        source: huggingface-cache
+        target: /opt/sincromisor/.cache
+        volume:
+          nocopy: true
   speech-recognizer:
     profiles:
       - full-service
@@ -31,7 +47,9 @@ services:
               capabilities: [gpu]
     stdin_open: true
     tty: true
-
+    depends_on:
+      service-initializer:
+        condition: service_completed_successfully
   sincro-rtc:
     profiles:
       - full-service
@@ -53,6 +71,9 @@ services:
         condition: on-failure
     stdin_open: true
     tty: true
+    depends_on:
+      service-initializer:
+        condition: service_completed_successfully
 
   speech-extractor:
     profiles:
@@ -75,6 +96,9 @@ services:
         condition: on-failure
     stdin_open: true
     tty: true
+    depends_on:
+      service-initializer:
+        condition: service_completed_successfully
 
   voice-synthesizer:
     profiles:
@@ -97,6 +121,9 @@ services:
         condition: on-failure
     stdin_open: true
     tty: true
+    depends_on:
+      service-initializer:
+        condition: service_completed_successfully
 
   sincro-client:
     profiles:
@@ -121,6 +148,9 @@ services:
         condition: on-failure
     stdin_open: true
     tty: true
+    depends_on:
+      service-initializer:
+        condition: service_completed_successfully
 
   sincro-voicevox:
     profiles:

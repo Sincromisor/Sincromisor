@@ -1,5 +1,5 @@
 ---
-ServerName: sincromisor.example.org
+ServerName: localhost
 VoiceSynthesizer:
     EnableRedis: true
     DefaultStyleID: 0
@@ -15,17 +15,17 @@ Worker:
     SpeechExtractor:
         - Host: 0.0.0.0
           Port: 8003
-          Url: ws://sincro-server:8003/
+          Url: ws://speech-extractor:8003/
           Launch: true
     SpeechRecognizer:
         - Host: 0.0.0.0
           Port: 8004
-          Url: ws://sincro-server:8004/
+          Url: ws://speech-recognizer:8004/
           Launch: true
     VoiceSynthesizer:
         - Host: 0.0.0.0
           Port: 8005
-          Url: ws://sincro-server:8005/
+          Url: ws://voice-synthesizer:8005/
           Launch: true
 Redis:
     - Host: sincro-voice-cache
