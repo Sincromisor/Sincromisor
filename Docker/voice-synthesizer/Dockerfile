@@ -8,13 +8,13 @@ ENV SINCROMISOR_WORKER_ID=1
 
 WORKDIR ${SINCRO_USER_DIR}
 
-RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache \
+RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
     mkdir ${SINCRO_USER_DIR}/sincromisor-server && \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
-RUN --mount=type=cache,target=/var/lib/apt/lists \
-    --mount=type=cache,target=/var/cache/apt/archives \
+RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
     apt-get update \
     && apt-get install -y curl
 
@@ -22,8 +22,8 @@ USER ${SINCRO_USER_ID}
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 #USER root
-#RUN --mount=type=cache,target=/var/lib/apt/lists \
-#    --mount=type=cache,target=/var/cache/apt/archives \
+#RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+#    --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
 #    apt-get install -y fdkaac opus-tools
 
 USER ${SINCRO_USER_ID}
@@ -78,7 +78,7 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 
 # 一旦依存ライブラリをsyncする
 # sincromisor-serverのモジュールは、空のまま依存関係だけ解決される
-RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache \
+RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --group voice-synthesizer
 
 # sincromisor-serverのソースコード一式をここでコピー
@@ -87,7 +87,7 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ${SINCRO_USER_DIR}/sincromisor-server
 
 # sincromisor-serverのモジュールをビルドし直す
-RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache \
+RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --group voice-synthesizer
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server

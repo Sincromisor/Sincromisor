@@ -11,16 +11,13 @@ RUN useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
     mkdir ${SINCRO_USER_DIR}/sincromisor-client && \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
-RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm \
-    chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
-
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-client/package.json ./sincromisor-client/package-lock.json \
     ${SINCRO_USER_DIR}/sincromisor-client/
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-client
 USER $SINCRO_USER_ID
-RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm \
+RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm,uid=1001,gid=1001 \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR} && \
     npm install
 
