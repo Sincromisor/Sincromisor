@@ -10,17 +10,7 @@ class WorkerConfig(BaseModel):
     Port: int
     Url: str
     ForwardedAllowIps: Optional[str] = Field(None, alias="forwarded-allow-ips")
-    Launch: bool
-
-
-class RedisConfig(BaseModel):
-    Host: str
-    Port: int
-
-
-class VoiceVoxConfig(BaseModel):
-    Host: str
-    Port: int
+    Launch: bool | None = False
 
 
 class RTCIceServerConfig(BaseModel):
@@ -45,8 +35,6 @@ class SincromisorConfig(BaseModel):
     ServerName: str
     VoiceSynthesizer: VoiceSynthesizerConfig
     Worker: dict[str, List[WorkerConfig]]
-    Redis: List[RedisConfig]
-    VoiceVox: List[VoiceVoxConfig]
     WebRTC: WebRTCConfig
     LogDirectory: str | None = None
 
@@ -98,16 +86,6 @@ class SincromisorConfig(BaseModel):
             if conf.Urls[0:5] == f"{server_type}:":
                 yield conf
 
-    def get_random_redis_conf(self) -> RedisConfig:
-        server_count: int = len(self.Redis)
-        worker_id = random.randint(0, server_count - 1)
-        return self.Redis[worker_id]
-
-    def get_random_voicevox_conf(self) -> VoiceVoxConfig:
-        server_count: int = len(self.VoiceVox)
-        worker_id = random.randint(0, server_count - 1)
-        return self.VoiceVox[worker_id]
-
     def get_log_dir(self) -> str:
         if self.LogDirectory:
             return self.LogDirectory
@@ -136,4 +114,3 @@ if __name__ == "__main__":
     pprint(config.get_random_worker_conf("SpeechExtractor"))
     pprint(config.get_random_worker_conf("SpeechRecognizer"))
     pprint(config.get_random_worker_conf("VoiceSynthesizer"))
-    pprint(config.Redis)

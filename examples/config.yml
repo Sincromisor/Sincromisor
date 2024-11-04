@@ -27,12 +27,14 @@ Worker:
           Port: 8005
           Url: ws://127.0.0.1:8005/
           Launch: true
-Redis:
-    - Host: localhost
-      Port: 6379
-VoiceVox:
-    - Host: localhost
-      Port: 50021
+    Redis:
+        - Host: localhost
+          Port: 6379
+          Url: redis://localhost:6379/
+    VoiceVox:
+        - Host: localhost
+          Port: 50021
+          Url: http://localhost:50021/
 WebRTC:
     MaxSessions: 5
     RTCIceServers:

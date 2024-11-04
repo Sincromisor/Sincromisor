@@ -2,7 +2,7 @@ import logging
 from logging import Logger
 from io import BytesIO
 from typing import Generator
-from sincro_config import SincromisorConfig, RedisConfig, VoiceVoxConfig
+from sincro_config import SincromisorConfig, WorkerConfig
 from sincro_models import (
     SpeechRecognizerResult,
     VoiceSynthesizerRequest,
@@ -17,8 +17,8 @@ class VoiceSynthesizerWorker:
         self.logger: Logger = logging.getLogger(__name__)
         self.poke_text: PokeText = PokeText()
         self.config: SincromisorConfig = SincromisorConfig.from_yaml()
-        redis_conf: RedisConfig = self.config.get_random_redis_conf()
-        vvox_conf: VoiceVoxConfig = self.config.get_random_voicevox_conf()
+        redis_conf: WorkerConfig = self.config.get_random_worker_conf(type="Redis")
+        vvox_conf: WorkerConfig = self.config.get_random_worker_conf(type="VoiceVox")
         self.vvox: VoiceCacheManager = VoiceCacheManager(
             vvox_host=vvox_conf.Host,
             vvox_port=vvox_conf.Port,
