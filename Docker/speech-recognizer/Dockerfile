@@ -13,20 +13,22 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     mkdir ${SINCRO_USER_DIR}/sincromisor-server && \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
+# curl: uvのインストール
+# git: nue-asrのインストール。nue-asrが不要なコンテナでも無いとsyncでコケる
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
     apt-get update \
-    && apt-get install -y curl
+    && apt-get install -y curl git
 
 USER ${SINCRO_USER_ID}
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # nue-asrのビルド時依存
 # git
-USER root
-RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
-    apt-get install -y git
+#USER root
+#RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+#    --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
+#    apt-get install -y git
 
 USER ${SINCRO_USER_ID}
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
