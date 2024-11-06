@@ -6,3 +6,5 @@ from .SincromisorConfig import (
     VoiceSynthesizerConfig,
 )
 from .SincromisorLoggerConfig import SincromisorLoggerConfig
+from .KeepAliveReporter import KeepAliveReporter
+from .WorkerStatusManager import WorkerStatusManager, WorkerStatus

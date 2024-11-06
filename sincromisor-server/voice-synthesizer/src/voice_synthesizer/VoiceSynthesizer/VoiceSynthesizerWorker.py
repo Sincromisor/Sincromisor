@@ -1,8 +1,6 @@
 import logging
 from logging import Logger
-from io import BytesIO
 from typing import Generator
-from sincro_config import SincromisorConfig, WorkerConfig
 from sincro_models import (
     SpeechRecognizerResult,
     VoiceSynthesizerRequest,
@@ -13,43 +11,37 @@ from .VoiceCacheManager import VoiceCacheManager
 
 
 class VoiceSynthesizerWorker:
-    def __init__(self):
+    def __init__(
+        self,
+        voicevox_host: str,
+        voicevox_port: int,
+        voicevox_style_id: int,
+        redis_host: str,
+        redis_port: int,
+    ):
         self.logger: Logger = logging.getLogger(__name__)
         self.poke_text: PokeText = PokeText()
-        self.config: SincromisorConfig = SincromisorConfig.from_yaml()
-        redis_conf: WorkerConfig = self.config.get_random_worker_conf(type="Redis")
-        vvox_conf: WorkerConfig = self.config.get_random_worker_conf(type="VoiceVox")
         self.vvox: VoiceCacheManager = VoiceCacheManager(
-            vvox_host=vvox_conf.Host,
-            vvox_port=vvox_conf.Port,
-            redis_host=redis_conf.Host,
-            redis_port=redis_conf.Port,
+            voicevox_host=voicevox_host,
+            voicevox_port=voicevox_port,
+            redis_host=redis_host,
+            redis_port=redis_port,
         )
+        self.voicevox_style_id: int = voicevox_style_id
 
     def __get_voice(
         self, voice_text: str, vvox: VoiceCacheManager
     ) -> VoiceSynthesizerResult:
-        vs_request = VoiceSynthesizerRequest(
+        vs_request: VoiceSynthesizerRequest = VoiceSynthesizerRequest(
             message=voice_text,
             audio_format="audio/wav",
-            style_id=self.config.VoiceSynthesizer.DefaultStyleID,
-            pre_phoneme_length=self.config.VoiceSynthesizer.PrePhonemeLength,
-            post_phoneme_length=self.config.VoiceSynthesizer.PostPhonemeLength,
+            style_id=self.voicevox_style_id,
+            pre_phoneme_length=0.1,
+            post_phoneme_length=0.0,
         )
-        vs_result: VoiceSynthesizerResult
-        if self.config.VoiceSynthesizer.EnableRedis:
-            vs_result = vvox.get_voice(vs_request=vs_request)
-        else:
-            vs_result = vvox.get_voice_nocache(vs_request=vs_request)
+        vs_result: VoiceSynthesizerResult = vvox.get_voice(vs_request=vs_request)
 
         return vs_result
-        """
-        self.voice_writer(
-            vs_result=vs_result,
-            target_frame_rate=self.target_sample_rate.value,
-            target_frame_size=self.target_sample_size.value,
-        )
-        """
 
     def synth(
         self, sr_result: SpeechRecognizerResult

@@ -18,6 +18,13 @@ class RTCIceServerConfig(BaseModel):
     UserName: str | None = None
     Credential: str | None = None
 
+    def to_lowerkeys(self) -> dict:
+        return {
+            "urls": self.Urls,
+            "UserName": self.UserName,
+            "Credential": self.Credential,
+        }
+
 
 class WebRTCConfig(BaseModel):
     MaxSessions: int
@@ -77,6 +84,9 @@ class SincromisorConfig(BaseModel):
             if conf.Launch:
                 yield (worker_id, conf)
             worker_id += 1
+
+    def get_all_ice_servers_conf(self) -> list[RTCIceServerConfig]:
+        return self.WebRTC.RTCIceServers
 
     # type: stun, turn
     def get_ice_servers_conf(

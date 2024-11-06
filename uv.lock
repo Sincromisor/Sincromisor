@@ -1790,14 +1790,14 @@ wheels = [
 
 [[package]]
 name = "redis"
-version = "5.1.0"
+version = "5.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "async-timeout", marker = "python_full_version < '3.11.3'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9b/b6/7a4b49eadff6bdd1904ef96b7e1dede8754673fe4724969bfae3d418ad8d/redis-5.1.0.tar.gz", hash = "sha256:b756df1e4a3858fcc0ef861f3fc53623a96c41e2b1f5304e09e0fe758d333d40", size = 4607302 }
+sdist = { url = "https://files.pythonhosted.org/packages/53/17/2f4a87ffa4cd93714cf52edfa3ea94589e9de65f71e9f99cbcfa84347a53/redis-5.2.0.tar.gz", hash = "sha256:0b1087665a771b1ff2e003aa5bdd354f15a70c9e25d5a7dbf9c722c16528a7b0", size = 4607878 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/d6/37ba7502c5144c93e2e63c81fbfd69c8b97c275328eb85734ce996d3dc13/redis-5.1.0-py3-none-any.whl", hash = "sha256:fd4fccba0d7f6aa48c58a78d76ddb4afc698f5da4a2c1d03d916e4fd7ab88cdd", size = 261212 },
+    { url = "https://files.pythonhosted.org/packages/12/f5/ffa560ecc4bafbf25f7961c3d6f50d627a90186352e27e7d0ba5b1f6d87d/redis-5.2.0-py3-none-any.whl", hash = "sha256:ae174f2bb3b1bf2b09d54bf3e51fbc1469cf6c10aa03e21141f51969801a7897", size = 261428 },
 ]
 
 [package.optional-dependencies]
@@ -2142,12 +2142,14 @@ source = { editable = "sincromisor-server/sincro-config" }
 dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
+    { name = "redis" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "pydantic", specifier = ">=2.9.2" },
     { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "redis", specifier = ">=5.2.0" },
 ]
 
 [[package]]
@@ -2337,6 +2339,7 @@ dependencies = [
     { name = "sincro-config" },
     { name = "sincro-models" },
     { name = "uvicorn" },
+    { name = "websockets" },
 ]
 
 [package.metadata]
@@ -2349,6 +2352,7 @@ requires-dist = [
     { name = "sincro-config", editable = "sincromisor-server/sincro-config" },
     { name = "sincro-models", editable = "sincromisor-server/sincro-models" },
     { name = "uvicorn", specifier = ">=0.30.6" },
+    { name = "websockets", specifier = ">=13.0.1" },
 ]
 
 [[package]]
@@ -2369,6 +2373,7 @@ dependencies = [
     { name = "torch" },
     { name = "transformers" },
     { name = "uvicorn" },
+    { name = "websockets" },
 ]
 
 [package.metadata]
@@ -2386,6 +2391,7 @@ requires-dist = [
     { name = "torch", specifier = ">=2.3.1" },
     { name = "transformers", specifier = "==4.37.2" },
     { name = "uvicorn", specifier = ">=0.30.6" },
+    { name = "websockets", specifier = ">=13.0.1" },
 ]
 
 [[package]]
@@ -2697,6 +2703,7 @@ dependencies = [
     { name = "sudachidict-full" },
     { name = "sudachipy" },
     { name = "uvicorn" },
+    { name = "websockets" },
 ]
 
 [package.metadata]
@@ -2712,6 +2719,7 @@ requires-dist = [
     { name = "sudachidict-full", specifier = ">=20240409" },
     { name = "sudachipy", specifier = ">=0.6.8" },
     { name = "uvicorn", specifier = ">=0.30.6" },
+    { name = "websockets", specifier = ">=13.0.1" },
 ]
 
 [[package]]

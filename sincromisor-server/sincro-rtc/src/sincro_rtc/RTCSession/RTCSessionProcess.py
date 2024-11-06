@@ -36,6 +36,8 @@ class RTCSessionProcess(Process):
         request_type: str,
         sdp_pipe: Connection,
         rtc_session_status: Synchronized,
+        redis_host: str,
+        redis_port: int,
     ):
         Process.__init__(self)
         self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
@@ -44,6 +46,8 @@ class RTCSessionProcess(Process):
         self.__request_type: str = request_type
         self.__server_sdp_pipe: Connection = sdp_pipe
         self.__rtc_session_status: Synchronized = rtc_session_status
+        self.__redis_host = redis_host
+        self.__redis_port = redis_port
 
     def __get_ice_servers(self):
         config = SincromisorConfig.from_yaml()
@@ -86,6 +90,7 @@ class RTCSessionProcess(Process):
                     self.__vcs.text_ch = channel
                 case _:
                     # 想定していないDataChannelが存在した場合
+                    self.__rtc_session_status.value = -1
                     raise UnknownRTCDataChannel(channel.label)
 
             @channel.on("message")
@@ -99,6 +104,7 @@ class RTCSessionProcess(Process):
                 f"on_connectionstatechange - {self.__vcs.peer.connectionState}"
             )
             if self.__vcs.peer.connectionState == "failed":
+                self.__rtc_session_status.value = -1
                 await self.__vcs.close()
             elif self.__vcs.peer.connectionState == "closed":
                 self.__rtc_session_status.value = -1
@@ -111,12 +117,15 @@ class RTCSessionProcess(Process):
                     track=self.relay.subscribe(track),
                     vcs=self.__vcs,
                     rtc_session_status=self.__rtc_session_status,
+                    redis_host=self.__redis_host,
+                    redis_port=self.__redis_port,
                 )
                 self.__vcs.peer.addTrack(self.__vcs.audio_transform_track)
             else:
                 # 想定していないトラックが来た時はMediaBlackholeに投げないと、
                 # メモリリークしまくる模様。
                 self.__logger.error(f"Unknown Track: {track.kind} {track}")
+                self.__rtc_session_status.value = -1
                 raise UnknownRTCTrack(f"Unknown Track: {track.kind} {track}")
 
             @track.on("ended")

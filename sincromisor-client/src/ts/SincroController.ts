@@ -8,12 +8,14 @@ import { DebugConsoleManager } from "./UI/DebugConsoleManager";
 import { TelopChannelMessage, TextChannelMessage } from "./RTC/RTCMessage";
 import { CharacterBone } from "./Character/CharacterBone";
 import { Detection } from "@mediapipe/tasks-vision";
+import { SincroRTCConfigManager } from "./RTC/SincroRTCConfigManager";
 
 export class SincroController {
     private readonly dialogManager: DialogManager;
     private readonly chatMessageManager: ChatMessageManager;
     private readonly talkManager: TalkManager;
     private readonly userMediaManager: UserMediaManager;
+    private readonly rtcConfigManager: SincroRTCConfigManager;
     private rtcc?: RTCTalkClient;
     private characterBone?: CharacterBone;
 
@@ -21,7 +23,9 @@ export class SincroController {
         this.dialogManager = DialogManager.getManager();
         this.chatMessageManager = ChatMessageManager.getManager();
         this.talkManager = TalkManager.getManager();
-
+        this.rtcConfigManager = SincroRTCConfigManager.getManager((err) => {
+            this.chatMessageManager.writeSystemMessageText(`WebRTCの設定の取得に失敗しました。 - ${err}`);
+        });
         this.userMediaManager = new UserMediaManager();
         if (!this.dialogManager.enableCharacterGaze()) {
             this.userMediaManager.disableVideo();
@@ -36,7 +40,10 @@ export class SincroController {
     }
 
     startRTC(audioTrack: MediaStreamTrack): void {
-        this.rtcc = new RTCTalkClient(audioTrack);
+        if (!this.rtcConfigManager.config) {
+            return;
+        }
+        this.rtcc = new RTCTalkClient(this.rtcConfigManager.config, audioTrack);
         this.setTextChannelCallback(this.rtcc);
         this.setTelopChannelCallback(this.rtcc);
         this.rtcc.start();

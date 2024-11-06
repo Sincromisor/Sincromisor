@@ -23,6 +23,8 @@ class VoiceTransformTrack(MediaStreamTrack):
         track: MediaStreamTrack,
         vcs: RTCVoiceChatSession,
         rtc_session_status: Synchronized,
+        redis_host: str,
+        redis_port: int,
     ):
         super().__init__()
         self.__logger: Logger = logging.getLogger(
@@ -36,7 +38,9 @@ class VoiceTransformTrack(MediaStreamTrack):
         self.__vcs: RTCVoiceChatSession = vcs
         # SpeechExtractor -> SpeechRecognizer用フォーマットは1ch, 16bit, 16000Hz
         self.__resampler = AudioResampler(layout=1, rate=16000)
-        self.__audio_broker = AudioBroker(session_id=self.__session_id)
+        self.__audio_broker = AudioBroker(
+            session_id=self.__session_id, redis_host=redis_host, redis_port=redis_port
+        )
 
     # デコード済みのオーディオフレームを受け取って、何らかの処理を行った上でフレームを返す。
     # 返却するフレームは、同じフォーマット、かつ同じサンプル数でなければならない。

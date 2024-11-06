@@ -10,7 +10,7 @@ from .SpeechRecognizer import SpeechRecognizer
 
 
 class SpeechRecognizerWorker:
-    def __init__(self, voice_log_dir: str):
+    def __init__(self, voice_log_dir: str | None):
         self.logger: Logger = logging.getLogger(__name__)
         self.s2t: SpeechRecognizer = SpeechRecognizer(
             decode_options={"max_new_tokens": 255}
@@ -40,7 +40,7 @@ class SpeechRecognizerWorker:
             result=result,
         )
         self.logger.info(sr_result)
-        if spe_result.confirmed:
+        if spe_result.confirmed and self.voice_log_dir:
             self.export_result(sr_result)
             self.export_voice(spe_result)
         return sr_result

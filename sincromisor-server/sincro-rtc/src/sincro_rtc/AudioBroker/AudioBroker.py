@@ -9,7 +9,10 @@ from websockets.exceptions import ConnectionClosed
 from .ExtractorThread import ExtractorSenderThread, ExtractorReceiverThread
 from .RecognizerThread import RecognizerSenderThread, RecognizerReceiverThread
 from .SynthesizerThread import SynthesizerSenderThread, SynthesizerReceiverThread
-from sincro_config import SincromisorConfig
+from sincro_config import (
+    WorkerStatusManager,
+    WorkerStatus,
+)
 from threading import Thread
 
 
@@ -91,13 +94,12 @@ class AudioBrokerEvent(Event):
 
 
 class AudioBroker:
-    def __init__(
-        self,
-        session_id: str,
-    ):
+    def __init__(self, session_id: str, redis_host: str, redis_port: int):
         self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         self.__session_id: str = session_id
-        self.__config = SincromisorConfig.from_yaml()
+        self.__wstatuses = WorkerStatusManager(
+            redis_host=redis_host, redis_port=redis_port
+        )
 
         # AudioBrokerもしくは子スレッドでなにかしらの問題が発生したら、
         # runningをclearして全てを停止する。
@@ -149,10 +151,12 @@ class AudioBroker:
         self.__logger.info("AudioBroker closed.")
 
     def __extractor(self) -> None:
-        ws_url: str = urljoin(
-            self.__config.get_random_worker_conf(type="SpeechExtractor").Url,
-            "SpeechExtractor",
+        wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
+            worker_type="SpeechExtractor"
         )
+        if wstat is None:
+            raise AudioBrokerError("SpeechExtractor worker is not found.")
+        ws_url: str = f"ws://{wstat.host}:{wstat.port}/SpeechExtractor"
         ws: ClientConnection = connect(ws_url)
         sender_t: ExtractorSenderThread = ExtractorSenderThread(
             ws=ws,
@@ -178,10 +182,12 @@ class AudioBroker:
         )
 
     def __recognizer(self) -> None:
-        ws_url: str = urljoin(
-            self.__config.get_random_worker_conf(type="SpeechRecognizer").Url,
-            "SpeechRecognizer",
+        wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
+            worker_type="SpeechRecognizer"
         )
+        if wstat is None:
+            raise AudioBrokerError("SpeechRecognizer worker is not found.")
+        ws_url: str = f"ws://{wstat.host}:{wstat.port}/SpeechRecognizer"
         ws: ClientConnection = connect(ws_url)
         sender_t: RecognizerSenderThread = RecognizerSenderThread(
             ws=ws,
@@ -208,10 +214,12 @@ class AudioBroker:
         )
 
     def __synthesizer(self) -> None:
-        ws_url: str = urljoin(
-            self.__config.get_random_worker_conf(type="VoiceSynthesizer").Url,
-            "VoiceSynthesizer",
+        wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
+            worker_type="VoiceSynthesizer"
         )
+        if wstat is None:
+            raise AudioBrokerError("voiceSynthesizer worker is not found.")
+        ws_url: str = f"ws://{wstat.host}:{wstat.port}/VoiceSynthesizer"
         ws: ClientConnection = connect(ws_url)
         sender_t: SynthesizerSenderThread = SynthesizerSenderThread(
             ws=ws,
@@ -243,4 +251,4 @@ class AudioBroker:
 
         self.__frame_buffer.append(frame)
         if len(self.__frame_buffer) >= 25:
-            self.__logger.warn("add_frame - overflow")
+            self.__logger.warning("add_frame - overflow")

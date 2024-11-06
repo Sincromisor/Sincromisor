@@ -2,9 +2,17 @@ FROM ubuntu:24.04
 
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
+
 ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${PATH}
 ENV SINCROMISOR_CONF=/opt/sincromisor/config.yml
 ENV SINCROMISOR_WORKER_ID=1
+
+ENV SINCRO_HOST=0.0.0.0
+ENV SINCRO_PORT=8003
+ENV SINCRO_PUBLIC_BIND_HOST=speech-extractor
+ENV SINCRO_PUBLIC_BIND_PORT=8003
+ENV SINCRO_REDIS_HOST=sincro-voice-cache
+ENV SINCRO_REDIS_PORT=6379
 
 WORKDIR ${SINCRO_USER_DIR}
 
@@ -96,5 +104,11 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --group speech-extractor
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
-# VOLUME ["/opt/sincromisor/.cache"]
-CMD ["uv", "run", "uvicorn", "speech-extractor.SpeechExtractorProcess:app", "--host=0.0.0.0", "--port=8003"]
+
+CMD uv run speech-extractor/SpeechExtractorProcess.py \
+    --host "${SINCRO_HOST}" \
+    --port "${SINCRO_PORT}" \
+    --public-bind-host "${SINCRO_PUBLIC_BIND_HOST}" \
+    --public-bind-port "${SINCRO_PUBLIC_BIND_PORT}" \
+    --redis-host "${SINCRO_REDIS_HOST}" \
+    --redis-port "${SINCRO_REDIS_PORT}"

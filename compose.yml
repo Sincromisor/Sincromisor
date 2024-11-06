@@ -35,7 +35,8 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./Docker/env_vars/.env
+      - ./Docker/env_vars/speech-recognizer.env
+      - ./Docker/env_vars/redis.env
     deploy:
       restart_policy:
         condition: on-failure
@@ -59,13 +60,14 @@ services:
       dockerfile: ./Docker/sincro-rtc/Dockerfile
     image: sincromisor/sincro-rtc:latest
     ports:
-      - 8001:8001/tcp
+      - 8002:8002/tcp
     volumes:
       - ./Docker/env_vars/config.yml:/opt/sincromisor/config.yml:ro
     networks:
       - sincromisor-net
     env_file:
-      - ./Docker/env_vars/.env
+      - ./Docker/env_vars/sincro-rtc.env
+      - ./Docker/env_vars/redis.env
     deploy:
       restart_policy:
         condition: on-failure
@@ -90,7 +92,8 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./Docker/env_vars/.env
+      - ./Docker/env_vars/speech-extractor.env
+      - ./Docker/env_vars/redis.env
     deploy:
       restart_policy:
         condition: on-failure
@@ -115,7 +118,8 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./Docker/env_vars/.env
+      - ./Docker/env_vars/voice-synthesizer.env
+      - ./Docker/env_vars/redis.env
     deploy:
       restart_policy:
         condition: on-failure
@@ -141,8 +145,6 @@ services:
       - ./Docker/env_vars/config.yml:/opt/sincromisor/config.yml:ro
     networks:
       - sincromisor-net
-    env_file:
-      - ./Docker/env_vars/.env
     deploy:
       restart_policy:
         condition: on-failure

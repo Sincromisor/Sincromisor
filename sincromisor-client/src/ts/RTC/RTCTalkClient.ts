@@ -1,12 +1,7 @@
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { TelopChannelMessage, TextChannelMessage } from "./RTCMessage";
 import { ChatMessageManager } from "../UI/ChatMessageManager";
-
-interface IceServerConfig {
-    urls: string;
-    username?: string;
-    credential?: string;
-}
+import { SincroRTCConfig } from "./SincroRTCConfigManager";
 
 export class RTCTalkClient {
     private readonly logger: DebugConsoleManager;
@@ -15,6 +10,7 @@ export class RTCTalkClient {
     private readonly textChannel: RTCDataChannel;
     private readonly chatMessageManager: ChatMessageManager;
     private config: RTCConfiguration;
+    private sincroConfig: SincroRTCConfig;
 
     /*
         default     Default codecs
@@ -32,13 +28,13 @@ export class RTCTalkClient {
     telopChannelCallback: (msg: TelopChannelMessage) => void = () => { };
     textChannelCallback: (msg: TextChannelMessage) => void = () => { };
 
-    constructor(audioTrack: MediaStreamTrack) {
+    constructor(sincroConfig: SincroRTCConfig, audioTrack: MediaStreamTrack) {
         this.logger = DebugConsoleManager.getManager();
         this.chatMessageManager = ChatMessageManager.getManager();
         this.config = this.defaultConfig();
-        const rtcIceServers: IceServerConfig[] | null = import.meta.env.RTC_ICE_SERVERS;
-        if (rtcIceServers) {
-            this.config["iceServers"] = rtcIceServers;
+        this.sincroConfig = sincroConfig;
+        if (sincroConfig) {
+            this.config["iceServers"] = sincroConfig.iceServers;
         } else {
             //this.config["iceServers"] = [{ urls: ["stun:stun.l.google.com:19302"] }];
         }
@@ -141,11 +137,7 @@ export class RTCTalkClient {
                     sdp: offer.sdp,
                     type: offer.type
                 }));
-                let rtcServerURL: string | null = import.meta.env.RTC_SERVER_URL;
-                if (!rtcServerURL) {
-                    rtcServerURL = '/offer';
-                }
-                return fetch(rtcServerURL, {
+                return fetch(this.sincroConfig.offerURL, {
                     body: JSON.stringify({
                         sdp: offer.sdp,
                         type: offer.type

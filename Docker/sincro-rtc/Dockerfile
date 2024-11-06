@@ -2,9 +2,19 @@ FROM ubuntu:24.04
 
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
+
 ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${PATH}
 ENV SINCROMISOR_CONF=/opt/sincromisor/config.yml
 ENV SINCROMISOR_WORKER_ID=1
+
+ENV SINCRO_HOST=0.0.0.0
+ENV SINCRO_PORT=8002
+ENV SINCRO_PUBLIC_BIND_HOST=sincro-rtc
+ENV SINCRO_PUBLIC_BIND_PORT=8002
+ENV SINCRO_FORWARDED_ALLOW_IPS=127.0.0.0/8,192.168.0.0/16,172.16.0.0/12,10.0.0.0/8
+ENV SINCRO_MAX_SESSIONS=10
+ENV SINCRO_REDIS_HOST=sincro-voice-cache
+ENV SINCRO_REDIS_PORT=6379
 
 WORKDIR ${SINCRO_USER_DIR}
 
@@ -93,5 +103,13 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --group sincro-rtc
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
-# VOLUME ["/opt/sincromisor/.cache"]
-CMD ["uv", "run", "uvicorn", "sincro-rtc.Sincromisor:app", "--host=0.0.0.0", "--port=8001"]
+
+CMD uv run sincro-rtc/Sincromisor.py \
+    --host "${SINCRO_HOST}" \
+    --port "${SINCRO_PORT}" \
+    --public-bind-host "${SINCRO_PUBLIC_BIND_HOST}" \
+    --public-bind-port "${SINCRO_PUBLIC_BIND_PORT}" \
+    --redis-host "${SINCRO_REDIS_HOST}" \
+    --redis-port "${SINCRO_REDIS_PORT}" \
+    --forwarded-allow-ips "${SINCRO_FORWARDED_ALLOW_IPS}" \
+    --max-sessions "${SINCRO_MAX_SESSIONS}"
