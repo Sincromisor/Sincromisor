@@ -1,9 +1,7 @@
 services:
   service-initializer:
     profiles:
-      - full-service
-      - without-webclient
-      - webclient-only
+      - full
       - backend
     build:
       context: .
@@ -16,10 +14,86 @@ services:
         target: /opt/sincromisor/.cache
         volume:
           nocopy: true
+
+  sincro-client:
+    profiles:
+      - full
+      - frontend
+      - webclient
+    build:
+      context: .
+      dockerfile: ./Docker/sincro-client/Dockerfile
+    image: sincromisor/sincro-client:latest
+    ports:
+      - 80:80/tcp
+      - 443:443/tcp
+      - 443:443/udp
+    volumes:
+      - ./Docker/env_vars/config.yml:/opt/sincromisor/config.yml:ro
+    networks:
+      - sincromisor-net
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+    depends_on:
+      service-initializer:
+        condition: service_completed_successfully
+
+  sincro-rtc:
+    profiles:
+      - full
+      - frontend
+      - rtc
+    build:
+      context: .
+      dockerfile: ./Docker/sincro-rtc/Dockerfile
+    image: sincromisor/sincro-rtc:latest
+    ports:
+      - 8002:8002/tcp
+    volumes:
+      - ./Docker/env_vars/config.yml:/opt/sincromisor/config.yml:ro
+    networks:
+      - sincromisor-net
+    env_file:
+      - ./Docker/env_vars/sincro-rtc.env
+      - ./Docker/env_vars/redis.env
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+    depends_on:
+      service-initializer:
+        condition: service_completed_successfully
+
+  speech-extractor:
+    profiles:
+      - full
+      - backend
+    build:
+      context: .
+      dockerfile: ./Docker/speech-extractor/Dockerfile
+    image: sincromisor/speech-extractor:latest
+    ports:
+      - 8003:8003/tcp
+    volumes:
+      - ./Docker/env_vars/config.yml:/opt/sincromisor/config.yml:ro
+    networks:
+      - sincromisor-net
+    env_file:
+      - ./Docker/env_vars/speech-extractor.env
+      - ./Docker/env_vars/redis.env
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+    depends_on:
+      service-initializer:
+        condition: service_completed_successfully
+
   speech-recognizer:
     profiles:
-      - full-service
-      - without-webclient
+      - full
       - backend
     build:
       context: .
@@ -42,74 +116,20 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
+        delay: 10s
       resources:
         reservations:
           devices:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    stdin_open: true
-    tty: true
-    depends_on:
-      service-initializer:
-        condition: service_completed_successfully
-  sincro-rtc:
-    profiles:
-      - full-service
-      - without-webclient
-    build:
-      context: .
-      dockerfile: ./Docker/sincro-rtc/Dockerfile
-    image: sincromisor/sincro-rtc:latest
-    ports:
-      - 8002:8002/tcp
-    volumes:
-      - ./Docker/env_vars/config.yml:/opt/sincromisor/config.yml:ro
-    networks:
-      - sincromisor-net
-    env_file:
-      - ./Docker/env_vars/sincro-rtc.env
-      - ./Docker/env_vars/redis.env
-    deploy:
-      restart_policy:
-        condition: on-failure
-    stdin_open: true
-    tty: true
-    depends_on:
-      service-initializer:
-        condition: service_completed_successfully
-
-  speech-extractor:
-    profiles:
-      - full-service
-      - without-webclient
-      - backend
-    build:
-      context: .
-      dockerfile: ./Docker/speech-extractor/Dockerfile
-    image: sincromisor/speech-extractor:latest
-    ports:
-      - 8003:8003/tcp
-    volumes:
-      - ./Docker/env_vars/config.yml:/opt/sincromisor/config.yml:ro
-    networks:
-      - sincromisor-net
-    env_file:
-      - ./Docker/env_vars/speech-extractor.env
-      - ./Docker/env_vars/redis.env
-    deploy:
-      restart_policy:
-        condition: on-failure
-    stdin_open: true
-    tty: true
     depends_on:
       service-initializer:
         condition: service_completed_successfully
 
   voice-synthesizer:
     profiles:
-      - full-service
-      - without-webclient
+      - full
       - backend
     build:
       context: .
@@ -127,41 +147,14 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
-    stdin_open: true
-    tty: true
-    depends_on:
-      service-initializer:
-        condition: service_completed_successfully
-
-  sincro-client:
-    profiles:
-      - full-service
-      - webclient-only
-    build:
-      context: .
-      dockerfile: ./Docker/sincro-client/Dockerfile
-    image: sincromisor/sincro-client:latest
-    ports:
-      - 80:80/tcp
-      - 443:443/tcp
-      - 443:443/udp
-    volumes:
-      - ./Docker/env_vars/config.yml:/opt/sincromisor/config.yml:ro
-    networks:
-      - sincromisor-net
-    deploy:
-      restart_policy:
-        condition: on-failure
-    stdin_open: true
-    tty: true
+        delay: 10s
     depends_on:
       service-initializer:
         condition: service_completed_successfully
 
   sincro-voicevox:
     profiles:
-      - full-service
-      - without-webclient
+      - full
       - backend
     image: sincromisor/voicevox:latest
     build:
@@ -174,11 +167,11 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
+        delay: 10s
 
   sincro-voice-cache:
     profiles:
-      - full-service
-      - without-webclient
+      - full
       - backend
     image: sincromisor/voice-cache:latest
     build:
@@ -191,6 +184,7 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
+        delay: 10s
 
 networks:
   sincromisor-net:
