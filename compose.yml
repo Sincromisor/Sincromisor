@@ -4,6 +4,7 @@ services:
       - full-service
       - without-webclient
       - webclient-only
+      - backend
     build:
       context: .
       dockerfile: ./Docker/service-initializer/Dockerfile
@@ -19,6 +20,7 @@ services:
     profiles:
       - full-service
       - without-webclient
+      - backend
     build:
       context: .
       dockerfile: ./Docker/speech-recognizer/Dockerfile
@@ -81,6 +83,7 @@ services:
     profiles:
       - full-service
       - without-webclient
+      - backend
     build:
       context: .
       dockerfile: ./Docker/speech-extractor/Dockerfile
@@ -107,6 +110,7 @@ services:
     profiles:
       - full-service
       - without-webclient
+      - backend
     build:
       context: .
       dockerfile: ./Docker/voice-synthesizer/Dockerfile
@@ -158,6 +162,7 @@ services:
     profiles:
       - full-service
       - without-webclient
+      - backend
     image: sincromisor/voicevox:latest
     build:
       context: .
@@ -174,6 +179,7 @@ services:
     profiles:
       - full-service
       - without-webclient
+      - backend
     image: sincromisor/voice-cache:latest
     build:
       context: .
