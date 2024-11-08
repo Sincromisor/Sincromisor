@@ -1,7 +1,7 @@
 import logging
 from logging import Logger
 from threading import Thread, Event
-from redis import Redis
+from redis import Redis, ConnectionError
 import time
 
 
@@ -61,13 +61,29 @@ class KeepAliveReporter(Thread):
                         f"{self.public_bind_host}:{self.public_bind_port}",
                         f"{time.time()}:{self.count}",
                     )
-            except Exception as e:
-                self.__logger.error(f"Keepalive report failure - {repr(e)}")
-            finally:
                 redis.hdel(
                     redis_key, f"{self.public_bind_host}:{self.public_bind_port}"
                 )
                 break
+            except ConnectionError as e:
+                self.__logger.error(f"Keepalive report failure - {repr(e)}")
+            except Exception as e:
+                self.__logger.error(f"Keepalive report failure - {repr(e)}")
+            finally:
+                try:
+                    redis.hdel(
+                        redis_key, f"{self.public_bind_host}:{self.public_bind_port}"
+                    )
+                except ConnectionError as e:
+                    self.__logger.error(
+                        f"Keepalive report finalize failure - {repr(e)}"
+                    )
+                except Exception as e:
+                    self.__logger.error(
+                        f"Keepalive report finalize failure - {repr(e)}"
+                    )
+                self.event.set()
+                time.sleep(30)
         self.__logger.info("Keepalive reporter ended.")
 
     def set_count(self, count: int) -> int:
