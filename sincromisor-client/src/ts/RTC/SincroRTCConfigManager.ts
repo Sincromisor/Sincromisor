@@ -30,9 +30,9 @@ export class SincroRTCConfigManager {
     }
 
     private async getServers(): Promise<void> {
-        const response: Response = await fetch('/config/RTCConfig.json');
+        const response: Response = await fetch('/api/v1/rtc/config.json');
         if (!response.ok) {
-            throw new Error(`Failed to fetch /config/RTCConfig.json: ${response.statusText}`);
+            throw new Error(`Failed to fetch /api/v1/rtc/config.json: ${response.statusText}`);
         }
         this.config = await response.json();
     }

@@ -7,13 +7,7 @@
         root * /srv/sincromisor-client
         file_server
 
-        reverse_proxy /offer* {
-                to http://sincro-rtc:8002
-                #    header_up X-Forwarded-For {remote}
-                #    header_up X-Forwarded-Proto {scheme}
-        }
-
-        reverse_proxy /config* {
+        reverse_proxy /api* {
                 to http://sincro-rtc:8002
                 #    header_up X-Forwarded-For {remote}
                 #    header_up X-Forwarded-Proto {scheme}

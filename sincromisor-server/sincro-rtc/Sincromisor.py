@@ -65,7 +65,7 @@ class SincromisorProcess:
         )
         self.keepalive_t.start()
 
-        @app.post("/offer")
+        @app.post("/api/v1/rtc/offer")
         async def app_offer(request: Request, offer_params: RTCSessionOffer):
             rtcSM.cleanup_sessions()
             if rtcSM.session_count() > self.__args.max_sessions:
@@ -82,18 +82,20 @@ class SincromisorProcess:
             )
             return JSONResponse(session_info)
 
-        @app.get("/cleanup")
+        @app.get("/api/v1/cleanup")
         def app_cleanup(request: Request):
             result = rtcSM.cleanup_sessions()
             return JSONResponse({"status": True, "running": result})
 
-        @app.get("/config/RTCConfig.json")
+        @app.get("/api/v1/rtc/config.json")
         def app_config_ice_servers(request: Request):
             config = SincromisorConfig.from_yaml()
             ice_servers = []
             for ice_server in config.get_all_ice_servers_conf():
                 ice_servers.append(ice_server.to_lowerkeys())
-            return JSONResponse({"offerURL": "/offer", "iceServers": ice_servers})
+            return JSONResponse(
+                {"offerURL": "/api/v1/rtc/offer", "iceServers": ice_servers}
+            )
 
         try:
             uvicorn.run(
