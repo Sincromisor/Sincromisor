@@ -3,7 +3,7 @@ FROM nvidia/cuda:12.6.2-cudnn-devel-ubuntu24.04
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
-ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${PATH}
+ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${SINCRO_USER_DIR}/.local/bin:${PATH}
 ENV SINCROMISOR_CONF=/opt/sincromisor/config.yml
 ENV SINCROMISOR_WORKER_ID=1
 
