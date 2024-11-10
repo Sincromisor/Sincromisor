@@ -9,6 +9,7 @@ from websockets.exceptions import ConnectionClosed
 from .ExtractorThread import ExtractorSenderThread, ExtractorReceiverThread
 from .RecognizerThread import RecognizerSenderThread, RecognizerReceiverThread
 from .SynthesizerThread import SynthesizerSenderThread, SynthesizerReceiverThread
+from .TextProcessorThread import TextProcessorSenderThread, TextProcessorReceiverThread
 from sincro_config import (
     WorkerStatusManager,
     WorkerStatus,
@@ -59,20 +60,24 @@ class AudioBrokerCommunicators:
     extractor: AudioBrokerCommunicator
     recognizer: AudioBrokerCommunicator
     synthesizer: AudioBrokerCommunicator
+    text_processor: AudioBrokerCommunicator
 
     def __init__(
         self,
         extractor: AudioBrokerCommunicator,
         recognizer: AudioBrokerCommunicator,
+        text_processor: AudioBrokerCommunicator,
         synthesizer: AudioBrokerCommunicator,
     ):
         self.extractor = extractor
         self.recognizer = recognizer
+        self.text_processor = text_processor
         self.synthesizer = synthesizer
 
     def close(self) -> None:
         self.extractor.close()
         self.recognizer.close()
+        self.text_processor.close()
         self.synthesizer.close()
 
 
@@ -109,9 +114,11 @@ class AudioBroker:
         # VoiceTransformTrack -> ExtractorSenderThread: bytes
         self.__frame_buffer: deque = deque([], 25)
         # ExtractorReceiverThread -> RecognizerSenderThread: SpeechExtractorResult
-        self.__extractor_results: deque = deque([], 3)
-        # RecognizerReceiverThread -> SynthesizerSenderThread: SpeechRecognizerResult
-        self.__recognizer_results: deque = deque([], 3)
+        self.__extractor_results: deque = deque([], 10)
+        # RecognizerReceiverThread -> TextProcessorSenderThread: SpeechRecognizerResult
+        self.__recognizer_results: deque = deque([], 10)
+        # TextProcessorReceiverThread -> VoiceSynthesizerSenderThread: TextProcessorResult
+        self.__text_processor_results: deque = deque([], 10)
 
         # VoiceTransformTrackから利用
         # RecognizerReceiverThread -> VoiceTransformTrack: SpeechRecognizerResult
@@ -125,6 +132,7 @@ class AudioBroker:
             self.__communicators: AudioBrokerCommunicators = AudioBrokerCommunicators(
                 extractor=self.__extractor(),
                 recognizer=self.__recognizer(),
+                text_processor=self.__text_processor(),
                 synthesizer=self.__synthesizer(),
             )
         except ConnectionRefusedError:
@@ -150,7 +158,7 @@ class AudioBroker:
             self.__logger.error("__communicators is not defined.")
         self.__logger.info("AudioBroker closed.")
 
-    def __extractor(self) -> None:
+    def __extractor(self) -> AudioBrokerCommunicator:
         wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
             worker_type="SpeechExtractor"
         )
@@ -181,7 +189,7 @@ class AudioBroker:
             receiver_thread=receiver_t,
         )
 
-    def __recognizer(self) -> None:
+    def __recognizer(self) -> AudioBrokerCommunicator:
         wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
             worker_type="SpeechRecognizer"
         )
@@ -199,7 +207,6 @@ class AudioBroker:
         receiver_t: RecognizerReceiverThread = RecognizerReceiverThread(
             ws=ws,
             recognizer_results=self.__recognizer_results,
-            text_channel_queue=self.text_channel_queue,
             running=self.__running,
             session_id=self.__session_id,
         )
@@ -213,7 +220,39 @@ class AudioBroker:
             receiver_thread=receiver_t,
         )
 
-    def __synthesizer(self) -> None:
+    def __text_processor(self) -> AudioBrokerCommunicator:
+        wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
+            worker_type="TextProcessor"
+        )
+        if wstat is None:
+            raise AudioBrokerError("TextProcessor worker is not found.")
+        ws_url: str = f"ws://{wstat.host}:{wstat.port}/TextProcessor"
+        ws: ClientConnection = connect(ws_url)
+        sender_t: TextProcessorSenderThread = TextProcessorSenderThread(
+            ws=ws,
+            recognizer_results=self.__recognizer_results,
+            running=self.__running,
+            session_id=self.__session_id,
+        )
+        sender_t.start()
+        receiver_t: TextProcessorReceiverThread = TextProcessorReceiverThread(
+            ws=ws,
+            running=self.__running,
+            session_id=self.__session_id,
+            text_channel_queue=self.text_channel_queue,
+            text_processor_results=self.__text_processor_results,
+        )
+        receiver_t.start()
+        return AudioBrokerCommunicator(
+            session_id=self.__session_id,
+            comm_type="TextProcessor",
+            ws_url=ws_url,
+            ws=ws,
+            sender_thread=sender_t,
+            receiver_thread=receiver_t,
+        )
+
+    def __synthesizer(self) -> AudioBrokerCommunicator:
         wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
             worker_type="VoiceSynthesizer"
         )
@@ -223,7 +262,7 @@ class AudioBroker:
         ws: ClientConnection = connect(ws_url)
         sender_t: SynthesizerSenderThread = SynthesizerSenderThread(
             ws=ws,
-            recognizer_results=self.__recognizer_results,
+            text_processor_results=self.__text_processor_results,
             running=self.__running,
             session_id=self.__session_id,
         )

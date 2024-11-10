@@ -32,6 +32,10 @@ speech-recognizer = [
     "speech-recognizer",
 ]
 
+text-processor = [
+    "text-processor",
+]
+
 voice-synthesizer = [
     "voice-synthesizer",
 ]

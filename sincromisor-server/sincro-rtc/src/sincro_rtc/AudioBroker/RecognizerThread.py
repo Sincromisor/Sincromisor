@@ -18,11 +18,13 @@ class RecognizerSenderThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__session_id: str = session_id
+        self.__logger: Logger = logging.getLogger(
+            __name__ + f"[{self.__session_id[21:26]}]"
+        )
         self.__ws: ClientConnection = ws
         self.__extractor_results: deque = extractor_results
         self.__running: Event = running
-        self.__session_id: str = session_id
 
     def __pop_extractor_result(self) -> bytes:
         base_e_result: SpeechExtractorResult = self.__extractor_results.popleft()
@@ -65,17 +67,15 @@ class RecognizerReceiverThread(Thread):
         self,
         ws: ClientConnection,
         recognizer_results: deque,
-        text_channel_queue: deque,
         running: Event,
         session_id: str,
     ):
         super().__init__()
-        self.__logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
+        self.__session_id: str = session_id
+        self.__logger = logging.getLogger(__name__ + f"[{self.__session_id[21:26]}]")
         self.__ws: ClientConnection = ws
         self.__recognizer_results: deque = recognizer_results
-        self.__text_channel_queue: deque = text_channel_queue
         self.__running: Event = running
-        self.__session_id: str = session_id
 
     def run(self) -> None:
         self.__logger.info(f"Thread start.")
@@ -88,8 +88,6 @@ class RecognizerReceiverThread(Thread):
 
                 # to SynthesizerThread
                 self.__recognizer_results.append(sr_result)
-                # to TextChannel
-                self.__text_channel_queue.append(sr_result)
             except TimeoutError:
                 pass  # タイムアウトした時のみやり直す。
             except ConnectionClosed:

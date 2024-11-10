@@ -108,4 +108,4 @@ CMD uv run text-processor/TextProcessorProcess.py \
     --public-bind-host "${SINCRO_PUBLIC_BIND_HOST}" \
     --public-bind-port "${SINCRO_PUBLIC_BIND_PORT}" \
     --redis-host "${SINCRO_REDIS_HOST}" \
-    --redis-port "${SINCRO_REDIS_PORT}" \
+    --redis-port "${SINCRO_REDIS_PORT}"

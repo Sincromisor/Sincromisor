@@ -1,5 +1,5 @@
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
-import { TelopChannelMessage, TextChannelMessage } from "./RTCMessage";
+import { TelopChannelMessage, TextProcessorResult } from "./RTCMessage";
 import { ChatMessageManager } from "../UI/ChatMessageManager";
 import { SincroRTCConfig } from "./SincroRTCConfigManager";
 
@@ -26,7 +26,7 @@ export class RTCTalkClient {
     */
     audioCodec: string = "default";
     telopChannelCallback: (msg: TelopChannelMessage) => void = () => { };
-    textChannelCallback: (msg: TextChannelMessage) => void = () => { };
+    textChannelCallback: (msg: TextProcessorResult) => void = () => { };
 
     constructor(sincroConfig: SincroRTCConfig, audioTrack: MediaStreamTrack) {
         this.logger = DebugConsoleManager.getManager();
@@ -55,7 +55,7 @@ export class RTCTalkClient {
     }
 
     start(): Promise<void> {
-        this.chatMessageManager.writeSystemMessageText("音声認識・合成システムに接続します。");
+        this.chatMessageManager.writeSystemMessage("音声認識・合成システムに接続します。");
         return this.negotiate(this.peerConnection);
     }
 
@@ -201,8 +201,8 @@ export class RTCTalkClient {
             this.logger.addTextChannelLog("- open(text_ch)\n");
         };
         dc.onmessage = (evt) => {
-            this.logger.addTextChannelLog("< [telop_ch] " + evt.data + "\n");
-            this.textChannelCallback(JSON.parse(evt.data) as TextChannelMessage);
+            this.logger.addTextChannelLog("< [text_ch] " + evt.data + "\n");
+            this.textChannelCallback(JSON.parse(evt.data) as TextProcessorResult);
         };
         return dc;
     }
@@ -235,25 +235,25 @@ export class RTCTalkClient {
         /* new -> checking -> connected、disconnected -> failed */
         switch (state) {
             case "new":
-                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムに接続します。");
+                this.chatMessageManager.writeSystemMessage("音声認識・合成システムに接続します。");
                 break;
             case "checking":
-                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムへの接続を確認しています。");
+                this.chatMessageManager.writeSystemMessage("音声認識・合成システムへの接続を確認しています。");
                 break;
             case "connected":
-                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムに接続しました。");
+                this.chatMessageManager.writeSystemMessage("音声認識・合成システムに接続しました。");
                 break;
             case "completed":
-                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムとのセッションの確立に成功しました。");
+                this.chatMessageManager.writeSystemMessage("音声認識・合成システムとのセッションの確立に成功しました。");
                 break;
             case "disconnected":
-                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムから切断されました。");
+                this.chatMessageManager.writeSystemMessage("音声認識・合成システムから切断されました。");
                 break;
             case "failed":
-                this.chatMessageManager.writeSystemMessageText("音声認識・合成システムへの接続に失敗しました。");
+                this.chatMessageManager.writeSystemMessage("音声認識・合成システムへの接続に失敗しました。");
                 break;
             default:
-                this.chatMessageManager.writeSystemMessageText(`Unknown ICE Connection State - ${state}`);
+                this.chatMessageManager.writeSystemMessage(`Unknown ICE Connection State - ${state}`);
                 console.error(state);
         }
     }

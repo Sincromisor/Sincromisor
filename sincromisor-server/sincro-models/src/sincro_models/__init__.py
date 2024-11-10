@@ -4,3 +4,6 @@ from .SpeechRecognizerResult import SpeechRecognizerResult
 from .VoiceSynthesizerRequest import VoiceSynthesizerRequest
 from .VoiceSynthesizerResult import VoiceSynthesizerResult
 from .VoiceSynthesizerResultFrame import VoiceSynthesizerResultFrame
+from .ChatHistory import ChatHistory, ChatMessage
+from .TextProcessorRequest import TextProcessorRequest
+from .TextProcessorResult import TextProcessorResult

@@ -16,7 +16,6 @@ import traceback
 from threading import Event
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from sincro_models import SpeechRecognizerResult
 from voice_synthesizer.VoiceSynthesizer import VoiceSynthesizerWorker
 
 
@@ -52,13 +51,7 @@ class VoiceSynthesizerProcess:
                     redis_host=self.__args.redis_host,
                     redis_port=self.__args.redis_port,
                 )
-                while pack := await ws.receive_bytes():
-                    recognizer_result = SpeechRecognizerResult.from_msgpack(pack=pack)
-                    for synthesizer_result in voice_synthesizer.synth(
-                        recognizer_result
-                    ):
-                        await ws.send_bytes(synthesizer_result.to_msgpack())
-                traceback.print_exc()
+                await voice_synthesizer.communicate(ws=ws)
             except WebSocketDisconnect:
                 self.__logger.info("Disconnected WebSocket.")
             except Exception as e:

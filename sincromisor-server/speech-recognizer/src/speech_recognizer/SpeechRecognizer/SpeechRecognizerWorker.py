@@ -4,8 +4,7 @@ from datetime import datetime
 import logging
 from logging import Logger
 import shutil
-from sincro_models import SpeechExtractorResult
-from sincro_models import SpeechRecognizerResult
+from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 from .SpeechRecognizer import SpeechRecognizer
 
 

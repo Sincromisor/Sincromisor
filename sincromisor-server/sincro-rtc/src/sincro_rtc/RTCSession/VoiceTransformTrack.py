@@ -10,7 +10,7 @@ from aiortc.mediastreams import MediaStreamError
 from av.audio.frame import AudioFrame
 from av.audio.resampler import AudioResampler
 from ..models import RTCVoiceChatSession
-from sincro_models import SpeechRecognizerResult
+from sincro_models import TextProcessorResult
 from sincro_models import VoiceSynthesizerResultFrame
 from ..AudioBroker import AudioBroker, AudioBrokerError
 
@@ -76,7 +76,7 @@ class VoiceTransformTrack(MediaStreamTrack):
             for rf in resampled_frames:
                 self.__audio_broker.add_frame(rf.to_ndarray().tobytes())
             if (sr_result := self.__get_recognized_text()) is not None:
-                self.__vcs.text_ch.send(sr_result.to_json())
+                self.__vcs.text_ch.send(sr_result.model_dump_json())
             if (synth_voice := self.__get_voice_frame()) is not None:
                 if synth_voice.new_text:
                     self.__vcs.telop_ch.send(synth_voice.params_to_json())
@@ -105,9 +105,9 @@ class VoiceTransformTrack(MediaStreamTrack):
         self.__rtc_session_status = -1
         return self.__convert_dummy_frame(frame)
 
-    def __get_recognized_text(self) -> SpeechRecognizerResult | None:
+    def __get_recognized_text(self) -> TextProcessorResult | None:
         if len(self.__audio_broker.text_channel_queue) > 0:
-            sr_result: SpeechRecognizerResult = (
+            sr_result: TextProcessorResult = (
                 self.__audio_broker.text_channel_queue.popleft()
             )
             return sr_result

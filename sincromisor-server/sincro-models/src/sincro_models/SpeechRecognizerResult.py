@@ -19,8 +19,11 @@ class SpeechRecognizerResult(BaseModel):
     # 最初の音声検知時に割り当てられ、
     # 発話が完了する(confirmedがTrueとなる)まで維持される。
     speech_id: int
+    # SpeechExtractorResultを送信するごとに割り振られるID。
     sequence_id: int
+    # 発話開始時の時刻(秒)。
     start_at: float
+    # 発話が完了しているか否か。途中の場合はFalse。
     confirmed: bool = False
     # [('こんにちは', 0.387), ('。', 0.998), ('</s>', 1.0)]
     result: list
@@ -31,7 +34,7 @@ class SpeechRecognizerResult(BaseModel):
         else:
             return True
 
-    def voice_text(self) -> str:
+    def result_text(self) -> str:
         result_text = ""
         for text, score in self.result:
             if self.word_filter(text):
@@ -47,11 +50,11 @@ class SpeechRecognizerResult(BaseModel):
                 "start_at": self.start_at,
                 "confirmed": self.confirmed,
                 "recognizedResult": self.result,
-                "resultText": self.voice_text(),
+                "resultText": self.result_text(),
             },
             # cls=Int16Encoder,
             ensure_ascii=False,
-            **dumps_opt
+            **dumps_opt,
         )
 
     def to_msgpack(self) -> bytes:

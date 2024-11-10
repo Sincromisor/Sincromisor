@@ -12,7 +12,7 @@ import av
 from av import AudioResampler
 from av.container import InputContainer
 from sincro_models import (
-    SpeechRecognizerResult,
+    TextProcessorResult,
     VoiceSynthesizerResult,
     VoiceSynthesizerResultFrame,
 )
@@ -22,28 +22,30 @@ class SynthesizerSenderThread(Thread):
     def __init__(
         self,
         ws: ClientConnection,
-        recognizer_results: deque,
+        text_processor_results: deque,
         running: Event,
         session_id: str,
     ):
         super().__init__()
-        self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
-        self.__ws: ClientConnection = ws
-        self.__recognizer_results: deque = recognizer_results
-        self.__running: Event = running
         self.__session_id: str = session_id
+        self.__logger: Logger = logging.getLogger(
+            __name__ + f"[{self.__session_id[21:26]}]"
+        )
+        self.__ws: ClientConnection = ws
+        self.__text_processor_results: deque = text_processor_results
+        self.__running: Event = running
 
     def run(self) -> None:
         self.__logger.info(f"Thread start.")
         try:
             last_ping: float = time.time()
             while self.__running.is_set():
-                if len(self.__recognizer_results) > 0:
-                    sr_result: SpeechRecognizerResult = (
-                        self.__recognizer_results.popleft()
+                if len(self.__text_processor_results) > 0:
+                    tp_result: TextProcessorResult = (
+                        self.__text_processor_results.popleft()
                     )
-                    if sr_result.confirmed:
-                        self.__ws.send(sr_result.to_msgpack())
+                    self.__logger.info(f"Send: {repr(tp_result)}")
+                    self.__ws.send(tp_result.to_msgpack())
                 else:
                     if last_ping <= time.time() + 10:
                         self.__ws.ping()

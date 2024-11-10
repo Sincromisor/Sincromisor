@@ -5,7 +5,7 @@ import { ChatMessageManager } from "./UI/ChatMessageManager";
 import { DialogManager } from "./UI/DialogManager";
 import { TalkManager } from "./RTC/TalkManager";
 import { DebugConsoleManager } from "./UI/DebugConsoleManager";
-import { TelopChannelMessage, TextChannelMessage } from "./RTC/RTCMessage";
+import { TelopChannelMessage, TextProcessorResult } from "./RTC/RTCMessage";
 import { CharacterBone } from "./Character/CharacterBone";
 import { Detection } from "@mediapipe/tasks-vision";
 import { SincroRTCConfigManager } from "./RTC/SincroRTCConfigManager";
@@ -24,7 +24,7 @@ export class SincroController {
         this.chatMessageManager = ChatMessageManager.getManager();
         this.talkManager = TalkManager.getManager();
         this.rtcConfigManager = SincroRTCConfigManager.getManager((err) => {
-            this.chatMessageManager.writeSystemMessageText(`WebRTCの設定の取得に失敗しました。 - ${err}`);
+            this.chatMessageManager.writeSystemMessage(`WebRTCの設定の取得に失敗しました。 - ${err}`);
         });
         this.userMediaManager = new UserMediaManager();
         if (!this.dialogManager.enableCharacterGaze()) {
@@ -35,7 +35,7 @@ export class SincroController {
         }, (videoTrack: MediaStreamTrack) => {
             this.startCharacterGaze(videoTrack);
         }, (err) => {
-            this.chatMessageManager.writeSystemMessageText(`カメラまたはマイクが見つかりませんでした。 - ${err}`);
+            this.chatMessageManager.writeSystemMessage(`カメラまたはマイクが見つかりませんでした。 - ${err}`);
         });
     }
 
@@ -58,7 +58,7 @@ export class SincroController {
     }
 
     private setTextChannelCallback(rtcc: RTCTalkClient): void {
-        rtcc.textChannelCallback = (tcMsg: TextChannelMessage) => {
+        rtcc.textChannelCallback = (tcMsg: TextProcessorResult) => {
             this.talkManager.addTextChannelMessage(tcMsg);
         }
     }

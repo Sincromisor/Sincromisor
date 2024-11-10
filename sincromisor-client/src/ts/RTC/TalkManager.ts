@@ -1,4 +1,4 @@
-import { TelopChannelMessage, TextChannelMessage } from "./RTCMessage";
+import { TelopChannelMessage, TextProcessorResult } from "./RTCMessage";
 import { ChatMessageManager } from "../UI/ChatMessageManager";
 
 export interface CurrentMora {
@@ -12,11 +12,8 @@ export class TalkManager {
     private static instance: TalkManager;
     private readonly chatMessageManager: ChatMessageManager;
     private telopChannelMessage: Array<TelopChannelMessage> = [];
-    private textChannelMessage: Array<TextChannelMessage> = [];
-    private confirmedText: { 'startAt': number, 'text': string }[] = []
     private currentTelopChannelMessage: CurrentMora | null = null;
     private moraID: number = 0;
-    private currentMessageElement: HTMLDivElement | null = null;
 
     static getManager(): TalkManager {
         if (!TalkManager.instance) {
@@ -29,23 +26,11 @@ export class TalkManager {
         this.chatMessageManager = ChatMessageManager.getManager();
     }
 
-    addTextChannelMessage(msg: TextChannelMessage): void {
-        this.textChannelMessage.push(msg);
-
-        if (this.currentMessageElement) {
-            this.chatMessageManager.updateSystemMessageText(this.currentMessageElement, msg.resultText);
-        } else {
-            this.currentMessageElement = this.chatMessageManager.writeSystemMessageText(msg.resultText);
-        }
-
-        if (msg.confirmed) {
-            this.confirmedText.push({
-                'startAt': msg.start_at,
-                'text': msg.resultText
-            });
-            this.currentMessageElement = null;
-            this.chatMessageManager.removeOldMessage(30);
-        }
+    addTextChannelMessage(msg: TextProcessorResult): void {
+        console.dir(msg);
+        this.chatMessageManager.writeMessage(msg.request_message);
+        this.chatMessageManager.writeMessage(msg.response_message);
+        this.chatMessageManager.removeOldMessage(30);
     }
 
     addTelopChannelMessage(msg: TelopChannelMessage): void {
@@ -72,10 +57,6 @@ export class TalkManager {
             return null;
         }
         return this.currentTelopChannelMessage;
-    }
-
-    currentText(): string {
-        return this.textChannelMessage[this.textChannelMessage.length - 1]['resultText'];
     }
 
     private addTelopChar(char: string): void {
