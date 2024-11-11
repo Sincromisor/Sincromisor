@@ -94,7 +94,8 @@ class AudioBrokerEvent(Event):
     # 最初にclear()が実行された時にスタックトレースをログに書き出すようにする。
     def clear(self) -> None:
         if super().is_set():
-            self.__logger.info(f"AudioBrokerEventClear: {traceback.format_stack()}")
+            tb_str: str = "".join(traceback.format_stack())
+            self.__logger.info(f"AudioBrokerEventClear: {tb_str}")
         super().clear()
 
 
@@ -182,7 +183,7 @@ class AudioBroker:
         receiver_t.start()
         return AudioBrokerCommunicator(
             session_id=self.__session_id,
-            comm_type="Extractor",
+            comm_type="SpeechExtractor",
             ws_url=ws_url,
             ws=ws,
             sender_thread=sender_t,
@@ -213,7 +214,7 @@ class AudioBroker:
         receiver_t.start()
         return AudioBrokerCommunicator(
             session_id=self.__session_id,
-            comm_type="Recognizer",
+            comm_type="SpeechRecognizer",
             ws_url=ws_url,
             ws=ws,
             sender_thread=sender_t,
@@ -276,7 +277,7 @@ class AudioBroker:
         )
         receiver_t.start()
         return AudioBrokerCommunicator(
-            comm_type="Synthesizer",
+            comm_type="VoiceSynthesizer",
             session_id=self.__session_id,
             ws_url=ws_url,
             ws=ws,
