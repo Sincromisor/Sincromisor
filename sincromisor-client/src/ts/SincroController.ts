@@ -5,7 +5,7 @@ import { ChatMessageManager } from "./UI/ChatMessageManager";
 import { DialogManager } from "./UI/DialogManager";
 import { TalkManager } from "./RTC/TalkManager";
 import { DebugConsoleManager } from "./UI/DebugConsoleManager";
-import { TelopChannelMessage, TextProcessorResult } from "./RTC/RTCMessage";
+import { ChatMessage, TelopChannelMessage } from "./RTC/RTCMessage";
 import { CharacterBone } from "./Character/CharacterBone";
 import { Detection } from "@mediapipe/tasks-vision";
 import { SincroRTCConfigManager } from "./RTC/SincroRTCConfigManager";
@@ -43,7 +43,7 @@ export class SincroController {
         if (!this.rtcConfigManager.config) {
             return;
         }
-        this.rtcc = new RTCTalkClient(this.rtcConfigManager.config, audioTrack);
+        this.rtcc = new RTCTalkClient(this.rtcConfigManager.config, audioTrack, this.dialogManager.talkMode());
         this.setTextChannelCallback(this.rtcc);
         this.setTelopChannelCallback(this.rtcc);
         this.rtcc.start();
@@ -58,8 +58,8 @@ export class SincroController {
     }
 
     private setTextChannelCallback(rtcc: RTCTalkClient): void {
-        rtcc.textChannelCallback = (tcMsg: TextProcessorResult) => {
-            this.talkManager.addTextChannelMessage(tcMsg);
+        rtcc.textChannelCallback = (chatMsg: ChatMessage) => {
+            this.talkManager.addTextChannelMessage(chatMsg);
         }
     }
 

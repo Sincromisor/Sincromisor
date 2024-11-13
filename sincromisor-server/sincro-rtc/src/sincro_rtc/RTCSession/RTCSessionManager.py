@@ -48,6 +48,7 @@ class RTCSessionManager:
             session_id=session_id,
             request_sdp=offer.sdp,
             request_type=offer.type,
+            request_talk_mode=offer.talk_mode,
             sdp_pipe=cl_pipe,
             rtc_session_status=rtc_session_status,
             redis_host=self.__redis_host,

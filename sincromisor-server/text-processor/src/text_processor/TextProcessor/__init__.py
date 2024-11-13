@@ -1,1 +1,3 @@
 from .TextProcessorWorker import TextProcessorWorker
+from .PokeTextProcessorWorker import PokeTextProcessorWorker
+from .DifyTextProcessorWorker import DifyTextProcessorWorker

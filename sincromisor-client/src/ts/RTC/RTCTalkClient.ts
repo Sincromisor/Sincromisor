@@ -1,5 +1,5 @@
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
-import { TelopChannelMessage, TextProcessorResult } from "./RTCMessage";
+import { ChatMessage, TelopChannelMessage } from "./RTCMessage";
 import { ChatMessageManager } from "../UI/ChatMessageManager";
 import { SincroRTCConfig } from "./SincroRTCConfigManager";
 
@@ -9,6 +9,7 @@ export class RTCTalkClient {
     private readonly telopChannel: RTCDataChannel;
     private readonly textChannel: RTCDataChannel;
     private readonly chatMessageManager: ChatMessageManager;
+    private readonly talkMode: string;
     private config: RTCConfiguration;
     private sincroConfig: SincroRTCConfig;
 
@@ -26,11 +27,12 @@ export class RTCTalkClient {
     */
     audioCodec: string = "default";
     telopChannelCallback: (msg: TelopChannelMessage) => void = () => { };
-    textChannelCallback: (msg: TextProcessorResult) => void = () => { };
+    textChannelCallback: (msg: ChatMessage) => void = () => { };
 
-    constructor(sincroConfig: SincroRTCConfig, audioTrack: MediaStreamTrack) {
+    constructor(sincroConfig: SincroRTCConfig, audioTrack: MediaStreamTrack, talkMode: string) {
         this.logger = DebugConsoleManager.getManager();
         this.chatMessageManager = ChatMessageManager.getManager();
+        this.talkMode = talkMode;
         this.config = this.defaultConfig();
         this.sincroConfig = sincroConfig;
         if (sincroConfig) {
@@ -140,7 +142,8 @@ export class RTCTalkClient {
                 return fetch(this.sincroConfig.offerURL, {
                     body: JSON.stringify({
                         sdp: offer.sdp,
-                        type: offer.type
+                        type: offer.type,
+                        talk_mode: this.talkMode
                     }),
                     headers: {
                         "Content-Type": "application/json"
@@ -202,7 +205,7 @@ export class RTCTalkClient {
         };
         dc.onmessage = (evt) => {
             this.logger.addTextChannelLog("< [text_ch] " + evt.data + "\n");
-            this.textChannelCallback(JSON.parse(evt.data) as TextProcessorResult);
+            this.textChannelCallback(JSON.parse(evt.data) as ChatMessage);
         };
         return dc;
     }

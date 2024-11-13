@@ -34,6 +34,7 @@ class RTCSessionProcess(Process):
         session_id: str,
         request_sdp: str,
         request_type: str,
+        request_talk_mode: str,
         sdp_pipe: Connection,
         rtc_session_status: Synchronized,
         redis_host: str,
@@ -44,6 +45,7 @@ class RTCSessionProcess(Process):
         self.__session_id: str = session_id
         self.__request_sdp: str = request_sdp
         self.__request_type: str = request_type
+        self.__request_talk_mode: str = request_talk_mode
         self.__server_sdp_pipe: Connection = sdp_pipe
         self.__rtc_session_status: Synchronized = rtc_session_status
         self.__redis_host = redis_host
@@ -74,6 +76,7 @@ class RTCSessionProcess(Process):
                 sdp=self.__request_sdp, type=self.__request_type
             ),
             session_id=self.__session_id,
+            talk_mode=self.__request_talk_mode,
         )
         setproctitle(f"RTCSes[{self.__session_id[21:26]}]")
         self.relay = MediaRelay()

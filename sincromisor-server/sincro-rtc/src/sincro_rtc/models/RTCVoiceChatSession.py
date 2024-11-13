@@ -19,6 +19,9 @@ class RTCVoiceChatSession(BaseModel):
     audio_transform_track: MediaStreamTrack | None = None
     telop_ch: RTCDataChannel | None = None
     text_ch: RTCDataChannel | None = None
+    # TextProcessorに渡される
+    # chat or poke
+    talk_mode: str = "chat"
     closed: bool = False
 
     def __hash__(self) -> int:

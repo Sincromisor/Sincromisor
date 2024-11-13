@@ -1,4 +1,4 @@
-import { TelopChannelMessage, TextProcessorResult } from "./RTCMessage";
+import { TelopChannelMessage, ChatMessage } from "./RTCMessage";
 import { ChatMessageManager } from "../UI/ChatMessageManager";
 
 export interface CurrentMora {
@@ -26,10 +26,9 @@ export class TalkManager {
         this.chatMessageManager = ChatMessageManager.getManager();
     }
 
-    addTextChannelMessage(msg: TextProcessorResult): void {
+    addTextChannelMessage(msg: ChatMessage): void {
         console.dir(msg);
-        this.chatMessageManager.writeMessage(msg.request_message);
-        this.chatMessageManager.writeMessage(msg.response_message);
+        this.chatMessageManager.writeMessage(msg);
         this.chatMessageManager.removeOldMessage(30);
     }
 

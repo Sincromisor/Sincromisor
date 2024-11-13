@@ -10,6 +10,8 @@ class TextProcessorProcessArgument(BaseModel):
     redis_host: str
     redis_port: int
     log_file: str | None
+    dify_url: str | None
+    dify_token: str | None
 
     @classmethod
     def __argparse(cls) -> Namespace:
@@ -42,6 +44,15 @@ class TextProcessorProcessArgument(BaseModel):
         )
         parser.add_argument(
             "--redis-port", type=int, default=6379, help="Redis port(default: 6379)"
+        )
+        parser.add_argument(
+            "--dify-url", type=str, default=None, help="Dify URL(default: None)"
+        )
+        parser.add_argument(
+            "--dify-token",
+            type=str,
+            default=None,
+            help="Dify access token(default: None)",
         )
         parser.add_argument(
             "--log-file",

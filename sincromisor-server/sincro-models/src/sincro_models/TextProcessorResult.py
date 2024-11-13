@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 import msgpack
-import json
 from .ChatHistory import ChatHistory, ChatMessage
 from .TextProcessorRequest import TextProcessorRequest
 

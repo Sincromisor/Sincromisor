@@ -31,6 +31,7 @@ export interface TelopChannelMessage {
     new_text: boolean
 }
 
+/*
 export interface TextProcessorResult {
     session_id: string,
     speech_id: number,
@@ -42,6 +43,7 @@ export interface TextProcessorResult {
     end_of_response: boolean,
     voice_text: string | null
 }
+*/
 
 export class ChatMessageBuilder implements ChatMessage {
     private static serial_no: number = 0;

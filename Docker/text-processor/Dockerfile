@@ -13,6 +13,8 @@ ENV SINCRO_PUBLIC_BIND_HOST=text-processor
 ENV SINCRO_PUBLIC_BIND_PORT=8006
 ENV SINCRO_REDIS_HOST=sincro-voice-cache
 ENV SINCRO_REDIS_PORT=6379
+ENV SINCRO_DIFY_URL=
+ENV SINCRO_DIFY_TOKEN=
 
 WORKDIR ${SINCRO_USER_DIR}
 
@@ -108,4 +110,6 @@ CMD uv run text-processor/TextProcessorProcess.py \
     --public-bind-host "${SINCRO_PUBLIC_BIND_HOST}" \
     --public-bind-port "${SINCRO_PUBLIC_BIND_PORT}" \
     --redis-host "${SINCRO_REDIS_HOST}" \
-    --redis-port "${SINCRO_REDIS_PORT}"
+    --redis-port "${SINCRO_REDIS_PORT}" \
+    --dify-url "${SINCRO_DIFY_URL}" \
+    --dify-token "${SINCRO_DIFY_TOKEN}"

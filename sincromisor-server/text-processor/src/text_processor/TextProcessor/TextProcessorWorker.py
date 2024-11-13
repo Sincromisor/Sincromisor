@@ -1,17 +1,13 @@
-import time
 import logging
 from logging import Logger
 from collections.abc import Generator
 from fastapi import WebSocket
 from sincro_models import TextProcessorRequest, TextProcessorResult
-from ..PokeText import PokeText
 
 
 class TextProcessorWorker:
-    pokeText: PokeText = PokeText()
-
     def __init__(self):
-        self.__logger: Logger = logging.getLogger("sincro." + __name__)
+        self.logger: Logger = logging.getLogger("sincro." + __name__)
 
         self.message_type: str = "system"
         self.speaker_id: str = "system"
@@ -24,11 +20,12 @@ class TextProcessorWorker:
             # 現状では、requestのテキストが完全に認識できたタイミングで処理をする
             if not request.confirmed:
                 continue
-            for response in self.__process_text(request=request):
-                self.__logger.info(["send", response])
+            self.logger.info(["process_request", request])
+            for response in self.process(request=request):
+                self.logger.info(["send_response", response])
                 await ws.send_bytes(response.to_msgpack())
 
-    def __process_text(
+    def process(
         self,
         request: TextProcessorRequest,
     ) -> Generator[TextProcessorResult, None, None]:
@@ -38,11 +35,7 @@ class TextProcessorWorker:
             speaker_name=self.speaker_name,
             request=request,
         )
-        for text in TextProcessorWorker.pokeText.convert(
-            request.request_message.message
-        ):
-            self.__logger.info(["convertedText", text])
-            response.append_response_message(text)
-            yield response
+        response.append_response_message(request.request_message.message)
+        yield response
         response.finalize()
         yield response

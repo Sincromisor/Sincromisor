@@ -100,9 +100,12 @@ class AudioBrokerEvent(Event):
 
 
 class AudioBroker:
-    def __init__(self, session_id: str, redis_host: str, redis_port: int):
+    def __init__(
+        self, session_id: str, talk_mode: str, redis_host: str, redis_port: int
+    ):
         self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         self.__session_id: str = session_id
+        self.__talk_mode: str = talk_mode
         self.__wstatuses = WorkerStatusManager(
             redis_host=redis_host, redis_port=redis_port
         )
@@ -227,13 +230,16 @@ class AudioBroker:
         )
         if wstat is None:
             raise AudioBrokerError("TextProcessor worker is not found.")
-        ws_url: str = f"ws://{wstat.host}:{wstat.port}/TextProcessor"
+        ws_url: str = (
+            f"ws://{wstat.host}:{wstat.port}/TextProcessor?talk_mode={self.__talk_mode}"
+        )
         ws: ClientConnection = connect(ws_url)
         sender_t: TextProcessorSenderThread = TextProcessorSenderThread(
             ws=ws,
-            recognizer_results=self.__recognizer_results,
             running=self.__running,
             session_id=self.__session_id,
+            recognizer_results=self.__recognizer_results,
+            text_channel_queue=self.text_channel_queue,
         )
         sender_t.start()
         receiver_t: TextProcessorReceiverThread = TextProcessorReceiverThread(

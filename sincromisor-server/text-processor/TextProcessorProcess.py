@@ -5,7 +5,7 @@ from setproctitle import setproctitle
 from sincro_config import SincromisorLoggerConfig, KeepAliveReporter
 from text_processor.models import TextProcessorProcessArgument
 
-setproctitle(f"SPExtractor")
+setproctitle(f"TextProcessor")
 
 args: TextProcessorProcessArgument = TextProcessorProcessArgument.argparse()
 logging.config.dictConfig(
@@ -17,7 +17,11 @@ import traceback
 from threading import Event
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from text_processor.TextProcessor import TextProcessorWorker
+from text_processor.TextProcessor import (
+    DifyTextProcessorWorker,
+    PokeTextProcessorWorker,
+    TextProcessorWorker,
+)
 
 
 class TextProcessorProcess:
@@ -39,14 +43,24 @@ class TextProcessorProcess:
             interval=5,
         )
         self.keepalive_t.start()
-        self.__worker: TextProcessorWorker = TextProcessorWorker()
+        self.__poke_text_worker: TextProcessorWorker = PokeTextProcessorWorker()
+        if self.__args.dify_url:
+            self.__dify_text_worker: TextProcessorWorker = DifyTextProcessorWorker(
+                base_url=self.__args.dify_url, api_key=self.__args.dify_token
+            )
 
+        # talk_mode: chat, sincro
+        # /TextProcessor?talk_mode=chat
         @app.websocket("/TextProcessor")
-        async def websocket_chat_endpoint(ws: WebSocket):
+        async def websocket_chat_endpoint(ws: WebSocket, talk_mode: str | None):
             self.__logger.info("Connected Websocket.")
             try:
                 await ws.accept()
-                await self.__worker.communicate(ws=ws)
+                if self.__args.dify_url and talk_mode == "chat":
+                    await self.__dify_text_worker.communicate(ws=ws)
+                else:
+                    await self.__poke_text_worker.communicate(ws=ws)
+
             except WebSocketDisconnect:
                 self.__logger.info("Disconnected WebSocket.")
             except Exception as e:

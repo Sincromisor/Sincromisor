@@ -56,7 +56,8 @@ export class SincroInitializer {
     }
 
     private start(): void {
-        this.chatMessageManager.writeSystemMessage("こんにちは～!");
+        this.chatMessageManager.writeSystemMessage("こんにちは～!")
+        this.chatMessageManager.writeSystemMessage("音声は「VOICEVOX 四国めたん」でお送りします。");
         this.chatMessageManager.autoScroll();
 
         const sincroController: SincroController = new SincroController();

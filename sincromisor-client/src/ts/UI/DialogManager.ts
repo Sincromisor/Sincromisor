@@ -37,6 +37,12 @@ export class DialogManager {
         return e;
     }
 
+    talkMode(): string {
+        const eC: HTMLSelectElement | null = document.querySelector('select#talkModeSelector');
+        if (eC == null) { return 'chat'; }
+        return eC?.value;
+    }
+
     enableCharacter(): boolean {
         const eC: HTMLInputElement | null = document.querySelector('input#enableCharacter');
         if (eC == null) { return false; }
@@ -51,7 +57,8 @@ export class DialogManager {
 
     enableCharacterGaze(): boolean {
         const eC: HTMLInputElement | null = document.querySelector("input#enableCharacterGaze");
-        if (eC?.checked) {
+        if (eC == null) { return false; }
+        if (eC.checked) {
             return true;
         }
         return false;

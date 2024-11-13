@@ -39,7 +39,10 @@ class VoiceTransformTrack(MediaStreamTrack):
         # SpeechExtractor -> SpeechRecognizer用フォーマットは1ch, 16bit, 16000Hz
         self.__resampler = AudioResampler(layout=1, rate=16000)
         self.__audio_broker = AudioBroker(
-            session_id=self.__session_id, redis_host=redis_host, redis_port=redis_port
+            session_id=self.__session_id,
+            talk_mode=self.__vcs.talk_mode,
+            redis_host=redis_host,
+            redis_port=redis_port,
         )
 
     # デコード済みのオーディオフレームを受け取って、何らかの処理を行った上でフレームを返す。
