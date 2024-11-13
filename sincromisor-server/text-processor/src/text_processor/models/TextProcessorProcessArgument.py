@@ -14,7 +14,7 @@ class TextProcessorProcessArgument(SincromisorArgumentParser):
     dify_token: str | None
 
     @classmethod
-    def argparse(cls, parser: ArgumentParser) -> None:
+    def set_args(cls, parser: ArgumentParser) -> None:
         super().set_args(parser=parser)
 
         default_bind_port: int = 8006

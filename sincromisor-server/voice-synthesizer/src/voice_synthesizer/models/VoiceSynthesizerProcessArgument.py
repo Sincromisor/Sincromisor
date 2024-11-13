@@ -15,7 +15,7 @@ class VoiceSynthesizerProcessArgument(SincromisorArgumentParser):
     log_file: str | None
 
     @classmethod
-    def argparse(cls, parser: ArgumentParser) -> None:
+    def set_args(cls, parser: ArgumentParser) -> None:
         super().set_args(parser=parser)
 
         default_bind_port: int = 8005

@@ -32,7 +32,7 @@ class SincromisorArgumentParser(BaseModel):
         cls.add_argument(
             parser=parser,
             cmd_name="--redis-host",
-            env_name="REDIS_HOST",
+            env_name="SINCRO_REDIS_HOST",
             default=None,
             help="Redis address",
         )
@@ -40,7 +40,7 @@ class SincromisorArgumentParser(BaseModel):
         cls.add_argument(
             parser=parser,
             cmd_name="--redis-port",
-            env_name="REDIS_PORT",
+            env_name="SINCRO_REDIS_PORT",
             default=6379,
             help="Redis port(default: 6379)",
         )
@@ -56,5 +56,5 @@ class SincromisorArgumentParser(BaseModel):
     @classmethod
     def argparse(cls) -> "SincromisorArgumentParser":
         parser: ArgumentParser = ArgumentParser(description=cls.description())
-        cls.set_args(parser)
+        cls.set_args(parser=parser)
         return cls.model_validate(vars(parser.parse_args()))
