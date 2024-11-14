@@ -56,8 +56,7 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./Docker/env_vars/sincro-rtc.env
-      - ./Docker/env_vars/redis.env
+      - ./Docker/env_vars/.env
     deploy:
       restart_policy:
         condition: on-failure
@@ -81,8 +80,7 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./Docker/env_vars/speech-extractor.env
-      - ./Docker/env_vars/redis.env
+      - ./Docker/env_vars/.env
     deploy:
       restart_policy:
         condition: on-failure
@@ -111,8 +109,7 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./Docker/env_vars/speech-recognizer.env
-      - ./Docker/env_vars/redis.env
+      - ./Docker/env_vars/.env
     deploy:
       restart_policy:
         condition: on-failure
@@ -142,8 +139,7 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./Docker/env_vars/text-processor.env
-      - ./Docker/env_vars/redis.env
+      - ./Docker/env_vars/.env
     deploy:
       restart_policy:
         condition: on-failure
@@ -167,8 +163,7 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./Docker/env_vars/voice-synthesizer.env
-      - ./Docker/env_vars/redis.env
+      - ./Docker/env_vars/.env
     deploy:
       restart_policy:
         condition: on-failure

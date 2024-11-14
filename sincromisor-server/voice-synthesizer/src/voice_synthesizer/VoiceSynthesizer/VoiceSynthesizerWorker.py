@@ -47,7 +47,7 @@ class VoiceSynthesizerWorker:
             audio_format="audio/wav",
             style_id=self.__voicevox_style_id,
             pre_phoneme_length=0.1,
-            post_phoneme_length=0.0,
+            post_phoneme_length=0.1,
         )
         vs_result: VoiceSynthesizerResult = vvox.get_voice(vs_request=vs_request)
 

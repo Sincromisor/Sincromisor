@@ -7,10 +7,10 @@ ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${SINCRO_USER_DIR}/.local/bin:${PATH}
 ENV SINCROMISOR_CONF=/opt/sincromisor/config.yml
 ENV SINCROMISOR_WORKER_ID=1
 
-ENV SINCRO_HOST=0.0.0.0
-ENV SINCRO_PORT=8003
-ENV SINCRO_PUBLIC_BIND_HOST=speech-extractor
-ENV SINCRO_PUBLIC_BIND_PORT=8003
+ENV SINCRO_EXTRACTOR_HOST=0.0.0.0
+ENV SINCRO_EXTRACTOR_PORT=8003
+ENV SINCRO_EXTRACTOR_PUBLIC_BIND_HOST=speech-extractor
+ENV SINCRO_EXTRACTOR_PUBLIC_BIND_PORT=8003
 ENV SINCRO_REDIS_HOST=sincro-voice-cache
 ENV SINCRO_REDIS_PORT=6379
 
@@ -106,9 +106,9 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
 CMD uv run speech-extractor/SpeechExtractorProcess.py \
-    --host "${SINCRO_HOST}" \
-    --port "${SINCRO_PORT}" \
-    --public-bind-host "${SINCRO_PUBLIC_BIND_HOST}" \
-    --public-bind-port "${SINCRO_PUBLIC_BIND_PORT}" \
+    --host "${SINCRO_EXTRACTOR_HOST}" \
+    --port "${SINCRO_EXTRACTOR_PORT}" \
+    --public-bind-host "${SINCRO_EXTRACTOR_PUBLIC_BIND_HOST}" \
+    --public-bind-port "${SINCRO_EXTRACTOR_PUBLIC_BIND_PORT}" \
     --redis-host "${SINCRO_REDIS_HOST}" \
     --redis-port "${SINCRO_REDIS_PORT}"

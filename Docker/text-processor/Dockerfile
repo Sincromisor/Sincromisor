@@ -7,14 +7,15 @@ ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${SINCRO_USER_DIR}/.local/bin:${PATH}
 ENV SINCROMISOR_CONF=/opt/sincromisor/config.yml
 ENV SINCROMISOR_WORKER_ID=1
 
-ENV SINCRO_HOST=0.0.0.0
-ENV SINCRO_PORT=8006
-ENV SINCRO_PUBLIC_BIND_HOST=text-processor
-ENV SINCRO_PUBLIC_BIND_PORT=8006
+ENV SINCRO_PROCESSOR_HOST=0.0.0.0
+ENV SINCRO_PROCESSOR_PORT=8006
+ENV SINCRO_PROCESSOR_PUBLIC_BIND_HOST=text-processor
+ENV SINCRO_PROCESSOR_PUBLIC_BIND_PORT=8006
+ENV SINCRO_PROCESSOR_DIFY_URL=
+ENV SINCRO_PROCESSOR_DIFY_TOKEN=
 ENV SINCRO_REDIS_HOST=sincro-voice-cache
 ENV SINCRO_REDIS_PORT=6379
-ENV SINCRO_DIFY_URL=
-ENV SINCRO_DIFY_TOKEN=
+
 
 WORKDIR ${SINCRO_USER_DIR}
 
@@ -105,11 +106,11 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
 CMD uv run text-processor/TextProcessorProcess.py \
-    --host "${SINCRO_HOST}" \
-    --port "${SINCRO_PORT}" \
-    --public-bind-host "${SINCRO_PUBLIC_BIND_HOST}" \
-    --public-bind-port "${SINCRO_PUBLIC_BIND_PORT}" \
+    --host "${SINCRO_PROCESSOR_HOST}" \
+    --port "${SINCRO_PROCESSOR_PORT}" \
+    --public-bind-host "${SINCRO_PROCESSOR_PUBLIC_BIND_HOST}" \
+    --public-bind-port "${SINCRO_PROCESSOR_PUBLIC_BIND_PORT}" \
     --redis-host "${SINCRO_REDIS_HOST}" \
     --redis-port "${SINCRO_REDIS_PORT}" \
-    --dify-url "${SINCRO_DIFY_URL}" \
-    --dify-token "${SINCRO_DIFY_TOKEN}"
+    --dify-url "${SINCRO_PROCESSOR_DIFY_URL}" \
+    --dify-token "${SINCRO_PROCESSOR_DIFY_TOKEN}"

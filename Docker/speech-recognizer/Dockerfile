@@ -7,10 +7,10 @@ ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${SINCRO_USER_DIR}/.local/bin:${PATH}
 ENV SINCROMISOR_CONF=/opt/sincromisor/config.yml
 ENV SINCROMISOR_WORKER_ID=1
 
-ENV SINCRO_HOST=0.0.0.0
-ENV SINCRO_PORT=8004
-ENV SINCRO_PUBLIC_BIND_HOST=speech-recognizer
-ENV SINCRO_PUBLIC_BIND_PORT=8004
+ENV SINCRO_RECOGNIZER_HOST=0.0.0.0
+ENV SINCRO_RECOGNIZER_PORT=8004
+ENV SINCRO_RECOGNIZER_PUBLIC_BIND_HOST=speech-recognizer
+ENV SINCRO_RECOGNIZER_PUBLIC_BIND_PORT=8004
 ENV SINCRO_REDIS_HOST=sincro-voice-cache
 ENV SINCRO_REDIS_PORT=6379
 
@@ -105,9 +105,9 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
 CMD uv run speech-recognizer/SpeechRecognizerProcess.py \
-    --host "${SINCRO_HOST}" \
-    --port "${SINCRO_PORT}" \
-    --public-bind-host "${SINCRO_PUBLIC_BIND_HOST}" \
-    --public-bind-port "${SINCRO_PUBLIC_BIND_PORT}" \
+    --host "${SINCRO_RECOGNIZER_HOST}" \
+    --port "${SINCRO_RECOGNIZER_PORT}" \
+    --public-bind-host "${SINCRO_RECOGNIZER_PUBLIC_BIND_HOST}" \
+    --public-bind-port "${SINCRO_RECOGNIZER_PUBLIC_BIND_PORT}" \
     --redis-host "${SINCRO_REDIS_HOST}" \
     --redis-port "${SINCRO_REDIS_PORT}"
