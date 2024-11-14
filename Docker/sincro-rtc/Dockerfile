@@ -102,12 +102,4 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
-CMD uv run sincro-rtc/Sincromisor.py \
-    --host "${SINCRO_RTC_HOST}" \
-    --port "${SINCRO_RTC_PORT}" \
-    --public-bind-host "${SINCRO_RTC_PUBLIC_BIND_HOST}" \
-    --public-bind-port "${SINCRO_RTC_PUBLIC_BIND_PORT}" \
-    --redis-host "${SINCRO_REDIS_HOST}" \
-    --redis-port "${SINCRO_REDIS_PORT}" \
-    --forwarded-allow-ips "${SINCRO_RTC_FORWARDED_ALLOW_IPS}" \
-    --max-sessions "${SINCRO_RTC_MAX_SESSIONS}"
+CMD ["uv", "run", "sincro-rtc/Sincromisor.py"]

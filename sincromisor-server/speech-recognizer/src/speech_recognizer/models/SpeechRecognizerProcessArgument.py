@@ -1,8 +1,8 @@
-from pydantic import BaseModel
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
+from sincro_config import SincromisorArgumentParser
 
 
-class SpeechRecognizerProcessArgument(BaseModel):
+class SpeechRecognizerProcessArgument(SincromisorArgumentParser):
     host: str
     port: int
     public_bind_host: str
@@ -13,56 +13,47 @@ class SpeechRecognizerProcessArgument(BaseModel):
     voice_log_dir: str | None
 
     @classmethod
-    def __argparse(cls) -> Namespace:
-        parser = ArgumentParser(
-            description="Start the FastAPI application with custom options.",
-            exit_on_error=False,
-        )
-        parser.add_argument(
-            "--host",
-            type=str,
+    def argparse(cls, parser: ArgumentParser) -> None:
+        super().set_args(parser=parser)
+
+        default_bind_port: int = 8003
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--host",
+            env_name="SINCRO_RECOGNIZER_HOST",
             default="127.0.0.1",
             help="Host to bind to(default: 127.0.0.1)",
         )
-        parser.add_argument(
-            "--port", type=int, default=8003, help="Port to bind to(default: 8003)"
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--port",
+            env_name="SINCRO_RECOGNIZER_PORT",
+            default=default_bind_port,
+            help=f"Port to bind to(default: {default_bind_port})",
         )
-        parser.add_argument(
-            "--public-bind-host", type=str, help="Public bind address", required=True
-        )
-        parser.add_argument(
-            "--public-bind-port",
-            type=int,
-            default=8003,
-            help="Public bind port",
-        )
-        parser.add_argument(
-            "--redis-host",
-            type=str,
-            help="Redis address",
-            required=True,
-        )
-        parser.add_argument(
-            "--redis-port",
-            type=int,
-            default=6379,
-            help="Redis port(default: 6379)",
-        )
-        parser.add_argument(
-            "--log-file",
-            type=str,
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--public-bind-host",
+            env_name="SINCRO_RECOGNIZER_PUBLIC_BIND_HOST",
             default=None,
-            help="log file path(default: None(to stdout))",
+            help="Public bind address",
         )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--public-bind-port",
+            env_name="SINCRO_RECOGNIZER_PUBLIC_BIND_PORT",
+            default=default_bind_port,
+            help=f"Public bind port(default: {default_bind_port})",
+        )
+
         parser.add_argument(
             "--voice-log-dir",
             type=str,
             default=None,
             help="voice log directory path",
         )
-        args: Namespace = parser.parse_args()
-        return args
-
-    @classmethod
-    def argparse(cls) -> "SpeechRecognizerProcessArgument":
-        return cls.model_validate(vars(cls.__argparse()))
+        return

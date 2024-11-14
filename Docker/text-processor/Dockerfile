@@ -105,12 +105,4 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
-CMD uv run text-processor/TextProcessorProcess.py \
-    --host "${SINCRO_PROCESSOR_HOST}" \
-    --port "${SINCRO_PROCESSOR_PORT}" \
-    --public-bind-host "${SINCRO_PROCESSOR_PUBLIC_BIND_HOST}" \
-    --public-bind-port "${SINCRO_PROCESSOR_PUBLIC_BIND_PORT}" \
-    --redis-host "${SINCRO_REDIS_HOST}" \
-    --redis-port "${SINCRO_REDIS_PORT}" \
-    --dify-url "${SINCRO_PROCESSOR_DIFY_URL}" \
-    --dify-token "${SINCRO_PROCESSOR_DIFY_TOKEN}"
+CMD ["uv", "run", "text-processor/TextProcessorProcess.py"]

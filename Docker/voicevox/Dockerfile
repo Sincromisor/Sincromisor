@@ -2,7 +2,7 @@ FROM ubuntu:24.04
 
 EXPOSE 50021
 
-ARG VOICEVOX_VERSION=0.21.0
+ARG VOICEVOX_VERSION=0.21.1
 
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \

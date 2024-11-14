@@ -1,8 +1,8 @@
-from pydantic import BaseModel
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
+from sincro_config import SincromisorArgumentParser
 
 
-class VoiceSynthesizerProcessArgument(BaseModel):
+class VoiceSynthesizerProcessArgument(SincromisorArgumentParser):
     host: str
     port: int
     public_bind_host: str
@@ -15,65 +15,65 @@ class VoiceSynthesizerProcessArgument(BaseModel):
     log_file: str | None
 
     @classmethod
-    def __argparse(cls) -> Namespace:
-        parser = ArgumentParser(
-            description="Start the FastAPI application with custom options."
-        )
-        parser.add_argument(
-            "--host",
-            type=str,
+    def argparse(cls, parser: ArgumentParser) -> None:
+        super().set_args(parser=parser)
+
+        default_bind_port: int = 8005
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--host",
+            env_name="SINCRO_SYNTHESIZER_HOST",
             default="127.0.0.1",
             help="Host to bind to(default: 127.0.0.1)",
         )
-        parser.add_argument(
-            "--port", type=int, default=8005, help="Port to bind to(default: 8005)"
-        )
-        parser.add_argument(
-            "--public-bind-host", type=str, help="Public bind address", required=True
-        )
-        parser.add_argument(
-            "--public-bind-port",
-            default=8005,
-            type=int,
-            help="Public bind port(default: 8005)",
-            required=True,
-        )
-        parser.add_argument(
-            "--redis-host",
-            type=str,
-            help="Redis address",
-            required=True,
-        )
-        parser.add_argument(
-            "--redis-port", type=int, default=6379, help="Redis port(default: 6379)"
-        )
-        parser.add_argument(
-            "--voicevox-host",
-            type=str,
-            help="VOICEVOX address",
-            required=True,
-        )
-        parser.add_argument(
-            "--voicevox-port",
-            type=int,
-            default=50021,
-            help="VOICEVOX port(default: 50021)",
-        )
-        parser.add_argument(
-            "--voicevox-default-style-id",
-            type=int,
-            default=1,
-            help="VOICEVOX Style ID(default: 1)",
-        )
-        parser.add_argument(
-            "--log-file",
-            type=str,
-            default=None,
-            help="log file path(default: None(to stdout))",
-        )
-        args: Namespace = parser.parse_args()
-        return args
 
-    @classmethod
-    def argparse(cls) -> "VoiceSynthesizerProcessArgument":
-        return cls.model_validate(vars(cls.__argparse()))
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--port",
+            env_name="SINCRO_SYNTHESIZER_PORT",
+            default=default_bind_port,
+            help=f"Port to bind to(default: {default_bind_port})",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--public-bind-host",
+            env_name="SINCRO_SYNTHESIZER_PUBLIC_BIND_HOST",
+            default=None,
+            help="Public bind address",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--public-bind-port",
+            env_name="SINCRO_SYNTHESIZER_PUBLIC_BIND_PORT",
+            default=default_bind_port,
+            help=f"Public bind port(default: {default_bind_port})",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--voicevox-host",
+            env_name="SINCRO_SYNTHESIZER_VOICEVOX_HOST",
+            default=None,
+            help="VOICEVOX engine address",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--voicevox-port",
+            env_name="SINCRO_SYNTHESIZER_VOICEVOX_PORT",
+            default=50021,
+            help="VOICEVOX engine port(default: 50021)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--voicevox-default-style-id",
+            env_name="SINCRO_SYNTHESIZER_VOICEVOX_DEFAULT_STYLE_ID",
+            default=0,
+            help="VOICEVOX Style ID(default: 0)",
+        )
+
+        return

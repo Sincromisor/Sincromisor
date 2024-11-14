@@ -104,10 +104,4 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
-CMD uv run speech-recognizer/SpeechRecognizerProcess.py \
-    --host "${SINCRO_RECOGNIZER_HOST}" \
-    --port "${SINCRO_RECOGNIZER_PORT}" \
-    --public-bind-host "${SINCRO_RECOGNIZER_PUBLIC_BIND_HOST}" \
-    --public-bind-port "${SINCRO_RECOGNIZER_PUBLIC_BIND_PORT}" \
-    --redis-host "${SINCRO_REDIS_HOST}" \
-    --redis-port "${SINCRO_REDIS_PORT}"
+CMD ["uv", "run", "speech-recognizer/SpeechRecognizerProcess.py"]

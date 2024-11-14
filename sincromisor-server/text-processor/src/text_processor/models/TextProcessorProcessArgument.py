@@ -1,8 +1,8 @@
-from pydantic import BaseModel
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
+from sincro_config import SincromisorArgumentParser
 
 
-class TextProcessorProcessArgument(BaseModel):
+class TextProcessorProcessArgument(SincromisorArgumentParser):
     host: str
     port: int
     public_bind_host: str
@@ -14,55 +14,57 @@ class TextProcessorProcessArgument(BaseModel):
     dify_token: str | None
 
     @classmethod
-    def __argparse(cls) -> Namespace:
-        parser = ArgumentParser(
-            description="Start the FastAPI application with custom options."
-        )
-        parser.add_argument(
-            "--host",
-            type=str,
+    def argparse(cls, parser: ArgumentParser) -> None:
+        super().set_args(parser=parser)
+
+        default_bind_port: int = 8006
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--host",
+            env_name="SINCRO_PROCESSOR_HOST",
             default="127.0.0.1",
             help="Host to bind to(default: 127.0.0.1)",
         )
-        parser.add_argument(
-            "--port", type=int, default=8006, help="Port to bind to(default: 8006)"
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--port",
+            env_name="SINCRO_PROCESSOR_PORT",
+            default=default_bind_port,
+            help=f"Port to bind to(default: {default_bind_port})",
         )
-        parser.add_argument(
-            "--public-bind-host", type=str, help="Public bind address", required=True
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--public-bind-host",
+            env_name="SINCRO_PROCESSOR_PUBLIC_BIND_HOST",
+            default=None,
+            help="Public bind address",
         )
-        parser.add_argument(
-            "--public-bind-port",
-            type=int,
-            default=8006,
-            help="Public bind port(default: 8006)",
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--public-bind-port",
+            env_name="SINCRO_PROCESSOR_PUBLIC_BIND_PORT",
+            default=default_bind_port,
+            help=f"Public bind port(default: {default_bind_port})",
         )
-        parser.add_argument(
-            "--redis-host",
-            type=str,
-            help="Redis address",
-            required=True,
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--dify-url",
+            env_name="SINCRO_PROCESSOR_DIFY_URL",
+            default=None,
+            help="Dify URL(default: None)",
         )
-        parser.add_argument(
-            "--redis-port", type=int, default=6379, help="Redis port(default: 6379)"
-        )
-        parser.add_argument(
-            "--dify-url", type=str, default=None, help="Dify URL(default: None)"
-        )
-        parser.add_argument(
-            "--dify-token",
-            type=str,
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--dify-token",
+            env_name="SINCRO_PROCESSOR_DIFY_TOKEN",
             default=None,
             help="Dify access token(default: None)",
         )
-        parser.add_argument(
-            "--log-file",
-            type=str,
-            default=None,
-            help="log file path(default: None(to stdout))",
-        )
-        args: Namespace = parser.parse_args()
-        return args
 
-    @classmethod
-    def argparse(cls) -> "TextProcessorProcessArgument":
-        return cls.model_validate(vars(cls.__argparse()))
+        return

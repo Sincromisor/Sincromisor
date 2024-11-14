@@ -105,10 +105,4 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
-CMD uv run speech-extractor/SpeechExtractorProcess.py \
-    --host "${SINCRO_EXTRACTOR_HOST}" \
-    --port "${SINCRO_EXTRACTOR_PORT}" \
-    --public-bind-host "${SINCRO_EXTRACTOR_PUBLIC_BIND_HOST}" \
-    --public-bind-port "${SINCRO_EXTRACTOR_PUBLIC_BIND_PORT}" \
-    --redis-host "${SINCRO_REDIS_HOST}" \
-    --redis-port "${SINCRO_REDIS_PORT}"
+CMD ["uv", "run", "speech-extractor/SpeechExtractorProcess.py"]

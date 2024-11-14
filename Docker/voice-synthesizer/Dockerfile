@@ -105,13 +105,4 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
-CMD uv run voice-synthesizer/VoiceSynthesizerProcess.py \
-    --host "${SINCRO_SYNTHESIZER_HOST}" \
-    --port "${SINCRO_SYNTHESIZER_PORT}" \
-    --public-bind-host "${SINCRO_SYNTHESIZER_PUBLIC_BIND_HOST}" \
-    --public-bind-port "${SINCRO_SYNTHESIZER_PUBLIC_BIND_PORT}" \
-    --redis-host "${SINCRO_REDIS_HOST}" \
-    --redis-port "${SINCRO_REDIS_PORT}" \
-    --voicevox-host "${SINCRO_SYNTHESIZER_VOICEVOX_HOST}" \
-    --voicevox-port "${SINCRO_SYNTHESIZER_VOICEVOX_PORT}" \
-    --voicevox-default-style-id "${SINCRO_SYNTHESIZER_VOICEVOX_DEFAULT_STYLE_ID}"
+CMD ["uv", "run", "voice-synthesizer/VoiceSynthesizerProcess.py"]
