@@ -1,3 +1,22 @@
+:root {
+    --canvasWidth: 100dvw;
+    --canvasHeight: 100dvh;
+    --canvasMinWidth: 650px;
+}
+
+body,
+div#obsBody {
+    min-width: var(--canvasMinWidth);
+}
+
+div#obsVideo1 {
+    display: none;
+}
+
+div#obsVideo2 {
+    display: none;
+}
+
 div#obsHeaderBox {
     display: none;
 }
@@ -6,11 +25,17 @@ div#obsMessageBox {
     display: none;
 }
 
-div#obsFooterBox {
-    display: none;
-}
-
 div#obsCharacterBox {
     min-width: var(--canvasMinWidth);
     grid-area: 1 / 1 / 5 / 4;
+}
+
+div#obsCharacterBackgroundBox {
+    grid-area: 3 / 1 / 4 / 4;
+}
+
+div#obsFooterBox {
+    min-width: var(--canvasMinWidth);
+    z-index: 256;
+    background-color: rgba(34, 34, 34, 0.5);
 }

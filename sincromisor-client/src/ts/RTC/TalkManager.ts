@@ -63,6 +63,8 @@ export class TalkManager {
         if (!telopText) {
             return;
         }
+        /* display:noneなどで描画エリアがない場合は何もしない(無限ループ対策) */
+        if (telopText.clientWidth == 0) { return; }
         const fontSize = parseFloat(window.getComputedStyle(telopText, null).getPropertyValue("font-size"));
         const maxLength = telopText.clientWidth / fontSize - 1;
         while (telopText.innerText.length > maxLength) {
