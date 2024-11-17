@@ -135,7 +135,7 @@ export class DialogManager {
         }
     }
 
-    private updateEnableCharacterGazeStatus(available: boolean): void {
+    updateEnableCharacterGazeStatus(available: boolean): void {
         const eC: HTMLInputElement | null = document.querySelector('#enableCharacterGaze');
         if (!eC) {
             return;
@@ -148,7 +148,7 @@ export class DialogManager {
         }
     }
 
-    private updateAutoMuteStatus(): void {
+    updateAutoMuteStatus(): void {
         const eInput: HTMLInputElement | null = document.querySelector('input#enableAutoMute');
         if (!eInput) {
             return;

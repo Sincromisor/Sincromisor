@@ -27,7 +27,8 @@ export default defineConfig({
                 double: resolve(contents_src, 'double/index.html'),
                 glass: resolve(contents_src, 'glass/index.html'),
                 character: resolve(contents_src, 'character/index.html'),
-                character_glass: resolve(contents_src, 'character-glass/index.html')
+                character_glass: resolve(contents_src, 'character-glass/index.html'),
+                area360: resolve(contents_src, 'area360/index.html')
             }
         }
     }

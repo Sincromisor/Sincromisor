@@ -1,0 +1,16 @@
+div#obsHeaderBox {
+    display: none;
+}
+
+div#obsMessageBox {
+    display: none;
+}
+
+div#obsFooterBox {
+    display: none;
+}
+
+div#obsCharacterBox {
+    min-width: var(--canvasMinWidth);
+    grid-area: 1 / 1 / 5 / 4;
+}

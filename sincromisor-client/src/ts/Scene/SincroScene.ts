@@ -40,7 +40,7 @@ export class SincroScene {
         this.engine = new Engine(this.canvas, true, { preserveDrawingBuffer: true, stencil: true });
         this.scene = new Scene(this.engine);
         this.light = new StageLight(this.scene);
-        this.camera = new StageCamera(this.canvas, this.scene, this.vrMode);
+        this.camera = this.setupCamera();
 
         if (this.withInspector) {
             const bodyElement = document.querySelector('body');
@@ -57,6 +57,10 @@ export class SincroScene {
         this.scene.autoClear = true;
         this.scene.clearColor = new Color4(0, 0, 0, 0.01); // Background color
         this.setResizeEvent();
+    }
+
+    protected setupCamera(): StageCamera {
+        return new StageCamera(this.canvas, this.scene, this.vrMode);
     }
 
     run(): void {

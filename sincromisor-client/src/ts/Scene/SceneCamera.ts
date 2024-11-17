@@ -4,19 +4,19 @@ import { Vector3 } from '@babylonjs/core/Maths';
 import { Tools } from '@babylonjs/core/Misc/tools';
 
 export class StageCamera {
-    private readonly canvas: HTMLCanvasElement;
-    private readonly scene: Scene;
-    private readonly camera: ArcRotateCamera;
+    protected readonly canvas: HTMLCanvasElement;
+    protected readonly scene: Scene;
+    protected readonly camera: ArcRotateCamera;
     /*
         Alpha: 水平方向の回転.
         Beta: 垂直方向の回転,
         Radius: 中心からの距離
     */
-    private readonly defaultAlpha: number = 0.0;
-    private readonly defaultBeta: number = Math.PI / 2;
-    private readonly defaultRadius: number = 2.0;
-    private readonly cameraTarget: Vector3 = new Vector3(0, 1.25, 0);
-    private cameraDistance: number = 0.75;
+    protected readonly defaultAlpha: number = 0.0;
+    protected readonly defaultBeta: number = Math.PI / 2;
+    protected readonly defaultRadius: number = 2.0;
+    protected readonly cameraTarget: Vector3 = new Vector3(0, 1.25, 0);
+    protected cameraDistance: number = 0.75;
 
     constructor(canvas: HTMLCanvasElement, scene: Scene, vrMode: boolean) {
         this.canvas = canvas;
@@ -29,7 +29,21 @@ export class StageCamera {
         }
     }
 
-    private createCamera(): ArcRotateCamera {
+    /* カメラ目線を作りたい時のターゲット座標を計算 */
+    getEyeTarget(): Vector3 {
+        const cameraDirection = this.getCameraDirection();
+        return new Vector3(
+            (this.camera.beta - Math.PI / 2) / 2,
+            -Math.atan2(cameraDirection.x, cameraDirection.z) - this.defaultBeta,
+            0
+        )
+    }
+
+    private getCameraDirection(): Vector3 {
+        return this.camera.getTarget().subtract(this.camera.position).normalize();
+    }
+
+    protected createCamera(): ArcRotateCamera {
         const camera: ArcRotateCamera = new ArcRotateCamera('camera',
             this.defaultAlpha, this.defaultBeta, this.defaultRadius, this.cameraTarget, this.scene);
         camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
@@ -64,7 +78,7 @@ export class StageCamera {
         return camera;
     }
 
-    private createVRCamera(): ArcRotateCamera {
+    protected createVRCamera(): ArcRotateCamera {
         const scale: number = 0.015;
         const defaultVRAlpha: number = 3 * Math.PI / 2;
         const defaultVRBeta: number = Math.PI / 50;
