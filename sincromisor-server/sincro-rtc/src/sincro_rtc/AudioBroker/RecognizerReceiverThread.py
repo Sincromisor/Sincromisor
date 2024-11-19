@@ -29,7 +29,7 @@ class RecognizerReceiverThread(Thread):
             try:
                 pack: bytes = self.__ws.recv(timeout=5)
                 sr_result: SpeechRecognizerResult = SpeechRecognizerResult.from_msgpack(
-                    pack
+                    pack,
                 )
 
                 # to SynthesizerThread
@@ -41,7 +41,7 @@ class RecognizerReceiverThread(Thread):
                 break
             except Exception as e:
                 self.__logger.error(
-                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
                 )
                 traceback.print_exc()
                 break

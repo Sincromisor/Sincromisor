@@ -35,7 +35,7 @@ class KeepAliveReporter(Thread):
     ):
         super().__init__()
         self.__logger: Logger = logging.getLogger(
-            "sincro." + __name__ + f".{worker_type}"
+            "sincro." + __name__ + f".{worker_type}",
         )
         self.redis_host: str = redis_host
         self.redis_port: int = redis_port
@@ -50,7 +50,7 @@ class KeepAliveReporter(Thread):
         while True:
             try:
                 self.__logger.info(
-                    f"Keepalive reporter - connecting - {self.redis_host}:{self.redis_port}"
+                    f"Keepalive reporter - connecting - {self.redis_host}:{self.redis_port}",
                 )
                 redis: Redis = Redis(host=self.redis_host, port=self.redis_port, db=1)
                 self.__logger.info("Keepalive reporter - connected.")
@@ -63,7 +63,8 @@ class KeepAliveReporter(Thread):
                         f"{time.time()}:{self.count}",
                     )
                 redis.hdel(
-                    redis_key, f"{self.public_bind_host}:{self.public_bind_port}"
+                    redis_key,
+                    f"{self.public_bind_host}:{self.public_bind_port}",
                 )
                 break
             except ConnectionError as e:
@@ -73,15 +74,16 @@ class KeepAliveReporter(Thread):
             finally:
                 try:
                     redis.hdel(
-                        redis_key, f"{self.public_bind_host}:{self.public_bind_port}"
+                        redis_key,
+                        f"{self.public_bind_host}:{self.public_bind_port}",
                     )
                 except ConnectionError as e:
                     self.__logger.error(
-                        f"Keepalive report finalize failure - {repr(e)}"
+                        f"Keepalive report finalize failure - {repr(e)}",
                     )
                 except Exception as e:
                     self.__logger.error(
-                        f"Keepalive report finalize failure - {repr(e)}"
+                        f"Keepalive report finalize failure - {repr(e)}",
                     )
                 self.event.set()
                 time.sleep(30)

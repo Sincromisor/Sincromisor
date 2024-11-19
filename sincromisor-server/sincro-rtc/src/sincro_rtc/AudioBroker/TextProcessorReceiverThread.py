@@ -42,7 +42,7 @@ class TextProcessorReceiverThread(Thread):
                 break
             except Exception as e:
                 self.__logger.error(
-                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
                 )
                 traceback.print_exc()
                 break

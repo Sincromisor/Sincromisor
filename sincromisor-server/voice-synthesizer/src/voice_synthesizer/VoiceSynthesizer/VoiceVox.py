@@ -41,7 +41,10 @@ class VoiceVox:
     # * アクセント位置を'で指定する。全てのアクセント句にはアクセント位置を1つ指定する必要がある。
     # * アクセント句末に？(全角)を入れることにより疑問文の発音ができる。
     def accent_phrases(
-        self, text: str, style_id: int = 1, is_kana: bool = False
+        self,
+        text: str,
+        style_id: int = 1,
+        is_kana: bool = False,
     ) -> list:
         res = requests.post(
             f"{self.base_url}/accent_phrases",
@@ -140,18 +143,16 @@ class VoiceVox:
     def response_validator(self, res: requests.Response) -> bool:
         if res.status_code == 200:
             return True
-        else:
-            raise self.ProtocolError(
-                f"{res.status_code} {res.reason} - {res.request.url}"
-            )
+        raise self.ProtocolError(
+            f"{res.status_code} {res.reason} - {res.request.url}",
+        )
 
     def update_response_validator(self, res: requests.Response) -> bool:
         if res.status_code == 204:
             return True
-        else:
-            raise self.ProtocolError(
-                f"{res.status_code} {res.reason} - {res.request.url}"
-            )
+        raise self.ProtocolError(
+            f"{res.status_code} {res.reason} - {res.request.url}",
+        )
 
 
 if __name__ == "__main__":

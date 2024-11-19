@@ -40,10 +40,9 @@ class SpeechRecognizer:
     def transcribe(self, audio: np.ndarray, decode_options: dict) -> list:
         decode_options |= self.decode_options
         audio_tensor: Tensor = torch.from_numpy(audio)
-        if audio_tensor.dim() != 1:
-            assert (
-                audio_tensor.dim() == 2 and audio_tensor.shape[0] == 1
-            ), "Only mono audio is supported."
+
+        assert audio_tensor.dim() == 1, "Only mono audio is supported."
+        assert audio_tensor.shape[0] == 1, "Only mono audio is supported."
 
         audio_tensor = audio_tensor.to(self.model.dtype).reshape(1, -1)
         audio_len_sec = audio_tensor.shape[-1] / self.sampling_rate
@@ -71,12 +70,14 @@ class SpeechRecognizer:
     # https://huggingface.co/transformers/v4.6.0/internal/generation_utils.html
     def transcribe_with_score(self, inputs, outputs, threshold=0.5) -> list:
         transition_scores = self.model.llm.compute_transition_scores(
-            outputs.sequences, outputs.scores, normalize_logits=True
+            outputs.sequences,
+            outputs.scores,
+            normalize_logits=True,
         )
         input_length = 1  # inputs.input_ids.shape[1]
         generated_tokens = outputs.sequences[:, input_length:]
         token_and_prob = []
-        for tok, score in zip(generated_tokens[0], transition_scores[0]):
+        for tok, score in zip(generated_tokens[0], transition_scores[0], strict=False):
             # | token | token string | logits | probability
             # print(f"| {tok:5d} | {self.tokenizer.decode(tok):8s} | {score.cpu().numpy():.4f} | {np.exp(score.cpu().numpy()):.2%}")
             token_string = self.tokenizer.decode(tok)

@@ -50,7 +50,8 @@ class SpeechExtractorResult(BaseModel):
     def from_msgpack(self, pack: bytes) -> "SpeechExtractorResult":
         contents = msgpack.unpackb(pack)
         contents["voice"] = np.frombuffer(
-            contents["voice"], dtype=contents["voice_dtype"]
+            contents["voice"],
+            dtype=contents["voice_dtype"],
         )
         return SpeechExtractorResult(**contents)
 
@@ -67,7 +68,7 @@ class SpeechExtractorResult(BaseModel):
                 "voice_sampling_rate": self.voice_sampling_rate,
                 "voice_sample_bytes": self.voice_sample_bytes,
                 "voice_channels": self.voice_channels,
-            }
+            },
         )
 
     # voiceをopus形式でエンコードし、ファイルに書き出す。

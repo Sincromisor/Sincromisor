@@ -24,7 +24,7 @@ setproctitle("Sincromisor")
 
 args: SincromisorProcessArgument = SincromisorProcessArgument.argparse()
 logging.config.dictConfig(
-    SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True)
+    SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True),
 )
 
 
@@ -39,7 +39,8 @@ class SincromisorProcess:
 
     def start(self):
         rtcSM = RTCSessionManager(
-            redis_host=self.__args.redis_host, redis_port=self.__args.redis_port
+            redis_host=self.__args.redis_host,
+            redis_port=self.__args.redis_port,
         )
         app = FastAPI(on_shutdown=[rtcSM.shutdown])
         """
@@ -74,10 +75,12 @@ class SincromisorProcess:
 
             session_info = rtcSM.create_session(offer=offer_params)
             self.__logger.info(
-                f"Client: {request.client}\n"
-                + f"RequestHeaders: {request.headers}\n"
-                + f"OfferSDP:\n{offer_params.sdp}\n"
-                + f"ResponseSDP:\n{session_info['sdp']}"
+                (
+                    f"Client: {request.client}\n"
+                    f"RequestHeaders: {request.headers}\n"
+                    f"OfferSDP:\n{offer_params.sdp}\n"
+                    f"ResponseSDP:\n{session_info['sdp']}",
+                ),
             )
             return JSONResponse(session_info)
 
@@ -93,7 +96,7 @@ class SincromisorProcess:
             for ice_server in config.get_all_ice_servers_conf():
                 ice_servers.append(ice_server.to_lowerkeys())
             return JSONResponse(
-                {"offerURL": "/api/v1/rtc/offer", "iceServers": ice_servers}
+                {"offerURL": "/api/v1/rtc/offer", "iceServers": ice_servers},
             )
 
         try:

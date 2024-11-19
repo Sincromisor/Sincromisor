@@ -5,16 +5,18 @@ from collections import deque
 from logging import Logger
 from threading import Event, Thread
 
-from sincro_models import (
-    SpeechExtractorInitializeRequest,
-)
+from sincro_models import SpeechExtractorInitializeRequest
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import ClientConnection
 
 
 class ExtractorSenderThread(Thread):
     def __init__(
-        self, ws: ClientConnection, running: Event, session_id: str, frame_buffer: deque
+        self,
+        ws: ClientConnection,
+        running: Event,
+        session_id: str,
+        frame_buffer: deque,
     ):
         super().__init__()
         self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
@@ -27,7 +29,7 @@ class ExtractorSenderThread(Thread):
         self.__logger.info("Thread start.")
         try:
             init_request = SpeechExtractorInitializeRequest(
-                session_id=self.__session_id
+                session_id=self.__session_id,
             )
             self.__ws.send(init_request.to_msgpack())
             while self.__running.is_set():

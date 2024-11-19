@@ -32,8 +32,7 @@ class SpeechRecognizerResult(BaseModel):
     def word_filter(self, text: str) -> bool:
         if text == "</s>":
             return False
-        else:
-            return True
+        return True
 
     def result_text(self) -> str:
         result_text = ""

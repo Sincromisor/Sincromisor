@@ -19,10 +19,12 @@ class VoiceCacheManager:
         redis_port: int = 6379,
     ):
         self.redis: Redis = Redis(
-            host=redis_host, port=redis_port
+            host=redis_host,
+            port=redis_port,
         )  # , decode_responses=True
         self.vsynth: VoiceSynthesizer = VoiceSynthesizer(
-            host=voicevox_host, port=voicevox_port
+            host=voicevox_host,
+            port=voicevox_port,
         )
         self.logger: Logger = logging.getLogger(__name__)
 
@@ -57,7 +59,7 @@ class VoiceCacheManager:
             return VoiceSynthesizerResult.from_msgpack(vs_pack)
         try:
             vs_result: VoiceSynthesizerResult = self.vsynth.generate(
-                vs_request=vs_request
+                vs_request=vs_request,
             )
         except Exception:
             raise self.VoiceSynthesizerServerException
@@ -65,7 +67,8 @@ class VoiceCacheManager:
         return vs_result
 
     def get_voice_nocache(
-        self, vs_request: VoiceSynthesizerRequest
+        self,
+        vs_request: VoiceSynthesizerRequest,
     ) -> VoiceSynthesizerResult:
         self.logger.info(f"SynthRequest(NOCACHE): {vs_request.message}")
         try:

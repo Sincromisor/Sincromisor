@@ -70,7 +70,7 @@ class TextProcessorSenderThread(Thread):
             while self.__running.is_set():
                 if len(self.__recognizer_results) > 0:
                     request: TextProcessorRequest = self.__create_request(
-                        chat_history=chat_history
+                        chat_history=chat_history,
                     )
                     self.__text_channel_queue.append(request.request_message)
                     self.__ws.send(request.to_msgpack())

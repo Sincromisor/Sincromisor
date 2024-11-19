@@ -19,7 +19,7 @@ setproctitle("TextProcessor")
 
 args: TextProcessorProcessArgument = TextProcessorProcessArgument.argparse()
 logging.config.dictConfig(
-    SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True)
+    SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True),
 )
 
 
@@ -45,7 +45,8 @@ class TextProcessorProcess:
         self.__poke_text_worker: TextProcessorWorker = PokeTextProcessorWorker()
         if self.__args.dify_url:
             self.__dify_text_worker: TextProcessorWorker = DifyTextProcessorWorker(
-                base_url=self.__args.dify_url, api_key=self.__args.dify_token
+                base_url=self.__args.dify_url,
+                api_key=self.__args.dify_token,
             )
 
         # talk_mode: chat, sincro
@@ -64,7 +65,7 @@ class TextProcessorProcess:
                 self.__logger.info("Disconnected WebSocket.")
             except Exception as e:
                 self.__logger.error(
-                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
                 )
                 await ws.close()
 

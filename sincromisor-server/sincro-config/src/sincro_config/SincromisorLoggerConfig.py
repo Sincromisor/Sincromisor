@@ -4,10 +4,10 @@ class SincromisorLoggerConfig:
         "disable_existing_loggers": False,
         "formatters": {
             "default": {
-                "format": "[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d:%(funcName)s] [%(name)s] %(message)s"
+                "format": "[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d:%(funcName)s] [%(name)s] %(message)s",
             },
             "access": {
-                "format": "[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d:%(funcName)s] [%(name)s] %(message)s"
+                "format": "[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d:%(funcName)s] [%(name)s] %(message)s",
             },
         },
         "handlers": {

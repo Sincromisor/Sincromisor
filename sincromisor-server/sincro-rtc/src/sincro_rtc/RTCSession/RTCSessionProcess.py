@@ -64,7 +64,7 @@ class RTCSessionProcess(Process):
                     urls=turn_conf.Urls,
                     username=turn_conf.UserName,
                     credential=turn_conf.Credential,
-                )
+                ),
             )
         self.__logger.debug(f"IceServers: {ice_servers}")
         return ice_servers
@@ -72,10 +72,11 @@ class RTCSessionProcess(Process):
     async def __offer(self) -> dict:
         self.__vcs = RTCVoiceChatSession(
             peer=RTCPeerConnection(
-                configuration=RTCConfiguration(iceServers=self.__get_ice_servers())
+                configuration=RTCConfiguration(iceServers=self.__get_ice_servers()),
             ),
             desc=RTCSessionDescription(
-                sdp=self.__request_sdp, type=self.__request_type
+                sdp=self.__request_sdp,
+                type=self.__request_type,
             ),
             session_id=self.__session_id,
             talk_mode=self.__request_talk_mode,
@@ -106,7 +107,7 @@ class RTCSessionProcess(Process):
         @self.__vcs.peer.on("connectionstatechange")
         async def on_connectionstatechange():
             self.__logger.info(
-                f"on_connectionstatechange - {self.__vcs.peer.connectionState}"
+                f"on_connectionstatechange - {self.__vcs.peer.connectionState}",
             )
             if self.__vcs.peer.connectionState == "failed":
                 self.__rtc_session_status.value = -1

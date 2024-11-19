@@ -39,7 +39,7 @@ class SynthesizerReceiverThread(Thread):
             try:
                 pack: bytes = self.__ws.recv(timeout=5)
                 vs_result: VoiceSynthesizerResult = VoiceSynthesizerResult.from_msgpack(
-                    pack
+                    pack,
                 )
                 for vs_frame in self.__voice_splitter(
                     vs_result=vs_result,
@@ -54,7 +54,7 @@ class SynthesizerReceiverThread(Thread):
                 break
             except Exception as e:
                 self.__logger.error(
-                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
                 )
                 traceback.print_exc()
                 break
@@ -71,9 +71,11 @@ class SynthesizerReceiverThread(Thread):
     ) -> Generator[VoiceSynthesizerResultFrame, None, None]:
         # 1ch 16000Hzの音声を2ch 48000Hzに変換し、20ms(960 / 48000)ごとに分割し直す。
         # 960はWebRTCでopus音声を得た際のデフォルトフレームサイズだが、
-        # 環境によって異なる可能性があるため、将来的にはパラメーターで設定できるようにする。
+        # 環境によって異なる可能性がある(要調査)。
         resampler = AudioResampler(
-            layout=2, rate=target_frame_rate, frame_size=target_frame_size
+            layout=2,
+            rate=target_frame_rate,
+            frame_size=target_frame_size,
         )
         container: InputContainer = av.open(BytesIO(vs_result.voice))
         frame_ms: float = target_frame_size / target_frame_rate

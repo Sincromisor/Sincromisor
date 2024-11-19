@@ -16,7 +16,7 @@ setproctitle("SPExtractor")
 
 args: SpeechExtractorProcessArgument = SpeechExtractorProcessArgument.argparse()
 logging.config.dictConfig(
-    SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True)
+    SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True),
 )
 
 
@@ -58,7 +58,7 @@ class SpeechExtractorProcess:
                 self.__logger.info("Disconnected WebSocket.")
             except Exception as e:
                 self.__logger.error(
-                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
                 )
                 await ws.close()
 

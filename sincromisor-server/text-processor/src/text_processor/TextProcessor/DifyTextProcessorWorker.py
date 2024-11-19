@@ -15,7 +15,8 @@ class DifyTextProcessorWorker(TextProcessorWorker):
         self.conversation_id: str | None = None
 
     def process(
-        self, request: TextProcessorRequest
+        self,
+        request: TextProcessorRequest,
     ) -> Generator[TextProcessorResult, None, None]:
         response: TextProcessorResult = TextProcessorResult.from_request(
             message_type=self.message_type,
@@ -48,12 +49,17 @@ class DifyTextProcessorWorker(TextProcessorWorker):
         yield response
 
     def __dify_client_thread(
-        self, request: str, responses: deque, event: Event
+        self,
+        request: str,
+        responses: deque,
+        event: Event,
     ) -> None:
         try:
             buffer: str = ""
             for response in self.dify_client.chat(
-                inputs={}, query=request, conversation_id=self.conversation_id
+                inputs={},
+                query=request,
+                conversation_id=self.conversation_id,
             ):
                 match response["event"]:
                     case "message":

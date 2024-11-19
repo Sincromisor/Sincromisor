@@ -30,7 +30,7 @@ class VoiceSynthesizerResult(BaseModel):
                 "speaking_time": self.speaking_time,
                 "voice": self.voice,
                 "audio_format": self.audio_format,
-            }
+            },
         )
 
     def to_json(self) -> str:

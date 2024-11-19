@@ -33,7 +33,7 @@ if __name__ == "__main__":
             speaker_id="gloria",
             speaker_name="Gloria",
             message="hello!",
-        )
+        ),
     )
     print(history.model_dump_json())
 

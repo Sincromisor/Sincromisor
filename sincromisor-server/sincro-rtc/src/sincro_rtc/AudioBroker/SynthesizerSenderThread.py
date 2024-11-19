@@ -21,7 +21,7 @@ class SynthesizerSenderThread(Thread):
         super().__init__()
         self.__session_id: str = session_id
         self.__logger: Logger = logging.getLogger(
-            __name__ + f"[{self.__session_id[21:26]}]"
+            __name__ + f"[{self.__session_id[21:26]}]",
         )
         self.__ws: ClientConnection = ws
         self.__text_processor_results: deque = text_processor_results

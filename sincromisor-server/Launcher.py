@@ -14,8 +14,9 @@ from sincro_config import SincromisorConfig, SincromisorLoggerConfig
 config = SincromisorConfig.from_yaml()
 logging.config.dictConfig(
     SincromisorLoggerConfig.generate(
-        log_file=config.get_log_path("Launcher"), stdout=True
-    )
+        log_file=config.get_log_path("Launcher"),
+        stdout=True,
+    ),
 )
 
 
@@ -64,14 +65,21 @@ class ProcessLauncher:
 
     def start(self):
         self.process = sp.Popen(
-            self.args, stdout=sp.PIPE, stderr=sp.PIPE, env=self.newenv
+            self.args,
+            stdout=sp.PIPE,
+            stderr=sp.PIPE,
+            env=self.newenv,
         )
         self.stdout_t = ProcessStdOutReader(
-            name=self.name, process=self.process, logger=self.logger
+            name=self.name,
+            process=self.process,
+            logger=self.logger,
         )
         self.stdout_t.start()
         self.stderr_t = ProcessStdErrReader(
-            name=self.name, process=self.process, logger=self.logger
+            name=self.name,
+            process=self.process,
+            logger=self.logger,
         )
         self.stderr_t.start()
 

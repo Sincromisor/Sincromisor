@@ -30,8 +30,7 @@ class SincromisorConfig(BaseModel):
     def config_path(cls) -> str:
         if config_path := os.environ.get("SINCROMISOR_CONF"):
             return os.path.abspath(os.path.expanduser(config_path))
-        else:
-            return os.path.abspath("../config.yml")
+        return os.path.abspath("../config.yml")
 
     def get_worker_conf(self, worker_id: int, type: str) -> WorkerConfig:
         return self.Worker[type][worker_id]
@@ -42,7 +41,8 @@ class SincromisorConfig(BaseModel):
         return self.Worker[type][worker_id]
 
     def get_workers_conf(
-        self, type: str
+        self,
+        type: str,
     ) -> Generator[tuple[int, WorkerConfig], None, None]:
         worker_id: int = 0
         for conf in self.Worker[type]:
@@ -50,7 +50,8 @@ class SincromisorConfig(BaseModel):
             worker_id += 1
 
     def get_launchable_workers_conf(
-        self, type: str
+        self,
+        type: str,
     ) -> Generator[tuple[int, WorkerConfig], None, None]:
         worker_id: int = 0
         for conf in self.Worker[type]:
@@ -63,7 +64,8 @@ class SincromisorConfig(BaseModel):
 
     # type: stun, turn
     def get_ice_servers_conf(
-        self, server_type: str
+        self,
+        server_type: str,
     ) -> Generator[RTCIceServerConfig, None, None]:
         for conf in self.WebRTC.RTCIceServers:
             if conf.Urls[0:5] == f"{server_type}:":
@@ -76,7 +78,8 @@ class SincromisorConfig(BaseModel):
 
     def get_log_path(self, type: str) -> str:
         return os.path.join(
-            self.get_log_dir(), f"{type}.{self.get_current_worker_id()}.log"
+            self.get_log_dir(),
+            f"{type}.{self.get_current_worker_id()}.log",
         )
 
     def get_voice_log_dir(self) -> str:

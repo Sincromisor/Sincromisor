@@ -23,5 +23,5 @@ class SpeechExtractorInitializeRequest(BaseModel):
                 "voice_sampling_rate": self.voice_sampling_rate,
                 "voice_sample_bytes": self.voice_sample_bytes,
                 "voice_channels": self.voice_channels,
-            }
+            },
         )

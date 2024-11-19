@@ -111,7 +111,7 @@ class PokeText:
     def cleanup(self, text: str) -> list[str]:
         # \u3000 は全角スペース
         return list(
-            filter(lambda x: not (x == "" or x == " "), re.split("\u3000+", text))
+            filter(lambda x: not (x == "" or x == " "), re.split("\u3000+", text)),
         )
 
     def print(self, m: Morpheme) -> None:
@@ -123,7 +123,7 @@ class PokeText:
                 m.normalized_form(),
                 m.part_of_speech(),
                 m.is_oov(),
-            ]
+            ],
         )
 
 

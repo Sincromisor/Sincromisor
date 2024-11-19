@@ -17,7 +17,10 @@ class DifyClient:
         }
 
     def chat(
-        self, inputs: dict, query: str, conversation_id: str | None
+        self,
+        inputs: dict,
+        query: str,
+        conversation_id: str | None,
     ) -> Generator[dict, None, None]:
         data = {
             "inputs": inputs,
@@ -38,7 +41,12 @@ class DifyClient:
                 yield json.loads(data)
 
     def _send_request(
-        self, method, endpoint, json=None, params=None, stream=True
+        self,
+        method,
+        endpoint,
+        json=None,
+        params=None,
+        stream=True,
     ) -> Response:
         url = f"{self.base_url}{endpoint}"
         response: Response = requests.request(

@@ -38,11 +38,13 @@ class VoiceSynthesizerWorker:
             self.__logger.info(f"Receive {repr(text_processor_result)}")
             if text_processor_result.voice_text:
                 await ws.send_bytes(
-                    self.__synth(tp_result=text_processor_result).to_msgpack()
+                    self.__synth(tp_result=text_processor_result).to_msgpack(),
                 )
 
     def __get_voice(
-        self, voice_text: str, vvox: VoiceCacheManager
+        self,
+        voice_text: str,
+        vvox: VoiceCacheManager,
     ) -> VoiceSynthesizerResult:
         vs_request: VoiceSynthesizerRequest = VoiceSynthesizerRequest(
             message=voice_text,
@@ -59,9 +61,10 @@ class VoiceSynthesizerWorker:
         vtext: str = tp_result.voice_text
         self.__logger.info(f"VoiceSynthesizerRequest({tp_result.session_id}) {vtext}")
         vs_result: VoiceSynthesizerResult = self.__get_voice(
-            vvox=self.__vvox, voice_text=vtext
+            vvox=self.__vvox,
+            voice_text=vtext,
         )
         self.__logger.info(
-            f"VoiceSynthesizerResult({tp_result.session_id}): {vs_result.to_json()}"
+            f"VoiceSynthesizerResult({tp_result.session_id}): {vs_result.to_json()}",
         )
         return vs_result

@@ -21,7 +21,7 @@ class RecognizerSenderThread(Thread):
         super().__init__()
         self.__session_id: str = session_id
         self.__logger: Logger = logging.getLogger(
-            __name__ + f"[{self.__session_id[21:26]}]"
+            __name__ + f"[{self.__session_id[21:26]}]",
         )
         self.__ws: ClientConnection = ws
         self.__extractor_results: deque = extractor_results
@@ -30,9 +30,10 @@ class RecognizerSenderThread(Thread):
     def __pop_extractor_result(self) -> bytes:
         base_e_result: SpeechExtractorResult = self.__extractor_results.popleft()
 
-        # 音声認識に時間が掛かった場合、Extractorから複数の音声パケットが届いている
-        # 場合がある。この場合は、各パケットの音声データを結合する。
-        # パケットに音声の末端である(confirmed=Trueである)場合は、そこで結合を終了し返す。
+        # 音声認識に時間が掛かった場合、Extractorから複数の音声パケットが
+        # 届いている場合がある。この場合は、各パケットの音声データを結合する。
+        # パケットに音声の末端である(confirmed=Trueである)場合は、
+        # そこで結合を終了し返す。
         while len(self.__extractor_results) > 0:
             e_result: SpeechExtractorResult = self.__extractor_results.popleft()
             base_e_result.append_voice(e_result.voice)

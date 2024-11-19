@@ -23,9 +23,11 @@ class SincromisorArgumentParser(BaseModel):
             value = default
 
         parser.add_argument(
-            cmd_name, help=help, default=value, required=not bool(value)
+            cmd_name,
+            help=help,
+            default=value,
+            required=not bool(value),
         )
-        pass
 
     @classmethod
     def set_args(cls, parser: ArgumentParser) -> None:

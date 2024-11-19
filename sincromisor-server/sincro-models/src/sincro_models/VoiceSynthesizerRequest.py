@@ -14,12 +14,11 @@ class VoiceSynthesizerRequest(BaseModel):
     def validate_format(cls, audio_format: str) -> str:
         if audio_format == "audio/aac":
             return "audio/aac"
-        elif audio_format == "audio/ogg":
+        if audio_format == "audio/ogg":
             return "audio/ogg"
-        elif audio_format == "audio/ogg;codecs=opus":
+        if audio_format == "audio/ogg;codecs=opus":
             return "audio/ogg;codecs=opus"
-        else:
-            return "audio/wav"
+        return "audio/wav"
 
     def redis_key(self) -> str:
         msg_hash = hashlib.sha256(self.message.encode("UTF-8")).hexdigest()

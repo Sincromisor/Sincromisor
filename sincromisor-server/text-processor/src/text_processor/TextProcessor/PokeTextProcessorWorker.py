@@ -20,7 +20,7 @@ class PokeTextProcessorWorker(TextProcessorWorker):
             request=request,
         )
         for text in PokeTextProcessorWorker.pokeText.convert(
-            request.request_message.message
+            request.request_message.message,
         ):
             self.logger.info(["Converted", text])
             response.append_response_message(text)

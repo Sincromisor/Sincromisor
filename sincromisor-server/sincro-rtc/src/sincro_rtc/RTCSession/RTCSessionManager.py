@@ -59,7 +59,9 @@ class RTCSessionManager:
         ps.start()
 
         self.__processes[session_id] = RTCProcessDescription(
-            process=ps, pipe=sv_pipe, rtc_session_status=rtc_session_status
+            process=ps,
+            pipe=sv_pipe,
+            rtc_session_status=rtc_session_status,
         )
         return sv_pipe.recv()
 
@@ -83,7 +85,7 @@ class RTCSessionManager:
                 ps_desc.rtc_session_status.value = -1
             except Exception:
                 self.__logger.error(
-                    f"[{session_id}] Change session status: UnknownError - {traceback.format_exc()}"
+                    f"[{session_id}] Change session status: UnknownError - {traceback.format_exc()}",
                 )
                 traceback.print_exc()
 
@@ -92,6 +94,6 @@ class RTCSessionManager:
                 ps_desc.close(self.__join_timeout)
             except Exception:
                 self.__logger.error(
-                    f"[{session_id}] RTC session close: UnknownError - {traceback.format_exc()}"
+                    f"[{session_id}] RTC session close: UnknownError - {traceback.format_exc()}",
                 )
                 traceback.print_exc()

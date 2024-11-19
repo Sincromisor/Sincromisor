@@ -15,7 +15,10 @@ class SpeechExtractorWorker:
     classifier: AudioClassifier
 
     def __init__(
-        self, session_id: str, voice_channels: int = 1, voice_sampling_rate: int = 16000
+        self,
+        session_id: str,
+        voice_channels: int = 1,
+        voice_sampling_rate: int = 16000,
     ):
         self.logger: Logger = logging.getLogger(__name__)
         self.session_id: str = session_id
@@ -28,7 +31,7 @@ class SpeechExtractorWorker:
     @classmethod
     def setup_model(cls):
         base_options = python.BaseOptions(
-            model_asset_path="assets/3rd_party/yamnet.tflite"
+            model_asset_path="assets/3rd_party/yamnet.tflite",
         )
         options = audio.AudioClassifierOptions(base_options=base_options, max_results=1)
         # これが実行された瞬間VSZが32TBになる。
@@ -45,7 +48,8 @@ class SpeechExtractorWorker:
 
         while True:
             np_frame: np.ndarray = np.frombuffer(
-                await ws.receive_bytes(), dtype=self.voice_dtype
+                await ws.receive_bytes(),
+                dtype=self.voice_dtype,
             )
             buffer = np.append(buffer, np_frame)
             if buffer.size > min_buffer_length:
@@ -110,7 +114,7 @@ class SpeechExtractorWorker:
         )
         try:
             classification_result_list = SpeechExtractorWorker.classifier.classify(
-                audio_clip
+                audio_clip,
             )
         except Exception as e:
             self.logger.error(f"UnknownError: {repr(e)}")

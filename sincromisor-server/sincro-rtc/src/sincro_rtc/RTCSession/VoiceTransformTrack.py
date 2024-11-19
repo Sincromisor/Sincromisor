@@ -29,7 +29,7 @@ class VoiceTransformTrack(MediaStreamTrack):
     ):
         super().__init__()
         self.__logger: Logger = logging.getLogger(
-            __name__ + f"[{vcs.session_id[21:26]}]"
+            __name__ + f"[{vcs.session_id[21:26]}]",
         )
         # RTCSessionManager、RTCSessionProcessと共有される
         self.__rtc_session_status: Synchronized = rtc_session_status
@@ -46,7 +46,8 @@ class VoiceTransformTrack(MediaStreamTrack):
             redis_port=redis_port,
         )
 
-    # デコード済みのオーディオフレームを受け取って、何らかの処理を行った上でフレームを返す。
+    # デコード済みのオーディオフレームを受け取って、何らかの処理を行った上で
+    # フレームを返す。
     # 返却するフレームは、同じフォーマット、かつ同じサンプル数でなければならない。
     # ここでフレームを返さないと、aiortc/rtcrtpsender.pyのnext_encoded_frameの
     # await self.__track.recv()がデッドロックしてしまう。
@@ -65,7 +66,7 @@ class VoiceTransformTrack(MediaStreamTrack):
             self.__logger.info("recv - MediaStreamError.")
         except Exception as e:
             self.__logger.error(
-                f"recv - UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                f"recv - UnknownError: {repr(e)}\n{traceback.format_exc()}",
             )
             traceback.print_exc()
         # 何らかの例外が発生した時はrtcをshutdownする
@@ -85,7 +86,9 @@ class VoiceTransformTrack(MediaStreamTrack):
                 if synth_voice.new_text:
                     self.__vcs.telop_ch.send(synth_voice.params_to_json())
                 newframe = frame.from_ndarray(
-                    synth_voice.vframe, format="s16", layout="stereo"
+                    synth_voice.vframe,
+                    format="s16",
+                    layout="stereo",
                 )
                 newframe.pts = frame.pts
                 newframe.rate = frame.sample_rate
@@ -94,16 +97,16 @@ class VoiceTransformTrack(MediaStreamTrack):
             return newframe
         except AttributeError as e:
             self.__logger.error(
-                f"transform - AttributeError: {repr(e)}\n{traceback.format_exc()}"
+                f"transform - AttributeError: {repr(e)}\n{traceback.format_exc()}",
             )
         except AudioBrokerError as e:
             self.__logger.error(
-                f"transform - AudioBrokerError: {repr(e)}\n{traceback.format_exc()}"
+                f"transform - AudioBrokerError: {repr(e)}\n{traceback.format_exc()}",
             )
             raise e
         except Exception as e:
             self.__logger.error(
-                f"transform - UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                f"transform - UnknownError: {repr(e)}\n{traceback.format_exc()}",
             )
         # 何らかの例外が発生した時はrtcをshutdownする
         self.__rtc_session_status = -1
@@ -129,7 +132,9 @@ class VoiceTransformTrack(MediaStreamTrack):
         # opus/48000Hz/2chで1920フレームらしい
         zero_frame: np.ndarray = np.zeros((frame.to_ndarray().shape), dtype=np.int16)
         newframe: AudioFrame = frame.from_ndarray(
-            zero_frame, format="s16", layout="stereo"
+            zero_frame,
+            format="s16",
+            layout="stereo",
         )
         newframe.pts = frame.pts
         newframe.rate = 48000
@@ -141,7 +146,9 @@ class VoiceTransformTrack(MediaStreamTrack):
         byte_frame: bytes = b"\0" * blocksize * 2
         np_frame: np.ndarray = np.frombuffer(byte_frame, dtype=np.int16)
         frame = AudioFrame.from_ndarray(
-            np_frame.reshape(1, blocksize), format="s16", layout="mono"
+            np_frame.reshape(1, blocksize),
+            format="s16",
+            layout="mono",
         )
         frame.pts = 0
         frame.time_base = Fraction(1, samplerate)
@@ -155,14 +162,14 @@ class VoiceTransformTrack(MediaStreamTrack):
             self.__audio_broker.close()
         except Exception as e:
             self.__logger.error(
-                f"close - UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                f"close - UnknownError: {repr(e)}\n{traceback.format_exc()}",
             )
             traceback.print_exc()
         try:
             self.stop()
         except Exception as e:
             self.__logger.error(
-                f"close - UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                f"close - UnknownError: {repr(e)}\n{traceback.format_exc()}",
             )
             traceback.print_exc()
         self.__logger.info("Closed VoiceTransformTrack.")

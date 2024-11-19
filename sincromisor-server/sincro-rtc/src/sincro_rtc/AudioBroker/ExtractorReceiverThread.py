@@ -18,13 +18,13 @@ class ExtractorReceiverThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
-        # self.extract_log = logging.getLogger(__name__ + f'[{session_id}]')
-        # self.extract_log.addHandler(logging.FileHandler('log/Extractor.log', mode='a'))
+        self.__session_id: str = session_id
+        self.__logger: Logger = logging.getLogger(
+            __name__ + f"[{self.__session_id[21:26]}]",
+        )
         self.__ws: ClientConnection = ws
         self.__extractor_results: deque = extractor_results
         self.__running: Event = running
-        self.__session_id: str = session_id
 
     def run(self) -> None:
         self.__logger.info("Thread start.")
@@ -32,7 +32,7 @@ class ExtractorReceiverThread(Thread):
             try:
                 pack: bytes = self.__ws.recv(timeout=5)
                 se_result: SpeechExtractorResult = SpeechExtractorResult.from_msgpack(
-                    pack
+                    pack,
                 )
                 self.__logger.info(se_result)
                 self.__extractor_results.append(se_result)
@@ -43,7 +43,7 @@ class ExtractorReceiverThread(Thread):
                 break
             except Exception as e:
                 self.__logger.error(
-                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
                 )
                 traceback.print_exc()
                 break

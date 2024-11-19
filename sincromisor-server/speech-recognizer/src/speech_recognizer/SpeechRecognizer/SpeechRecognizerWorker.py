@@ -14,7 +14,7 @@ class SpeechRecognizerWorker:
     def __init__(self, voice_log_dir: str | None):
         self.logger: Logger = logging.getLogger(__name__)
         self.s2t: SpeechRecognizer = SpeechRecognizer(
-            decode_options={"max_new_tokens": 255}
+            decode_options={"max_new_tokens": 255},
         )
         self.voice_log_dir: str = voice_log_dir
         self.logger.info("SpeechRecognizerWorker is initialized.")
@@ -59,18 +59,20 @@ class SpeechRecognizerWorker:
 
     def export_voice(self, result: SpeechExtractorResult) -> str:
         time_text: str = datetime.fromtimestamp(result.start_at).strftime(
-            "%Y%m%d_%H%M%S.%f"
+            "%Y%m%d_%H%M%S.%f",
         )
         write_dir: Path = Path(self.voice_log_dir, result.session_id)
         write_dir.mkdir(parents=True, exist_ok=True)
         if shutil.which("opusenc"):
             write_path: Path = Path(
-                write_dir, f"{result.speech_id:06d}_{time_text}.opus"
+                write_dir,
+                f"{result.speech_id:06d}_{time_text}.opus",
             )
             result.to_opusfile(path=str(write_path))
         else:
             write_path: Path = Path(
-                write_dir, f"{result.speech_id:06d}_{time_text}.wav"
+                write_dir,
+                f"{result.speech_id:06d}_{time_text}.wav",
             )
             result.to_wavfile(path=str(write_path))
         self.logger.info(f"Wrote: {write_path}")

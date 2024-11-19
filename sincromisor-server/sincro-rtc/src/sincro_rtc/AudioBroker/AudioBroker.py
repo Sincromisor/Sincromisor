@@ -40,7 +40,7 @@ class AudioBrokerCommunicator:
 
     def close(self) -> None:
         logger: Logger = logging.getLogger(
-            f"{__name__}::{self.comm_type}[{self.session_id[21:26]}]"
+            f"{__name__}::{self.comm_type}[{self.session_id[21:26]}]",
         )
 
         logger.info("join sender_thread")
@@ -101,13 +101,18 @@ class AudioBrokerEvent(Event):
 
 class AudioBroker:
     def __init__(
-        self, session_id: str, talk_mode: str, redis_host: str, redis_port: int
+        self,
+        session_id: str,
+        talk_mode: str,
+        redis_host: str,
+        redis_port: int,
     ):
         self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         self.__session_id: str = session_id
         self.__talk_mode: str = talk_mode
         self.__wstatuses: WorkerStatusManager = WorkerStatusManager(
-            redis_host=redis_host, redis_port=redis_port
+            redis_host=redis_host,
+            redis_port=redis_port,
         )
 
         # AudioBrokerもしくは子スレッドでなにかしらの問題が発生したら、
@@ -115,19 +120,25 @@ class AudioBroker:
         self.__running: Event = AudioBrokerEvent()
         self.__running.set()
 
-        # VoiceTransformTrack -> ExtractorSenderThread: bytes
+        # VoiceTransformTrack
+        # -> ExtractorSenderThread: bytes
         self.__frame_buffer: deque = deque([], 25)
-        # ExtractorReceiverThread -> RecognizerSenderThread: SpeechExtractorResult
+        # ExtractorReceiverThread
+        # -> RecognizerSenderThread: SpeechExtractorResult
         self.__extractor_results: deque = deque([], 10)
-        # RecognizerReceiverThread -> TextProcessorSenderThread: SpeechRecognizerResult
+        # RecognizerReceiverThread
+        # -> TextProcessorSenderThread: SpeechRecognizerResult
         self.__recognizer_results: deque = deque([], 10)
-        # TextProcessorReceiverThread -> VoiceSynthesizerSenderThread: TextProcessorResult
+        # TextProcessorReceiverThread
+        # -> VoiceSynthesizerSenderThread: TextProcessorResult
         self.__text_processor_results: deque = deque([], 10)
 
         # VoiceTransformTrackから利用
-        # RecognizerReceiverThread -> VoiceTransformTrack: SpeechRecognizerResult
+        # RecognizerReceiverThread
+        # -> VoiceTransformTrack: SpeechRecognizerResult
         self.text_channel_queue: deque = deque([])
-        # SynthesizerReceiverThread -> VoiceTransformTrack: VoiceSynthesizerResultFrame
+        # SynthesizerReceiverThread
+        # -> VoiceTransformTrack: VoiceSynthesizerResultFrame
         self.voice_frame_queue: deque = deque([])
 
         self.return_frame_format = {"sample_rate": 48000, "sample_size": 960}
@@ -164,7 +175,7 @@ class AudioBroker:
 
     def __extractor(self) -> AudioBrokerCommunicator:
         wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
-            worker_type="SpeechExtractor"
+            worker_type="SpeechExtractor",
         )
         if wstat is None:
             raise AudioBrokerError("SpeechExtractor worker is not found.")
@@ -195,7 +206,7 @@ class AudioBroker:
 
     def __recognizer(self) -> AudioBrokerCommunicator:
         wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
-            worker_type="SpeechRecognizer"
+            worker_type="SpeechRecognizer",
         )
         if wstat is None:
             raise AudioBrokerError("SpeechRecognizer worker is not found.")
@@ -226,7 +237,7 @@ class AudioBroker:
 
     def __text_processor(self) -> AudioBrokerCommunicator:
         wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
-            worker_type="TextProcessor"
+            worker_type="TextProcessor",
         )
         if wstat is None:
             raise AudioBrokerError("TextProcessor worker is not found.")
@@ -261,7 +272,7 @@ class AudioBroker:
 
     def __synthesizer(self) -> AudioBrokerCommunicator:
         wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
-            worker_type="VoiceSynthesizer"
+            worker_type="VoiceSynthesizer",
         )
         if wstat is None:
             raise AudioBrokerError("voiceSynthesizer worker is not found.")

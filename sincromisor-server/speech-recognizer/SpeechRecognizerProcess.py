@@ -16,7 +16,7 @@ from speech_recognizer.SpeechRecognizer import SpeechRecognizerWorker
 setproctitle("SPRecognizer")
 args: SpeechRecognizerProcessArgument = SpeechRecognizerProcessArgument.argparse()
 logging.config.dictConfig(
-    SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True)
+    SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True),
 )
 
 
@@ -65,7 +65,8 @@ class SpeechRecognizerProcess:
                         current_speech_buffer = extractor_result.voice.copy()
                     else:
                         current_speech_buffer = np.append(
-                            current_speech_buffer, extractor_result.voice
+                            current_speech_buffer,
+                            extractor_result.voice,
                         )
                         extractor_result.voice = current_speech_buffer
                     result = speech_recognizer.recognize(extractor_result)
@@ -75,7 +76,7 @@ class SpeechRecognizerProcess:
                 self.__logger.info("Disconnected WebSocket.")
             except Exception as e:
                 self.__logger.error(
-                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
                 )
                 await ws.close()
 

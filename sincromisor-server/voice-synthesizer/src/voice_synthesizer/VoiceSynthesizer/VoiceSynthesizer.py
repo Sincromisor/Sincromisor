@@ -17,7 +17,8 @@ class VoiceSynthesizer(VoiceVox):
     # テキストを元に音声を生成し、エンコード済み音声と母音タイミングデータをdictにまとめて返す。
     def generate(self, vs_request: VoiceSynthesizerRequest) -> VoiceSynthesizerResult:
         query: dict = self.audio_query(
-            text=vs_request.message, style_id=vs_request.style_id
+            text=vs_request.message,
+            style_id=vs_request.style_id,
         )
         query["prePhonemeLength"] = vs_request.pre_phoneme_length
         query["postPhonemeLength"] = vs_request.post_phoneme_length
@@ -53,13 +54,15 @@ class VoiceSynthesizer(VoiceVox):
                 text=False,
             )
             return {"voice": encoder_p.stdout, "audio_format": "audio/aac"}
-        elif audio_format == "audio/ogg;codecs=opus":
+        if audio_format == "audio/ogg;codecs=opus":
             encoder_p: CompletedProcess = sp.run(
-                ["opusenc", "-", "-"], input=voice, capture_output=True, text=False
+                ["opusenc", "-", "-"],
+                input=voice,
+                capture_output=True,
+                text=False,
             )
             return {"voice": encoder_p.stdout, "audio_format": "audio/ogg;codecs=opus"}
-        else:
-            return {"voice": voice, "audio_format": "audio/wav"}
+        return {"voice": voice, "audio_format": "audio/wav"}
 
     # フレーズの間隔を指定した秒数で上書きする。
     def query_filter(self, query: dict, sec: float = 0.1) -> dict:
@@ -79,7 +82,7 @@ class VoiceSynthesizer(VoiceVox):
     def __parse_phrases(self, query: dict) -> list:
         mora_list = []
         mora_list.append(
-            {"vowel": None, "length": query["prePhonemeLength"], "text": None}
+            {"vowel": None, "length": query["prePhonemeLength"], "text": None},
         )
 
         # クエリからフレーズをひとつずつ取り出す。
@@ -90,7 +93,7 @@ class VoiceSynthesizer(VoiceVox):
             mora_list += self.__parse_phrase(phrase)
 
         mora_list.append(
-            {"vowel": None, "length": query["postPhonemeLength"], "text": None}
+            {"vowel": None, "length": query["postPhonemeLength"], "text": None},
         )
         return mora_list
 
