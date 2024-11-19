@@ -1,33 +1,32 @@
-import os
 import logging
 import logging.config
+import os
 from logging import Logger
-from setproctitle import setproctitle
-from sincro_config import SincromisorLoggerConfig, KeepAliveReporter
-from sincro_rtc.models import SincromisorProcessArgument
+from threading import Event
 
+import uvicorn
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
+from setproctitle import setproctitle
+from sincro_config import KeepAliveReporter, SincromisorConfig, SincromisorLoggerConfig
+from sincro_rtc.models import RTCSessionOffer, SincromisorProcessArgument
+from sincro_rtc.RTCSession import RTCSessionManager
 
 if os.environ.get("SINCROMISOR_MODE") == "development":
     import tracemalloc
+
     from sincro_rtc.utils import MemoryProfiler
 
     tracemalloc.start()
     mem = MemoryProfiler()
 
-setproctitle(f"Sincromisor")
+setproctitle("Sincromisor")
 
 args: SincromisorProcessArgument = SincromisorProcessArgument.argparse()
 logging.config.dictConfig(
     SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True)
 )
 
-from threading import Event
-import uvicorn
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
-from sincro_rtc.models import RTCSessionOffer, SincromisorProcessArgument
-from sincro_rtc.RTCSession import RTCSessionManager
-from sincro_config import SincromisorConfig
 
 # from starlette.middleware.cors import CORSMiddleware
 

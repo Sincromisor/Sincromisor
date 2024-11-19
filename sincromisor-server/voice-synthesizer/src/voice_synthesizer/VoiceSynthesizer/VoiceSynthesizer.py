@@ -1,9 +1,10 @@
+import subprocess as sp
 import wave
 from io import BytesIO
-import subprocess as sp
 from subprocess import CompletedProcess
-from sincro_models import VoiceSynthesizerRequest
-from sincro_models import VoiceSynthesizerResult
+
+from sincro_models import VoiceSynthesizerRequest, VoiceSynthesizerResult
+
 from .VoiceVox import VoiceVox
 
 
@@ -48,13 +49,13 @@ class VoiceSynthesizer(VoiceVox):
             encoder_p: CompletedProcess = sp.run(
                 ["fdkaac", "-S", "-m3", "-f2", "-o-", "-"],
                 input=voice,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE,
+                capture_output=True,
+                text=False,
             )
             return {"voice": encoder_p.stdout, "audio_format": "audio/aac"}
         elif audio_format == "audio/ogg;codecs=opus":
             encoder_p: CompletedProcess = sp.run(
-                ["opusenc", "-", "-"], input=voice, stdout=sp.PIPE, stderr=sp.PIPE
+                ["opusenc", "-", "-"], input=voice, capture_output=True, text=False
             )
             return {"voice": encoder_p.stdout, "audio_format": "audio/ogg;codecs=opus"}
         else:

@@ -1,7 +1,9 @@
-from sincro_models import TextProcessorRequest, TextProcessorResult
-from .TextProcessorWorker import TextProcessorWorker
-from ..PokeText import PokeText
 from collections.abc import Generator
+
+from sincro_models import TextProcessorRequest, TextProcessorResult
+
+from ..PokeText import PokeText
+from .TextProcessorWorker import TextProcessorWorker
 
 
 class PokeTextProcessorWorker(TextProcessorWorker):

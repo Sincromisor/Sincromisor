@@ -1,7 +1,8 @@
 import json
+from collections.abc import Generator
+
 import requests
 from requests import Response
-from typing import Generator
 
 
 class DifyClient:

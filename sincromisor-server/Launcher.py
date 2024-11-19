@@ -1,7 +1,14 @@
-import os
 import logging
 import logging.config
+import os
+import shutil
+import signal
+import subprocess as sp
+import time
 from logging import Logger
+from threading import Thread
+
+from setproctitle import setproctitle
 from sincro_config import SincromisorConfig, SincromisorLoggerConfig
 
 config = SincromisorConfig.from_yaml()
@@ -10,14 +17,6 @@ logging.config.dictConfig(
         log_file=config.get_log_path("Launcher"), stdout=True
     )
 )
-
-import time
-import shutil
-import signal
-import subprocess as sp
-from threading import Thread
-from typing import List
-from setproctitle import setproctitle
 
 
 class ProcessStdOutReader(Thread):
@@ -89,7 +88,7 @@ class ProcessLauncher:
 
 setproctitle("SincroLauncher")
 running: bool = True
-processes: List[ProcessLauncher] = []
+processes: list[ProcessLauncher] = []
 
 
 def all_active():

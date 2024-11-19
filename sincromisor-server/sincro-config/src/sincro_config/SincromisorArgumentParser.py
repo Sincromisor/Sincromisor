@@ -1,10 +1,10 @@
-from pydantic import BaseModel
-from argparse import ArgumentParser
 import os
+from argparse import ArgumentParser
+
+from pydantic import BaseModel
 
 
 class SincromisorArgumentParser(BaseModel):
-
     @classmethod
     def description(cls) -> str:
         return cls.__name__

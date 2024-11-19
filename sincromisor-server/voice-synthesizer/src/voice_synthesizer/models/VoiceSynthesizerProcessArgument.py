@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+
 from sincro_config import SincromisorArgumentParser
 
 

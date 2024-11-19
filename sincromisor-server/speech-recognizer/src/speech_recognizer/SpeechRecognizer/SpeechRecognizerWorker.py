@@ -1,10 +1,12 @@
-import numpy as np
-from pathlib import Path
-from datetime import datetime
 import logging
-from logging import Logger
 import shutil
+from datetime import datetime
+from logging import Logger
+from pathlib import Path
+
+import numpy as np
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
+
 from .SpeechRecognizer import SpeechRecognizer
 
 

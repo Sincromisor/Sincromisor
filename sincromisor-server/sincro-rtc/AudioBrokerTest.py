@@ -1,8 +1,9 @@
 import signal
-from sincro_rtc.AudioBroker import AudioBroker
-from threading import Thread
-import time
 import sys
+import time
+from threading import Thread
+
+from sincro_rtc.AudioBroker import AudioBroker
 from ulid import ULID
 
 ab = AudioBroker(session_id=ULID())

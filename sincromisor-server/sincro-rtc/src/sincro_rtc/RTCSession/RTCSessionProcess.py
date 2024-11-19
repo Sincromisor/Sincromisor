@@ -1,21 +1,23 @@
-import logging
-from logging import Logger
 import asyncio
+import logging
 import socket
 import traceback
-from aiortc import (
-    RTCPeerConnection,
-    RTCSessionDescription,
-    RTCConfiguration,
-    RTCIceServer,
-    RTCDataChannel,
-)
-from aiortc.contrib.media import MediaRelay
+from logging import Logger
 from multiprocessing import Process
 from multiprocessing.connection import Connection
 from multiprocessing.sharedctypes import Synchronized
+
+from aiortc import (
+    RTCConfiguration,
+    RTCDataChannel,
+    RTCIceServer,
+    RTCPeerConnection,
+    RTCSessionDescription,
+)
+from aiortc.contrib.media import MediaRelay
 from setproctitle import setproctitle
 from sincro_config import SincromisorConfig
+
 from ..models import RTCVoiceChatSession
 from .VoiceTransformTrack import VoiceTransformTrack
 
@@ -163,12 +165,12 @@ class RTCSessionProcess(Process):
         self.__server_sdp_pipe.send(await self.__offer())
         while self.__rtc_session_status.value >= 0:
             await asyncio.sleep(1)
-        self.__logger.info(f"RTC session loop terminated.")
+        self.__logger.info("RTC session loop terminated.")
         self.__server_sdp_pipe.close()
         if self.__vcs:
             await self.__vcs.close()
-        self.__logger.info(f"RTC connection closed.")
+        self.__logger.info("RTC connection closed.")
 
     def run(self) -> None:
         asyncio.run(self.__serve())
-        self.__logger.info(f"RTC session terminated.")
+        self.__logger.info("RTC session terminated.")

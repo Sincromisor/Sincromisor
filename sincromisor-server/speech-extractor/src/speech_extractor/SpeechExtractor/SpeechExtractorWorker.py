@@ -1,12 +1,13 @@
-from fastapi import WebSocket
-import time
 import logging
+import time
 from logging import Logger
+
 import numpy as np
+from fastapi import WebSocket
 from mediapipe.tasks import python
-from mediapipe.tasks.python.components import containers
 from mediapipe.tasks.python import audio
 from mediapipe.tasks.python.audio.audio_classifier import AudioClassifier
+from mediapipe.tasks.python.components import containers
 from sincro_models import SpeechExtractorResult
 
 

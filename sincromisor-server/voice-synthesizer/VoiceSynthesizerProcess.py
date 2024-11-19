@@ -1,9 +1,15 @@
 import logging
 import logging.config
+import traceback
 from logging import Logger
+from threading import Event
+
+import uvicorn
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from setproctitle import setproctitle
-from sincro_config import SincromisorLoggerConfig, KeepAliveReporter
+from sincro_config import KeepAliveReporter, SincromisorLoggerConfig
 from voice_synthesizer.models import VoiceSynthesizerProcessArgument
+from voice_synthesizer.VoiceSynthesizer import VoiceSynthesizerWorker
 
 setproctitle("VSynthesizer")
 
@@ -11,12 +17,6 @@ args: VoiceSynthesizerProcessArgument = VoiceSynthesizerProcessArgument.argparse
 logging.config.dictConfig(
     SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True)
 )
-
-import traceback
-from threading import Event
-import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from voice_synthesizer.VoiceSynthesizer import VoiceSynthesizerWorker
 
 
 class VoiceSynthesizerProcess:

@@ -1,47 +1,20 @@
-from pydantic import BaseModel, Field
-from typing import List, Tuple, Optional, Generator
-import yaml
 import os
 import random
+from collections.abc import Generator
 
+import yaml
+from pydantic import BaseModel
 
-class WorkerConfig(BaseModel):
-    Host: str
-    Port: int
-    Url: str
-    ForwardedAllowIps: Optional[str] = Field(None, alias="forwarded-allow-ips")
-    Launch: bool | None = False
-
-
-class RTCIceServerConfig(BaseModel):
-    Urls: str
-    UserName: str | None = None
-    Credential: str | None = None
-
-    def to_lowerkeys(self) -> dict:
-        return {
-            "urls": self.Urls,
-            "UserName": self.UserName,
-            "Credential": self.Credential,
-        }
-
-
-class WebRTCConfig(BaseModel):
-    MaxSessions: int
-    RTCIceServers: List[RTCIceServerConfig]
-
-
-class VoiceSynthesizerConfig(BaseModel):
-    EnableRedis: bool
-    DefaultStyleID: int
-    PrePhonemeLength: float
-    PostPhonemeLength: float
+from .RTCIceServerConfig import RTCIceServerConfig
+from .VoiceSynthesizerConfig import VoiceSynthesizerConfig
+from .WebRTCConfig import WebRTCConfig
+from .WorkerConfig import WorkerConfig
 
 
 class SincromisorConfig(BaseModel):
     ServerName: str
     VoiceSynthesizer: VoiceSynthesizerConfig
-    Worker: dict[str, List[WorkerConfig]]
+    Worker: dict[str, list[WorkerConfig]]
     WebRTC: WebRTCConfig
     LogDirectory: str | None = None
 
@@ -49,7 +22,7 @@ class SincromisorConfig(BaseModel):
     def from_yaml(cls, filename: str | None = None) -> "SincromisorConfig":
         if filename is None:
             filename = cls.config_path()
-        with open(filename, "r") as file:
+        with open(filename) as file:
             config_data = yaml.safe_load(file)
         return SincromisorConfig(**config_data)
 
@@ -70,7 +43,7 @@ class SincromisorConfig(BaseModel):
 
     def get_workers_conf(
         self, type: str
-    ) -> Generator[Tuple[int, WorkerConfig], None, None]:
+    ) -> Generator[tuple[int, WorkerConfig], None, None]:
         worker_id: int = 0
         for conf in self.Worker[type]:
             yield (worker_id, conf)
@@ -78,7 +51,7 @@ class SincromisorConfig(BaseModel):
 
     def get_launchable_workers_conf(
         self, type: str
-    ) -> Generator[Tuple[int, WorkerConfig], None, None]:
+    ) -> Generator[tuple[int, WorkerConfig], None, None]:
         worker_id: int = 0
         for conf in self.Worker[type]:
             if conf.Launch:

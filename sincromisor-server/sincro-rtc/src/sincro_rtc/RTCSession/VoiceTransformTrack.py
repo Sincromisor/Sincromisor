@@ -1,18 +1,19 @@
 import logging
-from logging import Logger
 import traceback
-import numpy as np
 from asyncio.exceptions import CancelledError
-from multiprocessing.sharedctypes import Synchronized
 from fractions import Fraction
+from logging import Logger
+from multiprocessing.sharedctypes import Synchronized
+
+import numpy as np
 from aiortc import MediaStreamTrack
 from aiortc.mediastreams import MediaStreamError
 from av.audio.frame import AudioFrame
 from av.audio.resampler import AudioResampler
-from ..models import RTCVoiceChatSession
-from sincro_models import TextProcessorResult
-from sincro_models import VoiceSynthesizerResultFrame
+from sincro_models import TextProcessorResult, VoiceSynthesizerResultFrame
+
 from ..AudioBroker import AudioBroker, AudioBrokerError
+from ..models import RTCVoiceChatSession
 
 
 class VoiceTransformTrack(MediaStreamTrack):
@@ -33,7 +34,7 @@ class VoiceTransformTrack(MediaStreamTrack):
         # RTCSessionManager、RTCSessionProcessと共有される
         self.__rtc_session_status: Synchronized = rtc_session_status
         self.__session_id: str = vcs.session_id
-        self.__logger.info(f"Initialize VoiceTransformTrack.")
+        self.__logger.info("Initialize VoiceTransformTrack.")
         self.__track: MediaStreamTrack = track
         self.__vcs: RTCVoiceChatSession = vcs
         # SpeechExtractor -> SpeechRecognizer用フォーマットは1ch, 16bit, 16000Hz
@@ -59,9 +60,9 @@ class VoiceTransformTrack(MediaStreamTrack):
             frame: AudioFrame = await self.__track.recv()
             return self.__transform(frame)
         except CancelledError:
-            self.__logger.info(f"recv - CancelledError.")
+            self.__logger.info("recv - CancelledError.")
         except MediaStreamError:
-            self.__logger.info(f"recv - MediaStreamError.")
+            self.__logger.info("recv - MediaStreamError.")
         except Exception as e:
             self.__logger.error(
                 f"recv - UnknownError: {repr(e)}\n{traceback.format_exc()}"
@@ -148,7 +149,7 @@ class VoiceTransformTrack(MediaStreamTrack):
         return frame
 
     def close(self) -> None:
-        self.__logger.info(f"Closing VoiceTransformTrack.")
+        self.__logger.info("Closing VoiceTransformTrack.")
 
         try:
             self.__audio_broker.close()
@@ -164,4 +165,4 @@ class VoiceTransformTrack(MediaStreamTrack):
                 f"close - UnknownError: {repr(e)}\n{traceback.format_exc()}"
             )
             traceback.print_exc()
-        self.__logger.info(f"Closed VoiceTransformTrack.")
+        self.__logger.info("Closed VoiceTransformTrack.")

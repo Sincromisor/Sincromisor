@@ -1,64 +1,19 @@
-import time
 import logging
-from logging import Logger
 import traceback
-from io import BytesIO
 from collections import deque
 from collections.abc import Generator
-from threading import Thread, Event
-from websockets.sync.client import ClientConnection
-from websockets.exceptions import ConnectionClosed
+from io import BytesIO
+from threading import Event, Thread
+
 import av
 from av import AudioResampler
 from av.container import InputContainer
 from sincro_models import (
-    TextProcessorResult,
     VoiceSynthesizerResult,
     VoiceSynthesizerResultFrame,
 )
-
-
-class SynthesizerSenderThread(Thread):
-    def __init__(
-        self,
-        ws: ClientConnection,
-        text_processor_results: deque,
-        running: Event,
-        session_id: str,
-    ):
-        super().__init__()
-        self.__session_id: str = session_id
-        self.__logger: Logger = logging.getLogger(
-            __name__ + f"[{self.__session_id[21:26]}]"
-        )
-        self.__ws: ClientConnection = ws
-        self.__text_processor_results: deque = text_processor_results
-        self.__running: Event = running
-
-    def run(self) -> None:
-        self.__logger.info(f"Thread start.")
-        try:
-            last_ping: float = time.time()
-            while self.__running.is_set():
-                if len(self.__text_processor_results) > 0:
-                    tp_result: TextProcessorResult = (
-                        self.__text_processor_results.popleft()
-                    )
-                    self.__logger.info(f"Send: {repr(tp_result)}")
-                    self.__ws.send(tp_result.to_msgpack())
-                else:
-                    if last_ping <= time.time() + 10:
-                        self.__ws.ping()
-                        last_ping = time.time()
-                    time.sleep(0.2)
-            self.__logger.info("Cancelled by another thread.")
-        except ConnectionClosed:
-            self.__logger.info("ConnectionClosed.")
-        except Exception as e:
-            self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
-            traceback.print_exc()
-        self.__logger.info("Thread terminated.")
-        self.__running.clear()
+from websockets.exceptions import ConnectionClosed
+from websockets.sync.client import ClientConnection
 
 
 class SynthesizerReceiverThread(Thread):
@@ -79,7 +34,7 @@ class SynthesizerReceiverThread(Thread):
         self.__session_id: str = session_id
 
     def run(self) -> None:
-        self.__logger.info(f"Thread start.")
+        self.__logger.info("Thread start.")
         while self.__running.is_set():
             try:
                 pack: bytes = self.__ws.recv(timeout=5)

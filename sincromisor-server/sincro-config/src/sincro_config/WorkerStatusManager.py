@@ -1,14 +1,9 @@
-from redis import Redis
-import time
 import random
-from pydantic import BaseModel
+import time
 
+from redis import Redis
 
-class WorkerStatus(BaseModel):
-    host: str
-    port: int
-    last: float
-    count: int
+from .WorkerStatus import WorkerStatus
 
 
 class WorkerStatusManager:
@@ -42,7 +37,7 @@ class WorkerStatusManager:
             self.active_workers(worker_type=worker_type, threshold=threshold)
         )
 
-    def __parse(self, key, value) -> WorkerStatus:
+    def __parse(self, key: str, value: str) -> WorkerStatus:
         host, __port = key.split(":")
         __last, __count = value.split(":")
         port = int(__port)

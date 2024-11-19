@@ -1,8 +1,9 @@
 import logging
-from logging import Logger
-from threading import Thread, Event
-from redis import Redis, ConnectionError
 import time
+from logging import Logger
+from threading import Event, Thread
+
+from redis import ConnectionError, Redis
 
 
 class KeepAliveReporter(Thread):
@@ -52,7 +53,7 @@ class KeepAliveReporter(Thread):
                     f"Keepalive reporter - connecting - {self.redis_host}:{self.redis_port}"
                 )
                 redis: Redis = Redis(host=self.redis_host, port=self.redis_port, db=1)
-                self.__logger.info(f"Keepalive reporter - connected.")
+                self.__logger.info("Keepalive reporter - connected.")
 
                 redis_key: str = f"KeepAliveReporter.{self.worker_type}"
                 while not self.event.wait(self.interval):

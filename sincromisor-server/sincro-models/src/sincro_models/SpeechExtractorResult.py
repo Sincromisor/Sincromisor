@@ -1,8 +1,9 @@
+import subprocess as sp
 import wave
+
 import msgpack
 import numpy as np
 from pydantic import BaseModel, ConfigDict
-import subprocess as sp
 
 
 class SpeechExtractorResult(BaseModel):
@@ -86,8 +87,8 @@ class SpeechExtractorResult(BaseModel):
                 "-",
             ],
             input=self.voice.tobytes(),
-            stdout=sp.PIPE,
-            stderr=sp.PIPE,
+            capture_output=True,
+            text=False,
         )
         print(f"wrote: {len(self.voice)} {path}")
         with open(path, "wb") as opus:

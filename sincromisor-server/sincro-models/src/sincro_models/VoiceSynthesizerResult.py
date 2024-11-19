@@ -1,6 +1,7 @@
-from pydantic import BaseModel, ConfigDict
-import msgpack
 import json
+
+import msgpack
+from pydantic import BaseModel, ConfigDict
 
 
 class VoiceSynthesizerResult(BaseModel):

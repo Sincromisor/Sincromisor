@@ -1,8 +1,9 @@
 import logging
 from logging import Logger
+
 from redis import Redis
-from sincro_models import VoiceSynthesizerRequest
-from sincro_models import VoiceSynthesizerResult
+from sincro_models import VoiceSynthesizerRequest, VoiceSynthesizerResult
+
 from .VoiceSynthesizer import VoiceSynthesizer
 
 
@@ -28,7 +29,7 @@ class VoiceCacheManager:
     def get_speaker_ids(self) -> dict:
         try:
             speakers: list = self.vsynth.speakers()
-        except:
+        except Exception:
             raise self.VoiceSynthesizerServerException
 
         ids: dict = {}
@@ -44,7 +45,7 @@ class VoiceCacheManager:
     def get_speaker_info(self, speaker_id: int) -> dict:
         try:
             speaker_ids: dict = self.get_speaker_ids()
-        except:
+        except Exception:
             raise self.VoiceSynthesizerServerException
         return speaker_ids[speaker_id]
 
@@ -58,7 +59,7 @@ class VoiceCacheManager:
             vs_result: VoiceSynthesizerResult = self.vsynth.generate(
                 vs_request=vs_request
             )
-        except:
+        except Exception:
             raise self.VoiceSynthesizerServerException
         self.redis.set(key, vs_result.to_msgpack())
         return vs_result
@@ -69,5 +70,5 @@ class VoiceCacheManager:
         self.logger.info(f"SynthRequest(NOCACHE): {vs_request.message}")
         try:
             return self.vsynth.generate(vs_request=vs_request)
-        except:
+        except Exception:
             raise self.VoiceSynthesizerServerException

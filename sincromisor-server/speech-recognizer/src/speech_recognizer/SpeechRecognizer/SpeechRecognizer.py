@@ -1,7 +1,7 @@
 import nue_asr
+import numpy as np
 import torch
 from torch import Tensor
-import numpy as np
 
 
 class RecognizerError(Exception):
@@ -63,7 +63,7 @@ class SpeechRecognizer:
                 )
                 return [audio_tensor.to(self.device), outputs]
         except RuntimeError as e:
-            raise RecognizerError()
+            raise RecognizerError(e)
 
     def decode(self, outputs) -> str:
         return self.tokenizer.decode(outputs[0], skip_special_tokens=True)

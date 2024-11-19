@@ -1,12 +1,14 @@
-import traceback
 import logging
+import traceback
 from logging import Logger
 from multiprocessing import Pipe, Value
 from multiprocessing.connection import Connection
 from multiprocessing.sharedctypes import Synchronized
-from . import RTCSessionProcess
-from ..models import RTCSessionOffer
+
 from ulid import ULID
+
+from ..models import RTCSessionOffer
+from .RTCSessionProcess import RTCSessionProcess
 
 
 class RTCProcessDescription:
@@ -79,7 +81,7 @@ class RTCSessionManager:
         for session_id, ps_desc in self.__processes.items():
             try:
                 ps_desc.rtc_session_status.value = -1
-            except:
+            except Exception:
                 self.__logger.error(
                     f"[{session_id}] Change session status: UnknownError - {traceback.format_exc()}"
                 )
@@ -88,7 +90,7 @@ class RTCSessionManager:
         for session_id, ps_desc in self.__processes.items():
             try:
                 ps_desc.close(self.__join_timeout)
-            except:
+            except Exception:
                 self.__logger.error(
                     f"[{session_id}] RTC session close: UnknownError - {traceback.format_exc()}"
                 )

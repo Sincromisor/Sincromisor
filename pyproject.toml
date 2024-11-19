@@ -78,3 +78,18 @@ text-processor = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["sincromisor-server"]
+
+# https://docs.astral.sh/ruff/rules/
+[tool.ruff.lint]
+extend-select = [
+    # isort
+    "I",
+    # pyupgrade
+    "UP",
+    # pydocstyle
+    # "D",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

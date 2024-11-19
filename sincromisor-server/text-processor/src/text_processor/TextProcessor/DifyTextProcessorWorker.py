@@ -1,9 +1,11 @@
-from collections.abc import Generator
-from sincro_models import TextProcessorRequest, TextProcessorResult
-from .TextProcessorWorker import TextProcessorWorker
-from threading import Thread, Event
 from collections import deque
+from collections.abc import Generator
+from threading import Event, Thread
+
+from sincro_models import TextProcessorRequest, TextProcessorResult
+
 from ..Dify import DifyClient
+from .TextProcessorWorker import TextProcessorWorker
 
 
 class DifyTextProcessorWorker(TextProcessorWorker):
@@ -53,7 +55,7 @@ class DifyTextProcessorWorker(TextProcessorWorker):
             for response in self.dify_client.chat(
                 inputs={}, query=request, conversation_id=self.conversation_id
             ):
-                match (response["event"]):
+                match response["event"]:
                     case "message":
                         buffer += response["answer"]
                         char: str

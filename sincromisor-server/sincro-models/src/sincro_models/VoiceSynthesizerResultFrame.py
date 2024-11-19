@@ -1,6 +1,7 @@
-from pydantic import BaseModel, ConfigDict
-import numpy as np
 import json
+
+import numpy as np
+from pydantic import BaseModel, ConfigDict
 
 
 class VoiceSynthesizerResultFrame(BaseModel):

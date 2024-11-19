@@ -1,6 +1,6 @@
-import requests
 import json
 
+import requests
 
 # API reference
 # https://voicevox.github.io/voicevox_engine/api/
@@ -13,7 +13,7 @@ class VoiceVox:
     def __init__(self, host: str = "127.0.0.1", port: int = 50021):
         self.host = host
         self.port = port
-        self.base_url = "http://{}:{}".format(self.host, self.port)
+        self.base_url = f"http://{self.host}:{self.port}"
         self.style_id_key: str = "speaker"  # speaker(deprecated)、style_id(新)。
 
     # テキストを+synthesis+に渡せるクエリJSON(連想配列)に変換。
@@ -22,7 +22,7 @@ class VoiceVox:
     # * 戻り値 - クエリ連想配列
     def audio_query(self, text: str, style_id: int = 1) -> dict:
         res = requests.post(
-            "{}/audio_query".format(self.base_url),
+            f"{self.base_url}/audio_query",
             params={self.style_id_key: style_id, "text": text},
         )
         self.response_validator(res)
@@ -44,7 +44,7 @@ class VoiceVox:
         self, text: str, style_id: int = 1, is_kana: bool = False
     ) -> list:
         res = requests.post(
-            "{}/accent_phrases".format(self.base_url),
+            f"{self.base_url}/accent_phrases",
             params={self.style_id_key: style_id, "text": text, "is_kana": is_kana},
         )
         self.response_validator(res)
@@ -56,7 +56,7 @@ class VoiceVox:
     # * 戻り値 - wavストリーム
     def query_synthesis(self, query: dict, style_id: int = 1) -> bytes:
         res = requests.post(
-            "{}/synthesis".format(self.base_url),
+            f"{self.base_url}/synthesis",
             params={self.style_id_key: style_id},
             headers={"Content-Type": "application/json"},
             data=json.dumps(query),
@@ -86,7 +86,7 @@ class VoiceVox:
         morph_rate: float = 0.5,
     ) -> bytes:
         res = requests.post(
-            "{}/synthesis_morphing".format(self.base_url),
+            f"{self.base_url}/synthesis_morphing",
             params={
                 f"base_{self.style_id_key}": base_style_id,
                 f"target_{self.style_id_key}": target_style_id,
@@ -101,7 +101,7 @@ class VoiceVox:
     # 話者の一覧を取得。
     # * 戻り値 - 話者一覧の配列。
     def speakers(self) -> list:
-        res = requests.get("{}/speakers".format(self.base_url))
+        res = requests.get(f"{self.base_url}/speakers")
         self.response_validator(res)
         return res.json()
 
@@ -110,7 +110,7 @@ class VoiceVox:
     # * 戻り値 - 話者の詳細情報の連想配列。
     def speaker_info(self, speaker_uuid: str) -> dict:
         res = requests.get(
-            "{}/speaker_info".format(self.base_url),
+            f"{self.base_url}/speaker_info",
             params={"speaker_uuid": speaker_uuid},
         )
         self.response_validator(res)
@@ -119,21 +119,21 @@ class VoiceVox:
     # サーバエンジンが保持しているプリセットを取得。
     # * 戻り値 - 配列
     def presets(self) -> list:
-        res = requests.get("{}/presets".format(self.base_url))
+        res = requests.get(f"{self.base_url}/presets")
         self.response_validator(res)
         return res.json()
 
     # サーバのバージョンを取得。
     # 戻り値 - バージョン文字列
     def version(self) -> str:
-        res = requests.get("{}/version".format(self.base_url))
+        res = requests.get(f"{self.base_url}/version")
         self.response_validator(res)
         return res.json()
 
     # エンジンコアのバージョンを取得。
     # 戻り値 - バージョン文字列の配列
     def core_versions(self) -> list[str]:
-        res = requests.get("{}/core_versions".format(self.base_url))
+        res = requests.get(f"{self.base_url}/core_versions")
         self.response_validator(res)
         return res.json()
 
@@ -142,7 +142,7 @@ class VoiceVox:
             return True
         else:
             raise self.ProtocolError(
-                "{} {} - {}".format(res.status_code, res.reason, res.request.url)
+                f"{res.status_code} {res.reason} - {res.request.url}"
             )
 
     def update_response_validator(self, res: requests.Response) -> bool:
@@ -150,7 +150,7 @@ class VoiceVox:
             return True
         else:
             raise self.ProtocolError(
-                "{} {} - {}".format(res.status_code, res.reason, res.request.url)
+                f"{res.status_code} {res.reason} - {res.request.url}"
             )
 
 

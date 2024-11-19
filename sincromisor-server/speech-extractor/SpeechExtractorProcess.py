@@ -1,24 +1,23 @@
 import logging
 import logging.config
+import traceback
 from logging import Logger
-from setproctitle import setproctitle
-from sincro_config import SincromisorLoggerConfig, KeepAliveReporter
-from speech_extractor.models import SpeechExtractorProcessArgument
+from threading import Event
 
-setproctitle(f"SPExtractor")
+import uvicorn
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from setproctitle import setproctitle
+from sincro_config import KeepAliveReporter, SincromisorLoggerConfig
+from sincro_models import SpeechExtractorInitializeRequest
+from speech_extractor.models import SpeechExtractorProcessArgument
+from speech_extractor.SpeechExtractor import SpeechExtractorWorker
+
+setproctitle("SPExtractor")
 
 args: SpeechExtractorProcessArgument = SpeechExtractorProcessArgument.argparse()
 logging.config.dictConfig(
     SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True)
 )
-
-
-import traceback
-from threading import Event
-import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from sincro_models import SpeechExtractorInitializeRequest
-from speech_extractor.SpeechExtractor import SpeechExtractorWorker
 
 
 class SpeechExtractorProcess:

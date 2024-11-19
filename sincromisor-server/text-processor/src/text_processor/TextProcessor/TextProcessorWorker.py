@@ -1,6 +1,7 @@
 import logging
-from logging import Logger
 from collections.abc import Generator
+from logging import Logger
+
 from fastapi import WebSocket
 from sincro_models import TextProcessorRequest, TextProcessorResult
 

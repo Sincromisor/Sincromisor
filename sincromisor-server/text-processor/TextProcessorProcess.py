@@ -1,26 +1,25 @@
 import logging
 import logging.config
-from logging import Logger
-from setproctitle import setproctitle
-from sincro_config import SincromisorLoggerConfig, KeepAliveReporter
-from text_processor.models import TextProcessorProcessArgument
-
-setproctitle(f"TextProcessor")
-
-args: TextProcessorProcessArgument = TextProcessorProcessArgument.argparse()
-logging.config.dictConfig(
-    SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True)
-)
-
-
 import traceback
+from logging import Logger
 from threading import Event
+
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from setproctitle import setproctitle
+from sincro_config import KeepAliveReporter, SincromisorLoggerConfig
+from text_processor.models import TextProcessorProcessArgument
 from text_processor.TextProcessor import (
     DifyTextProcessorWorker,
     PokeTextProcessorWorker,
     TextProcessorWorker,
+)
+
+setproctitle("TextProcessor")
+
+args: TextProcessorProcessArgument = TextProcessorProcessArgument.argparse()
+logging.config.dictConfig(
+    SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True)
 )
 
 

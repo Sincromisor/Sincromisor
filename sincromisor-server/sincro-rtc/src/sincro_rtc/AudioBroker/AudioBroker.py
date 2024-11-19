@@ -1,20 +1,24 @@
 import logging
-from logging import Logger
 import traceback
 from collections import deque
-from threading import Event
-from urllib.parse import urljoin
-from websockets.sync.client import connect, ClientConnection
-from websockets.exceptions import ConnectionClosed
-from .ExtractorThread import ExtractorSenderThread, ExtractorReceiverThread
-from .RecognizerThread import RecognizerSenderThread, RecognizerReceiverThread
-from .SynthesizerThread import SynthesizerSenderThread, SynthesizerReceiverThread
-from .TextProcessorThread import TextProcessorSenderThread, TextProcessorReceiverThread
+from logging import Logger
+from threading import Event, Thread
+
 from sincro_config import (
-    WorkerStatusManager,
     WorkerStatus,
+    WorkerStatusManager,
 )
-from threading import Thread
+from websockets.sync.client import ClientConnection, connect
+
+from .Exceptions import AudioBrokerError
+from .ExtractorReceiverThread import ExtractorReceiverThread
+from .ExtractorSenderThread import ExtractorSenderThread
+from .RecognizerReceiverThread import RecognizerReceiverThread
+from .RecognizerSenderThread import RecognizerSenderThread
+from .SynthesizerReceiverThread import SynthesizerReceiverThread
+from .SynthesizerSenderThread import SynthesizerSenderThread
+from .TextProcessorReceiverThread import TextProcessorReceiverThread
+from .TextProcessorSenderThread import TextProcessorSenderThread
 
 
 class AudioBrokerCommunicator:
@@ -81,10 +85,6 @@ class AudioBrokerCommunicators:
         self.synthesizer.close()
 
 
-class AudioBrokerError(Exception):
-    pass
-
-
 class AudioBrokerEvent(Event):
     def __init__(self):
         self.__logger: Logger = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ class AudioBroker:
         self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         self.__session_id: str = session_id
         self.__talk_mode: str = talk_mode
-        self.__wstatuses = WorkerStatusManager(
+        self.__wstatuses: WorkerStatusManager = WorkerStatusManager(
             redis_host=redis_host, redis_port=redis_port
         )
 

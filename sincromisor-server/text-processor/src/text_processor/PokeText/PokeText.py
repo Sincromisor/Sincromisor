@@ -1,5 +1,6 @@
 import re
-from sudachipy import Dictionary, Tokenizer, SplitMode, Morpheme, MorphemeList
+
+from sudachipy import Dictionary, Morpheme, MorphemeList, SplitMode, Tokenizer
 
 # https://warp.da.ndl.go.jp/info:ndljp/pid/8703998/www.ndl.go.jp/jp/library/data/wakati.html
 
@@ -23,10 +24,7 @@ class PokeText:
                 before_pos = result[i - 1].part_of_speech()
             else:
                 before_pos = None
-            if i < len(result) - 1:
-                after_pos = result[i + 1].part_of_speech()
-            else:
-                after_pos = None
+
             current_pos = m.part_of_speech()
 
             match current_pos[0]:
