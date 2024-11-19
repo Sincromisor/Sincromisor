@@ -20,6 +20,14 @@ dev = [
     "types-requests>=2.32.0.20240622",
 ]
 
+full = [
+    "sincro-rtc",
+    "speech-extractor",
+    "speech-recognizer",
+    "text-processor",
+    "voice-synthesizer",
+]
+
 sincro-rtc = [
     "sincro-rtc",
 ]
@@ -56,7 +64,7 @@ members = [
     "sincromisor-server/speech-extractor",
     "sincromisor-server/voice-synthesizer",
     "sincromisor-server/text-processor",
-    "sincromisor-server/sincro-models"
+    "sincromisor-server/sincro-models",
 ]
 
 [tool.uv.sources]

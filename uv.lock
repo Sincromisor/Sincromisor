@@ -2216,12 +2216,19 @@ dependencies = [
     { name = "setuptools" },
 ]
 
-[package.dependency-groups]
+[package.dev-dependencies]
 dev = [
     { name = "mypy" },
     { name = "types-psutil" },
     { name = "types-pyyaml" },
     { name = "types-requests" },
+]
+full = [
+    { name = "sincro-rtc" },
+    { name = "speech-extractor" },
+    { name = "speech-recognizer" },
+    { name = "text-processor" },
+    { name = "voice-synthesizer" },
 ]
 sincro-rtc = [
     { name = "sincro-rtc" },
@@ -2242,12 +2249,19 @@ voice-synthesizer = [
 [package.metadata]
 requires-dist = [{ name = "setuptools", specifier = ">=70.1.1" }]
 
-[package.metadata.dependency-groups]
+[package.metadata.requires-dev]
 dev = [
     { name = "mypy", specifier = ">=1.10.1" },
     { name = "types-psutil", specifier = ">=6.0.0.20240621" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20240311" },
     { name = "types-requests", specifier = ">=2.32.0.20240622" },
+]
+full = [
+    { name = "sincro-rtc", editable = "sincromisor-server/sincro-rtc" },
+    { name = "speech-extractor", editable = "sincromisor-server/speech-extractor" },
+    { name = "speech-recognizer", editable = "sincromisor-server/speech-recognizer" },
+    { name = "text-processor", editable = "sincromisor-server/text-processor" },
+    { name = "voice-synthesizer", editable = "sincromisor-server/voice-synthesizer" },
 ]
 sincro-rtc = [{ name = "sincro-rtc", editable = "sincromisor-server/sincro-rtc" }]
 speech-extractor = [{ name = "speech-extractor", editable = "sincromisor-server/speech-extractor" }]
