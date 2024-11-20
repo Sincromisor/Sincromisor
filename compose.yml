@@ -176,6 +176,7 @@ services:
     profiles:
       - full
       - backend
+      - external
     image: sincromisor/voicevox:latest
     build:
       context: .
@@ -193,6 +194,7 @@ services:
     profiles:
       - full
       - backend
+      - external
     image: sincromisor/voice-cache:latest
     build:
       context: .
