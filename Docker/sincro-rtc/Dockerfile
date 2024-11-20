@@ -19,6 +19,7 @@ WORKDIR ${SINCRO_USER_DIR}
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
     mkdir ${SINCRO_USER_DIR}/sincromisor-server && \
+    mkdir ${SINCRO_USER_DIR}/configs && \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
 # curl: uvのインストール

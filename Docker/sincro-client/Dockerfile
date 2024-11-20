@@ -39,10 +39,6 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-client/public \
     ${SINCRO_USER_DIR}/sincromisor-client/public
 
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./Docker/env_vars/config.yml \
-    ${SINCRO_USER_DIR}/
-
 RUN npm run build
 
 
@@ -54,7 +50,7 @@ COPY --from=builder --chown=root:root \
     /opt/sincromisor/sincromisor-client/dist /srv/sincromisor-client
 
 COPY --chown=root:root \
-    ./Docker/env_vars/Caddyfile \
+    ./configs/Caddyfile \
     /etc/caddy/Caddyfile
 
 CMD ["/usr/bin/caddy", "run", "-c", "/etc/caddy/Caddyfile"]
