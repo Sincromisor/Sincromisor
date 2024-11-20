@@ -29,7 +29,17 @@ export default defineConfig({
                 character: resolve(contents_src, 'character/index.html'),
                 character_glass: resolve(contents_src, 'character-glass/index.html'),
                 area360: resolve(contents_src, 'area360/index.html')
+            },
+            output: {
+                manualChunks: {
+                    vendor: [
+                        '@babylonjs/core'
+                    ]
+                }
             }
         }
     }
 });
+
+// babylon.js Tree Shaking
+// https://doc.babylonjs.com/setup/frameworkPackages/es6Support#tree-shaking
