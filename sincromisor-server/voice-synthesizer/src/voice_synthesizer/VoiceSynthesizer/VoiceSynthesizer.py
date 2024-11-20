@@ -52,6 +52,7 @@ class VoiceSynthesizer(VoiceVox):
                 input=voice,
                 capture_output=True,
                 text=False,
+                check=True,
             )
             return {"voice": encoder_p.stdout, "audio_format": "audio/aac"}
         if audio_format == "audio/ogg;codecs=opus":
@@ -60,6 +61,7 @@ class VoiceSynthesizer(VoiceVox):
                 input=voice,
                 capture_output=True,
                 text=False,
+                check=True,
             )
             return {"voice": encoder_p.stdout, "audio_format": "audio/ogg;codecs=opus"}
         return {"voice": voice, "audio_format": "audio/wav"}

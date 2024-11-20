@@ -2,11 +2,11 @@
 
 set -e
 
-if [ -e "${HOME}/.cargo/bin" ]; then
-    if ! echo "${PATH}" | grep -q -o "${HOME}/.cargo/bin"; then
-        PATH="$HOME/.cargo/bin:$PATH"
-    fi
+cd "$(dirname "${0}")/sincromisor-server"
+
+if [ ! -e ../.env ]; then
+    echo envfile $(realpath ../.env) is not found.
+    exit 1
 fi
 
-cd "$(dirname "${0}")/sincromisor-server"
-uv run python3 Launcher.py
+uv run python3 Launcher.py --env-file ../.env

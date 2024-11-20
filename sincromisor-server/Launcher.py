@@ -1,23 +1,20 @@
 import logging
 import logging.config
 import os
-import shutil
 import signal
 import subprocess as sp
 import time
+from argparse import ArgumentParser
+from collections import OrderedDict
 from logging import Logger
+from pathlib import Path
 from threading import Thread
 
+from dotenv import dotenv_values
 from setproctitle import setproctitle
-from sincro_config import SincromisorConfig, SincromisorLoggerConfig
+from sincro_config import SincromisorLoggerConfig
 
-config = SincromisorConfig.from_yaml()
-logging.config.dictConfig(
-    SincromisorLoggerConfig.generate(
-        log_file=config.get_log_path("Launcher"),
-        stdout=True,
-    ),
-)
+setproctitle("SincroLauncher")
 
 
 class ProcessStdOutReader(Thread):
@@ -27,7 +24,7 @@ class ProcessStdOutReader(Thread):
         self.process: sp.Popen = process
         self.logger: Logger = logger
 
-    def run(self):
+    def run(self) -> None:
         line: bytes
         while line := self.process.stdout.readline():
             line_s: str = line.decode().rstrip("\r\n")
@@ -41,7 +38,7 @@ class ProcessStdErrReader(Thread):
         self.process: sp.Popen = process
         self.logger: Logger = logger
 
-    def run(self):
+    def run(self) -> None:
         line: bytes
         while line := self.process.stderr.readline():
             line_s: str = line.decode().rstrip("\r\n")
@@ -49,21 +46,18 @@ class ProcessStdErrReader(Thread):
 
 
 class ProcessLauncher:
-    def __init__(self, name: str, worker_id: int, args: list):
+    def __init__(self, name: str, args: list, envs: dict[str, str]):
         self.args: list = args
         self.name: str = name
         self.process: sp.Popen | None = None
         self.stdout_t: Thread | None = None
         self.stderr_t: Thread | None = None
-        self.worker_id: int = worker_id
         self.logger: Logger = logging.getLogger(name)
         # サブプロセスに環境変数を引き継ぐ。
-        # 環境変数SINCROMISOR_CONFで明示的に設定ファイルの絶対パスを渡す。
         self.newenv = os.environ.copy()
-        self.newenv["SINCROMISOR_CONF"] = config.config_path()
-        self.newenv["SINCROMISOR_WORKER_ID"] = str(self.worker_id)
+        self.newenv |= envs
 
-    def start(self):
+    def start(self) -> None:
         self.process = sp.Popen(
             self.args,
             stdout=sp.PIPE,
@@ -83,83 +77,91 @@ class ProcessLauncher:
         )
         self.stderr_t.start()
 
-    def active(self):
+    # サブプロセスが稼働していたらTrue、終了していたらFalseを返す
+    def active(self) -> bool:
         return self.process.poll() is None
 
-    def stop(self):
+    def stop(self) -> None:
         self.logger.info(f"Stopping {self.name}")
-        self.process.send_signal(signal.SIGINT)
+        if not self.active():
+            self.logger.info(f"Already stopeed - {self.name}")
+        else:
+            self.process.send_signal(signal.SIGINT)
         self.stdout_t.join()
         self.stderr_t.join()
         self.logger.info(f"{self.name} was terminated.")
 
 
-setproctitle("SincroLauncher")
-running: bool = True
-processes: list[ProcessLauncher] = []
+class SincroLauncher:
+    def __init__(self):
+        self.__args = self.__parse_args()
+        self.__logger:Logger = self.__setup_logger(log_file=self.__args.log_file)
+        self.__logger.info("===== Starting SincroLauncher =====")
+        self.__envs = self.__get_envs(self.__args.env_file)
+        self.__logger.info(self.__envs)
+        self.workers: list[ProcessLauncher] = []
 
-
-def all_active():
-    global processes
-    for process in processes:
-        if not process.active():
-            return False
-    return True
-
-
-def stop_all_workers():
-    global processes
-    for process in processes:
-        process.stop()
-
-
-def trap_sigint(signum, frame):
-    global running
-    running = False
-
-
-signal.signal(signal.SIGINT, trap_sigint)
-
-for dir_name, worker_type in [
-    ["speech-extractor", "SpeechExtractor"],
-    ["speech-recognizer", "SpeechRecognizer"],
-    ["voice-synthesizer", "VoiceSynthesizer"],
-]:
-    for worker_id, worker_conf in config.get_launchable_workers_conf(type=worker_type):
-        worker_p: ProcessLauncher = ProcessLauncher(
-            name=f"{worker_type}({worker_id})",
-            worker_id=worker_id,
-            args=[
-                shutil.which("uvicorn"),
-                f"{dir_name}.{worker_type}Process:app",
-                f"--host={worker_conf.Host}",
-                f"--port={worker_conf.Port}",
-            ],
+    def __parse_args(self) -> dict[str, str]:
+        parser: ArgumentParser = ArgumentParser()
+        parser.add_argument("--env-file", type=str, help=".env file", required=True)
+        parser.add_argument(
+            "--log-file",
+            type=str,
+            default=None,
+            help="log file path(default: None(to stdout))",
         )
-        worker_p.start()
-        processes.append(worker_p)
+        return parser.parse_args()
 
-# --proxy-headersを設定していても、X-Forwarded-Portが常に0になる問題がある模様
-# https://github.com/encode/uvicorn/discussions/1948
-worker_type = "Sincromisor"
-for worker_id, worker_conf in config.get_launchable_workers_conf(type=worker_type):
-    web_p: ProcessLauncher = ProcessLauncher(
-        name=worker_type,
-        worker_id=worker_id,
-        args=[
-            shutil.which("uvicorn"),
-            "sincro-rtc.Sincromisor:app",
-            f"--host={worker_conf.Host}",
-            f"--port={worker_conf.Port}",
-            "--proxy-headers",
-            f'--forwarded-allow-ips="{worker_conf.ForwardedAllowIps}"',
-            # "--log-level=debug"
-        ],
-    )
-    web_p.start()
-    processes.append(web_p)
+    def __setup_logger(self, log_file: str | None) -> Logger:
+        logging.config.dictConfig(
+            SincromisorLoggerConfig.generate(log_file=log_file, stdout=True),
+        )
+        return logging.getLogger("sincro." + __name__)
 
-while running and all_active():
-    time.sleep(0.5)
+    def __get_envs(self, env_file: str) -> OrderedDict:
+        return dotenv_values(env_file)
 
-stop_all_workers()
+    def launch(self):
+        cmds: list[str] = [
+            "sincro-rtc/Sincromisor.py",
+            "speech-extractor/SpeechExtractorProcess.py",
+            "speech-recognizer/SpeechRecognizerProcess.py",
+            "text-processor/TextProcessorProcess.py",
+            "voice-synthesizer/VoiceSynthesizerProcess.py",
+        ]
+        for cmd in cmds:
+            worker_p: ProcessLauncher = ProcessLauncher(
+                name=Path(cmd).stem, args=["uv", "run", cmd], envs=self.__envs
+            )
+            worker_p.start()
+            self.workers.append(worker_p)
+
+        signal.signal(signal.SIGINT, self.__signal_trap)
+
+    # 全てのワーカープロセスが稼働中であればTrue、ひとつでも終了していればFalseを返す。
+    def all_active(self) -> bool:
+        for worker in self.workers:
+            if not worker.active():
+                return False
+        return True
+
+    def stop(self) -> None:
+        for worker in self.workers:
+            worker.stop()
+
+    def __signal_trap(self, signum: int, handler: int) -> None:
+        print(["signal", signum, handler])
+        self.stop()
+
+
+if __name__ == "__main__":
+    sl: SincroLauncher = SincroLauncher()
+    # ソースファイルのあるディレクトリに移動する。
+    # コンストラクタが呼ばれる前だと、
+    # --env_fileオプションが相対パスで設定されていない場合に、
+    # 想定していないパスから読まれる不具合が発生する
+    os.chdir(os.path.dirname(__file__))
+    sl.launch()
+    while sl.all_active():
+        time.sleep(1)
+    sl.stop()

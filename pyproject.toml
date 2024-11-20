@@ -6,6 +6,7 @@ authors = [
     { name = "Akito Miura", email = "phenomer@g.hachune.net" }
 ]
 dependencies = [
+    "python-dotenv>=1.0.1",
     "setuptools>=70.1.1",
 ]
 
@@ -171,7 +172,7 @@ extend-select = [
     # Refactor
     # "PLR",
     # Warning
-    # "PLW",
+    "PLW",
     # tryceratops
     # "TRY",
     # flynt

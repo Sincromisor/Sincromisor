@@ -90,6 +90,7 @@ class SpeechExtractorResult(BaseModel):
             input=self.voice.tobytes(),
             capture_output=True,
             text=False,
+            check=True,
         )
         print(f"wrote: {len(self.voice)} {path}")
         with open(path, "wb") as opus:
