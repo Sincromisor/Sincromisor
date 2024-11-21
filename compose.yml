@@ -50,7 +50,7 @@ services:
       dockerfile: ./Docker/sincro-rtc/Dockerfile
     image: sincromisor/sincro-rtc:latest
     ports:
-      - 8002:8002/tcp
+      - 8001:8001/tcp
     volumes:
       - ./configs/config.yml:/opt/sincromisor/configs/config.yml:ro
     networks:
@@ -74,7 +74,7 @@ services:
       dockerfile: ./Docker/speech-extractor/Dockerfile
     image: sincromisor/speech-extractor:latest
     ports:
-      - 8003:8003/tcp
+      - 8002:8002/tcp
     networks:
       - sincromisor-net
     env_file:
@@ -96,7 +96,7 @@ services:
       dockerfile: ./Docker/speech-recognizer/Dockerfile
     image: sincromisor/speech-recognizer:latest
     ports:
-      - 8004:8004/tcp
+      - 8003:8003/tcp
     volumes:
       - type: volume
         source: huggingface-cache
@@ -130,7 +130,7 @@ services:
       dockerfile: ./Docker/text-processor/Dockerfile
     image: sincromisor/text-processor:latest
     ports:
-      - 8006:8006/tcp
+      - 8004:8004/tcp
     networks:
       - sincromisor-net
     env_file:
