@@ -28,6 +28,8 @@ services:
       - 80:80/tcp
       - 443:443/tcp
       - 443:443/udp
+    volumes:
+      - ./configs/Caddyfile:/etc/caddy/Caddyfile:ro
     networks:
       - sincromisor-net
     deploy:
