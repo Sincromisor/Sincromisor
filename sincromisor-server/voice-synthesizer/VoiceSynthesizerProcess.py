@@ -6,8 +6,9 @@ from threading import Event
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from setproctitle import setproctitle
-from sincro_config import KeepAliveReporter, SincromisorLoggerConfig
+from sincro_config import ServiceDiscoveryReporter, SincromisorLoggerConfig
 from voice_synthesizer.models import VoiceSynthesizerProcessArgument
 from voice_synthesizer.VoiceSynthesizer import VoiceSynthesizerWorker
 
@@ -24,24 +25,28 @@ class VoiceSynthesizerProcess:
         self.__logger: Logger = logging.getLogger("sincro." + __name__)
         self.__logger.info("===== Starting VoiceSynthesizerProcess =====")
         self.__args: VoiceSynthesizerProcessArgument = args
+        self.__sessions: int = 0
 
     def start(self):
         app: FastAPI = FastAPI()
         event: Event = Event()
-        self.keepalive_t: KeepAliveReporter = KeepAliveReporter(
-            event=event,
-            redis_host=self.__args.redis_host,
-            redis_port=self.__args.redis_port,
+        self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
+            worker_type="VoiceSynthesizer",
+            consul_host=self.__args.consul_agent_host,
+            consul_port=self.__args.consul_agent_port,
             public_bind_host=self.__args.public_bind_host,
             public_bind_port=self.__args.public_bind_port,
-            worker_type="VoiceSynthesizer",
-            interval=5,
         )
-        self.keepalive_t.start()
+        self.sd_reporter.register()
 
-        @app.websocket("/VoiceSynthesizer")
-        async def websocket_chat_endpoint(ws: WebSocket):
+        @app.get("/api/v1/statuses")
+        async def get_status() -> JSONResponse:
+            return JSONResponse({"sessions": self.__sessions})
+
+        @app.websocket("/api/v1/VoiceSynthesizer")
+        async def websocket_chat_endpoint(ws: WebSocket) -> None:
             self.__logger.info("Connected Websocket.")
+            self.__sessions += 1
             try:
                 await ws.accept()
                 voice_synthesizer = VoiceSynthesizerWorker(
@@ -58,6 +63,8 @@ class VoiceSynthesizerProcess:
                 self.__logger.error(
                     f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
                 )
+            finally:
+                self.__sessions -= 1
                 await ws.close()
 
         try:
@@ -66,7 +73,6 @@ class VoiceSynthesizerProcess:
             pass
         finally:
             event.set()
-            self.keepalive_t.join()
 
 
 if __name__ == "__main__":

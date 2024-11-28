@@ -77,4 +77,19 @@ class VoiceSynthesizerProcessArgument(SincromisorArgumentParser):
             help="VOICEVOX Style ID(default: 0)",
         )
 
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--redis-host",
+            env_name="SINCRO_REDIS_HOST",
+            default=None,
+            help="Redis address",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--redis-port",
+            env_name="SINCRO_REDIS_PORT",
+            default=6379,
+            help="Redis port(default: 6379)",
+        )
         return

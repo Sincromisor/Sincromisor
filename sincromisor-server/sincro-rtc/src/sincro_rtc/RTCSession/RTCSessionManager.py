@@ -29,12 +29,12 @@ class RTCProcessDescription:
 
 
 class RTCSessionManager:
-    def __init__(self, redis_host: str, redis_port: int):
+    def __init__(self, consul_agent_host: str, consul_agent_port: int):
         self.__logger: Logger = logging.getLogger(__name__)
         self.__processes: dict = {}
         self.__join_timeout: int = 10
-        self.__redis_host = redis_host
-        self.__redis_port = redis_port
+        self.__consul_agent_host = consul_agent_host
+        self.__consul_agent_port = consul_agent_port
 
     # WebRTCのセッションを持つプロセスを新たに生成し、
     # そのプロセスが持つセッションのSDPをdictとして返す。
@@ -53,8 +53,8 @@ class RTCSessionManager:
             request_talk_mode=offer.talk_mode,
             sdp_pipe=cl_pipe,
             rtc_session_status=rtc_session_status,
-            redis_host=self.__redis_host,
-            redis_port=self.__redis_port,
+            consul_agent_host=self.__consul_agent_host,
+            consul_agent_port=self.__consul_agent_port,
         )
         ps.start()
 

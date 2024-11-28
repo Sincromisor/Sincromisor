@@ -1,15 +1,20 @@
 :80 {
-        log {
-                output stdout
-                level info
-        }
+    log {
+            output stdout
+            level info
+    }
 
-        root * /srv/sincromisor-client
-        file_server
+    root * /srv/sincromisor-client
+    file_server
 
-        reverse_proxy /api* {
-                to http://sincro-rtc:8002
-                #    header_up X-Forwarded-For {remote}
-                #    header_up X-Forwarded-Proto {scheme}
+    reverse_proxy /api/* {
+        dynamic a {
+            name sincromisor.service.consul
+            port 8002
+            resolvers sincro-consul-agent:8600
+            versions ipv4
+            refresh 5s
         }
+        lb_policy random
+    }
 }

@@ -8,6 +8,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "pydantic>=2.9.2",
     "redis[hiredis]>=5.2.0",
+    "py-consul>=1.5.3",
 ]
 
 [tool.hatch.build.targets.wheel]

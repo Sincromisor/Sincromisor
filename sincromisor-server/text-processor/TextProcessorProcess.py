@@ -6,8 +6,9 @@ from threading import Event
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from setproctitle import setproctitle
-from sincro_config import KeepAliveReporter, SincromisorLoggerConfig
+from sincro_config import ServiceDiscoveryReporter, SincromisorLoggerConfig
 from text_processor.models import TextProcessorProcessArgument
 from text_processor.TextProcessor import (
     DifyTextProcessorWorker,
@@ -28,20 +29,19 @@ class TextProcessorProcess:
         self.__logger: Logger = logging.getLogger("sincro." + __name__)
         self.__logger.info("===== Starting TextProcessorProcess =====")
         self.__args: TextProcessorProcessArgument = args
+        self.__sessions: int = 0
 
     def start(self):
         app: FastAPI = FastAPI()
         event: Event = Event()
-        self.keepalive_t: KeepAliveReporter = KeepAliveReporter(
-            event=event,
-            redis_host=self.__args.redis_host,
-            redis_port=self.__args.redis_port,
+        self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
+            worker_type="TextProcessor",
+            consul_host=self.__args.consul_agent_host,
+            consul_port=self.__args.consul_agent_port,
             public_bind_host=self.__args.public_bind_host,
             public_bind_port=self.__args.public_bind_port,
-            worker_type="TextProcessor",
-            interval=5,
         )
-        self.keepalive_t.start()
+        self.sd_reporter.register()
         self.__poke_text_worker: TextProcessorWorker = PokeTextProcessorWorker()
         if self.__args.dify_url:
             self.__dify_text_worker: TextProcessorWorker = DifyTextProcessorWorker(
@@ -49,11 +49,16 @@ class TextProcessorProcess:
                 api_key=self.__args.dify_token,
             )
 
+        @app.get("/api/v1/statuses")
+        async def get_status() -> JSONResponse:
+            return JSONResponse({"sessions": self.__sessions})
+
         # talk_mode: chat, sincro
         # /TextProcessor?talk_mode=chat
-        @app.websocket("/TextProcessor")
-        async def websocket_chat_endpoint(ws: WebSocket, talk_mode: str | None):
+        @app.websocket("/api/v1/TextProcessor")
+        async def websocket_chat_endpoint(ws: WebSocket, talk_mode: str | None) -> None:
             self.__logger.info("Connected Websocket.")
+            self.__sessions += 1
             try:
                 await ws.accept()
                 if self.__args.dify_url and talk_mode == "chat":
@@ -67,6 +72,8 @@ class TextProcessorProcess:
                 self.__logger.error(
                     f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
                 )
+            finally:
+                self.__sessions -= 1
                 await ws.close()
 
         try:
@@ -75,7 +82,6 @@ class TextProcessorProcess:
             pass
         finally:
             event.set()
-            self.keepalive_t.join()
 
 
 if __name__ == "__main__":

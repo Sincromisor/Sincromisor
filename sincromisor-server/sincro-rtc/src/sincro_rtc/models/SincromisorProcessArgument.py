@@ -8,11 +8,8 @@ class SincromisorProcessArgument(SincromisorArgumentParser):
     port: int
     public_bind_host: str
     public_bind_port: int
-    redis_host: str
-    redis_port: int
     forwarded_allow_ips: str
     max_sessions: int
-    log_file: str | None
 
     @classmethod
     def set_args(cls, parser: ArgumentParser) -> None:

@@ -1569,6 +1569,18 @@ wheels = [
 ]
 
 [[package]]
+name = "py-consul"
+version = "1.5.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/29/37/990af3ac56e70705578808f6e4109226127379cccd4557ec6c7ae4b9824f/py_consul-1.5.3.tar.gz", hash = "sha256:05bc4e9e0fea17a2156659ed7f93025b2665859787ff8d0aa9c476829ddf3fdd", size = 33491 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/0a/d2ab888381ba5e27d4cd50f774e783c7203bcd2454385a280fa0ef187ca8/py_consul-1.5.3-py2.py3-none-any.whl", hash = "sha256:d1270ec7b253c6af1dfa4a368e3c46f7abed0546feceebe5166999ab20850207", size = 35698 },
+]
+
+[[package]]
 name = "py-cpuinfo"
 version = "9.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2149,6 +2161,7 @@ name = "sincro-config"
 version = "2.0.0"
 source = { editable = "sincromisor-server/sincro-config" }
 dependencies = [
+    { name = "py-consul" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "redis", extra = ["hiredis"] },
@@ -2156,6 +2169,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "py-consul", specifier = ">=1.5.3" },
     { name = "pydantic", specifier = ">=2.9.2" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "redis", extras = ["hiredis"], specifier = ">=5.2.0" },

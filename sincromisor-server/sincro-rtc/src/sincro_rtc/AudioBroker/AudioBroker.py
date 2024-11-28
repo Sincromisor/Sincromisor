@@ -5,8 +5,8 @@ from logging import Logger
 from threading import Event, Thread
 
 from sincro_config import (
-    WorkerStatus,
-    WorkerStatusManager,
+    ServiceDescription,
+    ServiceDiscoveryReferrer,
 )
 from websockets.sync.client import ClientConnection, connect
 
@@ -104,15 +104,14 @@ class AudioBroker:
         self,
         session_id: str,
         talk_mode: str,
-        redis_host: str,
-        redis_port: int,
+        consul_agent_host: str,
+        consul_agent_port: int,
     ):
         self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
         self.__session_id: str = session_id
         self.__talk_mode: str = talk_mode
-        self.__wstatuses: WorkerStatusManager = WorkerStatusManager(
-            redis_host=redis_host,
-            redis_port=redis_port,
+        self.__sd_refrrer: ServiceDiscoveryReferrer = ServiceDiscoveryReferrer(
+            consul_agent_host=consul_agent_host, consul_agent_port=consul_agent_port
         )
 
         # AudioBrokerもしくは子スレッドでなにかしらの問題が発生したら、
@@ -174,12 +173,12 @@ class AudioBroker:
         self.__logger.info("AudioBroker closed.")
 
     def __extractor(self) -> AudioBrokerCommunicator:
-        wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
-            worker_type="SpeechExtractor",
+        worker: ServiceDescription | None = self.__sd_refrrer.get_random_worker(
+            worker_type="SpeechExtractor"
         )
-        if wstat is None:
+        if worker is None:
             raise AudioBrokerError("SpeechExtractor worker is not found.")
-        ws_url: str = f"ws://{wstat.host}:{wstat.port}/SpeechExtractor"
+        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/SpeechExtractor"
         ws: ClientConnection = connect(ws_url)
         sender_t: ExtractorSenderThread = ExtractorSenderThread(
             ws=ws,
@@ -205,12 +204,12 @@ class AudioBroker:
         )
 
     def __recognizer(self) -> AudioBrokerCommunicator:
-        wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
-            worker_type="SpeechRecognizer",
+        worker: ServiceDescription | None = self.__sd_refrrer.get_random_worker(
+            worker_type="SpeechRecognizer"
         )
-        if wstat is None:
+        if worker is None:
             raise AudioBrokerError("SpeechRecognizer worker is not found.")
-        ws_url: str = f"ws://{wstat.host}:{wstat.port}/SpeechRecognizer"
+        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/SpeechRecognizer"
         ws: ClientConnection = connect(ws_url)
         sender_t: RecognizerSenderThread = RecognizerSenderThread(
             ws=ws,
@@ -236,14 +235,12 @@ class AudioBroker:
         )
 
     def __text_processor(self) -> AudioBrokerCommunicator:
-        wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
-            worker_type="TextProcessor",
+        worker: ServiceDescription | None = self.__sd_refrrer.get_random_worker(
+            worker_type="TextProcessor"
         )
-        if wstat is None:
+        if worker is None:
             raise AudioBrokerError("TextProcessor worker is not found.")
-        ws_url: str = (
-            f"ws://{wstat.host}:{wstat.port}/TextProcessor?talk_mode={self.__talk_mode}"
-        )
+        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/TextProcessor?talk_mode={self.__talk_mode}"
         ws: ClientConnection = connect(ws_url)
         sender_t: TextProcessorSenderThread = TextProcessorSenderThread(
             ws=ws,
@@ -271,12 +268,12 @@ class AudioBroker:
         )
 
     def __synthesizer(self) -> AudioBrokerCommunicator:
-        wstat: WorkerStatus | None = self.__wstatuses.random_active_worker(
-            worker_type="VoiceSynthesizer",
+        worker: ServiceDescription | None = self.__sd_refrrer.get_random_worker(
+            worker_type="VoiceSynthesizer"
         )
-        if wstat is None:
+        if worker is None:
             raise AudioBrokerError("voiceSynthesizer worker is not found.")
-        ws_url: str = f"ws://{wstat.host}:{wstat.port}/VoiceSynthesizer"
+        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/VoiceSynthesizer"
         ws: ClientConnection = connect(ws_url)
         sender_t: SynthesizerSenderThread = SynthesizerSenderThread(
             ws=ws,

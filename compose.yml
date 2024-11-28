@@ -165,6 +165,34 @@ services:
       service-initializer:
         condition: service_completed_successfully
 
+  sincro-consul-server:
+    profiles:
+      - full
+      - backend
+      - external
+    image: hashicorp/consul:latest
+    command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0
+    volumes:
+      - consul-data:/consul/data
+    networks:
+      - sincromisor-net
+
+  sincro-consul-agent:
+    profiles:
+      - full
+      - backend
+      - external
+    image: hashicorp/consul:latest
+    command: agent -retry-join=sincro-consul-server -client=0.0.0.0
+    ports:
+      - "8500:8500"
+      - "8600:8600/tcp"
+      - "8600:8600/udp"
+    depends_on:
+      - sincro-consul-server
+    networks:
+      - sincromisor-net
+
   sincro-voicevox:
     profiles:
       - full
@@ -206,3 +234,4 @@ networks:
 
 volumes:
   huggingface-cache:
+  consul-data:

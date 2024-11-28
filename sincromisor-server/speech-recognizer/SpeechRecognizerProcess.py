@@ -7,8 +7,9 @@ from threading import Event
 import numpy as np
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from setproctitle import setproctitle
-from sincro_config import KeepAliveReporter, SincromisorLoggerConfig
+from sincro_config import ServiceDiscoveryReporter, SincromisorLoggerConfig
 from sincro_models import SpeechExtractorResult
 from speech_recognizer.models import SpeechRecognizerProcessArgument
 from speech_recognizer.SpeechRecognizer import SpeechRecognizerWorker
@@ -27,25 +28,29 @@ class SpeechRecognizerProcess:
         self.__args: SpeechRecognizerProcessArgument = (
             SpeechRecognizerProcessArgument.argparse()
         )
+        self.__sessions: int = 0
 
     def start(self):
         speech_recognizer = SpeechRecognizerWorker(voice_log_dir=args.voice_log_dir)
         app: FastAPI = FastAPI()
         event: Event = Event()
-        self.keepalive_t: KeepAliveReporter = KeepAliveReporter(
-            event=event,
-            redis_host=self.__args.redis_host,
-            redis_port=self.__args.redis_port,
+        self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
+            worker_type="SpeechRecognizer",
+            consul_host=self.__args.consul_agent_host,
+            consul_port=self.__args.consul_agent_port,
             public_bind_host=self.__args.public_bind_host,
             public_bind_port=self.__args.public_bind_port,
-            worker_type="SpeechRecognizer",
-            interval=5,
         )
-        self.keepalive_t.start()
+        self.sd_reporter.register()
 
-        @app.websocket("/SpeechRecognizer")
-        async def websocket_chat_endpoint(ws: WebSocket):
+        @app.get("/api/v1/statuses")
+        async def get_status() -> JSONResponse:
+            return JSONResponse({"sessions": self.__sessions})
+
+        @app.websocket("/api/v1/SpeechRecognizer")
+        async def websocket_chat_endpoint(ws: WebSocket) -> None:
             self.__logger.info("Connected Websocket.")
+            self.__sessions += 1
             try:
                 await ws.accept()
                 current_speech_id = -1
@@ -78,6 +83,8 @@ class SpeechRecognizerProcess:
                 self.__logger.error(
                     f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
                 )
+            finally:
+                self.__sessions -= 1
                 await ws.close()
 
         try:
@@ -86,7 +93,6 @@ class SpeechRecognizerProcess:
             pass
         finally:
             event.set()
-            self.keepalive_t.join()
 
 
 if __name__ == "__main__":

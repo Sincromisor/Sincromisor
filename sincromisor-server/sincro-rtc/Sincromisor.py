@@ -8,7 +8,11 @@ import uvicorn
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from setproctitle import setproctitle
-from sincro_config import KeepAliveReporter, SincromisorConfig, SincromisorLoggerConfig
+from sincro_config import (
+    ServiceDiscoveryReporter,
+    SincromisorConfig,
+    SincromisorLoggerConfig,
+)
 from sincro_rtc.models import RTCSessionOffer, SincromisorProcessArgument
 from sincro_rtc.RTCSession import RTCSessionManager
 
@@ -39,8 +43,8 @@ class SincromisorProcess:
 
     def start(self):
         rtcSM = RTCSessionManager(
-            redis_host=self.__args.redis_host,
-            redis_port=self.__args.redis_port,
+            consul_agent_host=self.__args.consul_agent_host,
+            consul_agent_port=self.__args.consul_agent_port,
         )
         app = FastAPI(on_shutdown=[rtcSM.shutdown])
         """
@@ -54,16 +58,22 @@ class SincromisorProcess:
         """
         event: Event = Event()
 
-        self.keepalive_t: KeepAliveReporter = KeepAliveReporter(
-            event=event,
-            redis_host=self.__args.redis_host,
-            redis_port=self.__args.redis_port,
+        self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
+            worker_type="Sincromisor",
+            consul_host=self.__args.consul_agent_host,
+            consul_port=self.__args.consul_agent_port,
             public_bind_host=self.__args.public_bind_host,
             public_bind_port=self.__args.public_bind_port,
-            worker_type="Sincromisor",
-            interval=5,
         )
-        self.keepalive_t.start()
+        self.sd_reporter.register()
+
+        @app.get("/api/v1/statuses")
+        async def get_status() -> JSONResponse:
+            if rtcSM.session_count() > self.__args.max_sessions:
+                res = JSONResponse({"error": "Too many requests."})
+                res.status_code = status.HTTP_429_TOO_MANY_REQUESTS
+                return res
+            return JSONResponse({"sessions": rtcSM.session_count()})
 
         @app.post("/api/v1/rtc/offer")
         async def app_offer(request: Request, offer_params: RTCSessionOffer):
@@ -110,7 +120,6 @@ class SincromisorProcess:
             pass
         finally:
             event.set()
-            self.keepalive_t.join()
 
 
 if __name__ == "__main__":

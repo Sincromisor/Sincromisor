@@ -24,8 +24,8 @@ class VoiceTransformTrack(MediaStreamTrack):
         track: MediaStreamTrack,
         vcs: RTCVoiceChatSession,
         rtc_session_status: Synchronized,
-        redis_host: str,
-        redis_port: int,
+        consul_agent_host: str,
+        consul_agent_port: int,
     ):
         super().__init__()
         self.__logger: Logger = logging.getLogger(
@@ -42,8 +42,8 @@ class VoiceTransformTrack(MediaStreamTrack):
         self.__audio_broker = AudioBroker(
             session_id=self.__session_id,
             talk_mode=self.__vcs.talk_mode,
-            redis_host=redis_host,
-            redis_port=redis_port,
+            consul_agent_host=consul_agent_host,
+            consul_agent_port=consul_agent_port,
         )
 
     # デコード済みのオーディオフレームを受け取って、何らかの処理を行った上で

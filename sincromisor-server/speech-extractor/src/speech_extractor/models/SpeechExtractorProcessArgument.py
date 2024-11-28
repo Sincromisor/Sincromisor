@@ -8,9 +8,6 @@ class SpeechExtractorProcessArgument(SincromisorArgumentParser):
     port: int
     public_bind_host: str
     public_bind_port: int
-    redis_host: str
-    redis_port: int
-    log_file: str | None
 
     @classmethod
     def set_args(cls, parser: ArgumentParser) -> None:

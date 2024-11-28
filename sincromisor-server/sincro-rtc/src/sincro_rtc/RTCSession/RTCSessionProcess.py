@@ -39,8 +39,8 @@ class RTCSessionProcess(Process):
         request_talk_mode: str,
         sdp_pipe: Connection,
         rtc_session_status: Synchronized,
-        redis_host: str,
-        redis_port: int,
+        consul_agent_host: str,
+        consul_agent_port: int,
     ):
         Process.__init__(self)
         self.__logger: Logger = logging.getLogger(__name__ + f"[{session_id[21:26]}]")
@@ -50,8 +50,8 @@ class RTCSessionProcess(Process):
         self.__request_talk_mode: str = request_talk_mode
         self.__server_sdp_pipe: Connection = sdp_pipe
         self.__rtc_session_status: Synchronized = rtc_session_status
-        self.__redis_host = redis_host
-        self.__redis_port = redis_port
+        self.__consul_agent_host = consul_agent_host
+        self.__consul_agent_port = consul_agent_port
 
     def __get_ice_servers(self):
         config = SincromisorConfig.from_yaml()
@@ -123,8 +123,8 @@ class RTCSessionProcess(Process):
                     track=self.relay.subscribe(track),
                     vcs=self.__vcs,
                     rtc_session_status=self.__rtc_session_status,
-                    redis_host=self.__redis_host,
-                    redis_port=self.__redis_port,
+                    consul_agent_host=self.__consul_agent_host,
+                    consul_agent_port=self.__consul_agent_port,
                 )
                 self.__vcs.peer.addTrack(self.__vcs.audio_transform_track)
             else:

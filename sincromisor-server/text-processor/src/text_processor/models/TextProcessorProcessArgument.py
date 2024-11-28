@@ -8,9 +8,6 @@ class TextProcessorProcessArgument(SincromisorArgumentParser):
     port: int
     public_bind_host: str
     public_bind_port: int
-    redis_host: str
-    redis_port: int
-    log_file: str | None
     dify_url: str | None
     dify_token: str | None
 
@@ -18,7 +15,7 @@ class TextProcessorProcessArgument(SincromisorArgumentParser):
     def set_args(cls, parser: ArgumentParser) -> None:
         super().set_args(parser=parser)
 
-        default_bind_port: int = 8006
+        default_bind_port: int = 8004
 
         cls.add_argument(
             parser=parser,
