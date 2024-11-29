@@ -6,6 +6,7 @@
 .vscode
 __pycache__
 /config.yml
+configs/.env
 samples
 Docker/env_vars/.env
 sincromisor-server/log/*.log
