@@ -8,6 +8,7 @@ from sincro_config import (
     ServiceDescription,
     ServiceDiscoveryReferrer,
 )
+from sincro_models import ChatMessage
 from websockets.sync.client import ClientConnection, connect
 
 from .Exceptions import AudioBrokerError
@@ -128,6 +129,7 @@ class AudioBroker:
         # RecognizerReceiverThread
         # -> TextProcessorSenderThread: SpeechRecognizerResult
         self.__recognizer_results: deque = deque([], 10)
+        # ChatMessage
         # TextProcessorReceiverThread
         # -> VoiceSynthesizerSenderThread: TextProcessorResult
         self.__text_processor_results: deque = deque([], 10)
@@ -149,11 +151,21 @@ class AudioBroker:
                 text_processor=self.__text_processor(),
                 synthesizer=self.__synthesizer(),
             )
+        except AudioBrokerError:
+            self.__logger.error(f"AudioBrokerError: {traceback.format_exc()}")
+            self.__err_to_chat(message=f"AudioBrokerError: {traceback.format_exc()}")
+            self.close()
         except ConnectionRefusedError:
             self.__logger.error(f"ConnectionRefusedError: {traceback.format_exc()}")
+            self.__err_to_chat(
+                message=f"ConnectionRefusedError: {traceback.format_exc()}"
+            )
             self.close()
         except Exception as e:
             self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
+            self.__err_to_chat(
+                message=f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+            )
             self.close()
 
     def is_running(self) -> bool:
@@ -179,6 +191,7 @@ class AudioBroker:
         if worker is None:
             raise AudioBrokerError("SpeechExtractor worker is not found.")
         ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/SpeechExtractor"
+        self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)
         sender_t: ExtractorSenderThread = ExtractorSenderThread(
             ws=ws,
@@ -210,6 +223,7 @@ class AudioBroker:
         if worker is None:
             raise AudioBrokerError("SpeechRecognizer worker is not found.")
         ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/SpeechRecognizer"
+        self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)
         sender_t: RecognizerSenderThread = RecognizerSenderThread(
             ws=ws,
@@ -241,6 +255,7 @@ class AudioBroker:
         if worker is None:
             raise AudioBrokerError("TextProcessor worker is not found.")
         ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/TextProcessor?talk_mode={self.__talk_mode}"
+        self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)
         sender_t: TextProcessorSenderThread = TextProcessorSenderThread(
             ws=ws,
@@ -274,6 +289,7 @@ class AudioBroker:
         if worker is None:
             raise AudioBrokerError("voiceSynthesizer worker is not found.")
         ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/VoiceSynthesizer"
+        self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)
         sender_t: SynthesizerSenderThread = SynthesizerSenderThread(
             ws=ws,
@@ -306,3 +322,13 @@ class AudioBroker:
         self.__frame_buffer.append(frame)
         if len(self.__frame_buffer) >= 25:
             self.__logger.warning("add_frame - overflow")
+
+    def __err_to_chat(self, message: str) -> None:
+        self.text_channel_queue.append(
+            ChatMessage(
+                message_type="error",
+                speaker_id="system",
+                speaker_name="Sincromisor",
+                message=message,
+            )
+        )
