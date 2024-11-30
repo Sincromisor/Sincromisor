@@ -103,4 +103,4 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
-CMD ["uv", "run", "sincro-rtc/Sincromisor.py"]
+CMD ["uv", "run", "sincro-rtc/RTCSignalingServer.py"]

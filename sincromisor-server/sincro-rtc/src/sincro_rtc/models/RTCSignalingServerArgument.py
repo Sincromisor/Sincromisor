@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from sincro_config import SincromisorArgumentParser
 
 
-class SincromisorProcessArgument(SincromisorArgumentParser):
+class RTCSignalingServerArgument(SincromisorArgumentParser):
     host: str
     port: int
     public_bind_host: str

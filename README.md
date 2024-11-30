@@ -41,7 +41,7 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
 
 ## とにかくローカル環境でサーバーを動かす
 
-最初に、NVIDIA Driverが正常に動作し、`nvidia-smi`コマンドでGPUの状態を見れるところまでをがんばってください。
+最初に、NVIDIA DriverとContainer Toolkitが正常に動作し、`nvidia-smi`コマンドでGPUの状態を見れるところまでをがんばってください。
 
 Sincromisorのシンクロモードは、[docker compose](https://docs.docker.com/compose/)を用いると、比較的簡単に実行できます。
 

@@ -13,7 +13,7 @@ from sincro_config import (
     SincromisorConfig,
     SincromisorLoggerConfig,
 )
-from sincro_rtc.models import RTCSessionOffer, SincromisorProcessArgument
+from sincro_rtc.models import RTCSessionOffer, RTCSignalingServerArgument
 from sincro_rtc.RTCSession import RTCSessionManager
 
 if os.environ.get("SINCROMISOR_MODE") == "development":
@@ -24,9 +24,9 @@ if os.environ.get("SINCROMISOR_MODE") == "development":
     tracemalloc.start()
     mem = MemoryProfiler()
 
-setproctitle("Sincromisor")
+setproctitle("RTCSignalingSv")
 
-args: SincromisorProcessArgument = SincromisorProcessArgument.argparse()
+args: RTCSignalingServerArgument = RTCSignalingServerArgument.argparse()
 logging.config.dictConfig(
     SincromisorLoggerConfig.generate(log_file=args.log_file, stdout=True),
 )
@@ -35,11 +35,11 @@ logging.config.dictConfig(
 # from starlette.middleware.cors import CORSMiddleware
 
 
-class SincromisorProcess:
-    def __init__(self, args: SincromisorProcessArgument):
+class RTCSignalingServer:
+    def __init__(self, args: RTCSignalingServerArgument):
         self.__logger: Logger = logging.getLogger("sincro." + __name__)
         self.__logger.info("===== Starting SincromisorProcess =====")
-        self.__args: SincromisorProcessArgument = args
+        self.__args: RTCSignalingServerArgument = args
 
     def start(self):
         rtcSM = RTCSessionManager(
@@ -59,7 +59,7 @@ class SincromisorProcess:
         event: Event = Event()
 
         self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
-            worker_type="Sincromisor",
+            worker_type="RTCSignalingServer",
             consul_host=self.__args.consul_agent_host,
             consul_port=self.__args.consul_agent_port,
             public_bind_host=self.__args.public_bind_host,
@@ -123,4 +123,4 @@ class SincromisorProcess:
 
 
 if __name__ == "__main__":
-    SincromisorProcess(args=args).start()
+    RTCSignalingServer(args=args).start()

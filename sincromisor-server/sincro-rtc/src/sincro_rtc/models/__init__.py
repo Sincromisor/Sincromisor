@@ -1,9 +1,9 @@
 from .RTCSessionOffer import RTCSessionOffer
+from .RTCSignalingServerArgument import RTCSignalingServerArgument
 from .RTCVoiceChatSession import RTCVoiceChatSession
-from .SincromisorProcessArgument import SincromisorProcessArgument
 
 __all__ = [
     "RTCSessionOffer",
     "RTCVoiceChatSession",
-    "SincromisorProcessArgument",
+    "RTCSignalingServerArgument",
 ]

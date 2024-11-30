@@ -123,7 +123,7 @@ class SincroLauncher:
 
     def launch(self):
         cmds: list[str] = [
-            "sincro-rtc/Sincromisor.py",
+            "sincro-rtc/RTCSignalingServer.py",
             "speech-extractor/SpeechExtractorProcess.py",
             "speech-recognizer/SpeechRecognizerProcess.py",
             "text-processor/TextProcessorProcess.py",
