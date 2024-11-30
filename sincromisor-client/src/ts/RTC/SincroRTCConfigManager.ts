@@ -20,7 +20,7 @@ export class SincroRTCConfigManager {
         if (!SincroRTCConfigManager.instance) {
             SincroRTCConfigManager.instance = new SincroRTCConfigManager();
             try {
-                SincroRTCConfigManager.instance.getServers();
+                SincroRTCConfigManager.instance.getServers(onerror);
             } catch (err) {
                 console.error(err);
                 onerror(err);
@@ -29,10 +29,12 @@ export class SincroRTCConfigManager {
         return SincroRTCConfigManager.instance;
     }
 
-    private async getServers(): Promise<void> {
+    private async getServers(onerror: (err: any) => void): Promise<void> {
         const response: Response = await fetch('/api/v1/rtc/config.json');
         if (!response.ok) {
-            throw new Error(`Failed to fetch /api/v1/rtc/config.json: ${response.statusText}`);
+            const err = new Error(`Failed to fetch /api/v1/rtc/config.json: ${response.statusText}`);
+            onerror(err);
+            throw err;
         }
         this.config = await response.json();
     }
