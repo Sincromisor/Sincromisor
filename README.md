@@ -1,6 +1,6 @@
 # Sincromisor
 
-Webブラウザ上でかわいいキャラになっておしゃべりできるよ!
+Webブラウザ上でかわいいキャラになっておしゃべりしたり、かわいいキャラとおしゃべりしたりできるよ!
 
 ![配信画面の例](examples/sincromisor-example.png)
 
@@ -52,11 +52,12 @@ $ git clone https://github.com/Phenomer/Sincromisor.git
 $ cd Sincromisor
 ```
 
-設定ファイル`.env`を、`configs/.env`となるようコピーします。
+設定ファイル`.env`を、`configs/.env.example-docker`を参考に作成します。
+とりあえず動かしたいだけであれば、そのままコピーする形で構いません。
 
 ```sh
-$ cp configs/.env.example-docker configs/.env
-$ chmod 600 configs/.env
+$ cp configs/.env.example-docker .env
+$ chmod 600 .env
 ```
 
 `docker compose build`でイメージをbuildします。

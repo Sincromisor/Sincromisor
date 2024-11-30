@@ -56,7 +56,7 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./configs/.env
+      - .env
     deploy:
       restart_policy:
         condition: on-failure
@@ -78,7 +78,7 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./configs/.env
+      - .env
     deploy:
       restart_policy:
         condition: on-failure
@@ -106,7 +106,7 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./configs/.env
+      - .env
     deploy:
       restart_policy:
         condition: on-failure
@@ -116,7 +116,7 @@ services:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
+              capabilities: [ gpu ]
     depends_on:
       service-initializer:
         condition: service_completed_successfully
@@ -134,7 +134,7 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./configs/.env
+      - .env
     deploy:
       restart_policy:
         condition: on-failure
@@ -156,7 +156,7 @@ services:
     networks:
       - sincromisor-net
     env_file:
-      - ./configs/.env
+      - .env
     deploy:
       restart_policy:
         condition: on-failure
@@ -171,7 +171,20 @@ services:
       - backend
       - external
     image: hashicorp/consul:latest
-    command: agent -server -bootstrap-expect=1 -ui -client=0.0.0.0
+    command: [ 'agent', '-server', '-bootstrap-expect=1', '-ui', '-client=0.0.0.0' ]
+    ports:
+      # https://developer.hashicorp.com/consul/docs/install/ports
+      - 8300:8300
+      - 8301:8301/tcp
+      - 8301:8301/udp
+      - 8302:8302/tcp
+      - 8302:8302/udp
+      - 8500:8500
+      - 8501:8501
+      - 8502:8502
+      - 8503:8503
+      - 8600:8600/tcp
+      - 8600:8600/udp
     volumes:
       - consul-data:/consul/data
     networks:
@@ -183,11 +196,13 @@ services:
       - backend
       - external
     image: hashicorp/consul:latest
-    command: agent -retry-join=sincro-consul-server -client=0.0.0.0
     ports:
-      - "8500:8500"
-      - "8600:8600/tcp"
-      - "8600:8600/udp"
+      - 8498:8500
+      - 8499:8600/tcp
+      - 8499:8600/udp
+    env_file:
+      - .env
+    command: [ 'agent', '-retry-join=${SINCRO_CONSUL_SERVER_HOST}', '-client=0.0.0.0' ]
     depends_on:
       - sincro-consul-server
     networks:
@@ -231,6 +246,7 @@ services:
 
 networks:
   sincromisor-net:
+
 
 volumes:
   huggingface-cache:
