@@ -9,8 +9,8 @@
 
     reverse_proxy /api/* {
         dynamic a {
-            name sincromisor.service.consul
-            port 8002
+            name RTCSignalingServer.service.consul
+            port 8001
             resolvers sincro-consul-agent:8600
             versions ipv4
             refresh 5s
