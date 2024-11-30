@@ -26,26 +26,28 @@ class ServiceDiscoveryReferrer:
     def __services(self) -> tuple[int, dict[str, list]]:
         return self.consul.catalog.services()
 
-    # worker_typeで指定したサービスのhelthcheck情報を返す。
-    def __health(self, worker_type: str) -> tuple[int, list]:
-        return self.consul.health.checks(worker_type)
-
     # worker_typeで指定したサービスの情報を返す。
     def __service(self, worker_type: str) -> tuple[int, list]:
         return self.consul.catalog.service(worker_type)
 
-    # worker_typeで指定したサービスのワーカーをランダムにひとつ返す。
+    # worker_typeで指定したサービスのうち、
+    # 正常稼働が確認できているものの情報を返す。
+    def __healthy_service(self, worker_type: str) -> tuple[int, list]:
+        return self.consul.health.service(worker_type, passing=True)
+
+    # worker_typeで指定したサービスのワーカーのうち、
+    # 正常稼働が確認できているものをランダムにひとつ返す。
     def get_random_worker(self, worker_type: str) -> ServiceDescription:
         index: int
         workers: list
-        index, workers = self.__service(worker_type=worker_type)
+        index, workers = self.__healthy_service(worker_type=worker_type)
         worker: dict = random.choice(workers)
         return ServiceDescription(
             index=index,
-            service_name=worker["ServiceName"],
-            service_id=worker["ServiceID"],
-            service_address=worker["ServiceAddress"],
-            service_port=worker["ServicePort"],
+            service_name=worker_type,
+            service_id=worker["Service"]["ID"],
+            service_address=worker["Service"]["Address"],
+            service_port=worker["Service"]["Port"],
         )
 
     # worker_typeで指定したサービスのワーカーすべてをGeneratorとして返す。
@@ -71,8 +73,8 @@ if __name__ == "__main__":
 
     sdr = ServiceDiscoveryReferrer(consul_agent_host="127.0.0.1", consul_agent_port=8500)
     print("All workers:")
-    for worker in sdr.get_all_workers("service-a"):
+    for worker in sdr.get_all_workers("SpeechRecognizer"):
         pprint(worker)
 
     print("\nTarget worker:")
-    pprint(sdr.get_random_worker("service-a"))
+    pprint(sdr.get_random_worker("SpeechRecognizer"))
