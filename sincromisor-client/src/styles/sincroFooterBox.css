@@ -1,0 +1,28 @@
+div#sincroFooterBox {
+    & {
+        width: 100%;
+        height: 100%;
+        background-color: rgba(32, 32, 32, 0.75);
+
+        padding-left: 1em;
+        padding-right: 1em;
+        padding-top: 0px;
+        padding-bottom: 0px;
+    }
+
+    & #sincroFooterBox__text {
+        height: 100%;
+        color: rgba(255, 255, 255, 1);
+        /* 
+            https://clamp.font-size.app/
+            1280 -> 3840: 28 -> 84
+        */
+        font-size: clamp(1.5rem, 0rem + 1.875vw, 4.5rem);
+        line-height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: normal;
+    }
+}

@@ -3,9 +3,9 @@ import { SincroScene } from "../ts/Scene/SincroScene";
 import { TalkManager } from "../ts/RTC/TalkManager";
 
 function start() {
-    const charCanvas: HTMLCanvasElement | null = document.querySelector('canvas#characterCanvas') as HTMLCanvasElement | null;
+    const charCanvas: HTMLCanvasElement | null = document.querySelector('canvas#sincroCharacterBox__canvas') as HTMLCanvasElement | null;
     if (!charCanvas) {
-        throw 'canvas#characterCanvas is not found.';
+        throw 'canvas#sincroCharacterBox__canvas is not found.';
     }
     const talkManager: TalkManager = TalkManager.getManager();
 

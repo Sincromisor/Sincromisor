@@ -11,7 +11,6 @@ export class DialogManager {
     private constructor() {
         this.setMiscEvent();
         this.updateTitleText();
-        this.setShortcutKeyEvent();
         this.showDialog();
     }
 
@@ -91,7 +90,7 @@ export class DialogManager {
     }
 
     updateTitleText(): void {
-        const headerElement: HTMLDivElement | null = document.querySelector("div#headerText");
+        const headerElement: HTMLDivElement | null = document.querySelector("div#sincroHeaderBox__text");
         if (!headerElement) {
             return;
         }
@@ -105,7 +104,7 @@ export class DialogManager {
     }
 
     updateUserMediaAvailabilityStatus(available: boolean): void {
-        const eC: HTMLButtonElement | null = document.querySelector('button#rtcStart');
+        const eC: HTMLButtonElement | null = document.querySelector('button#sincroStart');
         if (!eC) {
             return;
         }
@@ -163,9 +162,9 @@ export class DialogManager {
     }
 
     setRTCStartButtonEventListener(startFunction: () => void): void {
-        const startBtn: HTMLButtonElement | null = document.querySelector('button#rtcStart');
+        const startBtn: HTMLButtonElement | null = document.querySelector('button#sincroStart');
         if (!startBtn) {
-            throw 'button#rtcStart is not found.';
+            throw 'button#sincroStart is not found.';
         }
         startBtn.addEventListener('click', startFunction);
     }
@@ -173,7 +172,7 @@ export class DialogManager {
     setRTCStopButtonEventListener(stopFunction: () => void): void {
         const startBtn: HTMLButtonElement | null = document.querySelector('button#rtcStop');
         if (!startBtn) {
-            throw 'button#rtcStart is not found.';
+            throw 'button#sincroStart is not found.';
         }
         startBtn.addEventListener('click', stopFunction);
     }
@@ -194,25 +193,5 @@ export class DialogManager {
                 this.updateAutoMuteStatus();
             }
         }
-    }
-
-    /* ctrl + alt + dでデバッグコンソールを表示 */
-    private setShortcutKeyEvent(): void {
-        const debugConsole: HTMLDivElement | null = document.querySelector("div#debugConsole");
-        if (!debugConsole) {
-            return;
-        }
-        window.addEventListener("keydown", (e) => {
-            // macOSのChromeではalt+dでkeyの値がδになる
-            if (e.ctrlKey && e.altKey && (e.key == 'd' || e.code == 'KeyD')) {
-                if (window.getComputedStyle(debugConsole).zIndex == '-1') {
-                    debugConsole.style.zIndex = '255';
-                    debugConsole.style.overflow = 'scroll';
-                } else {
-                    debugConsole.style.zIndex = '-1';
-                    debugConsole.style.overflow = 'hidden';
-                }
-            }
-        });
     }
 }

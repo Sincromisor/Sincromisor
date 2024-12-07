@@ -12,6 +12,7 @@ import { SincroRTCConfigManager } from "./RTC/SincroRTCConfigManager";
 
 export class SincroController {
     private readonly dialogManager: DialogManager;
+    private readonly debugConsoleManager: DebugConsoleManager;
     private readonly chatMessageManager: ChatMessageManager;
     private readonly talkManager: TalkManager;
     private readonly userMediaManager: UserMediaManager;
@@ -21,6 +22,7 @@ export class SincroController {
 
     constructor() {
         this.dialogManager = DialogManager.getManager();
+        this.debugConsoleManager = DebugConsoleManager.getManager();
         this.chatMessageManager = ChatMessageManager.getManager();
         this.talkManager = TalkManager.getManager();
         this.rtcConfigManager = SincroRTCConfigManager.getManager((err) => {
@@ -75,7 +77,6 @@ export class SincroController {
         const chracterGazeVideo: HTMLVideoElement | null = document.querySelector('video#characterGazeVideo');
         if (!chracterGazeVideo) { return; }
         const characterGaze = new CharacterGaze(chracterGazeVideo);
-        const eyeLogger = DebugConsoleManager.getManager();
 
         characterGaze.initVision();
 
@@ -88,9 +89,9 @@ export class SincroController {
                     console.log("start CharacterGaze");
                     const eyeTargetElement = document.querySelector("#eyeTarget");
                     characterGaze.initCamera(videoTrack, (detects: Detection[]) => {
-                        eyeLogger.updateFaceXLog(characterGaze.targetX());
-                        eyeLogger.updateFaceYLog(characterGaze.targetY());
-                        eyeLogger.updateFacing(characterGaze.facing());
+                        this.debugConsoleManager.updateFaceXLog(characterGaze.targetX());
+                        this.debugConsoleManager.updateFaceYLog(characterGaze.targetY());
+                        this.debugConsoleManager.updateFacing(characterGaze.facing());
                         const eyeAngles = characterGaze.eyeAngles();
                         // 縦方向
                         const eyeAngleX = eyeAngles[1] * (Math.PI / 180);
@@ -114,11 +115,11 @@ export class SincroController {
 
         if (this.dialogManager.enableAutoMute()) {
             characterGaze.arriveCallback = () => {
-                eyeLogger.updateCharacterEyeStatus(true);
+                this.debugConsoleManager.updateCharacterEyeStatus(true);
                 this.rtcc?.setMute(false);
             }
             characterGaze.leaveCallback = () => {
-                eyeLogger.updateCharacterEyeStatus(false);
+                this.debugConsoleManager.updateCharacterEyeStatus(false);
                 this.rtcc?.setMute(true);
             }
         }

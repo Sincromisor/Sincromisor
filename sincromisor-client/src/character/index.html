@@ -2,11 +2,9 @@
 <html>
 
 <head>
+  {{> baseHeader}}
+  
   <title>Sincromisor - Character Test</title>
-  <meta charset="UTF-8">
-  <link href="../styles/fonts.css" rel="stylesheet">
-  <link href="../styles/main.css" rel="stylesheet">
-  <link href="../styles/single.css" rel="stylesheet">
   <link href="../styles/simple.css" rel="stylesheet">
   <script type="module" src="character.ts"></script>
 </head>
@@ -14,28 +12,7 @@
 <body>
   {{> configurationDialog}}
 
-  <div id="obsBody">
-    <div id="obsHeaderBox">
-      <div id="headerDecoration"></div>
-      <div id="headerText">Sincromisor</div>
-      <img id="headerIcon" src="../images/icon-user.webp" width="100" height="100">
-    </div>
-    <div id="obsVideo1">
-      Video1です。
-      1600x900
-    </div>
-    <div id="obsMessageBox">
-    </div>
-    <div id="obsCharacterBox">
-      <canvas id="characterCanvas"></canvas>
-    </div>
-    <div id="obsCharacterBackgroundBox">
-    </div>
-    <div id="obsFooterBox">
-    </div>
-  </div>
-
-  {{> debugConsole}}
+  {{> sincroBody}}
 </body>
 
 </html>

@@ -5,36 +5,36 @@
 }
 
 body,
-div#obsBody {
+div#sincroBody {
     min-width: var(--canvasMinWidth);
 }
 
-div#obsVideo1 {
+div#sincroVideoBox1 {
     display: none;
 }
 
-div#obsVideo2 {
+div#sincroVideoBox2 {
     display: none;
 }
 
-div#obsHeaderBox {
+div#sincroHeaderBox {
     display: none;
 }
 
-div#obsMessageBox {
+div#sincroChatBox {
     display: none;
 }
 
-div#obsCharacterBox {
+div#sincroCharacterBox {
     min-width: var(--canvasMinWidth);
     grid-area: 1 / 1 / 5 / 4;
 }
 
-div#obsCharacterBackgroundBox {
+div#sincroCharacterBox__background {
     grid-area: 3 / 1 / 4 / 4;
 }
 
-div#obsFooterBox {
+div#sincroFooterBox {
     min-width: var(--canvasMinWidth);
     z-index: 256;
     background-color: rgba(34, 34, 34, 0.5);

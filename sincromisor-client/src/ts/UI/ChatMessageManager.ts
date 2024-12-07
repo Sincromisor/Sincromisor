@@ -20,9 +20,9 @@ export class ChatMessageManager {
 
     static getManager(): ChatMessageManager {
         if (!ChatMessageManager.instance) {
-            const e: HTMLDivElement | null = document.querySelector("div#obsMessageBox");
+            const e: HTMLDivElement | null = document.querySelector("div#sincroChatBox");
             if (!e) {
-                throw 'div#obsMessageBox is not found.';
+                throw 'div#sincroChatBox is not found.';
             }
             ChatMessageManager.instance = new ChatMessageManager(e);
         }
@@ -45,7 +45,7 @@ export class ChatMessageManager {
         const box: HTMLDivElement | null = this.getMessageBox(cMessage.message_id);
         console.dir(["writeMessage", box, cMessage]);
         if (box) {
-            const ePara: HTMLParagraphElement | null = box.querySelector('p.message');
+            const ePara: HTMLParagraphElement | null = box.querySelector('p.sincroMessage__text');
             if (ePara) {
                 if (isHTML) {
                     ePara.innerHTML = cMessage.message;
@@ -104,16 +104,16 @@ export class ChatMessageManager {
     }
 
     /*
-      <div id="chatBox"></div>の末尾に、下記のような要素を追記する。
-      追記したdiv要素のIDをテキストで返す。
+        <div id="chatBox"></div>の末尾に、下記のような要素を追記する。
+        追記したdiv要素のIDをテキストで返す。
     
-      <div class="systemMessage">
-        <div class="icon"><img src="/icon-system.png"></div>
-        <p class="message">てきとうなメッセージ</p>
-      </div>
+        <div class="sincroMessage__systemMessage">
+            <div class="sincroMessage__icon"><img src="/icon-system.png"></div>
+            <p class="sincroMessage__text">てきとうなメッセージ</p>
+        </div>
 
-      cMessage: メッセージ本体(text or html)。htmlの時はisHTMLをtrueにする。
-      isHTML: messageObjがhtmlの時はtrue、textの時はfalseを渡す。
+        cMessage: メッセージ本体(text or html)。htmlの時はisHTMLをtrueにする。
+        isHTML: messageObjがhtmlの時はtrue、textの時はfalseを渡す。
     */
     private createNewMessageBox(cMessage: ChatMessage, isHTML = false): HTMLDivElement {
         const eDisplayName = document.createElement("span");
@@ -124,12 +124,16 @@ export class ChatMessageManager {
         eUserName.className = "username";
         eUserName.innerText = "@" + cMessage.speaker_id;
 
+        const eIconBox = document.createElement("div");
+        eIconBox.className = "sincroMessage__iconBox";
+
         const eIcon = document.createElement("img");
-        eIcon.className = "icon";
+        eIcon.className = "sincroMessage__icon";
         eIcon.src = `../images/icon-${cMessage.message_type}.webp`;
+        eIconBox.appendChild(eIcon);
 
         const eMesg = document.createElement("p");
-        eMesg.className = "message";
+        eMesg.className = "sincroMessage__text";
         if (isHTML) {
             eMesg.innerHTML = cMessage.message;
         } else {
@@ -139,8 +143,8 @@ export class ChatMessageManager {
         const e = document.createElement("div");
         e.id = `msg${cMessage.message_id}`;
         this.messageID += 1;
-        e.className = cMessage.message_type + "Message obsMessage";
-        e.appendChild(eIcon);
+        e.className = `sincroMessage__${cMessage.message_type}Message sincroMessage`;
+        e.appendChild(eIconBox);
         e.appendChild(eMesg);
 
         this.chatBox.prepend(e);

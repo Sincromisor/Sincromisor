@@ -1,0 +1,91 @@
+div#sincroHeaderBox {
+    & {
+        width: 100%;
+        height: 100%;
+
+        display: grid;
+        grid-template-columns: 180px 90px 1fr 90px 180px;
+        grid-template-rows: 1fr;
+        grid-column-gap: 0px;
+        grid-row-gap: 0px;
+        position: relative;
+    }
+
+    & div.headerIconBox {
+        & {
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        & img.headerIconBox__icon {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            aspect-ratio: 1 / 1;
+            display: block;
+        }
+    }
+
+    & div.leftIconBox {
+        grid-area: 1 / 1 / 2 / 2;
+    }
+
+    & div.rightIconBox {
+        grid-area: 1 / 5 / 2 / 6;
+    }
+
+    & div#sincroHeaderBox__leftDecoration {
+        grid-area: 1 / 2 / 2 / 3;
+
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(-70deg,
+                rgba(50, 50, 50, 0.75) 0%,
+                rgba(50, 50, 50, 0.75) 50%,
+                rgba(0, 0, 0, 0.5) 50%,
+                rgba(0, 0, 0, 0.5) 100%);
+    }
+
+    & div#sincroHeaderBox__rightDecoration {
+        grid-area: 1 / 4 / 2 / 5;
+
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(-70deg,
+                rgba(0, 0, 0, 0.5) 0%,
+                rgba(0, 0, 0, 0.5) 50%,
+                rgba(50, 50, 50, 0.75) 50%,
+                rgba(50, 50, 50, 0.75) 100%);
+    }
+
+    & div#sincroHeaderBox__text {
+        grid-area: 1 / 3 / 2 / 4;
+
+        width: 100%;
+        height: 100%;
+        /* 
+            https://clamp.font-size.app/
+            1280 -> 3840 : 24 -> 72
+        */
+        font-size: clamp(1.75rem, 0rem + 2.1875vw, 5.25rem);
+        font-weight: bold;
+        color: rgba(255, 255, 255, 1);
+        background-color: rgba(50, 50, 50, 0.75);
+        padding: 0px 10px 0px 10px;
+
+        /* 子要素の上下中央揃え */
+        display: flex;
+        /* 横方向 */
+        justify-content: left;
+        /* 縦方向 */
+        align-items: center;
+        overflow: hidden;
+    }
+}

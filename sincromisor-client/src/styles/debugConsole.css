@@ -1,0 +1,36 @@
+div#debugConsole {
+    & {
+        grid-area: 1 / 1 / 5 / 4;
+        position: absolute;
+        top: 0;
+        left: 0;
+        font-size: 100%;
+        overflow: hidden;
+        height: 100dvh;
+        width: 100dvw;
+        -webkit-text-stroke: 0.2px #ffffff;
+    }
+
+    & div#characterGaze {
+        width: 30vw;
+        position: fixed;
+        top: 0;
+        right: 0;
+    }
+
+    & video#characterGazeVideo {
+        width: 100%;
+        height: auto;
+        display: block;
+        z-index: 0;
+    }
+
+    & svg#characterGazeMarker {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+    }
+}

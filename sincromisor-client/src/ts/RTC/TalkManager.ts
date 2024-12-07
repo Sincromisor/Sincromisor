@@ -59,7 +59,7 @@ export class TalkManager {
     }
 
     private addTelopChar(char: string): void {
-        const telopText: HTMLDivElement | null = document.querySelector("div#obsFooterBox");
+        const telopText: HTMLParagraphElement | null = document.querySelector("p#sincroFooterBox__text");
         if (!telopText) {
             return;
         }

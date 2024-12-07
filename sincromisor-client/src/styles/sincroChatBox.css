@@ -1,0 +1,66 @@
+div#sincroChatBox {
+    --chatMessageBorderRadius: clamp(5px 1vh 20px);
+    --chatBoxSpace: clamp(5px 1vh 20px);
+    --chatBoxIconSize: clamp(25px 5vh 100px);
+
+    & {
+        width: 100%;
+        height: 100%;
+        font-size: clamp(50% 1.5vh 400%);
+        overflow: hidden;
+    }
+
+    div.sincroMessage {
+        & {
+            position: relative;
+            padding: var(--chatBoxSpace);
+            width: 95%;
+
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: var(--chatBoxSpace);
+            margin-bottom: var(--chatBoxSpace);
+            border-radius: var(--chatMessageBorderRadius);
+            background-color: #eeaacc;
+
+            display: grid;
+            grid-template-columns: var(--chatBoxIconSize) 5fr;
+            grid-column-gap: 0px;
+            grid-row-gap: 0px;
+
+            transition: all 0.5s ease-in-out;
+            opacity: 0;
+        }
+
+        & .sincroMessage__iconBox {
+            & {
+                border-radius: var(--chatMessageBorderRadius) 0px 0px var(--chatMessageBorderRadius);
+                background-color: #bb88aa;
+                grid-area: 1 / 1 / 2 / 2;
+                /*width: 100%;
+                height: 100%;
+                aspect-ratio: 1 / 1;*/
+                width: var(--chatBoxIconSize);
+                height: var(--chatBoxIconSize);
+            }
+
+            & .sincroMessage__icon {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                display: block;
+            }
+        }
+
+        & .sincroMessage__text {
+            width: 100%;
+            border-radius: 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
+            grid-area: 1 / 2 / 2 / 3;
+            min-height: calc(var(--chatBoxIconSize) + var(--chatMessageBorderRadius));
+            background-color: #eee;
+            padding: var(--chatBoxSpace);
+            box-sizing: border-box;
+            word-break: break-all;
+        }
+    }
+}

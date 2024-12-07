@@ -1,6 +1,7 @@
 export class DebugConsoleManager {
     private static instance: DebugConsoleManager
 
+    private readonly debugConsoleContainer: HTMLDivElement | null;
     /* RTC */
     private readonly telopChannelLog: HTMLPreElement | null;
     private readonly textChannelLog: HTMLPreElement | null;
@@ -24,6 +25,8 @@ export class DebugConsoleManager {
     }
 
     private constructor() {
+        this.debugConsoleContainer = document.querySelector("div#sincroDebugConsoleContainer");
+
         /* RTC */
         this.telopChannelLog = document.querySelector("pre#telopChannel");
         this.textChannelLog = document.querySelector("pre#textChannel");
@@ -43,33 +46,33 @@ export class DebugConsoleManager {
     }
 
     showDebugConsole(): void {
-        const debugConsole: HTMLDivElement | null = document.querySelector("div#debugConsole");
-        if (!debugConsole) {
+        if (!this.debugConsoleContainer) {
             return;
         }
-        debugConsole.style.zIndex = '255';
-        debugConsole.style.overflow = 'scroll';
+        this.debugConsoleContainer.style.visibility = 'visible';
+        this.debugConsoleContainer.style.overflow = 'scroll';
     }
 
     hideDebugConsole(): void {
-        const debugConsole: HTMLDivElement | null = document.querySelector("div#debugConsole");
-        if (!debugConsole) {
+        if (!this.debugConsoleContainer) {
             return;
         }
-        debugConsole.style.zIndex = '-1';
-        debugConsole.style.overflow = 'hidden';
+        this.debugConsoleContainer.style.visibility = 'hidden';
+        this.debugConsoleContainer.style.overflow = 'hidden';
     }
 
     /* ctrl + alt + dでデバッグコンソールを表示 */
     private setShortcutKeyEvent(): void {
-        const debugConsole: HTMLDivElement | null = document.querySelector("div#debugConsole");
-        if (!debugConsole) {
+        if (!this.debugConsoleContainer) {
+            console.error("DebugConsole is not found!");
             return;
         }
         window.addEventListener("keydown", (e) => {
+            console.log(e);
             // macOSのChromeではalt+dでkeyの値がδになる
             if (e.ctrlKey && e.altKey && (e.key == 'd' || e.code == 'KeyD')) {
-                if (window.getComputedStyle(debugConsole).zIndex == '-1') {
+                console.log("toggleDebugConsole.");
+                if (this.debugConsoleContainer && this.debugConsoleContainer.style.visibility == 'hidden') {
                     this.showDebugConsole();
                 } else {
                     this.hideDebugConsole();

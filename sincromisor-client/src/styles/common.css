@@ -1,0 +1,8 @@
+* {
+    margin: 0 auto;
+    padding: 0;
+    /*overflow: clip;*/
+    font-family: 'BIZ UDPGothic', 'UDPGothic', sans-serif;
+    font-feature-settings: "palt" 1;
+    box-sizing: border-box;
+}

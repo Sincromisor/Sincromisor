@@ -159,6 +159,12 @@ export class CharacterGaze {
                 this.updateKeypointsMovingAverageToNeutral();
             }
             callback(detections);
+        } else {
+            /* 
+                sincroDebugConsoleContainerをhideした際にvideoの再生が止まり、
+                その影響で顔認識も止まってしまう問題を回避。
+            */
+            this.videoElement.play();
         }
         window.requestAnimationFrame(() => { this.predictCam(callback) });
     }

@@ -1,38 +1,89 @@
-:root {
-    --videoWidth: calc(var(--canvasWidth) / 2);
-    --videoHeight: calc(var(--canvasHeight) / 2);
-    --footerHeight: 90px;
+div#sincroBody {
+    & {
+        width: 100dvw;
+        min-height: 100dvh;
 
-    --chatBoxHeight: calc(var(--canvasHeight) - var(--headerHeight) - var(--videoHeight) - var(--footerHeight));
-    --characterBoxHeight: calc(var(--chatBoxHeight) + var(--footerHeight));
-    --characterBoxWidth: var(--characterBoxHeight);
+        overflow: clip;
+        gap: 0px 0px;
+        position: absolute;
+        top: 0;
+        left: 0;
 
-    --chatMessageHeight: calc(var(--chatBoxHeight) / 5);
-    --chatIconSize: calc(var(--chatMessageHeight) * 0.8);
-}
+        background-color: #ffffff;
 
-div#obsBody {
-    /* https://grid.layoutit.com/?id=aFLAWNI */
-    grid-template-columns: calc(var(--canvasWidth) / 2) calc(var(--canvasWidth) / 2 - var(--characterBoxWidth)) var(--characterBoxWidth);
-    grid-template-rows: var(--headerHeight) calc(var(--videoHeight) * 0.6) calc(var(--videoHeight) * 0.4) var(--chatBoxHeight) var(--footerHeight);
-}
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        grid-template-rows: repeat(12, 1fr);
+        grid-column-gap: 0px;
+        grid-row-gap: 0px;
 
-div#obsVideo1 {
-    grid-area: 2 / 1 / 4 / 2;
-}
+        z-index: 0;
+    }
 
-div#obsVideo2 {
-    grid-area: 2 / 2 / 4 / 4;
-}
+    & div#sincroHeaderContainer {
+        grid-area: 1 / 1 / 2 / 13;
+        width: 100%;
+        height: 100%;
+        z-index: 6;
+    }
 
-div#obsMessageBox {
-    grid-area: 4 / 1 / 5 / 3;
-}
+    & div#sincroVideoContainer {
+        & {
+            grid-area: 2 / 1 / 12 / 7;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            position: relative;
+        }
 
-div#obsCharacterBox {
-    grid-area: 4 / 3 / 6 / 4;
-}
+        & div#sincroVideoBox1 {
+            width: 100%;
+            height: 50%;
+            position: absolute;
+            top: 0%;
+        }
 
-div#obsFooterBox {
-    grid-area: 5 / 1 / 6 / 4;
+        & div#sincroVideoBox2 {
+            width: 100%;
+            height: 50%;
+            position: absolute;
+            top: 50%;
+        }
+    }
+
+    & div#sincroChatContainer {
+        grid-area: 1 / 7 / 13 / 13;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+    }
+
+    & div#sincroCharacterContainer {
+        grid-area: 4 / 8 / 13 / 12;
+        width: 100%;
+        height: 100%;
+        z-index: 4;
+    }
+
+    & div#sincroBackgroundContainer {
+        grid-area: 4 / 7 / 12 / 13;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+    }
+
+    & div#sincroFooterContainer {
+        grid-area: 12 / 1 / 13 / 13;
+        width: 100%;
+        height: 100%;
+        z-index: 3;
+    }
+
+    & div#sincroDebugConsoleContainer {
+        grid-area: 1 / 1 / 13 / 13;
+        width: 100%;
+        height: 100%;
+        visibility: hidden;
+        z-index: 15;
+    }
 }
