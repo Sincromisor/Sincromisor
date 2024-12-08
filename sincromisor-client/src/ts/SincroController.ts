@@ -26,7 +26,7 @@ export class SincroController {
         this.chatMessageManager = ChatMessageManager.getManager();
         this.talkManager = TalkManager.getManager();
         this.rtcConfigManager = SincroRTCConfigManager.getManager((err) => {
-            this.chatMessageManager.writeSystemMessage(`WebRTCの設定の取得に失敗しました。 - ${err}`);
+            this.chatMessageManager.writeErrorMessage(`WebRTCの設定の取得に失敗しました。 - ${err}`);
         });
         this.userMediaManager = new UserMediaManager();
         if (!this.dialogManager.enableCharacterGaze()) {
@@ -37,7 +37,7 @@ export class SincroController {
         }, (videoTrack: MediaStreamTrack) => {
             this.startCharacterGaze(videoTrack);
         }, (err) => {
-            this.chatMessageManager.writeSystemMessage(`カメラまたはマイクが見つかりませんでした。 - ${err}`);
+            this.chatMessageManager.writeErrorMessage(`カメラまたはマイクが見つかりませんでした。 - ${err}`);
         });
     }
 

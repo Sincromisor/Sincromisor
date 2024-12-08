@@ -1,7 +1,7 @@
 div#sincroChatBox {
     --chatMessageBorderRadius: clamp(5px 1vh 20px);
     --chatBoxSpace: clamp(5px 1vh 20px);
-    --chatBoxIconSize: clamp(25px 5vh 100px);
+    --chatBoxIconSize: clamp(25px 4vh 100px);
 
     & {
         width: 100%;
@@ -14,7 +14,7 @@ div#sincroChatBox {
         & {
             position: relative;
             padding: var(--chatBoxSpace);
-            width: 95%;
+            width: 85%;
 
             margin-left: auto;
             margin-right: auto;
@@ -23,23 +23,13 @@ div#sincroChatBox {
             border-radius: var(--chatMessageBorderRadius);
             background-color: #eeaacc;
 
-            display: grid;
-            grid-template-columns: var(--chatBoxIconSize) 5fr;
-            grid-column-gap: 0px;
-            grid-row-gap: 0px;
-
             transition: all 0.5s ease-in-out;
             opacity: 0;
         }
 
         & .sincroMessage__iconBox {
             & {
-                border-radius: var(--chatMessageBorderRadius) 0px 0px var(--chatMessageBorderRadius);
                 background-color: #bb88aa;
-                grid-area: 1 / 1 / 2 / 2;
-                /*width: 100%;
-                height: 100%;
-                aspect-ratio: 1 / 1;*/
                 width: var(--chatBoxIconSize);
                 height: var(--chatBoxIconSize);
             }
@@ -54,13 +44,104 @@ div#sincroChatBox {
 
         & .sincroMessage__text {
             width: 100%;
-            border-radius: 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
-            grid-area: 1 / 2 / 2 / 3;
             min-height: calc(var(--chatBoxIconSize) + var(--chatMessageBorderRadius));
             background-color: #eee;
             padding: var(--chatBoxSpace);
             box-sizing: border-box;
             word-break: break-all;
+        }
+    }
+
+    div.sincroUserMessage {
+        & {
+            margin-left: auto;
+            margin-right: var(--chatBoxSpace);
+            display: grid;
+            grid-template-columns: 5fr var(--chatBoxIconSize);
+            column-gap: 0px;
+            row-gap: 0px;
+        }
+
+        & .sincroMessage__iconBox{
+            & {
+                grid-area: 1 / 2 / 2 / 3;
+                border-radius: 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) 0px;
+
+            }
+        }
+
+        & .sincroMessage__text{
+            grid-area: 1 / 1 / 2 / 2;
+            border-radius: var(--chatMessageBorderRadius) 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
+        }
+    }
+
+    div.sincroSystemMessage {
+        & {
+            margin-left: var(--chatBoxSpace);
+            margin-right: auto;
+            display: grid;
+            grid-template-columns: var(--chatBoxIconSize) 5fr;
+            column-gap: 0px;
+            row-gap: 0px;
+        }
+
+        & .sincroMessage__iconBox{
+            & {
+                grid-area: 1 / 1 / 2 / 2;
+                border-radius: var(--chatMessageBorderRadius) 0px 0px var(--chatMessageBorderRadius);
+            }
+        }
+
+        & .sincroMessage__text{
+            grid-area: 1 / 2 / 2 / 3;
+            border-radius: 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
+        }
+    }
+
+    div.sincroErrorMessage {
+        & {
+            margin-left: var(--chatBoxSpace);
+            margin-right: auto;
+            display: grid;
+            grid-template-columns: var(--chatBoxIconSize) 5fr;
+            column-gap: 0px;
+            row-gap: 0px;
+        }
+
+        & .sincroMessage__iconBox{
+            & {
+                grid-area: 1 / 1 / 2 / 2;
+                border-radius: var(--chatMessageBorderRadius) 0px 0px var(--chatMessageBorderRadius);
+            }
+        }
+
+        & .sincroMessage__text{
+            grid-area: 1 / 2 / 2 / 3;
+            border-radius: 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
+        }
+    }
+
+    div.sincroResetMessage {
+        & {
+            margin-left: var(--chatBoxSpace);
+            margin-right: auto;
+            display: grid;
+            grid-template-columns: var(--chatBoxIconSize) 5fr;
+            column-gap: 0px;
+            row-gap: 0px;
+        }
+
+        & .sincroMessage__iconBox{
+            & {
+                grid-area: 1 / 1 / 2 / 2;
+                border-radius: var(--chatMessageBorderRadius) 0px 0px var(--chatMessageBorderRadius);
+            }
+        }
+
+        & .sincroMessage__text{
+            grid-area: 1 / 2 / 2 / 3;
+            border-radius: 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
         }
     }
 }

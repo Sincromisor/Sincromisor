@@ -61,9 +61,18 @@ export class ChatMessageManager {
     }
 
     /*
+        誰かわからないユーザーのメッセージを出力する。主にデバッグ用。
+        生成したメッセージのdiv要素を返す。
+    */
+    writeUnknownUserMessage(message:string, isHTML: boolean = false): HTMLDivElement {
+        const chatMessage: ChatMessage = new ChatMessageBuilder('user', 'UnknownUser', 'Unknown User', message);
+        return this.createNewMessageBox(chatMessage, isHTML);
+    }
+
+    /*
         システムの返信としてメッセージを出力する。
         生成したメッセージのdiv要素を返す。
-     */
+    */
     writeSystemMessage(message: string, isHTML: boolean = false): HTMLDivElement {
         const chatMessage: ChatMessage = new ChatMessageBuilder('system', this.systemUserID, this.systemUserName, message);
         return this.createNewMessageBox(chatMessage, isHTML);
@@ -71,7 +80,7 @@ export class ChatMessageManager {
 
     /*
         システムのエラーメッセージとしてメッセージを出力する。
-        メッセージのdiv要素のIDを返す。
+        メッセージのdiv要素を返す。
     */
     writeErrorMessage(message: string, force: boolean = false): HTMLDivElement | null {
         /* 同じエラーメッセージが何度も繰り返されないようにする。 */
@@ -85,7 +94,7 @@ export class ChatMessageManager {
 
     /*
         システムのリセットメッセージとしてメッセージを出力する。
-        メッセージのdiv要素のIDを返す。
+        メッセージのdiv要素を返す。
     */
     writeResetMessage(message: string): HTMLDivElement {
         const chatMessage: ChatMessage = new ChatMessageBuilder('reset', this.systemUserID, this.systemUserName, message);
@@ -105,7 +114,7 @@ export class ChatMessageManager {
 
     /*
         <div id="chatBox"></div>の末尾に、下記のような要素を追記する。
-        追記したdiv要素のIDをテキストで返す。
+        追記したdiv要素を返す。
     
         <div class="sincroMessage__systemMessage">
             <div class="sincroMessage__icon"><img src="/icon-system.png"></div>
@@ -143,7 +152,8 @@ export class ChatMessageManager {
         const e = document.createElement("div");
         e.id = `msg${cMessage.message_id}`;
         this.messageID += 1;
-        e.className = `sincroMessage__${cMessage.message_type}Message sincroMessage`;
+        /* message_typeはsystem, user, error, resetのいずれか */
+        e.className = `${this.messageTypeToMessageClassName(cMessage.message_type)} sincroMessage`;
         e.appendChild(eIconBox);
         e.appendChild(eMesg);
 
@@ -153,6 +163,10 @@ export class ChatMessageManager {
         return e;
     }
 
+    private messageTypeToMessageClassName(message_type: string): string{
+        const name = message_type.charAt(0).toUpperCase() + message_type.slice(1);
+        return `sincro${name}Message`;
+    }
     removeOldMessage(count: number) {
         while (this.chatBox.childNodes.length >= count) {
             this.chatBox.childNodes[this.chatBox.childNodes.length - 1].remove();

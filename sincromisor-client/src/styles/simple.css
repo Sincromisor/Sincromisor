@@ -25,8 +25,8 @@ div#sincroBody {
         display: grid;
         grid-template-columns: 1fr;
         grid-template-rows: 90px 1fr 90px;
-        grid-column-gap: 0px;
-        grid-row-gap: 0px;
+        column-gap: 0px;
+        row-gap: 0px;
 
         z-index: 0;
     }

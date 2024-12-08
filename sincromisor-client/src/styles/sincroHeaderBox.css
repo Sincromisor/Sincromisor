@@ -6,8 +6,8 @@ div#sincroHeaderBox {
         display: grid;
         grid-template-columns: 180px 90px 1fr 90px 180px;
         grid-template-rows: 1fr;
-        grid-column-gap: 0px;
-        grid-row-gap: 0px;
+        column-gap: 0px;
+        row-gap: 0px;
         position: relative;
     }
 

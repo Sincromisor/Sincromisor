@@ -250,13 +250,13 @@ export class RTCTalkClient {
                 this.chatMessageManager.writeSystemMessage("音声認識・合成システムとのセッションの確立に成功しました。");
                 break;
             case "disconnected":
-                this.chatMessageManager.writeSystemMessage("音声認識・合成システムから切断されました。");
+                this.chatMessageManager.writeErrorMessage("音声認識・合成システムから切断されました。");
                 break;
             case "failed":
-                this.chatMessageManager.writeSystemMessage("音声認識・合成システムへの接続に失敗しました。");
+                this.chatMessageManager.writeErrorMessage("音声認識・合成システムへの接続に失敗しました。");
                 break;
             default:
-                this.chatMessageManager.writeSystemMessage(`Unknown ICE Connection State - ${state}`);
+                this.chatMessageManager.writeErrorMessage(`Unknown ICE Connection State - ${state}`);
                 console.error(state);
         }
     }

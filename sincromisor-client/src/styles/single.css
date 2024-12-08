@@ -1,3 +1,9 @@
+/*
+    4K(3840 x 2160):     320   * 12, 180 * 12
+    FullHD(1920 x 1080): 160   * 12, 90  * 12
+    HD(1280 x 720):      106.6 * 12, 60  * 12
+*/
+
 div#sincroBody {
     & {
         width: 100dvw;
@@ -14,8 +20,8 @@ div#sincroBody {
         display: grid;
         grid-template-columns: repeat(12, 1fr);
         grid-template-rows: repeat(12, 1fr);
-        grid-column-gap: 0px;
-        grid-row-gap: 0px;
+        column-gap: 0px;
+        row-gap: 0px;
 
         z-index: 0;
     }
