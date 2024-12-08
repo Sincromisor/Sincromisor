@@ -4,25 +4,49 @@
 <head>
     <title>Sincromisor</title>
     <meta charset="UTF-8">
-    <link href="/styles/common.css" rel="stylesheet">
+    <link href="styles/fonts.css" rel="stylesheet">
+    <link href="styles/common.css" rel="stylesheet">
+    <link href="styles/sincroHeaderBox.css" rel="stylesheet">
+    <link href="styles/index.css" rel="stylesheet">
 </head>
 
-<body>
-    <h1>Sincromisor</h1>
-    <ul>
-        <li><a href="simple/">Simple Interface</a></li>
-        <li><a href="single/">Single Display(16:9)</a></li>
-        <li><a href="double/">Double Display(16:9)</a></li>
-        <li><a href="glass/">Looking Glass(Experimental)</a></li>
-        <li><a href="character/">Character Test</a></li>
-        <li><a href="character-glass/">Looking Glass & Character Test(Experimental)</a></li>
-        <li><a href="area360/">360deg Camera(Experimental)</a></li>
-    </ul>
-    <div>
-        <p>GitHub:
-            <a href="https://github.com/Phenomer/Sincromisor">
-                https://github.com/Phenomer/Sincromisor</a>
-        </p>
+<body class="sincroIndexPage">
+    <div id="sincroBody">
+        <div id="sincroHeaderContainer">
+            <div id="sincroHeaderBox">
+                <div class="headerIconBox leftIconBox">
+                    <img class="headerIconBox__icon" src="../images/icon-system.webp">
+                </div>
+                <div id="sincroHeaderBox__leftDecoration"></div>
+                <div id="sincroHeaderBox__text">Sincromisor</div>
+                <div id="sincroHeaderBox__rightDecoration"></div>
+                <div class="headerIconBox rightIconBox">
+                </div>
+            </div>
+        </div>
+
+        <div class="sincroIndexContainer">
+            <form class="sincroLinkBox">
+                <button formaction="simple/">Simple Interface</button>
+                <button formaction="single/">Single Display (16:9)</button>
+                <button formaction="double/">Double Display (16:9)</button>
+                <button formaction="character/">Character Rendering Test</button>
+            </form>
+
+            <form class="sincroLinkBox">
+                <h2>Experimental</h2>
+                <button formaction="glass/" class="experimental">Looking Glass</button>
+                <button formaction="character-glass/" class="experimental">Looking Glass Rendering Test</button>
+                <button formaction="area360/" class="experimental">360deg Camera</button>
+            </form>
+
+            <div>
+                <h2>Source</h2>
+                <p><a href="https://github.com/Phenomer/Sincromisor">
+                        https://github.com/Phenomer/Sincromisor</a></p>
+            </div>
+        </div>
+
     </div>
 </body>
 
