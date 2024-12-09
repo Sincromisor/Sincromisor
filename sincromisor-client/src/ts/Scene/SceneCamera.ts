@@ -75,6 +75,11 @@ export class StageCamera {
             this.reconfigure();
         });
 
+        /* 2000msごとにキャンパスサイズを再計算 */
+        setInterval(()=>{
+            this.reconfigure();
+        }, 2000);
+
         return camera;
     }
 
