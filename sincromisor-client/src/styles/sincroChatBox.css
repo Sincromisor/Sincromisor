@@ -21,7 +21,7 @@ div#sincroChatBox {
             margin-top: var(--chatBoxSpace);
             margin-bottom: var(--chatBoxSpace);
             border-radius: var(--chatMessageBorderRadius);
-            background-color: #eeaacc;
+            background-color: var(--otherMessageBackgroundColor);
 
             transition: all 0.5s ease-in-out;
             opacity: 0;
@@ -29,7 +29,7 @@ div#sincroChatBox {
 
         & .sincroMessage__iconBox {
             & {
-                background-color: #bb88aa;
+                background-color: var(--otherMessageIconBoxColor);
                 width: var(--chatBoxIconSize);
                 height: var(--chatBoxIconSize);
             }
@@ -45,7 +45,8 @@ div#sincroChatBox {
         & .sincroMessage__text {
             width: 100%;
             min-height: calc(var(--chatBoxIconSize) + var(--chatMessageBorderRadius));
-            background-color: #eee;
+            color: var(--textMessageColor);
+            background-color: var(--textMessageBackgroundColor);
             padding: var(--chatBoxSpace);
             box-sizing: border-box;
             word-break: break-all;
@@ -60,13 +61,14 @@ div#sincroChatBox {
             grid-template-columns: 5fr var(--chatBoxIconSize);
             column-gap: 0px;
             row-gap: 0px;
+            background-color: var(--userMessageBackgroundColor);
         }
 
         & .sincroMessage__iconBox{
             & {
                 grid-area: 1 / 2 / 2 / 3;
                 border-radius: 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) 0px;
-
+                background-color: var(--userMessageIconBoxColor);
             }
         }
 
@@ -84,12 +86,14 @@ div#sincroChatBox {
             grid-template-columns: var(--chatBoxIconSize) 5fr;
             column-gap: 0px;
             row-gap: 0px;
+            background-color: var(--systemMessageBackgroundColor);
         }
 
         & .sincroMessage__iconBox{
             & {
                 grid-area: 1 / 1 / 2 / 2;
                 border-radius: var(--chatMessageBorderRadius) 0px 0px var(--chatMessageBorderRadius);
+                background-color: var(--systemMessageIconBoxColor);
             }
         }
 
@@ -101,7 +105,7 @@ div#sincroChatBox {
 
     div.sincroErrorMessage {
         & {
-            margin-left: var(--chatBoxSpace);
+            margin-left: auto;
             margin-right: auto;
             display: grid;
             grid-template-columns: var(--chatBoxIconSize) 5fr;
@@ -124,7 +128,7 @@ div#sincroChatBox {
 
     div.sincroResetMessage {
         & {
-            margin-left: var(--chatBoxSpace);
+            margin-left: auto;
             margin-right: auto;
             display: grid;
             grid-template-columns: var(--chatBoxIconSize) 5fr;

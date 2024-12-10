@@ -16,7 +16,7 @@ export class StageCamera {
     protected readonly defaultBeta: number = Math.PI / 2;
     protected readonly defaultRadius: number = 2.0;
     protected readonly cameraTarget: Vector3 = new Vector3(0, 1.25, 0);
-    protected cameraDistance: number = 0.75;
+    protected cameraDistance: number = 1.0;
 
     constructor(canvas: HTMLCanvasElement, scene: Scene, vrMode: boolean) {
         this.canvas = canvas;
@@ -103,38 +103,3 @@ export class StageCamera {
         this.camera.orthoBottom = this.camera.orthoLeft * ratio;
     }
 }
-
-/*
-this.cameraDistance = 0.75;
-this.cameraTarget = new Vector3(0, 1.25, 0);
-
-setupCamera() {
-    //const camera = new BABYLON.FreeCamera("camera01", new BABYLON.Vector3(0, 5, 10), this.scene);
-    // 第2引数(左右): 0.5 * Math.PI
-    // 第3引数(上下): Math.PI / 2
-    // 第4引数(距離): 1.5
-    this.camera = new ArcRotateCamera("camera01", 0.5 * Math.PI, Math.PI / 2.2, 1.5, this.cameraTarget, this.scene);
-    this.camera.mode = Camera.ORTHOGRAPHIC_CAMERA;
-    this.camera.minZ = 0.001;
-
-    // ctrl + マウスドラッグの慣性をひかえめに
-    this.camera.panningInertia = 0.3;
-    // ctrl + マウスドラッグの移動距離に制限を掛ける
-    // 1.0未満はなぜか微動だにしなくなるので注意
-    this.camera.panningDistanceLimit = 1.4;
-
-    this.camera.wheelDeltaPercentage = 0.005; // カメラの拡大・縮小速度
-    this.camera.speed = 0.5; // カメラの回転速度
-    this.camera.lowerAlphaLimit = -1; // 左回転の制御
-    this.camera.upperAlphaLimit = 4; // 右回転の制御
-    this.camera.lowerBetaLimit = 0; // 上からは見れるようにする
-    this.camera.upperBetaLimit = 2.2; // 下から覗かれないようにする
-    this.camera.lowerRadiusLimit = 0.3; // 近づきすぎないようにする
-    this.camera.upperRadiusLimit = 5; // 離れすぎないようにする
-    this.camera.fov = 0.95;
-
-    //this.camera.setTarget(new BABYLON.Vector3(0, 1.2, 0));
-    this.updateCameraDistance();
-    this.camera.attachControl(this.canvasID, true);
-
-*/

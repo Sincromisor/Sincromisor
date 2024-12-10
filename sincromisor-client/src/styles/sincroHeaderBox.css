@@ -15,7 +15,7 @@ div#sincroHeaderBox {
         & {
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: var(--headerBackgroundColor);
 
             position: absolute;
             top: 0;
@@ -46,11 +46,11 @@ div#sincroHeaderBox {
 
         width: 100%;
         height: 100%;
-        background: linear-gradient(-70deg,
-                rgba(50, 50, 50, 0.75) 0%,
-                rgba(50, 50, 50, 0.75) 50%,
-                rgba(0, 0, 0, 0.5) 50%,
-                rgba(0, 0, 0, 0.5) 100%);
+        background: linear-gradient(110deg,
+                var(--headerBackgroundColor) 0%,
+                var(--headerBackgroundColor) 50%,
+                var(--headerBodyColor) 50%,
+                var(--headerBodyColor) 100%);
     }
 
     & div#sincroHeaderBox__rightDecoration {
@@ -58,11 +58,11 @@ div#sincroHeaderBox {
 
         width: 100%;
         height: 100%;
-        background: linear-gradient(-70deg,
-                rgba(0, 0, 0, 0.5) 0%,
-                rgba(0, 0, 0, 0.5) 50%,
-                rgba(50, 50, 50, 0.75) 50%,
-                rgba(50, 50, 50, 0.75) 100%);
+        background: linear-gradient(110deg,
+                var(--headerBodyColor) 0%,
+                var(--headerBodyColor) 50%,
+                var(--headerBackgroundColor) 50%,
+                var(--headerBackgroundColor) 100%);
     }
 
     & div#sincroHeaderBox__text {
@@ -76,8 +76,8 @@ div#sincroHeaderBox {
         */
         font-size: clamp(1.75rem, 0rem + 2.1875vw, 5.25rem);
         font-weight: bold;
-        color: rgba(255, 255, 255, 1);
-        background-color: rgba(50, 50, 50, 0.75);
+        color: var(--headerTextColor);
+        background-color: var(--headerBodyColor);
         padding: 0px 10px 0px 10px;
 
         /* 子要素の上下中央揃え */

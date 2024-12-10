@@ -8,7 +8,9 @@ div#debugConsole {
         overflow: hidden;
         height: 100dvh;
         width: 100dvw;
-        -webkit-text-stroke: 0.2px #ffffff;
+        -webkit-text-stroke: 0.2px var(--debugConsoleTextStrokeColor);
+        color: var(--debugConsoleTextColor);
+        background-color: var(--debugConsoleBackgroundColor);
     }
 
     & div#characterGaze {
