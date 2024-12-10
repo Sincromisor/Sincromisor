@@ -61,7 +61,7 @@ div#sincroBody {
         top: 0;
         left: 0;
 
-        background-color: #ffffff;
+        background-color: var(--baseBackgroundColor);
 
         display: grid;
         grid-template-columns: repeat(12, 1fr);

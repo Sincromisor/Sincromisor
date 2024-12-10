@@ -3,31 +3,24 @@
 
     <fieldset>
         <legend>詳細設定</legend>
-        <div>
-            <label for="talkModeSelector">おはなしモード</label>
-
-            <select name="talkMode" id="talkModeSelector">
+            <label class='fieldLabel'  for="talkModeSelector">おはなしモード</label>
+            <select class='fieldContent' name="talkMode" id="talkModeSelector">
                 <option value="chat" selected>チャット</option>
                 <option value="sincro">シンクロ</option>
             </select>
-        </div>
-        <div>
-            <input type="checkbox" id="enableCharacter" name="enableCharacter" checked disabled />
-            <label for="enableCharacter">キャラクターを表示する</label>
-        </div>
-        <div>
-            <input type="checkbox" id="enableCharacterGaze" name="enableCharacterGaze" checked disabled />
-            <label for="enableCharacterGaze">顔認識機能を利用する(Webカメラが必要です)</label>
-        </div>
-        <div>
-            <input type="checkbox" id="enableAutoMute" name="enableAutoMute" checked disabled />
-            <label for="enableAutoMute">顔認識時のみ応答する(Webカメラが必要です)</label>
-        </div>
-        <div>
-            <label for="titleText">タイトル</label>
-            <input type="text" id="titleText" name="titleText" placeholder="ここにタイトルを入力" />
-        </div>
+
+            <label class='fieldLabel' for="enableCharacter">キャラクターを表示する</label>
+            <input class='fieldContent' type="checkbox" id="enableCharacter" name="enableCharacter" checked disabled />
+
+            <label class='fieldLabel' for="enableCharacterGaze">顔認識機能を利用する<br>(Webカメラが必要です)</label>
+            <input class='fieldContent' type="checkbox" id="enableCharacterGaze" name="enableCharacterGaze" checked disabled />
+
+            <label class='fieldLabel' for="enableAutoMute">顔認識時のみ応答する<br>(Webカメラが必要です)</label>
+            <input class='fieldContent' type="checkbox" id="enableAutoMute" name="enableAutoMute" checked disabled />
+
+            <label  class='fieldLabel' for="titleText">タイトル</label>
+            <input  class='fieldContent' type="text" id="titleText" name="titleText" placeholder="ここにタイトルを入力" />
     </fieldset>
 
-    <p><a href="/">&lt;&lt; もどる</a></p>
+    <p class="configurationDialog__back"><a href="/">&lt;&lt; もどる</a></p>
 </dialog>

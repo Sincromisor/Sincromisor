@@ -6,3 +6,35 @@
     font-feature-settings: "palt" 1;
     box-sizing: border-box;
 }
+
+:root {
+    /* Body */
+    --baseTextColor: hsl(0deg, 0%, 5%, 1);
+    --baseBackgroundColor: hsl(0deg, 0%, 95%, 1);
+
+    /* Header & Footer */
+    --headerTextColor: hsl(0deg, 0%, 95%, 1);
+    --headerExperimentalTextColor: hsl(0deg, 0%, 85%, 1);
+    --headerBackgroundColor: hsl(0deg, 0%, 30%, 0.75);
+    --headerBodyColor: hsl(0deg, 0%, 20%, 0.75);
+    --headerBackgroundHoverColor: hsl(0deg, 0%, 5%, 0.75);
+
+    /* ChatMessage */
+    --textMessageColor: hsl(0deg, 0%, 5%, 1);
+    --textMessageBackgroundColor: hsl(0deg, 0%, 95%, 1);
+    --otherMessageBackgroundColor: hsl(0deg, 0%, 77%, 1);
+    --otherMessageIconBoxColor: hsl(0deg, 0%, 67%, 1);
+    --systemMessageBackgroundColor: hsl(331deg, 47%, 77%, 1);
+    --systemMessageIconBoxColor: hsl(331deg, 37%, 67%, 1);
+    --userMessageBackgroundColor: hsl(180deg, 47%, 77%, 1);
+    --userMessageIconBoxColor: hsl(180deg, 37%, 67%, 1);
+
+    /* ConfigurationDialog */
+    --configurationDialogTextColor: var(--baseTextColor);
+    --configurationDialogBackgroundColor: var(--baseBackgroundColor);
+
+    /* DebugConsole */
+    --debugConsoleTextColor: var(--baseTextColor);
+    --debugConsoleTextStrokeColor: var(--baseBackgroundColor);
+    --debugConsoleBackgroundColor: hsl(0deg, 0%, 0%, 0.25);
+}
