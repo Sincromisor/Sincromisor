@@ -9,16 +9,23 @@ dialog#configurationDialog {
         border-radius: 5px;
         font-size: clamp(1.5rem, 0rem + 1.25vw, 4.5rem);
         overflow: auto;
+        color: var(--configurationDialogTextColor);
+        background-color: var(--configurationDialogBackgroundColor);
     }
 
-    & p {
-        font-size: clamp(2rem, 0rem + 2.5vw, 6rem);
-        margin: 40px auto 40px auto;
-        width: 80%;
-        text-decoration: none;
+    & p.configurationDialog__back {
+        & {
+            font-size: clamp(2rem, 0rem + 2.5vw, 6rem);
+            margin: 40px auto 40px auto;
+            width: 80%;
+        }
+
+        & a {
+            text-decoration: none;
+        }
     }
 
-    & button {
+    & button#sincroStart {
         display: block;
         height: clamp(4rem, 0rem + 5vw, 12rem);
         font-size: clamp(2rem, 0rem + 2.5vw, 6rem);
@@ -27,49 +34,55 @@ dialog#configurationDialog {
     }
 
     & fieldset {
-        margin: 20px auto 20px auto;
-        width: 90%;
-    }
-
-    & fieldset legend {
-        margin-left: 2em;
-    }
-
-    & fieldset div {
-        margin: 20px 20px 20px 20px;
-    }
-
-    & fieldset div input[type=checkbox] {
-        vertical-align: middle;
-        width: 36px;
-        height: clamp(2rem, 0rem + 2.5vw, 6rem);
-        font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
-        margin: 0 1em 0 1em;
-    }
-
-    & fieldset div input[type=text] {
-        vertical-align: middle;
-        width: 80%;
-        height: clamp(2rem, 0rem + 2.5vw, 6rem);
-        font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
-        margin: 0 1em 0 1em;
-    }
-
-    & fieldset div select {
         & {
+            margin: 20px auto 20px auto;
+            width: 90%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            row-gap: 1em;
+            place-content: center;
+            place-items: center;
+            padding: 0.5em;
+        }
+
+        & .fieldLabel {
+            height: 100%;
+            width: 95%;
+            display: block;
+            grid-column: 1 / 2;
             height: clamp(2rem, 0rem + 2.5vw, 6rem);
             font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
         }
 
-        & option {
+        & .fieldContent {
+            height: 100%;
+            width: 95%;
+            display: block;
+            grid-column: 2 / 3;
             height: clamp(2rem, 0rem + 2.5vw, 6rem);
-            font-size: 20px;
+            font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
         }
-    }
 
-    & fieldset div label {
-        vertical-align: middle;
-        height: clamp(2rem, 0rem + 2.5vw, 6rem);
+        & legend {
+            margin-left: 2em;
+        }
+
+        & select {
+            & {
+                height: clamp(2rem, 0rem + 2.5vw, 6rem);
+                font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
+            }
+
+            & option {
+                height: clamp(2rem, 0rem + 2.5vw, 6rem);
+                font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
+            }
+        }
+
+        & label {
+            vertical-align: middle;
+            height: clamp(2rem, 0rem + 2.5vw, 6rem);
+        }
     }
 
     &::backdrop {

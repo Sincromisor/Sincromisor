@@ -11,7 +11,7 @@ div#sincroBody {
         top: 0;
         left: 0;
 
-        background-color: #ffffff;
+        background-color: var(--baseBackgroundColor);
 
         display: grid;
         grid-template-columns: repeat(12, 1fr);
@@ -41,7 +41,7 @@ div#sincroBody {
 
         & h2 {
             font-size: clamp(1.5rem, 1.0714rem + 1.4286vw, 4.5rem);
-            padding: var(--objectSpace) 0 var(--objectSpace) 0px;
+            padding: var(--objectSpace) 0 var(--objectSpace) 1em;
             margin: var(--objectSpace) 0 var(--objectSpace) 0px;
             border-bottom: solid 1px;
         }
@@ -59,28 +59,27 @@ div#sincroBody {
                 width: 75%;
                 font-weight: bold;
                 font-size: clamp(1.5rem, 1.0714rem + 1.4286vw, 4.5rem);
-                color: #fff;
-                background-color: #555;
+                color: var(--headerTextColor);
                 text-align: center;
                 padding: clamp(1.5rem, 1.0714rem + 1.4286vw, 4.5rem);
                 margin-top: var(--objectSpace);
                 margin-bottom: var(--objectSpace);
                 border-radius: var(--buttonBorderRadius) var(--buttonBorderRadius) var(--buttonBorderRadius) var(--buttonBorderRadius);
                 background: linear-gradient(-70deg,
-                rgba(0, 0, 0, 0.5) 0%,
-                rgba(0, 0, 0, 0.5) 15%,
-                rgba(50, 50, 50, 0.75) 15%,
-                rgba(50, 50, 50, 0.75) 85%,
-                rgba(0, 0, 0, 0.5) 85%,
-                rgba(0, 0, 0, 0.5) 100%);
+                var(--headerBackgroundColor) 0%,
+                var(--headerBackgroundColor) 15%,
+                var(--headerBodyColor) 15%,
+                var(--headerBodyColor) 85%,
+                var(--headerBackgroundColor) 85%,
+                var(--headerBackgroundColor) 100%);
             }
 
             & button:hover {
-                background-color: #777;
+                background-color: var(--headerBackgroundHoverColor);
             }
 
             & button.experimental {
-                color: #ddd;
+                color: var(--headerExperimentalTextColor);
             }
         }
     }
