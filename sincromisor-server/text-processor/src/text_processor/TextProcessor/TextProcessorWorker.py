@@ -6,6 +6,8 @@ from fastapi import WebSocket
 from sincro_models import TextProcessorRequest, TextProcessorResult
 
 
+# 対話ごとにテキスト処理を行うための基底クラス
+# 新しい対話が始まるたびにインスタンスを生成する
 class TextProcessorWorker:
     def __init__(self):
         self.logger: Logger = logging.getLogger("sincro." + __name__)

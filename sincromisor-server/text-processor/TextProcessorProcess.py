@@ -42,12 +42,6 @@ class TextProcessorProcess:
             public_bind_port=self.__args.public_bind_port,
         )
         self.sd_reporter.register()
-        self.__poke_text_worker: TextProcessorWorker = PokeTextProcessorWorker()
-        if self.__args.dify_url:
-            self.__dify_text_worker: TextProcessorWorker = DifyTextProcessorWorker(
-                base_url=self.__args.dify_url,
-                api_key=self.__args.dify_token,
-            )
 
         @app.get("/api/v1/statuses")
         async def get_status() -> JSONResponse:
@@ -62,10 +56,13 @@ class TextProcessorProcess:
             try:
                 await ws.accept()
                 if self.__args.dify_url and talk_mode == "chat":
-                    await self.__dify_text_worker.communicate(ws=ws)
+                    text_worker: TextProcessorWorker = DifyTextProcessorWorker(
+                        base_url=self.__args.dify_url,
+                        api_key=self.__args.dify_token,
+                    )
                 else:
-                    await self.__poke_text_worker.communicate(ws=ws)
-
+                    text_worker: TextProcessorWorker = PokeTextProcessorWorker()
+                await text_worker.communicate(ws=ws)
             except WebSocketDisconnect:
                 self.__logger.info("Disconnected WebSocket.")
             except Exception as e:
