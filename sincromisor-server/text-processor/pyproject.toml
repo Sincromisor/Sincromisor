@@ -7,8 +7,8 @@ requires-python = ">=3.12"
 dependencies = [
     "sincro-config",
     "sincro-models",
-    "sudachipy>=0.6.8",
-    "sudachidict-full>=20240409",
+    "sudachipy>=0.6.9",
+    "sudachidict-full>=20241021",
     "requests>=2.32.3",
     "pydantic>=2.10.4",
     "uvicorn>=0.30.6",
