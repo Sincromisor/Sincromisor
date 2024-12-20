@@ -37,7 +37,7 @@ class SynthesizerReceiverThread(Thread):
         self.__logger.info("Thread start.")
         while self.__running.is_set():
             try:
-                pack: bytes = self.__ws.recv(timeout=5)
+                pack: str | bytes = self.__ws.recv(timeout=5)
                 vs_result: VoiceSynthesizerResult = VoiceSynthesizerResult.from_msgpack(
                     pack,
                 )
@@ -77,7 +77,7 @@ class SynthesizerReceiverThread(Thread):
             rate=target_frame_rate,
             frame_size=target_frame_size,
         )
-        container: InputContainer = av.open(BytesIO(vs_result.voice))
+        container: InputContainer = av.open(BytesIO(vs_result.voice), mode="r")
         frame_ms: float = target_frame_size / target_frame_rate
         timestamp_sec: float = 0.0
         next_time_sec: float = 0.0

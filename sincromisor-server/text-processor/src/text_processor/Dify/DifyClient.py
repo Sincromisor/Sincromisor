@@ -22,7 +22,7 @@ class DifyClient:
         query: str,
         conversation_id: str | None,
     ) -> Generator[dict, None, None]:
-        data = {
+        query_data = {
             "inputs": inputs,
             "query": query,
             "user": "username",
@@ -30,15 +30,15 @@ class DifyClient:
             "files": None,
         }
         if conversation_id:
-            data["conversation_id"] = conversation_id
+            query_data["conversation_id"] = conversation_id
 
-        res: Response = self._send_request("POST", "/chat-messages", data, stream=True)
+        res: Response = self._send_request("POST", "/chat-messages", query_data, stream=True)
 
         line: str
         for line in res.iter_lines(decode_unicode=True):
-            data: str = line.split("data:", 1)[-1]
-            if data:
-                yield json.loads(data)
+            response_data: str = line.split("data:", 1)[-1]
+            if response_data:
+                yield json.loads(response_data)
 
     def _send_request(
         self,

@@ -46,8 +46,9 @@ class VoiceSynthesizer(VoiceVox):
     # audio/aac、audio/ogg;codecs=opus、audio/wavのいずれか。
     # 実行にはfdkaacとopusencコマンドが必要。
     def encode(self, voice: bytes, audio_format: str | None) -> dict:
+        encoder_p: CompletedProcess
         if audio_format == "audio/aac":
-            encoder_p: CompletedProcess = sp.run(
+            encoder_p = sp.run(
                 ["fdkaac", "-S", "-m3", "-f2", "-o-", "-"],
                 input=voice,
                 capture_output=True,
@@ -56,7 +57,7 @@ class VoiceSynthesizer(VoiceVox):
             )
             return {"voice": encoder_p.stdout, "audio_format": "audio/aac"}
         if audio_format == "audio/ogg;codecs=opus":
-            encoder_p: CompletedProcess = sp.run(
+            encoder_p = sp.run(
                 ["opusenc", "-", "-"],
                 input=voice,
                 capture_output=True,

@@ -28,7 +28,7 @@ class SincromisorConfig(BaseModel):
     def get_all_ice_servers_conf(self) -> list[RTCIceServerConfig]:
         return self.WebRTC.RTCIceServers
 
-    # type: stun, turn
+    # server_type: stun, turn
     def get_ice_servers_conf(
         self,
         server_type: str,

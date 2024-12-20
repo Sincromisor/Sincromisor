@@ -23,7 +23,7 @@ class VoiceTransformTrack(MediaStreamTrack):
         self,
         track: MediaStreamTrack,
         vcs: RTCVoiceChatSession,
-        rtc_session_status: Synchronized,
+        rtc_session_status: Synchronized[int],
         consul_agent_host: str,
         consul_agent_port: int,
     ):

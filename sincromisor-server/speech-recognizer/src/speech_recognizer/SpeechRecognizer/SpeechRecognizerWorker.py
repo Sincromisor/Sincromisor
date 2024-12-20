@@ -16,7 +16,7 @@ class SpeechRecognizerWorker:
         self.s2t: SpeechRecognizer = SpeechRecognizer(
             decode_options={"max_new_tokens": 255},
         )
-        self.voice_log_dir: str = voice_log_dir
+        self.voice_log_dir: str | None = voice_log_dir
         self.logger.info("SpeechRecognizerWorker is initialized.")
 
     def transcribe(self, voice: np.ndarray) -> list:
@@ -46,7 +46,9 @@ class SpeechRecognizerWorker:
             self.export_voice(spe_result)
         return sr_result
 
-    def export_result(self, result: SpeechRecognizerResult) -> str:
+    def export_result(self, result: SpeechRecognizerResult) -> Path | None:
+        if self.voice_log_dir is None:
+            return None
         time_text = datetime.fromtimestamp(result.start_at).strftime("%Y%m%d_%H%M%S.%f")
         write_dir: Path = Path(self.voice_log_dir, result.session_id)
         write_dir.mkdir(parents=True, exist_ok=True)
@@ -57,20 +59,23 @@ class SpeechRecognizerWorker:
         self.logger.info(f"Wrote: {write_path}")
         return write_path
 
-    def export_voice(self, result: SpeechExtractorResult) -> str:
+    def export_voice(self, result: SpeechExtractorResult) -> Path | None:
+        if self.voice_log_dir is None:
+            return None
         time_text: str = datetime.fromtimestamp(result.start_at).strftime(
             "%Y%m%d_%H%M%S.%f",
         )
         write_dir: Path = Path(self.voice_log_dir, result.session_id)
         write_dir.mkdir(parents=True, exist_ok=True)
+        write_path: Path
         if shutil.which("opusenc"):
-            write_path: Path = Path(
+            write_path = Path(
                 write_dir,
                 f"{result.speech_id:06d}_{time_text}.opus",
             )
             result.to_opusfile(path=str(write_path))
         else:
-            write_path: Path = Path(
+            write_path = Path(
                 write_dir,
                 f"{result.speech_id:06d}_{time_text}.wav",
             )

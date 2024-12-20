@@ -30,7 +30,7 @@ class ExtractorReceiverThread(Thread):
         self.__logger.info("Thread start.")
         while self.__running.is_set():
             try:
-                pack: bytes = self.__ws.recv(timeout=5)
+                pack: str | bytes = self.__ws.recv(timeout=5)
                 se_result: SpeechExtractorResult = SpeechExtractorResult.from_msgpack(
                     pack,
                 )

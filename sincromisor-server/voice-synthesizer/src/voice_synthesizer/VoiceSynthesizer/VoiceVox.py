@@ -21,9 +21,10 @@ class VoiceVox:
     # * +speaker+ - 話者ID。+speakers+メソッドで得られる。(default: 1)
     # * 戻り値 - クエリ連想配列
     def audio_query(self, text: str, style_id: int = 1) -> dict:
+        params: dict[str, str | int] = {self.style_id_key: style_id, "text": text}
         res = requests.post(
-            f"{self.base_url}/audio_query",
-            params={self.style_id_key: style_id, "text": text},
+            url=f"{self.base_url}/audio_query",
+            params=params,
         )
         self.response_validator(res)
         return res.json()
@@ -46,9 +47,14 @@ class VoiceVox:
         style_id: int = 1,
         is_kana: bool = False,
     ) -> list:
+        params: dict[str, str | int] = {
+            self.style_id_key: style_id,
+            "text": text,
+            "is_kana": is_kana,
+        }
         res = requests.post(
-            f"{self.base_url}/accent_phrases",
-            params={self.style_id_key: style_id, "text": text, "is_kana": is_kana},
+            url=f"{self.base_url}/accent_phrases",
+            params=params,
         )
         self.response_validator(res)
         return res.json()
@@ -59,7 +65,7 @@ class VoiceVox:
     # * 戻り値 - wavストリーム
     def query_synthesis(self, query: dict, style_id: int = 1) -> bytes:
         res = requests.post(
-            f"{self.base_url}/synthesis",
+            url=f"{self.base_url}/synthesis",
             params={self.style_id_key: style_id},
             headers={"Content-Type": "application/json"},
             data=json.dumps(query),
@@ -89,7 +95,7 @@ class VoiceVox:
         morph_rate: float = 0.5,
     ) -> bytes:
         res = requests.post(
-            f"{self.base_url}/synthesis_morphing",
+            url=f"{self.base_url}/synthesis_morphing",
             params={
                 f"base_{self.style_id_key}": base_style_id,
                 f"target_{self.style_id_key}": target_style_id,
@@ -104,7 +110,7 @@ class VoiceVox:
     # 話者の一覧を取得。
     # * 戻り値 - 話者一覧の配列。
     def speakers(self) -> list:
-        res = requests.get(f"{self.base_url}/speakers")
+        res = requests.get(url=f"{self.base_url}/speakers")
         self.response_validator(res)
         return res.json()
 
@@ -113,7 +119,7 @@ class VoiceVox:
     # * 戻り値 - 話者の詳細情報の連想配列。
     def speaker_info(self, speaker_uuid: str) -> dict:
         res = requests.get(
-            f"{self.base_url}/speaker_info",
+            url=f"{self.base_url}/speaker_info",
             params={"speaker_uuid": speaker_uuid},
         )
         self.response_validator(res)
@@ -122,21 +128,21 @@ class VoiceVox:
     # サーバエンジンが保持しているプリセットを取得。
     # * 戻り値 - 配列
     def presets(self) -> list:
-        res = requests.get(f"{self.base_url}/presets")
+        res = requests.get(url=f"{self.base_url}/presets")
         self.response_validator(res)
         return res.json()
 
     # サーバのバージョンを取得。
     # 戻り値 - バージョン文字列
     def version(self) -> str:
-        res = requests.get(f"{self.base_url}/version")
+        res = requests.get(url=f"{self.base_url}/version")
         self.response_validator(res)
         return res.json()
 
     # エンジンコアのバージョンを取得。
     # 戻り値 - バージョン文字列の配列
     def core_versions(self) -> list[str]:
-        res = requests.get(f"{self.base_url}/core_versions")
+        res = requests.get(url=f"{self.base_url}/core_versions")
         self.response_validator(res)
         return res.json()
 

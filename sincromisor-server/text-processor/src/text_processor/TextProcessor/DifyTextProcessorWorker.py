@@ -24,7 +24,7 @@ class DifyTextProcessorWorker(TextProcessorWorker):
             speaker_name=self.speaker_name,
             request=request,
         )
-        responses = deque([], 10)
+        responses: deque = deque([], 10)
         event = Event()
         self.logger.info(["Request", request.request_message.message])
         t = Thread(

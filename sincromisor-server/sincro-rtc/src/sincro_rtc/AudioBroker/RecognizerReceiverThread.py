@@ -27,7 +27,7 @@ class RecognizerReceiverThread(Thread):
         self.__logger.info("Thread start.")
         while self.__running.is_set():
             try:
-                pack: bytes = self.__ws.recv(timeout=5)
+                pack: str | bytes = self.__ws.recv(timeout=5)
                 sr_result: SpeechRecognizerResult = SpeechRecognizerResult.from_msgpack(
                     pack,
                 )

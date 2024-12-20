@@ -27,7 +27,9 @@ class RTCVoiceChatSession(BaseModel):
     def __hash__(self) -> int:
         return int(self.session_id)
 
-    def __eq__(self, other: "RTCVoiceChatSession") -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, RTCVoiceChatSession):
+            return NotImplemented
         return self.session_id == other.session_id
 
     async def close(self) -> None:

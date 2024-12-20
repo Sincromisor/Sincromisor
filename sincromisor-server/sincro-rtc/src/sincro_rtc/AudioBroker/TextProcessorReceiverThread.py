@@ -29,7 +29,7 @@ class TextProcessorReceiverThread(Thread):
         self.__logger.info("Thread start.")
         while self.__running.is_set():
             try:
-                pack: bytes = self.__ws.recv(timeout=5)
+                pack: str | bytes = self.__ws.recv(timeout=5)
                 tp_result: TextProcessorResult = TextProcessorResult.from_msgpack(pack)
                 # to SynthesizerThread
                 self.__text_processor_results.append(tp_result)

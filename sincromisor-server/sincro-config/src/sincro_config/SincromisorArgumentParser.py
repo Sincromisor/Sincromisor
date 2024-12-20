@@ -22,7 +22,7 @@ class SincromisorArgumentParser(BaseModel):
         help: str,
         default: str | int | float | None = None,
     ) -> None:
-        value: str | None = os.environ.get(env_name)
+        value: str | int | float | None = os.environ.get(env_name)
         if value is None and default is not None:
             value = default
 
