@@ -15,7 +15,7 @@ requires-python = ">= 3.10"
 
 [dependency-groups]
 dev = [
-    "mypy>=1.10.1",
+    "mypy>=1.14.0",
     "types-psutil>=6.0.0.20240621",
     "types-pyyaml>=6.0.12.20240311",
     "types-requests>=2.32.0.20240622",
