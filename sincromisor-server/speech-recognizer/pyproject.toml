@@ -19,7 +19,7 @@ dependencies = [
     "uvicorn>=0.34.0",
     "fastapi>=0.115.6",
     "websockets>=14.1",
-    "setproctitle>=1.3.3",
+    "setproctitle>=1.3.4",
 ]
 
 [tool.uv.sources]
