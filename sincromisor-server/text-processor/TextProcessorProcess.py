@@ -54,14 +54,15 @@ class TextProcessorProcess:
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1
             try:
+                text_worker: TextProcessorWorker
                 await ws.accept()
                 if self.__args.dify_url and talk_mode == "chat":
-                    text_worker: TextProcessorWorker = DifyTextProcessorWorker(
+                    text_worker = DifyTextProcessorWorker(
                         base_url=self.__args.dify_url,
                         api_key=self.__args.dify_token,
                     )
                 else:
-                    text_worker: TextProcessorWorker = PokeTextProcessorWorker()
+                    text_worker = PokeTextProcessorWorker()
                 await text_worker.communicate(ws=ws)
             except WebSocketDisconnect:
                 self.__logger.info("Disconnected WebSocket.")
