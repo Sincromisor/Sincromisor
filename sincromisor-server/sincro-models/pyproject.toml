@@ -9,7 +9,7 @@ dependencies = [
     "pydantic>=2.10.4",
     "msgpack>=1.1.0",
     "numpy==1.26.4",
-    "python-ulid>=2.7.0",
+    "python-ulid>=3.0.0",
 ]
 
 [tool.uv.sources]
