@@ -38,7 +38,7 @@ dialog#configurationDialog {
             margin: 20px auto 20px auto;
             width: 90%;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr auto;
             row-gap: 1em;
             place-content: center;
             place-items: center;

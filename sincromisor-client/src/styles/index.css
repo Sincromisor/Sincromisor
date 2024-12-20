@@ -1,3 +1,9 @@
+body{
+    width: 100dvw;
+    /* 横スクロールを防ぐ */
+    overflow-x: hidden;
+}
+
 div#sincroBody {
     --buttonBorderRadius: clamp(5px 1vh 20px);
 
@@ -10,7 +16,6 @@ div#sincroBody {
         position: absolute;
         top: 0;
         left: 0;
-
         background-color: var(--baseBackgroundColor);
 
         display: grid;
@@ -36,7 +41,6 @@ div#sincroBody {
         & {
             width: 100%;
             height: 100%;
-            padding: var(--objectSpace);
         }
 
         & h2 {
@@ -51,8 +55,8 @@ div#sincroBody {
                 display: grid;
                 grid-template-columns: 1fr;
                 row-gap: var(--objectSpace);
-                padding: var(--objectSpace);
-
+                padding-top: clamp(1.5rem, 1.0714rem + 1.4286vw, 4.5rem);
+                padding-bottom: clamp(1.5rem, 1.0714rem + 1.4286vw, 4.5rem);
             }
 
             & button {
