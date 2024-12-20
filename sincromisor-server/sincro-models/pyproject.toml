@@ -3,10 +3,10 @@ name = "sincro-models"
 version = "2.0.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "sincro-config",
-    "pydantic>=2.9.2",
+    "pydantic>=2.10.4",
     "msgpack>=1.1.0",
     "numpy==1.26.4",
     "python-ulid>=2.7.0",

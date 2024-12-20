@@ -3,13 +3,13 @@ name = "speech-extractor"
 version = "2.0.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "sincro-config",
     "sincro-models",
     "numpy==1.26.4",
     "mediapipe==0.10.15",
-    "pydantic>=2.9.2",
+    "pydantic>=2.10.4",
     "uvicorn>=0.30.6",
     "fastapi>=0.112.2",
     "websockets>=13.0.1",

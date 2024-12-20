@@ -3,13 +3,13 @@ name = "voice-synthesizer"
 version = "2.0.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "sincro-config",
     "sincro-models",
     "redis[hiredis]>=5.2.0",
     "requests>=2.32.3",
-    "pydantic>=2.9.2",
+    "pydantic>=2.10.4",
     "numpy==1.26.4",
     "uvicorn>=0.30.6",
     "fastapi>=0.112.2",
