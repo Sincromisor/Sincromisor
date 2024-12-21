@@ -51,6 +51,7 @@ class RTCSessionManager:
             request_sdp=offer.sdp,
             request_type=offer.type,
             request_talk_mode=offer.talk_mode,
+            rtc_finalize_event=rtc_finalize_event,
             sdp_pipe=cl_pipe,
             consul_agent_host=self.__consul_agent_host,
             consul_agent_port=self.__consul_agent_port,
