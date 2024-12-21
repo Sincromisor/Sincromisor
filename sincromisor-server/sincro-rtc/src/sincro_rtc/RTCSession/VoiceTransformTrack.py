@@ -3,7 +3,7 @@ import traceback
 from asyncio.exceptions import CancelledError
 from fractions import Fraction
 from logging import Logger
-from multiprocessing.sharedctypes import Synchronized
+from threading import Event
 
 import numpy as np
 from aiortc import MediaStreamTrack
@@ -23,7 +23,7 @@ class VoiceTransformTrack(MediaStreamTrack):
         self,
         track: MediaStreamTrack,
         vcs: RTCVoiceChatSession,
-        rtc_session_status: Synchronized[int],
+        rtc_finalize_event: Event,
         consul_agent_host: str,
         consul_agent_port: int,
     ):
@@ -32,7 +32,7 @@ class VoiceTransformTrack(MediaStreamTrack):
             __name__ + f"[{vcs.session_id[21:26]}]",
         )
         # RTCSessionManager、RTCSessionProcessと共有される
-        self.__rtc_session_status: Synchronized = rtc_session_status
+        self.__rtc_finalize_event: Event = rtc_finalize_event
         self.__session_id: str = vcs.session_id
         self.__logger.info("Initialize VoiceTransformTrack.")
         self.__track: MediaStreamTrack = track
@@ -54,7 +54,7 @@ class VoiceTransformTrack(MediaStreamTrack):
     async def recv(self) -> AudioFrame:
         if not self.__audio_broker.is_running():
             # AudioBrokerに異常が発生したら、RTC Sessionも止める
-            self.__rtc_session_status = -1
+            self.__rtc_finalize_event.set()
             return self.__generate_dummy_frame()
 
         try:
@@ -70,7 +70,7 @@ class VoiceTransformTrack(MediaStreamTrack):
             )
             traceback.print_exc()
         # 何らかの例外が発生した時はrtcをshutdownする
-        self.__rtc_session_status = -1
+        self.__rtc_finalize_event.set()
         return self.__generate_dummy_frame()
 
     def __transform(self, frame: AudioFrame) -> AudioFrame:
@@ -109,7 +109,8 @@ class VoiceTransformTrack(MediaStreamTrack):
                 f"transform - UnknownError: {repr(e)}\n{traceback.format_exc()}",
             )
         # 何らかの例外が発生した時はrtcをshutdownする
-        self.__rtc_session_status = -1
+        self.__rtc_finalize_event.set()
+        # フレームを返さないとデッドロックするため、ダミーフレームを返す
         return self.__convert_dummy_frame(frame)
 
     def __get_recognized_text(self) -> TextProcessorResult | None:

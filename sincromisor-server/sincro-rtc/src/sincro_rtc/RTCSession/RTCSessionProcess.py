@@ -5,7 +5,7 @@ import traceback
 from logging import Logger
 from multiprocessing import Process
 from multiprocessing.connection import Connection
-from multiprocessing.sharedctypes import Synchronized
+from threading import Event
 
 from aiortc import (
     RTCConfiguration,
@@ -38,7 +38,7 @@ class RTCSessionProcess(Process):
         request_type: str,
         request_talk_mode: str,
         sdp_pipe: Connection,
-        rtc_session_status: Synchronized,
+        rtc_finalize_event: Event,
         consul_agent_host: str,
         consul_agent_port: int,
     ):
@@ -49,7 +49,7 @@ class RTCSessionProcess(Process):
         self.__request_type: str = request_type
         self.__request_talk_mode: str = request_talk_mode
         self.__server_sdp_pipe: Connection = sdp_pipe
-        self.__rtc_session_status: Synchronized = rtc_session_status
+        self.__rtc_finalize_event: Event = rtc_finalize_event
         self.__consul_agent_host = consul_agent_host
         self.__consul_agent_port = consul_agent_port
 
@@ -96,7 +96,7 @@ class RTCSessionProcess(Process):
                     self.__vcs.text_ch = channel
                 case _:
                     # 想定していないDataChannelが存在した場合
-                    self.__rtc_session_status.value = -1
+                    self.__rtc_finalize_event.set()
                     raise UnknownRTCDataChannel(channel.label)
 
             @channel.on("message")
@@ -110,10 +110,10 @@ class RTCSessionProcess(Process):
                 f"on_connectionstatechange - {self.__vcs.peer.connectionState}",
             )
             if self.__vcs.peer.connectionState == "failed":
-                self.__rtc_session_status.value = -1
+                self.__rtc_finalize_event.set()
                 await self.__vcs.close()
             elif self.__vcs.peer.connectionState == "closed":
-                self.__rtc_session_status.value = -1
+                self.__rtc_finalize_event.set()
 
         @self.__vcs.peer.on("track")
         def on_track(track):
@@ -122,7 +122,7 @@ class RTCSessionProcess(Process):
                 self.__vcs.audio_transform_track = VoiceTransformTrack(
                     track=self.relay.subscribe(track),
                     vcs=self.__vcs,
-                    rtc_session_status=self.__rtc_session_status,
+                    rtc_finalize_event=self.__rtc_finalize_event,
                     consul_agent_host=self.__consul_agent_host,
                     consul_agent_port=self.__consul_agent_port,
                 )
@@ -131,7 +131,7 @@ class RTCSessionProcess(Process):
                 # 想定していないトラックが来た時はMediaBlackholeに投げないと、
                 # メモリリークしまくる模様。
                 self.__logger.error(f"Unknown Track: {track.kind} {track}")
-                self.__rtc_session_status.value = -1
+                self.__rtc_finalize_event.set()
                 raise UnknownRTCTrack(f"Unknown Track: {track.kind} {track}")
 
             @track.on("ended")
@@ -150,11 +150,11 @@ class RTCSessionProcess(Process):
         except socket.gaierror as e:
             self.__logger.error(f"ConnectionError: {repr(e)}\n{traceback.format_exc()}")
             traceback.print_exc()
-            self.__rtc_session_status.value = -1
+            self.__rtc_finalize_event.set()
         except Exception as e:
             self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
             traceback.print_exc()
-            self.__rtc_session_status.value = -1
+            self.__rtc_finalize_event.set()
 
         return {
             "sdp": self.__vcs.peer.localDescription.sdp,
@@ -164,7 +164,7 @@ class RTCSessionProcess(Process):
 
     async def __serve(self) -> None:
         self.__server_sdp_pipe.send(await self.__offer())
-        while self.__rtc_session_status.value >= 0:
+        while self.__rtc_finalize_event.is_set() is False:
             await asyncio.sleep(1)
         self.__logger.info("RTC session loop terminated.")
         self.__server_sdp_pipe.close()
@@ -174,4 +174,4 @@ class RTCSessionProcess(Process):
 
     def run(self) -> None:
         asyncio.run(self.__serve())
-        self.__logger.info("RTC session terminated.")
+        self.__logger.info("RTC session process terminated.")
