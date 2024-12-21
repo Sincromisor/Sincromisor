@@ -74,7 +74,7 @@ class SpeechRecognizer:
             outputs.scores,
             normalize_logits=True,
         )
-        input_length = 1  # inputs.input_ids.shape[1]
+        input_length = 0  # inputs.input_ids.shape[1]
         generated_tokens = outputs.sequences[:, input_length:]
         token_and_prob = []
         for tok, score in zip(generated_tokens[0], transition_scores[0], strict=False):
