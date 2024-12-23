@@ -3,7 +3,7 @@ import traceback
 from asyncio.exceptions import CancelledError
 from fractions import Fraction
 from logging import Logger
-from threading import Event
+from multiprocessing.synchronize import Event
 
 import numpy as np
 from aiortc import MediaStreamTrack

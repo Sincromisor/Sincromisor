@@ -5,7 +5,7 @@ import traceback
 from logging import Logger
 from multiprocessing import Process
 from multiprocessing.connection import Connection
-from threading import Event
+from multiprocessing.synchronize import Event
 
 from aiortc import (
     RTCConfiguration,

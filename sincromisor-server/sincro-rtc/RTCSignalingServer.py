@@ -42,11 +42,11 @@ class RTCSignalingServer:
         self.__args: RTCSignalingServerArgument = args
 
     def start(self):
-        rtcSM = RTCSessionManager(
+        rtcSM:RTCSessionManager = RTCSessionManager(
             consul_agent_host=self.__args.consul_agent_host,
             consul_agent_port=self.__args.consul_agent_port,
         )
-        app = FastAPI(on_shutdown=[rtcSM.shutdown])
+        app:FastAPI = FastAPI(on_shutdown=[rtcSM.shutdown])
         """
         app.add_middleware(
             CORSMiddleware,

@@ -1,9 +1,10 @@
 import logging
 import traceback
 from logging import Logger
+from multiprocessing import Event as MPEvent
 from multiprocessing import Pipe
 from multiprocessing.connection import Connection
-from threading import Event
+from multiprocessing.synchronize import Event
 
 from ulid import ULID
 
@@ -45,7 +46,7 @@ class RTCSessionManager:
         sv_pipe: Connection
         cl_pipe: Connection
         sv_pipe, cl_pipe = Pipe()
-        rtc_finalize_event: Event = Event()
+        rtc_finalize_event: Event = MPEvent()
         ps: RTCSessionProcess = RTCSessionProcess(
             session_id=session_id,
             request_sdp=offer.sdp,
