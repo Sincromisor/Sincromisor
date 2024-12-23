@@ -44,13 +44,13 @@ class AudioBrokerCommunicator:
             f"{__name__}::{self.comm_type}[{self.session_id[21:26]}]",
         )
 
-        logger.info("join sender_thread")
+        logger.info(f"{self.comm_type} - join sender_thread")
         try:
             self.sender_thread.join()
         except Exception as e:
             logger.error(f"Unknown Error: {repr(e)}")
 
-        logger.info("join receiver_thread")
+        logger.info(f"{self.comm_type} join receiver_thread")
         try:
             self.receiver_thread.join()
         except Exception as e:
@@ -160,6 +160,10 @@ class AudioBroker:
             self.__err_to_chat(
                 message=f"ConnectionRefusedError: {traceback.format_exc()}"
             )
+            self.close()
+        except TimeoutError:
+            self.__logger.error(f"TimeoutError: {traceback.format_exc()}")
+            self.__err_to_chat(message=f"TimeoutError: {traceback.format_exc()}")
             self.close()
         except Exception as e:
             self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")

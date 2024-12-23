@@ -43,7 +43,9 @@ class SpeechExtractorProcess:
 
         @app.get("/api/v1/statuses")
         async def get_status() -> JSONResponse:
-            return JSONResponse({"sessions": self.__sessions})
+            return JSONResponse(
+                {"worker_type": "SpeechExtractor", "sessions": self.__sessions}
+            )
 
         @app.websocket("/api/v1/SpeechExtractor")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
@@ -67,7 +69,12 @@ class SpeechExtractorProcess:
                 )
             finally:
                 self.__sessions -= 1
-                await ws.close()
+                try:
+                    await ws.close()
+                except RuntimeError:
+                    self.__logger.warning(
+                        "WebSocket is already closed.",
+                    )
 
         try:
             uvicorn.run(app, host=self.__args.host, port=self.__args.port)

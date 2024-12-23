@@ -42,11 +42,11 @@ class RTCSignalingServer:
         self.__args: RTCSignalingServerArgument = args
 
     def start(self):
-        rtcSM:RTCSessionManager = RTCSessionManager(
+        rtcSM: RTCSessionManager = RTCSessionManager(
             consul_agent_host=self.__args.consul_agent_host,
             consul_agent_port=self.__args.consul_agent_port,
         )
-        app:FastAPI = FastAPI(on_shutdown=[rtcSM.shutdown])
+        app: FastAPI = FastAPI(on_shutdown=[rtcSM.shutdown])
         """
         app.add_middleware(
             CORSMiddleware,
@@ -73,7 +73,9 @@ class RTCSignalingServer:
                 res = JSONResponse({"error": "Too many requests."})
                 res.status_code = status.HTTP_429_TOO_MANY_REQUESTS
                 return res
-            return JSONResponse({"sessions": rtcSM.session_count()})
+            return JSONResponse(
+                {"worker_type": "RTCSignalingServer", "sessions": rtcSM.session_count()}
+            )
 
         @app.post("/api/v1/rtc/offer")
         async def app_offer(request: Request, offer_params: RTCSessionOffer):
