@@ -186,6 +186,9 @@ services:
       restart_policy:
         condition: on-failure
         delay: 10s
+    depends_on:
+      service-initializer:
+        condition: service_completed_successfully
 
   sincro-consul-agent:
     profiles:
@@ -201,7 +204,10 @@ services:
       - .env
     command: [ 'agent', '-retry-join=${SINCRO_CONSUL_SERVER_HOST}', '-client=0.0.0.0' ]
     depends_on:
-      - sincro-consul-server
+      service-initializer:
+        condition: service_completed_successfully
+      sincro-consul-server:
+        condition: service_started
     networks:
       - sincromisor-net
     deploy:
