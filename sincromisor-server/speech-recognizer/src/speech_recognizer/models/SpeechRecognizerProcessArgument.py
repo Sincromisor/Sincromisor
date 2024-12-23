@@ -48,9 +48,10 @@ class SpeechRecognizerProcessArgument(SincromisorArgumentParser):
             help=f"Public bind port(default: {default_bind_port})",
         )
 
-        parser.add_argument(
-            "--voice-log-dir",
-            type=str,
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--voice-log-dir",
+            env_name="SINCRO_RECOGNIZER_VOICE_LOG_DIR",
             default=None,
             help="voice log directory path",
         )

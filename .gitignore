@@ -8,7 +8,9 @@ __pycache__
 /config.yml
 .env
 samples
-Docker/env_vars/.env
+volumes/consul-data
+volumes/sincro-cache
+volumes/sincro-voice
 sincromisor-server/log/*.log
 sincromisor-server/log/voice
 sincromisor-server/node_modules

@@ -9,11 +9,7 @@ services:
     image: sincromisor/service-initializer
     volumes:
       - ./configs/config.yml:/opt/sincromisor/configs/config.yml:rw
-      - type: volume
-        source: huggingface-cache
-        target: /opt/sincromisor/.cache
-        volume:
-          nocopy: true
+      - sincro-volumes:/volumes
 
   sincro-client:
     profiles:
@@ -98,11 +94,8 @@ services:
     ports:
       - 8003:8003/tcp
     volumes:
-      - type: volume
-        source: huggingface-cache
-        target: /opt/sincromisor/.cache
-        volume:
-          nocopy: true
+      - sincro-cache:/opt/sincromisor/.cache
+      - sincro-voice:/opt/sincromisor/.voice
     networks:
       - sincromisor-net
     env_file:
@@ -255,7 +248,28 @@ services:
 networks:
   sincromisor-net:
 
-
 volumes:
-  huggingface-cache:
+  sincro-volumes:
+    driver: local
+    driver_opts:
+      device: ./volumes
+      o: bind
+      type: none
+  sincro-cache:
+    driver: local
+    driver_opts:
+      device: ./volumes/sincro-cache
+      o: bind
+      type: none
+  sincro-voice:
+    driver: local
+    driver_opts:
+      device: ./volumes/sincro-voice
+      o: bind
+      type: none
   consul-data:
+    driver: local
+    driver_opts:
+      device: ./volumes/consul-data
+      o: bind
+      type: none

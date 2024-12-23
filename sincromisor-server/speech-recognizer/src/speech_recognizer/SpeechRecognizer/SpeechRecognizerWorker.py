@@ -59,7 +59,9 @@ class SpeechRecognizerWorker:
     def export_result(self, result: SpeechRecognizerResult) -> Path | None:
         if self.voice_log_dir is None:
             return None
-        time_text = datetime.fromtimestamp(result.start_at).strftime("%Y%m%d_%H%M%S.%f")
+        time_text: str = datetime.fromtimestamp(result.start_at).strftime(
+            "%Y%m%d_%H%M%S.%f"
+        )
         write_dir: Path = Path(self.voice_log_dir, result.session_id)
         write_dir.mkdir(parents=True, exist_ok=True)
         write_path: Path = Path(write_dir, f"{result.speech_id:06d}_{time_text}.json")
