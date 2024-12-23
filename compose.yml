@@ -164,7 +164,7 @@ services:
       - backend
       - external
     image: hashicorp/consul:latest
-    command: [ 'agent', '-server', '-bootstrap-expect=1', '-ui', '-client=0.0.0.0' ]
+    command: [ 'agent', '-server', '-node=${SINCRO_CONSUL_SERVER_NODE_NAME}', '-bootstrap-expect=1', '-ui', '-client=0.0.0.0' ]
     ports:
       # https://developer.hashicorp.com/consul/docs/install/ports
       - 8300:8300
@@ -200,9 +200,11 @@ services:
       - 8498:8500
       - 8499:8600/tcp
       - 8499:8600/udp
+    environment:
+      - name=value
     env_file:
       - .env
-    command: [ 'agent', '-retry-join=${SINCRO_CONSUL_SERVER_HOST}', '-client=0.0.0.0' ]
+    command: [ 'agent', '-node=${SINCRO_CONSUL_AGENT_NODE_NAME}', '-retry-join=${SINCRO_CONSUL_SERVER_HOST}', '-client=0.0.0.0' ]
     depends_on:
       service-initializer:
         condition: service_completed_successfully
@@ -253,6 +255,7 @@ services:
 
 networks:
   sincromisor-net:
+
 
 volumes:
   sincro-volumes:
