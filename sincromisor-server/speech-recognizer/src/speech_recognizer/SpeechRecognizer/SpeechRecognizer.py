@@ -1,7 +1,9 @@
 import nue_asr
 import numpy as np
 import torch
-from torch import Tensor
+from nue_asr import NueASRModel
+from torch import Tensor, device
+from transformers import PreTrainedTokenizer
 
 
 class RecognizerError(Exception):
@@ -10,14 +12,14 @@ class RecognizerError(Exception):
 
 class SpeechRecognizer:
     def __init__(self, decode_options: dict):
-        self.model = nue_asr.load_model(
+        self.model: NueASRModel = nue_asr.load_model(
             "rinna/nue-asr",
             use_deepspeed=True,
         )
-        self.tokenizer = nue_asr.load_tokenizer("rinna/nue-asr")
-        self.device = self.model.device
-        self.decode_options = decode_options
-        self.sampling_rate = 16000
+        self.tokenizer: PreTrainedTokenizer = nue_asr.load_tokenizer("rinna/nue-asr")
+        self.device: device = self.model.device
+        self.decode_options: dict = decode_options
+        self.sampling_rate: int = 16000
 
         # https://huggingface.co/docs/transformers/main_classes/text_generation
         decode_options.setdefault("do_sample", False)
@@ -41,17 +43,19 @@ class SpeechRecognizer:
         decode_options |= self.decode_options
         audio_tensor: Tensor = torch.from_numpy(audio)
 
-        assert audio_tensor.dim() == 1, f"Only mono audio is supported - {audio_tensor.dim()}"
+        assert (
+            audio_tensor.dim() == 1
+        ), f"Only mono audio is supported - {audio_tensor.dim()}"
         # assert audio_tensor.shape[0] == 115200, f"Only mono audio is supported - {audio_tensor.shape[0]}"
 
-        audio_tensor = audio_tensor.to(self.model.dtype).reshape(1, -1)
-        audio_len_sec = audio_tensor.shape[-1] / self.sampling_rate
+        audio_tensor: Tensor = audio_tensor.to(self.model.dtype).reshape(1, -1)
+        audio_len_sec: float = audio_tensor.shape[-1] / self.sampling_rate
         if self.decode_options["max_new_tokens"] is None:
             self.decode_options["max_new_tokens"] = int(4 * audio_len_sec + 20 + 0.5)
 
         try:
             with torch.inference_mode():
-                outputs = self.model(
+                outputs: Tensor = self.model(
                     self.prefix_token.to(self.device),
                     audio_tensor.to(self.device),
                     self.postfix_token.to(self.device),

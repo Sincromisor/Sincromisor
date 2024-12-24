@@ -95,6 +95,7 @@ services:
       - 8003:8003/tcp
     volumes:
       - sincro-cache:/opt/sincromisor/.cache
+      - sincro-triton:/opt/sincromisor/.triton
       - sincro-voice:/opt/sincromisor/.voice
     networks:
       - sincromisor-net
@@ -268,6 +269,12 @@ volumes:
     driver: local
     driver_opts:
       device: ./volumes/sincro-cache
+      o: bind
+      type: none
+  sincro-triton:
+    driver: local
+    driver_opts:
+      device: ./volumes/sincro-triton
       o: bind
       type: none
   sincro-voice:
