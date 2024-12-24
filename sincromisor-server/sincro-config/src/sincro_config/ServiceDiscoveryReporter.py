@@ -1,6 +1,8 @@
 import atexit
 import logging
+import random
 import socket
+import time
 from logging import Logger
 
 from consul import Check, Consul
@@ -38,19 +40,25 @@ class ServiceDiscoveryReporter:
             # criticalになってから自動的にderegisterされるまでの時間
             deregister="1m",
         )
-        self.consul.agent.service.register(
-            self.worker_type,
-            service_id=self.service_id,
-            # ここでホスト名をそのまま渡すと、consulのDNSサーバーが
-            # リバースプロキシに解決できないcnameレコードを返してしまう。
-            address=socket.gethostbyname(self.public_bind_host),
-            port=self.public_bind_port,
-            check=check,
-        )
-        self.__logger.info(
-            f"Service {self.worker_type} registered with ID: {self.service_id}"
-        )
-        self.__reserve_deregister()
+        while True:
+            try:
+                self.consul.agent.service.register(
+                    self.worker_type,
+                    service_id=self.service_id,
+                    # ここでホスト名をそのまま渡すと、consulのDNSサーバーが
+                    # リバースプロキシに解決できないcnameレコードを返してしまう。
+                    address=socket.gethostbyname(self.public_bind_host),
+                    port=self.public_bind_port,
+                    check=check,
+                )
+                self.__reserve_deregister()
+                self.__logger.info(
+                    f"Service {self.worker_type} registered with ID: {self.service_id}"
+                )
+                return
+            except Exception as e:
+                self.__logger.error(f"Service registration error - {repr(e)}")
+                time.sleep(random.randint(1, 10))
 
     def deregister(self):
         self.consul.agent.service.deregister(service_id=self.service_id)
