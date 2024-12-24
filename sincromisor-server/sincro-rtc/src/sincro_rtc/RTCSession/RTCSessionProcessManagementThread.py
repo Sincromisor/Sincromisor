@@ -25,7 +25,7 @@ class RTCSessionProcessManagementThread(Thread):
     # プロセスの終了を待ち、終了したら終了処理をおこなう。
     # プロセスの終了についての責任はここで持つ。
     def run(self) -> None:
-        while self.__rtc_finalize_event.is_set() is None and self.__process.is_alive():
+        while not self.__rtc_finalize_event.is_set() and self.__process.is_alive():
             time.sleep(1)
         if self.__process.join(timeout=self.__timeout) is None:
             self.__logger.warning(
