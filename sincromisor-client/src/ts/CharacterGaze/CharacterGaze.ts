@@ -12,16 +12,30 @@ declare interface NormalizedKeypoint {
 }
 
 export class CharacterGaze {
+    private static instance: CharacterGaze;
     private readonly videoElement: HTMLVideoElement;
     private faceDetector?: FaceDetector;
     private lastVideoTime: number = -1;
     private lastDetectedTime: number = -1;
     private detected: boolean = false;
-    movingAverage: Array<{ 'x': number, 'y': number }> = [...Array(6)].map(() => { return { 'x': 0.0, 'y': 0.0 } });
+    // デフォルトでは真正面を向くよう、
+    // すべてのkeypointを画像中央となる0.5に設定する
+    movingAverage: Array<{ 'x': number, 'y': number }> = [...Array(6)].map(() => { return { 'x': 0.5, 'y': 0.5 } });
     arriveCallback: () => void = () => { };
     leaveCallback: () => void = () => { };
 
-    constructor(targetVideoElement: HTMLVideoElement) {
+    static getManager(): CharacterGaze {
+        if (!CharacterGaze.instance) {
+            const chracterGazeVideo: HTMLVideoElement | null = document.querySelector('video#characterGazeVideo');
+            if (!chracterGazeVideo) {
+                throw 'video#characterGazeVideo is not found.';
+            }
+            CharacterGaze.instance = new CharacterGaze(chracterGazeVideo);
+        }
+        return CharacterGaze.instance;
+    }
+
+    private constructor(targetVideoElement: HTMLVideoElement) {
         this.videoElement = targetVideoElement;
         this.arriveCallback = () => { };
         this.leaveCallback = () => { };

@@ -6,7 +6,6 @@ import { DialogManager } from "./UI/DialogManager";
 import { TalkManager } from "./RTC/TalkManager";
 import { DebugConsoleManager } from "./UI/DebugConsoleManager";
 import { ChatMessage, TelopChannelMessage } from "./RTC/RTCMessage";
-import { CharacterBone } from "./Character/CharacterBone";
 import { Detection } from "@mediapipe/tasks-vision";
 import { SincroRTCConfigManager } from "./RTC/SincroRTCConfigManager";
 
@@ -18,7 +17,6 @@ export class SincroController {
     private readonly userMediaManager: UserMediaManager;
     private readonly rtcConfigManager: SincroRTCConfigManager;
     private rtcc?: RTCTalkClient;
-    private characterBone?: CharacterBone;
 
     constructor() {
         this.dialogManager = DialogManager.getManager();
@@ -55,10 +53,6 @@ export class SincroController {
         this.rtcc?.stop();
     }
 
-    setCharacterBone(characterBone: CharacterBone): void {
-        this.characterBone = characterBone;
-    }
-
     private setTextChannelCallback(rtcc: RTCTalkClient): void {
         rtcc.textChannelCallback = (chatMsg: ChatMessage) => {
             this.talkManager.addTextChannelMessage(chatMsg);
@@ -74,9 +68,7 @@ export class SincroController {
     private startCharacterGaze(videoTrack: MediaStreamTrack): void {
         if (!this.dialogManager.enableCharacterGaze()) { return; }
 
-        const chracterGazeVideo: HTMLVideoElement | null = document.querySelector('video#characterGazeVideo');
-        if (!chracterGazeVideo) { return; }
-        const characterGaze = new CharacterGaze(chracterGazeVideo);
+        const characterGaze = CharacterGaze.getManager();
 
         characterGaze.initVision();
 
@@ -92,12 +84,6 @@ export class SincroController {
                         this.debugConsoleManager.updateFaceXLog(characterGaze.targetX());
                         this.debugConsoleManager.updateFaceYLog(characterGaze.targetY());
                         this.debugConsoleManager.updateFacing(characterGaze.facing());
-                        const eyeAngles = characterGaze.eyeAngles();
-                        // 縦方向
-                        const eyeAngleX = eyeAngles[1] * (Math.PI / 180);
-                        // 横方向
-                        const eyeAngleY = -eyeAngles[0] * (Math.PI / 180);
-                        this.characterBone?.setEyeTarget(eyeAngleX, eyeAngleY, 0);
                         if (eyeTargetElement) {
                             if (detects.length > 0) {
                                 eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 50%)");

@@ -11,7 +11,8 @@
   "devDependencies": {
     "postcss-preset-env": "^10.1.1",
     "typescript": "^5.5.3",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "@types/three": "^0.171.0"
   },
   "dependencies": {
     "@babylonjs/core": "^7.24.0",
@@ -23,7 +24,9 @@
     "@babylonjs/serializers": "^7.24.0",
     "@lookingglass/webxr": "^0.6.0",
     "@mediapipe/tasks-vision": "^0.10.15",
+    "@pixiv/three-vrm": "^3.3.2",
     "js-yaml": "^4.1.0",
+    "three": "^0.171.0",
     "vite-plugin-handlebars": "^2.0.0"
   }
 }

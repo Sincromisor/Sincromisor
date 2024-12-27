@@ -70,9 +70,6 @@ export class SincroInitializer {
             const sincroScene: SincroScene = this.initializeSincroScene();
             sincroScene.createScene();
             sincroScene.run();
-            if (sincroScene.character) {
-                sincroController.setCharacterBone(sincroScene.character?.bones.root);
-            }
         }
 
         this.dialogManager.closeDialog();

@@ -3,6 +3,7 @@ import { Vector3, Quaternion } from '@babylonjs/core/Maths';
 import { Tools } from '@babylonjs/core/Misc';
 import { Nullable, float, int } from '@babylonjs/core/types';
 import { TransformNode } from "@babylonjs/core/Meshes";
+import { CharacterGaze } from '../CharacterGaze/CharacterGaze';
 
 type BoneRotation = {
     "roll": Array<float>,
@@ -14,8 +15,10 @@ export class CharacterBone {
     private rotation: BoneRotation;
     private readonly maxSamples: int;
     private readonly neckRotation: Vector3;
+    private readonly characterGaze: CharacterGaze;
 
     constructor() {
+        this.characterGaze = CharacterGaze.getManager();
         this.neckRotation = new Vector3(0.0, 0.0, 0.0);
         this.rotation = {
             "roll": [0.0],
@@ -74,6 +77,14 @@ export class CharacterBone {
         }
 
         scene.registerBeforeRender(() => {
+            // 顔認識結果から目線を計算し設定
+            const eyeAngles = this.characterGaze.eyeAngles();
+            // 縦方向
+            const eyeAngleX = eyeAngles[1] * (Math.PI / 180);
+            // 横方向
+            const eyeAngleY = -eyeAngles[0] * (Math.PI / 180);
+            this.setEyeTarget(eyeAngleX, eyeAngleY, 0);
+
             //b_form.scaling.set(10, 10, 10);
             // 左右を向く(-3.14 ～ 3.14)
             const roll = this.average(this.rotation["roll"]); //Math.sin((window.performance.now() / freq / 180) * Math.PI) / 5;
