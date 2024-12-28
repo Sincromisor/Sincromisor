@@ -14,7 +14,8 @@ div#sincroChatBox {
         & {
             position: relative;
             padding: var(--chatBoxSpace);
-            width: 85%;
+            max-width: 85%;
+            width: max-content;
 
             margin-left: auto;
             margin-right: auto;
@@ -43,7 +44,7 @@ div#sincroChatBox {
         }
 
         & .sincroMessage__text {
-            width: 100%;
+            max-width: 100%;
             min-height: calc(var(--chatBoxIconSize) + var(--chatMessageBorderRadius));
             color: var(--textMessageColor);
             background-color: var(--textMessageBackgroundColor);
