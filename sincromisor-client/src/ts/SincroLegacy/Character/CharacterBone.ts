@@ -3,7 +3,7 @@ import { Vector3, Quaternion } from '@babylonjs/core/Maths';
 import { Tools } from '@babylonjs/core/Misc';
 import { Nullable, float, int } from '@babylonjs/core/types';
 import { TransformNode } from "@babylonjs/core/Meshes";
-import { CharacterGaze } from '../CharacterGaze/CharacterGaze';
+import { CharacterGaze } from '../../CharacterGaze/CharacterGaze';
 
 type BoneRotation = {
     "roll": Array<float>,

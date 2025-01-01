@@ -1,5 +1,5 @@
-import { CharacterManager } from "../ts/Character/CharacterManager";
-import { SincroGlassScene } from "../ts/Scene/SincroGlassScene";
+import { CharacterManager } from "../ts/SincroLegacy/Character/CharacterManager";
+import { SincroGlassScene } from "../ts/SincroLegacy/Scene/SincroGlassScene";
 import { TalkManager } from "../ts/RTC/TalkManager";
 import { DebugConsoleManager } from "../ts/UI/DebugConsoleManager";
 

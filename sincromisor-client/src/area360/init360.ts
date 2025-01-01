@@ -1,5 +1,5 @@
-import { SincroInitializer } from "../ts/SincroInitializer";
-import { SincroScene } from "../ts/Scene/SincroScene";
+import { SincroInitializer } from "../ts/SincroLegacy/SincroInitializer";
+import { SincroScene } from "../ts/SincroLegacy/Scene/SincroScene";
 import { Sincro360Scene } from "./Sincro360Scene";
 import { DialogManager } from "../ts/UI/DialogManager";
 

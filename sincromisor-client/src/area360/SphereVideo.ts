@@ -1,6 +1,6 @@
 import { Scene } from "@babylonjs/core/scene";
 import { VideoTexture } from "@babylonjs/core/Materials/Textures/videoTexture";
-import { StageLight } from "../ts/Scene/SceneLight";
+import { StageLight } from "../ts/SincroLegacy/Scene/SceneLight";
 import { Vector3 } from '@babylonjs/core/Maths';
 import { Tools } from "@babylonjs/core/Misc/tools";
 

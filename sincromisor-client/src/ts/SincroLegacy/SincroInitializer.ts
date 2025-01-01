@@ -1,10 +1,10 @@
-import { SincroController } from "./SincroController";
-import { DialogManager } from "./UI/DialogManager";
-import { ChatMessageManager } from "./UI/ChatMessageManager";
+import { SincroController } from "../SincroController";
+import { DialogManager } from "../UI/DialogManager";
+import { ChatMessageManager } from "../UI/ChatMessageManager";
 import { CharacterManager } from "./Character/CharacterManager";
 import { SincroScene } from "./Scene/SincroScene";
-import { TalkManager } from "./RTC/TalkManager";
-import { UserMediaManager } from "./RTC/UserMediaManager";
+import { TalkManager } from "../RTC/TalkManager";
+import { UserMediaManager } from "../RTC/UserMediaManager";
 
 export class SincroInitializer {
     protected readonly dialogManager: DialogManager;

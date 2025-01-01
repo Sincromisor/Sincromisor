@@ -36,7 +36,7 @@ export class FaceMorphController {
             }
             this.currentMoraID = cMora.moraID;
         }
-        window.requestAnimationFrame(()=>{
+        window.requestAnimationFrame(() => {
             this.setTalkManager();
         });
     }

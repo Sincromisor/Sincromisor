@@ -1,4 +1,4 @@
-import { SincroScene } from "../ts/Scene/SincroScene";
+import { SincroScene } from "../ts/SincroLegacy/Scene/SincroScene";
 import { Color3, Vector3 } from '@babylonjs/core/Maths';
 //import { EnvironmentHelper } from "@babylonjs/core/Helpers/environmentHelper";
 import { ScenePerformancePriority } from '@babylonjs/core/scene';
@@ -6,7 +6,7 @@ import { Mesh, MeshBuilder } from "@babylonjs/core/Meshes";
 import { StandardMaterial } from "@babylonjs/core/Materials";
 import { SphereVideo } from "./SphereVideo";
 import { StageFloor } from "./StageFloor";
-import { StageCamera } from "../ts/Scene/SceneCamera";
+import { StageCamera } from "../ts/SincroLegacy/Scene/SceneCamera";
 import { StageCamera360 } from "./StageCamera360";
 // @ts-ignore
 

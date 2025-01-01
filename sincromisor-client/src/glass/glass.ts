@@ -1,6 +1,6 @@
-import { SincroScene } from "../ts/Scene/SincroScene";
-import { SincroGlassScene } from "../ts/Scene/SincroGlassScene";
-import { SincroInitializer } from "../ts/SincroInitializer";
+import { SincroScene } from "../ts/SincroLegacy/Scene/SincroScene";
+import { SincroGlassScene } from "../ts/SincroLegacy/Scene/SincroGlassScene";
+import { SincroInitializer } from "../ts/SincroLegacy/SincroInitializer";
 import { DebugConsoleManager } from "../ts/UI/DebugConsoleManager";
 
 class SincroGlassInitializer extends SincroInitializer {

@@ -26,34 +26,34 @@ export class ArmBoneController {
         this.updateLeftHand(this.getNode('leftHand'));
         this.updateLeftThumb(this.getNode('leftThumbProximal'));
         this.updateRightHand(this.getNode('rightHand'));
-        this.updateRightThumb(this.getNode('rightThumbProximal'));   
+        this.updateRightThumb(this.getNode('rightThumbProximal'));
     }
 
     private updateLeftHand(baseBone: Object3D): void {
         baseBone.rotation.set(0, 0, -0.2);
         baseBone.children.forEach((childBone: Object3D) => {
-           this.updateLeftHand(childBone);
+            this.updateLeftHand(childBone);
         });
     }
 
     private updateLeftThumb(baseBone: Object3D): void {
         baseBone.rotation.set(0, 0.2, 0);
         baseBone.children.forEach((childBone: Object3D) => {
-           this.updateLeftThumb(childBone);
+            this.updateLeftThumb(childBone);
         });
     }
 
     private updateRightHand(baseBone: Object3D): void {
         baseBone.rotation.set(0, 0, 0.2);
         baseBone.children.forEach((childBone: Object3D) => {
-           this.updateRightHand(childBone);
+            this.updateRightHand(childBone);
         });
     }
 
     private updateRightThumb(baseBone: Object3D): void {
         baseBone.rotation.set(0, -0.2, 0);
         baseBone.children.forEach((childBone: Object3D) => {
-           this.updateRightThumb(childBone);
+            this.updateRightThumb(childBone);
         });
     }
 

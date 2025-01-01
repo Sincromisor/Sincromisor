@@ -4,7 +4,7 @@ import { Euler, Quaternion } from 'three';
 // 球面線形補完をおこなったクオータニオンを扱うクラス
 export class RotationFilter {
     private rotation: Euler;
-    private alpha:number = 0.1;
+    private alpha: number = 0.1;
 
     constructor(rotaion: Euler) {
         this.rotation = rotaion;
@@ -12,7 +12,7 @@ export class RotationFilter {
 
     // 新たに得たオイラー角を元に、ローパスフィルタと
     // 球面線形補完をおこなった結果をrotationに反映
-    update(newRX: number, newRY: number, newRZ: number): void{
+    update(newRX: number, newRY: number, newRZ: number): void {
         const x: number = this.lowPassFilter(newRX, this.rotation.x, this.alpha);
         const y: number = this.lowPassFilter(newRY, this.rotation.y, this.alpha);
         const z: number = this.lowPassFilter(newRZ, this.rotation.z, this.alpha);

@@ -2,7 +2,7 @@ import { Scene } from '@babylonjs/core/scene';
 import { Nullable } from '@babylonjs/core/types';
 import { AbstractMesh } from '@babylonjs/core/Meshes';
 import { MorphTargetManager } from '@babylonjs/core/Morph';
-import { TalkManager, CurrentMora } from '../../RTC/TalkManager';
+import { TalkManager, CurrentMora } from '../../../RTC/TalkManager';
 
 type MouseMorphValues = {
     "Mouse.A": number,

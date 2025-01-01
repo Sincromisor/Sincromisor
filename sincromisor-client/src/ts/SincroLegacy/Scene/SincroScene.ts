@@ -10,7 +10,7 @@ import { CharacterManager } from '../Character/CharacterManager';
 import { Inspector } from '@babylonjs/inspector';
 import { StageLight } from './SceneLight';
 import { StageCamera } from './SceneCamera';
-import { TalkManager } from '../RTC/TalkManager';
+import { TalkManager } from '../../RTC/TalkManager';
 
 // https://learn.microsoft.com/ja-jp/windows/mixed-reality/develop/javascript/tutorials/babylonjs-webxr-helloworld/introduction-01
 // https://doc.babylonjs.com/features/featuresDeepDive/scene/optimize_your_scene

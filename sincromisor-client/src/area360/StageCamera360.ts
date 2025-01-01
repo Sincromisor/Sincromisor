@@ -1,7 +1,7 @@
 import { ArcRotateCamera } from '@babylonjs/core/Cameras';
 import { Vector3 } from '@babylonjs/core/Maths';
 import { Tools } from '@babylonjs/core/Misc/tools';
-import { StageCamera } from '../ts/Scene/SceneCamera';
+import { StageCamera } from '../ts/SincroLegacy/Scene/SceneCamera';
 
 export class StageCamera360 extends StageCamera {
     /*
