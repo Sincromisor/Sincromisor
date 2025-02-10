@@ -9,7 +9,7 @@ services:
     image: sincromisor/service-initializer
     volumes:
       - ./configs/config.yml:/opt/sincromisor/configs/config.yml:rw
-      - sincro-volumes:/volumes
+      - ./volumes:/volumes
 
   sincro-client:
     profiles:
@@ -30,7 +30,7 @@ services:
       - sincromisor-net
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
     depends_on:
       service-initializer:
@@ -55,7 +55,7 @@ services:
       - .env
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
     depends_on:
       service-initializer:
@@ -77,7 +77,7 @@ services:
       - .env
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
     depends_on:
       service-initializer:
@@ -94,16 +94,16 @@ services:
     ports:
       - 8003:8003/tcp
     volumes:
-      - sincro-cache:/opt/sincromisor/.cache
-      - sincro-triton:/opt/sincromisor/.triton
-      - sincro-voice:/opt/sincromisor/.voice
+      - ./volumes/sincro-cache:/opt/sincromisor/.cache
+      - ./volumes/sincro-triton:/opt/sincromisor/.triton
+      - ./volumes/sincro-voice:/opt/sincromisor/.voice
     networks:
       - sincromisor-net
     env_file:
       - .env
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
       resources:
         reservations:
@@ -131,7 +131,7 @@ services:
       - .env
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
     depends_on:
       service-initializer:
@@ -153,7 +153,7 @@ services:
       - .env
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
     depends_on:
       service-initializer:
@@ -180,12 +180,12 @@ services:
       - 8600:8600/tcp
       - 8600:8600/udp
     volumes:
-      - consul-data:/consul/data
+      - ./volumes/consul-data:/consul/data
     networks:
       - sincromisor-net
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
     depends_on:
       service-initializer:
@@ -215,7 +215,7 @@ services:
       - sincromisor-net
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
 
   sincro-voicevox:
@@ -233,7 +233,7 @@ services:
       - sincromisor-net
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
 
   sincro-voice-cache:
@@ -251,41 +251,8 @@ services:
       - sincromisor-net
     deploy:
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
 
 networks:
   sincromisor-net:
-
-
-volumes:
-  sincro-volumes:
-    driver: local
-    driver_opts:
-      device: ./volumes
-      o: bind
-      type: none
-  sincro-cache:
-    driver: local
-    driver_opts:
-      device: ./volumes/sincro-cache
-      o: bind
-      type: none
-  sincro-triton:
-    driver: local
-    driver_opts:
-      device: ./volumes/sincro-triton
-      o: bind
-      type: none
-  sincro-voice:
-    driver: local
-    driver_opts:
-      device: ./volumes/sincro-voice
-      o: bind
-      type: none
-  consul-data:
-    driver: local
-    driver_opts:
-      device: ./volumes/consul-data
-      o: bind
-      type: none
