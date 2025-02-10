@@ -10,7 +10,7 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
   * Linuxサーバー
   * Transformersが動作するNVIDIA GPU
     * シンクロモード: VRAM 8GBは必須、12GB以上推奨
-    * チャットモード: 追加で8GB程度のVRAMが必要(Dify用)
+    * チャットモード: 追加で8GB程度、合計16GB以上のVRAMが必要(Dify用)
   * [Docker Engine](https://docs.docker.com/engine/install/ubuntu/)
   * [NVIDIA Driver(nvidia-open)](https://www.nvidia.com/en-us/drivers/)
   * [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
@@ -19,6 +19,7 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
   * マイク
   * カメラ
   * Webブラウザ
+  * かわいいVRM-1.0モデル
 
 ## 検証済み環境
 
@@ -84,10 +85,16 @@ $ docker compose --profile full up -d
 * `Looking Glass`:  キャラクターを[Looking Glass](https://lookingglassfactory.com/looking-glass-portrait)で表示
 * `Character Test`: キャラクターの動作テスト(音声認識・合成なし)
 
+## キャラクターを差し替える
+
+キャラクターモデルは[VRM-1.0形式](https://vrm.dev/vrm1/)のものが利用できます。
+`sincromisor-client/public/characters/default.vrm`のファイルを差し替えてください。
+
 ## チャットモードを利用する
 
 チャットモードで利用したい時は、別途[Dify](https://dify.ai/jp)が必要となります。
-また、Dify上でローカルLLMを利用したい場合は、[Ollama](https://ollama.com/)などが必要となります。
+また、Dify上でローカルLLMを利用したい場合は、[Ollama](https://ollama.com/)や
+[fake-openai-server](https://github.com/Phenomer/fake-openai-server)などが必要となります。
 
 Difyでてきとうにチャットボットを作成したら、そのURLとAPIキーを`configs/.env`ファイルに記入し、コンテナを再起動してください。
 
