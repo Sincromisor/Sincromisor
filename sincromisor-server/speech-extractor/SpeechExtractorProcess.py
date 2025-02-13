@@ -39,7 +39,7 @@ class SpeechExtractorProcess:
             public_bind_host=self.__args.public_bind_host,
             public_bind_port=self.__args.public_bind_port,
         )
-        self.sd_reporter.register()
+        self.sd_reporter.start()
 
         @app.get("/api/v1/statuses")
         async def get_status() -> JSONResponse:
