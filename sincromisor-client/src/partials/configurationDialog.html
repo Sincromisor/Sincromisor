@@ -3,24 +3,30 @@
 
     <fieldset>
         <legend>詳細設定</legend>
-            <label class='fieldLabel'  for="talkModeSelector">おはなしモード</label>
-            <select class='fieldContent' name="talkMode" id="talkModeSelector">
-                <option value="chat" selected>チャット</option>
-                <option value="sincro">シンクロ</option>
-            </select>
+        <label class='fieldLabel' for="talkModeSelector">おはなしモード</label>
+        <select class='fieldContent' name="talkMode" id="talkModeSelector">
+            <option value="chat" selected>チャット</option>
+            <option value="sincro">シンクロ</option>
+        </select>
 
-            <label class='fieldLabel' for="enableCharacter">キャラクターを表示する</label>
-            <input class='fieldContent' type="checkbox" id="enableCharacter" name="enableCharacter" checked disabled />
+        <label class='fieldLabel' for="enableCharacter">キャラクターを表示する</label>
+        <input class='fieldContent' type="checkbox" id="enableCharacter" name="enableCharacter" checked disabled />
 
-            <label class='fieldLabel' for="enableCharacterGaze">顔認識機能を利用する<br>(Webカメラが必要です)</label>
-            <input class='fieldContent' type="checkbox" id="enableCharacterGaze" name="enableCharacterGaze" checked disabled />
+        <label class='fieldLabel' for="enableCharacterGaze">顔認識機能を利用する<br>(Webカメラが必要です)</label>
+        <input class='fieldContent' type="checkbox" id="enableCharacterGaze" name="enableCharacterGaze" checked
+            disabled />
 
-            <label class='fieldLabel' for="enableAutoMute">顔認識時のみ応答する<br>(Webカメラが必要です)</label>
-            <input class='fieldContent' type="checkbox" id="enableAutoMute" name="enableAutoMute" checked disabled />
+        <label class='fieldLabel' for="enableAutoMute">顔認識時のみ応答する<br>(Webカメラが必要です)</label>
+        <input class='fieldContent' type="checkbox" id="enableAutoMute" name="enableAutoMute" checked disabled />
 
-            <label  class='fieldLabel' for="titleText">タイトル</label>
-            <input  class='fieldContent' type="text" id="titleText" name="titleText" placeholder="ここにタイトルを入力" />
+        <label class='fieldLabel' for="titleText">タイトル</label>
+        <input class='fieldContent' type="text" id="titleText" name="titleText" placeholder="ここにタイトルを入力" />
     </fieldset>
-
+    <fieldset>
+        <legend>VRMモデル</legend>
+        <label class="fieldLabel" for="vrmFileInput">VRM-1.0モデルを<br>ここにドラッグ&ドロップ</label>
+        <input type="file" id="vrmFileInput" accept=".vrm">
+        <label id="message" class="fieldLabel" for="vrmFileInput"></label>
+    </fieldset>
     <p class="configurationDialog__back"><a href="/">&lt;&lt; もどる</a></p>
 </dialog>

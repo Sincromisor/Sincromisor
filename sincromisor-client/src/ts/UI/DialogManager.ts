@@ -1,5 +1,6 @@
 export class DialogManager {
     private static instance: DialogManager
+    static vrmUrl: string = '/characters/default.vrm';
 
     static getManager(): DialogManager {
         if (!DialogManager.instance) {
@@ -10,8 +11,15 @@ export class DialogManager {
 
     private constructor() {
         this.setMiscEvent();
+        this.setDragAndDropVrmEvent();
+        this.setUploadVrmEvent();
         this.updateTitleText();
         this.showDialog();
+        this.loadVrmFile().then(() => {
+            console.log('VRM file loaded.')
+        }).catch((error) => {
+            console.error('VRM file load failed.', error);
+        });
     }
 
     showDialog(): void {
@@ -193,5 +201,72 @@ export class DialogManager {
                 this.updateAutoMuteStatus();
             }
         }
+    }
+
+    /* VRMファイルがDrag & Dropされた際のイベントを定義 */
+    private setDragAndDropVrmEvent(): void {
+        const dropArea: HTMLDialogElement = this.getDialogElement();
+        console.log(dropArea);
+        dropArea.addEventListener('dragover', (e: DragEvent) => {
+            e.preventDefault();
+            dropArea.classList.add('vrmDragover');
+        });
+        dropArea.addEventListener('dragleave', (e: DragEvent) => {
+            e.preventDefault();
+            dropArea.classList.remove('vrmDragover');
+        });
+        dropArea.addEventListener('drop', (e: DragEvent) => {
+            e.preventDefault();
+            dropArea.classList.remove('vrmDragover');
+            if (e.dataTransfer == null) {
+                return;
+            }
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                this.updateVrmFile(file);
+            }
+        });
+    }
+
+    /* VRMファイルのアップロードイベントを定義 */
+    private setUploadVrmEvent(): void {
+        const inputElement: HTMLInputElement | null = document.querySelector('input#vrmFileInput');
+        if (!inputElement) { return; }
+        inputElement.addEventListener('change', (event: Event) => {
+            event.preventDefault();
+            if (event.target) {
+                const fileElement = event.target as HTMLInputElement;
+                const files = fileElement.files;
+                if (files) {
+                    this.updateVrmFile(files[0]);
+                }
+            }
+        });
+    }
+
+    private updateVrmFile(file: File): void {
+        const blob = new Blob([file], { type: "application/octet-stream" });
+        DialogManager.vrmUrl = URL.createObjectURL(blob);
+        this.saveVrmFile(file).then(() => {
+            console.log('VRM file updated.', file);
+        }).catch((error) => {
+            console.error('VRM file update failed.', error);
+        });
+    }
+
+    private async saveVrmFile(file: File): Promise<void> {
+        const cache = await caches.open('file-cache');
+        const response = new Response(file);
+        await cache.put('sincroVrmFile', response);
+    }
+
+    private async loadVrmFile(): Promise<void> {
+        const cache = await caches.open('file-cache');
+        const response: Response | undefined = await cache.match('sincroVrmFile');
+        if (!response) {
+            return;
+        }
+        DialogManager.vrmUrl = URL.createObjectURL(await response.blob());
     }
 }

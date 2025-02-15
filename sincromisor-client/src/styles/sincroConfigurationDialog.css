@@ -88,4 +88,9 @@ dialog#configurationDialog {
     &::backdrop {
         background: rgba(180, 100, 180, 0.5);
     }
+
+    &.vrmDragover {
+        border: 2px dashed rgb(63, 63, 63);
+        background-color: rgb(200, 200, 200);
+    }
 }

@@ -20,12 +20,12 @@ export class VRMCharacterManager {
     public armBoneController: ArmBoneController | null = null;
     public mouthMorphController: FaceMorphController | null = null;
 
-    constructor(scene: Scene, vrmCamera: VRMCamera, url: string) {
+    constructor(scene: Scene, vrmCamera: VRMCamera, vrmUrl: string) {
         this.scene = scene;
         this.vrmCamera = vrmCamera;
         this.clock = new Clock();
         this.clock.start();
-        this.load(url);
+        this.load(vrmUrl);
     }
 
     // VRMキャラクターのload

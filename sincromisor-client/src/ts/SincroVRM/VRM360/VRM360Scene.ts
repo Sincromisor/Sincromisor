@@ -13,8 +13,8 @@ export class VRM360Scene extends VRMScene {
     private readonly sphereVideo: SphereVideo;
     private readonly lightSphere: Mesh;
 
-    constructor(canvasRoot: HTMLDivElement) {
-        super(canvasRoot);
+    constructor(canvasRoot: HTMLDivElement, vrmUrl: string) {
+        super(canvasRoot, vrmUrl);
         this.sphereVideo = new SphereVideo('movie');
         this.createWorldSphere(this.sphereVideo.videoTexture);
         this.createFlatFloor();

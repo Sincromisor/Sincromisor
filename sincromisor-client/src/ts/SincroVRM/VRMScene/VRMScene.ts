@@ -10,7 +10,7 @@ export class VRMScene {
     private readonly vrmCamera: VRMCamera;
     protected readonly vrmLight: VRMLight;
 
-    constructor(canvasRoot: HTMLDivElement) {
+    constructor(canvasRoot: HTMLDivElement, vrmUrl: string) {
         this.scene = new Scene();
         this.vrmLight = new VRMLight();
         this.scene.add(this.vrmLight.light);
@@ -21,7 +21,7 @@ export class VRMScene {
         this.scene.add(axesHelper);
 
         this.vrmCamera = new VRMCamera(canvasRoot);
-        this.vrmCharacterManager = new VRMCharacterManager(this.scene, this.vrmCamera, '/characters/default.vrm');
+        this.vrmCharacterManager = new VRMCharacterManager(this.scene, this.vrmCamera, vrmUrl);
 
         // レンダラーを設定する。背景は透過する。
         this.renderer = new WebGLRenderer({ alpha: true });
