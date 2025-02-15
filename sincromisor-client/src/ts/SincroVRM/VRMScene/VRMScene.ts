@@ -29,6 +29,7 @@ export class VRMScene {
         this.renderer.setPixelRatio(window.devicePixelRatio);
         canvasRoot.appendChild(this.renderer.domElement);
 
+        this.setupResizeHandler();
         this.animate();
     }
 
@@ -39,6 +40,24 @@ export class VRMScene {
         this.updateScene();
         this.vrmCharacterManager.update();
         this.renderer.render(this.scene, this.vrmCamera.camera);
+    }
+
+    private setupResizeHandler(): void {
+        const resizeObserver = new ResizeObserver(() => {
+            this.handleResize();
+        });
+        resizeObserver.observe(this.renderer.domElement.parentElement as Element);
+    }
+
+    private handleResize(): void {
+        if (this.renderer.domElement.parentElement) {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            this.renderer.setSize(width, height);
+            this.renderer.setPixelRatio(window.devicePixelRatio);
+            this.vrmCamera.updateAspect(width / height);
+        }
     }
 
     /* フレームごとのシーンの更新処理を記述する。 */
