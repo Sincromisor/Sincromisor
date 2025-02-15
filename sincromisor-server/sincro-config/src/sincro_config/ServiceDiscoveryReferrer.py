@@ -37,10 +37,13 @@ class ServiceDiscoveryReferrer:
 
     # worker_typeで指定したサービスのワーカーのうち、
     # 正常稼働が確認できているものをランダムにひとつ返す。
-    def get_random_worker(self, worker_type: str) -> ServiceDescription:
+    # どのワーカーも正常稼働していない場合はNoneを返す。
+    def get_random_worker(self, worker_type: str) -> ServiceDescription | None:
         index: int
         workers: list
         index, workers = self.__healthy_service(worker_type=worker_type)
+        if not workers:
+            return None
         worker: dict = random.choice(workers)
         return ServiceDescription(
             index=index,
