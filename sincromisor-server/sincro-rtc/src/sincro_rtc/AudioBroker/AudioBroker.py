@@ -103,6 +103,7 @@ class AudioBrokerEvent(Event):
 
 
 class AudioBroker:
+    # talk_mode: chat, sincro
     def __init__(
         self,
         session_id: str,
@@ -198,7 +199,14 @@ class AudioBroker:
         )
         if worker is None:
             raise AudioBrokerError("SpeechExtractor worker is not found.")
-        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/SpeechExtractor"
+        match self.__talk_mode:
+            case "chat":
+                max_slince_ms: int = 1000
+            case "sincro":
+                max_slince_ms: int = 600
+            case _:
+                max_slince_ms: int = 1000
+        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/SpeechExtractor?max_silence_ms={max_slince_ms}"
         self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)
         sender_t: ExtractorSenderThread = ExtractorSenderThread(

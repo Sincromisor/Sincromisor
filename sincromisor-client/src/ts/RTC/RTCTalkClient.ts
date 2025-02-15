@@ -29,6 +29,7 @@ export class RTCTalkClient {
     telopChannelCallback: (msg: TelopChannelMessage) => void = () => { };
     textChannelCallback: (msg: ChatMessage) => void = () => { };
 
+    /* talk_mode: chat, sincro */
     constructor(sincroConfig: SincroRTCConfig, audioTrack: MediaStreamTrack, talkMode: string) {
         this.logger = DebugConsoleManager.getManager();
         this.chatMessageManager = ChatMessageManager.getManager();

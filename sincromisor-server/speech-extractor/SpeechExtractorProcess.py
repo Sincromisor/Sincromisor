@@ -48,7 +48,7 @@ class SpeechExtractorProcess:
             )
 
         @app.websocket("/api/v1/SpeechExtractor")
-        async def websocket_chat_endpoint(ws: WebSocket) -> None:
+        async def websocket_chat_endpoint(ws: WebSocket, max_silence_ms: int = 600) -> None:
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1
             try:
@@ -60,7 +60,7 @@ class SpeechExtractorProcess:
                     voice_channels=speRequest.voice_channels,
                     voice_sampling_rate=speRequest.voice_sampling_rate,
                 )
-                await speechExtractor.extract(ws=ws, max_silence_ms=600)
+                await speechExtractor.extract(ws=ws, max_silence_ms=max_silence_ms)
             except WebSocketDisconnect:
                 self.__logger.info("Disconnected WebSocket.")
             except Exception as e:
