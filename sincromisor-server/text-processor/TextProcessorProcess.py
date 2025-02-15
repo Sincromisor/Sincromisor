@@ -53,7 +53,7 @@ class TextProcessorProcess:
         # /TextProcessor?talk_mode=chat
         @app.websocket("/api/v1/TextProcessor")
         async def websocket_chat_endpoint(ws: WebSocket, talk_mode: str | None) -> None:
-            self.__logger.info("Connected Websocket.")
+            self.__logger.info(f"Connected Websocket - talk_mode={talk_mode}")
             self.__sessions += 1
             try:
                 text_worker: TextProcessorWorker

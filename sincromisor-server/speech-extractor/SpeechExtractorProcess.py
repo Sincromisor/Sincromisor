@@ -49,7 +49,7 @@ class SpeechExtractorProcess:
 
         @app.websocket("/api/v1/SpeechExtractor")
         async def websocket_chat_endpoint(ws: WebSocket, max_silence_ms: int = 600) -> None:
-            self.__logger.info("Connected Websocket.")
+            self.__logger.info(f"Connected Websocket - max_silence_ms={max_silence_ms}")
             self.__sessions += 1
             try:
                 await ws.accept()
