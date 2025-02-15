@@ -1,4 +1,8 @@
 <dialog id="configurationDialog">
+    <div id="sincroDialogPopContainer">
+        <div id="sincroDialogPopBox">
+        </div>
+    </div>
     <button id="sincroStart">はじめる</button>
 
     <fieldset>
@@ -25,8 +29,7 @@
     <fieldset>
         <legend>VRMモデル</legend>
         <label class="fieldLabel" for="vrmFileInput">VRM-1.0モデルを<br>ここにドラッグ&ドロップ</label>
-        <input type="file" id="vrmFileInput" accept=".vrm">
-        <label id="message" class="fieldLabel" for="vrmFileInput"></label>
+        <input class='fieldContent' type="file" id="vrmFileInput" accept=".vrm">
     </fieldset>
     <p class="configurationDialog__back"><a href="/">&lt;&lt; もどる</a></p>
 </dialog>

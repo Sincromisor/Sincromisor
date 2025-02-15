@@ -1,3 +1,5 @@
+import { PopManager } from "./PopManager";
+
 export class DialogManager {
     private static instance: DialogManager
     static vrmUrl: string = '/characters/default.vrm';
@@ -246,11 +248,19 @@ export class DialogManager {
     }
 
     private updateVrmFile(file: File): void {
+        const popManager = PopManager.getManager();
+        // ファイル名がVRM拡張子であるか確認
+        if (!file.name.endsWith('.vrm')) {
+            popManager.writeDialogPopError('VRMファイルを選択してください。');
+            return;
+        }
         const blob = new Blob([file], { type: "application/octet-stream" });
         DialogManager.vrmUrl = URL.createObjectURL(blob);
         this.saveVrmFile(file).then(() => {
+            popManager.writeDialogPopMessage('VRMファイルを更新しました。');
             console.log('VRM file updated.', file);
         }).catch((error) => {
+            popManager.writeDialogPopError('VRMファイルの更新に失敗しました。');
             console.error('VRM file update failed.', error);
         });
     }
