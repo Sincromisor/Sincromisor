@@ -106,7 +106,7 @@ div#sincroChatBox {
 
     div.sincroErrorMessage {
         & {
-            margin-left: auto;
+            margin-left: var(--chatBoxSpace);
             margin-right: auto;
             display: grid;
             grid-template-columns: var(--chatBoxIconSize) 5fr;
@@ -129,7 +129,7 @@ div#sincroChatBox {
 
     div.sincroResetMessage {
         & {
-            margin-left: auto;
+            margin-left: var(--chatBoxSpace);
             margin-right: auto;
             display: grid;
             grid-template-columns: var(--chatBoxIconSize) 5fr;
