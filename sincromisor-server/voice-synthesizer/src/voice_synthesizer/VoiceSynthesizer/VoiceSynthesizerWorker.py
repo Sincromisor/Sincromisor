@@ -1,5 +1,6 @@
 import logging
 from logging import Logger
+from time import perf_counter
 
 from fastapi import WebSocket
 from sincro_models import (
@@ -32,14 +33,33 @@ class VoiceSynthesizerWorker:
     async def communicate(self, ws: WebSocket) -> None:
         pack: bytes
         while pack := await ws.receive_bytes():
-            text_processor_result: TextProcessorResult = (
+            tp_result: TextProcessorResult = (
                 TextProcessorResult.from_msgpack(pack=pack)
             )
-            self.__logger.info(f"Receive {repr(text_processor_result)}")
-            if text_processor_result.voice_text:
-                await ws.send_bytes(
-                    self.__synth(tp_result=text_processor_result).to_msgpack(),
+            self.__logger.info(f"Receive {repr(tp_result)}")
+            if tp_result.voice_text:
+                self.__logger.info(
+                    {
+                        "type": "VoiceSynthesizerRequest",
+                        "session_id": tp_result.session_id,
+                        "speech_id": tp_result.speech_id,
+                        "voice_text": tp_result.voice_text,
+                    },
                 )
+                start_t = perf_counter()
+                vs_result: VoiceSynthesizerResult = self.__synth(
+                    tp_result=tp_result
+                )
+                self.__logger.info(
+                    {
+                        "type": "VoiceSynthesizerResult",
+                        "session_id": tp_result.session_id,
+                        "speech_id": tp_result.speech_id,
+                        "query_time": perf_counter() - start_t,
+                        "result": vs_result.to_json(),
+                    },
+                )
+                await ws.send_bytes(vs_result.to_msgpack())
 
     def __get_voice(
         self,
@@ -59,12 +79,8 @@ class VoiceSynthesizerWorker:
 
     def __synth(self, tp_result: TextProcessorResult) -> VoiceSynthesizerResult:
         vtext: str = tp_result.voice_text
-        self.__logger.info(f"VoiceSynthesizerRequest({tp_result.session_id}) {vtext}")
         vs_result: VoiceSynthesizerResult = self.__get_voice(
             vvox=self.__vvox,
             voice_text=vtext,
-        )
-        self.__logger.info(
-            f"VoiceSynthesizerResult({tp_result.session_id}): {vs_result.to_json()}",
         )
         return vs_result

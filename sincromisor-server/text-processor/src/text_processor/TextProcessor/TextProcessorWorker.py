@@ -1,6 +1,7 @@
 import logging
 from collections.abc import Generator
 from logging import Logger
+from time import perf_counter
 
 from fastapi import WebSocket
 from sincro_models import TextProcessorRequest, TextProcessorResult
@@ -23,10 +24,24 @@ class TextProcessorWorker:
             # 現状では、requestのテキストが完全に認識できたタイミングで処理をする
             if not request.confirmed:
                 continue
+
+            start_t: float = perf_counter()
+            response_t: float = -1
             self.logger.info(["process_request", request])
             for response in self.process(request=request):
                 self.logger.info(["send_response", response])
                 await ws.send_bytes(response.to_msgpack())
+                # 最初のレスポンスがあった時刻を記録
+                if response_t < 0:
+                    response_t = perf_counter()
+            self.logger.info(
+                {
+                    "session_id": request.session_id,
+                    "speech_id": request.speech_id,
+                    "response_time": response_t - start_t,
+                    "query_time": perf_counter() - start_t,
+                }
+            )
 
     def process(
         self,

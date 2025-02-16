@@ -3,6 +3,7 @@ import shutil
 from datetime import datetime
 from logging import Logger
 from pathlib import Path
+from time import perf_counter
 
 import numpy as np
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
@@ -19,7 +20,24 @@ class SpeechRecognizerWorker:
         self.voice_log_dir: str | None = voice_log_dir
         self.logger.info("SpeechRecognizerWorker is initialized.")
 
-    def transcribe(self, voice: np.ndarray) -> list:
+    def recognize(self, spe_result: SpeechExtractorResult) -> SpeechRecognizerResult:
+        start_t = perf_counter()
+        result = self.__transcribe_with_score(spe_result.voice)
+        sr_result = SpeechRecognizerResult(
+            session_id=spe_result.session_id,
+            speech_id=spe_result.speech_id,
+            sequence_id=spe_result.sequence_id,
+            start_at=spe_result.start_at,
+            confirmed=spe_result.confirmed,
+            result=result,
+        )
+        self.logger.info({"query_time": perf_counter() - start_t, "result": sr_result})
+        if spe_result.confirmed and self.voice_log_dir:
+            self.__export_result(sr_result)
+            self.__export_voice(spe_result)
+        return sr_result
+
+    def __transcribe(self, voice: np.ndarray) -> list:
         _, outputs = self.s2t.transcribe(
             voice,
             decode_options={
@@ -29,7 +47,7 @@ class SpeechRecognizerWorker:
         # transcribe_with_scoreと同じ構造で返す。
         return [(self.s2t.decode(outputs), 1.0)]
 
-    def transcribe_with_score(self, voice: np.ndarray) -> list:
+    def __transcribe_with_score(self, voice: np.ndarray) -> list:
         inputs, outputs = self.s2t.transcribe(
             voice,
             decode_options={
@@ -40,23 +58,7 @@ class SpeechRecognizerWorker:
         )
         return self.s2t.transcribe_with_score(inputs, outputs)
 
-    def recognize(self, spe_result: SpeechExtractorResult) -> SpeechRecognizerResult:
-        result = self.transcribe_with_score(spe_result.voice)
-        sr_result = SpeechRecognizerResult(
-            session_id=spe_result.session_id,
-            speech_id=spe_result.speech_id,
-            sequence_id=spe_result.sequence_id,
-            start_at=spe_result.start_at,
-            confirmed=spe_result.confirmed,
-            result=result,
-        )
-        self.logger.info(sr_result)
-        if spe_result.confirmed and self.voice_log_dir:
-            self.export_result(sr_result)
-            self.export_voice(spe_result)
-        return sr_result
-
-    def export_result(self, result: SpeechRecognizerResult) -> Path | None:
+    def __export_result(self, result: SpeechRecognizerResult) -> Path | None:
         if self.voice_log_dir is None:
             return None
         time_text: str = datetime.fromtimestamp(result.start_at).strftime(
@@ -71,7 +73,7 @@ class SpeechRecognizerWorker:
         self.logger.info(f"Wrote: {write_path}")
         return write_path
 
-    def export_voice(self, result: SpeechExtractorResult) -> Path | None:
+    def __export_voice(self, result: SpeechExtractorResult) -> Path | None:
         if self.voice_log_dir is None:
             return None
         time_text: str = datetime.fromtimestamp(result.start_at).strftime(

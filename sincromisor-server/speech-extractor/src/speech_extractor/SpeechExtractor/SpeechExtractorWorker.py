@@ -43,7 +43,7 @@ class SpeechExtractorWorker:
     # 一度に得られるフレーム数はRTC側の実装依存のため、ここでバッファリングを行う。
     # 短すぎると音声検知や認識の負荷が高くなる上音声認識がエラーとなる場合もあるため、
     # ある程度(200ms、3200フレーム程度)は確保しておく。
-    async def get_audio_buffer(self, ws: WebSocket, min_buffer_length: int = 3200):
+    async def __get_audio_buffer(self, ws: WebSocket, min_buffer_length: int = 3200):
         buffer: np.ndarray = np.zeros(0, dtype=self.voice_dtype)
 
         while True:
@@ -77,9 +77,9 @@ class SpeechExtractorWorker:
             start_at=-1,
         )
 
-        async for mic_voice in self.get_audio_buffer(ws):
+        async for mic_voice in self.__get_audio_buffer(ws):
             is_speech = False
-            if self.check_speech_exists(mic_voice):
+            if self.__check_speech_exists(mic_voice):
                 result.start_at = time.time()
                 silence_ms = 0
                 in_speech = True
@@ -107,7 +107,7 @@ class SpeechExtractorWorker:
                 result.cut_voice(-int(self.voice_sampling_rate / 2))
         self.logger.info("End Extractor.extract.")
 
-    def check_speech_exists(self, audio: np.ndarray) -> bool:
+    def __check_speech_exists(self, audio: np.ndarray) -> bool:
         audio_clip = containers.AudioData.create_from_array(
             audio.astype(float) / np.iinfo(self.voice_dtype).max,
             self.voice_sampling_rate,
