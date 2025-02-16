@@ -56,7 +56,8 @@ class VoiceSynthesizerWorker:
                         "session_id": tp_result.session_id,
                         "speech_id": tp_result.speech_id,
                         "query_time": perf_counter() - start_t,
-                        "result": vs_result.to_json(),
+                        "message": vs_result.message,
+                        "speeking_time": vs_result.speaking_time,
                     },
                 )
                 await ws.send_bytes(vs_result.to_msgpack())

@@ -31,7 +31,13 @@ class SpeechRecognizerWorker:
             confirmed=spe_result.confirmed,
             result=result,
         )
-        self.logger.info({"query_time": perf_counter() - start_t, "result": sr_result})
+        self.logger.info(
+            {
+                "query_time": perf_counter() - start_t,
+                "voice_size": spe_result.voice.size,
+                "result": sr_result,
+            }
+        )
         if spe_result.confirmed and self.voice_log_dir:
             self.__export_result(sr_result)
             self.__export_voice(spe_result)
