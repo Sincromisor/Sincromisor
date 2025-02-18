@@ -46,20 +46,18 @@ dialog#configurationDialog {
         }
 
         & .fieldLabel {
-            height: 100%;
+            height: auto;
             width: 95%;
             display: block;
             grid-column: 1 / 2;
-            height: clamp(2rem, 0rem + 2.5vw, 6rem);
             font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
         }
 
         & .fieldContent {
-            height: 100%;
+            height: clamp(2rem, 0rem + 2.5vw, 6rem);
             width: 95%;
             display: block;
             grid-column: 2 / 3;
-            height: clamp(2rem, 0rem + 2.5vw, 6rem);
             font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
         }
 
