@@ -30,12 +30,15 @@ export class VRMScene {
         canvasRoot.appendChild(this.renderer.domElement);
 
         this.setupResizeHandler();
+    }
+
+    start():void{
         this.animate();
     }
 
     private animate(): void {
         window.requestAnimationFrame(() => {
-            this.animate()
+            this.animate();
         });
         this.updateScene();
         this.vrmCharacterManager.update();

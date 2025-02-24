@@ -24,7 +24,7 @@ dev = [
 full = [
     "sincro-rtc",
     "speech-extractor",
-    "speech-recognizer",
+    "speech-recognizer-nemo",
     "text-processor",
     "voice-synthesizer",
 ]
@@ -39,6 +39,10 @@ speech-extractor = [
 
 speech-recognizer = [
     "speech-recognizer",
+]
+
+speech-recognizer-nemo = [
+    "speech-recognizer-nemo",
 ]
 
 text-processor = [
@@ -62,6 +66,7 @@ members = [
     "sincromisor-server/sincro-models",
     "sincromisor-server/sincro-rtc",
     "sincromisor-server/speech-recognizer",
+    "sincromisor-server/speech-recognizer-nemo",
     "sincromisor-server/speech-extractor",
     "sincromisor-server/voice-synthesizer",
     "sincromisor-server/text-processor",
@@ -74,6 +79,7 @@ sincro-models = { workspace = true }
 sincro-rtc = { workspace = true }
 speech-extractor = { workspace = true }
 speech-recognizer = { workspace = true }
+speech-recognizer-nemo = { workspace = true }
 voice-synthesizer = { workspace = true }
 text-processor = { workspace = true }
 

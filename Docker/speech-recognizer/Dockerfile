@@ -5,7 +5,6 @@ ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
 ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${SINCRO_USER_DIR}/.local/bin:${PATH}
 ENV SINCROMISOR_CONF=/opt/sincromisor/config.yml
-ENV SINCROMISOR_WORKER_ID=1
 
 ENV SINCRO_RECOGNIZER_HOST=0.0.0.0
 ENV SINCRO_RECOGNIZER_PORT=8003
@@ -77,6 +76,12 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-server/speech-recognizer/README.md \
     ./sincromisor-server/speech-recognizer/.python-version \
     ${SINCRO_USER_DIR}/sincromisor-server/speech-recognizer/
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/speech-recognizer-nemo/pyproject.toml \
+    ./sincromisor-server/speech-recognizer-nemo/README.md \
+    ./sincromisor-server/speech-recognizer-nemo/.python-version \
+    ${SINCRO_USER_DIR}/sincromisor-server/speech-recognizer-nemo/
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-server/text-processor/pyproject.toml \

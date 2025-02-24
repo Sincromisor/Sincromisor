@@ -76,6 +76,12 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ${SINCRO_USER_DIR}/sincromisor-server/speech-recognizer/
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/speech-recognizer-nemo/pyproject.toml \
+    ./sincromisor-server/speech-recognizer-nemo/README.md \
+    ./sincromisor-server/speech-recognizer-nemo/.python-version \
+    ${SINCRO_USER_DIR}/sincromisor-server/speech-recognizer-nemo/
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-server/text-processor/pyproject.toml \
     ./sincromisor-server/text-processor/README.md \
     ./sincromisor-server/text-processor/.python-version \

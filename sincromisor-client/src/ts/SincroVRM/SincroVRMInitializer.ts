@@ -66,7 +66,10 @@ export class SincroVRMInitializer {
     }
 
     protected initializeSincroScene(): VRMScene {
-        return new VRMScene(this.charCanvas, DialogManager.vrmUrl);
+        const vrmScene: VRMScene = new VRMScene(this.charCanvas, DialogManager.vrmUrl);
+        vrmScene.start();
+        return vrmScene;
+
         /*
             this.charCanvas, this.talkManager,
             this.dialogManager.enableVR(),

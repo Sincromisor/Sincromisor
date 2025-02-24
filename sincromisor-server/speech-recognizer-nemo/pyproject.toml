@@ -1,0 +1,32 @@
+[project]
+name = "speech-recognizer-nemo"
+version = "2.0.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "sincro-config",
+    "sincro-models",
+    "pydantic>=2.10.4",
+    "numpy==1.26.4",
+    "uvicorn>=0.34.0",
+    "fastapi>=0.115.6",
+    "websockets>=14.1",
+    "setproctitle>=1.3.4",
+    "reazonspeech-nemo-asr",
+]
+
+[tool.uv.sources]
+reazonspeech-nemo-asr = { git = "https://github.com/reazon-research/ReazonSpeech.git", subdirectory = "pkg/nemo-asr" }
+sincro-config = { workspace = true }
+sincro-models = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/speech_recognizer_nemo"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
