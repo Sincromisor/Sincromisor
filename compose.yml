@@ -90,7 +90,6 @@ services:
   speech-recognizer:
     profiles:
       - full
-      - full-experimental
       - backend
     build:
       context: .
