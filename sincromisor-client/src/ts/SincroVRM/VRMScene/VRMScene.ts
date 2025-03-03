@@ -10,7 +10,7 @@ export class VRMScene {
     private readonly vrmCamera: VRMCamera;
     protected readonly vrmLight: VRMLight;
 
-    constructor(canvasRoot: HTMLDivElement, vrmUrl: string) {
+    constructor(canvasRoot: HTMLDivElement, controlTarget: HTMLElement, vrmUrl: string) {
         this.scene = new Scene();
         this.vrmLight = new VRMLight();
         this.scene.add(this.vrmLight.light);
@@ -20,11 +20,11 @@ export class VRMScene {
         const axesHelper = new AxesHelper(5);
         this.scene.add(axesHelper);
 
-        this.vrmCamera = new VRMCamera(canvasRoot);
+        this.vrmCamera = new VRMCamera(controlTarget);
         this.vrmCharacterManager = new VRMCharacterManager(this.scene, this.vrmCamera, vrmUrl);
 
         // レンダラーを設定する。背景は透過する。
-        this.renderer = new WebGLRenderer({ alpha: true });
+        this.renderer = new WebGLRenderer({ alpha: true, antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         canvasRoot.appendChild(this.renderer.domElement);
@@ -32,7 +32,7 @@ export class VRMScene {
         this.setupResizeHandler();
     }
 
-    start():void{
+    start(): void {
         this.animate();
     }
 
@@ -56,7 +56,7 @@ export class VRMScene {
         if (this.renderer.domElement.parentElement) {
             const width = window.innerWidth;
             const height = window.innerHeight;
-            
+
             this.renderer.setSize(width, height);
             this.renderer.setPixelRatio(window.devicePixelRatio);
             this.vrmCamera.updateAspect(width / height);

@@ -11,12 +11,14 @@ export class SincroVRMInitializer {
     protected readonly chatMessageManager: ChatMessageManager;
     protected readonly talkManager: TalkManager;
     protected readonly charCanvas: HTMLDivElement;
+    protected readonly controlTarget: HTMLElement;
 
     constructor() {
         this.dialogManager = DialogManager.getManager();
         this.chatMessageManager = ChatMessageManager.getManager();
         this.talkManager = TalkManager.getManager();
         this.charCanvas = this.getCharCanvasRoot();
+        this.controlTarget = document.querySelector('div#sincroBody')!;
 
         this.getUserMediaAvailabilityCheck();
         this.dialogManager.updateCharacterStatus(true);
@@ -66,7 +68,7 @@ export class SincroVRMInitializer {
     }
 
     protected initializeSincroScene(): VRMScene {
-        const vrmScene: VRMScene = new VRMScene(this.charCanvas, DialogManager.vrmUrl);
+        const vrmScene: VRMScene = new VRMScene(this.charCanvas, this.controlTarget, DialogManager.vrmUrl);
         vrmScene.start();
         return vrmScene;
 

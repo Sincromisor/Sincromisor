@@ -4,7 +4,7 @@ import { DialogManager } from "../UI/DialogManager";
 
 export class SincroVRM360Initializer extends SincroVRMInitializer {
     protected override initializeSincroScene(): VRM360Scene {
-        const vrmScene: VRM360Scene =  new VRM360Scene(this.charCanvas, DialogManager.vrmUrl);
+        const vrmScene: VRM360Scene =  new VRM360Scene(this.charCanvas, this.controlTarget, DialogManager.vrmUrl);
         vrmScene.start();
         return vrmScene;
         /*
