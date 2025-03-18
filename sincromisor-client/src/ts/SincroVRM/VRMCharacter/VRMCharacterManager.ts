@@ -1,11 +1,14 @@
 import { GLTF, GLTFLoader, GLTFParser } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { Object3D } from 'three/src/core/Object3D.js';
 import { Scene } from 'three/src/scenes/Scene.js';
 import { Clock } from 'three/src/core/Clock.js';
 import { VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { HeadBoneController } from './HeadBoneController';
 import { ArmBoneController } from './ArmBoneController';
+import { LegBoneController } from './LegBoneController';
 import { FaceMorphController } from './FaceMorphController';
 import { VRMCamera } from '../VRMScene/VRMCamera';
+import { Vector3 } from 'three/src/math/Vector3.js';
 // import { MToonMaterialLoaderPlugin } from '@pixiv/three-vrm';
 // import { MToonNodeMaterial } from '@pixiv/three-vrm/nodes';
 
@@ -18,7 +21,11 @@ export class VRMCharacterManager {
     private vrmCamera: VRMCamera;
     public headBoneController: HeadBoneController | null = null;
     public armBoneController: ArmBoneController | null = null;
+    public legBoneController: LegBoneController | null = null;
     public mouthMorphController: FaceMorphController | null = null;
+    public characterPosition: Vector3 = new Vector3(0, 0, 0);
+    private defaultPosition: Vector3 = new Vector3(0, 0, 0);
+    private rootBone: Object3D | null = null;
 
     constructor(scene: Scene, vrmCamera: VRMCamera, vrmUrl: string) {
         this.scene = scene;
@@ -47,6 +54,8 @@ export class VRMCharacterManager {
                 this.headBoneController = new HeadBoneController(this.vrm, this.vrmCamera);
                 this.armBoneController = new ArmBoneController(this.vrm);
                 this.armBoneController.update();
+                this.legBoneController = new LegBoneController(this.vrm);
+                this.legBoneController.update();
                 if (this.vrm.expressionManager) {
                     this.mouthMorphController = new FaceMorphController(this.vrm.expressionManager);
                 }
@@ -54,7 +63,10 @@ export class VRMCharacterManager {
                 VRMUtils.removeUnnecessaryVertices(gltf.scene);
                 VRMUtils.combineSkeletons(gltf.scene);
                 VRMUtils.combineMorphs(this.vrm);
-
+                this.rootBone = this.vrm?.humanoid.getNormalizedBoneNode('hips');
+                if (this.rootBone) {
+                    this.defaultPosition = this.rootBone?.position.clone();
+                }
                 this.scene.add(this.vrm.scene);
                 //this.setEvent(this.vrm);
             },
@@ -69,7 +81,12 @@ export class VRMCharacterManager {
 
     update(): void {
         this.headBoneController?.update();
+        this.armBoneController?.update();
+        this.legBoneController?.update();
         this.vrm?.update(this.clock.getDelta());
+        if (this.rootBone) {
+            this.rootBone.position.copy(this.defaultPosition.clone().add(this.characterPosition));
+        }
     }
 
     /*

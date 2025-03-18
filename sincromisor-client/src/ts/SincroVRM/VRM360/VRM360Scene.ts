@@ -13,8 +13,8 @@ export class VRM360Scene extends VRMScene {
     private readonly sphereVideo: SphereVideo;
     private readonly lightSphere: Mesh;
 
-    constructor(canvasRoot: HTMLDivElement, controlTarget: HTMLElement, vrmUrl: string) {
-        super(canvasRoot, controlTarget, vrmUrl);
+    constructor(canvasRoot: HTMLDivElement, controlTarget: HTMLElement, vrmUrl: string, xrMode: boolean = false) {
+        super(canvasRoot, controlTarget, vrmUrl, xrMode);
         this.sphereVideo = new SphereVideo('movie');
         this.createWorldSphere(this.sphereVideo.videoTexture);
         this.createFlatFloor();
@@ -76,7 +76,6 @@ export class VRM360Scene extends VRMScene {
         this.vrmLight.setPotision(lightPosition);
         this.vrmLight.setIntensity(lightIntensity * 3);
 
-        console.log(lightPosition);
         this.lightSphere.position.copy(lightPosition);
     }
 }
