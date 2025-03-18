@@ -20,6 +20,7 @@ export class VRMScene {
         this.scene = new Scene();
         this.vrmLight = new VRMLight();
         this.scene.add(this.vrmLight.light);
+        this.scene.add(this.vrmLight.ambientLight);
 
         const gridHelper = new GridHelper(10, 10);
         this.scene.add(gridHelper);

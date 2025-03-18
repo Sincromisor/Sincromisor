@@ -72,10 +72,10 @@ export class VRM360Scene extends VRMScene {
 
     protected override updateScene(): void {
         const lightPosition: Vector3 = this.sphereVideo.getLightPosition();
-        const lightIntensity : number = this.sphereVideo.getLightIntensity();
+        const lightIntensity: number = this.sphereVideo.getLightIntensity();
         this.vrmLight.setPotision(lightPosition);
-        this.vrmLight.setIntensity(lightIntensity * 3);
+        this.vrmLight.setIntensity(lightIntensity);
 
-        this.lightSphere.position.copy(lightPosition);
+        this.lightSphere.position.set(this.vrmLight.posX, this.vrmLight.posY, this.vrmLight.posZ);
     }
 }
