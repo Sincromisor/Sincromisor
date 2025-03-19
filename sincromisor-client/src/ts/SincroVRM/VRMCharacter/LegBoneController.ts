@@ -22,21 +22,21 @@ export class LegBoneController {
         const rightFoot:Object3D = this.getNode('rightFoot');
 
         /* 揺れの頻度(Hz) */
-        const yure_freq:number = 0.5;
+        const yure_freq:number = 0.75;
         /* 振幅(1/yure_ampl) */
-        const yure_ampl: number = 200;
+        const yure_ampl: number = 500;
         /* yure_freq Hzのsin波を作り、-(1/yure_ampl)～(1/yure_ampl)の範囲で揺らす */
         const yure: number = Math.sin(window.performance.now() / 1000 * yure_freq * Math.PI) / yure_ampl;
 
-        leftUpperFootNode.rotation.set(MathUtils.degToRad(-8) + yure, MathUtils.degToRad(-5), MathUtils.degToRad(-3));
-        leftLowerFootNode.rotation.set(MathUtils.degToRad(16) - yure * 2, 0, MathUtils.degToRad(5));
+        leftUpperFootNode.rotation.set(MathUtils.degToRad(-3), MathUtils.degToRad(-5), MathUtils.degToRad(-3));
+        leftLowerFootNode.rotation.set(MathUtils.degToRad(6), 0, MathUtils.degToRad(5));
 
-        rightUpperFootNode.rotation.set(MathUtils.degToRad(-3), MathUtils.degToRad(5), 0);
-        rightLowerFootNode.rotation.set(MathUtils.degToRad(6), 0, 0);
+        rightUpperFootNode.rotation.set(MathUtils.degToRad(-4) + yure / 2, MathUtils.degToRad(5), MathUtils.degToRad(2));
+        rightLowerFootNode.rotation.set(MathUtils.degToRad(20) + yure, MathUtils.degToRad(5), MathUtils.degToRad(-3));
 
         /* つま先を10度内側に向ける */
-        leftFoot.rotation.set(MathUtils.degToRad(-3) - yure, MathUtils.degToRad(-10), 0);
-        rightFoot.rotation.set(MathUtils.degToRad(-3), MathUtils.degToRad(10), 0);
+        leftFoot.rotation.set(MathUtils.degToRad(-3), MathUtils.degToRad(-10), 0);
+        rightFoot.rotation.set(MathUtils.degToRad(-8) - yure, MathUtils.degToRad(3), 0);
     }
 
     private getNode(name: VRMHumanBoneName): Object3D {
