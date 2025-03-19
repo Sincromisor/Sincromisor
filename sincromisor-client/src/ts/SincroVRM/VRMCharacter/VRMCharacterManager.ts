@@ -69,6 +69,10 @@ export class VRMCharacterManager {
                 }
                 this.scene.add(this.vrm.scene);
                 //this.setEvent(this.vrm);
+
+                this.vrm.scene.traverse((obj: Object3D) => {
+                    obj.castShadow = true;
+                });
             },
             (progress) => {
                 console.log('Loading model...', 100.0 * (progress.loaded / progress.total), '%');

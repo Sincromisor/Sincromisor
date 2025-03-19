@@ -9,7 +9,7 @@ import { VRMLight } from './VRMLight';
 
 export class VRMScene {
     protected readonly scene: Scene;
-    private readonly renderer: WebGLRenderer;
+    protected readonly renderer: WebGLRenderer;
     private readonly vrmCharacterManager: VRMCharacterManager;
     private readonly vrmCamera: VRMCamera;
     protected readonly vrmLight: VRMLight;

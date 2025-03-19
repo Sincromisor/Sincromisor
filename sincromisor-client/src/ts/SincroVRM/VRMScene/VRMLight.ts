@@ -12,6 +12,9 @@ export class VRMLight {
 
     constructor() {
         this.light = new DirectionalLight(0xffffff, Math.PI);
+        this.light.castShadow = true;
+        this.light.shadow.mapSize.width = 2048;
+        this.light.shadow.mapSize.height = 2048;
         this.light.position.set(0.0, 1.0, 5.0).normalize();
     }
 

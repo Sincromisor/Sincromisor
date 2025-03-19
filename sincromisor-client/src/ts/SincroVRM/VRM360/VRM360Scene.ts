@@ -2,6 +2,7 @@ import { VRMScene } from "../VRMScene/VRMScene";
 import { CircleGeometry } from "three/src/geometries/CircleGeometry.js";
 import { SphereGeometry } from "three/src/geometries/SphereGeometry.js";
 import { MeshBasicMaterial } from "three/src/materials/MeshBasicMaterial.js";
+import { MeshStandardMaterial } from "three/src/materials/MeshStandardMaterial.js";
 import { Mesh } from "three/src/objects/Mesh.js";
 import { CanvasTexture } from "three/src/textures/CanvasTexture.js";
 import { DoubleSide } from "three/src/constants.js";
@@ -28,6 +29,7 @@ export class VRM360Scene extends VRMScene {
         const sphere: Mesh = new Mesh(geometry, material);
         sphere.position.y = 1;
         this.scene.add(sphere);
+        this.renderer.shadowMap.enabled = true;
     }
 
     private createLightSphere(): Mesh {
@@ -62,11 +64,12 @@ export class VRM360Scene extends VRMScene {
         ctx.fillRect(0, 0, size, size);
 
         const texture: CanvasTexture = new CanvasTexture(canvas);
-        const material: MeshBasicMaterial = new MeshBasicMaterial({
-            map: texture, transparent: true, side: DoubleSide
+        const material: MeshStandardMaterial = new MeshStandardMaterial({
+            map: texture, transparent: true, side: DoubleSide, roughness: 0.8, metalness: 0.2
         });
         const floor: Mesh = new Mesh(geometry, material);
         floor.position.y = 0;  // キャラクターの位置に合わせる
+        floor.receiveShadow = true;
         this.scene.add(floor);
     }
 
