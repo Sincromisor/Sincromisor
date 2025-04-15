@@ -23,7 +23,9 @@
         "noImplicitReturns": true,
         "noImplicitOverride": true,
         "noImplicitAny": true,
-        "noImplicitThis": true
+        "noImplicitThis": true,
+        "forceConsistentCasingInFileNames": true,
+        "esModuleInterop": true
         //"noUncheckedIndexedAccess": true
     },
     "include": [
