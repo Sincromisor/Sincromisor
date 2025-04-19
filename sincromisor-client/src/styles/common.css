@@ -21,13 +21,15 @@
 
     /* ChatMessage */
     --textMessageColor: hsl(0deg, 0%, 5%, 1);
-    --textMessageBackgroundColor: hsl(0deg, 0%, 95%, 1);
-    --otherMessageBackgroundColor: hsl(0deg, 0%, 77%, 1);
-    --otherMessageIconBoxColor: hsl(0deg, 0%, 67%, 1);
-    --systemMessageBackgroundColor: hsl(331deg, 47%, 77%, 1);
-    --systemMessageIconBoxColor: hsl(331deg, 37%, 67%, 1);
-    --userMessageBackgroundColor: hsl(180deg, 47%, 77%, 1);
-    --userMessageIconBoxColor: hsl(180deg, 37%, 67%, 1);
+    --textMessageBackgroundColor: hsl(0deg, 0%, 95%, 0.75);
+
+    --otherMessageBackgroundColor: hsl(0deg, 0%, 77%, 0.5);
+    --systemMessageBackgroundColor: hsl(331deg, 47%, 77%, 0.5);
+    --userMessageBackgroundColor: hsl(180deg, 47%, 77%, 0.5);
+
+    --otherMessageIconBoxColor: hsl(0deg, 0%, 67%, 0.5);
+    --systemMessageIconBoxColor: hsl(331deg, 37%, 67%, 0.5);
+    --userMessageIconBoxColor: hsl(180deg, 37%, 67%, 0.5);
 
     /* ConfigurationDialog */
     --configurationDialogTextColor: var(--baseTextColor);

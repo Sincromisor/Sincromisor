@@ -14,7 +14,8 @@ div#sincroChatBox {
         & {
             position: relative;
             padding: var(--chatBoxSpace);
-            max-width: 85%;
+            max-width: 35%;
+            min-width: calc(var(--chatBoxIconSize) * 2);
             width: max-content;
 
             margin-left: auto;
@@ -65,7 +66,7 @@ div#sincroChatBox {
             background-color: var(--userMessageBackgroundColor);
         }
 
-        & .sincroMessage__iconBox{
+        & .sincroMessage__iconBox {
             & {
                 grid-area: 1 / 2 / 2 / 3;
                 border-radius: 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) 0px;
@@ -73,7 +74,7 @@ div#sincroChatBox {
             }
         }
 
-        & .sincroMessage__text{
+        & .sincroMessage__text {
             grid-area: 1 / 1 / 2 / 2;
             border-radius: var(--chatMessageBorderRadius) 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
         }
@@ -90,7 +91,7 @@ div#sincroChatBox {
             background-color: var(--systemMessageBackgroundColor);
         }
 
-        & .sincroMessage__iconBox{
+        & .sincroMessage__iconBox {
             & {
                 grid-area: 1 / 1 / 2 / 2;
                 border-radius: var(--chatMessageBorderRadius) 0px 0px var(--chatMessageBorderRadius);
@@ -98,7 +99,7 @@ div#sincroChatBox {
             }
         }
 
-        & .sincroMessage__text{
+        & .sincroMessage__text {
             grid-area: 1 / 2 / 2 / 3;
             border-radius: 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
         }
@@ -114,14 +115,14 @@ div#sincroChatBox {
             row-gap: 0px;
         }
 
-        & .sincroMessage__iconBox{
+        & .sincroMessage__iconBox {
             & {
                 grid-area: 1 / 1 / 2 / 2;
                 border-radius: var(--chatMessageBorderRadius) 0px 0px var(--chatMessageBorderRadius);
             }
         }
 
-        & .sincroMessage__text{
+        & .sincroMessage__text {
             grid-area: 1 / 2 / 2 / 3;
             border-radius: 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
         }
@@ -137,14 +138,14 @@ div#sincroChatBox {
             row-gap: 0px;
         }
 
-        & .sincroMessage__iconBox{
+        & .sincroMessage__iconBox {
             & {
                 grid-area: 1 / 1 / 2 / 2;
                 border-radius: var(--chatMessageBorderRadius) 0px 0px var(--chatMessageBorderRadius);
             }
         }
 
-        & .sincroMessage__text{
+        & .sincroMessage__text {
             grid-area: 1 / 2 / 2 / 3;
             border-radius: 0px var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
         }

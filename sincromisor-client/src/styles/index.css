@@ -1,4 +1,4 @@
-body{
+body {
     width: 100dvw;
     /* 横スクロールを防ぐ */
     overflow-x: hidden;
@@ -70,12 +70,12 @@ div#sincroBody {
                 margin-bottom: var(--objectSpace);
                 border-radius: var(--buttonBorderRadius) var(--buttonBorderRadius) var(--buttonBorderRadius) var(--buttonBorderRadius);
                 background: linear-gradient(-70deg,
-                var(--headerBackgroundColor) 0%,
-                var(--headerBackgroundColor) 15%,
-                var(--headerBodyColor) 15%,
-                var(--headerBodyColor) 85%,
-                var(--headerBackgroundColor) 85%,
-                var(--headerBackgroundColor) 100%);
+                        var(--headerBackgroundColor) 0%,
+                        var(--headerBackgroundColor) 15%,
+                        var(--headerBodyColor) 15%,
+                        var(--headerBodyColor) 85%,
+                        var(--headerBackgroundColor) 85%,
+                        var(--headerBackgroundColor) 100%);
             }
 
             & button:hover {
