@@ -2,6 +2,7 @@ import { VideoTexture } from "three/src/textures/VideoTexture.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { LinearFilter, RGBFormat } from "three/src/constants.js";
+import { SRGBColorSpace } from 'three/src/constants.js';
 
 type FrameInfo = {
     frameID: number,
@@ -32,7 +33,7 @@ export class SphereVideo {
     }
 
     private async getVideoInfo(videoID: string): Promise<void> {
-        await fetch(this.videoPath + '/' + videoID + '.json').then((res) => {
+        await fetch(this.videoPath + '/' + videoID + '/movie.json').then((res) => {
             if (!res.ok) {
                 throw new Error(`HTTP error! status: ${res.status}`);
             }
@@ -45,7 +46,7 @@ export class SphereVideo {
 
     private createVideoElement(videoID: string): HTMLVideoElement {
         const video: HTMLVideoElement = document.createElement('video');
-        video.src = this.videoPath + '/' + videoID + '.mp4'; // 動画ファイルのパス
+        video.src = this.videoPath + '/' + videoID + '/movie.mp4'; // 動画ファイルのパス
         video.crossOrigin = 'anonymous';
         video.loop = true;
         // video.muted = true; // 音声をミュートする
@@ -59,6 +60,8 @@ export class SphereVideo {
 
     private createVideoTexture(videoElement: HTMLVideoElement): VideoTexture {
         const texture: VideoTexture = new VideoTexture(videoElement);
+        /* colorSpaceをSRGBにし、動画の色がくすむのを防ぐ */
+        texture.colorSpace = SRGBColorSpace;
         texture.minFilter = LinearFilter;
         texture.format = RGBFormat;
         return texture;
