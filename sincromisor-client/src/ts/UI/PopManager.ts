@@ -21,7 +21,7 @@ export class PopManager {
         DialogManagerから呼び出す際は、モーダルダイアログ用のメソッドを使うこと。
     */
     private constructor() {
-        this.popBox =  document.querySelector('div#sincroPopBox')!;
+        this.popBox = document.querySelector('div#sincroPopBox')!;
         this.dialogPopBox = document.querySelector('div#sincroDialogPopBox')!;
     }
 

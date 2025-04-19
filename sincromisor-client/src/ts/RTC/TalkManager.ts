@@ -29,7 +29,6 @@ export class TalkManager {
     addTextChannelMessage(msg: ChatMessage): void {
         console.dir(msg);
         this.chatMessageManager.writeMessage(msg);
-        this.chatMessageManager.removeOldMessage(30);
     }
 
     addTelopChannelMessage(msg: TelopChannelMessage): void {

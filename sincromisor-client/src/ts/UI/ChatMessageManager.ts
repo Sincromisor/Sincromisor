@@ -1,11 +1,3 @@
-/*
-interface ChatMessage {
-    name: string,
-    message: string,
-    time: number
-}
-*/
-
 import { ChatMessage, ChatMessageBuilder } from "../RTC/RTCMessage";
 
 export class ChatMessageManager {
@@ -13,7 +5,14 @@ export class ChatMessageManager {
     private readonly chatBox: HTMLDivElement;
     private readonly systemUserID: string = "GloriousAI";
     private readonly systemUserName: string = "Glorious AI";
+    /*
+        メッセージのID。メッセージを一意に識別するために使用
+        メッセージのIDは、メッセージが追加されるたびにインクリメントされる。
+    */
     private messageID: number = 0;
+
+    /* 画面上に表示される最大メッセージ数 */
+    private readonly maxMessageCount: number = 30;
 
     /* 同じエラーメッセージが何度も表示されないようにするために使用 */
     lastErrorMessage: string = '';
@@ -57,14 +56,13 @@ export class ChatMessageManager {
         } else {
             this.createNewMessageBox(cMessage);
         }
-
     }
 
     /*
         誰かわからないユーザーのメッセージを出力する。主にデバッグ用。
         生成したメッセージのdiv要素を返す。
     */
-    writeUnknownUserMessage(message:string, isHTML: boolean = false): HTMLDivElement {
+    writeUnknownUserMessage(message: string, isHTML: boolean = false): HTMLDivElement {
         const chatMessage: ChatMessage = new ChatMessageBuilder('user', 'UnknownUser', 'Unknown User', message);
         return this.createNewMessageBox(chatMessage, isHTML);
     }
@@ -99,17 +97,6 @@ export class ChatMessageManager {
     writeResetMessage(message: string): HTMLDivElement {
         const chatMessage: ChatMessage = new ChatMessageBuilder('reset', this.systemUserID, this.systemUserName, message);
         return this.createNewMessageBox(chatMessage);
-    }
-
-    /* 投稿時と返信受信時に、要素の末尾にスクロールする。 */
-    autoScroll(): void {
-        //const element = document.documentElement;
-        //this.chatBox.scrollTo(0, this.chatBox.clientHeight);
-        this.chatBox.scrollTo({
-            top: this.chatBox.scrollHeight,
-            left: 0,
-            behavior: "smooth"
-        });
     }
 
     /*
@@ -160,16 +147,25 @@ export class ChatMessageManager {
         this.chatBox.prepend(e);
         setTimeout(() => { e.style.opacity = '1'; }, 200);
         //this.autoScroll();
+        this.removeOldMessage();
         return e;
     }
 
-    private messageTypeToMessageClassName(message_type: string): string{
+    private messageTypeToMessageClassName(message_type: string): string {
         const name = message_type.charAt(0).toUpperCase() + message_type.slice(1);
         return `sincro${name}Message`;
     }
-    removeOldMessage(count: number) {
-        while (this.chatBox.childNodes.length >= count) {
+
+    /* メッセージ数がmaxMessageCountを超えた場合、古いメッセージを削除する。 */
+    private removeOldMessage() {
+        while (this.chatBox.childNodes.length >= this.maxMessageCount) {
             this.chatBox.childNodes[this.chatBox.childNodes.length - 1].remove();
         }
     }
 }
+
+declare global {
+    var chatMessageManager: ChatMessageManager;
+}
+
+window.chatMessageManager = ChatMessageManager.getManager();

@@ -59,7 +59,6 @@ export class SincroInitializer {
         this.chatMessageManager.writeUnknownUserMessage("こんにちは!");
         this.chatMessageManager.writeSystemMessage("こんにちは～!")
         this.chatMessageManager.writeSystemMessage("音声は「VOICEVOX 四国めたん」でお送りします。");
-        this.chatMessageManager.autoScroll();
 
         const sincroController: SincroController = new SincroController();
         this.dialogManager.setRTCStopButtonEventListener(() => {
