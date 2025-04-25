@@ -43,17 +43,17 @@ class SpeechRecognizerWorker:
             self.__export_voice(spe_result)
         return sr_result
 
-    def __transcribe(self, voice: np.ndarray) -> list:
+    def __transcribe(self, voice: np.ndarray) -> list[tuple[str, float]]:
         _, outputs = self.s2t.transcribe(
             voice,
             decode_options={
                 "max_new_tokens": 500,
             },
         )
-        # transcribe_with_scoreと同じ構造で返す。
+        # ダミースコア1.0を付与し、transcribe_with_scoreと同じ構造で返す。
         return [(self.s2t.decode(outputs), 1.0)]
 
-    def __transcribe_with_score(self, voice: np.ndarray) -> list:
+    def __transcribe_with_score(self, voice: np.ndarray) -> list[tuple[str, float]]:
         inputs, outputs = self.s2t.transcribe(
             voice,
             decode_options={

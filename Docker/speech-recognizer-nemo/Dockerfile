@@ -146,5 +146,7 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --group speech-recognizer-nemo
 
+WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
+
 USER ${SINCRO_USER_ID}
-CMD ["uv", "run", "speech-recognizer/SpeechRecognizerProcess.py"]
+CMD ["uv", "run", "speech-recognizer-nemo/SpeechRecognizerNemoProcess.py"]

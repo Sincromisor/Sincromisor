@@ -72,7 +72,9 @@ class SpeechRecognizer:
         return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     # https://huggingface.co/transformers/v4.6.0/internal/generation_utils.html
-    def transcribe_with_score(self, inputs, outputs, threshold=0.5) -> list:
+    def transcribe_with_score(
+        self, inputs, outputs, threshold=0.5
+    ) -> list[tuple[str, float]]:
         transition_scores = self.model.llm.compute_transition_scores(
             outputs.sequences,
             outputs.scores,
