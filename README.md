@@ -2,7 +2,8 @@
 
 Webブラウザ上でかわいいキャラになっておしゃべりしたり、かわいいキャラとおしゃべりしたりできるよ!
 
-![配信画面の例](examples/sincromisor-example.png)
+![Sincromisor](documents/images/sincromisor.jpg)
+![配信画面の例](documents/images/sincromisor-example.png)
 
 ## 必要なもの
 
