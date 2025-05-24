@@ -22,7 +22,9 @@ class ServiceDiscoveryReporter(Thread):
         self.__logger: Logger = logging.getLogger(
             "sincro." + self.__class__.__name__ + f".{worker_type}",
         )
-        self.consul: Consul = Consul(host=consul_host, port=consul_port)
+        self.consul_host: str = consul_host
+        self.consul_port: int = consul_port
+        self.consul: Consul = Consul(host=self.consul_host, port=self.consul_port)
         self.public_bind_host: str = public_bind_host
         self.public_bind_port: int = public_bind_port
         self.worker_type: str = worker_type
@@ -35,7 +37,9 @@ class ServiceDiscoveryReporter(Thread):
             try:
                 self.__check_register()
             except Exception as e:
-                self.__logger.error(f"Service registration error - {repr(e)}")
+                self.__logger.error(
+                    f"Service registration error - consul: {self.consul_host}:{self.consul_port}, bind: {self.public_bind_host}:{self.public_bind_port}, {repr(e)}"
+                )
             time.sleep(random.randint(5, 10))
 
     # consulのサービスカタログにこのサービスが登録されているかを確認する。
