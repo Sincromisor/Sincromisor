@@ -3,7 +3,9 @@ import { Vector3 } from "three/src/math/Vector3.js";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { LinearFilter, RGBFormat } from "three/src/constants.js";
 import { SRGBColorSpace } from 'three/src/constants.js';
+import Hls from "hls.js";
 
+/* フレーム毎の光源の情報 */
 type FrameInfo = {
     frameID: number,
     x: number,
@@ -23,13 +25,33 @@ type VideoInfo = {
 export class SphereVideo {
     readonly videoElement: HTMLVideoElement;
     readonly videoTexture: VideoTexture;
-    private readonly videoPath: string = '/area360/videos';
+    private readonly videoPath: string = '/media/hls';
     private videoInfo?: VideoInfo;
+    private videoType: 'file' | 'live';
 
+    /*
+        videoID: file_VIDEONAME, live_VIDEONAMEのいずれか。VIDEONAMEは動画のID。
+    */
     constructor(videoID: string) {
+        this.videoType = this.getVideoType(videoID);
         this.videoElement = this.createVideoElement(videoID);
         this.videoTexture = this.createVideoTexture(this.videoElement);
-        this.getVideoInfo(videoID);
+
+        /* Live配信では光源の処理は行わない */
+        if (this.videoType === 'file') {
+            this.getVideoInfo(videoID);
+        }
+    }
+
+    /* videoIDから、fileかliveかを判定する */
+    private getVideoType(videoID: string): 'file' | 'live' {
+        if (videoID.startsWith('file_')) {
+            return 'file';
+        } else if (videoID.startsWith('live_')) {
+            return 'live';
+        } else {
+            throw new Error(`Invalid videoID: ${videoID}`);
+        }
     }
 
     private async getVideoInfo(videoID: string): Promise<void> {
@@ -46,7 +68,6 @@ export class SphereVideo {
 
     private createVideoElement(videoID: string): HTMLVideoElement {
         const video: HTMLVideoElement = document.createElement('video');
-        video.src = this.videoPath + '/' + videoID + '/movie.mp4'; // 動画ファイルのパス
         video.crossOrigin = 'anonymous';
         video.loop = true;
         // video.muted = true; // 音声をミュートする
@@ -54,7 +75,7 @@ export class SphereVideo {
         video.autoplay = true;
         video.setAttribute('playsinline', '');
         video.setAttribute('webkit-playsinline', '');
-        video.play();
+        this.loadHLS(video, this.videoPath + '/' + videoID + '/index.m3u8');
         return video;
     }
 
@@ -95,9 +116,9 @@ export class SphereVideo {
         return this.sphericalToCartesian(frameInfo['lat'], frameInfo['lon'] - 180, 8);
     }
 
-    /* 動画から現在の照度を得る(0.0～1.0) */
+    /* 動画から現在の照度を得る(0.0～1.0)。デフォルトは1.0 */
     getLightIntensity(): number {
-        if (!this.videoInfo) { return 0; }
+        if (!this.videoInfo) { return 1.0; }
         const frameNo = this.getCurrentFrameNo();
         const frameInfo: FrameInfo = this.videoInfo.frameInfo[frameNo];
         if (!frameInfo) {
@@ -115,5 +136,66 @@ export class SphereVideo {
         const y = radius * Math.sin(latRad);
         const z = radius * Math.cos(latRad) * Math.sin(lonRad);
         return new Vector3(x, y, z);
+    }
+
+    private loadHLS(video: HTMLVideoElement, m3u8Path: string): void {
+        const retryPause: number = 5000;
+        console.log(`Loading HLS stream from: ${m3u8Path}`);
+        if (Hls.isSupported() && !this.isIOS()) {
+            const hls = new Hls({
+                maxLiveSyncPlaybackRate: 1.5,
+            });
+
+            hls.on(Hls.Events.ERROR, (_evt, data) => {
+                console.error(`HLS error: ${data.type} - ${data.details} - ${data.fatal}`);
+                if (data.fatal) {
+                    hls.destroy();
+
+                    if (data.details === 'manifestIncompatibleCodecsError') {
+                        console.error('stream makes use of codecs which are not compatible with this browser or operative system');
+                    } else if (data.response && data.response.code === 404) {
+                        console.error('stream not found, retrying in some seconds');
+                    } else {
+                        console.error(`${data.error}, retrying in some seconds`);
+                    }
+
+                    setTimeout(() => this.loadHLS(video, m3u8Path), retryPause);
+                }
+            });
+
+            hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+                console.log('HLS media attached');
+                hls.loadSource(`${m3u8Path}${window.location.search}`);
+            });
+
+            hls.on(Hls.Events.MANIFEST_LOADED, () => {
+                console.log('HLS manifest loaded');
+                video.play();
+            });
+
+            video.onplay = () => {
+                /* ライブ配信の場合、最新の映像が見れるようliveSyncPositionまでシークする */
+                if (this.videoType === 'live') {
+                    const pos: number | null = hls.liveSyncPosition;
+                    if (pos !== null) {
+                        video.currentTime = pos;
+                    }
+                }
+            };
+
+            hls.attachMedia(video);
+
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            fetch(m3u8Path)
+                .then(() => {
+                    video.src = m3u8Path;
+                    video.play();
+                });
+        }
+    }
+
+    private isIOS(): boolean {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.userAgent.includes('Mac') && !!navigator.maxTouchPoints && navigator.maxTouchPoints > 1);
     }
 }

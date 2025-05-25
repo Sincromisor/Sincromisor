@@ -32,12 +32,12 @@ export class VRM360Scene extends VRMScene {
     private getVideoId(): string {
         const urlParams: URLSearchParams = new URLSearchParams(window.location.search);
         const regex = /^[a-zA-Z0-9_]{1,32}$/;
-        const video_id = urlParams.get('video_id') ?? 'default';
+        const video_id = urlParams.get('video_id') ?? 'file_default';
 
         if (regex.test(video_id)) {
             return video_id;
         } else {
-            return 'default';
+            return 'file_default';
         }
     }
 

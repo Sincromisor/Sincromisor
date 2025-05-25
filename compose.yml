@@ -11,6 +11,8 @@ services:
     volumes:
       - ./configs/config.yml:/opt/sincromisor/configs/config.yml:rw
       - ./volumes:/volumes
+    networks:
+      - sincromisor-net
 
   sincro-client:
     profiles:
@@ -287,6 +289,22 @@ services:
       dockerfile: ./Docker/voice-cache/Dockerfile
     ports:
       - 6379:6379/tcp
+    networks:
+      - sincromisor-net
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 10s
+
+  sincro-mediamtx:
+    profiles:
+      - full
+      - full-experimental
+      - backend
+      - external
+    image: bluenviron/mediamtx:latest
+    ports:
+      - 1935:1935/tcp
     networks:
       - sincromisor-net
     deploy:

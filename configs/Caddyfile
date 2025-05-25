@@ -17,4 +17,11 @@
         }
         lb_policy random
     }
+
+    handle_path /media/hls/live_* {
+        rewrite * /{path}
+        reverse_proxy {
+            to sincro-mediamtx:8888
+        }
+    }
 }
