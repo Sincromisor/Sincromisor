@@ -1,0 +1,33 @@
+services:
+    sincro-consul-agent:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - backend-experimental
+            - external
+        image: hashicorp/consul:latest
+        ports:
+            - 8498:8500
+            - 8499:8600/tcp
+            - 8499:8600/udp
+        environment:
+            - name=value
+        env_file:
+            - .env
+        command:
+            [
+                "agent",
+                "-node=${SINCRO_CONSUL_AGENT_NODE_NAME}",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-client=0.0.0.0",
+            ]
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+
+networks:
+    sincromisor-net:

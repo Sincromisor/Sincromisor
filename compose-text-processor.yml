@@ -1,0 +1,27 @@
+services:
+    text-processor:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - backend-experimental
+        build:
+            context: .
+            dockerfile: ./Docker/text-processor/Dockerfile
+        image: sincromisor/text-processor:latest
+        ports:
+            - 8004:8004/tcp
+        networks:
+            - sincromisor-net
+        env_file:
+            - .env
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            service-initializer:
+                condition: service_completed_successfully
+
+networks:
+    sincromisor-net:

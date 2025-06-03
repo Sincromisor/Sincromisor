@@ -1,0 +1,69 @@
+include:
+    - compose-initializer.yml
+
+services:
+    speech-recognizer:
+        profiles:
+            - full
+            - backend
+        build:
+            context: .
+            dockerfile: ./Docker/speech-recognizer/Dockerfile
+        image: sincromisor/speech-recognizer:latest
+        ports:
+            - 8003:8003/tcp
+        volumes:
+            - ./volumes/sincro-cache:/opt/sincromisor/.cache
+            - ./volumes/sincro-triton:/opt/sincromisor/.triton
+            - ./volumes/sincro-voice:/opt/sincromisor/.voice
+        networks:
+            - sincromisor-net
+        env_file:
+            - .env
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          count: all
+                          capabilities: [gpu]
+        depends_on:
+            service-initializer:
+                condition: service_completed_successfully
+
+    speech-recognizer-nemo:
+        profiles:
+            - full-experimental
+            - backend-experimental
+        build:
+            context: .
+            dockerfile: ./Docker/speech-recognizer-nemo/Dockerfile
+        image: sincromisor/speech-recognizer-nemo:latest
+        ports:
+            - 8003:8003/tcp
+        volumes:
+            - ./volumes/sincro-cache:/opt/sincromisor/.cache
+            - ./volumes/sincro-voice:/opt/sincromisor/.voice
+        networks:
+            - sincromisor-net
+        env_file:
+            - .env
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          count: all
+                          capabilities: [gpu]
+        depends_on:
+            service-initializer:
+                condition: service_completed_successfully
+
+networks:
+    sincromisor-net:

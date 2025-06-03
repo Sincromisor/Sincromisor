@@ -1,0 +1,62 @@
+services:
+    voice-synthesizer:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - backend-experimental
+        build:
+            context: .
+            dockerfile: ./Docker/voice-synthesizer/Dockerfile
+        image: sincromisor/voice-synthesizer:latest
+        ports:
+            - 8005:8005/tcp
+        networks:
+            - sincromisor-net
+        env_file:
+            - .env
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+
+    sincro-voicevox:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - external
+        image: sincromisor/voicevox:latest
+        build:
+            context: .
+            dockerfile: ./Docker/voicevox/Dockerfile
+        ports:
+            - 50021:50021/tcp
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+
+    sincro-voice-cache:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - external
+        image: sincromisor/voice-cache:latest
+        build:
+            context: .
+            dockerfile: ./Docker/voice-cache/Dockerfile
+        ports:
+            - 6379:6379/tcp
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+
+networks:
+    sincromisor-net:

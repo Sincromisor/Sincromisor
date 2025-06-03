@@ -1,0 +1,24 @@
+services:
+    speech-extractor:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - backend-experimental
+        build:
+            context: .
+            dockerfile: ./Docker/speech-extractor/Dockerfile
+        image: sincromisor/speech-extractor:latest
+        ports:
+            - 8002:8002/tcp
+        networks:
+            - sincromisor-net
+        env_file:
+            - .env
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+
+networks:
+    sincromisor-net:

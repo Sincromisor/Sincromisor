@@ -1,0 +1,48 @@
+include:
+    - compose-initializer.yml
+
+services:
+    sincro-consul-server:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - backend-experimental
+            - external
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-server",
+                "-node=${SINCRO_CONSUL_SERVER_NODE_NAME}",
+                "-bootstrap-expect=1",
+                "-ui",
+                "-client=0.0.0.0",
+            ]
+        ports:
+            # https://developer.hashicorp.com/consul/docs/install/ports
+            - 8300:8300
+            - 8301:8301/tcp
+            - 8301:8301/udp
+            - 8302:8302/tcp
+            - 8302:8302/udp
+            - 8500:8500
+            - 8501:8501
+            - 8502:8502
+            - 8503:8503
+            - 8600:8600/tcp
+            - 8600:8600/udp
+        volumes:
+            - ./volumes/consul-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            service-initializer:
+                condition: service_completed_successfully
+
+networks:
+    sincromisor-net:

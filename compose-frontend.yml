@@ -1,0 +1,58 @@
+include:
+    - compose-initializer.yml
+
+services:
+    sincro-client:
+        profiles:
+            - full
+            - full-experimental
+            - frontend
+            - webclient
+        build:
+            context: .
+            dockerfile: ./Docker/sincro-client/Dockerfile
+        image: sincromisor/sincro-client:latest
+        ports:
+            - 80:80/tcp
+            - 443:443/tcp
+            - 443:443/udp
+        volumes:
+            - ./configs/Caddyfile:/etc/caddy/Caddyfile:ro
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            service-initializer:
+                condition: service_completed_successfully
+
+    sincro-rtc:
+        profiles:
+            - full
+            - full-experimental
+            - frontend
+            - rtc
+        build:
+            context: .
+            dockerfile: ./Docker/sincro-rtc/Dockerfile
+        image: sincromisor/sincro-rtc:latest
+        ports:
+            - 8001:8001/tcp
+        volumes:
+            - ./configs/config.yml:/opt/sincromisor/configs/config.yml:ro
+        networks:
+            - sincromisor-net
+        env_file:
+            - .env
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            service-initializer:
+                condition: service_completed_successfully
+
+networks:
+    sincromisor-net:
