@@ -11,7 +11,7 @@ services:
         build:
             context: ..
             dockerfile: ./Docker/sincro-client/Dockerfile
-        image: sincromisor/sincro-client:latest
+        image: ${SINCRO_REGISTRY_NAME}/sincro-client:latest
         ports:
             - 80:80/tcp
             - 443:443/tcp
@@ -37,7 +37,7 @@ services:
         build:
             context: ..
             dockerfile: ./Docker/sincro-rtc/Dockerfile
-        image: sincromisor/sincro-rtc:latest
+        image: ${SINCRO_REGISTRY_NAME}/sincro-rtc:latest
         ports:
             - 8001:8001/tcp
         volumes:

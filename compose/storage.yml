@@ -5,7 +5,7 @@ services:
             - full-experimental
             - backend
             - external
-        image: sincromisor/voice-cache:latest
+        image: ${SINCRO_REGISTRY_NAME}/voice-cache:latest
         build:
             context: ..
             dockerfile: ./Docker/voice-cache/Dockerfile

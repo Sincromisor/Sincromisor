@@ -9,7 +9,7 @@ services:
         build:
             context: ..
             dockerfile: ./Docker/speech-recognizer/Dockerfile
-        image: sincromisor/speech-recognizer:latest
+        image: ${SINCRO_REGISTRY_NAME}/speech-recognizer:latest
         ports:
             - 8003:8003/tcp
         volumes:
@@ -47,7 +47,7 @@ services:
         build:
             context: ..
             dockerfile: ./Docker/speech-recognizer-nemo/Dockerfile
-        image: sincromisor/speech-recognizer-nemo:latest
+        image: ${SINCRO_REGISTRY_NAME}/speech-recognizer-nemo:latest
         ports:
             - 8003:8003/tcp
         volumes:

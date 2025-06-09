@@ -8,7 +8,7 @@ services:
         build:
             context: ..
             dockerfile: ./Docker/text-processor/Dockerfile
-        image: sincromisor/text-processor:latest
+        image: ${SINCRO_REGISTRY_NAME}/text-processor:latest
         ports:
             - 8004:8004/tcp
         networks:

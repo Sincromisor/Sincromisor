@@ -8,7 +8,7 @@ services:
         build:
             context: ..
             dockerfile: ./Docker/voice-synthesizer/Dockerfile
-        image: sincromisor/voice-synthesizer:latest
+        image: ${SINCRO_REGISTRY_NAME}/voice-synthesizer:latest
         ports:
             - 8005:8005/tcp
         networks:
@@ -36,7 +36,7 @@ services:
             - full-experimental
             - backend
             - external
-        image: sincromisor/voicevox:latest
+        image: ${SINCRO_REGISTRY_NAME}/voicevox:latest
         build:
             context: ..
             dockerfile: ./Docker/voicevox/Dockerfile

@@ -9,7 +9,7 @@ services:
         build:
             context: ..
             dockerfile: ./Docker/service-initializer/Dockerfile
-        image: sincromisor/service-initializer
+        image: ${SINCRO_REGISTRY_NAME}/service-initializer
         volumes:
             - ../configs/config.yml:/opt/sincromisor/configs/config.yml:rw
             - ../volumes:/volumes
