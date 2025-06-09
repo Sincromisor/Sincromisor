@@ -1,13 +1,13 @@
 include:
-    - compose-initializer.yml
-    - compose-frontend.yml
-    - compose-speech-extractor.yml
-    - compose-speech-recognizer.yml
-    - compose-text-processor.yml
-    - compose-voice-synthesizer.yml
-    - compose-consul-server.yml
-    - compose-consul-agent.yml
-    - compose-storage.yml
+    - compose/initializer.yml
+    - compose/frontend.yml
+    - compose/speech-extractor.yml
+    - compose/speech-recognizer.yml
+    - compose/text-processor.yml
+    - compose/voice-synthesizer.yml
+    - compose/consul-server.yml
+    - compose/consul-agent.yml
+    - compose/storage.yml
 
 networks:
     sincromisor-net:

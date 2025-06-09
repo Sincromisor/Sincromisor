@@ -1,5 +1,5 @@
 include:
-    - compose-initializer.yml
+    - initializer.yml
 
 services:
     speech-recognizer:
@@ -7,15 +7,15 @@ services:
             - full
             - backend
         build:
-            context: .
+            context: ..
             dockerfile: ./Docker/speech-recognizer/Dockerfile
         image: sincromisor/speech-recognizer:latest
         ports:
             - 8003:8003/tcp
         volumes:
-            - ./volumes/sincro-cache:/opt/sincromisor/.cache
-            - ./volumes/sincro-triton:/opt/sincromisor/.triton
-            - ./volumes/sincro-voice:/opt/sincromisor/.voice
+            - ../volumes/sincro-cache:/opt/sincromisor/.cache
+            - ../volumes/sincro-triton:/opt/sincromisor/.triton
+            - ../volumes/sincro-voice:/opt/sincromisor/.voice
         networks:
             - sincromisor-net
         environment:
@@ -45,14 +45,14 @@ services:
             - full-experimental
             - backend-experimental
         build:
-            context: .
+            context: ..
             dockerfile: ./Docker/speech-recognizer-nemo/Dockerfile
         image: sincromisor/speech-recognizer-nemo:latest
         ports:
             - 8003:8003/tcp
         volumes:
-            - ./volumes/sincro-cache:/opt/sincromisor/.cache
-            - ./volumes/sincro-voice:/opt/sincromisor/.voice
+            - ../volumes/sincro-cache:/opt/sincromisor/.cache
+            - ../volumes/sincro-voice:/opt/sincromisor/.voice
         networks:
             - sincromisor-net
         environment:

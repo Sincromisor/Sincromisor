@@ -7,12 +7,12 @@ services:
             - backend
             - backend-experimental
         build:
-            context: .
+            context: ..
             dockerfile: ./Docker/service-initializer/Dockerfile
         image: sincromisor/service-initializer
         volumes:
-            - ./configs/config.yml:/opt/sincromisor/configs/config.yml:rw
-            - ./volumes:/volumes
+            - ../configs/config.yml:/opt/sincromisor/configs/config.yml:rw
+            - ../volumes:/volumes
         networks:
             - sincromisor-net
 

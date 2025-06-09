@@ -6,7 +6,7 @@ services:
             - backend
             - backend-experimental
         build:
-            context: .
+            context: ..
             dockerfile: ./Docker/voice-synthesizer/Dockerfile
         image: sincromisor/voice-synthesizer:latest
         ports:
@@ -38,7 +38,7 @@ services:
             - external
         image: sincromisor/voicevox:latest
         build:
-            context: .
+            context: ..
             dockerfile: ./Docker/voicevox/Dockerfile
         ports:
             - 50021:50021/tcp

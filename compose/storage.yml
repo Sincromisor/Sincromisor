@@ -7,7 +7,7 @@ services:
             - external
         image: sincromisor/voice-cache:latest
         build:
-            context: .
+            context: ..
             dockerfile: ./Docker/voice-cache/Dockerfile
         ports:
             - 6379:6379/tcp
@@ -33,7 +33,7 @@ services:
             - MINIO_ROOT_USER=${SINCRO_MINIO_ROOT_USER}
             - MINIO_ROOT_PASSWORD=${SINCRO_MINIO_ROOT_PASSWORD}
         volumes:
-            - ./volumes/minio:/data
+            - ../volumes/minio:/data
         command: server /data --console-address ":9001"
         networks:
             - sincromisor-net

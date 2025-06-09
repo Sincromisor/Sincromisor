@@ -6,7 +6,7 @@ services:
             - backend
             - backend-experimental
         build:
-            context: .
+            context: ..
             dockerfile: ./Docker/text-processor/Dockerfile
         image: sincromisor/text-processor:latest
         ports:

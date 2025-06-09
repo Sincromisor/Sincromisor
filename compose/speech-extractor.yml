@@ -6,7 +6,7 @@ services:
             - backend
             - backend-experimental
         build:
-            context: .
+            context: ..
             dockerfile: ./Docker/speech-extractor/Dockerfile
         image: sincromisor/speech-extractor:latest
         ports:

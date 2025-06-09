@@ -1,5 +1,5 @@
 include:
-    - compose-initializer.yml
+    - initializer.yml
 
 services:
     sincro-client:
@@ -9,7 +9,7 @@ services:
             - frontend
             - webclient
         build:
-            context: .
+            context: ..
             dockerfile: ./Docker/sincro-client/Dockerfile
         image: sincromisor/sincro-client:latest
         ports:
@@ -17,7 +17,7 @@ services:
             - 443:443/tcp
             - 443:443/udp
         volumes:
-            - ./configs/Caddyfile:/etc/caddy/Caddyfile:ro
+            - ../configs/Caddyfile:/etc/caddy/Caddyfile:ro
         networks:
             - sincromisor-net
         deploy:
@@ -35,13 +35,13 @@ services:
             - frontend
             - rtc
         build:
-            context: .
+            context: ..
             dockerfile: ./Docker/sincro-rtc/Dockerfile
         image: sincromisor/sincro-rtc:latest
         ports:
             - 8001:8001/tcp
         volumes:
-            - ./configs/config.yml:/opt/sincromisor/configs/config.yml:ro
+            - ../configs/config.yml:/opt/sincromisor/configs/config.yml:ro
         networks:
             - sincromisor-net
         environment:

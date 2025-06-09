@@ -1,5 +1,5 @@
 include:
-    - compose-initializer.yml
+    - initializer.yml
 
 services:
     sincro-consul-server:
@@ -33,7 +33,7 @@ services:
             - 8600:8600/tcp
             - 8600:8600/udp
         volumes:
-            - ./volumes/consul-data:/consul/data
+            - ../volumes/consul-data:/consul/data
         networks:
             - sincromisor-net
         deploy:
