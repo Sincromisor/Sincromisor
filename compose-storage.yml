@@ -1,0 +1,46 @@
+services:
+    sincro-voice-cache:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - external
+        image: sincromisor/voice-cache:latest
+        build:
+            context: .
+            dockerfile: ./Docker/voice-cache/Dockerfile
+        ports:
+            - 6379:6379/tcp
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+
+    sincro-minio:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - backend-experimental
+            - external
+        image: minio/minio:latest
+        ports:
+            - 9000:9000/tcp
+            - 9001:9001/tcp
+        environment:
+            - MINIO_ROOT_USER=${SINCRO_MINIO_ROOT_USER}
+            - MINIO_ROOT_PASSWORD=${SINCRO_MINIO_ROOT_PASSWORD}
+        volumes:
+            - ./volumes/minio:/data
+        command: server /data --console-address ":9001"
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+
+networks:
+    sincromisor-net:

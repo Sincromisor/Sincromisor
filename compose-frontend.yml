@@ -44,8 +44,15 @@ services:
             - ./configs/config.yml:/opt/sincromisor/configs/config.yml:ro
         networks:
             - sincromisor-net
-        env_file:
-            - .env
+        environment:
+            - SINCRO_RTC_HOST=${SINCRO_RTC_HOST}
+            - SINCRO_RTC_PORT=${SINCRO_RTC_PORT}
+            - SINCRO_RTC_PUBLIC_BIND_HOST=${SINCRO_RTC_PUBLIC_BIND_HOST}
+            - SINCRO_RTC_PUBLIC_BIND_PORT=${SINCRO_RTC_PUBLIC_BIND_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=${SINCRO_CONSUL_AGENT_HOST}
+            - SINCRO_CONSUL_AGENT_PORT=${SINCRO_CONSUL_AGENT_PORT}
+            - SINCRO_RTC_FORWARDED_ALLOW_IPS=${SINCRO_RTC_FORWARDED_ALLOW_IPS}
+            - SINCRO_RTC_MAX_SESSIONS=${SINCRO_RTC_MAX_SESSIONS}
         deploy:
             restart_policy:
                 condition: any

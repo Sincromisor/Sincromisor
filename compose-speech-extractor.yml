@@ -13,8 +13,13 @@ services:
             - 8002:8002/tcp
         networks:
             - sincromisor-net
-        env_file:
-            - .env
+        environment:
+            - SINCRO_EXTRACTOR_HOST=${SINCRO_EXTRACTOR_HOST}
+            - SINCRO_EXTRACTOR_PORT=${SINCRO_EXTRACTOR_PORT}
+            - SINCRO_EXTRACTOR_PUBLIC_BIND_HOST=${SINCRO_EXTRACTOR_PUBLIC_BIND_HOST}
+            - SINCRO_EXTRACTOR_PUBLIC_BIND_PORT=${SINCRO_EXTRACTOR_PUBLIC_BIND_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=${SINCRO_CONSUL_AGENT_HOST}
+            - SINCRO_CONSUL_AGENT_PORT=${SINCRO_CONSUL_AGENT_PORT}
         deploy:
             restart_policy:
                 condition: any

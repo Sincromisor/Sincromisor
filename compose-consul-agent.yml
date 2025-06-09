@@ -11,10 +11,6 @@ services:
             - 8498:8500
             - 8499:8600/tcp
             - 8499:8600/udp
-        environment:
-            - name=value
-        env_file:
-            - .env
         command:
             [
                 "agent",

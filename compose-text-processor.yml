@@ -13,8 +13,15 @@ services:
             - 8004:8004/tcp
         networks:
             - sincromisor-net
-        env_file:
-            - .env
+        environment:
+            - SINCRO_PROCESSOR_HOST=${SINCRO_PROCESSOR_HOST}
+            - SINCRO_PROCESSOR_PORT=${SINCRO_PROCESSOR_PORT}
+            - SINCRO_PROCESSOR_PUBLIC_BIND_HOST=${SINCRO_PROCESSOR_PUBLIC_BIND_HOST}
+            - SINCRO_PROCESSOR_PUBLIC_BIND_PORT=${SINCRO_PROCESSOR_PUBLIC_BIND_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=${SINCRO_CONSUL_AGENT_HOST}
+            - SINCRO_CONSUL_AGENT_PORT=${SINCRO_CONSUL_AGENT_PORT}
+            - SINCRO_PROCESSOR_DIFY_URL=${SINCRO_PROCESSOR_DIFY_URL}
+            - SINCRO_PROCESSOR_DIFY_TOKEN=${SINCRO_PROCESSOR_DIFY_TOKEN}
         deploy:
             restart_policy:
                 condition: any

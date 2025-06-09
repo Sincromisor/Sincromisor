@@ -18,8 +18,14 @@ services:
             - ./volumes/sincro-voice:/opt/sincromisor/.voice
         networks:
             - sincromisor-net
-        env_file:
-            - .env
+        environment:
+            - SINCRO_RECOGNIZER_HOST=${SINCRO_RECOGNIZER_HOST}
+            - SINCRO_RECOGNIZER_PORT=${SINCRO_RECOGNIZER_PORT}
+            - SINCRO_RECOGNIZER_PUBLIC_BIND_HOST=${SINCRO_RECOGNIZER_PUBLIC_BIND_HOST}
+            - SINCRO_RECOGNIZER_PUBLIC_BIND_PORT=${SINCRO_RECOGNIZER_PUBLIC_BIND_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=${SINCRO_CONSUL_AGENT_HOST}
+            - SINCRO_CONSUL_AGENT_PORT=${SINCRO_CONSUL_AGENT_PORT}
+            - SINCRO_RECOGNIZER_VOICE_LOG_DIR=${SINCRO_RECOGNIZER_VOICE_LOG_DIR}
         deploy:
             restart_policy:
                 condition: any
@@ -49,8 +55,14 @@ services:
             - ./volumes/sincro-voice:/opt/sincromisor/.voice
         networks:
             - sincromisor-net
-        env_file:
-            - .env
+        environment:
+            - SINCRO_RECOGNIZER_HOST=${SINCRO_RECOGNIZER_HOST}
+            - SINCRO_RECOGNIZER_PORT=${SINCRO_RECOGNIZER_PORT}
+            - SINCRO_RECOGNIZER_PUBLIC_BIND_HOST=${SINCRO_RECOGNIZER_PUBLIC_BIND_HOST}
+            - SINCRO_RECOGNIZER_PUBLIC_BIND_PORT=${SINCRO_RECOGNIZER_PUBLIC_BIND_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=${SINCRO_CONSUL_AGENT_HOST}
+            - SINCRO_CONSUL_AGENT_PORT=${SINCRO_CONSUL_AGENT_PORT}
+            - SINCRO_RECOGNIZER_VOICE_LOG_DIR=${SINCRO_RECOGNIZER_VOICE_LOG_DIR}
         deploy:
             restart_policy:
                 condition: any
