@@ -18,6 +18,8 @@ services:
                 "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
                 "-client=0.0.0.0",
             ]
+        volumes:
+            - consul-agent-data:/consul/data
         networks:
             - sincromisor-net
         deploy:
@@ -27,3 +29,6 @@ services:
 
 networks:
     sincromisor-net:
+
+volumes:
+    consul-agent-data:

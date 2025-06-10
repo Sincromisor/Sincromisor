@@ -33,7 +33,7 @@ services:
             - 8600:8600/tcp
             - 8600:8600/udp
         volumes:
-            - ../volumes/consul-data:/consul/data
+            - consul-server-data:/consul/data
         networks:
             - sincromisor-net
         deploy:
@@ -46,3 +46,6 @@ services:
 
 networks:
     sincromisor-net:
+
+volumes:
+    consul-server-data:
