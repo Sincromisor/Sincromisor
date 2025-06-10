@@ -8,6 +8,7 @@ import numpy as np
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
+from minio import Minio
 from setproctitle import setproctitle
 from sincro_config import ServiceDiscoveryReporter, SincromisorLoggerConfig
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
@@ -33,7 +34,20 @@ class SpeechRecognizerNemoProcess:
         self.__sessions: int = 0
 
     def start(self):
-        speech_recognizer = SpeechRecognizerNemoWorker(voice_log_dir=args.voice_log_dir)
+        minio_client: Minio | None = None
+        if self.__args.minio_public_bind_host and self.__args.minio_public_bind_port:
+            self.__logger.info(
+                f"Connecting to MinIO at {self.__args.minio_public_bind_host}:{self.__args.minio_public_bind_port} {self.__args.minio_user} {self.__args.minio_password}"
+            )
+            minio_client = Minio(
+                endpoint=f"{self.__args.minio_public_bind_host}:{self.__args.minio_public_bind_port}",
+                access_key=self.__args.minio_user,
+                secret_key=self.__args.minio_password,
+                secure=False,
+            )
+        speech_recognizer = SpeechRecognizerNemoWorker(
+            voice_log_dir=args.voice_log_dir, minio_client=minio_client
+        )
         app: FastAPI = FastAPI()
         event: Event = Event()
         self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(

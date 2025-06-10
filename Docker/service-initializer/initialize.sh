@@ -19,3 +19,8 @@ stat /volumes/sincro-cache
 stat /volumes/sincro-triton
 stat /volumes/sincro-voice
 stat /volumes/consul-data
+
+mc alias set sincro-minio \
+    "http://${SINCRO_MINIO_PUBLIC_BIND_HOST}:${SINCRO_MINIO_PUBLIC_BIND_PORT}" \
+    "${MINIO_ROOT_USER}" \
+    "${MINIO_ROOT_PASSWORD}"

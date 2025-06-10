@@ -8,6 +8,10 @@ class SpeechRecognizerProcessArgument(SincromisorArgumentParser):
     port: int
     public_bind_host: str
     public_bind_port: int
+    minio_public_bind_host: str | None
+    minio_public_bind_port: int | None
+    minio_user: str | None
+    minio_password: str | None
     voice_log_dir: str | None
 
     @classmethod
@@ -46,6 +50,38 @@ class SpeechRecognizerProcessArgument(SincromisorArgumentParser):
             env_name="SINCRO_RECOGNIZER_PUBLIC_BIND_PORT",
             default=default_bind_port,
             help=f"Public bind port(default: {default_bind_port})",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--minio-public-bind-host",
+            env_name="SINCRO_MINIO_PUBLIC_BIND_HOST",
+            default=None,
+            help="MinIO public bind address(default: None)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--minio-public-bind-port",
+            env_name="SINCRO_MINIO_PUBLIC_BIND_PORT",
+            default=None,
+            help="MinIO public bind port(default: None)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--minio-user",
+            env_name="SINCRO_MINIO_ROOT_USER",
+            default=None,
+            help="MinIO user(default: None)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--minio-password",
+            env_name="SINCRO_MINIO_ROOT_PASSWORD",
+            default=None,
+            help="MinIO user(default: None)",
         )
 
         cls.add_argument(

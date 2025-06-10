@@ -35,6 +35,11 @@ services:
         volumes:
             - ../volumes/minio:/data
         command: server /data --console-address ":9001"
+        healthcheck:
+            test: ["CMD", "mc", "ready", "local"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
         networks:
             - sincromisor-net
         deploy:

@@ -3,7 +3,7 @@ FROM nvidia/cuda:12.6.3-cudnn-devel-ubuntu24.04
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
-ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${SINCRO_USER_DIR}/.local/bin:${PATH}
+ENV PATH=${SINCRO_USER_DIR}/.local/bin:${PATH}
 ENV SINCROMISOR_CONF=/opt/sincromisor/config.yml
 
 ENV SINCRO_RECOGNIZER_HOST=0.0.0.0
@@ -12,6 +12,12 @@ ENV SINCRO_RECOGNIZER_PUBLIC_BIND_HOST=speech-recognizer
 ENV SINCRO_RECOGNIZER_PUBLIC_BIND_PORT=8003
 ENV SINCRO_CONSUL_AGENT_HOST=sincro-consul-agent
 ENV SINCRO_CONSUL_AGENT_PORT=8500
+
+ENV SINCRO_MINIO_PUBLIC_BIND_HOST=
+ENV SINCRO_MINIO_PUBLIC_BIND_PORT=
+ENV SINCRO_MINIO_ROOT_USER=
+ENV SINCRO_MINIO_ROOT_PASSWORD=
+
 # SINCRO_RECOGNIZER_VOICE_LOG_DIRが空の場合、音声認識ログを出力しない
 ENV SINCRO_RECOGNIZER_VOICE_LOG_DIR=
 
@@ -27,7 +33,7 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
     apt-get update \
-    && apt-get install -y curl git
+    && apt-get install -y curl git opus-tools
 
 USER ${SINCRO_USER_ID}
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh

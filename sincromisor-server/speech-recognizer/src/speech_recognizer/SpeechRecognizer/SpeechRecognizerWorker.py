@@ -1,3 +1,4 @@
+import io
 import logging
 import shutil
 from datetime import datetime
@@ -6,18 +7,22 @@ from pathlib import Path
 from time import perf_counter
 
 import numpy as np
+from minio import Minio
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 
 from .SpeechRecognizer import SpeechRecognizer
 
 
 class SpeechRecognizerWorker:
-    def __init__(self, voice_log_dir: str | None):
+    def __init__(self, voice_log_dir: str | None, minio_client: Minio | None = None):
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.s2t: SpeechRecognizer = SpeechRecognizer(
             decode_options={"max_new_tokens": 255},
         )
         self.voice_log_dir: str | None = voice_log_dir
+        self.minio_client: Minio | None = minio_client
+        self.bucket_name = "speech-recognizer"
+        self.__setup_minio_bucket()
         self.logger.info("SpeechRecognizerWorker is initialized.")
 
     def recognize(self, spe_result: SpeechExtractorResult) -> SpeechRecognizerResult:
@@ -41,6 +46,8 @@ class SpeechRecognizerWorker:
         if spe_result.confirmed and self.voice_log_dir:
             self.__export_result(sr_result)
             self.__export_voice(spe_result)
+            self.__export_result_to_minio(sr_result)
+            self.__export_voice_to_minio(spe_result)
         return sr_result
 
     def __transcribe(self, voice: np.ndarray) -> list[tuple[str, float]]:
@@ -102,3 +109,47 @@ class SpeechRecognizerWorker:
             result.to_wavfile(path=str(write_path))
         self.logger.info(f"Wrote: {write_path}")
         return write_path
+
+    def __setup_minio_bucket(self) -> None:
+        if self.minio_client is None:
+            self.logger.warning("MinIO client is not set, skipping bucket setup.")
+            return
+        if not self.minio_client.bucket_exists(self.bucket_name):
+            self.minio_client.make_bucket(self.bucket_name)
+            self.logger.info(f"Created MinIO bucket: {self.bucket_name}")
+
+    def __put_minio(self, minio_client: Minio, object_name: str, data: bytes) -> None:
+        minio_client.put_object(
+            bucket_name="speech-recognizer",
+            object_name=object_name,
+            data=io.BytesIO(data),
+            length=len(data),
+        )
+
+    def __export_result_to_minio(self, result: SpeechRecognizerResult) -> None:
+        if self.minio_client is None:
+            return
+
+        time_text: str = datetime.fromtimestamp(result.start_at).strftime(
+            "%Y%m%d_%H%M%S.%f",
+        )
+        object_name: str = (
+            f"{result.session_id}/{result.speech_id:06d}_{time_text}.json"
+        )
+        json: str = result.to_json(dumps_opt={"indent": 4})
+        self.__put_minio(self.minio_client, object_name, json.encode("utf-8"))
+        self.logger.info(f"Wrote to MinIO: {object_name}")
+
+    def __export_voice_to_minio(self, result: SpeechExtractorResult) -> None:
+        if self.minio_client is None:
+            return
+
+        time_text: str = datetime.fromtimestamp(result.start_at).strftime(
+            "%Y%m%d_%H%M%S.%f",
+        )
+        object_name: str
+        if shutil.which("opusenc"):
+            object_name = f"{result.session_id}/{result.speech_id:06d}_{time_text}.opus"
+            opus: bytes = result.to_opus()
+            self.__put_minio(self.minio_client, object_name, opus)
+            self.logger.info(f"Wrote to MinIO: {object_name}")

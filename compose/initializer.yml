@@ -10,11 +10,19 @@ services:
             context: ..
             dockerfile: ./Docker/service-initializer/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/service-initializer
+        environment:
+            - SINCRO_MINIO_PUBLIC_BIND_HOST=${SINCRO_MINIO_PUBLIC_BIND_HOST}
+            - SINCRO_MINIO_PUBLIC_BIND_PORT=${SINCRO_MINIO_PUBLIC_BIND_PORT}
+            - SINCRO_MINIO_ROOT_USER=${SINCRO_MINIO_ROOT_USER}
+            - SINCRO_MINIO_ROOT_PASSWORD=${SINCRO_MINIO_ROOT_PASSWORD}
         volumes:
             - ../configs/config.yml:/opt/sincromisor/configs/config.yml:rw
             - ../volumes:/volumes
         networks:
             - sincromisor-net
+        depends_on:
+            sincro-minio:
+                condition: service_healthy
 
 networks:
     sincromisor-net:

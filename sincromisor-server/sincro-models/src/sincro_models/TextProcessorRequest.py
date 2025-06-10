@@ -23,11 +23,8 @@ class TextProcessorRequest(BaseModel):
     history: ChatHistory
     request_message: ChatMessage
 
-    def append_request_message(self, text: str):
-        self.request_message += text
-
     @classmethod
-    def from_msgpack(self, pack: bytes) -> "TextProcessorRequest":
+    def from_msgpack(cls, pack: bytes) -> "TextProcessorRequest":
         contents = msgpack.unpackb(pack)
         return TextProcessorRequest(**contents)
 

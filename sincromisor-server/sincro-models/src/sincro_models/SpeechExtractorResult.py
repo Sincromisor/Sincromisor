@@ -1,3 +1,4 @@
+import io
 import subprocess as sp
 import wave
 
@@ -47,7 +48,7 @@ class SpeechExtractorResult(BaseModel):
         self.voice = np.zeros(0, dtype=self.voice_dtype)
 
     @classmethod
-    def from_msgpack(self, pack: bytes) -> "SpeechExtractorResult":
+    def from_msgpack(cls, pack: bytes) -> "SpeechExtractorResult":
         contents = msgpack.unpackb(pack)
         contents["voice"] = np.frombuffer(
             contents["voice"],
@@ -71,9 +72,7 @@ class SpeechExtractorResult(BaseModel):
             },
         )
 
-    # voiceをopus形式でエンコードし、ファイルに書き出す。
-    # 実行にはopusencコマンドが必要。
-    def to_opusfile(self, path: str) -> None:
+    def to_opus(self) -> bytes:
         enc_p = sp.run(
             [
                 "opusenc",
@@ -92,9 +91,14 @@ class SpeechExtractorResult(BaseModel):
             text=False,
             check=True,
         )
-        print(f"wrote: {len(self.voice)} {path}")
-        with open(path, "wb") as opus:
-            opus.write(enc_p.stdout)
+        return enc_p.stdout
+
+    # voiceをopus形式でエンコードし、ファイルに書き出す。
+    # 実行にはopusencコマンドが必要。
+    def to_opusfile(self, path: str) -> None:
+        opus: bytes = self.to_opus()
+        with open(path, "wb") as opusfile:
+            opusfile.write(opus)
 
     def to_wavfile(self, path: str) -> None:
         with wave.open(path, "wb") as wav:

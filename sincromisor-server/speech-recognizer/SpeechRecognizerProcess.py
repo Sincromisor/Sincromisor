@@ -8,6 +8,7 @@ import numpy as np
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
+from minio import Minio
 from setproctitle import setproctitle
 from sincro_config import ServiceDiscoveryReporter, SincromisorLoggerConfig
 from sincro_models import SpeechExtractorResult
@@ -31,7 +32,17 @@ class SpeechRecognizerProcess:
         self.__sessions: int = 0
 
     def start(self):
-        speech_recognizer = SpeechRecognizerWorker(voice_log_dir=args.voice_log_dir)
+        minio_client: Minio | None = None
+        if self.__args.minio_public_bind_host and self.__args.minio_public_bind_port:
+            minio_client = Minio(
+                endpoint=f"{self.__args.minio_public_bind_host}:{self.__args.minio_public_bind_port}",
+                access_key=self.__args.minio_user,
+                secret_key=self.__args.minio_password,
+                secure=False,
+            )
+        speech_recognizer = SpeechRecognizerWorker(
+            voice_log_dir=args.voice_log_dir, minio_client=minio_client
+        )
         app: FastAPI = FastAPI()
         event: Event = Event()
         self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
@@ -45,7 +56,9 @@ class SpeechRecognizerProcess:
 
         @app.get("/api/v1/statuses")
         async def get_status() -> JSONResponse:
-            return JSONResponse({"worker_type": "SpeechRecognizer", "sessions": self.__sessions})
+            return JSONResponse(
+                {"worker_type": "SpeechRecognizer", "sessions": self.__sessions}
+            )
 
         @app.websocket("/api/v1/SpeechRecognizer")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
@@ -91,6 +104,7 @@ class SpeechRecognizerProcess:
                     self.__logger.warning(
                         "WebSocket is already closed.",
                     )
+
         try:
             uvicorn.run(app, host=self.__args.host, port=self.__args.port)
         except KeyboardInterrupt:
