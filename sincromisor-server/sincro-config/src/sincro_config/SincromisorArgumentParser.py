@@ -1,5 +1,6 @@
 import os
 from argparse import ArgumentParser
+from typing import Self
 
 from pydantic import BaseModel
 
@@ -60,7 +61,7 @@ class SincromisorArgumentParser(BaseModel):
         return
 
     @classmethod
-    def argparse(cls) -> "SincromisorArgumentParser":
+    def argparse(cls) -> Self:
         parser: ArgumentParser = ArgumentParser(description=cls.description())
         cls.set_args(parser=parser)
         return cls.model_validate(vars(parser.parse_args()))
