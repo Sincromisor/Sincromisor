@@ -59,7 +59,7 @@ class SpeechRecognizerNemoProcess:
         )
         self.sd_reporter.start()
 
-        @app.get("/api/v1/statuses")
+        @app.get("/api/v1/SpeechRecognizer/statuses")
         async def get_status() -> JSONResponse:
             return JSONResponse(
                 {"worker_type": "SpeechRecognizer", "sessions": self.__sessions}

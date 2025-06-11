@@ -67,7 +67,7 @@ class RTCSignalingServer:
         )
         self.sd_reporter.start()
 
-        @app.get("/api/v1/statuses")
+        @app.get("/api/v1/RTCSignalingServer/statuses")
         async def get_status() -> JSONResponse:
             if rtcSM.session_count() > self.__args.max_sessions:
                 res = JSONResponse({"error": "Too many requests."})

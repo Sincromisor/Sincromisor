@@ -41,14 +41,16 @@ class SpeechExtractorProcess:
         )
         self.sd_reporter.start()
 
-        @app.get("/api/v1/statuses")
+        @app.get("/api/v1/SpeechExtractor/statuses")
         async def get_status() -> JSONResponse:
             return JSONResponse(
                 {"worker_type": "SpeechExtractor", "sessions": self.__sessions}
             )
 
         @app.websocket("/api/v1/SpeechExtractor")
-        async def websocket_chat_endpoint(ws: WebSocket, max_silence_ms: int = 600) -> None:
+        async def websocket_chat_endpoint(
+            ws: WebSocket, max_silence_ms: int = 600
+        ) -> None:
             self.__logger.info(f"Connected Websocket - max_silence_ms={max_silence_ms}")
             self.__sessions += 1
             try:
