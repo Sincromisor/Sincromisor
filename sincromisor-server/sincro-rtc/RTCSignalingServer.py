@@ -77,7 +77,7 @@ class RTCSignalingServer:
                 {"worker_type": "RTCSignalingServer", "sessions": rtcSM.session_count()}
             )
 
-        @app.post("/api/v1/rtc/offer")
+        @app.post("/api/v1/RTCSignalingServer/offer")
         async def app_offer(request: Request, offer_params: RTCSessionOffer):
             rtcSM.cleanup_sessions()
             if rtcSM.session_count() > self.__args.max_sessions:
@@ -96,19 +96,22 @@ class RTCSignalingServer:
             )
             return JSONResponse(session_info)
 
-        @app.get("/api/v1/cleanup")
+        @app.get("/api/v1/RTCSignalingServer/cleanup")
         def app_cleanup(request: Request):
             result = rtcSM.cleanup_sessions()
             return JSONResponse({"status": True, "running": result})
 
-        @app.get("/api/v1/rtc/config.json")
+        @app.get("/api/v1/RTCSignalingServer/config.json")
         def app_config_ice_servers(request: Request):
             config = SincromisorConfig.from_yaml()
             ice_servers = []
             for ice_server in config.get_all_ice_servers_conf():
                 ice_servers.append(ice_server.to_lowerkeys())
             return JSONResponse(
-                {"offerURL": "/api/v1/rtc/offer", "iceServers": ice_servers},
+                {
+                    "offerURL": "/api/v1/RTCSignalingServer/offer",
+                    "iceServers": ice_servers,
+                },
             )
 
         try:
