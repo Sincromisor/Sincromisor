@@ -1,3 +1,5 @@
+from typing import Any
+
 import msgpack
 from pydantic import BaseModel
 
@@ -36,7 +38,7 @@ class TextProcessorRequest(BaseModel):
         return obj
 
     def to_msgpack(self) -> bytes:
-        return msgpack.packb(
+        pack: Any | None = msgpack.packb(
             {
                 "session_id": self.session_id,
                 "speech_id": self.speech_id,
@@ -47,3 +49,5 @@ class TextProcessorRequest(BaseModel):
             },
             default=self.__msgpack_pack,
         )
+        assert isinstance(pack, bytes), "msgpack.packb returned non-bytes"
+        return pack

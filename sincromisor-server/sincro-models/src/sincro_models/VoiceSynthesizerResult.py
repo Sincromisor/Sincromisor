@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 import msgpack
 from pydantic import BaseModel, ConfigDict
@@ -22,7 +23,7 @@ class VoiceSynthesizerResult(BaseModel):
     audio_format: str
 
     def to_msgpack(self) -> bytes:
-        return msgpack.packb(
+        pack: Any | None = msgpack.packb(
             {
                 "message": self.message,
                 "query": self.query,
@@ -32,6 +33,8 @@ class VoiceSynthesizerResult(BaseModel):
                 "audio_format": self.audio_format,
             },
         )
+        assert isinstance(pack, bytes), "msgpack.packb returned non-bytes"
+        return pack
 
     def to_json(self) -> str:
         return json.dumps(

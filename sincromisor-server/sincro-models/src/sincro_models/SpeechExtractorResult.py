@@ -1,6 +1,6 @@
-import io
 import subprocess as sp
 import wave
+from typing import Any
 
 import msgpack
 import numpy as np
@@ -57,7 +57,7 @@ class SpeechExtractorResult(BaseModel):
         return SpeechExtractorResult(**contents)
 
     def to_msgpack(self) -> bytes:
-        return msgpack.packb(
+        pack: Any | None = msgpack.packb(
             {
                 "session_id": self.session_id,
                 "speech_id": self.speech_id,
@@ -71,6 +71,8 @@ class SpeechExtractorResult(BaseModel):
                 "voice_channels": self.voice_channels,
             },
         )
+        assert isinstance(pack, bytes), "msgpack.packb returned non-bytes"
+        return pack
 
     def to_opus(self) -> bytes:
         enc_p = sp.run(

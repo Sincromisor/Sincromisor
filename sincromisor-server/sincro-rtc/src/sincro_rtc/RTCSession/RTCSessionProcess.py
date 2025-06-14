@@ -43,7 +43,9 @@ class RTCSessionProcess(Process):
         consul_agent_port: int,
     ):
         Process.__init__(self)
-        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__ + f"[{session_id[21:26]}]")
+        self.__logger: Logger = logging.getLogger(
+            "sincro." + self.__class__.__name__ + f"[{session_id[21:26]}]"
+        )
         self.__session_id: str = session_id
         self.__request_sdp: str = request_sdp
         self.__request_type: str = request_type
@@ -143,7 +145,10 @@ class RTCSessionProcess(Process):
 
         try:
             # send answer
-            answer: RTCSessionDescription = await self.__vcs.peer.createAnswer()
+            answer: RTCSessionDescription | None = await self.__vcs.peer.createAnswer()
+            assert isinstance(
+                answer, RTCSessionDescription
+            ), "Failed to create RTCSessionDescription."
             # 設定されているstun/turnサーバが利用できない時にエラーとなる
             # [Sincromisor]E: socket.gaierror: [Errno -2] Name or service not known
             await self.__vcs.peer.setLocalDescription(answer)

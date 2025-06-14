@@ -20,7 +20,7 @@ class RTCSessionManager:
         self.__processes: dict[str, RTCSessionProcessDescription] = {}
         self.__join_timeout: int = 10
         self.__consul_agent_host: str = consul_agent_host
-        self.__consul_agent_port: str = consul_agent_port
+        self.__consul_agent_port: int = consul_agent_port
 
     # WebRTCのセッションを持つプロセスを新たに生成し、
     # そのプロセスが持つセッションのSDPをdictとして返す。
