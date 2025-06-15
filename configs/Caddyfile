@@ -11,7 +11,7 @@
         dynamic a {
             name RTCSignalingServer.service.consul
             port 8001
-            resolvers sincro-consul-agent:8600
+            resolvers consul-agent-frontend:8600
             versions ipv4
             refresh 5s
         }
