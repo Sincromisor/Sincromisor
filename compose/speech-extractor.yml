@@ -18,12 +18,37 @@ services:
             - SINCRO_EXTRACTOR_PORT=${SINCRO_EXTRACTOR_PORT}
             - SINCRO_EXTRACTOR_PUBLIC_BIND_HOST=${SINCRO_EXTRACTOR_PUBLIC_BIND_HOST}
             - SINCRO_EXTRACTOR_PUBLIC_BIND_PORT=${SINCRO_EXTRACTOR_PUBLIC_BIND_PORT}
-            - SINCRO_CONSUL_AGENT_HOST=${SINCRO_CONSUL_AGENT_HOST}
-            - SINCRO_CONSUL_AGENT_PORT=${SINCRO_CONSUL_AGENT_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=consul-agent-extractor
+            - SINCRO_CONSUL_AGENT_PORT=8500
         deploy:
             restart_policy:
                 condition: any
                 delay: 10s
+
+    consul-agent-extractor:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - backend-experimental
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-client=0.0.0.0",
+            ]
+        volumes:
+            - consul-agent-extractor-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+
+volumes:
+    consul-agent-extractor-data:
 
 networks:
     sincromisor-net:

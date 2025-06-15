@@ -6,7 +6,6 @@ include:
     - compose/text-processor.yml
     - compose/voice-synthesizer.yml
     - compose/consul-server.yml
-    - compose/consul-agent.yml
     - compose/storage.yml
 
 networks:

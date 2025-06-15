@@ -23,8 +23,8 @@ services:
             - SINCRO_RECOGNIZER_PORT=${SINCRO_RECOGNIZER_PORT}
             - SINCRO_RECOGNIZER_PUBLIC_BIND_HOST=${SINCRO_RECOGNIZER_PUBLIC_BIND_HOST}
             - SINCRO_RECOGNIZER_PUBLIC_BIND_PORT=${SINCRO_RECOGNIZER_PUBLIC_BIND_PORT}
-            - SINCRO_CONSUL_AGENT_HOST=${SINCRO_CONSUL_AGENT_HOST}
-            - SINCRO_CONSUL_AGENT_PORT=${SINCRO_CONSUL_AGENT_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=consul-agent-recognizer
+            - SINCRO_CONSUL_AGENT_PORT=8500
             - SINCRO_MINIO_PUBLIC_BIND_HOST=${SINCRO_MINIO_PUBLIC_BIND_HOST}
             - SINCRO_MINIO_PUBLIC_BIND_PORT=${SINCRO_MINIO_PUBLIC_BIND_PORT}
             - SINCRO_MINIO_ROOT_USER=${SINCRO_MINIO_ROOT_USER}
@@ -64,8 +64,8 @@ services:
             - SINCRO_RECOGNIZER_PORT=${SINCRO_RECOGNIZER_PORT}
             - SINCRO_RECOGNIZER_PUBLIC_BIND_HOST=${SINCRO_RECOGNIZER_PUBLIC_BIND_HOST}
             - SINCRO_RECOGNIZER_PUBLIC_BIND_PORT=${SINCRO_RECOGNIZER_PUBLIC_BIND_PORT}
-            - SINCRO_CONSUL_AGENT_HOST=${SINCRO_CONSUL_AGENT_HOST}
-            - SINCRO_CONSUL_AGENT_PORT=${SINCRO_CONSUL_AGENT_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=consul-agent-recognizer
+            - SINCRO_CONSUL_AGENT_PORT=8500
             - SINCRO_MINIO_PUBLIC_BIND_HOST=${SINCRO_MINIO_PUBLIC_BIND_HOST}
             - SINCRO_MINIO_PUBLIC_BIND_PORT=${SINCRO_MINIO_PUBLIC_BIND_PORT}
             - SINCRO_MINIO_ROOT_USER=${SINCRO_MINIO_ROOT_USER}
@@ -84,6 +84,31 @@ services:
         depends_on:
             service-initializer:
                 condition: service_completed_successfully
+
+    consul-agent-recognizer:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - backend-experimental
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-client=0.0.0.0",
+            ]
+        volumes:
+            - consul-agent-recognizer-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+
+volumes:
+    consul-agent-recognizer-data:
 
 networks:
     sincromisor-net:

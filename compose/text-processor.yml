@@ -18,8 +18,8 @@ services:
             - SINCRO_PROCESSOR_PORT=${SINCRO_PROCESSOR_PORT}
             - SINCRO_PROCESSOR_PUBLIC_BIND_HOST=${SINCRO_PROCESSOR_PUBLIC_BIND_HOST}
             - SINCRO_PROCESSOR_PUBLIC_BIND_PORT=${SINCRO_PROCESSOR_PUBLIC_BIND_PORT}
-            - SINCRO_CONSUL_AGENT_HOST=${SINCRO_CONSUL_AGENT_HOST}
-            - SINCRO_CONSUL_AGENT_PORT=${SINCRO_CONSUL_AGENT_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=consul-agent-processor
+            - SINCRO_CONSUL_AGENT_PORT=8500
             - SINCRO_PROCESSOR_DIFY_URL=${SINCRO_PROCESSOR_DIFY_URL}
             - SINCRO_PROCESSOR_DIFY_TOKEN=${SINCRO_PROCESSOR_DIFY_TOKEN}
         deploy:
@@ -29,6 +29,31 @@ services:
         depends_on:
             service-initializer:
                 condition: service_completed_successfully
+
+    consul-agent-processor:
+        profiles:
+            - full
+            - full-experimental
+            - backend
+            - backend-experimental
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-client=0.0.0.0",
+            ]
+        volumes:
+            - consul-agent-processor-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+
+volumes:
+    consul-agent-processor-data:
 
 networks:
     sincromisor-net:
