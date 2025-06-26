@@ -17,14 +17,14 @@ import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
 
 SceneLoader.RegisterPlugin(new GLTFFileLoader());
 
-interface CharacterMorph {
+type CharacterMorph = {
     body: BodyMorph,
     eye: EyeMorph,
     mayu: MayuMorph,
     mouse: MouseMorph
 }
 
-interface CharacterBones {
+type CharacterBones = {
     root: CharacterBone
 }
 

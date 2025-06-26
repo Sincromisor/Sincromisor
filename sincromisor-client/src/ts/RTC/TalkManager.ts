@@ -1,7 +1,7 @@
 import { TelopChannelMessage, ChatMessage } from "./RTCMessage";
 import { ChatMessageManager } from "../UI/ChatMessageManager";
 
-export interface CurrentMora {
+export type CurrentMora = {
     'moraID': number,
     'mora': TelopChannelMessage,
     'msec': number,

@@ -1,10 +1,10 @@
-export interface IceServerConfig {
+export type IceServerConfig = {
     urls: string;
     username?: string;
     credential?: string;
 }
 
-export interface SincroRTCConfig {
+export type SincroRTCConfig = {
     offerURL: string,
     iceServers: IceServerConfig[]
 }
