@@ -2,9 +2,7 @@ services:
     voice-synthesizer:
         profiles:
             - full
-            - full-experimental
             - backend
-            - backend-experimental
         build:
             context: ..
             dockerfile: ./Docker/voice-synthesizer/Dockerfile
@@ -33,7 +31,6 @@ services:
     sincro-voicevox:
         profiles:
             - full
-            - full-experimental
             - backend
         image: ${SINCRO_REGISTRY_NAME}/voicevox:latest
         build:
@@ -51,9 +48,7 @@ services:
     consul-agent-synthesizer:
         profiles:
             - full
-            - full-experimental
             - backend
-            - backend-experimental
         image: hashicorp/consul:latest
         command:
             [

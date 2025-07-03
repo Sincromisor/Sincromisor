@@ -5,22 +5,19 @@ set -e
 
 chmod 644 /opt/sincromisor/configs/config.yml
 
-mkdir -p /volumes/sincro-cache
-mkdir -p /volumes/sincro-triton
-mkdir -p /volumes/sincro-voice
-mkdir -p /volumes/consul-data
-
-chown -R sincromisor:sincromisor /volumes/sincro-cache
-chown -R sincromisor:sincromisor /volumes/sincro-triton
-chown -R sincromisor:sincromisor /volumes/sincro-voice
+chown -R sincromisor:sincromisor /opt/sincromisor/.cache
 
 stat /opt/sincromisor/configs/config.yml
-stat /volumes/sincro-cache
-stat /volumes/sincro-triton
-stat /volumes/sincro-voice
-stat /volumes/consul-data
+stat /opt/sincromisor/.cache
 
 mc alias set sincro-minio \
     "http://${SINCRO_MINIO_PUBLIC_BIND_HOST}:${SINCRO_MINIO_PUBLIC_BIND_PORT}" \
     "${MINIO_ROOT_USER}" \
     "${MINIO_ROOT_PASSWORD}"
+
+su sincromisor -c '/opt/sincromisor/.local/bin/uv run huggingface-cli scan-cache -vvv'
+if [ "${SINCRO_RECOGNIZER_MODEL}" = "nemo" ]; then
+    su sincromisor -c '/opt/sincromisor/.local/bin/uv run huggingface-cli download reazon-research/reazonspeech-nemo-v2'
+elif [ "${SINCRO_RECOGNIZER_MODEL}" = "nue" ]; then
+    su sincromisor -c '/opt/sincromisor/.local/bin/uv run huggingface-cli download rinna/nue-asr'
+fi

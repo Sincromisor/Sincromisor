@@ -37,5 +37,4 @@ USER root
 COPY ./Docker/service-initializer/initialize.sh ${SINCRO_USER_DIR}
 RUN chown ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}/initialize.sh
 
-VOLUME ["/opt/sincromisor/.cache"]
 CMD ["/opt/sincromisor/initialize.sh"]

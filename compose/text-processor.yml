@@ -2,9 +2,7 @@ services:
     text-processor:
         profiles:
             - full
-            - full-experimental
             - backend
-            - backend-experimental
         build:
             context: ..
             dockerfile: ./Docker/text-processor/Dockerfile
@@ -33,9 +31,7 @@ services:
     consul-agent-processor:
         profiles:
             - full
-            - full-experimental
             - backend
-            - backend-experimental
         image: hashicorp/consul:latest
         command:
             [

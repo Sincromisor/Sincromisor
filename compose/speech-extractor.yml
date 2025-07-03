@@ -2,9 +2,7 @@ services:
     speech-extractor:
         profiles:
             - full
-            - full-experimental
             - backend
-            - backend-experimental
         build:
             context: ..
             dockerfile: ./Docker/speech-extractor/Dockerfile
@@ -28,9 +26,7 @@ services:
     consul-agent-extractor:
         profiles:
             - full
-            - full-experimental
             - backend
-            - backend-experimental
         image: hashicorp/consul:latest
         command:
             [

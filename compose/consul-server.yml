@@ -5,9 +5,7 @@ services:
     sincro-consul-server:
         profiles:
             - full
-            - full-experimental
             - backend
-            - backend-experimental
             - external
         image: hashicorp/consul:latest
         command:

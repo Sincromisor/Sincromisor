@@ -5,7 +5,6 @@ services:
     sincro-client:
         profiles:
             - full
-            - full-experimental
             - frontend
             - webclient
         build:
@@ -31,7 +30,6 @@ services:
     sincro-rtc:
         profiles:
             - full
-            - full-experimental
             - frontend
             - rtc
         build:
@@ -64,7 +62,6 @@ services:
     consul-agent-frontend:
         profiles:
             - full
-            - full-experimental
             - frontend
             - rtc
         image: hashicorp/consul:latest

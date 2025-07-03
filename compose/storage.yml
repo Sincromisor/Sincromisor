@@ -2,7 +2,6 @@ services:
     sincro-voice-cache:
         profiles:
             - full
-            - full-experimental
             - backend
             - external
         image: ${SINCRO_REGISTRY_NAME}/voice-cache:latest
@@ -21,9 +20,7 @@ services:
     sincro-minio:
         profiles:
             - full
-            - full-experimental
             - backend
-            - backend-experimental
             - external
         image: minio/minio:latest
         ports:

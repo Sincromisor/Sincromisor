@@ -8,55 +8,12 @@ services:
             - backend
         build:
             context: ..
-            dockerfile: ./Docker/speech-recognizer/Dockerfile
-        image: ${SINCRO_REGISTRY_NAME}/speech-recognizer:latest
+            dockerfile: ./Docker/speech-recognizer-${SINCRO_RECOGNIZER_MODEL}/Dockerfile
+        image: ${SINCRO_REGISTRY_NAME}/speech-recognizer-${SINCRO_RECOGNIZER_MODEL}:latest
         ports:
             - 8003:8003/tcp
         volumes:
             - ../volumes/sincro-cache:/opt/sincromisor/.cache
-            - ../volumes/sincro-triton:/opt/sincromisor/.triton
-            - ../volumes/sincro-voice:/opt/sincromisor/.voice
-        networks:
-            - sincromisor-net
-        environment:
-            - SINCRO_RECOGNIZER_HOST=${SINCRO_RECOGNIZER_HOST}
-            - SINCRO_RECOGNIZER_PORT=${SINCRO_RECOGNIZER_PORT}
-            - SINCRO_RECOGNIZER_PUBLIC_BIND_HOST=${SINCRO_RECOGNIZER_PUBLIC_BIND_HOST}
-            - SINCRO_RECOGNIZER_PUBLIC_BIND_PORT=${SINCRO_RECOGNIZER_PUBLIC_BIND_PORT}
-            - SINCRO_CONSUL_AGENT_HOST=consul-agent-recognizer
-            - SINCRO_CONSUL_AGENT_PORT=8500
-            - SINCRO_MINIO_PUBLIC_BIND_HOST=${SINCRO_MINIO_PUBLIC_BIND_HOST}
-            - SINCRO_MINIO_PUBLIC_BIND_PORT=${SINCRO_MINIO_PUBLIC_BIND_PORT}
-            - SINCRO_MINIO_ROOT_USER=${SINCRO_MINIO_ROOT_USER}
-            - SINCRO_MINIO_ROOT_PASSWORD=${SINCRO_MINIO_ROOT_PASSWORD}
-            - SINCRO_RECOGNIZER_VOICE_LOG_DIR=${SINCRO_RECOGNIZER_VOICE_LOG_DIR}
-        deploy:
-            restart_policy:
-                condition: any
-                delay: 10s
-            resources:
-                reservations:
-                    devices:
-                        - driver: nvidia
-                          count: all
-                          capabilities: [gpu]
-        depends_on:
-            service-initializer:
-                condition: service_completed_successfully
-
-    speech-recognizer-nemo:
-        profiles:
-            - full-experimental
-            - backend-experimental
-        build:
-            context: ..
-            dockerfile: ./Docker/speech-recognizer-nemo/Dockerfile
-        image: ${SINCRO_REGISTRY_NAME}/speech-recognizer-nemo:latest
-        ports:
-            - 8003:8003/tcp
-        volumes:
-            - ../volumes/sincro-cache:/opt/sincromisor/.cache
-            - ../volumes/sincro-voice:/opt/sincromisor/.voice
         networks:
             - sincromisor-net
         environment:
@@ -88,9 +45,7 @@ services:
     consul-agent-recognizer:
         profiles:
             - full
-            - full-experimental
             - backend
-            - backend-experimental
         image: hashicorp/consul:latest
         command:
             [
