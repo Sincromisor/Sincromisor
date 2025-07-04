@@ -107,6 +107,12 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --group sincro-rtc
 
+# RTCSignalingServer用のRTC設定ファイルを
+# /opt/sincromisor/configs/config.ymlにコピーする。
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./examples/config.yml \
+    ${SINCRO_USER_DIR}/configs/config.yml
+
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
 CMD ["uv", "run", "sincro-rtc/RTCSignalingServer.py"]

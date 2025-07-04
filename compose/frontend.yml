@@ -6,7 +6,6 @@ services:
         profiles:
             - full
             - frontend
-            - webclient
         build:
             context: ..
             dockerfile: ./Docker/sincro-client/Dockerfile
@@ -26,62 +25,6 @@ services:
         depends_on:
             service-initializer:
                 condition: service_completed_successfully
-
-    sincro-rtc:
-        profiles:
-            - full
-            - frontend
-            - rtc
-        build:
-            context: ..
-            dockerfile: ./Docker/sincro-rtc/Dockerfile
-        image: ${SINCRO_REGISTRY_NAME}/sincro-rtc:latest
-        ports:
-            - 8001:8001/tcp
-        volumes:
-            - ../configs/config.yml:/opt/sincromisor/configs/config.yml:ro
-        networks:
-            - sincromisor-net
-        environment:
-            - SINCRO_RTC_HOST=${SINCRO_RTC_HOST}
-            - SINCRO_RTC_PORT=${SINCRO_RTC_PORT}
-            - SINCRO_RTC_PUBLIC_BIND_HOST=${SINCRO_RTC_PUBLIC_BIND_HOST}
-            - SINCRO_RTC_PUBLIC_BIND_PORT=${SINCRO_RTC_PUBLIC_BIND_PORT}
-            - SINCRO_CONSUL_AGENT_HOST=consul-agent-frontend
-            - SINCRO_CONSUL_AGENT_PORT=8500
-            - SINCRO_RTC_FORWARDED_ALLOW_IPS=${SINCRO_RTC_FORWARDED_ALLOW_IPS}
-            - SINCRO_RTC_MAX_SESSIONS=${SINCRO_RTC_MAX_SESSIONS}
-        deploy:
-            restart_policy:
-                condition: any
-                delay: 10s
-        depends_on:
-            service-initializer:
-                condition: service_completed_successfully
-
-    consul-agent-frontend:
-        profiles:
-            - full
-            - frontend
-            - rtc
-        image: hashicorp/consul:latest
-        command:
-            [
-                "agent",
-                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
-                "-client=0.0.0.0",
-            ]
-        volumes:
-            - consul-agent-frontend-data:/consul/data
-        networks:
-            - sincromisor-net
-        deploy:
-            restart_policy:
-                condition: any
-                delay: 10s
-
-volumes:
-    consul-agent-frontend-data:
 
 networks:
     sincromisor-net:
