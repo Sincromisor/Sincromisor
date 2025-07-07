@@ -1,13 +1,13 @@
 services:
-    sincro-voice-cache:
+    sincro-redis:
         profiles:
             - full
             - backend
             - external
-        image: ${SINCRO_REGISTRY_NAME}/voice-cache:latest
+        image: ${SINCRO_REGISTRY_NAME}/redis:latest
         build:
             context: ..
-            dockerfile: ./Docker/voice-cache/Dockerfile
+            dockerfile: ./Docker/redis/Dockerfile
         ports:
             - 6379:6379/tcp
         networks:
