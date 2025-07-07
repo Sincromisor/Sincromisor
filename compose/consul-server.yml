@@ -41,6 +41,11 @@ services:
         depends_on:
             service-initializer:
                 condition: service_completed_successfully
+        healthcheck:
+            test: ["CMD", "consul", "members"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
 networks:
     sincromisor-net:

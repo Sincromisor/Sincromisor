@@ -64,6 +64,11 @@ services:
             restart_policy:
                 condition: any
                 delay: 10s
+        healthcheck:
+            test: ["CMD", "consul", "members"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
 volumes:
     consul-agent-synthesizer-data:
