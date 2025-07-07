@@ -24,6 +24,7 @@ dev = [
 full = [
     "sincro-rtc",
     "speech-extractor",
+    "speech-recognizer",
     "speech-recognizer-nemo",
     "text-processor",
     "voice-synthesizer",
