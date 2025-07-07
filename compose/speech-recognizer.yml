@@ -41,6 +41,8 @@ services:
         depends_on:
             service-initializer:
                 condition: service_completed_successfully
+            consul-agent-recognizer:
+                condition: service_healthy
 
     consul-agent-recognizer:
         profiles:

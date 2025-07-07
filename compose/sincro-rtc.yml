@@ -33,6 +33,8 @@ services:
         depends_on:
             service-initializer:
                 condition: service_completed_successfully
+            consul-agent-rtc:
+                condition: service_healthy
 
     consul-agent-rtc:
         profiles:

@@ -27,6 +27,11 @@ services:
             restart_policy:
                 condition: any
                 delay: 10s
+        depends_on:
+            consul-agent-synthesizer:
+                condition: service_healthy
+            sincro-voicevox:
+                condition: service_healthy
 
     sincro-voicevox:
         profiles:
@@ -44,6 +49,14 @@ services:
             restart_policy:
                 condition: any
                 delay: 10s
+        depends_on:
+            consul-agent-synthesizer:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD", "curl", "http://localhost:50021/version"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
     consul-agent-synthesizer:
         profiles:

@@ -38,9 +38,6 @@ services:
             restart_policy:
                 condition: any
                 delay: 10s
-        depends_on:
-            service-initializer:
-                condition: service_completed_successfully
         healthcheck:
             test: ["CMD", "consul", "members"]
             interval: 10s

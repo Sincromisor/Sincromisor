@@ -22,6 +22,9 @@ services:
             restart_policy:
                 condition: any
                 delay: 10s
+        depends_on:
+            consul-agent-extractor:
+                condition: service_healthy
 
     consul-agent-extractor:
         profiles:
