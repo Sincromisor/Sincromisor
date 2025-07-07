@@ -1,3 +1,5 @@
+FROM hashicorp/consul:latest AS consul
+
 FROM node:22 AS builder
 
 ARG SINCRO_USER_ID=sincromisor
@@ -42,10 +44,13 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 
 RUN npm run build
 
-
 FROM caddy:latest AS runner
 
 EXPOSE 80/tcp
+
+COPY --from=consul --chown=root:root \
+    /bin/consul \
+    /bin/consul
 
 COPY --from=builder --chown=root:root \
     /opt/sincromisor/sincromisor-client/dist /srv/sincromisor-client
@@ -54,4 +59,17 @@ COPY --chown=root:root \
     ./configs/Caddyfile \
     /etc/caddy/Caddyfile
 
-CMD ["/usr/bin/caddy", "run", "-c", "/etc/caddy/Caddyfile"]
+COPY --chown=root:root \
+    ./Docker/sincro-client/frontend-template.json \
+    /etc/caddy/frontend-template.json
+
+COPY --chown=root:root \
+    ./Docker/sincro-client/start-caddy.sh \
+    /usr/local/bin/start-caddy.sh
+
+RUN chmod 755 \
+    /usr/local/bin/start-caddy.sh \
+    /bin/consul
+
+ENTRYPOINT ["/usr/local/bin/start-caddy.sh"]
+CMD ["/usr/local/bin/start-caddy.sh"]

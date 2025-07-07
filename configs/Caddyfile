@@ -11,10 +11,15 @@
         dynamic a {
             name RTCSignalingServer.service.consul
             port 8001
-            resolvers consul-agent-rtc:8600
+            resolvers consul-agent-frontend:8600
             versions ipv4
             refresh 5s
         }
         lb_policy random
+    }
+
+    respond /api/v1/Frontend/statuses 200 {
+        body "{\"worker_type\": \"Frontend\"}"
+        close
     }
 }

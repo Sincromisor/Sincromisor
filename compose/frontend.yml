@@ -16,8 +16,23 @@ services:
             - 443:443/udp
         volumes:
             - ../configs/Caddyfile:/etc/caddy/Caddyfile:ro
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "wget",
+                    "-q",
+                    "-O-",
+                    "http://localhost/api/v1/Frontend/statuses",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
         networks:
             - sincromisor-net
+        environment:
+            - SINCRO_CONSUL_AGENT_HOST=consul-agent-frontend
+            - SINCRO_CONSUL_AGENT_PORT=8500
         deploy:
             restart_policy:
                 condition: any
@@ -25,6 +40,36 @@ services:
         depends_on:
             service-initializer:
                 condition: service_completed_successfully
+            consul-agent-frontend:
+                condition: service_healthy
+
+    consul-agent-frontend:
+        profiles:
+            - full
+            - frontend
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-client=0.0.0.0",
+            ]
+        healthcheck:
+            test: ["CMD", "consul", "members"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        volumes:
+            - consul-agent-frontend-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+
+volumes:
+    consul-agent-frontend-data:
 
 networks:
     sincromisor-net:
