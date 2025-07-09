@@ -2,7 +2,7 @@ FROM ubuntu:24.04
 
 EXPOSE 50021
 
-ARG VOICEVOX_VERSION=0.21.1
+ARG VOICEVOX_VERSION=0.24.1
 
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
@@ -14,9 +14,9 @@ RUN --mount=type=cache,target=/mnt \
     cd /opt && \
     test -e /mnt/voicevox-${VOICEVOX_VERSION}.7z || \
     curl -L -o /mnt/voicevox-${VOICEVOX_VERSION}.7z \
-    "https://github.com/VOICEVOX/voicevox_engine/releases/download/${VOICEVOX_VERSION}/voicevox_engine-linux-cpu-${VOICEVOX_VERSION}.7z.001" && \
+    "https://github.com/VOICEVOX/voicevox_engine/releases/download/${VOICEVOX_VERSION}/voicevox_engine-linux-cpu-x64-${VOICEVOX_VERSION}.7z.001" && \
     7zr x  /mnt/voicevox-${VOICEVOX_VERSION}.7z && \
-    mv linux-cpu voicevox && \
+    mv linux-cpu-x64 voicevox && \
     chmod +x /opt/voicevox/run && \
     mkdir /opt/voicevox/.local && \
     chown voicevox:voicevox /opt/voicevox/.local 
