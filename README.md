@@ -55,11 +55,11 @@ $ git clone https://github.com/Phenomer/Sincromisor.git
 $ cd Sincromisor
 ```
 
-設定ファイル`.env`を、`configs/.env.example-docker`を参考に作成します。
+設定ファイル`.env`を、`examples/compose.env`を参考に作成します。
 とりあえず動かしたいだけであれば、そのままコピーする形で構いません。
 
 ```sh
-$ cp configs/.env.example-docker .env
+$ cp examples/compose.env .env
 $ chmod 600 .env
 ```
 
