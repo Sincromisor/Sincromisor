@@ -113,7 +113,7 @@ RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
     apt-get update && \
     apt-get install -y \
-    libsentencepiece0 libprotobuf-c1 ffmpeg opus-tools
+    libsentencepiece0 libprotobuf-c1 ffmpeg opus-tools curl
 
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \

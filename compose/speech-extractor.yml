@@ -25,6 +25,16 @@ services:
         depends_on:
             consul-agent-extractor:
                 condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "curl",
+                    "http://localhost:8002/api/v1/SpeechExtractor/statuses",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 15
 
     consul-agent-extractor:
         profiles:

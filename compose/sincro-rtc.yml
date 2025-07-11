@@ -35,6 +35,16 @@ services:
                 condition: service_completed_successfully
             consul-agent-rtc:
                 condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "curl",
+                    "http://localhost:8001/api/v1/RTCSignalingServer/statuses",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 15
 
     consul-agent-rtc:
         profiles:

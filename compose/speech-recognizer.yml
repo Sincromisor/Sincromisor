@@ -43,6 +43,17 @@ services:
                 condition: service_completed_successfully
             consul-agent-recognizer:
                 condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "curl",
+                    "http://localhost:8003/api/v1/SpeechRecognizer/statuses",
+                ]
+            start_period: 60s
+            interval: 10s
+            timeout: 5s
+            retries: 15
 
     consul-agent-recognizer:
         profiles:

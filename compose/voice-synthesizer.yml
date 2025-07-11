@@ -32,6 +32,16 @@ services:
                 condition: service_healthy
             sincro-voicevox:
                 condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "curl",
+                    "http://localhost:8005/api/v1/VoiceSynthesizer/statuses",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 15
 
     sincro-voicevox:
         profiles:

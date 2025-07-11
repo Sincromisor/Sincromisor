@@ -29,6 +29,16 @@ services:
                 condition: service_completed_successfully
             consul-agent-processor:
                 condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "curl",
+                    "http://localhost:8004/api/v1/TextProcessor/statuses",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 15
 
     consul-agent-processor:
         profiles:
