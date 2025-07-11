@@ -10,7 +10,8 @@
         "port": 80,
         "check": {
             "http": "http://FRONTEND_IPV4_ADDRESS:80/api/v1/Frontend/statuses",
-            "interval": "10s"
+            "interval": "10s",
+            "deregister_critical_service_after": "30s"
         }
     }
 }

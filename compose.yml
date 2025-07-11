@@ -7,7 +7,8 @@ include:
     - compose/text-processor.yml
     - compose/voice-synthesizer.yml
     - compose/consul-server.yml
-    - compose/storage.yml
+    - compose/minio.yml
+    - compose/redis.yml
 
 networks:
     sincromisor-net:

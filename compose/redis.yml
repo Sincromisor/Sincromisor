@@ -12,31 +12,37 @@ services:
             - 6379:6379/tcp
         networks:
             - sincromisor-net
+        environment:
+            - SINCRO_CONSUL_AGENT_HOST=consul-agent-redis
+            - SINCRO_CONSUL_AGENT_PORT=8500
+        command: /start-redis.sh
         deploy:
             restart_policy:
                 condition: any
                 delay: 10s
+        depends_on:
+            consul-agent-redis:
+                condition: service_healthy
         healthcheck:
             test: ["CMD", "redis-cli", "ping"]
             interval: 5s
             timeout: 5s
             retries: 5
 
-    sincro-minio:
+    consul-agent-redis:
         profiles:
             - full
             - backend
             - external
-        image: minio/minio:latest
-        ports:
-            - 9000:9000/tcp
-            - 9001:9001/tcp
-        environment:
-            - MINIO_ROOT_USER=${SINCRO_MINIO_ROOT_USER}
-            - MINIO_ROOT_PASSWORD=${SINCRO_MINIO_ROOT_PASSWORD}
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-client=0.0.0.0",
+            ]
         volumes:
-            - ../volumes/minio:/data
-        command: server /data --console-address ":9001"
+            - consul-agent-redis-data:/consul/data
         networks:
             - sincromisor-net
         deploy:
@@ -44,10 +50,13 @@ services:
                 condition: any
                 delay: 10s
         healthcheck:
-            test: ["CMD", "mc", "ready", "local"]
-            interval: 5s
+            test: ["CMD", "consul", "members"]
+            interval: 10s
             timeout: 5s
             retries: 5
+
+volumes:
+    consul-agent-redis-data:
 
 networks:
     sincromisor-net:
