@@ -55,6 +55,11 @@ services:
             - 50021:50021/tcp
         networks:
             - sincromisor-net
+        environment:
+            - SINCRO_VOICEVOX_HOST=${SINCRO_VOICEVOX_HOST}
+            - SINCRO_VOICEVOX_PORT=${SINCRO_VOICEVOX_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=consul-agent-synthesizer
+            - SINCRO_CONSUL_AGENT_PORT=8500
         deploy:
             restart_policy:
                 condition: any
