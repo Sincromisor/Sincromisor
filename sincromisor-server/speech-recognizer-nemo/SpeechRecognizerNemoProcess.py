@@ -8,12 +8,19 @@ import numpy as np
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
-from minio import Minio
 from setproctitle import setproctitle
-from sincro_config import ServiceDiscoveryReporter, SincromisorLoggerConfig
+from sincro_config import (
+    ServiceDescription,
+    ServiceDiscoveryReferrer,
+    ServiceDiscoveryReporter,
+    SincromisorLoggerConfig,
+)
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 from speech_recognizer_nemo.models import SpeechRecognizerNemoProcessArgument
 from speech_recognizer_nemo.SpeechRecognizerNemo import SpeechRecognizerNemoWorker
+from speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerMinioClient import (
+    SpeechRecognizerMinioClient,
+)
 
 setproctitle("SPRecognizer")
 args: SpeechRecognizerNemoProcessArgument = (
@@ -28,26 +35,15 @@ class SpeechRecognizerNemoProcess:
     def __init__(self, args: SpeechRecognizerNemoProcessArgument):
         self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__logger.info("===== Starting SpeechRecognizerNemoProcess =====")
-        self.__args: SpeechRecognizerNemoProcessArgument = (
-            SpeechRecognizerNemoProcessArgument.argparse()
-        )
+        self.__args: SpeechRecognizerNemoProcessArgument = args
         self.__sessions: int = 0
 
     def start(self):
-        minio_client: Minio | None = None
-        if self.__args.minio_public_bind_host and self.__args.minio_public_bind_port:
-            self.__logger.info(
-                f"Connecting to MinIO at {self.__args.minio_public_bind_host}:{self.__args.minio_public_bind_port} {self.__args.minio_user} {self.__args.minio_password}"
-            )
-            minio_client = Minio(
-                endpoint=f"{self.__args.minio_public_bind_host}:{self.__args.minio_public_bind_port}",
-                access_key=self.__args.minio_user,
-                secret_key=self.__args.minio_password,
-                secure=False,
-            )
-        speech_recognizer = SpeechRecognizerNemoWorker(
-            voice_log_dir=args.voice_log_dir, minio_client=minio_client
+        self.sd_referrer: ServiceDiscoveryReferrer = ServiceDiscoveryReferrer(
+            consul_agent_host=self.__args.consul_agent_host,
+            consul_agent_port=self.__args.consul_agent_port,
         )
+        speech_recognizer = SpeechRecognizerNemoWorker(voice_log_dir=args.voice_log_dir)
         app: FastAPI = FastAPI()
         event: Event = Event()
         self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
@@ -70,6 +66,21 @@ class SpeechRecognizerNemoProcess:
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1
             try:
+                minio_client: SpeechRecognizerMinioClient | None = None
+                minio_description: ServiceDescription | None = (
+                    self.sd_referrer.get_random_worker(worker_type="SincroMinio")
+                )
+                if (
+                    minio_description is not None
+                    and self.__args.minio_user
+                    and self.__args.minio_password
+                ):
+                    minio_client = SpeechRecognizerMinioClient(
+                        minio_host=minio_description.service_address,
+                        minio_port=minio_description.service_port,
+                        access_key=self.__args.minio_user,
+                        secret_key=self.__args.minio_password,
+                    )
                 await ws.accept()
                 current_speech_id = -1
                 current_speech_buffer = np.zeros(0, dtype=np.int16)
@@ -93,7 +104,7 @@ class SpeechRecognizerNemoProcess:
                         )
                         extractor_result.voice = current_speech_buffer
                     result: SpeechRecognizerResult = speech_recognizer.recognize(
-                        extractor_result
+                        spe_result=extractor_result, minio_client=minio_client
                     )
                     self.__logger.info(
                         f"SpeechRecognizerResult: {repr(result)}",
