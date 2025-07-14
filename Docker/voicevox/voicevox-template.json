@@ -7,7 +7,7 @@
             "voicevox"
         ],
         "address": "VOICEVOX_IPV4_ADDRESS",
-        "port": 80,
+        "port": 50021,
         "check": {
             "http": "http://VOICEVOX_IPV4_ADDRESS:50021/version",
             "interval": "10s",
