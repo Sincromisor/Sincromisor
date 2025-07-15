@@ -8,10 +8,6 @@ class VoiceSynthesizerProcessArgument(SincromisorArgumentParser):
     port: int
     public_bind_host: str
     public_bind_port: int
-    redis_host: str
-    redis_port: int
-    voicevox_host: str
-    voicevox_port: int
     voicevox_default_style_id: int
     log_file: str | None
 
@@ -55,41 +51,10 @@ class VoiceSynthesizerProcessArgument(SincromisorArgumentParser):
 
         cls.add_argument(
             parser=parser,
-            cmd_name="--voicevox-host",
-            env_name="SINCRO_SYNTHESIZER_VOICEVOX_HOST",
-            default=None,
-            help="VOICEVOX engine address",
-        )
-
-        cls.add_argument(
-            parser=parser,
-            cmd_name="--voicevox-port",
-            env_name="SINCRO_SYNTHESIZER_VOICEVOX_PORT",
-            default=50021,
-            help="VOICEVOX engine port(default: 50021)",
-        )
-
-        cls.add_argument(
-            parser=parser,
             cmd_name="--voicevox-default-style-id",
             env_name="SINCRO_SYNTHESIZER_VOICEVOX_DEFAULT_STYLE_ID",
             default=0,
             help="VOICEVOX Style ID(default: 0)",
         )
 
-        cls.add_argument(
-            parser=parser,
-            cmd_name="--redis-host",
-            env_name="SINCRO_REDIS_HOST",
-            default=None,
-            help="Redis address",
-        )
-
-        cls.add_argument(
-            parser=parser,
-            cmd_name="--redis-port",
-            env_name="SINCRO_REDIS_PORT",
-            default=6379,
-            help="Redis port(default: 6379)",
-        )
         return
