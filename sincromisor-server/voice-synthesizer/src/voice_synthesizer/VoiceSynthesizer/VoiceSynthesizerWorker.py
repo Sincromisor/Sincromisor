@@ -33,9 +33,7 @@ class VoiceSynthesizerWorker:
     async def communicate(self, ws: WebSocket) -> None:
         pack: bytes
         while pack := await ws.receive_bytes():
-            tp_result: TextProcessorResult = (
-                TextProcessorResult.from_msgpack(pack=pack)
-            )
+            tp_result: TextProcessorResult = TextProcessorResult.from_msgpack(pack=pack)
             self.__logger.info(f"Receive {repr(tp_result)}")
             if tp_result.voice_text:
                 self.__logger.info(
@@ -47,8 +45,9 @@ class VoiceSynthesizerWorker:
                     },
                 )
                 start_t = perf_counter()
-                vs_result: VoiceSynthesizerResult = self.__synth(
-                    tp_result=tp_result
+                vs_result: VoiceSynthesizerResult = self.__get_voice(
+                    vvox=self.__vvox,
+                    voice_text=tp_result.voice_text,
                 )
                 self.__logger.info(
                     {
@@ -76,12 +75,4 @@ class VoiceSynthesizerWorker:
         )
         vs_result: VoiceSynthesizerResult = vvox.get_voice(vs_request=vs_request)
 
-        return vs_result
-
-    def __synth(self, tp_result: TextProcessorResult) -> VoiceSynthesizerResult:
-        vtext: str = tp_result.voice_text
-        vs_result: VoiceSynthesizerResult = self.__get_voice(
-            vvox=self.__vvox,
-            voice_text=vtext,
-        )
         return vs_result

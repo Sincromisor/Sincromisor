@@ -6,7 +6,7 @@ from io import BytesIO
 from threading import Event, Thread
 
 import av
-from av import AudioResampler
+from av.audio.resampler import AudioResampler
 from av.container import InputContainer
 from sincro_models import (
     VoiceSynthesizerResult,
@@ -14,6 +14,7 @@ from sincro_models import (
 )
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import ClientConnection
+from websockets.typing import Data
 
 
 class SynthesizerReceiverThread(Thread):
@@ -26,7 +27,9 @@ class SynthesizerReceiverThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.__logger = logging.getLogger("sincro." + self.__class__.__name__ + f"[{session_id[21:26]}]")
+        self.__logger = logging.getLogger(
+            "sincro." + self.__class__.__name__ + f"[{session_id[21:26]}]"
+        )
         self.__ws: ClientConnection = ws
         self.__voice_frame_queue: deque = voice_frame_queue
         self.__return_frame_format: dict = return_frame_format
@@ -37,7 +40,8 @@ class SynthesizerReceiverThread(Thread):
         self.__logger.info("Thread start.")
         while self.__running.is_set():
             try:
-                pack: str | bytes = self.__ws.recv(timeout=5)
+                pack: Data = self.__ws.recv(timeout=5)
+                assert isinstance(pack, bytes)
                 vs_result: VoiceSynthesizerResult = VoiceSynthesizerResult.from_msgpack(
                     pack,
                 )

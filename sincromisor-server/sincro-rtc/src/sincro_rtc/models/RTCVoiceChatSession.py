@@ -36,7 +36,7 @@ class RTCVoiceChatSession(BaseModel):
         if self.closed:
             return
         if self.audio_transform_track:
-            self.audio_transform_track.close()
+            self.audio_transform_track.stop()
         if self.telop_ch:
             self.telop_ch.close()
         if self.text_ch:

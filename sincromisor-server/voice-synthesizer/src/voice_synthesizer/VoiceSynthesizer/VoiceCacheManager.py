@@ -55,8 +55,9 @@ class VoiceCacheManager:
         self.logger.info(f"SynthRequest: {vs_request.message}")
         key: str = vs_request.redis_key()
         if vs_pack := self.redis.get(key):
-            self.logger.info(f"SynthRequest(CacheHIT): {vs_request.message}")
-            return VoiceSynthesizerResult.from_msgpack(vs_pack)
+            if isinstance(vs_pack, bytes):
+                self.logger.info(f"SynthRequest(CacheHIT): {vs_request.message}")
+                return VoiceSynthesizerResult.from_msgpack(vs_pack)
         try:
             vs_result: VoiceSynthesizerResult = self.vsynth.generate(
                 vs_request=vs_request,
