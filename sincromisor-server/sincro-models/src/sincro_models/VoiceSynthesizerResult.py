@@ -4,6 +4,8 @@ from typing import Any
 import msgpack
 from pydantic import BaseModel, ConfigDict
 
+from .VoiceVoxQuery import VoiceVoxAccentPhrase, VoiceVoxMora, VoiceVoxQuery
+
 
 class VoiceSynthesizerMora(BaseModel):
     # a,i,u,e,o,N
@@ -19,7 +21,7 @@ class VoiceSynthesizerResult(BaseModel):
     # 元となったメッセージテキスト
     message: str
     # メッセージテキストから生成された音声クエリ
-    query: dict
+    query: VoiceVoxQuery
     # クエリをモーラごとに時系列で並べたもの
     mora_queue: list[VoiceSynthesizerMora]
     # 音声データの再生時間(s)
@@ -60,6 +62,12 @@ class VoiceSynthesizerResult(BaseModel):
     def __object_pack(self, obj):
         if isinstance(obj, VoiceSynthesizerMora):
             return obj.model_dump()
+        if isinstance(obj, VoiceVoxQuery):
+            return obj.model_dump()
+        if isinstance(obj, VoiceVoxAccentPhrase):
+            return obj.model_dump()
+        if isinstance(obj, VoiceVoxMora):
+            return obj.model_dump()
         return obj
 
     @classmethod
@@ -70,7 +78,7 @@ class VoiceSynthesizerResult(BaseModel):
         ]
         return VoiceSynthesizerResult(
             message=content["message"],
-            query=content["query"],
+            query=VoiceVoxQuery.model_validate(content["query"]),
             mora_queue=mora_queue,
             speaking_time=content["speaking_time"],
             voice=content["voice"],

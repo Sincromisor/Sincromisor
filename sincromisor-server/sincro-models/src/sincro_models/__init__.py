@@ -8,6 +8,7 @@ from .TextProcessorResult import TextProcessorResult
 from .VoiceSynthesizerRequest import VoiceSynthesizerRequest
 from .VoiceSynthesizerResult import VoiceSynthesizerMora, VoiceSynthesizerResult
 from .VoiceSynthesizerResultFrame import VoiceSynthesizerResultFrame
+from .VoiceVoxQuery import VoiceVoxAccentPhrase, VoiceVoxMora, VoiceVoxQuery
 
 __all__ = [
     "SpeechExtractorInitializeRequest",
@@ -19,6 +20,9 @@ __all__ = [
     "VoiceSynthesizerMora",
     "VoiceSynthesizerResult",
     "VoiceSynthesizerResultFrame",
+    "VoiceVoxAccentPhrase",
+    "VoiceVoxMora",
+    "VoiceVoxQuery",
     "ChatHistory",
     "ChatMessage",
 ]
