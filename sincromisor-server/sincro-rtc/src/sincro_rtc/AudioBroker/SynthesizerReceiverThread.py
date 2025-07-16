@@ -9,6 +9,7 @@ import av
 from av.audio.resampler import AudioResampler
 from av.container import InputContainer
 from sincro_models import (
+    VoiceSynthesizerMora,
     VoiceSynthesizerResult,
     VoiceSynthesizerResultFrame,
 )
@@ -86,6 +87,7 @@ class SynthesizerReceiverThread(Thread):
         timestamp_sec: float = 0.0
         next_time_sec: float = 0.0
         # mora = {'vowel': None, 'length': 0.0, 'text': None}
+        mora: VoiceSynthesizerMora | None = None
         for decoded_frames in container.decode(audio=0):
             for resampled_frame in resampler.resample(decoded_frames):
                 # 1文字につき複数のフレームがあるため、
@@ -93,14 +95,17 @@ class SynthesizerReceiverThread(Thread):
                 new_text: bool = False
                 if vs_result.mora_queue and timestamp_sec >= next_time_sec:
                     mora = vs_result.mora_queue.pop(0)
-                    next_time_sec += mora["length"]
+                    next_time_sec += mora.length
                     new_text = True
+                assert isinstance(mora, VoiceSynthesizerMora), (
+                    f"mora must be VoiceSynthesizerMora, but got {type(mora)}"
+                )
                 yield VoiceSynthesizerResultFrame(
                     timestamp=timestamp_sec,
                     message=vs_result.message,
-                    vowel=mora["vowel"],
-                    length=mora["length"],
-                    text=mora["text"],
+                    vowel=mora.vowel,
+                    length=mora.length,
+                    text=mora.text,
                     new_text=new_text,
                     vframe=resampled_frame.to_ndarray(),
                 )

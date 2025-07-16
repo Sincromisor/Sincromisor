@@ -6,7 +6,7 @@ from .SpeechRecognizerResult import SpeechRecognizerResult
 from .TextProcessorRequest import TextProcessorRequest
 from .TextProcessorResult import TextProcessorResult
 from .VoiceSynthesizerRequest import VoiceSynthesizerRequest
-from .VoiceSynthesizerResult import VoiceSynthesizerResult
+from .VoiceSynthesizerResult import VoiceSynthesizerMora, VoiceSynthesizerResult
 from .VoiceSynthesizerResultFrame import VoiceSynthesizerResultFrame
 
 __all__ = [
@@ -16,6 +16,7 @@ __all__ = [
     "TextProcessorRequest",
     "TextProcessorResult",
     "VoiceSynthesizerRequest",
+    "VoiceSynthesizerMora",
     "VoiceSynthesizerResult",
     "VoiceSynthesizerResultFrame",
     "ChatHistory",

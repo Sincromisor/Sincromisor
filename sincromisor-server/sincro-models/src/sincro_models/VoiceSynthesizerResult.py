@@ -5,6 +5,13 @@ import msgpack
 from pydantic import BaseModel, ConfigDict
 
 
+class VoiceSynthesizerMora(BaseModel):
+    # a,i,u,e,o,N
+    vowel: str | None = None
+    length: float = 0.0
+    text: str | None = None
+
+
 class VoiceSynthesizerResult(BaseModel):
     # np.ndarrayがメンバにいるとコケる問題対策
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -14,7 +21,7 @@ class VoiceSynthesizerResult(BaseModel):
     # メッセージテキストから生成された音声クエリ
     query: dict
     # クエリをモーラごとに時系列で並べたもの
-    mora_queue: list
+    mora_queue: list[VoiceSynthesizerMora]
     # 音声データの再生時間(s)
     speaking_time: float
     # 音声データ(エンコード済み)
@@ -32,6 +39,7 @@ class VoiceSynthesizerResult(BaseModel):
                 "voice": self.voice,
                 "audio_format": self.audio_format,
             },
+            default=self.__object_pack,
         )
         assert isinstance(pack, bytes), "msgpack.packb returned non-bytes"
         return pack
@@ -46,15 +54,24 @@ class VoiceSynthesizerResult(BaseModel):
                 "audio_format": self.audio_format,
             },
             ensure_ascii=False,
+            default=self.__object_pack,
         )
+
+    def __object_pack(self, obj):
+        if isinstance(obj, VoiceSynthesizerMora):
+            return obj.model_dump()
+        return obj
 
     @classmethod
     def from_msgpack(cls, vpackage: bytes) -> "VoiceSynthesizerResult":
         content = msgpack.unpackb(vpackage)
+        mora_queue = [
+            VoiceSynthesizerMora.model_validate(m) for m in content["mora_queue"]
+        ]
         return VoiceSynthesizerResult(
             message=content["message"],
             query=content["query"],
-            mora_queue=content["mora_queue"],
+            mora_queue=mora_queue,
             speaking_time=content["speaking_time"],
             voice=content["voice"],
             audio_format=content["audio_format"],

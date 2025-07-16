@@ -3,7 +3,11 @@ import wave
 from io import BytesIO
 from subprocess import CompletedProcess
 
-from sincro_models import VoiceSynthesizerRequest, VoiceSynthesizerResult
+from sincro_models import (
+    VoiceSynthesizerMora,
+    VoiceSynthesizerRequest,
+    VoiceSynthesizerResult,
+)
 
 from .VoiceVox import VoiceVox
 
@@ -24,7 +28,7 @@ class VoiceSynthesizer(VoiceVox):
         query["postPhonemeLength"] = vs_request.post_phoneme_length
         query = self.query_filter(query)
         wav: bytes = self.query_synthesis(query, style_id=vs_request.style_id)
-        mora_list: list = self.__parse_phrases(query)
+        mora_list: list[VoiceSynthesizerMora] = self.__parse_phrases(query)
         sp_time: float = self.__wav_speaking_time(wav)
         enc_result: dict = self.encode(wav, vs_request.audio_format)
         return VoiceSynthesizerResult(
@@ -82,10 +86,14 @@ class VoiceSynthesizer(VoiceVox):
     # 音声データの長さは
     #   prePhonemeLength + accent_phrasesのmoraの長さ + postPhonemeLength
     # に近い値となるはず(完全には一致しない模様)。
-    def __parse_phrases(self, query: dict) -> list:
+    def __parse_phrases(self, query: dict) -> list[VoiceSynthesizerMora]:
         mora_list = []
+
+        # 音声前の無音時間
         mora_list.append(
-            {"vowel": None, "length": query["prePhonemeLength"], "text": None},
+            VoiceSynthesizerMora(
+                vowel=None, length=query["prePhonemeLength"], text=None
+            )
         )
 
         # クエリからフレーズをひとつずつ取り出す。
@@ -95,35 +103,41 @@ class VoiceSynthesizer(VoiceVox):
         for phrase in query["accent_phrases"]:
             mora_list += self.__parse_phrase(phrase)
 
+        # 音声後の無音時間
         mora_list.append(
-            {"vowel": None, "length": query["postPhonemeLength"], "text": None},
+            VoiceSynthesizerMora(
+                vowel=None, length=query["prePhonemeLength"], text=None
+            )
         )
         return mora_list
 
     # 各フレーズからモーラの長さと母音を抽出し、リストの形で返す。
-    def __parse_phrase(self, phrase: dict) -> list:
+    def __parse_phrase(self, phrase: dict) -> list[VoiceSynthesizerMora]:
         m_queue = []
         # print(phrase)
         # フレーズ中のモーラをひとつずつ取り出す。
         for mora in phrase["moras"]:
-            # pprint(mora)
-            mo = {"vowel": None, "length": 0, "text": mora["text"]}
+            mo: VoiceSynthesizerMora = VoiceSynthesizerMora(
+                vowel=None, length=0, text=mora["text"]
+            )
             if mora["vowel_length"]:
-                mo["vowel"] = mora["vowel"]
-                mo["length"] += mora["vowel_length"]
+                mo.vowel = mora["vowel"]
+                mo.length += mora["vowel_length"]
             if mora["consonant_length"]:
-                mo["length"] += mora["consonant_length"]
+                mo.length += mora["consonant_length"]
             m_queue.append(mo)
 
         # フレーズ末尾の休止。
         # フレーズごとに1回のみ存在する。
         # 無い場合はphrase["pause_mora"]はNoneが入っている。
         if phrase["pause_mora"]:
-            mo = {"vowel": None, "length": 0, "text": None}
+            mo: VoiceSynthesizerMora = VoiceSynthesizerMora(
+                vowel=None, length=0, text=None
+            )
             if phrase["pause_mora"]["vowel_length"]:
-                mo["length"] += phrase["pause_mora"]["vowel_length"]
+                mo.length += phrase["pause_mora"]["vowel_length"]
             if phrase["pause_mora"]["consonant_length"]:
-                mo["length"] += phrase["pause_mora"]["consonant_length"]
+                mo.length += phrase["pause_mora"]["consonant_length"]
             m_queue.append(mo)
         return m_queue
 
