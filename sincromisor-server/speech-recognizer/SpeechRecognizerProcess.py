@@ -70,14 +70,14 @@ class SpeechRecognizerProcess:
                 )
                 if (
                     minio_description is not None
-                    and self.__args.minio_user
-                    and self.__args.minio_password
+                    and self.__args.minio_access_key
+                    and self.__args.minio_secret_key
                 ):
                     minio_client = SpeechRecognizerMinioClient(
                         minio_host=minio_description.service_address,
                         minio_port=minio_description.service_port,
-                        access_key=self.__args.minio_user,
-                        secret_key=self.__args.minio_password,
+                        access_key=self.__args.minio_access_key,
+                        secret_key=self.__args.minio_secret_key,
                     )
                 await ws.accept()
                 current_speech_id = -1

@@ -12,8 +12,8 @@ stat /opt/sincromisor/.cache
 
 mc alias set sincro-minio \
     "http://${SINCRO_MINIO_PUBLIC_BIND_HOST}:${SINCRO_MINIO_PUBLIC_BIND_PORT}" \
-    "${MINIO_ROOT_USER}" \
-    "${MINIO_ROOT_PASSWORD}"
+    "${SINCRO_MINIO_ACCESS_KEY}" \
+    "${SINCRO_MINIO_SECRET_KEY}"
 
 su sincromisor -c '/opt/sincromisor/.local/bin/uv run huggingface-cli scan-cache -vvv'
 if [ "${SINCRO_RECOGNIZER_MODEL}" = "nemo" ]; then

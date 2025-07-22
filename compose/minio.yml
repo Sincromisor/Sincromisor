@@ -12,8 +12,8 @@ services:
             - 9000:9000/tcp
             - 9001:9001/tcp
         environment:
-            - MINIO_ROOT_USER=${SINCRO_MINIO_ROOT_USER}
-            - MINIO_ROOT_PASSWORD=${SINCRO_MINIO_ROOT_PASSWORD}
+            - MINIO_ROOT_USER=${SINCRO_MINIO_ACCESS_KEY}
+            - MINIO_ROOT_PASSWORD=${SINCRO_MINIO_SECRET_KEY}
             - SINCRO_CONSUL_AGENT_HOST=consul-agent-minio
             - SINCRO_CONSUL_AGENT_PORT=8500
         volumes:
