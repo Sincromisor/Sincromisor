@@ -9,7 +9,8 @@ class VoiceSynthesizerProcessArgument(SincromisorArgumentParser):
     public_bind_host: str
     public_bind_port: int
     voicevox_default_style_id: int
-    log_file: str | None
+    minio_access_key: str
+    minio_secret_key: str
 
     @classmethod
     def set_args(cls, parser: ArgumentParser) -> None:
@@ -55,6 +56,22 @@ class VoiceSynthesizerProcessArgument(SincromisorArgumentParser):
             env_name="SINCRO_SYNTHESIZER_VOICEVOX_DEFAULT_STYLE_ID",
             default=0,
             help="VOICEVOX Style ID(default: 0)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--minio-access-key",
+            env_name="SINCRO_MINIO_ACCESS_KEY",
+            default=None,
+            help="MinIO access key(default: None)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--minio-secret-key",
+            env_name="SINCRO_MINIO_SECRET_KEY",
+            default=None,
+            help="MinIO secret key(default: None)",
         )
 
         return

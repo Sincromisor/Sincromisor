@@ -124,6 +124,24 @@ class VoiceVox:
         self.response_validator(res)
         return res.json()
 
+    # スタイルIDをキーにして話者名とスタイル名を持つdictを返す。
+    def get_speaker_ids(self) -> dict:
+        speakers: list = self.speakers()
+
+        ids: dict = {}
+        for sp in speakers:
+            spname = sp["name"]
+            spuuid = sp["speaker_uuid"]
+            for style in sp["styles"]:
+                stname = style["name"]
+                stid = style["id"]
+                ids[stid] = {"name": spname, "style": stname, "speakers_uuid": spuuid}
+        return ids
+
+    def get_speaker_info(self, speaker_id: int) -> dict:
+        speaker_ids: dict = self.get_speaker_ids()
+        return speaker_ids[speaker_id]
+
     # サーバエンジンが保持しているプリセットを取得。
     # * 戻り値 - 配列
     def presets(self) -> list:

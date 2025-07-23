@@ -20,6 +20,10 @@ class VoiceSynthesizerWorker:
         voicevox_style_id: int,
         redis_host: str,
         redis_port: int,
+        minio_host: str,
+        minio_port: int,
+        minio_access_key: str,
+        minio_secret_key: str,
     ):
         self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__vvox: VoiceCacheManager = VoiceCacheManager(
@@ -27,6 +31,10 @@ class VoiceSynthesizerWorker:
             voicevox_port=voicevox_port,
             redis_host=redis_host,
             redis_port=redis_port,
+            minio_host=minio_host,
+            minio_port=minio_port,
+            minio_access_key=minio_access_key,
+            minio_secret_key=minio_secret_key,
         )
         self.__voicevox_style_id: int = voicevox_style_id
 
@@ -46,7 +54,7 @@ class VoiceSynthesizerWorker:
                 )
                 start_t = perf_counter()
                 vs_result: VoiceSynthesizerResult = self.__get_voice(
-                    vvox=self.__vvox,
+                    vvox_cm=self.__vvox,
                     voice_text=tp_result.voice_text,
                 )
                 self.__logger.info(
@@ -64,15 +72,16 @@ class VoiceSynthesizerWorker:
     def __get_voice(
         self,
         voice_text: str,
-        vvox: VoiceCacheManager,
+        vvox_cm: VoiceCacheManager,
     ) -> VoiceSynthesizerResult:
         vs_request: VoiceSynthesizerRequest = VoiceSynthesizerRequest(
             message=voice_text,
+            # "audio/ogg;codecs=opus"にしたい
             audio_format="audio/wav",
             style_id=self.__voicevox_style_id,
             pre_phoneme_length=0.1,
             post_phoneme_length=0.1,
         )
-        vs_result: VoiceSynthesizerResult = vvox.get_voice(vs_request=vs_request)
+        vs_result: VoiceSynthesizerResult = vvox_cm.get_voice(vs_request=vs_request)
 
         return vs_result
