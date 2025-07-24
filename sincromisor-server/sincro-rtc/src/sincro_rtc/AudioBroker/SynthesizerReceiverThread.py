@@ -5,9 +5,9 @@ from collections.abc import Generator
 from io import BytesIO
 from threading import Event, Thread
 
-import av
 from av.audio.resampler import AudioResampler
 from av.container import InputContainer
+from av.container import open as av_open
 from sincro_models import (
     VoiceSynthesizerMora,
     VoiceSynthesizerResult,
@@ -74,15 +74,18 @@ class SynthesizerReceiverThread(Thread):
         target_frame_rate: int,
         target_frame_size: int,
     ) -> Generator[VoiceSynthesizerResultFrame, None, None]:
-        # 1ch 16000Hzの音声を2ch 48000Hzに変換し、20ms(960 / 48000)ごとに分割し直す。
+        # 音声をs16 2ch 48000Hzに変換し、20ms(960 / 48000)ごとに分割し直す。
+        # ソースの音声はコーデックなどによりフォーマットが変化する。
+        # (wav: 1ch s16 24000Hz, opus: 1ch float32 48000Hz)
         # 960はWebRTCでopus音声を得た際のデフォルトフレームサイズだが、
         # 環境によって異なる可能性がある(要調査)。
         resampler = AudioResampler(
             layout=2,
+            format="s16",
             rate=target_frame_rate,
             frame_size=target_frame_size,
         )
-        container: InputContainer = av.open(BytesIO(vs_result.voice), mode="r")
+        container: InputContainer = av_open(BytesIO(vs_result.voice), mode="r")
         frame_ms: float = target_frame_size / target_frame_rate
         timestamp_sec: float = 0.0
         next_time_sec: float = 0.0

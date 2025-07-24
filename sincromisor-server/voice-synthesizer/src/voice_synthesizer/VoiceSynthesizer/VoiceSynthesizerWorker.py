@@ -77,7 +77,7 @@ class VoiceSynthesizerWorker:
         vs_request: VoiceSynthesizerRequest = VoiceSynthesizerRequest(
             message=voice_text,
             # "audio/ogg;codecs=opus"にしたい
-            audio_format="audio/wav",
+            audio_format="audio/ogg;codecs=opus",
             style_id=self.__voicevox_style_id,
             pre_phoneme_length=0.1,
             post_phoneme_length=0.1,

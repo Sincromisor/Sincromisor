@@ -23,10 +23,11 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 # curl: uvのインストール
 # git: nue-asrのインストール。nue-asrが不要なコンテナでも無いとsyncでコケる
+# opus-tools: 合成した音声のキャッシュに利用
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
     apt-get update \
-    && apt-get install -y curl git
+    && apt-get install -y curl git opus-tools
 
 USER ${SINCRO_USER_ID}
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
