@@ -39,8 +39,8 @@ class RTCSessionProcess(Process):
         request_talk_mode: str,
         sdp_pipe: Connection,
         rtc_finalize_event: Event,
-        consul_agent_host: str,
-        consul_agent_port: int,
+        consul_agent_host: str | None,
+        consul_agent_port: int | None,
         fallback_host: str | None = None,
         fallback_port: int | None = None,
     ):
@@ -54,8 +54,8 @@ class RTCSessionProcess(Process):
         self.__request_talk_mode: str = request_talk_mode
         self.__server_sdp_pipe: Connection = sdp_pipe
         self.__rtc_finalize_event: Event = rtc_finalize_event
-        self.__consul_agent_host: str = consul_agent_host
-        self.__consul_agent_port: int = consul_agent_port
+        self.__consul_agent_host: str | None = consul_agent_host
+        self.__consul_agent_port: int | None = consul_agent_port
         self.__fallback_host: str | None = fallback_host
         self.__fallback_port: int | None = fallback_port
 

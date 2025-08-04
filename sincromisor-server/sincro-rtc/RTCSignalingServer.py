@@ -60,14 +60,17 @@ class RTCSignalingServer:
         """
         event: Event = Event()
 
-        self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
-            worker_type="RTCSignalingServer",
-            consul_host=self.__args.consul_agent_host,
-            consul_port=self.__args.consul_agent_port,
-            public_bind_host=self.__args.public_bind_host,
-            public_bind_port=self.__args.public_bind_port,
-        )
-        self.sd_reporter.start()
+        if self.__args.consul_agent_host and self.__args.consul_agent_port:
+            self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
+                worker_type="RTCSignalingServer",
+                consul_host=self.__args.consul_agent_host,
+                consul_port=self.__args.consul_agent_port,
+                public_bind_host=self.__args.public_bind_host,
+                public_bind_port=self.__args.public_bind_port,
+            )
+            self.sd_reporter.start()
+        else:
+            self.__logger.warning("Service discovery reporter is disabled.")
 
         @app.get("/api/v1/RTCSignalingServer/statuses")
         async def get_status() -> JSONResponse:

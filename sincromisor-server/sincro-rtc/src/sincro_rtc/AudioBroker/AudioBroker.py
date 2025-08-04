@@ -109,8 +109,8 @@ class AudioBroker:
         self,
         session_id: str,
         talk_mode: str,
-        consul_agent_host: str,
-        consul_agent_port: int,
+        consul_agent_host: str | None,
+        consul_agent_port: int | None,
         fallback_host: str | None = None,
         fallback_port: int | None = None,
     ):
@@ -119,9 +119,11 @@ class AudioBroker:
         )
         self.__session_id: str = session_id
         self.__talk_mode: str = talk_mode
-        self.__sd_refrrer: ServiceDiscoveryReferrer = ServiceDiscoveryReferrer(
-            consul_agent_host=consul_agent_host, consul_agent_port=consul_agent_port
-        )
+        self.__sd_refrrer: ServiceDiscoveryReferrer | None
+        if consul_agent_host and consul_agent_port:
+            self.__sd_refrrer = ServiceDiscoveryReferrer(
+                consul_agent_host=consul_agent_host, consul_agent_port=consul_agent_port
+            )
         self.__fallback_host: str | None = fallback_host
         self.__fallback_port: int | None = fallback_port
 
@@ -201,6 +203,8 @@ class AudioBroker:
     def __get_worker(self, worker_type: str) -> ServiceDescription:
         worker: ServiceDescription | None
         try:
+            if self.__sd_refrrer is None:
+                raise ServiceDiscoveryReferrerError("Consul agent is not set.")
             worker = self.__sd_refrrer.get_random_worker(worker_type=worker_type)
         except ServiceDiscoveryReferrerError as e:
             self.__logger.error(

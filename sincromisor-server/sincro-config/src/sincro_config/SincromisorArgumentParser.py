@@ -6,8 +6,8 @@ from pydantic import BaseModel
 
 
 class SincromisorArgumentParser(BaseModel):
-    consul_agent_host: str
-    consul_agent_port: int
+    consul_agent_host: str | None
+    consul_agent_port: int | None
     log_file: str | None
 
     @classmethod
@@ -43,15 +43,15 @@ class SincromisorArgumentParser(BaseModel):
             cmd_name="--consul-agent-host",
             env_name="SINCRO_CONSUL_AGENT_HOST",
             default=None,
-            help="Redis address",
+            help="Consul agent address",
         )
 
         cls.add_argument(
             parser=parser,
             cmd_name="--consul-agent-port",
             env_name="SINCRO_CONSUL_AGENT_PORT",
-            default=6379,
-            help="Redis port(default: 6379)",
+            default=8500,
+            help="Consul agent port(default: 8500)",
         )
 
         parser.add_argument(

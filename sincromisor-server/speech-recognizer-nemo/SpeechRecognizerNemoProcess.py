@@ -39,6 +39,11 @@ class SpeechRecognizerNemoProcess:
         self.__sessions: int = 0
 
     def start(self):
+        if not self.__args.consul_agent_host or not self.__args.consul_agent_port:
+            raise RuntimeError(
+                "Consul agent is not set. Service discovery will not be available.",
+            )
+
         self.sd_referrer: ServiceDiscoveryReferrer = ServiceDiscoveryReferrer(
             consul_agent_host=self.__args.consul_agent_host,
             consul_agent_port=self.__args.consul_agent_port,

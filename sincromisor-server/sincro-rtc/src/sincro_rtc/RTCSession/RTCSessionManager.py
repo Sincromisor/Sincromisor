@@ -17,16 +17,16 @@ from .RTCSessionProcessManagementThread import RTCSessionProcessManagementThread
 class RTCSessionManager:
     def __init__(
         self,
-        consul_agent_host: str,
-        consul_agent_port: int,
+        consul_agent_host: str | None,
+        consul_agent_port: int | None,
         fallback_host: str | None,
         fallback_port: int | None,
     ):
         self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__processes: dict[str, RTCSessionProcessDescription] = {}
         self.__join_timeout: int = 10
-        self.__consul_agent_host: str = consul_agent_host
-        self.__consul_agent_port: int = consul_agent_port
+        self.__consul_agent_host: str | None = consul_agent_host
+        self.__consul_agent_port: int | None = consul_agent_port
         self.__fallback_host: str | None = fallback_host
         self.__fallback_port: int | None = fallback_port
 
