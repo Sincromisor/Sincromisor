@@ -119,7 +119,7 @@ class AudioBroker:
         )
         self.__session_id: str = session_id
         self.__talk_mode: str = talk_mode
-        self.__sd_refrrer: ServiceDiscoveryReferrer | None
+        self.__sd_refrrer: ServiceDiscoveryReferrer | None = None
         if consul_agent_host and consul_agent_port:
             self.__sd_refrrer = ServiceDiscoveryReferrer(
                 consul_agent_host=consul_agent_host, consul_agent_port=consul_agent_port
