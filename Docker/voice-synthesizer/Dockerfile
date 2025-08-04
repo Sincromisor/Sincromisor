@@ -3,7 +3,7 @@ FROM ubuntu:24.04
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
-ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${SINCRO_USER_DIR}/.local/bin:${PATH}
+ENV PATH=${SINCRO_USER_DIR}/.local/bin:${PATH}
 ENV SINCROMISOR_CONF=/opt/sincromisor/config.yml
 
 ENV SINCRO_SYNTHESIZER_HOST=0.0.0.0
@@ -12,10 +12,6 @@ ENV SINCRO_SYNTHESIZER_PUBLIC_BIND_HOST=voice-synthesizer
 ENV SINCRO_SYNTHESIZER_PUBLIC_BIND_PORT=8005
 ENV SINCRO_CONSUL_AGENT_HOST=sincro-consul-agent
 ENV SINCRO_CONSUL_AGENT_PORT=8500
-ENV SINCRO_REDIS_HOST=sincro-voice-cache
-ENV SINCRO_REDIS_PORT=6379
-ENV SINCRO_SYNTHESIZER_VOICEVOX_HOST=sincro-voicevox
-ENV SINCRO_SYNTHESIZER_VOICEVOX_PORT=50021
 ENV SINCRO_SYNTHESIZER_VOICEVOX_DEFAULT_STYLE_ID=0
 
 WORKDIR ${SINCRO_USER_DIR}
@@ -27,10 +23,11 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 # curl: uvのインストール
 # git: nue-asrのインストール。nue-asrが不要なコンテナでも無いとsyncでコケる
+# opus-tools: 合成した音声のキャッシュに利用
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
     apt-get update \
-    && apt-get install -y curl git
+    && apt-get install -y curl git opus-tools
 
 USER ${SINCRO_USER_ID}
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh

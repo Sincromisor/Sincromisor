@@ -6,6 +6,7 @@ from threading import Event, Thread
 from sincro_models import TextProcessorResult
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import ClientConnection
+from websockets.typing import Data
 
 
 class TextProcessorReceiverThread(Thread):
@@ -19,7 +20,9 @@ class TextProcessorReceiverThread(Thread):
     ):
         super().__init__()
         self.__session_id: str = session_id
-        self.__logger = logging.getLogger("sincro." + self.__class__.__name__ + f"[{self.__session_id[21:26]}]")
+        self.__logger = logging.getLogger(
+            "sincro." + self.__class__.__name__ + f"[{self.__session_id[21:26]}]"
+        )
         self.__ws: ClientConnection = ws
         self.__text_channel_queue: deque = text_channel_queue
         self.__text_processor_results: deque = text_processor_results
@@ -29,7 +32,8 @@ class TextProcessorReceiverThread(Thread):
         self.__logger.info("Thread start.")
         while self.__running.is_set():
             try:
-                pack: str | bytes = self.__ws.recv(timeout=5)
+                pack: Data = self.__ws.recv(timeout=5)
+                assert isinstance(pack, bytes)
                 tp_result: TextProcessorResult = TextProcessorResult.from_msgpack(pack)
                 # to SynthesizerThread
                 self.__text_processor_results.append(tp_result)

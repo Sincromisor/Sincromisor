@@ -6,6 +6,7 @@ from threading import Event, Thread
 from sincro_models import SpeechRecognizerResult
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import ClientConnection
+from websockets.typing import Data
 
 
 class RecognizerReceiverThread(Thread):
@@ -18,7 +19,9 @@ class RecognizerReceiverThread(Thread):
     ):
         super().__init__()
         self.__session_id: str = session_id
-        self.__logger = logging.getLogger("sincro." + self.__class__.__name__ + f"[{self.__session_id[21:26]}]")
+        self.__logger = logging.getLogger(
+            "sincro." + self.__class__.__name__ + f"[{self.__session_id[21:26]}]"
+        )
         self.__ws: ClientConnection = ws
         self.__recognizer_results: deque = recognizer_results
         self.__running: Event = running
@@ -27,11 +30,11 @@ class RecognizerReceiverThread(Thread):
         self.__logger.info("Thread start.")
         while self.__running.is_set():
             try:
-                pack: str | bytes = self.__ws.recv(timeout=5)
+                pack: Data = self.__ws.recv(timeout=5)
+                assert isinstance(pack, bytes)
                 sr_result: SpeechRecognizerResult = SpeechRecognizerResult.from_msgpack(
                     pack,
                 )
-
                 # to SynthesizerThread
                 self.__recognizer_results.append(sr_result)
             except TimeoutError:

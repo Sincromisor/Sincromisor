@@ -3,7 +3,7 @@ FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu24.04 AS builder
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
-ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${SINCRO_USER_DIR}/.local/bin:${PATH}
+ENV PATH=${SINCRO_USER_DIR}/.local/bin:${PATH}
 
 WORKDIR ${SINCRO_USER_DIR}
 
@@ -91,7 +91,7 @@ FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu24.04 AS runner
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
-ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${SINCRO_USER_DIR}/.local/bin:${PATH}
+ENV PATH=${SINCRO_USER_DIR}/.local/bin:${PATH}
 ENV SINCROMISOR_CONF=/opt/sincromisor/config.yml
 
 ENV SINCRO_RECOGNIZER_HOST=0.0.0.0
@@ -100,6 +100,12 @@ ENV SINCRO_RECOGNIZER_PUBLIC_BIND_HOST=speech-recognizer-nemo
 ENV SINCRO_RECOGNIZER_PUBLIC_BIND_PORT=8003
 ENV SINCRO_CONSUL_AGENT_HOST=sincro-consul-agent
 ENV SINCRO_CONSUL_AGENT_PORT=8500
+
+ENV SINCRO_MINIO_PUBLIC_BIND_HOST=
+ENV SINCRO_MINIO_PUBLIC_BIND_PORT=
+ENV SINCRO_MINIO_ROOT_USER=
+ENV SINCRO_MINIO_ROOT_PASSWORD=
+
 # SINCRO_RECOGNIZER_VOICE_LOG_DIRが空の場合、音声認識ログを出力しない
 ENV SINCRO_RECOGNIZER_VOICE_LOG_DIR=
 
@@ -107,7 +113,7 @@ RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
     apt-get update && \
     apt-get install -y \
-    libsentencepiece0 libprotobuf-c1 ffmpeg
+    libsentencepiece0 libprotobuf-c1 ffmpeg opus-tools curl
 
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \

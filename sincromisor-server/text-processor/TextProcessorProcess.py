@@ -43,7 +43,7 @@ class TextProcessorProcess:
         )
         self.sd_reporter.start()
 
-        @app.get("/api/v1/statuses")
+        @app.get("/api/v1/TextProcessor/statuses")
         async def get_status() -> JSONResponse:
             return JSONResponse(
                 {"worker_type": "TextProcessor", "sessions": self.__sessions}
@@ -58,7 +58,11 @@ class TextProcessorProcess:
             try:
                 text_worker: TextProcessorWorker
                 await ws.accept()
-                if self.__args.dify_url and talk_mode == "chat":
+                if (
+                    self.__args.dify_url
+                    and self.__args.dify_token
+                    and talk_mode == "chat"
+                ):
                     text_worker = DifyTextProcessorWorker(
                         base_url=self.__args.dify_url,
                         api_key=self.__args.dify_token,
@@ -80,6 +84,7 @@ class TextProcessorProcess:
                     self.__logger.warning(
                         "WebSocket is already closed.",
                     )
+
         try:
             uvicorn.run(app, host=self.__args.host, port=self.__args.port)
         except KeyboardInterrupt:

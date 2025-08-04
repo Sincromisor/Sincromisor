@@ -38,7 +38,7 @@ print("All Nodes:")
 results: list[str] = all_node_names(client=client)
 print(results)
 
-print("\nAvtive Nodes:")
+print("\nActive Nodes:")
 results: list[str] = active_node_names(client=client)
 print(results)
 

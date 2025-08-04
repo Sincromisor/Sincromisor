@@ -8,7 +8,12 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from setproctitle import setproctitle
-from sincro_config import ServiceDiscoveryReporter, SincromisorLoggerConfig
+from sincro_config import (
+    ServiceDescription,
+    ServiceDiscoveryReferrer,
+    ServiceDiscoveryReporter,
+    SincromisorLoggerConfig,
+)
 from voice_synthesizer.models import VoiceSynthesizerProcessArgument
 from voice_synthesizer.VoiceSynthesizer import VoiceSynthesizerWorker
 
@@ -28,6 +33,10 @@ class VoiceSynthesizerProcess:
         self.__sessions: int = 0
 
     def start(self):
+        self.sd_referrer: ServiceDiscoveryReferrer = ServiceDiscoveryReferrer(
+            consul_agent_host=self.__args.consul_agent_host,
+            consul_agent_port=self.__args.consul_agent_port,
+        )
         app: FastAPI = FastAPI()
         event: Event = Event()
         self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
@@ -39,22 +48,43 @@ class VoiceSynthesizerProcess:
         )
         self.sd_reporter.start()
 
-        @app.get("/api/v1/statuses")
+        @app.get("/api/v1/VoiceSynthesizer/statuses")
         async def get_status() -> JSONResponse:
-            return JSONResponse({"worker_type": "VoiceSynthesizer", "sessions": self.__sessions})
+            return JSONResponse(
+                {"worker_type": "VoiceSynthesizer", "sessions": self.__sessions}
+            )
 
         @app.websocket("/api/v1/VoiceSynthesizer")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1
             try:
+                redis_description: ServiceDescription | None = (
+                    self.sd_referrer.get_random_worker(worker_type="SincroRedis")
+                )
+                if redis_description is None:
+                    raise RuntimeError("No SincroRedis worker found.")
+                minio_description: ServiceDescription | None = (
+                    self.sd_referrer.get_random_worker(worker_type="SincroMinio")
+                )
+                if minio_description is None:
+                    raise RuntimeError("No SincroMinio worker found.")
+                voicevox_description: ServiceDescription | None = (
+                    self.sd_referrer.get_random_worker(worker_type="SincroVoiceVox")
+                )
+                if voicevox_description is None:
+                    raise RuntimeError("No SincroVoiceVox worker found.")
                 await ws.accept()
                 voice_synthesizer = VoiceSynthesizerWorker(
-                    voicevox_host=self.__args.voicevox_host,
-                    voicevox_port=self.__args.voicevox_port,
+                    voicevox_host=voicevox_description.service_address,
+                    voicevox_port=voicevox_description.service_port,
                     voicevox_style_id=self.__args.voicevox_default_style_id,
-                    redis_host=self.__args.redis_host,
-                    redis_port=self.__args.redis_port,
+                    redis_host=redis_description.service_address,
+                    redis_port=redis_description.service_port,
+                    minio_host=minio_description.service_address,
+                    minio_port=minio_description.service_port,
+                    minio_access_key=self.__args.minio_access_key,
+                    minio_secret_key=self.__args.minio_secret_key,
                 )
                 await voice_synthesizer.communicate(ws=ws)
             except WebSocketDisconnect:
@@ -71,6 +101,7 @@ class VoiceSynthesizerProcess:
                     self.__logger.warning(
                         "WebSocket is already closed.",
                     )
+
         try:
             uvicorn.run(app, host=self.__args.host, port=self.__args.port)
         except KeyboardInterrupt:

@@ -9,7 +9,7 @@ if ! type npm > /dev/null; then
     exit 1
 fi
 
-cd "$(dirname "${0}")"/sincromisor-client
+cd "$(dirname "${0}")"/../../sincromisor-client
 
 npm install
 

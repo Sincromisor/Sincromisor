@@ -91,7 +91,9 @@ class SpeechExtractorWorker:
                     await ws.send_bytes(result.to_msgpack())
                     result.clear_voice()
                 elif not is_speech and len(result.voice) > 0:
-                    silence_ms += (mic_voice.size / self.voice_sampling_rate) * 1000
+                    silence_ms += int(
+                        (mic_voice.size / self.voice_sampling_rate) * 1000
+                    )
                     if silence_ms >= max_silence_ms:
                         result.sequence_id += 1
                         result.confirmed = True

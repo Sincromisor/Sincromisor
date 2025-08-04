@@ -1,0 +1,75 @@
+include:
+    - initializer.yml
+
+services:
+    sincro-client:
+        profiles:
+            - full
+            - frontend
+        build:
+            context: ..
+            dockerfile: ./Docker/sincro-client/Dockerfile
+        image: ${SINCRO_REGISTRY_NAME}/sincro-client:latest
+        ports:
+            - 80:80/tcp
+            - 443:443/tcp
+            - 443:443/udp
+        volumes:
+            - ../configs/Caddyfile:/etc/caddy/Caddyfile:ro
+        networks:
+            - sincromisor-net
+        environment:
+            - SINCRO_CONSUL_AGENT_HOST=consul-agent-frontend
+            - SINCRO_CONSUL_AGENT_PORT=8500
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            service-initializer:
+                condition: service_completed_successfully
+            consul-agent-frontend:
+                condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "wget",
+                    "-q",
+                    "-O-",
+                    "http://localhost/api/v1/Frontend/statuses",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    consul-agent-frontend:
+        profiles:
+            - full
+            - frontend
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-client=0.0.0.0",
+            ]
+        volumes:
+            - consul-agent-frontend-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        healthcheck:
+            test: ["CMD", "consul", "members"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    consul-agent-frontend-data:
+
+networks:
+    sincromisor-net:

@@ -3,7 +3,7 @@ FROM ubuntu:24.04
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
-ENV PATH=${SINCRO_USER_DIR}/.cargo/bin:${SINCRO_USER_DIR}/.local/bin:${PATH}
+ENV PATH=${SINCRO_USER_DIR}/.local/bin:${PATH}
 
 ENV SINCRO_RTC_HOST=0.0.0.0
 ENV SINCRO_RTC_PORT=8001
@@ -106,6 +106,12 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 # sincromisor-serverのモジュールをビルドし直す
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --group sincro-rtc
+
+# RTCSignalingServer用のRTC設定ファイルを
+# /opt/sincromisor/configs/config.ymlにコピーする。
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./examples/config.yml \
+    ${SINCRO_USER_DIR}/configs/config.yml
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 

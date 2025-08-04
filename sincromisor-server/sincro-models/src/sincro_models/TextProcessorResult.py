@@ -1,3 +1,5 @@
+from typing import Any
+
 import msgpack
 from pydantic import BaseModel
 
@@ -40,7 +42,7 @@ class TextProcessorResult(BaseModel):
 
     @classmethod
     def from_request(
-        self,
+        cls,
         request: TextProcessorRequest,
         message_type: str,
         speaker_id: str,
@@ -63,7 +65,7 @@ class TextProcessorResult(BaseModel):
         )
 
     @classmethod
-    def from_msgpack(self, pack: bytes) -> "TextProcessorResult":
+    def from_msgpack(cls, pack: bytes) -> "TextProcessorResult":
         contents = msgpack.unpackb(pack)
         return TextProcessorResult(**contents)
 
@@ -75,7 +77,7 @@ class TextProcessorResult(BaseModel):
         return obj
 
     def to_msgpack(self) -> bytes:
-        return msgpack.packb(
+        pack: Any | None = msgpack.packb(
             {
                 "session_id": self.session_id,
                 "speech_id": self.speech_id,
@@ -89,6 +91,8 @@ class TextProcessorResult(BaseModel):
             },
             default=self.__msgpack_pack,
         )
+        assert isinstance(pack, bytes), "msgpack.packb returned non-bytes"
+        return pack
 
     """
     def to_json(self) -> str:

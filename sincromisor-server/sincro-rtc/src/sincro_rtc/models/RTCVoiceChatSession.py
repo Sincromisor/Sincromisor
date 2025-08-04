@@ -19,7 +19,7 @@ class RTCVoiceChatSession(BaseModel):
     audio_transform_track: MediaStreamTrack | None = None
     telop_ch: RTCDataChannel | None = None
     text_ch: RTCDataChannel | None = None
-    # TextProcessorに渡される
+    # TextProcessorの/api/v1/TextProcessorに渡される
     # chat or poke
     talk_mode: str = "chat"
     closed: bool = False
@@ -36,7 +36,7 @@ class RTCVoiceChatSession(BaseModel):
         if self.closed:
             return
         if self.audio_transform_track:
-            self.audio_transform_track.close()
+            self.audio_transform_track.stop()
         if self.telop_ch:
             self.telop_ch.close()
         if self.text_ch:

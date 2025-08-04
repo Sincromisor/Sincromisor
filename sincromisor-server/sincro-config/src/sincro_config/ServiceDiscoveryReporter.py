@@ -5,6 +5,7 @@ import socket
 import time
 from logging import Logger
 from threading import Thread
+from typing import Any
 
 from consul import Check, Consul
 
@@ -27,10 +28,9 @@ class ServiceDiscoveryReporter(Thread):
         self.consul: Consul = Consul(host=self.consul_host, port=self.consul_port)
         self.public_bind_host: str = public_bind_host
         self.public_bind_port: int = public_bind_port
+        self.ip_address: str = socket.gethostbyname(self.public_bind_host)
         self.worker_type: str = worker_type
-        self.service_id: str = (
-            f"{self.worker_type}-{self.public_bind_host}:{self.public_bind_port}"
-        )
+        self.service_id: str = f"{self.worker_type}_{self.public_bind_host}_{self.ip_address}:{self.public_bind_port}"
 
     def run(self):
         while True:
@@ -38,7 +38,8 @@ class ServiceDiscoveryReporter(Thread):
                 self.__check_register()
             except Exception as e:
                 self.__logger.error(
-                    f"Service registration error - consul: {self.consul_host}:{self.consul_port}, bind: {self.public_bind_host}:{self.public_bind_port}, {repr(e)}"
+                    f"Service registration error - consul: {self.consul_host}:{self.consul_port}, "
+                    f"bind: {self.public_bind_host}({self.ip_address}):{self.public_bind_port}, {repr(e)}"
                 )
             time.sleep(random.randint(5, 10))
 
@@ -52,10 +53,12 @@ class ServiceDiscoveryReporter(Thread):
                     return True
         return False
 
-    def __register(self):
-        check: Check = Check.http(
+    def __register(self) -> None:
+        check: dict[str, Any] = Check.http(
             # JSONResponse({"sessions": セッション数(int)})
-            f"http://{self.public_bind_host}:{self.public_bind_port}/api/v1/statuses",
+            # self.public_bind_hostを用いると、IPアドレスが変更された場合でも
+            # 新ノード宛てとして名前解決できてしまい、checkがpassしてしまう
+            f"http://{self.ip_address}:{self.public_bind_port}/api/v1/{self.worker_type}/statuses",
             # agentがチェックする間隔
             interval="10s",
             # agentからの接続タイムアウト
@@ -69,7 +72,7 @@ class ServiceDiscoveryReporter(Thread):
             service_id=self.service_id,
             # ここでホスト名をそのまま渡すと、consulのDNSサーバーが
             # リバースプロキシに解決できないcnameレコードを返してしまう。
-            address=socket.gethostbyname(self.public_bind_host),
+            address=self.ip_address,
             port=self.public_bind_port,
             check=check,
         )
@@ -77,11 +80,11 @@ class ServiceDiscoveryReporter(Thread):
         self.__logger.info(
             f"Service {self.worker_type} registered with ID: {self.service_id}"
         )
-        return
 
     # consulにこのサービスが登録されているかを確認し、登録されていない場合は登録する
-    def __check_register(self):
+    def __check_register(self) -> None:
         services = self.consul.agent.services()
+        # public_bind_hostとportが同じでIPアドレスが変わった場合、情報が更新されない問題がある点に注意
         if self.service_id not in services:
             self.__register()
         else:
@@ -90,12 +93,12 @@ class ServiceDiscoveryReporter(Thread):
             )
 
     # consulからこのサービスの情報を削除する
-    def __deregister(self):
+    def __deregister(self) -> None:
         self.consul.agent.service.deregister(service_id=self.service_id)
         self.__logger.info(
             f"Service {self.worker_type} deregistered with ID: {self.service_id}"
         )
 
     # プログラム終了時にconsulからこのサービスの情報を削除するよう予約する
-    def __reserve_deregister(self):
+    def __reserve_deregister(self) -> None:
         atexit.register(self.__deregister)

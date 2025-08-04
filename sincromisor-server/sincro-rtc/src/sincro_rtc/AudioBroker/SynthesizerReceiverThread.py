@@ -5,15 +5,17 @@ from collections.abc import Generator
 from io import BytesIO
 from threading import Event, Thread
 
-import av
-from av import AudioResampler
+from av.audio.resampler import AudioResampler
 from av.container import InputContainer
+from av.container import open as av_open
 from sincro_models import (
+    VoiceSynthesizerMora,
     VoiceSynthesizerResult,
     VoiceSynthesizerResultFrame,
 )
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import ClientConnection
+from websockets.typing import Data
 
 
 class SynthesizerReceiverThread(Thread):
@@ -26,7 +28,9 @@ class SynthesizerReceiverThread(Thread):
         session_id: str,
     ):
         super().__init__()
-        self.__logger = logging.getLogger("sincro." + self.__class__.__name__ + f"[{session_id[21:26]}]")
+        self.__logger = logging.getLogger(
+            "sincro." + self.__class__.__name__ + f"[{session_id[21:26]}]"
+        )
         self.__ws: ClientConnection = ws
         self.__voice_frame_queue: deque = voice_frame_queue
         self.__return_frame_format: dict = return_frame_format
@@ -37,7 +41,8 @@ class SynthesizerReceiverThread(Thread):
         self.__logger.info("Thread start.")
         while self.__running.is_set():
             try:
-                pack: str | bytes = self.__ws.recv(timeout=5)
+                pack: Data = self.__ws.recv(timeout=5)
+                assert isinstance(pack, bytes)
                 vs_result: VoiceSynthesizerResult = VoiceSynthesizerResult.from_msgpack(
                     pack,
                 )
@@ -69,19 +74,23 @@ class SynthesizerReceiverThread(Thread):
         target_frame_rate: int,
         target_frame_size: int,
     ) -> Generator[VoiceSynthesizerResultFrame, None, None]:
-        # 1ch 16000Hzの音声を2ch 48000Hzに変換し、20ms(960 / 48000)ごとに分割し直す。
+        # 音声をs16 2ch 48000Hzに変換し、20ms(960 / 48000)ごとに分割し直す。
+        # ソースの音声はコーデックなどによりフォーマットが変化する。
+        # (wav: 1ch s16 24000Hz, opus: 1ch float32 48000Hz)
         # 960はWebRTCでopus音声を得た際のデフォルトフレームサイズだが、
         # 環境によって異なる可能性がある(要調査)。
         resampler = AudioResampler(
             layout=2,
+            format="s16",
             rate=target_frame_rate,
             frame_size=target_frame_size,
         )
-        container: InputContainer = av.open(BytesIO(vs_result.voice), mode="r")
+        container: InputContainer = av_open(BytesIO(vs_result.voice), mode="r")
         frame_ms: float = target_frame_size / target_frame_rate
         timestamp_sec: float = 0.0
         next_time_sec: float = 0.0
         # mora = {'vowel': None, 'length': 0.0, 'text': None}
+        mora: VoiceSynthesizerMora | None = None
         for decoded_frames in container.decode(audio=0):
             for resampled_frame in resampler.resample(decoded_frames):
                 # 1文字につき複数のフレームがあるため、
@@ -89,14 +98,17 @@ class SynthesizerReceiverThread(Thread):
                 new_text: bool = False
                 if vs_result.mora_queue and timestamp_sec >= next_time_sec:
                     mora = vs_result.mora_queue.pop(0)
-                    next_time_sec += mora["length"]
+                    next_time_sec += mora.length
                     new_text = True
+                assert isinstance(mora, VoiceSynthesizerMora), (
+                    f"mora must be VoiceSynthesizerMora, but got {type(mora)}"
+                )
                 yield VoiceSynthesizerResultFrame(
                     timestamp=timestamp_sec,
                     message=vs_result.message,
-                    vowel=mora["vowel"],
-                    length=mora["length"],
-                    text=mora["text"],
+                    vowel=mora.vowel,
+                    length=mora.length,
+                    text=mora.text,
                     new_text=new_text,
                     vframe=resampled_frame.to_ndarray(),
                 )

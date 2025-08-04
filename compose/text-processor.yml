@@ -1,0 +1,72 @@
+services:
+    text-processor:
+        profiles:
+            - full
+            - backend
+        build:
+            context: ..
+            dockerfile: ./Docker/text-processor/Dockerfile
+        image: ${SINCRO_REGISTRY_NAME}/text-processor:latest
+        ports:
+            - 8004:8004/tcp
+        networks:
+            - sincromisor-net
+        environment:
+            - SINCRO_PROCESSOR_HOST=${SINCRO_PROCESSOR_HOST}
+            - SINCRO_PROCESSOR_PORT=${SINCRO_PROCESSOR_PORT}
+            - SINCRO_PROCESSOR_PUBLIC_BIND_HOST=${SINCRO_PROCESSOR_PUBLIC_BIND_HOST}
+            - SINCRO_PROCESSOR_PUBLIC_BIND_PORT=${SINCRO_PROCESSOR_PUBLIC_BIND_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=consul-agent-processor
+            - SINCRO_CONSUL_AGENT_PORT=8500
+            - SINCRO_PROCESSOR_DIFY_URL=${SINCRO_PROCESSOR_DIFY_URL}
+            - SINCRO_PROCESSOR_DIFY_TOKEN=${SINCRO_PROCESSOR_DIFY_TOKEN}
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            service-initializer:
+                condition: service_completed_successfully
+            consul-agent-processor:
+                condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "curl",
+                    "http://localhost:8004/api/v1/TextProcessor/statuses",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 15
+
+    consul-agent-processor:
+        profiles:
+            - full
+            - backend
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-client=0.0.0.0",
+            ]
+        volumes:
+            - consul-agent-processor-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        healthcheck:
+            test: ["CMD", "consul", "members"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    consul-agent-processor-data:
+
+networks:
+    sincromisor-net:

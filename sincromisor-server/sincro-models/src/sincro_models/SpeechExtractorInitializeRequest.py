@@ -1,4 +1,5 @@
 import time
+from typing import Any
 
 import msgpack
 from pydantic import BaseModel, Field
@@ -16,7 +17,7 @@ class SpeechExtractorInitializeRequest(BaseModel):
         return SpeechExtractorInitializeRequest(**msgpack.unpackb(pack))
 
     def to_msgpack(self) -> bytes:
-        return msgpack.packb(
+        pack: Any | None = msgpack.packb(
             {
                 "session_id": self.session_id,
                 "start_at": self.start_at,
@@ -25,3 +26,5 @@ class SpeechExtractorInitializeRequest(BaseModel):
                 "voice_channels": self.voice_channels,
             },
         )
+        assert isinstance(pack, bytes), "msgpack.packb returned non-bytes"
+        return pack

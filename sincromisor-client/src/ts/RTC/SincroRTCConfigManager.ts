@@ -1,10 +1,10 @@
-export interface IceServerConfig {
+export type IceServerConfig = {
     urls: string;
     username?: string;
     credential?: string;
 }
 
-export interface SincroRTCConfig {
+export type SincroRTCConfig = {
     offerURL: string,
     iceServers: IceServerConfig[]
 }
@@ -30,9 +30,9 @@ export class SincroRTCConfigManager {
     }
 
     private async getServers(onerror: (err: any) => void): Promise<void> {
-        const response: Response = await fetch('/api/v1/rtc/config.json');
+        const response: Response = await fetch('/api/v1/RTCSignalingServer/config.json');
         if (!response.ok) {
-            const err = new Error(`Failed to fetch /api/v1/rtc/config.json: ${response.statusText}`);
+            const err = new Error(`Failed to fetch /api/v1/RTCSignalingServer/config.json: ${response.statusText}`);
             onerror(err);
             throw err;
         }

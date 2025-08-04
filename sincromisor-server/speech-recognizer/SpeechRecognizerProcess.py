@@ -9,10 +9,18 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from setproctitle import setproctitle
-from sincro_config import ServiceDiscoveryReporter, SincromisorLoggerConfig
+from sincro_config import (
+    ServiceDescription,
+    ServiceDiscoveryReferrer,
+    ServiceDiscoveryReporter,
+    SincromisorLoggerConfig,
+)
 from sincro_models import SpeechExtractorResult
 from speech_recognizer.models import SpeechRecognizerProcessArgument
 from speech_recognizer.SpeechRecognizer import SpeechRecognizerWorker
+from speech_recognizer.SpeechRecognizer.SpeechRecognizerMinioClient import (
+    SpeechRecognizerMinioClient,
+)
 
 setproctitle("SPRecognizer")
 args: SpeechRecognizerProcessArgument = SpeechRecognizerProcessArgument.argparse()
@@ -25,12 +33,14 @@ class SpeechRecognizerProcess:
     def __init__(self, args: SpeechRecognizerProcessArgument):
         self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__logger.info("===== Starting SpeechRecognizerProcess =====")
-        self.__args: SpeechRecognizerProcessArgument = (
-            SpeechRecognizerProcessArgument.argparse()
-        )
+        self.__args: SpeechRecognizerProcessArgument = args
         self.__sessions: int = 0
 
     def start(self):
+        self.sd_referrer: ServiceDiscoveryReferrer = ServiceDiscoveryReferrer(
+            consul_agent_host=self.__args.consul_agent_host,
+            consul_agent_port=self.__args.consul_agent_port,
+        )
         speech_recognizer = SpeechRecognizerWorker(voice_log_dir=args.voice_log_dir)
         app: FastAPI = FastAPI()
         event: Event = Event()
@@ -43,15 +53,32 @@ class SpeechRecognizerProcess:
         )
         self.sd_reporter.start()
 
-        @app.get("/api/v1/statuses")
+        @app.get("/api/v1/SpeechRecognizer/statuses")
         async def get_status() -> JSONResponse:
-            return JSONResponse({"worker_type": "SpeechRecognizer", "sessions": self.__sessions})
+            return JSONResponse(
+                {"worker_type": "SpeechRecognizer", "sessions": self.__sessions}
+            )
 
         @app.websocket("/api/v1/SpeechRecognizer")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1
             try:
+                minio_client: SpeechRecognizerMinioClient | None = None
+                minio_description: ServiceDescription | None = (
+                    self.sd_referrer.get_random_worker(worker_type="SincroMinio")
+                )
+                if (
+                    minio_description is not None
+                    and self.__args.minio_access_key
+                    and self.__args.minio_secret_key
+                ):
+                    minio_client = SpeechRecognizerMinioClient(
+                        minio_host=minio_description.service_address,
+                        minio_port=minio_description.service_port,
+                        access_key=self.__args.minio_access_key,
+                        secret_key=self.__args.minio_secret_key,
+                    )
                 await ws.accept()
                 current_speech_id = -1
                 current_speech_buffer = np.zeros(0, dtype=np.int16)
@@ -74,7 +101,9 @@ class SpeechRecognizerProcess:
                             extractor_result.voice,
                         )
                         extractor_result.voice = current_speech_buffer
-                    result = speech_recognizer.recognize(extractor_result)
+                    result = speech_recognizer.recognize(
+                        spe_result=extractor_result, minio_client=minio_client
+                    )
                     await ws.send_bytes(result.to_msgpack())
                 traceback.print_exc()
             except WebSocketDisconnect:
@@ -91,6 +120,7 @@ class SpeechRecognizerProcess:
                     self.__logger.warning(
                         "WebSocket is already closed.",
                     )
+
         try:
             uvicorn.run(app, host=self.__args.host, port=self.__args.port)
         except KeyboardInterrupt:

@@ -1,0 +1,17 @@
+{
+    "service": {
+        "name": "SincroRedis",
+        "id": "SERVICE_ID",
+        "tags": [
+            "redis",
+            "storage"
+        ],
+        "address": "REDIS_IPV4_ADDRESS",
+        "port": 6379,
+        "check": {
+            "tcp": "REDIS_IPV4_ADDRESS:6379",
+            "interval": "10s",
+            "deregister_critical_service_after": "30s"
+        }
+    }
+}

@@ -8,6 +8,7 @@ from time import perf_counter
 import numpy as np
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 
+from .SpeechRecognizerMinioClient import SpeechRecognizerMinioClient
 from .SpeechRecognizerNemo import SpeechRecognizerNemo
 
 
@@ -18,7 +19,11 @@ class SpeechRecognizerNemoWorker:
         self.voice_log_dir: str | None = voice_log_dir
         self.logger.info("SpeechRecognizerWorker is initialized.")
 
-    def recognize(self, spe_result: SpeechExtractorResult) -> SpeechRecognizerResult:
+    def recognize(
+        self,
+        spe_result: SpeechExtractorResult,
+        minio_client: SpeechRecognizerMinioClient | None,
+    ) -> SpeechRecognizerResult:
         start_t = perf_counter()
         result = self.__transcribe_with_score(spe_result.voice)
         sr_result = SpeechRecognizerResult(
@@ -39,6 +44,9 @@ class SpeechRecognizerNemoWorker:
         if spe_result.confirmed and self.voice_log_dir:
             self.__export_result(sr_result)
             self.__export_voice(spe_result)
+        if spe_result.confirmed and minio_client is not None:
+            minio_client.export_result_to_minio(sr_result)
+            minio_client.export_voice_to_minio(spe_result)
         return sr_result
 
     def __transcribe_with_score(self, voice: np.ndarray) -> list[tuple[str, float]]:

@@ -1,0 +1,85 @@
+include:
+    - initializer.yml
+
+services:
+    speech-recognizer:
+        profiles:
+            - full
+            - backend
+        build:
+            context: ..
+            dockerfile: ./Docker/speech-recognizer-${SINCRO_RECOGNIZER_MODEL}/Dockerfile
+        image: ${SINCRO_REGISTRY_NAME}/speech-recognizer-${SINCRO_RECOGNIZER_MODEL}:latest
+        ports:
+            - 8003:8003/tcp
+        volumes:
+            - ../volumes/sincro-cache:/opt/sincromisor/.cache
+        networks:
+            - sincromisor-net
+        environment:
+            - SINCRO_RECOGNIZER_HOST=${SINCRO_RECOGNIZER_HOST}
+            - SINCRO_RECOGNIZER_PORT=${SINCRO_RECOGNIZER_PORT}
+            - SINCRO_RECOGNIZER_PUBLIC_BIND_HOST=${SINCRO_RECOGNIZER_PUBLIC_BIND_HOST}
+            - SINCRO_RECOGNIZER_PUBLIC_BIND_PORT=${SINCRO_RECOGNIZER_PUBLIC_BIND_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=consul-agent-recognizer
+            - SINCRO_CONSUL_AGENT_PORT=8500
+            - SINCRO_MINIO_ACCESS_KEY=${SINCRO_MINIO_ACCESS_KEY}
+            - SINCRO_MINIO_SECRET_KEY=${SINCRO_MINIO_SECRET_KEY}
+            - SINCRO_RECOGNIZER_VOICE_LOG_DIR=${SINCRO_RECOGNIZER_VOICE_LOG_DIR}
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          count: all
+                          capabilities: [gpu]
+        depends_on:
+            service-initializer:
+                condition: service_completed_successfully
+            consul-agent-recognizer:
+                condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "curl",
+                    "http://localhost:8003/api/v1/SpeechRecognizer/statuses",
+                ]
+            start_period: 60s
+            interval: 10s
+            timeout: 5s
+            retries: 15
+
+    consul-agent-recognizer:
+        profiles:
+            - full
+            - backend
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-client=0.0.0.0",
+            ]
+        volumes:
+            - consul-agent-recognizer-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        healthcheck:
+            test: ["CMD", "consul", "members"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    consul-agent-recognizer-data:
+
+networks:
+    sincromisor-net:

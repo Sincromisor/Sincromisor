@@ -1,6 +1,6 @@
 import { FilesetResolver, FaceDetector, Detection } from "@mediapipe/tasks-vision";
 
-declare interface NormalizedKeypoint {
+declare type NormalizedKeypoint = {
     /** X in normalized image coordinates. */
     x: number;
     /** Y in normalized image coordinates. */

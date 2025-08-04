@@ -10,6 +10,8 @@ from aiortc import MediaStreamTrack
 from aiortc.mediastreams import MediaStreamError
 from av.audio.frame import AudioFrame
 from av.audio.resampler import AudioResampler
+from av.frame import Frame
+from av.packet import Packet
 from sincro_models import TextProcessorResult, VoiceSynthesizerResultFrame
 
 from ..AudioBroker import AudioBroker, AudioBrokerError
@@ -58,7 +60,8 @@ class VoiceTransformTrack(MediaStreamTrack):
             return self.__generate_dummy_frame()
 
         try:
-            frame: AudioFrame = await self.__track.recv()
+            frame: Frame | Packet = await self.__track.recv()
+            assert isinstance(frame, AudioFrame)
             return self.__transform(frame)
         except CancelledError:
             self.__logger.info("recv - CancelledError.")
@@ -80,9 +83,15 @@ class VoiceTransformTrack(MediaStreamTrack):
             resampled_frames = self.__resampler.resample(frame)
             for rf in resampled_frames:
                 self.__audio_broker.add_frame(rf.to_ndarray().tobytes())
-            if (sr_result := self.__get_recognized_text()) is not None:
+            if (
+                self.__vcs.text_ch is not None
+                and (sr_result := self.__get_recognized_text()) is not None
+            ):
                 self.__vcs.text_ch.send(sr_result.model_dump_json())
-            if (synth_voice := self.__get_voice_frame()) is not None:
+            if (
+                self.__vcs.telop_ch is not None
+                and (synth_voice := self.__get_voice_frame()) is not None
+            ):
                 if synth_voice.new_text:
                     self.__vcs.telop_ch.send(synth_voice.params_to_json())
                 newframe = frame.from_ndarray(

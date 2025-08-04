@@ -1,0 +1,27 @@
+services:
+    service-initializer:
+        profiles:
+            - full
+            - frontend
+            - backend
+        build:
+            context: ..
+            dockerfile: ./Docker/service-initializer/Dockerfile
+        image: ${SINCRO_REGISTRY_NAME}/service-initializer
+        environment:
+            - SINCRO_MINIO_PUBLIC_BIND_HOST=${SINCRO_MINIO_PUBLIC_BIND_HOST}
+            - SINCRO_MINIO_PUBLIC_BIND_PORT=${SINCRO_MINIO_PUBLIC_BIND_PORT}
+            - SINCRO_MINIO_ACCESS_KEY=${SINCRO_MINIO_ACCESS_KEY}
+            - SINCRO_MINIO_SECRET_KEY=${SINCRO_MINIO_SECRET_KEY}
+            - SINCRO_RECOGNIZER_MODEL=${SINCRO_RECOGNIZER_MODEL}
+        volumes:
+            - ../volumes/sincro-cache:/opt/sincromisor/.cache
+            - ../configs/config.yml:/opt/sincromisor/configs/config.yml:rw
+        networks:
+            - sincromisor-net
+        depends_on:
+            sincro-minio:
+                condition: service_healthy
+
+networks:
+    sincromisor-net:

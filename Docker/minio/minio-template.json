@@ -1,0 +1,17 @@
+{
+    "service": {
+        "name": "SincroMinio",
+        "id": "SERVICE_ID",
+        "tags": [
+            "minio",
+            "storage"
+        ],
+        "address": "MINIO_IPV4_ADDRESS",
+        "port": 9000,
+        "check": {
+            "tcp": "MINIO_IPV4_ADDRESS:9000",
+            "interval": "10s",
+            "deregister_critical_service_after": "30s"
+        }
+    }
+}

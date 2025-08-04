@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 import msgpack
 import numpy as np
@@ -7,10 +8,10 @@ from pydantic import BaseModel
 
 # TypeError: Object of type float16 is not JSON serializable
 class Int16Encoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.float16):
-            return float(obj)
-        return json.JSONEncoder.default(self, obj)
+    def default(self, o):
+        if type(o) is np.float16:
+            return float(o)
+        return json.JSONEncoder.default(self, o)
 
 
 class SpeechRecognizerResult(BaseModel):
@@ -27,7 +28,7 @@ class SpeechRecognizerResult(BaseModel):
     # 発話が完了しているか否か。途中の場合はFalse。
     confirmed: bool = False
     # [('こんにちは', 0.387), ('。', 0.998), ('</s>', 1.0)]
-    result: list
+    result: list[tuple[str, float]]
 
     def word_filter(self, text: str) -> bool:
         if text == "</s>":
@@ -58,7 +59,7 @@ class SpeechRecognizerResult(BaseModel):
         )
 
     def to_msgpack(self) -> bytes:
-        return msgpack.packb(
+        pack: Any | None = msgpack.packb(
             {
                 "session_id": self.session_id,
                 "speech_id": self.speech_id,
@@ -68,6 +69,8 @@ class SpeechRecognizerResult(BaseModel):
                 "result": self.result,
             },
         )
+        assert isinstance(pack, bytes), "msgpack.packb returned non-bytes"
+        return pack
 
     @classmethod
     def from_msgpack(cls, pack: bytes) -> "SpeechRecognizerResult":

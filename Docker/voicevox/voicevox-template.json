@@ -1,0 +1,17 @@
+{
+    "service": {
+        "name": "SincroVoiceVox",
+        "id": "SERVICE_ID",
+        "tags": [
+            "http",
+            "voicevox"
+        ],
+        "address": "VOICEVOX_IPV4_ADDRESS",
+        "port": 50021,
+        "check": {
+            "http": "http://VOICEVOX_IPV4_ADDRESS:50021/version",
+            "interval": "10s",
+            "deregister_critical_service_after": "30s"
+        }
+    }
+}

@@ -1,4 +1,4 @@
-export interface ChatMessage {
+export type ChatMessage = {
     message_id: string, // ULID
     message_type: string, // system, error, reset, user
     speaker_id: string, // @systemのsystem部分(@は無し)
@@ -7,22 +7,11 @@ export interface ChatMessage {
     created_at: number
 }
 
-export interface ChatHistory {
+export type ChatHistory = {
     messages: ChatMessage[],
 }
 
-/*
-export interface TextChannelMessage {
-    session_id: string,
-    speech_id: number,
-    sequence_id: number,
-    start_at: number,
-    confirmed: boolean,
-    recognizedText: [string, number][],
-    resultText: string
-}*/
-
-export interface TelopChannelMessage {
+export type TelopChannelMessage = {
     timestamp: number,
     message: string,
     vowel: string,
@@ -30,20 +19,6 @@ export interface TelopChannelMessage {
     length: number,
     new_text: boolean
 }
-
-/*
-export interface TextProcessorResult {
-    session_id: string,
-    speech_id: number,
-    sequence_id: number,
-    confirmed: boolean,
-    history: ChatHistory,
-    request_message: ChatMessage,
-    response_message: ChatMessage,
-    end_of_response: boolean,
-    voice_text: string | null
-}
-*/
 
 export class ChatMessageBuilder implements ChatMessage {
     private static serial_no: number = 0;

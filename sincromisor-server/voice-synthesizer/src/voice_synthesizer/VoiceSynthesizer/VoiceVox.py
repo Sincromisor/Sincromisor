@@ -1,6 +1,5 @@
-import json
-
 import requests
+from sincro_models.VoiceVoxQuery import VoiceVoxQuery
 
 # API reference
 # https://voicevox.github.io/voicevox_engine/api/
@@ -20,14 +19,14 @@ class VoiceVox:
     # * +text+ - クエリに変換するテキスト文字列。
     # * +speaker+ - 話者ID。+speakers+メソッドで得られる。(default: 1)
     # * 戻り値 - クエリ連想配列
-    def audio_query(self, text: str, style_id: int = 1) -> dict:
+    def audio_query(self, text: str, style_id: int = 1) -> VoiceVoxQuery:
         params: dict[str, str | int] = {self.style_id_key: style_id, "text": text}
         res = requests.post(
             url=f"{self.base_url}/audio_query",
             params=params,
         )
         self.response_validator(res)
-        return res.json()
+        return VoiceVoxQuery.model_validate(res.json())
 
     # テキストからアクセント句を生成。
     # * +text+ - アクセントに変換する文字列。
@@ -63,12 +62,12 @@ class VoiceVox:
     # * +query+ - 変換を要求するクエリ。
     # * +speaker+ - 話者ID。+speakers+メソッドで得られる。(default: 1)
     # * 戻り値 - wavストリーム
-    def query_synthesis(self, query: dict, style_id: int = 1) -> bytes:
+    def query_synthesis(self, query: VoiceVoxQuery, style_id: int = 1) -> bytes:
         res = requests.post(
             url=f"{self.base_url}/synthesis",
             params={self.style_id_key: style_id},
             headers={"Content-Type": "application/json"},
-            data=json.dumps(query),
+            data=query.model_dump_json(),
         )
         self.response_validator(res)
         return res.content
@@ -77,7 +76,7 @@ class VoiceVox:
     # * +text+ - 音声に変換する文字列。
     # * +speaker+ - 話者ID。+speakers+メソッドで得られる。(default: 1)
     def synthesis(self, text: str, style_id: int = 1) -> bytes:
-        query = self.audio_query(text, style_id)
+        query: VoiceVoxQuery = self.audio_query(text, style_id)
         return self.query_synthesis(query, style_id)
 
     # ふたりの話者でモーフィングした音声を生成する。
@@ -89,7 +88,7 @@ class VoiceVox:
     # * 戻り値 - wavストリーム
     def synthesis_morphing(
         self,
-        query: dict,
+        query: VoiceVoxQuery,
         base_style_id: int = 1,
         target_style_id: int = 2,
         morph_rate: float = 0.5,
@@ -102,7 +101,7 @@ class VoiceVox:
                 "morph_rate": morph_rate,
             },
             headers={"Content-Type": "application/json"},
-            data=json.dumps(query),
+            data=query.model_dump_json(),
         )
         self.response_validator(res)
         return res.content
@@ -124,6 +123,24 @@ class VoiceVox:
         )
         self.response_validator(res)
         return res.json()
+
+    # スタイルIDをキーにして話者名とスタイル名を持つdictを返す。
+    def get_speaker_ids(self) -> dict:
+        speakers: list = self.speakers()
+
+        ids: dict = {}
+        for sp in speakers:
+            spname = sp["name"]
+            spuuid = sp["speaker_uuid"]
+            for style in sp["styles"]:
+                stname = style["name"]
+                stid = style["id"]
+                ids[stid] = {"name": spname, "style": stname, "speakers_uuid": spuuid}
+        return ids
+
+    def get_speaker_info(self, speaker_id: int) -> dict:
+        speaker_ids: dict = self.get_speaker_ids()
+        return speaker_ids[speaker_id]
 
     # サーバエンジンが保持しているプリセットを取得。
     # * 戻り値 - 配列

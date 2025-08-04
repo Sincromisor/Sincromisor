@@ -1,3 +1,5 @@
+from typing import Any
+
 import msgpack
 from pydantic import BaseModel
 
@@ -23,11 +25,8 @@ class TextProcessorRequest(BaseModel):
     history: ChatHistory
     request_message: ChatMessage
 
-    def append_request_message(self, text: str):
-        self.request_message += text
-
     @classmethod
-    def from_msgpack(self, pack: bytes) -> "TextProcessorRequest":
+    def from_msgpack(cls, pack: bytes) -> "TextProcessorRequest":
         contents = msgpack.unpackb(pack)
         return TextProcessorRequest(**contents)
 
@@ -39,7 +38,7 @@ class TextProcessorRequest(BaseModel):
         return obj
 
     def to_msgpack(self) -> bytes:
-        return msgpack.packb(
+        pack: Any | None = msgpack.packb(
             {
                 "session_id": self.session_id,
                 "speech_id": self.speech_id,
@@ -50,3 +49,5 @@ class TextProcessorRequest(BaseModel):
             },
             default=self.__msgpack_pack,
         )
+        assert isinstance(pack, bytes), "msgpack.packb returned non-bytes"
+        return pack

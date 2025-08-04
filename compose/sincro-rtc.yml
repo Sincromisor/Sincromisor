@@ -1,0 +1,78 @@
+include:
+    - initializer.yml
+
+services:
+    sincro-rtc:
+        profiles:
+            - full
+            - rtc
+        build:
+            context: ..
+            dockerfile: ./Docker/sincro-rtc/Dockerfile
+        image: ${SINCRO_REGISTRY_NAME}/sincro-rtc:latest
+        ports:
+            - 8001:8001/tcp
+        volumes:
+            []
+            # - ../configs/config.yml:/opt/sincromisor/configs/config.yml:ro
+        networks:
+            - sincromisor-net
+        environment:
+            - SINCRO_RTC_HOST=${SINCRO_RTC_HOST}
+            - SINCRO_RTC_PORT=${SINCRO_RTC_PORT}
+            - SINCRO_RTC_PUBLIC_BIND_HOST=${SINCRO_RTC_PUBLIC_BIND_HOST}
+            - SINCRO_RTC_PUBLIC_BIND_PORT=${SINCRO_RTC_PUBLIC_BIND_PORT}
+            - SINCRO_CONSUL_AGENT_HOST=consul-agent-rtc
+            - SINCRO_CONSUL_AGENT_PORT=8500
+            - SINCRO_RTC_FORWARDED_ALLOW_IPS=${SINCRO_RTC_FORWARDED_ALLOW_IPS}
+            - SINCRO_RTC_MAX_SESSIONS=${SINCRO_RTC_MAX_SESSIONS}
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            service-initializer:
+                condition: service_completed_successfully
+            consul-agent-rtc:
+                condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "curl",
+                    "http://localhost:8001/api/v1/RTCSignalingServer/statuses",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 15
+
+    consul-agent-rtc:
+        profiles:
+            - full
+            - rtc
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-client=0.0.0.0",
+            ]
+        volumes:
+            - consul-agent-rtc-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        healthcheck:
+            test: ["CMD", "consul", "members"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    consul-agent-rtc-data:
+
+networks:
+    sincromisor-net:

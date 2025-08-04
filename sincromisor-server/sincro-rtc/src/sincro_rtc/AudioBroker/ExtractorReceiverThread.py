@@ -7,6 +7,7 @@ from threading import Event, Thread
 from sincro_models import SpeechExtractorResult
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import ClientConnection
+from websockets.typing import Data
 
 
 class ExtractorReceiverThread(Thread):
@@ -30,7 +31,8 @@ class ExtractorReceiverThread(Thread):
         self.__logger.info("Thread start.")
         while self.__running.is_set():
             try:
-                pack: str | bytes = self.__ws.recv(timeout=5)
+                pack: Data = self.__ws.recv(timeout=5)
+                assert isinstance(pack, bytes)
                 se_result: SpeechExtractorResult = SpeechExtractorResult.from_msgpack(
                     pack,
                 )

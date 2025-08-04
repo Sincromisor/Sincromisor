@@ -1,0 +1,51 @@
+include:
+    - initializer.yml
+
+services:
+    sincro-consul-server:
+        profiles:
+            - full
+            - backend
+            - external
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-server",
+                "-node=${SINCRO_CONSUL_SERVER_NODE_NAME}",
+                "-bootstrap-expect=1",
+                "-ui",
+                "-client=0.0.0.0",
+            ]
+        ports:
+            # https://developer.hashicorp.com/consul/docs/install/ports
+            - 8300:8300
+            - 8301:8301/tcp
+            - 8301:8301/udp
+            - 8302:8302/tcp
+            - 8302:8302/udp
+            - 8500:8500
+            - 8501:8501
+            - 8502:8502
+            - 8503:8503
+            - 8600:8600/tcp
+            - 8600:8600/udp
+        volumes:
+            - consul-server-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        healthcheck:
+            test: ["CMD", "consul", "members"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+networks:
+    sincromisor-net:
+
+volumes:
+    consul-server-data:
