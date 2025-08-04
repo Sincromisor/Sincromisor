@@ -59,7 +59,7 @@ class VoiceSynthesizerProcess:
                 {"worker_type": "VoiceSynthesizer", "sessions": self.__sessions}
             )
 
-        @app.websocket("/api/v1/VoiceSynthesizer")
+        @app.websocket("/api/v1/VoiceSynthesizer/synthesize")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1

@@ -64,7 +64,7 @@ class SpeechRecognizerProcess:
                 {"worker_type": "SpeechRecognizer", "sessions": self.__sessions}
             )
 
-        @app.websocket("/api/v1/SpeechRecognizer")
+        @app.websocket("/api/v1/SpeechRecognizer/recognize")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1

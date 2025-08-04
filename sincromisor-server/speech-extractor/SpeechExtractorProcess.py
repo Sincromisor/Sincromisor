@@ -51,7 +51,7 @@ class SpeechExtractorProcess:
                 {"worker_type": "SpeechExtractor", "sessions": self.__sessions}
             )
 
-        @app.websocket("/api/v1/SpeechExtractor")
+        @app.websocket("/api/v1/SpeechExtractor/extract")
         async def websocket_chat_endpoint(
             ws: WebSocket, max_silence_ms: int = 600
         ) -> None:

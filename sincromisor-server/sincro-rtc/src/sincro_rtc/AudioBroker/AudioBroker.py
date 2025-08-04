@@ -232,7 +232,7 @@ class AudioBroker:
                 max_slince_ms: int = 600
             case _:
                 max_slince_ms: int = 1000
-        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/SpeechExtractor?max_silence_ms={max_slince_ms}"
+        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/SpeechExtractor/extract?max_silence_ms={max_slince_ms}"
         self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)
         sender_t: ExtractorSenderThread = ExtractorSenderThread(
@@ -260,7 +260,7 @@ class AudioBroker:
 
     def __recognizer(self) -> AudioBrokerCommunicator:
         worker: ServiceDescription = self.__get_worker(worker_type="SpeechRecognizer")
-        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/SpeechRecognizer"
+        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/SpeechRecognizer/recognize"
         self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)
         sender_t: RecognizerSenderThread = RecognizerSenderThread(
@@ -288,7 +288,7 @@ class AudioBroker:
 
     def __text_processor(self) -> AudioBrokerCommunicator:
         worker: ServiceDescription = self.__get_worker(worker_type="TextProcessor")
-        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/TextProcessor?talk_mode={self.__talk_mode}"
+        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/TextProcessor/{self.__talk_mode}"
         self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)
         sender_t: TextProcessorSenderThread = TextProcessorSenderThread(
@@ -318,7 +318,7 @@ class AudioBroker:
 
     def __synthesizer(self) -> AudioBrokerCommunicator:
         worker: ServiceDescription = self.__get_worker(worker_type="VoiceSynthesizer")
-        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/VoiceSynthesizer"
+        ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/VoiceSynthesizer/synthesize"
         self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)
         sender_t: SynthesizerSenderThread = SynthesizerSenderThread(
