@@ -45,6 +45,8 @@ class RTCSignalingServer:
         rtcSM: RTCSessionManager = RTCSessionManager(
             consul_agent_host=self.__args.consul_agent_host,
             consul_agent_port=self.__args.consul_agent_port,
+            fallback_host=self.__args.fallback_host,
+            fallback_port=self.__args.fallback_port,
         )
         app: FastAPI = FastAPI(on_shutdown=[rtcSM.shutdown])
         """

@@ -28,6 +28,8 @@ class VoiceTransformTrack(MediaStreamTrack):
         rtc_finalize_event: Event,
         consul_agent_host: str,
         consul_agent_port: int,
+        fallback_host: str | None = None,
+        fallback_port: int | None = None,
     ):
         super().__init__()
         self.__logger: Logger = logging.getLogger(
@@ -46,6 +48,8 @@ class VoiceTransformTrack(MediaStreamTrack):
             talk_mode=self.__vcs.talk_mode,
             consul_agent_host=consul_agent_host,
             consul_agent_port=consul_agent_port,
+            fallback_host=fallback_host,
+            fallback_port=fallback_port,
         )
 
     # デコード済みのオーディオフレームを受け取って、何らかの処理を行った上で

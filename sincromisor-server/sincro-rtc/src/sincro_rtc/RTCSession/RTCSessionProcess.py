@@ -41,6 +41,8 @@ class RTCSessionProcess(Process):
         rtc_finalize_event: Event,
         consul_agent_host: str,
         consul_agent_port: int,
+        fallback_host: str | None = None,
+        fallback_port: int | None = None,
     ):
         Process.__init__(self)
         self.__logger: Logger = logging.getLogger(
@@ -52,8 +54,10 @@ class RTCSessionProcess(Process):
         self.__request_talk_mode: str = request_talk_mode
         self.__server_sdp_pipe: Connection = sdp_pipe
         self.__rtc_finalize_event: Event = rtc_finalize_event
-        self.__consul_agent_host = consul_agent_host
-        self.__consul_agent_port = consul_agent_port
+        self.__consul_agent_host: str = consul_agent_host
+        self.__consul_agent_port: int = consul_agent_port
+        self.__fallback_host: str | None = fallback_host
+        self.__fallback_port: int | None = fallback_port
 
     def __get_ice_servers(self):
         config = SincromisorConfig.from_yaml()
@@ -127,6 +131,8 @@ class RTCSessionProcess(Process):
                     rtc_finalize_event=self.__rtc_finalize_event,
                     consul_agent_host=self.__consul_agent_host,
                     consul_agent_port=self.__consul_agent_port,
+                    fallback_host=self.__fallback_host,
+                    fallback_port=self.__fallback_port,
                 )
                 self.__vcs.peer.addTrack(self.__vcs.audio_transform_track)
             else:
@@ -146,9 +152,9 @@ class RTCSessionProcess(Process):
         try:
             # send answer
             answer: RTCSessionDescription | None = await self.__vcs.peer.createAnswer()
-            assert isinstance(
-                answer, RTCSessionDescription
-            ), "Failed to create RTCSessionDescription."
+            assert isinstance(answer, RTCSessionDescription), (
+                "Failed to create RTCSessionDescription."
+            )
             # 設定されているstun/turnサーバが利用できない時にエラーとなる
             # [Sincromisor]E: socket.gaierror: [Errno -2] Name or service not known
             await self.__vcs.peer.setLocalDescription(answer)

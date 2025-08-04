@@ -15,12 +15,20 @@ from .RTCSessionProcessManagementThread import RTCSessionProcessManagementThread
 
 
 class RTCSessionManager:
-    def __init__(self, consul_agent_host: str, consul_agent_port: int):
+    def __init__(
+        self,
+        consul_agent_host: str,
+        consul_agent_port: int,
+        fallback_host: str | None,
+        fallback_port: int | None,
+    ):
         self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__processes: dict[str, RTCSessionProcessDescription] = {}
         self.__join_timeout: int = 10
         self.__consul_agent_host: str = consul_agent_host
         self.__consul_agent_port: int = consul_agent_port
+        self.__fallback_host: str | None = fallback_host
+        self.__fallback_port: int | None = fallback_port
 
     # WebRTCのセッションを持つプロセスを新たに生成し、
     # そのプロセスが持つセッションのSDPをdictとして返す。
@@ -41,6 +49,8 @@ class RTCSessionManager:
             sdp_pipe=cl_pipe,
             consul_agent_host=self.__consul_agent_host,
             consul_agent_port=self.__consul_agent_port,
+            fallback_host=self.__fallback_host,
+            fallback_port=self.__fallback_port,
         )
         ps.start()
 

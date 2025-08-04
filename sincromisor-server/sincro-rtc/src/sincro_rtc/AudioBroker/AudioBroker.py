@@ -7,6 +7,7 @@ from threading import Event, Thread
 from sincro_config import (
     ServiceDescription,
     ServiceDiscoveryReferrer,
+    ServiceDiscoveryReferrerError,
 )
 from sincro_models import ChatMessage
 from websockets.sync.client import ClientConnection, connect
@@ -110,6 +111,8 @@ class AudioBroker:
         talk_mode: str,
         consul_agent_host: str,
         consul_agent_port: int,
+        fallback_host: str | None = None,
+        fallback_port: int | None = None,
     ):
         self.__logger: Logger = logging.getLogger(
             "sincro." + self.__class__.__name__ + f"[{session_id[21:26]}]"
@@ -119,6 +122,8 @@ class AudioBroker:
         self.__sd_refrrer: ServiceDiscoveryReferrer = ServiceDiscoveryReferrer(
             consul_agent_host=consul_agent_host, consul_agent_port=consul_agent_port
         )
+        self.__fallback_host: str | None = fallback_host
+        self.__fallback_port: int | None = fallback_port
 
         # AudioBrokerもしくは子スレッドでなにかしらの問題が発生したら、
         # runningをclearして全てを停止する。
@@ -193,12 +198,29 @@ class AudioBroker:
             self.__logger.error("__communicators is not defined.")
         self.__logger.info("AudioBroker closed.")
 
-    def __extractor(self) -> AudioBrokerCommunicator:
-        worker: ServiceDescription | None = self.__sd_refrrer.get_random_worker(
-            worker_type="SpeechExtractor"
-        )
+    def __get_worker(self, worker_type: str) -> ServiceDescription:
+        worker: ServiceDescription | None
+        try:
+            worker = self.__sd_refrrer.get_random_worker(worker_type=worker_type)
+        except ServiceDiscoveryReferrerError as e:
+            self.__logger.error(
+                f"ServiceDiscoveryReferrerError: {repr(e)}\n{traceback.format_exc()}"
+            )
+            if self.__fallback_host is None or self.__fallback_port is None:
+                raise AudioBrokerError(f"{worker_type} fallback worker is not found.")
+            worker = ServiceDescription(
+                index=-1,
+                service_name=worker_type,
+                service_id=f"{worker_type}FallbackServer",
+                service_address=self.__fallback_host,
+                service_port=self.__fallback_port,
+            )
         if worker is None:
-            raise AudioBrokerError("SpeechExtractor worker is not found.")
+            raise AudioBrokerError(f"{worker_type} worker is not found.")
+        return worker
+
+    def __extractor(self) -> AudioBrokerCommunicator:
+        worker: ServiceDescription = self.__get_worker(worker_type="SpeechExtractor")
         match self.__talk_mode:
             case "chat":
                 max_slince_ms: int = 1000
@@ -233,11 +255,7 @@ class AudioBroker:
         )
 
     def __recognizer(self) -> AudioBrokerCommunicator:
-        worker: ServiceDescription | None = self.__sd_refrrer.get_random_worker(
-            worker_type="SpeechRecognizer"
-        )
-        if worker is None:
-            raise AudioBrokerError("SpeechRecognizer worker is not found.")
+        worker: ServiceDescription = self.__get_worker(worker_type="SpeechRecognizer")
         ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/SpeechRecognizer"
         self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)
@@ -265,11 +283,7 @@ class AudioBroker:
         )
 
     def __text_processor(self) -> AudioBrokerCommunicator:
-        worker: ServiceDescription | None = self.__sd_refrrer.get_random_worker(
-            worker_type="TextProcessor"
-        )
-        if worker is None:
-            raise AudioBrokerError("TextProcessor worker is not found.")
+        worker: ServiceDescription = self.__get_worker(worker_type="TextProcessor")
         ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/TextProcessor?talk_mode={self.__talk_mode}"
         self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)
@@ -299,11 +313,7 @@ class AudioBroker:
         )
 
     def __synthesizer(self) -> AudioBrokerCommunicator:
-        worker: ServiceDescription | None = self.__sd_refrrer.get_random_worker(
-            worker_type="VoiceSynthesizer"
-        )
-        if worker is None:
-            raise AudioBrokerError("voiceSynthesizer worker is not found.")
+        worker: ServiceDescription = self.__get_worker(worker_type="VoiceSynthesizer")
         ws_url: str = f"ws://{worker.service_address}:{worker.service_port}/api/v1/VoiceSynthesizer"
         self.__logger.info(f"Connecting {ws_url}")
         ws: ClientConnection = connect(ws_url)

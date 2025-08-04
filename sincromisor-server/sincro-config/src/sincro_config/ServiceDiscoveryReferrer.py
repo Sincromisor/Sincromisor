@@ -3,6 +3,18 @@ from collections.abc import Generator
 
 from consul import Consul
 from pydantic import BaseModel
+from requests.exceptions import ConnectionError
+
+
+class ServiceDiscoveryReferrerError(Exception):
+    """Custom exception for service discovery errors."""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self):
+        return f"ServiceDiscoveryError: {self.message}"
 
 
 class ServiceDescription(BaseModel):
@@ -20,6 +32,8 @@ class ServiceDescription(BaseModel):
 
 class ServiceDiscoveryReferrer:
     def __init__(self, consul_agent_host: str, consul_agent_port: int):
+        self.__consul_agent_host: str = consul_agent_host
+        self.__consul_agent_port: int = consul_agent_port
         self.consul: Consul = Consul(host=consul_agent_host, port=consul_agent_port)
 
     # consulに登録されているサービスの一覧を返す。
@@ -41,7 +55,13 @@ class ServiceDiscoveryReferrer:
     def get_random_worker(self, worker_type: str) -> ServiceDescription | None:
         index: int
         workers: list
-        index, workers = self.__healthy_service(worker_type=worker_type)
+        try:
+            index, workers = self.__healthy_service(worker_type=worker_type)
+        except ConnectionError as e:
+            raise ServiceDiscoveryReferrerError(
+                f"Failed to connect to Consul agent at {self.__consul_agent_host}:{self.__consul_agent_port}"
+            ) from e
+
         if not workers:
             return None
         worker: dict = random.choice(workers)
@@ -60,7 +80,12 @@ class ServiceDiscoveryReferrer:
         index: int
         workers: list
         worker: dict
-        index, workers = self.__service(worker_type=worker_type)
+        try:
+            index, workers = self.__service(worker_type=worker_type)
+        except ConnectionError as e:
+            raise ServiceDiscoveryReferrerError(
+                f"Failed to connect to Consul agent at {self.__consul_agent_host}:{self.__consul_agent_port}"
+            ) from e
         for worker in workers:
             yield ServiceDescription(
                 index=index,
@@ -74,7 +99,9 @@ class ServiceDiscoveryReferrer:
 if __name__ == "__main__":
     from pprint import pprint
 
-    sdr = ServiceDiscoveryReferrer(consul_agent_host="127.0.0.1", consul_agent_port=8500)
+    sdr = ServiceDiscoveryReferrer(
+        consul_agent_host="127.0.0.1", consul_agent_port=8500
+    )
     print("All workers:")
     for worker in sdr.get_all_workers("SpeechRecognizer"):
         pprint(worker)
