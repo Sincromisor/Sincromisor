@@ -9,6 +9,7 @@ include:
     - compose/consul-server.yml
     - compose/minio.yml
     - compose/redis.yml
+    - compose/mediamtx.yml
 
 networks:
     sincromisor-net:

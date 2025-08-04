@@ -1,0 +1,18 @@
+services:
+  sincro-mediamtx:
+    profiles:
+      - full
+      - backend
+      - external
+    image: bluenviron/mediamtx:latest
+    ports:
+      - 1935:1935/tcp
+    networks:
+      - sincromisor-net
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 10s
+
+networks:
+  sincromisor-net:
