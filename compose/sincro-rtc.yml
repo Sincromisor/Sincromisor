@@ -26,6 +26,8 @@ services:
             - SINCRO_CONSUL_AGENT_PORT=8500
             - SINCRO_RTC_FORWARDED_ALLOW_IPS=${SINCRO_RTC_FORWARDED_ALLOW_IPS}
             - SINCRO_RTC_MAX_SESSIONS=${SINCRO_RTC_MAX_SESSIONS}
+            - SINCRO_RTC_FALLBACK_HOST=${SINCRO_RTC_FALLBACK_HOST}
+            - SINCRO_RTC_FALLBACK_PORT=${SINCRO_RTC_FALLBACK_PORT}
         deploy:
             restart_policy:
                 condition: any

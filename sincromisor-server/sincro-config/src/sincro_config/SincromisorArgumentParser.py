@@ -15,6 +15,7 @@ class SincromisorArgumentParser(BaseModel):
         return cls.__name__
 
     @classmethod
+    # defaultがNoneで必要な値の場合のみ、required=Trueにする
     def add_argument(
         cls,
         parser: ArgumentParser,
@@ -22,6 +23,7 @@ class SincromisorArgumentParser(BaseModel):
         env_name: str,
         help: str,
         default: str | int | float | None = None,
+        required: bool = False,
     ) -> None:
         value: str | int | float | None = os.environ.get(env_name)
         if value is None and default is not None:
@@ -31,7 +33,7 @@ class SincromisorArgumentParser(BaseModel):
             cmd_name,
             help=help,
             default=value,
-            required=not bool(value),
+            required=required and not bool(value),
         )
 
     @classmethod

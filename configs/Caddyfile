@@ -7,7 +7,8 @@
     root * /srv/sincromisor-client
     file_server
 
-    reverse_proxy /api/* {
+    # RTCSignalingServer
+    reverse_proxy /api/v1/RTCSignalingServer/* {
         dynamic a {
             name RTCSignalingServer.service.consul
             port 8001
@@ -18,6 +19,55 @@
         lb_policy random
     }
 
+    # SpeechExtractor(service discovery fallback server)
+    reverse_proxy /api/v1/SpeechExtractor/* {
+        dynamic a {
+            name SpeechExtractor.service.consul
+            port 8002
+            resolvers consul-agent-frontend:8600
+            versions ipv4
+            refresh 5s
+        }
+        lb_policy random
+    }
+
+    # SpeechRecognizer(service discovery fallback server)
+    reverse_proxy /api/v1/SpeechRecognizer/* {
+        dynamic a {
+            name SpeechRecognizer.service.consul
+            port 8003
+            resolvers consul-agent-frontend:8600
+            versions ipv4
+            refresh 5s
+        }
+        lb_policy random
+    }
+
+    # TextProcessor(service discovery fallback server)
+    reverse_proxy /api/v1/TextProcessor/* {
+        dynamic a {
+            name TextProcessor.service.consul
+            port 8004
+            resolvers consul-agent-frontend:8600
+            versions ipv4
+            refresh 5s
+        }
+        lb_policy random
+    }
+
+    # VoiceSynthesizer(service discovery fallback server)
+    reverse_proxy /api/v1/VoiceSynthesizer/* {
+        dynamic a {
+            name VoiceSynthesizer.service.consul
+            port 8005
+            resolvers consul-agent-frontend:8600
+            versions ipv4
+            refresh 5s
+        }
+        lb_policy random
+    }
+
+    # health check
     respond /api/v1/Frontend/statuses 200 {
         body "{\"worker_type\": \"Frontend\"}"
         close

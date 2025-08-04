@@ -1,5 +1,9 @@
 from .RTCIceServerConfig import RTCIceServerConfig
-from .ServiceDiscoveryReferrer import ServiceDescription, ServiceDiscoveryReferrer
+from .ServiceDiscoveryReferrer import (
+    ServiceDescription,
+    ServiceDiscoveryReferrer,
+    ServiceDiscoveryReferrerError,
+)
 from .ServiceDiscoveryReporter import ServiceDiscoveryReporter
 from .SincromisorArgumentParser import SincromisorArgumentParser
 from .SincromisorConfig import SincromisorConfig
@@ -9,11 +13,9 @@ __all__ = [
     "SincromisorConfig",
     "RTCIceServerConfig",
     "SincromisorLoggerConfig",
-    "KeepAliveReporter",
-    "WorkerStatus",
-    "WorkerStatusManager",
     "SincromisorArgumentParser",
     "ServiceDiscoveryReporter",
     "ServiceDiscoveryReferrer",
+    "ServiceDiscoveryReferrerError",
     "ServiceDescription",
 ]

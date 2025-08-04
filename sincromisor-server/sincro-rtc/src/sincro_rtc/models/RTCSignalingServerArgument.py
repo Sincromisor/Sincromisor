@@ -10,6 +10,8 @@ class RTCSignalingServerArgument(SincromisorArgumentParser):
     public_bind_port: int
     forwarded_allow_ips: str
     max_sessions: int
+    fallback_host: str | None
+    fallback_port: int | None
 
     @classmethod
     def set_args(cls, parser: ArgumentParser) -> None:
@@ -54,7 +56,7 @@ class RTCSignalingServerArgument(SincromisorArgumentParser):
             cmd_name="--forwarded-allow-ips",
             env_name="SINCRO_RTC_FORWARDED_ALLOW_IPS",
             default="127.0.0.0/8",
-            help="Reverse proxy IPs",
+            help="Reverse proxy IPs(default: 127.0.0.0/8)",
         )
 
         cls.add_argument(
@@ -63,6 +65,26 @@ class RTCSignalingServerArgument(SincromisorArgumentParser):
             env_name="SINCRO_RTC_MAX_SESSIONS",
             default=10,
             help="Max WebRTC sessions(default: 10)",
+        )
+
+        # フォールバックAPIサーバーのホスト名
+        # 必要に応じてリバースプロキシサーバーのホスト名を指定する。
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--fallback-host",
+            env_name="SINCRO_RTC_FALLBACK_HOST",
+            default=None,
+            help="Fallback server host(default: None)",
+        )
+
+        # フォールバックAPIサーバーのポート番号
+        # 必要に応じてリバースプロキシサーバーのポート番号を指定する。
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--fallback-port",
+            env_name="SINCRO_RTC_FALLBACK_PORT",
+            default=80,
+            help="Fallback server port(default: 80)",
         )
 
         return
