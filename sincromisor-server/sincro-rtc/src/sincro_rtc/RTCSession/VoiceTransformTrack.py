@@ -26,8 +26,8 @@ class VoiceTransformTrack(MediaStreamTrack):
         track: MediaStreamTrack,
         vcs: RTCVoiceChatSession,
         rtc_finalize_event: Event,
-        consul_agent_host: str,
-        consul_agent_port: int,
+        consul_agent_host: str | None,
+        consul_agent_port: int | None,
         fallback_host: str | None = None,
         fallback_port: int | None = None,
     ):

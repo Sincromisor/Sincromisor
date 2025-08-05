@@ -32,6 +32,11 @@ class TextProcessorProcess:
         self.__sessions: int = 0
 
     def start(self):
+        if not self.__args.consul_agent_host or not self.__args.consul_agent_port:
+            raise RuntimeError(
+                "Consul agent is not set. Service discovery will not be available.",
+            )
+
         app: FastAPI = FastAPI()
         event: Event = Event()
         self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
@@ -49,26 +54,46 @@ class TextProcessorProcess:
                 {"worker_type": "TextProcessor", "sessions": self.__sessions}
             )
 
-        # talk_mode: chat, sincro
-        # /TextProcessor?talk_mode=chat
-        @app.websocket("/api/v1/TextProcessor")
+        @app.websocket("/api/v1/TextProcessor/chat")
         async def websocket_chat_endpoint(ws: WebSocket, talk_mode: str | None) -> None:
-            self.__logger.info(f"Connected Websocket - talk_mode={talk_mode}")
+            self.__logger.info("Connected Websocket - chat")
             self.__sessions += 1
             try:
                 text_worker: TextProcessorWorker
                 await ws.accept()
-                if (
-                    self.__args.dify_url
-                    and self.__args.dify_token
-                    and talk_mode == "chat"
-                ):
+                if self.__args.dify_url and self.__args.dify_token:
                     text_worker = DifyTextProcessorWorker(
                         base_url=self.__args.dify_url,
                         api_key=self.__args.dify_token,
                     )
+                    await text_worker.communicate(ws=ws)
                 else:
-                    text_worker = PokeTextProcessorWorker()
+                    raise RuntimeError(
+                        "Dify URL and token are required for chat mode.",
+                    )
+            except WebSocketDisconnect:
+                self.__logger.info("Disconnected WebSocket.")
+            except Exception as e:
+                self.__logger.error(
+                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
+                )
+            finally:
+                self.__sessions -= 1
+                try:
+                    await ws.close()
+                except RuntimeError:
+                    self.__logger.warning(
+                        "WebSocket is already closed.",
+                    )
+
+        @app.websocket("/api/v1/TextProcessor/sincro")
+        async def websocket_sincro_endpoint(ws: WebSocket) -> None:
+            self.__logger.info("Connected Websocket - sincro")
+            self.__sessions += 1
+            try:
+                text_worker: TextProcessorWorker
+                await ws.accept()
+                text_worker = PokeTextProcessorWorker()
                 await text_worker.communicate(ws=ws)
             except WebSocketDisconnect:
                 self.__logger.info("Disconnected WebSocket.")

@@ -32,6 +32,10 @@ class SpeechExtractorProcess:
         SpeechExtractorWorker.setup_model()
         app: FastAPI = FastAPI()
         event: Event = Event()
+        if not self.__args.consul_agent_host or not self.__args.consul_agent_port:
+            raise RuntimeError(
+                "Consul agent is not set. Service discovery will not be available.",
+            )
         self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
             worker_type="SpeechExtractor",
             consul_host=self.__args.consul_agent_host,
@@ -47,7 +51,7 @@ class SpeechExtractorProcess:
                 {"worker_type": "SpeechExtractor", "sessions": self.__sessions}
             )
 
-        @app.websocket("/api/v1/SpeechExtractor")
+        @app.websocket("/api/v1/SpeechExtractor/extract")
         async def websocket_chat_endpoint(
             ws: WebSocket, max_silence_ms: int = 600
         ) -> None:

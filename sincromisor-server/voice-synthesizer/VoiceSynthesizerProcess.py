@@ -33,6 +33,11 @@ class VoiceSynthesizerProcess:
         self.__sessions: int = 0
 
     def start(self):
+        if not self.__args.consul_agent_host or not self.__args.consul_agent_port:
+            raise RuntimeError(
+                "Consul agent is not set. Service discovery will not be available.",
+            )
+
         self.sd_referrer: ServiceDiscoveryReferrer = ServiceDiscoveryReferrer(
             consul_agent_host=self.__args.consul_agent_host,
             consul_agent_port=self.__args.consul_agent_port,
@@ -54,7 +59,7 @@ class VoiceSynthesizerProcess:
                 {"worker_type": "VoiceSynthesizer", "sessions": self.__sessions}
             )
 
-        @app.websocket("/api/v1/VoiceSynthesizer")
+        @app.websocket("/api/v1/VoiceSynthesizer/synthesize")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1
