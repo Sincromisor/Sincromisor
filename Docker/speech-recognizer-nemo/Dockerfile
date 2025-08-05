@@ -141,18 +141,16 @@ COPY --from=builder --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ${SINCRO_USER_DIR}/.python-version \
     ${SINCRO_USER_DIR}/
 
-RUN ls -la ${SINCRO_USER_DIR}
-
 # sincromisor-serverのソースコード一式をここでコピー
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-server \
     ${SINCRO_USER_DIR}/sincromisor-server
 
+USER ${SINCRO_USER_ID}
 # sincromisor-serverのモジュールをビルドし直す
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --group speech-recognizer-nemo
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
-USER ${SINCRO_USER_ID}
 CMD ["uv", "run", "speech-recognizer-nemo/SpeechRecognizerNemoProcess.py"]
