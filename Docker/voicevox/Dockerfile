@@ -2,6 +2,8 @@ FROM hashicorp/consul:latest AS consul
 
 FROM ubuntu:24.04
 
+LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
+
 EXPOSE 50021
 
 ARG VOICEVOX_VERSION=0.24.1

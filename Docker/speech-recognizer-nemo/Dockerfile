@@ -88,6 +88,8 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 #------------------------------------------------------------
 FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu24.04 AS runner
 
+LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
+
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
@@ -103,8 +105,8 @@ ENV SINCRO_CONSUL_AGENT_PORT=8500
 
 ENV SINCRO_MINIO_PUBLIC_BIND_HOST=
 ENV SINCRO_MINIO_PUBLIC_BIND_PORT=
-ENV SINCRO_MINIO_ROOT_USER=
-ENV SINCRO_MINIO_ROOT_PASSWORD=
+ENV SINCRO_MINIO_ACCESS_KEY=
+ENV SINCRO_MINIO_SECRET_KEY=
 
 # SINCRO_RECOGNIZER_VOICE_LOG_DIRが空の場合、音声認識ログを出力しない
 ENV SINCRO_RECOGNIZER_VOICE_LOG_DIR=

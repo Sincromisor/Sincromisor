@@ -5,12 +5,11 @@
 *.zip
 .vscode
 __pycache__
-/config.yml
 .env
 samples
 volumes/consul-data
 volumes/sincro-cache
-volumes/sincro-voice
+volumes/minio
 sincromisor-server/log/*.log
 sincromisor-server/log/voice
 sincromisor-server/node_modules

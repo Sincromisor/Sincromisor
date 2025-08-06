@@ -1,5 +1,7 @@
 FROM ubuntu:24.04
 
+LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
+
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
@@ -12,9 +14,9 @@ WORKDIR ${SINCRO_USER_DIR}
 RUN \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        ca-certificates \
-        curl \
-        python3 && \
+    ca-certificates \
+    curl \
+    python3 && \
     rm -rf /var/lib/apt/lists/*
 
 RUN curl -L -o /usr/local/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc && \
