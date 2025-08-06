@@ -8,9 +8,9 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
 ## 必要なもの
 
 * サーバー側
-  * Linuxサーバー
+  * Linuxサーバー(x86_64)
   * Transformersが動作するNVIDIA GPU
-    * シンクロモード: VRAM 8GBは必須、12GB以上推奨
+    * シンクロモード: VRAM 4GB(nemo)、8GB(nue)。
     * チャットモード: 追加で8GB程度、合計16GB以上のVRAMが必要(Dify用)
   * [Docker Engine](https://docs.docker.com/engine/install/ubuntu/)
   * [NVIDIA Driver(nvidia-open)](https://www.nvidia.com/en-us/drivers/)
@@ -51,26 +51,20 @@ Sincromisorのシンクロモードは、[docker compose](https://docs.docker.co
 まずはソースコードを入手します。
 
 ```sh
-$ git clone https://github.com/Phenomer/Sincromisor.git
+$ git clone https://github.com/Sincromisor/Sincromisor.git
 $ cd Sincromisor
 ```
 
 設定ファイル`.env`を、`examples/compose.env`を参考に作成します。
-とりあえず動かしたいだけであれば、そのままコピーする形で構いません。
+とりあえず動かしたいだけであれば、そのままコピーする形でかまいません。
 
 ```sh
 $ cp examples/compose.env .env
 $ chmod 600 .env
 ```
 
-`docker compose build`でイメージをbuildします。
-`--profile full`を指定すると、必要なコンテナ全てがビルドされます。
-
-```sh
-$ docker compose --profile full build
-```
-
 `docker compose up`で実行します。
+`--profile full`を指定すると、必要なコンテナ全てが実行されます。
 
 ```sh
 $ docker compose --profile full up -d
@@ -99,7 +93,7 @@ $ docker compose --profile full up -d
 
 チャットモードで利用したい時は、別途[Dify](https://dify.ai/jp)が必要となります。
 また、Dify上でローカルLLMを利用したい場合は、[Ollama](https://ollama.com/)や
-[fake-openai-server](https://github.com/Phenomer/fake-openai-server)などが必要となります。
+[fake-openai-server](https://github.com/Sincromisor/fake-openai-server)などが必要となります。
 
 Difyでてきとうにチャットボットを作成したら、そのURLとAPIキーを`configs/.env`ファイルに記入し、コンテナを再起動してください。
 
@@ -133,7 +127,7 @@ obs64.exe --enable-media-stream ^
 
 ### キャラクターの制御に利用するカメラ・マイクの設定
 
-Chromeの設定を変えると、Chromium Embedded Framework側にも反映されるってBing AIが言ってました。
+Google Chromeの設定を変えると、Chromium Embedded Framework側にも反映されます。
 カメラについては、OBSで利用するカメラやキャプチャーボードと重複すると動作しなくなるので注意してください。
 
 * <chrome://settings/content/camera>
@@ -141,5 +135,5 @@ Chromeの設定を変えると、Chromium Embedded Framework側にも反映さ�
 
 ## 音声認識・合成をコマンドラインで使いたい
 
-[SincromisorCLI](https://github.com/Phenomer/SincromisorCLI)を用いると、
+[SincromisorCLI](https://github.com/Sincromisor/SincromisorCLI)を用いると、
 コマンドライン経由での音声認識・合成・テロップ用テキストの取得ができます。

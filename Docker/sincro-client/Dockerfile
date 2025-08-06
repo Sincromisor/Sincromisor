@@ -46,6 +46,8 @@ RUN npm run build
 
 FROM caddy:latest AS runner
 
+LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
+
 EXPOSE 80/tcp
 
 COPY --from=consul --chown=root:root \

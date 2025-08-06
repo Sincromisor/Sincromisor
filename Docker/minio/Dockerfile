@@ -5,6 +5,8 @@ FROM hashicorp/consul:latest AS consul
 
 FROM minio/minio:latest
 
+LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
+
 EXPOSE 9000/tcp
 EXPOSE 9001/tcp
 

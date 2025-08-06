@@ -2,6 +2,8 @@ FROM hashicorp/consul:latest AS consul
 
 FROM redis:8
 
+LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
+
 EXPOSE 6379
 
 COPY --from=consul --chown=root:root \
