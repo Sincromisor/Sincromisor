@@ -9,7 +9,8 @@ include:
     - compose/consul-server.yml
     - compose/minio.yml
     - compose/redis.yml
-    - compose/mediamtx.yml
+    # vrm360でLive配信を行いたい場合は、以下のコメントアウトを外す
+    # - compose/mediamtx.yml
 
 networks:
     sincromisor-net:
