@@ -73,7 +73,7 @@
         close
     }
 
-    handle_path /media/hls/live_* {
+    handle_path /media/hls/live/* {
         rewrite * /{path}
         reverse_proxy {
             to sincro-mediamtx:8888

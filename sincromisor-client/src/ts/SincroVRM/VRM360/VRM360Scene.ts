@@ -28,16 +28,18 @@ export class VRM360Scene extends VRMScene {
         this.renderer.outputColorSpace = SRGBColorSpace;
     }
 
-    /* URLのvideo_idパラメーターから、閲覧する動画のIDを得る。パラメーターが無い場合は、'default'を返す。 */
+    /*  URLのvideo_idパラメーターから、閲覧する動画のIDを得る。
+        video_idの形式はfile/VIDEONAMEまたはlive/VIDEONAME。利用できる文字列はa-zA-Z0-9_/で、最大64文字。
+        パラメーターが無い場合は、'file/default'を返す。 */
     private getVideoId(): string {
         const urlParams: URLSearchParams = new URLSearchParams(window.location.search);
-        const regex = /^[a-zA-Z0-9_]{1,32}$/;
-        const video_id = urlParams.get('video_id') ?? 'file_default';
+        const regex: RegExp = /^(file|live)\/[a-zA-Z0-9_]{1,64}$/;
+        const video_id = urlParams.get('video_id') ?? 'file/default';
 
         if (regex.test(video_id)) {
             return video_id;
         } else {
-            return 'file_default';
+            return 'file/default';
         }
     }
 

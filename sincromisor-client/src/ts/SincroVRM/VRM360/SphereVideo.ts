@@ -30,7 +30,7 @@ export class SphereVideo {
     private videoType: 'file' | 'live';
 
     /*
-        videoID: file_VIDEONAME, live_VIDEONAMEのいずれか。VIDEONAMEは動画のID。
+        videoID: file/VIDEONAME, live/VIDEONAMEのいずれか。VIDEONAMEは動画のID。
     */
     constructor(videoID: string) {
         this.videoType = this.getVideoType(videoID);
@@ -45,9 +45,9 @@ export class SphereVideo {
 
     /* videoIDから、fileかliveかを判定する */
     private getVideoType(videoID: string): 'file' | 'live' {
-        if (videoID.startsWith('file_')) {
+        if (videoID.startsWith('file/')) {
             return 'file';
-        } else if (videoID.startsWith('live_')) {
+        } else if (videoID.startsWith('live/')) {
             return 'live';
         } else {
             throw new Error(`Invalid videoID: ${videoID}`);
