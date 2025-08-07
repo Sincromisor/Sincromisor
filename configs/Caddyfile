@@ -4,7 +4,7 @@
             level info
     }
 
-    root * /srv/sincromisor-client
+    root * /srv/sincromisor-frontend
     file_server
 
     # RTCSignalingServer

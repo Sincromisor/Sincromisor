@@ -2,14 +2,14 @@ include:
     - initializer.yml
 
 services:
-    sincro-client:
+    sincro-frontend:
         profiles:
             - full
             - frontend
         build:
             context: ..
-            dockerfile: ./Docker/sincro-client/Dockerfile
-        image: ${SINCRO_REGISTRY_NAME}/sincro-client:latest
+            dockerfile: ./Docker/sincro-frontend/Dockerfile
+        image: ${SINCRO_REGISTRY_NAME}/sincro-frontend:latest
         ports:
             - 80:80/tcp
             - 443:443/tcp
