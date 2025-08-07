@@ -10,18 +10,24 @@ LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
 EXPOSE 9000/tcp
 EXPOSE 9001/tcp
 
-COPY --from=busybox --chown=root:root \
+COPY --from=busybox --chown=root:root --chmod=755 \
     /bin/busybox \
     /bin/busybox
+RUN busybox --install -s /usr/local/bin
 
-COPY --from=consul --chown=root:root \
+COPY --from=consul --chown=root:root --chmod=755 \
     /bin/consul \
     /bin/consul
 
-COPY ./Docker/minio/minio-template.json /minio-template.json
-COPY ./Docker/minio/start-minio.sh /start-minio.sh
-RUN chmod 755 \
-    /start-minio.sh /bin/busybox /bin/consul
+COPY --chown=root:root --chmod=755 \
+    ./Docker/common/service-register.sh \
+    /service-register.sh
+COPY --chown=root:root --chmod=755 \
+    ./Docker/minio/start-minio.sh \
+    /start-minio.sh
+COPY --chown=root:root --chmod=644 \
+    ./Docker/minio/minio-template.json \
+    /minio-template.json
 
 ENTRYPOINT [ ]
 CMD [ "/start-minio.sh" ]

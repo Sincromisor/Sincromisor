@@ -35,9 +35,11 @@ RUN --mount=type=cache,target=/mnt \
     chown voicevox:voicevox /opt/voicevox/.local 
 
 COPY --chown=root:root --chmod=755 \
+    ./Docker/common/service-register.sh \
+    /service-register.sh
+COPY --chown=root:root --chmod=755 \
     ./Docker/voicevox/start-voicevox.sh \
     /start-voicevox.sh
-
 COPY --chown=voicevox:voicevox --chmod=755 \
     ./Docker/voicevox/voicevox-template.json \
     /opt/voicevox/.local/voicevox-template.json
