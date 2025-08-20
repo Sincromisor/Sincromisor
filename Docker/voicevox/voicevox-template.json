@@ -11,7 +11,7 @@
         "check": {
             "http": "http://SERVICE_IPV4_ADDRESS:50021/version",
             "interval": "10s",
-            "deregister_critical_service_after": "30s"
+            "deregister_critical_service_after": "10m"
         }
     }
 }

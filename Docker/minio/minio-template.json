@@ -11,7 +11,7 @@
         "check": {
             "tcp": "SERVICE_IPV4_ADDRESS:9000",
             "interval": "10s",
-            "deregister_critical_service_after": "30s"
+            "deregister_critical_service_after": "10m"
         }
     }
 }
