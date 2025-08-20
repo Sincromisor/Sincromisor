@@ -5,7 +5,7 @@ Sincromisorは、オンプレミス環境でAIエージェントとの音声対�
 ## プロジェクト構成
 
 - **sincromisor-server**: サーバーサイドのコード（Python + uv + ruff）
-- **sincromisor-client**: クライアントサイドのコード（Vite + プレーンTypeScript）
+- **sincromisor-frontend**: クライアントサイドのコード（Vite + プレーンTypeScript）
 - **Docker**: Docker Compose関連のコード
 
 ## 技術スタック
