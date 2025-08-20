@@ -87,7 +87,7 @@ $ docker compose --profile full up -d
 登録したVRMファイルは、ブラウザのキャッシュとして保持されます。サーバーにアップロードはされません。
 
 デフォルトのモデルを差し替えたい時は、サーバーのファイル
-`sincromisor-client/public/characters/default.vrm`を差し替えてください。
+`sincromisor-frontend/public/characters/default.vrm`を差し替えてください。
 
 ## チャットモードを利用する
 

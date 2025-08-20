@@ -10,37 +10,37 @@ ENV NODE_OPTIONS=${SINCRO_NODE_OPTIONS}
 WORKDIR ${SINCRO_USER_DIR}
 
 RUN useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
-    mkdir ${SINCRO_USER_DIR}/sincromisor-client && \
+    mkdir ${SINCRO_USER_DIR}/sincromisor-frontend && \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-client/package.json ./sincromisor-client/package-lock.json \
-    ${SINCRO_USER_DIR}/sincromisor-client/
+    ./sincromisor-frontend/package.json ./sincromisor-frontend/package-lock.json \
+    ${SINCRO_USER_DIR}/sincromisor-frontend/
 
-WORKDIR ${SINCRO_USER_DIR}/sincromisor-client
+WORKDIR ${SINCRO_USER_DIR}/sincromisor-frontend
 USER $SINCRO_USER_ID
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm,uid=1001,gid=1001 \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR} && \
     npm install
 
 RUN \
-    mkdir -p ${SINCRO_USER_DIR}/sincromisor-client/public/mediapipe-wasm && \
-    cp -r ${SINCRO_USER_DIR}/sincromisor-client/node_modules/@mediapipe/tasks-vision/wasm/* \
-    ${SINCRO_USER_DIR}/sincromisor-client/public/mediapipe-wasm
+    mkdir -p ${SINCRO_USER_DIR}/sincromisor-frontend/public/mediapipe-wasm && \
+    cp -r ${SINCRO_USER_DIR}/sincromisor-frontend/node_modules/@mediapipe/tasks-vision/wasm/* \
+    ${SINCRO_USER_DIR}/sincromisor-frontend/public/mediapipe-wasm
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-client/tsconfig.json \
-    ./sincromisor-client/vite.config.js \
-    ./sincromisor-client/postcss.config.js \
-    ${SINCRO_USER_DIR}/sincromisor-client/
+    ./sincromisor-frontend/tsconfig.json \
+    ./sincromisor-frontend/vite.config.js \
+    ./sincromisor-frontend/postcss.config.js \
+    ${SINCRO_USER_DIR}/sincromisor-frontend/
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-client/src \
-    ${SINCRO_USER_DIR}/sincromisor-client/src
+    ./sincromisor-frontend/src \
+    ${SINCRO_USER_DIR}/sincromisor-frontend/src
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-client/public \
-    ${SINCRO_USER_DIR}/sincromisor-client/public
+    ./sincromisor-frontend/public \
+    ${SINCRO_USER_DIR}/sincromisor-frontend/public
 
 RUN npm run build
 
@@ -55,18 +55,18 @@ COPY --from=consul --chown=root:root \
     /bin/consul
 
 COPY --from=builder --chown=root:root \
-    /opt/sincromisor/sincromisor-client/dist /srv/sincromisor-client
+    /opt/sincromisor/sincromisor-frontend/dist /srv/sincromisor-frontend
 
 COPY --chown=root:root \
     ./configs/Caddyfile \
     /etc/caddy/Caddyfile
 
 COPY --chown=root:root \
-    ./Docker/sincro-client/frontend-template.json \
+    ./Docker/sincro-frontend/frontend-template.json \
     /etc/caddy/frontend-template.json
 
 COPY --chown=root:root \
-    ./Docker/sincro-client/start-caddy.sh \
+    ./Docker/sincro-frontend/start-caddy.sh \
     /usr/local/bin/start-caddy.sh
 
 RUN chmod 755 \

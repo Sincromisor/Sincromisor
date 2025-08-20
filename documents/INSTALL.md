@@ -105,7 +105,7 @@ maxmemoryのサイズは、環境に合わせて適宜変更してください�
 
 ## リバースプロキシの準備
 
-静的コンテンツ(`/opt/sincromisor/sincromisor-client/dist`)を配布するためのHTTPサーバーと、
+静的コンテンツ(`/opt/sincromisor/sincromisor-frontend/dist`)を配布するためのHTTPサーバーと、
 WebRTCのOfferを受け取るサーバーへのリバースプロキシを兼ねる、リバースプロキシサーバーが必要です。
 
 クライアントとサーバー間のWebRTCの通信については、
