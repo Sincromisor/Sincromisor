@@ -1650,7 +1650,7 @@ wheels = [
 
 [[package]]
 name = "mediapipe"
-version = "0.10.20"
+version = "0.10.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "absl-py" },
@@ -1666,10 +1666,10 @@ dependencies = [
     { name = "sounddevice" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/37/96/99b3e248d833b2831631878cabdf498ede542a47a6d55ed36a34bdc30da5/mediapipe-0.10.20-cp312-cp312-macosx_11_0_universal2.whl", hash = "sha256:2ed9a133f02cb6a0c88b88cabc3ebe70dc3031d1145ac47642bb8484c6aba42f", size = 49151703, upload-time = "2024-12-13T21:38:45.82Z" },
-    { url = "https://files.pythonhosted.org/packages/12/1b/bcb732b052a971328beef1aed97ed9c025f5f01dfc7c55d0a65bf9b33c40/mediapipe-0.10.20-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:7cb8fea7682e26d74d46f4617abed48abadf02ce9c995375d64172e297d0142b", size = 49058279, upload-time = "2024-12-13T21:38:52.859Z" },
-    { url = "https://files.pythonhosted.org/packages/6d/49/49b201714a1c762268c153cecbcb03765e77b4f0d758589dbf4c8ce228ba/mediapipe-0.10.20-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:f0452b7c863ec0cd1c6360f0b81fe2492c56088de80adf8f3642c57b45e1f1d3", size = 35643545, upload-time = "2024-12-13T21:38:59.279Z" },
-    { url = "https://files.pythonhosted.org/packages/a4/07/250480def49cf6f3500c6d9e8ac783f3a8681cb9b75dee8c9eece19f470a/mediapipe-0.10.20-cp312-cp312-win_amd64.whl", hash = "sha256:fbd6dee5a8bccabc25f0e473433ff13585b142b8f562ae664c0c5b6978a1ad79", size = 50961950, upload-time = "2024-12-13T21:39:07.256Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/df/b1912b0d4e88c70a969258b201737c92ea268a90650c470ee842833a6690/mediapipe-0.10.21-cp312-cp312-macosx_11_0_universal2.whl", hash = "sha256:a65508f8c0e28a73f519c8a717f95949b9d5b2fb3bf4a632b181cdb71224d62e", size = 49176855, upload-time = "2025-02-06T19:07:02.525Z" },
+    { url = "https://files.pythonhosted.org/packages/89/34/f490f2e1614c021679fe757b08fdedd6100fd18f21111532af8864d006fe/mediapipe-0.10.21-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:96bf0dafa9851c74b1f930090193f23c257ccf4bb1bdebbd2ca3a02397011c0e", size = 49080132, upload-time = "2025-02-06T19:07:11.306Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/99/5da7ae7f7e25847383bc2fe5a9adc7ce150dd371682f486c0666b407cad7/mediapipe-0.10.21-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:956eb1ebc275c629e61b085b2cab89c3a5b9e93bad1bb107348d98dafb5a4bb5", size = 35627340, upload-time = "2025-02-06T19:07:19.82Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/79/b77808f8195f229ef0c15875540dfdd36724748a4b3de53d993f23336839/mediapipe-0.10.21-cp312-cp312-win_amd64.whl", hash = "sha256:d07b5e69308411161286ea4e48be2ea3e9ab62745143fcb0cb4acced0517e341", size = 50967082, upload-time = "2025-02-06T19:07:26.979Z" },
 ]
 
 [[package]]
@@ -3501,7 +3501,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.116.1" },
-    { name = "mediapipe", specifier = "==0.10.20" },
+    { name = "mediapipe", specifier = "==0.10.21" },
     { name = "numpy", specifier = "==1.26.4" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "setproctitle", specifier = ">=1.3.6" },
