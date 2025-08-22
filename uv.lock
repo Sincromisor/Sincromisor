@@ -3540,7 +3540,7 @@ requires-dist = [
     { name = "deepspeed", specifier = ">=0.17.5" },
     { name = "fastapi", specifier = ">=0.116.1" },
     { name = "librosa", specifier = ">=0.11.0" },
-    { name = "minio", specifier = ">=7.2.15" },
+    { name = "minio", specifier = ">=7.2.16" },
     { name = "nue-asr", git = "https://github.com/rinnakk/nue-asr.git" },
     { name = "numpy", specifier = "==1.26.4" },
     { name = "pydantic", specifier = ">=2.11.7" },
@@ -3574,7 +3574,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.116.1" },
-    { name = "minio", specifier = ">=7.2.15" },
+    { name = "minio", specifier = ">=7.2.16" },
     { name = "numpy", specifier = "==1.26.4" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "reazonspeech-nemo-asr", git = "https://github.com/reazon-research/ReazonSpeech.git?subdirectory=pkg%2Fnemo-asr" },
@@ -4098,7 +4098,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.116.1" },
-    { name = "minio", specifier = ">=7.2.15" },
+    { name = "minio", specifier = ">=7.2.16" },
     { name = "numpy", specifier = "==1.26.4" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "redis", extras = ["hiredis"], specifier = ">=6.4.0" },
