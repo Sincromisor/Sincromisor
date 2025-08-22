@@ -3676,25 +3676,27 @@ wheels = [
 
 [[package]]
 name = "sudachidict-full"
-version = "20241021"
+version = "20250515"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "sudachipy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ae/1b/a9cb141e6f0b11262b0ee649c850ed460a45b4a4d7354814e65b5caa2057/SudachiDict-full-20241021.tar.gz", hash = "sha256:d673cf14632a5797b5e6124c7f0da05841d2557e32ff176297f4c8eda8ce93e3", size = 9011, upload-time = "2024-10-23T02:40:02.018Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/da/d5/acb338e4664dbce508c75adce25f630d8f3df4c498d5ac6d887c27a024a8/sudachidict_full-20250515.tar.gz", hash = "sha256:3cc688f403487c65b29eccc6465b376ba5b512f59cd2357f94dc491a3b064fb7", size = 9056, upload-time = "2025-05-19T05:22:22.69Z" }
 
 [[package]]
 name = "sudachipy"
-version = "0.6.9"
+version = "0.6.10"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/73/65/a389277043901d3a6566d4463c2f96e0a102cc4bb5b59a44c3bd7a947ab7/sudachipy-0.6.9.tar.gz", hash = "sha256:131fc9521f2d538be9d5f276e69efc64a2b38dd6489af5dfe1e7161c3efaebb6", size = 164153, upload-time = "2024-11-20T07:04:38.268Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/86/eb/ceadfb1e9178332839a75b91393765b135ab870fad9230d47c201c931607/sudachipy-0.6.10.tar.gz", hash = "sha256:b8910a4610de98b2c3cb6dc3362fea93e3ba5059f1eb445a68baa9585278f31b", size = 71518686, upload-time = "2025-01-10T07:15:22.811Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/ee/532cea9e81ce64637a69158d4327485ce60a4bff928045b6033a97808c59/SudachiPy-0.6.9-cp312-cp312-macosx_10_12_universal2.whl", hash = "sha256:4a9571e93b2be900d26f1d1713b62ae567e3a31d4654ec7d1ac472a16efd017e", size = 2998485, upload-time = "2024-11-20T07:04:18.893Z" },
-    { url = "https://files.pythonhosted.org/packages/5d/b3/0b8e7fa9747c6122801f174ca0120cf75d940381b5d32630849f1fcca40d/SudachiPy-0.6.9-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:666f2817a9ced479610ebdfc21cbfd0ac13e97fe81e0484b314399d8dfaff90f", size = 1700136, upload-time = "2024-11-20T07:04:20.969Z" },
-    { url = "https://files.pythonhosted.org/packages/56/69/449697aa51bfeaf56cb58cf6f3b7e4344996d2fcad3bfaa80dd7e18568fc/SudachiPy-0.6.9-cp312-cp312-win_amd64.whl", hash = "sha256:f1355e3a17e68c54aedba4275c8799233792139df2082becc9b4af82f21195ac", size = 1369146, upload-time = "2024-11-20T07:04:22.362Z" },
-    { url = "https://files.pythonhosted.org/packages/e5/00/790f77cfe05ace70cac154240872de619562d79c08708a7f5605685c5642/SudachiPy-0.6.9-cp313-cp313-macosx_10_12_universal2.whl", hash = "sha256:ddc3620503af8cbefe897a59a802a964b5f0bc41791b313fa3f7d28fd461ddbb", size = 2996517, upload-time = "2024-11-20T07:04:24.63Z" },
-    { url = "https://files.pythonhosted.org/packages/48/e5/f999d65406ad96b6b637265badcd5a089cff83d391d9e7b2e0b37989d94d/SudachiPy-0.6.9-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c369062289e32e7e11d377c55e3349d73496b84a84fd8bf07ff68ca6b1d1da9c", size = 1699522, upload-time = "2024-11-20T07:04:26.677Z" },
-    { url = "https://files.pythonhosted.org/packages/a3/2e/1b4abe308ab44cb0ad485a053d67493a56df3c196b9479a8a3a4ccb18f66/SudachiPy-0.6.9-cp313-cp313-win_amd64.whl", hash = "sha256:0494b04d864f7788309975aeca4dc5d7b61b3c3d987d058c71e2bf4ba3a6daca", size = 1369017, upload-time = "2024-11-20T07:04:28.66Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/82/3d330442ab967417440a3875654698b7091a24a2f0f50fe777461f168356/SudachiPy-0.6.10-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:efb43fb3b46696ca4510b7dd4c3e490de8dbb7950d7172140dc27a4e69cd5811", size = 3041078, upload-time = "2025-01-10T07:14:51.455Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/30/93bf06bec9db46bef29e57bebb94db10a4726a8563bdaba6c9e086f067cd/SudachiPy-0.6.10-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0f8fd0ce37961401c9bdd78c126b2119a0a1669d376feb0b2427c35894ef1428", size = 1731213, upload-time = "2025-01-10T07:14:54.146Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/6f/8155e6dd268a582fc3b8db3caa3e83589bdf68d9b0a9f67a78436055206d/SudachiPy-0.6.10-cp312-cp312-win_amd64.whl", hash = "sha256:4a79b92b0776613481481c1ed0d2e92994b233ed5d29aa365789a1ba521de0a4", size = 1379214, upload-time = "2025-01-10T07:14:55.776Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/20/c58e1dde2b5413c68cc570f96e31c2ed1bc0b7b19b4eb67533dfaadbd94c/SudachiPy-0.6.10-cp313-cp313-macosx_10_13_universal2.whl", hash = "sha256:cc97b5d48f46f9989d97e105f7dd6419da2174888fcc42e55c0e4cd46597ed3b", size = 3040385, upload-time = "2025-01-10T07:14:58.575Z" },
+    { url = "https://files.pythonhosted.org/packages/58/f4/3451dbe8fa54a7b23285512db018c622e10d649a94f134f9fc92292eb4a4/SudachiPy-0.6.10-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9794b73fffd8099d93e07882ba87eee5edbed0e4f1b94761db8f22c8e5da9904", size = 1730957, upload-time = "2025-01-10T07:15:01.296Z" },
+    { url = "https://files.pythonhosted.org/packages/47/d3/e3cbab0b5d84df3c9d46e18fa07b84e2ab0b317daafb2bcd01610895106d/SudachiPy-0.6.10-cp313-cp313-win_amd64.whl", hash = "sha256:0fc5b60920a439c534688237e2651e15e4eaadc166a63182d6e24ac7ef3e4779", size = 1378958, upload-time = "2025-01-10T07:15:03.877Z" },
+    { url = "https://files.pythonhosted.org/packages/9b/da/279d12cab13f2affa9edd0ad4d5631573f4de07a020ad89a4ad0195f1d7c/SudachiPy-0.6.10-cp313-cp313t-macosx_10_13_universal2.whl", hash = "sha256:7455e5cbb4c2cf9294c82345c9d46b344774b4eb23eca917f305ed716d8d5168", size = 3033253, upload-time = "2025-01-10T07:15:06.674Z" },
+    { url = "https://files.pythonhosted.org/packages/66/ed/36eabf79eb81c38d477b77a5ab8fd62c8a4814a82c845f079f0c3b78ff18/SudachiPy-0.6.10-cp313-cp313t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:38d0de9e840ac8d199e714a40506792ea5237d0db0c966da16d51fbc74a508d6", size = 1730534, upload-time = "2025-01-10T07:15:09.348Z" },
 ]
 
 [[package]]
@@ -3782,8 +3784,8 @@ requires-dist = [
     { name = "setproctitle", specifier = ">=1.3.6" },
     { name = "sincro-config", editable = "sincromisor-server/sincro-config" },
     { name = "sincro-models", editable = "sincromisor-server/sincro-models" },
-    { name = "sudachidict-full", specifier = ">=20241021" },
-    { name = "sudachipy", specifier = ">=0.6.9" },
+    { name = "sudachidict-full", specifier = ">=20250515" },
+    { name = "sudachipy", specifier = ">=0.6.10" },
     { name = "uvicorn", specifier = ">=0.35.0" },
     { name = "websockets", specifier = ">=15.0.1" },
 ]
