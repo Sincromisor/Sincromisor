@@ -42,7 +42,7 @@ class VoiceTransformTrack(MediaStreamTrack):
         self.__track: MediaStreamTrack = track
         self.__vcs: RTCVoiceChatSession = vcs
         # SpeechExtractor -> SpeechRecognizer用フォーマットは1ch, 16bit, 16000Hz
-        self.__resampler = AudioResampler(layout=1, rate=16000)
+        self.__resampler = AudioResampler(layout="mono", rate=16000)
         self.__audio_broker = AudioBroker(
             session_id=self.__session_id,
             talk_mode=self.__vcs.talk_mode,
