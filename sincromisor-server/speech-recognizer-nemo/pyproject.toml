@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "sincro-config",
     "sincro-models",
-    "pydantic>=2.10.4",
+    "pydantic>=2.11.7",
     "numpy==1.26.4",
     "uvicorn>=0.35.0",
     "fastapi>=0.116.1",
