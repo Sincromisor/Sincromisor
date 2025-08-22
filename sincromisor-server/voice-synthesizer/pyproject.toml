@@ -9,7 +9,7 @@ dependencies = [
     "sincro-models",
     "redis[hiredis]>=5.2.0",
     "minio>=7.2.15",
-    "requests>=2.32.3",
+    "requests>=2.32.5",
     "pydantic>=2.10.4",
     "numpy==1.26.4",
     "uvicorn>=0.35.0",
