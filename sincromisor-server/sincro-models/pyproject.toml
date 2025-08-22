@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "sincro-config",
-    "pydantic>=2.10.4",
+    "pydantic>=2.11.7",
     "msgpack>=1.1.0",
     "numpy==1.26.4",
     "python-ulid>=3.0.0",
