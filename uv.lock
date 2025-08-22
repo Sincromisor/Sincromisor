@@ -2452,14 +2452,14 @@ wheels = [
 
 [[package]]
 name = "py-consul"
-version = "1.5.3"
+version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/29/37/990af3ac56e70705578808f6e4109226127379cccd4557ec6c7ae4b9824f/py_consul-1.5.3.tar.gz", hash = "sha256:05bc4e9e0fea17a2156659ed7f93025b2665859787ff8d0aa9c476829ddf3fdd", size = 33491, upload-time = "2024-10-01T14:58:43.177Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/00/c2/dbab1b7dc4e09f28001de0785e553caf4ea5844c68e29a08806b26e230c5/py_consul-1.6.0.tar.gz", hash = "sha256:a5ba8347178b0172aa1388e6584ae34ad0d14e22ae7bc8ee53071c24de5c8712", size = 35420, upload-time = "2025-04-10T14:43:39.192Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/43/0a/d2ab888381ba5e27d4cd50f774e783c7203bcd2454385a280fa0ef187ca8/py_consul-1.5.3-py2.py3-none-any.whl", hash = "sha256:d1270ec7b253c6af1dfa4a368e3c46f7abed0546feceebe5166999ab20850207", size = 35698, upload-time = "2024-10-01T14:58:41.626Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/db/20523e1d191a8199a56167d61c277ec4874abe26ac6c461e6cf166850b12/py_consul-1.6.0-py2.py3-none-any.whl", hash = "sha256:2ffd6b9dd794da99393b75ff78fd786917c3afbfe71ac46292f7099457e68fdf", size = 37245, upload-time = "2025-04-10T14:43:37.84Z" },
 ]
 
 [[package]]
@@ -3254,7 +3254,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "py-consul", specifier = ">=1.5.3" },
+    { name = "py-consul", specifier = ">=1.6.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "redis", extras = ["hiredis"], specifier = ">=6.4.0" },
