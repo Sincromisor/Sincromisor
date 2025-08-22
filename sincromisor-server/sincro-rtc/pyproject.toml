@@ -7,10 +7,10 @@ requires-python = ">=3.12"
 dependencies = [
     "sincro-config",
     "sincro-models",
-    "aiortc>=1.9.0",
+    "aiortc>=1.13.0",
     "websockets>=15.0.1",
-    "av>=12.3.0",
-    "google-crc32c>=1.6.0",
+    "av>=14.4.0",
+    "google-crc32c>=1.7.1",
     "numpy==1.26.4",
     "pydantic>=2.11.7",
     "python-ulid>=3.1.0",

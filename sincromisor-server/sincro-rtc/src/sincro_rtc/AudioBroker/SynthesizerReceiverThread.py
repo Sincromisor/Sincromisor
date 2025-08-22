@@ -80,7 +80,7 @@ class SynthesizerReceiverThread(Thread):
         # 960はWebRTCでopus音声を得た際のデフォルトフレームサイズだが、
         # 環境によって異なる可能性がある(要調査)。
         resampler = AudioResampler(
-            layout=2,
+            layout="stereo",
             format="s16",
             rate=target_frame_rate,
             frame_size=target_frame_size,
