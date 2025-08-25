@@ -1,5 +1,8 @@
 # hostname -i用
-FROM busybox:latest AS busybox
+FROM ubuntu:24.04 AS busybox
+
+RUN apt-get update && \
+    apt-get install -y busybox-static
 
 FROM hashicorp/consul:latest AS consul
 
