@@ -12,7 +12,7 @@ export CONSUL_HTTP_ADDR="http://${SINCRO_CONSUL_AGENT_HOST}:${SINCRO_CONSUL_AGEN
 echo "CONSUL_HTTP_ADDR=${CONSUL_HTTP_ADDR}"
 
 SERVICE_ID="$(generate_service_id "$SERVICE_NAME" "$MINIO_PORT")"
-SERVICE_IPV4="$(busybox hostname -i)"
+SERVICE_IPV4="$(hostname -i)"
 
 echo "Starting ${SERVICE_NAME} - ${SERVICE_ID} - ${SERVICE_IPV4}"
 
