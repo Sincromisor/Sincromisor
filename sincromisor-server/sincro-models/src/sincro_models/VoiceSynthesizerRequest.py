@@ -4,6 +4,9 @@ from pydantic import BaseModel, field_validator
 
 
 class VoiceSynthesizerRequest(BaseModel):
+    # 発話ごとに割り振られるID。TextProcessorから引き継ぐ。
+    # 音声を検知する度に割り当てられる。
+    speech_id: int
     message: str
     style_id: int
     audio_format: str | None = "audio/wav"

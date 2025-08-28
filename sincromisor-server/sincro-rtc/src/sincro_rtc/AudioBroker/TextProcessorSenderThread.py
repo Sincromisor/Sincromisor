@@ -25,15 +25,20 @@ class TextProcessorSenderThread(Thread):
     ):
         super().__init__()
         self.__session_id: str = session_id
-        self.__logger = logging.getLogger("sincro." + self.__class__.__name__ + f"[{self.__session_id[21:26]}]")
+        self.__logger = logging.getLogger(
+            "sincro." + self.__class__.__name__ + f"[{self.__session_id[21:26]}]"
+        )
         self.__ws: ClientConnection = ws
         self.__recognizer_results: deque = recognizer_results
         self.__text_channel_queue: deque = text_channel_queue
         self.__running: Event = running
         self.__init_message()
 
+    # リクエストメッセージオブジェクトの初期化
+    # 起動時と発話が完了した際に呼び出される。
     def __init_message(self):
         self.__current_message = ChatMessage(
+            speech_id=-1,
             message_type="user",
             speaker_id="user",
             speaker_name="User",
@@ -42,6 +47,7 @@ class TextProcessorSenderThread(Thread):
 
     def __create_request(self, chat_history: ChatHistory) -> TextProcessorRequest:
         rec_result: SpeechRecognizerResult = self.__recognizer_results.popleft()
+        self.__current_message.speech_id = rec_result.speech_id
         self.__current_message.message = rec_result.result_text()
 
         if rec_result.confirmed:
@@ -50,7 +56,6 @@ class TextProcessorSenderThread(Thread):
 
         request: TextProcessorRequest = TextProcessorRequest(
             session_id=rec_result.session_id,
-            speech_id=rec_result.speech_id,
             sequence_id=rec_result.sequence_id,
             confirmed=rec_result.confirmed,
             history=chat_history,
@@ -72,6 +77,9 @@ class TextProcessorSenderThread(Thread):
                     request: TextProcessorRequest = self.__create_request(
                         chat_history=chat_history,
                     )
+                    # RTCのTextChannel経由でフロントエンド側に
+                    # リクエストメッセージ(ChatMessage)を送る
+                    # (レスポンスはTextProcessorReceiverThreadで送っている)
                     self.__text_channel_queue.append(request.request_message)
                     self.__ws.send(request.to_msgpack())
                 else:

@@ -37,7 +37,9 @@ class TextProcessorReceiverThread(Thread):
                 tp_result: TextProcessorResult = TextProcessorResult.from_msgpack(pack)
                 # to SynthesizerThread
                 self.__text_processor_results.append(tp_result)
-                # to TextChannel
+                # RTCのTextChannel経由でフロントエンド側に
+                # レスポンスメッセージ(ChatMessage)を送る
+                # (リクエストはTextProcessorSenderThreadで送っている)
                 self.__text_channel_queue.append(tp_result.response_message)
             except TimeoutError:
                 pass  # タイムアウトした時のみやり直す。

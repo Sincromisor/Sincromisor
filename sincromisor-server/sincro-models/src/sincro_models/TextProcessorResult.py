@@ -10,10 +10,6 @@ from .TextProcessorRequest import TextProcessorRequest
 class TextProcessorResult(BaseModel):
     # セッションのID。接続している間は同じ値となる。
     session_id: str
-    # 発話ごとに割り振られるID。
-    # 最初の音声検知時に割り当てられ、
-    # 発話が完了する(confirmedがTrueとなる)まで維持される。
-    speech_id: int = 0
     # SpeechExtractorResultを送信するごとに割り振られるID。    sequence_id: int = 0
     sequence_id: int = 0
     # 発話が(request_messageの生成が)完了していたらTrue、
@@ -50,12 +46,12 @@ class TextProcessorResult(BaseModel):
     ) -> "TextProcessorResult":
         return TextProcessorResult(
             session_id=request.session_id,
-            speech_id=request.speech_id,
             sequence_id=request.sequence_id,
             confirmed=request.confirmed,
             history=request.history,
             request_message=request.request_message,
             response_message=ChatMessage(
+                speech_id=request.request_message.speech_id,
                 message_type=message_type,
                 speaker_id=speaker_id,
                 speaker_name=speaker_name,
@@ -80,7 +76,6 @@ class TextProcessorResult(BaseModel):
         pack: Any | None = msgpack.packb(
             {
                 "session_id": self.session_id,
-                "speech_id": self.speech_id,
                 "sequence_id": self.sequence_id,
                 "confirmed": self.confirmed,
                 "history": self.history,

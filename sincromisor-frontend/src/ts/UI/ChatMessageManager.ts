@@ -63,7 +63,7 @@ export class ChatMessageManager {
         生成したメッセージのdiv要素を返す。
     */
     writeUnknownUserMessage(message: string, isHTML: boolean = false): HTMLDivElement {
-        const chatMessage: ChatMessage = new ChatMessageBuilder('user', 'UnknownUser', 'Unknown User', message);
+        const chatMessage: ChatMessage = new ChatMessageBuilder('user', 'UnknownUser', 'Unknown User', -1, message);
         return this.createNewMessageBox(chatMessage, isHTML);
     }
 
@@ -72,7 +72,7 @@ export class ChatMessageManager {
         生成したメッセージのdiv要素を返す。
     */
     writeSystemMessage(message: string, isHTML: boolean = false): HTMLDivElement {
-        const chatMessage: ChatMessage = new ChatMessageBuilder('system', this.systemUserID, this.systemUserName, message);
+        const chatMessage: ChatMessage = new ChatMessageBuilder('system', this.systemUserID, this.systemUserName, -1, message);
         return this.createNewMessageBox(chatMessage, isHTML);
     }
 
@@ -86,7 +86,7 @@ export class ChatMessageManager {
             return null;
         }
         this.lastErrorMessage = message;
-        const chatMessage: ChatMessage = new ChatMessageBuilder('error', this.systemUserID, this.systemUserName, message);
+        const chatMessage: ChatMessage = new ChatMessageBuilder('error', this.systemUserID, this.systemUserName, -1, message);
         return this.createNewMessageBox(chatMessage);
     }
 
@@ -95,7 +95,7 @@ export class ChatMessageManager {
         メッセージのdiv要素を返す。
     */
     writeResetMessage(message: string): HTMLDivElement {
-        const chatMessage: ChatMessage = new ChatMessageBuilder('reset', this.systemUserID, this.systemUserName, message);
+        const chatMessage: ChatMessage = new ChatMessageBuilder('reset', this.systemUserID, this.systemUserName, -1, message);
         return this.createNewMessageBox(chatMessage);
     }
 

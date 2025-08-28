@@ -48,12 +48,13 @@ class VoiceSynthesizerWorker:
                     {
                         "type": "VoiceSynthesizerRequest",
                         "session_id": tp_result.session_id,
-                        "speech_id": tp_result.speech_id,
+                        "speech_id": tp_result.response_message.speech_id,
                         "voice_text": tp_result.voice_text,
                     },
                 )
                 start_t = perf_counter()
                 vs_result: VoiceSynthesizerResult = self.__get_voice(
+                    speech_id=tp_result.response_message.speech_id,
                     vvox_cm=self.__vvox,
                     voice_text=tp_result.voice_text,
                 )
@@ -61,7 +62,7 @@ class VoiceSynthesizerWorker:
                     {
                         "type": "VoiceSynthesizerResult",
                         "session_id": tp_result.session_id,
-                        "speech_id": tp_result.speech_id,
+                        "speech_id": tp_result.response_message.speech_id,
                         "query_time": perf_counter() - start_t,
                         "message": vs_result.message,
                         "speeking_time": vs_result.speaking_time,
@@ -71,17 +72,18 @@ class VoiceSynthesizerWorker:
 
     def __get_voice(
         self,
+        speech_id: int,
         voice_text: str,
         vvox_cm: VoiceCacheManager,
     ) -> VoiceSynthesizerResult:
         vs_request: VoiceSynthesizerRequest = VoiceSynthesizerRequest(
+            speech_id=speech_id,
             message=voice_text,
-            # "audio/ogg;codecs=opus"にしたい
             audio_format="audio/ogg;codecs=opus",
             style_id=self.__voicevox_style_id,
             pre_phoneme_length=0.1,
             post_phoneme_length=0.1,
         )
         vs_result: VoiceSynthesizerResult = vvox_cm.get_voice(vs_request=vs_request)
-
+        vs_result.speech_id = speech_id
         return vs_result

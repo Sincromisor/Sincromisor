@@ -12,10 +12,6 @@ from .ChatHistory import ChatHistory, ChatMessage
 class TextProcessorRequest(BaseModel):
     # セッションのID。接続している間は同じ値となる。
     session_id: str
-    # 発話ごとに割り振られるID。
-    # 最初の音声検知時に割り当てられ、
-    # 発話が完了する(confirmedがTrueとなる)まで維持される。
-    speech_id: int = 0
     # SpeechExtractorResultを送信するごとに割り振られるID。
     sequence_id: int = 0
     # 発話が(request_messageの生成が)完了していたらTrue、
@@ -41,7 +37,6 @@ class TextProcessorRequest(BaseModel):
         pack: Any | None = msgpack.packb(
             {
                 "session_id": self.session_id,
-                "speech_id": self.speech_id,
                 "sequence_id": self.sequence_id,
                 "confirmed": self.confirmed,
                 "history": self.history,

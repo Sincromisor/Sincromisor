@@ -359,6 +359,7 @@ class AudioBroker:
                 message_type="error",
                 speaker_id="system",
                 speaker_name="Sincromisor",
+                speech_id=-1,
                 message=message,
             )
         )

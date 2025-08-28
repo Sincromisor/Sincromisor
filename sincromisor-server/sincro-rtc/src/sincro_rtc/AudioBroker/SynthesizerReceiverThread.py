@@ -104,6 +104,7 @@ class SynthesizerReceiverThread(Thread):
                     f"mora must be VoiceSynthesizerMora, but got {type(mora)}"
                 )
                 yield VoiceSynthesizerResultFrame(
+                    speech_id=vs_result.speech_id,
                     timestamp=timestamp_sec,
                     message=vs_result.message,
                     vowel=mora.vowel,
