@@ -18,6 +18,13 @@ class VoiceSynthesizerResult(BaseModel):
     # np.ndarrayがメンバにいるとコケる問題対策
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    # 発話ごとに割り振られるID。TextProcessorから引き継ぐ。
+    # 音声を検知する度に割り当てられる。
+    # 0以上の値が割り当てられる。-1は未割り当て。
+    # RedisやMinIO上ではこの値は-1として記録される。
+    # VoiceSynthesizerWorkerが、VoiceSynthesizerRequestの値と同じになるよう
+    # 設定しなおした上でクライアントに返す。
+    speech_id: int = -1
     # 元となったメッセージテキスト
     message: str
     # メッセージテキストから生成された音声クエリ
@@ -34,6 +41,7 @@ class VoiceSynthesizerResult(BaseModel):
     def to_msgpack(self) -> bytes:
         pack: Any | None = msgpack.packb(
             {
+                "speech_id": self.speech_id,
                 "message": self.message,
                 "query": self.query,
                 "mora_queue": self.mora_queue,
@@ -49,6 +57,7 @@ class VoiceSynthesizerResult(BaseModel):
     def to_json(self) -> str:
         return json.dumps(
             {
+                "speech_id": self.speech_id,
                 "message": self.message,
                 "query": self.query,
                 "mora_queue": self.mora_queue,
@@ -76,7 +85,14 @@ class VoiceSynthesizerResult(BaseModel):
         mora_queue = [
             VoiceSynthesizerMora.model_validate(m) for m in content["mora_queue"]
         ]
+
+        # contentにspeech_idがない場合は-1を設定
+        # (redis、minio上のデータから復元した場合など)
+        if "speech_id" not in content:
+            content["speech_id"] = -1
+
         return VoiceSynthesizerResult(
+            speech_id=content["speech_id"],
             message=content["message"],
             query=VoiceVoxQuery.model_validate(content["query"]),
             mora_queue=mora_queue,

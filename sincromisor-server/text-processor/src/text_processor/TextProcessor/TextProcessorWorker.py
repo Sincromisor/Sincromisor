@@ -37,7 +37,7 @@ class TextProcessorWorker:
             self.logger.info(
                 {
                     "session_id": request.session_id,
-                    "speech_id": request.speech_id,
+                    "speech_id": request.request_message.speech_id,
                     "response_time": response_t - start_t,
                     "query_time": perf_counter() - start_t,
                 }

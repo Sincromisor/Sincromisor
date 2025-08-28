@@ -5,6 +5,14 @@ from ulid import ULID
 
 
 class ChatMessage(BaseModel):
+    # ユーザーの発話ごとに割り振られるID。
+    # 最初の音声検知時に割り当てられ、
+    # 発話が完了する(confirmedがTrueとなる)まで維持される。
+    speech_id: int
+
+    # メッセージごとに個別に付与されるID。
+    # 対話の場合、speech_idひとつにつき、リクエストと
+    # レスポンスのふたつのメッセージが生成される。
     message_id: str = Field(default_factory=lambda: str(ULID()))
     # system, error, reset, user - Chat UIでの表示に影響する。
     message_type: str

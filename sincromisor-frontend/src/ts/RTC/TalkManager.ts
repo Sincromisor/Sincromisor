@@ -34,7 +34,7 @@ export class TalkManager {
     addTelopChannelMessage(msg: TelopChannelMessage): void {
         this.telopChannelMessage.push(msg);
         if (msg.new_text) {
-            console.log(msg.new_text);
+            console.dir(msg);
             this.currentTelopChannelMessage = {
                 'moraID': this.moraID,
                 'mora': msg,
@@ -42,7 +42,7 @@ export class TalkManager {
                 'endTime': performance.now() + msg.length * 1000
             };
             this.moraID += 1;
-            this.addTelopChar(msg.text);
+            this.addTelopChar(msg.speech_id, msg.text);
         }
     }
 
@@ -57,19 +57,44 @@ export class TalkManager {
         return this.currentTelopChannelMessage;
     }
 
-    private addTelopChar(char: string): void {
-        const telopText: HTMLParagraphElement | null = document.querySelector("p#sincroFooterBox__text");
-        if (!telopText) {
-            return;
+    private addTelopChar(speech_id: number, char: string): void {
+        const telopText: HTMLParagraphElement | null = document.querySelector("div#sincroFooterBox");
+        if (!telopText) return;
+        if (telopText.clientWidth === 0) return;
+
+        const paddingLeftPx = parseInt(window.getComputedStyle(telopText).paddingLeft) || 0;
+        const paddingRightPx = parseInt(window.getComputedStyle(telopText).paddingRight) || 0;
+
+        // speech_idに対応するspanを探す
+        let span: HTMLSpanElement | null = telopText.querySelector<HTMLSpanElement>(`span[data-speech-id="${speech_id}"]`);
+        if (!span) {
+            span = document.createElement("span");
+            span.classList.add("sincroFooterBox__telopText");
+            span.setAttribute("data-speech-id", String(speech_id));
+            telopText.appendChild(span);
         }
-        /* display:noneなどで描画エリアがない場合は何もしない(無限ループ対策) */
-        if (telopText.clientWidth == 0) { return; }
-        const fontSize = parseFloat(window.getComputedStyle(telopText, null).getPropertyValue("font-size"));
-        const maxLength = telopText.clientWidth / fontSize - 1;
-        while (telopText.innerText.length > maxLength) {
-            telopText.innerText = telopText.innerText.slice(1);
+        span.textContent += char || ' ';
+
+        // 1文字単位で先頭から削除
+        let totalWidth: number = 0;
+        const spans: HTMLSpanElement[] = Array.from(telopText.children) as HTMLSpanElement[];
+        totalWidth = spans.reduce((acc, s) => acc + s.offsetWidth, 0);
+
+        while (totalWidth > telopText.clientWidth - paddingLeftPx - paddingRightPx && telopText.firstChild) {
+            const firstSpan = telopText.firstChild as HTMLSpanElement;
+            if (firstSpan.textContent && firstSpan.textContent.length > 0) {
+                // 先頭spanの1文字目を削除
+                firstSpan.textContent = firstSpan.textContent.slice(1);
+                // 幅を再計算
+                totalWidth = spans.reduce((acc, s) => acc + s.offsetWidth, 0);
+                // spanが空になったら要素ごと削除
+                if (firstSpan.textContent.length === 0) {
+                    telopText.removeChild(firstSpan);
+                }
+            } else {
+                telopText.removeChild(firstSpan);
+            }
         }
-        telopText.innerText += (char || "　");
     }
 }
 

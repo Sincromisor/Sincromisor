@@ -8,6 +8,9 @@ class VoiceSynthesizerResultFrame(BaseModel):
     # np.ndarrayがメンバにいるとコケる問題対策
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    # 発話ごとに割り振られるID。VoiceSynthesizerResultから引き継ぐ。
+    # 音声を検知する度に割り当てられる。
+    speech_id: int
     # 発話開始時からの経過時間
     # (このフレームが開始するまでのlengthの累計)
     timestamp: float
@@ -32,6 +35,7 @@ class VoiceSynthesizerResultFrame(BaseModel):
     def params_to_json(self) -> str:
         return json.dumps(
             {
+                "speech_id": self.speech_id,
                 "timestamp": self.timestamp,
                 "message": self.message,
                 "vowel": self.vowel,

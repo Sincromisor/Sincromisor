@@ -1,8 +1,13 @@
+/*
+    RTCのTextChannelから送られてくるメッセージ
+    TextProcesssorのChatMessageと同様
+ */
 export type ChatMessage = {
     message_id: string, // ULID
     message_type: string, // system, error, reset, user
     speaker_id: string, // @systemのsystem部分(@は無し)
     speaker_name: string, // Glorious AI
+    speech_id: number,
     message: string,
     created_at: number
 }
@@ -11,7 +16,13 @@ export type ChatHistory = {
     messages: ChatMessage[],
 }
 
+/*
+    RTCのTelopChannelから送られてくるメッセージ
+    VoiceSynthesizerResultFrameとほぼ同様
+    (音声データフレームは含まない)
+ */
 export type TelopChannelMessage = {
+    speech_id: number,
     timestamp: number,
     message: string,
     vowel: string,
@@ -26,14 +37,16 @@ export class ChatMessageBuilder implements ChatMessage {
     message_type: string;
     speaker_id: string;
     speaker_name: string;
+    speech_id: number;
     message: string;
     created_at: number;
 
-    constructor(message_type: string, speaker_id: string, speaker_name: string, message: string) {
+    constructor(message_type: string, speaker_id: string, speaker_name: string, speech_id: number, message: string) {
         this.message_id = this.get_message_id();
         this.message_type = message_type;
         this.speaker_id = speaker_id;
         this.speaker_name = speaker_name;
+        this.speech_id = speech_id;
         this.message = message;
         this.created_at = Date.now();
     }
