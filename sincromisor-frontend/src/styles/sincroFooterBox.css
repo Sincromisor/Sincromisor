@@ -4,25 +4,30 @@ div#sincroFooterBox {
         height: 100%;
         background-color: var(--headerBackgroundColor);
 
-        padding-left: 1em;
-        padding-right: 1em;
-        padding-top: 0px;
-        padding-bottom: 0px;
+        padding: 0 1em;
+        overflow: hidden;
+
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
     }
 
-    & #sincroFooterBox__text {
+    & span.sincroFooterBox__telopText {
+        width: auto;
         height: 100%;
+        flex-shrink: 0;
         color: var(--headerTextColor);
         /* 
             https://clamp.font-size.app/
             1280 -> 3840: 28 -> 84
         */
         font-size: clamp(1.5rem, 0rem + 1.875vw, 4.5rem);
-        line-height: 100%;
+        line-height: inherit;
         overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: normal;
+
+        align-content: center;
+        white-space: nowrap;
+        padding: 0 0.5em;
+        margin: 0;
     }
 }
