@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu24.04 AS builder
+FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04 AS builder
 
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
