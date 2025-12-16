@@ -15,9 +15,9 @@ mc alias set sincro-minio \
     "${SINCRO_MINIO_ACCESS_KEY}" \
     "${SINCRO_MINIO_SECRET_KEY}"
 
-su sincromisor -c '/opt/sincromisor/.local/bin/uv run huggingface-cli scan-cache -vvv'
+su sincromisor -c '/opt/sincromisor/.local/bin/uv run hf cache ls || true'
 if [ "${SINCRO_RECOGNIZER_MODEL}" = "nemo" ]; then
-    su sincromisor -c '/opt/sincromisor/.local/bin/uv run huggingface-cli download reazon-research/reazonspeech-nemo-v2'
+    su sincromisor -c '/opt/sincromisor/.local/bin/uv run hf download reazon-research/reazonspeech-nemo-v2'
 elif [ "${SINCRO_RECOGNIZER_MODEL}" = "nue" ]; then
-    su sincromisor -c '/opt/sincromisor/.local/bin/uv run huggingface-cli download rinna/nue-asr'
+    su sincromisor -c '/opt/sincromisor/.local/bin/uv run hf download rinna/nue-asr'
 fi
