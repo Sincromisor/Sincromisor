@@ -69,11 +69,11 @@ class VoiceSynthesizerProcess:
                 )
                 if redis_description is None:
                     raise RuntimeError("No SincroRedis worker found.")
-                minio_description: ServiceDescription | None = (
-                    self.sd_referrer.get_random_worker(worker_type="SincroMinio")
+                s3_description: ServiceDescription | None = (
+                    self.sd_referrer.get_random_worker(worker_type="SincroS3")
                 )
-                if minio_description is None:
-                    raise RuntimeError("No SincroMinio worker found.")
+                if s3_description is None:
+                    raise RuntimeError("No SincroS3 worker found.")
                 voicevox_description: ServiceDescription | None = (
                     self.sd_referrer.get_random_worker(worker_type="SincroVoiceVox")
                 )
@@ -86,10 +86,10 @@ class VoiceSynthesizerProcess:
                     voicevox_style_id=self.__args.voicevox_default_style_id,
                     redis_host=redis_description.service_address,
                     redis_port=redis_description.service_port,
-                    minio_host=minio_description.service_address,
-                    minio_port=minio_description.service_port,
-                    minio_access_key=self.__args.minio_access_key,
-                    minio_secret_key=self.__args.minio_secret_key,
+                    s3_host=s3_description.service_address,
+                    s3_port=s3_description.service_port,
+                    s3_access_key=self.__args.s3_access_key,
+                    s3_secret_key=self.__args.s3_secret_key,
                 )
                 await voice_synthesizer.communicate(ws=ws)
             except WebSocketDisconnect:

@@ -1,10 +1,10 @@
 from .SpeechRecognizer import RecognizerError, SpeechRecognizer
-from .SpeechRecognizerMinioClient import SpeechRecognizerMinioClient
+from .SpeechRecognizerS3Client import SpeechRecognizerS3Client
 from .SpeechRecognizerWorker import SpeechRecognizerWorker
 
 __all__ = [
     "SpeechRecognizer",
     "RecognizerError",
-    "SpeechRecognizerMinioClient",
+    "SpeechRecognizerS3Client",
     "SpeechRecognizerWorker",
 ]

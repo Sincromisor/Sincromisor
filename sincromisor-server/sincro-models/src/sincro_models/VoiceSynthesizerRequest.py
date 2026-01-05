@@ -29,7 +29,7 @@ class VoiceSynthesizerRequest(BaseModel):
 
     # 拡張子はとりあえず.mpkにしておく
     # https://github.com/msgpack/msgpack/issues/291
-    def minio_key(self) -> str:
+    def s3_key(self) -> str:
         msg_hash = hashlib.sha256(self.message.encode("UTF-8")).hexdigest()
         return f"{self.audio_format}/{self.style_id}/{self.__msg_dir()}/{msg_hash}.mpk"
 
