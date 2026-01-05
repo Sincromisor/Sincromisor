@@ -21,7 +21,7 @@ class VoiceSynthesizerResult(BaseModel):
     # 発話ごとに割り振られるID。TextProcessorから引き継ぐ。
     # 音声を検知する度に割り当てられる。
     # 0以上の値が割り当てられる。-1は未割り当て。
-    # RedisやMinIO上ではこの値は-1として記録される。
+    # RedisやS3上ではこの値は-1として記録される。
     # VoiceSynthesizerWorkerが、VoiceSynthesizerRequestの値と同じになるよう
     # 設定しなおした上でクライアントに返す。
     speech_id: int = -1
@@ -87,7 +87,7 @@ class VoiceSynthesizerResult(BaseModel):
         ]
 
         # contentにspeech_idがない場合は-1を設定
-        # (redis、minio上のデータから復元した場合など)
+        # (redis、S3上のデータから復元した場合など)
         if "speech_id" not in content:
             content["speech_id"] = -1
 

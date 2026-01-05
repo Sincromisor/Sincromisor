@@ -8,8 +8,8 @@ class SpeechRecognizerNemoProcessArgument(SincromisorArgumentParser):
     port: int
     public_bind_host: str
     public_bind_port: int
-    minio_access_key: str | None
-    minio_secret_key: str | None
+    s3_access_key: str | None
+    s3_secret_key: str | None
     voice_log_dir: str | None
 
     @classmethod
@@ -52,18 +52,18 @@ class SpeechRecognizerNemoProcessArgument(SincromisorArgumentParser):
 
         cls.add_argument(
             parser=parser,
-            cmd_name="--minio-access-key",
-            env_name="SINCRO_MINIO_ACCESS_KEY",
+            cmd_name="--s3-access-key",
+            env_name="SINCRO_S3_ACCESS_KEY",
             default=None,
-            help="MinIO access key(default: None)",
+            help="S3 access key(default: None)",
         )
 
         cls.add_argument(
             parser=parser,
-            cmd_name="--minio-secret-key",
-            env_name="SINCRO_MINIO_SECRET_KEY",
+            cmd_name="--s3-secret-key",
+            env_name="SINCRO_S3_SECRET_KEY",
             default=None,
-            help="MinIO secret key(default: None)",
+            help="S3 secret key(default: None)",
         )
 
         cls.add_argument(

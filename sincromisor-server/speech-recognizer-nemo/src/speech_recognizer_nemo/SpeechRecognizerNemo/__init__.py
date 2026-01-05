@@ -1,9 +1,9 @@
-from .SpeechRecognizerMinioClient import SpeechRecognizerMinioClient
+from .SpeechRecognizerS3Client import SpeechRecognizerS3Client
 from .SpeechRecognizerNemo import SpeechRecognizerNemo
 from .SpeechRecognizerNemoWorker import SpeechRecognizerNemoWorker
 
 __all__ = [
-    "SpeechRecognizerMinioClient",
+    "SpeechRecognizerS3Client",
     "SpeechRecognizerNemo",
     "SpeechRecognizerNemoWorker",
 ]

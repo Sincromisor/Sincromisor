@@ -9,10 +9,10 @@ services:
             dockerfile: ./Docker/service-initializer/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/service-initializer
         environment:
-            - SINCRO_MINIO_PUBLIC_BIND_HOST=${SINCRO_MINIO_PUBLIC_BIND_HOST}
-            - SINCRO_MINIO_PUBLIC_BIND_PORT=${SINCRO_MINIO_PUBLIC_BIND_PORT}
-            - SINCRO_MINIO_ACCESS_KEY=${SINCRO_MINIO_ACCESS_KEY}
-            - SINCRO_MINIO_SECRET_KEY=${SINCRO_MINIO_SECRET_KEY}
+            - SINCRO_S3_PUBLIC_BIND_HOST=${SINCRO_S3_PUBLIC_BIND_HOST}
+            - SINCRO_S3_PUBLIC_BIND_PORT=${SINCRO_S3_PUBLIC_BIND_PORT}
+            - SINCRO_S3_ACCESS_KEY=${SINCRO_S3_ACCESS_KEY}
+            - SINCRO_S3_SECRET_KEY=${SINCRO_S3_SECRET_KEY}
             - SINCRO_RECOGNIZER_MODEL=${SINCRO_RECOGNIZER_MODEL}
         volumes:
             - ../volumes/sincro-cache:/opt/sincromisor/.cache
@@ -20,7 +20,7 @@ services:
         networks:
             - sincromisor-net
         depends_on:
-            sincro-minio:
+            sincro-s3:
                 condition: service_healthy
 
 networks:

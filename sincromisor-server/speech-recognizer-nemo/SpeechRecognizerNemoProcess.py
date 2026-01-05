@@ -18,8 +18,8 @@ from sincro_config import (
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 from speech_recognizer_nemo.models import SpeechRecognizerNemoProcessArgument
 from speech_recognizer_nemo.SpeechRecognizerNemo import SpeechRecognizerNemoWorker
-from speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerMinioClient import (
-    SpeechRecognizerMinioClient,
+from speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerS3Client import (
+    SpeechRecognizerS3Client,
 )
 
 setproctitle("SPRecognizer")
@@ -71,20 +71,20 @@ class SpeechRecognizerNemoProcess:
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1
             try:
-                minio_client: SpeechRecognizerMinioClient | None = None
-                minio_description: ServiceDescription | None = (
-                    self.sd_referrer.get_random_worker(worker_type="SincroMinio")
+                s3_client: SpeechRecognizerS3Client | None = None
+                s3_description: ServiceDescription | None = (
+                    self.sd_referrer.get_random_worker(worker_type="SincroS3")
                 )
                 if (
-                    minio_description is not None
-                    and self.__args.minio_access_key
-                    and self.__args.minio_secret_key
+                    s3_description is not None
+                    and self.__args.s3_access_key
+                    and self.__args.s3_secret_key
                 ):
-                    minio_client = SpeechRecognizerMinioClient(
-                        minio_host=minio_description.service_address,
-                        minio_port=minio_description.service_port,
-                        access_key=self.__args.minio_access_key,
-                        secret_key=self.__args.minio_secret_key,
+                    s3_client = SpeechRecognizerS3Client(
+                        s3_host=s3_description.service_address,
+                        s3_port=s3_description.service_port,
+                        access_key=self.__args.s3_access_key,
+                        secret_key=self.__args.s3_secret_key,
                     )
                 await ws.accept()
                 current_speech_id = -1
@@ -109,7 +109,7 @@ class SpeechRecognizerNemoProcess:
                         )
                         extractor_result.voice = current_speech_buffer
                     result: SpeechRecognizerResult = speech_recognizer.recognize(
-                        spe_result=extractor_result, minio_client=minio_client
+                        spe_result=extractor_result, s3_client=s3_client
                     )
                     self.__logger.info(
                         f"SpeechRecognizerResult: {repr(result)}",

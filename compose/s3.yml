@@ -1,0 +1,203 @@
+services:
+    seaweed-master:
+        profiles:
+            - full
+            - backend
+            - external
+        image: chrislusf/seaweedfs
+        ports:
+            - 9333:9333
+            - 19333:19333
+            - 9324:9324
+        command: 'master -ip=seaweed-master -ip.bind=0.0.0.0 -metricsPort=9324'
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            consul-agent-s3:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9333/ >/dev/null 2>&1 || exit 1"]
+            interval: 5s
+            timeout: 3s
+            retries: 30
+
+    seaweed-volume:
+        profiles:
+            - full
+            - backend
+            - external
+        image: chrislusf/seaweedfs
+        ports:
+            - 8080:8080
+            - 18080:18080
+            - 9325:9325
+        command: 'volume -ip=seaweed-volume -master="seaweed-master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9325'
+        volumes:
+            - sincro-s3-data:/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            seaweed-master:
+                condition: service_healthy
+            consul-agent-s3:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/status >/dev/null 2>&1 || exit 1"]
+            interval: 5s
+            timeout: 3s
+            retries: 30
+
+    seaweed-filer:
+        profiles:
+            - full
+            - backend
+            - external
+        image: chrislusf/seaweedfs
+        ports:
+            - 8888:8888
+            - 18888:18888
+            - 9326:9326
+        command: 'filer -ip=seaweed-filer -master="seaweed-master:9333" -ip.bind=0.0.0.0 -metricsPort=9326'
+        tty: true
+        stdin_open: true
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            consul-agent-s3:
+                condition: service_healthy
+            seaweed-master:
+                condition: service_healthy
+            seaweed-volume:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8888/ >/dev/null 2>&1 || exit 1"]
+            interval: 5s
+            timeout: 3s
+            retries: 30
+
+    sincro-s3:
+        profiles:
+            - full
+            - backend
+            - external
+        image: chrislusf/seaweedfs
+        ports:
+            # default: 8333
+            - ${SINCRO_S3_PUBLIC_BIND_PORT}:${SINCRO_S3_PUBLIC_BIND_PORT}
+            - 9327:9327
+        command: 's3 -filer="seaweed-filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327'
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            seaweed-master:
+                condition: service_healthy
+            seaweed-volume:
+                condition: service_healthy
+            seaweed-filer:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:${SINCRO_S3_PUBLIC_BIND_PORT}/ >/dev/null 2>&1 || exit 1"]
+            interval: 5s
+            timeout: 3s
+            retries: 30
+
+    consul-agent-s3:
+        profiles:
+            - full
+            - backend
+            - external
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-client=0.0.0.0",
+            ]
+        volumes:
+            - consul-agent-s3-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        healthcheck:
+            test: ["CMD", "consul", "members"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    consul-s3-registrar:
+        profiles:
+            - full
+            - backend
+            - external
+        image: curlimages/curl:latest
+        networks:
+            - sincromisor-net
+        depends_on:
+            consul-agent-s3:
+                condition: service_healthy
+            sincro-s3:
+                condition: service_healthy
+        environment:
+            - CONSUL_HTTP_ADDR=http://consul-agent-s3:8500
+            - SERVICE_NAME=SincroS3
+            - SERVICE_ID=seaweed-s3
+            - SERVICE_ADDRESS=sincro-s3
+            - SERVICE_PORT=${SINCRO_S3_PUBLIC_BIND_PORT}
+            - SERVICE_TAGS=s3,seaweedfs,tts-cache
+            - PERIOD_SECONDS=15
+        volumes:
+            - ../Docker/seaweedfs/consul-registrar.sh:/consul-registrar.sh:ro
+        entrypoint: ["/bin/sh", "/consul-registrar.sh"]
+        restart: unless-stopped
+
+    s3-bootstrap:
+        profiles:
+            - full
+            - backend
+            - external
+        image: chrislusf/seaweedfs:latest
+        networks:
+            - sincromisor-net
+        depends_on:
+            sincro-s3:
+                condition: service_healthy
+        environment:
+            - S3_BUCKETS=speech-recognizer,voice-synthesizer
+            - S3_USER=sincromisor
+            - S3_ACCESS_KEY=${SINCRO_S3_ACCESS_KEY}
+            - S3_SECRET_KEY=${SINCRO_S3_SECRET_KEY}
+            # 既存の同一 access_key が見つかったが secret が異なる場合の挙動
+            # 0: 失敗して止める（デフォルト、安全）
+            # 1: 上書きローテーションを許可する（意図がある時だけ）
+            - ALLOW_SECRET_ROTATION=0
+            - S3_ACTIONS=Read,Write,List
+        volumes:
+            - ../Docker/seaweedfs/s3-bootstrap.sh:/s3-bootstrap.sh:ro
+        entrypoint: ["/bin/sh","/s3-bootstrap.sh"]
+        restart: "no"
+
+volumes:
+    consul-agent-s3-data:
+    sincro-s3-data:
+
+networks:
+    sincromisor-net:

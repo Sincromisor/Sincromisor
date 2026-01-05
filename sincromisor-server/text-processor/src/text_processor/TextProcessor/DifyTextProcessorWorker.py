@@ -61,6 +61,7 @@ class DifyTextProcessorWorker(TextProcessorWorker):
                 query=request,
                 conversation_id=self.conversation_id,
             ):
+                self.logger.info(["Dify Response", response])
                 match response["event"]:
                     case "message":
                         buffer += response["answer"]

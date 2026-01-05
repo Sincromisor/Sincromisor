@@ -1,6 +1,6 @@
 {
     "service": {
-        "name": "SincroMinio",
+        "name": "SincroS3",
         "id": "SERVICE_ID",
         "tags": [
             "minio",

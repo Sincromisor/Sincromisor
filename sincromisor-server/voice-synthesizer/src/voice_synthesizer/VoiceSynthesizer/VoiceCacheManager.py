@@ -2,11 +2,14 @@ import io
 import logging
 from logging import Logger
 
-from minio import Minio
-from minio.error import S3Error
+import boto3
+from botocore.client import BaseClient
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError
+from botocore.response import StreamingBody
 from redis import Redis
+from redis.exceptions import RedisError
 from sincro_models import VoiceSynthesizerRequest, VoiceSynthesizerResult
-from urllib3.response import BaseHTTPResponse
 
 from .VoiceSynthesizer import VoiceSynthesizer
 
@@ -21,35 +24,43 @@ class VoiceCacheManager:
         voicevox_port: int,
         redis_host: str,
         redis_port: int,
-        minio_host: str,
-        minio_port: int,
-        minio_access_key: str,
-        minio_secret_key: str,
+        s3_host: str,
+        s3_port: int,
+        s3_access_key: str,
+        s3_secret_key: str,
     ):
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.redis: Redis = Redis(
             host=redis_host,
             port=redis_port,
         )  # , decode_responses=True
-
-        self.minio_client: Minio = Minio(
-            endpoint=f"{minio_host}:{minio_port}",
-            access_key=minio_access_key,
-            secret_key=minio_secret_key,
-            secure=False,
+        self.s3_client: BaseClient = boto3.client(
+            "s3",
+            endpoint_url=f"http://{s3_host}:{s3_port}",
+            aws_access_key_id=s3_access_key,
+            aws_secret_access_key=s3_secret_key,
+            region_name="us-east-1",
+            config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
         )
         self.bucket_name: str = "voice-synthesizer"
-        self.__setup_minio_bucket()
+        self.__setup_s3_bucket()
 
         self.vsynth: VoiceSynthesizer = VoiceSynthesizer(
             host=voicevox_host,
             port=voicevox_port,
         )
 
-    def __setup_minio_bucket(self) -> None:
-        if not self.minio_client.bucket_exists(self.bucket_name):
-            self.minio_client.make_bucket(self.bucket_name)
-            self.logger.info(f"Created MinIO bucket: {self.bucket_name}")
+    def __setup_s3_bucket(self) -> None:
+        try:
+            self.s3_client.head_bucket(Bucket=self.bucket_name)
+        except ClientError as exc:
+            error_code = exc.response.get("Error", {}).get("Code")
+            if error_code not in ("404", "NoSuchBucket", "NotFound"):
+                raise
+            self.s3_client.create_bucket(Bucket=self.bucket_name)
+            self.logger.info(f"Created S3 bucket: {self.bucket_name}")
+        except BotoCoreError:
+            raise
 
     def get_voice(self, vs_request: VoiceSynthesizerRequest) -> VoiceSynthesizerResult:
         self.logger.info(f"SynthRequest: {vs_request.message}")
@@ -58,9 +69,9 @@ class VoiceCacheManager:
         if vs_result:
             self.logger.info(f"SynthRequest(Redis-HIT): {vs_request.message}")
             return vs_result
-        vs_result = self.__get_voice_minio(vs_request)
+        vs_result = self.__get_voice_s3(vs_request)
         if vs_result:
-            self.logger.info(f"SynthRequest(MinIO-HIT): {vs_request.message}")
+            self.logger.info(f"SynthRequest(S3-HIT): {vs_request.message}")
             self.__put_voice_redis(vs_request, vs_result)
             return vs_result
         try:
@@ -71,7 +82,7 @@ class VoiceCacheManager:
         except Exception:
             raise self.VoiceSynthesizerServerException
         self.__put_voice_redis(vs_request, vs_result)
-        self.__put_voice_minio(vs_request, vs_result)
+        self.__put_voice_s3(vs_request, vs_result)
         return vs_result
 
     def __get_voice_redis(
@@ -83,18 +94,18 @@ class VoiceCacheManager:
                 return VoiceSynthesizerResult.from_msgpack(vs_pack)
         return None
 
-    def __get_voice_minio(
+    def __get_voice_s3(
         self, vs_request: VoiceSynthesizerRequest
     ) -> VoiceSynthesizerResult | None:
         try:
-            minio_res: BaseHTTPResponse = self.minio_client.get_object(
-                bucket_name=self.bucket_name, object_name=vs_request.minio_key()
+            response = self.s3_client.get_object(
+                Bucket=self.bucket_name, Key=vs_request.s3_key()
             )
-            vpack: bytes = minio_res.read()
-            minio_res.close()
-            minio_res.release_conn()
+            body: StreamingBody = response["Body"]
+            vpack: bytes = body.read()
+            body.close()
             return VoiceSynthesizerResult.from_msgpack(vpack)
-        except S3Error:
+        except (ClientError, BotoCoreError):
             return None
 
     def __put_voice_redis(
@@ -104,19 +115,19 @@ class VoiceCacheManager:
             self.redis.set(
                 vs_request.redis_key(), vs_result.to_msgpack(), ex=60 * 60 * 24 * 7
             )
-        except S3Error as e:
+        except RedisError as e:
             self.logger.error(f"Failed to upload voice to Redis: {e}")
 
-    def __put_voice_minio(
+    def __put_voice_s3(
         self, vs_request: VoiceSynthesizerRequest, vs_result: VoiceSynthesizerResult
     ) -> None:
         try:
-            self.minio_client.put_object(
-                bucket_name=self.bucket_name,
-                object_name=vs_request.minio_key(),
-                data=io.BytesIO(vs_result.to_msgpack()),
-                length=len(vs_result.to_msgpack()),
-                content_type="application/octet-stream",
+            payload = vs_result.to_msgpack()
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=vs_request.s3_key(),
+                Body=io.BytesIO(payload),
+                ContentType="application/octet-stream",
             )
-        except S3Error as e:
-            self.logger.error(f"Failed to upload voice to MinIO: {e}")
+        except (ClientError, BotoCoreError) as e:
+            self.logger.error(f"Failed to upload voice to S3: {e}")

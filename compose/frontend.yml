@@ -11,9 +11,9 @@ services:
             dockerfile: ./Docker/sincro-frontend/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/sincro-frontend:latest
         ports:
-            - 80:80/tcp
-            - 443:443/tcp
-            - 443:443/udp
+            - 8086:80/tcp
+            - 8443:443/tcp
+            - 8443:443/udp
         volumes:
             - ../configs/Caddyfile:/etc/caddy/Caddyfile:ro
         networks:

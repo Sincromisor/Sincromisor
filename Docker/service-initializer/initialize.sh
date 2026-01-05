@@ -10,10 +10,10 @@ chown -R sincromisor:sincromisor /opt/sincromisor/.cache
 stat /opt/sincromisor/configs/config.yml
 stat /opt/sincromisor/.cache
 
-mc alias set sincro-minio \
-    "http://${SINCRO_MINIO_PUBLIC_BIND_HOST}:${SINCRO_MINIO_PUBLIC_BIND_PORT}" \
-    "${SINCRO_MINIO_ACCESS_KEY}" \
-    "${SINCRO_MINIO_SECRET_KEY}"
+mc alias set sincro-s3 \
+    "http://${SINCRO_S3_PUBLIC_BIND_HOST}:${SINCRO_S3_PUBLIC_BIND_PORT}" \
+    "${SINCRO_S3_ACCESS_KEY}" \
+    "${SINCRO_S3_SECRET_KEY}"
 
 su sincromisor -c '/opt/sincromisor/.local/bin/uv run hf cache ls || true'
 if [ "${SINCRO_RECOGNIZER_MODEL}" = "nemo" ]; then

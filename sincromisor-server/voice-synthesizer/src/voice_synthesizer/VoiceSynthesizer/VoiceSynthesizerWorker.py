@@ -20,10 +20,10 @@ class VoiceSynthesizerWorker:
         voicevox_style_id: int,
         redis_host: str,
         redis_port: int,
-        minio_host: str,
-        minio_port: int,
-        minio_access_key: str,
-        minio_secret_key: str,
+        s3_host: str,
+        s3_port: int,
+        s3_access_key: str,
+        s3_secret_key: str,
     ):
         self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__vvox: VoiceCacheManager = VoiceCacheManager(
@@ -31,10 +31,10 @@ class VoiceSynthesizerWorker:
             voicevox_port=voicevox_port,
             redis_host=redis_host,
             redis_port=redis_port,
-            minio_host=minio_host,
-            minio_port=minio_port,
-            minio_access_key=minio_access_key,
-            minio_secret_key=minio_secret_key,
+            s3_host=s3_host,
+            s3_port=s3_port,
+            s3_access_key=s3_access_key,
+            s3_secret_key=s3_secret_key,
         )
         self.__voicevox_style_id: int = voicevox_style_id
 
