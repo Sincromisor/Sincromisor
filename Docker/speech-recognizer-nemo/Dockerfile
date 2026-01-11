@@ -86,7 +86,7 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --group speech-recognizer-nemo
 
 #------------------------------------------------------------
-FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu24.04 AS runner
+FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04 AS runner
 
 LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
 
