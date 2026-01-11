@@ -5,13 +5,13 @@ services:
             - backend
             - external
         image: chrislusf/seaweedfs
-        ports:
-            - 9333:9333
-            - 19333:19333
-            - 9324:9324
+        ports: []
+            # - 9333:9333
+            # - 19333:19333
+            # - 9324:9324
         command: 'master -ip=seaweed-master -ip.bind=0.0.0.0 -metricsPort=9324'
         networks:
-            - sincromisor-net
+            - s3-internal-net
         deploy:
             restart_policy:
                 condition: any
@@ -31,15 +31,15 @@ services:
             - backend
             - external
         image: chrislusf/seaweedfs
-        ports:
-            - 8080:8080
-            - 18080:18080
-            - 9325:9325
+        ports: []
+            # - 8080:8080
+            # - 18080:18080
+            # - 9325:9325
         command: 'volume -ip=seaweed-volume -master="seaweed-master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9325'
         volumes:
             - sincro-s3-data:/data
         networks:
-            - sincromisor-net
+            - s3-internal-net
         deploy:
             restart_policy:
                 condition: any
@@ -61,15 +61,15 @@ services:
             - backend
             - external
         image: chrislusf/seaweedfs
-        ports:
-            - 8888:8888
-            - 18888:18888
-            - 9326:9326
+        ports: []
+            # - 8888:8888
+            # - 18888:18888
+            # - 9326:9326
         command: 'filer -ip=seaweed-filer -master="seaweed-master:9333" -ip.bind=0.0.0.0 -metricsPort=9326'
         tty: true
         stdin_open: true
         networks:
-            - sincromisor-net
+            - s3-internal-net
         deploy:
             restart_policy:
                 condition: any
@@ -99,6 +99,7 @@ services:
             - 9327:9327
         command: 's3 -filer="seaweed-filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327'
         networks:
+            - s3-internal-net
             - sincromisor-net
         deploy:
             restart_policy:
@@ -201,3 +202,5 @@ volumes:
 
 networks:
     sincromisor-net:
+    s3-internal-net:
+        internal: true
