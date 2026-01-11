@@ -25,19 +25,6 @@ class SpeechRecognizerS3Client:
             config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
         )
         self.bucket_name: str = "speech-recognizer"
-        self.__setup_s3_bucket()
-
-    def __setup_s3_bucket(self) -> None:
-        try:
-            self.s3_client.head_bucket(Bucket=self.bucket_name)
-        except ClientError as exc:
-            error_code = exc.response.get("Error", {}).get("Code")
-            if error_code not in ("404", "NoSuchBucket", "NotFound"):
-                raise
-            self.s3_client.create_bucket(Bucket=self.bucket_name)
-            self.logger.info(f"Created S3 bucket: {self.bucket_name}")
-        except BotoCoreError:
-            raise
 
     def __put_s3(self, object_name: str, data: bytes, content_type: str) -> None:
         self.s3_client.put_object(
