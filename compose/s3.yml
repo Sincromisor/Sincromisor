@@ -4,6 +4,7 @@ services:
             - full
             - backend
             - external
+            - s3
         image: chrislusf/seaweedfs
         ports: []
             # - 9333:9333
@@ -30,6 +31,7 @@ services:
             - full
             - backend
             - external
+            - s3
         image: chrislusf/seaweedfs
         ports: []
             # - 8080:8080
@@ -60,6 +62,7 @@ services:
             - full
             - backend
             - external
+            - s3
         image: chrislusf/seaweedfs
         ports: []
             # - 8888:8888
@@ -92,6 +95,7 @@ services:
             - full
             - backend
             - external
+            - s3
         image: chrislusf/seaweedfs
         ports:
             # default: 8333
@@ -123,6 +127,7 @@ services:
             - full
             - backend
             - external
+            - s3
         image: hashicorp/consul:latest
         command:
             [
@@ -149,6 +154,7 @@ services:
             - full
             - backend
             - external
+            - s3
         image: curlimages/curl:latest
         networks:
             - sincromisor-net
@@ -175,9 +181,10 @@ services:
             - full
             - backend
             - external
+            - s3
         image: chrislusf/seaweedfs:latest
         networks:
-            - sincromisor-net
+            - s3-internal-net
         depends_on:
             sincro-s3:
                 condition: service_healthy
