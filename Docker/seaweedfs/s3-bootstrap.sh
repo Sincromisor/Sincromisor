@@ -5,6 +5,7 @@ echo "[bootstrap] starting s3-bootstrap.sh"
 # set -euo pipefail
 
 FILER_ENDPOINT="seaweed-filer:8888"
+MASTER_ENDPOINT="seaweed-master:9333"
 
 USER="${S3_USER}"
 AK="${S3_ACCESS_KEY}"
@@ -12,15 +13,13 @@ SK="${S3_SECRET_KEY}"
 ACTIONS="${S3_ACTIONS}"
 ALLOW_ROTATE="${ALLOW_SECRET_ROTATION}"
 
-IFS=',' read -r -a BUCKET_LIST <<<"${S3_BUCKETS}"
-
 weed_shell() {
-	weed shell -filer="${FILER_ENDPOINT}"
+	weed shell -master="${MASTER_ENDPOINT}" -filer="${FILER_ENDPOINT}"
 }
 
 echo "[bootstrap] start"
 echo "[bootstrap] user=${USER} access_key=${AK}"
-echo "[bootstrap] buckets=${BUCKET_LIST[*]}"
+echo "[bootstrap] buckets=${S3_BUCKETS}"
 
 # ------------------------------------------------------------
 # 1) Ensure buckets (idempotent)
@@ -29,7 +28,8 @@ echo "[bootstrap] ensuring buckets..."
 
 EXISTING_BUCKETS="$(printf '%s\n' 's3.bucket.list' | weed_shell || true)"
 
-for BUCKET in "${BUCKET_LIST[@]}"; do
+for BUCKET in $(echo ${S3_BUCKETS} | tr ',' '\n'); do
+    BUCKET=$(printf '%s' "$BUCKET" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 	if echo "${EXISTING_BUCKETS}" | grep -qE "(^|[[:space:]\"])${BUCKET}([[:space:]\"]|$)"; then
 		echo "[bootstrap] bucket exists: ${BUCKET}"
 	else
