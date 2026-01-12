@@ -35,6 +35,12 @@ class VoiceTransformTrack(MediaStreamTrack):
         self.__logger: Logger = logging.getLogger(
             __name__ + f"[{vcs.session_id[21:26]}]",
         )
+
+        self.__consul_agent_host: str | None = consul_agent_host
+        self.__consul_agent_port: int | None = consul_agent_port
+        self.__fallback_host: str | None = fallback_host
+        self.__fallback_port: int | None = fallback_port
+
         # RTCSessionManager、RTCSessionProcessと共有される
         self.__rtc_finalize_event: Event = rtc_finalize_event
         self.__session_id: str = vcs.session_id
@@ -42,15 +48,16 @@ class VoiceTransformTrack(MediaStreamTrack):
         self.__track: MediaStreamTrack = track
         self.__vcs: RTCVoiceChatSession = vcs
         # SpeechExtractor -> SpeechRecognizer用フォーマットは1ch, 16bit, 16000Hz
-        self.__resampler = AudioResampler(layout="mono", rate=16000)
-        self.__audio_broker = AudioBroker(
+        self.__resampler: AudioResampler = AudioResampler(layout="mono", rate=16000)
+        self.__audio_broker: AudioBroker = AudioBroker(
             session_id=self.__session_id,
             talk_mode=self.__vcs.talk_mode,
-            consul_agent_host=consul_agent_host,
-            consul_agent_port=consul_agent_port,
-            fallback_host=fallback_host,
-            fallback_port=fallback_port,
+            consul_agent_host=self.__consul_agent_host,
+            consul_agent_port=self.__consul_agent_port,
+            fallback_host=self.__fallback_host,
+            fallback_port=self.__fallback_port,
         )
+        self.__audio_broker.connect()
 
     # デコード済みのオーディオフレームを受け取って、何らかの処理を行った上で
     # フレームを返す。
@@ -59,8 +66,8 @@ class VoiceTransformTrack(MediaStreamTrack):
     # await self.__track.recv()がデッドロックしてしまう。
     async def recv(self) -> AudioFrame:
         if not self.__audio_broker.is_running():
-            # AudioBrokerに異常が発生したら、RTC Sessionも止める
-            self.__rtc_finalize_event.set()
+            # AudioBrokerに異常が発生したら再接続を試みる
+            self.__audio_broker.connect()
             return self.__generate_dummy_frame()
 
         try:
