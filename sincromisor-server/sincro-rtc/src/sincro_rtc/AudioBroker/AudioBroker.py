@@ -160,13 +160,14 @@ class AudioBroker:
 
     def connect(self) -> None:
         # 再接続の試行は最低でも10秒以上間隔を開ける
-        if self.__last_connect + 10 < time.time():
+        if self.__last_connect + 10 > time.time():
             return
 
         self.__last_connect = time.time()
         # reconnectの場合、clearされている可能性がある
         self.__running.set()
 
+        self.__logger.info('connecting worker...')
         try:
             extractor: AudioBrokerCommunicator = self.__extractor()
             recognizer: AudioBrokerCommunicator = self.__recognizer()
@@ -367,7 +368,7 @@ class AudioBroker:
 
         self.__frame_buffer.append(frame)
         if len(self.__frame_buffer) >= 25:
-            self.__logger.warning("add_frame - overflow")
+            self.__logger.warning(f"add_frame - overflow len: {len(self.__frame_buffer)}")
 
     def __err_to_chat(self, message: str) -> None:
         self.text_channel_queue.append(
