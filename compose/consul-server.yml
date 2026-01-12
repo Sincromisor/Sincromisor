@@ -44,6 +44,28 @@ services:
             timeout: 5s
             retries: 5
 
+    bandog:
+        profiles:
+            - full
+            - backend
+            - external
+        image: hashicorp/consul:latest
+        networks:
+            - sincromisor-net
+        volumes:
+            - ../Docker/consul/bandog.sh:/bandog.sh:ro
+        command: ["/bin/sh", "/bandog.sh"]
+        environment:
+            - CONSUL_DNS_ADDR=${SINCRO_CONSUL_SERVER_HOST}:8600
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        healthcheck:
+            test: ["CMD-SHELL", "test $(cat services.status) = 0"]
+            interval: 3s
+            timeout: 1s
+
 networks:
     sincromisor-net:
 
