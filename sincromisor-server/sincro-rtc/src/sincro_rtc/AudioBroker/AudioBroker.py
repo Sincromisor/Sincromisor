@@ -234,6 +234,7 @@ class AudioBroker:
                 service_address=self.__fallback_host,
                 service_port=self.__fallback_port,
             )
+            self.__logger.warning(f"Set fallback server :{self.__fallback_host}:{self.__fallback_port}")
         if worker is None:
             raise AudioBrokerError(f"{worker_type} worker is not found.")
         return worker
