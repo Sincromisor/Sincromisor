@@ -1,5 +1,6 @@
 import logging
 import traceback
+import time
 from collections import deque
 from logging import Logger
 from threading import Event, Thread
@@ -156,33 +157,47 @@ class AudioBroker:
 
         self.return_frame_format = {"sample_rate": 48000, "sample_size": 960}
 
-        try:
-            self.__communicators: AudioBrokerCommunicators = AudioBrokerCommunicators(
-                extractor=self.__extractor(),
-                recognizer=self.__recognizer(),
-                text_processor=self.__text_processor(),
-                synthesizer=self.__synthesizer(),
-            )
-        except AudioBrokerError:
-            self.__logger.error(f"AudioBrokerError: {traceback.format_exc()}")
-            self.__err_to_chat(message=f"AudioBrokerError: {traceback.format_exc()}")
-            self.close()
-        except ConnectionRefusedError:
-            self.__logger.error(f"ConnectionRefusedError: {traceback.format_exc()}")
-            self.__err_to_chat(
-                message=f"ConnectionRefusedError: {traceback.format_exc()}"
-            )
-            self.close()
-        except TimeoutError:
-            self.__logger.error(f"TimeoutError: {traceback.format_exc()}")
-            self.__err_to_chat(message=f"TimeoutError: {traceback.format_exc()}")
-            self.close()
-        except Exception as e:
-            self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
-            self.__err_to_chat(
-                message=f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
-            )
-            self.close()
+        extractor: AudioBrokerCommunicator| None = None
+        recognizer: AudioBrokerCommunicator| None = None
+        text_processor: AudioBrokerCommunicator| None = None
+        synthesizer: AudioBrokerCommunicator| None = None
+
+        while self.is_running():
+            try:
+                if not extractor:
+                    extractor = self.__extractor()
+                if not recognizer:
+                    recognizer = self.__recognizer()
+                if not text_processor:
+                    text_processor = self.__text_processor()
+                if not synthesizer:
+                    synthesizer = self.__synthesizer()
+                self.__communicators: AudioBrokerCommunicators = AudioBrokerCommunicators(
+                    extractor=extractor,
+                    recognizer=recognizer,
+                    text_processor=text_processor,
+                    synthesizer=synthesizer,
+                )
+            except AudioBrokerError:
+                self.__logger.error(f"AudioBrokerError: {traceback.format_exc()}")
+                self.__err_to_chat(message=f"AudioBrokerError: {traceback.format_exc()}")
+            except ConnectionRefusedError:
+                self.__logger.error(f"ConnectionRefusedError: {traceback.format_exc()}")
+                self.__err_to_chat(
+                    message=f"ConnectionRefusedError: {traceback.format_exc()}"
+                )
+            except TimeoutError:
+                self.__logger.error(f"TimeoutError: {traceback.format_exc()}")
+                self.__err_to_chat(message=f"TimeoutError: {traceback.format_exc()}")
+            except Exception as e:
+                self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
+                self.__err_to_chat(
+                    message=f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                )
+                # 未知の例外が発生した場合はAudioBrokerを停止する
+                self.close()
+
+            time.sleep(30)
 
     def is_running(self) -> bool:
         return self.__running.is_set()
