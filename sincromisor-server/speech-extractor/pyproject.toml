@@ -8,7 +8,7 @@ dependencies = [
     "sincro-config",
     "sincro-models",
     "numpy==1.26.4",
-    "mediapipe==0.10.21",
+    "mediapipe==0.10.32",
     "pydantic>=2.11.7",
     "uvicorn>=0.35.0",
     "fastapi>=0.116.1",
