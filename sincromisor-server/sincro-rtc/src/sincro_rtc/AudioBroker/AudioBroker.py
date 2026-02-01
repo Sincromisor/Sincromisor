@@ -1,6 +1,6 @@
 import logging
-import traceback
 import time
+import traceback
 from collections import deque
 from logging import Logger
 from threading import Event, Thread
@@ -167,7 +167,7 @@ class AudioBroker:
         # reconnectの場合、clearされている可能性がある
         self.__running.set()
 
-        self.__logger.info('connecting worker...')
+        self.__logger.info("connecting worker...")
         try:
             extractor: AudioBrokerCommunicator = self.__extractor()
             recognizer: AudioBrokerCommunicator = self.__recognizer()

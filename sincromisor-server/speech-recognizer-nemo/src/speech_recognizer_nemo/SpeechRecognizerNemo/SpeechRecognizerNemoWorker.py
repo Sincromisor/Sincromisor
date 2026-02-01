@@ -8,8 +8,8 @@ from time import perf_counter
 import numpy as np
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 
-from .SpeechRecognizerS3Client import SpeechRecognizerS3Client
 from .SpeechRecognizerNemo import SpeechRecognizerNemo
+from .SpeechRecognizerS3Client import SpeechRecognizerS3Client
 
 
 class SpeechRecognizerNemoWorker:
