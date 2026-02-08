@@ -27,7 +27,6 @@
     "@pixiv/three-vrm": "^3.4.5",
     "hls.js": "^1.6.10",
     "js-yaml": "^4.1.1",
-    "three": "^0.182.0",
-    "vite-plugin-handlebars": "^2.0.0"
+    "three": "^0.182.0"
   }
 }
