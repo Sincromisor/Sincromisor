@@ -12,6 +12,7 @@ from reazonspeech.nemo.asr.interface import (
 
 
 class SpeechRecognizerNemo:
+    # pkg/nemo-asr/src/decode.pyと同じ
     PAD_SECONDS = 0.5
 
     def __init__(self):
@@ -59,14 +60,16 @@ class SpeechRecognizerNemo:
         audio: np.ndarray,
     ) -> list[tuple[str, float]]:
         ts_result: TranscribeResult = self.transcribe(audio)
-        return [(ts_result.text, ts_result.hypothesis.score)]
+        hyp: Hypothesis = ts_result.hypothesis  # ty:ignore[invalid-assignment]
+
+        return [(hyp.text or ts_result.text, hyp.score)]
 
 if __name__ == "__main__":
     from pprint import pprint
 
     import numpy as np
 
-    data = np.fromfile("sample_f32le.raw", dtype=np.float32)
+    data = np.fromfile("sample02_f32le.raw", dtype=np.float32)
     nemo = SpeechRecognizerNemo()
     result: TranscribeResult = nemo.transcribe(data)
     pprint(result)
