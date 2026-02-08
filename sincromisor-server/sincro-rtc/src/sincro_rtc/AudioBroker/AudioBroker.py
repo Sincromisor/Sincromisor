@@ -135,7 +135,8 @@ class AudioBroker:
 
         # VoiceTransformTrack
         # -> ExtractorSenderThread: bytes
-        self.__frame_buffer: deque = deque([], 25)
+        # 50frame(960samples * 50frame = 48000samples)
+        self.__frame_buffer: deque = deque([], 50)
         # ExtractorReceiverThread
         # -> RecognizerSenderThread: SpeechExtractorResult
         self.__extractor_results: deque = deque([], 10)
@@ -367,8 +368,11 @@ class AudioBroker:
             raise AudioBrokerError("AudioBroker is not running.")
 
         self.__frame_buffer.append(frame)
-        if len(self.__frame_buffer) >= 25:
+        if len(self.__frame_buffer) >= 50:
             self.__logger.warning(f"add_frame - overflow len: {len(self.__frame_buffer)}")
+            # 溢れたら0.5秒分(25frame)破棄する
+            while len(self.__frame_buffer) >= 25:
+                self.__frame_buffer.popleft()
 
     def __err_to_chat(self, message: str) -> None:
         self.text_channel_queue.append(
