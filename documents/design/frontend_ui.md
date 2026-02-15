@@ -136,7 +136,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - HTTP 429 は明示エラーとして扱う
   - それ以外の非200は再接続対象
 - タイムアウト/リトライ方針:
-  - 明示タイムアウト未設定
+  - Offer生成時のICE gathering待機は最大 `1500ms`（`RTCTalkClient.ICE_GATHERING_TIMEOUT_MS`）
+  - timeout時は `iceGatheringState=complete` を待たず、部分的なcandidateを含むSDPで `POST /offer` を継続
   - 接続失敗時は `10-30秒` ランダム遅延で再接続
 
 ### 7.4 状態遷移・シーケンス
@@ -219,8 +220,10 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - UIロジックとDOM依存が密結合な箇所がある
 - リスク一覧:
   - WebRTC仕様変更時にフロント/サーバー差分が発生しやすい
+  - ICE gathering待機を短縮しているため、NAT条件が厳しい環境では初回接続成功率が低下する可能性がある
 - 軽減策:
   - `networking_rtc.md` と本書を同時更新する運用を徹底
+  - `ICE_GATHERING_TIMEOUT_MS` を環境に応じて調整し、接続時間と成功率を運用で最適化する
 
 ## 13. 代替案と設計判断
 
@@ -236,6 +239,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 日付 | 変更内容 |
 | --- | --- |
 | 2026-02-15 | 初版作成 |
+| 2026-02-15 | ChromiumでのOffer遅延対策として、ICE gathering待機に1500ms上限を設ける仕様を追記 |
 
 ## 15. 参照資料
 
