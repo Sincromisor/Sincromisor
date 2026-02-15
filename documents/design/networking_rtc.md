@@ -140,6 +140,8 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
   - `offer` 非200時はフロント側で接続失敗表示し再接続
   - 不正DataChannel/不正Trackはセッション側で終了
 - タイムアウト/リトライ方針:
+  - フロントはOffer生成時、ICE gathering完了待機を最大 `1500ms` に制限する
+  - timeout時は部分candidateを含むSDPで `POST /offer` を継続し、接続開始遅延を抑制する
   - フロントはランダム遅延（約10-30秒）で再接続
 
 ### 7.4 状態遷移・シーケンス
@@ -232,8 +234,10 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 - リスク一覧:
   - DataChannel名ずれによる無通信
   - ICE設定ミスによる全面接続失敗
+  - ICE gathering timeoutにより、候補不足のままoffer送信されることで初回接続成功率が低下する可能性
 - 軽減策:
   - この文書と frontend/backend文書を同時更新
+  - `RTCTalkClient.ICE_GATHERING_TIMEOUT_MS` の値を運用環境で調整し、遅延と成功率のバランスを取る
 
 ## 13. 代替案と設計判断
 
@@ -249,6 +253,7 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 | 日付 | 変更内容 |
 | --- | --- |
 | 2026-02-15 | 初版作成 |
+| 2026-02-15 | ICE gathering待機上限（1500ms）と、そのトレードオフ（初回成功率低下可能性）を追記 |
 
 ## 15. 参照資料
 

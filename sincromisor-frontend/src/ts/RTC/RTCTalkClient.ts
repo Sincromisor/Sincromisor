@@ -4,6 +4,13 @@ import { ChatMessageManager } from "../UI/ChatMessageManager";
 import { SincroRTCConfig } from "./SincroRTCConfigManager";
 
 export class RTCTalkClient {
+    // Firefoxは短時間でcompleteに達する一方、Chromiumはネットワーク条件によって
+    // ICE gathering完了まで数十秒かかることがある。
+    // この値は「ユーザー待ち時間を抑える」ための上限待機時間。
+    // timeout後は収集中の候補を含むSDPでoffer送信を続行する。
+    // 副作用: candidateが出揃う前に送信するため、NAT条件が厳しい環境では
+    // 初回接続成功率がわずかに低下する可能性がある（速度とのトレードオフ）。
+    private static readonly ICE_GATHERING_TIMEOUT_MS = 1500;
     private readonly logger: DebugConsoleManager;
     private readonly peerConnection: RTCPeerConnection;
     private readonly telopChannel: RTCDataChannel;
@@ -98,27 +105,49 @@ export class RTCTalkClient {
     }
 
     private async negotiate(peerConnection: RTCPeerConnection): Promise<void> {
+        // 1) Offerを生成してlocalDescriptionへ反映する。
+        // setLocalDescription時点でICE candidate収集が開始される。
         return peerConnection.createOffer()
             .then((offer) => {
                 return peerConnection.setLocalDescription(offer);
             })
             .then(() => {
-                // wait for ICE gathering to complete
+                // 2) 本来はICE gathering完了まで待つ。
+                // ただしChromiumでは、利用可能なcandidateが既に得られていても
+                // 「complete」遷移が遅れるケースがあり、ここで接続開始が大きく遅延する。
+                // そのため、complete待ちは最大ICE_GATHERING_TIMEOUT_MSで打ち切る。
                 return new Promise<void>((resolve) => {
                     if (peerConnection.iceGatheringState === "complete") {
+                        // 既に完了している場合は即座に次へ進む。
                         resolve();
-                    } else {
-                        function checkState() {
-                            if (peerConnection.iceGatheringState === "complete") {
-                                peerConnection.removeEventListener("icegatheringstatechange", checkState);
-                                resolve();
-                            }
-                        }
-                        peerConnection.addEventListener("icegatheringstatechange", checkState);
+                        return;
                     }
+
+                    const timerId = window.setTimeout(() => {
+                        // 3) timeout時はcompleteを待たずにoffer送信へ進む。
+                        // Trickle ICE未実装の構成でも、初期candidateのみで接続できる環境が多く、
+                        // 体感遅延の大幅な悪化を防げる。
+                        // 一方で、candidate不足により接続成立率が低下する可能性がある。
+                        peerConnection.removeEventListener("icegatheringstatechange", checkState);
+                        console.warn(
+                            `negotiate: ICE gathering timeout(${RTCTalkClient.ICE_GATHERING_TIMEOUT_MS}ms), continue with partial candidates.`,
+                        );
+                        resolve();
+                    }, RTCTalkClient.ICE_GATHERING_TIMEOUT_MS);
+
+                    function checkState() {
+                        if (peerConnection.iceGatheringState === "complete") {
+                            // timeout前にcompleteへ到達した通常経路。
+                            window.clearTimeout(timerId);
+                            peerConnection.removeEventListener("icegatheringstatechange", checkState);
+                            resolve();
+                        }
+                    }
+                    peerConnection.addEventListener("icegatheringstatechange", checkState);
                 });
             })
             .then(() => {
+                // 4) 取得できた時点のlocalDescriptionをofferとしてシグナリングサーバーへ送る。
                 console.log('negotiate: complate.');
 
                 const offer: RTCSessionDescription | null = peerConnection.localDescription;
