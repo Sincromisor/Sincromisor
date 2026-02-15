@@ -12,7 +12,7 @@ from av.audio.frame import AudioFrame
 from av.audio.resampler import AudioResampler
 from av.frame import Frame
 from av.packet import Packet
-from sincro_models import TextProcessorResult, VoiceSynthesizerResultFrame
+from sincro_models import ChatMessage, VoiceSynthesizerResultFrame
 
 from ..AudioBroker import AudioBroker, AudioBrokerError
 from ..models import RTCVoiceChatSession
@@ -68,6 +68,7 @@ class VoiceTransformTrack(MediaStreamTrack):
         if not self.__audio_broker.is_running():
             # AudioBrokerに異常が発生したら再接続を試みる
             self.__audio_broker.connect()
+            self.__flush_text_channel()
             return self.__generate_dummy_frame()
 
         try:
@@ -94,11 +95,7 @@ class VoiceTransformTrack(MediaStreamTrack):
             resampled_frames = self.__resampler.resample(frame)
             for rf in resampled_frames:
                 self.__audio_broker.add_frame(rf.to_ndarray().tobytes())
-            if (
-                self.__vcs.text_ch is not None
-                and (sr_result := self.__get_recognized_text()) is not None
-            ):
-                self.__vcs.text_ch.send(sr_result.model_dump_json())
+            self.__flush_text_channel()
             if (
                 self.__vcs.telop_ch is not None
                 and (synth_voice := self.__get_voice_frame()) is not None
@@ -133,13 +130,24 @@ class VoiceTransformTrack(MediaStreamTrack):
         # フレームを返さないとデッドロックするため、ダミーフレームを返す
         return self.__convert_dummy_frame(frame)
 
-    def __get_recognized_text(self) -> TextProcessorResult | None:
-        if len(self.__audio_broker.text_channel_queue) > 0:
-            sr_result: TextProcessorResult = (
+    # AudioBroker障害時に積まれたChatMessageも含めて、text_chがopenの間に
+    # キューを前から順に送る。未open時はキューを保持してメッセージ欠落を防ぐ。
+    def __flush_text_channel(self) -> None:
+        if self.__vcs.text_ch is None:
+            return
+        if self.__vcs.text_ch.readyState != "open":
+            return
+
+        while len(self.__audio_broker.text_channel_queue) > 0:
+            chat_message: ChatMessage = self.__audio_broker.text_channel_queue[0]
+            try:
+                self.__vcs.text_ch.send(chat_message.model_dump_json())
                 self.__audio_broker.text_channel_queue.popleft()
-            )
-            return sr_result
-        return None
+            except Exception as e:
+                self.__logger.error(
+                    f"flush_text_channel - UnknownError: {repr(e)}\n{traceback.format_exc()}",
+                )
+                break
 
     def __get_voice_frame(self) -> VoiceSynthesizerResultFrame | None:
         if len(self.__audio_broker.voice_frame_queue) > 0:
