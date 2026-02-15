@@ -157,6 +157,8 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
 - 異常系フロー:
   - いずれかのThread例外/切断 -> `running.clear()` -> 全体停止
   - `VoiceTransformTrack.recv()` で非稼働検知 -> `connect()` 再試行 + ダミーフレーム返却
+  - `text_ch` が open の場合は `text_channel_queue` を前から送信し、`__err_to_chat()` で投入された `message_type="error"` も配信する
+  - `text_ch` 未open時は `text_channel_queue` を保持し、open後に送信して欠落を防ぐ
 - 状態遷移図/シーケンス図（必要なら図リンク）:
   - TODO: `documents/design/networking_websocket.md` と統合
 

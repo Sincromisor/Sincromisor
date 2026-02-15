@@ -161,6 +161,8 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
 - 異常系フロー:
   - 接続拒否/切断/デコード失敗 -> Event clear -> 全体停止
   - 上位 `VoiceTransformTrack` が停止検知して再接続
+  - 上位 `VoiceTransformTrack` は `text_ch` が open の間、`text_channel_queue` をフラッシュし、`AudioBroker.__err_to_chat()` のエラー通知をフロントへ中継する
+  - `text_ch` 未open時はキューを保持し、open後に順次送信する
 - 状態遷移図/シーケンス図（必要なら図リンク）:
   - TODO: 追加予定
 
