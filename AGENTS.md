@@ -14,16 +14,21 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
   - WebRTC 接続
   - `three` / `@pixiv/three-vrm` による 3D キャラクター描画
   - マルチページ構成（simple-vrm, glass, vrm360 など）
+- 設計文書: `documents/design/`（本プロジェクトの設計情報の正本）
+  - 入口: `documents/design/index.md`
+  - テンプレート: `documents/design/template.md`
 
 ## 2. 最初に読むファイル（推奨順）
 
 1. `README.md`
 2. `compose.yml`
 3. `examples/compose.env`
-4. `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
-5. `sincromisor-frontend/vite.config.js`
-6. `sincromisor-frontend/src/ts/SincroController.ts`
-7. `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
+4. `documents/design/index.md`
+5. `documents/design/template.md`
+6. `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
+7. `sincromisor-frontend/vite.config.js`
+8. `sincromisor-frontend/src/ts/SincroController.ts`
+9. `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
 
 ## 3. ディレクトリマップ
 
@@ -45,6 +50,13 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
   - 各マイクロサービスの compose 定義
 - `Docker/`
   - 各コンテナの Dockerfile と起動スクリプト
+- `documents/design/`
+  - `index.md`: 設計文書の入口
+  - `frontend_*.md`: フロントエンド設計
+  - `backend_*.md`: バックエンド設計
+  - `networking_*.md`: 通信契約設計
+  - `service_*.md`: compose / Consul 設計
+  - `template.md`: 設計文書テンプレート
 
 ## 4. 通信フロー（実装把握用）
 
@@ -108,6 +120,9 @@ docker compose --profile full up -d
   - `.env` 変数定義（`examples/compose.env`）
   - compose の environment
   - Python 側の引数・設定クラス（`sincro-config`）
+- 設計変更を伴う実装変更時
+  - `documents/design/` の該当文書を同時更新
+  - 入口の `documents/design/index.md` との整合を確認
 
 ## 7. よくある落とし穴
 
