@@ -189,6 +189,12 @@ export class RTCTalkClient {
     }
 
     private sendIceCandidate(candidate: RTCIceCandidateInit | null): Promise<void> {
+        // Firefox等で candidateオブジェクト自体は存在するが candidate文字列が空のケースがある。
+        // これは実質 end-of-candidates なので null として統一する。
+        if (candidate != null && (!candidate.candidate || candidate.candidate.trim() === "")) {
+            candidate = null;
+        }
+
         if (!this.sessionId) {
             // session_id未確定時は送信できないためキューへ退避。
             this.pendingIceCandidates.push(candidate);

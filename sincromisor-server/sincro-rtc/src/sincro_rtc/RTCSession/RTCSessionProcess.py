@@ -59,6 +59,10 @@ class RTCSessionProcess(Process):
         self.__consul_agent_port: int | None = consul_agent_port
         self.__fallback_host: str | None = fallback_host
         self.__fallback_port: int | None = fallback_port
+        # 運用監視用カウンタ:
+        # candidate異常が断続的に出る環境で、件数を追えるようにする。
+        self.__empty_candidate_count: int = 0
+        self.__invalid_candidate_count: int = 0
 
     async def __add_ice_candidate(self, candidate: dict | None) -> None:
         if candidate is None:
@@ -66,8 +70,22 @@ class RTCSessionProcess(Process):
             await self.__vcs.peer.addIceCandidate(None)
             return
 
+        candidate_sdp = candidate.get("candidate")
+        if not candidate_sdp or not str(candidate_sdp).strip():
+            # Firefox等で空candidateが来ることがあるため、終端扱いに寄せる。
+            self.__empty_candidate_count += 1
+            self.__logger.info(
+                (
+                    "ICE candidate normalized to end-of-candidates "
+                    f"(empty payload count={self.__empty_candidate_count}, "
+                    f"sdpMid={candidate.get('sdpMid')}, "
+                    f"sdpMLineIndex={candidate.get('sdpMLineIndex')})"
+                ),
+            )
+            await self.__vcs.peer.addIceCandidate(None)
+            return
+
         try:
-            candidate_sdp = candidate["candidate"]
             if candidate_sdp.startswith("candidate:"):
                 # ブラウザ実装差で接頭辞有無が揺れるため正規化する。
                 candidate_sdp = candidate_sdp[len("candidate:") :]
@@ -75,6 +93,20 @@ class RTCSessionProcess(Process):
             rtc_candidate.sdpMid = candidate.get("sdpMid")
             rtc_candidate.sdpMLineIndex = candidate.get("sdpMLineIndex")
             await self.__vcs.peer.addIceCandidate(rtc_candidate)
+        except AssertionError:
+            # aiortc.sdp.candidate_from_sdp() が期待フォーマット外で失敗したケース。
+            # 想定内の入力不整合としてwarningで記録し、処理は継続する。
+            self.__invalid_candidate_count += 1
+            head = str(candidate_sdp).replace("\n", "\\n")[:160]
+            self.__logger.warning(
+                (
+                    "Invalid ICE candidate ignored "
+                    f"(count={self.__invalid_candidate_count}, "
+                    f"sdpMid={candidate.get('sdpMid')}, "
+                    f"sdpMLineIndex={candidate.get('sdpMLineIndex')}, "
+                    f"candidate_head={head})"
+                ),
+            )
         except Exception:
             self.__logger.error(
                 f"Failed to add ICE candidate.\n{traceback.format_exc()}",

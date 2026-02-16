@@ -113,6 +113,13 @@ class RTCSignalingServer:
             rtcSM.cleanup_sessions()
             if rtcSM.add_ice_candidate(candidate_params):
                 return JSONResponse({"status": True})
+            self.__logger.warning(
+                (
+                    "Candidate rejected: session not found or closed "
+                    f"(session_id={candidate_params.session_id}, "
+                    f"has_candidate={candidate_params.candidate is not None})"
+                ),
+            )
             return JSONResponse(
                 {"error": "Session not found or already closed."},
                 status_code=status.HTTP_404_NOT_FOUND,
