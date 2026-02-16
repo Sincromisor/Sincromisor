@@ -190,14 +190,22 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
 
 - ログ設計:
   - Offer/Answer SDP、接続状態、セッション終了をログ出力
+  - Trickle ICE監視ログ:
+    - `ICE candidate normalized to end-of-candidates (...)`
+      - 空candidateを終端イベントとして正規化した記録（件数カウンタ付き）
+    - `Invalid ICE candidate ignored (...)`
+      - candidateフォーマット異常を無視した記録（件数・先頭文字列付き）
+    - `Candidate rejected: session not found or closed (...)`
+      - `/candidate` が閉塞セッションへ到達した記録（session_id付き）
 - メトリクス:
   - `/statuses` の `sessions` を簡易メトリクスとして利用
 - 障害時の切り分け手順:
   - 1. `/statuses` が200応答するか
   - 2. `/config.json` が期待通りの `offerURL/candidateURL/iceServers` を返すか
   - 3. `/candidate` が404多発していないか（session_id不整合）確認
-  - 4. `connectionState` が `failed` で落ちていないかログ確認
-  - 5. `cleanup` 後にゾンビセッションが残っていないか確認
+  - 4. `Invalid ICE candidate ignored` の件数増加有無を確認（特定ブラウザ/経路のフォーマット異常）
+  - 5. `connectionState` が `failed` で落ちていないかログ確認
+  - 6. `cleanup` 後にゾンビセッションが残っていないか確認
 - よくある失敗と対処:
   - ICEホスト名解決不可 -> config/ネットワーク/DNS確認
   - `max_sessions` 超過 -> 閾値見直しまたは接続数平準化
@@ -261,6 +269,7 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
 | --- | --- |
 | 2026-02-15 | 初版作成 |
 | 2026-02-16 | Trickle ICE導入に伴い `POST /candidate` と `RTCSessionCandidate` モデルを追加 |
+| 2026-02-16 | Trickle ICE運用監視向けにcandidate正規化/無視/rejectログの判読ポイントを追記 |
 
 ## 15. 参照資料
 

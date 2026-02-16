@@ -189,14 +189,19 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 - ログ設計:
   - frontend: ICE/DataChannelログ（DebugConsole）
   - backend: Offer/Answer・connection stateログ
+  - backend(Trickle ICE):
+    - `ICE candidate normalized to end-of-candidates (...)`
+    - `Invalid ICE candidate ignored (...)`
+    - `Candidate rejected: session not found or closed (...)`
 - メトリクス:
   - `/statuses` の `sessions`
 - 障害時の切り分け手順:
   - 1. `/config.json` 応答確認
   - 2. `/offer` のHTTPステータス確認
   - 3. `/candidate` のHTTPステータス確認
-  - 4. ICE state遷移確認
-  - 5. `text_ch` / `telop_ch` open/受信確認
+  - 4. backendログで `Invalid ICE candidate ignored` と `Candidate rejected` の発生数を確認
+  - 5. ICE state遷移確認
+  - 6. `text_ch` / `telop_ch` open/受信確認
 - よくある失敗と対処:
   - マイク権限拒否 -> 権限設定を見直す
   - ICE不整合 -> STUN/TURN設定を見直す
@@ -262,6 +267,7 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 | 2026-02-15 | ICE gathering待機上限（1500ms）と、そのトレードオフ（初回成功率低下可能性）を追記 |
 | 2026-02-16 | FirefoxのICE失敗対策として、ICE gathering待機をブラウザ別制御（Chromiumのみ1500ms上限）に更新 |
 | 2026-02-16 | Trickle ICE導入に合わせて `candidate` API と `candidateURL` を通信契約へ追加 |
+| 2026-02-16 | Trickle ICEの運用監視向けにcandidate関連ログ（normalized/ignored/rejected）の確認手順を追記 |
 
 ## 15. 参照資料
 
