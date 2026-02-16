@@ -15,6 +15,7 @@ from aiortc import (
     RTCSessionDescription,
 )
 from aiortc.contrib.media import MediaRelay
+from aiortc.sdp import candidate_from_sdp
 from setproctitle import setproctitle
 from sincro_config import SincromisorConfig
 
@@ -58,6 +59,35 @@ class RTCSessionProcess(Process):
         self.__consul_agent_port: int | None = consul_agent_port
         self.__fallback_host: str | None = fallback_host
         self.__fallback_port: int | None = fallback_port
+
+    async def __add_ice_candidate(self, candidate: dict | None) -> None:
+        if candidate is None:
+            # nullはend-of-candidates。aiortcにもNoneで明示的に渡す。
+            await self.__vcs.peer.addIceCandidate(None)
+            return
+
+        try:
+            candidate_sdp = candidate["candidate"]
+            if candidate_sdp.startswith("candidate:"):
+                # ブラウザ実装差で接頭辞有無が揺れるため正規化する。
+                candidate_sdp = candidate_sdp[len("candidate:") :]
+            rtc_candidate = candidate_from_sdp(candidate_sdp)
+            rtc_candidate.sdpMid = candidate.get("sdpMid")
+            rtc_candidate.sdpMLineIndex = candidate.get("sdpMLineIndex")
+            await self.__vcs.peer.addIceCandidate(rtc_candidate)
+        except Exception:
+            self.__logger.error(
+                f"Failed to add ICE candidate.\n{traceback.format_exc()}",
+            )
+            traceback.print_exc()
+
+    async def __handle_signal_message(self, message: dict) -> None:
+        message_type = message.get("type")
+        if message_type == "add_ice_candidate":
+            await self.__add_ice_candidate(message.get("candidate"))
+            return
+
+        self.__logger.warning(f"Unknown signal message type: {message_type}")
 
     def __get_ice_servers(self):
         config = SincromisorConfig.from_yaml()
@@ -176,7 +206,17 @@ class RTCSessionProcess(Process):
     async def __serve(self) -> None:
         self.__server_sdp_pipe.send(await self.__offer())
         while self.__rtc_finalize_event.is_set() is False:
-            await asyncio.sleep(1)
+            try:
+                # Trickle ICE後送用メッセージを親プロセスから受信し、
+                # 同一イベントループ上でRTCPeerConnectionへ反映する。
+                while self.__server_sdp_pipe.poll():
+                    message = self.__server_sdp_pipe.recv()
+                    if isinstance(message, dict):
+                        await self.__handle_signal_message(message)
+            except EOFError:
+                self.__rtc_finalize_event.set()
+            # busy loop回避。candidate適用遅延を抑えるため短いsleepにする。
+            await asyncio.sleep(0.01)
         self.__logger.info("RTC session loop terminated.")
         self.__server_sdp_pipe.close()
         if self.__vcs:

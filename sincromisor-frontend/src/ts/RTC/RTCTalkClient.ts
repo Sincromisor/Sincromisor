@@ -4,13 +4,6 @@ import { ChatMessageManager } from "../UI/ChatMessageManager";
 import { SincroRTCConfig } from "./SincroRTCConfigManager";
 
 export class RTCTalkClient {
-    // Firefoxは短時間でcompleteに達する一方、Chromiumはネットワーク条件によって
-    // ICE gathering完了まで数十秒かかることがある。
-    // この値は「ユーザー待ち時間を抑える」ための上限待機時間。
-    // timeout後は収集中の候補を含むSDPでoffer送信を続行する。
-    // 副作用: candidateが出揃う前に送信するため、NAT条件が厳しい環境では
-    // 初回接続成功率がわずかに低下する可能性がある（速度とのトレードオフ）。
-    private static readonly ICE_GATHERING_TIMEOUT_MS = 1500;
     private readonly logger: DebugConsoleManager;
     private readonly peerConnection: RTCPeerConnection;
     private readonly telopChannel: RTCDataChannel;
@@ -19,6 +12,12 @@ export class RTCTalkClient {
     private readonly talkMode: string;
     private config: RTCConfiguration;
     private sincroConfig: SincroRTCConfig;
+    // /offer 応答で払い出されるサーバー側セッションID。
+    // Trickle ICEの candidate 送信先セッションの特定に使う。
+    private sessionId: string | null = null;
+    // /offer 応答より先に onicecandidate が発火するため、
+    // セッションID取得前のcandidateを一時保管する。
+    private pendingIceCandidates: Array<RTCIceCandidateInit | null> = [];
 
     /*
         default     Default codecs
@@ -65,11 +64,16 @@ export class RTCTalkClient {
     }
 
     start(): Promise<void> {
+        this.sessionId = null;
+        this.pendingIceCandidates = [];
         this.chatMessageManager.writeSystemMessage("音声認識・合成システムに接続します。");
         return this.negotiate(this.peerConnection);
     }
 
     stop(): void {
+        this.sessionId = null;
+        this.pendingIceCandidates = [];
+
         // close data channel
         if (this.textChannel) { this.textChannel.close(); }
         if (this.telopChannel) { this.telopChannel.close(); }
@@ -105,51 +109,14 @@ export class RTCTalkClient {
     }
 
     private async negotiate(peerConnection: RTCPeerConnection): Promise<void> {
-        // 1) Offerを生成してlocalDescriptionへ反映する。
-        // setLocalDescription時点でICE candidate収集が開始される。
+        // Trickle ICE方針:
+        // 1) OfferはICE completeを待たず先に送信して接続開始を早める
+        // 2) 以降のcandidateは /candidate に逐次送信する
         return peerConnection.createOffer()
             .then((offer) => {
                 return peerConnection.setLocalDescription(offer);
             })
             .then(() => {
-                // 2) 本来はICE gathering完了まで待つ。
-                // ただしChromiumでは、利用可能なcandidateが既に得られていても
-                // 「complete」遷移が遅れるケースがあり、ここで接続開始が大きく遅延する。
-                // そのため、complete待ちは最大ICE_GATHERING_TIMEOUT_MSで打ち切る。
-                return new Promise<void>((resolve) => {
-                    if (peerConnection.iceGatheringState === "complete") {
-                        // 既に完了している場合は即座に次へ進む。
-                        resolve();
-                        return;
-                    }
-
-                    const timerId = window.setTimeout(() => {
-                        // 3) timeout時はcompleteを待たずにoffer送信へ進む。
-                        // Trickle ICE未実装の構成でも、初期candidateのみで接続できる環境が多く、
-                        // 体感遅延の大幅な悪化を防げる。
-                        // 一方で、candidate不足により接続成立率が低下する可能性がある。
-                        peerConnection.removeEventListener("icegatheringstatechange", checkState);
-                        console.warn(
-                            `negotiate: ICE gathering timeout(${RTCTalkClient.ICE_GATHERING_TIMEOUT_MS}ms), continue with partial candidates.`,
-                        );
-                        resolve();
-                    }, RTCTalkClient.ICE_GATHERING_TIMEOUT_MS);
-
-                    function checkState() {
-                        if (peerConnection.iceGatheringState === "complete") {
-                            // timeout前にcompleteへ到達した通常経路。
-                            window.clearTimeout(timerId);
-                            peerConnection.removeEventListener("icegatheringstatechange", checkState);
-                            resolve();
-                        }
-                    }
-                    peerConnection.addEventListener("icegatheringstatechange", checkState);
-                });
-            })
-            .then(() => {
-                // 4) 取得できた時点のlocalDescriptionをofferとしてシグナリングサーバーへ送る。
-                console.log('negotiate: complate.');
-
                 const offer: RTCSessionDescription | null = peerConnection.localDescription;
                 if (offer == null) {
                     throw "Offer is null.";
@@ -195,12 +162,55 @@ export class RTCTalkClient {
             }).then((answer) => {
                 console.log(answer);
                 this.logger.answerSDP(answer.sdp);
-                return peerConnection.setRemoteDescription(answer);
+                this.sessionId = answer.session_id;
+                // Offer応答前に貯まったcandidateを、session_id確定後に順次反映する。
+                return this.flushPendingIceCandidates()
+                    .then(() => {
+                        return peerConnection.setRemoteDescription({
+                            sdp: answer.sdp,
+                            type: answer.type,
+                        });
+                    });
             }).catch((e) => {
+                this.sessionId = null;
+                this.pendingIceCandidates = [];
                 this.chatMessageManager.writeErrorMessage(`RTCサーバーへの接続に失敗しました...。\n${e}`, true);
                 console.error(e);
                 this.reConnect();
             });
+    }
+
+    private flushPendingIceCandidates(): Promise<void> {
+        const pendingCandidates = this.pendingIceCandidates.splice(0, this.pendingIceCandidates.length);
+        // 大量candidateでも送信順序を保つため逐次Promiseで流す。
+        return pendingCandidates.reduce((p, candidate) => {
+            return p.then(() => this.sendIceCandidate(candidate));
+        }, Promise.resolve());
+    }
+
+    private sendIceCandidate(candidate: RTCIceCandidateInit | null): Promise<void> {
+        if (!this.sessionId) {
+            // session_id未確定時は送信できないためキューへ退避。
+            this.pendingIceCandidates.push(candidate);
+            return Promise.resolve();
+        }
+        return fetch(this.sincroConfig.candidateURL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                session_id: this.sessionId,
+                candidate: candidate,
+            }),
+        }).then((response) => {
+            if (!response.ok) {
+                throw new Error(`Failed to send ICE candidate: ${response.status} ${response.statusText}`);
+            }
+        }).catch((e) => {
+            console.error(e);
+            this.logger.addTextChannelLog(`! failed to send ice candidate: ${e}\n`);
+        });
     }
 
     /*
@@ -241,6 +251,13 @@ export class RTCTalkClient {
     }
 
     private setupICEEventLog(peerConnection: RTCPeerConnection): RTCPeerConnection {
+        peerConnection.addEventListener("icecandidate", (event) => {
+            // event.candidate === null は end-of-candidates。
+            // サーバー側にも明示的に伝えるため null のまま送る。
+            const candidate = event.candidate ? event.candidate.toJSON() : null;
+            this.sendIceCandidate(candidate);
+        });
+
         // register some listeners to help debugging
         peerConnection.addEventListener("icegatheringstatechange", () => {
             this.logger.updateIceGatheringState(peerConnection.iceGatheringState);

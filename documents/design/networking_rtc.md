@@ -14,15 +14,16 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 - 目的:
   - フロントエンドとRTCサーバーの通信契約を明文化し、変更時の破壊を防ぐ
 - 対象範囲:
-  - HTTP API: `config.json`, `offer`, `statuses`, `cleanup`
+  - HTTP API: `config.json`, `offer`, `candidate`, `statuses`, `cleanup`
   - WebRTC: audio track, `text_ch`, `telop_ch`
   - 主要実装: frontend `RTCTalkClient` / backend `RTCSignalingServer`, `RTCSessionProcess`
 - 非対象範囲:
   - AudioBroker 以降のWebSocket契約（`networking_websocket.md`）
   - UI表示詳細
 - LLM向け要約（3-5行）:
-  - フロントは `GET /config.json` で `offerURL` と `iceServers` を取得する。
-  - `POST /offer` に `{sdp,type,talk_mode}` を送信し、Answer SDP を受け取る。
+  - フロントは `GET /config.json` で `offerURL` / `candidateURL` と `iceServers` を取得する。
+  - `POST /offer` に `{sdp,type,talk_mode}` を送信し、Answer SDP + `session_id` を受け取る。
+  - `POST /candidate` に `{session_id,candidate}` を送信し、Trickle ICEで候補を後送する。
   - WebRTC接続後、音声は MediaTrack で送信し、`text_ch` と `telop_ch` を受信する。
   - `text_ch` はチャット表示、`telop_ch` はテロップと口形同期に利用する。
 
@@ -110,7 +111,8 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 - 主要データ構造:
   - Offer request: `{ sdp: string, type: string, talk_mode: "chat"|"sincro" }`
   - Offer response: `{ sdp: string, type: string, session_id: string }`
-  - config response: `{ offerURL: string, iceServers: IceServerConfig[] }`
+  - Candidate request: `{ session_id: string, candidate: RTCIceCandidatePayload | null }`
+  - config response: `{ offerURL: string, candidateURL: string, iceServers: IceServerConfig[] }`
   - DataChannel payload:
     - `text_ch`: `ChatMessage`
     - `telop_ch`: `TelopChannelMessage`
@@ -127,12 +129,14 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 - エンドポイント/チャネル:
   - `GET /api/v1/RTCSignalingServer/config.json`
   - `POST /api/v1/RTCSignalingServer/offer`
+  - `POST /api/v1/RTCSignalingServer/candidate`
   - `GET /api/v1/RTCSignalingServer/statuses`
   - `GET /api/v1/RTCSignalingServer/cleanup`
   - DataChannel: `text_ch` (ordered=true), `telop_ch` (ordered=false, maxRetransmits=0)
 - リクエスト仕様:
   - `config.json`: bodyなし
   - `offer`: JSON bodyに `sdp/type/talk_mode`
+  - `candidate`: JSON bodyに `session_id/candidate`（end-of-candidatesは `candidate: null`）
 - レスポンス仕様:
   - `200`: Answer SDPまたは設定JSON
   - `429`: `{"error":"Too many requests."}`
@@ -140,8 +144,7 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
   - `offer` 非200時はフロント側で接続失敗表示し再接続
   - 不正DataChannel/不正Trackはセッション側で終了
 - タイムアウト/リトライ方針:
-  - フロントはOffer生成時、ICE gathering完了待機を最大 `1500ms` に制限する
-  - timeout時は部分candidateを含むSDPで `POST /offer` を継続し、接続開始遅延を抑制する
+  - Trickle ICE方式: Offerを先に送信し、ICE candidateは逐次 `POST /candidate` で送信
   - フロントはランダム遅延（約10-30秒）で再接続
 
 ### 7.4 状態遷移・シーケンス
@@ -150,9 +153,10 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
   - 1. Front: `GET /config.json`
   - 2. Front: PeerConnection生成、audio track追加、DataChannel生成
   - 3. Front: `POST /offer`
-  - 4. Server: Answer生成し返却
-  - 5. Front: `setRemoteDescription`、接続確立
-  - 6. Runtime: `text_ch` / `telop_ch` 受信処理
+  - 4. Server: Answer + `session_id` を返却
+  - 5. Front: `setRemoteDescription`
+  - 6. Front: `onicecandidate` ごとに `POST /candidate`
+  - 7. Runtime: `text_ch` / `telop_ch` 受信処理
 - 異常系フロー:
   - `429` 受信 -> 再接続待ち
   - ICE失敗 -> Frontの再接続処理へ移行
@@ -177,6 +181,7 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
   - `docker compose --profile full up -d`
 - 互換性に影響する設定変更:
   - `offerURL` パス変更
+  - `candidateURL` パス変更
   - ICEサーバ設定変更
 
 ## 9. 監視・運用
@@ -189,8 +194,9 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 - 障害時の切り分け手順:
   - 1. `/config.json` 応答確認
   - 2. `/offer` のHTTPステータス確認
-  - 3. ICE state遷移確認
-  - 4. `text_ch` / `telop_ch` open/受信確認
+  - 3. `/candidate` のHTTPステータス確認
+  - 4. ICE state遷移確認
+  - 5. `text_ch` / `telop_ch` open/受信確認
 - よくある失敗と対処:
   - マイク権限拒否 -> 権限設定を見直す
   - ICE不整合 -> STUN/TURN設定を見直す
@@ -234,10 +240,10 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 - リスク一覧:
   - DataChannel名ずれによる無通信
   - ICE設定ミスによる全面接続失敗
-  - ICE gathering timeoutにより、候補不足のままoffer送信されることで初回接続成功率が低下する可能性
+  - `session_id` 不整合または `candidate` API不整合でTrickle ICEが機能せず接続失敗する可能性
 - 軽減策:
   - この文書と frontend/backend文書を同時更新
-  - `RTCTalkClient.ICE_GATHERING_TIMEOUT_MS` の値を運用環境で調整し、遅延と成功率のバランスを取る
+  - `offer`/`candidate` のpayload契約とURLを統合テストで常時検証する
 
 ## 13. 代替案と設計判断
 
@@ -254,6 +260,8 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 | --- | --- |
 | 2026-02-15 | 初版作成 |
 | 2026-02-15 | ICE gathering待機上限（1500ms）と、そのトレードオフ（初回成功率低下可能性）を追記 |
+| 2026-02-16 | FirefoxのICE失敗対策として、ICE gathering待機をブラウザ別制御（Chromiumのみ1500ms上限）に更新 |
+| 2026-02-16 | Trickle ICE導入に合わせて `candidate` API と `candidateURL` を通信契約へ追加 |
 
 ## 15. 参照資料
 

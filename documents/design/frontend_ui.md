@@ -113,7 +113,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 主要データ構造:
   - `ChatMessage`（text_ch）
   - `TelopChannelMessage`（telop_ch）
-  - `SincroRTCConfig`（offerURL, iceServers）
+  - `SincroRTCConfig`（offerURL, candidateURL, iceServers）
 - 永続化対象:
   - ブラウザ側の永続ストレージ利用は基本なし
   - VRMファイルは `DialogManager` 経由で Cache API（`caches.open('file-cache')`）に保存/読込
@@ -127,24 +127,25 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - エンドポイント/チャネル:
   - `GET /api/v1/RTCSignalingServer/config.json`
   - `POST {offerURL}`（configで配布）
+  - `POST {candidateURL}`（configで配布）
   - DataChannel: `text_ch`, `telop_ch`
 - リクエスト仕様:
   - Offer送信: `{ sdp, type, talk_mode }`
+  - Candidate送信: `{ session_id, candidate }`（`candidate` は end-of-candidates のとき `null`）
 - レスポンス仕様:
-  - Answer: `{ sdp, type }`
+  - Answer: `{ sdp, type, session_id }`
 - エラー仕様:
   - HTTP 429 は明示エラーとして扱う
   - それ以外の非200は再接続対象
 - タイムアウト/リトライ方針:
-  - Offer生成時のICE gathering待機は最大 `1500ms`（`RTCTalkClient.ICE_GATHERING_TIMEOUT_MS`）
-  - timeout時は `iceGatheringState=complete` を待たず、部分的なcandidateを含むSDPで `POST /offer` を継続
+  - Trickle ICE方式: `setLocalDescription`後にOfferを先に送信し、候補は`onicecandidate`で逐次送信
   - 接続失敗時は `10-30秒` ランダム遅延で再接続
 
 ### 7.4 状態遷移・シーケンス
 
 - 正常系フロー:
   - 画面読込 -> 設定ダイアログ表示 -> Start押下
-  - UserMedia取得 -> RTC Offer/Answer -> DataChannel open
+  - UserMedia取得 -> RTC Offer/Answer（session_id取得）-> ICE candidate逐次送信 -> DataChannel open
   - text/telop受信 -> UI更新
 - 異常系フロー:
   - 設定取得失敗 -> チャット欄へエラー表示
@@ -220,10 +221,10 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - UIロジックとDOM依存が密結合な箇所がある
 - リスク一覧:
   - WebRTC仕様変更時にフロント/サーバー差分が発生しやすい
-  - ICE gathering待機を短縮しているため、NAT条件が厳しい環境では初回接続成功率が低下する可能性がある
+  - Candidate送信経路（`candidateURL`）が不整合だと接続が成立しない
 - 軽減策:
   - `networking_rtc.md` と本書を同時更新する運用を徹底
-  - `ICE_GATHERING_TIMEOUT_MS` を環境に応じて調整し、接続時間と成功率を運用で最適化する
+  - `offerURL`/`candidateURL`/payloadをフロントとサーバーで同時更新する
 
 ## 13. 代替案と設計判断
 
@@ -240,6 +241,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | --- | --- |
 | 2026-02-15 | 初版作成 |
 | 2026-02-15 | ChromiumでのOffer遅延対策として、ICE gathering待機に1500ms上限を設ける仕様を追記 |
+| 2026-02-16 | FirefoxでのICE失敗を避けるため、ICE gathering待機をブラウザ別制御（Chromiumのみ1500ms上限）に更新 |
+| 2026-02-16 | Trickle ICE導入。`candidateURL`追加、`session_id`付きAnswer、候補の逐次送信フローへ更新 |
 
 ## 15. 参照資料
 
