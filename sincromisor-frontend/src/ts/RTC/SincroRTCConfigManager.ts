@@ -5,7 +5,10 @@ export type IceServerConfig = {
 }
 
 export type SincroRTCConfig = {
+    // 初回シグナリング（Offer/Answer）用エンドポイント
     offerURL: string,
+    // Trickle ICEで候補を後送するエンドポイント
+    candidateURL: string,
     iceServers: IceServerConfig[]
 }
 

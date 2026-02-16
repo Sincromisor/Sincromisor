@@ -13,7 +13,11 @@ from sincro_config import (
     SincromisorConfig,
     SincromisorLoggerConfig,
 )
-from sincro_rtc.models import RTCSessionOffer, RTCSignalingServerArgument
+from sincro_rtc.models import (
+    RTCSessionCandidate,
+    RTCSessionOffer,
+    RTCSignalingServerArgument,
+)
 from sincro_rtc.RTCSession import RTCSessionManager
 
 if os.environ.get("SINCROMISOR_MODE") == "development":
@@ -101,6 +105,19 @@ class RTCSignalingServer:
             )
             return JSONResponse(session_info)
 
+        @app.post("/api/v1/RTCSignalingServer/candidate")
+        async def app_candidate(candidate_params: RTCSessionCandidate):
+            # Trickle ICE用:
+            # Offer後に到着する候補を既存セッションへ中継する。
+            # セッション終了済み候補は404で捨て、クライアント側の再接続判定に委ねる。
+            rtcSM.cleanup_sessions()
+            if rtcSM.add_ice_candidate(candidate_params):
+                return JSONResponse({"status": True})
+            return JSONResponse(
+                {"error": "Session not found or already closed."},
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
         @app.get("/api/v1/RTCSignalingServer/cleanup")
         def app_cleanup(request: Request):
             result = rtcSM.cleanup_sessions()
@@ -115,6 +132,8 @@ class RTCSignalingServer:
             return JSONResponse(
                 {
                     "offerURL": "/api/v1/RTCSignalingServer/offer",
+                    # Trickle ICE候補の後送先。フロントはconfig.jsonから動的取得する。
+                    "candidateURL": "/api/v1/RTCSignalingServer/candidate",
                     "iceServers": ice_servers,
                 },
             )

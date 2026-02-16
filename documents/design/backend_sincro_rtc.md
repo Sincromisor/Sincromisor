@@ -122,6 +122,7 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
   - 永続DBなし。セッション状態はメモリ上で管理
 - スキーマ/モデル:
   - `src/sincro_rtc/models/RTCSessionOffer.py`
+  - `src/sincro_rtc/models/RTCSessionCandidate.py`
   - `src/sincro_rtc/models/RTCVoiceChatSession.py`
 - バージョニング方針:
   - API互換は frontend の送信JSONと同期管理
@@ -131,14 +132,17 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
 - エンドポイント/チャネル:
   - `GET /api/v1/RTCSignalingServer/statuses`
   - `POST /api/v1/RTCSignalingServer/offer`
+  - `POST /api/v1/RTCSignalingServer/candidate`
   - `GET /api/v1/RTCSignalingServer/cleanup`
   - `GET /api/v1/RTCSignalingServer/config.json`
   - DataChannel: `text_ch`, `telop_ch`
 - リクエスト仕様:
   - `/offer` body: `{"sdp": "...", "type": "...", "talk_mode": "chat|sincro"}`
+  - `/candidate` body: `{"session_id":"...","candidate":{"candidate":"...","sdpMid":"...","sdpMLineIndex":0} | null}`
 - レスポンス仕様:
   - `/offer` success: `{"sdp": "...", "type": "...", "session_id": "..."}`
-  - `/config.json`: `{"offerURL": "/api/v1/RTCSignalingServer/offer", "iceServers": [...]}`
+  - `/candidate` success: `{"status": true}`
+  - `/config.json`: `{"offerURL": "/api/v1/RTCSignalingServer/offer", "candidateURL": "/api/v1/RTCSignalingServer/candidate", "iceServers": [...]}`
   - `/statuses`: `{"worker_type":"RTCSignalingServer","sessions":<int>}`
 - エラー仕様:
   - セッション超過: HTTP 429 + `{"error":"Too many requests."}`
@@ -152,6 +156,7 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
   - `POST /offer` -> `RTCSessionManager.create_session()`
   - 子プロセスで `setRemoteDescription` -> `createAnswer` -> `setLocalDescription`
   - AnswerをPipe経由で親に返却 -> HTTP応答
+  - `POST /candidate` -> `RTCSessionManager.add_ice_candidate()` -> 子プロセスの`RTCPeerConnection.addIceCandidate()`
   - audio track受信後に `VoiceTransformTrack` が稼働
 - 異常系フロー:
   - `max_sessions` 超過 -> 429
@@ -189,9 +194,10 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
   - `/statuses` の `sessions` を簡易メトリクスとして利用
 - 障害時の切り分け手順:
   - 1. `/statuses` が200応答するか
-  - 2. `/config.json` が期待通りの `offerURL/iceServers` を返すか
-  - 3. `connectionState` が `failed` で落ちていないかログ確認
-  - 4. `cleanup` 後にゾンビセッションが残っていないか確認
+  - 2. `/config.json` が期待通りの `offerURL/candidateURL/iceServers` を返すか
+  - 3. `/candidate` が404多発していないか（session_id不整合）確認
+  - 4. `connectionState` が `failed` で落ちていないかログ確認
+  - 5. `cleanup` 後にゾンビセッションが残っていないか確認
 - よくある失敗と対処:
   - ICEホスト名解決不可 -> config/ネットワーク/DNS確認
   - `max_sessions` 超過 -> 閾値見直しまたは接続数平準化
@@ -213,7 +219,7 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
 ## 11. テスト方針
 
 - テスト観点:
-  - API疎通、Offer/Answer成立、セッション上限、終了処理
+  - API疎通、Offer/Answer成立、Trickle ICE候補反映、セッション上限、終了処理
 - 単体テスト:
   - `AudioBrokerTest.py` など限定的。RTC全体は統合中心
 - 結合テスト:
@@ -223,7 +229,7 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
 - 負荷テスト（必要な場合のみ）:
   - `max_sessions` 近傍の同時接続で応答と回復性を確認
 - 受け入れ条件:
-  - `/offer` がAnswerを返し、音声セッションが成立する
+  - `/offer` がAnswerを返し、`/candidate` 経由の候補反映後に音声セッションが成立する
 
 ## 12. 既知課題・リスク
 
@@ -234,6 +240,7 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
   - CORS設定はコメントアウト状態で環境依存
 - リスク一覧:
   - ICE設定ミスで全セッション接続不能
+  - `session_id`不整合で候補を適用できず接続不能
   - 下流サービス不調時の品質低下
 - 軽減策:
   - healthcheck + cleanup運用
@@ -253,6 +260,7 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
 | 日付 | 変更内容 |
 | --- | --- |
 | 2026-02-15 | 初版作成 |
+| 2026-02-16 | Trickle ICE導入に伴い `POST /candidate` と `RTCSessionCandidate` モデルを追加 |
 
 ## 15. 参照資料
 

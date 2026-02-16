@@ -8,7 +8,7 @@ from multiprocessing.synchronize import Event
 
 from ulid import ULID
 
-from ..models import RTCSessionOffer
+from ..models import RTCSessionCandidate, RTCSessionOffer
 from .RTCSessionProcess import RTCSessionProcess
 from .RTCSessionProcessDescription import RTCSessionProcessDescription
 from .RTCSessionProcessManagementThread import RTCSessionProcessManagementThread
@@ -72,6 +72,39 @@ class RTCSessionManager:
 
     def session_count(self) -> int:
         return len(self.__processes)
+
+    def add_ice_candidate(self, session_candidate: RTCSessionCandidate) -> bool:
+        # セッション単位で独立プロセスを持つ設計のため、
+        # candidate適用は「親プロセス -> 対象子プロセス」へPipeで中継する。
+        session_desc: RTCSessionProcessDescription | None = self.__processes.get(
+            session_candidate.session_id
+        )
+        if session_desc is None:
+            return False
+        if not session_desc.is_active():
+            return False
+
+        try:
+            session_desc.sv_pipe.send(
+                {
+                    "type": "add_ice_candidate",
+                    "candidate": (
+                        session_candidate.candidate.model_dump()
+                        if session_candidate.candidate is not None
+                        else None
+                    ),
+                }
+            )
+            return True
+        except Exception:
+            self.__logger.error(
+                (
+                    f"[{session_candidate.session_id}] Failed to add ICE candidate."
+                    f"\n{traceback.format_exc()}"
+                ),
+            )
+            traceback.print_exc()
+            return False
 
     # 終了済みのセッションを閉じる。
     # 残ったセッションのセッションIDの一覧を返す。
