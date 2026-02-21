@@ -13,10 +13,27 @@ class VadProcessor extends AudioWorkletProcessor {
     // 毎フレーム通知するとUI更新負荷が高いため、数フレームごとに集約して通知する。
     this.reportEveryFrames = 4;
     this.frameCounter = 0;
+    // 学習ベースVAD向けにPCMフレームを送るかどうか。
+    // ブラウザ実装差で制御メッセージが初回に届かないケースを避けるため、既定で有効化しておく。
+    // 実際の推論ON/OFFはメインスレッド側(WorkerClient.enabled)でもガードしている。
+    this.learnedVadStreamEnabled = true;
+    this.learnedVadFrameSize = 1536; // 48kHzで約32ms。送信頻度を抑えてCPU負荷を下げる。
+    this.learnedVadFrameBuffer = new Float32Array(this.learnedVadFrameSize);
+    this.learnedVadFrameWriteIndex = 0;
 
     // メインスレッドからVAD閾値を更新できるようにする。
     this.port.onmessage = (event) => {
       const data = event.data;
+      if (!data) {
+        return;
+      }
+      if (data.type === "learned-vad-stream") {
+        this.learnedVadStreamEnabled = !!data.enabled;
+        if (!this.learnedVadStreamEnabled) {
+          this.learnedVadFrameWriteIndex = 0;
+        }
+        return;
+      }
       if (!data || data.type !== "vad-threshold") {
         return;
       }
@@ -53,6 +70,10 @@ class VadProcessor extends AudioWorkletProcessor {
       }
     }
 
+    if (this.learnedVadStreamEnabled) {
+      this.pushLearnedVadFrame(channelData);
+    }
+
     let sumSquares = 0;
     let peak = 0;
     for (let i = 0; i < channelData.length; i += 1) {
@@ -87,6 +108,33 @@ class VadProcessor extends AudioWorkletProcessor {
       });
     }
     return true;
+  }
+
+  pushLearnedVadFrame(channelData) {
+    let readIndex = 0;
+    while (readIndex < channelData.length) {
+      const writable = this.learnedVadFrameSize - this.learnedVadFrameWriteIndex;
+      const copySize = Math.min(writable, channelData.length - readIndex);
+      this.learnedVadFrameBuffer.set(
+        channelData.subarray(readIndex, readIndex + copySize),
+        this.learnedVadFrameWriteIndex,
+      );
+      this.learnedVadFrameWriteIndex += copySize;
+      readIndex += copySize;
+
+      if (this.learnedVadFrameWriteIndex >= this.learnedVadFrameSize) {
+        const pcm = new Float32Array(this.learnedVadFrameBuffer);
+        this.port.postMessage(
+          {
+            type: "audio-frame",
+            pcm,
+            sampleRate: globalThis.sampleRate,
+          },
+          [pcm.buffer],
+        );
+        this.learnedVadFrameWriteIndex = 0;
+      }
+    }
   }
 }
 

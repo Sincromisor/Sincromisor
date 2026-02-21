@@ -139,66 +139,20 @@
                 <dl class="audioMetricTable">
                     <dt>VAD</dt>
                     <dd id="localAudioVadValue">-</dd>
+                    <dt>Engine</dt>
+                    <dd id="localVadEngineValue">RMS</dd>
+                    <dt>Prob</dt>
+                    <dd id="localVadProbValue">-</dd>
+                    <dt>Model</dt>
+                    <dd id="localVadModelStateValue">-</dd>
+                    <dt>Frames</dt>
+                    <dd id="localVadFramesValue">tx:0 rx:0</dd>
                     <dt>RMS</dt>
                     <dd id="localAudioRmsValue">0.0%</dd>
                     <dt>Peak</dt>
                     <dd id="localAudioPeakValue">0.0%</dd>
                 </dl>
                 <p id="localAudioWarning" class="audioWarning">Normal</p>
-                <div class="audioControlGroup">
-                    <label class="audioControlLabel" for="localAudioHighpassCutoff">
-                        HPF Cutoff
-                        <span id="localAudioHighpassCutoffValue">120Hz</span>
-                    </label>
-                    <input
-                        id="localAudioHighpassCutoff"
-                        class="audioControlRange"
-                        type="range"
-                        min="60"
-                        max="300"
-                        step="5"
-                        value="120"
-                    />
-                </div>
-                <div class="audioControlGroup">
-                    <label class="audioControlCheckLabel" for="localAudioLowpassEnabled">
-                        <input id="localAudioLowpassEnabled" type="checkbox" />
-                        LPFを有効化
-                    </label>
-                    <label class="audioControlLabel" for="localAudioLowpassCutoff">
-                        LPF Cutoff
-                        <span id="localAudioLowpassCutoffValue">4200Hz</span>
-                    </label>
-                    <input
-                        id="localAudioLowpassCutoff"
-                        class="audioControlRange"
-                        type="range"
-                        min="2500"
-                        max="10000"
-                        step="100"
-                        value="4200"
-                    />
-                </div>
-                <div class="audioControlGroup">
-                    <label class="audioControlLabel" for="localVadRmsThreshold">
-                        VAD RMS Threshold
-                        <span id="localVadRmsThresholdValue">1.5%</span>
-                    </label>
-                    <input
-                        id="localVadRmsThreshold"
-                        class="audioControlRange"
-                        type="range"
-                        min="0.005"
-                        max="0.20"
-                        step="0.001"
-                        value="0.015"
-                    />
-                    <div class="audioPresetButtons" role="group" aria-label="VAD RMS Presets">
-                        <button type="button" class="audioPresetButton" data-vad-rms-preset="0.015">標準</button>
-                        <button type="button" class="audioPresetButton" data-vad-rms-preset="0.05">騒音環境</button>
-                        <button type="button" class="audioPresetButton" data-vad-rms-preset="0.1">超騒音環境</button>
-                    </div>
-                </div>
             </div>
             <div class="audioMeterPanel">
                 <div class="audioMeterHeader">
@@ -208,6 +162,151 @@
                 <div class="audioMeterTrack">
                     <div id="remoteAudioLevelMeter" class="audioMeterFill"></div>
                 </div>
+            </div>
+            <div class="audioMeterPanel audioMeterPanel--controls">
+                <details class="audioInlineDetails audioInlineDetails--controls">
+                    <summary>入力/VAD設定</summary>
+                    <div class="audioControlGroup">
+                        <label class="audioControlLabel" for="localAudioHighpassCutoff">
+                            HPF Cutoff
+                            <span id="localAudioHighpassCutoffValue">120Hz</span>
+                        </label>
+                        <input
+                            id="localAudioHighpassCutoff"
+                            class="audioControlRange"
+                            type="range"
+                            min="60"
+                            max="300"
+                            step="5"
+                            value="120"
+                        />
+                    </div>
+                    <div class="audioControlGroup">
+                        <label class="audioControlCheckLabel" for="localAudioLowpassEnabled">
+                            <input id="localAudioLowpassEnabled" type="checkbox" />
+                            LPFを有効化
+                        </label>
+                        <label class="audioControlLabel" for="localAudioLowpassCutoff">
+                            LPF Cutoff
+                            <span id="localAudioLowpassCutoffValue">4200Hz</span>
+                        </label>
+                        <input
+                            id="localAudioLowpassCutoff"
+                            class="audioControlRange"
+                            type="range"
+                            min="2500"
+                            max="10000"
+                            step="100"
+                            value="4200"
+                        />
+                    </div>
+                    <div class="audioControlGroup">
+                        <label class="audioControlCheckLabel" for="localVadLearnedEnabled">
+                            <input id="localVadLearnedEnabled" type="checkbox" />
+                            学習VAD（Silero）を有効化
+                        </label>
+                        <details class="audioInlineDetails">
+                            <summary>学習VADチューニング</summary>
+                            <div class="audioControlGroup">
+                                <label class="audioControlLabel" for="localVadLearnedPerformanceMode">
+                                    Preset
+                                    <span>負荷/精度</span>
+                                </label>
+                                <select id="localVadLearnedPerformanceMode" class="audioControlSelect">
+                                    <option value="balanced" selected>標準</option>
+                                    <option value="low_cpu">低負荷</option>
+                                    <option value="high_accuracy">高精度</option>
+                                </select>
+                            </div>
+                            <div class="audioControlGroup">
+                                <label class="audioControlLabel" for="localVadLearnedOnThreshold">
+                                    ON Threshold
+                                    <span id="localVadLearnedOnThresholdValue">0.0008</span>
+                                </label>
+                                <input
+                                    id="localVadLearnedOnThreshold"
+                                    class="audioControlRange"
+                                    type="range"
+                                    min="0.0001"
+                                    max="0.1000"
+                                    step="0.0001"
+                                    value="0.0008"
+                                />
+                            </div>
+                            <div class="audioControlGroup">
+                                <label class="audioControlLabel" for="localVadLearnedOffThreshold">
+                                    OFF Threshold
+                                    <span id="localVadLearnedOffThresholdValue">0.0004</span>
+                                </label>
+                                <input
+                                    id="localVadLearnedOffThreshold"
+                                    class="audioControlRange"
+                                    type="range"
+                                    min="0.00005"
+                                    max="0.0900"
+                                    step="0.00005"
+                                    value="0.0004"
+                                />
+                            </div>
+                            <div class="audioControlGroup">
+                                <label class="audioControlLabel" for="localVadLearnedHangoverMs">
+                                    Hangover
+                                    <span id="localVadLearnedHangoverMsValue">180ms</span>
+                                </label>
+                                <input
+                                    id="localVadLearnedHangoverMs"
+                                    class="audioControlRange"
+                                    type="range"
+                                    min="0"
+                                    max="1200"
+                                    step="10"
+                                    value="180"
+                                />
+                            </div>
+                            <div class="audioControlGroup">
+                                <label class="audioControlLabel" for="localVadLearnedInferIntervalMs">
+                                    Infer Interval
+                                    <span id="localVadLearnedInferIntervalMsValue">80ms</span>
+                                </label>
+                                <input
+                                    id="localVadLearnedInferIntervalMs"
+                                    class="audioControlRange"
+                                    type="range"
+                                    min="20"
+                                    max="400"
+                                    step="10"
+                                    value="80"
+                                />
+                            </div>
+                        </details>
+                        <label class="audioControlCheckLabel" for="localVadLearnedStrictMode">
+                            <input id="localVadLearnedStrictMode" type="checkbox" />
+                            厳格判定（Learned + RMS）
+                        </label>
+                        <label class="audioControlCheckLabel" for="localVadThresholdAutoEnabled">
+                            <input id="localVadThresholdAutoEnabled" type="checkbox" />
+                            VAD閾値を自動追従（ノイズフロア）
+                        </label>
+                        <label class="audioControlLabel" for="localVadRmsThreshold">
+                            VAD RMS Threshold
+                            <span id="localVadRmsThresholdValue">1.5%</span>
+                        </label>
+                        <input
+                            id="localVadRmsThreshold"
+                            class="audioControlRange"
+                            type="range"
+                            min="0.005"
+                            max="0.20"
+                            step="0.001"
+                            value="0.015"
+                        />
+                        <div class="audioPresetButtons" role="group" aria-label="VAD RMS Presets">
+                            <button type="button" class="audioPresetButton" data-vad-rms-preset="0.015">標準</button>
+                            <button type="button" class="audioPresetButton" data-vad-rms-preset="0.05">騒音環境</button>
+                            <button type="button" class="audioPresetButton" data-vad-rms-preset="0.1">超騒音環境</button>
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
         <audio id="rtcAudio" autoplay="true"></audio>

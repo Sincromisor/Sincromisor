@@ -110,8 +110,8 @@ div#debugConsole {
     grid-template-areas:
         "header header header header header header header header header header header header"
         "status status status status transport transport transport transport transport transport transport transport"
-        "audio audio audio audio channels channels channels channels channels channels channels channels"
-        "gaze gaze gaze gaze channels channels channels channels channels channels channels channels"
+        "audio audio audio audio audio audio gaze gaze gaze gaze gaze gaze"
+        "channels channels channels channels channels channels channels channels channels channels channels channels"
         "sdp sdp sdp sdp sdp sdp sdp sdp sdp sdp sdp sdp";
     gap: 12px;
     align-content: start;
@@ -275,6 +275,7 @@ div#debugConsole .debugCard--audio {
 
 div#debugConsole .debugCard--channels {
     grid-area: channels;
+    align-self: stretch;
 }
 
 div#debugConsole .debugCard--gaze {
@@ -371,9 +372,9 @@ div#debugConsole .state-error {
 
 div#debugConsole .audioMeterGrid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
-    align-items: stretch;
+    align-items: start;
     justify-items: stretch;
 }
 
@@ -386,6 +387,12 @@ div#debugConsole .audioMeterPanel {
     border: 1px solid hsl(190deg 65% 62% / 15%);
     background: hsl(218deg 28% 10% / 72%);
     min-height: 142px;
+    height: fit-content;
+}
+
+div#debugConsole .audioMeterPanel--controls {
+    grid-column: auto;
+    min-height: 0;
 }
 
 div#debugConsole .audioMeterHeader {
@@ -494,6 +501,24 @@ div#debugConsole .audioControlCheckLabel input[type="checkbox"] {
     margin: 0;
 }
 
+div#debugConsole details.audioInlineDetails {
+    border: 1px solid hsl(190deg 65% 62% / 15%);
+    border-radius: 6px;
+    padding: 4px 6px;
+    margin-bottom: 6px;
+}
+
+div#debugConsole details.audioInlineDetails--controls {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+div#debugConsole details.audioInlineDetails > summary {
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--debug-text-muted);
+}
+
 div#debugConsole .audioControlLabel span {
     min-width: 6ch;
     text-align: right;
@@ -505,6 +530,13 @@ div#debugConsole .audioControlLabel span {
 div#debugConsole input.audioControlRange[type="range"] {
     width: 100%;
     margin: 0;
+}
+
+div#debugConsole select.audioControlSelect {
+    width: 100%;
+    margin: 0;
+    min-height: 26px;
+    font-size: 11px;
 }
 
 div#debugConsole .audioPresetButtons {
@@ -521,16 +553,34 @@ div#debugConsole button.audioPresetButton {
     line-height: 1.2;
 }
 
+div#debugConsole input.audioControlRange:disabled,
+div#debugConsole button.audioPresetButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 div#debugConsole .channelGrid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
+    align-items: stretch;
+}
+
+div#debugConsole .channelGrid > article {
+    min-width: 0;
+    width: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr;
+}
+
+div#debugConsole .channelGrid > article > pre {
+    width: 100%;
 }
 
 div#debugConsole pre {
     margin: 0;
     padding: 8px;
-    height: 180px;
+    height: clamp(140px, 18dvh, 220px);
     overflow: auto;
     border-radius: 8px;
     border: 1px solid hsl(190deg 65% 62% / 15%);

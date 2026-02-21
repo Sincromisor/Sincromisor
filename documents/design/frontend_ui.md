@@ -57,6 +57,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - ローカルマイク入力に高域通過フィルタ(HPF)を適用し、低周波ノイズを抑えられること
   - AudioWorkletベースVADを実行し、DebugConsoleへ `Speech/Silence` 状態を表示できること
   - DebugConsole上でVADのRMS閾値を動的に変更し、判定感度を即時調整できること
+  - DebugConsole上でVAD閾値モード（手動/自動追従）を排他的に切り替えられること
+  - DebugConsole上で学習VAD（Silero）を有効化し、Web Worker推論結果でVAD判定を上書きできること
   - DebugConsole上でHPF/LPFのカットオフとLPF有効状態を変更し、前段フィルタを動的調整できること
   - 高度設定でVAD送信ゲートを有効化した場合、無音時の送信音量を抑制できること
   - 高度設定で騒音会場モードを有効化した場合、強めの前段フィルタ（HPF+LPF）と高めのVAD初期閾値を適用できること
@@ -107,16 +109,19 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `RTCTalkClient`: Offer生成、`/offer` POST、Answer適用、DataChannel管理
   - `TalkManager`: text/telop受信を集約し、チャットUIと口形同期向け状態を維持
   - `DialogManager`: 設定値の参照、タイトル反映、VRMファイル更新
-  - `UserMediaManager`: `getUserMedia` 制約（`echoCancellation`/`noiseSuppression`/`autoGainControl` 等）を構築し、騒音会場モード切替、HPF/LPF+AudioWorklet VAD処理と閾値更新を管理
-  - `DebugConsoleManager`: デバッグUIの表示制御、RTC状態表示、イベントログ、音声レベルメーター、HPF/LPF・VAD状態/閾値調整、60秒トレンドグラフ描画
+  - `LearnedVadWorkerClient`: 学習VAD Workerの初期化/有効化/チューニング設定/状態通知を管理
+  - `UserMediaManager`: `getUserMedia` 制約（`echoCancellation`/`noiseSuppression`/`autoGainControl` 等）を構築し、騒音会場モード切替、HPF/LPF+AudioWorklet VAD処理、手動/自動/学習VAD閾値更新を管理
+  - `DebugConsoleManager`: デバッグUIの表示制御、RTC状態表示、イベントログ、音声レベルメーター、HPF/LPF・VAD状態/閾値調整・学習VAD状態表示、60秒トレンドグラフ描画
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroController.ts`
   - `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
+  - `sincromisor-frontend/src/ts/RTC/LearnedVadWorkerClient.ts`
   - `sincromisor-frontend/src/ts/RTC/TalkManager.ts`
   - `sincromisor-frontend/src/ts/UI/DialogManager.ts`
   - `sincromisor-frontend/src/ts/UI/ChatMessageManager.ts`
   - `sincromisor-frontend/src/ts/UI/DebugConsoleManager.ts`
   - `sincromisor-frontend/src/partials/debugConsole.html`
+  - `sincromisor-frontend/src/ts/RTC/silero-vad.worker.ts`
   - `sincromisor-frontend/src/styles/sincroDebugConsole.css`
 - 変更時に同時確認が必要なファイル:
   - RTCペイロード変更: `RTCTalkClient.ts` とサーバー側 `RTCSignalingServer.py`
@@ -187,6 +192,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - デプロイ/ローカル実行手順:
   - `npm run build` で `dist/` 出力
   - `public/mediapipe-wasm` と `public/3rd_party/blaze_face_short_range.tflite` の配置が必要
+  - 学習VAD利用時は `public/3rd_party/silero-vad/silero_vad.onnx` の配置が必要（`onnxruntime-web` はnpm依存でバンドル）
 - 互換性に影響する設定変更:
   - `config.json` の `offerURL` / `iceServers` 変更は接続性に直結
 
@@ -290,6 +296,10 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-02-21 | クライアント音声処理パイプラインにHPF(120Hz)とAudioWorklet VADを追加し、DebugConsoleへSpeech/Silence状態を表示 |
 | 2026-02-21 | 高度設定にVAD送信ゲートを追加し、無音時はGainNodeで送信音量を抑制できるよう更新 |
 | 2026-02-21 | DebugConsoleにVAD RMS閾値スライダーを追加し、AudioWorkletへ閾値を動的反映できるよう更新 |
+| 2026-02-21 | DebugConsoleにVAD閾値の手動/自動追従モードを追加し、Auto時はノイズフロア追従でRMS閾値を更新する仕様へ更新 |
+| 2026-02-21 | DebugConsoleに学習VAD（Silero）トグルとモデル状態/確率表示を追加し、Web Workerで推論できる構成へ更新 |
+| 2026-02-21 | 学習VAD処理を `LearnedVadWorkerClient` へ分離し、ON/OFF閾値・hangover・推論間隔をランタイム調整可能に更新 |
+| 2026-02-21 | 学習VADに負荷/精度プリセット（低負荷/標準/高精度）を追加し、会場運用時に一括調整できるよう更新 |
 | 2026-02-21 | DebugConsoleにHPF/LPF設定（HPF cutoff・LPF有効化・LPF cutoff）を追加し、前段フィルタを動的反映できるよう更新 |
 | 2026-02-21 | DebugConsoleにVAD RMS閾値プリセット（標準/騒音環境/超騒音環境）を追加し、ワンクリックで適用可能に更新 |
 | 2026-02-21 | 高度設定に騒音会場モードを追加し、HPF強化(180Hz)+LPF(4.2kHz)+高めのVAD初期閾値を起動時に適用できるよう更新 |
