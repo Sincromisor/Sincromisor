@@ -21,6 +21,8 @@ export class RTCTalkClient {
     private statsIntervalId: number | null = null;
     private previousOutboundAudio: { bytes: number; timestamp: number } | null = null;
     private previousInboundAudio: { bytes: number; timestamp: number } | null = null;
+    private currentRouteSignature: string | null = null;
+    private iceFailureDiagnosticCaptured = false;
 
     /*
         default     Default codecs
@@ -69,6 +71,8 @@ export class RTCTalkClient {
     start(): Promise<void> {
         this.sessionId = null;
         this.pendingIceCandidates = [];
+        this.currentRouteSignature = null;
+        this.iceFailureDiagnosticCaptured = false;
         this.startStatsCollector();
         this.chatMessageManager.writeSystemMessage("音声認識・合成システムに接続します。");
         return this.negotiate(this.peerConnection);
@@ -77,6 +81,8 @@ export class RTCTalkClient {
     stop(): void {
         this.sessionId = null;
         this.pendingIceCandidates = [];
+        this.currentRouteSignature = null;
+        this.iceFailureDiagnosticCaptured = false;
         this.stopStatsCollector();
         this.logger.resetRealtimeStats();
 
@@ -280,6 +286,14 @@ export class RTCTalkClient {
                 this.logger.addRtcEventLog("ICE candidate gathering completed");
             }
         });
+        peerConnection.addEventListener("icecandidateerror", (event) => {
+            // STUN/TURNへの疎通失敗をブラウザが検知した場合の詳細ログ。
+            // 「ICE failed」切り分け時に about:webrtc を開かずに最低限の情報を残す。
+            const err = event as RTCPeerConnectionIceErrorEvent;
+            this.logger.addRtcEventLog(
+                `ICE candidate error: url=${err.url ?? "-"}, code=${err.errorCode}, text=${err.errorText ?? "-"}`,
+            );
+        });
 
         // register some listeners to help debugging
         peerConnection.addEventListener("icegatheringstatechange", () => {
@@ -314,9 +328,11 @@ export class RTCTalkClient {
                 this.chatMessageManager.writeSystemMessage("音声認識・合成システムへの接続を確認しています。");
                 break;
             case "connected":
+                this.iceFailureDiagnosticCaptured = false;
                 this.chatMessageManager.writeSystemMessage("音声認識・合成システムに接続しました。");
                 break;
             case "completed":
+                this.iceFailureDiagnosticCaptured = false;
                 this.chatMessageManager.writeSystemMessage("音声認識・合成システムとのセッションの確立に成功しました。");
                 break;
             case "disconnected":
@@ -324,10 +340,72 @@ export class RTCTalkClient {
                 break;
             case "failed":
                 this.chatMessageManager.writeErrorMessage("音声認識・合成システムへの接続に失敗しました。");
+                void this.captureIceFailureDiagnostics("iceConnectionState=failed");
                 break;
             default:
                 this.chatMessageManager.writeErrorMessage(`Unknown ICE Connection State - ${state}`);
                 console.error(state);
+        }
+    }
+
+    private async captureIceFailureDiagnostics(reason: string): Promise<void> {
+        if (this.iceFailureDiagnosticCaptured) {
+            return;
+        }
+        this.iceFailureDiagnosticCaptured = true;
+        try {
+            const report = await this.peerConnection.getStats();
+            let selectedPair: any = null;
+            let pairTotal = 0;
+            let pairSucceeded = 0;
+            const localCandidates = new Map<string, any>();
+            const remoteCandidates = new Map<string, any>();
+            const localTypeCount: Record<string, number> = {};
+            const remoteTypeCount: Record<string, number> = {};
+
+            report.forEach((stats: any) => {
+                if (stats.type === "candidate-pair") {
+                    pairTotal += 1;
+                    if (stats.state === "succeeded") {
+                        pairSucceeded += 1;
+                    }
+                    if (stats.selected || stats.nominated) {
+                        selectedPair = stats;
+                    }
+                }
+                if (stats.type === "local-candidate") {
+                    localCandidates.set(stats.id, stats);
+                    const t = stats.candidateType ?? "unknown";
+                    localTypeCount[t] = (localTypeCount[t] ?? 0) + 1;
+                }
+                if (stats.type === "remote-candidate") {
+                    remoteCandidates.set(stats.id, stats);
+                    const t = stats.candidateType ?? "unknown";
+                    remoteTypeCount[t] = (remoteTypeCount[t] ?? 0) + 1;
+                }
+            });
+
+            const local = selectedPair?.localCandidateId ? localCandidates.get(selectedPair.localCandidateId) : null;
+            const remote = selectedPair?.remoteCandidateId ? remoteCandidates.get(selectedPair.remoteCandidateId) : null;
+            const localType = local?.candidateType ?? "-";
+            const remoteType = remote?.candidateType ?? "-";
+            const pairState = selectedPair?.state ?? "-";
+            const rttMs = selectedPair?.currentRoundTripTime != null
+                ? `${(selectedPair.currentRoundTripTime * 1000).toFixed(1)}ms`
+                : "-";
+
+            this.logger.addRtcEventLog(
+                `ICE failure diagnostics: reason=${reason}, pair=${pairState} ${localType}->${remoteType}, rtt=${rttMs}, pairs=${pairSucceeded}/${pairTotal}(succeeded/total)`,
+            );
+            this.logger.addRtcEventLog(
+                `ICE failure diagnostics: localCandidates=${JSON.stringify(localTypeCount)}, remoteCandidates=${JSON.stringify(remoteTypeCount)}, ua=${navigator.userAgent}`,
+            );
+            this.logger.addRtcEventLog(
+                `ICE failure diagnostics: signaling=${this.peerConnection.signalingState}, gathering=${this.peerConnection.iceGatheringState}, session_id=${this.sessionId ?? "-"}`,
+            );
+        } catch (e) {
+            this.logger.addRtcEventLog(`ICE failure diagnostics collection failed: ${e}`);
+            console.error(e);
         }
     }
 
@@ -386,6 +464,28 @@ export class RTCTalkClient {
             return `${(bitsPerSecond / 1_000).toFixed(1)} kbps`;
         }
         return `${bitsPerSecond.toFixed(0)} bps`;
+    }
+
+    private candidateAddress(candidate: any): string {
+        return candidate?.address ?? candidate?.ip ?? "-";
+    }
+
+    private candidatePort(candidate: any): string {
+        if (candidate?.port == null) {
+            return "-";
+        }
+        return `${candidate.port}`;
+    }
+
+    private candidateEndpointLabel(candidate: any): string {
+        if (!candidate) {
+            return "-";
+        }
+        const address = this.candidateAddress(candidate);
+        const port = this.candidatePort(candidate);
+        const type = candidate?.candidateType ?? "unknown";
+        const protocol = candidate?.protocol ?? "-";
+        return `${address}:${port} (${type}/${protocol})`;
     }
 
     private calcBitrate(
@@ -500,10 +600,28 @@ export class RTCTalkClient {
         const remoteCandidate = selectedPair?.remoteCandidateId ? remoteCandidates.get(selectedPair.remoteCandidateId) : null;
         if (!localCandidate || !remoteCandidate) {
             this.logger.updateMetricValue("rtcCandidatePair", "-");
+            this.logger.updateMetricValue("rtcTransportProtocol", "-");
+            this.logger.updateMetricValue("rtcLocalCandidate", "-");
+            this.logger.updateMetricValue("rtcRemoteCandidate", "-");
+            this.currentRouteSignature = null;
         } else {
             const localType = localCandidate.candidateType ?? "unknown";
             const remoteType = remoteCandidate.candidateType ?? "unknown";
+            const localProtocol = localCandidate.protocol ?? "-";
+            const relayProtocol = localCandidate.relayProtocol ? `/${localCandidate.relayProtocol}` : "";
+            const localEndpoint = this.candidateEndpointLabel(localCandidate);
+            const remoteEndpoint = this.candidateEndpointLabel(remoteCandidate);
+
             this.logger.updateMetricValue("rtcCandidatePair", `${localType} -> ${remoteType}`);
+            this.logger.updateMetricValue("rtcTransportProtocol", `${localProtocol}${relayProtocol}`);
+            this.logger.updateMetricValue("rtcLocalCandidate", localEndpoint);
+            this.logger.updateMetricValue("rtcRemoteCandidate", remoteEndpoint);
+
+            const routeSignature = `${localEndpoint}=>${remoteEndpoint}`;
+            if (this.currentRouteSignature !== routeSignature) {
+                this.currentRouteSignature = routeSignature;
+                this.logger.addRtcEventLog(`selected route: ${localEndpoint} -> ${remoteEndpoint}`);
+            }
         }
     }
 }

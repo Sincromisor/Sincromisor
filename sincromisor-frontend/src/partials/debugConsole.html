@@ -5,12 +5,21 @@
             <p>WebRTC / Audio Monitoring</p>
         </div>
         <div class="debugConsoleActions">
+            <button id="debugConsoleClose" type="button">Close</button>
             <button id="rtcStop">RTC Stop</button>
             <button id="startLookingGlass">Start Looking Glass</button>
         </div>
     </header>
+    <nav class="debugConsoleTabs" aria-label="Debug panels">
+        <button type="button" class="debugTab is-active" data-debug-tab="status">Status</button>
+        <button type="button" class="debugTab" data-debug-tab="transport">Transport</button>
+        <button type="button" class="debugTab" data-debug-tab="audio">Audio</button>
+        <button type="button" class="debugTab" data-debug-tab="channels">Channels</button>
+        <button type="button" class="debugTab" data-debug-tab="gaze">Gaze</button>
+        <button type="button" class="debugTab" data-debug-tab="sdp">SDP</button>
+    </nav>
 
-    <section class="debugCard debugCard--status">
+    <section class="debugCard debugCard--status debugPanel is-active" data-debug-panel="status">
         <h3>Session Overview</h3>
         <div class="statusGrid">
             <div class="statusItem">
@@ -37,10 +46,22 @@
                 <span class="statusLabel">Selected Candidate</span>
                 <span id="rtcCandidatePair" class="statusValue">-</span>
             </div>
+            <div class="statusItem">
+                <span class="statusLabel">Transport Protocol</span>
+                <span id="rtcTransportProtocol" class="statusValue">-</span>
+            </div>
+            <div class="statusItem">
+                <span class="statusLabel">Local Endpoint</span>
+                <span id="rtcLocalCandidate" class="statusValue">-</span>
+            </div>
+            <div class="statusItem">
+                <span class="statusLabel">Remote Endpoint</span>
+                <span id="rtcRemoteCandidate" class="statusValue">-</span>
+            </div>
         </div>
     </section>
 
-    <section class="debugCard debugCard--transport">
+    <section class="debugCard debugCard--transport debugPanel" data-debug-panel="transport">
         <h3>WebRTC Transport</h3>
         <div class="metricGrid">
             <div class="metricItem">
@@ -96,7 +117,7 @@
         </div>
     </section>
 
-    <section class="debugCard debugCard--audio">
+    <section class="debugCard debugCard--audio debugPanel" data-debug-panel="audio">
         <h3>Audio Monitor (Frontend)</h3>
         <div class="audioMeterGrid">
             <div class="audioMeterPanel">
@@ -121,7 +142,7 @@
         <audio id="rtcAudio" autoplay="true"></audio>
     </section>
 
-    <section class="debugCard debugCard--channels">
+    <section class="debugCard debugCard--channels debugPanel" data-debug-panel="channels">
         <h3>Data Channel Events</h3>
         <div class="channelGrid">
             <article>
@@ -139,7 +160,7 @@
         </div>
     </section>
 
-    <section class="debugCard debugCard--gaze">
+    <section class="debugCard debugCard--gaze debugPanel" data-debug-panel="gaze">
         <h3>Face & Gaze</h3>
         <div id="characterGaze">
             <video id="characterGazeVideo" autoplay="true" playsinline="true"></video>
@@ -159,7 +180,7 @@
         </dl>
     </section>
 
-    <section class="debugCard debugCard--sdp">
+    <section class="debugCard debugCard--sdp debugPanel" data-debug-panel="sdp">
         <h3>SDP Details</h3>
         <div class="sdpGrid">
             <article>

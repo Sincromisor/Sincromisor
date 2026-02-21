@@ -1,3 +1,87 @@
+div#sincroDebugConsoleContainer {
+    position: fixed;
+    inset: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 18;
+}
+
+div#sincroDebugConsoleContainer.is-open {
+    visibility: visible;
+}
+
+div#debugMenu {
+    position: relative;
+    z-index: 2;
+}
+
+button#debugMenuButton {
+    width: clamp(30px, 2.8vw, 38px);
+    height: clamp(30px, 2.8vw, 38px);
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid hsl(0deg 0% 100% / 15%);
+    color: var(--headerTextColor);
+    background: hsl(0deg 0% 20% / 46%);
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+    border-radius: 7px;
+    padding: 0;
+    cursor: pointer;
+}
+
+button#debugMenuButton .debugMenuButton__icon {
+    width: clamp(15px, 1.5vw, 18px);
+    height: clamp(15px, 1.5vw, 18px);
+    display: block;
+    fill: hsl(0deg 0% 93% / 84%);
+}
+
+button#debugMenuButton:hover {
+    background: hsl(0deg 0% 28% / 58%);
+    border-color: hsl(0deg 0% 100% / 22%);
+}
+
+div#debugMenuPanel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 168px;
+    padding: 6px;
+    border: 1px solid hsl(0deg 0% 100% / 16%);
+    border-radius: 8px;
+    background: hsl(0deg 0% 18% / 96%);
+    box-shadow: 0 8px 22px hsl(220deg 35% 4% / 42%);
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+    pointer-events: none;
+}
+
+div#debugMenu.is-open div#debugMenuPanel {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+button#debugConsoleToggle {
+    width: 100%;
+    border: 1px solid hsl(0deg 0% 100% / 16%);
+    border-radius: 6px;
+    background: hsl(0deg 0% 24% / 94%);
+    color: hsl(0deg 0% 92%);
+    text-align: left;
+    padding: 7px 9px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+button#debugConsoleToggle:hover {
+    background: hsl(0deg 0% 30% / 95%);
+}
+
 div#debugConsole {
     --debug-panel-bg: hsl(215deg 28% 13% / 94%);
     --debug-panel-bg-soft: hsl(215deg 25% 18% / 92%);
@@ -10,7 +94,15 @@ div#debugConsole {
     --debug-danger: hsl(0deg 75% 62%);
 
     position: absolute;
-    inset: 0;
+    top: clamp(52px, 8dvh, 84px);
+    right: 12px;
+    left: auto;
+    width: min(1120px, calc(100vw - 24px));
+    max-height: calc(100dvh - clamp(52px, 8dvh, 84px) - 12px);
+    border: 1px solid var(--debug-panel-border);
+    border-radius: 12px;
+    box-shadow: 0 14px 44px hsl(220deg 50% 3% / 55%);
+    pointer-events: auto;
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
     grid-template-areas:
@@ -22,7 +114,7 @@ div#debugConsole {
     gap: 12px;
     align-content: start;
     padding: 14px;
-    height: 100dvh;
+    height: auto;
     overflow: auto;
     color: var(--debug-text-strong);
     background:
@@ -32,6 +124,40 @@ div#debugConsole {
     font-family: "IBM Plex Sans", "BIZ UDPGothic", "UDPGothic", sans-serif;
     font-size: 14px;
     line-height: 1.45;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(186deg 66% 52% / 70%) hsl(216deg 26% 12% / 78%);
+}
+
+div#debugConsole::-webkit-scrollbar,
+div#debugConsole pre::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+div#debugConsole::-webkit-scrollbar-track,
+div#debugConsole pre::-webkit-scrollbar-track {
+    background: hsl(216deg 26% 12% / 78%);
+    border-radius: 999px;
+}
+
+div#debugConsole::-webkit-scrollbar-thumb,
+div#debugConsole pre::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+        180deg,
+        hsl(186deg 82% 54% / 85%),
+        hsl(204deg 72% 46% / 80%)
+    );
+    border: 2px solid hsl(216deg 26% 12% / 78%);
+    border-radius: 999px;
+}
+
+div#debugConsole::-webkit-scrollbar-thumb:hover,
+div#debugConsole pre::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+        180deg,
+        hsl(186deg 88% 60% / 90%),
+        hsl(204deg 78% 52% / 88%)
+    );
 }
 
 div#debugConsole .debugConsoleHeader {
@@ -325,51 +451,107 @@ div#debugConsole audio#rtcAudio {
     filter: saturate(0.9) contrast(1.1);
 }
 
+div#debugConsole .debugConsoleTabs {
+    display: none;
+}
+
+div#debugConsole .debugTab {
+    border: 1px solid hsl(190deg 60% 60% / 25%);
+    border-radius: 999px;
+    padding: 5px 10px;
+    background: hsl(215deg 22% 14% / 88%);
+    color: var(--debug-text-muted);
+    font-size: 11px;
+}
+
+div#debugConsole .debugTab.is-active {
+    border-color: hsl(186deg 82% 54% / 55%);
+    color: var(--debug-text-strong);
+    background: hsl(189deg 42% 20% / 90%);
+}
+
 @media (max-width: 1280px) {
     div#debugConsole {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        width: min(720px, calc(100vw - 16px));
+        right: 8px;
+        top: clamp(48px, 7dvh, 72px);
+        max-height: calc(100dvh - clamp(48px, 7dvh, 72px) - 8px);
+    }
+}
+
+@media (max-width: 1366px) {
+    div#debugConsole {
+        grid-template-columns: 1fr;
         grid-template-areas:
-            "header header header header header header"
-            "status status status status status status"
-            "transport transport transport transport transport transport"
-            "audio audio audio audio audio audio"
-            "channels channels channels channels channels channels"
-            "gaze gaze gaze sdp sdp sdp";
+            "header"
+            "tabs"
+            "panel";
+        gap: 8px;
+        padding: 10px;
+    }
+
+    div#debugConsole .debugConsoleHeader {
+        padding: 10px;
+    }
+
+    div#debugConsole .debugConsoleTabs {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        grid-area: tabs;
+    }
+
+    div#debugConsole .debugConsoleActions {
+        gap: 6px;
+    }
+
+    div#debugConsole .debugConsoleActions button {
+        padding: 6px 9px;
+        font-size: 11px;
+    }
+
+    div#debugConsole .debugPanel {
+        display: none;
+        grid-area: panel;
+    }
+
+    div#debugConsole .debugPanel.is-active {
+        display: block;
     }
 
     div#debugConsole .statusGrid,
     div#debugConsole .metricGrid,
     div#debugConsole .channelGrid,
-    div#debugConsole .trendGrid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    div#debugConsole .trendGrid,
+    div#debugConsole .audioMeterGrid,
+    div#debugConsole .sdpGrid {
+        grid-template-columns: 1fr;
+    }
+
+    div#debugConsole pre {
+        height: clamp(110px, 20dvh, 170px);
+    }
+
+    div#debugConsole .trendGraph {
+        height: clamp(70px, 16dvh, 96px);
     }
 }
 
 @media (max-width: 900px) {
     div#debugConsole {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "header"
-            "status"
-            "transport"
-            "audio"
-            "channels"
-            "gaze"
-            "sdp";
-        padding: 10px;
-    }
-
-    div#debugConsole .audioMeterGrid,
-    div#debugConsole .statusGrid,
-    div#debugConsole .metricGrid,
-    div#debugConsole .channelGrid,
-    div#debugConsole .sdpGrid,
-    div#debugConsole .trendGrid {
-        grid-template-columns: 1fr;
+        top: 6px;
+        right: 6px;
+        width: calc(100vw - 12px);
+        max-height: calc(100dvh - 12px);
+        border-radius: 10px;
     }
 
     div#debugConsole .debugConsoleHeader {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    div#debugMenuPanel {
+        right: -2px;
     }
 }

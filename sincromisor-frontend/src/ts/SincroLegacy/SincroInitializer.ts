@@ -5,6 +5,7 @@ import { CharacterManager } from "./Character/CharacterManager";
 import { SincroScene } from "./Scene/SincroScene";
 import { TalkManager } from "../RTC/TalkManager";
 import { UserMediaManager } from "../RTC/UserMediaManager";
+import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 
 export class SincroInitializer {
     protected readonly dialogManager: DialogManager;
@@ -13,6 +14,8 @@ export class SincroInitializer {
     protected readonly charCanvas: HTMLCanvasElement;
 
     constructor() {
+        // Register debug console UI events at startup so touch/click toggles work before RTC start.
+        DebugConsoleManager.getManager();
         this.dialogManager = DialogManager.getManager();
         this.chatMessageManager = ChatMessageManager.getManager();
         this.talkManager = TalkManager.getManager();

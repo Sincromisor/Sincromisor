@@ -4,6 +4,7 @@ import { ChatMessageManager } from "../UI/ChatMessageManager";
 import { TalkManager } from "../RTC/TalkManager";
 import { UserMediaManager } from "../RTC/UserMediaManager";
 import { VRMScene } from './VRMScene/VRMScene';
+import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 
 
 export class SincroVRMInitializer {
@@ -14,6 +15,8 @@ export class SincroVRMInitializer {
     protected readonly controlTarget: HTMLElement;
 
     constructor() {
+        // Register debug console UI events at startup so touch/click toggles work before RTC start.
+        DebugConsoleManager.getManager();
         this.dialogManager = DialogManager.getManager();
         this.chatMessageManager = ChatMessageManager.getManager();
         this.talkManager = TalkManager.getManager();
