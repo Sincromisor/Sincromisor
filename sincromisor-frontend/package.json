@@ -27,6 +27,7 @@
     "@pixiv/three-vrm": "^3.4.5",
     "hls.js": "^1.6.10",
     "js-yaml": "^4.1.1",
+    "onnxruntime-web": "^1.24.2",
     "three": "^0.182.0"
   }
 }
