@@ -39,6 +39,9 @@ div#sincroHeaderBox {
 
     & div.rightIconBox {
         grid-area: 1 / 5 / 2 / 6;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 
     & div#sincroHeaderBox__leftDecoration {

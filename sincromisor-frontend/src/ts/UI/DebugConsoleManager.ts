@@ -13,6 +13,14 @@ export class DebugConsoleManager {
     private static readonly TREND_POINTS = 60;
 
     private readonly debugConsoleContainer: HTMLDivElement | null;
+    private readonly debugConsoleRoot: HTMLDivElement | null;
+    private readonly debugMenu: HTMLDivElement | null;
+    private readonly debugMenuButton: HTMLButtonElement | null;
+    private readonly debugMenuPanel: HTMLDivElement | null;
+    private readonly debugConsoleToggleButton: HTMLButtonElement | null;
+    private readonly debugConsoleCloseButton: HTMLButtonElement | null;
+    private readonly debugTabButtons: NodeListOf<HTMLButtonElement>;
+    private readonly debugPanels: NodeListOf<HTMLElement>;
 
     /* RTC */
     private readonly telopChannelLog: HTMLPreElement | null;
@@ -56,6 +64,14 @@ export class DebugConsoleManager {
 
     private constructor() {
         this.debugConsoleContainer = document.querySelector("div#sincroDebugConsoleContainer");
+        this.debugConsoleRoot = document.querySelector("div#debugConsole");
+        this.debugMenu = document.querySelector("div#debugMenu");
+        this.debugMenuButton = document.querySelector("button#debugMenuButton");
+        this.debugMenuPanel = document.querySelector("div#debugMenuPanel");
+        this.debugConsoleToggleButton = document.querySelector("button#debugConsoleToggle");
+        this.debugConsoleCloseButton = document.querySelector("button#debugConsoleClose");
+        this.debugTabButtons = document.querySelectorAll("button[data-debug-tab]");
+        this.debugPanels = document.querySelectorAll("[data-debug-panel]");
 
         /* RTC */
         this.telopChannelLog = document.querySelector("pre#telopChannel");
@@ -70,6 +86,9 @@ export class DebugConsoleManager {
             rtcRoundTripTime: document.querySelector("#rtcRoundTripTime"),
             rtcAvailableOutgoingBitrate: document.querySelector("#rtcAvailableOutgoingBitrate"),
             rtcCandidatePair: document.querySelector("#rtcCandidatePair"),
+            rtcTransportProtocol: document.querySelector("#rtcTransportProtocol"),
+            rtcLocalCandidate: document.querySelector("#rtcLocalCandidate"),
+            rtcRemoteCandidate: document.querySelector("#rtcRemoteCandidate"),
             outboundAudioBitrate: document.querySelector("#outboundAudioBitrate"),
             inboundAudioBitrate: document.querySelector("#inboundAudioBitrate"),
             outboundPacketsSent: document.querySelector("#outboundPacketsSent"),
@@ -96,6 +115,9 @@ export class DebugConsoleManager {
         this.localAudioLevelValue = document.querySelector("#localAudioLevelValue");
         this.remoteAudioLevelValue = document.querySelector("#remoteAudioLevelValue");
 
+        this.setDebugConsoleButtons();
+        this.blockPropagationToSceneControls();
+        this.setTabEvents();
         this.setShortcutKeyEvent();
     }
 
@@ -103,16 +125,137 @@ export class DebugConsoleManager {
         if (!this.debugConsoleContainer) {
             return;
         }
+        this.debugConsoleContainer.classList.add("is-open");
         this.debugConsoleContainer.style.visibility = "visible";
-        this.debugConsoleContainer.style.overflow = "auto";
+        this.debugConsoleContainer.style.overflow = "visible";
+        if (this.debugConsoleToggleButton) {
+            this.debugConsoleToggleButton.innerText = "Close Debug Console";
+        }
+        this.closeDebugMenu();
     }
 
     hideDebugConsole(): void {
         if (!this.debugConsoleContainer) {
             return;
         }
+        this.debugConsoleContainer.classList.remove("is-open");
         this.debugConsoleContainer.style.visibility = "hidden";
         this.debugConsoleContainer.style.overflow = "hidden";
+        if (this.debugConsoleToggleButton) {
+            this.debugConsoleToggleButton.innerText = "Open Debug Console";
+        }
+        this.closeDebugMenu();
+    }
+
+    private toggleDebugConsole(): void {
+        if (!this.debugConsoleContainer) {
+            return;
+        }
+        if (this.debugConsoleContainer.classList.contains("is-open")) {
+            this.hideDebugConsole();
+            return;
+        }
+        this.showDebugConsole();
+    }
+
+    private setDebugConsoleButtons(): void {
+        if (this.debugMenuButton) {
+            this.blockPointerEvent(this.debugMenuButton);
+            this.debugMenuButton.addEventListener("click", () => {
+                if (this.debugMenu?.classList.contains("is-open")) {
+                    this.closeDebugMenu();
+                } else {
+                    this.openDebugMenu();
+                }
+            });
+        }
+        if (this.debugConsoleToggleButton) {
+            this.blockPointerEvent(this.debugConsoleToggleButton);
+            this.debugConsoleToggleButton.addEventListener("click", () => {
+                this.toggleDebugConsole();
+            });
+        }
+        if (this.debugConsoleCloseButton) {
+            this.blockPointerEvent(this.debugConsoleCloseButton);
+            this.debugConsoleCloseButton.addEventListener("click", () => {
+                this.hideDebugConsole();
+            });
+        }
+        this.bindDocumentMenuClose();
+    }
+
+    private openDebugMenu(): void {
+        if (!this.debugMenu || !this.debugMenuButton || !this.debugMenuPanel) {
+            return;
+        }
+        this.debugMenu.classList.add("is-open");
+        this.debugMenuButton.setAttribute("aria-expanded", "true");
+        this.debugMenuPanel.setAttribute("aria-hidden", "false");
+    }
+
+    private closeDebugMenu(): void {
+        if (!this.debugMenu || !this.debugMenuButton || !this.debugMenuPanel) {
+            return;
+        }
+        this.debugMenu.classList.remove("is-open");
+        this.debugMenuButton.setAttribute("aria-expanded", "false");
+        this.debugMenuPanel.setAttribute("aria-hidden", "true");
+    }
+
+    private bindDocumentMenuClose(): void {
+        document.addEventListener("click", (event) => {
+            if (!this.debugMenu) {
+                return;
+            }
+            const target = event.target as Node | null;
+            if (target && this.debugMenu.contains(target)) {
+                return;
+            }
+            this.closeDebugMenu();
+        });
+    }
+
+    private blockPointerEvent(element: HTMLElement): void {
+        const stop = (event: Event): void => {
+            event.stopPropagation();
+        };
+        // Use bubble phase so target controls (buttons/tabs) still receive events.
+        element.addEventListener("pointerdown", stop);
+        element.addEventListener("pointerup", stop);
+        element.addEventListener("touchstart", stop);
+        element.addEventListener("touchend", stop);
+        element.addEventListener("mousedown", stop);
+        element.addEventListener("mouseup", stop);
+        element.addEventListener("wheel", stop);
+        element.addEventListener("click", stop);
+    }
+
+    private blockPropagationToSceneControls(): void {
+        if (this.debugConsoleRoot) {
+            this.blockPointerEvent(this.debugConsoleRoot);
+        }
+    }
+
+    private setActiveTab(tabName: string): void {
+        this.debugTabButtons.forEach((btn) => {
+            btn.classList.toggle("is-active", btn.dataset.debugTab === tabName);
+        });
+        this.debugPanels.forEach((panel) => {
+            panel.classList.toggle("is-active", panel.getAttribute("data-debug-panel") === tabName);
+        });
+    }
+
+    private setTabEvents(): void {
+        this.debugTabButtons.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const tabName = btn.dataset.debugTab;
+                if (!tabName) {
+                    return;
+                }
+                this.setActiveTab(tabName);
+            });
+        });
+        this.setActiveTab("status");
     }
 
     /* ctrl + alt + dでデバッグコンソールを表示 */
@@ -124,11 +267,7 @@ export class DebugConsoleManager {
         window.addEventListener("keydown", (e) => {
             // macOSのChromeではalt+dでkeyの値がδになる
             if (e.ctrlKey && e.altKey && (e.key == "d" || e.code == "KeyD")) {
-                if (this.debugConsoleContainer && this.debugConsoleContainer.style.visibility == "hidden") {
-                    this.showDebugConsole();
-                } else {
-                    this.hideDebugConsole();
-                }
+                this.toggleDebugConsole();
             }
         });
     }
