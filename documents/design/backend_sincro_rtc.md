@@ -137,11 +137,12 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
   - `GET /api/v1/RTCSignalingServer/config.json`
   - DataChannel: `text_ch`, `telop_ch`
 - リクエスト仕様:
-  - `/offer` body: `{"sdp": "...", "type": "...", "talk_mode": "chat|sincro"}`
+  - `/offer` body: `{"sdp": "...", "type": "...", "talk_mode": "chat|sincro", "session_id": "..."(optional)}`
   - `/candidate` body: `{"session_id":"...","candidate":{"candidate":"...","sdpMid":"...","sdpMLineIndex":0} | null}`
 - レスポンス仕様:
   - `/offer` success: `{"sdp": "...", "type": "...", "session_id": "..."}`
   - `/candidate` success: `{"status": true}`
+  - `/candidate` late candidate: `{"status": false, "reason": "session_not_found_or_closed"}`
   - `/config.json`: `{"offerURL": "/api/v1/RTCSignalingServer/offer", "candidateURL": "/api/v1/RTCSignalingServer/candidate", "iceServers": [...]}`
   - `/statuses`: `{"worker_type":"RTCSignalingServer","sessions":<int>}`
 - エラー仕様:
@@ -153,7 +154,9 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
 ### 7.4 状態遷移・シーケンス
 
 - 正常系フロー:
-  - `POST /offer` -> `RTCSessionManager.create_session()`
+  - `POST /offer` -> `RTCSessionManager.create_or_update_session()`
+  - `session_id` が有効なら既存 `RTCSessionProcess` へ再Offer適用
+  - `session_id` 不在/無効/更新失敗時は新規 `RTCSessionProcess` を生成
   - 子プロセスで `setRemoteDescription` -> `createAnswer` -> `setLocalDescription`
   - AnswerをPipe経由で親に返却 -> HTTP応答
   - `POST /candidate` -> `RTCSessionManager.add_ice_candidate()` -> 子プロセスの`RTCPeerConnection.addIceCandidate()`
@@ -190,22 +193,29 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
 
 - ログ設計:
   - Offer/Answer SDP、接続状態、セッション終了をログ出力
+  - offer更新判定ログ:
+    - `Offer received: requested_session_id=..., talk_mode=..., client=...`
+    - `Try session update via /offer (...)`
+    - `Session update accepted (...)`
+    - `Offer update fallback to new session (...)`
+    - `Create new RTC session process (...)`
   - Trickle ICE監視ログ:
     - `ICE candidate normalized to end-of-candidates (...)`
       - 空candidateを終端イベントとして正規化した記録（件数カウンタ付き）
     - `Invalid ICE candidate ignored (...)`
       - candidateフォーマット異常を無視した記録（件数・先頭文字列付き）
-    - `Candidate rejected: session not found or closed (...)`
-      - `/candidate` が閉塞セッションへ到達した記録（session_id付き）
+    - `Late candidate ignored: session not found or closed (...)`
+      - 切断/再接続レースで遅れて到達した `/candidate` を無害化した記録（session_id付き）
 - メトリクス:
   - `/statuses` の `sessions` を簡易メトリクスとして利用
 - 障害時の切り分け手順:
   - 1. `/statuses` が200応答するか
   - 2. `/config.json` が期待通りの `offerURL/candidateURL/iceServers` を返すか
-  - 3. `/candidate` が404多発していないか（session_id不整合）確認
+  - 3. `/candidate` の `status:false, reason=session_not_found_or_closed` が異常に多発していないか確認
   - 4. `Invalid ICE candidate ignored` の件数増加有無を確認（特定ブラウザ/経路のフォーマット異常）
-  - 5. `connectionState` が `failed` で落ちていないかログ確認
-  - 6. `cleanup` 後にゾンビセッションが残っていないか確認
+  - 5. `Session update accepted` と `Offer update fallback to new session` の比率を確認
+  - 6. `connectionState` が `failed` で落ちていないかログ確認
+  - 7. `cleanup` 後にゾンビセッションが残っていないか確認
 - よくある失敗と対処:
   - ICEホスト名解決不可 -> config/ネットワーク/DNS確認
   - `max_sessions` 超過 -> 閾値見直しまたは接続数平準化
@@ -270,6 +280,9 @@ Sincromisor の `sincro-rtc` サービスにおける、WebRTCシグナリング
 | 2026-02-15 | 初版作成 |
 | 2026-02-16 | Trickle ICE導入に伴い `POST /candidate` と `RTCSessionCandidate` モデルを追加 |
 | 2026-02-16 | Trickle ICE運用監視向けにcandidate正規化/無視/rejectログの判読ポイントを追記 |
+| 2026-02-21 | 再接続レースでの遅延candidateを無害化するため、`/candidate` の閉塞セッション応答を `status:false` (HTTP 200) に更新 |
+| 2026-02-21 | `offer.session_id` を利用した同一セッション更新を追加。更新失敗時は新規セッションへフォールバックする運用へ変更 |
+| 2026-02-21 | 同一セッション更新の運用監視向けに、offer更新試行/成功/フォールバック判定ログの読み方を追記 |
 
 ## 15. 参照資料
 

@@ -23,6 +23,12 @@ export class RTCTalkClient {
     private previousInboundAudio: { bytes: number; timestamp: number } | null = null;
     private currentRouteSignature: string | null = null;
     private iceFailureDiagnosticCaptured = false;
+    private reconnectTimerId: number | null = null;
+    private isNegotiating = false;
+    private reconnectAttempt = 0;
+    // 直近で接続確立に成功したsession_id。
+    // ICE切断後の再接続で「同一セッション更新」を試すために保持する。
+    private lastStableSessionId: string | null = null;
 
     /*
         default     Default codecs
@@ -68,21 +74,38 @@ export class RTCTalkClient {
         }
     }
 
-    start(): Promise<void> {
+    start(forceIceRestart: boolean = false, preferredSessionId: string | null = null): Promise<void> {
+        if (this.isNegotiating) {
+            this.logger.addRtcEventLog("start skipped: negotiation already in progress");
+            return Promise.resolve();
+        }
+        if (this.reconnectTimerId != null) {
+            clearTimeout(this.reconnectTimerId);
+            this.reconnectTimerId = null;
+        }
         this.sessionId = null;
         this.pendingIceCandidates = [];
         this.currentRouteSignature = null;
         this.iceFailureDiagnosticCaptured = false;
         this.startStatsCollector();
+        this.logger.addRtcEventLog(
+            `start negotiation: forceIceRestart=${forceIceRestart}, preferredSessionId=${preferredSessionId ?? "-"}`,
+        );
         this.chatMessageManager.writeSystemMessage("音声認識・合成システムに接続します。");
-        return this.negotiate(this.peerConnection);
+        return this.negotiate(this.peerConnection, forceIceRestart, preferredSessionId);
     }
 
     stop(): void {
+        if (this.reconnectTimerId != null) {
+            clearTimeout(this.reconnectTimerId);
+            this.reconnectTimerId = null;
+        }
         this.sessionId = null;
         this.pendingIceCandidates = [];
         this.currentRouteSignature = null;
         this.iceFailureDiagnosticCaptured = false;
+        this.reconnectAttempt = 0;
+        this.lastStableSessionId = null;
         this.stopStatsCollector();
         this.logger.resetRealtimeStats();
 
@@ -109,7 +132,24 @@ export class RTCTalkClient {
     }
 
     reConnect(): void {
-        setTimeout(() => { this.start(); }, Math.random() * 20000 + 10000);
+        const preferredSessionId = this.sessionId ?? this.lastStableSessionId;
+        // 切断後に遅れて発火する onicecandidate を旧sessionへ送らないよう、
+        // 再接続スケジュール時点で session_id を無効化する。
+        this.sessionId = null;
+        this.pendingIceCandidates = [];
+
+        if (this.reconnectTimerId != null) {
+            this.logger.addRtcEventLog("reconnect already scheduled");
+            return;
+        }
+        const waitMs = this.nextReconnectDelayMs();
+        this.logger.addRtcEventLog(
+            `schedule reconnect in ${Math.round(waitMs)}ms (attempt=${this.reconnectAttempt}, preferredSessionId=${preferredSessionId ?? "-"})`,
+        );
+        this.reconnectTimerId = window.setTimeout(() => {
+            this.reconnectTimerId = null;
+            void this.start(true, preferredSessionId);
+        }, waitMs);
     }
 
     setMute(mute: boolean): void {
@@ -120,11 +160,24 @@ export class RTCTalkClient {
         });
     }
 
-    private async negotiate(peerConnection: RTCPeerConnection): Promise<void> {
+    private async negotiate(
+        peerConnection: RTCPeerConnection,
+        forceIceRestart: boolean,
+        preferredSessionId: string | null,
+    ): Promise<void> {
+        if (peerConnection.signalingState !== "stable") {
+            this.logger.addRtcEventLog(
+                `negotiate skipped: signaling state is not stable (${peerConnection.signalingState})`,
+            );
+            this.reConnect();
+            return Promise.resolve();
+        }
+
+        this.isNegotiating = true;
         // Trickle ICE方針:
         // 1) OfferはICE completeを待たず先に送信して接続開始を早める
         // 2) 以降のcandidateは /candidate に逐次送信する
-        return peerConnection.createOffer()
+        return peerConnection.createOffer({ iceRestart: forceIceRestart })
             .then((offer) => {
                 return peerConnection.setLocalDescription(offer);
             })
@@ -144,16 +197,28 @@ export class RTCTalkClient {
                 */
 
                 this.logger.offerSDP(offer.sdp);
+                const offerPayload: {
+                    sdp: string;
+                    type: RTCSdpType;
+                    talk_mode: string;
+                    session_id?: string;
+                } = {
+                    sdp: offer.sdp,
+                    type: offer.type,
+                    talk_mode: this.talkMode,
+                };
+                if (preferredSessionId) {
+                    offerPayload.session_id = preferredSessionId;
+                }
+                this.logger.addRtcEventLog(
+                    `send offer: mode=${preferredSessionId ? "session-update" : "new-session"}, targetSessionId=${preferredSessionId ?? "-"}`,
+                );
                 console.log(JSON.stringify({
                     sdp: offer.sdp,
                     type: offer.type
                 }));
                 return fetch(this.sincroConfig.offerURL, {
-                    body: JSON.stringify({
-                        sdp: offer.sdp,
-                        type: offer.type,
-                        talk_mode: this.talkMode
-                    }),
+                    body: JSON.stringify(offerPayload),
                     headers: {
                         "Content-Type": "application/json"
                     },
@@ -175,6 +240,17 @@ export class RTCTalkClient {
                 console.log(answer);
                 this.logger.answerSDP(answer.sdp);
                 this.sessionId = answer.session_id;
+                this.lastStableSessionId = answer.session_id;
+                if (preferredSessionId && preferredSessionId !== answer.session_id) {
+                    // サーバー側で既存更新に失敗した場合は、新規セッションへのフォールバックが返る。
+                    this.logger.addRtcEventLog(
+                        `offer fallback detected: preferredSessionId=${preferredSessionId}, assignedSessionId=${answer.session_id}`,
+                    );
+                } else if (preferredSessionId) {
+                    this.logger.addRtcEventLog(`offer update succeeded: sessionId=${answer.session_id}`);
+                } else {
+                    this.logger.addRtcEventLog(`offer created new session: sessionId=${answer.session_id}`);
+                }
                 // Offer応答前に貯まったcandidateを、session_id確定後に順次反映する。
                 return this.flushPendingIceCandidates()
                     .then(() => {
@@ -182,6 +258,10 @@ export class RTCTalkClient {
                             sdp: answer.sdp,
                             type: answer.type,
                         });
+                    })
+                    .then(() => {
+                        this.reconnectAttempt = 0;
+                        this.logger.addRtcEventLog("negotiate succeeded: reconnect attempt reset");
                     });
             }).catch((e) => {
                 this.sessionId = null;
@@ -190,7 +270,20 @@ export class RTCTalkClient {
                 console.error(e);
                 this.logger.addRtcEventLog(`negotiate failed: ${e}`);
                 this.reConnect();
+            }).finally(() => {
+                this.isNegotiating = false;
             });
+    }
+
+    private nextReconnectDelayMs(): number {
+        // 段階的バックオフ。連続失敗時は待機時間を伸ばし、群発再接続を避けるためジッターを加える。
+        this.reconnectAttempt += 1;
+        const baseMs = 5000;
+        const maxMs = 60000;
+        const step = Math.min(this.reconnectAttempt - 1, 5);
+        const backoffMs = Math.min(baseMs * (2 ** step), maxMs);
+        const jitterRatio = 0.8 + (Math.random() * 0.4); // 0.8x - 1.2x
+        return Math.min(Math.round(backoffMs * jitterRatio), maxMs);
     }
 
     private flushPendingIceCandidates(): Promise<void> {
@@ -222,9 +315,15 @@ export class RTCTalkClient {
                 session_id: this.sessionId,
                 candidate: candidate,
             }),
-        }).then((response) => {
+        }).then(async (response) => {
             if (!response.ok) {
                 throw new Error(`Failed to send ICE candidate: ${response.status} ${response.statusText}`);
+            }
+            const result = await response.json().catch(() => null);
+            if (result?.status === false) {
+                this.logger.addRtcEventLog(
+                    `ICE candidate ignored by server: ${result.reason ?? "unknown_reason"}`,
+                );
             }
         }).catch((e) => {
             console.error(e);

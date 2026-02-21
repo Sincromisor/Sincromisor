@@ -137,16 +137,20 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `POST {candidateURL}`（configで配布）
   - DataChannel: `text_ch`, `telop_ch`
 - リクエスト仕様:
-  - Offer送信: `{ sdp, type, talk_mode }`
+  - Offer送信: `{ sdp, type, talk_mode, session_id? }`（再接続時は直前 `session_id` で同一セッション更新を試行）
   - Candidate送信: `{ session_id, candidate }`（`candidate` は end-of-candidates のとき `null`）
 - レスポンス仕様:
   - Answer: `{ sdp, type, session_id }`
+  - Candidate応答: `{ status: true }` または `{ status: false, reason: "session_not_found_or_closed" }`
 - エラー仕様:
   - HTTP 429 は明示エラーとして扱う
   - それ以外の非200は再接続対象
 - タイムアウト/リトライ方針:
   - Trickle ICE方式: `setLocalDescription`後にOfferを先に送信し、候補は`onicecandidate`で逐次送信
-  - 接続失敗時は `10-30秒` ランダム遅延で再接続
+  - `offer.session_id` が有効なら同一セッション更新を優先し、失敗時はサーバー側で新規セッションへフォールバック
+  - 接続失敗時は `createOffer({ iceRestart: true })` を利用して再接続する
+  - 再接続待機は段階的バックオフ（初回約5秒、指数的に増加、上限60秒、ジッターあり）で制御する
+  - 再接続タイマーは単一化し、同時多重再接続を防止する
 
 ### 7.4 状態遷移・シーケンス
 
@@ -159,7 +163,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 異常系フロー:
   - 設定取得失敗 -> チャット欄へエラー表示
   - マイク/カメラ取得失敗 -> 起動不可表示またはエラーメッセージ
-  - ICE failed -> 再接続
+  - ICE failed -> ICE restart付きOfferで再接続
 - 状態遷移図/シーケンス図（必要なら図リンク）:
   - TODO: `networking_rtc.md` と整合する図を後続で追加
 
@@ -182,6 +186,11 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - ログ設計:
   - チャット欄にシステム/エラーを表示
   - デバッグ欄に ICE/SDP/DataChannelログ + RTCイベントタイムラインを表示
+  - 再接続時の判定ログ:
+    - `start negotiation: forceIceRestart=..., preferredSessionId=...`
+    - `send offer: mode=session-update|new-session, targetSessionId=...`
+    - `offer update succeeded (...)`
+    - `offer fallback detected (...)`
 - メトリクス:
   - 1秒間隔で `RTCPeerConnection.getStats()` を収集し、以下を表示
     - Outbound/Inbound audio bitrate
@@ -198,7 +207,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 1. `/config.json` が取得できるか
   - 2. ICE state が `connected/completed` に遷移するか
   - 3. `text_ch` / `telop_ch` のopenと受信ログが出るか
-  - 4. RTT/loss/jitterトレンドが劣化していないか
+  - 4. `offer update succeeded` / `offer fallback detected` の発生傾向を確認
+  - 5. RTT/loss/jitterトレンドが劣化していないか
 - よくある失敗と対処:
   - マイク権限なし: ブラウザ権限を許可
   - 会場ノイズで誤反応が多い: 設定ダイアログの「マイク自動音量調整」をOFFにして再試行
@@ -268,6 +278,9 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-02-21 | 設定ダイアログにマイク自動音量調整(AGC)の切替を追加し、`getUserMedia` 音声制約へ反映する仕様を追記 |
 | 2026-02-21 | DebugConsole UIをカード型レイアウトへ刷新。Session/Transport/Audio/Channel/Gaze/SDPの監視パネルを追加 |
 | 2026-02-21 | `getStats()` の1秒収集による主要メトリクス表示と、直近60秒ミニグラフ（固定上限スケール）を追加 |
+| 2026-02-21 | 再接続仕様を更新。ICE restart明示のOffer再送と、指数バックオフ（上限60秒・ジッター付き）を追加 |
+| 2026-02-21 | `offer.session_id` による同一セッション更新（失敗時は新規セッションフォールバック）を追加 |
+| 2026-02-21 | 同一セッション更新の挙動を追跡するため、再接続時の判定ログ（更新成功/フォールバック）を追記 |
 
 ## 15. 参照資料
 

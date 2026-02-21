@@ -63,8 +63,12 @@ class RTCSessionProcess(Process):
         # candidate異常が断続的に出る環境で、件数を追えるようにする。
         self.__empty_candidate_count: int = 0
         self.__invalid_candidate_count: int = 0
+        self.__vcs: RTCVoiceChatSession | None = None
 
     async def __add_ice_candidate(self, candidate: dict | None) -> None:
+        if self.__vcs is None:
+            self.__logger.warning("ICE candidate ignored: session is not initialized yet.")
+            return
         if candidate is None:
             # nullはend-of-candidates。aiortcにもNoneで明示的に渡す。
             await self.__vcs.peer.addIceCandidate(None)
@@ -118,8 +122,42 @@ class RTCSessionProcess(Process):
         if message_type == "add_ice_candidate":
             await self.__add_ice_candidate(message.get("candidate"))
             return
+        if message_type == "update_offer":
+            await self.__update_offer(message)
+            return
 
         self.__logger.warning(f"Unknown signal message type: {message_type}")
+
+    async def __update_offer(self, message: dict) -> None:
+        self.__logger.info(
+            (
+                "Received update_offer message "
+                f"(session_id={self.__session_id}, has_vcs={self.__vcs is not None})"
+            ),
+        )
+        try:
+            answer = await self.__apply_offer(
+                offer_sdp=message["sdp"],
+                offer_type=message.get("offer_type", "offer"),
+                offer_talk_mode=message.get("talk_mode"),
+                offer_source="update_offer",
+            )
+            answer["message_type"] = "update_offer_result"
+            self.__server_sdp_pipe.send(answer)
+        except Exception:
+            error_message = traceback.format_exc()
+            self.__logger.error(
+                (
+                    f"Failed to update offer in existing session.\n{error_message}"
+                ),
+            )
+            self.__server_sdp_pipe.send(
+                {
+                    "message_type": "update_offer_error",
+                    "session_id": self.__session_id,
+                    "error": "failed_to_update_offer",
+                },
+            )
 
     def __get_ice_servers(self):
         config = SincromisorConfig.from_yaml()
@@ -137,7 +175,7 @@ class RTCSessionProcess(Process):
         self.__logger.debug(f"IceServers: {ice_servers}")
         return ice_servers
 
-    async def __offer(self) -> dict:
+    def __init_peer(self) -> None:
         self.__vcs = RTCVoiceChatSession(
             peer=RTCPeerConnection(
                 configuration=RTCConfiguration(iceServers=self.__get_ice_servers()),
@@ -151,8 +189,6 @@ class RTCSessionProcess(Process):
         )
         setproctitle(f"RTCSes[{self.__session_id[21:26]}]")
         self.relay = MediaRelay()
-
-        # self.logger.info(f"Created for {request.client}")
 
         @self.__vcs.peer.on("datachannel")
         def on_datachannel(channel: RTCDataChannel):
@@ -170,7 +206,6 @@ class RTCSessionProcess(Process):
             @channel.on("message")
             def on_message(message):
                 self.__logger.info(f"on_message - {channel.label} {message}")
-                # channel.send(json.dumps({"response": f"pong - {message}"}))
 
         @self.__vcs.peer.on("connectionstatechange")
         async def on_connectionstatechange():
@@ -187,16 +222,20 @@ class RTCSessionProcess(Process):
         def on_track(track):
             self.__logger.info(f"Track {track.kind} received.")
             if track.kind == "audio":
-                self.__vcs.audio_transform_track = VoiceTransformTrack(
-                    track=self.relay.subscribe(track),
-                    vcs=self.__vcs,
-                    rtc_finalize_event=self.__rtc_finalize_event,
-                    consul_agent_host=self.__consul_agent_host,
-                    consul_agent_port=self.__consul_agent_port,
-                    fallback_host=self.__fallback_host,
-                    fallback_port=self.__fallback_port,
-                )
-                self.__vcs.peer.addTrack(self.__vcs.audio_transform_track)
+                # 既存トランシーバ利用で再Offerが来るため、音声変換トラックは初回のみ追加する。
+                if self.__vcs.audio_transform_track is None:
+                    self.__vcs.audio_transform_track = VoiceTransformTrack(
+                        track=self.relay.subscribe(track),
+                        vcs=self.__vcs,
+                        rtc_finalize_event=self.__rtc_finalize_event,
+                        consul_agent_host=self.__consul_agent_host,
+                        consul_agent_port=self.__consul_agent_port,
+                        fallback_host=self.__fallback_host,
+                        fallback_port=self.__fallback_port,
+                    )
+                    self.__vcs.peer.addTrack(self.__vcs.audio_transform_track)
+                else:
+                    self.__logger.info("audio track already initialized. keep existing transform track.")
             else:
                 # 想定していないトラックが来た時はMediaBlackholeに投げないと、
                 # メモリリークしまくる模様。
@@ -208,11 +247,43 @@ class RTCSessionProcess(Process):
             async def on_ended():
                 self.__logger.info(f"Track {track.kind} ended.")
 
-        # handle offer
+    async def __apply_offer(
+        self,
+        offer_sdp: str,
+        offer_type: str,
+        offer_talk_mode: str | None,
+        offer_source: str,
+    ) -> dict:
+        if self.__vcs is None:
+            self.__logger.info(
+                f"Initialize peer for offer handling (source={offer_source}, session_id={self.__session_id})",
+            )
+            self.__init_peer()
+        assert self.__vcs is not None, "RTC session must be initialized."
+
+        if offer_talk_mode and offer_talk_mode != self.__vcs.talk_mode:
+            self.__logger.warning(
+                (
+                    "Requested talk_mode update is ignored. "
+                    f"current={self.__vcs.talk_mode}, requested={offer_talk_mode}"
+                ),
+            )
+
+        self.__vcs.desc = RTCSessionDescription(
+            sdp=offer_sdp,
+            type=offer_type,
+        )
+
+        self.__logger.info(
+            (
+                "Apply remote offer "
+                f"(source={offer_source}, session_id={self.__session_id}, "
+                f"offer_type={offer_type}, signaling_state={self.__vcs.peer.signalingState})"
+            ),
+        )
         await self.__vcs.peer.setRemoteDescription(self.__vcs.desc)
 
         try:
-            # send answer
             answer: RTCSessionDescription | None = await self.__vcs.peer.createAnswer()
             assert isinstance(answer, RTCSessionDescription), (
                 "Failed to create RTCSessionDescription."
@@ -220,14 +291,23 @@ class RTCSessionProcess(Process):
             # 設定されているstun/turnサーバが利用できない時にエラーとなる
             # [Sincromisor]E: socket.gaierror: [Errno -2] Name or service not known
             await self.__vcs.peer.setLocalDescription(answer)
+            self.__logger.info(
+                (
+                    "Generated local answer "
+                    f"(source={offer_source}, session_id={self.__session_id}, "
+                    f"signaling_state={self.__vcs.peer.signalingState})"
+                ),
+            )
         except socket.gaierror as e:
             self.__logger.error(f"ConnectionError: {repr(e)}\n{traceback.format_exc()}")
             traceback.print_exc()
             self.__rtc_finalize_event.set()
+            raise
         except Exception as e:
             self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
             traceback.print_exc()
             self.__rtc_finalize_event.set()
+            raise
 
         return {
             "sdp": self.__vcs.peer.localDescription.sdp,
@@ -235,8 +315,29 @@ class RTCSessionProcess(Process):
             "session_id": self.__session_id,
         }
 
+    async def __offer(self) -> dict:
+        return await self.__apply_offer(
+            offer_sdp=self.__request_sdp,
+            offer_type=self.__request_type,
+            offer_talk_mode=self.__request_talk_mode,
+            offer_source="initial_offer",
+        )
+
     async def __serve(self) -> None:
-        self.__server_sdp_pipe.send(await self.__offer())
+        try:
+            self.__server_sdp_pipe.send(await self.__offer())
+        except Exception:
+            self.__logger.error(
+                f"Failed to create initial offer/answer.\n{traceback.format_exc()}",
+            )
+            self.__server_sdp_pipe.send(
+                {
+                    "message_type": "offer_error",
+                    "session_id": self.__session_id,
+                    "error": "failed_to_create_initial_answer",
+                },
+            )
+            self.__rtc_finalize_event.set()
         while self.__rtc_finalize_event.is_set() is False:
             try:
                 # Trickle ICE後送用メッセージを親プロセスから受信し、

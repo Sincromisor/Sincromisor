@@ -88,13 +88,48 @@ class RTCSignalingServer:
 
         @app.post("/api/v1/RTCSignalingServer/offer")
         async def app_offer(request: Request, offer_params: RTCSessionOffer):
+            # /offer 時点で寿命切れセッションを回収し、session_id更新可否の判定精度を上げる。
             rtcSM.cleanup_sessions()
             if rtcSM.session_count() > self.__args.max_sessions:
                 res = JSONResponse({"error": "Too many requests."})
                 res.status_code = status.HTTP_429_TOO_MANY_REQUESTS
                 return res
 
-            session_info = rtcSM.create_session(offer=offer_params)
+            self.__logger.info(
+                (
+                    "Offer received: "
+                    f"requested_session_id={offer_params.session_id}, "
+                    f"talk_mode={offer_params.talk_mode}, "
+                    f"client={request.client}"
+                ),
+            )
+            try:
+                session_info = rtcSM.create_or_update_session(offer=offer_params)
+            except Exception as e:
+                self.__logger.error(
+                    (
+                        "Failed to process offer request. "
+                        f"session_id={offer_params.session_id}, error={repr(e)}"
+                    ),
+                )
+                return JSONResponse(
+                    {"error": "Failed to establish RTC session."},
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            assigned_session_id = session_info.get("session_id")
+            if offer_params.session_id and offer_params.session_id == assigned_session_id:
+                self.__logger.info(
+                    f"Offer handled as session update (session_id={assigned_session_id})"
+                )
+            elif offer_params.session_id:
+                self.__logger.info(
+                    (
+                        "Offer update fallback to new session "
+                        f"(requested={offer_params.session_id}, assigned={assigned_session_id})"
+                    ),
+                )
+            else:
+                self.__logger.info(f"Offer handled as new session (session_id={assigned_session_id})")
             self.__logger.info(
                 (
                     f"Client: {request.client}\n"
@@ -109,21 +144,19 @@ class RTCSignalingServer:
         async def app_candidate(candidate_params: RTCSessionCandidate):
             # Trickle ICE用:
             # Offer後に到着する候補を既存セッションへ中継する。
-            # セッション終了済み候補は404で捨て、クライアント側の再接続判定に委ねる。
+            # セッション終了済み候補は再接続レースで自然発生するため、
+            # 受理不能でもHTTP 200で無害化し、過剰な404/Warningを避ける。
             rtcSM.cleanup_sessions()
             if rtcSM.add_ice_candidate(candidate_params):
                 return JSONResponse({"status": True})
-            self.__logger.warning(
+            self.__logger.info(
                 (
-                    "Candidate rejected: session not found or closed "
+                    "Late candidate ignored: session not found or closed "
                     f"(session_id={candidate_params.session_id}, "
                     f"has_candidate={candidate_params.candidate is not None})"
                 ),
             )
-            return JSONResponse(
-                {"error": "Session not found or already closed."},
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
+            return JSONResponse({"status": False, "reason": "session_not_found_or_closed"})
 
         @app.get("/api/v1/RTCSignalingServer/cleanup")
         def app_cleanup(request: Request):
