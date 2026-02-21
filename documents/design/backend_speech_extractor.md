@@ -6,7 +6,7 @@ Sincromisor の Speech Extractor サービス（音声区間抽出）の設計�
 
 - ドキュメントパス: `documents/design/backend_speech_extractor.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-02-15
+- 最終更新日: 2026-02-21
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -88,7 +88,9 @@ Sincromisor の Speech Extractor サービス（音声区間抽出）の設計�
 - コンポーネントごとの責務:
   - `SpeechExtractorProcess.start()`: `/statuses` と `/extract` を提供
   - `SpeechExtractorWorker.setup_model()`: YAMNetモデルロード
-  - `SpeechExtractorWorker.extract()`: 状態機械（in_speech/silence_ms）で結果送信
+  - `SpeechExtractorWorker.extract()`: WebSocket受信ループを管理し、チャンク処理を委譲する
+  - `SpeechExtractorWorker.__process_audio_chunk()`: 状態機械（in_speech/silence_ms）を実行する
+  - `SpeechExtractorWorker.__emit_result()`: sequence/confirmed更新とmsgpack送信を担当する
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-server/speech-extractor/SpeechExtractorProcess.py`
   - `sincromisor-server/speech-extractor/src/speech_extractor/SpeechExtractor/SpeechExtractorWorker.py`
@@ -219,6 +221,7 @@ Sincromisor の Speech Extractor サービス（音声区間抽出）の設計�
 | 日付 | 変更内容 |
 | --- | --- |
 | 2026-02-15 | 初版作成 |
+| 2026-02-21 | `SpeechExtractorWorker` の状態遷移ロジックをヘルパーメソッドへ分割した実装方針を反映 |
 
 ## 15. 参照資料
 
