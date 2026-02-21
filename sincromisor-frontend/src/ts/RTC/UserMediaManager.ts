@@ -1,7 +1,16 @@
+export type VadStateReport = {
+    isSpeech: boolean;
+    rms: number;
+    peak: number;
+};
+
 export class UserMediaManager {
     audioTrack?: MediaStreamTrack;
     videoTrack?: MediaStreamTrack;
     config: MediaStreamConstraints;
+    private onVadStateCallback: (report: VadStateReport) => void = () => { };
+    private audioContext: AudioContext | null = null;
+    private rawAudioTrack: MediaStreamTrack | null = null;
 
     constructor() {
         this.config = this.defaultConfig();
@@ -31,15 +40,21 @@ export class UserMediaManager {
         }
     }
 
+    // DebugConsole表示用に、AudioWorklet側VADの状態を通知する。
+    setVadStateCallback(callback: (report: VadStateReport) => void): void {
+        this.onVadStateCallback = callback;
+    }
+
     getUserMedia(audioTrackCallback: (audioTrack: MediaStreamTrack) => void,
         videoTrackCallback: (videoTrack: MediaStreamTrack) => void,
         errCallback: (err: any) => void): void {
         navigator.mediaDevices.getUserMedia(this.config)
-            .then((mediaStream) => {
-                mediaStream.getTracks().forEach((track) => {
+            .then(async (mediaStream) => {
+                for (const track of mediaStream.getTracks()) {
                     if (track.kind == 'audio') {
                         console.log(`AudioTrack: ${track.label}`);
-                        this.audioTrack = track;
+                        this.rawAudioTrack = track;
+                        this.audioTrack = await this.buildProcessedAudioTrack(track);
                         audioTrackCallback(this.audioTrack);
                     } else if (track.kind == 'video') {
                         console.log(`VideoTrack: ${track.label}`);
@@ -48,16 +63,60 @@ export class UserMediaManager {
                     } else {
                         console.error(`Unknown Track: ${track}`);
                     }
-                });
-
+                }
             }).catch((err) => {
                 console.error(`Could not acquire media: ${err}`);
                 errCallback(err);
             })
     }
 
+    private async buildProcessedAudioTrack(rawTrack: MediaStreamTrack): Promise<MediaStreamTrack> {
+        this.disposeAudioProcessing();
+        const AudioContextCtor = window.AudioContext;
+        if (!AudioContextCtor || !("audioWorklet" in AudioContextCtor.prototype)) {
+            return rawTrack;
+        }
+
+        const context = new AudioContextCtor();
+        this.audioContext = context;
+        const source = context.createMediaStreamSource(new MediaStream([rawTrack]));
+
+        // 低周波ノイズ（空調/振動）を抑えるため、VAD前段にHPFを入れる。
+        const highpass = context.createBiquadFilter();
+        highpass.type = "highpass";
+        highpass.frequency.value = 120;
+        highpass.Q.value = 0.707;
+
+        await context.audioWorklet.addModule("/worklets/vad-processor.js");
+        const vadNode = new AudioWorkletNode(context, "vad-processor");
+        vadNode.port.onmessage = (event: MessageEvent<{ type: string; isSpeech: boolean; rms: number; peak: number; }>) => {
+            const data = event.data;
+            if (!data || data.type !== "vad") {
+                return;
+            }
+            this.onVadStateCallback({
+                isSpeech: !!data.isSpeech,
+                rms: Number(data.rms) || 0,
+                peak: Number(data.peak) || 0,
+            });
+        };
+
+        const destination = context.createMediaStreamDestination();
+        source.connect(highpass);
+        highpass.connect(vadNode);
+        vadNode.connect(destination);
+
+        if (context.state === "suspended") {
+            await context.resume();
+        }
+        const processedTrack = destination.stream.getAudioTracks()[0];
+        if (!processedTrack) {
+            return rawTrack;
+        }
+        return processedTrack;
+    }
+
     setAutoGainControl(enabled: boolean): void {
-        // 設定画面のON/OFFをそのまま制約値へ反映する。
         this.updateAudioBooleanConstraint("autoGainControl", enabled);
     }
 
@@ -77,12 +136,21 @@ export class UserMediaManager {
         if (!audioConfig || typeof audioConfig === "boolean") {
             return;
         }
-        // getUserMedia前に更新するため、再接続時は最新設定で取り直せる。
         audioConfig[key] = enabled;
     }
 
     disableVideo(): void {
         this.config["video"] = false;
+    }
+
+    private disposeAudioProcessing(): void {
+        if (!this.audioContext) {
+            return;
+        }
+        this.audioContext.close().catch((e) => {
+            console.error(e);
+        });
+        this.audioContext = null;
     }
 
     close(): void {
@@ -92,6 +160,10 @@ export class UserMediaManager {
         if (this.audioTrack) {
             this.audioTrack.stop();
         }
+        if (this.rawAudioTrack && this.rawAudioTrack !== this.audioTrack) {
+            this.rawAudioTrack.stop();
+        }
+        this.disposeAudioProcessing();
     }
 }
 

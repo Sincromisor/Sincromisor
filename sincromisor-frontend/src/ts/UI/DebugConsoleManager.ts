@@ -64,6 +64,7 @@ export class DebugConsoleManager {
     private readonly remoteAudioLevelValue: HTMLElement | null;
     private readonly localAudioRmsValue: HTMLElement | null;
     private readonly localAudioPeakValue: HTMLElement | null;
+    private readonly localAudioVadValue: HTMLElement | null;
     private readonly localAudioWarning: HTMLElement | null;
     private localAudioMeterHandle: AudioMeterHandle | null = null;
     private remoteAudioMeterHandle: AudioMeterHandle | null = null;
@@ -134,6 +135,7 @@ export class DebugConsoleManager {
         this.remoteAudioLevelValue = document.querySelector("#remoteAudioLevelValue");
         this.localAudioRmsValue = document.querySelector("#localAudioRmsValue");
         this.localAudioPeakValue = document.querySelector("#localAudioPeakValue");
+        this.localAudioVadValue = document.querySelector("#localAudioVadValue");
         this.localAudioWarning = document.querySelector("#localAudioWarning");
 
         this.setDebugConsoleButtons();
@@ -403,6 +405,14 @@ export class DebugConsoleManager {
         }
     }
 
+    // AudioWorklet側VADの判定状態を表示する。
+    updateLocalVadState(isSpeech: boolean): void {
+        if (!this.localAudioVadValue) {
+            return;
+        }
+        this.localAudioVadValue.textContent = isSpeech ? "Speech" : "Silence";
+    }
+
     // Local Micの状態表示テキストと色を更新する。
     private updateLocalMicWarning(state: "ok" | "silent" | "error", message: string): void {
         if (!this.localAudioWarning) {
@@ -463,6 +473,7 @@ export class DebugConsoleManager {
             this.localAudioMeterHandle = null;
             this.updateAudioMeter(0, this.localAudioLevelMeter, this.localAudioLevelValue);
             this.updateLocalMicMetrics(0, 0);
+            this.updateLocalVadState(false);
             this.localAudioWarningState = "ok";
             this.localAudioWarningPendingState = "ok";
             this.localAudioWarningPendingFrames = 0;

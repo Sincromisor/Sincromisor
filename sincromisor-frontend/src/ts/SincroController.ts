@@ -1,5 +1,5 @@
 import { RTCTalkClient } from "./RTC/RTCTalkClient";
-import { UserMediaManager } from "./RTC/UserMediaManager";
+import { UserMediaManager, VadStateReport } from "./RTC/UserMediaManager";
 import { CharacterGaze } from "./CharacterGaze/CharacterGaze";
 import { ChatMessageManager } from "./UI/ChatMessageManager";
 import { DialogManager } from "./UI/DialogManager";
@@ -31,6 +31,9 @@ export class SincroController {
         this.userMediaManager.setNoiseSuppression(this.dialogManager.enableNoiseSuppression());
         this.userMediaManager.setEchoCancellation(this.dialogManager.enableEchoCancellation());
         this.userMediaManager.setAutoGainControl(this.dialogManager.enableAutoGainControl());
+        this.userMediaManager.setVadStateCallback((report: VadStateReport) => {
+            this.debugConsoleManager.updateLocalVadState(report.isSpeech);
+        });
         if (!this.dialogManager.enableCharacterGaze()) {
             this.userMediaManager.disableVideo();
         }
