@@ -373,13 +373,19 @@ div#debugConsole .audioMeterGrid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+    align-items: stretch;
+    justify-items: stretch;
 }
 
 div#debugConsole .audioMeterPanel {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     padding: 9px;
     border-radius: 8px;
     border: 1px solid hsl(190deg 65% 62% / 15%);
     background: hsl(218deg 28% 10% / 72%);
+    min-height: 142px;
 }
 
 div#debugConsole .audioMeterHeader {
@@ -388,6 +394,14 @@ div#debugConsole .audioMeterHeader {
     color: var(--debug-text-muted);
     font-size: 12px;
     margin-bottom: 5px;
+}
+
+div#debugConsole .audioMeterHeader span:last-child {
+    display: inline-block;
+    min-width: 5ch;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-family: "IBM Plex Mono", monospace;
 }
 
 div#debugConsole .audioMeterTrack {
@@ -404,6 +418,51 @@ div#debugConsole .audioMeterFill {
     border-radius: inherit;
     background: linear-gradient(90deg, hsl(190deg 84% 48%), hsl(49deg 95% 55%), hsl(8deg 82% 58%));
     transition: width 0.08s linear;
+}
+
+div#debugConsole .audioMetricTable {
+    margin: 8px 0 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 8px;
+    row-gap: 3px;
+    font-size: 12px;
+    color: var(--debug-text-muted);
+}
+
+div#debugConsole .audioMetricTable dt {
+    margin: 0;
+}
+
+div#debugConsole .audioMetricTable dd {
+    margin: 0;
+    text-align: right;
+    color: var(--debug-text-strong);
+    min-width: 7ch;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    font-family: "IBM Plex Mono", monospace;
+}
+
+div#debugConsole .audioWarning {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--debug-ok);
+    min-height: 1.2em;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+div#debugConsole .audioWarning.warn {
+    color: var(--debug-warn);
+}
+
+div#debugConsole .audioWarning.error {
+    color: var(--debug-danger);
+}
+
+div#debugConsole .audioWarning.silent {
+    color: var(--debug-text-muted);
 }
 
 div#debugConsole .channelGrid {
