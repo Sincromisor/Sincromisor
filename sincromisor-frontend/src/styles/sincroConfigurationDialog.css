@@ -61,6 +61,13 @@ dialog#configurationDialog {
             font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
         }
 
+        /* checkboxは幅95%にせず、視認性の高い一定サイズに揃える */
+        & input.fieldContent[type="checkbox"] {
+            width: clamp(2rem, 0rem + 2.5vw, 6rem);
+            height: clamp(2rem, 0rem + 2.5vw, 6rem);
+            justify-self: center;
+        }
+
         & legend {
             margin-left: 2em;
         }
@@ -80,6 +87,51 @@ dialog#configurationDialog {
         & label {
             vertical-align: middle;
             height: clamp(2rem, 0rem + 2.5vw, 6rem);
+        }
+
+        & details.advancedSettings {
+            /* 追加したマイク詳細設定を主設定と視覚的に分離し、誤操作を減らす。 */
+            width: 100%;
+            grid-column: 1 / 3;
+            margin-top: 0.5em;
+            border: 1px solid color-mix(in srgb, var(--configurationDialogTextColor) 25%, transparent);
+            border-radius: 8px;
+            padding: 0.5em 0.75em;
+        }
+
+        & details.advancedSettings > summary {
+            cursor: pointer;
+            font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
+            user-select: none;
+        }
+
+        & details.advancedSettings > .advancedSettings__grid {
+            margin-top: 0.75em;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            row-gap: 1em;
+            place-items: center;
+        }
+
+        & details.advancedSettings > .advancedSettings__grid .fieldLabel {
+            width: 95%;
+            display: block;
+            grid-column: 1 / 2;
+            font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
+        }
+
+        & details.advancedSettings > .advancedSettings__grid .fieldContent {
+            width: 95%;
+            display: block;
+            grid-column: 2 / 3;
+            font-size: clamp(1rem, 0rem + 1.25vw, 3rem);
+            height: clamp(2rem, 0rem + 2.5vw, 6rem);
+        }
+
+        & details.advancedSettings > .advancedSettings__grid input.fieldContent[type="checkbox"] {
+            width: clamp(2rem, 0rem + 2.5vw, 6rem);
+            height: clamp(2rem, 0rem + 2.5vw, 6rem);
+            justify-self: center;
         }
     }
 

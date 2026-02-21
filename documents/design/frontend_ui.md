@@ -52,6 +52,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - 要件一覧:
   - 設定ダイアログで会話モード・キャラ表示・顔認識・自動ミュート・マイク自動音量調整(AGC)を切替可能
+  - 高度なマイク設定を折りたたみ表示（デフォルト閉）とし、必要時のみ詳細項目を操作できること
+  - マイク詳細項目として `noiseSuppression` / `echoCancellation` / `autoGainControl` を切替可能であること
   - 起動時にマイク/カメラを取得し、音声トラックでRTC接続する
   - `text_ch` / `telop_ch` の受信内容を画面に反映する
   - デバッグコンソールでICE/SDP/DataChannelログを確認できる
@@ -94,7 +96,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - コンポーネントごとの責務:
   - `SincroVRMInitializer`: 初期画面起動、開始ボタンイベント、シーン開始
-  - `SincroController`: UserMedia取得前にダイアログ設定（AGC含む）を反映し、RTC開始/停止、DataChannel受信ハンドラ設定、CharacterGaze起動
+  - `SincroController`: UserMedia取得前にダイアログ設定（NS/EC/AGC含む）を反映し、RTC開始/停止、DataChannel受信ハンドラ設定、CharacterGaze起動
   - `RTCTalkClient`: Offer生成、`/offer` POST、Answer適用、DataChannel管理
   - `TalkManager`: text/telop受信を集約し、チャットUIと口形同期向け状態を維持
   - `DialogManager`: 設定値の参照、タイトル反映、VRMファイル更新
@@ -276,6 +278,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-02-16 | FirefoxでのICE失敗を避けるため、ICE gathering待機をブラウザ別制御（Chromiumのみ1500ms上限）に更新 |
 | 2026-02-16 | Trickle ICE導入。`candidateURL`追加、`session_id`付きAnswer、候補の逐次送信フローへ更新 |
 | 2026-02-21 | 設定ダイアログにマイク自動音量調整(AGC)の切替を追加し、`getUserMedia` 音声制約へ反映する仕様を追記 |
+| 2026-02-21 | 高度なマイク設定（折りたたみ）を追加し、`noiseSuppression`/`echoCancellation`/`autoGainControl` の3項目を起動時に反映する仕様へ更新 |
 | 2026-02-21 | DebugConsole UIをカード型レイアウトへ刷新。Session/Transport/Audio/Channel/Gaze/SDPの監視パネルを追加 |
 | 2026-02-21 | `getStats()` の1秒収集による主要メトリクス表示と、直近60秒ミニグラフ（固定上限スケール）を追加 |
 | 2026-02-21 | 再接続仕様を更新。ICE restart明示のOffer再送と、指数バックオフ（上限60秒・ジッター付き）を追加 |

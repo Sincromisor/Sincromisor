@@ -116,9 +116,15 @@ export class DebugConsoleManager {
         this.remoteAudioLevelValue = document.querySelector("#remoteAudioLevelValue");
 
         this.setDebugConsoleButtons();
+        // 3Dシーン側のポインター制御と干渉しないよう、デバッグUI上のイベントを遮断する。
         this.blockPropagationToSceneControls();
+        // 1366px以下ではタブUIで1パネルずつ切り替えるため、常にタブイベントを登録する。
         this.setTabEvents();
+        // キーボード運用(PC)向けショートカットは継続しつつ、
+        // タブレット向けにはボタン操作でも同等機能を提供する。
         this.setShortcutKeyEvent();
+        // モーダル的に扱えるよう、コンソール外クリックで閉じる。
+        this.bindOutsideClickClose();
     }
 
     showDebugConsole(): void {
@@ -213,6 +219,33 @@ export class DebugConsoleManager {
             }
             this.closeDebugMenu();
         });
+    }
+
+    private bindOutsideClickClose(): void {
+        document.addEventListener(
+            "click",
+            (event) => {
+                if (!this.debugConsoleContainer || !this.debugConsoleRoot) {
+                    return;
+                }
+                if (!this.debugConsoleContainer.classList.contains("is-open")) {
+                    return;
+                }
+                const target = event.target as Node | null;
+                if (!target) {
+                    return;
+                }
+                if (this.debugConsoleRoot.contains(target)) {
+                    return;
+                }
+                if (this.debugMenu && this.debugMenu.contains(target)) {
+                    return;
+                }
+                // コンソール外かつメニュー外のクリックのみ閉じる。
+                this.hideDebugConsole();
+            },
+            { capture: true },
+        );
     }
 
     private blockPointerEvent(element: HTMLElement): void {
@@ -412,6 +445,7 @@ export class DebugConsoleManager {
     }
 
     resetRealtimeStats(): void {
+        // 接続再試行時に古い値を残さないよう、メトリクスとトレンドを初期化する。
         Object.keys(this.metricElements).forEach((key) => {
             this.updateMetricValue(key, "-");
         });
@@ -442,6 +476,7 @@ export class DebugConsoleManager {
         const height = 86;
         const upper = this.trendMaxValues[trendKey] ?? 1;
         const xStep = width / (DebugConsoleManager.TREND_POINTS - 1);
+        // 直近60点(=約60秒)を固定スケールへ正規化し、比較しやすい折れ線にする。
         const polylinePoints = points.map((v, i) => {
             const x = i * xStep;
             const normalized = Math.max(0, Math.min(1, v / upper));
@@ -458,6 +493,7 @@ export class DebugConsoleManager {
         }
         const series = this.trendSeries[trendKey];
         series.push(normalizedValue);
+        // 固定長バッファで描画コストを抑え、レイアウトを安定させる。
         if (series.length > DebugConsoleManager.TREND_POINTS) {
             series.splice(0, series.length - DebugConsoleManager.TREND_POINTS);
         }
