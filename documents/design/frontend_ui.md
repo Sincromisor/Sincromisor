@@ -6,7 +6,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - ドキュメントパス: `documents/design/frontend_ui.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-02-15
+- 最終更新日: 2026-02-21
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -51,7 +51,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 ### 5.1 機能要件
 
 - 要件一覧:
-  - 設定ダイアログで会話モード・キャラ表示・顔認識・自動ミュートを切替可能
+  - 設定ダイアログで会話モード・キャラ表示・顔認識・自動ミュート・マイク自動音量調整(AGC)を切替可能
   - 起動時にマイク/カメラを取得し、音声トラックでRTC接続する
   - `text_ch` / `telop_ch` の受信内容を画面に反映する
   - デバッグコンソールでICE/SDP/DataChannelログを確認できる
@@ -92,10 +92,11 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - コンポーネントごとの責務:
   - `SincroVRMInitializer`: 初期画面起動、開始ボタンイベント、シーン開始
-  - `SincroController`: UserMedia取得、RTC開始/停止、DataChannel受信ハンドラ設定、CharacterGaze起動
+  - `SincroController`: UserMedia取得前にダイアログ設定（AGC含む）を反映し、RTC開始/停止、DataChannel受信ハンドラ設定、CharacterGaze起動
   - `RTCTalkClient`: Offer生成、`/offer` POST、Answer適用、DataChannel管理
   - `TalkManager`: text/telop受信を集約し、チャットUIと口形同期向け状態を維持
   - `DialogManager`: 設定値の参照、タイトル反映、VRMファイル更新
+  - `UserMediaManager`: `getUserMedia` 制約（`echoCancellation`/`noiseSuppression`/`autoGainControl` 等）を構築
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroController.ts`
   - `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
@@ -106,6 +107,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 変更時に同時確認が必要なファイル:
   - RTCペイロード変更: `RTCTalkClient.ts` とサーバー側 `RTCSignalingServer.py`
   - ダイアログ項目変更: `DialogManager.ts` と `src/partials/configurationDialog.html`
+  - 音声入力制約変更: `SincroController.ts` と `RTC/UserMediaManager.ts`
   - チャット表示変更: `ChatMessageManager.ts` と `src/styles/sincroChatBox.css`
 
 ### 7.2 データ設計
@@ -181,6 +183,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 3. `text_ch` / `telop_ch` のopenと受信ログが出るか
 - よくある失敗と対処:
   - マイク権限なし: ブラウザ権限を許可
+  - 会場ノイズで誤反応が多い: 設定ダイアログの「マイク自動音量調整」をOFFにして再試行
   - WASM未配置: CharacterGazeが起動しない
   - offerURL不整合: POST先エラーで再接続ループ
 
@@ -243,6 +246,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-02-15 | ChromiumでのOffer遅延対策として、ICE gathering待機に1500ms上限を設ける仕様を追記 |
 | 2026-02-16 | FirefoxでのICE失敗を避けるため、ICE gathering待機をブラウザ別制御（Chromiumのみ1500ms上限）に更新 |
 | 2026-02-16 | Trickle ICE導入。`candidateURL`追加、`session_id`付きAnswer、候補の逐次送信フローへ更新 |
+| 2026-02-21 | 設定ダイアログにマイク自動音量調整(AGC)の切替を追加し、`getUserMedia` 音声制約へ反映する仕様を追記 |
 
 ## 15. 参照資料
 

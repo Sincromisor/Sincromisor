@@ -27,6 +27,7 @@ export class SincroController {
             this.chatMessageManager.writeErrorMessage(`WebRTCの設定の取得に失敗しました。 - ${err}`);
         });
         this.userMediaManager = new UserMediaManager();
+        this.userMediaManager.setAutoGainControl(this.dialogManager.enableAutoGainControl());
         if (!this.dialogManager.enableCharacterGaze()) {
             this.userMediaManager.disableVideo();
         }
