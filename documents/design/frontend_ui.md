@@ -57,6 +57,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - ローカルマイク入力に高域通過フィルタ(HPF)を適用し、低周波ノイズを抑えられること
   - AudioWorkletベースVADを実行し、DebugConsoleへ `Speech/Silence` 状態を表示できること
   - DebugConsole上でVADのRMS閾値を動的に変更し、判定感度を即時調整できること
+  - DebugConsole上でHPF/LPFのカットオフとLPF有効状態を変更し、前段フィルタを動的調整できること
   - 高度設定でVAD送信ゲートを有効化した場合、無音時の送信音量を抑制できること
   - 高度設定で騒音会場モードを有効化した場合、強めの前段フィルタ（HPF+LPF）と高めのVAD初期閾値を適用できること
   - 起動時にマイク/カメラを取得し、音声トラックでRTC接続する
@@ -107,7 +108,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `TalkManager`: text/telop受信を集約し、チャットUIと口形同期向け状態を維持
   - `DialogManager`: 設定値の参照、タイトル反映、VRMファイル更新
   - `UserMediaManager`: `getUserMedia` 制約（`echoCancellation`/`noiseSuppression`/`autoGainControl` 等）を構築し、騒音会場モード切替、HPF/LPF+AudioWorklet VAD処理と閾値更新を管理
-  - `DebugConsoleManager`: デバッグUIの表示制御、RTC状態表示、イベントログ、音声レベルメーター、VAD状態/閾値調整、60秒トレンドグラフ描画
+  - `DebugConsoleManager`: デバッグUIの表示制御、RTC状態表示、イベントログ、音声レベルメーター、HPF/LPF・VAD状態/閾値調整、60秒トレンドグラフ描画
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroController.ts`
   - `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
@@ -289,6 +290,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-02-21 | クライアント音声処理パイプラインにHPF(120Hz)とAudioWorklet VADを追加し、DebugConsoleへSpeech/Silence状態を表示 |
 | 2026-02-21 | 高度設定にVAD送信ゲートを追加し、無音時はGainNodeで送信音量を抑制できるよう更新 |
 | 2026-02-21 | DebugConsoleにVAD RMS閾値スライダーを追加し、AudioWorkletへ閾値を動的反映できるよう更新 |
+| 2026-02-21 | DebugConsoleにHPF/LPF設定（HPF cutoff・LPF有効化・LPF cutoff）を追加し、前段フィルタを動的反映できるよう更新 |
 | 2026-02-21 | DebugConsoleにVAD RMS閾値プリセット（標準/騒音環境/超騒音環境）を追加し、ワンクリックで適用可能に更新 |
 | 2026-02-21 | 高度設定に騒音会場モードを追加し、HPF強化(180Hz)+LPF(4.2kHz)+高めのVAD初期閾値を起動時に適用できるよう更新 |
 | 2026-02-21 | DebugConsole UIをカード型レイアウトへ刷新。Session/Transport/Audio/Channel/Gaze/SDPの監視パネルを追加 |

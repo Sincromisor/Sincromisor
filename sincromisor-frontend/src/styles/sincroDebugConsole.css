@@ -479,6 +479,21 @@ div#debugConsole .audioControlLabel {
     margin-bottom: 4px;
 }
 
+div#debugConsole .audioControlCheckLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--debug-text-muted);
+    margin-bottom: 4px;
+}
+
+div#debugConsole .audioControlCheckLabel input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+}
+
 div#debugConsole .audioControlLabel span {
     min-width: 6ch;
     text-align: right;

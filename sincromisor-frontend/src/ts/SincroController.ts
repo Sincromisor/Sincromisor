@@ -4,7 +4,7 @@ import { CharacterGaze } from "./CharacterGaze/CharacterGaze";
 import { ChatMessageManager } from "./UI/ChatMessageManager";
 import { DialogManager } from "./UI/DialogManager";
 import { TalkManager } from "./RTC/TalkManager";
-import { DebugConsoleManager } from "./UI/DebugConsoleManager";
+import { AudioFilterControlConfig, DebugConsoleManager } from "./UI/DebugConsoleManager";
 import { ChatMessage, TelopChannelMessage } from "./RTC/RTCMessage";
 import { Detection } from "@mediapipe/tasks-vision";
 import { SincroRTCConfigManager } from "./RTC/SincroRTCConfigManager";
@@ -33,6 +33,10 @@ export class SincroController {
         this.userMediaManager.setAutoGainControl(this.dialogManager.enableAutoGainControl());
         this.userMediaManager.setVadGateEnabled(this.dialogManager.enableVadGate());
         this.userMediaManager.setVenueNoiseModeEnabled(this.dialogManager.enableVenueNoiseMode());
+        this.debugConsoleManager.setLocalAudioFilterConfig(this.userMediaManager.getAudioFilterConfig());
+        this.debugConsoleManager.setLocalAudioFilterChangeCallback((config: AudioFilterControlConfig) => {
+            this.userMediaManager.setAudioFilterConfig(config);
+        });
         this.debugConsoleManager.setLocalVadRmsThreshold(this.userMediaManager.getVadThresholds().rmsThreshold);
         this.debugConsoleManager.setLocalVadRmsThresholdChangeCallback((threshold: number) => {
             this.userMediaManager.setVadThresholds({ rmsThreshold: threshold });

@@ -10,6 +10,12 @@ type AudioMeterHandle = {
     lastMeterUpdateAt: number;
 };
 
+export type AudioFilterControlConfig = {
+    highpassHz: number;
+    lowpassEnabled: boolean;
+    lowpassHz: number;
+};
+
 export class DebugConsoleManager {
     private static instance: DebugConsoleManager;
     private static readonly EVENT_LOG_LINES = 80;
@@ -66,6 +72,11 @@ export class DebugConsoleManager {
     private readonly localAudioPeakValue: HTMLElement | null;
     private readonly localAudioVadValue: HTMLElement | null;
     private readonly localAudioWarning: HTMLElement | null;
+    private readonly localAudioHighpassCutoffInput: HTMLInputElement | null;
+    private readonly localAudioHighpassCutoffValue: HTMLElement | null;
+    private readonly localAudioLowpassEnabledInput: HTMLInputElement | null;
+    private readonly localAudioLowpassCutoffInput: HTMLInputElement | null;
+    private readonly localAudioLowpassCutoffValue: HTMLElement | null;
     private readonly localVadRmsThresholdInput: HTMLInputElement | null;
     private readonly localVadRmsThresholdValue: HTMLElement | null;
     private readonly localVadRmsPresetButtons: NodeListOf<HTMLButtonElement>;
@@ -74,6 +85,7 @@ export class DebugConsoleManager {
     private localAudioWarningState: "ok" | "silent" | "error" = "ok";
     private localAudioWarningPendingState: "ok" | "silent" | "error" = "ok";
     private localAudioWarningPendingFrames: number = 0;
+    private onLocalAudioFilterChange: (config: AudioFilterControlConfig) => void = () => { };
     private onLocalVadRmsThresholdChange: (threshold: number) => void = () => { };
 
     // シングルトンインスタンスを返す。
@@ -141,6 +153,11 @@ export class DebugConsoleManager {
         this.localAudioPeakValue = document.querySelector("#localAudioPeakValue");
         this.localAudioVadValue = document.querySelector("#localAudioVadValue");
         this.localAudioWarning = document.querySelector("#localAudioWarning");
+        this.localAudioHighpassCutoffInput = document.querySelector("#localAudioHighpassCutoff");
+        this.localAudioHighpassCutoffValue = document.querySelector("#localAudioHighpassCutoffValue");
+        this.localAudioLowpassEnabledInput = document.querySelector("#localAudioLowpassEnabled");
+        this.localAudioLowpassCutoffInput = document.querySelector("#localAudioLowpassCutoff");
+        this.localAudioLowpassCutoffValue = document.querySelector("#localAudioLowpassCutoffValue");
         this.localVadRmsThresholdInput = document.querySelector("#localVadRmsThreshold");
         this.localVadRmsThresholdValue = document.querySelector("#localVadRmsThresholdValue");
         this.localVadRmsPresetButtons = document.querySelectorAll("button[data-vad-rms-preset]");
@@ -155,6 +172,8 @@ export class DebugConsoleManager {
         this.setShortcutKeyEvent();
         // モーダル的に扱えるよう、コンソール外クリックで閉じる。
         this.bindOutsideClickClose();
+        // AudioWorklet前段のHPF/LPF設定を操作できるようにする。
+        this.bindLocalAudioFilterControls();
         // VAD閾値スライダーを初期化し、変更時の通知を有効化する。
         this.bindLocalVadThresholdControl();
         // 環境別プリセットをボタンで即時反映できるようにする。
@@ -422,6 +441,63 @@ export class DebugConsoleManager {
             return;
         }
         this.localVadRmsThresholdValue.textContent = `${(Math.max(0, value) * 100).toFixed(1)}%`;
+    }
+
+    // HPF/LPFの現在値ラベルを更新する。
+    private updateLocalAudioFilterLabels(config: AudioFilterControlConfig): void {
+        if (this.localAudioHighpassCutoffValue) {
+            this.localAudioHighpassCutoffValue.textContent = `${Math.round(config.highpassHz)}Hz`;
+        }
+        if (this.localAudioLowpassCutoffValue) {
+            this.localAudioLowpassCutoffValue.textContent = `${Math.round(config.lowpassHz)}Hz`;
+        }
+    }
+
+    // HPF/LPF設定コントロールの入力を監視し、外部へ通知する。
+    private bindLocalAudioFilterControls(): void {
+        if (!this.localAudioHighpassCutoffInput || !this.localAudioLowpassEnabledInput || !this.localAudioLowpassCutoffInput) {
+            return;
+        }
+        const emit = (): void => {
+            const config = this.readLocalAudioFilterConfig();
+            this.updateLocalAudioFilterLabels(config);
+            this.onLocalAudioFilterChange(config);
+        };
+
+        this.updateLocalAudioFilterLabels(this.readLocalAudioFilterConfig());
+        this.localAudioHighpassCutoffInput.addEventListener("input", emit);
+        this.localAudioLowpassEnabledInput.addEventListener("change", emit);
+        this.localAudioLowpassCutoffInput.addEventListener("input", emit);
+    }
+
+    private readLocalAudioFilterConfig(): AudioFilterControlConfig {
+        const highpassHz = Number.parseFloat(this.localAudioHighpassCutoffInput?.value ?? "120");
+        const lowpassEnabled = !!this.localAudioLowpassEnabledInput?.checked;
+        const lowpassHz = Number.parseFloat(this.localAudioLowpassCutoffInput?.value ?? "4200");
+        return {
+            highpassHz: Number.isFinite(highpassHz) ? highpassHz : 120,
+            lowpassEnabled,
+            lowpassHz: Number.isFinite(lowpassHz) ? lowpassHz : 4200,
+        };
+    }
+
+    // 外部からHPF/LPF設定値をUIへ反映する（初期同期用）。
+    setLocalAudioFilterConfig(config: AudioFilterControlConfig): void {
+        if (this.localAudioHighpassCutoffInput) {
+            this.localAudioHighpassCutoffInput.value = `${Math.round(config.highpassHz)}`;
+        }
+        if (this.localAudioLowpassEnabledInput) {
+            this.localAudioLowpassEnabledInput.checked = config.lowpassEnabled;
+        }
+        if (this.localAudioLowpassCutoffInput) {
+            this.localAudioLowpassCutoffInput.value = `${Math.round(config.lowpassHz)}`;
+        }
+        this.updateLocalAudioFilterLabels(config);
+    }
+
+    // HPF/LPF設定変更の通知先を登録する。
+    setLocalAudioFilterChangeCallback(callback: (config: AudioFilterControlConfig) => void): void {
+        this.onLocalAudioFilterChange = callback;
     }
 
     // VAD RMS閾値スライダーのイベント登録と初期表示を行う。

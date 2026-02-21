@@ -146,6 +146,40 @@
                 </dl>
                 <p id="localAudioWarning" class="audioWarning">Normal</p>
                 <div class="audioControlGroup">
+                    <label class="audioControlLabel" for="localAudioHighpassCutoff">
+                        HPF Cutoff
+                        <span id="localAudioHighpassCutoffValue">120Hz</span>
+                    </label>
+                    <input
+                        id="localAudioHighpassCutoff"
+                        class="audioControlRange"
+                        type="range"
+                        min="60"
+                        max="300"
+                        step="5"
+                        value="120"
+                    />
+                </div>
+                <div class="audioControlGroup">
+                    <label class="audioControlCheckLabel" for="localAudioLowpassEnabled">
+                        <input id="localAudioLowpassEnabled" type="checkbox" />
+                        LPFを有効化
+                    </label>
+                    <label class="audioControlLabel" for="localAudioLowpassCutoff">
+                        LPF Cutoff
+                        <span id="localAudioLowpassCutoffValue">4200Hz</span>
+                    </label>
+                    <input
+                        id="localAudioLowpassCutoff"
+                        class="audioControlRange"
+                        type="range"
+                        min="2500"
+                        max="10000"
+                        step="100"
+                        value="4200"
+                    />
+                </div>
+                <div class="audioControlGroup">
                     <label class="audioControlLabel" for="localVadRmsThreshold">
                         VAD RMS Threshold
                         <span id="localVadRmsThresholdValue">1.5%</span>
