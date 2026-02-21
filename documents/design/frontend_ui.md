@@ -55,6 +55,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 起動時にマイク/カメラを取得し、音声トラックでRTC接続する
   - `text_ch` / `telop_ch` の受信内容を画面に反映する
   - デバッグコンソールでICE/SDP/DataChannelログを確認できる
+  - `RTCPeerConnection.getStats()` を1秒間隔で収集し、主要メトリクスを表示できる
+  - 主要メトリクスの直近60秒トレンドをミニグラフで確認できる
 - 優先度（Must/Should/Could）:
   - Must: RTC接続、チャット表示、テロップ表示
   - Should: 顔認識と自動ミュート、VRMファイル差し替え
@@ -67,7 +69,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - スケーラビリティ: フロントはクライアント内完結。サーバー側水平分割に依存
 - セキュリティ: ブラウザ権限（マイク/カメラ）とCORS/HTTPS前提
 - 運用性/保守性: Singleton Managerによる責務分離
-- 監視性: DebugConsoleで通信状態を可視化
+- 監視性: DebugConsoleで通信状態・音声レベル・`getStats` メトリクスを可視化
 
 ## 6. アーキテクチャ概要
 
@@ -97,6 +99,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `TalkManager`: text/telop受信を集約し、チャットUIと口形同期向け状態を維持
   - `DialogManager`: 設定値の参照、タイトル反映、VRMファイル更新
   - `UserMediaManager`: `getUserMedia` 制約（`echoCancellation`/`noiseSuppression`/`autoGainControl` 等）を構築
+  - `DebugConsoleManager`: デバッグUIの表示制御、RTC状態表示、イベントログ、音声レベルメーター、60秒トレンドグラフ描画
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroController.ts`
   - `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
@@ -104,6 +107,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `sincromisor-frontend/src/ts/UI/DialogManager.ts`
   - `sincromisor-frontend/src/ts/UI/ChatMessageManager.ts`
   - `sincromisor-frontend/src/ts/UI/DebugConsoleManager.ts`
+  - `sincromisor-frontend/src/partials/debugConsole.html`
+  - `sincromisor-frontend/src/styles/sincroDebugConsole.css`
 - 変更時に同時確認が必要なファイル:
   - RTCペイロード変更: `RTCTalkClient.ts` とサーバー側 `RTCSignalingServer.py`
   - ダイアログ項目変更: `DialogManager.ts` と `src/partials/configurationDialog.html`
@@ -148,6 +153,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 正常系フロー:
   - 画面読込 -> 設定ダイアログ表示 -> Start押下
   - UserMedia取得 -> RTC Offer/Answer（session_id取得）-> ICE candidate逐次送信 -> DataChannel open
+  - `RTCTalkClient` が `getStats()` を1秒間隔で収集し、DebugConsoleへ反映
+  - Local/Remote audio track から音声レベルメーターを更新
   - text/telop受信 -> UI更新
 - 異常系フロー:
   - 設定取得失敗 -> チャット欄へエラー表示
@@ -174,18 +181,30 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - ログ設計:
   - チャット欄にシステム/エラーを表示
-  - デバッグ欄に ICE/SDP/DataChannel ログを表示
+  - デバッグ欄に ICE/SDP/DataChannelログ + RTCイベントタイムラインを表示
 - メトリクス:
-  - ブラウザ内メトリクスの集約基盤は未導入
+  - 1秒間隔で `RTCPeerConnection.getStats()` を収集し、以下を表示
+    - Outbound/Inbound audio bitrate
+    - Outbound packets sent
+    - Inbound packets lost / loss rate / jitter
+    - Candidate pair / available outgoing bitrate / RTT
+  - 直近60秒トレンドをミニグラフ表示
+    - Outbound bitrate（max 256 kbps）
+    - Inbound bitrate（max 256 kbps）
+    - RTT（max 200 ms）
+    - Inbound loss rate（max 5%）
+  - Local Mic / Remote RTC の音声レベルメーターを表示
 - 障害時の切り分け手順:
   - 1. `/config.json` が取得できるか
   - 2. ICE state が `connected/completed` に遷移するか
   - 3. `text_ch` / `telop_ch` のopenと受信ログが出るか
+  - 4. RTT/loss/jitterトレンドが劣化していないか
 - よくある失敗と対処:
   - マイク権限なし: ブラウザ権限を許可
   - 会場ノイズで誤反応が多い: 設定ダイアログの「マイク自動音量調整」をOFFにして再試行
   - WASM未配置: CharacterGazeが起動しない
   - offerURL不整合: POST先エラーで再接続ループ
+  - 音声メーターが動かない: ブラウザの自動再生ポリシーにより `AudioContext` が `suspended` のままになっていないか確認
 
 ## 10. セキュリティ/コンプライアンス
 
@@ -247,6 +266,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-02-16 | FirefoxでのICE失敗を避けるため、ICE gathering待機をブラウザ別制御（Chromiumのみ1500ms上限）に更新 |
 | 2026-02-16 | Trickle ICE導入。`candidateURL`追加、`session_id`付きAnswer、候補の逐次送信フローへ更新 |
 | 2026-02-21 | 設定ダイアログにマイク自動音量調整(AGC)の切替を追加し、`getUserMedia` 音声制約へ反映する仕様を追記 |
+| 2026-02-21 | DebugConsole UIをカード型レイアウトへ刷新。Session/Transport/Audio/Channel/Gaze/SDPの監視パネルを追加 |
+| 2026-02-21 | `getStats()` の1秒収集による主要メトリクス表示と、直近60秒ミニグラフ（固定上限スケール）を追加 |
 
 ## 15. 参照資料
 

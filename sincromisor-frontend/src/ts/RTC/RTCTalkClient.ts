@@ -18,6 +18,9 @@ export class RTCTalkClient {
     // /offer 応答より先に onicecandidate が発火するため、
     // セッションID取得前のcandidateを一時保管する。
     private pendingIceCandidates: Array<RTCIceCandidateInit | null> = [];
+    private statsIntervalId: number | null = null;
+    private previousOutboundAudio: { bytes: number; timestamp: number } | null = null;
+    private previousInboundAudio: { bytes: number; timestamp: number } | null = null;
 
     /*
         default     Default codecs
@@ -66,6 +69,7 @@ export class RTCTalkClient {
     start(): Promise<void> {
         this.sessionId = null;
         this.pendingIceCandidates = [];
+        this.startStatsCollector();
         this.chatMessageManager.writeSystemMessage("音声認識・合成システムに接続します。");
         return this.negotiate(this.peerConnection);
     }
@@ -73,6 +77,8 @@ export class RTCTalkClient {
     stop(): void {
         this.sessionId = null;
         this.pendingIceCandidates = [];
+        this.stopStatsCollector();
+        this.logger.resetRealtimeStats();
 
         // close data channel
         if (this.textChannel) { this.textChannel.close(); }
@@ -176,6 +182,7 @@ export class RTCTalkClient {
                 this.pendingIceCandidates = [];
                 this.chatMessageManager.writeErrorMessage(`RTCサーバーへの接続に失敗しました...。\n${e}`, true);
                 console.error(e);
+                this.logger.addRtcEventLog(`negotiate failed: ${e}`);
                 this.reConnect();
             });
     }
@@ -216,6 +223,7 @@ export class RTCTalkClient {
         }).catch((e) => {
             console.error(e);
             this.logger.addTextChannelLog(`! failed to send ice candidate: ${e}\n`);
+            this.logger.addRtcEventLog(`candidate send failed: ${e}`);
         });
     }
 
@@ -229,9 +237,11 @@ export class RTCTalkClient {
         const dc: RTCDataChannel = peerConnection.createDataChannel("telop_ch", parameters);
         dc.onclose = () => {
             this.logger.addTelopChannelLog("- close(telop_ch)\n");
+            this.logger.addRtcEventLog("telop_ch closed");
         };
         dc.onopen = () => {
             this.logger.addTelopChannelLog("- open(telop_ch)\n");
+            this.logger.addRtcEventLog("telop_ch opened");
         };
         dc.onmessage = (evt) => {
             this.logger.addTelopChannelLog("< [telop_ch] " + evt.data + "\n");
@@ -245,9 +255,11 @@ export class RTCTalkClient {
         const dc: RTCDataChannel = peerConnection.createDataChannel("text_ch", parameters);
         dc.onclose = () => {
             this.logger.addTextChannelLog("- close(text_ch)\n");
+            this.logger.addRtcEventLog("text_ch closed");
         };
         dc.onopen = () => {
             this.logger.addTextChannelLog("- open(text_ch)\n");
+            this.logger.addRtcEventLog("text_ch opened");
         };
         dc.onmessage = (evt) => {
             this.logger.addTextChannelLog("< [text_ch] " + evt.data + "\n");
@@ -262,6 +274,11 @@ export class RTCTalkClient {
             // サーバー側にも明示的に伝えるため null のまま送る。
             const candidate = event.candidate ? event.candidate.toJSON() : null;
             this.sendIceCandidate(candidate);
+            if (candidate) {
+                this.logger.addRtcEventLog(`new ICE candidate: ${candidate.sdpMid ?? "audio"}`);
+            } else {
+                this.logger.addRtcEventLog("ICE candidate gathering completed");
+            }
         });
 
         // register some listeners to help debugging
@@ -328,11 +345,165 @@ export class RTCTalkClient {
                 const rtcAudio: HTMLAudioElement | null = document.querySelector("audio#rtcAudio");
                 if (rtcAudio) {
                     rtcAudio.srcObject = evt.streams[0];
+                    this.logger.setRemoteAudioTrack(evt.track);
+                    this.logger.addRtcEventLog(`remote track received: ${evt.track.kind}`);
                 } else {
                     throw "audio#rtcAudio is not found.";
                 }
             }
         });
         return peerConnection;
+    }
+
+    private startStatsCollector(): void {
+        this.stopStatsCollector();
+        this.previousOutboundAudio = null;
+        this.previousInboundAudio = null;
+        this.statsIntervalId = window.setInterval(() => {
+            this.collectAndRenderStats().catch((e) => {
+                console.error(e);
+            });
+        }, 1000);
+    }
+
+    private stopStatsCollector(): void {
+        if (this.statsIntervalId != null) {
+            clearInterval(this.statsIntervalId);
+            this.statsIntervalId = null;
+        }
+        this.previousOutboundAudio = null;
+        this.previousInboundAudio = null;
+    }
+
+    private formatBitrate(bitsPerSecond: number | null): string {
+        if (bitsPerSecond == null || !Number.isFinite(bitsPerSecond) || bitsPerSecond < 0) {
+            return "-";
+        }
+        if (bitsPerSecond >= 1_000_000) {
+            return `${(bitsPerSecond / 1_000_000).toFixed(2)} Mbps`;
+        }
+        if (bitsPerSecond >= 1_000) {
+            return `${(bitsPerSecond / 1_000).toFixed(1)} kbps`;
+        }
+        return `${bitsPerSecond.toFixed(0)} bps`;
+    }
+
+    private calcBitrate(
+        currentBytes: number | undefined,
+        currentTimestamp: number | undefined,
+        prev: { bytes: number; timestamp: number } | null,
+    ): { bitrate: number | null; next: { bytes: number; timestamp: number } | null } {
+        if (currentBytes == null || currentTimestamp == null) {
+            return { bitrate: null, next: prev };
+        }
+        if (!prev) {
+            return {
+                bitrate: null,
+                next: { bytes: currentBytes, timestamp: currentTimestamp },
+            };
+        }
+        const durationSec = (currentTimestamp - prev.timestamp) / 1000;
+        if (durationSec <= 0) {
+            return { bitrate: null, next: prev };
+        }
+        const bitrate = ((currentBytes - prev.bytes) * 8) / durationSec;
+        return {
+            bitrate,
+            next: { bytes: currentBytes, timestamp: currentTimestamp },
+        };
+    }
+
+    private async collectAndRenderStats(): Promise<void> {
+        const report = await this.peerConnection.getStats();
+        let outboundAudio: any = null;
+        let inboundAudio: any = null;
+        let selectedPair: any = null;
+        const localCandidates = new Map<string, any>();
+        const remoteCandidates = new Map<string, any>();
+
+        report.forEach((stats: any) => {
+            if (stats.type === "outbound-rtp" && stats.kind === "audio" && !stats.isRemote) {
+                outboundAudio = stats;
+            }
+            if (stats.type === "inbound-rtp" && stats.kind === "audio" && !stats.isRemote) {
+                inboundAudio = stats;
+            }
+            if (stats.type === "candidate-pair" && (stats.selected || stats.nominated)) {
+                selectedPair = stats;
+            }
+            if (stats.type === "local-candidate") {
+                localCandidates.set(stats.id, stats);
+            }
+            if (stats.type === "remote-candidate") {
+                remoteCandidates.set(stats.id, stats);
+            }
+        });
+
+        const outboundResult = this.calcBitrate(
+            outboundAudio?.bytesSent,
+            outboundAudio?.timestamp,
+            this.previousOutboundAudio,
+        );
+        this.previousOutboundAudio = outboundResult.next;
+        this.logger.updateMetricValue("outboundAudioBitrate", this.formatBitrate(outboundResult.bitrate));
+        this.logger.pushTrendPoint("trendOutboundAudioBitrate", outboundResult.bitrate);
+
+        const inboundResult = this.calcBitrate(
+            inboundAudio?.bytesReceived,
+            inboundAudio?.timestamp,
+            this.previousInboundAudio,
+        );
+        this.previousInboundAudio = inboundResult.next;
+        this.logger.updateMetricValue("inboundAudioBitrate", this.formatBitrate(inboundResult.bitrate));
+        this.logger.pushTrendPoint("trendInboundAudioBitrate", inboundResult.bitrate);
+
+        const packetsSent = outboundAudio?.packetsSent;
+        this.logger.updateMetricValue(
+            "outboundPacketsSent",
+            packetsSent == null ? "-" : `${packetsSent}`,
+        );
+
+        const packetsLost = inboundAudio?.packetsLost;
+        const packetsReceived = inboundAudio?.packetsReceived;
+        this.logger.updateMetricValue(
+            "inboundPacketsLost",
+            packetsLost == null ? "-" : `${packetsLost}`,
+        );
+        if (packetsLost == null || packetsReceived == null || packetsLost + packetsReceived <= 0) {
+            this.logger.updateMetricValue("inboundPacketLossRate", "-");
+            this.logger.pushTrendPoint("trendInboundPacketLossRate", null);
+        } else {
+            const lossRate = (packetsLost / (packetsLost + packetsReceived)) * 100;
+            this.logger.updateMetricValue("inboundPacketLossRate", `${lossRate.toFixed(2)}%`);
+            this.logger.pushTrendPoint("trendInboundPacketLossRate", lossRate);
+        }
+
+        if (inboundAudio?.jitter == null) {
+            this.logger.updateMetricValue("inboundJitter", "-");
+        } else {
+            this.logger.updateMetricValue("inboundJitter", `${(inboundAudio.jitter * 1000).toFixed(1)} ms`);
+        }
+
+        if (selectedPair?.currentRoundTripTime == null) {
+            this.logger.updateMetricValue("rtcRoundTripTime", "-");
+            this.logger.pushTrendPoint("trendRoundTripTime", null);
+        } else {
+            this.logger.updateMetricValue("rtcRoundTripTime", `${(selectedPair.currentRoundTripTime * 1000).toFixed(1)} ms`);
+            this.logger.pushTrendPoint("trendRoundTripTime", selectedPair.currentRoundTripTime * 1000);
+        }
+        this.logger.updateMetricValue(
+            "rtcAvailableOutgoingBitrate",
+            this.formatBitrate(selectedPair?.availableOutgoingBitrate ?? null),
+        );
+
+        const localCandidate = selectedPair?.localCandidateId ? localCandidates.get(selectedPair.localCandidateId) : null;
+        const remoteCandidate = selectedPair?.remoteCandidateId ? remoteCandidates.get(selectedPair.remoteCandidateId) : null;
+        if (!localCandidate || !remoteCandidate) {
+            this.logger.updateMetricValue("rtcCandidatePair", "-");
+        } else {
+            const localType = localCandidate.candidateType ?? "unknown";
+            const remoteType = remoteCandidate.candidateType ?? "unknown";
+            this.logger.updateMetricValue("rtcCandidatePair", `${localType} -> ${remoteType}`);
+        }
     }
 }
