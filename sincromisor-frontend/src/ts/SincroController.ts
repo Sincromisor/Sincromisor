@@ -1,10 +1,10 @@
 import { RTCTalkClient } from "./RTC/RTCTalkClient";
-import { UserMediaManager, VadStateReport } from "./RTC/UserMediaManager";
+import { UserMediaManager, VadStateReport, VadThresholdMode as UserMediaVadThresholdMode } from "./RTC/UserMediaManager";
 import { CharacterGaze } from "./CharacterGaze/CharacterGaze";
 import { ChatMessageManager } from "./UI/ChatMessageManager";
 import { DialogManager } from "./UI/DialogManager";
 import { TalkManager } from "./RTC/TalkManager";
-import { AudioFilterControlConfig, DebugConsoleManager } from "./UI/DebugConsoleManager";
+import { AudioFilterControlConfig, DebugConsoleManager, LearnedVadPerformanceMode, VadThresholdMode as DebugVadThresholdMode } from "./UI/DebugConsoleManager";
 import { ChatMessage, TelopChannelMessage } from "./RTC/RTCMessage";
 import { Detection } from "@mediapipe/tasks-vision";
 import { SincroRTCConfigManager } from "./RTC/SincroRTCConfigManager";
@@ -38,8 +38,38 @@ export class SincroController {
             this.userMediaManager.setAudioFilterConfig(config);
         });
         this.debugConsoleManager.setLocalVadRmsThreshold(this.userMediaManager.getVadThresholds().rmsThreshold);
+        this.debugConsoleManager.setLocalVadThresholdMode(this.userMediaManager.getVadThresholdMode());
+        this.debugConsoleManager.setLocalLearnedVadTuning(this.userMediaManager.getLearnedVadTuning());
+        this.debugConsoleManager.setLocalLearnedVadStrictMode(this.userMediaManager.getLearnedVadStrictMode());
+        // 学習VADは balanced を初期プリセットとして採用し、必要時にUIから変更できるようにする。
+        this.debugConsoleManager.setLocalLearnedVadPerformanceMode("balanced");
+        this.debugConsoleManager.setLocalVadThresholdModeChangeCallback((mode: DebugVadThresholdMode) => {
+            this.userMediaManager.setVadThresholdMode(mode as UserMediaVadThresholdMode);
+        });
+        this.debugConsoleManager.setLocalLearnedVadPerformanceModeChangeCallback((mode: LearnedVadPerformanceMode) => {
+            this.userMediaManager.setLearnedVadPerformanceMode(mode);
+            this.debugConsoleManager.setLocalLearnedVadTuning(this.userMediaManager.getLearnedVadTuning());
+        });
+        this.debugConsoleManager.setLocalLearnedVadTuningChangeCallback((config) => {
+            this.userMediaManager.setLearnedVadTuning(config);
+        });
+        this.debugConsoleManager.setLocalLearnedVadStrictModeChangeCallback((enabled) => {
+            this.userMediaManager.setLearnedVadStrictMode(enabled);
+        });
         this.debugConsoleManager.setLocalVadRmsThresholdChangeCallback((threshold: number) => {
             this.userMediaManager.setVadThresholds({ rmsThreshold: threshold });
+        });
+        this.userMediaManager.setVadThresholdCallback((config) => {
+            this.debugConsoleManager.setLocalVadRmsThreshold(config.rmsThreshold);
+        });
+        this.userMediaManager.setLearnedVadStateCallback((report) => {
+            this.debugConsoleManager.updateLearnedVadState({
+                status: report.status,
+                probability: report.probability,
+                txFrames: report.txFrames,
+                rxPredictions: report.rxPredictions,
+                message: report.message,
+            });
         });
         this.userMediaManager.setVadStateCallback((report: VadStateReport) => {
             this.debugConsoleManager.updateLocalVadState(report.isSpeech);
@@ -56,6 +86,7 @@ export class SincroController {
         });
     }
 
+    // WebRTC接続を開始する。生成済みローカル音声トラックをRTCPeerConnectionへ渡す。
     startRTC(audioTrack: MediaStreamTrack): void {
         if (!this.rtcConfigManager.config) {
             return;
@@ -68,22 +99,26 @@ export class SincroController {
         this.rtcc.start();
     }
 
+    // WebRTC接続を停止する。
     stopRTC(): void {
         this.rtcc?.stop();
     }
 
+    // textチャネル受信メッセージをTalkManagerへ連携する。
     private setTextChannelCallback(rtcc: RTCTalkClient): void {
         rtcc.textChannelCallback = (chatMsg: ChatMessage) => {
             this.talkManager.addTextChannelMessage(chatMsg);
         }
     }
 
+    // telopチャネル受信メッセージをTalkManagerへ連携する。
     private setTelopChannelCallback(rtcc: RTCTalkClient): void {
         rtcc.telopChannelCallback = (vcMsg: TelopChannelMessage) => {
             this.talkManager.addTelopChannelMessage(vcMsg);
         }
     }
 
+    // 顔認識を開始し、視線・AutoMute状態をデバッグUIとRTC mute制御へ反映する。
     private startCharacterGaze(videoTrack: MediaStreamTrack): void {
         if (!this.dialogManager.enableCharacterGaze()) { return; }
 

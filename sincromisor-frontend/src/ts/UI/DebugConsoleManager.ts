@@ -16,6 +16,31 @@ export type AudioFilterControlConfig = {
     lowpassHz: number;
 };
 
+export type VadThresholdMode = "manual" | "auto" | "learned";
+export type LearnedVadUiReport = {
+    status: "idle" | "loading" | "ready" | "running" | "fallback" | "unavailable";
+    probability: number | null;
+    txFrames?: number;
+    rxPredictions?: number;
+    message?: string;
+};
+
+export type LearnedVadTuningUiConfig = {
+    // Speech開始確率の境界。上げると誤反応減、下げると感度増。
+    onThreshold: number;
+    // Speech終了確率の境界。通常は onThreshold より低く設定する。
+    offThreshold: number;
+    // Speech状態を維持する保持時間(ms)。
+    hangoverMs: number;
+    // 推論実行間隔(ms)。短いほど追従性増/負荷増。
+    minInferIntervalMs: number;
+    // ON/OFF切替に必要な連続フレーム数（UIには露出せず内部プリセットで保持）。
+    onConsecutiveFrames: number;
+    offConsecutiveFrames: number;
+};
+
+export type LearnedVadPerformanceMode = "low_cpu" | "balanced" | "high_accuracy";
+
 export class DebugConsoleManager {
     private static instance: DebugConsoleManager;
     private static readonly EVENT_LOG_LINES = 80;
@@ -71,12 +96,28 @@ export class DebugConsoleManager {
     private readonly localAudioRmsValue: HTMLElement | null;
     private readonly localAudioPeakValue: HTMLElement | null;
     private readonly localAudioVadValue: HTMLElement | null;
+    private readonly localVadEngineValue: HTMLElement | null;
+    private readonly localVadProbValue: HTMLElement | null;
+    private readonly localVadModelStateValue: HTMLElement | null;
+    private readonly localVadFramesValue: HTMLElement | null;
     private readonly localAudioWarning: HTMLElement | null;
     private readonly localAudioHighpassCutoffInput: HTMLInputElement | null;
     private readonly localAudioHighpassCutoffValue: HTMLElement | null;
     private readonly localAudioLowpassEnabledInput: HTMLInputElement | null;
     private readonly localAudioLowpassCutoffInput: HTMLInputElement | null;
     private readonly localAudioLowpassCutoffValue: HTMLElement | null;
+    private readonly localVadLearnedEnabledInput: HTMLInputElement | null;
+    private readonly localVadLearnedPerformanceModeSelect: HTMLSelectElement | null;
+    private readonly localVadLearnedOnThresholdInput: HTMLInputElement | null;
+    private readonly localVadLearnedOnThresholdValue: HTMLElement | null;
+    private readonly localVadLearnedOffThresholdInput: HTMLInputElement | null;
+    private readonly localVadLearnedOffThresholdValue: HTMLElement | null;
+    private readonly localVadLearnedHangoverMsInput: HTMLInputElement | null;
+    private readonly localVadLearnedHangoverMsValue: HTMLElement | null;
+    private readonly localVadLearnedInferIntervalMsInput: HTMLInputElement | null;
+    private readonly localVadLearnedInferIntervalMsValue: HTMLElement | null;
+    private readonly localVadLearnedStrictModeInput: HTMLInputElement | null;
+    private readonly localVadThresholdAutoEnabledInput: HTMLInputElement | null;
     private readonly localVadRmsThresholdInput: HTMLInputElement | null;
     private readonly localVadRmsThresholdValue: HTMLElement | null;
     private readonly localVadRmsPresetButtons: NodeListOf<HTMLButtonElement>;
@@ -86,7 +127,14 @@ export class DebugConsoleManager {
     private localAudioWarningPendingState: "ok" | "silent" | "error" = "ok";
     private localAudioWarningPendingFrames: number = 0;
     private onLocalAudioFilterChange: (config: AudioFilterControlConfig) => void = () => { };
+    private onLocalLearnedVadTuningChange: (config: LearnedVadTuningUiConfig) => void = () => { };
+    private onLocalLearnedVadPerformanceModeChange: (mode: LearnedVadPerformanceMode) => void = () => { };
+    private onLocalLearnedVadStrictModeChange: (enabled: boolean) => void = () => { };
+    private onLocalVadThresholdModeChange: (mode: VadThresholdMode) => void = () => { };
     private onLocalVadRmsThresholdChange: (threshold: number) => void = () => { };
+    // 連続フレーム条件はプリセット依存のため内部保持し、UIスライダー更新時に合わせて渡す。
+    private learnedVadOnConsecutiveFrames: number = 2;
+    private learnedVadOffConsecutiveFrames: number = 2;
 
     // シングルトンインスタンスを返す。
     static getManager(): DebugConsoleManager {
@@ -152,12 +200,28 @@ export class DebugConsoleManager {
         this.localAudioRmsValue = document.querySelector("#localAudioRmsValue");
         this.localAudioPeakValue = document.querySelector("#localAudioPeakValue");
         this.localAudioVadValue = document.querySelector("#localAudioVadValue");
+        this.localVadEngineValue = document.querySelector("#localVadEngineValue");
+        this.localVadProbValue = document.querySelector("#localVadProbValue");
+        this.localVadModelStateValue = document.querySelector("#localVadModelStateValue");
+        this.localVadFramesValue = document.querySelector("#localVadFramesValue");
         this.localAudioWarning = document.querySelector("#localAudioWarning");
         this.localAudioHighpassCutoffInput = document.querySelector("#localAudioHighpassCutoff");
         this.localAudioHighpassCutoffValue = document.querySelector("#localAudioHighpassCutoffValue");
         this.localAudioLowpassEnabledInput = document.querySelector("#localAudioLowpassEnabled");
         this.localAudioLowpassCutoffInput = document.querySelector("#localAudioLowpassCutoff");
         this.localAudioLowpassCutoffValue = document.querySelector("#localAudioLowpassCutoffValue");
+        this.localVadLearnedEnabledInput = document.querySelector("#localVadLearnedEnabled");
+        this.localVadLearnedPerformanceModeSelect = document.querySelector("#localVadLearnedPerformanceMode");
+        this.localVadLearnedOnThresholdInput = document.querySelector("#localVadLearnedOnThreshold");
+        this.localVadLearnedOnThresholdValue = document.querySelector("#localVadLearnedOnThresholdValue");
+        this.localVadLearnedOffThresholdInput = document.querySelector("#localVadLearnedOffThreshold");
+        this.localVadLearnedOffThresholdValue = document.querySelector("#localVadLearnedOffThresholdValue");
+        this.localVadLearnedHangoverMsInput = document.querySelector("#localVadLearnedHangoverMs");
+        this.localVadLearnedHangoverMsValue = document.querySelector("#localVadLearnedHangoverMsValue");
+        this.localVadLearnedInferIntervalMsInput = document.querySelector("#localVadLearnedInferIntervalMs");
+        this.localVadLearnedInferIntervalMsValue = document.querySelector("#localVadLearnedInferIntervalMsValue");
+        this.localVadLearnedStrictModeInput = document.querySelector("#localVadLearnedStrictMode");
+        this.localVadThresholdAutoEnabledInput = document.querySelector("#localVadThresholdAutoEnabled");
         this.localVadRmsThresholdInput = document.querySelector("#localVadRmsThreshold");
         this.localVadRmsThresholdValue = document.querySelector("#localVadRmsThresholdValue");
         this.localVadRmsPresetButtons = document.querySelectorAll("button[data-vad-rms-preset]");
@@ -174,10 +238,17 @@ export class DebugConsoleManager {
         this.bindOutsideClickClose();
         // AudioWorklet前段のHPF/LPF設定を操作できるようにする。
         this.bindLocalAudioFilterControls();
+        // VAD閾値の手動/自動モード切替を設定する。
+        this.bindLocalVadThresholdModeControl();
+        this.bindLearnedVadPerformanceModeControl();
+        // 学習VADチューニング値の変更イベントを登録する。
+        this.bindLearnedVadTuningControls();
+        this.bindLearnedVadStrictModeControl();
         // VAD閾値スライダーを初期化し、変更時の通知を有効化する。
         this.bindLocalVadThresholdControl();
         // 環境別プリセットをボタンで即時反映できるようにする。
         this.bindLocalVadPresetButtons();
+        this.updateLearnedVadState({ status: "idle", probability: null });
     }
 
     // デバッグコンソールを表示状態にする。
@@ -470,6 +541,7 @@ export class DebugConsoleManager {
         this.localAudioLowpassCutoffInput.addEventListener("input", emit);
     }
 
+    // HPF/LPFの現在入力値を読み取って外部へ渡す設定値に変換する。
     private readLocalAudioFilterConfig(): AudioFilterControlConfig {
         const highpassHz = Number.parseFloat(this.localAudioHighpassCutoffInput?.value ?? "120");
         const lowpassEnabled = !!this.localAudioLowpassEnabledInput?.checked;
@@ -479,6 +551,203 @@ export class DebugConsoleManager {
             lowpassEnabled,
             lowpassHz: Number.isFinite(lowpassHz) ? lowpassHz : 4200,
         };
+    }
+
+    // 学習VADチューニング値表示を更新する。
+    private updateLearnedVadTuningLabels(config: LearnedVadTuningUiConfig): void {
+        if (this.localVadLearnedOnThresholdValue) {
+            this.localVadLearnedOnThresholdValue.textContent = `${config.onThreshold.toFixed(4)}`;
+        }
+        if (this.localVadLearnedOffThresholdValue) {
+            this.localVadLearnedOffThresholdValue.textContent = `${config.offThreshold.toFixed(4)}`;
+        }
+        if (this.localVadLearnedHangoverMsValue) {
+            this.localVadLearnedHangoverMsValue.textContent = `${Math.round(config.hangoverMs)}ms`;
+        }
+        if (this.localVadLearnedInferIntervalMsValue) {
+            this.localVadLearnedInferIntervalMsValue.textContent = `${Math.round(config.minInferIntervalMs)}ms`;
+        }
+    }
+
+    // 学習VADチューニング入力欄の現在値を読み取る。
+    private readLearnedVadTuningConfig(): LearnedVadTuningUiConfig {
+        const onThreshold = Number.parseFloat(this.localVadLearnedOnThresholdInput?.value ?? "0.0008");
+        const offThreshold = Number.parseFloat(this.localVadLearnedOffThresholdInput?.value ?? "0.0004");
+        const hangoverMs = Number.parseFloat(this.localVadLearnedHangoverMsInput?.value ?? "180");
+        const minInferIntervalMs = Number.parseFloat(this.localVadLearnedInferIntervalMsInput?.value ?? "80");
+        return {
+            onThreshold: Number.isFinite(onThreshold) ? onThreshold : 0.0008,
+            offThreshold: Number.isFinite(offThreshold) ? offThreshold : 0.0004,
+            hangoverMs: Number.isFinite(hangoverMs) ? hangoverMs : 180,
+            minInferIntervalMs: Number.isFinite(minInferIntervalMs) ? minInferIntervalMs : 80,
+            onConsecutiveFrames: this.learnedVadOnConsecutiveFrames,
+            offConsecutiveFrames: this.learnedVadOffConsecutiveFrames,
+        };
+    }
+
+    // 学習VADの性能プリセット選択変更を監視する。
+    private bindLearnedVadPerformanceModeControl(): void {
+        if (!this.localVadLearnedPerformanceModeSelect) {
+            return;
+        }
+        this.localVadLearnedPerformanceModeSelect.addEventListener("change", () => {
+            const mode = this.localVadLearnedPerformanceModeSelect?.value as LearnedVadPerformanceMode;
+            if (mode !== "low_cpu" && mode !== "balanced" && mode !== "high_accuracy") {
+                return;
+            }
+            this.onLocalLearnedVadPerformanceModeChange(mode);
+        });
+    }
+
+    // 学習VADチューニング入力の変更を監視する。
+    private bindLearnedVadTuningControls(): void {
+        if (
+            !this.localVadLearnedOnThresholdInput
+            || !this.localVadLearnedOffThresholdInput
+            || !this.localVadLearnedHangoverMsInput
+            || !this.localVadLearnedInferIntervalMsInput
+        ) {
+            return;
+        }
+        const emit = (): void => {
+            const config = this.readLearnedVadTuningConfig();
+            this.updateLearnedVadTuningLabels(config);
+            this.onLocalLearnedVadTuningChange(config);
+        };
+        this.updateLearnedVadTuningLabels(this.readLearnedVadTuningConfig());
+        this.localVadLearnedOnThresholdInput.addEventListener("input", emit);
+        this.localVadLearnedOffThresholdInput.addEventListener("input", emit);
+        this.localVadLearnedHangoverMsInput.addEventListener("input", emit);
+        this.localVadLearnedInferIntervalMsInput.addEventListener("input", emit);
+    }
+
+    private bindLearnedVadStrictModeControl(): void {
+        if (!this.localVadLearnedStrictModeInput) {
+            return;
+        }
+        this.localVadLearnedStrictModeInput.addEventListener("change", () => {
+            this.onLocalLearnedVadStrictModeChange(!!this.localVadLearnedStrictModeInput?.checked);
+        });
+    }
+
+    // VAD閾値の手動/自動モード切替を監視する。
+    private bindLocalVadThresholdModeControl(): void {
+        if (!this.localVadThresholdAutoEnabledInput || !this.localVadLearnedEnabledInput) {
+            return;
+        }
+        this.localVadLearnedEnabledInput.addEventListener("change", () => {
+            const mode: VadThresholdMode = this.localVadLearnedEnabledInput?.checked
+                ? "learned"
+                : (this.localVadThresholdAutoEnabledInput?.checked ? "auto" : "manual");
+            this.setLocalVadThresholdMode(mode);
+            this.onLocalVadThresholdModeChange(mode);
+        });
+        this.localVadThresholdAutoEnabledInput.addEventListener("change", () => {
+            const mode: VadThresholdMode = this.localVadLearnedEnabledInput?.checked
+                ? "learned"
+                : (this.localVadThresholdAutoEnabledInput?.checked ? "auto" : "manual");
+            this.setLocalVadThresholdMode(mode);
+            this.onLocalVadThresholdModeChange(mode);
+        });
+        this.setLocalVadThresholdMode(
+            this.localVadLearnedEnabledInput.checked
+                ? "learned"
+                : (this.localVadThresholdAutoEnabledInput.checked ? "auto" : "manual"),
+        );
+    }
+
+    // 手動/自動モードに合わせてVAD閾値入力の有効状態を更新する。
+    setLocalVadThresholdMode(mode: VadThresholdMode): void {
+        const isAuto = mode === "auto";
+        const isLearned = mode === "learned";
+        const disableManualControls = isAuto || isLearned;
+        if (this.localVadLearnedEnabledInput) {
+            this.localVadLearnedEnabledInput.checked = isLearned;
+        }
+        if (this.localVadThresholdAutoEnabledInput) {
+            this.localVadThresholdAutoEnabledInput.checked = isAuto;
+            this.localVadThresholdAutoEnabledInput.disabled = isLearned;
+        }
+        if (this.localVadRmsThresholdInput) {
+            this.localVadRmsThresholdInput.disabled = disableManualControls;
+        }
+        this.localVadRmsPresetButtons.forEach((button) => {
+            button.disabled = disableManualControls;
+        });
+        const learnedControlsDisabled = !isLearned;
+        if (this.localVadLearnedOnThresholdInput) {
+            this.localVadLearnedOnThresholdInput.disabled = learnedControlsDisabled;
+        }
+        if (this.localVadLearnedOffThresholdInput) {
+            this.localVadLearnedOffThresholdInput.disabled = learnedControlsDisabled;
+        }
+        if (this.localVadLearnedHangoverMsInput) {
+            this.localVadLearnedHangoverMsInput.disabled = learnedControlsDisabled;
+        }
+        if (this.localVadLearnedInferIntervalMsInput) {
+            this.localVadLearnedInferIntervalMsInput.disabled = learnedControlsDisabled;
+        }
+        if (this.localVadLearnedStrictModeInput) {
+            this.localVadLearnedStrictModeInput.disabled = learnedControlsDisabled;
+        }
+        if (this.localVadEngineValue) {
+            this.localVadEngineValue.textContent = isLearned ? "Silero" : (isAuto ? "Auto RMS" : "RMS");
+        }
+    }
+
+    // VAD閾値モード変更の通知先を登録する。
+    setLocalVadThresholdModeChangeCallback(callback: (mode: VadThresholdMode) => void): void {
+        this.onLocalVadThresholdModeChange = callback;
+    }
+
+    // 学習VADチューニング変更の通知先を登録する。
+    setLocalLearnedVadTuningChangeCallback(callback: (config: LearnedVadTuningUiConfig) => void): void {
+        this.onLocalLearnedVadTuningChange = callback;
+    }
+
+    // 外部から学習VADチューニングをUIへ反映する。
+    setLocalLearnedVadTuning(config: LearnedVadTuningUiConfig): void {
+        this.learnedVadOnConsecutiveFrames = Math.max(1, Math.round(config.onConsecutiveFrames));
+        this.learnedVadOffConsecutiveFrames = Math.max(1, Math.round(config.offConsecutiveFrames));
+        if (this.localVadLearnedOnThresholdInput) {
+            this.localVadLearnedOnThresholdInput.value = config.onThreshold.toFixed(4);
+        }
+        if (this.localVadLearnedOffThresholdInput) {
+            this.localVadLearnedOffThresholdInput.value = config.offThreshold.toFixed(4);
+        }
+        if (this.localVadLearnedHangoverMsInput) {
+            this.localVadLearnedHangoverMsInput.value = `${Math.round(config.hangoverMs)}`;
+        }
+        if (this.localVadLearnedInferIntervalMsInput) {
+            this.localVadLearnedInferIntervalMsInput.value = `${Math.round(config.minInferIntervalMs)}`;
+        }
+        this.updateLearnedVadTuningLabels(config);
+    }
+
+    // 外部から学習VAD性能プリセット選択値をUIへ反映する。
+    setLocalLearnedVadPerformanceMode(mode: LearnedVadPerformanceMode): void {
+        if (!this.localVadLearnedPerformanceModeSelect) {
+            return;
+        }
+        this.localVadLearnedPerformanceModeSelect.value = mode;
+    }
+
+    // 学習VAD性能プリセット変更時の通知先を登録する。
+    setLocalLearnedVadPerformanceModeChangeCallback(
+        callback: (mode: LearnedVadPerformanceMode) => void,
+    ): void {
+        this.onLocalLearnedVadPerformanceModeChange = callback;
+    }
+
+    setLocalLearnedVadStrictMode(enabled: boolean): void {
+        if (!this.localVadLearnedStrictModeInput) {
+            return;
+        }
+        this.localVadLearnedStrictModeInput.checked = enabled;
+    }
+
+    setLocalLearnedVadStrictModeChangeCallback(callback: (enabled: boolean) => void): void {
+        this.onLocalLearnedVadStrictModeChange = callback;
     }
 
     // 外部からHPF/LPF設定値をUIへ反映する（初期同期用）。
@@ -552,6 +821,26 @@ export class DebugConsoleManager {
             return;
         }
         this.localAudioVadValue.textContent = isSpeech ? "Speech" : "Silence";
+    }
+
+    // 学習VADのモデル状態と確率表示を更新する。
+    updateLearnedVadState(report: LearnedVadUiReport): void {
+        if (this.localVadModelStateValue) {
+            this.localVadModelStateValue.textContent = report.status;
+            this.localVadModelStateValue.title = report.message ?? "";
+        }
+        if (this.localVadFramesValue) {
+            const tx = Number.isFinite(report.txFrames) ? Math.max(0, Math.floor(report.txFrames ?? 0)) : 0;
+            const rx = Number.isFinite(report.rxPredictions) ? Math.max(0, Math.floor(report.rxPredictions ?? 0)) : 0;
+            this.localVadFramesValue.textContent = `tx:${tx} rx:${rx}`;
+        }
+        if (this.localVadProbValue) {
+            if (report.probability == null || !Number.isFinite(report.probability)) {
+                this.localVadProbValue.textContent = "-";
+            } else {
+                this.localVadProbValue.textContent = `${(Math.max(0, Math.min(1, report.probability)) * 100).toFixed(1)}%`;
+            }
+        }
     }
 
     // Local Micの状態表示テキストと色を更新する。

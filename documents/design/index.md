@@ -8,6 +8,8 @@
 
 - [UI](frontend_ui.md)
   - 基本となるユーザーインタフェース、デバッグコンソールなど
+- [VAD](frontend_vad.md)
+  - フロント側VAD（RMS/Peak・学習VAD・送信ゲート）の設計
 - [VRM Character](frontend_character.md)
   - Three.js + VRM-1.0によるキャラクターレンダリングやアニメーションなどに関するもの全般
 
