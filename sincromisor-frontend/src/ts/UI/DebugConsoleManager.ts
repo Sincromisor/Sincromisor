@@ -1,21 +1,51 @@
+type AudioMeterHandle = {
+    audioContext: AudioContext;
+    sourceNode: MediaStreamAudioSourceNode;
+    analyser: AnalyserNode;
+    data: Uint8Array;
+    frameId: number;
+};
+
 export class DebugConsoleManager {
-    private static instance: DebugConsoleManager
+    private static instance: DebugConsoleManager;
+    private static readonly EVENT_LOG_LINES = 80;
+    private static readonly CHANNEL_LOG_LINES = 30;
+    private static readonly TREND_POINTS = 60;
 
     private readonly debugConsoleContainer: HTMLDivElement | null;
+
     /* RTC */
     private readonly telopChannelLog: HTMLPreElement | null;
     private readonly textChannelLog: HTMLPreElement | null;
+    private readonly rtcEventLog: HTMLPreElement | null;
     private readonly iceConnectionLog: HTMLSpanElement | null;
     private readonly iceGatheringLog: HTMLSpanElement | null;
     private readonly signalingLog: HTMLSpanElement | null;
     private readonly offerSDPLog: HTMLPreElement | null;
     private readonly answerSDPLog: HTMLPreElement | null;
+    private readonly metricElements: Record<string, HTMLElement | null>;
+    private readonly trendPolylines: Record<string, SVGPolylineElement | null>;
+    private readonly trendSeries: Record<string, number[]> = {};
+    private readonly trendMaxValues: Record<string, number> = {
+        trendOutboundAudioBitrate: 256000, // 256 kbps
+        trendInboundAudioBitrate: 256000, // 256 kbps
+        trendRoundTripTime: 200, // 200 ms
+        trendInboundPacketLossRate: 5, // 5%
+    };
 
     /* CharacterGaze */
     private readonly faceXLog: HTMLElement | null;
     private readonly faceYLog: HTMLElement | null;
     private readonly facing: HTMLElement | null;
     private readonly characterGazeStatus: HTMLElement | null;
+
+    /* Audio meter */
+    private readonly localAudioLevelMeter: HTMLElement | null;
+    private readonly remoteAudioLevelMeter: HTMLElement | null;
+    private readonly localAudioLevelValue: HTMLElement | null;
+    private readonly remoteAudioLevelValue: HTMLElement | null;
+    private localAudioMeterHandle: AudioMeterHandle | null = null;
+    private remoteAudioMeterHandle: AudioMeterHandle | null = null;
 
     static getManager(): DebugConsoleManager {
         if (!DebugConsoleManager.instance) {
@@ -30,17 +60,41 @@ export class DebugConsoleManager {
         /* RTC */
         this.telopChannelLog = document.querySelector("pre#telopChannel");
         this.textChannelLog = document.querySelector("pre#textChannel");
+        this.rtcEventLog = document.querySelector("pre#rtcEventLog");
         this.iceConnectionLog = document.querySelector("span#iceConnectionState");
         this.iceGatheringLog = document.querySelector("span#iceGatheringState");
         this.signalingLog = document.querySelector("span#signalingState");
         this.offerSDPLog = document.querySelector("pre#offerSDP");
         this.answerSDPLog = document.querySelector("pre#answerSDP");
+        this.metricElements = {
+            rtcRoundTripTime: document.querySelector("#rtcRoundTripTime"),
+            rtcAvailableOutgoingBitrate: document.querySelector("#rtcAvailableOutgoingBitrate"),
+            rtcCandidatePair: document.querySelector("#rtcCandidatePair"),
+            outboundAudioBitrate: document.querySelector("#outboundAudioBitrate"),
+            inboundAudioBitrate: document.querySelector("#inboundAudioBitrate"),
+            outboundPacketsSent: document.querySelector("#outboundPacketsSent"),
+            inboundPacketsLost: document.querySelector("#inboundPacketsLost"),
+            inboundPacketLossRate: document.querySelector("#inboundPacketLossRate"),
+            inboundJitter: document.querySelector("#inboundJitter"),
+        };
+        this.trendPolylines = {
+            trendOutboundAudioBitrate: document.querySelector("#trendOutboundAudioBitrate polyline"),
+            trendInboundAudioBitrate: document.querySelector("#trendInboundAudioBitrate polyline"),
+            trendRoundTripTime: document.querySelector("#trendRoundTripTime polyline"),
+            trendInboundPacketLossRate: document.querySelector("#trendInboundPacketLossRate polyline"),
+        };
 
         /* CharacterGaze */
-        this.faceXLog = document.querySelector('dd#faceX');
-        this.faceYLog = document.querySelector('dd#faceY');
-        this.facing = document.querySelector('dd#facing');
-        this.characterGazeStatus = document.querySelector('dd#characterGazeStatus');
+        this.faceXLog = document.querySelector("dd#faceX");
+        this.faceYLog = document.querySelector("dd#faceY");
+        this.facing = document.querySelector("dd#facing");
+        this.characterGazeStatus = document.querySelector("dd#characterGazeStatus");
+
+        /* Audio meter */
+        this.localAudioLevelMeter = document.querySelector("#localAudioLevelMeter");
+        this.remoteAudioLevelMeter = document.querySelector("#remoteAudioLevelMeter");
+        this.localAudioLevelValue = document.querySelector("#localAudioLevelValue");
+        this.remoteAudioLevelValue = document.querySelector("#remoteAudioLevelValue");
 
         this.setShortcutKeyEvent();
     }
@@ -49,16 +103,16 @@ export class DebugConsoleManager {
         if (!this.debugConsoleContainer) {
             return;
         }
-        this.debugConsoleContainer.style.visibility = 'visible';
-        this.debugConsoleContainer.style.overflow = 'scroll';
+        this.debugConsoleContainer.style.visibility = "visible";
+        this.debugConsoleContainer.style.overflow = "auto";
     }
 
     hideDebugConsole(): void {
         if (!this.debugConsoleContainer) {
             return;
         }
-        this.debugConsoleContainer.style.visibility = 'hidden';
-        this.debugConsoleContainer.style.overflow = 'hidden';
+        this.debugConsoleContainer.style.visibility = "hidden";
+        this.debugConsoleContainer.style.overflow = "hidden";
     }
 
     /* ctrl + alt + dでデバッグコンソールを表示 */
@@ -68,11 +122,9 @@ export class DebugConsoleManager {
             return;
         }
         window.addEventListener("keydown", (e) => {
-            console.log(e);
             // macOSのChromeではalt+dでkeyの値がδになる
-            if (e.ctrlKey && e.altKey && (e.key == 'd' || e.code == 'KeyD')) {
-                console.log("toggleDebugConsole.");
-                if (this.debugConsoleContainer && this.debugConsoleContainer.style.visibility == 'hidden') {
+            if (e.ctrlKey && e.altKey && (e.key == "d" || e.code == "KeyD")) {
+                if (this.debugConsoleContainer && this.debugConsoleContainer.style.visibility == "hidden") {
                     this.showDebugConsole();
                 } else {
                     this.hideDebugConsole();
@@ -81,63 +133,240 @@ export class DebugConsoleManager {
         });
     }
 
-    /* RTC */
     private trimTextContent(text: string, lines: number): string {
         return text.split("\n").slice(-lines).join("\n");
     }
 
-    addTelopChannelLog(msg: string): void {
-        if (this.telopChannelLog) {
-            this.telopChannelLog.textContent += msg;
-            const textContent = this.trimTextContent(this.telopChannelLog.textContent as string, 10);
-            this.telopChannelLog.textContent = textContent;
-            this.telopChannelLog.scrollTo(0, this.telopChannelLog.scrollHeight);
+    private appendLog(logElement: HTMLPreElement | null, msg: string, lines: number): void {
+        if (!logElement) {
+            return;
         }
+        logElement.textContent += msg;
+        logElement.textContent = this.trimTextContent(logElement.textContent, lines);
+        logElement.scrollTo(0, logElement.scrollHeight);
+    }
+
+    private setStateClass(stateElement: HTMLSpanElement, state: string): void {
+        const normalizedState = state.toLowerCase();
+        stateElement.classList.remove("state-ok", "state-warn", "state-error");
+        if (normalizedState.includes("connected") || normalizedState.includes("completed")) {
+            stateElement.classList.add("state-ok");
+            return;
+        }
+        if (normalizedState.includes("checking") || normalizedState.includes("disconnected")) {
+            stateElement.classList.add("state-warn");
+            return;
+        }
+        if (normalizedState.includes("failed") || normalizedState.includes("closed")) {
+            stateElement.classList.add("state-error");
+        }
+    }
+
+    private updateStateLog(stateElement: HTMLSpanElement | null, state: string, append: boolean): void {
+        if (!stateElement) {
+            return;
+        }
+        if (append && stateElement.textContent) {
+            stateElement.textContent += ` -> ${state}`;
+        } else {
+            stateElement.textContent = state;
+        }
+        this.setStateClass(stateElement, state);
+    }
+
+    private updateAudioMeter(level: number, meter: HTMLElement | null, valueElement: HTMLElement | null): void {
+        if (!meter || !valueElement) {
+            return;
+        }
+        const clampedLevel = Math.max(0, Math.min(1, level));
+        meter.style.width = `${(clampedLevel * 100).toFixed(1)}%`;
+        valueElement.textContent = `${Math.round(clampedLevel * 100)}%`;
+    }
+
+    private stopAudioMeter(handle: AudioMeterHandle | null, target: "local" | "remote"): void {
+        if (!handle) {
+            return;
+        }
+        cancelAnimationFrame(handle.frameId);
+        handle.sourceNode.disconnect();
+        handle.analyser.disconnect();
+        handle.audioContext.close().catch((e) => console.error(e));
+        if (target === "local") {
+            this.localAudioMeterHandle = null;
+            this.updateAudioMeter(0, this.localAudioLevelMeter, this.localAudioLevelValue);
+            return;
+        }
+        this.remoteAudioMeterHandle = null;
+        this.updateAudioMeter(0, this.remoteAudioLevelMeter, this.remoteAudioLevelValue);
+    }
+
+    private startAudioMeter(track: MediaStreamTrack, target: "local" | "remote"): void {
+        if (typeof window.AudioContext === "undefined") {
+            return;
+        }
+        if (target === "local") {
+            this.stopAudioMeter(this.localAudioMeterHandle, "local");
+        } else {
+            this.stopAudioMeter(this.remoteAudioMeterHandle, "remote");
+        }
+
+        const stream = new MediaStream([track]);
+        const audioContext = new window.AudioContext();
+        const sourceNode = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = 0.75;
+        sourceNode.connect(analyser);
+        const data = new Uint8Array(analyser.fftSize);
+        const meter = target === "local" ? this.localAudioLevelMeter : this.remoteAudioLevelMeter;
+        const meterValue = target === "local" ? this.localAudioLevelValue : this.remoteAudioLevelValue;
+
+        const loop = (): number => {
+            analyser.getByteTimeDomainData(data);
+            let squaredSum = 0;
+            for (let i = 0; i < data.length; i += 1) {
+                const centered = (data[i] - 128) / 128;
+                squaredSum += centered * centered;
+            }
+            const rms = Math.sqrt(squaredSum / data.length);
+            this.updateAudioMeter(Math.min(1, rms * 4.5), meter, meterValue);
+            return requestAnimationFrame(loop);
+        };
+
+        const frameId = requestAnimationFrame(loop);
+        const handle: AudioMeterHandle = { audioContext, sourceNode, analyser, data, frameId };
+        if (target === "local") {
+            this.localAudioMeterHandle = handle;
+        } else {
+            this.remoteAudioMeterHandle = handle;
+        }
+
+        if (audioContext.state === "suspended") {
+            audioContext.resume().catch((e) => console.error(e));
+        }
+
+        track.addEventListener(
+            "ended",
+            () => {
+                if (target === "local") {
+                    this.stopAudioMeter(this.localAudioMeterHandle, "local");
+                } else {
+                    this.stopAudioMeter(this.remoteAudioMeterHandle, "remote");
+                }
+            },
+            { once: true },
+        );
+    }
+
+    setLocalAudioTrack(track: MediaStreamTrack): void {
+        if (track.kind !== "audio") {
+            return;
+        }
+        this.startAudioMeter(track, "local");
+    }
+
+    setRemoteAudioTrack(track: MediaStreamTrack): void {
+        if (track.kind !== "audio") {
+            return;
+        }
+        this.startAudioMeter(track, "remote");
+    }
+
+    resetRealtimeStats(): void {
+        Object.keys(this.metricElements).forEach((key) => {
+            this.updateMetricValue(key, "-");
+        });
+        Object.keys(this.trendPolylines).forEach((key) => {
+            this.trendSeries[key] = [];
+            this.renderTrend(key);
+        });
+    }
+
+    updateMetricValue(key: string, value: string): void {
+        const metricElement = this.metricElements[key];
+        if (metricElement) {
+            metricElement.textContent = value;
+        }
+    }
+
+    private renderTrend(trendKey: string): void {
+        const polyline = this.trendPolylines[trendKey];
+        if (!polyline) {
+            return;
+        }
+        const points = this.trendSeries[trendKey] ?? [];
+        if (points.length <= 1) {
+            polyline.setAttribute("points", "");
+            return;
+        }
+        const width = 300;
+        const height = 86;
+        const upper = this.trendMaxValues[trendKey] ?? 1;
+        const xStep = width / (DebugConsoleManager.TREND_POINTS - 1);
+        const polylinePoints = points.map((v, i) => {
+            const x = i * xStep;
+            const normalized = Math.max(0, Math.min(1, v / upper));
+            const y = height - normalized * (height - 4) - 2;
+            return `${x.toFixed(2)},${y.toFixed(2)}`;
+        });
+        polyline.setAttribute("points", polylinePoints.join(" "));
+    }
+
+    pushTrendPoint(trendKey: string, value: number | null): void {
+        const normalizedValue = value != null && Number.isFinite(value) && value >= 0 ? value : 0;
+        if (!this.trendSeries[trendKey]) {
+            this.trendSeries[trendKey] = [];
+        }
+        const series = this.trendSeries[trendKey];
+        series.push(normalizedValue);
+        if (series.length > DebugConsoleManager.TREND_POINTS) {
+            series.splice(0, series.length - DebugConsoleManager.TREND_POINTS);
+        }
+        this.renderTrend(trendKey);
+    }
+
+    addRtcEventLog(msg: string): void {
+        const now = new Date();
+        const ts = now.toISOString().split("T")[1]?.replace("Z", "") || now.toISOString();
+        this.appendLog(this.rtcEventLog, `[${ts}] ${msg}\n`, DebugConsoleManager.EVENT_LOG_LINES);
+    }
+
+    addTelopChannelLog(msg: string): void {
+        this.appendLog(this.telopChannelLog, msg, DebugConsoleManager.CHANNEL_LOG_LINES);
     }
 
     addTextChannelLog(msg: string): void {
-        if (this.textChannelLog) {
-            this.textChannelLog.textContent += msg;
-            const textContent = this.trimTextContent(this.textChannelLog.textContent as string, 10);
-            this.textChannelLog.textContent = textContent;
-            this.textChannelLog.scrollTo(0, this.textChannelLog.scrollHeight);
-        }
+        this.appendLog(this.textChannelLog, msg, DebugConsoleManager.CHANNEL_LOG_LINES);
     }
 
     newIceConnectionState(msg: string): void {
-        if (this.iceConnectionLog) {
-            this.iceConnectionLog.textContent = msg;
-        }
+        this.updateStateLog(this.iceConnectionLog, msg, false);
+        this.addRtcEventLog(`ICE connection state = ${msg}`);
     }
 
     updateIceConnectionState(msg: string): void {
-        if (this.iceConnectionLog) {
-            this.iceConnectionLog.textContent += '-> ' + msg;
-        }
+        this.updateStateLog(this.iceConnectionLog, msg, true);
+        this.addRtcEventLog(`ICE connection state -> ${msg}`);
     }
 
     newIceGatheringState(msg: string): void {
-        if (this.iceGatheringLog) {
-            this.iceGatheringLog.textContent = msg;
-        }
+        this.updateStateLog(this.iceGatheringLog, msg, false);
+        this.addRtcEventLog(`ICE gathering state = ${msg}`);
     }
 
     updateIceGatheringState(msg: string): void {
-        if (this.iceGatheringLog) {
-            this.iceGatheringLog.textContent += '-> ' + msg;
-        }
+        this.updateStateLog(this.iceGatheringLog, msg, true);
+        this.addRtcEventLog(`ICE gathering state -> ${msg}`);
     }
 
     newSignalingState(msg: string): void {
-        if (this.signalingLog) {
-            this.signalingLog.textContent = msg;
-        }
+        this.updateStateLog(this.signalingLog, msg, false);
+        this.addRtcEventLog(`Signaling state = ${msg}`);
     }
 
     updateSignalingState(msg: string): void {
-        if (this.signalingLog) {
-            this.signalingLog.textContent += '-> ' + msg;
-        }
+        this.updateStateLog(this.signalingLog, msg, true);
+        this.addRtcEventLog(`Signaling state -> ${msg}`);
     }
 
     offerSDP(msg: string): void {
@@ -175,10 +404,6 @@ export class DebugConsoleManager {
         if (!this.characterGazeStatus) {
             return;
         }
-        if (watching) {
-            this.characterGazeStatus.innerText = 'みてる';
-        } else {
-            this.characterGazeStatus.innerText = 'みてない';
-        }
+        this.characterGazeStatus.innerText = watching ? "みてる" : "みてない";
     }
 }

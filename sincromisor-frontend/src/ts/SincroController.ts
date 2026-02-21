@@ -44,6 +44,7 @@ export class SincroController {
         if (!this.rtcConfigManager.config) {
             return;
         }
+        this.debugConsoleManager.setLocalAudioTrack(audioTrack);
         this.rtcc = new RTCTalkClient(this.rtcConfigManager.config, audioTrack, this.dialogManager.talkMode());
         this.setTextChannelCallback(this.rtcc);
         this.setTelopChannelCallback(this.rtcc);

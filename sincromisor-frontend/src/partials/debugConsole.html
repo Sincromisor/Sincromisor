@@ -1,49 +1,175 @@
 <div id="debugConsole">
-    <div id="characterGaze">
-        <video id="characterGazeVideo" autoplay="true" playsinline="true"></video>
-        <svg id="characterGazeMarker" viewBox="0 0 320 240" version="1.1" xmlns="http://www.w3.org/2000/svg">
-            <circle id="eyeTarget" cx="50%" cy="50%" r="5" fill="hsl(300 100% 50% / 50%)" />
-        </svg>
-    </div>
+    <header class="debugConsoleHeader">
+        <div class="debugConsoleTitleBox">
+            <h2>Debug Console</h2>
+            <p>WebRTC / Audio Monitoring</p>
+        </div>
+        <div class="debugConsoleActions">
+            <button id="rtcStop">RTC Stop</button>
+            <button id="startLookingGlass">Start Looking Glass</button>
+        </div>
+    </header>
 
-    <div id="characterVoice">
+    <section class="debugCard debugCard--status">
+        <h3>Session Overview</h3>
+        <div class="statusGrid">
+            <div class="statusItem">
+                <span class="statusLabel">ICE Gathering</span>
+                <span id="iceGatheringState" class="statusValue"></span>
+            </div>
+            <div class="statusItem">
+                <span class="statusLabel">ICE Connection</span>
+                <span id="iceConnectionState" class="statusValue"></span>
+            </div>
+            <div class="statusItem">
+                <span class="statusLabel">Signaling</span>
+                <span id="signalingState" class="statusValue"></span>
+            </div>
+            <div class="statusItem">
+                <span class="statusLabel">Round Trip Time</span>
+                <span id="rtcRoundTripTime" class="statusValue">-</span>
+            </div>
+            <div class="statusItem">
+                <span class="statusLabel">Available Out Bitrate</span>
+                <span id="rtcAvailableOutgoingBitrate" class="statusValue">-</span>
+            </div>
+            <div class="statusItem">
+                <span class="statusLabel">Selected Candidate</span>
+                <span id="rtcCandidatePair" class="statusValue">-</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="debugCard debugCard--transport">
+        <h3>WebRTC Transport</h3>
+        <div class="metricGrid">
+            <div class="metricItem">
+                <span class="metricLabel">Outbound Audio Bitrate</span>
+                <span id="outboundAudioBitrate" class="metricValue">-</span>
+            </div>
+            <div class="metricItem">
+                <span class="metricLabel">Inbound Audio Bitrate</span>
+                <span id="inboundAudioBitrate" class="metricValue">-</span>
+            </div>
+            <div class="metricItem">
+                <span class="metricLabel">Outbound Packets Sent</span>
+                <span id="outboundPacketsSent" class="metricValue">-</span>
+            </div>
+            <div class="metricItem">
+                <span class="metricLabel">Inbound Packets Lost</span>
+                <span id="inboundPacketsLost" class="metricValue">-</span>
+            </div>
+            <div class="metricItem">
+                <span class="metricLabel">Inbound Packet Loss</span>
+                <span id="inboundPacketLossRate" class="metricValue">-</span>
+            </div>
+            <div class="metricItem">
+                <span class="metricLabel">Inbound Jitter</span>
+                <span id="inboundJitter" class="metricValue">-</span>
+            </div>
+        </div>
+        <div class="trendGrid">
+            <article class="trendCard">
+                <h4>Outbound Bitrate (60s / max 256 kbps)</h4>
+                <svg id="trendOutboundAudioBitrate" class="trendGraph" viewBox="0 0 300 86" preserveAspectRatio="none">
+                    <polyline class="trendLine"></polyline>
+                </svg>
+            </article>
+            <article class="trendCard">
+                <h4>Inbound Bitrate (60s / max 256 kbps)</h4>
+                <svg id="trendInboundAudioBitrate" class="trendGraph" viewBox="0 0 300 86" preserveAspectRatio="none">
+                    <polyline class="trendLine"></polyline>
+                </svg>
+            </article>
+            <article class="trendCard">
+                <h4>RTT (60s / max 200 ms)</h4>
+                <svg id="trendRoundTripTime" class="trendGraph" viewBox="0 0 300 86" preserveAspectRatio="none">
+                    <polyline class="trendLine"></polyline>
+                </svg>
+            </article>
+            <article class="trendCard">
+                <h4>Inbound Loss Rate (60s / max 5%)</h4>
+                <svg id="trendInboundPacketLossRate" class="trendGraph" viewBox="0 0 300 86" preserveAspectRatio="none">
+                    <polyline class="trendLine"></polyline>
+                </svg>
+            </article>
+        </div>
+    </section>
+
+    <section class="debugCard debugCard--audio">
+        <h3>Audio Monitor (Frontend)</h3>
+        <div class="audioMeterGrid">
+            <div class="audioMeterPanel">
+                <div class="audioMeterHeader">
+                    <span>Local Mic</span>
+                    <span id="localAudioLevelValue">0%</span>
+                </div>
+                <div class="audioMeterTrack">
+                    <div id="localAudioLevelMeter" class="audioMeterFill"></div>
+                </div>
+            </div>
+            <div class="audioMeterPanel">
+                <div class="audioMeterHeader">
+                    <span>Remote RTC</span>
+                    <span id="remoteAudioLevelValue">0%</span>
+                </div>
+                <div class="audioMeterTrack">
+                    <div id="remoteAudioLevelMeter" class="audioMeterFill"></div>
+                </div>
+            </div>
+        </div>
         <audio id="rtcAudio" autoplay="true"></audio>
-    </div>
+    </section>
 
-    <button id="rtcStop">RTC Stop</button>
-    <button id="startLookingGlass">Start Looking Glass</button>
+    <section class="debugCard debugCard--channels">
+        <h3>Data Channel Events</h3>
+        <div class="channelGrid">
+            <article>
+                <h4>text_ch</h4>
+                <pre id="textChannel"></pre>
+            </article>
+            <article>
+                <h4>telop_ch</h4>
+                <pre id="telopChannel"></pre>
+            </article>
+            <article>
+                <h4>RTC Event Timeline</h4>
+                <pre id="rtcEventLog"></pre>
+            </article>
+        </div>
+    </section>
 
-    <h2>Data channel</h2>
-    <pre id="textChannel"></pre>
-    <pre id="telopChannel"></pre>
+    <section class="debugCard debugCard--gaze">
+        <h3>Face & Gaze</h3>
+        <div id="characterGaze">
+            <video id="characterGazeVideo" autoplay="true" playsinline="true"></video>
+            <svg id="characterGazeMarker" viewBox="0 0 320 240" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                <circle id="eyeTarget" cx="50%" cy="50%" r="5" fill="hsl(300 100% 50% / 50%)" />
+            </svg>
+        </div>
+        <dl class="gazeTable">
+            <dt>Status</dt>
+            <dd id="characterGazeStatus">みてない</dd>
+            <dt>X</dt>
+            <dd id="faceX"></dd>
+            <dt>Y</dt>
+            <dd id="faceY"></dd>
+            <dt>Facing</dt>
+            <dd id="facing"></dd>
+        </dl>
+    </section>
 
-    <h2>Face Position</h2>
-    <dl>
-        <dt>Status</dt>
-        <dd id="characterGazeStatus">みてない</dd>
-        <dt>X</dt>
-        <dd id="faceX"></dd>
-        <dt>Y</dt>
-        <dd id="faceY"></dd>
-        <dt>Facing</dt>
-        <dd id="facing"></dd>
-    </dl>
-
-    <h2>State</h2>
-    <p>
-        ICE gathering state: <span id="iceGatheringState"></span>
-    </p>
-    <p>
-        ICE connection state: <span id="iceConnectionState"></span>
-    </p>
-    <p>
-        Signaling state: <span id="signalingState"></span>
-    </p>
-    <h2>SDP</h2>
-
-    <h3>Offer</h3>
-    <pre id="offerSDP"></pre>
-
-    <h3>Answer</h3>
-    <pre id="answerSDP"></pre>
+    <section class="debugCard debugCard--sdp">
+        <h3>SDP Details</h3>
+        <div class="sdpGrid">
+            <article>
+                <h4>Offer</h4>
+                <pre id="offerSDP"></pre>
+            </article>
+            <article>
+                <h4>Answer</h4>
+                <pre id="answerSDP"></pre>
+            </article>
+        </div>
+    </section>
 </div>

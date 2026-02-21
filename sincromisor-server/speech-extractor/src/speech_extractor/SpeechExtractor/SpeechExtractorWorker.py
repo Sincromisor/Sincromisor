@@ -123,6 +123,6 @@ class SpeechExtractorWorker:
             raise e
         for category in classification_result_list[0].classifications[0].categories:
             # self.logger.info(f"{self.session_id}: {category.category_name}({category.score})")
-            if category.category_name == "Speech" and category.score > 0.6:
+            if category.category_name == "Speech" and category.score is not None and category.score > 0.6:
                 return True
         return False
