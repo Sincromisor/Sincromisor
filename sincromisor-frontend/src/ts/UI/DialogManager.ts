@@ -103,6 +103,12 @@ export class DialogManager {
         return eC.checked;
     }
 
+    enableVadGate(): boolean {
+        const eC: HTMLInputElement | null = document.querySelector('input#enableVadGate');
+        if (eC == null) { return false; }
+        return eC.checked;
+    }
+
     enableInspector(): boolean {
         const eC: HTMLInputElement | null = document.querySelector('input#enableInspector');
         if (eC == null) { return false; }

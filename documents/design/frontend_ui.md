@@ -55,7 +55,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 高度なマイク設定を折りたたみ表示（デフォルト閉）とし、必要時のみ詳細項目を操作できること
   - マイク詳細項目として `noiseSuppression` / `echoCancellation` / `autoGainControl` を切替可能であること
   - ローカルマイク入力に高域通過フィルタ(HPF)を適用し、低周波ノイズを抑えられること
-  - AudioWorkletベースVADを実行し、DebugConsoleへ `Speech/Silence` 状態を表示できること（送信ゲートは未適用）
+  - AudioWorkletベースVADを実行し、DebugConsoleへ `Speech/Silence` 状態を表示できること
+  - 高度設定でVAD送信ゲートを有効化した場合、無音時の送信音量を抑制できること
   - 起動時にマイク/カメラを取得し、音声トラックでRTC接続する
   - `text_ch` / `telop_ch` の受信内容を画面に反映する
   - デバッグコンソールでICE/SDP/DataChannelログを確認できる
@@ -284,6 +285,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-02-21 | 高度なマイク設定（折りたたみ）を追加し、`noiseSuppression`/`echoCancellation`/`autoGainControl` の3項目を起動時に反映する仕様へ更新 |
 | 2026-02-21 | DebugConsoleのAudio MonitorにローカルマイクRMS/Peak表示と入力警告（クリッピング/入力小）を追加 |
 | 2026-02-21 | クライアント音声処理パイプラインにHPF(120Hz)とAudioWorklet VADを追加し、DebugConsoleへSpeech/Silence状態を表示 |
+| 2026-02-21 | 高度設定にVAD送信ゲートを追加し、無音時はGainNodeで送信音量を抑制できるよう更新 |
 | 2026-02-21 | DebugConsole UIをカード型レイアウトへ刷新。Session/Transport/Audio/Channel/Gaze/SDPの監視パネルを追加 |
 | 2026-02-21 | `getStats()` の1秒収集による主要メトリクス表示と、直近60秒ミニグラフ（固定上限スケール）を追加 |
 | 2026-02-21 | 再接続仕様を更新。ICE restart明示のOffer再送と、指数バックオフ（上限60秒・ジッター付き）を追加 |
