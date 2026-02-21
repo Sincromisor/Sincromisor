@@ -5,6 +5,7 @@ from multiprocessing import Event as MPEvent
 from multiprocessing import Pipe
 from multiprocessing.connection import Connection
 from multiprocessing.synchronize import Event
+from threading import Lock
 
 from ulid import ULID
 
@@ -29,10 +30,51 @@ class RTCSessionManager:
         self.__consul_agent_port: int | None = consul_agent_port
         self.__fallback_host: str | None = fallback_host
         self.__fallback_port: int | None = fallback_port
+        # FastAPIハンドラの並行実行時に、session辞書操作とPipe送受信を直列化する。
+        self.__lock = Lock()
 
     # WebRTCのセッションを持つプロセスを新たに生成し、
     # そのプロセスが持つセッションのSDPをdictとして返す。
     def create_session(self, offer: RTCSessionOffer) -> dict:
+        with self.__lock:
+            return self.__create_session_locked(offer)
+
+    def create_or_update_session(self, offer: RTCSessionOffer) -> dict:
+        with self.__lock:
+            requested_session_id = offer.session_id
+            if requested_session_id:
+                self.__logger.info(
+                    f"Try session update via /offer (session_id={requested_session_id})",
+                )
+                session_desc: RTCSessionProcessDescription | None = self.__processes.get(
+                    requested_session_id
+                )
+                if session_desc is not None and session_desc.is_active():
+                    updated = self.__update_session_locked(
+                        session_desc=session_desc,
+                        offer=offer,
+                    )
+                    if updated is not None:
+                        self.__logger.info(
+                            f"Session update accepted (session_id={requested_session_id})",
+                        )
+                        return updated
+                    self.__logger.warning(
+                        (
+                            "Failed to update existing session. "
+                            f"Fallback to create new session (session_id={requested_session_id})."
+                        ),
+                    )
+                else:
+                    self.__logger.info(
+                        (
+                            "Requested session for update is unavailable. "
+                            f"Fallback to create new session (session_id={requested_session_id})."
+                        ),
+                    )
+            return self.__create_session_locked(offer)
+
+    def __create_session_locked(self, offer: RTCSessionOffer) -> dict:
         # session_idはここで生成し、
         # RTCVoiceChatSessionを持つRTCSessionProcessと共有する。
         session_id: str = str(ULID())
@@ -68,12 +110,79 @@ class RTCSessionManager:
             rtc_finalize_event=rtc_finalize_event,
             sv_pipe=sv_pipe,
         )
-        return sv_pipe.recv()
+        self.__logger.info(
+            (
+                "Create new RTC session process "
+                f"(session_id={session_id}, talk_mode={offer.talk_mode})"
+            ),
+        )
+        response = sv_pipe.recv()
+        if isinstance(response, dict) and response.get("message_type") == "offer_error":
+            raise RuntimeError(response.get("error", "failed_to_create_initial_answer"))
+        return response
+
+    def __update_session_locked(
+        self,
+        session_desc: RTCSessionProcessDescription,
+        offer: RTCSessionOffer,
+    ) -> dict | None:
+        try:
+            self.__logger.info(
+                f"Forward update_offer to session process (session_id={session_desc.session_id})",
+            )
+            session_desc.sv_pipe.send(
+                {
+                    "type": "update_offer",
+                    "sdp": offer.sdp,
+                    "offer_type": offer.type,
+                    "talk_mode": offer.talk_mode,
+                }
+            )
+            response = session_desc.sv_pipe.recv()
+        except Exception:
+            self.__logger.error(
+                (
+                    f"[{session_desc.session_id}] Failed to update session offer."
+                    f"\n{traceback.format_exc()}"
+                ),
+            )
+            return None
+
+        if not isinstance(response, dict):
+            self.__logger.error(
+                f"[{session_desc.session_id}] Invalid update response type: {type(response)}"
+            )
+            return None
+
+        message_type = response.get("message_type")
+        if message_type == "update_offer_result":
+            response.pop("message_type", None)
+            return response
+        if message_type == "update_offer_error":
+            self.__logger.warning(
+                (
+                    f"[{session_desc.session_id}] Update offer rejected by session process: "
+                    f"{response.get('error', 'unknown error')}"
+                ),
+            )
+            return None
+        self.__logger.warning(
+            (
+                f"[{session_desc.session_id}] Unexpected update response payload. "
+                f"message_type={message_type}"
+            ),
+        )
+        return None
 
     def session_count(self) -> int:
-        return len(self.__processes)
+        with self.__lock:
+            return len(self.__processes)
 
     def add_ice_candidate(self, session_candidate: RTCSessionCandidate) -> bool:
+        with self.__lock:
+            return self.__add_ice_candidate_locked(session_candidate)
+
+    def __add_ice_candidate_locked(self, session_candidate: RTCSessionCandidate) -> bool:
         # セッション単位で独立プロセスを持つ設計のため、
         # candidate適用は「親プロセス -> 対象子プロセス」へPipeで中継する。
         session_desc: RTCSessionProcessDescription | None = self.__processes.get(
@@ -109,6 +218,10 @@ class RTCSessionManager:
     # 終了済みのセッションを閉じる。
     # 残ったセッションのセッションIDの一覧を返す。
     def cleanup_sessions(self) -> list[str]:
+        with self.__lock:
+            return self.__cleanup_sessions_locked()
+
+    def __cleanup_sessions_locked(self) -> list[str]:
         session_id: str
         session_desc: RTCSessionProcessDescription
         for session_id, session_desc in list(self.__processes.items()):
@@ -118,6 +231,11 @@ class RTCSessionManager:
         return list(self.__processes.keys())
 
     def shutdown(self) -> None:
+        with self.__lock:
+            self.__shutdown_locked()
+        self.__logger.info("RTCSessionManager is shutdown.")
+
+    def __shutdown_locked(self) -> None:
         session_id: str
         session_desc: RTCSessionProcessDescription
         for session_id, session_desc in self.__processes.items():
@@ -129,4 +247,3 @@ class RTCSessionManager:
                 )
                 traceback.print_exc()
         self.__processes.clear()
-        self.__logger.info("RTCSessionManager is shutdown.")

@@ -135,31 +135,35 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
   - DataChannel: `text_ch` (ordered=true), `telop_ch` (ordered=false, maxRetransmits=0)
 - リクエスト仕様:
   - `config.json`: bodyなし
-  - `offer`: JSON bodyに `sdp/type/talk_mode`
+  - `offer`: JSON bodyに `sdp/type/talk_mode`（任意で `session_id` を指定すると同一セッション更新を試行）
   - `candidate`: JSON bodyに `session_id/candidate`（end-of-candidatesは `candidate: null`）
 - レスポンス仕様:
-  - `200`: Answer SDPまたは設定JSON
+  - `200`: Answer SDPまたは設定JSON（`/candidate` は `{"status": true|false}`）
   - `429`: `{"error":"Too many requests."}`
 - エラー仕様:
   - `offer` 非200時はフロント側で接続失敗表示し再接続
   - 不正DataChannel/不正Trackはセッション側で終了
 - タイムアウト/リトライ方針:
   - Trickle ICE方式: Offerを先に送信し、ICE candidateは逐次 `POST /candidate` で送信
-  - フロントはランダム遅延（約10-30秒）で再接続
+  - 再接続時は `createOffer({ iceRestart: true })` を用いてICE資格情報を更新する
+  - フロントは段階的バックオフで再接続する（初回約5秒、以降は指数的に増加し上限60秒、各回にジッター付与）
+  - 同時多重再接続を避けるため、再接続タイマーは単一で管理する
 
 ### 7.4 状態遷移・シーケンス
 
 - 正常系フロー:
   - 1. Front: `GET /config.json`
   - 2. Front: PeerConnection生成、audio track追加、DataChannel生成
-  - 3. Front: `POST /offer`
+  - 3. Front: `POST /offer`（再接続時は直前の `session_id` を付与して同一セッション更新を試行）
   - 4. Server: Answer + `session_id` を返却
   - 5. Front: `setRemoteDescription`
   - 6. Front: `onicecandidate` ごとに `POST /candidate`
   - 7. Runtime: `text_ch` / `telop_ch` 受信処理
 - 異常系フロー:
   - `429` 受信 -> 再接続待ち
-  - ICE失敗 -> Frontの再接続処理へ移行
+  - 閉塞セッションへの `/candidate` 到達 -> `status:false` を受け取り、再接続処理継続
+  - 指定 `session_id` の更新失敗 -> サーバーは新規セッション作成へフォールバック
+  - ICE失敗 -> Frontの再接続処理へ移行（ICE restart付きOfferを再送）
   - track/datachannel想定外 -> session終了
 - 状態遷移図/シーケンス図（必要なら図リンク）:
   - TODO: シーケンス図追加
@@ -189,19 +193,25 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 - ログ設計:
   - frontend: ICE/DataChannelログ（DebugConsole）
   - backend: Offer/Answer・connection stateログ
+  - backend(offer update判定):
+    - `Offer received: requested_session_id=..., talk_mode=..., client=...`
+    - `Offer handled as session update (...)`
+    - `Offer update fallback to new session (...)`
+    - `Offer handled as new session (...)`
   - backend(Trickle ICE):
     - `ICE candidate normalized to end-of-candidates (...)`
     - `Invalid ICE candidate ignored (...)`
-    - `Candidate rejected: session not found or closed (...)`
+    - `Late candidate ignored: session not found or closed (...)`
 - メトリクス:
   - `/statuses` の `sessions`
 - 障害時の切り分け手順:
   - 1. `/config.json` 応答確認
   - 2. `/offer` のHTTPステータス確認
   - 3. `/candidate` のHTTPステータス確認
-  - 4. backendログで `Invalid ICE candidate ignored` と `Candidate rejected` の発生数を確認
-  - 5. ICE state遷移確認
-  - 6. `text_ch` / `telop_ch` open/受信確認
+  - 4. backendログで `Invalid ICE candidate ignored` と `Late candidate ignored` の発生数を確認
+  - 5. `Offer handled as session update` / `Offer update fallback to new session` の比率を確認
+  - 6. ICE state遷移確認
+  - 7. `text_ch` / `telop_ch` open/受信確認
 - よくある失敗と対処:
   - マイク権限拒否 -> 権限設定を見直す
   - ICE不整合 -> STUN/TURN設定を見直す
@@ -268,6 +278,10 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 | 2026-02-16 | FirefoxのICE失敗対策として、ICE gathering待機をブラウザ別制御（Chromiumのみ1500ms上限）に更新 |
 | 2026-02-16 | Trickle ICE導入に合わせて `candidate` API と `candidateURL` を通信契約へ追加 |
 | 2026-02-16 | Trickle ICEの運用監視向けにcandidate関連ログ（normalized/ignored/rejected）の確認手順を追記 |
+| 2026-02-21 | 再接続仕様を更新。`iceRestart: true` を明示したOffer再送と、指数バックオフ（上限60秒・ジッター付き）を定義 |
+| 2026-02-21 | `/candidate` の閉塞セッション応答を404から `status:false` (HTTP 200) へ更新し、再接続レース時のノイズを低減 |
+| 2026-02-21 | `offer.session_id` を導入。同一セッション更新を優先し、失敗時は新規セッション作成へフォールバックする仕様を追加 |
+| 2026-02-21 | 同一セッション更新運用向けに、offer更新成功/新規フォールバック判定ログと切り分け手順を追記 |
 
 ## 15. 参照資料
 

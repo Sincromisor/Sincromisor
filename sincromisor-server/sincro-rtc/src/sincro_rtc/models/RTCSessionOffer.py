@@ -14,3 +14,5 @@ class RTCSessionOffer(BaseModel):
     sdp: str
     type: str
     talk_mode: TalkMode
+    # 既存セッション更新を試みる場合のみ指定する（未指定時は新規セッション）。
+    session_id: str | None = None
