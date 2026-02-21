@@ -13,6 +13,20 @@ class VadProcessor extends AudioWorkletProcessor {
     // 毎フレーム通知するとUI更新負荷が高いため、数フレームごとに集約して通知する。
     this.reportEveryFrames = 4;
     this.frameCounter = 0;
+
+    // メインスレッドからVAD閾値を更新できるようにする。
+    this.port.onmessage = (event) => {
+      const data = event.data;
+      if (!data || data.type !== "vad-threshold") {
+        return;
+      }
+      if (typeof data.rmsThreshold === "number" && Number.isFinite(data.rmsThreshold)) {
+        this.rmsThreshold = Math.max(0.001, Math.min(0.2, data.rmsThreshold));
+      }
+      if (typeof data.peakThreshold === "number" && Number.isFinite(data.peakThreshold)) {
+        this.peakThreshold = Math.max(0.01, Math.min(0.99, data.peakThreshold));
+      }
+    };
   }
 
   process(inputs, outputs) {

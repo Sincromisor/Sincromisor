@@ -465,6 +465,47 @@ div#debugConsole .audioWarning.silent {
     color: var(--debug-text-muted);
 }
 
+div#debugConsole .audioControlGroup {
+    margin-top: 8px;
+}
+
+div#debugConsole .audioControlLabel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--debug-text-muted);
+    margin-bottom: 4px;
+}
+
+div#debugConsole .audioControlLabel span {
+    min-width: 6ch;
+    text-align: right;
+    color: var(--debug-text-strong);
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+div#debugConsole input.audioControlRange[type="range"] {
+    width: 100%;
+    margin: 0;
+}
+
+div#debugConsole .audioPresetButtons {
+    margin-top: 6px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+div#debugConsole button.audioPresetButton {
+    padding: 5px 7px;
+    border-radius: 6px;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
 div#debugConsole .channelGrid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

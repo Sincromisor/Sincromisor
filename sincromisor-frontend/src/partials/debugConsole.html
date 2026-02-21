@@ -145,6 +145,26 @@
                     <dd id="localAudioPeakValue">0.0%</dd>
                 </dl>
                 <p id="localAudioWarning" class="audioWarning">Normal</p>
+                <div class="audioControlGroup">
+                    <label class="audioControlLabel" for="localVadRmsThreshold">
+                        VAD RMS Threshold
+                        <span id="localVadRmsThresholdValue">1.5%</span>
+                    </label>
+                    <input
+                        id="localVadRmsThreshold"
+                        class="audioControlRange"
+                        type="range"
+                        min="0.005"
+                        max="0.20"
+                        step="0.001"
+                        value="0.015"
+                    />
+                    <div class="audioPresetButtons" role="group" aria-label="VAD RMS Presets">
+                        <button type="button" class="audioPresetButton" data-vad-rms-preset="0.015">標準</button>
+                        <button type="button" class="audioPresetButton" data-vad-rms-preset="0.05">騒音環境</button>
+                        <button type="button" class="audioPresetButton" data-vad-rms-preset="0.1">超騒音環境</button>
+                    </div>
+                </div>
             </div>
             <div class="audioMeterPanel">
                 <div class="audioMeterHeader">
