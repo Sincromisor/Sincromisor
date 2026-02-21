@@ -4,7 +4,15 @@ export type VadStateReport = {
     peak: number;
 };
 
+export type VadThresholdConfig = {
+    rmsThreshold: number;
+    peakThreshold: number;
+};
+
 export class UserMediaManager {
+    static readonly DEFAULT_VAD_RMS_THRESHOLD = 0.015;
+    static readonly DEFAULT_VAD_PEAK_THRESHOLD = 0.06;
+
     audioTrack?: MediaStreamTrack;
     videoTrack?: MediaStreamTrack;
     config: MediaStreamConstraints;
@@ -13,6 +21,11 @@ export class UserMediaManager {
     private rawAudioTrack: MediaStreamTrack | null = null;
     private vadGateEnabled: boolean = false;
     private outputGainNode: GainNode | null = null;
+    private vadNode: AudioWorkletNode | null = null;
+    private vadThresholdConfig: VadThresholdConfig = {
+        rmsThreshold: UserMediaManager.DEFAULT_VAD_RMS_THRESHOLD,
+        peakThreshold: UserMediaManager.DEFAULT_VAD_PEAK_THRESHOLD,
+    };
 
     constructor() {
         this.config = this.defaultConfig();
@@ -55,6 +68,21 @@ export class UserMediaManager {
         }
         const nextGain = enabled ? 0 : 1;
         this.outputGainNode.gain.setTargetAtTime(nextGain, this.audioContext.currentTime, 0.02);
+    }
+
+    // VADの閾値を更新し、処理中であればAudioWorkletへ即時反映する。
+    setVadThresholds(config: Partial<VadThresholdConfig>): void {
+        if (config.rmsThreshold != null && Number.isFinite(config.rmsThreshold)) {
+            this.vadThresholdConfig.rmsThreshold = Math.max(0.001, Math.min(0.2, config.rmsThreshold));
+        }
+        if (config.peakThreshold != null && Number.isFinite(config.peakThreshold)) {
+            this.vadThresholdConfig.peakThreshold = Math.max(0.01, Math.min(0.99, config.peakThreshold));
+        }
+        this.postVadThresholds();
+    }
+
+    getVadThresholds(): VadThresholdConfig {
+        return { ...this.vadThresholdConfig };
     }
 
     getUserMedia(audioTrackCallback: (audioTrack: MediaStreamTrack) => void,
@@ -101,6 +129,8 @@ export class UserMediaManager {
 
         await context.audioWorklet.addModule("/worklets/vad-processor.js");
         const vadNode = new AudioWorkletNode(context, "vad-processor");
+        this.vadNode = vadNode;
+        this.postVadThresholds();
         const gateGain = context.createGain();
         this.outputGainNode = gateGain;
         gateGain.gain.value = this.vadGateEnabled ? 0 : 1;
@@ -172,6 +202,18 @@ export class UserMediaManager {
         });
         this.audioContext = null;
         this.outputGainNode = null;
+        this.vadNode = null;
+    }
+
+    private postVadThresholds(): void {
+        if (!this.vadNode) {
+            return;
+        }
+        this.vadNode.port.postMessage({
+            type: "vad-threshold",
+            rmsThreshold: this.vadThresholdConfig.rmsThreshold,
+            peakThreshold: this.vadThresholdConfig.peakThreshold,
+        });
     }
 
     close(): void {

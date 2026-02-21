@@ -56,6 +56,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - マイク詳細項目として `noiseSuppression` / `echoCancellation` / `autoGainControl` を切替可能であること
   - ローカルマイク入力に高域通過フィルタ(HPF)を適用し、低周波ノイズを抑えられること
   - AudioWorkletベースVADを実行し、DebugConsoleへ `Speech/Silence` 状態を表示できること
+  - DebugConsole上でVADのRMS閾値を動的に変更し、判定感度を即時調整できること
   - 高度設定でVAD送信ゲートを有効化した場合、無音時の送信音量を抑制できること
   - 起動時にマイク/カメラを取得し、音声トラックでRTC接続する
   - `text_ch` / `telop_ch` の受信内容を画面に反映する
@@ -100,12 +101,12 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - コンポーネントごとの責務:
   - `SincroVRMInitializer`: 初期画面起動、開始ボタンイベント、シーン開始
-  - `SincroController`: UserMedia取得前にダイアログ設定（NS/EC/AGC含む）を反映し、RTC開始/停止、DataChannel受信ハンドラ設定、CharacterGaze起動
+  - `SincroController`: UserMedia取得前にダイアログ設定（NS/EC/AGC含む）を反映し、RTC開始/停止、DataChannel受信ハンドラ設定、CharacterGaze起動、DebugConsoleのVAD閾値変更をAudioWorkletへ中継
   - `RTCTalkClient`: Offer生成、`/offer` POST、Answer適用、DataChannel管理
   - `TalkManager`: text/telop受信を集約し、チャットUIと口形同期向け状態を維持
   - `DialogManager`: 設定値の参照、タイトル反映、VRMファイル更新
-  - `UserMediaManager`: `getUserMedia` 制約（`echoCancellation`/`noiseSuppression`/`autoGainControl` 等）を構築
-  - `DebugConsoleManager`: デバッグUIの表示制御、RTC状態表示、イベントログ、音声レベルメーター、60秒トレンドグラフ描画
+  - `UserMediaManager`: `getUserMedia` 制約（`echoCancellation`/`noiseSuppression`/`autoGainControl` 等）を構築し、HPF+AudioWorklet VAD処理と閾値更新を管理
+  - `DebugConsoleManager`: デバッグUIの表示制御、RTC状態表示、イベントログ、音声レベルメーター、VAD状態/閾値調整、60秒トレンドグラフ描画
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroController.ts`
   - `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
@@ -286,6 +287,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-02-21 | DebugConsoleのAudio MonitorにローカルマイクRMS/Peak表示と入力警告（クリッピング/入力小）を追加 |
 | 2026-02-21 | クライアント音声処理パイプラインにHPF(120Hz)とAudioWorklet VADを追加し、DebugConsoleへSpeech/Silence状態を表示 |
 | 2026-02-21 | 高度設定にVAD送信ゲートを追加し、無音時はGainNodeで送信音量を抑制できるよう更新 |
+| 2026-02-21 | DebugConsoleにVAD RMS閾値スライダーを追加し、AudioWorkletへ閾値を動的反映できるよう更新 |
+| 2026-02-21 | DebugConsoleにVAD RMS閾値プリセット（標準/騒音環境/超騒音環境）を追加し、ワンクリックで適用可能に更新 |
 | 2026-02-21 | DebugConsole UIをカード型レイアウトへ刷新。Session/Transport/Audio/Channel/Gaze/SDPの監視パネルを追加 |
 | 2026-02-21 | `getStats()` の1秒収集による主要メトリクス表示と、直近60秒ミニグラフ（固定上限スケール）を追加 |
 | 2026-02-21 | 再接続仕様を更新。ICE restart明示のOffer再送と、指数バックオフ（上限60秒・ジッター付き）を追加 |

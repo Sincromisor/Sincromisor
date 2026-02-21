@@ -66,11 +66,15 @@ export class DebugConsoleManager {
     private readonly localAudioPeakValue: HTMLElement | null;
     private readonly localAudioVadValue: HTMLElement | null;
     private readonly localAudioWarning: HTMLElement | null;
+    private readonly localVadRmsThresholdInput: HTMLInputElement | null;
+    private readonly localVadRmsThresholdValue: HTMLElement | null;
+    private readonly localVadRmsPresetButtons: NodeListOf<HTMLButtonElement>;
     private localAudioMeterHandle: AudioMeterHandle | null = null;
     private remoteAudioMeterHandle: AudioMeterHandle | null = null;
     private localAudioWarningState: "ok" | "silent" | "error" = "ok";
     private localAudioWarningPendingState: "ok" | "silent" | "error" = "ok";
     private localAudioWarningPendingFrames: number = 0;
+    private onLocalVadRmsThresholdChange: (threshold: number) => void = () => { };
 
     // シングルトンインスタンスを返す。
     static getManager(): DebugConsoleManager {
@@ -137,6 +141,9 @@ export class DebugConsoleManager {
         this.localAudioPeakValue = document.querySelector("#localAudioPeakValue");
         this.localAudioVadValue = document.querySelector("#localAudioVadValue");
         this.localAudioWarning = document.querySelector("#localAudioWarning");
+        this.localVadRmsThresholdInput = document.querySelector("#localVadRmsThreshold");
+        this.localVadRmsThresholdValue = document.querySelector("#localVadRmsThresholdValue");
+        this.localVadRmsPresetButtons = document.querySelectorAll("button[data-vad-rms-preset]");
 
         this.setDebugConsoleButtons();
         // 3Dシーン側のポインター制御と干渉しないよう、デバッグUI上のイベントを遮断する。
@@ -148,6 +155,10 @@ export class DebugConsoleManager {
         this.setShortcutKeyEvent();
         // モーダル的に扱えるよう、コンソール外クリックで閉じる。
         this.bindOutsideClickClose();
+        // VAD閾値スライダーを初期化し、変更時の通知を有効化する。
+        this.bindLocalVadThresholdControl();
+        // 環境別プリセットをボタンで即時反映できるようにする。
+        this.bindLocalVadPresetButtons();
     }
 
     // デバッグコンソールを表示状態にする。
@@ -403,6 +414,60 @@ export class DebugConsoleManager {
         if (this.localAudioPeakValue) {
             this.localAudioPeakValue.textContent = `${(Math.max(0, Math.min(1, peak)) * 100).toFixed(1)}%`;
         }
+    }
+
+    // VAD RMS閾値表示を更新する。
+    private updateLocalVadThresholdLabel(value: number): void {
+        if (!this.localVadRmsThresholdValue) {
+            return;
+        }
+        this.localVadRmsThresholdValue.textContent = `${(Math.max(0, value) * 100).toFixed(1)}%`;
+    }
+
+    // VAD RMS閾値スライダーのイベント登録と初期表示を行う。
+    private bindLocalVadThresholdControl(): void {
+        if (!this.localVadRmsThresholdInput) {
+            return;
+        }
+        const initial = Number.parseFloat(this.localVadRmsThresholdInput.value);
+        this.updateLocalVadThresholdLabel(Number.isFinite(initial) ? initial : 0);
+        this.localVadRmsThresholdInput.addEventListener("input", () => {
+            const threshold = Number.parseFloat(this.localVadRmsThresholdInput?.value ?? "0");
+            if (!Number.isFinite(threshold)) {
+                return;
+            }
+            this.updateLocalVadThresholdLabel(threshold);
+            this.onLocalVadRmsThresholdChange(threshold);
+        });
+    }
+
+    // VAD RMS閾値プリセットボタンのイベントを登録する。
+    private bindLocalVadPresetButtons(): void {
+        this.localVadRmsPresetButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const preset = Number.parseFloat(button.dataset.vadRmsPreset ?? "");
+                if (!Number.isFinite(preset)) {
+                    return;
+                }
+                this.setLocalVadRmsThreshold(preset);
+                this.onLocalVadRmsThresholdChange(preset);
+            });
+        });
+    }
+
+    // 外部からVAD RMS閾値を反映する（初期値同期用）。
+    setLocalVadRmsThreshold(value: number): void {
+        if (!this.localVadRmsThresholdInput) {
+            return;
+        }
+        const clamped = Math.max(0.005, Math.min(0.2, value));
+        this.localVadRmsThresholdInput.value = clamped.toFixed(3);
+        this.updateLocalVadThresholdLabel(clamped);
+    }
+
+    // VAD RMS閾値の変更通知先を登録する。
+    setLocalVadRmsThresholdChangeCallback(callback: (threshold: number) => void): void {
+        this.onLocalVadRmsThresholdChange = callback;
     }
 
     // AudioWorklet側VADの判定状態を表示する。
