@@ -32,6 +32,7 @@ export class SincroController {
         this.userMediaManager.setEchoCancellation(this.dialogManager.enableEchoCancellation());
         this.userMediaManager.setAutoGainControl(this.dialogManager.enableAutoGainControl());
         this.userMediaManager.setVadGateEnabled(this.dialogManager.enableVadGate());
+        this.userMediaManager.setVenueNoiseModeEnabled(this.dialogManager.enableVenueNoiseMode());
         this.debugConsoleManager.setLocalVadRmsThreshold(this.userMediaManager.getVadThresholds().rmsThreshold);
         this.debugConsoleManager.setLocalVadRmsThresholdChangeCallback((threshold: number) => {
             this.userMediaManager.setVadThresholds({ rmsThreshold: threshold });
