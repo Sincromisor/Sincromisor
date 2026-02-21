@@ -16,7 +16,8 @@
             versions ipv4
             refresh 5s
         }
-        lb_policy random
+        # lb_policy random
+        lb_policy cookie sincro_rtc_affinity
     }
 
     # SpeechExtractor(service discovery fallback server)
