@@ -5,6 +5,9 @@ export class ChatMessageManager {
     private readonly chatBox: HTMLDivElement;
     private readonly systemUserID: string = "GloriousAI";
     private readonly systemUserName: string = "Glorious AI";
+    // systemメッセージだけは、VRMのthumbnailImageに動的に差し替え可能にする。
+    // 取得前/未設定VRM向けに既存アイコンをデフォルト値として保持する。
+    private systemIconUrl: string = "../images/icon-system.webp";
     /*
         メッセージのID。メッセージを一意に識別するために使用
         メッセージのIDは、メッセージが追加されるたびにインクリメントされる。
@@ -99,6 +102,16 @@ export class ChatMessageManager {
         return this.createNewMessageBox(chatMessage);
     }
 
+    // 既存表示済みのsystemメッセージも含めてアイコンを一括更新する。
+    // (VRMロード完了が初回メッセージ表示より後になるため、後追い更新が必要)
+    setSystemIcon(iconUrl: string): void {
+        this.systemIconUrl = iconUrl;
+        const systemIcons = this.chatBox.querySelectorAll<HTMLImageElement>('div.sincroSystemMessage img.sincroMessage__icon');
+        systemIcons.forEach((icon) => {
+            icon.src = this.systemIconUrl;
+        });
+    }
+
     /*
         <div id="chatBox"></div>の末尾に、下記のような要素を追記する。
         追記したdiv要素を返す。
@@ -125,7 +138,12 @@ export class ChatMessageManager {
 
         const eIcon = document.createElement("img");
         eIcon.className = "sincroMessage__icon";
-        eIcon.src = `../images/icon-${cMessage.message_type}.webp`;
+        // systemのみ動的アイコン、それ以外(message_type別)は従来の静的アイコンを使う。
+        if (cMessage.message_type === 'system') {
+            eIcon.src = this.systemIconUrl;
+        } else {
+            eIcon.src = `../images/icon-${cMessage.message_type}.webp`;
+        }
         eIconBox.appendChild(eIcon);
 
         const eMesg = document.createElement("p");

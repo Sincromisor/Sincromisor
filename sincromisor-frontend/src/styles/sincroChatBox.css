@@ -34,6 +34,8 @@ div#sincroChatBox {
                 background-color: var(--otherMessageIconBoxColor);
                 width: var(--chatBoxIconSize);
                 height: var(--chatBoxIconSize);
+                /* アイコン画像をborder-radiusで確実にクリップする */
+                overflow: hidden;
             }
 
             & .sincroMessage__icon {

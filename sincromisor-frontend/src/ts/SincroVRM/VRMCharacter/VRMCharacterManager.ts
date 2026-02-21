@@ -2,7 +2,7 @@ import { GLTF, GLTFLoader, GLTFParser } from 'three/examples/jsm/loaders/GLTFLoa
 import { Object3D } from 'three/src/core/Object3D.js';
 import { Scene } from 'three/src/scenes/Scene.js';
 import { Clock } from 'three/src/core/Clock.js';
-import { VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+import { VRM, VRMLoaderPlugin, VRMMetaLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { HeadBoneController } from './HeadBoneController';
 import { ArmBoneController } from './ArmBoneController';
 import { LegBoneController } from './LegBoneController';
@@ -26,10 +26,13 @@ export class VRMCharacterManager {
     public characterPosition: Vector3 = new Vector3(0, 0, 0);
     private defaultPosition: Vector3 = new Vector3(0, 0, 0);
     private rootBone: Object3D | null = null;
+    // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
+    private readonly onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void;
 
-    constructor(scene: Scene, vrmCamera: VRMCamera, vrmUrl: string) {
+    constructor(scene: Scene, vrmCamera: VRMCamera, vrmUrl: string, onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void) {
         this.scene = scene;
         this.vrmCamera = vrmCamera;
+        this.onThumbnailLoaded = onThumbnailLoaded;
         this.clock = new Clock();
         this.clock.start();
         this.load(vrmUrl);
@@ -44,7 +47,11 @@ export class VRMCharacterManager {
                 materialType: MToonNodeMaterial,
             });
             return new VRMLoaderPlugin(parser, { mtoonMaterialPlugin });*/
-            return new VRMLoaderPlugin(parser);
+            // three-vrmはデフォルトでmeta.thumbnailImageを読まないため、
+            // needThumbnailImageを明示してチャットアイコン用途の画像を取得する。
+            return new VRMLoaderPlugin(parser, {
+                metaPlugin: new VRMMetaLoaderPlugin(parser, { needThumbnailImage: true }),
+            });
 
         });
 
@@ -69,6 +76,8 @@ export class VRMCharacterManager {
                 }
                 this.scene.add(this.vrm.scene);
                 //this.setEvent(this.vrm);
+                // サムネイルはVRM1.0のみ対象。未設定時はnullを通知してフォールバックさせる。
+                this.onThumbnailLoaded?.(this.getVRMThumbnailImage());
 
                 this.vrm.scene.traverse((obj: Object3D) => {
                     obj.castShadow = true;
@@ -81,6 +90,14 @@ export class VRMCharacterManager {
                 console.error(error);
                 throw new Error('Failed to load VRM model.');
             });
+    }
+
+    private getVRMThumbnailImage(): HTMLImageElement | null {
+        // VRM0.xはthumbnailImageではなくtexture運用のため、本実装では対象外とする。
+        if (!this.vrm || this.vrm.meta.metaVersion !== '1') {
+            return null;
+        }
+        return this.vrm.meta.thumbnailImage ?? null;
     }
 
     update(): void {

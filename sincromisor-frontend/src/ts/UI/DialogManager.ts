@@ -3,6 +3,11 @@ import { PopManager } from "./PopManager";
 export class DialogManager {
     private static instance: DialogManager
     static vrmUrl: string = '/characters/default.vrm';
+    // VRM本体とサムネイルを同一Cache Storageで管理する。
+    // 起動時にURL再作成できるよう、文字列URLではなくBlobを保存する。
+    private static readonly fileCacheName: string = 'file-cache';
+    private static readonly vrmFileCacheKey: string = 'sincroVrmFile';
+    private static readonly vrmThumbnailCacheKey: string = 'sincroVrmThumbnail';
 
     static getManager(): DialogManager {
         if (!DialogManager.instance) {
@@ -262,6 +267,10 @@ export class DialogManager {
         }
         const blob = new Blob([file], { type: "application/octet-stream" });
         DialogManager.vrmUrl = URL.createObjectURL(blob);
+        // VRM差し替え時は旧モデルのサムネイルを使い回さない。
+        this.clearVrmThumbnailCache().catch((error) => {
+            console.error('Failed to clear VRM thumbnail cache.', error);
+        });
         this.saveVrmFile(file).then(() => {
             popManager.writeDialogPopMessage('VRMファイルを更新しました。');
             console.log('VRM file updated.', file);
@@ -272,17 +281,39 @@ export class DialogManager {
     }
 
     private async saveVrmFile(file: File): Promise<void> {
-        const cache = await caches.open('file-cache');
+        const cache = await caches.open(DialogManager.fileCacheName);
         const response = new Response(file);
-        await cache.put('sincroVrmFile', response);
+        await cache.put(DialogManager.vrmFileCacheKey, response);
     }
 
     private async loadVrmFile(): Promise<void> {
-        const cache = await caches.open('file-cache');
-        const response: Response | undefined = await cache.match('sincroVrmFile');
+        const cache = await caches.open(DialogManager.fileCacheName);
+        const response: Response | undefined = await cache.match(DialogManager.vrmFileCacheKey);
         if (!response) {
             return;
         }
         DialogManager.vrmUrl = URL.createObjectURL(await response.blob());
+    }
+
+    // 変換済みサムネイル画像(Blob)を保存する。
+    async saveVrmThumbnailBlob(blob: Blob): Promise<void> {
+        const cache = await caches.open(DialogManager.fileCacheName);
+        await cache.put(DialogManager.vrmThumbnailCacheKey, new Response(blob));
+    }
+
+    // 起動時に前回使用したサムネイルを復元する。
+    async loadVrmThumbnailBlob(): Promise<Blob | null> {
+        const cache = await caches.open(DialogManager.fileCacheName);
+        const response: Response | undefined = await cache.match(DialogManager.vrmThumbnailCacheKey);
+        if (!response) {
+            return null;
+        }
+        return response.blob();
+    }
+
+    // モデル更新時にキャッシュ不整合を防ぐための明示削除。
+    async clearVrmThumbnailCache(): Promise<void> {
+        const cache = await caches.open(DialogManager.fileCacheName);
+        await cache.delete(DialogManager.vrmThumbnailCacheKey);
     }
 }

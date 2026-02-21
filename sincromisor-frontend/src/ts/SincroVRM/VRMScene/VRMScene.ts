@@ -16,7 +16,13 @@ export class VRMScene {
     private readonly xrSessionMode: XRSessionMode = 'immersive-vr';
     private readonly xrMode: boolean;
 
-    constructor(canvasRoot: HTMLDivElement, controlTarget: HTMLElement, vrmUrl: string, xrMode: boolean = false) {
+    constructor(
+        canvasRoot: HTMLDivElement,
+        controlTarget: HTMLElement,
+        vrmUrl: string,
+        xrMode: boolean = false,
+        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void,
+    ) {
         this.scene = new Scene();
         this.vrmLight = new VRMLight();
         this.scene.add(this.vrmLight.light);
@@ -30,7 +36,8 @@ export class VRMScene {
         this.scene.add(axesHelper);
         */
         this.vrmCamera = new VRMCamera(controlTarget);
-        this.vrmCharacterManager = new VRMCharacterManager(this.scene, this.vrmCamera, vrmUrl);
+        // VRMロード完了時にサムネイル取得結果を呼び出し元へ返し、UIアイコン更新に利用する。
+        this.vrmCharacterManager = new VRMCharacterManager(this.scene, this.vrmCamera, vrmUrl, onThumbnailLoaded);
 
         // レンダラーを設定する。背景は透過する。
         this.renderer = new WebGLRenderer({ alpha: true, antialias: true });
