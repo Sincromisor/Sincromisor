@@ -18,8 +18,14 @@ export class VRM360Scene extends VRMScene {
     /* 動画球の高さをだいたい身長 + カメラの高さ(1.9m)ぐらいに合わせる */
     private readonly videoPositionY: number = 1.9;
 
-    constructor(canvasRoot: HTMLDivElement, controlTarget: HTMLElement, vrmUrl: string, xrMode: boolean = false) {
-        super(canvasRoot, controlTarget, vrmUrl, xrMode);
+    constructor(
+        canvasRoot: HTMLDivElement,
+        controlTarget: HTMLElement,
+        vrmUrl: string,
+        xrMode: boolean = false,
+        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void,
+    ) {
+        super(canvasRoot, controlTarget, vrmUrl, xrMode, onThumbnailLoaded);
         this.sphereVideo = new SphereVideo(this.getVideoId());
         this.createWorldSphere(this.sphereVideo.videoTexture);
         this.createFlatFloor();
