@@ -31,6 +31,7 @@ export class SincroController {
         this.userMediaManager.setNoiseSuppression(this.dialogManager.enableNoiseSuppression());
         this.userMediaManager.setEchoCancellation(this.dialogManager.enableEchoCancellation());
         this.userMediaManager.setAutoGainControl(this.dialogManager.enableAutoGainControl());
+        this.userMediaManager.setVadGateEnabled(this.dialogManager.enableVadGate());
         this.userMediaManager.setVadStateCallback((report: VadStateReport) => {
             this.debugConsoleManager.updateLocalVadState(report.isSpeech);
         });

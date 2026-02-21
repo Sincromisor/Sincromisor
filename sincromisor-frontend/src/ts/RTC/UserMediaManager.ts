@@ -11,6 +11,8 @@ export class UserMediaManager {
     private onVadStateCallback: (report: VadStateReport) => void = () => { };
     private audioContext: AudioContext | null = null;
     private rawAudioTrack: MediaStreamTrack | null = null;
+    private vadGateEnabled: boolean = false;
+    private outputGainNode: GainNode | null = null;
 
     constructor() {
         this.config = this.defaultConfig();
@@ -43,6 +45,16 @@ export class UserMediaManager {
     // DebugConsole表示用に、AudioWorklet側VADの状態を通知する。
     setVadStateCallback(callback: (report: VadStateReport) => void): void {
         this.onVadStateCallback = callback;
+    }
+
+    // VAD判定に連動して無音時の送信音量を0にするかを切り替える。
+    setVadGateEnabled(enabled: boolean): void {
+        this.vadGateEnabled = enabled;
+        if (!this.outputGainNode || !this.audioContext) {
+            return;
+        }
+        const nextGain = enabled ? 0 : 1;
+        this.outputGainNode.gain.setTargetAtTime(nextGain, this.audioContext.currentTime, 0.02);
     }
 
     getUserMedia(audioTrackCallback: (audioTrack: MediaStreamTrack) => void,
@@ -89,10 +101,17 @@ export class UserMediaManager {
 
         await context.audioWorklet.addModule("/worklets/vad-processor.js");
         const vadNode = new AudioWorkletNode(context, "vad-processor");
+        const gateGain = context.createGain();
+        this.outputGainNode = gateGain;
+        gateGain.gain.value = this.vadGateEnabled ? 0 : 1;
         vadNode.port.onmessage = (event: MessageEvent<{ type: string; isSpeech: boolean; rms: number; peak: number; }>) => {
             const data = event.data;
             if (!data || data.type !== "vad") {
                 return;
+            }
+            if (this.vadGateEnabled && this.audioContext) {
+                const nextGain = data.isSpeech ? 1 : 0;
+                gateGain.gain.setTargetAtTime(nextGain, this.audioContext.currentTime, 0.02);
             }
             this.onVadStateCallback({
                 isSpeech: !!data.isSpeech,
@@ -104,7 +123,8 @@ export class UserMediaManager {
         const destination = context.createMediaStreamDestination();
         source.connect(highpass);
         highpass.connect(vadNode);
-        vadNode.connect(destination);
+        vadNode.connect(gateGain);
+        gateGain.connect(destination);
 
         if (context.state === "suspended") {
             await context.resume();
@@ -151,6 +171,7 @@ export class UserMediaManager {
             console.error(e);
         });
         this.audioContext = null;
+        this.outputGainNode = null;
     }
 
     close(): void {
