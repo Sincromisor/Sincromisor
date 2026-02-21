@@ -9,9 +9,10 @@ export type VadThresholdConfig = {
     peakThreshold: number;
 };
 
-type AudioFilterProfile = {
+export type AudioFilterConfig = {
     highpassHz: number;
-    lowpassHz: number | null;
+    lowpassEnabled: boolean;
+    lowpassHz: number;
     vadThreshold: VadThresholdConfig;
 };
 
@@ -20,16 +21,18 @@ export class UserMediaManager {
     static readonly DEFAULT_VAD_PEAK_THRESHOLD = 0.06;
     static readonly VENUE_VAD_RMS_THRESHOLD = 0.05;
     static readonly VENUE_VAD_PEAK_THRESHOLD = 0.12;
-    private static readonly DEFAULT_FILTER_PROFILE: AudioFilterProfile = {
+    private static readonly DEFAULT_FILTER_PROFILE: AudioFilterConfig = {
         highpassHz: 120,
-        lowpassHz: null,
+        lowpassEnabled: false,
+        lowpassHz: 4200,
         vadThreshold: {
             rmsThreshold: UserMediaManager.DEFAULT_VAD_RMS_THRESHOLD,
             peakThreshold: UserMediaManager.DEFAULT_VAD_PEAK_THRESHOLD,
         },
     };
-    private static readonly VENUE_FILTER_PROFILE: AudioFilterProfile = {
+    private static readonly VENUE_FILTER_PROFILE: AudioFilterConfig = {
         highpassHz: 180,
+        lowpassEnabled: true,
         lowpassHz: 4200,
         vadThreshold: {
             rmsThreshold: UserMediaManager.VENUE_VAD_RMS_THRESHOLD,
@@ -46,7 +49,9 @@ export class UserMediaManager {
     private vadGateEnabled: boolean = false;
     private outputGainNode: GainNode | null = null;
     private vadNode: AudioWorkletNode | null = null;
-    private audioFilterProfile: AudioFilterProfile = UserMediaManager.DEFAULT_FILTER_PROFILE;
+    private highpassNode: BiquadFilterNode | null = null;
+    private lowpassNode: BiquadFilterNode | null = null;
+    private audioFilterProfile: AudioFilterConfig = UserMediaManager.DEFAULT_FILTER_PROFILE;
     private vadThresholdConfig: VadThresholdConfig = {
         rmsThreshold: UserMediaManager.DEFAULT_VAD_RMS_THRESHOLD,
         peakThreshold: UserMediaManager.DEFAULT_VAD_PEAK_THRESHOLD,
@@ -112,6 +117,38 @@ export class UserMediaManager {
             ? UserMediaManager.VENUE_FILTER_PROFILE
             : UserMediaManager.DEFAULT_FILTER_PROFILE;
         this.setVadThresholds(this.audioFilterProfile.vadThreshold);
+        this.applyFilterNodes();
+    }
+
+    // HPF/LPF設定を更新し、処理中であればフィルタへ即時反映する。
+    setAudioFilterConfig(config: Partial<Omit<AudioFilterConfig, "vadThreshold">>): void {
+        if (config.highpassHz != null && Number.isFinite(config.highpassHz)) {
+            this.audioFilterProfile = {
+                ...this.audioFilterProfile,
+                highpassHz: Math.max(60, Math.min(300, config.highpassHz)),
+            };
+        }
+        if (config.lowpassEnabled != null) {
+            this.audioFilterProfile = {
+                ...this.audioFilterProfile,
+                lowpassEnabled: !!config.lowpassEnabled,
+            };
+        }
+        if (config.lowpassHz != null && Number.isFinite(config.lowpassHz)) {
+            this.audioFilterProfile = {
+                ...this.audioFilterProfile,
+                lowpassHz: Math.max(2500, Math.min(10000, config.lowpassHz)),
+            };
+        }
+        this.applyFilterNodes();
+    }
+
+    getAudioFilterConfig(): Omit<AudioFilterConfig, "vadThreshold"> {
+        return {
+            highpassHz: this.audioFilterProfile.highpassHz,
+            lowpassEnabled: this.audioFilterProfile.lowpassEnabled,
+            lowpassHz: this.audioFilterProfile.lowpassHz,
+        };
     }
 
     getVadThresholds(): VadThresholdConfig {
@@ -157,19 +194,14 @@ export class UserMediaManager {
         // 低周波ノイズ（空調/振動）を抑えるため、VAD前段にHPFを入れる。
         const highpass = context.createBiquadFilter();
         highpass.type = "highpass";
-        highpass.frequency.value = this.audioFilterProfile.highpassHz;
         highpass.Q.value = 0.707;
-
-        let inputNode: AudioNode = highpass;
-        if (this.audioFilterProfile.lowpassHz != null) {
-            // 会場の高域ノイズ/残響を抑えるため、必要時のみLPFを追加する。
-            const lowpass = context.createBiquadFilter();
-            lowpass.type = "lowpass";
-            lowpass.frequency.value = this.audioFilterProfile.lowpassHz;
-            lowpass.Q.value = 0.707;
-            highpass.connect(lowpass);
-            inputNode = lowpass;
-        }
+        this.highpassNode = highpass;
+        // 高域ノイズ/残響を抑えるLPF。未使用時もチェーンは固定して切替時の再配線を避ける。
+        const lowpass = context.createBiquadFilter();
+        lowpass.type = "lowpass";
+        lowpass.Q.value = 0.707;
+        this.lowpassNode = lowpass;
+        this.applyFilterNodes();
 
         await context.audioWorklet.addModule("/worklets/vad-processor.js");
         const vadNode = new AudioWorkletNode(context, "vad-processor");
@@ -196,7 +228,8 @@ export class UserMediaManager {
 
         const destination = context.createMediaStreamDestination();
         source.connect(highpass);
-        inputNode.connect(vadNode);
+        highpass.connect(lowpass);
+        lowpass.connect(vadNode);
         vadNode.connect(gateGain);
         gateGain.connect(destination);
 
@@ -247,6 +280,8 @@ export class UserMediaManager {
         this.audioContext = null;
         this.outputGainNode = null;
         this.vadNode = null;
+        this.highpassNode = null;
+        this.lowpassNode = null;
     }
 
     private postVadThresholds(): void {
@@ -258,6 +293,17 @@ export class UserMediaManager {
             rmsThreshold: this.vadThresholdConfig.rmsThreshold,
             peakThreshold: this.vadThresholdConfig.peakThreshold,
         });
+    }
+
+    private applyFilterNodes(): void {
+        if (this.highpassNode) {
+            this.highpassNode.frequency.value = this.audioFilterProfile.highpassHz;
+        }
+        if (this.lowpassNode) {
+            this.lowpassNode.frequency.value = this.audioFilterProfile.lowpassEnabled
+                ? this.audioFilterProfile.lowpassHz
+                : 20000;
+        }
     }
 
     close(): void {
