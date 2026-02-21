@@ -85,8 +85,21 @@ export class DialogManager {
     }
 
     enableAutoGainControl(): boolean {
+        // 騒音環境での過増幅回避のため、初期値はOFFだがユーザー選択を優先する。
         const eC: HTMLInputElement | null = document.querySelector('input#enableAutoGainControl');
         if (eC == null) { return false; }
+        return eC.checked;
+    }
+
+    enableNoiseSuppression(): boolean {
+        const eC: HTMLInputElement | null = document.querySelector('input#enableNoiseSuppression');
+        if (eC == null) { return true; }
+        return eC.checked;
+    }
+
+    enableEchoCancellation(): boolean {
+        const eC: HTMLInputElement | null = document.querySelector('input#enableEchoCancellation');
+        if (eC == null) { return true; }
         return eC.checked;
     }
 
@@ -132,6 +145,7 @@ export class DialogManager {
         if (available) {
             eC.disabled = false;
             eC.textContent = 'はじめる';
+            // デバイス利用可能時のみ、顔認識連動の設定を有効化する。
             this.updateEnableCharacterGazeStatus(true);
             this.updateAutoMuteStatus();
         } else {

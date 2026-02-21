@@ -27,6 +27,9 @@ export class SincroController {
             this.chatMessageManager.writeErrorMessage(`WebRTCの設定の取得に失敗しました。 - ${err}`);
         });
         this.userMediaManager = new UserMediaManager();
+        // 設定ダイアログのマイク処理設定を getUserMedia 制約へ反映する。
+        this.userMediaManager.setNoiseSuppression(this.dialogManager.enableNoiseSuppression());
+        this.userMediaManager.setEchoCancellation(this.dialogManager.enableEchoCancellation());
         this.userMediaManager.setAutoGainControl(this.dialogManager.enableAutoGainControl());
         if (!this.dialogManager.enableCharacterGaze()) {
             this.userMediaManager.disableVideo();
@@ -44,6 +47,7 @@ export class SincroController {
         if (!this.rtcConfigManager.config) {
             return;
         }
+        // フロント側の入力音量を可視化できるよう、ローカルトラックをデバッグへ渡す。
         this.debugConsoleManager.setLocalAudioTrack(audioTrack);
         this.rtcc = new RTCTalkClient(this.rtcConfigManager.config, audioTrack, this.dialogManager.talkMode());
         this.setTextChannelCallback(this.rtcc);

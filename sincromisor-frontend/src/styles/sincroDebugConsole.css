@@ -15,6 +15,7 @@ div#debugMenu {
     z-index: 2;
 }
 
+/* ヘッダー右端に置く控えめな設定アイコン。3D表示の主役感を壊さないサイズにする。 */
 button#debugMenuButton {
     width: clamp(30px, 2.8vw, 38px);
     height: clamp(30px, 2.8vw, 38px);
@@ -93,6 +94,7 @@ div#debugConsole {
     --debug-warn: hsl(41deg 90% 57%);
     --debug-danger: hsl(0deg 75% 62%);
 
+    /* 右上オーバーレイで表示し、会話UI(左側)と重なりづらい位置を優先する。 */
     position: absolute;
     top: clamp(52px, 8dvh, 84px);
     right: 12px;
@@ -189,6 +191,45 @@ div#debugConsole .debugConsoleTitleBox p {
 div#debugConsole .debugConsoleActions {
     display: flex;
     gap: 8px;
+}
+
+button#debugConsoleClose {
+    /* クリックターゲットは維持しつつ、見た目はフラットなXアイコンのみにする。 */
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: auto;
+    height: auto;
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+}
+
+button#debugConsoleClose:hover {
+    background: transparent;
+}
+
+button#debugConsoleClose svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    fill: hsl(0deg 0% 94% / 84%);
+}
+
+button#debugConsoleClose:focus,
+button#debugConsoleClose:focus-visible {
+    outline: none;
+    box-shadow: none;
 }
 
 div#debugConsole button {
@@ -481,6 +522,7 @@ div#debugConsole .debugTab.is-active {
 
 @media (max-width: 1366px) {
     div#debugConsole {
+        /* 小画面は多段グリッドをやめ、タブ+単一パネル表示で横崩れを防ぐ。 */
         grid-template-columns: 1fr;
         grid-template-areas:
             "header"
@@ -508,6 +550,18 @@ div#debugConsole .debugTab.is-active {
     div#debugConsole .debugConsoleActions button {
         padding: 6px 9px;
         font-size: 11px;
+    }
+
+    button#debugConsoleClose {
+        top: 10px;
+        right: 10px;
+        width: auto;
+        height: auto;
+    }
+
+    button#debugConsoleClose svg {
+        width: 14px;
+        height: 14px;
     }
 
     div#debugConsole .debugPanel {
@@ -539,6 +593,7 @@ div#debugConsole .debugTab.is-active {
 
 @media (max-width: 900px) {
     div#debugConsole {
+        /* タブレット幅は余白を最小化し、操作領域を確保する。 */
         top: 6px;
         right: 6px;
         width: calc(100vw - 12px);

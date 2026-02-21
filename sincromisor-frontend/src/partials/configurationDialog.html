@@ -23,11 +23,25 @@
         <label class='fieldLabel' for="enableAutoMute">顔認識時のみ応答する<br>(Webカメラが必要です)</label>
         <input class='fieldContent' type="checkbox" id="enableAutoMute" name="enableAutoMute" checked disabled />
 
-        <label class='fieldLabel' for="enableAutoGainControl">マイク自動音量調整を有効化する<br>(騒音環境では無効推奨)</label>
-        <input class='fieldContent' type="checkbox" id="enableAutoGainControl" name="enableAutoGainControl" />
-
         <label class='fieldLabel' for="titleText">タイトル</label>
         <input class='fieldContent' type="text" id="titleText" name="titleText" placeholder="ここにタイトルを入力" />
+
+        <details class="advancedSettings">
+            <!-- フロント収音品質の切り分け用。端末/環境別にWebRTC前段の音声処理を切り替えられる。 -->
+            <summary>高度なマイク設定</summary>
+            <div class="advancedSettings__grid">
+                <label class='fieldLabel' for="enableNoiseSuppression">ノイズ抑制を有効化する</label>
+                <input class='fieldContent' type="checkbox" id="enableNoiseSuppression" name="enableNoiseSuppression"
+                    checked />
+
+                <label class='fieldLabel' for="enableEchoCancellation">エコーキャンセルを有効化する</label>
+                <input class='fieldContent' type="checkbox" id="enableEchoCancellation" name="enableEchoCancellation"
+                    checked />
+
+                <label class='fieldLabel' for="enableAutoGainControl">マイク自動音量調整を有効化する<br>(騒音環境では無効推奨)</label>
+                <input class='fieldContent' type="checkbox" id="enableAutoGainControl" name="enableAutoGainControl" />
+            </div>
+        </details>
     </fieldset>
     <fieldset>
         <legend>VRMモデル</legend>

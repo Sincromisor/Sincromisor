@@ -57,11 +57,28 @@ export class UserMediaManager {
     }
 
     setAutoGainControl(enabled: boolean): void {
+        // 設定画面のON/OFFをそのまま制約値へ反映する。
+        this.updateAudioBooleanConstraint("autoGainControl", enabled);
+    }
+
+    setNoiseSuppression(enabled: boolean): void {
+        this.updateAudioBooleanConstraint("noiseSuppression", enabled);
+    }
+
+    setEchoCancellation(enabled: boolean): void {
+        this.updateAudioBooleanConstraint("echoCancellation", enabled);
+    }
+
+    private updateAudioBooleanConstraint(
+        key: "autoGainControl" | "noiseSuppression" | "echoCancellation",
+        enabled: boolean,
+    ): void {
         const audioConfig = this.config.audio;
         if (!audioConfig || typeof audioConfig === "boolean") {
             return;
         }
-        audioConfig.autoGainControl = enabled;
+        // getUserMedia前に更新するため、再接続時は最新設定で取り直せる。
+        audioConfig[key] = enabled;
     }
 
     disableVideo(): void {
