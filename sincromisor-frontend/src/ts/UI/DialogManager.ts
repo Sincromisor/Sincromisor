@@ -79,6 +79,12 @@ export class DialogManager {
         return eC.checked;
     }
 
+    enableAutoGainControl(): boolean {
+        const eC: HTMLInputElement | null = document.querySelector('input#enableAutoGainControl');
+        if (eC == null) { return false; }
+        return eC.checked;
+    }
+
     enableInspector(): boolean {
         const eC: HTMLInputElement | null = document.querySelector('input#enableInspector');
         if (eC == null) { return false; }
