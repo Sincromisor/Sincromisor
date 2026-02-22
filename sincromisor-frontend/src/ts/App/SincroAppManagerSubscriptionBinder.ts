@@ -66,12 +66,14 @@ export function bindTalkManagerSubscription(talkManager: SincroAppTalkSubscripti
 }
 
 export function bindPopManagerSubscription(popManager: SincroAppPopSubscriptionFacade, emitEvent: EmitFn): void {
+    // dialog 内 pop も AppEvent 化して、React が PopManager singleton を直接購読しない構成へ寄せる。
     popManager.subscribeDialogPop((message) => {
         emitEvent({ type: "dialog_pop_message", message });
     });
 }
 
 export function bindDialogManagerSubscriptions(params: DialogSubscriptionParams): void {
+    // DialogManager の個別変更通知を AppController snapshot 再通知へ変換する。
     params.dialogManager.subscribeSettingsChange(() => {
         params.emitSettingsRelatedSnapshots();
     });

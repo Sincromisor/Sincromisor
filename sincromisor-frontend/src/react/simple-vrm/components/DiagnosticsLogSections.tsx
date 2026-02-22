@@ -43,6 +43,7 @@ export function DiagnosticsLogSections({ rtcEvents, telopLogs, messageLogs }: Di
                     display: "grid",
                     gap: `${diagnosticsTuning.sectionGapPx}px`,
                     maxHeight: `${diagnosticsTuning.messageLogMaxHeightPx}px`,
+                    // 長いログでもパネル全体の高さを押し広げないよう、ここだけ内側スクロールにする。
                     overflow: "auto",
                 }}
             >
@@ -69,10 +70,12 @@ export function DiagnosticsLogSections({ rtcEvents, telopLogs, messageLogs }: Di
 }
 
 function SectionTitle({ title }: { title: string }) {
+    // 余白値は UI_TUNING から取得し、Control Panel 全体の spacing を一箇所で調整できるようにする。
     const styleTuning = UI_TUNING.controlPanel.styles;
     return <div style={{ opacity: 0.75, marginBottom: `${styleTuning.diagnosticsSectionTitleMarginBottomPx}px` }}>{title}</div>;
 }
 
 function EmptyLine({ text }: { text: string }) {
+    // 各セクションの空状態表示を統一する小部品。
     return <div style={{ opacity: 0.55 }}>{text}</div>;
 }

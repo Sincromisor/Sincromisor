@@ -45,6 +45,7 @@ type StatusCardProps = {
 };
 
 function StatusCard({ label, value }: StatusCardProps) {
+    // レイアウト/色は panelStyles 側に寄せ、ここではラベルと値の構造だけを定義する。
     return (
         <div style={panelStyles.miniCard}>
             <div style={{ opacity: 0.7 }}>{label}</div>

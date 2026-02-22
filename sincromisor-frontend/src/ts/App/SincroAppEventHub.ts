@@ -6,6 +6,7 @@ export class SincroAppEventHub {
     private readonly listeners = new Set<(event: SincroAppEvent) => void>();
 
     subscribe(listener: (event: SincroAppEvent) => void): () => void {
+        // Controller.subscribe() の戻り値としてそのまま使える unsubscribe を返す。
         this.listeners.add(listener);
         return () => {
             this.listeners.delete(listener);
@@ -13,6 +14,7 @@ export class SincroAppEventHub {
     }
 
     emit(event: SincroAppEvent): void {
+        // 登録順のまま配信し、UI 側の状態更新順序の予測可能性を保つ。
         for (const listener of this.listeners) {
             listener(event);
         }

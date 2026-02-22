@@ -6,6 +6,8 @@ import { MathUtils } from 'three/src/math/MathUtils.js';
     Humanoid bones: https://docs.unity3d.com/ja/2019.4/ScriptReference/HumanBodyBones.html
  */
 
+// 脚・足の既定ポーズを作る controller。
+// 片足側に小さな揺れを入れて、静止中でも完全固定に見えないようにしている。
 export class LegBoneController {
     private vrm: VRM;
 
@@ -13,6 +15,7 @@ export class LegBoneController {
         this.vrm = vrm;
     }
 
+    // 毎フレーム、脚の待機姿勢と足先向きを更新する。
     update(): void {
         const leftUpperFootNode: Object3D = this.getNode('leftUpperLeg');
         const rightUpperFootNode: Object3D = this.getNode('rightUpperLeg');

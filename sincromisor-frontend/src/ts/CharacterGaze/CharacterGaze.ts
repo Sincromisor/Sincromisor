@@ -41,6 +41,7 @@ export class CharacterGaze {
         this.leaveCallback = () => { };
     }
 
+    // ブラウザ権限/UI表示とは独立に、APIサポート有無だけを返す。
     hasGetUserMedia(): boolean {
         return !!navigator.mediaDevices?.getUserMedia;
     }
@@ -96,6 +97,8 @@ export class CharacterGaze {
         return false;
     }
 
+    // MediaPipe FaceDetector のロード。
+    // 実際のカメラ開始(initCamera)とは分離し、モデル読込完了待ちリトライを上位 controller で制御する。
     async initVision(): Promise<void> {
         // https://developers.google.com/mediapipe/api/solutions/js/tasks-vision.facedetector
         // https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.js
@@ -114,6 +117,7 @@ export class CharacterGaze {
             });
     }
 
+    // 上位の開始リトライ制御用。FaceDetector 生成完了のみを判定する。
     modelIsLoaded(): boolean {
         if (!this.faceDetector) {
             return false;
@@ -121,6 +125,8 @@ export class CharacterGaze {
         return true;
     }
 
+    // 既存の video#characterGazeVideo にトラックを接続し、検出ループを開始する。
+    // callback は Debug/React 向けの可視化と eyeTarget 表示更新に使われる。
     async initCamera(videoTrack: MediaStreamTrack, callback: (detection: Detection[]) => void): Promise<boolean> {
         if (!this.hasGetUserMedia) {
             console.error("This browser does not support getUserMedia.");
@@ -141,6 +147,8 @@ export class CharacterGaze {
         return true;
     }
 
+    // requestAnimationFrame ベースの顔検出ループ。
+    // 検出状態変化（arrive/leave）と keypoint 平滑化をここで管理する。
     private async predictCam(callback: (detection: Detection[]) => void): Promise<void> {
         if (!this.faceDetector) {
             return;
@@ -155,6 +163,7 @@ export class CharacterGaze {
                 this.lastDetectedTime = performance.now();
                 this.videoElement.dispatchEvent(new Event("detect"));
             }
+            // 直近検出時刻ベースで「在席/離席」を判定し、AutoMute 側イベントへ変換する。
             const newStatus = this.detecting();
             if (this.detected != newStatus) {
                 if (newStatus) {

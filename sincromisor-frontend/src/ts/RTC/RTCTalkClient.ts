@@ -3,6 +3,8 @@ import { ChatMessage, TelopChannelMessage } from "./RTCMessage";
 import { ChatMessageManager } from "../UI/ChatMessageManager";
 import { SincroRTCConfig } from "./SincroRTCConfigManager";
 
+// 1接続分の WebRTC セッションを管理するクライアント。
+// DataChannel(text/telop)・ICE/SDP診断表示・再接続制御までをまとめて担当する。
 export class RTCTalkClient {
     private readonly logger: DebugConsoleManager;
     private readonly peerConnection: RTCPeerConnection;
@@ -68,12 +70,15 @@ export class RTCTalkClient {
         this.peerConnection.addTrack(audioTrack);
     }
 
+    // PeerConnection のベース設定。ICE サーバーは API 設定取得後に constructor で上書きする。
     defaultConfig(): RTCConfiguration {
         return {
             /*"sdpSemantics": "unified-plan",*/
         }
     }
 
+    // 接続開始（または再接続開始）。
+    // start() は RTCTalkClient の再利用前提で内部状態をリセットしてから negotiate を実行する。
     start(forceIceRestart: boolean = false, preferredSessionId: string | null = null): Promise<void> {
         if (this.isNegotiating) {
             this.logger.addRtcEventLog("start skipped: negotiation already in progress");
@@ -131,6 +136,8 @@ export class RTCTalkClient {
         }, 1000);
     }
 
+    // ICE切断等の後にバックオフ付きで再接続を予約する。
+    // 直接 start() せずタイマーを挟むことで、連続失敗時の過負荷を避ける。
     reConnect(): void {
         const preferredSessionId = this.sessionId ?? this.lastStableSessionId;
         // 切断後に遅れて発火する onicecandidate を旧sessionへ送らないよう、
@@ -165,6 +172,7 @@ export class RTCTalkClient {
         forceIceRestart: boolean,
         preferredSessionId: string | null,
     ): Promise<void> {
+        // glare/中途半端な状態で再度 offer を投げると失敗しやすいため、stable 以外は再接続へ回す。
         if (peerConnection.signalingState !== "stable") {
             this.logger.addRtcEventLog(
                 `negotiate skipped: signaling state is not stable (${peerConnection.signalingState})`,
@@ -251,7 +259,8 @@ export class RTCTalkClient {
                 } else {
                     this.logger.addRtcEventLog(`offer created new session: sessionId=${answer.session_id}`);
                 }
-                // Offer応答前に貯まったcandidateを、session_id確定後に順次反映する。
+                // Offer応答前に貯まったcandidateを、session_id確定後に順次送信する。
+                // 応答受信前は session_id が未確定のため /candidate 送信できない。
                 return this.flushPendingIceCandidates()
                     .then(() => {
                         return peerConnection.setRemoteDescription({
@@ -264,6 +273,7 @@ export class RTCTalkClient {
                         this.logger.addRtcEventLog("negotiate succeeded: reconnect attempt reset");
                     });
             }).catch((e) => {
+                // 失敗時は診断ログ・UI通知を残したうえで再接続へ移行する。
                 this.sessionId = null;
                 this.pendingIceCandidates = [];
                 this.chatMessageManager.writeErrorMessage(`RTCサーバーへの接続に失敗しました...。\n${e}`, true);
@@ -294,6 +304,8 @@ export class RTCTalkClient {
         }, Promise.resolve());
     }
 
+    // Trickle ICE の candidate をサーバーへ送る。
+    // session_id 未確定時は一時キューに積み、Offer応答後に flush される。
     private sendIceCandidate(candidate: RTCIceCandidateInit | null): Promise<void> {
         // Firefox等で candidateオブジェクト自体は存在するが candidate文字列が空のケースがある。
         // これは実質 end-of-candidates なので null として統一する。

@@ -23,6 +23,8 @@ export class PopManager {
         };
     }
 
+    // 設定ダイアログ内の Pop 表示を React に切り替える際、既存DOM描画を止める。
+    // 通常画面用 pop は従来どおり DOM 描画を継続する。
     setDialogPopDomRenderingEnabled(enabled: boolean): void {
         this.dialogPopDomRenderingEnabled = enabled;
         if (!enabled) {
@@ -53,6 +55,7 @@ export class PopManager {
     }
 
     /* モーダル設定ダイアログでの通常メッセージ */
+    // React移行中は DOM描画有無に関係なくイベント通知し、DialogPopMessages が再描画する。
     writeDialogPopMessage(message: string): void {
         this.writeMessage(message, false, this.dialogPopBox);
         this.emitDialogPop(message, false);
@@ -101,6 +104,7 @@ export class PopManager {
         }, this.AUTO_REMOVE_TIME);
     }
 
+    // React側のアニメーション制御用に ID と auto-remove 時間を付与して通知する。
     private emitDialogPop(message: string, error: boolean): void {
         const event: DialogPopEvent = {
             id: ++this.dialogPopMessageID,

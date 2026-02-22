@@ -60,6 +60,7 @@ export class LearnedVadWorkerClient {
     }
 
     // 推論Workerを遅延生成する。未使用時に余分なCPU/メモリを使わないための初期化ポイント。
+    // UserMediaManager からは必要時にだけ呼ばれ、通常モードでは Worker を起動しない。
     ensureWorker(): void {
         if (this.worker) {
             return;
@@ -74,6 +75,7 @@ export class LearnedVadWorkerClient {
                 return;
             }
             if (data.type === "status") {
+                // Worker起動/モデル読込/フォールバック状態を UI 表示へそのまま伝える。
                 if (data.status) {
                     this.status = data.status;
                 }
@@ -83,6 +85,7 @@ export class LearnedVadWorkerClient {
             if (data.type !== "vad-prob") {
                 return;
             }
+            // 推論結果は Worker 側で1フレーム単位に更新されるため、ここでは UI 表示用に正規化して保持する。
             const p = Number(data.probability);
             this.probability = Number.isFinite(p) ? Math.max(0, Math.min(1, p)) : null;
             this.isSpeech = !!data.isSpeech;
@@ -166,6 +169,8 @@ export class LearnedVadWorkerClient {
         if (!force && !nodeChanged && this.streamEnabled === shouldEnable) {
             return;
         }
+        // AudioWorklet 側に「学習VAD向けPCM転送のON/OFF」だけを通知し、
+        // 実際の推論ロジックや閾値状態は Worker 側へ閉じ込める。
         vadNode.port.postMessage({
             type: "learned-vad-stream",
             enabled: shouldEnable,
@@ -217,6 +222,7 @@ export class LearnedVadWorkerClient {
     }
 
     // UI層へ現在状態を通知する単一経路。
+    // 状態更新経路を一箇所にまとめ、DebugConsole/React 表示の取りこぼしを防ぐ。
     private publishState(message?: string): void {
         this.onStateChanged({
             enabled: this.enabled,
@@ -230,6 +236,7 @@ export class LearnedVadWorkerClient {
     }
 
     // Worker側推論パラメータを一括送信する。
+    // しきい値・hangover・間引き設定は Worker 側で最終判定に使われる。
     private postTuningConfig(): void {
         this.worker?.postMessage({
             type: "set-params",

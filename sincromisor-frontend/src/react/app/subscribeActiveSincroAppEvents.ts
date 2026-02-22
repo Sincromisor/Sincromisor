@@ -3,7 +3,9 @@ import { subscribeActiveSincroAppController } from "./subscribeActiveSincroAppCo
 import type { SincroAppController } from "../../ts/App/SincroAppController";
 
 type ActiveEventOptions = {
+    // active controller 差し替え時の local state 同期用。
     onControllerChange?: (controller: SincroAppController | null) => void;
+    // controller.subscribe() 前に bridge 設定（DOM 描画停止など）を行うためのフック。
     onBeforeSubscribe?: (controller: SincroAppController) => void;
     onEvent: (event: SincroAppEvent, controller: SincroAppController) => void;
 };

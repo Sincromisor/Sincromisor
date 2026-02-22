@@ -26,6 +26,7 @@ export type DialogSettingsUiHints = {
 // DialogManager から条件分岐を切り出し、state 更新と通知処理を薄く保つ。
 export class DialogSettingsPolicy {
     buildUiState(stateStore: DialogStateStore): DialogSettingsUiState {
+        // React UI は disabled の理由を hints で出すが、まず「押せるかどうか」はこの snapshot を正本にする。
         return {
             titleTextDisabled: stateStore.isDisabled("titleText"),
             talkModeDisabled: stateStore.isDisabled("talkMode"),
@@ -44,6 +45,7 @@ export class DialogSettingsPolicy {
     }
 
     buildUiHints(stateStore: DialogStateStore): DialogSettingsUiHints {
+        // hints は disabled 理由の補足表示用。操作可否そのものは buildUiState の結果に従う。
         const characterDisabled = stateStore.isDisabled("enableCharacter");
         const gazeDisabled = stateStore.isDisabled("enableCharacterGaze");
         const autoMuteDisabled = stateStore.isDisabled("enableAutoMute");
@@ -90,6 +92,7 @@ export class DialogSettingsPolicy {
     }
 
     applyCharacterAvailability(stateStore: DialogStateStore, available: boolean): void {
+        // 利用不可になった時は checked 状態も落として、UI と内部状態の矛盾を防ぐ。
         stateStore.setDisabled("enableCharacter", !available);
         if (!available) {
             stateStore.set("enableCharacter", false);
@@ -104,6 +107,7 @@ export class DialogSettingsPolicy {
     }
 
     applyAutoMuteAvailability(stateStore: DialogStateStore): void {
+        // AutoMute は Gaze に依存するため、Gaze 無効時は自動的に OFF に戻す。
         const enabled = stateStore.get("enableCharacterGaze");
         stateStore.setDisabled("enableAutoMute", !enabled);
         if (!enabled) {

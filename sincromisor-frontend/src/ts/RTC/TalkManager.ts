@@ -17,6 +17,8 @@ export type TelopTextSegment = {
     text: string;
 };
 
+// text_ch / telop_ch の受信結果を、既存DOM描画と React購読の両方へ橋渡しする管理クラス。
+// ChatMessageManager と同様、移行期間中は DOM とイベントの二重経路を持つ。
 export class TalkManager {
     private static instance: TalkManager;
     private readonly chatMessageManager: ChatMessageManager;
@@ -38,6 +40,7 @@ export class TalkManager {
         this.chatMessageManager = ChatMessageManager.getManager();
     }
 
+    // React/AppController 向けの購読口。text/telop を分けて通知する。
     subscribe(listener: (event: TalkManagerEvent) => void): () => void {
         this.listeners.add(listener);
         return () => {
@@ -45,6 +48,8 @@ export class TalkManager {
         };
     }
 
+    // Reactテロップ描画に切り替える際、既存 footer DOM の更新を止める。
+    // 併存期間の二重描画防止用フラグ。
     setTelopDomRenderingEnabled(enabled: boolean): void {
         this.telopDomRenderingEnabled = enabled;
         if (!enabled) {
@@ -55,16 +60,20 @@ export class TalkManager {
         }
     }
 
+    // React初期描画用の簡易スナップショット（件数制限あり）。
+    // DOM版の横幅切り詰めとは異なり、移行期間中は speech 単位の履歴として保持する。
     getTelopTextSegmentsSnapshot(): TelopTextSegment[] {
         return [...this.telopTextSegments];
     }
 
+    // text_ch は既存 chat manager へ委譲しつつ、React購読向けイベントも発火する。
     addTextChannelMessage(msg: ChatMessage): void {
         console.dir(msg);
         this.chatMessageManager.writeMessage(msg);
         this.emitEvent({ type: "text_channel_message", message: msg });
     }
 
+    // telop_ch の 1 mora 分を内部状態へ反映し、必要に応じて DOM/React 両方へ通知する。
     addTelopChannelMessage(msg: TelopChannelMessage): void {
         this.telopChannelMessage.push(msg);
         if (msg.new_text) {
@@ -92,6 +101,8 @@ export class TalkManager {
         return this.currentTelopChannelMessage;
     }
 
+    // 既存 footer DOM 向けの文字単位描画。
+    // React移行後も fallback として残し、telopDomRenderingEnabled=false で停止できる。
     private addTelopChar(speech_id: number, char: string): void {
         this.upsertTelopTextSegment(speech_id, char || " ");
         if (!this.telopDomRenderingEnabled) {
@@ -136,6 +147,7 @@ export class TalkManager {
         }
     }
 
+    // React描画向けスナップショットを speech 単位で更新する。
     private upsertTelopTextSegment(speechId: number, char: string): void {
         const index = this.telopTextSegments.findIndex((segment) => segment.speechId === speechId);
         if (index >= 0) {
@@ -152,6 +164,7 @@ export class TalkManager {
         this.telopTextSegments = this.telopTextSegments.filter((segment) => segment.text.length > 0);
     }
 
+    // AppController が購読し、Control Panel / Telop React UI へ再配信するための通知。
     private emitEvent(event: TalkManagerEvent): void {
         for (const listener of this.listeners) {
             listener(event);

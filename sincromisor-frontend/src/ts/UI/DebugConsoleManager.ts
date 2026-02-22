@@ -51,6 +51,8 @@ export type DebugConsoleManagerEvent =
     | { type: "ice_connection_state"; value: string }
     | { type: "signaling_state"; value: string };
 
+// 既存デバッグUIのDOM更新と、React Control Panel向けの診断イベント配信を兼ねる管理クラス。
+// 移行期間中は DebugConsole 自体を維持しつつ、React 側へ状態を橋渡しする役割を持つ。
 export class DebugConsoleManager {
     private static instance: DebugConsoleManager;
     private static readonly EVENT_LOG_LINES = 80;
@@ -272,6 +274,7 @@ export class DebugConsoleManager {
         this.updateLearnedVadState({ status: "idle", probability: null });
     }
 
+    // React/AppController が購読するイベント口。各 update* 系メソッドの末尾で通知される。
     subscribe(listener: (event: DebugConsoleManagerEvent) => void): () => void {
         this.listeners.add(listener);
         return () => {
@@ -307,7 +310,8 @@ export class DebugConsoleManager {
         this.closeDebugMenu();
     }
 
-    // React設定パネルを表示状態にする。
+    // React設定パネル(現在の Control Panel)を Debug Menu から開く。
+    // ページごとの React UI は共通 root にマウントされるため、ここではコンテナ表示だけ切り替える。
     showReactSettingsPanel(): void {
         if (!this.reactSettingsPanelContainer) {
             return;
@@ -924,6 +928,7 @@ export class DebugConsoleManager {
     }
 
     // AudioWorklet側VADの判定状態を表示する。
+    // React側はこのイベントを受けて Control Panel の VAD 表示へ反映する。
     updateLocalVadState(isSpeech: boolean): void {
         if (!this.localAudioVadValue) {
             this.emitEvent({ type: "local_vad_state", isSpeech });
@@ -1207,6 +1212,7 @@ export class DebugConsoleManager {
     }
 
     // RTCイベントログにタイムスタンプ付きで追記する。
+    // React側には整形前メッセージを渡し、表示件数や見せ方を UI 側で制御できるようにする。
     addRtcEventLog(msg: string): void {
         const now = new Date();
         const ts = now.toISOString().split("T")[1]?.replace("Z", "") || now.toISOString();

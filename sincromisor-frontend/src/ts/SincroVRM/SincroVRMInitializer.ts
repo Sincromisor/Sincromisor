@@ -2,7 +2,8 @@ import { SincroAppController } from "../App/SincroAppController";
 import { UserMediaManager } from "../RTC/UserMediaManager";
 import { VRMScene } from './VRMScene/VRMScene';
 
-
+// VRM1.0 系ページ（simple-vrm など）の初期化入口。
+// 起動前 dialog / chat / debug / RTC 停止配線は SincroAppController 経由に寄せ、ページ差分は scene 初期化に閉じる。
 export class SincroVRMInitializer {
     protected readonly charCanvas: HTMLDivElement;
     protected readonly controlTarget: HTMLElement;
@@ -15,6 +16,7 @@ export class SincroVRMInitializer {
         this.charCanvas = this.getCharCanvasRoot();
         this.controlTarget = document.querySelector('div#sincroBody')!;
         this.appController = new SincroAppController();
+        // startup toggles のページごとの有効性を先に知らせ、React UI の「未対応項目表示」に反映する。
         // simple-vrm 現行実装では startup toggles の Talk/Inspector/VR は scene初期化へ未接続。
         this.appController.setStartupSettingsCapabilities({
             enableTalk: false,
@@ -23,9 +25,11 @@ export class SincroVRMInitializer {
         });
         this.appController.setStartHooks({
             beforeStart: () => {
+                // 既存 UX を崩さないよう、挨拶メッセージは初回 start 前に注入する。
                 this.writeWelcomeMessagesOnce();
             },
             afterStart: () => {
+                // scene 起動や dialog close は RTC 開始後の副作用として hook 側へ寄せる。
                 this.startUiSideEffectsOnce();
             },
         });
@@ -52,12 +56,14 @@ export class SincroVRMInitializer {
     }
 
     private getUserMediaAvailabilityCheck(): void {
+        // ブラウザ API 自体が無い環境では、起動前 dialog の開始ボタン状態へ即反映する。
         if (!UserMediaManager.hasGetUserMedia()) {
             this.appController.dialog.updateUserMediaAvailabilityStatus(false);
         }
     }
 
     private loadCachedSystemIcon(): void {
+        // VRMロード完了前でもチャット system icon を出せるよう、キャッシュ済みサムネイルを先に復元する。
         this.appController.dialog.loadVrmThumbnailBlob().then((blob: Blob | null) => {
             if (!blob) {
                 return;
@@ -70,6 +76,7 @@ export class SincroVRMInitializer {
     }
 
     private start(): void {
+        // start の順序制御（lifecycle / hooks / RTC 起動）は AppController に集約。
         this.appController.start();
     }
 
@@ -86,6 +93,7 @@ export class SincroVRMInitializer {
         if (this.appUiStarted) {
             return;
         }
+        // Character 無効時は scene を起動せず、RTC/UI だけ動かせる構成にしている。
         if (this.appController.dialog.isCharacterEnabled()) {
             this.initializeSincroScene();
         }
@@ -95,6 +103,7 @@ export class SincroVRMInitializer {
     }
 
     protected initializeSincroScene(): VRMScene {
+        // scene 初期値（VRM URL）は dialog bridge 経由で取得し、DialogManager 実装に直接依存しない。
         const vrmScene: VRMScene = new VRMScene(this.charCanvas, this.controlTarget, this.appController.dialog.getSelectedVrmUrl(), false, (thumbnailImage) => {
             this.updateSystemIconFromThumbnail(thumbnailImage);
         });
@@ -143,6 +152,7 @@ export class SincroVRMInitializer {
                 this.applySystemIcon(thumbnailImage.src);
                 return;
             }
+            // 次回起動で即復元できるよう、チャット用サムネイルを dialog 側キャッシュへ保存する。
             this.appController.dialog.saveVrmThumbnailBlob(blob).catch((error) => {
                 console.error('Failed to cache VRM thumbnail.', error);
             });
@@ -159,7 +169,7 @@ export class SincroVRMInitializer {
         }
 
         // ヘッダー左上は透過背景前提の見た目崩れがあるため更新対象外にし、
-        // チャット内systemアイコンだけを更新する。
+        // チャット内 system アイコンだけを更新する。
         this.appController.chat.setSystemIcon(iconURL);
     }
 

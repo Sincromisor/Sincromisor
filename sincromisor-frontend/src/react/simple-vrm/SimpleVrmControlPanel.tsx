@@ -17,6 +17,8 @@ type SimpleVrmControlPanelProps = {
     variant?: "default" | "vrm360" | "looking-glass-vrm";
 };
 
+// simple-vrm / vrm360 / looking-glass-vrm で共通利用する設定/診断パネル。
+// ページ差分は `variant` で吸収し、購読ロジックは useSimpleVrmPanelState に集約している。
 export function SimpleVrmControlPanel({
     title = "設定パネル",
     variant = "default",
@@ -46,6 +48,7 @@ export function SimpleVrmControlPanel({
         changeTalkMode,
     } = useSimpleVrmPanelState();
 
+    // connection_state は AppController 側で導出済みだが、detail がある場合だけ補助表示を足す。
     const effectiveConnectionState = connectionState.detail
         ? `${connectionState.value} (${connectionState.detail})`
         : connectionState.value;
@@ -57,6 +60,8 @@ export function SimpleVrmControlPanel({
     const canStopLookingGlass = lookingGlass.state === "active" || lookingGlass.state === "starting";
 
     const requestLookingGlassStart = (): void => {
+        // LG の実行/停止は Three.js 側 controller へ custom event で橋渡しする。
+        // Control Panel は実行要求だけを出し、WebXR session の詳細を直接持たない。
         window.dispatchEvent(new CustomEvent("sincro:looking-glass-start-request"));
     };
 
@@ -90,6 +95,7 @@ export function SimpleVrmControlPanel({
                 </div>
             </div>
             {isLookingGlassFocused ? (
+                // LG ページでは start/stop 導線を Control Panel に寄せる（Debug Console 依存を避ける）。
                 <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
                     <div
                         style={{
@@ -167,6 +173,7 @@ export function SimpleVrmControlPanel({
                 />
             ) : null}
             {isLookingGlassFocused ? (
+                // LG向けページでは Looking Glass 設定を最前面に置き、実機調整の導線を優先する。
                 <LookingGlassSettingsSection
                     settings={settings}
                     onApplySettings={applySettings}
@@ -208,6 +215,7 @@ export function SimpleVrmControlPanel({
             />
 
             <details style={{ marginTop: `${controlPanelTuning.sectionSpacingPx}px` }}>
+                {/* 通常利用の導線を邪魔しないよう、診断情報は折りたたみへ寄せる。 */}
                 <summary style={{ cursor: "pointer", opacity: 0.85 }}>診断情報</summary>
                 <div style={{ marginTop: `${controlPanelTuning.detailsContentTopMarginPx}px` }}>
                     <DiagnosticsStatusCards

@@ -7,6 +7,9 @@ import { SincroRtcSessionController } from "./App/SincroRtcSessionController";
 import { SincroAudioInputController } from "./App/SincroAudioInputController";
 import { SincroCharacterGazeController } from "./App/SincroCharacterGazeController";
 
+// 旧来のアプリ本体 controller。
+// 以前は巨大 constructor に UI/RTC/Media/Gaze の配線を集中させていたが、
+// React移行に合わせて各責務を App/*Controller へ分離し、ここは起動順序の統括に寄せている。
 export class SincroController {
     private readonly dialogManager: DialogManager;
     private readonly debugConsoleManager: DebugConsoleManager;
@@ -40,7 +43,8 @@ export class SincroController {
         );
     }
 
-    // アプリ制御の開始点。UserMedia取得開始を明示呼び出しにしてUI層との境界を固定する。
+    // アプリ制御の開始点。
+    // UserMedia -> (audio)RTC / (video)CharacterGaze の分岐だけを担い、個別処理は各 controller へ委譲する。
     start(): void {
         this.audioInputController.start((audioTrack: MediaStreamTrack) => {
             this.startRTC(audioTrack);

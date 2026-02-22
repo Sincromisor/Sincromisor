@@ -13,6 +13,8 @@ export type DialogSettingKey =
     | "enableInspector"
     | "enableVR";
 
+// DialogStateStore 内で保持する設定値の型マップ。
+// DialogManager の generic getter/setter から key-safe に扱うために定義している。
 type DialogSettingValueMap = {
     talkMode: string;
     titleText: string;
@@ -45,6 +47,7 @@ type DialogSettingDisabledMap = {
     enableVR: boolean;
 };
 
+// React dialog 側で直接使う UI 状態（表示/開始ボタン）を store 側でも保持する。
 export type DialogUiStateValue = {
     isOpen: boolean;
     startButtonDisabled: boolean;
@@ -105,6 +108,7 @@ export class DialogStateStore {
     }
 
     set<K extends DialogSettingKey>(key: K, value: DialogSettingValueMap[K]): void {
+        // store は純粋な状態保持に徹し、通知は DialogManager/EventHub 側で行う。
         this.values[key] = value;
     }
 
@@ -117,6 +121,7 @@ export class DialogStateStore {
     }
 
     getDialogUiState(): DialogUiStateValue {
+        // 外部からの破壊的変更を避けるため snapshot を返す。
         return { ...this.dialogUiState };
     }
 

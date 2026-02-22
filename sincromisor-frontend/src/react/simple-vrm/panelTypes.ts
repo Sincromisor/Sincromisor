@@ -11,6 +11,8 @@ import type {
     SincroAppSettingsUiState,
 } from "../app/appSettingsTypes";
 
+// Control Panel 表示専用の view-model 型。
+// AppController event/snapshot を UI 表示都合（ログ、診断カード、LG状態表示）に整形して保持する。
 export type { ApplySettingsFn };
 export type { SincroAppSettingsSnapshot };
 
@@ -60,6 +62,7 @@ export type PanelLookingGlassState = {
 export type PanelLookingGlassConfigStatus = SincroAppLookingGlassConfigStatus;
 
 export type SimpleVrmPanelViewState = {
+    // 表示コンポーネントへまとめて渡しやすいよう、頻出 state を集約した読み取り用型。
     lifecycleState: SincroAppLifecycleState;
     connectionState: PanelConnectionState;
     settings: SincroAppSettingsSnapshot;

@@ -12,6 +12,7 @@ export class SincroAppActiveControllerRegistry {
 
     subscribe(listener: (controller: SincroAppController | null) => void): () => void {
         this.listeners.add(listener);
+        // 現在値を即時通知して、React 側が mount 直後に active controller を把握できるようにする。
         listener(this.current);
         return () => {
             this.listeners.delete(listener);
@@ -20,6 +21,7 @@ export class SincroAppActiveControllerRegistry {
 
     setCurrent(controller: SincroAppController | null): void {
         this.current = controller;
+        // MPA ページ切替時の差し替えを想定し、null/新 controller の両方を通知する。
         for (const listener of this.listeners) {
             listener(controller);
         }

@@ -23,6 +23,8 @@ export type AudioFilterConfig = {
     vadThreshold: VadThresholdConfig;
 };
 
+// マイク/カメラ取得と、送信用音声トラックの前処理（HPF/LPF/VAD/学習VAD連携）を担当する。
+// React移行後も UI は controller 経由でこのクラスを操作し、音声処理の実装詳細はここに閉じ込める。
 export class UserMediaManager {
     // Worklet更新時にキャッシュ残りで旧実装を掴まないよう、バージョン付きURLで読む。
     private static readonly VAD_WORKLET_MODULE_URL = "/worklets/vad-processor.js?v=20260222a";
@@ -101,6 +103,8 @@ export class UserMediaManager {
 
     constructor() {
         this.config = this.defaultConfig();
+        // 学習VAD worker 状態は DebugConsole / React Control Panel に表示するため、
+        // コールバック1本に集約して上位へ通知する。
         this.learnedVadClient = new LearnedVadWorkerClient((report: LearnedVadStateReport) => {
             this.onLearnedVadStateCallback(report);
         });
@@ -159,6 +163,7 @@ export class UserMediaManager {
     }
 
     // VADの閾値を更新し、処理中であればAudioWorkletへ即時反映する。
+    // manualモードの正本は manualVadThresholdConfig とし、実効値は applyVadThresholds 経由で同期する。
     setVadThresholds(config: Partial<VadThresholdConfig>): void {
         if (config.rmsThreshold != null && Number.isFinite(config.rmsThreshold)) {
             this.manualVadThresholdConfig.rmsThreshold = Math.max(0.001, Math.min(0.2, config.rmsThreshold));
@@ -171,7 +176,8 @@ export class UserMediaManager {
         }
     }
 
-    // VAD閾値の手動/自動モードを切り替える。
+    // VAD閾値の手動/自動/学習モードを切り替える。
+    // learned モード時のみ Worker 推論を有効化し、通常時はCPU負荷を抑える。
     setVadThresholdMode(mode: VadThresholdMode): void {
         this.vadThresholdMode = mode;
         if (mode === "manual") {
@@ -279,6 +285,7 @@ export class UserMediaManager {
     }
 
     // マイク/カメラを取得し、音声は必要に応じてVAD/フィルタ付きトラックへ差し替えて返す。
+    // 呼び出し側（SincroAudioInputController）はここから返る track をそのまま RTC に渡す。
     getUserMedia(audioTrackCallback: (audioTrack: MediaStreamTrack) => void,
         videoTrackCallback: (videoTrack: MediaStreamTrack) => void,
         errCallback: (err: any) => void): void {
@@ -305,6 +312,7 @@ export class UserMediaManager {
     }
 
     // Rawマイク入力を WebAudio チェーンで加工し、送信用の音声トラックを生成する。
+    // WorkletVAD / learned VAD / ゲート制御はこのチェーンに集約し、上位層に漏らさない。
     private async buildProcessedAudioTrack(rawTrack: MediaStreamTrack): Promise<MediaStreamTrack> {
         this.disposeAudioProcessing();
         const AudioContextCtor = window.AudioContext;
@@ -335,6 +343,8 @@ export class UserMediaManager {
         const gateGain = context.createGain();
         this.outputGainNode = gateGain;
         gateGain.gain.value = this.vadGateEnabled ? 0 : 1;
+        // AudioWorklet -> main thread の VADメトリクス受信点。
+        // DebugConsole表示更新と learned VAD へのフレーム転送制御の両方をここで行う。
         vadNode.port.onmessage = (event: MessageEvent<any>) => {
             const data = event.data;
             if (!data) {
