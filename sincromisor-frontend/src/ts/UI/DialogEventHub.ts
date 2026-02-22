@@ -16,6 +16,7 @@ export class DialogEventHub {
 
     subscribeVrmUiState(listener: (state: DialogVrmUiStateValue) => void, initialState: DialogVrmUiStateValue): () => void {
         this.vrmUiStateListeners.add(listener);
+        // subscribe 直後に現在値を送って、React 側の初回描画で空表示を避ける。
         listener(initialState);
         return () => {
             this.vrmUiStateListeners.delete(listener);
@@ -55,6 +56,7 @@ export class DialogEventHub {
     }
 
     emitCurrentDialogUiState(getState: () => DialogUiStateValue): void {
+        // DialogManager 側で snapshot を毎回構築するコードを散らさないための helper。
         this.emitDialogUiStateChanged(getState());
     }
 }

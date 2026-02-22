@@ -24,6 +24,7 @@ export class DialogVrmWorkflowService {
     constructor(private readonly fileService: DialogVrmFileService) { }
 
     async applySelectedVrmFile(file: File): Promise<DialogVrmSelectResult> {
+        // UI通知文言はここで決め、DialogManager 側は結果に応じた state 更新/通知へ専念する。
         if (!this.fileService.isVrmFile(file)) {
             return {
                 ok: false,
@@ -49,6 +50,7 @@ export class DialogVrmWorkflowService {
     }
 
     async loadInitialVrmSelection(): Promise<DialogVrmInitialLoadResult> {
+        // 起動時は「前回選択あり / 既定モデル」の2択だけ返し、DialogManager が表示と scene 初期値へ反映する。
         const blob = await this.fileService.loadVrmFileBlob();
         if (!blob) {
             return {

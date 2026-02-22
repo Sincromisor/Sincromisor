@@ -28,6 +28,8 @@ type AudioFrameMessage = {
 
 type WorkerInputMessage = InitMessage | SetEnabledMessage | SetParamsMessage | AudioFrameMessage;
 
+// Silero VAD 推論専用 Worker。
+// メインスレッド/AudioWorklet から受けた PCM を ONNX Runtime で推論し、speech probability を返す。
 let enabled = false;
 let initialized = false;
 let available = false;
@@ -141,6 +143,7 @@ async function initialize(config?: InitMessage): Promise<void> {
     initialized = true;
     const modelUrl = config?.modelUrl || DEFAULT_MODEL_URL;
     try {
+        // Worker 内で ONNX Runtime を初期化し、メインスレッドの描画負荷と分離する。
         session = await ort.InferenceSession.create(modelUrl, {
             executionProviders: ["wasm"],
             graphOptimizationLevel: "all",
@@ -163,6 +166,7 @@ async function inferProbability(pcm: Float32Array, sampleRate: number): Promise<
     const frame = normalizeWindow(pcm16k, 512);
     const feeds: Record<string, ort.Tensor> = {};
 
+    // モデル差分に耐えるため、input/output 名を厳密固定せずパターンで解決する。
     for (const inputName of session.inputNames) {
         const lower = `${inputName}`.toLowerCase();
         if (lower.includes("input")) {
@@ -318,6 +322,7 @@ self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
         return;
     }
 
+    // 推論が詰まってもキューを増やさず最新フレームだけ保持し、描画・音声処理への波及を抑える。
     pendingFrame = { pcm, sampleRate };
     if (busy) {
         // 推論キューが増え続けると描画負荷へ波及するため、常に最新フレームのみ保持する。

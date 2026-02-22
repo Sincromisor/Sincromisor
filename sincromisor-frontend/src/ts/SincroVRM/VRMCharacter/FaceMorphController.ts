@@ -4,6 +4,8 @@ import { TalkManager, CurrentMora } from "../../RTC/TalkManager";
 
 type MouseVowel = "A" | "I" | "U" | "E" | "O" | "N";
 
+// テロップ/音素情報(TalkManager.currentMora)をもとに口形状とまばたきを制御する controller。
+// 音声波形解析ではなく telop_ch の vowel 情報を使うため、RTC同期に追従しやすい。
 export class FaceMorphController {
     private readonly clock: Clock;
     private readonly expressionManager: VRMExpressionManager;
@@ -28,6 +30,7 @@ export class FaceMorphController {
         }, 1000 * (Math.random() * 3 + 1));
     }
 
+    // TalkManager をポーリングし、mora 単位で新しい口形状が来た時だけ expression を更新する。
     private setTalkManager() {
         const cMora: CurrentMora | null = this.talkManager.currentMora();
         if (cMora && cMora.moraID != this.currentMoraID) {
@@ -42,6 +45,7 @@ export class FaceMorphController {
     }
 
     /* 母音とその長さに合わせた口の動きを設定する */
+    // 母音切替前に口形状を一旦リセットして、前の口形状の残りを避ける。
     private setMouseVowel(vowel: MouseVowel, msec: number) {
         this.expressionManager.setValue("aa", 0.0);
         this.expressionManager.setValue("ih", 0.0);
@@ -69,7 +73,7 @@ export class FaceMorphController {
         }
     }
 
-    /* 
+    /*
       顔のシェイプキーを、指定した時間の間だけ適用する。
       滑らかにアニメーションするよう、指定した時間の間に徐々に変化させる。
       第1引数で対象となるExpressionの名前、第2引数でそのExpressionを1.0にする時間(ms)を指定する。

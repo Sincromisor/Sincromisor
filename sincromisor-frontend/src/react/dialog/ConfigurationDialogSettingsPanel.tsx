@@ -28,6 +28,7 @@ export function ConfigurationDialogSettingsPanel() {
 
     return (
         <div className="configurationDialogReactSettingsPanel" aria-label="起動前設定">
+            {/* 起動前設定は閉じる導線を制限しているため、ヘッダーはタイトルのみ。 */}
             <div className="configurationDialogReactSettingsPanel__header">
                 <div className="configurationDialogReactSettingsPanel__title">起動前設定</div>
             </div>
@@ -51,6 +52,7 @@ export function ConfigurationDialogSettingsPanel() {
             <VrmModelSection onOpenFilePicker={openVrmFilePicker} />
             <DialogVrmDropStatusCard uiState={dialogVrmUiState} />
             <div className="configurationDialogReactSettingsPanel__actions">
+                {/* 利用不可時は説明カードではなく disabled ボタンで表現する。 */}
                 <button
                     type="button"
                     className="configurationDialogReactSettingsPanel__startButton"

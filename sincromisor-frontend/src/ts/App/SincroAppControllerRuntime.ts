@@ -19,6 +19,7 @@ import type {
     SincroAppStateBridge,
 } from "./SincroAppBridges";
 
+// SincroAppController constructor の依存組み立てを helper 側へ逃がすための bundle 型。
 export type SincroAppManagerBundle = {
     coreController: SincroController;
     chatMessageManager: ChatMessageManager;
@@ -76,6 +77,8 @@ export function createSincroAppRuntimeBundle(params: {
     getDialogVrmUiState: () => import("./SincroAppTypes").SincroAppDialogVrmUiState;
     getStartupSettingsStatus: () => import("./SincroAppTypes").SincroAppStartupSettingsStatus;
 }): SincroAppControllerRuntimeBundle {
+    // manager 取得 -> bridge 生成 -> state bridge 生成を1か所にまとめる。
+    // Controller 本体では field 代入と bind 順序だけを読めるようにする。
     const managers = createSincroAppManagerBundle();
     const bridges = createSincroAppBridgeBundle(managers, { stopRTC: params.stopRTC });
     const stateBridge = createSincroAppStateBridge({

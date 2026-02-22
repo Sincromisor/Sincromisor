@@ -8,6 +8,7 @@ export class DialogVrmFileService {
     private static readonly vrmThumbnailCacheKey: string = "sincroVrmThumbnail";
 
     isVrmFile(file: File): boolean {
+        // 拡張子判定のみ。内容検証は読み込み側/VRMロード側で扱う。
         return file.name.endsWith(".vrm");
     }
 
@@ -22,6 +23,7 @@ export class DialogVrmFileService {
         if (!response) {
             return null;
         }
+        // 呼び出し側で ObjectURL 化して scene に渡す。
         return response.blob();
     }
 

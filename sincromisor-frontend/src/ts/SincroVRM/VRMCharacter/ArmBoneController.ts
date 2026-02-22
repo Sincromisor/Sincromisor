@@ -6,6 +6,8 @@ import { MathUtils } from 'three/src/math/MathUtils.js';
     Humanoid bones: https://docs.unity3d.com/ja/2019.4/ScriptReference/HumanBodyBones.html
  */
 
+// 腕・手・親指の既定ポーズを作る controller。
+// 現状は待機姿勢の固定値 + 微小な揺れで、自然に見える静止ポーズを構成している。
 export class ArmBoneController {
     private vrm: VRM;
 
@@ -13,6 +15,7 @@ export class ArmBoneController {
         this.vrm = vrm;
     }
 
+    // 毎フレーム、腕の待機ポーズと微小揺れを適用する。
     update(): void {
         const leftUpperArmNode: Object3D = this.getNode('leftUpperArm');
         const rightUpperArmNode: Object3D = this.getNode('rightUpperArm');
@@ -37,6 +40,7 @@ export class ArmBoneController {
         this.updateRightThumb(this.getNode('rightThumbProximal'));
     }
 
+    // 手指は末端まで再帰的に回転を入れて、握り込み気味の形を作る。
     private updateLeftHand(baseBone: Object3D): void {
         baseBone.rotation.set(0, 0, -0.2);
         baseBone.children.forEach((childBone: Object3D) => {

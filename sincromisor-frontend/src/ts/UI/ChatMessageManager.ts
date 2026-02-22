@@ -14,6 +14,8 @@ export type ChatMessageManagerEvent = {
     systemIconUrl?: string;
 };
 
+// チャット欄の既存DOM描画を維持しつつ、React側へ同じ内容をイベント配信する移行期の管理クラス。
+// 既存コードは write* API を変更せず利用でき、React UI は subscribe + snapshot API で同期する。
 export class ChatMessageManager {
     private static instance: ChatMessageManager;
     private readonly chatBox: HTMLDivElement;
@@ -52,6 +54,7 @@ export class ChatMessageManager {
         this.chatBox = chatBoxID;
     }
 
+    // React移行で追加した購読口。DOM描画の有無に関係なくイベントを受け取れる。
     subscribe(listener: (event: ChatMessageManagerEvent) => void): () => void {
         this.listeners.add(listener);
         return () => {
@@ -68,6 +71,7 @@ export class ChatMessageManager {
     }
 
     // React 側の初期描画用に、現時点のチャット履歴（新しい順）を返す。
+    // renderModeを使わない利用箇所向けの互換APIとして残している。
     getMessagesSnapshot(): ChatMessage[] {
         return this.messages.map((record) => record.message);
     }
@@ -243,6 +247,7 @@ export class ChatMessageManager {
         }
     }
 
+    // React描画向けの履歴正本。message_id ベースで更新/新規挿入を行う。
     private upsertMessageSnapshot(message: ChatMessage, isHTML: boolean): void {
         const renderMode: ChatMessageRenderMode = isHTML ? "trusted_html" : "text";
         const existingIndex = this.messages.findIndex((m) => m.message.message_id === message.message_id);
@@ -253,6 +258,7 @@ export class ChatMessageManager {
         this.messages = [{ message, renderMode }, ...this.messages].slice(0, this.maxMessageCount);
     }
 
+    // DOM描画を止めていても React UI が再構築できるよう、renderMode を含めて通知する。
     private emitMessage(message: ChatMessage, isHTML: boolean): void {
         const renderMode: ChatMessageRenderMode = isHTML ? "trusted_html" : "text";
         const event: ChatMessageManagerEvent = { type: "message", message, viewRecord: { message, renderMode } };
@@ -261,6 +267,7 @@ export class ChatMessageManager {
         }
     }
 
+    // systemアイコン差し替え（VRMサムネイル反映）を React UI にも伝える。
     private emitSystemIconChanged(): void {
         const event: ChatMessageManagerEvent = { type: "system_icon_changed", systemIconUrl: this.systemIconUrl };
         for (const listener of this.listeners) {

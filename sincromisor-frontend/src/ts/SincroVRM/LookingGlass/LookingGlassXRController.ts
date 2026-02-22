@@ -48,6 +48,7 @@ export class LookingGlassXRController {
     }
 
     attachToStartButton(): void {
+        // Debug Console 互換の旧導線。現在は Control Panel 側 custom event 導線が主経路。
         const startButton = document.querySelector<HTMLButtonElement>(this.startButtonSelector);
         if (!startButton) {
             // Debug Console 側ボタンを使わないページ/構成でも、Control Panel 経由の custom event 操作は有効。
@@ -68,6 +69,7 @@ export class LookingGlassXRController {
     }
 
     async stop(): Promise<void> {
+        // stop は「セッション終了 -> 次回 start で最新設定を反映」の導線に使う。
         const currentSession = this.renderer.xr.getSession();
         if (!currentSession) {
             return;
@@ -123,6 +125,7 @@ export class LookingGlassXRController {
                     message: "session ended; ready to retry",
                 });
             });
+            // Three.js の XR session 設定後に通常 canvas を隠す。失敗時に先に隠さないよう順序を守る。
             await this.renderer.xr.setSession(xrSession);
 
             // Looking Glass セッション中は通常キャンバスを隠し、既存 UX（legacy）に寄せる。
@@ -193,6 +196,7 @@ export class LookingGlassXRController {
     }
 
     private emitState(detail: LookingGlassStateEventDetail): void {
+        // AppController 側で tracker 更新と UI 用 event へ再構成するため、window custom event で橋渡しする。
         this.lastState = detail.state;
         window.dispatchEvent(new CustomEvent<LookingGlassStateEventDetail>("sincro:looking-glass-state", { detail }));
     }
@@ -212,6 +216,7 @@ export class LookingGlassXRController {
         }
         this.polyfillInitialized = false;
         this.polyfillSessionWarmupDone = false;
+        // AppController 側で config status を「次回セッション反映可能」に再評価するトリガ。
         window.dispatchEvent(new CustomEvent("sincro:looking-glass-polyfill-reinit-ready"));
     }
 
@@ -220,6 +225,7 @@ export class LookingGlassXRController {
             return;
         }
         this.commandEventsBound = true;
+        // looking-glass-vrm の Control Panel から start/stop を操作する導線。
         window.addEventListener("sincro:looking-glass-start-request", this.handleExternalStartRequest as EventListener);
         window.addEventListener("sincro:looking-glass-stop-request", this.handleExternalStopRequest as EventListener);
     }

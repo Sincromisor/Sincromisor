@@ -7,11 +7,13 @@ import { CharacterGaze } from '../../CharacterGaze/CharacterGaze';
 import { PerspectiveCamera } from "three/src/cameras/PerspectiveCamera.js";
 import { VRMCamera } from '../VRMScene/VRMCamera';
 
-/* 
+/*
     Humanoid bones
     https://docs.unity3d.com/ja/2019.4/ScriptReference/HumanBodyBones.html
  */
 
+// 首(neck)ボーンの向きを制御する controller。
+// CharacterGaze が使える場合は顔検出ベース、未初期化時はカメラ追従でフォールバックする。
 export class HeadBoneController {
     private position: Vector3 = new Vector3(0, 0, 0);
     private rotation: Euler = new Euler(0, 0, 0);
@@ -28,6 +30,7 @@ export class HeadBoneController {
         this.characterGaze = CharacterGaze.getManager();
     }
 
+    // 毎フレームの首向き更新。検出可否に応じて gaze / camera fallback を切り替える。
     update(): void {
         // 顔認識機能の状況を元に、顔認識モードと、カメラの方向を向くモードを切り替える
         if (this.characterGaze.modelIsLoaded()) {
@@ -47,6 +50,7 @@ export class HeadBoneController {
     }
 
     /* VRMLookAtApplierを用いたほうがいいのでは? */
+    // 現状は簡易的に neck 回転へ直接反映する。極端な左右回転は clamp して不自然さを抑える。
     private setEyeTarget(rx: number, ry: number, rz: number) {
         //const beta:float = Tools.ToRadians(-20);
         this.rotation.x = (this.rotation.x + rx) / 2;
@@ -62,7 +66,7 @@ export class HeadBoneController {
         }
     }
 
-    // カメラの方向を向く
+    // 顔検出未使用/未初期化時のフォールバック。カメラ方向を向くように neck 回転を計算する。
     private setEyeToCamera(camera: PerspectiveCamera): void {
         // neckNode のワールド座標を取得してカメラとの方向ベクトルを求める
         const neckWorldPos = this.neckNode.getWorldPosition(new Vector3());
@@ -75,6 +79,7 @@ export class HeadBoneController {
         this.setEyeTarget(angleX / 2, angleY, 0);
     }
 
+    // 正規化ボーン取得に失敗した場合はモデル前提が崩れているため例外化する。
     private getNode(name: VRMHumanBoneName): Object3D {
         const node: Object3D | null = this.vrm.humanoid.getNormalizedBoneNode(name);
         if (node === null) {

@@ -1,5 +1,7 @@
 import type { SincroAppDialogFacade } from "./SincroAppDialogFacade";
 
+// 購読 binder helper が依存する最小 facade 群。
+// concrete manager class への依存を減らし、helper の再利用性とテスト容易性を上げる。
 export type SincroAppChatSubscriptionFacade = Pick<
     import("../UI/ChatMessageManager").ChatMessageManager,
     "subscribe"

@@ -4,6 +4,8 @@ import { SincroRTCConfigManager } from "../RTC/SincroRTCConfigManager";
 import { TalkManager } from "../RTC/TalkManager";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 
+// SincroController から分離した「RTC セッション開始/停止 + channel callback 配線」担当。
+// WebRTC本体(RTCTalkClient)と UI/表示系(TalkManager, DebugConsoleManager)の結線を担当する。
 export class SincroRtcSessionController {
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly talkManager: TalkManager;

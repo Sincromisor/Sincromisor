@@ -1,5 +1,6 @@
 import type { SincroAppDialogVrmUiState } from "../../../ts/App/SincroAppController";
 
+// 起動前 dialog の VRM 置き換え導線（ファイル選択 / D&D状態表示）をまとめる。
 type VrmModelSectionProps = {
     onOpenFilePicker: () => void;
 };
@@ -27,6 +28,7 @@ type DialogVrmDropStatusCardProps = {
 };
 
 export function DialogVrmDropStatusCard({ uiState }: DialogVrmDropStatusCardProps) {
+    // dragover 中は「ここへドロップ」へ切り替え、平常時は導線説明を短く表示する。
     return (
         <div className={`configurationDialogReactSettingsPanel__vrmDropStatus${uiState.isDragOver ? " is-dragover" : ""}`}>
             <div className="configurationDialogReactSettingsPanel__statusText">

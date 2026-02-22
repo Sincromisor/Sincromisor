@@ -102,6 +102,7 @@ type SimpleVrmPanelState = {
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
 };
 
+// Control Panel から呼ぶ UI 操作。実処理は AppController に集約し、hook は委譲のみ行う。
 type SimpleVrmPanelActions = {
     startAction: () => void;
     stopAction: () => void;
@@ -151,6 +152,7 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
     });
 
     useEffect(() => {
+        // event type -> state 更新処理を map にして、購読配線の見通しを保つ。
         const eventHandlers: SimpleVrmPanelEventHandlerMap = {
             lifecycle: (event) => {
                 setLifecycleState(event.state);
@@ -256,10 +258,12 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
     }, []);
 
     const startAction = (): void => {
+        // 開始の順序制御（hooks/lifecycle）は AppController に任せる。
         currentController?.start();
     };
 
     const stopAction = (): void => {
+        // stop も AppController 経由で行い、RTC停止の順序/状態遷移をUI側で持たない。
         currentController?.stop();
     };
 

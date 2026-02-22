@@ -8,6 +8,8 @@ import {
     VadThresholdMode as DebugVadThresholdMode,
 } from "../UI/DebugConsoleManager";
 
+// getUserMedia と VAD/音声フィルタ設定の結線をまとめる controller。
+// DialogManager(設定入力) / UserMediaManager(実処理) / DebugConsoleManager(診断UI) の橋渡し役。
 export class SincroAudioInputController {
     private readonly dialogManager: DialogManager;
     private readonly debugConsoleManager: DebugConsoleManager;
@@ -70,6 +72,7 @@ export class SincroAudioInputController {
         // 学習VADは balanced を初期プリセットとして採用し、必要時にUIから変更できるようにする。
         this.debugConsoleManager.setLocalLearnedVadPerformanceMode("balanced");
 
+        // DebugConsole での調整操作を UserMediaManager 側の実処理へ反映する。
         this.debugConsoleManager.setLocalVadThresholdModeChangeCallback((mode: DebugVadThresholdMode) => {
             this.userMediaManager.setVadThresholdMode(mode as UserMediaVadThresholdMode);
         });
@@ -88,6 +91,7 @@ export class SincroAudioInputController {
         });
 
         // UserMedia 側で更新される状態を DebugConsole へ戻し、UI表示と内部状態を同期する。
+        // 双方向同期にしているのは、内部補正（学習VADプリセット適用など）を UI に反映するため。
         this.userMediaManager.setVadThresholdCallback((config) => {
             this.debugConsoleManager.setLocalVadRmsThreshold(config.rmsThreshold);
         });

@@ -10,6 +10,8 @@ import type {
 } from "../panelTypes";
 import { UI_TUNING } from "../../app/uiTuning";
 
+// Control Panel 用の設定セクション群。
+// 起動前 dialog 用フォームとは分離し、ページ常設パネル向けの文言/密度/導線をここで管理する。
 const fieldStyle: CSSProperties = {
     width: "100%",
     borderRadius: "8px",
@@ -97,6 +99,7 @@ function HelpTooltip({ help, children }: { help?: string; children: ReactNode })
         if (!visible) {
             return;
         }
+        // hover だけでなくタップ操作でも閉じられるよう、外側 pointerdown で明示的に閉じる。
         const handlePointerDown = (event: PointerEvent) => {
             const root = containerRef.current;
             if (!root) {
@@ -208,6 +211,7 @@ export function BasicSettingsSection({
     showTalkMode = true,
 }: BasicSettingsSectionProps) {
     if (!showTitle && !showTalkMode) {
+        // variant 側で表示対象を完全に外した場合は空描画にする。
         return null;
     }
     return (
@@ -380,7 +384,7 @@ export function LookingGlassSettingsSection({ settings, onApplySettings }: Looki
             <div style={{ opacity: 0.7, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
                 ピンボケ気味の場合は、まず <code>Target Z</code> と <code>Target Diam</code> を少しずつ調整してください。
             </div>
-            {/* プリセット適用後も下の数値入力で細かく調整できる。 */}
+            {/* プリセットは初期位置合わせの近道。最終的な値は下の数値入力で追い込む。 */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: `${compactGapPx}px`, marginBottom: `${rowGapPx}px` }}>
                 {presets.map((preset) => (
                     <button
@@ -563,6 +567,7 @@ export function StartupSettingsSection({
             )}
             {unsupportedItems.length > 0 ? (
                 <details style={{ marginTop: `${compactGapPx}px` }}>
+                    {/* 未対応項目は通常表示から外し、必要時だけ参照できるようにする。 */}
                     <summary style={{ cursor: "pointer", opacity: 0.75 }}>
                         未対応の起動時トグルを表示 ({unsupportedItems.length})
                     </summary>
@@ -604,6 +609,7 @@ type NumericSettingFieldProps = {
 
 function NumericSettingField({ label, help, value, min, max, step, onChange }: NumericSettingFieldProps) {
     return (
+        // 数値入力の最終丸めは AppController 側で行うため、UI では入力値をそのまま渡す。
         <label style={{ display: "grid", gap: "4px" }}>
             <span style={{ opacity: 0.8, display: "flex", alignItems: "center" }}>
                 {label}
@@ -631,6 +637,7 @@ function NumericSettingField({ label, help, value, min, max, step, onChange }: N
 
 function SettingToggle({ label, help, checked, disabled = false, onChange }: SettingToggleProps) {
     return (
+        // Control Panel 側は常設 UI のため、dialog 版より少し情報密度を高くした toggle 表示を使う。
         <label style={{
             display: "flex",
             alignItems: "center",

@@ -28,6 +28,7 @@ export class VRM360Scene extends VRMScene {
         onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void,
     ) {
         super(canvasRoot, controlTarget, vrmUrl, xrMode, onThumbnailLoaded);
+        // 360 背景動画 + floor/light 補助を追加して、通常 VRMScene から 360 向け構成へ拡張する。
         this.sphereVideo = new SphereVideo(this.getVideoId());
         this.createWorldSphere(this.sphereVideo.videoTexture);
         this.createFlatFloor();
@@ -41,6 +42,7 @@ export class VRM360Scene extends VRMScene {
         if (this.lookingGlassXRController) {
             return;
         }
+        // Control Panel / (互換) Debug Console の start/stop 導線で使う LG controller を 1 回だけ生成する。
         this.lookingGlassXRController = new LookingGlassXRController(this.renderer, this.scene);
         this.lookingGlassXRController.attachToStartButton();
     }
@@ -73,6 +75,7 @@ export class VRM360Scene extends VRMScene {
         /* 反射マップを無効化 */
         material.reflectivity = 0;
         const sphere: Mesh = new Mesh(geometry, material);
+        // 動画球の中心をキャラクター頭部付近に寄せ、360映像の地平線と破綻しにくい位置にする。
         sphere.position.y = this.videoPositionY;
         /*
             カメラの前方がキャラクターの後ろに来るようにする
@@ -124,6 +127,7 @@ export class VRM360Scene extends VRMScene {
     }
 
     protected override updateScene(): void {
+        // 360映像から抽出した簡易ライト情報を VRM 照明へ反映して、映像環境に馴染ませる。
         const lightPosition: Vector3 = this.sphereVideo.getLightPosition();
         const lightIntensity: number = this.sphereVideo.getLightIntensity();
         this.vrmLight.setPotision(lightPosition);

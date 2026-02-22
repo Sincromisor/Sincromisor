@@ -104,6 +104,7 @@ export class SincroAppController {
     private beforeStartHook: () => void = () => { };
     private afterStartHook: () => void = () => { };
     private suppressSettingsSnapshotEvent: boolean = false;
+    // 同一同期処理中だけ有効な短命キャッシュ。settings 系 snapshot の重複組み立てを避ける。
     private settingsRelatedPayloadCache: SincroAppSettingsRelatedSnapshotPayload | null = null;
     private settingsRelatedPayloadCacheDepth: number = 0;
     private startupAppliedSettings: SincroAppStartupAppliedSettings | null = null;
@@ -141,6 +142,7 @@ export class SincroAppController {
     }
 
     constructor() {
+        // 依存の組み立てが終わる前に購読/イベント登録を始めないよう、初期化順を固定する。
         const runtime = this.initializeRuntime();
         this.chatMessageManager = runtime.chatMessageManager;
         this.debugConsoleManager = runtime.debugConsoleManager;
@@ -283,6 +285,8 @@ export class SincroAppController {
     }
 
     applySettings(partial: Partial<SincroAppSettingsSnapshot>): void {
+        // settings は dialog 設定と Looking Glass runtime config をまたいで更新されるため、
+        // 反映後に snapshot/status をまとめて emit して UI の整合を保つ。
         // DialogManager の変更イベントが同期通知を返してくるため、一時的に再入防止する。
         this.suppressSettingsSnapshotEvent = true;
         try {
@@ -303,6 +307,7 @@ export class SincroAppController {
         );
     }
 
+    // lifecycle event は startup settings status と一緒に流し、UI 側の再起動案内判定を安定させる。
     private emitLifecycle(state: SincroAppLifecycleState, settingsSnapshot?: SincroAppSettingsSnapshot): void {
         this.lifecycleState = state;
         emitSincroAppLifecycle(
@@ -314,6 +319,7 @@ export class SincroAppController {
         );
     }
 
+    // 実配信は EventHub に委譲し、本体は emit 順序制御に集中する。
     private emitEvent(event: SincroAppEvent): void {
         this.eventHub.emit(event);
     }
@@ -327,6 +333,7 @@ export class SincroAppController {
         });
     };
 
+    // LG設定変更（runtime config 更新）を tracker + UI通知に反映する。
     private readonly handleLookingGlassConfigUpdated = (event: CustomEvent<SincroAppLookingGlassConfigUpdatedEventDetail>): void => {
         handleLookingGlassConfigUpdatedFlow({
             tracker: this.lookingGlassTracker,
@@ -343,6 +350,7 @@ export class SincroAppController {
         });
     };
 
+    // グローバル custom event で起動前 dialog を開く（旧UI/DebugMenu 互換経路）。
     private readonly handleOpenConfigurationDialogEvent = (): void => {
         this.dialog.open();
     };
@@ -360,6 +368,7 @@ export class SincroAppController {
         });
     }
 
+    // singleton manager 群の購読を集約する。constructor から直接羅列しないのは読み順維持のため。
     private bindManagerSubscriptions(): void {
         // singleton manager 群を機能別に購読し、AppController 統一イベントへ正規化する。
         this.bindChatSubscriptions();
@@ -412,6 +421,7 @@ export class SincroAppController {
         });
     }
 
+    // settings系 event はまとまって発火させ、UI 側で disabled/hints/snapshot を同一世代として扱えるようにする。
     private emitSettingsRelatedSnapshots(): void {
         if (this.suppressSettingsSnapshotEvent) {
             return;
@@ -424,10 +434,13 @@ export class SincroAppController {
         });
     }
 
+    // settings関連 event 群で共通に使う payload を組み立てる。
+    // 連続 emit 中は短命 cache を再利用して重複計算を避ける。
     private buildSettingsRelatedSnapshotPayload(settings?: SincroAppSettingsSnapshot) {
         if (this.settingsRelatedPayloadCache) {
             return this.settingsRelatedPayloadCache;
         }
+        // 通常経路では毎回最新 snapshot を組み立て、連続 emit 中だけ短命 cache を使う。
         return buildSincroAppSettingsRelatedSnapshotPayload({
             dialogManager: this.dialogManager,
             settings,
@@ -459,6 +472,7 @@ export class SincroAppController {
 
     // DialogManager 由来の UI状態はまとめて取得し、同一タイミングでの整合を取りやすくする。
     private getUiStateSnapshot() {
+        // dialog/settings UI 状態はまとめて取得し、同一時点の整合を取りやすくする。
         return buildSincroAppUiStateSnapshot(this.dialogManager);
     }
 
@@ -467,6 +481,7 @@ export class SincroAppController {
         SincroAppController.activeRegistry.setCurrent(controller);
     }
 
+    // ICE/signaling/lifecycle の保持状態から UI向け connection_state を導出して通知する。
     private emitDerivedConnectionState(): void {
         emitSincroAppConnectionState(
             (event) => this.emitEvent(event),

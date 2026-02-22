@@ -8,6 +8,8 @@ import type {
 } from "../UI/DialogManager";
 import type { LookingGlassRuntimeConfig } from "../SincroVRM/LookingGlass/LookingGlassRuntimeConfig";
 
+// SincroAppController を境界にした UI 向けの共通型定義。
+// React UI / initializer / helper 群で同じ契約を共有するために Controller 本体から分離している。
 export type SincroAppLifecycleState = "idle" | "starting" | "running" | "stopping" | "stopped";
 
 export type SincroAppStartHooks = {
@@ -38,6 +40,7 @@ export type SincroAppSettingsSnapshot = {
     lgFovyDeg: number;
 };
 
+// DialogManager 側の設定 UI 状態/ヒント型を AppController 向け名称で再公開する。
 export type SincroAppSettingsUiState = DialogSettingsUiState;
 export type SincroAppSettingsUiHints = DialogSettingsUiHints;
 export type SincroAppDialogUiState = DialogUiState;
@@ -75,6 +78,8 @@ export type SincroAppLookingGlassConfigUpdatedEventDetail = {
     changedKeys: Array<keyof LookingGlassRuntimeConfig>;
 };
 
+// AppController が UI 層へ配信する統一イベント。
+// singleton manager ごとの差分をこの union へ吸収し、React 側の購読先を一本化する。
 export type SincroAppEvent = {
     type: "lifecycle";
     state: SincroAppLifecycleState;

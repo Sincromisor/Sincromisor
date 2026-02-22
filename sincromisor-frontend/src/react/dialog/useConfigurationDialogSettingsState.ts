@@ -93,6 +93,7 @@ export function useConfigurationDialogSettingsState() {
     );
 
     useEffect(() => {
+        // 起動前 dialog は React を主表示にするため、mount 中は bridge DOM を非表示化する。
         SincroAppController.getCurrent()?.dialog.setReactPrimarySettingsEnabled(true);
         const eventHandlers: ConfigurationDialogEventHandlerMap = {
             settings_snapshot: (event) => {
@@ -138,6 +139,7 @@ export function useConfigurationDialogSettingsState() {
         });
         return () => {
             unsubscribeActiveController();
+            // unmount 時に bridge DOM を戻しておく（フォールバック/開発時の安全策）。
             SincroAppController.getCurrent()?.dialog.setReactPrimarySettingsEnabled(false);
         };
     }, []);
@@ -151,6 +153,7 @@ export function useConfigurationDialogSettingsState() {
     };
 
     const openVrmFilePicker = (): void => {
+        // file input 自体は bridge DOM に残しているので、操作は AppController.dialog へ委譲する。
         currentController?.dialog.openVrmFilePicker();
     };
 

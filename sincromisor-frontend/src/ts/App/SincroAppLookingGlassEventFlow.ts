@@ -6,6 +6,7 @@ type SincroAppLookingGlassEventFlowContext = {
     emit: (event: SincroAppEvent) => void;
 };
 
+// Looking Glass 関連の tracker 更新 + AppEvent 発火順序を AppController から切り離す。
 export type SincroAppLookingGlassStateFlowParams = SincroAppLookingGlassEventFlowContext & {
     detail: SincroAppLookingGlassEventDetail;
 };
@@ -61,5 +62,6 @@ export function handleLookingGlassConfigUpdatedFlow(params: SincroAppLookingGlas
 export function emitLookingGlassConfigStatus(
     params: SincroAppLookingGlassConfigStatusFlowParams,
 ): void {
+    // polyfill 再初期化準備完了など、state event を伴わない更新点で使う。
     params.emit({ type: "looking_glass_config_status", status: params.tracker.getConfigStatus() });
 }

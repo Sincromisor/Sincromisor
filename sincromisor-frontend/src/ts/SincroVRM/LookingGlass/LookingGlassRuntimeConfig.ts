@@ -8,6 +8,7 @@ export type LookingGlassRuntimeConfig = {
     fovyDeg: number;
 };
 
+// Looking Glass の runtime 調整値（UI から更新され、次回セッション開始時の polyfill 初期化に使う）。
 const defaultLookingGlassRuntimeConfig: LookingGlassRuntimeConfig = {
     tileHeight: 512,
     numViews: 45,
@@ -32,6 +33,7 @@ export function getLookingGlassRuntimeConfig(): LookingGlassRuntimeConfig {
 
 // React UI からの設定変更を、Three.js/VRM1.0 側の Looking Glass 起動時オプションへ反映する。
 export function updateLookingGlassRuntimeConfig(partial: Partial<LookingGlassRuntimeConfig>): LookingGlassRuntimeConfig {
+    // 実際に変わったキーだけを抽出し、AppController 側の「反映タイミング表示」に使う。
     const changedKeys = Object.keys(partial).filter((key) => {
         const typedKey = key as keyof LookingGlassRuntimeConfig;
         const nextValue = partial[typedKey];

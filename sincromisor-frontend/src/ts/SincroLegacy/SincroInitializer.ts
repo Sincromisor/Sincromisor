@@ -4,6 +4,8 @@ import { SincroScene } from "./Scene/SincroScene";
 import { TalkManager } from "../RTC/TalkManager";
 import { UserMediaManager } from "../RTC/UserMediaManager";
 
+// Babylon legacy ページの initializer。
+// UI導線は AppController bridge を使って modern 側と揃えつつ、scene 初期化だけ legacy 実装を使う。
 export class SincroInitializer {
     protected readonly talkManager: TalkManager;
     protected readonly charCanvas: HTMLCanvasElement;
@@ -14,6 +16,7 @@ export class SincroInitializer {
         this.talkManager = TalkManager.getManager();
         this.charCanvas = this.getCharCanvas();
         this.appController = new SincroAppController();
+        // legacy scene では Inspector/VR の startup toggles が scene 初期化に反映される。
         // legacy scene 初期化時には Inspector/VR 設定が反映される。enableTalk は現状未使用。
         this.appController.setStartupSettingsCapabilities({
             enableTalk: false,
@@ -22,9 +25,11 @@ export class SincroInitializer {
         });
         this.appController.setStartHooks({
             beforeStart: () => {
+                // 挨拶メッセージは base UX を維持するため start hook で注入する。
                 this.writeWelcomeMessagesOnce();
             },
             afterStart: () => {
+                // scene 起動 / dialog close は RTC 開始後の副作用としてまとめる。
                 this.startUiSideEffectsOnce();
             },
         });
@@ -55,6 +60,7 @@ export class SincroInitializer {
     }
 
     private characterAvailabilityCheck(): void {
+        // legacy では CharacterManager の availability 判定を dialog state に反映して開始前 UX を保つ。
         CharacterManager.availabilityCheck(() => {
             this.appController.dialog.updateCharacterAvailabilityStatus(true);
         }, () => {
@@ -63,6 +69,7 @@ export class SincroInitializer {
     }
 
     private start(): void {
+        // AppController 側の lifecycle/state 管理を通して開始する。
         this.appController.start();
     }
 
@@ -90,6 +97,7 @@ export class SincroInitializer {
     }
 
     protected initializeSincroScene(): SincroScene {
+        // startup toggles の Inspector/VR は legacy scene constructor に渡して反映する。
         return new SincroScene(
             this.charCanvas, this.talkManager,
             this.appController.dialog.isVREnabled(),

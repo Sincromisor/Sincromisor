@@ -24,6 +24,8 @@ export function createSincroAppDialogBridge(params: {
     dialogManager: SincroAppDialogFacade;
     popManager: PopManager;
 }): SincroAppDialogBridge {
+    // DialogManager/PopManager を UI 向けの最小 API に絞って公開する bridge。
+    // 呼び出し側は DialogManager 実装の詳細を意識せず AppController.dialog 経由で扱える。
     const { dialogManager, popManager } = params;
     return {
         setReactPrimarySettingsEnabled: (enabled) => {
@@ -59,6 +61,7 @@ export function createSincroAppDialogBridge(params: {
 }
 
 export function createSincroAppChatBridge(chatMessageManager: ChatMessageManager): SincroAppChatBridge {
+    // initializer 側で頻出する chat 操作だけを集約し、ChatMessageManager の直接 import を減らす。
     return {
         writeUnknownUserMessage: (message, isHTML) => {
             chatMessageManager.writeUnknownUserMessage(message, isHTML);
@@ -73,6 +76,7 @@ export function createSincroAppChatBridge(chatMessageManager: ChatMessageManager
 }
 
 export function createSincroAppDebugBridge(debugConsoleManager: DebugConsoleManager): SincroAppDebugBridge {
+    // 現時点の debug bridge は停止ボタン配線のみ。将来の debug UI 操作追加の拡張点として残す。
     return {
         setRTCStopButtonEventListener: (stopFunction) => {
             debugConsoleManager.setRTCStopButtonEventListener(stopFunction);
@@ -81,6 +85,7 @@ export function createSincroAppDebugBridge(debugConsoleManager: DebugConsoleMana
 }
 
 export function createSincroAppRtcBridge(params: { stopRTC: () => void; }): SincroAppRtcBridge {
+    // stop は UI から多用されるため bridge に寄せる。start は AppController.start() の状態遷移制御を使う。
     return {
         stop: () => {
             params.stopRTC();
@@ -96,6 +101,7 @@ export function createSincroAppStateBridge(params: {
     getDialogVrmUiState: () => SincroAppDialogVrmUiState;
     getStartupSettingsStatus: () => SincroAppStartupSettingsStatus;
 }): SincroAppStateBridge {
+    // React hook が subscribe 前に初期値を同期取得するための読み取り専用 bridge。
     return {
         getSettingsSnapshot: params.getSettingsSnapshot,
         getSettingsUiState: params.getSettingsUiState,

@@ -19,6 +19,7 @@ export function applySincroAppSettingsPartial(
     dialogManager: SincroAppDialogFacade,
     partial: Partial<SincroAppSettingsSnapshot>,
 ): void {
+    // Dialog 設定（UI/RTC/描画系のトグル）は DialogManager facade 経由で即時反映する。
     if (partial.talkMode != null) {
         dialogManager.setTalkMode(partial.talkMode);
     }
@@ -59,6 +60,8 @@ export function applySincroAppSettingsPartial(
         dialogManager.setEnableVR(partial.enableVR);
     }
 
+    // Looking Glass 設定は runtime config に正規化して反映する。
+    // polyfill への反映タイミング判定は別の tracker/status ロジックで扱う。
     const nextLookingGlassConfig: Parameters<typeof updateLookingGlassRuntimeConfig>[0] = {};
     if (partial.lgTileHeight != null) {
         nextLookingGlassConfig.tileHeight = clampAndRoundToStep(partial.lgTileHeight, 256, 2048, 1);

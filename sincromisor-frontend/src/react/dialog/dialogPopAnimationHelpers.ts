@@ -11,6 +11,7 @@ type TimeoutHandle = ReturnType<typeof setTimeout>;
 const DIALOG_POP_RENDER_LIMIT = UI_TUNING.dialogPop.renderLimit;
 const DIALOG_POP_SHOW_DELAY_MS = UI_TUNING.dialogPop.showDelayMs;
 const DIALOG_POP_HIDE_TRANSITION_MS = UI_TUNING.dialogPop.hideTransitionMs;
+// dialog pop の件数/タイミングは UI_TUNING に寄せ、調整箇所をこの helper から分散させない。
 
 // dialog pop の表示/非表示/削除タイマーを共通化する helper。
 // React component 側は「新規 item を追加した後に、この helper を呼ぶ」だけにして可読性を保つ。

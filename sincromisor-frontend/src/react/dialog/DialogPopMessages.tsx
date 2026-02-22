@@ -20,6 +20,7 @@ export function DialogPopMessages() {
             if (!controller) {
                 return;
             }
+            // React で描画する間は既存 DOM pop を止めて二重表示を防ぐ。
             controller.dialog.setPopDomRenderingEnabled(false);
 
             const unsubscribeController = controller.subscribe((event: SincroAppEvent) => {
@@ -29,6 +30,7 @@ export function DialogPopMessages() {
                 const dialogPop = event.message;
                 const nextItem: DialogPopItem = { ...dialogPop, visible: false };
                 setItems((prev) => prependCappedItem(prev, nextItem, DIALOG_POP_TIMING.renderLimit));
+                // 表示/非表示/削除のタイマー手順は helper に閉じ、component は一覧更新に集中する。
                 const cleanupTimer = scheduleDialogPopVisibility(nextItem, setItems);
                 register(
                     cleanupTimer,
@@ -37,6 +39,7 @@ export function DialogPopMessages() {
             });
 
             return () => {
+                // ページ切替時の timer 残りによる setState を防ぐため、先に timer 群を掃除する。
                 clearAll();
                 unsubscribeController();
                 controller.dialog.setPopDomRenderingEnabled(true);

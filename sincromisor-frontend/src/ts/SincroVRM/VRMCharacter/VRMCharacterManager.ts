@@ -12,8 +12,8 @@ import { Vector3 } from 'three/src/math/Vector3.js';
 // import { MToonMaterialLoaderPlugin } from '@pixiv/three-vrm';
 // import { MToonNodeMaterial } from '@pixiv/three-vrm/nodes';
 
-// 指定したURLからVRM1.0形式のキャラクターを取得し、
-// キャラクターの表示、アニメーション、操作を行うクラス
+// 指定URLのVRM1.0モデルを読み込み、骨/表情コントローラ更新とシーン配置を担当する。
+// scene 側は render loop で update() を呼ぶだけにし、VRM固有処理をここへ閉じ込める。
 export class VRMCharacterManager {
     public vrm: VRM | null = null;
     public clock: Clock;
@@ -38,7 +38,8 @@ export class VRMCharacterManager {
         this.load(vrmUrl);
     }
 
-    // VRMキャラクターのload
+    // VRMキャラクターの load。
+    // ロード完了後に各ボーン/表情 controller を生成し、UI 用サムネイルも callback で返す。
     private load(url: string): void {
         const loader: GLTFLoader = new GLTFLoader();
         loader.register((parser: GLTFParser) => {
@@ -58,6 +59,7 @@ export class VRMCharacterManager {
         loader.load(url,
             (gltf: GLTF) => {
                 this.vrm = gltf.userData.vrm as VRM;
+                // 視線/姿勢/表情の更新責務を個別 controller に分け、update() でまとめて進める。
                 this.headBoneController = new HeadBoneController(this.vrm, this.vrmCamera);
                 this.armBoneController = new ArmBoneController(this.vrm);
                 this.armBoneController.update();
@@ -70,6 +72,8 @@ export class VRMCharacterManager {
                 VRMUtils.removeUnnecessaryVertices(gltf.scene);
                 VRMUtils.combineSkeletons(gltf.scene);
                 VRMUtils.combineMorphs(this.vrm);
+                // キャラクター全体の配置調整は hips 基準で扱う。
+                // Looking Glass / simple-vrm の位置合わせ時もここが基準点になる。
                 this.rootBone = this.vrm?.humanoid.getNormalizedBoneNode('hips');
                 if (this.rootBone) {
                     this.defaultPosition = this.rootBone?.position.clone();
@@ -100,6 +104,10 @@ export class VRMCharacterManager {
         return this.vrm.meta.thumbnailImage ?? null;
     }
 
+    // 毎フレーム更新:
+    // 1) ボーン/表情 controller
+    // 2) VRM内部 update
+    // 3) hips基準の位置オフセット反映
     update(): void {
         this.headBoneController?.update();
         this.armBoneController?.update();

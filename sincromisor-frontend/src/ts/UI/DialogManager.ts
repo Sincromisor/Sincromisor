@@ -18,6 +18,8 @@ export type { DialogSettingsUiHints, DialogSettingsUiState } from "./DialogSetti
 export type DialogVrmUiState = DialogVrmUiStateValue;
 export type DialogUiState = DialogUiStateValue;
 
+// 起動前設定 dialog の中心オーケストレータ。
+// 状態の正本は DialogStateStore、DOM 操作は DialogBridgeDomAdapter、保存/復元/通知は各 Service に分離している。
 export class DialogManager {
     private static instance: DialogManager
     private readonly stateStore = new DialogStateStore();
@@ -38,6 +40,7 @@ export class DialogManager {
     }
 
     private constructor() {
+        // store 初期化 -> DOMイベント配線 -> ヘッダー同期 -> dialog 表示 -> 前回VRM復元 の順で起動する。
         this.initializeDialogStateDefaults();
         this.bindDialogDomEvents();
         this.updateTitleText();
@@ -79,6 +82,8 @@ export class DialogManager {
         return this.stateStore.getSelectedVrmUrl();
     }
 
+    // 以下の getter/setter は React UI / AppController から参照される dialog 設定の public API。
+    // bridge DOM を直接読むのではなく stateStore を正本にしている。
     talkMode(): string {
         return this.stateStore.get("talkMode");
     }
@@ -220,6 +225,7 @@ export class DialogManager {
         if (!key) {
             return;
         }
+        // disabled 状態の設定は UIから操作できても state を変えない。
         if (this.stateStore.isDisabled(key)) {
             return;
         }
@@ -229,6 +235,7 @@ export class DialogManager {
 
     private emitSettingsChanged(): void {
         if (this.settingsChangeBatchDepth > 0) {
+            // 状態更新の途中では即時 emit せず、batch 終了時に 1 回だけ通知する。
             this.settingsChangePending = true;
             return;
         }
@@ -236,6 +243,7 @@ export class DialogManager {
     }
 
     private runSettingsChangeBatch(action: () => void): void {
+        // Character/Gaze/AutoMute の連動更新で settingsChange が連打されないようにする。
         this.settingsChangeBatchDepth += 1;
         try {
             action();
