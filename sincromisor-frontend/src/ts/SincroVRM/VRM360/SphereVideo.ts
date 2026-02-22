@@ -3,7 +3,6 @@ import { Vector3 } from "three/src/math/Vector3.js";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { LinearFilter, RGBFormat } from "three/src/constants.js";
 import { SRGBColorSpace } from 'three/src/constants.js';
-import Hls from "hls.js";
 
 /* フレーム毎の光源の情報 */
 type FrameInfo = {
@@ -75,7 +74,7 @@ export class SphereVideo {
         video.autoplay = true;
         video.setAttribute('playsinline', '');
         video.setAttribute('webkit-playsinline', '');
-        this.loadHLS(video, this.videoPath + '/' + videoID + '/index.m3u8');
+        void this.loadHls(video, this.videoPath + '/' + videoID + '/index.m3u8');
         return video;
     }
 
@@ -138,9 +137,11 @@ export class SphereVideo {
         return new Vector3(x, y, z);
     }
 
-    private loadHLS(video: HTMLVideoElement, m3u8Path: string): void {
+    // hls.js は VRM360 動画再生時のみ必要なため、初期バンドル肥大化を避けるために遅延ロードする。
+    private async loadHls(video: HTMLVideoElement, m3u8Path: string): Promise<void> {
         const retryPause: number = 5000;
         console.log(`Loading HLS stream from: ${m3u8Path}`);
+        const { default: Hls } = await import("hls.js");
         if (Hls.isSupported() && !this.isIOS()) {
             const hls = new Hls({
                 maxLiveSyncPlaybackRate: 1.5,
@@ -159,7 +160,7 @@ export class SphereVideo {
                         console.error(`${data.error}, retrying in some seconds`);
                     }
 
-                    setTimeout(() => this.loadHLS(video, m3u8Path), retryPause);
+                    setTimeout(() => { void this.loadHls(video, m3u8Path); }, retryPause);
                 }
             });
 

@@ -1,13 +1,34 @@
-import { PopManager } from "./PopManager";
+import {
+    DialogStateStore,
+    type DialogUiStateValue,
+    type DialogVrmUiStateValue,
+} from "./DialogStateStore";
+import {
+    DialogSettingsPolicy,
+    type DialogSettingsUiHints,
+    type DialogSettingsUiState,
+} from "./DialogSettingsPolicy";
+import { DialogBridgeDomAdapter } from "./DialogBridgeDomAdapter";
+import { DialogVrmFileService } from "./DialogVrmFileService";
+import { DialogVrmWorkflowService } from "./DialogVrmWorkflowService";
+import { DialogNotificationService } from "./DialogNotificationService";
+import { DialogEventHub } from "./DialogEventHub";
+
+export type { DialogSettingsUiHints, DialogSettingsUiState } from "./DialogSettingsPolicy";
+export type DialogVrmUiState = DialogVrmUiStateValue;
+export type DialogUiState = DialogUiStateValue;
 
 export class DialogManager {
     private static instance: DialogManager
-    static vrmUrl: string = '/characters/default.vrm';
-    // VRM本体とサムネイルを同一Cache Storageで管理する。
-    // 起動時にURL再作成できるよう、文字列URLではなくBlobを保存する。
-    private static readonly fileCacheName: string = 'file-cache';
-    private static readonly vrmFileCacheKey: string = 'sincroVrmFile';
-    private static readonly vrmThumbnailCacheKey: string = 'sincroVrmThumbnail';
+    private readonly stateStore = new DialogStateStore();
+    private readonly eventHub = new DialogEventHub();
+    private readonly dom = new DialogBridgeDomAdapter();
+    private readonly settingsPolicy = new DialogSettingsPolicy();
+    private readonly vrmFileService = new DialogVrmFileService();
+    private readonly vrmWorkflowService = new DialogVrmWorkflowService(this.vrmFileService);
+    private readonly notificationService = new DialogNotificationService();
+    private settingsChangeBatchDepth = 0;
+    private settingsChangePending = false;
 
     static getManager(): DialogManager {
         if (!DialogManager.instance) {
@@ -17,9 +38,8 @@ export class DialogManager {
     }
 
     private constructor() {
-        this.setMiscEvent();
-        this.setDragAndDropVrmEvent();
-        this.setUploadVrmEvent();
+        this.initializeDialogStateDefaults();
+        this.bindDialogDomEvents();
         this.updateTitleText();
         this.showDialog();
         this.loadVrmFile().then(() => {
@@ -30,316 +50,370 @@ export class DialogManager {
     }
 
     showDialog(): void {
-        const dialog = this.getDialogElement()
-        dialog.addEventListener("keydown", (e) => {
-            if (e.key == "Escape") {
-                this.closeDialog();
-            }
-        });
-        dialog.showModal();
+        this.dom.ensureDialogCloseInteractions(() => this.closeDialog());
+        const opened = this.dom.showDialog();
+        if (opened) {
+            // Dialog open 状態は React 側の dialog UI と同期するため、DOM操作成功後に通知する。
+            this.setDialogOpen(true);
+        }
     }
 
     closeDialog(): void {
-        this.getDialogElement().close();
+        const closed = this.dom.closeDialog();
+        if (closed || this.stateStore.getDialogUiState().isOpen) {
+            // close は DOM側の結果を優先しつつ、状態だけ開いたまま残らないよう冪等に同期する。
+            this.setDialogOpen(false);
+        }
     }
 
-    private getDialogElement(): HTMLDialogElement {
-        const e: HTMLDialogElement | null = document.querySelector('dialog#configurationDialog');
-        if (e == null) {
-            throw 'dialog#configurationDialog is not found.'
-        }
-        return e;
+    // React 移行中は既存入力DOMを橋渡し用に残しつつ、表示だけを段階的に置換する。
+    setReactPrimarySettingsEnabled(enabled: boolean): void {
+        this.dom.setReactPrimarySettingsEnabled(enabled);
+    }
+
+    openVrmFilePicker(): void {
+        this.dom.openVrmFilePicker();
+    }
+
+    getSelectedVrmUrl(): string {
+        return this.stateStore.getSelectedVrmUrl();
     }
 
     talkMode(): string {
-        const eC: HTMLSelectElement | null = document.querySelector('select#talkModeSelector');
-        if (eC == null) { return 'chat'; }
-        return eC?.value;
+        return this.stateStore.get("talkMode");
+    }
+
+    titleText(): string {
+        return this.stateStore.get("titleText") || "Sincromisor";
+    }
+
+    setTalkMode(value: string): void {
+        this.stateStore.set("talkMode", value);
+        this.emitSettingsChanged();
+    }
+
+    setTitleText(value: string): void {
+        this.stateStore.set("titleText", value || "Sincromisor");
+        this.updateTitleText();
+        this.emitSettingsChanged();
+    }
+
+    setEnableAutoGainControl(enabled: boolean): void {
+        this.setCheckboxValue("enableAutoGainControl", enabled);
+    }
+
+    setEnableNoiseSuppression(enabled: boolean): void {
+        this.setCheckboxValue("enableNoiseSuppression", enabled);
+    }
+
+    setEnableEchoCancellation(enabled: boolean): void {
+        this.setCheckboxValue("enableEchoCancellation", enabled);
+    }
+
+    setEnableVadGate(enabled: boolean): void {
+        this.setCheckboxValue("enableVadGate", enabled);
+    }
+
+    setEnableVenueNoiseMode(enabled: boolean): void {
+        this.setCheckboxValue("enableVenueNoiseMode", enabled);
+    }
+
+    setEnableCharacter(enabled: boolean): void {
+        this.setCheckboxValue("enableCharacter", enabled);
+    }
+
+    setEnableCharacterGaze(enabled: boolean): void {
+        this.setCheckboxValue("enableCharacterGaze", enabled);
+    }
+
+    setEnableAutoMute(enabled: boolean): void {
+        this.setCheckboxValue("enableAutoMute", enabled);
+    }
+
+    setEnableTalk(enabled: boolean): void {
+        this.setCheckboxValue("enableTalk", enabled);
+    }
+
+    setEnableInspector(enabled: boolean): void {
+        this.setCheckboxValue("enableInspector", enabled);
+    }
+
+    setEnableVR(enabled: boolean): void {
+        this.setCheckboxValue("enableVR", enabled);
+    }
+
+    subscribeSettingsChange(listener: () => void): () => void {
+        return this.eventHub.subscribeSettingsChange(listener);
+    }
+
+    subscribeVrmUiState(listener: (state: DialogVrmUiState) => void): () => void {
+        return this.eventHub.subscribeVrmUiState(listener, this.stateStore.getDialogVrmUiState());
+    }
+
+    subscribeDialogUiState(listener: (state: DialogUiState) => void): () => void {
+        return this.eventHub.subscribeDialogUiState(listener, this.stateStore.getDialogUiState());
+    }
+
+    getDialogUiState(): DialogUiState {
+        return this.stateStore.getDialogUiState();
+    }
+
+    getVrmUiState(): DialogVrmUiState {
+        return this.stateStore.getDialogVrmUiState();
+    }
+
+    settingsUiState(): DialogSettingsUiState {
+        return this.settingsPolicy.buildUiState(this.stateStore);
+    }
+
+    settingsUiHints(): DialogSettingsUiHints {
+        return this.settingsPolicy.buildUiHints(this.stateStore);
     }
 
     enableCharacter(): boolean {
-        const eC: HTMLInputElement | null = document.querySelector('input#enableCharacter');
-        if (eC == null) { return false; }
-        return eC.checked;
+        return this.stateStore.get("enableCharacter");
     }
 
     enableTalk(): boolean {
-        const eC: HTMLInputElement | null = document.querySelector('input#enableTalk');
-        if (eC == null) { return false; }
-        return eC.checked;
+        return this.stateStore.get("enableTalk");
     }
 
     enableCharacterGaze(): boolean {
-        const eC: HTMLInputElement | null = document.querySelector("input#enableCharacterGaze");
-        if (eC == null) { return false; }
-        if (eC.checked) {
-            return true;
-        }
-        return false;
+        return this.stateStore.get("enableCharacterGaze");
     }
 
     enableAutoMute(): boolean {
-        const eC: HTMLInputElement | null = document.querySelector('input#enableAutoMute');
-        if (eC == null) { return false; }
-        return eC.checked;
+        return this.stateStore.get("enableAutoMute");
     }
 
     enableAutoGainControl(): boolean {
         // 騒音環境での過増幅回避のため、初期値はOFFだがユーザー選択を優先する。
-        const eC: HTMLInputElement | null = document.querySelector('input#enableAutoGainControl');
-        if (eC == null) { return false; }
-        return eC.checked;
+        return this.stateStore.get("enableAutoGainControl");
     }
 
     enableNoiseSuppression(): boolean {
-        const eC: HTMLInputElement | null = document.querySelector('input#enableNoiseSuppression');
-        if (eC == null) { return true; }
-        return eC.checked;
+        return this.stateStore.get("enableNoiseSuppression");
     }
 
     enableEchoCancellation(): boolean {
-        const eC: HTMLInputElement | null = document.querySelector('input#enableEchoCancellation');
-        if (eC == null) { return true; }
-        return eC.checked;
+        return this.stateStore.get("enableEchoCancellation");
     }
 
     enableVadGate(): boolean {
-        const eC: HTMLInputElement | null = document.querySelector('input#enableVadGate');
-        if (eC == null) { return false; }
-        return eC.checked;
+        return this.stateStore.get("enableVadGate");
     }
 
     enableVenueNoiseMode(): boolean {
-        const eC: HTMLInputElement | null = document.querySelector('input#enableVenueNoiseMode');
-        if (eC == null) { return false; }
-        return eC.checked;
+        return this.stateStore.get("enableVenueNoiseMode");
     }
 
     enableInspector(): boolean {
-        const eC: HTMLInputElement | null = document.querySelector('input#enableInspector');
-        if (eC == null) { return false; }
-        return eC.checked;
+        return this.stateStore.get("enableInspector");
     }
 
     enableVR(): boolean {
-        const eC: HTMLInputElement | null = document.querySelector('input#enableVR');
-        if (eC == null) { return false; }
-        return eC.checked;
+        return this.stateStore.get("enableVR");
+    }
+
+    private setCheckboxValue(id: string, enabled: boolean): void {
+        const key = this.mapBooleanSettingId(id);
+        if (!key) {
+            return;
+        }
+        if (this.stateStore.isDisabled(key)) {
+            return;
+        }
+        this.stateStore.set(key, !!enabled);
+        this.emitSettingsChanged();
+    }
+
+    private emitSettingsChanged(): void {
+        if (this.settingsChangeBatchDepth > 0) {
+            this.settingsChangePending = true;
+            return;
+        }
+        this.eventHub.emitSettingsChanged();
+    }
+
+    private runSettingsChangeBatch(action: () => void): void {
+        this.settingsChangeBatchDepth += 1;
+        try {
+            action();
+        } finally {
+            this.settingsChangeBatchDepth -= 1;
+            if (this.settingsChangeBatchDepth === 0 && this.settingsChangePending) {
+                this.settingsChangePending = false;
+                this.eventHub.emitSettingsChanged();
+            }
+        }
     }
 
     private getTitleText(): string {
-        const titleInputElement: HTMLInputElement | null = document.querySelector("input#titleText");
-        if (titleInputElement && titleInputElement.value) {
-            return titleInputElement.value;
-        }
-        return "Sincromisor";
+        return this.titleText();
     }
 
     updateTitleText(): void {
-        const headerElement: HTMLDivElement | null = document.querySelector("div#sincroHeaderBox__text");
-        if (!headerElement) {
-            return;
-        }
-        headerElement.innerText = this.getTitleText();
+        this.dom.setHeaderTitle(this.getTitleText());
     }
 
     updateCharacterStatus(available: boolean): void {
-        this.updateEnableCharacterStatus(available);
-        this.updateEnableCharacterGazeStatus(available);
-        this.updateAutoMuteStatus();
+        this.runSettingsChangeBatch(() => {
+            this.updateEnableCharacterStatus(available);
+            this.updateEnableCharacterGazeStatus(available);
+            this.updateAutoMuteStatus();
+            // disabled/checked 状態の変化も React 側へ同期する。
+            this.emitSettingsChanged();
+        });
     }
 
     updateUserMediaAvailabilityStatus(available: boolean): void {
-        const eC: HTMLButtonElement | null = document.querySelector('button#sincroStart');
-        if (!eC) {
-            return;
-        }
-        if (available) {
-            eC.disabled = false;
-            eC.textContent = 'はじめる';
-            // デバイス利用可能時のみ、顔認識連動の設定を有効化する。
-            this.updateEnableCharacterGazeStatus(true);
-            this.updateAutoMuteStatus();
-        } else {
-            eC.disabled = true;
-            eC.textContent = 'マイクが利用できません';
-            this.updateEnableCharacterGazeStatus(false);
-            this.updateAutoMuteStatus();
-        }
+        this.runSettingsChangeBatch(() => {
+            if (available) {
+                this.setDialogStartButtonState(false, 'はじめる');
+                // デバイス利用可能時のみ、顔認識連動の設定を有効化する。
+                this.updateEnableCharacterGazeStatus(true);
+                this.updateAutoMuteStatus();
+            } else {
+                this.setDialogStartButtonState(true, 'マイクが利用できません');
+                this.updateEnableCharacterGazeStatus(false);
+                this.updateAutoMuteStatus();
+            }
+            // getUserMedia 可否に連動した設定項目の disabled 変化を通知する。
+            this.emitSettingsChanged();
+        });
     }
 
     private updateEnableCharacterStatus(available: boolean) {
-        const eC: HTMLInputElement | null = document.querySelector('#enableCharacter');
-        if (!eC) {
-            return;
-        }
-        if (available) {
-            eC.disabled = false;
-        } else {
-            eC.disabled = true;
-            eC.checked = false;
-        }
+        this.settingsPolicy.applyCharacterAvailability(this.stateStore, available);
     }
 
     updateEnableCharacterGazeStatus(available: boolean): void {
-        const eC: HTMLInputElement | null = document.querySelector('#enableCharacterGaze');
-        if (!eC) {
-            return;
-        }
-        if (available) {
-            eC.disabled = false;
-        } else {
-            eC.disabled = true;
-            eC.checked = false;
-        }
+        this.settingsPolicy.applyCharacterGazeAvailability(this.stateStore, available);
+        this.emitSettingsChanged();
     }
 
     updateAutoMuteStatus(): void {
-        const eInput: HTMLInputElement | null = document.querySelector('input#enableAutoMute');
-        if (!eInput) {
-            return;
-        }
-        if (this.enableCharacterGaze()) {
-            eInput.disabled = false;
-        } else {
-            eInput.disabled = true;
-            eInput.checked = false;
-
-        }
+        this.settingsPolicy.applyAutoMuteAvailability(this.stateStore);
+        this.emitSettingsChanged();
     }
 
-    setRTCStartButtonEventListener(startFunction: () => void): void {
-        const startBtn: HTMLButtonElement | null = document.querySelector('button#sincroStart');
-        if (!startBtn) {
-            throw 'button#sincroStart is not found.';
-        }
-        startBtn.addEventListener('click', startFunction);
+    private initializeDialogStateDefaults(): void {
+        this.settingsPolicy.initializeDefaultDisabledState(this.stateStore);
+        // 起動前 dialog の開始ボタンは React 側が正式経路になったため、初期表示文言も store を正本とする。
+        this.stateStore.setDialogStartButtonState(false, 'はじめる');
     }
 
-    setRTCStopButtonEventListener(stopFunction: () => void): void {
-        const startBtn: HTMLButtonElement | null = document.querySelector('button#rtcStop');
-        if (!startBtn) {
-            throw 'button#sincroStart is not found.';
-        }
-        startBtn.addEventListener('click', stopFunction);
+    private bindDialogDomEvents(): void {
+        this.dom.bindDialogDragAndDrop(
+            (isDragOver) => this.setVrmDragOver(isDragOver),
+            (file) => this.updateVrmFile(file),
+        );
+        this.dom.bindVrmFileInput((file) => this.updateVrmFile(file));
     }
 
-    private setMiscEvent(): void {
-        // 入力されたタイトルに合わせたヘッダの更新
-        const titleText: HTMLInputElement | null = document.querySelector("input#titleText");
-        if (titleText) {
-            titleText.oninput = () => {
-                this.updateTitleText();
-            }
-        }
-
-        // 顔認識の有効/無効化設定と自動ミュート設定の同期
-        const enablecharacterGazeBox: HTMLInputElement | null = document.querySelector("input#enableCharacterGaze");
-        if (enablecharacterGazeBox) {
-            enablecharacterGazeBox.onclick = () => {
-                this.updateAutoMuteStatus();
-            }
-        }
-    }
-
-    /* VRMファイルがDrag & Dropされた際のイベントを定義 */
-    private setDragAndDropVrmEvent(): void {
-        const dropArea: HTMLDialogElement = this.getDialogElement();
-        console.log(dropArea);
-        dropArea.addEventListener('dragover', (e: DragEvent) => {
-            e.preventDefault();
-            dropArea.classList.add('vrmDragover');
-        });
-        dropArea.addEventListener('dragleave', (e: DragEvent) => {
-            e.preventDefault();
-            dropArea.classList.remove('vrmDragover');
-        });
-        dropArea.addEventListener('drop', (e: DragEvent) => {
-            e.preventDefault();
-            dropArea.classList.remove('vrmDragover');
-            if (e.dataTransfer == null) {
-                return;
-            }
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                const file = files[0];
-                this.updateVrmFile(file);
-            }
-        });
-    }
-
-    /* VRMファイルのアップロードイベントを定義 */
-    private setUploadVrmEvent(): void {
-        const inputElement: HTMLInputElement | null = document.querySelector('input#vrmFileInput');
-        if (!inputElement) { return; }
-        inputElement.addEventListener('change', (event: Event) => {
-            event.preventDefault();
-            if (event.target) {
-                const fileElement = event.target as HTMLInputElement;
-                const files = fileElement.files;
-                if (files) {
-                    this.updateVrmFile(files[0]);
-                }
-            }
-        });
+    private mapBooleanSettingId(id: string): Parameters<DialogStateStore["set"]>[0] | null {
+        const mapping: Record<string, Parameters<DialogStateStore["set"]>[0] | undefined> = {
+            enableCharacter: "enableCharacter",
+            enableTalk: "enableTalk",
+            enableCharacterGaze: "enableCharacterGaze",
+            enableAutoMute: "enableAutoMute",
+            enableNoiseSuppression: "enableNoiseSuppression",
+            enableEchoCancellation: "enableEchoCancellation",
+            enableAutoGainControl: "enableAutoGainControl",
+            enableVadGate: "enableVadGate",
+            enableVenueNoiseMode: "enableVenueNoiseMode",
+            enableInspector: "enableInspector",
+            enableVR: "enableVR",
+        };
+        return mapping[id] ?? null;
     }
 
     private updateVrmFile(file: File): void {
-        const popManager = PopManager.getManager();
-        // ファイル名がVRM拡張子であるか確認
-        if (!file.name.endsWith('.vrm')) {
-            popManager.writeDialogPopError('VRMファイルを選択してください。');
-            return;
-        }
-        const blob = new Blob([file], { type: "application/octet-stream" });
-        DialogManager.vrmUrl = URL.createObjectURL(blob);
-        // VRM差し替え時は旧モデルのサムネイルを使い回さない。
-        this.clearVrmThumbnailCache().catch((error) => {
-            console.error('Failed to clear VRM thumbnail cache.', error);
-        });
-        this.saveVrmFile(file).then(() => {
-            popManager.writeDialogPopMessage('VRMファイルを更新しました。');
+        this.vrmWorkflowService.applySelectedVrmFile(file).then((result) => {
+            if (!result.ok) {
+                this.setVrmStatusText(result.statusText);
+                this.notificationService.writeError(result.popError);
+                return;
+            }
+            this.stateStore.setSelectedVrmUrl(result.vrmUrl);
+            this.setVrmStatusText(result.statusText);
+            this.notificationService.writeInfo(result.popMessage);
             console.log('VRM file updated.', file);
         }).catch((error) => {
-            popManager.writeDialogPopError('VRMファイルの更新に失敗しました。');
+            this.setVrmStatusText('VRMファイルの更新に失敗しました');
+            this.notificationService.writeError('VRMファイルの更新に失敗しました。');
             console.error('VRM file update failed.', error);
         });
     }
 
-    private async saveVrmFile(file: File): Promise<void> {
-        const cache = await caches.open(DialogManager.fileCacheName);
-        const response = new Response(file);
-        await cache.put(DialogManager.vrmFileCacheKey, response);
-    }
-
     private async loadVrmFile(): Promise<void> {
-        const cache = await caches.open(DialogManager.fileCacheName);
-        const response: Response | undefined = await cache.match(DialogManager.vrmFileCacheKey);
-        if (!response) {
-            return;
+        const result = await this.vrmWorkflowService.loadInitialVrmSelection();
+        if (result.vrmUrl) {
+            this.stateStore.setSelectedVrmUrl(result.vrmUrl);
         }
-        DialogManager.vrmUrl = URL.createObjectURL(await response.blob());
+        this.setVrmStatusText(result.statusText);
     }
 
     // 変換済みサムネイル画像(Blob)を保存する。
     async saveVrmThumbnailBlob(blob: Blob): Promise<void> {
-        const cache = await caches.open(DialogManager.fileCacheName);
-        await cache.put(DialogManager.vrmThumbnailCacheKey, new Response(blob));
+        await this.vrmFileService.saveVrmThumbnailBlob(blob);
     }
 
     // 起動時に前回使用したサムネイルを復元する。
     async loadVrmThumbnailBlob(): Promise<Blob | null> {
-        const cache = await caches.open(DialogManager.fileCacheName);
-        const response: Response | undefined = await cache.match(DialogManager.vrmThumbnailCacheKey);
-        if (!response) {
-            return null;
-        }
-        return response.blob();
+        return this.vrmFileService.loadVrmThumbnailBlob();
     }
 
     // モデル更新時にキャッシュ不整合を防ぐための明示削除。
     async clearVrmThumbnailCache(): Promise<void> {
-        const cache = await caches.open(DialogManager.fileCacheName);
-        await cache.delete(DialogManager.vrmThumbnailCacheKey);
+        await this.vrmFileService.clearVrmThumbnailCache();
+    }
+
+    private setVrmDragOver(isDragOver: boolean): void {
+        const current = this.stateStore.getDialogVrmUiState();
+        if (current.isDragOver === isDragOver) {
+            return;
+        }
+        this.dom.setDialogDragoverClass(isDragOver);
+        this.stateStore.setDialogVrmDragOver(isDragOver);
+        // class 更新 -> state 更新 -> emit の順で揃え、React が追従した時に DOM側表示と食い違わないようにする。
+        this.emitVrmUiStateChanged();
+    }
+
+    private setVrmStatusText(vrmStatusText: string): void {
+        const current = this.stateStore.getDialogVrmUiState();
+        if (current.vrmStatusText === vrmStatusText) {
+            return;
+        }
+        this.stateStore.setDialogVrmStatusText(vrmStatusText);
+        // VRM status は Pop通知文言と合わせて短時間に更新されることがあるため、同値ガード後に単発通知する。
+        this.emitVrmUiStateChanged();
+    }
+
+    private emitVrmUiStateChanged(): void {
+        this.eventHub.emitCurrentVrmUiState(() => this.stateStore.getDialogVrmUiState());
+    }
+
+    private setDialogOpen(isOpen: boolean): void {
+        const current = this.stateStore.getDialogUiState();
+        if (current.isOpen === isOpen) {
+            return;
+        }
+        this.stateStore.setDialogOpen(isOpen);
+        this.emitDialogUiStateChanged();
+    }
+
+    private setDialogStartButtonState(startButtonDisabled: boolean, startButtonText: string): void {
+        const current = this.stateStore.getDialogUiState();
+        if (current.startButtonDisabled === startButtonDisabled && current.startButtonText === startButtonText) {
+            return;
+        }
+        this.stateStore.setDialogStartButtonState(startButtonDisabled, startButtonText);
+        // start button 状態は settingsChange と別イベントで通知し、React 側で dialog 表示状態の更新順を安定させる。
+        this.emitDialogUiStateChanged();
+    }
+
+    private emitDialogUiStateChanged(): void {
+        this.eventHub.emitCurrentDialogUiState(() => this.stateStore.getDialogUiState());
     }
 }

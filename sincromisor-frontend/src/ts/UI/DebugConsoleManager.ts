@@ -40,6 +40,16 @@ export type LearnedVadTuningUiConfig = {
 };
 
 export type LearnedVadPerformanceMode = "low_cpu" | "balanced" | "high_accuracy";
+export type DebugConsoleManagerEvent =
+    | { type: "local_vad_state"; isSpeech: boolean }
+    | { type: "learned_vad_state"; report: LearnedVadUiReport }
+    | { type: "face_x"; value: number }
+    | { type: "face_y"; value: number }
+    | { type: "facing"; value: number }
+    | { type: "character_eye_status"; watching: boolean }
+    | { type: "rtc_event_log"; message: string }
+    | { type: "ice_connection_state"; value: string }
+    | { type: "signaling_state"; value: string };
 
 export class DebugConsoleManager {
     private static instance: DebugConsoleManager;
@@ -60,6 +70,11 @@ export class DebugConsoleManager {
     private readonly debugMenuPanel: HTMLDivElement | null;
     private readonly debugConsoleToggleButton: HTMLButtonElement | null;
     private readonly debugConsoleCloseButton: HTMLButtonElement | null;
+    private readonly rtcStopButton: HTMLButtonElement | null;
+    private readonly reactSettingsPanelContainer: HTMLDivElement | null;
+    private readonly reactSettingsPanelRoot: HTMLDivElement | null;
+    private readonly reactSettingsPanelToggleButton: HTMLButtonElement | null;
+    private readonly reactSettingsPanelCloseButton: HTMLButtonElement | null;
     private readonly debugTabButtons: NodeListOf<HTMLButtonElement>;
     private readonly debugPanels: NodeListOf<HTMLElement>;
 
@@ -135,6 +150,7 @@ export class DebugConsoleManager {
     // 連続フレーム条件はプリセット依存のため内部保持し、UIスライダー更新時に合わせて渡す。
     private learnedVadOnConsecutiveFrames: number = 2;
     private learnedVadOffConsecutiveFrames: number = 2;
+    private readonly listeners = new Set<(event: DebugConsoleManagerEvent) => void>();
 
     // シングルトンインスタンスを返す。
     static getManager(): DebugConsoleManager {
@@ -153,6 +169,11 @@ export class DebugConsoleManager {
         this.debugMenuPanel = document.querySelector("div#debugMenuPanel");
         this.debugConsoleToggleButton = document.querySelector("button#debugConsoleToggle");
         this.debugConsoleCloseButton = document.querySelector("button#debugConsoleClose");
+        this.rtcStopButton = document.querySelector("button#rtcStop");
+        this.reactSettingsPanelContainer = document.querySelector("div#sincroReactSettingsPanelContainer");
+        this.reactSettingsPanelRoot = document.querySelector("div#reactSettingsPanel");
+        this.reactSettingsPanelToggleButton = document.querySelector("button#reactSettingsPanelToggle");
+        this.reactSettingsPanelCloseButton = document.querySelector("button#reactSettingsPanelClose");
         this.debugTabButtons = document.querySelectorAll("button[data-debug-tab]");
         this.debugPanels = document.querySelectorAll("[data-debug-panel]");
 
@@ -251,6 +272,13 @@ export class DebugConsoleManager {
         this.updateLearnedVadState({ status: "idle", probability: null });
     }
 
+    subscribe(listener: (event: DebugConsoleManagerEvent) => void): () => void {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
+    }
+
     // デバッグコンソールを表示状態にする。
     showDebugConsole(): void {
         if (!this.debugConsoleContainer) {
@@ -277,6 +305,53 @@ export class DebugConsoleManager {
             this.debugConsoleToggleButton.innerText = "Open Debug Console";
         }
         this.closeDebugMenu();
+    }
+
+    // React設定パネルを表示状態にする。
+    showReactSettingsPanel(): void {
+        if (!this.reactSettingsPanelContainer) {
+            return;
+        }
+        this.reactSettingsPanelContainer.classList.add("is-open");
+        this.reactSettingsPanelContainer.style.visibility = "visible";
+        if (this.reactSettingsPanelToggleButton) {
+            this.reactSettingsPanelToggleButton.innerText = "Close Settings Panel";
+        }
+        this.closeDebugMenu();
+    }
+
+    // Debug Console 上の RTC Stop ボタンに停止処理を接続する。
+    // 起動前 dialog の責務と分離し、DialogManager が debug UI のボタンを持たない構成へ寄せる。
+    setRTCStopButtonEventListener(stopFunction: () => void): void {
+        if (!this.rtcStopButton) {
+            throw new Error("button#rtcStop is not found.");
+        }
+        this.rtcStopButton.addEventListener("click", stopFunction);
+    }
+
+    // React設定パネルを非表示状態にする。
+    hideReactSettingsPanel(): void {
+        if (!this.reactSettingsPanelContainer) {
+            return;
+        }
+        this.reactSettingsPanelContainer.classList.remove("is-open");
+        this.reactSettingsPanelContainer.style.visibility = "hidden";
+        if (this.reactSettingsPanelToggleButton) {
+            this.reactSettingsPanelToggleButton.innerText = "Open Settings Panel";
+        }
+        this.closeDebugMenu();
+    }
+
+    // 現在の表示状態に応じて設定パネル表示をトグルする。
+    private toggleReactSettingsPanel(): void {
+        if (!this.reactSettingsPanelContainer) {
+            return;
+        }
+        if (this.reactSettingsPanelContainer.classList.contains("is-open")) {
+            this.hideReactSettingsPanel();
+            return;
+        }
+        this.showReactSettingsPanel();
     }
 
     // 現在の表示状態に応じてコンソール表示をトグルする。
@@ -313,6 +388,18 @@ export class DebugConsoleManager {
             this.blockPointerEvent(this.debugConsoleCloseButton);
             this.debugConsoleCloseButton.addEventListener("click", () => {
                 this.hideDebugConsole();
+            });
+        }
+        if (this.reactSettingsPanelToggleButton) {
+            this.blockPointerEvent(this.reactSettingsPanelToggleButton);
+            this.reactSettingsPanelToggleButton.addEventListener("click", () => {
+                this.toggleReactSettingsPanel();
+            });
+        }
+        if (this.reactSettingsPanelCloseButton) {
+            this.blockPointerEvent(this.reactSettingsPanelCloseButton);
+            this.reactSettingsPanelCloseButton.addEventListener("click", () => {
+                this.hideReactSettingsPanel();
             });
         }
         this.bindDocumentMenuClose();
@@ -358,23 +445,41 @@ export class DebugConsoleManager {
             "click",
             (event) => {
                 if (!this.debugConsoleContainer || !this.debugConsoleRoot) {
-                    return;
-                }
-                if (!this.debugConsoleContainer.classList.contains("is-open")) {
-                    return;
+                    // debug console が無いページでも設定パネル外クリック閉じは有効にする
                 }
                 const target = event.target as Node | null;
                 if (!target) {
                     return;
                 }
-                if (this.debugConsoleRoot.contains(target)) {
+                if (
+                    this.debugConsoleContainer &&
+                    this.debugConsoleRoot &&
+                    this.debugConsoleContainer.classList.contains("is-open")
+                ) {
+                    if (this.debugConsoleRoot.contains(target)) {
+                        return;
+                    }
+                    if (this.debugMenu && this.debugMenu.contains(target)) {
+                        return;
+                    }
+                    // コンソール外かつメニュー外のクリックのみ閉じる。
+                    this.hideDebugConsole();
                     return;
                 }
-                if (this.debugMenu && this.debugMenu.contains(target)) {
-                    return;
+                if (
+                    this.reactSettingsPanelContainer &&
+                    this.reactSettingsPanelRoot &&
+                    this.reactSettingsPanelContainer.classList.contains("is-open")
+                ) {
+                    if (this.reactSettingsPanelRoot.contains(target)) {
+                        return;
+                    }
+                    if (this.debugMenu && this.debugMenu.contains(target)) {
+                        return;
+                    }
+                    // 設定パネル外かつメニュー外のクリックのみ閉じる。
+                    this.hideReactSettingsPanel();
                 }
-                // コンソール外かつメニュー外のクリックのみ閉じる。
-                this.hideDebugConsole();
             },
             { capture: true },
         );
@@ -400,6 +505,9 @@ export class DebugConsoleManager {
     private blockPropagationToSceneControls(): void {
         if (this.debugConsoleRoot) {
             this.blockPointerEvent(this.debugConsoleRoot);
+        }
+        if (this.reactSettingsPanelRoot) {
+            this.blockPointerEvent(this.reactSettingsPanelRoot);
         }
     }
 
@@ -818,9 +926,11 @@ export class DebugConsoleManager {
     // AudioWorklet側VADの判定状態を表示する。
     updateLocalVadState(isSpeech: boolean): void {
         if (!this.localAudioVadValue) {
+            this.emitEvent({ type: "local_vad_state", isSpeech });
             return;
         }
         this.localAudioVadValue.textContent = isSpeech ? "Speech" : "Silence";
+        this.emitEvent({ type: "local_vad_state", isSpeech });
     }
 
     // 学習VADのモデル状態と確率表示を更新する。
@@ -841,6 +951,7 @@ export class DebugConsoleManager {
                 this.localVadProbValue.textContent = `${(Math.max(0, Math.min(1, report.probability)) * 100).toFixed(1)}%`;
             }
         }
+        this.emitEvent({ type: "learned_vad_state", report });
     }
 
     // Local Micの状態表示テキストと色を更新する。
@@ -1100,6 +1211,7 @@ export class DebugConsoleManager {
         const now = new Date();
         const ts = now.toISOString().split("T")[1]?.replace("Z", "") || now.toISOString();
         this.appendLog(this.rtcEventLog, `[${ts}] ${msg}\n`, DebugConsoleManager.EVENT_LOG_LINES);
+        this.emitEvent({ type: "rtc_event_log", message: msg });
     }
 
     // telop_chログへ追記する。
@@ -1116,12 +1228,14 @@ export class DebugConsoleManager {
     newIceConnectionState(msg: string): void {
         this.updateStateLog(this.iceConnectionLog, msg, false);
         this.addRtcEventLog(`ICE connection state = ${msg}`);
+        this.emitEvent({ type: "ice_connection_state", value: msg });
     }
 
     // ICE connectionの遷移状態表示を追記形式で更新する。
     updateIceConnectionState(msg: string): void {
         this.updateStateLog(this.iceConnectionLog, msg, true);
         this.addRtcEventLog(`ICE connection state -> ${msg}`);
+        this.emitEvent({ type: "ice_connection_state", value: msg });
     }
 
     // ICE gatheringの初期状態表示をセットする。
@@ -1140,12 +1254,14 @@ export class DebugConsoleManager {
     newSignalingState(msg: string): void {
         this.updateStateLog(this.signalingLog, msg, false);
         this.addRtcEventLog(`Signaling state = ${msg}`);
+        this.emitEvent({ type: "signaling_state", value: msg });
     }
 
     // signalingの遷移状態表示を追記形式で更新する。
     updateSignalingState(msg: string): void {
         this.updateStateLog(this.signalingLog, msg, true);
         this.addRtcEventLog(`Signaling state -> ${msg}`);
+        this.emitEvent({ type: "signaling_state", value: msg });
     }
 
     // Offer SDP全文を表示欄へ出力する。
@@ -1168,6 +1284,7 @@ export class DebugConsoleManager {
         if (this.faceXLog) {
             this.faceXLog.textContent = `${value}`;
         }
+        this.emitEvent({ type: "face_x", value });
     }
 
     // 顔検出Y座標表示を更新する。
@@ -1175,6 +1292,7 @@ export class DebugConsoleManager {
         if (this.faceYLog) {
             this.faceYLog.textContent = `${value}`;
         }
+        this.emitEvent({ type: "face_y", value });
     }
 
     // 正面向き判定の数値表示を更新する。
@@ -1182,13 +1300,22 @@ export class DebugConsoleManager {
         if (this.facing) {
             this.facing.textContent = `${value}`;
         }
+        this.emitEvent({ type: "facing", value });
     }
 
     // CharacterGazeによる注視状態を表示する。
     updateCharacterEyeStatus(watching: boolean): void {
         if (!this.characterGazeStatus) {
+            this.emitEvent({ type: "character_eye_status", watching });
             return;
         }
         this.characterGazeStatus.innerText = watching ? "みてる" : "みてない";
+        this.emitEvent({ type: "character_eye_status", watching });
+    }
+
+    private emitEvent(event: DebugConsoleManagerEvent): void {
+        for (const listener of this.listeners) {
+            listener(event);
+        }
     }
 }

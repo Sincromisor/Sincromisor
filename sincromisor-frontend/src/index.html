@@ -27,24 +27,23 @@
 
         <div class="sincroIndexContainer">
             <form class="sincroLinkBox">
-                <button formaction="simple-vrm/">Simple Interface(VRM Support)</button>
+                <h2>Recommended (VRM 1.0)</h2>
+                <button formaction="simple-vrm/">Simple Interface (VRM 1.0)</button>
+                <button formaction="vrm360/" class="experimental">360deg Camera (VRM 1.0)</button>
             </form>
 
             <form class="sincroLinkBox">
-                <h2>Experimental</h2>
-                <button formaction="glass/" class="experimental">Looking Glass</button>
-                <button formaction="vrm360/" class="experimental">360deg Camera(VRM Support)</button>
-                <button formaction="character/">Character Rendering Test</button>
-                <button formaction="character-glass/" class="experimental">Looking Glass Rendering Test</button>
+                <h2>Looking Glass (VRM 1.0 Priority)</h2>
+                <button formaction="looking-glass-vrm/" class="experimental">Looking Glass (VRM 1.0 / Three.js)</button>
+                <p>Experimental route (VRM 1.0 / Three.js migration target). It may not work yet depending on environment/device.</p>
+                <p>Legacy `glass` / `character-glass` Babylon.js pages are excluded from the default build, but remain as fallback for verification.</p>
             </form>
 
-            <form class="sincroLinkBox">
-                <h2>Deprecated</h2>
-                <button formaction="simple/">Simple Interface(Legacy)</button>
-                <button formaction="single/">Single Display (16:9)</button>
-                <button formaction="double/">Double Display (16:9)</button>
-                <button formaction="area360/" class="experimental">360deg Camera</button>
-            </form>
+            <div class="sincroLinkBox">
+                <h2>Legacy / Babylon.js</h2>
+                <p>Legacy pages are isolated and excluded from the default build.</p>
+                <p>Use the full build (`npm run build:all`) only when legacy verification is required.</p>
+            </div>
 
             <div>
                 <h2>Source Code</h2>

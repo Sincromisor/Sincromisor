@@ -10,11 +10,13 @@ import { SphereVideo } from "./SphereVideo";
 import { VideoTexture } from "three/src/textures/VideoTexture.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import { SRGBColorSpace } from 'three/src/constants.js';
+import { LookingGlassXRController } from "../LookingGlass/LookingGlassXRController";
 //import { MathUtils } from "three/src/math/MathUtils.js";
 
 export class VRM360Scene extends VRMScene {
     private readonly sphereVideo: SphereVideo;
     private readonly lightSphere: Mesh;
+    private lookingGlassXRController: LookingGlassXRController | null = null;
     /* 動画球の高さをだいたい身長 + カメラの高さ(1.9m)ぐらいに合わせる */
     private readonly videoPositionY: number = 1.9;
 
@@ -32,6 +34,15 @@ export class VRM360Scene extends VRMScene {
         this.lightSphere = this.createLightSphere();
         this.renderer.shadowMap.enabled = true;
         this.renderer.outputColorSpace = SRGBColorSpace;
+    }
+
+    // Looking Glass WebXR の start/stop を受けるコントローラを初期化する。
+    enableLookingGlassStartButton(): void {
+        if (this.lookingGlassXRController) {
+            return;
+        }
+        this.lookingGlassXRController = new LookingGlassXRController(this.renderer, this.scene);
+        this.lookingGlassXRController.attachToStartButton();
     }
 
     /*  URLのvideo_idパラメーターから、閲覧する動画のIDを得る。
