@@ -11,6 +11,7 @@ export class SincroVRMInitializer {
     // 自前生成したblob URLのみ解放対象として保持する。
     private generatedSystemIconURL: string | null = null;
     private appUiStarted = false;
+    protected activeScene: VRMScene | null = null;
 
     constructor() {
         this.charCanvas = this.getCharCanvasRoot();
@@ -41,6 +42,7 @@ export class SincroVRMInitializer {
         this.appController.debug.setRTCStopButtonEventListener(() => {
             this.appController.rtc.stop();
         });
+        this.bindRuntimeSettingsSync();
 
         if ('obsstudio' in window) {
             this.start();
@@ -108,6 +110,8 @@ export class SincroVRMInitializer {
             this.updateSystemIconFromThumbnail(thumbnailImage);
         });
         vrmScene.start();
+        this.activeScene = vrmScene;
+        this.syncSceneCharacterVisibility(this.appController.state.getSettingsSnapshot());
         return vrmScene;
 
         /*
@@ -179,5 +183,22 @@ export class SincroVRMInitializer {
         }
         URL.revokeObjectURL(this.generatedSystemIconURL);
         this.generatedSystemIconURL = null;
+    }
+
+    // Character ON/OFF は起動後の設定変更でも見た目に反映されるよう、scene へ追従させる。
+    protected bindRuntimeSettingsSync(): void {
+        this.appController.subscribe((event) => {
+            if (event.type !== "settings_snapshot") {
+                return;
+            }
+            this.syncSceneCharacterVisibility(event.settings);
+        });
+    }
+
+    protected syncSceneCharacterVisibility(settings: { enableCharacter: boolean }): void {
+        if (!this.activeScene) {
+            return;
+        }
+        this.activeScene.setCharacterVisible(settings.enableCharacter);
     }
 }

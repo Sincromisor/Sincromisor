@@ -23,6 +23,13 @@ export type AudioFilterConfig = {
     vadThreshold: VadThresholdConfig;
 };
 
+export type AudioConstraintRuntimeApplyReport = {
+    key: "autoGainControl" | "noiseSuppression" | "echoCancellation";
+    enabled: boolean;
+    status: "pending" | "applied" | "failed";
+    message?: string;
+};
+
 // マイク/カメラ取得と、送信用音声トラックの前処理（HPF/LPF/VAD/学習VAD連携）を担当する。
 // React移行後も UI は controller 経由でこのクラスを操作し、音声処理の実装詳細はここに閉じ込める。
 export class UserMediaManager {
@@ -78,6 +85,7 @@ export class UserMediaManager {
     private onVadStateCallback: (report: VadStateReport) => void = () => { };
     private onVadThresholdCallback: (config: VadThresholdConfig) => void = () => { };
     private onLearnedVadStateCallback: (report: LearnedVadStateReport) => void = () => { };
+    private onAudioConstraintRuntimeApplyCallback: (report: AudioConstraintRuntimeApplyReport) => void = () => { };
     private audioContext: AudioContext | null = null;
     private rawAudioTrack: MediaStreamTrack | null = null;
     private vadGateEnabled: boolean = false;
@@ -150,6 +158,11 @@ export class UserMediaManager {
     setLearnedVadStateCallback(callback: (report: LearnedVadStateReport) => void): void {
         this.onLearnedVadStateCallback = callback;
         this.onLearnedVadStateCallback(this.learnedVadClient.getSnapshot());
+    }
+
+    // DebugConsole表示用に、NS/EC/AGC の実行中トラック反映結果を通知する。
+    setAudioConstraintRuntimeApplyCallback(callback: (report: AudioConstraintRuntimeApplyReport) => void): void {
+        this.onAudioConstraintRuntimeApplyCallback = callback;
     }
 
     // VAD判定に連動して無音時の送信音量を0にするかを切り替える。
@@ -456,6 +469,35 @@ export class UserMediaManager {
             return;
         }
         audioConfig[key] = enabled;
+        // 取得済みの生マイクトラックがある場合は、可能な範囲で実行中トラックにも反映する。
+        // ブラウザ/デバイス依存で未対応な場合があるため、失敗しても設定保持だけは継続する。
+        const rawTrack = this.rawAudioTrack;
+        if (!rawTrack) {
+            this.onAudioConstraintRuntimeApplyCallback({
+                key,
+                enabled,
+                status: "pending",
+                message: "マイク開始後に適用",
+            });
+            return;
+        }
+        void rawTrack.applyConstraints({ [key]: enabled } as MediaTrackConstraints)
+            .then(() => {
+                this.onAudioConstraintRuntimeApplyCallback({
+                    key,
+                    enabled,
+                    status: "applied",
+                });
+            })
+            .catch((err) => {
+                console.warn(`Failed to apply audio constraint "${key}" to running track`, err);
+                this.onAudioConstraintRuntimeApplyCallback({
+                    key,
+                    enabled,
+                    status: "failed",
+                    message: err instanceof Error ? err.message : String(err),
+                });
+            });
     }
 
     // 顔認識機能未使用時などにカメラ取得を無効化する。
