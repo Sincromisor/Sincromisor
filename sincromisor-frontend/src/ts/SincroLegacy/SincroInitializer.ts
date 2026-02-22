@@ -1,29 +1,39 @@
-import { SincroController } from "../SincroController";
-import { DialogManager } from "../UI/DialogManager";
-import { ChatMessageManager } from "../UI/ChatMessageManager";
+import { SincroAppController } from "../App/SincroAppController";
 import { CharacterManager } from "./Character/CharacterManager";
 import { SincroScene } from "./Scene/SincroScene";
 import { TalkManager } from "../RTC/TalkManager";
 import { UserMediaManager } from "../RTC/UserMediaManager";
-import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 
 export class SincroInitializer {
-    protected readonly dialogManager: DialogManager;
-    protected readonly chatMessageManager: ChatMessageManager;
     protected readonly talkManager: TalkManager;
     protected readonly charCanvas: HTMLCanvasElement;
+    protected readonly appController: SincroAppController;
+    private appUiStarted = false;
 
     constructor() {
-        // Register debug console UI events at startup so touch/click toggles work before RTC start.
-        DebugConsoleManager.getManager();
-        this.dialogManager = DialogManager.getManager();
-        this.chatMessageManager = ChatMessageManager.getManager();
         this.talkManager = TalkManager.getManager();
         this.charCanvas = this.getCharCanvas();
+        this.appController = new SincroAppController();
+        // legacy scene 初期化時には Inspector/VR 設定が反映される。enableTalk は現状未使用。
+        this.appController.setStartupSettingsCapabilities({
+            enableTalk: false,
+            enableInspector: true,
+            enableVR: true,
+        });
+        this.appController.setStartHooks({
+            beforeStart: () => {
+                this.writeWelcomeMessagesOnce();
+            },
+            afterStart: () => {
+                this.startUiSideEffectsOnce();
+            },
+        });
 
         this.getUserMediaAvailabilityCheck();
         this.characterAvailabilityCheck();
-        this.setStartButtonEvent();
+        this.appController.debug.setRTCStopButtonEventListener(() => {
+            this.appController.rtc.stop();
+        });
 
         if ('obsstudio' in window) {
             this.start();
@@ -40,49 +50,51 @@ export class SincroInitializer {
 
     private getUserMediaAvailabilityCheck(): void {
         if (!UserMediaManager.hasGetUserMedia()) {
-            this.dialogManager.updateUserMediaAvailabilityStatus(false);
+            this.appController.dialog.updateUserMediaAvailabilityStatus(false);
         }
     }
 
     private characterAvailabilityCheck(): void {
         CharacterManager.availabilityCheck(() => {
-            this.dialogManager.updateCharacterStatus(true);
+            this.appController.dialog.updateCharacterAvailabilityStatus(true);
         }, () => {
-            this.dialogManager.updateCharacterStatus(false);
-        });
-    }
-
-    private setStartButtonEvent(): void {
-        this.dialogManager.setRTCStartButtonEventListener(() => {
-            this.start();
+            this.appController.dialog.updateCharacterAvailabilityStatus(false);
         });
     }
 
     private start(): void {
-        this.chatMessageManager.writeUnknownUserMessage("こんにちは!");
-        this.chatMessageManager.writeSystemMessage("こんにちは～!")
-        this.chatMessageManager.writeSystemMessage("音声は「VOICEVOX 四国めたん」でお送りします。");
+        this.appController.start();
+    }
 
-        const sincroController: SincroController = new SincroController();
-        this.dialogManager.setRTCStopButtonEventListener(() => {
-            sincroController.stopRTC();
-        });
+    private writeWelcomeMessagesOnce(): void {
+        if (this.appUiStarted) {
+            return;
+        }
+        this.appController.chat.writeUnknownUserMessage("こんにちは!");
+        this.appController.chat.writeSystemMessage("こんにちは～!");
+        this.appController.chat.writeSystemMessage("音声は「VOICEVOX 四国めたん」でお送りします。");
+    }
 
-        if (this.dialogManager.enableCharacter()) {
+    private startUiSideEffectsOnce(): void {
+        if (this.appUiStarted) {
+            return;
+        }
+        if (this.appController.dialog.isCharacterEnabled()) {
             const sincroScene: SincroScene = this.initializeSincroScene();
             sincroScene.createScene();
             sincroScene.run();
         }
 
-        this.dialogManager.closeDialog();
+        this.appController.dialog.close();
+        this.appUiStarted = true;
     }
 
     protected initializeSincroScene(): SincroScene {
         return new SincroScene(
             this.charCanvas, this.talkManager,
-            this.dialogManager.enableVR(),
-            this.dialogManager.enableCharacter(),
-            this.dialogManager.enableInspector()
+            this.appController.dialog.isVREnabled(),
+            this.appController.dialog.isCharacterEnabled(),
+            this.appController.dialog.isInspectorEnabled()
         );
     }
 }

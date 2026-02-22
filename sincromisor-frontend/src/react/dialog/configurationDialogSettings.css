@@ -1,0 +1,160 @@
+.configurationDialogReactSettingsPanel {
+    width: 100%;
+    margin: 0 auto;
+    padding: 2px 2px 6px 2px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #eef3fb;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.configurationDialogReactSettingsPanel__header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: transparent;
+    padding: 2px 4px 6px 4px;
+}
+
+.configurationDialogReactSettingsPanel__title {
+    font-size: 1.05rem;
+    opacity: 0.92;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.configurationDialogReactSettingsPanel__vrmSection {
+    margin-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    padding-top: 6px;
+}
+
+.configurationDialogReactSettingsPanel__subTitle {
+    opacity: 0.75;
+    margin-bottom: 2px;
+}
+
+.configurationDialogReactSettingsPanel__caption {
+    opacity: 0.7;
+    line-height: 1.35;
+    margin-bottom: 4px;
+}
+
+.configurationDialogReactSettingsPanel__button {
+    width: 100%;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    color: #eef3fb;
+    padding: 7px 10px;
+    line-height: 1.2;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+}
+
+.configurationDialogReactSettingsPanel__vrmDropStatus {
+    margin-top: 6px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.03);
+    line-height: 1.35;
+}
+
+.configurationDialogReactSettingsPanel__vrmDropStatus.is-dragover {
+    border-color: rgba(118, 211, 255, 0.65);
+    background: rgba(68, 154, 255, 0.14);
+}
+
+.configurationDialogReactSettingsPanel__statusText {
+    opacity: 0.9;
+}
+
+.configurationDialogReactSettingsPanel__statusSubText {
+    opacity: 0.7;
+    margin-top: 2px;
+}
+
+.configurationDialogReactSettingsPanel__startHint {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+    line-height: 1.35;
+}
+
+.configurationDialogReactSettingsPanel__actions {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.configurationDialogReactSettingsPanel__footer {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.configurationDialogReactSettingsPanel__backLink {
+    color: #eef3fb;
+    text-decoration: none;
+    opacity: 0.85;
+}
+
+.configurationDialogReactSettingsPanel__backLink:hover,
+.configurationDialogReactSettingsPanel__backLink:focus-visible {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+.configurationDialogReactSettingsPanel__startButton {
+    width: 100%;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.07));
+    color: #eef3fb;
+    padding: 7px 12px;
+    font-size: 0.98rem;
+    line-height: 1.2;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+}
+
+.configurationDialogReactSettingsPanel__startButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 共有 settings section の inline style（暗色前提）を前提に、dialog 側でも文字色継承を揃える。 */
+.configurationDialogReactSettingsPanel label,
+.configurationDialogReactSettingsPanel input,
+.configurationDialogReactSettingsPanel select,
+.configurationDialogReactSettingsPanel button,
+.configurationDialogReactSettingsPanel summary {
+    color: inherit;
+    font-size: inherit;
+}
+
+.configurationDialogReactSettingsPanel select option {
+    background: #1e2230;
+    color: #eef3fb;
+}

@@ -8,12 +8,24 @@ export type CurrentMora = {
     'endTime': number
 }
 
+export type TalkManagerEvent =
+    | { type: "text_channel_message"; message: ChatMessage }
+    | { type: "telop_channel_message"; message: TelopChannelMessage };
+
+export type TelopTextSegment = {
+    speechId: number;
+    text: string;
+};
+
 export class TalkManager {
     private static instance: TalkManager;
     private readonly chatMessageManager: ChatMessageManager;
     private telopChannelMessage: Array<TelopChannelMessage> = [];
     private currentTelopChannelMessage: CurrentMora | null = null;
     private moraID: number = 0;
+    private readonly listeners = new Set<(event: TalkManagerEvent) => void>();
+    private telopDomRenderingEnabled: boolean = true;
+    private telopTextSegments: TelopTextSegment[] = [];
 
     static getManager(): TalkManager {
         if (!TalkManager.instance) {
@@ -26,9 +38,31 @@ export class TalkManager {
         this.chatMessageManager = ChatMessageManager.getManager();
     }
 
+    subscribe(listener: (event: TalkManagerEvent) => void): () => void {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
+    }
+
+    setTelopDomRenderingEnabled(enabled: boolean): void {
+        this.telopDomRenderingEnabled = enabled;
+        if (!enabled) {
+            const telopBox = document.querySelector("div#sincroFooterBox");
+            if (telopBox) {
+                telopBox.innerHTML = "";
+            }
+        }
+    }
+
+    getTelopTextSegmentsSnapshot(): TelopTextSegment[] {
+        return [...this.telopTextSegments];
+    }
+
     addTextChannelMessage(msg: ChatMessage): void {
         console.dir(msg);
         this.chatMessageManager.writeMessage(msg);
+        this.emitEvent({ type: "text_channel_message", message: msg });
     }
 
     addTelopChannelMessage(msg: TelopChannelMessage): void {
@@ -44,6 +78,7 @@ export class TalkManager {
             this.moraID += 1;
             this.addTelopChar(msg.speech_id, msg.text);
         }
+        this.emitEvent({ type: "telop_channel_message", message: msg });
     }
 
     currentMora(): CurrentMora | null {
@@ -58,6 +93,10 @@ export class TalkManager {
     }
 
     private addTelopChar(speech_id: number, char: string): void {
+        this.upsertTelopTextSegment(speech_id, char || " ");
+        if (!this.telopDomRenderingEnabled) {
+            return;
+        }
         const telopText: HTMLParagraphElement | null = document.querySelector("div#sincroFooterBox");
         if (!telopText) return;
         if (telopText.clientWidth === 0) return;
@@ -94,6 +133,28 @@ export class TalkManager {
             } else {
                 telopText.removeChild(firstSpan);
             }
+        }
+    }
+
+    private upsertTelopTextSegment(speechId: number, char: string): void {
+        const index = this.telopTextSegments.findIndex((segment) => segment.speechId === speechId);
+        if (index >= 0) {
+            const target = this.telopTextSegments[index];
+            this.telopTextSegments[index] = { ...target, text: target.text + char };
+        } else {
+            this.telopTextSegments.push({ speechId, text: char });
+        }
+        // フッターテロップは表示幅制御の代替として件数で切り詰める（React描画移行期間の簡易実装）。
+        if (this.telopTextSegments.length > 6) {
+            this.telopTextSegments = this.telopTextSegments.slice(-6);
+        }
+        // 先頭の空白だけになった segment は詰める。
+        this.telopTextSegments = this.telopTextSegments.filter((segment) => segment.text.length > 0);
+    }
+
+    private emitEvent(event: TalkManagerEvent): void {
+        for (const listener of this.listeners) {
+            listener(event);
         }
     }
 }

@@ -1,5 +1,19 @@
 import { ChatMessage, ChatMessageBuilder } from "../RTC/RTCMessage";
 
+export type ChatMessageViewRecord = {
+    message: ChatMessage;
+    renderMode: ChatMessageRenderMode;
+};
+
+export type ChatMessageRenderMode = "text" | "trusted_html";
+
+export type ChatMessageManagerEvent = {
+    type: "message" | "system_icon_changed";
+    message?: ChatMessage;
+    viewRecord?: ChatMessageViewRecord;
+    systemIconUrl?: string;
+};
+
 export class ChatMessageManager {
     private static instance: ChatMessageManager;
     private readonly chatBox: HTMLDivElement;
@@ -16,6 +30,9 @@ export class ChatMessageManager {
 
     /* 画面上に表示される最大メッセージ数 */
     private readonly maxMessageCount: number = 30;
+    private readonly listeners = new Set<(event: ChatMessageManagerEvent) => void>();
+    private domRenderingEnabled: boolean = true;
+    private messages: ChatMessageViewRecord[] = [];
 
     /* 同じエラーメッセージが何度も表示されないようにするために使用 */
     lastErrorMessage: string = '';
@@ -35,6 +52,35 @@ export class ChatMessageManager {
         this.chatBox = chatBoxID;
     }
 
+    subscribe(listener: (event: ChatMessageManagerEvent) => void): () => void {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
+    }
+
+    // React UI へ移行中のため、既存DOM描画を止めてイベント配信だけを使うモードを用意する。
+    setDomRenderingEnabled(enabled: boolean): void {
+        this.domRenderingEnabled = enabled;
+        if (!enabled) {
+            this.chatBox.innerHTML = "";
+        }
+    }
+
+    // React 側の初期描画用に、現時点のチャット履歴（新しい順）を返す。
+    getMessagesSnapshot(): ChatMessage[] {
+        return this.messages.map((record) => record.message);
+    }
+
+    // React描画では HTMLフラグを参照して表示方針を切り替えるため、描画メタデータを返す。
+    getMessageViewSnapshot(): ChatMessageViewRecord[] {
+        return [...this.messages];
+    }
+
+    getSystemIconUrl(): string {
+        return this.systemIconUrl;
+    }
+
 
     private getMessageBox(messageID: string): HTMLDivElement | null {
         return this.chatBox.querySelector('#msg' + messageID);
@@ -44,9 +90,10 @@ export class ChatMessageManager {
     // 新たにメッセージが追加された場合(ChatMessageのIDを持つMessageBoxがない)は新規にMessageBoxを作成、
     // 既存のものがある場合はp.message要素の中身を直接書き換える。
     writeMessage(cMessage: ChatMessage, isHTML: boolean = false): void {
+        this.upsertMessageSnapshot(cMessage, isHTML);
         const box: HTMLDivElement | null = this.getMessageBox(cMessage.message_id);
         console.dir(["writeMessage", box, cMessage]);
-        if (box) {
+        if (this.domRenderingEnabled && box) {
             const ePara: HTMLParagraphElement | null = box.querySelector('p.sincroMessage__text');
             if (ePara) {
                 if (isHTML) {
@@ -56,9 +103,10 @@ export class ChatMessageManager {
 
                 }
             }
-        } else {
-            this.createNewMessageBox(cMessage);
+        } else if (this.domRenderingEnabled) {
+            this.createNewMessageBox(cMessage, isHTML);
         }
+        this.emitMessage(cMessage, isHTML);
     }
 
     /*
@@ -67,7 +115,9 @@ export class ChatMessageManager {
     */
     writeUnknownUserMessage(message: string, isHTML: boolean = false): HTMLDivElement {
         const chatMessage: ChatMessage = new ChatMessageBuilder('user', 'UnknownUser', 'Unknown User', -1, message);
-        return this.createNewMessageBox(chatMessage, isHTML);
+        const box = this.createNewMessageBox(chatMessage, isHTML);
+        this.emitMessage(chatMessage, isHTML);
+        return box;
     }
 
     /*
@@ -76,7 +126,9 @@ export class ChatMessageManager {
     */
     writeSystemMessage(message: string, isHTML: boolean = false): HTMLDivElement {
         const chatMessage: ChatMessage = new ChatMessageBuilder('system', this.systemUserID, this.systemUserName, -1, message);
-        return this.createNewMessageBox(chatMessage, isHTML);
+        const box = this.createNewMessageBox(chatMessage, isHTML);
+        this.emitMessage(chatMessage, isHTML);
+        return box;
     }
 
     /*
@@ -90,7 +142,9 @@ export class ChatMessageManager {
         }
         this.lastErrorMessage = message;
         const chatMessage: ChatMessage = new ChatMessageBuilder('error', this.systemUserID, this.systemUserName, -1, message);
-        return this.createNewMessageBox(chatMessage);
+        const box = this.createNewMessageBox(chatMessage);
+        this.emitMessage(chatMessage, false);
+        return box;
     }
 
     /*
@@ -99,17 +153,22 @@ export class ChatMessageManager {
     */
     writeResetMessage(message: string): HTMLDivElement {
         const chatMessage: ChatMessage = new ChatMessageBuilder('reset', this.systemUserID, this.systemUserName, -1, message);
-        return this.createNewMessageBox(chatMessage);
+        const box = this.createNewMessageBox(chatMessage);
+        this.emitMessage(chatMessage, false);
+        return box;
     }
 
     // 既存表示済みのsystemメッセージも含めてアイコンを一括更新する。
     // (VRMロード完了が初回メッセージ表示より後になるため、後追い更新が必要)
     setSystemIcon(iconUrl: string): void {
         this.systemIconUrl = iconUrl;
-        const systemIcons = this.chatBox.querySelectorAll<HTMLImageElement>('div.sincroSystemMessage img.sincroMessage__icon');
-        systemIcons.forEach((icon) => {
-            icon.src = this.systemIconUrl;
-        });
+        if (this.domRenderingEnabled) {
+            const systemIcons = this.chatBox.querySelectorAll<HTMLImageElement>('div.sincroSystemMessage img.sincroMessage__icon');
+            systemIcons.forEach((icon) => {
+                icon.src = this.systemIconUrl;
+            });
+        }
+        this.emitSystemIconChanged();
     }
 
     /*
@@ -125,6 +184,7 @@ export class ChatMessageManager {
         isHTML: messageObjがhtmlの時はtrue、textの時はfalseを渡す。
     */
     private createNewMessageBox(cMessage: ChatMessage, isHTML = false): HTMLDivElement {
+        this.upsertMessageSnapshot(cMessage, isHTML);
         const eDisplayName = document.createElement("span");
         eDisplayName.className = "display_name";
         eDisplayName.innerText = cMessage.speaker_name;
@@ -162,10 +222,12 @@ export class ChatMessageManager {
         e.appendChild(eIconBox);
         e.appendChild(eMesg);
 
-        this.chatBox.prepend(e);
-        setTimeout(() => { e.style.opacity = '1'; }, 200);
-        //this.autoScroll();
-        this.removeOldMessage();
+        if (this.domRenderingEnabled) {
+            this.chatBox.prepend(e);
+            setTimeout(() => { e.style.opacity = '1'; }, 200);
+            //this.autoScroll();
+            this.removeOldMessage();
+        }
         return e;
     }
 
@@ -178,6 +240,31 @@ export class ChatMessageManager {
     private removeOldMessage() {
         while (this.chatBox.childNodes.length >= this.maxMessageCount) {
             this.chatBox.childNodes[this.chatBox.childNodes.length - 1].remove();
+        }
+    }
+
+    private upsertMessageSnapshot(message: ChatMessage, isHTML: boolean): void {
+        const renderMode: ChatMessageRenderMode = isHTML ? "trusted_html" : "text";
+        const existingIndex = this.messages.findIndex((m) => m.message.message_id === message.message_id);
+        if (existingIndex >= 0) {
+            this.messages[existingIndex] = { message, renderMode };
+            return;
+        }
+        this.messages = [{ message, renderMode }, ...this.messages].slice(0, this.maxMessageCount);
+    }
+
+    private emitMessage(message: ChatMessage, isHTML: boolean): void {
+        const renderMode: ChatMessageRenderMode = isHTML ? "trusted_html" : "text";
+        const event: ChatMessageManagerEvent = { type: "message", message, viewRecord: { message, renderMode } };
+        for (const listener of this.listeners) {
+            listener(event);
+        }
+    }
+
+    private emitSystemIconChanged(): void {
+        const event: ChatMessageManagerEvent = { type: "system_icon_changed", systemIconUrl: this.systemIconUrl };
+        for (const listener of this.listeners) {
+            listener(event);
         }
     }
 }

@@ -25,6 +25,16 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - Babylon.js 依存は `legacy`/`experimental` として隔離し、通常系ページから順次外す。
   - Looking Glass は `@lookingglass/webxr` を継続利用しつつ、Three.js + VRM1.0 側へ移植する。
 
+### 2.1 優先順位の更新（2026-02-22）
+
+- 最優先タスク:
+  - VRM 1.0（Three.js + `@pixiv/three-vrm`）の基本機能維持/改善
+  - Looking Glass + VRM 1.0 実装（Babylon 依存を持ち込まない）
+  - React 化（UI/制御境界の整理を含む）
+- 方針変更:
+  - Babylon.js legacy の置換は段階を細かく刻まず、通常導線・通常ビルドから先に切り離して高速に進める
+  - legacy 機能は必要時のみ明示的にビルド/検証する
+
 ## 3. 背景
 
 - 解決したい課題:
@@ -246,6 +256,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 
 - 新規機能追加時の原則:
   - UIに閉じる変更は React 側へ追加する
+  - React/UI の新規ファイルは原則 `TypeScript`（`.ts` / `.tsx`）で実装し、props・state・イベントpayloadの型を明示する
   - RTC/Media/描画のロジック追加は Core/Renderer 側に閉じ込める
   - React コンポーネントから WebRTC API を直接叩かない（Facade/Controller 経由）
 - 依存追加の原則:
@@ -358,6 +369,43 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 - ドキュメントチェック
   - `frontend_ui.md` に現行実装との差分（新規 controller 入口）を追記
   - 本書の分割案から逸脱した場合は、理由を変更履歴に残す
+
+### 7.10.1 Phase 0 実装進捗（2026-02-22）
+
+- 実装済み（挙動維持を優先した抽出）
+  - `SincroAppController`（薄いFacade）
+    - UI層（現行Initializer / 将来React）から使う入口を固定
+    - `start()` / `stop()` API を公開（現段階では `SincroController` への委譲中心）
+    - `subscribe(...)` の最小土台を実装（lifecycle イベントのみ）
+    - `setStartHooks(...)` を実装し、initializer 側のUI副作用（挨拶/シーン起動/ダイアログ閉じ）を段階的に移管可能にした
+  - `SincroRtcSessionController`
+    - `RTCTalkClient` 生成/開始/停止
+    - `text_ch` / `telop_ch` の `TalkManager` 連携
+    - `setLocalAudioTrack(...)` 反映
+    - AutoMute 用 `setMute(...)` 委譲
+  - `SincroAudioInputController`
+    - `UserMediaManager` 生成
+    - `DialogManager` 設定の `UserMediaManager` 反映
+    - `DebugConsoleManager` と VAD/学習VAD callback 配線
+    - `getUserMedia` 実行とエラー表示
+  - `SincroCharacterGazeController`
+    - `CharacterGaze` 起動
+    - 視線状態の Debug 表示更新
+    - `#eyeTarget` DOM 更新（暫定維持）
+    - AutoMute イベントから `setMute` への橋渡し
+
+- 現在の `SincroController` の主責務（簡素化後）
+  - manager/controller の組み立て
+  - `start()` での audio / rtc / gaze controller の起動順制御
+  - `talkMode` の引き渡し
+  - stop 操作の委譲
+  - 注: UI向けイベント購読は `SincroAppController` 側へ段階的に引き上げる方針
+
+- 残タスク（Phase 0 で推奨）
+  - `SincroUiBridge` の導入方針を確定（既存 UI manager 併存期間の整理）
+  - `SincroAppController.subscribe(...)` のイベント種類拡張（chat/error/rtc/vad/gaze）
+  - `SincroAppController` の責務拡張（`applySettings` 方向）
+  - `SincroController` と `SincroVRMInitializer` の責務境界を再定義（Start/Stop/初期メッセージ）
 
 ### 7.11 `SincroController` の UI manager 呼び出し一覧（Phase 0 作業メモ）
 
@@ -502,20 +550,254 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - Commit 2: `SincroController` から RTC 開始/停止を委譲
   - Commit 3: 軽微な整理（命名・コメント・型補足）
 
+### 7.13 Phase 1 実装開始用変更セット（`simple-vrm` React最小PoC）
+
+- 目的:
+  - 既存 MPA と Core 実装を維持したまま、`simple-vrm` で React UI を最小導入し、移行方式を検証する
+
+- この変更セットで扱う対象（In Scope）
+  - `@vitejs/plugin-react-swc` の導入と `vite.config.js` への適用
+  - `simple-vrm` 用 React エントリの追加（既存ページを置換または並行）
+  - Start/Stop、接続状態、最小メッセージ表示の React UI 実装
+  - 既存 Core（`SincroController` または Phase 0で抽出した controller 群）への接続
+  - 既存 DebugConsole の暫定共存（必要なら表示は既存のまま）
+
+- この変更セットで扱わない対象（Out of Scope）
+  - DebugConsole 全面React化
+  - 設定ダイアログ全面React化（詳細設定UI・VAD調整UI）
+  - `main`, `single`, `double`, `vrm360` 等の他ページの React 化
+  - Babylon.js 依存ページの整理/削除
+  - Looking Glass VRM1.0 移植
+
+- 想定する新規/変更ファイル（例）
+  - 新規:
+    - `sincromisor-frontend/src/simple-vrm/main-react.tsx`（仮）
+    - `sincromisor-frontend/src/react/simple-vrm/SimpleVrmApp.tsx`（仮）
+    - `sincromisor-frontend/src/react/shared/types.ts`（必要な場合のみ）
+  - 変更:
+    - `sincromisor-frontend/vite.config.js`（React plugin 追加）
+    - `sincromisor-frontend/src/simple-vrm/index.html`（React mount point の追加/調整）
+    - `sincromisor-frontend/package.json`（`@vitejs/plugin-react-swc` 追加後）
+  - 原則変更しない:
+    - `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
+    - `sincromisor-frontend/src/ts/RTC/UserMediaManager.ts`
+    - `sincromisor-frontend/src/ts/RTC/LearnedVadWorkerClient.ts`
+
+- React PoC の最小UI要件（Phase 1 の完成ライン）
+  - 必須表示:
+    - Start ボタン
+    - Stop ボタン
+    - 接続状態表示（文字列で可）
+    - チャット/システム/エラーの最小ログ表示
+  - 任意（あれば良い）:
+    - 現在の talk mode 表示
+    - Character 有効/無効の表示
+  - 非対象（Phase 2 へ送る）:
+    - DebugConsole 詳細UI
+    - VAD チューニングUI
+    - 設定ダイアログ全項目
+
+- React PoC の接続方式（推奨）
+  - 方式A（推奨・低リスク）:
+    - React UI は `SincroAppController` / `SincroController` を呼び出すだけ
+    - 既存 `DialogManager` / `DebugConsoleManager` は暫定共存
+    - React は「最小の操作UI + 表示UI」のみ担当
+  - 方式B（限定的に可）:
+    - `ChatMessageManager` の出力だけイベント化し、React のログ表示に流す
+    - DebugConsole は既存DOMのまま維持
+  - 避ける方式:
+    - React 導入初回PRで `DialogManager` / `DebugConsoleManager` を同時に全面置換する
+
+- `simple-vrm` ページの移行パターン（選択肢）
+  - パターン1（推奨）:
+    - `simple-vrm/index.html` は維持
+    - React mount point を追加し、既存DOMと併存させる
+    - 問題がなければ後続で既存DOMを縮退
+  - パターン2:
+    - `simple-vrm/index.html` の UI 部分を React mount に置換
+    - 3D描画用のコンテナ DOM は既存IDを維持
+  - 判断基準:
+    - 切り戻しやすさを優先するならパターン1
+    - 差分量を減らしたいならパターン2（ただし回帰確認が増える）
+
+- PR の受け入れ条件（この変更セット専用）
+  - ビルド/起動:
+    - `npm run build` が成功
+    - `simple-vrm` が dev/build 両方で開ける
+  - 挙動:
+    - React UI から Start/Stop が実行できる
+    - `text_ch` / `telop_ch` 由来の表示が最低限確認できる
+    - 既存 DebugConsole（暫定共存時）が機能を失っていない
+  - 非回帰:
+    - 非移行ページ（少なくとも `main` または `simple`）がビルドできる
+    - WebRTC payload / endpoint に変更が入っていない
+
+- レビュー時の確認ポイント
+  - `vite.config.js` の MPA entry が壊れていないか
+  - React plugin 追加で既存 HTML partial plugin の挙動に影響が出ていないか
+  - React mount 先と既存 DOM ID が衝突していないか
+  - Start/Stop のイベント登録が二重化していないか
+  - StrictMode の有無による副作用二重実行の影響を考慮しているか
+
+- 推奨コミット分割（小さく進める場合）
+  - Commit 1: `@vitejs/plugin-react-swc` 導入 + `vite.config.js` 設定
+  - Commit 2: `simple-vrm` 用 React mount と最小表示（ダミー表示）
+  - Commit 3: Start/Stop 接続
+  - Commit 4: 最小メッセージ表示 + 調整
+
+### 7.13.1 Phase 1 実装進捗（2026-02-22）
+
+- 実装済み（PoC最小段階）
+  - `vite.config.js` に `@vitejs/plugin-react-swc` を適用
+  - `simple-vrm/index.html` に React mount point を追加（既存UIと併存）
+  - `simple-vrm/main-react.tsx` を追加し、React パネルをマウント
+  - `src/react/simple-vrm/SimpleVrmControlPanel.tsx` を追加（旧 `SimpleVrmReactPanel.tsx` を正式名へリネーム）
+    - `SincroAppController.subscribeCurrent(...)` で active controller を監視
+    - `SincroAppController.subscribe(...)`（lifecycle + system/error/chat + VAD/Gaze/RTC event）を表示
+    - Start/Stop は `SincroAppController` 直接操作に統一（controller 未接続時は disabled）
+  - `ChatMessageManager` に購読フックを追加（既存DOM描画は維持）
+  - `ChatMessageManager` に履歴スナップショット保持 + DOM描画ON/OFF切替を追加し、React描画移行中でも既存 `write*` API を維持したまま表示層を差し替えられるようにした
+  - `SincroAppController.subscribe(...)` へ chat/system/error イベントを接続
+  - `DebugConsoleManager` に購読フックを追加（既存Debug表示は維持）
+  - `SincroAppController.subscribe(...)` へ local VAD / learned VAD / Gaze / RTC event log / ICE / signaling を接続
+  - `SincroAppController` 側で簡易 `connection_state`（idle/starting/connecting/connected/degraded/...）を導出し、React PoC はそれを優先表示
+  - `SincroAppController` に `settings_snapshot` / `applySettings(...)` の最小基盤を追加
+    - 現在対応: `titleText`, `talkMode`, `enableCharacter`, `enableTalk`, `enableCharacterGaze`, `enableAutoMute`, `enableNoiseSuppression`, `enableEchoCancellation`, `enableAutoGainControl`, `enableVadGate`, `enableVenueNoiseMode`, `enableInspector`, `enableVR`
+  - `DialogManager.subscribeSettingsChange(...)` を追加し、既存ダイアログ操作の変更も `settings_snapshot` として React 側へ同期可能にした
+  - `SincroAppController` に `settings_ui_state`（既存ダイアログの disabled 状態）を追加し、React PoC の入力可否を既存 UI 制約と同期
+  - `DialogManager.updateCharacterStatus(...)` / `updateUserMediaAvailabilityStatus(...)` などの status 更新でも `settings_ui_state` が追従するよう通知を追加し、disabled 状態同期の取りこぼしを低減
+  - `SincroAppController` に `settings_ui_hints`（disabled 理由の補足）を追加し、React PoC の Character/Gaze/AutoMute 設定で理由表示を開始
+  - `SincroAppController` に `startup_settings_status`（`enableTalk` / `enableInspector` / `enableVR` の変更差分）を追加し、React PoC で `running` 中は再起動推奨、`stopped/idle` では「次回起動で反映予定」として表示
+  - `SincroAppController` に `startup_settings_capabilities`（ページ別の有効性）を追加し、initializer から登録する構成にした
+    - `simple-vrm`（`SincroVRMInitializer`）では現行実装で `Talk/Inspector/VR` が scene 初期化へ未接続のため、React PoC 上では disabled + 注記表示
+    - React PoC の startup settings は、通常表示を「サポート項目のみ」に絞り、未対応項目は `details` 展開時のみ確認できるよう整理
+    - legacy（`SincroInitializer`）では `Inspector/VR` は scene 初期化に反映されるため有効、`enableTalk` は現状未使用として無効
+  - `SincroAppController.applySettings(...)` 実行中の `settings_snapshot` 多重通知を抑制し、反映後に単発スナップショットを通知するよう整理
+  - React PoC パネルから `titleText`、`talkMode`、主要マイク設定トグル、Character/Gaze/AutoMute、起動前設定トグル（Talk/Inspector/VR）を `applySettings(...)` 経由で変更可能にした（設定ダイアログDOM/ヘッダ表示を更新）
+  - React PoC の settings UI を `PoCSettingsSections`（basic/mic/character/startup）へ分割し、起動前設定（Talk/Inspector/VR）は「再起動が必要な場合あり」の注記を追加
+  - React PoC 実装ファイルを `jsx/js` から `tsx/ts` へ移行し、PoC用の共通型（`panelTypes.ts`）を追加
+  - React パネルのユーザー向け表示ラベルから `PoC` 色を弱め、設定を上段・診断情報（status/logs）を `Diagnostics` 折りたたみへ整理
+  - `SincroAppController` 購読ロジックを `useSimpleVrmPanelState` hook に抽出し、`SimpleVrmControlPanel` を表示組み立て中心へ整理（別ページ展開の再利用基盤）
+  - React パネル内の `PoC*` コンポーネント/型名を `PanelControls`, `Diagnostics*`, `*SettingsSection`, `Panel*` 型へ整理し、PoC 段階の内部命名を縮小
+  - `vrm360/index.html` にも React mount point と `main-react.tsx` を追加し、`SimpleVrmControlPanel` を横展開（同一 hook 基盤を再利用）
+  - `src/react/vrm360/Vrm360ControlPanel.tsx` を追加し、`vrm360` はページ名だけ切り替えた薄いラッパー経由で React パネルを利用（ページ別調整の拡張点を用意）
+  - `src/react/chat/SincroChatView.tsx` を追加し、`simple-vrm` / `vrm360` / `looking-glass-vrm` の `#sincroChatBox` を React 描画へ切り替え開始
+    - 既存 `sincroChatBox.css` の class 構造を再利用
+    - React マウント時に `ChatMessageManager.setDomRenderingEnabled(false)` を呼び、二重描画を回避
+    - system アイコン差し替え（VRMロード後の更新）も `system_icon_changed` イベントで反映
+    - `ChatMessageManager` の view snapshot/event に `renderMode`（`text` / `trusted_html`）を引き継ぎ、React 側で表示方針を明示（移行期間は既存互換優先で HTML 描画）
+  - `src/react/telop/SincroTelopView.tsx` を追加し、`#sincroFooterBox` のテロップ表示を React 描画へ切り替え開始
+    - `TalkManager` に telop DOM描画ON/OFF と telop text segment snapshot を追加
+    - React マウント時に `TalkManager.setTelopDomRenderingEnabled(false)` を呼び、二重描画を回避
+  - `src/react/dialog/ConfigurationDialogSettingsPanel.tsx` を追加し、設定ダイアログの主要セクション（基本設定 + マイク設定）を React 表示へ先行置換
+    - 既存 dialog の `talkModeSelector` / `titleText` / `details.advancedSettings` は CSS で非表示化し、`DialogManager` 用の橋渡しDOMとして保持
+  - 設定ダイアログの Character/Gaze/AutoMute と VRMモデル選択導線（`vrmFileInput` の proxy ボタン）も React セクションへ追加し、既存DOMは橋渡し用に非表示化
+  - `DialogManager` に React 置換補助API（`setReactPrimarySettingsEnabled(...)`, `openVrmFilePicker()`）を追加し、React 側の直接DOM操作を縮小
+  - `DialogManager` に `DialogVrmUiState`（dragover / VRM状態テキスト）の購読を追加し、React dialog UI で VRM更新・D&D状態を表示可能にした
+  - `DialogManager` に `DialogUiState`（dialog open/close, 開始ボタン disabled/text）の購読を追加し、React dialog UI で細部状態も表示可能にした
+  - `PopManager` に dialog pop イベント購読 + dialog pop DOM描画ON/OFF を追加し、`DialogPopMessages` で設定ダイアログ内の通知（VRM更新成功/失敗など）を React 描画へ切り替え開始
+  - `useConfigurationDialogSettingsState` を `useSimpleVrmPanelState` 依存から分離し、`SincroAppController.subscribeCurrent/subscribe` + `DialogManager.subscribeVrmUiState/subscribeDialogUiState` を直接購読する dialog 専用hook に整理
+  - `subscribeActiveSincroAppController` ユーティリティを追加し、active controller 差し替え時の購読張り替え/解放ロジックを `useSimpleVrmPanelState` と dialog hook で共有化
+  - `ConfigurationDialogSettingsPanel` の dialog 専用見た目を `configurationDialogSettings.css` へ分離し、`sincroConfigurationDialog.css` から React panel 専用スタイルを撤去
+  - dialog 用設定セクションの adapter（`DialogSettingsFormSections`）を追加し、`ConfigurationDialogSettingsPanel` から `simple-vrm` 用共有コンポーネントへの依存を局所化
+  - `DialogSettingsFormSections` の主要セクション（basic/mic/character）を dialog 専用実装へ置き換え、shared panel component 依存をさらに縮小
+  - `SincroAppController` に dialog bridge API（`setDialogReactPrimarySettingsEnabled`, `openDialogVrmFilePicker`）を追加し、dialog hook の `DialogManager` 直接依存を縮小
+  - `SincroAppController` に dialog pop bridge（`dialog_pop_message`, `setDialogPopDomRenderingEnabled(...)`）を追加し、`DialogPopMessages` の `PopManager` 直接依存を解消
+  - React 設定型（`ApplySettingsFn`, `SincroAppSettings*`）を `src/react/app/appSettingsTypes.ts` に切り出し、dialog UI が `simple-vrm/panelTypes` に依存しない構成へ整理
+  - 起動前 dialog の `はじめる` / `×` / `もどる` を `ConfigurationDialogSettingsPanel` 側へ移し、visible UI を React 主導に整理
+  - `configurationDialog.html` の旧入力群を `configurationDialog__bridgeDom` に集約し、`reactPrimarySettingsEnabled` 時は bridge DOM をまとめて非表示化
+  - `DialogManager` に dialog 外側クリック（背景クリック）での close を追加し、Debug Console に近い操作感へ寄せた
+  - `DialogStateStore` を追加し、`DialogManager` の主要 getter/setter（talkMode/title/checkbox 群）を DOM 直読み中心から内部状態参照へ移行開始（bridge DOM は同期先として維持）
+    - disabled 状態（`settings_ui_state` の元データ）も `DialogStateStore` に保持し、bridge DOM の hidden/縮退の影響を受けにくい構成へ移行開始
+    - `DialogUiState`（open / startButtonDisabled / startButtonText）も `DialogStateStore` に集約し、dialog UI状態と設定状態の管理を同一ストアへ寄せ始めた
+    - `DialogVrmUiState`（dragover / VRM状態テキスト）も `DialogStateStore` に集約し、dialog 状態管理の一本化をさらに前進
+  - `DialogManager` を state-first 化し、`setTalkMode` / `setTitleText` / checkbox setter 群は bridge DOM 非依存でも `DialogStateStore` を更新する構成へ変更
+  - `configurationDialog__bridgeDom` は `vrmFileInput` のみを残す最小構成へ縮退（visible 設定 UI は React 側が正式経路）
+  - `DialogBridgeDomAdapter` を追加し、dialog 本体/close操作/VRM file input/ヘッダー文言の DOM 依存を `DialogManager` から切り出し開始
+  - `SincroVRMInitializer` / `SincroInitializer` の旧 `#sincroStart` クリック配線を削除し、起動前 dialog の開始操作を React UI -> `SincroAppController.start()` の単一路へ統一
+  - `DialogBridgeDomAdapter` / `DialogManager` から旧 start ボタン関連の DOM bridge を削除し、開始ボタン文言/disabled は `DialogStateStore.DialogUiState` を正本化
+  - `DialogManager` の `talkMode/titleText` setter と Character/Gaze/AutoMute の disabled 更新ロジックを store 正本化し、設定値系の `document.querySelector(...)` fallback を削除
+  - `rtcStop` ボタン配線は `DebugConsoleManager` へ責務移管し、`DialogManager` から `document.querySelector(...)` を解消（dialog 本体の DOM 依存は `DialogBridgeDomAdapter` に隔離）
+  - `DialogVrmFileService` を追加し、VRMファイル/サムネイルの Cache Storage 永続化（保存・読込・削除）を `DialogManager` から分離
+  - `DialogVrmWorkflowService` を追加し、VRMファイル選択時の検証/保存/初期復元フローを `DialogManager` から分離（`DialogManager` は UI状態更新/Pop通知中心へ）
+  - `DialogNotificationService` を追加し、dialog 内通知（`PopManager.writeDialogPop*`）を `DialogManager` から分離して `PopManager.getManager()` 直接依存を縮退
+  - `SincroAppController` に dialog bridge API（`updateUserMediaAvailabilityStatus`, `updateCharacterAvailabilityStatus`, `isCharacterEnabled/isVREnabled/isInspectorEnabled`, `load/saveVrmThumbnailBlob`）を追加し、initializer の `DialogManager` 直接依存をさらに縮退
+  - `SincroVRMInitializer` / `SincroLegacy/SincroInitializer` から `DialogManager` import/field を削除し、dialog 関連の参照を `SincroAppController` bridge（設定参照/可否反映/thumbnail cache/close）へ統一
+  - `DialogManager.vrmUrl` の static 状態を instance の `selectedVrmUrl` に置換し、`SincroAppController.getSelectedVrmUrl()` 経由で initializer / VRM360 初期化へ渡す構成に整理
+  - `DialogStateStore` に selected VRM URL を集約し、`DialogManager` の状態責務（設定値/UI状態/VRM UI状態/選択中VRM）を store 側へさらに寄せた
+  - `DialogSettingsPolicy` を追加し、settings UI state/hints 生成と Character/Gaze/AutoMute の有効/無効ポリシーを `DialogManager` から分離
+  - `SincroAppController` に `dialogBridge`（`appController.dialog.*`）を追加し、React dialog hook / dialog pop / initializer の呼び出しを段階的に集約（既存メソッドは互換のため残置）
+  - `useConfigurationDialogSettingsState` / `DialogPopMessages` / `SincroVRMInitializer` / `SincroLegacy/SincroInitializer` / `SincroVRM360Initializer` の主要 dialog 呼び出しを `appController.dialog.*` へ寄せ、呼び出し側の責務を明確化
+  - `SincroAppController` に `chatBridge`（`appController.chat.*`）を追加し、initializer の挨拶メッセージ出力・system icon 更新を `ChatMessageManager` 直接依存から段階的に移行
+  - `SincroAppController` に `debugBridge`（`appController.debug.*`）を追加し、initializer の `RTC Stop` ボタン配線を `DebugConsoleManager` 直接依存から移行
+  - `SincroAppController` の `dialogBridge` / `chatBridge` / `debugBridge` を通じて、initializer / React dialog hook / dialog pop の UI操作依存を段階的に集約（manager 直接依存の縮退を継続）
+  - `SincroAppController` に `rtcBridge`（`appController.rtc.*`）を追加し、initializer の停止操作配線も bridge 群へ揃えて API を統一方向に整理
+  - `DialogManager` の設定DOM同期系メソッド（bridge input 前提の change/input 監視など）を削除し、React dialog + state store + adapter の構成へ整理
+  - `configurationDialog__bridgeDom` を最小 input/select/button/file 群に縮退し、ラベル/fieldset/戻るリンク等の可視UI要素は React 側へ寄せた
+  - Debug Menu に `Open Startup Dialog` を追加し、`sincro:open-configuration-dialog` -> `SincroAppController.openConfigurationDialog()` 経由で起動前 dialog の再表示導線を追加
+  - `main-react.tsx`（`simple-vrm` / `vrm360` / `looking-glass-vrm`）を動的 import 化し、Control Panel / Chat / Telop / Dialog UI を個別 chunk として分割
+  - `vite.config.js`（modern-only build）に `manualChunks` を追加し、`react`, `three`, `three-vrm`, `mediapipe/onnxruntime`, `@lookingglass/webxr`, その他 vendor の分離を開始
+  - `manualChunks` を追加調整し、`three/examples`, `three-vrm-animation`, `@mediapipe/*`, `onnxruntime-web` を分離（`vendor_three_examples`, `vendor_vrm_animation`, `vendor_mediapipe`, `vendor_onnxruntime`）
+  - React チャットで `renderMode`（`text` / `trusted_html`）を `ChatMessageManager` の view snapshot/event から受け取りつつ、HTML描画許可を `system` / `reset` のみに制限（移行期の安全方針を明示）
+  - VRM1.0 Looking Glass 専用の modern ページ `looking-glass-vrm/` を追加（`src/looking-glass-vrm/index.html`, `src/looking-glass-vrm/main-react.tsx`）
+    - `main-vrm360.ts` を再利用して VRM360 + Looking Glass 起動ボタン連携を利用
+    - `LookingGlassVrmControlPanel` で専用見出しを表示
+  - Babylon-free Looking Glass 入口の初版として `src/ts/SincroVRM/LookingGlass/LookingGlassXRController.ts` を追加
+    - `@lookingglass/webxr` polyfill 初期化 + `button#startLookingGlass` 連携 + Three.js `renderer.xr` セッション開始
+    - `VRM360Scene.enableLookingGlassStartButton()` から有効化し、`SincroVRM360Initializer` で接続
+  - `LookingGlassXRController` の状態を `window` カスタムイベント（`sincro:looking-glass-state`）で通知し、`SincroAppController` の `looking_glass_state` イベントとして React UI へ橋渡し
+    - エラー時は `code`（`button_not_found` / `webxr_unavailable` / `session_start_failed` / `polyfill_init_failed`）を付与して表示・切り分けを容易化
+    - 再試行/復帰待ち用に `recovering` 状態を追加（エラー後リトライ開始時、セッション終了後の再試行可能状態）
+  - React パネル（`SimpleVrmControlPanel` / `Vrm360ControlPanel`）で Looking Glass 状態を上段表示および Diagnostics card に表示
+  - React 設定パネルは常時表示をやめ、`sincroBody` の Debug Menu (`Open Settings Panel`) から開くモーダル式に変更
+    - `DebugConsoleManager` が開閉を管理し、閉じる操作は右上Xボタンとメニュー外/パネル外クリックで統一
+  - `LookingGlassVrmControlPanel` では `SimpleVrmControlPanel` の `variant="looking-glass-vrm"` を使い、Looking Glass 操作案内を上段に表示し、未サポート startup 設定が全件の時は startup セクション自体を省略
+  - `LookingGlassRuntimeConfig`（VRM1.0 側 runtime config）を追加し、`SincroAppController.getSettingsSnapshot()/applySettings(...)` から Looking Glass パラメータを読み書きできるようにした
+    - 現在対応: `lgTileHeight`, `lgNumViews`, `lgTargetY`, `lgDepthiness`, `lgFovyDeg`
+    - `LookingGlassXRController` は polyfill 初期化時に runtime config を参照
+    - `SincroAppController.applySettings(...)` 側で LG 設定の範囲丸め/step丸めを実施（入力揺れや範囲外値を吸収）
+  - `LookingGlassRuntimeConfig` 更新時に `sincro:looking-glass-config-updated` イベントを発火し、`SincroAppController` が `looking_glass_config_status`（`pendingForNextSession`, `reloadRecommended`, `changedKeys`, `reloadRecommendedKeys`, `nextSessionKeys`）を React UI へ通知
+    - `LookingGlassXRController` は config 更新イベントを監視し、非アクティブ時は次回開始に向けて polyfill 再初期化フラグを立てる（`sincro:looking-glass-polyfill-reinit-ready`）
+    - 実行中セッション中の変更のみ `reloadRecommended` として扱い、セッション終了後は `nextSession` 扱いへ戻す
+  - `looking-glass-vrm` の React UI に `looking glass settings` セクションを追加（次回セッション開始時に反映）
+    - `looking-glass-vrm` では通常の `mic settings` / `character settings` を advanced 折りたたみに移して、LG設定を前面化
+    - LG設定変更ステータスは項目別に「Reload recommended」「Next session」を表示
+    - `talkMode` は `sincro` / `chat` 両ユースケース想定のため表示維持、`titleText` は `looking-glass-vrm` では非表示（必要性が低いため）
+    - LG設定プリセット（`Default` / `Portrait` / `Wide`）を追加して実機調整を高速化
+  - legacy `glass` / `character-glass` ページに `looking-glass-vrm` への移行案内バナーを追加
+  - `TalkManager` に購読フックを追加し、`SincroAppController.subscribe(...)` へ `telop_message` を接続
+  - React PoC パネルで `text/chat` 系ログと `telop` を別枠表示
+  - React PoC パネルを `controls / status cards / logs` にコンポーネント分割（PoC段階の保守性改善）
+  - `SincroVRMInitializer` / `SincroInitializer` は `SincroAppController` を先行生成し、Start時UI副作用を `setStartHooks(...)` で登録
+    - React PoC の Start/Stop を `SincroAppController` 直操作に統一可能な構成へ移行
+
+- 未実装（Phase 1 継続）
+  - `connection_state` の文言/状態遷移を実運用向けに整理（再接続・初回待機の表現調整）
+  - React UI での telop / 詳細チャット表示の整形改善（現在はPoCログ）
+  - React PoC パネルの見た目調整（PoC inline style からCSS/テーマ変数化するか判断）
+  - 起動前設定トグルの実反映タイミングを `SincroAppController` / initializer で明確化（現状は再起動推奨表示まで）
+  - `vrm360` 向け React パネルの設定項目をページ特性に合わせて調整（現状は `Vrm360ControlPanel` で見出しのみ差し替え）
+  - `looking-glass-vrm` 向けに、設定項目の追加整理（例: LG専用設定群の新設）を行う
+  - Looking Glass 設定の適用タイミングの厳密化（polyfill 再初期化を含む挙動の実機検証と、必要なら再初期化失敗時のフォールバック設計）
+  - Looking Glass + VRM1.0 の描画/UX 実装を `LookingGlassXRController` 初版から拡張（VRM360専用設定、復帰動線、エラー種別表示）
+
 ## 8. 設定・デプロイ
 
 - 環境変数:
   - 原則変更なし（サーバー配布 `config.json` を継続利用）
 - 設定ファイル:
   - `sincromisor-frontend/vite.config.js`（React plugin 追加、MPA は維持）
+  - `sincromisor-frontend/tsconfig.modern.json`（default build 用。legacy/Babylon 系ソースを除外）
 - 導入状況（2026-02-22 時点）:
   - `react` / `react-dom` は導入済み（`^19.2.4`）
-  - `@vitejs/plugin-react-swc` は未導入（Phase 1 で追加予定）
+  - `@vitejs/plugin-react-swc` は導入済み（`^4.2.3`）
 - 起動方法:
   - `cd sincromisor-frontend && npm run dev`
 - デプロイ/ローカル実行手順:
-  - 段階移行中も `npm run build` を通す
-  - React 導入後は移行対象ページと既存ページの両方を確認する
+  - 通常確認（VRM1.0/React 優先）: `npm run build`（modern-only build）
+  - legacy/Babylon 含む確認が必要なときのみ: `npm run build:all`
+  - React 導入後は移行対象ページ（`simple-vrm`, `vrm360`, `looking-glass-vrm`）を優先確認する
+  - `looking-glass-vrm` は当面 Experimental 導線として扱い、未動作環境がある前提で案内文を維持する
 - 互換性に影響する設定変更:
   - Vite MPA entry 名変更は既存URLに影響するため慎重に扱う
   - Babylon 依存を削除する前に、対応ページの代替実装提供または廃止告知を行う
@@ -598,7 +880,18 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - `React + Vite + TypeScript` を最小依存で導入し、UI 層から段階移行する
   - MPA 構成は当面維持し、Router / 大規模 state 管理は必要になるまで導入しない
 
-## 14. 変更履歴
+## 14. Looking Glass 実機確認前チェックリスト（最小）
+
+- `npm run build` が成功している
+- `index.html` から `looking-glass-vrm/` に遷移できる
+- `looking-glass-vrm` で `Control Panel` が開ける（Debug Menu -> `Open Settings Panel`）
+- `Control Panel` で `トークモード (talk mode)` と Looking Glass 設定の変更が反映される（`settings_snapshot` 更新）
+- `Control Panel` 上段の Looking Glass 状態表示が更新される（未接続環境でも `idle/error` などの表示遷移を確認）
+- `Diagnostics` 内で `LGコード` / `LG詳細` が表示できる（エラー時の確認先が機能する）
+- `Debug Console` から `Start Looking Glass` ボタンが見える/押下できる（実機なし環境では失敗してもよい）
+- `looking_glass_config_status` の文言（次回セッション反映 / 再読み込み推奨）が設定変更時に表示される
+
+## 15. 変更履歴
 
 | 日付 | 変更内容 |
 | --- | --- |
@@ -606,8 +899,47 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 | 2026-02-22 | フェーズ別実施手順（Phase 0-4）、初期タスク分解、設計判断ルールを追加 |
 | 2026-02-22 | `SincroController` 分割案、UIイベント境界、Phase 0 完了判定を追加 |
 | 2026-02-22 | `SincroController` の UI manager 呼び出し一覧を追加、React/ReactDOM `^19.2.4` 導入状況を反映 |
+| 2026-02-22 | dialog 内部の責務分離を進行（`DialogEventHub` / `Dialog*Service` / `DialogSettingsPolicy` / `DialogBridgeDomAdapter` / `DialogStateStore` 集約）、`SincroAppController` の `dialog/chat/debug/rtc` bridge API と `SincroAppBridges.ts` 分離を反映 |
+| 2026-02-22 | `SincroAppTypes.ts` を追加して `SincroAppController` から型/イベント定義を分離。React 側は `DialogManager` 直接依存なし（`appController.dialog` 経由）を確認 |
+| 2026-02-22 | `SincroAppEventMappers.ts` を追加して managerイベント→`SincroAppEvent` 変換を分離。`SincroAppController` constructor の購読処理を `bindManagerSubscriptions()` へ整理 |
+| 2026-02-22 | `SincroAppLookingGlassStateTracker.ts` を追加し、Looking Glass 状態/設定変更差分の追跡と `looking_glass_config_status` 判定を `SincroAppController` から分離 |
+| 2026-02-22 | `SincroAppConnectionState.ts`（接続状態判定）、`SincroAppSettingsApply.ts`（`applySettings` 実処理）、`SincroAppBridgeFactories.ts`（dialog/chat/debug/rtc bridge実装）を追加し、`SincroAppController` を orchestration 中心に整理 |
+| 2026-02-22 | `SincroAppStartupSettings.ts`（startup設定の再起動/次回起動判定）と `SincroAppSubscriptionSnapshot.ts`（購読直後の初期イベント送出）を追加し、`SincroAppController.subscribe()` / `getStartupSettingsStatus()` を薄く整理 |
+| 2026-02-22 | `SincroAppSettingsSnapshotBuilder.ts`（settings snapshot 合成）と `SincroAppWindowEventBinder.ts`（window event 登録）を追加。未使用の `SincroAppController` 互換 wrapper メソッド群を整理し、`appController.dialog/*` などの bridge API 利用を前提に整理 |
+| 2026-02-22 | `SincroAppUiStateSnapshotBuilder.ts` を追加し、Dialog由来UI状態（settings ui/dialog ui/vrm ui）の取得を helper 化。`bindManagerSubscriptions()` を chat/debug/talk/pop/dialog ごとに分割して `SincroAppController` の可読性を改善 |
+| 2026-02-22 | `SincroAppEventHub.ts`（AppEvent listener管理）と `SincroAppControllerRuntime.ts`（manager bundle/bridge bundle 生成）を追加し、`SincroAppController` の constructor 初期化と emit 周辺を整理。UI状態 getter 群は `getUiStateSnapshot()` 経由に統一 |
+| 2026-02-22 | `SincroAppActiveControllerRegistry.ts`（static active controller 管理）と `SincroAppLookingGlassEventFlow.ts`（LG window event 処理手順）を追加。`SincroAppController` の static 管理と LG handler 本文を短縮し、public API をセクションコメントで整理 |
+| 2026-02-22 | `SincroAppDialogFacade.ts` で Dialog 境界型を明文化。`SincroAppEmitHelpers.ts` を追加して lifecycle/settings snapshot の emit 手順を helper 化。React 側は `subscribeActiveSincroAppEvents.ts` を追加して active controller + event購読の定型配線を共通化 |
+| 2026-02-22 | `SincroAppDebugSubscriptionFlow.ts` を追加して debug購読の RTC state / connection state 更新手順を helper 化。`SincroAppController` に `state` bridge（snapshot getter 群の grouping）を追加し、React `useSimpleVrmPanelState` はイベント処理を handler map 化して if 連鎖を整理 |
+| 2026-02-22 | `useConfigurationDialogSettingsState` も handler map 化し、`appController.state` から初期 snapshot / controller差し替え時 snapshot を取得する構成へ整理。`SincroAppController.bind*Subscriptions()` には emit順序意図のコメントを補強 |
+| 2026-02-22 | `sincroAppStateSnapshotHydrators.ts` を追加して React hook 間の snapshot 反映（settings/dialog/startup status）を共通化。`SincroAppManagerSubscriptionBinder.ts` を追加して AppController の manager購読本文（chat/debug/talk/pop/dialog）を helper 化 |
+| 2026-02-22 | `SincroAppManagerSubscriptionFacades.ts` を追加して manager購読binderの依存を facade 型へ寄せた。React 側は `panelLogHelpers.ts` で chat/system/error ログ追加処理を共通化。`SincroAppController` constructor は `initializeRuntime()` に分割して初期化の読み順を改善 |
+| 2026-02-22 | `SincroAppControllerRuntime.ts` に `SincroAppControllerRuntimeBundle` 型を追加し、`initializeRuntime()` の返却型を明示。`panelLogHelpers.ts` の汎用 `prependCappedItem()` を `DialogPopMessages.tsx` に展開し、dialog pop 一覧の更新処理も共通化。`SincroAppManagerSubscriptionBinder.ts` の debug購読に emit順序意図コメントを補強 |
+| 2026-02-22 | `dialogPopAnimationHelpers.ts` を追加して dialog pop の show/hide/remove タイマー処理を `DialogPopMessages.tsx` から分離。`SincroAppLookingGlassEventFlow.ts` に flow 用 params 型/ラッパーを追加して LG event handler 境界を明確化。`SincroAppController.initializeRuntime()` は `createSincroAppRuntimeBundle(...)` へ委譲して runtime bundle（manager + bridge + stateBridge）組み立てを `SincroAppControllerRuntime.ts` に集約 |
+| 2026-02-22 | `DialogPopMessages.tsx` に dialog pop タイマー cleanup（unmount / active controller 切替時）を追加し、pending timer を `useRef` で管理して安全性を改善。`SincroAppLookingGlassEventFlow.ts` は `*Detail` 公開より `*Flow` 公開中心へ整理。`SincroAppController` の `setStartupSettingsCapabilities()` は state/capability 系の近くへ移動して public API の読み順を改善 |
+| 2026-02-22 | `useDialogPopTimers.ts` を追加し、`DialogPopMessages.tsx` の pending timer 管理（登録/一括cleanup）を custom hook 化。`SincroAppLookingGlassEventFlow.ts` の `emitLookingGlassConfigStatus(...)` は flow context 型ベース引数へ統一。`SincroAppController` の private method 並びは event handler 群→初期化/bind 群→state helper 群の読み順を意識して整理を継続 |
+| 2026-02-22 | `dialogPopAnimationHelpers.ts` に dialog pop timing 定数（show delay / hide transition）を導入し、`DialogPopMessages.tsx` の cleanup 余裕時間計算でも再利用。`SincroAppEmitHelpers.ts` に `emitSincroAppConnectionState(...)` を追加し、AppController の派生接続状態通知を helper 経由へ統一。`SincroAppLookingGlassEventFlow.ts` には `active` 時の config status 二重通知の意図（表示収束のための保守的通知）をコメントで明記 |
+| 2026-02-22 | `DialogPopMessages.tsx` の表示件数 `3` を `dialogPopAnimationHelpers.ts` の `DIALOG_POP_TIMING.renderLimit` に集約。`SincroAppEmitHelpers.ts` に `emitSincroAppSettingsApplyEvents(...)` を追加し、`applySettings(...)` 後の settings/UI/startup/LG config 通知を helper 化。`SincroAppController` は `buildSettingsRelatedSnapshotPayload()` を追加して `emitSettingsRelatedSnapshots()` と `applySettings()` の payload 組み立て重複を削減 |
+| 2026-02-22 | `SincroAppSettingsRelatedSnapshotBuilder.ts` を追加し、settings関連 payload（settings/uiState/uiHints/startupStatus）の組み立てを AppController から helper へ外出し。`DialogManager` は `updateCharacterStatus()` / `updateUserMediaAvailabilityStatus()` 内で `updateEnableCharacterGazeStatus()` / `updateAutoMuteStatus()` の中間通知を抑止して `settingsChange` の重複発火を削減。React 側の表示件数/タイミング定数は `react/app/uiTuning.ts` に集約を開始（chat/telop/rtc event log / dialog pop） |
+| 2026-02-22 | `DialogEventHub` に current dialog/VRM UI state を getter から通知するヘルパを追加し、`DialogManager` の UI state emit を薄く整理。`SincroAppController.applySettings()` は `getSettingsSnapshot()` の結果を settings関連 payload builder に再利用して重複 snapshot 生成を削減。`UI_TUNING.controlPanel.diagnostics` を追加し、Diagnostics status/log セクションの gap・spacing・message log 高さなどの表示値を定数化して適用範囲を拡張 |
+| 2026-02-22 | `DialogManager` の `setVrmStatusText()` / `setDialogStartButtonState()` に同値更新ガードを追加し、drag&drop/状態更新時の不要な UI state 通知を抑止。`SincroAppController` は settings関連 payload の短命キャッシュ（同期処理内のみ有効）を導入して `applySettings()` / `emitSettingsRelatedSnapshots()` 内の重複組み立てを抑制。`UI_TUNING.controlPanel` を拡張し、Control Panel 本体の section spacing / details 内余白も定数化して `SimpleVrmControlPanel.tsx` に適用 |
+| 2026-02-22 | `SincroAppController.subscribe()` の初期スナップショット送出も settings関連 payload の短命キャッシュを利用するよう整理し、初回購読時の重複 snapshot 組み立てを削減。`DialogManager` の dialog open/close・VRM dragover/status・start button 状態更新には通知順序意図のコメントを補強。`SettingsSections.tsx` 側にも `UI_TUNING.controlPanel` を展開し、basic/mic/character/startup/LG 設定セクションの spacing を定数化 |
+| 2026-02-22 | `UI_TUNING.controlPanel.settings`（help badge/tooltip/spacing 系）を追加し、`SettingsSections.tsx` の tooltip 表示位置・help badge サイズ・help label margin・各設定セクションの gap/margin に適用。`SincroAppController.start()` は起動時 snapshot を `emitLifecycle(\"starting\")` と startup settings 保存で再利用し、初期状態計算の重複を小さく削減 |
+| 2026-02-22 | `UI_TUNING.controlPanel.styles` を追加し、`panelStyles.ts` の root/button/miniCard/miniLog の border radius / padding / font size / maxHeight を定数化。Control Panel の見た目調整点を `UI_TUNING` にさらに集約。`looking-glass-vrm` 向けの Control Panel 案内文（LGエラー時の誘導/再読込文言）も日本語表現を微調整 |
+| 2026-02-22 | `UI_TUNING.controlPanel.styles` を拡張し、Control Panel 操作ボタン間隔・Diagnostics カード間隔・section title 余白も定数化。`PanelControls.tsx` と `DiagnosticsStatusCards.tsx` / `DiagnosticsLogSections.tsx` に適用し、`Start/Stop` や `recent messages` 等の表示を日本語寄り（開始/停止、最近の〜、メッセージ未着など）へ調整 |
+| 2026-02-22 | `Control Panel` / `Diagnostics` の残り文言を日本語寄りに調整（`トークモード (talk mode)`、`診断情報`、`LGコード` / `LG詳細`、`Signaling状態` など）。Looking Glass 実機確認前の最小チェックリストを追加 |
+| 2026-02-22 | `UI_TUNING.controlPanel.styles` / `UI_TUNING.controlPanel.settings` を追加拡張し、Control Panel 本体・Diagnostics・Settings 各セクションの spacing / tooltip / help badge 調整値を集約。`looking-glass-vrm` の LG エラー時案内文を日本語表現で微調整し、確認先（`LGコード` / `LG詳細`）を明示 |
+| 2026-02-22 | `VRM360/SphereVideo.ts` の `hls.js` 読み込みを静的 import から `import(\"hls.js\")` の遅延読み込みへ変更し、VRM360 動画再生時以外の初期バンドル肥大化を抑制。`vite.config.js` の `manualChunks` も追加分割（`vendor_three_renderers` / `vendor_hls` / `vendor_yaml`）し、`vendor_misc` を縮小。`vendor_hls` は 500kB 超だが遅延読み込み chunk として分離 |
+| 2026-02-22 | `looking-glass-vrm` 向けの文言をさらに日本語寄りに調整（`VRM360 設定パネル` / `Looking Glass VRM1.0 設定パネル` 等）。ピンボケ調整向けに Looking Glass 設定へ `Target Z` / `Target Diam` を追加し、`LookingGlassRuntimeConfig` / `SincroAppSettingsSnapshot` / `applySettings(...)` / `LookingGlassXRController` の polyfill オプションへ反映。実機調整用に `焦点調整用 (Focus)` プリセットも追加 |
+| 2026-02-22 | `vendor_three_renderers` 分割は実行時に `Cannot access 'Je' before initialization`（three 内部初期化順）を誘発したため撤回。安定性優先で `three` 本体は単一 chunk に戻し、`hls.js` 遅延読み込み・`vendor_hls` 分離を継続 |
+| 2026-02-22 | Looking Glass 実機で初回 `Start Looking Glass` のみ失敗する polyfill 制約（`isSessionSupported()` / `inline` session 事前呼び出し要求）に対処。`LookingGlassXRController` に初回ウォームアップ（`navigator.xr.isSessionSupported(\"immersive-vr\")`）を追加し、初回 `immersive-vr` セッション要求前に実行するよう更新 |
+| 2026-02-22 | Looking Glass セッション終了時に polyfill の再初期化可能状態（polyfill initialized / warmup state）へ戻す処理を追加し、セッション中に変更した LG 設定をページ再読み込みなしで「終了後の再実行」で反映できるよう改善。Control Panel の案内文も「再読み込み推奨」から「セッション終了後に再実行」寄りに更新 |
+| 2026-02-22 | `looking-glass-vrm` の Control Panel に `Looking Glass 開始` / `Looking Glass 停止` ボタンを追加。`LookingGlassXRController` は Debug Console ボタンに加えて window custom event（start/stop request）からも起動/停止できるようにし、`XRSession.end()` による停止機能を実装 |
+| 2026-02-22 | `Start Looking Glass` ボタンを Debug Console から削除し、`looking-glass-vrm` の実行導線を Control Panel に一本化。`LookingGlassXRController.attachToStartButton()` は Debug Console ボタン未配置を正常系として扱うよう変更し、Control Panel の custom event 操作のみでも error 状態にならないよう調整 |
+| 2026-02-22 | 右上 Debug メニューの `Open Startup Dialog` を削除（現行構成では利用価値が低く誤操作導線になりやすいため）。起動前設定の React dialog UI は枠線/背景/ヘッダー/開始ボタンの見た目を調整し、Control Panel / Debug Console とトーンを揃える方向で更新 |
+| 2026-02-22 | 起動前設定の Character / Gaze の既定値を見直し、通常ページでは `Character=ON` / `Gaze=ON` を初期値に変更。`VRM360`（360deg camera）では `SincroVRM360Initializer` で `enableCharacterGaze=false` を明示適用し、Gaze は既定OFF・Character は既定ONを維持 |
 
-## 15. 参照資料
+## 16. 参照資料
 
 - 関連ドキュメント:
   - `documents/design/frontend_ui.md`

@@ -13,6 +13,7 @@
         "moduleResolution": "bundler",
         "allowImportingTsExtensions": true,
         "isolatedModules": true,
+        "jsx": "react-jsx",
         "moduleDetection": "force",
         "noEmit": true,
         /* Linting */

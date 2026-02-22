@@ -1,35 +1,42 @@
-import { SincroController } from "../SincroController";
-import { DialogManager } from "../UI/DialogManager";
-import { ChatMessageManager } from "../UI/ChatMessageManager";
-import { TalkManager } from "../RTC/TalkManager";
+import { SincroAppController } from "../App/SincroAppController";
 import { UserMediaManager } from "../RTC/UserMediaManager";
 import { VRMScene } from './VRMScene/VRMScene';
-import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 
 
 export class SincroVRMInitializer {
-    protected readonly dialogManager: DialogManager;
-    protected readonly chatMessageManager: ChatMessageManager;
-    protected readonly talkManager: TalkManager;
     protected readonly charCanvas: HTMLDivElement;
     protected readonly controlTarget: HTMLElement;
+    protected readonly appController: SincroAppController;
     // 自前生成したblob URLのみ解放対象として保持する。
     private generatedSystemIconURL: string | null = null;
+    private appUiStarted = false;
 
     constructor() {
-        // Register debug console UI events at startup so touch/click toggles work before RTC start.
-        DebugConsoleManager.getManager();
-        this.dialogManager = DialogManager.getManager();
-        this.chatMessageManager = ChatMessageManager.getManager();
-        this.talkManager = TalkManager.getManager();
         this.charCanvas = this.getCharCanvasRoot();
         this.controlTarget = document.querySelector('div#sincroBody')!;
+        this.appController = new SincroAppController();
+        // simple-vrm 現行実装では startup toggles の Talk/Inspector/VR は scene初期化へ未接続。
+        this.appController.setStartupSettingsCapabilities({
+            enableTalk: false,
+            enableInspector: false,
+            enableVR: false,
+        });
+        this.appController.setStartHooks({
+            beforeStart: () => {
+                this.writeWelcomeMessagesOnce();
+            },
+            afterStart: () => {
+                this.startUiSideEffectsOnce();
+            },
+        });
 
         this.getUserMediaAvailabilityCheck();
-        this.dialogManager.updateCharacterStatus(true);
+        this.appController.dialog.updateCharacterAvailabilityStatus(true);
         // VRMロード完了前でも、前回キャッシュ済みのアイコンを即座に表示する。
         this.loadCachedSystemIcon();
-        this.setStartButtonEvent();
+        this.appController.debug.setRTCStopButtonEventListener(() => {
+            this.appController.rtc.stop();
+        });
 
         if ('obsstudio' in window) {
             this.start();
@@ -46,18 +53,12 @@ export class SincroVRMInitializer {
 
     private getUserMediaAvailabilityCheck(): void {
         if (!UserMediaManager.hasGetUserMedia()) {
-            this.dialogManager.updateUserMediaAvailabilityStatus(false);
+            this.appController.dialog.updateUserMediaAvailabilityStatus(false);
         }
     }
 
-    private setStartButtonEvent(): void {
-        this.dialogManager.setRTCStartButtonEventListener(() => {
-            this.start();
-        });
-    }
-
     private loadCachedSystemIcon(): void {
-        this.dialogManager.loadVrmThumbnailBlob().then((blob: Blob | null) => {
+        this.appController.dialog.loadVrmThumbnailBlob().then((blob: Blob | null) => {
             if (!blob) {
                 return;
             }
@@ -69,34 +70,42 @@ export class SincroVRMInitializer {
     }
 
     private start(): void {
-        this.chatMessageManager.writeUnknownUserMessage("こんにちは!");
-        this.chatMessageManager.writeSystemMessage("こんにちは～!")
-        this.chatMessageManager.writeSystemMessage("音声は「VOICEVOX 四国めたん」でお送りします。");
+        this.appController.start();
+    }
 
-        const sincroController: SincroController = new SincroController();
-        this.dialogManager.setRTCStopButtonEventListener(() => {
-            sincroController.stopRTC();
-        });
+    private writeWelcomeMessagesOnce(): void {
+        if (this.appUiStarted) {
+            return;
+        }
+        this.appController.chat.writeUnknownUserMessage("こんにちは!");
+        this.appController.chat.writeSystemMessage("こんにちは～!");
+        this.appController.chat.writeSystemMessage("音声は「VOICEVOX 四国めたん」でお送りします。");
+    }
 
-        if (this.dialogManager.enableCharacter()) {
+    private startUiSideEffectsOnce(): void {
+        if (this.appUiStarted) {
+            return;
+        }
+        if (this.appController.dialog.isCharacterEnabled()) {
             this.initializeSincroScene();
         }
 
-        this.dialogManager.closeDialog();
+        this.appController.dialog.close();
+        this.appUiStarted = true;
     }
 
     protected initializeSincroScene(): VRMScene {
-        const vrmScene: VRMScene = new VRMScene(this.charCanvas, this.controlTarget, DialogManager.vrmUrl, false, (thumbnailImage) => {
+        const vrmScene: VRMScene = new VRMScene(this.charCanvas, this.controlTarget, this.appController.dialog.getSelectedVrmUrl(), false, (thumbnailImage) => {
             this.updateSystemIconFromThumbnail(thumbnailImage);
         });
         vrmScene.start();
         return vrmScene;
 
         /*
-            this.charCanvas, this.talkManager,
-            this.dialogManager.enableVR(),
-            this.dialogManager.enableCharacter(),
-            this.dialogManager.enableInspector()
+            this.charCanvas, talkManager,
+            this.appController.dialog.isVREnabled(),
+            this.appController.dialog.isCharacterEnabled(),
+            this.appController.dialog.isInspectorEnabled()
         */
     }
 
@@ -134,7 +143,7 @@ export class SincroVRMInitializer {
                 this.applySystemIcon(thumbnailImage.src);
                 return;
             }
-            this.dialogManager.saveVrmThumbnailBlob(blob).catch((error) => {
+            this.appController.dialog.saveVrmThumbnailBlob(blob).catch((error) => {
                 console.error('Failed to cache VRM thumbnail.', error);
             });
             const iconURL = URL.createObjectURL(blob);
@@ -151,7 +160,7 @@ export class SincroVRMInitializer {
 
         // ヘッダー左上は透過背景前提の見た目崩れがあるため更新対象外にし、
         // チャット内systemアイコンだけを更新する。
-        this.chatMessageManager.setSystemIcon(iconURL);
+        this.appController.chat.setSystemIcon(iconURL);
     }
 
     private revokeGeneratedSystemIconURL(): void {

@@ -10,6 +10,32 @@ div#sincroDebugConsoleContainer.is-open {
     visibility: visible;
 }
 
+div#sincroReactSettingsPanelContainer {
+    position: fixed;
+    inset: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 17;
+}
+
+div#sincroReactSettingsPanelContainer.is-open {
+    visibility: visible;
+}
+
+div#reactSettingsPanel {
+    position: absolute;
+    top: clamp(52px, 8dvh, 84px);
+    right: 12px;
+    width: min(360px, calc(100vw - 24px));
+    max-height: calc(100dvh - clamp(52px, 8dvh, 84px) - 12px);
+    padding-top: 30px;
+    pointer-events: auto;
+}
+
+div#sincroReactSettingsPanelRoot {
+    width: 100%;
+}
+
 div#debugMenu {
     position: relative;
     z-index: 2;
@@ -67,7 +93,8 @@ div#debugMenu.is-open div#debugMenuPanel {
     pointer-events: auto;
 }
 
-button#debugConsoleToggle {
+button#debugConsoleToggle,
+button#reactSettingsPanelToggle {
     width: 100%;
     border: 1px solid hsl(0deg 0% 100% / 16%);
     border-radius: 6px;
@@ -79,8 +106,13 @@ button#debugConsoleToggle {
     cursor: pointer;
 }
 
-button#debugConsoleToggle:hover {
+button#debugConsoleToggle:hover,
+button#reactSettingsPanelToggle:hover {
     background: hsl(0deg 0% 30% / 95%);
+}
+
+button#reactSettingsPanelToggle {
+    margin-top: 6px;
 }
 
 div#debugConsole {
@@ -224,6 +256,68 @@ button#debugConsoleClose svg {
     height: 16px;
     display: block;
     fill: hsl(0deg 0% 94% / 84%);
+}
+
+button#reactSettingsPanelClose {
+    position: absolute;
+    top: 7px;
+    right: 10px;
+    width: auto;
+    height: auto;
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    z-index: 1;
+}
+
+button#reactSettingsPanelClose svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    fill: hsl(0deg 0% 94% / 84%);
+}
+
+/* React settings panel scrollbar styling to match Debug Console without dominating the UI. */
+div#sincroReactSettingsPanelRoot .sincroControlPanel::-webkit-scrollbar,
+div#sincroReactSettingsPanelRoot .sincroControlPanel *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+div#sincroReactSettingsPanelRoot .sincroControlPanel::-webkit-scrollbar-track,
+div#sincroReactSettingsPanelRoot .sincroControlPanel *::-webkit-scrollbar-track {
+    background: hsl(216deg 22% 13% / 78%);
+    border-radius: 999px;
+}
+
+div#sincroReactSettingsPanelRoot .sincroControlPanel::-webkit-scrollbar-thumb,
+div#sincroReactSettingsPanelRoot .sincroControlPanel *::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+        180deg,
+        hsl(201deg 78% 66% / 82%),
+        hsl(183deg 68% 58% / 78%)
+    );
+    border: 2px solid hsl(216deg 22% 13% / 72%);
+    border-radius: 999px;
+}
+
+div#sincroReactSettingsPanelRoot .sincroControlPanel::-webkit-scrollbar-thumb:hover,
+div#sincroReactSettingsPanelRoot .sincroControlPanel *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+        180deg,
+        hsl(201deg 84% 72% / 88%),
+        hsl(183deg 74% 63% / 84%)
+    );
 }
 
 button#debugConsoleClose:focus,

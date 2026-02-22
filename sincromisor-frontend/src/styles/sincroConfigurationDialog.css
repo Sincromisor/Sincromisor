@@ -72,6 +72,11 @@ dialog#configurationDialog {
             margin-left: 2em;
         }
 
+        & div#sincroDialogReactSettingsRoot {
+            grid-column: 1 / 3;
+            width: 100%;
+        }
+
         & select {
             & {
                 height: clamp(2rem, 0rem + 2.5vw, 6rem);
@@ -135,6 +140,25 @@ dialog#configurationDialog {
         }
     }
 
+    & > div#sincroDialogReactSettingsRoot {
+        width: 90%;
+        margin: 20px auto 10px auto;
+        display: block;
+    }
+
+    & > div.configurationDialog__bridgeDom {
+        width: 100%;
+    }
+
+    & > div.configurationDialog__bridgeDom[aria-hidden="true"] {
+        position: absolute;
+        width: 0;
+        height: 0;
+        overflow: hidden;
+        opacity: 0;
+        pointer-events: none;
+    }
+
     &::backdrop {
         background: rgb(180, 100, 180, 0.5);
     }
@@ -143,4 +167,33 @@ dialog#configurationDialog {
         border: 2px dashed rgb(63, 63, 63);
         background-color: rgb(200, 200, 200);
     }
+
+    /* React 置換済みの主要設定は既存DOMを橋渡し用として残し、見た目からは隠す。 */
+    &.reactPrimarySettingsEnabled > div.configurationDialog__bridgeDom {
+        display: none !important;
+    }
+
+    /* React 主導の起動前設定UIでは dialog 本体を暗色面として使い、内側に余分な枠を作らない。 */
+    &.reactPrimarySettingsEnabled {
+        color: #eef3fb;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015)),
+            rgba(18, 20, 26, 0.94);
+        border-color: rgba(255, 255, 255, 0.14);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+}
+
+/* CSS nesting の解釈差で React モード時スタイルが落ちる環境向けの保険。
+   起動前設定の見た目は親 dialog を暗色化して成立するため、明示セレクタで強制する。 */
+dialog#configurationDialog.reactPrimarySettingsEnabled {
+    color: #eef3fb !important;
+    background-color: rgba(18, 20, 26, 0.94) !important;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
 }

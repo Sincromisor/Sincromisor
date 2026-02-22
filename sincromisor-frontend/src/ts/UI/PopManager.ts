@@ -5,12 +5,29 @@ export class PopManager {
     private messageQueue: HTMLDivElement[] = [];
     private readonly MAX_MESSAGES = 3;
     private readonly AUTO_REMOVE_TIME = 10000;
+    private dialogPopDomRenderingEnabled: boolean = true;
+    private dialogPopListeners = new Set<(event: DialogPopEvent) => void>();
+    private dialogPopMessageID: number = 0;
 
     static getManager(): PopManager {
         if (!PopManager.instance) {
             PopManager.instance = new PopManager();
         }
         return PopManager.instance;
+    }
+
+    subscribeDialogPop(listener: (event: DialogPopEvent) => void): () => void {
+        this.dialogPopListeners.add(listener);
+        return () => {
+            this.dialogPopListeners.delete(listener);
+        };
+    }
+
+    setDialogPopDomRenderingEnabled(enabled: boolean): void {
+        this.dialogPopDomRenderingEnabled = enabled;
+        if (!enabled) {
+            this.dialogPopBox.innerHTML = "";
+        }
     }
 
     /*
@@ -38,14 +55,19 @@ export class PopManager {
     /* モーダル設定ダイアログでの通常メッセージ */
     writeDialogPopMessage(message: string): void {
         this.writeMessage(message, false, this.dialogPopBox);
+        this.emitDialogPop(message, false);
     }
 
     /* モーダル設定ダイアログでのエラーメッセージ */
     writeDialogPopError(message: string): void {
         this.writeMessage(message, true, this.dialogPopBox);
+        this.emitDialogPop(message, true);
     }
 
     private writeMessage(message: string, error: boolean, targetBox: HTMLDivElement): void {
+        if (targetBox === this.dialogPopBox && !this.dialogPopDomRenderingEnabled) {
+            return;
+        }
         const messageElement: HTMLDivElement = document.createElement('div');
         if (error) {
             messageElement.className = 'popMessage popError';
@@ -78,4 +100,21 @@ export class PopManager {
             }, 500);
         }, this.AUTO_REMOVE_TIME);
     }
+
+    private emitDialogPop(message: string, error: boolean): void {
+        const event: DialogPopEvent = {
+            id: ++this.dialogPopMessageID,
+            message,
+            error,
+            autoRemoveMs: this.AUTO_REMOVE_TIME,
+        };
+        this.dialogPopListeners.forEach((listener) => listener(event));
+    }
 }
+
+export type DialogPopEvent = {
+    id: number;
+    message: string;
+    error: boolean;
+    autoRemoveMs: number;
+};
