@@ -1,5 +1,16 @@
 # Frontend UI / アプリ制御設計
 
+## 追記メモ（CharacterGaze 改善 / 2026-02-22）
+
+- `CharacterGaze` は複数顔検出時に `FaceTargetSelector` で 1 人を選択して追従する。
+  - 切替ヒステリシス（保持時間・切替マージン）により、複数人での迷い挙動を抑制
+- keypoint 平滑化は `OneEuroFilter1D` を採用（6 keypoint の x/y）
+  - 単純移動平均より、低速時の滑らかさと高速時の追従性を両立
+- Debug Console の `Face & Gaze` に `Target` を追加
+  - `対象:index / 候補数 / 固定中` を簡易表示して実機チューニングを行いやすくした
+- `Face & Gaze` に `Gaze Tuning` を追加
+  - 複数人選択（ヒステリシス）と平滑化（One Euro / deadband）の主要パラメータを実行中に調整可能
+
 SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC連携、表示更新）の設計文書。
 
 ## 1. 文書情報

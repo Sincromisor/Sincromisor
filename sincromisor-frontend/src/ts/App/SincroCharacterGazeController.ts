@@ -17,6 +17,11 @@ export class SincroCharacterGazeController {
     constructor(dialogManager: DialogManager, debugConsoleManager: DebugConsoleManager) {
         this.dialogManager = dialogManager;
         this.debugConsoleManager = debugConsoleManager;
+        const characterGaze = CharacterGaze.getManager();
+        this.debugConsoleManager.setCharacterGazeTrackingTuning(characterGaze.getTrackingTuning());
+        this.debugConsoleManager.setCharacterGazeTrackingTuningChangeCallback((config) => {
+            characterGaze.setTrackingTuning(config);
+        });
         // 起動後に Gaze 設定を OFF->ON した場合も、その場で開始できるように設定変更を監視する。
         this.dialogManager.subscribeSettingsChange(() => {
             this.handleGazeSettingChanged();
@@ -116,6 +121,7 @@ export class SincroCharacterGazeController {
                         this.debugConsoleManager.updateFaceXLog(characterGaze.targetX());
                         this.debugConsoleManager.updateFaceYLog(characterGaze.targetY());
                         this.debugConsoleManager.updateFacing(characterGaze.facing());
+                        this.debugConsoleManager.updateCharacterGazeTargetDebug(characterGaze.targetSelectionDebugText());
                     }
                     if (!eyeTargetElement) {
                         return;

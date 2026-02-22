@@ -1,4 +1,6 @@
 import { FilesetResolver, FaceDetector, Detection } from "@mediapipe/tasks-vision";
+import { FaceTargetSelector } from "./FaceTargetSelector";
+import { OneEuroFilter1D } from "./OneEuroFilter";
 
 declare type NormalizedKeypoint = {
     /** X in normalized image coordinates. */
@@ -28,6 +30,20 @@ export class CharacterGaze {
     private predictionFrameId: number | null = null;
     private detectionCallback: ((detection: Detection[]) => void) | null = null;
     private loadedDataHandlerBound: (() => void) | null = null;
+    private readonly faceTargetSelector = new FaceTargetSelector();
+    // 6 keypoints (rightEye, leftEye, nose, mouth, rightEar, leftEar) の x/y を個別に平滑化する。
+    private readonly keypointXFilters: OneEuroFilter1D[] = [...Array(6)].map(() => new OneEuroFilter1D(1.0, 0.02, 1.0));
+    private readonly keypointYFilters: OneEuroFilter1D[] = [...Array(6)].map(() => new OneEuroFilter1D(1.0, 0.02, 1.0));
+    private lastTargetDebugText = "-";
+    private gazeTuning = {
+        minimumHoldMs: 900,
+        switchMargin: 0.15,
+        relinkDistance: 0.20,
+        oneEuroMinCutoff: 1.0,
+        oneEuroBeta: 0.02,
+        oneEuroDCutoff: 1.0,
+        deadband: 0.0025,
+    };
 
     static getManager(): CharacterGaze {
         if (!CharacterGaze.instance) {
@@ -59,6 +75,41 @@ export class CharacterGaze {
 
     targetY(): number {
         return this.movingAverage[2]["y"];
+    }
+
+    // Debug Console の簡易表示用（複数人検出時の選択結果確認）。
+    targetSelectionDebugText(): string {
+        return this.lastTargetDebugText;
+    }
+
+    getTrackingTuning(): Readonly<typeof this.gazeTuning> {
+        return this.gazeTuning;
+    }
+
+    setTrackingTuning(partial: Partial<typeof this.gazeTuning>): void {
+        this.gazeTuning = {
+            ...this.gazeTuning,
+            ...partial,
+        };
+        this.faceTargetSelector.setTuning({
+            minimumHoldMs: this.gazeTuning.minimumHoldMs,
+            switchMargin: this.gazeTuning.switchMargin,
+            relinkDistance: this.gazeTuning.relinkDistance,
+        });
+        for (const filter of this.keypointXFilters) {
+            filter.setParams({
+                minCutoff: this.gazeTuning.oneEuroMinCutoff,
+                beta: this.gazeTuning.oneEuroBeta,
+                dCutoff: this.gazeTuning.oneEuroDCutoff,
+            });
+        }
+        for (const filter of this.keypointYFilters) {
+            filter.setParams({
+                minCutoff: this.gazeTuning.oneEuroMinCutoff,
+                beta: this.gazeTuning.oneEuroBeta,
+                dCutoff: this.gazeTuning.oneEuroDCutoff,
+            });
+        }
     }
 
 
@@ -165,6 +216,8 @@ export class CharacterGaze {
     stopPredictionLoop(): void {
         this.predictionLoopEnabled = false;
         this.predictionLoopRunning = false;
+        this.faceTargetSelector.reset();
+        this.lastTargetDebugText = "停止中";
         if (this.predictionFrameId !== null) {
             window.cancelAnimationFrame(this.predictionFrameId);
             this.predictionFrameId = null;
@@ -175,6 +228,7 @@ export class CharacterGaze {
     // Gaze の OFF -> ON 切替時に使う。
     resumePredictionLoop(): void {
         this.predictionLoopEnabled = true;
+        this.lastTargetDebugText = "-";
         this.startPredictionLoopIfNeeded();
     }
 
@@ -211,9 +265,18 @@ export class CharacterGaze {
             const detections = this.faceDetector.detectForVideo(this.videoElement, startTimeMs).detections;
 
             if (detections.length > 0) {
-                this.updateKeypointsMovingAverage(detections[0].keypoints);
-                this.lastDetectedTime = performance.now();
-                this.videoElement.dispatchEvent(new Event("detect"));
+                const selected = this.faceTargetSelector.select(detections, startTimeMs);
+                this.lastTargetDebugText = selected.selectedIndex == null
+                    ? `候補:${selected.candidateCount}`
+                    : `対象:${selected.selectedIndex} 候補:${selected.candidateCount} score:${(selected.selectedScore ?? 0).toFixed(2)}${selected.holdLocked ? " 固定中" : ""}`;
+                if (selected.selectedIndex != null) {
+                    const targetDetection = detections[selected.selectedIndex];
+                    this.updateKeypointsMovingAverage(targetDetection.keypoints as NormalizedKeypoint[], startTimeMs);
+                    this.lastDetectedTime = performance.now();
+                    this.videoElement.dispatchEvent(new Event("detect"));
+                }
+            } else {
+                this.lastTargetDebugText = "対象なし";
             }
             // 直近検出時刻ベースで「在席/離席」を判定し、AutoMute 側イベントへ変換する。
             const newStatus = this.detecting();
@@ -247,10 +310,14 @@ export class CharacterGaze {
     // keypointの指数移動平均値を更新する
     // keypointsの値は0.0～1.0
     // 画像左端がX=0、上がY=0
-    private updateKeypointsMovingAverage(keypoints: NormalizedKeypoint[]): void {
+    private updateKeypointsMovingAverage(keypoints: NormalizedKeypoint[], timestampMs: number): void {
         for (let i = 0; i <= 5; i++) {
-            this.movingAverage[i]["x"] = (keypoints[i]["x"] + this.movingAverage[i]["x"]) / 2;
-            this.movingAverage[i]["y"] = (keypoints[i]["y"] + this.movingAverage[i]["y"]) / 2;
+            const rawX = this.clamp01(keypoints[i]["x"]);
+            const rawY = this.clamp01(keypoints[i]["y"]);
+            const filteredX = this.keypointXFilters[i].filter(rawX, timestampMs);
+            const filteredY = this.keypointYFilters[i].filter(rawY, timestampMs);
+            this.movingAverage[i]["x"] = this.applyDeadband(this.movingAverage[i]["x"], this.clamp01(filteredX));
+            this.movingAverage[i]["y"] = this.applyDeadband(this.movingAverage[i]["y"], this.clamp01(filteredY));
         }
     }
 
@@ -262,5 +329,14 @@ export class CharacterGaze {
         if (Math.abs(deviation_x) < 0.01 && Math.abs(deviation_y) < 0.01) { return; }
         this.movingAverage[2]["x"] = this.movingAverage[2]["x"] + deviation_x / 30;
         this.movingAverage[2]["y"] = this.movingAverage[2]["y"] + deviation_y / 30;
+    }
+
+    private clamp01(value: number): number {
+        return Math.max(0, Math.min(1, value));
+    }
+
+    // 微小な揺れは無視して、視線オーバーレイと首振りの細かいジッタを減らす。
+    private applyDeadband(prev: number, next: number): number {
+        return Math.abs(next - prev) < this.gazeTuning.deadband ? prev : next;
     }
 }

@@ -54,9 +54,55 @@ export type DebugConsoleManagerEvent =
     | { type: "face_y"; value: number }
     | { type: "facing"; value: number }
     | { type: "character_eye_status"; watching: boolean }
+    | { type: "gaze_target_debug"; message: string }
     | { type: "rtc_event_log"; message: string }
     | { type: "ice_connection_state"; value: string }
     | { type: "signaling_state"; value: string };
+
+export type CharacterGazeTrackingTuningUiConfig = {
+    minimumHoldMs: number;
+    switchMargin: number;
+    relinkDistance: number;
+    oneEuroMinCutoff: number;
+    oneEuroBeta: number;
+    oneEuroDCutoff: number;
+    deadband: number;
+};
+
+type CharacterGazeTrackingTuningPresetKey = "stable" | "balanced" | "responsive";
+
+const CHARACTER_GAZE_TRACKING_TUNING_PRESETS: Record<CharacterGazeTrackingTuningPresetKey, CharacterGazeTrackingTuningUiConfig> = {
+    // 切替頻度を下げて揺れを抑える。複数人前提の展示/固定設置向け。
+    stable: {
+        minimumHoldMs: 1400,
+        switchMargin: 0.22,
+        relinkDistance: 0.18,
+        oneEuroMinCutoff: 0.8,
+        oneEuroBeta: 0.012,
+        oneEuroDCutoff: 1.0,
+        deadband: 0.0035,
+    },
+    // 現在の既定値に近い、最も無難なプリセット。
+    balanced: {
+        minimumHoldMs: 900,
+        switchMargin: 0.15,
+        relinkDistance: 0.2,
+        oneEuroMinCutoff: 1.0,
+        oneEuroBeta: 0.02,
+        oneEuroDCutoff: 1.0,
+        deadband: 0.0025,
+    },
+    // 追従性を優先。動きの多い場面向け（やや揺れやすくなる）。
+    responsive: {
+        minimumHoldMs: 450,
+        switchMargin: 0.08,
+        relinkDistance: 0.24,
+        oneEuroMinCutoff: 1.4,
+        oneEuroBeta: 0.04,
+        oneEuroDCutoff: 1.0,
+        deadband: 0.0015,
+    },
+};
 
 // 既存デバッグUIのDOM更新と、React Control Panel向けの診断イベント配信を兼ねる管理クラス。
 // 移行期間中は DebugConsole 自体を維持しつつ、React 側へ状態を橋渡しする役割を持つ。
@@ -111,6 +157,14 @@ export class DebugConsoleManager {
     private readonly faceYLog: HTMLElement | null;
     private readonly facing: HTMLElement | null;
     private readonly characterGazeStatus: HTMLElement | null;
+    private readonly characterGazeTargetDebug: HTMLElement | null;
+    private readonly gazeHoldMsInput: HTMLInputElement | null;
+    private readonly gazeSwitchMarginInput: HTMLInputElement | null;
+    private readonly gazeRelinkDistanceInput: HTMLInputElement | null;
+    private readonly gazeOneEuroMinCutoffInput: HTMLInputElement | null;
+    private readonly gazeOneEuroBetaInput: HTMLInputElement | null;
+    private readonly gazeDeadbandInput: HTMLInputElement | null;
+    private readonly gazeTrackingPresetButtons: NodeListOf<HTMLButtonElement>;
 
     /* Audio meter */
     private readonly localAudioLevelMeter: HTMLElement | null;
@@ -158,6 +212,7 @@ export class DebugConsoleManager {
     private onLocalLearnedVadStrictModeChange: (enabled: boolean) => void = () => { };
     private onLocalVadThresholdModeChange: (mode: VadThresholdMode) => void = () => { };
     private onLocalVadRmsThresholdChange: (threshold: number) => void = () => { };
+    private onCharacterGazeTrackingTuningChange: (config: CharacterGazeTrackingTuningUiConfig) => void = () => { };
     // 連続フレーム条件はプリセット依存のため内部保持し、UIスライダー更新時に合わせて渡す。
     private learnedVadOnConsecutiveFrames: number = 2;
     private learnedVadOffConsecutiveFrames: number = 2;
@@ -223,6 +278,14 @@ export class DebugConsoleManager {
         this.faceYLog = document.querySelector("dd#faceY");
         this.facing = document.querySelector("dd#facing");
         this.characterGazeStatus = document.querySelector("dd#characterGazeStatus");
+        this.characterGazeTargetDebug = document.querySelector("dd#characterGazeTargetDebug");
+        this.gazeHoldMsInput = document.querySelector("#gazeHoldMs");
+        this.gazeSwitchMarginInput = document.querySelector("#gazeSwitchMargin");
+        this.gazeRelinkDistanceInput = document.querySelector("#gazeRelinkDistance");
+        this.gazeOneEuroMinCutoffInput = document.querySelector("#gazeOneEuroMinCutoff");
+        this.gazeOneEuroBetaInput = document.querySelector("#gazeOneEuroBeta");
+        this.gazeDeadbandInput = document.querySelector("#gazeDeadband");
+        this.gazeTrackingPresetButtons = document.querySelectorAll("button[data-gaze-tuning-preset]");
 
         /* Audio meter */
         this.localAudioLevelMeter = document.querySelector("#localAudioLevelMeter");
@@ -281,6 +344,8 @@ export class DebugConsoleManager {
         this.bindLocalVadThresholdControl();
         // 環境別プリセットをボタンで即時反映できるようにする。
         this.bindLocalVadPresetButtons();
+        this.bindCharacterGazeTrackingTuningControls();
+        this.bindCharacterGazeTrackingTuningPresetButtons();
         this.updateLearnedVadState({ status: "idle", probability: null });
         this.renderLocalAudioConstraintApplyStatus();
     }
@@ -1383,6 +1448,14 @@ export class DebugConsoleManager {
         this.emitEvent({ type: "character_eye_status", watching });
     }
 
+    // 複数人検出時のターゲット選択状態（対象index / 候補数 / 固定中）を簡易表示する。
+    updateCharacterGazeTargetDebug(message: string): void {
+        if (this.characterGazeTargetDebug) {
+            this.characterGazeTargetDebug.textContent = message;
+        }
+        this.emitEvent({ type: "gaze_target_debug", message });
+    }
+
     // Gaze 機能を停止した時の Debug 表示。数値イベントは送らず、見た目だけを「停止中」にする。
     setCharacterGazePaused(paused: boolean): void {
         if (paused) {
@@ -1398,12 +1471,109 @@ export class DebugConsoleManager {
             if (this.characterGazeStatus) {
                 this.characterGazeStatus.innerText = "停止中";
             }
+            if (this.characterGazeTargetDebug) {
+                this.characterGazeTargetDebug.textContent = "停止中";
+            }
             return;
         }
         if (this.characterGazeStatus) {
             // 再開直後は未検出の可能性があるため、在席状態だけ中立値へ戻す。
             this.characterGazeStatus.innerText = "みてない";
         }
+        if (this.characterGazeTargetDebug) {
+            this.characterGazeTargetDebug.textContent = "-";
+        }
+    }
+
+    setCharacterGazeTrackingTuning(config: CharacterGazeTrackingTuningUiConfig): void {
+        if (this.gazeHoldMsInput) this.gazeHoldMsInput.value = `${Math.round(config.minimumHoldMs)}`;
+        if (this.gazeSwitchMarginInput) this.gazeSwitchMarginInput.value = `${config.switchMargin}`;
+        if (this.gazeRelinkDistanceInput) this.gazeRelinkDistanceInput.value = `${config.relinkDistance}`;
+        if (this.gazeOneEuroMinCutoffInput) this.gazeOneEuroMinCutoffInput.value = `${config.oneEuroMinCutoff}`;
+        if (this.gazeOneEuroBetaInput) this.gazeOneEuroBetaInput.value = `${config.oneEuroBeta}`;
+        if (this.gazeDeadbandInput) this.gazeDeadbandInput.value = `${config.deadband}`;
+        this.updateCharacterGazeTrackingTuningLabels(config);
+    }
+
+    setCharacterGazeTrackingTuningChangeCallback(callback: (config: CharacterGazeTrackingTuningUiConfig) => void): void {
+        this.onCharacterGazeTrackingTuningChange = callback;
+    }
+
+    private bindCharacterGazeTrackingTuningControls(): void {
+        const emit = () => {
+            const cfg = this.readCharacterGazeTrackingTuningUiConfig();
+            if (!cfg) {
+                return;
+            }
+            this.updateCharacterGazeTrackingTuningLabels(cfg);
+            this.onCharacterGazeTrackingTuningChange(cfg);
+        };
+        [
+            this.gazeHoldMsInput,
+            this.gazeSwitchMarginInput,
+            this.gazeRelinkDistanceInput,
+            this.gazeOneEuroMinCutoffInput,
+            this.gazeOneEuroBetaInput,
+            this.gazeDeadbandInput,
+        ].forEach((input) => input?.addEventListener("input", emit));
+    }
+
+    // 実機での調整を素早くするため、よく使う値セットをボタンで一括反映する。
+    private bindCharacterGazeTrackingTuningPresetButtons(): void {
+        this.gazeTrackingPresetButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const presetKey = button.dataset.gazeTuningPreset as CharacterGazeTrackingTuningPresetKey | undefined;
+                if (!presetKey) {
+                    return;
+                }
+                const preset = CHARACTER_GAZE_TRACKING_TUNING_PRESETS[presetKey];
+                if (!preset) {
+                    return;
+                }
+                this.setCharacterGazeTrackingTuning(preset);
+                this.onCharacterGazeTrackingTuningChange(preset);
+            });
+        });
+    }
+
+    private readCharacterGazeTrackingTuningUiConfig(): CharacterGazeTrackingTuningUiConfig | null {
+        const minimumHoldMs = Number.parseFloat(this.gazeHoldMsInput?.value ?? "");
+        const switchMargin = Number.parseFloat(this.gazeSwitchMarginInput?.value ?? "");
+        const relinkDistance = Number.parseFloat(this.gazeRelinkDistanceInput?.value ?? "");
+        const oneEuroMinCutoff = Number.parseFloat(this.gazeOneEuroMinCutoffInput?.value ?? "");
+        const oneEuroBeta = Number.parseFloat(this.gazeOneEuroBetaInput?.value ?? "");
+        const deadband = Number.parseFloat(this.gazeDeadbandInput?.value ?? "");
+        if (![minimumHoldMs, switchMargin, relinkDistance, oneEuroMinCutoff, oneEuroBeta, deadband].every(Number.isFinite)) {
+            return null;
+        }
+        return {
+            minimumHoldMs,
+            switchMargin,
+            relinkDistance,
+            oneEuroMinCutoff,
+            oneEuroBeta,
+            oneEuroDCutoff: 1.0,
+            deadband,
+        };
+    }
+
+    private updateCharacterGazeTrackingTuningLabels(config: CharacterGazeTrackingTuningUiConfig): void {
+        this.setAudioControlLabelValue(this.gazeHoldMsInput, `${Math.round(config.minimumHoldMs)}ms`);
+        this.setAudioControlLabelValue(this.gazeSwitchMarginInput, config.switchMargin.toFixed(2));
+        this.setAudioControlLabelValue(this.gazeRelinkDistanceInput, config.relinkDistance.toFixed(2));
+        this.setAudioControlLabelValue(this.gazeOneEuroMinCutoffInput, config.oneEuroMinCutoff.toFixed(2));
+        this.setAudioControlLabelValue(this.gazeOneEuroBetaInput, config.oneEuroBeta.toFixed(3));
+        this.setAudioControlLabelValue(this.gazeDeadbandInput, config.deadband.toFixed(4));
+    }
+
+    // audioControlLabel レイアウト（label末尾の span）を再利用して、Gaze tuning の現在値を表示する。
+    private setAudioControlLabelValue(input: HTMLInputElement | null, text: string): void {
+        const label = input?.closest("label.audioControlLabel");
+        const valueSpan = label?.querySelector("span");
+        if (!valueSpan) {
+            return;
+        }
+        valueSpan.textContent = text;
     }
 
     private emitEvent(event: DebugConsoleManagerEvent): void {
