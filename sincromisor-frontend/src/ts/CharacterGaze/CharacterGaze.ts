@@ -23,6 +23,11 @@ export class CharacterGaze {
     movingAverage: Array<{ 'x': number, 'y': number }> = [...Array(6)].map(() => { return { 'x': 0.5, 'y': 0.5 } });
     arriveCallback: () => void = () => { };
     leaveCallback: () => void = () => { };
+    private predictionLoopEnabled: boolean = false;
+    private predictionLoopRunning: boolean = false;
+    private predictionFrameId: number | null = null;
+    private detectionCallback: ((detection: Detection[]) => void) | null = null;
+    private loadedDataHandlerBound: (() => void) | null = null;
 
     static getManager(): CharacterGaze {
         if (!CharacterGaze.instance) {
@@ -143,14 +148,61 @@ export class CharacterGaze {
         this.videoElement.setAttribute("playsinline", 'true');
         this.videoElement.setAttribute("muted", 'true');
         this.videoElement.srcObject = videoStream;
-        this.videoElement.addEventListener("loadeddata", () => { this.predictCam(callback) });
+        this.detectionCallback = callback;
+        this.predictionLoopEnabled = true;
+        if (!this.loadedDataHandlerBound) {
+            this.loadedDataHandlerBound = () => {
+                this.startPredictionLoopIfNeeded();
+            };
+            this.videoElement.addEventListener("loadeddata", this.loadedDataHandlerBound);
+        }
+        // 既にvideoがロード済みの状態で再開するケース（OFF->ON）にも対応する。
+        this.startPredictionLoopIfNeeded();
         return true;
+    }
+
+    // Gaze OFF 時に顔検出ループだけを止める。video track 自体は他用途でも使うため停止しない。
+    stopPredictionLoop(): void {
+        this.predictionLoopEnabled = false;
+        this.predictionLoopRunning = false;
+        if (this.predictionFrameId !== null) {
+            window.cancelAnimationFrame(this.predictionFrameId);
+            this.predictionFrameId = null;
+        }
+    }
+
+    // 既に video/srcObject が設定済みの状態で、検出ループだけを再開する。
+    // Gaze の OFF -> ON 切替時に使う。
+    resumePredictionLoop(): void {
+        this.predictionLoopEnabled = true;
+        this.startPredictionLoopIfNeeded();
+    }
+
+    private startPredictionLoopIfNeeded(): void {
+        if (!this.predictionLoopEnabled || this.predictionLoopRunning) {
+            return;
+        }
+        if (!this.detectionCallback) {
+            return;
+        }
+        // HAVE_CURRENT_DATA(2) 以上なら loadeddata 待ち不要で再開できる。
+        if (this.videoElement.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+            return;
+        }
+        this.predictionLoopRunning = true;
+        void this.predictCam(this.detectionCallback);
     }
 
     // requestAnimationFrame ベースの顔検出ループ。
     // 検出状態変化（arrive/leave）と keypoint 平滑化をここで管理する。
     private async predictCam(callback: (detection: Detection[]) => void): Promise<void> {
+        if (!this.predictionLoopEnabled) {
+            this.predictionLoopRunning = false;
+            this.predictionFrameId = null;
+            return;
+        }
         if (!this.faceDetector) {
+            this.predictionLoopRunning = false;
             return;
         }
         const startTimeMs = performance.now();
@@ -189,7 +241,7 @@ export class CharacterGaze {
             */
             this.videoElement.play();
         }
-        window.requestAnimationFrame(() => { this.predictCam(callback) });
+        this.predictionFrameId = window.requestAnimationFrame(() => { void this.predictCam(callback); });
     }
 
     // keypointの指数移動平均値を更新する

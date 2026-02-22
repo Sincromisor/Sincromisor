@@ -15,6 +15,13 @@ export type AudioFilterControlConfig = {
     lowpassEnabled: boolean;
     lowpassHz: number;
 };
+type RuntimeAudioConstraintKey = "autoGainControl" | "noiseSuppression" | "echoCancellation";
+type RuntimeAudioConstraintApplyStatus = {
+    key: RuntimeAudioConstraintKey;
+    enabled: boolean;
+    status: "pending" | "applied" | "failed";
+    message?: string;
+};
 
 export type VadThresholdMode = "manual" | "auto" | "learned";
 export type LearnedVadUiReport = {
@@ -118,6 +125,7 @@ export class DebugConsoleManager {
     private readonly localVadModelStateValue: HTMLElement | null;
     private readonly localVadFramesValue: HTMLElement | null;
     private readonly localAudioWarning: HTMLElement | null;
+    private readonly localAudioConstraintStatus: HTMLElement | null;
     private readonly localAudioHighpassCutoffInput: HTMLInputElement | null;
     private readonly localAudioHighpassCutoffValue: HTMLElement | null;
     private readonly localAudioLowpassEnabledInput: HTMLInputElement | null;
@@ -143,6 +151,7 @@ export class DebugConsoleManager {
     private localAudioWarningState: "ok" | "silent" | "error" = "ok";
     private localAudioWarningPendingState: "ok" | "silent" | "error" = "ok";
     private localAudioWarningPendingFrames: number = 0;
+    private readonly localAudioConstraintApplyState: Partial<Record<RuntimeAudioConstraintKey, RuntimeAudioConstraintApplyStatus>> = {};
     private onLocalAudioFilterChange: (config: AudioFilterControlConfig) => void = () => { };
     private onLocalLearnedVadTuningChange: (config: LearnedVadTuningUiConfig) => void = () => { };
     private onLocalLearnedVadPerformanceModeChange: (mode: LearnedVadPerformanceMode) => void = () => { };
@@ -228,6 +237,7 @@ export class DebugConsoleManager {
         this.localVadModelStateValue = document.querySelector("#localVadModelStateValue");
         this.localVadFramesValue = document.querySelector("#localVadFramesValue");
         this.localAudioWarning = document.querySelector("#localAudioWarning");
+        this.localAudioConstraintStatus = document.querySelector("#localAudioConstraintStatus");
         this.localAudioHighpassCutoffInput = document.querySelector("#localAudioHighpassCutoff");
         this.localAudioHighpassCutoffValue = document.querySelector("#localAudioHighpassCutoffValue");
         this.localAudioLowpassEnabledInput = document.querySelector("#localAudioLowpassEnabled");
@@ -272,6 +282,7 @@ export class DebugConsoleManager {
         // 環境別プリセットをボタンで即時反映できるようにする。
         this.bindLocalVadPresetButtons();
         this.updateLearnedVadState({ status: "idle", probability: null });
+        this.renderLocalAudioConstraintApplyStatus();
     }
 
     // React/AppController が購読するイベント口。各 update* 系メソッドの末尾で通知される。
@@ -291,7 +302,7 @@ export class DebugConsoleManager {
         this.debugConsoleContainer.style.visibility = "visible";
         this.debugConsoleContainer.style.overflow = "visible";
         if (this.debugConsoleToggleButton) {
-            this.debugConsoleToggleButton.innerText = "Close Debug Console";
+            this.debugConsoleToggleButton.innerText = "Debug Console";
         }
         this.closeDebugMenu();
     }
@@ -305,7 +316,7 @@ export class DebugConsoleManager {
         this.debugConsoleContainer.style.visibility = "hidden";
         this.debugConsoleContainer.style.overflow = "hidden";
         if (this.debugConsoleToggleButton) {
-            this.debugConsoleToggleButton.innerText = "Open Debug Console";
+            this.debugConsoleToggleButton.innerText = "Debug Console";
         }
         this.closeDebugMenu();
     }
@@ -319,7 +330,7 @@ export class DebugConsoleManager {
         this.reactSettingsPanelContainer.classList.add("is-open");
         this.reactSettingsPanelContainer.style.visibility = "visible";
         if (this.reactSettingsPanelToggleButton) {
-            this.reactSettingsPanelToggleButton.innerText = "Close Settings Panel";
+            this.reactSettingsPanelToggleButton.innerText = "設定パネル";
         }
         this.closeDebugMenu();
     }
@@ -341,7 +352,7 @@ export class DebugConsoleManager {
         this.reactSettingsPanelContainer.classList.remove("is-open");
         this.reactSettingsPanelContainer.style.visibility = "hidden";
         if (this.reactSettingsPanelToggleButton) {
-            this.reactSettingsPanelToggleButton.innerText = "Open Settings Panel";
+            this.reactSettingsPanelToggleButton.innerText = "設定パネル";
         }
         this.closeDebugMenu();
     }
@@ -975,6 +986,59 @@ export class DebugConsoleManager {
         }
     }
 
+    // NS/EC/AGC の「実行中トラックへの適用結果」を表示する。
+    // 起動前設定・Control Panel・Debug Console の設定と実際の挙動差を確認しやすくする目的。
+    updateLocalAudioConstraintApplyStatus(report: RuntimeAudioConstraintApplyStatus): void {
+        this.localAudioConstraintApplyState[report.key] = report;
+        this.renderLocalAudioConstraintApplyStatus();
+    }
+
+    private renderLocalAudioConstraintApplyStatus(): void {
+        if (!this.localAudioConstraintStatus) {
+            return;
+        }
+        const order: RuntimeAudioConstraintKey[] = ["noiseSuppression", "echoCancellation", "autoGainControl"];
+        const labels: Record<RuntimeAudioConstraintKey, string> = {
+            noiseSuppression: "NS",
+            echoCancellation: "EC",
+            autoGainControl: "AGC",
+        };
+        const text = order.map((key) => {
+            const state = this.localAudioConstraintApplyState[key];
+            if (!state) {
+                return `${labels[key]}:未確認`;
+            }
+            if (state.status === "pending") {
+                return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(次回開始時)`;
+            }
+            if (state.status === "applied") {
+                return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(反映)`;
+            }
+            return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(未反映)`;
+        }).join(" / ");
+        this.localAudioConstraintStatus.textContent = text;
+        this.localAudioConstraintStatus.title = order
+            .map((key) => {
+                const state = this.localAudioConstraintApplyState[key];
+                if (!state?.message) {
+                    return "";
+                }
+                return `${labels[key]}: ${state.message}`;
+            })
+            .filter((line) => line.length > 0)
+            .join("\n");
+        this.localAudioConstraintStatus.classList.remove("state-ok", "state-warn", "state-error");
+        const hasFailed = order.some((key) => this.localAudioConstraintApplyState[key]?.status === "failed");
+        const hasPending = order.some((key) => this.localAudioConstraintApplyState[key]?.status === "pending");
+        if (hasFailed) {
+            this.localAudioConstraintStatus.classList.add("state-error");
+        } else if (hasPending) {
+            this.localAudioConstraintStatus.classList.add("state-warn");
+        } else {
+            this.localAudioConstraintStatus.classList.add("state-ok");
+        }
+    }
+
     // 状態変化のフリッカーを抑えるため、一定継続後に表示状態を切り替える。
     private applyLocalWarningState(nextState: "ok" | "silent" | "error"): void {
         if (nextState === this.localAudioWarningState) {
@@ -1317,6 +1381,29 @@ export class DebugConsoleManager {
         }
         this.characterGazeStatus.innerText = watching ? "みてる" : "みてない";
         this.emitEvent({ type: "character_eye_status", watching });
+    }
+
+    // Gaze 機能を停止した時の Debug 表示。数値イベントは送らず、見た目だけを「停止中」にする。
+    setCharacterGazePaused(paused: boolean): void {
+        if (paused) {
+            if (this.faceXLog) {
+                this.faceXLog.textContent = "停止中";
+            }
+            if (this.faceYLog) {
+                this.faceYLog.textContent = "停止中";
+            }
+            if (this.facing) {
+                this.facing.textContent = "停止中";
+            }
+            if (this.characterGazeStatus) {
+                this.characterGazeStatus.innerText = "停止中";
+            }
+            return;
+        }
+        if (this.characterGazeStatus) {
+            // 再開直後は未検出の可能性があるため、在席状態だけ中立値へ戻す。
+            this.characterGazeStatus.innerText = "みてない";
+        }
     }
 
     private emitEvent(event: DebugConsoleManagerEvent): void {

@@ -23,6 +23,8 @@ export class SincroVRM360Initializer extends SincroVRMInitializer {
         // VRM1.0系から Looking Glass を起動する入口。Babylon legacy を経由しない。
         vrmScene.enableLookingGlassStartButton();
         vrmScene.start();
+        this.activeScene = vrmScene;
+        this.syncSceneCharacterVisibility(this.appController.state.getSettingsSnapshot());
         return vrmScene;
         /*
             this.charCanvas, this.talkManager,

@@ -1,6 +1,5 @@
 import { PanelControls } from "./components/PanelControls";
 import { DiagnosticsStatusCards } from "./components/DiagnosticsStatusCards";
-import { DiagnosticsLogSections } from "./components/DiagnosticsLogSections";
 import {
     BasicSettingsSection,
     MicSettingsSection,
@@ -32,14 +31,11 @@ export function SimpleVrmControlPanel({
         settingsUiHints,
         startupSettingsStatus,
         startupSettingsCapabilities,
-        logs,
         vadState,
         learnedVad,
         gaze,
-        rtcEvents,
         rtcState,
         connectionState,
-        telopLogs,
         lookingGlass,
         lookingGlassConfigStatus,
         startAction,
@@ -224,11 +220,6 @@ export function SimpleVrmControlPanel({
                         rtcState={rtcState}
                         learnedVad={learnedVad}
                         lookingGlass={lookingGlass}
-                    />
-                    <DiagnosticsLogSections
-                        rtcEvents={rtcEvents}
-                        telopLogs={telopLogs}
-                        messageLogs={logs}
                     />
                 </div>
             </details>

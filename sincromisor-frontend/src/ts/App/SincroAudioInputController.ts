@@ -1,4 +1,9 @@
-import { UserMediaManager, VadStateReport, VadThresholdMode as UserMediaVadThresholdMode } from "../RTC/UserMediaManager";
+import {
+    UserMediaManager,
+    VadStateReport,
+    VadThresholdMode as UserMediaVadThresholdMode,
+    type AudioConstraintRuntimeApplyReport,
+} from "../RTC/UserMediaManager";
 import { ChatMessageManager } from "../UI/ChatMessageManager";
 import { DialogManager } from "../UI/DialogManager";
 import {
@@ -15,6 +20,8 @@ export class SincroAudioInputController {
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly chatMessageManager: ChatMessageManager;
     private readonly userMediaManager: UserMediaManager;
+    private dialogMicSettingsSnapshot: DialogMicSettingsSnapshot | null = null;
+    private suppressNextDialogMicSettingsSync = false;
 
     constructor(
         dialogManager: DialogManager,
@@ -50,12 +57,16 @@ export class SincroAudioInputController {
     }
 
     private bindDialogSettingsToUserMedia(): void {
-        // 設定ダイアログのマイク処理設定を getUserMedia 制約へ反映する。
-        this.userMediaManager.setNoiseSuppression(this.dialogManager.enableNoiseSuppression());
-        this.userMediaManager.setEchoCancellation(this.dialogManager.enableEchoCancellation());
-        this.userMediaManager.setAutoGainControl(this.dialogManager.enableAutoGainControl());
-        this.userMediaManager.setVadGateEnabled(this.dialogManager.enableVadGate());
-        this.userMediaManager.setVenueNoiseModeEnabled(this.dialogManager.enableVenueNoiseMode());
+        // 設定ダイアログのマイク処理設定を getUserMedia 制約 / 実行中チェーンへ反映する。
+        this.applyDialogMicSettingsToUserMedia(true);
+        this.dialogManager.subscribeSettingsChange(() => {
+            if (this.suppressNextDialogMicSettingsSync) {
+                this.suppressNextDialogMicSettingsSync = false;
+                this.dialogMicSettingsSnapshot = this.readDialogMicSettingsSnapshot();
+                return;
+            }
+            this.applyDialogMicSettingsToUserMedia(false);
+        });
     }
 
     private bindDebugConsoleAndVadState(): void {
@@ -63,6 +74,8 @@ export class SincroAudioInputController {
         this.debugConsoleManager.setLocalAudioFilterConfig(this.userMediaManager.getAudioFilterConfig());
         this.debugConsoleManager.setLocalAudioFilterChangeCallback((config: AudioFilterControlConfig) => {
             this.userMediaManager.setAudioFilterConfig(config);
+            // Venue preset 有効中にDebugで個別調整した場合は、preset状態を解除して表示を実効値へ揃える。
+            this.clearVenuePresetIfEnabledWithoutResync();
         });
 
         this.debugConsoleManager.setLocalVadRmsThreshold(this.userMediaManager.getVadThresholds().rmsThreshold);
@@ -88,6 +101,8 @@ export class SincroAudioInputController {
         });
         this.debugConsoleManager.setLocalVadRmsThresholdChangeCallback((threshold: number) => {
             this.userMediaManager.setVadThresholds({ rmsThreshold: threshold });
+            // Venue preset が保持する閾値から外れるため、UI上の preset 表示は解除しておく。
+            this.clearVenuePresetIfEnabledWithoutResync();
         });
 
         // UserMedia 側で更新される状態を DebugConsole へ戻し、UI表示と内部状態を同期する。
@@ -107,5 +122,70 @@ export class SincroAudioInputController {
         this.userMediaManager.setVadStateCallback((report: VadStateReport) => {
             this.debugConsoleManager.updateLocalVadState(report.isSpeech);
         });
+        this.userMediaManager.setAudioConstraintRuntimeApplyCallback((report: AudioConstraintRuntimeApplyReport) => {
+            this.debugConsoleManager.updateLocalAudioConstraintApplyStatus(report);
+        });
+    }
+
+    // Dialog にある「マイクまわり設定」のうち、runtime に効く項目だけを差分適用する。
+    // settingsChange は title/talkMode 等でも発火するため、差分判定なしで全適用すると
+    // Debug で調整したフィルタ値まで意図せず上書きしてしまう。
+    private applyDialogMicSettingsToUserMedia(forceAll: boolean): void {
+        const next = this.readDialogMicSettingsSnapshot();
+        const prev = this.dialogMicSettingsSnapshot;
+
+        if (forceAll || !prev || prev.enableNoiseSuppression !== next.enableNoiseSuppression) {
+            this.userMediaManager.setNoiseSuppression(next.enableNoiseSuppression);
+        }
+        if (forceAll || !prev || prev.enableEchoCancellation !== next.enableEchoCancellation) {
+            this.userMediaManager.setEchoCancellation(next.enableEchoCancellation);
+        }
+        if (forceAll || !prev || prev.enableAutoGainControl !== next.enableAutoGainControl) {
+            this.userMediaManager.setAutoGainControl(next.enableAutoGainControl);
+        }
+        if (forceAll || !prev || prev.enableVadGate !== next.enableVadGate) {
+            this.userMediaManager.setVadGateEnabled(next.enableVadGate);
+        }
+        if (forceAll || !prev || prev.enableVenueNoiseMode !== next.enableVenueNoiseMode) {
+            this.userMediaManager.setVenueNoiseModeEnabled(next.enableVenueNoiseMode);
+            // Venue preset は HPF/LPF と VAD閾値を同時変更するため、Debug UI も合わせて更新する。
+            this.syncDebugConsoleFromUserMedia();
+        }
+
+        this.dialogMicSettingsSnapshot = next;
+    }
+
+    private syncDebugConsoleFromUserMedia(): void {
+        this.debugConsoleManager.setLocalAudioFilterConfig(this.userMediaManager.getAudioFilterConfig());
+        this.debugConsoleManager.setLocalVadRmsThreshold(this.userMediaManager.getVadThresholds().rmsThreshold);
+        this.debugConsoleManager.setLocalVadThresholdMode(this.userMediaManager.getVadThresholdMode());
+    }
+
+    private clearVenuePresetIfEnabledWithoutResync(): void {
+        if (!this.dialogManager.enableVenueNoiseMode()) {
+            return;
+        }
+        // dialog state だけ更新し、settingsChange 経由の「デフォルトプロファイル再適用」を抑止する。
+        this.suppressNextDialogMicSettingsSync = true;
+        this.dialogManager.setEnableVenueNoiseMode(false);
+        this.dialogMicSettingsSnapshot = this.readDialogMicSettingsSnapshot();
+    }
+
+    private readDialogMicSettingsSnapshot(): DialogMicSettingsSnapshot {
+        return {
+            enableNoiseSuppression: this.dialogManager.enableNoiseSuppression(),
+            enableEchoCancellation: this.dialogManager.enableEchoCancellation(),
+            enableAutoGainControl: this.dialogManager.enableAutoGainControl(),
+            enableVadGate: this.dialogManager.enableVadGate(),
+            enableVenueNoiseMode: this.dialogManager.enableVenueNoiseMode(),
+        };
     }
 }
+
+type DialogMicSettingsSnapshot = {
+    enableNoiseSuppression: boolean;
+    enableEchoCancellation: boolean;
+    enableAutoGainControl: boolean;
+    enableVadGate: boolean;
+    enableVenueNoiseMode: boolean;
+};

@@ -28,6 +28,7 @@ export class VRMCharacterManager {
     private rootBone: Object3D | null = null;
     // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
     private readonly onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void;
+    private visible: boolean = true;
 
     constructor(scene: Scene, vrmCamera: VRMCamera, vrmUrl: string, onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void) {
         this.scene = scene;
@@ -79,6 +80,7 @@ export class VRMCharacterManager {
                     this.defaultPosition = this.rootBone?.position.clone();
                 }
                 this.scene.add(this.vrm.scene);
+                this.vrm.scene.visible = this.visible;
                 //this.setEvent(this.vrm);
                 // サムネイルはVRM1.0のみ対象。未設定時はnullを通知してフォールバックさせる。
                 this.onThumbnailLoaded?.(this.getVRMThumbnailImage());
@@ -118,6 +120,14 @@ export class VRMCharacterManager {
         }
     }
 
+    // 起動後に Character トグルを変更した時の可視状態反映に使う。
+    // モデル未ロード時は状態だけ保持し、ロード完了時に反映する。
+    setVisible(visible: boolean): void {
+        this.visible = visible;
+        if (this.vrm) {
+            this.vrm.scene.visible = visible;
+        }
+    }
     /*
     private setEvent(vrm: VRM): void {
         window.addEventListener('mousemove', function (event) {

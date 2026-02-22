@@ -110,6 +110,11 @@ export class VRMScene {
     protected updateScene(): void {
     }
 
+    // 起動後の設定変更（Character ON/OFF）で VRM 本体の表示を切り替える。
+    setCharacterVisible(visible: boolean): void {
+        this.vrmCharacterManager.setVisible(visible);
+    }
+
     /* WebXR対応チェック */
     private async checkXRSupport(): Promise<void> {
         if ('xr' in navigator) {
