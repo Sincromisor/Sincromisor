@@ -7,6 +7,8 @@ import type {
     SincroAppSettingsUiState,
 } from "../../app/appSettingsTypes";
 
+// 起動前 dialog 専用の settings form セクション群。
+// Control Panel 共有部品とは切り分け、dialog 文脈の文言/レイアウト/tooltip をここで管理する。
 type CommonProps = {
     settings: SincroAppSettingsSnapshot;
     uiState: SincroAppSettingsUiState;
@@ -51,9 +53,8 @@ const settingHelp = {
     enableAutoMute: "顔の向きなどに応じて自動的に mute を切り替えます。ハンズフリー運用や展示用途で便利です（Gaze 有効時を推奨）。",
 } as const;
 
-const tooltipBubbleStyle: CSSProperties = {
+const tooltipBubbleBaseStyle: CSSProperties = {
     position: "absolute",
-    right: 0,
     top: "calc(100% + 6px)",
     zIndex: 20,
     width: "min(300px, calc(100vw - 96px))",
@@ -73,6 +74,7 @@ const tooltipBubbleStyle: CSSProperties = {
 function HelpTooltip({ help, children }: { help?: string; children: ReactNode }) {
     const containerRef = useRef<HTMLSpanElement | null>(null);
     const [visible, setVisible] = useState<boolean>(false);
+    const [align, setAlign] = useState<"left" | "right">("right");
     if (!help) {
         return <>{children}</>;
     }
@@ -92,6 +94,26 @@ function HelpTooltip({ help, children }: { help?: string; children: ReactNode })
         document.addEventListener("pointerdown", handlePointerDown);
         return () => document.removeEventListener("pointerdown", handlePointerDown);
     }, [visible]);
+
+    useEffect(() => {
+        if (!visible) {
+            return;
+        }
+        const root = containerRef.current;
+        if (!root) {
+            return;
+        }
+        // 画面左側の項目は left 基準、右側は right 基準にして dialog の横スクロール発生と見切れを防ぐ。
+        const rect = root.getBoundingClientRect();
+        const viewportMidX = window.innerWidth / 2;
+        setAlign(rect.left < viewportMidX ? "left" : "right");
+    }, [visible]);
+
+    const tooltipBubbleStyle: CSSProperties = {
+        ...tooltipBubbleBaseStyle,
+        ...(align === "left" ? { left: 0 } : { right: 0 }),
+    };
+
     return (
         <span
             ref={containerRef}
@@ -299,6 +321,7 @@ type DialogToggleProps = {
 };
 
 function DialogToggle({ label, help, checked, disabled = false, onChange }: DialogToggleProps) {
+    // dialog では compact な2列レイアウトを優先するため、Control Panel とは別スタイルの toggle を使う。
     return (
         <label
             style={{
