@@ -258,6 +258,25 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - UIに閉じる変更は React 側へ追加する
   - React/UI の新規ファイルは原則 `TypeScript`（`.ts` / `.tsx`）で実装し、props・state・イベントpayloadの型を明示する
   - RTC/Media/描画のロジック追加は Core/Renderer 側に閉じ込める
+
+### 7.8 CharacterGaze 改善メモ（2026-02-22）
+
+- 複数人検出時の「迷う」挙動を抑えるため、`CharacterGaze` に `FaceTargetSelector` を導入した。
+  - 1人を選ぶスコア式（中央寄り/近さ/連続性/正面向き）
+  - 保持時間 + 切替マージンによるヒステリシス
+- カクつき対策として、6 keypoint（目/鼻/口/耳）の `x/y` に `OneEuroFilter1D` を適用した。
+  - 低速時は平滑化、急な動きは追従性を優先
+  - 微小揺れは deadband で無視
+- Debug Console の Gaze タブに `Target` 行を追加し、簡易調整用に以下を表示する。
+  - `対象:<index>`（選択中の候補）
+  - `候補:<n>`（検出人数）
+  - `固定中`（保持ロック中）
+  - `停止中`（Gaze OFF）
+- Debug Console の Gaze タブに `Gaze Tuning` を追加し、実行中に以下を調整できるようにした。
+  - `Hold(ms)` / `Switch Margin` / `Relink Dist`
+  - `OneEuro Min` / `OneEuro Beta`
+  - `Deadband`
+- `Target` 表示には選択スコア（`score:0.xx`）を含め、切替挙動の調整をしやすくした。
   - React コンポーネントから WebRTC API を直接叩かない（Facade/Controller 経由）
 - 依存追加の原則:
   - 同等のことが React 標準機能 + 既存実装で実現できるなら新規ライブラリを追加しない
