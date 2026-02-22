@@ -8,6 +8,8 @@
 
 - [UI](frontend_ui.md)
   - 基本となるユーザーインタフェース、デバッグコンソールなど
+- [React Migration Plan](frontend_migration_react.md)
+  - React段階移行、Babylon.js切り離し、Looking GlassのVRM1.0対応計画
 - [VAD](frontend_vad.md)
   - フロント側VAD（RMS/Peak・学習VAD・送信ゲート）の設計
 - [VRM Character](frontend_character.md)

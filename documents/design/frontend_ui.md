@@ -24,6 +24,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `SincroVRMInitializer` が設定ダイアログ表示と開始ボタンを管理し、開始時に `SincroController` を生成する。
   - `SincroController` は UserMedia 取得、RTC開始、DataChannel受信、CharacterGaze開始を統括する。
   - チャット文は `text_ch`、テロップは `telop_ch` で受信し、`TalkManager` 経由でUI/口形同期に渡す。
+  - React への段階移行計画は `documents/design/frontend_migration_react.md` を参照（本書は現行UI設計の正本）。
 
 ## 3. 背景
 
@@ -32,11 +33,13 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - モード別UI（simple/legacy/実験系）の共通部品化
 - 現状の問題点:
   - legacy系とVRM系が共存し、エントリや依存関係を誤ると回帰しやすい
+  - `SincroController` に UI / RTC / CharacterGaze の結線が集中しやすく、段階的なUI差し替え時の境界が見えにくい
 - 採用理由:
   - Vite MPA + HTML partial により、ページ分割と共通UI部品の両立が可能
 - 制約条件:
   - `getUserMedia` 利用のため HTTPS または localhost が前提
   - WebRTCの接続先は `/api/v1/RTCSignalingServer/config.json` の取得結果に依存
+  - React段階移行中は、現行UI manager と新UIの併存期間が発生しうる（詳細は `frontend_migration_react.md`）
 
 ## 4. 用語・略語
 
@@ -93,6 +96,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 画面入力/設定: DialogManager
   - 通信: RTCTalkClient + SincroRTCConfigManager
   - 表示更新: ChatMessageManager/TalkManager/DebugConsoleManager
+  - 注: React段階移行に伴い、`SincroController` 直下の結線責務は `App/*Controller` 群へ段階分割予定（`frontend_migration_react.md` 参照）
 - 外部依存:
   - Browser APIs: WebRTC, getUserMedia, Fetch, dialog element
   - `@mediapipe/tasks-vision`（顔認識利用時）
