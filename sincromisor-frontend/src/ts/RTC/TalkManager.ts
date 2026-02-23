@@ -73,6 +73,8 @@ export class TalkManager {
     addTextChannelMessage(msg: ChatMessage): void {
         console.dir(msg);
         if (msg.message_type === "system") {
+            // text_chの生JSONと別に、表情ヒントの有無だけを見やすく出す。
+            // 現場で「Difyは^Nを返しているのに表情が変わらない」事象の切り分け用。
             this.debugConsoleManager.addTextChannelLog(
                 `[emotion] recv message_id=${msg.message_id} speech_id=${msg.speech_id} expression_code=${msg.expression_code ?? "none"} text_len=${msg.message.length}\n`,
             );

@@ -92,6 +92,7 @@ Sincromisor の Text Processor サービス（対話応答生成）の設計文�
   - `TextProcessorWorker.process()`: 既定実装（エコー）
   - `PokeTextProcessorWorker.process()`: `PokeText.convert` 結果を段階送信
   - `DifyTextProcessorWorker.process()`: Dify streamを句読点区切りで段階送信
+  - `TextProcessorResult.append_response_message()`: ストリーミング応答先頭の `^N`（感情コード）を抽出し、`response_message.expression_code` へ反映しつつ本文/TTS文字列から除去
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-server/text-processor/TextProcessorProcess.py`
   - `sincromisor-server/text-processor/src/text_processor/TextProcessor/TextProcessorWorker.py`
@@ -125,6 +126,7 @@ Sincromisor の Text Processor サービス（対話応答生成）の設計文�
 - レスポンス仕様:
   - `TextProcessorResult` (msgpack) を0件以上返却
   - 最終レスポンスで `end_of_response=True`, `voice_text=None`
+  - chatモードでは、LLMが応答先頭に `^N`（`N=0..5`）を出力した場合、`response_message.expression_code` に変換して返す（`message` / `voice_text` には含めない）
 - エラー仕様:
   - chatモードでDify設定不足時はRuntimeError
 - タイムアウト/リトライ方針:
@@ -168,6 +170,9 @@ Sincromisor の Text Processor サービス（対話応答生成）の設計文�
   - 2. confirmedフラグがtrueで届いているか確認
   - 3. Dify設定/疎通確認（chatモード）
 - よくある失敗と対処:
+  - Dify/LLMのプロンプトで `^N` 出力指示を入れていない
+    - 症状: チャット応答は表示されるが、フロントの表情が変化しない（`expression_code` が付与されない）
+    - 対処: READMEの「チャットモードの表情連動を使う場合」節の指示文をDifyプロンプトへ反映する
   - Dify未設定でchat失敗 -> 環境変数設定
   - 長文応答遅延 -> 分割条件/外部API応答確認
 

@@ -24,6 +24,7 @@ export class FaceEmotionController {
         this.expressionManager = expressionManager;
         this.talkManager = TalkManager.getManager();
         this.logger = DebugConsoleManager.getManager();
+        // モデル差で感情プリセット未実装のことがあるため、起動時に一覧を出しておく。
         this.logAvailableExpressions();
         this.talkManager.subscribe((event) => {
             this.onTalkManagerEvent(event);
@@ -53,6 +54,8 @@ export class FaceEmotionController {
         const holdMs = code === 5 ? 700 : 2200;
         const transitionMs = code === 5 ? 120 : 180;
         const presetExists = this.expressionManager.getExpression(preset) != null;
+        // 同じコードでもVRMごとに見え方がかなり違うため、実機調整しやすいよう
+        // 適用先プリセット名と強度をログに残す。
         this.logger.addTextChannelLog(
             `[emotion] apply message_id=${msg.message_id} code=${code} preset=${preset} exists=${presetExists} intensity=${intensity.toFixed(2)}\n`,
         );
@@ -101,6 +104,7 @@ export class FaceEmotionController {
         holdMs: number,
         transitionMs: number,
     ): void {
+        // 新しい応答が来たら前の感情アニメーションを打ち切り、最新応答を優先する。
         const token = ++this.animationToken;
         const startMs = performance.now();
         const fadeInMs = Math.max(transitionMs, 1);
@@ -138,6 +142,7 @@ export class FaceEmotionController {
     }
 
     private setEmotionPresetValues(targetPreset: EmotionPreset, value: number): void {
+        // 1つの感情プリセットだけを有効にし、他感情の残留値で顔が混ざるのを防ぐ。
         for (const preset of this.animatedPresets) {
             this.expressionManager.setValue(preset, preset === targetPreset ? value : 0.0);
         }

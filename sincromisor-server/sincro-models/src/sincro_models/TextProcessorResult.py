@@ -31,8 +31,13 @@ class TextProcessorResult(BaseModel):
     _response_prefix_buffer: str = PrivateAttr(default="")
 
     def append_response_message(self, text: str) -> bool:
+        # 応答ストリーム先頭の ^N 感情コードをここで剥がす。
+        # text_ch 表示文と voice_text(TTS入力)の両方から制御文字を除去するため、
+        # TextProcessorWorker個別実装ではなく共有モデル側で一元処理する。
         visible_text = self.__consume_expression_prefix(text)
         if not visible_text:
+            # ^ のみ / ^N のみを受け取ったチャンクでは、まだ可視文字がないため
+            # 中間レスポンス送信をスキップできるよう False を返す。
             self.voice_text = None
             return False
         self.response_message.message += visible_text
@@ -53,6 +58,8 @@ class TextProcessorResult(BaseModel):
         if self._response_prefix_checked:
             return text
 
+        # Dify等の streaming では "^" と "1" が別チャンクになることがあるため、
+        # 先頭2文字が確定するまで内部バッファで保留する。
         self._response_prefix_buffer += text
         if self._response_prefix_buffer == "":
             return ""
@@ -69,6 +76,8 @@ class TextProcessorResult(BaseModel):
 
         code_char = self._response_prefix_buffer[1]
         if code_char in "012345":
+            # ChatMessageへ感情コードを載せることで、text_chの既存経路を維持したまま
+            # フロントが表情を切り替えられるようにする。
             self.response_message.expression_code = int(code_char)
             visible_text = self._response_prefix_buffer[2:]
             self._response_prefix_buffer = ""

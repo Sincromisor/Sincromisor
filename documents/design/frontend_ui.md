@@ -172,6 +172,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `sincromisor-frontend/src/ts/RTC/RTCMessage.ts`
 - バージョニング方針:
   - サーバーとの契約変更時は前方互換を優先し、必要なら `message_type` 等で吸収
+  - `text_ch` の `ChatMessage.expression_code`（表情ヒント）は任意項目として扱い、欠落時は従来どおりチャット表示のみ行う
 
 ### 7.3 インターフェース設計
 
