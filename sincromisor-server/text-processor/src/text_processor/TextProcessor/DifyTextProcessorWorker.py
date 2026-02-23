@@ -37,8 +37,8 @@ class DifyTextProcessorWorker(TextProcessorWorker):
             try:
                 res_text: str = responses.popleft()
                 self.logger.info(["Generated", res_text])
-                response.append_response_message(res_text)
-                yield response
+                if response.append_response_message(res_text):
+                    yield response
             except IndexError:
                 if event.is_set():
                     break

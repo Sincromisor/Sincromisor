@@ -7,6 +7,7 @@ import { HeadBoneController } from './HeadBoneController';
 import { ArmBoneController } from './ArmBoneController';
 import { LegBoneController } from './LegBoneController';
 import { FaceMorphController } from './FaceMorphController';
+import { FaceEmotionController } from './FaceEmotionController';
 import { VRMCamera } from '../VRMScene/VRMCamera';
 import { Vector3 } from 'three/src/math/Vector3.js';
 import { Box3 } from 'three/src/math/Box3.js';
@@ -63,6 +64,7 @@ export class VRMCharacterManager {
     public armBoneController: ArmBoneController | null = null;
     public legBoneController: LegBoneController | null = null;
     public mouthMorphController: FaceMorphController | null = null;
+    public emotionMorphController: FaceEmotionController | null = null;
     public characterPosition: Vector3 = new Vector3(0, 0, 0);
     private defaultPosition: Vector3 = new Vector3(0, 0, 0);
     private rootBone: Object3D | null = null;
@@ -116,6 +118,7 @@ export class VRMCharacterManager {
                 this.legBoneController.update();
                 if (this.vrm.expressionManager) {
                     this.mouthMorphController = new FaceMorphController(this.vrm.expressionManager);
+                    this.emotionMorphController = new FaceEmotionController(this.vrm.expressionManager);
                 }
 
                 VRMUtils.removeUnnecessaryVertices(gltf.scene);

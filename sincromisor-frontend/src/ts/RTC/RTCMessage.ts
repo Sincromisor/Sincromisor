@@ -8,6 +8,7 @@ export type ChatMessage = {
     speaker_id: string, // @systemのsystem部分(@は無し)
     speaker_name: string, // Glorious AI
     speech_id: number,
+    expression_code?: number, // 応答先頭の ^N から抽出した感情コード（0-5）
     message: string,
     created_at: number
 }

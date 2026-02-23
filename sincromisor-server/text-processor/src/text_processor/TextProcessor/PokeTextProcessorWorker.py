@@ -23,7 +23,7 @@ class PokeTextProcessorWorker(TextProcessorWorker):
             request.request_message.message,
         ):
             self.logger.info(["Converted", text])
-            response.append_response_message(text)
-            yield response
+            if response.append_response_message(text):
+                yield response
         response.finalize()
         yield response

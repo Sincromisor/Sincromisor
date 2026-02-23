@@ -53,7 +53,7 @@ class TextProcessorWorker:
             speaker_name=self.speaker_name,
             request=request,
         )
-        response.append_response_message(request.request_message.message)
-        yield response
+        if response.append_response_message(request.request_message.message):
+            yield response
         response.finalize()
         yield response

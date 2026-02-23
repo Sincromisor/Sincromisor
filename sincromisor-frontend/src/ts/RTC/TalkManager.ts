@@ -1,5 +1,6 @@
 import { TelopChannelMessage, ChatMessage } from "./RTCMessage";
 import { ChatMessageManager } from "../UI/ChatMessageManager";
+import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 
 export type CurrentMora = {
     'moraID': number,
@@ -22,6 +23,7 @@ export type TelopTextSegment = {
 export class TalkManager {
     private static instance: TalkManager;
     private readonly chatMessageManager: ChatMessageManager;
+    private readonly debugConsoleManager: DebugConsoleManager;
     private telopChannelMessage: Array<TelopChannelMessage> = [];
     private currentTelopChannelMessage: CurrentMora | null = null;
     private moraID: number = 0;
@@ -38,6 +40,7 @@ export class TalkManager {
 
     private constructor() {
         this.chatMessageManager = ChatMessageManager.getManager();
+        this.debugConsoleManager = DebugConsoleManager.getManager();
     }
 
     // React/AppController 向けの購読口。text/telop を分けて通知する。
@@ -69,6 +72,11 @@ export class TalkManager {
     // text_ch は既存 chat manager へ委譲しつつ、React購読向けイベントも発火する。
     addTextChannelMessage(msg: ChatMessage): void {
         console.dir(msg);
+        if (msg.message_type === "system") {
+            this.debugConsoleManager.addTextChannelLog(
+                `[emotion] recv message_id=${msg.message_id} speech_id=${msg.speech_id} expression_code=${msg.expression_code ?? "none"} text_len=${msg.message.length}\n`,
+            );
+        }
         this.chatMessageManager.writeMessage(msg);
         this.emitEvent({ type: "text_channel_message", message: msg });
     }
