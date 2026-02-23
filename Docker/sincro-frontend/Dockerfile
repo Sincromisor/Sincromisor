@@ -30,6 +30,7 @@ RUN \
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-frontend/tsconfig.json \
+    ./sincromisor-frontend/tsconfig.modern.json \
     ./sincromisor-frontend/vite.config.js \
     ./sincromisor-frontend/postcss.config.js \
     ${SINCRO_USER_DIR}/sincromisor-frontend/
