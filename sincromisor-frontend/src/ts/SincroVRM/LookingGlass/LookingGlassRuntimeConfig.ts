@@ -12,11 +12,13 @@ export type LookingGlassRuntimeConfig = {
 const defaultLookingGlassRuntimeConfig: LookingGlassRuntimeConfig = {
     tileHeight: 512,
     numViews: 45,
-    targetY: 1.25,
-    targetZ: 0.5,
-    targetDiam: 0.85,
-    depthiness: 1.0,
-    fovyDeg: 25,
+    // 展示用の縦長画角で全身を収めやすいよう、既定値はやや下寄りにする。
+    targetY: 0.85,
+    // 展示実機で焦点が合いやすかった「Focus」系の値をベースに、全身が入りやすいよう少し引く。
+    targetZ: 0.2,
+    targetDiam: 1.5,
+    depthiness: 0.85,
+    fovyDeg: 24,
 };
 
 let currentConfig: LookingGlassRuntimeConfig = { ...defaultLookingGlassRuntimeConfig };

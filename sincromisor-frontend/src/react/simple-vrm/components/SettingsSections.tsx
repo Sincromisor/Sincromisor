@@ -359,7 +359,8 @@ export function LookingGlassSettingsSection({ settings, onApplySettings }: Looki
     const presets: Array<{ label: string; values: Partial<SincroAppSettingsSnapshot> }> = [
         {
             label: "標準 (Default)",
-            values: { lgTileHeight: 512, lgNumViews: 45, lgTargetY: 1.25, lgTargetZ: 0.5, lgTargetDiam: 0.85, lgDepthiness: 1.0, lgFovyDeg: 25 },
+            // 既定値は展示実機で焦点を合わせやすかった Focus 値を採用する。
+            values: { lgTileHeight: 512, lgNumViews: 45, lgTargetY: 0.95, lgTargetZ: 0.05, lgTargetDiam: 1.25, lgDepthiness: 0.85, lgFovyDeg: 24 },
         },
         {
             label: "縦長 (Portrait)",
@@ -372,7 +373,8 @@ export function LookingGlassSettingsSection({ settings, onApplySettings }: Looki
         {
             label: "焦点調整用 (Focus)",
             // 実機検証で Target Z を 0.05 付近まで寄せると焦点が合いやすいケースがあったため反映。
-            values: { lgTileHeight: 512, lgNumViews: 45, lgTargetY: 1.25, lgTargetZ: 0.05, lgTargetDiam: 0.7, lgDepthiness: 0.85, lgFovyDeg: 24 },
+            // 展示構図（全身を収めやすい引き気味・下寄り）も合わせて既定値に寄せる。
+            values: { lgTileHeight: 512, lgNumViews: 45, lgTargetY: 0.95, lgTargetZ: 0.05, lgTargetDiam: 1.25, lgDepthiness: 0.85, lgFovyDeg: 24 },
         },
     ];
     return (

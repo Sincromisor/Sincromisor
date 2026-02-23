@@ -23,33 +23,54 @@ const SIMPLE_VRM_AUTO_FRAMING_CAMERA = {
 // simple-vrm / vrm360 / Looking Glass で「通常閲覧時の視点」を揃える基準になる。
 export class VRMCamera {
     public readonly camera: PerspectiveCamera;
-    private readonly controls: OrbitControls;
+    private controls: OrbitControls;
     private readonly cameraFov: number;
+    private readonly targetElement: HTMLElement;
+    private pitchCompensationRad = 0;
 
     constructor(targetElement: HTMLElement) {
         const CAMERA_FOV = 30.0;
         const CAMERA_Z = 1.2;
         this.cameraFov = CAMERA_FOV;
+        this.targetElement = targetElement;
         // 顔が見やすい距離・高さを既定にし、細かい差分は scene 側のキャラクター配置で吸収する。
         this.camera = new PerspectiveCamera(CAMERA_FOV, window.innerWidth / window.innerHeight, 0.001, 100.0);
         this.camera.position.set(0.0, 1.45, CAMERA_Z);
-        this.controls = new OrbitControls(this.camera, targetElement);
-        // キャラクターとの距離
-        this.controls.maxDistance = 10;
-        this.controls.minDistance = 0.75;
-        // minPolarAngle: キャラクターを上から見下ろす際の角度
-        // maxPolarAngle: キャラクターを下から見上げる際の角度
-        this.controls.minPolarAngle = Math.PI * 0.15;
-        this.controls.maxPolarAngle = Math.PI * 0.75;
-        this.controls.screenSpacePanning = true;
-        this.controls.target.set(0.0, 1.4, 0.0);
+        this.controls = this.createOrbitControls();
         this.controls.update();
+        this.applyPitchCompensation();
     }
 
     // renderer resize に追従して射影行列を更新する。
     updateAspect(ratio: number){
         this.camera.aspect = ratio;
         this.camera.updateProjectionMatrix();
+    }
+
+    // Looking Glass 実機の筐体傾き補正など、ページ固有の視点ピッチ補正を適用する。
+    // OrbitControls の target を維持したまま camera 位置だけを回して、接地感を調整する。
+    setPitchCompensationDeg(deg: number): void {
+        this.pitchCompensationRad = (deg * Math.PI) / 180.0;
+        this.applyPitchCompensation();
+        this.controls.update();
+    }
+
+    // WebXR セッション切替後に pointer 操作が効かなくなるケース向けに、OrbitControls のイベント配線を再初期化する。
+    refreshInteractionBindings(): void {
+        const prevTarget = this.controls.target.clone();
+        this.controls.dispose();
+        this.controls = this.createOrbitControls();
+        this.controls.target.copy(prevTarget);
+        this.controls.enabled = true;
+        this.controls.update();
+    }
+
+    // ページ固有の初期構図（展示用プリセット等）を、OrbitControls の target と camera 位置へ直接反映する。
+    setViewPose(target: Vector3, cameraPosition: Vector3): void {
+        this.controls.target.copy(target);
+        this.camera.position.copy(cameraPosition);
+        this.applyPitchCompensation();
+        this.controls.update();
     }
 
     // キャラクター寸法に合わせて初期構図を更新する。
@@ -64,6 +85,7 @@ export class VRMCamera {
         this.controls.target.copy(target);
         // 上半身フレーミング時は正面寄りを優先し、頭部が切れにくいよう縦オフセットを弱める。
         this.camera.position.set(target.x, target.y, target.z + distance);
+        this.applyPitchCompensation();
         this.controls.update();
     }
 
@@ -85,6 +107,40 @@ export class VRMCamera {
             target.y + span * SIMPLE_VRM_AUTO_FRAMING_CAMERA.cameraLiftRatio,
             target.z + distance,
         );
+        this.applyPitchCompensation();
         this.controls.update();
+    }
+
+    private applyPitchCompensation(): void {
+        if (this.pitchCompensationRad === 0) {
+            return;
+        }
+
+        const target = this.controls.target;
+        const offsetX = this.camera.position.x - target.x;
+        const offsetY = this.camera.position.y - target.y;
+        const offsetZ = this.camera.position.z - target.z;
+        const cos = Math.cos(this.pitchCompensationRad);
+        const sin = Math.sin(this.pitchCompensationRad);
+
+        // X軸回転で YZ 平面の視点位置だけ補正し、左右構図は維持する。
+        const rotatedY = offsetY * cos - offsetZ * sin;
+        const rotatedZ = offsetY * sin + offsetZ * cos;
+
+        this.camera.position.set(target.x + offsetX, target.y + rotatedY, target.z + rotatedZ);
+    }
+
+    private createOrbitControls(): OrbitControls {
+        const controls = new OrbitControls(this.camera, this.targetElement);
+        // キャラクターとの距離
+        controls.maxDistance = 10;
+        controls.minDistance = 0.75;
+        // minPolarAngle: キャラクターを上から見下ろす際の角度
+        // maxPolarAngle: キャラクターを下から見上げる際の角度
+        controls.minPolarAngle = Math.PI * 0.15;
+        controls.maxPolarAngle = Math.PI * 0.75;
+        controls.screenSpacePanning = true;
+        controls.target.set(0.0, 1.4, 0.0);
+        return controls;
     }
 }
