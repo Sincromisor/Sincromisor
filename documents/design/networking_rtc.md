@@ -115,6 +115,9 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
   - config response: `{ offerURL: string, candidateURL: string, iceServers: IceServerConfig[] }`
   - DataChannel payload:
     - `text_ch`: `ChatMessage`
+      - `expression_code?: number`（0-5）
+      - chatモードでLLM応答先頭の `^N`（感情コード）を text-processor が抽出して付与する任意フィールド
+      - `message` 本文および `voice_text`（TTS入力）からは `^N` を除去して配信する
     - `telop_ch`: `TelopChannelMessage`
 - 永続化対象:
   - なし（セッション中メモリ）
@@ -140,6 +143,9 @@ Sincromisor のフロントエンドと `sincro-rtc` 間の WebRTC 通信（シ�
 - レスポンス仕様:
   - `200`: Answer SDPまたは設定JSON（`/candidate` は `{"status": true|false}`）
   - `429`: `{"error":"Too many requests."}`
+- DataChannel補足仕様:
+  - `text_ch` の `expression_code` は後方互換のため任意項目とする（未対応サーバー/LLM設定未投入時は省略されうる）
+  - `expression_code` の値域は `0..5` を想定し、フロントは未知値/欠落時を `neutral` 相当として扱う
 - エラー仕様:
   - `offer` 非200時はフロント側で接続失敗表示し再接続
   - 不正DataChannel/不正Trackはセッション側で終了
