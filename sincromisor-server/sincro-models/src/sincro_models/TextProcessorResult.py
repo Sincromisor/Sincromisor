@@ -1,7 +1,7 @@
 from typing import Any
 
 import msgpack
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 
 from .ChatHistory import ChatHistory, ChatMessage
 from .TextProcessorRequest import TextProcessorRequest
@@ -26,15 +26,60 @@ class TextProcessorResult(BaseModel):
     # 「こんにちは」と「今日もいい天気ですね」がそれぞれtextに入る。
     # 一度VoiceSynthesizerに送ったら、同じテキストは再送しない。
     voice_text: str | None = None
+    # ストリーミング応答先頭の ^N をチャンク跨ぎで安全に剥がすための内部状態。
+    _response_prefix_checked: bool = PrivateAttr(default=False)
+    _response_prefix_buffer: str = PrivateAttr(default="")
 
-    def append_response_message(self, text: str):
-        self.response_message.message += text
-        self.voice_text = text
+    def append_response_message(self, text: str) -> bool:
+        visible_text = self.__consume_expression_prefix(text)
+        if not visible_text:
+            self.voice_text = None
+            return False
+        self.response_message.message += visible_text
+        self.voice_text = visible_text
+        return True
 
     def finalize(self):
+        # ^ のみで終了する等の異常系でも、本文文字を欠落させない。
+        if not self._response_prefix_checked and self._response_prefix_buffer:
+            self.response_message.message += self._response_prefix_buffer
+            self._response_prefix_buffer = ""
+            self._response_prefix_checked = True
         self.voice_text = None
         self.end_of_response = True
         self.history.messages.append(self.response_message)
+
+    def __consume_expression_prefix(self, text: str) -> str:
+        if self._response_prefix_checked:
+            return text
+
+        self._response_prefix_buffer += text
+        if self._response_prefix_buffer == "":
+            return ""
+
+        if not self._response_prefix_buffer.startswith("^"):
+            visible_text = self._response_prefix_buffer
+            self._response_prefix_buffer = ""
+            self._response_prefix_checked = True
+            return visible_text
+
+        # 先頭1文字しか来ていない場合は次チャンクを待つ。
+        if len(self._response_prefix_buffer) < 2:
+            return ""
+
+        code_char = self._response_prefix_buffer[1]
+        if code_char in "012345":
+            self.response_message.expression_code = int(code_char)
+            visible_text = self._response_prefix_buffer[2:]
+            self._response_prefix_buffer = ""
+            self._response_prefix_checked = True
+            return visible_text
+
+        # ^N 形式でない場合は本文としてそのまま扱う。
+        visible_text = self._response_prefix_buffer
+        self._response_prefix_buffer = ""
+        self._response_prefix_checked = True
+        return visible_text
 
     @classmethod
     def from_request(

@@ -20,5 +20,8 @@ class ChatMessage(BaseModel):
     speaker_id: str
     # Glorious AI - ユーザー名。UI上に表示されたりする。
     speaker_name: str
+    # 応答文先頭の ^N 形式から抽出した感情コード（0-5）。
+    # 未指定/未抽出時はNone。フロント側の表情制御ヒントとして使う。
+    expression_code: int | None = None
     message: str = ""
     created_at: float = Field(default_factory=time.time)
