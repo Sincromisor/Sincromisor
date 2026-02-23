@@ -6,6 +6,11 @@ type EmotionPreset = "neutral" | "relaxed" | "happy" | "sad" | "angry" | "surpri
 
 // text_ch の ChatMessage.expression_code (先頭 ^N) を受け取り、
 // VRM標準表情プリセットを短時間だけ適用する controller。
+//
+// 設計意図:
+// - 汎用VRM対応を優先し、モデルごとに名前が異なる個別morph（眉/目）を直接叩かない
+// - その代わり、標準プリセット(happy/sad/...)を使い、口パクvisemeとの重複morph bindだけ除去して
+//   口表現との干渉を最小化する（完全分離ではなく、汎用性重視の折衷）
 export class FaceEmotionController {
     private readonly expressionManager: VRMExpressionManager;
     private readonly talkManager: TalkManager;
@@ -24,6 +29,9 @@ export class FaceEmotionController {
         this.expressionManager = expressionManager;
         this.talkManager = TalkManager.getManager();
         this.logger = DebugConsoleManager.getManager();
+        // 口パク(aa/ih/...)と同じ morph target を感情プリセットが触るVRMでは、
+        // 表情と口の競合で破綻しやすい。初期化時に重複bindを除去して干渉を減らす。
+        this.detachEmotionBindsOverlappingMouthVisemes();
         // モデル差で感情プリセット未実装のことがあるため、起動時に一覧を出しておく。
         this.logAvailableExpressions();
         this.talkManager.subscribe((event) => {
@@ -157,5 +165,76 @@ export class FaceEmotionController {
             `[emotion] available expressions: ${names.join(", ") || "(none)"}\n`,
         );
         this.logger.addTextChannelLog(`[emotion] preset availability: ${availability}\n`);
+    }
+
+    private detachEmotionBindsOverlappingMouthVisemes(): void {
+        // three-vrm の expression bind から morph target の識別子（primitive uuid + morph index）を抜き出し、
+        // 口パク用visemeと感情プリセットが同じ morph を共有している場合のみ感情側 bind を外す。
+        // これにより、モデル差が大きい「目/眉個別morph名」の知識を持たなくても競合を減らせる。
+        const visemePresets: VRMExpressionPresetName[] = ["aa", "ih", "ou", "oh", "ee"];
+        const mouthMorphBindKeys = new Set<string>();
+
+        for (const preset of visemePresets) {
+            const expression = this.expressionManager.getExpression(preset) as unknown as {
+                binds?: unknown[];
+            } | null;
+            if (!expression?.binds) {
+                continue;
+            }
+            for (const bind of expression.binds) {
+                for (const key of this.extractMorphBindKeys(bind)) {
+                    mouthMorphBindKeys.add(key);
+                }
+            }
+        }
+
+        if (mouthMorphBindKeys.size === 0) {
+            this.logger.addTextChannelLog("[emotion] mouth-viseme morph bind overlap check skipped (no viseme morph binds)\n");
+            return;
+        }
+
+        let removedBindCount = 0;
+        for (const preset of this.animatedPresets) {
+            const expression = this.expressionManager.getExpression(preset) as unknown as {
+                binds?: unknown[];
+                deleteBind?: (bind: unknown) => void;
+            } | null;
+            if (!expression?.binds || !expression.deleteBind) {
+                continue;
+            }
+
+            // deleteBind() で配列が変化するため、スナップショットを走査する。
+            for (const bind of [...expression.binds]) {
+                const bindKeys = this.extractMorphBindKeys(bind);
+                if (bindKeys.length === 0) {
+                    continue;
+                }
+                const overlaps = bindKeys.some((key) => mouthMorphBindKeys.has(key));
+                if (!overlaps) {
+                    continue;
+                }
+                expression.deleteBind(bind);
+                removedBindCount += 1;
+            }
+        }
+
+        this.logger.addTextChannelLog(
+            `[emotion] detached ${removedBindCount} emotion morph binds overlapping mouth visemes\n`,
+        );
+    }
+
+    private extractMorphBindKeys(bind: unknown): string[] {
+        // MorphTargetBind だけを対象にし、Material/Texture系 bind はここでは干渉対象にしない。
+        const candidate = bind as {
+            index?: number;
+            primitives?: Array<{ uuid?: string }>;
+        };
+        if (typeof candidate.index !== "number" || !Array.isArray(candidate.primitives)) {
+            return [];
+        }
+        return candidate.primitives
+            .map((primitive) => primitive?.uuid)
+            .filter((uuid): uuid is string => typeof uuid === "string")
+            .map((uuid) => `${uuid}:${candidate.index}`);
     }
 }
