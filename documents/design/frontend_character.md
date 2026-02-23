@@ -6,7 +6,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 
 - ドキュメントパス: `documents/design/frontend_character.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-02-15
+- 最終更新日: 2026-02-23
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -22,6 +22,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - LLM向け要約（3-5行）:
   - Start後、`VRMScene` が Three.js renderer/camera/light を初期化し、`VRMCharacterManager` がVRMをロードする。
   - `FaceMorphController` は `TalkManager.currentMora()` を参照して母音ごとの口形を駆動する。
+  - `FaceEmotionController` は `text_ch` の `ChatMessage.expression_code` を受けて VRM感情プリセットを駆動する。
   - `HeadBoneController` は `CharacterGaze` の鼻座標から首向きを更新し、未検出時はカメラ追従にフォールバックする。
   - `CharacterGaze` は MediaPipe FaceDetector を `public/mediapipe-wasm` から読み込み、検出状態で自動ミュート連動も行う。
 
@@ -32,6 +33,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - ユーザーの顔向きに追従した自然なインタラクション
 - 現状の問題点:
   - 表情は母音中心で、感情表現や全身モーションは限定的
+  - VRMごとに感情プリセットが口形morphを含む場合、口パクとの干渉が起こり得る
 - 採用理由:
   - `@pixiv/three-vrm` により VRM 1.0 との互換性が高い
 - 制約条件:
@@ -76,11 +78,13 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - キャラクター: `VRMCharacterManager`
   - 骨制御: `HeadBoneController`, `ArmBoneController`, `LegBoneController`
   - 表情制御: `FaceMorphController`
+  - 感情表情制御: `FaceEmotionController`
   - 顔認識: `CharacterGaze`
 - 責務分割:
   - 読込/更新ループ: `VRMScene` + `VRMCharacterManager`
   - ボーン更新: BoneController群
   - 口形同期: FaceMorphController + TalkManager
+  - 感情表情同期: FaceEmotionController + TalkManager(`text_ch`)
   - 入力検出: CharacterGaze
 - 外部依存:
   - `three`, `@pixiv/three-vrm`, `@mediapipe/tasks-vision`
@@ -96,15 +100,18 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `VRMCharacterManager`: GLTFLoader+VRMLoaderPluginでVRM読込、コントローラ初期化
   - `HeadBoneController`: CharacterGazeまたはCamera方向に首回転を更新
   - `FaceMorphController`: `aa/ih/ou/ee/oh/blink` のExpression制御
+  - `FaceEmotionController`: `ChatMessage.expression_code` を `relaxed/happy/sad/angry/surprised` にマップし、短時間アニメーションで適用
   - `CharacterGaze`: 顔キーポイント追跡、視線角推定、arrive/leaveイベント通知
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/HeadBoneController.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceMorphController.ts`
+  - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceEmotionController.ts`
   - `sincromisor-frontend/src/ts/CharacterGaze/CharacterGaze.ts`
 - 変更時に同時確認が必要なファイル:
   - 口形ロジック変更: `FaceMorphController.ts` と `TalkManager.ts`
+  - 感情表情ロジック変更: `FaceEmotionController.ts` と `TalkManager.ts` / `RTCMessage.ts`
   - 顔認識ロジック変更: `CharacterGaze.ts` と `SincroController.ts`（自動ミュート連動）
   - シーン初期化変更: `VRMScene.ts` と `SincroVRMInitializer.ts`
 
@@ -112,18 +119,19 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 
 - 主要データ構造:
   - `CurrentMora`（TalkManagerが現在発話中の母音区間を保持）
+  - `ChatMessage.expression_code`（text_ch先頭 `^N` 由来の感情コード。任意項目）
   - CharacterGazeの `movingAverage[6]`（右目/左目/鼻/口/右耳/左耳）
 - 永続化対象:
   - VRMモデルURL（`DialogManager.vrmUrl`）と、ローカル保存済みVRM（DialogManager経由）
 - スキーマ/モデル:
-  - `sincromisor-frontend/src/ts/RTC/RTCMessage.ts` の `TelopChannelMessage`
+  - `sincromisor-frontend/src/ts/RTC/RTCMessage.ts` の `TelopChannelMessage`, `ChatMessage`
 - バージョニング方針:
   - `vowel` の表現変更時は `FaceMorphController` 側で後方互換を維持
 
 ### 7.3 インターフェース設計
 
 - エンドポイント/チャネル:
-  - 直接参照はしないが、`telop_ch` の `TelopChannelMessage` を入力として利用
+  - 直接参照はしないが、`telop_ch` の `TelopChannelMessage` と `text_ch` の `ChatMessage.expression_code` を入力として利用
   - FaceDetectorアセット:
     - `/mediapipe-wasm`
     - `/3rd_party/blaze_face_short_range.tflite`
@@ -142,6 +150,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - 正常系フロー:
   - Start -> `VRMScene.start()` -> animate loop
   - telop受信 -> `TalkManager.currentMora()` 更新 -> `FaceMorphController` が口形適用
+  - text受信（chat mode） -> `TalkManager` イベント通知 -> `FaceEmotionController` が感情表情を適用
   - 顔検出 -> `CharacterGaze` 更新 -> `HeadBoneController` に反映
 - 異常系フロー:
   - VRMロード失敗 -> 例外出力（表示不可）
@@ -163,12 +172,14 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `public/mediapipe-wasm` と face model を配置
 - 互換性に影響する設定変更:
   - VRM表情プリセット名の差異は `FaceMorphController` のマッピングに影響
+  - 感情表情はVRM標準プリセット前提。LLM先頭 `^N` 出力ルール未設定時は表情連動しない
 
 ## 9. 監視・運用
 
 - ログ設計:
   - VRMロード進捗/エラーをconsole出力
   - DebugConsoleで `faceX/faceY/facing/status` を表示
+  - DebugConsole `text_ch` ログに `expression_code` 受信・感情プリセット適用・口パク重複bind除去数を出力（切り分け用）
 - メトリクス:
   - 未導入
 - 障害時の切り分け手順:
@@ -179,6 +190,8 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - よくある失敗と対処:
   - wasm未配置で顔認識不可
   - VRM表情キー未対応で口形が動かない
+  - Dify/LLM側の `^N` 出力未設定で感情表情が動かない
+  - 感情表情と口パクが干渉するVRMでは、重複morph bind除去ログを確認し、必要に応じて強度を下げる
   - 低スペック端末で描画FPS低下
 
 ## 10. セキュリティ/コンプライアンス
@@ -212,15 +225,17 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 ## 12. 既知課題・リスク
 
 - 既知課題:
-  - 口形は母音中心で感情表現が不足
+  - 口形は母音中心で感情表現が不足（感情表情は追加済みだがVRM個体差により見え方の差が大きい）
   - 顔未検出時のニュートラル復帰は鼻中心で不自然な場合がある
 - 技術的負債:
   - Bone制御パラメータが経験則で、モデル差異に弱い
 - リスク一覧:
   - VRM個体差による表情キー不一致
+  - 感情プリセットに口形morphが含まれるVRMで、口パクと干渉する可能性
   - カメラ環境差による検出不安定
 - 軽減策:
   - モデルごとの補正値導入、表情キー存在チェックの強化
+  - 感情プリセットと viseme の重複morph bind を起動時に除去し、口パク優先で競合を軽減
 
 ## 13. 代替案と設計判断
 
@@ -238,6 +253,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 | 日付 | 変更内容 |
 | --- | --- |
 | 2026-02-15 | 初版作成 |
+| 2026-02-23 | chatモード感情表情（`FaceEmotionController`）と `^N`/`expression_code` 連動、口パク競合軽減方針を追記 |
 
 ## 15. 参照資料
 
@@ -247,6 +263,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - 参照実装:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceMorphController.ts`
+  - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceEmotionController.ts`
   - `sincromisor-frontend/src/ts/CharacterGaze/CharacterGaze.ts`
 - 外部リンク:
   - https://github.com/pixiv/three-vrm
