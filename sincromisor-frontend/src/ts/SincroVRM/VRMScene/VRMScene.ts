@@ -24,6 +24,7 @@ export class VRMScene {
         vrmUrl: string,
         xrMode: boolean = false,
         onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void,
+        enableInitialUpperBodyFraming: boolean = false,
     ) {
         this.scene = new Scene();
         this.vrmLight = new VRMLight();
@@ -41,7 +42,13 @@ export class VRMScene {
         // OrbitControls を含むカメラ設定は専用クラスへ分離し、ページ差分から独立させる。
         this.vrmCamera = new VRMCamera(controlTarget);
         // VRMロード完了時にサムネイル取得結果を呼び出し元へ返し、UIアイコン更新に利用する。
-        this.vrmCharacterManager = new VRMCharacterManager(this.scene, this.vrmCamera, vrmUrl, onThumbnailLoaded);
+        this.vrmCharacterManager = new VRMCharacterManager(
+            this.scene,
+            this.vrmCamera,
+            vrmUrl,
+            onThumbnailLoaded,
+            enableInitialUpperBodyFraming,
+        );
 
         // レンダラーを設定する。背景透過にして UI オーバーレイ（chat/telop/debug）と重ねる。
         this.renderer = new WebGLRenderer({ alpha: true, antialias: true });
