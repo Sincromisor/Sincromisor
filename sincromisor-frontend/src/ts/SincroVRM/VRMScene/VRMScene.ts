@@ -12,6 +12,7 @@ import { VRMLight } from './VRMLight';
 export class VRMScene {
     protected readonly scene: Scene;
     protected readonly renderer: WebGLRenderer;
+    private readonly gridHelper: GridHelper;
     private readonly vrmCharacterManager: VRMCharacterManager;
     private readonly vrmCamera: VRMCamera;
     protected readonly vrmLight: VRMLight;
@@ -32,8 +33,8 @@ export class VRMScene {
         this.scene.add(this.vrmLight.ambientLight);
 
         // 配置調整時の目安用。最終UIでは目立ちにくいが、座標系の確認に使える。
-        const gridHelper = new GridHelper(10, 10);
-        this.scene.add(gridHelper);
+        this.gridHelper = new GridHelper(10, 10);
+        this.scene.add(this.gridHelper);
         /*
         const axesHelper = new AxesHelper(5);
         axesHelper.setColors(new Color('rgb(255,0,0)'), new Color('rgb(0,255,0)'), new Color('rgb(0,0,255)'));
@@ -115,6 +116,30 @@ export class VRMScene {
 
     /* フレームごとのシーンの更新処理を記述する。派生クラスで環境差分のみ実装する。 */
     protected updateScene(): void {
+    }
+
+    // ページ固有の見え方補正（例: Looking Glass 実機の筐体角度）を camera 側へ委譲する。
+    protected setCameraPitchCompensationDeg(deg: number): void {
+        this.vrmCamera.setPitchCompensationDeg(deg);
+    }
+
+    protected setCameraViewPose(target: Vector3, cameraPosition: Vector3): void {
+        this.vrmCamera.setViewPose(target, cameraPosition);
+    }
+
+    // LG 再開後などで OrbitControls の pointer 入力が不安定になる場合に再初期化する。
+    protected refreshCameraInteractionBindings(): void {
+        this.vrmCamera.refreshInteractionBindings();
+    }
+
+    // XR セッション終了後に canvas サイズ/投影が崩れるケース向けに、viewport 基準で再計算する。
+    protected refreshRendererLayout(): void {
+        this.handleResize();
+    }
+
+    // ページごとに座標グリッドの表示有無を切り替える。
+    protected setGridHelperVisible(visible: boolean): void {
+        this.gridHelper.visible = visible;
     }
 
     // 起動後の設定変更（Character ON/OFF）で VRM 本体の表示を切り替える。

@@ -44,11 +44,11 @@ const defaultSettings: SincroAppSettingsSnapshot = {
     enableVR: false,
     lgTileHeight: 512,
     lgNumViews: 45,
-    lgTargetY: 1.25,
-    lgTargetZ: 0.5,
-    lgTargetDiam: 0.85,
-    lgDepthiness: 1.0,
-    lgFovyDeg: 25,
+    lgTargetY: 0.95,
+    lgTargetZ: 0.05,
+    lgTargetDiam: 1.25,
+    lgDepthiness: 0.85,
+    lgFovyDeg: 24,
 };
 
 const defaultSettingsUiState: SincroAppSettingsUiState = {

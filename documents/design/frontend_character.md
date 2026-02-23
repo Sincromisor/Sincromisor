@@ -227,8 +227,10 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - 既知課題:
   - 口形は母音中心で感情表現が不足（感情表情は追加済みだがVRM個体差により見え方の差が大きい）
   - 顔未検出時のニュートラル復帰は鼻中心で不自然な場合がある
+  - Looking Glass (`looking-glass-vrm`) では、`@lookingglass/webxr` の再開後セッションで mouse/wheel 操作が失効する環境がある（2026-02-23時点）
 - 技術的負債:
   - Bone制御パラメータが経験則で、モデル差異に弱い
+  - Looking Glass 再開時入力不具合に対して `LookingGlassXRController` へ段階的回復策（canvas参照再通知 / focus / fallback mouse controls）を実装しており、暫定コードが増えている
 - リスク一覧:
   - VRM個体差による表情キー不一致
   - 感情プリセットに口形morphが含まれるVRMで、口パクと干渉する可能性
@@ -236,6 +238,24 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - 軽減策:
   - モデルごとの補正値導入、表情キー存在チェックの強化
   - 感情プリセットと viseme の重複morph bind を起動時に除去し、口パク優先で競合を軽減
+  - Looking Glass は再開後入力失効の回避として `LookingGlassConfig` を直接更新する fallback 操作を再開時のみ有効化（初回セッションは vendor 実装を優先）
+
+### 12.1 Looking Glass 運用メモ（2026-02-23）
+
+- 背景:
+  - `looking-glass-vrm` は `VRM360Scene` 流用を外し、`LookingGlassVRMScene`（通常VRM + LG起動導線）へ分離した
+  - その過程で、renderer設定互換・終了後レイアウト復旧・再開時入力復旧の調整が `LookingGlassXRController` に集約された
+- 現在の実装方針:
+  - vendor (`@lookingglass/webxr`) の入力実装を基本とし、再開時にのみ回復策を追加する
+  - runtime config 変更がない通常の停止/再開では polyfill を再生成しない
+  - 再開後入力が失効する環境では fallback mouse controls を `lkgCanvas` に注入して `LookingGlassConfig.trackball* / target*` を直接更新する
+- 将来のリファクタリング時に優先して確認する点:
+  - `@lookingglass/webxr` の更新版で再開後 input 問題が解消していないか（解消済みなら fallback controls を削除）
+  - `LookingGlassXRController` の「入力回復」と「XRセッション管理」を分離できるか
+  - `LookingGlassVRMScene.bindLookingGlassStateRecovery()` の責務（レイアウト復旧 / camera interaction refresh）を Scene基底や専用Recoveryクラスへ分離できるか
+- 手動回帰確認（最低限）:
+  - `looking-glass-vrm` で `開始 -> 停止 -> 再開` 後に `wheel`, 左ドラッグ, 右ドラッグ（または `Shift+左ドラッグ`）が効く
+  - LG終了後に通常画面のレンダリングエリアが崩れない
 
 ## 13. 代替案と設計判断
 
@@ -254,6 +274,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 | --- | --- |
 | 2026-02-15 | 初版作成 |
 | 2026-02-23 | chatモード感情表情（`FaceEmotionController`）と `^N`/`expression_code` 連動、口パク競合軽減方針を追記 |
+| 2026-02-23 | Looking Glass 専用シーン化、展示向け床テクスチャ/視点補正、終了後レイアウト復旧と再開時入力回復の暫定方針を追記 |
 
 ## 15. 参照資料
 

@@ -14,10 +14,10 @@ export function PanelControls({ hasActiveController, onStart, onStop }: PanelCon
         // ボタン見た目は panelStyles、間隔は UI_TUNING で調整する。
         <div style={{ display: "flex", gap: `${styleTuning.controlsGapPx}px` }}>
             <button type="button" onClick={onStart} disabled={!hasActiveController} style={panelStyles.button}>
-                開始
+                WebRTC 開始
             </button>
             <button type="button" onClick={onStop} disabled={!hasActiveController} style={panelStyles.button}>
-                停止
+                WebRTC 停止
             </button>
         </div>
     );
