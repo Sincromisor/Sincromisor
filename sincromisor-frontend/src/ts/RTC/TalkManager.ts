@@ -22,6 +22,10 @@ export type TelopTextSegment = {
 // ChatMessageManager と同様、移行期間中は DOM とイベントの二重経路を持つ。
 export class TalkManager {
     private static instance: TalkManager;
+    // React footerテロップは幅ベースtrimを行わないため、保持件数を抑えて更新コストを安定させる。
+    private static readonly MAX_TELOP_SEGMENT_COUNT = 6;
+    // 長時間稼働時の保険として、React表示用の総文字数を単純上限で制御する。
+    private static readonly MAX_TELOP_TOTAL_CHARS = 240;
     private readonly chatMessageManager: ChatMessageManager;
     private readonly debugConsoleManager: DebugConsoleManager;
     private telopChannelMessage: Array<TelopChannelMessage> = [];
@@ -58,7 +62,9 @@ export class TalkManager {
         if (!enabled) {
             const telopBox = document.querySelector("div#sincroFooterBox");
             if (telopBox) {
-                telopBox.innerHTML = "";
+                // Reactや日時表示など他要素を巻き込まないよう、旧DOMテロップspanのみ掃除する。
+                const legacyTelopSpans = telopBox.querySelectorAll("span.sincroFooterBox__telopText");
+                legacyTelopSpans.forEach((node) => node.remove());
             }
         }
     }
@@ -135,18 +141,35 @@ export class TalkManager {
         }
         span.textContent += char || ' ';
 
-        // 1文字単位で先頭から削除
-        let totalWidth: number = 0;
-        const spans: HTMLSpanElement[] = Array.from(telopText.children) as HTMLSpanElement[];
-        totalWidth = spans.reduce((acc, s) => acc + s.offsetWidth, 0);
+        // 1文字単位で先頭から削除。
+        // footer内に日時など別要素がある構成では、その幅を差し引いた残りをテロップ用の幅とみなす。
+        const telopClass = "sincroFooterBox__telopText";
+        const getChildren = (): HTMLElement[] => Array.from(telopText.children) as HTMLElement[];
+        const getTelopSpans = (): HTMLSpanElement[] =>
+            getChildren().filter((child): child is HTMLSpanElement =>
+                child instanceof HTMLSpanElement && child.classList.contains(telopClass),
+            );
+        const getReservedWidth = (): number =>
+            getChildren()
+                .filter((child) => !child.classList.contains(telopClass))
+                .reduce((acc, child) => acc + child.offsetWidth, 0);
+        const getTelopTotalWidth = (): number =>
+            getTelopSpans().reduce((acc, currentSpan) => acc + currentSpan.offsetWidth, 0);
 
-        while (totalWidth > telopText.clientWidth - paddingLeftPx - paddingRightPx && telopText.firstChild) {
-            const firstSpan = telopText.firstChild as HTMLSpanElement;
+        const availableWidth = Math.max(
+            0,
+            telopText.clientWidth - paddingLeftPx - paddingRightPx - getReservedWidth(),
+        );
+        let totalWidth: number = getTelopTotalWidth();
+
+        while (totalWidth > availableWidth) {
+            const firstSpan = getTelopSpans()[0];
+            if (!firstSpan) {
+                break;
+            }
             if (firstSpan.textContent && firstSpan.textContent.length > 0) {
                 // 先頭spanの1文字目を削除
                 firstSpan.textContent = firstSpan.textContent.slice(1);
-                // 幅を再計算
-                totalWidth = spans.reduce((acc, s) => acc + s.offsetWidth, 0);
                 // spanが空になったら要素ごと削除
                 if (firstSpan.textContent.length === 0) {
                     telopText.removeChild(firstSpan);
@@ -154,6 +177,7 @@ export class TalkManager {
             } else {
                 telopText.removeChild(firstSpan);
             }
+            totalWidth = getTelopTotalWidth();
         }
     }
 
@@ -166,12 +190,38 @@ export class TalkManager {
         } else {
             this.telopTextSegments.push({ speechId, text: char });
         }
-        // フッターテロップは表示幅制御の代替として件数で切り詰める（React描画移行期間の簡易実装）。
-        if (this.telopTextSegments.length > 6) {
-            this.telopTextSegments = this.telopTextSegments.slice(-6);
+        // React footerテロップ用の保持データは、描画を壊しにくい単純ルールだけでtrimする。
+        // 幅計算はReact側で行わず、ここでは件数と総文字数の上限だけを管理する。
+        if (this.telopTextSegments.length > TalkManager.MAX_TELOP_SEGMENT_COUNT) {
+            this.telopTextSegments = this.telopTextSegments.slice(-TalkManager.MAX_TELOP_SEGMENT_COUNT);
         }
+        // 長時間稼働時に表示用文字列が肥大化しすぎないよう、保険として総文字数も上限制御する。
+        this.trimTelopSegmentsByTotalChars(TalkManager.MAX_TELOP_TOTAL_CHARS);
         // 先頭の空白だけになった segment は詰める。
         this.telopTextSegments = this.telopTextSegments.filter((segment) => segment.text.length > 0);
+    }
+
+    // 先頭（古いテロップ）から文字を落として、表示用バッファの総文字数を抑える。
+    private trimTelopSegmentsByTotalChars(maxTotalChars: number): void {
+        let totalChars = this.telopTextSegments.reduce((acc, segment) => acc + segment.text.length, 0);
+        if (totalChars <= maxTotalChars) {
+            return;
+        }
+
+        const nextSegments: TelopTextSegment[] = this.telopTextSegments.map((segment) => ({ ...segment }));
+        while (totalChars > maxTotalChars && nextSegments.length > 0) {
+            const first = nextSegments[0];
+            if (first.text.length <= 0) {
+                nextSegments.shift();
+                continue;
+            }
+            first.text = first.text.slice(1);
+            totalChars -= 1;
+            if (first.text.length === 0) {
+                nextSegments.shift();
+            }
+        }
+        this.telopTextSegments = nextSegments;
     }
 
     // AppController が購読し、Control Panel / Telop React UI へ再配信するための通知。
