@@ -48,21 +48,32 @@ class AudioBrokerCommunicator:
             + f"::{self.comm_type}[{self.session_id[21:26]}]",
         )
 
+        logger.info("closing WebSocket")
+        try:
+            self.ws.close()
+        except Exception as e:
+            logger.error(f"Unknown Error: {repr(e)}")
+
         logger.info(f"{self.comm_type} - join sender_thread")
         try:
-            self.sender_thread.join()
+            self.sender_thread.join(timeout=2.0)
         except Exception as e:
             logger.error(f"Unknown Error: {repr(e)}")
 
         logger.info(f"{self.comm_type} join receiver_thread")
         try:
-            self.receiver_thread.join()
+            self.receiver_thread.join(timeout=2.0)
         except Exception as e:
             logger.error(f"Unknown Error: {repr(e)}")
 
-        logger.info("closing WebSocket")
-        self.ws.close()
+        if self.sender_thread.is_alive():
+            logger.warning(f"{self.comm_type} sender_thread is still alive.")
+        if self.receiver_thread.is_alive():
+            logger.warning(f"{self.comm_type} receiver_thread is still alive.")
         logger.info("done.")
+
+    def is_alive(self) -> bool:
+        return self.sender_thread.is_alive() and self.receiver_thread.is_alive()
 
 
 class AudioBrokerCommunicators:
@@ -89,6 +100,14 @@ class AudioBrokerCommunicators:
         self.text_processor.close()
         self.synthesizer.close()
 
+    def is_alive(self) -> bool:
+        return (
+            self.extractor.is_alive()
+            and self.recognizer.is_alive()
+            and self.text_processor.is_alive()
+            and self.synthesizer.is_alive()
+        )
+
 
 class AudioBrokerEvent(Event):
     def __init__(self):
@@ -105,6 +124,9 @@ class AudioBrokerEvent(Event):
 
 
 class AudioBroker:
+    _RECONNECT_BASE_SEC = 1.0
+    _RECONNECT_MAX_SEC = 30.0
+
     # talk_mode: chat, sincro
     def __init__(
         self,
@@ -128,10 +150,11 @@ class AudioBroker:
         self.__fallback_host: str | None = fallback_host
         self.__fallback_port: int | None = fallback_port
 
-        # AudioBrokerもしくは子スレッドでなにかしらの問題が発生したら、
-        # runningをclearして全てを停止する。
+        # 明示的に停止するまではrunningを維持し、
+        # ワーカ通信障害はconnect()で再接続を試行する。
         self.__running: Event = AudioBrokerEvent()
         self.__running.set()
+        self.__communicators: AudioBrokerCommunicators | None = None
 
         # VoiceTransformTrack
         # -> ExtractorSenderThread: bytes
@@ -158,14 +181,23 @@ class AudioBroker:
 
         self.return_frame_format = {"sample_rate": 48000, "sample_size": 960}
         self.__last_connect: float = 0.0
+        self.__reconnect_failures: int = 0
+        self.__stop_requested: bool = False
 
     def connect(self) -> None:
-        # 再接続の試行は最低でも10秒以上間隔を開ける
-        if self.__last_connect + 10 > time.time():
+        if self.__stop_requested:
+            return
+
+        # 失敗回数に応じた指数バックオフで再接続を試行する。
+        wait_sec: float = min(
+            self._RECONNECT_MAX_SEC,
+            self._RECONNECT_BASE_SEC * (2**self.__reconnect_failures),
+        )
+        if self.__last_connect + wait_sec > time.time():
             return
 
         self.__last_connect = time.time()
-        # reconnectの場合、clearされている可能性がある
+        self.__close_communicators()
         self.__running.set()
 
         self.__logger.info("connecting worker...")
@@ -180,42 +212,67 @@ class AudioBroker:
                 text_processor=text_processor,
                 synthesizer=synthesizer,
             )
+            self.__reconnect_failures = 0
+            self.__logger.info("AudioBroker worker connection recovered.")
         except AudioBrokerError:
             self.__logger.error(f"AudioBrokerError: {traceback.format_exc()}")
             self.__err_to_chat(message=f"AudioBrokerError: {traceback.format_exc()}")
-            self.close()
+            self.__mark_connect_failure()
         except ConnectionRefusedError:
             self.__logger.error(f"ConnectionRefusedError: {traceback.format_exc()}")
             self.__err_to_chat(
                 message=f"ConnectionRefusedError: {traceback.format_exc()}"
             )
-            self.close()
+            self.__mark_connect_failure()
         except TimeoutError:
             self.__logger.error(f"TimeoutError: {traceback.format_exc()}")
             self.__err_to_chat(message=f"TimeoutError: {traceback.format_exc()}")
-            self.close()
+            self.__mark_connect_failure()
         except Exception as e:
             self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
             self.__err_to_chat(
                 message=f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
             )
-            self.close()
+            self.__mark_connect_failure()
 
     def is_running(self) -> bool:
+        if not self.__running.is_set():
+            return False
+
+        if self.__communicators is None:
+            return False
+
+        # どれか1つでもsender/receiverが終了した場合は不健全と見なし再接続対象にする。
+        if not self.__communicators.is_alive():
+            self.__logger.warning("Worker communication thread terminated. reconnect required.")
+            self.__running.clear()
+            self.__close_communicators()
+            return False
+
         return self.__running.is_set()
 
     def close(self) -> None:
         self.__logger.info("Stopping AudioBroker...")
-        if not self.__running.is_set():
-            self.__logger.warning("AudioBroker is not running.")
-            return
+        self.__stop_requested = True
         self.__logger.info("STOP AudioBroker...")
         self.__running.clear()
+        self.__close_communicators()
+        self.__logger.info("AudioBroker closed.")
+
+    def __mark_connect_failure(self) -> None:
+        self.__reconnect_failures += 1
+        self.__running.clear()
+        self.__close_communicators()
+
+    def __close_communicators(self) -> None:
+        if self.__communicators is None:
+            return
         try:
             self.__communicators.close()
-        except AttributeError:
-            self.__logger.error("__communicators is not defined.")
-        self.__logger.info("AudioBroker closed.")
+        except Exception as e:
+            self.__logger.error(f"close_communicators - UnknownError: {repr(e)}")
+        finally:
+            self.__communicators = None
 
     def __get_worker(self, worker_type: str) -> ServiceDescription:
         worker: ServiceDescription | None

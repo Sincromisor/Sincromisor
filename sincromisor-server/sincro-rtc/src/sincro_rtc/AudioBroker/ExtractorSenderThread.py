@@ -45,4 +45,3 @@ class ExtractorSenderThread(Thread):
             self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
             traceback.print_exc()
         self.__logger.info("Thread terminated.")
-        self.__running.clear()
