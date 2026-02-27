@@ -49,4 +49,3 @@ class RecognizerReceiverThread(Thread):
                 traceback.print_exc()
                 break
         self.__logger.info("Thread terminated.")
-        self.__running.clear()

@@ -6,7 +6,7 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
 
 - ドキュメントパス: `documents/design/networking_websocket.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-02-15
+- 最終更新日: 2026-02-27
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -23,7 +23,7 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
   - AudioBrokerは4つのWS接続を張り、すべて msgpack バイナリで通信する。
   - 流れは `AudioFrame -> Extractor -> Recognizer -> TextProcessor -> Synthesizer`。
   - TextProcessor 由来のChatMessageは `text_channel_queue`、Synthesizer音声は `voice_frame_queue` に集約される。
-  - どこか1系統で例外が出ると `running Event` をclearし全体停止する。
+  - どこか1系統で通信断が起きた場合は不健全として検知し、AudioBrokerが再接続を試行する。
 
 ## 3. 背景
 
@@ -64,7 +64,7 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
 ### 5.2 非機能要件
 
 - 性能: 低遅延を優先し、過負荷時は古いフレームを破棄
-- 可用性: 失敗時は停止して上位で再接続
+- 可用性: 失敗時は通信系を再初期化し、RTCセッション継続を優先
 - スケーラビリティ: セッション単位で独立インスタンス
 - セキュリティ: 内部ネットワークWS想定
 - 運用性/保守性: サービス別Thread分割
@@ -81,7 +81,7 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
 - 責務分割:
   - SenderThread: deque -> ws送信
   - ReceiverThread: ws受信 -> deque格納
-  - AudioBroker: worker探索、接続、停止制御、エラー注入
+  - AudioBroker: worker探索、接続、通信健全性監視、再接続制御、エラー注入
 - 外部依存:
   - `websockets.sync.client`, `sincro_models`, `sincro_config`
 - 全体図（必要なら図リンク）:
@@ -143,11 +143,11 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
 - レスポンス仕様:
   - 各段でmsgpack結果を返し、次段へ中継
 - エラー仕様:
-  - 接続断/例外時は当該Thread終了し `running.clear()`
+  - 接続断/例外時は当該Threadが終了し、AudioBrokerの生存監視が不健全と判定して再接続対象へ遷移する
   - `AudioBroker.__err_to_chat()` でエラーをユーザー向け出力可能
 - タイムアウト/リトライ方針:
   - `recv(timeout=5)` でポーリング継続
-  - `AudioBroker.connect()` は最低10秒間隔で再試行
+  - `AudioBroker.connect()` は指数バックオフ（1秒起点、最大30秒）で再接続
 
 ### 7.4 状態遷移・シーケンス
 
@@ -159,8 +159,8 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
   - 5. TextProcessor結果を Synthesizer へ送信
   - 6. Textは `text_channel_queue`、音声は `voice_frame_queue` へ
 - 異常系フロー:
-  - 接続拒否/切断/デコード失敗 -> Event clear -> 全体停止
-  - 上位 `VoiceTransformTrack` が停止検知して再接続
+  - 接続拒否/切断/デコード失敗 -> 通信スレッド終了 -> AudioBrokerが不健全検知して再接続
+  - 上位 `VoiceTransformTrack` は非稼働時に `connect()` を再試行し、ダミーフレームでRTCを継続
   - 上位 `VoiceTransformTrack` は `text_ch` が open の間、`text_channel_queue` をフラッシュし、`AudioBroker.__err_to_chat()` のエラー通知をフロントへ中継する
   - `text_ch` 未open時はキューを保持し、open後に順次送信する
 - 状態遷移図/シーケンス図（必要なら図リンク）:
@@ -206,14 +206,14 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
 - 入力検証:
   - msgpack復元時に型不整合を例外として扱う
 - 脅威と対策:
-  - 異常入力・切断時にfail-fastで停止
+  - 異常入力・切断時は当該通信系を閉塞し、再接続を試みながらRTC継続性を確保
 - 監査ログ（必要な場合のみ）:
   - 未実装
 
 ## 11. テスト方針
 
 - テスト観点:
-  - 4段パイプラインの連続性、切断時停止、再接続時復帰
+  - 4段パイプラインの連続性、切断時の再接続、再接続後の復帰
 - 単体テスト:
   - Thread単位の検証を必要に応じて追加
 - 結合テスト:
@@ -233,7 +233,7 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
 - 技術的負債:
   - スレッド間同期の可観測性が低い
 - リスク一覧:
-  - 下流サービスの一部障害で全停止
+  - 下流サービスの継続障害で再接続ループが長期化する
   - 遅延増大時のフレーム破棄増加
 - 軽減策:
   - fallback運用、ログ拡充、将来的なメトリクス追加
@@ -253,6 +253,7 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
 | 日付 | 変更内容 |
 | --- | --- |
 | 2026-02-15 | 初版作成 |
+| 2026-02-27 | AudioBrokerの障害時挙動を更新。全停止前提から、通信スレッド不健全検知 + 指数バックオフ再接続（1秒〜30秒）による復旧優先へ変更 |
 
 ## 15. 参照資料
 

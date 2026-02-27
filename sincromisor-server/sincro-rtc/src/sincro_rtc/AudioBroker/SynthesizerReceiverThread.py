@@ -64,7 +64,6 @@ class SynthesizerReceiverThread(Thread):
                 traceback.print_exc()
                 break
         self.__logger.info("Thread terminated.")
-        self.__running.clear()
 
     # 音声を指定されたフレームレートとフレーム長にリサンプリングし、
     # フレームごとに音声再生・口モーション用キューに書き出す。

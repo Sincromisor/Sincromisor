@@ -39,7 +39,7 @@ class SynthesizerSenderThread(Thread):
                     self.__logger.info(f"Send: {repr(tp_result)}")
                     self.__ws.send(tp_result.to_msgpack())
                 else:
-                    if last_ping <= time.time() + 10:
+                    if time.time() - last_ping >= 10:
                         self.__ws.ping()
                         last_ping = time.time()
                     time.sleep(0.2)
@@ -50,4 +50,3 @@ class SynthesizerSenderThread(Thread):
             self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
             traceback.print_exc()
         self.__logger.info("Thread terminated.")
-        self.__running.clear()

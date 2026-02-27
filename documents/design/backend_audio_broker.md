@@ -6,7 +6,7 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
 
 - ドキュメントパス: `documents/design/backend_audio_broker.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-02-15
+- 最終更新日: 2026-02-27
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -24,7 +24,7 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
   - AudioBroker は4つのWebSocket接続（Extractor, Recognizer, TextProcessor, Synthesizer）を張る。
   - 各接続は SenderThread / ReceiverThread の2スレッドで実行され、deque を介してデータを中継する。
   - `VoiceTransformTrack` は `add_frame()` で入力音声を供給し、`voice_frame_queue` と `text_channel_queue` から結果を取得する。
-  - いずれかのスレッド異常時は共有 `running Event` をclearし、パイプライン全体を停止する。
+  - いずれかの通信スレッド異常時は不健全状態として検知し、AudioBroker が指数バックオフで再接続を試行する。
 
 ## 3. 背景
 
@@ -43,7 +43,7 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
 | 用語 | 定義 |
 | --- | --- |
 | AudioBroker | RTC入力音声を各音声処理サービスへ配送し、結果を統合する中継器 |
-| running Event | 各スレッド共通の稼働フラグ。clearで全停止 |
+| running Event | AudioBrokerの稼働フラグ。不健全状態検知時にclearされ再接続トリガーになる |
 | mora | 音素単位の合成情報。テロップ/口形同期に利用 |
 
 ## 5. 要件
@@ -64,7 +64,7 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
 ### 5.2 非機能要件
 
 - 性能: deque による低オーバーヘッド中継
-- 可用性: 個別スレッド異常時に全停止し不整合を回避
+- 可用性: 個別WS断を検知したら再接続を優先し、RTCセッション継続を試みる
 - スケーラビリティ: セッションごとにAudioBrokerが独立
 - セキュリティ: サービス間は内部ネットワークWS通信を前提
 - 運用性/保守性: 役割別Threadクラスで責務分割
@@ -92,7 +92,8 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
 ### 7.1 コンポーネント設計
 
 - コンポーネントごとの責務:
-  - `AudioBroker.connect()`: 4 worker接続を初期化、失敗時はチャット向けエラーを積む
+  - `AudioBroker.connect()`: 4 worker接続を初期化し、失敗回数に応じて指数バックオフで再試行する
+  - `AudioBroker.is_running()`: 全通信スレッドの生存を監視し、不健全時に再接続対象へ遷移させる
   - `AudioBroker.add_frame()`: 入力フレームを `frame_buffer` に投入し、過剰時に古いフレームを破棄
   - `AudioBroker.__get_worker()`: Consulから解決し、失敗時は fallback host/port を使用
   - `SynthesizerReceiverThread.__voice_splitter()`: 音声を target sample rate/size に変換し `VoiceSynthesizerResultFrame` 化
@@ -141,11 +142,12 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
 - レスポンス仕様:
   - 各サービスから msgpack model を受信し、対応dequeへ格納
 - エラー仕様:
-  - 接続失敗/例外時は `AudioBrokerError` として扱い、`running.clear()` で停止
+  - 接続失敗/例外時は `AudioBrokerError` として扱い、エラー通知を積んだ上で再接続対象へ遷移
+  - 各Sender/Receiverの `ConnectionClosed` は当該Thread終了として扱い、全停止は `AudioBroker.is_running()` の監視結果で判断
   - `__err_to_chat()` で `message_type="error"` を `text_channel_queue` に投入
 - タイムアウト/リトライ方針:
   - recv は timeout=5秒でポーリング継続
-  - `connect()` は10秒未満の連続再接続を抑止
+  - `connect()` は指数バックオフ（1秒起点、最大30秒）で再接続を試行
 
 ### 7.4 状態遷移・シーケンス
 
@@ -155,8 +157,9 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
   - Textは `text_channel_queue`、音声は `voice_frame_queue` に集約
   - `VoiceTransformTrack.recv()` がキューを読み出してRTCへ返送
 - 異常系フロー:
-  - いずれかのThread例外/切断 -> `running.clear()` -> 全体停止
+  - いずれかのThread例外/切断 -> `AudioBroker.is_running()` が不健全検知 -> communicatorを閉塞し再接続待機
   - `VoiceTransformTrack.recv()` で非稼働検知 -> `connect()` 再試行 + ダミーフレーム返却
+  - `VoiceTransformTrack.__transform()` の `AudioBrokerError` は recoverable として扱い、RTCセッションを即終了しない
   - `text_ch` が open の場合は `text_channel_queue` を前から送信し、`__err_to_chat()` で投入された `message_type="error"` も配信する
   - `text_ch` 未open時は `text_channel_queue` を保持し、open後に送信して欠落を防ぐ
 - 状態遷移図/シーケンス図（必要なら図リンク）:
@@ -185,9 +188,11 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
   - 専用メトリクス未実装（必要時はキュー長/遅延の計測追加）
 - 障害時の切り分け手順:
   - 1. Consul解決失敗かfallback設定不備かを確認
-  - 2. どのThreadが `running.clear()` を引いたかログ確認
-  - 3. `text_channel_queue` と `voice_frame_queue` の枯渇/滞留を確認
-  - 4. `VoiceTransformTrack.recv()` がダミーフレーム返却に落ちていないか確認
+  - 2. `Worker communication thread terminated. reconnect required.` の有無を確認
+  - 3. `AudioBroker worker connection recovered.` が出て復旧しているか確認
+  - 4. `__reconnect_failures` の増加に対応して接続間隔が延びていないか確認
+  - 5. `text_channel_queue` と `voice_frame_queue` の枯渇/滞留を確認
+  - 6. `VoiceTransformTrack.recv()` がダミーフレーム返却に落ち続けていないか確認
 - よくある失敗と対処:
   - 下流WSの接続拒否 -> composeネットワーク/サービス起動順を確認
   - Extractor遅延で `frame_buffer` overflow -> モデル性能またはバッファ戦略見直し
@@ -201,7 +206,7 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
 - 入力検証:
   - msgpackデコード時に型不整合は例外で停止
 - 脅威と対策:
-  - 破損データ/接続断に対して fail-fast で全停止し、上位で再接続
+  - 破損データ/接続断に対して当該通信系を閉塞し、AudioBrokerで再接続して復旧を試行
 - 監査ログ（必要な場合のみ）:
   - 監査専用ログなし
 
@@ -228,7 +233,7 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
 - 技術的負債:
   - スレッドベース設計のデバッグ難易度が高い
 - リスク一覧:
-  - 下流のいずれか1つ不調で全パイプライン停止
+  - 下流の継続障害時に再接続ループが長期化し、ダミーフレーム返却が続く
   - 高遅延時に古い音声の破棄が増える
 - 軽減策:
   - 再接続ロジック維持、ログ強化、必要に応じてバッファ戦略再設計
@@ -248,6 +253,7 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
 | 日付 | 変更内容 |
 | --- | --- |
 | 2026-02-15 | 初版作成 |
+| 2026-02-27 | 部分障害時の自動再接続方針へ更新（全停止前提を撤廃）。`AudioBroker` の指数バックオフ再接続（1秒〜30秒）、通信スレッド生存監視、`VoiceTransformTrack` の recoverable エラー処理を反映 |
 
 ## 15. 参照資料
 

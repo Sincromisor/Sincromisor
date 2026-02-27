@@ -117,10 +117,11 @@ class VoiceTransformTrack(MediaStreamTrack):
                 f"transform - AttributeError: {repr(e)}\n{traceback.format_exc()}",
             )
         except AudioBrokerError as e:
-            self.__logger.error(
-                f"transform - AudioBrokerError: {repr(e)}\n{traceback.format_exc()}",
+            # AudioBroker障害は再接続対象とし、RTCセッションは継続する。
+            self.__logger.warning(
+                f"transform - AudioBrokerError(recoverable): {repr(e)}\n{traceback.format_exc()}",
             )
-            raise e
+            return self.__convert_dummy_frame(frame)
         except Exception as e:
             self.__logger.error(
                 f"transform - UnknownError: {repr(e)}\n{traceback.format_exc()}",
