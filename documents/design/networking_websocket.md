@@ -117,8 +117,8 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
     - `SpeechRecognizerResult`
     - `TextProcessorResult`
   - 出力:
-    - `ChatMessage`（`text_channel_queue`）
-    - `VoiceSynthesizerResultFrame`（`voice_frame_queue`）
+    - `ChatMessage`（`text_channel_queue`, maxlen=200）
+    - `VoiceSynthesizerResultFrame`（`voice_frame_queue`, maxlen=2000）
 - 永続化対象:
   - なし
 - スキーマ/モデル:
@@ -160,7 +160,7 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
   - 6. Textは `text_channel_queue`、音声は `voice_frame_queue` へ
 - 異常系フロー:
   - 接続拒否/切断/デコード失敗 -> 通信スレッド終了 -> AudioBrokerが不健全検知して再接続
-  - 上位 `VoiceTransformTrack` は非稼働時に `connect()` を再試行し、ダミーフレームでRTCを継続
+  - 上位 `VoiceTransformTrack` は非稼働時も入力フレームを継続消費しながら `connect()` を再試行し、ダミーフレームでRTCを継続
   - 上位 `VoiceTransformTrack` は `text_ch` が open の間、`text_channel_queue` をフラッシュし、`AudioBroker.__err_to_chat()` のエラー通知をフロントへ中継する
   - `text_ch` 未open時はキューを保持し、open後に順次送信する
 - 状態遷移図/シーケンス図（必要なら図リンク）:
@@ -254,6 +254,7 @@ Sincromisor の AudioBroker と各音声処理サービス（SpeechExtractor / S
 | --- | --- |
 | 2026-02-15 | 初版作成 |
 | 2026-02-27 | AudioBrokerの障害時挙動を更新。全停止前提から、通信スレッド不健全検知 + 指数バックオフ再接続（1秒〜30秒）による復旧優先へ変更 |
+| 2026-02-27 | `text_channel_queue`/`voice_frame_queue` の上限（200/2000）を明記し、障害時のメモリ増加抑制方針を追加 |
 
 ## 15. 参照資料
 
