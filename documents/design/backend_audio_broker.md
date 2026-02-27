@@ -94,6 +94,7 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
 - コンポーネントごとの責務:
   - `AudioBroker.connect()`: 4 worker接続を初期化し、失敗回数に応じて指数バックオフで再試行する
   - `AudioBroker.is_running()`: 全通信スレッドの生存を監視し、不健全時に再接続対象へ遷移させる
+  - `AudioBroker.__state_lock`: `connect()/is_running()/close()` の競合を抑止し、状態遷移を直列化する
   - `AudioBroker.add_frame()`: 入力フレームを `frame_buffer` に投入し、過剰時に古いフレームを破棄
   - `AudioBroker.__get_worker()`: Consulから解決し、失敗時は fallback host/port を使用
   - `SynthesizerReceiverThread.__voice_splitter()`: 音声を target sample rate/size に変換し `VoiceSynthesizerResultFrame` 化
@@ -115,8 +116,8 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
     - `__extractor_results` (SpeechExtractorResult, maxlen=10)
     - `__recognizer_results` (SpeechRecognizerResult, maxlen=10)
     - `__text_processor_results` (TextProcessorResult, maxlen=10)
-    - `text_channel_queue` (ChatMessage系)
-    - `voice_frame_queue` (VoiceSynthesizerResultFrame)
+    - `text_channel_queue` (ChatMessage系, maxlen=200)
+    - `voice_frame_queue` (VoiceSynthesizerResultFrame, maxlen=2000)
   - `return_frame_format`: `{"sample_rate": ..., "sample_size": ...}`
 - 永続化対象:
   - なし（全てセッションメモリ）
@@ -158,7 +159,7 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
   - `VoiceTransformTrack.recv()` がキューを読み出してRTCへ返送
 - 異常系フロー:
   - いずれかのThread例外/切断 -> `AudioBroker.is_running()` が不健全検知 -> communicatorを閉塞し再接続待機
-  - `VoiceTransformTrack.recv()` で非稼働検知 -> `connect()` 再試行 + ダミーフレーム返却
+  - `VoiceTransformTrack.recv()` で非稼働検知 -> 入力フレームは継続消費しつつ `connect()` 再試行 + ダミーフレーム返却
   - `VoiceTransformTrack.__transform()` の `AudioBrokerError` は recoverable として扱い、RTCセッションを即終了しない
   - `text_ch` が open の場合は `text_channel_queue` を前から送信し、`__err_to_chat()` で投入された `message_type="error"` も配信する
   - `text_ch` 未open時は `text_channel_queue` を保持し、open後に送信して欠落を防ぐ
@@ -254,6 +255,7 @@ Sincromisor の `sincro-rtc` 内部で動作する AudioBroker（音声中継・
 | --- | --- |
 | 2026-02-15 | 初版作成 |
 | 2026-02-27 | 部分障害時の自動再接続方針へ更新（全停止前提を撤廃）。`AudioBroker` の指数バックオフ再接続（1秒〜30秒）、通信スレッド生存監視、`VoiceTransformTrack` の recoverable エラー処理を反映 |
+| 2026-02-27 | 競合対策として `AudioBroker` に `RLock` を導入し、`connect()/is_running()/close()` の状態遷移を直列化。`text_channel_queue`/`voice_frame_queue` に上限を設定（200/2000）し、障害時のメモリ増加を抑制 |
 
 ## 15. 参照資料
 

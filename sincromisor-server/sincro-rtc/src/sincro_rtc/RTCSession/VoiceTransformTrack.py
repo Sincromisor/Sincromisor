@@ -65,15 +65,15 @@ class VoiceTransformTrack(MediaStreamTrack):
     # ここでフレームを返さないと、aiortc/rtcrtpsender.pyのnext_encoded_frameの
     # await self.__track.recv()がデッドロックしてしまう。
     async def recv(self) -> AudioFrame:
-        if not self.__audio_broker.is_running():
-            # AudioBrokerに異常が発生したら再接続を試みる
-            self.__audio_broker.connect()
-            self.__flush_text_channel()
-            return self.__generate_dummy_frame()
-
         try:
             frame: Frame | Packet = await self.__track.recv()
             assert isinstance(frame, AudioFrame)
+            if not self.__audio_broker.is_running():
+                # AudioBrokerが不稼働でも入力フレームは継続して消費し、
+                # 上流の詰まりを防ぎつつ再接続を試行する。
+                self.__audio_broker.connect()
+                self.__flush_text_channel()
+                return self.__convert_dummy_frame(frame)
             return self.__transform(frame)
         except CancelledError:
             self.__logger.info("recv - CancelledError.")
