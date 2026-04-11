@@ -21,6 +21,10 @@
 - [Audio Broker](backend_audio_broker.md)
 - [Speech Extractor](backend_speech_extractor.md)
 - [Speech Recognizer (nemo / nue)](backend_speech_recognizer.md)
+- [Speech Recognizer Proper Noun Biasing](backend_speech_recognizer_proper_noun_biasing.md)
+  - Nemo recognizer に対する固有名詞補強、後処理、context biasing、N-best 再ランキングの段階導入設計
+- [Speech Recognizer Proper Noun Dictionary](backend_speech_recognizer_proper_noun_dictionary.md)
+  - 固有名詞補強で使う辞書フォーマット、列定義、運用ルール
 - [Text Processor](backend_text_processor.md)
 - [Voice Synthesizer](backend_voice_synthesizer.md)
 - [Storage](backend_storage.md)
