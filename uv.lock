@@ -27,6 +27,11 @@ members = [
     "text-processor",
     "voice-synthesizer",
 ]
+constraints = [
+    { name = "aiohttp", specifier = ">=3.13.3" },
+    { name = "pyopenssl", specifier = ">=25.3.0" },
+    { name = "requests", specifier = ">=2.32.5" },
+]
 
 [[package]]
 name = "absl-py"
