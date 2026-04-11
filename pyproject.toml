@@ -55,6 +55,12 @@ build-backend = "hatchling.build"
 
 [tool.uv]
 default-groups = []
+constraint-dependencies = [
+    # Keep transitive resolutions above the vulnerability remediation floor.
+    "aiohttp>=3.13.3",
+    "pyopenssl>=25.3.0",
+    "requests>=2.32.5",
+]
 
 [tool.uv.workspace]
 members = [
