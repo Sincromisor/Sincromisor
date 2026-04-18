@@ -1,4 +1,5 @@
 import { DialogStateStore } from "./DialogStateStore";
+import type { SincroMediaDeviceSelectionState } from "../MediaDevices/SincroMediaDeviceService";
 
 export type DialogSettingsUiState = {
     titleTextDisabled: boolean;
@@ -26,6 +27,18 @@ export type DialogSettingsUiHints = {
     enableAutoMuteReason?: string;
 };
 
+export type DialogStartButtonState = {
+    startButtonDisabled: boolean;
+    startButtonText: string;
+    startButtonHint?: string;
+};
+
+type DialogMediaDeviceUiContext = {
+    isUserMediaAvailable: boolean;
+    audioInputSelection: SincroMediaDeviceSelectionState;
+    videoInputSelection: SincroMediaDeviceSelectionState;
+};
+
 // 起動前 dialog の「設定が有効か」「なぜ無効か」という UI ポリシーを保持する。
 // DialogManager から条件分岐を切り出し、state 更新と通知処理を薄く保つ。
 export class DialogSettingsPolicy {
@@ -50,45 +63,110 @@ export class DialogSettingsPolicy {
         };
     }
 
-    buildUiHints(stateStore: DialogStateStore): DialogSettingsUiHints {
+    buildUiHints(stateStore: DialogStateStore, context: DialogMediaDeviceUiContext): DialogSettingsUiHints {
         // hints は disabled 理由の補足表示用。操作可否そのものは buildUiState の結果に従う。
         const characterDisabled = stateStore.isDisabled("enableCharacter");
         const gazeDisabled = stateStore.isDisabled("enableCharacterGaze");
         const autoMuteDisabled = stateStore.isDisabled("enableAutoMute");
-        const startUnavailable = stateStore.getDialogUiState().startButtonDisabled;
+        const startUnavailable = this.buildStartButtonState(stateStore, context).startButtonDisabled;
         const characterGazeEnabled = stateStore.get("enableCharacterGaze");
+        const selectedAudioUnavailable = context.audioInputSelection.isSelected
+            && context.audioInputSelection.availabilityKnown
+            && !context.audioInputSelection.isAvailable;
+        const selectedVideoUnavailable = context.videoInputSelection.isSelected
+            && context.videoInputSelection.availabilityKnown
+            && !context.videoInputSelection.isAvailable;
+
+        let audioInputDeviceReason: string | undefined;
+        if (!context.isUserMediaAvailable) {
+            audioInputDeviceReason = "このブラウザではマイク入力を取得できません。";
+        } else if (selectedAudioUnavailable) {
+            audioInputDeviceReason = "選択中のマイクが見つからないため、開始前に別のマイクかブラウザ既定へ切り替えてください。";
+        }
+
+        let videoInputDeviceReason: string | undefined;
+        if (selectedVideoUnavailable) {
+            videoInputDeviceReason = characterGazeEnabled
+                ? "選択中の視線用カメラが見つからないため、Gaze を使う前に別のカメラかブラウザ既定へ切り替えてください。"
+                : "選択中の視線用カメラは現在見つかりません。Gaze を使うときは別のカメラかブラウザ既定へ切り替えてください。";
+        }
 
         let enableCharacterReason: string | undefined;
         if (characterDisabled) {
-            enableCharacterReason = "Character rendering is unavailable on this page or device.";
+            enableCharacterReason = "このページまたは端末では Character 表示を利用できません。";
         }
 
         let enableCharacterGazeReason: string | undefined;
         if (gazeDisabled) {
             if (startUnavailable) {
-                enableCharacterGazeReason = "Camera/microphone availability check has not passed yet.";
+                enableCharacterGazeReason = "開始条件を満たしていないため、Gaze を有効化できません。";
             } else if (characterDisabled) {
-                enableCharacterGazeReason = "Enable character rendering first.";
+                enableCharacterGazeReason = "先に Character を有効にしてください。";
             } else {
-                enableCharacterGazeReason = "Character gaze is currently unavailable.";
+                enableCharacterGazeReason = "現在の構成では Gaze を利用できません。";
             }
+        } else if (characterGazeEnabled && selectedVideoUnavailable) {
+            enableCharacterGazeReason = "選択中の視線用カメラが見つからないため、このままでは Gaze を開始できません。";
         }
 
         let enableAutoMuteReason: string | undefined;
         if (autoMuteDisabled) {
             if (!characterGazeEnabled) {
-                enableAutoMuteReason = "Enable character gaze to use auto-mute.";
+                enableAutoMuteReason = "AutoMute を使うには Gaze を有効にしてください。";
             } else {
-                enableAutoMuteReason = "Auto-mute is currently unavailable.";
+                enableAutoMuteReason = "現在の構成では AutoMute を利用できません。";
             }
         }
 
         return {
-            audioInputDeviceReason: undefined,
-            videoInputDeviceReason: undefined,
+            audioInputDeviceReason,
+            videoInputDeviceReason,
             enableCharacterReason,
             enableCharacterGazeReason,
             enableAutoMuteReason,
+        };
+    }
+
+    buildStartButtonState(
+        stateStore: DialogStateStore,
+        context: DialogMediaDeviceUiContext,
+    ): DialogStartButtonState {
+        if (!context.isUserMediaAvailable) {
+            return {
+                startButtonDisabled: true,
+                startButtonText: "開始できません",
+                startButtonHint: "このブラウザではマイク入力を取得できません。",
+            };
+        }
+
+        const blockedReasons: string[] = [];
+        if (
+            context.audioInputSelection.isSelected
+            && context.audioInputSelection.availabilityKnown
+            && !context.audioInputSelection.isAvailable
+        ) {
+            blockedReasons.push("選択中のマイクが見つかりません。別のマイクかブラウザ既定へ切り替えてください。");
+        }
+        if (
+            stateStore.get("enableCharacterGaze")
+            && context.videoInputSelection.isSelected
+            && context.videoInputSelection.availabilityKnown
+            && !context.videoInputSelection.isAvailable
+        ) {
+            blockedReasons.push("Gaze が有効なため、有効な視線用カメラが必要です。別のカメラかブラウザ既定へ切り替えてください。");
+        }
+
+        if (blockedReasons.length > 0) {
+            return {
+                startButtonDisabled: true,
+                startButtonText: "開始できません",
+                startButtonHint: blockedReasons.join(" "),
+            };
+        }
+
+        return {
+            startButtonDisabled: false,
+            startButtonText: "はじめる",
         };
     }
 

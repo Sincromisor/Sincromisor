@@ -13,6 +13,7 @@ export type SincroMediaDeviceOption = {
 export type SincroMediaDeviceSelectionState = {
     selectedDeviceId: string | null;
     isSelected: boolean;
+    availabilityKnown: boolean;
     isAvailable: boolean;
     matchedDevice: SincroMediaDeviceOption | null;
 };
@@ -135,9 +136,11 @@ export class SincroMediaDeviceService {
     ): SincroMediaDeviceSelectionState {
         const options = kind === "audioinput" ? this.snapshot.audioInputs : this.snapshot.videoInputs;
         const matchedDevice = options.find((option) => option.deviceId === selectedDeviceId) ?? null;
+        const availabilityKnown = this.snapshot.lastUpdatedAt !== null || this.snapshot.refreshError !== null;
         return {
             selectedDeviceId,
             isSelected: !!selectedDeviceId,
+            availabilityKnown,
             isAvailable: !!matchedDevice,
             matchedDevice,
         };
@@ -165,20 +168,31 @@ export function buildSincroMediaDeviceSelections(params: {
     audioInput: SincroMediaDeviceSelectionState;
     videoInput: SincroMediaDeviceSelectionState;
 } {
+    const availabilityKnown = params.snapshot.lastUpdatedAt !== null || params.snapshot.refreshError !== null;
     return {
-        audioInput: resolveMediaDeviceSelection(params.snapshot.audioInputs, params.audioInputDeviceId ?? null),
-        videoInput: resolveMediaDeviceSelection(params.snapshot.videoInputs, params.videoInputDeviceId ?? null),
+        audioInput: resolveMediaDeviceSelection(
+            params.snapshot.audioInputs,
+            params.audioInputDeviceId ?? null,
+            availabilityKnown,
+        ),
+        videoInput: resolveMediaDeviceSelection(
+            params.snapshot.videoInputs,
+            params.videoInputDeviceId ?? null,
+            availabilityKnown,
+        ),
     };
 }
 
 function resolveMediaDeviceSelection(
     options: SincroMediaDeviceOption[],
     selectedDeviceId: string | null,
+    availabilityKnown: boolean,
 ): SincroMediaDeviceSelectionState {
     const matchedDevice = options.find((option) => option.deviceId === selectedDeviceId) ?? null;
     return {
         selectedDeviceId,
         isSelected: !!selectedDeviceId,
+        availabilityKnown,
         isAvailable: !!matchedDevice,
         matchedDevice,
     };

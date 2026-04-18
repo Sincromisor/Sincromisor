@@ -8,6 +8,7 @@ import {
     type DialogSettingsUiHints,
     type DialogSettingsUiState,
 } from "./DialogSettingsPolicy";
+import { SincroMediaDeviceService } from "../MediaDevices/SincroMediaDeviceService";
 import { DialogBridgeDomAdapter } from "./DialogBridgeDomAdapter";
 import { DialogVrmFileService } from "./DialogVrmFileService";
 import { DialogVrmWorkflowService } from "./DialogVrmWorkflowService";
@@ -26,11 +27,13 @@ export class DialogManager {
     private readonly eventHub = new DialogEventHub();
     private readonly dom = new DialogBridgeDomAdapter();
     private readonly settingsPolicy = new DialogSettingsPolicy();
+    private readonly mediaDeviceService = SincroMediaDeviceService.getInstance();
     private readonly vrmFileService = new DialogVrmFileService();
     private readonly vrmWorkflowService = new DialogVrmWorkflowService(this.vrmFileService);
     private readonly notificationService = new DialogNotificationService();
     private settingsChangeBatchDepth = 0;
     private settingsChangePending = false;
+    private isUserMediaAvailable = true;
 
     static getManager(): DialogManager {
         if (!DialogManager.instance) {
@@ -42,6 +45,7 @@ export class DialogManager {
     private constructor() {
         // store 初期化 -> DOMイベント配線 -> ヘッダー同期 -> dialog 表示 -> 前回VRM復元 の順で起動する。
         this.initializeDialogStateDefaults();
+        this.bindMediaDeviceState();
         this.bindDialogDomEvents();
         this.updateTitleText();
         this.showDialog();
@@ -113,11 +117,13 @@ export class DialogManager {
 
     setAudioInputDeviceId(deviceId: string | null): void {
         this.stateStore.set("audioInputDeviceId", deviceId);
+        this.refreshMediaDeviceDerivedUiState();
         this.emitSettingsChanged();
     }
 
     setVideoInputDeviceId(deviceId: string | null): void {
         this.stateStore.set("videoInputDeviceId", deviceId);
+        this.refreshMediaDeviceDerivedUiState();
         this.emitSettingsChanged();
     }
 
@@ -190,7 +196,7 @@ export class DialogManager {
     }
 
     settingsUiHints(): DialogSettingsUiHints {
-        return this.settingsPolicy.buildUiHints(this.stateStore);
+        return this.settingsPolicy.buildUiHints(this.stateStore, this.buildMediaDeviceUiContext());
     }
 
     enableCharacter(): boolean {
@@ -248,6 +254,9 @@ export class DialogManager {
             return;
         }
         this.stateStore.set(key, !!enabled);
+        if (key === "enableCharacterGaze") {
+            this.refreshMediaDeviceDerivedUiState();
+        }
         this.emitSettingsChanged();
     }
 
@@ -293,17 +302,13 @@ export class DialogManager {
     }
 
     updateUserMediaAvailabilityStatus(available: boolean): void {
+        this.isUserMediaAvailable = available;
         this.runSettingsChangeBatch(() => {
-            if (available) {
-                this.setDialogStartButtonState(false, 'はじめる');
-                // デバイス利用可能時のみ、顔認識連動の設定を有効化する。
-                this.updateEnableCharacterGazeStatus(true);
-                this.updateAutoMuteStatus();
-            } else {
-                this.setDialogStartButtonState(true, 'マイクが利用できません');
+            if (!available) {
                 this.updateEnableCharacterGazeStatus(false);
                 this.updateAutoMuteStatus();
             }
+            this.refreshMediaDeviceDerivedUiState();
             // getUserMedia 可否に連動した設定項目の disabled 変化を通知する。
             this.emitSettingsChanged();
         });
@@ -315,6 +320,7 @@ export class DialogManager {
 
     updateEnableCharacterGazeStatus(available: boolean): void {
         this.settingsPolicy.applyCharacterGazeAvailability(this.stateStore, available);
+        this.refreshMediaDeviceDerivedUiState();
         this.emitSettingsChanged();
     }
 
@@ -325,8 +331,34 @@ export class DialogManager {
 
     private initializeDialogStateDefaults(): void {
         this.settingsPolicy.initializeDefaultDisabledState(this.stateStore);
-        // 起動前 dialog の開始ボタンは React 側が正式経路になったため、初期表示文言も store を正本とする。
-        this.stateStore.setDialogStartButtonState(false, 'はじめる');
+        this.refreshMediaDeviceDerivedUiState();
+    }
+
+    private bindMediaDeviceState(): void {
+        this.mediaDeviceService.start();
+        this.mediaDeviceService.subscribe(() => {
+            this.refreshMediaDeviceDerivedUiState();
+            this.emitSettingsChanged();
+        });
+        void this.mediaDeviceService.refresh();
+    }
+
+    private buildMediaDeviceUiContext() {
+        return {
+            isUserMediaAvailable: this.isUserMediaAvailable,
+            audioInputSelection: this.mediaDeviceService.getSelectionState("audioinput", this.stateStore.get("audioInputDeviceId")),
+            videoInputSelection: this.mediaDeviceService.getSelectionState("videoinput", this.stateStore.get("videoInputDeviceId")),
+        };
+    }
+
+    private refreshMediaDeviceDerivedUiState(): void {
+        const context = this.buildMediaDeviceUiContext();
+        const startButtonState = this.settingsPolicy.buildStartButtonState(this.stateStore, context);
+        this.setDialogStartButtonState(
+            startButtonState.startButtonDisabled,
+            startButtonState.startButtonText,
+            startButtonState.startButtonHint ?? null,
+        );
     }
 
     private bindDialogDomEvents(): void {
@@ -429,12 +461,20 @@ export class DialogManager {
         this.emitDialogUiStateChanged();
     }
 
-    private setDialogStartButtonState(startButtonDisabled: boolean, startButtonText: string): void {
+    private setDialogStartButtonState(
+        startButtonDisabled: boolean,
+        startButtonText: string,
+        startButtonHint: string | null = null,
+    ): void {
         const current = this.stateStore.getDialogUiState();
-        if (current.startButtonDisabled === startButtonDisabled && current.startButtonText === startButtonText) {
+        if (
+            current.startButtonDisabled === startButtonDisabled
+            && current.startButtonText === startButtonText
+            && current.startButtonHint === startButtonHint
+        ) {
             return;
         }
-        this.stateStore.setDialogStartButtonState(startButtonDisabled, startButtonText);
+        this.stateStore.setDialogStartButtonState(startButtonDisabled, startButtonText, startButtonHint);
         // start button 状態は settingsChange と別イベントで通知し、React 側で dialog 表示状態の更新順を安定させる。
         this.emitDialogUiStateChanged();
     }
