@@ -50,6 +50,8 @@ export class SincroController {
             this.startRTC(audioTrack);
         }, (videoTrack: MediaStreamTrack) => {
             this.startCharacterGaze(videoTrack);
+        }, (audioTrack: MediaStreamTrack) => {
+            this.rtcSessionController.replaceAudioTrack(audioTrack);
         });
     }
 

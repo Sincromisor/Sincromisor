@@ -28,6 +28,7 @@ export class RTCTalkClient {
     private reconnectTimerId: number | null = null;
     private isNegotiating = false;
     private reconnectAttempt = 0;
+    private isMuted = false;
     // 直近で接続確立に成功したsession_id。
     // ICE切断後の再接続で「同一セッション更新」を試すために保持する。
     private lastStableSessionId: string | null = null;
@@ -160,11 +161,25 @@ export class RTCTalkClient {
     }
 
     setMute(mute: boolean): void {
+        this.isMuted = mute;
         this.peerConnection.getSenders().forEach((sender: RTCRtpSender) => {
             if (sender.track) {
                 sender.track.enabled = !mute;
             }
         });
+    }
+
+    // 実行中セッションの送信用 audio sender を新しいトラックへ差し替える。
+    async replaceAudioTrack(audioTrack: MediaStreamTrack): Promise<void> {
+        audioTrack.enabled = !this.isMuted;
+        const audioSender = this.peerConnection.getSenders().find((sender) => sender.track?.kind === "audio");
+        if (!audioSender) {
+            this.peerConnection.addTrack(audioTrack);
+            this.logger.addRtcEventLog("replace audio track: sender missing, added new track");
+            return;
+        }
+        await audioSender.replaceTrack(audioTrack);
+        this.logger.addRtcEventLog(`replace audio track: label=${audioTrack.label || "-"}`);
     }
 
     private async negotiate(

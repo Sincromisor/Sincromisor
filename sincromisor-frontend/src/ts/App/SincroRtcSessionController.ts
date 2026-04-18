@@ -39,6 +39,12 @@ export class SincroRtcSessionController {
         rtcc.start();
     }
 
+    // 実行中の送信用音声トラックを差し替え、Debug Console の監視対象も追従させる。
+    replaceAudioTrack(audioTrack: MediaStreamTrack): void {
+        this.debugConsoleManager.setLocalAudioTrack(audioTrack);
+        void this.rtcc?.replaceAudioTrack(audioTrack);
+    }
+
     // WebRTC接続を停止する。
     stop(): void {
         // RTCTalkClient 側が stop の冪等性を担保しているため、ここは委譲に徹する。
