@@ -27,6 +27,7 @@ import {
 } from "../app/sincroAppStateSnapshotHydrators";
 import { prependPanelMessageLog } from "../app/panelLogHelpers";
 import { UI_TUNING } from "../app/uiTuning";
+import { useSincroMediaDeviceState } from "../app/useSincroMediaDeviceState";
 
 const defaultSettings: SincroAppSettingsSnapshot = {
     titleText: "Sincromisor",
@@ -94,6 +95,9 @@ type SimpleVrmPanelState = {
     settingsUiHints: SincroAppSettingsUiHints;
     startupSettingsStatus: SincroAppStartupSettingsStatus;
     startupSettingsCapabilities: SincroAppStartupSettingsCapabilities;
+    mediaDeviceSnapshot: ReturnType<typeof useSincroMediaDeviceState>["snapshot"];
+    audioInputSelection: ReturnType<typeof useSincroMediaDeviceState>["audioInputSelection"];
+    videoInputSelection: ReturnType<typeof useSincroMediaDeviceState>["videoInputSelection"];
     logs: PanelMessageLog[];
     vadState: "unknown" | "speech" | "silence";
     learnedVad: PanelLearnedVadState;
@@ -112,6 +116,7 @@ type SimpleVrmPanelActions = {
     stopAction: () => void;
     applySettings: ApplySettingsFn;
     changeTalkMode: (nextTalkMode: string) => void;
+    refreshDevices: ReturnType<typeof useSincroMediaDeviceState>["refreshDevices"];
 };
 
 type SimpleVrmPanelEventHandlerMap = {
@@ -138,6 +143,15 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
         initialController?.state.getStartupSettingsStatus() ?? defaultStartupSettingsStatus,
     );
     const [startupSettingsCapabilities, setStartupSettingsCapabilities] = useState<SincroAppStartupSettingsCapabilities>(defaultStartupSettingsCapabilities);
+    const {
+        snapshot: mediaDeviceSnapshot,
+        audioInputSelection,
+        videoInputSelection,
+        refreshDevices,
+    } = useSincroMediaDeviceState({
+        audioInputDeviceId: settings.audioInputDeviceId,
+        videoInputDeviceId: settings.videoInputDeviceId,
+    });
     const [logs, setLogs] = useState<PanelMessageLog[]>([]);
     const [vadState, setVadState] = useState<"unknown" | "speech" | "silence">("unknown");
     const [learnedVad, setLearnedVad] = useState<PanelLearnedVadState>({ status: "idle", probability: null });
@@ -289,6 +303,9 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
         settingsUiHints,
         startupSettingsStatus,
         startupSettingsCapabilities,
+        mediaDeviceSnapshot,
+        audioInputSelection,
+        videoInputSelection,
         logs,
         vadState,
         learnedVad,
@@ -303,5 +320,6 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
         stopAction,
         applySettings,
         changeTalkMode,
+        refreshDevices,
     };
 }

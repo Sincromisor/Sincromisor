@@ -9,6 +9,10 @@ import type {
     SincroAppStartupSettingsCapabilities,
 } from "../panelTypes";
 import { UI_TUNING } from "../../app/uiTuning";
+import type {
+    SincroMediaDeviceSelectionState,
+    SincroMediaDeviceSnapshot,
+} from "../../../ts/MediaDevices/SincroMediaDeviceService";
 
 // Control Panel 用の設定セクション群。
 // 起動前 dialog 用フォームとは分離し、ページ常設パネル向けの文言/密度/導線をここで管理する。
@@ -32,6 +36,10 @@ const settingHelp = {
     titleText: "会話UIなどに表示されるタイトル文字列です。配信名・キャラクター名を表示したいときに設定します。",
     talkMode:
         "応答モードを切り替えます。通常の会話用途では chat、同期的なやり取りや Sincromisor 想定フローでは sincro を使う想定です。",
+    audioInputDeviceId:
+        "起動前設定と同じ正式な設定経路で使うマイクを選びます。未選択ならブラウザ既定の入力デバイスを利用します。",
+    videoInputDeviceId:
+        "起動前設定と同じ正式な設定経路で、Gaze（視線検出）用カメラを選びます。未選択ならブラウザ既定のカメラを利用します。",
     enableNoiseSuppression:
         "Noise Suppression。周囲の定常ノイズを抑えます。家庭・オフィス環境で雑音が気になる場合に有効化を推奨します。",
     enableEchoCancellation:
@@ -254,10 +262,85 @@ type SettingsApplyProps = {
     onApplySettings: ApplySettingsFn;
 };
 
-export function MicSettingsSection({ settings, uiState, onApplySettings }: SettingsApplyProps) {
+type DeviceSettingsProps = SettingsApplyProps & {
+    uiHints: SincroAppSettingsUiHints;
+    mediaDeviceSnapshot: SincroMediaDeviceSnapshot;
+    audioInputSelection: SincroMediaDeviceSelectionState;
+    onRefreshDevices: () => Promise<SincroMediaDeviceSnapshot>;
+};
+
+export function MicSettingsSection({
+    settings,
+    uiState,
+    uiHints,
+    mediaDeviceSnapshot,
+    audioInputSelection,
+    onApplySettings,
+    onRefreshDevices,
+}: DeviceSettingsProps) {
+    const [refreshMessage, setRefreshMessage] = useState<string>("");
+
+    const handleRefreshDevices = () => {
+        setRefreshMessage("");
+        void onRefreshDevices().then((nextSnapshot) => {
+            if (nextSnapshot.refreshError) {
+                setRefreshMessage(`デバイス一覧の再取得に失敗しました: ${nextSnapshot.refreshError}`);
+                return;
+            }
+            setRefreshMessage("デバイス一覧を更新しました。");
+        });
+    };
+
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            <HelpLabel text="マイク設定" />
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: `${compactGapPx}px`,
+                    marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
+                }}
+            >
+                <HelpLabel text="マイク設定" />
+                <button
+                    type="button"
+                    onClick={handleRefreshDevices}
+                    disabled={mediaDeviceSnapshot.isRefreshing}
+                    style={{
+                        borderRadius: "8px",
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        background: "rgba(255,255,255,0.06)",
+                        color: "#f4f7fb",
+                        padding: "6px 8px",
+                        cursor: mediaDeviceSnapshot.isRefreshing ? "progress" : "pointer",
+                    }}
+                >
+                    {mediaDeviceSnapshot.isRefreshing ? "更新中..." : "再読み込み"}
+                </button>
+            </div>
+            <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
+                <HelpLabel text="マイク入力" help={settingHelp.audioInputDeviceId} />
+                <select
+                    value={settings.audioInputDeviceId ?? ""}
+                    onChange={(event) => onApplySettings({ audioInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
+                    disabled={uiState.audioInputDeviceDisabled}
+                    style={fieldStyle}
+                >
+                    <option value="">ブラウザ既定のマイクを使う</option>
+                    {mediaDeviceSnapshot.audioInputs.map((option) => (
+                        <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
+                    ))}
+                </select>
+                <DeviceSelectionHint
+                    emptyMessage="利用可能なマイクが見つかりません。接続後に再読み込みしてください。"
+                    snapshot={mediaDeviceSnapshot}
+                    selection={audioInputSelection}
+                    optionsCount={mediaDeviceSnapshot.audioInputs.length}
+                    unavailableReason={uiHints.audioInputDeviceReason}
+                    kindLabel="マイク"
+                />
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${compactGapPx}px` }}>
                 <SettingToggle
                     label="NS"
@@ -295,18 +378,52 @@ export function MicSettingsSection({ settings, uiState, onApplySettings }: Setti
                     onChange={(checked) => onApplySettings({ enableVenueNoiseMode: checked })}
                 />
             </div>
+            {refreshMessage ? (
+                <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
+                    {refreshMessage}
+                </div>
+            ) : null}
         </div>
     );
 }
 
-type CharacterSettingsSectionProps = SettingsApplyProps & {
-    uiHints: SincroAppSettingsUiHints;
+type CharacterSettingsSectionProps = DeviceSettingsProps & {
+    videoInputSelection: SincroMediaDeviceSelectionState;
 };
 
-export function CharacterSettingsSection({ settings, uiState, uiHints, onApplySettings }: CharacterSettingsSectionProps) {
+export function CharacterSettingsSection({
+    settings,
+    uiState,
+    uiHints,
+    mediaDeviceSnapshot,
+    videoInputSelection,
+    onApplySettings,
+}: CharacterSettingsSectionProps) {
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
             <HelpLabel text="キャラクター設定" />
+            <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
+                <HelpLabel text="視線用カメラ" help={settingHelp.videoInputDeviceId} />
+                <select
+                    value={settings.videoInputDeviceId ?? ""}
+                    onChange={(event) => onApplySettings({ videoInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
+                    disabled={uiState.videoInputDeviceDisabled}
+                    style={fieldStyle}
+                >
+                    <option value="">ブラウザ既定のカメラを使う</option>
+                    {mediaDeviceSnapshot.videoInputs.map((option) => (
+                        <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
+                    ))}
+                </select>
+                <DeviceSelectionHint
+                    emptyMessage="利用可能なカメラが見つかりません。接続後に再読み込みしてください。"
+                    snapshot={mediaDeviceSnapshot}
+                    selection={videoInputSelection}
+                    optionsCount={mediaDeviceSnapshot.videoInputs.length}
+                    unavailableReason={uiHints.videoInputDeviceReason}
+                    kindLabel="カメラ"
+                />
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${compactGapPx}px` }}>
                 <SettingToggle
                     label="Character"
@@ -347,6 +464,61 @@ export function CharacterSettingsSection({ settings, uiState, uiHints, onApplySe
             ) : null}
         </div>
     );
+}
+
+type DeviceSelectionHintProps = {
+    emptyMessage: string;
+    snapshot: SincroMediaDeviceSnapshot;
+    selection: SincroMediaDeviceSelectionState;
+    optionsCount: number;
+    unavailableReason?: string;
+    kindLabel: string;
+};
+
+function DeviceSelectionHint({
+    emptyMessage,
+    snapshot,
+    selection,
+    optionsCount,
+    unavailableReason,
+    kindLabel,
+}: DeviceSelectionHintProps) {
+    const messages: string[] = [];
+    if (!snapshot.isSupported) {
+        messages.push("このブラウザではメディアデバイス列挙に対応していません。");
+    }
+    if (snapshot.refreshError) {
+        messages.push(`デバイス一覧の取得に失敗しました: ${snapshot.refreshError}`);
+    }
+    if (optionsCount === 0 && !snapshot.isRefreshing && !snapshot.refreshError) {
+        messages.push(emptyMessage);
+    }
+    if (!snapshot.labelsResolved && optionsCount > 0) {
+        messages.push("ブラウザ権限が未許可だと実デバイス名を表示できないことがあります。");
+    }
+    if (selection.isSelected && !selection.isAvailable) {
+        messages.push(`選択中の${kindLabel}は現在見つかりません。別のデバイスへ切り替えるか、既定デバイスを選んでください。`);
+    }
+    if (selection.isAvailable && selection.matchedDevice) {
+        messages.push(`選択中: ${selection.matchedDevice.label}`);
+    }
+    if (unavailableReason) {
+        messages.push(unavailableReason);
+    }
+    if (messages.length === 0) {
+        return null;
+    }
+    return (
+        <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
+            {messages.map((message) => (
+                <div key={message}>{message}</div>
+            ))}
+        </div>
+    );
+}
+
+function normalizeSelectedDeviceId(value: string): string | null {
+    return value.trim().length > 0 ? value : null;
 }
 
 type LookingGlassSettingsSectionProps = {
