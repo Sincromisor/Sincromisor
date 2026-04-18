@@ -22,6 +22,10 @@ export class SincroAudioInputController {
     private readonly userMediaManager: UserMediaManager;
     private dialogMicSettingsSnapshot: DialogMicSettingsSnapshot | null = null;
     private suppressNextDialogMicSettingsSync = false;
+    private onAudioTrackReplaced: (audioTrack: MediaStreamTrack) => void = () => { };
+    private hasStarted = false;
+    private pendingAudioInputRefreshToken = 0;
+    private audioInputRefreshChain: Promise<void> = Promise.resolve();
 
     constructor(
         dialogManager: DialogManager,
@@ -42,7 +46,10 @@ export class SincroAudioInputController {
     start(
         onAudioTrack: (audioTrack: MediaStreamTrack) => void,
         onVideoTrack: (videoTrack: MediaStreamTrack) => void,
+        onAudioTrackReplaced: (audioTrack: MediaStreamTrack) => void,
     ): void {
+        this.onAudioTrackReplaced = onAudioTrackReplaced;
+        this.hasStarted = true;
         if (!this.dialogManager.enableCharacterGaze()) {
             this.userMediaManager.disableVideo();
         }
@@ -134,6 +141,13 @@ export class SincroAudioInputController {
         const next = this.readDialogMicSettingsSnapshot();
         const prev = this.dialogMicSettingsSnapshot;
 
+        if (forceAll || !prev || prev.audioInputDeviceId !== next.audioInputDeviceId) {
+            this.userMediaManager.setAudioInputDeviceId(next.audioInputDeviceId);
+            if (!forceAll && prev && this.hasStarted) {
+                this.scheduleAudioInputRefresh();
+            }
+        }
+
         if (forceAll || !prev || prev.enableNoiseSuppression !== next.enableNoiseSuppression) {
             this.userMediaManager.setNoiseSuppression(next.enableNoiseSuppression);
         }
@@ -153,6 +167,30 @@ export class SincroAudioInputController {
         }
 
         this.dialogMicSettingsSnapshot = next;
+    }
+
+    private scheduleAudioInputRefresh(): void {
+        const refreshToken = ++this.pendingAudioInputRefreshToken;
+        this.audioInputRefreshChain = this.audioInputRefreshChain
+            .catch(() => {
+                // 直前の切替失敗でチェーン全体が止まらないようにする。
+            })
+            .then(async () => {
+                if (refreshToken !== this.pendingAudioInputRefreshToken) {
+                    return;
+                }
+                const selectedDeviceId = this.userMediaManager.getAudioInputDeviceId();
+                try {
+                    const nextAudioTrack = await this.userMediaManager.reacquireAudioTrack();
+                    this.onAudioTrackReplaced(nextAudioTrack);
+                } catch (err) {
+                    const detail = err instanceof Error ? err.message : String(err);
+                    const deviceLabel = selectedDeviceId ? `deviceId=${selectedDeviceId}` : "既定デバイス";
+                    this.chatMessageManager.writeErrorMessage(
+                        `選択したマイク入力への切替に失敗しました。(${deviceLabel}) - ${detail}`,
+                    );
+                }
+            });
     }
 
     private syncDebugConsoleFromUserMedia(): void {
@@ -178,6 +216,7 @@ export class SincroAudioInputController {
             enableAutoGainControl: this.dialogManager.enableAutoGainControl(),
             enableVadGate: this.dialogManager.enableVadGate(),
             enableVenueNoiseMode: this.dialogManager.enableVenueNoiseMode(),
+            audioInputDeviceId: this.dialogManager.audioInputDeviceId(),
         };
     }
 }
@@ -188,4 +227,5 @@ type DialogMicSettingsSnapshot = {
     enableAutoGainControl: boolean;
     enableVadGate: boolean;
     enableVenueNoiseMode: boolean;
+    audioInputDeviceId: string | null;
 };

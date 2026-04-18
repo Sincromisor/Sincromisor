@@ -144,6 +144,39 @@ export class UserMediaManager {
         }
     }
 
+    // 設定UIで選択されたマイク入力 deviceId を保持し、次回取得制約へ反映する。
+    setAudioInputDeviceId(deviceId: string | null): void {
+        const audioConfig = this.config.audio;
+        if (!audioConfig || typeof audioConfig === "boolean") {
+            return;
+        }
+        if (deviceId && deviceId.trim() !== "") {
+            audioConfig.deviceId = { exact: deviceId };
+            return;
+        }
+        delete audioConfig.deviceId;
+    }
+
+    getAudioInputDeviceId(): string | null {
+        const audioConfig = this.config.audio;
+        if (!audioConfig || typeof audioConfig === "boolean") {
+            return null;
+        }
+        const deviceIdConstraint = audioConfig.deviceId;
+        if (typeof deviceIdConstraint === "string") {
+            return deviceIdConstraint;
+        }
+        if (
+            deviceIdConstraint
+            && typeof deviceIdConstraint === "object"
+            && "exact" in deviceIdConstraint
+            && typeof deviceIdConstraint.exact === "string"
+        ) {
+            return deviceIdConstraint.exact;
+        }
+        return null;
+    }
+
     // DebugConsole表示用に、AudioWorklet側VADの状態を通知する。
     setVadStateCallback(callback: (report: VadStateReport) => void): void {
         this.onVadStateCallback = callback;
@@ -321,7 +354,39 @@ export class UserMediaManager {
             }).catch((err) => {
                 console.error(`Could not acquire media: ${err}`);
                 errCallback(err);
-            })
+            });
+    }
+
+    // 実行中のマイク入力を再取得し、処理済み送信用トラックへ差し替える。
+    // RTC 側の replaceTrack と組み合わせて、セッションを維持したままデバイス切替できるようにする。
+    async reacquireAudioTrack(): Promise<MediaStreamTrack> {
+        const previousProcessedTrack = this.audioTrack;
+        const previousRawTrack = this.rawAudioTrack;
+        const previousEnabled = previousProcessedTrack?.enabled ?? true;
+        const audioConfig = this.config.audio;
+        const nextStream = await navigator.mediaDevices.getUserMedia({
+            audio: typeof audioConfig === "boolean" ? audioConfig : { ...audioConfig },
+            video: false,
+        });
+        const nextRawTrack = nextStream.getAudioTracks()[0];
+        if (!nextRawTrack) {
+            throw new Error("選択されたマイク入力デバイスから音声トラックを取得できませんでした。");
+        }
+
+        try {
+            const nextProcessedTrack = await this.buildProcessedAudioTrack(nextRawTrack);
+            nextProcessedTrack.enabled = previousEnabled;
+            this.rawAudioTrack = nextRawTrack;
+            this.audioTrack = nextProcessedTrack;
+            previousProcessedTrack?.stop();
+            if (previousRawTrack && previousRawTrack !== previousProcessedTrack) {
+                previousRawTrack.stop();
+            }
+            return nextProcessedTrack;
+        } catch (error) {
+            nextRawTrack.stop();
+            throw error;
+        }
     }
 
     // Rawマイク入力を WebAudio チェーンで加工し、送信用の音声トラックを生成する。

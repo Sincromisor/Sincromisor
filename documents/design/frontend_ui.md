@@ -33,7 +33,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - LLM向け要約（3-5行）:
   - エントリは `main-vrm.ts`（VRM系）と `main-legacy.ts`（legacy系）で分岐する。2026-02-22 時点で default build は VRM系優先（legacy は `build:all` 時のみ）で、modern 側には `simple-vrm`, `vrm360`, `looking-glass-vrm` を含む。
   - `SincroVRMInitializer` / `SincroInitializer` は `SincroAppController` を先行生成し、`start()` 呼び出しでアプリ起動を開始する（2026-02-22以降）。
-  - `SincroController` は `start()` 内で UserMedia 取得、RTC開始、CharacterGaze開始を統括する。
+  - `SincroController` は `start()` 内で UserMedia 取得、RTC開始、CharacterGaze開始を統括する。マイク入力 selector の `audioInputDeviceId` は起動時の `getUserMedia` 制約と、実行中の再取得 + `RTCRtpSender.replaceTrack()` の両方へ反映される。
   - チャット文は `text_ch`、テロップは `telop_ch` で受信し、`TalkManager` 経由でUI/口形同期に渡す。
   - React への段階移行計画は `documents/design/frontend_migration_react.md` を参照（本書は現行UI設計の正本）。
   - メディアデバイス列挙は `SincroMediaDeviceService` が担当し、`enumerateDevices()` の正規化、ラベル未解決時のフォールバック名生成、`devicechange` 監視を UI から分離する。React UI は `useSincroMediaDeviceState` から snapshot/refresh を購読する。
@@ -138,7 +138,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `DialogSettingsPolicy`: 設定UIの disabled 状態/Hints と Character/Gaze/AutoMute の有効化ポリシー
   - `SincroMediaDeviceService`: `enumerateDevices()` の結果を `audioinput` / `videoinput` の UI向け選択肢へ正規化し、`devicechange` 監視と選択済み `deviceId` の有効性判定APIを提供
   - `LearnedVadWorkerClient`: 学習VAD Workerの初期化/有効化/チューニング設定/状態通知を管理
-  - `UserMediaManager`: `getUserMedia` 制約（`echoCancellation`/`noiseSuppression`/`autoGainControl` 等）を構築し、騒音会場モード切替、HPF/LPF+AudioWorklet VAD処理、手動/自動/学習VAD閾値更新を管理
+  - `UserMediaManager`: `getUserMedia` 制約（`echoCancellation`/`noiseSuppression`/`autoGainControl`/`audioInputDeviceId` 等）を構築し、騒音会場モード切替、HPF/LPF+AudioWorklet VAD処理、手動/自動/学習VAD閾値更新、実行中マイク切替時の再取得を管理
   - `DebugConsoleManager`: デバッグUIの表示制御、RTC状態表示、イベントログ、音声レベルメーター、HPF/LPF・VAD状態/閾値調整・学習VAD状態表示、60秒トレンドグラフ描画
   - `SincroAppController.dialogBridge`（`appController.dialog.*`）: dialog 関連 bridge API の集約窓口。React dialog hook / dialog pop / initializer からの呼び出しを段階的に統一
   - `SincroAppController.chatBridge`（`appController.chat.*`）: 挨拶メッセージ出力や system icon 更新など、チャットUI更新の集約窓口（initializer からの `ChatMessageManager` 直接依存を縮退）
@@ -208,6 +208,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 正常系フロー:
   - 画面読込 -> 設定ダイアログ表示 -> Start押下
   - UserMedia取得 -> RTC Offer/Answer（session_id取得）-> ICE candidate逐次送信 -> DataChannel open
+  - 実行中に `audioInputDeviceId` が変わった場合は、選択デバイスで音声のみ再取得し、`RTCRtpSender.replaceTrack()` で送信トラックを差し替える。Debug Console の Local Mic meter も新トラックへ追従する
   - `RTCTalkClient` が `getStats()` を1秒間隔で収集し、DebugConsoleへ反映
   - Local/Remote audio track から音声レベルメーターを更新
   - text/telop受信 -> UI更新
@@ -384,6 +385,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-02-22 | `Start Looking Glass` を Debug Console から削除し、`looking-glass-vrm` では Control Panel を正式な実行導線に統一。`LookingGlassXRController` は Debug Console ボタン未配置時も error 扱いせず、custom event 経由の start/stop 操作を継続利用できるよう更新 |
 | 2026-02-22 | 右上 Debug メニューの `Open Startup Dialog` を削除。起動前設定の React dialog UI は枠線/背景/ヘッダー/開始ボタンの見た目を調整し、Control Panel / Debug Console とトーンを揃える方向で更新 |
 | 2026-02-22 | 起動前設定の既定値を見直し、通常ページでは `Character` / `Gaze` を初期ONに変更。`VRM360`（360deg camera）のみ `SincroVRM360Initializer` で `Gaze` を既定OFFに上書きし、Character は既定ONを維持 |
+| 2026-04-19 | 選択したマイク入力 `audioInputDeviceId` を `getUserMedia` 制約へ反映し、実行中変更時も再取得 + `replaceTrack()` でRTC送信とLocal Mic meterを継続できるよう更新 |
 | 2026-04-19 | 起動前設定 dialog にマイク入力 / 視線用カメラ selector とデバイス一覧再読込を追加。`useSincroMediaDeviceState` と接続し、ラベル未解決案内と無効な `deviceId` のヒント表示を実装 |
 
 ## 15. 参照資料
