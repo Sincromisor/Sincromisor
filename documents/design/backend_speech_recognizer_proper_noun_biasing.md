@@ -233,8 +233,11 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
     - NeMo の `boosting_tree` は `strategy='malsd_batch'` での confirmed 専用再デコードとして導入する。現行既定の `alsd` へ直接注入しない
     - 現行導入では、biasing 結果に保留中候補の `surface` が一意に現れた場合のみ biasing 側を採用し、それ以外は baseline 後処理結果を維持する
   - フェーズ3:
-    - confirmed の場合のみ N-best を取得し、辞書一致度 + モデルスコア + 周辺文脈で再ランキングする
+    - confirmed の場合のみ N-best を取得し、辞書一致度 + priority + 周辺文脈ヒント + モデルスコアで再ランキングする
     - N-best は `beam.return_best_hypothesis=False` で取得し、raw hypothesis は `list[Hypothesis]` として保持する
+    - 候補数は `beam_size` で固定し、raw 候補は `text, score` の組へ正規化して trace に残す
+    - `score` は NeMo の beam search score であり、確率ではない。比較は同一 decode 条件の候補間に限定する
+    - context biasing で採用済みの場合は N-best 再ランキングをスキップし、N-best は未解決の曖昧語に対する後段 fallback として使う
 - 異常系フロー:
   - 辞書未ロード -> 補正スキップ
   - 補正結果が低信頼 -> 元の 1-best を維持
@@ -252,6 +255,7 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
     - `SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_ENABLE`
     - `SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_BEAM_SIZE`
     - `SINCRO_RECOGNIZER_PROPER_NOUN_NBEST_ENABLE`
+    - `SINCRO_RECOGNIZER_PROPER_NOUN_NBEST_BEAM_SIZE`
 - 設定ファイル:
   - `examples/compose.env`
   - `compose/speech-recognizer.yml`

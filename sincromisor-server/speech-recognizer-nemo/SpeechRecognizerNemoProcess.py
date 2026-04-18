@@ -54,6 +54,8 @@ class SpeechRecognizerNemoProcess:
             proper_noun_dict_path=args.proper_noun_dict_path,
             proper_noun_context_biasing_enable=args.proper_noun_context_biasing_enable,
             proper_noun_context_biasing_beam_size=args.proper_noun_context_biasing_beam_size,
+            proper_noun_nbest_enable=args.proper_noun_nbest_enable,
+            proper_noun_nbest_beam_size=args.proper_noun_nbest_beam_size,
         )
         app: FastAPI = FastAPI()
         event: Event = Event()
