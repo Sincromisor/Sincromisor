@@ -212,6 +212,17 @@ class ProperNounDictionary:
             kept_chars.append(char)
         return "".join(kept_chars)
 
+    def surfaces_for_biasing(self) -> tuple[str, ...]:
+        """Build a stable key phrase list from dictionary surfaces."""
+        seen_surfaces: set[str] = set()
+        ordered_surfaces: list[str] = []
+        for entry in self.entries:
+            if entry.surface in seen_surfaces:
+                continue
+            seen_surfaces.add(entry.surface)
+            ordered_surfaces.append(entry.surface)
+        return tuple(ordered_surfaces)
+
     @classmethod
     def _parse_row(
         cls,

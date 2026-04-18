@@ -231,6 +231,7 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
     - confirmed の場合のみ context biasing 付きデコードを実行し、曖昧語の候補選定に利用する
     - key phrase は原則 `surface` を使う。`yomi` は後処理・曖昧性判定用であり、初期導入では biasing 入力に使わない
     - NeMo の `boosting_tree` は `strategy='malsd_batch'` での confirmed 専用再デコードとして導入する。現行既定の `alsd` へ直接注入しない
+    - 現行導入では、biasing 結果に保留中候補の `surface` が一意に現れた場合のみ biasing 側を採用し、それ以外は baseline 後処理結果を維持する
   - フェーズ3:
     - confirmed の場合のみ N-best を取得し、辞書一致度 + モデルスコア + 周辺文脈で再ランキングする
     - N-best は `beam.return_best_hypothesis=False` で取得し、raw hypothesis は `list[Hypothesis]` として保持する
@@ -249,6 +250,7 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
     - `SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE`
     - `SINCRO_RECOGNIZER_PROPER_NOUN_APPLY_PARTIAL`（初期値は `false` 推奨）
     - `SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_ENABLE`
+    - `SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_BEAM_SIZE`
     - `SINCRO_RECOGNIZER_PROPER_NOUN_NBEST_ENABLE`
 - 設定ファイル:
   - `examples/compose.env`
@@ -274,6 +276,7 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
   - 補正後 result
   - ヒット辞書語
   - 保留した曖昧語
+  - context biasing の raw 結果、採用判定、候補解決結果
   - 採用した decode path
   - 補正処理時間
 - メトリクス:
@@ -316,6 +319,9 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
   - 同音異義語の過補正が許容範囲であること
   - 一般会話文や非辞書文で不要な置換が発生しないこと
   - raw ASR result と補正 trace がログまたは sidecar に残ること
+  - confirmed 時のみ context biasing が走ること
+  - context biasing が `surface` ベースの key phrase を使うこと
+  - 保留中の曖昧語が biasing 結果で一意に解決できた場合のみ採用されること
 - 単体テスト:
   - CSV ローダ
   - 読み正規化

@@ -1,6 +1,7 @@
 import json
 import logging
 import shutil
+from dataclasses import dataclass
 from datetime import datetime
 from logging import Logger
 from pathlib import Path
@@ -16,12 +17,22 @@ from .SpeechRecognizerNemo import SpeechRecognizerNemo
 from .SpeechRecognizerS3Client import SpeechRecognizerS3Client
 
 
+@dataclass(frozen=True)
+class ProperNounContextBiasingConfig:
+    enabled: bool
+    beam_size: int
+    strategy: str = "malsd_batch"
+    boosting_tree_alpha: float = 1.0
+
+
 class SpeechRecognizerNemoWorker:
     def __init__(
         self,
         voice_log_dir: str | None,
         proper_noun_enable: bool = False,
         proper_noun_dict_path: str | None = None,
+        proper_noun_context_biasing_enable: bool = False,
+        proper_noun_context_biasing_beam_size: int = 4,
     ):
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.s2t: SpeechRecognizerNemo = SpeechRecognizerNemo()
@@ -33,9 +44,20 @@ class SpeechRecognizerNemoWorker:
             )
         )
         self.post_processor = RecognizerPostProcessor(self.proper_noun_dictionary)
+        self.context_biasing_config = ProperNounContextBiasingConfig(
+            enabled=proper_noun_context_biasing_enable,
+            beam_size=max(1, int(proper_noun_context_biasing_beam_size)),
+        )
         if proper_noun_enable and not self.post_processor.enabled:
             self.logger.warning(
                 "Proper noun post processor is disabled because tokenizer is unavailable.",
+            )
+        if (
+            self.context_biasing_config.enabled
+            and not self.proper_noun_dictionary.entries
+        ):
+            self.logger.warning(
+                "Proper noun context biasing is enabled but dictionary is unavailable.",
             )
         self.logger.info("SpeechRecognizerWorker is initialized.")
 
@@ -56,6 +78,7 @@ class SpeechRecognizerNemoWorker:
         )
         correction_trace = self.__apply_proper_noun_postprocess(
             sr_result=sr_result,
+            voice=spe_result.voice,
             confirmed=spe_result.confirmed,
         )
         self.logger.info(
@@ -108,6 +131,7 @@ class SpeechRecognizerNemoWorker:
         self,
         *,
         sr_result: SpeechRecognizerResult,
+        voice: np.ndarray,
         confirmed: bool,
     ) -> dict[str, Any] | None:
         if not confirmed or not self.post_processor.enabled:
@@ -122,7 +146,28 @@ class SpeechRecognizerNemoWorker:
             )
             return None
 
-        correction_trace = {
+        correction_trace = self.__build_postprocess_trace(post_process_result)
+        if post_process_result.changed:
+            sr_result.result = list(post_process_result.corrected_result)
+
+        biasing_trace = self.__apply_confirmed_context_biasing(
+            voice=voice,
+            post_process_result=post_process_result,
+        )
+        if biasing_trace is not None:
+            correction_trace["context_biasing"] = biasing_trace
+            if biasing_trace["adopted"]:
+                sr_result.result = list(biasing_trace["selected_result"])
+                correction_trace["decode_path"] = "context_biasing"
+                correction_trace["decision_reason"] = biasing_trace["decision_reason"]
+            else:
+                correction_trace["decision_reason"] = biasing_trace["decision_reason"]
+
+        self.logger.info({"proper_noun_postprocess": correction_trace})
+        return correction_trace
+
+    def __build_postprocess_trace(self, post_process_result: Any) -> dict[str, Any]:
+        return {
             "raw_text": post_process_result.raw_text,
             "corrected_text": post_process_result.corrected_text,
             "raw_result": list(post_process_result.raw_result),
@@ -170,10 +215,119 @@ class SpeechRecognizerNemoWorker:
             ],
             "decode_path": "baseline_with_unique_yomi_postprocess",
         }
-        self.logger.info({"proper_noun_postprocess": correction_trace})
-        if post_process_result.changed:
-            sr_result.result = list(post_process_result.corrected_result)
-        return correction_trace
+
+    def __apply_confirmed_context_biasing(
+        self,
+        *,
+        voice: np.ndarray,
+        post_process_result: Any,
+    ) -> dict[str, Any] | None:
+        if not self.context_biasing_config.enabled:
+            return None
+        if not self.proper_noun_dictionary.entries:
+            return {
+                "enabled": True,
+                "adopted": False,
+                "decision_reason": "dictionary_unavailable",
+            }
+
+        key_phrases = self.proper_noun_dictionary.surfaces_for_biasing()
+        if not key_phrases:
+            return {
+                "enabled": True,
+                "adopted": False,
+                "decision_reason": "empty_key_phrases",
+            }
+
+        start_t = perf_counter()
+        try:
+            biasing_result = self.s2t.transcribe_candidates(
+                voice,
+                strategy=self.context_biasing_config.strategy,
+                beam_size=self.context_biasing_config.beam_size,
+                boosting_phrases=list(key_phrases),
+                boosting_tree_alpha=self.context_biasing_config.boosting_tree_alpha,
+            )
+        except Exception as exc:
+            self.logger.warning("Proper noun context biasing failed: %r", exc)
+            return {
+                "enabled": True,
+                "adopted": False,
+                "decision_reason": "biasing_decode_failed",
+                "error": repr(exc),
+            }
+
+        baseline_text = post_process_result.corrected_text
+        biasing_text = self.__result_text(tuple(biasing_result))
+        resolved_candidates = self.__resolve_deferred_candidates(
+            biasing_text=biasing_text,
+            post_process_result=post_process_result,
+        )
+
+        adopted = bool(resolved_candidates) and biasing_text != baseline_text
+        selected_result = list(biasing_result) if adopted else list(
+            post_process_result.corrected_result
+        )
+        selected_text = biasing_text if adopted else baseline_text
+        decision_reason = (
+            "resolved_deferred_candidates_from_context_biasing"
+            if adopted
+            else "kept_baseline_after_context_biasing_compare"
+        )
+        if not post_process_result.deferred_matches:
+            decision_reason = "no_deferred_candidates_for_context_biasing"
+        elif not resolved_candidates:
+            decision_reason = "context_biasing_did_not_resolve_deferred_candidates"
+        elif biasing_text == baseline_text:
+            decision_reason = "context_biasing_matched_baseline_text"
+
+        return {
+            "enabled": True,
+            "strategy": self.context_biasing_config.strategy,
+            "beam_size": self.context_biasing_config.beam_size,
+            "boosting_tree_alpha": self.context_biasing_config.boosting_tree_alpha,
+            "key_phrases": list(key_phrases),
+            "elapsed_seconds": perf_counter() - start_t,
+            "biasing_result": list(biasing_result),
+            "biasing_text": biasing_text,
+            "baseline_text": baseline_text,
+            "resolved_candidates": resolved_candidates,
+            "adopted": adopted,
+            "selected_text": selected_text,
+            "selected_result": selected_result,
+            "decision_reason": decision_reason,
+        }
+
+    def __resolve_deferred_candidates(
+        self,
+        *,
+        biasing_text: str,
+        post_process_result: Any,
+    ) -> list[dict[str, Any]]:
+        resolved_candidates: list[dict[str, Any]] = []
+        for deferred_match in post_process_result.deferred_matches:
+            matched_candidates = [
+                candidate
+                for candidate in deferred_match.candidates
+                if candidate.surface in biasing_text
+            ]
+            if len(matched_candidates) != 1:
+                continue
+            candidate = matched_candidates[0]
+            resolved_candidates.append(
+                {
+                    "normalized_yomi": deferred_match.normalized_yomi,
+                    "surface": candidate.surface,
+                    "reason": deferred_match.reason,
+                    "start_index": deferred_match.start_index,
+                    "end_index": deferred_match.end_index,
+                }
+            )
+        return resolved_candidates
+
+    @staticmethod
+    def __result_text(result: tuple[tuple[str, float], ...]) -> str:
+        return "".join(text for text, _score in result if text != "</s>")
 
     def __export_result(
         self,

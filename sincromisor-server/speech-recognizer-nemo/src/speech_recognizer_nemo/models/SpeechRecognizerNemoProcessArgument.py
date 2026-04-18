@@ -13,6 +13,8 @@ class SpeechRecognizerNemoProcessArgument(SincromisorArgumentParser):
     voice_log_dir: str | None
     proper_noun_enable: bool
     proper_noun_dict_path: str | None
+    proper_noun_context_biasing_enable: bool
+    proper_noun_context_biasing_beam_size: int
 
     @classmethod
     def set_args(cls, parser: ArgumentParser) -> None:
@@ -90,5 +92,21 @@ class SpeechRecognizerNemoProcessArgument(SincromisorArgumentParser):
             env_name="SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH",
             default=None,
             help="Proper noun dictionary CSV path(default: None)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--proper-noun-context-biasing-enable",
+            env_name="SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_ENABLE",
+            default=False,
+            help="Enable confirmed-only proper noun context biasing(default: false)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--proper-noun-context-biasing-beam-size",
+            env_name="SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_BEAM_SIZE",
+            default=4,
+            help="Beam size for confirmed-only context biasing(default: 4)",
         )
         return
