@@ -19,6 +19,8 @@ except ImportError:  # pragma: no cover - dependency availability is verified in
 
 @dataclass(frozen=True)
 class RecognizerPostProcessorMatch:
+    """辞書補正で採用した置換内容を trace しやすい形で保持する。"""
+
     surface_before: str
     surface_after: str
     normalized_yomi: str
@@ -29,6 +31,8 @@ class RecognizerPostProcessorMatch:
 
 @dataclass(frozen=True)
 class RecognizerPostProcessorResult:
+    """後処理前後の結果と、保留候補の痕跡をまとめた返り値。"""
+
     raw_text: str
     corrected_text: str
     raw_result: tuple[tuple[str, float], ...]
@@ -39,11 +43,14 @@ class RecognizerPostProcessorResult:
 
     @property
     def changed(self) -> bool:
+        """呼び出し側が補正有無だけを簡単に判定できるようにする。"""
         return self.raw_text != self.corrected_text
 
 
 @dataclass(frozen=True)
 class _AnalyzedMorpheme:
+    """Sudachi 解析結果のうち、照合に必要な最小情報だけを抜き出したもの。"""
+
     surface: str
     normalized_yomi: str
     pos0: str
@@ -51,12 +58,16 @@ class _AnalyzedMorpheme:
 
 @dataclass(frozen=True)
 class _MatchCandidate:
+    """開始位置から見つかった最長一致候補。"""
+
     entry: ProperNounDictionaryEntry
     end_index: int
 
 
 @dataclass(frozen=True)
 class RecognizerPostProcessorDeferredMatch:
+    """この段階では確定できず、後段へ持ち越した曖昧語候補。"""
+
     normalized_yomi: str
     start_index: int
     end_index: int
@@ -66,11 +77,14 @@ class RecognizerPostProcessorDeferredMatch:
 
 
 class RecognizerPostProcessor:
+    """認識テキストを形態素単位で走査し、固有名詞辞書に基づく補正を行う。"""
+
     def __init__(
         self,
         proper_noun_dictionary: ProperNounDictionary,
         tokenizer: Any | None = None,
     ) -> None:
+        # tokenizer を外から差し替えられるようにして、テストでは Sudachi 依存を弱める。
         self.proper_noun_dictionary = proper_noun_dictionary
         self.tokenizer = tokenizer if tokenizer is not None else self._create_tokenizer()
         self.split_mode = getattr(SplitMode, "C", None)
@@ -78,12 +92,14 @@ class RecognizerPostProcessor:
 
     @property
     def enabled(self) -> bool:
+        """辞書と tokenizer の両方が揃ったときだけ後処理を有効化する。"""
         return self.tokenizer is not None and bool(self.proper_noun_dictionary.entries)
 
     def apply(
         self,
         result: list[tuple[str, float]] | tuple[tuple[str, float], ...],
     ) -> RecognizerPostProcessorResult:
+        """N-best 形式の結果を受け取り、辞書補正後の結果と trace を返す。"""
         raw_result = tuple(result)
         raw_text = self._result_text(raw_result)
         if not self.enabled or not raw_text:
@@ -115,6 +131,7 @@ class RecognizerPostProcessor:
         deferred_matches: list[RecognizerPostProcessorDeferredMatch] = []
         index = 0
         while index < len(morphemes):
+            # 各開始位置で最長一致を探し、見つからなければ元の形態素をそのまま残す。
             match = self._find_longest_match(
                 morphemes=morphemes,
                 start_index=index,
@@ -158,11 +175,13 @@ class RecognizerPostProcessor:
         )
 
     def _create_tokenizer(self) -> Any | None:
+        """Sudachi が利用可能な環境では full 辞書で tokenizer を生成する。"""
         if Dictionary is None:
             return None
         return Dictionary(dict="full").create()
 
     def _analyze_text(self, text: str) -> list[_AnalyzedMorpheme]:
+        """認識テキストを、辞書照合に必要な読み付き形態素列へ変換する。"""
         tokenized = self.tokenizer.tokenize(text, self.split_mode)
         return [
             _AnalyzedMorpheme(
@@ -183,6 +202,7 @@ class RecognizerPostProcessor:
         deferred_yomi: set[str],
         deferred_matches: list[RecognizerPostProcessorDeferredMatch],
     ) -> _MatchCandidate | None:
+        """開始位置から連続する読みを伸ばし、辞書の最長一致候補を探す。"""
         first = morphemes[start_index]
         if not first.normalized_yomi or first.pos0 == "補助記号":
             return None
@@ -194,6 +214,7 @@ class RecognizerPostProcessor:
             if not current.normalized_yomi or current.pos0 == "補助記号":
                 break
 
+            # 形態素を1つずつ足しながら読みを連結し、複合語も辞書照合できるようにする。
             current_yomi += current.normalized_yomi
             entries = self.proper_noun_dictionary.entries_by_yomi.get(current_yomi, ())
             if not entries:
@@ -212,12 +233,14 @@ class RecognizerPostProcessor:
                 ),
             )
             if decision.apply_entry is not None:
+                # 一意に確定したものだけを最長一致候補として更新する。
                 best_match = _MatchCandidate(
                     entry=decision.apply_entry,
                     end_index=current_index + 1,
                 )
                 continue
             if decision.deferred:
+                # 曖昧な候補はここでは置換せず、後段の再デコード比較の材料に残す。
                 deferred_yomi.add(current_yomi)
                 deferred_matches.append(
                     RecognizerPostProcessorDeferredMatch(
@@ -238,6 +261,7 @@ class RecognizerPostProcessor:
         start: int,
         end: int,
     ) -> tuple[str, ...]:
+        """補助記号を除いた前後コンテキストだけを取り出す。"""
         return tuple(
             morpheme.surface
             for morpheme in morphemes[start:end]
@@ -246,6 +270,7 @@ class RecognizerPostProcessor:
 
     @staticmethod
     def _result_text(result: tuple[tuple[str, float], ...]) -> str:
+        """`</s>` を除いた可視テキスト部分を結合する。"""
         return "".join(text for text, _score in result if text != "</s>")
 
     @staticmethod
@@ -254,10 +279,12 @@ class RecognizerPostProcessor:
         corrected_text: str,
         raw_result: tuple[tuple[str, float], ...],
     ) -> tuple[tuple[str, float], ...]:
+        """補正後の文字列を、既存の result 形式へ戻す。"""
         raw_text = RecognizerPostProcessor._result_text(raw_result)
         if corrected_text == raw_text:
             return raw_result
 
+        # 補正後は token 単位のスコアを再計算できないため、既存候補の最低 score を代表値として使う。
         raw_scores = [score for text, score in raw_result if text != "</s>"]
         corrected_score = min(raw_scores) if raw_scores else 1.0
         corrected_result: list[tuple[str, float]] = []
@@ -270,6 +297,7 @@ class RecognizerPostProcessor:
 
     @staticmethod
     def _morpheme_reading(morpheme: Any) -> str:
+        """読みが未定義な形態素は、表層形をそのまま読みとして扱う。"""
         reading = morpheme.reading_form()
         if not reading or reading == "*":
             return morpheme.surface()
@@ -277,6 +305,7 @@ class RecognizerPostProcessor:
 
     @staticmethod
     def _morpheme_pos0(morpheme: Any) -> str:
+        """品詞の大分類だけを見て、補助記号の除外判定に使う。"""
         pos = morpheme.part_of_speech()
         if not pos:
             return ""
