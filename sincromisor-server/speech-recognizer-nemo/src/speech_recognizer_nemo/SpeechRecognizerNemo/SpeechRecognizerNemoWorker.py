@@ -8,15 +8,27 @@ from time import perf_counter
 import numpy as np
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 
+from .ProperNounDictionary import ProperNounDictionary
 from .SpeechRecognizerNemo import SpeechRecognizerNemo
 from .SpeechRecognizerS3Client import SpeechRecognizerS3Client
 
 
 class SpeechRecognizerNemoWorker:
-    def __init__(self, voice_log_dir: str | None):
+    def __init__(
+        self,
+        voice_log_dir: str | None,
+        proper_noun_enable: bool = False,
+        proper_noun_dict_path: str | None = None,
+    ):
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.s2t: SpeechRecognizerNemo = SpeechRecognizerNemo()
         self.voice_log_dir: str | None = voice_log_dir
+        self.proper_noun_dictionary: ProperNounDictionary = (
+            self.__load_proper_noun_dictionary(
+                proper_noun_enable=proper_noun_enable,
+                proper_noun_dict_path=proper_noun_dict_path,
+            )
+        )
         self.logger.info("SpeechRecognizerWorker is initialized.")
 
     def recognize(
@@ -51,6 +63,34 @@ class SpeechRecognizerNemoWorker:
 
     def __transcribe_with_score(self, voice: np.ndarray) -> list[tuple[str, float]]:
         return self.s2t.transcribe_with_score(voice)
+
+    def __load_proper_noun_dictionary(
+        self,
+        *,
+        proper_noun_enable: bool,
+        proper_noun_dict_path: str | None,
+    ) -> ProperNounDictionary:
+        if not proper_noun_enable:
+            self.logger.info("Proper noun dictionary is disabled.")
+            return ProperNounDictionary.empty()
+        if not proper_noun_dict_path:
+            self.logger.warning(
+                "Proper noun dictionary is enabled but dict path is not set.",
+            )
+            return ProperNounDictionary.empty()
+
+        try:
+            return ProperNounDictionary.load_from_csv_with_logger(
+                csv_path=proper_noun_dict_path,
+                logger=self.logger,
+            )
+        except Exception as exc:
+            self.logger.warning(
+                "Failed to load proper noun dictionary from %s: %r",
+                proper_noun_dict_path,
+                exc,
+            )
+            return ProperNounDictionary.empty()
 
     def __export_result(self, result: SpeechRecognizerResult) -> Path | None:
         if self.voice_log_dir is None:
