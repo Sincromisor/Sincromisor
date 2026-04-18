@@ -1,3 +1,9 @@
+from .AmbiguityResolver import (
+    AmbiguityCandidate,
+    AmbiguityContextHint,
+    AmbiguityDecision,
+    AmbiguityResolver,
+)
 from .ProperNounDictionary import (
     ProperNounDictionary,
     ProperNounDictionaryEntry,
@@ -5,6 +11,7 @@ from .ProperNounDictionary import (
 )
 from .RecognizerPostProcessor import (
     RecognizerPostProcessor,
+    RecognizerPostProcessorDeferredMatch,
     RecognizerPostProcessorMatch,
     RecognizerPostProcessorResult,
 )
@@ -13,10 +20,15 @@ from .SpeechRecognizerNemoWorker import SpeechRecognizerNemoWorker
 from .SpeechRecognizerS3Client import SpeechRecognizerS3Client
 
 __all__ = [
+    "AmbiguityCandidate",
+    "AmbiguityContextHint",
+    "AmbiguityDecision",
+    "AmbiguityResolver",
     "ProperNounDictionary",
     "ProperNounDictionaryEntry",
     "ProperNounDictionaryStats",
     "RecognizerPostProcessor",
+    "RecognizerPostProcessorDeferredMatch",
     "RecognizerPostProcessorMatch",
     "RecognizerPostProcessorResult",
     "SpeechRecognizerS3Client",

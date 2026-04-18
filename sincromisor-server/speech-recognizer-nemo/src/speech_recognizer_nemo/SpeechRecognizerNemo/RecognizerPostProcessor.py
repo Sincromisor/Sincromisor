@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from .AmbiguityResolver import (
+    AmbiguityCandidate,
+    AmbiguityContextHint,
+    AmbiguityResolver,
+)
 from .ProperNounDictionary import ProperNounDictionary, ProperNounDictionaryEntry
 
 try:
@@ -30,6 +35,7 @@ class RecognizerPostProcessorResult:
     corrected_result: tuple[tuple[str, float], ...]
     matches: tuple[RecognizerPostProcessorMatch, ...]
     deferred_yomi: tuple[str, ...]
+    deferred_matches: tuple[RecognizerPostProcessorDeferredMatch, ...]
 
     @property
     def changed(self) -> bool:
@@ -49,6 +55,16 @@ class _MatchCandidate:
     end_index: int
 
 
+@dataclass(frozen=True)
+class RecognizerPostProcessorDeferredMatch:
+    normalized_yomi: str
+    start_index: int
+    end_index: int
+    reason: str
+    candidates: tuple[AmbiguityCandidate, ...]
+    context_hint: AmbiguityContextHint
+
+
 class RecognizerPostProcessor:
     def __init__(
         self,
@@ -58,6 +74,7 @@ class RecognizerPostProcessor:
         self.proper_noun_dictionary = proper_noun_dictionary
         self.tokenizer = tokenizer if tokenizer is not None else self._create_tokenizer()
         self.split_mode = getattr(SplitMode, "C", None)
+        self.ambiguity_resolver = AmbiguityResolver()
 
     @property
     def enabled(self) -> bool:
@@ -77,6 +94,7 @@ class RecognizerPostProcessor:
                 corrected_result=raw_result,
                 matches=(),
                 deferred_yomi=(),
+                deferred_matches=(),
             )
 
         morphemes = self._analyze_text(raw_text)
@@ -88,17 +106,20 @@ class RecognizerPostProcessor:
                 corrected_result=raw_result,
                 matches=(),
                 deferred_yomi=(),
+                deferred_matches=(),
             )
 
         corrected_parts: list[str] = []
         matches: list[RecognizerPostProcessorMatch] = []
         deferred_yomi: set[str] = set()
+        deferred_matches: list[RecognizerPostProcessorDeferredMatch] = []
         index = 0
         while index < len(morphemes):
             match = self._find_longest_match(
                 morphemes=morphemes,
                 start_index=index,
                 deferred_yomi=deferred_yomi,
+                deferred_matches=deferred_matches,
             )
             if match is None:
                 corrected_parts.append(morphemes[index].surface)
@@ -133,6 +154,7 @@ class RecognizerPostProcessor:
             corrected_result=corrected_result,
             matches=tuple(matches),
             deferred_yomi=tuple(sorted(deferred_yomi)),
+            deferred_matches=tuple(deferred_matches),
         )
 
     def _create_tokenizer(self) -> Any | None:
@@ -159,6 +181,7 @@ class RecognizerPostProcessor:
         morphemes: list[_AnalyzedMorpheme],
         start_index: int,
         deferred_yomi: set[str],
+        deferred_matches: list[RecognizerPostProcessorDeferredMatch],
     ) -> _MatchCandidate | None:
         first = morphemes[start_index]
         if not first.normalized_yomi or first.pos0 == "補助記号":
@@ -175,14 +198,51 @@ class RecognizerPostProcessor:
             entries = self.proper_noun_dictionary.entries_by_yomi.get(current_yomi, ())
             if not entries:
                 continue
-            if len(entries) == 1 and not entries[0].ambiguous:
+            decision = self.ambiguity_resolver.resolve(
+                entries=entries,
+                left_surfaces=self._context_surfaces(
+                    morphemes=morphemes,
+                    start=max(0, start_index - 2),
+                    end=start_index,
+                ),
+                right_surfaces=self._context_surfaces(
+                    morphemes=morphemes,
+                    start=current_index + 1,
+                    end=min(len(morphemes), current_index + 3),
+                ),
+            )
+            if decision.apply_entry is not None:
                 best_match = _MatchCandidate(
-                    entry=entries[0],
+                    entry=decision.apply_entry,
                     end_index=current_index + 1,
                 )
                 continue
-            deferred_yomi.add(current_yomi)
+            if decision.deferred:
+                deferred_yomi.add(current_yomi)
+                deferred_matches.append(
+                    RecognizerPostProcessorDeferredMatch(
+                        normalized_yomi=current_yomi,
+                        start_index=start_index,
+                        end_index=current_index + 1,
+                        reason=decision.reason or "ambiguous_candidate",
+                        candidates=decision.candidates,
+                        context_hint=decision.context_hint,
+                    )
+                )
         return best_match
+
+    @staticmethod
+    def _context_surfaces(
+        *,
+        morphemes: list[_AnalyzedMorpheme],
+        start: int,
+        end: int,
+    ) -> tuple[str, ...]:
+        return tuple(
+            morpheme.surface
+            for morpheme in morphemes[start:end]
+            if morpheme.pos0 != "補助記号"
+        )
 
     @staticmethod
     def _result_text(result: tuple[tuple[str, float], ...]) -> str:

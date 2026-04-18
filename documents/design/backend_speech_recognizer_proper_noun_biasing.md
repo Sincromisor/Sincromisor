@@ -145,6 +145,7 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
     - 同一 `yomi` に複数候補がある語を検出する
     - 例: `たぶんね -> タブンネ / たぶんね`
     - 文脈ヒントがない場合は自動置換せず保留する
+    - フェーズ1では `left_surfaces` / `right_surfaces` を周辺語ヒント API として保持する
     - context biasing、N-best、周辺語ルールにより採用候補を絞る
   - `SpeechRecognizerNemo`
     - 現行の軽量経路を維持する
@@ -181,6 +182,7 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
     - `matched_entries`
     - `applied_rules`
     - `deferred_entries`
+      - `normalized_yomi`, `reason`, `candidates`, `context_hint`
   - trace 情報:
     - `decode_path` (`baseline` / `context_biasing` / `nbest_rerank`)
     - `selected_score`
