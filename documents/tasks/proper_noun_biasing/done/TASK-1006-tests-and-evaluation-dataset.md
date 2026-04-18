@@ -1,7 +1,8 @@
 # TASK-1006 テストと評価用データ整備
 
 - 作成日: 2026-04-12
-- ステータス: Open
+- ステータス: Done
+- 完了日: 2026-04-18
 - 優先度: High
 
 ## 目的
@@ -67,3 +68,10 @@
 
 - テストがローカルで通る。
 - 回帰確認手順が追える。
+
+## 実施メモ
+
+- `speech-recognizer-nemo` の固有名詞補強テスト実行方式を `uv run python -m unittest` に統一した。
+- `TASK-1006-evaluation-dataset.csv` に代表文と負例セットを追加した。
+- `TASK-1006-manual-verification.md` に raw ASR result / 補正 trace / trace 保存方式の確認手順を追加した。
+- context biasing 採用時に N-best を再実行しないことを固定化する単体テストを追加した。
