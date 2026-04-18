@@ -395,7 +395,7 @@ export class DebugConsoleManager {
         this.reactSettingsPanelContainer.classList.add("is-open");
         this.reactSettingsPanelContainer.style.visibility = "visible";
         if (this.reactSettingsPanelToggleButton) {
-            this.reactSettingsPanelToggleButton.innerText = "設定を開く";
+            this.reactSettingsPanelToggleButton.innerText = "設定カテゴリを開く";
         }
         this.closeDebugMenu();
     }
@@ -417,7 +417,7 @@ export class DebugConsoleManager {
         this.reactSettingsPanelContainer.classList.remove("is-open");
         this.reactSettingsPanelContainer.style.visibility = "hidden";
         if (this.reactSettingsPanelToggleButton) {
-            this.reactSettingsPanelToggleButton.innerText = "設定を開く";
+            this.reactSettingsPanelToggleButton.innerText = "設定カテゴリを開く";
         }
         this.closeDebugMenu();
     }

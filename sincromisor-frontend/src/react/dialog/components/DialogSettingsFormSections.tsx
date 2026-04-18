@@ -188,15 +188,36 @@ function LabelWithHelp({ text, help }: { text: string; help?: string }) {
     );
 }
 
+type DialogSettingsCategoryProps = {
+    title: string;
+    description: string;
+    children: ReactNode;
+};
+
+export function DialogSettingsCategory({
+    title,
+    description,
+    children,
+}: DialogSettingsCategoryProps) {
+    return (
+        <section className="configurationDialogReactSettingsPanel__category">
+            <div className="configurationDialogReactSettingsPanel__categoryTitle">{title}</div>
+            <div className="configurationDialogReactSettingsPanel__categoryDescription">{description}</div>
+            <div>{children}</div>
+        </section>
+    );
+}
+
 export function DialogBasicSettingsSection({
     settings,
     uiState,
     onTitleChange,
     onTalkModeChange,
-}: DialogBasicSettingsSectionProps) {
+    showSectionTitle = true,
+}: DialogBasicSettingsSectionProps & { showSectionTitle?: boolean }) {
     return (
         <div style={{ marginTop: "4px", marginBottom: "8px" }}>
-            <div style={cardSectionTitleStyle}>基本設定</div>
+            {showSectionTitle ? <div style={cardSectionTitleStyle}>基本設定</div> : null}
             <div style={{ marginBottom: "8px" }}>
                 <LabelWithHelp text="タイトル" help={settingHelp.titleText} />
                 <input
@@ -233,6 +254,7 @@ type DialogDeviceSettingsSectionProps = CommonProps & {
     audioInputSelection: SincroMediaDeviceSelectionState;
     videoInputSelection: SincroMediaDeviceSelectionState;
     onRefreshDevices: () => Promise<SincroMediaDeviceSnapshot>;
+    showSectionTitle?: boolean;
 };
 
 export function DialogDeviceSettingsSection({
@@ -244,6 +266,7 @@ export function DialogDeviceSettingsSection({
     videoInputSelection,
     onApplySettings,
     onRefreshDevices,
+    showSectionTitle = true,
 }: DialogDeviceSettingsSectionProps) {
     const [refreshMessage, setRefreshMessage] = useState<string>("");
 
@@ -260,8 +283,8 @@ export function DialogDeviceSettingsSection({
 
     return (
         <div style={{ marginBottom: "8px" }}>
-            <div style={{ ...cardSectionTitleStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                <span>入力デバイス</span>
+            <div style={{ ...cardSectionTitleStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: showSectionTitle ? "4px" : "0" }}>
+                <span>{showSectionTitle ? "入力デバイス" : "マイクとカメラ"}</span>
                 <button
                     type="button"
                     className="configurationDialogReactSettingsPanel__secondaryButton"
@@ -325,10 +348,15 @@ export function DialogDeviceSettingsSection({
     );
 }
 
-export function DialogMicSettingsSection({ settings, uiState, onApplySettings }: CommonProps) {
+export function DialogMicSettingsSection({
+    settings,
+    uiState,
+    onApplySettings,
+    showSectionTitle = true,
+}: CommonProps & { showSectionTitle?: boolean }) {
     return (
         <div style={{ marginBottom: "8px" }}>
-            <div style={cardSectionTitleStyle}>マイク設定</div>
+            {showSectionTitle ? <div style={cardSectionTitleStyle}>マイク設定</div> : <div style={{ ...cardSectionTitleStyle, marginBottom: "6px" }}>マイクの聞こえ方</div>}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 6px" }}>
                 <DialogToggle
                     label="ノイズを抑える"
@@ -370,10 +398,16 @@ export function DialogMicSettingsSection({ settings, uiState, onApplySettings }:
     );
 }
 
-export function DialogCharacterSettingsSection({ settings, uiState, uiHints, onApplySettings }: DialogCharacterSettingsSectionProps) {
+export function DialogCharacterSettingsSection({
+    settings,
+    uiState,
+    uiHints,
+    onApplySettings,
+    showSectionTitle = true,
+}: DialogCharacterSettingsSectionProps & { showSectionTitle?: boolean }) {
     return (
         <div style={{ marginBottom: "8px" }}>
-            <div style={cardSectionTitleStyle}>キャラクター設定</div>
+            {showSectionTitle ? <div style={cardSectionTitleStyle}>キャラクター設定</div> : <div style={{ ...cardSectionTitleStyle, marginBottom: "6px" }}>キャラクター表示</div>}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 6px" }}>
                 <DialogToggle
                     label="3Dキャラクターを表示"

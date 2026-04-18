@@ -1,6 +1,7 @@
 import { PanelControls } from "./components/PanelControls";
 import { DiagnosticsStatusCards } from "./components/DiagnosticsStatusCards";
 import {
+    SettingsCategorySection,
     BasicSettingsSection,
     MicSettingsSection,
     CharacterSettingsSection,
@@ -58,6 +59,9 @@ export function SimpleVrmControlPanel({
         : lookingGlass.state;
     const canStartLookingGlass = lookingGlass.state !== "starting" && lookingGlass.state !== "active";
     const canStopLookingGlass = lookingGlass.state === "active" || lookingGlass.state === "starting";
+    const openDeveloperConsole = (): void => {
+        document.querySelector<HTMLButtonElement>("#debugConsoleToggle")?.click();
+    };
 
     const requestLookingGlassStart = (): void => {
         // LG の実行/停止は Three.js 側 controller へ custom event で橋渡しする。
@@ -80,55 +84,59 @@ export function SimpleVrmControlPanel({
                 <span style={{ opacity: 0.8 }}>{hasActiveController ? "接続済み" : "待機中"}</span>
             </div>
             <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px`, opacity: 0.75, lineHeight: 1.35 }}>
-                音声・カメラ・キャラクターの動きはここで調整できます。接続確認や詳しい診断が必要な時だけ、開発者向け診断画面を開いてください。
-            </div>
-
-            <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
-                <div style={{ opacity: 0.75 }}>ライフサイクル</div>
-                <div style={{ fontSize: "13px" }}>{lifecycleState}</div>
-            </div>
-            <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
-                <div style={{ opacity: 0.75 }}>接続状態</div>
-                <div style={{ fontSize: "13px" }}>{effectiveConnectionState}</div>
-            </div>
-            <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
-                <div style={{ opacity: 0.75 }}>Looking Glass状態</div>
-                <div style={{ fontSize: "13px" }}>
-                    {lookingGlassStatusText}
-                </div>
+                目的ごとに設定を分けています。まずは会話・音声・表示を調整し、接続確認や詳しい診断が必要な時だけ開発者向けを開いてください。
             </div>
             {isLookingGlassFocused ? (
-                // LG ページでは start/stop 導線を Control Panel に寄せる（Debug Console 依存を避ける）。
-                <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
-                    <div
-                        style={{
-                            display: "flex",
-                            gap: `${controlPanelTuning.styles.controlsGapPx}px`,
-                            marginBottom: "8px",
-                        }}
-                    >
-                        <button
-                            type="button"
-                            onClick={requestLookingGlassStart}
-                            disabled={!canStartLookingGlass}
-                            style={panelStyles.button}
+                <SettingsCategorySection
+                    title="Looking Glass 設定"
+                    description="このページだけで使う立体表示の設定です。表示の見え方やセッション操作をここで調整します。"
+                >
+                    <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: `${controlPanelTuning.styles.controlsGapPx}px`,
+                                marginBottom: "8px",
+                            }}
                         >
-                            Looking Glass 開始
-                        </button>
-                        <button
-                            type="button"
-                            onClick={requestLookingGlassStop}
-                            disabled={!canStopLookingGlass}
-                            style={panelStyles.button}
-                        >
-                            Looking Glass 停止
-                        </button>
+                            <button
+                                type="button"
+                                onClick={requestLookingGlassStart}
+                                disabled={!canStartLookingGlass}
+                                style={panelStyles.button}
+                            >
+                                Looking Glass 開始
+                            </button>
+                            <button
+                                type="button"
+                                onClick={requestLookingGlassStop}
+                                disabled={!canStopLookingGlass}
+                                style={panelStyles.button}
+                            >
+                                Looking Glass 停止
+                            </button>
+                        </div>
+                        <div style={{ opacity: 0.75, lineHeight: 1.35 }}>
+                            現在の状態: {lookingGlassStatusText}
+                            <br />
+                            {lookingGlass.state === "recovering" ? "再試行できます。" : "設定変更はセッション終了後の再実行で反映されます。"}
+                            {lookingGlass.state === "error" ? " エラー内容は開発者向け診断の LG コード / LG 詳細を確認してください。" : ""}
+                        </div>
                     </div>
-                    <div style={{ opacity: 0.75, lineHeight: 1.35 }}>
-                        {lookingGlass.state === "recovering" ? "再試行できます。" : "設定変更はセッション終了後の再実行で反映されます。"}
-                        {lookingGlass.state === "error" ? " エラー内容は下の診断情報（LGコード / LG詳細）を確認してください。" : ""}
-                    </div>
-                </div>
+                    <BasicSettingsSection
+                        settings={settings}
+                        uiState={settingsUiState}
+                        onTitleChange={(titleText) => applySettings({ titleText })}
+                        onTalkModeChange={changeTalkMode}
+                        showTitle={false}
+                        showTalkMode={true}
+                    />
+                    <LookingGlassSettingsSection
+                        settings={settings}
+                        onApplySettings={applySettings}
+                        showSectionTitle={false}
+                    />
+                </SettingsCategorySection>
             ) : null}
             {isLookingGlassFocused && lookingGlassConfigStatus.pendingForNextSession ? (
                 // 実行中セッション中の変更か、次回開始で反映できる変更かを項目別に表示する。
@@ -156,104 +164,107 @@ export function SimpleVrmControlPanel({
                 onStart={startAction}
                 onStop={stopAction}
             />
-            <BasicSettingsSection
-                settings={settings}
-                uiState={settingsUiState}
-                onTitleChange={(titleText) => applySettings({ titleText })}
-                onTalkModeChange={changeTalkMode}
-                showTitle={!isLookingGlassFocused}
-                showTalkMode={!isLookingGlassFocused}
-            />
-            {isLookingGlassFocused ? (
-                // LGページでは talk mode を LG 設定の近くに置き、用途切替を見つけやすくする。
-                <BasicSettingsSection
+            {!isLookingGlassFocused ? (
+                <SettingsCategorySection
+                    title="会話設定"
+                    description="会話の見え方や進み方を調整します。ふだんの利用で最初に触ることが多い設定です。"
+                >
+                    <BasicSettingsSection
+                        settings={settings}
+                        uiState={settingsUiState}
+                        onTitleChange={(titleText) => applySettings({ titleText })}
+                        onTalkModeChange={changeTalkMode}
+                        showTitle={true}
+                        showTalkMode={true}
+                    />
+                </SettingsCategorySection>
+            ) : null}
+            <SettingsCategorySection
+                title="音声設定"
+                description="マイクの選択と、声の入り方に関わる調整をまとめています。"
+                defaultOpen={!isLookingGlassFocused}
+            >
+                <MicSettingsSection
                     settings={settings}
                     uiState={settingsUiState}
-                    onTitleChange={(titleText) => applySettings({ titleText })}
-                    onTalkModeChange={changeTalkMode}
-                    showTitle={false}
-                    showTalkMode={true}
-                />
-            ) : null}
-            {isLookingGlassFocused ? (
-                // LG向けページでは Looking Glass 設定を最前面に置き、実機調整の導線を優先する。
-                <LookingGlassSettingsSection
-                    settings={settings}
+                    uiHints={settingsUiHints}
+                    mediaDeviceSnapshot={mediaDeviceSnapshot}
+                    audioInputSelection={audioInputSelection}
                     onApplySettings={applySettings}
+                    onRefreshDevices={refreshDevices}
+                    showSectionTitle={false}
                 />
+            </SettingsCategorySection>
+            <SettingsCategorySection
+                title="表示設定"
+                description="キャラクター表示や視線連動など、見た目や動きに関する設定です。"
+                defaultOpen={!isLookingGlassFocused}
+            >
+                <CharacterSettingsSection
+                    settings={settings}
+                    uiState={settingsUiState}
+                    uiHints={settingsUiHints}
+                    mediaDeviceSnapshot={mediaDeviceSnapshot}
+                    audioInputSelection={audioInputSelection}
+                    videoInputSelection={videoInputSelection}
+                    onApplySettings={applySettings}
+                    onRefreshDevices={refreshDevices}
+                    showSectionTitle={false}
+                />
+            </SettingsCategorySection>
+            {(!isLookingGlassFocused || startupSettingsCapabilities.enableTalk || startupSettingsCapabilities.enableInspector || startupSettingsCapabilities.enableVR) ? (
+                <SettingsCategorySection
+                    title="起動オプション"
+                    description="ページを始める時にだけ効く設定です。反映したい時は停止してからもう一度始めてください。"
+                    defaultOpen={false}
+                >
+                    <StartupSettingsSection
+                        settings={settings}
+                        uiState={settingsUiState}
+                        onApplySettings={applySettings}
+                        isRunning={lifecycleState === "running"}
+                        startupStatus={startupSettingsStatus}
+                        startupCapabilities={startupSettingsCapabilities}
+                        hideIfNoSupported={false}
+                        showSectionTitle={false}
+                    />
+                </SettingsCategorySection>
             ) : null}
-            {isLookingGlassFocused ? (
-                // LG向けページでは利用頻度の低い一般設定を折りたたみへ退避する。
-                <details style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
-                    <summary style={{ cursor: "pointer", opacity: 0.85 }}>音声 / キャラクター設定（詳細）</summary>
+            <SettingsCategorySection
+                title="開発者向け"
+                description="接続状態や診断情報を確認したい時だけ使います。通常の設定変更は上のカテゴリから行います。"
+                defaultOpen={false}
+            >
+                <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
+                    <button type="button" onClick={openDeveloperConsole} style={panelStyles.button}>
+                        開発者向け診断を開く
+                    </button>
+                </div>
+                <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
+                    <div style={{ opacity: 0.75 }}>ライフサイクル</div>
+                    <div style={{ fontSize: "13px" }}>{lifecycleState}</div>
+                </div>
+                <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
+                    <div style={{ opacity: 0.75 }}>接続状態</div>
+                    <div style={{ fontSize: "13px" }}>{effectiveConnectionState}</div>
+                </div>
+                <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
+                    <div style={{ opacity: 0.75 }}>Looking Glass状態</div>
+                    <div style={{ fontSize: "13px" }}>{lookingGlassStatusText}</div>
+                </div>
+                <details style={{ marginTop: `${controlPanelTuning.sectionSpacingPx}px` }}>
+                    <summary style={{ cursor: "pointer", opacity: 0.85 }}>診断情報の詳細</summary>
                     <div style={{ marginTop: `${controlPanelTuning.detailsContentTopMarginPx}px` }}>
-                        <MicSettingsSection
-                            settings={settings}
-                            uiState={settingsUiState}
-                            uiHints={settingsUiHints}
-                            mediaDeviceSnapshot={mediaDeviceSnapshot}
-                            audioInputSelection={audioInputSelection}
-                            onApplySettings={applySettings}
-                            onRefreshDevices={refreshDevices}
-                        />
-                        <CharacterSettingsSection
-                            settings={settings}
-                            uiState={settingsUiState}
-                            uiHints={settingsUiHints}
-                            mediaDeviceSnapshot={mediaDeviceSnapshot}
-                            audioInputSelection={audioInputSelection}
-                            videoInputSelection={videoInputSelection}
-                            onApplySettings={applySettings}
-                            onRefreshDevices={refreshDevices}
+                        <DiagnosticsStatusCards
+                            vadState={vadState}
+                            gaze={gaze}
+                            rtcState={rtcState}
+                            learnedVad={learnedVad}
+                            lookingGlass={lookingGlass}
                         />
                     </div>
                 </details>
-            ) : (
-                <>
-                    <MicSettingsSection
-                        settings={settings}
-                        uiState={settingsUiState}
-                        uiHints={settingsUiHints}
-                        mediaDeviceSnapshot={mediaDeviceSnapshot}
-                        audioInputSelection={audioInputSelection}
-                        onApplySettings={applySettings}
-                        onRefreshDevices={refreshDevices}
-                    />
-                    <CharacterSettingsSection
-                        settings={settings}
-                        uiState={settingsUiState}
-                        uiHints={settingsUiHints}
-                        mediaDeviceSnapshot={mediaDeviceSnapshot}
-                        audioInputSelection={audioInputSelection}
-                        videoInputSelection={videoInputSelection}
-                        onApplySettings={applySettings}
-                        onRefreshDevices={refreshDevices}
-                    />
-                </>
-            )}
-            <StartupSettingsSection
-                settings={settings}
-                uiState={settingsUiState}
-                onApplySettings={applySettings}
-                isRunning={lifecycleState === "running"}
-                startupStatus={startupSettingsStatus}
-                startupCapabilities={startupSettingsCapabilities}
-                hideIfNoSupported={isLookingGlassFocused}
-            />
-
-            <details style={{ marginTop: `${controlPanelTuning.sectionSpacingPx}px` }}>
-                {/* 通常利用の導線を邪魔しないよう、診断情報は折りたたみへ寄せる。 */}
-                <summary style={{ cursor: "pointer", opacity: 0.85 }}>診断情報</summary>
-                <div style={{ marginTop: `${controlPanelTuning.detailsContentTopMarginPx}px` }}>
-                    <DiagnosticsStatusCards
-                        vadState={vadState}
-                        gaze={gaze}
-                        rtcState={rtcState}
-                        learnedVad={learnedVad}
-                        lookingGlass={lookingGlass}
-                    />
-                </div>
-            </details>
+            </SettingsCategorySection>
         </section>
     );
 }
