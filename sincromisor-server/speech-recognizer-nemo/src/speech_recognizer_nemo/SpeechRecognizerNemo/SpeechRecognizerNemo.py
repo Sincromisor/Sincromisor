@@ -1,6 +1,6 @@
 import numpy as np
-from nemo.collections.asr.parts.context_biasing import BoostingTreeModelConfig
 from nemo.collections.asr.models import EncDecRNNTBPEModel
+from nemo.collections.asr.parts.context_biasing import BoostingTreeModelConfig
 from nemo.collections.asr.parts.utils.rnnt_utils import Hypothesis
 from omegaconf import DictConfig, OmegaConf
 from reazonspeech.nemo.asr import load_model

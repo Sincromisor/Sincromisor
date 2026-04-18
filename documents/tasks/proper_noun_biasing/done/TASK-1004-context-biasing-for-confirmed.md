@@ -1,7 +1,7 @@
 # TASK-1004 confirmed 時の context biasing 導入
 
 - 作成日: 2026-04-12
-- ステータス: Open
+- ステータス: Done
 - 優先度: Medium
 
 ## 目的
@@ -64,3 +64,11 @@ NeMo の context biasing を confirmed 専用の強化経路として導入し�
 - biasing 有効/無効の比較テストを行う。
 - `surface` と `yomi` の取り違えがないことを確認する。
 - 遅延増分をログで確認する。
+
+## 実施メモ
+
+- `confirmed=True` の場合のみ、`strategy='malsd_batch'` + `boosting_tree` による追加デコードを実装した。
+- key phrase は辞書 `surface` のユニークリストから構築する。
+- baseline の unique yomi 後処理結果を基準とし、biasing 結果に deferred 候補の `surface` が一意に現れた場合のみ biasing 側を採用する。
+- baseline / biasing / 最終採用結果は `.trace.json` に残る。
+- 設定として `SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_ENABLE` と `SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_BEAM_SIZE` を追加した。
