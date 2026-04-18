@@ -26,6 +26,12 @@ export function applySincroAppSettingsPartial(
     if (partial.titleText != null) {
         dialogManager.setTitleText(partial.titleText);
     }
+    if (partial.audioInputDeviceId !== undefined) {
+        dialogManager.setAudioInputDeviceId(partial.audioInputDeviceId);
+    }
+    if (partial.videoInputDeviceId !== undefined) {
+        dialogManager.setVideoInputDeviceId(partial.videoInputDeviceId);
+    }
     if (partial.enableAutoGainControl != null) {
         dialogManager.setEnableAutoGainControl(partial.enableAutoGainControl);
     }

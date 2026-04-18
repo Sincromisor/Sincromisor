@@ -9,6 +9,8 @@ export function buildSincroAppSettingsSnapshot(dialogManager: SincroAppDialogFac
     return {
         titleText: dialogManager.titleText(),
         talkMode: dialogManager.talkMode(),
+        audioInputDeviceId: dialogManager.audioInputDeviceId(),
+        videoInputDeviceId: dialogManager.videoInputDeviceId(),
         enableCharacter: dialogManager.enableCharacter(),
         enableTalk: dialogManager.enableTalk(),
         enableCharacterGaze: dialogManager.enableCharacterGaze(),
