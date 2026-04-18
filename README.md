@@ -89,6 +89,64 @@ $ docker compose --profile full up -d
 デフォルトのモデルを差し替えたい時は、サーバーのファイル
 `sincromisor-frontend/public/characters/default.vrm`を差し替えてください。
 
+## 音声認識の固有名詞辞書を追加する
+
+音声認識の固有名詞辞書は `speech-recognizer` コンテナに
+読み込ませます。固有名詞補強は `SINCRO_RECOGNIZER_MODEL=nemo` を前提にしています。
+
+1. 辞書配置用ディレクトリを作成します。
+
+```sh
+$ mkdir -p volumes/proper-noun-dictionaries
+```
+
+2. UTF-8 の CSV で辞書ファイルを作成します。
+   最低限 `surface` と `yomi` が必要です。運用上は
+   `surface,yomi,priority,category,enabled,ambiguous` の構成を推奨します。
+
+```csv
+surface,yomi,priority,category,enabled,ambiguous
+Sincromisor,しんくろみそーる,200,product,true,false
+ピカチュウ,ぴかちゅう,100,pokemon,true,false
+タブンネ,たぶんね,100,pokemon,true,true
+たぶんね,たぶんね,10,common,true,true
+```
+
+3. 作成した CSV を `volumes/proper-noun-dictionaries/` 配下へ置きます。
+   たとえば `volumes/proper-noun-dictionaries/proper_nouns.csv` のようなパスにします。
+
+4. ルートの `.env` を更新します。
+
+```dotenv
+SINCRO_RECOGNIZER_MODEL=nemo
+SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE=true
+SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH=/opt/sincromisor/proper-noun-dictionaries/proper_nouns.csv
+```
+
+必要に応じて、confirmed 時の補強を強めたい場合は以下も有効化できます。
+
+```dotenv
+SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_ENABLE=true
+SINCRO_RECOGNIZER_PROPER_NOUN_NBEST_ENABLE=true
+```
+
+5. `speech-recognizer` コンテナを再作成して反映します。
+
+```sh
+$ docker compose --profile full up -d speech-recognizer
+```
+
+6. ログを確認し、辞書がロードされていることを確認します。
+
+```sh
+$ docker compose logs speech-recognizer
+```
+
+`Proper noun dictionary loaded:` が出力されれば、辞書ファイルのマウントと読み込みは成功です。
+反映されない場合は、CSV のヘッダ、`.env` の `SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH`、
+`volumes/proper-noun-dictionaries` 配下のファイル配置を見直してください。
+
+
 ## チャットモードを利用する
 
 チャットモードで利用したい時は、別途[Dify](https://dify.ai/jp)が必要となります。
