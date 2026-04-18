@@ -140,6 +140,34 @@ class SpeechRecognizerNemoWorker:
                 for match in post_process_result.matches
             ],
             "deferred_yomi": list(post_process_result.deferred_yomi),
+            "deferred_entries": [
+                {
+                    "normalized_yomi": deferred_match.normalized_yomi,
+                    "start_index": deferred_match.start_index,
+                    "end_index": deferred_match.end_index,
+                    "reason": deferred_match.reason,
+                    "context_hint": {
+                        "left_surfaces": list(
+                            deferred_match.context_hint.left_surfaces
+                        ),
+                        "right_surfaces": list(
+                            deferred_match.context_hint.right_surfaces
+                        ),
+                    },
+                    "candidates": [
+                        {
+                            "surface": candidate.surface,
+                            "normalized_yomi": candidate.normalized_yomi,
+                            "priority": candidate.priority,
+                            "category": candidate.category,
+                            "source_line": candidate.source_line,
+                            "ambiguous": candidate.ambiguous,
+                        }
+                        for candidate in deferred_match.candidates
+                    ],
+                }
+                for deferred_match in post_process_result.deferred_matches
+            ],
             "decode_path": "baseline_with_unique_yomi_postprocess",
         }
         self.logger.info({"proper_noun_postprocess": correction_trace})
