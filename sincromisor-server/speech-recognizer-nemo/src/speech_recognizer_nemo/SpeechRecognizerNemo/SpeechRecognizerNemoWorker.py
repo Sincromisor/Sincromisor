@@ -258,6 +258,8 @@ class SpeechRecognizerNemoWorker:
 
     def __classify_dictionary_load_exception(self, exc: Exception) -> str:
         """ロード失敗をログで読みやすい理由へ畳み込む。"""
+        if isinstance(exc, PermissionError):
+            return "dictionary file is not readable (check directory/file permissions)"
         if isinstance(exc, FileNotFoundError):
             return "dictionary file not found"
         if isinstance(exc, ValueError):

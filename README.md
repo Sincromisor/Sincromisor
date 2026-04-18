@@ -103,6 +103,7 @@ $ mkdir -p volumes/proper-noun-dictionaries
 2. UTF-8 の CSV で辞書ファイルを作成します。
    最低限 `surface` と `yomi` が必要です。運用上は
    `surface,yomi,priority,category,enabled,ambiguous` の構成を推奨します。
+   **ヘッダが適切に記述されていないとエラーになります。注意してください。**
 
 ```csv
 surface,yomi,priority,category,enabled,ambiguous
@@ -114,6 +115,22 @@ Sincromisor,しんくろみそーる,200,product,true,false
 
 3. 作成した CSV を `volumes/proper-noun-dictionaries/` 配下へ置きます。
    たとえば `volumes/proper-noun-dictionaries/proper_nouns.csv` のようなパスにします。
+
+   `speech-recognizer` コンテナは非rootユーザーで動作するため、権限が厳しすぎると
+   辞書を読めません。配置後に次のスクリプトで権限を整えておくのを推奨します。
+
+```sh
+$ ./utils/setup/proper_noun_dictionary.sh
+```
+
+   このスクリプトは `volumes/proper-noun-dictionaries/` 配下を
+   `directory=755`、`file=644` にそろえます。あわせて `.csv` の先頭行を確認し、
+   `surface,yomi,priority,category,enabled,ambiguous` ヘッダが無ければ自動で補います。
+   個別パスを指定することもできます。
+
+```sh
+$ ./utils/setup/proper_noun_dictionary.sh volumes/proper-noun-dictionaries/proper_nouns.csv
+```
 
 4. ルートの `.env` を更新します。
 
@@ -144,7 +161,8 @@ $ docker compose logs speech-recognizer
 
 `Proper noun dictionary loaded:` が出力されれば、辞書ファイルのマウントと読み込みは成功です。
 反映されない場合は、CSV のヘッダ、`.env` の `SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH`、
-`volumes/proper-noun-dictionaries` 配下のファイル配置を見直してください。
+`volumes/proper-noun-dictionaries` 配下のファイル配置、ディレクトリ/ファイル権限
+（`755/644`）を見直してください。
 
 
 ## チャットモードを利用する
