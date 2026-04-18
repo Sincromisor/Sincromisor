@@ -271,6 +271,9 @@ export function DialogDeviceSettingsSection({
                     {snapshot.isRefreshing ? "更新中..." : "再読み込み"}
                 </button>
             </div>
+            <div className="configurationDialogReactSettingsPanel__hintText">
+                ここで選んだデバイスは設定パネルと共通です。配信前の確定や復帰はこの画面から行えます。
+            </div>
             <div style={{ marginBottom: "8px" }}>
                 <LabelWithHelp text="マイク入力" help={settingHelp.audioInputDeviceId} />
                 <select
@@ -483,7 +486,7 @@ function DeviceSelectionHint({
     if (!snapshot.labelsResolved && optionsCount > 0) {
         messages.push("ブラウザ権限が未許可だと実デバイス名を表示できないことがあります。");
     }
-    if (selection.isSelected && !selection.isAvailable) {
+    if (selection.isSelected && selection.availabilityKnown && !selection.isAvailable) {
         messages.push(`選択中の${kindLabel}は現在見つかりません。別のデバイスへ切り替えるか、既定デバイスを選んでください。`);
     }
     if (selection.isAvailable && selection.matchedDevice) {

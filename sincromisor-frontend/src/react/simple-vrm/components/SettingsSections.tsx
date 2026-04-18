@@ -319,6 +319,9 @@ export function MicSettingsSection({
                     {mediaDeviceSnapshot.isRefreshing ? "更新中..." : "再読み込み"}
                 </button>
             </div>
+            <div style={{ marginBottom: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
+                日常の設定変更はここが正式な導線です。Debug Console は音量や接続状態の診断に使います。
+            </div>
             <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
                 <HelpLabel text="マイク入力" help={settingHelp.audioInputDeviceId} />
                 <select
@@ -496,7 +499,7 @@ function DeviceSelectionHint({
     if (!snapshot.labelsResolved && optionsCount > 0) {
         messages.push("ブラウザ権限が未許可だと実デバイス名を表示できないことがあります。");
     }
-    if (selection.isSelected && !selection.isAvailable) {
+    if (selection.isSelected && selection.availabilityKnown && !selection.isAvailable) {
         messages.push(`選択中の${kindLabel}は現在見つかりません。別のデバイスへ切り替えるか、既定デバイスを選んでください。`);
     }
     if (selection.isAvailable && selection.matchedDevice) {

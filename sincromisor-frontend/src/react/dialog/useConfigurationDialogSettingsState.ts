@@ -69,6 +69,7 @@ const defaultDialogUiState: SincroAppDialogUiState = {
     isOpen: false,
     startButtonDisabled: false,
     startButtonText: "はじめる",
+    startButtonHint: null,
 };
 
 const defaultSettingsUiHints: SincroAppSettingsUiHints = {};

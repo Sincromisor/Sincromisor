@@ -37,6 +37,9 @@ export function ConfigurationDialogSettingsPanel() {
             <div className="configurationDialogReactSettingsPanel__header">
                 <div className="configurationDialogReactSettingsPanel__title">起動前設定</div>
             </div>
+            <div className="configurationDialogReactSettingsPanel__hintText">
+                デバイスや基本設定の変更はここか設定パネルが正式な導線です。Debug Console は診断とプレビュー確認に使います。
+            </div>
             <DialogBasicSettingsSection
                 settings={settings}
                 uiState={settingsUiState}
@@ -77,6 +80,11 @@ export function ConfigurationDialogSettingsPanel() {
                     {dialogUiState.startButtonText || "はじめる"}
                 </button>
             </div>
+            {dialogUiState.startButtonHint ? (
+                <div className="configurationDialogReactSettingsPanel__hintText">
+                    {dialogUiState.startButtonHint}
+                </div>
+            ) : null}
             <div className="configurationDialogReactSettingsPanel__footer">
                 <a className="configurationDialogReactSettingsPanel__backLink" href="/">
                     &lt;&lt; もどる
