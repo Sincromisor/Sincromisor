@@ -1,6 +1,8 @@
 import numpy as np
 from nemo.collections.asr.models import EncDecRNNTBPEModel
+from nemo.collections.asr.parts.context_biasing import BoostingTreeModelConfig
 from nemo.collections.asr.parts.utils.rnnt_utils import Hypothesis
+from omegaconf import DictConfig, OmegaConf
 from reazonspeech.nemo.asr import load_model
 from reazonspeech.nemo.asr.audio import norm_audio, pad_audio
 from reazonspeech.nemo.asr.decode import decode_hypothesis
@@ -12,17 +14,22 @@ from reazonspeech.nemo.asr.interface import (
 
 
 class SpeechRecognizerNemo:
+    """NeMo / ReazonSpeech の推論呼び出しを、このサービス向けに薄く包む。"""
+
     # pkg/nemo-asr/src/decode.pyと同じ
     PAD_SECONDS = 0.5
 
     def __init__(self):
+        # モデル本体と既定の decode 設定を初期化しておき、
+        # 後段で一時的に decoding strategy を差し替えられるようにする。
         self.model: EncDecRNNTBPEModel = load_model()
         self.transcribe_config: TranscribeConfig = TranscribeConfig()
         self.transcribe_config.verbose = False
         self.transcribe_config.raw_hypothesis = True
+        self.default_decoding_config: DictConfig = OmegaConf.create(self.model.cfg.decoding)
 
     def transcribe(self, audio: np.ndarray) -> TranscribeResult:
-        """Inference audio data using NeMo model
+        """音声を1回推論し、NeMo の生 hypothesis を含む結果を返す。
 
         Args:
             audio (AudioData): Audio data to transcribe, 16000Hz, 1ch, float32
@@ -31,13 +38,14 @@ class SpeechRecognizerNemo:
             TranscribeResult
         """
         org_audio: AudioData = AudioData(audio, 16000)
+        # 学習・推論時の前提に合わせて正規化し、前後に少し余白を入れて認識を安定させる。
         padded_audio: AudioData = pad_audio(norm_audio(org_audio), self.PAD_SECONDS)
 
         # partial_hypothesis は未実装となっているため、Noneを指定する。
         # NotImplementedError("`partial_hypotheses` support is not supported")
         # https://github.com/NVIDIA/NeMo/blob/45a3b5cad3434692b1fb805934913d95be8668ea/nemo/collections/asr/parts/submodules/rnnt_beam_decoding.py#L871
 
-        # list[Hypothesis]になる模様
+        # return_best_hypothesis=False の場合は list[Hypothesis] を受け取る。
         hyp: list[str] | list[Hypothesis] | tuple[list[str]] | tuple[list[Hypothesis]]  = self.model.transcribe(
             padded_audio.waveform,
             batch_size=1,
@@ -46,12 +54,78 @@ class SpeechRecognizerNemo:
             verbose=self.transcribe_config.verbose,
         )
         hyp: str | Hypothesis | list[str] | list[Hypothesis] = hyp[0]
-        ts_result: TranscribeResult = decode_hypothesis(self.model, hyp)
+        # beam search を使う場合でも、まずは先頭候補を decode_hypothesis へ渡して基本結果を組み立てる。
+        primary_hypothesis: str | Hypothesis = hyp[0] if isinstance(hyp, list) else hyp
+        ts_result: TranscribeResult = decode_hypothesis(self.model, primary_hypothesis)
 
         if self.transcribe_config.raw_hypothesis:
+            # 後段で N-best 比較できるよう、生の hypothesis 配列を保持する。
             ts_result.hypothesis = hyp
 
         return ts_result
+
+    def build_decoding_config(
+        self,
+        *,
+        strategy: str | None = None,
+        beam_size: int | None = None,
+        return_best_hypothesis: bool | None = None,
+        boosting_phrases: list[str] | None = None,
+        boosting_tree_alpha: float = 0.0,
+        allow_cuda_graphs: bool | None = None,
+    ) -> DictConfig:
+        """一時的な decoding strategy 差し替え用 config を構築する。"""
+        config: DictConfig = OmegaConf.create(self.default_decoding_config)
+
+        if strategy is not None:
+            config.strategy = strategy
+        if beam_size is not None:
+            config.beam.beam_size = beam_size
+        if return_best_hypothesis is not None:
+            config.beam.return_best_hypothesis = return_best_hypothesis
+        if allow_cuda_graphs is not None:
+            config.beam.allow_cuda_graphs = allow_cuda_graphs
+
+        if boosting_phrases:
+            # context biasing では辞書語を boosting tree に投入して、beam 探索を誘導する。
+            config.beam.boosting_tree = OmegaConf.structured(
+                BoostingTreeModelConfig(
+                    key_phrases_list=boosting_phrases,
+                    use_triton=False,
+                )
+            )
+            config.beam.boosting_tree_alpha = boosting_tree_alpha
+
+        return config
+
+    def transcribe_candidates(
+        self,
+        audio: np.ndarray,
+        *,
+        strategy: str | None = None,
+        beam_size: int | None = None,
+        boosting_phrases: list[str] | None = None,
+        boosting_tree_alpha: float = 0.0,
+        allow_cuda_graphs: bool | None = None,
+    ) -> list[tuple[str, float]]:
+        """一時的な decoding 設定で、候補テキストと score の一覧を返す。"""
+        config = self.build_decoding_config(
+            strategy=strategy,
+            beam_size=beam_size,
+            return_best_hypothesis=False,
+            boosting_phrases=boosting_phrases,
+            boosting_tree_alpha=boosting_tree_alpha,
+            allow_cuda_graphs=allow_cuda_graphs,
+        )
+        original_config: DictConfig = OmegaConf.create(self.model.cfg.decoding)
+        try:
+            # worker 側で baseline / context biasing / N-best を切り替えるため、
+            # ここでのみ一時的に decoding config を入れ替える。
+            self.model.change_decoding_strategy(config, verbose=False)
+            return self.transcribe_with_score(audio)
+        finally:
+            # 次の推論へ設定が漏れないよう、元の config を必ず復元する。
+            self.model.change_decoding_strategy(original_config, verbose=False)
 
     # 音声認識結果を、次の形式で返す。
     # [('認識したテキスト1', 0.0～1.0のスコア), ('認識したテキスト2', 0.0～1.0のスコア)]
@@ -59,9 +133,16 @@ class SpeechRecognizerNemo:
         self,
         audio: np.ndarray,
     ) -> list[tuple[str, float]]:
+        """認識結果を、後段で比較しやすい `(text, score)` 形式へ揃えて返す。"""
         ts_result: TranscribeResult = self.transcribe(audio)
-        hyp: Hypothesis = ts_result.hypothesis  # ty:ignore[invalid-assignment]
+        hypothesis = ts_result.hypothesis
 
+        if isinstance(hypothesis, list):
+            # N-best のスパイクでは Hypothesis 配列をそのまま score 付き候補列へ変換する。
+            return [(hyp.text or "", hyp.score) for hyp in hypothesis]
+
+        # 通常推論では単一 hypothesis を1件だけ返す。
+        hyp: Hypothesis = hypothesis  # ty:ignore[invalid-assignment]
         return [(hyp.text or ts_result.text, hyp.score)]
 
 if __name__ == "__main__":

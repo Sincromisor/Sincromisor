@@ -25,10 +25,11 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 3. `examples/compose.env`
 4. `documents/design/index.md`
 5. `documents/design/template.md`
-6. `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
-7. `sincromisor-frontend/vite.config.js`
-8. `sincromisor-frontend/src/ts/SincroController.ts`
-9. `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
+6. `documents/tasks/README.md`
+7. `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
+8. `sincromisor-frontend/vite.config.js`
+9. `sincromisor-frontend/src/ts/SincroController.ts`
+10. `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
 
 ## 3. ディレクトリマップ
 
@@ -57,6 +58,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
   - `networking_*.md`: 通信契約設計
   - `service_*.md`: compose / Consul 設計
   - `template.md`: 設計文書テンプレート
+- `documents/tasks`
 
 ## 4. 通信フロー（実装把握用）
 
@@ -158,3 +160,12 @@ docker compose --profile full up -d
 - ソースコードには積極的にコメントを記述する。
 - コメントは、後日それを読み返した際に素早くコンテキストが理解できる内容とすることを心掛ける。
 - ソースコードを変更した際など、documents/design以下の設計ドキュメントの更新が必要な場合はその旨を通知し、更新を促す。
+
+## 11. タスク管理とコミットのルール
+
+- タスクは`documents/tasks/<大分類>/open/TASK-<タスクID>-<タスク概要>.md`に記述する。
+- 最低限のラインとして、タスク単位でコミットを行う。
+  - タスク内でも、必要に応じてコミットを行う。
+- コミット時は、関連するTask IDを明記する。
+- タスクが完了したら、タスクファイルを`done`に移動する。
+- コミットメッセージは、何をどのような意図で行ったのかが明確になるように記述する。

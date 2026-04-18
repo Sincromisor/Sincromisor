@@ -4367,6 +4367,8 @@ dependencies = [
     { name = "setproctitle" },
     { name = "sincro-config" },
     { name = "sincro-models" },
+    { name = "sudachidict-full" },
+    { name = "sudachipy" },
     { name = "uvicorn" },
     { name = "websockets" },
 ]
@@ -4382,6 +4384,8 @@ requires-dist = [
     { name = "setproctitle", specifier = ">=1.3.6" },
     { name = "sincro-config", editable = "sincromisor-server/sincro-config" },
     { name = "sincro-models", editable = "sincromisor-server/sincro-models" },
+    { name = "sudachidict-full", specifier = ">=20250515" },
+    { name = "sudachipy", specifier = ">=0.6.10" },
     { name = "uvicorn", specifier = ">=0.35.0" },
     { name = "websockets", specifier = ">=15.0.1" },
 ]
