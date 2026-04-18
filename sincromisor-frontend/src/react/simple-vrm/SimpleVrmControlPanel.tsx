@@ -31,6 +31,9 @@ export function SimpleVrmControlPanel({
         settingsUiHints,
         startupSettingsStatus,
         startupSettingsCapabilities,
+        mediaDeviceSnapshot,
+        audioInputSelection,
+        videoInputSelection,
         vadState,
         learnedVad,
         gaze,
@@ -42,6 +45,7 @@ export function SimpleVrmControlPanel({
         stopAction,
         applySettings,
         changeTalkMode,
+        refreshDevices,
     } = useSimpleVrmPanelState();
 
     // connection_state は AppController 側で導出済みだが、detail がある場合だけ補助表示を足す。
@@ -180,23 +184,47 @@ export function SimpleVrmControlPanel({
                 <details style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
                     <summary style={{ cursor: "pointer", opacity: 0.85 }}>音声 / キャラクター設定（詳細）</summary>
                     <div style={{ marginTop: `${controlPanelTuning.detailsContentTopMarginPx}px` }}>
-                        <MicSettingsSection settings={settings} uiState={settingsUiState} onApplySettings={applySettings} />
+                        <MicSettingsSection
+                            settings={settings}
+                            uiState={settingsUiState}
+                            uiHints={settingsUiHints}
+                            mediaDeviceSnapshot={mediaDeviceSnapshot}
+                            audioInputSelection={audioInputSelection}
+                            onApplySettings={applySettings}
+                            onRefreshDevices={refreshDevices}
+                        />
                         <CharacterSettingsSection
                             settings={settings}
                             uiState={settingsUiState}
                             uiHints={settingsUiHints}
+                            mediaDeviceSnapshot={mediaDeviceSnapshot}
+                            audioInputSelection={audioInputSelection}
+                            videoInputSelection={videoInputSelection}
                             onApplySettings={applySettings}
+                            onRefreshDevices={refreshDevices}
                         />
                     </div>
                 </details>
             ) : (
                 <>
-                    <MicSettingsSection settings={settings} uiState={settingsUiState} onApplySettings={applySettings} />
+                    <MicSettingsSection
+                        settings={settings}
+                        uiState={settingsUiState}
+                        uiHints={settingsUiHints}
+                        mediaDeviceSnapshot={mediaDeviceSnapshot}
+                        audioInputSelection={audioInputSelection}
+                        onApplySettings={applySettings}
+                        onRefreshDevices={refreshDevices}
+                    />
                     <CharacterSettingsSection
                         settings={settings}
                         uiState={settingsUiState}
                         uiHints={settingsUiHints}
+                        mediaDeviceSnapshot={mediaDeviceSnapshot}
+                        audioInputSelection={audioInputSelection}
+                        videoInputSelection={videoInputSelection}
                         onApplySettings={applySettings}
+                        onRefreshDevices={refreshDevices}
                     />
                 </>
             )}
