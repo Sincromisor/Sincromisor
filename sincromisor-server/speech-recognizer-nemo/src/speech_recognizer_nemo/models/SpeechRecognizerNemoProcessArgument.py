@@ -11,6 +11,12 @@ class SpeechRecognizerNemoProcessArgument(SincromisorArgumentParser):
     s3_access_key: str | None
     s3_secret_key: str | None
     voice_log_dir: str | None
+    proper_noun_enable: bool
+    proper_noun_dict_path: str | None
+    proper_noun_context_biasing_enable: bool
+    proper_noun_context_biasing_beam_size: int
+    proper_noun_nbest_enable: bool
+    proper_noun_nbest_beam_size: int
 
     @classmethod
     def set_args(cls, parser: ArgumentParser) -> None:
@@ -72,5 +78,53 @@ class SpeechRecognizerNemoProcessArgument(SincromisorArgumentParser):
             env_name="SINCRO_RECOGNIZER_VOICE_LOG_DIR",
             default=None,
             help="voice log directory path",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--proper-noun-enable",
+            env_name="SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE",
+            default=False,
+            help="Enable proper noun dictionary loading(default: false)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--proper-noun-dict-path",
+            env_name="SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH",
+            default=None,
+            help="Proper noun dictionary CSV path(default: None)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--proper-noun-context-biasing-enable",
+            env_name="SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_ENABLE",
+            default=False,
+            help="Enable confirmed-only proper noun context biasing(default: false)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--proper-noun-context-biasing-beam-size",
+            env_name="SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_BEAM_SIZE",
+            default=4,
+            help="Beam size for confirmed-only context biasing(default: 4)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--proper-noun-nbest-enable",
+            env_name="SINCRO_RECOGNIZER_PROPER_NOUN_NBEST_ENABLE",
+            default=False,
+            help="Enable confirmed-only N-best reranking for ambiguous proper nouns(default: false)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--proper-noun-nbest-beam-size",
+            env_name="SINCRO_RECOGNIZER_PROPER_NOUN_NBEST_BEAM_SIZE",
+            default=4,
+            help="Beam size for confirmed-only N-best reranking(default: 4)",
         )
         return

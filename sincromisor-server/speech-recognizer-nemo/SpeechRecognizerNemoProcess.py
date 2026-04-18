@@ -48,7 +48,15 @@ class SpeechRecognizerNemoProcess:
             consul_agent_host=self.__args.consul_agent_host,
             consul_agent_port=self.__args.consul_agent_port,
         )
-        speech_recognizer = SpeechRecognizerNemoWorker(voice_log_dir=args.voice_log_dir)
+        speech_recognizer = SpeechRecognizerNemoWorker(
+            voice_log_dir=args.voice_log_dir,
+            proper_noun_enable=args.proper_noun_enable,
+            proper_noun_dict_path=args.proper_noun_dict_path,
+            proper_noun_context_biasing_enable=args.proper_noun_context_biasing_enable,
+            proper_noun_context_biasing_beam_size=args.proper_noun_context_biasing_beam_size,
+            proper_noun_nbest_enable=args.proper_noun_nbest_enable,
+            proper_noun_nbest_beam_size=args.proper_noun_nbest_beam_size,
+        )
         app: FastAPI = FastAPI()
         event: Event = Event()
         self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
