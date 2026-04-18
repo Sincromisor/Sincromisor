@@ -394,6 +394,12 @@ class SpeechRecognizerNemoWorker:
                 "adopted": False,
                 "decision_reason": "dictionary_unavailable",
             }
+        if not post_process_result.deferred_matches:
+            return {
+                "enabled": True,
+                "adopted": False,
+                "decision_reason": "no_deferred_candidates_for_context_biasing",
+            }
 
         key_phrases = self.proper_noun_dictionary.surfaces_for_biasing()
         if not key_phrases:
@@ -411,6 +417,9 @@ class SpeechRecognizerNemoWorker:
                 beam_size=self.context_biasing_config.beam_size,
                 boosting_phrases=list(key_phrases),
                 boosting_tree_alpha=self.context_biasing_config.boosting_tree_alpha,
+                # confirmed 後の救済 decode は機能優先だが、malsd_batch の既定 CUDA graph
+                # と競合すると後続の通常推論まで巻き込んで壊れるため安全側へ倒す。
+                allow_cuda_graphs=False,
             )
         except Exception as exc:
             self.logger.warning("Proper noun context biasing failed: %r", exc)

@@ -385,6 +385,7 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
         self.assertEqual(confirmed_result.result_text(), "タブンネです")
         self.assertEqual(fake_nemo.last_candidates_kwargs["strategy"], "malsd_batch")
         self.assertEqual(fake_nemo.last_candidates_kwargs["beam_size"], 5)
+        self.assertFalse(fake_nemo.last_candidates_kwargs["allow_cuda_graphs"])
         self.assertIn(
             "Sincromisor",
             fake_nemo.last_candidates_kwargs["boosting_phrases"],
@@ -504,4 +505,46 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
         self.assertEqual(
             correction_trace["nbest_reranking"]["decision_reason"],
             "context_biasing_already_adopted",
+        )
+
+    def test_recognize_skips_context_biasing_when_no_deferred_candidates_exist(self) -> None:
+        fake_nemo = FakeSpeechRecognizerNemo()
+        with patch(
+            "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
+            return_value=fake_nemo,
+        ):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                worker = SpeechRecognizerNemoWorker(
+                    voice_log_dir=temp_dir,
+                    proper_noun_enable=False,
+                    proper_noun_dict_path=None,
+                    proper_noun_context_biasing_enable=True,
+                    proper_noun_context_biasing_beam_size=5,
+                )
+                worker.proper_noun_dictionary = (
+                    ProperNounDictionary.load_from_csv(self.fixture_path)
+                )
+                worker.post_processor = FakePostProcessor()
+
+                confirmed_result = worker.recognize(
+                    SpeechExtractorResult(
+                        session_id="session",
+                        speech_id=4,
+                        sequence_id=1,
+                        start_at=1.0,
+                        confirmed=True,
+                        voice=np.zeros(8, dtype=np.int16),
+                    ),
+                    s3_client=None,
+                )
+
+                trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
+                self.assertEqual(len(trace_files), 1)
+                correction_trace = json.loads(trace_files[0].read_text(encoding="utf-8"))
+
+        self.assertEqual(confirmed_result.result_text(), "Sincromisorです")
+        self.assertIsNone(fake_nemo.last_candidates_kwargs)
+        self.assertEqual(
+            correction_trace["context_biasing"]["decision_reason"],
+            "no_deferred_candidates_for_context_biasing",
         )
