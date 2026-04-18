@@ -144,6 +144,33 @@
     cursor: not-allowed;
 }
 
+.configurationDialogReactSettingsPanel__secondaryButton {
+    min-height: 28px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.06);
+    color: #eef3fb;
+    padding: 4px 10px;
+    font-size: 12px;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.configurationDialogReactSettingsPanel__secondaryButton:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+.configurationDialogReactSettingsPanel__hintList {
+    margin-top: 4px;
+}
+
+.configurationDialogReactSettingsPanel__hintText {
+    opacity: 0.72;
+    line-height: 1.35;
+    margin-top: 4px;
+}
+
 /* 共有 settings section の inline style（暗色前提）を前提に、dialog 側でも文字色継承を揃える。 */
 .configurationDialogReactSettingsPanel label,
 .configurationDialogReactSettingsPanel input,

@@ -16,6 +16,7 @@ import {
     hydrateDialogUiSnapshotsFromController,
     hydrateSettingsSnapshotsFromController,
 } from "../app/sincroAppStateSnapshotHydrators";
+import { useSincroMediaDeviceState } from "../app/useSincroMediaDeviceState";
 
 const defaultSettings: SincroAppSettingsSnapshot = {
     titleText: "Sincromisor",
@@ -95,6 +96,15 @@ export function useConfigurationDialogSettingsState() {
     const [dialogUiState, setDialogUiState] = useState<SincroAppDialogUiState>(
         initialController?.state.getDialogUiState() ?? defaultDialogUiState,
     );
+    const {
+        snapshot: mediaDeviceSnapshot,
+        audioInputSelection,
+        videoInputSelection,
+        refreshDevices,
+    } = useSincroMediaDeviceState({
+        audioInputDeviceId: settings.audioInputDeviceId,
+        videoInputDeviceId: settings.videoInputDeviceId,
+    });
 
     useEffect(() => {
         // 起動前 dialog は React を主表示にするため、mount 中は bridge DOM を非表示化する。
@@ -176,6 +186,10 @@ export function useConfigurationDialogSettingsState() {
         settingsUiHints,
         dialogVrmUiState,
         dialogUiState,
+        mediaDeviceSnapshot,
+        audioInputSelection,
+        videoInputSelection,
+        refreshDevices,
         applySettings,
         changeTalkMode,
         openVrmFilePicker,
