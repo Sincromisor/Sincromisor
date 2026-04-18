@@ -1,6 +1,8 @@
 export type DialogSettingKey =
     | "talkMode"
     | "titleText"
+    | "audioInputDeviceId"
+    | "videoInputDeviceId"
     | "enableCharacter"
     | "enableTalk"
     | "enableCharacterGaze"
@@ -18,6 +20,8 @@ export type DialogSettingKey =
 type DialogSettingValueMap = {
     talkMode: string;
     titleText: string;
+    audioInputDeviceId: string | null;
+    videoInputDeviceId: string | null;
     enableCharacter: boolean;
     enableTalk: boolean;
     enableCharacterGaze: boolean;
@@ -34,6 +38,8 @@ type DialogSettingValueMap = {
 type DialogSettingDisabledMap = {
     titleText: boolean;
     talkMode: boolean;
+    audioInputDeviceId: boolean;
+    videoInputDeviceId: boolean;
     enableCharacter: boolean;
     enableTalk: boolean;
     enableCharacterGaze: boolean;
@@ -65,6 +71,8 @@ export class DialogStateStore {
     private values: DialogSettingValueMap = {
         talkMode: "chat",
         titleText: "Sincromisor",
+        audioInputDeviceId: null,
+        videoInputDeviceId: null,
         enableCharacter: true,
         enableTalk: true,
         enableCharacterGaze: true,
@@ -80,6 +88,8 @@ export class DialogStateStore {
     private disabled: DialogSettingDisabledMap = {
         titleText: false,
         talkMode: false,
+        audioInputDeviceId: false,
+        videoInputDeviceId: false,
         enableCharacter: true,
         enableTalk: false,
         enableCharacterGaze: true,

@@ -92,6 +92,14 @@ export class DialogManager {
         return this.stateStore.get("titleText") || "Sincromisor";
     }
 
+    audioInputDeviceId(): string | null {
+        return this.stateStore.get("audioInputDeviceId");
+    }
+
+    videoInputDeviceId(): string | null {
+        return this.stateStore.get("videoInputDeviceId");
+    }
+
     setTalkMode(value: string): void {
         this.stateStore.set("talkMode", value);
         this.emitSettingsChanged();
@@ -100,6 +108,16 @@ export class DialogManager {
     setTitleText(value: string): void {
         this.stateStore.set("titleText", value || "Sincromisor");
         this.updateTitleText();
+        this.emitSettingsChanged();
+    }
+
+    setAudioInputDeviceId(deviceId: string | null): void {
+        this.stateStore.set("audioInputDeviceId", deviceId);
+        this.emitSettingsChanged();
+    }
+
+    setVideoInputDeviceId(deviceId: string | null): void {
+        this.stateStore.set("videoInputDeviceId", deviceId);
         this.emitSettingsChanged();
     }
 

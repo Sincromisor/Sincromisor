@@ -31,6 +31,8 @@ import { UI_TUNING } from "../app/uiTuning";
 const defaultSettings: SincroAppSettingsSnapshot = {
     titleText: "Sincromisor",
     talkMode: "chat",
+    audioInputDeviceId: null,
+    videoInputDeviceId: null,
     enableCharacter: true,
     enableTalk: true,
     enableCharacterGaze: true,
@@ -54,6 +56,8 @@ const defaultSettings: SincroAppSettingsSnapshot = {
 const defaultSettingsUiState: SincroAppSettingsUiState = {
     titleTextDisabled: false,
     talkModeDisabled: false,
+    audioInputDeviceDisabled: false,
+    videoInputDeviceDisabled: false,
     enableCharacterDisabled: false,
     enableTalkDisabled: false,
     enableCharacterGazeDisabled: false,

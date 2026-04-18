@@ -3,6 +3,8 @@ import { DialogStateStore } from "./DialogStateStore";
 export type DialogSettingsUiState = {
     titleTextDisabled: boolean;
     talkModeDisabled: boolean;
+    audioInputDeviceDisabled: boolean;
+    videoInputDeviceDisabled: boolean;
     enableCharacterDisabled: boolean;
     enableTalkDisabled: boolean;
     enableCharacterGazeDisabled: boolean;
@@ -17,6 +19,8 @@ export type DialogSettingsUiState = {
 };
 
 export type DialogSettingsUiHints = {
+    audioInputDeviceReason?: string;
+    videoInputDeviceReason?: string;
     enableCharacterReason?: string;
     enableCharacterGazeReason?: string;
     enableAutoMuteReason?: string;
@@ -30,6 +34,8 @@ export class DialogSettingsPolicy {
         return {
             titleTextDisabled: stateStore.isDisabled("titleText"),
             talkModeDisabled: stateStore.isDisabled("talkMode"),
+            audioInputDeviceDisabled: stateStore.isDisabled("audioInputDeviceId"),
+            videoInputDeviceDisabled: stateStore.isDisabled("videoInputDeviceId"),
             enableCharacterDisabled: stateStore.isDisabled("enableCharacter"),
             enableTalkDisabled: stateStore.isDisabled("enableTalk"),
             enableCharacterGazeDisabled: stateStore.isDisabled("enableCharacterGaze"),
@@ -78,6 +84,8 @@ export class DialogSettingsPolicy {
         }
 
         return {
+            audioInputDeviceReason: undefined,
+            videoInputDeviceReason: undefined,
             enableCharacterReason,
             enableCharacterGazeReason,
             enableAutoMuteReason,
