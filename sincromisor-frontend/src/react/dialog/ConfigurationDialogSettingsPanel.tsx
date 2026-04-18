@@ -5,6 +5,7 @@ import {
     VrmModelSection,
 } from "./components/DialogSettingsSections";
 import {
+    DialogSettingsCategory,
     DialogBasicSettingsSection,
     DialogDeviceSettingsSection,
     DialogCharacterSettingsSection,
@@ -38,37 +39,56 @@ export function ConfigurationDialogSettingsPanel() {
                 <div className="configurationDialogReactSettingsPanel__title">起動前設定</div>
             </div>
             <div className="configurationDialogReactSettingsPanel__hintText">
-                はじめる前に、使うマイクやカメラ、基本の動きをここで決められます。接続確認や詳しい診断が必要な時だけ、開発者向け診断画面を使います。
+                はじめる前に、目的ごとに分かれた設定を確認できます。会話・音声・表示を順に見ていけば、そのまま始められます。
             </div>
-            <DialogBasicSettingsSection
-                settings={settings}
-                uiState={settingsUiState}
-                onTitleChange={(titleText) => applySettings({ titleText })}
-                onTalkModeChange={changeTalkMode}
-            />
-            <DialogDeviceSettingsSection
-                settings={settings}
-                uiState={settingsUiState}
-                uiHints={settingsUiHints}
-                snapshot={mediaDeviceSnapshot}
-                audioInputSelection={audioInputSelection}
-                videoInputSelection={videoInputSelection}
-                onApplySettings={applySettings}
-                onRefreshDevices={refreshDevices}
-            />
-            <DialogMicSettingsSection
-                settings={settings}
-                uiState={settingsUiState}
-                onApplySettings={applySettings}
-            />
-            <DialogCharacterSettingsSection
-                settings={settings}
-                uiState={settingsUiState}
-                uiHints={settingsUiHints}
-                onApplySettings={applySettings}
-            />
-            <VrmModelSection onOpenFilePicker={openVrmFilePicker} />
-            <DialogVrmDropStatusCard uiState={dialogVrmUiState} />
+            <DialogSettingsCategory
+                title="会話設定"
+                description="会話タイトルやトークモードを決めます。まず最初に見ておくと分かりやすい設定です。"
+            >
+                <DialogBasicSettingsSection
+                    settings={settings}
+                    uiState={settingsUiState}
+                    onTitleChange={(titleText) => applySettings({ titleText })}
+                    onTalkModeChange={changeTalkMode}
+                    showSectionTitle={false}
+                />
+            </DialogSettingsCategory>
+            <DialogSettingsCategory
+                title="音声設定"
+                description="使うマイクと、声の入り方に関する設定です。開始後の設定パネルにも引き継がれます。"
+            >
+                <DialogDeviceSettingsSection
+                    settings={settings}
+                    uiState={settingsUiState}
+                    uiHints={settingsUiHints}
+                    snapshot={mediaDeviceSnapshot}
+                    audioInputSelection={audioInputSelection}
+                    videoInputSelection={videoInputSelection}
+                    onApplySettings={applySettings}
+                    onRefreshDevices={refreshDevices}
+                    showSectionTitle={false}
+                />
+                <DialogMicSettingsSection
+                    settings={settings}
+                    uiState={settingsUiState}
+                    onApplySettings={applySettings}
+                    showSectionTitle={false}
+                />
+            </DialogSettingsCategory>
+            <DialogSettingsCategory
+                title="表示設定"
+                description="キャラクター表示や視線連動、利用する VRM モデルを開始前に整えます。"
+            >
+                <DialogCharacterSettingsSection
+                    settings={settings}
+                    uiState={settingsUiState}
+                    uiHints={settingsUiHints}
+                    onApplySettings={applySettings}
+                    showSectionTitle={false}
+                />
+                <VrmModelSection onOpenFilePicker={openVrmFilePicker} />
+                <DialogVrmDropStatusCard uiState={dialogVrmUiState} />
+            </DialogSettingsCategory>
             <div className="configurationDialogReactSettingsPanel__actions">
                 {/* 利用不可時は説明カードではなく disabled ボタンで表現する。 */}
                 <button

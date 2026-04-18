@@ -31,6 +31,25 @@
     letter-spacing: 0.02em;
 }
 
+.configurationDialogReactSettingsPanel__category {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.configurationDialogReactSettingsPanel__categoryTitle {
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.configurationDialogReactSettingsPanel__categoryDescription {
+    opacity: 0.72;
+    line-height: 1.35;
+    margin: 4px 0 8px 0;
+}
+
 .configurationDialogReactSettingsPanel__vrmSection {
     margin-top: 4px;
     border-top: 1px solid rgba(255, 255, 255, 0.12);

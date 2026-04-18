@@ -201,6 +201,49 @@ function HelpLabel({ text, help }: { text: string; help?: string }) {
     );
 }
 
+type SettingsCategorySectionProps = {
+    title: string;
+    description: string;
+    children: ReactNode;
+    defaultOpen?: boolean;
+};
+
+export function SettingsCategorySection({
+    title,
+    description,
+    children,
+    defaultOpen = true,
+}: SettingsCategorySectionProps) {
+    return (
+        <details open={defaultOpen} style={{ marginBottom: `${sectionSpacingPx}px` }}>
+            <summary
+                style={{
+                    cursor: "pointer",
+                    listStyle: "none",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "rgba(255,255,255,0.04)",
+                }}
+            >
+                <span style={{ fontWeight: 700, letterSpacing: "0.01em" }}>{title}</span>
+                <span style={{ opacity: 0.72, lineHeight: 1.35 }}>{description}</span>
+            </summary>
+            <div
+                style={{
+                    marginTop: `${detailsContentTopMarginPx}px`,
+                    padding: "0 4px 0 6px",
+                }}
+            >
+                {children}
+            </div>
+        </details>
+    );
+}
+
 type BasicSettingsSectionProps = {
     settings: SincroAppSettingsSnapshot;
     uiState: SincroAppSettingsUiState;
@@ -208,6 +251,7 @@ type BasicSettingsSectionProps = {
     onTalkModeChange: (talkMode: string) => void;
     showTitle?: boolean;
     showTalkMode?: boolean;
+    showSectionTitle?: boolean;
 };
 
 export function BasicSettingsSection({
@@ -217,6 +261,7 @@ export function BasicSettingsSection({
     onTalkModeChange,
     showTitle = true,
     showTalkMode = true,
+    showSectionTitle = false,
 }: BasicSettingsSectionProps) {
     if (!showTitle && !showTalkMode) {
         // variant 側で表示対象を完全に外した場合は空描画にする。
@@ -224,6 +269,7 @@ export function BasicSettingsSection({
     }
     return (
         <>
+            {showSectionTitle ? <HelpLabel text="会話設定" /> : null}
             {showTitle ? (
                 <div style={{ marginTop: `${detailsContentTopMarginPx}px`, marginBottom: `${sectionSpacingPx}px` }}>
                     <HelpLabel text="タイトル" help={settingHelp.titleText} />
@@ -267,6 +313,7 @@ type DeviceSettingsProps = SettingsApplyProps & {
     mediaDeviceSnapshot: SincroMediaDeviceSnapshot;
     audioInputSelection: SincroMediaDeviceSelectionState;
     onRefreshDevices: () => Promise<SincroMediaDeviceSnapshot>;
+    showSectionTitle?: boolean;
 };
 
 export function MicSettingsSection({
@@ -277,6 +324,7 @@ export function MicSettingsSection({
     audioInputSelection,
     onApplySettings,
     onRefreshDevices,
+    showSectionTitle = true,
 }: DeviceSettingsProps) {
     const [refreshMessage, setRefreshMessage] = useState<string>("");
 
@@ -302,7 +350,7 @@ export function MicSettingsSection({
                     marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
                 }}
             >
-                <HelpLabel text="マイク設定" />
+                {showSectionTitle ? <HelpLabel text="マイク設定" /> : <span style={{ opacity: 0.8, fontWeight: 700 }}>マイク入力</span>}
                 <button
                     type="button"
                     onClick={handleRefreshDevices}
@@ -398,10 +446,11 @@ export function CharacterSettingsSection({
     mediaDeviceSnapshot,
     videoInputSelection,
     onApplySettings,
+    showSectionTitle = true,
 }: CharacterSettingsSectionProps) {
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            <HelpLabel text="キャラクター設定" />
+            {showSectionTitle ? <HelpLabel text="キャラクター設定" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>キャラクターと視線</div>}
             <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
                 <HelpLabel text="視線用カメラ" help={settingHelp.videoInputDeviceId} />
                 <select
@@ -524,9 +573,14 @@ function normalizeSelectedDeviceId(value: string): string | null {
 type LookingGlassSettingsSectionProps = {
     settings: SincroAppSettingsSnapshot;
     onApplySettings: ApplySettingsFn;
+    showSectionTitle?: boolean;
 };
 
-export function LookingGlassSettingsSection({ settings, onApplySettings }: LookingGlassSettingsSectionProps) {
+export function LookingGlassSettingsSection({
+    settings,
+    onApplySettings,
+    showSectionTitle = true,
+}: LookingGlassSettingsSectionProps) {
     // 実機調整を速くするための簡易プリセット。最終的な値は個別調整で上書き可能。
     const presets: Array<{ label: string; values: Partial<SincroAppSettingsSnapshot> }> = [
         {
@@ -551,7 +605,7 @@ export function LookingGlassSettingsSection({ settings, onApplySettings }: Looki
     ];
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            <HelpLabel text="Looking Glass 設定" />
+            {showSectionTitle ? <HelpLabel text="Looking Glass 設定" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>Looking Glass 表示</div>}
             <div style={{ opacity: 0.6, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
                 これらの値は、次回の Looking Glass WebXR セッション開始時に適用されます。
             </div>
@@ -652,6 +706,7 @@ type StartupSettingsSectionProps = SettingsApplyProps & {
     startupStatus: SincroAppStartupSettingsStatus;
     startupCapabilities: SincroAppStartupSettingsCapabilities;
     hideIfNoSupported?: boolean;
+    showSectionTitle?: boolean;
 };
 
 export function StartupSettingsSection({
@@ -662,6 +717,7 @@ export function StartupSettingsSection({
     startupStatus,
     startupCapabilities,
     hideIfNoSupported = false,
+    showSectionTitle = true,
 }: StartupSettingsSectionProps) {
     const changedLabel = startupStatus.changedKeys.length > 0 ? ` 変更: ${startupStatus.changedKeys.join(", ")}` : "";
     const startupItems = [
@@ -700,7 +756,7 @@ export function StartupSettingsSection({
     }
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            <HelpLabel text="開始時の動作" />
+            {showSectionTitle ? <HelpLabel text="開始時の動作" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>ページ開始時の動作</div>}
             <div style={{ opacity: 0.6, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
                 {isRunning
                     ? "開始前に決まる動きです。いま変更した内容を反映したい時は、いったん停止してからもう一度始めてください。"
