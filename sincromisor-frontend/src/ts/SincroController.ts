@@ -35,6 +35,7 @@ export class SincroController {
         this.characterGazeController = new SincroCharacterGazeController(
             this.dialogManager,
             this.debugConsoleManager,
+            this.chatMessageManager,
         );
         this.rtcSessionController = new SincroRtcSessionController(
             this.debugConsoleManager,
@@ -46,10 +47,9 @@ export class SincroController {
     // アプリ制御の開始点。
     // UserMedia -> (audio)RTC / (video)CharacterGaze の分岐だけを担い、個別処理は各 controller へ委譲する。
     start(): void {
+        this.startCharacterGaze();
         this.audioInputController.start((audioTrack: MediaStreamTrack) => {
             this.startRTC(audioTrack);
-        }, (videoTrack: MediaStreamTrack) => {
-            this.startCharacterGaze(videoTrack);
         }, (audioTrack: MediaStreamTrack) => {
             this.rtcSessionController.replaceAudioTrack(audioTrack);
         });
@@ -66,8 +66,8 @@ export class SincroController {
     }
 
     // 顔認識を開始し、視線・AutoMute状態をデバッグUIとRTC mute制御へ反映する。
-    private startCharacterGaze(videoTrack: MediaStreamTrack): void {
-        this.characterGazeController.start(videoTrack, (mute) => {
+    private startCharacterGaze(): void {
+        this.characterGazeController.start((mute) => {
             this.rtcSessionController.setMute(mute);
         });
     }

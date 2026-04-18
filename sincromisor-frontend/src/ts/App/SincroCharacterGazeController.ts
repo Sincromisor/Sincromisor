@@ -1,5 +1,7 @@
 import { Detection } from "@mediapipe/tasks-vision";
 import { CharacterGaze } from "../CharacterGaze/CharacterGaze";
+import { VideoInputManager } from "../RTC/VideoInputManager";
+import { ChatMessageManager } from "../UI/ChatMessageManager";
 import { DialogManager } from "../UI/DialogManager";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 
@@ -8,73 +10,69 @@ import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 export class SincroCharacterGazeController {
     private readonly dialogManager: DialogManager;
     private readonly debugConsoleManager: DebugConsoleManager;
-    private videoTrack: MediaStreamTrack | null = null;
+    private readonly chatMessageManager: ChatMessageManager;
+    private readonly videoInputManager = new VideoInputManager();
     private onMuteChange: ((mute: boolean) => void) | null = null;
-    private visionInitRequested = false;
-    private cameraStartRequested = false;
-    private cameraStarted = false;
+    private visionInitPromise: Promise<void> | null = null;
+    private hasStarted = false;
+    private gazeSettingsSnapshot: DialogGazeSettingsSnapshot | null = null;
+    private pendingCameraRefreshToken = 0;
+    private cameraRefreshChain: Promise<void> = Promise.resolve();
 
-    constructor(dialogManager: DialogManager, debugConsoleManager: DebugConsoleManager) {
+    constructor(
+        dialogManager: DialogManager,
+        debugConsoleManager: DebugConsoleManager,
+        chatMessageManager: ChatMessageManager,
+    ) {
         this.dialogManager = dialogManager;
         this.debugConsoleManager = debugConsoleManager;
+        this.chatMessageManager = chatMessageManager;
         const characterGaze = CharacterGaze.getManager();
         this.debugConsoleManager.setCharacterGazeTrackingTuning(characterGaze.getTrackingTuning());
         this.debugConsoleManager.setCharacterGazeTrackingTuningChangeCallback((config) => {
             characterGaze.setTrackingTuning(config);
         });
-        // 起動後に Gaze 設定を OFF->ON した場合も、その場で開始できるように設定変更を監視する。
+        // Gaze ON/OFF と camera selector の両方に追従できるよう、設定変更は差分監視で扱う。
         this.dialogManager.subscribeSettingsChange(() => {
-            this.handleGazeSettingChanged();
+            this.applyDialogGazeSettings(false);
         });
     }
 
     // 顔認識を開始し、視線・AutoMute状態をデバッグUIとRTC mute制御へ反映する。
-    start(videoTrack: MediaStreamTrack, onMuteChange: (mute: boolean) => void): void {
-        this.videoTrack = videoTrack;
+    start(onMuteChange: (mute: boolean) => void): void {
         this.onMuteChange = onMuteChange;
+        this.hasStarted = true;
 
         const characterGaze = CharacterGaze.getManager();
         this.bindCharacterGazeCallbacks(characterGaze, onMuteChange);
-        this.handleGazeSettingChanged();
+        this.applyDialogGazeSettings(true);
     }
 
-    // Gaze 有効時のみ、MediaPipe の初期化とカメラ開始を1回だけ行う。
-    // 起動時 OFF でも videoTrack を保持しておき、設定変更で ON になった瞬間に開始できるようにする。
-    private ensureCharacterGazeStartedIfEnabled(): void {
-        if (!this.dialogManager.enableCharacterGaze()) {
-            return;
+    // Dialog 設定から Gaze runtime へ必要な差分だけを反映する。
+    private applyDialogGazeSettings(forceAll: boolean): void {
+        const next = this.readDialogGazeSettingsSnapshot();
+        const prev = this.gazeSettingsSnapshot;
+        const videoDeviceChanged = forceAll || !prev || prev.videoInputDeviceId !== next.videoInputDeviceId;
+        const gazeEnabledChanged = forceAll || !prev || prev.enableCharacterGaze !== next.enableCharacterGaze;
+
+        if (videoDeviceChanged) {
+            this.videoInputManager.setVideoInputDeviceId(next.videoInputDeviceId);
         }
-        if (!this.videoTrack || !this.onMuteChange) {
+        this.gazeSettingsSnapshot = next;
+
+        if (!this.hasStarted || !this.onMuteChange) {
             return;
         }
 
-        const characterGaze = CharacterGaze.getManager();
-        if (!this.visionInitRequested) {
-            this.visionInitRequested = true;
-            characterGaze.initVision();
-        }
-        this.bindCharacterGazeCallbacks(characterGaze, this.onMuteChange);
-        if (this.cameraStarted) {
-            // OFF で止めた後の ON は、カメラ再初期化ではなく検出ループ再開だけで良い。
-            characterGaze.resumePredictionLoop();
+        if (!next.enableCharacterGaze) {
+            if (gazeEnabledChanged || videoDeviceChanged) {
+                this.stopCharacterGazeCamera();
+            }
             return;
         }
-        this.ensureCameraStarted(characterGaze, this.videoTrack);
-    }
-
-    // Gaze ON/OFF 切り替え時の開始/停止をまとめて扱う。
-    // OFF 時は検出ループ自体を停止し、CPU/GPU負荷を下げる。
-    private handleGazeSettingChanged(): void {
-        const characterGaze = CharacterGaze.getManager();
-        if (!this.dialogManager.enableCharacterGaze()) {
-            characterGaze.stopPredictionLoop();
-            this.debugConsoleManager.setCharacterGazePaused(true);
-            const eyeTargetElement = document.querySelector("#eyeTarget");
-            eyeTargetElement?.setAttribute("fill", "hsl(300 100% 50% / 0%)");
-            return;
+        if (gazeEnabledChanged || videoDeviceChanged) {
+            this.scheduleCameraRefresh();
         }
-        this.debugConsoleManager.setCharacterGazePaused(false);
-        this.ensureCharacterGazeStartedIfEnabled();
     }
 
     // CharacterGaze の在席/離席 callback は 1 つしか持てないため、毎回上書きして最新設定を参照する。
@@ -94,56 +92,115 @@ export class SincroCharacterGazeController {
         };
     }
 
-    private ensureCameraStarted(characterGaze: CharacterGaze, videoTrack: MediaStreamTrack): void {
-        if (this.cameraStarted || this.cameraStartRequested) {
-            return;
-        }
-        this.cameraStartRequested = true;
+    private stopCharacterGazeCamera(): void {
+        const characterGaze = CharacterGaze.getManager();
+        characterGaze.detachCamera();
+        this.videoInputManager.releaseVideoTrack();
+        this.debugConsoleManager.setCharacterGazePaused(true);
+        this.debugConsoleManager.updateCharacterGazeTargetDebug("停止中");
+        const eyeTargetElement = document.querySelector("#eyeTarget");
+        eyeTargetElement?.setAttribute("fill", "hsl(300 100% 50% / 0%)");
+    }
 
-        // MediaPipe モデルの読み込み完了を待ってからカメラ処理を開始する。
-        const startEye = () => {
-            window.setTimeout(() => {
-                // FaceDetectorロード完了前のカメラ初期化を避けるため、ここで待機リトライする。
-                if (!characterGaze.modelIsLoaded()) {
-                    console.log("Face detector is still loading. wait 1000ms...");
-                    startEye();
+    private scheduleCameraRefresh(): void {
+        const refreshToken = ++this.pendingCameraRefreshToken;
+        this.cameraRefreshChain = this.cameraRefreshChain
+            .catch(() => {
+                // 直前の切替失敗で後続チェーンが止まらないようにする。
+            })
+            .then(async () => {
+                if (refreshToken !== this.pendingCameraRefreshToken) {
                     return;
                 }
+                await this.refreshCharacterGazeCamera(refreshToken);
+            });
+    }
 
-                console.log("start CharacterGaze");
-                // 既存 SVG オーバーレイ表示。React へ移しきるまでここで更新を閉じ込める。
-                const eyeTargetElement = document.querySelector("#eyeTarget");
-                characterGaze.initCamera(videoTrack, (detects: Detection[]) => {
-                    // 設定変更後も動作が追従するよう、毎フレーム時点の設定を参照する。
-                    const gazeEnabled = this.dialogManager.enableCharacterGaze();
-                    // ここが Gaze 状態の主更新点。DebugConsole購読経由で React 側にも値が流れる。
-                    if (gazeEnabled) {
-                        this.debugConsoleManager.updateFaceXLog(characterGaze.targetX());
-                        this.debugConsoleManager.updateFaceYLog(characterGaze.targetY());
-                        this.debugConsoleManager.updateFacing(characterGaze.facing());
-                        this.debugConsoleManager.updateCharacterGazeTargetDebug(characterGaze.targetSelectionDebugText());
-                    }
-                    if (!eyeTargetElement) {
-                        return;
-                    }
-                    if (gazeEnabled && detects.length > 0) {
-                        eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 50%)");
-                        eyeTargetElement.setAttribute("cx", `${characterGaze.targetX() * 100}%`);
-                        eyeTargetElement.setAttribute("cy", `${characterGaze.targetY() * 100}%`);
-                    } else {
-                        eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 0%)");
-                    }
-                }).then((started) => {
-                    this.cameraStarted = started;
-                    if (!started) {
-                        this.cameraStartRequested = false;
-                    }
-                }).catch((error) => {
-                    console.error("Failed to init CharacterGaze camera.", error);
-                    this.cameraStartRequested = false;
+    private async refreshCharacterGazeCamera(refreshToken: number): Promise<void> {
+        if (!this.dialogManager.enableCharacterGaze() || !this.onMuteChange) {
+            return;
+        }
+        const characterGaze = CharacterGaze.getManager();
+        this.bindCharacterGazeCallbacks(characterGaze, this.onMuteChange);
+        this.debugConsoleManager.setCharacterGazePaused(false);
+
+        try {
+            await this.ensureVisionInitialized(characterGaze);
+            const nextVideoTrack = await this.videoInputManager.reacquireVideoTrack();
+            if (refreshToken !== this.pendingCameraRefreshToken || !this.dialogManager.enableCharacterGaze()) {
+                nextVideoTrack.stop();
+                return;
+            }
+
+            console.log("start CharacterGaze");
+            const started = await characterGaze.initCamera(nextVideoTrack, (detects: Detection[]) => {
+                // 設定変更後も動作が追従するよう、毎フレーム時点の設定を参照する。
+                const gazeEnabled = this.dialogManager.enableCharacterGaze();
+                // ここが Gaze 状態の主更新点。DebugConsole購読経由で React 側にも値が流れる。
+                if (gazeEnabled) {
+                    this.debugConsoleManager.updateFaceXLog(characterGaze.targetX());
+                    this.debugConsoleManager.updateFaceYLog(characterGaze.targetY());
+                    this.debugConsoleManager.updateFacing(characterGaze.facing());
+                    this.debugConsoleManager.updateCharacterGazeTargetDebug(characterGaze.targetSelectionDebugText());
+                }
+                this.updateEyeTargetOverlay(characterGaze, gazeEnabled, detects);
+            });
+            if (!started) {
+                throw new Error("CharacterGaze camera initialization returned false.");
+            }
+        } catch (error) {
+            if (refreshToken !== this.pendingCameraRefreshToken) {
+                return;
+            }
+            console.error("Failed to init CharacterGaze camera.", error);
+            this.stopCharacterGazeCamera();
+            const detail = error instanceof Error ? error.message : String(error);
+            const selectedDeviceId = this.videoInputManager.getVideoInputDeviceId();
+            const deviceLabel = selectedDeviceId ? `deviceId=${selectedDeviceId}` : "既定デバイス";
+            this.chatMessageManager.writeErrorMessage(
+                `選択した視線検出用カメラへの切替に失敗しました。(${deviceLabel}) - ${detail}`,
+            );
+        }
+    }
+
+    private ensureVisionInitialized(characterGaze: CharacterGaze): Promise<void> {
+        if (characterGaze.modelIsLoaded()) {
+            return Promise.resolve();
+        }
+        if (!this.visionInitPromise) {
+            this.visionInitPromise = characterGaze.initVision()
+                .catch((error) => {
+                    this.visionInitPromise = null;
+                    throw error;
                 });
-            }, 1000);
+        }
+        return this.visionInitPromise;
+    }
+
+    private updateEyeTargetOverlay(characterGaze: CharacterGaze, gazeEnabled: boolean, detects: Detection[]): void {
+        // 既存 SVG オーバーレイ表示。React へ移しきるまでここで更新を閉じ込める。
+        const eyeTargetElement = document.querySelector("#eyeTarget");
+        if (!eyeTargetElement) {
+            return;
+        }
+        if (gazeEnabled && detects.length > 0) {
+            eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 50%)");
+            eyeTargetElement.setAttribute("cx", `${characterGaze.targetX() * 100}%`);
+            eyeTargetElement.setAttribute("cy", `${characterGaze.targetY() * 100}%`);
+            return;
+        }
+        eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 0%)");
+    }
+
+    private readDialogGazeSettingsSnapshot(): DialogGazeSettingsSnapshot {
+        return {
+            enableCharacterGaze: this.dialogManager.enableCharacterGaze(),
+            videoInputDeviceId: this.dialogManager.videoInputDeviceId(),
         };
-        startEye();
     }
 }
+
+type DialogGazeSettingsSnapshot = {
+    enableCharacterGaze: boolean;
+    videoInputDeviceId: string | null;
+};
