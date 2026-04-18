@@ -11,6 +11,8 @@ class SpeechRecognizerNemoProcessArgument(SincromisorArgumentParser):
     s3_access_key: str | None
     s3_secret_key: str | None
     voice_log_dir: str | None
+    proper_noun_enable: bool
+    proper_noun_dict_path: str | None
 
     @classmethod
     def set_args(cls, parser: ArgumentParser) -> None:
@@ -72,5 +74,21 @@ class SpeechRecognizerNemoProcessArgument(SincromisorArgumentParser):
             env_name="SINCRO_RECOGNIZER_VOICE_LOG_DIR",
             default=None,
             help="voice log directory path",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--proper-noun-enable",
+            env_name="SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE",
+            default=False,
+            help="Enable proper noun dictionary loading(default: false)",
+        )
+
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--proper-noun-dict-path",
+            env_name="SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH",
+            default=None,
+            help="Proper noun dictionary CSV path(default: None)",
         )
         return
