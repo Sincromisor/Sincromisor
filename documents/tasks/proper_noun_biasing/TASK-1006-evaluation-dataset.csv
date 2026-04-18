@@ -1,0 +1,11 @@
+case_id,category,input_text,expected_postprocess_only,expected_with_context_biasing,expected_with_nbest,expected_final_with_all_features,negative_guard,notes
+PN-001,unique_yomi_short,Sincromisorです,Sincromisorです,Sincromisorです,Sincromisorです,Sincromisorです,partialでは補正しない,固有名詞のみの短文
+PN-002,unique_yomi_sentence,しんくろみそーるが好きです,Sincromisorが好きです,Sincromisorが好きです,Sincromisorが好きです,Sincromisorが好きです,形態素境界をまたがない部分一致は補正しない,一意読み補正の代表例
+PN-003,ambiguous_hold,たぶんね,たぶんね,たぶんね,たぶんね,たぶんね,曖昧語を単純置換しない,曖昧語保留の最小例
+PN-004,ambiguous_context,タブンネはヒヤリングポケモンですたぶんね,タブンネはヒヤリングポケモンですたぶんね,タブンネはヒヤリングポケモンですタブンネ,タブンネはヒヤリングポケモンですタブンネ,タブンネはヒヤリングポケモンですタブンネ,保留語が一意解決できない場合は baseline を維持,文脈でポケモン名へ寄せたい例
+PN-005,common_sentence_negative,たぶんね明日は晴れるよ,たぶんね明日は晴れるよ,たぶんね明日は晴れるよ,たぶんね明日は晴れるよ,たぶんね明日は晴れるよ,false positive を出さない,一般会話の負例
+PN-006,partial_match_negative,しんくろみそーるっぽい,しんくろみそーるっぽい,しんくろみそーるっぽい,しんくろみそーるっぽい,しんくろみそーるっぽい,非境界の部分一致を補正しない,過補正の負例
+PN-007,homophone_mix,Sincromisorとたぶんねの話です,Sincromisorとたぶんねの話です,Sincromisorとたぶんねの話です,Sincromisorとたぶんねの話です,Sincromisorとたぶんねの話です,一意語だけ補正して曖昧語は保留,同音異義語混在文
+PN-008,non_dictionary_negative,今日はランチのあとで会議です,今日はランチのあとで会議です,今日はランチのあとで会議です,今日はランチのあとで会議です,今日はランチのあとで会議です,非辞書文無変化率の母集団に含める,固有名詞を含まない一般会話文
+PN-009,short_false_positive_guard,たぶんね。たぶんね。,たぶんね。たぶんね。,たぶんね。たぶんね。,たぶんね。たぶんね。,たぶんね。たぶんね。,短文反復で誤ってタブンネ化しない,誤って部分一致しやすい短文
+PN-010,task_example,タブンネはヒヤリングポケモンです。たぶんね。,タブンネはヒヤリングポケモンです。たぶんね。,タブンネはヒヤリングポケモンです。タブンネ。,タブンネはヒヤリングポケモンです。タブンネ。,タブンネはヒヤリングポケモンです。タブンネ。,句読点を挟んでも一般会話側を強制置換しないことを確認,TASK-1006 指定例
