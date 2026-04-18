@@ -42,6 +42,7 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
   - CSV 辞書は運用で用意しやすく、語彙追加の反復が容易
   - 確定時のみ処理を強化すれば、対話遅延への影響を抑えつつ精度向上を狙える
   - NeMo 側には context biasing と n-gram LM の受け口があり、段階的強化がしやすい
+  - 2026-04-18 のスパイクで、RNNT の `boosting_tree` は `alsd` では使えず、`malsd_batch` confirmed 再デコード前提で導入する方針が妥当と確認した
 - 制約条件:
   - `SpeechRecognizerResult` の msgpack 構造は極力維持する
   - partial の応答速度を大きく悪化させない
@@ -225,8 +226,10 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
   - フェーズ2:
     - confirmed の場合のみ context biasing 付きデコードを実行し、曖昧語の候補選定に利用する
     - key phrase は原則 `surface` を使う。`yomi` は後処理・曖昧性判定用であり、初期導入では biasing 入力に使わない
+    - NeMo の `boosting_tree` は `strategy='malsd_batch'` での confirmed 専用再デコードとして導入する。現行既定の `alsd` へ直接注入しない
   - フェーズ3:
     - confirmed の場合のみ N-best を取得し、辞書一致度 + モデルスコア + 周辺文脈で再ランキングする
+    - N-best は `beam.return_best_hypothesis=False` で取得し、raw hypothesis は `list[Hypothesis]` として保持する
 - 異常系フロー:
   - 辞書未ロード -> 補正スキップ
   - 補正結果が低信頼 -> 元の 1-best を維持
