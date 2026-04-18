@@ -25,6 +25,13 @@ class ProperNounContextBiasingConfig:
     boosting_tree_alpha: float = 1.0
 
 
+@dataclass(frozen=True)
+class ProperNounNbestRerankingConfig:
+    enabled: bool
+    beam_size: int
+    strategy: str = "alsd"
+
+
 class SpeechRecognizerNemoWorker:
     def __init__(
         self,
@@ -33,6 +40,8 @@ class SpeechRecognizerNemoWorker:
         proper_noun_dict_path: str | None = None,
         proper_noun_context_biasing_enable: bool = False,
         proper_noun_context_biasing_beam_size: int = 4,
+        proper_noun_nbest_enable: bool = False,
+        proper_noun_nbest_beam_size: int = 4,
     ):
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.s2t: SpeechRecognizerNemo = SpeechRecognizerNemo()
@@ -48,6 +57,10 @@ class SpeechRecognizerNemoWorker:
             enabled=proper_noun_context_biasing_enable,
             beam_size=max(1, int(proper_noun_context_biasing_beam_size)),
         )
+        self.nbest_reranking_config = ProperNounNbestRerankingConfig(
+            enabled=proper_noun_nbest_enable,
+            beam_size=max(1, int(proper_noun_nbest_beam_size)),
+        )
         if proper_noun_enable and not self.post_processor.enabled:
             self.logger.warning(
                 "Proper noun post processor is disabled because tokenizer is unavailable.",
@@ -58,6 +71,10 @@ class SpeechRecognizerNemoWorker:
         ):
             self.logger.warning(
                 "Proper noun context biasing is enabled but dictionary is unavailable.",
+            )
+        if self.nbest_reranking_config.enabled and not self.proper_noun_dictionary.entries:
+            self.logger.warning(
+                "Proper noun N-best reranking is enabled but dictionary is unavailable.",
             )
         self.logger.info("SpeechRecognizerWorker is initialized.")
 
@@ -163,6 +180,21 @@ class SpeechRecognizerNemoWorker:
             else:
                 correction_trace["decision_reason"] = biasing_trace["decision_reason"]
 
+        nbest_trace = self.__apply_confirmed_nbest_reranking(
+            voice=voice,
+            post_process_result=post_process_result,
+            current_result=tuple(sr_result.result),
+            current_decode_path=correction_trace["decode_path"],
+        )
+        if nbest_trace is not None:
+            correction_trace["nbest_reranking"] = nbest_trace
+            if nbest_trace["adopted"]:
+                sr_result.result = list(nbest_trace["selected_result"])
+                correction_trace["decode_path"] = "nbest_rerank"
+                correction_trace["decision_reason"] = nbest_trace["decision_reason"]
+            else:
+                correction_trace["decision_reason"] = nbest_trace["decision_reason"]
+
         self.logger.info({"proper_noun_postprocess": correction_trace})
         return correction_trace
 
@@ -214,6 +246,11 @@ class SpeechRecognizerNemoWorker:
                 for deferred_match in post_process_result.deferred_matches
             ],
             "decode_path": "baseline_with_unique_yomi_postprocess",
+            "decision_reason": (
+                "unique_yomi_postprocess_applied"
+                if post_process_result.changed
+                else "kept_baseline_after_unique_yomi_postprocess"
+            ),
         }
 
     def __apply_confirmed_context_biasing(
@@ -298,6 +335,226 @@ class SpeechRecognizerNemoWorker:
             "decision_reason": decision_reason,
         }
 
+    def __apply_confirmed_nbest_reranking(
+        self,
+        *,
+        voice: np.ndarray,
+        post_process_result: Any,
+        current_result: tuple[tuple[str, float], ...],
+        current_decode_path: str,
+    ) -> dict[str, Any] | None:
+        if not self.nbest_reranking_config.enabled:
+            return None
+        if not self.proper_noun_dictionary.entries:
+            return {
+                "enabled": True,
+                "adopted": False,
+                "decision_reason": "dictionary_unavailable",
+            }
+        if not post_process_result.deferred_matches:
+            return {
+                "enabled": True,
+                "strategy": self.nbest_reranking_config.strategy,
+                "beam_size": self.nbest_reranking_config.beam_size,
+                "adopted": False,
+                "decision_reason": "no_deferred_candidates_for_nbest_reranking",
+            }
+        if current_decode_path == "context_biasing":
+            return {
+                "enabled": True,
+                "strategy": self.nbest_reranking_config.strategy,
+                "beam_size": self.nbest_reranking_config.beam_size,
+                "adopted": False,
+                "decision_reason": "context_biasing_already_adopted",
+            }
+
+        start_t = perf_counter()
+        try:
+            nbest_result = self.s2t.transcribe_candidates(
+                voice,
+                strategy=self.nbest_reranking_config.strategy,
+                beam_size=self.nbest_reranking_config.beam_size,
+            )
+        except Exception as exc:
+            self.logger.warning("Proper noun N-best reranking failed: %r", exc)
+            return {
+                "enabled": True,
+                "strategy": self.nbest_reranking_config.strategy,
+                "beam_size": self.nbest_reranking_config.beam_size,
+                "adopted": False,
+                "decision_reason": "nbest_decode_failed",
+                "error": repr(exc),
+            }
+
+        candidate_traces = self.__score_nbest_candidates(
+            nbest_result=tuple(nbest_result),
+            post_process_result=post_process_result,
+        )
+        raw_baseline_candidate = self.__build_candidate_trace(
+            candidate_result=post_process_result.raw_result,
+            raw_text=post_process_result.raw_text,
+            post_process_result=post_process_result,
+        )
+        current_baseline_candidate = self.__build_candidate_trace(
+            candidate_result=current_result,
+            raw_text=self.__result_text(current_result),
+            post_process_result=post_process_result,
+        )
+        selected_candidate = (
+            max(candidate_traces, key=lambda candidate: candidate["total_score"])
+            if candidate_traces
+            else None
+        )
+
+        adopted = (
+            selected_candidate is not None
+            and selected_candidate["deferred_resolved_count"] > 0
+            and selected_candidate["corrected_text"]
+            != current_baseline_candidate["corrected_text"]
+            and selected_candidate["total_score"]
+            > current_baseline_candidate["total_score"]
+        )
+        selected_result = (
+            selected_candidate["selected_result"]
+            if adopted and selected_candidate is not None
+            else list(current_result)
+        )
+        decision_reason = (
+            "resolved_deferred_candidates_from_nbest_reranking"
+            if adopted
+            else "kept_baseline_after_nbest_reranking"
+        )
+        if not candidate_traces:
+            decision_reason = "nbest_candidates_empty"
+        elif (
+            selected_candidate is not None
+            and selected_candidate["deferred_resolved_count"] <= 0
+        ):
+            decision_reason = "nbest_reranking_did_not_resolve_deferred_candidates"
+        elif (
+            selected_candidate is not None
+            and selected_candidate["corrected_text"]
+            == current_baseline_candidate["corrected_text"]
+        ):
+            decision_reason = "nbest_reranking_matched_baseline_text"
+
+        return {
+            "enabled": True,
+            "strategy": self.nbest_reranking_config.strategy,
+            "beam_size": self.nbest_reranking_config.beam_size,
+            "score_note": (
+                "model_score is NeMo beam search score; larger is better, but it is not a probability"
+            ),
+            "elapsed_seconds": perf_counter() - start_t,
+            "raw_baseline_candidate": raw_baseline_candidate,
+            "current_baseline_candidate": current_baseline_candidate,
+            "ranked_candidates": candidate_traces,
+            "selected_candidate": selected_candidate,
+            "adopted": adopted,
+            "selected_text": self.__result_text(tuple(selected_result)),
+            "selected_result": selected_result,
+            "decision_reason": decision_reason,
+        }
+
+    def __score_nbest_candidates(
+        self,
+        *,
+        nbest_result: tuple[tuple[str, float], ...],
+        post_process_result: Any,
+    ) -> list[dict[str, Any]]:
+        candidate_traces: list[dict[str, Any]] = []
+        for rank, (candidate_text, model_score) in enumerate(nbest_result, start=1):
+            if candidate_text == "</s>":
+                continue
+
+            # 候補ごとに一度 post process を通し、曖昧語以外の補正条件は baseline と揃える。
+            candidate_post_process = self.post_processor.apply([(candidate_text, model_score)])
+            resolved_candidates = self.__resolve_deferred_candidates(
+                biasing_text=candidate_post_process.corrected_text,
+                post_process_result=post_process_result,
+            )
+            priority_score = sum(
+                resolved_candidate["priority"] for resolved_candidate in resolved_candidates
+            )
+            context_score = sum(
+                resolved_candidate["context_score"]
+                for resolved_candidate in resolved_candidates
+            )
+            dictionary_match_count = len(candidate_post_process.matches)
+
+            # 固有名詞解決を最優先にしつつ、僅差のときだけ model score と rank で整列する。
+            total_score = (
+                float(len(resolved_candidates) * 1000)
+                + float(priority_score * 10)
+                + float(context_score * 2)
+                + float(dictionary_match_count)
+                + float((self.nbest_reranking_config.beam_size - rank + 1) * 0.1)
+                + float(model_score * 0.01)
+            )
+            candidate_traces.append(
+                {
+                    "rank": rank,
+                    "raw_text": candidate_text,
+                    "corrected_text": candidate_post_process.corrected_text,
+                    "model_score": model_score,
+                    "dictionary_match_count": dictionary_match_count,
+                    "deferred_resolved_count": len(resolved_candidates),
+                    "priority_score": priority_score,
+                    "context_score": context_score,
+                    "total_score": total_score,
+                    "resolved_candidates": resolved_candidates,
+                    "selected_result": list(candidate_post_process.corrected_result),
+                }
+            )
+
+        candidate_traces.sort(key=lambda candidate: candidate["total_score"], reverse=True)
+        for rank, candidate_trace in enumerate(candidate_traces, start=1):
+            candidate_trace["rerank_position"] = rank
+        return candidate_traces
+
+    def __build_candidate_trace(
+        self,
+        *,
+        candidate_result: tuple[tuple[str, float], ...],
+        raw_text: str,
+        post_process_result: Any,
+    ) -> dict[str, Any]:
+        baseline_text = self.__result_text(candidate_result)
+        baseline_score = self.__primary_score(candidate_result)
+        resolved_candidates = self.__resolve_deferred_candidates(
+            biasing_text=baseline_text,
+            post_process_result=post_process_result,
+        )
+        return {
+            "raw_text": raw_text,
+            "corrected_text": baseline_text,
+            "model_score": baseline_score,
+            "dictionary_match_count": len(post_process_result.matches),
+            "deferred_resolved_count": len(resolved_candidates),
+            "priority_score": sum(
+                resolved_candidate["priority"] for resolved_candidate in resolved_candidates
+            ),
+            "context_score": sum(
+                resolved_candidate["context_score"] for resolved_candidate in resolved_candidates
+            ),
+            "total_score": float(len(resolved_candidates) * 1000)
+            + float(
+                sum(resolved_candidate["priority"] for resolved_candidate in resolved_candidates)
+                * 10
+            )
+            + float(
+                sum(
+                    resolved_candidate["context_score"]
+                    for resolved_candidate in resolved_candidates
+                )
+                * 2
+            )
+            + float(len(post_process_result.matches))
+            + float(baseline_score * 0.01),
+            "resolved_candidates": resolved_candidates,
+            "selected_result": list(candidate_result),
+        }
+
     def __resolve_deferred_candidates(
         self,
         *,
@@ -314,13 +571,23 @@ class SpeechRecognizerNemoWorker:
             if len(matched_candidates) != 1:
                 continue
             candidate = matched_candidates[0]
+            context_score = sum(
+                1
+                for surface in (
+                    *deferred_match.context_hint.left_surfaces,
+                    *deferred_match.context_hint.right_surfaces,
+                )
+                if surface and surface in biasing_text
+            )
             resolved_candidates.append(
                 {
                     "normalized_yomi": deferred_match.normalized_yomi,
                     "surface": candidate.surface,
+                    "priority": candidate.priority,
                     "reason": deferred_match.reason,
                     "start_index": deferred_match.start_index,
                     "end_index": deferred_match.end_index,
+                    "context_score": context_score,
                 }
             )
         return resolved_candidates
@@ -328,6 +595,13 @@ class SpeechRecognizerNemoWorker:
     @staticmethod
     def __result_text(result: tuple[tuple[str, float], ...]) -> str:
         return "".join(text for text, _score in result if text != "</s>")
+
+    @staticmethod
+    def __primary_score(result: tuple[tuple[str, float], ...]) -> float:
+        for text, score in result:
+            if text != "</s>":
+                return float(score)
+        return 0.0
 
     def __export_result(
         self,

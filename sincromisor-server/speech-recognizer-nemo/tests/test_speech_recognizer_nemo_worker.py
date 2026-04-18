@@ -16,6 +16,7 @@ from speech_recognizer_nemo.SpeechRecognizerNemo import (
 class FakeSpeechRecognizerNemo:
     def __init__(self) -> None:
         self.last_candidates_kwargs: dict[str, object] | None = None
+        self.last_nbest_kwargs: dict[str, object] | None = None
 
     def transcribe_with_score(self, _voice: np.ndarray) -> list[tuple[str, float]]:
         return [("しんくろみそーる", 0.5), ("です", 1.0), ("</s>", 1.0)]
@@ -30,14 +31,23 @@ class FakeSpeechRecognizerNemo:
         boosting_tree_alpha: float = 0.0,
         allow_cuda_graphs: bool | None = None,
     ) -> list[tuple[str, float]]:
-        self.last_candidates_kwargs = {
+        kwargs = {
             "strategy": strategy,
             "beam_size": beam_size,
             "boosting_phrases": boosting_phrases,
             "boosting_tree_alpha": boosting_tree_alpha,
             "allow_cuda_graphs": allow_cuda_graphs,
         }
-        return [("タブンネです", 0.8), ("</s>", 1.0)]
+        if boosting_phrases:
+            self.last_candidates_kwargs = kwargs
+            return [("タブンネです", 0.8), ("</s>", 1.0)]
+
+        self.last_nbest_kwargs = kwargs
+        return [
+            ("たぶんねです", 0.95),
+            ("タブンネです", 0.7),
+            ("多分ねです", 0.6),
+        ]
 
 
 class FakePostProcessorResult:
@@ -61,10 +71,10 @@ class FakePostProcessor:
 
 
 class FakeCandidate:
-    def __init__(self, surface: str) -> None:
+    def __init__(self, surface: str, priority: int = 100) -> None:
         self.surface = surface
         self.normalized_yomi = "たぶんね"
-        self.priority = 100
+        self.priority = priority
         self.category = "pokemon"
         self.source_line = 2
         self.ambiguous = True
@@ -80,7 +90,7 @@ class FakeDeferredMatch:
     start_index = 3
     end_index = 5
     reason = "multiple_candidates_for_same_yomi"
-    candidates = (FakeCandidate("タブンネ"), FakeCandidate("たぶんね"))
+    candidates = (FakeCandidate("タブンネ", priority=100), FakeCandidate("たぶんね", priority=10))
     context_hint = FakeContextHint()
 
 
@@ -93,6 +103,18 @@ class FakeDeferredPostProcessorResult(FakePostProcessorResult):
 
 class FakeDeferredPostProcessor(FakePostProcessor):
     def apply(self, _result: list[tuple[str, float]]) -> FakeDeferredPostProcessorResult:
+        return FakeDeferredPostProcessorResult()
+
+
+class FakeRerankAwareDeferredPostProcessor(FakePostProcessor):
+    def apply(
+        self, result: list[tuple[str, float]]
+    ) -> FakeDeferredPostProcessorResult | FakePostProcessorResult:
+        candidate_text = "".join(text for text, _score in result if text != "</s>")
+        if candidate_text == "タブンネです":
+            return FakePostProcessorResult("タブンネです", changed=False)
+        if candidate_text == "多分ねです":
+            return FakePostProcessorResult("多分ねです", changed=False)
         return FakeDeferredPostProcessorResult()
 
 
@@ -249,5 +271,62 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
         self.assertTrue(correction_trace["context_biasing"]["adopted"])
         self.assertEqual(
             correction_trace["context_biasing"]["resolved_candidates"][0]["surface"],
+            "タブンネ",
+        )
+
+    def test_recognize_uses_nbest_reranking_for_confirmed_ambiguous_candidates(self) -> None:
+        fake_nemo = FakeSpeechRecognizerNemo()
+        with patch(
+            "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
+            return_value=fake_nemo,
+        ):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                worker = SpeechRecognizerNemoWorker(
+                    voice_log_dir=temp_dir,
+                    proper_noun_enable=False,
+                    proper_noun_dict_path=None,
+                    proper_noun_nbest_enable=True,
+                    proper_noun_nbest_beam_size=3,
+                )
+                worker.proper_noun_dictionary = (
+                    ProperNounDictionary.load_from_csv(self.fixture_path)
+                )
+                worker.post_processor = FakeRerankAwareDeferredPostProcessor()
+
+                confirmed_result = worker.recognize(
+                    SpeechExtractorResult(
+                        session_id="session",
+                        speech_id=2,
+                        sequence_id=1,
+                        start_at=1.0,
+                        confirmed=True,
+                        voice=np.zeros(8, dtype=np.int16),
+                    ),
+                    s3_client=None,
+                )
+
+                trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
+                self.assertEqual(len(trace_files), 1)
+                correction_trace = json.loads(trace_files[0].read_text(encoding="utf-8"))
+
+        self.assertEqual(confirmed_result.result_text(), "タブンネです")
+        self.assertEqual(fake_nemo.last_nbest_kwargs["strategy"], "alsd")
+        self.assertEqual(fake_nemo.last_nbest_kwargs["beam_size"], 3)
+        self.assertEqual(correction_trace["decode_path"], "nbest_rerank")
+        self.assertEqual(
+            correction_trace["decision_reason"],
+            "resolved_deferred_candidates_from_nbest_reranking",
+        )
+        self.assertTrue(correction_trace["nbest_reranking"]["adopted"])
+        self.assertEqual(
+            correction_trace["nbest_reranking"]["raw_baseline_candidate"]["corrected_text"],
+            "しんくろみそーるです",
+        )
+        self.assertEqual(
+            correction_trace["nbest_reranking"]["selected_candidate"]["corrected_text"],
+            "タブンネです",
+        )
+        self.assertEqual(
+            correction_trace["nbest_reranking"]["ranked_candidates"][0]["resolved_candidates"][0]["surface"],
             "タブンネ",
         )
