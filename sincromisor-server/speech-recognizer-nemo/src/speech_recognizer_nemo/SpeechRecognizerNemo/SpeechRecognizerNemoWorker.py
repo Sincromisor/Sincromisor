@@ -1,14 +1,17 @@
+import json
 import logging
 import shutil
 from datetime import datetime
 from logging import Logger
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 
 import numpy as np
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 
 from .ProperNounDictionary import ProperNounDictionary
+from .RecognizerPostProcessor import RecognizerPostProcessor
 from .SpeechRecognizerNemo import SpeechRecognizerNemo
 from .SpeechRecognizerS3Client import SpeechRecognizerS3Client
 
@@ -29,6 +32,11 @@ class SpeechRecognizerNemoWorker:
                 proper_noun_dict_path=proper_noun_dict_path,
             )
         )
+        self.post_processor = RecognizerPostProcessor(self.proper_noun_dictionary)
+        if proper_noun_enable and not self.post_processor.enabled:
+            self.logger.warning(
+                "Proper noun post processor is disabled because tokenizer is unavailable.",
+            )
         self.logger.info("SpeechRecognizerWorker is initialized.")
 
     def recognize(
@@ -37,14 +45,18 @@ class SpeechRecognizerNemoWorker:
         s3_client: SpeechRecognizerS3Client | None,
     ) -> SpeechRecognizerResult:
         start_t = perf_counter()
-        result = self.__transcribe_with_score(spe_result.voice)
+        raw_result = self.__transcribe_with_score(spe_result.voice)
         sr_result = SpeechRecognizerResult(
             session_id=spe_result.session_id,
             speech_id=spe_result.speech_id,
             sequence_id=spe_result.sequence_id,
             start_at=spe_result.start_at,
             confirmed=spe_result.confirmed,
-            result=result,
+            result=raw_result,
+        )
+        correction_trace = self.__apply_proper_noun_postprocess(
+            sr_result=sr_result,
+            confirmed=spe_result.confirmed,
         )
         self.logger.info(
             {
@@ -54,7 +66,7 @@ class SpeechRecognizerNemoWorker:
             }
         )
         if spe_result.confirmed and self.voice_log_dir:
-            self.__export_result(sr_result)
+            self.__export_result(sr_result, correction_trace=correction_trace)
             self.__export_voice(spe_result)
         if spe_result.confirmed and s3_client is not None:
             s3_client.export_result_to_s3(sr_result)
@@ -92,7 +104,54 @@ class SpeechRecognizerNemoWorker:
             )
             return ProperNounDictionary.empty()
 
-    def __export_result(self, result: SpeechRecognizerResult) -> Path | None:
+    def __apply_proper_noun_postprocess(
+        self,
+        *,
+        sr_result: SpeechRecognizerResult,
+        confirmed: bool,
+    ) -> dict[str, Any] | None:
+        if not confirmed or not self.post_processor.enabled:
+            return None
+
+        try:
+            post_process_result = self.post_processor.apply(sr_result.result)
+        except Exception as exc:
+            self.logger.warning(
+                "Proper noun post process failed: %r",
+                exc,
+            )
+            return None
+
+        correction_trace = {
+            "raw_text": post_process_result.raw_text,
+            "corrected_text": post_process_result.corrected_text,
+            "raw_result": list(post_process_result.raw_result),
+            "corrected_result": list(post_process_result.corrected_result),
+            "match_count": len(post_process_result.matches),
+            "matched_entries": [
+                {
+                    "surface_before": match.surface_before,
+                    "surface_after": match.surface_after,
+                    "normalized_yomi": match.normalized_yomi,
+                    "start_index": match.start_index,
+                    "end_index": match.end_index,
+                    "source_line": match.source_line,
+                }
+                for match in post_process_result.matches
+            ],
+            "deferred_yomi": list(post_process_result.deferred_yomi),
+            "decode_path": "baseline_with_unique_yomi_postprocess",
+        }
+        self.logger.info({"proper_noun_postprocess": correction_trace})
+        if post_process_result.changed:
+            sr_result.result = list(post_process_result.corrected_result)
+        return correction_trace
+
+    def __export_result(
+        self,
+        result: SpeechRecognizerResult,
+        correction_trace: dict[str, Any] | None = None,
+    ) -> Path | None:
         if self.voice_log_dir is None:
             return None
         time_text: str = datetime.fromtimestamp(result.start_at).strftime(
@@ -102,9 +161,14 @@ class SpeechRecognizerNemoWorker:
         write_dir.mkdir(parents=True, exist_ok=True)
         write_path: Path = Path(write_dir, f"{result.speech_id:06d}_{time_text}.json")
         with open(write_path, "w", encoding="utf-8") as text:
-            json = result.to_json(dumps_opt={"indent": 4})
-            text.write(json)
+            result_json = result.to_json(dumps_opt={"indent": 4})
+            text.write(result_json)
         self.logger.info(f"Wrote: {write_path}")
+        if correction_trace is not None:
+            trace_path = write_path.with_suffix(".trace.json")
+            with open(trace_path, "w", encoding="utf-8") as text:
+                text.write(json.dumps(correction_trace, ensure_ascii=False, indent=4))
+            self.logger.info(f"Wrote: {trace_path}")
         return write_path
 
     def __export_voice(self, result: SpeechExtractorResult) -> Path | None:

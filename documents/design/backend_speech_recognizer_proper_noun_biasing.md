@@ -6,7 +6,7 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
 
 - ドキュメントパス: `documents/design/backend_speech_recognizer_proper_noun_biasing.md`
 - 作成日: 2026-04-12
-- 最終更新日: 2026-04-12
+- 最終更新日: 2026-04-18
 - ステータス: Draft
 
 ## 2. 目的とスコープ
@@ -120,6 +120,7 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
 - 外部依存:
   - `sudachipy` または既存かな変換手段
   - NeMo の `boosting_tree` / `ngram_lm_model` 機能
+  - フェーズ1実装では `sudachipy` + `sudachidict-full` を採用し、`SplitMode.C` の形態素列と `reading_form()` を読み生成の基準とする
 - 全体図（必要なら図リンク）:
   - partial: Extractor -> Nemo 1-best -> 下流送信
   - confirmed: Extractor -> Nemo 1-best -> 読み一致補正 -> 必要時追加デコード -> 下流送信
@@ -139,6 +140,7 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
     - 句読点・記号のみの要素をまたぐ置換や、任意部分文字列への置換は行わない
     - 初期段階では、読みが一意な語のみを自動置換対象とする
     - 補正前後テキスト、補正後 result、ヒット語一覧、補正件数を返す
+    - 読み生成は `sudachipy.Dictionary(dict="full").create()` を使い、未知語や読みに失敗した形態素は `surface` をそのまま正規化へ回す
   - `AmbiguityResolver`
     - 同一 `yomi` に複数候補がある語を検出する
     - 例: `たぶんね -> タブンネ / たぶんね`
@@ -368,6 +370,7 @@ Sincromisor の Speech Recognizer に対して、ファインチューニング�
 | 日付 | 変更内容 |
 | --- | --- |
 | 2026-04-12 | 初版作成 |
+| 2026-04-18 | TASK-1002 向けに読み生成方式として `sudachipy` + `sudachidict-full` を採用し、confirmed 時の一意読み補正方針を具体化 |
 
 ## 15. 参照資料
 
