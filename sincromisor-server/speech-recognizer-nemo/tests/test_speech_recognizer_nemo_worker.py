@@ -330,3 +330,48 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             correction_trace["nbest_reranking"]["ranked_candidates"][0]["resolved_candidates"][0]["surface"],
             "タブンネ",
         )
+
+    def test_recognize_skips_nbest_when_context_biasing_was_adopted(self) -> None:
+        fake_nemo = FakeSpeechRecognizerNemo()
+        with patch(
+            "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
+            return_value=fake_nemo,
+        ):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                worker = SpeechRecognizerNemoWorker(
+                    voice_log_dir=temp_dir,
+                    proper_noun_enable=False,
+                    proper_noun_dict_path=None,
+                    proper_noun_context_biasing_enable=True,
+                    proper_noun_context_biasing_beam_size=5,
+                    proper_noun_nbest_enable=True,
+                    proper_noun_nbest_beam_size=3,
+                )
+                worker.proper_noun_dictionary = (
+                    ProperNounDictionary.load_from_csv(self.fixture_path)
+                )
+                worker.post_processor = FakeDeferredPostProcessor()
+
+                confirmed_result = worker.recognize(
+                    SpeechExtractorResult(
+                        session_id="session",
+                        speech_id=3,
+                        sequence_id=1,
+                        start_at=1.0,
+                        confirmed=True,
+                        voice=np.zeros(8, dtype=np.int16),
+                    ),
+                    s3_client=None,
+                )
+
+                trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
+                self.assertEqual(len(trace_files), 1)
+                correction_trace = json.loads(trace_files[0].read_text(encoding="utf-8"))
+
+        self.assertEqual(confirmed_result.result_text(), "タブンネです")
+        self.assertIsNone(fake_nemo.last_nbest_kwargs)
+        self.assertEqual(correction_trace["decode_path"], "context_biasing")
+        self.assertEqual(
+            correction_trace["nbest_reranking"]["decision_reason"],
+            "context_biasing_already_adopted",
+        )
