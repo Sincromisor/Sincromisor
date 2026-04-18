@@ -4,7 +4,6 @@
 
 ## Open
 
-- `TASK-1001`: 辞書ロード基盤と設定追加
 - `TASK-1002`: confirmed 時の一意読み辞書補正
 - `TASK-1003`: 曖昧語保留と文脈解決の土台
 - `TASK-1004`: context biasing の導入
@@ -14,6 +13,7 @@
 ## Done
 
 - `TASK-1000`: NeMo biasing / N-best 実現性スパイク
+- `TASK-1001`: 辞書ロード基盤と設定追加
 
 ## Related Design
 
