@@ -184,7 +184,7 @@ export class CharacterGaze {
     // 既存の video#characterGazeVideo にトラックを接続し、検出ループを開始する。
     // callback は Debug/React 向けの可視化と eyeTarget 表示更新に使われる。
     async initCamera(videoTrack: MediaStreamTrack, callback: (detection: Detection[]) => void): Promise<boolean> {
-        if (!this.hasGetUserMedia) {
+        if (!this.hasGetUserMedia()) {
             console.error("This browser does not support getUserMedia.");
             return false;
         }
@@ -208,8 +208,23 @@ export class CharacterGaze {
             this.videoElement.addEventListener("loadeddata", this.loadedDataHandlerBound);
         }
         // 既にvideoがロード済みの状態で再開するケース（OFF->ON）にも対応する。
+        this.lastVideoTime = -1;
+        this.lastDetectedTime = -1;
         this.startPredictionLoopIfNeeded();
         return true;
+    }
+
+    // CharacterGaze を完全停止し、preview video と内部状態を初期化する。
+    // OFF 時やカメラ切替途中に呼び、次回の再取得を安全にする。
+    detachCamera(): void {
+        this.stopPredictionLoop();
+        this.detectionCallback = null;
+        this.detected = false;
+        this.lastVideoTime = -1;
+        this.lastDetectedTime = -1;
+        this.updateKeypointsMovingAverageToNeutral();
+        this.videoElement.pause();
+        this.videoElement.srcObject = null;
     }
 
     // Gaze OFF 時に顔検出ループだけを止める。video track 自体は他用途でも使うため停止しない。

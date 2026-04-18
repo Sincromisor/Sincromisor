@@ -45,18 +45,17 @@ export class SincroAudioInputController {
     // React移行中でも getUserMedia / VAD 実装はこの controller に集約しておく。
     start(
         onAudioTrack: (audioTrack: MediaStreamTrack) => void,
-        onVideoTrack: (videoTrack: MediaStreamTrack) => void,
         onAudioTrackReplaced: (audioTrack: MediaStreamTrack) => void,
     ): void {
         this.onAudioTrackReplaced = onAudioTrackReplaced;
         this.hasStarted = true;
-        if (!this.dialogManager.enableCharacterGaze()) {
-            this.userMediaManager.disableVideo();
-        }
+        // CharacterGaze 用カメラは専用 manager で取得する。
+        // 音声入力の初回 getUserMedia では常に video を無効化し、不要な二重取得を避ける。
+        this.userMediaManager.disableVideo();
 
         this.userMediaManager.getUserMedia(
             onAudioTrack,
-            onVideoTrack,
+            () => { },
             (err) => {
                 this.chatMessageManager.writeErrorMessage(`カメラまたはマイクが見つかりませんでした。 - ${err}`);
             },
