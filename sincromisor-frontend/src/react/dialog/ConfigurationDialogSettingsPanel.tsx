@@ -38,7 +38,7 @@ export function ConfigurationDialogSettingsPanel() {
                 <div className="configurationDialogReactSettingsPanel__title">起動前設定</div>
             </div>
             <div className="configurationDialogReactSettingsPanel__hintText">
-                デバイスや基本設定の変更はここか設定パネルが正式な導線です。Debug Console は診断とプレビュー確認に使います。
+                はじめる前に、使うマイクやカメラ、基本の動きをここで決められます。接続確認や詳しい診断が必要な時だけ、開発者向け診断画面を使います。
             </div>
             <DialogBasicSettingsSection
                 settings={settings}

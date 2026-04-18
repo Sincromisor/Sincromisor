@@ -80,7 +80,7 @@ export function SimpleVrmControlPanel({
                 <span style={{ opacity: 0.8 }}>{hasActiveController ? "接続済み" : "待機中"}</span>
             </div>
             <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px`, opacity: 0.75, lineHeight: 1.35 }}>
-                設定変更はこちらが正式な導線です。Debug Console は WebRTC / Audio / Gaze の診断とプレビュー確認に使います。
+                音声・カメラ・キャラクターの動きはここで調整できます。接続確認や詳しい診断が必要な時だけ、開発者向け診断画面を開いてください。
             </div>
 
             <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>

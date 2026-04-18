@@ -35,33 +35,33 @@ const rowGapPx = settingsTuning.rowGapPx;
 const settingHelp = {
     titleText: "会話UIなどに表示されるタイトル文字列です。配信名・キャラクター名を表示したいときに設定します。",
     talkMode:
-        "応答モードを切り替えます。通常の会話用途では chat、同期的なやり取りや Sincromisor 想定フローでは sincro を使う想定です。",
+        "応答の進み方を切り替えます。ふだんの会話なら chat、発話の往復を揃えたい時は sincro を選びます。",
     audioInputDeviceId:
-        "起動前設定と同じ正式な設定経路で使うマイクを選びます。未選択ならブラウザ既定の入力デバイスを利用します。",
+        "使うマイクを選びます。未選択ならブラウザで既定になっているマイクを使います。",
     videoInputDeviceId:
-        "起動前設定と同じ正式な設定経路で、Gaze（視線検出）用カメラを選びます。未選択ならブラウザ既定のカメラを利用します。",
+        "顔の向きや視線の検出に使うカメラを選びます。未選択ならブラウザで既定になっているカメラを使います。",
     enableNoiseSuppression:
-        "Noise Suppression。周囲の定常ノイズを抑えます。家庭・オフィス環境で雑音が気になる場合に有効化を推奨します。",
+        "周囲のザーッというノイズを抑えます。部屋の空調音やPCファン音が入りやすい時に向いています。",
     enableEchoCancellation:
-        "Echo Cancellation。スピーカー音の回り込みを抑えます。ヘッドホン未使用時やスピーカー再生時に有効化を推奨します。",
+        "スピーカーから出た音がマイクに戻るのを抑えます。ヘッドホンを使わずに話す時に向いています。",
     enableAutoGainControl:
-        "Auto Gain Control。入力音量を自動補正します。マイク音量が不安定な環境で有効化を推奨します。",
+        "マイク音量を自動で整えます。声の大きさが変わりやすい時や、入力レベルが安定しない時に向いています。",
     enableVadGate:
-        "VAD Gate。無音区間の送信を抑えて誤反応を減らします。雑音で反応しやすい場合に有効化を推奨します。",
+        "話していない時の送信を抑えます。無音でも反応しやすい環境で、誤反応を減らしたい時に向いています。",
     enableVenueNoiseMode:
-        "会場ノイズ向けモード。イベント会場や広い空間など、反射音・環境音が多い場面での利用を想定しています。",
+        "反射音や周囲のざわつきが多い場所向けの調整です。イベント会場や広い部屋で使う時に試してください。",
     enableCharacter:
-        "3Dキャラクター表示の有効/無効です。描画負荷を下げたい場合や音声動作だけ確認したい場合は無効化します。",
+        "3Dキャラクターを表示します。動作を軽くしたい時や、音声まわりだけ確認したい時はオフにします。",
     enableCharacterGaze:
-        "Gaze（視線・顔向き推定）を有効化します。カメラに向いた時の演出や AutoMute と連携したい場合に有効化を推奨します。",
+        "カメラから顔の向きや視線を読み取ります。顔の向きに合わせた演出や自動ミュートを使いたい時にオンにします。",
     enableAutoMute:
-        "顔の向きなどに応じて自動的に mute を切り替えます。ハンズフリー運用や展示用途で便利です（Gaze 有効時を推奨）。",
+        "顔の向きに合わせて自動でミュートを切り替えます。展示やハンズフリー運用で、話していない時を静かにしたい場面に向いています。",
     enableTalk:
-        "ページ初期化時に Talk 機能を使う設定です。ページによっては未使用です。初期化前に設定すると反映されやすくなります。",
+        "ページを開いた時に会話機能を準備します。会話をすぐ始めたいページで使います。",
     enableInspector:
-        "Three.js Inspector などの開発者向け機能を有効化します。表示確認・デバッグ時のみ有効化を推奨します。",
+        "開発者向けの表示確認ツールを使えるようにします。表示の切り分けや検証が必要な時だけオンにします。",
     enableVR:
-        "VR 起動に関する初期化設定です。VR 対応ページでのみ有効です。VR 利用時に有効化を推奨します。",
+        "VR で開くための準備を行います。VR 対応ページを使う時だけオンにします。",
     lgTileHeight:
         "Looking Glass のタイル解像度の高さです。高いほど精細になりますが負荷が増えます。まずは既定値から調整してください。",
     lgNumViews:
@@ -319,9 +319,6 @@ export function MicSettingsSection({
                     {mediaDeviceSnapshot.isRefreshing ? "更新中..." : "再読み込み"}
                 </button>
             </div>
-            <div style={{ marginBottom: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
-                日常の設定変更はここが正式な導線です。Debug Console は音量や接続状態の診断に使います。
-            </div>
             <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
                 <HelpLabel text="マイク入力" help={settingHelp.audioInputDeviceId} />
                 <select
@@ -346,35 +343,35 @@ export function MicSettingsSection({
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${compactGapPx}px` }}>
                 <SettingToggle
-                    label="NS"
+                    label="ノイズを抑える"
                     help={settingHelp.enableNoiseSuppression}
                     checked={!!settings.enableNoiseSuppression}
                     disabled={uiState.enableNoiseSuppressionDisabled}
                     onChange={(checked) => onApplySettings({ enableNoiseSuppression: checked })}
                 />
                 <SettingToggle
-                    label="EC"
+                    label="音の回り込みを抑える"
                     help={settingHelp.enableEchoCancellation}
                     checked={!!settings.enableEchoCancellation}
                     disabled={uiState.enableEchoCancellationDisabled}
                     onChange={(checked) => onApplySettings({ enableEchoCancellation: checked })}
                 />
                 <SettingToggle
-                    label="AGC"
+                    label="音量を自動で整える"
                     help={settingHelp.enableAutoGainControl}
                     checked={!!settings.enableAutoGainControl}
                     disabled={uiState.enableAutoGainControlDisabled}
                     onChange={(checked) => onApplySettings({ enableAutoGainControl: checked })}
                 />
                 <SettingToggle
-                    label="VAD Gate"
+                    label="無音時の送信を抑える"
                     help={settingHelp.enableVadGate}
                     checked={!!settings.enableVadGate}
                     disabled={uiState.enableVadGateDisabled}
                     onChange={(checked) => onApplySettings({ enableVadGate: checked })}
                 />
                 <SettingToggle
-                    label="Venue"
+                    label="にぎやかな場所向けに調整"
                     help={settingHelp.enableVenueNoiseMode}
                     checked={!!settings.enableVenueNoiseMode}
                     disabled={uiState.enableVenueNoiseModeDisabled}
@@ -429,21 +426,21 @@ export function CharacterSettingsSection({
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${compactGapPx}px` }}>
                 <SettingToggle
-                    label="Character"
+                    label="3Dキャラクターを表示"
                     help={settingHelp.enableCharacter}
                     checked={!!settings.enableCharacter}
                     disabled={uiState.enableCharacterDisabled}
                     onChange={(checked) => onApplySettings({ enableCharacter: checked })}
                 />
                 <SettingToggle
-                    label="Gaze"
+                    label="顔の向きを使う"
                     help={settingHelp.enableCharacterGaze}
                     checked={!!settings.enableCharacterGaze}
                     disabled={uiState.enableCharacterGazeDisabled}
                     onChange={(checked) => onApplySettings({ enableCharacterGaze: checked })}
                 />
                 <SettingToggle
-                    label="AutoMute"
+                    label="自動でミュートする"
                     help={settingHelp.enableAutoMute}
                     checked={!!settings.enableAutoMute}
                     disabled={uiState.enableAutoMuteDisabled}
@@ -452,17 +449,17 @@ export function CharacterSettingsSection({
             </div>
             {uiHints.enableCharacterReason ? (
                 <div style={{ marginTop: `${compactGapPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
-                    Character: {uiHints.enableCharacterReason}
+                    3Dキャラクター表示: {uiHints.enableCharacterReason}
                 </div>
             ) : null}
             {uiHints.enableCharacterGazeReason ? (
                 <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
-                    Gaze: {uiHints.enableCharacterGazeReason}
+                    顔の向き: {uiHints.enableCharacterGazeReason}
                 </div>
             ) : null}
             {uiHints.enableAutoMuteReason ? (
                 <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
-                    AutoMute: {uiHints.enableAutoMuteReason}
+                    自動ミュート: {uiHints.enableAutoMuteReason}
                 </div>
             ) : null}
         </div>
@@ -670,7 +667,7 @@ export function StartupSettingsSection({
     const startupItems = [
         {
             key: "enableTalk" as const,
-            label: "Talk",
+            label: "会話機能を準備する",
             help: settingHelp.enableTalk,
             checked: !!settings.enableTalk,
             disabled: uiState.enableTalkDisabled,
@@ -679,7 +676,7 @@ export function StartupSettingsSection({
         },
         {
             key: "enableInspector" as const,
-            label: "Inspector",
+            label: "開発者向け表示確認を使う",
             help: settingHelp.enableInspector,
             checked: !!settings.enableInspector,
             disabled: uiState.enableInspectorDisabled,
@@ -688,7 +685,7 @@ export function StartupSettingsSection({
         },
         {
             key: "enableVR" as const,
-            label: "VR",
+            label: "VRで開く準備をする",
             help: settingHelp.enableVR,
             checked: !!settings.enableVR,
             disabled: uiState.enableVRDisabled,
@@ -697,33 +694,26 @@ export function StartupSettingsSection({
         },
     ];
     const supportedItems = startupItems.filter((item) => item.supported);
-    const unsupportedItems = startupItems.filter((item) => !item.supported);
-    const unsupportedKeys = unsupportedItems.map((item) => item.key);
     // page variant 側で「全部未対応ならセクションごと消す」用途に使う。
     if (hideIfNoSupported && supportedItems.length === 0) {
         return null;
     }
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            <HelpLabel text="ページ起動時設定" />
+            <HelpLabel text="開始時の動作" />
             <div style={{ opacity: 0.6, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
                 {isRunning
-                    ? "主に初期化時に効く設定です。起動中に変更した場合は再起動が必要になることがあります。"
-                    : "主にページ初期化時の挙動に影響する設定です。"}
+                    ? "開始前に決まる動きです。いま変更した内容を反映したい時は、いったん停止してからもう一度始めてください。"
+                    : "開始した時の動きを決めます。必要なものだけオンにしてから始めてください。"}
             </div>
             {startupStatus.requiresRestart ? (
                 <div style={{ marginBottom: `${compactGapPx}px`, color: "#ffd38a", lineHeight: 1.3 }}>
-                    起動時設定を完全に反映するには再起動を推奨します。{changedLabel}
+                    変更した内容を反映するには、いったん停止してからもう一度始めてください。{changedLabel}
                 </div>
             ) : null}
             {!startupStatus.requiresRestart && startupStatus.willApplyOnNextStart ? (
                 <div style={{ marginBottom: `${compactGapPx}px`, color: "#b8e0ff", lineHeight: 1.3 }}>
-                    起動時設定の変更は次回起動時に反映されます。{changedLabel}
-                </div>
-            ) : null}
-            {unsupportedKeys.length > 0 ? (
-                <div style={{ marginBottom: `${compactGapPx}px`, color: "#b8e0ff", opacity: 0.85, lineHeight: 1.3 }}>
-                    このページでは未使用: {unsupportedKeys.join(", ")}
+                    変更した内容は次に始める時に反映されます。{changedLabel}
                 </div>
             ) : null}
             {supportedItems.length > 0 ? (
@@ -740,28 +730,10 @@ export function StartupSettingsSection({
                     ))}
                 </div>
             ) : (
-                <div style={{ opacity: 0.55, marginBottom: `${compactGapPx}px` }}>このページで有効な起動時設定はありません。</div>
+                <div style={{ opacity: 0.7, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
+                    このページでは、開始前に切り替える項目はありません。
+                </div>
             )}
-            {unsupportedItems.length > 0 ? (
-                <details style={{ marginTop: `${compactGapPx}px` }}>
-                    {/* 未対応項目は通常表示から外し、必要時だけ参照できるようにする。 */}
-                    <summary style={{ cursor: "pointer", opacity: 0.75 }}>
-                        未対応の起動時トグルを表示 ({unsupportedItems.length})
-                    </summary>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${compactGapPx}px`, marginTop: `${compactGapPx}px` }}>
-                        {unsupportedItems.map((item) => (
-                            <SettingToggle
-                                key={item.key}
-                                label={item.label}
-                                help={item.help}
-                                checked={item.checked}
-                                disabled={true}
-                                onChange={item.onChange}
-                            />
-                        ))}
-                    </div>
-                </details>
-            ) : null}
         </div>
     );
 }
