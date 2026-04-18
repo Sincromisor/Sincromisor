@@ -213,6 +213,45 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             joined_logs,
         )
 
+    def test_init_logs_permission_error_reason(self) -> None:
+        with patch(
+            "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
+            return_value=FakeSpeechRecognizerNemo(),
+        ):
+            with patch(
+                "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.ProperNounDictionary.load_from_csv_with_logger",
+                side_effect=PermissionError("permission denied"),
+            ):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    csv_path = Path(temp_dir, "proper_nouns.csv")
+                    csv_path.write_text(
+                        "surface,yomi\nSincromisor,しんくろみそーる\n",
+                        encoding="utf-8",
+                    )
+                    with self.assertLogs(
+                        "sincro.SpeechRecognizerNemoWorker", level="WARNING"
+                    ) as logs:
+                        SpeechRecognizerNemoWorker(
+                            voice_log_dir=None,
+                            proper_noun_enable=True,
+                            proper_noun_dict_path=str(csv_path),
+                            proper_noun_context_biasing_enable=True,
+                        )
+
+        joined_logs = "\n".join(logs.output)
+        self.assertIn(
+            "Proper noun dictionary load failed: "
+            f"path={csv_path} reason=dictionary file is not readable "
+            "(check directory/file permissions)",
+            joined_logs,
+        )
+        self.assertIn(
+            "Proper noun context biasing is enabled but dictionary is unavailable "
+            f"(dictionary file is not readable (check directory/file permissions): "
+            f"path={csv_path}).",
+            joined_logs,
+        )
+
     def test_recognize_applies_postprocess_only_for_confirmed(self) -> None:
         fake_nemo = FakeSpeechRecognizerNemo()
         with patch(
