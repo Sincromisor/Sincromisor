@@ -36,6 +36,15 @@ class ProperNounNbestRerankingConfig:
     strategy: str = "alsd"
 
 
+@dataclass(frozen=True)
+class ProperNounDictionaryAvailability:
+    """辞書の利用可否と、その理由をログ用に保持する。"""
+
+    available: bool
+    reason_code: str
+    detail: str
+
+
 class SpeechRecognizerNemoWorker:
     """音声認識、固有名詞補正、結果保存をまとめて扱うワーカー。"""
 
@@ -53,11 +62,12 @@ class SpeechRecognizerNemoWorker:
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.s2t: SpeechRecognizerNemo = SpeechRecognizerNemo()
         self.voice_log_dir: str | None = voice_log_dir
-        self.proper_noun_dictionary: ProperNounDictionary = (
-            self.__load_proper_noun_dictionary(
-                proper_noun_enable=proper_noun_enable,
-                proper_noun_dict_path=proper_noun_dict_path,
-            )
+        (
+            self.proper_noun_dictionary,
+            self.proper_noun_dictionary_availability,
+        ) = self.__load_proper_noun_dictionary(
+            proper_noun_enable=proper_noun_enable,
+            proper_noun_dict_path=proper_noun_dict_path,
         )
         self.post_processor = RecognizerPostProcessor(self.proper_noun_dictionary)
         self.context_biasing_config = ProperNounContextBiasingConfig(
@@ -72,17 +82,7 @@ class SpeechRecognizerNemoWorker:
             self.logger.warning(
                 "Proper noun post processor is disabled because tokenizer is unavailable.",
             )
-        if (
-            self.context_biasing_config.enabled
-            and not self.proper_noun_dictionary.entries
-        ):
-            self.logger.warning(
-                "Proper noun context biasing is enabled but dictionary is unavailable.",
-            )
-        if self.nbest_reranking_config.enabled and not self.proper_noun_dictionary.entries:
-            self.logger.warning(
-                "Proper noun N-best reranking is enabled but dictionary is unavailable.",
-            )
+        self.__log_proper_noun_feature_guards()
         self.logger.info("SpeechRecognizerWorker is initialized.")
 
     def recognize(
@@ -131,29 +131,138 @@ class SpeechRecognizerNemoWorker:
         *,
         proper_noun_enable: bool,
         proper_noun_dict_path: str | None,
-    ) -> ProperNounDictionary:
+    ) -> tuple[ProperNounDictionary, ProperNounDictionaryAvailability]:
         """辞書設定を安全に読み込み、失敗時は空辞書へフォールバックする。"""
         if not proper_noun_enable:
-            self.logger.info("Proper noun dictionary is disabled.")
-            return ProperNounDictionary.empty()
-        if not proper_noun_dict_path:
-            self.logger.warning(
-                "Proper noun dictionary is enabled but dict path is not set.",
+            detail = (
+                "disabled by config: "
+                "SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE=false"
             )
-            return ProperNounDictionary.empty()
+            self.logger.info("Proper noun dictionary is unavailable (%s).", detail)
+            return (
+                ProperNounDictionary.empty(),
+                ProperNounDictionaryAvailability(
+                    available=False,
+                    reason_code="disabled_by_config",
+                    detail=detail,
+                ),
+            )
+        if not proper_noun_dict_path:
+            detail = (
+                "dictionary path is not set: "
+                "SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH is empty"
+            )
+            self.logger.warning(
+                "Proper noun dictionary is unavailable (%s).",
+                detail,
+            )
+            return (
+                ProperNounDictionary.empty(),
+                ProperNounDictionaryAvailability(
+                    available=False,
+                    reason_code="dict_path_not_set",
+                    detail=detail,
+                ),
+            )
+
+        csv_path = Path(proper_noun_dict_path)
+        if not csv_path.exists():
+            detail = f"dictionary file does not exist: path={csv_path}"
+            self.logger.warning(
+                "Proper noun dictionary is unavailable (%s).",
+                detail,
+            )
+            return (
+                ProperNounDictionary.empty(),
+                ProperNounDictionaryAvailability(
+                    available=False,
+                    reason_code="dict_file_not_found",
+                    detail=detail,
+                ),
+            )
+        if not csv_path.is_file():
+            detail = f"dictionary path is not a file: path={csv_path}"
+            self.logger.warning(
+                "Proper noun dictionary is unavailable (%s).",
+                detail,
+            )
+            return (
+                ProperNounDictionary.empty(),
+                ProperNounDictionaryAvailability(
+                    available=False,
+                    reason_code="dict_path_not_file",
+                    detail=detail,
+                ),
+            )
 
         try:
-            return ProperNounDictionary.load_from_csv_with_logger(
+            dictionary = ProperNounDictionary.load_from_csv_with_logger(
                 csv_path=proper_noun_dict_path,
                 logger=self.logger,
             )
+            if not dictionary.entries:
+                detail = f"dictionary loaded but contains no enabled entries: path={csv_path}"
+                self.logger.warning(
+                    "Proper noun dictionary is unavailable (%s).",
+                    detail,
+                )
+                return (
+                    dictionary,
+                    ProperNounDictionaryAvailability(
+                        available=False,
+                        reason_code="dict_has_no_enabled_entries",
+                        detail=detail,
+                    ),
+                )
+            return (
+                dictionary,
+                ProperNounDictionaryAvailability(
+                    available=True,
+                    reason_code="loaded",
+                    detail=f"dictionary loaded successfully: path={csv_path}",
+                ),
+            )
         except Exception as exc:
             self.logger.warning(
-                "Failed to load proper noun dictionary from %s: %r",
-                proper_noun_dict_path,
+                "Proper noun dictionary load failed: path=%s reason=%s: %r",
+                csv_path,
+                self.__classify_dictionary_load_exception(exc),
                 exc,
             )
-            return ProperNounDictionary.empty()
+            return (
+                ProperNounDictionary.empty(),
+                ProperNounDictionaryAvailability(
+                    available=False,
+                    reason_code="dict_load_failed",
+                    detail=(
+                        f"{self.__classify_dictionary_load_exception(exc)}: "
+                        f"path={csv_path}"
+                    ),
+                ),
+            )
+
+    def __log_proper_noun_feature_guards(self) -> None:
+        """辞書依存機能の設定矛盾を初期化時に明示する。"""
+        if not self.proper_noun_dictionary_availability.available:
+            detail = self.proper_noun_dictionary_availability.detail
+            if self.context_biasing_config.enabled:
+                self.logger.warning(
+                    "Proper noun context biasing is enabled but dictionary is unavailable (%s).",
+                    detail,
+                )
+            if self.nbest_reranking_config.enabled:
+                self.logger.warning(
+                    "Proper noun N-best reranking is enabled but dictionary is unavailable (%s).",
+                    detail,
+                )
+
+    def __classify_dictionary_load_exception(self, exc: Exception) -> str:
+        """ロード失敗をログで読みやすい理由へ畳み込む。"""
+        if isinstance(exc, FileNotFoundError):
+            return "dictionary file not found"
+        if isinstance(exc, ValueError):
+            return f"invalid dictionary format ({exc})"
+        return "unexpected dictionary load error"
 
     def __apply_proper_noun_postprocess(
         self,

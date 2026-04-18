@@ -122,6 +122,97 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
     def setUp(self) -> None:
         self.fixture_path = Path(__file__).with_name("fixtures") / "proper_nouns.csv"
 
+    def test_init_logs_when_dependent_features_are_enabled_but_dictionary_is_disabled(self) -> None:
+        with patch(
+            "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
+            return_value=FakeSpeechRecognizerNemo(),
+        ):
+            with self.assertLogs("sincro.SpeechRecognizerNemoWorker", level="INFO") as logs:
+                SpeechRecognizerNemoWorker(
+                    voice_log_dir=None,
+                    proper_noun_enable=False,
+                    proper_noun_dict_path=str(self.fixture_path),
+                    proper_noun_context_biasing_enable=True,
+                    proper_noun_nbest_enable=True,
+                )
+
+        joined_logs = "\n".join(logs.output)
+        self.assertIn(
+            "Proper noun dictionary is unavailable (disabled by config: "
+            "SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE=false).",
+            joined_logs,
+        )
+        self.assertIn(
+            "Proper noun context biasing is enabled but dictionary is unavailable "
+            "(disabled by config: SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE=false).",
+            joined_logs,
+        )
+        self.assertIn(
+            "Proper noun N-best reranking is enabled but dictionary is unavailable "
+            "(disabled by config: SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE=false).",
+            joined_logs,
+        )
+
+    def test_init_logs_when_dictionary_file_is_missing(self) -> None:
+        missing_path = self.fixture_path.with_name("missing.csv")
+        with patch(
+            "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
+            return_value=FakeSpeechRecognizerNemo(),
+        ):
+            with self.assertLogs("sincro.SpeechRecognizerNemoWorker", level="WARNING") as logs:
+                SpeechRecognizerNemoWorker(
+                    voice_log_dir=None,
+                    proper_noun_enable=True,
+                    proper_noun_dict_path=str(missing_path),
+                    proper_noun_context_biasing_enable=True,
+                )
+
+        joined_logs = "\n".join(logs.output)
+        self.assertIn(
+            f"Proper noun dictionary is unavailable (dictionary file does not exist: path={missing_path}).",
+            joined_logs,
+        )
+        self.assertIn(
+            f"Proper noun context biasing is enabled but dictionary is unavailable "
+            f"(dictionary file does not exist: path={missing_path}).",
+            joined_logs,
+        )
+
+    def test_init_logs_invalid_dictionary_format_reason(self) -> None:
+        with patch(
+            "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
+            return_value=FakeSpeechRecognizerNemo(),
+        ):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                invalid_csv_path = Path(temp_dir, "invalid.csv")
+                invalid_csv_path.write_text(
+                    "surface,priority\nSincromisor,100\n",
+                    encoding="utf-8",
+                )
+                with self.assertLogs(
+                    "sincro.SpeechRecognizerNemoWorker", level="WARNING"
+                ) as logs:
+                    SpeechRecognizerNemoWorker(
+                        voice_log_dir=None,
+                        proper_noun_enable=True,
+                        proper_noun_dict_path=str(invalid_csv_path),
+                        proper_noun_nbest_enable=True,
+                    )
+
+        joined_logs = "\n".join(logs.output)
+        self.assertIn(
+            "Proper noun dictionary load failed: "
+            f"path={invalid_csv_path} reason=invalid dictionary format "
+            "(Proper noun dictionary is missing required columns: yomi)",
+            joined_logs,
+        )
+        self.assertIn(
+            "Proper noun N-best reranking is enabled but dictionary is unavailable "
+            f"(invalid dictionary format (Proper noun dictionary is missing required "
+            f"columns: yomi): path={invalid_csv_path}).",
+            joined_logs,
+        )
+
     def test_recognize_applies_postprocess_only_for_confirmed(self) -> None:
         fake_nemo = FakeSpeechRecognizerNemo()
         with patch(
