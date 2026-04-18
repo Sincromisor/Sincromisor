@@ -6,6 +6,7 @@ import {
 } from "./components/DialogSettingsSections";
 import {
     DialogBasicSettingsSection,
+    DialogDeviceSettingsSection,
     DialogCharacterSettingsSection,
     DialogMicSettingsSection,
 } from "./components/DialogSettingsFormSections";
@@ -18,6 +19,10 @@ export function ConfigurationDialogSettingsPanel() {
         settings,
         settingsUiState,
         settingsUiHints,
+        mediaDeviceSnapshot,
+        audioInputSelection,
+        videoInputSelection,
+        refreshDevices,
         applySettings,
         changeTalkMode,
         dialogVrmUiState,
@@ -37,6 +42,16 @@ export function ConfigurationDialogSettingsPanel() {
                 uiState={settingsUiState}
                 onTitleChange={(titleText) => applySettings({ titleText })}
                 onTalkModeChange={changeTalkMode}
+            />
+            <DialogDeviceSettingsSection
+                settings={settings}
+                uiState={settingsUiState}
+                uiHints={settingsUiHints}
+                snapshot={mediaDeviceSnapshot}
+                audioInputSelection={audioInputSelection}
+                videoInputSelection={videoInputSelection}
+                onApplySettings={applySettings}
+                onRefreshDevices={refreshDevices}
             />
             <DialogMicSettingsSection
                 settings={settings}

@@ -6,6 +6,10 @@ import type {
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
 } from "../../app/appSettingsTypes";
+import type {
+    SincroMediaDeviceSelectionState,
+    SincroMediaDeviceSnapshot,
+} from "../../../ts/MediaDevices/SincroMediaDeviceService";
 
 // 起動前 dialog 専用の settings form セクション群。
 // Control Panel 共有部品とは切り分け、dialog 文脈の文言/レイアウト/tooltip をここで管理する。
@@ -43,6 +47,8 @@ const cardSectionTitleStyle: CSSProperties = {
 const settingHelp = {
     titleText: "会話UIなどに表示されるタイトル文字列です。配信名・キャラクター名を表示したい時に設定します。",
     talkMode: "応答モードを切り替えます。通常会話用途では chat、同期的なやり取りや Sincromisor 想定フローでは sincro を使う想定です。",
+    audioInputDeviceId: "起動時に使うマイク入力デバイスです。未選択ならブラウザ既定の入力デバイスを利用します。",
+    videoInputDeviceId: "視線検出に使うカメラです。未選択ならブラウザ既定のカメラを利用します。",
     enableNoiseSuppression: "Noise Suppression。周囲の定常ノイズを抑えます。家庭・オフィス環境で雑音が気になる時に有効化を推奨します。",
     enableEchoCancellation: "Echo Cancellation。スピーカー音の回り込みを抑えます。ヘッドホン未使用時やスピーカー再生時に有効化を推奨します。",
     enableAutoGainControl: "Auto Gain Control。入力音量を自動補正します。マイク音量が不安定な環境で有効化を推奨します。",
@@ -221,6 +227,101 @@ type DialogCharacterSettingsSectionProps = CommonProps & {
     uiHints: SincroAppSettingsUiHints;
 };
 
+type DialogDeviceSettingsSectionProps = CommonProps & {
+    uiHints: SincroAppSettingsUiHints;
+    snapshot: SincroMediaDeviceSnapshot;
+    audioInputSelection: SincroMediaDeviceSelectionState;
+    videoInputSelection: SincroMediaDeviceSelectionState;
+    onRefreshDevices: () => Promise<SincroMediaDeviceSnapshot>;
+};
+
+export function DialogDeviceSettingsSection({
+    settings,
+    uiState,
+    uiHints,
+    snapshot,
+    audioInputSelection,
+    videoInputSelection,
+    onApplySettings,
+    onRefreshDevices,
+}: DialogDeviceSettingsSectionProps) {
+    const [refreshMessage, setRefreshMessage] = useState<string>("");
+
+    const handleRefreshDevices = () => {
+        setRefreshMessage("");
+        void onRefreshDevices().then((nextSnapshot) => {
+            if (nextSnapshot.refreshError) {
+                setRefreshMessage(`デバイス一覧の再取得に失敗しました: ${nextSnapshot.refreshError}`);
+                return;
+            }
+            setRefreshMessage("デバイス一覧を更新しました。");
+        });
+    };
+
+    return (
+        <div style={{ marginBottom: "8px" }}>
+            <div style={{ ...cardSectionTitleStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                <span>入力デバイス</span>
+                <button
+                    type="button"
+                    className="configurationDialogReactSettingsPanel__secondaryButton"
+                    onClick={handleRefreshDevices}
+                    disabled={snapshot.isRefreshing}
+                >
+                    {snapshot.isRefreshing ? "更新中..." : "再読み込み"}
+                </button>
+            </div>
+            <div style={{ marginBottom: "8px" }}>
+                <LabelWithHelp text="マイク入力" help={settingHelp.audioInputDeviceId} />
+                <select
+                    value={settings.audioInputDeviceId ?? ""}
+                    onChange={(event) => onApplySettings({ audioInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
+                    disabled={uiState.audioInputDeviceDisabled}
+                    style={fieldStyle}
+                >
+                    <option value="">ブラウザ既定のマイクを使う</option>
+                    {snapshot.audioInputs.map((option) => (
+                        <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
+                    ))}
+                </select>
+                <DeviceSelectionHint
+                    emptyMessage="利用可能なマイクが見つかりません。接続後に再読み込みしてください。"
+                    snapshot={snapshot}
+                    selection={audioInputSelection}
+                    optionsCount={snapshot.audioInputs.length}
+                    unavailableReason={uiHints.audioInputDeviceReason}
+                    kindLabel="マイク"
+                />
+            </div>
+            <div>
+                <LabelWithHelp text="視線用カメラ" help={settingHelp.videoInputDeviceId} />
+                <select
+                    value={settings.videoInputDeviceId ?? ""}
+                    onChange={(event) => onApplySettings({ videoInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
+                    disabled={uiState.videoInputDeviceDisabled}
+                    style={fieldStyle}
+                >
+                    <option value="">ブラウザ既定のカメラを使う</option>
+                    {snapshot.videoInputs.map((option) => (
+                        <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
+                    ))}
+                </select>
+                <DeviceSelectionHint
+                    emptyMessage="利用可能なカメラが見つかりません。接続後に再読み込みしてください。"
+                    snapshot={snapshot}
+                    selection={videoInputSelection}
+                    optionsCount={snapshot.videoInputs.length}
+                    unavailableReason={uiHints.videoInputDeviceReason}
+                    kindLabel="カメラ"
+                />
+            </div>
+            {refreshMessage ? (
+                <div className="configurationDialogReactSettingsPanel__hintText">{refreshMessage}</div>
+            ) : null}
+        </div>
+    );
+}
+
 export function DialogMicSettingsSection({ settings, uiState, onApplySettings }: CommonProps) {
     return (
         <div style={{ marginBottom: "8px" }}>
@@ -350,4 +451,59 @@ function DialogToggle({ label, help, checked, disabled = false, onChange }: Dial
             </span>
         </label>
     );
+}
+
+type DeviceSelectionHintProps = {
+    emptyMessage: string;
+    snapshot: SincroMediaDeviceSnapshot;
+    selection: SincroMediaDeviceSelectionState;
+    optionsCount: number;
+    unavailableReason?: string;
+    kindLabel: string;
+};
+
+function DeviceSelectionHint({
+    emptyMessage,
+    snapshot,
+    selection,
+    optionsCount,
+    unavailableReason,
+    kindLabel,
+}: DeviceSelectionHintProps) {
+    const messages: string[] = [];
+    if (!snapshot.isSupported) {
+        messages.push("このブラウザではメディアデバイス列挙に対応していません。");
+    }
+    if (snapshot.refreshError) {
+        messages.push(`デバイス一覧の取得に失敗しました: ${snapshot.refreshError}`);
+    }
+    if (optionsCount === 0 && !snapshot.isRefreshing && !snapshot.refreshError) {
+        messages.push(emptyMessage);
+    }
+    if (!snapshot.labelsResolved && optionsCount > 0) {
+        messages.push("ブラウザ権限が未許可だと実デバイス名を表示できないことがあります。");
+    }
+    if (selection.isSelected && !selection.isAvailable) {
+        messages.push(`選択中の${kindLabel}は現在見つかりません。別のデバイスへ切り替えるか、既定デバイスを選んでください。`);
+    }
+    if (selection.isAvailable && selection.matchedDevice) {
+        messages.push(`選択中: ${selection.matchedDevice.label}`);
+    }
+    if (unavailableReason) {
+        messages.push(unavailableReason);
+    }
+    if (messages.length === 0) {
+        return null;
+    }
+    return (
+        <div className="configurationDialogReactSettingsPanel__hintList">
+            {messages.map((message) => (
+                <div key={message} className="configurationDialogReactSettingsPanel__hintText">{message}</div>
+            ))}
+        </div>
+    );
+}
+
+function normalizeSelectedDeviceId(value: string): string | null {
+    return value.trim().length > 0 ? value : null;
 }
