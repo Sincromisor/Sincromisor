@@ -9,6 +9,8 @@ from typing import ClassVar
 
 @dataclass(frozen=True)
 class ProperNounDictionaryEntry:
+    """CSV 1行を正規化した固有名詞辞書エントリ。"""
+
     surface: str
     yomi: str
     normalized_yomi: str
@@ -21,6 +23,8 @@ class ProperNounDictionaryEntry:
 
 @dataclass(frozen=True)
 class ProperNounDictionaryStats:
+    """辞書ロード時の採用・除外件数をまとめた統計情報。"""
+
     total_rows: int = 0
     loaded_entries: int = 0
     disabled_rows: int = 0
@@ -32,6 +36,8 @@ class ProperNounDictionaryStats:
 
 @dataclass(frozen=True)
 class ProperNounDictionary:
+    """固有名詞辞書のロード結果と、読み検索用インデックスを保持する。"""
+
     entries: tuple[ProperNounDictionaryEntry, ...]
     entries_by_yomi: dict[str, tuple[ProperNounDictionaryEntry, ...]]
     stats: ProperNounDictionaryStats
@@ -58,6 +64,7 @@ class ProperNounDictionary:
 
     @classmethod
     def empty(cls) -> "ProperNounDictionary":
+        """辞書無効時やロード失敗時に使う、安全な空辞書を返す。"""
         return cls(
             entries=(),
             entries_by_yomi={},
@@ -68,6 +75,7 @@ class ProperNounDictionary:
 
     @classmethod
     def load_from_csv(cls, csv_path: str | Path) -> "ProperNounDictionary":
+        """CSV から辞書を構築し、読みごとの検索に使いやすい形へ正規化する。"""
         source_path = Path(csv_path)
         with source_path.open(encoding="utf-8", newline="") as csv_file:
             reader = csv.DictReader(csv_file)
@@ -85,6 +93,7 @@ class ProperNounDictionary:
             seen_pairs: set[tuple[str, str]] = set()
 
             for line_no, row in enumerate(reader, start=2):
+                # CSV の生行は一度パースしてから、無効行・重複行・disabled 行を段階的に除外する。
                 stats = replace(stats, total_rows=stats.total_rows + 1)
                 entry = cls._parse_row(row=row, line_no=line_no, warnings=warnings)
                 if entry is None:
@@ -151,6 +160,8 @@ class ProperNounDictionary:
                 sorted_entries = tuple(
                     sorted(
                         promoted_entries,
+                        # 同一読みの候補は優先度順で並べておくことで、
+                        # 一意候補判定や trace 出力の見通しを揃える。
                         key=lambda entry: (-entry.priority, entry.surface),
                     )
                 )
@@ -177,6 +188,7 @@ class ProperNounDictionary:
         csv_path: str | Path,
         logger: logging.Logger,
     ) -> "ProperNounDictionary":
+        """辞書ロードと同時に警告・統計をログへ流すヘルパー。"""
         dictionary = cls.load_from_csv(csv_path=csv_path)
         for warning_message in dictionary.warnings:
             logger.warning("Proper noun dictionary: %s", warning_message)
@@ -213,7 +225,7 @@ class ProperNounDictionary:
         return "".join(kept_chars)
 
     def surfaces_for_biasing(self) -> tuple[str, ...]:
-        """Build a stable key phrase list from dictionary surfaces."""
+        """Context biasing に渡す表記一覧を、重複なし・安定順で返す。"""
         seen_surfaces: set[str] = set()
         ordered_surfaces: list[str] = []
         for entry in self.entries:
@@ -231,6 +243,7 @@ class ProperNounDictionary:
         line_no: int,
         warnings: list[str],
     ) -> ProperNounDictionaryEntry | None:
+        """CSV の1行を検証し、辞書エントリへ変換する。"""
         surface = (row.get("surface") or "").strip()
         yomi = (row.get("yomi") or "").strip()
 
@@ -294,6 +307,7 @@ class ProperNounDictionary:
         line_no: int,
         warnings: list[str],
     ) -> int:
+        """priority 列は壊れていても処理継続し、既定値 0 にフォールバックする。"""
         if not priority_text:
             return 0
         try:
@@ -313,6 +327,7 @@ class ProperNounDictionary:
         line_no: int,
         warnings: list[str],
     ) -> bool:
+        """真偽値列はゆるく解釈し、不正値は warning を残して既定値へ倒す。"""
         if value is None:
             return default
 
@@ -331,6 +346,7 @@ class ProperNounDictionary:
 
     @staticmethod
     def _katakana_to_hiragana(text: str) -> str:
+        """読み比較用にカタカナをひらがなへ揃える。"""
         chars: list[str] = []
         for char in text:
             code = ord(char)
@@ -342,6 +358,7 @@ class ProperNounDictionary:
 
     @staticmethod
     def _is_supported_yomi(text: str) -> bool:
+        """正規化後の読みが、辞書照合対象として扱える文字だけか確認する。"""
         return all(
             char == "ー" or char == "ゔ" or "ぁ" <= char <= "ゖ" for char in text
         )

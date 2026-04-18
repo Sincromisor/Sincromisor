@@ -19,6 +19,8 @@ from .SpeechRecognizerS3Client import SpeechRecognizerS3Client
 
 @dataclass(frozen=True)
 class ProperNounContextBiasingConfig:
+    """confirmed 音声に対する context biasing 再デコード設定。"""
+
     enabled: bool
     beam_size: int
     strategy: str = "malsd_batch"
@@ -27,12 +29,16 @@ class ProperNounContextBiasingConfig:
 
 @dataclass(frozen=True)
 class ProperNounNbestRerankingConfig:
+    """曖昧語を解くための N-best 再ランキング設定。"""
+
     enabled: bool
     beam_size: int
     strategy: str = "alsd"
 
 
 class SpeechRecognizerNemoWorker:
+    """音声認識、固有名詞補正、結果保存をまとめて扱うワーカー。"""
+
     def __init__(
         self,
         voice_log_dir: str | None,
@@ -43,6 +49,7 @@ class SpeechRecognizerNemoWorker:
         proper_noun_nbest_enable: bool = False,
         proper_noun_nbest_beam_size: int = 4,
     ):
+        # 認識本体と辞書系機能を初期化し、機能ごとの有効/無効をここで確定する。
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.s2t: SpeechRecognizerNemo = SpeechRecognizerNemo()
         self.voice_log_dir: str | None = voice_log_dir
@@ -83,6 +90,7 @@ class SpeechRecognizerNemoWorker:
         spe_result: SpeechExtractorResult,
         s3_client: SpeechRecognizerS3Client | None,
     ) -> SpeechRecognizerResult:
+        """抽出済み音声を認識し、必要なら固有名詞補正とログ出力まで行う。"""
         start_t = perf_counter()
         raw_result = self.__transcribe_with_score(spe_result.voice)
         sr_result = SpeechRecognizerResult(
@@ -106,6 +114,7 @@ class SpeechRecognizerNemoWorker:
             }
         )
         if spe_result.confirmed and self.voice_log_dir:
+            # confirmed 音声のみを証跡として残し、途中結果のログ爆発を避ける。
             self.__export_result(sr_result, correction_trace=correction_trace)
             self.__export_voice(spe_result)
         if spe_result.confirmed and s3_client is not None:
@@ -114,6 +123,7 @@ class SpeechRecognizerNemoWorker:
         return sr_result
 
     def __transcribe_with_score(self, voice: np.ndarray) -> list[tuple[str, float]]:
+        """baseline の認識結果を `(text, score)` 形式で取得する。"""
         return self.s2t.transcribe_with_score(voice)
 
     def __load_proper_noun_dictionary(
@@ -122,6 +132,7 @@ class SpeechRecognizerNemoWorker:
         proper_noun_enable: bool,
         proper_noun_dict_path: str | None,
     ) -> ProperNounDictionary:
+        """辞書設定を安全に読み込み、失敗時は空辞書へフォールバックする。"""
         if not proper_noun_enable:
             self.logger.info("Proper noun dictionary is disabled.")
             return ProperNounDictionary.empty()
@@ -151,6 +162,7 @@ class SpeechRecognizerNemoWorker:
         voice: np.ndarray,
         confirmed: bool,
     ) -> dict[str, Any] | None:
+        """固有名詞補正と、必要に応じた再デコード系の救済処理を適用する。"""
         if not confirmed or not self.post_processor.enabled:
             return None
 
@@ -165,8 +177,10 @@ class SpeechRecognizerNemoWorker:
 
         correction_trace = self.__build_postprocess_trace(post_process_result)
         if post_process_result.changed:
+            # 一意に確定できた辞書補正は、まず baseline 結果へ直接反映する。
             sr_result.result = list(post_process_result.corrected_result)
 
+        # 曖昧語が残っている場合だけ、重い再デコード系で解決可能かを順に試す。
         biasing_trace = self.__apply_confirmed_context_biasing(
             voice=voice,
             post_process_result=post_process_result,
@@ -199,6 +213,7 @@ class SpeechRecognizerNemoWorker:
         return correction_trace
 
     def __build_postprocess_trace(self, post_process_result: Any) -> dict[str, Any]:
+        """補正内容と判断理由を JSON へ出しやすい trace 形式へ整形する。"""
         return {
             "raw_text": post_process_result.raw_text,
             "corrected_text": post_process_result.corrected_text,
@@ -259,6 +274,7 @@ class SpeechRecognizerNemoWorker:
         voice: np.ndarray,
         post_process_result: Any,
     ) -> dict[str, Any] | None:
+        """辞書語を key phrase に使って再デコードし、曖昧語が解けるか確認する。"""
         if not self.context_biasing_config.enabled:
             return None
         if not self.proper_noun_dictionary.entries:
@@ -301,6 +317,7 @@ class SpeechRecognizerNemoWorker:
             post_process_result=post_process_result,
         )
 
+        # 曖昧候補を実際に解決でき、かつ baseline と異なる場合だけ結果を採用する。
         adopted = bool(resolved_candidates) and biasing_text != baseline_text
         selected_result = list(biasing_result) if adopted else list(
             post_process_result.corrected_result
@@ -343,6 +360,7 @@ class SpeechRecognizerNemoWorker:
         current_result: tuple[tuple[str, float], ...],
         current_decode_path: str,
     ) -> dict[str, Any] | None:
+        """N-best 候補群を辞書観点で再採点し、baseline より良い候補があれば採用する。"""
         if not self.nbest_reranking_config.enabled:
             return None
         if not self.proper_noun_dictionary.entries:
@@ -406,6 +424,7 @@ class SpeechRecognizerNemoWorker:
             else None
         )
 
+        # 曖昧語解決を最優先条件にし、単に model score が高いだけでは置き換えない。
         adopted = (
             selected_candidate is not None
             and selected_candidate["deferred_resolved_count"] > 0
@@ -462,6 +481,7 @@ class SpeechRecognizerNemoWorker:
         nbest_result: tuple[tuple[str, float], ...],
         post_process_result: Any,
     ) -> list[dict[str, Any]]:
+        """N-best 各候補を、辞書解決数と文脈一致度で再スコアリングする。"""
         candidate_traces: list[dict[str, Any]] = []
         for rank, (candidate_text, model_score) in enumerate(nbest_result, start=1):
             if candidate_text == "</s>":
@@ -519,6 +539,7 @@ class SpeechRecognizerNemoWorker:
         raw_text: str,
         post_process_result: Any,
     ) -> dict[str, Any]:
+        """baseline 候補も N-best 候補と同じ尺度で比較できるよう trace 化する。"""
         baseline_text = self.__result_text(candidate_result)
         baseline_score = self.__primary_score(candidate_result)
         resolved_candidates = self.__resolve_deferred_candidates(
@@ -561,6 +582,7 @@ class SpeechRecognizerNemoWorker:
         biasing_text: str,
         post_process_result: Any,
     ) -> list[dict[str, Any]]:
+        """再デコード結果の文面から、どの曖昧候補が一意に現れたかを抽出する。"""
         resolved_candidates: list[dict[str, Any]] = []
         for deferred_match in post_process_result.deferred_matches:
             matched_candidates = [
@@ -571,6 +593,7 @@ class SpeechRecognizerNemoWorker:
             if len(matched_candidates) != 1:
                 continue
             candidate = matched_candidates[0]
+            # 前後文脈語も同じ文面に現れていれば、より自然な解決として加点する。
             context_score = sum(
                 1
                 for surface in (
@@ -594,10 +617,12 @@ class SpeechRecognizerNemoWorker:
 
     @staticmethod
     def __result_text(result: tuple[tuple[str, float], ...]) -> str:
+        """候補列から終端記号を除いたテキストを得る。"""
         return "".join(text for text, _score in result if text != "</s>")
 
     @staticmethod
     def __primary_score(result: tuple[tuple[str, float], ...]) -> float:
+        """候補列の先頭実テキストの score を代表値として取り出す。"""
         for text, score in result:
             if text != "</s>":
                 return float(score)
@@ -608,6 +633,7 @@ class SpeechRecognizerNemoWorker:
         result: SpeechRecognizerResult,
         correction_trace: dict[str, Any] | None = None,
     ) -> Path | None:
+        """認識結果と補正 trace をローカルログへ保存する。"""
         if self.voice_log_dir is None:
             return None
         time_text: str = datetime.fromtimestamp(result.start_at).strftime(
@@ -628,6 +654,7 @@ class SpeechRecognizerNemoWorker:
         return write_path
 
     def __export_voice(self, result: SpeechExtractorResult) -> Path | None:
+        """入力音声を opus 優先で保存し、後追い検証できるようにする。"""
         if self.voice_log_dir is None:
             return None
         time_text: str = datetime.fromtimestamp(result.start_at).strftime(
