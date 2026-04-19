@@ -8,7 +8,6 @@ export type SettingsShellPage = {
     title: string;
     description: string;
     content: ReactNode;
-    summary?: ReactNode;
     footer?: ReactNode;
     tone?: "default" | "developer";
 };
@@ -71,19 +70,18 @@ export function SettingsShell({
                     ) : null}
                 </nav>
                 <div className="settingsShell__detail">
-                    <div className="settingsShell__pageSurface">
-                        <header className="settingsShell__pageHeader">
-                            <h2 className="settingsShell__pageTitle">{activePage.title}</h2>
-                            <p className="settingsShell__pageDescription">{activePage.description}</p>
-                        </header>
-                        {activePage.summary ? (
-                            <div className="settingsShell__summary">{activePage.summary}</div>
+                    <div className="settingsShell__detailScroll">
+                        <div className="settingsShell__pageSurface">
+                            <header className="settingsShell__pageHeader">
+                                <h2 className="settingsShell__pageTitle">{activePage.title}</h2>
+                                <p className="settingsShell__pageDescription">{activePage.description}</p>
+                            </header>
+                            <div className="settingsShell__content">{activePage.content}</div>
+                        </div>
+                        {activePage.footer ? (
+                            <div className="settingsShell__pageFooter">{activePage.footer}</div>
                         ) : null}
-                        <div className="settingsShell__content">{activePage.content}</div>
                     </div>
-                    {activePage.footer ? (
-                        <div className="settingsShell__pageFooter">{activePage.footer}</div>
-                    ) : null}
                 </div>
             </div>
             {footer ? <div className="settingsShell__footer">{footer}</div> : null}
@@ -153,14 +151,18 @@ type SettingsStatusCardProps = {
 };
 
 const statusToneStyles: Record<NonNullable<SettingsStatusCardProps["tone"]>, CSSProperties> = {
-    neutral: {},
+    neutral: {
+        ["--settings-status-accent" as string]: "rgba(157, 176, 204, 0.18)",
+    },
     good: {
-        borderColor: "rgba(119, 233, 168, 0.28)",
-        background: "linear-gradient(180deg, rgba(59, 110, 82, 0.32), rgba(19, 31, 25, 0.42))",
+        ["--settings-status-accent" as string]: "rgba(119, 233, 168, 0.84)",
+        borderColor: "rgba(119, 233, 168, 0.22)",
+        background: "rgba(119, 233, 168, 0.06)",
     },
     warn: {
-        borderColor: "rgba(255, 198, 120, 0.34)",
-        background: "linear-gradient(180deg, rgba(110, 80, 39, 0.34), rgba(37, 25, 18, 0.46))",
+        ["--settings-status-accent" as string]: "rgba(255, 198, 120, 0.88)",
+        borderColor: "rgba(255, 198, 120, 0.24)",
+        background: "rgba(255, 198, 120, 0.06)",
     },
 };
 
