@@ -8,6 +8,11 @@
     gap: 18px;
 }
 
+.settingsShell.is-containerResponsive {
+    container-type: inline-size;
+    container-name: settings-shell;
+}
+
 .settingsShell__header {
     display: flex;
     align-items: flex-start;
@@ -206,6 +211,58 @@
     border: 1px solid var(--settings-shell-border);
     border-radius: 22px;
     background: var(--settings-shell-surface);
+}
+
+@container settings-shell (max-width: 720px) {
+    .settingsShell__layout {
+        grid-template-columns: 1fr;
+    }
+
+    .settingsShell__nav {
+        position: static;
+        gap: 16px;
+    }
+
+    .settingsShell__navSection {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    .settingsShell__detail {
+        max-width: none;
+    }
+}
+
+@container settings-shell (max-width: 560px) {
+    .settingsShell {
+        gap: 16px;
+    }
+
+    .settingsShell__nav,
+    .settingsShell__pageSurface,
+    .settingsShell__pageHeader,
+    .settingsShell__content,
+    .settingsShell__pageFooter,
+    .settingsShell__footer {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .settingsShell__pageHeader,
+    .settingsShell__content {
+        padding: 0;
+    }
+
+    .settingsShell__pageHeader {
+        min-height: 0;
+    }
+
+    .settingsShell__navSection {
+        grid-template-columns: 1fr;
+    }
+
+    .settingsShell__summaryGrid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 960px) {

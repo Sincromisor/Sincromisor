@@ -20,6 +20,7 @@ type SettingsShellProps = {
     pages: SettingsShellPage[];
     initialPageId?: string;
     footer?: ReactNode;
+    responsiveMode?: "viewport" | "container";
 };
 
 type SettingsShellHeaderProps = Pick<SettingsShellProps, "badge" | "title" | "description">;
@@ -32,6 +33,7 @@ export function SettingsShell({
     pages,
     initialPageId,
     footer,
+    responsiveMode = "viewport",
 }: SettingsShellProps) {
     const visiblePages = useMemo(() => pages, [pages]);
     const fallbackPageId = visiblePages[0]?.id ?? "";
@@ -51,7 +53,10 @@ export function SettingsShell({
     const developerPages = visiblePages.filter((page) => page.tone === "developer");
 
     return (
-        <section className="settingsShell" aria-label={ariaLabel}>
+        <section
+            className={`settingsShell${responsiveMode === "container" ? " is-containerResponsive" : ""}`}
+            aria-label={ariaLabel}
+        >
             <SettingsShellHeader badge={badge} title={title} description={description} />
             <div className="settingsShell__layout">
                 <nav className="settingsShell__nav" aria-label={`${title} カテゴリ`}>

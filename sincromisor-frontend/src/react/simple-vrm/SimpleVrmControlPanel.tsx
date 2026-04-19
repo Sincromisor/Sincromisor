@@ -100,6 +100,7 @@ export function SimpleVrmControlPanel({
                 badge="一般ユーザー向け設定"
                 title={title}
                 description="会話・入出力デバイス・音声・表示・接続を同じ分類で整理しています。通常の調整はここから行い、詳しい診断が必要な時だけ開発者向けを開いてください。"
+                responsiveMode="container"
                 initialPageId={isLookingGlassFocused ? "looking-glass" : "conversation"}
                 pages={[
                     ...(isLookingGlassFocused ? [{
