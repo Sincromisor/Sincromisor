@@ -59,6 +59,10 @@ export function SimpleVrmControlPanel({
         : lookingGlass.state;
     const canStartLookingGlass = lookingGlass.state !== "starting" && lookingGlass.state !== "active";
     const canStopLookingGlass = lookingGlass.state === "active" || lookingGlass.state === "starting";
+    const hasStartupOptions =
+        startupSettingsCapabilities.enableTalk
+        || startupSettingsCapabilities.enableInspector
+        || startupSettingsCapabilities.enableVR;
     const openDeveloperConsole = (): void => {
         document.querySelector<HTMLButtonElement>("#debugConsoleToggle")?.click();
     };
@@ -228,7 +232,7 @@ export function SimpleVrmControlPanel({
                     showSectionTitle={false}
                 />
             </SettingsCategorySection>
-            {(!isLookingGlassFocused || startupSettingsCapabilities.enableTalk || startupSettingsCapabilities.enableInspector || startupSettingsCapabilities.enableVR) ? (
+            {hasStartupOptions ? (
                 <SettingsCategorySection
                     title="起動オプション"
                     description="ページを始める時にだけ効く設定です。反映したい時は停止してからもう一度始めてください。"
@@ -241,7 +245,7 @@ export function SimpleVrmControlPanel({
                         isRunning={lifecycleState === "running"}
                         startupStatus={startupSettingsStatus}
                         startupCapabilities={startupSettingsCapabilities}
-                        hideIfNoSupported={false}
+                        hideIfNoSupported={true}
                         showSectionTitle={false}
                     />
                 </SettingsCategorySection>
