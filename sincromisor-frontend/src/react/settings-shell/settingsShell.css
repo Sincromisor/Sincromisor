@@ -117,6 +117,11 @@
     max-width: 840px;
 }
 
+.settingsShell__detailScroll {
+    display: grid;
+    gap: 16px;
+}
+
 .settingsShell__pageSurface {
     display: grid;
     gap: 18px;
@@ -130,6 +135,10 @@
 .settingsShell__pageHeader {
     display: grid;
     gap: 6px;
+    min-height: 90px;
+    align-content: start;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .settingsShell__pageTitle {
@@ -144,13 +153,6 @@
     line-height: 1.55;
 }
 
-.settingsShell__summary {
-    display: grid;
-    gap: 10px;
-    padding-bottom: 18px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
 .settingsShell__summaryGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -159,13 +161,14 @@
 
 .settingsShell__statusCard {
     min-width: 0;
-    min-height: 88px;
-    padding: 12px 14px;
-    border-radius: 14px;
+    min-height: 0;
+    padding: 11px 13px;
+    border-radius: 12px;
     border: 1px solid var(--settings-shell-border);
-    background: var(--settings-shell-surface-strong);
+    background: rgba(255, 255, 255, 0.035);
     display: grid;
     align-content: start;
+    box-shadow: inset 3px 0 0 var(--settings-status-accent, transparent);
 }
 
 .settingsShell__statusLabel {
@@ -192,6 +195,9 @@
 .settingsShell__content {
     min-width: 0;
     padding: 0;
+    display: grid;
+    align-content: start;
+    gap: 18px;
 }
 
 .settingsShell__pageFooter,
@@ -239,6 +245,10 @@
     .settingsShell__pageHeader,
     .settingsShell__content {
         padding: 0;
+    }
+
+    .settingsShell__pageHeader {
+        min-height: 0;
     }
 
     .settingsShell__navSection {
