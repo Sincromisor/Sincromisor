@@ -37,7 +37,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - チャット文は `text_ch`、テロップは `telop_ch` で受信し、`TalkManager` 経由でUI/口形同期に渡す。
   - React への段階移行計画は `documents/design/frontend_migration_react.md` を参照（本書は現行UI設計の正本）。
   - メディアデバイス列挙は `SincroMediaDeviceService` が担当し、`enumerateDevices()` の正規化、ラベル未解決時のフォールバック名生成、`devicechange` 監視を UI から分離する。React UI は `useSincroMediaDeviceState` から snapshot/refresh を購読する。
-  - `simple-vrm`, `vrm360`, `looking-glass-vrm` では React 設定パネル（`SimpleVrmControlPanel` 系）を段階導入中。現行の表示コンポーネントは `SimpleVrmControlPanel`（旧 `SimpleVrmReactPanel`）で、`vrm360` は `Vrm360ControlPanel`、`looking-glass-vrm` は `LookingGlassVrmControlPanel` ラッパーから再利用する。`useSimpleVrmPanelState` hook を共有して横展開している。表示は常時ではなく、ヘッダー右上のツールメニューから開く。閉じる操作は開発者向け診断画面と同様に右上の X ボタン、およびメニュー外/パネル外のクリック（タップ由来 click を含む）で行う。`DebugConsoleManager` が `#sincroReactSettingsPanelContainer` の開閉を管理し、メニュー系の開閉導線・外側クリック閉じの実装パターンを共有する。Start/Stop は `SincroAppController` 直操作とし、controller 未接続時は disabled。設定パネルは `会話設定`、`音声設定`、`表示設定`、`起動オプション`、`開発者向け` のカテゴリに分け、`looking-glass-vrm` ではこれに加えてページ限定の `Looking Glass 設定` を先頭に置く。`connection_state` や診断カードは一般設定から切り離し、`開発者向け` カテゴリ配下でのみ扱う。設定UIは `titleText` / `talkMode`、選択デバイス（`audioInputDeviceId`, `videoInputDeviceId`）、主要マイク設定トグル（ノイズ抑制 / 音の回り込み抑制 / 自動音量調整 / 無音時送信抑制 / にぎやかな場所向け調整）、Character/Gaze/AutoMute、起動前設定トグル（Talk/Inspector/VR）、および Looking Glass runtime 設定（`lgTileHeight`, `lgNumViews`, `lgTargetY`, `lgDepthiness`, `lgFovyDeg`）を `settings_snapshot / applySettings(...)` 経由で読み書きする。device selector は起動前 dialog と設定パネルで同じ settings key を共有し、`settings_ui_state` / `settings_ui_hints` で未解決・無効選択時の補足表示を拡張できる。起動前 dialog では `ConfigurationDialogSettingsPanel` が `useSincroMediaDeviceState` と接続し、`会話設定`、`音声設定`、`表示設定` のカテゴリでマイク入力 / 視線用カメラの selector、一覧再読み込み、ラベル未解決案内、選択済み `deviceId` が無効になった場合のヒント表示、VRM 選択導線をまとめて扱う。Looking Glass runtime 設定は `LookingGlassRuntimeConfig` に保持され、次回 Looking Glass セッション開始時の polyfill 初期化へ反映される。`SincroAppController.applySettings(...)` は LG 設定を範囲丸め/step丸めして正規化する。LG 設定には `Default` / `Portrait` / `Wide` プリセットを用意する。`SincroAppController` は `looking_glass_config_status`（次回反映待ち/再読込推奨/変更キー一覧 + 項目別の `reloadRecommendedKeys` / `nextSessionKeys`）も通知し、`looking-glass-vrm` の React パネル上段に表示する。`LookingGlassXRController` は config 更新イベントを監視し、非アクティブ時は次回開始に向けて polyfill 再初期化フラグを立てるため、セッション終了後は `reloadRecommended` を解除して `nextSession` 扱いに戻せる。既存ダイアログ操作の変更も `settings_snapshot` で同期する。加えて `settings_ui_state` により既存ダイアログの disabled 状態を React 側にも反映し、`updateCharacterStatus` / `updateUserMediaAvailabilityStatus` 由来の状態変化にも追従する。`settings_ui_hints` により Character/Gaze/AutoMute に加えて device selector の disabled 理由や無効選択メッセージも補足表示できる。`startup_settings_status` により開始前設定の変更差分を表示する（`running` 中は再開推奨、`stopped/idle` では次回開始で反映予定）。さらに `startup_settings_capabilities` によりページ別の有効性を示し、通常表示では現在のページで利用できる項目だけを見せる。`looking-glass-vrm` では `variant="looking-glass-vrm"` により Looking Glass 操作案内と LG設定セクションを追加し、startup 設定が全件未対応のときは startup セクション自体を省略する。`talkMode` は `sincro` / `chat` の両ユースケースがあるため表示を維持し、LG設定の近くに配置する。`titleText` は `looking-glass-vrm` では非表示にしている。実装は `tsx/ts` 化済み。initializer 側のUI副作用は `SincroAppController.setStartHooks(...)` へ登録して整合を取る。加えて、`simple-vrm` / `vrm360` / `looking-glass-vrm` のチャット欄 (`#sincroChatBox`) とフッターテロップ欄 (`#sincroFooterBox`) は React 描画へ段階移行を開始しており、`ChatMessageManager` / `TalkManager` はイベント配信と履歴スナップショットを保持しつつ、React マウント時に既存DOM描画を停止できる。設定ダイアログ (`dialog#configurationDialog`) では主要セクションを `ConfigurationDialogSettingsPanel` で React 置換し、表示UIは React 主導（`×`, `はじめる`, `<< もどる` を含む）へ寄せている。bridge DOM は `vrmFileInput` のみを残す最小構成へ縮退しており、visible 設定UIは React 側が正式経路である。`DialogManager` は `DialogStateStore` を介して主要設定値 / disabled 状態 / `DialogUiState` / `DialogVrmUiState` を保持し、`DialogBridgeDomAdapter` を介して dialog本体・VRM file input・ヘッダー文言の DOM 依存を扱う構成へ移行した。停止ボタン（`#rtcStop`）は Debug Console UI の責務として `DebugConsoleManager` が配線し、`DialogManager` からは切り離した。React 側は `SincroAppController` の dialog bridge API（`setDialogReactPrimarySettingsEnabled(...)`, `openDialogVrmFilePicker()`, `setDialogPopDomRenderingEnabled(...)`, `closeConfigurationDialog()`, `openConfigurationDialog()`）経由で dialog 操作を行い、`DialogManager` / `PopManager` 直接依存を減らしている。起動時 dialog の `はじめる` ボタンは React 側から `SincroAppController.start()` 直呼びに切り替え済みで、旧 `#sincroStart` クリック配線は initializer から削除済み。dialog は `DialogManager` 側で Esc / dialog 外側クリック（背景クリック）でも閉じられる。さらに dialog 専用hook（`useConfigurationDialogSettingsState`）で `SincroAppController` の settings系イベントと dialog UI状態イベント（VRM関連UI状態、`DialogUiState`）を直接購読し、`useSimpleVrmPanelState` 依存を外している。設定ダイアログ内の Pop 通知（VRM更新成功/失敗など）は `SincroAppController` の `dialog_pop_message` イベント経由で `DialogPopMessages` が React 描画し、既存 dialog pop DOM描画は停止できる。React dialog の見た目は `configurationDialogSettings.css` に分離し、dialog 本体の既存スタイル（`sincroConfigurationDialog.css`）とは役割を分けている。`ConfigurationDialogSettingsPanel` は dialog 専用セクション部品（`DialogSettingsSections`）と dialog 専用フォーム部品（`DialogSettingsFormSections`）へ分割し、フォーム実装も shared panel から独立化を開始した。React 設定型（`ApplySettingsFn`, `SincroAppSettings*`）は `src/react/app/appSettingsTypes.ts` へ切り出し、dialog UI が `simple-vrm/panelTypes` に依存しない構成へ整理した。`useSimpleVrmPanelState` と dialog hook は、active `SincroAppController` 差し替え時の購読張り替えを `subscribeActiveSincroAppController` で共有する。React エントリ（`main-react.tsx`）は動的 import 化され、Control Panel / Chat / Telop / Dialog UI が個別 chunk としてロードされる。`vite.config.js` の `manualChunks` により `react`, `three`, `three/examples`, `three-vrm`, `three-vrm-animation`, `@mediapipe/*`, `onnxruntime-web`, `@lookingglass/webxr`, その他 vendor を分離している。React チャットの描画方針は `ChatMessageManager` の view snapshot/event に含める `renderMode`（`text` / `trusted_html`）で受け取り、移行期間は `system` / `reset` のみ HTML 描画を許可する。
+  - `simple-vrm`, `vrm360`, `looking-glass-vrm` では React 設定パネル（`SimpleVrmControlPanel` 系）を段階導入中。現行の表示コンポーネントは `SimpleVrmControlPanel`（旧 `SimpleVrmReactPanel`）で、`vrm360` は `Vrm360ControlPanel`、`looking-glass-vrm` は `LookingGlassVrmControlPanel` ラッパーから再利用する。`useSimpleVrmPanelState` hook を共有して横展開している。表示は常時ではなく、ヘッダー右上のツールメニューから開く。閉じる操作は開発者向け診断画面と同様に右上の X ボタン、およびメニュー外/パネル外のクリック（タップ由来 click を含む）で行う。`DebugConsoleManager` が `#sincroReactSettingsPanelContainer` の開閉を管理し、メニュー系の開閉導線・外側クリック閉じの実装パターンを共有する。設定パネルと Debug Console は同時表示せず、片方を開く時はもう片方を閉じて同じ右側ツール領域の切替として扱う。Start/Stop は `SincroAppController` 直操作とし、controller 未接続時は disabled。設定パネルは `会話設定`、`音声設定`、`表示設定`、`起動オプション`、`開発者向け` のカテゴリに分け、`looking-glass-vrm` ではこれに加えてページ限定の `Looking Glass 設定` を先頭に置く。`connection_state` や診断カードは一般設定から切り離し、`開発者向け` カテゴリ配下でのみ扱う。既定状態では主要カテゴリへ短いスクロールで到達できるよう、常時開くカテゴリを絞って縦方向の圧迫を抑える。設定UIは `titleText` / `talkMode`、選択デバイス（`audioInputDeviceId`, `videoInputDeviceId`）、主要マイク設定トグル（ノイズ抑制 / 音の回り込み抑制 / 自動音量調整 / 無音時送信抑制 / にぎやかな場所向け調整）、Character/Gaze/AutoMute、起動前設定トグル（Talk/Inspector/VR）、および Looking Glass runtime 設定（`lgTileHeight`, `lgNumViews`, `lgTargetY`, `lgDepthiness`, `lgFovyDeg`）を `settings_snapshot / applySettings(...)` 経由で読み書きする。device selector は起動前 dialog と設定パネルで同じ settings key を共有し、`settings_ui_state` / `settings_ui_hints` で未解決・無効選択時の補足表示を拡張できる。起動前 dialog では `ConfigurationDialogSettingsPanel` が `useSincroMediaDeviceState` と接続し、`会話設定`、`音声設定`、`表示設定` のカテゴリでマイク入力 / 視線用カメラの selector、一覧再読み込み、ラベル未解決案内、選択済み `deviceId` が無効になった場合のヒント表示、VRM 選択導線をまとめて扱う。Looking Glass runtime 設定は `LookingGlassRuntimeConfig` に保持され、次回 Looking Glass セッション開始時の polyfill 初期化へ反映される。`SincroAppController.applySettings(...)` は LG 設定を範囲丸め/step丸めして正規化する。LG 設定には `Default` / `Portrait` / `Wide` プリセットを用意する。`SincroAppController` は `looking_glass_config_status`（次回反映待ち/再読込推奨/変更キー一覧 + 項目別の `reloadRecommendedKeys` / `nextSessionKeys`）も通知し、`looking-glass-vrm` の React パネル上段に表示する。`LookingGlassXRController` は config 更新イベントを監視し、非アクティブ時は次回開始に向けて polyfill 再初期化フラグを立てるため、セッション終了後は `reloadRecommended` を解除して `nextSession` 扱いに戻せる。既存ダイアログ操作の変更も `settings_snapshot` で同期する。加えて `settings_ui_state` により既存ダイアログの disabled 状態を React 側にも反映し、`updateCharacterStatus` / `updateUserMediaAvailabilityStatus` 由来の状態変化にも追従する。`settings_ui_hints` により Character/Gaze/AutoMute に加えて device selector の disabled 理由や無効選択メッセージも補足表示できる。`startup_settings_status` により開始前設定の変更差分を表示する（`running` 中は再開推奨、`stopped/idle` では次回開始で反映予定）。さらに `startup_settings_capabilities` によりページ別の有効性を示し、通常表示では現在のページで利用できる項目だけを見せる。`looking-glass-vrm` では `variant="looking-glass-vrm"` により Looking Glass 操作案内と LG設定セクションを追加し、startup 設定が全件未対応のときは startup セクション自体を省略する。`talkMode` は `sincro` / `chat` の両ユースケースがあるため表示を維持し、LG設定の近くに配置する。`titleText` は `looking-glass-vrm` では非表示にしている。実装は `tsx/ts` 化済み。initializer 側のUI副作用は `SincroAppController.setStartHooks(...)` へ登録して整合を取る。加えて、`simple-vrm` / `vrm360` / `looking-glass-vrm` のチャット欄 (`#sincroChatBox`) とフッターテロップ欄 (`#sincroFooterBox`) は React 描画へ段階移行を開始しており、`ChatMessageManager` / `TalkManager` はイベント配信と履歴スナップショットを保持しつつ、React マウント時に既存DOM描画を停止できる。設定ダイアログ (`dialog#configurationDialog`) では主要セクションを `ConfigurationDialogSettingsPanel` で React 置換し、表示UIは React 主導（`×`, `はじめる`, `<< もどる` を含む）へ寄せている。bridge DOM は `vrmFileInput` のみを残す最小構成へ縮退しており、visible 設定UIは React 側が正式経路である。`DialogManager` は `DialogStateStore` を介して主要設定値 / disabled 状態 / `DialogUiState` / `DialogVrmUiState` を保持し、`DialogBridgeDomAdapter` を介して dialog本体・VRM file input・ヘッダー文言の DOM 依存を扱う構成へ移行した。停止ボタン（`#rtcStop`）は Debug Console UI の責務として `DebugConsoleManager` が配線し、`DialogManager` からは切り離した。React 側は `SincroAppController` の dialog bridge API（`setDialogReactPrimarySettingsEnabled(...)`, `openDialogVrmFilePicker()`, `setDialogPopDomRenderingEnabled(...)`, `closeConfigurationDialog()`, `openConfigurationDialog()`）経由で dialog 操作を行い、`DialogManager` / `PopManager` 直接依存を減らしている。起動時 dialog の `はじめる` ボタンは React 側から `SincroAppController.start()` 直呼びに切り替え済みで、旧 `#sincroStart` クリック配線は initializer から削除済み。dialog は `DialogManager` 側で Esc / dialog 外側クリック（背景クリック）でも閉じられる。さらに dialog 専用hook（`useConfigurationDialogSettingsState`）で `SincroAppController` の settings系イベントと dialog UI状態イベント（VRM関連UI状態、`DialogUiState`）を直接購読し、`useSimpleVrmPanelState` 依存を外している。設定ダイアログ内の Pop 通知（VRM更新成功/失敗など）は `SincroAppController` の `dialog_pop_message` イベント経由で `DialogPopMessages` が React 描画し、既存 dialog pop DOM描画は停止できる。React dialog の見た目は `configurationDialogSettings.css` に分離し、dialog 本体の既存スタイル（`sincroConfigurationDialog.css`）とは役割を分けている。`ConfigurationDialogSettingsPanel` は dialog 専用セクション部品（`DialogSettingsSections`）と dialog 専用フォーム部品（`DialogSettingsFormSections`）へ分割し、フォーム実装も shared panel から独立化を開始した。React 設定型（`ApplySettingsFn`, `SincroAppSettings*`）は `src/react/app/appSettingsTypes.ts` へ切り出し、dialog UI が `simple-vrm/panelTypes` に依存しない構成へ整理した。`useSimpleVrmPanelState` と dialog hook は、active `SincroAppController` 差し替え時の購読張り替えを `subscribeActiveSincroAppController` で共有する。React エントリ（`main-react.tsx`）は動的 import 化され、Control Panel / Chat / Telop / Dialog UI が個別 chunk としてロードされる。`vite.config.js` の `manualChunks` により `react`, `three`, `three/examples`, `three-vrm`, `three-vrm-animation`, `@mediapipe/*`, `onnxruntime-web`, `@lookingglass/webxr`, その他 vendor を分離している。React チャットの描画方針は `ChatMessageManager` の view snapshot/event に含める `renderMode`（`text` / `trusted_html`）で受け取り、移行期間は `system` / `reset` のみ HTML 描画を許可する。
 
   - 2026-04-19 時点で設定パネル側の device selector は、起動前 dialog と同じ `audioInputDeviceId` / `videoInputDeviceId` を直接編集する。`useSimpleVrmPanelState` が `useSincroMediaDeviceState` を購読し、マイク設定に入力 selector、キャラクター設定に Gaze 用カメラ selector を表示する。両UIとも一覧再読み込みと未解決/無効デバイスのヒント表示を共通の考え方でそろえる。`videoInputDeviceId` は `SincroCharacterGazeController` + `VideoInputManager` により CharacterGaze 専用カメラ取得へ直結し、起動時選択・実行中切替・Gaze OFF/ON で再取得/再初期化される。
   - 起動前 dialog の Start 可否は `DialogManager` + `DialogSettingsPolicy` が保持し、`audioInputDeviceId` と `videoInputDeviceId` の選択状態、`enableCharacterGaze`、`getUserMedia` 利用可否を突き合わせて導出する。特に `audioInputDeviceId` が無効な場合、または Gaze 有効中に `videoInputDeviceId` が無効な場合は Start を disabled にし、個別 selector の hint と開始ボタン下の hint の両方で復帰導線を示す。設定パネル / 起動前設定は一般ユーザー向けの設定導線、Debug Console は開発者向けの診断・プレビュー確認導線として分離する。
@@ -48,6 +48,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 一般ユーザーが音声、入力デバイス、キャラクター挙動を調整するためのUIとする
   - ラベルとヘルプは、内部略語ではなく「何が変わるか」「どんな場面で使うか」を優先して記述する
   - 現在のページで使えない項目は通常表示に出さず、意味のない空セクションも作らない
+  - 既定状態では、利用頻度の高いカテゴリに短いスクロールで到達できる情報量に抑える
 - 起動前設定 dialog:
   - 開始前に決める内容の確認と、開始可否に直結するデバイス選択を担う
   - 常設の設定パネルと同じ分類軸を使い、`会話設定`、`音声設定`、`表示設定` のカテゴリで主要項目をまとめる
@@ -55,6 +56,27 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - Debug Console:
   - 開発者が WebRTC / Audio / Face & Gaze / SDP を診断するためのUIとする
   - 技術用語や詳細ステータスは維持してよいが、通常の設定導線と誤認しないタイトル、メニュー名、補助文を付ける
+  - 既定表示は接続概要などの一次情報を優先し、ログやSDPなどの詳細情報は段階的に辿れる構成とする
+
+### 2.2 右側ツールUIの表示ルール
+
+- ヘッダー右上メニューから開く設定パネルと Debug Console は、同じ「右側ツール領域」に属するUIとして扱う
+- 右側ツール領域では、大きな overlay を複数同時に開いて重ねない
+  - 設定パネルと Debug Console は相互排他、または同一シェル内のモード切替として扱う
+- メニュー操作の結果は、「別のダイアログがもう一枚重なる」ではなく「同じツール領域の内容が切り替わる」と理解できる導線を優先する
+- 一般ユーザー向け設定と開発者向け診断は、対象ユーザーと用途が視覚的に区別できる見出し・補助文・情報密度にする
+- 右側ツール領域の共通ルール:
+  - 閉じる導線は右上の同じ位置に揃える
+  - タイポグラフィ、余白、パネル幅、スクロール挙動は可能な限り共通化する
+  - 外側クリックで閉じる場合でも、別ツールへの切替操作と誤認しにくい挙動にする
+- 設定パネルのカテゴリ表示ルール:
+  - 現在のページで有効な項目がないカテゴリは通常表示しない
+  - `起動オプション` は対象項目が1件もないページではカテゴリごと表示しない
+  - `looking-glass-vrm` のようなページ限定カテゴリは、通常カテゴリと混在させず独立カテゴリとして表示する
+- Debug Console の情報表示ルール:
+  - 最初に確認したい `Overview` 系情報を先頭に置く
+  - `Channels` / `SDP` / 詳細ログは二次情報として扱い、常時全面展開を避ける
+  - 監視用UIと実験的な調整UIが混在する場合は、`高度な調整` として分離する
 
 ## 3. 背景
 
@@ -87,6 +109,9 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - 要件一覧:
   - 設定ダイアログで会話モード・キャラ表示・顔認識・自動ミュート・マイク自動音量調整(AGC)を切替可能
+  - 常設設定パネルと Debug Console は右側ツール領域内で重ならず、片方の操作中にもう片方が認知負荷を増やさないこと
+  - 常設設定パネルでは、現在のページで設定できる項目がないカテゴリを表示しないこと
+  - 常設設定パネルの既定状態で、主要カテゴリへ短いスクロールで到達できること
   - 高度なマイク設定を折りたたみ表示（デフォルト閉）とし、必要時のみ詳細項目を操作できること
   - マイク詳細項目として `noiseSuppression` / `echoCancellation` / `autoGainControl` を切替可能であること
   - ローカルマイク入力に高域通過フィルタ(HPF)を適用し、低周波ノイズを抑えられること
@@ -103,6 +128,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - デバッグコンソールでローカルマイクのRMS/Peakと、入力状態表示/クリッピング警告を確認できる
   - `RTCPeerConnection.getStats()` を1秒間隔で収集し、主要メトリクスを表示できる
   - 主要メトリクスの直近60秒トレンドをミニグラフで確認できる
+  - Debug Console は概要確認と詳細診断を段階的に辿れる構成であること
 - 優先度（Must/Should/Could）:
   - Must: RTC接続、チャット表示、テロップ表示
   - Should: 顔認識と自動ミュート、VRMファイル差し替え
@@ -116,6 +142,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - セキュリティ: ブラウザ権限（マイク/カメラ）とCORS/HTTPS前提
 - 運用性/保守性: Singleton Managerによる責務分離
 - 監視性: DebugConsoleで通信状態・音声レベル・`getStats` メトリクスを可視化
+- UX一貫性: 設定パネルと Debug Console は右側ツール領域として見た目と操作規則を揃え、用途の違いは情報密度と文言で区別する
 
 ## 6. アーキテクチャ概要
 
@@ -156,6 +183,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `UserMediaManager`: `getUserMedia` 制約（`echoCancellation`/`noiseSuppression`/`autoGainControl`/`audioInputDeviceId` 等）を構築し、騒音会場モード切替、HPF/LPF+AudioWorklet VAD処理、手動/自動/学習VAD閾値更新、実行中マイク切替時の再取得を管理
   - `VideoInputManager`: CharacterGaze 専用カメラの取得/再取得/解放を担当し、`videoInputDeviceId` の適用とカメラ切替時の旧トラック停止を集約する
   - `DebugConsoleManager`: デバッグUIの表示制御、RTC状態表示、イベントログ、音声レベルメーター、HPF/LPF・VAD状態/閾値調整・学習VAD状態表示、60秒トレンドグラフ描画
+    - 右側ツール領域の開閉責務を持ち、設定パネルと Debug Console の表示ルール（相互排他、外側クリック閉じ、メニュー遷移の整合）を管理する
   - `SincroAppController.dialogBridge`（`appController.dialog.*`）: dialog 関連 bridge API の集約窓口。React dialog hook / dialog pop / initializer からの呼び出しを段階的に統一
   - `SincroAppController.chatBridge`（`appController.chat.*`）: 挨拶メッセージ出力や system icon 更新など、チャットUI更新の集約窓口（initializer からの `ChatMessageManager` 直接依存を縮退）
   - `SincroAppController.debugBridge`（`appController.debug.*`）: Debug Console 操作の集約窓口（initializer からの `DebugConsoleManager` 直接依存を縮退）
@@ -407,6 +435,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-19 | `videoInputDeviceId` を CharacterGaze 専用カメラ取得へ反映。`VideoInputManager` を追加し、起動時選択・実行中カメラ切替・Gaze OFF/ON 時も `characterGazeVideo` preview と AutoMute が選択カメラに追従するよう更新 |
 | 2026-04-19 | 起動前設定の Start 可否を選択デバイス基準へ調整。無効な `audioInputDeviceId`、および Gaze 有効時の無効な `videoInputDeviceId` では Start を disabled にし、開始不可理由をボタン下 hint と selector hint の両方に表示するよう更新。設定パネルは正式な設定導線、Debug Console は診断/プレビュー導線として文言も整理 |
 | 2026-04-19 | 設定パネルを `会話設定` / `音声設定` / `表示設定` / `起動オプション` / `開発者向け` に再編し、起動前 dialog も `会話設定` / `音声設定` / `表示設定` のカテゴリカードへ整理。`looking-glass-vrm` はページ限定の `Looking Glass 設定` を独立表示し、接続状態や診断カードは `開発者向け` へ集約 |
+| 2026-04-19 | 右側ツールUIの表示ルールを追記。設定パネルと Debug Console は同じツール領域として扱い、重ならない表示、空カテゴリ非表示、概要優先の診断構成、共通の閉じる導線・見た目整合を設計方針として明文化 |
+| 2026-04-19 | 右側ツールUIの見た目を寄せ、設定パネルは初期展開カテゴリを絞って縦長化を抑制。Debug Console は `Overview` 優先とし、Audio / Gaze の調整UIを `高度な調整` として折りたたみ導線へ整理 |
 
 ## 15. 参照資料
 

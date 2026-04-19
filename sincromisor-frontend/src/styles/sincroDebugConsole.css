@@ -26,7 +26,7 @@ div#reactSettingsPanel {
     position: absolute;
     top: clamp(52px, 8dvh, 84px);
     right: 12px;
-    width: min(360px, calc(100vw - 24px));
+    width: min(396px, calc(100vw - 24px));
     max-height: calc(100dvh - clamp(52px, 8dvh, 84px) - 12px);
     padding-top: 34px;
     pointer-events: auto;
@@ -73,11 +73,11 @@ div#debugMenuPanel {
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    min-width: 168px;
-    padding: 6px;
-    border: 1px solid hsl(0deg 0% 100% / 16%);
-    border-radius: 8px;
-    background: hsl(0deg 0% 18% / 96%);
+    min-width: 196px;
+    padding: 8px;
+    border: 1px solid hsl(186deg 65% 52% / 20%);
+    border-radius: 10px;
+    background: linear-gradient(145deg, hsl(218deg 28% 10% / 97%), hsl(224deg 27% 7% / 97%));
     box-shadow: 0 8px 22px hsl(220deg 35% 4% / 42%);
     visibility: hidden;
     opacity: 0;
@@ -96,13 +96,13 @@ div#debugMenu.is-open div#debugMenuPanel {
 button#debugConsoleToggle,
 button#reactSettingsPanelToggle {
     width: 100%;
-    border: 1px solid hsl(0deg 0% 100% / 16%);
-    border-radius: 6px;
-    background: hsl(0deg 0% 24% / 94%);
+    border: 1px solid hsl(186deg 65% 52% / 18%);
+    border-radius: 8px;
+    background: hsl(210deg 32% 18% / 94%);
     color: hsl(0deg 0% 92%);
     text-align: left;
-    padding: 7px 9px;
-    font-size: 11px;
+    padding: 9px 10px;
+    font-size: 12px;
     cursor: pointer;
 }
 
@@ -214,10 +214,31 @@ div#debugConsole .debugConsoleTitleBox h2 {
     letter-spacing: 0.02em;
 }
 
+div#debugConsole .debugConsoleEyebrow {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid hsl(186deg 65% 52% / 28%);
+    background: hsl(186deg 70% 42% / 10%);
+    color: hsl(188deg 80% 74%);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+}
+
 div#debugConsole .debugConsoleTitleBox p {
     margin: 0;
     color: var(--debug-text-muted);
     font-size: 12px;
+}
+
+div#debugConsole .debugConsoleLead,
+div#debugConsole .debugInlineLead {
+    margin: 0 0 10px;
+    color: var(--debug-text-muted);
+    font-size: 12px;
+    line-height: 1.45;
 }
 
 div#debugConsole .debugConsoleActions {
