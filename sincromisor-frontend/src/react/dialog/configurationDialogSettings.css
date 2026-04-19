@@ -1,7 +1,8 @@
 .configurationDialogReactSettingsPanel {
     width: 100%;
     margin: 0 auto;
-    padding: 2px 2px 6px;
+    max-width: 780px;
+    padding: 2px 4px 6px;
     font-size: 14px;
     line-height: 1.4;
     color: #eef3fb;
@@ -74,9 +75,13 @@
 }
 
 .configurationDialogReactSettingsPanel__footer {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.configurationDialogReactSettingsPanel__primaryAction {
+    display: grid;
+    gap: 6px;
 }
 
 .configurationDialogReactSettingsPanel__backLink {
@@ -134,7 +139,45 @@
 .configurationDialogReactSettingsPanel__hintText {
     opacity: 0.72;
     line-height: 1.35;
-    margin-top: 4px;
+    margin-top: 0;
+}
+
+.configurationDialogReactSettingsPanel .settingsShell {
+    gap: 12px;
+}
+
+.configurationDialogReactSettingsPanel .settingsShell__header {
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.configurationDialogReactSettingsPanel .settingsShell__layout {
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 18px;
+}
+
+.configurationDialogReactSettingsPanel .settingsShell__nav {
+    gap: 10px;
+}
+
+.configurationDialogReactSettingsPanel .settingsShell__navButton {
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 14px;
+    text-align: center;
+}
+
+.configurationDialogReactSettingsPanel .settingsShell__detail {
+    gap: 16px;
+}
+
+.configurationDialogReactSettingsPanel .settingsShell__summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+}
+
+.configurationDialogReactSettingsPanel .settingsShell__statusCard {
+    min-height: 88px;
 }
 
 /* 共有 settings section の inline style（暗色前提）を前提に、dialog 側でも文字色継承を揃える。 */
@@ -150,4 +193,18 @@
 .configurationDialogReactSettingsPanel select option {
     background: #1e2230;
     color: #eef3fb;
+}
+
+@media (max-width: 860px) {
+    .configurationDialogReactSettingsPanel {
+        max-width: none;
+    }
+
+    .configurationDialogReactSettingsPanel .settingsShell__layout {
+        grid-template-columns: 1fr;
+    }
+
+    .configurationDialogReactSettingsPanel .settingsShell__summaryGrid {
+        grid-template-columns: 1fr;
+    }
 }
