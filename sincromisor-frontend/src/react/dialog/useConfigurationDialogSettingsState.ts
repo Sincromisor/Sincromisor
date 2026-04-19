@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { SincroAppController } from "../../ts/App/SincroAppController";
 import type {
     SincroAppEvent,
+    SincroAppLifecycleState,
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
+    SincroAppStartupSettingsCapabilities,
+    SincroAppStartupSettingsStatus,
 } from "../../ts/App/SincroAppTypes";
 import type {
     ApplySettingsFn,
@@ -73,6 +76,20 @@ const defaultDialogUiState: SincroAppDialogUiState = {
 };
 
 const defaultSettingsUiHints: SincroAppSettingsUiHints = {};
+const defaultStartupSettingsStatus: SincroAppStartupSettingsStatus = {
+    requiresRestart: false,
+    willApplyOnNextStart: false,
+    changedKeys: [],
+};
+const defaultStartupSettingsCapabilities: SincroAppStartupSettingsCapabilities = {
+    enableTalk: true,
+    enableInspector: true,
+    enableVR: true,
+};
+const defaultConnectionState: {
+    value: "idle" | "starting" | "connecting" | "connected" | "degraded" | "stopping" | "stopped";
+    detail: string;
+} = { value: "idle", detail: "" };
 
 type ConfigurationDialogEventHandlerMap = {
     [K in SincroAppEvent["type"]]?: (event: Extract<SincroAppEvent, { type: K; }>) => void;
@@ -82,6 +99,8 @@ type ConfigurationDialogEventHandlerMap = {
 export function useConfigurationDialogSettingsState() {
     const initialController = SincroAppController.getCurrent();
     const [currentController, setCurrentController] = useState<SincroAppController | null>(initialController);
+    const [lifecycleState, setLifecycleState] = useState<SincroAppLifecycleState>("idle");
+    const [connectionState, setConnectionState] = useState(defaultConnectionState);
     const [settings, setSettings] = useState<SincroAppSettingsSnapshot>(
         initialController?.state.getSettingsSnapshot() ?? defaultSettings,
     );
@@ -97,6 +116,12 @@ export function useConfigurationDialogSettingsState() {
     const [dialogUiState, setDialogUiState] = useState<SincroAppDialogUiState>(
         initialController?.state.getDialogUiState() ?? defaultDialogUiState,
     );
+    const [startupSettingsStatus, setStartupSettingsStatus] = useState<SincroAppStartupSettingsStatus>(
+        initialController?.state.getStartupSettingsStatus() ?? defaultStartupSettingsStatus,
+    );
+    const [startupSettingsCapabilities, setStartupSettingsCapabilities] = useState<SincroAppStartupSettingsCapabilities>(
+        defaultStartupSettingsCapabilities,
+    );
     const {
         snapshot: mediaDeviceSnapshot,
         audioInputSelection,
@@ -111,6 +136,12 @@ export function useConfigurationDialogSettingsState() {
         // 起動前 dialog は React を主表示にするため、mount 中は bridge DOM を非表示化する。
         SincroAppController.getCurrent()?.dialog.setReactPrimarySettingsEnabled(true);
         const eventHandlers: ConfigurationDialogEventHandlerMap = {
+            lifecycle: (event) => {
+                setLifecycleState(event.state);
+            },
+            connection_state: (event) => {
+                setConnectionState({ value: event.value, detail: event.detail ?? "" });
+            },
             settings_snapshot: (event) => {
                 setSettings((prev) => ({ ...prev, ...event.settings }));
             },
@@ -125,6 +156,12 @@ export function useConfigurationDialogSettingsState() {
             },
             dialog_ui_state: (event) => {
                 setDialogUiState(event.uiState);
+            },
+            startup_settings_status: (event) => {
+                setStartupSettingsStatus(event.status);
+            },
+            startup_settings_capabilities: (event) => {
+                setStartupSettingsCapabilities(event.capabilities);
             },
         };
         const unsubscribeActiveController = subscribeActiveSincroAppEvents({
@@ -143,6 +180,7 @@ export function useConfigurationDialogSettingsState() {
                     setDialogUiState,
                     setDialogVrmUiState,
                 });
+                setStartupSettingsStatus(controller.state.getStartupSettingsStatus());
             },
             onBeforeSubscribe: (controller) => {
                 controller.dialog.setReactPrimarySettingsEnabled(true);
@@ -182,11 +220,15 @@ export function useConfigurationDialogSettingsState() {
 
     return {
         currentController,
+        lifecycleState,
+        connectionState,
         settings,
         settingsUiState,
         settingsUiHints,
         dialogVrmUiState,
         dialogUiState,
+        startupSettingsStatus,
+        startupSettingsCapabilities,
         mediaDeviceSnapshot,
         audioInputSelection,
         videoInputSelection,
