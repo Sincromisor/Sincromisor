@@ -17,7 +17,7 @@ type SettingsShellProps = {
     ariaLabel: string;
     badge?: string;
     title: string;
-    description: string;
+    description?: string;
     pages: SettingsShellPage[];
     initialPageId?: string;
     footer?: ReactNode;
@@ -91,7 +91,7 @@ function SettingsShellHeader({ badge, title, description }: SettingsShellHeaderP
             <div>
                 {badge ? <div className="settingsShell__badge">{badge}</div> : null}
                 <div className="settingsShell__title">{title}</div>
-                <p className="settingsShell__description">{description}</p>
+                {description ? <p className="settingsShell__description">{description}</p> : null}
             </div>
         </header>
     );

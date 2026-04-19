@@ -78,21 +78,21 @@ export function ConfigurationDialogSettingsPanel() {
         fallbackLabel: settings.enableCharacterGaze ? "ブラウザ既定" : "視線連動オフ",
         unavailableLabel: "未検出のカメラ",
     });
+    const startButtonLabel = dialogUiState.startButtonText || "はじめる";
+    const startButtonHint = dialogUiState.startButtonHint ?? "このまま開始できます。";
 
     return (
         <div className="configurationDialogReactSettingsPanel">
             <SettingsShell
                 ariaLabel="起動前設定"
-                badge="開始前に確認"
                 title="起動前設定"
-                description="Discord ライクなカテゴリナビで、会話・音声・表示・起動・接続を順に確認できます。設定は開始後の設定パネルにも引き継がれます。"
                 initialPageId="conversation"
                 pages={[
                     {
                         id: "conversation",
                         label: "会話",
                         title: "会話",
-                        description: "会話タイトルやトークモードを決めます。まず最初に見ておくと全体像を掴みやすいページです。",
+                        description: "会話タイトルやトークモードを決めます。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -122,7 +122,7 @@ export function ConfigurationDialogSettingsPanel() {
                         id: "audio",
                         label: "音声",
                         title: "音声",
-                        description: "使うマイクと、声の入り方の調整をまとめています。デバイス選択から一覧更新までこのページで完結します。",
+                        description: "使うマイクと、声の入り方を調整します。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -165,7 +165,7 @@ export function ConfigurationDialogSettingsPanel() {
                         id: "display",
                         label: "表示",
                         title: "表示",
-                        description: "キャラクター表示、視線連動、利用する VRM モデルを開始前に整えます。",
+                        description: "キャラクター表示や VRM モデルを整えます。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -200,7 +200,7 @@ export function ConfigurationDialogSettingsPanel() {
                         id: "startup",
                         label: "起動",
                         title: "起動",
-                        description: "開始した時にだけ効く動きをまとめています。次回開始時に反映される項目をここで確認します。",
+                        description: "開始した時にだけ効く動きを確認します。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -227,7 +227,7 @@ export function ConfigurationDialogSettingsPanel() {
                         id: "connection",
                         label: "接続",
                         title: "接続",
-                        description: "接続状態の確認と、開始操作をここにまとめています。設定項目と接続アクションを分けて迷いを減らします。",
+                        description: "接続状態を確認します。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -246,16 +246,8 @@ export function ConfigurationDialogSettingsPanel() {
                         ),
                         content: (
                             <div className="configurationDialogReactSettingsPanel__connectionPage">
-                                <button
-                                    type="button"
-                                    className="configurationDialogReactSettingsPanel__startButton"
-                                    onClick={startApp}
-                                    disabled={!currentController || dialogUiState.startButtonDisabled}
-                                >
-                                    {dialogUiState.startButtonText || "はじめる"}
-                                </button>
                                 <div className="configurationDialogReactSettingsPanel__hintText">
-                                    {dialogUiState.startButtonHint ?? "設定の確認が終わったら、このページから開始できます。"}
+                                    状態だけ確認したい時に使うページです。開始は下のボタンからいつでも行えます。
                                 </div>
                             </div>
                         ),
@@ -263,6 +255,19 @@ export function ConfigurationDialogSettingsPanel() {
                 ]}
                 footer={(
                     <div className="configurationDialogReactSettingsPanel__footer">
+                        <div className="configurationDialogReactSettingsPanel__primaryAction">
+                            <button
+                                type="button"
+                                className="configurationDialogReactSettingsPanel__startButton"
+                                onClick={startApp}
+                                disabled={!currentController || dialogUiState.startButtonDisabled}
+                            >
+                                {startButtonLabel}
+                            </button>
+                            <div className="configurationDialogReactSettingsPanel__hintText">
+                                {startButtonHint}
+                            </div>
+                        </div>
                         <a className="configurationDialogReactSettingsPanel__backLink" href="/">
                             &lt;&lt; もどる
                         </a>
