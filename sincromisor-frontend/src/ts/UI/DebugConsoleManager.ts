@@ -369,7 +369,7 @@ export class DebugConsoleManager {
         this.debugConsoleContainer.style.visibility = "visible";
         this.debugConsoleContainer.style.overflow = "visible";
         if (this.debugConsoleToggleButton) {
-            this.debugConsoleToggleButton.innerText = "開発者向け診断を開く";
+            this.debugConsoleToggleButton.innerText = "開発者向け診断";
         }
         this.closeDebugMenu();
     }
@@ -383,7 +383,7 @@ export class DebugConsoleManager {
         this.debugConsoleContainer.style.visibility = "hidden";
         this.debugConsoleContainer.style.overflow = "hidden";
         if (this.debugConsoleToggleButton) {
-            this.debugConsoleToggleButton.innerText = "開発者向け診断を開く";
+            this.debugConsoleToggleButton.innerText = "開発者向け診断";
         }
         this.closeDebugMenu();
     }
@@ -399,7 +399,7 @@ export class DebugConsoleManager {
         this.reactSettingsPanelContainer.classList.add("is-open");
         this.reactSettingsPanelContainer.style.visibility = "visible";
         if (this.reactSettingsPanelToggleButton) {
-            this.reactSettingsPanelToggleButton.innerText = "設定カテゴリを開く";
+            this.reactSettingsPanelToggleButton.innerText = "設定";
         }
         this.closeDebugMenu();
     }
@@ -421,7 +421,7 @@ export class DebugConsoleManager {
         this.reactSettingsPanelContainer.classList.remove("is-open");
         this.reactSettingsPanelContainer.style.visibility = "hidden";
         if (this.reactSettingsPanelToggleButton) {
-            this.reactSettingsPanelToggleButton.innerText = "設定カテゴリを開く";
+            this.reactSettingsPanelToggleButton.innerText = "設定";
         }
         this.closeDebugMenu();
     }
