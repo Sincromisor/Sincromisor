@@ -4,6 +4,7 @@ import {
     CharacterSettingsSection,
     LookingGlassSettingsSection,
     MicSettingsSection,
+    SettingsCategorySection,
     StartupSettingsSection,
 } from "./components/SettingsSections";
 import { panelStyles } from "./panelStyles";
@@ -23,6 +24,26 @@ function connectionTone(value: string): "neutral" | "good" | "warn" {
         return "neutral";
     }
     return "warn";
+}
+
+function connectionStatusLabel(value: string): string {
+    switch (value) {
+        case "connected":
+            return "接続済み";
+        case "starting":
+            return "開始準備中";
+        case "connecting":
+            return "接続中";
+        case "degraded":
+            return "要確認";
+        case "stopping":
+            return "停止中";
+        case "stopped":
+        case "idle":
+            return "未接続";
+        default:
+            return value;
+    }
 }
 
 function formatSelectionLabel(params: {
@@ -183,7 +204,7 @@ export function SimpleVrmControlPanel({
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
                                     label="接続状態"
-                                    value={connectionState.value}
+                                    value={connectionStatusLabel(connectionState.value)}
                                     detail={connectionDetail}
                                     tone={connectionTone(connectionState.value)}
                                 />
@@ -195,15 +216,20 @@ export function SimpleVrmControlPanel({
                             </SettingsSummaryGrid>
                         ),
                         content: (
-                            <BasicSettingsSection
-                                settings={settings}
-                                uiState={settingsUiState}
-                                onTitleChange={(titleText) => applySettings({ titleText })}
-                                onTalkModeChange={changeTalkMode}
-                                showTitle={true}
-                                showTalkMode={true}
-                                showSectionTitle={false}
-                            />
+                            <SettingsCategorySection
+                                title="会話の基本"
+                                description="表示名と会話の進み方をここで決めます。開始後も同じ分類で見直せます。"
+                            >
+                                <BasicSettingsSection
+                                    settings={settings}
+                                    uiState={settingsUiState}
+                                    onTitleChange={(titleText) => applySettings({ titleText })}
+                                    onTalkModeChange={changeTalkMode}
+                                    showTitle={true}
+                                    showTalkMode={true}
+                                    showSectionTitle={false}
+                                />
+                            </SettingsCategorySection>
                         ),
                     }] : []),
                     {
@@ -228,16 +254,40 @@ export function SimpleVrmControlPanel({
                             </SettingsSummaryGrid>
                         ),
                         content: (
-                            <MicSettingsSection
-                                settings={settings}
-                                uiState={settingsUiState}
-                                uiHints={settingsUiHints}
-                                mediaDeviceSnapshot={mediaDeviceSnapshot}
-                                audioInputSelection={audioInputSelection}
-                                onApplySettings={applySettings}
-                                onRefreshDevices={refreshDevices}
-                                showSectionTitle={false}
-                            />
+                            <>
+                                <SettingsCategorySection
+                                    title="入力デバイス"
+                                    description="会話で使うマイクをここで選びます。利用可能な一覧の再取得も同じ場所で行えます。"
+                                >
+                                    <MicSettingsSection
+                                        settings={settings}
+                                        uiState={settingsUiState}
+                                        uiHints={settingsUiHints}
+                                        mediaDeviceSnapshot={mediaDeviceSnapshot}
+                                        audioInputSelection={audioInputSelection}
+                                        onApplySettings={applySettings}
+                                        onRefreshDevices={refreshDevices}
+                                        showSectionTitle={false}
+                                        mode="device"
+                                    />
+                                </SettingsCategorySection>
+                                <SettingsCategorySection
+                                    title="マイク前処理"
+                                    description="周囲のノイズや反響に合わせて、声の拾い方を調整します。迷った時は既定値から少しずつ切り替えてください。"
+                                >
+                                    <MicSettingsSection
+                                        settings={settings}
+                                        uiState={settingsUiState}
+                                        uiHints={settingsUiHints}
+                                        mediaDeviceSnapshot={mediaDeviceSnapshot}
+                                        audioInputSelection={audioInputSelection}
+                                        onApplySettings={applySettings}
+                                        onRefreshDevices={refreshDevices}
+                                        showSectionTitle={false}
+                                        mode="processing"
+                                    />
+                                </SettingsCategorySection>
+                            </>
                         ),
                     },
                     {
@@ -262,17 +312,42 @@ export function SimpleVrmControlPanel({
                             </SettingsSummaryGrid>
                         ),
                         content: (
-                            <CharacterSettingsSection
-                                settings={settings}
-                                uiState={settingsUiState}
-                                uiHints={settingsUiHints}
-                                mediaDeviceSnapshot={mediaDeviceSnapshot}
-                                audioInputSelection={audioInputSelection}
-                                videoInputSelection={videoInputSelection}
-                                onApplySettings={applySettings}
-                                onRefreshDevices={refreshDevices}
-                                showSectionTitle={false}
-                            />
+                            <>
+                                <SettingsCategorySection
+                                    title="視線用カメラ"
+                                    description="顔の向きや視線連動に使うカメラを選びます。認識が必要ない場合は既定設定のままでも進められます。"
+                                >
+                                    <CharacterSettingsSection
+                                        settings={settings}
+                                        uiState={settingsUiState}
+                                        uiHints={settingsUiHints}
+                                        mediaDeviceSnapshot={mediaDeviceSnapshot}
+                                        audioInputSelection={audioInputSelection}
+                                        videoInputSelection={videoInputSelection}
+                                        onApplySettings={applySettings}
+                                        onRefreshDevices={refreshDevices}
+                                        showSectionTitle={false}
+                                        mode="camera"
+                                    />
+                                </SettingsCategorySection>
+                                <SettingsCategorySection
+                                    title="キャラクター表示"
+                                    description="3D表示、顔の向き連動、自動ミュートなど見た目とふるまいをまとめて調整します。"
+                                >
+                                    <CharacterSettingsSection
+                                        settings={settings}
+                                        uiState={settingsUiState}
+                                        uiHints={settingsUiHints}
+                                        mediaDeviceSnapshot={mediaDeviceSnapshot}
+                                        audioInputSelection={audioInputSelection}
+                                        videoInputSelection={videoInputSelection}
+                                        onApplySettings={applySettings}
+                                        onRefreshDevices={refreshDevices}
+                                        showSectionTitle={false}
+                                        mode="display"
+                                    />
+                                </SettingsCategorySection>
+                            </>
                         ),
                     },
                     ...(hasStartupOptions ? [{
@@ -291,16 +366,21 @@ export function SimpleVrmControlPanel({
                             </SettingsSummaryGrid>
                         ),
                         content: (
-                            <StartupSettingsSection
-                                settings={settings}
-                                uiState={settingsUiState}
-                                onApplySettings={applySettings}
-                                isRunning={lifecycleState === "running"}
-                                startupStatus={startupSettingsStatus}
-                                startupCapabilities={startupSettingsCapabilities}
-                                hideIfNoSupported={true}
-                                showSectionTitle={false}
-                            />
+                            <SettingsCategorySection
+                                title="開始時のオプション"
+                                description="ページを始める瞬間にだけ効く項目です。変更したあと反映タイミングもこの中で確認できます。"
+                            >
+                                <StartupSettingsSection
+                                    settings={settings}
+                                    uiState={settingsUiState}
+                                    onApplySettings={applySettings}
+                                    isRunning={lifecycleState === "running"}
+                                    startupStatus={startupSettingsStatus}
+                                    startupCapabilities={startupSettingsCapabilities}
+                                    hideIfNoSupported={true}
+                                    showSectionTitle={false}
+                                />
+                            </SettingsCategorySection>
                         ),
                     }] : []),
                     {
@@ -312,7 +392,7 @@ export function SimpleVrmControlPanel({
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
                                     label="接続状態"
-                                    value={connectionState.value}
+                                    value={connectionStatusLabel(connectionState.value)}
                                     detail={connectionDetail}
                                     tone={connectionTone(connectionState.value)}
                                 />
@@ -324,19 +404,24 @@ export function SimpleVrmControlPanel({
                             </SettingsSummaryGrid>
                         ),
                         content: (
-                            <div style={{ display: "grid", gap: "12px" }}>
-                                <div style={{ display: "flex", gap: "8px" }}>
-                                    <button type="button" onClick={startAction} disabled={!hasActiveController} style={panelStyles.button}>
-                                        会話を開始
-                                    </button>
-                                    <button type="button" onClick={stopAction} disabled={!hasActiveController} style={panelStyles.button}>
-                                        接続を停止
-                                    </button>
+                            <SettingsCategorySection
+                                title="接続操作"
+                                description="状態確認と開始・停止をこの面にまとめています。設定値の変更と接続アクションを混在させないための専用ページです。"
+                            >
+                                <div style={{ display: "grid", gap: "14px" }}>
+                                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                        <button type="button" onClick={startAction} disabled={!hasActiveController} style={panelStyles.button}>
+                                            会話を開始
+                                        </button>
+                                        <button type="button" onClick={stopAction} disabled={!hasActiveController} style={panelStyles.button}>
+                                            接続を停止
+                                        </button>
+                                    </div>
+                                    <div style={{ opacity: 0.78, lineHeight: 1.5 }}>
+                                        接続状態が不安定な時は、ここで停止してからもう一度開始してください。詳しい原因確認が必要な時は開発者向けを使います。
+                                    </div>
                                 </div>
-                                <div style={{ opacity: 0.72, lineHeight: 1.4 }}>
-                                    接続状態が不安定な時は、ここで停止してからもう一度開始してください。詳しい原因確認が必要な時は開発者向けを使います。
-                                </div>
-                            </div>
+                            </SettingsCategorySection>
                         ),
                     },
                     {
@@ -362,14 +447,19 @@ export function SimpleVrmControlPanel({
                         ),
                         content: (
                             <>
-                                <div style={{ marginBottom: "14px" }}>
-                                    <button type="button" onClick={openDeveloperConsole} style={panelStyles.button}>
-                                        開発者向け診断へ切り替える
-                                    </button>
-                                    <div style={{ marginTop: "6px", opacity: 0.68, lineHeight: 1.35 }}>
-                                        診断画面を開くと、この設定パネルは閉じて同じ右側ツール領域に切り替わります。
+                                <SettingsCategorySection
+                                    title="診断画面"
+                                    description="より詳しい RTC や音声の状態を確認したい時だけ切り替えます。通常の調整は他カテゴリのまま進めてください。"
+                                >
+                                    <div style={{ marginBottom: "4px" }}>
+                                        <button type="button" onClick={openDeveloperConsole} style={panelStyles.button}>
+                                            開発者向け診断へ切り替える
+                                        </button>
+                                        <div style={{ marginTop: "8px", opacity: 0.72, lineHeight: 1.45 }}>
+                                            診断画面を開くと、この設定パネルは閉じて同じ右側ツール領域に切り替わります。
+                                        </div>
                                     </div>
-                                </div>
+                                </SettingsCategorySection>
                                 <DiagnosticsStatusCards
                                     vadState={vadState}
                                     gaze={gaze}

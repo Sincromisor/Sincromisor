@@ -175,25 +175,74 @@ dialog#configurationDialog {
 
     /* React 主導の起動前設定UIでは dialog 本体を暗色面として使い、内側に余分な枠を作らない。 */
     &.reactPrimarySettingsEnabled {
+        width: min(1120px, calc(100vw - 48px));
+        min-width: min(960px, calc(100vw - 48px));
+        min-height: min(700px, calc(100dvh - 48px));
+        max-width: calc(100vw - 48px);
+        max-height: calc(100dvh - 48px);
+        padding: 0;
         color: #eef3fb;
         background:
             linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015)),
             rgba(18, 20, 26, 0.94);
         border-color: rgba(255, 255, 255, 0.14);
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+        border-radius: 22px;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.36);
         overflow-x: hidden;
         overflow-y: auto;
+    }
+
+    &.reactPrimarySettingsEnabled > div#sincroDialogReactSettingsRoot {
+        width: 100%;
+        margin: 0;
+        padding: 28px 30px 24px;
+        box-sizing: border-box;
+    }
+
+    &.reactPrimarySettingsEnabled::backdrop {
+        background:
+            radial-gradient(circle at 20% 10%, rgba(89, 165, 229, 0.16), transparent 30%),
+            rgba(6, 10, 16, 0.72);
+        backdrop-filter: blur(2px);
     }
 }
 
 /* CSS nesting の解釈差で React モード時スタイルが落ちる環境向けの保険。
    起動前設定の見た目は親 dialog を暗色化して成立するため、明示セレクタで強制する。 */
 dialog#configurationDialog.reactPrimarySettingsEnabled {
+    width: min(1120px, calc(100vw - 48px)) !important;
+    min-width: min(960px, calc(100vw - 48px)) !important;
+    min-height: min(700px, calc(100dvh - 48px)) !important;
+    max-width: calc(100vw - 48px) !important;
+    max-height: calc(100dvh - 48px) !important;
+    padding: 0 !important;
     color: #eef3fb !important;
     background-color: rgba(18, 20, 26, 0.94) !important;
     background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)) !important;
     border-color: rgba(255, 255, 255, 0.14) !important;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28) !important;
+    border-radius: 22px !important;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.36) !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
+}
+
+dialog#configurationDialog.reactPrimarySettingsEnabled > div#sincroDialogReactSettingsRoot {
+    width: 100%;
+    margin: 0;
+    padding: 28px 30px 24px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 960px) {
+    dialog#configurationDialog.reactPrimarySettingsEnabled {
+        width: calc(100vw - 24px) !important;
+        min-width: calc(100vw - 24px) !important;
+        min-height: calc(100dvh - 24px) !important;
+        max-width: calc(100vw - 24px) !important;
+        max-height: calc(100dvh - 24px) !important;
+    }
+
+    dialog#configurationDialog.reactPrimarySettingsEnabled > div#sincroDialogReactSettingsRoot {
+        padding: 20px 18px 18px;
+    }
 }

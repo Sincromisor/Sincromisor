@@ -1,22 +1,27 @@
 .settingsShell {
+    --settings-shell-border: rgba(130, 188, 255, 0.14);
+    --settings-shell-border-strong: rgba(130, 188, 255, 0.22);
+    --settings-shell-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
+    --settings-shell-surface-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03));
+    --settings-shell-nav-active: linear-gradient(180deg, rgba(71, 118, 161, 0.4), rgba(22, 37, 53, 0.58));
     display: grid;
-    gap: 16px;
+    gap: 20px;
 }
 
 .settingsShell__header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
 }
 
 .settingsShell__badge {
     display: inline-flex;
     align-items: center;
-    padding: 3px 9px;
-    margin-bottom: 8px;
+    padding: 5px 11px;
+    margin-bottom: 12px;
     border-radius: 999px;
-    border: 1px solid rgba(130, 188, 255, 0.24);
+    border: 1px solid var(--settings-shell-border-strong);
     background: rgba(124, 187, 255, 0.08);
     color: #b8d8ff;
     font-size: 11px;
@@ -24,139 +29,212 @@
 }
 
 .settingsShell__title {
-    font-size: 1.02rem;
+    font-size: 1.18rem;
     font-weight: 700;
     letter-spacing: 0.02em;
 }
 
 .settingsShell__description {
-    margin: 8px 0 0;
-    opacity: 0.76;
-    line-height: 1.45;
+    margin: 10px 0 0;
+    opacity: 0.8;
+    line-height: 1.55;
+    max-width: 62rem;
 }
 
 .settingsShell__layout {
     display: grid;
-    grid-template-columns: minmax(132px, 176px) minmax(0, 1fr);
-    gap: 16px;
+    grid-template-columns: minmax(188px, 220px) minmax(0, 1fr);
+    gap: 28px;
     align-items: start;
 }
 
 .settingsShell__nav {
     display: grid;
-    gap: 8px;
+    gap: 20px;
     position: sticky;
     top: 0;
+    padding: 18px 14px;
+    border: 1px solid var(--settings-shell-border);
+    border-radius: 22px;
+    background: var(--settings-shell-surface);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.14);
+}
+
+.settingsShell__navSection {
+    display: grid;
+    gap: 8px;
+}
+
+.settingsShell__navSectionTitle {
+    padding: 0 10px;
+    color: rgba(223, 232, 245, 0.72);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .settingsShell__navButton {
     width: 100%;
-    min-height: 40px;
-    padding: 10px 12px;
-    border: 1px solid rgba(130, 188, 255, 0.12);
+    min-height: 42px;
+    padding: 11px 14px;
+    border: 1px solid transparent;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.035);
+    background: transparent;
     color: inherit;
     text-align: left;
     font: inherit;
     cursor: pointer;
-    transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
+    transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease, color 120ms ease;
+}
+
+.settingsShell__navButtonLabel {
+    display: block;
+    font-weight: 600;
+    line-height: 1.35;
 }
 
 .settingsShell__navButton:hover,
 .settingsShell__navButton:focus-visible {
-    border-color: rgba(130, 188, 255, 0.24);
-    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(130, 188, 255, 0.18);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .settingsShell__navButton.is-active {
-    border-color: rgba(130, 188, 255, 0.34);
-    background: linear-gradient(180deg, rgba(71, 118, 161, 0.34), rgba(22, 37, 53, 0.54));
+    border-color: var(--settings-shell-border-strong);
+    background: var(--settings-shell-nav-active);
+    box-shadow: inset 3px 0 0 rgba(159, 210, 255, 0.78);
     transform: translateX(1px);
 }
 
 .settingsShell__navButton.is-developer {
-    color: #d8deeb;
+    color: rgba(232, 238, 245, 0.92);
 }
 
 .settingsShell__detail {
     min-width: 0;
     display: grid;
-    gap: 14px;
+    gap: 16px;
+    max-width: 760px;
 }
 
 .settingsShell__pageHeader {
     display: grid;
-    gap: 6px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 8px;
+    padding: 20px 22px;
+    border: 1px solid var(--settings-shell-border);
+    border-radius: 22px;
+    background: var(--settings-shell-surface);
 }
 
 .settingsShell__pageTitle {
     margin: 0;
-    font-size: 1rem;
+    font-size: 1.28rem;
+    line-height: 1.2;
 }
 
 .settingsShell__pageDescription {
     margin: 0;
-    opacity: 0.74;
-    line-height: 1.45;
+    opacity: 0.8;
+    line-height: 1.55;
 }
 
 .settingsShell__summary {
     display: grid;
-    gap: 10px;
+    gap: 12px;
 }
 
 .settingsShell__summaryGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
 }
 
 .settingsShell__statusCard {
     min-width: 0;
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.04);
+    min-height: 118px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid var(--settings-shell-border);
+    background: var(--settings-shell-surface-strong);
+    display: grid;
+    align-content: start;
 }
 
 .settingsShell__statusLabel {
-    opacity: 0.66;
+    opacity: 0.72;
     font-size: 12px;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
+    letter-spacing: 0.03em;
 }
 
 .settingsShell__statusValue {
     font-weight: 700;
     line-height: 1.3;
+    font-size: 1rem;
 }
 
 .settingsShell__statusDetail {
-    margin-top: 4px;
-    opacity: 0.72;
-    line-height: 1.35;
+    margin-top: 8px;
+    opacity: 0.8;
+    line-height: 1.45;
     font-size: 12px;
 }
 
 .settingsShell__content {
     min-width: 0;
+    padding: 20px 22px;
+    border-radius: 22px;
+    border: 1px solid var(--settings-shell-border);
+    background: var(--settings-shell-surface);
 }
 
 .settingsShell__pageFooter,
 .settingsShell__footer {
-    padding-top: 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 18px 22px;
+    border: 1px solid var(--settings-shell-border);
+    border-radius: 22px;
+    background: var(--settings-shell-surface);
 }
 
-@media (max-width: 860px) {
+@media (max-width: 960px) {
     .settingsShell__layout {
         grid-template-columns: 1fr;
     }
 
     .settingsShell__nav {
         position: static;
-        grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+        gap: 16px;
+    }
+
+    .settingsShell__navSection {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    .settingsShell__detail {
+        max-width: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .settingsShell {
+        gap: 16px;
+    }
+
+    .settingsShell__nav,
+    .settingsShell__pageHeader,
+    .settingsShell__content,
+    .settingsShell__pageFooter,
+    .settingsShell__footer {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .settingsShell__navSection {
+        grid-template-columns: 1fr;
+    }
+
+    .settingsShell__summaryGrid {
+        grid-template-columns: 1fr;
     }
 }
