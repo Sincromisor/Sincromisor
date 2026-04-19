@@ -22,12 +22,12 @@ export const panelStyles: PanelStyles = {
         // Debug Menu から開く専用コンテナ内に描画するため、fixed ではなく relative で組む。
         position: "relative",
         width: "100%",
-        border: "1px solid rgba(255,255,255,0.25)",
-        background: "rgba(17, 22, 31, 0.82)",
+        border: "1px solid hsl(186deg 65% 52% / 24%)",
+        background: "linear-gradient(145deg, rgba(18, 24, 33, 0.94), rgba(11, 15, 22, 0.94))",
         color: "#f4f7fb",
-        boxShadow: "0 8px 28px rgba(0,0,0,0.24)",
+        boxShadow: "0 14px 44px rgba(0, 0, 0, 0.34)",
         backdropFilter: "blur(8px)",
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+        fontFamily: "\"IBM Plex Sans\", \"BIZ UDPGothic\", \"UDPGothic\", sans-serif",
         overflowX: "hidden",
         overflowY: "auto",
         scrollbarWidth: "thin",
@@ -42,10 +42,11 @@ export const panelStyles: PanelStyles = {
             };
         })(),
         flex: 1,
-        border: "1px solid rgba(255,255,255,0.2)",
-        background: "rgba(255,255,255,0.08)",
+        border: "1px solid hsl(190deg 60% 60% / 30%)",
+        background: "linear-gradient(180deg, rgba(43, 77, 102, 0.68), rgba(24, 45, 61, 0.78))",
         color: "#f4f7fb",
         cursor: "pointer",
+        fontWeight: 600,
     },
     miniCard: {
         ...(() => {

@@ -7,15 +7,16 @@
     </button>
     <header class="debugConsoleHeader">
         <div class="debugConsoleTitleBox">
+            <div class="debugConsoleEyebrow">開発者向け診断</div>
             <h2>Debug Console</h2>
-            <p>開発者向けの診断画面です。接続状況や音声入力、視線検出の状態確認に使います。</p>
+            <p>まずは Overview で接続状態を確認し、必要な時だけ Audio / Channels / SDP の詳細へ進みます。</p>
         </div>
         <div class="debugConsoleActions">
             <button id="rtcStop">接続を停止</button>
         </div>
     </header>
     <nav class="debugConsoleTabs" aria-label="Developer diagnostics panels">
-        <button type="button" class="debugTab is-active" data-debug-tab="status">Status</button>
+        <button type="button" class="debugTab is-active" data-debug-tab="status">Overview</button>
         <button type="button" class="debugTab" data-debug-tab="transport">Transport</button>
         <button type="button" class="debugTab" data-debug-tab="audio">Audio</button>
         <button type="button" class="debugTab" data-debug-tab="channels">Channels</button>
@@ -25,6 +26,7 @@
 
     <section class="debugCard debugCard--status debugPanel is-active" data-debug-panel="status">
         <h3>Session Overview</h3>
+        <p class="debugConsoleLead">接続が不安定な時は、まず ICE / Signaling / RTT を確認してください。ログや SDP はその後で十分です。</p>
         <div class="statusGrid">
             <div class="statusItem">
                 <span class="statusLabel">ICE Gathering</span>
@@ -165,7 +167,8 @@
             </div>
             <div class="audioMeterPanel audioMeterPanel--controls">
                 <details class="audioInlineDetails audioInlineDetails--controls">
-                    <summary>入力/VAD設定</summary>
+                    <summary>高度な調整</summary>
+                    <p class="debugInlineLead">通常はメーター確認だけで十分です。入力の切り分けや騒音環境の調整が必要な時だけ開いてください。</p>
                     <div class="audioControlGroup">
                         <label class="audioControlLabel" for="localAudioHighpassCutoff">
                             HPF Cutoff
@@ -351,7 +354,8 @@
             <dd id="characterGazeTargetDebug">-</dd>
         </dl>
         <details class="audioInlineDetails">
-            <summary>Gaze Tuning</summary>
+            <summary>高度な調整 (Gaze Tuning)</summary>
+            <p class="debugInlineLead">視線追従が不安定な時だけ調整してください。通常運用では既定値のままで構いません。</p>
             <div class="audioControlGroup">
                 <div class="audioControlPresetButtons">
                     <button type="button" data-gaze-tuning-preset="stable">安定重視</button>

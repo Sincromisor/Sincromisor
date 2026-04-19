@@ -72,6 +72,17 @@ export function SimpleVrmControlPanel({
     const requestLookingGlassStop = (): void => {
         window.dispatchEvent(new CustomEvent("sincro:looking-glass-stop-request"));
     };
+    const shellBadgeStyle = {
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "3px 8px",
+        borderRadius: "999px",
+        border: "1px solid rgba(130, 188, 255, 0.24)",
+        background: "rgba(124, 187, 255, 0.08)",
+        color: "#b8d8ff",
+        fontSize: "11px",
+        letterSpacing: "0.04em",
+    } as const;
 
     return (
         <section
@@ -79,11 +90,16 @@ export function SimpleVrmControlPanel({
             className="sincroControlPanel"
             style={panelStyles.root}
         >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                <strong style={{ fontSize: "12px", letterSpacing: "0.02em" }}>{title}</strong>
-                <span style={{ opacity: 0.8 }}>{hasActiveController ? "接続済み" : "待機中"}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "8px" }}>
+                <div>
+                    <div style={{ ...shellBadgeStyle, marginBottom: "8px" }}>一般ユーザー向け設定</div>
+                    <strong style={{ fontSize: "15px", letterSpacing: "0.02em", display: "block" }}>{title}</strong>
+                </div>
+                <span style={{ ...shellBadgeStyle, color: hasActiveController ? "#9ff0bf" : "#d7e3f5" }}>
+                    {hasActiveController ? "接続済み" : "待機中"}
+                </span>
             </div>
-            <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px`, opacity: 0.75, lineHeight: 1.35 }}>
+            <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px`, opacity: 0.75, lineHeight: 1.45 }}>
                 目的ごとに設定を分けています。まずは会話・音声・表示を調整し、接続確認や詳しい診断が必要な時だけ開発者向けを開いてください。
             </div>
             {isLookingGlassFocused ? (
@@ -198,7 +214,7 @@ export function SimpleVrmControlPanel({
             <SettingsCategorySection
                 title="表示設定"
                 description="キャラクター表示や視線連動など、見た目や動きに関する設定です。"
-                defaultOpen={!isLookingGlassFocused}
+                defaultOpen={false}
             >
                 <CharacterSettingsSection
                     settings={settings}
@@ -237,8 +253,11 @@ export function SimpleVrmControlPanel({
             >
                 <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
                     <button type="button" onClick={openDeveloperConsole} style={panelStyles.button}>
-                        開発者向け診断を開く
+                        開発者向け診断へ切り替える
                     </button>
+                    <div style={{ marginTop: "6px", opacity: 0.68, lineHeight: 1.35 }}>
+                        診断画面を開くと、この設定パネルは閉じて同じ右側ツール領域に切り替わります。
+                    </div>
                 </div>
                 <div style={{ marginBottom: `${controlPanelTuning.sectionSpacingPx}px` }}>
                     <div style={{ opacity: 0.75 }}>ライフサイクル</div>

@@ -363,6 +363,8 @@ export class DebugConsoleManager {
         if (!this.debugConsoleContainer) {
             return;
         }
+        // 右側ツール領域では大型 overlay を重ねず、常に片側だけを見せる。
+        this.hideReactSettingsPanel();
         this.debugConsoleContainer.classList.add("is-open");
         this.debugConsoleContainer.style.visibility = "visible";
         this.debugConsoleContainer.style.overflow = "visible";
@@ -392,6 +394,8 @@ export class DebugConsoleManager {
         if (!this.reactSettingsPanelContainer) {
             return;
         }
+        // 設定導線を開く時は診断画面を閉じ、同じツール領域の切替として扱う。
+        this.hideDebugConsole();
         this.reactSettingsPanelContainer.classList.add("is-open");
         this.reactSettingsPanelContainer.style.visibility = "visible";
         if (this.reactSettingsPanelToggleButton) {

@@ -31,6 +31,11 @@ const detailsContentTopMarginPx = UI_TUNING.controlPanel.detailsContentTopMargin
 const settingsTuning = UI_TUNING.controlPanel.settings;
 const compactGapPx = settingsTuning.compactGapPx;
 const rowGapPx = settingsTuning.rowGapPx;
+const toggleGridStyle: CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: `${compactGapPx}px`,
+};
 
 const settingHelp = {
     titleText: "会話UIなどに表示されるタイトル文字列です。配信名・キャラクター名を表示したいときに設定します。",
@@ -223,14 +228,14 @@ export function SettingsCategorySection({
                     display: "flex",
                     flexDirection: "column",
                     gap: "4px",
-                    padding: "10px 12px",
+                    padding: "11px 12px",
                     borderRadius: "10px",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(130, 188, 255, 0.14)",
+                    background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
                 }}
             >
                 <span style={{ fontWeight: 700, letterSpacing: "0.01em" }}>{title}</span>
-                <span style={{ opacity: 0.72, lineHeight: 1.35 }}>{description}</span>
+                <span style={{ opacity: 0.68, lineHeight: 1.35, fontSize: "12px" }}>{description}</span>
             </summary>
             <div
                 style={{
@@ -389,7 +394,7 @@ export function MicSettingsSection({
                     kindLabel="マイク"
                 />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${compactGapPx}px` }}>
+            <div style={toggleGridStyle}>
                 <SettingToggle
                     label="ノイズを抑える"
                     help={settingHelp.enableNoiseSuppression}
@@ -473,7 +478,7 @@ export function CharacterSettingsSection({
                     kindLabel="カメラ"
                 />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${compactGapPx}px` }}>
+            <div style={toggleGridStyle}>
                 <SettingToggle
                     label="3Dキャラクターを表示"
                     help={settingHelp.enableCharacter}
@@ -773,7 +778,7 @@ export function StartupSettingsSection({
                 </div>
             ) : null}
             {supportedItems.length > 0 ? (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${compactGapPx}px` }}>
+                <div style={toggleGridStyle}>
                     {supportedItems.map((item) => (
                         <SettingToggle
                             key={item.key}
@@ -845,17 +850,25 @@ function SettingToggle({ label, help, checked, disabled = false, onChange }: Set
         // Control Panel 側は常設 UI のため、dialog 版より少し情報密度を高くした toggle 表示を使う。
         <label style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             gap: `${compactGapPx}px`,
-            padding: "6px 8px",
-            borderRadius: "6px",
-            border: "1px solid rgba(255,255,255,0.08)",
+            minHeight: "56px",
+            padding: "10px 11px",
+            borderRadius: "8px",
+            border: "1px solid rgba(130, 188, 255, 0.14)",
             background: "rgba(255,255,255,0.04)",
             opacity: disabled ? 0.6 : 1,
-            cursor: "default",
+            cursor: disabled ? "not-allowed" : "pointer",
+            boxSizing: "border-box",
         }}>
-            <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
-            <span style={{ display: "inline-flex", alignItems: "center" }}>
+            <input
+                type="checkbox"
+                checked={checked}
+                disabled={disabled}
+                onChange={(e) => onChange(e.target.checked)}
+                style={{ marginTop: "2px", flexShrink: 0 }}
+            />
+            <span style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", lineHeight: 1.35 }}>
                 {label}
                 {help ? <HelpBadge help={help} /> : null}
             </span>
