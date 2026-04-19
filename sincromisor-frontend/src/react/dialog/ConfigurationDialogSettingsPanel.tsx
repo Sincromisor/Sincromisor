@@ -63,7 +63,7 @@ export function ConfigurationDialogSettingsPanel() {
         startApp,
     } = useConfigurationDialogSettingsState();
 
-    const connectionDetail = connectionState.detail || dialogUiState.startButtonHint || "開始前の設定を確認できます。";
+    const connectionDetail = connectionState.detail || dialogUiState.startButtonHint || "最初に必要な設定を確認してから開始します。";
     const microphoneValue = formatSelectionLabel({
         selectedLabel: audioInputSelection.matchedDevice?.label ?? null,
         isSelected: audioInputSelection.isSelected,
@@ -78,21 +78,23 @@ export function ConfigurationDialogSettingsPanel() {
         fallbackLabel: settings.enableCharacterGaze ? "ブラウザ既定" : "視線連動オフ",
         unavailableLabel: "未検出のカメラ",
     });
-    const startButtonLabel = dialogUiState.startButtonText || "はじめる";
-    const startButtonHint = dialogUiState.startButtonHint ?? "このまま開始できます。";
+    const startButtonLabel = dialogUiState.startButtonText || "開始する";
+    const startButtonHint = dialogUiState.startButtonHint ?? "必要な設定を確認したら、このまま開始できます。";
 
     return (
         <div className="configurationDialogReactSettingsPanel">
             <SettingsShell
-                ariaLabel="起動前設定"
-                title="起動前設定"
+                ariaLabel="初回セットアップウィザード"
+                badge="初回セットアップ"
+                title="会話を始める前のセットアップ"
+                description="この画面で会話・音声・表示の準備を確認します。完了すると会話画面へ進み、開始後の設定パネルからも同じ項目を見直せます。"
                 initialPageId="conversation"
                 pages={[
                     {
                         id: "conversation",
                         label: "会話",
                         title: "会話",
-                        description: "会話タイトルやトークモードを決めます。",
+                        description: "最初に、会話画面で使う名前と会話モードを確認します。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -122,7 +124,7 @@ export function ConfigurationDialogSettingsPanel() {
                         id: "audio",
                         label: "音声",
                         title: "音声",
-                        description: "使うマイクと、声の入り方を調整します。",
+                        description: "使うマイクと、声の入り方に関わる準備をここで整えます。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -165,7 +167,7 @@ export function ConfigurationDialogSettingsPanel() {
                         id: "display",
                         label: "表示",
                         title: "表示",
-                        description: "キャラクター表示や VRM モデルを整えます。",
+                        description: "キャラクター表示、視線連動、VRM モデルを開始前に確認します。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -200,7 +202,7 @@ export function ConfigurationDialogSettingsPanel() {
                         id: "startup",
                         label: "起動",
                         title: "起動",
-                        description: "開始した時にだけ効く動きを確認します。",
+                        description: "開始した時にだけ効く動きやオプションを確認します。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -227,7 +229,7 @@ export function ConfigurationDialogSettingsPanel() {
                         id: "connection",
                         label: "接続",
                         title: "接続",
-                        description: "接続状態を確認します。",
+                        description: "開始前の確認ページです。準備が整ったら下のボタンから会話を始めます。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -247,7 +249,7 @@ export function ConfigurationDialogSettingsPanel() {
                         content: (
                             <div className="configurationDialogReactSettingsPanel__connectionPage">
                                 <div className="configurationDialogReactSettingsPanel__hintText">
-                                    状態だけ確認したい時に使うページです。開始は下のボタンからいつでも行えます。
+                                    このセットアップは開始前の必須フローです。内容を確認したら、下の主ボタンから会話を始めてください。
                                 </div>
                             </div>
                         ),
@@ -255,6 +257,9 @@ export function ConfigurationDialogSettingsPanel() {
                 ]}
                 footer={(
                     <div className="configurationDialogReactSettingsPanel__footer">
+                        <div className="configurationDialogReactSettingsPanel__exitHint">
+                            途中で離れる場合はトップへ戻れます。ESC キーや背景クリックでは閉じません。
+                        </div>
                         <div className="configurationDialogReactSettingsPanel__primaryAction">
                             <button
                                 type="button"
@@ -269,7 +274,7 @@ export function ConfigurationDialogSettingsPanel() {
                             </div>
                         </div>
                         <a className="configurationDialogReactSettingsPanel__backLink" href="/">
-                            &lt;&lt; もどる
+                            トップへ戻る
                         </a>
                     </div>
                 )}

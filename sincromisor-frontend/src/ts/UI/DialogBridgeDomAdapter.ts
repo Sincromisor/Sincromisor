@@ -29,11 +29,11 @@ export class DialogBridgeDomAdapter {
         });
         dialog.addEventListener("click", (e) => {
             if (e.target === dialog) {
-                // 背景クリックでは閉じない。操作は「はじめる」または「<< もどる」に限定する。
+                // 背景クリックでは閉じない。操作は「開始する」または「トップへ戻る」に限定する。
                 e.preventDefault();
             }
         });
-        // 現状の起動前設定では閉じ導線を明示操作（はじめる/もどる）に限定するため、callback は未使用。
+        // 初回セットアップでは閉じ導線を明示操作（開始する/トップへ戻る）に限定するため、callback は未使用。
         // 将来「確認付き close」を戻す場合の拡張点として引数は残している。
         void onRequestClose;
         this.dialogEventsBound = true;
