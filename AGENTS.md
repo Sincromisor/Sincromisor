@@ -158,6 +158,9 @@ docker compose --profile full up -d
 ## 10. コメントの記述とドキュメントの更新
 
 - ソースコードには積極的にコメントを記述する。
+- コメント記述ルールはGoogleのスタイルガイドラインを参考にする。
+  - https://google.github.io/styleguide/tsguide.html#comments-documentation
+  - https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings
 - コメントは、後日それを読み返した際に素早くコンテキストが理解できる内容とすることを心掛ける。
 - ソースコードを変更した際など、documents/design以下の設計ドキュメントの更新が必要な場合はその旨を通知し、更新を促す。
 
