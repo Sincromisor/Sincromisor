@@ -166,7 +166,7 @@ export class DialogSettingsPolicy {
 
         return {
             startButtonDisabled: false,
-            startButtonText: "はじめる",
+            startButtonText: "開始する",
         };
     }
 

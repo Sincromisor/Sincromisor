@@ -71,7 +71,7 @@ const defaultDialogVrmUiState: SincroAppDialogVrmUiState = {
 const defaultDialogUiState: SincroAppDialogUiState = {
     isOpen: false,
     startButtonDisabled: false,
-    startButtonText: "はじめる",
+    startButtonText: "開始する",
     startButtonHint: null,
 };
 

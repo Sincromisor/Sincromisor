@@ -106,7 +106,7 @@ export class DialogStateStore {
     private dialogUiState: DialogUiStateValue = {
         isOpen: false,
         startButtonDisabled: false,
-        startButtonText: "はじめる",
+        startButtonText: "開始する",
         startButtonHint: null,
     };
     private dialogVrmUiState: DialogVrmUiStateValue = {

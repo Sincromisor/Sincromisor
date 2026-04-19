@@ -1,8 +1,8 @@
 .configurationDialogReactSettingsPanel {
     width: 100%;
     margin: 0 auto;
-    max-width: 780px;
-    padding: 2px 4px 6px;
+    max-width: 860px;
+    padding: 4px 6px 8px;
     font-size: 14px;
     line-height: 1.4;
     color: #eef3fb;
@@ -77,6 +77,7 @@
 .configurationDialogReactSettingsPanel__footer {
     display: grid;
     gap: 12px;
+    align-items: start;
 }
 
 .configurationDialogReactSettingsPanel__primaryAction {
@@ -84,10 +85,19 @@
     gap: 6px;
 }
 
+.configurationDialogReactSettingsPanel__exitHint {
+    max-width: 44rem;
+    color: rgba(225, 233, 247, 0.76);
+    line-height: 1.45;
+    font-size: 12px;
+}
+
 .configurationDialogReactSettingsPanel__backLink {
     color: #eef3fb;
     text-decoration: none;
-    opacity: 0.85;
+    width: fit-content;
+    opacity: 0.72;
+    font-size: 12px;
 }
 
 .configurationDialogReactSettingsPanel__backLink:hover,
@@ -143,17 +153,38 @@
 }
 
 .configurationDialogReactSettingsPanel .settingsShell {
-    gap: 12px;
+    gap: 16px;
 }
 
 .configurationDialogReactSettingsPanel .settingsShell__header {
-    padding-bottom: 8px;
+    padding: 4px 0 14px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.configurationDialogReactSettingsPanel .settingsShell__badge {
+    margin-bottom: 10px;
+    padding: 5px 11px;
+    border-color: rgba(133, 192, 255, 0.3);
+    background: rgba(102, 165, 241, 0.12);
+    color: #d4e8ff;
+}
+
+.configurationDialogReactSettingsPanel .settingsShell__title {
+    font-size: 1.22rem;
+    letter-spacing: 0.01em;
+}
+
+.configurationDialogReactSettingsPanel .settingsShell__description {
+    max-width: 48rem;
+    margin-top: 10px;
+    line-height: 1.55;
+    opacity: 0.8;
+}
+
 .configurationDialogReactSettingsPanel .settingsShell__layout {
-    grid-template-columns: 92px minmax(0, 1fr);
-    gap: 18px;
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
 }
 
 .configurationDialogReactSettingsPanel .settingsShell__nav {
@@ -161,14 +192,15 @@
 }
 
 .configurationDialogReactSettingsPanel .settingsShell__navButton {
-    min-height: 38px;
-    padding: 8px 12px;
+    min-height: 42px;
+    padding: 10px 12px;
     border-radius: 14px;
-    text-align: center;
+    text-align: left;
 }
 
 .configurationDialogReactSettingsPanel .settingsShell__detail {
     gap: 16px;
+    padding: 2px 0 0;
 }
 
 .configurationDialogReactSettingsPanel .settingsShell__summaryGrid {
@@ -177,7 +209,19 @@
 }
 
 .configurationDialogReactSettingsPanel .settingsShell__statusCard {
-    min-height: 88px;
+    min-height: 96px;
+}
+
+.configurationDialogReactSettingsPanel .settingsShell__content,
+.configurationDialogReactSettingsPanel .settingsShell__footer {
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 16px 18px;
+}
+
+.configurationDialogReactSettingsPanel .settingsShell__footer {
+    padding-top: 16px;
 }
 
 /* 共有 settings section の inline style（暗色前提）を前提に、dialog 側でも文字色継承を揃える。 */
@@ -202,6 +246,11 @@
 
     .configurationDialogReactSettingsPanel .settingsShell__layout {
         grid-template-columns: 1fr;
+    }
+
+    .configurationDialogReactSettingsPanel .settingsShell__content,
+    .configurationDialogReactSettingsPanel .settingsShell__footer {
+        padding: 14px;
     }
 
     .configurationDialogReactSettingsPanel .settingsShell__summaryGrid {
