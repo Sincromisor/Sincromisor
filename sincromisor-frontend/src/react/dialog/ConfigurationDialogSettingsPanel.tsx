@@ -84,7 +84,37 @@ export function ConfigurationDialogSettingsPanel() {
         startApp,
     } = useConfigurationDialogSettingsState();
 
+    const hasStartupOptions =
+        startupSettingsCapabilities.enableTalk
+        || startupSettingsCapabilities.enableInspector
+        || startupSettingsCapabilities.enableVR;
     const connectionDetail = connectionState.detail || dialogUiState.startButtonHint || "最初に必要な設定を確認してから開始します。";
+    const audioProcessingLabels = [
+        settings.enableNoiseSuppression ? "ノイズ抑制" : null,
+        settings.enableEchoCancellation ? "回り込み抑制" : null,
+        settings.enableAutoGainControl ? "自動音量調整" : null,
+        settings.enableVenueNoiseMode ? "会場向け調整" : null,
+    ].filter((label): label is string => label !== null);
+    const audioProcessingValue = audioProcessingLabels.length > 0 ? `${audioProcessingLabels.length}項目を調整中` : "既定のまま";
+    const audioProcessingDetail = audioProcessingLabels.length > 0
+        ? audioProcessingLabels.join(" / ")
+        : "ノイズが気になる時だけ補正を有効にしてください。";
+    const speechGateValue = settings.enableVadGate ? "無音時は送信を抑える" : "常に送信する";
+    const displayModeValue = settings.enableCharacter ? "3Dキャラクターを表示" : "表示しない";
+    const gazeModeValue = settings.enableCharacterGaze ? "顔の向きを使う" : "顔の向きを使わない";
+    const autoMuteDetail = settings.enableAutoMute ? "自動ミュートも有効です。" : "自動ミュートは使いません。";
+    const startupSummaryValue = startupSettingsStatus.requiresRestart
+        ? "再開始が必要"
+        : startupSettingsStatus.willApplyOnNextStart
+            ? "次回開始で反映"
+            : hasStartupOptions
+                ? "開始前の準備は最新です"
+                : "追加の開始準備はありません";
+    const startupSummaryDetail = startupSettingsStatus.changedKeys.length > 0
+        ? `変更中: ${startupSettingsStatus.changedKeys.join(", ")}`
+        : hasStartupOptions
+            ? "開始時だけ効く項目は接続ページでまとめて確認できます。"
+            : "このページでは最終確認だけを行います。";
     const microphoneValue = formatSelectionLabel({
         selectedLabel: audioInputSelection.matchedDevice?.label ?? null,
         isSelected: audioInputSelection.isSelected,
@@ -147,10 +177,10 @@ export function ConfigurationDialogSettingsPanel() {
                         ),
                     },
                     {
-                        id: "audio",
-                        label: "音声",
-                        title: "音声",
-                        description: "使うマイクと、声の入り方に関わる準備をここで整えます。",
+                        id: "devices",
+                        label: "入出力デバイス",
+                        title: "入出力デバイス",
+                        description: "会話に使うマイクと、視線連動に使うカメラを同じ場所で確認します。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -160,43 +190,64 @@ export function ConfigurationDialogSettingsPanel() {
                                     tone={audioInputSelection.isSelected && !audioInputSelection.isAvailable ? "warn" : "neutral"}
                                 />
                                 <SettingsStatusCard
-                                    label="デバイス一覧"
-                                    value={mediaDeviceSnapshot.isRefreshing ? "更新中" : "確認可能"}
-                                    detail={mediaDeviceSnapshot.labelsResolved ? "実デバイス名を表示できています。" : "権限未許可だと実デバイス名が出ないことがあります。"}
-                                    tone={mediaDeviceSnapshot.refreshError ? "warn" : "neutral"}
+                                    label="視線用カメラ"
+                                    value={cameraValue}
+                                    detail={settingsUiHints.videoInputDeviceReason ?? settingsUiHints.enableCharacterGazeReason ?? "顔の向きや視線連動に使います。"}
+                                    tone={settings.enableCharacterGaze && videoInputSelection.isSelected && !videoInputSelection.isAvailable ? "warn" : "neutral"}
                                 />
                             </SettingsSummaryGrid>
                         ),
                         content: (
-                            <>
-                                <DialogSettingsCategory
-                                    title="入力デバイス"
-                                    description="開始前に使うマイクと視線用カメラを確認します。開始後もここで選んだ内容を引き継ぎます。"
-                                >
-                                    <DialogDeviceSettingsSection
-                                        settings={settings}
-                                        uiState={settingsUiState}
-                                        uiHints={settingsUiHints}
-                                        snapshot={mediaDeviceSnapshot}
-                                        audioInputSelection={audioInputSelection}
-                                        videoInputSelection={videoInputSelection}
-                                        onApplySettings={applySettings}
-                                        onRefreshDevices={refreshDevices}
-                                        showSectionTitle={false}
-                                    />
-                                </DialogSettingsCategory>
-                                <DialogSettingsCategory
-                                    title="マイク前処理"
-                                    description="ノイズや反響の多い環境でも話しやすくするための補正です。必要なものだけオンにして試せます。"
-                                >
-                                    <DialogMicSettingsSection
-                                        settings={settings}
-                                        uiState={settingsUiState}
-                                        onApplySettings={applySettings}
-                                        showSectionTitle={false}
-                                    />
-                                </DialogSettingsCategory>
-                            </>
+                            <DialogSettingsCategory
+                                title="使うデバイス"
+                                description="開始前に使うマイクと視線用カメラを確認します。開始後もここで選んだ内容を引き継ぎます。"
+                            >
+                                <DialogDeviceSettingsSection
+                                    settings={settings}
+                                    uiState={settingsUiState}
+                                    uiHints={settingsUiHints}
+                                    snapshot={mediaDeviceSnapshot}
+                                    audioInputSelection={audioInputSelection}
+                                    videoInputSelection={videoInputSelection}
+                                    onApplySettings={applySettings}
+                                    onRefreshDevices={refreshDevices}
+                                    showSectionTitle={false}
+                                />
+                            </DialogSettingsCategory>
+                        ),
+                    },
+                    {
+                        id: "audio",
+                        label: "音声",
+                        title: "音声",
+                        description: "声の入り方や無音時の扱いなど、会話音声の調整だけをまとめています。",
+                        summary: (
+                            <SettingsSummaryGrid>
+                                <SettingsStatusCard
+                                    label="入力補正"
+                                    value={audioProcessingValue}
+                                    detail={audioProcessingDetail}
+                                />
+                                <SettingsStatusCard
+                                    label="話していない時"
+                                    value={speechGateValue}
+                                    detail="反応が多い環境では、無音時の送信抑制を有効にすると落ち着きやすくなります。"
+                                    tone={settings.enableVadGate ? "good" : "neutral"}
+                                />
+                            </SettingsSummaryGrid>
+                        ),
+                        content: (
+                            <DialogSettingsCategory
+                                title="マイク前処理"
+                                description="ノイズや反響の多い環境でも話しやすくするための補正です。必要なものだけオンにして試せます。"
+                            >
+                                <DialogMicSettingsSection
+                                    settings={settings}
+                                    uiState={settingsUiState}
+                                    onApplySettings={applySettings}
+                                    showSectionTitle={false}
+                                />
+                            </DialogSettingsCategory>
                         ),
                     },
                     {
@@ -208,15 +259,15 @@ export function ConfigurationDialogSettingsPanel() {
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
                                     label="3Dキャラクター"
-                                    value={settings.enableCharacter ? "表示する" : "表示しない"}
+                                    value={displayModeValue}
                                     detail={settingsUiHints.enableCharacterReason ?? "表示負荷を抑えたい時はオフにできます。"}
                                     tone={settings.enableCharacter ? "good" : "neutral"}
                                 />
                                 <SettingsStatusCard
-                                    label="視線用カメラ"
-                                    value={cameraValue}
-                                    detail={settingsUiHints.videoInputDeviceReason ?? settingsUiHints.enableCharacterGazeReason ?? "顔の向きや視線連動に使います。"}
-                                    tone={settings.enableCharacterGaze && videoInputSelection.isSelected && !videoInputSelection.isAvailable ? "warn" : "neutral"}
+                                    label="視線連動"
+                                    value={gazeModeValue}
+                                    detail={settingsUiHints.enableCharacterGazeReason ?? autoMuteDetail}
+                                    tone={settings.enableCharacterGaze ? "good" : "neutral"}
                                 />
                             </SettingsSummaryGrid>
                         ),
@@ -245,42 +296,10 @@ export function ConfigurationDialogSettingsPanel() {
                         ),
                     },
                     {
-                        id: "startup",
-                        label: "起動",
-                        title: "起動",
-                        description: "開始した時にだけ効く動きやオプションを確認します。",
-                        summary: (
-                            <SettingsSummaryGrid>
-                                <SettingsStatusCard
-                                    label="反映タイミング"
-                                    value={startupSettingsStatus.requiresRestart ? "再開始が必要" : startupSettingsStatus.willApplyOnNextStart ? "次回開始で反映" : "すぐ使える状態"}
-                                    detail={startupSettingsStatus.changedKeys.length > 0 ? `変更中: ${startupSettingsStatus.changedKeys.join(", ")}` : "開始前の準備項目をまとめています。"}
-                                    tone={startupSettingsStatus.requiresRestart ? "warn" : "neutral"}
-                                />
-                            </SettingsSummaryGrid>
-                        ),
-                        content: (
-                            <DialogSettingsCategory
-                                title="開始時のオプション"
-                                description="開始した瞬間にだけ効く準備項目です。反映タイミングもこの面の中でまとめて確認できます。"
-                            >
-                                <DialogStartupSettingsSection
-                                    settings={settings}
-                                    uiState={settingsUiState}
-                                    onApplySettings={applySettings}
-                                    startupStatus={startupSettingsStatus}
-                                    startupCapabilities={startupSettingsCapabilities}
-                                    isRunning={lifecycleState === "running"}
-                                    showSectionTitle={false}
-                                />
-                            </DialogSettingsCategory>
-                        ),
-                    },
-                    {
                         id: "connection",
                         label: "接続",
                         title: "接続",
-                        description: "開始前の確認ページです。準備が整ったら下のボタンから会話を始めます。",
+                        description: "開始前の最終確認ページです。開始時だけ効く項目もここでまとめて確認できます。",
                         summary: (
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
@@ -295,30 +314,54 @@ export function ConfigurationDialogSettingsPanel() {
                                     detail={dialogUiState.startButtonText || "はじめる"}
                                     tone={dialogUiState.startButtonDisabled ? "warn" : "good"}
                                 />
+                                <SettingsStatusCard
+                                    label="開始時の準備"
+                                    value={startupSummaryValue}
+                                    detail={startupSummaryDetail}
+                                    tone={startupSettingsStatus.requiresRestart ? "warn" : "neutral"}
+                                />
                             </SettingsSummaryGrid>
                         ),
                         content: (
-                            <DialogSettingsCategory
-                                title="開始前の確認"
-                                description="最後に、会話を始める前の見通しをここでそろえます。必要な項目だけ見直したら下の主ボタンへ進んでください。"
-                            >
-                                <div className="configurationDialogReactSettingsPanel__connectionPage">
-                                    <div className="configurationDialogReactSettingsPanel__hintText">
-                                        このセットアップは開始前の必須フローです。途中で離れる場合はトップへ戻れます。
+                            <>
+                                {hasStartupOptions ? (
+                                    <DialogSettingsCategory
+                                        title="開始時のオプション"
+                                        description="開始した瞬間にだけ効く準備項目です。反映タイミングもこの面の中でまとめて確認できます。"
+                                    >
+                                        <DialogStartupSettingsSection
+                                            settings={settings}
+                                            uiState={settingsUiState}
+                                            onApplySettings={applySettings}
+                                            startupStatus={startupSettingsStatus}
+                                            startupCapabilities={startupSettingsCapabilities}
+                                            isRunning={lifecycleState === "running"}
+                                            showSectionTitle={false}
+                                        />
+                                    </DialogSettingsCategory>
+                                ) : null}
+                                <DialogSettingsCategory
+                                    title="開始前の確認"
+                                    description="最後に、会話を始める前の見通しをここでそろえます。必要な項目だけ見直したら下の主ボタンへ進んでください。"
+                                >
+                                    <div className="configurationDialogReactSettingsPanel__connectionPage">
+                                        <div className="configurationDialogReactSettingsPanel__hintText">
+                                            このセットアップは開始前の必須フローです。途中で離れる場合はトップへ戻れます。
+                                        </div>
+                                        <div className="configurationDialogReactSettingsPanel__checkList">
+                                            <div className="configurationDialogReactSettingsPanel__checkItem">
+                                                会話画面の表示名とトークモードを確認済み
+                                            </div>
+                                            <div className="configurationDialogReactSettingsPanel__checkItem">
+                                                使うマイクと、必要なら視線用カメラを選択済み
+                                            </div>
+                                            <div className="configurationDialogReactSettingsPanel__checkItem">
+                                                表示設定と開始時の準備を確認済み
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="configurationDialogReactSettingsPanel__checkList">
-                                        <div className="configurationDialogReactSettingsPanel__checkItem">
-                                            会話画面の表示名とトークモードを確認済み
-                                        </div>
-                                        <div className="configurationDialogReactSettingsPanel__checkItem">
-                                            使うマイクと、必要なら視線用カメラを選択済み
-                                        </div>
-                                        <div className="configurationDialogReactSettingsPanel__checkItem">
-                                            開始時のオプションや表示設定を確認済み
-                                        </div>
-                                    </div>
-                                </div>
-                            </DialogSettingsCategory>
+                                </DialogSettingsCategory>
+                            </>
                         ),
                     },
                 ]}

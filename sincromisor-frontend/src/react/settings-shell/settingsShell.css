@@ -1,11 +1,11 @@
 .settingsShell {
-    --settings-shell-border: rgba(130, 188, 255, 0.14);
-    --settings-shell-border-strong: rgba(130, 188, 255, 0.22);
-    --settings-shell-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
-    --settings-shell-surface-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03));
-    --settings-shell-nav-active: linear-gradient(180deg, rgba(71, 118, 161, 0.4), rgba(22, 37, 53, 0.58));
+    --settings-shell-border: rgba(157, 176, 204, 0.14);
+    --settings-shell-border-strong: rgba(157, 190, 232, 0.24);
+    --settings-shell-surface: linear-gradient(180deg, rgba(29, 31, 39, 0.96), rgba(22, 24, 31, 0.94));
+    --settings-shell-surface-strong: linear-gradient(180deg, rgba(39, 44, 57, 0.92), rgba(30, 33, 42, 0.9));
+    --settings-shell-nav-active: linear-gradient(180deg, rgba(92, 124, 191, 0.34), rgba(49, 58, 80, 0.68));
     display: grid;
-    gap: 20px;
+    gap: 18px;
 }
 
 .settingsShell__header {
@@ -43,21 +43,21 @@
 
 .settingsShell__layout {
     display: grid;
-    grid-template-columns: minmax(188px, 220px) minmax(0, 1fr);
-    gap: 28px;
+    grid-template-columns: minmax(204px, 228px) minmax(0, 1fr);
+    gap: 22px;
     align-items: start;
 }
 
 .settingsShell__nav {
     display: grid;
-    gap: 20px;
+    gap: 18px;
     position: sticky;
-    top: 0;
-    padding: 18px 14px;
+    top: 8px;
+    padding: 16px 12px;
     border: 1px solid var(--settings-shell-border);
-    border-radius: 22px;
+    border-radius: 20px;
     background: var(--settings-shell-surface);
-    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.14);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
 }
 
 .settingsShell__navSection {
@@ -76,10 +76,10 @@
 
 .settingsShell__navButton {
     width: 100%;
-    min-height: 42px;
-    padding: 11px 14px;
+    min-height: 40px;
+    padding: 10px 12px;
     border: 1px solid transparent;
-    border-radius: 12px;
+    border-radius: 10px;
     background: transparent;
     color: inherit;
     text-align: left;
@@ -103,8 +103,7 @@
 .settingsShell__navButton.is-active {
     border-color: var(--settings-shell-border-strong);
     background: var(--settings-shell-nav-active);
-    box-shadow: inset 3px 0 0 rgba(159, 210, 255, 0.78);
-    transform: translateX(1px);
+    box-shadow: inset 3px 0 0 rgba(159, 210, 255, 0.68);
 }
 
 .settingsShell__navButton.is-developer {
@@ -115,16 +114,22 @@
     min-width: 0;
     display: grid;
     gap: 16px;
-    max-width: 760px;
+    max-width: 840px;
+}
+
+.settingsShell__pageSurface {
+    display: grid;
+    gap: 18px;
+    padding: 22px 24px;
+    border: 1px solid var(--settings-shell-border);
+    border-radius: 22px;
+    background: var(--settings-shell-surface);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.16);
 }
 
 .settingsShell__pageHeader {
     display: grid;
-    gap: 8px;
-    padding: 20px 22px;
-    border: 1px solid var(--settings-shell-border);
-    border-radius: 22px;
-    background: var(--settings-shell-surface);
+    gap: 6px;
 }
 
 .settingsShell__pageTitle {
@@ -141,20 +146,22 @@
 
 .settingsShell__summary {
     display: grid;
-    gap: 12px;
+    gap: 10px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .settingsShell__summaryGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
+    gap: 10px;
 }
 
 .settingsShell__statusCard {
     min-width: 0;
-    min-height: 118px;
-    padding: 14px 16px;
-    border-radius: 18px;
+    min-height: 88px;
+    padding: 12px 14px;
+    border-radius: 14px;
     border: 1px solid var(--settings-shell-border);
     background: var(--settings-shell-surface-strong);
     display: grid;
@@ -162,10 +169,11 @@
 }
 
 .settingsShell__statusLabel {
-    opacity: 0.72;
-    font-size: 12px;
+    opacity: 0.68;
+    font-size: 11px;
     margin-bottom: 6px;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .settingsShell__statusValue {
@@ -176,17 +184,14 @@
 
 .settingsShell__statusDetail {
     margin-top: 8px;
-    opacity: 0.8;
+    opacity: 0.76;
     line-height: 1.45;
     font-size: 12px;
 }
 
 .settingsShell__content {
     min-width: 0;
-    padding: 20px 22px;
-    border-radius: 22px;
-    border: 1px solid var(--settings-shell-border);
-    background: var(--settings-shell-surface);
+    padding: 0;
 }
 
 .settingsShell__pageFooter,
@@ -222,12 +227,18 @@
     }
 
     .settingsShell__nav,
+    .settingsShell__pageSurface,
     .settingsShell__pageHeader,
     .settingsShell__content,
     .settingsShell__pageFooter,
     .settingsShell__footer {
         padding: 16px;
         border-radius: 18px;
+    }
+
+    .settingsShell__pageHeader,
+    .settingsShell__content {
+        padding: 0;
     }
 
     .settingsShell__navSection {
