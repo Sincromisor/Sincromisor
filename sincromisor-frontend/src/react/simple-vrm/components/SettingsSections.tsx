@@ -220,32 +220,33 @@ export function SettingsCategorySection({
     defaultOpen = true,
 }: SettingsCategorySectionProps) {
     return (
-        <details open={defaultOpen} style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            <summary
-                style={{
-                    cursor: "pointer",
-                    listStyle: "none",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "4px",
-                    padding: "11px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(130, 188, 255, 0.14)",
-                    background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
-                }}
-            >
-                <span style={{ fontWeight: 700, letterSpacing: "0.01em" }}>{title}</span>
-                <span style={{ opacity: 0.68, lineHeight: 1.35, fontSize: "12px" }}>{description}</span>
-            </summary>
+        <section
+            aria-expanded={defaultOpen}
+            style={{
+                marginBottom: `${sectionSpacingPx}px`,
+                padding: "16px 18px",
+                borderRadius: "16px",
+                border: "1px solid rgba(130, 188, 255, 0.14)",
+                background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
+                boxShadow: "0 8px 18px rgba(0, 0, 0, 0.12)",
+            }}
+        >
             <div
                 style={{
-                    marginTop: `${detailsContentTopMarginPx}px`,
-                    padding: "0 4px 0 6px",
+                    display: "grid",
+                    gap: "4px",
+                    paddingBottom: "12px",
+                    marginBottom: `${detailsContentTopMarginPx}px`,
+                    borderBottom: "1px solid rgba(255,255,255,0.08)",
                 }}
             >
+                <div style={{ fontWeight: 700, letterSpacing: "0.01em" }}>{title}</div>
+                <div style={{ opacity: 0.74, lineHeight: 1.45, fontSize: "12px" }}>{description}</div>
+            </div>
+            <div style={{ padding: "0 2px" }}>
                 {children}
             </div>
-        </details>
+        </section>
     );
 }
 
@@ -321,6 +322,8 @@ type DeviceSettingsProps = SettingsApplyProps & {
     showSectionTitle?: boolean;
 };
 
+type MicSettingsSectionMode = "full" | "device" | "processing";
+
 export function MicSettingsSection({
     settings,
     uiState,
@@ -330,8 +333,11 @@ export function MicSettingsSection({
     onApplySettings,
     onRefreshDevices,
     showSectionTitle = true,
-}: DeviceSettingsProps) {
+    mode = "full",
+}: DeviceSettingsProps & { mode?: MicSettingsSectionMode }) {
     const [refreshMessage, setRefreshMessage] = useState<string>("");
+    const showDeviceSelection = mode !== "processing";
+    const showProcessingOptions = mode !== "device";
 
     const handleRefreshDevices = () => {
         setRefreshMessage("");
@@ -346,91 +352,97 @@ export function MicSettingsSection({
 
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: `${compactGapPx}px`,
-                    marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
-                }}
-            >
-                {showSectionTitle ? <HelpLabel text="マイク設定" /> : <span style={{ opacity: 0.8, fontWeight: 700 }}>マイク入力</span>}
-                <button
-                    type="button"
-                    onClick={handleRefreshDevices}
-                    disabled={mediaDeviceSnapshot.isRefreshing}
-                    style={{
-                        borderRadius: "8px",
-                        border: "1px solid rgba(255,255,255,0.2)",
-                        background: "rgba(255,255,255,0.06)",
-                        color: "#f4f7fb",
-                        padding: "6px 8px",
-                        cursor: mediaDeviceSnapshot.isRefreshing ? "progress" : "pointer",
-                    }}
-                >
-                    {mediaDeviceSnapshot.isRefreshing ? "更新中..." : "再読み込み"}
-                </button>
-            </div>
-            <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-                <HelpLabel text="マイク入力" help={settingHelp.audioInputDeviceId} />
-                <select
-                    value={settings.audioInputDeviceId ?? ""}
-                    onChange={(event) => onApplySettings({ audioInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
-                    disabled={uiState.audioInputDeviceDisabled}
-                    style={fieldStyle}
-                >
-                    <option value="">ブラウザ既定のマイクを使う</option>
-                    {mediaDeviceSnapshot.audioInputs.map((option) => (
-                        <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
-                    ))}
-                </select>
-                <DeviceSelectionHint
-                    emptyMessage="利用可能なマイクが見つかりません。接続後に再読み込みしてください。"
-                    snapshot={mediaDeviceSnapshot}
-                    selection={audioInputSelection}
-                    optionsCount={mediaDeviceSnapshot.audioInputs.length}
-                    unavailableReason={uiHints.audioInputDeviceReason}
-                    kindLabel="マイク"
-                />
-            </div>
-            <div style={toggleGridStyle}>
-                <SettingToggle
-                    label="ノイズを抑える"
-                    help={settingHelp.enableNoiseSuppression}
-                    checked={!!settings.enableNoiseSuppression}
-                    disabled={uiState.enableNoiseSuppressionDisabled}
-                    onChange={(checked) => onApplySettings({ enableNoiseSuppression: checked })}
-                />
-                <SettingToggle
-                    label="音の回り込みを抑える"
-                    help={settingHelp.enableEchoCancellation}
-                    checked={!!settings.enableEchoCancellation}
-                    disabled={uiState.enableEchoCancellationDisabled}
-                    onChange={(checked) => onApplySettings({ enableEchoCancellation: checked })}
-                />
-                <SettingToggle
-                    label="音量を自動で整える"
-                    help={settingHelp.enableAutoGainControl}
-                    checked={!!settings.enableAutoGainControl}
-                    disabled={uiState.enableAutoGainControlDisabled}
-                    onChange={(checked) => onApplySettings({ enableAutoGainControl: checked })}
-                />
-                <SettingToggle
-                    label="無音時の送信を抑える"
-                    help={settingHelp.enableVadGate}
-                    checked={!!settings.enableVadGate}
-                    disabled={uiState.enableVadGateDisabled}
-                    onChange={(checked) => onApplySettings({ enableVadGate: checked })}
-                />
-                <SettingToggle
-                    label="にぎやかな場所向けに調整"
-                    help={settingHelp.enableVenueNoiseMode}
-                    checked={!!settings.enableVenueNoiseMode}
-                    disabled={uiState.enableVenueNoiseModeDisabled}
-                    onChange={(checked) => onApplySettings({ enableVenueNoiseMode: checked })}
-                />
-            </div>
+            {showDeviceSelection ? (
+                <>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: `${compactGapPx}px`,
+                            marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
+                        }}
+                    >
+                        {showSectionTitle ? <HelpLabel text="マイク設定" /> : <span style={{ opacity: 0.8, fontWeight: 700 }}>マイク入力</span>}
+                        <button
+                            type="button"
+                            onClick={handleRefreshDevices}
+                            disabled={mediaDeviceSnapshot.isRefreshing}
+                            style={{
+                                borderRadius: "8px",
+                                border: "1px solid rgba(255,255,255,0.2)",
+                                background: "rgba(255,255,255,0.06)",
+                                color: "#f4f7fb",
+                                padding: "6px 8px",
+                                cursor: mediaDeviceSnapshot.isRefreshing ? "progress" : "pointer",
+                            }}
+                        >
+                            {mediaDeviceSnapshot.isRefreshing ? "更新中..." : "再読み込み"}
+                        </button>
+                    </div>
+                    <div style={{ marginBottom: showProcessingOptions ? `${sectionSpacingPx}px` : "0" }}>
+                        <HelpLabel text="マイク入力" help={settingHelp.audioInputDeviceId} />
+                        <select
+                            value={settings.audioInputDeviceId ?? ""}
+                            onChange={(event) => onApplySettings({ audioInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
+                            disabled={uiState.audioInputDeviceDisabled}
+                            style={fieldStyle}
+                        >
+                            <option value="">ブラウザ既定のマイクを使う</option>
+                            {mediaDeviceSnapshot.audioInputs.map((option) => (
+                                <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
+                            ))}
+                        </select>
+                        <DeviceSelectionHint
+                            emptyMessage="利用可能なマイクが見つかりません。接続後に再読み込みしてください。"
+                            snapshot={mediaDeviceSnapshot}
+                            selection={audioInputSelection}
+                            optionsCount={mediaDeviceSnapshot.audioInputs.length}
+                            unavailableReason={uiHints.audioInputDeviceReason}
+                            kindLabel="マイク"
+                        />
+                    </div>
+                </>
+            ) : null}
+            {showProcessingOptions ? (
+                <div style={toggleGridStyle}>
+                    <SettingToggle
+                        label="ノイズを抑える"
+                        help={settingHelp.enableNoiseSuppression}
+                        checked={!!settings.enableNoiseSuppression}
+                        disabled={uiState.enableNoiseSuppressionDisabled}
+                        onChange={(checked) => onApplySettings({ enableNoiseSuppression: checked })}
+                    />
+                    <SettingToggle
+                        label="音の回り込みを抑える"
+                        help={settingHelp.enableEchoCancellation}
+                        checked={!!settings.enableEchoCancellation}
+                        disabled={uiState.enableEchoCancellationDisabled}
+                        onChange={(checked) => onApplySettings({ enableEchoCancellation: checked })}
+                    />
+                    <SettingToggle
+                        label="音量を自動で整える"
+                        help={settingHelp.enableAutoGainControl}
+                        checked={!!settings.enableAutoGainControl}
+                        disabled={uiState.enableAutoGainControlDisabled}
+                        onChange={(checked) => onApplySettings({ enableAutoGainControl: checked })}
+                    />
+                    <SettingToggle
+                        label="無音時の送信を抑える"
+                        help={settingHelp.enableVadGate}
+                        checked={!!settings.enableVadGate}
+                        disabled={uiState.enableVadGateDisabled}
+                        onChange={(checked) => onApplySettings({ enableVadGate: checked })}
+                    />
+                    <SettingToggle
+                        label="にぎやかな場所向けに調整"
+                        help={settingHelp.enableVenueNoiseMode}
+                        checked={!!settings.enableVenueNoiseMode}
+                        disabled={uiState.enableVenueNoiseModeDisabled}
+                        onChange={(checked) => onApplySettings({ enableVenueNoiseMode: checked })}
+                    />
+                </div>
+            ) : null}
             {refreshMessage ? (
                 <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
                     {refreshMessage}
@@ -444,6 +456,8 @@ type CharacterSettingsSectionProps = DeviceSettingsProps & {
     videoInputSelection: SincroMediaDeviceSelectionState;
 };
 
+type CharacterSettingsSectionMode = "full" | "camera" | "display";
+
 export function CharacterSettingsSection({
     settings,
     uiState,
@@ -452,55 +466,62 @@ export function CharacterSettingsSection({
     videoInputSelection,
     onApplySettings,
     showSectionTitle = true,
-}: CharacterSettingsSectionProps) {
+    mode = "full",
+}: CharacterSettingsSectionProps & { mode?: CharacterSettingsSectionMode }) {
+    const showCameraSelection = mode !== "display";
+    const showDisplayOptions = mode !== "camera";
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
             {showSectionTitle ? <HelpLabel text="キャラクター設定" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>キャラクターと視線</div>}
-            <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-                <HelpLabel text="視線用カメラ" help={settingHelp.videoInputDeviceId} />
-                <select
-                    value={settings.videoInputDeviceId ?? ""}
-                    onChange={(event) => onApplySettings({ videoInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
-                    disabled={uiState.videoInputDeviceDisabled}
-                    style={fieldStyle}
-                >
-                    <option value="">ブラウザ既定のカメラを使う</option>
-                    {mediaDeviceSnapshot.videoInputs.map((option) => (
-                        <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
-                    ))}
-                </select>
-                <DeviceSelectionHint
-                    emptyMessage="利用可能なカメラが見つかりません。接続後に再読み込みしてください。"
-                    snapshot={mediaDeviceSnapshot}
-                    selection={videoInputSelection}
-                    optionsCount={mediaDeviceSnapshot.videoInputs.length}
-                    unavailableReason={uiHints.videoInputDeviceReason}
-                    kindLabel="カメラ"
-                />
-            </div>
-            <div style={toggleGridStyle}>
-                <SettingToggle
-                    label="3Dキャラクターを表示"
-                    help={settingHelp.enableCharacter}
-                    checked={!!settings.enableCharacter}
-                    disabled={uiState.enableCharacterDisabled}
-                    onChange={(checked) => onApplySettings({ enableCharacter: checked })}
-                />
-                <SettingToggle
-                    label="顔の向きを使う"
-                    help={settingHelp.enableCharacterGaze}
-                    checked={!!settings.enableCharacterGaze}
-                    disabled={uiState.enableCharacterGazeDisabled}
-                    onChange={(checked) => onApplySettings({ enableCharacterGaze: checked })}
-                />
-                <SettingToggle
-                    label="自動でミュートする"
-                    help={settingHelp.enableAutoMute}
-                    checked={!!settings.enableAutoMute}
-                    disabled={uiState.enableAutoMuteDisabled}
-                    onChange={(checked) => onApplySettings({ enableAutoMute: checked })}
-                />
-            </div>
+            {showCameraSelection ? (
+                <div style={{ marginBottom: showDisplayOptions ? `${sectionSpacingPx}px` : "0" }}>
+                    <HelpLabel text="視線用カメラ" help={settingHelp.videoInputDeviceId} />
+                    <select
+                        value={settings.videoInputDeviceId ?? ""}
+                        onChange={(event) => onApplySettings({ videoInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
+                        disabled={uiState.videoInputDeviceDisabled}
+                        style={fieldStyle}
+                    >
+                        <option value="">ブラウザ既定のカメラを使う</option>
+                        {mediaDeviceSnapshot.videoInputs.map((option) => (
+                            <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
+                        ))}
+                    </select>
+                    <DeviceSelectionHint
+                        emptyMessage="利用可能なカメラが見つかりません。接続後に再読み込みしてください。"
+                        snapshot={mediaDeviceSnapshot}
+                        selection={videoInputSelection}
+                        optionsCount={mediaDeviceSnapshot.videoInputs.length}
+                        unavailableReason={uiHints.videoInputDeviceReason}
+                        kindLabel="カメラ"
+                    />
+                </div>
+            ) : null}
+            {showDisplayOptions ? (
+                <div style={toggleGridStyle}>
+                    <SettingToggle
+                        label="3Dキャラクターを表示"
+                        help={settingHelp.enableCharacter}
+                        checked={!!settings.enableCharacter}
+                        disabled={uiState.enableCharacterDisabled}
+                        onChange={(checked) => onApplySettings({ enableCharacter: checked })}
+                    />
+                    <SettingToggle
+                        label="顔の向きを使う"
+                        help={settingHelp.enableCharacterGaze}
+                        checked={!!settings.enableCharacterGaze}
+                        disabled={uiState.enableCharacterGazeDisabled}
+                        onChange={(checked) => onApplySettings({ enableCharacterGaze: checked })}
+                    />
+                    <SettingToggle
+                        label="自動でミュートする"
+                        help={settingHelp.enableAutoMute}
+                        checked={!!settings.enableAutoMute}
+                        disabled={uiState.enableAutoMuteDisabled}
+                        onChange={(checked) => onApplySettings({ enableAutoMute: checked })}
+                    />
+                </div>
+            ) : null}
             {uiHints.enableCharacterReason ? (
                 <div style={{ marginTop: `${compactGapPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
                     3Dキャラクター表示: {uiHints.enableCharacterReason}

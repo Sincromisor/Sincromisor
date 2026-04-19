@@ -6,6 +6,7 @@ import {
     VrmModelSection,
 } from "./components/DialogSettingsSections";
 import {
+    DialogSettingsCategory,
     DialogBasicSettingsSection,
     DialogCharacterSettingsSection,
     DialogDeviceSettingsSection,
@@ -37,6 +38,26 @@ function connectionTone(value: string): "neutral" | "good" | "warn" {
         return "neutral";
     }
     return "warn";
+}
+
+function connectionStatusLabel(value: string): string {
+    switch (value) {
+        case "connected":
+            return "接続済み";
+        case "starting":
+            return "開始準備中";
+        case "connecting":
+            return "接続中";
+        case "degraded":
+            return "要確認";
+        case "stopping":
+            return "停止中";
+        case "stopped":
+        case "idle":
+            return "未接続";
+        default:
+            return value;
+    }
 }
 
 // 起動前 dialog の見た目/操作を React 側で主導する設定パネル。
@@ -99,7 +120,7 @@ export function ConfigurationDialogSettingsPanel() {
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
                                     label="接続状態"
-                                    value={connectionState.value}
+                                    value={connectionStatusLabel(connectionState.value)}
                                     detail={connectionDetail}
                                     tone={connectionTone(connectionState.value)}
                                 />
@@ -111,13 +132,18 @@ export function ConfigurationDialogSettingsPanel() {
                             </SettingsSummaryGrid>
                         ),
                         content: (
-                            <DialogBasicSettingsSection
-                                settings={settings}
-                                uiState={settingsUiState}
-                                onTitleChange={(titleText) => applySettings({ titleText })}
-                                onTalkModeChange={changeTalkMode}
-                                showSectionTitle={false}
-                            />
+                            <DialogSettingsCategory
+                                title="会話の基本"
+                                description="会話画面に表示する名前と、やり取りの進み方をここで決めます。開始後の設定パネルでも同じ分類で見直せます。"
+                            >
+                                <DialogBasicSettingsSection
+                                    settings={settings}
+                                    uiState={settingsUiState}
+                                    onTitleChange={(titleText) => applySettings({ titleText })}
+                                    onTalkModeChange={changeTalkMode}
+                                    showSectionTitle={false}
+                                />
+                            </DialogSettingsCategory>
                         ),
                     },
                     {
@@ -143,23 +169,33 @@ export function ConfigurationDialogSettingsPanel() {
                         ),
                         content: (
                             <>
-                                <DialogDeviceSettingsSection
-                                    settings={settings}
-                                    uiState={settingsUiState}
-                                    uiHints={settingsUiHints}
-                                    snapshot={mediaDeviceSnapshot}
-                                    audioInputSelection={audioInputSelection}
-                                    videoInputSelection={videoInputSelection}
-                                    onApplySettings={applySettings}
-                                    onRefreshDevices={refreshDevices}
-                                    showSectionTitle={false}
-                                />
-                                <DialogMicSettingsSection
-                                    settings={settings}
-                                    uiState={settingsUiState}
-                                    onApplySettings={applySettings}
-                                    showSectionTitle={false}
-                                />
+                                <DialogSettingsCategory
+                                    title="入力デバイス"
+                                    description="開始前に使うマイクと視線用カメラを確認します。開始後もここで選んだ内容を引き継ぎます。"
+                                >
+                                    <DialogDeviceSettingsSection
+                                        settings={settings}
+                                        uiState={settingsUiState}
+                                        uiHints={settingsUiHints}
+                                        snapshot={mediaDeviceSnapshot}
+                                        audioInputSelection={audioInputSelection}
+                                        videoInputSelection={videoInputSelection}
+                                        onApplySettings={applySettings}
+                                        onRefreshDevices={refreshDevices}
+                                        showSectionTitle={false}
+                                    />
+                                </DialogSettingsCategory>
+                                <DialogSettingsCategory
+                                    title="マイク前処理"
+                                    description="ノイズや反響の多い環境でも話しやすくするための補正です。必要なものだけオンにして試せます。"
+                                >
+                                    <DialogMicSettingsSection
+                                        settings={settings}
+                                        uiState={settingsUiState}
+                                        onApplySettings={applySettings}
+                                        showSectionTitle={false}
+                                    />
+                                </DialogSettingsCategory>
                             </>
                         ),
                     },
@@ -186,15 +222,25 @@ export function ConfigurationDialogSettingsPanel() {
                         ),
                         content: (
                             <>
-                                <DialogCharacterSettingsSection
-                                    settings={settings}
-                                    uiState={settingsUiState}
-                                    uiHints={settingsUiHints}
-                                    onApplySettings={applySettings}
-                                    showSectionTitle={false}
-                                />
-                                <VrmModelSection onOpenFilePicker={openVrmFilePicker} />
-                                <DialogVrmDropStatusCard uiState={dialogVrmUiState} />
+                                <DialogSettingsCategory
+                                    title="キャラクター表示"
+                                    description="3Dキャラクター、顔の向き連動、自動ミュートなど、見た目とふるまいをまとめて調整します。"
+                                >
+                                    <DialogCharacterSettingsSection
+                                        settings={settings}
+                                        uiState={settingsUiState}
+                                        uiHints={settingsUiHints}
+                                        onApplySettings={applySettings}
+                                        showSectionTitle={false}
+                                    />
+                                </DialogSettingsCategory>
+                                <DialogSettingsCategory
+                                    title="VRM モデル"
+                                    description="表示するモデルを差し替えたい時の導線です。ファイル選択とドラッグ&ドロップのどちらでも更新できます。"
+                                >
+                                    <VrmModelSection onOpenFilePicker={openVrmFilePicker} />
+                                    <DialogVrmDropStatusCard uiState={dialogVrmUiState} />
+                                </DialogSettingsCategory>
                             </>
                         ),
                     },
@@ -214,15 +260,20 @@ export function ConfigurationDialogSettingsPanel() {
                             </SettingsSummaryGrid>
                         ),
                         content: (
-                            <DialogStartupSettingsSection
-                                settings={settings}
-                                uiState={settingsUiState}
-                                onApplySettings={applySettings}
-                                startupStatus={startupSettingsStatus}
-                                startupCapabilities={startupSettingsCapabilities}
-                                isRunning={lifecycleState === "running"}
-                                showSectionTitle={false}
-                            />
+                            <DialogSettingsCategory
+                                title="開始時のオプション"
+                                description="開始した瞬間にだけ効く準備項目です。反映タイミングもこの面の中でまとめて確認できます。"
+                            >
+                                <DialogStartupSettingsSection
+                                    settings={settings}
+                                    uiState={settingsUiState}
+                                    onApplySettings={applySettings}
+                                    startupStatus={startupSettingsStatus}
+                                    startupCapabilities={startupSettingsCapabilities}
+                                    isRunning={lifecycleState === "running"}
+                                    showSectionTitle={false}
+                                />
+                            </DialogSettingsCategory>
                         ),
                     },
                     {
@@ -234,7 +285,7 @@ export function ConfigurationDialogSettingsPanel() {
                             <SettingsSummaryGrid>
                                 <SettingsStatusCard
                                     label="接続状態"
-                                    value={connectionState.value}
+                                    value={connectionStatusLabel(connectionState.value)}
                                     detail={connectionDetail}
                                     tone={connectionTone(connectionState.value)}
                                 />
@@ -247,18 +298,39 @@ export function ConfigurationDialogSettingsPanel() {
                             </SettingsSummaryGrid>
                         ),
                         content: (
-                            <div className="configurationDialogReactSettingsPanel__connectionPage">
-                                <div className="configurationDialogReactSettingsPanel__hintText">
-                                    このセットアップは開始前の必須フローです。内容を確認したら、下の主ボタンから会話を始めてください。
+                            <DialogSettingsCategory
+                                title="開始前の確認"
+                                description="最後に、会話を始める前の見通しをここでそろえます。必要な項目だけ見直したら下の主ボタンへ進んでください。"
+                            >
+                                <div className="configurationDialogReactSettingsPanel__connectionPage">
+                                    <div className="configurationDialogReactSettingsPanel__hintText">
+                                        このセットアップは開始前の必須フローです。途中で離れる場合はトップへ戻れます。
+                                    </div>
+                                    <div className="configurationDialogReactSettingsPanel__checkList">
+                                        <div className="configurationDialogReactSettingsPanel__checkItem">
+                                            会話画面の表示名とトークモードを確認済み
+                                        </div>
+                                        <div className="configurationDialogReactSettingsPanel__checkItem">
+                                            使うマイクと、必要なら視線用カメラを選択済み
+                                        </div>
+                                        <div className="configurationDialogReactSettingsPanel__checkItem">
+                                            開始時のオプションや表示設定を確認済み
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            </DialogSettingsCategory>
                         ),
                     },
                 ]}
                 footer={(
                     <div className="configurationDialogReactSettingsPanel__footer">
-                        <div className="configurationDialogReactSettingsPanel__exitHint">
-                            途中で離れる場合はトップへ戻れます。ESC キーや背景クリックでは閉じません。
+                        <div className="configurationDialogReactSettingsPanel__footerLead">
+                            <div className="configurationDialogReactSettingsPanel__exitHint">
+                                途中で離れる場合はトップへ戻れます。ESC キーや背景クリックでは閉じません。
+                            </div>
+                            <a className="configurationDialogReactSettingsPanel__backLink" href="/">
+                                トップへ戻る
+                            </a>
                         </div>
                         <div className="configurationDialogReactSettingsPanel__primaryAction">
                             <button
@@ -273,9 +345,6 @@ export function ConfigurationDialogSettingsPanel() {
                                 {startButtonHint}
                             </div>
                         </div>
-                        <a className="configurationDialogReactSettingsPanel__backLink" href="/">
-                            トップへ戻る
-                        </a>
                     </div>
                 )}
             />

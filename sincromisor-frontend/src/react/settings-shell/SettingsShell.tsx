@@ -48,23 +48,27 @@ export function SettingsShell({
     if (!activePage) {
         return null;
     }
+    const primaryPages = visiblePages.filter((page) => page.tone !== "developer");
+    const developerPages = visiblePages.filter((page) => page.tone === "developer");
 
     return (
         <section className="settingsShell" aria-label={ariaLabel}>
             <SettingsShellHeader badge={badge} title={title} description={description} />
             <div className="settingsShell__layout">
                 <nav className="settingsShell__nav" aria-label={`${title} カテゴリ`}>
-                    {visiblePages.map((page) => (
-                        <button
-                            key={page.id}
-                            type="button"
-                            className={`settingsShell__navButton${page.id === activePage.id ? " is-active" : ""}${page.tone === "developer" ? " is-developer" : ""}`}
-                            onClick={() => setActivePageId(page.id)}
-                            aria-current={page.id === activePage.id ? "page" : undefined}
-                        >
-                            {page.label}
-                        </button>
-                    ))}
+                    <SettingsShellNavGroup
+                        pages={primaryPages}
+                        activePageId={activePage.id}
+                        onSelectPage={setActivePageId}
+                    />
+                    {developerPages.length > 0 ? (
+                        <SettingsShellNavGroup
+                            heading="開発者向け"
+                            pages={developerPages}
+                            activePageId={activePage.id}
+                            onSelectPage={setActivePageId}
+                        />
+                    ) : null}
                 </nav>
                 <div className="settingsShell__detail">
                     <header className="settingsShell__pageHeader">
@@ -82,6 +86,40 @@ export function SettingsShell({
             </div>
             {footer ? <div className="settingsShell__footer">{footer}</div> : null}
         </section>
+    );
+}
+
+type SettingsShellNavGroupProps = {
+    heading?: string;
+    pages: SettingsShellPage[];
+    activePageId: string;
+    onSelectPage: (pageId: string) => void;
+};
+
+function SettingsShellNavGroup({
+    heading,
+    pages,
+    activePageId,
+    onSelectPage,
+}: SettingsShellNavGroupProps) {
+    if (pages.length === 0) {
+        return null;
+    }
+    return (
+        <div className="settingsShell__navSection">
+            {heading ? <div className="settingsShell__navSectionTitle">{heading}</div> : null}
+            {pages.map((page) => (
+                <button
+                    key={page.id}
+                    type="button"
+                    className={`settingsShell__navButton${page.id === activePageId ? " is-active" : ""}${page.tone === "developer" ? " is-developer" : ""}`}
+                    onClick={() => onSelectPage(page.id)}
+                    aria-current={page.id === activePageId ? "page" : undefined}
+                >
+                    <span className="settingsShell__navButtonLabel">{page.label}</span>
+                </button>
+            ))}
+        </div>
     );
 }
 

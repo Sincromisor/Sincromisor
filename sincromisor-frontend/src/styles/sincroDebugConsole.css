@@ -26,7 +26,7 @@ div#reactSettingsPanel {
     position: absolute;
     top: clamp(52px, 8dvh, 84px);
     right: 12px;
-    width: min(396px, calc(100vw - 24px));
+    width: min(520px, calc(100vw - 24px));
     max-height: calc(100dvh - clamp(52px, 8dvh, 84px) - 12px);
     padding-top: 34px;
     pointer-events: auto;
