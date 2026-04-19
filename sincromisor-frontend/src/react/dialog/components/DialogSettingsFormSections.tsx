@@ -3,6 +3,8 @@ import type { CSSProperties, ReactNode } from "react";
 import type {
     ApplySettingsFn,
     SincroAppSettingsSnapshot,
+    SincroAppStartupSettingsCapabilities,
+    SincroAppStartupSettingsStatus,
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
 } from "../../app/appSettingsTypes";
@@ -487,6 +489,107 @@ function DialogToggle({ label, help, checked, disabled = false, onChange }: Dial
                 {help ? <HelpBadge help={help} /> : null}
             </span>
         </label>
+    );
+}
+
+type DialogStartupSettingsSectionProps = CommonProps & {
+    startupStatus: SincroAppStartupSettingsStatus;
+    startupCapabilities: SincroAppStartupSettingsCapabilities;
+    isRunning: boolean;
+    showSectionTitle?: boolean;
+};
+
+export function DialogStartupSettingsSection({
+    settings,
+    uiState,
+    onApplySettings,
+    startupStatus,
+    startupCapabilities,
+    isRunning,
+    showSectionTitle = true,
+}: DialogStartupSettingsSectionProps) {
+    const changedLabel = startupStatus.changedKeys.length > 0 ? ` 変更: ${startupStatus.changedKeys.join(", ")}` : "";
+    const items = [
+        {
+            key: "enableTalk" as const,
+            label: "会話機能を準備する",
+            checked: !!settings.enableTalk,
+            disabled: uiState.enableTalkDisabled,
+            supported: startupCapabilities.enableTalk,
+            help: "ページを開いた時に会話機能を準備します。会話をすぐ始めたいページで使います。",
+            onChange: (checked: boolean) => onApplySettings({ enableTalk: checked }),
+        },
+        {
+            key: "enableInspector" as const,
+            label: "開発者向け表示確認を使う",
+            checked: !!settings.enableInspector,
+            disabled: uiState.enableInspectorDisabled,
+            supported: startupCapabilities.enableInspector,
+            help: "開発者向けの表示確認ツールを使えるようにします。表示の切り分けが必要な時だけオンにします。",
+            onChange: (checked: boolean) => onApplySettings({ enableInspector: checked }),
+        },
+        {
+            key: "enableVR" as const,
+            label: "VR で開く準備をする",
+            checked: !!settings.enableVR,
+            disabled: uiState.enableVRDisabled,
+            supported: startupCapabilities.enableVR,
+            help: "VR で開くための準備を行います。VR 対応ページを使う時だけオンにします。",
+            onChange: (checked: boolean) => onApplySettings({ enableVR: checked }),
+        },
+    ].filter((item) => item.supported);
+
+    return (
+        <div style={{ marginBottom: "8px" }}>
+            {showSectionTitle ? <div style={cardSectionTitleStyle}>開始時の動作</div> : null}
+            <div className="configurationDialogReactSettingsPanel__hintText">
+                {isRunning
+                    ? "開始前に決まる設定です。反映したい時は、いったん停止してからもう一度始めてください。"
+                    : "開始した時の動きを決めます。必要なものだけオンにしてから始めてください。"}
+            </div>
+            {startupStatus.requiresRestart ? (
+                <div className="configurationDialogReactSettingsPanel__hintText">
+                    変更した内容を反映するには、いったん停止してからもう一度始めてください。{changedLabel}
+                </div>
+            ) : null}
+            {!startupStatus.requiresRestart && startupStatus.willApplyOnNextStart ? (
+                <div className="configurationDialogReactSettingsPanel__hintText">
+                    変更した内容は次に始める時に反映されます。{changedLabel}
+                </div>
+            ) : null}
+            <div style={{ display: "grid", gap: "8px", marginTop: "8px" }}>
+                {items.map((item) => (
+                    <label
+                        key={item.key}
+                        style={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: "8px",
+                            padding: "10px 11px",
+                            borderRadius: "8px",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            background: "rgba(255,255,255,0.04)",
+                            cursor: item.disabled ? "not-allowed" : "pointer",
+                            opacity: item.disabled ? 0.6 : 1,
+                        }}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={item.checked}
+                            disabled={item.disabled}
+                            onChange={(event) => item.onChange(event.target.checked)}
+                            style={{ marginTop: "2px", flexShrink: 0 }}
+                        />
+                        <span style={{ display: "grid", gap: "4px", lineHeight: 1.35 }}>
+                            <span style={{ display: "inline-flex", alignItems: "center" }}>
+                                {item.label}
+                                <HelpBadge help={item.help} />
+                            </span>
+                        </span>
+                    </label>
+                ))}
+            </div>
+        </div>
     );
 }
 

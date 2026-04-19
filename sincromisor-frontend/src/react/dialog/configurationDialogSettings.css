@@ -1,7 +1,7 @@
 .configurationDialogReactSettingsPanel {
     width: 100%;
     margin: 0 auto;
-    padding: 2px 2px 6px 2px;
+    padding: 2px 2px 6px;
     font-size: 14px;
     line-height: 1.4;
     color: #eef3fb;
@@ -11,49 +11,10 @@
     box-shadow: none;
 }
 
-.configurationDialogReactSettingsPanel__header {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 8px;
-    margin-bottom: 6px;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    background: transparent;
-    padding: 2px 4px 6px 4px;
-}
-
-.configurationDialogReactSettingsPanel__title {
-    font-size: 1.05rem;
-    opacity: 0.92;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-}
-
-.configurationDialogReactSettingsPanel__category {
-    margin-top: 10px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.035);
-}
-
-.configurationDialogReactSettingsPanel__categoryTitle {
-    font-weight: 700;
-    letter-spacing: 0.01em;
-}
-
-.configurationDialogReactSettingsPanel__categoryDescription {
-    opacity: 0.72;
-    line-height: 1.35;
-    margin: 4px 0 8px 0;
-}
-
 .configurationDialogReactSettingsPanel__vrmSection {
     margin-top: 4px;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
-    padding-top: 6px;
+    padding-top: 12px;
 }
 
 .configurationDialogReactSettingsPanel__subTitle {
@@ -107,25 +68,15 @@
     margin-top: 2px;
 }
 
-.configurationDialogReactSettingsPanel__startHint {
-    margin-top: 8px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.02);
-    line-height: 1.35;
-}
-
-.configurationDialogReactSettingsPanel__actions {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+.configurationDialogReactSettingsPanel__connectionPage {
+    display: grid;
+    gap: 10px;
 }
 
 .configurationDialogReactSettingsPanel__footer {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
 }
 
 .configurationDialogReactSettingsPanel__backLink {
@@ -178,10 +129,6 @@
 .configurationDialogReactSettingsPanel__secondaryButton:disabled {
     opacity: 0.6;
     cursor: progress;
-}
-
-.configurationDialogReactSettingsPanel__hintList {
-    margin-top: 4px;
 }
 
 .configurationDialogReactSettingsPanel__hintText {
