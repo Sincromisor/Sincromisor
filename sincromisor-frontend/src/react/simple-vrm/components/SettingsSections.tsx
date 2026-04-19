@@ -227,8 +227,7 @@ export function SettingsCategorySection({
                 padding: "16px 18px",
                 borderRadius: "16px",
                 border: "1px solid rgba(130, 188, 255, 0.14)",
-                background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
-                boxShadow: "0 8px 18px rgba(0, 0, 0, 0.12)",
+                background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
             }}
         >
             <div
@@ -470,9 +469,14 @@ export function CharacterSettingsSection({
 }: CharacterSettingsSectionProps & { mode?: CharacterSettingsSectionMode }) {
     const showCameraSelection = mode !== "display";
     const showDisplayOptions = mode !== "camera";
+    const sectionLabel = mode === "camera"
+        ? "視線用カメラ"
+        : mode === "display"
+            ? "キャラクター表示"
+            : "キャラクターと視線";
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            {showSectionTitle ? <HelpLabel text="キャラクター設定" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>キャラクターと視線</div>}
+            {showSectionTitle ? <HelpLabel text="キャラクター設定" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>{sectionLabel}</div>}
             {showCameraSelection ? (
                 <div style={{ marginBottom: showDisplayOptions ? `${sectionSpacingPx}px` : "0" }}>
                     <HelpLabel text="視線用カメラ" help={settingHelp.videoInputDeviceId} />

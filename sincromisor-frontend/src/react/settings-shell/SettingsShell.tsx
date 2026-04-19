@@ -71,14 +71,16 @@ export function SettingsShell({
                     ) : null}
                 </nav>
                 <div className="settingsShell__detail">
-                    <header className="settingsShell__pageHeader">
-                        <h2 className="settingsShell__pageTitle">{activePage.title}</h2>
-                        <p className="settingsShell__pageDescription">{activePage.description}</p>
-                    </header>
-                    {activePage.summary ? (
-                        <div className="settingsShell__summary">{activePage.summary}</div>
-                    ) : null}
-                    <div className="settingsShell__content">{activePage.content}</div>
+                    <div className="settingsShell__pageSurface">
+                        <header className="settingsShell__pageHeader">
+                            <h2 className="settingsShell__pageTitle">{activePage.title}</h2>
+                            <p className="settingsShell__pageDescription">{activePage.description}</p>
+                        </header>
+                        {activePage.summary ? (
+                            <div className="settingsShell__summary">{activePage.summary}</div>
+                        ) : null}
+                        <div className="settingsShell__content">{activePage.content}</div>
+                    </div>
                     {activePage.footer ? (
                         <div className="settingsShell__pageFooter">{activePage.footer}</div>
                     ) : null}

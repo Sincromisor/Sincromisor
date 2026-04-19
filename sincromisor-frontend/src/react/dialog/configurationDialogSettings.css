@@ -48,13 +48,12 @@
 
 .configurationDialogReactSettingsPanel__category {
     display: grid;
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 18px;
-    padding: 18px 20px;
+    padding: 16px 18px;
     border-radius: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.02));
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(157, 176, 204, 0.12);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.016));
 }
 
 .configurationDialogReactSettingsPanel__category:last-child {
@@ -103,28 +102,25 @@
 
 .configurationDialogReactSettingsPanel__checkList {
     display: grid;
-    gap: 10px;
+    gap: 8px;
 }
 
 .configurationDialogReactSettingsPanel__checkItem {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: 14px;
-    border: 1px solid rgba(132, 190, 255, 0.16);
-    background: rgba(71, 118, 161, 0.12);
+    position: relative;
+    padding-left: 16px;
     line-height: 1.45;
+    color: rgba(238, 243, 251, 0.88);
 }
 
 .configurationDialogReactSettingsPanel__checkItem::before {
     content: "";
-    flex: 0 0 10px;
-    width: 10px;
-    height: 10px;
-    margin-top: 5px;
+    position: absolute;
+    left: 0;
+    top: 9px;
+    width: 6px;
+    height: 6px;
     border-radius: 999px;
-    background: linear-gradient(180deg, #9fd2ff, #63c1cf);
+    background: #9fd2ff;
 }
 
 .configurationDialogReactSettingsPanel__footer {
@@ -245,7 +241,7 @@
 }
 
 .configurationDialogReactSettingsPanel .settingsShell__layout {
-    grid-template-columns: minmax(188px, 208px) minmax(0, 1fr);
+    grid-template-columns: minmax(196px, 216px) minmax(0, 1fr);
 }
 
 .configurationDialogReactSettingsPanel .settingsShell__navButton {
@@ -257,12 +253,16 @@
     max-width: 760px;
 }
 
+.configurationDialogReactSettingsPanel .settingsShell__pageSurface {
+    gap: 16px;
+}
+
 .configurationDialogReactSettingsPanel .settingsShell__summaryGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
 }
 
-.configurationDialogReactSettingsPanel .settingsShell__content,
+.configurationDialogReactSettingsPanel .settingsShell__pageSurface,
 .configurationDialogReactSettingsPanel .settingsShell__footer {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.018));
 }
