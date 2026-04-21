@@ -121,7 +121,7 @@
 - `documents/tasks/frontend_ui_guidance/done/TASK-3008-frontend-modernization-foundation-and-legacy-retirement.md`
 - `documents/tasks/frontend_ui_guidance/open/TASK-3009-frontend-support-matrix-and-page-classification.md`
 - `documents/tasks/frontend_ui_guidance/open/TASK-3010-css-foundation-and-legacy-style-isolation.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3011-react-app-controller-boundary-and-ui-dependency-reduction.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3011-react-app-controller-boundary-and-ui-dependency-reduction.md`
 - `documents/tasks/frontend_ui_guidance/open/TASK-3012-babylon-legacy-retirement-and-build-path-separation.md`
 - `documents/tasks/frontend_ui_guidance/open/TASK-3013-frontend-readability-comments-and-design-doc-alignment.md`
 

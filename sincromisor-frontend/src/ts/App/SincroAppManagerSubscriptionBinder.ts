@@ -32,10 +32,11 @@ type DialogSubscriptionParams = {
 // manager 群の subscribe 本文を helper 側へ分離し、SincroAppController を orchestration 中心に保つ。
 export function bindChatManagerSubscription(chatMessageManager: SincroAppChatSubscriptionFacade, emitEvent: EmitFn): void {
     chatMessageManager.subscribe((event) => {
-        if (event.type !== "message" || !event.message) {
+        const appEvent = mapChatMessageToAppEvent(event);
+        if (!appEvent) {
             return;
         }
-        emitEvent(mapChatMessageToAppEvent(event.message));
+        emitEvent(appEvent);
     });
 }
 

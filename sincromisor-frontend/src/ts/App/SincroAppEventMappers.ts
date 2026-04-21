@@ -1,6 +1,6 @@
 import type { DebugConsoleManagerEvent } from "../UI/DebugConsoleManager";
 import type { TalkManagerEvent } from "../RTC/TalkManager";
-import type { ChatMessage } from "../RTC/RTCMessage";
+import type { ChatMessageManagerEvent } from "../UI/ChatMessageManager";
 import type { SincroAppEvent } from "./SincroAppTypes";
 
 export type DebugEventMapResult =
@@ -11,14 +11,24 @@ export type DebugEventMapResult =
 
 // singleton manager のイベント型を AppController 向けのイベントへ変換する pure mapper 群。
 // AppController 本体は状態更新と emit 順序に集中させる。
-export function mapChatMessageToAppEvent(message: ChatMessage): SincroAppEvent {
+export function mapChatMessageToAppEvent(event: ChatMessageManagerEvent): SincroAppEvent | null {
+    if (event.type === "system_icon_changed") {
+        if (!event.systemIconUrl) {
+            return null;
+        }
+        return { type: "chat_system_icon", iconUrl: event.systemIconUrl };
+    }
+    if (event.type !== "message" || !event.viewRecord) {
+        return null;
+    }
+    const { message } = event.viewRecord;
     let eventType: SincroAppEvent["type"] = "chat_message";
     if (message.message_type === "system") {
         eventType = "system_message";
     } else if (message.message_type === "error") {
         eventType = "error_message";
     }
-    return { type: eventType, message } as SincroAppEvent;
+    return { type: eventType, message, viewRecord: event.viewRecord } as SincroAppEvent;
 }
 
 export function mapTalkManagerEventToAppEvent(event: TalkManagerEvent): SincroAppEvent | null {

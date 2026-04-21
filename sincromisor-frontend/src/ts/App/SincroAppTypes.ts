@@ -1,4 +1,6 @@
 import type { ChatMessage, TelopChannelMessage } from "../RTC/RTCMessage";
+import type { TelopTextSegment } from "../RTC/TalkManager";
+import type { ChatMessageViewRecord } from "../UI/ChatMessageManager";
 import type { DialogPopEvent } from "../UI/PopManager";
 import type {
     DialogSettingsUiHints,
@@ -88,12 +90,18 @@ export type SincroAppEvent = {
 } | {
     type: "chat_message";
     message: ChatMessage;
+    viewRecord: ChatMessageViewRecord;
 } | {
     type: "system_message";
     message: ChatMessage;
+    viewRecord: ChatMessageViewRecord;
 } | {
     type: "error_message";
     message: ChatMessage;
+    viewRecord: ChatMessageViewRecord;
+} | {
+    type: "chat_system_icon";
+    iconUrl: string;
 } | {
     type: "local_vad_state";
     isSpeech: boolean;
@@ -154,3 +162,5 @@ export type SincroAppEvent = {
     type: "looking_glass_config_status";
     status: SincroAppLookingGlassConfigStatus;
 };
+
+export type { ChatMessageViewRecord, TelopTextSegment };

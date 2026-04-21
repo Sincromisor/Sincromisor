@@ -6,7 +6,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 
 - ドキュメントパス: `documents/design/frontend_migration_react.md`
 - 作成日: 2026-02-22
-- 最終更新日: 2026-02-22
+- 最終更新日: 2026-04-22
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -104,6 +104,26 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - 将来的に削減対象: `@babylonjs/*`
 - 全体図（必要なら図リンク）:
   - TODO: `frontend_ui.md` の全体図に React UI / Core / Renderer の分離図を追記
+
+### 6.1 ページ分類と移行優先順位（2026-04-21）
+
+- build の基準:
+  - 通常開発では `npm run build` を使い、`main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` だけを常時守る
+  - `npm run build:all` は legacy/Babylon.js 検証が必要な時だけ使う
+- 優先順位:
+  - 優先度 A: `main`、`simple-vrm`
+    - 公開導線と通常会話の正規ルート。React / CSS / 文言整理の主対象
+  - 優先度 B: `vrm360`、`looking-glass-vrm`
+    - Three.js + VRM1.0 基盤の実験導線。通常ビルドには含めるが、環境依存前提で段階改善する
+  - 優先度 C: `simple`、`glass`、`character`、`character-glass`、`area360`
+    - Babylon.js legacy の検証ページ。通常導線から外し、比較確認専用に縮退する
+  - 優先度 D: `single`、`double`
+    - `deprecated`。即時凍結し、React 化や CSS 追従の対象にしない
+- `single` / `double` の扱い:
+  - 現行 standalone ページのまま維持しない
+  - 将来要件が残る場合は、modern 側の page variant または overlay として再設計する
+  - Babylon.js ベースの現行ページは退役候補として扱う
+- 本書で参照する詳細な分類表の正本は `documents/design/frontend_ui.md` とする
 
 ## 7. 詳細設計
 
@@ -219,12 +239,13 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - 目的:
     - 通常系ページから Babylon.js 依存を切り離し、保守対象を明確化する
   - 実施内容:
-    - `SincroLegacy/**` と `area360/**` を `legacy`/`experimental` として扱う方針を実装/文書で明示
+    - `SincroLegacy/**` と `area360/**` を `legacy` として扱う方針を実装/文書で明示し、`single` / `double` は `deprecated` として凍結する
     - 通常系ページ（VRM1.0）と Babylon系ページのビルド確認手順を分ける
     - Babylon系ページの利用状況を確認し、代替実装または廃止順を決める
   - 受け入れ条件:
     - 通常系ページ開発時に Babylon 変更が不要な状態
     - 削除対象/維持対象が文書化されている
+    - `single` / `double` を正規導線として守らないことが明文化されている
 
 - Phase 4: Looking Glass の VRM1.0 対応
   - 目的:
@@ -371,6 +392,22 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - `ChatMessageManager.write*` -> `chat/system/error` 表示イベントへ寄せる
   - `DebugConsoleManager.update*` -> `rtc_stats / vad / gaze / log` 系イベントへ寄せる
   - `DialogManager.*` getter 群 -> `settings` オブジェクト生成へ寄せる
+
+### 7.9.1 React UI の残存 direct manager 依存棚卸し（2026-04-22）
+
+| 対象 | 旧 direct dependency | React が必要だったもの | 分類 | 現在の扱い |
+| --- | --- | --- | --- | --- |
+| `src/react/chat/SincroChatView.tsx` | `ChatMessageManager.getManager()` | チャット履歴 snapshot、system icon 更新、旧 DOM 描画停止、`renderMode` 付き更新イベント | `既存 bridge へ移行` | `appController.chat.getMessageViewSnapshot()`、`appController.chat.getSystemIconUrl()`、`appController.chat.setDomRenderingEnabled(...)`、`chat_system_icon` / `chat_message` / `system_message` / `error_message` へ移行済み |
+| `src/react/telop/SincroTelopView.tsx` | `TalkManager.getManager()` | telop text segment snapshot、旧 footer DOM 描画停止、`telop_message` 購読 | `bridge/state 拡張後に移行` | `appController.state.getTelopTextSegmentsSnapshot()`、`appController.chat.setTelopDomRenderingEnabled(...)`、`telop_message` へ移行済み |
+| `src/react/dialog/**`, `src/react/simple-vrm/**`, `src/react/looking-glass-vrm/**`, `src/react/vrm360/**` | なし（すでに `SincroAppController` 経由） | 設定 snapshot、dialog UI 状態、lifecycle / connection / LG 状態 | `維持` | direct manager 依存なしを継続 |
+
+- React UI の現行ルール:
+  - 新規 React コンポーネント / hook は manager singleton を直接 import・`getManager()` しない。
+  - 読み取りは `appController.state`、会話表示系の操作は `appController.chat`、dialog 操作は `appController.dialog`、停止などの接続操作は `appController.rtc`、診断UI配線は `appController.debug` を使う。
+  - active controller 差し替えに備え、React 側の購読は `SincroAppController.getCurrent()` / `subscribeCurrent()` または `subscribeActiveSincroAppEvents(...)` を正規経路とする。
+- スコープ外として残すもの:
+  - `TalkManager` / `ChatMessageManager` の direct 参照は Core / legacy / renderer 側に残るが、React UI の direct dependency とは分けて扱う。
+  - legacy ページの整理や manager 自体の削除は別タスクで判断する。
 
 ### 7.10 Phase 0 完了判定（レビュー観点）
 
@@ -944,6 +981,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 | 2026-02-22 | `DialogManager` の `setVrmStatusText()` / `setDialogStartButtonState()` に同値更新ガードを追加し、drag&drop/状態更新時の不要な UI state 通知を抑止。`SincroAppController` は settings関連 payload の短命キャッシュ（同期処理内のみ有効）を導入して `applySettings()` / `emitSettingsRelatedSnapshots()` 内の重複組み立てを抑制。`UI_TUNING.controlPanel` を拡張し、Control Panel 本体の section spacing / details 内余白も定数化して `SimpleVrmControlPanel.tsx` に適用 |
 | 2026-02-22 | `SincroAppController.subscribe()` の初期スナップショット送出も settings関連 payload の短命キャッシュを利用するよう整理し、初回購読時の重複 snapshot 組み立てを削減。`DialogManager` の dialog open/close・VRM dragover/status・start button 状態更新には通知順序意図のコメントを補強。`SettingsSections.tsx` 側にも `UI_TUNING.controlPanel` を展開し、basic/mic/character/startup/LG 設定セクションの spacing を定数化 |
 | 2026-02-22 | `UI_TUNING.controlPanel.settings`（help badge/tooltip/spacing 系）を追加し、`SettingsSections.tsx` の tooltip 表示位置・help badge サイズ・help label margin・各設定セクションの gap/margin に適用。`SincroAppController.start()` は起動時 snapshot を `emitLifecycle(\"starting\")` と startup settings 保存で再利用し、初期状態計算の重複を小さく削減 |
+| 2026-04-22 | `SincroChatView` / `SincroTelopView` の direct manager 依存を整理し、React 側は active `SincroAppController` 経由で chat/telop を購読する構成へ移行。`SincroAppController` の `chat` / `state` bridge を拡張し、`chat_system_icon` event、chat view snapshot、telop snapshot、旧 DOM 描画停止操作を React から singleton 直参照せず扱えるようにした |
 | 2026-02-22 | `UI_TUNING.controlPanel.styles` を追加し、`panelStyles.ts` の root/button/miniCard/miniLog の border radius / padding / font size / maxHeight を定数化。Control Panel の見た目調整点を `UI_TUNING` にさらに集約。`looking-glass-vrm` 向けの Control Panel 案内文（LGエラー時の誘導/再読込文言）も日本語表現を微調整 |
 | 2026-02-22 | `UI_TUNING.controlPanel.styles` を拡張し、Control Panel 操作ボタン間隔・Diagnostics カード間隔・section title 余白も定数化。`PanelControls.tsx` と `DiagnosticsStatusCards.tsx` / `DiagnosticsLogSections.tsx` に適用し、`Start/Stop` や `recent messages` 等の表示を日本語寄り（開始/停止、最近の〜、メッセージ未着など）へ調整 |
 | 2026-02-22 | `Control Panel` / `Diagnostics` の残り文言を日本語寄りに調整（`トークモード (talk mode)`、`診断情報`、`LGコード` / `LG詳細`、`Signaling状態` など）。Looking Glass 実機確認前の最小チェックリストを追加 |

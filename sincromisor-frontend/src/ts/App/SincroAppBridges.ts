@@ -21,6 +21,10 @@ export type SincroAppChatBridge = {
     writeUnknownUserMessage: (message: string, isHTML?: boolean) => void;
     writeSystemMessage: (message: string, isHTML?: boolean) => void;
     setSystemIcon: (iconUrl: string) => void;
+    setDomRenderingEnabled: (enabled: boolean) => void;
+    setTelopDomRenderingEnabled: (enabled: boolean) => void;
+    getMessageViewSnapshot: () => import("./SincroAppTypes").ChatMessageViewRecord[];
+    getSystemIconUrl: () => string;
 };
 
 export type SincroAppDebugBridge = {
@@ -38,4 +42,5 @@ export type SincroAppStateBridge = {
     getDialogUiState: () => import("./SincroAppTypes").SincroAppDialogUiState;
     getDialogVrmUiState: () => import("./SincroAppTypes").SincroAppDialogVrmUiState;
     getStartupSettingsStatus: () => import("./SincroAppTypes").SincroAppStartupSettingsStatus;
+    getTelopTextSegmentsSnapshot: () => import("./SincroAppTypes").TelopTextSegment[];
 };

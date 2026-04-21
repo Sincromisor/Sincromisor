@@ -1,6 +1,7 @@
 import type { ChatMessageManager } from "../UI/ChatMessageManager";
 import type { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import type { PopManager } from "../UI/PopManager";
+import type { TalkManager } from "../RTC/TalkManager";
 import type { SincroAppDialogFacade } from "./SincroAppDialogFacade";
 import type {
     SincroAppChatBridge,
@@ -60,7 +61,10 @@ export function createSincroAppDialogBridge(params: {
     };
 }
 
-export function createSincroAppChatBridge(chatMessageManager: ChatMessageManager): SincroAppChatBridge {
+export function createSincroAppChatBridge(
+    chatMessageManager: ChatMessageManager,
+    talkManager: TalkManager,
+): SincroAppChatBridge {
     // initializer 側で頻出する chat 操作だけを集約し、ChatMessageManager の直接 import を減らす。
     return {
         writeUnknownUserMessage: (message, isHTML) => {
@@ -72,6 +76,14 @@ export function createSincroAppChatBridge(chatMessageManager: ChatMessageManager
         setSystemIcon: (iconUrl) => {
             chatMessageManager.setSystemIcon(iconUrl);
         },
+        setDomRenderingEnabled: (enabled) => {
+            chatMessageManager.setDomRenderingEnabled(enabled);
+        },
+        setTelopDomRenderingEnabled: (enabled) => {
+            talkManager.setTelopDomRenderingEnabled(enabled);
+        },
+        getMessageViewSnapshot: () => chatMessageManager.getMessageViewSnapshot(),
+        getSystemIconUrl: () => chatMessageManager.getSystemIconUrl(),
     };
 }
 
@@ -100,6 +112,7 @@ export function createSincroAppStateBridge(params: {
     getDialogUiState: () => SincroAppDialogUiState;
     getDialogVrmUiState: () => SincroAppDialogVrmUiState;
     getStartupSettingsStatus: () => SincroAppStartupSettingsStatus;
+    getTelopTextSegmentsSnapshot: () => import("./SincroAppTypes").TelopTextSegment[];
 }): SincroAppStateBridge {
     // React hook が subscribe 前に初期値を同期取得するための読み取り専用 bridge。
     return {
@@ -109,5 +122,6 @@ export function createSincroAppStateBridge(params: {
         getDialogUiState: params.getDialogUiState,
         getDialogVrmUiState: params.getDialogVrmUiState,
         getStartupSettingsStatus: params.getStartupSettingsStatus,
+        getTelopTextSegmentsSnapshot: params.getTelopTextSegmentsSnapshot,
     };
 }

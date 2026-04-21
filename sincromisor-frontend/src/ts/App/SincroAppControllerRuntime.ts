@@ -54,7 +54,7 @@ export function createSincroAppManagerBundle(): SincroAppManagerBundle {
 
 // manager bundle を元に bridge 群をまとめて作成する helper。
 export function createSincroAppBridgeBundle(
-    managers: Pick<SincroAppManagerBundle, "chatMessageManager" | "debugConsoleManager" | "dialogManager" | "popManager">,
+    managers: Pick<SincroAppManagerBundle, "chatMessageManager" | "debugConsoleManager" | "dialogManager" | "popManager" | "talkManager">,
     callbacks: { stopRTC: () => void; },
 ): SincroAppBridgeBundle {
     return {
@@ -62,7 +62,7 @@ export function createSincroAppBridgeBundle(
             dialogManager: managers.dialogManager,
             popManager: managers.popManager,
         }),
-        chatBridge: createSincroAppChatBridge(managers.chatMessageManager),
+        chatBridge: createSincroAppChatBridge(managers.chatMessageManager, managers.talkManager),
         debugBridge: createSincroAppDebugBridge(managers.debugConsoleManager),
         rtcBridge: createSincroAppRtcBridge({ stopRTC: callbacks.stopRTC }),
     };
@@ -76,6 +76,7 @@ export function createSincroAppRuntimeBundle(params: {
     getDialogUiState: () => import("./SincroAppTypes").SincroAppDialogUiState;
     getDialogVrmUiState: () => import("./SincroAppTypes").SincroAppDialogVrmUiState;
     getStartupSettingsStatus: () => import("./SincroAppTypes").SincroAppStartupSettingsStatus;
+    getTelopTextSegmentsSnapshot: () => import("./SincroAppTypes").TelopTextSegment[];
 }): SincroAppControllerRuntimeBundle {
     // manager 取得 -> bridge 生成 -> state bridge 生成を1か所にまとめる。
     // Controller 本体では field 代入と bind 順序だけを読めるようにする。
@@ -88,6 +89,7 @@ export function createSincroAppRuntimeBundle(params: {
         getDialogUiState: params.getDialogUiState,
         getDialogVrmUiState: params.getDialogVrmUiState,
         getStartupSettingsStatus: params.getStartupSettingsStatus,
+        getTelopTextSegmentsSnapshot: params.getTelopTextSegmentsSnapshot,
     });
     return {
         ...managers,
