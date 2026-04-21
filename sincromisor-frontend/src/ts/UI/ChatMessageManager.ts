@@ -67,7 +67,9 @@ export class ChatMessageManager {
         this.domRenderingEnabled = enabled;
         if (!enabled) {
             this.chatBox.innerHTML = "";
+            return;
         }
+        this.renderDomSnapshot();
     }
 
     // React 側の初期描画用に、現時点のチャット履歴（新しい順）を返す。
@@ -189,6 +191,28 @@ export class ChatMessageManager {
     */
     private createNewMessageBox(cMessage: ChatMessage, isHTML = false): HTMLDivElement {
         this.upsertMessageSnapshot(cMessage, isHTML);
+        const e = this.createMessageBoxElement(cMessage, isHTML);
+        if (this.domRenderingEnabled) {
+            this.chatBox.prepend(e);
+            setTimeout(() => { e.style.opacity = '1'; }, 200);
+            //this.autoScroll();
+            this.removeOldMessage();
+        }
+        return e;
+    }
+
+    // legacy DOM fallback を再有効化したとき、保持済み snapshot から一覧を復元する。
+    private renderDomSnapshot(): void {
+        this.chatBox.innerHTML = "";
+        for (const record of this.messages) {
+            const messageBox = this.createMessageBoxElement(record.message, record.renderMode === "trusted_html");
+            // React描画時と違い CSS 初期opacity=0 を使わないため、即座に表示状態へそろえる。
+            messageBox.style.opacity = "1";
+            this.chatBox.appendChild(messageBox);
+        }
+    }
+
+    private createMessageBoxElement(cMessage: ChatMessage, isHTML: boolean): HTMLDivElement {
         const eDisplayName = document.createElement("span");
         eDisplayName.className = "display_name";
         eDisplayName.innerText = cMessage.speaker_name;
@@ -225,13 +249,6 @@ export class ChatMessageManager {
         e.className = `${this.messageTypeToMessageClassName(cMessage.message_type)} sincroMessage`;
         e.appendChild(eIconBox);
         e.appendChild(eMesg);
-
-        if (this.domRenderingEnabled) {
-            this.chatBox.prepend(e);
-            setTimeout(() => { e.style.opacity = '1'; }, 200);
-            //this.autoScroll();
-            this.removeOldMessage();
-        }
         return e;
     }
 

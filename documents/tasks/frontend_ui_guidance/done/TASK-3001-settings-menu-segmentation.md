@@ -17,7 +17,7 @@
 ## 関連設計
 
 - `documents/design/frontend_ui.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3000-settings-panel-and-debug-console-role-separation.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3000-settings-panel-and-debug-console-role-separation.md`
 
 ## 推奨構成案
 

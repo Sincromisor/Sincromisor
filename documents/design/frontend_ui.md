@@ -161,7 +161,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | `src/double/index.html` | `npm run build:all` | Babylon.js legacy | 旧二画面レイアウト | `deprecated` | 即時凍結し、現行 standalone ページとしては保守しない |
 
 - `single` / `double` の判断:
-  - 現行の Babylon.js ページは `deprecated` とし、通常利用者向け導線・通常ビルド・README の主導線から外す
+  - `deprecated` とするのは `single` / `double` のみとし、通常利用者向け導線・通常ビルド・README の主導線から外す
+  - `simple` / `glass` / `character` / `character-glass` / `area360` は `legacy` として `npm run build:all` でのみ回帰確認する
   - 互換維持のために CSS や React の新方針を追従させない
   - 将来レイアウト需要が再発した場合は、`simple-vrm` 系の overlay / scene layout として再設計し、現行ページを延命しない
 - 後続タスクへの前提:

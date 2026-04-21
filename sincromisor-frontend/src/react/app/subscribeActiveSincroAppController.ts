@@ -17,6 +17,7 @@ export function subscribeActiveSincroAppController(bindController: BindControlle
         unsubscribeCurrent();
         if (unsubscribeBound) {
             unsubscribeBound();
+            unsubscribeBound = null;
         }
     };
 }

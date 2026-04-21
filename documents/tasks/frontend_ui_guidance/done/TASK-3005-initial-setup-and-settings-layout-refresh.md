@@ -20,7 +20,7 @@
 
 - `documents/design/frontend_ui.md`
 - `documents/tasks/frontend_ui_guidance/done/TASK-3003-discord-like-settings-shell-redesign.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3004-initial-setup-wizard-and-dialog-close-semantics.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3004-initial-setup-wizard-and-dialog-close-semantics.md`
 
 ## スコープ
 

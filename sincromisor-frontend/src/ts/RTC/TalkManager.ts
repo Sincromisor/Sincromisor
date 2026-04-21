@@ -60,13 +60,10 @@ export class TalkManager {
     setTelopDomRenderingEnabled(enabled: boolean): void {
         this.telopDomRenderingEnabled = enabled;
         if (!enabled) {
-            const telopBox = document.querySelector("div#sincroFooterBox");
-            if (telopBox) {
-                // Reactや日時表示など他要素を巻き込まないよう、旧DOMテロップspanのみ掃除する。
-                const legacyTelopSpans = telopBox.querySelectorAll("span.sincroFooterBox__telopText");
-                legacyTelopSpans.forEach((node) => node.remove());
-            }
+            this.clearLegacyTelopSpans();
+            return;
         }
+        this.renderLegacyTelopSnapshot();
     }
 
     // React初期描画用の簡易スナップショット（件数制限あり）。
@@ -120,16 +117,13 @@ export class TalkManager {
     // 既存 footer DOM 向けの文字単位描画。
     // React移行後も fallback として残し、telopDomRenderingEnabled=false で停止できる。
     private addTelopChar(speech_id: number, char: string): void {
-        this.upsertTelopTextSegment(speech_id, char || " ");
+        const normalizedChar = char || " ";
+        this.upsertTelopTextSegment(speech_id, normalizedChar);
         if (!this.telopDomRenderingEnabled) {
             return;
         }
-        const telopText: HTMLParagraphElement | null = document.querySelector("div#sincroFooterBox");
+        const telopText: HTMLDivElement | null = document.querySelector("div#sincroFooterBox");
         if (!telopText) return;
-        if (telopText.clientWidth === 0) return;
-
-        const paddingLeftPx = parseInt(window.getComputedStyle(telopText).paddingLeft) || 0;
-        const paddingRightPx = parseInt(window.getComputedStyle(telopText).paddingRight) || 0;
 
         // speech_idに対応するspanを探す
         let span: HTMLSpanElement | null = telopText.querySelector<HTMLSpanElement>(`span[data-speech-id="${speech_id}"]`);
@@ -139,8 +133,45 @@ export class TalkManager {
             span.setAttribute("data-speech-id", String(speech_id));
             telopText.appendChild(span);
         }
-        span.textContent += char || ' ';
+        span.textContent += normalizedChar;
 
+        this.trimLegacyTelopOverflow(telopText);
+    }
+
+    // React island を外したあとでも直前のテロップを見返せるよう、保持済み snapshot を再描画する。
+    private renderLegacyTelopSnapshot(): void {
+        const telopText: HTMLDivElement | null = document.querySelector("div#sincroFooterBox");
+        if (!telopText) {
+            return;
+        }
+        this.clearLegacyTelopSpans(telopText);
+        for (const segment of this.telopTextSegments) {
+            const span = document.createElement("span");
+            span.classList.add("sincroFooterBox__telopText");
+            span.setAttribute("data-speech-id", String(segment.speechId));
+            span.textContent = segment.text;
+            telopText.appendChild(span);
+        }
+        this.trimLegacyTelopOverflow(telopText);
+    }
+
+    // Reactや日時表示など他要素を巻き込まないよう、旧DOMテロップspanのみ掃除する。
+    private clearLegacyTelopSpans(telopBox?: Element): void {
+        const target = telopBox ?? document.querySelector("div#sincroFooterBox");
+        if (!target) {
+            return;
+        }
+        const legacyTelopSpans = target.querySelectorAll("span.sincroFooterBox__telopText");
+        legacyTelopSpans.forEach((node) => node.remove());
+    }
+
+    // footer内の日時など別要素を残したまま、旧DOMテロップだけを幅内へ切り詰める。
+    private trimLegacyTelopOverflow(telopText: HTMLDivElement): void {
+        if (telopText.clientWidth === 0) {
+            return;
+        }
+        const paddingLeftPx = parseInt(window.getComputedStyle(telopText).paddingLeft) || 0;
+        const paddingRightPx = parseInt(window.getComputedStyle(telopText).paddingRight) || 0;
         // 1文字単位で先頭から削除。
         // footer内に日時など別要素がある構成では、その幅を差し引いた残りをテロップ用の幅とみなす。
         const telopClass = "sincroFooterBox__telopText";
