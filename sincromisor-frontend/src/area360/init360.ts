@@ -7,9 +7,9 @@ class Sincro360Initializer extends SincroInitializer {
     protected override initializeSincroScene(): SincroScene {
         return new Sincro360Scene(
             this.charCanvas, this.talkManager,
-            this.dialogManager.enableVR(),
-            this.dialogManager.enableCharacter(),
-            this.dialogManager.enableInspector()
+            this.appController.dialog.isVREnabled(),
+            this.appController.dialog.isCharacterEnabled(),
+            this.appController.dialog.isInspectorEnabled()
         );
     }
 

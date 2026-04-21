@@ -7,9 +7,9 @@ class SincroGlassInitializer extends SincroInitializer {
     protected override initializeSincroScene(): SincroScene {
         DebugConsoleManager.getManager().showDebugConsole();
         return new SincroGlassScene(this.charCanvas, this.talkManager,
-            this.dialogManager.enableVR(),
-            this.dialogManager.enableCharacter(),
-            this.dialogManager.enableInspector()
+            this.appController.dialog.isVREnabled(),
+            this.appController.dialog.isCharacterEnabled(),
+            this.appController.dialog.isInspectorEnabled()
         );
     }
 }

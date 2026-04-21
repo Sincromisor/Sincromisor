@@ -31,7 +31,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - VRMボーン制御や表情制御の詳細（`frontend_character.md` で扱う）
   - サーバー側のシグナリング実装詳細
 - LLM向け要約（3-5行）:
-  - エントリは `main-vrm.ts`（VRM系）と `main-legacy.ts`（legacy系）で分岐する。2026-02-22 時点で default build は VRM系優先（legacy は `build:all` 時のみ）で、modern 側には `simple-vrm`, `vrm360`, `looking-glass-vrm` を含む。
+  - エントリは `main-vrm.ts`（VRM系）と `main-legacy.ts`（legacy系）で分岐する。default build は VRM系優先で、`vite.config.js` の `buildInputMap()` は `SINCRO_BUILD_LEGACY=1` の時だけ legacy input を追加する。modern 側には `simple-vrm`, `vrm360`, `looking-glass-vrm` を含む。
   - `SincroVRMInitializer` / `SincroInitializer` は `SincroAppController` を先行生成し、`start()` 呼び出しでアプリ起動を開始する（2026-02-22以降）。
   - `SincroController` は `start()` 内で UserMedia 取得、RTC開始、CharacterGaze開始を統括する。マイク入力 selector の `audioInputDeviceId` は起動時の `getUserMedia` 制約と、実行中の再取得 + `RTCRtpSender.replaceTrack()` の両方へ反映される。視線用カメラ selector の `videoInputDeviceId` は CharacterGaze 専用カメラ取得へ反映され、実行中変更時も preview/AutoMute を維持しながら再初期化される。
   - チャット文は `text_ch`、テロップは `telop_ch` で受信し、`TalkManager` 経由でUI/口形同期に渡す。
@@ -143,6 +143,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - build 運用:
   - 日常開発・CI 相当の確認は `npm run build` を基準とし、`main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` を守る
   - legacy 検証が必要なときだけ `npm run build:all` を使い、Babylon.js 系ページの回帰確認を行う
+  - `npm run build` は `tsc -p tsconfig.modern.json && vite build` を使い、modern 系ソースだけを型チェック対象にする
+  - `npm run build:all` は `tsc && SINCRO_BUILD_LEGACY=1 vite build` を使い、`simple`、`single`、`double`、`glass`、`character`、`character-glass`、`area360` を Vite input に追加する
 
 | ページ | build 導線 | 描画 / UI 基盤 | 主用途 | 分類 | 保守方針 |
 | --- | --- | --- | --- | --- | --- |
@@ -386,11 +388,15 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 環境変数:
   - フロント単体では `.env` 依存は薄く、主にサーバー配布configを利用
 - 設定ファイル:
-  - `sincromisor-frontend/vite.config.js`（MPA entry / partial plugin）
+  - `sincromisor-frontend/vite.config.js`（MPA entry / partial plugin。`SINCRO_BUILD_LEGACY=1` 時のみ legacy input を追加）
+  - `sincromisor-frontend/tsconfig.modern.json`（通常 build 用。legacy/Babylon 系ソースを除外）
 - 起動方法:
   - `cd sincromisor-frontend && npm run dev`
 - デプロイ/ローカル実行手順:
-  - `npm run build` で `dist/` 出力
+  - 通常確認: `npm run build`
+  - 上記は `tsc -p tsconfig.modern.json && vite build` を実行し、`dist/` に modern 系ページだけを出力する
+  - legacy/Babylon 含む確認が必要なときのみ: `npm run build:all`
+  - 上記は `tsc && SINCRO_BUILD_LEGACY=1 vite build` を実行し、legacy / deprecated ページも含めて出力する
   - `public/mediapipe-wasm` と `public/3rd_party/blaze_face_short_range.tflite` の配置が必要
   - 学習VAD利用時は `public/3rd_party/silero-vad/silero_vad.onnx` の配置が必要（`onnxruntime-web` はnpm依存でバンドル）
 - 互換性に影響する設定変更:

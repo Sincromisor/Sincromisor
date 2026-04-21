@@ -1,7 +1,8 @@
 # TASK-3012 legacy build/public 導線の文書同期と `single` / `double` 扱い確定
 
 - 作成日: 2026-04-21
-- ステータス: Open
+- ステータス: Done
+- 完了日: 2026-04-22
 - 優先度: High
 
 ## 目的
@@ -21,7 +22,7 @@
 - `documents/design/frontend_ui.md`
 - `documents/design/frontend_migration_react.md`
 - `documents/tasks/frontend_ui_guidance/done/TASK-3008-frontend-modernization-foundation-and-legacy-retirement.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3009-frontend-support-matrix-and-page-classification.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3009-frontend-support-matrix-and-page-classification.md`
 
 ## スコープ
 
@@ -56,21 +57,21 @@
 
 ### 1. ビルド説明の同期
 
-- [ ] `build` と `build:all` の違いが README と設計文書で説明されている
-- [ ] `SINCRO_BUILD_LEGACY=1` による legacy input 分離が文書上でも読み取れる
-- [ ] 通常開発時に legacy build を前提にしない運用が整理されている
+- [x] `build` と `build:all` の違いが README と設計文書で説明されている
+- [x] `SINCRO_BUILD_LEGACY=1` による legacy input 分離が文書上でも読み取れる
+- [x] 通常開発時に legacy build を前提にしない運用が整理されている
 
 ### 2. 公開導線の整理
 
-- [ ] README のページ案内が current state に追従している
-- [ ] legacy ページを通常利用者向けとして案内しすぎていない
-- [ ] `src/index.html`、README、設計文書の説明が矛盾していない
+- [x] README のページ案内が current state に追従している
+- [x] legacy ページを通常利用者向けとして案内しすぎていない
+- [x] `src/index.html`、README、設計文書の説明が矛盾していない
 
 ### 3. 旧導線の扱い確定
 
-- [ ] `single` / `double` の分類と今後の扱いが明文化されている
-- [ ] `glass` / `character` / `area360` など Babylon legacy 群の位置付けが整理されている
-- [ ] `TASK-3009` の分類結果と整合している
+- [x] `single` / `double` の分類と今後の扱いが明文化されている
+- [x] `glass` / `character` / `area360` など Babylon legacy 群の位置付けが整理されている
+- [x] `TASK-3009` の分類結果と整合している
 
 ## 実装タスク
 
@@ -99,6 +100,8 @@
 - `build/public 導線の分離が未着手` という前提に戻っていないことを確認する
 - README の案内と `src/index.html` の案内が矛盾していないことを確認する
 - `single` / `double` の扱いが、`TASK-3009` の分類結果と整合していることを確認する
+- `cd sincromisor-frontend && npm run build` が成功することを確認した
+- `cd sincromisor-frontend && npm run build:all` が成功することを確認した
 
 ## 実施メモ
 
