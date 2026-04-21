@@ -17,7 +17,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - ドキュメントパス: `documents/design/frontend_ui.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-04-19
+- 最終更新日: 2026-04-21
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -132,6 +132,40 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - React段階移行中は、現行UI manager と新UIの併存期間が発生しうる（詳細は `frontend_migration_react.md`）
   - React移行で追加するUIコードは原則 `TypeScript`（`.ts` / `.tsx`）で実装し、props/state/event payload の型を明示する
   - Babylon/legacy ページは通常導線・通常ビルドから切り離して高速に置換を進める方針（必要時のみ legacy build）
+
+### 3.1 サポート範囲とページ分類（2026-04-21）
+
+- 分類ルール:
+  - `modern`: 通常利用者向け導線に含め、`npm run build` の対象として継続保守するページ
+  - `experimental`: 通常ビルドには含めるが、環境依存や未成熟な制約を明示した上で限定導線として扱うページ
+  - `legacy`: `npm run build:all` でのみ確認する Babylon.js 系の検証ページ
+  - `deprecated`: 新規保守対象から外し、即時凍結する退役候補ページ
+- build 運用:
+  - 日常開発・CI 相当の確認は `npm run build` を基準とし、`main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` を守る
+  - legacy 検証が必要なときだけ `npm run build:all` を使い、Babylon.js 系ページの回帰確認を行う
+
+| ページ | build 導線 | 描画 / UI 基盤 | 主用途 | 分類 | 保守方針 |
+| --- | --- | --- | --- | --- | --- |
+| `src/index.html` | `npm run build` | 静的トップページ | 公開導線の入口 | `modern` | 通常利用者向けの案内を集約し、legacy への直リンクは置かない |
+| `src/simple-vrm/index.html` | `npm run build` | Three.js + VRM1.0 + React UI | 通常会話の正規導線 | `modern` | CSS 基盤、React 境界整理、README の主対象として守る |
+| `src/vrm360/index.html` | `npm run build` | Three.js + VRM1.0 + React UI | 360 動画 / カメラ系の拡張導線 | `experimental` | 通常ビルドには含めるが、環境依存前提で検証範囲を限定する |
+| `src/looking-glass-vrm/index.html` | `npm run build` | Three.js + VRM1.0 + React UI + `@lookingglass/webxr` | Looking Glass の新正規候補 | `experimental` | public 導線には出すが、対応デバイス前提の実験導線として扱う |
+| `src/simple/index.html` | `npm run build:all` | Babylon.js legacy + 既存 dialog/body | 旧 simple 導線の比較確認 | `legacy` | VRM1.0 正規導線との差分確認用に短期維持し、通常導線からは外す |
+| `src/glass/index.html` | `npm run build:all` | Babylon.js legacy | 旧 Looking Glass 導線の退役前確認 | `legacy` | `looking-glass-vrm` の fallback 検証に限定する |
+| `src/character/index.html` | `npm run build:all` | Babylon.js legacy | キャラクター描画単体の旧テスト | `legacy` | Babylon.js 側のレンダラ確認専用とし、通常利用者向けには案内しない |
+| `src/character-glass/index.html` | `npm run build:all` | Babylon.js legacy | Looking Glass + character の旧テスト | `legacy` | `looking-glass-vrm` 移行後の比較確認専用に縮退する |
+| `src/area360/index.html` | `npm run build:all` | Babylon.js legacy | 360 系の旧実験導線 | `legacy` | 内部検証専用。通常導線や CSS/React 整理対象には含めない |
+| `src/single/index.html` | `npm run build:all` | Babylon.js legacy | 旧単画面レイアウト | `deprecated` | 即時凍結し、現行 standalone ページとしては保守しない |
+| `src/double/index.html` | `npm run build:all` | Babylon.js legacy | 旧二画面レイアウト | `deprecated` | 即時凍結し、現行 standalone ページとしては保守しない |
+
+- `single` / `double` の判断:
+  - 現行の Babylon.js ページは `deprecated` とし、通常利用者向け導線・通常ビルド・README の主導線から外す
+  - 互換維持のために CSS や React の新方針を追従させない
+  - 将来レイアウト需要が再発した場合は、`simple-vrm` 系の overlay / scene layout として再設計し、現行ページを延命しない
+- 後続タスクへの前提:
+  - `TASK-3010` の CSS 基盤対象は `index`、`simple-vrm`、`vrm360`、`looking-glass-vrm`
+  - `TASK-3011` の React 境界整理対象も同じく modern / experimental の 4 ページを優先する
+  - Babylon 退役判断では `single` / `double` を最初の削除候補、`simple` / `glass` / `character` / `character-glass` / `area360` を検証専用 legacy として扱う
 
 ## 4. 用語・略語
 
@@ -252,6 +286,44 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 起動前 dialog の起動/停止導線変更: `SincroAppController.ts` / `SincroVRMInitializer.ts` / `SincroLegacy/SincroInitializer.ts`
   - 音声入力制約変更: `SincroController.ts` と `RTC/UserMediaManager.ts`
   - チャット表示変更: `ChatMessageManager.ts` と `src/styles/sincroChatBox.css`
+
+### 7.1.1 CSS 基盤と legacy 隔離
+
+- 適用対象:
+  - `TASK-3009` の分類に従い、CSS 基盤の一次保守対象は `index`、`simple-vrm`、`vrm360`、`looking-glass-vrm` とする
+  - Babylon.js 系 `legacy` / `deprecated` ページは互換維持のために残すが、新しい React UI 規約の追従対象には含めない
+- レイヤ方針:
+  - `src/styles/uiFoundation.css` を CSS 基盤の入口とし、`@layer legacy, tokens, foundation, components, utilities;` を宣言する
+  - `tokens`: 色、余白、角丸、影、タイポ、z-index の共通トークンを置く。React UI ではハードコード値を増やさず、まず token へ寄せる
+  - `foundation`: `box-sizing` や form font 継承のような全体前提だけを置く。ページレイアウトや見た目の主張はここに入れない
+  - `components`: `SettingsShell`、`ConfigurationDialogSettingsPanel` など modern React UI の見た目を置く。component root 起点で閉じる
+  - `utilities`: 今回は空層のまま予約し、単発の補助 class が本当に必要な時だけ追加する
+  - `legacy`: `src/styles/common.css`、`src/styles/sincroConfigurationDialog.css` のような既存 DOM / Babylon 系 CSS を隔離する。cascade 上も modern より弱く保ち、React 側の回避用 `!important` を増やさない
+- トークン方針:
+  - `DESIGN.md` は dark surface / compact spacing / tactile radius の原則だけを翻訳し、Spotify 風の固有ブランド表現はそのまま持ち込まない
+  - token 名は `--sincro-*` で統一し、legacy 互換変数（`--baseTextColor` など）は `common.css` 側で alias する
+  - まず共通化するのは `overlay text`、`panel surface`、`border`、`space`、`radius`、`shadow`、`font size` の最小集合に留める
+- 命名規約:
+  - modern CSS は `componentRoot__element` を基本とし、状態は `is-*` を追加 class で表す
+  - root 名は責務で切る。例: `settingsShell*` は共通 shell、`configurationDialogReactSettingsPanel*` は dialog 固有
+  - page 名や DOM selector の都合で legacy class / id を残す場合でも、新規の React component CSS へ同じ責務名を持ち込まない
+- nesting 利用ルール:
+  - legacy CSS では既存保守の都合で nesting を許容するが、既存 selector を崩さない最小修正に留める
+  - modern React CSS では nesting を常用しない。root class から 1 段で読める flat selector を基本とし、親状態を拾う必要がある時だけ最小限に使う
+  - `tag` 依存や深い子孫 selector による見た目制御は避け、component root から責務を追えることを優先する
+- 起動前設定 dialog の責務境界:
+  - `src/styles/sincroConfigurationDialog.css` は dialog 要素、bridge DOM、legacy fieldset フォールバックの維持だけを担当する
+  - `src/react/dialog/configurationDialogSettings.css` は `reactPrimarySettingsEnabled` 時の dialog surface、余白、footer、category card、SettingsShell 上書きなど React 主導 UI の見た目を担当する
+  - bridge DOM 非表示の切替は legacy 側に残してよいが、暗色面や backdrop のような modern 見た目は React 側に寄せる
+- CSS ファイル分類:
+  - `global foundation`: `src/styles/uiFoundation.css`
+  - `modern component CSS`: `src/react/settings-shell/settingsShell.css`, `src/react/dialog/configurationDialogSettings.css`
+  - `legacy shared CSS`: `src/styles/common.css`, `src/styles/sincroConfigurationDialog.css`
+  - `legacy page / box CSS`: `src/styles/index.css`, `src/styles/simple.css`, `src/styles/single.css`, `src/styles/double.css`, `src/styles/sincro*.css`, `src/area360/area360.css`
+- 後続移行の前提:
+  - 新しい設定 UI を追加する時は、まず `SettingsShell` 既存 token を再利用し、足りない値だけ `uiFoundation.css` へ追加する
+  - legacy CSS を修正する場合も、`modern component CSS` の見た目責務を取り戻さない
+  - 互換保険としての `!important` は原則追加しない。必要なら layer 順序か責務境界の崩れを先に見直す
 
 ### 7.2 データ設計
 
@@ -484,6 +556,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-19 | 右側ツールUIの見た目を寄せ、設定パネルは初期展開カテゴリを絞って縦長化を抑制。Debug Console は `Overview` 優先とし、Audio / Gaze の調整UIを `高度な調整` として折りたたみ導線へ整理 |
 | 2026-04-19 | 設定UIを `上部ヘッダー + 左カテゴリナビ + 右詳細ペイン` へ再整理する方針を追記。主要カテゴリを `会話` / `入出力デバイス` / `音声` / `表示` / `接続` に再定義し、接続操作の分離、起動前 dialog と開始後パネルの文言・情報設計共通化を明文化 |
 | 2026-04-19 | `SettingsShell` を追加し、起動前 dialog と `SimpleVrmControlPanel` 系を共通のカテゴリナビシェルへ移行。接続操作と開始時オプションを `接続` ページへ集約し、dialog 側にも同じカテゴリ構成を適用 |
+| 2026-04-21 | `uiFoundation.css` を追加し、`tokens / foundation / components / utilities / legacy` の CSS レイヤ方針を明文化。起動前 dialog の暗色面責務を `configurationDialogSettings.css` へ寄せ、`sincroConfigurationDialog.css` は bridge / legacy fallback に限定した |
 | 2026-04-19 | `TASK-3007` 対応として `SettingsShell` の本文前 summary 構造をやめ、固定高さのページヘッダー直後から本文を始める構成へ修正。一般カテゴリでは冗長な状態カードを廃止し、状態表示は対象セクションや CTA 近くへ寄せた |
 | 2026-04-19 | 起動前 dialog を `初回セットアップウィザード` として再定義。`トップへ戻る` / `閉じる` / `キャンセル` の役割差、ESC・背景クリック禁止、開始ボタンの前進文言を設計へ反映 |
 | 2026-04-19 | 初回セットアップ dialog のサイズ基準を `960-1120px x 620-780px`、右側設定パネルの幅基準を `420-560px` として追記。`SettingsShell` の左ナビ幅、`開発者向け` の分離見出し、カテゴリ内セクション面、狭幅時の縮退順序を明文化 |

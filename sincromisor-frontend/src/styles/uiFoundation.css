@@ -1,0 +1,96 @@
+@layer legacy, tokens, foundation, components, utilities;
+
+@layer tokens {
+    :root {
+        /* Typography */
+        --sincro-font-family-base: 'BIZ UDPGothic', 'UDPGothic', sans-serif;
+        --sincro-font-size-100: 12px;
+        --sincro-font-size-150: 13px;
+        --sincro-font-size-200: 14px;
+        --sincro-font-size-300: 16px;
+        --sincro-font-size-400: 18px;
+        --sincro-font-size-500: 20px;
+        --sincro-font-size-600: 22px;
+        --sincro-line-height-tight: 1.2;
+        --sincro-line-height-normal: 1.4;
+        --sincro-line-height-body: 1.55;
+
+        /* Spacing */
+        --sincro-space-050: 2px;
+        --sincro-space-100: 4px;
+        --sincro-space-150: 6px;
+        --sincro-space-200: 8px;
+        --sincro-space-250: 10px;
+        --sincro-space-300: 12px;
+        --sincro-space-350: 14px;
+        --sincro-space-400: 16px;
+        --sincro-space-450: 18px;
+        --sincro-space-500: 20px;
+        --sincro-space-550: 22px;
+        --sincro-space-600: 24px;
+        --sincro-space-700: 28px;
+        --sincro-space-800: 32px;
+
+        /* Radius */
+        --sincro-radius-100: 8px;
+        --sincro-radius-200: 12px;
+        --sincro-radius-300: 14px;
+        --sincro-radius-400: 16px;
+        --sincro-radius-500: 18px;
+        --sincro-radius-600: 22px;
+        --sincro-radius-pill: 999px;
+
+        /* Color */
+        --sincro-color-page-background: hsl(0deg 0% 95%);
+        --sincro-color-ink-strong: hsl(220deg 20% 12%);
+        --sincro-color-overlay-text-primary: #eef3fb;
+        --sincro-color-overlay-text-muted: rgba(225, 233, 247, 0.8);
+        --sincro-color-overlay-text-subtle: rgba(225, 233, 247, 0.72);
+        --sincro-color-border-subtle: rgba(157, 176, 204, 0.14);
+        --sincro-color-border-default: rgba(255, 255, 255, 0.12);
+        --sincro-color-border-strong: rgba(157, 190, 232, 0.24);
+        --sincro-color-border-accent: rgba(133, 192, 255, 0.3);
+        --sincro-color-accent-soft: rgba(102, 165, 241, 0.12);
+        --sincro-color-accent-outline: rgba(118, 211, 255, 0.65);
+        --sincro-color-accent-fill: rgba(68, 154, 255, 0.14);
+        --sincro-color-accent-text: #d4e8ff;
+        --sincro-color-surface-soft: rgba(255, 255, 255, 0.03);
+        --sincro-color-surface-soft-strong: rgba(255, 255, 255, 0.06);
+        --sincro-color-surface-soft-stronger: rgba(255, 255, 255, 0.08);
+        --sincro-color-select-option-background: #1e2230;
+        --sincro-surface-panel: linear-gradient(180deg, rgba(29, 31, 39, 0.96), rgba(22, 24, 31, 0.94));
+        --sincro-surface-panel-strong: linear-gradient(180deg, rgba(39, 44, 57, 0.92), rgba(30, 33, 42, 0.9));
+        --sincro-surface-card: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.016));
+        --sincro-surface-card-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.018));
+        --sincro-surface-dialog: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)), rgba(18, 20, 26, 0.94);
+        --sincro-surface-nav-active: linear-gradient(180deg, rgba(92, 124, 191, 0.34), rgba(49, 58, 80, 0.68));
+        --sincro-surface-dialog-backdrop: radial-gradient(circle at 20% 10%, rgba(89, 165, 229, 0.16), transparent 30%), rgba(6, 10, 16, 0.72);
+
+        /* Shadow */
+        --sincro-shadow-panel: 0 18px 36px rgba(0, 0, 0, 0.18);
+        --sincro-shadow-panel-soft: 0 18px 36px rgba(0, 0, 0, 0.16);
+        --sincro-shadow-dialog: 0 24px 64px rgba(0, 0, 0, 0.36);
+
+        /* Z-index */
+        --sincro-z-dialog: 40;
+        --sincro-z-overlay: 50;
+    }
+}
+
+@layer foundation {
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+    }
+
+    body,
+    button,
+    input,
+    select,
+    textarea,
+    summary {
+        font-family: var(--sincro-font-family-base);
+        font-feature-settings: "palt" 1;
+    }
+}

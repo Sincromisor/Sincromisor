@@ -1,42 +1,43 @@
-* {
-    margin: 0 auto;
-    padding: 0;
-    /*overflow: clip;*/
-    font-family: 'BIZ UDPGothic', 'UDPGothic', sans-serif;
-    font-feature-settings: "palt" 1;
-    box-sizing: border-box;
-}
+@layer legacy {
+    * {
+        margin: 0 auto;
+        padding: 0;
+        /*overflow: clip;*/
+        font-family: var(--sincro-font-family-base);
+        font-feature-settings: "palt" 1;
+    }
 
-:root {
-    /* Body */
-    --baseTextColor: hsl(0deg, 0%, 5%, 1);
-    --baseBackgroundColor: hsl(0deg, 0%, 95%, 1);
+    :root {
+        /* Body */
+        --baseTextColor: var(--sincro-color-ink-strong);
+        --baseBackgroundColor: var(--sincro-color-page-background);
 
-    /* Header & Footer */
-    --headerTextColor: hsl(0deg, 0%, 95%, 1);
-    --headerExperimentalTextColor: hsl(0deg, 0%, 85%, 1);
-    --headerBackgroundColor: hsl(0deg, 0%, 30%, 0.75);
-    --headerBodyColor: hsl(0deg, 0%, 20%, 0.75);
-    --headerBackgroundHoverColor: hsl(0deg, 0%, 5%, 0.75);
+        /* Header & Footer */
+        --headerTextColor: var(--sincro-color-overlay-text-primary);
+        --headerExperimentalTextColor: color-mix(in srgb, var(--sincro-color-overlay-text-primary) 85%, transparent);
+        --headerBackgroundColor: rgba(77, 77, 77, 0.75);
+        --headerBodyColor: rgba(38, 38, 38, 0.75);
+        --headerBackgroundHoverColor: rgba(13, 13, 13, 0.75);
 
-    /* ChatMessage */
-    --textMessageColor: hsl(0deg, 0%, 5%, 1);
-    --textMessageBackgroundColor: hsl(0deg, 0%, 95%, 0.75);
+        /* ChatMessage */
+        --textMessageColor: var(--baseTextColor);
+        --textMessageBackgroundColor: rgba(242, 242, 242, 0.75);
 
-    --otherMessageBackgroundColor: hsl(0deg, 0%, 77%, 0.5);
-    --systemMessageBackgroundColor: hsl(331deg, 47%, 77%, 0.5);
-    --userMessageBackgroundColor: hsl(180deg, 47%, 77%, 0.5);
+        --otherMessageBackgroundColor: rgba(196, 196, 196, 0.5);
+        --systemMessageBackgroundColor: rgba(223, 170, 196, 0.5);
+        --userMessageBackgroundColor: rgba(170, 223, 223, 0.5);
 
-    --otherMessageIconBoxColor: hsl(0deg, 0%, 67%, 0.5);
-    --systemMessageIconBoxColor: hsl(331deg, 37%, 67%, 0.5);
-    --userMessageIconBoxColor: hsl(180deg, 37%, 67%, 0.5);
+        --otherMessageIconBoxColor: rgba(171, 171, 171, 0.5);
+        --systemMessageIconBoxColor: rgba(197, 146, 171, 0.5);
+        --userMessageIconBoxColor: rgba(146, 197, 197, 0.5);
 
-    /* ConfigurationDialog */
-    --configurationDialogTextColor: var(--baseTextColor);
-    --configurationDialogBackgroundColor: var(--baseBackgroundColor);
+        /* ConfigurationDialog */
+        --configurationDialogTextColor: var(--baseTextColor);
+        --configurationDialogBackgroundColor: var(--baseBackgroundColor);
 
-    /* DebugConsole */
-    --debugConsoleTextColor: var(--baseTextColor);
-    --debugConsoleTextStrokeColor: var(--baseBackgroundColor);
-    --debugConsoleBackgroundColor: hsl(0deg, 0%, 0%, 0.25);
+        /* DebugConsole */
+        --debugConsoleTextColor: var(--baseTextColor);
+        --debugConsoleTextStrokeColor: var(--baseBackgroundColor);
+        --debugConsoleBackgroundColor: rgba(0, 0, 0, 0.25);
+    }
 }
