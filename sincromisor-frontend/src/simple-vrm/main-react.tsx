@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
 import { createRoot } from "react-dom/client";
 
+// simple-vrm 用 React island のマウント入口。
+// Panel / Chat / Telop / Dialog を個別 chunk で遅延読込し、TS initializer 側と責務を分ける。
 function mountAsync<TModule>(
     elementId: string,
     load: () => Promise<TModule>,

@@ -1,7 +1,7 @@
 # TASK-3013 不足コメントの棚卸しと対象限定の責務コメント整備
 
 - 作成日: 2026-04-21
-- ステータス: Open
+- ステータス: Done
 - 優先度: Medium
 
 ## 目的
@@ -20,10 +20,10 @@
 - `documents/design/frontend_ui.md`
 - `documents/design/frontend_migration_react.md`
 - `documents/tasks/frontend_ui_guidance/done/TASK-3008-frontend-modernization-foundation-and-legacy-retirement.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3009-frontend-support-matrix-and-page-classification.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3010-css-foundation-and-legacy-style-isolation.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3009-frontend-support-matrix-and-page-classification.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3010-css-foundation-and-legacy-style-isolation.md`
 - `documents/tasks/frontend_ui_guidance/done/TASK-3011-react-app-controller-boundary-and-ui-dependency-reduction.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3012-babylon-legacy-retirement-and-build-path-separation.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3012-babylon-legacy-retirement-and-build-path-separation.md`
 
 ## スコープ
 
@@ -58,21 +58,21 @@
 
 ### 1. 棚卸し
 
-- [ ] 主要エントリ、initializer、controller、hook、service のうちコメント不足箇所が一覧化されている
-- [ ] 既に十分なコメントがあるファイルと、追加対象ファイルが区別されている
-- [ ] 各対象ファイルについて、`何が分かりにくいのか` が整理されている
+- [x] 主要エントリ、initializer、controller、hook、service のうちコメント不足箇所が一覧化されている
+- [x] 既に十分なコメントがあるファイルと、追加対象ファイルが区別されている
+- [x] 各対象ファイルについて、`何が分かりにくいのか` が整理されている
 
 ### 2. 対象限定の整備
 
-- [ ] `main-vrm.ts` のような薄い入口ファイルの扱いが整理されている
-- [ ] コメント追加対象が、初見で修正入口を追ううえで効果の高い箇所に絞られている
-- [ ] コメント追加がノイズ化しない粒度になっている
+- [x] `main-vrm.ts` のような薄い入口ファイルの扱いが整理されている
+- [x] コメント追加対象が、初見で修正入口を追ううえで効果の高い箇所に絞られている
+- [x] コメント追加がノイズ化しない粒度になっている
 
 ### 3. 文書同期
 
-- [ ] コメントの説明と `frontend_ui.md` / `frontend_migration_react.md` が矛盾していない
-- [ ] 必要に応じて README や設計文書の補足ポイントが整理されている
-- [ ] 変更後に、修正入口を追いやすくなったか確認できる
+- [x] コメントの説明と `frontend_ui.md` / `frontend_migration_react.md` が矛盾していない
+- [x] 必要に応じて README や設計文書の補足ポイントが整理されている
+- [x] 変更後に、修正入口を追いやすくなったか確認できる
 
 ## 実装タスク
 
@@ -110,3 +110,9 @@
 
 - 本タスクは `コメントを増やすこと` ではなく、`不足している入口説明だけを補うこと` が目的である。
 - 先行する `TASK-3009` から `TASK-3012` の整理結果を踏まえて行うのが望ましい。
+- 2026-04-22 実施内容:
+  - `documents/design/frontend_ui.md` に入口コメントの棚卸し結果を追加し、`追加不要` と `追加対象` を分けて判断理由を明文化した。
+  - `documents/design/frontend_migration_react.md` に、`main-react.tsx` 系を薄い mount 入口として保ち、詳細な購読/設定反映は hook / controller 側へ寄せる方針を追記した。
+  - 実装側では `main-vrm.ts`、`main-legacy.ts`、`vrm360/main-vrm360.ts`、`looking-glass-vrm/main-vrm-looking-glass.ts`、各 `main-react.tsx` に、どのページから呼ばれ、何を下位 initializer / React UI へ委譲しているかを示す責務コメントを追加した。
+  - `SincroController`、`SincroAppController`、各 initializer、主要 hook / service は既存コメントで責務を追えるため、追加対象から外した。
+  - `cd sincromisor-frontend && npm run build` を実行し、ビルド成功を確認した。既知の警告として `vendor_misc -> vendor_react -> vendor_misc` の circular chunk 警告は継続している。
