@@ -110,6 +110,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 - build の基準:
   - 通常開発では `npm run build` を使い、`main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` だけを常時守る
   - `npm run build:all` は legacy/Babylon.js 検証が必要な時だけ使う
+  - `vite.config.js` は `SINCRO_BUILD_LEGACY=1` の時だけ legacy input を追加し、通常 build では Babylon.js 系ページを入口ごと切り離す
 - 優先順位:
   - 優先度 A: `main`、`simple-vrm`
     - 公開導線と通常会話の正規ルート。React / CSS / 文言整理の主対象
@@ -851,7 +852,9 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - `cd sincromisor-frontend && npm run dev`
 - デプロイ/ローカル実行手順:
   - 通常確認（VRM1.0/React 優先）: `npm run build`（modern-only build）
+  - `npm run build` は `tsc -p tsconfig.modern.json && vite build` を実行し、modern / experimental の 4 ページを基準に確認する
   - legacy/Babylon 含む確認が必要なときのみ: `npm run build:all`
+  - `npm run build:all` は `tsc && SINCRO_BUILD_LEGACY=1 vite build` を実行し、legacy / deprecated ページも含めた回帰確認に使う
   - React 導入後は移行対象ページ（`simple-vrm`, `vrm360`, `looking-glass-vrm`）を優先確認する
   - `looking-glass-vrm` は当面 Experimental 導線として扱い、未動作環境がある前提で案内文を維持する
 - 互換性に影響する設定変更:
