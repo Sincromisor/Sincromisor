@@ -1,7 +1,8 @@
 # TASK-3010 CSS 基盤整備と legacy style 隔離
 
 - 作成日: 2026-04-21
-- ステータス: Open
+- ステータス: Done
+- 完了日: 2026-04-21
 - 優先度: High
 
 ## 目的
@@ -38,6 +39,30 @@
 - React / Core のイベント境界整理
 - `modern / legacy / deprecated` のページ分類をここでやり直すこと
 
+## 実施結果
+
+### 1. CSS foundation を追加
+
+- `sincromisor-frontend/src/styles/uiFoundation.css` を追加し、`@layer legacy, tokens, foundation, components, utilities;` を宣言した。
+- `--sincro-*` で色、余白、角丸、影、タイポ、z-index の最小 token 群を定義した。
+- `src/index.html` と `src/partials/baseHeader.html` から foundation を先に読み込む構成へ更新した。
+
+### 2. legacy CSS を隔離
+
+- `src/styles/common.css` を `@layer legacy` に移し、既存の `--baseTextColor` などは foundation token の alias として維持した。
+- `src/styles/sincroConfigurationDialog.css` を `@layer legacy` に移し、責務を `dialog 要素 / bridge DOM / legacy fieldset fallback` に限定した。
+- React UI の見た目責務を legacy CSS に持ち込まない前提を設計書へ反映した。
+
+### 3. modern React CSS の責務を整理
+
+- `src/react/settings-shell/settingsShell.css` を `@layer components` 化し、token ベースへ更新した。
+- `src/react/dialog/configurationDialogSettings.css` を `@layer components` 化し、`reactPrimarySettingsEnabled` 時の dialog surface / backdrop / footer / category card の責務をここへ集約した。
+- 起動前設定 dialog の二重責務は、`legacy bridge` と `React 主導 UI` に分離して整理した。
+
+### 4. 設計文書を同期
+
+- `documents/design/frontend_ui.md` に CSS layer、token、命名、nesting、起動前 dialog の責務境界、CSS ファイル分類を追記した。
+
 ## 先行条件
 
 - `TASK-3009` で決めた `守る対象ページ` と `legacy として隔離する対象` を入力として扱う。
@@ -55,23 +80,23 @@
 
 ### 1. トークンと基盤
 
-- [ ] 色、余白、角丸、影、タイポ、z-index のトークンが定義されている
-- [ ] `DESIGN.md` から取り込む原則と取り込まない要素が整理されている
-- [ ] 共通 UI で再利用すべき token 群が定義されている
+- [x] 色、余白、角丸、影、タイポ、z-index のトークンが定義されている
+- [x] `DESIGN.md` から取り込む原則と取り込まない要素が整理されている
+- [x] 共通 UI で再利用すべき token 群が定義されている
 
 ### 2. CSS レイヤと命名
 
-- [ ] `tokens / foundation / components / utilities / legacy` などの責務レイヤが定義されている
-- [ ] component root 起点の命名規約が定義されている
-- [ ] state class の扱いが整理されている
-- [ ] `nesting` 利用ルールと禁止事項が定義されている
+- [x] `tokens / foundation / components / utilities / legacy` などの責務レイヤが定義されている
+- [x] component root 起点の命名規約が定義されている
+- [x] state class の扱いが整理されている
+- [x] `nesting` 利用ルールと禁止事項が定義されている
 
 ### 3. 起動前設定ダイアログ整理
 
-- [ ] `configurationDialogSettings.css` の責務が明確化されている
-- [ ] `sincroConfigurationDialog.css` の責務が明確化されている
-- [ ] React 主導領域と legacy bridge 領域の境界が整理されている
-- [ ] `!important` や互換保険の扱いを減らす方針がある
+- [x] `configurationDialogSettings.css` の責務が明確化されている
+- [x] `sincroConfigurationDialog.css` の責務が明確化されている
+- [x] React 主導領域と legacy bridge 領域の境界が整理されている
+- [x] `!important` や互換保険の扱いを減らす方針がある
 
 ## 実装タスク
 

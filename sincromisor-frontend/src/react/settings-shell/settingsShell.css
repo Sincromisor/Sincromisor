@@ -1,318 +1,321 @@
-.settingsShell {
-    --settings-shell-border: rgba(157, 176, 204, 0.14);
-    --settings-shell-border-strong: rgba(157, 190, 232, 0.24);
-    --settings-shell-surface: linear-gradient(180deg, rgba(29, 31, 39, 0.96), rgba(22, 24, 31, 0.94));
-    --settings-shell-surface-strong: linear-gradient(180deg, rgba(39, 44, 57, 0.92), rgba(30, 33, 42, 0.9));
-    --settings-shell-nav-active: linear-gradient(180deg, rgba(92, 124, 191, 0.34), rgba(49, 58, 80, 0.68));
-    display: grid;
-    gap: 18px;
-}
+@layer components {
+    .settingsShell {
+        --settings-shell-border: var(--sincro-color-border-subtle);
+        --settings-shell-border-strong: var(--sincro-color-border-strong);
+        --settings-shell-surface: var(--sincro-surface-panel);
+        --settings-shell-surface-strong: var(--sincro-surface-panel-strong);
+        --settings-shell-nav-active: var(--sincro-surface-nav-active);
+        display: grid;
+        gap: var(--sincro-space-450);
+        color: var(--sincro-color-overlay-text-primary);
+    }
 
-.settingsShell.is-containerResponsive {
-    container-type: inline-size;
-    container-name: settings-shell;
-}
+    .settingsShell.is-containerResponsive {
+        container-type: inline-size;
+        container-name: settings-shell;
+    }
 
-.settingsShell__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-}
+    .settingsShell__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--sincro-space-400);
+    }
 
-.settingsShell__badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 5px 11px;
-    margin-bottom: 12px;
-    border-radius: 999px;
-    border: 1px solid var(--settings-shell-border-strong);
-    background: rgba(124, 187, 255, 0.08);
-    color: #b8d8ff;
-    font-size: 11px;
-    letter-spacing: 0.04em;
-}
+    .settingsShell__badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 11px;
+        margin-bottom: var(--sincro-space-300);
+        border-radius: var(--sincro-radius-pill);
+        border: 1px solid var(--settings-shell-border-strong);
+        background: rgba(124, 187, 255, 0.08);
+        color: #b8d8ff;
+        font-size: var(--sincro-font-size-100);
+        letter-spacing: 0.04em;
+    }
 
-.settingsShell__title {
-    font-size: 1.18rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-}
+    .settingsShell__title {
+        font-size: 1.18rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+    }
 
-.settingsShell__description {
-    margin: 10px 0 0;
-    opacity: 0.8;
-    line-height: 1.55;
-    max-width: 62rem;
-}
+    .settingsShell__description {
+        margin: var(--sincro-space-250) 0 0;
+        opacity: 0.8;
+        line-height: var(--sincro-line-height-body);
+        max-width: 62rem;
+    }
 
-.settingsShell__layout {
-    display: grid;
-    grid-template-columns: minmax(204px, 228px) minmax(0, 1fr);
-    gap: 22px;
-    align-items: start;
-}
-
-.settingsShell__nav {
-    display: grid;
-    gap: 18px;
-    position: sticky;
-    top: 8px;
-    padding: 16px 12px;
-    border: 1px solid var(--settings-shell-border);
-    border-radius: 20px;
-    background: var(--settings-shell-surface);
-    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
-}
-
-.settingsShell__navSection {
-    display: grid;
-    gap: 8px;
-}
-
-.settingsShell__navSectionTitle {
-    padding: 0 10px;
-    color: rgba(223, 232, 245, 0.72);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.settingsShell__navButton {
-    width: 100%;
-    min-height: 40px;
-    padding: 10px 12px;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    background: transparent;
-    color: inherit;
-    text-align: left;
-    font: inherit;
-    cursor: pointer;
-    transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease, color 120ms ease;
-}
-
-.settingsShell__navButtonLabel {
-    display: block;
-    font-weight: 600;
-    line-height: 1.35;
-}
-
-.settingsShell__navButton:hover,
-.settingsShell__navButton:focus-visible {
-    border-color: rgba(130, 188, 255, 0.18);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.settingsShell__navButton.is-active {
-    border-color: var(--settings-shell-border-strong);
-    background: var(--settings-shell-nav-active);
-    box-shadow: inset 3px 0 0 rgba(159, 210, 255, 0.68);
-}
-
-.settingsShell__navButton.is-developer {
-    color: rgba(232, 238, 245, 0.92);
-}
-
-.settingsShell__detail {
-    min-width: 0;
-    display: grid;
-    gap: 16px;
-    max-width: 840px;
-}
-
-.settingsShell__detailScroll {
-    display: grid;
-    gap: 16px;
-}
-
-.settingsShell__pageSurface {
-    display: grid;
-    gap: 18px;
-    padding: 22px 24px;
-    border: 1px solid var(--settings-shell-border);
-    border-radius: 22px;
-    background: var(--settings-shell-surface);
-    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.16);
-}
-
-.settingsShell__pageHeader {
-    display: grid;
-    gap: 6px;
-    min-height: 90px;
-    align-content: start;
-    padding-bottom: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.settingsShell__pageTitle {
-    margin: 0;
-    font-size: 1.28rem;
-    line-height: 1.2;
-}
-
-.settingsShell__pageDescription {
-    margin: 0;
-    opacity: 0.8;
-    line-height: 1.55;
-}
-
-.settingsShell__summaryGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 10px;
-}
-
-.settingsShell__statusCard {
-    min-width: 0;
-    min-height: 0;
-    padding: 11px 13px;
-    border-radius: 12px;
-    border: 1px solid var(--settings-shell-border);
-    background: rgba(255, 255, 255, 0.035);
-    display: grid;
-    align-content: start;
-    box-shadow: inset 3px 0 0 var(--settings-status-accent, transparent);
-}
-
-.settingsShell__statusLabel {
-    opacity: 0.68;
-    font-size: 11px;
-    margin-bottom: 6px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.settingsShell__statusValue {
-    font-weight: 700;
-    line-height: 1.3;
-    font-size: 1rem;
-}
-
-.settingsShell__statusDetail {
-    margin-top: 8px;
-    opacity: 0.76;
-    line-height: 1.45;
-    font-size: 12px;
-}
-
-.settingsShell__content {
-    min-width: 0;
-    padding: 0;
-    display: grid;
-    align-content: start;
-    gap: 18px;
-}
-
-.settingsShell__pageFooter,
-.settingsShell__footer {
-    padding: 18px 22px;
-    border: 1px solid var(--settings-shell-border);
-    border-radius: 22px;
-    background: var(--settings-shell-surface);
-}
-
-@container settings-shell (max-width: 720px) {
     .settingsShell__layout {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: minmax(204px, 228px) minmax(0, 1fr);
+        gap: var(--sincro-space-550);
+        align-items: start;
     }
 
     .settingsShell__nav {
-        position: static;
-        gap: 16px;
+        display: grid;
+        gap: var(--sincro-space-450);
+        position: sticky;
+        top: var(--sincro-space-200);
+        padding: var(--sincro-space-400) var(--sincro-space-300);
+        border: 1px solid var(--settings-shell-border);
+        border-radius: var(--sincro-radius-600);
+        background: var(--settings-shell-surface);
+        box-shadow: var(--sincro-shadow-panel);
     }
 
     .settingsShell__navSection {
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        display: grid;
+        gap: var(--sincro-space-200);
+    }
+
+    .settingsShell__navSectionTitle {
+        padding: 0 10px;
+        color: var(--sincro-color-overlay-text-subtle);
+        font-size: var(--sincro-font-size-100);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .settingsShell__navButton {
+        width: 100%;
+        min-height: 40px;
+        padding: var(--sincro-space-250) var(--sincro-space-300);
+        border: 1px solid transparent;
+        border-radius: 10px;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+        font: inherit;
+        cursor: pointer;
+        transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease, color 120ms ease;
+    }
+
+    .settingsShell__navButtonLabel {
+        display: block;
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    .settingsShell__navButton:hover,
+    .settingsShell__navButton:focus-visible {
+        border-color: rgba(130, 188, 255, 0.18);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .settingsShell__navButton.is-active {
+        border-color: var(--settings-shell-border-strong);
+        background: var(--settings-shell-nav-active);
+        box-shadow: inset 3px 0 0 rgba(159, 210, 255, 0.68);
+    }
+
+    .settingsShell__navButton.is-developer {
+        color: rgba(232, 238, 245, 0.92);
     }
 
     .settingsShell__detail {
-        max-width: none;
-    }
-}
-
-@container settings-shell (max-width: 560px) {
-    .settingsShell {
-        gap: 16px;
+        min-width: 0;
+        display: grid;
+        gap: var(--sincro-space-400);
+        max-width: 840px;
     }
 
-    .settingsShell__nav,
-    .settingsShell__pageSurface,
-    .settingsShell__pageHeader,
-    .settingsShell__content,
-    .settingsShell__pageFooter,
-    .settingsShell__footer {
-        padding: 16px;
-        border-radius: 18px;
+    .settingsShell__detailScroll {
+        display: grid;
+        gap: var(--sincro-space-400);
     }
 
-    .settingsShell__pageHeader,
-    .settingsShell__content {
-        padding: 0;
+    .settingsShell__pageSurface {
+        display: grid;
+        gap: var(--sincro-space-450);
+        padding: var(--sincro-space-550) var(--sincro-space-600);
+        border: 1px solid var(--settings-shell-border);
+        border-radius: var(--sincro-radius-600);
+        background: var(--settings-shell-surface);
+        box-shadow: var(--sincro-shadow-panel-soft);
     }
 
     .settingsShell__pageHeader {
-        min-height: 0;
+        display: grid;
+        gap: var(--sincro-space-150);
+        min-height: 90px;
+        align-content: start;
+        padding-bottom: var(--sincro-space-350);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
-    .settingsShell__navSection {
-        grid-template-columns: 1fr;
+    .settingsShell__pageTitle {
+        margin: 0;
+        font-size: 1.28rem;
+        line-height: var(--sincro-line-height-tight);
+    }
+
+    .settingsShell__pageDescription {
+        margin: 0;
+        opacity: 0.8;
+        line-height: var(--sincro-line-height-body);
     }
 
     .settingsShell__summaryGrid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 960px) {
-    .settingsShell__layout {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: var(--sincro-space-250);
     }
 
-    .settingsShell__nav {
-        position: static;
-        gap: 16px;
+    .settingsShell__statusCard {
+        min-width: 0;
+        min-height: 0;
+        padding: 11px 13px;
+        border-radius: var(--sincro-radius-200);
+        border: 1px solid var(--settings-shell-border);
+        background: rgba(255, 255, 255, 0.035);
+        display: grid;
+        align-content: start;
+        box-shadow: inset 3px 0 0 var(--settings-status-accent, transparent);
     }
 
-    .settingsShell__navSection {
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    .settingsShell__statusLabel {
+        opacity: 0.68;
+        font-size: var(--sincro-font-size-100);
+        margin-bottom: var(--sincro-space-150);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
     }
 
-    .settingsShell__detail {
-        max-width: none;
-    }
-}
-
-@media (max-width: 640px) {
-    .settingsShell {
-        gap: 16px;
+    .settingsShell__statusValue {
+        font-weight: 700;
+        line-height: 1.3;
+        font-size: 1rem;
     }
 
-    .settingsShell__nav,
-    .settingsShell__pageSurface,
-    .settingsShell__pageHeader,
-    .settingsShell__content,
+    .settingsShell__statusDetail {
+        margin-top: var(--sincro-space-200);
+        opacity: 0.76;
+        line-height: 1.45;
+        font-size: var(--sincro-font-size-100);
+    }
+
+    .settingsShell__content {
+        min-width: 0;
+        padding: 0;
+        display: grid;
+        align-content: start;
+        gap: var(--sincro-space-450);
+    }
+
     .settingsShell__pageFooter,
     .settingsShell__footer {
-        padding: 16px;
-        border-radius: 18px;
+        padding: var(--sincro-space-450) var(--sincro-space-550);
+        border: 1px solid var(--settings-shell-border);
+        border-radius: var(--sincro-radius-600);
+        background: var(--settings-shell-surface);
     }
 
-    .settingsShell__pageHeader,
-    .settingsShell__content {
-        padding: 0;
+    @container settings-shell (max-width: 720px) {
+        .settingsShell__layout {
+            grid-template-columns: 1fr;
+        }
+
+        .settingsShell__nav {
+            position: static;
+            gap: var(--sincro-space-400);
+        }
+
+        .settingsShell__navSection {
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        }
+
+        .settingsShell__detail {
+            max-width: none;
+        }
     }
 
-    .settingsShell__pageHeader {
-        min-height: 0;
+    @container settings-shell (max-width: 560px) {
+        .settingsShell {
+            gap: var(--sincro-space-400);
+        }
+
+        .settingsShell__nav,
+        .settingsShell__pageSurface,
+        .settingsShell__pageHeader,
+        .settingsShell__content,
+        .settingsShell__pageFooter,
+        .settingsShell__footer {
+            padding: var(--sincro-space-400);
+            border-radius: var(--sincro-radius-500);
+        }
+
+        .settingsShell__pageHeader,
+        .settingsShell__content {
+            padding: 0;
+        }
+
+        .settingsShell__pageHeader {
+            min-height: 0;
+        }
+
+        .settingsShell__navSection {
+            grid-template-columns: 1fr;
+        }
+
+        .settingsShell__summaryGrid {
+            grid-template-columns: 1fr;
+        }
     }
 
-    .settingsShell__navSection {
-        grid-template-columns: 1fr;
+    @media (max-width: 960px) {
+        .settingsShell__layout {
+            grid-template-columns: 1fr;
+        }
+
+        .settingsShell__nav {
+            position: static;
+            gap: var(--sincro-space-400);
+        }
+
+        .settingsShell__navSection {
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        }
+
+        .settingsShell__detail {
+            max-width: none;
+        }
     }
 
-    .settingsShell__summaryGrid {
-        grid-template-columns: 1fr;
+    @media (max-width: 640px) {
+        .settingsShell {
+            gap: var(--sincro-space-400);
+        }
+
+        .settingsShell__nav,
+        .settingsShell__pageSurface,
+        .settingsShell__pageHeader,
+        .settingsShell__content,
+        .settingsShell__pageFooter,
+        .settingsShell__footer {
+            padding: var(--sincro-space-400);
+            border-radius: var(--sincro-radius-500);
+        }
+
+        .settingsShell__pageHeader,
+        .settingsShell__content {
+            padding: 0;
+        }
+
+        .settingsShell__pageHeader {
+            min-height: 0;
+        }
+
+        .settingsShell__navSection {
+            grid-template-columns: 1fr;
+        }
+
+        .settingsShell__summaryGrid {
+            grid-template-columns: 1fr;
+        }
     }
 }
