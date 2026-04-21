@@ -30,6 +30,11 @@ export function SincroTelopView({ enableReactRendering = true }: SincroTelopView
                     controller.chat.setTelopDomRenderingEnabled(false);
                 }
             },
+            onCleanupController: (controller) => {
+                if (enableReactRendering) {
+                    controller.chat.setTelopDomRenderingEnabled(true);
+                }
+            },
             onEvent: (event, controller) => {
                 if (event.type !== "telop_message" || !event.message.new_text) {
                     return;
@@ -37,13 +42,7 @@ export function SincroTelopView({ enableReactRendering = true }: SincroTelopView
                 setSegments(controller.state.getTelopTextSegmentsSnapshot());
             },
         });
-        return () => {
-            if (enableReactRendering) {
-                const controller = SincroAppController.getCurrent();
-                controller?.chat.setTelopDomRenderingEnabled(true);
-            }
-            unsubscribe();
-        };
+        return unsubscribe;
     }, [enableReactRendering]);
 
     useLayoutEffect(() => {

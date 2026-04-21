@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ChatMessage } from "../../ts/RTC/RTCMessage";
-import { SincroAppController } from "../../ts/App/SincroAppController";
 import type { ChatMessageViewRecord, SincroAppEvent } from "../../ts/App/SincroAppTypes";
+import { SincroAppController } from "../../ts/App/SincroAppController";
 import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
 
 type SincroChatViewProps = {
@@ -70,6 +70,11 @@ export function SincroChatView({ enableReactRendering = true }: SincroChatViewPr
                     controller.chat.setDomRenderingEnabled(false);
                 }
             },
+            onCleanupController: (controller) => {
+                if (enableReactRendering) {
+                    controller.chat.setDomRenderingEnabled(true);
+                }
+            },
             onEvent: (event) => {
                 if (event.type === "chat_system_icon") {
                     setSystemIconUrl(event.iconUrl);
@@ -85,13 +90,7 @@ export function SincroChatView({ enableReactRendering = true }: SincroChatViewPr
             },
         });
 
-        return () => {
-            if (enableReactRendering) {
-                const controller = SincroAppController.getCurrent();
-                controller?.chat.setDomRenderingEnabled(true);
-            }
-            unsubscribe();
-        };
+        return unsubscribe;
     }, [enableReactRendering]);
 
     return (
