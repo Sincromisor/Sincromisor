@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ChatMessage } from "../../ts/RTC/RTCMessage";
-import {
-    ChatMessageManager,
-    type ChatMessageViewRecord,
-} from "../../ts/UI/ChatMessageManager";
+import { SincroAppController } from "../../ts/App/SincroAppController";
+import type { ChatMessageViewRecord, SincroAppEvent } from "../../ts/App/SincroAppTypes";
+import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
 
 type SincroChatViewProps = {
     enableReactRendering?: boolean;
@@ -33,37 +32,64 @@ function canRenderHtml(record: ChatMessageViewRecord): boolean {
 
 // 既存のチャットCSS(class名)を再利用して、描画だけ React へ移す。
 export function SincroChatView({ enableReactRendering = true }: SincroChatViewProps) {
-    const [messages, setMessages] = useState<ChatMessageViewRecord[]>([]);
-    const [systemIconUrl, setSystemIconUrl] = useState<string>("../images/icon-system.webp");
+    const initialController = SincroAppController.getCurrent();
+    const [messages, setMessages] = useState<ChatMessageViewRecord[]>(
+        initialController?.chat.getMessageViewSnapshot() ?? [],
+    );
+    const [systemIconUrl, setSystemIconUrl] = useState<string>(
+        initialController?.chat.getSystemIconUrl() ?? "../images/icon-system.webp",
+    );
 
     useEffect(() => {
-        const chatManager = ChatMessageManager.getManager();
-        setSystemIconUrl(chatManager.getSystemIconUrl());
-        setMessages(chatManager.getMessageViewSnapshot());
-        if (enableReactRendering) {
-            chatManager.setDomRenderingEnabled(false);
-        }
-
-        const unsubscribe = chatManager.subscribe((event) => {
-            if (event.type === "system_icon_changed" && event.systemIconUrl) {
-                setSystemIconUrl(event.systemIconUrl);
-                return;
-            }
-            if (event.type !== "message" || !event.viewRecord) {
-                return;
-            }
+        const applyChatViewRecord = (event: Extract<SincroAppEvent, {
+            type: "chat_message" | "system_message" | "error_message";
+        }>) => {
             setMessages((prev) => {
-                const index = prev.findIndex((m) => m.message.message_id === event.viewRecord!.message.message_id);
+                const index = prev.findIndex((m) => m.message.message_id === event.viewRecord.message.message_id);
                 if (index >= 0) {
                     const next = [...prev];
-                    next[index] = event.viewRecord!;
+                    next[index] = event.viewRecord;
                     return next;
                 }
-                return [event.viewRecord!, ...prev].slice(0, 30);
+                return [event.viewRecord, ...prev].slice(0, 30);
             });
+        };
+
+        const unsubscribe = subscribeActiveSincroAppEvents({
+            onControllerChange: (controller) => {
+                if (!controller) {
+                    setMessages([]);
+                    setSystemIconUrl("../images/icon-system.webp");
+                    return;
+                }
+                setMessages(controller.chat.getMessageViewSnapshot());
+                setSystemIconUrl(controller.chat.getSystemIconUrl());
+            },
+            onBeforeSubscribe: (controller) => {
+                if (enableReactRendering) {
+                    controller.chat.setDomRenderingEnabled(false);
+                }
+            },
+            onEvent: (event) => {
+                if (event.type === "chat_system_icon") {
+                    setSystemIconUrl(event.iconUrl);
+                    return;
+                }
+                if (
+                    event.type === "chat_message"
+                    || event.type === "system_message"
+                    || event.type === "error_message"
+                ) {
+                    applyChatViewRecord(event);
+                }
+            },
         });
 
         return () => {
+            if (enableReactRendering) {
+                const controller = SincroAppController.getCurrent();
+                controller?.chat.setDomRenderingEnabled(true);
+            }
             unsubscribe();
         };
     }, [enableReactRendering]);

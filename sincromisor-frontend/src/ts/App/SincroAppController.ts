@@ -267,6 +267,10 @@ export class SincroAppController {
         return this.buildStartupSettingsStatusFromSnapshot(this.getSettingsSnapshot());
     }
 
+    getTelopTextSegmentsSnapshot() {
+        return this.talkManager.getTelopTextSegmentsSnapshot();
+    }
+
     private buildStartupSettingsStatusFromSnapshot(current: SincroAppSettingsSnapshot): SincroAppStartupSettingsStatus {
         return buildStartupSettingsStatus({
             lifecycleState: this.lifecycleState,
@@ -365,6 +369,7 @@ export class SincroAppController {
             getDialogUiState: () => this.getDialogUiState(),
             getDialogVrmUiState: () => this.getDialogVrmUiState(),
             getStartupSettingsStatus: () => this.getStartupSettingsStatus(),
+            getTelopTextSegmentsSnapshot: () => this.getTelopTextSegmentsSnapshot(),
         });
     }
 

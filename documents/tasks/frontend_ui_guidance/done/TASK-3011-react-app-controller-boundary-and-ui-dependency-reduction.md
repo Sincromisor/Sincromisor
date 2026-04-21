@@ -1,7 +1,7 @@
 # TASK-3011 React UI の残存 direct manager 依存整理と AppController 経由への移行
 
 - 作成日: 2026-04-21
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 
 ## 目的
@@ -55,21 +55,21 @@
 
 ### 1. 例外箇所の把握
 
-- [ ] React コンポーネントや hook で direct manager 依存している箇所が一覧化されている
-- [ ] 各箇所について、何の state / event / action を取りたいのか整理されている
-- [ ] `既存 bridge で吸収可能か`、`bridge 拡張が必要か`、`暫定維持か` が判定されている
+- [x] React コンポーネントや hook で direct manager 依存している箇所が一覧化されている
+- [x] 各箇所について、何の state / event / action を取りたいのか整理されている
+- [x] `既存 bridge で吸収可能か`、`bridge 拡張が必要か`、`暫定維持か` が判定されている
 
 ### 2. 移行方針
 
-- [ ] 優先的に移行すべき direct manager 依存が特定されている
-- [ ] `SincroChatView`、`SincroTelopView` など代表的な例外箇所の扱いが整理されている
-- [ ] 新規 React 実装で manager singleton を直接触れないルールが明文化されている
+- [x] 優先的に移行すべき direct manager 依存が特定されている
+- [x] `SincroChatView`、`SincroTelopView` など代表的な例外箇所の扱いが整理されている
+- [x] 新規 React 実装で manager singleton を直接触れないルールが明文化されている
 
 ### 3. 文書同期
 
-- [ ] `frontend_ui.md` の正規経路説明と残存例外の扱いが一致している
-- [ ] `frontend_migration_react.md` に移行対象一覧または優先順位が反映されている
-- [ ] 後続担当者が `次にどの依存を寄せるか` 判断できる
+- [x] `frontend_ui.md` の正規経路説明と残存例外の扱いが一致している
+- [x] `frontend_migration_react.md` に移行対象一覧または優先順位が反映されている
+- [x] 後続担当者が `次にどの依存を寄せるか` 判断できる
 
 ## 実装タスク
 
@@ -104,3 +104,7 @@
 
 - 本タスクは `UI 境界の新規定義` ではなく、`すでに定義済みの境界へ例外箇所を寄せる` ためのタスクである。
 - 実装変更に着手した場合は、`documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` の更新が必要になる。
+- 2026-04-22 実施内容:
+  - React 側の direct manager 依存は `SincroChatView` の `ChatMessageManager.getManager()` と `SincroTelopView` の `TalkManager.getManager()` に限定されていることを確認した。
+  - `SincroAppController` の `chat` / `state` bridge と `SincroAppEvent` を拡張し、chat view snapshot、system icon 更新、telop snapshot、旧 DOM 描画停止を AppController 経由で扱えるようにした。
+  - React UI では `subscribeActiveSincroAppEvents(...)` を正規経路として使い、manager singleton の direct import / `getManager()` を行わないルールを `documents/design/frontend_migration_react.md` に反映した。

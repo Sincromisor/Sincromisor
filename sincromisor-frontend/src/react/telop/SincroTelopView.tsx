@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { TalkManager, type TelopTextSegment } from "../../ts/RTC/TalkManager";
+import { SincroAppController } from "../../ts/App/SincroAppController";
+import type { TelopTextSegment } from "../../ts/App/SincroAppTypes";
+import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
 
 type SincroTelopViewProps = {
     enableReactRendering?: boolean;
@@ -7,23 +9,39 @@ type SincroTelopViewProps = {
 
 // 既存 footer CSS (`.sincroFooterBox__telopText`) を再利用し、テロップ描画を React 化する。
 export function SincroTelopView({ enableReactRendering = true }: SincroTelopViewProps) {
-    const [segments, setSegments] = useState<TelopTextSegment[]>([]);
+    const initialController = SincroAppController.getCurrent();
+    const [segments, setSegments] = useState<TelopTextSegment[]>(
+        initialController?.state.getTelopTextSegmentsSnapshot() ?? [],
+    );
     // footer表示領域。overflow後に最新文字へ追従するため scrollLeft を直接操作する。
     const containerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        const talkManager = TalkManager.getManager();
-        setSegments(talkManager.getTelopTextSegmentsSnapshot());
-        if (enableReactRendering) {
-            talkManager.setTelopDomRenderingEnabled(false);
-        }
-        const unsubscribe = talkManager.subscribe((event) => {
-            if (event.type !== "telop_channel_message" || !event.message.new_text) {
-                return;
-            }
-            setSegments(talkManager.getTelopTextSegmentsSnapshot());
+        const unsubscribe = subscribeActiveSincroAppEvents({
+            onControllerChange: (controller) => {
+                if (!controller) {
+                    setSegments([]);
+                    return;
+                }
+                setSegments(controller.state.getTelopTextSegmentsSnapshot());
+            },
+            onBeforeSubscribe: (controller) => {
+                if (enableReactRendering) {
+                    controller.chat.setTelopDomRenderingEnabled(false);
+                }
+            },
+            onEvent: (event, controller) => {
+                if (event.type !== "telop_message" || !event.message.new_text) {
+                    return;
+                }
+                setSegments(controller.state.getTelopTextSegmentsSnapshot());
+            },
         });
         return () => {
+            if (enableReactRendering) {
+                const controller = SincroAppController.getCurrent();
+                controller?.chat.setTelopDomRenderingEnabled(true);
+            }
             unsubscribe();
         };
     }, [enableReactRendering]);
