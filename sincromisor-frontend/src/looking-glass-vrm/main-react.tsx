@@ -1,5 +1,8 @@
 import type { ReactElement } from "react";
 import { createRoot } from "react-dom/client";
+
+// looking-glass-vrm 用 React island のマウント入口。
+// React UI は共通 panel/dialog 基盤を再利用し、LG 固有差分はページ別 panel に閉じる。
 function mountAsync<TModule>(
     elementId: string,
     load: () => Promise<TModule>,

@@ -406,6 +406,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - 新規 React コンポーネント / hook は manager singleton を直接 import・`getManager()` しない。
   - 読み取りは `appController.state`、会話表示系の操作は `appController.chat`、dialog 操作は `appController.dialog`、停止などの接続操作は `appController.rtc`、診断UI配線は `appController.debug` を使う。
   - active controller 差し替えに備え、React 側の購読は `SincroAppController.getCurrent()` / `subscribeCurrent()` または `subscribeActiveSincroAppEvents(...)` を正規経路とする。
+  - `simple-vrm/main-react.tsx` などのページエントリは薄い mount 入口として保ち、詳細な状態購読や設定反映は hook / controller 側へ寄せる。
 - スコープ外として残すもの:
   - `TalkManager` / `ChatMessageManager` の direct 参照は Core / legacy / renderer 側に残るが、React UI の direct dependency とは分けて扱う。
   - legacy ページの整理や manager 自体の削除は別タスクで判断する。

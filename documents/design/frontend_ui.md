@@ -244,6 +244,19 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 全体図（必要なら図リンク）:
   - TODO: 図を追加する場合は `documents/design/assets/frontend_ui_overview.drawio` などに配置
 
+### 6.1 入口コメントの棚卸し（2026-04-22）
+
+| 区分 | 対象 | 判断 |
+| --- | --- | --- |
+| 追加不要 | `src/ts/SincroController.ts`, `src/ts/App/SincroAppController.ts`, `src/ts/SincroVRM/SincroVRMInitializer.ts`, `src/ts/SincroLegacy/SincroInitializer.ts`, `src/ts/SincroVRM/SincroVRM360Initializer.ts`, `src/ts/SincroVRM/SincroLookingGlassVRMInitializer.ts` | 起動順序、存在意図、UI/RTC/scene の責務境界を示す入口コメントが既にあり、このタスクで増やすと重複ノイズが増える |
+| 追加不要 | `src/react/simple-vrm/useSimpleVrmPanelState.ts`, `src/react/dialog/useConfigurationDialogSettingsState.ts`, `src/react/app/subscribeActiveSincroAppEvents.ts`, `src/react/app/useSincroMediaDeviceState.ts`, `src/ts/MediaDevices/SincroMediaDeviceService.ts` | hook / service / bridge utility としての役割、どこへ責務を寄せるかがコメントから追える |
+| 追加対象 | `src/ts/main-vrm.ts`, `src/ts/main-legacy.ts`, `src/vrm360/main-vrm360.ts`, `src/looking-glass-vrm/main-vrm-looking-glass.ts` | HTML から直接読まれる薄いエントリだが、どのページ群の起動入口で何を initializer へ委譲しているかがファイル単体では分かりにくかった |
+| 追加対象 | `src/simple-vrm/main-react.tsx`, `src/vrm360/main-react.tsx`, `src/looking-glass-vrm/main-react.tsx` | 動的 import による React island の mount 入口だが、TS initializer との責務分離とページ別差分の置き場所が読み取りにくかった |
+
+- 本タスクの判断:
+  - 追加対象は `main-*` 系の薄い入口に限定し、controller / initializer / hook / service 本体へは広げない。
+  - コメントは「何をしているか」の逐次説明ではなく、「どのページから呼ばれ、詳細責務はどこへ委譲しているか」を示す。
+
 ## 7. 詳細設計
 
 ### 7.1 コンポーネント設計
