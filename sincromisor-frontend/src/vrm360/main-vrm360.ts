@@ -7,5 +7,7 @@ window.addEventListener('load', () => {
     const dialogManager = DialogManager.getManager();
     dialogManager.updateEnableCharacterGazeStatus(false);
     dialogManager.updateAutoMuteStatus();
-    new SincroVRM360Initializer();
+    void SincroVRM360Initializer.bootstrap().catch((error) => {
+        console.error('Failed to bootstrap vrm360 page.', error);
+    });
 });
