@@ -1,20 +1,11 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 import {
     closeRightToolMenu,
-    getRightToolPanelState,
-    subscribeRightToolPanelState,
-    toggleDebugConsole,
-    toggleReactSettingsPanel,
+    toggleRightToolDebugPanel,
     toggleRightToolMenu,
-} from "../../ts/UI/rightToolPanelStore";
-
-function useRightToolPanelState() {
-    return useSyncExternalStore(
-        subscribeRightToolPanelState,
-        getRightToolPanelState,
-        getRightToolPanelState,
-    );
-}
+    toggleRightToolSettingsPanel,
+    useRightToolPanelState,
+} from "../app/useRightToolPanelState";
 
 function blockPointerEvent(element: HTMLElement | null): (() => void) | null {
     if (!element) {
@@ -55,8 +46,8 @@ function syncContainerVisibility(containerId: string, isOpen: boolean): void {
     }
 }
 
-// 右上メニューと右側ツール領域の開閉ルールを React 側で所有する薄い shell。
-// 設定パネル本体と Debug Console 本体は別 island に分け、ここでは排他表示と外側クリック閉じを担当する。
+// 右上メニューと右側ツール領域の見た目/DOMイベントだけを担当する薄い shell。
+// state owner は App/service 側に置き、ここでは排他表示と外側クリック閉じを UI として実装する。
 export function RightToolMenu() {
     const state = useRightToolPanelState();
 
@@ -89,11 +80,11 @@ export function RightToolMenu() {
                 closeRightToolMenu();
             }
             if (state.activePanel === "debug" && debugConsole && !debugConsole.contains(target) && !debugMenu?.contains(target)) {
-                toggleDebugConsole();
+                toggleRightToolDebugPanel();
                 return;
             }
             if (state.activePanel === "settings" && reactSettingsPanel && !reactSettingsPanel.contains(target) && !debugMenu?.contains(target)) {
-                toggleReactSettingsPanel();
+                toggleRightToolSettingsPanel();
             }
         };
         document.addEventListener("click", handleClick, true);
@@ -105,7 +96,7 @@ export function RightToolMenu() {
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent): void => {
             if (event.ctrlKey && event.altKey && (event.key === "d" || event.code === "KeyD")) {
-                toggleDebugConsole();
+                toggleRightToolDebugPanel();
             }
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -129,10 +120,10 @@ export function RightToolMenu() {
                 </svg>
             </button>
             <div id="debugMenuPanel" role="menu" aria-hidden={!state.menuOpen} aria-label="右側ツール">
-                <button id="reactSettingsPanelToggle" type="button" role="menuitem" onClick={toggleReactSettingsPanel}>
+                <button id="reactSettingsPanelToggle" type="button" role="menuitem" onClick={toggleRightToolSettingsPanel}>
                     設定
                 </button>
-                <button id="debugConsoleToggle" type="button" role="menuitem" onClick={toggleDebugConsole}>
+                <button id="debugConsoleToggle" type="button" role="menuitem" onClick={toggleRightToolDebugPanel}>
                     開発者向け診断
                 </button>
             </div>

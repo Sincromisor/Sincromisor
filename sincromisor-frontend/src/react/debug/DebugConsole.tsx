@@ -8,7 +8,7 @@ import {
     type DebugConsoleTrendKey,
     type LearnedVadTuningUiConfig,
 } from "../../ts/UI/DebugConsoleManager";
-import { hideDebugConsole } from "../../ts/UI/rightToolPanelStore";
+import { hideRightToolDebugPanel } from "../app/useRightToolPanelState";
 
 type DebugTabKey = "status" | "transport" | "audio" | "channels" | "gaze" | "sdp";
 
@@ -109,7 +109,7 @@ export function DebugConsole() {
 
     return (
         <div id="debugConsole">
-            <button id="debugConsoleClose" type="button" aria-label="開発者向け診断を閉じる" onClick={hideDebugConsole}>
+            <button id="debugConsoleClose" type="button" aria-label="開発者向け診断を閉じる" onClick={hideRightToolDebugPanel}>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M18.3 6.7a1 1 0 0 0-1.4 0L12 11.6 7.1 6.7a1 1 0 1 0-1.4 1.4l4.9 4.9-4.9 4.9a1 1 0 1 0 1.4 1.4l4.9-4.9 4.9 4.9a1 1 0 0 0 1.4-1.4l-4.9-4.9 4.9-4.9a1 1 0 0 0 0-1.4z" />
                 </svg>

@@ -37,7 +37,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - チャット文は `text_ch`、テロップは `telop_ch` で受信し、`TalkManager` 経由でUI/口形同期に渡す。
   - React への段階移行計画は `documents/design/frontend_migration_react.md` を参照（本書は現行UI設計の正本）。
   - メディアデバイス列挙は `SincroMediaDeviceService` が担当し、`enumerateDevices()` の正規化、ラベル未解決時のフォールバック名生成、`devicechange` 監視を UI から分離する。React UI は `useSincroMediaDeviceState` から snapshot/refresh を購読する。
-  - `simple-vrm`, `vrm360`, `looking-glass-vrm` では React 設定パネル（`SimpleVrmControlPanel` 系）に加えて React Debug Console を正式導線として採用している。右側ツール領域の open/close と相互排他は `rightToolPanelStore` と React menu shell が所有し、`DebugConsoleManager` は DOM owner ではなく diagnostics snapshot provider と UI callback bridge として振る舞う。設定パネルと開発者向け診断は同時表示せず、右上の X ボタン、メニュー外/パネル外クリック、`Ctrl+Alt+D` で同じルールに従って切り替える。
+  - `simple-vrm`, `vrm360`, `looking-glass-vrm` では React 設定パネル（`SimpleVrmControlPanel` 系）に加えて React Debug Console を正式導線として採用している。右側ツール領域の open/close と相互排他は `SincroAppRightToolPanelService` と React menu shell が所有し、React 側は `appController.debug.*` 経由で state と開閉 API を利用する。`DebugConsoleManager` は DOM owner ではなく diagnostics snapshot provider と UI callback bridge として振る舞う。設定パネルと開発者向け診断は同時表示せず、右上の X ボタン、メニュー外/パネル外クリック、`Ctrl+Alt+D` で同じルールに従って切り替える。
 
   - 2026-04-19 時点で設定パネル側の device selector は、起動前 dialog と同じ `audioInputDeviceId` / `videoInputDeviceId` を直接編集する。`useSimpleVrmPanelState` が `useSincroMediaDeviceState` を購読し、`入出力デバイス` カテゴリ内でマイク入力と Gaze 用カメラ selector をまとめて表示する。両UIとも一覧再読み込みと未解決/無効デバイスのヒント表示を共通の考え方でそろえる。`videoInputDeviceId` は `SincroCharacterGazeController` + `VideoInputManager` により CharacterGaze 専用カメラ取得へ直結し、起動時選択・実行中切替・Gaze OFF/ON で再取得/再初期化される。
   - 起動前 dialog の Start 可否は `DialogManager` + `DialogSettingsPolicy` が保持し、`audioInputDeviceId` と `videoInputDeviceId` の選択状態、`enableCharacterGaze`、`getUserMedia` 利用可否を突き合わせて導出する。特に `audioInputDeviceId` が無効な場合、または Gaze 有効中に `videoInputDeviceId` が無効な場合は Start を disabled にし、個別 selector の hint と開始ボタン下の hint の両方で復帰導線を示す。設定パネル / 起動前設定は一般ユーザー向けの設定導線、Debug Console は開発者向けの診断・プレビュー確認導線として分離する。
@@ -263,10 +263,10 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `UserMediaManager`: `getUserMedia` 制約（`echoCancellation`/`noiseSuppression`/`autoGainControl`/`audioInputDeviceId` 等）を構築し、騒音会場モード切替、HPF/LPF+AudioWorklet VAD処理、手動/自動/学習VAD閾値更新、実行中マイク切替時の再取得を管理
   - `VideoInputManager`: CharacterGaze 専用カメラの取得/再取得/解放を担当し、`videoInputDeviceId` の適用とカメラ切替時の旧トラック停止を集約する
   - `DebugConsoleManager`: React Debug Console が購読する diagnostics core。RTC状態、イベントログ、音声レベルメーター、HPF/LPF・VAD状態/閾値調整・学習VAD状態、60秒トレンドグラフ用 snapshot を保持し、既存 controller からの public API 呼び出し先を維持する
-  - `rightToolPanelStore` + React menu shell: 右側ツール領域の開閉責務を持ち、設定パネルと Debug Console の表示ルール（相互排他、外側クリック閉じ、メニュー遷移の整合）を管理する
+  - `SincroAppRightToolPanelService`: 右側ツール領域の state owner。設定パネルと Debug Console の表示ルール（相互排他、外側クリック閉じ、メニュー遷移の整合）を App/service 側で保持する
   - `SincroAppController.dialogBridge`（`appController.dialog.*`）: dialog 関連 bridge API の集約窓口。React dialog hook / dialog pop / initializer からの呼び出しを段階的に統一
   - `SincroAppController.chatBridge`（`appController.chat.*`）: 挨拶メッセージ出力や system icon 更新など、チャットUI更新の集約窓口（initializer からの `ChatMessageManager` 直接依存を縮退）
-  - `SincroAppController.debugBridge`（`appController.debug.*`）: Debug Console 操作の集約窓口（initializer からの `DebugConsoleManager` 直接依存を縮退）
+  - `SincroAppController.debugBridge`（`appController.debug.*`）: Debug Console 操作と右側ツール領域開閉の集約窓口（initializer / React からの `DebugConsoleManager` や tool panel store 直接依存を縮退）
   - `SincroAppController` の bridge 群（`dialog/chat/debug/rtc`）を UI層の主要な呼び出し窓口として段階採用し、manager singleton 直接参照を削減している
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroController.ts`
@@ -277,11 +277,11 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `sincromisor-frontend/src/ts/MediaDevices/SincroMediaDeviceService.ts`
   - `sincromisor-frontend/src/ts/UI/ChatMessageManager.ts`
   - `sincromisor-frontend/src/ts/UI/DebugConsoleManager.ts`
+  - `sincromisor-frontend/src/ts/App/SincroAppRightToolPanelService.ts`
   - `sincromisor-frontend/src/ts/RTC/silero-vad.worker.ts`
   - `sincromisor-frontend/src/styles/sincroDebugConsole.css`
   - `sincromisor-frontend/src/react/debug/DebugConsole.tsx`
   - `sincromisor-frontend/src/react/debug/RightToolMenu.tsx`
-  - `sincromisor-frontend/src/ts/UI/rightToolPanelStore.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/LookingGlass/LookingGlassXRController.ts`
 - 変更時に同時確認が必要なファイル:
   - RTCペイロード変更: `RTCTalkClient.ts` とサーバー側 `RTCSignalingServer.py`
@@ -565,7 +565,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-19 | `TASK-3007` 対応として `SettingsShell` の本文前 summary 構造をやめ、固定高さのページヘッダー直後から本文を始める構成へ修正。一般カテゴリでは冗長な状態カードを廃止し、状態表示は対象セクションや CTA 近くへ寄せた |
 | 2026-04-19 | 起動前 dialog を `初回セットアップウィザード` として再定義。`トップへ戻る` / `閉じる` / `キャンセル` の役割差、ESC・背景クリック禁止、開始ボタンの前進文言を設計へ反映 |
 | 2026-04-19 | 初回セットアップ dialog のサイズ基準を `960-1120px x 620-780px`、右側設定パネルの幅基準を `420-560px` として追記。`SettingsShell` の左ナビ幅、`開発者向け` の分離見出し、カテゴリ内セクション面、狭幅時の縮退順序を明文化 |
-| 2026-04-22 | `TASK-3015` 対応として Debug Console を React 正式描画へ移行。`debugConsole.html` は削除し、右側ツール領域の state owner を `rightToolPanelStore` + React menu shell へ移した。`DebugConsoleManager` は DOM manager から diagnostics snapshot provider へ縮退した |
+| 2026-04-22 | `TASK-3015` 対応として Debug Console を React 正式描画へ移行。`debugConsole.html` は削除し、右側ツール領域の state owner を App/service 側へ寄せる前段として React shell を導入した。`DebugConsoleManager` は DOM manager から diagnostics snapshot provider へ縮退した |
+| 2026-04-22 | `TASK-3017` 対応として右側ツール領域の state owner を `SincroAppRightToolPanelService` へ移し、React 側の開閉 API を `appController.debug.*` へ集約した。`src/ts/UI/rightToolPanelStore.ts` は削除し、`DebugConsoleManager` はツール領域 owner ではなく diagnostics core に専念する構成へ整理した |
 | 2026-04-22 | `TASK-3016` 対応として起動前 dialog の bridge DOM を撤去。VRM file picker と drag & drop は `ConfigurationDialogSettingsPanel` の React 正規経路へ移し、`DialogBridgeDomAdapter` は `HTMLDialogElement` の open/close と Esc / backdrop close 抑止だけを扱う最小 platform adapter に縮退した |
 
 ## 15. 参照資料

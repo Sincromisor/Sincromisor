@@ -989,7 +989,8 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 | 2026-02-22 | `Start Looking Glass` ボタンを Debug Console から削除し、`looking-glass-vrm` の実行導線を Control Panel に一本化。`LookingGlassXRController.attachToStartButton()` は Debug Console ボタン未配置を正常系として扱うよう変更し、Control Panel の custom event 操作のみでも error 状態にならないよう調整 |
 | 2026-02-22 | 右上 Debug メニューの `Open Startup Dialog` を削除（現行構成では利用価値が低く誤操作導線になりやすいため）。起動前設定の React dialog UI は枠線/背景/ヘッダー/開始ボタンの見た目を調整し、Control Panel / Debug Console とトーンを揃える方向で更新 |
 | 2026-02-22 | 起動前設定の Character / Gaze の既定値を見直し、通常ページでは `Character=ON` / `Gaze=ON` を初期値に変更。`VRM360`（360deg camera）では `SincroVRM360Initializer` で `enableCharacterGaze=false` を明示適用し、Gaze は既定OFF・Character は既定ONを維持 |
-| 2026-04-22 | `TASK-3015` で Debug Console を React 正式経路へ移行。`debugConsole.html` は削除し、右側ツール領域の state owner を `rightToolPanelStore` + React shell へ移した。`DebugConsoleManager` は DOM 直操作 owner ではなく、React view が購読する diagnostics snapshot provider と UI callback bridge に縮退した |
+| 2026-04-22 | `TASK-3015` で Debug Console を React 正式経路へ移行。`debugConsole.html` は削除し、右側ツール領域は React shell から扱う構成へ移行した。`DebugConsoleManager` は DOM 直操作 owner ではなく、React view が購読する diagnostics snapshot provider と UI callback bridge に縮退した |
+| 2026-04-22 | `TASK-3017` で右側ツール領域の state owner を `SincroAppRightToolPanelService` へ移し、React 側の開閉 API を `appController.debug.*` 経由へ集約した。`src/ts/UI/rightToolPanelStore.ts` を削除し、UI manager 層に残っていた tool panel owner 責務を App / service 層へ寄せた |
 
 ## 16. 参照資料
 
