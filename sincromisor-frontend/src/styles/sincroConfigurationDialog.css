@@ -147,34 +147,8 @@
             display: block;
         }
 
-        & > div.configurationDialog__bridgeDom {
-            width: 100%;
-        }
-
-        & > div.configurationDialog__bridgeDom[aria-hidden="true"] {
-            position: absolute;
-            width: 0;
-            height: 0;
-            overflow: hidden;
-            opacity: 0;
-            pointer-events: none;
-        }
-
         &::backdrop {
             background: rgb(180, 100, 180, 0.5);
-        }
-
-        &.vrmDragover {
-            border: 2px dashed rgb(63, 63, 63);
-            background-color: rgb(200, 200, 200);
-        }
-
-        /*
-         * React 置換済みの主要設定は bridge DOM だけを legacy 側に残す。
-         * dialog 本体の暗色面や余白は configurationDialogSettings.css が担当する。
-         */
-        &.reactPrimarySettingsEnabled > div.configurationDialog__bridgeDom {
-            display: none !important;
         }
     }
 }

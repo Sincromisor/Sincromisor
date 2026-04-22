@@ -1,5 +1,5 @@
-// React 移行後に残る最小の DOM 依存（dialog 本体 / VRM file input / ヘッダー文言）を隔離する。
-// DialogManager は state とルールに集中し、DOM 操作の詳細はこの adapter に閉じ込める。
+// React 移行後に残る HTMLDialogElement の platform boundary を隔離する。
+// DialogManager は dialog 状態とルールに集中し、native dialog API だけをここへ閉じ込める。
 export class DialogBridgeDomAdapter {
     private dialogEventsBound = false;
 
@@ -12,7 +12,7 @@ export class DialogBridgeDomAdapter {
         return dialog;
     }
 
-    ensureDialogCloseInteractions(onRequestClose: () => void): void {
+    ensureDialogCloseInteractions(onClosed: () => void): void {
         if (this.dialogEventsBound) {
             return;
         }
@@ -33,9 +33,10 @@ export class DialogBridgeDomAdapter {
                 e.preventDefault();
             }
         });
-        // 初回セットアップでは閉じ導線を明示操作（開始する/トップへ戻る）に限定するため、callback は未使用。
-        // 将来「確認付き close」を戻す場合の拡張点として引数は残している。
-        void onRequestClose;
+        dialog.addEventListener("close", () => {
+            // dialog.close() が別経路から呼ばれても、stateStore 側の open 状態を同期できるようにする。
+            onClosed();
+        });
         this.dialogEventsBound = true;
     }
 
@@ -55,67 +56,6 @@ export class DialogBridgeDomAdapter {
         }
         dialog.close();
         return true;
-    }
-
-    setReactPrimarySettingsEnabled(enabled: boolean): void {
-        this.getDialogElement().classList.toggle("reactPrimarySettingsEnabled", enabled);
-    }
-
-    setDialogDragoverClass(enabled: boolean): void {
-        this.getDialogElement().classList.toggle("vrmDragover", enabled);
-    }
-
-    openVrmFilePicker(): void {
-        const input = document.querySelector("input#vrmFileInput");
-        if (input instanceof HTMLInputElement) {
-            input.click();
-        }
-    }
-
-    bindVrmFileInput(onFile: (file: File) => void): void {
-        const input = document.querySelector("input#vrmFileInput");
-        if (!(input instanceof HTMLInputElement)) {
-            return;
-        }
-        input.addEventListener("change", (event) => {
-            event.preventDefault();
-            const target = event.target;
-            if (!(target instanceof HTMLInputElement) || !target.files || target.files.length === 0) {
-                return;
-            }
-            onFile(target.files[0]);
-        });
-    }
-
-    bindDialogDragAndDrop(onDragOverChanged: (isDragOver: boolean) => void, onFile: (file: File) => void): void {
-        // dialog 全体を drop target にし、React UI 側の表示状態は callback 経由で stateStore と同期する。
-        const dialog = this.getDialogElement();
-        dialog.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            this.setDialogDragoverClass(true);
-            onDragOverChanged(true);
-        });
-        dialog.addEventListener("dragleave", (e) => {
-            e.preventDefault();
-            this.setDialogDragoverClass(false);
-            onDragOverChanged(false);
-        });
-        dialog.addEventListener("drop", (e) => {
-            e.preventDefault();
-            this.setDialogDragoverClass(false);
-            onDragOverChanged(false);
-            if (!e.dataTransfer || e.dataTransfer.files.length === 0) {
-                return;
-            }
-            onFile(e.dataTransfer.files[0]);
-        });
-    }
-
-    setHeaderTitle(text: string): void {
-        const header = document.querySelector("div#sincroHeaderBox__text");
-        if (header instanceof HTMLDivElement) {
-            header.innerText = text;
-        }
     }
 
 }

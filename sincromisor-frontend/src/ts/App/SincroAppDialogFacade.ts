@@ -8,8 +8,8 @@ import type {
 // SincroAppController 系 helper が DialogManager に期待する最小インターフェース。
 // 具体クラス依存を薄め、snapshot/apply/bridge factory の責務境界を明確化する。
 export type SincroAppDialogFacade = {
-    setReactPrimarySettingsEnabled(enabled: boolean): void;
-    openVrmFilePicker(): void;
+    applySelectedVrmFile(file: File): void;
+    setVrmDragOver(isDragOver: boolean): void;
     closeDialog(): void;
     showDialog(): void;
     updateUserMediaAvailabilityStatus(available: boolean): void;

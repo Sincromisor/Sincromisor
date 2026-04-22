@@ -781,6 +781,8 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - `SincroAppController` に `rtcBridge`（`appController.rtc.*`）を追加し、initializer の停止操作配線も bridge 群へ揃えて API を統一方向に整理
   - `DialogManager` の設定DOM同期系メソッド（bridge input 前提の change/input 監視など）を削除し、React dialog + state store + adapter の構成へ整理
   - `configurationDialog__bridgeDom` を最小 input/select/button/file 群に縮退し、ラベル/fieldset/戻るリンク等の可視UI要素は React 側へ寄せた
+  - `TASK-3016` で `configurationDialog__bridgeDom` 自体を削除し、VRM file picker / drag & drop / dragover 状態更新を `ConfigurationDialogSettingsPanel` の React event 経路へ統一
+    - `DialogBridgeDomAdapter` は `HTMLDialogElement` の open/close と close-interaction 制御に限定し、ヘッダー文言更新は `HeaderTitleDomAdapter` へ分離
   - Debug Menu に `Open Startup Dialog` を追加し、`sincro:open-configuration-dialog` -> `SincroAppController.openConfigurationDialog()` 経由で起動前 dialog の再表示導線を追加
   - `main-react.tsx`（`simple-vrm` / `vrm360` / `looking-glass-vrm`）を動的 import 化し、Control Panel / Chat / Telop / Dialog UI を個別 chunk として分割
   - `vite.config.js`（modern-only build）に `manualChunks` を追加し、`react`, `three`, `three-vrm`, `mediapipe/onnxruntime`, `@lookingglass/webxr`, その他 vendor の分離を開始
@@ -951,6 +953,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 | 2026-02-22 | `SincroAppEventMappers.ts` を追加して managerイベント→`SincroAppEvent` 変換を分離。`SincroAppController` constructor の購読処理を `bindManagerSubscriptions()` へ整理 |
 | 2026-02-22 | `SincroAppLookingGlassStateTracker.ts` を追加し、Looking Glass 状態/設定変更差分の追跡と `looking_glass_config_status` 判定を `SincroAppController` から分離 |
 | 2026-02-22 | `SincroAppConnectionState.ts`（接続状態判定）、`SincroAppSettingsApply.ts`（`applySettings` 実処理）、`SincroAppBridgeFactories.ts`（dialog/chat/debug/rtc bridge実装）を追加し、`SincroAppController` を orchestration 中心に整理 |
+| 2026-04-22 | `TASK-3016` として起動前 dialog の bridge DOM を撤去し、VRM file picker / drag & drop / dragover 状態更新を React 正規経路へ統一。`DialogBridgeDomAdapter` は `HTMLDialogElement` の platform boundary に限定し、非 dialog DOM 更新は別 adapter へ分離 |
 | 2026-02-22 | `SincroAppStartupSettings.ts`（startup設定の再起動/次回起動判定）と `SincroAppSubscriptionSnapshot.ts`（購読直後の初期イベント送出）を追加し、`SincroAppController.subscribe()` / `getStartupSettingsStatus()` を薄く整理 |
 | 2026-02-22 | `SincroAppSettingsSnapshotBuilder.ts`（settings snapshot 合成）と `SincroAppWindowEventBinder.ts`（window event 登録）を追加。未使用の `SincroAppController` 互換 wrapper メソッド群を整理し、`appController.dialog/*` などの bridge API 利用を前提に整理 |
 | 2026-02-22 | `SincroAppUiStateSnapshotBuilder.ts` を追加し、Dialog由来UI状態（settings ui/dialog ui/vrm ui）の取得を helper 化。`bindManagerSubscriptions()` を chat/debug/talk/pop/dialog ごとに分割して `SincroAppController` の可読性を改善 |

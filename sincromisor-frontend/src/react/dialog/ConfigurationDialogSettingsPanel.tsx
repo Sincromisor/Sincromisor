@@ -1,3 +1,5 @@
+import type { ChangeEvent, DragEvent } from "react";
+import { useRef } from "react";
 import { SettingsShell } from "../settings-shell/SettingsShell";
 import { useConfigurationDialogSettingsState } from "./useConfigurationDialogSettingsState";
 import "./configurationDialogSettings.css";
@@ -34,8 +36,15 @@ function connectionStatusLabel(value: string): string {
     }
 }
 
+function hasFileDragPayload(dataTransfer: DataTransfer | null): boolean {
+    if (!dataTransfer) {
+        return false;
+    }
+    return Array.from(dataTransfer.types).includes("Files");
+}
+
 // 起動前 dialog の見た目/操作を React 側で主導する設定パネル。
-// bridge DOM は AppController/dialog bridge のために残し、表示と操作導線だけ React 側へ寄せる。
+// HTMLDialogElement 以外の visible UI と VRM file 操作は React 正規経路に寄せる。
 export function ConfigurationDialogSettingsPanel() {
     const {
         currentController,
@@ -54,9 +63,12 @@ export function ConfigurationDialogSettingsPanel() {
         changeTalkMode,
         dialogVrmUiState,
         dialogUiState,
-        openVrmFilePicker,
+        applySelectedVrmFile,
+        setVrmDragOver,
         startApp,
     } = useConfigurationDialogSettingsState();
+    const vrmFileInputRef = useRef<HTMLInputElement | null>(null);
+    const dragDepthRef = useRef(0);
 
     const hasStartupOptions =
         startupSettingsCapabilities.enableTalk
@@ -71,8 +83,90 @@ export function ConfigurationDialogSettingsPanel() {
     const startButtonLabel = dialogUiState.startButtonText || "開始する";
     const startButtonHint = dialogUiState.startButtonHint ?? "必要な設定を確認したら、このまま開始できます。";
 
+    const resetDragState = (): void => {
+        dragDepthRef.current = 0;
+        setVrmDragOver(false);
+    };
+
+    const handleOpenVrmFilePicker = (): void => {
+        const input = vrmFileInputRef.current;
+        if (!input) {
+            return;
+        }
+        // 同じファイルを選び直した時も change が発火するよう、click 前に値を空に戻す。
+        input.value = "";
+        input.click();
+    };
+
+    const handleVrmFileInputChange = (event: ChangeEvent<HTMLInputElement>): void => {
+        const file = event.currentTarget.files?.[0];
+        if (!file) {
+            return;
+        }
+        applySelectedVrmFile(file);
+        event.currentTarget.value = "";
+    };
+
+    const handleDialogDragEnter = (event: DragEvent<HTMLDivElement>): void => {
+        if (!hasFileDragPayload(event.dataTransfer)) {
+            return;
+        }
+        event.preventDefault();
+        dragDepthRef.current += 1;
+        setVrmDragOver(true);
+    };
+
+    const handleDialogDragOver = (event: DragEvent<HTMLDivElement>): void => {
+        if (!hasFileDragPayload(event.dataTransfer)) {
+            return;
+        }
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+        if (!dialogVrmUiState.isDragOver) {
+            setVrmDragOver(true);
+        }
+    };
+
+    const handleDialogDragLeave = (event: DragEvent<HTMLDivElement>): void => {
+        if (!hasFileDragPayload(event.dataTransfer)) {
+            return;
+        }
+        event.preventDefault();
+        dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+        if (dragDepthRef.current === 0) {
+            setVrmDragOver(false);
+        }
+    };
+
+    const handleDialogDrop = (event: DragEvent<HTMLDivElement>): void => {
+        if (!hasFileDragPayload(event.dataTransfer)) {
+            return;
+        }
+        event.preventDefault();
+        const file = event.dataTransfer.files?.[0];
+        resetDragState();
+        if (file) {
+            applySelectedVrmFile(file);
+        }
+    };
+
     return (
-        <div className="configurationDialogReactSettingsPanel">
+        <div
+            className={`configurationDialogReactSettingsPanel${dialogVrmUiState.isDragOver ? " is-dragover" : ""}`}
+            onDragEnter={handleDialogDragEnter}
+            onDragOver={handleDialogDragOver}
+            onDragLeave={handleDialogDragLeave}
+            onDrop={handleDialogDrop}
+        >
+            <input
+                ref={vrmFileInputRef}
+                type="file"
+                accept=".vrm"
+                className="configurationDialogReactSettingsPanel__fileInput"
+                tabIndex={-1}
+                aria-hidden="true"
+                onChange={handleVrmFileInputChange}
+            />
             <SettingsShell
                 ariaLabel="初回セットアップウィザード"
                 badge="初回セットアップ"
@@ -166,7 +260,7 @@ export function ConfigurationDialogSettingsPanel() {
                                     title="VRM モデル"
                                     description="表示するモデルを差し替えたい時の導線です。ファイル選択とドラッグ&ドロップのどちらでも更新できます。"
                                 >
-                                    <VrmModelSection onOpenFilePicker={openVrmFilePicker} />
+                                    <VrmModelSection onOpenFilePicker={handleOpenVrmFilePicker} />
                                     <DialogVrmDropStatusCard uiState={dialogVrmUiState} />
                                 </DialogSettingsCategory>
                             </>
