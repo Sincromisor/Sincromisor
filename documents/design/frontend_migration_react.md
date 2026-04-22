@@ -14,7 +14,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 - 目的: `sincromisor-frontend` の巨大化に対応し、個人開発でも扱いやすい構成へ段階的に移行する
 - 対象範囲:
   - フロントエンドの UI 層 / アプリ制御層の React 移行方針
-  - Babylon.js legacy コードの切り離し方針
+  - Babylon.js legacy 削除後のフロントエンド整理方針
   - Looking Glass 機能の VRM1.0 対応の進め方
 - 非対象範囲:
   - サーバー側 WebRTC シグナリング仕様の変更
@@ -22,7 +22,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 - LLM向け要約（3-5行）:
   - React は UI 層から段階導入し、RTC / Media / 3D 描画の既存 TypeScript 実装は当面再利用する。
   - Vite は継続、構成はまず MPA のまま維持し、全面再構成を避ける。
-  - Babylon.js 依存は `legacy`/`experimental` として隔離し、通常系ページから順次外す。
+  - Babylon.js legacy は `TASK-3014` で削除済みで、現在の描画系は Three.js + VRM1.0 に統一されている。
   - Looking Glass は `@lookingglass/webxr` を継続利用しつつ、Three.js + VRM1.0 側へ移植する。
 
 ### 2.1 優先順位の更新（2026-02-22）
@@ -33,7 +33,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - React 化（UI/制御境界の整理を含む）
 - 方針変更:
   - Babylon.js legacy の置換は段階を細かく刻まず、通常導線・通常ビルドから先に切り離して高速に進める
-  - legacy 機能は必要時のみ明示的にビルド/検証する
+  - 切り離し完了後は Babylon.js legacy を削除し、modern ページ群だけを通常開発対象にする
 
 ## 3. 背景
 
@@ -44,7 +44,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 - 現状の問題点:
   - `SincroController` に UI / RTC / CharacterGaze の結線が集中しやすい
   - MPA の各ページで UI と描画初期化ロジックの再利用境界が曖昧
-  - Babylon.js と Three.js が同一フロントエンド内で共存しており、依存削減計画が明文化されていない
+  - React UI と既存 DOM/UI manager の責務分離を続けて進める必要がある
 - 採用理由:
   - React はメジャーで情報量が多く、個人開発でも保守しやすい
   - Vite + React は構成が比較的シンプルでバージョンアップ追従しやすい
@@ -60,7 +60,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 | --- | --- |
 | React化 | UI層および画面状態管理を React コンポーネント中心へ移行すること |
 | Core層 | フレームワーク非依存で再利用する RTC / Media / Talk / Gaze 制御モジュール群 |
-| Legacy | Babylon.js ベースの旧実装（将来的に削除予定） |
+| Legacy | Babylon.js ベースの旧実装。`TASK-3014` で削除済み |
 | MPA | Vite の複数 HTML エントリ構成（当面維持） |
 
 ## 5. 要件
@@ -70,7 +70,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 - 要件一覧:
   - 既存の主要機能（RTC接続、text/telop受信、設定ダイアログ、デバッグ表示）を維持したまま UI 層を段階移行できること
   - React 導入後も `simple-vrm` を最初の移行対象として単独で動作確認できること
-  - Babylon.js 依存ページを通常系ページから明確に分離できること
+  - 削除済み Babylon.js legacy に再依存しない構成を維持できること
   - Looking Glass 機能を Three.js + VRM1.0 系へ移植可能な構造にすること
   - フロントエンド依存ライブラリの増加を最小限に抑えること
 - 優先度（Must/Should/Could）:
@@ -92,8 +92,8 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 - コンポーネント一覧:
   - UI層（React）: 設定ダイアログ、チャット、デバッグコンソール、各ページの画面構成
   - Core層（既存TS再利用・段階整理）: `RTCTalkClient`, `UserMediaManager`, `TalkManager`, `CharacterGaze`, `SincroRTCConfigManager`
-  - 描画層: Three.js + VRM1.0（主系統）、Babylon.js（legacy/experimental）
-  - ページエントリ層: Vite MPA エントリ (`simple-vrm`, `main`, `vrm360`, `glass` など)
+  - 描画層: Three.js + VRM1.0
+  - ページエントリ層: Vite MPA エントリ (`main`, `simple-vrm`, `vrm360`, `looking-glass-vrm`)
 - 責務分割:
   - React: UI描画・ユーザー操作・状態表示
   - Core: WebRTC接続、音声処理、VAD、DataChannel受信、設定反映
@@ -101,29 +101,22 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 - 外部依存:
   - 継続: `vite`, `typescript`, `three`, `@pixiv/three-vrm`, `@mediapipe/tasks-vision`, `onnxruntime-web`
   - 追加（最小）: `react`, `react-dom`, `@vitejs/plugin-react-swc`
-  - 将来的に削減対象: `@babylonjs/*`
+  - Babylon.js 依存は削除済み
 - 全体図（必要なら図リンク）:
   - TODO: `frontend_ui.md` の全体図に React UI / Core / Renderer の分離図を追記
 
-### 6.1 ページ分類と移行優先順位（2026-04-21）
+### 6.1 ページ分類と移行優先順位（2026-04-22）
 
 - build の基準:
   - 通常開発では `npm run build` を使い、`main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` だけを常時守る
-  - `npm run build:all` は legacy/Babylon.js 検証が必要な時だけ使う
-  - `vite.config.js` は `SINCRO_BUILD_LEGACY=1` の時だけ legacy input を追加し、通常 build では Babylon.js 系ページを入口ごと切り離す
+  - `vite.config.js` は Babylon.js legacy input を持たず、modern 4 ページだけを build 対象にする
 - 優先順位:
   - 優先度 A: `main`、`simple-vrm`
     - 公開導線と通常会話の正規ルート。React / CSS / 文言整理の主対象
   - 優先度 B: `vrm360`、`looking-glass-vrm`
     - Three.js + VRM1.0 基盤の実験導線。通常ビルドには含めるが、環境依存前提で段階改善する
-  - 優先度 C: `simple`、`glass`、`character`、`character-glass`、`area360`
-    - Babylon.js legacy の検証ページ。通常導線から外し、比較確認専用に縮退する
-  - 優先度 D: `single`、`double`
-    - `deprecated`。即時凍結し、React 化や CSS 追従の対象にしない
-- `single` / `double` の扱い:
-  - 現行 standalone ページのまま維持しない
-  - 将来要件が残る場合は、modern 側の page variant または overlay として再設計する
-  - Babylon.js ベースの現行ページは退役候補として扱う
+- 削除済みページ:
+  - `simple`、`glass`、`character`、`character-glass`、`area360`、`single`、`double`、`main-legacy.ts`、`SincroLegacy/**` は `TASK-3014` で削除済み
 - 本書で参照する詳細な分類表の正本は `documents/design/frontend_ui.md` とする
 
 ## 7. 詳細設計
@@ -135,19 +128,17 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - `App Controller / Core Facade`（新設予定）: React UI と既存 Core 間の橋渡し
   - `RTCTalkClient` / `UserMediaManager` / `TalkManager`: 原則そのまま利用し、UI への通知方法のみ整理
   - `VRMScene` 系: Three.js + VRM1.0 描画継続、React からは API 経由で制御
-  - `SincroLegacy/*`: Babylon.js 依存実装として隔離し、縮退対象にする
   - Looking Glass 新実装（計画）: `@lookingglass/webxr` + Three.js/VRM1.0 による描画開始処理
 - 主要クラス/モジュールと対応ファイル:
   - 現行制御: `sincromisor-frontend/src/ts/SincroController.ts`
   - RTC: `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
   - Media/VAD: `sincromisor-frontend/src/ts/RTC/UserMediaManager.ts`
   - VRM描画: `sincromisor-frontend/src/ts/SincroVRM/**`
-  - Babylon legacy: `sincromisor-frontend/src/ts/SincroLegacy/**`, `sincromisor-frontend/src/area360/**`
-  - Looking Glass（現行）: `sincromisor-frontend/src/ts/SincroLegacy/Scene/SincroGlassScene.ts`
+  - Looking Glass: `sincromisor-frontend/src/ts/SincroVRM/LookingGlass/**`
 - 変更時に同時確認が必要なファイル:
   - UIイベント移行時: `frontend_ui.md`, `src/partials/*.html`, `src/ts/UI/*.ts`
   - RTC契約関連: `src/ts/RTC/RTCTalkClient.ts` と `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
-  - Looking Glass移植時: `src/ts/SincroLegacy/Scene/SincroGlassScene.ts` と `src/ts/SincroVRM/**`
+  - Looking Glass移植時: `src/ts/SincroVRM/LookingGlass/**` と `src/ts/SincroVRM/**`
 
 ### 7.2 データ設計
 
@@ -236,17 +227,15 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
     - 既存の主要デバッグ表示（RTCログ/VAD状態/音声メーター）の欠落がない
     - イベント二重登録や二重描画が発生しない
 
-- Phase 3: Babylon.js 依存の隔離・縮退
+- Phase 3: Babylon.js 依存の削除
   - 目的:
-    - 通常系ページから Babylon.js 依存を切り離し、保守対象を明確化する
+    - 通常系ページから切り離した Babylon.js 依存を実体ごと削除し、保守対象を modern ページへ絞る
   - 実施内容:
-    - `SincroLegacy/**` と `area360/**` を `legacy` として扱う方針を実装/文書で明示し、`single` / `double` は `deprecated` として凍結する
-    - 通常系ページ（VRM1.0）と Babylon系ページのビルド確認手順を分ける
-    - Babylon系ページの利用状況を確認し、代替実装または廃止順を決める
+    - `SincroLegacy/**`、`area360/**`、Babylon.js 系 HTML エントリ、`main-legacy.ts`、`@babylonjs/*` 依存を削除する
+    - `vite.config.js`、`package.json`、`tsconfig.modern.json`、README、設計文書を modern 専用構成へ同期する
   - 受け入れ条件:
     - 通常系ページ開発時に Babylon 変更が不要な状態
-    - 削除対象/維持対象が文書化されている
-    - `single` / `double` を正規導線として守らないことが明文化されている
+    - 削除対象がビルド設定・依存関係・文書から取り除かれている
 
 - Phase 4: Looking Glass の VRM1.0 対応
   - 目的:
@@ -845,7 +834,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - 原則変更なし（サーバー配布 `config.json` を継続利用）
 - 設定ファイル:
   - `sincromisor-frontend/vite.config.js`（React plugin 追加、MPA は維持）
-  - `sincromisor-frontend/tsconfig.modern.json`（default build 用。legacy/Babylon 系ソースを除外）
+  - `sincromisor-frontend/tsconfig.modern.json`（default build 用）
 - 導入状況（2026-02-22 時点）:
   - `react` / `react-dom` は導入済み（`^19.2.4`）
   - `@vitejs/plugin-react-swc` は導入済み（`^4.2.3`）
@@ -854,13 +843,11 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 - デプロイ/ローカル実行手順:
   - 通常確認（VRM1.0/React 優先）: `npm run build`（modern-only build）
   - `npm run build` は `tsc -p tsconfig.modern.json && vite build` を実行し、modern / experimental の 4 ページを基準に確認する
-  - legacy/Babylon 含む確認が必要なときのみ: `npm run build:all`
-  - `npm run build:all` は `tsc && SINCRO_BUILD_LEGACY=1 vite build` を実行し、legacy / deprecated ページも含めた回帰確認に使う
   - React 導入後は移行対象ページ（`simple-vrm`, `vrm360`, `looking-glass-vrm`）を優先確認する
   - `looking-glass-vrm` は当面 Experimental 導線として扱い、未動作環境がある前提で案内文を維持する
 - 互換性に影響する設定変更:
   - Vite MPA entry 名変更は既存URLに影響するため慎重に扱う
-  - Babylon 依存を削除する前に、対応ページの代替実装提供または廃止告知を行う
+  - Babylon 依存は削除済みのため、新規実装で Babylon.js を再導入しない
 
 ## 9. 監視・運用
 

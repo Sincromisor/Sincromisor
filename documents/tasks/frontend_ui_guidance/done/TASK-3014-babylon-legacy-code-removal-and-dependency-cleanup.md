@@ -1,7 +1,7 @@
 # TASK-3014 Babylon legacy コード削除と依存クリーンアップ
 
 - 作成日: 2026-04-22
-- ステータス: Open
+- ステータス: Done
 - 優先度: Highest
 
 ## 目的
@@ -54,29 +54,29 @@
 
 ### 1. エントリ / ページ
 
-- [ ] `src/simple/index.html` が削除されている
-- [ ] `src/single/index.html` が削除されている
-- [ ] `src/double/index.html` が削除されている
-- [ ] `src/glass/index.html` が削除されている
-- [ ] `src/character/index.html` が削除されている
-- [ ] `src/character-glass/index.html` が削除されている
-- [ ] `src/area360/index.html` が削除されている
-- [ ] `src/ts/main-legacy.ts` が削除されている
+- [x] `src/simple/index.html` が削除されている
+- [x] `src/single/index.html` が削除されている
+- [x] `src/double/index.html` が削除されている
+- [x] `src/glass/index.html` が削除されている
+- [x] `src/character/index.html` が削除されている
+- [x] `src/character-glass/index.html` が削除されている
+- [x] `src/area360/index.html` が削除されている
+- [x] `src/ts/main-legacy.ts` が削除されている
 
 ### 2. 描画 / 実装
 
-- [ ] `src/ts/SincroLegacy/**` が削除されている
-- [ ] `src/area360/**` の Babylon.js 実装が削除されている
-- [ ] legacy ページ専用の CSS / 補助コードが整理されている
+- [x] `src/ts/SincroLegacy/**` が削除されている
+- [x] `src/area360/**` の Babylon.js 実装が削除されている
+- [x] legacy ページ専用の CSS / 補助コードが整理されている
 
 ### 3. 依存 / ビルド
 
-- [ ] `package.json` から `@babylonjs/*` 依存が削除されている
-- [ ] `vite.config.js` から legacy input が削除されている
-- [ ] `vite.config.js` から legacy vendor chunk 設定が削除されている
-- [ ] `tsconfig.modern.json` の legacy 向け `exclude` 群が削除後の構成に合わせて整理されている
-- [ ] `package.json` の scripts が削除後の構成に合わせて整理されている
-- [ ] `build:all` を残すか廃止するかが scripts レベルで確定している
+- [x] `package.json` から `@babylonjs/*` 依存が削除されている
+- [x] `vite.config.js` から legacy input が削除されている
+- [x] `vite.config.js` から legacy vendor chunk 設定が削除されている
+- [x] `tsconfig.modern.json` の legacy 向け `exclude` 群が削除後の構成に合わせて整理されている
+- [x] `package.json` の scripts が削除後の構成に合わせて整理されている
+- [x] `build:all` を残すか廃止するかが scripts レベルで確定している
 
 ## 実装タスク
 
@@ -130,3 +130,8 @@
 
 - 本タスクは `legacy を隔離する段階` を終え、`実体を削除する段階` へ進めるためのタスクである。
 - 実装変更時は `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` の更新が必要になる。
+- 2026-04-22 実施:
+  - `src/ts/SincroLegacy/**`、`src/area360/**`、Babylon.js 系 HTML エントリ、`src/ts/main-legacy.ts` を削除した。
+  - `sincromisor-frontend/package.json` と `package-lock.json` から `@babylonjs/*` 依存を削除し、`build:all` を廃止した。
+  - `vite.config.js` を modern 4 ページ専用へ整理し、README / 設計文書 / トップページを current state に同期した。
+  - `cd sincromisor-frontend && npm run build` の成功を確認した。

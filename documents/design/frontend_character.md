@@ -17,7 +17,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `VRMScene` / `VRMCharacterManager` / 各Bone/Face controller
   - `CharacterGaze` と自動ミュート連動
 - 非対象範囲:
-  - legacy（Babylon.js系）キャラクター実装
+  - 削除済みの Babylon.js legacy 実装
   - サーバー側音声合成・テロップ生成ロジック
 - LLM向け要約（3-5行）:
   - Start後、`VRMScene` が Three.js renderer/camera/light を初期化し、`VRMCharacterManager` がVRMをロードする。
