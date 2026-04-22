@@ -80,11 +80,9 @@ $ docker compose --profile full up -d
 * `360deg Camera (VRM 1.0)`: 360 動画/カメラ向けの experimental 導線
 * `Looking Glass (VRM 1.0 / Three.js)`: [Looking Glass](https://lookingglassfactory.com/looking-glass-portrait) 向けの experimental 導線
 
-`sincromisor-frontend/package.json` では、`npm run build` が `tsc -p tsconfig.modern.json && vite build` に対応しており、通常ビルドでは `simple-vrm`、`vrm360`、`looking-glass-vrm` を含む modern 系ページだけを出力します。`npm run build:all` は `tsc && SINCRO_BUILD_LEGACY=1 vite build` を使い、`vite.config.js` の legacy input を有効にして Babylon.js 系ページも含めて確認するための検証ビルドです。
+`sincromisor-frontend/package.json` では、`npm run build` が `tsc -p tsconfig.modern.json && vite build` に対応しており、通常ビルドでは `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` を出力します。
 
-Babylon.js ベースの旧ページ（`simple`、`glass`、`character`、`character-glass`、`area360`）は通常ビルドから外れており、legacy 検証時のみ `sincromisor-frontend` で `npm run build:all` を使って確認します。
-
-`single` / `double` は deprecated です。現行 standalone ページとしては凍結しており、通常利用や新規保守対象には含めません。
+Babylon.js ベースの旧ページ（`simple`、`glass`、`character`、`character-glass`、`area360`、`single`、`double`）と関連する legacy 実装は削除済みです。通常の開発・確認は `sincromisor-frontend` で `npm run build` を使ってください。
 
 ## キャラクターを差し替える
 

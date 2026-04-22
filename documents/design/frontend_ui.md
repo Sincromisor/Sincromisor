@@ -31,8 +31,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - VRMボーン制御や表情制御の詳細（`frontend_character.md` で扱う）
   - サーバー側のシグナリング実装詳細
 - LLM向け要約（3-5行）:
-  - エントリは `main-vrm.ts`（VRM系）と `main-legacy.ts`（legacy系）で分岐する。default build は VRM系優先で、`vite.config.js` の `buildInputMap()` は `SINCRO_BUILD_LEGACY=1` の時だけ legacy input を追加する。modern 側には `simple-vrm`, `vrm360`, `looking-glass-vrm` を含む。
-  - `SincroVRMInitializer` / `SincroInitializer` は `SincroAppController` を先行生成し、`start()` 呼び出しでアプリ起動を開始する（2026-02-22以降）。
+  - エントリは `main-vrm.ts`、`vrm360/main-vrm360.ts`、`looking-glass-vrm/main-vrm-looking-glass.ts` を中心とする modern 構成で、`vite.config.js` の build input も `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` の 4 ページに固定されている。
+  - `SincroVRMInitializer` / `SincroVRM360Initializer` / `SincroLookingGlassVRMInitializer` は `SincroAppController` を先行生成し、`start()` 呼び出しでアプリ起動を開始する。
   - `SincroController` は `start()` 内で UserMedia 取得、RTC開始、CharacterGaze開始を統括する。マイク入力 selector の `audioInputDeviceId` は起動時の `getUserMedia` 制約と、実行中の再取得 + `RTCRtpSender.replaceTrack()` の両方へ反映される。視線用カメラ selector の `videoInputDeviceId` は CharacterGaze 専用カメラ取得へ反映され、実行中変更時も preview/AutoMute を維持しながら再初期化される。
   - チャット文は `text_ch`、テロップは `telop_ch` で受信し、`TalkManager` 経由でUI/口形同期に渡す。
   - React への段階移行計画は `documents/design/frontend_migration_react.md` を参照（本書は現行UI設計の正本）。
@@ -122,7 +122,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - ブラウザ単体で、対話UI・音声I/O・状態確認を一体で扱う
   - モード別UI（simple/legacy/実験系）の共通部品化
 - 現状の問題点:
-  - legacy系とVRM系が共存し、エントリや依存関係を誤ると回帰しやすい
+  - React 移行と従来 DOM/UI manager の併存期間があり、責務境界を誤ると回帰しやすい
   - `SincroController` に UI / RTC / CharacterGaze の結線が集中しやすく、段階的なUI差し替え時の境界が見えにくい
 - 採用理由:
   - Vite MPA + HTML partial により、ページ分割と共通UI部品の両立が可能
@@ -131,20 +131,17 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - WebRTCの接続先は `/api/v1/RTCSignalingServer/config.json` の取得結果に依存
   - React段階移行中は、現行UI manager と新UIの併存期間が発生しうる（詳細は `frontend_migration_react.md`）
   - React移行で追加するUIコードは原則 `TypeScript`（`.ts` / `.tsx`）で実装し、props/state/event payload の型を明示する
-  - Babylon/legacy ページは通常導線・通常ビルドから切り離して高速に置換を進める方針（必要時のみ legacy build）
+  - Babylon.js legacy は削除済みであり、今後の UI/ビルド変更は modern ページ群だけを対象にする
 
-### 3.1 サポート範囲とページ分類（2026-04-21）
+### 3.1 サポート範囲とページ分類（2026-04-22）
 
 - 分類ルール:
   - `modern`: 通常利用者向け導線に含め、`npm run build` の対象として継続保守するページ
   - `experimental`: 通常ビルドには含めるが、環境依存や未成熟な制約を明示した上で限定導線として扱うページ
-  - `legacy`: `npm run build:all` でのみ確認する Babylon.js 系の検証ページ
-  - `deprecated`: 新規保守対象から外し、即時凍結する退役候補ページ
 - build 運用:
   - 日常開発・CI 相当の確認は `npm run build` を基準とし、`main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` を守る
-  - legacy 検証が必要なときだけ `npm run build:all` を使い、Babylon.js 系ページの回帰確認を行う
   - `npm run build` は `tsc -p tsconfig.modern.json && vite build` を使い、modern 系ソースだけを型チェック対象にする
-  - `npm run build:all` は `tsc && SINCRO_BUILD_LEGACY=1 vite build` を使い、`simple`、`single`、`double`、`glass`、`character`、`character-glass`、`area360` を Vite input に追加する
+  - Babylon.js 系の `simple`、`single`、`double`、`glass`、`character`、`character-glass`、`area360` と `main-legacy.ts` は `TASK-3014` で削除済み
 
 | ページ | build 導線 | 描画 / UI 基盤 | 主用途 | 分類 | 保守方針 |
 | --- | --- | --- | --- | --- | --- |
@@ -152,23 +149,11 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | `src/simple-vrm/index.html` | `npm run build` | Three.js + VRM1.0 + React UI | 通常会話の正規導線 | `modern` | CSS 基盤、React 境界整理、README の主対象として守る |
 | `src/vrm360/index.html` | `npm run build` | Three.js + VRM1.0 + React UI | 360 動画 / カメラ系の拡張導線 | `experimental` | 通常ビルドには含めるが、環境依存前提で検証範囲を限定する |
 | `src/looking-glass-vrm/index.html` | `npm run build` | Three.js + VRM1.0 + React UI + `@lookingglass/webxr` | Looking Glass の新正規候補 | `experimental` | public 導線には出すが、対応デバイス前提の実験導線として扱う |
-| `src/simple/index.html` | `npm run build:all` | Babylon.js legacy + 既存 dialog/body | 旧 simple 導線の比較確認 | `legacy` | VRM1.0 正規導線との差分確認用に短期維持し、通常導線からは外す |
-| `src/glass/index.html` | `npm run build:all` | Babylon.js legacy | 旧 Looking Glass 導線の退役前確認 | `legacy` | `looking-glass-vrm` の fallback 検証に限定する |
-| `src/character/index.html` | `npm run build:all` | Babylon.js legacy | キャラクター描画単体の旧テスト | `legacy` | Babylon.js 側のレンダラ確認専用とし、通常利用者向けには案内しない |
-| `src/character-glass/index.html` | `npm run build:all` | Babylon.js legacy | Looking Glass + character の旧テスト | `legacy` | `looking-glass-vrm` 移行後の比較確認専用に縮退する |
-| `src/area360/index.html` | `npm run build:all` | Babylon.js legacy | 360 系の旧実験導線 | `legacy` | 内部検証専用。通常導線や CSS/React 整理対象には含めない |
-| `src/single/index.html` | `npm run build:all` | Babylon.js legacy | 旧単画面レイアウト | `deprecated` | 即時凍結し、現行 standalone ページとしては保守しない |
-| `src/double/index.html` | `npm run build:all` | Babylon.js legacy | 旧二画面レイアウト | `deprecated` | 即時凍結し、現行 standalone ページとしては保守しない |
 
-- `single` / `double` の判断:
-  - `deprecated` とするのは `single` / `double` のみとし、通常利用者向け導線・通常ビルド・README の主導線から外す
-  - `simple` / `glass` / `character` / `character-glass` / `area360` は `legacy` として `npm run build:all` でのみ回帰確認する
-  - 互換維持のために CSS や React の新方針を追従させない
-  - 将来レイアウト需要が再発した場合は、`simple-vrm` 系の overlay / scene layout として再設計し、現行ページを延命しない
 - 後続タスクへの前提:
   - `TASK-3010` の CSS 基盤対象は `index`、`simple-vrm`、`vrm360`、`looking-glass-vrm`
   - `TASK-3011` の React 境界整理対象も同じく modern / experimental の 4 ページを優先する
-  - Babylon 退役判断では `single` / `double` を最初の削除候補、`simple` / `glass` / `character` / `character-glass` / `area360` を検証専用 legacy として扱う
+  - Babylon.js legacy は削除済みのため、以後の UI 整理は modern / experimental の 4 ページに集中する
 
 ## 4. 用語・略語
 
@@ -229,8 +214,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 ## 6. アーキテクチャ概要
 
 - コンポーネント一覧:
-  - エントリ: `main-vrm.ts`, `main-legacy.ts`
-  - 初期化: `SincroVRMInitializer`, `SincroInitializer`
+  - エントリ: `main-vrm.ts`, `vrm360/main-vrm360.ts`, `looking-glass-vrm/main-vrm-looking-glass.ts`
+  - 初期化: `SincroVRMInitializer`, `SincroVRM360Initializer`, `SincroLookingGlassVRMInitializer`
   - 制御: `SincroController`, `RTCTalkClient`, `TalkManager`
   - UI: `DialogManager`, `ChatMessageManager`, `DebugConsoleManager`, `PopManager`
 - 責務分割:
@@ -249,9 +234,9 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 | 区分 | 対象 | 判断 |
 | --- | --- | --- |
-| 追加不要 | `src/ts/SincroController.ts`, `src/ts/App/SincroAppController.ts`, `src/ts/SincroVRM/SincroVRMInitializer.ts`, `src/ts/SincroLegacy/SincroInitializer.ts`, `src/ts/SincroVRM/SincroVRM360Initializer.ts`, `src/ts/SincroVRM/SincroLookingGlassVRMInitializer.ts` | 起動順序、存在意図、UI/RTC/scene の責務境界を示す入口コメントが既にあり、このタスクで増やすと重複ノイズが増える |
+| 追加不要 | `src/ts/SincroController.ts`, `src/ts/App/SincroAppController.ts`, `src/ts/SincroVRM/SincroVRMInitializer.ts`, `src/ts/SincroVRM/SincroVRM360Initializer.ts`, `src/ts/SincroVRM/SincroLookingGlassVRMInitializer.ts` | 起動順序、存在意図、UI/RTC/scene の責務境界を示す入口コメントが既にあり、このタスクで増やすと重複ノイズが増える |
 | 追加不要 | `src/react/simple-vrm/useSimpleVrmPanelState.ts`, `src/react/dialog/useConfigurationDialogSettingsState.ts`, `src/react/app/subscribeActiveSincroAppEvents.ts`, `src/react/app/useSincroMediaDeviceState.ts`, `src/ts/MediaDevices/SincroMediaDeviceService.ts` | hook / service / bridge utility としての役割、どこへ責務を寄せるかがコメントから追える |
-| 追加対象 | `src/ts/main-vrm.ts`, `src/ts/main-legacy.ts`, `src/vrm360/main-vrm360.ts`, `src/looking-glass-vrm/main-vrm-looking-glass.ts` | HTML から直接読まれる薄いエントリだが、どのページ群の起動入口で何を initializer へ委譲しているかがファイル単体では分かりにくかった |
+| 追加対象 | `src/ts/main-vrm.ts`, `src/vrm360/main-vrm360.ts`, `src/looking-glass-vrm/main-vrm-looking-glass.ts` | HTML から直接読まれる薄いエントリだが、どのページ群の起動入口で何を initializer へ委譲しているかがファイル単体では分かりにくかった |
 | 追加対象 | `src/simple-vrm/main-react.tsx`, `src/vrm360/main-react.tsx`, `src/looking-glass-vrm/main-react.tsx` | 動的 import による React island の mount 入口だが、TS initializer との責務分離とページ別差分の置き場所が読み取りにくかった |
 
 - 本タスクの判断:
@@ -299,7 +284,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 変更時に同時確認が必要なファイル:
   - RTCペイロード変更: `RTCTalkClient.ts` とサーバー側 `RTCSignalingServer.py`
   - ダイアログ項目変更: `DialogManager.ts` と `src/partials/configurationDialog.html`
-  - 起動前 dialog の起動/停止導線変更: `SincroAppController.ts` / `SincroVRMInitializer.ts` / `SincroLegacy/SincroInitializer.ts`
+  - 起動前 dialog の起動/停止導線変更: `SincroAppController.ts` / `SincroVRMInitializer.ts`
   - 音声入力制約変更: `SincroController.ts` と `RTC/UserMediaManager.ts`
   - チャット表示変更: `ChatMessageManager.ts` と `src/styles/sincroChatBox.css`
 
@@ -307,7 +292,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - 適用対象:
   - `TASK-3009` の分類に従い、CSS 基盤の一次保守対象は `index`、`simple-vrm`、`vrm360`、`looking-glass-vrm` とする
-  - Babylon.js 系 `legacy` / `deprecated` ページは互換維持のために残すが、新しい React UI 規約の追従対象には含めない
+  - 削除済みの Babylon.js legacy ページ向け CSS は追従対象から外し、残存する共通 CSS だけを modern ページの互換レイヤとして扱う
 - レイヤ方針:
   - `src/styles/uiFoundation.css` を CSS 基盤の入口とし、`@layer legacy, tokens, foundation, components, utilities;` を宣言する
   - `tokens`: 色、余白、角丸、影、タイポ、z-index の共通トークンを置く。React UI ではハードコード値を増やさず、まず token へ寄せる
@@ -335,7 +320,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `global foundation`: `src/styles/uiFoundation.css`
   - `modern component CSS`: `src/react/settings-shell/settingsShell.css`, `src/react/dialog/configurationDialogSettings.css`
   - `legacy shared CSS`: `src/styles/common.css`, `src/styles/sincroConfigurationDialog.css`
-  - `legacy page / box CSS`: `src/styles/index.css`, `src/styles/simple.css`, `src/styles/single.css`, `src/styles/double.css`, `src/styles/sincro*.css`, `src/area360/area360.css`
+  - `page / box CSS`: `src/styles/index.css`, `src/styles/simple.css`, `src/styles/sincro*.css`
 - 後続移行の前提:
   - 新しい設定 UI を追加する時は、まず `SettingsShell` 既存 token を再利用し、足りない値だけ `uiFoundation.css` へ追加する
   - legacy CSS を修正する場合も、`modern component CSS` の見た目責務を取り戻さない
@@ -402,15 +387,13 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 環境変数:
   - フロント単体では `.env` 依存は薄く、主にサーバー配布configを利用
 - 設定ファイル:
-  - `sincromisor-frontend/vite.config.js`（MPA entry / partial plugin。`SINCRO_BUILD_LEGACY=1` 時のみ legacy input を追加）
-  - `sincromisor-frontend/tsconfig.modern.json`（通常 build 用。legacy/Babylon 系ソースを除外）
+  - `sincromisor-frontend/vite.config.js`（MPA entry / partial plugin。modern 4 ページを build input として定義）
+  - `sincromisor-frontend/tsconfig.modern.json`（通常 build 用）
 - 起動方法:
   - `cd sincromisor-frontend && npm run dev`
 - デプロイ/ローカル実行手順:
   - 通常確認: `npm run build`
-  - 上記は `tsc -p tsconfig.modern.json && vite build` を実行し、`dist/` に modern 系ページだけを出力する
-  - legacy/Babylon 含む確認が必要なときのみ: `npm run build:all`
-  - 上記は `tsc && SINCRO_BUILD_LEGACY=1 vite build` を実行し、legacy / deprecated ページも含めて出力する
+  - 上記は `tsc -p tsconfig.modern.json && vite build` を実行し、`dist/` に `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` を出力する
   - `public/mediapipe-wasm` と `public/3rd_party/blaze_face_short_range.tflite` の配置が必要
   - 学習VAD利用時は `public/3rd_party/silero-vad/silero_vad.onnx` の配置が必要（`onnxruntime-web` はnpm依存でバンドル）
 - 互換性に影響する設定変更:

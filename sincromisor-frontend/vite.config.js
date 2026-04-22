@@ -5,27 +5,13 @@ import { readFileSync } from 'fs';
 
 const contents_src = resolve(__dirname, 'src');
 const partials_dir = resolve(__dirname, 'src/partials');
-const enableLegacyPages = process.env.SINCRO_BUILD_LEGACY === '1';
 
 function buildInputMap() {
-    const modernInputs = {
+    return {
         main: resolve(contents_src, 'index.html'),
         simple_vrm: resolve(contents_src, 'simple-vrm/index.html'),
         vrm360: resolve(contents_src, 'vrm360/index.html'),
         looking_glass_vrm: resolve(contents_src, 'looking-glass-vrm/index.html'),
-    };
-    if (!enableLegacyPages) {
-        return modernInputs;
-    }
-    return {
-        ...modernInputs,
-        simple: resolve(contents_src, 'simple/index.html'),
-        single: resolve(contents_src, 'single/index.html'),
-        double: resolve(contents_src, 'double/index.html'),
-        glass: resolve(contents_src, 'glass/index.html'),
-        character: resolve(contents_src, 'character/index.html'),
-        character_glass: resolve(contents_src, 'character-glass/index.html'),
-        area360: resolve(contents_src, 'area360/index.html'),
     };
 }
 
@@ -80,61 +66,52 @@ export default defineConfig({
         rollupOptions: {
             input: buildInputMap(),
             output: {
-                manualChunks: enableLegacyPages
-                    ? {
-                        vendor: [
-                            '@babylonjs/core'
-                        ]
+                manualChunks: (id) => {
+                    if (!id.includes('node_modules')) {
+                        return undefined;
                     }
-                    : (id) => {
-                        if (!id.includes('node_modules')) {
-                            return undefined;
-                        }
-                        // Three/VRM 系と React/UI 系を分け、初期ロードの差分更新時に再利用されやすくする。
-                        // three/examples は three 本体と分離し、更新頻度の低い補助モジュール群の再利用性を上げる。
-                        if (id.includes('/three/examples/')) {
-                            return 'vendor_three_examples';
-                        }
-                        if (id.includes('@pixiv/three-vrm-animation')) {
-                            return 'vendor_vrm_animation';
-                        }
-                        if (id.includes('@pixiv/three-vrm')) {
-                            return 'vendor_vrm';
-                        }
-                        if (id.includes('/three/')) {
-                            return 'vendor_three';
-                        }
-                        if (
-                            id.includes('/react/') ||
-                            id.includes('/react-dom/') ||
-                            id.includes('@vitejs/plugin-react-swc')
-                        ) {
-                            return 'vendor_react';
-                        }
-                        if (id.includes('/@mediapipe/')) {
-                            return 'vendor_mediapipe';
-                        }
-                        if (id.includes('/onnxruntime-web/')) {
-                            return 'vendor_onnxruntime';
-                        }
-                        if (id.includes('@lookingglass/webxr')) {
-                            return 'vendor_looking_glass';
-                        }
-                        if (id.includes('/@microsoft/fetch-event-source/')) {
-                            return 'vendor_network';
-                        }
-                        if (id.includes('/hls.js/')) {
-                            return 'vendor_hls';
-                        }
-                        if (id.includes('/js-yaml/')) {
-                            return 'vendor_yaml';
-                        }
-                        return 'vendor_misc';
+                    // Three/VRM 系と React/UI 系を分け、初期ロードの差分更新時に再利用されやすくする。
+                    // three/examples は three 本体と分離し、更新頻度の低い補助モジュール群の再利用性を上げる。
+                    if (id.includes('/three/examples/')) {
+                        return 'vendor_three_examples';
                     }
+                    if (id.includes('@pixiv/three-vrm-animation')) {
+                        return 'vendor_vrm_animation';
+                    }
+                    if (id.includes('@pixiv/three-vrm')) {
+                        return 'vendor_vrm';
+                    }
+                    if (id.includes('/three/')) {
+                        return 'vendor_three';
+                    }
+                    if (
+                        id.includes('/react/') ||
+                        id.includes('/react-dom/') ||
+                        id.includes('@vitejs/plugin-react-swc')
+                    ) {
+                        return 'vendor_react';
+                    }
+                    if (id.includes('/@mediapipe/')) {
+                        return 'vendor_mediapipe';
+                    }
+                    if (id.includes('/onnxruntime-web/')) {
+                        return 'vendor_onnxruntime';
+                    }
+                    if (id.includes('@lookingglass/webxr')) {
+                        return 'vendor_looking_glass';
+                    }
+                    if (id.includes('/@microsoft/fetch-event-source/')) {
+                        return 'vendor_network';
+                    }
+                    if (id.includes('/hls.js/')) {
+                        return 'vendor_hls';
+                    }
+                    if (id.includes('/js-yaml/')) {
+                        return 'vendor_yaml';
+                    }
+                    return 'vendor_misc';
+                }
             }
         }
     }
 });
-
-// babylon.js Tree Shaking
-// https://doc.babylonjs.com/setup/frameworkPackages/es6Support#tree-shaking
