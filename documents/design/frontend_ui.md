@@ -253,7 +253,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `SincroController`: UserMedia取得前にダイアログ設定（NS/EC/AGC/騒音会場モード含む）を反映し、RTC開始/停止、DataChannel受信ハンドラ設定、CharacterGaze起動、DebugConsoleのVAD閾値変更をAudioWorkletへ中継
   - `RTCTalkClient`: Offer生成、`/offer` POST、Answer適用、DataChannel管理
   - `TalkManager`: text/telop受信を集約し、チャットUIと口形同期向け状態を維持
-  - `DialogManager`: 設定値の参照、タイトル反映、VRMファイル更新時のUI状態/通知（選択中VRM URL を含む状態は `DialogStateStore` に保持、DOM依存は `DialogBridgeDomAdapter` 経由）
+  - `DialogManager`: 設定値の参照、タイトル反映、VRMファイル更新時のUI状態/通知（選択中VRM URL を含む状態は `DialogStateStore` に保持し、dialog 本体の native API は `DialogBridgeDomAdapter`、ヘッダー文言更新は `HeaderTitleDomAdapter` に分離）
   - `DialogVrmFileService`: VRMファイル/サムネイルの Cache Storage 永続化
   - `DialogVrmWorkflowService`: VRMファイル選択/初期復元フロー（検証・保存・復元結果の組み立て）
   - `DialogNotificationService`: dialog 内 Pop 通知の橋渡し（`PopManager` ラッパー）
@@ -315,9 +315,9 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - modern React CSS では nesting を常用しない。root class から 1 段で読める flat selector を基本とし、親状態を拾う必要がある時だけ最小限に使う
   - `tag` 依存や深い子孫 selector による見た目制御は避け、component root から責務を追えることを優先する
 - 起動前設定 dialog の責務境界:
-  - `src/styles/sincroConfigurationDialog.css` は dialog 要素、bridge DOM、legacy fieldset フォールバックの維持だけを担当する
-  - `src/react/dialog/configurationDialogSettings.css` は `reactPrimarySettingsEnabled` 時の dialog surface、余白、footer、category card、SettingsShell 上書きなど React 主導 UI の見た目を担当する
-  - bridge DOM 非表示の切替は legacy 側に残してよいが、暗色面や backdrop のような modern 見た目は React 側に寄せる
+  - `src/styles/sincroConfigurationDialog.css` は dialog 要素と legacy fieldset フォールバックの最低限維持だけを担当する
+  - `src/react/dialog/configurationDialogSettings.css` は dialog surface、backdrop、余白、footer、category card、SettingsShell 上書きなど React 主導 UI の見た目を担当する
+  - file picker と drag & drop は `ConfigurationDialogSettingsPanel` の React 正規経路で扱い、`DialogBridgeDomAdapter` は `HTMLDialogElement` の open/close と close-interaction 制御だけに限定する
 - CSS ファイル分類:
   - `global foundation`: `src/styles/uiFoundation.css`
   - `modern component CSS`: `src/react/settings-shell/settingsShell.css`, `src/react/dialog/configurationDialogSettings.css`
@@ -566,6 +566,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-19 | 起動前 dialog を `初回セットアップウィザード` として再定義。`トップへ戻る` / `閉じる` / `キャンセル` の役割差、ESC・背景クリック禁止、開始ボタンの前進文言を設計へ反映 |
 | 2026-04-19 | 初回セットアップ dialog のサイズ基準を `960-1120px x 620-780px`、右側設定パネルの幅基準を `420-560px` として追記。`SettingsShell` の左ナビ幅、`開発者向け` の分離見出し、カテゴリ内セクション面、狭幅時の縮退順序を明文化 |
 | 2026-04-22 | `TASK-3015` 対応として Debug Console を React 正式描画へ移行。`debugConsole.html` は削除し、右側ツール領域の state owner を `rightToolPanelStore` + React menu shell へ移した。`DebugConsoleManager` は DOM manager から diagnostics snapshot provider へ縮退した |
+| 2026-04-22 | `TASK-3016` 対応として起動前 dialog の bridge DOM を撤去。VRM file picker と drag & drop は `ConfigurationDialogSettingsPanel` の React 正規経路へ移し、`DialogBridgeDomAdapter` は `HTMLDialogElement` の open/close と Esc / backdrop close 抑止だけを扱う最小 platform adapter に縮退した |
 
 ## 15. 参照資料
 

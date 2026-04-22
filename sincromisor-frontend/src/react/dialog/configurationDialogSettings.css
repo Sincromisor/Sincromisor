@@ -1,6 +1,6 @@
 @layer components {
     /* 起動前 dialog の暗色面は React 側の見た目責務とし、legacy CSS から分離する。 */
-    dialog#configurationDialog.reactPrimarySettingsEnabled {
+    dialog#configurationDialog {
         width: min(1120px, calc(100vw - 48px));
         min-width: min(960px, calc(100vw - 48px));
         height: min(820px, calc(100dvh - 48px));
@@ -17,7 +17,7 @@
         overflow-y: hidden;
     }
 
-    dialog#configurationDialog.reactPrimarySettingsEnabled > div#sincroDialogReactSettingsRoot {
+    dialog#configurationDialog > div#sincroDialogReactSettingsRoot {
         width: 100%;
         height: 100%;
         margin: 0;
@@ -25,7 +25,7 @@
         box-sizing: border-box;
     }
 
-    dialog#configurationDialog.reactPrimarySettingsEnabled::backdrop {
+    dialog#configurationDialog::backdrop {
         background: var(--sincro-surface-dialog-backdrop);
         backdrop-filter: blur(2px);
     }
@@ -45,6 +45,24 @@
         border: 0;
         border-radius: 0;
         box-shadow: none;
+    }
+
+    .configurationDialogReactSettingsPanel.is-dragover {
+        outline: 2px dashed var(--sincro-color-accent-outline);
+        outline-offset: -12px;
+    }
+
+    .configurationDialogReactSettingsPanel__fileInput {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        border: 0;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
     }
 
     .configurationDialogReactSettingsPanel__vrmSection {
@@ -375,14 +393,14 @@
     /* 2カラム時の必要幅は 216 + 22 + 760px に dialog 内余白が加わるため、
        760px を確保できなくなる前に 1カラムへ切り替えて横ブレを防ぐ。 */
     @media (max-width: 1100px) {
-        dialog#configurationDialog.reactPrimarySettingsEnabled {
+        dialog#configurationDialog {
             min-height: 0;
             height: auto;
             max-height: calc(100dvh - 24px);
             overflow-y: auto;
         }
 
-        dialog#configurationDialog.reactPrimarySettingsEnabled > div#sincroDialogReactSettingsRoot {
+        dialog#configurationDialog > div#sincroDialogReactSettingsRoot {
             height: auto;
             min-height: 100%;
             padding: var(--sincro-space-600) var(--sincro-space-550) var(--sincro-space-550);
@@ -442,7 +460,7 @@
     }
 
     @media (max-width: 960px) {
-        dialog#configurationDialog.reactPrimarySettingsEnabled {
+        dialog#configurationDialog {
             width: calc(100vw - 24px);
             min-width: calc(100vw - 24px);
             max-width: calc(100vw - 24px);

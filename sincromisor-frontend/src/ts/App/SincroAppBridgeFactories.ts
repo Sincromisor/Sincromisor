@@ -29,11 +29,11 @@ export function createSincroAppDialogBridge(params: {
     // 呼び出し側は DialogManager 実装の詳細を意識せず AppController.dialog 経由で扱える。
     const { dialogManager, popManager } = params;
     return {
-        setReactPrimarySettingsEnabled: (enabled) => {
-            dialogManager.setReactPrimarySettingsEnabled(enabled);
+        applySelectedVrmFile: (file) => {
+            dialogManager.applySelectedVrmFile(file);
         },
-        openVrmFilePicker: () => {
-            dialogManager.openVrmFilePicker();
+        setVrmDragOver: (isDragOver) => {
+            dialogManager.setVrmDragOver(isDragOver);
         },
         setPopDomRenderingEnabled: (enabled) => {
             popManager.setDialogPopDomRenderingEnabled(enabled);

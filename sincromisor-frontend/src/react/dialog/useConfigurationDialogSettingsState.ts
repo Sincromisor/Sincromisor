@@ -133,8 +133,6 @@ export function useConfigurationDialogSettingsState() {
     });
 
     useEffect(() => {
-        // 起動前 dialog は React を主表示にするため、mount 中は bridge DOM を非表示化する。
-        SincroAppController.getCurrent()?.dialog.setReactPrimarySettingsEnabled(true);
         const eventHandlers: ConfigurationDialogEventHandlerMap = {
             lifecycle: (event) => {
                 setLifecycleState(event.state);
@@ -182,9 +180,6 @@ export function useConfigurationDialogSettingsState() {
                 });
                 setStartupSettingsStatus(controller.state.getStartupSettingsStatus());
             },
-            onBeforeSubscribe: (controller) => {
-                controller.dialog.setReactPrimarySettingsEnabled(true);
-            },
             onEvent: (event: SincroAppEvent) => {
                 const handler = eventHandlers[event.type] as ((value: SincroAppEvent) => void) | undefined;
                 handler?.(event);
@@ -192,8 +187,6 @@ export function useConfigurationDialogSettingsState() {
         });
         return () => {
             unsubscribeActiveController();
-            // unmount 時に bridge DOM を戻しておく（フォールバック/開発時の安全策）。
-            SincroAppController.getCurrent()?.dialog.setReactPrimarySettingsEnabled(false);
         };
     }, []);
 
@@ -205,17 +198,16 @@ export function useConfigurationDialogSettingsState() {
         applySettings({ talkMode: nextTalkMode });
     };
 
-    const openVrmFilePicker = (): void => {
-        // file input 自体は bridge DOM に残しているので、操作は AppController.dialog へ委譲する。
-        currentController?.dialog.openVrmFilePicker();
+    const applySelectedVrmFile = (file: File): void => {
+        currentController?.dialog.applySelectedVrmFile(file);
+    };
+
+    const setVrmDragOver = (isDragOver: boolean): void => {
+        currentController?.dialog.setVrmDragOver(isDragOver);
     };
 
     const startApp = (): void => {
         currentController?.start();
-    };
-
-    const closeDialog = (): void => {
-        currentController?.dialog.close();
     };
 
     return {
@@ -235,8 +227,8 @@ export function useConfigurationDialogSettingsState() {
         refreshDevices,
         applySettings,
         changeTalkMode,
-        openVrmFilePicker,
+        applySelectedVrmFile,
+        setVrmDragOver,
         startApp,
-        closeDialog,
     };
 }

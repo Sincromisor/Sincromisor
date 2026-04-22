@@ -2,8 +2,8 @@
 // 呼び出し側（initializer / React hook）で責務を読みやすくするため、実装から分離して管理する。
 
 export type SincroAppDialogBridge = {
-    setReactPrimarySettingsEnabled: (enabled: boolean) => void;
-    openVrmFilePicker: () => void;
+    applySelectedVrmFile: (file: File) => void;
+    setVrmDragOver: (isDragOver: boolean) => void;
     setPopDomRenderingEnabled: (enabled: boolean) => void;
     close: () => void;
     open: () => void;

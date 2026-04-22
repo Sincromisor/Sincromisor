@@ -14,6 +14,7 @@ import { DialogVrmFileService } from "./DialogVrmFileService";
 import { DialogVrmWorkflowService } from "./DialogVrmWorkflowService";
 import { DialogNotificationService } from "./DialogNotificationService";
 import { DialogEventHub } from "./DialogEventHub";
+import { HeaderTitleDomAdapter } from "./HeaderTitleDomAdapter";
 
 export type { DialogSettingsUiHints, DialogSettingsUiState } from "./DialogSettingsPolicy";
 export type DialogVrmUiState = DialogVrmUiStateValue;
@@ -26,6 +27,7 @@ export class DialogManager {
     private readonly stateStore = new DialogStateStore();
     private readonly eventHub = new DialogEventHub();
     private readonly dom = new DialogBridgeDomAdapter();
+    private readonly headerDom = new HeaderTitleDomAdapter();
     private readonly settingsPolicy = new DialogSettingsPolicy();
     private readonly mediaDeviceService = SincroMediaDeviceService.getInstance();
     private readonly vrmFileService = new DialogVrmFileService();
@@ -46,7 +48,6 @@ export class DialogManager {
         // store 初期化 -> DOMイベント配線 -> ヘッダー同期 -> dialog 表示 -> 前回VRM復元 の順で起動する。
         this.initializeDialogStateDefaults();
         this.bindMediaDeviceState();
-        this.bindDialogDomEvents();
         this.updateTitleText();
         this.showDialog();
         this.loadVrmFile().then(() => {
@@ -57,7 +58,7 @@ export class DialogManager {
     }
 
     showDialog(): void {
-        this.dom.ensureDialogCloseInteractions(() => this.closeDialog());
+        this.dom.ensureDialogCloseInteractions(() => this.handleDialogClosedFromDom());
         const opened = this.dom.showDialog();
         if (opened) {
             // Dialog open 状態は React 側の dialog UI と同期するため、DOM操作成功後に通知する。
@@ -73,13 +74,14 @@ export class DialogManager {
         }
     }
 
-    // React 移行中は既存入力DOMを橋渡し用に残しつつ、表示だけを段階的に置換する。
-    setReactPrimarySettingsEnabled(enabled: boolean): void {
-        this.dom.setReactPrimarySettingsEnabled(enabled);
+    // React dialog から選択された VRM ファイルを正式経路として適用する。
+    applySelectedVrmFile(file: File): void {
+        this.updateVrmFile(file);
     }
 
-    openVrmFilePicker(): void {
-        this.dom.openVrmFilePicker();
+    // dragover 表示は React が担当しつつ、状態の正本は DialogStateStore に残す。
+    setVrmDragOver(isDragOver: boolean): void {
+        this.updateVrmDragOverState(isDragOver);
     }
 
     getSelectedVrmUrl(): string {
@@ -288,7 +290,7 @@ export class DialogManager {
     }
 
     updateTitleText(): void {
-        this.dom.setHeaderTitle(this.getTitleText());
+        this.headerDom.setHeaderTitle(this.getTitleText());
     }
 
     updateCharacterStatus(available: boolean): void {
@@ -361,14 +363,6 @@ export class DialogManager {
         );
     }
 
-    private bindDialogDomEvents(): void {
-        this.dom.bindDialogDragAndDrop(
-            (isDragOver) => this.setVrmDragOver(isDragOver),
-            (file) => this.updateVrmFile(file),
-        );
-        this.dom.bindVrmFileInput((file) => this.updateVrmFile(file));
-    }
-
     private mapBooleanSettingId(id: string): Parameters<DialogStateStore["set"]>[0] | null {
         const mapping: Record<string, Parameters<DialogStateStore["set"]>[0] | undefined> = {
             enableCharacter: "enableCharacter",
@@ -427,14 +421,13 @@ export class DialogManager {
         await this.vrmFileService.clearVrmThumbnailCache();
     }
 
-    private setVrmDragOver(isDragOver: boolean): void {
+    private updateVrmDragOverState(isDragOver: boolean): void {
         const current = this.stateStore.getDialogVrmUiState();
         if (current.isDragOver === isDragOver) {
             return;
         }
-        this.dom.setDialogDragoverClass(isDragOver);
         this.stateStore.setDialogVrmDragOver(isDragOver);
-        // class 更新 -> state 更新 -> emit の順で揃え、React が追従した時に DOM側表示と食い違わないようにする。
+        // dragover は React UI 側で描画するため、state 更新後に購読イベントだけを流す。
         this.emitVrmUiStateChanged();
     }
 
@@ -450,6 +443,10 @@ export class DialogManager {
 
     private emitVrmUiStateChanged(): void {
         this.eventHub.emitCurrentVrmUiState(() => this.stateStore.getDialogVrmUiState());
+    }
+
+    private handleDialogClosedFromDom(): void {
+        this.setDialogOpen(false);
     }
 
     private setDialogOpen(isOpen: boolean): void {

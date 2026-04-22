@@ -4,12 +4,4 @@
         </div>
     </div>
     <div id="sincroDialogReactSettingsRoot"></div>
-    <!--
-      React 移行中の bridge DOM。
-      DialogManager / 初期化コードは既存 selector(id) を参照するため、見た目は React に置き換えつつ DOM 自体は保持する。
-      React mount 失敗時のフォールバックとしても利用できるよう、reactPrimarySettingsEnabled 時のみ非表示にする。
-    -->
-    <div class="configurationDialog__bridgeDom" aria-hidden="true">
-        <input type="file" id="vrmFileInput" accept=".vrm">
-    </div>
 </dialog>
