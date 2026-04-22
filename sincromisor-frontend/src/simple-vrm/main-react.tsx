@@ -18,6 +18,9 @@ function mountAsync<TModule>(
 }
 
 mountAsync("sincroReactSettingsPanelRoot", () => import("../react/simple-vrm/SimpleVrmControlPanel"), (m) => <m.SimpleVrmControlPanel />);
+mountAsync("sincroReactSettingsPanelChromeRoot", () => import("../react/debug/RightToolSettingsChrome"), (m) => <m.RightToolSettingsChrome />);
+mountAsync("sincroDebugMenuRoot", () => import("../react/debug/RightToolMenu"), (m) => <m.RightToolMenu />);
+mountAsync("sincroDebugConsoleContainer", () => import("../react/debug/DebugConsole"), (m) => <m.DebugConsole />);
 mountAsync("sincroChatBox", () => import("../react/chat/SincroChatView"), (m) => <m.SincroChatView />);
 mountAsync("sincroFooterBox", () => import("../react/telop/SincroTelopView"), (m) => <m.SincroTelopView />);
 mountAsync("sincroDialogReactSettingsRoot", () => import("../react/dialog/ConfigurationDialogSettingsPanel"), (m) => <m.ConfigurationDialogSettingsPanel />);

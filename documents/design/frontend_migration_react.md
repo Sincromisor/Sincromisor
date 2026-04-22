@@ -221,8 +221,8 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - 実施内容:
     - 設定ダイアログを React コンポーネント化
     - チャット表示 UI を React 化（system/user/error 表示を再現）
-    - DebugConsole を React 化（段階的に。まずログと主要状態表示を優先）
-    - 既存 singleton manager を UIアダプタ化 or 縮退
+    - DebugConsole を React 化し、診断 view と diagnostics core を分離する
+    - 既存 singleton manager を UIアダプタ化 or diagnostics snapshot provider へ縮退
   - 受け入れ条件:
     - 既存の主要デバッグ表示（RTCログ/VAD状態/音声メーター）の欠落がない
     - イベント二重登録や二重描画が発生しない
@@ -986,6 +986,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 | 2026-02-22 | `Start Looking Glass` ボタンを Debug Console から削除し、`looking-glass-vrm` の実行導線を Control Panel に一本化。`LookingGlassXRController.attachToStartButton()` は Debug Console ボタン未配置を正常系として扱うよう変更し、Control Panel の custom event 操作のみでも error 状態にならないよう調整 |
 | 2026-02-22 | 右上 Debug メニューの `Open Startup Dialog` を削除（現行構成では利用価値が低く誤操作導線になりやすいため）。起動前設定の React dialog UI は枠線/背景/ヘッダー/開始ボタンの見た目を調整し、Control Panel / Debug Console とトーンを揃える方向で更新 |
 | 2026-02-22 | 起動前設定の Character / Gaze の既定値を見直し、通常ページでは `Character=ON` / `Gaze=ON` を初期値に変更。`VRM360`（360deg camera）では `SincroVRM360Initializer` で `enableCharacterGaze=false` を明示適用し、Gaze は既定OFF・Character は既定ONを維持 |
+| 2026-04-22 | `TASK-3015` で Debug Console を React 正式経路へ移行。`debugConsole.html` は削除し、右側ツール領域の state owner を `rightToolPanelStore` + React shell へ移した。`DebugConsoleManager` は DOM 直操作 owner ではなく、React view が購読する diagnostics snapshot provider と UI callback bridge に縮退した |
 
 ## 16. 参照資料
 
