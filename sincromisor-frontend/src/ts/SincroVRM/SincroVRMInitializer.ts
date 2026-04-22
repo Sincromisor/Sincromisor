@@ -2,6 +2,8 @@ import { SincroAppController } from "../App/SincroAppController";
 import { UserMediaManager } from "../RTC/UserMediaManager";
 import { VRMScene } from './VRMScene/VRMScene';
 
+const CHARACTER_BOX_SELECTOR = "div#sincroCharacterBox";
+
 // VRM1.0 系ページ（simple-vrm など）の初期化入口。
 // 起動前 dialog / chat / debug / RTC 停止配線は SincroAppController 経由に寄せ、ページ差分は scene 初期化に閉じる。
 export class SincroVRMInitializer {
@@ -12,6 +14,13 @@ export class SincroVRMInitializer {
     private generatedSystemIconURL: string | null = null;
     private appUiStarted = false;
     protected activeScene: VRMScene | null = null;
+
+    public static async bootstrap<TInitializer extends SincroVRMInitializer>(
+        this: new () => TInitializer,
+    ): Promise<TInitializer> {
+        await SincroVRMInitializer.waitForCharacterBoxRoot();
+        return new this();
+    }
 
     constructor() {
         this.charCanvas = this.getCharCanvasRoot();
@@ -49,10 +58,38 @@ export class SincroVRMInitializer {
         }
     }
 
+    private static waitForCharacterBoxRoot(timeoutMs = 5000): Promise<HTMLDivElement> {
+        const existingCharCanvas = document.querySelector<HTMLDivElement>(CHARACTER_BOX_SELECTOR);
+        if (existingCharCanvas) {
+            return Promise.resolve(existingCharCanvas);
+        }
+
+        const observationTarget = document.body ?? document.documentElement;
+        return new Promise((resolve, reject) => {
+            const observer = new MutationObserver(() => {
+                const charCanvas = document.querySelector<HTMLDivElement>(CHARACTER_BOX_SELECTOR);
+                if (!charCanvas) {
+                    return;
+                }
+
+                window.clearTimeout(timeoutId);
+                observer.disconnect();
+                resolve(charCanvas);
+            });
+            const timeoutId = window.setTimeout(() => {
+                observer.disconnect();
+                reject(new Error(`${CHARACTER_BOX_SELECTOR} is not found.`));
+            }, timeoutMs);
+
+            // React app shell が非同期に mount しても拾えるよう、DOM 追加を監視する。
+            observer.observe(observationTarget, { childList: true, subtree: true });
+        });
+    }
+
     private getCharCanvasRoot(): HTMLDivElement {
-        const charCanvas: HTMLDivElement | null = document.querySelector('div#sincroCharacterBox');
+        const charCanvas = document.querySelector<HTMLDivElement>(CHARACTER_BOX_SELECTOR);
         if (!charCanvas) {
-            throw 'canvas#sincroCharacterBox__canvas is not found.';
+            throw new Error(`${CHARACTER_BOX_SELECTOR} is not found.`);
         }
         return charCanvas;
     }

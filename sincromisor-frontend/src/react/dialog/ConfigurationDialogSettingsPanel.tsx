@@ -164,7 +164,6 @@ export function ConfigurationDialogSettingsPanel() {
                 accept=".vrm"
                 className="configurationDialogReactSettingsPanel__fileInput"
                 tabIndex={-1}
-                aria-hidden="true"
                 onChange={handleVrmFileInputChange}
             />
             <SettingsShell
