@@ -1,34 +1,18 @@
 import { useSyncExternalStore } from "react";
-import type { SincroAppDebugBridge } from "../../ts/App/SincroAppBridges";
-import { SincroAppController } from "../../ts/App/SincroAppController";
 import {
     DEFAULT_RIGHT_TOOL_PANEL_STATE,
+    getSincroAppRightToolPanelService,
     type RightToolPanelState,
 } from "../../ts/App/SincroAppRightToolPanelService";
 
+const rightToolPanelService = getSincroAppRightToolPanelService();
+
 function getRightToolPanelStateSnapshot(): RightToolPanelState {
-    return SincroAppController.getCurrent()?.debug.getRightToolPanelState() ?? DEFAULT_RIGHT_TOOL_PANEL_STATE;
+    return rightToolPanelService.getState() ?? DEFAULT_RIGHT_TOOL_PANEL_STATE;
 }
 
 function subscribeRightToolPanelState(listener: () => void): () => void {
-    let unsubscribePanelState = () => { };
-    const unsubscribeController = SincroAppController.subscribeCurrent((controller) => {
-        unsubscribePanelState();
-        if (!controller) {
-            listener();
-            return;
-        }
-        unsubscribePanelState = controller.debug.subscribeRightToolPanelState(listener);
-        listener();
-    });
-    return () => {
-        unsubscribePanelState();
-        unsubscribeController();
-    };
-}
-
-function getCurrentDebugBridge(): SincroAppDebugBridge | null {
-    return SincroAppController.getCurrent()?.debug ?? null;
+    return rightToolPanelService.subscribe(listener);
 }
 
 export function useRightToolPanelState(): RightToolPanelState {
@@ -40,39 +24,39 @@ export function useRightToolPanelState(): RightToolPanelState {
 }
 
 // 右側ツール領域の UI操作は current AppController の debug bridge 経由にそろえる。
-// React component から App/service 実装へ直接届かないよう、この薄い helper を正規導線にする。
+// state owner 自体は App/service 側に置き、React からはこの薄い helper を正規導線にする。
 export function openRightToolMenu(): void {
-    getCurrentDebugBridge()?.openRightToolMenu();
+    rightToolPanelService.openMenu();
 }
 
 export function closeRightToolMenu(): void {
-    getCurrentDebugBridge()?.closeRightToolMenu();
+    rightToolPanelService.closeMenu();
 }
 
 export function toggleRightToolMenu(): void {
-    getCurrentDebugBridge()?.toggleRightToolMenu();
+    rightToolPanelService.toggleMenu();
 }
 
 export function showRightToolDebugPanel(): void {
-    getCurrentDebugBridge()?.showRightToolDebugPanel();
+    rightToolPanelService.showDebugPanel();
 }
 
 export function hideRightToolDebugPanel(): void {
-    getCurrentDebugBridge()?.hideRightToolDebugPanel();
+    rightToolPanelService.hideDebugPanel();
 }
 
 export function toggleRightToolDebugPanel(): void {
-    getCurrentDebugBridge()?.toggleRightToolDebugPanel();
+    rightToolPanelService.toggleDebugPanel();
 }
 
 export function showRightToolSettingsPanel(): void {
-    getCurrentDebugBridge()?.showRightToolSettingsPanel();
+    rightToolPanelService.showSettingsPanel();
 }
 
 export function hideRightToolSettingsPanel(): void {
-    getCurrentDebugBridge()?.hideRightToolSettingsPanel();
+    rightToolPanelService.hideSettingsPanel();
 }
 
 export function toggleRightToolSettingsPanel(): void {
-    getCurrentDebugBridge()?.toggleRightToolSettingsPanel();
+    rightToolPanelService.toggleSettingsPanel();
 }
