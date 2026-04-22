@@ -22,7 +22,6 @@ function blockPointerEvent(element: HTMLElement | null): (() => void) | null {
         "mousedown",
         "mouseup",
         "wheel",
-        "click",
     ];
     eventNames.forEach((eventName) => {
         element.addEventListener(eventName, stop);
