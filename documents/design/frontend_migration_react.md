@@ -23,6 +23,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - React は UI 層から段階導入し、RTC / Media / 3D 描画の既存 TypeScript 実装は当面再利用する。
   - Vite は継続、構成はまず MPA のまま維持し、全面再構成を避ける。
   - Babylon.js legacy は `TASK-3014` で削除済みで、現在の描画系は Three.js + VRM1.0 に統一されている。
+  - `TASK-3018` により modern 3D ページは `div#sincroPageRoot` 配下の単一 React app shell root へ集約され、HTML partial / partial plugin は撤去された。
   - Looking Glass は `@lookingglass/webxr` を継続利用しつつ、Three.js + VRM1.0 側へ移植する。
 
 ### 2.1 優先順位の更新（2026-02-22）
@@ -136,7 +137,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - VRM描画: `sincromisor-frontend/src/ts/SincroVRM/**`
   - Looking Glass: `sincromisor-frontend/src/ts/SincroVRM/LookingGlass/**`
 - 変更時に同時確認が必要なファイル:
-  - UIイベント移行時: `frontend_ui.md`, `src/partials/*.html`, `src/ts/UI/*.ts`
+  - UIイベント移行時: `frontend_ui.md`, `src/react/app-shell/*.tsx`, `src/ts/UI/*.ts`
   - RTC契約関連: `src/ts/RTC/RTCTalkClient.ts` と `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
   - Looking Glass移植時: `src/ts/SincroVRM/LookingGlass/**` と `src/ts/SincroVRM/**`
 
@@ -217,7 +218,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 
 - Phase 2: 共通UIの段階移行（React UIの実用化）
   - 目的:
-    - `partials` と `UI/*Manager.ts` 依存を減らし、UI保守性を上げる
+    - 分散 bootstrap と旧 DOM/UI manager 依存を減らし、UI保守性を上げる
   - 実施内容:
     - 設定ダイアログを React コンポーネント化
     - チャット表示 UI を React 化（system/user/error 表示を再現）
@@ -681,7 +682,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 
 - レビュー時の確認ポイント
   - `vite.config.js` の MPA entry が壊れていないか
-  - React plugin 追加で既存 HTML partial plugin の挙動に影響が出ていないか
+  - app shell bootstrap と page initializer の責務分離が崩れていないか
   - React mount 先と既存 DOM ID が衝突していないか
   - Start/Stop のイベント登録が二重化していないか
   - StrictMode の有無による副作用二重実行の影響を考慮しているか

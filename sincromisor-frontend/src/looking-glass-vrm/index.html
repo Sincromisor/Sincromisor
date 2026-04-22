@@ -1,18 +1,27 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 
 <head>
-  {{> baseHeader}}
-
+  <meta charset="UTF-8">
   <title>Sincromisor(Looking Glass VRM1.0)</title>
+  <link href="../styles/fonts.css" rel="stylesheet">
+  <link href="../styles/uiFoundation.css" rel="stylesheet">
+  <link href="../styles/common.css" rel="stylesheet">
+  <link href="../styles/sincroDebugConsole.css" rel="stylesheet">
+  <link href="../styles/sincroConfigurationDialog.css" rel="stylesheet">
+  <link href="../styles/sincroHeaderBox.css" rel="stylesheet">
+  <link href="../styles/sincroChatBox.css" rel="stylesheet">
+  <link href="../styles/sincroCharacterBox.css" rel="stylesheet">
+  <link href="../styles/sincroVideoBox.css" rel="stylesheet">
+  <link href="../styles/sincroBackgroundBox.css" rel="stylesheet">
+  <link href="../styles/sincroFooterBox.css" rel="stylesheet">
+  <link href="../styles/sincroPopBox.css" rel="stylesheet">
   <link href="../styles/simple.css" rel="stylesheet">
   <script type="module" src="./main-vrm-looking-glass.ts"></script>
 </head>
 
 <body>
-  {{> configurationDialog}}
-
-  {{> sincroBody}}
+  <div id="sincroPageRoot"></div>
   <script type="module" src="./main-react.tsx"></script>
 </body>
 

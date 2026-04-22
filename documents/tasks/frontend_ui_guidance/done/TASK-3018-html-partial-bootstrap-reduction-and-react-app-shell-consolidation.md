@@ -1,7 +1,7 @@
 # TASK-3018 HTML partial / bootstrap 縮退と React app shell 集約
 
 - 作成日: 2026-04-22
-- ステータス: Open
+- ステータス: Done
 - 優先度: Medium
 
 ## 目的
@@ -53,23 +53,23 @@
 
 ### 1. partial 縮退
 
-- [ ] `baseHeader.html` の扱いが整理されている
-- [ ] `sincroBody.html` の扱いが整理されている
-- [ ] `configurationDialog.html` と `debugConsole.html` の縮退結果が反映されている
-- [ ] `htmlPartialsPlugin` を残す理由があるか再評価されている
+- [x] `baseHeader.html` の扱いが整理されている
+- [x] `sincroBody.html` の扱いが整理されている
+- [x] `configurationDialog.html` と `debugConsole.html` の縮退結果が反映されている
+- [x] `htmlPartialsPlugin` を残す理由があるか再評価されている
 
 ### 2. bootstrap 共通化
 
-- [ ] `simple-vrm`、`vrm360`、`looking-glass-vrm` の React bootstrap 差分が整理されている
-- [ ] 共通 mount ロジックが shared 化されている
-- [ ] scene 差分と UI shell 差分が分離されている
-- [ ] mount topology の目標が `単一 app shell root` か `multi-root shared helper` かで明文化されている
+- [x] `simple-vrm`、`vrm360`、`looking-glass-vrm` の React bootstrap 差分が整理されている
+- [x] 共通 mount ロジックが shared 化されている
+- [x] scene 差分と UI shell 差分が分離されている
+- [x] mount topology の目標が `単一 app shell root` か `multi-root shared helper` かで明文化されている
 
 ### 3. app shell 集約
 
-- [ ] React app shell の責務が定義されている
-- [ ] ページごとの UI 起動構造が揃っている
-- [ ] 設計文書が current structure を反映している
+- [x] React app shell の責務が定義されている
+- [x] ページごとの UI 起動構造が揃っている
+- [x] 設計文書が current structure を反映している
 
 ## 実装タスク
 
@@ -111,3 +111,8 @@
 
 - 本タスクは `SPA 化` ではなく、`MPA のままでも app shell を整理して modern 化する` タスクである。
 - 実装変更時は `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` の更新が必要になる。
+- 実施結果:
+  - `src/react/app-shell/SincroPageAppShell.tsx` と `bootstrapSincroPageAppShell.tsx` を追加し、modern 3 ページの UI 骨格を単一 React root に集約した。
+  - `src/partials/*.html` と `vite.config.js` の `htmlPartialsPlugin` を削除し、各ページ HTML は `div#sincroPageRoot` を持つ最小エントリへ簡素化した。
+  - `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` を current structure に合わせて更新した。
+  - `cd sincromisor-frontend && npm run build` は 2026-04-22 に成功した。
