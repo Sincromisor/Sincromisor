@@ -1,6 +1,7 @@
 import type { ChatMessageManager } from "../UI/ChatMessageManager";
 import type { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import type { PopManager } from "../UI/PopManager";
+import { getSincroAppRightToolPanelService } from "./SincroAppRightToolPanelService";
 import type { TalkManager } from "../RTC/TalkManager";
 import type { SincroAppDialogFacade } from "./SincroAppDialogFacade";
 import type {
@@ -88,10 +89,41 @@ export function createSincroAppChatBridge(
 }
 
 export function createSincroAppDebugBridge(debugConsoleManager: DebugConsoleManager): SincroAppDebugBridge {
-    // 現時点の debug bridge は停止ボタン配線のみ。将来の debug UI 操作追加の拡張点として残す。
+    // Debug Console callback と右側ツール領域 state/service をまとめて公開し、
+    // React 側の UI manager/store 直接依存を減らす。
+    const rightToolPanelService = getSincroAppRightToolPanelService();
     return {
         setRTCStopButtonEventListener: (stopFunction) => {
             debugConsoleManager.setRTCStopButtonEventListener(stopFunction);
+        },
+        getRightToolPanelState: () => rightToolPanelService.getState(),
+        subscribeRightToolPanelState: (listener) => rightToolPanelService.subscribe(listener),
+        openRightToolMenu: () => {
+            rightToolPanelService.openMenu();
+        },
+        closeRightToolMenu: () => {
+            rightToolPanelService.closeMenu();
+        },
+        toggleRightToolMenu: () => {
+            rightToolPanelService.toggleMenu();
+        },
+        showRightToolDebugPanel: () => {
+            rightToolPanelService.showDebugPanel();
+        },
+        hideRightToolDebugPanel: () => {
+            rightToolPanelService.hideDebugPanel();
+        },
+        toggleRightToolDebugPanel: () => {
+            rightToolPanelService.toggleDebugPanel();
+        },
+        showRightToolSettingsPanel: () => {
+            rightToolPanelService.showSettingsPanel();
+        },
+        hideRightToolSettingsPanel: () => {
+            rightToolPanelService.hideSettingsPanel();
+        },
+        toggleRightToolSettingsPanel: () => {
+            rightToolPanelService.toggleSettingsPanel();
         },
     };
 }

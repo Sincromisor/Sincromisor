@@ -10,7 +10,7 @@ import {
 import { panelStyles } from "./panelStyles";
 import { useSimpleVrmPanelState } from "./useSimpleVrmPanelState";
 import { SettingsShell, SettingsStatusCard, SettingsSummaryGrid } from "../settings-shell/SettingsShell";
-import { showDebugConsole } from "../../ts/UI/rightToolPanelStore";
+import { showRightToolDebugPanel } from "../app/useRightToolPanelState";
 
 type SimpleVrmControlPanelProps = {
     title?: string;
@@ -85,7 +85,7 @@ export function SimpleVrmControlPanel({
             ? "開始前だけ効く項目は、必要な時だけこのページで調整します。"
             : "このページでは接続状態と開始・停止だけを確認します。";
     const openDeveloperConsole = (): void => {
-        showDebugConsole();
+        showRightToolDebugPanel();
     };
     const requestLookingGlassStart = (): void => {
         window.dispatchEvent(new CustomEvent("sincro:looking-glass-start-request"));

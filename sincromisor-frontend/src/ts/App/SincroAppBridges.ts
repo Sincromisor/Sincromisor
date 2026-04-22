@@ -29,6 +29,17 @@ export type SincroAppChatBridge = {
 
 export type SincroAppDebugBridge = {
     setRTCStopButtonEventListener: (stopFunction: () => void) => void;
+    getRightToolPanelState: () => import("./SincroAppRightToolPanelService").RightToolPanelState;
+    subscribeRightToolPanelState: (listener: () => void) => () => void;
+    openRightToolMenu: () => void;
+    closeRightToolMenu: () => void;
+    toggleRightToolMenu: () => void;
+    showRightToolDebugPanel: () => void;
+    hideRightToolDebugPanel: () => void;
+    toggleRightToolDebugPanel: () => void;
+    showRightToolSettingsPanel: () => void;
+    hideRightToolSettingsPanel: () => void;
+    toggleRightToolSettingsPanel: () => void;
 };
 
 export type SincroAppRtcBridge = {

@@ -1,10 +1,3 @@
-import {
-    hideDebugConsole,
-    hideReactSettingsPanel,
-    showDebugConsole,
-    showReactSettingsPanel,
-} from "./rightToolPanelStore";
-
 type AudioMeterHandle = {
     audioContext: AudioContext;
     sourceNode: MediaStreamAudioSourceNode;
@@ -335,22 +328,6 @@ export class DebugConsoleManager {
 
     getSnapshot(): DebugConsoleSnapshot {
         return this.snapshot;
-    }
-
-    showDebugConsole(): void {
-        showDebugConsole();
-    }
-
-    hideDebugConsole(): void {
-        hideDebugConsole();
-    }
-
-    showReactSettingsPanel(): void {
-        showReactSettingsPanel();
-    }
-
-    hideReactSettingsPanel(): void {
-        hideReactSettingsPanel();
     }
 
     setRTCStopButtonEventListener(stopFunction: () => void): void {
