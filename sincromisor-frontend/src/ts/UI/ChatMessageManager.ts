@@ -18,7 +18,7 @@ export type ChatMessageManagerEvent = {
 // 既存コードは write* API を変更せず利用でき、React UI は subscribe + snapshot API で同期する。
 export class ChatMessageManager {
     private static instance: ChatMessageManager;
-    private readonly chatBox: HTMLDivElement;
+    private chatBox: HTMLDivElement | null;
     private readonly systemUserID: string = "GloriousAI";
     private readonly systemUserName: string = "Glorious AI";
     // systemメッセージだけは、VRMのthumbnailImageに動的に差し替え可能にする。
@@ -41,17 +41,14 @@ export class ChatMessageManager {
 
     static getManager(): ChatMessageManager {
         if (!ChatMessageManager.instance) {
-            const e: HTMLDivElement | null = document.querySelector("div#sincroChatBox");
-            if (!e) {
-                throw 'div#sincroChatBox is not found.';
-            }
-            ChatMessageManager.instance = new ChatMessageManager(e);
+            const chatBox: HTMLDivElement | null = document.querySelector("div#sincroChatBox");
+            ChatMessageManager.instance = new ChatMessageManager(chatBox);
         }
         return ChatMessageManager.instance;
     }
 
-    private constructor(chatBoxID: HTMLDivElement) {
-        this.chatBox = chatBoxID;
+    private constructor(chatBox: HTMLDivElement | null) {
+        this.chatBox = chatBox;
     }
 
     // React移行で追加した購読口。DOM描画の有無に関係なくイベントを受け取れる。
@@ -65,8 +62,12 @@ export class ChatMessageManager {
     // React UI へ移行中のため、既存DOM描画を止めてイベント配信だけを使うモードを用意する。
     setDomRenderingEnabled(enabled: boolean): void {
         this.domRenderingEnabled = enabled;
+        const chatBox = this.ensureChatBoxBound();
+        if (!chatBox) {
+            return;
+        }
         if (!enabled) {
-            this.chatBox.innerHTML = "";
+            chatBox.innerHTML = "";
             return;
         }
         this.renderDomSnapshot();
@@ -89,7 +90,7 @@ export class ChatMessageManager {
 
 
     private getMessageBox(messageID: string): HTMLDivElement | null {
-        return this.chatBox.querySelector('#msg' + messageID);
+        return this.ensureChatBoxBound()?.querySelector('#msg' + messageID) ?? null;
     }
 
     // Chat欄にメッセージを追加、もしくはメッセージを更新する。
@@ -168,8 +169,9 @@ export class ChatMessageManager {
     // (VRMロード完了が初回メッセージ表示より後になるため、後追い更新が必要)
     setSystemIcon(iconUrl: string): void {
         this.systemIconUrl = iconUrl;
-        if (this.domRenderingEnabled) {
-            const systemIcons = this.chatBox.querySelectorAll<HTMLImageElement>('div.sincroSystemMessage img.sincroMessage__icon');
+        const chatBox = this.ensureChatBoxBound();
+        if (this.domRenderingEnabled && chatBox) {
+            const systemIcons = chatBox.querySelectorAll<HTMLImageElement>('div.sincroSystemMessage img.sincroMessage__icon');
             systemIcons.forEach((icon) => {
                 icon.src = this.systemIconUrl;
             });
@@ -192,8 +194,9 @@ export class ChatMessageManager {
     private createNewMessageBox(cMessage: ChatMessage, isHTML = false): HTMLDivElement {
         this.upsertMessageSnapshot(cMessage, isHTML);
         const e = this.createMessageBoxElement(cMessage, isHTML);
-        if (this.domRenderingEnabled) {
-            this.chatBox.prepend(e);
+        const chatBox = this.ensureChatBoxBound();
+        if (this.domRenderingEnabled && chatBox) {
+            chatBox.prepend(e);
             setTimeout(() => { e.style.opacity = '1'; }, 200);
             //this.autoScroll();
             this.removeOldMessage();
@@ -203,12 +206,16 @@ export class ChatMessageManager {
 
     // legacy DOM fallback を再有効化したとき、保持済み snapshot から一覧を復元する。
     private renderDomSnapshot(): void {
-        this.chatBox.innerHTML = "";
+        const chatBox = this.ensureChatBoxBound();
+        if (!chatBox) {
+            return;
+        }
+        chatBox.innerHTML = "";
         for (const record of this.messages) {
             const messageBox = this.createMessageBoxElement(record.message, record.renderMode === "trusted_html");
             // React描画時と違い CSS 初期opacity=0 を使わないため、即座に表示状態へそろえる。
             messageBox.style.opacity = "1";
-            this.chatBox.appendChild(messageBox);
+            chatBox.appendChild(messageBox);
         }
     }
 
@@ -259,9 +266,30 @@ export class ChatMessageManager {
 
     /* メッセージ数がmaxMessageCountを超えた場合、古いメッセージを削除する。 */
     private removeOldMessage() {
-        while (this.chatBox.childNodes.length >= this.maxMessageCount) {
-            this.chatBox.childNodes[this.chatBox.childNodes.length - 1].remove();
+        const chatBox = this.ensureChatBoxBound();
+        if (!chatBox) {
+            return;
         }
+        while (chatBox.childNodes.length >= this.maxMessageCount) {
+            chatBox.childNodes[chatBox.childNodes.length - 1].remove();
+        }
+    }
+
+    // React shell が後から mount される構成でも、旧 DOM fallback を安全に再接続する。
+    private ensureChatBoxBound(): HTMLDivElement | null {
+        if (this.chatBox?.isConnected) {
+            return this.chatBox;
+        }
+        const nextChatBox: HTMLDivElement | null = document.querySelector("div#sincroChatBox");
+        if (!nextChatBox) {
+            return this.chatBox;
+        }
+        const shouldHydrateDom = this.chatBox !== nextChatBox && this.domRenderingEnabled;
+        this.chatBox = nextChatBox;
+        if (shouldHydrateDom) {
+            this.renderDomSnapshot();
+        }
+        return this.chatBox;
     }
 
     // React描画向けの履歴正本。message_id ベースで更新/新規挿入を行う。
@@ -294,7 +322,5 @@ export class ChatMessageManager {
 }
 
 declare global {
-    var chatMessageManager: ChatMessageManager;
+    var chatMessageManager: ChatMessageManager | undefined;
 }
-
-window.chatMessageManager = ChatMessageManager.getManager();
