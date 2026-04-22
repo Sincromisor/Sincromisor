@@ -26,12 +26,13 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 対象範囲:
   - `sincromisor-frontend/src/ts/SincroController.ts` を中心とした制御
   - UIコンポーネント（Dialog/Chat/Debug/Pop）
-  - Vite MPA構成とHTML partial
+  - Vite MPA構成と React app shell
 - 非対象範囲:
   - VRMボーン制御や表情制御の詳細（`frontend_character.md` で扱う）
   - サーバー側のシグナリング実装詳細
 - LLM向け要約（3-5行）:
   - エントリは `main-vrm.ts`、`vrm360/main-vrm360.ts`、`looking-glass-vrm/main-vrm-looking-glass.ts` を中心とする modern 構成で、`vite.config.js` の build input も `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` の 4 ページに固定されている。
+  - `simple-vrm`、`vrm360`、`looking-glass-vrm` の UI 骨格は `div#sincroPageRoot` 配下の単一 React root に集約され、`src/react/app-shell/SincroPageAppShell.tsx` が dialog / header / chat / telop / debug / settings panel をまとめて描画する。
   - `SincroVRMInitializer` / `SincroVRM360Initializer` / `SincroLookingGlassVRMInitializer` は `SincroAppController` を先行生成し、`start()` 呼び出しでアプリ起動を開始する。
   - `SincroController` は `start()` 内で UserMedia 取得、RTC開始、CharacterGaze開始を統括する。マイク入力 selector の `audioInputDeviceId` は起動時の `getUserMedia` 制約と、実行中の再取得 + `RTCRtpSender.replaceTrack()` の両方へ反映される。視線用カメラ selector の `videoInputDeviceId` は CharacterGaze 専用カメラ取得へ反映され、実行中変更時も preview/AutoMute を維持しながら再初期化される。
   - チャット文は `text_ch`、テロップは `telop_ch` で受信し、`TalkManager` 経由でUI/口形同期に渡す。
@@ -125,7 +126,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - React 移行と従来 DOM/UI manager の併存期間があり、責務境界を誤ると回帰しやすい
   - `SincroController` に UI / RTC / CharacterGaze の結線が集中しやすく、段階的なUI差し替え時の境界が見えにくい
 - 採用理由:
-  - Vite MPA + HTML partial により、ページ分割と共通UI部品の両立が可能
+  - Vite MPA + React app shell により、MPA を維持したまま UI 骨格を共有し、ページ差分を scene と control panel に閉じ込めやすい
 - 制約条件:
   - `getUserMedia` 利用のため HTTPS または localhost が前提
   - WebRTCの接続先は `/api/v1/RTCSignalingServer/config.json` の取得結果に依存
@@ -154,6 +155,14 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `TASK-3010` の CSS 基盤対象は `index`、`simple-vrm`、`vrm360`、`looking-glass-vrm`
   - `TASK-3011` の React 境界整理対象も同じく modern / experimental の 4 ページを優先する
   - Babylon.js legacy は削除済みのため、以後の UI 整理は modern / experimental の 4 ページに集中する
+
+### 3.2 Mount Topology（2026-04-22）
+
+- `simple-vrm`、`vrm360`、`looking-glass-vrm` は、HTML 側に `div#sincroPageRoot` だけを置き、`main-react.tsx` から `bootstrapSincroPageAppShell()` を呼ぶ
+- `src/react/app-shell/SincroPageAppShell.tsx` が、起動前 dialog、ヘッダー、チャット、テロップ、Debug Console、設定パネルの DOM 骨格を一括で描画する
+- ページ差分は `SimpleVrmControlPanel` / `Vrm360ControlPanel` / `LookingGlassVrmControlPanel` を app shell へ差し込む形に閉じ、scene 初期化差分は `main-vrm*.ts` と initializer 側へ残す
+- `DialogManager`、`TalkManager`、`PopManager` など既存 TS は引き続き DOM id を参照するため、app shell は互換用 id を維持する
+- `htmlPartialsPlugin` と `src/partials/*.html` は撤去済みで、mount topology の end state は `MPA のまま、ページごとに単一の React app shell root を持つ` 構成とする
 
 ## 4. 用語・略語
 
@@ -285,7 +294,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `sincromisor-frontend/src/ts/SincroVRM/LookingGlass/LookingGlassXRController.ts`
 - 変更時に同時確認が必要なファイル:
   - RTCペイロード変更: `RTCTalkClient.ts` とサーバー側 `RTCSignalingServer.py`
-  - ダイアログ項目変更: `DialogManager.ts` と `src/partials/configurationDialog.html`
+  - ダイアログ項目変更: `DialogManager.ts` と `src/react/app-shell/SincroPageAppShell.tsx`
   - 起動前 dialog の起動/停止導線変更: `SincroAppController.ts` / `SincroVRMInitializer.ts`
   - 音声入力制約変更: `SincroController.ts` と `RTC/UserMediaManager.ts`
   - チャット表示変更: `ChatMessageManager.ts` と `src/styles/sincroChatBox.css`
@@ -389,7 +398,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 環境変数:
   - フロント単体では `.env` 依存は薄く、主にサーバー配布configを利用
 - 設定ファイル:
-  - `sincromisor-frontend/vite.config.js`（MPA entry / partial plugin。modern 4 ページを build input として定義）
+  - `sincromisor-frontend/vite.config.js`（MPA entry と build chunk 設定。modern 4 ページを build input として定義）
   - `sincromisor-frontend/tsconfig.modern.json`（通常 build 用）
 - 起動方法:
   - `cd sincromisor-frontend && npm run dev`
@@ -485,7 +494,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 採用しなかった理由:
   - 実験ページを含む複数導線を小さく独立管理したい
 - 最終判断:
-  - MPA継続。共通部品は partial + Manager クラスで共有
+  - MPA継続。共通UI骨格は React app shell で共有し、Manager クラスは既存 DOM id 互換を保ちながら段階縮退する
 
 ## 14. 変更履歴
 
@@ -498,6 +507,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-02-21 | 設定ダイアログにマイク自動音量調整(AGC)の切替を追加し、`getUserMedia` 音声制約へ反映する仕様を追記 |
 | 2026-02-21 | 高度なマイク設定（折りたたみ）を追加し、`noiseSuppression`/`echoCancellation`/`autoGainControl` の3項目を起動時に反映する仕様へ更新 |
 | 2026-02-21 | DebugConsoleのAudio MonitorにローカルマイクRMS/Peak表示と入力警告（クリッピング/入力小）を追加 |
+| 2026-04-22 | `TASK-3018` として HTML partial / `htmlPartialsPlugin` を撤去し、modern 3 ページの UI 骨格を単一 React app shell root へ集約 |
 | 2026-02-21 | クライアント音声処理パイプラインにHPF(120Hz)とAudioWorklet VADを追加し、DebugConsoleへSpeech/Silence状態を表示 |
 | 2026-02-21 | 高度設定にVAD送信ゲートを追加し、無音時はGainNodeで送信音量を抑制できるよう更新 |
 | 2026-02-21 | DebugConsoleにVAD RMS閾値スライダーを追加し、AudioWorkletへ閾値を動的反映できるよう更新 |
