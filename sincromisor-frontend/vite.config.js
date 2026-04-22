@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react-swc';
 import { resolve } from 'path';
 
 const contents_src = resolve(__dirname, 'src');
+const reactRuntimePackages = [
+    '/react/',
+    '/react-dom/',
+    '/scheduler/',
+];
 
 function buildInputMap() {
     return {
@@ -35,6 +40,7 @@ export default defineConfig({
                     }
                     // Three/VRM 系と React/UI 系を分け、初期ロードの差分更新時に再利用されやすくする。
                     // three/examples は three 本体と分離し、更新頻度の低い補助モジュール群の再利用性を上げる。
+                    // React runtime は scheduler まで含めて 1 chunk に閉じ、vendor_misc との循環参照を避ける。
                     if (id.includes('/three/examples/')) {
                         return 'vendor_three_examples';
                     }
@@ -47,11 +53,7 @@ export default defineConfig({
                     if (id.includes('/three/')) {
                         return 'vendor_three';
                     }
-                    if (
-                        id.includes('/react/') ||
-                        id.includes('/react-dom/') ||
-                        id.includes('@vitejs/plugin-react-swc')
-                    ) {
+                    if (reactRuntimePackages.some((segment) => id.includes(segment))) {
                         return 'vendor_react';
                     }
                     if (id.includes('/@mediapipe/')) {
