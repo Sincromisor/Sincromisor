@@ -54,13 +54,12 @@ export function createSincroAppManagerBundle(): SincroAppManagerBundle {
 
 // manager bundle を元に bridge 群をまとめて作成する helper。
 export function createSincroAppBridgeBundle(
-    managers: Pick<SincroAppManagerBundle, "chatMessageManager" | "debugConsoleManager" | "dialogManager" | "popManager" | "talkManager">,
+    managers: Pick<SincroAppManagerBundle, "chatMessageManager" | "debugConsoleManager" | "dialogManager" | "talkManager">,
     callbacks: { stopRTC: () => void; },
 ): SincroAppBridgeBundle {
     return {
         dialogBridge: createSincroAppDialogBridge({
             dialogManager: managers.dialogManager,
-            popManager: managers.popManager,
         }),
         chatBridge: createSincroAppChatBridge(managers.chatMessageManager, managers.talkManager),
         debugBridge: createSincroAppDebugBridge(managers.debugConsoleManager),

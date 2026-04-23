@@ -9,7 +9,6 @@ import {
     type DialogSettingsUiState,
 } from "./DialogSettingsPolicy";
 import { SincroMediaDeviceService } from "../MediaDevices/SincroMediaDeviceService";
-import { DialogBridgeDomAdapter } from "./DialogBridgeDomAdapter";
 import { DialogVrmFileService } from "./DialogVrmFileService";
 import { DialogVrmWorkflowService } from "./DialogVrmWorkflowService";
 import { DialogNotificationService } from "./DialogNotificationService";
@@ -21,12 +20,12 @@ export type DialogVrmUiState = DialogVrmUiStateValue;
 export type DialogUiState = DialogUiStateValue;
 
 // 起動前設定 dialog の中心オーケストレータ。
-// 状態の正本は DialogStateStore、DOM 操作は DialogBridgeDomAdapter、保存/復元/通知は各 Service に分離している。
+// 状態の正本は DialogStateStore、保存/復元/通知は各 Service に分離している。
+// dialog 本体の native API 呼び出しは React 側 platform adapter が担当する。
 export class DialogManager {
     private static instance: DialogManager
     private readonly stateStore = new DialogStateStore();
     private readonly eventHub = new DialogEventHub();
-    private readonly dom = new DialogBridgeDomAdapter();
     private readonly headerDom = new HeaderTitleDomAdapter();
     private readonly settingsPolicy = new DialogSettingsPolicy();
     private readonly mediaDeviceService = SincroMediaDeviceService.getInstance();
@@ -58,20 +57,13 @@ export class DialogManager {
     }
 
     showDialog(): void {
-        this.dom.ensureDialogCloseInteractions(() => this.handleDialogClosedFromDom());
-        const opened = this.dom.showDialog();
-        if (opened) {
-            // Dialog open 状態は React 側の dialog UI と同期するため、DOM操作成功後に通知する。
-            this.setDialogOpen(true);
-        }
+        // native dialog API 呼び出しは React 側 platform adapter が担当し、
+        // ここでは state の正本だけを更新する。
+        this.setDialogOpen(true);
     }
 
     closeDialog(): void {
-        const closed = this.dom.closeDialog();
-        if (closed || this.stateStore.getDialogUiState().isOpen) {
-            // close は DOM側の結果を優先しつつ、状態だけ開いたまま残らないよう冪等に同期する。
-            this.setDialogOpen(false);
-        }
+        this.setDialogOpen(false);
     }
 
     // React dialog から選択された VRM ファイルを正式経路として適用する。
@@ -443,10 +435,6 @@ export class DialogManager {
 
     private emitVrmUiStateChanged(): void {
         this.eventHub.emitCurrentVrmUiState(() => this.stateStore.getDialogVrmUiState());
-    }
-
-    private handleDialogClosedFromDom(): void {
-        this.setDialogOpen(false);
     }
 
     private setDialogOpen(isOpen: boolean): void {

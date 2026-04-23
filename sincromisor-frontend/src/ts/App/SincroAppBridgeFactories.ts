@@ -1,6 +1,5 @@
 import type { ChatMessageManager } from "../UI/ChatMessageManager";
 import type { DebugConsoleManager } from "../UI/DebugConsoleManager";
-import type { PopManager } from "../UI/PopManager";
 import { getSincroAppRightToolPanelService } from "./SincroAppRightToolPanelService";
 import type { TalkManager } from "../RTC/TalkManager";
 import type { SincroAppDialogFacade } from "./SincroAppDialogFacade";
@@ -24,20 +23,16 @@ import type {
 // Controller 本体を「依存の束ね役」に寄せる。
 export function createSincroAppDialogBridge(params: {
     dialogManager: SincroAppDialogFacade;
-    popManager: PopManager;
 }): SincroAppDialogBridge {
-    // DialogManager/PopManager を UI 向けの最小 API に絞って公開する bridge。
+    // DialogManager を UI 向けの最小 API に絞って公開する bridge。
     // 呼び出し側は DialogManager 実装の詳細を意識せず AppController.dialog 経由で扱える。
-    const { dialogManager, popManager } = params;
+    const { dialogManager } = params;
     return {
         applySelectedVrmFile: (file) => {
             dialogManager.applySelectedVrmFile(file);
         },
         setVrmDragOver: (isDragOver) => {
             dialogManager.setVrmDragOver(isDragOver);
-        },
-        setPopDomRenderingEnabled: (enabled) => {
-            popManager.setDialogPopDomRenderingEnabled(enabled);
         },
         close: () => {
             dialogManager.closeDialog();

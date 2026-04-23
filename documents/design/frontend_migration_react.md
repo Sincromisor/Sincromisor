@@ -6,7 +6,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 
 - ドキュメントパス: `documents/design/frontend_migration_react.md`
 - 作成日: 2026-02-22
-- 最終更新日: 2026-04-22
+- 最終更新日: 2026-04-24
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -743,14 +743,14 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - `DialogManager` に React 置換補助API（`setReactPrimarySettingsEnabled(...)`, `openVrmFilePicker()`）を追加し、React 側の直接DOM操作を縮小
   - `DialogManager` に `DialogVrmUiState`（dragover / VRM状態テキスト）の購読を追加し、React dialog UI で VRM更新・D&D状態を表示可能にした
   - `DialogManager` に `DialogUiState`（dialog open/close, 開始ボタン disabled/text）の購読を追加し、React dialog UI で細部状態も表示可能にした
-  - `PopManager` に dialog pop イベント購読 + dialog pop DOM描画ON/OFF を追加し、`DialogPopMessages` で設定ダイアログ内の通知（VRM更新成功/失敗など）を React 描画へ切り替え開始
+  - `PopManager` に dialog pop イベント購読を追加し、`DialogPopMessages` で設定ダイアログ内の通知（VRM更新成功/失敗など）を React 描画へ切り替え開始
   - `useConfigurationDialogSettingsState` を `useSimpleVrmPanelState` 依存から分離し、`SincroAppController.subscribeCurrent/subscribe` + `DialogManager.subscribeVrmUiState/subscribeDialogUiState` を直接購読する dialog 専用hook に整理
   - `subscribeActiveSincroAppController` ユーティリティを追加し、active controller 差し替え時の購読張り替え/解放ロジックを `useSimpleVrmPanelState` と dialog hook で共有化
   - `ConfigurationDialogSettingsPanel` の dialog 専用見た目を `configurationDialogSettings.css` へ分離し、`sincroConfigurationDialog.css` から React panel 専用スタイルを撤去
   - dialog 用設定セクションの adapter（`DialogSettingsFormSections`）を追加し、`ConfigurationDialogSettingsPanel` から `simple-vrm` 用共有コンポーネントへの依存を局所化
   - `DialogSettingsFormSections` の主要セクション（basic/mic/character）を dialog 専用実装へ置き換え、shared panel component 依存をさらに縮小
   - `SincroAppController` に dialog bridge API（`setDialogReactPrimarySettingsEnabled`, `openDialogVrmFilePicker`）を追加し、dialog hook の `DialogManager` 直接依存を縮小
-  - `SincroAppController` に dialog pop bridge（`dialog_pop_message`, `setDialogPopDomRenderingEnabled(...)`）を追加し、`DialogPopMessages` の `PopManager` 直接依存を解消
+  - `SincroAppController` に dialog pop bridge（`dialog_pop_message`）を追加し、`DialogPopMessages` の `PopManager` 直接依存を解消
   - React 設定型（`ApplySettingsFn`, `SincroAppSettings*`）を `src/react/app/appSettingsTypes.ts` に切り出し、dialog UI が `simple-vrm/panelTypes` に依存しない構成へ整理
   - 起動前 dialog の `はじめる` / `×` / `もどる` を `ConfigurationDialogSettingsPanel` 側へ移し、visible UI を React 主導に整理
   - `configurationDialog.html` の旧入力群を `configurationDialog__bridgeDom` に集約し、`reactPrimarySettingsEnabled` 時は bridge DOM をまとめて非表示化
@@ -783,7 +783,8 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
   - `DialogManager` の設定DOM同期系メソッド（bridge input 前提の change/input 監視など）を削除し、React dialog + state store + adapter の構成へ整理
   - `configurationDialog__bridgeDom` を最小 input/select/button/file 群に縮退し、ラベル/fieldset/戻るリンク等の可視UI要素は React 側へ寄せた
   - `TASK-3016` で `configurationDialog__bridgeDom` 自体を削除し、VRM file picker / drag & drop / dragover 状態更新を `ConfigurationDialogSettingsPanel` の React event 経路へ統一
-    - `DialogBridgeDomAdapter` は `HTMLDialogElement` の open/close と close-interaction 制御に限定し、ヘッダー文言更新は `HeaderTitleDomAdapter` へ分離
+    - `ConfigurationDialog` が React 側の dialog root となり、`DialogManager` は open/close state owner、`DialogBridgeDomAdapter` は `HTMLDialogElement` の open/close と close-interaction 制御だけを扱う
+    - dialog 内 pop も `sincroDialogPopBox` bridge DOM を廃止し、`DialogPopMessages` の React 描画を正式経路にした
   - Debug Menu に `Open Startup Dialog` を追加し、`sincro:open-configuration-dialog` -> `SincroAppController.openConfigurationDialog()` 経由で起動前 dialog の再表示導線を追加
   - `main-react.tsx`（`simple-vrm` / `vrm360` / `looking-glass-vrm`）を動的 import 化し、Control Panel / Chat / Telop / Dialog UI を個別 chunk として分割
   - `vite.config.js`（modern-only build）に `manualChunks` を追加し、`react`, `three`, `three-vrm`, `mediapipe/onnxruntime`, `@lookingglass/webxr`, その他 vendor の分離を開始
