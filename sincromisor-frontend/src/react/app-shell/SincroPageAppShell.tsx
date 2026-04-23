@@ -17,7 +17,7 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
         <>
             <ConfigurationDialog />
 
-            <div id="sincroBody">
+            <div id="sincroBody" className="sincroPageShell sincroPageShell--modern">
                 <div id="sincroHeaderContainer">
                     <div id="sincroHeaderBox">
                         <div className="headerIconBox leftIconBox">
