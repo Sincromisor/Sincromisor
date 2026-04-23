@@ -1,5 +1,5 @@
 import { TelopChannelMessage, ChatMessage } from "./RTCMessage";
-import { ChatMessageManager } from "../UI/ChatMessageManager";
+import { ChatMessageService } from "../UI/ChatMessageService";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 
 export type CurrentMora = {
@@ -19,14 +19,14 @@ export type TelopTextSegment = {
 };
 
 // text_ch / telop_ch の受信結果を、既存DOM描画と React購読の両方へ橋渡しする管理クラス。
-// ChatMessageManager と同様、移行期間中は DOM とイベントの二重経路を持つ。
+// ChatMessageService と同様、移行期間中は DOM とイベントの二重経路を持つ。
 export class TalkManager {
     private static instance: TalkManager;
     // React footerテロップは幅ベースtrimを行わないため、保持件数を抑えて更新コストを安定させる。
     private static readonly MAX_TELOP_SEGMENT_COUNT = 6;
     // 長時間稼働時の保険として、React表示用の総文字数を単純上限で制御する。
     private static readonly MAX_TELOP_TOTAL_CHARS = 240;
-    private readonly chatMessageManager: ChatMessageManager;
+    private readonly chatMessageService: ChatMessageService;
     private readonly debugConsoleManager: DebugConsoleManager;
     private telopChannelMessage: Array<TelopChannelMessage> = [];
     private currentTelopChannelMessage: CurrentMora | null = null;
@@ -43,7 +43,7 @@ export class TalkManager {
     }
 
     private constructor() {
-        this.chatMessageManager = ChatMessageManager.getManager();
+        this.chatMessageService = ChatMessageService.getService();
         this.debugConsoleManager = DebugConsoleManager.getManager();
     }
 
@@ -82,7 +82,7 @@ export class TalkManager {
                 `[emotion] recv message_id=${msg.message_id} speech_id=${msg.speech_id} expression_code=${msg.expression_code ?? "none"} text_len=${msg.message.length}\n`,
             );
         }
-        this.chatMessageManager.writeMessage(msg);
+        this.chatMessageService.writeMessage(msg);
         this.emitEvent({ type: "text_channel_message", message: msg });
     }
 

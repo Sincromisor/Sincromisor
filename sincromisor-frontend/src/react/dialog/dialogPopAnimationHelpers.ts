@@ -24,7 +24,7 @@ export function scheduleDialogPopVisibility<T extends DialogPopItemLike>(
         setItems((prev) => prev.map((prevItem) => (prevItem.id === item.id ? { ...prevItem, visible: true } : prevItem)));
     }, DIALOG_POP_SHOW_DELAY_MS);
 
-    // PopManager 既存挙動に合わせて、自動で hide -> remove を行う。
+    // PopMessageService 既存挙動に合わせて、自動で hide -> remove を行う。
     let removeTimer: TimeoutHandle | null = null;
     const hideTimer: TimeoutHandle = setTimeout(() => {
         setItems((prev) => prev.map((prevItem) => (prevItem.id === item.id ? { ...prevItem, visible: false } : prevItem)));

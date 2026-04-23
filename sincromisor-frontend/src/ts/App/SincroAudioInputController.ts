@@ -4,7 +4,7 @@ import {
     VadThresholdMode as UserMediaVadThresholdMode,
     type AudioConstraintRuntimeApplyReport,
 } from "../RTC/UserMediaManager";
-import { ChatMessageManager } from "../UI/ChatMessageManager";
+import { ChatMessageService } from "../UI/ChatMessageService";
 import { DialogManager } from "../UI/DialogManager";
 import {
     AudioFilterControlConfig,
@@ -18,7 +18,7 @@ import {
 export class SincroAudioInputController {
     private readonly dialogManager: DialogManager;
     private readonly debugConsoleManager: DebugConsoleManager;
-    private readonly chatMessageManager: ChatMessageManager;
+    private readonly chatMessageService: ChatMessageService;
     private readonly userMediaManager: UserMediaManager;
     private dialogMicSettingsSnapshot: DialogMicSettingsSnapshot | null = null;
     private suppressNextDialogMicSettingsSync = false;
@@ -30,11 +30,11 @@ export class SincroAudioInputController {
     constructor(
         dialogManager: DialogManager,
         debugConsoleManager: DebugConsoleManager,
-        chatMessageManager: ChatMessageManager,
+        chatMessageService: ChatMessageService,
     ) {
         this.dialogManager = dialogManager;
         this.debugConsoleManager = debugConsoleManager;
-        this.chatMessageManager = chatMessageManager;
+        this.chatMessageService = chatMessageService;
         this.userMediaManager = new UserMediaManager();
 
         this.bindDialogSettingsToUserMedia();
@@ -57,7 +57,7 @@ export class SincroAudioInputController {
             onAudioTrack,
             () => { },
             (err) => {
-                this.chatMessageManager.writeErrorMessage(`カメラまたはマイクが見つかりませんでした。 - ${err}`);
+                this.chatMessageService.writeErrorMessage(`カメラまたはマイクが見つかりませんでした。 - ${err}`);
             },
         );
     }
@@ -185,7 +185,7 @@ export class SincroAudioInputController {
                 } catch (err) {
                     const detail = err instanceof Error ? err.message : String(err);
                     const deviceLabel = selectedDeviceId ? `deviceId=${selectedDeviceId}` : "既定デバイス";
-                    this.chatMessageManager.writeErrorMessage(
+                    this.chatMessageService.writeErrorMessage(
                         `選択したマイク入力への切替に失敗しました。(${deviceLabel}) - ${detail}`,
                     );
                 }

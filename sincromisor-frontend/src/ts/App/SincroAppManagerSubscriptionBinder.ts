@@ -29,9 +29,9 @@ type DialogSubscriptionParams = {
     emitSettingsRelatedSnapshots: () => void;
 };
 
-// manager 群の subscribe 本文を helper 側へ分離し、SincroAppController を orchestration 中心に保つ。
-export function bindChatManagerSubscription(chatMessageManager: SincroAppChatSubscriptionFacade, emitEvent: EmitFn): void {
-    chatMessageManager.subscribe((event) => {
+// manager / service 群の subscribe 本文を helper 側へ分離し、SincroAppController を orchestration 中心に保つ。
+export function bindChatServiceSubscription(chatMessageService: SincroAppChatSubscriptionFacade, emitEvent: EmitFn): void {
+    chatMessageService.subscribe((event) => {
         const appEvent = mapChatMessageToAppEvent(event);
         if (!appEvent) {
             return;
@@ -66,9 +66,9 @@ export function bindTalkManagerSubscription(talkManager: SincroAppTalkSubscripti
     });
 }
 
-export function bindPopManagerSubscription(popManager: SincroAppPopSubscriptionFacade, emitEvent: EmitFn): void {
-    // dialog 内 pop も AppEvent 化して、React が PopManager singleton を直接購読しない構成へ寄せる。
-    popManager.subscribeDialogPop((message) => {
+export function bindPopServiceSubscription(popMessageService: SincroAppPopSubscriptionFacade, emitEvent: EmitFn): void {
+    // dialog 内 pop も AppEvent 化して、React が PopMessageService singleton を直接購読しない構成へ寄せる。
+    popMessageService.subscribeDialogPop((message) => {
         emitEvent({ type: "dialog_pop_message", message });
     });
 }

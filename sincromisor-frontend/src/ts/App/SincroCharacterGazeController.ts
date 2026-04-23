@@ -1,7 +1,7 @@
 import { Detection } from "@mediapipe/tasks-vision";
 import { CharacterGaze } from "../CharacterGaze/CharacterGaze";
 import { VideoInputManager } from "../RTC/VideoInputManager";
-import { ChatMessageManager } from "../UI/ChatMessageManager";
+import { ChatMessageService } from "../UI/ChatMessageService";
 import { DialogManager } from "../UI/DialogManager";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 
@@ -10,7 +10,7 @@ import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 export class SincroCharacterGazeController {
     private readonly dialogManager: DialogManager;
     private readonly debugConsoleManager: DebugConsoleManager;
-    private readonly chatMessageManager: ChatMessageManager;
+    private readonly chatMessageService: ChatMessageService;
     private readonly videoInputManager = new VideoInputManager();
     private onMuteChange: ((mute: boolean) => void) | null = null;
     private visionInitPromise: Promise<void> | null = null;
@@ -22,11 +22,11 @@ export class SincroCharacterGazeController {
     constructor(
         dialogManager: DialogManager,
         debugConsoleManager: DebugConsoleManager,
-        chatMessageManager: ChatMessageManager,
+        chatMessageService: ChatMessageService,
     ) {
         this.dialogManager = dialogManager;
         this.debugConsoleManager = debugConsoleManager;
-        this.chatMessageManager = chatMessageManager;
+        this.chatMessageService = chatMessageService;
         const characterGaze = CharacterGaze.getManager();
         this.debugConsoleManager.setCharacterGazeTrackingTuning(characterGaze.getTrackingTuning());
         this.debugConsoleManager.setCharacterGazeTrackingTuningChangeCallback((config) => {
@@ -157,7 +157,7 @@ export class SincroCharacterGazeController {
             const detail = error instanceof Error ? error.message : String(error);
             const selectedDeviceId = this.videoInputManager.getVideoInputDeviceId();
             const deviceLabel = selectedDeviceId ? `deviceId=${selectedDeviceId}` : "既定デバイス";
-            this.chatMessageManager.writeErrorMessage(
+            this.chatMessageService.writeErrorMessage(
                 `選択した視線検出用カメラへの切替に失敗しました。(${deviceLabel}) - ${detail}`,
             );
         }

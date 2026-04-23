@@ -7,17 +7,17 @@ export type ChatMessageViewRecord = {
 
 export type ChatMessageRenderMode = "text" | "trusted_html";
 
-export type ChatMessageManagerEvent = {
+export type ChatMessageServiceEvent = {
     type: "message" | "system_icon_changed";
     message?: ChatMessage;
     viewRecord?: ChatMessageViewRecord;
     systemIconUrl?: string;
 };
 
-// チャット欄の既存DOM描画を維持しつつ、React側へ同じ内容をイベント配信する移行期の管理クラス。
+// チャット欄の既存 DOM 描画を維持しつつ、React 側へ同じ内容をイベント配信する移行期の service。
 // 既存コードは write* API を変更せず利用でき、React UI は subscribe + snapshot API で同期する。
-export class ChatMessageManager {
-    private static instance: ChatMessageManager;
+export class ChatMessageService {
+    private static instance: ChatMessageService;
     private chatBox: HTMLDivElement | null;
     private readonly systemUserID: string = "GloriousAI";
     private readonly systemUserName: string = "Glorious AI";
@@ -32,19 +32,19 @@ export class ChatMessageManager {
 
     /* 画面上に表示される最大メッセージ数 */
     private readonly maxMessageCount: number = 30;
-    private readonly listeners = new Set<(event: ChatMessageManagerEvent) => void>();
+    private readonly listeners = new Set<(event: ChatMessageServiceEvent) => void>();
     private domRenderingEnabled: boolean = true;
     private messages: ChatMessageViewRecord[] = [];
 
     /* 同じエラーメッセージが何度も表示されないようにするために使用 */
     lastErrorMessage: string = '';
 
-    static getManager(): ChatMessageManager {
-        if (!ChatMessageManager.instance) {
+    static getService(): ChatMessageService {
+        if (!ChatMessageService.instance) {
             const chatBox: HTMLDivElement | null = document.querySelector("div#sincroChatBox");
-            ChatMessageManager.instance = new ChatMessageManager(chatBox);
+            ChatMessageService.instance = new ChatMessageService(chatBox);
         }
-        return ChatMessageManager.instance;
+        return ChatMessageService.instance;
     }
 
     private constructor(chatBox: HTMLDivElement | null) {
@@ -52,7 +52,7 @@ export class ChatMessageManager {
     }
 
     // React移行で追加した購読口。DOM描画の有無に関係なくイベントを受け取れる。
-    subscribe(listener: (event: ChatMessageManagerEvent) => void): () => void {
+    subscribe(listener: (event: ChatMessageServiceEvent) => void): () => void {
         this.listeners.add(listener);
         return () => {
             this.listeners.delete(listener);
@@ -306,7 +306,7 @@ export class ChatMessageManager {
     // DOM描画を止めていても React UI が再構築できるよう、renderMode を含めて通知する。
     private emitMessage(message: ChatMessage, isHTML: boolean): void {
         const renderMode: ChatMessageRenderMode = isHTML ? "trusted_html" : "text";
-        const event: ChatMessageManagerEvent = { type: "message", message, viewRecord: { message, renderMode } };
+        const event: ChatMessageServiceEvent = { type: "message", message, viewRecord: { message, renderMode } };
         for (const listener of this.listeners) {
             listener(event);
         }
@@ -314,7 +314,7 @@ export class ChatMessageManager {
 
     // systemアイコン差し替え（VRMサムネイル反映）を React UI にも伝える。
     private emitSystemIconChanged(): void {
-        const event: ChatMessageManagerEvent = { type: "system_icon_changed", systemIconUrl: this.systemIconUrl };
+        const event: ChatMessageServiceEvent = { type: "system_icon_changed", systemIconUrl: this.systemIconUrl };
         for (const listener of this.listeners) {
             listener(event);
         }
@@ -322,5 +322,5 @@ export class ChatMessageManager {
 }
 
 declare global {
-    var chatMessageManager: ChatMessageManager | undefined;
+    var chatMessageService: ChatMessageService | undefined;
 }
