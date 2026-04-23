@@ -117,6 +117,29 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - PCでは左ナビを維持し、狭幅時のみドロワーまたはタブへの縮退を許可する
   - 狭幅では、まず左右カラムを縮め、それでも足りない場合に左ナビを上部へ回して主 CTA の視認性を優先する
 
+### 2.4 メインコンテンツの visual 方針
+
+- 対象:
+  - `simple-vrm` を main content 設計の正規対象とし、shared shell の変更は `vrm360` / `looking-glass-vrm` にも一貫して反映する
+  - 本節でいう main content は、開始後の `header`、`chat`、`telop`、`背景面`、右上ツール導線を指す
+- 基本思想:
+  - 主役は VRM キャラクター、背景演出、会話体験であり、UI は常時前面に出続けない `content-first` な overlay とする
+  - 起動前 dialog、設定パネル、Debug Console ですでに採用している暗色 panel / compact typography / rounded geometry を main content 側にも広げ、起動前後で別製品のように見えない一貫性を保つ
+  - `DESIGN.md` は模倣元ではなく、dark surface の役割、情報密度、pill / rounded geometry、elevation の原則を参考にして Sincromisor 用へ翻訳する
+- レイヤ設計:
+  - 背景 / VRM / 会話UI の優先順位を明確にし、背景コンテンツが読めなくなるほど大きな白面やベタ帯を常設しない
+  - `header`、`chat`、`telop` は scene を覆う面ではなく、必要情報だけを浮かせる translucent overlay として設計する
+  - 主要 overlay は near-black 系の面を基調にし、アクセント色は active state、focus、選択状態、補助情報など機能用途へ限定する
+- main content 各要素の方針:
+  - `header` は装飾よりも現在地と主要導線の視認性を優先し、dialog / settings / debug と同じ family に見える dark overlay とする
+  - `chat` は scene を塞ぎにくい情報密度を優先し、bubble の面積、余白、最大幅、背景濃度を抑えて可読性と没入感の両立を狙う
+  - `telop` は常時フッター帯として主張しすぎないよう、可読性を維持しつつ overlay 化し、背景映像とのコントラストを局所的に確保する
+  - 右上ツール導線は設定 panel / Debug Console の見た目と断絶しないトーンにそろえ、`設定だけ新しい / 本体だけ古い` 印象を避ける
+- レスポンシブ前提:
+  - modern ページでは `meta name="viewport" content="width=device-width, initial-scale=1"` を前提とし、CSS breakpoint と実機表示幅の解釈を一致させる
+  - 狭幅時は desktop の見た目を縮小表示するのではなく、overlay の幅、余白、固定帯の高さを減らし、主コンテンツの視認領域を優先する
+  - global reset や一括 centering が main content の幅解釈へ副作用を与えないよう、modern UI の見た目責務は component 単位へ寄せる
+
 ## 3. 背景
 
 - 解決したい課題:
@@ -143,6 +166,9 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 日常開発・CI 相当の確認は `npm run build` を基準とし、`main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` を守る
   - `npm run build` は `tsc -p tsconfig.modern.json && vite build` を使い、modern 系ソースだけを型チェック対象にする
   - Babylon.js 系の `simple`、`single`、`double`、`glass`、`character`、`character-glass`、`area360` と `main-legacy.ts` は `TASK-3014` で削除済み
+- responsive 前提:
+  - `simple-vrm`、`vrm360`、`looking-glass-vrm` の HTML 入口には `meta name="viewport" content="width=device-width, initial-scale=1"` を持たせ、desktop / mobile の layout viewport を実機幅に合わせる
+  - responsive 確認は `CSS breakpoint が効くこと` と `overlay UI が scene を塞ぎすぎないこと` の両方を基準にする
 
 | ページ | build 導線 | 描画 / UI 基盤 | 主用途 | 分類 | 保守方針 |
 | --- | --- | --- | --- | --- | --- |
@@ -159,6 +185,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 ### 3.2 Mount Topology（2026-04-22）
 
 - `simple-vrm`、`vrm360`、`looking-glass-vrm` は、HTML 側に `div#sincroPageRoot` だけを置き、`main-react.tsx` から `bootstrapSincroPageAppShell()` を呼ぶ
+- modern 3 ページの HTML は `meta viewport` を持ち、app shell の responsive 縮退判定が実機幅と一致する前提で運用する
 - `src/react/app-shell/SincroPageAppShell.tsx` が、起動前 dialog、ヘッダー、チャット、テロップ、Debug Console、設定パネルの DOM 骨格を一括で描画する
 - ページ差分は `SimpleVrmControlPanel` / `Vrm360ControlPanel` / `LookingGlassVrmControlPanel` を app shell へ差し込む形に閉じ、scene 初期化差分は `main-vrm*.ts` と initializer 側へ残す
 - `DialogManager`、`TalkManager`、`PopManager` など既存 TS は引き続き DOM id を参照するため、app shell は互換用 id を維持する
@@ -179,6 +206,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 要件一覧:
   - 設定ダイアログで会話モード・キャラ表示・顔認識・自動ミュート・マイク自動音量調整(AGC)を切替可能
   - 常設設定パネルと Debug Console は右側ツール領域内で重ならず、片方の操作中にもう片方が認知負荷を増やさないこと
+  - 開始後の main content は、VRM / 背景演出を主役にした dark overlay UI として表示され、起動前 dialog / 設定パネル / Debug Console と visual family が連続して見えること
   - 起動前設定 dialog と開始後の設定パネルは、`左カテゴリナビ + 右詳細ペイン` の情報設計を共有し、PC利用時に項目を探しやすいこと
   - 起動前設定 dialog は `初回セットアップウィザード` として、本文の読了位置に主 CTA を置き、離脱導線より優先して見えること
   - 常設設定パネルでは、現在のページで設定できる項目がないカテゴリを表示しないこと
@@ -200,6 +228,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 高度設定で騒音会場モードを有効化した場合、強めの前段フィルタ（HPF+LPF）と高めのVAD初期閾値を適用できること
   - 起動時にマイク/カメラを取得し、音声トラックでRTC接続する
   - `text_ch` / `telop_ch` の受信内容を画面に反映する
+  - `header`、`chat`、`telop` の overlay は、狭幅時にも操作や可読性を保ちつつ scene の視認領域を過度に圧迫しないこと
   - デバッグコンソールでICE/SDP/DataChannelログを確認できる
   - デバッグコンソールでローカルマイクのRMS/Peakと、入力状態表示/クリッピング警告を確認できる
   - `RTCPeerConnection.getStats()` を1秒間隔で収集し、主要メトリクスを表示できる
@@ -219,6 +248,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - 運用性/保守性: Singleton Managerによる責務分離
 - 監視性: DebugConsoleで通信状態・音声レベル・`getStats` メトリクスを可視化
 - UX一貫性: 設定パネルと Debug Console は右側ツール領域として見た目と操作規則を揃え、用途の違いは情報密度と文言で区別する
+- responsive 一貫性: modern ページは `meta viewport` を前提に layout viewport と CSS breakpoint の解釈を一致させ、desktop 前提の縮小表示に依存しない
+- visual 一貫性: main content、起動前 dialog、設定パネル、Debug Console は同じ dark / immersive design family に属し、legacy 由来の白面や過度な帯 UI を段階的に縮退する
 
 ## 6. アーキテクチャ概要
 
@@ -592,6 +623,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-22 | `TASK-3017` 対応として右側ツール領域の state owner を `SincroAppRightToolPanelService` へ移し、React 側の開閉 API を `appController.debug.*` へ集約した。`src/ts/UI/rightToolPanelStore.ts` は削除し、`DebugConsoleManager` はツール領域 owner ではなく diagnostics core に専念する構成へ整理した |
 | 2026-04-24 | `TASK-3017` 対応として `ChatMessageManager` を `ChatMessageService`、`PopManager` を `PopMessageService` へ改名した。`SincroAppController` / runtime bundle / subscription helper の依存名も service 前提へ揃え、`manager` 名を残す対象を `DialogManager` と `DebugConsoleManager` に絞った |
 | 2026-04-22 | `TASK-3016` 対応として起動前 dialog の bridge DOM を撤去。VRM file picker と drag & drop は `ConfigurationDialogSettingsPanel` の React 正規経路へ移し、`DialogBridgeDomAdapter` は `HTMLDialogElement` の open/close と Esc / backdrop close 抑止だけを扱う最小 platform adapter に縮退した |
+| 2026-04-24 | `TASK-3019` 調査結果を反映し、`simple-vrm` を中心とした main content の dark / immersive visual 方針、overlay 設計、`meta viewport` を前提とする responsive 基盤、legacy global reset の縮退方針を追記した |
 
 ## 15. 参照資料
 
