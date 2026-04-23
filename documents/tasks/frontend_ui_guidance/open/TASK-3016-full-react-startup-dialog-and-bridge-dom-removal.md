@@ -19,7 +19,7 @@
 
 - `documents/design/frontend_ui.md`
 - `documents/design/frontend_migration_react.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3015-debug-console-react-migration-and-diagnostics-core-split.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3015-debug-console-react-migration-and-diagnostics-core-split.md`
 
 ## スコープ
 

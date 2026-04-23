@@ -1,7 +1,7 @@
 # TASK-3015 Debug Console の React 化と diagnostics core 分割
 
 - 作成日: 2026-04-22
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 
 ## 目的
@@ -19,7 +19,7 @@
 
 - `documents/design/frontend_ui.md`
 - `documents/design/frontend_migration_react.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3014-babylon-legacy-code-removal-and-dependency-cleanup.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3014-babylon-legacy-code-removal-and-dependency-cleanup.md`
 
 ## スコープ
 
@@ -54,27 +54,27 @@
 
 ### 1. React view 化
 
-- [ ] Debug Console 本体が React コンポーネント化されている
-- [ ] タブ切替、概要表示、Audio、Channels、SDP が React 側で描画される
-- [ ] トレンド表示や状態表示が React view から扱える
+- [x] Debug Console 本体が React コンポーネント化されている
+- [x] タブ切替、概要表示、Audio、Channels、SDP が React 側で描画される
+- [x] トレンド表示や状態表示が React view から扱える
 
 ### 2. diagnostics core 分割
 
-- [ ] `DebugConsoleManager` から DOM 直操作責務が分離されている
-- [ ] イベント配信と snapshot 取得の責務が整理されている
-- [ ] React 側が購読・描画する正規経路が定義されている
+- [x] `DebugConsoleManager` から DOM 直操作責務が分離されている
+- [x] イベント配信と snapshot 取得の責務が整理されている
+- [x] React 側が購読・描画する正規経路が定義されている
 
 ### 3. 右側ツール領域 ownership
 
-- [ ] `debugMenu`、設定パネル、Debug Console の開閉状態を誰が所有するか明文化されている
-- [ ] 右側ツール領域の状態は App / React 正規 API から操作できる
-- [ ] Debug Console 移行後も設定パネルとの相互排他ルールが維持されている
+- [x] `debugMenu`、設定パネル、Debug Console の開閉状態を誰が所有するか明文化されている
+- [x] 右側ツール領域の状態は App / React 正規 API から操作できる
+- [x] Debug Console 移行後も設定パネルとの相互排他ルールが維持されている
 
 ### 4. partial 依存縮退
 
-- [ ] `debugConsole.html` の役割が縮退または削除されている
-- [ ] React mount が正式経路になっている
-- [ ] 設定パネルとの排他制御が current UX を維持している
+- [x] `debugConsole.html` の役割が縮退または削除されている
+- [x] React mount が正式経路になっている
+- [x] 設定パネルとの排他制御が current UX を維持している
 
 ## 実装タスク
 
@@ -118,3 +118,9 @@
 
 - 本タスクは `DebugConsoleManager を少し整理する` のではなく、`旧 DOM 主導の診断 UI を React 正式導線へ移す` のが目的である。
 - 実装変更時は `documents/design/frontend_ui.md` の更新が必要になる。
+- 2026-04-24 確認:
+  - `src/react/debug/DebugConsole.tsx` と `src/react/debug/RightToolMenu.tsx` により、Debug Console と右側ツール UI は React 正式経路で描画されている。
+  - `src/ts/UI/DebugConsoleManager.ts` は diagnostics snapshot provider / callback bridge として残り、DOM 直操作責務は除去されている。
+  - `src/ts/App/SincroAppRightToolPanelService.ts` と `appController.debug.*` 経路で、設定パネルと Debug Console の開閉・相互排他を App / React 側で所有している。
+  - `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` は current structure を反映済みである。
+  - `cd sincromisor-frontend && npm run build` は 2026-04-24 に成功した。
