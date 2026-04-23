@@ -24,10 +24,10 @@ div#sincroReactSettingsPanelContainer.is-open {
 
 div#reactSettingsPanel {
     position: absolute;
-    top: clamp(52px, 8dvh, 84px);
-    right: 12px;
-    width: min(560px, calc(100vw - 24px));
-    max-height: calc(100dvh - clamp(52px, 8dvh, 84px) - 12px);
+    top: var(--sincro-right-tool-panel-top, clamp(70px, 10dvh, 96px));
+    right: var(--sincro-main-overlay-side, 12px);
+    width: min(560px, calc(100vw - (var(--sincro-main-overlay-side, 12px) * 2)));
+    max-height: calc(100dvh - var(--sincro-right-tool-panel-top, clamp(70px, 10dvh, 96px)) - var(--sincro-main-overlay-side, 12px));
     padding-top: 34px;
     pointer-events: auto;
 }
@@ -43,42 +43,47 @@ div#debugMenu {
 
 /* ヘッダー右端に置く控えめな設定アイコン。3D表示の主役感を壊さないサイズにする。 */
 button#debugMenuButton {
-    width: clamp(30px, 2.8vw, 38px);
-    height: clamp(30px, 2.8vw, 38px);
+    width: clamp(34px, 3vw, 40px);
+    height: clamp(34px, 3vw, 40px);
     display: inline-grid;
     place-items: center;
-    border: 1px solid hsl(0deg 0% 100% / 15%);
+    border: 1px solid var(--sincro-main-overlay-border, hsl(0deg 0% 100% / 15%));
     color: var(--headerTextColor);
-    background: hsl(0deg 0% 20% / 46%);
-    backdrop-filter: blur(1px);
-    -webkit-backdrop-filter: blur(1px);
-    border-radius: 7px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+        rgba(255, 255, 255, 0.03);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
     padding: 0;
     cursor: pointer;
 }
 
 button#debugMenuButton .debugMenuButton__icon {
-    width: clamp(15px, 1.5vw, 18px);
-    height: clamp(15px, 1.5vw, 18px);
+    width: clamp(16px, 1.5vw, 18px);
+    height: clamp(16px, 1.5vw, 18px);
     display: block;
     fill: hsl(0deg 0% 93% / 84%);
 }
 
 button#debugMenuButton:hover {
-    background: hsl(0deg 0% 28% / 58%);
-    border-color: hsl(0deg 0% 100% / 22%);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+        rgba(255, 255, 255, 0.05);
+    border-color: var(--sincro-main-overlay-border-strong, hsl(0deg 0% 100% / 22%));
 }
 
 div#debugMenuPanel {
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% + 10px);
     right: 0;
-    min-width: 196px;
-    padding: 8px;
-    border: 1px solid hsl(186deg 65% 52% / 20%);
-    border-radius: 10px;
-    background: linear-gradient(145deg, hsl(218deg 28% 10% / 97%), hsl(224deg 27% 7% / 97%));
-    box-shadow: 0 8px 22px hsl(220deg 35% 4% / 42%);
+    min-width: 210px;
+    padding: 10px;
+    border: 1px solid var(--sincro-main-overlay-border-strong, hsl(186deg 65% 52% / 20%));
+    border-radius: 14px;
+    background: var(--sincro-main-overlay-surface, linear-gradient(145deg, hsl(218deg 28% 10% / 97%), hsl(224deg 27% 7% / 97%)));
+    box-shadow: var(--sincro-main-overlay-shadow, 0 8px 22px hsl(220deg 35% 4% / 42%));
     visibility: hidden;
     opacity: 0;
     transform: translateY(-6px);
@@ -96,19 +101,25 @@ div#debugMenu.is-open div#debugMenuPanel {
 button#debugConsoleToggle,
 button#reactSettingsPanelToggle {
     width: 100%;
-    border: 1px solid hsl(186deg 65% 52% / 18%);
-    border-radius: 8px;
-    background: hsl(210deg 32% 18% / 94%);
+    border: 1px solid var(--sincro-main-overlay-border, hsl(186deg 65% 52% / 18%));
+    border-radius: 10px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+        rgba(22, 26, 34, 0.78);
     color: hsl(0deg 0% 92%);
     text-align: left;
-    padding: 9px 10px;
+    padding: 10px 12px;
     font-size: 12px;
+    line-height: 1.4;
     cursor: pointer;
 }
 
 button#debugConsoleToggle:hover,
 button#reactSettingsPanelToggle:hover {
-    background: hsl(0deg 0% 30% / 95%);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+        rgba(28, 34, 44, 0.84);
+    border-color: var(--sincro-main-overlay-border-strong, rgba(157, 190, 232, 0.24));
 }
 
 button#reactSettingsPanelToggle {
@@ -128,11 +139,11 @@ div#debugConsole {
 
     /* 右上オーバーレイで表示し、会話UI(左側)と重なりづらい位置を優先する。 */
     position: absolute;
-    top: clamp(52px, 8dvh, 84px);
-    right: 12px;
+    top: var(--sincro-right-tool-panel-top, clamp(70px, 10dvh, 96px));
+    right: var(--sincro-main-overlay-side, 12px);
     left: auto;
-    width: min(1120px, calc(100vw - 24px));
-    max-height: calc(100dvh - clamp(52px, 8dvh, 84px) - 12px);
+    width: min(1120px, calc(100vw - (var(--sincro-main-overlay-side, 12px) * 2)));
+    max-height: calc(100dvh - var(--sincro-right-tool-panel-top, clamp(70px, 10dvh, 96px)) - var(--sincro-main-overlay-side, 12px));
     border: 1px solid var(--debug-panel-border);
     border-radius: 12px;
     box-shadow: 0 14px 44px hsl(220deg 50% 3% / 55%);

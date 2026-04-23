@@ -20,13 +20,16 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
             <div id="sincroBody" className="sincroPageShell sincroPageShell--modern">
                 <div id="sincroHeaderContainer">
                     <div id="sincroHeaderBox">
-                        <div className="headerIconBox leftIconBox">
-                            <img className="headerIconBox__icon" src="../images/icon-system.webp" alt="" />
+                        <div id="sincroHeaderBox__brand">
+                            <div className="headerIconBox">
+                                <img className="headerIconBox__icon" src="../images/icon-system.webp" alt="" />
+                            </div>
+                            <div id="sincroHeaderBox__textGroup">
+                                <div className="sincroHeaderBox__eyebrow">会話セッション</div>
+                                <div id="sincroHeaderBox__text">Sincromisor</div>
+                            </div>
                         </div>
-                        <div id="sincroHeaderBox__leftDecoration"></div>
-                        <div id="sincroHeaderBox__text">Sincromisor</div>
-                        <div id="sincroHeaderBox__rightDecoration"></div>
-                        <div className="headerIconBox rightIconBox">
+                        <div id="sincroHeaderBox__toolChrome">
                             <div id="sincroDebugMenuRoot">
                                 <RightToolMenu />
                             </div>

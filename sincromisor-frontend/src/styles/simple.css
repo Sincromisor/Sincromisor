@@ -52,6 +52,20 @@
 
 div#sincroBody.sincroPageShell--modern {
     & {
+        --sincro-main-overlay-top: clamp(8px, 1.2vw, 16px);
+        --sincro-main-overlay-side: clamp(8px, 1.4vw, 20px);
+        --sincro-main-overlay-gap: clamp(8px, 1vw, 14px);
+        --sincro-header-height: clamp(54px, 7dvh, 74px);
+        --sincro-right-tool-panel-top: clamp(70px, 10dvh, 96px);
+        --sincro-main-overlay-border: rgba(157, 190, 232, 0.14);
+        --sincro-main-overlay-border-strong: rgba(157, 190, 232, 0.24);
+        --sincro-main-overlay-surface:
+            radial-gradient(circle at 0% 0%, rgba(92, 165, 230, 0.18), transparent 34%),
+            linear-gradient(160deg, rgba(26, 29, 37, 0.92), rgba(14, 16, 22, 0.86));
+        --sincro-main-overlay-shadow: 0 14px 34px rgba(2, 6, 12, 0.34);
+        --sincro-main-overlay-shadow-soft: 0 10px 24px rgba(2, 6, 12, 0.28);
+        --sincro-main-overlay-text-muted: rgba(225, 233, 247, 0.72);
+
         width: 100dvw;
         height: 100dvh;
 
@@ -76,6 +90,10 @@ div#sincroBody.sincroPageShell--modern {
         grid-area: 1 / 1 / 2 / 13;
         width: 100%;
         height: 100%;
+        padding: var(--sincro-main-overlay-top) var(--sincro-main-overlay-side) 0;
+        display: flex;
+        align-items: flex-start;
+        pointer-events: none;
         z-index: 6;
     }
 
@@ -117,5 +135,17 @@ div#sincroBody.sincroPageShell--modern {
         height: 100%;
         visibility: hidden;
         z-index: 15;
+    }
+}
+
+@media (max-width: 720px) {
+    div#sincroBody.sincroPageShell--modern {
+        & {
+            --sincro-main-overlay-top: 8px;
+            --sincro-main-overlay-side: 8px;
+            --sincro-main-overlay-gap: 8px;
+            --sincro-header-height: 52px;
+            --sincro-right-tool-panel-top: 68px;
+        }
     }
 }
