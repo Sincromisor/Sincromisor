@@ -1,94 +1,133 @@
 div#sincroHeaderBox {
     & {
         width: 100%;
-        height: 100%;
+        min-height: var(--sincro-header-height, clamp(54px, 7dvh, 74px));
+        display: flex;
+        align-items: stretch;
+        justify-content: space-between;
+        gap: var(--sincro-main-overlay-gap, 12px);
+        pointer-events: auto;
+    }
 
-        display: grid;
-        grid-template-columns: 180px 90px 1fr 90px 180px;
-        grid-template-rows: 1fr;
-        column-gap: 0px;
-        row-gap: 0px;
-        position: relative;
+    & div#sincroHeaderBox__brand {
+        & {
+            min-width: 0;
+            flex: 1 1 auto;
+            display: flex;
+            align-items: center;
+            gap: clamp(10px, 1vw, 14px);
+            padding: clamp(8px, 1vw, 12px) clamp(12px, 1.6vw, 18px);
+            border: 1px solid var(--sincro-main-overlay-border-strong, rgba(157, 190, 232, 0.24));
+            border-radius: clamp(16px, 2vw, 22px);
+            box-shadow: var(--sincro-main-overlay-shadow, 0 14px 34px rgba(2, 6, 12, 0.34));
+            background: var(--sincro-main-overlay-surface, linear-gradient(160deg, rgba(26, 29, 37, 0.92), rgba(14, 16, 22, 0.86)));
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
     }
 
     & div.headerIconBox {
-        & {
-            width: 100%;
-            height: 100%;
-            background-color: var(--headerBackgroundColor);
-
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-        }
-
-        & img.headerIconBox__icon {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            aspect-ratio: 1 / 1;
-            display: block;
-        }
+        width: clamp(34px, 4vw, 44px);
+        height: clamp(34px, 4vw, 44px);
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--sincro-main-overlay-border, rgba(157, 190, 232, 0.14));
+        border-radius: clamp(12px, 1.4vw, 16px);
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
+            rgba(255, 255, 255, 0.03);
+        overflow: hidden;
     }
 
-    & div.leftIconBox {
-        grid-area: 1 / 1 / 2 / 2;
+    & img.headerIconBox__icon {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        aspect-ratio: 1 / 1;
+        display: block;
+        padding: 5px;
     }
 
-    & div.rightIconBox {
-        grid-area: 1 / 5 / 2 / 6;
+    & div#sincroHeaderBox__textGroup {
+        min-width: 0;
         display: flex;
-        justify-content: center;
-        align-items: center;
+        flex-direction: column;
+        gap: 2px;
     }
 
-    & div#sincroHeaderBox__leftDecoration {
-        grid-area: 1 / 2 / 2 / 3;
-
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(110deg,
-                var(--headerBackgroundColor) 0%,
-                var(--headerBackgroundColor) 50%,
-                var(--headerBodyColor) 50%,
-                var(--headerBodyColor) 100%);
-    }
-
-    & div#sincroHeaderBox__rightDecoration {
-        grid-area: 1 / 4 / 2 / 5;
-
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(110deg,
-                var(--headerBodyColor) 0%,
-                var(--headerBodyColor) 50%,
-                var(--headerBackgroundColor) 50%,
-                var(--headerBackgroundColor) 100%);
+    & div.sincroHeaderBox__eyebrow {
+        color: var(--sincro-main-overlay-text-muted, rgba(225, 233, 247, 0.72));
+        font-size: clamp(11px, 1vw, 12px);
+        line-height: 1.1;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
     }
 
     & div#sincroHeaderBox__text {
-        grid-area: 1 / 3 / 2 / 4;
-
-        width: 100%;
-        height: 100%;
-        /* 
-            https://clamp.font-size.app/
-            1280 -> 3840 : 24 -> 72
-        */
-        font-size: clamp(1.75rem, 0rem + 2.1875vw, 5.25rem);
-        font-weight: bold;
+        min-width: 0;
+        font-size: clamp(1.2rem, 1rem + 1vw, 1.85rem);
+        font-weight: 700;
         color: var(--headerTextColor);
-        background-color: var(--headerBodyColor);
-        padding: 0px 10px 0px 10px;
-
-        /* 子要素の上下中央揃え */
-        display: flex;
-        /* 横方向 */
-        justify-content: left;
-        /* 縦方向 */
-        align-items: center;
+        line-height: 1.1;
+        white-space: nowrap;
         overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    & div#sincroHeaderBox__toolChrome {
+        flex: 0 0 auto;
+        min-height: var(--sincro-header-height, clamp(54px, 7dvh, 74px));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: clamp(6px, 0.8vw, 8px);
+        border: 1px solid var(--sincro-main-overlay-border, rgba(157, 190, 232, 0.14));
+        border-radius: clamp(16px, 2vw, 22px);
+        box-shadow: var(--sincro-main-overlay-shadow-soft, 0 10px 24px rgba(2, 6, 12, 0.28));
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+            rgba(11, 14, 20, 0.58);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+    }
+
+    & div#sincroDebugMenuRoot {
+        display: flex;
+        align-items: center;
+    }
+}
+
+@media (max-width: 720px) {
+    div#sincroHeaderBox {
+        & {
+            gap: 8px;
+        }
+
+        & div#sincroHeaderBox__brand {
+            padding: 8px 10px;
+            border-radius: 16px;
+        }
+
+        & div.headerIconBox {
+            width: 32px;
+            height: 32px;
+            border-radius: 12px;
+        }
+
+        & div.sincroHeaderBox__eyebrow {
+            font-size: 10px;
+            letter-spacing: 0.06em;
+        }
+
+        & div#sincroHeaderBox__text {
+            font-size: clamp(1.05rem, 0.92rem + 1.1vw, 1.35rem);
+        }
+
+        & div#sincroHeaderBox__toolChrome {
+            min-height: 52px;
+            padding: 6px;
+            border-radius: 16px;
+        }
     }
 }
