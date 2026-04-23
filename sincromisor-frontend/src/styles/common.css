@@ -1,10 +1,17 @@
 @layer legacy {
-    * {
-        margin: 0 auto;
+    /* modern page は reset のみ、legacy 導線だけ auto-centering を引き継ぐ。 */
+    :where(body.sincroPage, body.sincroPage *) {
         padding: 0;
-        /*overflow: clip;*/
         font-family: var(--sincro-font-family-base);
         font-feature-settings: "palt" 1;
+    }
+
+    :where(body.sincroPage--modern, body.sincroPage--modern *) {
+        margin: 0;
+    }
+
+    :where(body.sincroPage--legacyCentered, body.sincroPage--legacyCentered *) {
+        margin: 0 auto;
     }
 
     :root {

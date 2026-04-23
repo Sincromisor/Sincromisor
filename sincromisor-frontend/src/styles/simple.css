@@ -50,7 +50,7 @@
     grid-area: 10 / 9 / 13 / 13;
 */
 
-div#sincroBody {
+div#sincroBody.sincroPageShell--modern {
     & {
         width: 100dvw;
         height: 100dvh;
