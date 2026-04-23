@@ -1,4 +1,4 @@
-import { ChatMessageManager } from "./UI/ChatMessageManager";
+import { ChatMessageService } from "./UI/ChatMessageService";
 import { DialogManager } from "./UI/DialogManager";
 import { TalkManager } from "./RTC/TalkManager";
 import { DebugConsoleManager } from "./UI/DebugConsoleManager";
@@ -13,7 +13,7 @@ import { SincroCharacterGazeController } from "./App/SincroCharacterGazeControll
 export class SincroController {
     private readonly dialogManager: DialogManager;
     private readonly debugConsoleManager: DebugConsoleManager;
-    private readonly chatMessageManager: ChatMessageManager;
+    private readonly chatMessageService: ChatMessageService;
     private readonly rtcConfigManager: SincroRTCConfigManager;
     private readonly audioInputController: SincroAudioInputController;
     private readonly rtcSessionController: SincroRtcSessionController;
@@ -22,20 +22,20 @@ export class SincroController {
     constructor() {
         this.dialogManager = DialogManager.getManager();
         this.debugConsoleManager = DebugConsoleManager.getManager();
-        this.chatMessageManager = ChatMessageManager.getManager();
+        this.chatMessageService = ChatMessageService.getService();
         const talkManager = TalkManager.getManager();
         this.rtcConfigManager = SincroRTCConfigManager.getManager((err) => {
-            this.chatMessageManager.writeErrorMessage(`WebRTCの設定の取得に失敗しました。 - ${err}`);
+            this.chatMessageService.writeErrorMessage(`WebRTCの設定の取得に失敗しました。 - ${err}`);
         });
         this.audioInputController = new SincroAudioInputController(
             this.dialogManager,
             this.debugConsoleManager,
-            this.chatMessageManager,
+            this.chatMessageService,
         );
         this.characterGazeController = new SincroCharacterGazeController(
             this.dialogManager,
             this.debugConsoleManager,
-            this.chatMessageManager,
+            this.chatMessageService,
         );
         this.rtcSessionController = new SincroRtcSessionController(
             this.debugConsoleManager,

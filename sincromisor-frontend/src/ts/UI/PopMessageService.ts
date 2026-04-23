@@ -1,17 +1,17 @@
-export class PopManager {
+export class PopMessageService {
     private popBox: HTMLDivElement;
-    private static instance: PopManager;
+    private static instance: PopMessageService;
     private messageQueue: HTMLDivElement[] = [];
     private readonly MAX_MESSAGES = 3;
     private readonly AUTO_REMOVE_TIME = 10000;
     private dialogPopListeners = new Set<(event: DialogPopEvent) => void>();
     private dialogPopMessageID: number = 0;
 
-    static getManager(): PopManager {
-        if (!PopManager.instance) {
-            PopManager.instance = new PopManager();
+    static getService(): PopMessageService {
+        if (!PopMessageService.instance) {
+            PopMessageService.instance = new PopMessageService();
         }
-        return PopManager.instance;
+        return PopMessageService.instance;
     }
 
     subscribeDialogPop(listener: (event: DialogPopEvent) => void): () => void {

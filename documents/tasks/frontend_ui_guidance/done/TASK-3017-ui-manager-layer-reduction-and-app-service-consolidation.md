@@ -1,7 +1,7 @@
 # TASK-3017 UI manager 層の縮退と App / service 層への統合
 
 - 作成日: 2026-04-22
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 
 ## 目的
@@ -55,27 +55,27 @@
 
 ### 1. 再分類
 
-- [ ] `src/ts/UI/*` の各ファイルが、manager / service / store / bridge のどれに当たるか整理されている
-- [ ] `manager` の名前を残すべきものと改名・統合すべきものが区別されている
-- [ ] React view から不要になった DOM 主導責務が整理されている
+- [x] `src/ts/UI/*` の各ファイルが、manager / service / store / bridge のどれに当たるか整理されている
+- [x] `manager` の名前を残すべきものと改名・統合すべきものが区別されている
+- [x] React view から不要になった DOM 主導責務が整理されている
 
 ### 2. App / service 統合
 
-- [ ] `AppController` とその helper に寄せる責務が整理されている
-- [ ] 独立 service として残す責務が整理されている
-- [ ] state store と UI interaction の境界が整理されている
+- [x] `AppController` とその helper に寄せる責務が整理されている
+- [x] 独立 service として残す責務が整理されている
+- [x] state store と UI interaction の境界が整理されている
 
 ### 3. 右側ツール領域 ownership
 
-- [ ] `debugMenu`、設定パネル、Debug Console の state owner が App / React 側に定義されている
-- [ ] 右側ツール領域の開閉 API が React から正規経路で呼べる
-- [ ] `DebugConsoleManager` が右側ツール領域全体の owner ではなくなっている
+- [x] `debugMenu`、設定パネル、Debug Console の state owner が App / React 側に定義されている
+- [x] 右側ツール領域の開閉 API が React から正規経路で呼べる
+- [x] `DebugConsoleManager` が右側ツール領域全体の owner ではなくなっている
 
 ### 4. 可読性
 
-- [ ] 命名とディレクトリ構成から責務が読める
-- [ ] React UI 側から触る正規 API が追いやすい
-- [ ] 設計文書が current structure に追従している
+- [x] 命名とディレクトリ構成から責務が読める
+- [x] React UI 側から触る正規 API が追いやすい
+- [x] 設計文書が current structure に追従している
 
 ## 実装タスク
 
@@ -114,3 +114,8 @@
 
 - 本タスクは `manager を全部消す` のではなく、`現在の責務に合わない manager 層を減らす` ためのタスクである。
 - 実装変更時は `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` の更新が必要になる。
+- 2026-04-24 進捗:
+  - `ChatMessageManager` を `ChatMessageService`、`PopManager` を `PopMessageService` へ改名した
+  - `SincroAppController` / runtime bundle / subscription helper の依存名を service 前提へ揃えた
+  - 右側ツール領域 owner は `SincroAppRightToolPanelService`、残す manager は `DialogManager` と `DebugConsoleManager` という整理を設計文書へ反映した
+  - `cd sincromisor-frontend && npm run build` が成功し、task-3017 の完了条件を満たしたため `done` へ移行する

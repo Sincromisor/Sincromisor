@@ -1,6 +1,6 @@
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { ChatMessage, TelopChannelMessage } from "./RTCMessage";
-import { ChatMessageManager } from "../UI/ChatMessageManager";
+import { ChatMessageService } from "../UI/ChatMessageService";
 import { SincroRTCConfig } from "./SincroRTCConfigManager";
 
 // 1接続分の WebRTC セッションを管理するクライアント。
@@ -10,7 +10,7 @@ export class RTCTalkClient {
     private readonly peerConnection: RTCPeerConnection;
     private readonly telopChannel: RTCDataChannel;
     private readonly textChannel: RTCDataChannel;
-    private readonly chatMessageManager: ChatMessageManager;
+    private readonly chatMessageService: ChatMessageService;
     private readonly talkMode: string;
     private config: RTCConfiguration;
     private sincroConfig: SincroRTCConfig;
@@ -52,7 +52,7 @@ export class RTCTalkClient {
     /* talk_mode: chat, sincro */
     constructor(sincroConfig: SincroRTCConfig, audioTrack: MediaStreamTrack, talkMode: string) {
         this.logger = DebugConsoleManager.getManager();
-        this.chatMessageManager = ChatMessageManager.getManager();
+        this.chatMessageService = ChatMessageService.getService();
         this.talkMode = talkMode;
         this.config = this.defaultConfig();
         this.sincroConfig = sincroConfig;
@@ -97,7 +97,7 @@ export class RTCTalkClient {
         this.logger.addRtcEventLog(
             `start negotiation: forceIceRestart=${forceIceRestart}, preferredSessionId=${preferredSessionId ?? "-"}`,
         );
-        this.chatMessageManager.writeSystemMessage("音声認識・合成システムに接続します。");
+        this.chatMessageService.writeSystemMessage("音声認識・合成システムに接続します。");
         return this.negotiate(this.peerConnection, forceIceRestart, preferredSessionId);
     }
 
@@ -291,7 +291,7 @@ export class RTCTalkClient {
                 // 失敗時は診断ログ・UI通知を残したうえで再接続へ移行する。
                 this.sessionId = null;
                 this.pendingIceCandidates = [];
-                this.chatMessageManager.writeErrorMessage(`RTCサーバーへの接続に失敗しました...。\n${e}`, true);
+                this.chatMessageService.writeErrorMessage(`RTCサーバーへの接続に失敗しました...。\n${e}`, true);
                 console.error(e);
                 this.logger.addRtcEventLog(`negotiate failed: ${e}`);
                 this.reConnect();
@@ -448,28 +448,28 @@ export class RTCTalkClient {
         /* new -> checking -> connected、disconnected -> failed */
         switch (state) {
             case "new":
-                this.chatMessageManager.writeSystemMessage("音声認識・合成システムに接続します。");
+                this.chatMessageService.writeSystemMessage("音声認識・合成システムに接続します。");
                 break;
             case "checking":
-                this.chatMessageManager.writeSystemMessage("音声認識・合成システムへの接続を確認しています。");
+                this.chatMessageService.writeSystemMessage("音声認識・合成システムへの接続を確認しています。");
                 break;
             case "connected":
                 this.iceFailureDiagnosticCaptured = false;
-                this.chatMessageManager.writeSystemMessage("音声認識・合成システムに接続しました。");
+                this.chatMessageService.writeSystemMessage("音声認識・合成システムに接続しました。");
                 break;
             case "completed":
                 this.iceFailureDiagnosticCaptured = false;
-                this.chatMessageManager.writeSystemMessage("音声認識・合成システムとのセッションの確立に成功しました。");
+                this.chatMessageService.writeSystemMessage("音声認識・合成システムとのセッションの確立に成功しました。");
                 break;
             case "disconnected":
-                this.chatMessageManager.writeErrorMessage("音声認識・合成システムから切断されました。");
+                this.chatMessageService.writeErrorMessage("音声認識・合成システムから切断されました。");
                 break;
             case "failed":
-                this.chatMessageManager.writeErrorMessage("音声認識・合成システムへの接続に失敗しました。");
+                this.chatMessageService.writeErrorMessage("音声認識・合成システムへの接続に失敗しました。");
                 void this.captureIceFailureDiagnostics("iceConnectionState=failed");
                 break;
             default:
-                this.chatMessageManager.writeErrorMessage(`Unknown ICE Connection State - ${state}`);
+                this.chatMessageService.writeErrorMessage(`Unknown ICE Connection State - ${state}`);
                 console.error(state);
         }
     }

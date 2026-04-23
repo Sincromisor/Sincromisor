@@ -226,11 +226,11 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - エントリ: `main-vrm.ts`, `vrm360/main-vrm360.ts`, `looking-glass-vrm/main-vrm-looking-glass.ts`
   - 初期化: `SincroVRMInitializer`, `SincroVRM360Initializer`, `SincroLookingGlassVRMInitializer`
   - 制御: `SincroController`, `RTCTalkClient`, `TalkManager`
-  - UI: `DialogManager`, `ChatMessageManager`, `DebugConsoleManager`, `PopManager`
+  - UI: `DialogManager`, `ChatMessageService`, `DebugConsoleManager`, `PopMessageService`
 - 責務分割:
   - 画面入力/設定: DialogManager
   - 通信: RTCTalkClient + SincroRTCConfigManager
-  - 表示更新: ChatMessageManager/TalkManager/DebugConsoleManager
+  - 表示更新: ChatMessageService/TalkManager/DebugConsoleManager
   - 注: React段階移行に伴い、`SincroController` 直下の結線責務は `App/*Controller` 群へ段階分割予定（`frontend_migration_react.md` 参照）
   - 2026-02-22 時点の分割進捗: `RTC` / `AudioInput` / `CharacterGaze` の結線責務は `App/*Controller` へ抽出済み。`SincroAppController`（`start/stop/subscribe` の最小Facade）導入済み
 - 外部依存:
@@ -238,6 +238,18 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `@mediapipe/tasks-vision`（顔認識利用時）
 - 全体図（必要なら図リンク）:
   - TODO: 図を追加する場合は `documents/design/assets/frontend_ui_overview.drawio` などに配置
+
+### UI責務分類（2026-04-24）
+
+| 区分 | 対象 | 現在の責務 |
+| --- | --- | --- |
+| manager として維持 | `DialogManager` | 起動前 dialog の設定 state を束ね、store / policy / notification service / DOM adapter をオーケストレーションする |
+| manager として維持 | `DebugConsoleManager` | React Debug Console が購読する diagnostics snapshot provider と UI callback bridge を担う |
+| service へ改名 | `ChatMessageService` | チャット履歴 snapshot、既存 DOM fallback、React 向けイベント配信を担う |
+| service へ改名 | `PopMessageService` | 通常画面 pop の DOM fallback と dialog 内 pop の React 向けイベント配信を担う |
+| store | `DialogStateStore` | dialog 設定値 / UI状態 / VRM UI状態 / selected VRM URL の正本を保持する |
+| bridge / adapter | `DialogBridgeDomAdapter`, `HeaderTitleDomAdapter` | native dialog API とヘッダー DOM の最小依存だけを隔離する |
+| App service | `SincroAppRightToolPanelService` | 右側ツール領域の state owner と開閉ルールを保持する |
 
 ### 6.1 入口コメントの棚卸し（2026-04-22）
 
@@ -265,7 +277,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `DialogManager`: 設定値の参照、タイトル反映、VRMファイル更新時のUI状態/通知（選択中VRM URL を含む状態は `DialogStateStore` に保持し、dialog 本体の native API は React 側 `ConfigurationDialog` + `DialogBridgeDomAdapter`、ヘッダー文言更新は `HeaderTitleDomAdapter` に分離）
   - `DialogVrmFileService`: VRMファイル/サムネイルの Cache Storage 永続化
   - `DialogVrmWorkflowService`: VRMファイル選択/初期復元フロー（検証・保存・復元結果の組み立て）
-  - `DialogNotificationService`: dialog 内 Pop 通知の橋渡し（`PopManager` ラッパー）
+  - `DialogNotificationService`: dialog 内 Pop 通知の橋渡し（`PopMessageService` ラッパー）
   - `DialogSettingsPolicy`: 設定UIの disabled 状態/Hints と Character/Gaze/AutoMute の有効化ポリシー
   - `SincroMediaDeviceService`: `enumerateDevices()` の結果を `audioinput` / `videoinput` の UI向け選択肢へ正規化し、`devicechange` 監視と選択済み `deviceId` の有効性判定APIを提供
   - `LearnedVadWorkerClient`: 学習VAD Workerの初期化/有効化/チューニング設定/状態通知を管理
@@ -274,7 +286,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `DebugConsoleManager`: React Debug Console が購読する diagnostics core。RTC状態、イベントログ、音声レベルメーター、HPF/LPF・VAD状態/閾値調整・学習VAD状態、60秒トレンドグラフ用 snapshot を保持し、既存 controller からの public API 呼び出し先を維持する
   - `SincroAppRightToolPanelService`: 右側ツール領域の state owner。設定パネルと Debug Console の表示ルール（相互排他、外側クリック閉じ、メニュー遷移の整合）を App/service 側で保持する
   - `SincroAppController.dialogBridge`（`appController.dialog.*`）: dialog 関連 bridge API の集約窓口。React dialog hook / dialog pop / initializer からの呼び出しを段階的に統一
-  - `SincroAppController.chatBridge`（`appController.chat.*`）: 挨拶メッセージ出力や system icon 更新など、チャットUI更新の集約窓口（initializer からの `ChatMessageManager` 直接依存を縮退）
+  - `SincroAppController.chatBridge`（`appController.chat.*`）: 挨拶メッセージ出力や system icon 更新など、チャットUI更新の集約窓口（initializer からの `ChatMessageService` 直接依存を縮退）
   - `SincroAppController.debugBridge`（`appController.debug.*`）: Debug Console 操作と右側ツール領域開閉の集約窓口（initializer / React からの `DebugConsoleManager` や tool panel store 直接依存を縮退）
   - `SincroAppController` の bridge 群（`dialog/chat/debug/rtc`）を UI層の主要な呼び出し窓口として段階採用し、manager singleton 直接参照を削減している
 - 主要クラス/モジュールと対応ファイル:
@@ -284,8 +296,9 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `sincromisor-frontend/src/ts/RTC/TalkManager.ts`
   - `sincromisor-frontend/src/ts/UI/DialogManager.ts`
   - `sincromisor-frontend/src/ts/MediaDevices/SincroMediaDeviceService.ts`
-  - `sincromisor-frontend/src/ts/UI/ChatMessageManager.ts`
+  - `sincromisor-frontend/src/ts/UI/ChatMessageService.ts`
   - `sincromisor-frontend/src/ts/UI/DebugConsoleManager.ts`
+  - `sincromisor-frontend/src/ts/UI/PopMessageService.ts`
   - `sincromisor-frontend/src/ts/App/SincroAppRightToolPanelService.ts`
   - `sincromisor-frontend/src/ts/RTC/silero-vad.worker.ts`
   - `sincromisor-frontend/src/styles/sincroDebugConsole.css`
@@ -297,7 +310,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - ダイアログ項目変更: `DialogManager.ts` と `src/react/app-shell/SincroPageAppShell.tsx`
   - 起動前 dialog の起動/停止導線変更: `SincroAppController.ts` / `SincroVRMInitializer.ts`
   - 音声入力制約変更: `SincroController.ts` と `RTC/UserMediaManager.ts`
-  - チャット表示変更: `ChatMessageManager.ts` と `src/styles/sincroChatBox.css`
+  - チャット表示変更: `ChatMessageService.ts` と `src/styles/sincroChatBox.css`
 
 ### 7.1.1 CSS 基盤と legacy 隔離
 
@@ -577,6 +590,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-19 | 初回セットアップ dialog のサイズ基準を `960-1120px x 620-780px`、右側設定パネルの幅基準を `420-560px` として追記。`SettingsShell` の左ナビ幅、`開発者向け` の分離見出し、カテゴリ内セクション面、狭幅時の縮退順序を明文化 |
 | 2026-04-22 | `TASK-3015` 対応として Debug Console を React 正式描画へ移行。`debugConsole.html` は削除し、右側ツール領域の state owner を App/service 側へ寄せる前段として React shell を導入した。`DebugConsoleManager` は DOM manager から diagnostics snapshot provider へ縮退した |
 | 2026-04-22 | `TASK-3017` 対応として右側ツール領域の state owner を `SincroAppRightToolPanelService` へ移し、React 側の開閉 API を `appController.debug.*` へ集約した。`src/ts/UI/rightToolPanelStore.ts` は削除し、`DebugConsoleManager` はツール領域 owner ではなく diagnostics core に専念する構成へ整理した |
+| 2026-04-24 | `TASK-3017` 対応として `ChatMessageManager` を `ChatMessageService`、`PopManager` を `PopMessageService` へ改名した。`SincroAppController` / runtime bundle / subscription helper の依存名も service 前提へ揃え、`manager` 名を残す対象を `DialogManager` と `DebugConsoleManager` に絞った |
 | 2026-04-22 | `TASK-3016` 対応として起動前 dialog の bridge DOM を撤去。VRM file picker と drag & drop は `ConfigurationDialogSettingsPanel` の React 正規経路へ移し、`DialogBridgeDomAdapter` は `HTMLDialogElement` の open/close と Esc / backdrop close 抑止だけを扱う最小 platform adapter に縮退した |
 
 ## 15. 参照資料

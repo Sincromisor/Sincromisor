@@ -1,6 +1,6 @@
 import type { DebugConsoleManagerEvent } from "../UI/DebugConsoleManager";
 import type { TalkManagerEvent } from "../RTC/TalkManager";
-import type { ChatMessageManagerEvent } from "../UI/ChatMessageManager";
+import type { ChatMessageServiceEvent } from "../UI/ChatMessageService";
 import type { SincroAppEvent } from "./SincroAppTypes";
 
 export type DebugEventMapResult =
@@ -9,9 +9,9 @@ export type DebugEventMapResult =
     | { kind: "ice_state"; value: string }
     | { kind: "signaling_state"; value: string };
 
-// singleton manager のイベント型を AppController 向けのイベントへ変換する pure mapper 群。
+// singleton manager / service のイベント型を AppController 向けのイベントへ変換する pure mapper 群。
 // AppController 本体は状態更新と emit 順序に集中させる。
-export function mapChatMessageToAppEvent(event: ChatMessageManagerEvent): SincroAppEvent | null {
+export function mapChatMessageToAppEvent(event: ChatMessageServiceEvent): SincroAppEvent | null {
     if (event.type === "system_icon_changed") {
         if (!event.systemIconUrl) {
             return null;

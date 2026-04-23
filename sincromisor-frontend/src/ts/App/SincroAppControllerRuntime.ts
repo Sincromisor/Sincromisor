@@ -1,8 +1,8 @@
 import { SincroController } from "../SincroController";
-import { ChatMessageManager } from "../UI/ChatMessageManager";
+import { ChatMessageService } from "../UI/ChatMessageService";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { DialogManager } from "../UI/DialogManager";
-import { PopManager } from "../UI/PopManager";
+import { PopMessageService } from "../UI/PopMessageService";
 import { TalkManager } from "../RTC/TalkManager";
 import {
     createSincroAppChatBridge,
@@ -19,13 +19,13 @@ import type {
     SincroAppStateBridge,
 } from "./SincroAppBridges";
 
-// SincroAppController constructor の依存組み立てを helper 側へ逃がすための bundle 型。
-export type SincroAppManagerBundle = {
+// SincroAppController constructor の UI 依存組み立てを helper 側へ逃がすための bundle 型。
+export type SincroAppUiDependencyBundle = {
     coreController: SincroController;
-    chatMessageManager: ChatMessageManager;
+    chatMessageService: ChatMessageService;
     debugConsoleManager: DebugConsoleManager;
     talkManager: TalkManager;
-    popManager: PopManager;
+    popMessageService: PopMessageService;
     dialogManager: DialogManager;
 };
 
@@ -36,33 +36,33 @@ export type SincroAppBridgeBundle = {
     rtcBridge: SincroAppRtcBridge;
 };
 
-export type SincroAppControllerRuntimeBundle = SincroAppManagerBundle & SincroAppBridgeBundle & {
+export type SincroAppControllerRuntimeBundle = SincroAppUiDependencyBundle & SincroAppBridgeBundle & {
     stateBridge: SincroAppStateBridge;
 };
 
-// SincroAppController constructor から singleton 取得列挙を分離し、初期化ブロックの見通しを良くする。
-export function createSincroAppManagerBundle(): SincroAppManagerBundle {
+// SincroAppController constructor から UI 依存の singleton / service 取得列挙を分離し、初期化ブロックの見通しを良くする。
+export function createSincroAppUiDependencyBundle(): SincroAppUiDependencyBundle {
     return {
         coreController: new SincroController(),
-        chatMessageManager: ChatMessageManager.getManager(),
+        chatMessageService: ChatMessageService.getService(),
         debugConsoleManager: DebugConsoleManager.getManager(),
         talkManager: TalkManager.getManager(),
-        popManager: PopManager.getManager(),
+        popMessageService: PopMessageService.getService(),
         dialogManager: DialogManager.getManager(),
     };
 }
 
-// manager bundle を元に bridge 群をまとめて作成する helper。
+// UI dependency bundle を元に bridge 群をまとめて作成する helper。
 export function createSincroAppBridgeBundle(
-    managers: Pick<SincroAppManagerBundle, "chatMessageManager" | "debugConsoleManager" | "dialogManager" | "talkManager">,
+    uiDependencies: Pick<SincroAppUiDependencyBundle, "chatMessageService" | "debugConsoleManager" | "dialogManager" | "talkManager">,
     callbacks: { stopRTC: () => void; },
 ): SincroAppBridgeBundle {
     return {
         dialogBridge: createSincroAppDialogBridge({
-            dialogManager: managers.dialogManager,
+            dialogManager: uiDependencies.dialogManager,
         }),
-        chatBridge: createSincroAppChatBridge(managers.chatMessageManager, managers.talkManager),
-        debugBridge: createSincroAppDebugBridge(managers.debugConsoleManager),
+        chatBridge: createSincroAppChatBridge(uiDependencies.chatMessageService, uiDependencies.talkManager),
+        debugBridge: createSincroAppDebugBridge(uiDependencies.debugConsoleManager),
         rtcBridge: createSincroAppRtcBridge({ stopRTC: callbacks.stopRTC }),
     };
 }
@@ -77,10 +77,10 @@ export function createSincroAppRuntimeBundle(params: {
     getStartupSettingsStatus: () => import("./SincroAppTypes").SincroAppStartupSettingsStatus;
     getTelopTextSegmentsSnapshot: () => import("./SincroAppTypes").TelopTextSegment[];
 }): SincroAppControllerRuntimeBundle {
-    // manager 取得 -> bridge 生成 -> state bridge 生成を1か所にまとめる。
+    // UI 依存取得 -> bridge 生成 -> state bridge 生成を1か所にまとめる。
     // Controller 本体では field 代入と bind 順序だけを読めるようにする。
-    const managers = createSincroAppManagerBundle();
-    const bridges = createSincroAppBridgeBundle(managers, { stopRTC: params.stopRTC });
+    const uiDependencies = createSincroAppUiDependencyBundle();
+    const bridges = createSincroAppBridgeBundle(uiDependencies, { stopRTC: params.stopRTC });
     const stateBridge = createSincroAppStateBridge({
         getSettingsSnapshot: params.getSettingsSnapshot,
         getSettingsUiState: params.getSettingsUiState,
@@ -91,7 +91,7 @@ export function createSincroAppRuntimeBundle(params: {
         getTelopTextSegmentsSnapshot: params.getTelopTextSegmentsSnapshot,
     });
     return {
-        ...managers,
+        ...uiDependencies,
         ...bridges,
         stateBridge,
     };

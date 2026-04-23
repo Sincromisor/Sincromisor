@@ -1,4 +1,4 @@
-import type { ChatMessageManager } from "../UI/ChatMessageManager";
+import type { ChatMessageService } from "../UI/ChatMessageService";
 import type { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { getSincroAppRightToolPanelService } from "./SincroAppRightToolPanelService";
 import type { TalkManager } from "../RTC/TalkManager";
@@ -58,28 +58,28 @@ export function createSincroAppDialogBridge(params: {
 }
 
 export function createSincroAppChatBridge(
-    chatMessageManager: ChatMessageManager,
+    chatMessageService: ChatMessageService,
     talkManager: TalkManager,
 ): SincroAppChatBridge {
-    // initializer 側で頻出する chat 操作だけを集約し、ChatMessageManager の直接 import を減らす。
+    // initializer 側で頻出する chat 操作だけを集約し、ChatMessageService の直接 import を減らす。
     return {
         writeUnknownUserMessage: (message, isHTML) => {
-            chatMessageManager.writeUnknownUserMessage(message, isHTML);
+            chatMessageService.writeUnknownUserMessage(message, isHTML);
         },
         writeSystemMessage: (message, isHTML) => {
-            chatMessageManager.writeSystemMessage(message, isHTML);
+            chatMessageService.writeSystemMessage(message, isHTML);
         },
         setSystemIcon: (iconUrl) => {
-            chatMessageManager.setSystemIcon(iconUrl);
+            chatMessageService.setSystemIcon(iconUrl);
         },
         setDomRenderingEnabled: (enabled) => {
-            chatMessageManager.setDomRenderingEnabled(enabled);
+            chatMessageService.setDomRenderingEnabled(enabled);
         },
         setTelopDomRenderingEnabled: (enabled) => {
             talkManager.setTelopDomRenderingEnabled(enabled);
         },
-        getMessageViewSnapshot: () => chatMessageManager.getMessageViewSnapshot(),
-        getSystemIconUrl: () => chatMessageManager.getSystemIconUrl(),
+        getMessageViewSnapshot: () => chatMessageService.getMessageViewSnapshot(),
+        getSystemIconUrl: () => chatMessageService.getSystemIconUrl(),
     };
 }
 

@@ -1,8 +1,8 @@
 import { SincroController } from "../SincroController";
-import { ChatMessageManager } from "../UI/ChatMessageManager";
+import { ChatMessageService } from "../UI/ChatMessageService";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { TalkManager } from "../RTC/TalkManager";
-import { PopManager } from "../UI/PopManager";
+import { PopMessageService } from "../UI/PopMessageService";
 import { DialogManager } from "../UI/DialogManager";
 import { SincroAppLookingGlassStateTracker } from "./SincroAppLookingGlassStateTracker";
 import { SincroAppActiveControllerRegistry } from "./SincroAppActiveControllerRegistry";
@@ -56,10 +56,10 @@ import type {
     SincroAppStartupSettingsStatus,
 } from "./SincroAppTypes";
 import {
-    bindChatManagerSubscription,
+    bindChatServiceSubscription,
     bindDebugManagerSubscription,
     bindDialogManagerSubscriptions,
-    bindPopManagerSubscription,
+    bindPopServiceSubscription,
     bindTalkManagerSubscription,
 } from "./SincroAppManagerSubscriptionBinder";
 
@@ -86,16 +86,16 @@ export type {
 } from "./SincroAppTypes";
 
 // UI層（現行Initializer/将来React）から使うアプリ制御の入口。
-// 現段階では既存 SincroController / singleton manager 群への統一窓口。
+// 現段階では既存 SincroController / singleton manager・service 群への統一窓口。
 // 型・bridge・判定ロジック・mapper は helper へ分離し、本体は orchestration と状態遷移に集中させる。
 export class SincroAppController {
     private static readonly activeRegistry = new SincroAppActiveControllerRegistry();
 
     private readonly coreController: SincroController;
-    private readonly chatMessageManager: ChatMessageManager;
+    private readonly chatMessageService: ChatMessageService;
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly talkManager: TalkManager;
-    private readonly popManager: PopManager;
+    private readonly popMessageService: PopMessageService;
     private readonly dialogManager: DialogManager;
     private readonly eventHub = new SincroAppEventHub();
     private lifecycleState: SincroAppLifecycleState = "idle";
@@ -120,7 +120,7 @@ export class SincroAppController {
         return this.dialogBridge;
     }
     // initializer/React からのチャットUI更新をまとめる軽量 bridge。
-    // ChatMessageManager 直接参照を減らし、UI経路を AppController に集約する。
+    // ChatMessageService 直接参照を減らし、UI経路を AppController に集約する。
     readonly chatBridge: SincroAppChatBridge;
     get chat(): SincroAppChatBridge {
         return this.chatBridge;
@@ -144,10 +144,10 @@ export class SincroAppController {
     constructor() {
         // 依存の組み立てが終わる前に購読/イベント登録を始めないよう、初期化順を固定する。
         const runtime = this.initializeRuntime();
-        this.chatMessageManager = runtime.chatMessageManager;
+        this.chatMessageService = runtime.chatMessageService;
         this.debugConsoleManager = runtime.debugConsoleManager;
         this.talkManager = runtime.talkManager;
-        this.popManager = runtime.popManager;
+        this.popMessageService = runtime.popMessageService;
         this.dialogManager = runtime.dialogManager;
         this.coreController = runtime.coreController;
         this.dialogBridge = runtime.dialogBridge;
@@ -156,7 +156,7 @@ export class SincroAppController {
         this.rtcBridge = runtime.rtcBridge;
         this.stateBridge = runtime.stateBridge;
         SincroAppController.setCurrent(this);
-        this.bindManagerSubscriptions();
+        this.bindUiSubscriptions();
         bindSincroAppWindowEvents({
             onLookingGlassState: this.handleLookingGlassStateEvent,
             onLookingGlassConfigUpdated: this.handleLookingGlassConfigUpdated,
@@ -373,9 +373,9 @@ export class SincroAppController {
         });
     }
 
-    // singleton manager 群の購読を集約する。constructor から直接羅列しないのは読み順維持のため。
-    private bindManagerSubscriptions(): void {
-        // singleton manager 群を機能別に購読し、AppController 統一イベントへ正規化する。
+    // singleton manager / service 群の購読を集約する。constructor から直接羅列しないのは読み順維持のため。
+    private bindUiSubscriptions(): void {
+        // singleton manager / service 群を機能別に購読し、AppController 統一イベントへ正規化する。
         this.bindChatSubscriptions();
         this.bindDebugSubscriptions();
         this.bindTalkSubscriptions();
@@ -384,8 +384,8 @@ export class SincroAppController {
     }
 
     private bindChatSubscriptions(): void {
-        // chat 系は manager -> app event の 1:1 変換のみなので、その場で emit して順序差分を作らない。
-        bindChatManagerSubscription(this.chatMessageManager, (event) => this.emitEvent(event));
+        // chat 系は service -> app event の 1:1 変換のみなので、その場で emit して順序差分を作らない。
+        bindChatServiceSubscription(this.chatMessageService, (event) => this.emitEvent(event));
     }
 
     private bindDebugSubscriptions(): void {
@@ -412,8 +412,8 @@ export class SincroAppController {
     }
 
     private bindPopSubscriptions(): void {
-        // dialog 内通知も AppController 経由に集約し、React 側が PopManager を直接参照しない構成へ寄せる。
-        bindPopManagerSubscription(this.popManager, (event) => this.emitEvent(event));
+        // dialog 内通知も AppController 経由に集約し、React 側が PopMessageService を直接参照しない構成へ寄せる。
+        bindPopServiceSubscription(this.popMessageService, (event) => this.emitEvent(event));
     }
 
     private bindDialogSubscriptions(): void {

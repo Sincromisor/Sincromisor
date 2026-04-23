@@ -1,7 +1,7 @@
 import type { ChatMessage, TelopChannelMessage } from "../RTC/RTCMessage";
 import type { TelopTextSegment } from "../RTC/TalkManager";
-import type { ChatMessageViewRecord } from "../UI/ChatMessageManager";
-import type { DialogPopEvent } from "../UI/PopManager";
+import type { ChatMessageViewRecord } from "../UI/ChatMessageService";
+import type { DialogPopEvent } from "../UI/PopMessageService";
 import type {
     DialogSettingsUiHints,
     DialogSettingsUiState,
@@ -83,7 +83,7 @@ export type SincroAppLookingGlassConfigUpdatedEventDetail = {
 };
 
 // AppController が UI 層へ配信する統一イベント。
-// singleton manager ごとの差分をこの union へ吸収し、React 側の購読先を一本化する。
+// singleton manager / service ごとの差分をこの union へ吸収し、React 側の購読先を一本化する。
 export type SincroAppEvent = {
     type: "lifecycle";
     state: SincroAppLifecycleState;
