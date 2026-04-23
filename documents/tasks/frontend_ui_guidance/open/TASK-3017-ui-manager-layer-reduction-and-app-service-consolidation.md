@@ -20,7 +20,7 @@
 - `documents/design/frontend_ui.md`
 - `documents/design/frontend_migration_react.md`
 - `documents/tasks/frontend_ui_guidance/done/TASK-3011-react-app-controller-boundary-and-ui-dependency-reduction.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3015-debug-console-react-migration-and-diagnostics-core-split.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3015-debug-console-react-migration-and-diagnostics-core-split.md`
 - `documents/tasks/frontend_ui_guidance/open/TASK-3016-full-react-startup-dialog-and-bridge-dom-removal.md`
 
 ## スコープ
