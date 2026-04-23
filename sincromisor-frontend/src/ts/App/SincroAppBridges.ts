@@ -4,7 +4,6 @@
 export type SincroAppDialogBridge = {
     applySelectedVrmFile: (file: File) => void;
     setVrmDragOver: (isDragOver: boolean) => void;
-    setPopDomRenderingEnabled: (enabled: boolean) => void;
     close: () => void;
     open: () => void;
     updateUserMediaAvailabilityStatus: (available: boolean) => void;

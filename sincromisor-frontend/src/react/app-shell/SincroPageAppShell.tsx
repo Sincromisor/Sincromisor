@@ -1,10 +1,9 @@
 import type { ReactElement } from "react";
 import { SincroChatView } from "../chat/SincroChatView";
+import { ConfigurationDialog } from "../dialog/ConfigurationDialog";
 import { DebugConsole } from "../debug/DebugConsole";
 import { RightToolMenu } from "../debug/RightToolMenu";
 import { RightToolSettingsChrome } from "../debug/RightToolSettingsChrome";
-import { ConfigurationDialogSettingsPanel } from "../dialog/ConfigurationDialogSettingsPanel";
-import { DialogPopMessages } from "../dialog/DialogPopMessages";
 import { SincroTelopView } from "../telop/SincroTelopView";
 
 type SincroPageAppShellProps = {
@@ -16,16 +15,7 @@ type SincroPageAppShellProps = {
 export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
     return (
         <>
-            <dialog id="configurationDialog">
-                <div id="sincroDialogPopContainer">
-                    <div id="sincroDialogPopBox">
-                        <DialogPopMessages />
-                    </div>
-                </div>
-                <div id="sincroDialogReactSettingsRoot">
-                    <ConfigurationDialogSettingsPanel />
-                </div>
-            </dialog>
+            <ConfigurationDialog />
 
             <div id="sincroBody">
                 <div id="sincroHeaderContainer">

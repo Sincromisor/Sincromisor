@@ -1,11 +1,9 @@
 export class PopManager {
     private popBox: HTMLDivElement;
-    private dialogPopBox: HTMLDivElement;
     private static instance: PopManager;
     private messageQueue: HTMLDivElement[] = [];
     private readonly MAX_MESSAGES = 3;
     private readonly AUTO_REMOVE_TIME = 10000;
-    private dialogPopDomRenderingEnabled: boolean = true;
     private dialogPopListeners = new Set<(event: DialogPopEvent) => void>();
     private dialogPopMessageID: number = 0;
 
@@ -23,25 +21,9 @@ export class PopManager {
         };
     }
 
-    // 設定ダイアログ内の Pop 表示を React に切り替える際、既存DOM描画を止める。
-    // 通常画面用 pop は従来どおり DOM 描画を継続する。
-    setDialogPopDomRenderingEnabled(enabled: boolean): void {
-        this.dialogPopDomRenderingEnabled = enabled;
-        if (!enabled) {
-            this.dialogPopBox.innerHTML = "";
-        }
-    }
-
-    /*
-        次のような制約のため、モーダルダイアログ用と通常用のポップアップボックスを分ける。
-        * dialog要素外だとモーダルダイアログの上にoverlayできない。
-        * dialog要素内だと、dialogを閉じた際に表示されなくなる。
-
-        DialogManagerから呼び出す際は、モーダルダイアログ用のメソッドを使うこと。
-    */
+    // 通常画面用 pop は既存 DOM 描画を継続し、dialog 内 pop は React event 描画を正式経路とする。
     private constructor() {
         this.popBox = document.querySelector('div#sincroPopBox')!;
-        this.dialogPopBox = document.querySelector('div#sincroDialogPopBox')!;
     }
 
     /* 通常メッセージ */
@@ -55,22 +37,17 @@ export class PopManager {
     }
 
     /* モーダル設定ダイアログでの通常メッセージ */
-    // React移行中は DOM描画有無に関係なくイベント通知し、DialogPopMessages が再描画する。
+    // dialog 内は React 描画が正式経路のため、DOM 生成は行わずイベント通知だけを流す。
     writeDialogPopMessage(message: string): void {
-        this.writeMessage(message, false, this.dialogPopBox);
         this.emitDialogPop(message, false);
     }
 
     /* モーダル設定ダイアログでのエラーメッセージ */
     writeDialogPopError(message: string): void {
-        this.writeMessage(message, true, this.dialogPopBox);
         this.emitDialogPop(message, true);
     }
 
     private writeMessage(message: string, error: boolean, targetBox: HTMLDivElement): void {
-        if (targetBox === this.dialogPopBox && !this.dialogPopDomRenderingEnabled) {
-            return;
-        }
         const messageElement: HTMLDivElement = document.createElement('div');
         if (error) {
             messageElement.className = 'popMessage popError';

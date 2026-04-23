@@ -17,7 +17,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - ドキュメントパス: `documents/design/frontend_ui.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-04-22
+- 最終更新日: 2026-04-24
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -262,7 +262,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `SincroController`: UserMedia取得前にダイアログ設定（NS/EC/AGC/騒音会場モード含む）を反映し、RTC開始/停止、DataChannel受信ハンドラ設定、CharacterGaze起動、DebugConsoleのVAD閾値変更をAudioWorkletへ中継
   - `RTCTalkClient`: Offer生成、`/offer` POST、Answer適用、DataChannel管理
   - `TalkManager`: text/telop受信を集約し、チャットUIと口形同期向け状態を維持
-  - `DialogManager`: 設定値の参照、タイトル反映、VRMファイル更新時のUI状態/通知（選択中VRM URL を含む状態は `DialogStateStore` に保持し、dialog 本体の native API は `DialogBridgeDomAdapter`、ヘッダー文言更新は `HeaderTitleDomAdapter` に分離）
+  - `DialogManager`: 設定値の参照、タイトル反映、VRMファイル更新時のUI状態/通知（選択中VRM URL を含む状態は `DialogStateStore` に保持し、dialog 本体の native API は React 側 `ConfigurationDialog` + `DialogBridgeDomAdapter`、ヘッダー文言更新は `HeaderTitleDomAdapter` に分離）
   - `DialogVrmFileService`: VRMファイル/サムネイルの Cache Storage 永続化
   - `DialogVrmWorkflowService`: VRMファイル選択/初期復元フロー（検証・保存・復元結果の組み立て）
   - `DialogNotificationService`: dialog 内 Pop 通知の橋渡し（`PopManager` ラッパー）
@@ -325,8 +325,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `tag` 依存や深い子孫 selector による見た目制御は避け、component root から責務を追えることを優先する
 - 起動前設定 dialog の責務境界:
   - `src/styles/sincroConfigurationDialog.css` は dialog 要素と legacy fieldset フォールバックの最低限維持だけを担当する
-  - `src/react/dialog/configurationDialogSettings.css` は dialog surface、backdrop、余白、footer、category card、SettingsShell 上書きなど React 主導 UI の見た目を担当する
-  - file picker と drag & drop は `ConfigurationDialogSettingsPanel` の React 正規経路で扱い、`DialogBridgeDomAdapter` は `HTMLDialogElement` の open/close と close-interaction 制御だけに限定する
+  - `src/react/dialog/configurationDialogSettings.css` は dialog surface、backdrop、dialog 内 pop layer、余白、footer、category card、SettingsShell 上書きなど React 主導 UI の見た目を担当する
+  - file picker と drag & drop は `ConfigurationDialogSettingsPanel` の React 正規経路で扱い、`DialogBridgeDomAdapter` は `ConfigurationDialog` から呼ばれる `HTMLDialogElement` の open/close と close-interaction 制御だけに限定する
 - CSS ファイル分類:
   - `global foundation`: `src/styles/uiFoundation.css`
   - `modern component CSS`: `src/react/settings-shell/settingsShell.css`, `src/react/dialog/configurationDialogSettings.css`

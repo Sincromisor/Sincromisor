@@ -20,9 +20,6 @@ export function DialogPopMessages() {
             if (!controller) {
                 return;
             }
-            // React で描画する間は既存 DOM pop を止めて二重表示を防ぐ。
-            controller.dialog.setPopDomRenderingEnabled(false);
-
             const unsubscribeController = controller.subscribe((event: SincroAppEvent) => {
                 if (event.type !== "dialog_pop_message") {
                     return;
@@ -42,7 +39,6 @@ export function DialogPopMessages() {
                 // ページ切替時の timer 残りによる setState を防ぐため、先に timer 群を掃除する。
                 clearAll();
                 unsubscribeController();
-                controller.dialog.setPopDomRenderingEnabled(true);
             };
         });
 
