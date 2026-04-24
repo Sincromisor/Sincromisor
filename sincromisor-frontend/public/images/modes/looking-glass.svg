@@ -1,24 +1,49 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" role="img">
-  <title>Looking Glass display concept</title>
+  <title>Looking Glass character concept</title>
   <defs>
-    <linearGradient id="glassPanel" x1="56" y1="34" x2="266" y2="164" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2a3550"/>
-      <stop offset="1" stop-color="#111721"/>
+    <linearGradient id="glassBackdrop" x1="40" y1="20" x2="284" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2a3750"/>
+      <stop offset=".58" stop-color="#182231"/>
+      <stop offset="1" stop-color="#101620"/>
     </linearGradient>
-    <linearGradient id="holo" x1="94" y1="58" x2="212" y2="144" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#d4e8ff"/>
-      <stop offset=".55" stop-color="#7edcff"/>
-      <stop offset="1" stop-color="#6aa8f7"/>
+    <linearGradient id="glassScreen" x1="80" y1="46" x2="234" y2="142" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#253451"/>
+      <stop offset="1" stop-color="#101721"/>
+    </linearGradient>
+    <linearGradient id="glassHolo" x1="111" y1="64" x2="208" y2="144" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff1bf"/>
+      <stop offset=".46" stop-color="#86dcff"/>
+      <stop offset="1" stop-color="#8d8cff"/>
+    </linearGradient>
+    <linearGradient id="glassHair" x1="139" y1="72" x2="181" y2="130" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5b351d"/>
+      <stop offset="1" stop-color="#25170c"/>
     </linearGradient>
   </defs>
-  <rect width="320" height="200" rx="22" fill="#101622"/>
-  <path d="M58 52c0-13 10-24 24-24h156c14 0 24 11 24 24v95c0 13-10 24-24 24H82c-14 0-24-11-24-24V52Z" fill="#0c111a" stroke="#d4e8ff" stroke-opacity=".26" stroke-width="3"/>
-  <path d="M78 47h164v98H78V47Z" fill="url(#glassPanel)"/>
-  <path d="M96 67h112l22 54H74l22-54Z" fill="#68a8ff" opacity=".1" stroke="#77d7ff" stroke-opacity=".48" stroke-width="3"/>
-  <path d="M122 78l42-18 42 18v48l-42 20-42-20V78Z" fill="url(#holo)" opacity=".86"/>
-  <path d="M122 78l42 20 42-20M164 98v48" fill="none" stroke="#f1f8ff" stroke-opacity=".74" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
-  <path d="M98 88l-18 36M222 88l18 36M104 132h112" fill="none" stroke="#d4e8ff" stroke-opacity=".28" stroke-linecap="round" stroke-width="3"/>
-  <path d="M95 161h130M132 171h56" stroke="#77d7ff" stroke-opacity=".64" stroke-linecap="round" stroke-width="5"/>
-  <circle cx="245" cy="42" r="6" fill="#77d7ff" opacity=".8"/>
-  <circle cx="68" cy="154" r="5" fill="#d4e8ff" opacity=".6"/>
+  <rect width="320" height="200" rx="24" fill="#101620"/>
+  <rect x="22" y="20" width="276" height="160" rx="26" fill="url(#glassBackdrop)" stroke="#7fb8ff" stroke-opacity=".27"/>
+  <path d="M56 47c0-13 11-24 24-24h160c13 0 24 11 24 24v104c0 13-11 24-24 24H80c-13 0-24-11-24-24V47Z" fill="#0c121c" stroke="#d7edff" stroke-opacity=".28" stroke-width="3"/>
+  <path d="M76 43h168v104H76V43Z" fill="url(#glassScreen)"/>
+  <path d="M94 64h124l20 62H74l20-62Z" fill="#80e1ff" opacity=".1" stroke="#80e1ff" stroke-opacity=".45" stroke-width="3"/>
+  <path d="M104 137h112M126 166h68M96 158h128" stroke="#80e1ff" stroke-opacity=".55" stroke-linecap="round" stroke-width="5"/>
+  <path d="M126 78l34-16 34 16v46l-34 18-34-18V78Z" fill="url(#glassHolo)" opacity=".48"/>
+  <path d="M126 78l34 18 34-18M160 96v46" fill="none" stroke="#f8fdff" stroke-opacity=".65" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+  <path d="M134 91c-6 4-10 11-10 22 0 22 16 39 36 39s36-17 36-39c0-11-4-18-10-22-4-16-19-25-34-20-8 2-14 9-18 20Z" fill="url(#glassHair)"/>
+  <path d="M129 113c-7 0-12 5-11 12 1 6 6 10 13 10l1-21-3-1Z" fill="#e7b296"/>
+  <path d="M193 113c7 0 12 5 11 12-1 6-6 10-13 10l-1-21 3-1Z" fill="#e7b296"/>
+  <path d="M135 103c5-15 18-22 34-20 16 2 27 14 27 32 0 22-14 38-31 38s-31-16-31-38c0-4 0-8 1-12Z" fill="#f1c1a8"/>
+  <path d="M135 103c9-20 30-27 51-15 3 8 8 15 15 20-18 1-34-6-45-20-5 12-10 17-21 15Z" fill="url(#glassHair)"/>
+  <circle cx="151" cy="118" r="7" fill="#5a351c"/>
+  <circle cx="177" cy="118" r="7" fill="#5a351c"/>
+  <circle cx="154" cy="115" r="3" fill="#fff8ec"/>
+  <circle cx="180" cy="115" r="3" fill="#fff8ec"/>
+  <path d="M158 136c4 3 9 3 13 0" fill="none" stroke="#6a3140" stroke-linecap="round" stroke-width="3"/>
+  <path d="M140 116c6-7 18-7 24 0M168 116c6-7 18-7 24 0M164 116h4" fill="none" stroke="#b2173b" stroke-linecap="round" stroke-width="4"/>
+  <path d="M149 153h22l5 20h-32l5-20Z" fill="#f8fbff"/>
+  <path d="M156 155h9l7 18h-23l7-18Z" fill="#34308f"/>
+  <path d="M226 55h24c10 0 18 8 18 18s-8 18-18 18h-10l-12 10V91h-2c-10 0-18-8-18-18s8-18 18-18Z" fill="#fff5dc" stroke="#ffffff" stroke-opacity=".4"/>
+  <path d="M228 72h22M228 81h13" stroke="#5a6b80" stroke-linecap="round" stroke-width="4"/>
+  <circle cx="244" cy="38" r="5" fill="#ff8ca7"/>
+  <circle cx="68" cy="151" r="5" fill="#ffd36a"/>
+  <path d="M57 72c9-8 18-8 27 0M236 129c9 8 18 8 27 0" fill="none" stroke="#ffd36a" stroke-linecap="round" stroke-width="4"/>
 </svg>
