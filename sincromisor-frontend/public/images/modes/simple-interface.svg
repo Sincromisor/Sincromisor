@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" role="img">
+  <title>Simple Interface concept</title>
+  <defs>
+    <linearGradient id="simplePanel" x1="54" y1="34" x2="270" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#26344b"/>
+      <stop offset="1" stop-color="#141925"/>
+    </linearGradient>
+    <linearGradient id="simpleAccent" x1="98" y1="42" x2="204" y2="154" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d4e8ff"/>
+      <stop offset="1" stop-color="#68a8ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="200" rx="22" fill="#101622"/>
+  <rect x="28" y="26" width="264" height="148" rx="22" fill="url(#simplePanel)" stroke="#6aa8f7" stroke-opacity=".34"/>
+  <circle cx="132" cy="86" r="38" fill="#0f1724" stroke="#d4e8ff" stroke-opacity=".44" stroke-width="3"/>
+  <path d="M104 84c10-34 52-34 62 0l-9 42h-44l-9-42Z" fill="url(#simpleAccent)" opacity=".96"/>
+  <circle cx="132" cy="84" r="21" fill="#f0f6ff"/>
+  <path d="M112 79c7-24 34-28 48-6-12 0-22-3-31-11-3 9-8 15-17 17Z" fill="#2d3a55"/>
+  <path d="M119 116c8 8 18 12 29 0" fill="none" stroke="#0f1724" stroke-width="4" stroke-linecap="round"/>
+  <path d="M188 58h48c12 0 22 10 22 22s-10 22-22 22h-26l-22 16v-16c-12 0-22-10-22-22s10-22 22-22Z" fill="#d4e8ff" opacity=".94"/>
+  <path d="M199 78h38M199 90h24" stroke="#172235" stroke-width="6" stroke-linecap="round"/>
+  <path d="M58 132c12-13 20-13 32 0s20 13 32 0 20-13 32 0 20 13 32 0" fill="none" stroke="#77d7ff" stroke-linecap="round" stroke-width="6"/>
+  <rect x="222" y="124" width="44" height="16" rx="8" fill="#77d7ff" opacity=".82"/>
+  <rect x="222" y="146" width="28" height="10" rx="5" fill="#d4e8ff" opacity=".72"/>
+</svg>

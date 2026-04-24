@@ -182,6 +182,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `360deg Camera` と `Looking Glass` は副導線として扱い、`Experimental` / `Device dependent` などの状態ラベルをカード内に明示する。
   - GitHub は起動モード選択を妨げない補助リンクとして header 右側に置き、主要 CTA と同じ重みでは扱わない。
   - トップページも `meta viewport` を持ち、desktop `1280x720` で主要導線と副導線の概要、mobile `390x844` で推奨導線と副導線の存在が初期表示から把握できる compact dashboard を基準にする。
+  - 各 mode card には機能概念を示す差し替え可能な SVG 画像を表示し、画像アセットは `public/images/modes/` に分離する。
   - 見た目は `uiFoundation.css` の dark surface / compact typography / pill geometry を使い、main content 側の immersive overlay family と連続させる。
 
 - 後続タスクへの前提:
@@ -632,6 +633,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-22 | `TASK-3016` 対応として起動前 dialog の bridge DOM を撤去。VRM file picker と drag & drop は `ConfigurationDialogSettingsPanel` の React 正規経路へ移し、`DialogBridgeDomAdapter` は `HTMLDialogElement` の open/close と Esc / backdrop close 抑止だけを扱う最小 platform adapter に縮退した |
 | 2026-04-24 | `TASK-3019` 調査結果を反映し、`simple-vrm` を中心とした main content の dark / immersive visual 方針、overlay 設計、`meta viewport` を前提とする responsive 基盤、legacy global reset の縮退方針を追記した |
 | 2026-04-25 | `TASK-3026` 対応としてトップページを mode selection dashboard として定義し、`Simple Interface` 主導線、`360deg Camera` / `Looking Glass` 副導線、GitHub 補助リンク、状態ラベル、desktop/mobile 初期表示基準を追記した |
+| 2026-04-25 | `TASK-3026` 追加調整として mode card に差し替え可能な SVG コンセプト画像を置く方針を追記した |
 
 ## 15. 参照資料
 
