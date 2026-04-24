@@ -17,7 +17,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - ドキュメントパス: `documents/design/frontend_ui.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-04-24
+- 最終更新日: 2026-04-25
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -176,6 +176,13 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | `src/simple-vrm/index.html` | `npm run build` | Three.js + VRM1.0 + React UI | 通常会話の正規導線 | `modern` | CSS 基盤、React 境界整理、README の主対象として守る |
 | `src/vrm360/index.html` | `npm run build` | Three.js + VRM1.0 + React UI | 360 動画 / カメラ系の拡張導線 | `experimental` | 通常ビルドには含めるが、環境依存前提で検証範囲を限定する |
 | `src/looking-glass-vrm/index.html` | `npm run build` | Three.js + VRM1.0 + React UI + `@lookingglass/webxr` | Looking Glass の新正規候補 | `experimental` | public 導線には出すが、対応デバイス前提の実験導線として扱う |
+
+- トップページ導線（2026-04-25）:
+  - `src/index.html` は、公開入口として `Simple Interface` を推奨起動モードに置く mode selection dashboard とする。
+  - `360deg Camera` と `Looking Glass` は副導線として扱い、`Experimental` / `Device dependent` などの状態ラベルをカード内に明示する。
+  - GitHub は起動モード選択を妨げない補助リンクとして header 右側に置き、主要 CTA と同じ重みでは扱わない。
+  - トップページも `meta viewport` を持ち、desktop `1280x720` で主要導線と副導線の概要、mobile `390x844` で推奨導線と副導線の存在が初期表示から把握できる compact dashboard を基準にする。
+  - 見た目は `uiFoundation.css` の dark surface / compact typography / pill geometry を使い、main content 側の immersive overlay family と連続させる。
 
 - 後続タスクへの前提:
   - `TASK-3010` の CSS 基盤対象は `index`、`simple-vrm`、`vrm360`、`looking-glass-vrm`
@@ -624,6 +631,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-24 | `TASK-3017` 対応として `ChatMessageManager` を `ChatMessageService`、`PopManager` を `PopMessageService` へ改名した。`SincroAppController` / runtime bundle / subscription helper の依存名も service 前提へ揃え、`manager` 名を残す対象を `DialogManager` と `DebugConsoleManager` に絞った |
 | 2026-04-22 | `TASK-3016` 対応として起動前 dialog の bridge DOM を撤去。VRM file picker と drag & drop は `ConfigurationDialogSettingsPanel` の React 正規経路へ移し、`DialogBridgeDomAdapter` は `HTMLDialogElement` の open/close と Esc / backdrop close 抑止だけを扱う最小 platform adapter に縮退した |
 | 2026-04-24 | `TASK-3019` 調査結果を反映し、`simple-vrm` を中心とした main content の dark / immersive visual 方針、overlay 設計、`meta viewport` を前提とする responsive 基盤、legacy global reset の縮退方針を追記した |
+| 2026-04-25 | `TASK-3026` 対応としてトップページを mode selection dashboard として定義し、`Simple Interface` 主導線、`360deg Camera` / `Looking Glass` 副導線、GitHub 補助リンク、状態ラベル、desktop/mobile 初期表示基準を追記した |
 
 ## 15. 参照資料
 

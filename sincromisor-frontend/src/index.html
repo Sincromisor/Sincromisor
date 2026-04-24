@@ -4,6 +4,7 @@
 <head>
     <title>Sincromisor</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="styles/fonts.css" rel="stylesheet">
     <link href="styles/uiFoundation.css" rel="stylesheet">
     <link href="styles/common.css" rel="stylesheet">
@@ -11,41 +12,59 @@
     <link href="styles/index.css" rel="stylesheet">
 </head>
 
-<body class="sincroPage sincroPage--legacyCentered">
+<body class="sincroPage sincroPage--modern">
     <div id="sincroBody">
-        <div id="sincroHeaderContainer">
-            <div id="sincroHeaderBox">
-                <div class="headerIconBox leftIconBox">
-                    <img class="headerIconBox__icon" src="../images/icon-system.webp">
+        <header class="sincroIndexHeader" aria-label="Sincromisor">
+            <a class="sincroIndexHeader__brand" href="./" aria-label="Sincromisor top page">
+                <span class="sincroIndexHeader__icon" aria-hidden="true">
+                    <img src="../images/icon-system.webp" alt="">
+                </span>
+                <span class="sincroIndexHeader__textGroup">
+                    <span class="sincroIndexHeader__eyebrow">Mode selection</span>
+                    <span class="sincroIndexHeader__name">Sincromisor</span>
+                </span>
+            </a>
+            <a class="sincroIndexHeader__sourceLink" href="https://github.com/Sincromisor/Sincromisor">
+                GitHub
+            </a>
+        </header>
+
+        <main class="sincroIndexDashboard" aria-labelledby="sincroIndexTitle">
+            <section class="sincroIndexHero" aria-labelledby="sincroIndexTitle">
+                <div class="sincroIndexHero__copy">
+                    <p class="sincroIndexHero__kicker">Browser voice chat with a 3D character</p>
+                    <h1 id="sincroIndexTitle">Sincromisor</h1>
+                    <p class="sincroIndexHero__lead">
+                        まずは通常の会話画面から開始できます。拡張モードは、用途やデバイスに合わせて選んでください。
+                    </p>
                 </div>
-                <div id="sincroHeaderBox__leftDecoration"></div>
-                <div id="sincroHeaderBox__text">Sincromisor</div>
-                <div id="sincroHeaderBox__rightDecoration"></div>
-                <div class="headerIconBox rightIconBox">
-                </div>
-            </div>
-        </div>
+                <a class="sincroModeCard sincroModeCard--primary" href="simple-vrm/" aria-describedby="simple-vrm-summary">
+                    <span class="sincroModeCard__status">Recommended</span>
+                    <span class="sincroModeCard__title">Simple Interface</span>
+                    <span id="simple-vrm-summary" class="sincroModeCard__summary">
+                        VRM 1.0 character, voice input, chat, telop, settings, and diagnostics.
+                    </span>
+                    <span class="sincroModeCard__action">Launch</span>
+                </a>
+            </section>
 
-        <div class="sincroIndexContainer">
-            <form class="sincroLinkBox">
-                <h2>Recommended (VRM 1.0)</h2>
-                <button formaction="simple-vrm/">Simple Interface (VRM 1.0)</button>
-                <button formaction="vrm360/" class="experimental">360deg Camera (VRM 1.0)</button>
-            </form>
-
-            <form class="sincroLinkBox">
-                <h2>Looking Glass (VRM 1.0 Priority)</h2>
-                <button formaction="looking-glass-vrm/" class="experimental">Looking Glass (VRM 1.0 / Three.js)</button>
-                <p>Experimental route (VRM 1.0 / Three.js migration target). It may not work yet depending on environment/device.</p>
-            </form>
-
-            <div>
-                <h2>Source Code</h2>
-                <p><a href="https://github.com/Sincromisor/Sincromisor">
-                        https://github.com/Sincromisor/Sincromisor</a></p>
-            </div>
-        </div>
-
+            <section class="sincroModeGrid" aria-label="Additional launch modes">
+                <a class="sincroModeCard" href="vrm360/" aria-describedby="vrm360-summary">
+                    <span class="sincroModeCard__status">Experimental</span>
+                    <span class="sincroModeCard__title">360deg Camera</span>
+                    <span id="vrm360-summary" class="sincroModeCard__summary">
+                        360 video and camera-oriented scene for environment-specific testing.
+                    </span>
+                </a>
+                <a class="sincroModeCard" href="looking-glass-vrm/" aria-describedby="looking-glass-summary">
+                    <span class="sincroModeCard__status">Device dependent</span>
+                    <span class="sincroModeCard__title">Looking Glass</span>
+                    <span id="looking-glass-summary" class="sincroModeCard__summary">
+                        VRM 1.0 / Three.js route for supported Looking Glass devices.
+                    </span>
+                </a>
+            </section>
+        </main>
     </div>
 </body>
 
