@@ -1,25 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" role="img">
-  <title>Simple Interface concept</title>
+  <title>Friendly character chat concept</title>
   <defs>
-    <linearGradient id="simplePanel" x1="54" y1="34" x2="270" y2="180" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#26344b"/>
-      <stop offset="1" stop-color="#141925"/>
+    <linearGradient id="simpleBackdrop" x1="46" y1="18" x2="280" y2="182" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#27364d"/>
+      <stop offset=".62" stop-color="#161f2d"/>
+      <stop offset="1" stop-color="#101620"/>
     </linearGradient>
-    <linearGradient id="simpleAccent" x1="98" y1="42" x2="204" y2="154" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#d4e8ff"/>
-      <stop offset="1" stop-color="#68a8ff"/>
+    <linearGradient id="simpleHair" x1="120" y1="42" x2="196" y2="142" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5a351c"/>
+      <stop offset=".58" stop-color="#32200f"/>
+      <stop offset="1" stop-color="#1f160d"/>
     </linearGradient>
+    <linearGradient id="simpleBubble" x1="194" y1="44" x2="270" y2="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff6de"/>
+      <stop offset="1" stop-color="#d8f0ff"/>
+    </linearGradient>
+    <radialGradient id="simpleCheek" cx="0" cy="0" r="1" gradientTransform="matrix(21 0 0 12 134 112)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff8ca7" stop-opacity=".62"/>
+      <stop offset="1" stop-color="#ff8ca7" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <rect width="320" height="200" rx="22" fill="#101622"/>
-  <rect x="28" y="26" width="264" height="148" rx="22" fill="url(#simplePanel)" stroke="#6aa8f7" stroke-opacity=".34"/>
-  <circle cx="132" cy="86" r="38" fill="#0f1724" stroke="#d4e8ff" stroke-opacity=".44" stroke-width="3"/>
-  <path d="M104 84c10-34 52-34 62 0l-9 42h-44l-9-42Z" fill="url(#simpleAccent)" opacity=".96"/>
-  <circle cx="132" cy="84" r="21" fill="#f0f6ff"/>
-  <path d="M112 79c7-24 34-28 48-6-12 0-22-3-31-11-3 9-8 15-17 17Z" fill="#2d3a55"/>
-  <path d="M119 116c8 8 18 12 29 0" fill="none" stroke="#0f1724" stroke-width="4" stroke-linecap="round"/>
-  <path d="M188 58h48c12 0 22 10 22 22s-10 22-22 22h-26l-22 16v-16c-12 0-22-10-22-22s10-22 22-22Z" fill="#d4e8ff" opacity=".94"/>
-  <path d="M199 78h38M199 90h24" stroke="#172235" stroke-width="6" stroke-linecap="round"/>
-  <path d="M58 132c12-13 20-13 32 0s20 13 32 0 20-13 32 0 20 13 32 0" fill="none" stroke="#77d7ff" stroke-linecap="round" stroke-width="6"/>
-  <rect x="222" y="124" width="44" height="16" rx="8" fill="#77d7ff" opacity=".82"/>
-  <rect x="222" y="146" width="28" height="10" rx="5" fill="#d4e8ff" opacity=".72"/>
+  <rect width="320" height="200" rx="24" fill="#101620"/>
+  <rect x="22" y="20" width="276" height="160" rx="26" fill="url(#simpleBackdrop)" stroke="#7fb8ff" stroke-opacity=".28"/>
+  <path d="M56 146c19-15 37-15 56 0s37 15 56 0 37-15 56 0 37 15 56 0" fill="none" stroke="#80e1ff" stroke-opacity=".32" stroke-linecap="round" stroke-width="6"/>
+  <path d="M43 126h55c11 0 20 9 20 20s-9 20-20 20H76l-18 13v-13H43c-11 0-20-9-20-20s9-20 20-20Z" fill="#253247" stroke="#f7d6e2" stroke-opacity=".28"/>
+  <path d="M46 144h38M46 155h24" stroke="#fff7e8" stroke-opacity=".9" stroke-linecap="round" stroke-width="6"/>
+  <path d="M198 42h54c16 0 29 12 29 27s-13 27-29 27h-24l-24 18v-18h-6c-16 0-29-12-29-27s13-27 29-27Z" fill="url(#simpleBubble)" stroke="#ffffff" stroke-opacity=".5"/>
+  <path d="M206 62c5-6 14-6 19 0 5-6 14-6 19 0 6 7 1 20-19 31-20-11-25-24-19-31Z" fill="#e64a70"/>
+  <path d="M122 69c-10 6-16 19-16 37 0 31 24 56 54 56s54-25 54-56c0-18-6-31-16-37-7-24-29-38-52-31-12 4-20 13-24 31Z" fill="url(#simpleHair)"/>
+  <path d="M108 104c-10 0-17 8-16 18 1 9 9 16 19 15l2-32-5-1Z" fill="#e7b296"/>
+  <path d="M212 104c10 0 17 8 16 18-1 9-9 16-19 15l-2-32 5-1Z" fill="#e7b296"/>
+  <path d="M118 86c7-21 26-33 48-30 24 3 39 21 39 50 0 33-20 57-45 57s-45-24-45-57c0-7 1-14 3-20Z" fill="#f1c1a8"/>
+  <path d="M119 85c13-28 43-39 73-22 5 11 11 20 22 28-26 1-49-9-65-29-7 17-15 26-30 23Z" fill="url(#simpleHair)"/>
+  <path d="M137 79c-12 5-20 15-23 31l-2-24c7-13 14-20 25-24v17Z" fill="#2a1b0f"/>
+  <ellipse cx="135" cy="113" rx="18" ry="11" fill="url(#simpleCheek)"/>
+  <ellipse cx="185" cy="113" rx="18" ry="11" fill="url(#simpleCheek)"/>
+  <circle cx="141" cy="103" r="11" fill="#5a351c"/>
+  <circle cx="181" cy="103" r="11" fill="#5a351c"/>
+  <circle cx="145" cy="99" r="4" fill="#fff8ec"/>
+  <circle cx="185" cy="99" r="4" fill="#fff8ec"/>
+  <circle cx="138" cy="107" r="3" fill="#24150b"/>
+  <circle cx="178" cy="107" r="3" fill="#24150b"/>
+  <path d="M151 130c6 5 13 5 19 0" fill="none" stroke="#6a3140" stroke-linecap="round" stroke-width="3"/>
+  <path d="M124 100c8-10 25-10 34 0M166 100c8-10 25-10 34 0M158 100h8" fill="none" stroke="#b2173b" stroke-linecap="round" stroke-width="5"/>
+  <path d="M116 102h9M195 102h9" fill="none" stroke="#b2173b" stroke-linecap="round" stroke-width="5"/>
+  <path d="M144 158h32l5 22h-42l5-22Z" fill="#f8fbff"/>
+  <path d="M153 160h14l8 20h-30l8-20Z" fill="#34308f"/>
+  <path d="M93 165c15-19 35-29 67-29s52 10 67 29v15H93v-15Z" fill="#f8fbff"/>
+  <path d="M91 117c0 22 11 40 30 52" fill="none" stroke="#7fdfff" stroke-linecap="round" stroke-width="5"/>
+  <circle cx="122" cy="169" r="7" fill="#7fdfff"/>
+  <path d="M70 62l6 12 13 2-10 9 3 13-12-6-12 6 3-13-10-9 13-2 6-12Z" fill="#ffd36a"/>
+  <circle cx="258" cy="131" r="5" fill="#ff8ca7"/>
+  <circle cx="274" cy="126" r="3" fill="#ffd36a"/>
 </svg>

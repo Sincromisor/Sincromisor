@@ -1,25 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" role="img">
-  <title>360 degree camera concept</title>
+  <title>360 camera character concept</title>
   <defs>
-    <linearGradient id="vrmSky" x1="42" y1="26" x2="278" y2="174" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#284260"/>
-      <stop offset=".54" stop-color="#142233"/>
-      <stop offset="1" stop-color="#0d131d"/>
+    <linearGradient id="vrmBackdrop" x1="36" y1="20" x2="286" y2="182" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#293b55"/>
+      <stop offset=".6" stop-color="#172536"/>
+      <stop offset="1" stop-color="#101620"/>
     </linearGradient>
-    <radialGradient id="vrmSphere" cx="0" cy="0" r="1" gradientTransform="matrix(68 0 0 68 154 96)" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#d4e8ff"/>
-      <stop offset=".44" stop-color="#75b9ff"/>
-      <stop offset="1" stop-color="#1e3f72"/>
+    <radialGradient id="vrmWorld" cx="0" cy="0" r="1" gradientTransform="matrix(56 0 0 56 153 92)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff1bf"/>
+      <stop offset=".35" stop-color="#86dcff"/>
+      <stop offset="1" stop-color="#3469ad"/>
     </radialGradient>
+    <linearGradient id="vrmHair" x1="139" y1="68" x2="181" y2="132" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5b351d"/>
+      <stop offset="1" stop-color="#25170c"/>
+    </linearGradient>
   </defs>
-  <rect width="320" height="200" rx="22" fill="#101622"/>
-  <rect x="28" y="26" width="264" height="148" rx="22" fill="url(#vrmSky)" stroke="#6aa8f7" stroke-opacity=".3"/>
-  <circle cx="154" cy="96" r="58" fill="url(#vrmSphere)" opacity=".96"/>
-  <path d="M99 96h110M154 38c-18 18-28 38-28 58s10 40 28 58M154 38c18 18 28 38 28 58s-10 40-28 58M102 74c34 12 70 12 104 0M102 118c34-12 70-12 104 0" fill="none" stroke="#eaf5ff" stroke-opacity=".62" stroke-width="3"/>
-  <path d="M66 102c16-46 64-76 118-66 53 10 91 57 89 108" fill="none" stroke="#77d7ff" stroke-linecap="round" stroke-width="5"/>
-  <path d="M252 125l21 19 16-24" fill="none" stroke="#77d7ff" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
-  <path d="M92 144h40l10 16h52l10-16h28v18c0 10-8 18-18 18H110c-10 0-18-8-18-18v-18Z" fill="#0e1724" stroke="#d4e8ff" stroke-opacity=".42" stroke-width="3"/>
-  <circle cx="162" cy="160" r="14" fill="#d4e8ff"/>
-  <circle cx="162" cy="160" r="7" fill="#172235"/>
-  <rect x="212" y="151" width="18" height="8" rx="4" fill="#77d7ff"/>
+  <rect width="320" height="200" rx="24" fill="#101620"/>
+  <rect x="22" y="20" width="276" height="160" rx="26" fill="url(#vrmBackdrop)" stroke="#7fb8ff" stroke-opacity=".27"/>
+  <circle cx="153" cy="92" r="55" fill="url(#vrmWorld)" opacity=".94"/>
+  <path d="M101 92h104M153 37c-17 17-27 36-27 55s10 38 27 55M153 37c17 17 27 36 27 55s-10 38-27 55M104 72c32 11 66 11 98 0M104 112c32-11 66-11 98 0" fill="none" stroke="#f8fdff" stroke-opacity=".58" stroke-width="3"/>
+  <path d="M48 96c16-46 63-76 116-67 54 9 92 55 92 106" fill="none" stroke="#80e1ff" stroke-linecap="round" stroke-width="5"/>
+  <path d="M236 117l20 18 17-23" fill="none" stroke="#80e1ff" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <path d="M74 135h126l12 29h-72l-7-13H86c-8 0-14-6-14-14 0-1 1-2 2-2Z" fill="#111a27" stroke="#d7edff" stroke-opacity=".42" stroke-width="3"/>
+  <circle cx="160" cy="150" r="18" fill="#f8fbff"/>
+  <circle cx="160" cy="150" r="9" fill="#1b2738"/>
+  <circle cx="164" cy="146" r="3" fill="#86dcff"/>
+  <path d="M209 131h35c12 0 22 10 22 22s-10 22-22 22h-13l-13 10v-10h-9c-12 0-22-10-22-22s10-22 22-22Z" fill="#fff5dc" stroke="#ffffff" stroke-opacity=".4"/>
+  <path d="M211 150h32M211 160h20" stroke="#5a6b80" stroke-linecap="round" stroke-width="5"/>
+  <path d="M137 90c-7 4-12 13-12 25 0 23 16 41 36 41s36-18 36-41c0-12-4-21-12-25-4-16-20-25-35-20-7 2-11 8-13 20Z" fill="url(#vrmHair)"/>
+  <path d="M132 114c-7 0-12 5-11 12 1 6 6 10 13 10l1-21-3-1Z" fill="#e7b296"/>
+  <path d="M194 114c7 0 12 5 11 12-1 6-6 10-13 10l-1-21 3-1Z" fill="#e7b296"/>
+  <path d="M137 104c5-15 18-22 34-20 16 2 27 15 27 33 0 22-14 38-31 38s-31-16-31-38c0-5 0-9 1-13Z" fill="#f1c1a8"/>
+  <path d="M137 104c9-19 29-26 50-15 3 8 8 15 15 20-18 1-34-6-45-20-5 12-10 17-20 15Z" fill="url(#vrmHair)"/>
+  <circle cx="153" cy="119" r="7" fill="#5a351c"/>
+  <circle cx="179" cy="119" r="7" fill="#5a351c"/>
+  <circle cx="156" cy="116" r="3" fill="#fff8ec"/>
+  <circle cx="182" cy="116" r="3" fill="#fff8ec"/>
+  <path d="M160 137c4 3 9 3 13 0" fill="none" stroke="#6a3140" stroke-linecap="round" stroke-width="3"/>
+  <path d="M142 117c6-7 18-7 24 0M170 117c6-7 18-7 24 0M166 117h4" fill="none" stroke="#b2173b" stroke-linecap="round" stroke-width="4"/>
+  <path d="M151 155h22l4 20h-30l4-20Z" fill="#f8fbff"/>
+  <path d="M158 157h9l7 18h-23l7-18Z" fill="#34308f"/>
+  <path d="M250 46l5 10 11 2-8 7 2 11-10-5-10 5 2-11-8-7 11-2 5-10Z" fill="#ffd36a"/>
+  <circle cx="63" cy="55" r="5" fill="#ff8ca7"/>
 </svg>
