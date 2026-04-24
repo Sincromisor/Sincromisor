@@ -186,7 +186,13 @@ div#sincroBody {
     min-width: 0;
     min-height: 144px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(92px, 9.5vw, 118px);
     grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+        "status visual"
+        "title visual"
+        "summary visual";
+    align-items: center;
     gap: var(--sincro-space-250);
     padding: var(--sincro-space-500);
     border: 1px solid var(--sincro-color-border-default);
@@ -215,7 +221,13 @@ div#sincroBody {
 
 .sincroModeCard--primary {
     min-height: 246px;
+    grid-template-columns: minmax(0, 1fr) clamp(150px, 18vw, 220px);
     grid-template-rows: auto auto 1fr auto;
+    grid-template-areas:
+        "status visual"
+        "title visual"
+        "summary visual"
+        "action visual";
     padding: clamp(22px, 3dvw, 34px);
     border-color: var(--sincro-color-border-accent);
     background:
@@ -230,6 +242,7 @@ div#sincroBody {
 }
 
 .sincroModeCard__status {
+    grid-area: status;
     width: fit-content;
     padding: var(--sincro-space-150) var(--sincro-space-300);
     border: 1px solid var(--sincro-color-border-strong);
@@ -244,6 +257,7 @@ div#sincroBody {
 }
 
 .sincroModeCard__title {
+    grid-area: title;
     min-width: 0;
     color: var(--sincro-color-overlay-text-primary);
     font-size: var(--sincro-font-size-600);
@@ -256,12 +270,14 @@ div#sincroBody {
 }
 
 .sincroModeCard__summary {
+    grid-area: summary;
     color: var(--sincro-color-overlay-text-muted);
     font-size: var(--sincro-font-size-200);
     line-height: var(--sincro-line-height-body);
 }
 
 .sincroModeCard__action {
+    grid-area: action;
     width: fit-content;
     min-height: 40px;
     display: inline-flex;
@@ -273,6 +289,36 @@ div#sincroBody {
     font-size: var(--sincro-font-size-200);
     font-weight: 700;
     background: #d4e8ff;
+}
+
+.sincroModeCard__visual {
+    grid-area: visual;
+    width: 100%;
+    align-self: stretch;
+    display: grid;
+    place-items: center;
+    min-height: 96px;
+    border: 1px solid var(--sincro-color-border-subtle);
+    border-radius: var(--sincro-radius-100);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
+        rgba(255, 255, 255, 0.025);
+    overflow: hidden;
+}
+
+.sincroModeCard--primary .sincroModeCard__visual {
+    min-height: 168px;
+    border-color: rgba(133, 192, 255, 0.22);
+    background:
+        linear-gradient(180deg, rgba(68, 154, 255, 0.11), rgba(255, 255, 255, 0.018)),
+        rgba(255, 255, 255, 0.026);
+}
+
+.sincroModeCard__visual img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
 }
 
 @media (max-width: 820px) {
@@ -308,7 +354,20 @@ div#sincroBody {
     .sincroModeCard,
     .sincroModeCard--primary {
         min-height: auto;
+        grid-template-columns: minmax(0, 1fr) minmax(92px, 28vw);
+        grid-template-areas:
+            "visual visual"
+            "status status"
+            "title title"
+            "summary summary"
+            "action action";
         padding: var(--sincro-space-400);
+    }
+
+    .sincroModeCard__visual,
+    .sincroModeCard--primary .sincroModeCard__visual {
+        min-height: 112px;
+        max-height: 150px;
     }
 }
 
@@ -353,5 +412,16 @@ div#sincroBody {
 
     .sincroModeCard--primary .sincroModeCard__title {
         font-size: 1.55rem;
+    }
+
+    .sincroModeCard,
+    .sincroModeCard--primary {
+        gap: var(--sincro-space-200);
+    }
+
+    .sincroModeCard__visual,
+    .sincroModeCard--primary .sincroModeCard__visual {
+        min-height: 86px;
+        max-height: 98px;
     }
 }

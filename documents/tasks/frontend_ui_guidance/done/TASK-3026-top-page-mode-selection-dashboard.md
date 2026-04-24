@@ -92,3 +92,4 @@
   - `cd sincromisor-frontend && npm run build` は 2026-04-25 に成功した。既存の large chunk warning は継続。
   - Playwright + Vite dev server で `/` を desktop `1280x720`、mobile `390x844` で確認し、主要導線と副導線が初期表示内に収まることを確認した。
   - Tab 操作で header brand と GitHub に focus が移ることを確認した。リンク共通の `:focus-visible` outline は mode card にも適用済み。
+  - 追加調整として `public/images/modes/` に各起動モードの概念 SVG を追加し、mode card へ `<img>` 参照で埋め込んだ。将来の差し替えは同パスの SVG 更新で対応できる。

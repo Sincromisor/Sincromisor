@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200" role="img">
+  <title>Looking Glass display concept</title>
+  <defs>
+    <linearGradient id="glassPanel" x1="56" y1="34" x2="266" y2="164" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2a3550"/>
+      <stop offset="1" stop-color="#111721"/>
+    </linearGradient>
+    <linearGradient id="holo" x1="94" y1="58" x2="212" y2="144" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d4e8ff"/>
+      <stop offset=".55" stop-color="#7edcff"/>
+      <stop offset="1" stop-color="#6aa8f7"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="200" rx="22" fill="#101622"/>
+  <path d="M58 52c0-13 10-24 24-24h156c14 0 24 11 24 24v95c0 13-10 24-24 24H82c-14 0-24-11-24-24V52Z" fill="#0c111a" stroke="#d4e8ff" stroke-opacity=".26" stroke-width="3"/>
+  <path d="M78 47h164v98H78V47Z" fill="url(#glassPanel)"/>
+  <path d="M96 67h112l22 54H74l22-54Z" fill="#68a8ff" opacity=".1" stroke="#77d7ff" stroke-opacity=".48" stroke-width="3"/>
+  <path d="M122 78l42-18 42 18v48l-42 20-42-20V78Z" fill="url(#holo)" opacity=".86"/>
+  <path d="M122 78l42 20 42-20M164 98v48" fill="none" stroke="#f1f8ff" stroke-opacity=".74" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+  <path d="M98 88l-18 36M222 88l18 36M104 132h112" fill="none" stroke="#d4e8ff" stroke-opacity=".28" stroke-linecap="round" stroke-width="3"/>
+  <path d="M95 161h130M132 171h56" stroke="#77d7ff" stroke-opacity=".64" stroke-linecap="round" stroke-width="5"/>
+  <circle cx="245" cy="42" r="6" fill="#77d7ff" opacity=".8"/>
+  <circle cx="68" cy="154" r="5" fill="#d4e8ff" opacity=".6"/>
+</svg>
