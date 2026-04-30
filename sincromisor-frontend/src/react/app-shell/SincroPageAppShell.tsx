@@ -3,7 +3,8 @@ import { SincroChatView } from "../chat/SincroChatView";
 import { ConfigurationDialog } from "../dialog/ConfigurationDialog";
 import { DebugConsole } from "../debug/DebugConsole";
 import { RightToolMenu } from "../debug/RightToolMenu";
-import { RightToolSettingsChrome } from "../debug/RightToolSettingsChrome";
+import { hideRightToolDebugPanel, hideRightToolSettingsPanel, useRightToolPanelState } from "../app/useRightToolPanelState";
+import { RightToolFrame } from "../overlay/RightToolFrame";
 import { SincroTelopView } from "../telop/SincroTelopView";
 
 type SincroPageAppShellProps = {
@@ -13,6 +14,8 @@ type SincroPageAppShellProps = {
 // modern 系ページで共通利用する app shell。
 // React が UI 骨格と island 間の配置を一括で所有しつつ、既存 TS が参照する DOM id は維持する。
 export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
+    const rightToolState = useRightToolPanelState();
+
     return (
         <>
             <ConfigurationDialog />
@@ -70,20 +73,31 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
                     </div>
                 </div>
 
-                <div id="sincroDebugConsoleContainer">
+                <RightToolFrame
+                    id="sincroDebugConsoleContainer"
+                    isOpen={rightToolState.activePanel === "debug"}
+                    title="開発者向け診断"
+                    ariaLabel="開発者向け診断"
+                    onClose={hideRightToolDebugPanel}
+                    variant="debug"
+                >
                     <DebugConsole />
-                </div>
+                </RightToolFrame>
 
-                <div id="sincroReactSettingsPanelContainer">
+                <RightToolFrame
+                    id="sincroReactSettingsPanelContainer"
+                    isOpen={rightToolState.activePanel === "settings"}
+                    title="設定パネル"
+                    ariaLabel="設定パネル"
+                    onClose={hideRightToolSettingsPanel}
+                    variant="settings"
+                >
                     <div id="reactSettingsPanel">
-                        <div id="sincroReactSettingsPanelChromeRoot">
-                            <RightToolSettingsChrome />
-                        </div>
                         <div id="sincroReactSettingsPanelRoot">
                             {controlPanel}
                         </div>
                     </div>
-                </div>
+                </RightToolFrame>
 
                 <div id="sincroPopContainer">
                     <div id="sincroPopBox"></div>

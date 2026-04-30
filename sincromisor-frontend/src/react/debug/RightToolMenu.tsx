@@ -33,33 +33,14 @@ function blockPointerEvent(element: HTMLElement | null): (() => void) | null {
     };
 }
 
-function syncContainerVisibility(containerId: string, isOpen: boolean): void {
-    const container = document.getElementById(containerId);
-    if (!container) {
-        return;
-    }
-    container.classList.toggle("is-open", isOpen);
-    container.style.visibility = isOpen ? "visible" : "hidden";
-    if (containerId === "sincroDebugConsoleContainer") {
-        container.style.overflow = isOpen ? "visible" : "hidden";
-    }
-}
-
 // 右上メニューと右側ツール領域の見た目/DOMイベントだけを担当する薄い shell。
 // state owner は App/service 側に置き、ここでは排他表示と外側クリック閉じを UI として実装する。
 export function RightToolMenu() {
     const state = useRightToolPanelState();
 
     useEffect(() => {
-        syncContainerVisibility("sincroDebugConsoleContainer", state.activePanel === "debug");
-        syncContainerVisibility("sincroReactSettingsPanelContainer", state.activePanel === "settings");
-    }, [state.activePanel]);
-
-    useEffect(() => {
         const cleanups = [
             blockPointerEvent(document.getElementById("debugMenu")),
-            blockPointerEvent(document.getElementById("debugConsole")),
-            blockPointerEvent(document.getElementById("reactSettingsPanel")),
         ].filter((cleanup): cleanup is () => void => typeof cleanup === "function");
         return () => {
             cleanups.forEach((cleanup) => cleanup());
@@ -73,24 +54,15 @@ export function RightToolMenu() {
                 return;
             }
             const debugMenu = document.getElementById("debugMenu");
-            const debugConsole = document.getElementById("debugConsole");
-            const reactSettingsPanel = document.getElementById("reactSettingsPanel");
             if (state.menuOpen && debugMenu && !debugMenu.contains(target)) {
                 closeRightToolMenu();
-            }
-            if (state.activePanel === "debug" && debugConsole && !debugConsole.contains(target) && !debugMenu?.contains(target)) {
-                toggleRightToolDebugPanel();
-                return;
-            }
-            if (state.activePanel === "settings" && reactSettingsPanel && !reactSettingsPanel.contains(target) && !debugMenu?.contains(target)) {
-                toggleRightToolSettingsPanel();
             }
         };
         document.addEventListener("click", handleClick, true);
         return () => {
             document.removeEventListener("click", handleClick, true);
         };
-    }, [state.activePanel, state.menuOpen]);
+    }, [state.menuOpen]);
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent): void => {

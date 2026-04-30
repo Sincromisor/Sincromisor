@@ -39,6 +39,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - React への段階移行計画は `documents/design/frontend_migration_react.md` を参照（本書は現行UI設計の正本）。
   - メディアデバイス列挙は `SincroMediaDeviceService` が担当し、`enumerateDevices()` の正規化、ラベル未解決時のフォールバック名生成、`devicechange` 監視を UI から分離する。React UI は `useSincroMediaDeviceState` から snapshot/refresh を購読する。
   - `simple-vrm`, `vrm360`, `looking-glass-vrm` では React 設定パネル（`SimpleVrmControlPanel` 系）に加えて React Debug Console を正式導線として採用している。右側ツール領域の open/close と相互排他は `SincroAppRightToolPanelService` と React menu shell が所有し、React 側は `appController.debug.*` 経由で state と開閉 API を利用する。`DebugConsoleManager` は DOM owner ではなく diagnostics snapshot provider と UI callback bridge として振る舞う。設定パネルと開発者向け診断は同時表示せず、右上の X ボタン、メニュー外/パネル外クリック、`Ctrl+Alt+D` で同じルールに従って切り替える。
+  - 2026-04-30 の調査では、起動前 dialog / 右側設定パネル / Debug Console の外側 chrome（surface、close button、z-index、幅、高さ、scroll、backdrop）がまだ共通コンポーネント化されておらず、`TASK-3027` 以降で overlay primitive と right tool frame へ段階的に集約する方針とした。
 
   - 2026-04-19 時点で設定パネル側の device selector は、起動前 dialog と同じ `audioInputDeviceId` / `videoInputDeviceId` を直接編集する。`useSimpleVrmPanelState` が `useSincroMediaDeviceState` を購読し、`入出力デバイス` カテゴリ内でマイク入力と Gaze 用カメラ selector をまとめて表示する。両UIとも一覧再読み込みと未解決/無効デバイスのヒント表示を共通の考え方でそろえる。`videoInputDeviceId` は `SincroCharacterGazeController` + `VideoInputManager` により CharacterGaze 専用カメラ取得へ直結し、起動時選択・実行中切替・Gaze OFF/ON で再取得/再初期化される。
   - 起動前 dialog の Start 可否は `DialogManager` + `DialogSettingsPolicy` が保持し、`audioInputDeviceId` と `videoInputDeviceId` の選択状態、`enableCharacterGaze`、`getUserMedia` 利用可否を突き合わせて導出する。特に `audioInputDeviceId` が無効な場合、または Gaze 有効中に `videoInputDeviceId` が無効な場合は Start を disabled にし、個別 selector の hint と開始ボタン下の hint の両方で復帰導線を示す。設定パネル / 起動前設定は一般ユーザー向けの設定導線、Debug Console は開発者向けの診断・プレビュー確認導線として分離する。
@@ -78,6 +79,42 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 最初に確認したい `Overview` 系情報を先頭に置く
   - `Channels` / `SDP` / 詳細ログは二次情報として扱い、常時全面展開を避ける
   - 監視用UIと実験的な調整UIが混在する場合は、`高度な調整` として分離する
+
+#### 2.2.1 Overlay chrome 共通化方針（2026-04-30）
+
+- 調査背景:
+  - `64436a7 Align right tool close buttons` では、右側設定パネルと Debug Console の閉じるボタン位置・見た目を揃えるために、`DebugConsole.tsx`、`RightToolSettingsChrome.tsx`、`sincroDebugConsole.css` を個別に調整した。
+  - この修正は症状を解消したが、根本的には「右側ツール領域の外側 chrome」を共通部品として所有する層がないため、今後も close button、panel padding、scrollbar、z-index、responsive 幅の調整が各実装へ散りやすい。
+- 現状の分散箇所:
+  - `src/react/app-shell/SincroPageAppShell.tsx`: 起動前 dialog、右側設定パネル、Debug Console の mount topology を持つが、共通 overlay frame は持たない。
+  - `src/react/dialog/ConfigurationDialog.tsx`: native `<dialog>` の platform boundary と React 設定UIの root を束ねる。
+  - `src/react/dialog/configurationDialogSettings.css`: 起動前 dialog の surface / backdrop / SettingsShell override / footer / category card を持つ。
+  - `src/styles/sincroConfigurationDialog.css`: legacy layer として `dialog#configurationDialog` の fallback をまだ持つ。
+  - `src/styles/sincroDebugConsole.css`: 右側設定パネル、Debug Console、右上 menu、`rightToolCloseButton` の見た目が同居する。
+  - `src/react/settings-shell/SettingsShell.tsx`: 設定情報設計の共通 shell だが、overlay 外枠や閉じる導線は責務外である。
+- 共通化の単位:
+  - `OverlayCloseButton`: close icon、サイズ、focus-visible、hover、disabled、ARIA label 方針を集約する。
+  - `OverlayFrame`: surface、border、shadow、padding、scrollbar、safe-area、responsive max size を集約する。
+  - `RightToolFrame`: 右側ツール領域の位置、幅、z-index、外側クリック閉じ、設定/診断の相互排他表示を集約する。
+  - `StartupDialogFrame`: native `<dialog>` の platform boundary を保ちつつ、dialog surface / backdrop / padding / scroll を共通 token ベースへ寄せる。
+- 移行方針:
+  - Phase 1 では close button と shared CSS token だけを切り出し、既存 DOM id と操作 API は維持する。
+  - Phase 2 では右側設定パネルと Debug Console を `RightToolFrame` 配下へ寄せ、コンテンツ本体と外側 chrome を分離する。
+  - Phase 3 では起動前 dialog の frame を整理し、`sincroConfigurationDialog.css` が modern dialog の見た目責務を再び持たない状態へ縮退する。
+  - Phase 4 では設定フォーム内の button / field / toggle / help / section card を共通 primitive へ寄せ、inline style と dialog/panel 差分を削減する。
+  - Phase 5 では `simple-vrm`、`vrm360`、`looking-glass-vrm` の desktop / mobile overlay 表示を Playwright で確認し、設計文書とタスク結果を同期する。
+- 守るべき境界:
+  - `SettingsShell` は情報設計とカテゴリナビの共通部品として維持し、overlay frame の責務を追加しすぎない。
+  - Debug Console は診断コンテンツ本体、設定パネルは設定コンテンツ本体に寄せ、panel の位置や閉じる導線は frame 側が持つ。
+  - `DialogBridgeDomAdapter` は native dialog API と close-interaction 抑止の platform adapter に限定し、見た目調整を戻さない。
+  - legacy CSS を修正する場合も、modern React component CSS の責務を取り戻さない。
+
+#### 2.2.2 RightToolFrame 統一結果（2026-04-30）
+
+- `src/react/overlay/RightToolFrame.tsx` が、右側設定パネルと Debug Console の fixed layer、幅、max-height、z-index、scroll container、close button slot、外側クリック閉じを共通管理する。
+- `SincroPageAppShell.tsx` は `sincroDebugConsoleContainer` / `sincroReactSettingsPanelContainer` の既存 id を維持しつつ、両方を `RightToolFrame` から描画する。相互排他状態は従来通り `SincroAppRightToolPanelService` の `activePanel` に従う。
+- `RightToolMenu` は menu open/close と `Ctrl+Alt+D` の keyboard shortcut を担当し、panel container の visibility や scroll は直接操作しない。
+- `DebugConsole` と設定パネル本体は content に専念し、Debug Console の surface / scroll / close button と設定パネルの外側位置指定は frame 側へ移した。
 
 ### 2.3 設定シェル方針
 
@@ -384,6 +421,11 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `modern component CSS`: `src/react/settings-shell/settingsShell.css`, `src/react/dialog/configurationDialogSettings.css`
   - `legacy shared CSS`: `src/styles/common.css`, `src/styles/sincroConfigurationDialog.css`
   - `page / box CSS`: `src/styles/index.css`, `src/styles/simple.css`, `src/styles/sincro*.css`
+- Overlay chrome 共通化後の CSS 配置方針:
+  - `src/react/overlay/overlay.css`（新設想定）は `OverlayFrame` / `OverlayCloseButton` / `RightToolFrame` / `StartupDialogFrame` の見た目責務を持つ。
+  - `configurationDialogSettings.css` は起動前設定 content と dialog 固有 override に寄せ、surface / close button / generic scrollbar は overlay 側へ移す。
+  - `sincroDebugConsole.css` は Debug Console content と右上 menu 固有の見た目に寄せ、右側 tool panel の外側 frame と close button を持たない。
+  - `sincroConfigurationDialog.css` は legacy fallback と互換維持に限定し、modern page から読み込みを外せる状態を目標にする。
 - 後続移行の前提:
   - 新しい設定 UI を追加する時は、まず `SettingsShell` 既存 token を再利用し、足りない値だけ `uiFoundation.css` へ追加する
   - legacy CSS を修正する場合も、`modern component CSS` の見た目責務を取り戻さない
@@ -634,6 +676,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-24 | `TASK-3019` 調査結果を反映し、`simple-vrm` を中心とした main content の dark / immersive visual 方針、overlay 設計、`meta viewport` を前提とする responsive 基盤、legacy global reset の縮退方針を追記した |
 | 2026-04-25 | `TASK-3026` 対応としてトップページを mode selection dashboard として定義し、`Simple Interface` 主導線、`360deg Camera` / `Looking Glass` 副導線、GitHub 補助リンク、状態ラベル、desktop/mobile 初期表示基準を追記した |
 | 2026-04-25 | `TASK-3026` 追加調整として mode card に差し替え可能な SVG コンセプト画像を置く方針を追記した |
+| 2026-04-30 | `64436a7` 周辺の UI 不整合調査を反映。起動前 dialog / 右側設定パネル / Debug Console の overlay chrome が分散していることを整理し、`TASK-3027` 以降で close button、right tool frame、startup dialog frame、フォーム primitive、visual regression 確認へ段階分割して共通化する方針を追記 |
 
 ## 15. 参照資料
 
