@@ -262,40 +262,11 @@ div#debugConsole .debugConsoleHeaderActions {
     flex: 0 0 auto;
 }
 
-button.rightToolCloseButton {
-    width: 38px;
-    height: 38px;
-    display: inline-grid;
-    place-items: center;
-    flex: 0 0 auto;
-    border: 1px solid hsl(190deg 60% 60% / 40%);
-    border-radius: 8px;
-    color: var(--debug-text-strong, hsl(194deg 45% 95%));
-    background: linear-gradient(180deg, hsl(208deg 45% 24%), hsl(208deg 45% 18%));
-    box-shadow: 0 6px 18px hsl(220deg 45% 4% / 28%);
-    padding: 0;
-    margin: 0;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-}
-
 button#reactSettingsPanelClose {
     position: absolute;
     top: calc(var(--settings-panel-close-offset, 34px) + 12px);
     right: 12px;
     z-index: 2;
-}
-
-button.rightToolCloseButton:hover {
-    background: linear-gradient(180deg, hsl(189deg 60% 31%), hsl(204deg 52% 21%));
-}
-
-button.rightToolCloseButton svg {
-    width: 16px;
-    height: 16px;
-    display: block;
-    fill: hsl(0deg 0% 94% / 84%);
 }
 
 div#sincroReactSettingsPanelRoot .settingsShell__header {
@@ -335,7 +306,7 @@ div#sincroReactSettingsPanelRoot .sincroControlPanel *::-webkit-scrollbar-thumb:
     );
 }
 
-div#debugConsole button {
+div#debugConsole button:not(.overlayCloseButton) {
     border: 1px solid hsl(190deg 60% 60% / 40%);
     color: var(--debug-text-strong);
     background: linear-gradient(180deg, hsl(208deg 45% 24%), hsl(208deg 45% 18%));
@@ -344,15 +315,8 @@ div#debugConsole button {
     cursor: pointer;
 }
 
-div#debugConsole button:hover {
+div#debugConsole button:not(.overlayCloseButton):hover {
     background: linear-gradient(180deg, hsl(189deg 60% 31%), hsl(204deg 52% 21%));
-}
-
-div#debugConsole button#debugConsoleClose.rightToolCloseButton,
-button#reactSettingsPanelClose.rightToolCloseButton {
-    width: 38px;
-    height: 38px;
-    padding: 0;
 }
 
 div#debugConsole .debugCard {
@@ -837,12 +801,6 @@ div#debugConsole .debugTab.is-active {
 
     div#debugConsole .debugConsoleHeaderActions {
         gap: 8px;
-    }
-
-    div#debugConsole button#debugConsoleClose.rightToolCloseButton,
-    button#reactSettingsPanelClose.rightToolCloseButton {
-        width: 36px;
-        height: 36px;
     }
 
     div#debugConsole .debugPanel {

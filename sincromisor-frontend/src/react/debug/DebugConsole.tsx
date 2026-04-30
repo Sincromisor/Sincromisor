@@ -9,6 +9,7 @@ import {
     type LearnedVadTuningUiConfig,
 } from "../../ts/UI/DebugConsoleManager";
 import { hideRightToolDebugPanel } from "../app/useRightToolPanelState";
+import { OverlayCloseButton } from "../overlay/OverlayCloseButton";
 
 type DebugTabKey = "status" | "transport" | "audio" | "channels" | "gaze" | "sdp";
 
@@ -116,11 +117,7 @@ export function DebugConsole() {
                     <p>まずは Overview で接続状態を確認し、必要な時だけ Audio / Channels / SDP の詳細へ進みます。</p>
                 </div>
                 <div className="debugConsoleHeaderActions">
-                    <button id="debugConsoleClose" className="rightToolCloseButton" type="button" aria-label="開発者向け診断を閉じる" onClick={hideRightToolDebugPanel}>
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M18.3 6.7a1 1 0 0 0-1.4 0L12 11.6 7.1 6.7a1 1 0 1 0-1.4 1.4l4.9 4.9-4.9 4.9a1 1 0 1 0 1.4 1.4l4.9-4.9 4.9 4.9a1 1 0 0 0 1.4-1.4l-4.9-4.9 4.9-4.9a1 1 0 0 0 0-1.4z" />
-                        </svg>
-                    </button>
+                    <OverlayCloseButton id="debugConsoleClose" ariaLabel="開発者向け診断を閉じる" onClick={hideRightToolDebugPanel} />
                     <div className="debugConsoleActions">
                         <button id="rtcStop" type="button" onClick={() => manager.requestRtcStop()}>
                             接続を停止

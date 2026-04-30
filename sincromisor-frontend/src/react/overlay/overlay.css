@@ -1,0 +1,72 @@
+@layer components {
+    :root {
+        --overlay-close-button-size: 38px;
+        --overlay-close-button-size-compact: 36px;
+        --overlay-close-button-icon-size: 16px;
+        --overlay-close-button-border: hsl(190deg 60% 60% / 40%);
+        --overlay-close-button-text: var(--sincro-color-overlay-text-primary, hsl(194deg 45% 95%));
+        --overlay-close-button-icon: hsl(0deg 0% 94% / 84%);
+        --overlay-close-button-background: linear-gradient(180deg, hsl(208deg 45% 24%), hsl(208deg 45% 18%));
+        --overlay-close-button-background-hover: linear-gradient(180deg, hsl(189deg 60% 31%), hsl(204deg 52% 21%));
+        --overlay-close-button-background-disabled: hsl(214deg 18% 18% / 68%);
+        --overlay-close-button-shadow: 0 6px 18px hsl(220deg 45% 4% / 28%);
+        --overlay-close-button-focus-ring: 0 0 0 3px hsl(190deg 90% 66% / 34%);
+    }
+
+    .overlayCloseButton {
+        width: var(--overlay-close-button-size);
+        height: var(--overlay-close-button-size);
+        display: inline-grid;
+        place-items: center;
+        flex: 0 0 auto;
+        border: 1px solid var(--overlay-close-button-border);
+        border-radius: var(--sincro-radius-100, 8px);
+        color: var(--overlay-close-button-text);
+        background: var(--overlay-close-button-background);
+        box-shadow: var(--overlay-close-button-shadow);
+        padding: 0;
+        margin: 0;
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+    }
+
+    .overlayCloseButton:hover {
+        background: var(--overlay-close-button-background-hover);
+    }
+
+    .overlayCloseButton:focus {
+        outline: none;
+    }
+
+    .overlayCloseButton:focus-visible {
+        outline: 2px solid var(--sincro-color-accent-outline, hsl(190deg 90% 66% / 80%));
+        outline-offset: 2px;
+        box-shadow: var(--overlay-close-button-shadow), var(--overlay-close-button-focus-ring);
+    }
+
+    .overlayCloseButton:disabled,
+    .overlayCloseButton[aria-disabled="true"] {
+        color: hsl(214deg 16% 68% / 72%);
+        background: var(--overlay-close-button-background-disabled);
+        box-shadow: none;
+        cursor: not-allowed;
+        opacity: 0.68;
+    }
+
+    .overlayCloseButton svg {
+        width: var(--overlay-close-button-icon-size);
+        height: var(--overlay-close-button-icon-size);
+        display: block;
+        fill: currentColor;
+        color: var(--overlay-close-button-icon);
+        pointer-events: none;
+    }
+
+    @media (max-width: 760px) {
+        .overlayCloseButton {
+            width: var(--overlay-close-button-size-compact);
+            height: var(--overlay-close-button-size-compact);
+        }
+    }
+}
