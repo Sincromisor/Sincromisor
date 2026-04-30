@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import { useState } from "react";
+import type { ReactNode } from "react";
 import type {
     ApplySettingsFn,
     SincroAppSettingsSnapshot,
@@ -13,30 +13,26 @@ import type {
     SincroMediaDeviceSelectionState,
     SincroMediaDeviceSnapshot,
 } from "../../../ts/MediaDevices/SincroMediaDeviceService";
+import {
+    SettingsButton,
+    SettingsHelpBadge,
+    SettingsHelpLabel,
+    SettingsHint,
+    SettingsHintList,
+    SettingsInput,
+    SettingsSectionCard,
+    SettingsSelect,
+    SettingsToggle,
+    SettingsToggleGrid,
+} from "../../settings-primitives/SettingsPrimitives";
 
 // Control Panel 用の設定セクション群。
 // 起動前 dialog 用フォームとは分離し、ページ常設パネル向けの文言/密度/導線をここで管理する。
-const fieldStyle: CSSProperties = {
-    width: "100%",
-    borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,0.2)",
-    background: "rgba(255,255,255,0.08)",
-    color: "#f4f7fb",
-    padding: "8px 10px",
-    boxSizing: "border-box",
-};
-
 const sectionSpacingPx = UI_TUNING.controlPanel.sectionSpacingPx;
 const detailsContentTopMarginPx = UI_TUNING.controlPanel.detailsContentTopMarginPx;
 const settingsTuning = UI_TUNING.controlPanel.settings;
 const compactGapPx = settingsTuning.compactGapPx;
 const rowGapPx = settingsTuning.rowGapPx;
-const toggleGridStyle: CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: `${compactGapPx}px`,
-};
-
 const settingHelp = {
     titleText: "会話UIなどに表示されるタイトル文字列です。配信名・キャラクター名を表示したいときに設定します。",
     talkMode:
@@ -83,128 +79,9 @@ const settingHelp = {
         "Looking Glass 用の縦方向視野角（FOV Y）です。被写体の見え方が窮屈/広すぎる場合に調整します。",
 } as const;
 
-const tooltipBubbleStyle: CSSProperties = {
-    position: "absolute",
-    left: 0,
-    top: `calc(100% + ${settingsTuning.tooltipOffsetPx}px)`,
-    zIndex: 20,
-    width: "min(300px, calc(100vw - 72px))",
-    borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,0.18)",
-    background: "rgba(15, 18, 24, 0.96)",
-    color: "#eef3fb",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-    padding: "8px 10px",
-    lineHeight: 1.45,
-    fontSize: `${settingsTuning.tooltipFontSizePx}px`,
-    whiteSpace: "normal",
-    wordBreak: "break-word",
-    pointerEvents: "none",
-};
-
-function HelpTooltip({ help, children }: { help?: string; children: ReactNode }) {
-    const containerRef = useRef<HTMLSpanElement | null>(null);
-    const [visible, setVisible] = useState<boolean>(false);
-    if (!help) {
-        return <>{children}</>;
-    }
-    useEffect(() => {
-        if (!visible) {
-            return;
-        }
-        // hover だけでなくタップ操作でも閉じられるよう、外側 pointerdown で明示的に閉じる。
-        const handlePointerDown = (event: PointerEvent) => {
-            const root = containerRef.current;
-            if (!root) {
-                return;
-            }
-            if (event.target instanceof Node && !root.contains(event.target)) {
-                setVisible(false);
-            }
-        };
-        document.addEventListener("pointerdown", handlePointerDown);
-        return () => {
-            document.removeEventListener("pointerdown", handlePointerDown);
-        };
-    }, [visible]);
-    return (
-        <span
-            ref={containerRef}
-            style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
-            onClickCapture={(event) => {
-                // モバイルでは hover が無いため、? バッジのタップで説明を開閉できるようにする。
-                event.preventDefault();
-                event.stopPropagation();
-                setVisible((prev) => !prev);
-            }}
-            onMouseEnter={() => setVisible(true)}
-            onMouseLeave={() => setVisible(false)}
-            onFocus={() => setVisible(true)}
-            onBlur={() => setVisible(false)}
-        >
-            {children}
-            {visible ? (
-                <span role="tooltip" style={tooltipBubbleStyle}>
-                    {help}
-                </span>
-            ) : null}
-        </span>
-    );
-}
-
-function HelpBadge({ help }: { help: string }) {
-    return (
-        <HelpTooltip help={help}>
-            <span
-                tabIndex={0}
-                role="button"
-                aria-label="設定説明を表示"
-                aria-haspopup="true"
-                onPointerDown={(event) => {
-                    // label 内の help バッジをタップした時に checkbox/select の操作へ伝播させない。
-                    event.preventDefault();
-                    event.stopPropagation();
-                }}
-                onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }}
-                onKeyDown={(event) => {
-                    if (event.key === " " || event.key === "Enter") {
-                        event.preventDefault();
-                    }
-                }}
-                style={{
-                    display: "inline-grid",
-                    placeItems: "center",
-                    width: `${settingsTuning.helpBadgeSizePx}px`,
-                    height: `${settingsTuning.helpBadgeSizePx}px`,
-                    borderRadius: "999px",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    background: "rgba(255,255,255,0.08)",
-                    color: "#dce7f8",
-                    fontSize: `${settingsTuning.tooltipFontSizePx}px`,
-                    lineHeight: 1,
-                    cursor: "help",
-                    userSelect: "none",
-                    marginLeft: `${settingsTuning.helpBadgeMarginLeftPx}px`,
-                    touchAction: "manipulation",
-                }}
-            >
-                ?
-            </span>
-        </HelpTooltip>
-    );
-}
-
-function HelpLabel({ text, help }: { text: string; help?: string }) {
-    return (
-        <div style={{ opacity: 0.75, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`, display: "flex", alignItems: "center" }}>
-            <span>{text}</span>
-            {help ? <HelpBadge help={help} /> : null}
-        </div>
-    );
-}
+const HelpBadge = SettingsHelpBadge;
+const HelpLabel = SettingsHelpLabel;
+const SettingToggle = SettingsToggle;
 
 type SettingsCategorySectionProps = {
     title: string;
@@ -220,32 +97,13 @@ export function SettingsCategorySection({
     defaultOpen = true,
 }: SettingsCategorySectionProps) {
     return (
-        <section
-            aria-expanded={defaultOpen}
-            style={{
-                marginBottom: `${sectionSpacingPx}px`,
-                padding: "16px 18px",
-                borderRadius: "16px",
-                border: "1px solid rgba(130, 188, 255, 0.14)",
-                background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
-            }}
+        <SettingsSectionCard
+            title={title}
+            description={description}
+            className={defaultOpen ? undefined : "is-collapsed"}
         >
-            <div
-                style={{
-                    display: "grid",
-                    gap: "4px",
-                    paddingBottom: "12px",
-                    marginBottom: `${detailsContentTopMarginPx}px`,
-                    borderBottom: "1px solid rgba(255,255,255,0.08)",
-                }}
-            >
-                <div style={{ fontWeight: 700, letterSpacing: "0.01em" }}>{title}</div>
-                <div style={{ opacity: 0.74, lineHeight: 1.45, fontSize: "12px" }}>{description}</div>
-            </div>
-            <div style={{ padding: "0 2px" }}>
-                {children}
-            </div>
-        </section>
+            {children}
+        </SettingsSectionCard>
     );
 }
 
@@ -278,12 +136,11 @@ export function BasicSettingsSection({
             {showTitle ? (
                 <div style={{ marginTop: `${detailsContentTopMarginPx}px`, marginBottom: `${sectionSpacingPx}px` }}>
                     <HelpLabel text="タイトル" help={settingHelp.titleText} />
-                    <input
+                    <SettingsInput
                         type="text"
                         value={settings.titleText ?? ""}
                         onChange={(e) => onTitleChange(e.target.value)}
                         disabled={uiState.titleTextDisabled}
-                        style={fieldStyle}
                     />
                 </div>
             ) : null}
@@ -291,15 +148,14 @@ export function BasicSettingsSection({
                 <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
                     <HelpLabel text="トークモード (talk mode)" help={settingHelp.talkMode} />
                     <div style={{ display: "flex", gap: `${rowGapPx}px` }}>
-                        <select
+                        <SettingsSelect
                             value={settings.talkMode}
                             onChange={(e) => onTalkModeChange(e.target.value)}
                             disabled={uiState.talkModeDisabled}
-                            style={{ ...fieldStyle, flex: 1 }}
                         >
                             <option value="chat">chat</option>
                             <option value="sincro">sincro</option>
-                        </select>
+                        </SettingsSelect>
                     </div>
                 </div>
             ) : null}
@@ -363,35 +219,26 @@ export function MicSettingsSection({
                         }}
                     >
                         {showSectionTitle ? <HelpLabel text="マイク設定" /> : <span style={{ opacity: 0.8, fontWeight: 700 }}>マイク入力</span>}
-                        <button
+                        <SettingsButton
                             type="button"
                             onClick={handleRefreshDevices}
                             disabled={mediaDeviceSnapshot.isRefreshing}
-                            style={{
-                                borderRadius: "8px",
-                                border: "1px solid rgba(255,255,255,0.2)",
-                                background: "rgba(255,255,255,0.06)",
-                                color: "#f4f7fb",
-                                padding: "6px 8px",
-                                cursor: mediaDeviceSnapshot.isRefreshing ? "progress" : "pointer",
-                            }}
                         >
                             {mediaDeviceSnapshot.isRefreshing ? "更新中..." : "再読み込み"}
-                        </button>
+                        </SettingsButton>
                     </div>
                     <div style={{ marginBottom: showProcessingOptions ? `${sectionSpacingPx}px` : "0" }}>
                         <HelpLabel text="マイク入力" help={settingHelp.audioInputDeviceId} />
-                        <select
+                        <SettingsSelect
                             value={settings.audioInputDeviceId ?? ""}
                             onChange={(event) => onApplySettings({ audioInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
                             disabled={uiState.audioInputDeviceDisabled}
-                            style={fieldStyle}
                         >
                             <option value="">ブラウザ既定のマイクを使う</option>
                             {mediaDeviceSnapshot.audioInputs.map((option) => (
                                 <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
                             ))}
-                        </select>
+                        </SettingsSelect>
                         <DeviceSelectionHint
                             emptyMessage="利用可能なマイクが見つかりません。接続後に再読み込みしてください。"
                             snapshot={mediaDeviceSnapshot}
@@ -404,7 +251,7 @@ export function MicSettingsSection({
                 </>
             ) : null}
             {showProcessingOptions ? (
-                <div style={toggleGridStyle}>
+                <SettingsToggleGrid>
                     <SettingToggle
                         label="ノイズを抑える"
                         help={settingHelp.enableNoiseSuppression}
@@ -440,7 +287,7 @@ export function MicSettingsSection({
                         disabled={uiState.enableVenueNoiseModeDisabled}
                         onChange={(checked) => onApplySettings({ enableVenueNoiseMode: checked })}
                     />
-                </div>
+                </SettingsToggleGrid>
             ) : null}
             {refreshMessage ? (
                 <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
@@ -480,17 +327,16 @@ export function CharacterSettingsSection({
             {showCameraSelection ? (
                 <div style={{ marginBottom: showDisplayOptions ? `${sectionSpacingPx}px` : "0" }}>
                     <HelpLabel text="視線用カメラ" help={settingHelp.videoInputDeviceId} />
-                    <select
+                    <SettingsSelect
                         value={settings.videoInputDeviceId ?? ""}
                         onChange={(event) => onApplySettings({ videoInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
                         disabled={uiState.videoInputDeviceDisabled}
-                        style={fieldStyle}
                     >
                         <option value="">ブラウザ既定のカメラを使う</option>
                         {mediaDeviceSnapshot.videoInputs.map((option) => (
                             <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
                         ))}
-                    </select>
+                    </SettingsSelect>
                     <DeviceSelectionHint
                         emptyMessage="利用可能なカメラが見つかりません。接続後に再読み込みしてください。"
                         snapshot={mediaDeviceSnapshot}
@@ -502,7 +348,7 @@ export function CharacterSettingsSection({
                 </div>
             ) : null}
             {showDisplayOptions ? (
-                <div style={toggleGridStyle}>
+                <SettingsToggleGrid>
                     <SettingToggle
                         label="3Dキャラクターを表示"
                         help={settingHelp.enableCharacter}
@@ -524,7 +370,7 @@ export function CharacterSettingsSection({
                         disabled={uiState.enableAutoMuteDisabled}
                         onChange={(checked) => onApplySettings({ enableAutoMute: checked })}
                     />
-                </div>
+                </SettingsToggleGrid>
             ) : null}
             {uiHints.enableCharacterReason ? (
                 <div style={{ marginTop: `${compactGapPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
@@ -584,16 +430,7 @@ function DeviceSelectionHint({
     if (unavailableReason) {
         messages.push(unavailableReason);
     }
-    if (messages.length === 0) {
-        return null;
-    }
-    return (
-        <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
-            {messages.map((message) => (
-                <div key={message}>{message}</div>
-            ))}
-        </div>
-    );
+    return <SettingsHintList messages={messages} />;
 }
 
 function normalizeSelectedDeviceId(value: string): string | null {
@@ -645,21 +482,13 @@ export function LookingGlassSettingsSection({
             {/* プリセットは初期位置合わせの近道。最終的な値は下の数値入力で追い込む。 */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: `${compactGapPx}px`, marginBottom: `${rowGapPx}px` }}>
                 {presets.map((preset) => (
-                    <button
+                    <SettingsButton
                         key={preset.label}
                         type="button"
                         onClick={() => onApplySettings(preset.values)}
-                        style={{
-                            borderRadius: "8px",
-                            border: "1px solid rgba(255,255,255,0.2)",
-                            background: "rgba(255,255,255,0.06)",
-                            color: "#f4f7fb",
-                            padding: "6px 8px",
-                            cursor: "pointer",
-                        }}
                     >
                         {preset.label}
-                    </button>
+                    </SettingsButton>
                 ))}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${compactGapPx}px` }}>
@@ -803,7 +632,7 @@ export function StartupSettingsSection({
                 </div>
             ) : null}
             {supportedItems.length > 0 ? (
-                <div style={toggleGridStyle}>
+                <SettingsToggleGrid>
                     {supportedItems.map((item) => (
                         <SettingToggle
                             key={item.key}
@@ -814,23 +643,13 @@ export function StartupSettingsSection({
                             onChange={item.onChange}
                         />
                     ))}
-                </div>
+                </SettingsToggleGrid>
             ) : (
-                <div style={{ opacity: 0.7, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
-                    このページでは、開始前に切り替える項目はありません。
-                </div>
+                <SettingsHint>このページでは、開始前に切り替える項目はありません。</SettingsHint>
             )}
         </div>
     );
 }
-
-type SettingToggleProps = {
-    label: string;
-    help?: string;
-    checked: boolean;
-    disabled?: boolean;
-    onChange: (checked: boolean) => void;
-};
 
 type NumericSettingFieldProps = {
     label: string;
@@ -850,7 +669,7 @@ function NumericSettingField({ label, help, value, min, max, step, onChange }: N
                 {label}
                 {help ? <HelpBadge help={help} /> : null}
             </span>
-            <input
+            <SettingsInput
                 type="number"
                 value={Number.isFinite(value) ? value : 0}
                 min={min}
@@ -864,39 +683,7 @@ function NumericSettingField({ label, help, value, min, max, step, onChange }: N
                     // 最終的な丸め/範囲制御は AppController 側で行い、UIは入力値をそのまま渡す。
                     onChange(nextValue);
                 }}
-                style={fieldStyle}
             />
-        </label>
-    );
-}
-
-function SettingToggle({ label, help, checked, disabled = false, onChange }: SettingToggleProps) {
-    return (
-        // Control Panel 側は常設 UI のため、dialog 版より少し情報密度を高くした toggle 表示を使う。
-        <label style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: `${compactGapPx}px`,
-            minHeight: "56px",
-            padding: "10px 11px",
-            borderRadius: "8px",
-            border: "1px solid rgba(130, 188, 255, 0.14)",
-            background: "rgba(255,255,255,0.04)",
-            opacity: disabled ? 0.6 : 1,
-            cursor: disabled ? "not-allowed" : "pointer",
-            boxSizing: "border-box",
-        }}>
-            <input
-                type="checkbox"
-                checked={checked}
-                disabled={disabled}
-                onChange={(e) => onChange(e.target.checked)}
-                style={{ marginTop: "2px", flexShrink: 0 }}
-            />
-            <span style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", lineHeight: 1.35 }}>
-                {label}
-                {help ? <HelpBadge help={help} /> : null}
-            </span>
         </label>
     );
 }

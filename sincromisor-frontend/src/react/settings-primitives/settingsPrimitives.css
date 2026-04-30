@@ -1,0 +1,238 @@
+@layer components {
+    .settingsPrimitiveField {
+        width: 100%;
+        min-height: 36px;
+        border-radius: var(--sincro-radius-100);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: var(--sincro-color-surface-soft-stronger);
+        color: var(--sincro-color-overlay-text-primary);
+        padding: 7px 10px;
+        line-height: var(--sincro-line-height-tight);
+        box-sizing: border-box;
+    }
+
+    .settingsPrimitiveField:disabled {
+        opacity: 0.62;
+        cursor: not-allowed;
+    }
+
+    .settingsPrimitiveField option {
+        color: var(--sincro-color-overlay-text-primary);
+        background: var(--sincro-color-select-option-background);
+    }
+
+    .settingsPrimitiveButton {
+        min-height: 32px;
+        border-radius: var(--sincro-radius-100);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: var(--sincro-color-surface-soft-strong);
+        color: var(--sincro-color-overlay-text-primary);
+        padding: var(--sincro-space-150) var(--sincro-space-200);
+        line-height: var(--sincro-line-height-tight);
+        font-weight: 600;
+        text-align: center;
+        cursor: pointer;
+    }
+
+    .settingsPrimitiveButton:disabled {
+        opacity: 0.6;
+        cursor: progress;
+    }
+
+    .settingsPrimitiveHelpTooltip {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .settingsPrimitiveHelpTooltip__bubble {
+        position: absolute;
+        left: 0;
+        top: calc(100% + var(--sincro-space-150));
+        z-index: 20;
+        width: min(300px, calc(100vw - 72px));
+        border-radius: var(--sincro-radius-100);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(15, 18, 24, 0.96);
+        color: var(--sincro-color-overlay-text-primary);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        padding: var(--sincro-space-200) var(--sincro-space-250);
+        line-height: 1.45;
+        font-size: var(--sincro-font-size-100);
+        white-space: normal;
+        word-break: break-word;
+        pointer-events: none;
+    }
+
+    .settingsPrimitiveHelpTooltip__bubble--right {
+        right: 0;
+        left: auto;
+    }
+
+    .settingsPrimitiveHelpBadge {
+        display: inline-grid;
+        place-items: center;
+        width: 18px;
+        height: 18px;
+        margin-left: var(--sincro-space-100);
+        border-radius: var(--sincro-radius-pill);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: var(--sincro-color-surface-soft-stronger);
+        color: #dce7f8;
+        font-size: var(--sincro-font-size-100);
+        line-height: 1;
+        cursor: help;
+        user-select: none;
+        touch-action: manipulation;
+    }
+
+    .settingsPrimitiveHelpLabel {
+        display: flex;
+        align-items: center;
+        margin-bottom: var(--sincro-space-100);
+        opacity: 0.75;
+    }
+
+    .settingsPrimitiveHint {
+        line-height: 1.35;
+        font-size: var(--sincro-font-size-150);
+    }
+
+    .settingsPrimitiveHint--muted {
+        color: var(--sincro-color-overlay-text-subtle);
+    }
+
+    .settingsPrimitiveHint--info {
+        color: #b8e0ff;
+    }
+
+    .settingsPrimitiveHint--warning {
+        color: #ffd38a;
+    }
+
+    .settingsPrimitiveHintList {
+        display: grid;
+        gap: var(--sincro-space-150);
+        margin-top: var(--sincro-space-100);
+    }
+
+    .settingsPrimitiveSectionCard {
+        display: grid;
+        gap: var(--sincro-space-250);
+        margin-bottom: var(--sincro-space-450);
+        padding: var(--sincro-space-400) var(--sincro-space-450);
+        border-radius: var(--sincro-radius-500);
+        border: 1px solid rgba(157, 176, 204, 0.12);
+        background: var(--sincro-surface-card);
+    }
+
+    .settingsPrimitiveSectionCard:last-child {
+        margin-bottom: 0;
+    }
+
+    .settingsPrimitiveSectionCard__header {
+        display: grid;
+        gap: var(--sincro-space-250);
+    }
+
+    .settingsPrimitiveSectionCard__title {
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .settingsPrimitiveSectionCard__description {
+        color: var(--sincro-color-overlay-text-muted);
+        line-height: var(--sincro-line-height-body);
+        font-size: var(--sincro-font-size-150);
+    }
+
+    .settingsPrimitiveSectionCard__body {
+        min-width: 0;
+    }
+
+    .settingsPrimitiveToggleGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: var(--sincro-space-150);
+    }
+
+    .settingsPrimitiveToggleGrid--compact {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--sincro-space-100) var(--sincro-space-150);
+    }
+
+    .settingsPrimitiveToggle {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--sincro-space-150);
+        min-height: 56px;
+        padding: var(--sincro-space-250) var(--sincro-space-300);
+        border-radius: var(--sincro-radius-100);
+        border: 1px solid rgba(130, 188, 255, 0.14);
+        background: var(--sincro-color-surface-soft-strong);
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    .settingsPrimitiveToggle--compact {
+        align-items: center;
+        gap: var(--sincro-space-150);
+        min-height: 34px;
+        padding: var(--sincro-space-150) var(--sincro-space-200);
+        border-color: rgba(255, 255, 255, 0.08);
+        background: var(--sincro-color-surface-soft);
+    }
+
+    .settingsPrimitiveToggle.is-disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .settingsPrimitiveToggle__input {
+        flex-shrink: 0;
+        margin: 2px 0 0;
+    }
+
+    .settingsPrimitiveToggle--compact .settingsPrimitiveToggle__input {
+        margin-top: 0;
+    }
+
+    .settingsPrimitiveToggle__label {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        line-height: 1.35;
+    }
+
+    .settingsPrimitiveFieldStack {
+        display: grid;
+        gap: var(--sincro-space-250);
+    }
+
+    .settingsPrimitiveFieldStack--compact {
+        gap: var(--sincro-space-200);
+    }
+
+    .settingsPrimitiveSubsectionTitle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--sincro-space-200);
+        margin-bottom: var(--sincro-space-100);
+        opacity: 0.8;
+        font-weight: 700;
+    }
+
+    .settingsPrimitiveSubsectionTitle__actions {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--sincro-space-150);
+    }
+
+    @media (max-width: 520px) {
+        .settingsPrimitiveToggleGrid--compact {
+            grid-template-columns: 1fr;
+        }
+    }
+}
