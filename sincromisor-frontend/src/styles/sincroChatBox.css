@@ -2,6 +2,13 @@ div#sincroChatBox {
     --chatMessageBorderRadius: clamp(16px, 1.8vw, 22px);
     --chatBoxSpace: clamp(10px, 1vw, 14px);
     --chatBoxIconSize: clamp(34px, 4vw, 42px);
+    --chatBoxAvatarGap: clamp(7px, 0.8vw, 10px);
+    /* Shadows are allowed to breathe outside the visual chat column so icon and bubble shadows are not clipped. */
+    --chatBoxShadowGutter: clamp(18px, 2vw, 26px);
+    /* The newest message sits at the block-end edge, so its shadow needs a larger non-fading gutter. */
+    --chatBoxBlockEndShadowGutter: clamp(36px, 4.8dvh, 52px);
+    /* Older messages may leave through the top; fade them out instead of exposing an abrupt clipping edge. */
+    --chatBoxTopFadeHeight: clamp(64px, 8dvh, 96px);
     --chatBoxColumnWidth: min(430px, calc(100vw - (var(--sincro-main-overlay-side, 12px) * 2) - 12px));
     --chatBoxBottomInset: clamp(78px, 12dvh, 116px);
     --chatBoxMessageSurface: linear-gradient(155deg, rgba(18, 24, 35, 0.84), rgba(8, 12, 19, 0.8));
@@ -9,15 +16,26 @@ div#sincroChatBox {
     --chatBoxMessageMutedTextColor: var(--sincro-main-overlay-text-muted, rgba(225, 233, 247, 0.72));
     --chatBoxMessageBorderColor: rgba(157, 190, 232, 0.16);
     --chatBoxMessageBorderColorStrong: rgba(157, 190, 232, 0.28);
-    --chatBoxMessageShadow: var(--sincro-main-overlay-shadow-soft, 0 10px 24px rgba(2, 6, 12, 0.28));
+    --chatBoxMessageShadow:
+        0 14px 30px rgba(2, 6, 12, 0.22),
+        0 2px 10px rgba(2, 6, 12, 0.16);
 
     /* scene-first: 左下に narrow column を浮かせ、VRM と背景の視認領域を確保する。 */
     & {
         position: absolute;
-        left: var(--sincro-main-overlay-side, 12px);
-        bottom: var(--chatBoxBottomInset);
-        width: var(--chatBoxColumnWidth);
-        max-height: min(58dvh, calc(100dvh - var(--chatBoxBottomInset) - 92px));
+        /*
+         * Keep the visual message column aligned to the page inset while expanding
+         * the clipping box around it. This preserves layout while avoiding cut-off
+         * shadows on the left, right, and newest-message bottom edge.
+         */
+        left: max(0px, calc(var(--sincro-main-overlay-side, 12px) - var(--chatBoxShadowGutter)));
+        bottom: calc(var(--chatBoxBottomInset) - var(--chatBoxBlockEndShadowGutter));
+        width: calc(var(--chatBoxColumnWidth) + (var(--chatBoxShadowGutter) * 2));
+        max-height: min(
+            calc(58dvh + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter)),
+            calc(100dvh - var(--chatBoxBottomInset) - 92px + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter))
+        );
+        padding: var(--chatBoxShadowGutter) var(--chatBoxShadowGutter) var(--chatBoxBlockEndShadowGutter);
         display: flex;
         flex-direction: column-reverse;
         align-items: stretch;
@@ -25,6 +43,27 @@ div#sincroChatBox {
         gap: var(--chatBoxSpace);
         font-size: clamp(13px, 0.72rem + 0.28vw, 16px);
         overflow: hidden;
+        /*
+         * The chat list still clips to avoid covering the scene indefinitely, but
+         * the top edge is masked so older messages recede instead of being visibly
+         * sliced through by the container boundary.
+         */
+        mask-image: linear-gradient(
+            to bottom,
+            transparent 0,
+            rgba(0, 0, 0, 0.34) calc(var(--chatBoxTopFadeHeight) * 0.42),
+            #000 var(--chatBoxTopFadeHeight)
+        );
+        mask-repeat: no-repeat;
+        mask-size: 100% 100%;
+        -webkit-mask-image: linear-gradient(
+            to bottom,
+            transparent 0,
+            rgba(0, 0, 0, 0.34) calc(var(--chatBoxTopFadeHeight) * 0.42),
+            #000 var(--chatBoxTopFadeHeight)
+        );
+        -webkit-mask-repeat: no-repeat;
+        -webkit-mask-size: 100% 100%;
         pointer-events: none;
         z-index: 5;
     }
@@ -34,18 +73,19 @@ div#sincroChatBox {
             position: relative;
             display: grid;
             align-items: stretch;
+            flex: 0 0 auto;
             width: fit-content;
             max-width: min(100%, 34rem);
             min-width: min(220px, 100%);
             margin: 0;
-            border: 1px solid var(--chatBoxMessageBorderColor);
-            border-radius: var(--chatMessageBorderRadius);
-            background: var(--chatBoxMessageSurface);
-            box-shadow: var(--chatBoxMessageShadow);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
             transition: opacity 0.3s ease, transform 0.3s ease;
-            overflow: hidden;
+            overflow: visible;
             opacity: 0;
         }
 
@@ -54,13 +94,18 @@ div#sincroChatBox {
                 width: var(--chatBoxIconSize);
                 min-width: var(--chatBoxIconSize);
                 height: var(--chatBoxIconSize);
-                align-self: flex-start;
+                align-self: start;
+                margin-top: 3px;
                 display: grid;
                 place-items: center;
-                border: 1px solid rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: clamp(10px, 1.2vw, 14px);
                 background:
                     linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
                     rgba(255, 255, 255, 0.03);
+                box-shadow:
+                    0 10px 22px rgba(2, 6, 12, 0.18),
+                    0 1px 6px rgba(2, 6, 12, 0.14);
                 overflow: hidden;
             }
 
@@ -79,8 +124,13 @@ div#sincroChatBox {
             margin: 0;
             padding: 12px 14px;
             box-sizing: border-box;
+            border: 1px solid var(--chatBoxMessageBorderColor);
+            border-radius: var(--chatMessageBorderRadius);
             color: var(--chatBoxMessageTextColor);
-            background: transparent;
+            background: var(--chatBoxMessageSurface);
+            box-shadow: var(--chatBoxMessageShadow);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             font-size: 1em;
             line-height: 1.55;
             letter-spacing: 0.01em;
@@ -92,18 +142,13 @@ div#sincroChatBox {
     div.sincroUserMessage {
         & {
             align-self: flex-end;
-            grid-template-columns: minmax(0, 1fr) var(--chatBoxIconSize);
-            border-color: rgba(109, 182, 255, 0.26);
-            background:
-                radial-gradient(circle at 100% 0%, rgba(72, 144, 223, 0.18), transparent 52%),
-                var(--chatBoxMessageSurface);
+            grid-template-columns: minmax(0, 1fr) var(--chatBoxAvatarGap) var(--chatBoxIconSize);
         }
 
         & .sincroMessage__iconBox {
             & {
-                grid-area: 1 / 2 / 2 / 3;
-                border-left: 1px solid rgba(109, 182, 255, 0.14);
-                border-radius: 0 var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) 0;
+                grid-area: 1 / 3 / 2 / 4;
+                border-color: rgba(109, 182, 255, 0.28);
                 background:
                     linear-gradient(180deg, rgba(76, 143, 219, 0.22), rgba(30, 65, 104, 0.2)),
                     rgba(255, 255, 255, 0.03);
@@ -112,7 +157,11 @@ div#sincroChatBox {
 
         & .sincroMessage__text {
             grid-area: 1 / 1 / 2 / 2;
-            border-radius: var(--chatMessageBorderRadius) 0 var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
+            border-color: rgba(109, 182, 255, 0.26);
+            border-radius: var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) 6px var(--chatMessageBorderRadius);
+            background:
+                radial-gradient(circle at 100% 0%, rgba(72, 144, 223, 0.18), transparent 52%),
+                var(--chatBoxMessageSurface);
         }
     }
 
@@ -120,14 +169,12 @@ div#sincroChatBox {
     div.sincroResetMessage {
         & {
             align-self: flex-start;
-            grid-template-columns: var(--chatBoxIconSize) minmax(0, 1fr);
+            grid-template-columns: var(--chatBoxIconSize) var(--chatBoxAvatarGap) minmax(0, 1fr);
         }
 
         & .sincroMessage__iconBox {
             & {
                 grid-area: 1 / 1 / 2 / 2;
-                border-right: 1px solid rgba(160, 197, 234, 0.12);
-                border-radius: var(--chatMessageBorderRadius) 0 0 var(--chatMessageBorderRadius);
                 background:
                     linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
                     rgba(255, 255, 255, 0.03);
@@ -135,17 +182,14 @@ div#sincroChatBox {
         }
 
         & .sincroMessage__text {
-            grid-area: 1 / 2 / 2 / 3;
-            border-radius: 0 var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
+            grid-area: 1 / 3 / 2 / 4;
+            border-radius: var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) 6px;
         }
     }
 
     div.sincroResetMessage {
-        & {
-            border-color: rgba(189, 202, 220, 0.18);
-        }
-
         & .sincroMessage__text {
+            border-color: rgba(189, 202, 220, 0.18);
             color: var(--chatBoxMessageMutedTextColor);
         }
     }
@@ -153,18 +197,13 @@ div#sincroChatBox {
     div.sincroErrorMessage {
         & {
             align-self: flex-start;
-            grid-template-columns: var(--chatBoxIconSize) minmax(0, 1fr);
-            border-color: rgba(255, 123, 123, 0.3);
-            background:
-                radial-gradient(circle at 0% 0%, rgba(185, 70, 70, 0.2), transparent 52%),
-                linear-gradient(155deg, rgba(35, 18, 23, 0.88), rgba(21, 10, 14, 0.82));
+            grid-template-columns: var(--chatBoxIconSize) var(--chatBoxAvatarGap) minmax(0, 1fr);
         }
 
         & .sincroMessage__iconBox {
             & {
                 grid-area: 1 / 1 / 2 / 2;
-                border-right: 1px solid rgba(255, 123, 123, 0.16);
-                border-radius: var(--chatMessageBorderRadius) 0 0 var(--chatMessageBorderRadius);
+                border-color: rgba(255, 123, 123, 0.28);
                 background:
                     linear-gradient(180deg, rgba(194, 83, 83, 0.28), rgba(92, 26, 26, 0.24)),
                     rgba(255, 255, 255, 0.03);
@@ -172,8 +211,12 @@ div#sincroChatBox {
         }
 
         & .sincroMessage__text {
-            grid-area: 1 / 2 / 2 / 3;
-            border-radius: 0 var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius);
+            grid-area: 1 / 3 / 2 / 4;
+            border-color: rgba(255, 123, 123, 0.3);
+            border-radius: var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) var(--chatMessageBorderRadius) 6px;
+            background:
+                radial-gradient(circle at 0% 0%, rgba(185, 70, 70, 0.2), transparent 52%),
+                linear-gradient(155deg, rgba(35, 18, 23, 0.88), rgba(21, 10, 14, 0.82));
             color: #fff1f1;
         }
     }
@@ -184,7 +227,10 @@ div#sincroChatBox {
         & {
             --chatBoxColumnWidth: min(360px, calc(100vw - (var(--sincro-main-overlay-side, 12px) * 2)));
             --chatBoxBottomInset: clamp(86px, 13dvh, 118px);
-            max-height: min(52dvh, calc(100dvh - var(--chatBoxBottomInset) - 88px));
+            max-height: min(
+                calc(52dvh + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter)),
+                calc(100dvh - var(--chatBoxBottomInset) - 88px + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter))
+            );
         }
 
         div.sincroMessage {
@@ -201,13 +247,20 @@ div#sincroChatBox {
         --chatMessageBorderRadius: 18px;
         --chatBoxSpace: 8px;
         --chatBoxIconSize: 34px;
-        --chatBoxColumnWidth: calc(100vw - (var(--sincro-main-overlay-side, 8px) * 2));
+        --chatBoxAvatarGap: 7px;
+        --chatBoxShadowGutter: 18px;
+        --chatBoxBlockEndShadowGutter: 38px;
+        --chatBoxTopFadeHeight: 68px;
+        --chatBoxColumnWidth: calc(100vw - var(--chatBoxShadowGutter) - var(--sincro-main-overlay-side, 8px));
         --chatBoxBottomInset: 92px;
 
         & {
-            left: var(--sincro-main-overlay-side, 8px);
-            width: var(--chatBoxColumnWidth);
-            max-height: min(36dvh, calc(100dvh - 188px));
+            left: 0;
+            width: calc(var(--chatBoxColumnWidth) + (var(--chatBoxShadowGutter) * 2));
+            max-height: min(
+                calc(36dvh + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter)),
+                calc(100dvh - 188px + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter))
+            );
             font-size: 13px;
         }
 
