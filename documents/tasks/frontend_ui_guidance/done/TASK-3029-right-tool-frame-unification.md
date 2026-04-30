@@ -17,7 +17,7 @@
 ## 関連設計
 
 - `documents/design/frontend_ui.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3027-overlay-chrome-commonization-epic.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3027-overlay-chrome-commonization-epic.md`
 - `documents/tasks/frontend_ui_guidance/done/TASK-3028-overlay-close-button-and-token-consolidation.md`
 
 ## 先行条件
@@ -73,3 +73,4 @@
 - content 側の見た目変更は最小化し、frame 責務の移動を主目的にする。
 - 2026-04-30: `RightToolFrame` を追加し、設定パネルと Debug Console の fixed layer / surface / scroll / close button slot / 外側クリック閉じを共通化した。
 - 2026-04-30: `simple-vrm` で設定パネルと Debug Console の相互切替、外側クリック閉じ、desktop / mobile 幅の収まりを確認した。`vrm360` / `looking-glass-vrm` でも右側ツールメニューと設定パネル表示を確認した。
+- 2026-05-01: `TASK-3032` の Playwright 確認で、`simple-vrm` desktop / mobile、`vrm360` desktop、`looking-glass-vrm` desktop の右側設定パネル / Debug Console が共通 frame として表示され、scroll / max-height / close button に明確な崩れがないことを確認した。

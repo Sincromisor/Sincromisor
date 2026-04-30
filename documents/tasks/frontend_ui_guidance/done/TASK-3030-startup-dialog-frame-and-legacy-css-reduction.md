@@ -17,7 +17,7 @@
 ## 関連設計
 
 - `documents/design/frontend_ui.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3027-overlay-chrome-commonization-epic.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3027-overlay-chrome-commonization-epic.md`
 - `documents/tasks/frontend_ui_guidance/done/TASK-3010-css-foundation-and-legacy-style-isolation.md`
 - `documents/tasks/frontend_ui_guidance/done/TASK-3016-full-react-startup-dialog-and-bridge-dom-removal.md`
 
@@ -78,3 +78,4 @@
 - 2026-04-30: `configurationDialogSettings.css` は設定フォーム本体、SettingsShell override、footer/category 等に縮退した。
 - 2026-04-30: `sincroConfigurationDialog.css` は `dialog#configurationDialog:not(:has(.startupDialogFrame))` の legacy fallback に限定し、modern 3ページの HTML から読み込みを削除した。
 - 2026-04-30: `npm run build` 成功。Vite dev server（`http://127.0.0.1:5174/`）で `simple-vrm` / `vrm360` / `looking-glass-vrm` の dialog 表示、開始ボタンの有効状態、Esc / backdrop click 抑止を確認した。dev server 単体では backend 未起動のため `/api/v1/RTCSignalingServer/config.json` は 404 になる。
+- 2026-05-01: `TASK-3032` の Playwright 確認で、`simple-vrm` mobile と modern 3ページ desktop の起動前 dialog surface / backdrop / responsive scroll に明確な崩れがないことを確認した。

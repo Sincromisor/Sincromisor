@@ -17,7 +17,7 @@
 ## 関連設計
 
 - `documents/design/frontend_ui.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3027-overlay-chrome-commonization-epic.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3027-overlay-chrome-commonization-epic.md`
 
 ## スコープ
 
@@ -66,3 +66,4 @@
 - 2026-04-30: `OverlayCloseButton` と `overlay.css` を追加し、Debug Console / 右側設定パネルの閉じるボタンを共通 component 化した。
 - 2026-04-30: `debugConsoleClose` と `reactSettingsPanelClose` の DOM id は維持した。
 - 2026-04-30: `npm run build` で TypeScript / Vite build が成功することを確認した。
+- 2026-05-01: `TASK-3032` の Playwright 確認で、設定パネル / Debug Console の close button 位置、click close、focus-visible が `simple-vrm` desktop / mobile と `vrm360` / `looking-glass-vrm` desktop で明確に崩れていないことを確認した。
