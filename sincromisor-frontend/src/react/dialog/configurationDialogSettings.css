@@ -68,32 +68,6 @@
         cursor: pointer;
     }
 
-    .configurationDialogReactSettingsPanel__category {
-        display: grid;
-        gap: var(--sincro-space-250);
-        margin-bottom: var(--sincro-space-450);
-        padding: var(--sincro-space-400) var(--sincro-space-450);
-        border-radius: var(--sincro-radius-500);
-        border: 1px solid rgba(157, 176, 204, 0.12);
-        background: var(--sincro-surface-card);
-    }
-
-    .configurationDialogReactSettingsPanel__category:last-child {
-        margin-bottom: 0;
-    }
-
-    .configurationDialogReactSettingsPanel__categoryTitle {
-        font-size: 1rem;
-        font-weight: 700;
-        line-height: 1.25;
-    }
-
-    .configurationDialogReactSettingsPanel__categoryDescription {
-        color: var(--sincro-color-overlay-text-muted);
-        line-height: var(--sincro-line-height-body);
-        font-size: var(--sincro-font-size-150);
-    }
-
     .configurationDialogReactSettingsPanel__vrmDropStatus {
         margin-top: var(--sincro-space-300);
         padding: var(--sincro-space-300) var(--sincro-space-350);
@@ -215,34 +189,11 @@
         cursor: not-allowed;
     }
 
-    .configurationDialogReactSettingsPanel__secondaryButton {
-        min-height: 32px;
-        border-radius: var(--sincro-radius-pill);
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        background: var(--sincro-color-surface-soft-strong);
-        color: var(--sincro-color-overlay-text-primary);
-        padding: var(--sincro-space-100) var(--sincro-space-250);
-        font-size: var(--sincro-font-size-100);
-        line-height: var(--sincro-line-height-tight);
-        cursor: pointer;
-    }
-
-    .configurationDialogReactSettingsPanel__secondaryButton:disabled {
-        opacity: 0.6;
-        cursor: progress;
-    }
-
     .configurationDialogReactSettingsPanel__hintText {
         opacity: 0.78;
         line-height: 1.5;
         margin-top: 0;
         font-size: var(--sincro-font-size-150);
-    }
-
-    .configurationDialogReactSettingsPanel__hintList {
-        display: grid;
-        gap: var(--sincro-space-150);
-        margin-top: var(--sincro-space-200);
     }
 
     .configurationDialogReactSettingsPanel .settingsShell {
@@ -428,11 +379,6 @@
     @media (max-width: 640px) {
         .configurationDialogReactSettingsPanel .settingsShell__navSection {
             grid-template-columns: 1fr;
-        }
-
-        .configurationDialogReactSettingsPanel__category {
-            padding: var(--sincro-space-400);
-            border-radius: var(--sincro-radius-400);
         }
 
         .configurationDialogReactSettingsPanel__button,

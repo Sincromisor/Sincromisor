@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import { useState } from "react";
+import type { ReactNode } from "react";
 import type {
     ApplySettingsFn,
     SincroAppSettingsSnapshot,
@@ -12,9 +12,21 @@ import type {
     SincroMediaDeviceSelectionState,
     SincroMediaDeviceSnapshot,
 } from "../../../ts/MediaDevices/SincroMediaDeviceService";
+import {
+    SettingsButton,
+    SettingsFieldStack,
+    SettingsHelpLabel,
+    SettingsHint,
+    SettingsHintList,
+    SettingsInput,
+    SettingsSectionCard,
+    SettingsSelect,
+    SettingsSubsectionTitle,
+    SettingsToggle,
+    SettingsToggleGrid,
+} from "../../settings-primitives/SettingsPrimitives";
 
-// 起動前 dialog 専用の settings form セクション群。
-// Control Panel 共有部品とは切り分け、dialog 文脈の文言/レイアウト/tooltip をここで管理する。
+// 起動前 dialog 専用の文言と表示対象を保持し、見た目は settings-primitives に委譲する。
 type CommonProps = {
     settings: SincroAppSettingsSnapshot;
     uiState: SincroAppSettingsUiState;
@@ -26,24 +38,6 @@ type DialogBasicSettingsSectionProps = {
     uiState: SincroAppSettingsUiState;
     onTitleChange: (titleText: string) => void;
     onTalkModeChange: (talkMode: string) => void;
-};
-
-const fieldStyle: CSSProperties = {
-    width: "100%",
-    minHeight: "36px",
-    borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,0.2)",
-    background: "rgba(255,255,255,0.08)",
-    color: "#f4f7fb",
-    padding: "7px 10px",
-    lineHeight: 1.2,
-    boxSizing: "border-box",
-};
-
-const cardSectionTitleStyle: CSSProperties = {
-    opacity: 0.8,
-    marginBottom: "4px",
-    fontWeight: 700,
 };
 
 const settingHelp = {
@@ -61,135 +55,6 @@ const settingHelp = {
     enableAutoMute: "顔の向きに合わせて自動でミュートを切り替えます。展示やハンズフリー運用で、話していない時を静かにしたい場面に向いています。",
 } as const;
 
-const tooltipBubbleBaseStyle: CSSProperties = {
-    position: "absolute",
-    top: "calc(100% + 6px)",
-    zIndex: 20,
-    width: "min(300px, calc(100vw - 96px))",
-    borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,0.18)",
-    background: "rgba(15, 18, 24, 0.96)",
-    color: "#eef3fb",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-    padding: "8px 10px",
-    lineHeight: 1.45,
-    fontSize: "12px",
-    whiteSpace: "normal",
-    wordBreak: "break-word",
-    pointerEvents: "none",
-};
-
-function HelpTooltip({ help, children }: { help?: string; children: ReactNode }) {
-    const containerRef = useRef<HTMLSpanElement | null>(null);
-    const [visible, setVisible] = useState<boolean>(false);
-    const [align, setAlign] = useState<"left" | "right">("right");
-    if (!help) {
-        return <>{children}</>;
-    }
-    useEffect(() => {
-        if (!visible) {
-            return;
-        }
-        const handlePointerDown = (event: PointerEvent) => {
-            const root = containerRef.current;
-            if (!root) {
-                return;
-            }
-            if (event.target instanceof Node && !root.contains(event.target)) {
-                setVisible(false);
-            }
-        };
-        document.addEventListener("pointerdown", handlePointerDown);
-        return () => document.removeEventListener("pointerdown", handlePointerDown);
-    }, [visible]);
-
-    useEffect(() => {
-        if (!visible) {
-            return;
-        }
-        const root = containerRef.current;
-        if (!root) {
-            return;
-        }
-        // 画面左側の項目は left 基準、右側は right 基準にして dialog の横スクロール発生と見切れを防ぐ。
-        const rect = root.getBoundingClientRect();
-        const viewportMidX = window.innerWidth / 2;
-        setAlign(rect.left < viewportMidX ? "left" : "right");
-    }, [visible]);
-
-    const tooltipBubbleStyle: CSSProperties = {
-        ...tooltipBubbleBaseStyle,
-        ...(align === "left" ? { left: 0 } : { right: 0 }),
-    };
-
-    return (
-        <span
-            ref={containerRef}
-            style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
-            onClickCapture={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setVisible((prev) => !prev);
-            }}
-            onMouseEnter={() => setVisible(true)}
-            onMouseLeave={() => setVisible(false)}
-            onFocus={() => setVisible(true)}
-            onBlur={() => setVisible(false)}
-        >
-            {children}
-            {visible ? <span role="tooltip" style={tooltipBubbleStyle}>{help}</span> : null}
-        </span>
-    );
-}
-
-function HelpBadge({ help }: { help: string }) {
-    return (
-        <HelpTooltip help={help}>
-            <span
-                tabIndex={0}
-                role="button"
-                aria-label="設定説明を表示"
-                aria-haspopup="true"
-                onPointerDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }}
-                onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }}
-                style={{
-                    display: "inline-grid",
-                    placeItems: "center",
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "999px",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    background: "rgba(255,255,255,0.08)",
-                    color: "#dce7f8",
-                    fontSize: "12px",
-                    lineHeight: 1,
-                    cursor: "help",
-                    userSelect: "none",
-                    marginLeft: "4px",
-                    touchAction: "manipulation",
-                }}
-            >
-                ?
-            </span>
-        </HelpTooltip>
-    );
-}
-
-function LabelWithHelp({ text, help }: { text: string; help?: string }) {
-    return (
-        <div style={{ opacity: 0.75, marginBottom: "4px", display: "flex", alignItems: "center" }}>
-            <span>{text}</span>
-            {help ? <HelpBadge help={help} /> : null}
-        </div>
-    );
-}
-
 type DialogSettingsCategoryProps = {
     title: string;
     description: string;
@@ -202,11 +67,9 @@ export function DialogSettingsCategory({
     children,
 }: DialogSettingsCategoryProps) {
     return (
-        <section className="configurationDialogReactSettingsPanel__category">
-            <div className="configurationDialogReactSettingsPanel__categoryTitle">{title}</div>
-            <div className="configurationDialogReactSettingsPanel__categoryDescription">{description}</div>
-            <div>{children}</div>
-        </section>
+        <SettingsSectionCard title={title} description={description}>
+            {children}
+        </SettingsSectionCard>
     );
 }
 
@@ -218,29 +81,27 @@ export function DialogBasicSettingsSection({
     showSectionTitle = true,
 }: DialogBasicSettingsSectionProps & { showSectionTitle?: boolean }) {
     return (
-        <div style={{ marginTop: "4px", marginBottom: "8px" }}>
-            {showSectionTitle ? <div style={cardSectionTitleStyle}>基本設定</div> : null}
-            <div style={{ marginBottom: "8px" }}>
-                <LabelWithHelp text="タイトル" help={settingHelp.titleText} />
-                <input
+        <div className="settingsPrimitiveFieldStack">
+            {showSectionTitle ? <SettingsSubsectionTitle>基本設定</SettingsSubsectionTitle> : null}
+            <div>
+                <SettingsHelpLabel text="タイトル" help={settingHelp.titleText} />
+                <SettingsInput
                     type="text"
                     value={settings.titleText ?? ""}
-                    onChange={(e) => onTitleChange(e.target.value)}
+                    onChange={(event) => onTitleChange(event.target.value)}
                     disabled={uiState.titleTextDisabled}
-                    style={fieldStyle}
                 />
             </div>
             <div>
-                <LabelWithHelp text="トークモード (talk mode)" help={settingHelp.talkMode} />
-                <select
+                <SettingsHelpLabel text="トークモード (talk mode)" help={settingHelp.talkMode} />
+                <SettingsSelect
                     value={settings.talkMode}
-                    onChange={(e) => onTalkModeChange(e.target.value)}
+                    onChange={(event) => onTalkModeChange(event.target.value)}
                     disabled={uiState.talkModeDisabled}
-                    style={fieldStyle}
                 >
                     <option value="chat">chat</option>
                     <option value="sincro">sincro</option>
-                </select>
+                </SettingsSelect>
             </div>
         </div>
     );
@@ -284,34 +145,35 @@ export function DialogDeviceSettingsSection({
     };
 
     return (
-        <div style={{ marginBottom: "8px" }}>
-            <div style={{ ...cardSectionTitleStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: showSectionTitle ? "4px" : "0" }}>
-                <span>{showSectionTitle ? "入力デバイス" : "マイクとカメラ"}</span>
-                <button
-                    type="button"
-                    className="configurationDialogReactSettingsPanel__secondaryButton"
-                    onClick={handleRefreshDevices}
-                    disabled={snapshot.isRefreshing}
-                >
-                    {snapshot.isRefreshing ? "更新中..." : "再読み込み"}
-                </button>
-            </div>
-            <div className="configurationDialogReactSettingsPanel__hintText">
+        <div className="settingsPrimitiveFieldStack">
+            <SettingsSubsectionTitle
+                actions={(
+                    <SettingsButton
+                        type="button"
+                        onClick={handleRefreshDevices}
+                        disabled={snapshot.isRefreshing}
+                    >
+                        {snapshot.isRefreshing ? "更新中..." : "再読み込み"}
+                    </SettingsButton>
+                )}
+            >
+                {showSectionTitle ? "入力デバイス" : "マイクとカメラ"}
+            </SettingsSubsectionTitle>
+            <SettingsHint>
                 ここで選んだマイクとカメラは、開始後の設定パネルにも引き継がれます。始める前の確認や切り替えに使ってください。
-            </div>
-            <div style={{ marginBottom: "8px" }}>
-                <LabelWithHelp text="マイク入力" help={settingHelp.audioInputDeviceId} />
-                <select
+            </SettingsHint>
+            <div>
+                <SettingsHelpLabel text="マイク入力" help={settingHelp.audioInputDeviceId} />
+                <SettingsSelect
                     value={settings.audioInputDeviceId ?? ""}
                     onChange={(event) => onApplySettings({ audioInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
                     disabled={uiState.audioInputDeviceDisabled}
-                    style={fieldStyle}
                 >
                     <option value="">ブラウザ既定のマイクを使う</option>
                     {snapshot.audioInputs.map((option) => (
                         <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
                     ))}
-                </select>
+                </SettingsSelect>
                 <DeviceSelectionHint
                     emptyMessage="利用可能なマイクが見つかりません。接続後に再読み込みしてください。"
                     snapshot={snapshot}
@@ -322,18 +184,17 @@ export function DialogDeviceSettingsSection({
                 />
             </div>
             <div>
-                <LabelWithHelp text="視線用カメラ" help={settingHelp.videoInputDeviceId} />
-                <select
+                <SettingsHelpLabel text="視線用カメラ" help={settingHelp.videoInputDeviceId} />
+                <SettingsSelect
                     value={settings.videoInputDeviceId ?? ""}
                     onChange={(event) => onApplySettings({ videoInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
                     disabled={uiState.videoInputDeviceDisabled}
-                    style={fieldStyle}
                 >
                     <option value="">ブラウザ既定のカメラを使う</option>
                     {snapshot.videoInputs.map((option) => (
                         <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
                     ))}
-                </select>
+                </SettingsSelect>
                 <DeviceSelectionHint
                     emptyMessage="利用可能なカメラが見つかりません。接続後に再読み込みしてください。"
                     snapshot={snapshot}
@@ -343,9 +204,7 @@ export function DialogDeviceSettingsSection({
                     kindLabel="カメラ"
                 />
             </div>
-            {refreshMessage ? (
-                <div className="configurationDialogReactSettingsPanel__hintText">{refreshMessage}</div>
-            ) : null}
+            {refreshMessage ? <SettingsHint>{refreshMessage}</SettingsHint> : null}
         </div>
     );
 }
@@ -357,45 +216,52 @@ export function DialogMicSettingsSection({
     showSectionTitle = true,
 }: CommonProps & { showSectionTitle?: boolean }) {
     return (
-        <div style={{ marginBottom: "8px" }}>
-            {showSectionTitle ? <div style={cardSectionTitleStyle}>マイク設定</div> : <div style={{ ...cardSectionTitleStyle, marginBottom: "6px" }}>マイクの聞こえ方</div>}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 6px" }}>
-                <DialogToggle
+        <div className="settingsPrimitiveFieldStack">
+            <SettingsSubsectionTitle>
+                {showSectionTitle ? "マイク設定" : "マイクの聞こえ方"}
+            </SettingsSubsectionTitle>
+            <SettingsToggleGrid density="compact">
+                <SettingsToggle
+                    density="compact"
                     label="ノイズを抑える"
                     help={settingHelp.enableNoiseSuppression}
                     checked={!!settings.enableNoiseSuppression}
                     disabled={uiState.enableNoiseSuppressionDisabled}
                     onChange={(checked) => onApplySettings({ enableNoiseSuppression: checked })}
                 />
-                <DialogToggle
+                <SettingsToggle
+                    density="compact"
                     label="音の回り込みを抑える"
                     help={settingHelp.enableEchoCancellation}
                     checked={!!settings.enableEchoCancellation}
                     disabled={uiState.enableEchoCancellationDisabled}
                     onChange={(checked) => onApplySettings({ enableEchoCancellation: checked })}
                 />
-                <DialogToggle
+                <SettingsToggle
+                    density="compact"
                     label="音量を自動で整える"
                     help={settingHelp.enableAutoGainControl}
                     checked={!!settings.enableAutoGainControl}
                     disabled={uiState.enableAutoGainControlDisabled}
                     onChange={(checked) => onApplySettings({ enableAutoGainControl: checked })}
                 />
-                <DialogToggle
+                <SettingsToggle
+                    density="compact"
                     label="無音時の送信を抑える"
                     help={settingHelp.enableVadGate}
                     checked={!!settings.enableVadGate}
                     disabled={uiState.enableVadGateDisabled}
                     onChange={(checked) => onApplySettings({ enableVadGate: checked })}
                 />
-                <DialogToggle
+                <SettingsToggle
+                    density="compact"
                     label="にぎやかな場所向けに調整"
                     help={settingHelp.enableVenueNoiseMode}
                     checked={!!settings.enableVenueNoiseMode}
                     disabled={uiState.enableVenueNoiseModeDisabled}
                     onChange={(checked) => onApplySettings({ enableVenueNoiseMode: checked })}
                 />
-            </div>
+            </SettingsToggleGrid>
         </div>
     );
 }
@@ -408,87 +274,40 @@ export function DialogCharacterSettingsSection({
     showSectionTitle = true,
 }: DialogCharacterSettingsSectionProps & { showSectionTitle?: boolean }) {
     return (
-        <div style={{ marginBottom: "8px" }}>
-            {showSectionTitle ? <div style={cardSectionTitleStyle}>キャラクター設定</div> : <div style={{ ...cardSectionTitleStyle, marginBottom: "6px" }}>キャラクター表示</div>}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 6px" }}>
-                <DialogToggle
+        <div className="settingsPrimitiveFieldStack">
+            <SettingsSubsectionTitle>
+                {showSectionTitle ? "キャラクター設定" : "キャラクター表示"}
+            </SettingsSubsectionTitle>
+            <SettingsToggleGrid density="compact">
+                <SettingsToggle
+                    density="compact"
                     label="3Dキャラクターを表示"
                     help={settingHelp.enableCharacter}
                     checked={!!settings.enableCharacter}
                     disabled={uiState.enableCharacterDisabled}
                     onChange={(checked) => onApplySettings({ enableCharacter: checked })}
                 />
-                <DialogToggle
+                <SettingsToggle
+                    density="compact"
                     label="顔の向きを使う"
                     help={settingHelp.enableCharacterGaze}
                     checked={!!settings.enableCharacterGaze}
                     disabled={uiState.enableCharacterGazeDisabled}
                     onChange={(checked) => onApplySettings({ enableCharacterGaze: checked })}
                 />
-                <DialogToggle
+                <SettingsToggle
+                    density="compact"
                     label="自動でミュートする"
                     help={settingHelp.enableAutoMute}
                     checked={!!settings.enableAutoMute}
                     disabled={uiState.enableAutoMuteDisabled}
                     onChange={(checked) => onApplySettings({ enableAutoMute: checked })}
                 />
-            </div>
-            {uiHints.enableCharacterReason ? (
-                <div style={{ marginTop: "4px", opacity: 0.7, lineHeight: 1.3 }}>
-                    3Dキャラクター表示: {uiHints.enableCharacterReason}
-                </div>
-            ) : null}
-            {uiHints.enableCharacterGazeReason ? (
-                <div style={{ marginTop: "4px", opacity: 0.7, lineHeight: 1.3 }}>
-                    顔の向き: {uiHints.enableCharacterGazeReason}
-                </div>
-            ) : null}
-            {uiHints.enableAutoMuteReason ? (
-                <div style={{ marginTop: "4px", opacity: 0.7, lineHeight: 1.3 }}>
-                    自動ミュート: {uiHints.enableAutoMuteReason}
-                </div>
-            ) : null}
+            </SettingsToggleGrid>
+            {uiHints.enableCharacterReason ? <SettingsHint>3Dキャラクター表示: {uiHints.enableCharacterReason}</SettingsHint> : null}
+            {uiHints.enableCharacterGazeReason ? <SettingsHint>顔の向き: {uiHints.enableCharacterGazeReason}</SettingsHint> : null}
+            {uiHints.enableAutoMuteReason ? <SettingsHint>自動ミュート: {uiHints.enableAutoMuteReason}</SettingsHint> : null}
         </div>
-    );
-}
-
-type DialogToggleProps = {
-    label: string;
-    help?: string;
-    checked: boolean;
-    disabled?: boolean;
-    onChange: (checked: boolean) => void;
-};
-
-function DialogToggle({ label, help, checked, disabled = false, onChange }: DialogToggleProps) {
-    // dialog では compact な2列レイアウトを優先するため、Control Panel とは別スタイルの toggle を使う。
-    return (
-        <label
-            style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                minHeight: "34px",
-                padding: "5px 8px",
-                borderRadius: "6px",
-                border: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.04)",
-                opacity: disabled ? 0.6 : 1,
-                boxSizing: "border-box",
-            }}
-        >
-            <input
-                type="checkbox"
-                checked={checked}
-                disabled={disabled}
-                onChange={(e) => onChange(e.target.checked)}
-                style={{ margin: 0 }}
-            />
-            <span style={{ display: "inline-flex", alignItems: "center" }}>
-                {label}
-                {help ? <HelpBadge help={help} /> : null}
-            </span>
-        </label>
     );
 }
 
@@ -540,55 +359,35 @@ export function DialogStartupSettingsSection({
     ].filter((item) => item.supported);
 
     return (
-        <div style={{ marginBottom: "8px" }}>
-            {showSectionTitle ? <div style={cardSectionTitleStyle}>開始時の動作</div> : null}
-            <div className="configurationDialogReactSettingsPanel__hintText">
+        <div className="settingsPrimitiveFieldStack">
+            {showSectionTitle ? <SettingsSubsectionTitle>開始時の動作</SettingsSubsectionTitle> : null}
+            <SettingsHint>
                 {isRunning
                     ? "開始前に決まる設定です。反映したい時は、いったん停止してからもう一度始めてください。"
                     : "開始した時の動きを決めます。必要なものだけオンにしてから始めてください。"}
-            </div>
+            </SettingsHint>
             {startupStatus.requiresRestart ? (
-                <div className="configurationDialogReactSettingsPanel__hintText">
+                <SettingsHint>
                     変更した内容を反映するには、いったん停止してからもう一度始めてください。{changedLabel}
-                </div>
+                </SettingsHint>
             ) : null}
             {!startupStatus.requiresRestart && startupStatus.willApplyOnNextStart ? (
-                <div className="configurationDialogReactSettingsPanel__hintText">
+                <SettingsHint>
                     変更した内容は次に始める時に反映されます。{changedLabel}
-                </div>
+                </SettingsHint>
             ) : null}
-            <div style={{ display: "grid", gap: "8px", marginTop: "8px" }}>
+            <SettingsFieldStack>
                 {items.map((item) => (
-                    <label
+                    <SettingsToggle
                         key={item.key}
-                        style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: "8px",
-                            padding: "10px 11px",
-                            borderRadius: "8px",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            background: "rgba(255,255,255,0.04)",
-                            cursor: item.disabled ? "not-allowed" : "pointer",
-                            opacity: item.disabled ? 0.6 : 1,
-                        }}
-                    >
-                        <input
-                            type="checkbox"
-                            checked={item.checked}
-                            disabled={item.disabled}
-                            onChange={(event) => item.onChange(event.target.checked)}
-                            style={{ marginTop: "2px", flexShrink: 0 }}
-                        />
-                        <span style={{ display: "grid", gap: "4px", lineHeight: 1.35 }}>
-                            <span style={{ display: "inline-flex", alignItems: "center" }}>
-                                {item.label}
-                                <HelpBadge help={item.help} />
-                            </span>
-                        </span>
-                    </label>
+                        label={item.label}
+                        help={item.help}
+                        checked={item.checked}
+                        disabled={item.disabled}
+                        onChange={item.onChange}
+                    />
                 ))}
-            </div>
+            </SettingsFieldStack>
         </div>
     );
 }
@@ -632,16 +431,7 @@ function DeviceSelectionHint({
     if (unavailableReason) {
         messages.push(unavailableReason);
     }
-    if (messages.length === 0) {
-        return null;
-    }
-    return (
-        <div className="configurationDialogReactSettingsPanel__hintList">
-            {messages.map((message) => (
-                <div key={message} className="configurationDialogReactSettingsPanel__hintText">{message}</div>
-            ))}
-        </div>
-    );
+    return <SettingsHintList messages={messages} />;
 }
 
 function normalizeSelectedDeviceId(value: string): string | null {
