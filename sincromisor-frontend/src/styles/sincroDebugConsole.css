@@ -1,36 +1,5 @@
-div#sincroDebugConsoleContainer {
-    position: fixed;
-    inset: 0;
-    visibility: hidden;
-    pointer-events: none;
-    z-index: 18;
-}
-
-div#sincroDebugConsoleContainer.is-open {
-    visibility: visible;
-}
-
-div#sincroReactSettingsPanelContainer {
-    position: fixed;
-    inset: 0;
-    visibility: hidden;
-    pointer-events: none;
-    z-index: 17;
-}
-
-div#sincroReactSettingsPanelContainer.is-open {
-    visibility: visible;
-}
-
 div#reactSettingsPanel {
-    --settings-panel-close-offset: 34px;
-    position: absolute;
-    top: var(--sincro-right-tool-panel-top, clamp(70px, 10dvh, 96px));
-    right: var(--sincro-main-overlay-side, 12px);
-    width: min(560px, calc(100vw - (var(--sincro-main-overlay-side, 12px) * 2)));
-    max-height: calc(100dvh - var(--sincro-right-tool-panel-top, clamp(70px, 10dvh, 96px)) - var(--sincro-main-overlay-side, 12px));
-    padding-top: var(--settings-panel-close-offset);
-    pointer-events: auto;
+    width: 100%;
 }
 
 div#sincroReactSettingsPanelRoot {
@@ -134,17 +103,6 @@ div#debugConsole {
     --debug-warn: hsl(41deg 90% 57%);
     --debug-danger: hsl(0deg 75% 62%);
 
-    /* 右上オーバーレイで表示し、会話UI(左側)と重なりづらい位置を優先する。 */
-    position: absolute;
-    top: var(--sincro-right-tool-panel-top, clamp(70px, 10dvh, 96px));
-    right: var(--sincro-main-overlay-side, 12px);
-    left: auto;
-    width: min(1120px, calc(100vw - (var(--sincro-main-overlay-side, 12px) * 2)));
-    max-height: calc(100dvh - var(--sincro-right-tool-panel-top, clamp(70px, 10dvh, 96px)) - var(--sincro-main-overlay-side, 12px));
-    border: 1px solid var(--debug-panel-border);
-    border-radius: 12px;
-    box-shadow: 0 14px 44px hsl(220deg 50% 3% / 55%);
-    pointer-events: auto;
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
     grid-template-areas:
@@ -155,51 +113,11 @@ div#debugConsole {
         "sdp sdp sdp sdp sdp sdp sdp sdp sdp sdp sdp sdp";
     gap: 12px;
     align-content: start;
-    padding: 14px;
     height: auto;
-    overflow: auto;
     color: var(--debug-text-strong);
-    background:
-        radial-gradient(circle at 18% -10%, hsl(184deg 84% 42% / 20%), transparent 35%),
-        radial-gradient(circle at 100% 0%, hsl(222deg 90% 62% / 14%), transparent 30%),
-        linear-gradient(145deg, hsl(218deg 34% 9% / 96%), hsl(224deg 27% 6% / 95%));
     font-family: "IBM Plex Sans", "BIZ UDPGothic", "UDPGothic", sans-serif;
     font-size: 14px;
     line-height: 1.45;
-    scrollbar-width: thin;
-    scrollbar-color: hsl(186deg 66% 52% / 70%) hsl(216deg 26% 12% / 78%);
-}
-
-div#debugConsole::-webkit-scrollbar,
-div#debugConsole pre::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
-div#debugConsole::-webkit-scrollbar-track,
-div#debugConsole pre::-webkit-scrollbar-track {
-    background: hsl(216deg 26% 12% / 78%);
-    border-radius: 999px;
-}
-
-div#debugConsole::-webkit-scrollbar-thumb,
-div#debugConsole pre::-webkit-scrollbar-thumb {
-    background: linear-gradient(
-        180deg,
-        hsl(186deg 82% 54% / 85%),
-        hsl(204deg 72% 46% / 80%)
-    );
-    border: 2px solid hsl(216deg 26% 12% / 78%);
-    border-radius: 999px;
-}
-
-div#debugConsole::-webkit-scrollbar-thumb:hover,
-div#debugConsole pre::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(
-        180deg,
-        hsl(186deg 88% 60% / 90%),
-        hsl(204deg 78% 52% / 88%)
-    );
 }
 
 div#debugConsole .debugConsoleHeader {
@@ -262,15 +180,13 @@ div#debugConsole .debugConsoleHeaderActions {
     flex: 0 0 auto;
 }
 
-button#reactSettingsPanelClose {
-    position: absolute;
-    top: calc(var(--settings-panel-close-offset, 34px) + 12px);
-    right: 12px;
-    z-index: 2;
-}
-
 div#sincroReactSettingsPanelRoot .settingsShell__header {
     padding-right: 50px;
+}
+
+div#sincroReactSettingsPanelRoot .sincroControlPanel {
+    max-height: none !important;
+    overflow: visible !important;
 }
 
 /* React settings panel scrollbar styling to match Debug Console without dominating the UI. */
