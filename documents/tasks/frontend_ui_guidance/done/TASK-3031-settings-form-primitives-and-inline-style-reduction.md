@@ -17,7 +17,7 @@
 ## 関連設計
 
 - `documents/design/frontend_ui.md`
-- `documents/tasks/frontend_ui_guidance/open/TASK-3027-overlay-chrome-commonization-epic.md`
+- `documents/tasks/frontend_ui_guidance/done/TASK-3027-overlay-chrome-commonization-epic.md`
 
 ## 先行条件
 
@@ -69,3 +69,4 @@
 
 - このタスクは見た目責務の整理が目的であり、設定ロジックのリファクタを混ぜない。
 - すべての inline style を一度に消す必要はない。次回以降の調整先が明確になる粒度を優先する。
+- 2026-05-01: `TASK-3032` の Playwright 確認で、起動前 dialog と開始後設定パネルの主要 form primitive が `simple-vrm` desktop / mobile と `vrm360` / `looking-glass-vrm` desktop で表示でき、overlay frame 内の scroll / max-height を崩していないことを確認した。

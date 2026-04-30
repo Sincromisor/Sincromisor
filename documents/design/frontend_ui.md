@@ -17,7 +17,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - ドキュメントパス: `documents/design/frontend_ui.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-04-25
+- 最終更新日: 2026-05-01
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -39,7 +39,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - React への段階移行計画は `documents/design/frontend_migration_react.md` を参照（本書は現行UI設計の正本）。
   - メディアデバイス列挙は `SincroMediaDeviceService` が担当し、`enumerateDevices()` の正規化、ラベル未解決時のフォールバック名生成、`devicechange` 監視を UI から分離する。React UI は `useSincroMediaDeviceState` から snapshot/refresh を購読する。
   - `simple-vrm`, `vrm360`, `looking-glass-vrm` では React 設定パネル（`SimpleVrmControlPanel` 系）に加えて React Debug Console を正式導線として採用している。右側ツール領域の open/close と相互排他は `SincroAppRightToolPanelService` と React menu shell が所有し、React 側は `appController.debug.*` 経由で state と開閉 API を利用する。`DebugConsoleManager` は DOM owner ではなく diagnostics snapshot provider と UI callback bridge として振る舞う。設定パネルと開発者向け診断は同時表示せず、右上の X ボタン、メニュー外/パネル外クリック、`Ctrl+Alt+D` で同じルールに従って切り替える。
-  - 2026-04-30 の調査では、起動前 dialog / 右側設定パネル / Debug Console の外側 chrome（surface、close button、z-index、幅、高さ、scroll、backdrop）がまだ共通コンポーネント化されておらず、`TASK-3027` 以降で overlay primitive と right tool frame へ段階的に集約する方針とした。
+  - 2026-05-01 時点で、起動前 dialog / 右側設定パネル / Debug Console の外側 chrome（surface、close button、z-index、幅、高さ、scroll、backdrop）は `src/react/overlay/*` と `overlay.css` へ集約済みである。`simple-vrm`、`vrm360`、`looking-glass-vrm` の Playwright 確認では、共通化由来の明確な overlay 崩れは検出されなかった。
 
   - 2026-04-19 時点で設定パネル側の device selector は、起動前 dialog と同じ `audioInputDeviceId` / `videoInputDeviceId` を直接編集する。`useSimpleVrmPanelState` が `useSincroMediaDeviceState` を購読し、`入出力デバイス` カテゴリ内でマイク入力と Gaze 用カメラ selector をまとめて表示する。両UIとも一覧再読み込みと未解決/無効デバイスのヒント表示を共通の考え方でそろえる。`videoInputDeviceId` は `SincroCharacterGazeController` + `VideoInputManager` により CharacterGaze 専用カメラ取得へ直結し、起動時選択・実行中切替・Gaze OFF/ON で再取得/再初期化される。
   - 起動前 dialog の Start 可否は `DialogManager` + `DialogSettingsPolicy` が保持し、`audioInputDeviceId` と `videoInputDeviceId` の選択状態、`enableCharacterGaze`、`getUserMedia` 利用可否を突き合わせて導出する。特に `audioInputDeviceId` が無効な場合、または Gaze 有効中に `videoInputDeviceId` が無効な場合は Start を disabled にし、個別 selector の hint と開始ボタン下の hint の両方で復帰導線を示す。設定パネル / 起動前設定は一般ユーザー向けの設定導線、Debug Console は開発者向けの診断・プレビュー確認導線として分離する。
@@ -125,6 +125,14 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - `src/react/overlay/overlay.css` は起動前 dialog の surface、backdrop、padding、responsive size、outer scroll、scrollbar を担当する。
 - `src/react/dialog/configurationDialogSettings.css` は設定フォーム本体、SettingsShell の dialog 固有 override、footer、category card など content 側の見た目に限定する。
 - `src/styles/sincroConfigurationDialog.css` は `dialog#configurationDialog:not(:has(.startupDialogFrame))` の legacy fallback に縮退し、modern 3ページからは読み込まない。
+
+#### 2.2.4 Overlay visual regression 確認結果（2026-05-01）
+
+- `npm run build` は成功し、TypeScript / Vite の production build 対象である `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` が生成された。Vite の chunk size warning は既存の bundle size 注意であり、overlay chrome の回帰ではない。
+- Playwright により `simple-vrm` の desktop / mobile 幅で、起動前 dialog、右側設定パネル、Debug Console を確認した。close button の位置、click close、外側クリック閉じ、focus-visible、scroll / max-height は共通 frame の期待どおりに動作した。
+- Playwright により `vrm360` と `looking-glass-vrm` の desktop 幅で、起動前 dialog、右側設定パネル、Debug Console を確認した。ページ固有の VR / WebXR 表示や media permission に関するエラーは出るが、右側ツール領域と dialog surface に overlay 共通化由来の明確な崩れはない。
+- backend 未起動の Vite dev server 単体確認では `/api/v1/RTCSignalingServer/config.json` が 404 になる。また、ブラウザ権限未付与のため `getUserMedia` は `NotAllowedError` になる。どちらも今回の overlay layout regression 判定の対象外として扱う。
+- 今後 overlay chrome を調整する場合は、外側 surface / close / scroll / responsive size は `src/react/overlay/*` と `src/react/overlay/overlay.css` を優先し、`SettingsShell` や Debug Console content CSS へ frame 責務を戻さない。
 
 ### 2.3 設定シェル方針
 
