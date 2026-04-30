@@ -86,11 +86,13 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `64436a7 Align right tool close buttons` では、右側設定パネルと Debug Console の閉じるボタン位置・見た目を揃えるために、`DebugConsole.tsx`、`RightToolSettingsChrome.tsx`、`sincroDebugConsole.css` を個別に調整した。
   - この修正は症状を解消したが、根本的には「右側ツール領域の外側 chrome」を共通部品として所有する層がないため、今後も close button、panel padding、scrollbar、z-index、responsive 幅の調整が各実装へ散りやすい。
 - 現状の分散箇所:
-  - `src/react/app-shell/SincroPageAppShell.tsx`: 起動前 dialog、右側設定パネル、Debug Console の mount topology を持つが、共通 overlay frame は持たない。
-  - `src/react/dialog/ConfigurationDialog.tsx`: native `<dialog>` の platform boundary と React 設定UIの root を束ねる。
-  - `src/react/dialog/configurationDialogSettings.css`: 起動前 dialog の surface / backdrop / SettingsShell override / footer / category card を持つ。
-  - `src/styles/sincroConfigurationDialog.css`: legacy layer として `dialog#configurationDialog` の fallback をまだ持つ。
-  - `src/styles/sincroDebugConsole.css`: 右側設定パネル、Debug Console、右上 menu、`rightToolCloseButton` の見た目が同居する。
+  - `src/react/app-shell/SincroPageAppShell.tsx`: 起動前 dialog、右側設定パネル、Debug Console の mount topology を持つ。
+  - `src/react/dialog/ConfigurationDialog.tsx`: native `<dialog>` の platform boundary と React 状態同期を束ねる。
+  - `src/react/overlay/StartupDialogFrame.tsx`: 起動前 dialog 内の pop layer と settings root を持つ。
+  - `src/react/overlay/overlay.css`: 起動前 dialog、右側設定パネル、Debug Console の外側 chrome を持つ。
+  - `src/react/dialog/configurationDialogSettings.css`: 起動前 dialog の SettingsShell override / footer / category card を持つ。
+  - `src/styles/sincroConfigurationDialog.css`: legacy layer として React frame 非搭載時の fallback だけを持つ。
+  - `src/styles/sincroDebugConsole.css`: Debug Console content と右上 menu 固有の見た目を持つ。
   - `src/react/settings-shell/SettingsShell.tsx`: 設定情報設計の共通 shell だが、overlay 外枠や閉じる導線は責務外である。
 - 共通化の単位:
   - `OverlayCloseButton`: close icon、サイズ、focus-visible、hover、disabled、ARIA label 方針を集約する。
@@ -115,6 +117,14 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - `SincroPageAppShell.tsx` は `sincroDebugConsoleContainer` / `sincroReactSettingsPanelContainer` の既存 id を維持しつつ、両方を `RightToolFrame` から描画する。相互排他状態は従来通り `SincroAppRightToolPanelService` の `activePanel` に従う。
 - `RightToolMenu` は menu open/close と `Ctrl+Alt+D` の keyboard shortcut を担当し、panel container の visibility や scroll は直接操作しない。
 - `DebugConsole` と設定パネル本体は content に専念し、Debug Console の surface / scroll / close button と設定パネルの外側位置指定は frame 側へ移した。
+
+#### 2.2.3 StartupDialogFrame 整理結果（2026-04-30）
+
+- `src/react/dialog/ConfigurationDialog.tsx` は `HTMLDialogElement` の native 境界、open/close 同期、close-interaction 抑止 hook の呼び出しに専念する。
+- `src/react/overlay/StartupDialogFrame.tsx` が dialog 内の `configurationDialogReactPopLayer` と `sincroDialogReactSettingsRoot` を所有し、既存 id / class による互換を維持する。
+- `src/react/overlay/overlay.css` は起動前 dialog の surface、backdrop、padding、responsive size、outer scroll、scrollbar を担当する。
+- `src/react/dialog/configurationDialogSettings.css` は設定フォーム本体、SettingsShell の dialog 固有 override、footer、category card など content 側の見た目に限定する。
+- `src/styles/sincroConfigurationDialog.css` は `dialog#configurationDialog:not(:has(.startupDialogFrame))` の legacy fallback に縮退し、modern 3ページからは読み込まない。
 
 ### 2.3 設定シェル方針
 
@@ -413,8 +423,11 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - modern React CSS では nesting を常用しない。root class から 1 段で読める flat selector を基本とし、親状態を拾う必要がある時だけ最小限に使う
   - `tag` 依存や深い子孫 selector による見た目制御は避け、component root から責務を追えることを優先する
 - 起動前設定 dialog の責務境界:
-  - `src/styles/sincroConfigurationDialog.css` は dialog 要素と legacy fieldset フォールバックの最低限維持だけを担当する
-  - `src/react/dialog/configurationDialogSettings.css` は dialog surface、backdrop、dialog 内 pop layer、余白、footer、category card、SettingsShell 上書きなど React 主導 UI の見た目を担当する
+  - `src/react/dialog/ConfigurationDialog.tsx` は native `<dialog>` と platform hook の境界を担当する
+  - `src/react/overlay/StartupDialogFrame.tsx` は dialog 内 frame、pop layer、settings root の DOM を担当する
+  - `src/react/overlay/overlay.css` は dialog surface、backdrop、余白、外側 scroll / scrollbar を担当する
+  - `src/react/dialog/configurationDialogSettings.css` は footer、category card、SettingsShell 上書きなど React 設定 content の見た目を担当する
+  - `src/styles/sincroConfigurationDialog.css` は React frame 非搭載時の legacy fieldset フォールバックだけを担当する
   - file picker と drag & drop は `ConfigurationDialogSettingsPanel` の React 正規経路で扱い、`DialogBridgeDomAdapter` は `ConfigurationDialog` から呼ばれる `HTMLDialogElement` の open/close と close-interaction 制御だけに限定する
 - CSS ファイル分類:
   - `global foundation`: `src/styles/uiFoundation.css`
@@ -422,10 +435,10 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `legacy shared CSS`: `src/styles/common.css`, `src/styles/sincroConfigurationDialog.css`
   - `page / box CSS`: `src/styles/index.css`, `src/styles/simple.css`, `src/styles/sincro*.css`
 - Overlay chrome 共通化後の CSS 配置方針:
-  - `src/react/overlay/overlay.css`（新設想定）は `OverlayFrame` / `OverlayCloseButton` / `RightToolFrame` / `StartupDialogFrame` の見た目責務を持つ。
+  - `src/react/overlay/overlay.css` は `OverlayCloseButton` / `RightToolFrame` / `StartupDialogFrame` の見た目責務を持つ。
   - `configurationDialogSettings.css` は起動前設定 content と dialog 固有 override に寄せ、surface / close button / generic scrollbar は overlay 側へ移す。
   - `sincroDebugConsole.css` は Debug Console content と右上 menu 固有の見た目に寄せ、右側 tool panel の外側 frame と close button を持たない。
-  - `sincroConfigurationDialog.css` は legacy fallback と互換維持に限定し、modern page から読み込みを外せる状態を目標にする。
+  - `sincroConfigurationDialog.css` は legacy fallback と互換維持に限定し、modern page から読み込まない。
 - 後続移行の前提:
   - 新しい設定 UI を追加する時は、まず `SettingsShell` 既存 token を再利用し、足りない値だけ `uiFoundation.css` へ追加する
   - legacy CSS を修正する場合も、`modern component CSS` の見た目責務を取り戻さない
@@ -677,6 +690,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-25 | `TASK-3026` 対応としてトップページを mode selection dashboard として定義し、`Simple Interface` 主導線、`360deg Camera` / `Looking Glass` 副導線、GitHub 補助リンク、状態ラベル、desktop/mobile 初期表示基準を追記した |
 | 2026-04-25 | `TASK-3026` 追加調整として mode card に差し替え可能な SVG コンセプト画像を置く方針を追記した |
 | 2026-04-30 | `64436a7` 周辺の UI 不整合調査を反映。起動前 dialog / 右側設定パネル / Debug Console の overlay chrome が分散していることを整理し、`TASK-3027` 以降で close button、right tool frame、startup dialog frame、フォーム primitive、visual regression 確認へ段階分割して共通化する方針を追記 |
+| 2026-04-30 | `TASK-3030` 対応として `StartupDialogFrame` を追加し、起動前 dialog の surface / backdrop / padding / scroll を `overlay.css` 側へ集約。`sincroConfigurationDialog.css` は legacy fallback に縮退し、modern 3ページから読み込みを外した |
 
 ## 15. 参照資料
 

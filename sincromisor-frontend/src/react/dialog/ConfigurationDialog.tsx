@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { SincroAppController } from "../../ts/App/SincroAppController";
 import type { SincroAppDialogUiState, SincroAppEvent } from "../../ts/App/SincroAppTypes";
 import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
+import { StartupDialogFrame } from "../overlay/StartupDialogFrame";
 import { ConfigurationDialogSettingsPanel } from "./ConfigurationDialogSettingsPanel";
 import { DialogPopMessages } from "./DialogPopMessages";
 import { useConfigurationDialogPlatformState } from "./useConfigurationDialogPlatformState";
@@ -46,12 +47,9 @@ export function ConfigurationDialog() {
 
     return (
         <dialog id="configurationDialog" ref={dialogRef}>
-            <div className="configurationDialogReactPopLayer">
-                <DialogPopMessages />
-            </div>
-            <div id="sincroDialogReactSettingsRoot">
+            <StartupDialogFrame popLayer={<DialogPopMessages />}>
                 <ConfigurationDialogSettingsPanel />
-            </div>
+            </StartupDialogFrame>
         </dialog>
     );
 }
