@@ -81,15 +81,6 @@ div#sincroHeaderBox {
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: clamp(6px, 0.8vw, 8px);
-        border: 1px solid var(--sincro-main-overlay-border, rgba(157, 190, 232, 0.14));
-        border-radius: clamp(16px, 2vw, 22px);
-        box-shadow: var(--sincro-main-overlay-shadow-soft, 0 10px 24px rgba(2, 6, 12, 0.28));
-        background:
-            linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
-            rgba(11, 14, 20, 0.58);
-        backdrop-filter: blur(18px);
-        -webkit-backdrop-filter: blur(18px);
     }
 
     & div#sincroDebugMenuRoot {
@@ -126,8 +117,6 @@ div#sincroHeaderBox {
 
         & div#sincroHeaderBox__toolChrome {
             min-height: 52px;
-            padding: 6px;
-            border-radius: 16px;
         }
     }
 }
