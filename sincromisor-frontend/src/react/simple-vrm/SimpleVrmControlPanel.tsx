@@ -1,4 +1,3 @@
-import { DiagnosticsStatusCards } from "./components/DiagnosticsStatusCards";
 import {
     BasicSettingsSection,
     CharacterSettingsSection,
@@ -54,10 +53,6 @@ export function SimpleVrmControlPanel({
         mediaDeviceSnapshot,
         audioInputSelection,
         videoInputSelection,
-        vadState,
-        learnedVad,
-        gaze,
-        rtcState,
         connectionState,
         lookingGlass,
         lookingGlassConfigStatus,
@@ -100,7 +95,7 @@ export function SimpleVrmControlPanel({
                 ariaLabel="一般ユーザー向け設定"
                 badge="一般ユーザー向け設定"
                 title={title}
-                description="会話・入出力デバイス・音声・表示・接続を同じ分類で整理しています。通常の調整はここから行い、詳しい診断が必要な時だけ開発者向けを開いてください。"
+                description="会話・入出力デバイス・音声・表示・接続を同じ分類で整理しています。通常の調整はここから行い、詳しい原因確認が必要な時だけ診断へ切り替えます。"
                 responsiveMode="container"
                 initialPageId={isLookingGlassFocused ? "looking-glass" : "conversation"}
                 pages={[
@@ -328,54 +323,29 @@ export function SimpleVrmControlPanel({
                                             </button>
                                         </div>
                                         <div style={{ opacity: 0.78, lineHeight: 1.5 }}>
-                                            接続状態が不安定な時は、ここで停止してからもう一度開始してください。詳しい原因確認が必要な時は開発者向けを使います。
+                                            接続状態が不安定な時は、ここで停止してからもう一度開始してください。詳しい原因確認が必要な時は、同じ右側ツール領域で診断へ切り替えられます。
+                                        </div>
+                                        <div
+                                            style={{
+                                                display: "grid",
+                                                gap: "8px",
+                                                padding: "12px 14px",
+                                                borderRadius: "12px",
+                                                border: "1px solid rgba(157, 176, 204, 0.14)",
+                                                background: "rgba(255,255,255,0.025)",
+                                            }}
+                                        >
+                                            <div style={{ opacity: 0.78, lineHeight: 1.5 }}>
+                                                ICE や音声レベルなどの詳しい値を確認したい場合だけ、診断画面を開いてください。
+                                            </div>
+                                            <div>
+                                                <button type="button" onClick={openDeveloperConsole} style={{ ...panelStyles.button, flex: "0 0 auto" }}>
+                                                    詳しい診断を開く
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </SettingsCategorySection>
-                            </>
-                        ),
-                    },
-                    {
-                        id: "developer",
-                        label: "開発者向け",
-                        title: "開発者向け",
-                        description: "接続状態や診断情報を確認したい時だけ使います。通常の設定変更は他のカテゴリから行います。",
-                        tone: "developer",
-                        content: (
-                            <>
-                                <SettingsSummaryGrid>
-                                    <SettingsStatusCard
-                                        label="ライフサイクル"
-                                        value={lifecycleState}
-                                        detail="UI と RTC の大まかな状態です。"
-                                    />
-                                    <SettingsStatusCard
-                                        label="Looking Glass"
-                                        value={lookingGlassStatusText}
-                                        detail={lookingGlass.message || "対象ページでない場合も状態だけ表示します。"}
-                                        tone={lookingGlass.state === "error" ? "warn" : lookingGlass.state === "active" ? "good" : "neutral"}
-                                    />
-                                </SettingsSummaryGrid>
-                                <SettingsCategorySection
-                                    title="診断画面"
-                                    description="より詳しい RTC や音声の状態を確認したい時だけ切り替えます。通常の調整は他カテゴリのまま進めてください。"
-                                >
-                                    <div style={{ marginBottom: "4px" }}>
-                                        <button type="button" onClick={openDeveloperConsole} style={panelStyles.button}>
-                                            開発者向け診断へ切り替える
-                                        </button>
-                                        <div style={{ marginTop: "8px", opacity: 0.72, lineHeight: 1.45 }}>
-                                            診断画面を開くと、この設定パネルは閉じて同じ右側ツール領域に切り替わります。
-                                        </div>
-                                    </div>
-                                </SettingsCategorySection>
-                                <DiagnosticsStatusCards
-                                    vadState={vadState}
-                                    gaze={gaze}
-                                    rtcState={rtcState}
-                                    learnedVad={learnedVad}
-                                    lookingGlass={lookingGlass}
-                                />
                             </>
                         ),
                     },
