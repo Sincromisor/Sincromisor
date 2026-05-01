@@ -185,8 +185,9 @@ div#sincroReactSettingsPanelRoot .settingsShell__header {
 }
 
 div#sincroReactSettingsPanelRoot .sincroControlPanel {
-    max-height: none !important;
-    overflow: visible !important;
+    max-height: calc(100dvh - var(--right-tool-frame-top) - var(--right-tool-frame-side) - 34px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
 }
 
 /* React settings panel scrollbar styling to match Debug Console without dominating the UI. */

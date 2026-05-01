@@ -172,6 +172,7 @@
 
     .rightToolFrame--settings .rightToolFrame__scroll {
         padding-top: 34px;
+        overflow: visible;
     }
 
     dialog#configurationDialog {
