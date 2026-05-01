@@ -118,7 +118,14 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - `RightToolMenu` は menu open/close と `Ctrl+Alt+D` の keyboard shortcut を担当し、panel container の visibility や scroll は直接操作しない。
 - `DebugConsole` と設定パネル本体は content に専念し、Debug Console の surface / scroll / close button と設定パネルの外側位置指定は frame 側へ移した。
 
-#### 2.2.3 StartupDialogFrame 整理結果（2026-04-30）
+#### 2.2.3 右上ツールメニュー状態表示（2026-05-01）
+
+- `RightToolMenu` は `SincroAppRightToolPanelService` の `activePanel` を参照し、設定パネル / Debug Console / 未選択の現在状態を menu button と menu item に表示する。
+- desktop では header 右端の tool button に短い `ツール` ラベルと現在状態を添え、mobile では従来の icon button へ縮退して tap target を維持する。
+- menu item には用途差を示す短い説明、active visual state、`aria-current` を付与する。menu button は `aria-expanded`、`aria-haspopup`、`aria-pressed`、現在状態を含む `aria-label` で右側ツールの状態を伝える。
+- `sincroDebugConsole.css` の右上 menu は header surface と連続する popover として扱い、panel 本体の frame / scroll 責務は `RightToolFrame` に残す。
+
+#### 2.2.4 StartupDialogFrame 整理結果（2026-04-30）
 
 - `src/react/dialog/ConfigurationDialog.tsx` は `HTMLDialogElement` の native 境界、open/close 同期、close-interaction 抑止 hook の呼び出しに専念する。
 - `src/react/overlay/StartupDialogFrame.tsx` が dialog 内の `configurationDialogReactPopLayer` と `sincroDialogReactSettingsRoot` を所有し、既存 id / class による互換を維持する。
@@ -126,7 +133,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - `src/react/dialog/configurationDialogSettings.css` は設定フォーム本体、SettingsShell の dialog 固有 override、footer、category card など content 側の見た目に限定する。
 - `src/styles/sincroConfigurationDialog.css` は `dialog#configurationDialog:not(:has(.startupDialogFrame))` の legacy fallback に縮退し、modern 3ページからは読み込まない。
 
-#### 2.2.4 Overlay visual regression 確認結果（2026-05-01）
+#### 2.2.5 Overlay visual regression 確認結果（2026-05-01）
 
 - `npm run build` は成功し、TypeScript / Vite の production build 対象である `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` が生成された。Vite の chunk size warning は既存の bundle size 注意であり、overlay chrome の回帰ではない。
 - Playwright により `simple-vrm` の desktop / mobile 幅で、起動前 dialog、右側設定パネル、Debug Console を確認した。close button の位置、click close、外側クリック閉じ、focus-visible、scroll / max-height は共通 frame の期待どおりに動作した。
@@ -701,6 +708,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-30 | `64436a7` 周辺の UI 不整合調査を反映。起動前 dialog / 右側設定パネル / Debug Console の overlay chrome が分散していることを整理し、`TASK-3027` 以降で close button、right tool frame、startup dialog frame、フォーム primitive、visual regression 確認へ段階分割して共通化する方針を追記 |
 | 2026-04-30 | `TASK-3030` 対応として `StartupDialogFrame` を追加し、起動前 dialog の surface / backdrop / padding / scroll を `overlay.css` 側へ集約。`sincroConfigurationDialog.css` は legacy fallback に縮退し、modern 3ページから読み込みを外した |
 | 2026-05-01 | `#sincroChatBox` の表示領域を起動時から固定高で確保する方針を追記。チャットメッセージ追加時に top fade / clipping 領域が上へ移動して見えることを避けるため、breakpoint ごとの高さ token を基準にする |
+| 2026-05-01 | `TASK-3034` 対応として右上ツールメニューの active state / ARIA / popover 表現を整理。desktop は補助ラベル付き、mobile は icon button 維持とし、設定 / 診断の用途差と現在表示中の panel を menu item から分かるようにした |
 
 ## 15. 参照資料
 

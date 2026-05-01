@@ -13,10 +13,12 @@ div#debugMenu {
 
 /* ヘッダー右端に置く控えめな設定アイコン。3D表示の主役感を壊さないサイズにする。 */
 button#debugMenuButton {
-    width: var(--sincro-header-height, clamp(54px, 7dvh, 74px));
+    min-width: var(--sincro-header-height, clamp(54px, 7dvh, 74px));
     height: var(--sincro-header-height, clamp(54px, 7dvh, 74px));
-    display: inline-grid;
-    place-items: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     border: 1px solid var(--sincro-main-overlay-border-strong, rgba(157, 190, 232, 0.24));
     color: var(--headerTextColor);
     background: var(--sincro-main-overlay-surface, linear-gradient(160deg, rgba(26, 29, 37, 0.92), rgba(14, 16, 22, 0.86)));
@@ -24,7 +26,7 @@ button#debugMenuButton {
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
     border-radius: clamp(16px, 2vw, 22px);
-    padding: 0;
+    padding: 0 14px;
     cursor: pointer;
 }
 
@@ -33,6 +35,25 @@ button#debugMenuButton .debugMenuButton__icon {
     height: clamp(18px, 1.6vw, 22px);
     display: block;
     fill: hsl(0deg 0% 93% / 84%);
+    flex: 0 0 auto;
+}
+
+button#debugMenuButton .debugMenuButton__label,
+button#debugMenuButton .debugMenuButton__state {
+    display: block;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+button#debugMenuButton .debugMenuButton__label {
+    color: hsl(194deg 45% 95% / 92%);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+button#debugMenuButton .debugMenuButton__state {
+    color: var(--sincro-main-overlay-text-muted, rgba(225, 233, 247, 0.72));
+    font-size: 10px;
 }
 
 button#debugMenuButton:hover {
@@ -40,21 +61,42 @@ button#debugMenuButton:hover {
     border-color: var(--sincro-main-overlay-border-strong, hsl(0deg 0% 100% / 22%));
 }
 
+button#debugMenuButton[aria-pressed="true"] {
+    border-color: hsl(186deg 65% 58% / 44%);
+}
+
 div#debugMenuPanel {
     position: absolute;
-    top: calc(100% + 10px);
+    top: calc(100% + 8px);
     right: 0;
-    min-width: 210px;
-    padding: 10px;
+    width: min(300px, calc(100vw - 24px));
+    padding: 8px;
     border: 1px solid var(--sincro-main-overlay-border-strong, hsl(186deg 65% 52% / 20%));
-    border-radius: 14px;
-    background: var(--sincro-main-overlay-surface, linear-gradient(145deg, hsl(218deg 28% 10% / 97%), hsl(224deg 27% 7% / 97%)));
+    border-radius: 16px;
+    background:
+        linear-gradient(180deg, hsl(186deg 65% 52% / 10%), transparent 42px),
+        var(--sincro-main-overlay-surface, linear-gradient(145deg, hsl(218deg 28% 10% / 98%), hsl(224deg 27% 7% / 98%)));
     box-shadow: var(--sincro-main-overlay-shadow, 0 8px 22px hsl(220deg 35% 4% / 42%));
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
     visibility: hidden;
     opacity: 0;
     transform: translateY(-6px);
     transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
     pointer-events: none;
+}
+
+div#debugMenuPanel::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    right: 22px;
+    width: 14px;
+    height: 14px;
+    border-left: 1px solid var(--sincro-main-overlay-border-strong, hsl(186deg 65% 52% / 20%));
+    border-top: 1px solid var(--sincro-main-overlay-border-strong, hsl(186deg 65% 52% / 20%));
+    background: hsl(218deg 28% 10% / 98%);
+    transform: rotate(45deg);
 }
 
 div#debugMenu.is-open div#debugMenuPanel {
@@ -67,17 +109,42 @@ div#debugMenu.is-open div#debugMenuPanel {
 button#debugConsoleToggle,
 button#reactSettingsPanelToggle {
     width: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     border: 1px solid var(--sincro-main-overlay-border, hsl(186deg 65% 52% / 18%));
-    border-radius: 10px;
+    border-radius: 12px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
         rgba(22, 26, 34, 0.78);
     color: hsl(0deg 0% 92%);
     text-align: left;
-    padding: 10px 12px;
+    padding: 11px 12px;
     font-size: 12px;
     line-height: 1.4;
     cursor: pointer;
+}
+
+button#debugConsoleToggle.is-active,
+button#reactSettingsPanelToggle.is-active {
+    border-color: hsl(186deg 72% 58% / 56%);
+    background:
+        linear-gradient(180deg, hsl(186deg 76% 42% / 18%), hsl(204deg 64% 34% / 12%)),
+        rgba(25, 33, 43, 0.9);
+}
+
+button#debugConsoleToggle.is-active::before,
+button#reactSettingsPanelToggle.is-active::before {
+    content: "";
+    width: 3px;
+    border-radius: 999px;
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    left: 7px;
+    background: hsl(186deg 82% 60% / 88%);
 }
 
 button#debugConsoleToggle:hover,
@@ -88,8 +155,37 @@ button#reactSettingsPanelToggle:hover {
     border-color: var(--sincro-main-overlay-border-strong, rgba(157, 190, 232, 0.24));
 }
 
-button#reactSettingsPanelToggle {
+button#debugConsoleToggle {
     margin-top: 6px;
+}
+
+.debugMenuPanel__itemText {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.debugMenuPanel__itemTitle {
+    color: hsl(194deg 45% 95% / 94%);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.debugMenuPanel__itemDescription {
+    color: var(--sincro-main-overlay-text-muted, rgba(225, 233, 247, 0.72));
+    font-size: 11px;
+}
+
+.debugMenuPanel__itemState {
+    flex: 0 0 auto;
+    border: 1px solid hsl(186deg 65% 52% / 22%);
+    border-radius: 999px;
+    padding: 2px 7px;
+    color: hsl(188deg 72% 78% / 88%);
+    background: hsl(186deg 70% 42% / 10%);
+    font-size: 10px;
+    line-height: 1.2;
 }
 
 div#debugConsole {
@@ -748,6 +844,19 @@ div#debugConsole .debugTab.is-active {
 }
 
 @media (max-width: 900px) {
+    button#debugMenuButton {
+        width: var(--sincro-header-height, 52px);
+        min-width: var(--sincro-header-height, 52px);
+        height: var(--sincro-header-height, 52px);
+        padding: 0;
+        gap: 0;
+    }
+
+    button#debugMenuButton .debugMenuButton__label,
+    button#debugMenuButton .debugMenuButton__state {
+        display: none;
+    }
+
     div#debugConsole {
         /* タブレット幅は余白を最小化し、操作領域を確保する。 */
         top: 6px;
@@ -768,5 +877,10 @@ div#debugConsole .debugTab.is-active {
 
     div#debugMenuPanel {
         right: -2px;
+        width: min(304px, calc(100vw - 16px));
+    }
+
+    div#debugMenuPanel::before {
+        right: 20px;
     }
 }
