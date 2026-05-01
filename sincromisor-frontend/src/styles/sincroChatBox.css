@@ -11,6 +11,10 @@ div#sincroChatBox {
     --chatBoxTopFadeHeight: clamp(64px, 8dvh, 96px);
     --chatBoxColumnWidth: min(430px, calc(100vw - (var(--sincro-main-overlay-side, 12px) * 2) - 12px));
     --chatBoxBottomInset: clamp(78px, 12dvh, 116px);
+    --chatBoxViewportHeight: min(
+        calc(58dvh + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter)),
+        calc(100dvh - var(--chatBoxBottomInset) - 92px + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter))
+    );
     --chatBoxMessageSurface: linear-gradient(155deg, rgba(18, 24, 35, 0.84), rgba(8, 12, 19, 0.8));
     --chatBoxMessageTextColor: var(--headerTextColor, #eef3fb);
     --chatBoxMessageMutedTextColor: var(--sincro-main-overlay-text-muted, rgba(225, 233, 247, 0.72));
@@ -31,10 +35,8 @@ div#sincroChatBox {
         left: max(0px, calc(var(--sincro-main-overlay-side, 12px) - var(--chatBoxShadowGutter)));
         bottom: calc(var(--chatBoxBottomInset) - var(--chatBoxBlockEndShadowGutter));
         width: calc(var(--chatBoxColumnWidth) + (var(--chatBoxShadowGutter) * 2));
-        max-height: min(
-            calc(58dvh + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter)),
-            calc(100dvh - var(--chatBoxBottomInset) - 92px + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter))
-        );
+        height: var(--chatBoxViewportHeight);
+        box-sizing: border-box;
         padding: var(--chatBoxShadowGutter) var(--chatBoxShadowGutter) var(--chatBoxBlockEndShadowGutter);
         display: flex;
         flex-direction: column-reverse;
@@ -227,7 +229,7 @@ div#sincroChatBox {
         & {
             --chatBoxColumnWidth: min(360px, calc(100vw - (var(--sincro-main-overlay-side, 12px) * 2)));
             --chatBoxBottomInset: clamp(86px, 13dvh, 118px);
-            max-height: min(
+            --chatBoxViewportHeight: min(
                 calc(52dvh + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter)),
                 calc(100dvh - var(--chatBoxBottomInset) - 88px + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter))
             );
@@ -253,14 +255,14 @@ div#sincroChatBox {
         --chatBoxTopFadeHeight: 68px;
         --chatBoxColumnWidth: calc(100vw - var(--chatBoxShadowGutter) - var(--sincro-main-overlay-side, 8px));
         --chatBoxBottomInset: 92px;
+        --chatBoxViewportHeight: min(
+            calc(36dvh + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter)),
+            calc(100dvh - 188px + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter))
+        );
 
         & {
             left: 0;
             width: calc(var(--chatBoxColumnWidth) + (var(--chatBoxShadowGutter) * 2));
-            max-height: min(
-                calc(36dvh + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter)),
-                calc(100dvh - 188px + var(--chatBoxShadowGutter) + var(--chatBoxBlockEndShadowGutter))
-            );
             font-size: 13px;
         }
 
