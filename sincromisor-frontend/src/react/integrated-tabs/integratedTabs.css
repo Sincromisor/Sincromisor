@@ -1,0 +1,105 @@
+@layer components {
+    .integratedTabs {
+        --integrated-tabs-surface: var(--sincro-surface-panel, hsl(218deg 28% 10% / 96%));
+        --integrated-tabs-border: var(--sincro-color-border-subtle, hsl(216deg 22% 100% / 12%));
+        --integrated-tabs-accent: rgba(159, 210, 255, 0.72);
+        --integrated-tabs-overlap: 1px;
+        --integrated-tabs-min-width: 92px;
+        display: grid;
+        gap: var(--sincro-space-350, 14px);
+        position: relative;
+        z-index: 2;
+    }
+
+    .integratedTabs__section {
+        display: grid;
+        gap: var(--sincro-space-150, 6px);
+    }
+
+    .integratedTabs__sectionTitle {
+        padding: var(--sincro-space-250, 10px) 10px var(--sincro-space-100, 4px);
+        color: var(--sincro-color-overlay-text-subtle, hsl(200deg 25% 80% / 76%));
+        font-size: var(--sincro-font-size-100, 0.78rem);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .integratedTabs__tab {
+        position: relative;
+        width: 100%;
+        min-height: 42px;
+        margin-right: calc(-1 * var(--integrated-tabs-overlap));
+        padding: var(--sincro-space-250, 10px) var(--sincro-space-350, 14px);
+        border: 1px solid transparent;
+        border-radius: var(--sincro-radius-300, 10px) 0 0 var(--sincro-radius-300, 10px);
+        background: transparent;
+        color: inherit;
+        text-align: left;
+        font: inherit;
+        cursor: pointer;
+        transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    }
+
+    .integratedTabs__tabLabel {
+        display: block;
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    .integratedTabs__tab:hover,
+    .integratedTabs__tab:focus-visible {
+        border-color: rgba(130, 188, 255, 0.14);
+        border-right-color: transparent;
+        background: rgba(255, 255, 255, 0.035);
+    }
+
+    .integratedTabs__tab.is-active {
+        z-index: 3;
+        border-color: transparent;
+        border-right-color: transparent;
+        background: var(--integrated-tabs-surface);
+        box-shadow: inset 3px 0 0 var(--integrated-tabs-accent), var(--sincro-shadow-panel-soft, 0 8px 22px hsl(220deg 35% 4% / 24%));
+    }
+
+    .integratedTabs__tab.is-developer {
+        color: rgba(232, 238, 245, 0.92);
+    }
+
+    .integratedTabs--top {
+        gap: var(--sincro-space-250, 10px);
+        padding: 0 var(--sincro-space-250, 10px);
+        align-self: end;
+    }
+
+    .integratedTabs--top .integratedTabs__section {
+        grid-template-columns: repeat(auto-fit, minmax(var(--integrated-tabs-min-width), 1fr));
+        gap: var(--sincro-space-100, 4px);
+    }
+
+    .integratedTabs--top .integratedTabs__sectionTitle {
+        grid-column: 1 / -1;
+        padding-inline: 4px;
+    }
+
+    .integratedTabs--top .integratedTabs__tab {
+        min-height: 38px;
+        margin-right: 0;
+        margin-bottom: calc(-1 * var(--integrated-tabs-overlap));
+        padding: var(--sincro-space-250, 10px) var(--sincro-space-200, 8px);
+        border-radius: var(--sincro-radius-300, 10px) var(--sincro-radius-300, 10px) 0 0;
+        text-align: center;
+    }
+
+    .integratedTabs--top .integratedTabs__tab:hover,
+    .integratedTabs--top .integratedTabs__tab:focus-visible {
+        border-right-color: rgba(130, 188, 255, 0.14);
+        border-bottom-color: transparent;
+    }
+
+    .integratedTabs--top .integratedTabs__tab.is-active {
+        border-color: transparent;
+        border-bottom-color: transparent;
+        box-shadow: inset 0 3px 0 var(--integrated-tabs-accent), var(--sincro-shadow-panel-soft, 0 8px 22px hsl(220deg 35% 4% / 24%));
+    }
+}

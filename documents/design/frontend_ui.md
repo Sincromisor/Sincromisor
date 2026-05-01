@@ -177,6 +177,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 初回セットアップ dialog は `幅 960-1120px`、`高さ 620-780px` を目安とし、左ナビ幅は固定寄りに保ちながら右本文を desktop では `760px` 基準で安定表示する。狭幅では desktop の固定高3段構成を維持せず、`header -> nav -> page -> footer` の 1 カラム積みへ切り替えて dialog 全体をスクロールさせる
   - 開始後の右側設定パネルは `420-560px` 幅を目安とし、本文として読ませる領域を `320px` 未満にしない。開始後オーバーレイで使う `SettingsShell` は viewport 幅ではなくパネル実幅を基準に縮退判定し、右上オーバーレイでも親コンテナの狭さに応じて 1 カラムへ切り替える
   - 開始後の compact navigation は、desktop ではカテゴリボタンを低密度な横並びにしすぎず本文見出しを初期表示内へ残す。mobile ではカテゴリ select へ縮退し、カテゴリ一覧が本文確認を押し下げないようにする
+  - 設定パネルや Debug Console などのタブ型カテゴリナビゲーションは `IntegratedTabs` を共通部品として使い、内容面一体型タブ表現へそろえる。`SettingsShell` の `regular` / `compact` は別UIではなく余白、最小幅、高さの密度差として扱い、選択中タブは表示中の内容面と同じ背景・境界に接続する。狭幅ではタブを上部へ回し、さらに狭い compact container では select へ縮退する
   - 起動前 dialog と開始後の設定パネルは、レイアウト差があってもカテゴリ名、項目順、文言方針をそろえる
   - PCでは左ナビを維持し、狭幅時のみドロワーまたはタブへの縮退を許可する
   - 狭幅では、まず左右カラムを縮め、それでも足りない場合に左ナビを上部へ回して主 CTA の視認性を優先する
@@ -708,6 +709,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-25 | `TASK-3026` 対応としてトップページを mode selection dashboard として定義し、`Simple Interface` 主導線、`360deg Camera` / `Looking Glass` 副導線、GitHub 補助リンク、状態ラベル、desktop/mobile 初期表示基準を追記した |
 | 2026-04-25 | `TASK-3026` 追加調整として mode card に差し替え可能な SVG コンセプト画像を置く方針を追記した |
 | 2026-04-30 | `64436a7` 周辺の UI 不整合調査を反映。起動前 dialog / 右側設定パネル / Debug Console の overlay chrome が分散していることを整理し、`TASK-3027` 以降で close button、right tool frame、startup dialog frame、フォーム primitive、visual regression 確認へ段階分割して共通化する方針を追記 |
+| 2026-05-02 | `TASK-3039` 対応として `SettingsShell` のカテゴリナビゲーションを内容面一体型タブ表現へ統一。起動前 dialog と開始後設定パネルで同じタブのメンタルモデルを使い、compact は密度差、狭幅は select 縮退として整理した |
+| 2026-05-02 | `IntegratedTabs` を追加し、`SettingsShell` と Debug Console のタブ UI を共通部品化。Debug Console 側の古い pill 型 `.debugTab` 表現を撤去し、内容面一体型タブへ統一した |
 | 2026-04-30 | `TASK-3030` 対応として `StartupDialogFrame` を追加し、起動前 dialog の surface / backdrop / padding / scroll を `overlay.css` 側へ集約。`sincroConfigurationDialog.css` は legacy fallback に縮退し、modern 3ページから読み込みを外した |
 | 2026-05-01 | `#sincroChatBox` の表示領域を起動時から固定高で確保する方針を追記。チャットメッセージ追加時に top fade / clipping 領域が上へ移動して見えることを避けるため、breakpoint ごとの高さ token を基準にする |
 | 2026-05-01 | `TASK-3034` 対応として右上ツールメニューの active state / ARIA / popover 表現を整理。desktop は補助ラベル付き、mobile は icon button 維持とし、設定 / 診断の用途差と現在表示中の panel を menu item から分かるようにした |

@@ -30,6 +30,7 @@ export const panelStyles: PanelStyles = {
         fontFamily: "\"IBM Plex Sans\", \"BIZ UDPGothic\", \"UDPGothic\", sans-serif",
         overflowX: "hidden",
         overflowY: "auto",
+        scrollbarGutter: "stable",
         scrollbarWidth: "thin",
         scrollbarColor: "rgba(130, 188, 255, 0.65) rgba(255,255,255,0.08)",
     },

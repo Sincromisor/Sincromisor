@@ -197,6 +197,7 @@
     }
 
     .configurationDialogReactSettingsPanel .settingsShell {
+        --settings-shell-surface: var(--sincro-surface-card-strong);
         --settings-shell-layout-gap: var(--sincro-space-550);
         --settings-shell-nav-width: 216px;
         --settings-shell-detail-min-width: 760px;
@@ -232,7 +233,7 @@
         max-width: calc(var(--settings-shell-nav-width) + var(--settings-shell-layout-gap) + var(--settings-shell-detail-max-width));
         margin-inline: auto;
         grid-template-columns: var(--settings-shell-nav-width) minmax(var(--settings-shell-detail-min-width), 1fr);
-        gap: var(--settings-shell-layout-gap);
+        gap: 0;
         min-height: 0;
         align-items: stretch;
     }
@@ -246,9 +247,9 @@
         overflow: visible;
     }
 
-    .configurationDialogReactSettingsPanel .settingsShell__navButton {
+    .configurationDialogReactSettingsPanel .settingsShell__nav .integratedTabs__tab {
         min-height: 44px;
-        border-radius: var(--sincro-radius-300);
+        border-radius: var(--sincro-radius-300) 0 0 var(--sincro-radius-300);
     }
 
     .configurationDialogReactSettingsPanel .settingsShell__detail {
@@ -271,7 +272,7 @@
         gap: var(--sincro-space-400);
         overflow-y: auto;
         overflow-x: hidden;
-        scrollbar-gutter: stable both-edges;
+        scrollbar-gutter: stable;
         box-sizing: border-box;
     }
 
@@ -334,14 +335,27 @@
         .configurationDialogReactSettingsPanel .settingsShell__nav {
             width: 100%;
             justify-self: stretch;
+            padding: 0 var(--sincro-space-250);
         }
 
-        .configurationDialogReactSettingsPanel .settingsShell__navSection {
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        .configurationDialogReactSettingsPanel .settingsShell__nav .integratedTabs__section {
+            grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
         }
 
-        .configurationDialogReactSettingsPanel .settingsShell__navSectionTitle {
+        .configurationDialogReactSettingsPanel .settingsShell__nav .integratedTabs__sectionTitle {
             grid-column: 1 / -1;
+        }
+
+        .configurationDialogReactSettingsPanel .settingsShell__nav .integratedTabs__tab {
+            margin-right: 0;
+            margin-bottom: calc(-1 * var(--settings-shell-tab-overlap));
+            border-radius: var(--sincro-radius-300) var(--sincro-radius-300) 0 0;
+            text-align: center;
+        }
+
+        .configurationDialogReactSettingsPanel .settingsShell__pageSurface {
+            border-top-color: transparent;
+            border-left-color: var(--settings-shell-border);
         }
 
         .configurationDialogReactSettingsPanel .settingsShell__detail {
@@ -371,14 +385,14 @@
             max-width: none;
         }
 
-        .configurationDialogReactSettingsPanel .settingsShell__navSection {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+        .configurationDialogReactSettingsPanel .settingsShell__nav .integratedTabs__section {
+            grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
         }
     }
 
     @media (max-width: 640px) {
-        .configurationDialogReactSettingsPanel .settingsShell__navSection {
-            grid-template-columns: 1fr;
+        .configurationDialogReactSettingsPanel .settingsShell__nav .integratedTabs__section {
+            grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
         }
 
         .configurationDialogReactSettingsPanel__button,

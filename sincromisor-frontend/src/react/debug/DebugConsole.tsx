@@ -1,4 +1,5 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
+import { IntegratedTabs } from "../integrated-tabs/IntegratedTabs";
 import {
     CHARACTER_GAZE_TRACKING_TUNING_PRESETS,
     DEBUG_CONSOLE_TREND_MAX_VALUES,
@@ -10,6 +11,15 @@ import {
 } from "../../ts/UI/DebugConsoleManager";
 
 type DebugTabKey = "status" | "transport" | "audio" | "channels" | "gaze" | "sdp";
+
+const DEBUG_TABS: { id: DebugTabKey; label: string }[] = [
+    { id: "status", label: "Overview" },
+    { id: "transport", label: "Transport" },
+    { id: "audio", label: "Audio" },
+    { id: "channels", label: "Channels" },
+    { id: "gaze", label: "Face & Gaze" },
+    { id: "sdp", label: "SDP" },
+];
 
 function useDebugConsoleSnapshot(): DebugConsoleSnapshot {
     const manager = DebugConsoleManager.getManager();
@@ -122,28 +132,17 @@ export function DebugConsole() {
                     </div>
                 </div>
             </header>
-            <nav className="debugConsoleTabs" aria-label="Developer diagnostics panels">
-                {([
-                    ["status", "Overview"],
-                    ["transport", "Transport"],
-                    ["audio", "Audio"],
-                    ["channels", "Channels"],
-                    ["gaze", "Face & Gaze"],
-                    ["sdp", "SDP"],
-                ] as const).map(([tabKey, label]) => (
-                    <button
-                        key={tabKey}
-                        type="button"
-                        className={`debugTab${activeTab === tabKey ? " is-active" : ""}`}
-                        data-debug-tab={tabKey}
-                        onClick={() => setActiveTab(tabKey)}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </nav>
+            <IntegratedTabs
+                className="debugConsoleTabs integratedTabs--top"
+                ariaLabel="Developer diagnostics panels"
+                groups={[{ items: DEBUG_TABS }]}
+                activeId={activeTab}
+                onSelect={(tabKey) => setActiveTab(tabKey as DebugTabKey)}
+                idPrefix="debug-console"
+                getPanelId={(_, tabKey) => `debug-console-panel-${tabKey}`}
+            />
 
-            <section className={`debugCard debugCard--status debugPanel${activeTab === "status" ? " is-active" : ""}`} data-debug-panel="status">
+            <section id="debug-console-panel-status" className={`debugCard debugCard--status debugPanel${activeTab === "status" ? " is-active" : ""}`} data-debug-panel="status" role="tabpanel" aria-labelledby="debug-console-tab-status">
                 <h3>Session Overview</h3>
                 <p className="debugConsoleLead">接続が不安定な時は、まず ICE / Signaling / RTT を確認してください。ログや SDP はその後で十分です。</p>
                 <div className="statusGrid">
@@ -186,7 +185,7 @@ export function DebugConsole() {
                 </div>
             </section>
 
-            <section className={`debugCard debugCard--transport debugPanel${activeTab === "transport" ? " is-active" : ""}`} data-debug-panel="transport">
+            <section id="debug-console-panel-transport" className={`debugCard debugCard--transport debugPanel${activeTab === "transport" ? " is-active" : ""}`} data-debug-panel="transport" role="tabpanel" aria-labelledby="debug-console-tab-transport">
                 <h3>WebRTC Transport</h3>
                 <div className="metricGrid">
                     <div className="metricItem"><span className="metricLabel">Outbound Audio Bitrate</span><span className="metricValue">{snapshot.rtc.metrics.outboundAudioBitrate}</span></div>
@@ -224,7 +223,7 @@ export function DebugConsole() {
                 </div>
             </section>
 
-            <section className={`debugCard debugCard--audio debugPanel${activeTab === "audio" ? " is-active" : ""}`} data-debug-panel="audio">
+            <section id="debug-console-panel-audio" className={`debugCard debugCard--audio debugPanel${activeTab === "audio" ? " is-active" : ""}`} data-debug-panel="audio" role="tabpanel" aria-labelledby="debug-console-tab-audio">
                 <h3>Audio Monitor (Frontend)</h3>
                 <div className="audioMeterGrid">
                     <div className="audioMeterPanel">
@@ -483,7 +482,7 @@ export function DebugConsole() {
                 <audio id="rtcAudio" autoPlay={true}></audio>
             </section>
 
-            <section className={`debugCard debugCard--channels debugPanel${activeTab === "channels" ? " is-active" : ""}`} data-debug-panel="channels">
+            <section id="debug-console-panel-channels" className={`debugCard debugCard--channels debugPanel${activeTab === "channels" ? " is-active" : ""}`} data-debug-panel="channels" role="tabpanel" aria-labelledby="debug-console-tab-channels">
                 <h3>Data Channel Events</h3>
                 <div className="channelGrid">
                     <article><h4>text_ch</h4><pre id="textChannel">{snapshot.rtc.textChannelLog}</pre></article>
@@ -492,7 +491,7 @@ export function DebugConsole() {
                 </div>
             </section>
 
-            <section className={`debugCard debugCard--gaze debugPanel${activeTab === "gaze" ? " is-active" : ""}`} data-debug-panel="gaze">
+            <section id="debug-console-panel-gaze" className={`debugCard debugCard--gaze debugPanel${activeTab === "gaze" ? " is-active" : ""}`} data-debug-panel="gaze" role="tabpanel" aria-labelledby="debug-console-tab-gaze">
                 <h3>Face &amp; Gaze</h3>
                 <div id="characterGaze">
                     <video id="characterGazeVideo" autoPlay={true} playsInline={true}></video>
@@ -634,7 +633,7 @@ export function DebugConsole() {
                 </details>
             </section>
 
-            <section className={`debugCard debugCard--sdp debugPanel${activeTab === "sdp" ? " is-active" : ""}`} data-debug-panel="sdp">
+            <section id="debug-console-panel-sdp" className={`debugCard debugCard--sdp debugPanel${activeTab === "sdp" ? " is-active" : ""}`} data-debug-panel="sdp" role="tabpanel" aria-labelledby="debug-console-tab-sdp">
                 <h3>SDP Details</h3>
                 <div className="sdpGrid">
                     <article><h4>Offer</h4><pre id="offerSDP">{snapshot.rtc.offerSdp}</pre></article>
