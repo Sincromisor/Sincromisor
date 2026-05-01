@@ -1,7 +1,7 @@
 # TASK-3036 開始後設定パネルのcompact navigation改善
 
 - 作成日: 2026-05-01
-- ステータス: Open
+- ステータス: Done
 - 優先度: Medium
 - 親タスク: `TASK-3033`
 - 依存: `TASK-3035`
@@ -47,3 +47,10 @@
 
 - `simple-vrm` desktop / mobile で設定パネルを確認する。
 - `vrm360` / `looking-glass-vrm` desktop で右側設定パネルを確認する。
+
+## 実施メモ
+
+- 開始後の右側設定パネルは `SettingsShell` の `responsiveMode="container"` と `navigationDensity="compact"` を使い、panel 実幅を基準にカテゴリナビを縮退する方針で整理した。
+- desktop `1280x720` ではカテゴリナビが横並びの compact navigation になり、本文見出しが初期表示内に入ることを確認した。
+- mobile `390x844` ではカテゴリ選択を select に縮退し、本文の確認領域を確保することを確認した。
+- `vrm360` / `looking-glass-vrm` desktop でも右側設定パネルに shared shell 由来の明確な崩れはなかった。
