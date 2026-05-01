@@ -15,6 +15,10 @@
         container-name: settings-shell;
     }
 
+    .settingsShell--compactNavigation {
+        --settings-shell-compact-nav-min-width: 112px;
+    }
+
     .settingsShell__header {
         display: flex;
         align-items: flex-start;
@@ -65,6 +69,10 @@
         border-radius: var(--sincro-radius-600);
         background: var(--settings-shell-surface);
         box-shadow: var(--sincro-shadow-panel);
+    }
+
+    .settingsShell__navSelectLabel {
+        display: none;
     }
 
     .settingsShell__navSection {
@@ -232,6 +240,53 @@
         .settingsShell__detail {
             max-width: none;
         }
+
+        .settingsShell--compactNavigation .settingsShell__layout {
+            gap: var(--sincro-space-350);
+        }
+
+        .settingsShell--compactNavigation .settingsShell__nav {
+            gap: var(--sincro-space-250);
+            padding: var(--sincro-space-300);
+            border-radius: var(--sincro-radius-400);
+            box-shadow: var(--sincro-shadow-panel-soft);
+        }
+
+        .settingsShell--compactNavigation .settingsShell__navSection {
+            grid-template-columns: repeat(auto-fit, minmax(var(--settings-shell-compact-nav-min-width), 1fr));
+            gap: var(--sincro-space-150);
+        }
+
+        .settingsShell--compactNavigation .settingsShell__navSectionTitle {
+            grid-column: 1 / -1;
+            padding-inline: 4px;
+            margin-top: var(--sincro-space-050);
+        }
+
+        .settingsShell--compactNavigation .settingsShell__navButton {
+            min-height: 32px;
+            padding: 6px 9px;
+            border-radius: var(--sincro-radius-100);
+            text-align: center;
+        }
+
+        .settingsShell--compactNavigation .settingsShell__navButton.is-active {
+            box-shadow: inset 0 -2px 0 rgba(159, 210, 255, 0.76);
+        }
+
+        .settingsShell--compactNavigation .settingsShell__navButtonLabel {
+            line-height: 1.25;
+        }
+
+        .settingsShell--compactNavigation .settingsShell__pageSurface {
+            gap: var(--sincro-space-350);
+            padding: var(--sincro-space-450);
+        }
+
+        .settingsShell--compactNavigation .settingsShell__pageHeader {
+            min-height: 0;
+            padding-bottom: var(--sincro-space-300);
+        }
     }
 
     @container settings-shell (max-width: 560px) {
@@ -264,6 +319,70 @@
 
         .settingsShell__summaryGrid {
             grid-template-columns: 1fr;
+        }
+
+        .settingsShell--compactNavigation .settingsShell__nav {
+            padding: var(--sincro-space-250);
+        }
+
+        .settingsShell--compactNavigation .settingsShell__navSection {
+            grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+        }
+
+        .settingsShell--compactNavigation .settingsShell__pageSurface {
+            padding: var(--sincro-space-350);
+        }
+    }
+
+    @container settings-shell (max-width: 440px) {
+        .settingsShell--compactNavigation .settingsShell__layout {
+            gap: var(--sincro-space-300);
+        }
+
+        .settingsShell--compactNavigation .settingsShell__nav {
+            display: none;
+        }
+
+        .settingsShell--compactNavigation .settingsShell__navSelectLabel {
+            display: grid;
+            gap: var(--sincro-space-150);
+            padding: var(--sincro-space-250);
+            border: 1px solid var(--settings-shell-border);
+            border-radius: var(--sincro-radius-300);
+            background: var(--settings-shell-surface);
+        }
+
+        .settingsShell--compactNavigation .settingsShell__navSelectText {
+            color: var(--sincro-color-overlay-text-subtle);
+            font-size: var(--sincro-font-size-100);
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .settingsShell--compactNavigation .settingsShell__navSelect {
+            width: 100%;
+            min-height: 36px;
+            border: 1px solid var(--settings-shell-border-strong);
+            border-radius: var(--sincro-radius-100);
+            background: rgba(255, 255, 255, 0.06);
+            color: inherit;
+            padding: 7px 10px;
+            font: inherit;
+        }
+
+        .settingsShell--compactNavigation .settingsShell__navSelect option,
+        .settingsShell--compactNavigation .settingsShell__navSelect optgroup {
+            background: var(--sincro-color-select-option-background);
+            color: var(--sincro-color-overlay-text-primary);
+        }
+
+        .settingsShell--compactNavigation .settingsShell__pageSurface {
+            padding: var(--sincro-space-300);
+        }
+
+        .settingsShell--compactNavigation .settingsShell__pageTitle {
+            font-size: 1.16rem;
         }
     }
 
