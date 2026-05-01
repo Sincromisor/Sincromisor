@@ -46,10 +46,12 @@ export function ConfigurationDialog() {
     });
 
     return (
-        <dialog id="configurationDialog" ref={dialogRef}>
-            <StartupDialogFrame popLayer={<DialogPopMessages />}>
-                <ConfigurationDialogSettingsPanel />
-            </StartupDialogFrame>
+        <dialog id="configurationDialog" ref={dialogRef} aria-hidden={!dialogUiState.isOpen}>
+            {dialogUiState.isOpen ? (
+                <StartupDialogFrame popLayer={<DialogPopMessages />}>
+                    <ConfigurationDialogSettingsPanel />
+                </StartupDialogFrame>
+            ) : null}
         </dialog>
     );
 }

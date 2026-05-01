@@ -41,11 +41,25 @@ export function RightToolFrame({
         }
     };
 
+    const handleClosePointerDown = (event: PointerEvent<HTMLButtonElement>): void => {
+        // 右側 tool frame 内では pointerup/click が外側 shell に retarget されることがある。
+        // pointer 操作は押下時点で閉じ、keyboard 操作は onClick に任せる。
+        if (event.button === 0) {
+            event.stopPropagation();
+            onClose();
+        }
+    };
+
     return (
         <div id={id} className={frameClassName} aria-hidden={!isOpen} onPointerDown={handleBackdropPointerDown}>
             <section className="rightToolFrame__surface" role="dialog" aria-modal="false" aria-label={ariaLabel ?? title}>
                 <div id={variant === "settings" ? "sincroReactSettingsPanelChromeRoot" : undefined} className="rightToolFrame__chrome">
-                    <OverlayCloseButton id={closeButtonIdForVariant(variant)} ariaLabel={`${title}を閉じる`} onClick={onClose} />
+                    <OverlayCloseButton
+                        id={closeButtonIdForVariant(variant)}
+                        ariaLabel={`${title}を閉じる`}
+                        onPointerDown={handleClosePointerDown}
+                        onClick={onClose}
+                    />
                 </div>
                 <div className="rightToolFrame__scroll">
                     {children}
