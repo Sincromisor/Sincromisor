@@ -188,6 +188,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - main content 各要素の方針:
   - `header` は装飾よりも現在地と主要導線の視認性を優先し、dialog / settings / debug と同じ family に見える dark overlay とする
   - `chat` は scene を塞ぎにくい情報密度を優先し、bubble の面積、余白、最大幅、背景濃度を抑えて可読性と没入感の両立を狙う
+  - `chat` の clipping / top fade 領域は起動時から固定高で確保し、メッセージ追加量に応じて overlay 上端や透明フェード位置が移動しないようにする。`#sincroChatBox` は viewport / breakpoint ごとの高さ token を正本とし、内容量由来の `max-height` 伸縮で見た目を決めない
   - `telop` は常時フッター帯として主張しすぎないよう、可読性を維持しつつ overlay 化し、背景映像とのコントラストを局所的に確保する
   - 右上ツール導線は設定 panel / Debug Console の見た目と断絶しないトーンにそろえ、`設定だけ新しい / 本体だけ古い` 印象を避ける
 - レスポンシブ前提:
@@ -699,6 +700,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-25 | `TASK-3026` 追加調整として mode card に差し替え可能な SVG コンセプト画像を置く方針を追記した |
 | 2026-04-30 | `64436a7` 周辺の UI 不整合調査を反映。起動前 dialog / 右側設定パネル / Debug Console の overlay chrome が分散していることを整理し、`TASK-3027` 以降で close button、right tool frame、startup dialog frame、フォーム primitive、visual regression 確認へ段階分割して共通化する方針を追記 |
 | 2026-04-30 | `TASK-3030` 対応として `StartupDialogFrame` を追加し、起動前 dialog の surface / backdrop / padding / scroll を `overlay.css` 側へ集約。`sincroConfigurationDialog.css` は legacy fallback に縮退し、modern 3ページから読み込みを外した |
+| 2026-05-01 | `#sincroChatBox` の表示領域を起動時から固定高で確保する方針を追記。チャットメッセージ追加時に top fade / clipping 領域が上へ移動して見えることを避けるため、breakpoint ごとの高さ token を基準にする |
 
 ## 15. 参照資料
 
