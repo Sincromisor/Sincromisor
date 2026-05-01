@@ -756,34 +756,28 @@ div#debugConsole audio#rtcAudio {
 }
 
 div#debugConsole .debugConsoleTabs {
+    --integrated-tabs-surface: var(--debug-panel-bg);
+    --integrated-tabs-border: var(--debug-panel-border);
+    --integrated-tabs-accent: hsl(186deg 82% 54% / 78%);
+    --integrated-tabs-min-width: 96px;
     display: none;
 }
 
-div#debugConsole .debugTab {
-    min-height: 32px;
-    min-width: 88px;
-    border: 1px solid hsl(190deg 60% 60% / 25%);
-    border-radius: 999px;
-    padding: 5px 10px;
-    background: hsl(215deg 22% 14% / 88%);
-    color: var(--debug-text-muted);
+div#debugConsole .debugConsoleTabs .integratedTabs__tab {
+    border-radius: var(--sincro-radius-300, 10px) var(--sincro-radius-300, 10px) 0 0;
     font-size: 11px;
-    line-height: 1.2;
     white-space: nowrap;
 }
 
-div#debugConsole .debugTab.is-active {
-    border-color: hsl(186deg 82% 54% / 55%);
+div#debugConsole .debugConsoleTabs .integratedTabs__tab.is-active {
+    border-color: transparent;
+    border-bottom-color: transparent;
     color: var(--debug-text-strong);
-    background: hsl(189deg 42% 20% / 90%);
 }
 
 @media (max-width: 1280px) {
     div#debugConsole {
-        width: min(720px, calc(100vw - 16px));
-        right: 8px;
-        top: clamp(48px, 7dvh, 72px);
-        max-height: calc(100dvh - clamp(48px, 7dvh, 72px) - 8px);
+        width: 100%;
     }
 }
 
@@ -795,7 +789,7 @@ div#debugConsole .debugTab.is-active {
             "header"
             "tabs"
             "panel";
-        gap: 8px;
+        gap: 0;
         padding: 10px;
     }
 
@@ -804,10 +798,10 @@ div#debugConsole .debugTab.is-active {
     }
 
     div#debugConsole .debugConsoleTabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
+        display: grid;
+        gap: 0;
         grid-area: tabs;
+        margin-top: 12px;
     }
 
     div#debugConsole .debugConsoleActions {
@@ -830,6 +824,7 @@ div#debugConsole .debugTab.is-active {
 
     div#debugConsole .debugPanel.is-active {
         display: block;
+        border-top-color: transparent;
     }
 
     div#debugConsole .statusGrid,
@@ -911,13 +906,6 @@ div#debugConsole .debugTab.is-active {
     div#debugConsole .debugConsoleTabs {
         row-gap: 8px;
         column-gap: 8px;
-    }
-
-    div#debugConsole .debugTab {
-        flex: 1 1 104px;
-        min-width: 96px;
-        min-height: 36px;
-        padding: 7px 10px;
     }
 
     div#debugMenuPanel {

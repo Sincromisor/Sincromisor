@@ -195,7 +195,7 @@ export function ConfigurationDialogSettingsPanel() {
                     },
                     {
                         id: "devices",
-                        label: "入出力デバイス",
+                        label: "デバイス",
                         title: "入出力デバイス",
                         description: "会話に使うマイクと、視線連動に使うカメラを同じ場所で確認します。",
                         content: (

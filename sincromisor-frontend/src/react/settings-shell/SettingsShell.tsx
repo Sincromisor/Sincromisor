@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { getIntegratedTabId, IntegratedTabs } from "../integrated-tabs/IntegratedTabs";
 import "./settingsShell.css";
 
 export type SettingsShellPage = {
@@ -37,6 +38,7 @@ export function SettingsShell({
     responsiveMode = "viewport",
     navigationDensity = "regular",
 }: SettingsShellProps) {
+    const tabIdPrefix = useId();
     const visiblePages = useMemo(() => pages, [pages]);
     const fallbackPageId = visiblePages[0]?.id ?? "";
     const [activePageId, setActivePageId] = useState<string>(initialPageId ?? fallbackPageId);
@@ -72,24 +74,26 @@ export function SettingsShell({
                     activePageId={activePage.id}
                     onSelectPage={setActivePageId}
                 />
-                <nav className="settingsShell__nav" aria-label={`${title} カテゴリ`}>
-                    <SettingsShellNavGroup
-                        pages={primaryPages}
-                        activePageId={activePage.id}
-                        onSelectPage={setActivePageId}
-                    />
-                    {developerPages.length > 0 ? (
-                        <SettingsShellNavGroup
-                            heading="開発者向け"
-                            pages={developerPages}
-                            activePageId={activePage.id}
-                            onSelectPage={setActivePageId}
-                        />
-                    ) : null}
-                </nav>
+                <IntegratedTabs
+                    className="settingsShell__nav"
+                    ariaLabel={`${title} カテゴリ`}
+                    groups={[
+                        { items: primaryPages },
+                        ...(developerPages.length > 0 ? [{ heading: "開発者向け", items: developerPages }] : []),
+                    ]}
+                    activeId={activePage.id}
+                    onSelect={setActivePageId}
+                    idPrefix={tabIdPrefix}
+                    getPanelId={getSettingsShellPanelId}
+                />
                 <div className="settingsShell__detail">
                     <div className="settingsShell__detailScroll">
-                        <div className="settingsShell__pageSurface">
+                        <div
+                            id={getSettingsShellPanelId(tabIdPrefix, activePage.id)}
+                            className="settingsShell__pageSurface"
+                            role="tabpanel"
+                            aria-labelledby={getIntegratedTabId(tabIdPrefix, activePage.id)}
+                        >
                             <header className="settingsShell__pageHeader">
                                 <h2 className="settingsShell__pageTitle">{activePage.title}</h2>
                                 <p className="settingsShell__pageDescription">{activePage.description}</p>
@@ -152,38 +156,8 @@ function SettingsShellNavSelect({
     );
 }
 
-type SettingsShellNavGroupProps = {
-    heading?: string;
-    pages: SettingsShellPage[];
-    activePageId: string;
-    onSelectPage: (pageId: string) => void;
-};
-
-function SettingsShellNavGroup({
-    heading,
-    pages,
-    activePageId,
-    onSelectPage,
-}: SettingsShellNavGroupProps) {
-    if (pages.length === 0) {
-        return null;
-    }
-    return (
-        <div className="settingsShell__navSection">
-            {heading ? <div className="settingsShell__navSectionTitle">{heading}</div> : null}
-            {pages.map((page) => (
-                <button
-                    key={page.id}
-                    type="button"
-                    className={`settingsShell__navButton${page.id === activePageId ? " is-active" : ""}${page.tone === "developer" ? " is-developer" : ""}`}
-                    onClick={() => onSelectPage(page.id)}
-                    aria-current={page.id === activePageId ? "page" : undefined}
-                >
-                    <span className="settingsShell__navButtonLabel">{page.label}</span>
-                </button>
-            ))}
-        </div>
-    );
+function getSettingsShellPanelId(prefix: string, pageId: string): string {
+    return `${prefix}-settings-shell-panel-${pageId}`;
 }
 
 function SettingsShellHeader({ badge, title, description }: SettingsShellHeaderProps) {

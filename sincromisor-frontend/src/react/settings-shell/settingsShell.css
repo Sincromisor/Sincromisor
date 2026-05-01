@@ -5,6 +5,7 @@
         --settings-shell-surface: var(--sincro-surface-panel);
         --settings-shell-surface-strong: var(--sincro-surface-panel-strong);
         --settings-shell-nav-active: var(--sincro-surface-nav-active);
+        --settings-shell-tab-overlap: 1px;
         display: grid;
         gap: var(--sincro-space-450);
         color: var(--sincro-color-overlay-text-primary);
@@ -16,7 +17,7 @@
     }
 
     .settingsShell--compactNavigation {
-        --settings-shell-compact-nav-min-width: 112px;
+        --settings-shell-compact-nav-min-width: 88px;
     }
 
     .settingsShell__header {
@@ -55,77 +56,37 @@
     .settingsShell__layout {
         display: grid;
         grid-template-columns: minmax(204px, 228px) minmax(0, 1fr);
-        gap: var(--sincro-space-550);
+        gap: 0;
         align-items: start;
     }
 
     .settingsShell__nav {
+        --integrated-tabs-surface: var(--settings-shell-surface);
+        --integrated-tabs-border: var(--settings-shell-border);
+        --integrated-tabs-min-width: 92px;
         display: grid;
-        gap: var(--sincro-space-450);
+        gap: var(--sincro-space-350);
         position: sticky;
         top: var(--sincro-space-200);
-        padding: var(--sincro-space-400) var(--sincro-space-300);
-        border: 1px solid var(--settings-shell-border);
-        border-radius: var(--sincro-radius-600);
-        background: var(--settings-shell-surface);
-        box-shadow: var(--sincro-shadow-panel);
+        z-index: 2;
+        padding: var(--sincro-space-350) 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
     }
 
     .settingsShell__navSelectLabel {
         display: none;
     }
 
-    .settingsShell__navSection {
-        display: grid;
-        gap: var(--sincro-space-200);
-    }
-
-    .settingsShell__navSectionTitle {
-        padding: 0 10px;
-        color: var(--sincro-color-overlay-text-subtle);
-        font-size: var(--sincro-font-size-100);
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-    }
-
-    .settingsShell__navButton {
-        width: 100%;
-        min-height: 40px;
-        padding: var(--sincro-space-250) var(--sincro-space-300);
-        border: 1px solid transparent;
-        border-radius: 10px;
-        background: transparent;
-        color: inherit;
-        text-align: left;
-        font: inherit;
-        cursor: pointer;
-        transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease, color 120ms ease;
-    }
-
-    .settingsShell__navButtonLabel {
-        display: block;
-        font-weight: 600;
-        line-height: 1.35;
-    }
-
-    .settingsShell__navButton:hover,
-    .settingsShell__navButton:focus-visible {
-        border-color: rgba(130, 188, 255, 0.18);
-        background: rgba(255, 255, 255, 0.05);
-    }
-
-    .settingsShell__navButton.is-active {
-        border-color: var(--settings-shell-border-strong);
-        background: var(--settings-shell-nav-active);
-        box-shadow: inset 3px 0 0 rgba(159, 210, 255, 0.68);
-    }
-
-    .settingsShell__navButton.is-developer {
-        color: rgba(232, 238, 245, 0.92);
+    .settingsShell--compactNavigation .settingsShell__nav {
+        --integrated-tabs-min-width: var(--settings-shell-compact-nav-min-width);
     }
 
     .settingsShell__detail {
+        position: relative;
+        z-index: 1;
         min-width: 0;
         display: grid;
         gap: var(--sincro-space-400);
@@ -142,6 +103,7 @@
         gap: var(--sincro-space-450);
         padding: var(--sincro-space-550) var(--sincro-space-600);
         border: 1px solid var(--settings-shell-border);
+        border-left-color: transparent;
         border-radius: var(--sincro-radius-600);
         background: var(--settings-shell-surface);
         box-shadow: var(--sincro-shadow-panel-soft);
@@ -230,51 +192,83 @@
 
         .settingsShell__nav {
             position: static;
-            gap: var(--sincro-space-400);
+            gap: var(--sincro-space-250);
+            padding: 0 var(--sincro-space-250);
+            align-self: end;
         }
 
-        .settingsShell__navSection {
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        .settingsShell__nav .integratedTabs__section {
+            grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+            gap: var(--sincro-space-100);
+        }
+
+        .settingsShell__nav .integratedTabs__sectionTitle {
+            grid-column: 1 / -1;
+            padding-inline: 4px;
+        }
+
+        .settingsShell__nav .integratedTabs__tab {
+            min-height: 38px;
+            margin-right: 0;
+            margin-bottom: calc(-1 * var(--settings-shell-tab-overlap));
+            padding: var(--sincro-space-250) var(--sincro-space-200);
+            border-radius: var(--sincro-radius-300) var(--sincro-radius-300) 0 0;
+            text-align: center;
+        }
+
+        .settingsShell__nav .integratedTabs__tab:hover,
+        .settingsShell__nav .integratedTabs__tab:focus-visible {
+            border-right-color: rgba(130, 188, 255, 0.14);
+            border-bottom-color: transparent;
+        }
+
+        .settingsShell__nav .integratedTabs__tab.is-active {
+            border-color: transparent;
+            border-bottom-color: transparent;
+            box-shadow: inset 0 3px 0 rgba(159, 210, 255, 0.72), var(--sincro-shadow-panel-soft);
         }
 
         .settingsShell__detail {
             max-width: none;
         }
 
+        .settingsShell__pageSurface {
+            border-top-color: transparent;
+            border-left-color: var(--settings-shell-border);
+        }
+
         .settingsShell--compactNavigation .settingsShell__layout {
-            gap: var(--sincro-space-350);
+            gap: 0;
         }
 
         .settingsShell--compactNavigation .settingsShell__nav {
             gap: var(--sincro-space-250);
-            padding: var(--sincro-space-300);
-            border-radius: var(--sincro-radius-400);
-            box-shadow: var(--sincro-shadow-panel-soft);
+            padding: 0 var(--sincro-space-200);
         }
 
-        .settingsShell--compactNavigation .settingsShell__navSection {
+        .settingsShell--compactNavigation .settingsShell__nav .integratedTabs__section {
             grid-template-columns: repeat(auto-fit, minmax(var(--settings-shell-compact-nav-min-width), 1fr));
             gap: var(--sincro-space-150);
         }
 
-        .settingsShell--compactNavigation .settingsShell__navSectionTitle {
+        .settingsShell--compactNavigation .settingsShell__nav .integratedTabs__sectionTitle {
             grid-column: 1 / -1;
             padding-inline: 4px;
             margin-top: var(--sincro-space-050);
         }
 
-        .settingsShell--compactNavigation .settingsShell__navButton {
+        .settingsShell--compactNavigation .settingsShell__nav .integratedTabs__tab {
             min-height: 32px;
-            padding: 6px 9px;
-            border-radius: var(--sincro-radius-100);
+            padding: 6px 7px;
+            border-radius: var(--sincro-radius-200) var(--sincro-radius-200) 0 0;
             text-align: center;
         }
 
-        .settingsShell--compactNavigation .settingsShell__navButton.is-active {
-            box-shadow: inset 0 -2px 0 rgba(159, 210, 255, 0.76);
+        .settingsShell--compactNavigation .settingsShell__nav .integratedTabs__tab.is-active {
+            box-shadow: inset 0 2px 0 rgba(159, 210, 255, 0.76), var(--sincro-shadow-panel-soft);
         }
 
-        .settingsShell--compactNavigation .settingsShell__navButtonLabel {
+        .settingsShell--compactNavigation .settingsShell__nav .integratedTabs__tabLabel {
             line-height: 1.25;
         }
 
@@ -313,7 +307,7 @@
             min-height: 0;
         }
 
-        .settingsShell__navSection {
+        .settingsShell__nav .integratedTabs__section {
             grid-template-columns: 1fr;
         }
 
@@ -322,10 +316,10 @@
         }
 
         .settingsShell--compactNavigation .settingsShell__nav {
-            padding: var(--sincro-space-250);
+            padding: 0 var(--sincro-space-150);
         }
 
-        .settingsShell--compactNavigation .settingsShell__navSection {
+        .settingsShell--compactNavigation .settingsShell__nav .integratedTabs__section {
             grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
         }
 
@@ -379,6 +373,7 @@
 
         .settingsShell--compactNavigation .settingsShell__pageSurface {
             padding: var(--sincro-space-300);
+            border-top-color: var(--settings-shell-border);
         }
 
         .settingsShell--compactNavigation .settingsShell__pageTitle {
@@ -393,15 +388,49 @@
 
         .settingsShell__nav {
             position: static;
-            gap: var(--sincro-space-400);
+            gap: var(--sincro-space-250);
+            padding: 0 var(--sincro-space-250);
+            align-self: end;
         }
 
-        .settingsShell__navSection {
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        .settingsShell__nav .integratedTabs__section {
+            grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+            gap: var(--sincro-space-100);
+        }
+
+        .settingsShell__nav .integratedTabs__sectionTitle {
+            grid-column: 1 / -1;
+            padding-inline: 4px;
+        }
+
+        .settingsShell__nav .integratedTabs__tab {
+            min-height: 38px;
+            margin-right: 0;
+            margin-bottom: calc(-1 * var(--settings-shell-tab-overlap));
+            padding: var(--sincro-space-250) var(--sincro-space-200);
+            border-radius: var(--sincro-radius-300) var(--sincro-radius-300) 0 0;
+            text-align: center;
+        }
+
+        .settingsShell__nav .integratedTabs__tab:hover,
+        .settingsShell__nav .integratedTabs__tab:focus-visible {
+            border-right-color: rgba(130, 188, 255, 0.14);
+            border-bottom-color: transparent;
+        }
+
+        .settingsShell__nav .integratedTabs__tab.is-active {
+            border-color: transparent;
+            border-bottom-color: transparent;
+            box-shadow: inset 0 3px 0 rgba(159, 210, 255, 0.72), var(--sincro-shadow-panel-soft);
         }
 
         .settingsShell__detail {
             max-width: none;
+        }
+
+        .settingsShell__pageSurface {
+            border-top-color: transparent;
+            border-left-color: var(--settings-shell-border);
         }
     }
 
@@ -429,7 +458,7 @@
             min-height: 0;
         }
 
-        .settingsShell__navSection {
+        .settingsShell__nav .integratedTabs__section {
             grid-template-columns: 1fr;
         }
 
