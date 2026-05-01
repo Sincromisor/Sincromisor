@@ -97,6 +97,7 @@ export function SimpleVrmControlPanel({
                 title={title}
                 description="会話・入出力デバイス・音声・表示・接続を同じ分類で整理しています。通常の調整はここから行い、詳しい原因確認が必要な時だけ診断へ切り替えます。"
                 responsiveMode="container"
+                navigationDensity="compact"
                 initialPageId={isLookingGlassFocused ? "looking-glass" : "conversation"}
                 pages={[
                     ...(isLookingGlassFocused ? [{

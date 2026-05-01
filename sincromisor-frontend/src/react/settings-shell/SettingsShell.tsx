@@ -21,6 +21,7 @@ type SettingsShellProps = {
     initialPageId?: string;
     footer?: ReactNode;
     responsiveMode?: "viewport" | "container";
+    navigationDensity?: "regular" | "compact";
 };
 
 type SettingsShellHeaderProps = Pick<SettingsShellProps, "badge" | "title" | "description">;
@@ -34,6 +35,7 @@ export function SettingsShell({
     initialPageId,
     footer,
     responsiveMode = "viewport",
+    navigationDensity = "regular",
 }: SettingsShellProps) {
     const visiblePages = useMemo(() => pages, [pages]);
     const fallbackPageId = visiblePages[0]?.id ?? "";
@@ -54,11 +56,22 @@ export function SettingsShell({
 
     return (
         <section
-            className={`settingsShell${responsiveMode === "container" ? " is-containerResponsive" : ""}`}
+            className={[
+                "settingsShell",
+                responsiveMode === "container" ? "is-containerResponsive" : "",
+                navigationDensity === "compact" ? "settingsShell--compactNavigation" : "",
+            ].filter(Boolean).join(" ")}
             aria-label={ariaLabel}
         >
             <SettingsShellHeader badge={badge} title={title} description={description} />
             <div className="settingsShell__layout">
+                <SettingsShellNavSelect
+                    title={title}
+                    primaryPages={primaryPages}
+                    developerPages={developerPages}
+                    activePageId={activePage.id}
+                    onSelectPage={setActivePageId}
+                />
                 <nav className="settingsShell__nav" aria-label={`${title} カテゴリ`}>
                     <SettingsShellNavGroup
                         pages={primaryPages}
@@ -91,6 +104,51 @@ export function SettingsShell({
             </div>
             {footer ? <div className="settingsShell__footer">{footer}</div> : null}
         </section>
+    );
+}
+
+type SettingsShellNavSelectProps = {
+    title: string;
+    primaryPages: SettingsShellPage[];
+    developerPages: SettingsShellPage[];
+    activePageId: string;
+    onSelectPage: (pageId: string) => void;
+};
+
+function SettingsShellNavSelect({
+    title,
+    primaryPages,
+    developerPages,
+    activePageId,
+    onSelectPage,
+}: SettingsShellNavSelectProps) {
+    const hasDeveloperPages = developerPages.length > 0;
+
+    return (
+        <label className="settingsShell__navSelectLabel">
+            <span className="settingsShell__navSelectText">カテゴリ</span>
+            <select
+                className="settingsShell__navSelect"
+                aria-label={`${title} カテゴリ`}
+                value={activePageId}
+                onChange={(event) => onSelectPage(event.currentTarget.value)}
+            >
+                {primaryPages.map((page) => (
+                    <option key={page.id} value={page.id}>
+                        {page.label}
+                    </option>
+                ))}
+                {hasDeveloperPages ? (
+                    <optgroup label="開発者向け">
+                        {developerPages.map((page) => (
+                            <option key={page.id} value={page.id}>
+                                {page.label}
+                            </option>
+                        ))}
+                    </optgroup>
+                ) : null}
+            </select>
+        </label>
     );
 }
 
