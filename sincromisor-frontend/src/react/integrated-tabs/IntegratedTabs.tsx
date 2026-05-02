@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { KeyboardEvent, PointerEvent } from "react";
+import type { KeyboardEvent } from "react";
 import "./integratedTabs.css";
 
 export type IntegratedTabItem = {
@@ -71,14 +71,6 @@ export function IntegratedTabs({
         }
     };
 
-    const handlePointerDown = (event: PointerEvent<HTMLButtonElement>, itemId: string): void => {
-        // 右側ツール領域では click が外側 shell へ retarget される環境があるため、
-        // pointer 操作は押下時点でタブ変更を確定させる。
-        if (event.button === 0) {
-            onSelect(itemId);
-        }
-    };
-
     return (
         <nav className={["integratedTabs", className ?? ""].filter(Boolean).join(" ")} aria-label={ariaLabel} role="tablist">
             {visibleGroups.map((group, groupIndex) => (
@@ -95,7 +87,6 @@ export function IntegratedTabs({
                                 item.id === activeId ? "is-active" : "",
                                 item.tone === "developer" ? "is-developer" : "",
                             ].filter(Boolean).join(" ")}
-                            onPointerDown={(event) => handlePointerDown(event, item.id)}
                             onClick={() => onSelect(item.id)}
                             onKeyDown={handleKeyDown}
                             aria-controls={getPanelId(resolvedIdPrefix, item.id)}
