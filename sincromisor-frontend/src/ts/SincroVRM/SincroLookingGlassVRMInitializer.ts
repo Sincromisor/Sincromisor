@@ -16,7 +16,7 @@ export class SincroLookingGlassVRMInitializer extends SincroVRMInitializer {
     protected override initializeSincroScene(): LookingGlassVRMScene {
         const vrmScene: LookingGlassVRMScene = new LookingGlassVRMScene(
             this.charCanvas,
-            this.controlTarget,
+            this.characterControlLayer,
             this.appController.dialog.getSelectedVrmUrl(),
             true,
             (thumbnailImage) => {

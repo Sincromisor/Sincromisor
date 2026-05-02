@@ -12,11 +12,22 @@ div#sincroCharacterBox {
         position: relative;
     }
 
-    & canvas#sincroCharacterBox__canvas {
+    & canvas {
         grid-area: 1 / 1 / 2 / 2;
         height: 100%;
         width: 100%;
         z-index: 1;
         position: absolute;
+    }
+
+    & div#sincroCharacterControlLayer {
+        grid-area: 1 / 1 / 2 / 2;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        position: absolute;
+        background: transparent;
+        touch-action: none;
+        pointer-events: auto;
     }
 }

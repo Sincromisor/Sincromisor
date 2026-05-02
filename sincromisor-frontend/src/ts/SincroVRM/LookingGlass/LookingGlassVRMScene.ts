@@ -18,12 +18,12 @@ export class LookingGlassVRMScene extends VRMScene {
 
     constructor(
         canvasRoot: HTMLDivElement,
-        controlTarget: HTMLElement,
+        characterControlLayer: HTMLElement,
         vrmUrl: string,
         xrMode: boolean = false,
         onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void,
     ) {
-        super(canvasRoot, controlTarget, vrmUrl, xrMode, onThumbnailLoaded);
+        super(canvasRoot, characterControlLayer, vrmUrl, xrMode, onThumbnailLoaded);
         // LG の WebXR 描画経路は vrm360 で使っていた renderer 設定に依存するケースがあるため互換設定を維持する。
         // 背景360動画は使わないが、色空間/影設定は LG ページでも合わせておく。
         this.renderer.shadowMap.enabled = true;

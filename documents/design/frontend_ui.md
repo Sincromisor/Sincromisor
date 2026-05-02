@@ -17,7 +17,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 
 - ドキュメントパス: `documents/design/frontend_ui.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-05-01
+- 最終更新日: 2026-05-02
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -33,6 +33,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - LLM向け要約（3-5行）:
   - エントリは `main-vrm.ts`、`vrm360/main-vrm360.ts`、`looking-glass-vrm/main-vrm-looking-glass.ts` を中心とする modern 構成で、`vite.config.js` の build input も `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` の 4 ページに固定されている。
   - `simple-vrm`、`vrm360`、`looking-glass-vrm` の UI 骨格は `div#sincroPageRoot` 配下の単一 React root に集約され、`src/react/app-shell/SincroPageAppShell.tsx` が dialog / header / chat / telop / debug / settings panel をまとめて描画する。
+  - VRM の `OrbitControls` は `div#sincroBody` ではなく、`src/react/app-shell/SincroPageAppShell.tsx` が `div#sincroCharacterBox` 内に置く `div#sincroCharacterControlLayer` だけを入力対象にする。Header / chat / telop / 右側ツール領域は overlay として重なり、UI 操作を OrbitControls 側へ流さない。
   - `SincroVRMInitializer` / `SincroVRM360Initializer` / `SincroLookingGlassVRMInitializer` は `SincroAppController` を先行生成し、`start()` 呼び出しでアプリ起動を開始する。
   - `SincroController` は `start()` 内で UserMedia 取得、RTC開始、CharacterGaze開始を統括する。マイク入力 selector の `audioInputDeviceId` は起動時の `getUserMedia` 制約と、実行中の再取得 + `RTCRtpSender.replaceTrack()` の両方へ反映される。視線用カメラ selector の `videoInputDeviceId` は CharacterGaze 専用カメラ取得へ反映され、実行中変更時も preview/AutoMute を維持しながら再初期化される。
   - チャット文は `text_ch`、テロップは `telop_ch` で受信し、`TalkManager` 経由でUI/口形同期に渡す。
@@ -195,6 +196,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 背景 / VRM / 会話UI の優先順位を明確にし、背景コンテンツが読めなくなるほど大きな白面やベタ帯を常設しない
   - `header`、`chat`、`telop` は scene を覆う面ではなく、必要情報だけを浮かせる translucent overlay として設計する
   - 主要 overlay は near-black 系の面を基調にし、アクセント色は active state、focus、選択状態、補助情報など機能用途へ限定する
+  - キャラクター操作は `#sincroCharacterControlLayer` に限定し、`OrbitControls` を page shell 全体へ接続しない。表示専用の chat / telop は `pointer-events: none` で透過し、Header / 右側ツール領域 / Debug Console / Settings は通常の UI として `pointer-events: auto` の layer に置く
 - main content 各要素の方針:
   - `header` は装飾よりも現在地と主要導線の視認性を優先し、dialog / settings / debug と同じ family に見える dark overlay とする
   - `chat` は scene を塞ぎにくい情報密度を優先し、bubble の面積、余白、最大幅、背景濃度を抑えて可読性と没入感の両立を狙う
@@ -715,6 +717,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-05-01 | `#sincroChatBox` の表示領域を起動時から固定高で確保する方針を追記。チャットメッセージ追加時に top fade / clipping 領域が上へ移動して見えることを避けるため、breakpoint ごとの高さ token を基準にする |
 | 2026-05-01 | `TASK-3034` 対応として右上ツールメニューの active state / ARIA / popover 表現を整理。desktop は補助ラベル付き、mobile は icon button 維持とし、設定 / 診断の用途差と現在表示中の panel を menu item から分かるようにした |
 | 2026-05-01 | `TASK-3035` から `TASK-3038` までの右側ツール refine 結果を同期。設定パネルから `開発者向け` カテゴリを一般カテゴリとして扱わず、`接続` 末尾から Debug Console へ handoff する方針、開始後 panel の compact navigation、`simple-vrm` / `vrm360` / `looking-glass-vrm` の Playwright 回帰確認結果を反映 |
+| 2026-05-02 | `TASK-3040` 対応として `OrbitControls` の入力対象を `#sincroCharacterControlLayer` へ分離。Debug Console / Settings / Header / 右側ツール領域は通常 UI layer として扱い、panel 内 wheel や details 開閉のための応急的なイベント遮断を縮退する方針を反映 |
 
 ## 15. 参照資料
 

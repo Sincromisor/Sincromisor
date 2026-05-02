@@ -22,12 +22,12 @@ export class VRM360Scene extends VRMScene {
 
     constructor(
         canvasRoot: HTMLDivElement,
-        controlTarget: HTMLElement,
+        characterControlLayer: HTMLElement,
         vrmUrl: string,
         xrMode: boolean = false,
         onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void,
     ) {
-        super(canvasRoot, controlTarget, vrmUrl, xrMode, onThumbnailLoaded);
+        super(canvasRoot, characterControlLayer, vrmUrl, xrMode, onThumbnailLoaded);
         // 360 背景動画 + floor/light 補助を追加して、通常 VRMScene から 360 向け構成へ拡張する。
         this.sphereVideo = new SphereVideo(this.getVideoId());
         this.createWorldSphere(this.sphereVideo.videoTexture);

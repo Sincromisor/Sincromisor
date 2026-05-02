@@ -3,12 +3,13 @@ import { UserMediaManager } from "../RTC/UserMediaManager";
 import { VRMScene } from './VRMScene/VRMScene';
 
 const CHARACTER_BOX_SELECTOR = "div#sincroCharacterBox";
+const CHARACTER_CONTROL_LAYER_SELECTOR = "div#sincroCharacterControlLayer";
 
 // VRM1.0 系ページ（simple-vrm など）の初期化入口。
 // 起動前 dialog / chat / debug / RTC 停止配線は SincroAppController 経由に寄せ、ページ差分は scene 初期化に閉じる。
 export class SincroVRMInitializer {
     protected readonly charCanvas: HTMLDivElement;
-    protected readonly controlTarget: HTMLElement;
+    protected readonly characterControlLayer: HTMLDivElement;
     protected readonly appController: SincroAppController;
     // 自前生成したblob URLのみ解放対象として保持する。
     private generatedSystemIconURL: string | null = null;
@@ -24,7 +25,7 @@ export class SincroVRMInitializer {
 
     constructor() {
         this.charCanvas = this.getCharCanvasRoot();
-        this.controlTarget = document.querySelector('div#sincroBody')!;
+        this.characterControlLayer = this.getCharacterControlLayer();
         this.appController = new SincroAppController();
         // startup toggles のページごとの有効性を先に知らせ、React UI の「未対応項目表示」に反映する。
         // simple-vrm 現行実装では startup toggles の Talk/Inspector/VR は scene初期化へ未接続。
@@ -94,6 +95,14 @@ export class SincroVRMInitializer {
         return charCanvas;
     }
 
+    private getCharacterControlLayer(): HTMLDivElement {
+        const controlLayer = document.querySelector<HTMLDivElement>(CHARACTER_CONTROL_LAYER_SELECTOR);
+        if (!controlLayer) {
+            throw new Error(`${CHARACTER_CONTROL_LAYER_SELECTOR} is not found.`);
+        }
+        return controlLayer;
+    }
+
     private getUserMediaAvailabilityCheck(): void {
         // ブラウザ API 自体が無い環境では、起動前 dialog の開始ボタン状態へ即反映する。
         if (!UserMediaManager.hasGetUserMedia()) {
@@ -145,7 +154,7 @@ export class SincroVRMInitializer {
         // scene 初期値（VRM URL）は dialog bridge 経由で取得し、DialogManager 実装に直接依存しない。
         const vrmScene: VRMScene = new VRMScene(
             this.charCanvas,
-            this.controlTarget,
+            this.characterControlLayer,
             this.appController.dialog.getSelectedVrmUrl(),
             false,
             (thumbnailImage) => {
