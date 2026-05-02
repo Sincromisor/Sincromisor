@@ -21,7 +21,7 @@ export class VRMScene {
 
     constructor(
         canvasRoot: HTMLDivElement,
-        controlTarget: HTMLElement,
+        characterControlLayer: HTMLElement,
         vrmUrl: string,
         xrMode: boolean = false,
         onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void,
@@ -41,7 +41,7 @@ export class VRMScene {
         this.scene.add(axesHelper);
         */
         // OrbitControls を含むカメラ設定は専用クラスへ分離し、ページ差分から独立させる。
-        this.vrmCamera = new VRMCamera(controlTarget);
+        this.vrmCamera = new VRMCamera(characterControlLayer);
         // VRMロード完了時にサムネイル取得結果を呼び出し元へ返し、UIアイコン更新に利用する。
         this.vrmCharacterManager = new VRMCharacterManager(
             this.scene,

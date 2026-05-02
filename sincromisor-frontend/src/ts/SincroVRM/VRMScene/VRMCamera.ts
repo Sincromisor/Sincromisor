@@ -20,19 +20,20 @@ const SIMPLE_VRM_AUTO_FRAMING_CAMERA = {
 } as const;
 
 // VRM表示用の既定カメラと OrbitControls 設定をまとめるクラス。
+// OrbitControls は UI shell 全体ではなく、キャラクター操作専用 input layer だけを購読する。
 // simple-vrm / vrm360 / Looking Glass で「通常閲覧時の視点」を揃える基準になる。
 export class VRMCamera {
     public readonly camera: PerspectiveCamera;
     private controls: OrbitControls;
     private readonly cameraFov: number;
-    private readonly targetElement: HTMLElement;
+    private readonly inputLayer: HTMLElement;
     private pitchCompensationRad = 0;
 
-    constructor(targetElement: HTMLElement) {
+    constructor(inputLayer: HTMLElement) {
         const CAMERA_FOV = 30.0;
         const CAMERA_Z = 1.2;
         this.cameraFov = CAMERA_FOV;
-        this.targetElement = targetElement;
+        this.inputLayer = inputLayer;
         // 顔が見やすい距離・高さを既定にし、細かい差分は scene 側のキャラクター配置で吸収する。
         this.camera = new PerspectiveCamera(CAMERA_FOV, window.innerWidth / window.innerHeight, 0.001, 100.0);
         this.camera.position.set(0.0, 1.45, CAMERA_Z);
@@ -131,7 +132,7 @@ export class VRMCamera {
     }
 
     private createOrbitControls(): OrbitControls {
-        const controls = new OrbitControls(this.camera, this.targetElement);
+        const controls = new OrbitControls(this.camera, this.inputLayer);
         // キャラクターとの距離
         controls.maxDistance = 10;
         controls.minDistance = 0.75;

@@ -60,6 +60,7 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
                 <div id="sincroCharacterContainer">
                     <div id="sincroCharacterBox">
                         <canvas id="sincroCharacterBox__canvas"></canvas>
+                        <div id="sincroCharacterControlLayer" aria-hidden="true"></div>
                     </div>
                 </div>
 
