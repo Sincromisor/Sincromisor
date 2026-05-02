@@ -7,32 +7,6 @@ import {
     useRightToolPanelState,
 } from "../app/useRightToolPanelState";
 
-function blockPointerEvent(element: HTMLElement | null): (() => void) | null {
-    if (!element) {
-        return null;
-    }
-    const stop = (event: Event): void => {
-        event.stopPropagation();
-    };
-    const eventNames: Array<keyof GlobalEventHandlersEventMap> = [
-        "pointerdown",
-        "pointerup",
-        "touchstart",
-        "touchend",
-        "mousedown",
-        "mouseup",
-        "wheel",
-    ];
-    eventNames.forEach((eventName) => {
-        element.addEventListener(eventName, stop);
-    });
-    return () => {
-        eventNames.forEach((eventName) => {
-            element.removeEventListener(eventName, stop);
-        });
-    };
-}
-
 // 右上メニューと右側ツール領域の見た目/DOMイベントだけを担当する薄い shell。
 // state owner は App/service 側に置き、ここでは排他表示と外側クリック閉じを UI として実装する。
 export function RightToolMenu() {
@@ -40,15 +14,6 @@ export function RightToolMenu() {
     const settingsActive = state.activePanel === "settings";
     const debugActive = state.activePanel === "debug";
     const currentToolLabel = settingsActive ? "設定" : debugActive ? "診断" : "未選択";
-
-    useEffect(() => {
-        const cleanups = [
-            blockPointerEvent(document.getElementById("debugMenu")),
-        ].filter((cleanup): cleanup is () => void => typeof cleanup === "function");
-        return () => {
-            cleanups.forEach((cleanup) => cleanup());
-        };
-    }, []);
 
     useEffect(() => {
         const handleClick = (event: MouseEvent): void => {
