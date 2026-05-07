@@ -39,7 +39,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - チャット文は `text_ch`、テロップは `telop_ch` で受信し、`TalkManager` 経由でUI/口形同期に渡す。
   - React への段階移行計画は `documents/design/frontend_migration_react.md` を参照（本書は現行UI設計の正本）。
   - メディアデバイス列挙は `SincroMediaDeviceService` が担当し、`enumerateDevices()` の正規化、ラベル未解決時のフォールバック名生成、`devicechange` 監視を UI から分離する。React UI は `useSincroMediaDeviceState` から snapshot/refresh を購読する。
-  - `simple-vrm`, `vrm360`, `looking-glass-vrm` では React 設定パネル（`SimpleVrmControlPanel` 系）に加えて React Debug Console を正式導線として採用している。右側ツール領域の open/close と相互排他は `SincroAppRightToolPanelService` と React menu shell が所有し、React 側は `appController.debug.*` 経由で state と開閉 API を利用する。`DebugConsoleManager` は DOM owner ではなく diagnostics snapshot provider と UI callback bridge として振る舞う。設定パネルと開発者向け診断は同時表示せず、右上の X ボタン、メニュー外/パネル外クリック、`Ctrl+Alt+D` で同じルールに従って切り替える。Debug Console 本体は全 viewport で `Status` / `Audio` / `RTC` / `Messages` / `Gaze` / `Raw` のタブ型詳細表示に統一し、desktop でも複数診断パネルを同時展開しない。
+  - `simple-vrm`, `vrm360`, `looking-glass-vrm` では React 設定パネル（`SimpleVrmControlPanel` 系）に加えて React Debug Console を正式導線として採用している。右側ツール領域の open/close と相互排他は `SincroAppRightToolPanelService` と React menu shell が所有し、React 側は `appController.debug.*` 経由で state と開閉 API を利用する。`DebugConsoleManager` は DOM owner ではなく diagnostics snapshot provider と UI callback bridge として振る舞う。設定パネルと開発者向け診断は同時表示せず、右上の X ボタン、メニュー外/パネル外クリック、`Ctrl+Alt+D` で同じルールに従って切り替える。Debug Console 本体は全 viewport で `Status` / `Audio` / `Messages` / `Gaze` / `RTC` / `SDP` のタブ型詳細表示に統一し、desktop でも複数診断パネルを同時展開しない。
   - 2026-05-01 時点で、起動前 dialog / 右側設定パネル / Debug Console の外側 chrome（surface、close button、z-index、幅、高さ、scroll、backdrop）は `src/react/overlay/*` と `overlay.css` へ集約済みである。`simple-vrm`、`vrm360`、`looking-glass-vrm` の Playwright 確認では、共通化由来の明確な overlay 崩れは検出されなかった。
 
   - 2026-04-19 時点で設定パネル側の device selector は、起動前 dialog と同じ `audioInputDeviceId` / `videoInputDeviceId` を直接編集する。`useSimpleVrmPanelState` が `useSincroMediaDeviceState` を購読し、`入出力デバイス` カテゴリ内でマイク入力と Gaze 用カメラ selector をまとめて表示する。両UIとも一覧再読み込みと未解決/無効デバイスのヒント表示を共通の考え方でそろえる。`videoInputDeviceId` は `SincroCharacterGazeController` + `VideoInputManager` により CharacterGaze 専用カメラ取得へ直結し、起動時選択・実行中切替・Gaze OFF/ON で再取得/再初期化される。
@@ -78,7 +78,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `looking-glass-vrm` のようなページ限定カテゴリは、通常カテゴリと混在させず独立カテゴリとして表示する
 - Debug Console の情報表示ルール:
   - 最初に確認したい `Status` に ICE / Signaling / RTT / mic / remote audio / VAD / Gaze / DataChannel の診断サマリを置く
-  - `Messages` / `Raw` / 詳細ログは二次情報として扱い、常時全面展開を避ける
+  - `Messages` / `SDP` / 詳細ログは二次情報として扱い、常時全面展開を避ける
   - desktop / mobile を問わず `IntegratedTabs` による単一 panel 表示を標準とし、広い画面でも全パネル同時表示へ戻さない
   - 監視用UIと実験的な調整UIが混在する場合は、`高度な調整` として分離する
 
@@ -721,7 +721,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-04-30 | `64436a7` 周辺の UI 不整合調査を反映。起動前 dialog / 右側設定パネル / Debug Console の overlay chrome が分散していることを整理し、`TASK-3027` 以降で close button、right tool frame、startup dialog frame、フォーム primitive、visual regression 確認へ段階分割して共通化する方針を追記 |
 | 2026-05-02 | `TASK-3039` 対応として `SettingsShell` のカテゴリナビゲーションを内容面一体型タブ表現へ統一。起動前 dialog と開始後設定パネルで同じタブのメンタルモデルを使い、compact は密度差、狭幅は select 縮退として整理した |
 | 2026-05-02 | `IntegratedTabs` を追加し、`SettingsShell` と Debug Console のタブ UI を共通部品化。Debug Console 側の古い pill 型 `.debugTab` 表現を撤去し、内容面一体型タブへ統一した |
-| 2026-05-07 | `TASK-3047` 対応として Debug Console を全 viewport 常時タブ UI へ統一。初期表示を `Status` 診断サマリにし、詳細を `Audio` / `RTC` / `Messages` / `Gaze` / `Raw` へ分割した。`DebugConsole.tsx` は snapshot 購読と tab state の container に縮退し、panel / primitive component を `src/react/debug/panels/**` と `components/**` に分離した |
+| 2026-05-07 | `TASK-3047` 対応として Debug Console を全 viewport 常時タブ UI へ統一。初期表示を `Status` 診断サマリにし、詳細を `Audio` / `Messages` / `Gaze` / `RTC` / `SDP` へ分割した。`DebugConsole.tsx` は snapshot 購読と tab state の container に縮退し、panel / primitive component を `src/react/debug/panels/**` と `components/**` に分離した |
 | 2026-04-30 | `TASK-3030` 対応として `StartupDialogFrame` を追加し、起動前 dialog の surface / backdrop / padding / scroll を `overlay.css` 側へ集約。`sincroConfigurationDialog.css` は legacy fallback に縮退し、modern 3ページから読み込みを外した |
 | 2026-05-01 | `#sincroChatBox` の表示領域を起動時から固定高で確保する方針を追記。チャットメッセージ追加時に top fade / clipping 領域が上へ移動して見えることを避けるため、breakpoint ごとの高さ token を基準にする |
 | 2026-05-01 | `TASK-3034` 対応として右上ツールメニューの active state / ARIA / popover 表現を整理。desktop は補助ラベル付き、mobile は icon button 維持とし、設定 / 診断の用途差と現在表示中の panel を menu item から分かるようにした |

@@ -42,7 +42,7 @@
 
 1. Debug Console は全画面幅で「常時タブ UI」を基本とし、広い画面でも全パネル同時表示へ戻さない。
 2. 初期タブは `Status` とし、接続・音声・視線・DataChannel の重要状態をスクロールなしで把握できる診断サマリにする。
-3. 詳細タブは技術カテゴリではなく、開発者の探し方に合わせて `Audio`、`RTC`、`Messages`、`Gaze`、`Raw` に整理する。
+3. 詳細タブは技術カテゴリではなく、開発者の探し方に合わせて `Audio`、`Messages`、`Gaze`、`RTC`、`SDP` に整理する。
 4. Audio / Gaze の調整項目は、状態確認領域の下または collapsible details に置き、監視と調整の密度を分ける。
 5. Logs / SDP など長文領域はタブ内の固定高さスクロールに閉じ込め、Debug Console 全体の縦スクロールを最小化する。
 
@@ -58,7 +58,7 @@ sincromisor-frontend/src/react/debug/
     RtcPanel.tsx
     MessagesPanel.tsx
     GazePanel.tsx
-    RawPanel.tsx
+    SdpPanel.tsx
   components/
     DebugMetricGrid.tsx
     DebugMetricItem.tsx
@@ -70,14 +70,14 @@ sincromisor-frontend/src/react/debug/
 
 ## 実装タスク
 
-1. 現在の `DebugConsole.tsx` の表示項目を、`Status` / `Audio` / `RTC` / `Messages` / `Gaze` / `Raw` に棚卸しする。
+1. 現在の `DebugConsole.tsx` の表示項目を、`Status` / `Audio` / `Messages` / `Gaze` / `RTC` / `SDP` に棚卸しする。
 2. `DebugConsole.tsx` を snapshot 取得、manager 取得、active tab 管理、panel 切替の薄い container に縮退する。
 3. `StatusPanel` を作成し、ICE / Signaling / RTT / mic / remote audio / VAD / gaze / channel 状態を診断サマリとして表示する。
 4. `AudioPanel` を作成し、Local / Remote メーター、VAD 状態、入力制約、filter、Silero tuning、RMS tuning を整理して配置する。
 5. `RtcPanel` を作成し、candidate、bitrate、packet loss、jitter、RTT、trend graph を集約する。
 6. `MessagesPanel` を作成し、`text_ch`、`telop_ch`、RTC event timeline をログビューとして表示する。
 7. `GazePanel` を作成し、camera preview、target marker、face/gaze 状態、tracking tuning を整理する。
-8. `RawPanel` を作成し、offer SDP / answer SDP など長文の生データを扱う。
+8. `SdpPanel` を作成し、offer SDP / answer SDP など長文の SDP データを扱う。
 9. `AudioMeter`、`TrendGraph`、`LogViewer`、`RangeControl` など、重複する UI primitive を必要最小限で共通化する。
 10. `sincroDebugConsole.css` を更新し、全 viewport で tabs を表示し、panel 単位の安定した高さ・内部スクロール・折り返しを定義する。
 11. コメントが必要な箇所は、Google TypeScript style に沿って「なぜその構造にしているか」が分かる短い説明に留める。
@@ -102,7 +102,7 @@ sincromisor-frontend/src/react/debug/
 - `RTC` タブで主要 metrics と trend graph が表示されることを確認する。
 - `Messages` タブで text / telop / event log が内部スクロールで確認できることを確認する。
 - `Gaze` タブで camera preview と tracking tuning が表示・操作できることを確認する。
-- `Raw` タブで offer / answer SDP が内部スクロールで確認できることを確認する。
+- `SDP` タブで offer / answer SDP が内部スクロールで確認できることを確認する。
 
 ## 実施メモ
 
@@ -114,7 +114,7 @@ sincromisor-frontend/src/react/debug/
 
 - 完了日: 2026-05-07
 - `DebugConsole.tsx` を snapshot 購読、manager 取得、active tab 管理、panel 切替の container に縮退した。
-- `DebugConsoleTabs.tsx`、`panels/*Panel.tsx`、`components/*` を追加し、表示責務を Status / Audio / RTC / Messages / Gaze / Raw に分割した。
+- `DebugConsoleTabs.tsx`、`panels/*Panel.tsx`、`components/*` を追加し、表示責務を Status / Audio / Messages / Gaze / RTC / SDP に分割した。
 - `sincroDebugConsole.css` を全 viewport 常時 tabs + 単一 panel 表示へ更新し、desktop の全パネル同時表示を撤去した。
 - 設計変更は `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` に反映した。
 - `cd sincromisor-frontend && npm run build` 成功。

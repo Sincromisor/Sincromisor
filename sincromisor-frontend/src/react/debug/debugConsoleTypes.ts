@@ -1,4 +1,4 @@
-export type DebugTabKey = "status" | "audio" | "rtc" | "messages" | "gaze" | "raw";
+export type DebugTabKey = "status" | "audio" | "messages" | "gaze" | "rtc" | "sdp";
 
 export type DebugPanelProps = {
     isActive: boolean;

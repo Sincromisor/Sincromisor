@@ -322,7 +322,7 @@ div#debugConsole .debugCard--gaze {
     grid-area: panel;
 }
 
-div#debugConsole .debugCard--raw {
+div#debugConsole .debugCard--sdp {
     grid-area: panel;
 }
 
