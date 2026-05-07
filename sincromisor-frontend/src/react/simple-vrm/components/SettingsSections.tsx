@@ -84,7 +84,7 @@ const HelpLabel = SettingsHelpLabel;
 const SettingToggle = SettingsToggle;
 
 type SettingsCategorySectionProps = {
-    title: string;
+    title?: string;
     description?: string;
     children: ReactNode;
     defaultOpen?: boolean;
@@ -645,7 +645,7 @@ export function StartupSettingsSection({
                     ))}
                 </SettingsToggleGrid>
             ) : (
-                <SettingsHint>このページでは、開始前に切り替える項目はありません。</SettingsHint>
+                <SettingsHint>開始前に切り替える項目はありません。</SettingsHint>
             )}
         </div>
     );

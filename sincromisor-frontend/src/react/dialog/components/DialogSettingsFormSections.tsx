@@ -56,7 +56,7 @@ const settingHelp = {
 } as const;
 
 type DialogSettingsCategoryProps = {
-    title: string;
+    title?: string;
     description?: string;
     children: ReactNode;
 };
