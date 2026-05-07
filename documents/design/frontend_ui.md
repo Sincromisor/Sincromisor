@@ -182,6 +182,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 開始後の compact navigation は、desktop ではカテゴリボタンを低密度な横並びにしすぎず本文見出しを初期表示内へ残す。mobile ではカテゴリ select へ縮退し、カテゴリ一覧が本文確認を押し下げないようにする
   - 設定パネルや Debug Console などのタブ型カテゴリナビゲーションは `IntegratedTabs` を共通部品として使い、内容面一体型タブ表現へそろえる。`SettingsShell` の `regular` / `compact` は別UIではなく余白、最小幅、高さの密度差として扱い、選択中タブは表示中の内容面と同じ背景・境界に接続する。狭幅ではタブを上部へ回し、さらに狭い compact container では select へ縮退する
   - 起動前 dialog と開始後の設定パネルは、レイアウト差があってもカテゴリ名、項目順、文言方針をそろえる
+  - 設定カテゴリのタブ label とページタイトルは同じ語にそろえ、`マイク補正` や `接続状態` のような具体的なまとまり名はカテゴリ内の section title として表示する
   - PCでは左ナビを維持し、狭幅時のみドロワーまたはタブへの縮退を許可する
   - 狭幅では、まず左右カラムを縮め、それでも足りない場合に左ナビを上部へ回して主 CTA の視認性を優先する
 
@@ -725,6 +726,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-05-07 | `TASK-3042` / `TASK-3043` 対応として、右上ツールボタンをアイコン主体にし、menu item の説明文と状態テキストを削除する方針へ更新。SettingsShell は shell / page / card の説明階層を必要最小限にし、重複説明や空セクションを表示しない方針へ整理 |
 | 2026-05-07 | `TASK-3044` 対応として、通常 UI から `enableTalk` / `enableInspector` の開始時切替を非露出化。開始時設定は明示 capability がある項目だけ表示し、Looking Glass の反映タイミング文言は会話接続と混ざらない `停止後に反映` / `次回起動で反映` へ整理 |
 | 2026-05-07 | `TASK-3046` 対応として `settings-fields` 層を追加し、起動前 dialog と開始後設定パネルの title / talk mode / device selector / audio processing / character display / startup behavior field group を共有。画面別 section は layout と画面固有導線に寄せる方針へ更新 |
+| 2026-05-07 | `TASK-3046` 追加整理として `settingsPageCopy` を追加し、起動前 dialog と開始後設定パネルのカテゴリ label / page title / page description / section title を共通化。タブ label とページタイトルは同一語、具体的な項目名は section title へ下げる方針へ更新 |
 
 ## 15. 参照資料
 
