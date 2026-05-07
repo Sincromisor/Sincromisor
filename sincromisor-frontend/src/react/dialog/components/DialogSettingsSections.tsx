@@ -9,9 +9,6 @@ export function VrmModelSection({ onOpenFilePicker }: VrmModelSectionProps) {
     return (
         <div className="configurationDialogReactSettingsPanel__vrmSection">
             <div className="configurationDialogReactSettingsPanel__subTitle">VRM-1.0 モデル</div>
-            <div className="configurationDialogReactSettingsPanel__caption">
-                ファイル選択またはこの画面へのドラッグ&ドロップでモデルを差し替えます。
-            </div>
             <button
                 type="button"
                 onClick={onOpenFilePicker}

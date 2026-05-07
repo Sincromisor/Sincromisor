@@ -201,12 +201,10 @@ export function SimpleVrmControlPanel({
                     {
                         id: "audio",
                         label: "音声",
-                        title: "音声",
+                        title: "マイク補正",
+                        description: "ノイズや反響に合わせて声の拾い方を調整します。",
                         content: (
-                            <SettingsCategorySection
-                                title="マイク補正"
-                                description="ノイズや反響に合わせて声の拾い方を調整します。"
-                            >
+                            <SettingsCategorySection>
                                 <MicSettingsSection
                                     settings={settings}
                                     uiState={settingsUiState}
@@ -226,9 +224,7 @@ export function SimpleVrmControlPanel({
                         label: "表示",
                         title: "キャラクターとアニメーション",
                         content: (
-                            <SettingsCategorySection
-                                title="キャラクターとアニメーション"
-                            >
+                            <SettingsCategorySection>
                                 <CharacterSettingsSection
                                     settings={settings}
                                     uiState={settingsUiState}

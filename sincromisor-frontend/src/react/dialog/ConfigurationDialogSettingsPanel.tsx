@@ -76,7 +76,7 @@ export function ConfigurationDialogSettingsPanel() {
         ? `開始前だけ効く項目に変更があります: ${startupSettingsStatus.changedKeys.join(", ")}`
         : "";
     const startButtonLabel = dialogUiState.startButtonText || "開始する";
-    const startButtonHint = dialogUiState.startButtonHint ?? "必要な設定を確認したら、このまま開始できます。";
+    const startButtonHint = dialogUiState.startButtonHint ?? "";
 
     const resetDragState = (): void => {
         dragDepthRef.current = 0;
@@ -209,12 +209,10 @@ export function ConfigurationDialogSettingsPanel() {
                     {
                         id: "audio",
                         label: "音声",
-                        title: "音声",
+                        title: "マイク補正",
+                        description: "ノイズや反響に合わせて声の拾い方を調整します。",
                         content: (
-                            <DialogSettingsCategory
-                                title="マイク補正"
-                                description="ノイズや反響に合わせて声の拾い方を調整します。"
-                            >
+                            <DialogSettingsCategory>
                                 <DialogMicSettingsSection
                                     settings={settings}
                                     uiState={settingsUiState}
@@ -253,8 +251,7 @@ export function ConfigurationDialogSettingsPanel() {
                     {
                         id: "connection",
                         label: "接続",
-                        title: "接続",
-                        description: "接続状態",
+                        title: "接続状態",
                         content: (
                             <>
                                 {hasStartupOptions ? (
@@ -309,9 +306,11 @@ export function ConfigurationDialogSettingsPanel() {
                             >
                                 {startButtonLabel}
                             </button>
-                            <div className="configurationDialogReactSettingsPanel__hintText">
-                                {startButtonHint}
-                            </div>
+                            {startButtonHint ? (
+                                <div className="configurationDialogReactSettingsPanel__hintText">
+                                    {startButtonHint}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 )}

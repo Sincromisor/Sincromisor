@@ -44,12 +44,6 @@
         font-weight: 700;
     }
 
-    .configurationDialogReactSettingsPanel__caption {
-        opacity: 0.78;
-        line-height: 1.45;
-        margin-bottom: var(--sincro-space-250);
-    }
-
     .configurationDialogReactSettingsPanel__button {
         width: fit-content;
         min-width: 180px;
