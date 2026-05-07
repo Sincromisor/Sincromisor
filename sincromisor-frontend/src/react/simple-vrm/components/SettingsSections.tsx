@@ -85,7 +85,7 @@ const SettingToggle = SettingsToggle;
 
 type SettingsCategorySectionProps = {
     title: string;
-    description: string;
+    description?: string;
     children: ReactNode;
     defaultOpen?: boolean;
 };
@@ -474,7 +474,7 @@ export function LookingGlassSettingsSection({
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
             {showSectionTitle ? <HelpLabel text="Looking Glass 設定" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>Looking Glass 表示</div>}
             <div style={{ opacity: 0.6, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
-                これらの値は、次回の Looking Glass WebXR セッション開始時に適用されます。
+                これらの値は、次回の Looking Glass 起動時に適用されます。
             </div>
             <div style={{ opacity: 0.7, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
                 ピンボケ気味の場合は、まず <code>Target Z</code> と <code>Target Diam</code> を少しずつ調整してください。
@@ -586,7 +586,7 @@ export function StartupSettingsSection({
             help: settingHelp.enableTalk,
             checked: !!settings.enableTalk,
             disabled: uiState.enableTalkDisabled,
-            supported: startupCapabilities.enableTalk,
+            supported: false,
             onChange: (checked: boolean) => onApplySettings({ enableTalk: checked }),
         },
         {
@@ -595,7 +595,7 @@ export function StartupSettingsSection({
             help: settingHelp.enableInspector,
             checked: !!settings.enableInspector,
             disabled: uiState.enableInspectorDisabled,
-            supported: startupCapabilities.enableInspector,
+            supported: false,
             onChange: (checked: boolean) => onApplySettings({ enableInspector: checked }),
         },
         {

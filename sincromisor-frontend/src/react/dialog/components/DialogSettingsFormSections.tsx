@@ -57,7 +57,7 @@ const settingHelp = {
 
 type DialogSettingsCategoryProps = {
     title: string;
-    description: string;
+    description?: string;
     children: ReactNode;
 };
 
@@ -159,9 +159,6 @@ export function DialogDeviceSettingsSection({
             >
                 {showSectionTitle ? "入力デバイス" : "マイクとカメラ"}
             </SettingsSubsectionTitle>
-            <SettingsHint>
-                ここで選んだマイクとカメラは、開始後の設定パネルにも引き継がれます。始める前の確認や切り替えに使ってください。
-            </SettingsHint>
             <div>
                 <SettingsHelpLabel text="マイク入力" help={settingHelp.audioInputDeviceId} />
                 <SettingsSelect
@@ -334,7 +331,7 @@ export function DialogStartupSettingsSection({
             label: "会話機能を準備する",
             checked: !!settings.enableTalk,
             disabled: uiState.enableTalkDisabled,
-            supported: startupCapabilities.enableTalk,
+            supported: false,
             help: "ページを開いた時に会話機能を準備します。会話をすぐ始めたいページで使います。",
             onChange: (checked: boolean) => onApplySettings({ enableTalk: checked }),
         },
@@ -343,7 +340,7 @@ export function DialogStartupSettingsSection({
             label: "開発者向け表示確認を使う",
             checked: !!settings.enableInspector,
             disabled: uiState.enableInspectorDisabled,
-            supported: startupCapabilities.enableInspector,
+            supported: false,
             help: "開発者向けの表示確認ツールを使えるようにします。表示の切り分けが必要な時だけオンにします。",
             onChange: (checked: boolean) => onApplySettings({ enableInspector: checked }),
         },
@@ -357,6 +354,10 @@ export function DialogStartupSettingsSection({
             onChange: (checked: boolean) => onApplySettings({ enableVR: checked }),
         },
     ].filter((item) => item.supported);
+
+    if (items.length === 0) {
+        return null;
+    }
 
     return (
         <div className="settingsPrimitiveFieldStack">
