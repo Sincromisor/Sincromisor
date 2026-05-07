@@ -7,7 +7,7 @@ export type SettingsShellPage = {
     id: string;
     label: string;
     title: string;
-    description: string;
+    description?: string;
     content: ReactNode;
     footer?: ReactNode;
     tone?: "default" | "developer";
@@ -96,7 +96,9 @@ export function SettingsShell({
                         >
                             <header className="settingsShell__pageHeader">
                                 <h2 className="settingsShell__pageTitle">{activePage.title}</h2>
-                                <p className="settingsShell__pageDescription">{activePage.description}</p>
+                                {activePage.description ? (
+                                    <p className="settingsShell__pageDescription">{activePage.description}</p>
+                                ) : null}
                             </header>
                             <div className="settingsShell__content">{activePage.content}</div>
                         </div>

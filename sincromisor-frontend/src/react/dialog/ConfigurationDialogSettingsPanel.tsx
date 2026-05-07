@@ -70,16 +70,11 @@ export function ConfigurationDialogSettingsPanel() {
     const vrmFileInputRef = useRef<HTMLInputElement | null>(null);
     const dragDepthRef = useRef(0);
 
-    const hasStartupOptions =
-        startupSettingsCapabilities.enableTalk
-        || startupSettingsCapabilities.enableInspector
-        || startupSettingsCapabilities.enableVR;
-    const connectionDetail = connectionState.detail || "左のカテゴリで必要な項目を見直したら、下の開始ボタンから会話画面へ進めます。";
+    const hasStartupOptions = startupSettingsCapabilities.enableVR;
+    const connectionDetail = connectionState.detail || "";
     const startupOptionHint = startupSettingsStatus.changedKeys.length > 0
         ? `開始前だけ効く項目に変更があります: ${startupSettingsStatus.changedKeys.join(", ")}`
-        : hasStartupOptions
-            ? "開始前だけ効く項目は、必要な時だけこのページで調整します。"
-            : "このページでは接続前の最終確認だけを行います。";
+        : "";
     const startButtonLabel = dialogUiState.startButtonText || "開始する";
     const startButtonHint = dialogUiState.startButtonHint ?? "必要な設定を確認したら、このまま開始できます。";
 
@@ -168,20 +163,16 @@ export function ConfigurationDialogSettingsPanel() {
             />
             <SettingsShell
                 ariaLabel="初回セットアップウィザード"
-                badge="初回セットアップ"
-                title="会話を始める前のセットアップ"
-                description="この画面で会話・入出力デバイス・音声・表示・接続の準備を確認します。完了すると会話画面へ進み、開始後の設定パネルからも同じ分類で見直せます。"
+                title="初回セットアップ"
                 initialPageId="conversation"
                 pages={[
                     {
                         id: "conversation",
                         label: "会話",
                         title: "会話",
-                        description: "最初に、会話画面で使う名前と会話モードを確認します。",
                         content: (
                             <DialogSettingsCategory
-                                title="会話の基本"
-                                description="会話画面に表示する名前と、やり取りの進み方をここで決めます。開始後の設定パネルでも同じ分類で見直せます。"
+                                title="会話"
                             >
                                 <DialogBasicSettingsSection
                                     settings={settings}
@@ -196,12 +187,10 @@ export function ConfigurationDialogSettingsPanel() {
                     {
                         id: "devices",
                         label: "デバイス",
-                        title: "入出力デバイス",
-                        description: "会話に使うマイクと、視線連動に使うカメラを同じ場所で確認します。",
+                        title: "マイクとカメラ",
                         content: (
                             <DialogSettingsCategory
-                                title="使うデバイス"
-                                description="開始前に使うマイクと視線用カメラを確認します。開始後もここで選んだ内容を引き継ぎます。"
+                                title="デバイス"
                             >
                                 <DialogDeviceSettingsSection
                                     settings={settings}
@@ -221,11 +210,10 @@ export function ConfigurationDialogSettingsPanel() {
                         id: "audio",
                         label: "音声",
                         title: "音声",
-                        description: "声の入り方や無音時の扱いなど、会話音声の調整だけをまとめています。",
                         content: (
                             <DialogSettingsCategory
-                                title="マイク前処理"
-                                description="ノイズや反響の多い環境でも話しやすくするための補正です。必要なものだけオンにして試せます。"
+                                title="マイク補正"
+                                description="ノイズや反響に合わせて声の拾い方を調整します。"
                             >
                                 <DialogMicSettingsSection
                                     settings={settings}
@@ -239,13 +227,11 @@ export function ConfigurationDialogSettingsPanel() {
                     {
                         id: "display",
                         label: "表示",
-                        title: "表示",
-                        description: "キャラクター表示、視線連動のオンオフ、VRM モデルを開始前に確認します。",
+                        title: "キャラクター表示とVRMモデル",
                         content: (
                             <>
                                 <DialogSettingsCategory
                                     title="キャラクター表示"
-                                    description="3Dキャラクター、顔の向き連動、自動ミュートなど、見た目とふるまいをまとめて調整します。"
                                 >
                                     <DialogCharacterSettingsSection
                                         settings={settings}
@@ -257,7 +243,6 @@ export function ConfigurationDialogSettingsPanel() {
                                 </DialogSettingsCategory>
                                 <DialogSettingsCategory
                                     title="VRM モデル"
-                                    description="表示するモデルを差し替えたい時の導線です。ファイル選択とドラッグ&ドロップのどちらでも更新できます。"
                                 >
                                     <VrmModelSection onOpenFilePicker={handleOpenVrmFilePicker} />
                                     <DialogVrmDropStatusCard uiState={dialogVrmUiState} />
@@ -269,13 +254,12 @@ export function ConfigurationDialogSettingsPanel() {
                         id: "connection",
                         label: "接続",
                         title: "接続",
-                        description: "最後に接続状態を確認し、下部の開始ボタンから会話画面へ進みます。開始前だけ効く項目がある時だけ、このページで扱います。",
+                        description: "接続状態",
                         content: (
                             <>
                                 {hasStartupOptions ? (
                                     <DialogSettingsCategory
-                                        title="開始前だけ効く項目"
-                                        description="会話を始める瞬間にだけ反映される項目です。必要な時だけここで調整します。"
+                                        title="開始時の設定"
                                     >
                                         <DialogStartupSettingsSection
                                             settings={settings}
@@ -289,27 +273,20 @@ export function ConfigurationDialogSettingsPanel() {
                                     </DialogSettingsCategory>
                                 ) : null}
                                 <DialogSettingsCategory
-                                    title="開始前の確認"
-                                    description="状態を確認したら、このまま下の主ボタンへ進みます。見直したい項目があれば左のカテゴリに戻れます。"
+                                    title="接続状態"
                                 >
                                     <div className="configurationDialogReactSettingsPanel__connectionPage">
                                         <div className="configurationDialogReactSettingsPanel__statusPanel">
-                                            <div className="configurationDialogReactSettingsPanel__statusLabel">
-                                                現在の状態
-                                            </div>
                                             <div className="configurationDialogReactSettingsPanel__statusValue">
                                                 {connectionStatusLabel(connectionState.value)}
                                             </div>
-                                            <div className="configurationDialogReactSettingsPanel__statusDetail">
+                                            {connectionDetail ? <div className="configurationDialogReactSettingsPanel__statusDetail">
                                                 {connectionDetail}
-                                            </div>
+                                            </div> : null}
                                         </div>
-                                        <div className="configurationDialogReactSettingsPanel__hintText">
+                                        {startupOptionHint ? <div className="configurationDialogReactSettingsPanel__hintText">
                                             {startupOptionHint}
-                                        </div>
-                                        <div className="configurationDialogReactSettingsPanel__hintText">
-                                            このセットアップは開始前の必須フローです。途中で離れる場合はトップへ戻れます。
-                                        </div>
+                                        </div> : null}
                                     </div>
                                 </DialogSettingsCategory>
                             </>
@@ -319,9 +296,6 @@ export function ConfigurationDialogSettingsPanel() {
                 footer={(
                     <div className="configurationDialogReactSettingsPanel__footer">
                         <div className="configurationDialogReactSettingsPanel__footerLead">
-                            <div className="configurationDialogReactSettingsPanel__exitHint">
-                                途中で離れる場合はトップへ戻れます。ESC キーや背景クリックでは閉じません。
-                            </div>
                             <a className="configurationDialogReactSettingsPanel__backLink" href="/">
                                 トップへ戻る
                             </a>

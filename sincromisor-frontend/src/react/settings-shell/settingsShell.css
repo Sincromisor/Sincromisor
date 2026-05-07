@@ -7,7 +7,7 @@
         --settings-shell-nav-active: var(--sincro-surface-nav-active);
         --settings-shell-tab-overlap: 1px;
         display: grid;
-        gap: var(--sincro-space-450);
+        gap: var(--sincro-space-350);
         color: var(--sincro-color-overlay-text-primary);
     }
 
@@ -112,7 +112,7 @@
     .settingsShell__pageHeader {
         display: grid;
         gap: var(--sincro-space-150);
-        min-height: 90px;
+        min-height: 0;
         align-content: start;
         padding-bottom: var(--sincro-space-350);
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);

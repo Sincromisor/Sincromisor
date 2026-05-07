@@ -13,12 +13,12 @@ div#debugMenu {
 
 /* ヘッダー右端に置く控えめな設定アイコン。3D表示の主役感を壊さないサイズにする。 */
 button#debugMenuButton {
-    min-width: var(--sincro-header-height, clamp(54px, 7dvh, 74px));
+    width: var(--sincro-header-height, clamp(54px, 7dvh, 74px));
+    min-width: 0;
     height: var(--sincro-header-height, clamp(54px, 7dvh, 74px));
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
     border: 1px solid var(--sincro-main-overlay-border-strong, rgba(157, 190, 232, 0.24));
     color: var(--headerTextColor);
     background: var(--sincro-main-overlay-surface, linear-gradient(160deg, rgba(26, 29, 37, 0.92), rgba(14, 16, 22, 0.86)));
@@ -26,7 +26,7 @@ button#debugMenuButton {
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
     border-radius: clamp(16px, 2vw, 22px);
-    padding: 0 14px;
+    padding: 0;
     cursor: pointer;
 }
 
@@ -36,24 +36,6 @@ button#debugMenuButton .debugMenuButton__icon {
     display: block;
     fill: hsl(0deg 0% 93% / 84%);
     flex: 0 0 auto;
-}
-
-button#debugMenuButton .debugMenuButton__label,
-button#debugMenuButton .debugMenuButton__state {
-    display: block;
-    line-height: 1.1;
-    white-space: nowrap;
-}
-
-button#debugMenuButton .debugMenuButton__label {
-    color: hsl(194deg 45% 95% / 92%);
-    font-size: 12px;
-    font-weight: 700;
-}
-
-button#debugMenuButton .debugMenuButton__state {
-    color: var(--sincro-main-overlay-text-muted, rgba(225, 233, 247, 0.72));
-    font-size: 10px;
 }
 
 button#debugMenuButton:hover {
@@ -69,7 +51,7 @@ div#debugMenuPanel {
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    width: min(300px, calc(100vw - 24px));
+    width: min(200px, calc(100vw - 24px));
     padding: 8px;
     border: 1px solid var(--sincro-main-overlay-border-strong, hsl(186deg 65% 52% / 20%));
     border-radius: 16px;
@@ -112,8 +94,7 @@ button#reactSettingsPanelToggle {
     position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    justify-content: flex-start;
     border: 1px solid var(--sincro-main-overlay-border, hsl(186deg 65% 52% / 18%));
     border-radius: 12px;
     background:
@@ -121,7 +102,7 @@ button#reactSettingsPanelToggle {
         rgba(22, 26, 34, 0.78);
     color: hsl(0deg 0% 92%);
     text-align: left;
-    padding: 11px 12px;
+    padding: 11px 12px 11px 16px;
     font-size: 12px;
     line-height: 1.4;
     cursor: pointer;
@@ -162,30 +143,12 @@ button#debugConsoleToggle {
 .debugMenuPanel__itemText {
     min-width: 0;
     display: flex;
-    flex-direction: column;
-    gap: 2px;
 }
 
 .debugMenuPanel__itemTitle {
     color: hsl(194deg 45% 95% / 94%);
     font-size: 12px;
     font-weight: 700;
-}
-
-.debugMenuPanel__itemDescription {
-    color: var(--sincro-main-overlay-text-muted, rgba(225, 233, 247, 0.72));
-    font-size: 11px;
-}
-
-.debugMenuPanel__itemState {
-    flex: 0 0 auto;
-    border: 1px solid hsl(186deg 65% 52% / 22%);
-    border-radius: 999px;
-    padding: 2px 7px;
-    color: hsl(188deg 72% 78% / 88%);
-    background: hsl(186deg 70% 42% / 10%);
-    font-size: 10px;
-    line-height: 1.2;
 }
 
 div#debugConsole {
@@ -235,20 +198,7 @@ div#debugConsole .debugConsoleTitleBox h2 {
     margin: 0;
     font-size: 18px;
     font-weight: 700;
-    letter-spacing: 0.02em;
-}
-
-div#debugConsole .debugConsoleEyebrow {
-    display: inline-flex;
-    align-items: center;
-    margin-bottom: 8px;
-    padding: 3px 8px;
-    border-radius: 999px;
-    border: 1px solid hsl(186deg 65% 52% / 28%);
-    background: hsl(186deg 70% 42% / 10%);
-    color: hsl(188deg 80% 74%);
-    font-size: 11px;
-    letter-spacing: 0.06em;
+    letter-spacing: 0;
 }
 
 div#debugConsole .debugConsoleTitleBox p {
@@ -851,12 +801,6 @@ div#debugConsole .debugConsoleTabs .integratedTabs__tab.is-active {
         min-width: var(--sincro-header-height, 52px);
         height: var(--sincro-header-height, 52px);
         padding: 0;
-        gap: 0;
-    }
-
-    button#debugMenuButton .debugMenuButton__label,
-    button#debugMenuButton .debugMenuButton__state {
-        display: none;
     }
 
     div#debugConsole {
@@ -910,7 +854,7 @@ div#debugConsole .debugConsoleTabs .integratedTabs__tab.is-active {
 
     div#debugMenuPanel {
         right: -2px;
-        width: min(304px, calc(100vw - 16px));
+        width: min(200px, calc(100vw - 16px));
     }
 
     div#debugMenuPanel::before {

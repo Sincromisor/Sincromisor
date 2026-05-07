@@ -29,7 +29,7 @@ type SettingsHintProps = {
 
 type SettingsSectionCardProps = {
     title: string;
-    description: string;
+    description?: string;
     children: ReactNode;
     className?: string;
 };
@@ -216,7 +216,7 @@ export function SettingsSectionCard({
         <section className={joinClassNames("settingsPrimitiveSectionCard", className)}>
             <div className="settingsPrimitiveSectionCard__header">
                 <div className="settingsPrimitiveSectionCard__title">{title}</div>
-                <div className="settingsPrimitiveSectionCard__description">{description}</div>
+                {description ? <div className="settingsPrimitiveSectionCard__description">{description}</div> : null}
             </div>
             <div className="settingsPrimitiveSectionCard__body">{children}</div>
         </section>

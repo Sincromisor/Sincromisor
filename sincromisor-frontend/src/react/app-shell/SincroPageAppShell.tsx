@@ -77,8 +77,8 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
                 <RightToolFrame
                     id="sincroDebugConsoleContainer"
                     isOpen={rightToolState.activePanel === "debug"}
-                    title="開発者向け診断"
-                    ariaLabel="開発者向け診断"
+                    title="開発者ツール"
+                    ariaLabel="開発者ツール"
                     onClose={hideRightToolDebugPanel}
                     variant="debug"
                 >
@@ -88,8 +88,8 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
                 <RightToolFrame
                     id="sincroReactSettingsPanelContainer"
                     isOpen={rightToolState.activePanel === "settings"}
-                    title="設定パネル"
-                    ariaLabel="設定パネル"
+                    title="基本設定"
+                    ariaLabel="基本設定"
                     onClose={hideRightToolSettingsPanel}
                     variant="settings"
                 >

@@ -120,9 +120,7 @@ export function DebugConsole() {
         <div id="debugConsole">
             <header className="debugConsoleHeader">
                 <div className="debugConsoleTitleBox">
-                    <div className="debugConsoleEyebrow">開発者向け診断</div>
-                    <h2>Debug Console</h2>
-                    <p>まずは Overview で接続状態を確認し、必要な時だけ Audio / Channels / SDP の詳細へ進みます。</p>
+                    <h2>開発者ツール</h2>
                 </div>
                 <div className="debugConsoleHeaderActions">
                     <div className="debugConsoleActions">
@@ -512,7 +510,7 @@ export function DebugConsole() {
                     <dd>{snapshot.gaze.targetDebug}</dd>
                 </dl>
                 <details className="audioInlineDetails">
-                    <summary>高度な調整 (Gaze Tuning)</summary>
+                    <summary>高度な調整</summary>
                     <p className="debugInlineLead">視線追従が不安定な時だけ調整してください。通常運用では既定値のままで構いません。</p>
                     <div className="audioControlGroup">
                         <div className="audioControlPresetButtons">
