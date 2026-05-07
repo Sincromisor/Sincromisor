@@ -165,20 +165,19 @@ div#debugConsole {
     display: grid;
     box-sizing: border-box;
     width: 100%;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-        "header header header header header header header header header header header header"
-        "status status status status transport transport transport transport transport transport transport transport"
-        "audio audio audio audio audio audio gaze gaze gaze gaze gaze gaze"
-        "channels channels channels channels channels channels channels channels channels channels channels channels"
-        "sdp sdp sdp sdp sdp sdp sdp sdp sdp sdp sdp sdp";
-    gap: 12px;
+        "header"
+        "tabs"
+        "panel";
+    gap: 0;
     align-content: start;
-    height: auto;
+    min-height: 0;
     color: var(--debug-text-strong);
     font-family: "IBM Plex Sans", "BIZ UDPGothic", "UDPGothic", sans-serif;
     font-size: 14px;
     line-height: 1.45;
+    padding: 10px;
 }
 
 div#debugConsole .debugConsoleHeader {
@@ -291,6 +290,7 @@ div#debugConsole .debugCard {
     padding: 10px 12px;
     background: var(--debug-panel-bg-soft);
     min-height: 0;
+    border-top-color: transparent;
 }
 
 div#debugConsole .debugCard h3 {
@@ -302,28 +302,41 @@ div#debugConsole .debugCard h3 {
 }
 
 div#debugConsole .debugCard--status {
-    grid-area: status;
+    grid-area: panel;
 }
 
-div#debugConsole .debugCard--transport {
-    grid-area: transport;
+div#debugConsole .debugCard--rtc {
+    grid-area: panel;
 }
 
 div#debugConsole .debugCard--audio {
-    grid-area: audio;
+    grid-area: panel;
 }
 
-div#debugConsole .debugCard--channels {
-    grid-area: channels;
+div#debugConsole .debugCard--messages {
+    grid-area: panel;
     align-self: stretch;
 }
 
 div#debugConsole .debugCard--gaze {
-    grid-area: gaze;
+    grid-area: panel;
 }
 
-div#debugConsole .debugCard--sdp {
-    grid-area: sdp;
+div#debugConsole .debugCard--raw {
+    grid-area: panel;
+}
+
+div#debugConsole .debugConsolePanelSlot {
+    grid-area: panel;
+    min-height: 0;
+}
+
+div#debugConsole .debugPanel[hidden] {
+    display: none;
+}
+
+div#debugConsole .debugPanel.is-active {
+    display: block;
 }
 
 div#debugConsole .statusGrid,
@@ -412,7 +425,7 @@ div#debugConsole .state-error {
 
 div#debugConsole .audioMeterGrid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 10px;
     align-items: start;
     justify-items: stretch;
@@ -431,7 +444,7 @@ div#debugConsole .audioMeterPanel {
 }
 
 div#debugConsole .audioMeterPanel--controls {
-    grid-column: auto;
+    grid-column: 1 / -1;
     min-height: 0;
 }
 
@@ -621,6 +634,17 @@ div#debugConsole .channelGrid > article {
     grid-template-rows: auto 1fr;
 }
 
+div#debugConsole .gazePanelGrid {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.82fr) minmax(260px, 1fr);
+    gap: 10px;
+    align-items: start;
+}
+
+div#debugConsole .gazePanelDetails {
+    min-width: 0;
+}
+
 div#debugConsole .channelGrid > article > pre {
     width: 100%;
 }
@@ -710,7 +734,10 @@ div#debugConsole .debugConsoleTabs {
     --integrated-tabs-border: var(--debug-panel-border);
     --integrated-tabs-accent: hsl(186deg 82% 54% / 78%);
     --integrated-tabs-min-width: 96px;
-    display: none;
+    display: grid;
+    gap: 0;
+    grid-area: tabs;
+    margin-top: 12px;
 }
 
 div#debugConsole .debugConsoleTabs .integratedTabs__tab {
@@ -733,25 +760,11 @@ div#debugConsole .debugConsoleTabs .integratedTabs__tab.is-active {
 
 @media (max-width: 1366px) {
     div#debugConsole {
-        /* 小画面は多段グリッドをやめ、タブ+単一パネル表示で横崩れを防ぐ。 */
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "header"
-            "tabs"
-            "panel";
-        gap: 0;
         padding: 10px;
     }
 
     div#debugConsole .debugConsoleHeader {
         padding: 10px 56px 10px 10px;
-    }
-
-    div#debugConsole .debugConsoleTabs {
-        display: grid;
-        gap: 0;
-        grid-area: tabs;
-        margin-top: 12px;
     }
 
     div#debugConsole .debugConsoleActions {
@@ -765,16 +778,6 @@ div#debugConsole .debugConsoleTabs .integratedTabs__tab.is-active {
 
     div#debugConsole .debugConsoleHeaderActions {
         gap: 8px;
-    }
-
-    div#debugConsole .debugPanel {
-        display: none;
-        grid-area: panel;
-    }
-
-    div#debugConsole .debugPanel.is-active {
-        display: block;
-        border-top-color: transparent;
     }
 
     div#debugConsole .statusGrid,
@@ -792,6 +795,13 @@ div#debugConsole .debugConsoleTabs .integratedTabs__tab.is-active {
 
     div#debugConsole .trendGraph {
         height: clamp(70px, 16dvh, 96px);
+    }
+}
+
+@media (max-width: 1100px) {
+    div#debugConsole .audioMeterGrid,
+    div#debugConsole .gazePanelGrid {
+        grid-template-columns: 1fr;
     }
 }
 
