@@ -17,7 +17,6 @@ import {
     SettingsButton,
     SettingsHelpBadge,
     SettingsHelpLabel,
-    SettingsHint,
     SettingsHintList,
     SettingsInput,
     SettingsSectionCard,
@@ -57,10 +56,6 @@ const settingHelp = {
         "カメラから顔の向きや視線を読み取ります。顔の向きに合わせた演出や自動ミュートを使いたい時にオンにします。",
     enableAutoMute:
         "顔の向きに合わせて自動でミュートを切り替えます。展示やハンズフリー運用で、話していない時を静かにしたい場面に向いています。",
-    enableTalk:
-        "ページを開いた時に会話機能を準備します。会話をすぐ始めたいページで使います。",
-    enableInspector:
-        "開発者向けの表示確認ツールを使えるようにします。表示の切り分けや検証が必要な時だけオンにします。",
     enableVR:
         "VR で開くための準備を行います。VR 対応ページを使う時だけオンにします。",
     lgTileHeight:
@@ -564,7 +559,6 @@ type StartupSettingsSectionProps = SettingsApplyProps & {
     isRunning: boolean;
     startupStatus: SincroAppStartupSettingsStatus;
     startupCapabilities: SincroAppStartupSettingsCapabilities;
-    hideIfNoSupported?: boolean;
     showSectionTitle?: boolean;
 };
 
@@ -575,29 +569,10 @@ export function StartupSettingsSection({
     isRunning,
     startupStatus,
     startupCapabilities,
-    hideIfNoSupported = false,
     showSectionTitle = true,
 }: StartupSettingsSectionProps) {
     const changedLabel = startupStatus.changedKeys.length > 0 ? ` 変更: ${startupStatus.changedKeys.join(", ")}` : "";
     const startupItems = [
-        {
-            key: "enableTalk" as const,
-            label: "会話機能を準備する",
-            help: settingHelp.enableTalk,
-            checked: !!settings.enableTalk,
-            disabled: uiState.enableTalkDisabled,
-            supported: false,
-            onChange: (checked: boolean) => onApplySettings({ enableTalk: checked }),
-        },
-        {
-            key: "enableInspector" as const,
-            label: "開発者向け表示確認を使う",
-            help: settingHelp.enableInspector,
-            checked: !!settings.enableInspector,
-            disabled: uiState.enableInspectorDisabled,
-            supported: false,
-            onChange: (checked: boolean) => onApplySettings({ enableInspector: checked }),
-        },
         {
             key: "enableVR" as const,
             label: "VRで開く準備をする",
@@ -609,8 +584,8 @@ export function StartupSettingsSection({
         },
     ];
     const supportedItems = startupItems.filter((item) => item.supported);
-    // page variant 側で「全部未対応ならセクションごと消す」用途に使う。
-    if (hideIfNoSupported && supportedItems.length === 0) {
+    // 表示対象がない場合は、空カードや「項目なし」文言を出さずに section ごと隠す。
+    if (supportedItems.length === 0) {
         return null;
     }
     return (
@@ -631,22 +606,18 @@ export function StartupSettingsSection({
                     変更した内容は次に始める時に反映されます。{changedLabel}
                 </div>
             ) : null}
-            {supportedItems.length > 0 ? (
-                <SettingsToggleGrid>
-                    {supportedItems.map((item) => (
-                        <SettingToggle
-                            key={item.key}
-                            label={item.label}
-                            help={item.help}
-                            checked={item.checked}
-                            disabled={item.disabled}
-                            onChange={item.onChange}
-                        />
-                    ))}
-                </SettingsToggleGrid>
-            ) : (
-                <SettingsHint>開始前に切り替える項目はありません。</SettingsHint>
-            )}
+            <SettingsToggleGrid>
+                {supportedItems.map((item) => (
+                    <SettingToggle
+                        key={item.key}
+                        label={item.label}
+                        help={item.help}
+                        checked={item.checked}
+                        disabled={item.disabled}
+                        onChange={item.onChange}
+                    />
+                ))}
+            </SettingsToggleGrid>
         </div>
     );
 }

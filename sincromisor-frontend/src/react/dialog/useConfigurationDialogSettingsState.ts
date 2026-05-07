@@ -82,9 +82,9 @@ const defaultStartupSettingsStatus: SincroAppStartupSettingsStatus = {
     changedKeys: [],
 };
 const defaultStartupSettingsCapabilities: SincroAppStartupSettingsCapabilities = {
-    enableTalk: true,
-    enableInspector: true,
-    enableVR: true,
+    enableTalk: false,
+    enableInspector: false,
+    enableVR: false,
 };
 const defaultConnectionState: {
     value: "idle" | "starting" | "connecting" | "connected" | "degraded" | "stopping" | "stopped";
