@@ -17,13 +17,19 @@ import {
     SettingsButton,
     SettingsHelpBadge,
     SettingsHelpLabel,
-    SettingsHintList,
     SettingsInput,
     SettingsSectionCard,
-    SettingsSelect,
-    SettingsToggle,
-    SettingsToggleGrid,
 } from "../../settings-primitives/SettingsPrimitives";
+import {
+    AudioInputDeviceField,
+    AudioProcessingToggles,
+    CharacterDisplayToggles,
+    settingHelp,
+    StartupBehaviorFields,
+    TalkModeField,
+    TitleTextField,
+    VideoInputDeviceField,
+} from "../../settings-fields/SettingsFields";
 
 // Control Panel 用の設定セクション群。
 // 起動前 dialog 用フォームとは分離し、ページ常設パネル向けの文言/密度/導線をここで管理する。
@@ -32,51 +38,9 @@ const detailsContentTopMarginPx = UI_TUNING.controlPanel.detailsContentTopMargin
 const settingsTuning = UI_TUNING.controlPanel.settings;
 const compactGapPx = settingsTuning.compactGapPx;
 const rowGapPx = settingsTuning.rowGapPx;
-const settingHelp = {
-    titleText: "会話UIなどに表示されるタイトル文字列です。配信名・キャラクター名を表示したいときに設定します。",
-    talkMode:
-        "応答の進み方を切り替えます。ふだんの会話なら chat、発話の往復を揃えたい時は sincro を選びます。",
-    audioInputDeviceId:
-        "使うマイクを選びます。未選択ならブラウザで既定になっているマイクを使います。",
-    videoInputDeviceId:
-        "顔の向きや視線の検出に使うカメラを選びます。未選択ならブラウザで既定になっているカメラを使います。",
-    enableNoiseSuppression:
-        "周囲のザーッというノイズを抑えます。部屋の空調音やPCファン音が入りやすい時に向いています。",
-    enableEchoCancellation:
-        "スピーカーから出た音がマイクに戻るのを抑えます。ヘッドホンを使わずに話す時に向いています。",
-    enableAutoGainControl:
-        "マイク音量を自動で整えます。声の大きさが変わりやすい時や、入力レベルが安定しない時に向いています。",
-    enableVadGate:
-        "話していない時の送信を抑えます。無音でも反応しやすい環境で、誤反応を減らしたい時に向いています。",
-    enableVenueNoiseMode:
-        "反射音や周囲のざわつきが多い場所向けの調整です。イベント会場や広い部屋で使う時に試してください。",
-    enableCharacter:
-        "3Dキャラクターを表示します。動作を軽くしたい時や、音声まわりだけ確認したい時はオフにします。",
-    enableCharacterGaze:
-        "カメラから顔の向きや視線を読み取ります。顔の向きに合わせた演出や自動ミュートを使いたい時にオンにします。",
-    enableAutoMute:
-        "顔の向きに合わせて自動でミュートを切り替えます。展示やハンズフリー運用で、話していない時を静かにしたい場面に向いています。",
-    enableVR:
-        "VR で開くための準備を行います。VR 対応ページを使う時だけオンにします。",
-    lgTileHeight:
-        "Looking Glass のタイル解像度の高さです。高いほど精細になりますが負荷が増えます。まずは既定値から調整してください。",
-    lgNumViews:
-        "Looking Glass の視差ビュー数です。多いほど滑らかな立体感になりますが描画負荷が増えます。",
-    lgTargetY:
-        "Looking Glass 表示時の注視高さ（Y）です。キャラクターの顔位置に合わせて微調整すると見やすくなります。",
-    lgTargetZ:
-        "Looking Glass 表示時の注視奥行き（Z）です。ピンボケや前後の見え方が不自然な場合に、少しずつ調整してください。",
-    lgTargetDiam:
-        "Looking Glass の注視範囲（target diameter）です。焦点が合いにくい時は小さめ/大きめに振って見え方を確認してください。",
-    lgDepthiness:
-        "Looking Glass の奥行き強調量です。立体感を強くしたい時に上げ、破綻が出る場合は下げます。",
-    lgFovyDeg:
-        "Looking Glass 用の縦方向視野角（FOV Y）です。被写体の見え方が窮屈/広すぎる場合に調整します。",
-} as const;
 
 const HelpBadge = SettingsHelpBadge;
 const HelpLabel = SettingsHelpLabel;
-const SettingToggle = SettingsToggle;
 
 type SettingsCategorySectionProps = {
     title?: string;
@@ -129,30 +93,20 @@ export function BasicSettingsSection({
         <>
             {showSectionTitle ? <HelpLabel text="会話設定" /> : null}
             {showTitle ? (
-                <div style={{ marginTop: `${detailsContentTopMarginPx}px`, marginBottom: `${sectionSpacingPx}px` }}>
-                    <HelpLabel text="タイトル" help={settingHelp.titleText} />
-                    <SettingsInput
-                        type="text"
-                        value={settings.titleText ?? ""}
-                        onChange={(e) => onTitleChange(e.target.value)}
-                        disabled={uiState.titleTextDisabled}
-                    />
-                </div>
+                <TitleTextField
+                    settings={settings}
+                    uiState={uiState}
+                    onTitleChange={onTitleChange}
+                    style={{ marginTop: `${detailsContentTopMarginPx}px`, marginBottom: `${sectionSpacingPx}px` }}
+                />
             ) : null}
             {showTalkMode ? (
-                <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-                    <HelpLabel text="トークモード (talk mode)" help={settingHelp.talkMode} />
-                    <div style={{ display: "flex", gap: `${rowGapPx}px` }}>
-                        <SettingsSelect
-                            value={settings.talkMode}
-                            onChange={(e) => onTalkModeChange(e.target.value)}
-                            disabled={uiState.talkModeDisabled}
-                        >
-                            <option value="chat">chat</option>
-                            <option value="sincro">sincro</option>
-                        </SettingsSelect>
-                    </div>
-                </div>
+                <TalkModeField
+                    settings={settings}
+                    uiState={uiState}
+                    onTalkModeChange={onTalkModeChange}
+                    style={{ marginBottom: `${sectionSpacingPx}px` }}
+                />
             ) : null}
         </>
     );
@@ -223,66 +177,23 @@ export function MicSettingsSection({
                         </SettingsButton>
                     </div>
                     <div style={{ marginBottom: showProcessingOptions ? `${sectionSpacingPx}px` : "0" }}>
-                        <HelpLabel text="マイク入力" help={settingHelp.audioInputDeviceId} />
-                        <SettingsSelect
-                            value={settings.audioInputDeviceId ?? ""}
-                            onChange={(event) => onApplySettings({ audioInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
-                            disabled={uiState.audioInputDeviceDisabled}
-                        >
-                            <option value="">ブラウザ既定のマイクを使う</option>
-                            {mediaDeviceSnapshot.audioInputs.map((option) => (
-                                <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
-                            ))}
-                        </SettingsSelect>
-                        <DeviceSelectionHint
-                            emptyMessage="利用可能なマイクが見つかりません。接続後に再読み込みしてください。"
+                        <AudioInputDeviceField
+                            settings={settings}
+                            uiState={uiState}
+                            uiHints={uiHints}
                             snapshot={mediaDeviceSnapshot}
                             selection={audioInputSelection}
-                            optionsCount={mediaDeviceSnapshot.audioInputs.length}
-                            unavailableReason={uiHints.audioInputDeviceReason}
-                            kindLabel="マイク"
+                            onApplySettings={onApplySettings}
                         />
                     </div>
                 </>
             ) : null}
             {showProcessingOptions ? (
-                <SettingsToggleGrid>
-                    <SettingToggle
-                        label="ノイズを抑える"
-                        help={settingHelp.enableNoiseSuppression}
-                        checked={!!settings.enableNoiseSuppression}
-                        disabled={uiState.enableNoiseSuppressionDisabled}
-                        onChange={(checked) => onApplySettings({ enableNoiseSuppression: checked })}
-                    />
-                    <SettingToggle
-                        label="音の回り込みを抑える"
-                        help={settingHelp.enableEchoCancellation}
-                        checked={!!settings.enableEchoCancellation}
-                        disabled={uiState.enableEchoCancellationDisabled}
-                        onChange={(checked) => onApplySettings({ enableEchoCancellation: checked })}
-                    />
-                    <SettingToggle
-                        label="音量を自動で整える"
-                        help={settingHelp.enableAutoGainControl}
-                        checked={!!settings.enableAutoGainControl}
-                        disabled={uiState.enableAutoGainControlDisabled}
-                        onChange={(checked) => onApplySettings({ enableAutoGainControl: checked })}
-                    />
-                    <SettingToggle
-                        label="無音時の送信を抑える"
-                        help={settingHelp.enableVadGate}
-                        checked={!!settings.enableVadGate}
-                        disabled={uiState.enableVadGateDisabled}
-                        onChange={(checked) => onApplySettings({ enableVadGate: checked })}
-                    />
-                    <SettingToggle
-                        label="にぎやかな場所向けに調整"
-                        help={settingHelp.enableVenueNoiseMode}
-                        checked={!!settings.enableVenueNoiseMode}
-                        disabled={uiState.enableVenueNoiseModeDisabled}
-                        onChange={(checked) => onApplySettings({ enableVenueNoiseMode: checked })}
-                    />
-                </SettingsToggleGrid>
+                <AudioProcessingToggles
+                    settings={settings}
+                    uiState={uiState}
+                    onApplySettings={onApplySettings}
+                />
             ) : null}
             {refreshMessage ? (
                 <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
@@ -321,115 +232,31 @@ export function CharacterSettingsSection({
             {showSectionTitle ? <HelpLabel text="キャラクター設定" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>{sectionLabel}</div>}
             {showCameraSelection ? (
                 <div style={{ marginBottom: showDisplayOptions ? `${sectionSpacingPx}px` : "0" }}>
-                    <HelpLabel text="視線用カメラ" help={settingHelp.videoInputDeviceId} />
-                    <SettingsSelect
-                        value={settings.videoInputDeviceId ?? ""}
-                        onChange={(event) => onApplySettings({ videoInputDeviceId: normalizeSelectedDeviceId(event.target.value) })}
-                        disabled={uiState.videoInputDeviceDisabled}
-                    >
-                        <option value="">ブラウザ既定のカメラを使う</option>
-                        {mediaDeviceSnapshot.videoInputs.map((option) => (
-                            <option key={option.deviceId} value={option.deviceId}>{option.label}</option>
-                        ))}
-                    </SettingsSelect>
-                    <DeviceSelectionHint
-                        emptyMessage="利用可能なカメラが見つかりません。接続後に再読み込みしてください。"
+                    <VideoInputDeviceField
+                        settings={settings}
+                        uiState={uiState}
+                        uiHints={uiHints}
                         snapshot={mediaDeviceSnapshot}
                         selection={videoInputSelection}
-                        optionsCount={mediaDeviceSnapshot.videoInputs.length}
-                        unavailableReason={uiHints.videoInputDeviceReason}
-                        kindLabel="カメラ"
+                        onApplySettings={onApplySettings}
                     />
                 </div>
             ) : null}
             {showDisplayOptions ? (
-                <SettingsToggleGrid>
-                    <SettingToggle
-                        label="3Dキャラクターを表示"
-                        help={settingHelp.enableCharacter}
-                        checked={!!settings.enableCharacter}
-                        disabled={uiState.enableCharacterDisabled}
-                        onChange={(checked) => onApplySettings({ enableCharacter: checked })}
-                    />
-                    <SettingToggle
-                        label="顔の向きを使う"
-                        help={settingHelp.enableCharacterGaze}
-                        checked={!!settings.enableCharacterGaze}
-                        disabled={uiState.enableCharacterGazeDisabled}
-                        onChange={(checked) => onApplySettings({ enableCharacterGaze: checked })}
-                    />
-                    <SettingToggle
-                        label="自動でミュートする"
-                        help={settingHelp.enableAutoMute}
-                        checked={!!settings.enableAutoMute}
-                        disabled={uiState.enableAutoMuteDisabled}
-                        onChange={(checked) => onApplySettings({ enableAutoMute: checked })}
-                    />
-                </SettingsToggleGrid>
-            ) : null}
-            {uiHints.enableCharacterReason ? (
-                <div style={{ marginTop: `${compactGapPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
-                    3Dキャラクター表示: {uiHints.enableCharacterReason}
-                </div>
-            ) : null}
-            {uiHints.enableCharacterGazeReason ? (
-                <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
-                    顔の向き: {uiHints.enableCharacterGazeReason}
-                </div>
-            ) : null}
-            {uiHints.enableAutoMuteReason ? (
-                <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
-                    自動ミュート: {uiHints.enableAutoMuteReason}
-                </div>
+                <CharacterDisplayToggles
+                    settings={settings}
+                    uiState={uiState}
+                    uiHints={uiHints}
+                    onApplySettings={onApplySettings}
+                    renderHint={(label, message) => (
+                        <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
+                            {label}: {message}
+                        </div>
+                    )}
+                />
             ) : null}
         </div>
     );
-}
-
-type DeviceSelectionHintProps = {
-    emptyMessage: string;
-    snapshot: SincroMediaDeviceSnapshot;
-    selection: SincroMediaDeviceSelectionState;
-    optionsCount: number;
-    unavailableReason?: string;
-    kindLabel: string;
-};
-
-function DeviceSelectionHint({
-    emptyMessage,
-    snapshot,
-    selection,
-    optionsCount,
-    unavailableReason,
-    kindLabel,
-}: DeviceSelectionHintProps) {
-    const messages: string[] = [];
-    if (!snapshot.isSupported) {
-        messages.push("このブラウザではメディアデバイス列挙に対応していません。");
-    }
-    if (snapshot.refreshError) {
-        messages.push(`デバイス一覧の取得に失敗しました: ${snapshot.refreshError}`);
-    }
-    if (optionsCount === 0 && !snapshot.isRefreshing && !snapshot.refreshError) {
-        messages.push(emptyMessage);
-    }
-    if (!snapshot.labelsResolved && optionsCount > 0) {
-        messages.push("ブラウザ権限が未許可だと実デバイス名を表示できないことがあります。");
-    }
-    if (selection.isSelected && selection.availabilityKnown && !selection.isAvailable) {
-        messages.push(`選択中の${kindLabel}は現在見つかりません。別のデバイスへ切り替えるか、既定デバイスを選んでください。`);
-    }
-    if (selection.isAvailable && selection.matchedDevice) {
-        messages.push(`選択中: ${selection.matchedDevice.label}`);
-    }
-    if (unavailableReason) {
-        messages.push(unavailableReason);
-    }
-    return <SettingsHintList messages={messages} />;
-}
-
-function normalizeSelectedDeviceId(value: string): string | null {
-    return value.trim().length > 0 ? value : null;
 }
 
 type LookingGlassSettingsSectionProps = {
@@ -571,53 +398,38 @@ export function StartupSettingsSection({
     startupCapabilities,
     showSectionTitle = true,
 }: StartupSettingsSectionProps) {
-    const changedLabel = startupStatus.changedKeys.length > 0 ? ` 変更: ${startupStatus.changedKeys.join(", ")}` : "";
-    const startupItems = [
-        {
-            key: "enableVR" as const,
-            label: "VRで開く準備をする",
-            help: settingHelp.enableVR,
-            checked: !!settings.enableVR,
-            disabled: uiState.enableVRDisabled,
-            supported: startupCapabilities.enableVR,
-            onChange: (checked: boolean) => onApplySettings({ enableVR: checked }),
-        },
-    ];
-    const supportedItems = startupItems.filter((item) => item.supported);
     // 表示対象がない場合は、空カードや「項目なし」文言を出さずに section ごと隠す。
-    if (supportedItems.length === 0) {
+    if (!startupCapabilities.enableVR) {
         return null;
     }
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
             {showSectionTitle ? <HelpLabel text="開始時の動作" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>ページ開始時の動作</div>}
-            <div style={{ opacity: 0.6, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
-                {isRunning
-                    ? "開始前に決まる動きです。いま変更した内容を反映したい時は、いったん停止してからもう一度始めてください。"
-                    : "開始した時の動きを決めます。必要なものだけオンにしてから始めてください。"}
-            </div>
-            {startupStatus.requiresRestart ? (
-                <div style={{ marginBottom: `${compactGapPx}px`, color: "#ffd38a", lineHeight: 1.3 }}>
-                    変更した内容を反映するには、いったん停止してからもう一度始めてください。{changedLabel}
-                </div>
-            ) : null}
-            {!startupStatus.requiresRestart && startupStatus.willApplyOnNextStart ? (
-                <div style={{ marginBottom: `${compactGapPx}px`, color: "#b8e0ff", lineHeight: 1.3 }}>
-                    変更した内容は次に始める時に反映されます。{changedLabel}
-                </div>
-            ) : null}
-            <SettingsToggleGrid>
-                {supportedItems.map((item) => (
-                    <SettingToggle
-                        key={item.key}
-                        label={item.label}
-                        help={item.help}
-                        checked={item.checked}
-                        disabled={item.disabled}
-                        onChange={item.onChange}
-                    />
-                ))}
-            </SettingsToggleGrid>
+            <StartupBehaviorFields
+                settings={settings}
+                uiState={uiState}
+                onApplySettings={onApplySettings}
+                isRunning={isRunning}
+                startupStatus={startupStatus}
+                startupCapabilities={startupCapabilities}
+                useFieldStack={false}
+                introText={{
+                    running: "開始前に決まる動きです。いま変更した内容を反映したい時は、いったん停止してからもう一度始めてください。",
+                    stopped: "開始した時の動きを決めます。必要なものだけオンにしてから始めてください。",
+                }}
+                renderHint={(message, tone) => (
+                    <div
+                        style={{
+                            opacity: tone ? 1 : 0.6,
+                            marginBottom: `${compactGapPx}px`,
+                            color: tone === "warning" ? "#ffd38a" : tone === "info" ? "#b8e0ff" : undefined,
+                            lineHeight: 1.3,
+                        }}
+                    >
+                        {message}
+                    </div>
+                )}
+            />
         </div>
     );
 }
