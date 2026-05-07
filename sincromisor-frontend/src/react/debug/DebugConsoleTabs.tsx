@@ -4,10 +4,10 @@ import type { DebugTabKey } from "./debugConsoleTypes";
 const DEBUG_TABS: { id: DebugTabKey; label: string }[] = [
     { id: "status", label: "Status" },
     { id: "audio", label: "Audio" },
-    { id: "rtc", label: "RTC" },
     { id: "messages", label: "Messages" },
     { id: "gaze", label: "Gaze" },
-    { id: "raw", label: "Raw" },
+    { id: "rtc", label: "RTC" },
+    { id: "sdp", label: "SDP" },
 ];
 
 type DebugConsoleTabsProps = {

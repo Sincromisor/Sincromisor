@@ -5,8 +5,8 @@ import type { DebugTabKey } from "./debugConsoleTypes";
 import { AudioPanel } from "./panels/AudioPanel";
 import { GazePanel } from "./panels/GazePanel";
 import { MessagesPanel } from "./panels/MessagesPanel";
-import { RawPanel } from "./panels/RawPanel";
 import { RtcPanel } from "./panels/RtcPanel";
+import { SdpPanel } from "./panels/SdpPanel";
 import { StatusPanel } from "./panels/StatusPanel";
 
 function useDebugConsoleSnapshot(): DebugConsoleSnapshot {
@@ -46,7 +46,7 @@ export function DebugConsole() {
                 <RtcPanel snapshot={snapshot} isActive={activeTab === "rtc"} />
                 <MessagesPanel snapshot={snapshot} isActive={activeTab === "messages"} />
                 <GazePanel snapshot={snapshot} manager={manager} isActive={activeTab === "gaze"} />
-                <RawPanel snapshot={snapshot} isActive={activeTab === "raw"} />
+                <SdpPanel snapshot={snapshot} isActive={activeTab === "sdp"} />
             </div>
         </div>
     );

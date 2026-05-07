@@ -994,7 +994,7 @@ Sincromisor フロントエンドを、既存機能を維持しながら段階�
 | 2026-04-22 | `TASK-3015` で Debug Console を React 正式経路へ移行。`debugConsole.html` は削除し、右側ツール領域は React shell から扱う構成へ移行した。`DebugConsoleManager` は DOM 直操作 owner ではなく、React view が購読する diagnostics snapshot provider と UI callback bridge に縮退した |
 | 2026-04-22 | `TASK-3017` で右側ツール領域の state owner を `SincroAppRightToolPanelService` へ移し、React 側の開閉 API を `appController.debug.*` 経由へ集約した。`src/ts/UI/rightToolPanelStore.ts` を削除し、UI manager 層に残っていた tool panel owner 責務を App / service 層へ寄せた |
 | 2026-04-24 | `TASK-3017` で `ChatMessageManager` を `ChatMessageService`、`PopManager` を `PopMessageService` へ改名した。`SincroAppControllerRuntime` の依存 bundle も `UI dependency` 前提へ整理し、React / AppController から見た current structure で `manager` 名を残す対象を `DialogManager` と `DebugConsoleManager` に限定した |
-| 2026-05-07 | `TASK-3047` で React Debug Console を thin container + `DebugConsoleTabs` + panel components に再分割した。表示情報は `Status` / `Audio` / `RTC` / `Messages` / `Gaze` / `Raw` へ整理し、全 viewport で単一 panel 表示に統一した。`DebugConsoleManager` の snapshot / callback bridge は維持し、UI 側の構造整理として完結させた |
+| 2026-05-07 | `TASK-3047` で React Debug Console を thin container + `DebugConsoleTabs` + panel components に再分割した。表示情報は `Status` / `Audio` / `Messages` / `Gaze` / `RTC` / `SDP` へ整理し、全 viewport で単一 panel 表示に統一した。`DebugConsoleManager` の snapshot / callback bridge は維持し、UI 側の構造整理として完結させた |
 
 ## 16. 参照資料
 
