@@ -718,6 +718,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-05-01 | `TASK-3034` 対応として右上ツールメニューの active state / ARIA / popover 表現を整理。desktop は補助ラベル付き、mobile は icon button 維持とし、設定 / 診断の用途差と現在表示中の panel を menu item から分かるようにした |
 | 2026-05-01 | `TASK-3035` から `TASK-3038` までの右側ツール refine 結果を同期。設定パネルから `開発者向け` カテゴリを一般カテゴリとして扱わず、`接続` 末尾から Debug Console へ handoff する方針、開始後 panel の compact navigation、`simple-vrm` / `vrm360` / `looking-glass-vrm` の Playwright 回帰確認結果を反映 |
 | 2026-05-02 | `TASK-3040` 対応として `OrbitControls` の入力対象を `#sincroCharacterControlLayer` へ分離。Debug Console / Settings / Header / 右側ツール領域は通常 UI layer として扱い、panel 内 wheel や details 開閉のための応急的なイベント遮断を縮退する方針を反映 |
+| 2026-05-07 | `TASK-3044` 対応として、通常 UI から `enableTalk` / `enableInspector` の開始時切替を非露出化。開始時設定は明示 capability がある項目だけ表示し、Looking Glass の反映タイミング文言は会話接続と混ざらない `停止後に反映` / `次回起動で反映` へ整理 |
 
 ## 15. 参照資料
 

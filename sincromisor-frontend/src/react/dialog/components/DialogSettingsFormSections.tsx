@@ -327,24 +327,6 @@ export function DialogStartupSettingsSection({
     const changedLabel = startupStatus.changedKeys.length > 0 ? ` 変更: ${startupStatus.changedKeys.join(", ")}` : "";
     const items = [
         {
-            key: "enableTalk" as const,
-            label: "会話機能を準備する",
-            checked: !!settings.enableTalk,
-            disabled: uiState.enableTalkDisabled,
-            supported: false,
-            help: "ページを開いた時に会話機能を準備します。会話をすぐ始めたいページで使います。",
-            onChange: (checked: boolean) => onApplySettings({ enableTalk: checked }),
-        },
-        {
-            key: "enableInspector" as const,
-            label: "開発者向け表示確認を使う",
-            checked: !!settings.enableInspector,
-            disabled: uiState.enableInspectorDisabled,
-            supported: false,
-            help: "開発者向けの表示確認ツールを使えるようにします。表示の切り分けが必要な時だけオンにします。",
-            onChange: (checked: boolean) => onApplySettings({ enableInspector: checked }),
-        },
-        {
             key: "enableVR" as const,
             label: "VR で開く準備をする",
             checked: !!settings.enableVR,

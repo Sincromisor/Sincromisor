@@ -73,6 +73,16 @@ export function SimpleVrmControlPanel({
     const startupOptionHint = startupSettingsStatus.changedKeys.length > 0
         ? `開始前だけ効く項目に変更があります: ${startupSettingsStatus.changedKeys.join(", ")}`
         : "";
+    const lookingGlassApplyLabel = lookingGlassConfigStatus.reloadRecommended
+        ? "停止後に反映"
+        : lookingGlassConfigStatus.pendingForNextSession
+            ? "次回起動で反映"
+            : "最新状態";
+    const lookingGlassApplyDetail = lookingGlassConfigStatus.reloadRecommended
+        ? "停止してから Looking Glass をもう一度開始すると反映されます。"
+        : lookingGlassConfigStatus.changedKeys.length > 0
+            ? lookingGlassConfigStatus.changedKeys.join(", ")
+            : null;
     const requestLookingGlassStart = (): void => {
         window.dispatchEvent(new CustomEvent("sincro:looking-glass-start-request"));
     };
@@ -104,8 +114,8 @@ export function SimpleVrmControlPanel({
                                     />
                                     <SettingsStatusCard
                                         label="反映タイミング"
-                                        value={lookingGlassConfigStatus.reloadRecommended ? "再起動が必要" : lookingGlassConfigStatus.pendingForNextSession ? "次回起動で反映" : "最新状態"}
-                                        detail={lookingGlassConfigStatus.changedKeys.length > 0 ? lookingGlassConfigStatus.changedKeys.join(", ") : null}
+                                        value={lookingGlassApplyLabel}
+                                        detail={lookingGlassApplyDetail}
                                         tone={lookingGlassConfigStatus.reloadRecommended ? "warn" : "neutral"}
                                     />
                                 </SettingsSummaryGrid>
@@ -258,7 +268,6 @@ export function SimpleVrmControlPanel({
                                             isRunning={lifecycleState === "running"}
                                             startupStatus={startupSettingsStatus}
                                             startupCapabilities={startupSettingsCapabilities}
-                                            hideIfNoSupported={true}
                                             showSectionTitle={false}
                                         />
                                     </SettingsCategorySection>

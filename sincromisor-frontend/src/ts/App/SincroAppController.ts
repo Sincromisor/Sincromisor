@@ -109,9 +109,9 @@ export class SincroAppController {
     private settingsRelatedPayloadCacheDepth: number = 0;
     private startupAppliedSettings: SincroAppStartupAppliedSettings | null = null;
     private startupSettingsCapabilities: SincroAppStartupSettingsCapabilities = {
-        enableTalk: true,
-        enableInspector: true,
-        enableVR: true,
+        enableTalk: false,
+        enableInspector: false,
+        enableVR: false,
     };
     private readonly lookingGlassTracker = new SincroAppLookingGlassStateTracker();
     readonly dialogBridge: SincroAppDialogBridge;

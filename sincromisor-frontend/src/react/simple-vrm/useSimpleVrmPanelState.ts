@@ -81,9 +81,9 @@ const defaultStartupSettingsStatus: SincroAppStartupSettingsStatus = {
 };
 
 const defaultStartupSettingsCapabilities: SincroAppStartupSettingsCapabilities = {
-    enableTalk: true,
-    enableInspector: true,
-    enableVR: true,
+    enableTalk: false,
+    enableInspector: false,
+    enableVR: false,
 };
 
 type SimpleVrmPanelState = {
