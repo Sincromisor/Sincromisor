@@ -1,7 +1,7 @@
 # TASK-3045 トップページ文言反映とUI簡素化の目視検証
 
 - 作成日: 2026-05-07
-- ステータス: Open
+- ステータス: Done
 - 優先度: Medium
 - 親タスク: `TASK-3041`
 - 依存: `TASK-3042`, `TASK-3043`, `TASK-3044`
@@ -76,3 +76,10 @@ playwright-cli open http://127.0.0.1:5173/vrm360/
 playwright-cli open http://127.0.0.1:5173/looking-glass-vrm/
 ```
 
+## 完了メモ
+
+- 2026-05-07: `src/index.html` のヒーローリードと各モードカード説明がレビュー回答どおり反映済みであることを確認した。`<br>` は HTML 改行として表示され、文字列として露出していない。
+- 2026-05-07: `cd sincromisor-frontend && npm run build` が成功することを確認した。Vite の 500 kB 超 chunk warning は既存の bundle size 警告であり、本タスクの UI 文言確認の失敗ではない。
+- 2026-05-07: Playwright で `/`, `/simple-vrm/`, `/vrm360/`, `/looking-glass-vrm/` を desktop `1280x720` と mobile `390x844` で確認し、横はみ出しや明確なテキスト重なりがないことを確認した。
+- 2026-05-07: `simple-vrm` で開始後の右上ツールメニュー、`基本設定`、`開発者ツール` を確認した。単体 Vite 起動では backend config API 未起動と media permission によるエラー通知が出るが、右側ツールと初回セットアップの表示確認には支障なし。
+- 2026-05-07: レビューで設計正本とのズレが見つかったため、`documents/design/frontend_ui.md` の右上ツールと SettingsShell 方針を現行の簡素化後UIへ同期した。

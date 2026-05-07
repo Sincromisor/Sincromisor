@@ -1,7 +1,7 @@
 # TASK-3041 UI文言簡素化と不要階層削減 Epic
 
 - 作成日: 2026-05-07
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 - 親タスク: なし
 - 依存: なし
@@ -74,3 +74,7 @@ playwright-cli resize 1280 720
 playwright-cli resize 390 844
 ```
 
+## 完了メモ
+
+- 2026-05-07: 子タスク `TASK-3042` から `TASK-3045` までが Done になり、UI文言簡素化、階層削減、開始時設定整理、トップページ文言確認を完了した。
+- 2026-05-07: `documents/design/frontend_ui.md` を現行方針へ同期し、右上ツールと SettingsShell の簡素化方針を設計正本へ反映した。

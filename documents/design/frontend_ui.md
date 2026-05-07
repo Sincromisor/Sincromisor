@@ -119,11 +119,11 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 - `RightToolMenu` は menu open/close と `Ctrl+Alt+D` の keyboard shortcut を担当し、panel container の visibility や scroll は直接操作しない。
 - `DebugConsole` と設定パネル本体は content に専念し、Debug Console の surface / scroll / close button と設定パネルの外側位置指定は frame 側へ移した。
 
-#### 2.2.3 右上ツールメニュー状態表示（2026-05-01）
+#### 2.2.3 右上ツールメニュー状態表示（2026-05-07）
 
-- `RightToolMenu` は `SincroAppRightToolPanelService` の `activePanel` を参照し、設定パネル / Debug Console / 未選択の現在状態を menu button と menu item に表示する。
-- desktop では header 右端の tool button に短い `ツール` ラベルと現在状態を添え、mobile では従来の icon button へ縮退して tap target を維持する。
-- menu item には用途差を示す短い説明、active visual state、`aria-current` を付与する。menu button は `aria-expanded`、`aria-haspopup`、`aria-pressed`、現在状態を含む `aria-label` で右側ツールの状態を伝える。
+- `RightToolMenu` は `SincroAppRightToolPanelService` の `activePanel` を参照し、設定パネル / Debug Console / 未選択の現在状態を ARIA と active visual state へ反映する。
+- header 右端の tool button は desktop / mobile ともアイコン主体にし、可視の `ツール` ラベルや現在状態ラベルは表示しない。操作内容と現在状態は `aria-label`、`aria-expanded`、`aria-haspopup`、`aria-pressed` で伝える。
+- menu item は `基本設定` と `開発者ツール` の2項目に絞り、説明文や `表示中` / `開く` のような状態テキストは出さない。選択中の項目は active visual state と `aria-current` で表現する。
 - `sincroDebugConsole.css` の右上 menu は header surface と連続する popover として扱い、panel 本体の frame / scroll 責務は `RightToolFrame` に残す。
 
 #### 2.2.4 StartupDialogFrame 整理結果（2026-04-30）
@@ -149,10 +149,11 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 文言は技術用語優先ではなく、「何が変わるか」「次に何をすべきか」が分かる一般ユーザー向け表現を優先する
 - 基本構造:
   - 設定UIは `上部ヘッダー + 左カテゴリナビ + 右詳細ペイン` の 2 カラム構成を標準とする
-  - 上部ヘッダーには `設定` タイトル、導入説明、画面種別を示す badge を置く
+  - 上部ヘッダーには `基本設定` や `初回セットアップ` などの短いタイトルだけを置くことを基本とし、導入説明や画面種別 badge は必要な場合だけ表示する
   - 左カテゴリナビは現在地が一目で分かる選択状態を持たせ、カテゴリ探索の主導線とする
-  - 左カテゴリナビは最低 `188-220px` 幅を目安とし、通常カテゴリと `開発者向け` を見出しで視覚分離する
-  - 右詳細ペインは `ページタイトル / 1文説明 / 設定セクション / フッター操作` の順で構成する
+  - 左カテゴリナビは最低 `188-220px` 幅を目安とし、開始後 compact panel では本文幅を優先してタブ密度を下げる
+  - 右詳細ペインは `ページタイトル / 必要な場合のみ1文説明 / 設定セクション / フッター操作` の順で構成する
+  - page title と card title が同じ意味になる場合は card header を省略し、同じカテゴリ説明を複数階層に出さない
 - カテゴリ設計:
   - 一般ユーザー向けの主要カテゴリは `会話`、`入出力デバイス`、`音声`、`表示`、`接続` とする
   - `詳細設定` は一般ユーザーが必要時のみ触る項目をまとめる
@@ -169,9 +170,10 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - 設定変更と即時アクションを同列に並べず、ページごとの主目的に応じて主ボタンを 1 つ選ぶ
   - 保存方式は即時反映を基本とし、再起動や再接続が必要な設定のみ `次回開始時に反映`、`停止してからもう一度始めると反映` などの補助文を出す
 - フォーム設計:
-  - 説明文は常時長く見せず、見出し直下の 1 文説明と項目ごとの短い補足を基本にする
+  - 説明文は常時長く見せず、画面を見れば分かる案内、レイアウト位置の説明、内部フローの説明は表示しない
+  - ページ説明とカード説明は同じ意味で併用しない。残す説明は、ユーザー判断に必要な補足や再開始タイミングなどに限る
   - 音声デバイス選択は `現在の選択` と `一覧を更新` を `入出力デバイス` にまとめ、どこで探せばよいかを固定化する
-  - 項目量が多いカテゴリは、`使うデバイス`、`前処理`、`開始時のオプション` のようにセクション面を分けて整理する
+  - 項目量が多いカテゴリは、`使うデバイス`、`前処理`、`開始時のオプション` のようにセクション面を分けて整理する。ただし表示対象がないセクションは空カードや空状態文言を出さずに隠す
   - ヘルプは小さな `?` を画面中に散らすより、項目直下の短い説明文または詳細展開に寄せる
 - レイアウト/見た目:
   - カテゴリ単位で過剰なカード分割を行わず、`見出し + フォーム + 区切り線` を基本とする
@@ -718,6 +720,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-05-01 | `TASK-3034` 対応として右上ツールメニューの active state / ARIA / popover 表現を整理。desktop は補助ラベル付き、mobile は icon button 維持とし、設定 / 診断の用途差と現在表示中の panel を menu item から分かるようにした |
 | 2026-05-01 | `TASK-3035` から `TASK-3038` までの右側ツール refine 結果を同期。設定パネルから `開発者向け` カテゴリを一般カテゴリとして扱わず、`接続` 末尾から Debug Console へ handoff する方針、開始後 panel の compact navigation、`simple-vrm` / `vrm360` / `looking-glass-vrm` の Playwright 回帰確認結果を反映 |
 | 2026-05-02 | `TASK-3040` 対応として `OrbitControls` の入力対象を `#sincroCharacterControlLayer` へ分離。Debug Console / Settings / Header / 右側ツール領域は通常 UI layer として扱い、panel 内 wheel や details 開閉のための応急的なイベント遮断を縮退する方針を反映 |
+| 2026-05-07 | `TASK-3042` / `TASK-3043` 対応として、右上ツールボタンをアイコン主体にし、menu item の説明文と状態テキストを削除する方針へ更新。SettingsShell は shell / page / card の説明階層を必要最小限にし、重複説明や空セクションを表示しない方針へ整理 |
 | 2026-05-07 | `TASK-3044` 対応として、通常 UI から `enableTalk` / `enableInspector` の開始時切替を非露出化。開始時設定は明示 capability がある項目だけ表示し、Looking Glass の反映タイミング文言は会話接続と混ざらない `停止後に反映` / `次回起動で反映` へ整理 |
 
 ## 15. 参照資料
