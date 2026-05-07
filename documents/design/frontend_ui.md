@@ -464,6 +464,8 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
   - `sincroConfigurationDialog.css` は legacy fallback と互換維持に限定し、modern page から読み込まない。
 - 後続移行の前提:
   - 新しい設定 UI を追加する時は、まず `SettingsShell` 既存 token を再利用し、足りない値だけ `uiFoundation.css` へ追加する
+  - 起動前 dialog と開始後設定パネルで同じ意味を持つ設定項目は `src/react/settings-fields/SettingsFields.tsx` の field / field group を優先して使う。`DialogSettingsFormSections.tsx` と `SettingsSections.tsx` は、カテゴリ内 layout、密度、見出し、footer、VRM file 選択、Looking Glass 固有操作など画面固有の責務に絞る
+  - `settingHelp`、device selector の hint 生成、選択 device id の正規化は settings field 層で共有し、画面固有の言い回しや余白だけ props で差し替える
   - legacy CSS を修正する場合も、`modern component CSS` の見た目責務を取り戻さない
   - 互換保険としての `!important` は原則追加しない。必要なら layer 順序か責務境界の崩れを先に見直す
 
@@ -722,6 +724,7 @@ SincromisorフロントエンドのUI層とアプリ制御層（初期化、RTC�
 | 2026-05-02 | `TASK-3040` 対応として `OrbitControls` の入力対象を `#sincroCharacterControlLayer` へ分離。Debug Console / Settings / Header / 右側ツール領域は通常 UI layer として扱い、panel 内 wheel や details 開閉のための応急的なイベント遮断を縮退する方針を反映 |
 | 2026-05-07 | `TASK-3042` / `TASK-3043` 対応として、右上ツールボタンをアイコン主体にし、menu item の説明文と状態テキストを削除する方針へ更新。SettingsShell は shell / page / card の説明階層を必要最小限にし、重複説明や空セクションを表示しない方針へ整理 |
 | 2026-05-07 | `TASK-3044` 対応として、通常 UI から `enableTalk` / `enableInspector` の開始時切替を非露出化。開始時設定は明示 capability がある項目だけ表示し、Looking Glass の反映タイミング文言は会話接続と混ざらない `停止後に反映` / `次回起動で反映` へ整理 |
+| 2026-05-07 | `TASK-3046` 対応として `settings-fields` 層を追加し、起動前 dialog と開始後設定パネルの title / talk mode / device selector / audio processing / character display / startup behavior field group を共有。画面別 section は layout と画面固有導線に寄せる方針へ更新 |
 
 ## 15. 参照資料
 
