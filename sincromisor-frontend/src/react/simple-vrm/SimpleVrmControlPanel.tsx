@@ -9,6 +9,7 @@ import {
 import { panelStyles } from "./panelStyles";
 import { useSimpleVrmPanelState } from "./useSimpleVrmPanelState";
 import { SettingsShell, SettingsStatusCard, SettingsSummaryGrid } from "../settings-shell/SettingsShell";
+import { settingsPageCopy } from "../settings-shell/settingsPageCopy";
 
 type SimpleVrmControlPanelProps = {
     title?: string;
@@ -101,8 +102,8 @@ export function SimpleVrmControlPanel({
                 pages={[
                     ...(isLookingGlassFocused ? [{
                         id: "looking-glass",
-                        label: "Looking Glass",
-                        title: "Looking Glass",
+                        label: settingsPageCopy.lookingGlass.label,
+                        title: settingsPageCopy.lookingGlass.title,
                         content: (
                             <>
                                 <SettingsSummaryGrid>
@@ -156,11 +157,11 @@ export function SimpleVrmControlPanel({
                     }] : []),
                     ...(!isLookingGlassFocused ? [{
                         id: "conversation",
-                        label: "会話",
-                        title: "会話",
+                        label: settingsPageCopy.conversation.label,
+                        title: settingsPageCopy.conversation.title,
                         content: (
                             <SettingsCategorySection
-                                title="会話"
+                                title={settingsPageCopy.conversation.sectionTitle}
                             >
                                 <BasicSettingsSection
                                     settings={settings}
@@ -176,11 +177,11 @@ export function SimpleVrmControlPanel({
                     }] : []),
                     {
                         id: "devices",
-                        label: "デバイス",
-                        title: "マイクとカメラ",
+                        label: settingsPageCopy.devices.label,
+                        title: settingsPageCopy.devices.title,
                         content: (
                             <SettingsCategorySection
-                                title="デバイス"
+                                title={settingsPageCopy.devices.sectionTitle}
                             >
                                 <MicSettingsSection
                                     settings={settings}
@@ -210,11 +211,11 @@ export function SimpleVrmControlPanel({
                     },
                     {
                         id: "audio",
-                        label: "音声",
-                        title: "マイク補正",
-                        description: "ノイズや反響に合わせて声の拾い方を調整します。",
+                        label: settingsPageCopy.audio.label,
+                        title: settingsPageCopy.audio.title,
+                        description: settingsPageCopy.audio.description,
                         content: (
-                            <SettingsCategorySection>
+                            <SettingsCategorySection title={settingsPageCopy.audio.sectionTitle}>
                                 <MicSettingsSection
                                     settings={settings}
                                     uiState={settingsUiState}
@@ -231,10 +232,10 @@ export function SimpleVrmControlPanel({
                     },
                     {
                         id: "display",
-                        label: "表示",
-                        title: "キャラクターとアニメーション",
+                        label: settingsPageCopy.display.label,
+                        title: settingsPageCopy.display.title,
                         content: (
-                            <SettingsCategorySection>
+                            <SettingsCategorySection title={settingsPageCopy.display.sectionTitle}>
                                 <CharacterSettingsSection
                                     settings={settings}
                                     uiState={settingsUiState}
@@ -252,14 +253,14 @@ export function SimpleVrmControlPanel({
                     },
                     {
                         id: "connection",
-                        label: "接続",
-                        title: "接続",
-                        description: "接続状態の確認と開始・停止",
+                        label: settingsPageCopy.connection.label,
+                        title: settingsPageCopy.connection.title,
+                        description: settingsPageCopy.connection.description,
                         content: (
                             <>
                                 {hasStartupOptions ? (
                                     <SettingsCategorySection
-                                        title="開始時の設定"
+                                        title={settingsPageCopy.connection.startupSectionTitle}
                                     >
                                         <StartupSettingsSection
                                             settings={settings}
@@ -273,7 +274,7 @@ export function SimpleVrmControlPanel({
                                     </SettingsCategorySection>
                                 ) : null}
                                 <SettingsCategorySection
-                                    title="接続状態"
+                                    title={settingsPageCopy.connection.statusSectionTitle}
                                 >
                                     <div style={{ display: "grid", gap: "14px" }}>
                                         <div

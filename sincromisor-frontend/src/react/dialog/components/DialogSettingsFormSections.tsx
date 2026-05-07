@@ -154,12 +154,11 @@ export function DialogMicSettingsSection({
     uiState,
     onApplySettings,
     showSectionTitle = true,
-}: CommonProps & { showSectionTitle?: boolean }) {
+    sectionTitle = showSectionTitle ? "マイク設定" : "マイクの聞こえ方",
+}: CommonProps & { showSectionTitle?: boolean; sectionTitle?: string }) {
     return (
         <div className="settingsPrimitiveFieldStack">
-            <SettingsSubsectionTitle>
-                {showSectionTitle ? "マイク設定" : "マイクの聞こえ方"}
-            </SettingsSubsectionTitle>
+            {sectionTitle ? <SettingsSubsectionTitle>{sectionTitle}</SettingsSubsectionTitle> : null}
             <AudioProcessingToggles
                 settings={settings}
                 uiState={uiState}

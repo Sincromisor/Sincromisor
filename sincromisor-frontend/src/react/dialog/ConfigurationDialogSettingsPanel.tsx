@@ -1,6 +1,7 @@
 import type { ChangeEvent, DragEvent } from "react";
 import { useRef } from "react";
 import { SettingsShell } from "../settings-shell/SettingsShell";
+import { settingsPageCopy } from "../settings-shell/settingsPageCopy";
 import { useConfigurationDialogSettingsState } from "./useConfigurationDialogSettingsState";
 import "./configurationDialogSettings.css";
 import {
@@ -168,11 +169,11 @@ export function ConfigurationDialogSettingsPanel() {
                 pages={[
                     {
                         id: "conversation",
-                        label: "会話",
-                        title: "会話",
+                        label: settingsPageCopy.conversation.label,
+                        title: settingsPageCopy.conversation.title,
                         content: (
                             <DialogSettingsCategory
-                                title="会話"
+                                title={settingsPageCopy.conversation.sectionTitle}
                             >
                                 <DialogBasicSettingsSection
                                     settings={settings}
@@ -186,11 +187,11 @@ export function ConfigurationDialogSettingsPanel() {
                     },
                     {
                         id: "devices",
-                        label: "デバイス",
-                        title: "マイクとカメラ",
+                        label: settingsPageCopy.devices.label,
+                        title: settingsPageCopy.devices.title,
                         content: (
                             <DialogSettingsCategory
-                                title="デバイス"
+                                title={settingsPageCopy.devices.sectionTitle}
                             >
                                 <DialogDeviceSettingsSection
                                     settings={settings}
@@ -208,9 +209,9 @@ export function ConfigurationDialogSettingsPanel() {
                     },
                     {
                         id: "audio",
-                        label: "音声",
-                        title: "マイク補正",
-                        description: "ノイズや反響に合わせて声の拾い方を調整します。",
+                        label: settingsPageCopy.audio.label,
+                        title: settingsPageCopy.audio.title,
+                        description: settingsPageCopy.audio.description,
                         content: (
                             <DialogSettingsCategory>
                                 <DialogMicSettingsSection
@@ -218,18 +219,19 @@ export function ConfigurationDialogSettingsPanel() {
                                     uiState={settingsUiState}
                                     onApplySettings={applySettings}
                                     showSectionTitle={false}
+                                    sectionTitle={settingsPageCopy.audio.sectionTitle}
                                 />
                             </DialogSettingsCategory>
                         ),
                     },
                     {
                         id: "display",
-                        label: "表示",
-                        title: "キャラクター表示とVRMモデル",
+                        label: settingsPageCopy.display.label,
+                        title: settingsPageCopy.display.title,
                         content: (
                             <>
                                 <DialogSettingsCategory
-                                    title="キャラクター表示"
+                                    title={settingsPageCopy.display.sectionTitle}
                                 >
                                     <DialogCharacterSettingsSection
                                         settings={settings}
@@ -240,7 +242,7 @@ export function ConfigurationDialogSettingsPanel() {
                                     />
                                 </DialogSettingsCategory>
                                 <DialogSettingsCategory
-                                    title="VRM モデル"
+                                    title={settingsPageCopy.display.vrmSectionTitle}
                                 >
                                     <VrmModelSection onOpenFilePicker={handleOpenVrmFilePicker} />
                                     <DialogVrmDropStatusCard uiState={dialogVrmUiState} />
@@ -250,13 +252,13 @@ export function ConfigurationDialogSettingsPanel() {
                     },
                     {
                         id: "connection",
-                        label: "接続",
-                        title: "接続状態",
+                        label: settingsPageCopy.connection.label,
+                        title: settingsPageCopy.connection.title,
                         content: (
                             <>
                                 {hasStartupOptions ? (
                                     <DialogSettingsCategory
-                                        title="開始時の設定"
+                                        title={settingsPageCopy.connection.startupSectionTitle}
                                     >
                                         <DialogStartupSettingsSection
                                             settings={settings}
@@ -270,7 +272,7 @@ export function ConfigurationDialogSettingsPanel() {
                                     </DialogSettingsCategory>
                                 ) : null}
                                 <DialogSettingsCategory
-                                    title="接続状態"
+                                    title={settingsPageCopy.connection.statusSectionTitle}
                                 >
                                     <div className="configurationDialogReactSettingsPanel__connectionPage">
                                         <div className="configurationDialogReactSettingsPanel__statusPanel">
