@@ -58,13 +58,26 @@
         --sincro-color-surface-soft-strong: rgba(255, 255, 255, 0.06);
         --sincro-color-surface-soft-stronger: rgba(255, 255, 255, 0.08);
         --sincro-color-select-option-background: #1e2230;
+        --sincro-color-overlay-panel-border: hsl(186deg 65% 52% / 30%);
+        --sincro-surface-overlay-frame:
+            radial-gradient(circle at 18% -10%, hsl(184deg 84% 42% / 20%), transparent 35%),
+            radial-gradient(circle at 100% 0%, hsl(222deg 90% 62% / 14%), transparent 30%),
+            linear-gradient(145deg, hsl(218deg 34% 9% / 96%), hsl(224deg 27% 6% / 95%));
+        --sincro-surface-overlay-panel: hsl(215deg 28% 13% / 94%);
+        --sincro-surface-overlay-panel-soft: hsl(215deg 25% 18% / 92%);
         --sincro-surface-panel: linear-gradient(180deg, rgba(29, 31, 39, 0.96), rgba(22, 24, 31, 0.94));
         --sincro-surface-panel-strong: linear-gradient(180deg, rgba(39, 44, 57, 0.92), rgba(30, 33, 42, 0.9));
         --sincro-surface-card: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.016));
         --sincro-surface-card-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.018));
-        --sincro-surface-dialog: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)), rgba(18, 20, 26, 0.94);
+        --sincro-surface-dialog: var(--sincro-surface-overlay-frame);
         --sincro-surface-nav-active: linear-gradient(180deg, rgba(92, 124, 191, 0.34), rgba(49, 58, 80, 0.68));
         --sincro-surface-dialog-backdrop: radial-gradient(circle at 20% 10%, rgba(89, 165, 229, 0.16), transparent 30%), rgba(6, 10, 16, 0.72);
+        --sincro-overlay-tab-accent: hsl(186deg 82% 54% / 78%);
+        --sincro-overlay-tab-min-height: 38px;
+        --sincro-overlay-tab-min-width: 88px;
+        --sincro-overlay-tab-gap: var(--sincro-space-100);
+        --sincro-overlay-tab-padding-block: var(--sincro-space-250);
+        --sincro-overlay-tab-padding-inline: var(--sincro-space-200);
 
         /* Shadow */
         --sincro-shadow-panel: 0 18px 36px rgba(0, 0, 0, 0.18);

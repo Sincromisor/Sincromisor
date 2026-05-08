@@ -13,8 +13,10 @@
         --overlay-close-button-focus-ring: 0 0 0 3px hsl(190deg 90% 66% / 34%);
         --right-tool-frame-top: var(--sincro-right-tool-panel-top, clamp(70px, 10dvh, 96px));
         --right-tool-frame-side: var(--sincro-main-overlay-side, 12px);
+        --right-tool-frame-visual-offset-top: 34px;
+        --right-tool-frame-surface-offset-top: 0px;
         --right-tool-frame-z-index: 5;
-        --right-tool-frame-border: hsl(186deg 65% 52% / 30%);
+        --right-tool-frame-border: var(--sincro-color-overlay-panel-border, hsl(186deg 65% 52% / 30%));
         --right-tool-frame-shadow: 0 14px 44px hsl(220deg 50% 3% / 55%);
         --right-tool-frame-scrollbar-track: hsl(216deg 26% 12% / 78%);
         --right-tool-frame-scrollbar-thumb: linear-gradient(180deg, hsl(186deg 82% 54% / 85%), hsl(204deg 72% 46% / 80%));
@@ -94,26 +96,29 @@
 
     .rightToolFrame__surface {
         position: absolute;
-        top: var(--right-tool-frame-top);
+        top: calc(var(--right-tool-frame-top) + var(--right-tool-frame-surface-offset-top));
         right: var(--right-tool-frame-side);
         width: min(var(--right-tool-frame-width, 560px), calc(100vw - (var(--right-tool-frame-side) * 2)));
-        max-height: calc(100dvh - var(--right-tool-frame-top) - var(--right-tool-frame-side));
+        max-height: calc(
+            100dvh
+            - var(--right-tool-frame-top)
+            - var(--right-tool-frame-side)
+            - var(--right-tool-frame-surface-offset-top)
+        );
         box-sizing: border-box;
         border: 1px solid var(--right-tool-frame-border);
         border-radius: 12px;
         box-shadow: var(--right-tool-frame-shadow);
         color: var(--right-tool-frame-text, var(--sincro-color-overlay-text-primary, hsl(194deg 45% 95%)));
-        background: var(--right-tool-frame-background, linear-gradient(145deg, hsl(218deg 34% 9% / 96%), hsl(224deg 27% 6% / 95%)));
+        background: var(--right-tool-frame-background, var(--sincro-surface-overlay-frame, linear-gradient(145deg, hsl(218deg 34% 9% / 96%), hsl(224deg 27% 6% / 95%))));
         pointer-events: auto;
         overflow: hidden;
     }
 
     .rightToolFrame--debug {
         --right-tool-frame-width: 1120px;
-        --right-tool-frame-background:
-            radial-gradient(circle at 18% -10%, hsl(184deg 84% 42% / 20%), transparent 35%),
-            radial-gradient(circle at 100% 0%, hsl(222deg 90% 62% / 14%), transparent 30%),
-            linear-gradient(145deg, hsl(218deg 34% 9% / 96%), hsl(224deg 27% 6% / 95%));
+        --right-tool-frame-surface-offset-top: var(--right-tool-frame-visual-offset-top);
+        --right-tool-frame-background: var(--sincro-surface-overlay-frame);
     }
 
     .rightToolFrame--settings {
@@ -124,7 +129,7 @@
     }
 
     .rightToolFrame--settings .rightToolFrame__chrome {
-        top: 46px;
+        top: calc(var(--right-tool-frame-visual-offset-top) + 12px);
     }
 
     .rightToolFrame__chrome {
@@ -171,7 +176,8 @@
     }
 
     .rightToolFrame--settings .rightToolFrame__scroll {
-        padding-top: 34px;
+        /* 設定パネル自体が surface を描くため、外枠ではなく中身の表示面を共通基準まで下げる。 */
+        padding-top: var(--right-tool-frame-visual-offset-top);
         overflow: visible;
     }
 

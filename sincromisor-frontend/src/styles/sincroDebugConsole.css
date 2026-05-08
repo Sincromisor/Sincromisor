@@ -152,9 +152,9 @@ button#debugConsoleToggle {
 }
 
 div#debugConsole {
-    --debug-panel-bg: hsl(215deg 28% 13% / 94%);
-    --debug-panel-bg-soft: hsl(215deg 25% 18% / 92%);
-    --debug-panel-border: hsl(186deg 65% 52% / 30%);
+    --debug-panel-bg: var(--sincro-surface-overlay-panel);
+    --debug-panel-bg-soft: var(--sincro-surface-overlay-panel-soft);
+    --debug-panel-border: var(--sincro-color-overlay-panel-border);
     --debug-text-strong: hsl(194deg 45% 95%);
     --debug-text-muted: hsl(200deg 25% 80%);
     --debug-accent: hsl(186deg 82% 54%);
@@ -186,11 +186,8 @@ div#debugConsole .debugConsoleHeader {
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    padding: 12px 58px 12px 14px;
-    border: 1px solid var(--debug-panel-border);
-    border-radius: 12px;
-    background: var(--debug-panel-bg);
-    box-shadow: 0 6px 24px hsl(220deg 50% 4% / 40%);
+    padding: 10px calc(var(--overlay-close-button-size, 38px) + 26px) 8px 10px;
+    margin-right: calc(var(--overlay-close-button-size, 38px) + 16px);
 }
 
 div#debugConsole .debugConsoleTitleBox h2 {
@@ -271,7 +268,7 @@ div#sincroReactSettingsPanelRoot .sincroControlPanel *::-webkit-scrollbar-thumb:
     );
 }
 
-div#debugConsole button:not(.overlayCloseButton) {
+div#debugConsole button:not(.overlayCloseButton):not(.integratedTabs__tab) {
     border: 1px solid hsl(190deg 60% 60% / 40%);
     color: var(--debug-text-strong);
     background: linear-gradient(180deg, hsl(208deg 45% 24%), hsl(208deg 45% 18%));
@@ -280,7 +277,7 @@ div#debugConsole button:not(.overlayCloseButton) {
     cursor: pointer;
 }
 
-div#debugConsole button:not(.overlayCloseButton):hover {
+div#debugConsole button:not(.overlayCloseButton):not(.integratedTabs__tab):hover {
     background: linear-gradient(180deg, hsl(189deg 60% 31%), hsl(204deg 52% 21%));
 }
 
@@ -730,19 +727,18 @@ div#debugConsole audio#rtcAudio {
 }
 
 div#debugConsole .debugConsoleTabs {
-    --integrated-tabs-surface: var(--debug-panel-bg);
+    --integrated-tabs-surface: var(--debug-panel-bg-soft);
     --integrated-tabs-border: var(--debug-panel-border);
-    --integrated-tabs-accent: hsl(186deg 82% 54% / 78%);
-    --integrated-tabs-min-width: 96px;
+    --integrated-tabs-accent: var(--sincro-overlay-tab-accent);
+    --integrated-tabs-min-width: var(--sincro-overlay-tab-min-width);
     display: grid;
-    gap: 0;
     grid-area: tabs;
-    margin-top: 12px;
+    gap: var(--sincro-space-250, 10px);
+    padding: 0 var(--sincro-space-200, 8px);
+    margin-top: var(--sincro-space-250, 10px);
 }
 
 div#debugConsole .debugConsoleTabs .integratedTabs__tab {
-    border-radius: var(--sincro-radius-300, 10px) var(--sincro-radius-300, 10px) 0 0;
-    font-size: 11px;
     white-space: nowrap;
 }
 
@@ -764,7 +760,7 @@ div#debugConsole .debugConsoleTabs .integratedTabs__tab.is-active {
     }
 
     div#debugConsole .debugConsoleHeader {
-        padding: 10px 56px 10px 10px;
+        padding: 8px calc(var(--overlay-close-button-size, 38px) + 24px) 8px 8px;
     }
 
     div#debugConsole .debugConsoleActions {
