@@ -25,6 +25,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `FaceEmotionController` は `text_ch` の `ChatMessage.expression_code` を受けて VRM感情プリセットを駆動する。
   - `HeadBoneController` は `CharacterGaze` の鼻座標から首向きを更新し、未検出時はカメラ追従にフォールバックする。
   - `CharacterBehaviorState` は VAD、顔検出、text/telop、感情コードを集約し、後続モーションが同じ snapshot を参照できるようにする。
+  - `CharacterMotionOrchestrator` は呼吸・重心移動・肩周りの idle motion を毎フレーム適用し、腕/脚 controller は同じ motion config の時間係数を使って低振幅の手首・肘・足先揺れを足す。
   - `CharacterGaze` は MediaPipe FaceDetector を `public/mediapipe-wasm` から読み込み、検出状態で自動ミュート連動も行う。
 
 ## 3. 背景
@@ -105,6 +106,8 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `FaceMorphController`: `aa/ih/ou/ee/oh/blink` のExpression制御
   - `FaceEmotionController`: `ChatMessage.expression_code` を `relaxed/happy/sad/angry/surprised` にマップし、短時間アニメーションで適用
   - `CharacterBehaviorState`: VAD、顔検出、text/telop、感情コードを `idle/attending/user_speaking/thinking/ai_speaking/face_lost/error_or_disconnected` の対話状態 snapshot へ集約
+  - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、呼吸・hips重心移動・spine/chest/shoulder の idle offset を適用
+  - `CharacterMotionConfig`: idle motion の周期・振幅を集約し、腕/脚/胴体 controller の `performance.now()` 直参照を避ける
   - `CharacterGaze`: 顔キーポイント追跡、視線角推定、arrive/leaveイベント通知
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
@@ -113,6 +116,8 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/HeadBoneController.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceMorphController.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceEmotionController.ts`
+  - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterMotionOrchestrator.ts`
+  - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterMotionConfig.ts`
   - `sincromisor-frontend/src/ts/CharacterGaze/CharacterGaze.ts`
 - 変更時に同時確認が必要なファイル:
   - 口形ロジック変更: `FaceMorphController.ts` と `TalkManager.ts`
@@ -158,6 +163,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - telop受信 -> `TalkManager.currentMora()` 更新 -> `FaceMorphController` が口形適用
   - text受信（chat mode） -> `TalkManager` イベント通知 -> `FaceEmotionController` が感情表情を適用
   - VAD/顔検出/text/telop受信 -> `CharacterBehaviorState` に集約 -> `VRMCharacterManager.update()` が毎フレーム snapshot 更新
+  - `VRMCharacterManager.update()` -> `ArmBoneController` / `LegBoneController` が基準姿勢へ微小 idle offset を適用 -> `CharacterMotionOrchestrator` が hips/spine/chest/shoulder の呼吸・重心 offset を適用
   - 顔検出 -> `CharacterGaze` 更新 -> `HeadBoneController` に反映
 - 異常系フロー:
   - VRMロード失敗 -> 例外出力（表示不可）
@@ -194,6 +200,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - 2. `characterGazeVideo` に映像が来ているか
   - 3. `faceX/faceY` が更新されるか
   - 4. `telop_ch` 受信時に口形が変化するか
+  - 5. backend 未起動・カメラ/マイクOFFでも、胸/肩/腕/手首の idle motion が継続するか
 - よくある失敗と対処:
   - wasm未配置で顔認識不可
   - VRM表情キー未対応で口形が動かない
@@ -234,6 +241,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - 既知課題:
   - 口形は母音中心で感情表現が不足（感情表情は追加済みだがVRM個体差により見え方の差が大きい）
   - 顔未検出時のニュートラル復帰は鼻中心で不自然な場合がある
+  - idle motion はモデルごとの骨の向き・肩幅・衣装形状で見え方が変わるため、複数VRMで振幅調整が必要になる可能性がある
   - Looking Glass (`looking-glass-vrm`) では、`@lookingglass/webxr` の再開後セッションで mouse/wheel 操作が失効する環境がある（2026-02-23時点）
 - 技術的負債:
   - Bone制御パラメータが経験則で、モデル差異に弱い
@@ -283,6 +291,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 | 2026-02-23 | chatモード感情表情（`FaceEmotionController`）と `^N`/`expression_code` 連動、口パク競合軽減方針を追記 |
 | 2026-02-23 | Looking Glass 専用シーン化、展示向け床テクスチャ/視点補正、終了後レイアウト復旧と再開時入力回復の暫定方針を追記 |
 | 2026-05-08 | `CharacterBehaviorState` によるVAD/顔検出/text/telop/感情コードの集約と snapshot API を追記 |
+| 2026-05-08 | `CharacterMotionOrchestrator` / `CharacterMotionConfig` による呼吸・重心移動・上半身 idle motion と、腕/脚 controller の低振幅 offset 化を追記 |
 
 ## 15. 参照資料
 
@@ -292,6 +301,8 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - 参照実装:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterBehaviorState.ts`
+  - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterMotionOrchestrator.ts`
+  - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterMotionConfig.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceMorphController.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceEmotionController.ts`
   - `sincromisor-frontend/src/ts/CharacterGaze/CharacterGaze.ts`

@@ -1,6 +1,7 @@
 import { VRM, VRMHumanBoneName } from '@pixiv/three-vrm';
 import { Object3D } from 'three/src/core/Object3D.js';
 import { MathUtils } from 'three/src/math/MathUtils.js';
+import { CHARACTER_IDLE_MOTION_CONFIG, sineWave } from './CharacterMotionConfig';
 
 /*
     Humanoid bones: https://docs.unity3d.com/ja/2019.4/ScriptReference/HumanBodyBones.html
@@ -15,65 +16,82 @@ export class ArmBoneController {
         this.vrm = vrm;
     }
 
-    // 毎フレーム、腕の待機ポーズと微小揺れを適用する。
-    update(): void {
-        const leftUpperArmNode: Object3D = this.getNode('leftUpperArm');
-        const rightUpperArmNode: Object3D = this.getNode('rightUpperArm');
-        const leftLowerArmNode: Object3D = this.getNode('leftLowerArm');
-        const rightLowerArmNode: Object3D = this.getNode('rightLowerArm');
+    // 毎フレーム、腕の基準待機ポーズへ低振幅の idle offset を足して適用する。
+    update(elapsedSeconds: number): void {
+        const armSway = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.arms.swayPeriodSeconds, Math.PI / 5);
+        const elbowSway = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.arms.elbowPeriodSeconds, Math.PI / 2);
+        const wristSway = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.arms.wristPeriodSeconds, Math.PI / 9);
 
-        /* 揺れの頻度(Hz) */
-        const yure_freq:number = 0.5;
-        /* 振幅(1/yure_ampl) */
-        const yure_ampl: number = 300;
-        /* yure_freq Hzのsin波を作り、-(1/yure_ampl)～(1/yure_ampl)の範囲で揺らす */
-        const yure: number = Math.sin(window.performance.now() / 1000 * yure_freq * Math.PI) / yure_ampl;
+        this.getNode('leftUpperArm')?.rotation.set(
+            MathUtils.degToRad(5),
+            0,
+            MathUtils.degToRad(-75) - armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad,
+        );
+        this.getNode('rightUpperArm')?.rotation.set(
+            MathUtils.degToRad(5),
+            0,
+            MathUtils.degToRad(75) + armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad,
+        );
+        this.getNode('leftLowerArm')?.rotation.set(
+            0,
+            MathUtils.degToRad(-15) - elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad,
+            MathUtils.degToRad(5),
+        );
+        this.getNode('rightLowerArm')?.rotation.set(
+            0,
+            MathUtils.degToRad(15) + elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad,
+            MathUtils.degToRad(-5),
+        );
 
-        leftUpperArmNode.rotation.set(MathUtils.degToRad(5), 0, MathUtils.degToRad(-75) - yure)
-        rightUpperArmNode.rotation.set(MathUtils.degToRad(5), 0, MathUtils.degToRad(75) + yure);
-        leftLowerArmNode.rotation.set(0, MathUtils.degToRad(-15) - yure, MathUtils.degToRad(5));
-        rightLowerArmNode.rotation.set(0, MathUtils.degToRad(15) + yure, MathUtils.degToRad(-5));
-
-        this.updateLeftHand(this.getNode('leftHand'));
-        this.updateLeftThumb(this.getNode('leftThumbProximal'));
-        this.updateRightHand(this.getNode('rightHand'));
-        this.updateRightThumb(this.getNode('rightThumbProximal'));
+        this.updateLeftHand(this.getNode('leftHand'), wristSway);
+        this.updateLeftThumb(this.getNode('leftThumbProximal'), wristSway);
+        this.updateRightHand(this.getNode('rightHand'), wristSway);
+        this.updateRightThumb(this.getNode('rightThumbProximal'), wristSway);
     }
 
     // 手指は末端まで再帰的に回転を入れて、握り込み気味の形を作る。
-    private updateLeftHand(baseBone: Object3D): void {
-        baseBone.rotation.set(0, 0, -0.2);
-        baseBone.children.forEach((childBone: Object3D) => {
-            this.updateLeftHand(childBone);
-        });
-    }
-
-    private updateLeftThumb(baseBone: Object3D): void {
-        baseBone.rotation.set(0, 0.2, 0);
-        baseBone.children.forEach((childBone: Object3D) => {
-            this.updateLeftThumb(childBone);
-        });
-    }
-
-    private updateRightHand(baseBone: Object3D): void {
-        baseBone.rotation.set(0, 0, 0.2);
-        baseBone.children.forEach((childBone: Object3D) => {
-            this.updateRightHand(childBone);
-        });
-    }
-
-    private updateRightThumb(baseBone: Object3D): void {
-        baseBone.rotation.set(0, -0.2, 0);
-        baseBone.children.forEach((childBone: Object3D) => {
-            this.updateRightThumb(childBone);
-        });
-    }
-
-    private getNode(name: VRMHumanBoneName): Object3D {
-        const node: Object3D | null = this.vrm.humanoid.getNormalizedBoneNode(name);
-        if (node === null) {
-            throw new Error(`bone ${name} not found`);
+    private updateLeftHand(baseBone: Object3D | null, wristSway: number): void {
+        if (!baseBone) {
+            return;
         }
+        baseBone.rotation.set(0, 0, -0.2 - wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.wristSwayRad);
+        baseBone.children.forEach((childBone: Object3D) => {
+            this.updateLeftHand(childBone, wristSway * 0.35);
+        });
+    }
+
+    private updateLeftThumb(baseBone: Object3D | null, wristSway: number): void {
+        if (!baseBone) {
+            return;
+        }
+        baseBone.rotation.set(0, 0.2 + wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.thumbSwayRad, 0);
+        baseBone.children.forEach((childBone: Object3D) => {
+            this.updateLeftThumb(childBone, wristSway * 0.35);
+        });
+    }
+
+    private updateRightHand(baseBone: Object3D | null, wristSway: number): void {
+        if (!baseBone) {
+            return;
+        }
+        baseBone.rotation.set(0, 0, 0.2 + wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.wristSwayRad);
+        baseBone.children.forEach((childBone: Object3D) => {
+            this.updateRightHand(childBone, wristSway * 0.35);
+        });
+    }
+
+    private updateRightThumb(baseBone: Object3D | null, wristSway: number): void {
+        if (!baseBone) {
+            return;
+        }
+        baseBone.rotation.set(0, -0.2 - wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.thumbSwayRad, 0);
+        baseBone.children.forEach((childBone: Object3D) => {
+            this.updateRightThumb(childBone, wristSway * 0.35);
+        });
+    }
+
+    private getNode(name: VRMHumanBoneName): Object3D | null {
+        const node: Object3D | null = this.vrm.humanoid.getNormalizedBoneNode(name);
         return node;
     }
 }
