@@ -28,7 +28,6 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
                                 <img className="headerIconBox__icon" src="../images/icon-system.webp" alt="" />
                             </div>
                             <div id="sincroHeaderBox__textGroup">
-                                <div className="sincroHeaderBox__eyebrow">会話セッション</div>
                                 <div id="sincroHeaderBox__text">Sincromisor</div>
                             </div>
                         </div>

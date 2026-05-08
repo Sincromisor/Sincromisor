@@ -52,16 +52,7 @@ div#sincroHeaderBox {
     & div#sincroHeaderBox__textGroup {
         min-width: 0;
         display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    & div.sincroHeaderBox__eyebrow {
-        color: var(--sincro-main-overlay-text-muted, rgba(225, 233, 247, 0.72));
-        font-size: clamp(11px, 1vw, 12px);
-        line-height: 1.1;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        align-items: center;
     }
 
     & div#sincroHeaderBox__text {
@@ -104,11 +95,6 @@ div#sincroHeaderBox {
             width: 32px;
             height: 32px;
             border-radius: 12px;
-        }
-
-        & div.sincroHeaderBox__eyebrow {
-            font-size: 10px;
-            letter-spacing: 0.06em;
         }
 
         & div#sincroHeaderBox__text {
