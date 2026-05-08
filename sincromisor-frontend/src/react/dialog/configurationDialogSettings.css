@@ -249,11 +249,13 @@
 
     .configurationDialogReactSettingsPanel .settingsShell--topNavigation .settingsShell__layout {
         grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(0, 1fr);
+        align-content: start;
         align-items: start;
     }
 
     .configurationDialogReactSettingsPanel .settingsShell--topNavigation .settingsShell__nav {
-        align-self: end;
+        align-self: start;
         padding: 0 var(--sincro-space-250);
     }
 

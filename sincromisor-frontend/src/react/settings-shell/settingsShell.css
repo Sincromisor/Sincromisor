@@ -86,13 +86,15 @@
 
     .settingsShell--topNavigation .settingsShell__layout {
         grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(0, 1fr);
+        align-content: start;
     }
 
     .settingsShell--topNavigation .settingsShell__nav {
         position: static;
         gap: var(--sincro-space-250);
         padding: 0 var(--sincro-space-250);
-        align-self: end;
+        align-self: start;
     }
 
     .settingsShell--topNavigation .settingsShell__nav .integratedTabs__section {
