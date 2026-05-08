@@ -8,6 +8,7 @@ import { ArmBoneController } from './ArmBoneController';
 import { LegBoneController } from './LegBoneController';
 import { FaceMorphController } from './FaceMorphController';
 import { FaceEmotionController } from './FaceEmotionController';
+import { EyeBehaviorController } from './EyeBehaviorController';
 import { CharacterBehaviorSnapshot, CharacterBehaviorState } from './CharacterBehaviorState';
 import { CharacterMotionOrchestrator } from './CharacterMotionOrchestrator';
 import { VRMCamera } from '../VRMScene/VRMCamera';
@@ -68,6 +69,7 @@ export class VRMCharacterManager {
     public motionOrchestrator: CharacterMotionOrchestrator | null = null;
     public mouthMorphController: FaceMorphController | null = null;
     public emotionMorphController: FaceEmotionController | null = null;
+    public eyeBehaviorController: EyeBehaviorController | null = null;
     public characterPosition: Vector3 = new Vector3(0, 0, 0);
     private defaultPosition: Vector3 = new Vector3(0, 0, 0);
     private rootBone: Object3D | null = null;
@@ -127,6 +129,7 @@ export class VRMCharacterManager {
                 if (this.vrm.expressionManager) {
                     this.mouthMorphController = new FaceMorphController(this.vrm.expressionManager);
                     this.emotionMorphController = new FaceEmotionController(this.vrm.expressionManager);
+                    this.eyeBehaviorController = new EyeBehaviorController(this.vrm, this.vrm.expressionManager);
                 }
 
                 VRMUtils.removeUnnecessaryVertices(gltf.scene);
@@ -260,7 +263,8 @@ export class VRMCharacterManager {
         const deltaSeconds = this.clock.getDelta();
         this.motionElapsedSeconds += deltaSeconds;
         this.latestBehaviorSnapshot = this.behaviorState.update();
-        this.headBoneController?.update();
+        this.headBoneController?.update(this.latestBehaviorSnapshot);
+        this.eyeBehaviorController?.update(this.latestBehaviorSnapshot);
         this.armBoneController?.update(this.motionElapsedSeconds);
         this.legBoneController?.update(this.motionElapsedSeconds);
         this.vrm?.update(deltaSeconds);

@@ -6,6 +6,7 @@ import { Object3D } from 'three/src/core/Object3D.js';
 import { CharacterGaze } from '../../CharacterGaze/CharacterGaze';
 import { PerspectiveCamera } from "three/src/cameras/PerspectiveCamera.js";
 import { VRMCamera } from '../VRMScene/VRMCamera';
+import { CharacterBehaviorSnapshot } from './CharacterBehaviorState';
 
 /*
     Humanoid bones
@@ -22,6 +23,7 @@ export class HeadBoneController {
     private vrmCamera: VRMCamera;
     private neckNode: Object3D;
     private characterGaze: CharacterGaze;
+    private lastUpdateAtMs: number | null = null;
 
     constructor(vrm: VRM, vrmCamera: VRMCamera) {
         this.vrm = vrm;
@@ -31,15 +33,25 @@ export class HeadBoneController {
     }
 
     // 毎フレームの首向き更新。検出可否に応じて gaze / camera fallback を切り替える。
-    update(): void {
+    update(snapshot?: CharacterBehaviorSnapshot): void {
         // 顔認識機能の状況を元に、顔認識モードと、カメラの方向を向くモードを切り替える
-        if (this.characterGaze.modelIsLoaded()) {
-            const eyeAngles = this.characterGaze.eyeAngles();
-            // 縦方向
-            const eyeAngleX = eyeAngles[1] * (Math.PI / 180);
-            // 横方向
-            const eyeAngleY = -eyeAngles[0] * (Math.PI / 180);
-            this.setEyeTarget(eyeAngleX, eyeAngleY, 0);
+        if (snapshot?.gaze.trackingEnabled || this.characterGaze.modelIsLoaded()) {
+            const nowMs = snapshot?.nowMs ?? performance.now();
+            const deltaMs = this.lastUpdateAtMs == null
+                ? 1000 / 60
+                : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
+            this.lastUpdateAtMs = nowMs;
+            const targetX = snapshot?.gaze.detected ? snapshot.gaze.targetX : 0.5;
+            const targetY = snapshot?.gaze.detected ? snapshot.gaze.targetY : 0.5;
+            const targetRx = MathUtils.clamp((targetY - 0.5) * MathUtils.degToRad(24), MathUtils.degToRad(-10), MathUtils.degToRad(10));
+            const targetRy = MathUtils.clamp(-(targetX - 0.5) * MathUtils.degToRad(42), MathUtils.degToRad(-18), MathUtils.degToRad(18));
+            const timeConstantMs = snapshot?.gaze.detected ? 260 : 420;
+            const alpha = 1 - Math.exp(-deltaMs / timeConstantMs);
+            this.setEyeTarget(
+                this.rotation.x + (targetRx - this.rotation.x) * alpha,
+                this.rotation.y + (targetRy - this.rotation.y) * alpha,
+                0,
+            );
         } else {
             // カメラの方向を向くモード
             this.setEyeToCamera(this.vrmCamera.camera);
