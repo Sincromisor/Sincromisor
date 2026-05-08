@@ -113,10 +113,32 @@ export class EyeBehaviorController {
             : { x: 0.5, y: 0.5 };
         const aversion = this.updateAversion(snapshot, nowMs);
         const microsaccade = this.updateMicrosaccade(snapshot, nowMs);
+        const aiSpeechOffset = this.aiSpeechEyeOffset(snapshot);
         return {
-            x: MathUtils.clamp(baseTarget.x + aversion.x + microsaccade.x, 0.34, 0.66),
-            y: MathUtils.clamp(baseTarget.y + aversion.y + microsaccade.y, 0.38, 0.62),
+            x: MathUtils.clamp(baseTarget.x + aversion.x + microsaccade.x + aiSpeechOffset.x, 0.34, 0.66),
+            y: MathUtils.clamp(baseTarget.y + aversion.y + microsaccade.y + aiSpeechOffset.y, 0.38, 0.62),
         };
+    }
+
+    private aiSpeechEyeOffset(snapshot: CharacterBehaviorSnapshot): EyeTarget {
+        if (!snapshot.aiSpeech.isSpeaking) {
+            return { x: 0, y: 0 };
+        }
+        switch (snapshot.aiSpeech.expressionCode) {
+            case 2:
+                return { x: -0.012, y: 0.018 };
+            case 3:
+                return { x: 0, y: -0.006 };
+            case 4:
+                return { x: 0.01, y: -0.012 };
+            case 5:
+                return { x: 0, y: -0.02 };
+            case 1:
+                return { x: 0.008, y: -0.004 };
+            case 0:
+            default:
+                return { x: 0, y: -0.004 };
+        }
     }
 
     private updateAversion(snapshot: CharacterBehaviorSnapshot, nowMs: number): EyeTarget {

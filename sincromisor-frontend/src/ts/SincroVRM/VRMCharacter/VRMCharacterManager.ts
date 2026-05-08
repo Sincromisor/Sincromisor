@@ -265,7 +265,7 @@ export class VRMCharacterManager {
         this.latestBehaviorSnapshot = this.behaviorState.update();
         this.headBoneController?.update(this.latestBehaviorSnapshot);
         this.eyeBehaviorController?.update(this.latestBehaviorSnapshot);
-        this.armBoneController?.update(this.motionElapsedSeconds);
+        this.armBoneController?.update(this.motionElapsedSeconds, this.latestBehaviorSnapshot);
         this.legBoneController?.update(this.motionElapsedSeconds);
         this.vrm?.update(deltaSeconds);
         if (this.rootBone) {

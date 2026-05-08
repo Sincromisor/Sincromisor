@@ -24,6 +24,11 @@ export class HeadBoneController {
     private neckNode: Object3D;
     private characterGaze: CharacterGaze;
     private lastUpdateAtMs: number | null = null;
+    private aiSpeechBlend = 0;
+    private lastAiSpeechBeatId = 0;
+    private aiSpeechBeatStartedAtMs: number | null = null;
+    private aiSpeechBeatIntensity = 0;
+    private aiSpeechBeatDirection = 1;
 
     constructor(vrm: VRM, vrmCamera: VRMCamera) {
         this.vrm = vrm;
@@ -34,13 +39,13 @@ export class HeadBoneController {
 
     // 毎フレームの首向き更新。検出可否に応じて gaze / camera fallback を切り替える。
     update(snapshot?: CharacterBehaviorSnapshot): void {
+        const nowMs = snapshot?.nowMs ?? performance.now();
+        const deltaMs = this.lastUpdateAtMs == null
+            ? 1000 / 60
+            : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
+        this.lastUpdateAtMs = nowMs;
         // 顔認識機能の状況を元に、顔認識モードと、カメラの方向を向くモードを切り替える
         if (snapshot?.gaze.trackingEnabled || this.characterGaze.modelIsLoaded()) {
-            const nowMs = snapshot?.nowMs ?? performance.now();
-            const deltaMs = this.lastUpdateAtMs == null
-                ? 1000 / 60
-                : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
-            this.lastUpdateAtMs = nowMs;
             const targetX = snapshot?.gaze.detected ? snapshot.gaze.targetX : 0.5;
             const targetY = snapshot?.gaze.detected ? snapshot.gaze.targetY : 0.5;
             const targetRx = MathUtils.clamp((targetY - 0.5) * MathUtils.degToRad(24), MathUtils.degToRad(-10), MathUtils.degToRad(10));
@@ -55,6 +60,9 @@ export class HeadBoneController {
         } else {
             // カメラの方向を向くモード
             this.setEyeToCamera(this.vrmCamera.camera);
+        }
+        if (snapshot) {
+            this.applyAiSpeechMotion(snapshot, nowMs, deltaMs);
         }
         this.neckNode.position.copy(this.position);
         this.neckNode.rotation.copy(this.rotation);
@@ -99,4 +107,114 @@ export class HeadBoneController {
         }
         return node;
     }
+
+    private applyAiSpeechMotion(snapshot: CharacterBehaviorSnapshot, nowMs: number, deltaMs: number): void {
+        const expression = this.aiSpeechExpressionProfile(snapshot.aiSpeech.expressionCode);
+        const targetBlend = snapshot.aiSpeech.isSpeaking ? expression.intentScale : 0;
+        const timeConstantMs = targetBlend > this.aiSpeechBlend ? 180 : 620;
+        const alpha = 1 - Math.exp(-deltaMs / timeConstantMs);
+        this.aiSpeechBlend += (targetBlend - this.aiSpeechBlend) * alpha;
+
+        if (
+            snapshot.aiSpeech.isSpeaking
+            && snapshot.aiSpeech.beatId !== this.lastAiSpeechBeatId
+            && snapshot.aiSpeech.beatIntensity > 0
+        ) {
+            this.lastAiSpeechBeatId = snapshot.aiSpeech.beatId;
+            this.aiSpeechBeatStartedAtMs = nowMs;
+            this.aiSpeechBeatDirection *= -1;
+            const kindScale = snapshot.aiSpeech.beatKind === 'speech_start'
+                ? 1
+                : snapshot.aiSpeech.beatKind === 'punctuation'
+                    ? 0.5
+                    : 0.74;
+            this.aiSpeechBeatIntensity = MathUtils.clamp(
+                snapshot.aiSpeech.beatIntensity * expression.beatScale * kindScale,
+                0,
+                1,
+            );
+        }
+
+        const beat = this.currentAiSpeechBeat(nowMs, snapshot.aiSpeech.isSpeaking);
+        this.rotation.x += this.aiSpeechBlend * expression.pitchRad
+            - beat * MathUtils.degToRad(1.15);
+        this.rotation.y += beat * this.aiSpeechBeatDirection * MathUtils.degToRad(1.8)
+            + this.aiSpeechBlend * expression.yawRad;
+        this.rotation.z += beat * this.aiSpeechBeatDirection * MathUtils.degToRad(0.75)
+            + this.aiSpeechBlend * expression.rollRad;
+    }
+
+    private currentAiSpeechBeat(nowMs: number, isSpeaking: boolean): number {
+        if (this.aiSpeechBeatStartedAtMs == null) {
+            return 0;
+        }
+        const progress = (nowMs - this.aiSpeechBeatStartedAtMs) / 420;
+        if (progress >= 1 || !isSpeaking) {
+            this.aiSpeechBeatStartedAtMs = null;
+            return 0;
+        }
+        return Math.sin(Math.PI * MathUtils.clamp(progress, 0, 1)) * this.aiSpeechBeatIntensity;
+    }
+
+    private aiSpeechExpressionProfile(expressionCode: number | null): HeadSpeechExpressionProfile {
+        switch (expressionCode) {
+            case 2:
+                return {
+                    intentScale: 0.58,
+                    beatScale: 0.52,
+                    pitchRad: MathUtils.degToRad(1.2),
+                    yawRad: MathUtils.degToRad(-0.25),
+                    rollRad: MathUtils.degToRad(-0.5),
+                };
+            case 3:
+                return {
+                    intentScale: 0.72,
+                    beatScale: 0.62,
+                    pitchRad: MathUtils.degToRad(-0.25),
+                    yawRad: 0,
+                    rollRad: 0,
+                };
+            case 4:
+                return {
+                    intentScale: 0.82,
+                    beatScale: 0.78,
+                    pitchRad: MathUtils.degToRad(-0.75),
+                    yawRad: MathUtils.degToRad(0.2),
+                    rollRad: MathUtils.degToRad(0.45),
+                };
+            case 5:
+                return {
+                    intentScale: 0.86,
+                    beatScale: 0.92,
+                    pitchRad: MathUtils.degToRad(-1.0),
+                    yawRad: 0,
+                    rollRad: 0,
+                };
+            case 1:
+                return {
+                    intentScale: 0.5,
+                    beatScale: 0.42,
+                    pitchRad: MathUtils.degToRad(-0.2),
+                    yawRad: MathUtils.degToRad(0.12),
+                    rollRad: MathUtils.degToRad(0.28),
+                };
+            case 0:
+            default:
+                return {
+                    intentScale: 0.52,
+                    beatScale: 0.46,
+                    pitchRad: MathUtils.degToRad(-0.25),
+                    yawRad: 0,
+                    rollRad: 0,
+                };
+        }
+    }
 }
+
+type HeadSpeechExpressionProfile = {
+    intentScale: number;
+    beatScale: number;
+    pitchRad: number;
+    yawRad: number;
+    rollRad: number;
+};
