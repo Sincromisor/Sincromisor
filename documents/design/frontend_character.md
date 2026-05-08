@@ -6,7 +6,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 
 - ドキュメントパス: `documents/design/frontend_character.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-05-08
+- 最終更新日: 2026-05-09
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -27,6 +27,8 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `CharacterBehaviorState` は VAD、顔検出、text/telop、感情コードを集約し、後続モーションが同じ snapshot を参照できるようにする。
   - `CharacterMotionOrchestrator` は呼吸・重心移動・肩周りの idle motion を毎フレーム適用し、腕/脚 controller は同じ motion config の時間係数を使って低振幅の手首・肘・足先揺れを足す。
   - AI発話中は `telop_ch` から抽出した speech beat と `expression_code` を `CharacterBehaviorSnapshot.aiSpeech` に集約し、首・目線・上半身・腕の小さな gesture を同期する。
+  - モーション強度は `CharacterMotionConfig` で抑制し、首/目線/上半身/腕が同時に最大化しないよう、AI発話 posture と beat gesture を低振幅・長めの easing で重ねる。
+  - neck、eye、arm、leg、mouth expression はVRM個体差で欠損する可能性があるため任意要素として扱い、表現できない部位は例外停止ではなく無効化または近いボーンへフォールバックする。
   - `CharacterGaze` は MediaPipe FaceDetector を `public/mediapipe-wasm` から読み込み、検出状態で自動ミュート連動も行う。
 
 ## 3. 背景
@@ -104,14 +106,14 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - コンポーネントごとの責務:
   - `VRMScene`: renderer/camera/light初期化、リサイズ追従、描画ループ管理
   - `VRMCharacterManager`: GLTFLoader+VRMLoaderPluginでVRM読込、コントローラ初期化
-  - `HeadBoneController`: `CharacterBehaviorSnapshot.gaze` またはCamera方向に首回転を更新。目線が先行するよう、顔検出座標へ遅めに追従し、AI発話中は感情別の小さな nod/yaw/roll offset を重ねる
-  - `FaceMorphController`: `aa/ih/ou/ee/oh` のExpression制御
+  - `HeadBoneController`: `CharacterBehaviorSnapshot.gaze` またはCamera方向に首回転を更新。`neck` を優先して頭部回転を適用し、欠損時は `head` / `upperChest` / `chest` / `spine` の順で近い正規化ボーンへフォールバックする。目線が先行するよう顔検出座標へ遅めに追従し、AI発話中は感情別の小さな nod/yaw/roll offset を重ねる。該当ボーンが無い場合は頭部制御だけ無効化する
+  - `FaceMorphController`: `aa/ih/ou/ee/oh` のExpression制御。存在する mouth expression だけをリセット/駆動し、未実装プリセットでは口形制御を安全にスキップする
   - `FaceEmotionController`: `ChatMessage.expression_code` を `relaxed/happy/sad/angry/surprised` にマップし、短時間アニメーションで適用
   - `EyeBehaviorController`: VRM標準 `lookLeft/lookRight/lookUp/lookDown` expression を優先して目線を制御し、未実装モデルでは `leftEye/rightEye` ボーンへフォールバックする。対話状態に応じたblink schedule、考え中の短い視線外し、低振幅microsaccade、AI発話中の感情別視線offset、`surprised` 中のblink抑制を扱う
   - `CharacterBehaviorState`: VAD、顔検出、text/telop、感情コードを `idle/attending/user_speaking/thinking/ai_speaking/face_lost/error_or_disconnected` の対話状態 snapshot へ集約。VAD onset debounce、発話 hold、発話時間を持ち、短いノイズを聞き姿勢・相槌 trigger へ直結させない。AI発話は `new_text`、`speech_id`、句読点、mora長、一定間隔から `speech_start/cadence/phrase/punctuation` の beat に間引く
   - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、呼吸・hips重心移動・spine/chest/shoulder の idle offset、VAD連動の聞き姿勢、発話終了後の小さな相槌 nod、AI発話中の感情別姿勢と beat gesture を適用
   - `ArmBoneController`: idleの腕・肘・手首揺れに、`CharacterBehaviorSnapshot.aiSpeech.beatId` 由来の短い片腕gestureを重ねる。左右を交互に主役化し、発話開始・文節・句読点で強度を変える
-  - `CharacterMotionConfig`: idle/listening motion の周期・振幅を集約し、腕/脚/胴体 controller の `performance.now()` 直参照を避ける
+  - `CharacterMotionConfig`: idle/listening/AI発話 motion の周期・振幅・easing を集約し、腕/脚/胴体 controller の `performance.now()` 直参照を避ける。AI発話中は posture blend を控えめにし、beat duration を長めにして首・肩・腕の同時ピークを避ける
   - `CharacterGaze`: 顔キーポイント追跡、視線角推定、arrive/leaveイベント通知
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
@@ -231,6 +233,9 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 
 - テスト観点:
   - VRM表示、首追従、口形同期、まばたき、自動ミュート
+  - 待機、ユーザー発話、考え中、AI発話の各状態で首・目線・上半身・腕・表情が競合して破綻しないこと
+  - neck/eye/mouth/arm/leg の一部ボーンまたは expression がないVRMでも例外停止しないこと
+  - simple-vrm desktop/mobile でキャラクター motion が Debug Console / Settings / chat / telop の操作と視認性を妨げないこと
 - 単体テスト:
   - 現状は未整備
 - 結合テスト:
@@ -241,6 +246,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - 長時間（30分以上）描画でメモリ増加とFPS劣化を観察
 - 受け入れ条件:
   - Start後にVRM描画が継続し、顔検出と口形同期が目視確認できる
+  - backend 未起動、カメラOFF、マイクOFFでも idle motion が継続し、UI操作を阻害しない
 
 ## 12. 既知課題・リスク
 
@@ -258,8 +264,9 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - AI発話中gestureは汎用ボーン制御のため、VRM個体差により腕・肩・首の見え方が変わる可能性
   - カメラ環境差による検出不安定
 - 軽減策:
-  - モデルごとの補正値導入、表情キー存在チェックの強化
+  - neck 欠損時は head/chest 系正規化ボーンへフォールバックし、mouth/eye/arm/leg は存在するボーン・expression だけを駆動する
   - 感情プリセットと viseme の重複morph bind を起動時に除去し、口パク優先で競合を軽減
+  - `CharacterMotionConfig` で AI発話中の首・上半身・腕 gesture を控えめにし、attack/release と beat duration を長めにして唐突さを抑える
   - Looking Glass は再開後入力失効の回避として `LookingGlassConfig` を直接更新する fallback 操作を再開時のみ有効化（初回セッションは vendor 実装を優先）
 
 ### 12.1 Looking Glass 運用メモ（2026-02-23）
@@ -301,6 +308,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 | 2026-05-08 | `CharacterMotionOrchestrator` / `CharacterMotionConfig` による呼吸・重心移動・上半身 idle motion と、腕/脚 controller の低振幅 offset 化を追記 |
 | 2026-05-08 | VAD onset debounce、発話終了 timing、聞き姿勢 blend、発話終了後の相槌 nod を追記 |
 | 2026-05-09 | AI発話中の telop beat 抽出、`expression_code` による姿勢・首・目線・腕 gesture 差分を追記 |
+| 2026-05-09 | TASK-3054 として AI発話 gesture の強度/easing を抑制し、neck/mouth expression 欠損VRMの fallback と自然さ確認観点を追記 |
 
 ## 15. 参照資料
 

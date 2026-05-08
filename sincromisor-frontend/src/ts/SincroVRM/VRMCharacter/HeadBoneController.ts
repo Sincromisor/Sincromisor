@@ -21,7 +21,7 @@ export class HeadBoneController {
     private scale: Vector3 = new Vector3(1, 1, 1);
     private vrm: VRM;
     private vrmCamera: VRMCamera;
-    private neckNode: Object3D;
+    private headControlNode: Object3D | null;
     private characterGaze: CharacterGaze;
     private lastUpdateAtMs: number | null = null;
     private aiSpeechBlend = 0;
@@ -33,12 +33,15 @@ export class HeadBoneController {
     constructor(vrm: VRM, vrmCamera: VRMCamera) {
         this.vrm = vrm;
         this.vrmCamera = vrmCamera;
-        this.neckNode = this.getNode('neck');
+        this.headControlNode = this.getHeadControlNode();
         this.characterGaze = CharacterGaze.getManager();
     }
 
     // 毎フレームの首向き更新。検出可否に応じて gaze / camera fallback を切り替える。
     update(snapshot?: CharacterBehaviorSnapshot): void {
+        if (!this.headControlNode) {
+            return;
+        }
         const nowMs = snapshot?.nowMs ?? performance.now();
         const deltaMs = this.lastUpdateAtMs == null
             ? 1000 / 60
@@ -64,9 +67,9 @@ export class HeadBoneController {
         if (snapshot) {
             this.applyAiSpeechMotion(snapshot, nowMs, deltaMs);
         }
-        this.neckNode.position.copy(this.position);
-        this.neckNode.rotation.copy(this.rotation);
-        this.neckNode.scale.copy(this.scale);
+        this.headControlNode.position.copy(this.position);
+        this.headControlNode.rotation.copy(this.rotation);
+        this.headControlNode.scale.copy(this.scale);
     }
 
     /* VRMLookAtApplierを用いたほうがいいのでは? */
@@ -89,7 +92,10 @@ export class HeadBoneController {
     // 顔検出未使用/未初期化時のフォールバック。カメラ方向を向くように neck 回転を計算する。
     private setEyeToCamera(camera: PerspectiveCamera): void {
         // neckNode のワールド座標を取得してカメラとの方向ベクトルを求める
-        const neckWorldPos = this.neckNode.getWorldPosition(new Vector3());
+        if (!this.headControlNode) {
+            return;
+        }
+        const neckWorldPos = this.headControlNode.getWorldPosition(new Vector3());
         const cameraDirection = camera.position.clone().sub(neckWorldPos).normalize();
 
         // X軸、Y軸の回転角度を計算し、setEyeTarget に反映
@@ -99,19 +105,24 @@ export class HeadBoneController {
         this.setEyeTarget(angleX / 2, angleY, 0);
     }
 
-    // 正規化ボーン取得に失敗した場合はモデル前提が崩れているため例外化する。
-    private getNode(name: VRMHumanBoneName): Object3D {
-        const node: Object3D | null = this.vrm.humanoid.getNormalizedBoneNode(name);
-        if (node === null) {
-            throw new Error(`bone ${name} not found`);
+    private getHeadControlNode(): Object3D | null {
+        const fallbackOrder: VRMHumanBoneName[] = ['neck', 'head', 'upperChest', 'chest', 'spine'];
+        for (const name of fallbackOrder) {
+            const node = this.vrm.humanoid.getNormalizedBoneNode(name);
+            if (node) {
+                // neck が無いVRMでは head/chest 系ボーンを代替するため、local position/scale は保持する。
+                this.position.copy(node.position);
+                this.scale.copy(node.scale);
+                return node;
+            }
         }
-        return node;
+        return null;
     }
 
     private applyAiSpeechMotion(snapshot: CharacterBehaviorSnapshot, nowMs: number, deltaMs: number): void {
         const expression = this.aiSpeechExpressionProfile(snapshot.aiSpeech.expressionCode);
         const targetBlend = snapshot.aiSpeech.isSpeaking ? expression.intentScale : 0;
-        const timeConstantMs = targetBlend > this.aiSpeechBlend ? 180 : 620;
+        const timeConstantMs = targetBlend > this.aiSpeechBlend ? 240 : 720;
         const alpha = 1 - Math.exp(-deltaMs / timeConstantMs);
         this.aiSpeechBlend += (targetBlend - this.aiSpeechBlend) * alpha;
 
@@ -148,7 +159,7 @@ export class HeadBoneController {
         if (this.aiSpeechBeatStartedAtMs == null) {
             return 0;
         }
-        const progress = (nowMs - this.aiSpeechBeatStartedAtMs) / 420;
+        const progress = (nowMs - this.aiSpeechBeatStartedAtMs) / 520;
         if (progress >= 1 || !isSpeaking) {
             this.aiSpeechBeatStartedAtMs = null;
             return 0;
@@ -176,16 +187,16 @@ export class HeadBoneController {
                 };
             case 4:
                 return {
-                    intentScale: 0.82,
-                    beatScale: 0.78,
+                    intentScale: 0.76,
+                    beatScale: 0.68,
                     pitchRad: MathUtils.degToRad(-0.75),
                     yawRad: MathUtils.degToRad(0.2),
                     rollRad: MathUtils.degToRad(0.45),
                 };
             case 5:
                 return {
-                    intentScale: 0.86,
-                    beatScale: 0.92,
+                    intentScale: 0.78,
+                    beatScale: 0.78,
                     pitchRad: MathUtils.degToRad(-1.0),
                     yawRad: 0,
                     rollRad: 0,
