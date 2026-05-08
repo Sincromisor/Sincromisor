@@ -188,6 +188,7 @@
         min-height: var(--startup-dialog-frame-min-height);
         max-width: calc(100vw - 48px);
         max-height: calc(100dvh - 48px);
+        margin: auto;
         padding: 0;
         color: var(--sincro-color-overlay-text-primary);
         background: var(--sincro-surface-dialog);
