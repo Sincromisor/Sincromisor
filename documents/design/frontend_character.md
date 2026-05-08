@@ -6,7 +6,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 
 - ドキュメントパス: `documents/design/frontend_character.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-02-23
+- 最終更新日: 2026-05-08
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -24,6 +24,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `FaceMorphController` は `TalkManager.currentMora()` を参照して母音ごとの口形を駆動する。
   - `FaceEmotionController` は `text_ch` の `ChatMessage.expression_code` を受けて VRM感情プリセットを駆動する。
   - `HeadBoneController` は `CharacterGaze` の鼻座標から首向きを更新し、未検出時はカメラ追従にフォールバックする。
+  - `CharacterBehaviorState` は VAD、顔検出、text/telop、感情コードを集約し、後続モーションが同じ snapshot を参照できるようにする。
   - `CharacterGaze` は MediaPipe FaceDetector を `public/mediapipe-wasm` から読み込み、検出状態で自動ミュート連動も行う。
 
 ## 3. 背景
@@ -79,12 +80,14 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - 骨制御: `HeadBoneController`, `ArmBoneController`, `LegBoneController`
   - 表情制御: `FaceMorphController`
   - 感情表情制御: `FaceEmotionController`
+  - 対話状態集約: `CharacterBehaviorState`
   - 顔認識: `CharacterGaze`
 - 責務分割:
   - 読込/更新ループ: `VRMScene` + `VRMCharacterManager`
   - ボーン更新: BoneController群
   - 口形同期: FaceMorphController + TalkManager
   - 感情表情同期: FaceEmotionController + TalkManager(`text_ch`)
+  - 対話状態集約: CharacterBehaviorState + TalkManager/UserMediaManager/CharacterGaze
   - 入力検出: CharacterGaze
 - 外部依存:
   - `three`, `@pixiv/three-vrm`, `@mediapipe/tasks-vision`
@@ -101,10 +104,12 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `HeadBoneController`: CharacterGazeまたはCamera方向に首回転を更新
   - `FaceMorphController`: `aa/ih/ou/ee/oh/blink` のExpression制御
   - `FaceEmotionController`: `ChatMessage.expression_code` を `relaxed/happy/sad/angry/surprised` にマップし、短時間アニメーションで適用
+  - `CharacterBehaviorState`: VAD、顔検出、text/telop、感情コードを `idle/attending/user_speaking/thinking/ai_speaking/face_lost/error_or_disconnected` の対話状態 snapshot へ集約
   - `CharacterGaze`: 顔キーポイント追跡、視線角推定、arrive/leaveイベント通知
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`
+  - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterBehaviorState.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/HeadBoneController.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceMorphController.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceEmotionController.ts`
@@ -121,6 +126,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `CurrentMora`（TalkManagerが現在発話中の母音区間を保持）
   - `ChatMessage.expression_code`（text_ch先頭 `^N` 由来の感情コード。任意項目）
   - CharacterGazeの `movingAverage[6]`（右目/左目/鼻/口/右耳/左耳）
+  - `CharacterBehaviorSnapshot`（VAD envelope、顔検出・顔位置・正面度、AI発話中speech_id/母音/感情コード、対話状態を保持）
 - 永続化対象:
   - VRMモデルURL（`DialogManager.vrmUrl`）と、ローカル保存済みVRM（DialogManager経由）
 - スキーマ/モデル:
@@ -151,6 +157,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - Start -> `VRMScene.start()` -> animate loop
   - telop受信 -> `TalkManager.currentMora()` 更新 -> `FaceMorphController` が口形適用
   - text受信（chat mode） -> `TalkManager` イベント通知 -> `FaceEmotionController` が感情表情を適用
+  - VAD/顔検出/text/telop受信 -> `CharacterBehaviorState` に集約 -> `VRMCharacterManager.update()` が毎フレーム snapshot 更新
   - 顔検出 -> `CharacterGaze` 更新 -> `HeadBoneController` に反映
 - 異常系フロー:
   - VRMロード失敗 -> 例外出力（表示不可）
@@ -275,6 +282,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 | 2026-02-15 | 初版作成 |
 | 2026-02-23 | chatモード感情表情（`FaceEmotionController`）と `^N`/`expression_code` 連動、口パク競合軽減方針を追記 |
 | 2026-02-23 | Looking Glass 専用シーン化、展示向け床テクスチャ/視点補正、終了後レイアウト復旧と再開時入力回復の暫定方針を追記 |
+| 2026-05-08 | `CharacterBehaviorState` によるVAD/顔検出/text/telop/感情コードの集約と snapshot API を追記 |
 
 ## 15. 参照資料
 
@@ -283,6 +291,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `documents/design/networking_rtc.md`
 - 参照実装:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
+  - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterBehaviorState.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceMorphController.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceEmotionController.ts`
   - `sincromisor-frontend/src/ts/CharacterGaze/CharacterGaze.ts`

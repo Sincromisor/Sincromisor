@@ -4,6 +4,7 @@ import { VideoInputManager } from "../RTC/VideoInputManager";
 import { ChatMessageService } from "../UI/ChatMessageService";
 import { DialogManager } from "../UI/DialogManager";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
+import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehaviorState";
 
 // CharacterGaze の起動と、視線検出結果 -> Debug UI / AutoMute 変換を担当する controller。
 // DOM依存（#eyeTarget 表示）は移行期間の暫定としてここに閉じ込めている。
@@ -11,6 +12,7 @@ export class SincroCharacterGazeController {
     private readonly dialogManager: DialogManager;
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly chatMessageService: ChatMessageService;
+    private readonly characterBehaviorState: CharacterBehaviorState;
     private readonly videoInputManager = new VideoInputManager();
     private onMuteChange: ((mute: boolean) => void) | null = null;
     private visionInitPromise: Promise<void> | null = null;
@@ -27,6 +29,7 @@ export class SincroCharacterGazeController {
         this.dialogManager = dialogManager;
         this.debugConsoleManager = debugConsoleManager;
         this.chatMessageService = chatMessageService;
+        this.characterBehaviorState = CharacterBehaviorState.getManager();
         const characterGaze = CharacterGaze.getManager();
         this.debugConsoleManager.setCharacterGazeTrackingTuning(characterGaze.getTrackingTuning());
         this.debugConsoleManager.setCharacterGazeTrackingTuningChangeCallback((config) => {
@@ -95,6 +98,7 @@ export class SincroCharacterGazeController {
     private stopCharacterGazeCamera(): void {
         const characterGaze = CharacterGaze.getManager();
         characterGaze.detachCamera();
+        this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.videoInputManager.releaseVideoTrack();
         this.debugConsoleManager.setCharacterGazePaused(true);
         this.debugConsoleManager.updateCharacterGazeTargetDebug("停止中");
@@ -123,6 +127,7 @@ export class SincroCharacterGazeController {
         const characterGaze = CharacterGaze.getManager();
         this.bindCharacterGazeCallbacks(characterGaze, this.onMuteChange);
         this.debugConsoleManager.setCharacterGazePaused(false);
+        this.characterBehaviorState.setGazeTrackingEnabled(true);
 
         try {
             await this.ensureVisionInitialized(characterGaze);
@@ -142,6 +147,7 @@ export class SincroCharacterGazeController {
                     this.debugConsoleManager.updateFaceYLog(characterGaze.targetY());
                     this.debugConsoleManager.updateFacing(characterGaze.facing());
                     this.debugConsoleManager.updateCharacterGazeTargetDebug(characterGaze.targetSelectionDebugText());
+                    this.characterBehaviorState.applyGazeState(characterGaze, detects);
                 }
                 this.updateEyeTargetOverlay(characterGaze, gazeEnabled, detects);
             });

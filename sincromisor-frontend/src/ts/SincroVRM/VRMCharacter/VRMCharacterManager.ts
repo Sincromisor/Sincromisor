@@ -8,6 +8,7 @@ import { ArmBoneController } from './ArmBoneController';
 import { LegBoneController } from './LegBoneController';
 import { FaceMorphController } from './FaceMorphController';
 import { FaceEmotionController } from './FaceEmotionController';
+import { CharacterBehaviorSnapshot, CharacterBehaviorState } from './CharacterBehaviorState';
 import { VRMCamera } from '../VRMScene/VRMCamera';
 import { Vector3 } from 'three/src/math/Vector3.js';
 import { Box3 } from 'three/src/math/Box3.js';
@@ -68,6 +69,8 @@ export class VRMCharacterManager {
     public characterPosition: Vector3 = new Vector3(0, 0, 0);
     private defaultPosition: Vector3 = new Vector3(0, 0, 0);
     private rootBone: Object3D | null = null;
+    private readonly behaviorState: CharacterBehaviorState;
+    private latestBehaviorSnapshot: CharacterBehaviorSnapshot | null = null;
     // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
     private readonly onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void;
     private readonly enableInitialUpperBodyFraming: boolean;
@@ -84,6 +87,7 @@ export class VRMCharacterManager {
         this.vrmCamera = vrmCamera;
         this.onThumbnailLoaded = onThumbnailLoaded;
         this.enableInitialUpperBodyFraming = enableInitialUpperBodyFraming;
+        this.behaviorState = CharacterBehaviorState.getManager();
         this.clock = new Clock();
         this.clock.start();
         this.load(vrmUrl);
@@ -244,10 +248,12 @@ export class VRMCharacterManager {
     }
 
     // 毎フレーム更新:
-    // 1) ボーン/表情 controller
-    // 2) VRM内部 update
-    // 3) hips基準の位置オフセット反映
+    // 1) キャラクター対話状態 snapshot 更新
+    // 2) ボーン/表情 controller
+    // 3) VRM内部 update
+    // 4) hips基準の位置オフセット反映
     update(): void {
+        this.latestBehaviorSnapshot = this.behaviorState.update();
         this.headBoneController?.update();
         this.armBoneController?.update();
         this.legBoneController?.update();
@@ -255,6 +261,14 @@ export class VRMCharacterManager {
         if (this.rootBone) {
             this.rootBone.position.copy(this.defaultPosition.clone().add(this.characterPosition));
         }
+    }
+
+    // 後続の motion controller / デバッグ UI が毎フレームの集約済み入力を読むための口。
+    behaviorSnapshot(): CharacterBehaviorSnapshot {
+        if (!this.latestBehaviorSnapshot) {
+            this.latestBehaviorSnapshot = this.behaviorState.update();
+        }
+        return this.latestBehaviorSnapshot;
     }
 
     // 起動後に Character トグルを変更した時の可視状態反映に使う。

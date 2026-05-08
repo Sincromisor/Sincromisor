@@ -12,6 +12,7 @@ import {
     LearnedVadPerformanceMode,
     VadThresholdMode as DebugVadThresholdMode,
 } from "../UI/DebugConsoleManager";
+import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehaviorState";
 
 // getUserMedia と VAD/音声フィルタ設定の結線をまとめる controller。
 // DialogManager(設定入力) / UserMediaManager(実処理) / DebugConsoleManager(診断UI) の橋渡し役。
@@ -20,6 +21,7 @@ export class SincroAudioInputController {
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly chatMessageService: ChatMessageService;
     private readonly userMediaManager: UserMediaManager;
+    private readonly characterBehaviorState: CharacterBehaviorState;
     private dialogMicSettingsSnapshot: DialogMicSettingsSnapshot | null = null;
     private suppressNextDialogMicSettingsSync = false;
     private onAudioTrackReplaced: (audioTrack: MediaStreamTrack) => void = () => { };
@@ -36,6 +38,7 @@ export class SincroAudioInputController {
         this.debugConsoleManager = debugConsoleManager;
         this.chatMessageService = chatMessageService;
         this.userMediaManager = new UserMediaManager();
+        this.characterBehaviorState = CharacterBehaviorState.getManager();
 
         this.bindDialogSettingsToUserMedia();
         this.bindDebugConsoleAndVadState();
@@ -127,6 +130,7 @@ export class SincroAudioInputController {
         });
         this.userMediaManager.setVadStateCallback((report: VadStateReport) => {
             this.debugConsoleManager.updateLocalVadState(report.isSpeech);
+            this.characterBehaviorState.applyVadState(report);
         });
         this.userMediaManager.setAudioConstraintRuntimeApplyCallback((report: AudioConstraintRuntimeApplyReport) => {
             this.debugConsoleManager.updateLocalAudioConstraintApplyStatus(report);
