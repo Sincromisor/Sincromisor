@@ -9,6 +9,7 @@ import { LegBoneController } from './LegBoneController';
 import { FaceMorphController } from './FaceMorphController';
 import { FaceEmotionController } from './FaceEmotionController';
 import { CharacterBehaviorSnapshot, CharacterBehaviorState } from './CharacterBehaviorState';
+import { CharacterMotionOrchestrator } from './CharacterMotionOrchestrator';
 import { VRMCamera } from '../VRMScene/VRMCamera';
 import { Vector3 } from 'three/src/math/Vector3.js';
 import { Box3 } from 'three/src/math/Box3.js';
@@ -64,6 +65,7 @@ export class VRMCharacterManager {
     public headBoneController: HeadBoneController | null = null;
     public armBoneController: ArmBoneController | null = null;
     public legBoneController: LegBoneController | null = null;
+    public motionOrchestrator: CharacterMotionOrchestrator | null = null;
     public mouthMorphController: FaceMorphController | null = null;
     public emotionMorphController: FaceEmotionController | null = null;
     public characterPosition: Vector3 = new Vector3(0, 0, 0);
@@ -71,6 +73,7 @@ export class VRMCharacterManager {
     private rootBone: Object3D | null = null;
     private readonly behaviorState: CharacterBehaviorState;
     private latestBehaviorSnapshot: CharacterBehaviorSnapshot | null = null;
+    private motionElapsedSeconds = 0;
     // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
     private readonly onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void;
     private readonly enableInitialUpperBodyFraming: boolean;
@@ -117,9 +120,10 @@ export class VRMCharacterManager {
                 // 視線/姿勢/表情の更新責務を個別 controller に分け、update() でまとめて進める。
                 this.headBoneController = new HeadBoneController(this.vrm, this.vrmCamera);
                 this.armBoneController = new ArmBoneController(this.vrm);
-                this.armBoneController.update();
+                this.armBoneController.update(this.motionElapsedSeconds);
                 this.legBoneController = new LegBoneController(this.vrm);
-                this.legBoneController.update();
+                this.legBoneController.update(this.motionElapsedSeconds);
+                this.motionOrchestrator = new CharacterMotionOrchestrator(this.vrm);
                 if (this.vrm.expressionManager) {
                     this.mouthMorphController = new FaceMorphController(this.vrm.expressionManager);
                     this.emotionMorphController = new FaceEmotionController(this.vrm.expressionManager);
@@ -253,13 +257,17 @@ export class VRMCharacterManager {
     // 3) VRM内部 update
     // 4) hips基準の位置オフセット反映
     update(): void {
+        const deltaSeconds = this.clock.getDelta();
+        this.motionElapsedSeconds += deltaSeconds;
         this.latestBehaviorSnapshot = this.behaviorState.update();
         this.headBoneController?.update();
-        this.armBoneController?.update();
-        this.legBoneController?.update();
-        this.vrm?.update(this.clock.getDelta());
+        this.armBoneController?.update(this.motionElapsedSeconds);
+        this.legBoneController?.update(this.motionElapsedSeconds);
+        this.vrm?.update(deltaSeconds);
         if (this.rootBone) {
-            this.rootBone.position.copy(this.defaultPosition.clone().add(this.characterPosition));
+            const hipsBasePosition = this.defaultPosition.clone().add(this.characterPosition);
+            this.rootBone.position.copy(hipsBasePosition);
+            this.motionOrchestrator?.update(this.motionElapsedSeconds, this.latestBehaviorSnapshot, hipsBasePosition);
         }
     }
 
