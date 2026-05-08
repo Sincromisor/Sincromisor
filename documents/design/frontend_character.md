@@ -26,6 +26,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `HeadBoneController` は `CharacterGaze` の鼻座標から首向きを更新し、未検出時はカメラ追従にフォールバックする。
   - `CharacterBehaviorState` は VAD、顔検出、text/telop、感情コードを集約し、後続モーションが同じ snapshot を参照できるようにする。
   - `CharacterMotionOrchestrator` は呼吸・重心移動・肩周りの idle motion を毎フレーム適用し、腕/脚 controller は同じ motion config の時間係数を使って低振幅の手首・肘・足先揺れを足す。
+  - AI発話中は `telop_ch` から抽出した speech beat と `expression_code` を `CharacterBehaviorSnapshot.aiSpeech` に集約し、首・目線・上半身・腕の小さな gesture を同期する。
   - `CharacterGaze` は MediaPipe FaceDetector を `public/mediapipe-wasm` から読み込み、検出状態で自動ミュート連動も行う。
 
 ## 3. 背景
@@ -103,12 +104,13 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - コンポーネントごとの責務:
   - `VRMScene`: renderer/camera/light初期化、リサイズ追従、描画ループ管理
   - `VRMCharacterManager`: GLTFLoader+VRMLoaderPluginでVRM読込、コントローラ初期化
-  - `HeadBoneController`: `CharacterBehaviorSnapshot.gaze` またはCamera方向に首回転を更新。目線が先行するよう、顔検出座標へ遅めに追従する
+  - `HeadBoneController`: `CharacterBehaviorSnapshot.gaze` またはCamera方向に首回転を更新。目線が先行するよう、顔検出座標へ遅めに追従し、AI発話中は感情別の小さな nod/yaw/roll offset を重ねる
   - `FaceMorphController`: `aa/ih/ou/ee/oh` のExpression制御
   - `FaceEmotionController`: `ChatMessage.expression_code` を `relaxed/happy/sad/angry/surprised` にマップし、短時間アニメーションで適用
-  - `EyeBehaviorController`: VRM標準 `lookLeft/lookRight/lookUp/lookDown` expression を優先して目線を制御し、未実装モデルでは `leftEye/rightEye` ボーンへフォールバックする。対話状態に応じたblink schedule、考え中の短い視線外し、低振幅microsaccade、`surprised` 中のblink抑制を扱う
-  - `CharacterBehaviorState`: VAD、顔検出、text/telop、感情コードを `idle/attending/user_speaking/thinking/ai_speaking/face_lost/error_or_disconnected` の対話状態 snapshot へ集約。VAD onset debounce、発話 hold、発話時間を持ち、短いノイズを聞き姿勢・相槌 trigger へ直結させない
-  - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、呼吸・hips重心移動・spine/chest/shoulder の idle offset、VAD連動の聞き姿勢、発話終了後の小さな相槌 nod を適用
+  - `EyeBehaviorController`: VRM標準 `lookLeft/lookRight/lookUp/lookDown` expression を優先して目線を制御し、未実装モデルでは `leftEye/rightEye` ボーンへフォールバックする。対話状態に応じたblink schedule、考え中の短い視線外し、低振幅microsaccade、AI発話中の感情別視線offset、`surprised` 中のblink抑制を扱う
+  - `CharacterBehaviorState`: VAD、顔検出、text/telop、感情コードを `idle/attending/user_speaking/thinking/ai_speaking/face_lost/error_or_disconnected` の対話状態 snapshot へ集約。VAD onset debounce、発話 hold、発話時間を持ち、短いノイズを聞き姿勢・相槌 trigger へ直結させない。AI発話は `new_text`、`speech_id`、句読点、mora長、一定間隔から `speech_start/cadence/phrase/punctuation` の beat に間引く
+  - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、呼吸・hips重心移動・spine/chest/shoulder の idle offset、VAD連動の聞き姿勢、発話終了後の小さな相槌 nod、AI発話中の感情別姿勢と beat gesture を適用
+  - `ArmBoneController`: idleの腕・肘・手首揺れに、`CharacterBehaviorSnapshot.aiSpeech.beatId` 由来の短い片腕gestureを重ねる。左右を交互に主役化し、発話開始・文節・句読点で強度を変える
   - `CharacterMotionConfig`: idle/listening motion の周期・振幅を集約し、腕/脚/胴体 controller の `performance.now()` 直参照を避ける
   - `CharacterGaze`: 顔キーポイント追跡、視線角推定、arrive/leaveイベント通知
 - 主要クラス/モジュールと対応ファイル:
@@ -134,7 +136,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `CurrentMora`（TalkManagerが現在発話中の母音区間を保持）
   - `ChatMessage.expression_code`（text_ch先頭 `^N` 由来の感情コード。任意項目）
   - CharacterGazeの `movingAverage[6]`（右目/左目/鼻/口/右耳/左耳）
-  - `CharacterBehaviorSnapshot`（VAD envelope、発話開始/終了時刻、直近発話時間、顔検出・顔位置・正面度、AI発話中speech_id/母音/感情コード、対話状態を保持）
+  - `CharacterBehaviorSnapshot`（VAD envelope、発話開始/終了時刻、直近発話時間、顔検出・顔位置・正面度、AI発話中speech_id/母音/感情コード、AI speech beat、対話状態を保持）
 - 永続化対象:
   - VRMモデルURL（`DialogManager.vrmUrl`）と、ローカル保存済みVRM（DialogManager経由）
 - スキーマ/モデル:
@@ -166,7 +168,8 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - telop受信 -> `TalkManager.currentMora()` 更新 -> `FaceMorphController` が口形適用
   - text受信（chat mode） -> `TalkManager` イベント通知 -> `FaceEmotionController` が感情表情を適用
   - VAD/顔検出/text/telop受信 -> `CharacterBehaviorState` に集約 -> `VRMCharacterManager.update()` が毎フレーム snapshot 更新
-  - `VRMCharacterManager.update()` -> `ArmBoneController` / `LegBoneController` が基準姿勢へ微小 idle offset を適用 -> `CharacterMotionOrchestrator` が hips/spine/chest/shoulder の呼吸・重心 offset と VAD 連動の聞き姿勢・相槌 nod を適用
+  - `CharacterBehaviorState` は telop受信時に `speech_id` 変更、句読点、長めのmora、一定時間経過を speech beat として採用し、`beatId` と強度を更新
+  - `VRMCharacterManager.update()` -> `ArmBoneController` / `LegBoneController` が基準姿勢へ微小 idle offset を適用 -> `CharacterMotionOrchestrator` が hips/spine/chest/shoulder の呼吸・重心 offset、VAD 連動の聞き姿勢・相槌 nod、AI発話中の姿勢/gesture を適用
   - 顔検出 -> `CharacterGaze` 更新 -> `HeadBoneController` に反映
 - 異常系フロー:
   - VRMロード失敗 -> 例外出力（表示不可）
@@ -252,6 +255,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - リスク一覧:
   - VRM個体差による表情キー不一致
   - 感情プリセットに口形morphが含まれるVRMで、口パクと干渉する可能性
+  - AI発話中gestureは汎用ボーン制御のため、VRM個体差により腕・肩・首の見え方が変わる可能性
   - カメラ環境差による検出不安定
 - 軽減策:
   - モデルごとの補正値導入、表情キー存在チェックの強化
@@ -296,6 +300,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 | 2026-05-08 | `CharacterBehaviorState` によるVAD/顔検出/text/telop/感情コードの集約と snapshot API を追記 |
 | 2026-05-08 | `CharacterMotionOrchestrator` / `CharacterMotionConfig` による呼吸・重心移動・上半身 idle motion と、腕/脚 controller の低振幅 offset 化を追記 |
 | 2026-05-08 | VAD onset debounce、発話終了 timing、聞き姿勢 blend、発話終了後の相槌 nod を追記 |
+| 2026-05-09 | AI発話中の telop beat 抽出、`expression_code` による姿勢・首・目線・腕 gesture 差分を追記 |
 
 ## 15. 参照資料
 

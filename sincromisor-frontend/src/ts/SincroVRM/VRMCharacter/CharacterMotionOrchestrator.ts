@@ -23,6 +23,12 @@ export class CharacterMotionOrchestrator {
     private lastBackchannelTriggeredAtMs: number | null = null;
     private nodStartedAtSeconds: number | null = null;
     private nodIntensity = 0;
+    private aiSpeakingBlend = 0;
+    private lastAiSpeakingElapsedSeconds: number | null = null;
+    private lastAiSpeechBeatId = 0;
+    private aiSpeechBeatStartedAtSeconds: number | null = null;
+    private aiSpeechBeatIntensity = 0;
+    private aiSpeechBeatDirection = 1;
 
     constructor(vrm: VRM) {
         this.captureOptionalBone(vrm, 'hips');
@@ -41,11 +47,14 @@ export class CharacterMotionOrchestrator {
         const intensity = this.intensityForState(snapshot);
         const listening = this.updateListeningBlend(elapsedSeconds, snapshot);
         const backchannelNod = this.updateBackchannelNod(elapsedSeconds, snapshot);
+        const aiSpeaking = this.updateAiSpeakingBlend(elapsedSeconds, snapshot);
+        const aiGesture = this.updateAiSpeechBeat(elapsedSeconds, snapshot);
+        const expression = this.aiSpeechExpressionProfile(snapshot.aiSpeech.expressionCode);
 
-        this.updateHips(hipsBasePosition, balanceSide, balanceFront, intensity, listening);
-        this.updateSpine(breath, balanceSide, intensity, listening, backchannelNod);
-        this.updateChest(breath, breathSecondary, intensity, listening, backchannelNod);
-        this.updateShoulders(breath, breathSecondary, intensity, listening);
+        this.updateHips(hipsBasePosition, balanceSide, balanceFront, intensity, listening, aiSpeaking, expression);
+        this.updateSpine(breath, balanceSide, intensity, listening, backchannelNod, aiSpeaking, aiGesture, expression);
+        this.updateChest(breath, breathSecondary, intensity, listening, backchannelNod, aiSpeaking, aiGesture, expression);
+        this.updateShoulders(breath, breathSecondary, intensity, listening, aiSpeaking, aiGesture, expression);
     }
 
     private captureOptionalBone(vrm: VRM, name: OptionalBoneName): void {
@@ -65,6 +74,8 @@ export class CharacterMotionOrchestrator {
         frontWave: number,
         intensity: number,
         listening: number,
+        aiSpeaking: number,
+        expression: AiSpeechExpressionMotionProfile,
     ): void {
         const bone = this.bones.get('hips');
         if (!bone) {
@@ -75,7 +86,8 @@ export class CharacterMotionOrchestrator {
             basePosition.y,
             basePosition.z
                 + frontWave * CHARACTER_IDLE_MOTION_CONFIG.balance.hipsFrontShift * intensity
-                - listening * CHARACTER_IDLE_MOTION_CONFIG.listening.hipsFrontShift,
+                - listening * CHARACTER_IDLE_MOTION_CONFIG.listening.hipsFrontShift
+                + aiSpeaking * expression.hipsFrontShift,
         );
         bone.node.rotation.set(
             bone.baseRotation.x,
@@ -90,6 +102,9 @@ export class CharacterMotionOrchestrator {
         intensity: number,
         listening: number,
         backchannelNod: number,
+        aiSpeaking: number,
+        aiGesture: number,
+        expression: AiSpeechExpressionMotionProfile,
     ): void {
         const bone = this.bones.get('spine');
         if (!bone) {
@@ -99,8 +114,11 @@ export class CharacterMotionOrchestrator {
             bone.baseRotation.x
                 - breathWave * CHARACTER_IDLE_MOTION_CONFIG.breath.spinePitchRad * intensity
                 - listening * CHARACTER_IDLE_MOTION_CONFIG.listening.spineLeanRad
-                - backchannelNod * CHARACTER_IDLE_MOTION_CONFIG.listening.nodSpinePitchRad,
-            bone.baseRotation.y + sideWave * CHARACTER_IDLE_MOTION_CONFIG.balance.spineYawRad * intensity,
+                - backchannelNod * CHARACTER_IDLE_MOTION_CONFIG.listening.nodSpinePitchRad
+                + aiSpeaking * expression.spinePitchRad,
+            bone.baseRotation.y
+                + sideWave * CHARACTER_IDLE_MOTION_CONFIG.balance.spineYawRad * intensity
+                + aiGesture * this.aiSpeechBeatDirection * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.spineBeatYawRad,
             bone.baseRotation.z,
         );
     }
@@ -111,6 +129,9 @@ export class CharacterMotionOrchestrator {
         intensity: number,
         listening: number,
         backchannelNod: number,
+        aiSpeaking: number,
+        aiGesture: number,
+        expression: AiSpeechExpressionMotionProfile,
     ): void {
         const chest = this.bones.get('chest');
         if (chest) {
@@ -118,7 +139,9 @@ export class CharacterMotionOrchestrator {
                 chest.baseRotation.x
                     - breathWave * CHARACTER_IDLE_MOTION_CONFIG.breath.chestPitchRad * intensity
                     - listening * CHARACTER_IDLE_MOTION_CONFIG.listening.chestLeanRad
-                    - backchannelNod * CHARACTER_IDLE_MOTION_CONFIG.listening.nodChestPitchRad,
+                    - backchannelNod * CHARACTER_IDLE_MOTION_CONFIG.listening.nodChestPitchRad
+                    + aiSpeaking * expression.chestPitchRad
+                    - aiGesture * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestBeatPitchRad,
                 chest.baseRotation.y,
                 chest.baseRotation.z + secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.chestRollRad * intensity,
             );
@@ -130,22 +153,37 @@ export class CharacterMotionOrchestrator {
                 upperChest.baseRotation.x
                     - breathWave * CHARACTER_IDLE_MOTION_CONFIG.breath.upperChestPitchRad * intensity
                     - listening * CHARACTER_IDLE_MOTION_CONFIG.listening.upperChestLeanRad
-                    - backchannelNod * CHARACTER_IDLE_MOTION_CONFIG.listening.nodChestPitchRad * 0.55,
+                    - backchannelNod * CHARACTER_IDLE_MOTION_CONFIG.listening.nodChestPitchRad * 0.55
+                    + aiSpeaking * expression.upperChestPitchRad
+                    - aiGesture * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestBeatPitchRad * 0.65,
                 upperChest.baseRotation.y,
-                upperChest.baseRotation.z - secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.chestRollRad * 0.65 * intensity,
+                upperChest.baseRotation.z
+                    - secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.chestRollRad * 0.65 * intensity
+                    + aiSpeaking * expression.upperChestRollRad,
             );
         }
     }
 
-    private updateShoulders(breathWave: number, secondaryWave: number, intensity: number, listening: number): void {
+    private updateShoulders(
+        breathWave: number,
+        secondaryWave: number,
+        intensity: number,
+        listening: number,
+        aiSpeaking: number,
+        aiGesture: number,
+        expression: AiSpeechExpressionMotionProfile,
+    ): void {
         const shoulderQuieting = 1 - listening * 0.35;
+        const speechQuieting = 1 - aiSpeaking * expression.idleQuieting;
         const left = this.bones.get('leftShoulder');
         if (left) {
             left.node.rotation.set(
                 left.baseRotation.x,
                 left.baseRotation.y,
                 left.baseRotation.z - breathWave * CHARACTER_IDLE_MOTION_CONFIG.breath.shoulderLiftRad * intensity * shoulderQuieting
-                    + secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.shoulderRollRad * intensity * shoulderQuieting,
+                    + secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.shoulderRollRad * intensity * shoulderQuieting * speechQuieting
+                    - aiSpeaking * expression.shoulderOpenRad
+                    - aiGesture * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderBeatRad,
             );
         }
 
@@ -155,7 +193,9 @@ export class CharacterMotionOrchestrator {
                 right.baseRotation.x,
                 right.baseRotation.y,
                 right.baseRotation.z + breathWave * CHARACTER_IDLE_MOTION_CONFIG.breath.shoulderLiftRad * intensity * shoulderQuieting
-                    + secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.shoulderRollRad * intensity * shoulderQuieting,
+                    + secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.shoulderRollRad * intensity * shoulderQuieting * speechQuieting
+                    + aiSpeaking * expression.shoulderOpenRad
+                    + aiGesture * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderBeatRad,
             );
         }
     }
@@ -245,4 +285,144 @@ export class CharacterMotionOrchestrator {
         }
         return 1;
     }
+
+    private updateAiSpeakingBlend(elapsedSeconds: number, snapshot: CharacterBehaviorSnapshot): number {
+        const deltaSeconds = this.lastAiSpeakingElapsedSeconds == null
+            ? 1 / 60
+            : MathUtils.clamp(elapsedSeconds - this.lastAiSpeakingElapsedSeconds, 1 / 120, 0.1);
+        this.lastAiSpeakingElapsedSeconds = elapsedSeconds;
+        const expression = this.aiSpeechExpressionProfile(snapshot.aiSpeech.expressionCode);
+        const target = snapshot.aiSpeech.isSpeaking
+            ? expression.postureIntensity * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.postureBlendScale
+            : 0;
+        const timeConstant = target > this.aiSpeakingBlend
+            ? CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.attackSeconds
+            : CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.releaseSeconds;
+        const alpha = 1 - Math.exp(-deltaSeconds / timeConstant);
+        this.aiSpeakingBlend += (target - this.aiSpeakingBlend) * alpha;
+        return this.aiSpeakingBlend;
+    }
+
+    private updateAiSpeechBeat(elapsedSeconds: number, snapshot: CharacterBehaviorSnapshot): number {
+        if (
+            snapshot.aiSpeech.isSpeaking
+            && snapshot.aiSpeech.beatId !== this.lastAiSpeechBeatId
+            && snapshot.aiSpeech.beatIntensity > 0
+        ) {
+            this.lastAiSpeechBeatId = snapshot.aiSpeech.beatId;
+            this.aiSpeechBeatStartedAtSeconds = elapsedSeconds;
+            this.aiSpeechBeatDirection *= -1;
+            const expression = this.aiSpeechExpressionProfile(snapshot.aiSpeech.expressionCode);
+            const kindScale = snapshot.aiSpeech.beatKind === 'speech_start'
+                ? 1.0
+                : snapshot.aiSpeech.beatKind === 'punctuation'
+                    ? 0.58
+                    : 0.78;
+            this.aiSpeechBeatIntensity = MathUtils.clamp(
+                snapshot.aiSpeech.beatIntensity * expression.gestureIntensity * kindScale,
+                0,
+                1,
+            );
+        }
+        if (this.aiSpeechBeatStartedAtSeconds == null) {
+            return 0;
+        }
+        const progress = (elapsedSeconds - this.aiSpeechBeatStartedAtSeconds)
+            / CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.beatDurationSeconds;
+        if (progress >= 1 || !snapshot.aiSpeech.isSpeaking) {
+            this.aiSpeechBeatStartedAtSeconds = null;
+            return 0;
+        }
+        return Math.sin(Math.PI * MathUtils.clamp(progress, 0, 1)) * this.aiSpeechBeatIntensity;
+    }
+
+    private aiSpeechExpressionProfile(expressionCode: number | null): AiSpeechExpressionMotionProfile {
+        switch (expressionCode) {
+            case 2:
+                return {
+                    postureIntensity: 0.7,
+                    gestureIntensity: 0.58,
+                    idleQuieting: 0.34,
+                    spinePitchRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.spineLeanRad,
+                    chestPitchRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestPitchRad,
+                    upperChestPitchRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.upperChestPitchRad,
+                    upperChestRollRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.upperChestRollRad * 0.35,
+                    hipsFrontShift: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.hipsFrontShift,
+                    shoulderOpenRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad * 0.45,
+                };
+            case 3:
+                return {
+                    postureIntensity: 0.82,
+                    gestureIntensity: 0.72,
+                    idleQuieting: 0.55,
+                    spinePitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.spineLeanRad * 0.25,
+                    chestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.55,
+                    upperChestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.65,
+                    upperChestRollRad: 0,
+                    hipsFrontShift: 0,
+                    shoulderOpenRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad * 0.35,
+                };
+            case 4:
+                return {
+                    postureIntensity: 0.86,
+                    gestureIntensity: 0.82,
+                    idleQuieting: 0.18,
+                    spinePitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.spineLeanRad * 0.45,
+                    chestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad,
+                    upperChestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.9,
+                    upperChestRollRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.upperChestRollRad,
+                    hipsFrontShift: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.hipsFrontShift,
+                    shoulderOpenRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad,
+                };
+            case 5:
+                return {
+                    postureIntensity: 0.9,
+                    gestureIntensity: 0.9,
+                    idleQuieting: 0.4,
+                    spinePitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.spineLeanRad * 0.6,
+                    chestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.8,
+                    upperChestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad,
+                    upperChestRollRad: 0,
+                    hipsFrontShift: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.hipsFrontShift * 0.5,
+                    shoulderOpenRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad * 0.75,
+                };
+            case 1:
+                return {
+                    postureIntensity: 0.58,
+                    gestureIntensity: 0.48,
+                    idleQuieting: 0.2,
+                    spinePitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.spineLeanRad * 0.2,
+                    chestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.35,
+                    upperChestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.3,
+                    upperChestRollRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.upperChestRollRad * 0.35,
+                    hipsFrontShift: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.hipsFrontShift * 0.4,
+                    shoulderOpenRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad * 0.4,
+                };
+            case 0:
+            default:
+                return {
+                    postureIntensity: 0.54,
+                    gestureIntensity: 0.5,
+                    idleQuieting: 0.26,
+                    spinePitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.spineLeanRad * 0.12,
+                    chestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.24,
+                    upperChestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.18,
+                    upperChestRollRad: 0,
+                    hipsFrontShift: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.hipsFrontShift * 0.15,
+                    shoulderOpenRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad * 0.22,
+                };
+        }
+    }
 }
+
+type AiSpeechExpressionMotionProfile = {
+    postureIntensity: number;
+    gestureIntensity: number;
+    idleQuieting: number;
+    spinePitchRad: number;
+    chestPitchRad: number;
+    upperChestPitchRad: number;
+    upperChestRollRad: number;
+    hipsFrontShift: number;
+    shoulderOpenRad: number;
+};

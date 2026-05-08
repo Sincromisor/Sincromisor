@@ -45,12 +45,20 @@ export type CharacterBehaviorAiSpeechSnapshot = {
     expressionCode: number | null;
     currentVowel: string | null;
     currentText: string | null;
+    currentLengthSeconds: number;
+    beatId: number;
+    beatKind: CharacterBehaviorAiSpeechBeatKind | null;
+    beatText: string | null;
+    beatIntensity: number;
+    lastBeatAtMs: number | null;
     lastTextMessage: ChatMessage | null;
     lastTelopMessage: TelopChannelMessage | null;
     lastStartedAtMs: number | null;
     lastUpdatedAtMs: number | null;
     lastEndedAtMs: number | null;
 };
+
+export type CharacterBehaviorAiSpeechBeatKind = "speech_start" | "cadence" | "phrase" | "punctuation";
 
 export type CharacterBehaviorSnapshot = {
     state: CharacterInteractionState;
@@ -70,6 +78,8 @@ const BEHAVIOR_TIMING = {
     vadMinimumMeaningfulSpeechMs: 650,
     vadSpeechHoldMs: 420,
     aiSpeechHoldMs: 360,
+    aiSpeechCadenceBeatMs: 680,
+    aiSpeechPhrasePauseSeconds: 0.24,
     thinkingHoldMs: 1600,
 } as const;
 
@@ -114,6 +124,12 @@ export class CharacterBehaviorState {
         expressionCode: null,
         currentVowel: null,
         currentText: null,
+        currentLengthSeconds: 0,
+        beatId: 0,
+        beatKind: null,
+        beatText: null,
+        beatIntensity: 0,
+        lastBeatAtMs: null,
         lastTextMessage: null,
         lastTelopMessage: null,
         lastStartedAtMs: null,
@@ -272,12 +288,19 @@ export class CharacterBehaviorState {
 
     private applyTelopChannelMessage(message: TelopChannelMessage, nowMs: number): void {
         const wasSpeaking = this.aiSpeech.isSpeaking;
+        const beat = this.nextAiSpeechBeat(message, nowMs);
         this.aiSpeech = {
             ...this.aiSpeech,
             isSpeaking: true,
             speechId: message.speech_id,
             currentVowel: message.vowel || null,
             currentText: message.text || null,
+            currentLengthSeconds: Math.max(0, Number(message.length) || 0),
+            beatId: beat ? this.aiSpeech.beatId + 1 : this.aiSpeech.beatId,
+            beatKind: beat?.kind ?? this.aiSpeech.beatKind,
+            beatText: beat?.text ?? this.aiSpeech.beatText,
+            beatIntensity: beat?.intensity ?? this.aiSpeech.beatIntensity,
+            lastBeatAtMs: beat ? nowMs : this.aiSpeech.lastBeatAtMs,
             lastTelopMessage: message,
             lastStartedAtMs: wasSpeaking ? this.aiSpeech.lastStartedAtMs : nowMs,
             lastUpdatedAtMs: nowMs,
@@ -298,6 +321,9 @@ export class CharacterBehaviorState {
                 speechId: currentMora?.mora.speech_id ?? this.aiSpeech.speechId,
                 currentVowel: currentMora?.mora.vowel || this.aiSpeech.currentVowel,
                 currentText: currentMora?.mora.text || this.aiSpeech.currentText,
+                currentLengthSeconds: currentMora
+                    ? Math.max(0, Number(currentMora.mora.length) || 0)
+                    : this.aiSpeech.currentLengthSeconds,
                 lastUpdatedAtMs: currentMora ? nowMs : this.aiSpeech.lastUpdatedAtMs,
                 lastEndedAtMs: null,
             };
@@ -309,6 +335,10 @@ export class CharacterBehaviorState {
                 isSpeaking: false,
                 currentVowel: null,
                 currentText: null,
+                currentLengthSeconds: 0,
+                beatKind: null,
+                beatText: null,
+                beatIntensity: 0,
                 lastEndedAtMs: nowMs,
             };
         }
@@ -342,5 +372,37 @@ export class CharacterBehaviorState {
     private smoothEnvelope(previous: number, next: number): number {
         const alpha = next > previous ? BEHAVIOR_TIMING.vadAttack : BEHAVIOR_TIMING.vadRelease;
         return previous + (next - previous) * alpha;
+    }
+
+    private nextAiSpeechBeat(
+        message: TelopChannelMessage,
+        nowMs: number,
+    ): { kind: CharacterBehaviorAiSpeechBeatKind; text: string | null; intensity: number } | null {
+        if (!message.new_text) {
+            return null;
+        }
+
+        const speechChanged = !this.aiSpeech.isSpeaking || this.aiSpeech.speechId !== message.speech_id;
+        const text = message.text || message.message || null;
+        const lengthSeconds = Math.max(0, Number(message.length) || 0);
+        const isPunctuation = /[、。,.!?！？]/.test(message.text || "");
+        const isPhrasePause = lengthSeconds >= BEHAVIOR_TIMING.aiSpeechPhrasePauseSeconds;
+        const lastBeatAtMs = this.aiSpeech.lastBeatAtMs;
+        const enoughCadenceGap = lastBeatAtMs == null
+            || nowMs - lastBeatAtMs >= BEHAVIOR_TIMING.aiSpeechCadenceBeatMs;
+
+        if (speechChanged) {
+            return { kind: "speech_start", text, intensity: 0.8 };
+        }
+        if (isPunctuation) {
+            return { kind: "punctuation", text, intensity: 0.55 };
+        }
+        if (isPhrasePause && enoughCadenceGap) {
+            return { kind: "phrase", text, intensity: 0.62 };
+        }
+        if (enoughCadenceGap) {
+            return { kind: "cadence", text, intensity: 0.42 };
+        }
+        return null;
     }
 }
