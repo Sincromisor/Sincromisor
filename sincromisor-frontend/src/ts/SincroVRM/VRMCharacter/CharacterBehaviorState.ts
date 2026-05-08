@@ -20,6 +20,9 @@ export type CharacterBehaviorVadSnapshot = {
     peak: number;
     envelopeRms: number;
     envelopePeak: number;
+    speechStartedAtMs: number | null;
+    lastSpeechEndedAtMs: number | null;
+    lastSpeechDurationMs: number;
     lastSpeechAtMs: number | null;
     lastUpdatedAtMs: number | null;
 };
@@ -63,6 +66,8 @@ export type CharacterBehaviorSnapshot = {
 const BEHAVIOR_TIMING = {
     vadAttack: 0.45,
     vadRelease: 0.12,
+    vadOnsetDebounceMs: 240,
+    vadMinimumMeaningfulSpeechMs: 650,
     vadSpeechHoldMs: 420,
     aiSpeechHoldMs: 360,
     thinkingHoldMs: 1600,
@@ -78,6 +83,7 @@ export class CharacterBehaviorState {
     private stateChangedAtMs = performance.now();
     private errorMessage: string | null = null;
     private lastUserSpeechEndedAtMs: number | null = null;
+    private pendingRawSpeechStartedAtMs: number | null = null;
     private vad: CharacterBehaviorVadSnapshot = {
         isSpeech: false,
         rawIsSpeech: false,
@@ -85,6 +91,9 @@ export class CharacterBehaviorState {
         peak: 0,
         envelopeRms: 0,
         envelopePeak: 0,
+        speechStartedAtMs: null,
+        lastSpeechEndedAtMs: null,
+        lastSpeechDurationMs: 0,
         lastSpeechAtMs: null,
         lastUpdatedAtMs: null,
     };
@@ -131,14 +140,41 @@ export class CharacterBehaviorState {
         const wasSpeech = this.vad.isSpeech;
         const envelopeRms = this.smoothEnvelope(this.vad.envelopeRms, rms);
         const envelopePeak = this.smoothEnvelope(this.vad.envelopePeak, peak);
+        if (report.isSpeech && this.pendingRawSpeechStartedAtMs == null) {
+            this.pendingRawSpeechStartedAtMs = nowMs;
+        }
+        if (!report.isSpeech && !wasSpeech) {
+            this.pendingRawSpeechStartedAtMs = null;
+        }
+        const rawSpeechAgeMs = this.pendingRawSpeechStartedAtMs == null
+            ? 0
+            : nowMs - this.pendingRawSpeechStartedAtMs;
+        const acceptedRawSpeech = report.isSpeech && rawSpeechAgeMs >= BEHAVIOR_TIMING.vadOnsetDebounceMs;
         const lastSpeechAtMs = report.isSpeech ? nowMs : this.vad.lastSpeechAtMs;
-        const isSpeech = report.isSpeech || (
-            lastSpeechAtMs != null
+        const isSpeech = acceptedRawSpeech || (
+            wasSpeech
+            && lastSpeechAtMs != null
             && nowMs - lastSpeechAtMs <= BEHAVIOR_TIMING.vadSpeechHoldMs
         );
+        const speechStartedAtMs = isSpeech
+            ? this.vad.speechStartedAtMs ?? this.pendingRawSpeechStartedAtMs ?? nowMs
+            : null;
+        const speechDurationMs = wasSpeech
+            ? nowMs - (this.vad.speechStartedAtMs ?? nowMs)
+            : 0;
+        const completedMeaningfulSpeech = speechDurationMs >= BEHAVIOR_TIMING.vadMinimumMeaningfulSpeechMs;
+        const lastSpeechEndedAtMs = wasSpeech && !isSpeech && completedMeaningfulSpeech
+            ? nowMs
+            : this.vad.lastSpeechEndedAtMs;
+        const lastSpeechDurationMs = wasSpeech && !isSpeech
+            ? speechDurationMs
+            : this.vad.lastSpeechDurationMs;
 
-        if (wasSpeech && !isSpeech) {
+        if (wasSpeech && !isSpeech && completedMeaningfulSpeech) {
             this.lastUserSpeechEndedAtMs = nowMs;
+        }
+        if (wasSpeech && !isSpeech) {
+            this.pendingRawSpeechStartedAtMs = report.isSpeech ? nowMs : null;
         }
 
         this.vad = {
@@ -148,6 +184,9 @@ export class CharacterBehaviorState {
             peak,
             envelopeRms,
             envelopePeak,
+            speechStartedAtMs,
+            lastSpeechEndedAtMs,
+            lastSpeechDurationMs,
             lastSpeechAtMs,
             lastUpdatedAtMs: nowMs,
         };
