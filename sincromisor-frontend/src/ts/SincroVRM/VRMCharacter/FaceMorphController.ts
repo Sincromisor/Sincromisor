@@ -17,17 +17,8 @@ export class FaceMorphController {
         this.expressionManager = expressionManager;
         this.clock = new Clock();
         this.clock.start();
-        this.setRandomBlink();
         this.setTalkManager();
         //this.expressionManager.setValue("aa", 0.8);
-    }
-
-    // ランダムな間隔で200msのまばたきをおこなう
-    private setRandomBlink() {
-        this.setExpression("blink", 200);
-        setTimeout(() => {
-            this.setRandomBlink();
-        }, 1000 * (Math.random() * 3 + 1));
     }
 
     // TalkManager をポーリングし、mora 単位で新しい口形状が来た時だけ expression を更新する。

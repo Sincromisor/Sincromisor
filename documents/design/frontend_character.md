@@ -79,7 +79,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - シーン: `VRMScene`, `VRMCamera`, `VRMLight`
   - キャラクター: `VRMCharacterManager`
   - 骨制御: `HeadBoneController`, `ArmBoneController`, `LegBoneController`
-  - 表情制御: `FaceMorphController`
+  - 表情制御: `FaceMorphController`, `EyeBehaviorController`
   - 感情表情制御: `FaceEmotionController`
   - 対話状態集約: `CharacterBehaviorState`
   - 顔認識: `CharacterGaze`
@@ -87,6 +87,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - 読込/更新ループ: `VRMScene` + `VRMCharacterManager`
   - ボーン更新: BoneController群
   - 口形同期: FaceMorphController + TalkManager
+  - 目線/まばたき: EyeBehaviorController + CharacterBehaviorSnapshot
   - 感情表情同期: FaceEmotionController + TalkManager(`text_ch`)
   - 対話状態集約: CharacterBehaviorState + TalkManager/UserMediaManager/CharacterGaze
   - 入力検出: CharacterGaze
@@ -102,9 +103,10 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - コンポーネントごとの責務:
   - `VRMScene`: renderer/camera/light初期化、リサイズ追従、描画ループ管理
   - `VRMCharacterManager`: GLTFLoader+VRMLoaderPluginでVRM読込、コントローラ初期化
-  - `HeadBoneController`: CharacterGazeまたはCamera方向に首回転を更新
-  - `FaceMorphController`: `aa/ih/ou/ee/oh/blink` のExpression制御
+  - `HeadBoneController`: `CharacterBehaviorSnapshot.gaze` またはCamera方向に首回転を更新。目線が先行するよう、顔検出座標へ遅めに追従する
+  - `FaceMorphController`: `aa/ih/ou/ee/oh` のExpression制御
   - `FaceEmotionController`: `ChatMessage.expression_code` を `relaxed/happy/sad/angry/surprised` にマップし、短時間アニメーションで適用
+  - `EyeBehaviorController`: VRM標準 `lookLeft/lookRight/lookUp/lookDown` expression を優先して目線を制御し、未実装モデルでは `leftEye/rightEye` ボーンへフォールバックする。対話状態に応じたblink schedule、考え中の短い視線外し、低振幅microsaccade、`surprised` 中のblink抑制を扱う
   - `CharacterBehaviorState`: VAD、顔検出、text/telop、感情コードを `idle/attending/user_speaking/thinking/ai_speaking/face_lost/error_or_disconnected` の対話状態 snapshot へ集約。VAD onset debounce、発話 hold、発話時間を持ち、短いノイズを聞き姿勢・相槌 trigger へ直結させない
   - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、呼吸・hips重心移動・spine/chest/shoulder の idle offset、VAD連動の聞き姿勢、発話終了後の小さな相槌 nod を適用
   - `CharacterMotionConfig`: idle/listening motion の周期・振幅を集約し、腕/脚/胴体 controller の `performance.now()` 直参照を避ける
@@ -116,6 +118,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/HeadBoneController.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceMorphController.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceEmotionController.ts`
+  - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/EyeBehaviorController.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterMotionOrchestrator.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterMotionConfig.ts`
   - `sincromisor-frontend/src/ts/CharacterGaze/CharacterGaze.ts`
