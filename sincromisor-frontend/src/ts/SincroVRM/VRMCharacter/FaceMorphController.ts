@@ -4,17 +4,25 @@ import { TalkManager, CurrentMora } from "../../RTC/TalkManager";
 
 type MouseVowel = "A" | "I" | "U" | "E" | "O" | "N";
 
+const MOUTH_PRESETS: VRMExpressionPresetName[] = ["aa", "ih", "ou", "oh", "ee"];
+
 // テロップ/音素情報(TalkManager.currentMora)をもとに口形状とまばたきを制御する controller。
 // 音声波形解析ではなく telop_ch の vowel 情報を使うため、RTC同期に追従しやすい。
 export class FaceMorphController {
     private readonly clock: Clock;
     private readonly expressionManager: VRMExpressionManager;
     private readonly talkManager: TalkManager;
+    private readonly availableMouthPresets = new Set<VRMExpressionPresetName>();
     private currentMoraID: number = -1;
 
     constructor(expressionManager: VRMExpressionManager) {
         this.talkManager = TalkManager.getManager();
         this.expressionManager = expressionManager;
+        for (const preset of MOUTH_PRESETS) {
+            if (this.expressionManager.getExpression(preset) != null) {
+                this.availableMouthPresets.add(preset);
+            }
+        }
         this.clock = new Clock();
         this.clock.start();
         this.setTalkManager();
@@ -38,11 +46,9 @@ export class FaceMorphController {
     /* 母音とその長さに合わせた口の動きを設定する */
     // 母音切替前に口形状を一旦リセットして、前の口形状の残りを避ける。
     private setMouseVowel(vowel: MouseVowel, msec: number) {
-        this.expressionManager.setValue("aa", 0.0);
-        this.expressionManager.setValue("ih", 0.0);
-        this.expressionManager.setValue("ou", 0.0);
-        this.expressionManager.setValue("oh", 0.0);
-        this.expressionManager.setValue("ee", 0.0);
+        for (const preset of this.availableMouthPresets) {
+            this.expressionManager.setValue(preset, 0.0);
+        }
         switch (vowel) {
             case "A":
                 this.setExpression("aa", msec);
@@ -70,8 +76,11 @@ export class FaceMorphController {
       第1引数で対象となるExpressionの名前、第2引数でそのExpressionを1.0にする時間(ms)を指定する。
     */
     private setExpression(name: VRMExpressionPresetName, msec: number): void {
+        if (!this.availableMouthPresets.has(name)) {
+            return;
+        }
         const startTime = this.clock.getElapsedTime();
-        const duration = msec / 1000 / 2;
+        const duration = Math.max(0.04, msec / 1000 / 2);
         let isInFadeOut = false;
 
         const updateExpression = () => {
