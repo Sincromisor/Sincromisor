@@ -105,9 +105,9 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `HeadBoneController`: CharacterGazeまたはCamera方向に首回転を更新
   - `FaceMorphController`: `aa/ih/ou/ee/oh/blink` のExpression制御
   - `FaceEmotionController`: `ChatMessage.expression_code` を `relaxed/happy/sad/angry/surprised` にマップし、短時間アニメーションで適用
-  - `CharacterBehaviorState`: VAD、顔検出、text/telop、感情コードを `idle/attending/user_speaking/thinking/ai_speaking/face_lost/error_or_disconnected` の対話状態 snapshot へ集約
-  - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、呼吸・hips重心移動・spine/chest/shoulder の idle offset を適用
-  - `CharacterMotionConfig`: idle motion の周期・振幅を集約し、腕/脚/胴体 controller の `performance.now()` 直参照を避ける
+  - `CharacterBehaviorState`: VAD、顔検出、text/telop、感情コードを `idle/attending/user_speaking/thinking/ai_speaking/face_lost/error_or_disconnected` の対話状態 snapshot へ集約。VAD onset debounce、発話 hold、発話時間を持ち、短いノイズを聞き姿勢・相槌 trigger へ直結させない
+  - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、呼吸・hips重心移動・spine/chest/shoulder の idle offset、VAD連動の聞き姿勢、発話終了後の小さな相槌 nod を適用
+  - `CharacterMotionConfig`: idle/listening motion の周期・振幅を集約し、腕/脚/胴体 controller の `performance.now()` 直参照を避ける
   - `CharacterGaze`: 顔キーポイント追跡、視線角推定、arrive/leaveイベント通知
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
@@ -131,7 +131,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `CurrentMora`（TalkManagerが現在発話中の母音区間を保持）
   - `ChatMessage.expression_code`（text_ch先頭 `^N` 由来の感情コード。任意項目）
   - CharacterGazeの `movingAverage[6]`（右目/左目/鼻/口/右耳/左耳）
-  - `CharacterBehaviorSnapshot`（VAD envelope、顔検出・顔位置・正面度、AI発話中speech_id/母音/感情コード、対話状態を保持）
+  - `CharacterBehaviorSnapshot`（VAD envelope、発話開始/終了時刻、直近発話時間、顔検出・顔位置・正面度、AI発話中speech_id/母音/感情コード、対話状態を保持）
 - 永続化対象:
   - VRMモデルURL（`DialogManager.vrmUrl`）と、ローカル保存済みVRM（DialogManager経由）
 - スキーマ/モデル:
@@ -163,7 +163,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - telop受信 -> `TalkManager.currentMora()` 更新 -> `FaceMorphController` が口形適用
   - text受信（chat mode） -> `TalkManager` イベント通知 -> `FaceEmotionController` が感情表情を適用
   - VAD/顔検出/text/telop受信 -> `CharacterBehaviorState` に集約 -> `VRMCharacterManager.update()` が毎フレーム snapshot 更新
-  - `VRMCharacterManager.update()` -> `ArmBoneController` / `LegBoneController` が基準姿勢へ微小 idle offset を適用 -> `CharacterMotionOrchestrator` が hips/spine/chest/shoulder の呼吸・重心 offset を適用
+  - `VRMCharacterManager.update()` -> `ArmBoneController` / `LegBoneController` が基準姿勢へ微小 idle offset を適用 -> `CharacterMotionOrchestrator` が hips/spine/chest/shoulder の呼吸・重心 offset と VAD 連動の聞き姿勢・相槌 nod を適用
   - 顔検出 -> `CharacterGaze` 更新 -> `HeadBoneController` に反映
 - 異常系フロー:
   - VRMロード失敗 -> 例外出力（表示不可）
@@ -292,6 +292,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 | 2026-02-23 | Looking Glass 専用シーン化、展示向け床テクスチャ/視点補正、終了後レイアウト復旧と再開時入力回復の暫定方針を追記 |
 | 2026-05-08 | `CharacterBehaviorState` によるVAD/顔検出/text/telop/感情コードの集約と snapshot API を追記 |
 | 2026-05-08 | `CharacterMotionOrchestrator` / `CharacterMotionConfig` による呼吸・重心移動・上半身 idle motion と、腕/脚 controller の低振幅 offset 化を追記 |
+| 2026-05-08 | VAD onset debounce、発話終了 timing、聞き姿勢 blend、発話終了後の相槌 nod を追記 |
 
 ## 15. 参照資料
 
