@@ -165,6 +165,7 @@ export function ConfigurationDialogSettingsPanel() {
             <SettingsShell
                 ariaLabel="初回セットアップウィザード"
                 title="初回セットアップ"
+                navigationPlacement="top"
                 initialPageId="conversation"
                 pages={[
                     {

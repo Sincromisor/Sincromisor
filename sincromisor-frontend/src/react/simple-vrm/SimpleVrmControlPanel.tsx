@@ -98,6 +98,7 @@ export function SimpleVrmControlPanel({
                 title={title}
                 responsiveMode="container"
                 navigationDensity="compact"
+                navigationPlacement="top"
                 initialPageId={isLookingGlassFocused ? "looking-glass" : "conversation"}
                 pages={[
                     ...(isLookingGlassFocused ? [{

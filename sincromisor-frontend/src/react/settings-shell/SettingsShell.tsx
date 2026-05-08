@@ -23,6 +23,7 @@ type SettingsShellProps = {
     footer?: ReactNode;
     responsiveMode?: "viewport" | "container";
     navigationDensity?: "regular" | "compact";
+    navigationPlacement?: "auto" | "top";
 };
 
 type SettingsShellHeaderProps = Pick<SettingsShellProps, "badge" | "title" | "description">;
@@ -37,6 +38,7 @@ export function SettingsShell({
     footer,
     responsiveMode = "viewport",
     navigationDensity = "regular",
+    navigationPlacement = "auto",
 }: SettingsShellProps) {
     const tabIdPrefix = useId();
     const visiblePages = useMemo(() => pages, [pages]);
@@ -62,6 +64,7 @@ export function SettingsShell({
                 "settingsShell",
                 responsiveMode === "container" ? "is-containerResponsive" : "",
                 navigationDensity === "compact" ? "settingsShell--compactNavigation" : "",
+                navigationPlacement === "top" ? "settingsShell--topNavigation" : "",
             ].filter(Boolean).join(" ")}
             aria-label={ariaLabel}
         >

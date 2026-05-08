@@ -191,7 +191,8 @@
     }
 
     .configurationDialogReactSettingsPanel .settingsShell {
-        --settings-shell-surface: var(--sincro-surface-card-strong);
+        --settings-shell-surface: var(--sincro-surface-overlay-panel-soft);
+        --settings-shell-surface-strong: var(--sincro-surface-overlay-panel);
         --settings-shell-layout-gap: var(--sincro-space-550);
         --settings-shell-nav-width: 216px;
         --settings-shell-detail-min-width: 760px;
@@ -242,8 +243,22 @@
     }
 
     .configurationDialogReactSettingsPanel .settingsShell__nav .integratedTabs__tab {
-        min-height: 44px;
+        min-height: var(--sincro-overlay-tab-min-height, 38px);
         border-radius: var(--sincro-radius-300) 0 0 var(--sincro-radius-300);
+    }
+
+    .configurationDialogReactSettingsPanel .settingsShell--topNavigation .settingsShell__layout {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .configurationDialogReactSettingsPanel .settingsShell--topNavigation .settingsShell__nav {
+        align-self: end;
+        padding: 0 var(--sincro-space-250);
+    }
+
+    .configurationDialogReactSettingsPanel .settingsShell--topNavigation .settingsShell__nav .integratedTabs__tab {
+        border-radius: var(--sincro-radius-300) var(--sincro-radius-300) 0 0;
     }
 
     .configurationDialogReactSettingsPanel .settingsShell__detail {
@@ -287,7 +302,7 @@
 
     .configurationDialogReactSettingsPanel .settingsShell__pageSurface,
     .configurationDialogReactSettingsPanel .settingsShell__footer {
-        background: var(--sincro-surface-card-strong);
+        background: var(--settings-shell-surface);
     }
 
     /* 共有 settings section の inline style（暗色前提）を前提に、dialog 側でも文字色継承を揃える。 */
@@ -333,7 +348,7 @@
         }
 
         .configurationDialogReactSettingsPanel .settingsShell__nav .integratedTabs__section {
-            grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(var(--sincro-overlay-tab-min-width, 88px), 1fr));
         }
 
         .configurationDialogReactSettingsPanel .settingsShell__nav .integratedTabs__sectionTitle {
@@ -380,13 +395,13 @@
         }
 
         .configurationDialogReactSettingsPanel .settingsShell__nav .integratedTabs__section {
-            grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(var(--sincro-overlay-tab-min-width, 88px), 1fr));
         }
     }
 
     @media (max-width: 640px) {
         .configurationDialogReactSettingsPanel .settingsShell__nav .integratedTabs__section {
-            grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(var(--sincro-overlay-tab-min-width, 88px), 1fr));
         }
 
         .configurationDialogReactSettingsPanel__button,

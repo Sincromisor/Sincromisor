@@ -2,9 +2,9 @@
     .integratedTabs {
         --integrated-tabs-surface: var(--sincro-surface-panel, hsl(218deg 28% 10% / 96%));
         --integrated-tabs-border: var(--sincro-color-border-subtle, hsl(216deg 22% 100% / 12%));
-        --integrated-tabs-accent: rgba(159, 210, 255, 0.72);
+        --integrated-tabs-accent: var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.72));
         --integrated-tabs-overlap: 1px;
-        --integrated-tabs-min-width: 92px;
+        --integrated-tabs-min-width: var(--sincro-overlay-tab-min-width, 92px);
         display: grid;
         gap: var(--sincro-space-350, 14px);
         position: relative;
@@ -74,7 +74,7 @@
 
     .integratedTabs--top .integratedTabs__section {
         grid-template-columns: repeat(auto-fit, minmax(var(--integrated-tabs-min-width), 1fr));
-        gap: var(--sincro-space-100, 4px);
+        gap: var(--sincro-overlay-tab-gap, var(--sincro-space-100, 4px));
     }
 
     .integratedTabs--top .integratedTabs__sectionTitle {
@@ -83,10 +83,10 @@
     }
 
     .integratedTabs--top .integratedTabs__tab {
-        min-height: 38px;
+        min-height: var(--sincro-overlay-tab-min-height, 38px);
         margin-right: 0;
         margin-bottom: calc(-1 * var(--integrated-tabs-overlap));
-        padding: var(--sincro-space-250, 10px) var(--sincro-space-200, 8px);
+        padding: var(--sincro-overlay-tab-padding-block, var(--sincro-space-250, 10px)) var(--sincro-overlay-tab-padding-inline, var(--sincro-space-200, 8px));
         border-radius: var(--sincro-radius-300, 10px) var(--sincro-radius-300, 10px) 0 0;
         text-align: center;
     }

@@ -22,8 +22,8 @@ export const panelStyles: PanelStyles = {
         // Debug Menu から開く専用コンテナ内に描画するため、fixed ではなく relative で組む。
         position: "relative",
         width: "100%",
-        border: "1px solid hsl(186deg 65% 52% / 24%)",
-        background: "linear-gradient(145deg, rgba(18, 24, 33, 0.94), rgba(11, 15, 22, 0.94))",
+        border: "1px solid var(--sincro-color-overlay-panel-border, hsl(186deg 65% 52% / 30%))",
+        background: "var(--sincro-surface-overlay-frame, linear-gradient(145deg, rgba(18, 24, 33, 0.94), rgba(11, 15, 22, 0.94)))",
         color: "#f4f7fb",
         boxShadow: "0 14px 44px rgba(0, 0, 0, 0.34)",
         backdropFilter: "blur(8px)",
