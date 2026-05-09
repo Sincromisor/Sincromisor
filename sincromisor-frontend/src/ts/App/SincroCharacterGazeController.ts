@@ -136,6 +136,13 @@ export class SincroCharacterGazeController {
                 nextVideoTrack.stop();
                 return;
             }
+            nextVideoTrack.addEventListener("ended", () => {
+                if (!this.dialogManager.enableCharacterGaze()) {
+                    return;
+                }
+                this.characterBehaviorState.setErrorSource("gaze", "視線検出用カメラの映像トラックが停止しました。");
+                this.characterBehaviorState.setGazeTrackingEnabled(true);
+            });
 
             console.log("start CharacterGaze");
             const started = await characterGaze.initCamera(nextVideoTrack, (detects: Detection[]) => {
@@ -154,6 +161,7 @@ export class SincroCharacterGazeController {
             if (!started) {
                 throw new Error("CharacterGaze camera initialization returned false.");
             }
+            this.characterBehaviorState.setErrorSource("gaze", null);
         } catch (error) {
             if (refreshToken !== this.pendingCameraRefreshToken) {
                 return;
@@ -161,6 +169,7 @@ export class SincroCharacterGazeController {
             console.error("Failed to init CharacterGaze camera.", error);
             this.stopCharacterGazeCamera();
             const detail = error instanceof Error ? error.message : String(error);
+            this.characterBehaviorState.setErrorSource("gaze", `視線検出用カメラへの切替に失敗しました。${detail}`);
             const selectedDeviceId = this.videoInputManager.getVideoInputDeviceId();
             const deviceLabel = selectedDeviceId ? `deviceId=${selectedDeviceId}` : "既定デバイス";
             this.chatMessageService.writeErrorMessage(

@@ -13,11 +13,14 @@ declare type NormalizedKeypoint = {
     score?: number;
 }
 
+const VIDEO_FRAME_STALE_MS = 1200;
+
 export class CharacterGaze {
     private static instance: CharacterGaze;
     private readonly videoElement: HTMLVideoElement;
     private faceDetector?: FaceDetector;
     private lastVideoTime: number = -1;
+    private lastVideoFrameUpdatedAtMs: number = -1;
     private lastDetectedTime: number = -1;
     private detected: boolean = false;
     // デフォルトでは真正面を向くよう、
@@ -147,10 +150,14 @@ export class CharacterGaze {
 
     // 5秒(5000ms)以内に顔が検知できていた場合はtrueを、それ以外はfalseを返す。
     detecting(): boolean {
-        if (performance.now() - this.lastDetectedTime < 5000) {
-            return true;
+        const nowMs = performance.now();
+        if (
+            this.lastVideoFrameUpdatedAtMs >= 0
+            && nowMs - this.lastVideoFrameUpdatedAtMs > VIDEO_FRAME_STALE_MS
+        ) {
+            return false;
         }
-        return false;
+        return nowMs - this.lastDetectedTime < 5000;
     }
 
     // MediaPipe FaceDetector のロード。
@@ -209,6 +216,7 @@ export class CharacterGaze {
         }
         // 既にvideoがロード済みの状態で再開するケース（OFF->ON）にも対応する。
         this.lastVideoTime = -1;
+        this.lastVideoFrameUpdatedAtMs = -1;
         this.lastDetectedTime = -1;
         this.startPredictionLoopIfNeeded();
         return true;
@@ -221,6 +229,7 @@ export class CharacterGaze {
         this.detectionCallback = null;
         this.detected = false;
         this.lastVideoTime = -1;
+        this.lastVideoFrameUpdatedAtMs = -1;
         this.lastDetectedTime = -1;
         this.updateKeypointsMovingAverageToNeutral();
         this.videoElement.pause();
@@ -277,6 +286,7 @@ export class CharacterGaze {
         const startTimeMs = performance.now();
         if (this.videoElement.currentTime !== this.lastVideoTime) {
             this.lastVideoTime = this.videoElement.currentTime;
+            this.lastVideoFrameUpdatedAtMs = startTimeMs;
             const detections = this.faceDetector.detectForVideo(this.videoElement, startTimeMs).detections;
 
             if (detections.length > 0) {
@@ -318,8 +328,28 @@ export class CharacterGaze {
                 その影響で顔認識も止まってしまう問題を回避。
             */
             this.videoElement.play();
+            this.handleFrozenVideoFrame(startTimeMs, callback);
         }
         this.predictionFrameId = window.requestAnimationFrame(() => { void this.predictCam(callback); });
+    }
+
+    private handleFrozenVideoFrame(nowMs: number, callback: (detection: Detection[]) => void): void {
+        if (
+            this.lastVideoFrameUpdatedAtMs < 0
+            || nowMs - this.lastVideoFrameUpdatedAtMs <= VIDEO_FRAME_STALE_MS
+        ) {
+            return;
+        }
+        this.lastTargetDebugText = "映像停止";
+        this.updateKeypointsMovingAverageToNeutral();
+        const newStatus = this.detecting();
+        if (this.detected !== newStatus) {
+            console.log("leave!");
+            this.leaveCallback();
+            this.videoElement.dispatchEvent(new Event("leave"));
+            this.detected = newStatus;
+        }
+        callback([]);
     }
 
     // keypointの指数移動平均値を更新する

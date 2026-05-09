@@ -65,3 +65,10 @@ AI 発話中に、口形だけでなく、頭、目線、姿勢、腕、手首�
 - telop が高速に流れても gesture が毎文字/毎 mora で過剰発火しない。
 - 口形と感情表情の競合回避が維持される。
 - backend 未起動時は既存の表示や idle motion が壊れない。
+
+## レビュー対応メモ
+
+- 2026-05-09:
+  - `FaceMorphController` と `FaceEmotionController` の `TalkManager` 直接参照を廃止し、`VRMCharacterManager.update()` から渡される `CharacterBehaviorSnapshot` を唯一の入力にした。
+  - 口形と感情表情の短時間アニメーションを各 controller 独自の rAF ではなく、VRM render loop の snapshot 時刻で進めるようにした。
+  - `speech_id` が切り替わった telop は `expression_code` 未到着なら neutral として扱い、前発話の happy/sad/angry/surprised が姿勢・gesture へ持ち越されないようにした。

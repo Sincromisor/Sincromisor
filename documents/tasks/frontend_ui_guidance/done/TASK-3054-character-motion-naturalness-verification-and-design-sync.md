@@ -96,3 +96,6 @@ playwright-cli resize 390 844
   - `cd sincromisor-frontend && npm run build` 成功。
   - Playwright で `simple-vrm` を 1280x720 / 390x844 で確認し、Settings / Debug Console が前面UIとして操作できることを確認した。
   - backend 未起動、MediaPipe wasm 未配置、ブラウザ権限なしのため、RTC config 404 / Gaze wasm 404 / media permission error は既知のローカル検証条件として発生。VRMロードとUI表示は継続した。
+  - レビュー対応として、口形/感情 controller の直接購読と独自 rAF を廃止し、発話・感情・motion の時刻正本を `CharacterBehaviorSnapshot` と `VRMCharacterManager.update()` に揃えた。
+  - `npm run build` 成功。複数 VRM、実カメラ、実マイク、低スペック端末での自然さ確認は引き続き手動確認リスクとして残る。
+  - hips/root が揺れ対象になるVRMで全身が左右/前後に漂って見えるため、`CharacterMotionOrchestrator` は hips を基準位置・基準回転に固定し、重心感は spine/chest/shoulder の低振幅 motion のみに限定した。

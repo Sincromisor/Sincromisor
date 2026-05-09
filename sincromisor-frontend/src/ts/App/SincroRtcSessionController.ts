@@ -3,6 +3,7 @@ import { ChatMessage, TelopChannelMessage } from "../RTC/RTCMessage";
 import { SincroRTCConfigManager } from "../RTC/SincroRTCConfigManager";
 import { TalkManager } from "../RTC/TalkManager";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
+import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehaviorState";
 
 // SincroController から分離した「RTC セッション開始/停止 + channel callback 配線」担当。
 // WebRTC本体(RTCTalkClient)と UI/表示系(TalkManager, DebugConsoleManager)の結線を担当する。
@@ -10,6 +11,7 @@ export class SincroRtcSessionController {
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly talkManager: TalkManager;
     private readonly rtcConfigManager: SincroRTCConfigManager;
+    private readonly characterBehaviorState: CharacterBehaviorState;
     private rtcc?: RTCTalkClient;
 
     constructor(
@@ -20,6 +22,7 @@ export class SincroRtcSessionController {
         this.debugConsoleManager = debugConsoleManager;
         this.talkManager = talkManager;
         this.rtcConfigManager = rtcConfigManager;
+        this.characterBehaviorState = CharacterBehaviorState.getManager();
     }
 
     // WebRTC接続を開始する。生成済みローカル音声トラックをRTCPeerConnectionへ渡す。
@@ -31,10 +34,14 @@ export class SincroRtcSessionController {
 
         // フロント側の入力音量を可視化できるよう、ローカルトラックをデバッグへ渡す。
         this.debugConsoleManager.setLocalAudioTrack(audioTrack);
+        this.characterBehaviorState.setErrorSource("rtc", null);
 
         const rtcc = new RTCTalkClient(this.rtcConfigManager.config, audioTrack, talkMode);
         this.setTextChannelCallback(rtcc);
         this.setTelopChannelCallback(rtcc);
+        rtcc.rtcHealthCallback = (message) => {
+            this.characterBehaviorState.setErrorSource("rtc", message);
+        };
         this.rtcc = rtcc;
         rtcc.start();
     }
@@ -49,6 +56,7 @@ export class SincroRtcSessionController {
     stop(): void {
         // RTCTalkClient 側が stop の冪等性を担保しているため、ここは委譲に徹する。
         this.rtcc?.stop();
+        this.characterBehaviorState.setErrorSource("rtc", "音声認識・合成システムとの接続を停止しました。");
     }
 
     // CharacterGaze の AutoMute から使う薄い委譲。

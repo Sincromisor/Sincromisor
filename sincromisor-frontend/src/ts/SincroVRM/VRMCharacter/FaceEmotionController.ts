@@ -1,6 +1,6 @@
 import { VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
-import { TalkManager, TalkManagerEvent } from "../../RTC/TalkManager";
 import { DebugConsoleManager } from "../../UI/DebugConsoleManager";
+import { CharacterBehaviorSnapshot } from "./CharacterBehaviorState";
 
 type EmotionPreset = "neutral" | "relaxed" | "happy" | "sad" | "angry" | "surprised";
 
@@ -13,10 +13,17 @@ type EmotionPreset = "neutral" | "relaxed" | "happy" | "sad" | "angry" | "surpri
 //   口表現との干渉を最小化する（完全分離ではなく、汎用性重視の折衷）
 export class FaceEmotionController {
     private readonly expressionManager: VRMExpressionManager;
-    private readonly talkManager: TalkManager;
     private readonly logger: DebugConsoleManager;
     private handledMessageId: string | null = null;
-    private animationToken: number = 0;
+    private neutralizedSpeechId: number | null = null;
+    private activeEmotion: {
+        preset: EmotionPreset;
+        intensity: number;
+        startMs: number;
+        fadeInMs: number;
+        fadeOutStartMs: number;
+        endMs: number;
+    } | null = null;
     private readonly animatedPresets: VRMExpressionPresetName[] = [
         "relaxed",
         "happy",
@@ -27,31 +34,41 @@ export class FaceEmotionController {
 
     constructor(expressionManager: VRMExpressionManager) {
         this.expressionManager = expressionManager;
-        this.talkManager = TalkManager.getManager();
         this.logger = DebugConsoleManager.getManager();
         // 口パク(aa/ih/...)と同じ morph target を感情プリセットが触るVRMでは、
         // 表情と口の競合で破綻しやすい。初期化時に重複bindを除去して干渉を減らす。
         this.detachEmotionBindsOverlappingMouthVisemes();
         // モデル差で感情プリセット未実装のことがあるため、起動時に一覧を出しておく。
         this.logAvailableExpressions();
-        this.talkManager.subscribe((event) => {
-            this.onTalkManagerEvent(event);
-        });
         this.logger.addTextChannelLog("[emotion] FaceEmotionController initialized\n");
     }
 
-    private onTalkManagerEvent(event: TalkManagerEvent): void {
-        if (event.type !== "text_channel_message") {
-            return;
+    // 感情表情も CharacterBehaviorSnapshot を正本にし、text_ch/telop_ch の順序差を状態層へ閉じ込める。
+    update(snapshot: CharacterBehaviorSnapshot): void {
+        const speechId = snapshot.aiSpeech.speechId;
+        if (
+            snapshot.aiSpeech.isSpeaking
+            && speechId != null
+            && snapshot.aiSpeech.expressionCode == null
+            && speechId !== this.neutralizedSpeechId
+        ) {
+            this.neutralizedSpeechId = speechId;
+            this.playEmotion("neutral", 0.0, 0, 1, snapshot.nowMs);
         }
 
-        const msg = event.message;
-        if (msg.message_type !== "system") {
+        const msg = snapshot.aiSpeech.lastTextMessage;
+        if (!msg || msg.message_type !== "system") {
+            this.updateEmotionAnimation(snapshot.nowMs);
+            return;
+        }
+        if (speechId != null && msg.speech_id !== speechId) {
+            this.updateEmotionAnimation(snapshot.nowMs);
             return;
         }
 
         // 同一 message_id のストリーミング更新で表情を再トリガーしない。
         if (msg.message_id === this.handledMessageId) {
+            this.updateEmotionAnimation(snapshot.nowMs);
             return;
         }
         this.handledMessageId = msg.message_id;
@@ -67,7 +84,8 @@ export class FaceEmotionController {
         this.logger.addTextChannelLog(
             `[emotion] apply message_id=${msg.message_id} code=${code} preset=${preset} exists=${presetExists} intensity=${intensity.toFixed(2)}\n`,
         );
-        this.playEmotion(preset, intensity, holdMs, transitionMs);
+        this.playEmotion(preset, intensity, holdMs, transitionMs, snapshot.nowMs);
+        this.updateEmotionAnimation(snapshot.nowMs);
     }
 
     private mapExpressionCode(code: number): EmotionPreset {
@@ -111,42 +129,43 @@ export class FaceEmotionController {
         intensity: number,
         holdMs: number,
         transitionMs: number,
+        nowMs: number,
     ): void {
         // 新しい応答が来たら前の感情アニメーションを打ち切り、最新応答を優先する。
-        const token = ++this.animationToken;
-        const startMs = performance.now();
+        const startMs = nowMs;
         const fadeInMs = Math.max(transitionMs, 1);
         const fadeOutStartMs = startMs + fadeInMs + Math.max(holdMs, 0);
         const endMs = fadeOutStartMs + fadeInMs;
 
-        const animate = () => {
-            if (token !== this.animationToken) {
-                return;
-            }
+        if (preset === "neutral") {
+            this.activeEmotion = null;
+            this.setEmotionPresetValues("neutral", 0.0);
+            return;
+        }
 
-            const nowMs = performance.now();
-            if (preset === "neutral") {
-                this.setEmotionPresetValues("neutral", 0.0);
-                return;
-            }
+        this.activeEmotion = { preset, intensity, startMs, fadeInMs, fadeOutStartMs, endMs };
+    }
 
-            let value = 0.0;
-            if (nowMs < startMs + fadeInMs) {
-                value = intensity * ((nowMs - startMs) / fadeInMs);
-            } else if (nowMs < fadeOutStartMs) {
-                value = intensity;
-            } else if (nowMs < endMs) {
-                value = intensity * (1.0 - ((nowMs - fadeOutStartMs) / fadeInMs));
-            } else {
-                this.setEmotionPresetValues(preset, 0.0);
-                return;
-            }
+    private updateEmotionAnimation(nowMs: number): void {
+        if (!this.activeEmotion) {
+            return;
+        }
 
-            this.setEmotionPresetValues(preset, Math.max(0.0, Math.min(1.0, value)));
-            window.requestAnimationFrame(animate);
-        };
+        const animation = this.activeEmotion;
+        let value = 0.0;
+        if (nowMs < animation.startMs + animation.fadeInMs) {
+            value = animation.intensity * ((nowMs - animation.startMs) / animation.fadeInMs);
+        } else if (nowMs < animation.fadeOutStartMs) {
+            value = animation.intensity;
+        } else if (nowMs < animation.endMs) {
+            value = animation.intensity * (1.0 - ((nowMs - animation.fadeOutStartMs) / animation.fadeInMs));
+        } else {
+            this.setEmotionPresetValues(animation.preset, 0.0);
+            this.activeEmotion = null;
+            return;
+        }
 
-        animate();
+        this.setEmotionPresetValues(animation.preset, Math.max(0.0, Math.min(1.0, value)));
     }
 
     private setEmotionPresetValues(targetPreset: EmotionPreset, value: number): void {
