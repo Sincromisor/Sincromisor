@@ -66,3 +66,9 @@
 - 30 秒待機しても blink と microsaccade が機械的すぎない。
 - AI 応答待ちの考え中表現で、視線外しが自然に見える。
 - 複数 VRM で look expression の有無に応じた fallback が効く。
+
+## レビュー対応メモ
+
+- 2026-05-09:
+  - `lookLeft/lookRight` と `lookUp/lookDown` の有無を軸別に判定し、一部 look expression だけを持つ VRM では不足軸だけ `leftEye/rightEye` ボーンへ fallback するようにした。
+  - `CharacterGaze` の video frame が一定時間進まない場合は検出 stale とみなし、leave callback と空 detection callback を発火して AutoMute / `CharacterBehaviorState` の `face_lost` が更新されるようにした。

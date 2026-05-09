@@ -13,8 +13,8 @@ type MotionBone = {
     baseRotation: Euler;
 };
 
-// 呼吸、重心移動、肩周りの小さな idle motion をまとめて適用する。
-// 腕/脚の固定姿勢 controller と競合しないよう、胴体・肩・hips の基準姿勢に offset だけを足す。
+// 呼吸、上半身の重心感、肩周りの小さな idle motion をまとめて適用する。
+// hips はモデル全体の root として振る舞うVRMがあるため、位置揺れの対象にしない。
 export class CharacterMotionOrchestrator {
     private readonly bones = new Map<OptionalBoneName, MotionBone>();
     private listeningBlend = 0;
@@ -43,7 +43,6 @@ export class CharacterMotionOrchestrator {
         const breath = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.breath.periodSeconds);
         const breathSecondary = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.breath.periodSeconds, Math.PI / 2);
         const balanceSide = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.balance.sidePeriodSeconds, Math.PI / 7);
-        const balanceFront = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.balance.frontPeriodSeconds, Math.PI / 3);
         const intensity = this.intensityForState(snapshot);
         const listening = this.updateListeningBlend(elapsedSeconds, snapshot);
         const backchannelNod = this.updateBackchannelNod(elapsedSeconds, snapshot);
@@ -51,7 +50,7 @@ export class CharacterMotionOrchestrator {
         const aiGesture = this.updateAiSpeechBeat(elapsedSeconds, snapshot);
         const expression = this.aiSpeechExpressionProfile(snapshot.aiSpeech.expressionCode);
 
-        this.updateHips(hipsBasePosition, balanceSide, balanceFront, intensity, listening, aiSpeaking, expression);
+        this.stabilizeHips(hipsBasePosition);
         this.updateSpine(breath, balanceSide, intensity, listening, backchannelNod, aiSpeaking, aiGesture, expression);
         this.updateChest(breath, breathSecondary, intensity, listening, backchannelNod, aiSpeaking, aiGesture, expression);
         this.updateShoulders(breath, breathSecondary, intensity, listening, aiSpeaking, aiGesture, expression);
@@ -68,32 +67,13 @@ export class CharacterMotionOrchestrator {
         });
     }
 
-    private updateHips(
-        basePosition: Vector3,
-        sideWave: number,
-        frontWave: number,
-        intensity: number,
-        listening: number,
-        aiSpeaking: number,
-        expression: AiSpeechExpressionMotionProfile,
-    ): void {
+    private stabilizeHips(basePosition: Vector3): void {
         const bone = this.bones.get('hips');
         if (!bone) {
             return;
         }
-        bone.node.position.set(
-            basePosition.x + sideWave * CHARACTER_IDLE_MOTION_CONFIG.balance.hipsSideShift * intensity,
-            basePosition.y,
-            basePosition.z
-                + frontWave * CHARACTER_IDLE_MOTION_CONFIG.balance.hipsFrontShift * intensity
-                - listening * CHARACTER_IDLE_MOTION_CONFIG.listening.hipsFrontShift
-                + aiSpeaking * expression.hipsFrontShift,
-        );
-        bone.node.rotation.set(
-            bone.baseRotation.x,
-            bone.baseRotation.y,
-            bone.baseRotation.z + sideWave * CHARACTER_IDLE_MOTION_CONFIG.balance.hipsRollRad * intensity,
-        );
+        bone.node.position.copy(basePosition);
+        bone.node.rotation.copy(bone.baseRotation);
     }
 
     private updateSpine(
@@ -347,7 +327,6 @@ export class CharacterMotionOrchestrator {
                     chestPitchRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestPitchRad,
                     upperChestPitchRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.upperChestPitchRad,
                     upperChestRollRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.upperChestRollRad * 0.35,
-                    hipsFrontShift: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.hipsFrontShift,
                     shoulderOpenRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad * 0.45,
                 };
             case 3:
@@ -359,7 +338,6 @@ export class CharacterMotionOrchestrator {
                     chestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.55,
                     upperChestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.65,
                     upperChestRollRad: 0,
-                    hipsFrontShift: 0,
                     shoulderOpenRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad * 0.35,
                 };
             case 4:
@@ -371,7 +349,6 @@ export class CharacterMotionOrchestrator {
                     chestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad,
                     upperChestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.9,
                     upperChestRollRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.upperChestRollRad,
-                    hipsFrontShift: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.hipsFrontShift,
                     shoulderOpenRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad,
                 };
             case 5:
@@ -383,7 +360,6 @@ export class CharacterMotionOrchestrator {
                     chestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.8,
                     upperChestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad,
                     upperChestRollRad: 0,
-                    hipsFrontShift: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.hipsFrontShift * 0.5,
                     shoulderOpenRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad * 0.75,
                 };
             case 1:
@@ -395,7 +371,6 @@ export class CharacterMotionOrchestrator {
                     chestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.35,
                     upperChestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.3,
                     upperChestRollRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.upperChestRollRad * 0.35,
-                    hipsFrontShift: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.hipsFrontShift * 0.4,
                     shoulderOpenRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad * 0.4,
                 };
             case 0:
@@ -408,7 +383,6 @@ export class CharacterMotionOrchestrator {
                     chestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.24,
                     upperChestPitchRad: -CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestOpenRad * 0.18,
                     upperChestRollRad: 0,
-                    hipsFrontShift: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.hipsFrontShift * 0.15,
                     shoulderOpenRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad * 0.22,
                 };
         }
@@ -423,6 +397,5 @@ type AiSpeechExpressionMotionProfile = {
     chestPitchRad: number;
     upperChestPitchRad: number;
     upperChestRollRad: number;
-    hipsFrontShift: number;
     shoulderOpenRad: number;
 };

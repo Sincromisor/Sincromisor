@@ -64,3 +64,11 @@ VAD、顔検出、telop、text、感情コードを直接各 controller が参�
 - カメラ OFF / マイク OFF でも `idle` または `face_lost` 相当で安定する。
 - Debug Console の VAD 表示とキャラクター状態の VAD snapshot が大きく食い違わない。
 - text/telop 受信時に `ai_speaking` 相当へ遷移し、発話終了後に戻る。
+
+## レビュー対応メモ
+
+- 2026-05-09:
+  - `text_ch` と `telop_ch` の順序差で前発話の `expression_code` が持ち越されないよう、`speech_id` ごとに感情コードを保持し、新しい telop 発話は該当 text が無ければ neutral として扱うようにした。
+  - `currentMoraId` を `CharacterBehaviorSnapshot.aiSpeech` に追加し、口形 controller が `TalkManager.currentMora()` を直接ポーリングしなくても mora 切替を検出できるようにした。
+  - Gaze callback が止まった場合も `face_lost` へ落ちるよう、状態層に stale 判定を追加した。
+  - media / gaze / RTC の異常を `setErrorSource()` で source 別に結線し、接続異常時に `error_or_disconnected` へ遷移できるようにした。

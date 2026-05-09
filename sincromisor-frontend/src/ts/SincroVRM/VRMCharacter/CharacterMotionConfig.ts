@@ -14,10 +14,6 @@ export const CHARACTER_IDLE_MOTION_CONFIG = {
     },
     balance: {
         sidePeriodSeconds: 9.5,
-        frontPeriodSeconds: 12.0,
-        hipsSideShift: 0.012,
-        hipsFrontShift: 0.006,
-        hipsRollRad: MathUtils.degToRad(0.35),
         spineYawRad: MathUtils.degToRad(0.35),
     },
     listening: {
@@ -26,7 +22,6 @@ export const CHARACTER_IDLE_MOTION_CONFIG = {
         spineLeanRad: MathUtils.degToRad(1.4),
         chestLeanRad: MathUtils.degToRad(1.9),
         upperChestLeanRad: MathUtils.degToRad(1.2),
-        hipsFrontShift: 0.008,
         nodDelayMs: 220,
         nodDurationSeconds: 0.62,
         nodCooldownMs: 2400,
@@ -46,7 +41,6 @@ export const CHARACTER_IDLE_MOTION_CONFIG = {
         chestPitchRad: MathUtils.degToRad(0.72),
         upperChestPitchRad: MathUtils.degToRad(1.0),
         upperChestRollRad: MathUtils.degToRad(0.3),
-        hipsFrontShift: 0.003,
         shoulderOpenRad: MathUtils.degToRad(0.65),
         shoulderBeatRad: MathUtils.degToRad(0.38),
         spineBeatYawRad: MathUtils.degToRad(0.28),

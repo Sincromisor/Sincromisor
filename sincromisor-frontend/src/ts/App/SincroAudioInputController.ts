@@ -57,9 +57,13 @@ export class SincroAudioInputController {
         this.userMediaManager.disableVideo();
 
         this.userMediaManager.getUserMedia(
-            onAudioTrack,
+            (audioTrack) => {
+                this.characterBehaviorState.setErrorSource("media", null);
+                onAudioTrack(audioTrack);
+            },
             () => { },
             (err) => {
+                this.characterBehaviorState.setErrorSource("media", `マイク入力の取得に失敗しました。${err}`);
                 this.chatMessageService.writeErrorMessage(`カメラまたはマイクが見つかりませんでした。 - ${err}`);
             },
         );
@@ -185,9 +189,11 @@ export class SincroAudioInputController {
                 const selectedDeviceId = this.userMediaManager.getAudioInputDeviceId();
                 try {
                     const nextAudioTrack = await this.userMediaManager.reacquireAudioTrack();
+                    this.characterBehaviorState.setErrorSource("media", null);
                     this.onAudioTrackReplaced(nextAudioTrack);
                 } catch (err) {
                     const detail = err instanceof Error ? err.message : String(err);
+                    this.characterBehaviorState.setErrorSource("media", `マイク入力への切替に失敗しました。${detail}`);
                     const deviceLabel = selectedDeviceId ? `deviceId=${selectedDeviceId}` : "既定デバイス";
                     this.chatMessageService.writeErrorMessage(
                         `選択したマイク入力への切替に失敗しました。(${deviceLabel}) - ${detail}`,

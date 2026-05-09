@@ -182,11 +182,22 @@ export class EyeBehaviorController {
     }
 
     private applyLook(offsetX: number, offsetY: number): void {
-        if (this.availableLookPresets.size > 0) {
-            this.applyLookExpressions(offsetX, offsetY);
-            return;
+        const hasHorizontalLookExpression = this.availableLookPresets.has('lookLeft')
+            || this.availableLookPresets.has('lookRight');
+        const hasVerticalLookExpression = this.availableLookPresets.has('lookUp')
+            || this.availableLookPresets.has('lookDown');
+        if (hasHorizontalLookExpression || hasVerticalLookExpression) {
+            this.applyLookExpressions(
+                hasHorizontalLookExpression ? offsetX : 0,
+                hasVerticalLookExpression ? offsetY : 0,
+            );
         }
-        this.applyEyeBoneRotation(offsetX, offsetY);
+        if (!hasHorizontalLookExpression || !hasVerticalLookExpression) {
+            this.applyEyeBoneRotation(
+                hasHorizontalLookExpression ? 0 : offsetX,
+                hasVerticalLookExpression ? 0 : offsetY,
+            );
+        }
     }
 
     private applyLookExpressions(offsetX: number, offsetY: number): void {
@@ -203,18 +214,18 @@ export class EyeBehaviorController {
         );
         this.setExpressionIfAvailable(
             'lookUp',
-            MathUtils.clamp(-offsetY * EYE_BEHAVIOR_CONFIG.expressionVerticalScale, 0, 1),
+            MathUtils.clamp(offsetY * EYE_BEHAVIOR_CONFIG.expressionVerticalScale, 0, 1),
         );
         this.setExpressionIfAvailable(
             'lookDown',
-            MathUtils.clamp(offsetY * EYE_BEHAVIOR_CONFIG.expressionVerticalScale, 0, 1),
+            MathUtils.clamp(-offsetY * EYE_BEHAVIOR_CONFIG.expressionVerticalScale, 0, 1),
         );
     }
 
     private applyEyeBoneRotation(offsetX: number, offsetY: number): void {
         for (const bone of this.eyeBones.values()) {
             bone.node.rotation.set(
-                bone.baseRotation.x - offsetY * EYE_BEHAVIOR_CONFIG.maxVerticalRad * 2,
+                bone.baseRotation.x + offsetY * EYE_BEHAVIOR_CONFIG.maxVerticalRad * 2,
                 bone.baseRotation.y - offsetX * EYE_BEHAVIOR_CONFIG.maxHorizontalRad * 2,
                 bone.baseRotation.z,
             );

@@ -42,6 +42,7 @@ export type CharacterBehaviorGazeSnapshot = {
 export type CharacterBehaviorAiSpeechSnapshot = {
     isSpeaking: boolean;
     speechId: number | null;
+    currentMoraId: number | null;
     expressionCode: number | null;
     currentVowel: string | null;
     currentText: string | null;
@@ -81,6 +82,7 @@ const BEHAVIOR_TIMING = {
     aiSpeechCadenceBeatMs: 680,
     aiSpeechPhrasePauseSeconds: 0.24,
     thinkingHoldMs: 1600,
+    gazeStaleMs: 1200,
 } as const;
 
 // キャラクター表現が参照する入力状態の集約点。
@@ -92,6 +94,8 @@ export class CharacterBehaviorState {
     private state: CharacterInteractionState = "idle";
     private stateChangedAtMs = performance.now();
     private errorMessage: string | null = null;
+    private readonly errorMessagesBySource = new Map<string, string>();
+    private readonly expressionCodeBySpeechId = new Map<number, number | null>();
     private lastUserSpeechEndedAtMs: number | null = null;
     private pendingRawSpeechStartedAtMs: number | null = null;
     private vad: CharacterBehaviorVadSnapshot = {
@@ -121,6 +125,7 @@ export class CharacterBehaviorState {
     private aiSpeech: CharacterBehaviorAiSpeechSnapshot = {
         isSpeaking: false,
         speechId: null,
+        currentMoraId: null,
         expressionCode: null,
         currentVowel: null,
         currentText: null,
@@ -236,11 +241,21 @@ export class CharacterBehaviorState {
     }
 
     setError(message: string | null, nowMs: number = performance.now()): void {
-        this.errorMessage = message;
+        this.setErrorSource("general", message, nowMs);
+    }
+
+    setErrorSource(source: string, message: string | null, nowMs: number = performance.now()): void {
+        if (message) {
+            this.errorMessagesBySource.set(source, message);
+        } else {
+            this.errorMessagesBySource.delete(source);
+        }
+        this.errorMessage = this.currentErrorMessage();
         this.update(nowMs);
     }
 
     update(nowMs: number = performance.now()): CharacterBehaviorSnapshot {
+        this.refreshGazeStaleness(nowMs);
         this.refreshAiSpeechFromCurrentMora(nowMs);
         const nextState = this.deriveState(nowMs);
         if (nextState !== this.state) {
@@ -277,29 +292,39 @@ export class CharacterBehaviorState {
         if (message.message_type !== "system") {
             return;
         }
+        const expressionCode = typeof message.expression_code === "number" ? message.expression_code : null;
+        this.expressionCodeBySpeechId.set(message.speech_id, expressionCode);
+        const shouldApplyToCurrentSpeech = this.aiSpeech.speechId == null
+            || this.aiSpeech.speechId === message.speech_id
+            || !this.aiSpeech.isSpeaking;
         this.aiSpeech = {
             ...this.aiSpeech,
-            speechId: message.speech_id,
-            expressionCode: typeof message.expression_code === "number" ? message.expression_code : null,
+            speechId: shouldApplyToCurrentSpeech ? message.speech_id : this.aiSpeech.speechId,
+            expressionCode: shouldApplyToCurrentSpeech ? expressionCode : this.aiSpeech.expressionCode,
             lastTextMessage: message,
             lastUpdatedAtMs: nowMs,
         };
     }
 
     private applyTelopChannelMessage(message: TelopChannelMessage, nowMs: number): void {
-        const wasSpeaking = this.aiSpeech.isSpeaking;
+        const speechChanged = this.aiSpeech.speechId !== message.speech_id;
+        const wasSpeaking = this.aiSpeech.isSpeaking && !speechChanged;
         const beat = this.nextAiSpeechBeat(message, nowMs);
         this.aiSpeech = {
             ...this.aiSpeech,
             isSpeaking: true,
             speechId: message.speech_id,
+            currentMoraId: message.new_text ? (this.aiSpeech.currentMoraId ?? -1) + 1 : this.aiSpeech.currentMoraId,
+            expressionCode: speechChanged
+                ? this.expressionCodeForSpeech(message.speech_id)
+                : this.aiSpeech.expressionCode,
             currentVowel: message.vowel || null,
             currentText: message.text || null,
             currentLengthSeconds: Math.max(0, Number(message.length) || 0),
             beatId: beat ? this.aiSpeech.beatId + 1 : this.aiSpeech.beatId,
-            beatKind: beat?.kind ?? this.aiSpeech.beatKind,
-            beatText: beat?.text ?? this.aiSpeech.beatText,
-            beatIntensity: beat?.intensity ?? this.aiSpeech.beatIntensity,
+            beatKind: beat?.kind ?? (speechChanged ? null : this.aiSpeech.beatKind),
+            beatText: beat?.text ?? (speechChanged ? null : this.aiSpeech.beatText),
+            beatIntensity: beat?.intensity ?? (speechChanged ? 0 : this.aiSpeech.beatIntensity),
             lastBeatAtMs: beat ? nowMs : this.aiSpeech.lastBeatAtMs,
             lastTelopMessage: message,
             lastStartedAtMs: wasSpeaking ? this.aiSpeech.lastStartedAtMs : nowMs,
@@ -315,10 +340,15 @@ export class CharacterBehaviorState {
             && nowMs - lastUpdatedAtMs <= BEHAVIOR_TIMING.aiSpeechHoldMs;
         const isSpeaking = currentMora != null || heldByRecentTelop;
         if (isSpeaking) {
+            const currentSpeechId = currentMora?.mora.speech_id ?? this.aiSpeech.speechId;
             this.aiSpeech = {
                 ...this.aiSpeech,
                 isSpeaking: true,
-                speechId: currentMora?.mora.speech_id ?? this.aiSpeech.speechId,
+                speechId: currentSpeechId,
+                currentMoraId: currentMora?.moraID ?? this.aiSpeech.currentMoraId,
+                expressionCode: currentSpeechId == null
+                    ? this.aiSpeech.expressionCode
+                    : this.expressionCodeForSpeech(currentSpeechId),
                 currentVowel: currentMora?.mora.vowel || this.aiSpeech.currentVowel,
                 currentText: currentMora?.mora.text || this.aiSpeech.currentText,
                 currentLengthSeconds: currentMora
@@ -336,6 +366,7 @@ export class CharacterBehaviorState {
                 currentVowel: null,
                 currentText: null,
                 currentLengthSeconds: 0,
+                currentMoraId: null,
                 beatKind: null,
                 beatText: null,
                 beatIntensity: 0,
@@ -404,5 +435,36 @@ export class CharacterBehaviorState {
             return { kind: "cadence", text, intensity: 0.42 };
         }
         return null;
+    }
+
+    private expressionCodeForSpeech(speechId: number): number | null {
+        return this.expressionCodeBySpeechId.has(speechId)
+            ? this.expressionCodeBySpeechId.get(speechId) ?? null
+            : null;
+    }
+
+    private refreshGazeStaleness(nowMs: number): void {
+        if (
+            !this.gaze.trackingEnabled
+            || this.gaze.lastUpdatedAtMs == null
+            || nowMs - this.gaze.lastUpdatedAtMs <= BEHAVIOR_TIMING.gazeStaleMs
+        ) {
+            return;
+        }
+        this.gaze = {
+            ...this.gaze,
+            detected: false,
+            rawDetected: false,
+            targetX: 0.5,
+            targetY: 0.5,
+            facing: 0.5,
+            detectionCount: 0,
+            lastUpdatedAtMs: nowMs,
+        };
+    }
+
+    private currentErrorMessage(): string | null {
+        const first = this.errorMessagesBySource.values().next();
+        return first.done ? null : first.value;
     }
 }
