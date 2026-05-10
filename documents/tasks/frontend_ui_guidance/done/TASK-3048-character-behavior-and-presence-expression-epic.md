@@ -1,7 +1,7 @@
 # TASK-3048 キャラクター挙動と対話存在感の表現強化 Epic
 
 - 作成日: 2026-05-08
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 
 ## 目的
@@ -143,6 +143,13 @@
 - Done: `documents/tasks/frontend_ui_guidance/done/TASK-3052-eye-behavior-gaze-blink-and-microsaccade.md`
 - Done: `documents/tasks/frontend_ui_guidance/done/TASK-3053-ai-speech-telop-emotion-synchronized-motion.md`
 - Done: `documents/tasks/frontend_ui_guidance/done/TASK-3054-character-motion-naturalness-verification-and-design-sync.md`
+
+## 完了メモ
+
+- 2026-05-11:
+  - 子タスク `TASK-3049` から `TASK-3054` が完了済みのため、本 Epic も完了扱いとする。
+  - 後続の `sincro` 同期モーション基盤は `documents/tasks/character_sincro_motion/open/TASK-3100-sincro-motion-foundation-epic.md` へ分離した。
+  - `TASK-3100` 以降は、本タスクで整備した `CharacterBehaviorState`、`CharacterMotionOrchestrator`、eye / idle / AI speech motion を前提に進める。
 
 ## 実装対象候補
 
