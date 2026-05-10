@@ -6,7 +6,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 
 - ドキュメントパス: `documents/design/frontend_character.md`
 - 作成日: 2026-02-15
-- 最終更新日: 2026-05-09
+- 最終更新日: 2026-05-10
 - ステータス: Active
 
 ## 2. 目的とスコープ
@@ -29,7 +29,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - AI発話中は `telop_ch` から抽出した speech beat と `expression_code` を `CharacterBehaviorSnapshot.aiSpeech` に集約し、首・目線・上半身・腕の小さな gesture を同期する。
   - モーション強度は `CharacterMotionConfig` で抑制し、首/目線/上半身/腕が同時に最大化しないよう、AI発話 posture と beat gesture を低振幅・長めの easing で重ねる。
   - neck、eye、arm、leg、mouth expression はVRM個体差で欠損する可能性があるため任意要素として扱い、表現できない部位は例外停止ではなく無効化または近いボーンへフォールバックする。look expression は左右/上下の軸別に判定し、不足軸だけ eye bone へ fallback する。
-  - `CharacterGaze` は MediaPipe FaceDetector を `public/mediapipe-wasm` から読み込み、検出状態で自動ミュート連動も行う。
+  - `CharacterGaze` は MediaPipe FaceDetector を `public/mediapipe-wasm` から読み込み、検出状態で自動ミュート連動も行う。FirefoxではMediaPipe GPU delegateのwasm/WebGL相性を避けるためCPU delegateを使う。
 
 ## 3. 背景
 
@@ -114,7 +114,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、hips/root を基準位置へ固定したうえで、呼吸・spine/chest/shoulder の idle offset、VAD連動の聞き姿勢、発話終了後の小さな相槌 nod、AI発話中の感情別姿勢と beat gesture を適用
   - `ArmBoneController`: idleの腕・肘・手首揺れに、`CharacterBehaviorSnapshot.aiSpeech.beatId` 由来の短い片腕gestureを重ねる。左右を交互に主役化し、発話開始・文節・句読点で強度を変える
   - `CharacterMotionConfig`: idle/listening/AI発話 motion の周期・振幅・easing を集約し、腕/脚/胴体 controller の `performance.now()` 直参照を避ける。AI発話中は posture blend を控えめにし、beat duration を長めにして首・肩・腕の同時ピークを避ける
-  - `CharacterGaze`: 顔キーポイント追跡、視線角推定、arrive/leaveイベント通知
+  - `CharacterGaze`: 顔キーポイント追跡、視線角推定、arrive/leaveイベント通知。`detectForVideo()` へ渡す前にvideo frameのreadyStateとdecode済み寸法を確認し、MediaPipe実行時例外では検出ループを停止して上位controllerへ通知する
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`
@@ -160,6 +160,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - エラー仕様:
   - VRMロード失敗はError throw
   - FaceDetector未ロード時は検出処理をスキップ
+  - FaceDetector実行時例外はCharacterGazeで捕捉し、検出ループ停止、DebugConsole表示、`CharacterBehaviorState` のgaze errorへ反映する
 - タイムアウト/リトライ方針:
   - CharacterGazeモデルロード完了まで1秒間隔で起動待ち
 
@@ -176,6 +177,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - 異常系フロー:
   - VRMロード失敗 -> 例外出力（表示不可）
   - 顔未検出継続 -> ニュートラル位置に漸近
+  - MediaPipe実行時例外 -> 顔検出ループ停止、DebugConsoleに検出エラー表示、Gaze OFF/ONで再起動可能
   - media/gaze/RTC エラーまたは切断 -> `CharacterBehaviorState.setErrorSource()` へ記録し、`error_or_disconnected` の控えめな motion へ遷移
 - 状態遷移図/シーケンス図（必要なら図リンク）:
   - TODO: `networking_rtc.md` の telop フロー図と統合予定
