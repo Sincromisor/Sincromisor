@@ -145,19 +145,25 @@ export class SincroCharacterGazeController {
             });
 
             console.log("start CharacterGaze");
-            const started = await characterGaze.initCamera(nextVideoTrack, (detects: Detection[]) => {
-                // 設定変更後も動作が追従するよう、毎フレーム時点の設定を参照する。
-                const gazeEnabled = this.dialogManager.enableCharacterGaze();
-                // ここが Gaze 状態の主更新点。DebugConsole購読経由で React 側にも値が流れる。
-                if (gazeEnabled) {
-                    this.debugConsoleManager.updateFaceXLog(characterGaze.targetX());
-                    this.debugConsoleManager.updateFaceYLog(characterGaze.targetY());
-                    this.debugConsoleManager.updateFacing(characterGaze.facing());
-                    this.debugConsoleManager.updateCharacterGazeTargetDebug(characterGaze.targetSelectionDebugText());
-                    this.characterBehaviorState.applyGazeState(characterGaze, detects);
-                }
-                this.updateEyeTargetOverlay(characterGaze, gazeEnabled, detects);
-            });
+            const started = await characterGaze.initCamera(
+                nextVideoTrack,
+                (detects: Detection[]) => {
+                    // 設定変更後も動作が追従するよう、毎フレーム時点の設定を参照する。
+                    const gazeEnabled = this.dialogManager.enableCharacterGaze();
+                    // ここが Gaze 状態の主更新点。DebugConsole購読経由で React 側にも値が流れる。
+                    if (gazeEnabled) {
+                        this.debugConsoleManager.updateFaceXLog(characterGaze.targetX());
+                        this.debugConsoleManager.updateFaceYLog(characterGaze.targetY());
+                        this.debugConsoleManager.updateFacing(characterGaze.facing());
+                        this.debugConsoleManager.updateCharacterGazeTargetDebug(characterGaze.targetSelectionDebugText());
+                        this.characterBehaviorState.applyGazeState(characterGaze, detects);
+                    }
+                    this.updateEyeTargetOverlay(characterGaze, gazeEnabled, detects);
+                },
+                (error: unknown) => {
+                    this.handleCharacterGazeRuntimeError(error);
+                },
+            );
             if (!started) {
                 throw new Error("CharacterGaze camera initialization returned false.");
             }
@@ -205,6 +211,24 @@ export class SincroCharacterGazeController {
             return;
         }
         eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 0%)");
+    }
+
+    private handleCharacterGazeRuntimeError(error: unknown): void {
+        this.characterBehaviorState.setGazeTrackingEnabled(false);
+        this.characterBehaviorState.setErrorSource(
+            "gaze",
+            `視線検出処理が停止しました。${this.formatErrorDetail(error)}`,
+        );
+        this.debugConsoleManager.setCharacterGazePaused(true);
+        this.debugConsoleManager.updateCharacterGazeTargetDebug("検出エラー");
+        this.updateEyeTargetOverlay(CharacterGaze.getManager(), false, []);
+        this.chatMessageService.writeErrorMessage(
+            `視線検出処理が停止しました。Gaze を一度OFF/ONするか、Firefoxでは別のカメラ設定を試してください。(${this.formatErrorDetail(error)})`,
+        );
+    }
+
+    private formatErrorDetail(error: unknown): string {
+        return error instanceof Error ? error.message : String(error);
     }
 
     private readDialogGazeSettingsSnapshot(): DialogGazeSettingsSnapshot {

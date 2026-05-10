@@ -14,6 +14,7 @@ declare type NormalizedKeypoint = {
 }
 
 const VIDEO_FRAME_STALE_MS = 1200;
+const MIN_DETECTABLE_VIDEO_DIMENSION_PX = 2;
 
 export class CharacterGaze {
     private static instance: CharacterGaze;
@@ -32,6 +33,7 @@ export class CharacterGaze {
     private predictionLoopRunning: boolean = false;
     private predictionFrameId: number | null = null;
     private detectionCallback: ((detection: Detection[]) => void) | null = null;
+    private detectionErrorCallback: ((error: unknown) => void) | null = null;
     private loadedDataHandlerBound: (() => void) | null = null;
     private readonly faceTargetSelector = new FaceTargetSelector();
     // 6 keypoints (rightEye, leftEye, nose, mouth, rightEar, leftEar) の x/y を個別に平滑化する。
@@ -174,7 +176,7 @@ export class CharacterGaze {
             {
                 baseOptions: {
                     modelAssetPath: "/3rd_party/blaze_face_short_range.tflite",
-                    delegate: "GPU"
+                    delegate: this.selectFaceDetectorDelegate()
                 },
                 runningMode: "VIDEO",
             });
@@ -190,7 +192,11 @@ export class CharacterGaze {
 
     // 既存の video#characterGazeVideo にトラックを接続し、検出ループを開始する。
     // callback は Debug/React 向けの可視化と eyeTarget 表示更新に使われる。
-    async initCamera(videoTrack: MediaStreamTrack, callback: (detection: Detection[]) => void): Promise<boolean> {
+    async initCamera(
+        videoTrack: MediaStreamTrack,
+        callback: (detection: Detection[]) => void,
+        errorCallback?: (error: unknown) => void,
+    ): Promise<boolean> {
         if (!this.hasGetUserMedia()) {
             console.error("This browser does not support getUserMedia.");
             return false;
@@ -207,6 +213,7 @@ export class CharacterGaze {
         this.videoElement.setAttribute("muted", 'true');
         this.videoElement.srcObject = videoStream;
         this.detectionCallback = callback;
+        this.detectionErrorCallback = errorCallback ?? null;
         this.predictionLoopEnabled = true;
         if (!this.loadedDataHandlerBound) {
             this.loadedDataHandlerBound = () => {
@@ -227,6 +234,7 @@ export class CharacterGaze {
     detachCamera(): void {
         this.stopPredictionLoop();
         this.detectionCallback = null;
+        this.detectionErrorCallback = null;
         this.detected = false;
         this.lastVideoTime = -1;
         this.lastVideoFrameUpdatedAtMs = -1;
@@ -267,6 +275,13 @@ export class CharacterGaze {
         if (this.videoElement.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
             return;
         }
+        if (!this.videoFrameIsReadyForDetection()) {
+            this.predictionFrameId = window.requestAnimationFrame(() => {
+                this.predictionFrameId = null;
+                this.startPredictionLoopIfNeeded();
+            });
+            return;
+        }
         this.predictionLoopRunning = true;
         void this.predictCam(this.detectionCallback);
     }
@@ -287,7 +302,18 @@ export class CharacterGaze {
         if (this.videoElement.currentTime !== this.lastVideoTime) {
             this.lastVideoTime = this.videoElement.currentTime;
             this.lastVideoFrameUpdatedAtMs = startTimeMs;
-            const detections = this.faceDetector.detectForVideo(this.videoElement, startTimeMs).detections;
+            if (!this.videoFrameIsReadyForDetection()) {
+                this.handleFrozenVideoFrame(startTimeMs, callback);
+                this.scheduleNextPrediction(callback);
+                return;
+            }
+            let detections: Detection[];
+            try {
+                detections = this.faceDetector.detectForVideo(this.videoElement, startTimeMs).detections;
+            } catch (error) {
+                this.handleDetectionRuntimeError(error);
+                return;
+            }
 
             if (detections.length > 0) {
                 const selected = this.faceTargetSelector.select(detections, startTimeMs);
@@ -330,7 +356,41 @@ export class CharacterGaze {
             this.videoElement.play();
             this.handleFrozenVideoFrame(startTimeMs, callback);
         }
+        this.scheduleNextPrediction(callback);
+    }
+
+    private videoFrameIsReadyForDetection(): boolean {
+        // Firefox can fire loadeddata before decoded dimensions are stable. Passing a
+        // zero-sized frame to MediaPipe may surface as a wasm index-out-of-bounds error.
+        return (
+            this.videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+            && this.videoElement.videoWidth >= MIN_DETECTABLE_VIDEO_DIMENSION_PX
+            && this.videoElement.videoHeight >= MIN_DETECTABLE_VIDEO_DIMENSION_PX
+        );
+    }
+
+    private scheduleNextPrediction(callback: (detection: Detection[]) => void): void {
         this.predictionFrameId = window.requestAnimationFrame(() => { void this.predictCam(callback); });
+    }
+
+    private handleDetectionRuntimeError(error: unknown): void {
+        console.error("CharacterGaze FaceDetector failed during video inference.", error);
+        const wasDetected = this.detected;
+        this.stopPredictionLoop();
+        this.detected = false;
+        this.lastTargetDebugText = "検出エラー";
+        this.updateKeypointsMovingAverageToNeutral();
+        if (wasDetected) {
+            this.leaveCallback();
+            this.videoElement.dispatchEvent(new Event("leave"));
+        }
+        this.detectionErrorCallback?.(error);
+    }
+
+    private selectFaceDetectorDelegate(): "CPU" | "GPU" {
+        // MediaPipe GPU delegate may fail inside Firefox's wasm/WebGL pipeline with
+        // RuntimeError: index out of bounds, so Firefox uses the more stable CPU path.
+        return navigator.userAgent.toLowerCase().includes("firefox") ? "CPU" : "GPU";
     }
 
     private handleFrozenVideoFrame(nowMs: number, callback: (detection: Detection[]) => void): void {
