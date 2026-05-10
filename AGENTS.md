@@ -2,7 +2,7 @@
 
 このファイルは、LLMエージェントが **Sincromisor** を短時間で理解し、安全に変更するための作業ガイドです。
 
-## 1. プロジェクト概要
+## プロジェクト概要
 
 Sincromisor は、ブラウザ上で 3D キャラクターと音声対話するためのサービス基盤です。
 
@@ -18,7 +18,36 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
   - 入口: `documents/design/index.md`
   - テンプレート: `documents/design/template.md`
 
-## 2. 最初に読むファイル（推奨順）
+## 作業を行う際の心構え
+
+- これは**趣味プロダクト**であり、現状で最良のものを作ることが目標
+  - 後方互換性の考慮はほとんどの場合で不要
+  - 技術的負債を残さないことを常に心がける
+  - 最小変更にこだわらず、変えるべき時は変える
+- 既存の通信契約（endpoint / JSON）を変更する際は、明示して指示を仰ぐ(再デプロイが必要な場面を明確にする)
+- フロントとサーバーの変更を片側だけで終わらせない
+- compose + 設定 + 実装の 3 点を整合させる
+- 再現手順と確認結果を残す
+
+## コメントの記述とドキュメントの更新
+
+- ソースコードには積極的にコメントを記述する
+- コメントは、Googleのスタイルガイドラインを熟読して確実に記述し、他社が素早くコンテキストを理解できる内容とすることを心掛ける
+  - <https://google.github.io/styleguide/tsguide.html#comments-documentation>
+  - <https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings>
+- ソースコードを変更した際など、documents/design以下の設計ドキュメントの更新が必要な場合はその旨を通知し、更新を促す
+- スタイルガイドラインに則っていない不適切なコードは、レビュワーから差し戻される
+
+## タスク管理とコミットのルール
+
+- タスクは`documents/tasks/<大分類>/open/TASK-<タスクID>-<タスク概要>.md`に記述する
+- 最低限のラインとして、タスク単位でコミットを行う
+  - タスク内でも、必要に応じてコミットを行い、差分が巨大にならないようにする
+- コミット時は、関連するTask IDを明記する
+- タスクが完了したら、タスクファイルを`done`に移動する
+- コミットメッセージは、何をどのような意図で行ったのかが明確になるように記述する
+
+## 最初に読むファイル（推奨順）
 
 1. `README.md`
 2. `compose.yml`
@@ -31,7 +60,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 9. `sincromisor-frontend/src/ts/SincroController.ts`
 10. `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
 
-## 3. ディレクトリマップ
+## ディレクトリマップ
 
 - `sincromisor-server/`
   - `sincro-rtc/`: WebRTC シグナリングサーバー（FastAPI + uvicorn）
@@ -60,7 +89,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
   - `template.md`: 設計文書テンプレート
 - `documents/tasks`
 
-## 4. 通信フロー（実装把握用）
+## 通信フロー（実装把握用）
 
 1. フロントが設定取得
    - `GET /api/v1/RTCSignalingServer/config.json`
@@ -73,7 +102,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 
 フロント側の主制御は `SincroController`、WebRTC 接続処理は `RTCTalkClient` が担当します。
 
-## 5. ローカルセットアップ（開発時）
+## ローカルセットアップ（開発時）
 
 ### Server (Python)
 
@@ -109,7 +138,7 @@ chmod 600 .env
 docker compose --profile full up -d
 ```
 
-## 6. 変更時の指針（LLM 向け）
+## 変更時の指針（LLM 向け）
 
 - WebRTC 接続仕様を変える場合
   - サーバー: `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
@@ -126,49 +155,28 @@ docker compose --profile full up -d
   - `documents/design/` の該当文書を同時更新
   - 入口の `documents/design/index.md` との整合を確認
 
-## 7. よくある落とし穴
+## よくある落とし穴
 
 - フロントのマイク/カメラ権限がないと接続処理が途中で止まる
 - `offerURL` や ICE サーバー設定不一致で WebRTC ネゴシエーションに失敗
 - 新しい環境変数を追加しても compose / 設定クラスの片側だけ更新してしまう
 - `@mediapipe/tasks-vision` の wasm 配置漏れで CharacterGaze が動作しない
 
-## 8. 変更後の最低確認
+## 変更後の最低確認
 
 - フロントビルド
+
   ```sh
   cd sincromisor-frontend && npm run build
   ```
+
 - Python 静的チェック（必要に応じて）
+
   ```sh
   uv run ruff check .
   ```
+
 - 起動確認
   - `docker compose --profile full up -d`
   - フロント画面遷移
   - 音声入出力 + テキスト/テロップ受信
-
-## 9. 作業優先順位（迷ったとき）
-
-1. 既存の通信契約（endpoint / JSON）を壊さない
-2. フロントとサーバーの変更を片側だけで終わらせない
-3. compose + 設定 + 実装の 3 点を整合させる
-4. 変更点を最小に保ち、再現手順と確認結果を残す
-
-## 10. コメントの記述とドキュメントの更新
-
-- ソースコードには積極的にコメントを記述する。
-- コメントは、Googleのスタイルガイドラインを熟読して確実に記述し、他社が素早くコンテキストを理解できる内容とすることを心掛ける。
-  - https://google.github.io/styleguide/tsguide.html#comments-documentation
-  - https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings
-- ソースコードを変更した際など、documents/design以下の設計ドキュメントの更新が必要な場合はその旨を通知し、更新を促す。
-- スタイルガイドラインに則っていない不適切なコードは、レビュワーから差し戻される。
-
-## 11. タスク管理とコミットのルール
-
-- タスクは`documents/tasks/<大分類>/open/TASK-<タスクID>-<タスク概要>.md`に記述する。
-- 最低限のラインとして、タスク単位でコミットを行う。
-  - タスク内でも、必要に応じてコミットを行う。
-- コミット時は、関連するTask IDを明記する。
-- タスクが完了したら、タスクファイルを`done`に移動する。
-- コミットメッセージは、何をどのような意図で行ったのかが明確になるように記述する。
