@@ -21,6 +21,41 @@
         background: var(--sincro-color-select-option-background);
     }
 
+    .settingsPrimitiveRange {
+        display: grid;
+        gap: var(--sincro-space-100);
+        min-width: 0;
+    }
+
+    .settingsPrimitiveRange.is-disabled {
+        opacity: 0.62;
+        cursor: not-allowed;
+    }
+
+    .settingsPrimitiveRange__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--sincro-space-200);
+    }
+
+    .settingsPrimitiveRange__header .settingsPrimitiveHelpLabel {
+        margin-bottom: 0;
+    }
+
+    .settingsPrimitiveRange__value {
+        flex-shrink: 0;
+        color: var(--sincro-color-overlay-text-muted);
+        font-size: var(--sincro-font-size-150);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .settingsPrimitiveRange__input {
+        width: 100%;
+        min-height: 28px;
+        accent-color: #82bcff;
+    }
+
     .settingsPrimitiveButton {
         min-height: 32px;
         border-radius: var(--sincro-radius-100);

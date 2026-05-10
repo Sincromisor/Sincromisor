@@ -65,6 +65,12 @@ export function applySincroAppSettingsPartial(
     if (partial.enableVR != null) {
         dialogManager.setEnableVR(partial.enableVR);
     }
+    if (partial.characterMotionScale != null) {
+        dialogManager.setCharacterMotionScale(clampAndRoundToStep(partial.characterMotionScale, 0, 1.2, 0.05));
+    }
+    if (partial.characterEyeTrackingScale != null) {
+        dialogManager.setCharacterEyeTrackingScale(clampAndRoundToStep(partial.characterEyeTrackingScale, 0, 1.2, 0.05));
+    }
 
     // Looking Glass 設定は runtime config に正規化して反映する。
     // polyfill への反映タイミング判定は別の tracker/status ロジックで扱う。

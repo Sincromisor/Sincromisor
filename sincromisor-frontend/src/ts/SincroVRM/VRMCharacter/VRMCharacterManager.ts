@@ -11,6 +11,7 @@ import { FaceEmotionController } from './FaceEmotionController';
 import { EyeBehaviorController } from './EyeBehaviorController';
 import { CharacterBehaviorSnapshot, CharacterBehaviorState } from './CharacterBehaviorState';
 import { CharacterMotionOrchestrator } from './CharacterMotionOrchestrator';
+import type { CharacterMotionTuning } from './CharacterMotionConfig';
 import { VRMCamera } from '../VRMScene/VRMCamera';
 import { Vector3 } from 'three/src/math/Vector3.js';
 import { Box3 } from 'three/src/math/Box3.js';
@@ -292,6 +293,11 @@ export class VRMCharacterManager {
         if (this.vrm) {
             this.vrm.scene.visible = visible;
         }
+    }
+
+    setMotionTuning(tuning: Partial<CharacterMotionTuning>): void {
+        this.motionOrchestrator?.setTuning(tuning);
+        this.eyeBehaviorController?.setTuning(tuning);
     }
     /*
     private setEvent(vrm: VRM): void {
