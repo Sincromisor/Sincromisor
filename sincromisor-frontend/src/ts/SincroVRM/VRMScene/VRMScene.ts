@@ -4,6 +4,7 @@ import { Scene } from 'three/src/scenes/Scene.js';
 import { GridHelper } from 'three/src/helpers/GridHelper.js';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { VRMCharacterManager } from '../VRMCharacter/VRMCharacterManager';
+import type { CharacterMotionTuning } from '../VRMCharacter/CharacterMotionConfig';
 import { VRMCamera } from './VRMCamera';
 import { VRMLight } from './VRMLight';
 
@@ -145,6 +146,10 @@ export class VRMScene {
     // 起動後の設定変更（Character ON/OFF）で VRM 本体の表示を切り替える。
     setCharacterVisible(visible: boolean): void {
         this.vrmCharacterManager.setVisible(visible);
+    }
+
+    setCharacterMotionTuning(tuning: Partial<CharacterMotionTuning>): void {
+        this.vrmCharacterManager.setMotionTuning(tuning);
     }
 
     /* WebXR対応チェック */

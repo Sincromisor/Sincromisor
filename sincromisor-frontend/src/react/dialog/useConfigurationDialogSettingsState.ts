@@ -37,6 +37,8 @@ const defaultSettings: SincroAppSettingsSnapshot = {
     enableVenueNoiseMode: false,
     enableInspector: false,
     enableVR: false,
+    characterMotionScale: 0.72,
+    characterEyeTrackingScale: 0.68,
     lgTileHeight: 512,
     lgNumViews: 45,
     lgTargetY: 0.95,

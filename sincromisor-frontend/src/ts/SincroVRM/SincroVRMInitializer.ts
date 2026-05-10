@@ -164,7 +164,7 @@ export class SincroVRMInitializer {
         );
         vrmScene.start();
         this.activeScene = vrmScene;
-        this.syncSceneCharacterVisibility(this.appController.state.getSettingsSnapshot());
+        this.syncSceneRuntimeSettings(this.appController.state.getSettingsSnapshot());
         return vrmScene;
 
         /*
@@ -244,14 +244,22 @@ export class SincroVRMInitializer {
             if (event.type !== "settings_snapshot") {
                 return;
             }
-            this.syncSceneCharacterVisibility(event.settings);
+            this.syncSceneRuntimeSettings(event.settings);
         });
     }
 
-    protected syncSceneCharacterVisibility(settings: { enableCharacter: boolean }): void {
+    protected syncSceneRuntimeSettings(settings: {
+        enableCharacter: boolean;
+        characterMotionScale: number;
+        characterEyeTrackingScale: number;
+    }): void {
         if (!this.activeScene) {
             return;
         }
         this.activeScene.setCharacterVisible(settings.enableCharacter);
+        this.activeScene.setCharacterMotionTuning({
+            motionScale: settings.characterMotionScale,
+            eyeTrackingScale: settings.characterEyeTrackingScale,
+        });
     }
 }

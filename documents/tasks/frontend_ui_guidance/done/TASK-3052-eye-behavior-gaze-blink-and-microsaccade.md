@@ -72,3 +72,5 @@
 - 2026-05-09:
   - `lookLeft/lookRight` と `lookUp/lookDown` の有無を軸別に判定し、一部 look expression だけを持つ VRM では不足軸だけ `leftEye/rightEye` ボーンへ fallback するようにした。
   - `CharacterGaze` の video frame が一定時間進まない場合は検出 stale とみなし、leave callback と空 detection callback を発火して AutoMute / `CharacterBehaviorState` の `face_lost` が更新されるようにした。
+- 2026-05-10:
+  - eyeball の顔位置追跡が強く見えるモデル向けに、キャラクター表示設定へ `characterEyeTrackingScale` を追加し、look expression / eye bone fallback の追跡量を即時調整できるようにした。

@@ -3,6 +3,7 @@ import { MathUtils } from 'three/src/math/MathUtils.js';
 import { Euler } from 'three/src/math/Euler.js';
 import { Object3D } from 'three/src/core/Object3D.js';
 import { CharacterBehaviorSnapshot, CharacterInteractionState } from './CharacterBehaviorState';
+import { DEFAULT_CHARACTER_MOTION_TUNING, type CharacterMotionTuning } from './CharacterMotionConfig';
 
 type EyeBoneName = 'leftEye' | 'rightEye';
 
@@ -62,6 +63,7 @@ export class EyeBehaviorController {
     private blinkStartedAtMs: number | null = null;
     private nextBlinkAtMs = performance.now() + this.randomRange(1800, 4200);
     private lastUpdateAtMs: number | null = null;
+    private tuning: CharacterMotionTuning = DEFAULT_CHARACTER_MOTION_TUNING;
 
     constructor(vrm: VRM, expressionManager: VRMExpressionManager) {
         this.expressionManager = expressionManager;
@@ -90,10 +92,17 @@ export class EyeBehaviorController {
         this.smoothedTarget.x += (target.x - this.smoothedTarget.x) * alpha;
         this.smoothedTarget.y += (target.y - this.smoothedTarget.y) * alpha;
 
-        const offsetX = MathUtils.clamp(this.smoothedTarget.x - 0.5, -0.5, 0.5);
-        const offsetY = MathUtils.clamp(this.smoothedTarget.y - 0.5, -0.5, 0.5);
+        const offsetX = MathUtils.clamp(this.smoothedTarget.x - 0.5, -0.5, 0.5) * this.tuning.eyeTrackingScale;
+        const offsetY = MathUtils.clamp(this.smoothedTarget.y - 0.5, -0.5, 0.5) * this.tuning.eyeTrackingScale;
         this.applyLook(offsetX, offsetY);
         this.applyBlink(snapshot, nowMs);
+    }
+
+    setTuning(partial: Partial<CharacterMotionTuning>): void {
+        this.tuning = {
+            ...this.tuning,
+            ...partial,
+        };
     }
 
     private captureEyeBone(vrm: VRM, name: EyeBoneName): void {
