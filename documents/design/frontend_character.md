@@ -25,7 +25,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `FaceEmotionController` は `CharacterBehaviorSnapshot.aiSpeech.expressionCode` と `lastTextMessage` を参照し、VRM感情プリセットを render loop 内で駆動する。
   - `HeadBoneController` は `CharacterGaze` の鼻座標から首向きを更新し、未検出時はカメラ追従にフォールバックする。
   - `CharacterBehaviorState` は VAD、顔検出、text/telop、感情コード、media/gaze/RTC エラーを集約し、後続モーションが同じ snapshot を参照できるようにする。
-  - `CharacterMotionOrchestrator` は呼吸・上半身の重心感・肩周りの idle motion を毎フレーム適用し、腕/脚 controller は同じ motion config の時間係数を使って低振幅の手首・肘・足先揺れを足す。hips/root は全身移動に見えやすいため位置揺れの対象にしない。
+  - `CharacterMotionOrchestrator` は呼吸・上半身の重心感・肩周りの idle motion を毎フレーム適用し、腕/脚 controller は同じ motion config の時間係数を使って低振幅の手首・肘・足先揺れを足す。hips/root は全身移動に見えやすいため位置揺れの対象にしない。上半身 motion の強度はキャラクター表示設定から即時調整できる。
   - AI発話中は `telop_ch` から抽出した speech beat と `expression_code` を `CharacterBehaviorSnapshot.aiSpeech` に集約し、首・目線・上半身・腕の小さな gesture を同期する。
   - モーション強度は `CharacterMotionConfig` で抑制し、首/目線/上半身/腕が同時に最大化しないよう、AI発話 posture と beat gesture を低振幅・長めの easing で重ねる。
   - neck、eye、arm、leg、mouth expression はVRM個体差で欠損する可能性があるため任意要素として扱い、表現できない部位は例外停止ではなく無効化または近いボーンへフォールバックする。look expression は左右/上下の軸別に判定し、不足軸だけ eye bone へ fallback する。
@@ -109,9 +109,9 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - `HeadBoneController`: `CharacterBehaviorSnapshot.gaze` またはCamera方向に首回転を更新。`neck` を優先して頭部回転を適用し、欠損時は `head` / `upperChest` / `chest` / `spine` の順で近い正規化ボーンへフォールバックする。目線が先行するよう顔検出座標へ遅めに追従し、AI発話中は感情別の小さな nod/yaw/roll offset を重ねる。該当ボーンが無い場合は頭部制御だけ無効化する
   - `FaceMorphController`: `CharacterBehaviorSnapshot.aiSpeech.currentMoraId` で mora 切替を検出し、`aa/ih/ou/ee/oh` のExpression制御を `VRMCharacterManager.update()` の時刻で進める。存在する mouth expression だけをリセット/駆動し、未実装プリセットでは口形制御を安全にスキップする
   - `FaceEmotionController`: `ChatMessage.expression_code` を `relaxed/happy/sad/angry/surprised` にマップし、`CharacterBehaviorSnapshot` を入力に短時間アニメーションを進める。`expression_code` 未到着の新規発話は neutral として扱い、前発話の表情残留を避ける
-  - `EyeBehaviorController`: VRM標準 `lookLeft/lookRight/lookUp/lookDown` expression を軸別に優先して目線を制御し、左右または上下の不足軸だけ `leftEye/rightEye` ボーンへフォールバックする。MediaPipe の画像Y座標は下向き正なので、VRMへの上下適用段で反転する。対話状態に応じたblink schedule、考え中の短い視線外し、低振幅microsaccade、AI発話中の感情別視線offset、`surprised` 中のblink抑制を扱う
+  - `EyeBehaviorController`: VRM標準 `lookLeft/lookRight/lookUp/lookDown` expression を軸別に優先して目線を制御し、左右または上下の不足軸だけ `leftEye/rightEye` ボーンへフォールバックする。MediaPipe の画像Y座標は下向き正なので、VRMへの上下適用段で反転する。対話状態に応じたblink schedule、考え中の短い視線外し、低振幅microsaccade、AI発話中の感情別視線offset、`surprised` 中のblink抑制を扱う。顔位置追跡の強度はキャラクター表示設定から即時調整できる
   - `CharacterBehaviorState`: VAD、顔検出、text/telop、感情コード、media/gaze/RTC エラーを `idle/attending/user_speaking/thinking/ai_speaking/face_lost/error_or_disconnected` の対話状態 snapshot へ集約。VAD onset debounce、発話 hold、発話時間を持ち、短いノイズを聞き姿勢・相槌 trigger へ直結させない。AI発話は `speech_id` ごとの感情コード cache を参照し、text 未到着または `expression_code` なしの発話は neutral として扱う。Gaze callback が止まった場合は stale として `face_lost` へ遷移させる。AI発話は `new_text`、`speech_id`、句読点、mora長、一定間隔から `speech_start/cadence/phrase/punctuation` の beat に間引く
-  - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、hips/root を基準位置へ固定したうえで、呼吸・spine/chest/shoulder の idle offset、VAD連動の聞き姿勢、発話終了後の小さな相槌 nod、AI発話中の感情別姿勢と beat gesture を適用
+  - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、hips/root を基準位置へ固定したうえで、呼吸・spine/chest/shoulder の idle offset、VAD連動の聞き姿勢、発話終了後の小さな相槌 nod、AI発話中の感情別姿勢と beat gesture を適用。上半身 motion はキャラクター表示設定の `characterMotionScale` で一括スケールする
   - `ArmBoneController`: idleの腕・肘・手首揺れに、`CharacterBehaviorSnapshot.aiSpeech.beatId` 由来の短い片腕gestureを重ねる。左右を交互に主役化し、発話開始・文節・句読点で強度を変える
   - `CharacterMotionConfig`: idle/listening/AI発話 motion の周期・振幅・easing を集約し、腕/脚/胴体 controller の `performance.now()` 直参照を避ける。AI発話中は posture blend を控えめにし、beat duration を長めにして首・肩・腕の同時ピークを避ける
   - `CharacterGaze`: 顔キーポイント追跡、視線角推定、arrive/leaveイベント通知
@@ -137,6 +137,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - 主要データ構造:
   - `CurrentMora`（TalkManagerが現在発話中の母音区間を保持し、CharacterBehaviorState が snapshot へ転写する）
   - `ChatMessage.expression_code`（text_ch先頭 `^N` 由来の感情コード。任意項目）
+  - `characterMotionScale` / `characterEyeTrackingScale`（キャラクター表示設定から変更する runtime tuning 値。既定は 0.72 / 0.68）
   - CharacterGazeの `movingAverage[6]`（右目/左目/鼻/口/右耳/左耳）
   - `CharacterBehaviorSnapshot`（VAD envelope、発話開始/終了時刻、直近発話時間、顔検出・顔位置・正面度、AI発話中speech_id/mora ID/母音/感情コード、AI speech beat、対話状態、source別エラーを集約した代表エラーを保持）
 - 永続化対象:

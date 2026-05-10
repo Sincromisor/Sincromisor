@@ -99,3 +99,6 @@ playwright-cli resize 390 844
   - レビュー対応として、口形/感情 controller の直接購読と独自 rAF を廃止し、発話・感情・motion の時刻正本を `CharacterBehaviorSnapshot` と `VRMCharacterManager.update()` に揃えた。
   - `npm run build` 成功。複数 VRM、実カメラ、実マイク、低スペック端末での自然さ確認は引き続き手動確認リスクとして残る。
   - hips/root が揺れ対象になるVRMで全身が左右/前後に漂って見えるため、`CharacterMotionOrchestrator` は hips を基準位置・基準回転に固定し、重心感は spine/chest/shoulder の低振幅 motion のみに限定した。
+- 2026-05-10:
+  - キャラクター表示設定に「上半身モーション」「目線追跡」のスライダーを追加し、`characterMotionScale` / `characterEyeTrackingScale` を runtime scene へ即時同期するようにした。
+  - `npm run build` 成功。

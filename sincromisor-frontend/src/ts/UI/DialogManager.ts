@@ -19,6 +19,19 @@ export type { DialogSettingsUiHints, DialogSettingsUiState } from "./DialogSetti
 export type DialogVrmUiState = DialogVrmUiStateValue;
 export type DialogUiState = DialogUiStateValue;
 
+type BooleanDialogSettingKey =
+    | "enableCharacter"
+    | "enableTalk"
+    | "enableCharacterGaze"
+    | "enableAutoMute"
+    | "enableNoiseSuppression"
+    | "enableEchoCancellation"
+    | "enableAutoGainControl"
+    | "enableVadGate"
+    | "enableVenueNoiseMode"
+    | "enableInspector"
+    | "enableVR";
+
 // 起動前設定 dialog の中心オーケストレータ。
 // 状態の正本は DialogStateStore、保存/復元/通知は各 Service に分離している。
 // dialog 本体の native API 呼び出しは React 側 platform adapter が担当する。
@@ -165,6 +178,14 @@ export class DialogManager {
         this.setCheckboxValue("enableVR", enabled);
     }
 
+    setCharacterMotionScale(value: number): void {
+        this.setNumericValue("characterMotionScale", value);
+    }
+
+    setCharacterEyeTrackingScale(value: number): void {
+        this.setNumericValue("characterEyeTrackingScale", value);
+    }
+
     subscribeSettingsChange(listener: () => void): () => void {
         return this.eventHub.subscribeSettingsChange(listener);
     }
@@ -238,6 +259,14 @@ export class DialogManager {
         return this.stateStore.get("enableVR");
     }
 
+    characterMotionScale(): number {
+        return this.stateStore.get("characterMotionScale");
+    }
+
+    characterEyeTrackingScale(): number {
+        return this.stateStore.get("characterEyeTrackingScale");
+    }
+
     private setCheckboxValue(id: string, enabled: boolean): void {
         const key = this.mapBooleanSettingId(id);
         if (!key) {
@@ -251,6 +280,14 @@ export class DialogManager {
         if (key === "enableCharacterGaze") {
             this.refreshMediaDeviceDerivedUiState();
         }
+        this.emitSettingsChanged();
+    }
+
+    private setNumericValue(
+        key: "characterMotionScale" | "characterEyeTrackingScale",
+        value: number,
+    ): void {
+        this.stateStore.set(key, value);
         this.emitSettingsChanged();
     }
 
@@ -355,8 +392,8 @@ export class DialogManager {
         );
     }
 
-    private mapBooleanSettingId(id: string): Parameters<DialogStateStore["set"]>[0] | null {
-        const mapping: Record<string, Parameters<DialogStateStore["set"]>[0] | undefined> = {
+    private mapBooleanSettingId(id: string): BooleanDialogSettingKey | null {
+        const mapping: Record<string, BooleanDialogSettingKey | undefined> = {
             enableCharacter: "enableCharacter",
             enableTalk: "enableTalk",
             enableCharacterGaze: "enableCharacterGaze",

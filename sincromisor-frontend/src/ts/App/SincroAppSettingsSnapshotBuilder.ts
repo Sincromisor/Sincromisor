@@ -22,6 +22,8 @@ export function buildSincroAppSettingsSnapshot(dialogManager: SincroAppDialogFac
         enableVenueNoiseMode: dialogManager.enableVenueNoiseMode(),
         enableInspector: dialogManager.enableInspector(),
         enableVR: dialogManager.enableVR(),
+        characterMotionScale: dialogManager.characterMotionScale(),
+        characterEyeTrackingScale: dialogManager.characterEyeTrackingScale(),
         lgTileHeight: lg.tileHeight,
         lgNumViews: lg.numViews,
         lgTargetY: lg.targetY,
