@@ -33,6 +33,8 @@ export type SincroAppDialogFacade = {
     enableAutoGainControl(): boolean;
     enableVadGate(): boolean;
     enableVenueNoiseMode(): boolean;
+    characterMotionScale(): number;
+    characterEyeTrackingScale(): number;
 
     setTalkMode(value: string): void;
     setTitleText(value: string): void;
@@ -49,6 +51,8 @@ export type SincroAppDialogFacade = {
     setEnableAutoMute(enabled: boolean): void;
     setEnableInspector(enabled: boolean): void;
     setEnableVR(enabled: boolean): void;
+    setCharacterMotionScale(value: number): void;
+    setCharacterEyeTrackingScale(value: number): void;
 
     settingsUiState(): DialogSettingsUiState;
     settingsUiHints(): DialogSettingsUiHints;

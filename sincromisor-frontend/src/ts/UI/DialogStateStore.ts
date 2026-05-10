@@ -13,7 +13,9 @@ export type DialogSettingKey =
     | "enableVadGate"
     | "enableVenueNoiseMode"
     | "enableInspector"
-    | "enableVR";
+    | "enableVR"
+    | "characterMotionScale"
+    | "characterEyeTrackingScale";
 
 // DialogStateStore 内で保持する設定値の型マップ。
 // DialogManager の generic getter/setter から key-safe に扱うために定義している。
@@ -33,6 +35,8 @@ type DialogSettingValueMap = {
     enableVenueNoiseMode: boolean;
     enableInspector: boolean;
     enableVR: boolean;
+    characterMotionScale: number;
+    characterEyeTrackingScale: number;
 };
 
 type DialogSettingDisabledMap = {
@@ -85,6 +89,8 @@ export class DialogStateStore {
         enableVenueNoiseMode: false,
         enableInspector: false,
         enableVR: false,
+        characterMotionScale: 0.72,
+        characterEyeTrackingScale: 0.68,
     };
     private disabled: DialogSettingDisabledMap = {
         titleText: false,

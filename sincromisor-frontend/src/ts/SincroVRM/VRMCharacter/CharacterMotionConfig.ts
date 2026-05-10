@@ -1,5 +1,15 @@
 import { MathUtils } from 'three/src/math/MathUtils.js';
 
+export type CharacterMotionTuning = {
+    motionScale: number;
+    eyeTrackingScale: number;
+};
+
+export const DEFAULT_CHARACTER_MOTION_TUNING: CharacterMotionTuning = {
+    motionScale: 0.72,
+    eyeTrackingScale: 0.68,
+};
+
 // キャラクターの常時 idle motion 調整値。
 // 各 controller が performance.now() を直接参照すると周期調整が散らばるため、時間係数と振幅をここに集約する。
 export const CHARACTER_IDLE_MOTION_CONFIG = {

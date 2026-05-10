@@ -18,6 +18,7 @@ import {
     SettingsHint,
     SettingsHintList,
     SettingsInput,
+    SettingsRange,
     SettingsSelect,
     SettingsToggle,
     SettingsToggleGrid,
@@ -36,6 +37,8 @@ export const settingHelp = {
     enableCharacter: "3Dキャラクターを表示します。動作を軽くしたい時や、音声まわりだけ確認したい時はオフにします。",
     enableCharacterGaze: "カメラから顔の向きや視線を読み取ります。顔の向きに合わせた演出や自動ミュートを使いたい時にオンにします。",
     enableAutoMute: "顔の向きに合わせて自動でミュートを切り替えます。展示やハンズフリー運用で、話していない時を静かにしたい場面に向いています。",
+    characterMotionScale: "呼吸、聞き姿勢、AI発話中の上半身モーションの強さです。前後の揺れが大きい時は下げます。",
+    characterEyeTrackingScale: "顔位置に追従する eyeball の動きの強さです。視線が動きすぎる時は下げます。",
     enableVR: "VR で開くための準備を行います。VR 対応ページを使う時だけオンにします。",
     lgTileHeight: "Looking Glass のタイル解像度の高さです。高いほど精細になりますが負荷が増えます。まずは既定値から調整してください。",
     lgNumViews: "Looking Glass の視差ビュー数です。多いほど滑らかな立体感になりますが描画負荷が増えます。",
@@ -332,6 +335,30 @@ export function CharacterDisplayToggles({
                     onChange={(checked) => onApplySettings({ enableAutoMute: checked })}
                 />
             </SettingsToggleGrid>
+            <SettingsFieldStack spacing="compact">
+                <SettingsRange
+                    label="上半身モーション"
+                    help={settingHelp.characterMotionScale}
+                    min={0}
+                    max={1.2}
+                    step={0.05}
+                    value={settings.characterMotionScale}
+                    valueLabel={`${Math.round(settings.characterMotionScale * 100)}%`}
+                    disabled={!settings.enableCharacter}
+                    onChange={(value) => onApplySettings({ characterMotionScale: value })}
+                />
+                <SettingsRange
+                    label="目線追跡"
+                    help={settingHelp.characterEyeTrackingScale}
+                    min={0}
+                    max={1.2}
+                    step={0.05}
+                    value={settings.characterEyeTrackingScale}
+                    valueLabel={`${Math.round(settings.characterEyeTrackingScale * 100)}%`}
+                    disabled={!settings.enableCharacter || !settings.enableCharacterGaze}
+                    onChange={(value) => onApplySettings({ characterEyeTrackingScale: value })}
+                />
+            </SettingsFieldStack>
             {hints.map((hint) => (
                 <Fragment key={hint.label}>{renderHint(hint.label, hint.message)}</Fragment>
             ))}

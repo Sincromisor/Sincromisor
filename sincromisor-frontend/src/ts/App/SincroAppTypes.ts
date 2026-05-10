@@ -35,6 +35,8 @@ export type SincroAppSettingsSnapshot = {
     enableVenueNoiseMode: boolean;
     enableInspector: boolean;
     enableVR: boolean;
+    characterMotionScale: number;
+    characterEyeTrackingScale: number;
     lgTileHeight: number;
     lgNumViews: number;
     lgTargetY: number;
