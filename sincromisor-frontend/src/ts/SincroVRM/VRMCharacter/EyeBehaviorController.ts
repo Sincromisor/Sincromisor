@@ -4,6 +4,7 @@ import { Euler } from 'three/src/math/Euler.js';
 import { Object3D } from 'three/src/core/Object3D.js';
 import { CharacterBehaviorSnapshot, CharacterInteractionState } from './CharacterBehaviorState';
 import { DEFAULT_CHARACTER_MOTION_TUNING, type CharacterMotionTuning } from './CharacterMotionConfig';
+import type { SincroFaceRetargetFrame } from './SincroFaceRetargeter';
 
 type EyeBoneName = 'leftEye' | 'rightEye';
 
@@ -77,12 +78,16 @@ export class EyeBehaviorController {
         this.captureEyeBone(vrm, 'rightEye');
     }
 
-    update(snapshot: CharacterBehaviorSnapshot): void {
+    update(snapshot: CharacterBehaviorSnapshot, sincroFace?: SincroFaceRetargetFrame): void {
         const nowMs = snapshot.nowMs;
         const deltaMs = this.lastUpdateAtMs == null
             ? 1000 / 60
             : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
         this.lastUpdateAtMs = nowMs;
+        if (snapshot.faceMotion.trackingEnabled && sincroFace) {
+            this.applySincroFaceMotion(sincroFace);
+            return;
+        }
 
         const target = this.nextEyeTarget(snapshot, nowMs);
         const timeConstantMs = snapshot.gaze.detected
@@ -235,6 +240,44 @@ export class EyeBehaviorController {
         for (const bone of this.eyeBones.values()) {
             bone.node.rotation.set(
                 bone.baseRotation.x + offsetY * EYE_BEHAVIOR_CONFIG.maxVerticalRad * 2,
+                bone.baseRotation.y - offsetX * EYE_BEHAVIOR_CONFIG.maxHorizontalRad * 2,
+                bone.baseRotation.z,
+            );
+        }
+    }
+
+    private applySincroFaceMotion(sincroFace: SincroFaceRetargetFrame): void {
+        const expressions = sincroFace.expressions;
+        for (const preset of LOOK_PRESETS) {
+            this.setExpressionIfAvailable(preset, 0);
+        }
+        this.setExpressionIfAvailable('lookLeft', expressions.lookLeft);
+        this.setExpressionIfAvailable('lookRight', expressions.lookRight);
+        this.setExpressionIfAvailable('lookUp', expressions.lookUp);
+        this.setExpressionIfAvailable('lookDown', expressions.lookDown);
+        if (this.hasBlinkExpression) {
+            this.expressionManager.setValue('blink', expressions.blink);
+        }
+
+        const offsetX = MathUtils.clamp((expressions.lookRight - expressions.lookLeft) * 0.42, -0.5, 0.5);
+        const offsetY = MathUtils.clamp((expressions.lookUp - expressions.lookDown) * 0.36, -0.5, 0.5);
+        const lookExpressionCoversHorizontal = this.availableLookPresets.has('lookLeft')
+            || this.availableLookPresets.has('lookRight');
+        const lookExpressionCoversVertical = this.availableLookPresets.has('lookUp')
+            || this.availableLookPresets.has('lookDown');
+        this.applySincroEyeBoneFallback(
+            lookExpressionCoversHorizontal ? 0 : offsetX,
+            lookExpressionCoversVertical ? 0 : offsetY,
+            this.hasBlinkExpression ? 0 : expressions.blink,
+        );
+    }
+
+    private applySincroEyeBoneFallback(offsetX: number, offsetY: number, blink: number): void {
+        for (const bone of this.eyeBones.values()) {
+            bone.node.rotation.set(
+                bone.baseRotation.x
+                    + offsetY * EYE_BEHAVIOR_CONFIG.maxVerticalRad * 2
+                    + blink * MathUtils.degToRad(9),
                 bone.baseRotation.y - offsetX * EYE_BEHAVIOR_CONFIG.maxHorizontalRad * 2,
                 bone.baseRotation.z,
             );

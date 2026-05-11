@@ -1,6 +1,7 @@
 import { VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { CharacterBehaviorSnapshot } from "./CharacterBehaviorState";
+import type { SincroFaceRetargetFrame } from "./SincroFaceRetargeter";
 
 type MouseVowel = "A" | "I" | "U" | "E" | "O" | "N";
 
@@ -25,7 +26,14 @@ export class FaceMorphController {
     }
 
     // 口形もキャラクター全体と同じ render loop で進め、発話時刻の正本を snapshot に揃える。
-    update(snapshot: CharacterBehaviorSnapshot): void {
+    update(snapshot: CharacterBehaviorSnapshot, sincroFace?: SincroFaceRetargetFrame): void {
+        if (snapshot.faceMotion.trackingEnabled && sincroFace) {
+            this.currentMoraID = -1;
+            this.activeMouth = null;
+            this.applySincroMouth(sincroFace);
+            return;
+        }
+
         const moraId = snapshot.aiSpeech.currentMoraId;
         if (!snapshot.aiSpeech.isSpeaking || moraId == null) {
             this.currentMoraID = -1;
@@ -45,6 +53,19 @@ export class FaceMorphController {
             }
         }
         this.updateActiveMouth(snapshot.nowMs);
+    }
+
+    private applySincroMouth(sincroFace: SincroFaceRetargetFrame): void {
+        const values: Partial<Record<VRMExpressionPresetName, number>> = {
+            aa: sincroFace.expressions.aa,
+            ih: sincroFace.expressions.ih,
+            ou: sincroFace.expressions.ou,
+            oh: sincroFace.expressions.oh,
+            ee: sincroFace.expressions.ee,
+        };
+        for (const preset of this.availableMouthPresets) {
+            this.expressionManager.setValue(preset, MathUtils.clamp(values[preset] ?? 0, 0, 1));
+        }
     }
 
     /* 母音とその長さに合わせた口の動きを設定する */

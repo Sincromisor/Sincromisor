@@ -72,3 +72,17 @@
 - 口を開く、閉じる、すぼめる動きが VRM の口形へ反映される。
 - blink expression が無い VRM でも停止しない。
 - カメラ映像のミラー表示有無に関わらず、`sincro` の左右方向が意図通りになる。
+
+## 実施メモ
+
+- `SincroFaceRetargeter` を追加し、`faceMotion` snapshot から head / blink / look / mouth の VRM 向け値を生成する層を分離した。
+- neutral calibration、clamp、deadband、confidence gate、smoothing、顔未検出時の neutral return を retargeter 内へ集約した。
+- head pose は `upperChest` / `neck` / `head` へ分配し、該当ボーンが無い場合は既存 head control fallback に合算適用する。
+- `EyeBehaviorController` は `sincro` 中に retarget 済み look / blink を優先し、blink expression が無い場合は eye bone fallback で停止しない。
+- `FaceMorphController` は `sincro` 中に telop 口パクを抑制し、ユーザー口形 retarget の `aa/ih/ou/ee/oh` を優先する。
+- `SincroFaceRetargeterVerification.ts` に固定 snapshot 検証ケースを追加し、yaw / neutral / mouth / blink の期待値を型付きで残した。
+- 確認: `cd sincromisor-frontend && npm run build` 成功。
+
+## 未確認
+
+- 実カメラ + `face_landmarker.task` 配置状態での左右符号、roll、モデル別 expression の体感確認。
