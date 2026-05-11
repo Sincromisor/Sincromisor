@@ -10,6 +10,14 @@ type StatusPanelProps = DebugPanelProps & {
 export function StatusPanel({ snapshot, isActive }: StatusPanelProps) {
     const channelState = snapshot.rtc.textChannelLog || snapshot.rtc.telopChannelLog ? "received" : "waiting";
     const gazeState = snapshot.gaze.paused ? "paused" : snapshot.gaze.status;
+    const faceState = snapshot.sincroMotion.face.trackingEnabled
+        ? snapshot.sincroMotion.face.detected ? "detected" : "lost"
+        : "off";
+    const poseState = snapshot.sincroMotion.pose.degradedToFaceOnly
+        ? "face-only"
+        : snapshot.sincroMotion.pose.trackingEnabled
+            ? snapshot.sincroMotion.pose.detected ? "detected" : "lost"
+            : "off";
 
     return (
         <section
@@ -32,6 +40,8 @@ export function StatusPanel({ snapshot, isActive }: StatusPanelProps) {
                         { label: "Remote Audio", value: `${Math.round(snapshot.audio.remoteLevel * 100)}%` },
                         { label: "Local VAD", value: snapshot.audio.localVadIsSpeech ? "Speech" : "Silence", valueClassName: snapshot.audio.localVadIsSpeech ? "state-ok" : "" },
                         { label: "Gaze", value: gazeState },
+                        { label: "Sincro Face", value: faceState, valueClassName: faceState === "detected" ? "state-ok" : faceState === "off" ? "" : "state-warn" },
+                        { label: "Sincro Pose", value: poseState, valueClassName: poseState === "detected" ? "state-ok" : poseState === "off" ? "" : "state-warn" },
                         { label: "DataChannel", value: channelState, valueClassName: channelState === "received" ? "state-ok" : "" },
                         { label: "Candidate", value: snapshot.rtc.metrics.rtcCandidatePair },
                     ]}

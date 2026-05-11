@@ -7,6 +7,7 @@ import { GazePanel } from "./panels/GazePanel";
 import { MessagesPanel } from "./panels/MessagesPanel";
 import { RtcPanel } from "./panels/RtcPanel";
 import { SdpPanel } from "./panels/SdpPanel";
+import { SincroMotionPanel } from "./panels/SincroMotionPanel";
 import { StatusPanel } from "./panels/StatusPanel";
 
 function useDebugConsoleSnapshot(): DebugConsoleSnapshot {
@@ -46,6 +47,7 @@ export function DebugConsole() {
                 <RtcPanel snapshot={snapshot} isActive={activeTab === "rtc"} />
                 <MessagesPanel snapshot={snapshot} isActive={activeTab === "messages"} />
                 <GazePanel snapshot={snapshot} manager={manager} isActive={activeTab === "gaze"} />
+                <SincroMotionPanel snapshot={snapshot} isActive={activeTab === "sincro"} />
                 <SdpPanel snapshot={snapshot} isActive={activeTab === "sdp"} />
             </div>
         </div>

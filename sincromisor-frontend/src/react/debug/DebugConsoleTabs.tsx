@@ -6,6 +6,7 @@ const DEBUG_TABS: { id: DebugTabKey; label: string }[] = [
     { id: "audio", label: "Audio" },
     { id: "messages", label: "Messages" },
     { id: "gaze", label: "Gaze" },
+    { id: "sincro", label: "Sincro" },
     { id: "rtc", label: "RTC" },
     { id: "sdp", label: "SDP" },
 ];

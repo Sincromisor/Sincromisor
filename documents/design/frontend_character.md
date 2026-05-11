@@ -301,8 +301,8 @@ flowchart LR
 - ログ設計:
   - VRMロード進捗/エラーをconsole出力
   - DebugConsoleで `faceX/faceY/facing/status` を表示
-  - DebugConsoleで `faceMotion.detected`、head pose、blendshape主要値、推論時間、推論fps、fallback reason を表示する
-  - Pose採用時は `poseMotion.detected`、肩・上半身の主要値、推論時間、推論fps、fallback reason を表示する
+  - DebugConsole の `Sincro` tab で `faceMotion.detected`、head pose、主要 blendshape、推論時間、推論fps、fallback reason を表示する。Status tab には `Sincro Face` の概要も出す
+  - Pose採用時は DebugConsole の `Sincro` tab で `poseMotion.detected`、肩・上半身・左右腕の主要値、推論時間、推論fps、連続失敗数、fallback reason を表示する。性能ゲート発火時は `face-only` として切り分ける
   - DebugConsole `text_ch` ログに `expression_code` 受信・感情プリセット適用・口パク重複bind除去数を出力（切り分け用）
 - メトリクス:
   - 未導入

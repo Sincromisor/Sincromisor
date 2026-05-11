@@ -283,6 +283,7 @@ export class SincroCharacterGazeController {
         this.debugConsoleManager.updateFaceYLog(snapshot.headPose.pitchDeg);
         this.debugConsoleManager.updateFacing(snapshot.confidence);
         this.debugConsoleManager.updateCharacterGazeTargetDebug(this.formatSincroFaceDebug(snapshot));
+        this.debugConsoleManager.updateSincroFaceMotion(snapshot);
     }
 
     private handleSincroPoseMotion(snapshot: SincroPoseMotionSnapshot): void {
@@ -290,6 +291,7 @@ export class SincroCharacterGazeController {
             return;
         }
         this.characterBehaviorState.applyPoseMotion(snapshot);
+        this.debugConsoleManager.updateSincroPoseMotion(snapshot);
         if (snapshot.degradedToFaceOnly || snapshot.fallbackReason) {
             this.debugConsoleManager.updateCharacterGazeTargetDebug(this.formatSincroPoseDebug(snapshot));
         }
@@ -298,6 +300,7 @@ export class SincroCharacterGazeController {
     private handleSincroPoseFallback(snapshot: SincroPoseMotionSnapshot): void {
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
         this.characterBehaviorState.setErrorSource("poseMotion", null);
+        this.debugConsoleManager.updateSincroPoseMotion(snapshot);
         this.debugConsoleManager.updateCharacterGazeTargetDebug(this.formatSincroPoseDebug(snapshot));
     }
 
