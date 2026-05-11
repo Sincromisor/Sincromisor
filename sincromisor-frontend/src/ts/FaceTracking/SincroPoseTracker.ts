@@ -1,5 +1,4 @@
 import {
-    FilesetResolver,
     PoseLandmarker,
 } from "@mediapipe/tasks-vision";
 import type {
@@ -12,8 +11,8 @@ import {
     type SincroPoseArmMotionSnapshot,
     type SincroPoseMotionSnapshot,
 } from "./SincroPoseMotionSnapshot";
+import { loadMediaPipeVisionFileset } from "./MediaPipeVisionFileset";
 
-const MEDIAPIPE_WASM_PATH = "/mediapipe-wasm";
 const POSE_LANDMARKER_MODEL_PATH = "/3rd_party/pose_landmarker_lite.task";
 const MIN_LANDMARK_VISIBILITY = 0.45;
 
@@ -110,7 +109,7 @@ export class SincroPoseTracker {
     }
 
     private async createPoseLandmarker(): Promise<void> {
-        const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_PATH);
+        const vision = await loadMediaPipeVisionFileset();
         this.poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
             baseOptions: {
                 modelAssetPath: POSE_LANDMARKER_MODEL_PATH,
