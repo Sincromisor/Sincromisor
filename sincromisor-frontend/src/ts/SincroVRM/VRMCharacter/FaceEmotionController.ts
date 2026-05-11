@@ -45,6 +45,12 @@ export class FaceEmotionController {
 
     // 感情表情も CharacterBehaviorSnapshot を正本にし、text_ch/telop_ch の順序差を状態層へ閉じ込める。
     update(snapshot: CharacterBehaviorSnapshot): void {
+        if (!snapshot.motionPolicy.allowAiEmotion) {
+            this.activeEmotion = null;
+            this.setEmotionPresetValues("neutral", 0.0);
+            return;
+        }
+
         const speechId = snapshot.aiSpeech.speechId;
         if (
             snapshot.aiSpeech.isSpeaking

@@ -27,7 +27,7 @@ export class FaceMorphController {
 
     // 口形もキャラクター全体と同じ render loop で進め、発話時刻の正本を snapshot に揃える。
     update(snapshot: CharacterBehaviorSnapshot, sincroFace?: SincroFaceRetargetFrame): void {
-        if (snapshot.faceMotion.trackingEnabled && sincroFace) {
+        if (snapshot.motionPolicy.allowFaceRetarget && snapshot.faceMotion.trackingEnabled && sincroFace) {
             this.currentMoraID = -1;
             this.activeMouth = null;
             this.applySincroMouth(sincroFace);
@@ -35,7 +35,7 @@ export class FaceMorphController {
         }
 
         const moraId = snapshot.aiSpeech.currentMoraId;
-        if (!snapshot.aiSpeech.isSpeaking || moraId == null) {
+        if (!snapshot.motionPolicy.allowAiLipSync || !snapshot.aiSpeech.isSpeaking || moraId == null) {
             this.currentMoraID = -1;
             this.activeMouth = null;
             this.resetMouthPresets();

@@ -63,6 +63,7 @@ export class SincroCharacterGazeController {
         const gazeEnabledChanged = forceAll || !prev || prev.enableCharacterGaze !== next.enableCharacterGaze;
         const talkModeChanged = forceAll || !prev || prev.talkMode !== next.talkMode;
 
+        this.characterBehaviorState.setTalkMode(next.talkMode);
         if (videoDeviceChanged) {
             this.videoInputManager.setVideoInputDeviceId(next.videoInputDeviceId);
         }

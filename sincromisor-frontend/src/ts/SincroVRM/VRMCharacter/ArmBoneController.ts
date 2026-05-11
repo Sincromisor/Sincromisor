@@ -126,7 +126,8 @@ export class ArmBoneController {
 
     private updateSpeechGesture(elapsedSeconds: number, snapshot: CharacterBehaviorSnapshot): number {
         if (
-            snapshot.aiSpeech.isSpeaking
+            snapshot.motionPolicy.allowAiSpeechGesture
+            && snapshot.aiSpeech.isSpeaking
             && snapshot.aiSpeech.beatId !== this.lastSpeechBeatId
             && snapshot.aiSpeech.beatIntensity > 0
         ) {
@@ -150,7 +151,7 @@ export class ArmBoneController {
         }
         const progress = (elapsedSeconds - this.speechGestureStartedAtSeconds)
             / CHARACTER_IDLE_MOTION_CONFIG.arms.speechGestureDurationSeconds;
-        if (progress >= 1 || !snapshot.aiSpeech.isSpeaking) {
+        if (progress >= 1 || !snapshot.aiSpeech.isSpeaking || !snapshot.motionPolicy.allowAiSpeechGesture) {
             this.speechGestureStartedAtSeconds = null;
             return 0;
         }

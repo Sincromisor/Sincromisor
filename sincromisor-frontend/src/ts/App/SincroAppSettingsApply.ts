@@ -1,4 +1,5 @@
 import { updateLookingGlassRuntimeConfig } from "../SincroVRM/LookingGlass/LookingGlassRuntimeConfig";
+import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehaviorState";
 import type { SincroAppDialogFacade } from "./SincroAppDialogFacade";
 import type { SincroAppSettingsSnapshot } from "./SincroAppTypes";
 
@@ -22,6 +23,9 @@ export function applySincroAppSettingsPartial(
     // Dialog 設定（UI/RTC/描画系のトグル）は DialogManager facade 経由で即時反映する。
     if (partial.talkMode != null) {
         dialogManager.setTalkMode(partial.talkMode);
+        // RTCのtalk_modeは接続開始時の契約なので、実行中の音声経路変更は再接続で反映する。
+        // ここではキャラクターのlocal motion policyだけを即時更新する。
+        CharacterBehaviorState.getManager().setTalkMode(partial.talkMode);
     }
     if (partial.titleText != null) {
         dialogManager.setTitleText(partial.titleText);
