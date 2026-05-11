@@ -1,3 +1,13 @@
+import {
+    DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
+    type SincroFaceMotionSnapshot,
+} from "../FaceTracking/SincroFaceMotionSnapshot";
+import {
+    DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
+    DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
+    type SincroPoseMotionSnapshot,
+} from "../FaceTracking/SincroPoseMotionSnapshot";
+
 type AudioMeterHandle = {
     audioContext: AudioContext;
     sourceNode: MediaStreamAudioSourceNode;
@@ -161,6 +171,11 @@ type GazeSnapshot = {
     tuning: CharacterGazeTrackingTuningUiConfig;
 };
 
+type SincroMotionSnapshot = {
+    face: SincroFaceMotionSnapshot;
+    pose: SincroPoseMotionSnapshot;
+};
+
 type RtcSnapshot = {
     iceConnectionState: string;
     iceGatheringState: string;
@@ -177,6 +192,7 @@ type RtcSnapshot = {
 export type DebugConsoleSnapshot = {
     audio: AudioPanelSnapshot;
     gaze: GazeSnapshot;
+    sincroMotion: SincroMotionSnapshot;
     rtc: RtcSnapshot;
 };
 
@@ -214,6 +230,23 @@ const DEFAULT_RTC_METRICS: Record<DebugConsoleMetricKey, string> = {
     inboundJitter: "-",
 };
 
+function createDefaultFaceMotionSnapshot(): SincroFaceMotionSnapshot {
+    return {
+        ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
+        headPose: { ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT.headPose },
+        blendshapes: { ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT.blendshapes },
+    };
+}
+
+function createDefaultPoseMotionSnapshot(): SincroPoseMotionSnapshot {
+    return {
+        ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
+        upperBody: { ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT.upperBody },
+        leftArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
+        rightArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
+    };
+}
+
 function createDefaultSnapshot(): DebugConsoleSnapshot {
     return {
         audio: {
@@ -248,6 +281,10 @@ function createDefaultSnapshot(): DebugConsoleSnapshot {
             targetDebug: "-",
             paused: false,
             tuning: { ...DEFAULT_GAZE_TUNING },
+        },
+        sincroMotion: {
+            face: createDefaultFaceMotionSnapshot(),
+            pose: createDefaultPoseMotionSnapshot(),
         },
         rtc: {
             iceConnectionState: "",
@@ -890,6 +927,35 @@ export class DebugConsoleManager {
         this.emitEvent({ type: "gaze_target_debug", message });
     }
 
+    updateSincroFaceMotion(snapshot: SincroFaceMotionSnapshot): void {
+        this.updateSnapshot((currentSnapshot) => ({
+            ...currentSnapshot,
+            sincroMotion: {
+                ...currentSnapshot.sincroMotion,
+                face: {
+                    ...snapshot,
+                    headPose: { ...snapshot.headPose },
+                    blendshapes: { ...snapshot.blendshapes },
+                },
+            },
+        }));
+    }
+
+    updateSincroPoseMotion(snapshot: SincroPoseMotionSnapshot): void {
+        this.updateSnapshot((currentSnapshot) => ({
+            ...currentSnapshot,
+            sincroMotion: {
+                ...currentSnapshot.sincroMotion,
+                pose: {
+                    ...snapshot,
+                    upperBody: { ...snapshot.upperBody },
+                    leftArm: { ...snapshot.leftArm },
+                    rightArm: { ...snapshot.rightArm },
+                },
+            },
+        }));
+    }
+
     setCharacterGazePaused(paused: boolean): void {
         if (paused) {
             this.updateSnapshot((snapshot) => ({
@@ -902,6 +968,18 @@ export class DebugConsoleManager {
                     facing: "停止中",
                     status: "停止中",
                     targetDebug: "停止中",
+                },
+                sincroMotion: {
+                    face: {
+                        ...createDefaultFaceMotionSnapshot(),
+                        fallbackReason: "tracking_paused",
+                        lastUpdatedAtMs: performance.now(),
+                    },
+                    pose: {
+                        ...createDefaultPoseMotionSnapshot(),
+                        fallbackReason: "tracking_paused",
+                        lastUpdatedAtMs: performance.now(),
+                    },
                 },
             }));
             return;

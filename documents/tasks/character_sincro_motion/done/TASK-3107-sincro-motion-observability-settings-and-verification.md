@@ -1,7 +1,7 @@
 # TASK-3107 Sincro Motion の観測性・設定・確認・設計同期
 
 - 作成日: 2026-05-11
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 - 親タスク: `TASK-3100`
 - 依存: `TASK-3103`, `TASK-3104`
@@ -89,3 +89,13 @@ playwright-cli resize 390 844
 - Debug Console を開いても推論・描画が極端に重くならない。
 - Settings を開いた状態で、UI と VRM が重なって操作不能にならない。
 - 低性能端末では face-only または pose-off へ逃がせる。
+
+## 完了メモ
+
+- Debug Console に `Sincro` tab を追加し、face / pose の検出状態、fallback、推論時間、fps、主要値を確認できるようにした。
+- Status tab に `Sincro Face` / `Sincro Pose` の概要を追加した。
+- Settings は既存の `talk mode`、`顔の向きを使う`、`上半身モーション`、`目線追跡` で必要最小限を満たすため、新しい設定項目は追加しなかった。
+- `documents/design/frontend_character.md` の監視・運用記述を実装後の Debug Console 構造に同期した。
+- `npm run build` 成功。
+- Playwright CLI で `http://127.0.0.1:5173/simple-vrm/` を 1280x720 / 390x844 で確認。開発者ツールと `Sincro` tab は表示され、モバイル幅で横スクロールは出なかった。
+- backend 未起動のため `/api/v1/RTCSignalingServer/config.json` は 404、ブラウザ権限未許可のためカメラ/マイクは `Permission denied`。実カメラ・実マイクでの head / blink / mouth 同期は手動確認に残す。
