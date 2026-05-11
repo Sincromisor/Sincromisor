@@ -78,7 +78,7 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 
 ## 子タスク
 
-- Open: `documents/tasks/character_sincro_motion/open/TASK-3101-sincro-motion-architecture-and-design-doc.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3101-sincro-motion-architecture-and-design-doc.md`
 - Open: `documents/tasks/character_sincro_motion/open/TASK-3102-face-tracking-runtime-and-sincro-face-tracker.md`
 - Open: `documents/tasks/character_sincro_motion/open/TASK-3103-sincro-face-retargeting-head-eye-mouth.md`
 - Open: `documents/tasks/character_sincro_motion/open/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
