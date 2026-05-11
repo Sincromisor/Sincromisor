@@ -7,7 +7,7 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 ## タスク一覧
 
 - Open: `open/TASK-3100-sincro-motion-foundation-epic.md`
-- Open: `open/TASK-3101-sincro-motion-architecture-and-design-doc.md`
+- Done: `done/TASK-3101-sincro-motion-architecture-and-design-doc.md`
 - Open: `open/TASK-3102-face-tracking-runtime-and-sincro-face-tracker.md`
 - Open: `open/TASK-3103-sincro-face-retargeting-head-eye-mouth.md`
 - Open: `open/TASK-3104-talk-mode-aware-character-motion-orchestration.md`

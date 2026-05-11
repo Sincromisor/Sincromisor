@@ -1,7 +1,7 @@
 # TASK-3101 Sincro モーション基盤の設計整理と設計文書更新
 
 - 作成日: 2026-05-11
-- ステータス: Open
+- ステータス: Done
 - 優先度: Critical
 - 親タスク: `TASK-3100`
 
@@ -59,3 +59,13 @@
 - `CharacterGaze` に無理に同期責務を足さない方針が読み取れる。
 - Pose Landmarker が optional であり、性能ゲート付きであることが明確である。
 
+## 完了メモ
+
+- 完了日: 2026-05-11
+- 更新対象:
+  - `documents/design/frontend_character.md`
+- 確認結果:
+  - `chat` と `sincro` の入力・状態・motion priority の違いを `6.1 chat と sincro のモーション責務境界` に整理した。
+  - `SincroFaceTracker`、`SincroPoseTracker`、`TrackerRuntime`、retargeter の責務を `6.2 Sincro Motion パイプライン` と `7.1 コンポーネント設計` に定義した。
+  - FaceLandmarker を顔同期の本流、PoseLandmarker を optional 上半身同期として位置づけ、性能ゲートと face-only fallback 方針を記載した。
+  - WebRTC endpoint / JSON 契約は変更していない。
