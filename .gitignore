@@ -6,6 +6,7 @@
 .vscode
 __pycache__
 .env
+.agents
 samples
 volumes/consul-data
 volumes/sincro-cache
