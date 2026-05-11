@@ -7,6 +7,7 @@ import { CharacterGaze } from '../../CharacterGaze/CharacterGaze';
 import { PerspectiveCamera } from "three/src/cameras/PerspectiveCamera.js";
 import { VRMCamera } from '../VRMScene/VRMCamera';
 import { CharacterBehaviorSnapshot } from './CharacterBehaviorState';
+import type { SincroFaceRetargetFrame } from './SincroFaceRetargeter';
 
 /*
     Humanoid bones
@@ -22,6 +23,7 @@ export class HeadBoneController {
     private vrm: VRM;
     private vrmCamera: VRMCamera;
     private headControlNode: Object3D | null;
+    private readonly sincroHeadNodes = new Map<SincroHeadBoneName, SincroHeadBone>();
     private characterGaze: CharacterGaze;
     private lastUpdateAtMs: number | null = null;
     private aiSpeechBlend = 0;
@@ -34,11 +36,12 @@ export class HeadBoneController {
         this.vrm = vrm;
         this.vrmCamera = vrmCamera;
         this.headControlNode = this.getHeadControlNode();
+        this.captureSincroHeadBones();
         this.characterGaze = CharacterGaze.getManager();
     }
 
     // 毎フレームの首向き更新。検出可否に応じて gaze / camera fallback を切り替える。
-    update(snapshot?: CharacterBehaviorSnapshot): void {
+    update(snapshot?: CharacterBehaviorSnapshot, sincroFace?: SincroFaceRetargetFrame): void {
         if (!this.headControlNode) {
             return;
         }
@@ -47,6 +50,10 @@ export class HeadBoneController {
             ? 1000 / 60
             : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
         this.lastUpdateAtMs = nowMs;
+        if (snapshot?.faceMotion.trackingEnabled && sincroFace) {
+            this.applySincroFaceMotion(sincroFace);
+            return;
+        }
         // 顔認識機能の状況を元に、顔認識モードと、カメラの方向を向くモードを切り替える
         if (snapshot?.gaze.trackingEnabled || this.characterGaze.modelIsLoaded()) {
             const targetX = snapshot?.gaze.detected ? snapshot.gaze.targetX : 0.5;
@@ -117,6 +124,53 @@ export class HeadBoneController {
             }
         }
         return null;
+    }
+
+    private captureSincroHeadBones(): void {
+        for (const name of ['upperChest', 'neck', 'head'] as const) {
+            const node = this.vrm.humanoid.getNormalizedBoneNode(name);
+            if (!node) {
+                continue;
+            }
+            this.sincroHeadNodes.set(name, {
+                node,
+                baseRotation: node.rotation.clone(),
+            });
+        }
+    }
+
+    private applySincroFaceMotion(sincroFace: SincroFaceRetargetFrame): void {
+        const appliedNodes = new Set<Object3D>();
+        this.applySincroBone('upperChest', sincroFace.head.upperChest, appliedNodes);
+        this.applySincroBone('neck', sincroFace.head.neck, appliedNodes);
+        this.applySincroBone('head', sincroFace.head.head, appliedNodes);
+        if (appliedNodes.size > 0 || !this.headControlNode) {
+            return;
+        }
+
+        // neck/head/upperChest が無いモデルでは、chat 用 fallback ボーンに合算して安全に追従させる。
+        this.headControlNode.rotation.set(
+            sincroFace.head.upperChest.x + sincroFace.head.neck.x + sincroFace.head.head.x,
+            sincroFace.head.upperChest.y + sincroFace.head.neck.y + sincroFace.head.head.y,
+            sincroFace.head.upperChest.z + sincroFace.head.neck.z + sincroFace.head.head.z,
+        );
+    }
+
+    private applySincroBone(
+        name: SincroHeadBoneName,
+        rotation: { x: number; y: number; z: number },
+        appliedNodes: Set<Object3D>,
+    ): void {
+        const bone = this.sincroHeadNodes.get(name);
+        if (!bone) {
+            return;
+        }
+        bone.node.rotation.set(
+            bone.baseRotation.x + rotation.x,
+            bone.baseRotation.y + rotation.y,
+            bone.baseRotation.z + rotation.z,
+        );
+        appliedNodes.add(bone.node);
     }
 
     private applyAiSpeechMotion(snapshot: CharacterBehaviorSnapshot, nowMs: number, deltaMs: number): void {
@@ -228,4 +282,11 @@ type HeadSpeechExpressionProfile = {
     pitchRad: number;
     yawRad: number;
     rollRad: number;
+};
+
+type SincroHeadBoneName = 'upperChest' | 'neck' | 'head';
+
+type SincroHeadBone = {
+    node: Object3D;
+    baseRotation: Euler;
 };

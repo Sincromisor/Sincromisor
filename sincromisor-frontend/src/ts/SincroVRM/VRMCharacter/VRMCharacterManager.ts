@@ -12,6 +12,7 @@ import { EyeBehaviorController } from './EyeBehaviorController';
 import { CharacterBehaviorSnapshot, CharacterBehaviorState } from './CharacterBehaviorState';
 import { CharacterMotionOrchestrator } from './CharacterMotionOrchestrator';
 import type { CharacterMotionTuning } from './CharacterMotionConfig';
+import { SincroFaceRetargeter } from './SincroFaceRetargeter';
 import { VRMCamera } from '../VRMScene/VRMCamera';
 import { Vector3 } from 'three/src/math/Vector3.js';
 import { Box3 } from 'three/src/math/Box3.js';
@@ -75,6 +76,7 @@ export class VRMCharacterManager {
     private defaultPosition: Vector3 = new Vector3(0, 0, 0);
     private rootBone: Object3D | null = null;
     private readonly behaviorState: CharacterBehaviorState;
+    private readonly sincroFaceRetargeter = new SincroFaceRetargeter();
     private latestBehaviorSnapshot: CharacterBehaviorSnapshot | null = null;
     private motionElapsedSeconds = 0;
     // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
@@ -264,9 +266,13 @@ export class VRMCharacterManager {
         const deltaSeconds = this.clock.getDelta();
         this.motionElapsedSeconds += deltaSeconds;
         this.latestBehaviorSnapshot = this.behaviorState.update();
-        this.headBoneController?.update(this.latestBehaviorSnapshot);
-        this.eyeBehaviorController?.update(this.latestBehaviorSnapshot);
-        this.mouthMorphController?.update(this.latestBehaviorSnapshot);
+        const sincroFace = this.sincroFaceRetargeter.retarget(
+            this.latestBehaviorSnapshot.faceMotion,
+            this.latestBehaviorSnapshot.nowMs,
+        );
+        this.headBoneController?.update(this.latestBehaviorSnapshot, sincroFace);
+        this.eyeBehaviorController?.update(this.latestBehaviorSnapshot, sincroFace);
+        this.mouthMorphController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.emotionMorphController?.update(this.latestBehaviorSnapshot);
         this.armBoneController?.update(this.motionElapsedSeconds, this.latestBehaviorSnapshot);
         this.legBoneController?.update(this.motionElapsedSeconds);
