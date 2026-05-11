@@ -17,6 +17,19 @@ FaceLandmarker 初期化失敗として表示されます。
 * 配置先: `public/3rd_party/face_landmarker.task`
 * ライセンス: 配布元のモデルライセンスに従う
 
+## pose\_landmarker\_\*.task (optional spike)
+
+`TASK-3105` の Pose Landmarker 検証ページで利用します。
+通常画面からは参照されないため、未配置でも本番ビルドや通常起動には影響しません。
+
+* ソース: [https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker)
+* 配置候補:
+  * `public/3rd_party/pose_landmarker_lite.task`
+  * `public/3rd_party/pose_landmarker_full.task`
+  * `public/3rd_party/pose_landmarker_heavy.task`
+* 検証ページ: `src/pose-landmarker-spike/index.html`
+* ライセンス: 配布元のモデルライセンスに従う
+
 ## silero-vad (optional)
 
 学習ベースVADを有効化する場合は、以下を配置してください。
