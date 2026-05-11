@@ -1,6 +1,5 @@
 import {
     FaceLandmarker,
-    FilesetResolver,
 } from "@mediapipe/tasks-vision";
 import type {
     Category,
@@ -11,9 +10,9 @@ import {
     DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
     SincroFaceMotionSnapshot,
 } from "./SincroFaceMotionSnapshot";
+import { loadMediaPipeVisionFileset } from "./MediaPipeVisionFileset";
 
 const FACE_LANDMARKER_MODEL_PATH = "/3rd_party/face_landmarker.task";
-const MEDIAPIPE_WASM_PATH = "/mediapipe-wasm";
 
 // FaceLandmarker の生結果を、VRM retarget が扱いやすい内部 snapshot へ正規化する。
 // DOM や UI 更新は持ち込まず、TrackerRuntime から渡された video frame だけを同期推論する。
@@ -88,7 +87,7 @@ export class SincroFaceTracker {
     }
 
     private async createFaceLandmarker(): Promise<void> {
-        const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_PATH);
+        const vision = await loadMediaPipeVisionFileset();
         this.faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
             baseOptions: {
                 modelAssetPath: FACE_LANDMARKER_MODEL_PATH,

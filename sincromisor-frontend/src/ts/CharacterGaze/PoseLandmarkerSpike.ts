@@ -1,6 +1,5 @@
 import {
     FaceLandmarker,
-    FilesetResolver,
     PoseLandmarker,
 } from "@mediapipe/tasks-vision";
 import type {
@@ -8,8 +7,8 @@ import type {
     NormalizedLandmark,
     PoseLandmarkerResult,
 } from "@mediapipe/tasks-vision";
+import { loadMediaPipeVisionFileset } from "../FaceTracking/MediaPipeVisionFileset";
 
-const MEDIAPIPE_WASM_PATH = "/mediapipe-wasm";
 const DEFAULT_FACE_LANDMARKER_MODEL_PATH = "/3rd_party/face_landmarker.task";
 const MIN_VIDEO_DIMENSION_PX = 2;
 const SAMPLE_WINDOW_SIZE = 120;
@@ -121,7 +120,7 @@ export class PoseLandmarkerSpike {
         this.lastPoseInferenceEndedAtMs = null;
         this.fallbackReason = null;
         this.callbacks.onStatus("MediaPipe vision runtime を初期化しています。");
-        const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_PATH);
+        const vision = await loadMediaPipeVisionFileset();
         this.poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
             baseOptions: {
                 modelAssetPath: this.config.modelAssetPath,

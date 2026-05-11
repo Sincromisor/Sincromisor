@@ -1,8 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
-import { resolve } from 'path';
+import { createRequire } from 'module';
+import { readFileSync } from 'fs';
+import { dirname, resolve } from 'path';
 
 const contents_src = resolve(__dirname, 'src');
+const require = createRequire(import.meta.url);
+const mediapipeTasksVisionPackageJson = JSON.parse(
+    readFileSync(resolve(dirname(require.resolve('@mediapipe/tasks-vision')), 'package.json'), 'utf8'),
+);
+const mediapipeTasksVisionVersion = mediapipeTasksVisionPackageJson.version;
 const reactRuntimePackages = [
     '/react/',
     '/react-dom/',
@@ -20,6 +27,9 @@ function buildInputMap() {
 
 export default defineConfig({
     appType: 'mpa',
+    define: {
+        __MEDIAPIPE_TASKS_VISION_VERSION__: JSON.stringify(mediapipeTasksVisionVersion),
+    },
     server: {
         open: true,
     },

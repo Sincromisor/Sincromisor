@@ -1,6 +1,7 @@
-import { FilesetResolver, FaceDetector, Detection } from "@mediapipe/tasks-vision";
+import { FaceDetector, Detection } from "@mediapipe/tasks-vision";
 import { FaceTargetSelector } from "./FaceTargetSelector";
 import { OneEuroFilter1D } from "./OneEuroFilter";
+import { loadMediaPipeVisionFileset } from "../FaceTracking/MediaPipeVisionFileset";
 
 declare type NormalizedKeypoint = {
     /** X in normalized image coordinates. */
@@ -168,9 +169,7 @@ export class CharacterGaze {
         // https://developers.google.com/mediapipe/api/solutions/js/tasks-vision.facedetector
         // https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.js
         // https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.wasm
-        const vision = await FilesetResolver.forVisionTasks(
-            "/mediapipe-wasm"
-        );
+        const vision = await loadMediaPipeVisionFileset();
         this.faceDetector = await FaceDetector.createFromOptions(
             vision,
             {
