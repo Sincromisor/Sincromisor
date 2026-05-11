@@ -19,6 +19,7 @@ type EyeTarget = {
 };
 
 const LOOK_PRESETS: VRMExpressionPresetName[] = ['lookLeft', 'lookRight', 'lookUp', 'lookDown'];
+const BLINK_PRESETS: VRMExpressionPresetName[] = ['blink', 'blinkLeft', 'blinkRight'];
 
 const EYE_BEHAVIOR_CONFIG = {
     maxHorizontalRad: MathUtils.degToRad(13),
@@ -54,7 +55,7 @@ export class EyeBehaviorController {
     private readonly expressionManager: VRMExpressionManager;
     private readonly eyeBones = new Map<EyeBoneName, EyeBone>();
     private readonly availableLookPresets = new Set<VRMExpressionPresetName>();
-    private readonly hasBlinkExpression: boolean;
+    private readonly availableBlinkPresets = new Set<VRMExpressionPresetName>();
     private smoothedTarget: EyeTarget = { x: 0.5, y: 0.5 };
     private microsaccade: EyeTarget = { x: 0, y: 0 };
     private nextMicrosaccadeAtMs = performance.now() + 900;
@@ -73,7 +74,11 @@ export class EyeBehaviorController {
                 this.availableLookPresets.add(preset);
             }
         }
-        this.hasBlinkExpression = this.expressionManager.getExpression('blink') != null;
+        for (const preset of BLINK_PRESETS) {
+            if (this.expressionManager.getExpression(preset) != null) {
+                this.availableBlinkPresets.add(preset);
+            }
+        }
         this.captureEyeBone(vrm, 'leftEye');
         this.captureEyeBone(vrm, 'rightEye');
     }
@@ -255,9 +260,7 @@ export class EyeBehaviorController {
         this.setExpressionIfAvailable('lookRight', expressions.lookRight);
         this.setExpressionIfAvailable('lookUp', expressions.lookUp);
         this.setExpressionIfAvailable('lookDown', expressions.lookDown);
-        if (this.hasBlinkExpression) {
-            this.expressionManager.setValue('blink', expressions.blink);
-        }
+        this.applyBlinkExpressions(expressions.blinkLeft, expressions.blinkRight);
 
         const offsetX = MathUtils.clamp((expressions.lookRight - expressions.lookLeft) * 0.42, -0.5, 0.5);
         const offsetY = MathUtils.clamp((expressions.lookUp - expressions.lookDown) * 0.36, -0.5, 0.5);
@@ -268,12 +271,14 @@ export class EyeBehaviorController {
         this.applySincroEyeBoneFallback(
             lookExpressionCoversHorizontal ? 0 : offsetX,
             lookExpressionCoversVertical ? 0 : offsetY,
-            this.hasBlinkExpression ? 0 : expressions.blink,
+            this.availableBlinkPresets.size > 0 ? 0 : expressions.blinkLeft,
+            this.availableBlinkPresets.size > 0 ? 0 : expressions.blinkRight,
         );
     }
 
-    private applySincroEyeBoneFallback(offsetX: number, offsetY: number, blink: number): void {
-        for (const bone of this.eyeBones.values()) {
+    private applySincroEyeBoneFallback(offsetX: number, offsetY: number, blinkLeft: number, blinkRight: number): void {
+        for (const [name, bone] of this.eyeBones) {
+            const blink = name === 'leftEye' ? blinkLeft : blinkRight;
             bone.node.rotation.set(
                 bone.baseRotation.x
                     + offsetY * EYE_BEHAVIOR_CONFIG.maxVerticalRad * 2
@@ -285,11 +290,11 @@ export class EyeBehaviorController {
     }
 
     private applyBlink(snapshot: CharacterBehaviorSnapshot, nowMs: number): void {
-        if (!this.hasBlinkExpression) {
+        if (this.availableBlinkPresets.size === 0) {
             return;
         }
         if (this.isBlinkSuppressed(snapshot, nowMs)) {
-            this.expressionManager.setValue('blink', 0);
+            this.applyBlinkExpressions(0, 0);
             this.blinkStartedAtMs = null;
             this.nextBlinkAtMs = Math.max(this.nextBlinkAtMs, nowMs + 450);
             return;
@@ -298,14 +303,14 @@ export class EyeBehaviorController {
             this.blinkStartedAtMs = nowMs;
         }
         if (this.blinkStartedAtMs == null) {
-            this.expressionManager.setValue('blink', 0);
+            this.applyBlinkExpressions(0, 0);
             return;
         }
 
         const elapsedMs = nowMs - this.blinkStartedAtMs;
         const durationMs = EYE_BEHAVIOR_CONFIG.blinkDurationMs;
         if (elapsedMs >= durationMs) {
-            this.expressionManager.setValue('blink', 0);
+            this.applyBlinkExpressions(0, 0);
             this.blinkStartedAtMs = null;
             this.nextBlinkAtMs = nowMs + this.nextBlinkDelayMs(snapshot.state);
             return;
@@ -314,7 +319,31 @@ export class EyeBehaviorController {
         const value = elapsedMs < closeMs
             ? elapsedMs / closeMs
             : 1 - ((elapsedMs - closeMs) / (durationMs - closeMs));
-        this.expressionManager.setValue('blink', MathUtils.clamp(value, 0, 1));
+        this.applyBlinkExpressions(value, value);
+    }
+
+    private applyBlinkExpressions(left: number, right: number): void {
+        const leftValue = MathUtils.clamp(left, 0, 1);
+        const rightValue = MathUtils.clamp(right, 0, 1);
+        const hasSeparateBlink = this.availableBlinkPresets.has('blinkLeft')
+            || this.availableBlinkPresets.has('blinkRight');
+
+        // VRM 1.0 は `blink` を両目、`blinkLeft`/`blinkRight` を片目として定義する。
+        // 片目 preset があるモデルでは左右を保持し、無いモデルだけ `blink` に畳み込む。
+        if (hasSeparateBlink) {
+            this.setBlinkExpressionIfAvailable('blink', 0);
+            this.setBlinkExpressionIfAvailable('blinkLeft', leftValue);
+            this.setBlinkExpressionIfAvailable('blinkRight', rightValue);
+            return;
+        }
+        this.setBlinkExpressionIfAvailable('blink', Math.max(leftValue, rightValue));
+    }
+
+    private setBlinkExpressionIfAvailable(preset: VRMExpressionPresetName, value: number): void {
+        if (!this.availableBlinkPresets.has(preset)) {
+            return;
+        }
+        this.expressionManager.setValue(preset, MathUtils.clamp(value, 0, 1));
     }
 
     private isBlinkSuppressed(snapshot: CharacterBehaviorSnapshot, nowMs: number): boolean {

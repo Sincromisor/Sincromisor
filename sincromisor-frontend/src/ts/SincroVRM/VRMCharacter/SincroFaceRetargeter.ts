@@ -9,6 +9,8 @@ export type SincroFaceRetargetedHeadPose = {
 
 export type SincroFaceRetargetedExpressions = {
     blink: number;
+    blinkLeft: number;
+    blinkRight: number;
     lookLeft: number;
     lookRight: number;
     lookUp: number;
@@ -35,6 +37,11 @@ export type SincroFaceRetargetConfig = {
     expressionSmoothingMs: number;
     headDeadbandDeg: number;
     expressionDeadband: number;
+    blinkCalibration: {
+        openThreshold: number;
+        closeThreshold: number;
+        gamma: number;
+    };
     mirrorYaw: boolean;
     headInputScale: {
         yaw: number;
@@ -61,6 +68,11 @@ export const DEFAULT_SINCRO_FACE_RETARGET_CONFIG: SincroFaceRetargetConfig = {
     expressionSmoothingMs: 70,
     headDeadbandDeg: 1.2,
     expressionDeadband: 0.035,
+    blinkCalibration: {
+        openThreshold: 0.22,
+        closeThreshold: 0.62,
+        gamma: 0.72,
+    },
     mirrorYaw: false,
     headInputScale: {
         yaw: 0.58,
@@ -81,6 +93,8 @@ export const DEFAULT_SINCRO_FACE_RETARGET_CONFIG: SincroFaceRetargetConfig = {
 
 const NEUTRAL_EXPRESSIONS: SincroFaceRetargetedExpressions = {
     blink: 0,
+    blinkLeft: 0,
+    blinkRight: 0,
     lookLeft: 0,
     lookRight: 0,
     lookUp: 0,
@@ -136,6 +150,10 @@ export class SincroFaceRetargeter {
             headBoneWeights: {
                 ...DEFAULT_SINCRO_FACE_RETARGET_CONFIG.headBoneWeights,
                 ...config.headBoneWeights,
+            },
+            blinkCalibration: {
+                ...DEFAULT_SINCRO_FACE_RETARGET_CONFIG.blinkCalibration,
+                ...config.blinkCalibration,
             },
         };
     }
@@ -227,7 +245,9 @@ export function retargetSincroFaceHeadPose(
         config.headDeadbandDeg,
     );
     const pitchDeg = applyDeadband(
-        (snapshot.headPose.pitchDeg - neutral.pitchDeg) * config.headInputScale.pitch,
+        // MediaPipe の pitch と VRM 正規化ボーンの X 回転は上下方向の符号が逆になる。
+        // sincro モードでは首・頭へ直接加算するため、retarget 境界で VRM 座標へ揃える。
+        -(snapshot.headPose.pitchDeg - neutral.pitchDeg) * config.headInputScale.pitch,
         config.headDeadbandDeg,
     );
     const rollDeg = applyDeadband(
@@ -248,11 +268,11 @@ export function retargetSincroFaceHeadPose(
 
 export function retargetSincroFaceExpressions(
     blendshapes: Record<string, number>,
-    config: Pick<SincroFaceRetargetConfig, "expressionDeadband"> = DEFAULT_SINCRO_FACE_RETARGET_CONFIG,
+    config: Pick<SincroFaceRetargetConfig, "expressionDeadband" | "blinkCalibration"> = DEFAULT_SINCRO_FACE_RETARGET_CONFIG,
 ): SincroFaceRetargetedExpressions {
-    const blinkLeft = maxBlendshape(blendshapes, EYE_BLINK_LEFT_KEYS);
-    const blinkRight = maxBlendshape(blendshapes, EYE_BLINK_RIGHT_KEYS);
-    const blink = applyExpressionDeadband(Math.max(blinkLeft, blinkRight), config.expressionDeadband);
+    const blinkLeft = calibrateBlink(maxBlendshape(blendshapes, EYE_BLINK_LEFT_KEYS), config.blinkCalibration);
+    const blinkRight = calibrateBlink(maxBlendshape(blendshapes, EYE_BLINK_RIGHT_KEYS), config.blinkCalibration);
+    const blink = Math.max(blinkLeft, blinkRight);
     const jawOpen = maxBlendshape(blendshapes, MOUTH_OPEN_KEYS);
     const mouthClose = maxBlendshape(blendshapes, MOUTH_CLOSE_KEYS);
     const funnel = maxBlendshape(blendshapes, MOUTH_FUNNEL_KEYS);
@@ -264,6 +284,8 @@ export function retargetSincroFaceExpressions(
 
     return {
         blink,
+        blinkLeft,
+        blinkRight,
         lookLeft: applyExpressionDeadband(maxBlendshape(blendshapes, EYE_LOOK_LEFT_KEYS), config.expressionDeadband),
         lookRight: applyExpressionDeadband(maxBlendshape(blendshapes, EYE_LOOK_RIGHT_KEYS), config.expressionDeadband),
         lookUp: applyExpressionDeadband(maxBlendshape(blendshapes, EYE_LOOK_UP_KEYS), config.expressionDeadband),
@@ -295,6 +317,8 @@ function smoothExpressions(
 ): SincroFaceRetargetedExpressions {
     return {
         blink: lerp(previous.blink, next.blink, alpha),
+        blinkLeft: lerp(previous.blinkLeft, next.blinkLeft, alpha),
+        blinkRight: lerp(previous.blinkRight, next.blinkRight, alpha),
         lookLeft: lerp(previous.lookLeft, next.lookLeft, alpha),
         lookRight: lerp(previous.lookRight, next.lookRight, alpha),
         lookUp: lerp(previous.lookUp, next.lookUp, alpha),
@@ -352,6 +376,26 @@ function applyExpressionDeadband(value: number, deadband: number): number {
         return 0;
     }
     return MathUtils.clamp((clamped - deadband) / (1 - deadband), 0, 1);
+}
+
+function calibrateBlink(
+    value: number,
+    calibration: SincroFaceRetargetConfig["blinkCalibration"],
+): number {
+    const clamped = clamp01(value);
+    if (clamped <= calibration.openThreshold) {
+        return 0;
+    }
+    if (clamped >= calibration.closeThreshold) {
+        return 1;
+    }
+
+    // MediaPipe の blink score は開眼時も閉眼時も端まで届きにくい。
+    // しきい値間を smoothstep 化し、gamma で閉じ始めの反応を少し強める。
+    const normalized = (clamped - calibration.openThreshold)
+        / Math.max(0.001, calibration.closeThreshold - calibration.openThreshold);
+    const eased = normalized * normalized * (3 - 2 * normalized);
+    return MathUtils.clamp(Math.pow(eased, calibration.gamma), 0, 1);
 }
 
 function applyDeadband(value: number, deadband: number): number {
