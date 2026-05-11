@@ -10,6 +10,7 @@ import {
     sineWave,
 } from './CharacterMotionConfig';
 import { CharacterBehaviorSnapshot } from './CharacterBehaviorState';
+import type { SincroPoseRetargetFrame } from './SincroPoseRetargeter';
 
 type OptionalBoneName = 'hips' | 'spine' | 'chest' | 'upperChest' | 'leftShoulder' | 'rightShoulder';
 
@@ -45,7 +46,12 @@ export class CharacterMotionOrchestrator {
         this.captureOptionalBone(vrm, 'rightShoulder');
     }
 
-    update(elapsedSeconds: number, snapshot: CharacterBehaviorSnapshot, hipsBasePosition: Vector3): void {
+    update(
+        elapsedSeconds: number,
+        snapshot: CharacterBehaviorSnapshot,
+        hipsBasePosition: Vector3,
+        pose?: SincroPoseRetargetFrame,
+    ): void {
         const breath = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.breath.periodSeconds);
         const breathSecondary = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.breath.periodSeconds, Math.PI / 2);
         const balanceSide = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.balance.sidePeriodSeconds, Math.PI / 7);
@@ -58,9 +64,9 @@ export class CharacterMotionOrchestrator {
         const motionScale = this.tuning.motionScale * snapshot.motionPolicy.idleMotionScale;
 
         this.stabilizeHips(hipsBasePosition);
-        this.updateSpine(breath, balanceSide, intensity, listening, backchannelNod, aiSpeaking, aiGesture, expression, motionScale);
-        this.updateChest(breath, breathSecondary, intensity, listening, backchannelNod, aiSpeaking, aiGesture, expression, motionScale);
-        this.updateShoulders(breath, breathSecondary, intensity, listening, aiSpeaking, aiGesture, expression, motionScale);
+        this.updateSpine(breath, balanceSide, intensity, listening, backchannelNod, aiSpeaking, aiGesture, expression, motionScale, pose);
+        this.updateChest(breath, breathSecondary, intensity, listening, backchannelNod, aiSpeaking, aiGesture, expression, motionScale, pose);
+        this.updateShoulders(breath, breathSecondary, intensity, listening, aiSpeaking, aiGesture, expression, motionScale, pose);
     }
 
     setTuning(partial: Partial<CharacterMotionTuning>): void {
@@ -100,6 +106,7 @@ export class CharacterMotionOrchestrator {
         aiGesture: number,
         expression: AiSpeechExpressionMotionProfile,
         motionScale: number,
+        pose?: SincroPoseRetargetFrame,
     ): void {
         const bone = this.bones.get('spine');
         if (!bone) {
@@ -113,8 +120,9 @@ export class CharacterMotionOrchestrator {
                 + aiSpeaking * expression.spinePitchRad * motionScale,
             bone.baseRotation.y
                 + sideWave * CHARACTER_IDLE_MOTION_CONFIG.balance.spineYawRad * intensity * motionScale
-                + aiGesture * this.aiSpeechBeatDirection * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.spineBeatYawRad * motionScale,
-            bone.baseRotation.z,
+                + aiGesture * this.aiSpeechBeatDirection * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.spineBeatYawRad * motionScale
+                + (pose?.upperBody.spine.y ?? 0),
+            bone.baseRotation.z + (pose?.upperBody.spine.z ?? 0),
         );
     }
 
@@ -128,6 +136,7 @@ export class CharacterMotionOrchestrator {
         aiGesture: number,
         expression: AiSpeechExpressionMotionProfile,
         motionScale: number,
+        pose?: SincroPoseRetargetFrame,
     ): void {
         const chest = this.bones.get('chest');
         if (chest) {
@@ -138,8 +147,10 @@ export class CharacterMotionOrchestrator {
                     - backchannelNod * CHARACTER_IDLE_MOTION_CONFIG.listening.nodChestPitchRad * motionScale
                     + aiSpeaking * expression.chestPitchRad * motionScale
                     - aiGesture * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.chestBeatPitchRad * motionScale,
-                chest.baseRotation.y,
-                chest.baseRotation.z + secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.chestRollRad * intensity * motionScale,
+                chest.baseRotation.y + (pose?.upperBody.chest.y ?? 0),
+                chest.baseRotation.z
+                    + secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.chestRollRad * intensity * motionScale
+                    + (pose?.upperBody.chest.z ?? 0),
             );
         }
 
@@ -155,7 +166,8 @@ export class CharacterMotionOrchestrator {
                 upperChest.baseRotation.y,
                 upperChest.baseRotation.z
                     - secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.chestRollRad * 0.65 * intensity * motionScale
-                    + aiSpeaking * expression.upperChestRollRad * motionScale,
+                    + aiSpeaking * expression.upperChestRollRad * motionScale
+                    + (pose?.upperBody.chest.z ?? 0) * 0.45,
             );
         }
     }
@@ -169,6 +181,7 @@ export class CharacterMotionOrchestrator {
         aiGesture: number,
         expression: AiSpeechExpressionMotionProfile,
         motionScale: number,
+        pose?: SincroPoseRetargetFrame,
     ): void {
         const shoulderQuieting = 1 - listening * 0.35;
         const speechQuieting = 1 - aiSpeaking * expression.idleQuieting;
@@ -180,7 +193,8 @@ export class CharacterMotionOrchestrator {
                 left.baseRotation.z - breathWave * CHARACTER_IDLE_MOTION_CONFIG.breath.shoulderLiftRad * intensity * shoulderQuieting * motionScale
                     + secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.shoulderRollRad * intensity * shoulderQuieting * speechQuieting * motionScale
                     - aiSpeaking * expression.shoulderOpenRad * motionScale
-                    - aiGesture * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderBeatRad * motionScale,
+                    - aiGesture * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderBeatRad * motionScale
+                    + (pose?.upperBody.leftShoulder.z ?? 0),
             );
         }
 
@@ -192,7 +206,8 @@ export class CharacterMotionOrchestrator {
                 right.baseRotation.z + breathWave * CHARACTER_IDLE_MOTION_CONFIG.breath.shoulderLiftRad * intensity * shoulderQuieting * motionScale
                     + secondaryWave * CHARACTER_IDLE_MOTION_CONFIG.breath.shoulderRollRad * intensity * shoulderQuieting * speechQuieting * motionScale
                     + aiSpeaking * expression.shoulderOpenRad * motionScale
-                    + aiGesture * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderBeatRad * motionScale,
+                    + aiGesture * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderBeatRad * motionScale
+                    + (pose?.upperBody.rightShoulder.z ?? 0),
             );
         }
     }

@@ -12,7 +12,7 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 - Open: `open/TASK-3103-sincro-face-retargeting-head-eye-mouth.md`
 - Open: `open/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
 - Open: `open/TASK-3105-pose-landmarker-feasibility-spike.md`
-- Open: `open/TASK-3106-optional-sincro-pose-tracker-and-performance-gates.md`
+- Done: `done/TASK-3106-optional-sincro-pose-tracker-and-performance-gates.md`
 - Open: `open/TASK-3107-sincro-motion-observability-settings-and-verification.md`
 
 ## 前提

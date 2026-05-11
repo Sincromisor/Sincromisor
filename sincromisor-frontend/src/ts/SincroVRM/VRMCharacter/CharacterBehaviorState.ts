@@ -4,6 +4,11 @@ import {
     DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
 } from "../../FaceTracking/SincroFaceMotionSnapshot";
 import type { SincroFaceMotionSnapshot } from "../../FaceTracking/SincroFaceMotionSnapshot";
+import {
+    DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
+    DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
+} from "../../FaceTracking/SincroPoseMotionSnapshot";
+import type { SincroPoseMotionSnapshot } from "../../FaceTracking/SincroPoseMotionSnapshot";
 import { ChatMessage, TelopChannelMessage } from "../../RTC/RTCMessage";
 import { TalkManager, TalkManagerEvent } from "../../RTC/TalkManager";
 import { VadStateReport } from "../../RTC/UserMediaManager";
@@ -27,6 +32,7 @@ export type CharacterMotionPolicySnapshot = {
     neutralTransition: boolean;
     allowGazeMotion: boolean;
     allowFaceRetarget: boolean;
+    allowPoseRetarget: boolean;
     allowAiSpeechGesture: boolean;
     allowAiLipSync: boolean;
     allowAiEmotion: boolean;
@@ -92,6 +98,7 @@ export type CharacterBehaviorSnapshot = {
     vad: CharacterBehaviorVadSnapshot;
     gaze: CharacterBehaviorGazeSnapshot;
     faceMotion: SincroFaceMotionSnapshot;
+    poseMotion: SincroPoseMotionSnapshot;
     aiSpeech: CharacterBehaviorAiSpeechSnapshot;
     errorMessage: string | null;
 };
@@ -153,6 +160,12 @@ export class CharacterBehaviorState {
         ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
         headPose: { ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT.headPose },
         blendshapes: { ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT.blendshapes },
+    };
+    private poseMotion: SincroPoseMotionSnapshot = {
+        ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
+        upperBody: { ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT.upperBody },
+        leftArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
+        rightArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
     };
     private aiSpeech: CharacterBehaviorAiSpeechSnapshot = {
         isSpeaking: false,
@@ -281,6 +294,16 @@ export class CharacterBehaviorState {
         };
     }
 
+    applyPoseMotion(snapshot: SincroPoseMotionSnapshot, nowMs: number = performance.now()): void {
+        this.poseMotion = {
+            ...snapshot,
+            upperBody: { ...snapshot.upperBody },
+            leftArm: { ...snapshot.leftArm },
+            rightArm: { ...snapshot.rightArm },
+            lastUpdatedAtMs: snapshot.lastUpdatedAtMs ?? nowMs,
+        };
+    }
+
     setTalkMode(mode: string, nowMs: number = performance.now()): void {
         const nextMode = this.normalizeTalkMode(mode);
         if (nextMode === this.talkMode) {
@@ -297,6 +320,7 @@ export class CharacterBehaviorState {
             this.setGazeTrackingEnabled(false, nowMs);
         } else {
             this.setFaceMotionTrackingEnabled(false, nowMs);
+            this.setPoseMotionTrackingEnabled(false, nowMs);
         }
         this.update(nowMs);
     }
@@ -308,6 +332,18 @@ export class CharacterBehaviorState {
             detected: enabled ? this.faceMotion.detected : false,
             confidence: enabled ? this.faceMotion.confidence : 0,
             fallbackReason: enabled ? this.faceMotion.fallbackReason : null,
+            lastUpdatedAtMs: nowMs,
+        };
+    }
+
+    setPoseMotionTrackingEnabled(enabled: boolean, nowMs: number = performance.now()): void {
+        this.poseMotion = {
+            ...this.poseMotion,
+            trackingEnabled: enabled,
+            detected: enabled ? this.poseMotion.detected : false,
+            confidence: enabled ? this.poseMotion.confidence : 0,
+            fallbackReason: enabled ? this.poseMotion.fallbackReason : null,
+            degradedToFaceOnly: enabled ? this.poseMotion.degradedToFaceOnly : false,
             lastUpdatedAtMs: nowMs,
         };
     }
@@ -353,6 +389,12 @@ export class CharacterBehaviorState {
                 ...this.faceMotion,
                 headPose: { ...this.faceMotion.headPose },
                 blendshapes: { ...this.faceMotion.blendshapes },
+            },
+            poseMotion: {
+                ...this.poseMotion,
+                upperBody: { ...this.poseMotion.upperBody },
+                leftArm: { ...this.poseMotion.leftArm },
+                rightArm: { ...this.poseMotion.rightArm },
             },
             aiSpeech: { ...this.aiSpeech },
             errorMessage: this.errorMessage,
@@ -496,6 +538,7 @@ export class CharacterBehaviorState {
                 neutralTransition,
                 allowGazeMotion: false,
                 allowFaceRetarget: true,
+                allowPoseRetarget: !this.poseMotion.degradedToFaceOnly,
                 allowAiSpeechGesture: false,
                 allowAiLipSync: false,
                 allowAiEmotion: false,
@@ -509,6 +552,7 @@ export class CharacterBehaviorState {
             neutralTransition,
             allowGazeMotion: true,
             allowFaceRetarget: false,
+            allowPoseRetarget: false,
             allowAiSpeechGesture: !neutralTransition,
             allowAiLipSync: !neutralTransition,
             allowAiEmotion: !neutralTransition,

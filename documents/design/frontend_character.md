@@ -29,6 +29,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
   - AI発話中は `telop_ch` から抽出した speech beat と `expression_code` を `CharacterBehaviorSnapshot.aiSpeech` に集約し、首・目線・上半身・腕の小さな gesture を同期する。
   - `chat` は相手を見る対話モード、`sincro` はユーザーの顔・姿勢をまねる同期モードとして扱う。`CharacterGaze` は `chat` 向け注視入力と AutoMute を担当し、`SincroFaceTracker` / `SincroPoseTracker` へ同期責務を足さない。
   - `sincro` の顔同期は MediaPipe `FaceLandmarker` を本流とし、head pose / blink / mouth blendshape を正規化した `faceMotion` snapshot から VRM retarget を行う。`PoseLandmarker` は上半身同期の optional pipeline とし、性能ゲートを通った場合だけ `poseMotion` snapshot として取り込む。
+  - `SincroPoseTracker` は Lite model を 12fps 目安で実行し、推論遅延または連続検出失敗が続く場合は pose だけを停止して face-only に降格する。
   - MediaPipe の生ランドマーク、正規化 motion snapshot、VRM retarget、最終的なボーン・expression 適用は別責務に分ける。VRM controller は MediaPipe の戻り値を直接読まない。
   - モーション強度は `CharacterMotionConfig` で抑制し、首/目線/上半身/腕が同時に最大化しないよう、AI発話 posture と beat gesture を低振幅・長めの easing で重ねる。
   - neck、eye、arm、leg、mouth expression はVRM個体差で欠損する可能性があるため任意要素として扱い、表現できない部位は例外停止ではなく無効化または近いボーンへフォールバックする。look expression は左右/上下の軸別に判定し、不足軸だけ eye bone へ fallback する。
@@ -84,7 +85,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 
 ### 5.2 非機能要件
 
-- 性能: 連続アニメーションは `requestAnimationFrame` / renderer loop で更新。FaceLandmarker / PoseLandmarker は描画fpsから独立した推論fpsで動かし、重い場合は推論fps低下、face-only降格、または同期停止へfallbackする
+- 性能: 連続アニメーションは `requestAnimationFrame` / renderer loop で更新。FaceLandmarker / PoseLandmarker は描画fpsから独立した推論fpsで動かし、重い場合は推論fps低下、face-only降格、または同期停止へfallbackする。初期実装では FaceLandmarker 15fps、PoseLandmarker 12fps を既定とし、Pose 推論が 38ms 以上で4回続くか、姿勢検出失敗が18回続いた場合は pose-only fallback を発火する
 - 可用性: モデル未検出時はニュートラル姿勢へ戻す
 - スケーラビリティ: クライアント側計算中心でサーバー負荷に依存しない
 - セキュリティ: ローカルVRMアップロードを扱うためファイル種別の最低限検証を実施
@@ -156,9 +157,9 @@ flowchart LR
     Controllers --> VRM["VRM bones / expressions"]
 ```
 
-- `TrackerRuntime`: camera track の取得・差し替え・解放、video element 接続、推論 loop の開始/停止、推論fps制限、runtime error の通知を担当する。DOM / UI 更新は runtime 外へ出し、Worker 化しやすい境界にする。
+- `TrackerRuntime`: camera track の取得・差し替え・解放、video element 接続、推論 loop の開始/停止、推論fps制限、runtime error の通知を担当する。DOM / UI 更新は runtime 外へ出し、Worker 化しやすい境界にする。FaceLandmarker と optional PoseLandmarker は同じ video frame を共有し、pose の性能ゲートが発火しても face tracker loop は継続する。
 - `SincroFaceTracker`: FaceLandmarker を初期化し、head pose、face blendshape、必要最小限の landmarks を `SincroFaceMotionSnapshot` へ正規化する。`CharacterGaze` のAutoMuteや注視計算は持たない。
-- `SincroPoseTracker`: PoseLandmarker を使う optional tracker。肩、上半身、腕の姿勢候補を `SincroPoseMotionSnapshot` へ正規化する。採用前に推論時間、推論fps、main thread負荷、検出安定性を記録する。
+- `SincroPoseTracker`: PoseLandmarker を使う optional tracker。肩、上半身、腕の姿勢候補を `SincroPoseMotionSnapshot` へ正規化する。初期実装では肩・肘・手首・腰の normalized landmarks から肩傾き、胴体傾き、上腕リフト、上腕開き、前腕屈曲、手首上げを低振幅 retarget 用に算出する。
 - Retargeter: neutral calibration、軸変換、左右ミラー、clamp、deadband、smoothing、confidence gate を持つ。MediaPipe の category 名や行列を controller へ漏らさない。
 - Controller: retarget 済みのVRM向け値だけを受け取り、存在するボーン・expressionへ適用する。欠損部位は例外停止ではなく無効化または近い要素へfallbackする。
 
@@ -180,9 +181,9 @@ flowchart LR
   - `CharacterGaze`: `chat` 向けの顔キーポイント追跡、視線角推定、arrive/leaveイベント通知、AutoMute連動を担当する。`detectForVideo()` へ渡す前にvideo frameのreadyStateとdecode済み寸法を確認し、MediaPipe実行時例外では検出ループを停止して上位controllerへ通知する。`sincro` の head pose / blendshape / pose 同期責務は持たない
   - `TrackerRuntime`: `SincroFaceTracker` と optional `SincroPoseTracker` の共有実行基盤。camera track / video element / 推論 loop を所有し、二重 `getUserMedia` と二重推論 loop を避ける。将来のWorker化に備え、UI更新、DebugConsole更新、VRM適用をruntime coreへ持ち込まない
   - `SincroFaceTracker`: FaceLandmarker の `outputFaceBlendshapes` と `outputFacialTransformationMatrixes` を有効化し、検出有無、confidence相当、head pose、blendshape map、推論時間、推論fps、`lastUpdatedAtMs` を `SincroFaceMotionSnapshot` に正規化する
-  - `SincroPoseTracker`: PoseLandmarker の結果から肩・胴体・腕の大まかな姿勢を `SincroPoseMotionSnapshot` に正規化する optional module。推論fpsは face より低くてよく、採用前に性能ゲートを通す
+  - `SincroPoseTracker`: PoseLandmarker の結果から肩・胴体・腕の大まかな姿勢を `SincroPoseMotionSnapshot` に正規化する optional module。推論fpsは face より低くし、性能ゲート超過時は `degradedToFaceOnly` を立てて face-only に戻す
   - `SincroFaceRetargeter`: `SincroFaceMotionSnapshot` を VRM の head / eye / blink / mouth expression 向け値へ変換する。neutral calibration、clamp、deadband、smoothing、confidence gate、左右ミラー補正をこの層で扱う
-  - `SincroPoseRetargeter`: optional `SincroPoseMotionSnapshot` を spine/chest/shoulder/arm向け値へ変換する。未採用段階では設計上の拡張点として保持する
+  - `SincroPoseRetargeter`: optional `SincroPoseMotionSnapshot` を spine/chest/shoulder/arm向け値へ変換する。初期段階では低振幅・強い smoothing をかけ、腕が画面外に出た場合は部位単位で neutral へ戻す
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`
