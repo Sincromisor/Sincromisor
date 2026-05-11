@@ -14,6 +14,8 @@ type SincroFaceRetargeterVerificationCase = {
         headRollSign: -1 | 0 | 1;
         dominantMouth: "aa" | "ih" | "ou" | "ee" | "oh" | "none";
         blinkActive: boolean;
+        blinkLeftActive?: boolean;
+        blinkRightActive?: boolean;
     };
 };
 
@@ -66,6 +68,20 @@ export const SINCRO_FACE_RETARGETER_VERIFICATION_CASES: SincroFaceRetargeterVeri
         },
     },
     {
+        name: "positive pitch maps to VRM upward neck rotation",
+        snapshot: {
+            ...BASE_SNAPSHOT,
+            headPose: { ...BASE_SNAPSHOT.headPose, pitchDeg: 12 },
+        },
+        expected: {
+            headYawSign: 0,
+            headPitchSign: -1,
+            headRollSign: 0,
+            dominantMouth: "none",
+            blinkActive: false,
+        },
+    },
+    {
         name: "jaw open maps to aa",
         snapshot: {
             ...BASE_SNAPSHOT,
@@ -80,7 +96,7 @@ export const SINCRO_FACE_RETARGETER_VERIFICATION_CASES: SincroFaceRetargeterVeri
         },
     },
     {
-        name: "funnel maps to oh or ou and blink stays active",
+        name: "funnel maps to oh or ou and separate blink stays active",
         snapshot: {
             ...BASE_SNAPSHOT,
             blendshapes: { jawOpen: 0.42, mouthFunnel: 0.9, eyeBlinkLeft: 0.76, eyeBlinkRight: 0.73 },
@@ -91,6 +107,24 @@ export const SINCRO_FACE_RETARGETER_VERIFICATION_CASES: SincroFaceRetargeterVeri
             headRollSign: 0,
             dominantMouth: "oh",
             blinkActive: true,
+            blinkLeftActive: true,
+            blinkRightActive: true,
+        },
+    },
+    {
+        name: "left blink remains separate and calibrated to closed",
+        snapshot: {
+            ...BASE_SNAPSHOT,
+            blendshapes: { eyeBlinkLeft: 0.64, eyeBlinkRight: 0.08 },
+        },
+        expected: {
+            headYawSign: 0,
+            headPitchSign: 0,
+            headRollSign: 0,
+            dominantMouth: "none",
+            blinkActive: true,
+            blinkLeftActive: true,
+            blinkRightActive: false,
         },
     },
 ];
@@ -107,7 +141,9 @@ export function evaluateSincroFaceRetargeterVerificationCases(): { name: string;
             && sign(head.neck.x) === testCase.expected.headPitchSign
             && sign(head.neck.z) === testCase.expected.headRollSign
             && dominantMouth === testCase.expected.dominantMouth
-            && (expressions.blink > 0.5) === testCase.expected.blinkActive;
+            && (expressions.blink > 0.5) === testCase.expected.blinkActive
+            && (testCase.expected.blinkLeftActive == null || (expressions.blinkLeft > 0.5) === testCase.expected.blinkLeftActive)
+            && (testCase.expected.blinkRightActive == null || (expressions.blinkRight > 0.5) === testCase.expected.blinkRightActive);
         return { name: testCase.name, passed };
     });
 }
