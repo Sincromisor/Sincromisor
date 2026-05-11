@@ -1,5 +1,9 @@
 import { Detection } from "@mediapipe/tasks-vision";
 import { CharacterGaze } from "../../CharacterGaze/CharacterGaze";
+import {
+    DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
+} from "../../FaceTracking/SincroFaceMotionSnapshot";
+import type { SincroFaceMotionSnapshot } from "../../FaceTracking/SincroFaceMotionSnapshot";
 import { ChatMessage, TelopChannelMessage } from "../../RTC/RTCMessage";
 import { TalkManager, TalkManagerEvent } from "../../RTC/TalkManager";
 import { VadStateReport } from "../../RTC/UserMediaManager";
@@ -68,6 +72,7 @@ export type CharacterBehaviorSnapshot = {
     nowMs: number;
     vad: CharacterBehaviorVadSnapshot;
     gaze: CharacterBehaviorGazeSnapshot;
+    faceMotion: SincroFaceMotionSnapshot;
     aiSpeech: CharacterBehaviorAiSpeechSnapshot;
     errorMessage: string | null;
 };
@@ -121,6 +126,11 @@ export class CharacterBehaviorState {
         detectionCount: 0,
         lastDetectedAtMs: null,
         lastUpdatedAtMs: null,
+    };
+    private faceMotion: SincroFaceMotionSnapshot = {
+        ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
+        headPose: { ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT.headPose },
+        blendshapes: { ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT.blendshapes },
     };
     private aiSpeech: CharacterBehaviorAiSpeechSnapshot = {
         isSpeaking: false,
@@ -240,6 +250,26 @@ export class CharacterBehaviorState {
         };
     }
 
+    applyFaceMotion(snapshot: SincroFaceMotionSnapshot, nowMs: number = performance.now()): void {
+        this.faceMotion = {
+            ...snapshot,
+            headPose: { ...snapshot.headPose },
+            blendshapes: { ...snapshot.blendshapes },
+            lastUpdatedAtMs: snapshot.lastUpdatedAtMs ?? nowMs,
+        };
+    }
+
+    setFaceMotionTrackingEnabled(enabled: boolean, nowMs: number = performance.now()): void {
+        this.faceMotion = {
+            ...this.faceMotion,
+            trackingEnabled: enabled,
+            detected: enabled ? this.faceMotion.detected : false,
+            confidence: enabled ? this.faceMotion.confidence : 0,
+            fallbackReason: enabled ? this.faceMotion.fallbackReason : null,
+            lastUpdatedAtMs: nowMs,
+        };
+    }
+
     setError(message: string | null, nowMs: number = performance.now()): void {
         this.setErrorSource("general", message, nowMs);
     }
@@ -274,6 +304,11 @@ export class CharacterBehaviorState {
             nowMs,
             vad: { ...this.vad },
             gaze: { ...this.gaze },
+            faceMotion: {
+                ...this.faceMotion,
+                headPose: { ...this.faceMotion.headPose },
+                blendshapes: { ...this.faceMotion.blendshapes },
+            },
             aiSpeech: { ...this.aiSpeech },
             errorMessage: this.errorMessage,
         };
@@ -394,7 +429,13 @@ export class CharacterBehaviorState {
         if (this.gaze.trackingEnabled && !this.gaze.detected) {
             return "face_lost";
         }
+        if (this.faceMotion.trackingEnabled && !this.faceMotion.detected) {
+            return "face_lost";
+        }
         if (this.gaze.detected) {
+            return "attending";
+        }
+        if (this.faceMotion.detected) {
             return "attending";
         }
         return "idle";

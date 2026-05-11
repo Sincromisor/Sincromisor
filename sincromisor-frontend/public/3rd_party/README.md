@@ -7,6 +7,16 @@
 * <https://storage.googleapis.com/mediapipe-assets/MediaPipe%20BlazeFace%20Model%20Card%20(Short%20Range).pdf>
 * [Apache License Version 2.0](blaze_face_short_range.tflite.LICENSE)
 
+## face\_landmarker.task (optional)
+
+`sincro` モードの顔同期トラッキングを有効化する場合は、以下を配置してください。
+未配置の場合、アプリ全体は停止せず `faceMotion.fallbackReason` と Debug Console に
+FaceLandmarker 初期化失敗として表示されます。
+
+* ソース: [https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker)
+* 配置先: `public/3rd_party/face_landmarker.task`
+* ライセンス: 配布元のモデルライセンスに従う
+
 ## silero-vad (optional)
 
 学習ベースVADを有効化する場合は、以下を配置してください。

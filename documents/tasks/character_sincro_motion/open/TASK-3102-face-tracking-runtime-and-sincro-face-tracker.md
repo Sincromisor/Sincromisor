@@ -73,3 +73,14 @@ MediaPipe 顔認識の起動、停止、カメラ接続、エラー処理、モ�
 - まばたき、口の開閉に対応する blendshape 値が変化する。
 - Gaze OFF/ON、カメラ切替、`chat` / `sincro` 切替後も二重 loop が残らない。
 - FaceLandmarker の推論が重い状態を再現し、fps 制限または fallback の挙動を確認する。
+
+## 進捗メモ
+
+- 2026-05-11:
+  - `src/ts/FaceTracking/` に `TrackerRuntime`、`SincroFaceTracker`、`SincroFaceMotionSnapshot` を追加。
+  - `CharacterBehaviorState` に `faceMotion` snapshot と更新 API を追加。
+  - `SincroCharacterGazeController` で `chat` は既存 `CharacterGaze`、`sincro` は `TrackerRuntime` + `SincroFaceTracker` を起動する分岐を追加。
+  - `FaceLandmarker` は `outputFaceBlendshapes` / `outputFacialTransformationMatrixes` を有効化し、head pose / blendshape / 推論時間 / 推論 fps / fallback reason を snapshot 化。
+  - `public/3rd_party/README.md` に `face_landmarker.task` の配置先と未配置時 fallback を追記。
+  - `cd sincromisor-frontend && npm run build` 成功。
+  - 未確認: 実カメラ + `face_landmarker.task` 配置状態での head pose / blink / mouth blendshape 実測。
