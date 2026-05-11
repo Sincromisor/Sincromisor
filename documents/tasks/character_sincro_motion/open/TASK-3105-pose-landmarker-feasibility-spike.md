@@ -110,10 +110,12 @@ MediaPipe `PoseLandmarker` を Sincromisor の将来の手・腕・上半身同�
 - 実カメラによる Pose 推論時間と FaceLandmarker 同時実行負荷は未実測。
 - 1280x720 と 390x844 の推論負荷、Settings / Debug Console 操作遅延、上半身のみ・近距離・半身ケースの landmark 安定性は、実カメラ環境で追記する。
 
-### 暫定判断
+### 条件付き採用判断
 
-- 現時点では `SincroPoseTracker` の本番実装へは進めず、条件付き採用候補のまま保留する。
-- 続行条件:
-  - Lite 10-15fps + FaceLandmarker 同時実行で UI 操作と VRM 描画が破綻しない。
-  - 肩・肘・手首の visibility が上半身のみの利用形態で概ね安定する。
-  - 30fps または Full / Heavy が重い場合でも、低fps化または Worker 化で face-only を巻き込まず停止できる見通しがある。
+- `TASK-3106` では、PoseLandmarker を本流にせず optional pipeline として条件付き採用する。
+- 採用条件:
+  - Lite model を 10-15fps 程度に制限する。
+  - FaceLandmarker と同じ camera / video frame を共有し、二重 `getUserMedia` や二重 preview を作らない。
+  - Pose の初期化、推論遅延、連続検出失敗は face tracker を巻き込まず face-only に降格する。
+  - 肩・腕 retarget は低振幅に限定し、実カメラ確認で過大回転が見えた場合は振幅または fps を下げる。
+- 未実測の実カメラ負荷と landmark 安定性は `TASK-3107` の pose 観測性・確認項目へ引き継ぐ。

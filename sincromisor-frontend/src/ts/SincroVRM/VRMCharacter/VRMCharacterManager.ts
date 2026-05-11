@@ -13,6 +13,7 @@ import { CharacterBehaviorSnapshot, CharacterBehaviorState } from './CharacterBe
 import { CharacterMotionOrchestrator } from './CharacterMotionOrchestrator';
 import type { CharacterMotionTuning } from './CharacterMotionConfig';
 import { SincroFaceRetargeter } from './SincroFaceRetargeter';
+import { SincroPoseRetargeter } from './SincroPoseRetargeter';
 import { VRMCamera } from '../VRMScene/VRMCamera';
 import { Vector3 } from 'three/src/math/Vector3.js';
 import { Box3 } from 'three/src/math/Box3.js';
@@ -77,6 +78,7 @@ export class VRMCharacterManager {
     private rootBone: Object3D | null = null;
     private readonly behaviorState: CharacterBehaviorState;
     private readonly sincroFaceRetargeter = new SincroFaceRetargeter();
+    private readonly sincroPoseRetargeter = new SincroPoseRetargeter();
     private latestBehaviorSnapshot: CharacterBehaviorSnapshot | null = null;
     private motionElapsedSeconds = 0;
     // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
@@ -270,17 +272,21 @@ export class VRMCharacterManager {
             this.latestBehaviorSnapshot.faceMotion,
             this.latestBehaviorSnapshot.nowMs,
         );
+        const sincroPose = this.sincroPoseRetargeter.retarget(
+            this.latestBehaviorSnapshot.poseMotion,
+            this.latestBehaviorSnapshot.nowMs,
+        );
         this.headBoneController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.eyeBehaviorController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.mouthMorphController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.emotionMorphController?.update(this.latestBehaviorSnapshot);
-        this.armBoneController?.update(this.motionElapsedSeconds, this.latestBehaviorSnapshot);
+        this.armBoneController?.update(this.motionElapsedSeconds, this.latestBehaviorSnapshot, sincroPose);
         this.legBoneController?.update(this.motionElapsedSeconds);
         this.vrm?.update(deltaSeconds);
         if (this.rootBone) {
             const hipsBasePosition = this.defaultPosition.clone().add(this.characterPosition);
             this.rootBone.position.copy(hipsBasePosition);
-            this.motionOrchestrator?.update(this.motionElapsedSeconds, this.latestBehaviorSnapshot, hipsBasePosition);
+            this.motionOrchestrator?.update(this.motionElapsedSeconds, this.latestBehaviorSnapshot, hipsBasePosition, sincroPose);
         }
     }
 

@@ -7,6 +7,10 @@ import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehaviorState";
 import { TrackerRuntime } from "../FaceTracking/TrackerRuntime";
 import type { SincroFaceMotionSnapshot } from "../FaceTracking/SincroFaceMotionSnapshot";
+import type { SincroPoseMotionSnapshot } from "../FaceTracking/SincroPoseMotionSnapshot";
+
+const SINCRO_POSE_TRACKING_ENABLED = true;
+const SINCRO_POSE_TARGET_INFERENCE_FPS = 12;
 
 // CharacterGaze の起動と、視線検出結果 -> Debug UI / AutoMute 変換を担当する controller。
 // DOM依存（#eyeTarget 表示）は移行期間の暫定としてここに閉じ込めている。
@@ -107,6 +111,7 @@ export class SincroCharacterGazeController {
         this.trackerRuntime.stopFaceTracking("sincro_face_tracking_stopped");
         this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
+        this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
         this.videoInputManager.releaseVideoTrack();
         this.debugConsoleManager.setCharacterGazePaused(true);
         this.debugConsoleManager.updateCharacterGazeTargetDebug("停止中");
@@ -137,6 +142,7 @@ export class SincroCharacterGazeController {
         this.debugConsoleManager.setCharacterGazePaused(false);
         this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
+        this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
 
         try {
             const nextVideoTrack = await this.videoInputManager.reacquireVideoTrack();
@@ -177,6 +183,7 @@ export class SincroCharacterGazeController {
     private async startCharacterGazeTracking(characterGaze: CharacterGaze, nextVideoTrack: MediaStreamTrack): Promise<void> {
         this.trackerRuntime.stopFaceTracking("chat_mode_selected");
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
+        this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
         await this.ensureVisionInitialized(characterGaze);
         console.log("start CharacterGaze");
         const started = await characterGaze.initCamera(
@@ -211,6 +218,7 @@ export class SincroCharacterGazeController {
         this.updateEyeTargetOverlay(characterGaze, false, []);
         this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.characterBehaviorState.setFaceMotionTrackingEnabled(true);
+        this.characterBehaviorState.setPoseMotionTrackingEnabled(SINCRO_POSE_TRACKING_ENABLED);
         console.log("start SincroFaceTracker");
         await this.trackerRuntime.startFaceTracking(
             nextVideoTrack,
@@ -218,9 +226,20 @@ export class SincroCharacterGazeController {
                 onFaceMotion: (snapshot) => {
                     this.handleSincroFaceMotion(snapshot);
                 },
+                onPoseMotion: (snapshot) => {
+                    this.handleSincroPoseMotion(snapshot);
+                },
+                onPoseFallback: (snapshot) => {
+                    this.handleSincroPoseFallback(snapshot);
+                },
                 onError: (error) => {
                     this.handleSincroFaceRuntimeError(error);
                 },
+            },
+            undefined,
+            {
+                enabled: SINCRO_POSE_TRACKING_ENABLED,
+                targetInferenceFps: SINCRO_POSE_TARGET_INFERENCE_FPS,
             },
         );
     }
@@ -266,6 +285,22 @@ export class SincroCharacterGazeController {
         this.debugConsoleManager.updateCharacterGazeTargetDebug(this.formatSincroFaceDebug(snapshot));
     }
 
+    private handleSincroPoseMotion(snapshot: SincroPoseMotionSnapshot): void {
+        if (!this.dialogManager.enableCharacterGaze() || this.dialogManager.talkMode() !== "sincro") {
+            return;
+        }
+        this.characterBehaviorState.applyPoseMotion(snapshot);
+        if (snapshot.degradedToFaceOnly || snapshot.fallbackReason) {
+            this.debugConsoleManager.updateCharacterGazeTargetDebug(this.formatSincroPoseDebug(snapshot));
+        }
+    }
+
+    private handleSincroPoseFallback(snapshot: SincroPoseMotionSnapshot): void {
+        this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
+        this.characterBehaviorState.setErrorSource("poseMotion", null);
+        this.debugConsoleManager.updateCharacterGazeTargetDebug(this.formatSincroPoseDebug(snapshot));
+    }
+
     private handleCharacterGazeRuntimeError(error: unknown): void {
         this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.characterBehaviorState.setErrorSource(
@@ -282,6 +317,7 @@ export class SincroCharacterGazeController {
 
     private handleSincroFaceRuntimeError(error: unknown): void {
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
+        this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
         this.characterBehaviorState.setErrorSource(
             "faceMotion",
             `顔同期トラッキングが停止しました。${this.formatErrorDetail(error)}`,
@@ -302,6 +338,21 @@ export class SincroCharacterGazeController {
             `yaw:${snapshot.headPose.yawDeg.toFixed(1)}`,
             `pitch:${snapshot.headPose.pitchDeg.toFixed(1)}`,
             `roll:${snapshot.headPose.rollDeg.toFixed(1)}`,
+            `infer:${snapshot.inferenceTimeMs.toFixed(1)}ms`,
+            `fps:${snapshot.inferenceFps.toFixed(1)}`,
+        ].join(" ");
+    }
+
+    private formatSincroPoseDebug(snapshot: SincroPoseMotionSnapshot): string {
+        if (snapshot.degradedToFaceOnly) {
+            return `sincro pose: face-only fallback (${snapshot.fallbackReason ?? "performance_gate"})`;
+        }
+        if (snapshot.fallbackReason) {
+            return `sincro pose: ${snapshot.fallbackReason}`;
+        }
+        return [
+            `sincro pose:${snapshot.detected ? "detected" : "lost"}`,
+            `conf:${snapshot.confidence.toFixed(2)}`,
             `infer:${snapshot.inferenceTimeMs.toFixed(1)}ms`,
             `fps:${snapshot.inferenceFps.toFixed(1)}`,
         ].join(" ");

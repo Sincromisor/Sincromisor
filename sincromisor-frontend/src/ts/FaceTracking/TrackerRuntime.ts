@@ -1,11 +1,19 @@
 import type { SincroFaceMotionSnapshot } from "./SincroFaceMotionSnapshot";
 import { SincroFaceTracker } from "./SincroFaceTracker";
+import type { SincroPoseMotionSnapshot } from "./SincroPoseMotionSnapshot";
+import { SincroPoseTracker } from "./SincroPoseTracker";
 
 const MIN_DETECTABLE_VIDEO_DIMENSION_PX = 2;
 const DEFAULT_TARGET_INFERENCE_FPS = 15;
+const DEFAULT_TARGET_POSE_INFERENCE_FPS = 12;
+const POSE_INFERENCE_WARN_MS = 38;
+const POSE_INFERENCE_WARN_LIMIT = 4;
+const POSE_FAILURE_LIMIT = 18;
 
 export type TrackerRuntimeCallbacks = {
     onFaceMotion: (snapshot: SincroFaceMotionSnapshot) => void;
+    onPoseMotion?: (snapshot: SincroPoseMotionSnapshot) => void;
+    onPoseFallback?: (snapshot: SincroPoseMotionSnapshot) => void;
     onError?: (error: unknown) => void;
 };
 
@@ -14,6 +22,7 @@ export type TrackerRuntimeCallbacks = {
 export class TrackerRuntime {
     private readonly videoElement: HTMLVideoElement;
     private readonly faceTracker: SincroFaceTracker;
+    private readonly poseTracker: SincroPoseTracker;
     private callbacks: TrackerRuntimeCallbacks | null = null;
     private loopEnabled = false;
     private loopRunning = false;
@@ -21,25 +30,49 @@ export class TrackerRuntime {
     private loadedDataHandlerBound: (() => void) | null = null;
     private lastVideoTime = -1;
     private lastInferenceAtMs = -1;
+    private lastPoseInferenceAtMs = -1;
     private targetInferenceFps = DEFAULT_TARGET_INFERENCE_FPS;
+    private targetPoseInferenceFps = DEFAULT_TARGET_POSE_INFERENCE_FPS;
+    private poseTrackingEnabled = false;
+    private poseDegradedToFaceOnly = false;
+    private slowPoseInferenceCount = 0;
 
-    constructor(videoElement: HTMLVideoElement, faceTracker: SincroFaceTracker = new SincroFaceTracker()) {
+    constructor(
+        videoElement: HTMLVideoElement,
+        faceTracker: SincroFaceTracker = new SincroFaceTracker(),
+        poseTracker: SincroPoseTracker = new SincroPoseTracker(),
+    ) {
         this.videoElement = videoElement;
         this.faceTracker = faceTracker;
+        this.poseTracker = poseTracker;
     }
 
     async startFaceTracking(
         videoTrack: MediaStreamTrack,
         callbacks: TrackerRuntimeCallbacks,
         targetInferenceFps: number = DEFAULT_TARGET_INFERENCE_FPS,
+        poseOptions: { enabled?: boolean; targetInferenceFps?: number } = {},
     ): Promise<void> {
         await this.faceTracker.initVision();
         this.callbacks = callbacks;
+        this.poseTrackingEnabled = !!poseOptions.enabled;
+        this.poseDegradedToFaceOnly = false;
+        this.slowPoseInferenceCount = 0;
+        if (this.poseTrackingEnabled) {
+            try {
+                await this.poseTracker.initVision();
+            } catch (error) {
+                console.warn("Sincro PoseLandmarker initialization failed. Continuing with face-only tracking.", error);
+                this.degradePoseToFaceOnly(this.formatErrorDetail(error), performance.now());
+            }
+        }
         this.targetInferenceFps = Math.max(1, Math.min(30, targetInferenceFps));
+        this.targetPoseInferenceFps = Math.max(1, Math.min(15, poseOptions.targetInferenceFps ?? DEFAULT_TARGET_POSE_INFERENCE_FPS));
         this.attachVideoTrack(videoTrack);
         this.loopEnabled = true;
         this.lastVideoTime = -1;
         this.lastInferenceAtMs = -1;
+        this.lastPoseInferenceAtMs = -1;
         if (!this.loadedDataHandlerBound) {
             this.loadedDataHandlerBound = () => {
                 this.startLoopIfNeeded();
@@ -52,7 +85,10 @@ export class TrackerRuntime {
     stopFaceTracking(reason: string | null = "sincro_face_tracking_stopped"): void {
         this.stopLoop();
         this.callbacks?.onFaceMotion(this.faceTracker.stop(reason));
+        this.callbacks?.onPoseMotion?.(this.poseTracker.stop(reason));
         this.callbacks = null;
+        this.poseTrackingEnabled = false;
+        this.poseDegradedToFaceOnly = false;
         this.videoElement.pause();
         this.videoElement.srcObject = null;
     }
@@ -124,6 +160,9 @@ export class TrackerRuntime {
         try {
             const snapshot = this.faceTracker.detect(this.videoElement, nowMs);
             this.callbacks.onFaceMotion(snapshot);
+            if (this.shouldRunPoseInference(nowMs)) {
+                this.runPoseInference(nowMs);
+            }
         } catch (error) {
             this.handleRuntimeError(error);
             return;
@@ -138,6 +177,57 @@ export class TrackerRuntime {
         return nowMs - this.lastInferenceAtMs >= 1000 / this.targetInferenceFps;
     }
 
+    private shouldRunPoseInference(nowMs: number): boolean {
+        if (!this.poseTrackingEnabled || this.poseDegradedToFaceOnly) {
+            return false;
+        }
+        if (this.lastPoseInferenceAtMs < 0) {
+            return true;
+        }
+        return nowMs - this.lastPoseInferenceAtMs >= 1000 / this.targetPoseInferenceFps;
+    }
+
+    private runPoseInference(nowMs: number): void {
+        if (!this.callbacks) {
+            return;
+        }
+        this.lastPoseInferenceAtMs = nowMs;
+        try {
+            const snapshot = this.poseTracker.detect(this.videoElement, nowMs);
+            this.callbacks.onPoseMotion?.(snapshot);
+            this.applyPosePerformanceGate(snapshot, nowMs);
+        } catch (error) {
+            console.warn("Sincro PoseLandmarker failed during video inference. Falling back to face-only.", error);
+            this.degradePoseToFaceOnly(this.formatErrorDetail(error), nowMs);
+        }
+    }
+
+    private applyPosePerformanceGate(snapshot: SincroPoseMotionSnapshot, nowMs: number): void {
+        if (snapshot.inferenceTimeMs >= POSE_INFERENCE_WARN_MS) {
+            this.slowPoseInferenceCount += 1;
+        } else {
+            this.slowPoseInferenceCount = 0;
+        }
+        if (snapshot.consecutiveFailures >= POSE_FAILURE_LIMIT) {
+            this.degradePoseToFaceOnly("pose_detection_failed_repeatedly", nowMs);
+            return;
+        }
+        if (this.slowPoseInferenceCount >= POSE_INFERENCE_WARN_LIMIT) {
+            this.degradePoseToFaceOnly("pose_inference_too_slow", nowMs);
+        }
+    }
+
+    private degradePoseToFaceOnly(reason: string, nowMs: number): void {
+        this.poseDegradedToFaceOnly = true;
+        const snapshot = {
+            ...this.poseTracker.stop(reason, nowMs),
+            degradedToFaceOnly: true,
+            fallbackReason: reason,
+        };
+        this.callbacks?.onPoseMotion?.(snapshot);
+        this.callbacks?.onPoseFallback?.(snapshot);
+    }
+
     private videoFrameIsReadyForDetection(): boolean {
         return (
             this.videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
@@ -149,6 +239,7 @@ export class TrackerRuntime {
     private handleRuntimeError(error: unknown): void {
         console.error("Sincro FaceLandmarker failed during video inference.", error);
         this.callbacks?.onFaceMotion(this.faceTracker.stop(this.formatErrorDetail(error)));
+        this.callbacks?.onPoseMotion?.(this.poseTracker.stop("face_tracking_runtime_error"));
         this.callbacks?.onError?.(error);
         this.stopLoop();
     }

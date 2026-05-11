@@ -3,6 +3,7 @@ import { Object3D } from 'three/src/core/Object3D.js';
 import { MathUtils } from 'three/src/math/MathUtils.js';
 import { CHARACTER_IDLE_MOTION_CONFIG, sineWave } from './CharacterMotionConfig';
 import { CharacterBehaviorSnapshot } from './CharacterBehaviorState';
+import type { SincroPoseRetargetFrame } from './SincroPoseRetargeter';
 
 /*
     Humanoid bones: https://docs.unity3d.com/ja/2019.4/ScriptReference/HumanBodyBones.html
@@ -22,7 +23,7 @@ export class ArmBoneController {
     }
 
     // 毎フレーム、腕の基準待機ポーズへ低振幅の idle offset を足して適用する。
-    update(elapsedSeconds: number, snapshot?: CharacterBehaviorSnapshot): void {
+    update(elapsedSeconds: number, snapshot?: CharacterBehaviorSnapshot, pose?: SincroPoseRetargetFrame): void {
         const armSway = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.arms.swayPeriodSeconds, Math.PI / 5);
         const elbowSway = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.arms.elbowPeriodSeconds, Math.PI / 2);
         const wristSway = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.arms.wristPeriodSeconds, Math.PI / 9);
@@ -32,42 +33,52 @@ export class ArmBoneController {
         const rightGesture = speechGesture * (this.speechGestureSide > 0 ? 1 : 0.42);
 
         this.getNode('leftUpperArm')?.rotation.set(
-            MathUtils.degToRad(5) - leftGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmLiftRad * expression.liftScale,
-            leftGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale,
+            MathUtils.degToRad(5)
+                - leftGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmLiftRad * expression.liftScale
+                + (pose?.leftArm.upperArm.x ?? 0),
+            leftGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale
+                + (pose?.leftArm.upperArm.y ?? 0),
             MathUtils.degToRad(-75)
                 - armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad
-                - leftGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale,
+                - leftGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale
+                + (pose?.leftArm.upperArm.z ?? 0),
         );
         this.getNode('rightUpperArm')?.rotation.set(
-            MathUtils.degToRad(5) - rightGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmLiftRad * expression.liftScale,
-            -rightGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale,
+            MathUtils.degToRad(5)
+                - rightGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmLiftRad * expression.liftScale
+                + (pose?.rightArm.upperArm.x ?? 0),
+            -rightGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale
+                + (pose?.rightArm.upperArm.y ?? 0),
             MathUtils.degToRad(75)
                 + armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad
-                + rightGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale,
+                + rightGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale
+                + (pose?.rightArm.upperArm.z ?? 0),
         );
         this.getNode('leftLowerArm')?.rotation.set(
-            0,
+            pose?.leftArm.lowerArm.x ?? 0,
             MathUtils.degToRad(-15)
                 - elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad
-                - leftGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad * expression.flexScale,
-            MathUtils.degToRad(5),
+                - leftGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad * expression.flexScale
+                + (pose?.leftArm.lowerArm.y ?? 0),
+            MathUtils.degToRad(5) + (pose?.leftArm.lowerArm.z ?? 0),
         );
         this.getNode('rightLowerArm')?.rotation.set(
-            0,
+            pose?.rightArm.lowerArm.x ?? 0,
             MathUtils.degToRad(15)
                 + elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad
-                + rightGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad * expression.flexScale,
-            MathUtils.degToRad(-5),
+                + rightGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad * expression.flexScale
+                + (pose?.rightArm.lowerArm.y ?? 0),
+            MathUtils.degToRad(-5) + (pose?.rightArm.lowerArm.z ?? 0),
         );
 
-        this.updateLeftHand(this.getNode('leftHand'), wristSway, leftGesture * expression.wristScale);
+        this.updateLeftHand(this.getNode('leftHand'), wristSway, leftGesture * expression.wristScale, pose?.leftArm.wrist.z ?? 0);
         this.updateLeftThumb(this.getNode('leftThumbProximal'), wristSway);
-        this.updateRightHand(this.getNode('rightHand'), wristSway, rightGesture * expression.wristScale);
+        this.updateRightHand(this.getNode('rightHand'), wristSway, rightGesture * expression.wristScale, pose?.rightArm.wrist.z ?? 0);
         this.updateRightThumb(this.getNode('rightThumbProximal'), wristSway);
     }
 
     // 手指は末端まで再帰的に回転を入れて、握り込み気味の形を作る。
-    private updateLeftHand(baseBone: Object3D | null, wristSway: number, speechGesture: number): void {
+    private updateLeftHand(baseBone: Object3D | null, wristSway: number, speechGesture: number, poseWristRoll: number): void {
         if (!baseBone) {
             return;
         }
@@ -76,10 +87,11 @@ export class ArmBoneController {
             0,
             -0.2
                 - wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.wristSwayRad
-                - speechGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechWristRollRad,
+                - speechGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechWristRollRad
+                + poseWristRoll,
         );
         baseBone.children.forEach((childBone: Object3D) => {
-            this.updateLeftHand(childBone, wristSway * 0.35, speechGesture * 0.4);
+            this.updateLeftHand(childBone, wristSway * 0.35, speechGesture * 0.4, poseWristRoll * 0.25);
         });
     }
 
@@ -93,7 +105,7 @@ export class ArmBoneController {
         });
     }
 
-    private updateRightHand(baseBone: Object3D | null, wristSway: number, speechGesture: number): void {
+    private updateRightHand(baseBone: Object3D | null, wristSway: number, speechGesture: number, poseWristRoll: number): void {
         if (!baseBone) {
             return;
         }
@@ -102,10 +114,11 @@ export class ArmBoneController {
             0,
             0.2
                 + wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.wristSwayRad
-                + speechGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechWristRollRad,
+                + speechGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechWristRollRad
+                + poseWristRoll,
         );
         baseBone.children.forEach((childBone: Object3D) => {
-            this.updateRightHand(childBone, wristSway * 0.35, speechGesture * 0.4);
+            this.updateRightHand(childBone, wristSway * 0.35, speechGesture * 0.4, poseWristRoll * 0.25);
         });
     }
 
