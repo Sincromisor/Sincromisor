@@ -17,6 +17,23 @@ export type CharacterInteractionState =
     | "face_lost"
     | "error_or_disconnected";
 
+export type CharacterTalkMode = "chat" | "sincro";
+
+export type CharacterMotionPrimaryInput = "gaze" | "faceMotion";
+
+export type CharacterMotionPolicySnapshot = {
+    talkMode: CharacterTalkMode;
+    primaryInput: CharacterMotionPrimaryInput;
+    neutralTransition: boolean;
+    allowGazeMotion: boolean;
+    allowFaceRetarget: boolean;
+    allowAiSpeechGesture: boolean;
+    allowAiLipSync: boolean;
+    allowAiEmotion: boolean;
+    allowThinkingAversion: boolean;
+    idleMotionScale: number;
+};
+
 export type CharacterBehaviorVadSnapshot = {
     isSpeech: boolean;
     rawIsSpeech: boolean;
@@ -66,6 +83,8 @@ export type CharacterBehaviorAiSpeechSnapshot = {
 export type CharacterBehaviorAiSpeechBeatKind = "speech_start" | "cadence" | "phrase" | "punctuation";
 
 export type CharacterBehaviorSnapshot = {
+    talkMode: CharacterTalkMode;
+    motionPolicy: CharacterMotionPolicySnapshot;
     state: CharacterInteractionState;
     previousState: CharacterInteractionState;
     stateChangedAtMs: number;
@@ -88,6 +107,7 @@ const BEHAVIOR_TIMING = {
     aiSpeechPhrasePauseSeconds: 0.24,
     thinkingHoldMs: 1600,
     gazeStaleMs: 1200,
+    modeNeutralTransitionMs: 420,
 } as const;
 
 // キャラクター表現が参照する入力状態の集約点。
@@ -95,6 +115,8 @@ const BEHAVIOR_TIMING = {
 // 後続の姿勢・目線・発話同期モーションはこの snapshot を正本として参照する。
 export class CharacterBehaviorState {
     private static instance: CharacterBehaviorState;
+    private talkMode: CharacterTalkMode = "chat";
+    private talkModeChangedAtMs = performance.now();
     private previousState: CharacterInteractionState = "idle";
     private state: CharacterInteractionState = "idle";
     private stateChangedAtMs = performance.now();
@@ -259,6 +281,26 @@ export class CharacterBehaviorState {
         };
     }
 
+    setTalkMode(mode: string, nowMs: number = performance.now()): void {
+        const nextMode = this.normalizeTalkMode(mode);
+        if (nextMode === this.talkMode) {
+            return;
+        }
+
+        this.talkMode = nextMode;
+        this.talkModeChangedAtMs = nowMs;
+        this.lastUserSpeechEndedAtMs = null;
+        this.pendingRawSpeechStartedAtMs = null;
+
+        // mode切替直後は古い入力状態を残さない。trackerの実停止/起動はApp層が担当する。
+        if (nextMode === "sincro") {
+            this.setGazeTrackingEnabled(false, nowMs);
+        } else {
+            this.setFaceMotionTrackingEnabled(false, nowMs);
+        }
+        this.update(nowMs);
+    }
+
     setFaceMotionTrackingEnabled(enabled: boolean, nowMs: number = performance.now()): void {
         this.faceMotion = {
             ...this.faceMotion,
@@ -297,7 +339,10 @@ export class CharacterBehaviorState {
     }
 
     getSnapshot(nowMs: number = performance.now()): CharacterBehaviorSnapshot {
+        const motionPolicy = this.buildMotionPolicy(nowMs);
         return {
+            talkMode: this.talkMode,
+            motionPolicy,
             state: this.state,
             previousState: this.previousState,
             stateChangedAtMs: this.stateChangedAtMs,
@@ -414,31 +459,66 @@ export class CharacterBehaviorState {
         if (this.errorMessage) {
             return "error_or_disconnected";
         }
-        if (this.aiSpeech.isSpeaking) {
+        if (this.aiSpeech.isSpeaking && this.talkMode === "chat") {
             return "ai_speaking";
         }
         if (this.vad.isSpeech) {
             return "user_speaking";
         }
         if (
-            this.lastUserSpeechEndedAtMs != null
+            this.talkMode === "chat"
+            && this.lastUserSpeechEndedAtMs != null
             && nowMs - this.lastUserSpeechEndedAtMs <= BEHAVIOR_TIMING.thinkingHoldMs
         ) {
             return "thinking";
         }
-        if (this.gaze.trackingEnabled && !this.gaze.detected) {
+        if (this.talkMode === "chat" && this.gaze.trackingEnabled && !this.gaze.detected) {
             return "face_lost";
         }
-        if (this.faceMotion.trackingEnabled && !this.faceMotion.detected) {
+        if (this.talkMode === "sincro" && this.faceMotion.trackingEnabled && !this.faceMotion.detected) {
             return "face_lost";
         }
-        if (this.gaze.detected) {
+        if (this.talkMode === "chat" && this.gaze.detected) {
             return "attending";
         }
-        if (this.faceMotion.detected) {
+        if (this.talkMode === "sincro" && this.faceMotion.detected) {
             return "attending";
         }
         return "idle";
+    }
+
+    private buildMotionPolicy(nowMs: number): CharacterMotionPolicySnapshot {
+        const neutralTransition = nowMs - this.talkModeChangedAtMs <= BEHAVIOR_TIMING.modeNeutralTransitionMs;
+        if (this.talkMode === "sincro") {
+            return {
+                talkMode: "sincro",
+                primaryInput: "faceMotion",
+                neutralTransition,
+                allowGazeMotion: false,
+                allowFaceRetarget: true,
+                allowAiSpeechGesture: false,
+                allowAiLipSync: false,
+                allowAiEmotion: false,
+                allowThinkingAversion: false,
+                idleMotionScale: neutralTransition ? 0.25 : 0.42,
+            };
+        }
+        return {
+            talkMode: "chat",
+            primaryInput: "gaze",
+            neutralTransition,
+            allowGazeMotion: true,
+            allowFaceRetarget: false,
+            allowAiSpeechGesture: !neutralTransition,
+            allowAiLipSync: !neutralTransition,
+            allowAiEmotion: !neutralTransition,
+            allowThinkingAversion: !neutralTransition,
+            idleMotionScale: neutralTransition ? 0.35 : 1,
+        };
+    }
+
+    private normalizeTalkMode(mode: string): CharacterTalkMode {
+        return mode === "sincro" ? "sincro" : "chat";
     }
 
     private smoothEnvelope(previous: number, next: number): number {

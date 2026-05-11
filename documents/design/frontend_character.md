@@ -433,6 +433,7 @@ flowchart LR
 | 2026-05-09 | AI発話中の telop beat 抽出、`expression_code` による姿勢・首・目線・腕 gesture 差分を追記 |
 | 2026-05-09 | TASK-3054 として AI発話 gesture の強度/easing を抑制し、neck/mouth expression 欠損VRMの fallback と自然さ確認観点を追記 |
 | 2026-05-11 | TASK-3101 として `chat` 注視と `sincro` 同期の責務境界、`SincroFaceTracker` / optional `SincroPoseTracker`、retarget、性能ゲート、face-only fallback 方針を追記 |
+| 2026-05-11 | TASK-3104 として `CharacterBehaviorSnapshot.motionPolicy` を実装し、`chat` の対話 gesture と `sincro` の face retarget 優先を controller 共通方針として分離 |
 
 ## 15. 参照資料
 
@@ -442,7 +443,7 @@ flowchart LR
   - `documents/tasks/character_sincro_motion/open/TASK-3100-sincro-motion-foundation-epic.md`
   - `documents/tasks/character_sincro_motion/open/TASK-3102-face-tracking-runtime-and-sincro-face-tracker.md`
   - `documents/tasks/character_sincro_motion/open/TASK-3103-sincro-face-retargeting-head-eye-mouth.md`
-  - `documents/tasks/character_sincro_motion/open/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
+  - `documents/tasks/character_sincro_motion/done/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
 - 参照実装:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterBehaviorState.ts`

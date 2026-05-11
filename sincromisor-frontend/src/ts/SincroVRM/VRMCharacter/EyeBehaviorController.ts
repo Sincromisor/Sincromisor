@@ -84,7 +84,7 @@ export class EyeBehaviorController {
             ? 1000 / 60
             : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
         this.lastUpdateAtMs = nowMs;
-        if (snapshot.faceMotion.trackingEnabled && sincroFace) {
+        if (snapshot.motionPolicy.allowFaceRetarget && snapshot.faceMotion.trackingEnabled && sincroFace) {
             this.applySincroFaceMotion(sincroFace);
             return;
         }
@@ -122,7 +122,7 @@ export class EyeBehaviorController {
     }
 
     private nextEyeTarget(snapshot: CharacterBehaviorSnapshot, nowMs: number): EyeTarget {
-        const baseTarget = snapshot.gaze.detected
+        const baseTarget = snapshot.motionPolicy.allowGazeMotion && snapshot.gaze.detected
             ? { x: snapshot.gaze.targetX, y: snapshot.gaze.targetY }
             : { x: 0.5, y: 0.5 };
         const aversion = this.updateAversion(snapshot, nowMs);
@@ -135,7 +135,7 @@ export class EyeBehaviorController {
     }
 
     private aiSpeechEyeOffset(snapshot: CharacterBehaviorSnapshot): EyeTarget {
-        if (!snapshot.aiSpeech.isSpeaking) {
+        if (!snapshot.motionPolicy.allowAiSpeechGesture || !snapshot.aiSpeech.isSpeaking) {
             return { x: 0, y: 0 };
         }
         switch (snapshot.aiSpeech.expressionCode) {
@@ -156,7 +156,7 @@ export class EyeBehaviorController {
     }
 
     private updateAversion(snapshot: CharacterBehaviorSnapshot, nowMs: number): EyeTarget {
-        if (snapshot.state !== 'thinking' || !snapshot.gaze.detected) {
+        if (!snapshot.motionPolicy.allowThinkingAversion || snapshot.state !== 'thinking' || !snapshot.gaze.detected) {
             this.aversionTarget = null;
             return { x: 0, y: 0 };
         }

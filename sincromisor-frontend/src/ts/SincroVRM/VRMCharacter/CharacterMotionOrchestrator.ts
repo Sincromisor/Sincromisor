@@ -55,7 +55,7 @@ export class CharacterMotionOrchestrator {
         const aiSpeaking = this.updateAiSpeakingBlend(elapsedSeconds, snapshot);
         const aiGesture = this.updateAiSpeechBeat(elapsedSeconds, snapshot);
         const expression = this.aiSpeechExpressionProfile(snapshot.aiSpeech.expressionCode);
-        const motionScale = this.tuning.motionScale;
+        const motionScale = this.tuning.motionScale * snapshot.motionPolicy.idleMotionScale;
 
         this.stabilizeHips(hipsBasePosition);
         this.updateSpine(breath, balanceSide, intensity, listening, backchannelNod, aiSpeaking, aiGesture, expression, motionScale);
@@ -204,7 +204,9 @@ export class CharacterMotionOrchestrator {
         this.lastElapsedSeconds = elapsedSeconds;
         const envelopeIntensity = this.vadEnvelopeIntensity(snapshot);
         let target = 0;
-        if (snapshot.state === 'user_speaking') {
+        if (snapshot.motionPolicy.talkMode !== 'chat') {
+            target = 0;
+        } else if (snapshot.state === 'user_speaking') {
             target = 0.72 + envelopeIntensity * 0.28;
         } else if (snapshot.state === 'thinking') {
             target = 0.26;
@@ -256,7 +258,10 @@ export class CharacterMotionOrchestrator {
     private shouldStartBackchannelNod(snapshot: CharacterBehaviorSnapshot): boolean {
         const speechEndedAtMs = snapshot.vad.lastSpeechEndedAtMs;
         if (
-            snapshot.state !== 'thinking'
+            !snapshot.motionPolicy.allowThinkingAversion
+            || !snapshot.motionPolicy.allowAiSpeechGesture
+            || snapshot.motionPolicy.neutralTransition
+            || snapshot.state !== 'thinking'
             || snapshot.aiSpeech.isSpeaking
             || speechEndedAtMs == null
             || speechEndedAtMs === this.lastBackchannelSpeechEndedAtMs
@@ -289,7 +294,7 @@ export class CharacterMotionOrchestrator {
             : MathUtils.clamp(elapsedSeconds - this.lastAiSpeakingElapsedSeconds, 1 / 120, 0.1);
         this.lastAiSpeakingElapsedSeconds = elapsedSeconds;
         const expression = this.aiSpeechExpressionProfile(snapshot.aiSpeech.expressionCode);
-        const target = snapshot.aiSpeech.isSpeaking
+        const target = snapshot.motionPolicy.allowAiSpeechGesture && snapshot.aiSpeech.isSpeaking
             ? expression.postureIntensity * CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.postureBlendScale
             : 0;
         const timeConstant = target > this.aiSpeakingBlend
@@ -302,7 +307,8 @@ export class CharacterMotionOrchestrator {
 
     private updateAiSpeechBeat(elapsedSeconds: number, snapshot: CharacterBehaviorSnapshot): number {
         if (
-            snapshot.aiSpeech.isSpeaking
+            snapshot.motionPolicy.allowAiSpeechGesture
+            && snapshot.aiSpeech.isSpeaking
             && snapshot.aiSpeech.beatId !== this.lastAiSpeechBeatId
             && snapshot.aiSpeech.beatIntensity > 0
         ) {

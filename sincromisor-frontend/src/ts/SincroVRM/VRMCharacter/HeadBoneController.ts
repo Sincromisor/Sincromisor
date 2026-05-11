@@ -50,12 +50,12 @@ export class HeadBoneController {
             ? 1000 / 60
             : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
         this.lastUpdateAtMs = nowMs;
-        if (snapshot?.faceMotion.trackingEnabled && sincroFace) {
+        if (snapshot?.motionPolicy.allowFaceRetarget && snapshot.faceMotion.trackingEnabled && sincroFace) {
             this.applySincroFaceMotion(sincroFace);
             return;
         }
         // 顔認識機能の状況を元に、顔認識モードと、カメラの方向を向くモードを切り替える
-        if (snapshot?.gaze.trackingEnabled || this.characterGaze.modelIsLoaded()) {
+        if (snapshot?.motionPolicy.allowGazeMotion && (snapshot.gaze.trackingEnabled || this.characterGaze.modelIsLoaded())) {
             const targetX = snapshot?.gaze.detected ? snapshot.gaze.targetX : 0.5;
             const targetY = snapshot?.gaze.detected ? snapshot.gaze.targetY : 0.5;
             const targetRx = MathUtils.clamp((targetY - 0.5) * MathUtils.degToRad(24), MathUtils.degToRad(-10), MathUtils.degToRad(10));
@@ -71,7 +71,7 @@ export class HeadBoneController {
             // カメラの方向を向くモード
             this.setEyeToCamera(this.vrmCamera.camera);
         }
-        if (snapshot) {
+        if (snapshot?.motionPolicy.allowAiSpeechGesture) {
             this.applyAiSpeechMotion(snapshot, nowMs, deltaMs);
         }
         this.headControlNode.position.copy(this.position);
@@ -175,13 +175,16 @@ export class HeadBoneController {
 
     private applyAiSpeechMotion(snapshot: CharacterBehaviorSnapshot, nowMs: number, deltaMs: number): void {
         const expression = this.aiSpeechExpressionProfile(snapshot.aiSpeech.expressionCode);
-        const targetBlend = snapshot.aiSpeech.isSpeaking ? expression.intentScale : 0;
+        const targetBlend = snapshot.motionPolicy.allowAiSpeechGesture && snapshot.aiSpeech.isSpeaking
+            ? expression.intentScale
+            : 0;
         const timeConstantMs = targetBlend > this.aiSpeechBlend ? 240 : 720;
         const alpha = 1 - Math.exp(-deltaMs / timeConstantMs);
         this.aiSpeechBlend += (targetBlend - this.aiSpeechBlend) * alpha;
 
         if (
-            snapshot.aiSpeech.isSpeaking
+            snapshot.motionPolicy.allowAiSpeechGesture
+            && snapshot.aiSpeech.isSpeaking
             && snapshot.aiSpeech.beatId !== this.lastAiSpeechBeatId
             && snapshot.aiSpeech.beatIntensity > 0
         ) {

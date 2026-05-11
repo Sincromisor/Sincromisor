@@ -34,6 +34,7 @@ export class SincroRtcSessionController {
 
         // フロント側の入力音量を可視化できるよう、ローカルトラックをデバッグへ渡す。
         this.debugConsoleManager.setLocalAudioTrack(audioTrack);
+        this.characterBehaviorState.setTalkMode(talkMode);
         this.characterBehaviorState.setErrorSource("rtc", null);
 
         const rtcc = new RTCTalkClient(this.rtcConfigManager.config, audioTrack, talkMode);

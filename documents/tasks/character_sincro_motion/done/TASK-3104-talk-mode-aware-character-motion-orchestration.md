@@ -1,7 +1,7 @@
 # TASK-3104 talk mode 別 Character Motion Orchestration
 
 - 作成日: 2026-05-11
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 - 親タスク: `TASK-3100`
 - 依存: `TASK-3103`
