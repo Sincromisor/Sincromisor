@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Pose Landmarker Spike</title>
+        <script type="module" src="./main.ts"></script>
+    </head>
+    <body>
+        <main class="spike-shell">
+            <section class="control-band" aria-label="Pose Landmarker spike controls">
+                <div class="title-block">
+                    <h1>Pose Landmarker Spike</h1>
+                    <p id="statusText">待機中</p>
+                </div>
+                <div class="control-grid">
+                    <label>
+                        <span>Model</span>
+                        <select id="modelPreset">
+                            <option value="lite">Lite</option>
+                            <option value="full">Full</option>
+                            <option value="heavy">Heavy</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Model path</span>
+                        <input id="modelPath" type="text" value="/3rd_party/pose_landmarker_lite.task" />
+                    </label>
+                    <label>
+                        <span>Inference fps</span>
+                        <select id="targetFps">
+                            <option value="10">10fps</option>
+                            <option value="15" selected>15fps</option>
+                            <option value="30">30fps</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Delegate</span>
+                        <select id="delegate">
+                            <option value="GPU">GPU</option>
+                            <option value="CPU">CPU</option>
+                        </select>
+                    </label>
+                    <label class="checkbox-row">
+                        <input id="runFaceLandmarker" type="checkbox" />
+                        <span>FaceLandmarker 同時実行</span>
+                    </label>
+                </div>
+                <div class="button-row">
+                    <button id="startButton" type="button">Start</button>
+                    <button id="stopButton" type="button" disabled>Stop</button>
+                    <button id="markButton" type="button">UI Latency Mark</button>
+                </div>
+            </section>
+
+            <section class="stage-band" aria-label="Pose Landmarker spike preview">
+                <div class="video-frame">
+                    <video id="previewVideo"></video>
+                    <canvas id="overlayCanvas"></canvas>
+                </div>
+                <aside class="metrics-panel" aria-label="Pose Landmarker metrics">
+                    <div class="metric">
+                        <span>Pose ms</span>
+                        <strong id="poseMs">--</strong>
+                    </div>
+                    <div class="metric">
+                        <span>Pose avg / max</span>
+                        <strong id="poseAvgMax">--</strong>
+                    </div>
+                    <div class="metric">
+                        <span>Render fps</span>
+                        <strong id="renderFps">--</strong>
+                    </div>
+                    <div class="metric">
+                        <span>Face ms</span>
+                        <strong id="faceMs">--</strong>
+                    </div>
+                    <div class="metric">
+                        <span>Dropped frames</span>
+                        <strong id="droppedFrames">--</strong>
+                    </div>
+                    <div class="metric">
+                        <span>UI latency</span>
+                        <strong id="uiLatency">--</strong>
+                    </div>
+                    <div class="metric wide">
+                        <span>Upper body landmarks</span>
+                        <pre id="landmarkSummary">--</pre>
+                    </div>
+                </aside>
+            </section>
+        </main>
+    </body>
+</html>
