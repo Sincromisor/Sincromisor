@@ -99,11 +99,15 @@ MediaPipe `PoseLandmarker` を Sincromisor の将来の手・腕・上半身同�
   - Desktop相当: `http://127.0.0.1:5173/pose-landmarker-spike/` が表示される。
   - 390x844相当: controls / metrics が縦積みで表示され、console error は 0 件。
   - UI Latency Mark: 9.0ms を確認。
+- 2026-05-11 追記:
+  - `public/mediapipe-wasm`、`pose_landmarker_lite.task`、`pose_landmarker_full.task`、`pose_landmarker_heavy.task`、`face_landmarker.task` の配置を確認した。
+  - Vite dev server 経由で各 model / wasm が HTTP 200 で取得できることを確認した。
+  - Playwright の canvas captureStream を使ったダミー映像で、Lite / Full / Heavy の PoseLandmarker 初期化と推論ループ開始を確認した。
+  - Lite + FaceLandmarker 同時実行でも初期化と推論ループ開始を確認した。
 
 ### 未実測・制約
 
-- この作業環境には `public/mediapipe-wasm`、`pose_landmarker_*.task`、`face_landmarker.task` が未配置のため、実カメラによる Pose 推論時間と FaceLandmarker 同時実行負荷は未実測。
-- 実測時は `utils/setup/frontend.sh` で wasm を配置し、`public/3rd_party/pose_landmarker_lite.task` から順に配置して検証する。
+- 実カメラによる Pose 推論時間と FaceLandmarker 同時実行負荷は未実測。
 - 1280x720 と 390x844 の推論負荷、Settings / Debug Console 操作遅延、上半身のみ・近距離・半身ケースの landmark 安定性は、実カメラ環境で追記する。
 
 ### 暫定判断
