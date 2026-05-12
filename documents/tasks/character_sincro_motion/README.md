@@ -9,11 +9,16 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 - Open: `open/TASK-3100-sincro-motion-foundation-epic.md`
 - Done: `done/TASK-3101-sincro-motion-architecture-and-design-doc.md`
 - Open: `open/TASK-3102-face-tracking-runtime-and-sincro-face-tracker.md`
-- Open: `open/TASK-3103-sincro-face-retargeting-head-eye-mouth.md`
-- Open: `open/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
+- Done: `done/TASK-3103-sincro-face-retargeting-head-eye-mouth.md`
+- Done: `done/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
 - Open: `open/TASK-3105-pose-landmarker-feasibility-spike.md`
 - Done: `done/TASK-3106-optional-sincro-pose-tracker-and-performance-gates.md`
-- Open: `open/TASK-3107-sincro-motion-observability-settings-and-verification.md`
+- Done: `done/TASK-3107-sincro-motion-observability-settings-and-verification.md`
+- Done: `done/TASK-3108-sincro-head-pitch-direction-fix.md`
+- Done: `done/TASK-3109-sincro-separate-blink-expression-calibration.md`
+- Done: `done/TASK-3110-sincro-blink-open-threshold-tuning.md`
+- Done: `done/TASK-3111-sincro-pose-retarget-formalization-and-tuning.md`
+- Open: `open/TASK-3112-sincro-tracker-workerization-and-load-isolation.md`
 
 ## 前提
 
@@ -37,3 +42,5 @@ Pose Landmarker は face-only の本流と分けて進める。
    - 延期なら `TASK-3106` は保留し、`TASK-3107` は face-only 完了として閉じる。
 3. `TASK-3106`: optional `SincroPoseTracker` と性能ゲートを実装する。
 4. Pose を採用した場合は、`TASK-3107` の pose 観測性・確認項目も完了条件に含める。
+5. `TASK-3111`: optional pose pipeline をキャラクター動作として正式化し、設定・適用 gate・反映強度・実カメラ確認を整える。
+6. `TASK-3112`: Face / Pose tracker を Worker 化し、model load と同期推論による main thread ブロックを軽減する。
