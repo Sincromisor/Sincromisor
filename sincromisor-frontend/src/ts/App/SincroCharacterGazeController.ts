@@ -233,6 +233,9 @@ export class SincroCharacterGazeController {
                 onPoseFallback: (snapshot) => {
                     this.handleSincroPoseFallback(snapshot);
                 },
+                onTrackerStats: (snapshot) => {
+                    this.debugConsoleManager.updateSincroTrackerStats(snapshot);
+                },
                 onError: (error) => {
                     this.handleSincroFaceRuntimeError(error);
                 },

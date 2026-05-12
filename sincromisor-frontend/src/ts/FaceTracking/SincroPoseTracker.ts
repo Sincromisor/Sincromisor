@@ -61,14 +61,14 @@ export class SincroPoseTracker {
         return this.poseLandmarker != null;
     }
 
-    detect(videoElement: HTMLVideoElement, timestampMs: number): SincroPoseMotionSnapshot {
+    detect(videoFrame: TexImageSource, timestampMs: number): SincroPoseMotionSnapshot {
         if (!this.poseLandmarker) {
             this.snapshot = this.createFallbackSnapshot("PoseLandmarker model is not loaded.", timestampMs);
             return this.snapshot;
         }
 
         const inferenceStartedAtMs = performance.now();
-        const result = this.poseLandmarker.detectForVideo(videoElement, timestampMs);
+        const result = this.poseLandmarker.detectForVideo(videoFrame, timestampMs);
         const inferenceEndedAtMs = performance.now();
         const inferenceTimeMs = inferenceEndedAtMs - inferenceStartedAtMs;
         const inferenceFps = this.lastInferenceEndedAtMs == null

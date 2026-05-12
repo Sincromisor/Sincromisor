@@ -4,6 +4,8 @@ declare const __MEDIAPIPE_TASKS_VISION_VERSION__: string;
 
 const MEDIAPIPE_WASM_PATH = "/mediapipe-wasm";
 const MEDIAPIPE_TASKS_VISION_CACHE_KEY = `tasks-vision-${__MEDIAPIPE_TASKS_VISION_VERSION__}`;
+const MEDIAPIPE_WORKER_WASM_LOADER_PATH = `${MEDIAPIPE_WASM_PATH}/vision_wasm_internal.js`;
+const MEDIAPIPE_WORKER_WASM_BINARY_PATH = `${MEDIAPIPE_WASM_PATH}/vision_wasm_internal.wasm`;
 
 let visionFilesetPromise: ReturnType<typeof FilesetResolver.forVisionTasks> | null = null;
 
@@ -14,13 +16,25 @@ export function loadMediaPipeVisionFileset(): ReturnType<typeof FilesetResolver.
         visionFilesetPromise = FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_PATH)
             .then((fileset) => ({
                 ...fileset,
-                wasmLoaderPath: withCacheKey(fileset.wasmLoaderPath),
-                wasmBinaryPath: withCacheKey(fileset.wasmBinaryPath),
+                wasmLoaderPath: withCacheKey(resolveWasmLoaderPath(fileset.wasmLoaderPath)),
+                wasmBinaryPath: withCacheKey(resolveWasmBinaryPath(fileset.wasmBinaryPath)),
                 assetLoaderPath: fileset.assetLoaderPath ? withCacheKey(fileset.assetLoaderPath) : undefined,
                 assetBinaryPath: fileset.assetBinaryPath ? withCacheKey(fileset.assetBinaryPath) : undefined,
             }));
     }
     return visionFilesetPromise;
+}
+
+function resolveWasmLoaderPath(defaultPath: string): string {
+    return isWorkerGlobalScope() ? MEDIAPIPE_WORKER_WASM_LOADER_PATH : defaultPath;
+}
+
+function resolveWasmBinaryPath(defaultPath: string): string {
+    return isWorkerGlobalScope() ? MEDIAPIPE_WORKER_WASM_BINARY_PATH : defaultPath;
+}
+
+function isWorkerGlobalScope(): boolean {
+    return typeof document === "undefined";
 }
 
 function withCacheKey(path: string): string {

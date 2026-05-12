@@ -43,14 +43,14 @@ export class SincroFaceTracker {
         return this.faceLandmarker != null;
     }
 
-    detect(videoElement: HTMLVideoElement, timestampMs: number): SincroFaceMotionSnapshot {
+    detect(videoFrame: TexImageSource, timestampMs: number): SincroFaceMotionSnapshot {
         if (!this.faceLandmarker) {
             this.snapshot = this.createFallbackSnapshot("FaceLandmarker model is not loaded.", timestampMs);
             return this.snapshot;
         }
 
         const inferenceStartedAtMs = performance.now();
-        const result = this.faceLandmarker.detectForVideo(videoElement, timestampMs);
+        const result = this.faceLandmarker.detectForVideo(videoFrame, timestampMs);
         const inferenceEndedAtMs = performance.now();
         const inferenceTimeMs = inferenceEndedAtMs - inferenceStartedAtMs;
         const inferenceFps = this.lastInferenceEndedAtMs == null

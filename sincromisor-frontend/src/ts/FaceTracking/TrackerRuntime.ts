@@ -2,6 +2,8 @@ import type { SincroFaceMotionSnapshot } from "./SincroFaceMotionSnapshot";
 import { SincroFaceTracker } from "./SincroFaceTracker";
 import type { SincroPoseMotionSnapshot } from "./SincroPoseMotionSnapshot";
 import { SincroPoseTracker } from "./SincroPoseTracker";
+import { SincroTrackerWorkerClient } from "./SincroTrackerWorkerClient";
+import type { SincroTrackerWorkerStats } from "./SincroTrackerWorkerTypes";
 
 const MIN_DETECTABLE_VIDEO_DIMENSION_PX = 2;
 const DEFAULT_TARGET_INFERENCE_FPS = 15;
@@ -14,6 +16,7 @@ export type TrackerRuntimeCallbacks = {
     onFaceMotion: (snapshot: SincroFaceMotionSnapshot) => void;
     onPoseMotion?: (snapshot: SincroPoseMotionSnapshot) => void;
     onPoseFallback?: (snapshot: SincroPoseMotionSnapshot) => void;
+    onTrackerStats?: (snapshot: SincroTrackerWorkerStats) => void;
     onError?: (error: unknown) => void;
 };
 
@@ -23,6 +26,7 @@ export class TrackerRuntime {
     private readonly videoElement: HTMLVideoElement;
     private readonly faceTracker: SincroFaceTracker;
     private readonly poseTracker: SincroPoseTracker;
+    private readonly workerClient: SincroTrackerWorkerClient;
     private callbacks: TrackerRuntimeCallbacks | null = null;
     private loopEnabled = false;
     private loopRunning = false;
@@ -36,6 +40,8 @@ export class TrackerRuntime {
     private poseTrackingEnabled = false;
     private poseDegradedToFaceOnly = false;
     private slowPoseInferenceCount = 0;
+    private useWorkerTracking = false;
+    private switchingToMainThreadFallback = false;
 
     constructor(
         videoElement: HTMLVideoElement,
@@ -45,6 +51,9 @@ export class TrackerRuntime {
         this.videoElement = videoElement;
         this.faceTracker = faceTracker;
         this.poseTracker = poseTracker;
+        this.workerClient = new SincroTrackerWorkerClient((stats) => {
+            this.callbacks?.onTrackerStats?.(stats);
+        });
     }
 
     async startFaceTracking(
@@ -53,21 +62,13 @@ export class TrackerRuntime {
         targetInferenceFps: number = DEFAULT_TARGET_INFERENCE_FPS,
         poseOptions: { enabled?: boolean; targetInferenceFps?: number } = {},
     ): Promise<void> {
-        await this.faceTracker.initVision();
         this.callbacks = callbacks;
         this.poseTrackingEnabled = !!poseOptions.enabled;
         this.poseDegradedToFaceOnly = false;
         this.slowPoseInferenceCount = 0;
-        if (this.poseTrackingEnabled) {
-            try {
-                await this.poseTracker.initVision();
-            } catch (error) {
-                console.warn("Sincro PoseLandmarker initialization failed. Continuing with face-only tracking.", error);
-                this.degradePoseToFaceOnly(this.formatErrorDetail(error), performance.now());
-            }
-        }
         this.targetInferenceFps = Math.max(1, Math.min(30, targetInferenceFps));
         this.targetPoseInferenceFps = Math.max(1, Math.min(15, poseOptions.targetInferenceFps ?? DEFAULT_TARGET_POSE_INFERENCE_FPS));
+        await this.initializeTrackingEngine();
         this.attachVideoTrack(videoTrack);
         this.loopEnabled = true;
         this.lastVideoTime = -1;
@@ -84,11 +85,16 @@ export class TrackerRuntime {
 
     stopFaceTracking(reason: string | null = "sincro_face_tracking_stopped"): void {
         this.stopLoop();
+        if (this.useWorkerTracking) {
+            this.workerClient.stop(reason);
+        }
         this.callbacks?.onFaceMotion(this.faceTracker.stop(reason));
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop(reason));
         this.callbacks = null;
         this.poseTrackingEnabled = false;
         this.poseDegradedToFaceOnly = false;
+        this.useWorkerTracking = false;
+        this.switchingToMainThreadFallback = false;
         this.videoElement.pause();
         this.videoElement.srcObject = null;
     }
@@ -96,6 +102,38 @@ export class TrackerRuntime {
     dispose(): void {
         this.stopFaceTracking("sincro_face_tracking_disposed");
         this.faceTracker.dispose();
+        this.poseTracker.dispose();
+        this.workerClient.dispose();
+    }
+
+    private async initializeTrackingEngine(): Promise<void> {
+        if (SincroTrackerWorkerClient.isSupported()) {
+            try {
+                await this.workerClient.init(this.poseTrackingEnabled);
+                this.useWorkerTracking = true;
+                return;
+            } catch (error) {
+                console.warn("Sincro tracker worker initialization failed. Falling back to main-thread tracking.", error);
+                this.publishMainThreadFallbackStats(this.formatErrorDetail(error));
+            }
+        } else {
+            this.publishMainThreadFallbackStats("worker_or_createImageBitmap_unavailable");
+        }
+        await this.initializeMainThreadTrackers();
+        this.useWorkerTracking = false;
+    }
+
+    private async initializeMainThreadTrackers(): Promise<void> {
+        await this.faceTracker.initVision();
+        if (!this.poseTrackingEnabled) {
+            return;
+        }
+        try {
+            await this.poseTracker.initVision();
+        } catch (error) {
+            console.warn("Sincro PoseLandmarker initialization failed. Continuing with face-only tracking.", error);
+            this.degradePoseToFaceOnly(this.formatErrorDetail(error), performance.now());
+        }
     }
 
     private attachVideoTrack(videoTrack: MediaStreamTrack): void {
@@ -157,6 +195,10 @@ export class TrackerRuntime {
 
         this.lastVideoTime = this.videoElement.currentTime;
         this.lastInferenceAtMs = nowMs;
+        if (this.useWorkerTracking) {
+            void this.predictWithWorker(nowMs);
+            return;
+        }
         try {
             const snapshot = this.faceTracker.detect(this.videoElement, nowMs);
             this.callbacks.onFaceMotion(snapshot);
@@ -168,6 +210,32 @@ export class TrackerRuntime {
             return;
         }
         this.scheduleNextPrediction();
+    }
+
+    private async predictWithWorker(nowMs: number): Promise<void> {
+        if (!this.loopEnabled || !this.callbacks) {
+            this.loopRunning = false;
+            return;
+        }
+        const runPose = this.shouldRunPoseInference(nowMs);
+        if (runPose) {
+            this.lastPoseInferenceAtMs = nowMs;
+        }
+        try {
+            const transferStartedAtMs = performance.now();
+            const frame = await createImageBitmap(this.videoElement);
+            const transferTimeMs = performance.now() - transferStartedAtMs;
+            const result = await this.workerClient.detect(frame, nowMs, runPose, transferTimeMs);
+            this.callbacks.onTrackerStats?.(result.stats);
+            this.callbacks.onFaceMotion(result.face);
+            if (result.pose) {
+                this.callbacks.onPoseMotion?.(result.pose);
+                this.applyPosePerformanceGate(result.pose, nowMs);
+            }
+            this.scheduleNextPrediction();
+        } catch (error) {
+            await this.switchToMainThreadFallback(error);
+        }
     }
 
     private shouldRunInference(nowMs: number): boolean {
@@ -199,6 +267,26 @@ export class TrackerRuntime {
         } catch (error) {
             console.warn("Sincro PoseLandmarker failed during video inference. Falling back to face-only.", error);
             this.degradePoseToFaceOnly(this.formatErrorDetail(error), nowMs);
+        }
+    }
+
+    private async switchToMainThreadFallback(error: unknown): Promise<void> {
+        if (this.switchingToMainThreadFallback) {
+            return;
+        }
+        this.switchingToMainThreadFallback = true;
+        this.publishMainThreadFallbackStats(this.formatErrorDetail(error));
+        this.workerClient.dispose();
+        this.useWorkerTracking = false;
+        try {
+            await this.initializeMainThreadTrackers();
+            this.switchingToMainThreadFallback = false;
+            if (this.loopEnabled) {
+                this.scheduleNextPrediction();
+            }
+        } catch (fallbackError) {
+            this.switchingToMainThreadFallback = false;
+            this.handleRuntimeError(fallbackError);
         }
     }
 
@@ -242,6 +330,18 @@ export class TrackerRuntime {
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop("face_tracking_runtime_error"));
         this.callbacks?.onError?.(error);
         this.stopLoop();
+    }
+
+    private publishMainThreadFallbackStats(reason: string): void {
+        this.callbacks?.onTrackerStats?.({
+            mode: "fallback",
+            status: "fallback",
+            transferTimeMs: 0,
+            workerRoundTripMs: 0,
+            loadTimeMs: this.workerClient.getStats().loadTimeMs,
+            droppedFrames: this.workerClient.getStats().droppedFrames,
+            fallbackReason: reason,
+        });
     }
 
     private formatErrorDetail(error: unknown): string {
