@@ -6,6 +6,7 @@ export type DialogSettingKey =
     | "enableCharacter"
     | "enableTalk"
     | "enableCharacterGaze"
+    | "enableSincroPoseTracking"
     | "enableAutoMute"
     | "enableNoiseSuppression"
     | "enableEchoCancellation"
@@ -15,6 +16,7 @@ export type DialogSettingKey =
     | "enableInspector"
     | "enableVR"
     | "characterMotionScale"
+    | "sincroPoseRetargetScale"
     | "characterEyeTrackingScale";
 
 // DialogStateStore 内で保持する設定値の型マップ。
@@ -27,6 +29,7 @@ type DialogSettingValueMap = {
     enableCharacter: boolean;
     enableTalk: boolean;
     enableCharacterGaze: boolean;
+    enableSincroPoseTracking: boolean;
     enableAutoMute: boolean;
     enableNoiseSuppression: boolean;
     enableEchoCancellation: boolean;
@@ -36,6 +39,7 @@ type DialogSettingValueMap = {
     enableInspector: boolean;
     enableVR: boolean;
     characterMotionScale: number;
+    sincroPoseRetargetScale: number;
     characterEyeTrackingScale: number;
 };
 
@@ -47,6 +51,7 @@ type DialogSettingDisabledMap = {
     enableCharacter: boolean;
     enableTalk: boolean;
     enableCharacterGaze: boolean;
+    enableSincroPoseTracking: boolean;
     enableAutoMute: boolean;
     enableNoiseSuppression: boolean;
     enableEchoCancellation: boolean;
@@ -81,6 +86,7 @@ export class DialogStateStore {
         enableCharacter: true,
         enableTalk: true,
         enableCharacterGaze: true,
+        enableSincroPoseTracking: true,
         enableAutoMute: false,
         enableNoiseSuppression: true,
         enableEchoCancellation: true,
@@ -90,6 +96,7 @@ export class DialogStateStore {
         enableInspector: false,
         enableVR: false,
         characterMotionScale: 0.72,
+        sincroPoseRetargetScale: 0.68,
         characterEyeTrackingScale: 0.68,
     };
     private disabled: DialogSettingDisabledMap = {
@@ -100,6 +107,7 @@ export class DialogStateStore {
         enableCharacter: true,
         enableTalk: false,
         enableCharacterGaze: true,
+        enableSincroPoseTracking: false,
         enableAutoMute: true,
         enableNoiseSuppression: false,
         enableEchoCancellation: false,

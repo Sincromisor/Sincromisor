@@ -47,7 +47,7 @@ export function DebugConsole() {
                 <RtcPanel snapshot={snapshot} isActive={activeTab === "rtc"} />
                 <MessagesPanel snapshot={snapshot} isActive={activeTab === "messages"} />
                 <GazePanel snapshot={snapshot} manager={manager} isActive={activeTab === "gaze"} />
-                <SincroMotionPanel snapshot={snapshot} isActive={activeTab === "sincro"} />
+                <SincroMotionPanel snapshot={snapshot} manager={manager} isActive={activeTab === "sincro"} />
                 <SdpPanel snapshot={snapshot} isActive={activeTab === "sdp"} />
             </div>
         </div>

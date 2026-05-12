@@ -25,6 +25,7 @@ export type SincroPoseRetargetFrame = {
 };
 
 export type SincroPoseRetargetConfig = {
+    intensityScale: number;
     minConfidence: number;
     returnToNeutralMs: number;
     smoothingMs: number;
@@ -38,6 +39,7 @@ export type SincroPoseRetargetConfig = {
 };
 
 export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
+    intensityScale: 0.68,
     minConfidence: 0.45,
     returnToNeutralMs: 520,
     smoothingMs: 155,
@@ -76,7 +78,7 @@ const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
 // Pose同期はまだoptionalなので、低振幅・強いsmoothingでVRM向け値へ変換する。
 // 腕が画面外へ出た時は部位単位で neutral に戻し、face-only の同期を邪魔しない。
 export class SincroPoseRetargeter {
-    private readonly config: SincroPoseRetargetConfig;
+    private config: SincroPoseRetargetConfig;
     private lastUpdateAtMs: number | null = null;
     private smoothedFrame: SincroPoseRetargetFrame = cloneFrame(NEUTRAL_POSE_FRAME);
 
@@ -84,6 +86,17 @@ export class SincroPoseRetargeter {
         this.config = {
             ...DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
             ...config,
+        };
+    }
+
+    setConfig(config: Partial<SincroPoseRetargetConfig>): void {
+        this.config = {
+            ...this.config,
+            ...config,
+            intensityScale: MathUtils.clamp(config.intensityScale ?? this.config.intensityScale, 0, 1.2),
+            minConfidence: MathUtils.clamp(config.minConfidence ?? this.config.minConfidence, 0, 1),
+            returnToNeutralMs: MathUtils.clamp(config.returnToNeutralMs ?? this.config.returnToNeutralMs, 80, 2000),
+            smoothingMs: MathUtils.clamp(config.smoothingMs ?? this.config.smoothingMs, 40, 800),
         };
     }
 
@@ -103,23 +116,23 @@ export class SincroPoseRetargeter {
             upperBody: {
                 spine: {
                     x: 0,
-                    y: -snapshot.upperBody.torsoLean * this.config.torsoLeanRad * 0.45,
-                    z: -snapshot.upperBody.shoulderRoll * this.config.shoulderRollRad * 0.35,
+                    y: -snapshot.upperBody.torsoLean * this.config.torsoLeanRad * 0.45 * this.config.intensityScale,
+                    z: -snapshot.upperBody.shoulderRoll * this.config.shoulderRollRad * 0.35 * this.config.intensityScale,
                 },
                 chest: {
                     x: 0,
-                    y: -snapshot.upperBody.torsoLean * this.config.torsoLeanRad,
-                    z: -snapshot.upperBody.shoulderRoll * this.config.shoulderRollRad,
+                    y: -snapshot.upperBody.torsoLean * this.config.torsoLeanRad * this.config.intensityScale,
+                    z: -snapshot.upperBody.shoulderRoll * this.config.shoulderRollRad * this.config.intensityScale,
                 },
                 leftShoulder: {
                     x: 0,
                     y: 0,
-                    z: -snapshot.upperBody.shoulderRoll * this.config.shoulderLiftRad,
+                    z: -snapshot.upperBody.shoulderRoll * this.config.shoulderLiftRad * this.config.intensityScale,
                 },
                 rightShoulder: {
                     x: 0,
                     y: 0,
-                    z: -snapshot.upperBody.shoulderRoll * this.config.shoulderLiftRad,
+                    z: -snapshot.upperBody.shoulderRoll * this.config.shoulderLiftRad * this.config.intensityScale,
                 },
             },
             leftArm: this.retargetArm(snapshot.leftArm, "left"),
@@ -145,22 +158,23 @@ export class SincroPoseRetargeter {
             return cloneArm(NEUTRAL_POSE_FRAME.leftArm);
         }
         const sideSign = side === "left" ? -1 : 1;
+        const scale = this.config.intensityScale;
         return {
             active: true,
             upperArm: {
-                x: -positiveOnly(arm.upperArmLift) * this.config.upperArmLiftRad,
-                y: sideSign * arm.upperArmOpen * this.config.upperArmOpenRad,
-                z: -sideSign * positiveOnly(arm.upperArmLift) * this.config.upperArmOpenRad * 0.55,
+                x: -positiveOnly(arm.upperArmLift) * this.config.upperArmLiftRad * scale,
+                y: sideSign * arm.upperArmOpen * this.config.upperArmOpenRad * scale,
+                z: -sideSign * positiveOnly(arm.upperArmLift) * this.config.upperArmOpenRad * 0.55 * scale,
             },
             lowerArm: {
                 x: 0,
-                y: sideSign * arm.lowerArmFlex * this.config.lowerArmFlexRad,
+                y: sideSign * arm.lowerArmFlex * this.config.lowerArmFlexRad * scale,
                 z: 0,
             },
             wrist: {
                 x: 0,
                 y: 0,
-                z: sideSign * arm.wristRaise * this.config.wristRaiseRad,
+                z: sideSign * arm.wristRaise * this.config.wristRaiseRad * scale,
             },
         };
     }

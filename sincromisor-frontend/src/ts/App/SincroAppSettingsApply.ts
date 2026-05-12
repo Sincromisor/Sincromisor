@@ -60,6 +60,9 @@ export function applySincroAppSettingsPartial(
     if (partial.enableCharacterGaze != null) {
         dialogManager.setEnableCharacterGaze(partial.enableCharacterGaze);
     }
+    if (partial.enableSincroPoseTracking != null) {
+        dialogManager.setEnableSincroPoseTracking(partial.enableSincroPoseTracking);
+    }
     if (partial.enableAutoMute != null) {
         dialogManager.setEnableAutoMute(partial.enableAutoMute);
     }
@@ -71,6 +74,9 @@ export function applySincroAppSettingsPartial(
     }
     if (partial.characterMotionScale != null) {
         dialogManager.setCharacterMotionScale(clampAndRoundToStep(partial.characterMotionScale, 0, 1.2, 0.05));
+    }
+    if (partial.sincroPoseRetargetScale != null) {
+        dialogManager.setSincroPoseRetargetScale(clampAndRoundToStep(partial.sincroPoseRetargetScale, 0, 1.2, 0.05));
     }
     if (partial.characterEyeTrackingScale != null) {
         dialogManager.setCharacterEyeTrackingScale(clampAndRoundToStep(partial.characterEyeTrackingScale, 0, 1.2, 0.05));

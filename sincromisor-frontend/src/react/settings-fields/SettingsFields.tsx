@@ -36,8 +36,10 @@ export const settingHelp = {
     enableVenueNoiseMode: "反射音や周囲のざわつきが多い場所向けの調整です。イベント会場や広い部屋で使う時に試してください。",
     enableCharacter: "3Dキャラクターを表示します。動作を軽くしたい時や、音声まわりだけ確認したい時はオフにします。",
     enableCharacterGaze: "カメラから顔の向きや視線を読み取ります。顔の向きに合わせた演出や自動ミュートを使いたい時にオンにします。",
+    enableSincroPoseTracking: "sincro で肩・上半身・腕の動きを低振幅で反映します。重い時や姿勢検出が不安定な時はオフにできます。",
     enableAutoMute: "顔の向きに合わせて自動でミュートを切り替えます。展示やハンズフリー運用で、話していない時を静かにしたい場面に向いています。",
     characterMotionScale: "呼吸、聞き姿勢、AI発話中の上半身モーションの強さです。前後の揺れが大きい時は下げます。",
+    sincroPoseRetargetScale: "sincro の姿勢同期をキャラクターへ反映する強さです。腕や肩が動きすぎる時は下げます。",
     characterEyeTrackingScale: "顔位置に追従する eyeball の動きの強さです。視線が動きすぎる時は下げます。",
     enableVR: "VR で開くための準備を行います。VR 対応ページを使う時だけオンにします。",
     lgTileHeight: "Looking Glass のタイル解像度の高さです。高いほど精細になりますが負荷が増えます。まずは既定値から調整してください。",
@@ -328,6 +330,14 @@ export function CharacterDisplayToggles({
                 />
                 <SettingsToggle
                     density={toggleDensity}
+                    label="sincroで姿勢を使う"
+                    help={settingHelp.enableSincroPoseTracking}
+                    checked={!!settings.enableSincroPoseTracking}
+                    disabled={!settings.enableCharacter || !settings.enableCharacterGaze}
+                    onChange={(checked) => onApplySettings({ enableSincroPoseTracking: checked })}
+                />
+                <SettingsToggle
+                    density={toggleDensity}
                     label="自動でミュートする"
                     help={settingHelp.enableAutoMute}
                     checked={!!settings.enableAutoMute}
@@ -346,6 +356,17 @@ export function CharacterDisplayToggles({
                     valueLabel={`${Math.round(settings.characterMotionScale * 100)}%`}
                     disabled={!settings.enableCharacter}
                     onChange={(value) => onApplySettings({ characterMotionScale: value })}
+                />
+                <SettingsRange
+                    label="姿勢同期"
+                    help={settingHelp.sincroPoseRetargetScale}
+                    min={0}
+                    max={1.2}
+                    step={0.05}
+                    value={settings.sincroPoseRetargetScale}
+                    valueLabel={`${Math.round(settings.sincroPoseRetargetScale * 100)}%`}
+                    disabled={!settings.enableCharacter || !settings.enableCharacterGaze || !settings.enableSincroPoseTracking}
+                    onChange={(value) => onApplySettings({ sincroPoseRetargetScale: value })}
                 />
                 <SettingsRange
                     label="目線追跡"

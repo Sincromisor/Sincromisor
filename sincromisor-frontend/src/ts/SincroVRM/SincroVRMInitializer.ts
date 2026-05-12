@@ -1,5 +1,6 @@
 import { SincroAppController } from "../App/SincroAppController";
 import { UserMediaManager } from "../RTC/UserMediaManager";
+import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { VRMScene } from './VRMScene/VRMScene';
 
 const CHARACTER_BOX_SELECTOR = "div#sincroCharacterBox";
@@ -51,6 +52,9 @@ export class SincroVRMInitializer {
         this.loadCachedSystemIcon();
         this.appController.debug.setRTCStopButtonEventListener(() => {
             this.appController.rtc.stop();
+        });
+        DebugConsoleManager.getManager().setSincroPoseRetargetConfigChangeCallback((config) => {
+            this.activeScene?.setSincroPoseRetargetConfig(config);
         });
         this.bindRuntimeSettingsSync();
 
@@ -251,6 +255,7 @@ export class SincroVRMInitializer {
     protected syncSceneRuntimeSettings(settings: {
         enableCharacter: boolean;
         characterMotionScale: number;
+        sincroPoseRetargetScale: number;
         characterEyeTrackingScale: number;
     }): void {
         if (!this.activeScene) {
@@ -261,5 +266,11 @@ export class SincroVRMInitializer {
             motionScale: settings.characterMotionScale,
             eyeTrackingScale: settings.characterEyeTrackingScale,
         });
+        const poseRetargetConfig = {
+            ...DebugConsoleManager.getManager().getSnapshot().sincroMotion.poseRetarget,
+            intensityScale: settings.sincroPoseRetargetScale,
+        };
+        DebugConsoleManager.getManager().setSincroPoseRetargetConfig(poseRetargetConfig);
+        this.activeScene.setSincroPoseRetargetConfig(poseRetargetConfig);
     }
 }

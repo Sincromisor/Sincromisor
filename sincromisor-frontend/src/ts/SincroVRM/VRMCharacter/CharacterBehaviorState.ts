@@ -538,7 +538,7 @@ export class CharacterBehaviorState {
                 neutralTransition,
                 allowGazeMotion: false,
                 allowFaceRetarget: true,
-                allowPoseRetarget: !this.poseMotion.degradedToFaceOnly,
+                allowPoseRetarget: this.poseMotion.trackingEnabled && !this.poseMotion.degradedToFaceOnly,
                 allowAiSpeechGesture: false,
                 allowAiLipSync: false,
                 allowAiEmotion: false,

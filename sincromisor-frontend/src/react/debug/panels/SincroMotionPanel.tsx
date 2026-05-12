@@ -1,10 +1,12 @@
 import type { SincroFaceMotionSnapshot } from "../../../ts/FaceTracking/SincroFaceMotionSnapshot";
 import type { SincroPoseArmMotionSnapshot, SincroPoseMotionSnapshot } from "../../../ts/FaceTracking/SincroPoseMotionSnapshot";
-import type { DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
+import { DebugConsoleManager, type DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
+import { RangeControl } from "../components/RangeControl";
 import { debugPanelClassName, type DebugPanelProps } from "../debugConsoleTypes";
 
 type SincroMotionPanelProps = DebugPanelProps & {
     snapshot: DebugConsoleSnapshot;
+    manager: DebugConsoleManager;
 };
 
 const FACE_BLENDSHAPE_KEYS = [
@@ -17,9 +19,10 @@ const FACE_BLENDSHAPE_KEYS = [
     "mouthPucker",
 ];
 
-export function SincroMotionPanel({ snapshot, isActive }: SincroMotionPanelProps) {
+export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionPanelProps) {
     const face = snapshot.sincroMotion.face;
     const pose = snapshot.sincroMotion.pose;
+    const poseRetarget = snapshot.sincroMotion.poseRetarget;
 
     return (
         <section
@@ -61,6 +64,8 @@ export function SincroMotionPanel({ snapshot, isActive }: SincroMotionPanelProps
                     <dl className="gazeTable">
                         <dt>Status</dt>
                         <dd>{formatPoseStatus(pose)}</dd>
+                        <dt>Retarget</dt>
+                        <dd>{formatPoseRetargetStatus(pose, poseRetarget.minConfidence)}</dd>
                         <dt>Confidence</dt>
                         <dd>{formatRatio(pose.confidence)}</dd>
                         <dt>Upper</dt>
@@ -76,6 +81,61 @@ export function SincroMotionPanel({ snapshot, isActive }: SincroMotionPanelProps
                         <dt>Updated</dt>
                         <dd>{formatUpdatedAt(pose.lastUpdatedAtMs)}</dd>
                     </dl>
+                    <details className="audioInlineDetails">
+                        <summary>Pose retarget 調整</summary>
+                        <RangeControl
+                            id="sincroPoseRetargetIntensity"
+                            label="Intensity"
+                            valueLabel={`${Math.round(poseRetarget.intensityScale * 100)}%`}
+                            min="0"
+                            max="1.2"
+                            step="0.05"
+                            value={poseRetarget.intensityScale}
+                            onChange={(value) => manager.applySincroPoseRetargetConfig({
+                                ...poseRetarget,
+                                intensityScale: value,
+                            })}
+                        />
+                        <RangeControl
+                            id="sincroPoseRetargetMinConfidence"
+                            label="Min Confidence"
+                            valueLabel={poseRetarget.minConfidence.toFixed(2)}
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={poseRetarget.minConfidence}
+                            onChange={(value) => manager.applySincroPoseRetargetConfig({
+                                ...poseRetarget,
+                                minConfidence: value,
+                            })}
+                        />
+                        <RangeControl
+                            id="sincroPoseRetargetSmoothing"
+                            label="Smoothing"
+                            valueLabel={`${Math.round(poseRetarget.smoothingMs)}ms`}
+                            min="40"
+                            max="800"
+                            step="10"
+                            value={poseRetarget.smoothingMs}
+                            onChange={(value) => manager.applySincroPoseRetargetConfig({
+                                ...poseRetarget,
+                                smoothingMs: value,
+                            })}
+                        />
+                        <RangeControl
+                            id="sincroPoseRetargetNeutralReturn"
+                            label="Neutral Return"
+                            valueLabel={`${Math.round(poseRetarget.returnToNeutralMs)}ms`}
+                            min="80"
+                            max="2000"
+                            step="20"
+                            value={poseRetarget.returnToNeutralMs}
+                            onChange={(value) => manager.applySincroPoseRetargetConfig({
+                                ...poseRetarget,
+                                returnToNeutralMs: value,
+                            })}
+                        />
+                    </details>
                 </article>
             </div>
         </section>
@@ -97,6 +157,22 @@ function formatPoseStatus(snapshot: SincroPoseMotionSnapshot): string {
         return `face-only (${snapshot.fallbackReason ?? "performance_gate"})`;
     }
     return formatTrackingStatus(snapshot.trackingEnabled, snapshot.detected, snapshot.fallbackReason);
+}
+
+function formatPoseRetargetStatus(snapshot: SincroPoseMotionSnapshot, minConfidence: number): string {
+    if (!snapshot.trackingEnabled) {
+        return "off";
+    }
+    if (snapshot.degradedToFaceOnly) {
+        return "neutral (face-only)";
+    }
+    if (!snapshot.detected) {
+        return "neutral (lost)";
+    }
+    if (snapshot.confidence < minConfidence) {
+        return "neutral (confidence)";
+    }
+    return "active";
 }
 
 function formatHeadPose(snapshot: SincroFaceMotionSnapshot): string {
