@@ -27,6 +27,7 @@ export type SincroAppSettingsSnapshot = {
     enableCharacter: boolean;
     enableTalk: boolean;
     enableCharacterGaze: boolean;
+    enableSincroPoseTracking: boolean;
     enableAutoMute: boolean;
     enableNoiseSuppression: boolean;
     enableEchoCancellation: boolean;
@@ -36,6 +37,7 @@ export type SincroAppSettingsSnapshot = {
     enableInspector: boolean;
     enableVR: boolean;
     characterMotionScale: number;
+    sincroPoseRetargetScale: number;
     characterEyeTrackingScale: number;
     lgTileHeight: number;
     lgNumViews: number;

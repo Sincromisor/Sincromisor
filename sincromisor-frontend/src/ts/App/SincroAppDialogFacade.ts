@@ -27,6 +27,7 @@ export type SincroAppDialogFacade = {
     videoInputDeviceId(): string | null;
     enableTalk(): boolean;
     enableCharacterGaze(): boolean;
+    enableSincroPoseTracking(): boolean;
     enableAutoMute(): boolean;
     enableNoiseSuppression(): boolean;
     enableEchoCancellation(): boolean;
@@ -34,6 +35,7 @@ export type SincroAppDialogFacade = {
     enableVadGate(): boolean;
     enableVenueNoiseMode(): boolean;
     characterMotionScale(): number;
+    sincroPoseRetargetScale(): number;
     characterEyeTrackingScale(): number;
 
     setTalkMode(value: string): void;
@@ -48,10 +50,12 @@ export type SincroAppDialogFacade = {
     setEnableCharacter(enabled: boolean): void;
     setEnableTalk(enabled: boolean): void;
     setEnableCharacterGaze(enabled: boolean): void;
+    setEnableSincroPoseTracking(enabled: boolean): void;
     setEnableAutoMute(enabled: boolean): void;
     setEnableInspector(enabled: boolean): void;
     setEnableVR(enabled: boolean): void;
     setCharacterMotionScale(value: number): void;
+    setSincroPoseRetargetScale(value: number): void;
     setCharacterEyeTrackingScale(value: number): void;
 
     settingsUiState(): DialogSettingsUiState;

@@ -7,6 +7,10 @@ import {
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
     type SincroPoseMotionSnapshot,
 } from "../FaceTracking/SincroPoseMotionSnapshot";
+import {
+    DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
+    type SincroPoseRetargetConfig,
+} from "../SincroVRM/VRMCharacter/SincroPoseRetargeter";
 
 type AudioMeterHandle = {
     audioContext: AudioContext;
@@ -174,6 +178,7 @@ type GazeSnapshot = {
 type SincroMotionSnapshot = {
     face: SincroFaceMotionSnapshot;
     pose: SincroPoseMotionSnapshot;
+    poseRetarget: Pick<SincroPoseRetargetConfig, "intensityScale" | "minConfidence" | "returnToNeutralMs" | "smoothingMs">;
 };
 
 type RtcSnapshot = {
@@ -285,6 +290,12 @@ function createDefaultSnapshot(): DebugConsoleSnapshot {
         sincroMotion: {
             face: createDefaultFaceMotionSnapshot(),
             pose: createDefaultPoseMotionSnapshot(),
+            poseRetarget: {
+                intensityScale: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.intensityScale,
+                minConfidence: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.minConfidence,
+                returnToNeutralMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.returnToNeutralMs,
+                smoothingMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.smoothingMs,
+            },
         },
         rtc: {
             iceConnectionState: "",
@@ -337,6 +348,7 @@ export class DebugConsoleManager {
     private onLocalVadThresholdModeChange: (mode: VadThresholdMode) => void = () => { };
     private onLocalVadRmsThresholdChange: (threshold: number) => void = () => { };
     private onCharacterGazeTrackingTuningChange: (config: CharacterGazeTrackingTuningUiConfig) => void = () => { };
+    private onSincroPoseRetargetConfigChange: (config: Partial<SincroPoseRetargetConfig>) => void = () => { };
 
     static getManager(): DebugConsoleManager {
         if (!DebugConsoleManager.instance) {
@@ -956,6 +968,31 @@ export class DebugConsoleManager {
         }));
     }
 
+    setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
+        this.updateSnapshot((snapshot) => ({
+            ...snapshot,
+            sincroMotion: {
+                ...snapshot.sincroMotion,
+                poseRetarget: {
+                    ...snapshot.sincroMotion.poseRetarget,
+                    intensityScale: clampNumber(config.intensityScale ?? snapshot.sincroMotion.poseRetarget.intensityScale, 0, 1.2),
+                    minConfidence: clampNumber(config.minConfidence ?? snapshot.sincroMotion.poseRetarget.minConfidence, 0, 1),
+                    returnToNeutralMs: clampNumber(config.returnToNeutralMs ?? snapshot.sincroMotion.poseRetarget.returnToNeutralMs, 80, 2000),
+                    smoothingMs: clampNumber(config.smoothingMs ?? snapshot.sincroMotion.poseRetarget.smoothingMs, 40, 800),
+                },
+            },
+        }));
+    }
+
+    setSincroPoseRetargetConfigChangeCallback(callback: (config: Partial<SincroPoseRetargetConfig>) => void): void {
+        this.onSincroPoseRetargetConfigChange = callback;
+    }
+
+    applySincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
+        this.setSincroPoseRetargetConfig(config);
+        this.onSincroPoseRetargetConfigChange(this.snapshot.sincroMotion.poseRetarget);
+    }
+
     setCharacterGazePaused(paused: boolean): void {
         if (paused) {
             this.updateSnapshot((snapshot) => ({
@@ -980,6 +1017,7 @@ export class DebugConsoleManager {
                         fallbackReason: "tracking_paused",
                         lastUpdatedAtMs: performance.now(),
                     },
+                    poseRetarget: snapshot.sincroMotion.poseRetarget,
                 },
             }));
             return;
@@ -1050,4 +1088,11 @@ export class DebugConsoleManager {
             listener(event);
         }
     }
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+    if (!Number.isFinite(value)) {
+        return min;
+    }
+    return Math.max(min, Math.min(max, value));
 }

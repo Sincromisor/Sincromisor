@@ -23,6 +23,7 @@ type BooleanDialogSettingKey =
     | "enableCharacter"
     | "enableTalk"
     | "enableCharacterGaze"
+    | "enableSincroPoseTracking"
     | "enableAutoMute"
     | "enableNoiseSuppression"
     | "enableEchoCancellation"
@@ -162,6 +163,10 @@ export class DialogManager {
         this.setCheckboxValue("enableCharacterGaze", enabled);
     }
 
+    setEnableSincroPoseTracking(enabled: boolean): void {
+        this.setCheckboxValue("enableSincroPoseTracking", enabled);
+    }
+
     setEnableAutoMute(enabled: boolean): void {
         this.setCheckboxValue("enableAutoMute", enabled);
     }
@@ -180,6 +185,10 @@ export class DialogManager {
 
     setCharacterMotionScale(value: number): void {
         this.setNumericValue("characterMotionScale", value);
+    }
+
+    setSincroPoseRetargetScale(value: number): void {
+        this.setNumericValue("sincroPoseRetargetScale", value);
     }
 
     setCharacterEyeTrackingScale(value: number): void {
@@ -226,6 +235,10 @@ export class DialogManager {
         return this.stateStore.get("enableCharacterGaze");
     }
 
+    enableSincroPoseTracking(): boolean {
+        return this.stateStore.get("enableSincroPoseTracking");
+    }
+
     enableAutoMute(): boolean {
         return this.stateStore.get("enableAutoMute");
     }
@@ -263,6 +276,10 @@ export class DialogManager {
         return this.stateStore.get("characterMotionScale");
     }
 
+    sincroPoseRetargetScale(): number {
+        return this.stateStore.get("sincroPoseRetargetScale");
+    }
+
     characterEyeTrackingScale(): number {
         return this.stateStore.get("characterEyeTrackingScale");
     }
@@ -284,7 +301,7 @@ export class DialogManager {
     }
 
     private setNumericValue(
-        key: "characterMotionScale" | "characterEyeTrackingScale",
+        key: "characterMotionScale" | "sincroPoseRetargetScale" | "characterEyeTrackingScale",
         value: number,
     ): void {
         this.stateStore.set(key, value);
@@ -397,6 +414,7 @@ export class DialogManager {
             enableCharacter: "enableCharacter",
             enableTalk: "enableTalk",
             enableCharacterGaze: "enableCharacterGaze",
+            enableSincroPoseTracking: "enableSincroPoseTracking",
             enableAutoMute: "enableAutoMute",
             enableNoiseSuppression: "enableNoiseSuppression",
             enableEchoCancellation: "enableEchoCancellation",

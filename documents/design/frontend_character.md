@@ -85,7 +85,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 
 ### 5.2 非機能要件
 
-- 性能: 連続アニメーションは `requestAnimationFrame` / renderer loop で更新。FaceLandmarker / PoseLandmarker は描画fpsから独立した推論fpsで動かし、重い場合は推論fps低下、face-only降格、または同期停止へfallbackする。初期実装では FaceLandmarker 15fps、PoseLandmarker 12fps を既定とし、Pose 推論が 38ms 以上で4回続くか、姿勢検出失敗が18回続いた場合は pose-only fallback を発火する
+- 性能: 連続アニメーションは `requestAnimationFrame` / renderer loop で更新。FaceLandmarker / PoseLandmarker は描画fpsから独立した推論fpsで動かし、重い場合は推論fps低下、face-only降格、または同期停止へfallbackする。初期実装では FaceLandmarker 15fps、PoseLandmarker 12fps を既定とし、Pose 推論が 38ms 以上で4回続くか、姿勢検出失敗が18回続いた場合は pose-only fallback を発火する。PoseLandmarker は `enableSincroPoseTracking` で実行時ON/OFFでき、OFF時も face-only 同期を継続する。
 - 可用性: モデル未検出時はニュートラル姿勢へ戻す
 - スケーラビリティ: クライアント側計算中心でサーバー負荷に依存しない
 - セキュリティ: ローカルVRMアップロードを扱うためファイル種別の最低限検証を実施
@@ -128,7 +128,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 | 観点 | `chat` | `sincro` |
 | --- | --- | --- |
 | 目的 | 対話相手を見て、会話中の存在感を出す | ユーザーの顔・姿勢と同じ動きをする |
-| 主入力 | `CharacterGaze` の顔位置・検出有無 | `faceMotion`、将来は `poseMotion` |
+| 主入力 | `CharacterGaze` の顔位置・検出有無 | `faceMotion`、任意で `poseMotion` |
 | MediaPipe model | `FaceDetector` | `FaceLandmarker`、optional `PoseLandmarker` |
 | 状態 | gaze、VAD、AI speech、thinking、error | faceMotion、poseMotion、tracking quality、fallback state |
 | 首・目 | 相手を見る方向へ追従。AI発話 gesture や視線外しを重ねる | ユーザーの head pose / eye / blink retarget を優先 |
@@ -159,8 +159,8 @@ flowchart LR
 
 - `TrackerRuntime`: camera track の取得・差し替え・解放、video element 接続、推論 loop の開始/停止、推論fps制限、runtime error の通知を担当する。DOM / UI 更新は runtime 外へ出し、Worker 化しやすい境界にする。FaceLandmarker と optional PoseLandmarker は同じ video frame を共有し、pose の性能ゲートが発火しても face tracker loop は継続する。
 - `SincroFaceTracker`: FaceLandmarker を初期化し、head pose、face blendshape、必要最小限の landmarks を `SincroFaceMotionSnapshot` へ正規化する。`CharacterGaze` のAutoMuteや注視計算は持たない。
-- `SincroPoseTracker`: PoseLandmarker を使う optional tracker。肩、上半身、腕の姿勢候補を `SincroPoseMotionSnapshot` へ正規化する。初期実装では肩・肘・手首・腰の normalized landmarks から肩傾き、胴体傾き、上腕リフト、上腕開き、前腕屈曲、手首上げを低振幅 retarget 用に算出する。
-- Retargeter: neutral calibration、軸変換、左右ミラー、clamp、deadband、smoothing、confidence gate を持つ。MediaPipe の category 名や行列を controller へ漏らさない。
+- `SincroPoseTracker`: PoseLandmarker を使う optional tracker。肩、上半身、腕の姿勢候補を `SincroPoseMotionSnapshot` へ正規化する。初期実装では肩・肘・手首・腰の normalized landmarks から肩傾き、胴体傾き、上腕リフト、上腕開き、前腕屈曲、手首上げを低振幅 retarget 用に算出する。`enableSincroPoseTracking` が false の場合は PoseLandmarker を起動せず、`poseMotion.trackingEnabled=false` として扱う。
+- Retargeter: neutral calibration、軸変換、左右ミラー、clamp、deadband、smoothing、confidence gate を持つ。MediaPipe の category 名や行列を controller へ漏らさない。`CharacterBehaviorSnapshot.motionPolicy.allowPoseRetarget=false`、`poseMotion.degradedToFaceOnly=true`、confidence 不足、または Pose OFF の場合は neutral frame へ戻す。
 - Controller: retarget 済みのVRM向け値だけを受け取り、存在するボーン・expressionへ適用する。欠損部位は例外停止ではなく無効化または近い要素へfallbackする。
 
 ## 7. 詳細設計
@@ -175,15 +175,15 @@ flowchart LR
   - `FaceEmotionController`: `ChatMessage.expression_code` を `relaxed/happy/sad/angry/surprised` にマップし、`CharacterBehaviorSnapshot` を入力に短時間アニメーションを進める。`expression_code` 未到着の新規発話は neutral として扱い、前発話の表情残留を避ける
   - `EyeBehaviorController`: VRM標準 `lookLeft/lookRight/lookUp/lookDown` expression を軸別に優先して目線を制御し、左右または上下の不足軸だけ `leftEye/rightEye` ボーンへフォールバックする。MediaPipe の画像Y座標は下向き正なので、VRMへの上下適用段で反転する。対話状態に応じたblink schedule、考え中の短い視線外し、低振幅microsaccade、AI発話中の感情別視線offset、`surprised` 中のblink抑制を扱う。顔位置追跡の強度はキャラクター表示設定から即時調整できる
   - `CharacterBehaviorState`: VAD、顔検出、text/telop、感情コード、media/gaze/RTC エラーを `idle/attending/user_speaking/thinking/ai_speaking/face_lost/error_or_disconnected` の対話状態 snapshot へ集約。VAD onset debounce、発話 hold、発話時間を持ち、短いノイズを聞き姿勢・相槌 trigger へ直結させない。AI発話は `speech_id` ごとの感情コード cache を参照し、text 未到着または `expression_code` なしの発話は neutral として扱う。Gaze callback が止まった場合は stale として `face_lost` へ遷移させる。AI発話は `new_text`、`speech_id`、句読点、mora長、一定間隔から `speech_start/cadence/phrase/punctuation` の beat に間引く。`talkMode`、同期用 `faceMotion`、optional `poseMotion`、tracker fallback state を追加できる構造にし、`chat` の注視 snapshot と `sincro` の同期 snapshot を同じフィールドへ混ぜない
-  - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、hips/root を基準位置へ固定したうえで、呼吸・spine/chest/shoulder の idle offset、VAD連動の聞き姿勢、発話終了後の小さな相槌 nod、AI発話中の感情別姿勢と beat gesture を適用。上半身 motion はキャラクター表示設定の `characterMotionScale` で一括スケールする。`chat` では既存の対話演出を優先し、`sincro` では retarget 済み face / pose motion を優先してAI発話gestureやthinking aversionを抑制する
-  - `ArmBoneController`: idleの腕・肘・手首揺れに、`CharacterBehaviorSnapshot.aiSpeech.beatId` 由来の短い片腕gestureを重ねる。左右を交互に主役化し、発話開始・文節・句読点で強度を変える
+  - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、hips/root を基準位置へ固定したうえで、呼吸・spine/chest/shoulder の idle offset、VAD連動の聞き姿勢、発話終了後の小さな相槌 nod、AI発話中の感情別姿勢と beat gesture を適用。上半身 motion はキャラクター表示設定の `characterMotionScale` で一括スケールする。`chat` では既存の対話演出を優先し、`sincro` では retarget 済み face / pose motion を優先してAI発話gestureやthinking aversionを抑制する。Pose retarget は `motionPolicy.allowPoseRetarget` をVRM適用前の明示 gate として通過した場合だけ加算する
+  - `ArmBoneController`: idleの腕・肘・手首揺れに、`CharacterBehaviorSnapshot.aiSpeech.beatId` 由来の短い片腕gestureを重ねる。左右を交互に主役化し、発話開始・文節・句読点で強度を変える。Pose retarget が有効な場合のみ上腕・前腕・手首へ低振幅の additive offset を加える
   - `CharacterMotionConfig`: idle/listening/AI発話 motion の周期・振幅・easing を集約し、腕/脚/胴体 controller の `performance.now()` 直参照を避ける。AI発話中は posture blend を控えめにし、beat duration を長めにして首・肩・腕の同時ピークを避ける
   - `CharacterGaze`: `chat` 向けの顔キーポイント追跡、視線角推定、arrive/leaveイベント通知、AutoMute連動を担当する。`detectForVideo()` へ渡す前にvideo frameのreadyStateとdecode済み寸法を確認し、MediaPipe実行時例外では検出ループを停止して上位controllerへ通知する。`sincro` の head pose / blendshape / pose 同期責務は持たない
   - `TrackerRuntime`: `SincroFaceTracker` と optional `SincroPoseTracker` の共有実行基盤。camera track / video element / 推論 loop を所有し、二重 `getUserMedia` と二重推論 loop を避ける。将来のWorker化に備え、UI更新、DebugConsole更新、VRM適用をruntime coreへ持ち込まない
   - `SincroFaceTracker`: FaceLandmarker の `outputFaceBlendshapes` と `outputFacialTransformationMatrixes` を有効化し、検出有無、confidence相当、head pose、blendshape map、推論時間、推論fps、`lastUpdatedAtMs` を `SincroFaceMotionSnapshot` に正規化する
   - `SincroPoseTracker`: PoseLandmarker の結果から肩・胴体・腕の大まかな姿勢を `SincroPoseMotionSnapshot` に正規化する optional module。推論fpsは face より低くし、性能ゲート超過時は `degradedToFaceOnly` を立てて face-only に戻す
   - `SincroFaceRetargeter`: `SincroFaceMotionSnapshot` を VRM の head / eye / blink / mouth expression 向け値へ変換する。neutral calibration、clamp、deadband、smoothing、confidence gate、左右ミラー補正をこの層で扱う
-  - `SincroPoseRetargeter`: optional `SincroPoseMotionSnapshot` を spine/chest/shoulder/arm向け値へ変換する。初期段階では低振幅・強い smoothing をかけ、腕が画面外に出た場合は部位単位で neutral へ戻す
+  - `SincroPoseRetargeter`: optional `SincroPoseMotionSnapshot` を spine/chest/shoulder/arm向け値へ変換する。初期段階では低振幅・強い smoothing をかけ、腕が画面外に出た場合は部位単位で neutral へ戻す。`intensityScale` は設定の `sincroPoseRetargetScale` と Debug Console の Pose retarget 調整から変更でき、`minConfidence` / `smoothingMs` / `returnToNeutralMs` は Debug Console で調整できる
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`
@@ -214,11 +214,12 @@ flowchart LR
 - 主要データ構造:
   - `CurrentMora`（TalkManagerが現在発話中の母音区間を保持し、CharacterBehaviorState が snapshot へ転写する）
   - `ChatMessage.expression_code`（text_ch先頭 `^N` 由来の感情コード。任意項目）
-  - `characterMotionScale` / `characterEyeTrackingScale`（キャラクター表示設定から変更する runtime tuning 値。既定は 0.72 / 0.68）
+  - `characterMotionScale` / `sincroPoseRetargetScale` / `characterEyeTrackingScale`（キャラクター表示設定から変更する runtime tuning 値。既定は 0.72 / 0.68 / 0.68）
+  - `enableSincroPoseTracking`（`sincro` で PoseLandmarker を実行するかの runtime toggle。OFF時は face-only を維持する）
   - CharacterGazeの `movingAverage[6]`（右目/左目/鼻/口/右耳/左耳）
   - `CharacterBehaviorSnapshot`（VAD envelope、発話開始/終了時刻、直近発話時間、顔検出・顔位置・正面度、AI発話中speech_id/mora ID/母音/感情コード、AI speech beat、対話状態、source別エラーを集約した代表エラーを保持）
   - `SincroFaceMotionSnapshot`（`detected`、`confidence`、`headPose`、`blendshapes`、`inferenceTimeMs`、`inferenceFps`、`lastUpdatedAtMs`、`fallbackReason` を保持。MediaPipe生ランドマークは原則保持しない）
-  - `SincroPoseMotionSnapshot`（`detected`、`confidence`、肩・胴体・腕の正規化姿勢、`inferenceTimeMs`、`inferenceFps`、`lastUpdatedAtMs`、`fallbackReason` を保持。optional）
+  - `SincroPoseMotionSnapshot`（`trackingEnabled`、`detected`、`confidence`、肩・胴体・腕の正規化姿勢、`inferenceTimeMs`、`inferenceFps`、`consecutiveFailures`、`lastUpdatedAtMs`、`degradedToFaceOnly`、`fallbackReason` を保持。optional）
   - `SincroFaceRetargetSnapshot`（head / eye / blink / mouth のVRM向け正規化値。controller はこの形式を読んでボーン・expressionへ適用する）
 - 永続化対象:
   - VRMモデルURL（`DialogManager.vrmUrl`）と、ローカル保存済みVRM（DialogManager経由）

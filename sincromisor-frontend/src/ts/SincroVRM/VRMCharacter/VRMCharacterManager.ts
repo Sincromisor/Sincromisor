@@ -14,6 +14,7 @@ import { CharacterMotionOrchestrator } from './CharacterMotionOrchestrator';
 import type { CharacterMotionTuning } from './CharacterMotionConfig';
 import { SincroFaceRetargeter } from './SincroFaceRetargeter';
 import { SincroPoseRetargeter } from './SincroPoseRetargeter';
+import type { SincroPoseRetargetConfig } from './SincroPoseRetargeter';
 import { VRMCamera } from '../VRMScene/VRMCamera';
 import { Vector3 } from 'three/src/math/Vector3.js';
 import { Box3 } from 'three/src/math/Box3.js';
@@ -273,7 +274,15 @@ export class VRMCharacterManager {
             this.latestBehaviorSnapshot.nowMs,
         );
         const sincroPose = this.sincroPoseRetargeter.retarget(
-            this.latestBehaviorSnapshot.poseMotion,
+            this.latestBehaviorSnapshot.motionPolicy.allowPoseRetarget
+                ? this.latestBehaviorSnapshot.poseMotion
+                : {
+                    ...this.latestBehaviorSnapshot.poseMotion,
+                    detected: false,
+                    confidence: 0,
+                    degradedToFaceOnly: true,
+                    fallbackReason: "pose_retarget_disabled",
+                },
             this.latestBehaviorSnapshot.nowMs,
         );
         this.headBoneController?.update(this.latestBehaviorSnapshot, sincroFace);
@@ -310,6 +319,10 @@ export class VRMCharacterManager {
     setMotionTuning(tuning: Partial<CharacterMotionTuning>): void {
         this.motionOrchestrator?.setTuning(tuning);
         this.eyeBehaviorController?.setTuning(tuning);
+    }
+
+    setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
+        this.sincroPoseRetargeter.setConfig(config);
     }
     /*
     private setEvent(vrm: VRM): void {

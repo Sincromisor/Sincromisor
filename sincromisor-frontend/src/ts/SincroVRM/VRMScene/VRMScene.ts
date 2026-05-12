@@ -5,6 +5,7 @@ import { GridHelper } from 'three/src/helpers/GridHelper.js';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { VRMCharacterManager } from '../VRMCharacter/VRMCharacterManager';
 import type { CharacterMotionTuning } from '../VRMCharacter/CharacterMotionConfig';
+import type { SincroPoseRetargetConfig } from '../VRMCharacter/SincroPoseRetargeter';
 import { VRMCamera } from './VRMCamera';
 import { VRMLight } from './VRMLight';
 
@@ -150,6 +151,10 @@ export class VRMScene {
 
     setCharacterMotionTuning(tuning: Partial<CharacterMotionTuning>): void {
         this.vrmCharacterManager.setMotionTuning(tuning);
+    }
+
+    setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
+        this.vrmCharacterManager.setSincroPoseRetargetConfig(config);
     }
 
     /* WebXR対応チェック */

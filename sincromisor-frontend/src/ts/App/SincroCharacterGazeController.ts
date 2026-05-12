@@ -9,7 +9,6 @@ import { TrackerRuntime } from "../FaceTracking/TrackerRuntime";
 import type { SincroFaceMotionSnapshot } from "../FaceTracking/SincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../FaceTracking/SincroPoseMotionSnapshot";
 
-const SINCRO_POSE_TRACKING_ENABLED = true;
 const SINCRO_POSE_TARGET_INFERENCE_FPS = 12;
 
 // CharacterGaze の起動と、視線検出結果 -> Debug UI / AutoMute 変換を担当する controller。
@@ -66,6 +65,7 @@ export class SincroCharacterGazeController {
         const videoDeviceChanged = forceAll || !prev || prev.videoInputDeviceId !== next.videoInputDeviceId;
         const gazeEnabledChanged = forceAll || !prev || prev.enableCharacterGaze !== next.enableCharacterGaze;
         const talkModeChanged = forceAll || !prev || prev.talkMode !== next.talkMode;
+        const poseTrackingChanged = forceAll || !prev || prev.enableSincroPoseTracking !== next.enableSincroPoseTracking;
 
         this.characterBehaviorState.setTalkMode(next.talkMode);
         if (videoDeviceChanged) {
@@ -83,7 +83,7 @@ export class SincroCharacterGazeController {
             }
             return;
         }
-        if (gazeEnabledChanged || videoDeviceChanged || talkModeChanged) {
+        if (gazeEnabledChanged || videoDeviceChanged || talkModeChanged || poseTrackingChanged) {
             this.scheduleCameraRefresh();
         }
     }
@@ -216,9 +216,10 @@ export class SincroCharacterGazeController {
         const characterGaze = CharacterGaze.getManager();
         characterGaze.detachCamera();
         this.updateEyeTargetOverlay(characterGaze, false, []);
+        const poseTrackingEnabled = this.dialogManager.enableSincroPoseTracking();
         this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.characterBehaviorState.setFaceMotionTrackingEnabled(true);
-        this.characterBehaviorState.setPoseMotionTrackingEnabled(SINCRO_POSE_TRACKING_ENABLED);
+        this.characterBehaviorState.setPoseMotionTrackingEnabled(poseTrackingEnabled);
         console.log("start SincroFaceTracker");
         await this.trackerRuntime.startFaceTracking(
             nextVideoTrack,
@@ -238,7 +239,7 @@ export class SincroCharacterGazeController {
             },
             undefined,
             {
-                enabled: SINCRO_POSE_TRACKING_ENABLED,
+                enabled: poseTrackingEnabled,
                 targetInferenceFps: SINCRO_POSE_TARGET_INFERENCE_FPS,
             },
         );
@@ -368,6 +369,7 @@ export class SincroCharacterGazeController {
     private readDialogGazeSettingsSnapshot(): DialogGazeSettingsSnapshot {
         return {
             enableCharacterGaze: this.dialogManager.enableCharacterGaze(),
+            enableSincroPoseTracking: this.dialogManager.enableSincroPoseTracking(),
             videoInputDeviceId: this.dialogManager.videoInputDeviceId(),
             talkMode: this.dialogManager.talkMode(),
         };
@@ -384,6 +386,7 @@ export class SincroCharacterGazeController {
 
 type DialogGazeSettingsSnapshot = {
     enableCharacterGaze: boolean;
+    enableSincroPoseTracking: boolean;
     videoInputDeviceId: string | null;
     talkMode: string;
 };
