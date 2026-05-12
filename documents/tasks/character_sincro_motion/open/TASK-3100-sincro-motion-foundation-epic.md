@@ -80,11 +80,16 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3101-sincro-motion-architecture-and-design-doc.md`
 - Open: `documents/tasks/character_sincro_motion/open/TASK-3102-face-tracking-runtime-and-sincro-face-tracker.md`
-- Open: `documents/tasks/character_sincro_motion/open/TASK-3103-sincro-face-retargeting-head-eye-mouth.md`
-- Open: `documents/tasks/character_sincro_motion/open/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3103-sincro-face-retargeting-head-eye-mouth.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
 - Open: `documents/tasks/character_sincro_motion/open/TASK-3105-pose-landmarker-feasibility-spike.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3106-optional-sincro-pose-tracker-and-performance-gates.md`
-- Open: `documents/tasks/character_sincro_motion/open/TASK-3107-sincro-motion-observability-settings-and-verification.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3107-sincro-motion-observability-settings-and-verification.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3108-sincro-head-pitch-direction-fix.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3109-sincro-separate-blink-expression-calibration.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3110-sincro-blink-open-threshold-tuning.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3111-sincro-pose-retarget-formalization-and-tuning.md`
+- Open: `documents/tasks/character_sincro_motion/open/TASK-3112-sincro-tracker-workerization-and-load-isolation.md`
 
 ## 完了条件
 

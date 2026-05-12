@@ -43,13 +43,13 @@ export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
     minConfidence: 0.45,
     returnToNeutralMs: 520,
     smoothingMs: 155,
-    torsoLeanRad: MathUtils.degToRad(2.2),
-    shoulderRollRad: MathUtils.degToRad(1.6),
-    shoulderLiftRad: MathUtils.degToRad(1.4),
-    upperArmLiftRad: MathUtils.degToRad(5.0),
-    upperArmOpenRad: MathUtils.degToRad(4.2),
-    lowerArmFlexRad: MathUtils.degToRad(5.4),
-    wristRaiseRad: MathUtils.degToRad(2.2),
+    torsoLeanRad: MathUtils.degToRad(6.0),
+    shoulderRollRad: MathUtils.degToRad(4.8),
+    shoulderLiftRad: MathUtils.degToRad(4.0),
+    upperArmLiftRad: MathUtils.degToRad(18.0),
+    upperArmOpenRad: MathUtils.degToRad(12.0),
+    lowerArmFlexRad: MathUtils.degToRad(14.0),
+    wristRaiseRad: MathUtils.degToRad(7.0),
 };
 
 const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
