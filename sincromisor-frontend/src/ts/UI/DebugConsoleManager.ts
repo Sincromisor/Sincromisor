@@ -2,6 +2,7 @@ import {
     DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
     type SincroFaceMotionSnapshot,
 } from "../FaceTracking/SincroFaceMotionSnapshot";
+import type { SincroTrackerWorkerStats } from "../FaceTracking/SincroTrackerWorkerTypes";
 import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
@@ -178,6 +179,7 @@ type GazeSnapshot = {
 type SincroMotionSnapshot = {
     face: SincroFaceMotionSnapshot;
     pose: SincroPoseMotionSnapshot;
+    tracker: SincroTrackerWorkerStats;
     poseRetarget: Pick<SincroPoseRetargetConfig, "intensityScale" | "minConfidence" | "returnToNeutralMs" | "smoothingMs">;
 };
 
@@ -290,6 +292,15 @@ function createDefaultSnapshot(): DebugConsoleSnapshot {
         sincroMotion: {
             face: createDefaultFaceMotionSnapshot(),
             pose: createDefaultPoseMotionSnapshot(),
+            tracker: {
+                mode: "main-thread",
+                status: "idle",
+                transferTimeMs: 0,
+                workerRoundTripMs: 0,
+                loadTimeMs: 0,
+                droppedFrames: 0,
+                fallbackReason: null,
+            },
             poseRetarget: {
                 intensityScale: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.intensityScale,
                 minConfidence: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.minConfidence,
@@ -968,6 +979,16 @@ export class DebugConsoleManager {
         }));
     }
 
+    updateSincroTrackerStats(snapshot: SincroTrackerWorkerStats): void {
+        this.updateSnapshot((currentSnapshot) => ({
+            ...currentSnapshot,
+            sincroMotion: {
+                ...currentSnapshot.sincroMotion,
+                tracker: { ...snapshot },
+            },
+        }));
+    }
+
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
         this.updateSnapshot((snapshot) => ({
             ...snapshot,
@@ -1016,6 +1037,10 @@ export class DebugConsoleManager {
                         ...createDefaultPoseMotionSnapshot(),
                         fallbackReason: "tracking_paused",
                         lastUpdatedAtMs: performance.now(),
+                    },
+                    tracker: {
+                        ...snapshot.sincroMotion.tracker,
+                        status: "idle",
                     },
                     poseRetarget: snapshot.sincroMotion.poseRetarget,
                 },

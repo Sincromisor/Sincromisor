@@ -22,6 +22,7 @@ const FACE_BLENDSHAPE_KEYS = [
 export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionPanelProps) {
     const face = snapshot.sincroMotion.face;
     const pose = snapshot.sincroMotion.pose;
+    const tracker = snapshot.sincroMotion.tracker;
     const poseRetarget = snapshot.sincroMotion.poseRetarget;
 
     return (
@@ -38,6 +39,8 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                 <article className="sincroMotionSection">
                     <h4>Face</h4>
                     <dl className="gazeTable">
+                        <dt>Runtime</dt>
+                        <dd>{formatTrackerRuntime(tracker)}</dd>
                         <dt>Status</dt>
                         <dd>{formatTrackingStatus(face.trackingEnabled, face.detected, face.fallbackReason)}</dd>
                         <dt>Confidence</dt>
@@ -150,6 +153,12 @@ function formatTrackingStatus(enabled: boolean, detected: boolean, fallbackReaso
         return `fallback (${fallbackReason})`;
     }
     return detected ? "detected" : "lost";
+}
+
+function formatTrackerRuntime(snapshot: DebugConsoleSnapshot["sincroMotion"]["tracker"]): string {
+    const base = `${snapshot.mode} / ${snapshot.status}`;
+    const perf = `load ${snapshot.loadTimeMs.toFixed(1)}ms / transfer ${snapshot.transferTimeMs.toFixed(1)}ms / rtt ${snapshot.workerRoundTripMs.toFixed(1)}ms / drop ${snapshot.droppedFrames}`;
+    return snapshot.fallbackReason ? `${base} (${snapshot.fallbackReason}) / ${perf}` : `${base} / ${perf}`;
 }
 
 function formatPoseStatus(snapshot: SincroPoseMotionSnapshot): string {
