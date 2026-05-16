@@ -46,8 +46,8 @@ class RTCSessionManager:
                 self.__logger.info(
                     f"Try session update via /offer (session_id={requested_session_id})",
                 )
-                session_desc: RTCSessionProcessDescription | None = self.__processes.get(
-                    requested_session_id
+                session_desc: RTCSessionProcessDescription | None = (
+                    self.__processes.get(requested_session_id)
                 )
                 if session_desc is not None and session_desc.is_active():
                     updated = self.__update_session_locked(
@@ -182,7 +182,9 @@ class RTCSessionManager:
         with self.__lock:
             return self.__add_ice_candidate_locked(session_candidate)
 
-    def __add_ice_candidate_locked(self, session_candidate: RTCSessionCandidate) -> bool:
+    def __add_ice_candidate_locked(
+        self, session_candidate: RTCSessionCandidate
+    ) -> bool:
         # セッション単位で独立プロセスを持つ設計のため、
         # candidate適用は「親プロセス -> 対象子プロセス」へPipeで中継する。
         session_desc: RTCSessionProcessDescription | None = self.__processes.get(

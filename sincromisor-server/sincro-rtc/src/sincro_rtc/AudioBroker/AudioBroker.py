@@ -224,7 +224,9 @@ class AudioBroker:
                 self.__logger.info("AudioBroker worker connection recovered.")
             except AudioBrokerError:
                 self.__logger.error(f"AudioBrokerError: {traceback.format_exc()}")
-                self.__err_to_chat(message=f"AudioBrokerError: {traceback.format_exc()}")
+                self.__err_to_chat(
+                    message=f"AudioBrokerError: {traceback.format_exc()}"
+                )
                 self.__mark_connect_failure()
             except ConnectionRefusedError:
                 self.__logger.error(f"ConnectionRefusedError: {traceback.format_exc()}")
@@ -237,7 +239,9 @@ class AudioBroker:
                 self.__err_to_chat(message=f"TimeoutError: {traceback.format_exc()}")
                 self.__mark_connect_failure()
             except Exception as e:
-                self.__logger.error(f"UnknownError: {repr(e)}\n{traceback.format_exc()}")
+                self.__logger.error(
+                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
+                )
                 self.__err_to_chat(
                     message=f"UnknownError: {repr(e)}\n{traceback.format_exc()}"
                 )
@@ -254,7 +258,9 @@ class AudioBroker:
 
             # どれか1つでもsender/receiverが終了した場合は不健全と見なし再接続対象にする。
             if not self.__communicators.is_alive():
-                self.__logger.warning("Worker communication thread terminated. reconnect required.")
+                self.__logger.warning(
+                    "Worker communication thread terminated. reconnect required."
+                )
                 self.__running.clear()
                 self.__close_communicators()
                 return False
@@ -307,7 +313,9 @@ class AudioBroker:
                 service_address=self.__fallback_host,
                 service_port=self.__fallback_port,
             )
-            self.__logger.warning(f"Set fallback server :{self.__fallback_host}:{self.__fallback_port}")
+            self.__logger.warning(
+                f"Set fallback server :{self.__fallback_host}:{self.__fallback_port}"
+            )
         if worker is None:
             raise AudioBrokerError(f"{worker_type} worker is not found.")
         return worker
@@ -440,7 +448,9 @@ class AudioBroker:
 
         self.__frame_buffer.append(frame)
         if len(self.__frame_buffer) >= 50:
-            self.__logger.warning(f"add_frame - overflow len: {len(self.__frame_buffer)}")
+            self.__logger.warning(
+                f"add_frame - overflow len: {len(self.__frame_buffer)}"
+            )
             # 溢れたら0.5秒分(25frame)破棄する
             while len(self.__frame_buffer) >= 25:
                 self.__frame_buffer.popleft()

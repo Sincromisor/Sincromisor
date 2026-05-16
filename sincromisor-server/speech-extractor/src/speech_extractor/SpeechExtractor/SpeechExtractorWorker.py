@@ -152,8 +152,10 @@ class SpeechExtractorWorker:
             self.voice_sampling_rate,
         )
         try:
-            classification_result_list: list[containers.ClassificationResult] = SpeechExtractorWorker.classifier.classify(
-                audio_clip,
+            classification_result_list: list[containers.ClassificationResult] = (
+                SpeechExtractorWorker.classifier.classify(
+                    audio_clip,
+                )
             )
         except Exception as e:
             self.logger.error(f"UnknownError: {repr(e)}")
