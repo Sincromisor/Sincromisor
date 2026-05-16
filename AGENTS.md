@@ -46,7 +46,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 
 - 設計思想: (1) 負債が残りにくい方向を選ぶ (2) debug と更新のしやすさを維持する
 - ルールは原則 hard。**破る場合は同じ行または直前行に `# reason: <理由>` を付ける**(レビューでの差し戻し基準は理由の有無)
-- コミット前は `uv run ruff check .` / `uv run ruff format --check .` / `uv run ty check .` を必ず通す。`uv run mypy .` と `uv run pytest` は対象 package の整備状況に応じて実行する
+- コミット前は `uv run ruff check .` / `uv run ruff format --check .` / `uv run --group dev --group full ty check .` を必ず通す。`uv run pytest` は対象 package の整備状況に応じて実行する
 
 ## コーディング規約 (TypeScript)
 

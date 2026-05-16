@@ -4,6 +4,8 @@ from sudachipy import Dictionary, Morpheme, MorphemeList, SplitMode, Tokenizer
 
 # https://warp.da.ndl.go.jp/info:ndljp/pid/8703998/www.ndl.go.jp/jp/library/data/wakati.html
 
+PartOfSpeech = tuple[str, str, str, str, str, str]
+
 
 class PokeText:
     def __init__(self, debug=False):
@@ -79,7 +81,7 @@ class PokeText:
 
     def pos_check(
         self,
-        target_pos: list | None,
+        target_pos: PartOfSpeech | None,
         pos0: str | None = None,
         pos1: str | None = None,
         pos2: str | None = None,

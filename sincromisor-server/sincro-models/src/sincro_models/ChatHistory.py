@@ -29,6 +29,7 @@ if __name__ == "__main__":
     history = ChatHistory()
     history.append(
         ChatMessage(
+            speech_id=1,
             message_type="user",
             speaker_id="gloria",
             speaker_name="Gloria",
