@@ -1,5 +1,5 @@
 import type { SincroFaceTracker } from "./SincroFaceTracker";
-import type { SincroPoseTargetPointSnapshot } from "./SincroPoseMotionSnapshot";
+import { DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT } from "./SincroPoseMotionSnapshot";
 import type { SincroPoseTracker } from "./SincroPoseTracker";
 import type {
     SincroTrackerWorkerDetectMessage,
@@ -232,6 +232,14 @@ function createStoppedPoseSnapshot(reason: string | null, nowMs: number) {
             wristRaise: 0,
             targets: createStoppedArmTargets(),
         },
+        lowerBodyTargets: {
+            leftHip: createStoppedTargetPoint(),
+            rightHip: createStoppedTargetPoint(),
+            leftKnee: createStoppedTargetPoint(),
+            rightKnee: createStoppedTargetPoint(),
+            leftAnkle: createStoppedTargetPoint(),
+            rightAnkle: createStoppedTargetPoint(),
+        },
         inferenceTimeMs: 0,
         inferenceFps: 0,
         consecutiveFailures: 0,
@@ -249,23 +257,9 @@ function createStoppedArmTargets() {
     };
 }
 
-function createStoppedTargetPoint(): SincroPoseTargetPointSnapshot {
+function createStoppedTargetPoint() {
     return {
-        tracked: false,
-        quality: "lost",
-        confidence: 0,
-        visibility: 0,
-        presence: 0,
-        hasFiniteCoordinates: false,
-        usableForIk: false,
-        ikWeight: 0,
-        stale: true,
-        staleReason: "not_tracked",
-        cameraX: 0.5,
-        cameraY: 0.5,
-        cameraZ: null,
-        localX: 0,
-        localY: 0,
-        localZ: null,
+        ...DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT,
+        world: { ...DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT.world },
     };
 }

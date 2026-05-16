@@ -107,6 +107,8 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                         <dd>{formatArmTargets(pose.rightArm)}</dd>
                         <dt>Right Solver</dt>
                         <dd>{formatRetargetedArm(poseRetargetRuntime.rightArm)}</dd>
+                        <dt>Lower Targets</dt>
+                        <dd>{formatLowerBodyTargets(pose)}</dd>
                         <dt>Inference</dt>
                         <dd>{formatInference(pose.inferenceTimeMs, pose.inferenceFps)}</dd>
                         <dt>Failures</dt>
@@ -365,6 +367,18 @@ function formatArmTargets(snapshot: SincroPoseArmMotionSnapshot): string {
     ].join(" / ");
 }
 
+function formatLowerBodyTargets(snapshot: SincroPoseMotionSnapshot): string {
+    const targets = snapshot.lowerBodyTargets;
+    return [
+        `LH ${formatTargetPoint(targets.leftHip)}`,
+        `RH ${formatTargetPoint(targets.rightHip)}`,
+        `LK ${formatTargetPoint(targets.leftKnee)}`,
+        `RK ${formatTargetPoint(targets.rightKnee)}`,
+        `LA ${formatTargetPoint(targets.leftAnkle)}`,
+        `RA ${formatTargetPoint(targets.rightAnkle)}`,
+    ].join(" / ");
+}
+
 function formatRetargetedArm(snapshot: SincroPoseRetargetedArm): string {
     const state = snapshot.ikActive
         ? `ik ${formatRatio(snapshot.ikWeight)}`
@@ -377,10 +391,23 @@ function formatRetargetedArm(snapshot: SincroPoseRetargetedArm): string {
 function formatTargetPoint(snapshot: SincroPoseTargetPointSnapshot): string {
     const coordinateState = snapshot.hasFiniteCoordinates ? "coords_ok" : "coords_missing";
     const ikState = snapshot.usableForIk ? `ik ${formatRatio(snapshot.ikWeight)}` : "ik none";
-    if (!snapshot.tracked) {
-        return `${snapshot.quality} ${formatRatio(snapshot.confidence)} ${coordinateState} ${ikState} ${snapshot.staleReason ?? "stale"}`;
+    const imageTarget = snapshot.tracked
+        ? `2d ${snapshot.quality} (${snapshot.localX.toFixed(2)}, ${snapshot.localY.toFixed(2)}) ${formatRatio(snapshot.confidence)} ${coordinateState} ${ikState}`
+        : `2d ${snapshot.quality} ${formatRatio(snapshot.confidence)} ${coordinateState} ${ikState} ${snapshot.staleReason ?? "stale"}`;
+    return `${imageTarget}; ${formatWorldTarget(snapshot)}`;
+}
+
+function formatWorldTarget(snapshot: SincroPoseTargetPointSnapshot): string {
+    const world = snapshot.world;
+    const ikState = world.worldUsableForIk ? `ik ${formatRatio(world.worldIkWeight)}` : "ik none";
+    if (!world.hasWorldCoordinates) {
+        return `world none ${ikState} ${world.worldStaleReason ?? "world_missing"}`;
     }
-    return `${snapshot.quality} (${snapshot.localX.toFixed(2)}, ${snapshot.localY.toFixed(2)}) ${formatRatio(snapshot.confidence)} ${coordinateState} ${ikState}`;
+    const x = world.normalizedX?.toFixed(2) ?? "-";
+    const y = world.normalizedY?.toFixed(2) ?? "-";
+    const z = world.normalizedZ?.toFixed(2) ?? "-";
+    const anchor = world.anchor === "none" ? "no_anchor" : world.anchor;
+    return `world ${world.worldQuality} ${anchor} (${x}, ${y}, ${z}) ${formatRatio(world.worldConfidence)} ${ikState}`;
 }
 
 function formatInference(timeMs: number, fps: number): string {

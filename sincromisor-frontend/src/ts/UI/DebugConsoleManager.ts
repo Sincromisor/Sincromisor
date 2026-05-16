@@ -4,9 +4,12 @@ import {
 } from "../FaceTracking/SincroFaceMotionSnapshot";
 import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
+    DEFAULT_SINCRO_POSE_LOWER_BODY_TARGET_SNAPSHOT,
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
     type SincroPoseArmMotionSnapshot,
+    type SincroPoseLowerBodyTargetSnapshot,
     type SincroPoseMotionSnapshot,
+    type SincroPoseTargetPointSnapshot,
 } from "../FaceTracking/SincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../FaceTracking/SincroTrackerWorkerTypes";
 import {
@@ -271,6 +274,7 @@ function createDefaultPoseMotionSnapshot(): SincroPoseMotionSnapshot {
         upperBody: { ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT.upperBody },
         leftArm: clonePoseArmMotion(DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT),
         rightArm: clonePoseArmMotion(DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT),
+        lowerBodyTargets: cloneLowerBodyTargets(DEFAULT_SINCRO_POSE_LOWER_BODY_TARGET_SNAPSHOT),
     };
 }
 
@@ -1080,6 +1084,7 @@ export class DebugConsoleManager {
                     upperBody: { ...snapshot.upperBody },
                     leftArm: clonePoseArmMotion(snapshot.leftArm),
                     rightArm: clonePoseArmMotion(snapshot.rightArm),
+                    lowerBodyTargets: cloneLowerBodyTargets(snapshot.lowerBodyTargets),
                 },
             },
         }));
@@ -1321,10 +1326,30 @@ function clonePoseArmMotion(snapshot: SincroPoseArmMotionSnapshot): SincroPoseAr
     return {
         ...snapshot,
         targets: {
-            shoulder: { ...snapshot.targets.shoulder },
-            elbow: { ...snapshot.targets.elbow },
-            wrist: { ...snapshot.targets.wrist },
+            shoulder: cloneTargetPoint(snapshot.targets.shoulder),
+            elbow: cloneTargetPoint(snapshot.targets.elbow),
+            wrist: cloneTargetPoint(snapshot.targets.wrist),
         },
+    };
+}
+
+function cloneLowerBodyTargets(
+    snapshot: SincroPoseLowerBodyTargetSnapshot,
+): SincroPoseLowerBodyTargetSnapshot {
+    return {
+        leftHip: cloneTargetPoint(snapshot.leftHip),
+        rightHip: cloneTargetPoint(snapshot.rightHip),
+        leftKnee: cloneTargetPoint(snapshot.leftKnee),
+        rightKnee: cloneTargetPoint(snapshot.rightKnee),
+        leftAnkle: cloneTargetPoint(snapshot.leftAnkle),
+        rightAnkle: cloneTargetPoint(snapshot.rightAnkle),
+    };
+}
+
+function cloneTargetPoint(snapshot: SincroPoseTargetPointSnapshot): SincroPoseTargetPointSnapshot {
+    return {
+        ...snapshot,
+        world: { ...snapshot.world },
     };
 }
 
