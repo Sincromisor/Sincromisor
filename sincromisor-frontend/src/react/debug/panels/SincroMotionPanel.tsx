@@ -318,13 +318,21 @@ function formatIkRuntime(
     runtime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"],
 ): string {
     const armReasons = [
-        runtime.leftArm.ikActive ? "L ik" : `L ${runtime.leftArm.fallbackReason ?? "feature"}`,
-        runtime.rightArm.ikActive ? "R ik" : `R ${runtime.rightArm.fallbackReason ?? "feature"}`,
+        formatIkArmRuntime("L", runtime.leftArm),
+        formatIkArmRuntime("R", runtime.rightArm),
     ].join(" / ");
     if (runtime.fallbackReason) {
         return `${runtime.ikMode} (${runtime.fallbackReason}) / ${armReasons}`;
     }
     return `${runtime.ikMode} / confidence ${formatRatio(runtime.confidence)} / ${armReasons}`;
+}
+
+function formatIkArmRuntime(label: "L" | "R", snapshot: SincroPoseRetargetedArm): string {
+    if (!snapshot.ikActive) {
+        return `${label} ${snapshot.fallbackReason ?? "feature"}`;
+    }
+    const mode = snapshot.ikWeight >= 0.98 ? "full_ik" : "weak_ik";
+    return `${label} ${mode} ${formatRatio(snapshot.ikWeight)}`;
 }
 
 function formatAnchorRuntime(
@@ -359,7 +367,7 @@ function formatArmTargets(snapshot: SincroPoseArmMotionSnapshot): string {
 
 function formatRetargetedArm(snapshot: SincroPoseRetargetedArm): string {
     const state = snapshot.ikActive
-        ? "ik"
+        ? `ik ${formatRatio(snapshot.ikWeight)}`
         : snapshot.active
           ? "feature"
           : `fallback ${snapshot.fallbackReason ?? "neutral"}`;
@@ -367,10 +375,12 @@ function formatRetargetedArm(snapshot: SincroPoseRetargetedArm): string {
 }
 
 function formatTargetPoint(snapshot: SincroPoseTargetPointSnapshot): string {
+    const coordinateState = snapshot.hasFiniteCoordinates ? "coords_ok" : "coords_missing";
+    const ikState = snapshot.usableForIk ? `ik ${formatRatio(snapshot.ikWeight)}` : "ik none";
     if (!snapshot.tracked) {
-        return `lost ${formatRatio(snapshot.confidence)} ${snapshot.staleReason ?? "stale"}`;
+        return `${snapshot.quality} ${formatRatio(snapshot.confidence)} ${coordinateState} ${ikState} ${snapshot.staleReason ?? "stale"}`;
     }
-    return `(${snapshot.localX.toFixed(2)}, ${snapshot.localY.toFixed(2)}) ${formatRatio(snapshot.confidence)}`;
+    return `${snapshot.quality} (${snapshot.localX.toFixed(2)}, ${snapshot.localY.toFixed(2)}) ${formatRatio(snapshot.confidence)} ${coordinateState} ${ikState}`;
 }
 
 function formatInference(timeMs: number, fps: number): string {

@@ -23,6 +23,7 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 - Done: `done/TASK-3114-sincro-lightweight-two-bone-arm-ik.md`
 - Done: `done/TASK-3115-sincro-pose-upper-body-anchor-and-ik-fallback.md`
 - Open: `open/TASK-3116-sincro-pose-ik-observability-verification-and-design-sync.md`
+- Open: `open/TASK-260517014025-sincro-pose-ik-wrist-confidence-gate.md`
 
 ## 前提
 

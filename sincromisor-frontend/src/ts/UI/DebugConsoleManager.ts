@@ -346,6 +346,7 @@ function createDefaultSnapshot(): DebugConsoleSnapshot {
                 leftArm: {
                     active: false,
                     ikActive: false,
+                    ikWeight: 0,
                     fallbackReason: "neutral",
                     upperArm: { x: 0, y: 0, z: 0 },
                     lowerArm: { x: 0, y: 0, z: 0 },
@@ -354,6 +355,7 @@ function createDefaultSnapshot(): DebugConsoleSnapshot {
                 rightArm: {
                     active: false,
                     ikActive: false,
+                    ikWeight: 0,
                     fallbackReason: "neutral",
                     upperArm: { x: 0, y: 0, z: 0 },
                     lowerArm: { x: 0, y: 0, z: 0 },

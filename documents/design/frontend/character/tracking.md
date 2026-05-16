@@ -32,6 +32,7 @@
     - `SincroFaceMotionSnapshot` を出力する。
 - `SincroPoseTracker`
     - optional PoseLandmarker から肩、胴体、腕 target を抽出する。
+    - 腕 target は通常 retarget 用の `tracked` と IK 用の `quality` / `usableForIk` / `ikWeight` を分けて出力する。
     - performance gate により face-only fallback できる。
 - Retargeters
     - neutral calibration、clamp、deadband、smoothing、confidence gate を扱う。
@@ -53,6 +54,11 @@
     - consecutiveFailures
     - degradedToFaceOnly
     - fallbackReason
+- `SincroPoseTargetPointSnapshot`
+    - `tracked`: 通常 target として十分な confidence と有限座標を持つ状態。
+    - `quality`: `strong` / `weak` / `lost`。`weak` は座標を IK に使えるが、強度を落とすべき状態。
+    - `usableForIk`: IK solver が target として使える状態。wrist / elbow は低 confidence でも有限座標かつ画面近傍なら weak target になり得る。
+    - `ikWeight`: weak target を使う時に IK 強度へ掛ける 0.0-1.0 の重み。
 
 ## Failure Modes
 
@@ -62,6 +68,7 @@
     - main-thread tracker へ fallback する。
 - 推論遅延または連続検出失敗:
     - pose のみ face-only に降格できる。
+    - `pose_inference_too_slow` は起動直後の MediaPipe warm-up サンプルを除外し、target pose inference fps から算出した推論予算で判定する。
 - Firefox GPU delegate 相性:
     - CPU delegate を使う。
 
