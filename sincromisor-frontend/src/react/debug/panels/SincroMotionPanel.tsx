@@ -4,6 +4,7 @@ import type {
     SincroPoseMotionSnapshot,
     SincroPoseTargetPointSnapshot,
 } from "../../../ts/FaceTracking/SincroPoseMotionSnapshot";
+import type { SincroPoseRetargetedArm } from "../../../ts/SincroVRM/VRMCharacter/SincroPoseRetargeter";
 import { DebugConsoleManager, type DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
 import { RangeControl } from "../components/RangeControl";
 import { debugPanelClassName, type DebugPanelProps } from "../debugConsoleTypes";
@@ -86,10 +87,14 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                         <dd>{formatArm(pose.leftArm)}</dd>
                         <dt>Left Targets</dt>
                         <dd>{formatArmTargets(pose.leftArm)}</dd>
+                        <dt>Left Solver</dt>
+                        <dd>{formatRetargetedArm(poseRetargetRuntime.leftArm)}</dd>
                         <dt>Right Arm</dt>
                         <dd>{formatArm(pose.rightArm)}</dd>
                         <dt>Right Targets</dt>
                         <dd>{formatArmTargets(pose.rightArm)}</dd>
+                        <dt>Right Solver</dt>
+                        <dd>{formatRetargetedArm(poseRetargetRuntime.rightArm)}</dd>
                         <dt>Inference</dt>
                         <dd>{formatInference(pose.inferenceTimeMs, pose.inferenceFps)}</dd>
                         <dt>Failures</dt>
@@ -149,6 +154,71 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                             onChange={(value) => manager.applySincroPoseRetargetConfig({
                                 ...poseRetarget,
                                 returnToNeutralMs: value,
+                            })}
+                        />
+                        <RangeControl
+                            id="sincroPoseRetargetIkStrength"
+                            label="IK Strength"
+                            valueLabel={`${Math.round(poseRetarget.armIkStrength * 100)}%`}
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={poseRetarget.armIkStrength}
+                            onChange={(value) => manager.applySincroPoseRetargetConfig({
+                                ...poseRetarget,
+                                armIkStrength: value,
+                            })}
+                        />
+                        <RangeControl
+                            id="sincroPoseRetargetIkTargetScale"
+                            label="IK Target Scale"
+                            valueLabel={poseRetarget.armIkTargetScale.toFixed(2)}
+                            min="0.2"
+                            max="1.5"
+                            step="0.05"
+                            value={poseRetarget.armIkTargetScale}
+                            onChange={(value) => manager.applySincroPoseRetargetConfig({
+                                ...poseRetarget,
+                                armIkTargetScale: value,
+                            })}
+                        />
+                        <RangeControl
+                            id="sincroPoseRetargetIkMaxLift"
+                            label="Max Lift"
+                            valueLabel={`${Math.round(radToDeg(poseRetarget.armIkMaxLiftRad))}deg`}
+                            min="0"
+                            max={String(Math.PI / 2)}
+                            step="0.02"
+                            value={poseRetarget.armIkMaxLiftRad}
+                            onChange={(value) => manager.applySincroPoseRetargetConfig({
+                                ...poseRetarget,
+                                armIkMaxLiftRad: value,
+                            })}
+                        />
+                        <RangeControl
+                            id="sincroPoseRetargetIkMaxOpen"
+                            label="Max Open"
+                            valueLabel={`${Math.round(radToDeg(poseRetarget.armIkMaxOpenRad))}deg`}
+                            min="0"
+                            max={String(Math.PI / 2)}
+                            step="0.02"
+                            value={poseRetarget.armIkMaxOpenRad}
+                            onChange={(value) => manager.applySincroPoseRetargetConfig({
+                                ...poseRetarget,
+                                armIkMaxOpenRad: value,
+                            })}
+                        />
+                        <RangeControl
+                            id="sincroPoseRetargetIkMaxFlex"
+                            label="Max Flex"
+                            valueLabel={`${Math.round(radToDeg(poseRetarget.armIkMaxForearmFlexRad))}deg`}
+                            min="0"
+                            max={String(Math.PI / 2)}
+                            step="0.02"
+                            value={poseRetarget.armIkMaxForearmFlexRad}
+                            onChange={(value) => manager.applySincroPoseRetargetConfig({
+                                ...poseRetarget,
+                                armIkMaxForearmFlexRad: value,
                             })}
                         />
                     </details>
@@ -243,6 +313,13 @@ function formatArmTargets(snapshot: SincroPoseArmMotionSnapshot): string {
     ].join(" / ");
 }
 
+function formatRetargetedArm(snapshot: SincroPoseRetargetedArm): string {
+    const state = snapshot.ikActive
+        ? "ik"
+        : snapshot.active ? "feature" : `fallback ${snapshot.fallbackReason ?? "neutral"}`;
+    return `${state} / upper ${formatVector(snapshot.upperArm)} / lower ${formatVector(snapshot.lowerArm)} / wrist ${formatVector(snapshot.wrist)}`;
+}
+
 function formatTargetPoint(snapshot: SincroPoseTargetPointSnapshot): string {
     if (!snapshot.tracked) {
         return `lost ${formatRatio(snapshot.confidence)} ${snapshot.staleReason ?? "stale"}`;
@@ -256,6 +333,14 @@ function formatInference(timeMs: number, fps: number): string {
 
 function formatRatio(value: number): string {
     return value.toFixed(2);
+}
+
+function formatVector(value: { x: number; y: number; z: number }): string {
+    return `${radToDeg(value.x).toFixed(1)}, ${radToDeg(value.y).toFixed(1)}, ${radToDeg(value.z).toFixed(1)}deg`;
+}
+
+function radToDeg(value: number): number {
+    return value * 180 / Math.PI;
 }
 
 function formatUpdatedAt(value: number | null): string {

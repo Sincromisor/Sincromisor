@@ -776,6 +776,8 @@ div#debugConsole .gazeTable dd {
     margin: 0;
     font-family: "IBM Plex Mono", monospace;
     font-size: 12px;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 div#debugConsole audio#rtcAudio {

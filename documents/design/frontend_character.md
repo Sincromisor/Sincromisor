@@ -183,7 +183,7 @@ flowchart LR
   - `SincroFaceTracker`: FaceLandmarker の `outputFaceBlendshapes` と `outputFacialTransformationMatrixes` を有効化し、検出有無、confidence相当、head pose、blendshape map、推論時間、推論fps、`lastUpdatedAtMs` を `SincroFaceMotionSnapshot` に正規化する
   - `SincroPoseTracker`: PoseLandmarker の結果から肩・胴体・腕の大まかな姿勢を `SincroPoseMotionSnapshot` に正規化する optional module。腕 target は MediaPipe 生ランドマークを外へ出さず、部位ごとに `tracked`、`confidence`、`visibility`、`presence`、`staleReason`、camera normalized 座標、肩幅基準 local 座標を持つ。推論fpsは face より低くし、性能ゲート超過時は `degradedToFaceOnly` を立てて face-only に戻す
   - `SincroFaceRetargeter`: `SincroFaceMotionSnapshot` を VRM の head / eye / blink / mouth expression 向け値へ変換する。neutral calibration、clamp、deadband、smoothing、confidence gate、左右ミラー補正をこの層で扱う
-  - `SincroPoseRetargeter`: optional `SincroPoseMotionSnapshot` を spine/chest/shoulder/arm向け値へ変換する。腕は VRM normalized bone から肩幅・上腕長・前腕長を測り、screen-space の shoulder / elbow / wrist target をモデル側スケールへ写して軽量 two-bone IK 風に補正する。奥行きは本解決せず、手首方向を到達方向、肘方向を pole 近似として使う。target 欠損、confidence 不足、`allowPoseRetarget=false` では部位単位で低振幅 retarget または neutral へ戻す。`intensityScale` は設定の `sincroPoseRetargetScale` と Debug Console の Pose retarget 調整から変更でき、`minConfidence` / `smoothingMs` / `returnToNeutralMs` は Debug Console で調整できる
+  - `SincroPoseRetargeter`: optional `SincroPoseMotionSnapshot` を spine/chest/shoulder/arm向け値へ変換する。腕は VRM normalized bone から肩幅・上腕長・前腕長を測り、screen-space の shoulder / elbow / wrist target をモデル側スケールへ写して軽量 two-bone IK 風に補正する。奥行きは本解決せず、手首方向を到達方向、肘方向を pole 近似として使う。target 欠損、confidence 不足、`allowPoseRetarget=false` では部位単位で低振幅 retarget または neutral へ戻す。`intensityScale` は設定の `sincroPoseRetargetScale` と Debug Console の Pose retarget 調整から変更できる。Debug Console では `minConfidence`、`smoothingMs`、`returnToNeutralMs`、`armIkStrength`、`armIkTargetScale`、上腕 lift/open と前腕 flex の max rotation を実行時に調整できる
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`
@@ -220,6 +220,7 @@ flowchart LR
   - `CharacterBehaviorSnapshot`（VAD envelope、発話開始/終了時刻、直近発話時間、顔検出・顔位置・正面度、AI発話中speech_id/mora ID/母音/感情コード、AI speech beat、対話状態、source別エラーを集約した代表エラーを保持）
   - `SincroFaceMotionSnapshot`（`detected`、`confidence`、`headPose`、`blendshapes`、`inferenceTimeMs`、`inferenceFps`、`lastUpdatedAtMs`、`fallbackReason` を保持。MediaPipe生ランドマークは原則保持しない）
   - `SincroPoseMotionSnapshot`（`trackingEnabled`、`detected`、`confidence`、肩・胴体・腕の正規化姿勢、左右腕の shoulder / elbow / wrist target、`inferenceTimeMs`、`inferenceFps`、`consecutiveFailures`、`lastUpdatedAtMs`、`degradedToFaceOnly`、`fallbackReason` を保持。optional）
+  - `SincroPoseRetargetFrame`（`active`、`confidence`、`ikMode`、`fallbackReason`、上半身 anchor、左右腕の `active` / `ikActive` / `fallbackReason` / 上腕・前腕・手首の最終 additive rotation を保持。Debug Console はこの frame と `SincroPoseMotionSnapshot` を並べて、検出なし、target 欠損、solver fallback、VRM適用 gate を切り分ける）
   - `SincroFaceRetargetSnapshot`（head / eye / blink / mouth のVRM向け正規化値。controller はこの形式を読んでボーン・expressionへ適用する）
 - 永続化対象:
   - VRMモデルURL（`DialogManager.vrmUrl`）と、ローカル保存済みVRM（DialogManager経由）
@@ -303,7 +304,7 @@ flowchart LR
   - VRMロード進捗/エラーをconsole出力
   - DebugConsoleで `faceX/faceY/facing/status` を表示
   - DebugConsole の `Sincro` tab で `faceMotion.detected`、head pose、主要 blendshape、推論時間、推論fps、fallback reason を表示する。Status tab には `Sincro Face` の概要も出す
-  - Pose採用時は DebugConsole の `Sincro` tab で `poseMotion.detected`、肩・上半身・左右腕の主要値、推論時間、推論fps、連続失敗数、fallback reason を表示する。性能ゲート発火時は `face-only` として切り分ける
+  - Pose採用時は DebugConsole の `Sincro` tab で `poseMotion.detected`、肩・上半身・左右腕の主要値、shoulder / elbow / wrist target availability、推論時間、推論fps、連続失敗数、fallback reason を表示する。さらに `SincroPoseRetargetFrame` の `ikMode`、anchor reason、左右腕の IK active / fallback reason、solver output rotation を表示し、性能ゲート発火時は `face-only` として切り分ける
   - DebugConsole `text_ch` ログに `expression_code` 受信・感情プリセット適用・口パク重複bind除去数を出力（切り分け用）
 - メトリクス:
   - 未導入
@@ -315,6 +316,7 @@ flowchart LR
   - 5. backend 未起動・カメラ/マイクOFFでも、胸/肩/腕/手首の idle motion が継続するか
   - 6. `sincro` で FaceLandmarker snapshot が更新され、頭部・まばたき・口形の値が変化するか
   - 7. FaceLandmarker が重い端末で推論fps低下または fallback が発動し、UI全体が固まらないか
+  - 8. Pose IK で target が欠損しているのか、solver が `feature_only` / fallback へ落ちているのか、`allowPoseRetarget=false` など VRM 適用 gate で neutral に戻っているのかを Debug Console の `Status`、`IK`、`Anchor`、`Left/Right Targets`、`Left/Right Solver` で確認する
 - よくある失敗と対処:
   - wasm未配置で顔認識不可
   - VRM表情キー未対応で口形が動かない
@@ -347,6 +349,7 @@ flowchart LR
   - `chat` では相手を見る動き、`sincro` では同じ動きになることが目視で区別できること
   - `sincro` face-only で head pose、blink、mouth が過敏すぎず、低confidence時に震え続けないこと
   - PoseLandmarker 採用時は pose 無効化で face-only に戻り、顔同期と描画fpsを巻き込まないこと
+  - IK は実カメラで片手上げ、横開き、肘曲げ、片腕欠損、両腕欠損、近距離上半身構図を確認し、Debug Console の IK 強度、target scale、smoothing、return-to-neutral、max rotation で破綻しない範囲を調整すること
 - 単体テスト:
   - 現状は未整備
 - 結合テスト:
