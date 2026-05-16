@@ -5,9 +5,7 @@ export class VideoInputManager {
     private videoInputDeviceId: string | null = null;
 
     setVideoInputDeviceId(deviceId: string | null): void {
-        this.videoInputDeviceId = deviceId && deviceId.trim() !== ""
-            ? deviceId
-            : null;
+        this.videoInputDeviceId = deviceId && deviceId.trim() !== "" ? deviceId : null;
     }
 
     getVideoInputDeviceId(): string | null {

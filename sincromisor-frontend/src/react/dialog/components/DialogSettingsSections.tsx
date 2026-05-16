@@ -27,11 +27,17 @@ type DialogVrmDropStatusCardProps = {
 export function DialogVrmDropStatusCard({ uiState }: DialogVrmDropStatusCardProps) {
     // dragover 中は「ここへドロップ」へ切り替え、平常時は導線説明を短く表示する。
     return (
-        <div className={`configurationDialogReactSettingsPanel__vrmDropStatus${uiState.isDragOver ? " is-dragover" : ""}`}>
+        <div
+            className={`configurationDialogReactSettingsPanel__vrmDropStatus${uiState.isDragOver ? " is-dragover" : ""}`}
+        >
             <div className="configurationDialogReactSettingsPanel__statusText">
-                {uiState.isDragOver ? "ここにVRMファイルをドロップしてください" : "VRMファイルをここにドラッグ&ドロップ"}
+                {uiState.isDragOver
+                    ? "ここにVRMファイルをドロップしてください"
+                    : "VRMファイルをここにドラッグ&ドロップ"}
             </div>
-            <div className="configurationDialogReactSettingsPanel__statusSubText">{uiState.vrmStatusText}</div>
+            <div className="configurationDialogReactSettingsPanel__statusSubText">
+                {uiState.vrmStatusText}
+            </div>
         </div>
     );
 }

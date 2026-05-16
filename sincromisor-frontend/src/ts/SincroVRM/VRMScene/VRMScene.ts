@@ -1,13 +1,13 @@
-import { Vector3 } from 'three/src/math/Vector3.js';
-import { WebGLRenderer } from 'three/src/renderers/WebGLRenderer.js';
-import { Scene } from 'three/src/scenes/Scene.js';
-import { GridHelper } from 'three/src/helpers/GridHelper.js';
-import { VRButton } from 'three/addons/webxr/VRButton.js';
-import { VRMCharacterManager } from '../VRMCharacter/VRMCharacterManager';
-import type { CharacterMotionTuning } from '../VRMCharacter/CharacterMotionConfig';
-import type { SincroPoseRetargetConfig } from '../VRMCharacter/SincroPoseRetargeter';
-import { VRMCamera } from './VRMCamera';
-import { VRMLight } from './VRMLight';
+import { VRButton } from "three/addons/webxr/VRButton.js";
+import { GridHelper } from "three/src/helpers/GridHelper.js";
+import { Vector3 } from "three/src/math/Vector3.js";
+import { WebGLRenderer } from "three/src/renderers/WebGLRenderer.js";
+import { Scene } from "three/src/scenes/Scene.js";
+import type { CharacterMotionTuning } from "../VRMCharacter/CharacterMotionConfig";
+import type { SincroPoseRetargetConfig } from "../VRMCharacter/SincroPoseRetargeter";
+import { VRMCharacterManager } from "../VRMCharacter/VRMCharacterManager";
+import { VRMCamera } from "./VRMCamera";
+import { VRMLight } from "./VRMLight";
 
 // VRM表示ページの共通ベースシーン。
 // キャラクター・カメラ・ライト・renderer の基本構成をまとめ、派生クラスは updateScene() を上書きする。
@@ -18,7 +18,7 @@ export class VRMScene {
     private readonly vrmCharacterManager: VRMCharacterManager;
     private readonly vrmCamera: VRMCamera;
     protected readonly vrmLight: VRMLight;
-    private readonly xrSessionMode: XRSessionMode = 'immersive-vr';
+    private readonly xrSessionMode: XRSessionMode = "immersive-vr";
     private readonly xrMode: boolean;
 
     constructor(
@@ -117,8 +117,7 @@ export class VRMScene {
     }
 
     /* フレームごとのシーンの更新処理を記述する。派生クラスで環境差分のみ実装する。 */
-    protected updateScene(): void {
-    }
+    protected updateScene(): void {}
 
     // ページ固有の見え方補正（例: Looking Glass 実機の筐体角度）を camera 側へ委譲する。
     protected setCameraPitchCompensationDeg(deg: number): void {
@@ -159,20 +158,20 @@ export class VRMScene {
 
     /* WebXR対応チェック */
     private async checkXRSupport(): Promise<void> {
-        if ('xr' in navigator) {
+        if ("xr" in navigator) {
             try {
                 // 'immersive-vr'モードがサポートされているかチェック
                 const isSupported = await navigator.xr?.isSessionSupported(this.xrSessionMode);
                 if (isSupported) {
-                    console.log('WebXR VRモードがサポートされています');
+                    console.log("WebXR VRモードがサポートされています");
                 } else {
-                    console.log('このブラウザはWebXR VRモードをサポートしていません');
+                    console.log("このブラウザはWebXR VRモードをサポートしていません");
                 }
             } catch (err) {
-                console.error('WebXR対応確認中にエラーが発生しました:', err);
+                console.error("WebXR対応確認中にエラーが発生しました:", err);
             }
         } else {
-            console.warn('このブラウザはWebXR APIをサポートしていません');
+            console.warn("このブラウザはWebXR APIをサポートしていません");
         }
     }
 

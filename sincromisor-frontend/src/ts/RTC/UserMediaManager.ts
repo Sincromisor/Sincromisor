@@ -1,6 +1,10 @@
-import { LearnedVadStateReport, LearnedVadTuningConfig, LearnedVadWorkerClient } from "./LearnedVadWorkerClient";
-export type { LearnedVadStateReport } from "./LearnedVadWorkerClient";
-export type { LearnedVadTuningConfig } from "./LearnedVadWorkerClient";
+import {
+    type LearnedVadStateReport,
+    type LearnedVadTuningConfig,
+    LearnedVadWorkerClient,
+} from "./LearnedVadWorkerClient";
+
+export type { LearnedVadStateReport, LearnedVadTuningConfig } from "./LearnedVadWorkerClient";
 export type LearnedVadPerformanceMode = "low_cpu" | "balanced" | "high_accuracy";
 
 export type VadStateReport = {
@@ -49,15 +53,33 @@ export class UserMediaManager {
     // low_cpu: 推論頻度を抑えて負荷優先
     // balanced: 通常運用向け
     // high_accuracy: 応答性/取りこぼし低減優先（負荷高め）
-    private static readonly LEARNED_VAD_TUNING_PRESETS: Record<LearnedVadPerformanceMode, LearnedVadTuningConfig> = {
+    private static readonly LEARNED_VAD_TUNING_PRESETS: Record<
+        LearnedVadPerformanceMode,
+        LearnedVadTuningConfig
+    > = {
         low_cpu: {
-            onThreshold: 0.0012, offThreshold: 0.0006, hangoverMs: 160, minInferIntervalMs: 140, onConsecutiveFrames: 2, offConsecutiveFrames: 2,
+            onThreshold: 0.0012,
+            offThreshold: 0.0006,
+            hangoverMs: 160,
+            minInferIntervalMs: 140,
+            onConsecutiveFrames: 2,
+            offConsecutiveFrames: 2,
         },
         balanced: {
-            onThreshold: 0.0008, offThreshold: 0.0004, hangoverMs: 180, minInferIntervalMs: 80, onConsecutiveFrames: 2, offConsecutiveFrames: 2,
+            onThreshold: 0.0008,
+            offThreshold: 0.0004,
+            hangoverMs: 180,
+            minInferIntervalMs: 80,
+            onConsecutiveFrames: 2,
+            offConsecutiveFrames: 2,
         },
         high_accuracy: {
-            onThreshold: 0.00055, offThreshold: 0.00025, hangoverMs: 240, minInferIntervalMs: 40, onConsecutiveFrames: 3, offConsecutiveFrames: 2,
+            onThreshold: 0.00055,
+            offThreshold: 0.00025,
+            hangoverMs: 240,
+            minInferIntervalMs: 40,
+            onConsecutiveFrames: 3,
+            offConsecutiveFrames: 2,
         },
     };
     private static readonly DEFAULT_FILTER_PROFILE: AudioFilterConfig = {
@@ -82,10 +104,12 @@ export class UserMediaManager {
     audioTrack?: MediaStreamTrack;
     videoTrack?: MediaStreamTrack;
     config: MediaStreamConstraints;
-    private onVadStateCallback: (report: VadStateReport) => void = () => { };
-    private onVadThresholdCallback: (config: VadThresholdConfig) => void = () => { };
-    private onLearnedVadStateCallback: (report: LearnedVadStateReport) => void = () => { };
-    private onAudioConstraintRuntimeApplyCallback: (report: AudioConstraintRuntimeApplyReport) => void = () => { };
+    private onVadStateCallback: (report: VadStateReport) => void = () => {};
+    private onVadThresholdCallback: (config: VadThresholdConfig) => void = () => {};
+    private onLearnedVadStateCallback: (report: LearnedVadStateReport) => void = () => {};
+    private onAudioConstraintRuntimeApplyCallback: (
+        report: AudioConstraintRuntimeApplyReport,
+    ) => void = () => {};
     private audioContext: AudioContext | null = null;
     private rawAudioTrack: MediaStreamTrack | null = null;
     private vadGateEnabled: boolean = false;
@@ -130,18 +154,18 @@ export class UserMediaManager {
                 ビデオを有効にし解像度を指定する場合は
                 {"width": 320, "height": 240}
             */
-            "video": { "width": 320, "height": 240 },
+            video: { width: 320, height: 240 },
             // イベント会場などの騒音環境を想定し、音声処理を明示指定する。
-            "audio": {
-                "echoCancellation": true,
-                "noiseSuppression": true,
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
                 // AGCは環境ノイズを持ち上げることがあるため、まずは無効を既定にする。
-                "autoGainControl": false,
-                "channelCount": 1,
-                "sampleRate": 48000,
-                "sampleSize": 16
-            }
-        }
+                autoGainControl: false,
+                channelCount: 1,
+                sampleRate: 48000,
+                sampleSize: 16,
+            },
+        };
     }
 
     // 設定UIで選択されたマイク入力 deviceId を保持し、次回取得制約へ反映する。
@@ -167,10 +191,10 @@ export class UserMediaManager {
             return deviceIdConstraint;
         }
         if (
-            deviceIdConstraint
-            && typeof deviceIdConstraint === "object"
-            && "exact" in deviceIdConstraint
-            && typeof deviceIdConstraint.exact === "string"
+            deviceIdConstraint &&
+            typeof deviceIdConstraint === "object" &&
+            "exact" in deviceIdConstraint &&
+            typeof deviceIdConstraint.exact === "string"
         ) {
             return deviceIdConstraint.exact;
         }
@@ -194,7 +218,9 @@ export class UserMediaManager {
     }
 
     // DebugConsole表示用に、NS/EC/AGC の実行中トラック反映結果を通知する。
-    setAudioConstraintRuntimeApplyCallback(callback: (report: AudioConstraintRuntimeApplyReport) => void): void {
+    setAudioConstraintRuntimeApplyCallback(
+        callback: (report: AudioConstraintRuntimeApplyReport) => void,
+    ): void {
         this.onAudioConstraintRuntimeApplyCallback = callback;
     }
 
@@ -212,10 +238,16 @@ export class UserMediaManager {
     // manualモードの正本は manualVadThresholdConfig とし、実効値は applyVadThresholds 経由で同期する。
     setVadThresholds(config: Partial<VadThresholdConfig>): void {
         if (config.rmsThreshold != null && Number.isFinite(config.rmsThreshold)) {
-            this.manualVadThresholdConfig.rmsThreshold = Math.max(0.001, Math.min(0.2, config.rmsThreshold));
+            this.manualVadThresholdConfig.rmsThreshold = Math.max(
+                0.001,
+                Math.min(0.2, config.rmsThreshold),
+            );
         }
         if (config.peakThreshold != null && Number.isFinite(config.peakThreshold)) {
-            this.manualVadThresholdConfig.peakThreshold = Math.max(0.01, Math.min(0.99, config.peakThreshold));
+            this.manualVadThresholdConfig.peakThreshold = Math.max(
+                0.01,
+                Math.min(0.99, config.peakThreshold),
+            );
         }
         if (this.vadThresholdMode === "manual") {
             this.applyVadThresholds(this.manualVadThresholdConfig);
@@ -245,7 +277,8 @@ export class UserMediaManager {
             UserMediaManager.AUTO_VAD_MIN_RMS_THRESHOLD,
             Math.min(
                 UserMediaManager.AUTO_VAD_MAX_RMS_THRESHOLD,
-                this.autoNoiseFloorRms * UserMediaManager.AUTO_VAD_MULTIPLIER + UserMediaManager.AUTO_VAD_OFFSET,
+                this.autoNoiseFloorRms * UserMediaManager.AUTO_VAD_MULTIPLIER +
+                    UserMediaManager.AUTO_VAD_OFFSET,
             ),
         );
         this.applyVadThresholds({
@@ -332,18 +365,21 @@ export class UserMediaManager {
 
     // マイク/カメラを取得し、音声は必要に応じてVAD/フィルタ付きトラックへ差し替えて返す。
     // 呼び出し側（SincroAudioInputController）はここから返る track をそのまま RTC に渡す。
-    getUserMedia(audioTrackCallback: (audioTrack: MediaStreamTrack) => void,
+    getUserMedia(
+        audioTrackCallback: (audioTrack: MediaStreamTrack) => void,
         videoTrackCallback: (videoTrack: MediaStreamTrack) => void,
-        errCallback: (err: any) => void): void {
-        navigator.mediaDevices.getUserMedia(this.config)
+        errCallback: (err: any) => void,
+    ): void {
+        navigator.mediaDevices
+            .getUserMedia(this.config)
             .then(async (mediaStream) => {
                 for (const track of mediaStream.getTracks()) {
-                    if (track.kind == 'audio') {
+                    if (track.kind === "audio") {
                         console.log(`AudioTrack: ${track.label}`);
                         this.rawAudioTrack = track;
                         this.audioTrack = await this.buildProcessedAudioTrack(track);
                         audioTrackCallback(this.audioTrack);
-                    } else if (track.kind == 'video') {
+                    } else if (track.kind === "video") {
                         console.log(`VideoTrack: ${track.label}`);
                         this.videoTrack = track;
                         videoTrackCallback(this.videoTrack);
@@ -351,7 +387,8 @@ export class UserMediaManager {
                         console.error(`Unknown Track: ${track}`);
                     }
                 }
-            }).catch((err) => {
+            })
+            .catch((err) => {
                 console.error(`Could not acquire media: ${err}`);
                 errCallback(err);
             });
@@ -441,7 +478,10 @@ export class UserMediaManager {
                 return;
             }
             this.updateAutoVadThreshold(data);
-            if (this.vadThresholdMode === "learned" && !this.learnedVadClient.hasValidPrediction()) {
+            if (
+                this.vadThresholdMode === "learned" &&
+                !this.learnedVadClient.hasValidPrediction()
+            ) {
                 const now = performance.now();
                 if (now - this.learnedVadStreamRecoveryLastAtMs >= 1000) {
                     this.learnedVadClient.syncAudioFrameStreaming(this.vadNode, true, true);
@@ -449,15 +489,14 @@ export class UserMediaManager {
                 }
             }
             // 学習VADでまだ確率が返っていない間は、RMS/Peak判定をフォールバックに使って送信停止を避ける。
-            const speechState = this.vadThresholdMode === "learned"
-                ? (
-                    this.learnedVadClient.hasValidPrediction()
-                        ? (this.learnedVadStrictMode
-                            ? (this.learnedVadClient.getSpeechState() && !!data.isSpeech)
-                            : this.learnedVadClient.getSpeechState())
+            const speechState =
+                this.vadThresholdMode === "learned"
+                    ? this.learnedVadClient.hasValidPrediction()
+                        ? this.learnedVadStrictMode
+                            ? this.learnedVadClient.getSpeechState() && !!data.isSpeech
+                            : this.learnedVadClient.getSpeechState()
                         : !!data.isSpeech
-                )
-                : !!data.isSpeech;
+                    : !!data.isSpeech;
             if (this.vadGateEnabled && this.audioContext) {
                 const nextGain = speechState ? 1 : 0;
                 gateGain.gain.setTargetAtTime(nextGain, this.audioContext.currentTime, 0.02);
@@ -497,7 +536,9 @@ export class UserMediaManager {
         }
         if (ArrayBuffer.isView(raw)) {
             const view = raw as ArrayBufferView;
-            return new Float32Array(view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength));
+            return new Float32Array(
+                view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength),
+            );
         }
         if (Array.isArray(raw)) {
             const values = raw.map((v) => Number(v));
@@ -546,7 +587,8 @@ export class UserMediaManager {
             });
             return;
         }
-        void rawTrack.applyConstraints({ [key]: enabled } as MediaTrackConstraints)
+        void rawTrack
+            .applyConstraints({ [key]: enabled } as MediaTrackConstraints)
             .then(() => {
                 this.onAudioConstraintRuntimeApplyCallback({
                     key,
@@ -636,13 +678,14 @@ export class UserMediaManager {
     }
 
     // autoモード用: 無音時RMSからノイズフロアを追従し、一定周期で閾値を更新する。
-    private updateAutoVadThreshold(report: { isSpeech: boolean; rms: number; }): void {
+    private updateAutoVadThreshold(report: { isSpeech: boolean; rms: number }): void {
         if (this.vadThresholdMode !== "auto") {
             return;
         }
         if (!report.isSpeech) {
-            const nextFloor = this.autoNoiseFloorRms * (1 - UserMediaManager.AUTO_VAD_NOISE_FLOOR_ALPHA)
-                + report.rms * UserMediaManager.AUTO_VAD_NOISE_FLOOR_ALPHA;
+            const nextFloor =
+                this.autoNoiseFloorRms * (1 - UserMediaManager.AUTO_VAD_NOISE_FLOOR_ALPHA) +
+                report.rms * UserMediaManager.AUTO_VAD_NOISE_FLOOR_ALPHA;
             this.autoNoiseFloorRms = Math.max(0, Math.min(1, nextFloor));
         }
 
@@ -654,7 +697,8 @@ export class UserMediaManager {
             UserMediaManager.AUTO_VAD_MIN_RMS_THRESHOLD,
             Math.min(
                 UserMediaManager.AUTO_VAD_MAX_RMS_THRESHOLD,
-                this.autoNoiseFloorRms * UserMediaManager.AUTO_VAD_MULTIPLIER + UserMediaManager.AUTO_VAD_OFFSET,
+                this.autoNoiseFloorRms * UserMediaManager.AUTO_VAD_MULTIPLIER +
+                    UserMediaManager.AUTO_VAD_OFFSET,
             ),
         );
         if (Math.abs(nextRmsThreshold - this.vadThresholdConfig.rmsThreshold) < 0.001) {

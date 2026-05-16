@@ -26,16 +26,21 @@ export class FaceTargetSelector {
     private lastSwitchAtMs = 0;
     private minimumHoldMs = 900;
     private switchMargin = 0.15;
-    private relinkDistance = 0.20;
+    private relinkDistance = 0.2;
 
     reset(): void {
         this.currentNose = null;
         this.lastSwitchAtMs = 0;
     }
 
-    setTuning(params: Partial<{ minimumHoldMs: number; switchMargin: number; relinkDistance: number }>): void {
+    setTuning(
+        params: Partial<{ minimumHoldMs: number; switchMargin: number; relinkDistance: number }>,
+    ): void {
         if (Number.isFinite(params.minimumHoldMs)) {
-            this.minimumHoldMs = Math.max(0, Math.min(5000, Math.round(params.minimumHoldMs as number)));
+            this.minimumHoldMs = Math.max(
+                0,
+                Math.min(5000, Math.round(params.minimumHoldMs as number)),
+            );
         }
         if (Number.isFinite(params.switchMargin)) {
             this.switchMargin = Math.max(0, Math.min(1, params.switchMargin as number));
@@ -66,7 +71,12 @@ export class FaceTargetSelector {
         if (!this.currentNose) {
             this.currentNose = best.nose;
             this.lastSwitchAtMs = nowMs;
-            return { selectedIndex: best.index, candidateCount: candidates.length, holdLocked: false, selectedScore: best.score };
+            return {
+                selectedIndex: best.index,
+                candidateCount: candidates.length,
+                holdLocked: false,
+                selectedScore: best.score,
+            };
         }
 
         const matchedCurrent = this.findCurrentCandidate(candidates, this.currentNose);
@@ -75,24 +85,47 @@ export class FaceTargetSelector {
         // 現在ターゲット相当の候補が残っている間は、一定時間は優先保持して「迷う」挙動を抑える。
         if (matchedCurrent && holdElapsedMs < this.minimumHoldMs) {
             this.currentNose = matchedCurrent.nose;
-            return { selectedIndex: matchedCurrent.index, candidateCount: candidates.length, holdLocked: true, selectedScore: matchedCurrent.score };
+            return {
+                selectedIndex: matchedCurrent.index,
+                candidateCount: candidates.length,
+                holdLocked: true,
+                selectedScore: matchedCurrent.score,
+            };
         }
 
         if (!matchedCurrent) {
             this.currentNose = best.nose;
             this.lastSwitchAtMs = nowMs;
-            return { selectedIndex: best.index, candidateCount: candidates.length, holdLocked: false, selectedScore: best.score };
+            return {
+                selectedIndex: best.index,
+                candidateCount: candidates.length,
+                holdLocked: false,
+                selectedScore: best.score,
+            };
         }
 
         // 切替は「少し良い」では行わず、十分優位な場合だけ実行する。
-        if (best.index !== matchedCurrent.index && best.score > matchedCurrent.score + this.switchMargin) {
+        if (
+            best.index !== matchedCurrent.index &&
+            best.score > matchedCurrent.score + this.switchMargin
+        ) {
             this.currentNose = best.nose;
             this.lastSwitchAtMs = nowMs;
-            return { selectedIndex: best.index, candidateCount: candidates.length, holdLocked: false, selectedScore: best.score };
+            return {
+                selectedIndex: best.index,
+                candidateCount: candidates.length,
+                holdLocked: false,
+                selectedScore: best.score,
+            };
         }
 
         this.currentNose = matchedCurrent.nose;
-        return { selectedIndex: matchedCurrent.index, candidateCount: candidates.length, holdLocked: false, selectedScore: matchedCurrent.score };
+        return {
+            selectedIndex: matchedCurrent.index,
+            candidateCount: candidates.length,
+            holdLocked: false,
+            selectedScore: matchedCurrent.score,
+        };
     }
 
     private buildCandidates(detections: Detection[]): FaceCandidate[] {
@@ -149,7 +182,10 @@ export class FaceTargetSelector {
         return 1 - Math.min(1, Math.abs(ratio - 0.5) / 0.5);
     }
 
-    private findCurrentCandidate(candidates: FaceCandidate[], current: { x: number; y: number }): FaceCandidate | null {
+    private findCurrentCandidate(
+        candidates: FaceCandidate[],
+        current: { x: number; y: number },
+    ): FaceCandidate | null {
         let best: FaceCandidate | null = null;
         let bestDist = Number.POSITIVE_INFINITY;
         for (const candidate of candidates) {

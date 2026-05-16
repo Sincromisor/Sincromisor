@@ -1,39 +1,10 @@
-import { SincroController } from "../SincroController";
-import { ChatMessageService } from "../UI/ChatMessageService";
-import { DebugConsoleManager } from "../UI/DebugConsoleManager";
-import { TalkManager } from "../RTC/TalkManager";
-import { PopMessageService } from "../UI/PopMessageService";
-import { DialogManager } from "../UI/DialogManager";
-import { SincroAppLookingGlassStateTracker } from "./SincroAppLookingGlassStateTracker";
+import type { TalkManager } from "../RTC/TalkManager";
+import type { SincroController } from "../SincroController";
+import type { ChatMessageService } from "../UI/ChatMessageService";
+import type { DebugConsoleManager } from "../UI/DebugConsoleManager";
+import type { DialogManager } from "../UI/DialogManager";
+import type { PopMessageService } from "../UI/PopMessageService";
 import { SincroAppActiveControllerRegistry } from "./SincroAppActiveControllerRegistry";
-import { buildSincroAppConnectionStateEvent } from "./SincroAppConnectionState";
-import { applySincroAppSettingsPartial } from "./SincroAppSettingsApply";
-import {
-    buildStartupSettingsStatus,
-    type SincroAppStartupAppliedSettings,
-} from "./SincroAppStartupSettings";
-import { emitSincroAppInitialSnapshot } from "./SincroAppSubscriptionSnapshot";
-import { buildSincroAppSettingsSnapshot } from "./SincroAppSettingsSnapshotBuilder";
-import { buildSincroAppUiStateSnapshot } from "./SincroAppUiStateSnapshotBuilder";
-import { buildSincroAppSettingsRelatedSnapshotPayload } from "./SincroAppSettingsRelatedSnapshotBuilder";
-import type { SincroAppSettingsRelatedSnapshotPayload } from "./SincroAppSettingsRelatedSnapshotBuilder";
-import { bindSincroAppWindowEvents } from "./SincroAppWindowEventBinder";
-import { SincroAppEventHub } from "./SincroAppEventHub";
-import {
-    createSincroAppRuntimeBundle,
-    type SincroAppControllerRuntimeBundle,
-} from "./SincroAppControllerRuntime";
-import {
-    emitSincroAppConnectionState,
-    emitSincroAppSettingsApplyEvents,
-    emitSincroAppLifecycle,
-    emitSincroAppSettingsRelatedSnapshots,
-} from "./SincroAppEmitHelpers";
-import {
-    emitLookingGlassConfigStatus,
-    handleLookingGlassConfigUpdatedFlow,
-    handleLookingGlassStateFlow,
-} from "./SincroAppLookingGlassEventFlow";
 import type {
     SincroAppChatBridge,
     SincroAppDebugBridge,
@@ -41,6 +12,40 @@ import type {
     SincroAppRtcBridge,
     SincroAppStateBridge,
 } from "./SincroAppBridges";
+import { buildSincroAppConnectionStateEvent } from "./SincroAppConnectionState";
+import {
+    createSincroAppRuntimeBundle,
+    type SincroAppControllerRuntimeBundle,
+} from "./SincroAppControllerRuntime";
+import {
+    emitSincroAppConnectionState,
+    emitSincroAppLifecycle,
+    emitSincroAppSettingsApplyEvents,
+    emitSincroAppSettingsRelatedSnapshots,
+} from "./SincroAppEmitHelpers";
+import { SincroAppEventHub } from "./SincroAppEventHub";
+import {
+    emitLookingGlassConfigStatus,
+    handleLookingGlassConfigUpdatedFlow,
+    handleLookingGlassStateFlow,
+} from "./SincroAppLookingGlassEventFlow";
+import { SincroAppLookingGlassStateTracker } from "./SincroAppLookingGlassStateTracker";
+import {
+    bindChatServiceSubscription,
+    bindDebugManagerSubscription,
+    bindDialogManagerSubscriptions,
+    bindPopServiceSubscription,
+    bindTalkManagerSubscription,
+} from "./SincroAppManagerSubscriptionBinder";
+import { applySincroAppSettingsPartial } from "./SincroAppSettingsApply";
+import type { SincroAppSettingsRelatedSnapshotPayload } from "./SincroAppSettingsRelatedSnapshotBuilder";
+import { buildSincroAppSettingsRelatedSnapshotPayload } from "./SincroAppSettingsRelatedSnapshotBuilder";
+import { buildSincroAppSettingsSnapshot } from "./SincroAppSettingsSnapshotBuilder";
+import {
+    buildStartupSettingsStatus,
+    type SincroAppStartupAppliedSettings,
+} from "./SincroAppStartupSettings";
+import { emitSincroAppInitialSnapshot } from "./SincroAppSubscriptionSnapshot";
 import type {
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
@@ -55,34 +60,29 @@ import type {
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
 } from "./SincroAppTypes";
-import {
-    bindChatServiceSubscription,
-    bindDebugManagerSubscription,
-    bindDialogManagerSubscriptions,
-    bindPopServiceSubscription,
-    bindTalkManagerSubscription,
-} from "./SincroAppManagerSubscriptionBinder";
+import { buildSincroAppUiStateSnapshot } from "./SincroAppUiStateSnapshotBuilder";
+import { bindSincroAppWindowEvents } from "./SincroAppWindowEventBinder";
 
 export type {
-    SincroAppDialogBridge,
     SincroAppChatBridge,
     SincroAppDebugBridge,
+    SincroAppDialogBridge,
     SincroAppRtcBridge,
     SincroAppStateBridge,
 } from "./SincroAppBridges";
 export type {
-    SincroAppEvent,
-    SincroAppLifecycleState,
-    SincroAppStartHooks,
-    SincroAppSettingsSnapshot,
-    SincroAppSettingsUiState,
-    SincroAppSettingsUiHints,
+    SincroAppDialogPopMessage,
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
-    SincroAppDialogPopMessage,
-    SincroAppStartupSettingsStatus,
-    SincroAppStartupSettingsCapabilities,
+    SincroAppEvent,
+    SincroAppLifecycleState,
     SincroAppLookingGlassConfigStatus,
+    SincroAppSettingsSnapshot,
+    SincroAppSettingsUiHints,
+    SincroAppSettingsUiState,
+    SincroAppStartHooks,
+    SincroAppStartupSettingsCapabilities,
+    SincroAppStartupSettingsStatus,
 } from "./SincroAppTypes";
 
 // UI層（現行Initializer/将来React）から使うアプリ制御の入口。
@@ -101,8 +101,8 @@ export class SincroAppController {
     private lifecycleState: SincroAppLifecycleState = "idle";
     private iceConnectionState: string = "";
     private signalingState: string = "";
-    private beforeStartHook: () => void = () => { };
-    private afterStartHook: () => void = () => { };
+    private beforeStartHook: () => void = () => {};
+    private afterStartHook: () => void = () => {};
     private suppressSettingsSnapshotEvent: boolean = false;
     // 同一同期処理中だけ有効な短命キャッシュ。settings 系 snapshot の重複組み立てを避ける。
     private settingsRelatedPayloadCache: SincroAppSettingsRelatedSnapshotPayload | null = null;
@@ -172,7 +172,9 @@ export class SincroAppController {
     }
 
     // MPAページ切り替えや initializer 差し替えを考慮し、active controller の変化も購読可能にする。
-    static subscribeCurrent(listener: (controller: SincroAppController | null) => void): () => void {
+    static subscribeCurrent(
+        listener: (controller: SincroAppController | null) => void,
+    ): () => void {
         return SincroAppController.activeRegistry.subscribe(listener);
     }
 
@@ -203,8 +205,8 @@ export class SincroAppController {
     // Public lifecycle / control API
     setStartHooks(hooks: SincroAppStartHooks): void {
         // initializer 側に残る UI副作用（挨拶、シーン開始、ダイアログclose）をここ経由で組み込む。
-        this.beforeStartHook = hooks.beforeStart ?? (() => { });
-        this.afterStartHook = hooks.afterStart ?? (() => { });
+        this.beforeStartHook = hooks.beforeStart ?? (() => {});
+        this.afterStartHook = hooks.afterStart ?? (() => {});
     }
 
     start(): void {
@@ -228,7 +230,11 @@ export class SincroAppController {
     }
 
     stopRTC(): void {
-        if (this.lifecycleState === "stopping" || this.lifecycleState === "stopped" || this.lifecycleState === "idle") {
+        if (
+            this.lifecycleState === "stopping" ||
+            this.lifecycleState === "stopped" ||
+            this.lifecycleState === "idle"
+        ) {
             return;
         }
         this.emitLifecycle("stopping");
@@ -271,7 +277,9 @@ export class SincroAppController {
         return this.talkManager.getTelopTextSegmentsSnapshot();
     }
 
-    private buildStartupSettingsStatusFromSnapshot(current: SincroAppSettingsSnapshot): SincroAppStartupSettingsStatus {
+    private buildStartupSettingsStatusFromSnapshot(
+        current: SincroAppSettingsSnapshot,
+    ): SincroAppStartupSettingsStatus {
         return buildStartupSettingsStatus({
             lifecycleState: this.lifecycleState,
             current,
@@ -280,12 +288,17 @@ export class SincroAppController {
     }
 
     // Public startup capability API
-    setStartupSettingsCapabilities(capabilities: Partial<SincroAppStartupSettingsCapabilities>): void {
+    setStartupSettingsCapabilities(
+        capabilities: Partial<SincroAppStartupSettingsCapabilities>,
+    ): void {
         this.startupSettingsCapabilities = {
             ...this.startupSettingsCapabilities,
             ...capabilities,
         };
-        this.emitEvent({ type: "startup_settings_capabilities", capabilities: this.startupSettingsCapabilities });
+        this.emitEvent({
+            type: "startup_settings_capabilities",
+            capabilities: this.startupSettingsCapabilities,
+        });
     }
 
     applySettings(partial: Partial<SincroAppSettingsSnapshot>): void {
@@ -299,20 +312,21 @@ export class SincroAppController {
             this.suppressSettingsSnapshotEvent = false;
         }
         const currentSettingsSnapshot = this.getSettingsSnapshot();
-        this.withSettingsRelatedSnapshotPayloadCache(
-            () => {
-                const settingsPayload = this.buildSettingsRelatedSnapshotPayload(currentSettingsSnapshot);
-                emitSincroAppSettingsApplyEvents((event) => this.emitEvent(event), {
-                    ...settingsPayload,
-                    lookingGlassConfigStatus: this.lookingGlassTracker.getConfigStatus(),
-                });
-            },
-            currentSettingsSnapshot,
-        );
+        this.withSettingsRelatedSnapshotPayloadCache(() => {
+            const settingsPayload =
+                this.buildSettingsRelatedSnapshotPayload(currentSettingsSnapshot);
+            emitSincroAppSettingsApplyEvents((event) => this.emitEvent(event), {
+                ...settingsPayload,
+                lookingGlassConfigStatus: this.lookingGlassTracker.getConfigStatus(),
+            });
+        }, currentSettingsSnapshot);
     }
 
     // lifecycle event は startup settings status と一緒に流し、UI 側の再起動案内判定を安定させる。
-    private emitLifecycle(state: SincroAppLifecycleState, settingsSnapshot?: SincroAppSettingsSnapshot): void {
+    private emitLifecycle(
+        state: SincroAppLifecycleState,
+        settingsSnapshot?: SincroAppSettingsSnapshot,
+    ): void {
         this.lifecycleState = state;
         emitSincroAppLifecycle(
             (event) => this.emitEvent(event),
@@ -328,7 +342,9 @@ export class SincroAppController {
         this.eventHub.emit(event);
     }
 
-    private readonly handleLookingGlassStateEvent = (event: CustomEvent<SincroAppLookingGlassEventDetail>): void => {
+    private readonly handleLookingGlassStateEvent = (
+        event: CustomEvent<SincroAppLookingGlassEventDetail>,
+    ): void => {
         // Looking Glass 側の状態変化は React パネルの表示制御（案内文/再読込表示）に使う。
         handleLookingGlassStateFlow({
             tracker: this.lookingGlassTracker,
@@ -338,7 +354,9 @@ export class SincroAppController {
     };
 
     // LG設定変更（runtime config 更新）を tracker + UI通知に反映する。
-    private readonly handleLookingGlassConfigUpdated = (event: CustomEvent<SincroAppLookingGlassConfigUpdatedEventDetail>): void => {
+    private readonly handleLookingGlassConfigUpdated = (
+        event: CustomEvent<SincroAppLookingGlassConfigUpdatedEventDetail>,
+    ): void => {
         handleLookingGlassConfigUpdatedFlow({
             tracker: this.lookingGlassTracker,
             detail: event.detail,
@@ -449,20 +467,25 @@ export class SincroAppController {
         return buildSincroAppSettingsRelatedSnapshotPayload({
             dialogManager: this.dialogManager,
             settings,
-            buildStartupSettingsStatus: (currentSettings) => this.buildStartupSettingsStatusFromSnapshot(currentSettings),
+            buildStartupSettingsStatus: (currentSettings) =>
+                this.buildStartupSettingsStatusFromSnapshot(currentSettings),
         });
     }
 
     // 同一同期処理の中で settings系 snapshot を複数回使う場合にだけ共有し、
     // 処理を抜けたら必ず破棄して stale cache を残さない。
-    private withSettingsRelatedSnapshotPayloadCache<T>(run: () => T, settings?: SincroAppSettingsSnapshot): T {
+    private withSettingsRelatedSnapshotPayloadCache<T>(
+        run: () => T,
+        settings?: SincroAppSettingsSnapshot,
+    ): T {
         const shouldSeedCache = this.settingsRelatedPayloadCacheDepth === 0;
         this.settingsRelatedPayloadCacheDepth += 1;
         if (shouldSeedCache) {
             this.settingsRelatedPayloadCache = buildSincroAppSettingsRelatedSnapshotPayload({
                 dialogManager: this.dialogManager,
                 settings,
-                buildStartupSettingsStatus: (currentSettings) => this.buildStartupSettingsStatusFromSnapshot(currentSettings),
+                buildStartupSettingsStatus: (currentSettings) =>
+                    this.buildStartupSettingsStatusFromSnapshot(currentSettings),
             });
         }
         try {

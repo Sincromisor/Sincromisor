@@ -1,18 +1,13 @@
-import {
-    PoseLandmarker,
-} from "@mediapipe/tasks-vision";
-import type {
-    NormalizedLandmark,
-    PoseLandmarkerResult,
-} from "@mediapipe/tasks-vision";
+import type { NormalizedLandmark, PoseLandmarkerResult } from "@mediapipe/tasks-vision";
+import { PoseLandmarker } from "@mediapipe/tasks-vision";
+import { loadMediaPipeVisionFileset } from "./MediaPipeVisionFileset";
 import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
     type SincroPoseArmMotionSnapshot,
-    type SincroPoseTargetPointSnapshot,
     type SincroPoseMotionSnapshot,
+    type SincroPoseTargetPointSnapshot,
 } from "./SincroPoseMotionSnapshot";
-import { loadMediaPipeVisionFileset } from "./MediaPipeVisionFileset";
 
 const POSE_LANDMARKER_MODEL_PATH = "/3rd_party/pose_landmarker_lite.task";
 const MIN_LANDMARK_VISIBILITY = 0.45;
@@ -48,12 +43,14 @@ export class SincroPoseTracker {
             return;
         }
         if (!this.initPromise) {
-            this.initPromise = this.createPoseLandmarker()
-                .catch((error) => {
-                    this.initPromise = null;
-                    this.snapshot = this.createFallbackSnapshot("PoseLandmarker の初期化に失敗しました。", performance.now());
-                    throw error;
-                });
+            this.initPromise = this.createPoseLandmarker().catch((error) => {
+                this.initPromise = null;
+                this.snapshot = this.createFallbackSnapshot(
+                    "PoseLandmarker の初期化に失敗しました。",
+                    performance.now(),
+                );
+                throw error;
+            });
         }
         await this.initPromise;
     }
@@ -64,7 +61,10 @@ export class SincroPoseTracker {
 
     detect(videoFrame: TexImageSource, timestampMs: number): SincroPoseMotionSnapshot {
         if (!this.poseLandmarker) {
-            this.snapshot = this.createFallbackSnapshot("PoseLandmarker model is not loaded.", timestampMs);
+            this.snapshot = this.createFallbackSnapshot(
+                "PoseLandmarker model is not loaded.",
+                timestampMs,
+            );
             return this.snapshot;
         }
 
@@ -72,9 +72,10 @@ export class SincroPoseTracker {
         const result = this.poseLandmarker.detectForVideo(videoFrame, timestampMs);
         const inferenceEndedAtMs = performance.now();
         const inferenceTimeMs = inferenceEndedAtMs - inferenceStartedAtMs;
-        const inferenceFps = this.lastInferenceEndedAtMs == null
-            ? 0
-            : 1000 / Math.max(1, inferenceEndedAtMs - this.lastInferenceEndedAtMs);
+        const inferenceFps =
+            this.lastInferenceEndedAtMs == null
+                ? 0
+                : 1000 / Math.max(1, inferenceEndedAtMs - this.lastInferenceEndedAtMs);
         this.lastInferenceEndedAtMs = inferenceEndedAtMs;
         this.snapshot = this.normalizeResult(result, inferenceTimeMs, inferenceFps, timestampMs);
         return this.getSnapshot();
@@ -89,7 +90,10 @@ export class SincroPoseTracker {
         };
     }
 
-    stop(reason: string | null = null, nowMs: number = performance.now()): SincroPoseMotionSnapshot {
+    stop(
+        reason: string | null = null,
+        nowMs: number = performance.now(),
+    ): SincroPoseMotionSnapshot {
         this.snapshot = {
             ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
             leftArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
@@ -178,21 +182,29 @@ export class SincroPoseTracker {
         const shoulderWidth = Math.max(distance2d(leftShoulder, rightShoulder), 0.08);
         const shoulderCenterX = (leftShoulder.x + rightShoulder.x) * 0.5;
         const shoulderCenterY = (leftShoulder.y + rightShoulder.y) * 0.5;
-        const hipCenterTracked = visibility(leftHip) >= MIN_LANDMARK_VISIBILITY && visibility(rightHip) >= MIN_LANDMARK_VISIBILITY;
-        const hipCenterX = hipCenterTracked
-            ? (leftHip.x + rightHip.x) * 0.5
-            : shoulderCenterX;
-        const leftArm = this.armMotion(landmarks, "left", shoulderWidth, shoulderCenterX, shoulderCenterY);
-        const rightArm = this.armMotion(landmarks, "right", shoulderWidth, shoulderCenterX, shoulderCenterY);
+        const hipCenterTracked =
+            visibility(leftHip) >= MIN_LANDMARK_VISIBILITY &&
+            visibility(rightHip) >= MIN_LANDMARK_VISIBILITY;
+        const hipCenterX = hipCenterTracked ? (leftHip.x + rightHip.x) * 0.5 : shoulderCenterX;
+        const leftArm = this.armMotion(
+            landmarks,
+            "left",
+            shoulderWidth,
+            shoulderCenterX,
+            shoulderCenterY,
+        );
+        const rightArm = this.armMotion(
+            landmarks,
+            "right",
+            shoulderWidth,
+            shoulderCenterX,
+            shoulderCenterY,
+        );
 
         return {
             trackingEnabled: true,
             detected: true,
-            confidence: Math.max(
-                shoulderConfidence,
-                leftArm.confidence,
-                rightArm.confidence,
-            ),
+            confidence: Math.max(shoulderConfidence, leftArm.confidence, rightArm.confidence),
             upperBody: {
                 shoulderRoll: clampSigned((rightShoulder.y - leftShoulder.y) / shoulderWidth),
                 torsoLean: clampSigned((hipCenterX - shoulderCenterX) / shoulderWidth),
@@ -219,7 +231,8 @@ export class SincroPoseTracker {
         shoulderCenterX: number,
         shoulderCenterY: number,
     ): SincroPoseArmMotionSnapshot {
-        const shoulder = landmarks[side === "left" ? LANDMARK.leftShoulder : LANDMARK.rightShoulder];
+        const shoulder =
+            landmarks[side === "left" ? LANDMARK.leftShoulder : LANDMARK.rightShoulder];
         const elbow = landmarks[side === "left" ? LANDMARK.leftElbow : LANDMARK.rightElbow];
         const wrist = landmarks[side === "left" ? LANDMARK.leftWrist : LANDMARK.rightWrist];
         const confidence = averageVisibility([shoulder, elbow, wrist]);
@@ -304,7 +317,9 @@ function visibility(landmark: NormalizedLandmark | undefined): number {
 }
 
 function presence(landmark: NormalizedLandmark | undefined): number {
-    const landmarkWithPresence = landmark as (NormalizedLandmark & { presence?: number }) | undefined;
+    const landmarkWithPresence = landmark as
+        | (NormalizedLandmark & { presence?: number })
+        | undefined;
     return clamp01(landmarkWithPresence?.presence ?? landmark?.visibility ?? 0);
 }
 

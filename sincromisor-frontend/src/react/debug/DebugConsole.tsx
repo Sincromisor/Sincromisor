@@ -43,11 +43,19 @@ export function DebugConsole() {
             <DebugConsoleTabs activeTab={activeTab} onSelect={setActiveTab} />
             <div className="debugConsolePanelSlot">
                 <StatusPanel snapshot={snapshot} isActive={activeTab === "status"} />
-                <AudioPanel snapshot={snapshot} manager={manager} isActive={activeTab === "audio"} />
+                <AudioPanel
+                    snapshot={snapshot}
+                    manager={manager}
+                    isActive={activeTab === "audio"}
+                />
                 <RtcPanel snapshot={snapshot} isActive={activeTab === "rtc"} />
                 <MessagesPanel snapshot={snapshot} isActive={activeTab === "messages"} />
                 <GazePanel snapshot={snapshot} manager={manager} isActive={activeTab === "gaze"} />
-                <SincroMotionPanel snapshot={snapshot} manager={manager} isActive={activeTab === "sincro"} />
+                <SincroMotionPanel
+                    snapshot={snapshot}
+                    manager={manager}
+                    isActive={activeTab === "sincro"}
+                />
                 <SdpPanel snapshot={snapshot} isActive={activeTab === "sdp"} />
             </div>
         </div>

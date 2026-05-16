@@ -1,8 +1,11 @@
-import type { PanelMessageLog } from "../simple-vrm/panelTypes";
 import type { SincroAppEvent } from "../../ts/App/SincroAppTypes";
+import type { PanelMessageLog } from "../simple-vrm/panelTypes";
 import { UI_TUNING } from "./uiTuning";
 
-type ChatLikeEvent = Extract<SincroAppEvent, { type: "chat_message" | "system_message" | "error_message"; }>;
+type ChatLikeEvent = Extract<
+    SincroAppEvent,
+    { type: "chat_message" | "system_message" | "error_message" }
+>;
 
 // 配列先頭に要素を追加し、件数上限を維持する共通 helper。
 // chat log 以外（dialog pop 等）の一時リストにも使えるよう汎用化している。

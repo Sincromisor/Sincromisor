@@ -1,18 +1,20 @@
-import { useState } from "react";
 import type { ReactNode } from "react";
-import type {
-    ApplySettingsFn,
-    SincroAppSettingsSnapshot,
-    SincroAppSettingsUiState,
-    SincroAppSettingsUiHints,
-    SincroAppStartupSettingsStatus,
-    SincroAppStartupSettingsCapabilities,
-} from "../panelTypes";
-import { UI_TUNING } from "../../app/uiTuning";
+import { useState } from "react";
 import type {
     SincroMediaDeviceSelectionState,
     SincroMediaDeviceSnapshot,
 } from "../../../ts/MediaDevices/SincroMediaDeviceService";
+import { UI_TUNING } from "../../app/uiTuning";
+import {
+    AudioInputDeviceField,
+    AudioProcessingToggles,
+    CharacterDisplayToggles,
+    StartupBehaviorFields,
+    settingHelp,
+    TalkModeField,
+    TitleTextField,
+    VideoInputDeviceField,
+} from "../../settings-fields/SettingsFields";
 import {
     SettingsButton,
     SettingsHelpBadge,
@@ -20,16 +22,14 @@ import {
     SettingsInput,
     SettingsSectionCard,
 } from "../../settings-primitives/SettingsPrimitives";
-import {
-    AudioInputDeviceField,
-    AudioProcessingToggles,
-    CharacterDisplayToggles,
-    settingHelp,
-    StartupBehaviorFields,
-    TalkModeField,
-    TitleTextField,
-    VideoInputDeviceField,
-} from "../../settings-fields/SettingsFields";
+import type {
+    ApplySettingsFn,
+    SincroAppSettingsSnapshot,
+    SincroAppSettingsUiHints,
+    SincroAppSettingsUiState,
+    SincroAppStartupSettingsCapabilities,
+    SincroAppStartupSettingsStatus,
+} from "../panelTypes";
 
 // Control Panel 用の設定セクション群。
 // 起動前 dialog 用フォームとは分離し、ページ常設パネル向けの文言/密度/導線をここで管理する。
@@ -97,7 +97,10 @@ export function BasicSettingsSection({
                     settings={settings}
                     uiState={uiState}
                     onTitleChange={onTitleChange}
-                    style={{ marginTop: `${detailsContentTopMarginPx}px`, marginBottom: `${sectionSpacingPx}px` }}
+                    style={{
+                        marginTop: `${detailsContentTopMarginPx}px`,
+                        marginBottom: `${sectionSpacingPx}px`,
+                    }}
                 />
             ) : null}
             {showTalkMode ? (
@@ -147,7 +150,9 @@ export function MicSettingsSection({
         setRefreshMessage("");
         void onRefreshDevices().then((nextSnapshot) => {
             if (nextSnapshot.refreshError) {
-                setRefreshMessage(`デバイス一覧の再取得に失敗しました: ${nextSnapshot.refreshError}`);
+                setRefreshMessage(
+                    `デバイス一覧の再取得に失敗しました: ${nextSnapshot.refreshError}`,
+                );
                 return;
             }
             setRefreshMessage("デバイス一覧を更新しました。");
@@ -167,7 +172,11 @@ export function MicSettingsSection({
                             marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
                         }}
                     >
-                        {showSectionTitle ? <HelpLabel text="マイク設定" /> : <span style={{ opacity: 0.8, fontWeight: 700 }}>マイク入力</span>}
+                        {showSectionTitle ? (
+                            <HelpLabel text="マイク設定" />
+                        ) : (
+                            <span style={{ opacity: 0.8, fontWeight: 700 }}>マイク入力</span>
+                        )}
                         <SettingsButton
                             type="button"
                             onClick={handleRefreshDevices}
@@ -176,7 +185,11 @@ export function MicSettingsSection({
                             {mediaDeviceSnapshot.isRefreshing ? "更新中..." : "再読み込み"}
                         </SettingsButton>
                     </div>
-                    <div style={{ marginBottom: showProcessingOptions ? `${sectionSpacingPx}px` : "0" }}>
+                    <div
+                        style={{
+                            marginBottom: showProcessingOptions ? `${sectionSpacingPx}px` : "0",
+                        }}
+                    >
                         <AudioInputDeviceField
                             settings={settings}
                             uiState={uiState}
@@ -196,7 +209,13 @@ export function MicSettingsSection({
                 />
             ) : null}
             {refreshMessage ? (
-                <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
+                <div
+                    style={{
+                        marginTop: `${settingsTuning.hintMarginTopPx}px`,
+                        opacity: 0.7,
+                        lineHeight: 1.3,
+                    }}
+                >
                     {refreshMessage}
                 </div>
             ) : null}
@@ -222,14 +241,27 @@ export function CharacterSettingsSection({
 }: CharacterSettingsSectionProps & { mode?: CharacterSettingsSectionMode }) {
     const showCameraSelection = mode !== "display";
     const showDisplayOptions = mode !== "camera";
-    const sectionLabel = mode === "camera"
-        ? "視線用カメラ"
-        : mode === "display"
-            ? "キャラクター表示"
-            : "キャラクターと視線";
+    const sectionLabel =
+        mode === "camera"
+            ? "視線用カメラ"
+            : mode === "display"
+              ? "キャラクター表示"
+              : "キャラクターと視線";
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            {showSectionTitle ? <HelpLabel text="キャラクター設定" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>{sectionLabel}</div>}
+            {showSectionTitle ? (
+                <HelpLabel text="キャラクター設定" />
+            ) : (
+                <div
+                    style={{
+                        opacity: 0.8,
+                        fontWeight: 700,
+                        marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
+                    }}
+                >
+                    {sectionLabel}
+                </div>
+            )}
             {showCameraSelection ? (
                 <div style={{ marginBottom: showDisplayOptions ? `${sectionSpacingPx}px` : "0" }}>
                     <VideoInputDeviceField
@@ -249,7 +281,13 @@ export function CharacterSettingsSection({
                     uiHints={uiHints}
                     onApplySettings={onApplySettings}
                     renderHint={(label, message) => (
-                        <div style={{ marginTop: `${settingsTuning.hintMarginTopPx}px`, opacity: 0.7, lineHeight: 1.3 }}>
+                        <div
+                            style={{
+                                marginTop: `${settingsTuning.hintMarginTopPx}px`,
+                                opacity: 0.7,
+                                lineHeight: 1.3,
+                            }}
+                        >
                             {label}: {message}
                         </div>
                     )}
@@ -275,34 +313,86 @@ export function LookingGlassSettingsSection({
         {
             label: "標準 (Default)",
             // 既定値は展示実機で焦点を合わせやすかった Focus 値を採用する。
-            values: { lgTileHeight: 512, lgNumViews: 45, lgTargetY: 0.95, lgTargetZ: 0.05, lgTargetDiam: 1.25, lgDepthiness: 0.85, lgFovyDeg: 24 },
+            values: {
+                lgTileHeight: 512,
+                lgNumViews: 45,
+                lgTargetY: 0.95,
+                lgTargetZ: 0.05,
+                lgTargetDiam: 1.25,
+                lgDepthiness: 0.85,
+                lgFovyDeg: 24,
+            },
         },
         {
             label: "縦長 (Portrait)",
-            values: { lgTileHeight: 640, lgNumViews: 45, lgTargetY: 1.35, lgTargetZ: 0.45, lgTargetDiam: 0.8, lgDepthiness: 0.9, lgFovyDeg: 22 },
+            values: {
+                lgTileHeight: 640,
+                lgNumViews: 45,
+                lgTargetY: 1.35,
+                lgTargetZ: 0.45,
+                lgTargetDiam: 0.8,
+                lgDepthiness: 0.9,
+                lgFovyDeg: 22,
+            },
         },
         {
             label: "広角 (Wide)",
-            values: { lgTileHeight: 512, lgNumViews: 48, lgTargetY: 1.15, lgTargetZ: 0.6, lgTargetDiam: 0.95, lgDepthiness: 1.2, lgFovyDeg: 30 },
+            values: {
+                lgTileHeight: 512,
+                lgNumViews: 48,
+                lgTargetY: 1.15,
+                lgTargetZ: 0.6,
+                lgTargetDiam: 0.95,
+                lgDepthiness: 1.2,
+                lgFovyDeg: 30,
+            },
         },
         {
             label: "焦点調整用 (Focus)",
             // 実機検証で Target Z を 0.05 付近まで寄せると焦点が合いやすいケースがあったため反映。
             // 展示構図（全身を収めやすい引き気味・下寄り）も合わせて既定値に寄せる。
-            values: { lgTileHeight: 512, lgNumViews: 45, lgTargetY: 0.95, lgTargetZ: 0.05, lgTargetDiam: 1.25, lgDepthiness: 0.85, lgFovyDeg: 24 },
+            values: {
+                lgTileHeight: 512,
+                lgNumViews: 45,
+                lgTargetY: 0.95,
+                lgTargetZ: 0.05,
+                lgTargetDiam: 1.25,
+                lgDepthiness: 0.85,
+                lgFovyDeg: 24,
+            },
         },
     ];
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            {showSectionTitle ? <HelpLabel text="Looking Glass 設定" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>Looking Glass 表示</div>}
+            {showSectionTitle ? (
+                <HelpLabel text="Looking Glass 設定" />
+            ) : (
+                <div
+                    style={{
+                        opacity: 0.8,
+                        fontWeight: 700,
+                        marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
+                    }}
+                >
+                    Looking Glass 表示
+                </div>
+            )}
             <div style={{ opacity: 0.6, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
                 これらの値は、次回の Looking Glass 起動時に適用されます。
             </div>
             <div style={{ opacity: 0.7, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
-                ピンボケ気味の場合は、まず <code>Target Z</code> と <code>Target Diam</code> を少しずつ調整してください。
+                ピンボケ気味の場合は、まず <code>Target Z</code> と <code>Target Diam</code>{" "}
+                を少しずつ調整してください。
             </div>
             {/* プリセットは初期位置合わせの近道。最終的な値は下の数値入力で追い込む。 */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: `${compactGapPx}px`, marginBottom: `${rowGapPx}px` }}>
+            <div
+                style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: `${compactGapPx}px`,
+                    marginBottom: `${rowGapPx}px`,
+                }}
+            >
                 {presets.map((preset) => (
                     <SettingsButton
                         key={preset.label}
@@ -313,7 +403,13 @@ export function LookingGlassSettingsSection({
                     </SettingsButton>
                 ))}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${compactGapPx}px` }}>
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: `${compactGapPx}px`,
+                }}
+            >
                 <NumericSettingField
                     label="タイル高さ (Tile Height)"
                     help={settingHelp.lgTileHeight}
@@ -404,7 +500,19 @@ export function StartupSettingsSection({
     }
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            {showSectionTitle ? <HelpLabel text="開始時の動作" /> : <div style={{ opacity: 0.8, fontWeight: 700, marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px` }}>ページ開始時の動作</div>}
+            {showSectionTitle ? (
+                <HelpLabel text="開始時の動作" />
+            ) : (
+                <div
+                    style={{
+                        opacity: 0.8,
+                        fontWeight: 700,
+                        marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
+                    }}
+                >
+                    ページ開始時の動作
+                </div>
+            )}
             <StartupBehaviorFields
                 settings={settings}
                 uiState={uiState}
@@ -414,15 +522,22 @@ export function StartupSettingsSection({
                 startupCapabilities={startupCapabilities}
                 useFieldStack={false}
                 introText={{
-                    running: "開始前に決まる動きです。いま変更した内容を反映したい時は、いったん停止してからもう一度始めてください。",
-                    stopped: "開始した時の動きを決めます。必要なものだけオンにしてから始めてください。",
+                    running:
+                        "開始前に決まる動きです。いま変更した内容を反映したい時は、いったん停止してからもう一度始めてください。",
+                    stopped:
+                        "開始した時の動きを決めます。必要なものだけオンにしてから始めてください。",
                 }}
                 renderHint={(message, tone) => (
                     <div
                         style={{
                             opacity: tone ? 1 : 0.6,
                             marginBottom: `${compactGapPx}px`,
-                            color: tone === "warning" ? "#ffd38a" : tone === "info" ? "#b8e0ff" : undefined,
+                            color:
+                                tone === "warning"
+                                    ? "#ffd38a"
+                                    : tone === "info"
+                                      ? "#b8e0ff"
+                                      : undefined,
                             lineHeight: 1.3,
                         }}
                     >
@@ -444,10 +559,18 @@ type NumericSettingFieldProps = {
     onChange: (value: number) => void;
 };
 
-function NumericSettingField({ label, help, value, min, max, step, onChange }: NumericSettingFieldProps) {
+function NumericSettingField({
+    label,
+    help,
+    value,
+    min,
+    max,
+    step,
+    onChange,
+}: NumericSettingFieldProps) {
     return (
         // 数値入力の最終丸めは AppController 側で行うため、UI では入力値をそのまま渡す。
-        <label style={{ display: "grid", gap: "4px" }}>
+        <div style={{ display: "grid", gap: "4px" }}>
             <span style={{ opacity: 0.8, display: "flex", alignItems: "center" }}>
                 {label}
                 {help ? <HelpBadge help={help} /> : null}
@@ -458,6 +581,7 @@ function NumericSettingField({ label, help, value, min, max, step, onChange }: N
                 min={min}
                 max={max}
                 step={step}
+                aria-label={label}
                 onChange={(event) => {
                     const nextValue = Number(event.target.value);
                     if (!Number.isFinite(nextValue)) {
@@ -467,6 +591,6 @@ function NumericSettingField({ label, help, value, min, max, step, onChange }: N
                     onChange(nextValue);
                 }}
             />
-        </label>
+        </div>
     );
 }

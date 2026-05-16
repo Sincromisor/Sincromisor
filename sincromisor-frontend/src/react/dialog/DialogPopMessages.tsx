@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import type { SincroAppDialogPopMessage, SincroAppEvent } from "../../ts/App/SincroAppTypes";
-import { subscribeActiveSincroAppController } from "../app/subscribeActiveSincroAppController";
 import { prependCappedItem } from "../app/panelLogHelpers";
+import { subscribeActiveSincroAppController } from "../app/subscribeActiveSincroAppController";
+import { UI_TUNING } from "../app/uiTuning";
 import { DIALOG_POP_TIMING, scheduleDialogPopVisibility } from "./dialogPopAnimationHelpers";
 import { useDialogPopTimers } from "./useDialogPopTimers";
-import { UI_TUNING } from "../app/uiTuning";
 
 type DialogPopItem = SincroAppDialogPopMessage & {
     visible: boolean;
@@ -26,12 +26,16 @@ export function DialogPopMessages() {
                 }
                 const dialogPop = event.message;
                 const nextItem: DialogPopItem = { ...dialogPop, visible: false };
-                setItems((prev) => prependCappedItem(prev, nextItem, DIALOG_POP_TIMING.renderLimit));
+                setItems((prev) =>
+                    prependCappedItem(prev, nextItem, DIALOG_POP_TIMING.renderLimit),
+                );
                 // 表示/非表示/削除のタイマー手順は helper に閉じ、component は一覧更新に集中する。
                 const cleanupTimer = scheduleDialogPopVisibility(nextItem, setItems);
                 register(
                     cleanupTimer,
-                    nextItem.autoRemoveMs + DIALOG_POP_TIMING.hideTransitionMs + UI_TUNING.dialogPop.cleanupMarginMs,
+                    nextItem.autoRemoveMs +
+                        DIALOG_POP_TIMING.hideTransitionMs +
+                        UI_TUNING.dialogPop.cleanupMarginMs,
                 );
             });
 

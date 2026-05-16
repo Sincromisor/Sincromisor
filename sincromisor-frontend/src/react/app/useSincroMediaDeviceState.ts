@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
     buildSincroMediaDeviceSelections,
-    SincroMediaDeviceService,
     type SincroMediaDeviceSelectionState,
+    SincroMediaDeviceService,
     type SincroMediaDeviceSnapshot,
 } from "../../ts/MediaDevices/SincroMediaDeviceService";
 
@@ -24,7 +24,9 @@ export function useSincroMediaDeviceState(
     params: UseSincroMediaDeviceStateParams = {},
 ): UseSincroMediaDeviceStateResult {
     const service = SincroMediaDeviceService.getInstance();
-    const [snapshot, setSnapshot] = useState<SincroMediaDeviceSnapshot>(() => service.getSnapshot());
+    const [snapshot, setSnapshot] = useState<SincroMediaDeviceSnapshot>(() =>
+        service.getSnapshot(),
+    );
 
     useEffect(() => {
         service.start();

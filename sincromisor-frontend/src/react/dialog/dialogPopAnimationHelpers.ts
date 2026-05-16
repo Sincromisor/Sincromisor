@@ -21,13 +21,21 @@ export function scheduleDialogPopVisibility<T extends DialogPopItemLike>(
 ): () => void {
     // CSS transition を使うため、次フレーム相当で visible=true にする。
     const showTimer: TimeoutHandle = setTimeout(() => {
-        setItems((prev) => prev.map((prevItem) => (prevItem.id === item.id ? { ...prevItem, visible: true } : prevItem)));
+        setItems((prev) =>
+            prev.map((prevItem) =>
+                prevItem.id === item.id ? { ...prevItem, visible: true } : prevItem,
+            ),
+        );
     }, DIALOG_POP_SHOW_DELAY_MS);
 
     // PopMessageService 既存挙動に合わせて、自動で hide -> remove を行う。
     let removeTimer: TimeoutHandle | null = null;
     const hideTimer: TimeoutHandle = setTimeout(() => {
-        setItems((prev) => prev.map((prevItem) => (prevItem.id === item.id ? { ...prevItem, visible: false } : prevItem)));
+        setItems((prev) =>
+            prev.map((prevItem) =>
+                prevItem.id === item.id ? { ...prevItem, visible: false } : prevItem,
+            ),
+        );
         removeTimer = setTimeout(() => {
             setItems((prev) => prev.filter((prevItem) => prevItem.id !== item.id));
         }, DIALOG_POP_HIDE_TRANSITION_MS);

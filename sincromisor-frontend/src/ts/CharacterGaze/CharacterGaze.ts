@@ -1,7 +1,7 @@
-import { FaceDetector, Detection } from "@mediapipe/tasks-vision";
+import { type Detection, FaceDetector } from "@mediapipe/tasks-vision";
+import { loadMediaPipeVisionFileset } from "../FaceTracking/MediaPipeVisionFileset";
 import { FaceTargetSelector } from "./FaceTargetSelector";
 import { OneEuroFilter1D } from "./OneEuroFilter";
-import { loadMediaPipeVisionFileset } from "../FaceTracking/MediaPipeVisionFileset";
 
 declare type NormalizedKeypoint = {
     /** X in normalized image coordinates. */
@@ -12,7 +12,7 @@ declare type NormalizedKeypoint = {
     label?: string;
     /** Optional score of the keypoint. */
     score?: number;
-}
+};
 
 const VIDEO_FRAME_STALE_MS = 1200;
 const MIN_DETECTABLE_VIDEO_DIMENSION_PX = 2;
@@ -27,9 +27,11 @@ export class CharacterGaze {
     private detected: boolean = false;
     // デフォルトでは真正面を向くよう、
     // すべてのkeypointを画像中央となる0.5に設定する
-    movingAverage: Array<{ 'x': number, 'y': number }> = [...Array(6)].map(() => { return { 'x': 0.5, 'y': 0.5 } });
-    arriveCallback: () => void = () => { };
-    leaveCallback: () => void = () => { };
+    movingAverage: Array<{ x: number; y: number }> = [...Array(6)].map(() => {
+        return { x: 0.5, y: 0.5 };
+    });
+    arriveCallback: () => void = () => {};
+    leaveCallback: () => void = () => {};
     private predictionLoopEnabled: boolean = false;
     private predictionLoopRunning: boolean = false;
     private predictionFrameId: number | null = null;
@@ -38,13 +40,17 @@ export class CharacterGaze {
     private loadedDataHandlerBound: (() => void) | null = null;
     private readonly faceTargetSelector = new FaceTargetSelector();
     // 6 keypoints (rightEye, leftEye, nose, mouth, rightEar, leftEar) の x/y を個別に平滑化する。
-    private readonly keypointXFilters: OneEuroFilter1D[] = [...Array(6)].map(() => new OneEuroFilter1D(1.0, 0.02, 1.0));
-    private readonly keypointYFilters: OneEuroFilter1D[] = [...Array(6)].map(() => new OneEuroFilter1D(1.0, 0.02, 1.0));
+    private readonly keypointXFilters: OneEuroFilter1D[] = [...Array(6)].map(
+        () => new OneEuroFilter1D(1.0, 0.02, 1.0),
+    );
+    private readonly keypointYFilters: OneEuroFilter1D[] = [...Array(6)].map(
+        () => new OneEuroFilter1D(1.0, 0.02, 1.0),
+    );
     private lastTargetDebugText = "-";
     private gazeTuning = {
         minimumHoldMs: 900,
         switchMargin: 0.15,
-        relinkDistance: 0.20,
+        relinkDistance: 0.2,
         oneEuroMinCutoff: 1.0,
         oneEuroBeta: 0.02,
         oneEuroDCutoff: 1.0,
@@ -53,9 +59,11 @@ export class CharacterGaze {
 
     static getManager(): CharacterGaze {
         if (!CharacterGaze.instance) {
-            const chracterGazeVideo: HTMLVideoElement | null = document.querySelector('video#characterGazeVideo');
+            const chracterGazeVideo: HTMLVideoElement | null = document.querySelector(
+                "video#characterGazeVideo",
+            );
             if (!chracterGazeVideo) {
-                throw 'video#characterGazeVideo is not found.';
+                throw "video#characterGazeVideo is not found.";
             }
             CharacterGaze.instance = new CharacterGaze(chracterGazeVideo);
         }
@@ -64,8 +72,8 @@ export class CharacterGaze {
 
     private constructor(targetVideoElement: HTMLVideoElement) {
         this.videoElement = targetVideoElement;
-        this.arriveCallback = () => { };
-        this.leaveCallback = () => { };
+        this.arriveCallback = () => {};
+        this.leaveCallback = () => {};
     }
 
     // ブラウザ権限/UI表示とは独立に、APIサポート有無だけを返す。
@@ -118,14 +126,21 @@ export class CharacterGaze {
         }
     }
 
-
     // 鼻の座標から、相手の目線の角度を計算する。
     eyeAngles(): [number, number] {
         const cameraPos: [number, number, number] = [0, 0, 0];
-        const [faceX, faceY, faceZ] = [this.movingAverage[2]["x"] - 0.5, this.movingAverage[2]["y"] - 0.5, 1];
+        const [faceX, faceY, faceZ] = [
+            this.movingAverage[2]["x"] - 0.5,
+            this.movingAverage[2]["y"] - 0.5,
+            1,
+        ];
 
         // カメラから点cへのベクトル
-        const vector: [number, number, number] = [faceX - cameraPos[0], faceY - cameraPos[1], faceZ - cameraPos[2]];
+        const vector: [number, number, number] = [
+            faceX - cameraPos[0],
+            faceY - cameraPos[1],
+            faceZ - cameraPos[2],
+        ];
 
         // z軸に対する深さ
         const depth = vector[2];
@@ -139,15 +154,18 @@ export class CharacterGaze {
         return [alpha, beta];
     }
 
-
     // 右目-鼻、左目-鼻の距離を基に、顔がこちらを向いているかを0.0～1.0の値で返す。
     // 0.5に近ければ近いほど、正面を向いている可能性が高い。
     facing(): number {
         const rightEye = this.movingAverage[0];
         const leftEye = this.movingAverage[1];
         const nose = this.movingAverage[2];
-        const rEyeDist = Math.sqrt((rightEye["x"] - nose["x"]) ** 2 + (rightEye["y"] - nose["y"]) ** 2);
-        const lEyeDist = Math.sqrt((leftEye["x"] - nose["x"]) ** 2 + (leftEye["y"] - nose["y"]) ** 2);
+        const rEyeDist = Math.sqrt(
+            (rightEye["x"] - nose["x"]) ** 2 + (rightEye["y"] - nose["y"]) ** 2,
+        );
+        const lEyeDist = Math.sqrt(
+            (leftEye["x"] - nose["x"]) ** 2 + (leftEye["y"] - nose["y"]) ** 2,
+        );
         return rEyeDist / (rEyeDist + lEyeDist);
     }
 
@@ -155,8 +173,8 @@ export class CharacterGaze {
     detecting(): boolean {
         const nowMs = performance.now();
         if (
-            this.lastVideoFrameUpdatedAtMs >= 0
-            && nowMs - this.lastVideoFrameUpdatedAtMs > VIDEO_FRAME_STALE_MS
+            this.lastVideoFrameUpdatedAtMs >= 0 &&
+            nowMs - this.lastVideoFrameUpdatedAtMs > VIDEO_FRAME_STALE_MS
         ) {
             return false;
         }
@@ -170,15 +188,13 @@ export class CharacterGaze {
         // https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.js
         // https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.wasm
         const vision = await loadMediaPipeVisionFileset();
-        this.faceDetector = await FaceDetector.createFromOptions(
-            vision,
-            {
-                baseOptions: {
-                    modelAssetPath: "/3rd_party/blaze_face_short_range.tflite",
-                    delegate: this.selectFaceDetectorDelegate()
-                },
-                runningMode: "VIDEO",
-            });
+        this.faceDetector = await FaceDetector.createFromOptions(vision, {
+            baseOptions: {
+                modelAssetPath: "/3rd_party/blaze_face_short_range.tflite",
+                delegate: this.selectFaceDetectorDelegate(),
+            },
+            runningMode: "VIDEO",
+        });
     }
 
     // 上位の開始リトライ制御用。FaceDetector 生成完了のみを判定する。
@@ -207,9 +223,9 @@ export class CharacterGaze {
 
         const videoStream = new MediaStream();
         videoStream.addTrack(videoTrack);
-        this.videoElement.setAttribute("autoplay", 'true');
-        this.videoElement.setAttribute("playsinline", 'true');
-        this.videoElement.setAttribute("muted", 'true');
+        this.videoElement.setAttribute("autoplay", "true");
+        this.videoElement.setAttribute("playsinline", "true");
+        this.videoElement.setAttribute("muted", "true");
         this.videoElement.srcObject = videoStream;
         this.detectionCallback = callback;
         this.detectionErrorCallback = errorCallback ?? null;
@@ -308,7 +324,10 @@ export class CharacterGaze {
             }
             let detections: Detection[];
             try {
-                detections = this.faceDetector.detectForVideo(this.videoElement, startTimeMs).detections;
+                detections = this.faceDetector.detectForVideo(
+                    this.videoElement,
+                    startTimeMs,
+                ).detections;
             } catch (error) {
                 this.handleDetectionRuntimeError(error);
                 return;
@@ -316,12 +335,16 @@ export class CharacterGaze {
 
             if (detections.length > 0) {
                 const selected = this.faceTargetSelector.select(detections, startTimeMs);
-                this.lastTargetDebugText = selected.selectedIndex == null
-                    ? `候補:${selected.candidateCount}`
-                    : `対象:${selected.selectedIndex} 候補:${selected.candidateCount} score:${(selected.selectedScore ?? 0).toFixed(2)}${selected.holdLocked ? " 固定中" : ""}`;
+                this.lastTargetDebugText =
+                    selected.selectedIndex == null
+                        ? `候補:${selected.candidateCount}`
+                        : `対象:${selected.selectedIndex} 候補:${selected.candidateCount} score:${(selected.selectedScore ?? 0).toFixed(2)}${selected.holdLocked ? " 固定中" : ""}`;
                 if (selected.selectedIndex != null) {
                     const targetDetection = detections[selected.selectedIndex];
-                    this.updateKeypointsMovingAverage(targetDetection.keypoints as NormalizedKeypoint[], startTimeMs);
+                    this.updateKeypointsMovingAverage(
+                        targetDetection.keypoints as NormalizedKeypoint[],
+                        startTimeMs,
+                    );
                     this.lastDetectedTime = performance.now();
                     this.videoElement.dispatchEvent(new Event("detect"));
                 }
@@ -330,7 +353,7 @@ export class CharacterGaze {
             }
             // 直近検出時刻ベースで「在席/離席」を判定し、AutoMute 側イベントへ変換する。
             const newStatus = this.detecting();
-            if (this.detected != newStatus) {
+            if (this.detected !== newStatus) {
                 if (newStatus) {
                     console.log("arrive!");
                     this.arriveCallback();
@@ -362,14 +385,16 @@ export class CharacterGaze {
         // Firefox can fire loadeddata before decoded dimensions are stable. Passing a
         // zero-sized frame to MediaPipe may surface as a wasm index-out-of-bounds error.
         return (
-            this.videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
-            && this.videoElement.videoWidth >= MIN_DETECTABLE_VIDEO_DIMENSION_PX
-            && this.videoElement.videoHeight >= MIN_DETECTABLE_VIDEO_DIMENSION_PX
+            this.videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+            this.videoElement.videoWidth >= MIN_DETECTABLE_VIDEO_DIMENSION_PX &&
+            this.videoElement.videoHeight >= MIN_DETECTABLE_VIDEO_DIMENSION_PX
         );
     }
 
     private scheduleNextPrediction(callback: (detection: Detection[]) => void): void {
-        this.predictionFrameId = window.requestAnimationFrame(() => { void this.predictCam(callback); });
+        this.predictionFrameId = window.requestAnimationFrame(() => {
+            void this.predictCam(callback);
+        });
     }
 
     private handleDetectionRuntimeError(error: unknown): void {
@@ -392,10 +417,13 @@ export class CharacterGaze {
         return navigator.userAgent.toLowerCase().includes("firefox") ? "CPU" : "GPU";
     }
 
-    private handleFrozenVideoFrame(nowMs: number, callback: (detection: Detection[]) => void): void {
+    private handleFrozenVideoFrame(
+        nowMs: number,
+        callback: (detection: Detection[]) => void,
+    ): void {
         if (
-            this.lastVideoFrameUpdatedAtMs < 0
-            || nowMs - this.lastVideoFrameUpdatedAtMs <= VIDEO_FRAME_STALE_MS
+            this.lastVideoFrameUpdatedAtMs < 0 ||
+            nowMs - this.lastVideoFrameUpdatedAtMs <= VIDEO_FRAME_STALE_MS
         ) {
             return;
         }
@@ -414,23 +442,34 @@ export class CharacterGaze {
     // keypointの指数移動平均値を更新する
     // keypointsの値は0.0～1.0
     // 画像左端がX=0、上がY=0
-    private updateKeypointsMovingAverage(keypoints: NormalizedKeypoint[], timestampMs: number): void {
+    private updateKeypointsMovingAverage(
+        keypoints: NormalizedKeypoint[],
+        timestampMs: number,
+    ): void {
         for (let i = 0; i <= 5; i++) {
             const rawX = this.clamp01(keypoints[i]["x"]);
             const rawY = this.clamp01(keypoints[i]["y"]);
             const filteredX = this.keypointXFilters[i].filter(rawX, timestampMs);
             const filteredY = this.keypointYFilters[i].filter(rawY, timestampMs);
-            this.movingAverage[i]["x"] = this.applyDeadband(this.movingAverage[i]["x"], this.clamp01(filteredX));
-            this.movingAverage[i]["y"] = this.applyDeadband(this.movingAverage[i]["y"], this.clamp01(filteredY));
+            this.movingAverage[i]["x"] = this.applyDeadband(
+                this.movingAverage[i]["x"],
+                this.clamp01(filteredX),
+            );
+            this.movingAverage[i]["y"] = this.applyDeadband(
+                this.movingAverage[i]["y"],
+                this.clamp01(filteredY),
+            );
         }
     }
 
     // ニュートラルポジションにじわじわと戻す。
     // ToDo: 現状鼻だけ真ん中に戻ってしまうため、なんとかする。
     private updateKeypointsMovingAverageToNeutral(): void {
-        let deviation_x = 0.5 - this.movingAverage[2]["x"];
-        let deviation_y = 0.5 - this.movingAverage[2]["y"];
-        if (Math.abs(deviation_x) < 0.01 && Math.abs(deviation_y) < 0.01) { return; }
+        const deviation_x = 0.5 - this.movingAverage[2]["x"];
+        const deviation_y = 0.5 - this.movingAverage[2]["y"];
+        if (Math.abs(deviation_x) < 0.01 && Math.abs(deviation_y) < 0.01) {
+            return;
+        }
         this.movingAverage[2]["x"] = this.movingAverage[2]["x"] + deviation_x / 30;
         this.movingAverage[2]["y"] = this.movingAverage[2]["y"] + deviation_y / 30;
     }

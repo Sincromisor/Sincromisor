@@ -119,8 +119,8 @@
 - 本タスクは `DebugConsoleManager を少し整理する` のではなく、`旧 DOM 主導の診断 UI を React 正式導線へ移す` のが目的である。
 - 実装変更時は `documents/design/frontend_ui.md` の更新が必要になる。
 - 2026-04-24 確認:
-  - `src/react/debug/DebugConsole.tsx` と `src/react/debug/RightToolMenu.tsx` により、Debug Console と右側ツール UI は React 正式経路で描画されている。
-  - `src/ts/UI/DebugConsoleManager.ts` は diagnostics snapshot provider / callback bridge として残り、DOM 直操作責務は除去されている。
-  - `src/ts/App/SincroAppRightToolPanelService.ts` と `appController.debug.*` 経路で、設定パネルと Debug Console の開閉・相互排他を App / React 側で所有している。
-  - `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` は current structure を反映済みである。
-  - `cd sincromisor-frontend && npm run build` は 2026-04-24 に成功した。
+    - `src/react/debug/DebugConsole.tsx` と `src/react/debug/RightToolMenu.tsx` により、Debug Console と右側ツール UI は React 正式経路で描画されている。
+    - `src/ts/UI/DebugConsoleManager.ts` は diagnostics snapshot provider / callback bridge として残り、DOM 直操作責務は除去されている。
+    - `src/ts/App/SincroAppRightToolPanelService.ts` と `appController.debug.*` 経路で、設定パネルと Debug Console の開閉・相互排他を App / React 側で所有している。
+    - `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` は current structure を反映済みである。
+    - `cd sincromisor-frontend && npm run build` は 2026-04-24 に成功した。

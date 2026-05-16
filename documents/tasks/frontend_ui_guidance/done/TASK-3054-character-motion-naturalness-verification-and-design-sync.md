@@ -89,16 +89,16 @@ playwright-cli resize 390 844
 ## 実施メモ
 
 - 2026-05-09:
-  - AI発話中の首・上半身・腕 gesture を低振幅化し、attack/release と beat duration を長めに調整した。
-  - `neck` 欠損VRMでは `head` / `upperChest` / `chest` / `spine` へフォールバックするようにし、該当ボーンがない場合は頭部制御のみ無効化する。
-  - mouth expression は存在する `aa/ih/ou/ee/oh` のみを駆動し、未実装プリセットでは安全にスキップする。
-  - `documents/design/frontend_character.md` に自然さ調整、VRM個体差 fallback、確認観点を同期した。
-  - `cd sincromisor-frontend && npm run build` 成功。
-  - Playwright で `simple-vrm` を 1280x720 / 390x844 で確認し、Settings / Debug Console が前面UIとして操作できることを確認した。
-  - backend 未起動、MediaPipe wasm 未配置、ブラウザ権限なしのため、RTC config 404 / Gaze wasm 404 / media permission error は既知のローカル検証条件として発生。VRMロードとUI表示は継続した。
-  - レビュー対応として、口形/感情 controller の直接購読と独自 rAF を廃止し、発話・感情・motion の時刻正本を `CharacterBehaviorSnapshot` と `VRMCharacterManager.update()` に揃えた。
-  - `npm run build` 成功。複数 VRM、実カメラ、実マイク、低スペック端末での自然さ確認は引き続き手動確認リスクとして残る。
-  - hips/root が揺れ対象になるVRMで全身が左右/前後に漂って見えるため、`CharacterMotionOrchestrator` は hips を基準位置・基準回転に固定し、重心感は spine/chest/shoulder の低振幅 motion のみに限定した。
+    - AI発話中の首・上半身・腕 gesture を低振幅化し、attack/release と beat duration を長めに調整した。
+    - `neck` 欠損VRMでは `head` / `upperChest` / `chest` / `spine` へフォールバックするようにし、該当ボーンがない場合は頭部制御のみ無効化する。
+    - mouth expression は存在する `aa/ih/ou/ee/oh` のみを駆動し、未実装プリセットでは安全にスキップする。
+    - `documents/design/frontend_character.md` に自然さ調整、VRM個体差 fallback、確認観点を同期した。
+    - `cd sincromisor-frontend && npm run build` 成功。
+    - Playwright で `simple-vrm` を 1280x720 / 390x844 で確認し、Settings / Debug Console が前面UIとして操作できることを確認した。
+    - backend 未起動、MediaPipe wasm 未配置、ブラウザ権限なしのため、RTC config 404 / Gaze wasm 404 / media permission error は既知のローカル検証条件として発生。VRMロードとUI表示は継続した。
+    - レビュー対応として、口形/感情 controller の直接購読と独自 rAF を廃止し、発話・感情・motion の時刻正本を `CharacterBehaviorSnapshot` と `VRMCharacterManager.update()` に揃えた。
+    - `npm run build` 成功。複数 VRM、実カメラ、実マイク、低スペック端末での自然さ確認は引き続き手動確認リスクとして残る。
+    - hips/root が揺れ対象になるVRMで全身が左右/前後に漂って見えるため、`CharacterMotionOrchestrator` は hips を基準位置・基準回転に固定し、重心感は spine/chest/shoulder の低振幅 motion のみに限定した。
 - 2026-05-10:
-  - キャラクター表示設定に「上半身モーション」「目線追跡」のスライダーを追加し、`characterMotionScale` / `characterEyeTrackingScale` を runtime scene へ即時同期するようにした。
-  - `npm run build` 成功。
+    - キャラクター表示設定に「上半身モーション」「目線追跡」のスライダーを追加し、`characterMotionScale` / `characterEyeTrackingScale` を runtime scene へ即時同期するようにした。
+    - `npm run build` 成功。

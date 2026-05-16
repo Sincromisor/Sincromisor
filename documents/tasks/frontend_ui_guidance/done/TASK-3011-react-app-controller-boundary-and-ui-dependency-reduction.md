@@ -105,6 +105,6 @@
 - 本タスクは `UI 境界の新規定義` ではなく、`すでに定義済みの境界へ例外箇所を寄せる` ためのタスクである。
 - 実装変更に着手した場合は、`documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` の更新が必要になる。
 - 2026-04-22 実施内容:
-  - React 側の direct manager 依存は `SincroChatView` の `ChatMessageManager.getManager()` と `SincroTelopView` の `TalkManager.getManager()` に限定されていることを確認した。
-  - `SincroAppController` の `chat` / `state` bridge と `SincroAppEvent` を拡張し、chat view snapshot、system icon 更新、telop snapshot、旧 DOM 描画停止を AppController 経由で扱えるようにした。
-  - React UI では `subscribeActiveSincroAppEvents(...)` を正規経路として使い、manager singleton の direct import / `getManager()` を行わないルールを `documents/design/frontend_migration_react.md` に反映した。
+    - React 側の direct manager 依存は `SincroChatView` の `ChatMessageManager.getManager()` と `SincroTelopView` の `TalkManager.getManager()` に限定されていることを確認した。
+    - `SincroAppController` の `chat` / `state` bridge と `SincroAppEvent` を拡張し、chat view snapshot、system icon 更新、telop snapshot、旧 DOM 描画停止を AppController 経由で扱えるようにした。
+    - React UI では `subscribeActiveSincroAppEvents(...)` を正規経路として使い、manager singleton の direct import / `getManager()` を行わないルールを `documents/design/frontend_migration_react.md` に反映した。

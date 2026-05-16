@@ -1,7 +1,12 @@
-import { panelStyles } from "../panelStyles";
-import { formatMaybeNumber, formatMaybeProbability } from "../panelUtils";
-import type { PanelGazeState, PanelLearnedVadState, PanelLookingGlassState, PanelRtcState } from "../panelTypes";
 import { UI_TUNING } from "../../app/uiTuning";
+import { panelStyles } from "../panelStyles";
+import type {
+    PanelGazeState,
+    PanelLearnedVadState,
+    PanelLookingGlassState,
+    PanelRtcState,
+} from "../panelTypes";
+import { formatMaybeNumber, formatMaybeProbability } from "../panelUtils";
 
 type DiagnosticsStatusCardsProps = {
     vadState: "unknown" | "speech" | "silence";
@@ -11,7 +16,13 @@ type DiagnosticsStatusCardsProps = {
     lookingGlass: PanelLookingGlassState;
 };
 
-export function DiagnosticsStatusCards({ vadState, gaze, rtcState, learnedVad, lookingGlass }: DiagnosticsStatusCardsProps) {
+export function DiagnosticsStatusCards({
+    vadState,
+    gaze,
+    rtcState,
+    learnedVad,
+    lookingGlass,
+}: DiagnosticsStatusCardsProps) {
     const diagnosticsTuning = UI_TUNING.controlPanel.diagnostics;
     const styleTuning = UI_TUNING.controlPanel.styles;
     // 生の観測値を一覧表示する領域。状態の意味づけ/合成は AppController 側で行う。
@@ -25,7 +36,10 @@ export function DiagnosticsStatusCards({ vadState, gaze, rtcState, learnedVad, l
             }}
         >
             <StatusCard label="VAD" value={vadState} />
-            <StatusCard label="Gaze" value={gaze.watching == null ? "-" : gaze.watching ? "注視" : "外れ"} />
+            <StatusCard
+                label="Gaze"
+                value={gaze.watching == null ? "-" : gaze.watching ? "注視" : "外れ"}
+            />
             <StatusCard label="顔X (faceX)" value={formatMaybeNumber(gaze.faceX)} />
             <StatusCard label="顔Y (faceY)" value={formatMaybeNumber(gaze.faceY)} />
             <StatusCard label="ICE" value={rtcState.iceConnectionState} />

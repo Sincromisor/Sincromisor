@@ -1,17 +1,17 @@
-import { DialogVrmFileService } from "./DialogVrmFileService";
+import type { DialogVrmFileService } from "./DialogVrmFileService";
 
 export type DialogVrmSelectResult =
     | {
-        ok: true;
-        vrmUrl: string;
-        statusText: string;
-        popMessage: string;
-    }
+          ok: true;
+          vrmUrl: string;
+          statusText: string;
+          popMessage: string;
+      }
     | {
-        ok: false;
-        statusText: string;
-        popError: string;
-    };
+          ok: false;
+          statusText: string;
+          popError: string;
+      };
 
 export type DialogVrmInitialLoadResult = {
     vrmUrl: string | null;
@@ -21,7 +21,7 @@ export type DialogVrmInitialLoadResult = {
 // dialog の VRM 選択/復元フローをまとめる。
 // DialogManager は UI 状態更新と通知に集中し、保存/検証の流れは service 側に寄せる。
 export class DialogVrmWorkflowService {
-    constructor(private readonly fileService: DialogVrmFileService) { }
+    constructor(private readonly fileService: DialogVrmFileService) {}
 
     async applySelectedVrmFile(file: File): Promise<DialogVrmSelectResult> {
         // UI通知文言はここで決め、DialogManager 側は結果に応じた state 更新/通知へ専念する。

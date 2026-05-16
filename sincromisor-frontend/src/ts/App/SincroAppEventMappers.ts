@@ -1,6 +1,6 @@
-import type { DebugConsoleManagerEvent } from "../UI/DebugConsoleManager";
 import type { TalkManagerEvent } from "../RTC/TalkManager";
 import type { ChatMessageServiceEvent } from "../UI/ChatMessageService";
+import type { DebugConsoleManagerEvent } from "../UI/DebugConsoleManager";
 import type { SincroAppEvent } from "./SincroAppTypes";
 
 export type DebugEventMapResult =

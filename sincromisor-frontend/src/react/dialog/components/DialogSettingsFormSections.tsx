@@ -1,23 +1,17 @@
-import { useState } from "react";
 import type { ReactNode } from "react";
-import type {
-    ApplySettingsFn,
-    SincroAppSettingsSnapshot,
-    SincroAppStartupSettingsCapabilities,
-    SincroAppStartupSettingsStatus,
-    SincroAppSettingsUiHints,
-    SincroAppSettingsUiState,
-} from "../../app/appSettingsTypes";
+import { useState } from "react";
 import type {
     SincroMediaDeviceSelectionState,
     SincroMediaDeviceSnapshot,
 } from "../../../ts/MediaDevices/SincroMediaDeviceService";
-import {
-    SettingsButton,
-    SettingsHint,
-    SettingsSectionCard,
-    SettingsSubsectionTitle,
-} from "../../settings-primitives/SettingsPrimitives";
+import type {
+    ApplySettingsFn,
+    SincroAppSettingsSnapshot,
+    SincroAppSettingsUiHints,
+    SincroAppSettingsUiState,
+    SincroAppStartupSettingsCapabilities,
+    SincroAppStartupSettingsStatus,
+} from "../../app/appSettingsTypes";
 import {
     AudioInputDeviceField,
     AudioProcessingToggles,
@@ -27,6 +21,12 @@ import {
     TitleTextField,
     VideoInputDeviceField,
 } from "../../settings-fields/SettingsFields";
+import {
+    SettingsButton,
+    SettingsHint,
+    SettingsSectionCard,
+    SettingsSubsectionTitle,
+} from "../../settings-primitives/SettingsPrimitives";
 
 // 起動前 dialog 専用の文言と表示対象を保持し、見た目は settings-primitives に委譲する。
 type CommonProps = {
@@ -71,7 +71,11 @@ export function DialogBasicSettingsSection({
         <div className="settingsPrimitiveFieldStack">
             {showSectionTitle ? <SettingsSubsectionTitle>基本設定</SettingsSubsectionTitle> : null}
             <TitleTextField settings={settings} uiState={uiState} onTitleChange={onTitleChange} />
-            <TalkModeField settings={settings} uiState={uiState} onTalkModeChange={onTalkModeChange} />
+            <TalkModeField
+                settings={settings}
+                uiState={uiState}
+                onTalkModeChange={onTalkModeChange}
+            />
         </div>
     );
 }
@@ -106,7 +110,9 @@ export function DialogDeviceSettingsSection({
         setRefreshMessage("");
         void onRefreshDevices().then((nextSnapshot) => {
             if (nextSnapshot.refreshError) {
-                setRefreshMessage(`デバイス一覧の再取得に失敗しました: ${nextSnapshot.refreshError}`);
+                setRefreshMessage(
+                    `デバイス一覧の再取得に失敗しました: ${nextSnapshot.refreshError}`,
+                );
                 return;
             }
             setRefreshMessage("デバイス一覧を更新しました。");
@@ -116,7 +122,7 @@ export function DialogDeviceSettingsSection({
     return (
         <div className="settingsPrimitiveFieldStack">
             <SettingsSubsectionTitle
-                actions={(
+                actions={
                     <SettingsButton
                         type="button"
                         onClick={handleRefreshDevices}
@@ -124,7 +130,7 @@ export function DialogDeviceSettingsSection({
                     >
                         {snapshot.isRefreshing ? "更新中..." : "再読み込み"}
                     </SettingsButton>
-                )}
+                }
             >
                 {showSectionTitle ? "入力デバイス" : "マイクとカメラ"}
             </SettingsSubsectionTitle>
@@ -158,7 +164,9 @@ export function DialogMicSettingsSection({
 }: CommonProps & { showSectionTitle?: boolean; sectionTitle?: string }) {
     return (
         <div className="settingsPrimitiveFieldStack">
-            {sectionTitle ? <SettingsSubsectionTitle>{sectionTitle}</SettingsSubsectionTitle> : null}
+            {sectionTitle ? (
+                <SettingsSubsectionTitle>{sectionTitle}</SettingsSubsectionTitle>
+            ) : null}
             <AudioProcessingToggles
                 settings={settings}
                 uiState={uiState}
@@ -216,7 +224,9 @@ export function DialogStartupSettingsSection({
 
     return (
         <div className="settingsPrimitiveFieldStack">
-            {showSectionTitle ? <SettingsSubsectionTitle>開始時の動作</SettingsSubsectionTitle> : null}
+            {showSectionTitle ? (
+                <SettingsSubsectionTitle>開始時の動作</SettingsSubsectionTitle>
+            ) : null}
             <StartupBehaviorFields
                 settings={settings}
                 uiState={uiState}

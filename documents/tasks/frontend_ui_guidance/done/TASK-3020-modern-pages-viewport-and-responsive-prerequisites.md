@@ -60,8 +60,8 @@ modern ページ群で layout viewport と実機幅の解釈を一致させ、�
 
 - このタスクは visual polish ではなく、以後の確認結果を信頼できる状態にするための前提整備である。
 - 実施結果:
-  - `simple-vrm`、`vrm360`、`looking-glass-vrm` の HTML 入口に `meta name="viewport" content="width=device-width, initial-scale=1"` を追加した。
-  - `cd sincromisor-frontend && npm run build` は 2026-04-24 に成功した。
-  - Playwright で `simple-vrm` を desktop `1280x900` と mobile `390x844` で確認し、`window.innerWidth` が viewport 幅と一致することを確認した。
-  - mobile `390x844` では初回セットアップ dialog が `366px` 幅で表示され、body の `scrollWidth` も `390px` に収まり、致命的な横崩れは確認されなかった。
-  - `documents/design/frontend_ui.md` にはすでに modern ページの viewport / responsive 前提が反映されていたため、今回追加の設計更新は不要だった。
+    - `simple-vrm`、`vrm360`、`looking-glass-vrm` の HTML 入口に `meta name="viewport" content="width=device-width, initial-scale=1"` を追加した。
+    - `cd sincromisor-frontend && npm run build` は 2026-04-24 に成功した。
+    - Playwright で `simple-vrm` を desktop `1280x900` と mobile `390x844` で確認し、`window.innerWidth` が viewport 幅と一致することを確認した。
+    - mobile `390x844` では初回セットアップ dialog が `366px` 幅で表示され、body の `scrollWidth` も `390px` に収まり、致命的な横崩れは確認されなかった。
+    - `documents/design/frontend_ui.md` にはすでに modern ページの viewport / responsive 前提が反映されていたため、今回追加の設計更新は不要だった。

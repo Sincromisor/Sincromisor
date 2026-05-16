@@ -63,9 +63,9 @@
 
 - 文書更新は親タスクではなく、この収束タスクでまとめて行う前提とする。
 - 実施結果:
-  - `documents/design/frontend_ui.md` に main content の dark / immersive visual 方針、overlay 設計、responsive 前提、legacy global reset の責務整理を同期した。
-  - `cd sincromisor-frontend && npm run build` は 2026-04-24 に成功した。
-  - Playwright + `vite preview` で `simple-vrm` を desktop `1280x720`、mobile `390x844` で確認し、header / chat / telop overlay が狭幅でも scene を過度に塞がないことを確認した。
-  - preview 環境では backend 未起動のため `/api/v1/RTCSignalingServer/config.json` の 404 が出るが、shared shell / CSS 確認の支障にはならないため sample chat / telop を注入して layout を検証した。
-  - `vrm360` と `looking-glass-vrm` も desktop `1280x720` で確認し、header / footer overlay の配置と寸法が `simple-vrm` と同等で、shared 変更由来の明確な崩れは確認されなかった。
-  - 親タスク `TASK-3019` の完了条件を満たしたため、本タスクと合わせて close した。
+    - `documents/design/frontend_ui.md` に main content の dark / immersive visual 方針、overlay 設計、responsive 前提、legacy global reset の責務整理を同期した。
+    - `cd sincromisor-frontend && npm run build` は 2026-04-24 に成功した。
+    - Playwright + `vite preview` で `simple-vrm` を desktop `1280x720`、mobile `390x844` で確認し、header / chat / telop overlay が狭幅でも scene を過度に塞がないことを確認した。
+    - preview 環境では backend 未起動のため `/api/v1/RTCSignalingServer/config.json` の 404 が出るが、shared shell / CSS 確認の支障にはならないため sample chat / telop を注入して layout を検証した。
+    - `vrm360` と `looking-glass-vrm` も desktop `1280x720` で確認し、header / footer overlay の配置と寸法が `simple-vrm` と同等で、shared 変更由来の明確な崩れは確認されなかった。
+    - 親タスク `TASK-3019` の完了条件を満たしたため、本タスクと合わせて close した。

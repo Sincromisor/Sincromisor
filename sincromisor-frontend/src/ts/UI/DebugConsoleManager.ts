@@ -2,13 +2,13 @@ import {
     DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
     type SincroFaceMotionSnapshot,
 } from "../FaceTracking/SincroFaceMotionSnapshot";
-import type { SincroTrackerWorkerStats } from "../FaceTracking/SincroTrackerWorkerTypes";
 import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
     type SincroPoseArmMotionSnapshot,
     type SincroPoseMotionSnapshot,
 } from "../FaceTracking/SincroPoseMotionSnapshot";
+import type { SincroTrackerWorkerStats } from "../FaceTracking/SincroTrackerWorkerTypes";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
     type SincroPoseRetargetConfig,
@@ -87,7 +87,10 @@ export type CharacterGazeTrackingTuningUiConfig = {
 
 export type CharacterGazeTrackingTuningPresetKey = "stable" | "balanced" | "responsive";
 
-export const CHARACTER_GAZE_TRACKING_TUNING_PRESETS: Record<CharacterGazeTrackingTuningPresetKey, CharacterGazeTrackingTuningUiConfig> = {
+export const CHARACTER_GAZE_TRACKING_TUNING_PRESETS: Record<
+    CharacterGazeTrackingTuningPresetKey,
+    CharacterGazeTrackingTuningUiConfig
+> = {
     stable: {
         minimumHoldMs: 1400,
         switchMargin: 0.22,
@@ -194,7 +197,10 @@ type SincroMotionSnapshot = {
         | "armIkMaxOpenRad"
         | "armIkMaxForearmFlexRad"
     >;
-    poseRetargetRuntime: Pick<SincroPoseRetargetFrame, "active" | "confidence" | "ikMode" | "fallbackReason" | "anchor" | "leftArm" | "rightArm">;
+    poseRetargetRuntime: Pick<
+        SincroPoseRetargetFrame,
+        "active" | "confidence" | "ikMode" | "fallbackReason" | "anchor" | "leftArm" | "rightArm"
+    >;
 };
 
 type RtcSnapshot = {
@@ -392,21 +398,27 @@ export class DebugConsoleManager {
     private snapshot: DebugConsoleSnapshot = createDefaultSnapshot();
     private readonly listeners = new Set<(event: DebugConsoleManagerEvent) => void>();
     private readonly snapshotListeners = new Set<() => void>();
-    private readonly localAudioConstraintApplyState: Partial<Record<RuntimeAudioConstraintKey, RuntimeAudioConstraintApplyStatus>> = {};
+    private readonly localAudioConstraintApplyState: Partial<
+        Record<RuntimeAudioConstraintKey, RuntimeAudioConstraintApplyStatus>
+    > = {};
     private localAudioMeterHandle: AudioMeterHandle | null = null;
     private remoteAudioMeterHandle: AudioMeterHandle | null = null;
     private localAudioWarningState: "ok" | "silent" | "error" = "ok";
     private localAudioWarningPendingState: "ok" | "silent" | "error" = "ok";
     private localAudioWarningPendingFrames = 0;
-    private rtcStopHandler: () => void = () => { };
-    private onLocalAudioFilterChange: (config: AudioFilterControlConfig) => void = () => { };
-    private onLocalLearnedVadTuningChange: (config: LearnedVadTuningUiConfig) => void = () => { };
-    private onLocalLearnedVadPerformanceModeChange: (mode: LearnedVadPerformanceMode) => void = () => { };
-    private onLocalLearnedVadStrictModeChange: (enabled: boolean) => void = () => { };
-    private onLocalVadThresholdModeChange: (mode: VadThresholdMode) => void = () => { };
-    private onLocalVadRmsThresholdChange: (threshold: number) => void = () => { };
-    private onCharacterGazeTrackingTuningChange: (config: CharacterGazeTrackingTuningUiConfig) => void = () => { };
-    private onSincroPoseRetargetConfigChange: (config: Partial<SincroPoseRetargetConfig>) => void = () => { };
+    private rtcStopHandler: () => void = () => {};
+    private onLocalAudioFilterChange: (config: AudioFilterControlConfig) => void = () => {};
+    private onLocalLearnedVadTuningChange: (config: LearnedVadTuningUiConfig) => void = () => {};
+    private onLocalLearnedVadPerformanceModeChange: (mode: LearnedVadPerformanceMode) => void =
+        () => {};
+    private onLocalLearnedVadStrictModeChange: (enabled: boolean) => void = () => {};
+    private onLocalVadThresholdModeChange: (mode: VadThresholdMode) => void = () => {};
+    private onLocalVadRmsThresholdChange: (threshold: number) => void = () => {};
+    private onCharacterGazeTrackingTuningChange: (
+        config: CharacterGazeTrackingTuningUiConfig,
+    ) => void = () => {};
+    private onSincroPoseRetargetConfigChange: (config: Partial<SincroPoseRetargetConfig>) => void =
+        () => {};
 
     static getManager(): DebugConsoleManager {
         if (!DebugConsoleManager.instance) {
@@ -464,7 +476,9 @@ export class DebugConsoleManager {
         this.onLocalVadThresholdModeChange(mode);
     }
 
-    setLocalLearnedVadTuningChangeCallback(callback: (config: LearnedVadTuningUiConfig) => void): void {
+    setLocalLearnedVadTuningChangeCallback(
+        callback: (config: LearnedVadTuningUiConfig) => void,
+    ): void {
         this.onLocalLearnedVadTuningChange = callback;
     }
 
@@ -497,7 +511,9 @@ export class DebugConsoleManager {
         }));
     }
 
-    setLocalLearnedVadPerformanceModeChangeCallback(callback: (mode: LearnedVadPerformanceMode) => void): void {
+    setLocalLearnedVadPerformanceModeChangeCallback(
+        callback: (mode: LearnedVadPerformanceMode) => void,
+    ): void {
         this.onLocalLearnedVadPerformanceModeChange = callback;
     }
 
@@ -596,35 +612,52 @@ export class DebugConsoleManager {
     }
 
     private renderLocalAudioConstraintApplyStatus(): void {
-        const order: RuntimeAudioConstraintKey[] = ["noiseSuppression", "echoCancellation", "autoGainControl"];
+        const order: RuntimeAudioConstraintKey[] = [
+            "noiseSuppression",
+            "echoCancellation",
+            "autoGainControl",
+        ];
         const labels: Record<RuntimeAudioConstraintKey, string> = {
             noiseSuppression: "NS",
             echoCancellation: "EC",
             autoGainControl: "AGC",
         };
-        const text = order.map((key) => {
-            const state = this.localAudioConstraintApplyState[key];
-            if (!state) {
-                return `${labels[key]}:未確認`;
-            }
-            if (state.status === "pending") {
-                return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(次回開始時)`;
-            }
-            if (state.status === "applied") {
-                return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(反映)`;
-            }
-            return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(未反映)`;
-        }).join(" / ");
-        const title = order.map((key) => {
-            const state = this.localAudioConstraintApplyState[key];
-            if (!state?.message) {
-                return "";
-            }
-            return `${labels[key]}: ${state.message}`;
-        }).filter((line) => line.length > 0).join("\n");
-        const hasFailed = order.some((key) => this.localAudioConstraintApplyState[key]?.status === "failed");
-        const hasPending = order.some((key) => this.localAudioConstraintApplyState[key]?.status === "pending");
-        const tone: ConstraintStatusSnapshot["tone"] = hasFailed ? "state-error" : hasPending ? "state-warn" : "state-ok";
+        const text = order
+            .map((key) => {
+                const state = this.localAudioConstraintApplyState[key];
+                if (!state) {
+                    return `${labels[key]}:未確認`;
+                }
+                if (state.status === "pending") {
+                    return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(次回開始時)`;
+                }
+                if (state.status === "applied") {
+                    return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(反映)`;
+                }
+                return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(未反映)`;
+            })
+            .join(" / ");
+        const title = order
+            .map((key) => {
+                const state = this.localAudioConstraintApplyState[key];
+                if (!state?.message) {
+                    return "";
+                }
+                return `${labels[key]}: ${state.message}`;
+            })
+            .filter((line) => line.length > 0)
+            .join("\n");
+        const hasFailed = order.some(
+            (key) => this.localAudioConstraintApplyState[key]?.status === "failed",
+        );
+        const hasPending = order.some(
+            (key) => this.localAudioConstraintApplyState[key]?.status === "pending",
+        );
+        const tone: ConstraintStatusSnapshot["tone"] = hasFailed
+            ? "state-error"
+            : hasPending
+              ? "state-warn"
+              : "state-ok";
         this.updateSnapshot((snapshot) => ({
             ...snapshot,
             audio: {
@@ -650,12 +683,16 @@ export class DebugConsoleManager {
             return;
         }
         this.localAudioWarningPendingFrames += 1;
-        if (this.localAudioWarningPendingFrames < DebugConsoleManager.AUDIO_WARNING_SWITCH_HOLD_FRAMES) {
+        if (
+            this.localAudioWarningPendingFrames <
+            DebugConsoleManager.AUDIO_WARNING_SWITCH_HOLD_FRAMES
+        ) {
             return;
         }
         this.localAudioWarningState = nextState;
         this.localAudioWarningPendingFrames = 0;
-        const text = nextState === "error" ? "Clipping" : nextState === "silent" ? "Silence" : "Normal";
+        const text =
+            nextState === "error" ? "Clipping" : nextState === "silent" ? "Silence" : "Normal";
         this.updateSnapshot((snapshot) => ({
             ...snapshot,
             audio: {
@@ -703,7 +740,10 @@ export class DebugConsoleManager {
         }));
     }
 
-    private startAudioMeter(track: MediaStreamTrack, target: "local" | "remote"): AudioMeterHandle | null {
+    private startAudioMeter(
+        track: MediaStreamTrack,
+        target: "local" | "remote",
+    ): AudioMeterHandle | null {
         if (track.kind !== "audio") {
             return null;
         }
@@ -738,7 +778,10 @@ export class DebugConsoleManager {
             const rms = Math.sqrt(squareSum / data.length);
             handle.displayLevel = Math.max(handle.displayLevel * 0.82, peak);
             const now = performance.now();
-            if (now - handle.lastMeterUpdateAt >= DebugConsoleManager.AUDIO_METER_UPDATE_INTERVAL_MS) {
+            if (
+                now - handle.lastMeterUpdateAt >=
+                DebugConsoleManager.AUDIO_METER_UPDATE_INTERVAL_MS
+            ) {
                 handle.lastMeterUpdateAt = now;
                 if (target === "local") {
                     if (peak >= DebugConsoleManager.AUDIO_CLIP_THRESHOLD) {
@@ -751,11 +794,13 @@ export class DebugConsoleManager {
                     } else {
                         handle.lowInputFrames = 0;
                     }
-                    const nextWarningState: "ok" | "silent" | "error" = handle.clippingHoldFrames > 0
-                        ? "error"
-                        : handle.lowInputFrames >= DebugConsoleManager.AUDIO_LOW_INPUT_HOLD_FRAMES
-                            ? "silent"
-                            : "ok";
+                    const nextWarningState: "ok" | "silent" | "error" =
+                        handle.clippingHoldFrames > 0
+                            ? "error"
+                            : handle.lowInputFrames >=
+                                DebugConsoleManager.AUDIO_LOW_INPUT_HOLD_FRAMES
+                              ? "silent"
+                              : "ok";
                     this.applyLocalWarningState(nextWarningState);
                     this.updateSnapshot((snapshot) => ({
                         ...snapshot,
@@ -865,7 +910,11 @@ export class DebugConsoleManager {
             ...snapshot,
             rtc: {
                 ...snapshot.rtc,
-                rtcEventLog: this.appendLog(snapshot.rtc.rtcEventLog, logLine, DebugConsoleManager.EVENT_LOG_LINES),
+                rtcEventLog: this.appendLog(
+                    snapshot.rtc.rtcEventLog,
+                    logLine,
+                    DebugConsoleManager.EVENT_LOG_LINES,
+                ),
             },
         }));
         this.emitEvent({ type: "rtc_event_log", message: msg });
@@ -876,7 +925,11 @@ export class DebugConsoleManager {
             ...snapshot,
             rtc: {
                 ...snapshot.rtc,
-                telopChannelLog: this.appendLog(snapshot.rtc.telopChannelLog, msg, DebugConsoleManager.CHANNEL_LOG_LINES),
+                telopChannelLog: this.appendLog(
+                    snapshot.rtc.telopChannelLog,
+                    msg,
+                    DebugConsoleManager.CHANNEL_LOG_LINES,
+                ),
             },
         }));
     }
@@ -886,7 +939,11 @@ export class DebugConsoleManager {
             ...snapshot,
             rtc: {
                 ...snapshot.rtc,
-                textChannelLog: this.appendLog(snapshot.rtc.textChannelLog, msg, DebugConsoleManager.CHANNEL_LOG_LINES),
+                textChannelLog: this.appendLog(
+                    snapshot.rtc.textChannelLog,
+                    msg,
+                    DebugConsoleManager.CHANNEL_LOG_LINES,
+                ),
             },
         }));
     }
@@ -1076,21 +1133,64 @@ export class DebugConsoleManager {
                 ...snapshot.sincroMotion,
                 poseRetarget: {
                     ...snapshot.sincroMotion.poseRetarget,
-                    intensityScale: clampNumber(config.intensityScale ?? snapshot.sincroMotion.poseRetarget.intensityScale, 0, 1.2),
-                    minConfidence: clampNumber(config.minConfidence ?? snapshot.sincroMotion.poseRetarget.minConfidence, 0, 1),
-                    returnToNeutralMs: clampNumber(config.returnToNeutralMs ?? snapshot.sincroMotion.poseRetarget.returnToNeutralMs, 80, 2000),
-                    smoothingMs: clampNumber(config.smoothingMs ?? snapshot.sincroMotion.poseRetarget.smoothingMs, 40, 800),
-                    armIkStrength: clampNumber(config.armIkStrength ?? snapshot.sincroMotion.poseRetarget.armIkStrength, 0, 1),
-                    armIkTargetScale: clampNumber(config.armIkTargetScale ?? snapshot.sincroMotion.poseRetarget.armIkTargetScale, 0.2, 1.5),
-                    armIkMaxLiftRad: clampNumber(config.armIkMaxLiftRad ?? snapshot.sincroMotion.poseRetarget.armIkMaxLiftRad, 0, Math.PI / 2),
-                    armIkMaxOpenRad: clampNumber(config.armIkMaxOpenRad ?? snapshot.sincroMotion.poseRetarget.armIkMaxOpenRad, 0, Math.PI / 2),
-                    armIkMaxForearmFlexRad: clampNumber(config.armIkMaxForearmFlexRad ?? snapshot.sincroMotion.poseRetarget.armIkMaxForearmFlexRad, 0, Math.PI / 2),
+                    intensityScale: clampNumber(
+                        config.intensityScale ?? snapshot.sincroMotion.poseRetarget.intensityScale,
+                        0,
+                        1.2,
+                    ),
+                    minConfidence: clampNumber(
+                        config.minConfidence ?? snapshot.sincroMotion.poseRetarget.minConfidence,
+                        0,
+                        1,
+                    ),
+                    returnToNeutralMs: clampNumber(
+                        config.returnToNeutralMs ??
+                            snapshot.sincroMotion.poseRetarget.returnToNeutralMs,
+                        80,
+                        2000,
+                    ),
+                    smoothingMs: clampNumber(
+                        config.smoothingMs ?? snapshot.sincroMotion.poseRetarget.smoothingMs,
+                        40,
+                        800,
+                    ),
+                    armIkStrength: clampNumber(
+                        config.armIkStrength ?? snapshot.sincroMotion.poseRetarget.armIkStrength,
+                        0,
+                        1,
+                    ),
+                    armIkTargetScale: clampNumber(
+                        config.armIkTargetScale ??
+                            snapshot.sincroMotion.poseRetarget.armIkTargetScale,
+                        0.2,
+                        1.5,
+                    ),
+                    armIkMaxLiftRad: clampNumber(
+                        config.armIkMaxLiftRad ??
+                            snapshot.sincroMotion.poseRetarget.armIkMaxLiftRad,
+                        0,
+                        Math.PI / 2,
+                    ),
+                    armIkMaxOpenRad: clampNumber(
+                        config.armIkMaxOpenRad ??
+                            snapshot.sincroMotion.poseRetarget.armIkMaxOpenRad,
+                        0,
+                        Math.PI / 2,
+                    ),
+                    armIkMaxForearmFlexRad: clampNumber(
+                        config.armIkMaxForearmFlexRad ??
+                            snapshot.sincroMotion.poseRetarget.armIkMaxForearmFlexRad,
+                        0,
+                        Math.PI / 2,
+                    ),
                 },
             },
         }));
     }
 
-    setSincroPoseRetargetConfigChangeCallback(callback: (config: Partial<SincroPoseRetargetConfig>) => void): void {
+    setSincroPoseRetargetConfigChangeCallback(
+        callback: (config: Partial<SincroPoseRetargetConfig>) => void,
+    ): void {
         this.onSincroPoseRetargetConfigChange = callback;
     }
 
@@ -1166,7 +1266,9 @@ export class DebugConsoleManager {
         }));
     }
 
-    setCharacterGazeTrackingTuningChangeCallback(callback: (config: CharacterGazeTrackingTuningUiConfig) => void): void {
+    setCharacterGazeTrackingTuningChangeCallback(
+        callback: (config: CharacterGazeTrackingTuningUiConfig) => void,
+    ): void {
         this.onCharacterGazeTrackingTuningChange = callback;
     }
 
@@ -1197,7 +1299,9 @@ export class DebugConsoleManager {
         return `${text}${msg}`.split("\n").slice(-lines).join("\n");
     }
 
-    private updateSnapshot(updater: (snapshot: DebugConsoleSnapshot) => DebugConsoleSnapshot): void {
+    private updateSnapshot(
+        updater: (snapshot: DebugConsoleSnapshot) => DebugConsoleSnapshot,
+    ): void {
         this.snapshot = updater(this.snapshot);
         for (const listener of this.snapshotListeners) {
             listener();

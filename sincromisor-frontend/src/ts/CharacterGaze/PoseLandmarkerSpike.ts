@@ -1,12 +1,9 @@
-import {
-    FaceLandmarker,
-    PoseLandmarker,
-} from "@mediapipe/tasks-vision";
 import type {
     FaceLandmarkerResult,
     NormalizedLandmark,
     PoseLandmarkerResult,
 } from "@mediapipe/tasks-vision";
+import { FaceLandmarker, PoseLandmarker } from "@mediapipe/tasks-vision";
 import { loadMediaPipeVisionFileset } from "../FaceTracking/MediaPipeVisionFileset";
 
 const DEFAULT_FACE_LANDMARKER_MODEL_PATH = "/3rd_party/face_landmarker.task";
@@ -71,7 +68,10 @@ const TRACKED_UPPER_BODY_LANDMARKS: LandmarkIndex[] = [
     { name: "right_hip", index: 24 },
 ];
 
-export const POSE_LANDMARKER_SPIKE_MODEL_PATHS: Record<Exclude<PoseLandmarkerSpikeModelPreset, "custom">, string> = {
+export const POSE_LANDMARKER_SPIKE_MODEL_PATHS: Record<
+    Exclude<PoseLandmarkerSpikeModelPreset, "custom">,
+    string
+> = {
     lite: "/3rd_party/pose_landmarker_lite.task",
     full: "/3rd_party/pose_landmarker_full.task",
     heavy: "/3rd_party/pose_landmarker_heavy.task",
@@ -136,7 +136,8 @@ export class PoseLandmarkerSpike {
         if (this.config.runFaceLandmarker) {
             this.faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
                 baseOptions: {
-                    modelAssetPath: this.config.faceModelAssetPath ?? DEFAULT_FACE_LANDMARKER_MODEL_PATH,
+                    modelAssetPath:
+                        this.config.faceModelAssetPath ?? DEFAULT_FACE_LANDMARKER_MODEL_PATH,
                     delegate: this.config.delegate,
                 },
                 runningMode: "VIDEO",
@@ -275,7 +276,9 @@ export class PoseLandmarkerSpike {
         };
     }
 
-    private extractTrackedLandmarks(landmarks: NormalizedLandmark[]): PoseLandmarkerSpikeTrackedLandmark[] {
+    private extractTrackedLandmarks(
+        landmarks: NormalizedLandmark[],
+    ): PoseLandmarkerSpikeTrackedLandmark[] {
         return TRACKED_UPPER_BODY_LANDMARKS.map((landmark) => {
             const value = landmarks[landmark.index];
             return {
@@ -298,16 +301,17 @@ export class PoseLandmarkerSpike {
 
     private videoIsReady(): boolean {
         return (
-            this.videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
-            && this.videoElement.videoWidth >= MIN_VIDEO_DIMENSION_PX
-            && this.videoElement.videoHeight >= MIN_VIDEO_DIMENSION_PX
+            this.videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+            this.videoElement.videoWidth >= MIN_VIDEO_DIMENSION_PX &&
+            this.videoElement.videoHeight >= MIN_VIDEO_DIMENSION_PX
         );
     }
 
     private updateRenderFps(nowMs: number): void {
         if (this.lastRenderFrameAtMs != null) {
             const instantFps = 1000 / Math.max(1, nowMs - this.lastRenderFrameAtMs);
-            this.renderFps = this.renderFps === 0 ? instantFps : (this.renderFps * 0.9) + (instantFps * 0.1);
+            this.renderFps =
+                this.renderFps === 0 ? instantFps : this.renderFps * 0.9 + instantFps * 0.1;
         }
         this.lastRenderFrameAtMs = nowMs;
     }
@@ -316,7 +320,10 @@ export class PoseLandmarkerSpike {
         if (this.lastPoseInferenceEndedAtMs == null || this.lastInferenceAtMs < 0) {
             return 0;
         }
-        return Math.min(this.config.targetInferenceFps, 1000 / Math.max(1, performance.now() - this.lastInferenceAtMs));
+        return Math.min(
+            this.config.targetInferenceFps,
+            1000 / Math.max(1, performance.now() - this.lastInferenceAtMs),
+        );
     }
 
     private readDroppedVideoFrames(): number | null {
@@ -346,7 +353,8 @@ export class PoseLandmarkerSpike {
             ...config,
             targetInferenceFps,
             modelAssetPath: config.modelAssetPath.trim(),
-            faceModelAssetPath: config.faceModelAssetPath?.trim() || DEFAULT_FACE_LANDMARKER_MODEL_PATH,
+            faceModelAssetPath:
+                config.faceModelAssetPath?.trim() || DEFAULT_FACE_LANDMARKER_MODEL_PATH,
         };
     }
 

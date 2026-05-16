@@ -1,31 +1,39 @@
 {
-  "name": "sincromisor-frontend",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -p tsconfig.modern.json && vite build",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@types/three": "^0.182.0",
-    "@vitejs/plugin-react-swc": "^4.3.0",
-    "postcss-preset-env": "^10.6.1",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.2"
-  },
-  "dependencies": {
-    "@lookingglass/webxr": "^0.6.0",
-    "@mediapipe/tasks-vision": "^0.10.34",
-    "@pixiv/three-vrm": "^3.5.1",
-    "hls.js": "^1.6.15",
-    "js-yaml": "^4.1.1",
-    "onnxruntime-web": "^1.24.3",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "three": "^0.182.0"
-  }
+    "name": "sincromisor-frontend",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc -p tsconfig.modern.json && vite build",
+        "check": "npm run check:biome && npm run check:md",
+        "check:biome": "biome check .",
+        "check:md": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --check \"../*.md\" \"../documents/**/*.md\" \"**/*.md\"",
+        "format": "npm run format:biome && npm run format:md",
+        "format:biome": "biome check --write .",
+        "format:md": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --write \"../*.md\" \"../documents/**/*.md\" \"**/*.md\"",
+        "preview": "vite preview"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.4.15",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
+        "@types/three": "^0.182.0",
+        "@vitejs/plugin-react-swc": "^4.3.0",
+        "postcss-preset-env": "^10.6.1",
+        "prettier": "^3.8.3",
+        "typescript": "^5.9.3",
+        "vite": "^7.3.2"
+    },
+    "dependencies": {
+        "@lookingglass/webxr": "^0.6.0",
+        "@mediapipe/tasks-vision": "^0.10.34",
+        "@pixiv/three-vrm": "^3.5.1",
+        "hls.js": "^1.6.15",
+        "js-yaml": "^4.1.1",
+        "onnxruntime-web": "^1.24.3",
+        "react": "^19.2.5",
+        "react-dom": "^19.2.5",
+        "three": "^0.182.0"
+    }
 }

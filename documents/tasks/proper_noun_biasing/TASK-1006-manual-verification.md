@@ -17,29 +17,29 @@ uv run python -m unittest discover -s sincromisor-server/speech-recognizer-nemo/
 
 - 代表文と負例は `documents/tasks/proper_noun_biasing/TASK-1006-evaluation-dataset.csv` を正本として扱う。
 - 最低限、以下のカテゴリを毎回確認する。
-  - 一意読み補正
-  - 曖昧語保留
-  - 文脈あり曖昧語
-  - 固有名詞を含まない一般会話文
-  - 部分一致しやすい短文
+    - 一意読み補正
+    - 曖昧語保留
+    - 文脈あり曖昧語
+    - 固有名詞を含まない一般会話文
+    - 部分一致しやすい短文
 
 ## trace 保存方式
 
 - confirmed 結果で `voice_log_dir` が設定されている場合に、`SpeechRecognizerNemoWorker` が 2 種類の sidecar を保存する。
-  - `<speech_id>_<timestamp>.json`
-  - `<speech_id>_<timestamp>.trace.json`
+    - `<speech_id>_<timestamp>.json`
+    - `<speech_id>_<timestamp>.trace.json`
 - `.json` は下流へ返した最終結果、`.trace.json` は raw ASR result と補正判断の内訳である。
 - trace の主な確認キー:
-  - `raw_text`
-  - `corrected_text`
-  - `raw_result`
-  - `corrected_result`
-  - `matched_entries`
-  - `deferred_entries`
-  - `decode_path`
-  - `decision_reason`
-  - `context_biasing`
-  - `nbest_reranking`
+    - `raw_text`
+    - `corrected_text`
+    - `raw_result`
+    - `corrected_result`
+    - `matched_entries`
+    - `deferred_entries`
+    - `decode_path`
+    - `decision_reason`
+    - `context_biasing`
+    - `nbest_reranking`
 
 ## 手順
 
@@ -54,11 +54,11 @@ uv run python -m unittest discover -s sincromisor-server/speech-recognizer-nemo/
 ## 評価項目
 
 - `false_positive_count`
-  - 負例セットで、期待しない固有名詞置換が発生した件数。
+    - 負例セットで、期待しない固有名詞置換が発生した件数。
 - `non_dictionary_sentence_unchanged_rate`
-  - 固有名詞を含まない一般会話文が無変化だった割合。
+    - 固有名詞を含まない一般会話文が無変化だった割合。
 - `confirmed_latency_delta_ms`
-  - 固有名詞補強 OFF 時と ON 時の confirmed 処理時間差分。
+    - 固有名詞補強 OFF 時と ON 時の confirmed 処理時間差分。
 
 ## 判定の目安
 

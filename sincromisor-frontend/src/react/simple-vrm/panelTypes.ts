@@ -1,8 +1,8 @@
 import type {
     SincroAppLifecycleState,
-    SincroAppStartupSettingsStatus,
-    SincroAppStartupSettingsCapabilities,
     SincroAppLookingGlassConfigStatus,
+    SincroAppStartupSettingsCapabilities,
+    SincroAppStartupSettingsStatus,
 } from "../../ts/App/SincroAppTypes";
 import type {
     ApplySettingsFn,
@@ -13,8 +13,7 @@ import type {
 
 // Control Panel 表示専用の view-model 型。
 // AppController event/snapshot を UI 表示都合（ログ、診断カード、LG状態表示）に整形して保持する。
-export type { ApplySettingsFn };
-export type { SincroAppSettingsSnapshot };
+export type { ApplySettingsFn, SincroAppSettingsSnapshot };
 
 export type PanelMessageLogKind = "chat_message" | "system_message" | "error_message";
 
@@ -77,7 +76,9 @@ export type SimpleVrmPanelViewState = {
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
 };
 
-export type { SincroAppSettingsUiState };
-export type { SincroAppSettingsUiHints };
-export type { SincroAppStartupSettingsStatus };
-export type { SincroAppStartupSettingsCapabilities };
+export type {
+    SincroAppSettingsUiHints,
+    SincroAppSettingsUiState,
+    SincroAppStartupSettingsCapabilities,
+    SincroAppStartupSettingsStatus,
+};

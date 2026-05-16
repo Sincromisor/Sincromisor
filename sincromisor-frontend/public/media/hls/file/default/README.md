@@ -2,7 +2,7 @@
 アクセスする際のURLを `https://localhost/vrm360/?video_id=file/sample` とすると、
 `sincromisor-frontend/public/media/hls/file/sample/index.m3u8` が参照されます。
 
-video_idの形式はfile/VIDEONAMEまたはlive/VIDEONAME。利用できる文字列はa-zA-Z0-9_/で、最大64文字です。
+video*idの形式はfile/VIDEONAMEまたはlive/VIDEONAME。利用できる文字列はa-zA-Z0-9*/で、最大64文字です。
 movie.jsonは[Light360](https://github.com/Sincromisor/Light360)で生成できます(Optional)。
 
 - sincromisor-frontend/public/media/hls/file/VIDEONAME/index.m3u8

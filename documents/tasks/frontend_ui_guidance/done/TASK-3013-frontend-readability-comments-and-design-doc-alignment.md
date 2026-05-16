@@ -111,8 +111,8 @@
 - 本タスクは `コメントを増やすこと` ではなく、`不足している入口説明だけを補うこと` が目的である。
 - 先行する `TASK-3009` から `TASK-3012` の整理結果を踏まえて行うのが望ましい。
 - 2026-04-22 実施内容:
-  - `documents/design/frontend_ui.md` に入口コメントの棚卸し結果を追加し、`追加不要` と `追加対象` を分けて判断理由を明文化した。
-  - `documents/design/frontend_migration_react.md` に、`main-react.tsx` 系を薄い mount 入口として保ち、詳細な購読/設定反映は hook / controller 側へ寄せる方針を追記した。
-  - 実装側では `main-vrm.ts`、`main-legacy.ts`、`vrm360/main-vrm360.ts`、`looking-glass-vrm/main-vrm-looking-glass.ts`、各 `main-react.tsx` に、どのページから呼ばれ、何を下位 initializer / React UI へ委譲しているかを示す責務コメントを追加した。
-  - `SincroController`、`SincroAppController`、各 initializer、主要 hook / service は既存コメントで責務を追えるため、追加対象から外した。
-  - `cd sincromisor-frontend && npm run build` を実行し、ビルド成功を確認した。既知の警告として `vendor_misc -> vendor_react -> vendor_misc` の circular chunk 警告は継続している。
+    - `documents/design/frontend_ui.md` に入口コメントの棚卸し結果を追加し、`追加不要` と `追加対象` を分けて判断理由を明文化した。
+    - `documents/design/frontend_migration_react.md` に、`main-react.tsx` 系を薄い mount 入口として保ち、詳細な購読/設定反映は hook / controller 側へ寄せる方針を追記した。
+    - 実装側では `main-vrm.ts`、`main-legacy.ts`、`vrm360/main-vrm360.ts`、`looking-glass-vrm/main-vrm-looking-glass.ts`、各 `main-react.tsx` に、どのページから呼ばれ、何を下位 initializer / React UI へ委譲しているかを示す責務コメントを追加した。
+    - `SincroController`、`SincroAppController`、各 initializer、主要 hook / service は既存コメントで責務を追えるため、追加対象から外した。
+    - `cd sincromisor-frontend && npm run build` を実行し、ビルド成功を確認した。既知の警告として `vendor_misc -> vendor_react -> vendor_misc` の circular chunk 警告は継続している。

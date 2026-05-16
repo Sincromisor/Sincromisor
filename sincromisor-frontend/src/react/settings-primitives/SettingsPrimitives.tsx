@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./settingsPrimitives.css";
 
 type HelpTooltipProps = {
@@ -75,7 +75,7 @@ function joinClassNames(...classNames: Array<string | false | null | undefined>)
 }
 
 export function SettingsHelpTooltip({ help, children }: HelpTooltipProps) {
-    const containerRef = useRef<HTMLSpanElement | null>(null);
+    const containerRef = useRef<HTMLButtonElement | null>(null);
     const [visible, setVisible] = useState<boolean>(false);
     const [align, setAlign] = useState<"left" | "right">("left");
 
@@ -114,10 +114,13 @@ export function SettingsHelpTooltip({ help, children }: HelpTooltipProps) {
     }
 
     return (
-        <span
+        <button
             ref={containerRef}
-            className="settingsPrimitiveHelpTooltip"
-            onClickCapture={(event) => {
+            type="button"
+            className="settingsPrimitiveHelpTooltip settingsPrimitiveHelpBadge"
+            aria-label="設定説明を表示"
+            aria-haspopup="true"
+            onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
                 setVisible((prev) => !prev);
@@ -139,37 +142,12 @@ export function SettingsHelpTooltip({ help, children }: HelpTooltipProps) {
                     {help}
                 </span>
             ) : null}
-        </span>
+        </button>
     );
 }
 
 export function SettingsHelpBadge({ help }: HelpBadgeProps) {
-    return (
-        <SettingsHelpTooltip help={help}>
-            <span
-                tabIndex={0}
-                role="button"
-                aria-label="設定説明を表示"
-                aria-haspopup="true"
-                className="settingsPrimitiveHelpBadge"
-                onPointerDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }}
-                onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }}
-                onKeyDown={(event) => {
-                    if (event.key === " " || event.key === "Enter") {
-                        event.preventDefault();
-                    }
-                }}
-            >
-                ?
-            </span>
-        </SettingsHelpTooltip>
-    );
+    return <SettingsHelpTooltip help={help}>?</SettingsHelpTooltip>;
 }
 
 export function SettingsHelpLabel({ text, help }: SettingsHelpLabelProps) {
@@ -182,11 +160,15 @@ export function SettingsHelpLabel({ text, help }: SettingsHelpLabelProps) {
 }
 
 export function SettingsInput(props: InputHTMLAttributes<HTMLInputElement>) {
-    return <input {...props} className={joinClassNames("settingsPrimitiveField", props.className)} />;
+    return (
+        <input {...props} className={joinClassNames("settingsPrimitiveField", props.className)} />
+    );
 }
 
 export function SettingsSelect(props: SelectHTMLAttributes<HTMLSelectElement>) {
-    return <select {...props} className={joinClassNames("settingsPrimitiveField", props.className)} />;
+    return (
+        <select {...props} className={joinClassNames("settingsPrimitiveField", props.className)} />
+    );
 }
 
 export function SettingsRange({
@@ -230,7 +212,13 @@ export function SettingsButton({ children, className, ...props }: SettingsButton
 
 export function SettingsHint({ children, tone = "muted", className }: SettingsHintProps) {
     return (
-        <div className={joinClassNames("settingsPrimitiveHint", `settingsPrimitiveHint--${tone}`, className)}>
+        <div
+            className={joinClassNames(
+                "settingsPrimitiveHint",
+                `settingsPrimitiveHint--${tone}`,
+                className,
+            )}
+        >
             {children}
         </div>
     );
@@ -260,8 +248,14 @@ export function SettingsSectionCard({
         <section className={joinClassNames("settingsPrimitiveSectionCard", className)}>
             {hasHeader ? (
                 <div className="settingsPrimitiveSectionCard__header">
-                    {title ? <div className="settingsPrimitiveSectionCard__title">{title}</div> : null}
-                    {description ? <div className="settingsPrimitiveSectionCard__description">{description}</div> : null}
+                    {title ? (
+                        <div className="settingsPrimitiveSectionCard__title">{title}</div>
+                    ) : null}
+                    {description ? (
+                        <div className="settingsPrimitiveSectionCard__description">
+                            {description}
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
             <div className="settingsPrimitiveSectionCard__body">{children}</div>
@@ -271,10 +265,12 @@ export function SettingsSectionCard({
 
 export function SettingsToggleGrid({ children, density = "regular" }: SettingsToggleGridProps) {
     return (
-        <div className={joinClassNames(
-            "settingsPrimitiveToggleGrid",
-            density === "compact" && "settingsPrimitiveToggleGrid--compact",
-        )}>
+        <div
+            className={joinClassNames(
+                "settingsPrimitiveToggleGrid",
+                density === "compact" && "settingsPrimitiveToggleGrid--compact",
+            )}
+        >
             {children}
         </div>
     );
@@ -289,11 +285,13 @@ export function SettingsToggle({
     onChange,
 }: SettingsToggleProps) {
     return (
-        <label className={joinClassNames(
-            "settingsPrimitiveToggle",
-            density === "compact" && "settingsPrimitiveToggle--compact",
-            disabled && "is-disabled",
-        )}>
+        <label
+            className={joinClassNames(
+                "settingsPrimitiveToggle",
+                density === "compact" && "settingsPrimitiveToggle--compact",
+                disabled && "is-disabled",
+            )}
+        >
             <input
                 type="checkbox"
                 checked={checked}
@@ -311,10 +309,12 @@ export function SettingsToggle({
 
 export function SettingsFieldStack({ children, spacing = "regular" }: SettingsFieldStackProps) {
     return (
-        <div className={joinClassNames(
-            "settingsPrimitiveFieldStack",
-            spacing === "compact" && "settingsPrimitiveFieldStack--compact",
-        )}>
+        <div
+            className={joinClassNames(
+                "settingsPrimitiveFieldStack",
+                spacing === "compact" && "settingsPrimitiveFieldStack--compact",
+            )}
+        >
             {children}
         </div>
     );
@@ -324,7 +324,9 @@ export function SettingsSubsectionTitle({ children, actions }: SettingsSubsectio
     return (
         <div className="settingsPrimitiveSubsectionTitle">
             <span>{children}</span>
-            {actions ? <span className="settingsPrimitiveSubsectionTitle__actions">{actions}</span> : null}
+            {actions ? (
+                <span className="settingsPrimitiveSubsectionTitle__actions">{actions}</span>
+            ) : null}
         </div>
     );
 }

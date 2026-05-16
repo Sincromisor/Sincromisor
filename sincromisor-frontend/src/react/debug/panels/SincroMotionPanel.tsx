@@ -5,9 +5,9 @@ import type {
     SincroPoseTargetPointSnapshot,
 } from "../../../ts/FaceTracking/SincroPoseMotionSnapshot";
 import type { SincroPoseRetargetedArm } from "../../../ts/SincroVRM/VRMCharacter/SincroPoseRetargeter";
-import { DebugConsoleManager, type DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
+import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
 import { RangeControl } from "../components/RangeControl";
-import { debugPanelClassName, type DebugPanelProps } from "../debugConsoleTypes";
+import { type DebugPanelProps, debugPanelClassName } from "../debugConsoleTypes";
 
 type SincroMotionPanelProps = DebugPanelProps & {
     snapshot: DebugConsoleSnapshot;
@@ -48,7 +48,13 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                         <dt>Runtime</dt>
                         <dd>{formatTrackerRuntime(tracker)}</dd>
                         <dt>Status</dt>
-                        <dd>{formatTrackingStatus(face.trackingEnabled, face.detected, face.fallbackReason)}</dd>
+                        <dd>
+                            {formatTrackingStatus(
+                                face.trackingEnabled,
+                                face.detected,
+                                face.fallbackReason,
+                            )}
+                        </dd>
                         <dt>Confidence</dt>
                         <dd>{formatRatio(face.confidence)}</dd>
                         <dt>Head</dt>
@@ -74,7 +80,13 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                         <dt>Status</dt>
                         <dd>{formatPoseStatus(pose)}</dd>
                         <dt>Retarget</dt>
-                        <dd>{formatPoseRetargetStatus(pose, poseRetarget.minConfidence, poseRetargetRuntime)}</dd>
+                        <dd>
+                            {formatPoseRetargetStatus(
+                                pose,
+                                poseRetarget.minConfidence,
+                                poseRetargetRuntime,
+                            )}
+                        </dd>
                         <dt>IK</dt>
                         <dd>{formatIkRuntime(poseRetargetRuntime)}</dd>
                         <dt>Anchor</dt>
@@ -112,10 +124,12 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                             max="1.2"
                             step="0.05"
                             value={poseRetarget.intensityScale}
-                            onChange={(value) => manager.applySincroPoseRetargetConfig({
-                                ...poseRetarget,
-                                intensityScale: value,
-                            })}
+                            onChange={(value) =>
+                                manager.applySincroPoseRetargetConfig({
+                                    ...poseRetarget,
+                                    intensityScale: value,
+                                })
+                            }
                         />
                         <RangeControl
                             id="sincroPoseRetargetMinConfidence"
@@ -125,10 +139,12 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                             max="1"
                             step="0.05"
                             value={poseRetarget.minConfidence}
-                            onChange={(value) => manager.applySincroPoseRetargetConfig({
-                                ...poseRetarget,
-                                minConfidence: value,
-                            })}
+                            onChange={(value) =>
+                                manager.applySincroPoseRetargetConfig({
+                                    ...poseRetarget,
+                                    minConfidence: value,
+                                })
+                            }
                         />
                         <RangeControl
                             id="sincroPoseRetargetSmoothing"
@@ -138,10 +154,12 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                             max="800"
                             step="10"
                             value={poseRetarget.smoothingMs}
-                            onChange={(value) => manager.applySincroPoseRetargetConfig({
-                                ...poseRetarget,
-                                smoothingMs: value,
-                            })}
+                            onChange={(value) =>
+                                manager.applySincroPoseRetargetConfig({
+                                    ...poseRetarget,
+                                    smoothingMs: value,
+                                })
+                            }
                         />
                         <RangeControl
                             id="sincroPoseRetargetNeutralReturn"
@@ -151,10 +169,12 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                             max="2000"
                             step="20"
                             value={poseRetarget.returnToNeutralMs}
-                            onChange={(value) => manager.applySincroPoseRetargetConfig({
-                                ...poseRetarget,
-                                returnToNeutralMs: value,
-                            })}
+                            onChange={(value) =>
+                                manager.applySincroPoseRetargetConfig({
+                                    ...poseRetarget,
+                                    returnToNeutralMs: value,
+                                })
+                            }
                         />
                         <RangeControl
                             id="sincroPoseRetargetIkStrength"
@@ -164,10 +184,12 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                             max="1"
                             step="0.05"
                             value={poseRetarget.armIkStrength}
-                            onChange={(value) => manager.applySincroPoseRetargetConfig({
-                                ...poseRetarget,
-                                armIkStrength: value,
-                            })}
+                            onChange={(value) =>
+                                manager.applySincroPoseRetargetConfig({
+                                    ...poseRetarget,
+                                    armIkStrength: value,
+                                })
+                            }
                         />
                         <RangeControl
                             id="sincroPoseRetargetIkTargetScale"
@@ -177,10 +199,12 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                             max="1.5"
                             step="0.05"
                             value={poseRetarget.armIkTargetScale}
-                            onChange={(value) => manager.applySincroPoseRetargetConfig({
-                                ...poseRetarget,
-                                armIkTargetScale: value,
-                            })}
+                            onChange={(value) =>
+                                manager.applySincroPoseRetargetConfig({
+                                    ...poseRetarget,
+                                    armIkTargetScale: value,
+                                })
+                            }
                         />
                         <RangeControl
                             id="sincroPoseRetargetIkMaxLift"
@@ -190,10 +214,12 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                             max={String(Math.PI / 2)}
                             step="0.02"
                             value={poseRetarget.armIkMaxLiftRad}
-                            onChange={(value) => manager.applySincroPoseRetargetConfig({
-                                ...poseRetarget,
-                                armIkMaxLiftRad: value,
-                            })}
+                            onChange={(value) =>
+                                manager.applySincroPoseRetargetConfig({
+                                    ...poseRetarget,
+                                    armIkMaxLiftRad: value,
+                                })
+                            }
                         />
                         <RangeControl
                             id="sincroPoseRetargetIkMaxOpen"
@@ -203,10 +229,12 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                             max={String(Math.PI / 2)}
                             step="0.02"
                             value={poseRetarget.armIkMaxOpenRad}
-                            onChange={(value) => manager.applySincroPoseRetargetConfig({
-                                ...poseRetarget,
-                                armIkMaxOpenRad: value,
-                            })}
+                            onChange={(value) =>
+                                manager.applySincroPoseRetargetConfig({
+                                    ...poseRetarget,
+                                    armIkMaxOpenRad: value,
+                                })
+                            }
                         />
                         <RangeControl
                             id="sincroPoseRetargetIkMaxFlex"
@@ -216,10 +244,12 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                             max={String(Math.PI / 2)}
                             step="0.02"
                             value={poseRetarget.armIkMaxForearmFlexRad}
-                            onChange={(value) => manager.applySincroPoseRetargetConfig({
-                                ...poseRetarget,
-                                armIkMaxForearmFlexRad: value,
-                            })}
+                            onChange={(value) =>
+                                manager.applySincroPoseRetargetConfig({
+                                    ...poseRetarget,
+                                    armIkMaxForearmFlexRad: value,
+                                })
+                            }
                         />
                     </details>
                 </article>
@@ -228,7 +258,11 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
     );
 }
 
-function formatTrackingStatus(enabled: boolean, detected: boolean, fallbackReason: string | null): string {
+function formatTrackingStatus(
+    enabled: boolean,
+    detected: boolean,
+    fallbackReason: string | null,
+): string {
     if (!enabled) {
         return fallbackReason ? `off (${fallbackReason})` : "off";
     }
@@ -241,14 +275,20 @@ function formatTrackingStatus(enabled: boolean, detected: boolean, fallbackReaso
 function formatTrackerRuntime(snapshot: DebugConsoleSnapshot["sincroMotion"]["tracker"]): string {
     const base = `${snapshot.mode} / ${snapshot.status}`;
     const perf = `load ${snapshot.loadTimeMs.toFixed(1)}ms / transfer ${snapshot.transferTimeMs.toFixed(1)}ms / rtt ${snapshot.workerRoundTripMs.toFixed(1)}ms / drop ${snapshot.droppedFrames}`;
-    return snapshot.fallbackReason ? `${base} (${snapshot.fallbackReason}) / ${perf}` : `${base} / ${perf}`;
+    return snapshot.fallbackReason
+        ? `${base} (${snapshot.fallbackReason}) / ${perf}`
+        : `${base} / ${perf}`;
 }
 
 function formatPoseStatus(snapshot: SincroPoseMotionSnapshot): string {
     if (snapshot.degradedToFaceOnly) {
         return `face-only (${snapshot.fallbackReason ?? "performance_gate"})`;
     }
-    return formatTrackingStatus(snapshot.trackingEnabled, snapshot.detected, snapshot.fallbackReason);
+    return formatTrackingStatus(
+        snapshot.trackingEnabled,
+        snapshot.detected,
+        snapshot.fallbackReason,
+    );
 }
 
 function formatPoseRetargetStatus(
@@ -274,7 +314,9 @@ function formatPoseRetargetStatus(
     return "active";
 }
 
-function formatIkRuntime(runtime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"]): string {
+function formatIkRuntime(
+    runtime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"],
+): string {
     const armReasons = [
         runtime.leftArm.ikActive ? "L ik" : `L ${runtime.leftArm.fallbackReason ?? "feature"}`,
         runtime.rightArm.ikActive ? "R ik" : `R ${runtime.rightArm.fallbackReason ?? "feature"}`,
@@ -285,7 +327,9 @@ function formatIkRuntime(runtime: DebugConsoleSnapshot["sincroMotion"]["poseReta
     return `${runtime.ikMode} / confidence ${formatRatio(runtime.confidence)} / ${armReasons}`;
 }
 
-function formatAnchorRuntime(runtime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"]): string {
+function formatAnchorRuntime(
+    runtime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"],
+): string {
     const offset = runtime.anchor.shoulderOffset;
     return `${runtime.anchor.active ? "active" : "fallback"} ${formatRatio(runtime.anchor.weight)} / ${runtime.anchor.reason} / offset ${offset.x.toFixed(2)}, ${offset.y.toFixed(2)}`;
 }
@@ -316,7 +360,9 @@ function formatArmTargets(snapshot: SincroPoseArmMotionSnapshot): string {
 function formatRetargetedArm(snapshot: SincroPoseRetargetedArm): string {
     const state = snapshot.ikActive
         ? "ik"
-        : snapshot.active ? "feature" : `fallback ${snapshot.fallbackReason ?? "neutral"}`;
+        : snapshot.active
+          ? "feature"
+          : `fallback ${snapshot.fallbackReason ?? "neutral"}`;
     return `${state} / upper ${formatVector(snapshot.upperArm)} / lower ${formatVector(snapshot.lowerArm)} / wrist ${formatVector(snapshot.wrist)}`;
 }
 
@@ -340,7 +386,7 @@ function formatVector(value: { x: number; y: number; z: number }): string {
 }
 
 function radToDeg(value: number): number {
-    return value * 180 / Math.PI;
+    return (value * 180) / Math.PI;
 }
 
 function formatUpdatedAt(value: number | null): string {

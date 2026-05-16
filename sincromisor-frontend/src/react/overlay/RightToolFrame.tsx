@@ -29,11 +29,9 @@ export function RightToolFrame({
     variant,
     children,
 }: RightToolFrameProps) {
-    const frameClassName = [
-        "rightToolFrame",
-        `rightToolFrame--${variant}`,
-        isOpen ? "is-open" : "",
-    ].filter(Boolean).join(" ");
+    const frameClassName = ["rightToolFrame", `rightToolFrame--${variant}`, isOpen ? "is-open" : ""]
+        .filter(Boolean)
+        .join(" ");
 
     const handleBackdropPointerDown = (event: PointerEvent<HTMLDivElement>): void => {
         if (event.target === event.currentTarget) {
@@ -42,18 +40,29 @@ export function RightToolFrame({
     };
 
     return (
-        <div id={id} className={frameClassName} aria-hidden={!isOpen} onPointerDown={handleBackdropPointerDown}>
-            <section className="rightToolFrame__surface" role="dialog" aria-modal="false" aria-label={ariaLabel ?? title}>
-                <div id={variant === "settings" ? "sincroReactSettingsPanelChromeRoot" : undefined} className="rightToolFrame__chrome">
+        <div
+            id={id}
+            className={frameClassName}
+            aria-hidden={!isOpen}
+            onPointerDown={handleBackdropPointerDown}
+        >
+            <section
+                className="rightToolFrame__surface"
+                role="dialog"
+                aria-modal="false"
+                aria-label={ariaLabel ?? title}
+            >
+                <div
+                    id={variant === "settings" ? "sincroReactSettingsPanelChromeRoot" : undefined}
+                    className="rightToolFrame__chrome"
+                >
                     <OverlayCloseButton
                         id={closeButtonIdForVariant(variant)}
                         ariaLabel={`${title}を閉じる`}
                         onClick={onClose}
                     />
                 </div>
-                <div className="rightToolFrame__scroll">
-                    {children}
-                </div>
+                <div className="rightToolFrame__scroll">{children}</div>
             </section>
         </div>
     );

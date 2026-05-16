@@ -1,6 +1,6 @@
 import type { DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
 import { LogViewer } from "../components/LogViewer";
-import { debugPanelClassName, type DebugPanelProps } from "../debugConsoleTypes";
+import { type DebugPanelProps, debugPanelClassName } from "../debugConsoleTypes";
 
 type MessagesPanelProps = DebugPanelProps & {
     snapshot: DebugConsoleSnapshot;
@@ -19,8 +19,16 @@ export function MessagesPanel({ snapshot, isActive }: MessagesPanelProps) {
             <h3>Messages</h3>
             <div className="channelGrid">
                 <LogViewer id="textChannel" title="text_ch" value={snapshot.rtc.textChannelLog} />
-                <LogViewer id="telopChannel" title="telop_ch" value={snapshot.rtc.telopChannelLog} />
-                <LogViewer id="rtcEventLog" title="RTC Event Timeline" value={snapshot.rtc.rtcEventLog} />
+                <LogViewer
+                    id="telopChannel"
+                    title="telop_ch"
+                    value={snapshot.rtc.telopChannelLog}
+                />
+                <LogViewer
+                    id="rtcEventLog"
+                    title="RTC Event Timeline"
+                    value={snapshot.rtc.rtcEventLog}
+                />
             </div>
         </section>
     );

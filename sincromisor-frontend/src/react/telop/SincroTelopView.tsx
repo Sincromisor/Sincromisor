@@ -53,7 +53,7 @@ export function SincroTelopView({ enableReactRendering = true }: SincroTelopView
         // 初期表示は左端開始のまま、横幅を超えたタイミングからだけ末尾（最新文字）に追従する。
         const maxScrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
         node.scrollLeft = maxScrollLeft;
-    }, [segments]);
+    });
 
     return (
         <div

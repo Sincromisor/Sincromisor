@@ -1,24 +1,25 @@
-import { GLTF, GLTFLoader, GLTFParser } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { Object3D } from 'three/src/core/Object3D.js';
-import { Scene } from 'three/src/scenes/Scene.js';
-import { Clock } from 'three/src/core/Clock.js';
-import { VRM, VRMLoaderPlugin, VRMMetaLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
-import { HeadBoneController } from './HeadBoneController';
-import { ArmBoneController } from './ArmBoneController';
-import { LegBoneController } from './LegBoneController';
-import { FaceMorphController } from './FaceMorphController';
-import { FaceEmotionController } from './FaceEmotionController';
-import { EyeBehaviorController } from './EyeBehaviorController';
-import { CharacterBehaviorSnapshot, CharacterBehaviorState } from './CharacterBehaviorState';
-import { CharacterMotionOrchestrator } from './CharacterMotionOrchestrator';
-import type { CharacterMotionTuning } from './CharacterMotionConfig';
-import { SincroFaceRetargeter } from './SincroFaceRetargeter';
-import { SincroPoseRetargeter } from './SincroPoseRetargeter';
-import type { SincroPoseRetargetConfig } from './SincroPoseRetargeter';
-import { VRMCamera } from '../VRMScene/VRMCamera';
-import { Vector3 } from 'three/src/math/Vector3.js';
-import { Box3 } from 'three/src/math/Box3.js';
-import { DebugConsoleManager } from '../../UI/DebugConsoleManager';
+import { type VRM, VRMLoaderPlugin, VRMMetaLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+import { type GLTF, GLTFLoader, type GLTFParser } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { Clock } from "three/src/core/Clock.js";
+import type { Object3D } from "three/src/core/Object3D.js";
+import { Box3 } from "three/src/math/Box3.js";
+import { Vector3 } from "three/src/math/Vector3.js";
+import type { Scene } from "three/src/scenes/Scene.js";
+import { DebugConsoleManager } from "../../UI/DebugConsoleManager";
+import type { VRMCamera } from "../VRMScene/VRMCamera";
+import { ArmBoneController } from "./ArmBoneController";
+import { type CharacterBehaviorSnapshot, CharacterBehaviorState } from "./CharacterBehaviorState";
+import type { CharacterMotionTuning } from "./CharacterMotionConfig";
+import { CharacterMotionOrchestrator } from "./CharacterMotionOrchestrator";
+import { EyeBehaviorController } from "./EyeBehaviorController";
+import { FaceEmotionController } from "./FaceEmotionController";
+import { FaceMorphController } from "./FaceMorphController";
+import { HeadBoneController } from "./HeadBoneController";
+import { LegBoneController } from "./LegBoneController";
+import { SincroFaceRetargeter } from "./SincroFaceRetargeter";
+import type { SincroPoseRetargetConfig } from "./SincroPoseRetargeter";
+import { SincroPoseRetargeter } from "./SincroPoseRetargeter";
+
 // import { MToonMaterialLoaderPlugin } from '@pixiv/three-vrm';
 // import { MToonNodeMaterial } from '@pixiv/three-vrm/nodes';
 
@@ -41,7 +42,7 @@ const SIMPLE_VRM_AUTO_FRAMING_TARGET = {
     maxTopOvershootFromHeadTopRatio: 0.45,
     // eyeCenter -> neck の補間率。0 に近いほど目寄り、1 に近いほど首寄り。
     // 顔ターゲットが低い（首寄り）場合は 0.04 ずつ下げる。高い（目より上）場合は 0.04 ずつ上げる（推奨範囲: 0.00 - 0.40）。
-    eyeCenterTowardNeckRatio: 0.10,
+    eyeCenterTowardNeckRatio: 0.1,
     // eye ボーンが無いVRMで neck->head から顔ターゲットを作る比率（0=neck, 1=head）。
     // 顔ターゲットが低い場合は 0.04 ずつ増やす（推奨範囲: 0.72 - 0.96）。
     faceAimFallbackFromNeckToHead: 0.88,
@@ -120,10 +121,10 @@ export class VRMCharacterManager {
             return new VRMLoaderPlugin(parser, {
                 metaPlugin: new VRMMetaLoaderPlugin(parser, { needThumbnailImage: true }),
             });
-
         });
 
-        loader.load(url,
+        loader.load(
+            url,
             (gltf: GLTF) => {
                 this.vrm = gltf.userData.vrm as VRM;
                 // 視線/姿勢/表情の更新責務を個別 controller に分け、update() でまとめて進める。
@@ -136,8 +137,13 @@ export class VRMCharacterManager {
                 this.motionOrchestrator = new CharacterMotionOrchestrator(this.vrm);
                 if (this.vrm.expressionManager) {
                     this.mouthMorphController = new FaceMorphController(this.vrm.expressionManager);
-                    this.emotionMorphController = new FaceEmotionController(this.vrm.expressionManager);
-                    this.eyeBehaviorController = new EyeBehaviorController(this.vrm, this.vrm.expressionManager);
+                    this.emotionMorphController = new FaceEmotionController(
+                        this.vrm.expressionManager,
+                    );
+                    this.eyeBehaviorController = new EyeBehaviorController(
+                        this.vrm,
+                        this.vrm.expressionManager,
+                    );
                 }
 
                 VRMUtils.removeUnnecessaryVertices(gltf.scene);
@@ -145,7 +151,7 @@ export class VRMCharacterManager {
                 VRMUtils.combineMorphs(this.vrm);
                 // キャラクター全体の配置調整は hips 基準で扱う。
                 // Looking Glass / simple-vrm の位置合わせ時もここが基準点になる。
-                this.rootBone = this.vrm?.humanoid.getNormalizedBoneNode('hips');
+                this.rootBone = this.vrm?.humanoid.getNormalizedBoneNode("hips");
                 if (this.rootBone) {
                     this.defaultPosition = this.rootBone?.position.clone();
                 }
@@ -163,17 +169,18 @@ export class VRMCharacterManager {
                 });
             },
             (progress) => {
-                console.log('Loading model...', 100.0 * (progress.loaded / progress.total), '%');
+                console.log("Loading model...", 100.0 * (progress.loaded / progress.total), "%");
             },
             (error) => {
                 console.error(error);
-                throw new Error('Failed to load VRM model.');
-            });
+                throw new Error("Failed to load VRM model.");
+            },
+        );
     }
 
     private getVRMThumbnailImage(): HTMLImageElement | null {
         // VRM0.xはthumbnailImageではなくtexture運用のため、本実装では対象外とする。
-        if (!this.vrm || this.vrm.meta.metaVersion !== '1') {
+        if (!this.vrm || this.vrm.meta.metaVersion !== "1") {
             return null;
         }
         return this.vrm.meta.thumbnailImage ?? null;
@@ -189,43 +196,56 @@ export class VRMCharacterManager {
         this.vrm.scene.updateMatrixWorld(true);
         const bbox = new Box3().setFromObject(this.vrm.scene);
 
-        const headPos = this.getHumanoidBoneWorldPosition('head');
-        const neckPos = this.getHumanoidBoneWorldPosition('neck');
-        const leftEyePos = this.getHumanoidBoneWorldPosition('leftEye');
-        const rightEyePos = this.getHumanoidBoneWorldPosition('rightEye');
-        const upperChestPos = this.getHumanoidBoneWorldPosition('upperChest');
-        const chestPos = this.getHumanoidBoneWorldPosition('chest');
-        const spinePos = this.getHumanoidBoneWorldPosition('spine');
+        const headPos = this.getHumanoidBoneWorldPosition("head");
+        const neckPos = this.getHumanoidBoneWorldPosition("neck");
+        const leftEyePos = this.getHumanoidBoneWorldPosition("leftEye");
+        const rightEyePos = this.getHumanoidBoneWorldPosition("rightEye");
+        const upperChestPos = this.getHumanoidBoneWorldPosition("upperChest");
+        const chestPos = this.getHumanoidBoneWorldPosition("chest");
+        const spinePos = this.getHumanoidBoneWorldPosition("spine");
 
         const chestBasePos = upperChestPos ?? chestPos ?? spinePos;
         if (headPos && chestBasePos) {
-            const neckReferencePos = neckPos ?? chestBasePos.clone().lerp(
-                headPos,
-                SIMPLE_VRM_AUTO_FRAMING_TARGET.neckFallbackFromChestToHead,
-            );
+            const neckReferencePos =
+                neckPos ??
+                chestBasePos
+                    .clone()
+                    .lerp(headPos, SIMPLE_VRM_AUTO_FRAMING_TARGET.neckFallbackFromChestToHead);
             const headToNeck = Math.max(headPos.y - neckReferencePos.y, 0.06);
             // head ボーンは頭の中心寄りになりやすいので、頭頂側の見切れ防止余白を加える。
-            const estimatedHeadTopY = headPos.y + headToNeck * SIMPLE_VRM_AUTO_FRAMING_TARGET.estimatedHeadTopFromHeadNeckSpan;
+            const estimatedHeadTopY =
+                headPos.y +
+                headToNeck * SIMPLE_VRM_AUTO_FRAMING_TARGET.estimatedHeadTopFromHeadNeckSpan;
             // 「胸から上」を残しつつ顔寄りの構図にするため、胸の少し下までを下端として扱う。
-            const frameBottomY = chestBasePos.y
-                - Math.max(headPos.y - chestBasePos.y, 0.2) * SIMPLE_VRM_AUTO_FRAMING_TARGET.bottomOverscanBelowChestRatio;
+            const frameBottomY =
+                chestBasePos.y -
+                Math.max(headPos.y - chestBasePos.y, 0.2) *
+                    SIMPLE_VRM_AUTO_FRAMING_TARGET.bottomOverscanBelowChestRatio;
             // ahoge 等の極端な突起で引きすぎないよう、bbox上端の寄与は head推定からの増分を制限する。
-            const maxTopOvershoot = headToNeck * SIMPLE_VRM_AUTO_FRAMING_TARGET.maxTopOvershootFromHeadTopRatio;
+            const maxTopOvershoot =
+                headToNeck * SIMPLE_VRM_AUTO_FRAMING_TARGET.maxTopOvershootFromHeadTopRatio;
             const frameTopY = bbox.isEmpty()
                 ? estimatedHeadTopY
-                : Math.min(Math.max(estimatedHeadTopY, bbox.max.y), estimatedHeadTopY + maxTopOvershoot);
+                : Math.min(
+                      Math.max(estimatedHeadTopY, bbox.max.y),
+                      estimatedHeadTopY + maxTopOvershoot,
+                  );
             // 目ボーンが取れる場合はその中点を優先し、目〜鼻付近を直接ターゲットにする。
-            const eyeCenterPos = (leftEyePos && rightEyePos)
-                ? leftEyePos.clone().add(rightEyePos).multiplyScalar(0.5)
-                : null;
+            const eyeCenterPos =
+                leftEyePos && rightEyePos
+                    ? leftEyePos.clone().add(rightEyePos).multiplyScalar(0.5)
+                    : null;
             const faceAimPos = eyeCenterPos
-                ? eyeCenterPos.clone().lerp(neckReferencePos, SIMPLE_VRM_AUTO_FRAMING_TARGET.eyeCenterTowardNeckRatio)
-                : neckReferencePos.clone().lerp(headPos, SIMPLE_VRM_AUTO_FRAMING_TARGET.faceAimFallbackFromNeckToHead);
-            const target = new Vector3(
-                faceAimPos.x,
-                faceAimPos.y,
-                faceAimPos.z,
-            );
+                ? eyeCenterPos
+                      .clone()
+                      .lerp(
+                          neckReferencePos,
+                          SIMPLE_VRM_AUTO_FRAMING_TARGET.eyeCenterTowardNeckRatio,
+                      )
+                : neckReferencePos
+                      .clone()
+                      .lerp(headPos, SIMPLE_VRM_AUTO_FRAMING_TARGET.faceAimFallbackFromNeckToHead);
+            const target = new Vector3(faceAimPos.x, faceAimPos.y, faceAimPos.z);
             this.vrmCamera.frameVerticalRange(target, frameTopY, frameBottomY);
             return;
         }
@@ -237,8 +257,11 @@ export class VRMCharacterManager {
         const size = bbox.getSize(new Vector3());
         const center = bbox.getCenter(new Vector3());
         const topY = bbox.max.y;
-        const estimatedChestY = bbox.min.y + size.y * SIMPLE_VRM_AUTO_FRAMING_BBOX_FALLBACK.estimatedChestHeightRatio;
-        const frameBottomY = estimatedChestY - size.y * SIMPLE_VRM_AUTO_FRAMING_BBOX_FALLBACK.chestBottomOverscanRatio;
+        const estimatedChestY =
+            bbox.min.y + size.y * SIMPLE_VRM_AUTO_FRAMING_BBOX_FALLBACK.estimatedChestHeightRatio;
+        const frameBottomY =
+            estimatedChestY -
+            size.y * SIMPLE_VRM_AUTO_FRAMING_BBOX_FALLBACK.chestBottomOverscanRatio;
         const verticalSpan = Math.max(topY - frameBottomY, 0.3);
         // ボーンが無い場合は bbox 比率で近似。顔中心に寄せるため少し上側を向く。
         const target = new Vector3(
@@ -250,7 +273,7 @@ export class VRMCharacterManager {
     }
 
     private getHumanoidBoneWorldPosition(
-        boneName: 'head' | 'neck' | 'leftEye' | 'rightEye' | 'upperChest' | 'chest' | 'spine',
+        boneName: "head" | "neck" | "leftEye" | "rightEye" | "upperChest" | "chest" | "spine",
     ): Vector3 | null {
         if (!this.vrm) {
             return null;
@@ -279,12 +302,12 @@ export class VRMCharacterManager {
             this.latestBehaviorSnapshot.motionPolicy.allowPoseRetarget
                 ? this.latestBehaviorSnapshot.poseMotion
                 : {
-                    ...this.latestBehaviorSnapshot.poseMotion,
-                    detected: false,
-                    confidence: 0,
-                    degradedToFaceOnly: true,
-                    fallbackReason: "pose_retarget_disabled",
-            },
+                      ...this.latestBehaviorSnapshot.poseMotion,
+                      detected: false,
+                      confidence: 0,
+                      degradedToFaceOnly: true,
+                      fallbackReason: "pose_retarget_disabled",
+                  },
             this.latestBehaviorSnapshot.nowMs,
         );
         DebugConsoleManager.getManager().updateSincroPoseRetargetFrame(sincroPose);
@@ -292,13 +315,22 @@ export class VRMCharacterManager {
         this.eyeBehaviorController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.mouthMorphController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.emotionMorphController?.update(this.latestBehaviorSnapshot);
-        this.armBoneController?.update(this.motionElapsedSeconds, this.latestBehaviorSnapshot, sincroPose);
+        this.armBoneController?.update(
+            this.motionElapsedSeconds,
+            this.latestBehaviorSnapshot,
+            sincroPose,
+        );
         this.legBoneController?.update(this.motionElapsedSeconds);
         this.vrm?.update(deltaSeconds);
         if (this.rootBone) {
             const hipsBasePosition = this.defaultPosition.clone().add(this.characterPosition);
             this.rootBone.position.copy(hipsBasePosition);
-            this.motionOrchestrator?.update(this.motionElapsedSeconds, this.latestBehaviorSnapshot, hipsBasePosition, sincroPose);
+            this.motionOrchestrator?.update(
+                this.motionElapsedSeconds,
+                this.latestBehaviorSnapshot,
+                hipsBasePosition,
+                sincroPose,
+            );
         }
     }
 

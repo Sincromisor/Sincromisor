@@ -1,13 +1,13 @@
-import { Detection } from "@mediapipe/tasks-vision";
+import type { Detection } from "@mediapipe/tasks-vision";
 import { CharacterGaze } from "../CharacterGaze/CharacterGaze";
-import { VideoInputManager } from "../RTC/VideoInputManager";
-import { ChatMessageService } from "../UI/ChatMessageService";
-import { DialogManager } from "../UI/DialogManager";
-import { DebugConsoleManager } from "../UI/DebugConsoleManager";
-import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehaviorState";
-import { TrackerRuntime } from "../FaceTracking/TrackerRuntime";
 import type { SincroFaceMotionSnapshot } from "../FaceTracking/SincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../FaceTracking/SincroPoseMotionSnapshot";
+import { TrackerRuntime } from "../FaceTracking/TrackerRuntime";
+import { VideoInputManager } from "../RTC/VideoInputManager";
+import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehaviorState";
+import type { ChatMessageService } from "../UI/ChatMessageService";
+import type { DebugConsoleManager } from "../UI/DebugConsoleManager";
+import type { DialogManager } from "../UI/DialogManager";
 
 const SINCRO_POSE_TARGET_INFERENCE_FPS = 12;
 
@@ -62,10 +62,13 @@ export class SincroCharacterGazeController {
     private applyDialogGazeSettings(forceAll: boolean): void {
         const next = this.readDialogGazeSettingsSnapshot();
         const prev = this.gazeSettingsSnapshot;
-        const videoDeviceChanged = forceAll || !prev || prev.videoInputDeviceId !== next.videoInputDeviceId;
-        const gazeEnabledChanged = forceAll || !prev || prev.enableCharacterGaze !== next.enableCharacterGaze;
+        const videoDeviceChanged =
+            forceAll || !prev || prev.videoInputDeviceId !== next.videoInputDeviceId;
+        const gazeEnabledChanged =
+            forceAll || !prev || prev.enableCharacterGaze !== next.enableCharacterGaze;
         const talkModeChanged = forceAll || !prev || prev.talkMode !== next.talkMode;
-        const poseTrackingChanged = forceAll || !prev || prev.enableSincroPoseTracking !== next.enableSincroPoseTracking;
+        const poseTrackingChanged =
+            forceAll || !prev || prev.enableSincroPoseTracking !== next.enableSincroPoseTracking;
 
         this.characterBehaviorState.setTalkMode(next.talkMode);
         if (videoDeviceChanged) {
@@ -89,7 +92,10 @@ export class SincroCharacterGazeController {
     }
 
     // CharacterGaze の在席/離席 callback は 1 つしか持てないため、毎回上書きして最新設定を参照する。
-    private bindCharacterGazeCallbacks(characterGaze: CharacterGaze, onMuteChange: (mute: boolean) => void): void {
+    private bindCharacterGazeCallbacks(
+        characterGaze: CharacterGaze,
+        onMuteChange: (mute: boolean) => void,
+    ): void {
         // AutoMute の実適用は RTC controller 側に残し、この controller は視線イベント変換のみ担当する。
         characterGaze.arriveCallback = () => {
             this.debugConsoleManager.updateCharacterEyeStatus(true);
@@ -146,7 +152,10 @@ export class SincroCharacterGazeController {
 
         try {
             const nextVideoTrack = await this.videoInputManager.reacquireVideoTrack();
-            if (refreshToken !== this.pendingCameraRefreshToken || !this.dialogManager.enableCharacterGaze()) {
+            if (
+                refreshToken !== this.pendingCameraRefreshToken ||
+                !this.dialogManager.enableCharacterGaze()
+            ) {
                 nextVideoTrack.stop();
                 return;
             }
@@ -154,7 +163,10 @@ export class SincroCharacterGazeController {
                 if (!this.dialogManager.enableCharacterGaze()) {
                     return;
                 }
-                this.characterBehaviorState.setErrorSource("gaze", "顔トラッキング用カメラの映像トラックが停止しました。");
+                this.characterBehaviorState.setErrorSource(
+                    "gaze",
+                    "顔トラッキング用カメラの映像トラックが停止しました。",
+                );
             });
 
             if (this.dialogManager.talkMode() === "sincro") {
@@ -171,7 +183,10 @@ export class SincroCharacterGazeController {
             console.error("Failed to init CharacterGaze camera.", error);
             this.stopCharacterGazeCamera();
             const detail = error instanceof Error ? error.message : String(error);
-            this.characterBehaviorState.setErrorSource("gaze", `顔トラッキング用カメラへの切替に失敗しました。${detail}`);
+            this.characterBehaviorState.setErrorSource(
+                "gaze",
+                `顔トラッキング用カメラへの切替に失敗しました。${detail}`,
+            );
             const selectedDeviceId = this.videoInputManager.getVideoInputDeviceId();
             const deviceLabel = selectedDeviceId ? `deviceId=${selectedDeviceId}` : "既定デバイス";
             this.chatMessageService.writeErrorMessage(
@@ -180,7 +195,10 @@ export class SincroCharacterGazeController {
         }
     }
 
-    private async startCharacterGazeTracking(characterGaze: CharacterGaze, nextVideoTrack: MediaStreamTrack): Promise<void> {
+    private async startCharacterGazeTracking(
+        characterGaze: CharacterGaze,
+        nextVideoTrack: MediaStreamTrack,
+    ): Promise<void> {
         this.trackerRuntime.stopFaceTracking("chat_mode_selected");
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
@@ -190,14 +208,17 @@ export class SincroCharacterGazeController {
             nextVideoTrack,
             (detects: Detection[]) => {
                 // 設定変更後も動作が追従するよう、毎フレーム時点の設定を参照する。
-                const gazeEnabled = this.dialogManager.enableCharacterGaze()
-                    && this.dialogManager.talkMode() !== "sincro";
+                const gazeEnabled =
+                    this.dialogManager.enableCharacterGaze() &&
+                    this.dialogManager.talkMode() !== "sincro";
                 // ここが Gaze 状態の主更新点。DebugConsole購読経由で React 側にも値が流れる。
                 if (gazeEnabled) {
                     this.debugConsoleManager.updateFaceXLog(characterGaze.targetX());
                     this.debugConsoleManager.updateFaceYLog(characterGaze.targetY());
                     this.debugConsoleManager.updateFacing(characterGaze.facing());
-                    this.debugConsoleManager.updateCharacterGazeTargetDebug(characterGaze.targetSelectionDebugText());
+                    this.debugConsoleManager.updateCharacterGazeTargetDebug(
+                        characterGaze.targetSelectionDebugText(),
+                    );
                     this.characterBehaviorState.applyGazeState(characterGaze, detects);
                 }
                 this.updateEyeTargetOverlay(characterGaze, gazeEnabled, detects);
@@ -253,16 +274,19 @@ export class SincroCharacterGazeController {
             return Promise.resolve();
         }
         if (!this.visionInitPromise) {
-            this.visionInitPromise = characterGaze.initVision()
-                .catch((error) => {
-                    this.visionInitPromise = null;
-                    throw error;
-                });
+            this.visionInitPromise = characterGaze.initVision().catch((error) => {
+                this.visionInitPromise = null;
+                throw error;
+            });
         }
         return this.visionInitPromise;
     }
 
-    private updateEyeTargetOverlay(characterGaze: CharacterGaze, gazeEnabled: boolean, detects: Detection[]): void {
+    private updateEyeTargetOverlay(
+        characterGaze: CharacterGaze,
+        gazeEnabled: boolean,
+        detects: Detection[],
+    ): void {
         // 既存 SVG オーバーレイ表示。React へ移しきるまでここで更新を閉じ込める。
         const eyeTargetElement = document.querySelector("#eyeTarget");
         if (!eyeTargetElement) {
@@ -278,7 +302,10 @@ export class SincroCharacterGazeController {
     }
 
     private handleSincroFaceMotion(snapshot: SincroFaceMotionSnapshot): void {
-        if (!this.dialogManager.enableCharacterGaze() || this.dialogManager.talkMode() !== "sincro") {
+        if (
+            !this.dialogManager.enableCharacterGaze() ||
+            this.dialogManager.talkMode() !== "sincro"
+        ) {
             return;
         }
         this.characterBehaviorState.applyFaceMotion(snapshot);
@@ -286,18 +313,25 @@ export class SincroCharacterGazeController {
         this.debugConsoleManager.updateFaceXLog(snapshot.headPose.yawDeg);
         this.debugConsoleManager.updateFaceYLog(snapshot.headPose.pitchDeg);
         this.debugConsoleManager.updateFacing(snapshot.confidence);
-        this.debugConsoleManager.updateCharacterGazeTargetDebug(this.formatSincroFaceDebug(snapshot));
+        this.debugConsoleManager.updateCharacterGazeTargetDebug(
+            this.formatSincroFaceDebug(snapshot),
+        );
         this.debugConsoleManager.updateSincroFaceMotion(snapshot);
     }
 
     private handleSincroPoseMotion(snapshot: SincroPoseMotionSnapshot): void {
-        if (!this.dialogManager.enableCharacterGaze() || this.dialogManager.talkMode() !== "sincro") {
+        if (
+            !this.dialogManager.enableCharacterGaze() ||
+            this.dialogManager.talkMode() !== "sincro"
+        ) {
             return;
         }
         this.characterBehaviorState.applyPoseMotion(snapshot);
         this.debugConsoleManager.updateSincroPoseMotion(snapshot);
         if (snapshot.degradedToFaceOnly || snapshot.fallbackReason) {
-            this.debugConsoleManager.updateCharacterGazeTargetDebug(this.formatSincroPoseDebug(snapshot));
+            this.debugConsoleManager.updateCharacterGazeTargetDebug(
+                this.formatSincroPoseDebug(snapshot),
+            );
         }
     }
 
@@ -305,7 +339,9 @@ export class SincroCharacterGazeController {
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
         this.characterBehaviorState.setErrorSource("poseMotion", null);
         this.debugConsoleManager.updateSincroPoseMotion(snapshot);
-        this.debugConsoleManager.updateCharacterGazeTargetDebug(this.formatSincroPoseDebug(snapshot));
+        this.debugConsoleManager.updateCharacterGazeTargetDebug(
+            this.formatSincroPoseDebug(snapshot),
+        );
     }
 
     private handleCharacterGazeRuntimeError(error: unknown): void {

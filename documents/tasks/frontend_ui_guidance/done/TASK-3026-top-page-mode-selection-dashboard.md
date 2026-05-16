@@ -13,10 +13,10 @@
 - 現状のトップページは `Recommended` / `Looking Glass` / `Source Code` の縦並びリンクに近く、初見ユーザーにとって「まず何を押すべきか」が弱い。
 - desktop `1280x720` では `Looking Glass` 導線の下部が初期表示から外れやすく、mobile `390x844` では `Source Code` がほぼ画面外に押し出される。
 - `DESIGN.md` は模倣対象ではなく、以下の考え方をトップページへ適用するための参考とする。
-  - 暗い没入面の上に主役コンテンツを浮かせる。
-  - 機能色を限定し、主要操作だけを強調する。
-  - アプリ導線として文字階層と余白をコンパクトにする。
-  - pill / circle 系の操作感で触れる対象を明確にする。
+    - 暗い没入面の上に主役コンテンツを浮かせる。
+    - 機能色を限定し、主要操作だけを強調する。
+    - アプリ導線として文字階層と余白をコンパクトにする。
+    - pill / circle 系の操作感で触れる対象を明確にする。
 
 ## 関連設計
 
@@ -84,12 +84,12 @@
 - 2026-04-25 時点の公開ページ確認では、desktop `1280x720` で `Looking Glass` ボタン下部が fold 付近にあり、mobile `390x844` では `Source Code` 見出しが初期表示外だった。
 - 現状の主な対象は `sincromisor-frontend/src/index.html` と `sincromisor-frontend/src/styles/index.css` に閉じられる見込み。
 - 実施結果:
-  - `sincromisor-frontend/src/index.html` を `form` + `button formaction` から `<a>` ベースの mode card 導線へ変更し、`Simple Interface` を主導線、`360deg Camera` / `Looking Glass` を副導線、GitHub を補助リンクとして再構成した。
-  - `meta viewport` を追加し、ヘッダーアイコンは装飾画像として `alt=""` に整理した。
-  - `sincromisor-frontend/src/styles/index.css` を compact dashboard 用に再設計し、既存 `uiFoundation.css` の dark surface / compact typography / pill geometry と接続した。
-  - `Recommended` / `Experimental` / `Device dependent` をテキストラベルとして表示し、色だけに依存しない状態表現にした。
-  - `documents/design/frontend_ui.md` にトップページ導線方針と確認基準を同期した。
-  - `cd sincromisor-frontend && npm run build` は 2026-04-25 に成功した。既存の large chunk warning は継続。
-  - Playwright + Vite dev server で `/` を desktop `1280x720`、mobile `390x844` で確認し、主要導線と副導線が初期表示内に収まることを確認した。
-  - Tab 操作で header brand と GitHub に focus が移ることを確認した。リンク共通の `:focus-visible` outline は mode card にも適用済み。
-  - 追加調整として `public/images/modes/` に各起動モードの概念 SVG を追加し、mode card へ `<img>` 参照で埋め込んだ。将来の差し替えは同パスの SVG 更新で対応できる。
+    - `sincromisor-frontend/src/index.html` を `form` + `button formaction` から `<a>` ベースの mode card 導線へ変更し、`Simple Interface` を主導線、`360deg Camera` / `Looking Glass` を副導線、GitHub を補助リンクとして再構成した。
+    - `meta viewport` を追加し、ヘッダーアイコンは装飾画像として `alt=""` に整理した。
+    - `sincromisor-frontend/src/styles/index.css` を compact dashboard 用に再設計し、既存 `uiFoundation.css` の dark surface / compact typography / pill geometry と接続した。
+    - `Recommended` / `Experimental` / `Device dependent` をテキストラベルとして表示し、色だけに依存しない状態表現にした。
+    - `documents/design/frontend_ui.md` にトップページ導線方針と確認基準を同期した。
+    - `cd sincromisor-frontend && npm run build` は 2026-04-25 に成功した。既存の large chunk warning は継続。
+    - Playwright + Vite dev server で `/` を desktop `1280x720`、mobile `390x844` で確認し、主要導線と副導線が初期表示内に収まることを確認した。
+    - Tab 操作で header brand と GitHub に focus が移ることを確認した。リンク共通の `:focus-visible` outline は mode card にも適用済み。
+    - 追加調整として `public/images/modes/` に各起動モードの概念 SVG を追加し、mode card へ `<img>` 参照で埋め込んだ。将来の差し替えは同パスの SVG 更新で対応できる。

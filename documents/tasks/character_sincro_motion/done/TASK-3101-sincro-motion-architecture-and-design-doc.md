@@ -63,9 +63,9 @@
 
 - 完了日: 2026-05-11
 - 更新対象:
-  - `documents/design/frontend_character.md`
+    - `documents/design/frontend_character.md`
 - 確認結果:
-  - `chat` と `sincro` の入力・状態・motion priority の違いを `6.1 chat と sincro のモーション責務境界` に整理した。
-  - `SincroFaceTracker`、`SincroPoseTracker`、`TrackerRuntime`、retargeter の責務を `6.2 Sincro Motion パイプライン` と `7.1 コンポーネント設計` に定義した。
-  - FaceLandmarker を顔同期の本流、PoseLandmarker を optional 上半身同期として位置づけ、性能ゲートと face-only fallback 方針を記載した。
-  - WebRTC endpoint / JSON 契約は変更していない。
+    - `chat` と `sincro` の入力・状態・motion priority の違いを `6.1 chat と sincro のモーション責務境界` に整理した。
+    - `SincroFaceTracker`、`SincroPoseTracker`、`TrackerRuntime`、retargeter の責務を `6.2 Sincro Motion パイプライン` と `7.1 コンポーネント設計` に定義した。
+    - FaceLandmarker を顔同期の本流、PoseLandmarker を optional 上半身同期として位置づけ、性能ゲートと face-only fallback 方針を記載した。
+    - WebRTC endpoint / JSON 契約は変更していない。

@@ -51,22 +51,22 @@
 ## 調査結果
 
 - N-best 取得は可能。
-  - `EncDecRNNTBPEModel.change_decoding_strategy()` で `beam.return_best_hypothesis=False` を指定すると、`model.transcribe(..., return_hypotheses=True)` の 1 要素目が `list[Hypothesis]` になる。
-  - 現行既定の `alsd` でも候補列は返る。`beam_size=4` のスパイクでは上位 4 件を取得できた。
-  - 候補ごとに `text` と `score` を取得できるため、TASK-1005 の再ランキング入力としては十分。
+    - `EncDecRNNTBPEModel.change_decoding_strategy()` で `beam.return_best_hypothesis=False` を指定すると、`model.transcribe(..., return_hypotheses=True)` の 1 要素目が `list[Hypothesis]` になる。
+    - 現行既定の `alsd` でも候補列は返る。`beam_size=4` のスパイクでは上位 4 件を取得できた。
+    - 候補ごとに `text` と `score` を取得できるため、TASK-1005 の再ランキング入力としては十分。
 - context biasing の受け口は存在するが、現行既定の `alsd` ではそのまま使えない。
-  - NeMo 側には `beam.boosting_tree` と `beam.boosting_tree_alpha` があり、`BoostingTreeModelConfig` に `key_phrases_list` を直接渡せる。
-  - ただし `strategy='alsd'` のまま `boosting_tree` を入れると、`Model rnnt with strategy 'alsd' does not support n-gram LM models and boosting tree. Recommended beam decoding strategy with LM is 'malsd_batch'.` で失敗する。
-  - `strategy='malsd_batch'` へ切り替えると `boosting_tree` 付きデコードは実行できた。
+    - NeMo 側には `beam.boosting_tree` と `beam.boosting_tree_alpha` があり、`BoostingTreeModelConfig` に `key_phrases_list` を直接渡せる。
+    - ただし `strategy='alsd'` のまま `boosting_tree` を入れると、`Model rnnt with strategy 'alsd' does not support n-gram LM models and boosting tree. Recommended beam decoding strategy with LM is 'malsd_batch'.` で失敗する。
+    - `strategy='malsd_batch'` へ切り替えると `boosting_tree` 付きデコードは実行できた。
 - partial 用の既存軽量経路は維持すべき。
-  - `malsd_batch` は `alsd` より重く、confirmed 専用の追加デコード経路として扱う前提が妥当。
-  - `allow_cuda_graphs=False` で CPU スパイクは通った。実運用では GPU/CPU の挙動差を別途確認する。
+    - `malsd_batch` は `alsd` より重く、confirmed 専用の追加デコード経路として扱う前提が妥当。
+    - `allow_cuda_graphs=False` で CPU スパイクは通った。実運用では GPU/CPU の挙動差を別途確認する。
 
 ## 実装メモ
 
 - `SpeechRecognizerNemo` に以下のスパイク補助 API を追加した。
-  - `build_decoding_config()`: 一時的な decoding strategy 構築
-  - `transcribe_candidates()`: 候補列の取得
+    - `build_decoding_config()`: 一時的な decoding strategy 構築
+    - `transcribe_candidates()`: 候補列の取得
 - `transcribe_with_score()` は raw hypothesis が `list[Hypothesis]` の場合も候補列を返すようにした。
 - `transcribe()` は N-best 時でも先頭候補を `TranscribeResult` 本文へ反映し、候補列全体は raw hypothesis として保持するようにした。
 

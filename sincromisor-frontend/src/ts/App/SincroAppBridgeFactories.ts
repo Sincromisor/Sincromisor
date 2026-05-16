@@ -1,8 +1,6 @@
+import type { TalkManager } from "../RTC/TalkManager";
 import type { ChatMessageService } from "../UI/ChatMessageService";
 import type { DebugConsoleManager } from "../UI/DebugConsoleManager";
-import { getSincroAppRightToolPanelService } from "./SincroAppRightToolPanelService";
-import type { TalkManager } from "../RTC/TalkManager";
-import type { SincroAppDialogFacade } from "./SincroAppDialogFacade";
 import type {
     SincroAppChatBridge,
     SincroAppDebugBridge,
@@ -10,6 +8,8 @@ import type {
     SincroAppRtcBridge,
     SincroAppStateBridge,
 } from "./SincroAppBridges";
+import type { SincroAppDialogFacade } from "./SincroAppDialogFacade";
+import { getSincroAppRightToolPanelService } from "./SincroAppRightToolPanelService";
 import type {
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
@@ -83,7 +83,9 @@ export function createSincroAppChatBridge(
     };
 }
 
-export function createSincroAppDebugBridge(debugConsoleManager: DebugConsoleManager): SincroAppDebugBridge {
+export function createSincroAppDebugBridge(
+    debugConsoleManager: DebugConsoleManager,
+): SincroAppDebugBridge {
     // Debug Console callback と右側ツール領域 state/service をまとめて公開し、
     // React 側の UI manager/store 直接依存を減らす。
     const rightToolPanelService = getSincroAppRightToolPanelService();
@@ -123,7 +125,7 @@ export function createSincroAppDebugBridge(debugConsoleManager: DebugConsoleMana
     };
 }
 
-export function createSincroAppRtcBridge(params: { stopRTC: () => void; }): SincroAppRtcBridge {
+export function createSincroAppRtcBridge(params: { stopRTC: () => void }): SincroAppRtcBridge {
     // stop は UI から多用されるため bridge に寄せる。start は AppController.start() の状態遷移制御を使う。
     return {
         stop: () => {

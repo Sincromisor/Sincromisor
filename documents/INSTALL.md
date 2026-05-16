@@ -52,11 +52,11 @@ $ sudo -u sincromisor cp examples/config.yml config.yml
 
 複数のサーバーを用いて分散させたい時は、次の手順が必要です。
 
-* すべてのサーバーのconfig.ymlの`host`、`port`、`url`を構成に合わせて書き換える
-  * `host`、`port`: 動作するWorkerが待ち受けるIPアドレスとポート
-  * `url`: Workerにアクセスする際に用いられるURL
-* サーバーごとに、動作させたいWorkerの`launch`を`true`にする
-  * そのサーバーで動かしたくないWorkerの`launch`を`false`にする
+- すべてのサーバーのconfig.ymlの`host`、`port`、`url`を構成に合わせて書き換える
+    - `host`、`port`: 動作するWorkerが待ち受けるIPアドレスとポート
+    - `url`: Workerにアクセスする際に用いられるURL
+- サーバーごとに、動作させたいWorkerの`launch`を`true`にする
+    - そのサーバーで動かしたくないWorkerの`launch`を`false`にする
 
 ### 必要なアセット群や依存ライブラリのインストール、ビルド
 
@@ -73,7 +73,7 @@ $ sudo -u sincromisor ./install.sh
 一般にGPU版のほうがレスポンスタイムが早くなることが多いですが、
 NVIDIAのGPU、もしくはWindowsとDirectML対応のGPUが必要となります。
 
-* [VOICEVOX Engine](https://github.com/VOICEVOX/voicevox_engine)
+- [VOICEVOX Engine](https://github.com/VOICEVOX/voicevox_engine)
 
 ```sh
 $ ./run --host 0.0.0.0 --port 50021

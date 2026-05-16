@@ -19,7 +19,9 @@ export class DialogVrmFileService {
 
     async loadVrmFileBlob(): Promise<Blob | null> {
         const cache = await caches.open(DialogVrmFileService.fileCacheName);
-        const response: Response | undefined = await cache.match(DialogVrmFileService.vrmFileCacheKey);
+        const response: Response | undefined = await cache.match(
+            DialogVrmFileService.vrmFileCacheKey,
+        );
         if (!response) {
             return null;
         }
@@ -36,7 +38,9 @@ export class DialogVrmFileService {
     // 起動時に前回使用したサムネイルを復元する。
     async loadVrmThumbnailBlob(): Promise<Blob | null> {
         const cache = await caches.open(DialogVrmFileService.fileCacheName);
-        const response: Response | undefined = await cache.match(DialogVrmFileService.vrmThumbnailCacheKey);
+        const response: Response | undefined = await cache.match(
+            DialogVrmFileService.vrmThumbnailCacheKey,
+        );
         if (!response) {
             return null;
         }

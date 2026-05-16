@@ -1,5 +1,5 @@
-import type { PanelRtcState } from "./panelTypes";
 import type { SincroAppLifecycleState } from "../../ts/App/SincroAppTypes";
+import type { PanelRtcState } from "./panelTypes";
 
 // Diagnostics 表示専用の軽量フォーマッタ。UI側に重い分岐を散らさないために分離している。
 export function formatMaybeNumber(value: number | null | undefined): string {

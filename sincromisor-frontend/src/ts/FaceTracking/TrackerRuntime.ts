@@ -71,7 +71,10 @@ export class TrackerRuntime {
         this.poseDegradedToFaceOnly = false;
         this.slowPoseInferenceCount = 0;
         this.targetInferenceFps = Math.max(1, Math.min(30, targetInferenceFps));
-        this.targetPoseInferenceFps = Math.max(1, Math.min(15, poseOptions.targetInferenceFps ?? DEFAULT_TARGET_POSE_INFERENCE_FPS));
+        this.targetPoseInferenceFps = Math.max(
+            1,
+            Math.min(15, poseOptions.targetInferenceFps ?? DEFAULT_TARGET_POSE_INFERENCE_FPS),
+        );
         await this.initializeTrackingEngine();
         this.attachVideoTrack(videoTrack);
         this.loopEnabled = true;
@@ -119,7 +122,10 @@ export class TrackerRuntime {
                 this.useWorkerTracking = true;
                 return;
             } catch (error) {
-                console.warn("Sincro tracker worker initialization failed. Falling back to main-thread tracking.", error);
+                console.warn(
+                    "Sincro tracker worker initialization failed. Falling back to main-thread tracking.",
+                    error,
+                );
                 this.publishMainThreadFallbackStats(this.formatErrorDetail(error));
             }
         } else {
@@ -137,7 +143,10 @@ export class TrackerRuntime {
         try {
             await this.poseTracker.initVision();
         } catch (error) {
-            console.warn("Sincro PoseLandmarker initialization failed. Continuing with face-only tracking.", error);
+            console.warn(
+                "Sincro PoseLandmarker initialization failed. Continuing with face-only tracking.",
+                error,
+            );
             this.degradePoseToFaceOnly(this.formatErrorDetail(error), performance.now());
         }
     }
@@ -271,7 +280,10 @@ export class TrackerRuntime {
             this.callbacks.onPoseMotion?.(snapshot);
             this.applyPosePerformanceGate(snapshot, nowMs);
         } catch (error) {
-            console.warn("Sincro PoseLandmarker failed during video inference. Falling back to face-only.", error);
+            console.warn(
+                "Sincro PoseLandmarker failed during video inference. Falling back to face-only.",
+                error,
+            );
             this.degradePoseToFaceOnly(this.formatErrorDetail(error), nowMs);
         }
     }
@@ -324,9 +336,9 @@ export class TrackerRuntime {
 
     private videoFrameIsReadyForDetection(): boolean {
         return (
-            this.videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
-            && this.videoElement.videoWidth >= MIN_DETECTABLE_VIDEO_DIMENSION_PX
-            && this.videoElement.videoHeight >= MIN_DETECTABLE_VIDEO_DIMENSION_PX
+            this.videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+            this.videoElement.videoWidth >= MIN_DETECTABLE_VIDEO_DIMENSION_PX &&
+            this.videoElement.videoHeight >= MIN_DETECTABLE_VIDEO_DIMENSION_PX
         );
     }
 

@@ -1,9 +1,13 @@
 import type { ReactElement } from "react";
+import {
+    hideRightToolDebugPanel,
+    hideRightToolSettingsPanel,
+    useRightToolPanelState,
+} from "../app/useRightToolPanelState";
 import { SincroChatView } from "../chat/SincroChatView";
-import { ConfigurationDialog } from "../dialog/ConfigurationDialog";
 import { DebugConsole } from "../debug/DebugConsole";
 import { RightToolMenu } from "../debug/RightToolMenu";
-import { hideRightToolDebugPanel, hideRightToolSettingsPanel, useRightToolPanelState } from "../app/useRightToolPanelState";
+import { ConfigurationDialog } from "../dialog/ConfigurationDialog";
 import { RightToolFrame } from "../overlay/RightToolFrame";
 import { SincroTelopView } from "../telop/SincroTelopView";
 
@@ -25,7 +29,11 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
                     <div id="sincroHeaderBox">
                         <div id="sincroHeaderBox__brand">
                             <div className="headerIconBox">
-                                <img className="headerIconBox__icon" src="../images/icon-system.webp" alt="" />
+                                <img
+                                    className="headerIconBox__icon"
+                                    src="../images/icon-system.webp"
+                                    alt=""
+                                />
                             </div>
                             <div id="sincroHeaderBox__textGroup">
                                 <div id="sincroHeaderBox__text">Sincromisor</div>
@@ -40,14 +48,8 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
                 </div>
 
                 <div id="sincroVideoContainer">
-                    <div id="sincroVideoBox1">
-                        Video1です。
-                        1600x900
-                    </div>
-                    <div id="sincroVideoBox2">
-                        Video2です。
-                        1600x900
-                    </div>
+                    <div id="sincroVideoBox1">Video1です。 1600x900</div>
+                    <div id="sincroVideoBox2">Video2です。 1600x900</div>
                 </div>
 
                 <div id="sincroChatContainer">
@@ -93,9 +95,7 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
                     variant="settings"
                 >
                     <div id="reactSettingsPanel">
-                        <div id="sincroReactSettingsPanelRoot">
-                            {controlPanel}
-                        </div>
+                        <div id="sincroReactSettingsPanelRoot">{controlPanel}</div>
                     </div>
                 </RightToolFrame>
 

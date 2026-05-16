@@ -73,13 +73,13 @@ MediaPipe `PoseLandmarker` を Sincromisor の将来の手・腕・上半身同�
 ### PoC 実装
 
 - `sincromisor-frontend/src/ts/CharacterGaze/PoseLandmarkerSpike.ts` を追加した。
-  - `PoseLandmarker` を `runningMode: "VIDEO"`、`numPoses: 1`、`outputSegmentationMasks: false` で初期化する。
-  - Lite / Full / Heavy の配置候補を `/3rd_party/pose_landmarker_{lite,full,heavy}.task` として切り替え可能にした。
-  - 10fps / 15fps / 30fps の推論間引き、CPU / GPU delegate、FaceLandmarker 同時実行を切り替えられる。
-  - 推論時間、平均 / 最大推論時間、描画 FPS、FaceLandmarker 推論時間、video dropped frame、肩・肘・手首・腰の visibility を計測する。
+    - `PoseLandmarker` を `runningMode: "VIDEO"`、`numPoses: 1`、`outputSegmentationMasks: false` で初期化する。
+    - Lite / Full / Heavy の配置候補を `/3rd_party/pose_landmarker_{lite,full,heavy}.task` として切り替え可能にした。
+    - 10fps / 15fps / 30fps の推論間引き、CPU / GPU delegate、FaceLandmarker 同時実行を切り替えられる。
+    - 推論時間、平均 / 最大推論時間、描画 FPS、FaceLandmarker 推論時間、video dropped frame、肩・肘・手首・腰の visibility を計測する。
 - `sincromisor-frontend/src/pose-landmarker-spike/index.html` を追加した。
-  - Vite dev server で `http://127.0.0.1:5173/pose-landmarker-spike/` を直接開く検証専用ページ。
-  - `vite.config.js` の production input には追加していないため、通常画面の起動経路には入らない。
+    - Vite dev server で `http://127.0.0.1:5173/pose-landmarker-spike/` を直接開く検証専用ページ。
+    - `vite.config.js` の production input には追加していないため、通常画面の起動経路には入らない。
 - `sincromisor-frontend/public/3rd_party/README.md` に PoseLandmarker model の配置候補を追記した。
 
 ### モデル候補
@@ -87,23 +87,23 @@ MediaPipe `PoseLandmarker` を Sincromisor の将来の手・腕・上半身同�
 - Google AI Edge の Pose Landmarker docs では Lite / Full / Heavy の model bundle が案内されている。
 - Web guide では `detectForVideo()` が同期実行で main thread をブロックするため、video 推論では Worker 化が負荷対策候補になると明記されている。
 - 上半身 retarget 候補 landmark:
-  - 肩: `left_shoulder`(11), `right_shoulder`(12)
-  - 肘: `left_elbow`(13), `right_elbow`(14)
-  - 手首: `left_wrist`(15), `right_wrist`(16)
-  - 胸相当の推定基準: 肩左右 midpoint と腰左右 midpoint から torso 軸を推定する
+    - 肩: `left_shoulder`(11), `right_shoulder`(12)
+    - 肘: `left_elbow`(13), `right_elbow`(14)
+    - 手首: `left_wrist`(15), `right_wrist`(16)
+    - 胸相当の推定基準: 肩左右 midpoint と腰左右 midpoint から torso 軸を推定する
 
 ### ローカル確認
 
 - `npm run build`: 成功。
 - Playwright 表示確認:
-  - Desktop相当: `http://127.0.0.1:5173/pose-landmarker-spike/` が表示される。
-  - 390x844相当: controls / metrics が縦積みで表示され、console error は 0 件。
-  - UI Latency Mark: 9.0ms を確認。
+    - Desktop相当: `http://127.0.0.1:5173/pose-landmarker-spike/` が表示される。
+    - 390x844相当: controls / metrics が縦積みで表示され、console error は 0 件。
+    - UI Latency Mark: 9.0ms を確認。
 - 2026-05-11 追記:
-  - `public/mediapipe-wasm`、`pose_landmarker_lite.task`、`pose_landmarker_full.task`、`pose_landmarker_heavy.task`、`face_landmarker.task` の配置を確認した。
-  - Vite dev server 経由で各 model / wasm が HTTP 200 で取得できることを確認した。
-  - Playwright の canvas captureStream を使ったダミー映像で、Lite / Full / Heavy の PoseLandmarker 初期化と推論ループ開始を確認した。
-  - Lite + FaceLandmarker 同時実行でも初期化と推論ループ開始を確認した。
+    - `public/mediapipe-wasm`、`pose_landmarker_lite.task`、`pose_landmarker_full.task`、`pose_landmarker_heavy.task`、`face_landmarker.task` の配置を確認した。
+    - Vite dev server 経由で各 model / wasm が HTTP 200 で取得できることを確認した。
+    - Playwright の canvas captureStream を使ったダミー映像で、Lite / Full / Heavy の PoseLandmarker 初期化と推論ループ開始を確認した。
+    - Lite + FaceLandmarker 同時実行でも初期化と推論ループ開始を確認した。
 
 ### 未実測・制約
 
@@ -114,8 +114,8 @@ MediaPipe `PoseLandmarker` を Sincromisor の将来の手・腕・上半身同�
 
 - `TASK-3106` では、PoseLandmarker を本流にせず optional pipeline として条件付き採用する。
 - 採用条件:
-  - Lite model を 10-15fps 程度に制限する。
-  - FaceLandmarker と同じ camera / video frame を共有し、二重 `getUserMedia` や二重 preview を作らない。
-  - Pose の初期化、推論遅延、連続検出失敗は face tracker を巻き込まず face-only に降格する。
-  - 肩・腕 retarget は低振幅に限定し、実カメラ確認で過大回転が見えた場合は振幅または fps を下げる。
+    - Lite model を 10-15fps 程度に制限する。
+    - FaceLandmarker と同じ camera / video frame を共有し、二重 `getUserMedia` や二重 preview を作らない。
+    - Pose の初期化、推論遅延、連続検出失敗は face tracker を巻き込まず face-only に降格する。
+    - 肩・腕 retarget は低振幅に限定し、実カメラ確認で過大回転が見えた場合は振幅または fps を下げる。
 - 未実測の実カメラ負荷と landmark 安定性は `TASK-3107` の pose 観測性・確認項目へ引き継ぐ。

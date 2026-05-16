@@ -5,17 +5,14 @@ import { settingsPageCopy } from "../settings-shell/settingsPageCopy";
 import { useConfigurationDialogSettingsState } from "./useConfigurationDialogSettingsState";
 import "./configurationDialogSettings.css";
 import {
-    DialogVrmDropStatusCard,
-    VrmModelSection,
-} from "./components/DialogSettingsSections";
-import {
-    DialogSettingsCategory,
     DialogBasicSettingsSection,
     DialogCharacterSettingsSection,
     DialogDeviceSettingsSection,
     DialogMicSettingsSection,
+    DialogSettingsCategory,
     DialogStartupSettingsSection,
 } from "./components/DialogSettingsFormSections";
+import { DialogVrmDropStatusCard, VrmModelSection } from "./components/DialogSettingsSections";
 
 function connectionStatusLabel(value: string): string {
     switch (value) {
@@ -73,9 +70,10 @@ export function ConfigurationDialogSettingsPanel() {
 
     const hasStartupOptions = startupSettingsCapabilities.enableVR;
     const connectionDetail = connectionState.detail || "";
-    const startupOptionHint = startupSettingsStatus.changedKeys.length > 0
-        ? `開始前だけ効く項目に変更があります: ${startupSettingsStatus.changedKeys.join(", ")}`
-        : "";
+    const startupOptionHint =
+        startupSettingsStatus.changedKeys.length > 0
+            ? `開始前だけ効く項目に変更があります: ${startupSettingsStatus.changedKeys.join(", ")}`
+            : "";
     const startButtonLabel = dialogUiState.startButtonText || "開始する";
     const startButtonHint = dialogUiState.startButtonHint ?? "";
 
@@ -103,7 +101,7 @@ export function ConfigurationDialogSettingsPanel() {
         event.currentTarget.value = "";
     };
 
-    const handleDialogDragEnter = (event: DragEvent<HTMLDivElement>): void => {
+    const handleDialogDragEnter = (event: DragEvent<HTMLFieldSetElement>): void => {
         if (!hasFileDragPayload(event.dataTransfer)) {
             return;
         }
@@ -112,7 +110,7 @@ export function ConfigurationDialogSettingsPanel() {
         setVrmDragOver(true);
     };
 
-    const handleDialogDragOver = (event: DragEvent<HTMLDivElement>): void => {
+    const handleDialogDragOver = (event: DragEvent<HTMLFieldSetElement>): void => {
         if (!hasFileDragPayload(event.dataTransfer)) {
             return;
         }
@@ -123,7 +121,7 @@ export function ConfigurationDialogSettingsPanel() {
         }
     };
 
-    const handleDialogDragLeave = (event: DragEvent<HTMLDivElement>): void => {
+    const handleDialogDragLeave = (event: DragEvent<HTMLFieldSetElement>): void => {
         if (!hasFileDragPayload(event.dataTransfer)) {
             return;
         }
@@ -134,7 +132,7 @@ export function ConfigurationDialogSettingsPanel() {
         }
     };
 
-    const handleDialogDrop = (event: DragEvent<HTMLDivElement>): void => {
+    const handleDialogDrop = (event: DragEvent<HTMLFieldSetElement>): void => {
         if (!hasFileDragPayload(event.dataTransfer)) {
             return;
         }
@@ -147,13 +145,16 @@ export function ConfigurationDialogSettingsPanel() {
     };
 
     return (
-        <div
+        <fieldset
             className={`configurationDialogReactSettingsPanel${dialogVrmUiState.isDragOver ? " is-dragover" : ""}`}
             onDragEnter={handleDialogDragEnter}
             onDragOver={handleDialogDragOver}
             onDragLeave={handleDialogDragLeave}
             onDrop={handleDialogDrop}
         >
+            <legend className="configurationDialogReactSettingsPanel__legend">
+                VRMファイル設定
+            </legend>
             <input
                 ref={vrmFileInputRef}
                 type="file"
@@ -191,9 +192,7 @@ export function ConfigurationDialogSettingsPanel() {
                         label: settingsPageCopy.devices.label,
                         title: settingsPageCopy.devices.title,
                         content: (
-                            <DialogSettingsCategory
-                                title={settingsPageCopy.devices.sectionTitle}
-                            >
+                            <DialogSettingsCategory title={settingsPageCopy.devices.sectionTitle}>
                                 <DialogDeviceSettingsSection
                                     settings={settings}
                                     uiState={settingsUiState}
@@ -280,20 +279,24 @@ export function ConfigurationDialogSettingsPanel() {
                                             <div className="configurationDialogReactSettingsPanel__statusValue">
                                                 {connectionStatusLabel(connectionState.value)}
                                             </div>
-                                            {connectionDetail ? <div className="configurationDialogReactSettingsPanel__statusDetail">
-                                                {connectionDetail}
-                                            </div> : null}
+                                            {connectionDetail ? (
+                                                <div className="configurationDialogReactSettingsPanel__statusDetail">
+                                                    {connectionDetail}
+                                                </div>
+                                            ) : null}
                                         </div>
-                                        {startupOptionHint ? <div className="configurationDialogReactSettingsPanel__hintText">
-                                            {startupOptionHint}
-                                        </div> : null}
+                                        {startupOptionHint ? (
+                                            <div className="configurationDialogReactSettingsPanel__hintText">
+                                                {startupOptionHint}
+                                            </div>
+                                        ) : null}
                                     </div>
                                 </DialogSettingsCategory>
                             </>
                         ),
                     },
                 ]}
-                footer={(
+                footer={
                     <div className="configurationDialogReactSettingsPanel__footer">
                         <div className="configurationDialogReactSettingsPanel__footerLead">
                             <a className="configurationDialogReactSettingsPanel__backLink" href="/">
@@ -316,8 +319,8 @@ export function ConfigurationDialogSettingsPanel() {
                             ) : null}
                         </div>
                     </div>
-                )}
+                }
             />
-        </div>
+        </fieldset>
     );
 }

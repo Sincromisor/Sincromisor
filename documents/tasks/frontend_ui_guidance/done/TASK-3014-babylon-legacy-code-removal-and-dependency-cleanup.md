@@ -131,7 +131,7 @@
 - 本タスクは `legacy を隔離する段階` を終え、`実体を削除する段階` へ進めるためのタスクである。
 - 実装変更時は `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` の更新が必要になる。
 - 2026-04-22 実施:
-  - `src/ts/SincroLegacy/**`、`src/area360/**`、Babylon.js 系 HTML エントリ、`src/ts/main-legacy.ts` を削除した。
-  - `sincromisor-frontend/package.json` と `package-lock.json` から `@babylonjs/*` 依存を削除し、`build:all` を廃止した。
-  - `vite.config.js` を modern 4 ページ専用へ整理し、README / 設計文書 / トップページを current state に同期した。
-  - `cd sincromisor-frontend && npm run build` の成功を確認した。
+    - `src/ts/SincroLegacy/**`、`src/area360/**`、Babylon.js 系 HTML エントリ、`src/ts/main-legacy.ts` を削除した。
+    - `sincromisor-frontend/package.json` と `package-lock.json` から `@babylonjs/*` 依存を削除し、`build:all` を廃止した。
+    - `vite.config.js` を modern 4 ページ専用へ整理し、README / 設計文書 / トップページを current state に同期した。
+    - `cd sincromisor-frontend && npm run build` の成功を確認した。

@@ -1,7 +1,7 @@
-import { DebugConsoleManager } from "../UI/DebugConsoleManager";
-import { ChatMessage, TelopChannelMessage } from "./RTCMessage";
 import { ChatMessageService } from "../UI/ChatMessageService";
-import { SincroRTCConfig } from "./SincroRTCConfigManager";
+import { DebugConsoleManager } from "../UI/DebugConsoleManager";
+import type { ChatMessage, TelopChannelMessage } from "./RTCMessage";
+import type { SincroRTCConfig } from "./SincroRTCConfigManager";
 
 // 1接続分の WebRTC セッションを管理するクライアント。
 // DataChannel(text/telop)・ICE/SDP診断表示・再接続制御までをまとめて担当する。
@@ -46,9 +46,9 @@ export class RTCTalkClient {
         PCMA/8000       PCMA
     */
     audioCodec: string = "default";
-    telopChannelCallback: (msg: TelopChannelMessage) => void = () => { };
-    textChannelCallback: (msg: ChatMessage) => void = () => { };
-    rtcHealthCallback: (message: string | null) => void = () => { };
+    telopChannelCallback: (msg: TelopChannelMessage) => void = () => {};
+    textChannelCallback: (msg: ChatMessage) => void = () => {};
+    rtcHealthCallback: (message: string | null) => void = () => {};
 
     /* talk_mode: chat, sincro */
     constructor(sincroConfig: SincroRTCConfig, audioTrack: MediaStreamTrack, talkMode: string) {
@@ -76,12 +76,15 @@ export class RTCTalkClient {
     defaultConfig(): RTCConfiguration {
         return {
             /*"sdpSemantics": "unified-plan",*/
-        }
+        };
     }
 
     // 接続開始（または再接続開始）。
     // start() は RTCTalkClient の再利用前提で内部状態をリセットしてから negotiate を実行する。
-    start(forceIceRestart: boolean = false, preferredSessionId: string | null = null): Promise<void> {
+    start(
+        forceIceRestart: boolean = false,
+        preferredSessionId: string | null = null,
+    ): Promise<void> {
         if (this.isNegotiating) {
             this.logger.addRtcEventLog("start skipped: negotiation already in progress");
             return Promise.resolve();
@@ -117,13 +120,19 @@ export class RTCTalkClient {
         this.logger.resetRealtimeStats();
 
         // close data channel
-        if (this.textChannel) { this.textChannel.close(); }
-        if (this.telopChannel) { this.telopChannel.close(); }
+        if (this.textChannel) {
+            this.textChannel.close();
+        }
+        if (this.telopChannel) {
+            this.telopChannel.close();
+        }
 
         // close transceivers
         if (this.peerConnection.getTransceivers) {
             this.peerConnection.getTransceivers().forEach((transceiver) => {
-                if (transceiver.stop) { transceiver.stop(); }
+                if (transceiver.stop) {
+                    transceiver.stop();
+                }
             });
         }
 
@@ -173,7 +182,9 @@ export class RTCTalkClient {
     // 実行中セッションの送信用 audio sender を新しいトラックへ差し替える。
     async replaceAudioTrack(audioTrack: MediaStreamTrack): Promise<void> {
         audioTrack.enabled = !this.isMuted;
-        const audioSender = this.peerConnection.getSenders().find((sender) => sender.track?.kind === "audio");
+        const audioSender = this.peerConnection
+            .getSenders()
+            .find((sender) => sender.track?.kind === "audio");
         if (!audioSender) {
             this.peerConnection.addTrack(audioTrack);
             this.logger.addRtcEventLog("replace audio track: sender missing, added new track");
@@ -201,7 +212,8 @@ export class RTCTalkClient {
         // Trickle ICE方針:
         // 1) OfferはICE completeを待たず先に送信して接続開始を早める
         // 2) 以降のcandidateは /candidate に逐次送信する
-        return peerConnection.createOffer({ iceRestart: forceIceRestart })
+        return peerConnection
+            .createOffer({ iceRestart: forceIceRestart })
             .then((offer) => {
                 return peerConnection.setLocalDescription(offer);
             })
@@ -237,18 +249,21 @@ export class RTCTalkClient {
                 this.logger.addRtcEventLog(
                     `send offer: mode=${preferredSessionId ? "session-update" : "new-session"}, targetSessionId=${preferredSessionId ?? "-"}`,
                 );
-                console.log(JSON.stringify({
-                    sdp: offer.sdp,
-                    type: offer.type
-                }));
+                console.log(
+                    JSON.stringify({
+                        sdp: offer.sdp,
+                        type: offer.type,
+                    }),
+                );
                 return fetch(this.sincroConfig.offerURL, {
                     body: JSON.stringify(offerPayload),
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
-                    method: "POST"
+                    method: "POST",
                 });
-            }).then((response) => {
+            })
+            .then((response) => {
                 switch (response.status) {
                     case 200:
                         break;
@@ -260,7 +275,8 @@ export class RTCTalkClient {
                         throw `Invalid response - ${response.status} ${response.statusText}`;
                 }
                 return response.json();
-            }).then((answer) => {
+            })
+            .then((answer) => {
                 console.log(answer);
                 this.logger.answerSDP(answer.sdp);
                 this.sessionId = answer.session_id;
@@ -271,9 +287,13 @@ export class RTCTalkClient {
                         `offer fallback detected: preferredSessionId=${preferredSessionId}, assignedSessionId=${answer.session_id}`,
                     );
                 } else if (preferredSessionId) {
-                    this.logger.addRtcEventLog(`offer update succeeded: sessionId=${answer.session_id}`);
+                    this.logger.addRtcEventLog(
+                        `offer update succeeded: sessionId=${answer.session_id}`,
+                    );
                 } else {
-                    this.logger.addRtcEventLog(`offer created new session: sessionId=${answer.session_id}`);
+                    this.logger.addRtcEventLog(
+                        `offer created new session: sessionId=${answer.session_id}`,
+                    );
                 }
                 // Offer応答前に貯まったcandidateを、session_id確定後に順次送信する。
                 // 応答受信前は session_id が未確定のため /candidate 送信できない。
@@ -288,16 +308,21 @@ export class RTCTalkClient {
                         this.reconnectAttempt = 0;
                         this.logger.addRtcEventLog("negotiate succeeded: reconnect attempt reset");
                     });
-            }).catch((e) => {
+            })
+            .catch((e) => {
                 // 失敗時は診断ログ・UI通知を残したうえで再接続へ移行する。
                 this.sessionId = null;
                 this.pendingIceCandidates = [];
-                this.chatMessageService.writeErrorMessage(`RTCサーバーへの接続に失敗しました...。\n${e}`, true);
+                this.chatMessageService.writeErrorMessage(
+                    `RTCサーバーへの接続に失敗しました...。\n${e}`,
+                    true,
+                );
                 this.rtcHealthCallback(`RTCサーバーへの接続に失敗しました。${e}`);
                 console.error(e);
                 this.logger.addRtcEventLog(`negotiate failed: ${e}`);
                 this.reConnect();
-            }).finally(() => {
+            })
+            .finally(() => {
                 this.isNegotiating = false;
             });
     }
@@ -308,13 +333,16 @@ export class RTCTalkClient {
         const baseMs = 5000;
         const maxMs = 60000;
         const step = Math.min(this.reconnectAttempt - 1, 5);
-        const backoffMs = Math.min(baseMs * (2 ** step), maxMs);
-        const jitterRatio = 0.8 + (Math.random() * 0.4); // 0.8x - 1.2x
+        const backoffMs = Math.min(baseMs * 2 ** step, maxMs);
+        const jitterRatio = 0.8 + Math.random() * 0.4; // 0.8x - 1.2x
         return Math.min(Math.round(backoffMs * jitterRatio), maxMs);
     }
 
     private flushPendingIceCandidates(): Promise<void> {
-        const pendingCandidates = this.pendingIceCandidates.splice(0, this.pendingIceCandidates.length);
+        const pendingCandidates = this.pendingIceCandidates.splice(
+            0,
+            this.pendingIceCandidates.length,
+        );
         // 大量candidateでも送信順序を保つため逐次Promiseで流す。
         return pendingCandidates.reduce((p, candidate) => {
             return p.then(() => this.sendIceCandidate(candidate));
@@ -344,21 +372,25 @@ export class RTCTalkClient {
                 session_id: this.sessionId,
                 candidate: candidate,
             }),
-        }).then(async (response) => {
-            if (!response.ok) {
-                throw new Error(`Failed to send ICE candidate: ${response.status} ${response.statusText}`);
-            }
-            const result = await response.json().catch(() => null);
-            if (result?.status === false) {
-                this.logger.addRtcEventLog(
-                    `ICE candidate ignored by server: ${result.reason ?? "unknown_reason"}`,
-                );
-            }
-        }).catch((e) => {
-            console.error(e);
-            this.logger.addTextChannelLog(`! failed to send ice candidate: ${e}\n`);
-            this.logger.addRtcEventLog(`candidate send failed: ${e}`);
-        });
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error(
+                        `Failed to send ICE candidate: ${response.status} ${response.statusText}`,
+                    );
+                }
+                const result = await response.json().catch(() => null);
+                if (result?.status === false) {
+                    this.logger.addRtcEventLog(
+                        `ICE candidate ignored by server: ${result.reason ?? "unknown_reason"}`,
+                    );
+                }
+            })
+            .catch((e) => {
+                console.error(e);
+                this.logger.addTextChannelLog(`! failed to send ice candidate: ${e}\n`);
+                this.logger.addRtcEventLog(`candidate send failed: ${e}`);
+            });
     }
 
     /*
@@ -367,7 +399,7 @@ export class RTCTalkClient {
         {"ordered": false, "maxPacketLifetime": 500}">Unordered, 500ms lifetime
     */
     private createTelopChannel(peerConnection: RTCPeerConnection): RTCDataChannel {
-        const parameters: RTCDataChannelInit = { "ordered": false, "maxRetransmits": 0 }
+        const parameters: RTCDataChannelInit = { ordered: false, maxRetransmits: 0 };
         const dc: RTCDataChannel = peerConnection.createDataChannel("telop_ch", parameters);
         dc.onclose = () => {
             this.logger.addTelopChannelLog("- close(telop_ch)\n");
@@ -385,7 +417,7 @@ export class RTCTalkClient {
     }
 
     private createTextChannel(peerConnection: RTCPeerConnection): RTCDataChannel {
-        const parameters: RTCDataChannelInit = { "ordered": true }
+        const parameters: RTCDataChannelInit = { ordered: true };
         const dc: RTCDataChannel = peerConnection.createDataChannel("text_ch", parameters);
         dc.onclose = () => {
             this.logger.addTextChannelLog("- close(text_ch)\n");
@@ -424,24 +456,36 @@ export class RTCTalkClient {
         });
 
         // register some listeners to help debugging
-        peerConnection.addEventListener("icegatheringstatechange", () => {
-            this.logger.updateIceGatheringState(peerConnection.iceGatheringState);
-        }, false);
+        peerConnection.addEventListener(
+            "icegatheringstatechange",
+            () => {
+                this.logger.updateIceGatheringState(peerConnection.iceGatheringState);
+            },
+            false,
+        );
         this.logger.newIceGatheringState(peerConnection.iceGatheringState);
 
         /* 接続の確立はnew -> checking -> connected、切断されたらdisconnected -> failed */
-        peerConnection.addEventListener("iceconnectionstatechange", () => {
-            this.logger.updateIceConnectionState(peerConnection.iceConnectionState);
-            this.connectionStateChecker(peerConnection.iceConnectionState);
-            if (peerConnection.iceConnectionState == 'failed') {
-                this.reConnect();
-            }
-        }, false);
+        peerConnection.addEventListener(
+            "iceconnectionstatechange",
+            () => {
+                this.logger.updateIceConnectionState(peerConnection.iceConnectionState);
+                this.connectionStateChecker(peerConnection.iceConnectionState);
+                if (peerConnection.iceConnectionState === "failed") {
+                    this.reConnect();
+                }
+            },
+            false,
+        );
         this.logger.newIceConnectionState(peerConnection.iceConnectionState);
 
-        peerConnection.addEventListener("signalingstatechange", () => {
-            this.logger.updateSignalingState(peerConnection.signalingState);
-        }, false);
+        peerConnection.addEventListener(
+            "signalingstatechange",
+            () => {
+                this.logger.updateSignalingState(peerConnection.signalingState);
+            },
+            false,
+        );
         this.logger.newSignalingState(peerConnection.signalingState);
         return peerConnection;
     }
@@ -453,30 +497,42 @@ export class RTCTalkClient {
                 this.chatMessageService.writeSystemMessage("音声認識・合成システムに接続します。");
                 break;
             case "checking":
-                this.chatMessageService.writeSystemMessage("音声認識・合成システムへの接続を確認しています。");
+                this.chatMessageService.writeSystemMessage(
+                    "音声認識・合成システムへの接続を確認しています。",
+                );
                 break;
             case "connected":
                 this.iceFailureDiagnosticCaptured = false;
                 this.rtcHealthCallback(null);
-                this.chatMessageService.writeSystemMessage("音声認識・合成システムに接続しました。");
+                this.chatMessageService.writeSystemMessage(
+                    "音声認識・合成システムに接続しました。",
+                );
                 break;
             case "completed":
                 this.iceFailureDiagnosticCaptured = false;
                 this.rtcHealthCallback(null);
-                this.chatMessageService.writeSystemMessage("音声認識・合成システムとのセッションの確立に成功しました。");
+                this.chatMessageService.writeSystemMessage(
+                    "音声認識・合成システムとのセッションの確立に成功しました。",
+                );
                 break;
             case "disconnected":
                 this.rtcHealthCallback("音声認識・合成システムから切断されました。");
-                this.chatMessageService.writeErrorMessage("音声認識・合成システムから切断されました。");
+                this.chatMessageService.writeErrorMessage(
+                    "音声認識・合成システムから切断されました。",
+                );
                 break;
             case "failed":
                 this.rtcHealthCallback("音声認識・合成システムへの接続に失敗しました。");
-                this.chatMessageService.writeErrorMessage("音声認識・合成システムへの接続に失敗しました。");
+                this.chatMessageService.writeErrorMessage(
+                    "音声認識・合成システムへの接続に失敗しました。",
+                );
                 void this.captureIceFailureDiagnostics("iceConnectionState=failed");
                 break;
             default:
                 this.rtcHealthCallback(`Unknown ICE Connection State - ${state}`);
-                this.chatMessageService.writeErrorMessage(`Unknown ICE Connection State - ${state}`);
+                this.chatMessageService.writeErrorMessage(
+                    `Unknown ICE Connection State - ${state}`,
+                );
                 console.error(state);
         }
     }
@@ -518,14 +574,19 @@ export class RTCTalkClient {
                 }
             });
 
-            const local = selectedPair?.localCandidateId ? localCandidates.get(selectedPair.localCandidateId) : null;
-            const remote = selectedPair?.remoteCandidateId ? remoteCandidates.get(selectedPair.remoteCandidateId) : null;
+            const local = selectedPair?.localCandidateId
+                ? localCandidates.get(selectedPair.localCandidateId)
+                : null;
+            const remote = selectedPair?.remoteCandidateId
+                ? remoteCandidates.get(selectedPair.remoteCandidateId)
+                : null;
             const localType = local?.candidateType ?? "-";
             const remoteType = remote?.candidateType ?? "-";
             const pairState = selectedPair?.state ?? "-";
-            const rttMs = selectedPair?.currentRoundTripTime != null
-                ? `${(selectedPair.currentRoundTripTime * 1000).toFixed(1)}ms`
-                : "-";
+            const rttMs =
+                selectedPair?.currentRoundTripTime != null
+                    ? `${(selectedPair.currentRoundTripTime * 1000).toFixed(1)}ms`
+                    : "-";
 
             this.logger.addRtcEventLog(
                 `ICE failure diagnostics: reason=${reason}, pair=${pairState} ${localType}->${remoteType}, rtt=${rttMs}, pairs=${pairSucceeded}/${pairTotal}(succeeded/total)`,
@@ -544,7 +605,7 @@ export class RTCTalkClient {
 
     private setupTrack(peerConnection: RTCPeerConnection): RTCPeerConnection {
         peerConnection.addEventListener("track", (evt: RTCTrackEvent) => {
-            if (evt.track.kind == "video") {
+            if (evt.track.kind === "video") {
                 console.error("Unknown Video Track!");
                 const rtcVideo: HTMLVideoElement | null = document.querySelector("video#rtcVideo");
                 if (rtcVideo) {
@@ -604,7 +665,7 @@ export class RTCTalkClient {
     }
 
     private candidatePort(candidate: any): string {
-        if (candidate?.port == null) {
+        if (candidate?.port === null || candidate?.port === undefined) {
             return "-";
         }
         return `${candidate.port}`;
@@ -678,7 +739,10 @@ export class RTCTalkClient {
             this.previousOutboundAudio,
         );
         this.previousOutboundAudio = outboundResult.next;
-        this.logger.updateMetricValue("outboundAudioBitrate", this.formatBitrate(outboundResult.bitrate));
+        this.logger.updateMetricValue(
+            "outboundAudioBitrate",
+            this.formatBitrate(outboundResult.bitrate),
+        );
         this.logger.pushTrendPoint("trendOutboundAudioBitrate", outboundResult.bitrate);
 
         const inboundResult = this.calcBitrate(
@@ -687,7 +751,10 @@ export class RTCTalkClient {
             this.previousInboundAudio,
         );
         this.previousInboundAudio = inboundResult.next;
-        this.logger.updateMetricValue("inboundAudioBitrate", this.formatBitrate(inboundResult.bitrate));
+        this.logger.updateMetricValue(
+            "inboundAudioBitrate",
+            this.formatBitrate(inboundResult.bitrate),
+        );
         this.logger.pushTrendPoint("trendInboundAudioBitrate", inboundResult.bitrate);
 
         const packetsSent = outboundAudio?.packetsSent;
@@ -714,23 +781,36 @@ export class RTCTalkClient {
         if (inboundAudio?.jitter == null) {
             this.logger.updateMetricValue("inboundJitter", "-");
         } else {
-            this.logger.updateMetricValue("inboundJitter", `${(inboundAudio.jitter * 1000).toFixed(1)} ms`);
+            this.logger.updateMetricValue(
+                "inboundJitter",
+                `${(inboundAudio.jitter * 1000).toFixed(1)} ms`,
+            );
         }
 
         if (selectedPair?.currentRoundTripTime == null) {
             this.logger.updateMetricValue("rtcRoundTripTime", "-");
             this.logger.pushTrendPoint("trendRoundTripTime", null);
         } else {
-            this.logger.updateMetricValue("rtcRoundTripTime", `${(selectedPair.currentRoundTripTime * 1000).toFixed(1)} ms`);
-            this.logger.pushTrendPoint("trendRoundTripTime", selectedPair.currentRoundTripTime * 1000);
+            this.logger.updateMetricValue(
+                "rtcRoundTripTime",
+                `${(selectedPair.currentRoundTripTime * 1000).toFixed(1)} ms`,
+            );
+            this.logger.pushTrendPoint(
+                "trendRoundTripTime",
+                selectedPair.currentRoundTripTime * 1000,
+            );
         }
         this.logger.updateMetricValue(
             "rtcAvailableOutgoingBitrate",
             this.formatBitrate(selectedPair?.availableOutgoingBitrate ?? null),
         );
 
-        const localCandidate = selectedPair?.localCandidateId ? localCandidates.get(selectedPair.localCandidateId) : null;
-        const remoteCandidate = selectedPair?.remoteCandidateId ? remoteCandidates.get(selectedPair.remoteCandidateId) : null;
+        const localCandidate = selectedPair?.localCandidateId
+            ? localCandidates.get(selectedPair.localCandidateId)
+            : null;
+        const remoteCandidate = selectedPair?.remoteCandidateId
+            ? remoteCandidates.get(selectedPair.remoteCandidateId)
+            : null;
         if (!localCandidate || !remoteCandidate) {
             this.logger.updateMetricValue("rtcCandidatePair", "-");
             this.logger.updateMetricValue("rtcTransportProtocol", "-");
@@ -741,12 +821,17 @@ export class RTCTalkClient {
             const localType = localCandidate.candidateType ?? "unknown";
             const remoteType = remoteCandidate.candidateType ?? "unknown";
             const localProtocol = localCandidate.protocol ?? "-";
-            const relayProtocol = localCandidate.relayProtocol ? `/${localCandidate.relayProtocol}` : "";
+            const relayProtocol = localCandidate.relayProtocol
+                ? `/${localCandidate.relayProtocol}`
+                : "";
             const localEndpoint = this.candidateEndpointLabel(localCandidate);
             const remoteEndpoint = this.candidateEndpointLabel(remoteCandidate);
 
             this.logger.updateMetricValue("rtcCandidatePair", `${localType} -> ${remoteType}`);
-            this.logger.updateMetricValue("rtcTransportProtocol", `${localProtocol}${relayProtocol}`);
+            this.logger.updateMetricValue(
+                "rtcTransportProtocol",
+                `${localProtocol}${relayProtocol}`,
+            );
             this.logger.updateMetricValue("rtcLocalCandidate", localEndpoint);
             this.logger.updateMetricValue("rtcRemoteCandidate", remoteEndpoint);
 

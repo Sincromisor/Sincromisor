@@ -9,7 +9,9 @@ export function DebugMetricItem({ label, value, valueClassName, className }: Deb
     return (
         <div className={["metricItem", className ?? ""].filter(Boolean).join(" ")}>
             <span className="metricLabel">{label}</span>
-            <span className={["metricValue", valueClassName ?? ""].filter(Boolean).join(" ")}>{value}</span>
+            <span className={["metricValue", valueClassName ?? ""].filter(Boolean).join(" ")}>
+                {value}
+            </span>
         </div>
     );
 }

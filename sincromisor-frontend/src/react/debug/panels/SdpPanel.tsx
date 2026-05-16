@@ -1,6 +1,6 @@
 import type { DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
 import { LogViewer } from "../components/LogViewer";
-import { debugPanelClassName, type DebugPanelProps } from "../debugConsoleTypes";
+import { type DebugPanelProps, debugPanelClassName } from "../debugConsoleTypes";
 
 type SdpPanelProps = DebugPanelProps & {
     snapshot: DebugConsoleSnapshot;

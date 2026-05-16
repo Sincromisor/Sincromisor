@@ -1,13 +1,18 @@
+// @ts-expect-error `@lookingglass/webxr` は型定義が不完全なため最小ラッパーで吸収する。
+import { LookingGlassConfig, LookingGlassWebXRPolyfill } from "@lookingglass/webxr";
 import type { WebGLRenderer } from "three/src/renderers/WebGLRenderer.js";
 import type { Scene } from "three/src/scenes/Scene.js";
 import { getLookingGlassRuntimeConfig } from "./LookingGlassRuntimeConfig";
 
-// @ts-ignore `@lookingglass/webxr` は型定義が不完全なため最小ラッパーで吸収する。
-import { LookingGlassConfig, LookingGlassWebXRPolyfill } from "@lookingglass/webxr";
-
 type LookingGlassStateEventDetail = {
     state: "idle" | "starting" | "recovering" | "active" | "error";
-    code?: "button_not_found" | "webxr_unavailable" | "session_start_failed" | "polyfill_init_failed" | "retry_after_error" | "session_ended";
+    code?:
+        | "button_not_found"
+        | "webxr_unavailable"
+        | "session_start_failed"
+        | "polyfill_init_failed"
+        | "retry_after_error"
+        | "session_ended";
     message?: string;
 };
 
@@ -56,7 +61,10 @@ export class LookingGlassXRController {
         this.scene = scene;
         this.startButtonSelector = startButtonSelector;
         // React UI からのLG設定更新を、次回 start() の polyfill 初期化へ反映する。
-        window.addEventListener("sincro:looking-glass-config-updated", this.handleConfigUpdated as EventListener);
+        window.addEventListener(
+            "sincro:looking-glass-config-updated",
+            this.handleConfigUpdated as EventListener,
+        );
         // Debug Console 以外（React 設定パネル等）からも起動/停止できるようにする。
         this.bindCommandEvents();
     }
@@ -231,7 +239,9 @@ export class LookingGlassXRController {
     private emitState(detail: LookingGlassStateEventDetail): void {
         // AppController 側で tracker 更新と UI 用 event へ再構成するため、window custom event で橋渡しする。
         this.lastState = detail.state;
-        window.dispatchEvent(new CustomEvent<LookingGlassStateEventDetail>("sincro:looking-glass-state", { detail }));
+        window.dispatchEvent(
+            new CustomEvent<LookingGlassStateEventDetail>("sincro:looking-glass-state", { detail }),
+        );
     }
 
     private readonly handleConfigUpdated = (): void => {
@@ -260,8 +270,14 @@ export class LookingGlassXRController {
         }
         this.commandEventsBound = true;
         // looking-glass-vrm の Control Panel から start/stop を操作する導線。
-        window.addEventListener("sincro:looking-glass-start-request", this.handleExternalStartRequest as EventListener);
-        window.addEventListener("sincro:looking-glass-stop-request", this.handleExternalStopRequest as EventListener);
+        window.addEventListener(
+            "sincro:looking-glass-start-request",
+            this.handleExternalStartRequest as EventListener,
+        );
+        window.addEventListener(
+            "sincro:looking-glass-stop-request",
+            this.handleExternalStopRequest as EventListener,
+        );
     }
 
     private readonly handleExternalStartRequest = (): void => {
@@ -296,7 +312,8 @@ export class LookingGlassXRController {
                 config.popup?.focus?.();
                 if (config.lkgCanvas) {
                     config.lkgCanvas.style.pointerEvents = "auto";
-                    config.lkgCanvas.tabIndex = config.lkgCanvas.tabIndex >= 0 ? config.lkgCanvas.tabIndex : 0;
+                    config.lkgCanvas.tabIndex =
+                        config.lkgCanvas.tabIndex >= 0 ? config.lkgCanvas.tabIndex : 0;
                     config.lkgCanvas.focus();
                 }
                 config.appCanvas?.blur?.();
@@ -362,17 +379,23 @@ export class LookingGlassXRController {
         canvas.addEventListener("contextmenu", (event: MouseEvent) => {
             event.preventDefault();
         });
-        canvas.addEventListener("wheel", (event: WheelEvent) => {
-            const zoomBase = 1.1;
-            const current = Math.max(config.targetDiam ?? 1, 1e-6);
-            const exponent = Math.log(current) / Math.log(zoomBase);
-            config.targetDiam = Math.max(1e-4, Math.pow(zoomBase, exponent + event.deltaY * 0.01));
-            event.preventDefault();
-        }, { passive: false });
+        canvas.addEventListener(
+            "wheel",
+            (event: WheelEvent) => {
+                const zoomBase = 1.1;
+                const current = Math.max(config.targetDiam ?? 1, 1e-6);
+                const exponent = Math.log(current) / Math.log(zoomBase);
+                config.targetDiam = Math.max(1e-4, zoomBase ** (exponent + event.deltaY * 0.01));
+                event.preventDefault();
+            },
+            { passive: false },
+        );
         canvas.addEventListener("mousemove", (event: MouseEvent) => {
             const dx = event.movementX;
             const dy = -event.movementY;
-            const isPan = !!(event.buttons & 2) || (!!(event.buttons & 1) && (event.shiftKey || event.ctrlKey));
+            const isPan =
+                !!(event.buttons & 2) ||
+                (!!(event.buttons & 1) && (event.shiftKey || event.ctrlKey));
             if (isPan) {
                 const tx = config.trackballX ?? 0;
                 const ty = config.trackballY ?? 0;

@@ -1,6 +1,6 @@
-import { VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
+import type { VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
 import { MathUtils } from "three/src/math/MathUtils.js";
-import { CharacterBehaviorSnapshot } from "./CharacterBehaviorState";
+import type { CharacterBehaviorSnapshot } from "./CharacterBehaviorState";
 import type { SincroFaceRetargetFrame } from "./SincroFaceRetargeter";
 
 type MouseVowel = "A" | "I" | "U" | "E" | "O" | "N";
@@ -13,7 +13,11 @@ export class FaceMorphController {
     private readonly expressionManager: VRMExpressionManager;
     private readonly availableMouthPresets = new Set<VRMExpressionPresetName>();
     private currentMoraID: number = -1;
-    private activeMouth: { preset: VRMExpressionPresetName; startMs: number; durationMs: number } | null = null;
+    private activeMouth: {
+        preset: VRMExpressionPresetName;
+        startMs: number;
+        durationMs: number;
+    } | null = null;
 
     constructor(expressionManager: VRMExpressionManager) {
         this.expressionManager = expressionManager;
@@ -27,7 +31,11 @@ export class FaceMorphController {
 
     // 口形もキャラクター全体と同じ render loop で進め、発話時刻の正本を snapshot に揃える。
     update(snapshot: CharacterBehaviorSnapshot, sincroFace?: SincroFaceRetargetFrame): void {
-        if (snapshot.motionPolicy.allowFaceRetarget && snapshot.faceMotion.trackingEnabled && sincroFace) {
+        if (
+            snapshot.motionPolicy.allowFaceRetarget &&
+            snapshot.faceMotion.trackingEnabled &&
+            sincroFace
+        ) {
             this.currentMoraID = -1;
             this.activeMouth = null;
             this.applySincroMouth(sincroFace);
@@ -35,7 +43,11 @@ export class FaceMorphController {
         }
 
         const moraId = snapshot.aiSpeech.currentMoraId;
-        if (!snapshot.motionPolicy.allowAiLipSync || !snapshot.aiSpeech.isSpeaking || moraId == null) {
+        if (
+            !snapshot.motionPolicy.allowAiLipSync ||
+            !snapshot.aiSpeech.isSpeaking ||
+            moraId == null
+        ) {
             this.currentMoraID = -1;
             this.activeMouth = null;
             this.resetMouthPresets();
@@ -120,9 +132,10 @@ export class FaceMorphController {
             return;
         }
         const halfDurationMs = this.activeMouth.durationMs / 2;
-        const value = elapsedMs < halfDurationMs
-            ? elapsedMs / halfDurationMs
-            : 1.0 - ((elapsedMs - halfDurationMs) / halfDurationMs);
+        const value =
+            elapsedMs < halfDurationMs
+                ? elapsedMs / halfDurationMs
+                : 1.0 - (elapsedMs - halfDurationMs) / halfDurationMs;
         for (const preset of this.availableMouthPresets) {
             this.expressionManager.setValue(
                 preset,

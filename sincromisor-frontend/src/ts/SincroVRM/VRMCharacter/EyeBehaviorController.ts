@@ -1,12 +1,18 @@
-import { VRM, VRMExpressionManager, VRMExpressionPresetName } from '@pixiv/three-vrm';
-import { MathUtils } from 'three/src/math/MathUtils.js';
-import { Euler } from 'three/src/math/Euler.js';
-import { Object3D } from 'three/src/core/Object3D.js';
-import { CharacterBehaviorSnapshot, CharacterInteractionState } from './CharacterBehaviorState';
-import { DEFAULT_CHARACTER_MOTION_TUNING, type CharacterMotionTuning } from './CharacterMotionConfig';
-import type { SincroFaceRetargetFrame } from './SincroFaceRetargeter';
+import type { VRM, VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
+import type { Object3D } from "three/src/core/Object3D.js";
+import type { Euler } from "three/src/math/Euler.js";
+import { MathUtils } from "three/src/math/MathUtils.js";
+import type {
+    CharacterBehaviorSnapshot,
+    CharacterInteractionState,
+} from "./CharacterBehaviorState";
+import {
+    type CharacterMotionTuning,
+    DEFAULT_CHARACTER_MOTION_TUNING,
+} from "./CharacterMotionConfig";
+import type { SincroFaceRetargetFrame } from "./SincroFaceRetargeter";
 
-type EyeBoneName = 'leftEye' | 'rightEye';
+type EyeBoneName = "leftEye" | "rightEye";
 
 type EyeBone = {
     node: Object3D;
@@ -18,8 +24,8 @@ type EyeTarget = {
     y: number;
 };
 
-const LOOK_PRESETS: VRMExpressionPresetName[] = ['lookLeft', 'lookRight', 'lookUp', 'lookDown'];
-const BLINK_PRESETS: VRMExpressionPresetName[] = ['blink', 'blinkLeft', 'blinkRight'];
+const LOOK_PRESETS: VRMExpressionPresetName[] = ["lookLeft", "lookRight", "lookUp", "lookDown"];
+const BLINK_PRESETS: VRMExpressionPresetName[] = ["blink", "blinkLeft", "blinkRight"];
 
 const EYE_BEHAVIOR_CONFIG = {
     maxHorizontalRad: MathUtils.degToRad(13),
@@ -39,15 +45,16 @@ const EYE_BEHAVIOR_CONFIG = {
     surprisedBlinkSuppressMs: 950,
 } as const;
 
-const BLINK_INTERVAL_BY_STATE: Record<CharacterInteractionState, { minMs: number; maxMs: number }> = {
-    idle: { minMs: 3200, maxMs: 6800 },
-    attending: { minMs: 3600, maxMs: 7200 },
-    user_speaking: { minMs: 4200, maxMs: 7800 },
-    thinking: { minMs: 1800, maxMs: 3600 },
-    ai_speaking: { minMs: 2600, maxMs: 5200 },
-    face_lost: { minMs: 2600, maxMs: 5600 },
-    error_or_disconnected: { minMs: 2200, maxMs: 5000 },
-};
+const BLINK_INTERVAL_BY_STATE: Record<CharacterInteractionState, { minMs: number; maxMs: number }> =
+    {
+        idle: { minMs: 3200, maxMs: 6800 },
+        attending: { minMs: 3600, maxMs: 7200 },
+        user_speaking: { minMs: 4200, maxMs: 7800 },
+        thinking: { minMs: 1800, maxMs: 3600 },
+        ai_speaking: { minMs: 2600, maxMs: 5200 },
+        face_lost: { minMs: 2600, maxMs: 5600 },
+        error_or_disconnected: { minMs: 2200, maxMs: 5000 },
+    };
 
 // 目線、まばたき、短い視線外しをまとめる controller。
 // 標準look expressionを優先し、未実装モデルでは左右eyeボーンへフォールバックする。
@@ -79,17 +86,22 @@ export class EyeBehaviorController {
                 this.availableBlinkPresets.add(preset);
             }
         }
-        this.captureEyeBone(vrm, 'leftEye');
-        this.captureEyeBone(vrm, 'rightEye');
+        this.captureEyeBone(vrm, "leftEye");
+        this.captureEyeBone(vrm, "rightEye");
     }
 
     update(snapshot: CharacterBehaviorSnapshot, sincroFace?: SincroFaceRetargetFrame): void {
         const nowMs = snapshot.nowMs;
-        const deltaMs = this.lastUpdateAtMs == null
-            ? 1000 / 60
-            : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
+        const deltaMs =
+            this.lastUpdateAtMs == null
+                ? 1000 / 60
+                : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
         this.lastUpdateAtMs = nowMs;
-        if (snapshot.motionPolicy.allowFaceRetarget && snapshot.faceMotion.trackingEnabled && sincroFace) {
+        if (
+            snapshot.motionPolicy.allowFaceRetarget &&
+            snapshot.faceMotion.trackingEnabled &&
+            sincroFace
+        ) {
             this.applySincroFaceMotion(sincroFace);
             return;
         }
@@ -102,8 +114,10 @@ export class EyeBehaviorController {
         this.smoothedTarget.x += (target.x - this.smoothedTarget.x) * alpha;
         this.smoothedTarget.y += (target.y - this.smoothedTarget.y) * alpha;
 
-        const offsetX = MathUtils.clamp(this.smoothedTarget.x - 0.5, -0.5, 0.5) * this.tuning.eyeTrackingScale;
-        const offsetY = MathUtils.clamp(this.smoothedTarget.y - 0.5, -0.5, 0.5) * this.tuning.eyeTrackingScale;
+        const offsetX =
+            MathUtils.clamp(this.smoothedTarget.x - 0.5, -0.5, 0.5) * this.tuning.eyeTrackingScale;
+        const offsetY =
+            MathUtils.clamp(this.smoothedTarget.y - 0.5, -0.5, 0.5) * this.tuning.eyeTrackingScale;
         this.applyLook(offsetX, offsetY);
         this.applyBlink(snapshot, nowMs);
     }
@@ -127,15 +141,24 @@ export class EyeBehaviorController {
     }
 
     private nextEyeTarget(snapshot: CharacterBehaviorSnapshot, nowMs: number): EyeTarget {
-        const baseTarget = snapshot.motionPolicy.allowGazeMotion && snapshot.gaze.detected
-            ? { x: snapshot.gaze.targetX, y: snapshot.gaze.targetY }
-            : { x: 0.5, y: 0.5 };
+        const baseTarget =
+            snapshot.motionPolicy.allowGazeMotion && snapshot.gaze.detected
+                ? { x: snapshot.gaze.targetX, y: snapshot.gaze.targetY }
+                : { x: 0.5, y: 0.5 };
         const aversion = this.updateAversion(snapshot, nowMs);
         const microsaccade = this.updateMicrosaccade(snapshot, nowMs);
         const aiSpeechOffset = this.aiSpeechEyeOffset(snapshot);
         return {
-            x: MathUtils.clamp(baseTarget.x + aversion.x + microsaccade.x + aiSpeechOffset.x, 0.34, 0.66),
-            y: MathUtils.clamp(baseTarget.y + aversion.y + microsaccade.y + aiSpeechOffset.y, 0.38, 0.62),
+            x: MathUtils.clamp(
+                baseTarget.x + aversion.x + microsaccade.x + aiSpeechOffset.x,
+                0.34,
+                0.66,
+            ),
+            y: MathUtils.clamp(
+                baseTarget.y + aversion.y + microsaccade.y + aiSpeechOffset.y,
+                0.38,
+                0.62,
+            ),
         };
     }
 
@@ -161,7 +184,11 @@ export class EyeBehaviorController {
     }
 
     private updateAversion(snapshot: CharacterBehaviorSnapshot, nowMs: number): EyeTarget {
-        if (!snapshot.motionPolicy.allowThinkingAversion || snapshot.state !== 'thinking' || !snapshot.gaze.detected) {
+        if (
+            !snapshot.motionPolicy.allowThinkingAversion ||
+            snapshot.state !== "thinking" ||
+            !snapshot.gaze.detected
+        ) {
             this.aversionTarget = null;
             return { x: 0, y: 0 };
         }
@@ -178,9 +205,8 @@ export class EyeBehaviorController {
             y: EYE_BEHAVIOR_CONFIG.thinkingAversionOffsetY * (Math.random() < 0.65 ? 1 : -0.65),
         };
         this.aversionUntilMs = nowMs + EYE_BEHAVIOR_CONFIG.thinkingAversionDurationMs;
-        this.nextAversionAtMs = nowMs
-            + EYE_BEHAVIOR_CONFIG.thinkingAversionMinIntervalMs
-            + this.randomRange(0, 850);
+        this.nextAversionAtMs =
+            nowMs + EYE_BEHAVIOR_CONFIG.thinkingAversionMinIntervalMs + this.randomRange(0, 850);
         return this.aversionTarget;
     }
 
@@ -188,10 +214,11 @@ export class EyeBehaviorController {
         if (nowMs < this.nextMicrosaccadeAtMs) {
             return this.microsaccade;
         }
-        const stateIntervalScale = snapshot.state === 'user_speaking' ? 1.45 : 1;
-        const amplitude = snapshot.state === 'user_speaking' || snapshot.state === 'attending'
-            ? EYE_BEHAVIOR_CONFIG.attentionMicrosaccadeAmplitude
-            : EYE_BEHAVIOR_CONFIG.microsaccadeAmplitude;
+        const stateIntervalScale = snapshot.state === "user_speaking" ? 1.45 : 1;
+        const amplitude =
+            snapshot.state === "user_speaking" || snapshot.state === "attending"
+                ? EYE_BEHAVIOR_CONFIG.attentionMicrosaccadeAmplitude
+                : EYE_BEHAVIOR_CONFIG.microsaccadeAmplitude;
         this.microsaccade = {
             x: this.randomRange(-amplitude, amplitude),
             y: this.randomRange(-amplitude * 0.65, amplitude * 0.65),
@@ -201,10 +228,10 @@ export class EyeBehaviorController {
     }
 
     private applyLook(offsetX: number, offsetY: number): void {
-        const hasHorizontalLookExpression = this.availableLookPresets.has('lookLeft')
-            || this.availableLookPresets.has('lookRight');
-        const hasVerticalLookExpression = this.availableLookPresets.has('lookUp')
-            || this.availableLookPresets.has('lookDown');
+        const hasHorizontalLookExpression =
+            this.availableLookPresets.has("lookLeft") || this.availableLookPresets.has("lookRight");
+        const hasVerticalLookExpression =
+            this.availableLookPresets.has("lookUp") || this.availableLookPresets.has("lookDown");
         if (hasHorizontalLookExpression || hasVerticalLookExpression) {
             this.applyLookExpressions(
                 hasHorizontalLookExpression ? offsetX : 0,
@@ -224,19 +251,19 @@ export class EyeBehaviorController {
             this.setExpressionIfAvailable(preset, 0);
         }
         this.setExpressionIfAvailable(
-            'lookLeft',
+            "lookLeft",
             MathUtils.clamp(-offsetX * EYE_BEHAVIOR_CONFIG.expressionHorizontalScale, 0, 1),
         );
         this.setExpressionIfAvailable(
-            'lookRight',
+            "lookRight",
             MathUtils.clamp(offsetX * EYE_BEHAVIOR_CONFIG.expressionHorizontalScale, 0, 1),
         );
         this.setExpressionIfAvailable(
-            'lookUp',
+            "lookUp",
             MathUtils.clamp(offsetY * EYE_BEHAVIOR_CONFIG.expressionVerticalScale, 0, 1),
         );
         this.setExpressionIfAvailable(
-            'lookDown',
+            "lookDown",
             MathUtils.clamp(-offsetY * EYE_BEHAVIOR_CONFIG.expressionVerticalScale, 0, 1),
         );
     }
@@ -256,18 +283,26 @@ export class EyeBehaviorController {
         for (const preset of LOOK_PRESETS) {
             this.setExpressionIfAvailable(preset, 0);
         }
-        this.setExpressionIfAvailable('lookLeft', expressions.lookLeft);
-        this.setExpressionIfAvailable('lookRight', expressions.lookRight);
-        this.setExpressionIfAvailable('lookUp', expressions.lookUp);
-        this.setExpressionIfAvailable('lookDown', expressions.lookDown);
+        this.setExpressionIfAvailable("lookLeft", expressions.lookLeft);
+        this.setExpressionIfAvailable("lookRight", expressions.lookRight);
+        this.setExpressionIfAvailable("lookUp", expressions.lookUp);
+        this.setExpressionIfAvailable("lookDown", expressions.lookDown);
         this.applyBlinkExpressions(expressions.blinkLeft, expressions.blinkRight);
 
-        const offsetX = MathUtils.clamp((expressions.lookRight - expressions.lookLeft) * 0.42, -0.5, 0.5);
-        const offsetY = MathUtils.clamp((expressions.lookUp - expressions.lookDown) * 0.36, -0.5, 0.5);
-        const lookExpressionCoversHorizontal = this.availableLookPresets.has('lookLeft')
-            || this.availableLookPresets.has('lookRight');
-        const lookExpressionCoversVertical = this.availableLookPresets.has('lookUp')
-            || this.availableLookPresets.has('lookDown');
+        const offsetX = MathUtils.clamp(
+            (expressions.lookRight - expressions.lookLeft) * 0.42,
+            -0.5,
+            0.5,
+        );
+        const offsetY = MathUtils.clamp(
+            (expressions.lookUp - expressions.lookDown) * 0.36,
+            -0.5,
+            0.5,
+        );
+        const lookExpressionCoversHorizontal =
+            this.availableLookPresets.has("lookLeft") || this.availableLookPresets.has("lookRight");
+        const lookExpressionCoversVertical =
+            this.availableLookPresets.has("lookUp") || this.availableLookPresets.has("lookDown");
         this.applySincroEyeBoneFallback(
             lookExpressionCoversHorizontal ? 0 : offsetX,
             lookExpressionCoversVertical ? 0 : offsetY,
@@ -276,13 +311,18 @@ export class EyeBehaviorController {
         );
     }
 
-    private applySincroEyeBoneFallback(offsetX: number, offsetY: number, blinkLeft: number, blinkRight: number): void {
+    private applySincroEyeBoneFallback(
+        offsetX: number,
+        offsetY: number,
+        blinkLeft: number,
+        blinkRight: number,
+    ): void {
         for (const [name, bone] of this.eyeBones) {
-            const blink = name === 'leftEye' ? blinkLeft : blinkRight;
+            const blink = name === "leftEye" ? blinkLeft : blinkRight;
             bone.node.rotation.set(
-                bone.baseRotation.x
-                    + offsetY * EYE_BEHAVIOR_CONFIG.maxVerticalRad * 2
-                    + blink * MathUtils.degToRad(9),
+                bone.baseRotation.x +
+                    offsetY * EYE_BEHAVIOR_CONFIG.maxVerticalRad * 2 +
+                    blink * MathUtils.degToRad(9),
                 bone.baseRotation.y - offsetX * EYE_BEHAVIOR_CONFIG.maxHorizontalRad * 2,
                 bone.baseRotation.z,
             );
@@ -316,27 +356,29 @@ export class EyeBehaviorController {
             return;
         }
         const closeMs = durationMs * EYE_BEHAVIOR_CONFIG.blinkCloseRatio;
-        const value = elapsedMs < closeMs
-            ? elapsedMs / closeMs
-            : 1 - ((elapsedMs - closeMs) / (durationMs - closeMs));
+        const value =
+            elapsedMs < closeMs
+                ? elapsedMs / closeMs
+                : 1 - (elapsedMs - closeMs) / (durationMs - closeMs);
         this.applyBlinkExpressions(value, value);
     }
 
     private applyBlinkExpressions(left: number, right: number): void {
         const leftValue = MathUtils.clamp(left, 0, 1);
         const rightValue = MathUtils.clamp(right, 0, 1);
-        const hasSeparateBlink = this.availableBlinkPresets.has('blinkLeft')
-            || this.availableBlinkPresets.has('blinkRight');
+        const hasSeparateBlink =
+            this.availableBlinkPresets.has("blinkLeft") ||
+            this.availableBlinkPresets.has("blinkRight");
 
         // VRM 1.0 は `blink` を両目、`blinkLeft`/`blinkRight` を片目として定義する。
         // 片目 preset があるモデルでは左右を保持し、無いモデルだけ `blink` に畳み込む。
         if (hasSeparateBlink) {
-            this.setBlinkExpressionIfAvailable('blink', 0);
-            this.setBlinkExpressionIfAvailable('blinkLeft', leftValue);
-            this.setBlinkExpressionIfAvailable('blinkRight', rightValue);
+            this.setBlinkExpressionIfAvailable("blink", 0);
+            this.setBlinkExpressionIfAvailable("blinkLeft", leftValue);
+            this.setBlinkExpressionIfAvailable("blinkRight", rightValue);
             return;
         }
-        this.setBlinkExpressionIfAvailable('blink', Math.max(leftValue, rightValue));
+        this.setBlinkExpressionIfAvailable("blink", Math.max(leftValue, rightValue));
     }
 
     private setBlinkExpressionIfAvailable(preset: VRMExpressionPresetName, value: number): void {
@@ -347,9 +389,12 @@ export class EyeBehaviorController {
     }
 
     private isBlinkSuppressed(snapshot: CharacterBehaviorSnapshot, nowMs: number): boolean {
-        return snapshot.aiSpeech.expressionCode === 5
-            && snapshot.aiSpeech.lastUpdatedAtMs != null
-            && nowMs - snapshot.aiSpeech.lastUpdatedAtMs <= EYE_BEHAVIOR_CONFIG.surprisedBlinkSuppressMs;
+        return (
+            snapshot.aiSpeech.expressionCode === 5 &&
+            snapshot.aiSpeech.lastUpdatedAtMs != null &&
+            nowMs - snapshot.aiSpeech.lastUpdatedAtMs <=
+                EYE_BEHAVIOR_CONFIG.surprisedBlinkSuppressMs
+        );
     }
 
     private nextBlinkDelayMs(state: CharacterInteractionState): number {

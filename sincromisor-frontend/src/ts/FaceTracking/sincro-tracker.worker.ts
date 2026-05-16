@@ -18,13 +18,18 @@ const mediaPipeWorkerGlobal = self as MediaPipeWorkerGlobal;
 mediaPipeWorkerGlobal.import ??= async (path: string) => {
     const response = await fetch(normalizeMediaPipeImportPath(path));
     if (!response.ok) {
-        throw new Error(`Failed to fetch MediaPipe wasm loader: ${response.status} ${response.statusText}`);
+        throw new Error(
+            `Failed to fetch MediaPipe wasm loader: ${response.status} ${response.statusText}`,
+        );
     }
     // MediaPipe's fallback path expects the classic Emscripten loader to publish
     // `ModuleFactory` on the Worker global. Module workers cannot use importScripts(),
     // so we fetch the public loader and evaluate it in the Worker global scope.
     const code = await response.text();
-    new Function("self", `${code}\n;self.ModuleFactory = typeof ModuleFactory !== "undefined" ? ModuleFactory : self.ModuleFactory;`)(self);
+    new Function(
+        "self",
+        `${code}\n;self.ModuleFactory = typeof ModuleFactory !== "undefined" ? ModuleFactory : self.ModuleFactory;`,
+    )(self);
 };
 
 let faceTracker: SincroFaceTracker | null = null;
@@ -56,7 +61,10 @@ async function initialize(poseEnabled: boolean): Promise<void> {
         return;
     }
     const startedAtMs = performance.now();
-    postStatus("loading", poseEnabled ? "Loading FaceLandmarker and PoseLandmarker" : "Loading FaceLandmarker");
+    postStatus(
+        "loading",
+        poseEnabled ? "Loading FaceLandmarker and PoseLandmarker" : "Loading FaceLandmarker",
+    );
     const currentFaceTracker = faceTracker;
     if (!currentFaceTracker) {
         throw new Error("SincroFaceTracker is not loaded.");
@@ -89,10 +97,8 @@ async function ensureTrackers(): Promise<void> {
     if (faceTracker && poseTracker) {
         return;
     }
-    const [{ SincroFaceTracker: FaceTracker }, { SincroPoseTracker: PoseTracker }] = await Promise.all([
-        import("./SincroFaceTracker"),
-        import("./SincroPoseTracker"),
-    ]);
+    const [{ SincroFaceTracker: FaceTracker }, { SincroPoseTracker: PoseTracker }] =
+        await Promise.all([import("./SincroFaceTracker"), import("./SincroPoseTracker")]);
     faceTracker = new FaceTracker();
     poseTracker = new PoseTracker();
 }
@@ -106,9 +112,10 @@ async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> 
         }
         postStatus("running");
         const face = faceTracker.detect(message.frame, message.timestampMs);
-        const pose = message.poseEnabled && poseInitialized
-            ? poseTracker.detect(message.frame, message.timestampMs)
-            : null;
+        const pose =
+            message.poseEnabled && poseInitialized
+                ? poseTracker.detect(message.frame, message.timestampMs)
+                : null;
         post({
             type: "result",
             requestId: message.requestId,
@@ -150,8 +157,12 @@ self.onmessage = (event: MessageEvent<SincroTrackerWorkerInputMessage>) => {
     if (data.type === "stop") {
         post({
             type: "stopped",
-            face: faceTracker?.stop(data.reason, data.nowMs) ?? createStoppedFaceSnapshot(data.reason, data.nowMs),
-            pose: poseTracker?.stop(data.reason, data.nowMs) ?? createStoppedPoseSnapshot(data.reason, data.nowMs),
+            face:
+                faceTracker?.stop(data.reason, data.nowMs) ??
+                createStoppedFaceSnapshot(data.reason, data.nowMs),
+            pose:
+                poseTracker?.stop(data.reason, data.nowMs) ??
+                createStoppedPoseSnapshot(data.reason, data.nowMs),
         });
         return;
     }

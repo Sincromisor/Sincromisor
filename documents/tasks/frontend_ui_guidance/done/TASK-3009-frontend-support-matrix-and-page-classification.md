@@ -40,19 +40,19 @@
 
 ### 1. 分類結果
 
-| ページ | 分類 | build 導線 | 判断 |
-| --- | --- | --- | --- |
-| `index` | `modern` | `npm run build` | 公開導線の入口として維持 |
-| `simple-vrm` | `modern` | `npm run build` | 通常会話の正規導線として維持 |
-| `vrm360` | `experimental` | `npm run build` | Three.js + VRM1.0 の実験導線として維持 |
-| `looking-glass-vrm` | `experimental` | `npm run build` | Looking Glass の新正規候補として維持 |
-| `simple` | `legacy` | `npm run build:all` | 旧 simple の比較確認用として短期維持 |
-| `glass` | `legacy` | `npm run build:all` | 旧 Looking Glass の fallback 検証用 |
-| `character` | `legacy` | `npm run build:all` | Babylon.js キャラクター描画テスト用 |
-| `character-glass` | `legacy` | `npm run build:all` | 旧 Looking Glass + character テスト用 |
-| `area360` | `legacy` | `npm run build:all` | 内部向け 360 実験導線として縮退維持 |
-| `single` | `deprecated` | `npm run build:all` | 即時凍結。現行 standalone ページとしては保守しない |
-| `double` | `deprecated` | `npm run build:all` | 即時凍結。現行 standalone ページとしては保守しない |
+| ページ              | 分類           | build 導線          | 判断                                               |
+| ------------------- | -------------- | ------------------- | -------------------------------------------------- |
+| `index`             | `modern`       | `npm run build`     | 公開導線の入口として維持                           |
+| `simple-vrm`        | `modern`       | `npm run build`     | 通常会話の正規導線として維持                       |
+| `vrm360`            | `experimental` | `npm run build`     | Three.js + VRM1.0 の実験導線として維持             |
+| `looking-glass-vrm` | `experimental` | `npm run build`     | Looking Glass の新正規候補として維持               |
+| `simple`            | `legacy`       | `npm run build:all` | 旧 simple の比較確認用として短期維持               |
+| `glass`             | `legacy`       | `npm run build:all` | 旧 Looking Glass の fallback 検証用                |
+| `character`         | `legacy`       | `npm run build:all` | Babylon.js キャラクター描画テスト用                |
+| `character-glass`   | `legacy`       | `npm run build:all` | 旧 Looking Glass + character テスト用              |
+| `area360`           | `legacy`       | `npm run build:all` | 内部向け 360 実験導線として縮退維持                |
+| `single`            | `deprecated`   | `npm run build:all` | 即時凍結。現行 standalone ページとしては保守しない |
+| `double`            | `deprecated`   | `npm run build:all` | 即時凍結。現行 standalone ページとしては保守しない |
 
 ### 2. `single` / `double` の判断
 

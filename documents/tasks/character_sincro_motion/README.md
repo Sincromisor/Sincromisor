@@ -42,8 +42,8 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 1. `TASK-3105`: Pose Landmarker の性能・精度を検証する。
 2. 採用判断:
-   - 採用または条件付き採用なら `TASK-3106` へ進む。
-   - 延期なら `TASK-3106` は保留し、`TASK-3107` は face-only 完了として閉じる。
+    - 採用または条件付き採用なら `TASK-3106` へ進む。
+    - 延期なら `TASK-3106` は保留し、`TASK-3107` は face-only 完了として閉じる。
 3. `TASK-3106`: optional `SincroPoseTracker` と性能ゲートを実装する。
 4. Pose を採用した場合は、`TASK-3107` の pose 観測性・確認項目も完了条件に含める。
 5. `TASK-3111`: optional pose pipeline をキャラクター動作として正式化し、設定・適用 gate・反映強度・実カメラ確認を整える。

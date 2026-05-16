@@ -5,74 +5,74 @@
 この文書は `sincromisor-frontend` におけるフロントエンド側 VAD (Voice Activity Detection) の設計を定義する。
 
 - 目的:
-  - 騒音環境でも発話検知を安定させる
-  - 無音時の送信ゲートを行い、不要送信を抑える
-  - デバッグコンソールから運用調整できる
+    - 騒音環境でも発話検知を安定させる
+    - 無音時の送信ゲートを行い、不要送信を抑える
+    - デバッグコンソールから運用調整できる
 - 対象:
-  - `AudioWorklet` ベースの RMS/Peak VAD
-  - `onnxruntime-web` + Silero VAD による学習ベース判定
-  - フィルタ (HPF/LPF)、自動閾値、厳格判定モード
+    - `AudioWorklet` ベースの RMS/Peak VAD
+    - `onnxruntime-web` + Silero VAD による学習ベース判定
+    - フィルタ (HPF/LPF)、自動閾値、厳格判定モード
 
 ## 2. 構成
 
 ### 2.1 コンポーネント
 
 - `src/ts/RTC/UserMediaManager.ts`
-  - 音声処理チェーンの生成・制御
-  - VADモード切替、ゲート制御、フィルタ適用
+    - 音声処理チェーンの生成・制御
+    - VADモード切替、ゲート制御、フィルタ適用
 - `public/worklets/vad-processor.js`
-  - AudioWorklet 側の軽量 VAD (RMS/Peak)
-  - 学習VAD向け PCM フレーム送出
+    - AudioWorklet 側の軽量 VAD (RMS/Peak)
+    - 学習VAD向け PCM フレーム送出
 - `src/ts/RTC/LearnedVadWorkerClient.ts`
-  - メインスレッドから Worker 制御と状態同期を行う
+    - メインスレッドから Worker 制御と状態同期を行う
 - `src/ts/RTC/silero-vad.worker.ts`
-  - Silero ONNX 推論実行と最終 speech state の決定
+    - Silero ONNX 推論実行と最終 speech state の決定
 - `src/ts/UI/DebugConsoleManager.ts`
-  - デバッグ UI 入力と表示
+    - デバッグ UI 入力と表示
 
 ### 2.2 音声処理チェーン
 
 `MediaStreamTrack(raw)` -> `HPF` -> `LPF` -> `AudioWorklet(vad-processor)` -> `GateGain` -> `MediaStreamDestination`
 
 - `vad-processor` は以下を同時に実行する:
-  - 出力音声をそのままパススルー
-  - RMS/Peak を計算して `vad` イベント送信
-  - 学習VAD用の `audio-frame` を送信
+    - 出力音声をそのままパススルー
+    - RMS/Peak を計算して `vad` イベント送信
+    - 学習VAD用の `audio-frame` を送信
 
 ## 3. VADモード
 
 `VadThresholdMode` は以下の 3 モード:
 
 - `manual`
-  - RMS/Peak 閾値を固定値で運用
+    - RMS/Peak 閾値を固定値で運用
 - `auto`
-  - 無音時 RMS をノイズフロアとして追従し、閾値を動的更新
+    - 無音時 RMS をノイズフロアとして追従し、閾値を動的更新
 - `learned`
-  - Silero の推論結果を主判定として利用
+    - Silero の推論結果を主判定として利用
 
 ## 4. 学習VADパラメータ
 
 `LearnedVadTuningConfig`:
 
 - `onThreshold`
-  - Speech 開始境界
-  - 上げる: 誤反応減 / 取りこぼし増
-  - 下げる: 感度増 / 誤反応増
+    - Speech 開始境界
+    - 上げる: 誤反応減 / 取りこぼし増
+    - 下げる: 感度増 / 誤反応増
 - `offThreshold`
-  - Speech 終了境界
-  - 通常 `offThreshold < onThreshold`
+    - Speech 終了境界
+    - 通常 `offThreshold < onThreshold`
 - `hangoverMs`
-  - Speech 判定を保持する猶予時間
-  - 上げる: 途切れに強い / 終了が遅い
+    - Speech 判定を保持する猶予時間
+    - 上げる: 途切れに強い / 終了が遅い
 - `minInferIntervalMs`
-  - 推論の最小実行間隔
-  - 下げる: 応答性向上 / CPU負荷増
+    - 推論の最小実行間隔
+    - 下げる: 応答性向上 / CPU負荷増
 - `onConsecutiveFrames`
-  - ON切替に必要な連続超過回数
-  - 上げる: 誤反応減 / 立ち上がり遅延
+    - ON切替に必要な連続超過回数
+    - 上げる: 誤反応減 / 立ち上がり遅延
 - `offConsecutiveFrames`
-  - OFF切替に必要な連続下回り回数
-  - 上げる: 状態安定 / 終了遅延
+    - OFF切替に必要な連続下回り回数
+    - 上げる: 状態安定 / 終了遅延
 
 ### 4.1 現在のデフォルト
 
@@ -86,11 +86,11 @@
 ### 4.2 プリセット
 
 - `low_cpu`
-  - 推論頻度を抑えて負荷優先
+    - 推論頻度を抑えて負荷優先
 - `balanced`
-  - 標準運用
+    - 標準運用
 - `high_accuracy`
-  - 感度と追従性優先（負荷高め）
+    - 感度と追従性優先（負荷高め）
 
 ## 5. 厳格判定モード
 

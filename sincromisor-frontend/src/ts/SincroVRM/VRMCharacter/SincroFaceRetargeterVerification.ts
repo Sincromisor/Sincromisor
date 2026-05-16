@@ -1,9 +1,9 @@
+import type { SincroFaceMotionSnapshot } from "../../FaceTracking/SincroFaceMotionSnapshot";
 import {
     DEFAULT_SINCRO_FACE_RETARGET_CONFIG,
     retargetSincroFaceExpressions,
     retargetSincroFaceHeadPose,
 } from "./SincroFaceRetargeter";
-import type { SincroFaceMotionSnapshot } from "../../FaceTracking/SincroFaceMotionSnapshot";
 
 type SincroFaceRetargeterVerificationCase = {
     name: string;
@@ -99,7 +99,12 @@ export const SINCRO_FACE_RETARGETER_VERIFICATION_CASES: SincroFaceRetargeterVeri
         name: "funnel maps to oh or ou and separate blink stays active",
         snapshot: {
             ...BASE_SNAPSHOT,
-            blendshapes: { jawOpen: 0.42, mouthFunnel: 0.9, eyeBlinkLeft: 0.76, eyeBlinkRight: 0.73 },
+            blendshapes: {
+                jawOpen: 0.42,
+                mouthFunnel: 0.9,
+                eyeBlinkLeft: 0.76,
+                eyeBlinkRight: 0.73,
+            },
         },
         expected: {
             headYawSign: 0,
@@ -129,26 +134,38 @@ export const SINCRO_FACE_RETARGETER_VERIFICATION_CASES: SincroFaceRetargeterVeri
     },
 ];
 
-export function evaluateSincroFaceRetargeterVerificationCases(): { name: string; passed: boolean }[] {
+export function evaluateSincroFaceRetargeterVerificationCases(): {
+    name: string;
+    passed: boolean;
+}[] {
     return SINCRO_FACE_RETARGETER_VERIFICATION_CASES.map((testCase) => {
         const neutralPose = testCase.name.includes("neutral calibration")
             ? testCase.snapshot.headPose
             : BASE_SNAPSHOT.headPose;
-        const head = retargetSincroFaceHeadPose(testCase.snapshot, neutralPose, DEFAULT_SINCRO_FACE_RETARGET_CONFIG);
+        const head = retargetSincroFaceHeadPose(
+            testCase.snapshot,
+            neutralPose,
+            DEFAULT_SINCRO_FACE_RETARGET_CONFIG,
+        );
         const expressions = retargetSincroFaceExpressions(testCase.snapshot.blendshapes);
         const dominantMouth = dominantMouthExpression(expressions);
-        const passed = sign(head.neck.y) === testCase.expected.headYawSign
-            && sign(head.neck.x) === testCase.expected.headPitchSign
-            && sign(head.neck.z) === testCase.expected.headRollSign
-            && dominantMouth === testCase.expected.dominantMouth
-            && (expressions.blink > 0.5) === testCase.expected.blinkActive
-            && (testCase.expected.blinkLeftActive == null || (expressions.blinkLeft > 0.5) === testCase.expected.blinkLeftActive)
-            && (testCase.expected.blinkRightActive == null || (expressions.blinkRight > 0.5) === testCase.expected.blinkRightActive);
+        const passed =
+            sign(head.neck.y) === testCase.expected.headYawSign &&
+            sign(head.neck.x) === testCase.expected.headPitchSign &&
+            sign(head.neck.z) === testCase.expected.headRollSign &&
+            dominantMouth === testCase.expected.dominantMouth &&
+            expressions.blink > 0.5 === testCase.expected.blinkActive &&
+            (testCase.expected.blinkLeftActive == null ||
+                expressions.blinkLeft > 0.5 === testCase.expected.blinkLeftActive) &&
+            (testCase.expected.blinkRightActive == null ||
+                expressions.blinkRight > 0.5 === testCase.expected.blinkRightActive);
         return { name: testCase.name, passed };
     });
 }
 
-function dominantMouthExpression(expressions: ReturnType<typeof retargetSincroFaceExpressions>): SincroFaceRetargeterVerificationCase["expected"]["dominantMouth"] {
+function dominantMouthExpression(
+    expressions: ReturnType<typeof retargetSincroFaceExpressions>,
+): SincroFaceRetargeterVerificationCase["expected"]["dominantMouth"] {
     const mouthValues = {
         aa: expressions.aa,
         ih: expressions.ih,
@@ -156,9 +173,12 @@ function dominantMouthExpression(expressions: ReturnType<typeof retargetSincroFa
         ee: expressions.ee,
         oh: expressions.oh,
     };
-    const [name, value] = Object.entries(mouthValues)
-        .sort((left, right) => right[1] - left[1])[0] ?? ["none", 0];
-    return value > 0 ? name as SincroFaceRetargeterVerificationCase["expected"]["dominantMouth"] : "none";
+    const [name, value] = Object.entries(mouthValues).sort(
+        (left, right) => right[1] - left[1],
+    )[0] ?? ["none", 0];
+    return value > 0
+        ? (name as SincroFaceRetargeterVerificationCase["expected"]["dominantMouth"])
+        : "none";
 }
 
 function sign(value: number): -1 | 0 | 1 {

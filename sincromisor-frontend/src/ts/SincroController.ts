@@ -1,11 +1,11 @@
-import { ChatMessageService } from "./UI/ChatMessageService";
-import { DialogManager } from "./UI/DialogManager";
-import { TalkManager } from "./RTC/TalkManager";
-import { DebugConsoleManager } from "./UI/DebugConsoleManager";
-import { SincroRTCConfigManager } from "./RTC/SincroRTCConfigManager";
-import { SincroRtcSessionController } from "./App/SincroRtcSessionController";
 import { SincroAudioInputController } from "./App/SincroAudioInputController";
 import { SincroCharacterGazeController } from "./App/SincroCharacterGazeController";
+import { SincroRtcSessionController } from "./App/SincroRtcSessionController";
+import { SincroRTCConfigManager } from "./RTC/SincroRTCConfigManager";
+import { TalkManager } from "./RTC/TalkManager";
+import { ChatMessageService } from "./UI/ChatMessageService";
+import { DebugConsoleManager } from "./UI/DebugConsoleManager";
+import { DialogManager } from "./UI/DialogManager";
 
 // 旧来のアプリ本体 controller。
 // 以前は巨大 constructor に UI/RTC/Media/Gaze の配線を集中させていたが、
@@ -25,7 +25,9 @@ export class SincroController {
         this.chatMessageService = ChatMessageService.getService();
         const talkManager = TalkManager.getManager();
         this.rtcConfigManager = SincroRTCConfigManager.getManager((err) => {
-            this.chatMessageService.writeErrorMessage(`WebRTCの設定の取得に失敗しました。 - ${err}`);
+            this.chatMessageService.writeErrorMessage(
+                `WebRTCの設定の取得に失敗しました。 - ${err}`,
+            );
         });
         this.audioInputController = new SincroAudioInputController(
             this.dialogManager,
@@ -48,11 +50,14 @@ export class SincroController {
     // UserMedia -> (audio)RTC / (video)CharacterGaze の分岐だけを担い、個別処理は各 controller へ委譲する。
     start(): void {
         this.startCharacterGaze();
-        this.audioInputController.start((audioTrack: MediaStreamTrack) => {
-            this.startRTC(audioTrack);
-        }, (audioTrack: MediaStreamTrack) => {
-            this.rtcSessionController.replaceAudioTrack(audioTrack);
-        });
+        this.audioInputController.start(
+            (audioTrack: MediaStreamTrack) => {
+                this.startRTC(audioTrack);
+            },
+            (audioTrack: MediaStreamTrack) => {
+                this.rtcSessionController.replaceAudioTrack(audioTrack);
+            },
+        );
     }
 
     // WebRTC接続を開始する。生成済みローカル音声トラックをRTCPeerConnectionへ渡す。

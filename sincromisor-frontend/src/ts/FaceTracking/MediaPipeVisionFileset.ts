@@ -13,14 +13,19 @@ let visionFilesetPromise: ReturnType<typeof FilesetResolver.forVisionTasks> | nu
 // public 配下の wasm は非 hash ファイル名なので、依存更新後のブラウザキャッシュ混在を query で避ける。
 export function loadMediaPipeVisionFileset(): ReturnType<typeof FilesetResolver.forVisionTasks> {
     if (!visionFilesetPromise) {
-        visionFilesetPromise = FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_PATH)
-            .then((fileset) => ({
+        visionFilesetPromise = FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_PATH).then(
+            (fileset) => ({
                 ...fileset,
                 wasmLoaderPath: withCacheKey(resolveWasmLoaderPath(fileset.wasmLoaderPath)),
                 wasmBinaryPath: withCacheKey(resolveWasmBinaryPath(fileset.wasmBinaryPath)),
-                assetLoaderPath: fileset.assetLoaderPath ? withCacheKey(fileset.assetLoaderPath) : undefined,
-                assetBinaryPath: fileset.assetBinaryPath ? withCacheKey(fileset.assetBinaryPath) : undefined,
-            }));
+                assetLoaderPath: fileset.assetLoaderPath
+                    ? withCacheKey(fileset.assetLoaderPath)
+                    : undefined,
+                assetBinaryPath: fileset.assetBinaryPath
+                    ? withCacheKey(fileset.assetBinaryPath)
+                    : undefined,
+            }),
+        );
     }
     return visionFilesetPromise;
 }

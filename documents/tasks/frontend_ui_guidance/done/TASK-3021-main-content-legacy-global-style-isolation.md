@@ -61,8 +61,8 @@
 
 - このタスクは `見た目を完成させる` ことよりも、後続タスクでの視覚調整の土台を作ることを優先する。
 - 2026-04-24 実施:
-  - `common.css` の global reset を page class 起点に切り替え、modern ページでは `margin: 0`、legacy 導線では従来の auto-centering を適用する構成へ整理した
-  - `simple-vrm`、`vrm360`、`looking-glass-vrm` の `body` に `sincroPage--modern`、トップページに `sincroPage--legacyCentered` を付与して責務境界を明示した
-  - React app shell の root に `sincroPageShell--modern` を付与し、main content が modern shell の責務であることを追いやすくした
-  - `cd sincromisor-frontend && npm run build` が成功した
-  - Playwright で `simple-vrm` desktop 幅、`vrm360` mobile 幅、トップページの shared 変更影響を確認し、modern main content 直下コンテナの左右 margin が `0px` で揃うことを確認した
+    - `common.css` の global reset を page class 起点に切り替え、modern ページでは `margin: 0`、legacy 導線では従来の auto-centering を適用する構成へ整理した
+    - `simple-vrm`、`vrm360`、`looking-glass-vrm` の `body` に `sincroPage--modern`、トップページに `sincroPage--legacyCentered` を付与して責務境界を明示した
+    - React app shell の root に `sincroPageShell--modern` を付与し、main content が modern shell の責務であることを追いやすくした
+    - `cd sincromisor-frontend && npm run build` が成功した
+    - Playwright で `simple-vrm` desktop 幅、`vrm360` mobile 幅、トップページの shared 変更影響を確認し、modern main content 直下コンテナの左右 margin が `0px` で揃うことを確認した

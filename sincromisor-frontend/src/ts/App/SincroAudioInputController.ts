@@ -1,18 +1,18 @@
 import {
-    UserMediaManager,
-    VadStateReport,
-    VadThresholdMode as UserMediaVadThresholdMode,
     type AudioConstraintRuntimeApplyReport,
+    UserMediaManager,
+    type VadThresholdMode as UserMediaVadThresholdMode,
+    type VadStateReport,
 } from "../RTC/UserMediaManager";
-import { ChatMessageService } from "../UI/ChatMessageService";
-import { DialogManager } from "../UI/DialogManager";
-import {
+import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehaviorState";
+import type { ChatMessageService } from "../UI/ChatMessageService";
+import type {
     AudioFilterControlConfig,
     DebugConsoleManager,
-    LearnedVadPerformanceMode,
     VadThresholdMode as DebugVadThresholdMode,
+    LearnedVadPerformanceMode,
 } from "../UI/DebugConsoleManager";
-import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehaviorState";
+import type { DialogManager } from "../UI/DialogManager";
 
 // getUserMedia と VAD/音声フィルタ設定の結線をまとめる controller。
 // DialogManager(設定入力) / UserMediaManager(実処理) / DebugConsoleManager(診断UI) の橋渡し役。
@@ -24,7 +24,7 @@ export class SincroAudioInputController {
     private readonly characterBehaviorState: CharacterBehaviorState;
     private dialogMicSettingsSnapshot: DialogMicSettingsSnapshot | null = null;
     private suppressNextDialogMicSettingsSync = false;
-    private onAudioTrackReplaced: (audioTrack: MediaStreamTrack) => void = () => { };
+    private onAudioTrackReplaced: (audioTrack: MediaStreamTrack) => void = () => {};
     private hasStarted = false;
     private pendingAudioInputRefreshToken = 0;
     private audioInputRefreshChain: Promise<void> = Promise.resolve();
@@ -61,10 +61,15 @@ export class SincroAudioInputController {
                 this.characterBehaviorState.setErrorSource("media", null);
                 onAudioTrack(audioTrack);
             },
-            () => { },
+            () => {},
             (err) => {
-                this.characterBehaviorState.setErrorSource("media", `マイク入力の取得に失敗しました。${err}`);
-                this.chatMessageService.writeErrorMessage(`カメラまたはマイクが見つかりませんでした。 - ${err}`);
+                this.characterBehaviorState.setErrorSource(
+                    "media",
+                    `マイク入力の取得に失敗しました。${err}`,
+                );
+                this.chatMessageService.writeErrorMessage(
+                    `カメラまたはマイクが見つかりませんでした。 - ${err}`,
+                );
             },
         );
     }
@@ -84,28 +89,46 @@ export class SincroAudioInputController {
 
     private bindDebugConsoleAndVadState(): void {
         // DebugConsole の初期表示値を UserMediaManager の内部状態に合わせる。
-        this.debugConsoleManager.setLocalAudioFilterConfig(this.userMediaManager.getAudioFilterConfig());
-        this.debugConsoleManager.setLocalAudioFilterChangeCallback((config: AudioFilterControlConfig) => {
-            this.userMediaManager.setAudioFilterConfig(config);
-            // Venue preset 有効中にDebugで個別調整した場合は、preset状態を解除して表示を実効値へ揃える。
-            this.clearVenuePresetIfEnabledWithoutResync();
-        });
+        this.debugConsoleManager.setLocalAudioFilterConfig(
+            this.userMediaManager.getAudioFilterConfig(),
+        );
+        this.debugConsoleManager.setLocalAudioFilterChangeCallback(
+            (config: AudioFilterControlConfig) => {
+                this.userMediaManager.setAudioFilterConfig(config);
+                // Venue preset 有効中にDebugで個別調整した場合は、preset状態を解除して表示を実効値へ揃える。
+                this.clearVenuePresetIfEnabledWithoutResync();
+            },
+        );
 
-        this.debugConsoleManager.setLocalVadRmsThreshold(this.userMediaManager.getVadThresholds().rmsThreshold);
-        this.debugConsoleManager.setLocalVadThresholdMode(this.userMediaManager.getVadThresholdMode());
-        this.debugConsoleManager.setLocalLearnedVadTuning(this.userMediaManager.getLearnedVadTuning());
-        this.debugConsoleManager.setLocalLearnedVadStrictMode(this.userMediaManager.getLearnedVadStrictMode());
+        this.debugConsoleManager.setLocalVadRmsThreshold(
+            this.userMediaManager.getVadThresholds().rmsThreshold,
+        );
+        this.debugConsoleManager.setLocalVadThresholdMode(
+            this.userMediaManager.getVadThresholdMode(),
+        );
+        this.debugConsoleManager.setLocalLearnedVadTuning(
+            this.userMediaManager.getLearnedVadTuning(),
+        );
+        this.debugConsoleManager.setLocalLearnedVadStrictMode(
+            this.userMediaManager.getLearnedVadStrictMode(),
+        );
         // 学習VADは balanced を初期プリセットとして採用し、必要時にUIから変更できるようにする。
         this.debugConsoleManager.setLocalLearnedVadPerformanceMode("balanced");
 
         // DebugConsole での調整操作を UserMediaManager 側の実処理へ反映する。
-        this.debugConsoleManager.setLocalVadThresholdModeChangeCallback((mode: DebugVadThresholdMode) => {
-            this.userMediaManager.setVadThresholdMode(mode as UserMediaVadThresholdMode);
-        });
-        this.debugConsoleManager.setLocalLearnedVadPerformanceModeChangeCallback((mode: LearnedVadPerformanceMode) => {
-            this.userMediaManager.setLearnedVadPerformanceMode(mode);
-            this.debugConsoleManager.setLocalLearnedVadTuning(this.userMediaManager.getLearnedVadTuning());
-        });
+        this.debugConsoleManager.setLocalVadThresholdModeChangeCallback(
+            (mode: DebugVadThresholdMode) => {
+                this.userMediaManager.setVadThresholdMode(mode as UserMediaVadThresholdMode);
+            },
+        );
+        this.debugConsoleManager.setLocalLearnedVadPerformanceModeChangeCallback(
+            (mode: LearnedVadPerformanceMode) => {
+                this.userMediaManager.setLearnedVadPerformanceMode(mode);
+                this.debugConsoleManager.setLocalLearnedVadTuning(
+                    this.userMediaManager.getLearnedVadTuning(),
+                );
+            },
+        );
         this.debugConsoleManager.setLocalLearnedVadTuningChangeCallback((config) => {
             this.userMediaManager.setLearnedVadTuning(config);
         });
@@ -136,9 +159,11 @@ export class SincroAudioInputController {
             this.debugConsoleManager.updateLocalVadState(report.isSpeech);
             this.characterBehaviorState.applyVadState(report);
         });
-        this.userMediaManager.setAudioConstraintRuntimeApplyCallback((report: AudioConstraintRuntimeApplyReport) => {
-            this.debugConsoleManager.updateLocalAudioConstraintApplyStatus(report);
-        });
+        this.userMediaManager.setAudioConstraintRuntimeApplyCallback(
+            (report: AudioConstraintRuntimeApplyReport) => {
+                this.debugConsoleManager.updateLocalAudioConstraintApplyStatus(report);
+            },
+        );
     }
 
     // Dialog にある「マイクまわり設定」のうち、runtime に効く項目だけを差分適用する。
@@ -193,8 +218,13 @@ export class SincroAudioInputController {
                     this.onAudioTrackReplaced(nextAudioTrack);
                 } catch (err) {
                     const detail = err instanceof Error ? err.message : String(err);
-                    this.characterBehaviorState.setErrorSource("media", `マイク入力への切替に失敗しました。${detail}`);
-                    const deviceLabel = selectedDeviceId ? `deviceId=${selectedDeviceId}` : "既定デバイス";
+                    this.characterBehaviorState.setErrorSource(
+                        "media",
+                        `マイク入力への切替に失敗しました。${detail}`,
+                    );
+                    const deviceLabel = selectedDeviceId
+                        ? `deviceId=${selectedDeviceId}`
+                        : "既定デバイス";
                     this.chatMessageService.writeErrorMessage(
                         `選択したマイク入力への切替に失敗しました。(${deviceLabel}) - ${detail}`,
                     );
@@ -203,9 +233,15 @@ export class SincroAudioInputController {
     }
 
     private syncDebugConsoleFromUserMedia(): void {
-        this.debugConsoleManager.setLocalAudioFilterConfig(this.userMediaManager.getAudioFilterConfig());
-        this.debugConsoleManager.setLocalVadRmsThreshold(this.userMediaManager.getVadThresholds().rmsThreshold);
-        this.debugConsoleManager.setLocalVadThresholdMode(this.userMediaManager.getVadThresholdMode());
+        this.debugConsoleManager.setLocalAudioFilterConfig(
+            this.userMediaManager.getAudioFilterConfig(),
+        );
+        this.debugConsoleManager.setLocalVadRmsThreshold(
+            this.userMediaManager.getVadThresholds().rmsThreshold,
+        );
+        this.debugConsoleManager.setLocalVadThresholdMode(
+            this.userMediaManager.getVadThresholdMode(),
+        );
     }
 
     private clearVenuePresetIfEnabledWithoutResync(): void {
