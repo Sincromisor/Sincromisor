@@ -89,8 +89,11 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3109-sincro-separate-blink-expression-calibration.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3110-sincro-blink-open-threshold-tuning.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3111-sincro-pose-retarget-formalization-and-tuning.md`
-- Open: `documents/tasks/character_sincro_motion/open/TASK-3112-sincro-tracker-workerization-and-load-isolation.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3112-sincro-tracker-workerization-and-load-isolation.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3113-sincro-pose-camera-space-arm-targets.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3114-sincro-lightweight-two-bone-arm-ik.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3115-sincro-pose-upper-body-anchor-and-ik-fallback.md`
+- Open: `documents/tasks/character_sincro_motion/open/TASK-3116-sincro-pose-ik-observability-verification-and-design-sync.md`
 
 ## 完了条件
 
@@ -103,6 +106,8 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 - Pose Landmarker の採用可否が、計測値と設計判断として残っている。
 - Pose を採用する場合も、低性能端末では face-only へ降格できる。
 - MediaPipe 生データ、VRM retarget、motion orchestration の責務境界が明確である。
+- PoseLandmarker 由来の腕同期は、低振幅 retarget から簡易 IK へ拡張する場合も snapshot / retarget / controller の境界を維持する。
+- 簡易 IK は外部 motion 制御ライブラリへの全面置換ではなく、既存 `SincroPoseRetargeter` 系の局所拡張として扱う。
 - 複数 VRM で、存在しないボーンや expression により例外停止しない。
 - `cd sincromisor-frontend && npm run build` が成功する。
 - `documents/design/frontend_character.md` が新しい構成に更新されている。

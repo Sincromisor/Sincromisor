@@ -18,8 +18,11 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 - Done: `done/TASK-3109-sincro-separate-blink-expression-calibration.md`
 - Done: `done/TASK-3110-sincro-blink-open-threshold-tuning.md`
 - Done: `done/TASK-3111-sincro-pose-retarget-formalization-and-tuning.md`
-- Open: `open/TASK-3112-sincro-tracker-workerization-and-load-isolation.md`
+- Done: `done/TASK-3112-sincro-tracker-workerization-and-load-isolation.md`
 - Done: `done/TASK-3113-sincro-pose-camera-space-arm-targets.md`
+- Done: `done/TASK-3114-sincro-lightweight-two-bone-arm-ik.md`
+- Done: `done/TASK-3115-sincro-pose-upper-body-anchor-and-ik-fallback.md`
+- Open: `open/TASK-3116-sincro-pose-ik-observability-verification-and-design-sync.md`
 
 ## 前提
 
@@ -46,3 +49,6 @@ Pose Landmarker は face-only の本流と分けて進める。
 5. `TASK-3111`: optional pose pipeline をキャラクター動作として正式化し、設定・適用 gate・反映強度・実カメラ確認を整える。
 6. `TASK-3112`: Face / Pose tracker を Worker 化し、model load と同期推論による main thread ブロックを軽減する。
 7. `TASK-3113`: 簡易 IK の入力として、肩・肘・手首 target を snapshot に正規化する。
+8. `TASK-3114`: 新規外部ライブラリへ置き換えず、軽量 two-bone arm IK で腕先を target へ寄せる。
+9. `TASK-3115`: 上半身 anchor、motion priority、部位別 fallback を調整して IK の破綻を抑える。
+10. `TASK-3116`: IK の観測性、実カメラ検証、設計文書同期を行う。
