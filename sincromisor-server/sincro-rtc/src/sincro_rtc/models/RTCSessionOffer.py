@@ -1,14 +1,15 @@
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 
-class TalkMode(str, Enum):
+class TalkMode(StrEnum):
     # chat: 対話
     # sincro: 音声認識 + 読み上げ
 
     chat = "chat"
     sincro = "sincro"
+
 
 class RTCSessionOffer(BaseModel):
     sdp: str

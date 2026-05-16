@@ -134,10 +134,7 @@ class SpeechRecognizerNemoWorker:
     ) -> tuple[ProperNounDictionary, ProperNounDictionaryAvailability]:
         """辞書設定を安全に読み込み、失敗時は空辞書へフォールバックする。"""
         if not proper_noun_enable:
-            detail = (
-                "disabled by config: "
-                "SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE=false"
-            )
+            detail = "disabled by config: SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE=false"
             self.logger.info("Proper noun dictionary is unavailable (%s).", detail)
             return (
                 ProperNounDictionary.empty(),
@@ -439,8 +436,10 @@ class SpeechRecognizerNemoWorker:
 
         # 曖昧候補を実際に解決でき、かつ baseline と異なる場合だけ結果を採用する。
         adopted = bool(resolved_candidates) and biasing_text != baseline_text
-        selected_result = list(biasing_result) if adopted else list(
-            post_process_result.corrected_result
+        selected_result = (
+            list(biasing_result)
+            if adopted
+            else list(post_process_result.corrected_result)
         )
         selected_text = biasing_text if adopted else baseline_text
         decision_reason = (
@@ -608,13 +607,16 @@ class SpeechRecognizerNemoWorker:
                 continue
 
             # 候補ごとに一度 post process を通し、曖昧語以外の補正条件は baseline と揃える。
-            candidate_post_process = self.post_processor.apply([(candidate_text, model_score)])
+            candidate_post_process = self.post_processor.apply(
+                [(candidate_text, model_score)]
+            )
             resolved_candidates = self.__resolve_deferred_candidates(
                 biasing_text=candidate_post_process.corrected_text,
                 post_process_result=post_process_result,
             )
             priority_score = sum(
-                resolved_candidate["priority"] for resolved_candidate in resolved_candidates
+                resolved_candidate["priority"]
+                for resolved_candidate in resolved_candidates
             )
             context_score = sum(
                 resolved_candidate["context_score"]
@@ -647,7 +649,9 @@ class SpeechRecognizerNemoWorker:
                 }
             )
 
-        candidate_traces.sort(key=lambda candidate: candidate["total_score"], reverse=True)
+        candidate_traces.sort(
+            key=lambda candidate: candidate["total_score"], reverse=True
+        )
         for rank, candidate_trace in enumerate(candidate_traces, start=1):
             candidate_trace["rerank_position"] = rank
         return candidate_traces
@@ -673,14 +677,19 @@ class SpeechRecognizerNemoWorker:
             "dictionary_match_count": len(post_process_result.matches),
             "deferred_resolved_count": len(resolved_candidates),
             "priority_score": sum(
-                resolved_candidate["priority"] for resolved_candidate in resolved_candidates
+                resolved_candidate["priority"]
+                for resolved_candidate in resolved_candidates
             ),
             "context_score": sum(
-                resolved_candidate["context_score"] for resolved_candidate in resolved_candidates
+                resolved_candidate["context_score"]
+                for resolved_candidate in resolved_candidates
             ),
             "total_score": float(len(resolved_candidates) * 1000)
             + float(
-                sum(resolved_candidate["priority"] for resolved_candidate in resolved_candidates)
+                sum(
+                    resolved_candidate["priority"]
+                    for resolved_candidate in resolved_candidates
+                )
                 * 10
             )
             + float(

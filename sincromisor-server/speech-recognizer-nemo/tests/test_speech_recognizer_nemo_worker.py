@@ -90,7 +90,10 @@ class FakeDeferredMatch:
     start_index = 3
     end_index = 5
     reason = "multiple_candidates_for_same_yomi"
-    candidates = (FakeCandidate("タブンネ", priority=100), FakeCandidate("たぶんね", priority=10))
+    candidates = (
+        FakeCandidate("タブンネ", priority=100),
+        FakeCandidate("たぶんね", priority=10),
+    )
     context_hint = FakeContextHint()
 
 
@@ -102,7 +105,9 @@ class FakeDeferredPostProcessorResult(FakePostProcessorResult):
 
 
 class FakeDeferredPostProcessor(FakePostProcessor):
-    def apply(self, _result: list[tuple[str, float]]) -> FakeDeferredPostProcessorResult:
+    def apply(
+        self, _result: list[tuple[str, float]]
+    ) -> FakeDeferredPostProcessorResult:
         return FakeDeferredPostProcessorResult()
 
 
@@ -122,12 +127,16 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
     def setUp(self) -> None:
         self.fixture_path = Path(__file__).with_name("fixtures") / "proper_nouns.csv"
 
-    def test_init_logs_when_dependent_features_are_enabled_but_dictionary_is_disabled(self) -> None:
+    def test_init_logs_when_dependent_features_are_enabled_but_dictionary_is_disabled(
+        self,
+    ) -> None:
         with patch(
             "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
             return_value=FakeSpeechRecognizerNemo(),
         ):
-            with self.assertLogs("sincro.SpeechRecognizerNemoWorker", level="INFO") as logs:
+            with self.assertLogs(
+                "sincro.SpeechRecognizerNemoWorker", level="INFO"
+            ) as logs:
                 SpeechRecognizerNemoWorker(
                     voice_log_dir=None,
                     proper_noun_enable=False,
@@ -159,7 +168,9 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
             return_value=FakeSpeechRecognizerNemo(),
         ):
-            with self.assertLogs("sincro.SpeechRecognizerNemoWorker", level="WARNING") as logs:
+            with self.assertLogs(
+                "sincro.SpeechRecognizerNemoWorker", level="WARNING"
+            ) as logs:
                 SpeechRecognizerNemoWorker(
                     voice_log_dir=None,
                     proper_noun_enable=True,
@@ -319,7 +330,9 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
 
                 trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
                 self.assertEqual(len(trace_files), 1)
-                correction_trace = json.loads(trace_files[0].read_text(encoding="utf-8"))
+                correction_trace = json.loads(
+                    trace_files[0].read_text(encoding="utf-8")
+                )
 
         self.assertEqual(correction_trace["deferred_yomi"], ["たぶんね"])
         self.assertEqual(len(correction_trace["deferred_entries"]), 1)
@@ -333,7 +346,9 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             ["タブンネ", "たぶんね"],
         )
 
-    def test_recognize_uses_context_biasing_only_for_confirmed_and_adopts_result(self) -> None:
+    def test_recognize_uses_context_biasing_only_for_confirmed_and_adopts_result(
+        self,
+    ) -> None:
         fake_nemo = FakeSpeechRecognizerNemo()
         with patch(
             "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
@@ -347,8 +362,8 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                     proper_noun_context_biasing_enable=True,
                     proper_noun_context_biasing_beam_size=5,
                 )
-                worker.proper_noun_dictionary = (
-                    ProperNounDictionary.load_from_csv(self.fixture_path)
+                worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
+                    self.fixture_path
                 )
                 worker.post_processor = FakeDeferredPostProcessor()
 
@@ -380,7 +395,9 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
 
                 trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
                 self.assertEqual(len(trace_files), 1)
-                correction_trace = json.loads(trace_files[0].read_text(encoding="utf-8"))
+                correction_trace = json.loads(
+                    trace_files[0].read_text(encoding="utf-8")
+                )
 
         self.assertEqual(confirmed_result.result_text(), "タブンネです")
         self.assertEqual(fake_nemo.last_candidates_kwargs["strategy"], "malsd_batch")
@@ -405,7 +422,9 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             "タブンネ",
         )
 
-    def test_recognize_uses_nbest_reranking_for_confirmed_ambiguous_candidates(self) -> None:
+    def test_recognize_uses_nbest_reranking_for_confirmed_ambiguous_candidates(
+        self,
+    ) -> None:
         fake_nemo = FakeSpeechRecognizerNemo()
         with patch(
             "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
@@ -419,8 +438,8 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                     proper_noun_nbest_enable=True,
                     proper_noun_nbest_beam_size=3,
                 )
-                worker.proper_noun_dictionary = (
-                    ProperNounDictionary.load_from_csv(self.fixture_path)
+                worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
+                    self.fixture_path
                 )
                 worker.post_processor = FakeRerankAwareDeferredPostProcessor()
 
@@ -438,7 +457,9 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
 
                 trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
                 self.assertEqual(len(trace_files), 1)
-                correction_trace = json.loads(trace_files[0].read_text(encoding="utf-8"))
+                correction_trace = json.loads(
+                    trace_files[0].read_text(encoding="utf-8")
+                )
 
         self.assertEqual(confirmed_result.result_text(), "タブンネです")
         self.assertEqual(fake_nemo.last_nbest_kwargs["strategy"], "alsd")
@@ -450,7 +471,9 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
         )
         self.assertTrue(correction_trace["nbest_reranking"]["adopted"])
         self.assertEqual(
-            correction_trace["nbest_reranking"]["raw_baseline_candidate"]["corrected_text"],
+            correction_trace["nbest_reranking"]["raw_baseline_candidate"][
+                "corrected_text"
+            ],
             "しんくろみそーるです",
         )
         self.assertEqual(
@@ -458,7 +481,9 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             "タブンネです",
         )
         self.assertEqual(
-            correction_trace["nbest_reranking"]["ranked_candidates"][0]["resolved_candidates"][0]["surface"],
+            correction_trace["nbest_reranking"]["ranked_candidates"][0][
+                "resolved_candidates"
+            ][0]["surface"],
             "タブンネ",
         )
 
@@ -478,8 +503,8 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                     proper_noun_nbest_enable=True,
                     proper_noun_nbest_beam_size=3,
                 )
-                worker.proper_noun_dictionary = (
-                    ProperNounDictionary.load_from_csv(self.fixture_path)
+                worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
+                    self.fixture_path
                 )
                 worker.post_processor = FakeDeferredPostProcessor()
 
@@ -497,7 +522,9 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
 
                 trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
                 self.assertEqual(len(trace_files), 1)
-                correction_trace = json.loads(trace_files[0].read_text(encoding="utf-8"))
+                correction_trace = json.loads(
+                    trace_files[0].read_text(encoding="utf-8")
+                )
 
         self.assertEqual(confirmed_result.result_text(), "タブンネです")
         self.assertIsNone(fake_nemo.last_nbest_kwargs)
@@ -507,7 +534,9 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             "context_biasing_already_adopted",
         )
 
-    def test_recognize_skips_context_biasing_when_no_deferred_candidates_exist(self) -> None:
+    def test_recognize_skips_context_biasing_when_no_deferred_candidates_exist(
+        self,
+    ) -> None:
         fake_nemo = FakeSpeechRecognizerNemo()
         with patch(
             "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
@@ -521,8 +550,8 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                     proper_noun_context_biasing_enable=True,
                     proper_noun_context_biasing_beam_size=5,
                 )
-                worker.proper_noun_dictionary = (
-                    ProperNounDictionary.load_from_csv(self.fixture_path)
+                worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
+                    self.fixture_path
                 )
                 worker.post_processor = FakePostProcessor()
 
@@ -540,7 +569,9 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
 
                 trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
                 self.assertEqual(len(trace_files), 1)
-                correction_trace = json.loads(trace_files[0].read_text(encoding="utf-8"))
+                correction_trace = json.loads(
+                    trace_files[0].read_text(encoding="utf-8")
+                )
 
         self.assertEqual(confirmed_result.result_text(), "Sincromisorです")
         self.assertIsNone(fake_nemo.last_candidates_kwargs)

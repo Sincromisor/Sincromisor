@@ -138,7 +138,9 @@ class RecognizerPostProcessorTest(unittest.TestCase):
 
         result = processor.apply([("タブンネはヒヤリングポケモンですたぶんね", 0.9)])
 
-        self.assertEqual(result.corrected_text, "タブンネはヒヤリングポケモンですたぶんね")
+        self.assertEqual(
+            result.corrected_text, "タブンネはヒヤリングポケモンですたぶんね"
+        )
         self.assertEqual(result.deferred_yomi, ("たぶんね",))
         self.assertEqual(len(result.deferred_matches), 2)
         self.assertEqual(

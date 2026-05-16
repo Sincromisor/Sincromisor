@@ -117,7 +117,10 @@ class RTCSignalingServer:
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 )
             assigned_session_id = session_info.get("session_id")
-            if offer_params.session_id and offer_params.session_id == assigned_session_id:
+            if (
+                offer_params.session_id
+                and offer_params.session_id == assigned_session_id
+            ):
                 self.__logger.info(
                     f"Offer handled as session update (session_id={assigned_session_id})"
                 )
@@ -129,7 +132,9 @@ class RTCSignalingServer:
                     ),
                 )
             else:
-                self.__logger.info(f"Offer handled as new session (session_id={assigned_session_id})")
+                self.__logger.info(
+                    f"Offer handled as new session (session_id={assigned_session_id})"
+                )
             self.__logger.info(
                 (
                     f"Client: {request.client}\n"
@@ -156,7 +161,9 @@ class RTCSignalingServer:
                     f"has_candidate={candidate_params.candidate is not None})"
                 ),
             )
-            return JSONResponse({"status": False, "reason": "session_not_found_or_closed"})
+            return JSONResponse(
+                {"status": False, "reason": "session_not_found_or_closed"}
+            )
 
         @app.get("/api/v1/RTCSignalingServer/cleanup")
         def app_cleanup(request: Request):

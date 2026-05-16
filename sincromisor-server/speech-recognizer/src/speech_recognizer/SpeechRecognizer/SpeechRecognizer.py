@@ -43,9 +43,9 @@ class SpeechRecognizer:
         decode_options |= self.decode_options
         audio_tensor: Tensor = torch.from_numpy(audio)
 
-        assert (
-            audio_tensor.dim() == 1
-        ), f"Only mono audio is supported - {audio_tensor.dim()}"
+        assert audio_tensor.dim() == 1, (
+            f"Only mono audio is supported - {audio_tensor.dim()}"
+        )
         # assert audio_tensor.shape[0] == 115200, f"Only mono audio is supported - {audio_tensor.shape[0]}"
 
         audio_tensor: Tensor = audio_tensor.to(self.model.dtype).reshape(1, -1)
