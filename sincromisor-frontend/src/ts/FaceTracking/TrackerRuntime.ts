@@ -62,6 +62,10 @@ export class TrackerRuntime {
         targetInferenceFps: number = DEFAULT_TARGET_INFERENCE_FPS,
         poseOptions: { enabled?: boolean; targetInferenceFps?: number } = {},
     ): Promise<void> {
+        if (this.loopEnabled || this.callbacks) {
+            this.stopFaceTracking("sincro_face_tracking_restarting");
+        }
+
         this.callbacks = callbacks;
         this.poseTrackingEnabled = !!poseOptions.enabled;
         this.poseDegradedToFaceOnly = false;
@@ -86,7 +90,9 @@ export class TrackerRuntime {
     stopFaceTracking(reason: string | null = "sincro_face_tracking_stopped"): void {
         this.stopLoop();
         if (this.useWorkerTracking) {
-            this.workerClient.stop(reason);
+            // Restarting with Pose OFF must not keep a Worker that already loaded PoseLandmarker.
+            // Disposing here makes the next start honor the current tracking options from a clean Worker.
+            this.workerClient.dispose();
         }
         this.callbacks?.onFaceMotion(this.faceTracker.stop(reason));
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop(reason));
