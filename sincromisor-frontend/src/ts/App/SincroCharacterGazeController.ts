@@ -360,9 +360,18 @@ export class SincroCharacterGazeController {
         return [
             `sincro pose:${snapshot.detected ? "detected" : "lost"}`,
             `conf:${snapshot.confidence.toFixed(2)}`,
+            `targets:L${this.formatArmTargetAvailability(snapshot.leftArm)} R${this.formatArmTargetAvailability(snapshot.rightArm)}`,
             `infer:${snapshot.inferenceTimeMs.toFixed(1)}ms`,
             `fps:${snapshot.inferenceFps.toFixed(1)}`,
         ].join(" ");
+    }
+
+    private formatArmTargetAvailability(arm: SincroPoseMotionSnapshot["leftArm"]): string {
+        return [
+            arm.targets.shoulder.tracked ? "S" : "-",
+            arm.targets.elbow.tracked ? "E" : "-",
+            arm.targets.wrist.tracked ? "W" : "-",
+        ].join("");
     }
 
     private formatErrorDetail(error: unknown): string {

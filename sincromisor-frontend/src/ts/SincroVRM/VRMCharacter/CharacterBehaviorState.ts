@@ -8,7 +8,10 @@ import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
 } from "../../FaceTracking/SincroPoseMotionSnapshot";
-import type { SincroPoseMotionSnapshot } from "../../FaceTracking/SincroPoseMotionSnapshot";
+import type {
+    SincroPoseArmMotionSnapshot,
+    SincroPoseMotionSnapshot,
+} from "../../FaceTracking/SincroPoseMotionSnapshot";
 import { ChatMessage, TelopChannelMessage } from "../../RTC/RTCMessage";
 import { TalkManager, TalkManagerEvent } from "../../RTC/TalkManager";
 import { VadStateReport } from "../../RTC/UserMediaManager";
@@ -298,8 +301,8 @@ export class CharacterBehaviorState {
         this.poseMotion = {
             ...snapshot,
             upperBody: { ...snapshot.upperBody },
-            leftArm: { ...snapshot.leftArm },
-            rightArm: { ...snapshot.rightArm },
+            leftArm: clonePoseArmMotion(snapshot.leftArm),
+            rightArm: clonePoseArmMotion(snapshot.rightArm),
             lastUpdatedAtMs: snapshot.lastUpdatedAtMs ?? nowMs,
         };
     }
@@ -393,8 +396,8 @@ export class CharacterBehaviorState {
             poseMotion: {
                 ...this.poseMotion,
                 upperBody: { ...this.poseMotion.upperBody },
-                leftArm: { ...this.poseMotion.leftArm },
-                rightArm: { ...this.poseMotion.rightArm },
+                leftArm: clonePoseArmMotion(this.poseMotion.leftArm),
+                rightArm: clonePoseArmMotion(this.poseMotion.rightArm),
             },
             aiSpeech: { ...this.aiSpeech },
             errorMessage: this.errorMessage,
@@ -632,4 +635,15 @@ export class CharacterBehaviorState {
         const first = this.errorMessagesBySource.values().next();
         return first.done ? null : first.value;
     }
+}
+
+function clonePoseArmMotion(snapshot: SincroPoseArmMotionSnapshot): SincroPoseArmMotionSnapshot {
+    return {
+        ...snapshot,
+        targets: {
+            shoulder: { ...snapshot.targets.shoulder },
+            elbow: { ...snapshot.targets.elbow },
+            wrist: { ...snapshot.targets.wrist },
+        },
+    };
 }

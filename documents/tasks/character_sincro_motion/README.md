@@ -19,6 +19,7 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 - Done: `done/TASK-3110-sincro-blink-open-threshold-tuning.md`
 - Done: `done/TASK-3111-sincro-pose-retarget-formalization-and-tuning.md`
 - Open: `open/TASK-3112-sincro-tracker-workerization-and-load-isolation.md`
+- Done: `done/TASK-3113-sincro-pose-camera-space-arm-targets.md`
 
 ## 前提
 
@@ -44,3 +45,4 @@ Pose Landmarker は face-only の本流と分けて進める。
 4. Pose を採用した場合は、`TASK-3107` の pose 観測性・確認項目も完了条件に含める。
 5. `TASK-3111`: optional pose pipeline をキャラクター動作として正式化し、設定・適用 gate・反映強度・実カメラ確認を整える。
 6. `TASK-3112`: Face / Pose tracker を Worker 化し、model load と同期推論による main thread ブロックを軽減する。
+7. `TASK-3113`: 簡易 IK の入力として、肩・肘・手首 target を snapshot に正規化する。
