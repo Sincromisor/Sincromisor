@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Sincro Motion Debug</title>
+        <script type="module" src="./main.ts"></script>
+    </head>
+    <body>
+        <video id="characterGazeVideo" hidden playsinline muted></video>
+        <main class="motionDebugShell">
+            <header class="motionDebugHeader">
+                <div>
+                    <h1>Sincro Motion Debug</h1>
+                    <p id="motionDebugStatus">待機中</p>
+                </div>
+                <div class="motionDebugActions">
+                    <button
+                        id="motionDebugStart"
+                        data-testid="motion-debug-start"
+                        type="button"
+                    >
+                        Start
+                    </button>
+                    <button id="motionDebugStop" type="button" disabled>Stop</button>
+                    <button id="motionDebugCapture" type="button">Capture</button>
+                </div>
+            </header>
+
+            <section class="motionDebugStage" aria-label="Sincro motion comparison stage">
+                <div class="cameraPane">
+                    <video
+                        id="motionDebugCameraVideo"
+                        data-testid="motion-debug-camera-video"
+                        playsinline
+                        muted
+                    ></video>
+                    <canvas
+                        id="motionDebugPoseOverlay"
+                        data-testid="motion-debug-pose-overlay"
+                    ></canvas>
+                </div>
+                <div
+                    id="motionDebugVrmStage"
+                    class="vrmPane"
+                    data-testid="motion-debug-vrm-stage"
+                >
+                    <div id="sincroCharacterBox"></div>
+                    <div id="sincroCharacterControlLayer" aria-hidden="true"></div>
+                </div>
+            </section>
+
+            <section class="motionDebugWorkbench" aria-label="Sincro motion debug controls">
+                <form class="controlPanel" id="motionDebugControls">
+                    <label>
+                        <span>IK mode</span>
+                        <select
+                            id="motionDebugIkMode"
+                            data-testid="motion-debug-ik-mode"
+                        >
+                            <option value="world_3d_ik">World 3D IK</option>
+                            <option value="screen_space_ik">Screen Space IK</option>
+                            <option value="feature_only">Feature Only</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Strength</span>
+                        <input
+                            id="motionDebugIkStrength"
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value="1"
+                        />
+                        <output id="motionDebugIkStrengthValue">1.00</output>
+                    </label>
+                    <label>
+                        <span>Target scale</span>
+                        <input
+                            id="motionDebugTargetScale"
+                            type="range"
+                            min="0.2"
+                            max="1.5"
+                            step="0.05"
+                            value="1"
+                        />
+                        <output id="motionDebugTargetScaleValue">1.00</output>
+                    </label>
+                    <label>
+                        <span>Smoothing</span>
+                        <input
+                            id="motionDebugSmoothing"
+                            type="range"
+                            min="40"
+                            max="800"
+                            step="5"
+                            value="155"
+                        />
+                        <output id="motionDebugSmoothingValue">155ms</output>
+                    </label>
+                    <label>
+                        <span>Min confidence</span>
+                        <input
+                            id="motionDebugMinConfidence"
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value="0.45"
+                        />
+                        <output id="motionDebugMinConfidenceValue">0.45</output>
+                    </label>
+                    <figure
+                        id="motionDebugCaptureResult"
+                        class="captureResult"
+                        data-testid="motion-debug-capture-result"
+                        hidden
+                    >
+                        <img
+                            id="motionDebugCapturePreview"
+                            data-testid="motion-debug-capture-preview"
+                            alt="Captured camera frame with pose overlay"
+                        />
+                        <figcaption>
+                            <span id="motionDebugCaptureStatus">--</span>
+                            <a
+                                id="motionDebugCaptureDownload"
+                                data-testid="motion-debug-capture-download"
+                                download="sincro-motion-debug-capture.png"
+                                href="#"
+                            >
+                                PNG
+                            </a>
+                        </figcaption>
+                    </figure>
+                </form>
+                <aside class="snapshotPanel" aria-label="Sincro motion runtime snapshot">
+                    <pre
+                        id="motionDebugSnapshot"
+                        data-testid="motion-debug-snapshot"
+                    >--</pre>
+                </aside>
+            </section>
+        </main>
+    </body>
+</html>

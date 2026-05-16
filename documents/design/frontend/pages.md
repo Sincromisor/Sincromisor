@@ -2,7 +2,7 @@
 
 ## Summary
 
-- modern frontend は `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` の 4 ページを通常ビルド対象にする。
+- modern frontend は `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug` の 5 ページを通常ビルド対象にする。
 - Babylon.js legacy ページは通常導線と通常ビルドから外れている。
 - ページ差分は entry / initializer / scene option / page-specific settings に閉じ込める。
 
@@ -18,12 +18,13 @@
 
 ## Page Matrix
 
-| Page                | 分類         | 役割                    | 主な確認文書                                              |
-| ------------------- | ------------ | ----------------------- | --------------------------------------------------------- |
-| `main`              | modern       | 通常導線の入口          | `frontend/app-shell.md`                                   |
-| `simple-vrm`        | modern       | 通常会話の正規ルート    | `frontend/app-shell.md`, `frontend/character/overview.md` |
-| `vrm360`            | experimental | 360 表示実験            | `frontend/character/overview.md`                          |
-| `looking-glass-vrm` | experimental | Looking Glass + VRM 1.0 | `frontend/character/overview.md`                          |
+| Page                | 分類         | 役割                    | 主な確認文書                                                     |
+| ------------------- | ------------ | ----------------------- | ---------------------------------------------------------------- |
+| `main`              | modern       | 通常導線の入口          | `frontend/app-shell.md`                                          |
+| `simple-vrm`        | modern       | 通常会話の正規ルート    | `frontend/app-shell.md`, `frontend/character/overview.md`        |
+| `vrm360`            | experimental | 360 表示実験            | `frontend/character/overview.md`                                 |
+| `looking-glass-vrm` | experimental | Looking Glass + VRM 1.0 | `frontend/character/overview.md`                                 |
+| `motion-debug`      | experimental | Pose retarget / IK 調整 | `frontend/character/motion.md`, `frontend/character/tracking.md` |
 
 ## Responsibilities
 
@@ -33,6 +34,9 @@
     - scene / page option を組み立て、app controller の起動へ委譲する。
 - React app shell:
     - 共通 UI を描画し、ページ差分は props / controller option へ閉じ込める。
+- Developer pages:
+    - `motion-debug` は AppShell / RTC / chat / startup dialog を持たず、camera / tracker / VRM retarget の観測に限定する。
+    - Playwright から使う `window.__SINCRO_MOTION_DEBUG__` は frontend developer tooling の内部 API として扱い、本番 endpoint / JSON 契約には含めない。
 
 ## Change Checklist
 

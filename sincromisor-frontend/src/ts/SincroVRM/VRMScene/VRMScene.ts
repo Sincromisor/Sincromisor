@@ -55,7 +55,10 @@ export class VRMScene {
 
         // レンダラーを設定する。背景透過にして UI オーバーレイ（chat/telop/debug）と重ねる。
         this.renderer = new WebGLRenderer({ alpha: true, antialias: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(
+            canvasRoot.clientWidth || window.innerWidth,
+            canvasRoot.clientHeight || window.innerHeight,
+        );
         this.renderer.setPixelRatio(window.devicePixelRatio);
         canvasRoot.appendChild(this.renderer.domElement);
 
@@ -107,8 +110,9 @@ export class VRMScene {
 
     private handleResize(): void {
         if (this.renderer.domElement.parentElement) {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
+            const width = this.renderer.domElement.parentElement.clientWidth || window.innerWidth;
+            const height =
+                this.renderer.domElement.parentElement.clientHeight || window.innerHeight;
 
             this.renderer.setSize(width, height);
             this.renderer.setPixelRatio(window.devicePixelRatio);

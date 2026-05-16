@@ -1,0 +1,238 @@
+:root {
+    color: #eef3f8;
+    background: #121416;
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+body {
+    margin: 0;
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+.motionDebugShell {
+    display: grid;
+    min-height: 100vh;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    background: #121416;
+}
+
+.motionDebugHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px clamp(16px, 3vw, 32px);
+    border-bottom: 1px solid rgb(255 255 255 / 12%);
+    background: #20262d;
+}
+
+.motionDebugHeader h1 {
+    margin: 0;
+    font-size: 1.45rem;
+    font-weight: 680;
+}
+
+.motionDebugHeader p {
+    margin: 4px 0 0;
+    color: #a9b4c2;
+}
+
+.motionDebugActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+button {
+    min-height: 36px;
+    border: 1px solid rgb(255 255 255 / 18%);
+    border-radius: 6px;
+    color: #f4f8fb;
+    background: #31556b;
+    padding: 0 14px;
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.motionDebugStage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    min-height: 0;
+    padding: 12px clamp(12px, 2vw, 24px);
+}
+
+.cameraPane,
+.vrmPane {
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 8px;
+    background: #06080a;
+}
+
+.cameraPane video,
+.cameraPane canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: scaleX(-1);
+}
+
+.cameraPane canvas {
+    pointer-events: none;
+}
+
+#sincroCharacterBox,
+#sincroCharacterControlLayer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#sincroCharacterControlLayer {
+    z-index: 2;
+    background: transparent;
+    touch-action: none;
+}
+
+.motionDebugWorkbench {
+    display: grid;
+    grid-template-columns: minmax(280px, 440px) minmax(0, 1fr);
+    gap: 12px;
+    padding: 0 clamp(12px, 2vw, 24px) 16px;
+}
+
+.controlPanel,
+.snapshotPanel {
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 8px;
+    background: #1d232a;
+}
+
+.controlPanel {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+}
+
+.controlPanel label {
+    display: grid;
+    grid-template-columns: minmax(96px, 0.8fr) minmax(120px, 1fr) minmax(54px, auto);
+    align-items: center;
+    gap: 8px;
+    color: #c9d5df;
+    font-size: 0.84rem;
+}
+
+.controlPanel select,
+.controlPanel input {
+    min-height: 34px;
+    box-sizing: border-box;
+    border: 1px solid rgb(255 255 255 / 16%);
+    border-radius: 6px;
+    color: #f4f8fb;
+    background: #11171c;
+    padding: 0 8px;
+}
+
+.controlPanel output {
+    color: #f4f8fb;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.captureResult {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding-top: 4px;
+}
+
+.captureResult[hidden] {
+    display: none;
+}
+
+.captureResult img {
+    width: 112px;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    border: 1px solid rgb(255 255 255 / 16%);
+    border-radius: 6px;
+    background: #06080a;
+}
+
+.captureResult figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    color: #c9d5df;
+    font-size: 0.84rem;
+}
+
+.captureResult a {
+    color: #f4f8fb;
+    text-decoration: none;
+    border: 1px solid rgb(255 255 255 / 18%);
+    border-radius: 6px;
+    background: #31556b;
+    padding: 6px 10px;
+}
+
+.snapshotPanel {
+    min-height: 196px;
+    max-height: 30vh;
+    overflow: auto;
+    padding: 12px;
+}
+
+.snapshotPanel pre {
+    margin: 0;
+    white-space: pre-wrap;
+    color: #dce7ef;
+    font:
+        0.78rem/1.42 ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Consolas,
+        monospace;
+}
+
+@media (max-width: 980px) {
+    .motionDebugHeader,
+    .motionDebugStage,
+    .motionDebugWorkbench,
+    .controlPanel {
+        grid-template-columns: 1fr;
+    }
+
+    .motionDebugHeader {
+        display: grid;
+    }
+
+    .motionDebugStage {
+        grid-template-rows: minmax(320px, 44vh) minmax(320px, 44vh);
+    }
+}
