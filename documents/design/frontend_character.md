@@ -44,7 +44,7 @@ SincromisorフロントエンドのVRMキャラクター描画層（シーン、
 - 現状の問題点:
   - 表情は母音中心で、感情表現や全身モーションは限定的
   - VRMごとに感情プリセットが口形morphを含む場合、口パクとの干渉が起こり得る
-  - Pose retarget は低振幅の上半身・腕同期として成立しているが、手首や肘の到達位置へ合わせる簡易 IK は後続タスクで扱う
+  - Pose retarget は低振幅の上半身・腕同期に加え、肩・肘・手首 target から腕先を同方向へ寄せる軽量 two-bone IK 風補正を持つ
 - 採用理由:
   - `@pixiv/three-vrm` により VRM 1.0 との互換性が高い
 - 制約条件:
@@ -176,14 +176,14 @@ flowchart LR
   - `EyeBehaviorController`: VRM標準 `lookLeft/lookRight/lookUp/lookDown` expression を軸別に優先して目線を制御し、左右または上下の不足軸だけ `leftEye/rightEye` ボーンへフォールバックする。MediaPipe の画像Y座標は下向き正なので、VRMへの上下適用段で反転する。対話状態に応じたblink schedule、考え中の短い視線外し、低振幅microsaccade、AI発話中の感情別視線offset、`surprised` 中のblink抑制を扱う。顔位置追跡の強度はキャラクター表示設定から即時調整できる
   - `CharacterBehaviorState`: VAD、顔検出、text/telop、感情コード、media/gaze/RTC エラーを `idle/attending/user_speaking/thinking/ai_speaking/face_lost/error_or_disconnected` の対話状態 snapshot へ集約。VAD onset debounce、発話 hold、発話時間を持ち、短いノイズを聞き姿勢・相槌 trigger へ直結させない。AI発話は `speech_id` ごとの感情コード cache を参照し、text 未到着または `expression_code` なしの発話は neutral として扱う。Gaze callback が止まった場合は stale として `face_lost` へ遷移させる。AI発話は `new_text`、`speech_id`、句読点、mora長、一定間隔から `speech_start/cadence/phrase/punctuation` の beat に間引く。`talkMode`、同期用 `faceMotion`、optional `poseMotion`、tracker fallback state を追加できる構造にし、`chat` の注視 snapshot と `sincro` の同期 snapshot を同じフィールドへ混ぜない
   - `CharacterMotionOrchestrator`: `CharacterBehaviorSnapshot` と共通 motion config を参照し、hips/root を基準位置へ固定したうえで、呼吸・spine/chest/shoulder の idle offset、VAD連動の聞き姿勢、発話終了後の小さな相槌 nod、AI発話中の感情別姿勢と beat gesture を適用。上半身 motion はキャラクター表示設定の `characterMotionScale` で一括スケールする。`chat` では既存の対話演出を優先し、`sincro` では retarget 済み face / pose motion を優先してAI発話gestureやthinking aversionを抑制する。Pose retarget は `motionPolicy.allowPoseRetarget` をVRM適用前の明示 gate として通過した場合だけ加算する
-  - `ArmBoneController`: idleの腕・肘・手首揺れに、`CharacterBehaviorSnapshot.aiSpeech.beatId` 由来の短い片腕gestureを重ねる。左右を交互に主役化し、発話開始・文節・句読点で強度を変える。Pose retarget が有効な場合のみ上腕・前腕・手首へ低振幅の additive offset を加える
+  - `ArmBoneController`: idleの腕・肘・手首揺れに、`CharacterBehaviorSnapshot.aiSpeech.beatId` 由来の短い片腕gestureを重ねる。左右を交互に主役化し、発話開始・文節・句読点で強度を変える。Pose retarget が有効な場合のみ、`SincroPoseRetargeter` が算出した上腕・前腕・手首の additive offset を加える
   - `CharacterMotionConfig`: idle/listening/AI発話 motion の周期・振幅・easing を集約し、腕/脚/胴体 controller の `performance.now()` 直参照を避ける。AI発話中は posture blend を控えめにし、beat duration を長めにして首・肩・腕の同時ピークを避ける
   - `CharacterGaze`: `chat` 向けの顔キーポイント追跡、視線角推定、arrive/leaveイベント通知、AutoMute連動を担当する。`detectForVideo()` へ渡す前にvideo frameのreadyStateとdecode済み寸法を確認し、MediaPipe実行時例外では検出ループを停止して上位controllerへ通知する。`sincro` の head pose / blendshape / pose 同期責務は持たない
   - `TrackerRuntime`: `SincroFaceTracker` と optional `SincroPoseTracker` の共有実行基盤。camera track / video element / 推論 loop を所有し、二重 `getUserMedia` と二重推論 loop を避ける。Worker 経路では `SincroTrackerWorkerClient` を介して `sincro-tracker.worker.ts` へ `ImageBitmap` を転送し、snapshot と load / transfer / round-trip / dropped frame / fallback reason だけを受け取る。Pose OFF の場合は Worker 内でも PoseLandmarker を初期化しない。UI更新、DebugConsole更新、VRM適用はruntime coreへ持ち込まない
   - `SincroFaceTracker`: FaceLandmarker の `outputFaceBlendshapes` と `outputFacialTransformationMatrixes` を有効化し、検出有無、confidence相当、head pose、blendshape map、推論時間、推論fps、`lastUpdatedAtMs` を `SincroFaceMotionSnapshot` に正規化する
   - `SincroPoseTracker`: PoseLandmarker の結果から肩・胴体・腕の大まかな姿勢を `SincroPoseMotionSnapshot` に正規化する optional module。腕 target は MediaPipe 生ランドマークを外へ出さず、部位ごとに `tracked`、`confidence`、`visibility`、`presence`、`staleReason`、camera normalized 座標、肩幅基準 local 座標を持つ。推論fpsは face より低くし、性能ゲート超過時は `degradedToFaceOnly` を立てて face-only に戻す
   - `SincroFaceRetargeter`: `SincroFaceMotionSnapshot` を VRM の head / eye / blink / mouth expression 向け値へ変換する。neutral calibration、clamp、deadband、smoothing、confidence gate、左右ミラー補正をこの層で扱う
-  - `SincroPoseRetargeter`: optional `SincroPoseMotionSnapshot` を spine/chest/shoulder/arm向け値へ変換する。初期段階では低振幅・強い smoothing をかけ、腕が画面外に出た場合は部位単位で neutral へ戻す。`intensityScale` は設定の `sincroPoseRetargetScale` と Debug Console の Pose retarget 調整から変更でき、`minConfidence` / `smoothingMs` / `returnToNeutralMs` は Debug Console で調整できる
+  - `SincroPoseRetargeter`: optional `SincroPoseMotionSnapshot` を spine/chest/shoulder/arm向け値へ変換する。腕は VRM normalized bone から肩幅・上腕長・前腕長を測り、screen-space の shoulder / elbow / wrist target をモデル側スケールへ写して軽量 two-bone IK 風に補正する。奥行きは本解決せず、手首方向を到達方向、肘方向を pole 近似として使う。target 欠損、confidence 不足、`allowPoseRetarget=false` では部位単位で低振幅 retarget または neutral へ戻す。`intensityScale` は設定の `sincroPoseRetargetScale` と Debug Console の Pose retarget 調整から変更でき、`minConfidence` / `smoothingMs` / `returnToNeutralMs` は Debug Console で調整できる
 - 主要クラス/モジュールと対応ファイル:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`
@@ -438,6 +438,7 @@ flowchart LR
 | 2026-05-11 | TASK-3104 として `CharacterBehaviorSnapshot.motionPolicy` を実装し、`chat` の対話 gesture と `sincro` の face retarget 優先を controller 共通方針として分離 |
 | 2026-05-16 | Pose tracking の実行時 ON/OFF、Worker tracker 再起動時の破棄、低振幅 pose retarget と後続 IK タスクの境界を現行実装に同期 |
 | 2026-05-16 | TASK-3113 として左右腕の shoulder / elbow / wrist target を camera normalized と肩幅基準 local 座標へ正規化する snapshot 契約を追記 |
+| 2026-05-16 | TASK-3114 として `SincroPoseRetargeter` に VRM 腕長計測と screen-space target 由来の軽量 two-bone IK 風 arm 補正を追記 |
 
 ## 15. 参照資料
 
