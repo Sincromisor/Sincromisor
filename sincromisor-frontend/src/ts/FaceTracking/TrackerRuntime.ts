@@ -8,7 +8,9 @@ import type { SincroTrackerWorkerStats } from "./SincroTrackerWorkerTypes";
 const MIN_DETECTABLE_VIDEO_DIMENSION_PX = 2;
 const DEFAULT_TARGET_INFERENCE_FPS = 15;
 const DEFAULT_TARGET_POSE_INFERENCE_FPS = 12;
-const POSE_INFERENCE_WARN_MS = 38;
+const MIN_POSE_INFERENCE_WARN_MS = 38;
+const POSE_INFERENCE_WARN_BUDGET_RATIO = 0.9;
+const POSE_INFERENCE_WARMUP_SAMPLE_LIMIT = 6;
 const POSE_INFERENCE_WARN_LIMIT = 4;
 const POSE_FAILURE_LIMIT = 18;
 
@@ -39,6 +41,7 @@ export class TrackerRuntime {
     private targetPoseInferenceFps = DEFAULT_TARGET_POSE_INFERENCE_FPS;
     private poseTrackingEnabled = false;
     private poseDegradedToFaceOnly = false;
+    private poseInferenceSampleCount = 0;
     private slowPoseInferenceCount = 0;
     private useWorkerTracking = false;
     private switchingToMainThreadFallback = false;
@@ -69,6 +72,7 @@ export class TrackerRuntime {
         this.callbacks = callbacks;
         this.poseTrackingEnabled = !!poseOptions.enabled;
         this.poseDegradedToFaceOnly = false;
+        this.poseInferenceSampleCount = 0;
         this.slowPoseInferenceCount = 0;
         this.targetInferenceFps = Math.max(1, Math.min(30, targetInferenceFps));
         this.targetPoseInferenceFps = Math.max(
@@ -102,6 +106,8 @@ export class TrackerRuntime {
         this.callbacks = null;
         this.poseTrackingEnabled = false;
         this.poseDegradedToFaceOnly = false;
+        this.poseInferenceSampleCount = 0;
+        this.slowPoseInferenceCount = 0;
         this.useWorkerTracking = false;
         this.switchingToMainThreadFallback = false;
         this.videoElement.pause();
@@ -309,18 +315,33 @@ export class TrackerRuntime {
     }
 
     private applyPosePerformanceGate(snapshot: SincroPoseMotionSnapshot, nowMs: number): void {
-        if (snapshot.inferenceTimeMs >= POSE_INFERENCE_WARN_MS) {
-            this.slowPoseInferenceCount += 1;
-        } else {
-            this.slowPoseInferenceCount = 0;
-        }
         if (snapshot.consecutiveFailures >= POSE_FAILURE_LIMIT) {
             this.degradePoseToFaceOnly("pose_detection_failed_repeatedly", nowMs);
             return;
         }
+        this.poseInferenceSampleCount += 1;
+        if (this.poseInferenceSampleCount <= POSE_INFERENCE_WARMUP_SAMPLE_LIMIT) {
+            // MediaPipe の初回 video 推論には wasm / GPU delegate のウォームアップが混ざる。
+            // 起動コストを常時性能不足と誤認しないよう、安定後のサンプルだけで降格判定する。
+            this.slowPoseInferenceCount = 0;
+            return;
+        }
+        if (snapshot.inferenceTimeMs >= this.poseInferenceWarnMs()) {
+            this.slowPoseInferenceCount += 1;
+        } else {
+            this.slowPoseInferenceCount = 0;
+        }
         if (this.slowPoseInferenceCount >= POSE_INFERENCE_WARN_LIMIT) {
             this.degradePoseToFaceOnly("pose_inference_too_slow", nowMs);
         }
+    }
+
+    private poseInferenceWarnMs(): number {
+        const targetIntervalMs = 1000 / this.targetPoseInferenceFps;
+        return Math.max(
+            MIN_POSE_INFERENCE_WARN_MS,
+            targetIntervalMs * POSE_INFERENCE_WARN_BUDGET_RATIO,
+        );
     }
 
     private degradePoseToFaceOnly(reason: string, nowMs: number): void {
