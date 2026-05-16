@@ -24,6 +24,9 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 - Done: `done/TASK-3115-sincro-pose-upper-body-anchor-and-ik-fallback.md`
 - Open: `open/TASK-3116-sincro-pose-ik-observability-verification-and-design-sync.md`
 - Open: `open/TASK-260517014025-sincro-pose-ik-wrist-confidence-gate.md`
+- Done: `done/TASK-260517024504-sincro-pose-world-landmarks-and-3d-targets.md`
+- Done: `done/TASK-260517024505-sincro-vrm-3d-two-bone-ik-solver.md`
+- Done: `done/TASK-260517024506-sincro-ik-solver-comparison-and-adoption.md`
 
 ## 前提
 
@@ -53,3 +56,7 @@ Pose Landmarker は face-only の本流と分けて進める。
 8. `TASK-3114`: 新規外部ライブラリへ置き換えず、軽量 two-bone arm IK で腕先を target へ寄せる。
 9. `TASK-3115`: 上半身 anchor、motion priority、部位別 fallback を調整して IK の破綻を抑える。
 10. `TASK-3116`: IK の観測性、実カメラ検証、設計文書同期を行う。
+11. `TASK-260517014025`: 実カメラで手首 confidence が低く IK が落ちる gate を改善する。
+12. `TASK-260517024504`: MediaPipe `worldLandmarks` を 3D IK 用 target snapshot へ正規化する。
+13. `TASK-260517024505`: VRM normalized bones に適用する 3D two-bone IK solver を実装する。
+14. `TASK-260517024506`: `CCDIKSolver` など外部 solver と比較し、本流の IK 方針を採用判断する。

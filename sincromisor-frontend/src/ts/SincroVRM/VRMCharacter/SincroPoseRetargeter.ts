@@ -1,5 +1,6 @@
-import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
+import type { VRM } from "@pixiv/three-vrm";
 import { MathUtils } from "three/src/math/MathUtils.js";
+import { Quaternion } from "three/src/math/Quaternion.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import type {
     SincroPoseArmMotionSnapshot,
@@ -7,24 +8,38 @@ import type {
     SincroPoseMotionSnapshot,
     SincroPoseTargetPointSnapshot,
 } from "../../FaceTracking/SincroPoseMotionSnapshot";
+import {
+    type SincroArmIkQuaternion,
+    type SincroArmIkSolveResult,
+    SincroArmIkSolver,
+} from "./SincroArmIkSolver";
+import { runSincroCcdIkProbe, type SincroCcdIkProbeResult } from "./sincroCcdIkProbe";
+
+export type SincroPoseArmIkMode = "feature_only" | "screen_space_ik" | "world_3d_ik";
 
 export type SincroPoseRetargetedArm = {
     active: boolean;
     ikActive: boolean;
     ikWeight: number;
+    ikSolverMode: SincroPoseArmIkMode | "none";
     fallbackReason: string | null;
     upperArm: { x: number; y: number; z: number };
     lowerArm: { x: number; y: number; z: number };
     wrist: { x: number; y: number; z: number };
+    upperArmQuaternion: SincroArmIkQuaternion | null;
+    lowerArmQuaternion: SincroArmIkQuaternion | null;
 };
 
-export type SincroPoseIkMode = "fallback" | "left_ik" | "right_ik" | "both_ik" | "feature_only";
+export type SincroPoseIkMode = "fallback" | SincroPoseArmIkMode;
 
 export type SincroPoseRetargetFrame = {
     active: boolean;
     confidence: number;
     ikMode: SincroPoseIkMode;
     fallbackReason: string | null;
+    solverProbe: {
+        ccdik: SincroCcdIkProbeResult | null;
+    };
     anchor: {
         active: boolean;
         weight: number;
@@ -58,6 +73,7 @@ export type SincroPoseRetargetConfig = {
     armIkMaxLiftRad: number;
     armIkMaxOpenRad: number;
     armIkMaxForearmFlexRad: number;
+    armIkMode: SincroPoseArmIkMode;
     shoulderAnchorOffsetRad: number;
 };
 
@@ -78,6 +94,7 @@ export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
     armIkMaxLiftRad: MathUtils.degToRad(34.0),
     armIkMaxOpenRad: MathUtils.degToRad(28.0),
     armIkMaxForearmFlexRad: MathUtils.degToRad(38.0),
+    armIkMode: "world_3d_ik",
     shoulderAnchorOffsetRad: MathUtils.degToRad(2.4),
 };
 
@@ -88,6 +105,9 @@ const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
     confidence: 0,
     ikMode: "fallback",
     fallbackReason: "neutral",
+    solverProbe: {
+        ccdik: null,
+    },
     anchor: {
         active: false,
         weight: 0,
@@ -104,26 +124,26 @@ const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
         active: false,
         ikActive: false,
         ikWeight: 0,
+        ikSolverMode: "none",
         fallbackReason: "neutral",
         upperArm: { x: 0, y: 0, z: 0 },
         lowerArm: { x: 0, y: 0, z: 0 },
         wrist: { x: 0, y: 0, z: 0 },
+        upperArmQuaternion: null,
+        lowerArmQuaternion: null,
     },
     rightArm: {
         active: false,
         ikActive: false,
         ikWeight: 0,
+        ikSolverMode: "none",
         fallbackReason: "neutral",
         upperArm: { x: 0, y: 0, z: 0 },
         lowerArm: { x: 0, y: 0, z: 0 },
         wrist: { x: 0, y: 0, z: 0 },
+        upperArmQuaternion: null,
+        lowerArmQuaternion: null,
     },
-};
-
-type ArmRigMetrics = {
-    upperArmLength: number;
-    lowerArmLength: number;
-    shoulderWidth: number;
 };
 
 type ArmIkTarget = {
@@ -141,13 +161,19 @@ type ArmIkSolveResult = {
     fallbackReason: string | null;
 };
 
+type WorldArmIkSolveResult = {
+    result: SincroArmIkSolveResult | null;
+    fallbackReason: string | null;
+};
+
 // Pose同期はまだoptionalなので、低振幅・強いsmoothingでVRM向け値へ変換する。
 // 腕が画面外へ出た時は部位単位で neutral に戻し、face-only の同期を邪魔しない。
 export class SincroPoseRetargeter {
     private config: SincroPoseRetargetConfig;
     private lastUpdateAtMs: number | null = null;
     private smoothedFrame: SincroPoseRetargetFrame = cloneFrame(NEUTRAL_POSE_FRAME);
-    private armRigMetrics: Record<"left" | "right", ArmRigMetrics> | null = null;
+    private armIkSolvers: Record<"left" | "right", SincroArmIkSolver> | null = null;
+    private ccdIkProbeResult: SincroCcdIkProbeResult | null = null;
 
     constructor(config: Partial<SincroPoseRetargetConfig> = {}) {
         this.config = {
@@ -178,11 +204,13 @@ export class SincroPoseRetargeter {
                 0.2,
                 1.5,
             ),
+            armIkMode: config.armIkMode ?? this.config.armIkMode,
         };
     }
 
     attachVrm(vrm: VRM): void {
-        this.armRigMetrics = measureArmRigMetrics(vrm);
+        this.armIkSolvers = measureArmIkSolvers(vrm);
+        this.ccdIkProbeResult = runSincroCcdIkProbe(vrm, "left");
         this.reset();
     }
 
@@ -196,7 +224,10 @@ export class SincroPoseRetargeter {
         const snapshotFallbackReason = this.snapshotFallbackReason(snapshot);
         if (snapshotFallbackReason) {
             return this.smoothFrame(
-                withFallbackReason(NEUTRAL_POSE_FRAME, snapshotFallbackReason),
+                withSolverProbe(
+                    withFallbackReason(NEUTRAL_POSE_FRAME, snapshotFallbackReason),
+                    this.solverProbeSnapshot(),
+                ),
                 deltaMs,
                 this.config.returnToNeutralMs,
             );
@@ -211,6 +242,7 @@ export class SincroPoseRetargeter {
             confidence: snapshot.confidence,
             ikMode: ikModeForArms(leftArm, rightArm),
             fallbackReason: null,
+            solverProbe: this.solverProbeSnapshot(),
             anchor,
             upperBody: {
                 spine: {
@@ -337,6 +369,7 @@ export class SincroPoseRetargeter {
             active: true,
             ikActive: false,
             ikWeight: 0,
+            ikSolverMode: "feature_only",
             fallbackReason: null,
             upperArm: {
                 x: -positiveOnly(arm.upperArmLift) * this.config.upperArmLiftRad * scale,
@@ -358,12 +391,27 @@ export class SincroPoseRetargeter {
                 y: 0,
                 z: sideSign * arm.wristRaise * this.config.wristRaiseRad * scale,
             },
+            upperArmQuaternion: null,
+            lowerArmQuaternion: null,
         };
-        const ikResult = this.solveArmIk(arm.targets, side);
-        if (!ikResult.target || this.config.armIkStrength <= 0) {
+
+        if (this.config.armIkMode === "feature_only" || this.config.armIkStrength <= 0) {
             return {
                 ...featureArm,
-                fallbackReason: ikResult.fallbackReason ?? "ik_disabled",
+                fallbackReason:
+                    this.config.armIkMode === "feature_only" ? null : "ik_strength_zero",
+            };
+        }
+
+        if (this.config.armIkMode === "world_3d_ik") {
+            return this.retargetWorldArmIk(arm.targets, side, featureArm);
+        }
+
+        const ikResult = this.solveScreenSpaceArmIk(arm.targets, side);
+        if (!ikResult.target) {
+            return {
+                ...featureArm,
+                fallbackReason: ikResult.fallbackReason,
             };
         }
         const ikScale = scale;
@@ -371,6 +419,7 @@ export class SincroPoseRetargeter {
             active: true,
             ikActive: true,
             ikWeight: ikResult.target.weight,
+            ikSolverMode: "screen_space_ik",
             fallbackReason: null,
             upperArm: {
                 x: -ikResult.target.lift * this.config.armIkMaxLiftRad * ikScale,
@@ -387,24 +436,99 @@ export class SincroPoseRetargeter {
                 y: 0,
                 z: featureArm.wrist.z,
             },
+            upperArmQuaternion: null,
+            lowerArmQuaternion: null,
         };
         return {
             ...blendArm(featureArm, ikArm, this.config.armIkStrength * ikResult.target.weight),
             ikActive: true,
             ikWeight: ikResult.target.weight,
+            ikSolverMode: "screen_space_ik",
             fallbackReason: null,
         };
     }
 
-    private solveArmIk(
+    private retargetWorldArmIk(
+        targets: SincroPoseArmTargetSnapshot,
+        side: "left" | "right",
+        featureArm: SincroPoseRetargetedArm,
+    ): SincroPoseRetargetedArm {
+        const ikResult = this.solveWorldArmIk(targets, side);
+        if (!ikResult.result) {
+            return {
+                ...featureArm,
+                fallbackReason: ikResult.fallbackReason,
+            };
+        }
+        const ikBlendWeight = this.config.armIkStrength * ikResult.result.weight;
+        return {
+            active: true,
+            ikActive: true,
+            ikWeight: ikResult.result.weight,
+            ikSolverMode: "world_3d_ik",
+            fallbackReason: ikResult.result.targetClamped ? "ik_target_clamped" : null,
+            upperArm: { x: 0, y: 0, z: 0 },
+            lowerArm: { x: 0, y: 0, z: 0 },
+            wrist: { ...featureArm.wrist },
+            upperArmQuaternion: blendQuaternion(
+                ikResult.result.neutralUpperArmQuaternion,
+                ikResult.result.upperArmQuaternion,
+                ikBlendWeight,
+            ),
+            lowerArmQuaternion: blendQuaternion(
+                ikResult.result.neutralLowerArmQuaternion,
+                ikResult.result.lowerArmQuaternion,
+                ikBlendWeight,
+            ),
+        };
+    }
+
+    private solveWorldArmIk(
+        targets: SincroPoseArmTargetSnapshot,
+        side: "left" | "right",
+    ): WorldArmIkSolveResult {
+        const solver = this.armIkSolvers?.[side];
+        if (!solver) {
+            return { result: null, fallbackReason: "ik_solver_missing" };
+        }
+        const gateReason = armWorldIkGateReason(targets);
+        if (gateReason) {
+            return { result: null, fallbackReason: gateReason };
+        }
+        const wrist = mapWorldTargetDeltaToVrm(
+            targets.shoulder,
+            targets.wrist,
+            solver.shoulderWidth * this.config.armIkTargetScale,
+        );
+        const elbowPole = mapWorldTargetDeltaToVrm(
+            targets.shoulder,
+            targets.elbow,
+            solver.shoulderWidth * this.config.armIkTargetScale,
+        );
+        const weight = MathUtils.clamp(
+            Math.min(
+                targets.shoulder.world.worldIkWeight,
+                targets.elbow.world.worldIkWeight,
+                targets.wrist.world.worldIkWeight,
+            ),
+            0,
+            1,
+        );
+        return {
+            result: solver.solve({ wrist, elbowPole, weight }),
+            fallbackReason: null,
+        };
+    }
+
+    private solveScreenSpaceArmIk(
         targets: SincroPoseArmTargetSnapshot,
         side: "left" | "right",
     ): ArmIkSolveResult {
-        const metrics = this.armRigMetrics?.[side];
-        if (!metrics) {
+        const solver = this.armIkSolvers?.[side];
+        if (!solver) {
             return {
                 target: null,
-                fallbackReason: "ik_rig_metrics_missing",
+                fallbackReason: "ik_solver_missing",
             };
         }
         const gateReason = armIkGateReason(targets);
@@ -418,14 +542,14 @@ export class SincroPoseRetargeter {
         );
 
         const sideSign = side === "left" ? -1 : 1;
-        const modelScale = metrics.shoulderWidth * this.config.armIkTargetScale;
+        const modelScale = solver.shoulderWidth * this.config.armIkTargetScale;
         const wristX = (targets.wrist.localX - targets.shoulder.localX) * modelScale;
         const wristY = (targets.wrist.localY - targets.shoulder.localY) * modelScale;
         const elbowX = (targets.elbow.localX - targets.shoulder.localX) * modelScale;
         const elbowY = (targets.elbow.localY - targets.shoulder.localY) * modelScale;
-        const maxReach = Math.max(metrics.upperArmLength + metrics.lowerArmLength, 0.01);
+        const maxReach = Math.max(solver.upperArmLength + solver.lowerArmLength, 0.01);
         const minReach = Math.max(
-            Math.abs(metrics.upperArmLength - metrics.lowerArmLength),
+            Math.abs(solver.upperArmLength - solver.lowerArmLength),
             maxReach * 0.18,
         );
         const reach = MathUtils.clamp(Math.hypot(wristX, wristY), minReach, maxReach * 0.98);
@@ -446,8 +570,8 @@ export class SincroPoseRetargeter {
             1,
         );
         const elbowCos = MathUtils.clamp(
-            (metrics.upperArmLength ** 2 + metrics.lowerArmLength ** 2 - reach ** 2) /
-                (2 * metrics.upperArmLength * metrics.lowerArmLength),
+            (solver.upperArmLength ** 2 + solver.lowerArmLength ** 2 - reach ** 2) /
+                (2 * solver.upperArmLength * solver.lowerArmLength),
             -1,
             1,
         );
@@ -476,6 +600,17 @@ export class SincroPoseRetargeter {
         this.smoothedFrame = smoothFrame(this.smoothedFrame, target, alpha);
         return cloneFrame(this.smoothedFrame);
     }
+
+    private solverProbeSnapshot(): SincroPoseRetargetFrame["solverProbe"] {
+        return {
+            ccdik: this.ccdIkProbeResult
+                ? {
+                      ...this.ccdIkProbeResult,
+                      notes: [...this.ccdIkProbeResult.notes],
+                  }
+                : null,
+        };
+    }
 }
 
 function positiveOnly(value: number): number {
@@ -492,6 +627,7 @@ function smoothFrame(
         confidence: MathUtils.lerp(current.confidence, target.confidence, alpha),
         ikMode: target.ikMode,
         fallbackReason: target.fallbackReason,
+        solverProbe: cloneSolverProbe(target.solverProbe),
         anchor: {
             active: target.anchor.active,
             weight: MathUtils.lerp(current.anchor.weight, target.anchor.weight, alpha),
@@ -530,10 +666,21 @@ function smoothArm(
         active: target.active,
         ikActive: target.ikActive,
         ikWeight: MathUtils.lerp(current.ikWeight, target.ikWeight, alpha),
+        ikSolverMode: target.ikSolverMode,
         fallbackReason: target.fallbackReason,
         upperArm: smoothVector(current.upperArm, target.upperArm, alpha),
         lowerArm: smoothVector(current.lowerArm, target.lowerArm, alpha),
         wrist: smoothVector(current.wrist, target.wrist, alpha),
+        upperArmQuaternion: smoothQuaternion(
+            current.upperArmQuaternion,
+            target.upperArmQuaternion,
+            alpha,
+        ),
+        lowerArmQuaternion: smoothQuaternion(
+            current.lowerArmQuaternion,
+            target.lowerArmQuaternion,
+            alpha,
+        ),
     };
 }
 
@@ -547,10 +694,54 @@ function blendArm(
         active: featureArm.active || ikArm.active,
         ikActive: ikArm.ikActive,
         ikWeight: ikArm.ikWeight,
+        ikSolverMode: ikArm.ikSolverMode,
         fallbackReason: ikArm.fallbackReason ?? featureArm.fallbackReason,
         upperArm: smoothVector(featureArm.upperArm, ikArm.upperArm, alpha),
         lowerArm: smoothVector(featureArm.lowerArm, ikArm.lowerArm, alpha),
         wrist: smoothVector(featureArm.wrist, ikArm.wrist, alpha),
+        upperArmQuaternion: ikArm.upperArmQuaternion,
+        lowerArmQuaternion: ikArm.lowerArmQuaternion,
+    };
+}
+
+function smoothQuaternion(
+    current: SincroArmIkQuaternion | null,
+    target: SincroArmIkQuaternion | null,
+    alpha: number,
+): SincroArmIkQuaternion | null {
+    if (!target) {
+        return null;
+    }
+    if (!current) {
+        return { ...target };
+    }
+    return serializeQuaternion(
+        deserializeQuaternion(current).slerp(deserializeQuaternion(target), alpha).normalize(),
+    );
+}
+
+function blendQuaternion(
+    from: SincroArmIkQuaternion,
+    to: SincroArmIkQuaternion,
+    alpha: number,
+): SincroArmIkQuaternion {
+    return serializeQuaternion(
+        deserializeQuaternion(from)
+            .slerp(deserializeQuaternion(to), MathUtils.clamp(alpha, 0, 1))
+            .normalize(),
+    );
+}
+
+function deserializeQuaternion(value: SincroArmIkQuaternion): Quaternion {
+    return new Quaternion(value.x, value.y, value.z, value.w);
+}
+
+function serializeQuaternion(quaternion: Quaternion): SincroArmIkQuaternion {
+    return {
+        x: quaternion.x,
+        y: quaternion.y,
+        z: quaternion.z,
+        w: quaternion.w,
     };
 }
 
@@ -583,6 +774,7 @@ function cloneFrame(frame: SincroPoseRetargetFrame): SincroPoseRetargetFrame {
         confidence: frame.confidence,
         ikMode: frame.ikMode,
         fallbackReason: frame.fallbackReason,
+        solverProbe: cloneSolverProbe(frame.solverProbe),
         anchor: {
             active: frame.anchor.active,
             weight: frame.anchor.weight,
@@ -605,10 +797,13 @@ function cloneArm(arm: SincroPoseRetargetedArm): SincroPoseRetargetedArm {
         active: arm.active,
         ikActive: arm.ikActive,
         ikWeight: arm.ikWeight,
+        ikSolverMode: arm.ikSolverMode,
         fallbackReason: arm.fallbackReason,
         upperArm: { ...arm.upperArm },
         lowerArm: { ...arm.lowerArm },
         wrist: { ...arm.wrist },
+        upperArmQuaternion: arm.upperArmQuaternion ? { ...arm.upperArmQuaternion } : null,
+        lowerArmQuaternion: arm.lowerArmQuaternion ? { ...arm.lowerArmQuaternion } : null,
     };
 }
 
@@ -626,6 +821,30 @@ function withFallbackReason(
             active: false,
             reason: fallbackReason,
         },
+        solverProbe: cloneSolverProbe(frame.solverProbe),
+    };
+}
+
+function cloneSolverProbe(
+    solverProbe: SincroPoseRetargetFrame["solverProbe"],
+): SincroPoseRetargetFrame["solverProbe"] {
+    return {
+        ccdik: solverProbe.ccdik
+            ? {
+                  ...solverProbe.ccdik,
+                  notes: [...solverProbe.ccdik.notes],
+              }
+            : null,
+    };
+}
+
+function withSolverProbe(
+    frame: SincroPoseRetargetFrame,
+    solverProbe: SincroPoseRetargetFrame["solverProbe"],
+): SincroPoseRetargetFrame {
+    return {
+        ...cloneFrame(frame),
+        solverProbe: cloneSolverProbe(solverProbe),
     };
 }
 
@@ -638,8 +857,48 @@ function withArmFallbackReason(
         active: false,
         ikActive: false,
         ikWeight: 0,
+        ikSolverMode: "none",
         fallbackReason,
     };
+}
+
+function armWorldIkGateReason(targets: SincroPoseArmTargetSnapshot): string | null {
+    if (!targets.shoulder.world.worldUsableForIk) {
+        return armWorldIkTargetReason("shoulder", targets.shoulder);
+    }
+    if (!targets.elbow.world.worldUsableForIk) {
+        return armWorldIkTargetReason("elbow", targets.elbow);
+    }
+    if (!targets.wrist.world.worldUsableForIk) {
+        return armWorldIkTargetReason("wrist", targets.wrist);
+    }
+    return null;
+}
+
+function armWorldIkTargetReason(
+    joint: "shoulder" | "elbow" | "wrist",
+    target: SincroPoseTargetPointSnapshot,
+): string {
+    if (!target.world.hasWorldCoordinates) {
+        return `world_ik_${joint}_${target.world.worldStaleReason ?? "missing"}`;
+    }
+    if (target.world.worldConfidence < MIN_STRONG_TARGET_CONFIDENCE) {
+        return `world_ik_${joint}_low_confidence`;
+    }
+    return `world_ik_${joint}_missing`;
+}
+
+function mapWorldTargetDeltaToVrm(
+    shoulder: SincroPoseTargetPointSnapshot,
+    target: SincroPoseTargetPointSnapshot,
+    scale: number,
+): Vector3 {
+    const deltaX = (target.world.normalizedX ?? 0) - (shoulder.world.normalizedX ?? 0);
+    const deltaY = (target.world.normalizedY ?? 0) - (shoulder.world.normalizedY ?? 0);
+    const deltaZ = (target.world.normalizedZ ?? 0) - (shoulder.world.normalizedZ ?? 0);
+    // MediaPipe world target はカメラ側の人物座標なので、左右と奥行きをVRM表示側へ反転する。
+    // Zは推定揺れが大きいため、横/縦より弱く使って肘の裏返りを抑える。
+    return new Vector3(-deltaX * scale, deltaY * scale, -deltaZ * scale * 0.72);
 }
 
 function armIkGateReason(targets: SincroPoseArmTargetSnapshot): string | null {
@@ -675,14 +934,11 @@ function ikModeForArms(
     leftArm: SincroPoseRetargetedArm,
     rightArm: SincroPoseRetargetedArm,
 ): SincroPoseIkMode {
-    if (leftArm.ikActive && rightArm.ikActive) {
-        return "both_ik";
+    if (leftArm.ikSolverMode === "world_3d_ik" || rightArm.ikSolverMode === "world_3d_ik") {
+        return "world_3d_ik";
     }
-    if (leftArm.ikActive) {
-        return "left_ik";
-    }
-    if (rightArm.ikActive) {
-        return "right_ik";
+    if (leftArm.ikSolverMode === "screen_space_ik" || rightArm.ikSolverMode === "screen_space_ik") {
+        return "screen_space_ik";
     }
     if (leftArm.active || rightArm.active) {
         return "feature_only";
@@ -690,41 +946,11 @@ function ikModeForArms(
     return "fallback";
 }
 
-function measureArmRigMetrics(vrm: VRM): Record<"left" | "right", ArmRigMetrics> | null {
-    vrm.scene.updateMatrixWorld(true);
-    const leftShoulder = getBoneWorldPosition(vrm, "leftUpperArm");
-    const rightShoulder = getBoneWorldPosition(vrm, "rightUpperArm");
-    const shoulderWidth =
-        leftShoulder && rightShoulder
-            ? Math.max(leftShoulder.distanceTo(rightShoulder), 0.08)
-            : 0.32;
-    const left = measureArmSide(vrm, "left", shoulderWidth);
-    const right = measureArmSide(vrm, "right", shoulderWidth);
+function measureArmIkSolvers(vrm: VRM): Record<"left" | "right", SincroArmIkSolver> | null {
+    const left = SincroArmIkSolver.fromVrm(vrm, "left");
+    const right = SincroArmIkSolver.fromVrm(vrm, "right");
     if (!left || !right) {
         return null;
     }
     return { left, right };
-}
-
-function measureArmSide(
-    vrm: VRM,
-    side: "left" | "right",
-    shoulderWidth: number,
-): ArmRigMetrics | null {
-    const upperArm = getBoneWorldPosition(vrm, `${side}UpperArm` as VRMHumanBoneName);
-    const lowerArm = getBoneWorldPosition(vrm, `${side}LowerArm` as VRMHumanBoneName);
-    const hand = getBoneWorldPosition(vrm, `${side}Hand` as VRMHumanBoneName);
-    if (!upperArm || !lowerArm || !hand) {
-        return null;
-    }
-    return {
-        upperArmLength: Math.max(upperArm.distanceTo(lowerArm), 0.04),
-        lowerArmLength: Math.max(lowerArm.distanceTo(hand), 0.04),
-        shoulderWidth,
-    };
-}
-
-function getBoneWorldPosition(vrm: VRM, name: VRMHumanBoneName): Vector3 | null {
-    const node = vrm.humanoid.getNormalizedBoneNode(name);
-    return node ? node.getWorldPosition(new Vector3()) : null;
 }

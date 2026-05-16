@@ -1,9 +1,10 @@
 import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
 import type { Object3D } from "three/src/core/Object3D.js";
 import { MathUtils } from "three/src/math/MathUtils.js";
+import { Quaternion } from "three/src/math/Quaternion.js";
 import type { CharacterBehaviorSnapshot } from "./CharacterBehaviorState";
 import { CHARACTER_IDLE_MOTION_CONFIG, sineWave } from "./CharacterMotionConfig";
-import type { SincroPoseRetargetFrame } from "./SincroPoseRetargeter";
+import type { SincroPoseRetargetedArm, SincroPoseRetargetFrame } from "./SincroPoseRetargeter";
 
 /*
     Humanoid bones: https://docs.unity3d.com/ja/2019.4/ScriptReference/HumanBodyBones.html
@@ -60,60 +61,73 @@ export class ArmBoneController {
         const leftIdleScale = poseControlsLeftArm ? 0.22 : 1;
         const rightIdleScale = poseControlsRightArm ? 0.22 : 1;
 
-        this.getNode("leftUpperArm")?.rotation.set(
-            MathUtils.degToRad(5) -
-                leftGesture *
-                    CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmLiftRad *
-                    expression.liftScale +
-                (pose?.leftArm.upperArm.x ?? 0),
-            leftGesture *
-                CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad *
-                expression.openScale +
-                (pose?.leftArm.upperArm.y ?? 0),
-            MathUtils.degToRad(-75) -
-                armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad * leftIdleScale -
+        const leftUpperArm = this.getNode("leftUpperArm");
+        const rightUpperArm = this.getNode("rightUpperArm");
+        const leftLowerArm = this.getNode("leftLowerArm");
+        const rightLowerArm = this.getNode("rightLowerArm");
+
+        if (!this.applyIkQuaternion(leftUpperArm, pose?.leftArm, "upper")) {
+            leftUpperArm?.rotation.set(
+                MathUtils.degToRad(5) -
+                    leftGesture *
+                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmLiftRad *
+                        expression.liftScale +
+                    (pose?.leftArm.upperArm.x ?? 0),
                 leftGesture *
                     CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad *
                     expression.openScale +
-                (pose?.leftArm.upperArm.z ?? 0),
-        );
-        this.getNode("rightUpperArm")?.rotation.set(
-            MathUtils.degToRad(5) -
-                rightGesture *
-                    CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmLiftRad *
-                    expression.liftScale +
-                (pose?.rightArm.upperArm.x ?? 0),
-            -rightGesture *
-                CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad *
-                expression.openScale +
-                (pose?.rightArm.upperArm.y ?? 0),
-            MathUtils.degToRad(75) +
-                armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad * rightIdleScale +
-                rightGesture *
+                    (pose?.leftArm.upperArm.y ?? 0),
+                MathUtils.degToRad(-75) -
+                    armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad * leftIdleScale -
+                    leftGesture *
+                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad *
+                        expression.openScale +
+                    (pose?.leftArm.upperArm.z ?? 0),
+            );
+        }
+        if (!this.applyIkQuaternion(rightUpperArm, pose?.rightArm, "upper")) {
+            rightUpperArm?.rotation.set(
+                MathUtils.degToRad(5) -
+                    rightGesture *
+                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmLiftRad *
+                        expression.liftScale +
+                    (pose?.rightArm.upperArm.x ?? 0),
+                -rightGesture *
                     CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad *
                     expression.openScale +
-                (pose?.rightArm.upperArm.z ?? 0),
-        );
-        this.getNode("leftLowerArm")?.rotation.set(
-            pose?.leftArm.lowerArm.x ?? 0,
-            MathUtils.degToRad(-15) -
-                elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad * leftIdleScale -
-                leftGesture *
-                    CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad *
-                    expression.flexScale +
-                (pose?.leftArm.lowerArm.y ?? 0),
-            MathUtils.degToRad(5) + (pose?.leftArm.lowerArm.z ?? 0),
-        );
-        this.getNode("rightLowerArm")?.rotation.set(
-            pose?.rightArm.lowerArm.x ?? 0,
-            MathUtils.degToRad(15) +
-                elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad * rightIdleScale +
-                rightGesture *
-                    CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad *
-                    expression.flexScale +
-                (pose?.rightArm.lowerArm.y ?? 0),
-            MathUtils.degToRad(-5) + (pose?.rightArm.lowerArm.z ?? 0),
-        );
+                    (pose?.rightArm.upperArm.y ?? 0),
+                MathUtils.degToRad(75) +
+                    armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad * rightIdleScale +
+                    rightGesture *
+                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad *
+                        expression.openScale +
+                    (pose?.rightArm.upperArm.z ?? 0),
+            );
+        }
+        if (!this.applyIkQuaternion(leftLowerArm, pose?.leftArm, "lower")) {
+            leftLowerArm?.rotation.set(
+                pose?.leftArm.lowerArm.x ?? 0,
+                MathUtils.degToRad(-15) -
+                    elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad * leftIdleScale -
+                    leftGesture *
+                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad *
+                        expression.flexScale +
+                    (pose?.leftArm.lowerArm.y ?? 0),
+                MathUtils.degToRad(5) + (pose?.leftArm.lowerArm.z ?? 0),
+            );
+        }
+        if (!this.applyIkQuaternion(rightLowerArm, pose?.rightArm, "lower")) {
+            rightLowerArm?.rotation.set(
+                pose?.rightArm.lowerArm.x ?? 0,
+                MathUtils.degToRad(15) +
+                    elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad * rightIdleScale +
+                    rightGesture *
+                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad *
+                        expression.flexScale +
+                    (pose?.rightArm.lowerArm.y ?? 0),
+                MathUtils.degToRad(-5) + (pose?.rightArm.lowerArm.z ?? 0),
+            );
+        }
 
         this.updateLeftHand(
             this.getNode("leftHand"),
@@ -129,6 +143,23 @@ export class ArmBoneController {
             pose?.rightArm.wrist.z ?? 0,
         );
         this.updateRightThumb(this.getNode("rightThumbProximal"), wristSway);
+    }
+
+    // 3D IK は到達位置を満たすため local quaternion を直接適用する。
+    // Euler 加算系の idle / speech gesture は同じ腕では弱め、手首だけ表情付けとして残す。
+    private applyIkQuaternion(
+        bone: Object3D | null,
+        arm: SincroPoseRetargetedArm | undefined,
+        segment: "upper" | "lower",
+    ): boolean {
+        const quaternion = segment === "upper" ? arm?.upperArmQuaternion : arm?.lowerArmQuaternion;
+        if (!bone || !isWorldIkArm(arm) || !quaternion) {
+            return false;
+        }
+        bone.quaternion.copy(
+            new Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w),
+        );
+        return true;
     }
 
     // 手指は末端まで再帰的に回転を入れて、握り込み気味の形を作る。
@@ -304,7 +335,6 @@ export class ArmBoneController {
                     flexScale: 0.42,
                     wristScale: 0.56,
                 };
-            case 0:
             default:
                 return {
                     intensityScale: 0.52,
@@ -324,3 +354,7 @@ type ArmSpeechExpressionProfile = {
     flexScale: number;
     wristScale: number;
 };
+
+function isWorldIkArm(arm: SincroPoseRetargetedArm | undefined): boolean {
+    return arm?.ikActive === true && arm.ikSolverMode === "world_3d_ik";
+}

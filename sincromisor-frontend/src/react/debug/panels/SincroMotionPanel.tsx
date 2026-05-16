@@ -4,7 +4,10 @@ import type {
     SincroPoseMotionSnapshot,
     SincroPoseTargetPointSnapshot,
 } from "../../../ts/FaceTracking/SincroPoseMotionSnapshot";
-import type { SincroPoseRetargetedArm } from "../../../ts/SincroVRM/VRMCharacter/SincroPoseRetargeter";
+import type {
+    SincroPoseArmIkMode,
+    SincroPoseRetargetedArm,
+} from "../../../ts/SincroVRM/VRMCharacter/SincroPoseRetargeter";
 import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
 import { RangeControl } from "../components/RangeControl";
 import { type DebugPanelProps, debugPanelClassName } from "../debugConsoleTypes";
@@ -89,6 +92,8 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                         </dd>
                         <dt>IK</dt>
                         <dd>{formatIkRuntime(poseRetargetRuntime)}</dd>
+                        <dt>CCDIK PoC</dt>
+                        <dd>{formatCcdIkProbe(poseRetargetRuntime)}</dd>
                         <dt>Anchor</dt>
                         <dd>{formatAnchorRuntime(poseRetargetRuntime)}</dd>
                         <dt>Confidence</dt>
@@ -118,6 +123,27 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                     </dl>
                     <details className="audioInlineDetails">
                         <summary>Pose retarget 調整</summary>
+                        <div className="audioControlGroup">
+                            <label className="audioControlLabel" htmlFor="sincroPoseRetargetIkMode">
+                                IK Mode
+                                <span>solver</span>
+                            </label>
+                            <select
+                                id="sincroPoseRetargetIkMode"
+                                className="audioControlSelect"
+                                value={poseRetarget.armIkMode}
+                                onChange={(event) =>
+                                    manager.applySincroPoseRetargetConfig({
+                                        ...poseRetarget,
+                                        armIkMode: event.currentTarget.value as SincroPoseArmIkMode,
+                                    })
+                                }
+                            >
+                                <option value="world_3d_ik">world 3D IK</option>
+                                <option value="screen_space_ik">screen-space IK</option>
+                                <option value="feature_only">feature only</option>
+                            </select>
+                        </div>
                         <RangeControl
                             id="sincroPoseRetargetIntensity"
                             label="Intensity"
@@ -333,8 +359,27 @@ function formatIkArmRuntime(label: "L" | "R", snapshot: SincroPoseRetargetedArm)
     if (!snapshot.ikActive) {
         return `${label} ${snapshot.fallbackReason ?? "feature"}`;
     }
-    const mode = snapshot.ikWeight >= 0.98 ? "full_ik" : "weak_ik";
+    const mode =
+        snapshot.ikSolverMode === "world_3d_ik"
+            ? "world_3d_ik"
+            : snapshot.ikSolverMode === "screen_space_ik"
+              ? "screen_ik"
+              : "ik";
     return `${label} ${mode} ${formatRatio(snapshot.ikWeight)}`;
+}
+
+function formatCcdIkProbe(
+    runtime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"],
+): string {
+    const probe = runtime.solverProbe.ccdik;
+    if (!probe) {
+        return "not measured";
+    }
+    const normalized = probe.normalizedChainInSkeleton
+        ? "normalized in skeleton"
+        : "normalized separate";
+    const raw = probe.rawChainInSkeleton ? "raw chain found" : "raw chain missing";
+    return `${probe.side} ${probe.status} (${probe.reason}) / meshes ${probe.skinnedMeshCount} / ${normalized} / ${raw}`;
 }
 
 function formatAnchorRuntime(
@@ -381,11 +426,15 @@ function formatLowerBodyTargets(snapshot: SincroPoseMotionSnapshot): string {
 
 function formatRetargetedArm(snapshot: SincroPoseRetargetedArm): string {
     const state = snapshot.ikActive
-        ? `ik ${formatRatio(snapshot.ikWeight)}`
+        ? `${snapshot.ikSolverMode} ${formatRatio(snapshot.ikWeight)}`
         : snapshot.active
           ? "feature"
           : `fallback ${snapshot.fallbackReason ?? "neutral"}`;
-    return `${state} / upper ${formatVector(snapshot.upperArm)} / lower ${formatVector(snapshot.lowerArm)} / wrist ${formatVector(snapshot.wrist)}`;
+    const quaternionState =
+        snapshot.upperArmQuaternion && snapshot.lowerArmQuaternion
+            ? ` / q upper ${formatQuaternion(snapshot.upperArmQuaternion)} / q lower ${formatQuaternion(snapshot.lowerArmQuaternion)}`
+            : "";
+    return `${state} / upper ${formatVector(snapshot.upperArm)} / lower ${formatVector(snapshot.lowerArm)} / wrist ${formatVector(snapshot.wrist)}${quaternionState}`;
 }
 
 function formatTargetPoint(snapshot: SincroPoseTargetPointSnapshot): string {
@@ -420,6 +469,10 @@ function formatRatio(value: number): string {
 
 function formatVector(value: { x: number; y: number; z: number }): string {
     return `${radToDeg(value.x).toFixed(1)}, ${radToDeg(value.y).toFixed(1)}, ${radToDeg(value.z).toFixed(1)}deg`;
+}
+
+function formatQuaternion(value: { x: number; y: number; z: number; w: number }): string {
+    return `${value.x.toFixed(2)}, ${value.y.toFixed(2)}, ${value.z.toFixed(2)}, ${value.w.toFixed(2)}`;
 }
 
 function radToDeg(value: number): number {
