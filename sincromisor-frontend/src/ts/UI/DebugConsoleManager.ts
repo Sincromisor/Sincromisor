@@ -17,6 +17,7 @@ import {
     type SincroPoseRetargetConfig,
     type SincroPoseRetargetFrame,
 } from "../SincroVRM/VRMCharacter/SincroPoseRetargeter";
+import type { SincroArmIkConstraintSnapshot } from "../SincroVRM/VRMCharacter/sincroArmIkConstraint";
 
 type AudioMeterHandle = {
     audioContext: AudioContext;
@@ -286,6 +287,17 @@ function createDefaultPoseMotionSnapshot(): SincroPoseMotionSnapshot {
     };
 }
 
+function createNeutralArmIkConstraint(): SincroArmIkConstraintSnapshot {
+    return {
+        reasons: [],
+        jointLimited: false,
+        poleStabilized: false,
+        collisionAvoided: false,
+        weightScale: 1,
+        targetPushDistance: 0,
+    };
+}
+
 function createDefaultSnapshot(): DebugConsoleSnapshot {
     return {
         audio: {
@@ -365,6 +377,7 @@ function createDefaultSnapshot(): DebugConsoleSnapshot {
                     ikWeight: 0,
                     fallbackReason: "neutral",
                     ikSolverMode: "none",
+                    constraint: createNeutralArmIkConstraint(),
                     upperArm: { x: 0, y: 0, z: 0 },
                     lowerArm: { x: 0, y: 0, z: 0 },
                     wrist: { x: 0, y: 0, z: 0 },
@@ -377,6 +390,7 @@ function createDefaultSnapshot(): DebugConsoleSnapshot {
                     ikWeight: 0,
                     fallbackReason: "neutral",
                     ikSolverMode: "none",
+                    constraint: createNeutralArmIkConstraint(),
                     upperArm: { x: 0, y: 0, z: 0 },
                     lowerArm: { x: 0, y: 0, z: 0 },
                     wrist: { x: 0, y: 0, z: 0 },
@@ -1144,12 +1158,20 @@ export class DebugConsoleManager {
                     },
                     leftArm: {
                         ...frame.leftArm,
+                        constraint: {
+                            ...frame.leftArm.constraint,
+                            reasons: [...frame.leftArm.constraint.reasons],
+                        },
                         upperArm: { ...frame.leftArm.upperArm },
                         lowerArm: { ...frame.leftArm.lowerArm },
                         wrist: { ...frame.leftArm.wrist },
                     },
                     rightArm: {
                         ...frame.rightArm,
+                        constraint: {
+                            ...frame.rightArm.constraint,
+                            reasons: [...frame.rightArm.constraint.reasons],
+                        },
                         upperArm: { ...frame.rightArm.upperArm },
                         lowerArm: { ...frame.rightArm.lowerArm },
                         wrist: { ...frame.rightArm.wrist },

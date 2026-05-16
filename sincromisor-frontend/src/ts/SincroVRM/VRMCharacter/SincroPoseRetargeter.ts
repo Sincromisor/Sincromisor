@@ -13,6 +13,7 @@ import {
     type SincroArmIkSolveResult,
     SincroArmIkSolver,
 } from "./SincroArmIkSolver";
+import type { SincroArmIkConstraintSnapshot } from "./sincroArmIkConstraint";
 import { runSincroCcdIkProbe, type SincroCcdIkProbeResult } from "./sincroCcdIkProbe";
 
 export type SincroPoseArmIkMode = "feature_only" | "screen_space_ik" | "world_3d_ik";
@@ -23,6 +24,7 @@ export type SincroPoseRetargetedArm = {
     ikWeight: number;
     ikSolverMode: SincroPoseArmIkMode | "none";
     fallbackReason: string | null;
+    constraint: SincroArmIkConstraintSnapshot;
     upperArm: { x: number; y: number; z: number };
     lowerArm: { x: number; y: number; z: number };
     wrist: { x: number; y: number; z: number };
@@ -100,6 +102,15 @@ export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
 
 const MIN_STRONG_TARGET_CONFIDENCE = 0.45;
 
+const NEUTRAL_ARM_IK_CONSTRAINT: SincroArmIkConstraintSnapshot = {
+    reasons: [],
+    jointLimited: false,
+    poleStabilized: false,
+    collisionAvoided: false,
+    weightScale: 1,
+    targetPushDistance: 0,
+};
+
 const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
     active: false,
     confidence: 0,
@@ -126,6 +137,7 @@ const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
         ikWeight: 0,
         ikSolverMode: "none",
         fallbackReason: "neutral",
+        constraint: { ...NEUTRAL_ARM_IK_CONSTRAINT },
         upperArm: { x: 0, y: 0, z: 0 },
         lowerArm: { x: 0, y: 0, z: 0 },
         wrist: { x: 0, y: 0, z: 0 },
@@ -138,6 +150,7 @@ const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
         ikWeight: 0,
         ikSolverMode: "none",
         fallbackReason: "neutral",
+        constraint: { ...NEUTRAL_ARM_IK_CONSTRAINT },
         upperArm: { x: 0, y: 0, z: 0 },
         lowerArm: { x: 0, y: 0, z: 0 },
         wrist: { x: 0, y: 0, z: 0 },
@@ -371,6 +384,7 @@ export class SincroPoseRetargeter {
             ikWeight: 0,
             ikSolverMode: "feature_only",
             fallbackReason: null,
+            constraint: cloneArmIkConstraint(NEUTRAL_ARM_IK_CONSTRAINT),
             upperArm: {
                 x: -positiveOnly(arm.upperArmLift) * this.config.upperArmLiftRad * scale,
                 y: sideSign * arm.upperArmOpen * this.config.upperArmOpenRad * scale,
@@ -421,6 +435,7 @@ export class SincroPoseRetargeter {
             ikWeight: ikResult.target.weight,
             ikSolverMode: "screen_space_ik",
             fallbackReason: null,
+            constraint: cloneArmIkConstraint(NEUTRAL_ARM_IK_CONSTRAINT),
             upperArm: {
                 x: -ikResult.target.lift * this.config.armIkMaxLiftRad * ikScale,
                 y: sideSign * ikResult.target.open * this.config.armIkMaxOpenRad * ikScale,
@@ -466,7 +481,10 @@ export class SincroPoseRetargeter {
             ikActive: true,
             ikWeight: ikResult.result.weight,
             ikSolverMode: "world_3d_ik",
-            fallbackReason: ikResult.result.targetClamped ? "ik_target_clamped" : null,
+            fallbackReason:
+                ikResult.result.constraint.reasons[0] ??
+                (ikResult.result.targetClamped ? "ik_target_clamped" : null),
+            constraint: cloneArmIkConstraint(ikResult.result.constraint),
             upperArm: { x: 0, y: 0, z: 0 },
             lowerArm: { x: 0, y: 0, z: 0 },
             wrist: { ...featureArm.wrist },
@@ -668,6 +686,7 @@ function smoothArm(
         ikWeight: MathUtils.lerp(current.ikWeight, target.ikWeight, alpha),
         ikSolverMode: target.ikSolverMode,
         fallbackReason: target.fallbackReason,
+        constraint: cloneArmIkConstraint(target.constraint),
         upperArm: smoothVector(current.upperArm, target.upperArm, alpha),
         lowerArm: smoothVector(current.lowerArm, target.lowerArm, alpha),
         wrist: smoothVector(current.wrist, target.wrist, alpha),
@@ -696,6 +715,7 @@ function blendArm(
         ikWeight: ikArm.ikWeight,
         ikSolverMode: ikArm.ikSolverMode,
         fallbackReason: ikArm.fallbackReason ?? featureArm.fallbackReason,
+        constraint: cloneArmIkConstraint(ikArm.constraint),
         upperArm: smoothVector(featureArm.upperArm, ikArm.upperArm, alpha),
         lowerArm: smoothVector(featureArm.lowerArm, ikArm.lowerArm, alpha),
         wrist: smoothVector(featureArm.wrist, ikArm.wrist, alpha),
@@ -799,6 +819,7 @@ function cloneArm(arm: SincroPoseRetargetedArm): SincroPoseRetargetedArm {
         ikWeight: arm.ikWeight,
         ikSolverMode: arm.ikSolverMode,
         fallbackReason: arm.fallbackReason,
+        constraint: cloneArmIkConstraint(arm.constraint),
         upperArm: { ...arm.upperArm },
         lowerArm: { ...arm.lowerArm },
         wrist: { ...arm.wrist },
@@ -859,6 +880,16 @@ function withArmFallbackReason(
         ikWeight: 0,
         ikSolverMode: "none",
         fallbackReason,
+        constraint: cloneArmIkConstraint(NEUTRAL_ARM_IK_CONSTRAINT),
+    };
+}
+
+function cloneArmIkConstraint(
+    constraint: SincroArmIkConstraintSnapshot,
+): SincroArmIkConstraintSnapshot {
+    return {
+        ...constraint,
+        reasons: [...constraint.reasons],
     };
 }
 

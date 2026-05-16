@@ -46,6 +46,9 @@
     - VRM normalized arm chain の neutral quaternion、腕長、肩幅、pole 方向をロード時に測定する。
     - 肩相対の wrist target と elbow pole target から upper/lower arm の local quaternion を返す。
     - 到達不能 target は腕長内へ clamp し、neutral からの最大角で急な反転を抑える。
+    - 肩の lift / open / depth、lower arm delta、elbow pole 反転を solver-side constraint として制限する。
+    - head sphere と chest ellipsoid の軽量 no-go zone で、hand target と forearm segment の深い貫通を抑える。
+    - constraint / collision 発火時は target の押し戻しと IK weight 減衰を優先し、入力 target の品質補正や外れ値除去は持たない。
 - `sincroCcdIkProbe`
     - Three.js 公式 addon `CCDIKSolver` と VRM raw / normalized bone の相性を見るための PoC 診断。
     - 左腕 raw skeleton chain に対して one-iteration smoke test を行い、結果を Debug Console の `CCDIK PoC` に表示する。
@@ -76,6 +79,7 @@
     - MediaPipe world target は入力 video と同じ左右を維持し、上下・奥行きを VRM 表示側へ反転する。Z は tracker 揺れを考慮して弱めに使う。
     - `SincroPoseRetargetedArm.ikWeight` は Debug Console で full IK と weak IK を切り分けるための runtime 値。
     - `SincroPoseRetargetedArm.ikSolverMode` は `feature_only` / `screen_space_ik` / `world_3d_ik` の切り分けを Debug Console に表示する。
+    - `SincroPoseRetargetedArm.constraint` は `joint_limited`、`elbow_pole_stabilized`、`head_collision_avoided`、`chest_no_go_zone`、`forearm_twist_limited` など、solver-side safety が効いた理由と weight scale を表示する。
     - `solverProbe.ccdik` は external solver 採用判断用の診断値であり、実際の腕姿勢には適用しない。
 - `motion-debug` snapshot
     - `pose`、`tracker`、`poseRetarget`、`poseRetargetRuntime`、camera readiness、render fps をまとめて返す。
@@ -86,6 +90,7 @@
 - 本流:
     - 自前 3D two-bone IK を維持し、`@pixiv/three-vrm` normalized bones に local quaternion を適用する。
     - 理由は ADR-260517 に記録する。
+    - 腕単体の人体的 constraint と head / chest no-go zone は solver 内の軽量 safety として扱い、full-body IK や物理 collision へ拡張しない。
 - 比較対象:
     - `CCDIKSolver` は `SkinnedMesh.skeleton.bones` の index を要求するため、normalized bone 直適用とは責務が合わない。
     - raw skeleton chain では PoC smoke test 可能だが、target bone の追加と normalized/raw pose bridge が必要になる。

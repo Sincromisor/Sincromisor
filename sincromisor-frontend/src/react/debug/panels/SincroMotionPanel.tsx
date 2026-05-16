@@ -365,7 +365,10 @@ function formatIkArmRuntime(label: "L" | "R", snapshot: SincroPoseRetargetedArm)
             : snapshot.ikSolverMode === "screen_space_ik"
               ? "screen_ik"
               : "ik";
-    return `${label} ${mode} ${formatRatio(snapshot.ikWeight)}`;
+    const constraint = formatArmConstraint(snapshot);
+    return constraint
+        ? `${label} ${mode} ${formatRatio(snapshot.ikWeight)} ${constraint}`
+        : `${label} ${mode} ${formatRatio(snapshot.ikWeight)}`;
 }
 
 function formatCcdIkProbe(
@@ -430,11 +433,24 @@ function formatRetargetedArm(snapshot: SincroPoseRetargetedArm): string {
         : snapshot.active
           ? "feature"
           : `fallback ${snapshot.fallbackReason ?? "neutral"}`;
+    const constraint = formatArmConstraint(snapshot);
     const quaternionState =
         snapshot.upperArmQuaternion && snapshot.lowerArmQuaternion
             ? ` / q upper ${formatQuaternion(snapshot.upperArmQuaternion)} / q lower ${formatQuaternion(snapshot.lowerArmQuaternion)}`
             : "";
-    return `${state} / upper ${formatVector(snapshot.upperArm)} / lower ${formatVector(snapshot.lowerArm)} / wrist ${formatVector(snapshot.wrist)}${quaternionState}`;
+    const constraintState = constraint ? ` / ${constraint}` : "";
+    return `${state}${constraintState} / upper ${formatVector(snapshot.upperArm)} / lower ${formatVector(snapshot.lowerArm)} / wrist ${formatVector(snapshot.wrist)}${quaternionState}`;
+}
+
+function formatArmConstraint(snapshot: SincroPoseRetargetedArm): string {
+    if (snapshot.constraint.reasons.length === 0) {
+        return "";
+    }
+    const push =
+        snapshot.constraint.targetPushDistance > 0
+            ? ` push ${snapshot.constraint.targetPushDistance.toFixed(3)}`
+            : "";
+    return `constraints ${snapshot.constraint.reasons.join(",")} weight ${formatRatio(snapshot.constraint.weightScale)}${push}`;
 }
 
 function formatTargetPoint(snapshot: SincroPoseTargetPointSnapshot): string {
