@@ -11,10 +11,16 @@ from .AmbiguityResolver import (
 from .ProperNounDictionary import ProperNounDictionary, ProperNounDictionaryEntry
 
 try:
-    from sudachipy import Dictionary, SplitMode
-except ImportError:  # pragma: no cover - dependency availability is verified in runtime env.
-    Dictionary = None
-    SplitMode = None
+    from sudachipy import Dictionary as _SudachiDictionary
+    from sudachipy import SplitMode as _SudachiSplitMode
+except (
+    ImportError
+):  # pragma: no cover - dependency availability is verified in runtime env.
+    SudachiDictionary: Any | None = None
+    SudachiSplitMode: Any | None = None
+else:
+    SudachiDictionary = _SudachiDictionary
+    SudachiSplitMode = _SudachiSplitMode
 
 
 @dataclass(frozen=True)
@@ -86,8 +92,10 @@ class RecognizerPostProcessor:
     ) -> None:
         # tokenizer を外から差し替えられるようにして、テストでは Sudachi 依存を弱める。
         self.proper_noun_dictionary = proper_noun_dictionary
-        self.tokenizer = tokenizer if tokenizer is not None else self._create_tokenizer()
-        self.split_mode = getattr(SplitMode, "C", None)
+        self.tokenizer = (
+            tokenizer if tokenizer is not None else self._create_tokenizer()
+        )
+        self.split_mode = getattr(SudachiSplitMode, "C", None)
         self.ambiguity_resolver = AmbiguityResolver()
 
     @property
@@ -176,13 +184,16 @@ class RecognizerPostProcessor:
 
     def _create_tokenizer(self) -> Any | None:
         """Sudachi が利用可能な環境では full 辞書で tokenizer を生成する。"""
-        if Dictionary is None:
+        if SudachiDictionary is None:
             return None
-        return Dictionary(dict="full").create()
+        return SudachiDictionary(dict="full").create()
 
     def _analyze_text(self, text: str) -> list[_AnalyzedMorpheme]:
         """認識テキストを、辞書照合に必要な読み付き形態素列へ変換する。"""
-        tokenized = self.tokenizer.tokenize(text, self.split_mode)
+        tokenizer = self.tokenizer
+        if tokenizer is None:
+            return []
+        tokenized = tokenizer.tokenize(text, self.split_mode)
         return [
             _AnalyzedMorpheme(
                 surface=morpheme.surface(),

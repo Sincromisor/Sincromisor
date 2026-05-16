@@ -26,7 +26,9 @@ class SpeechRecognizerNemo:
         self.transcribe_config: TranscribeConfig = TranscribeConfig()
         self.transcribe_config.verbose = False
         self.transcribe_config.raw_hypothesis = True
-        self.default_decoding_config: DictConfig = OmegaConf.create(self.model.cfg.decoding)
+        self.default_decoding_config: DictConfig = OmegaConf.create(
+            self.model.cfg.decoding
+        )
 
     def transcribe(self, audio: np.ndarray) -> TranscribeResult:
         """音声を1回推論し、NeMo の生 hypothesis を含む結果を返す。
@@ -37,7 +39,7 @@ class SpeechRecognizerNemo:
         Returns:
             TranscribeResult
         """
-        org_audio: AudioData = AudioData(audio, 16000)
+        org_audio: AudioData = AudioData(audio, 16000)  # ty: ignore[invalid-argument-type]  # reason: upstream ReazonSpeech annotates waveform as np.float32, but runtime expects ndarray / 解消条件: upstream 型定義修正後に削除
         # 学習・推論時の前提に合わせて正規化し、前後に少し余白を入れて認識を安定させる。
         padded_audio: AudioData = pad_audio(norm_audio(org_audio), self.PAD_SECONDS)
 
@@ -46,16 +48,20 @@ class SpeechRecognizerNemo:
         # https://github.com/NVIDIA/NeMo/blob/45a3b5cad3434692b1fb805934913d95be8668ea/nemo/collections/asr/parts/submodules/rnnt_beam_decoding.py#L871
 
         # return_best_hypothesis=False の場合は list[Hypothesis] を受け取る。
-        hyp: list[str] | list[Hypothesis] | tuple[list[str]] | tuple[list[Hypothesis]]  = self.model.transcribe(
-            padded_audio.waveform,
+        transcribe_output = self.model.transcribe(
+            padded_audio.waveform,  # ty: ignore[invalid-argument-type]  # reason: upstream ReazonSpeech annotates waveform as np.float32, but NeMo transcribe expects ndarray at runtime / 解消条件: upstream 型定義修正後に削除
             batch_size=1,
             return_hypotheses=True,
             partial_hypothesis=None,
             verbose=self.transcribe_config.verbose,
         )
-        hyp: str | Hypothesis | list[str] | list[Hypothesis] = hyp[0]
+        if not isinstance(transcribe_output, list | tuple) or not transcribe_output:
+            raise TypeError("NeMo transcribe returned an unexpected empty result.")
+        hyp = transcribe_output[0]
         # beam search を使う場合でも、まずは先頭候補を decode_hypothesis へ渡して基本結果を組み立てる。
-        primary_hypothesis: str | Hypothesis = hyp[0] if isinstance(hyp, list) else hyp
+        primary_hypothesis = hyp[0] if isinstance(hyp, list) else hyp
+        if not isinstance(primary_hypothesis, str | Hypothesis):
+            raise TypeError("NeMo transcribe returned an unsupported hypothesis type.")
         ts_result: TranscribeResult = decode_hypothesis(self.model, primary_hypothesis)
 
         if self.transcribe_config.raw_hypothesis:
@@ -139,11 +145,19 @@ class SpeechRecognizerNemo:
 
         if isinstance(hypothesis, list):
             # N-best のスパイクでは Hypothesis 配列をそのまま score 付き候補列へ変換する。
-            return [(hyp.text or "", hyp.score) for hyp in hypothesis]
+            candidates: list[tuple[str, float]] = []
+            for hyp in hypothesis:
+                if not isinstance(hyp, Hypothesis):
+                    raise TypeError("N-best hypothesis must contain Hypothesis values.")
+                candidates.append((hyp.text or "", hyp.score))
+            return candidates
 
         # 通常推論では単一 hypothesis を1件だけ返す。
-        hyp: Hypothesis = hypothesis  # ty:ignore[invalid-assignment]
+        if not isinstance(hypothesis, Hypothesis):
+            raise TypeError("Single hypothesis must be a Hypothesis value.")
+        hyp = hypothesis
         return [(hyp.text or ts_result.text, hyp.score)]
+
 
 if __name__ == "__main__":
     from pprint import pprint

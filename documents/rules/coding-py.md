@@ -36,7 +36,7 @@ PoC では下記 2 軸を最優先する。
 | Lint                         | **Ruff**                          |
 | フォーマッタ (Python)        | **Ruff format**                   |
 | フォーマッタ (Markdown)      | **Prettier**(`*.md` のみスコープ) |
-| 型チェック                   | **ty** / **mypy**                 |
+| 型チェック                   | **ty**                            |
 | テスト                       | **pytest**                        |
 | パッケージ / 仮想環境 / 実行 | **uv**                            |
 
@@ -44,9 +44,8 @@ PoC では下記 2 軸を最優先する。
 - コミット前の確認項目:
     1. `uv run ruff check .`
     2. `uv run ruff format --check .`
-    3. `uv run ty check .`
-    4. `uv run mypy .`(mypy 設定が整っていない範囲は、対象 package 単位で実行)
-    5. `uv run pytest`(変更レイヤ。重い統合テストは対象を絞る)
+    3. `uv run --group dev --group full ty check .`
+    4. `uv run pytest`(変更レイヤ。重い統合テストは対象を絞る)
 - lint 警告を局所的に抑制する場合は `# noqa: <rule>  # reason: <理由>` を付ける(本書 §0 の `# reason:` ルールに準ずる)
 - ty の警告を局所的に抑制する場合は `# ty: ignore[rule]  # reason: <理由> / 解消条件: <条件>` を付ける
 - formatter の出力と衝突する手整形をしない。import の並び順も Ruff/isort に任せる
@@ -54,7 +53,7 @@ PoC では下記 2 軸を最優先する。
 
 **Why**: lint と format の取りこぼしは手動チェックでは必ず発生し、後で大量修正の負債になる。Ruff は Python の lint + format + import 整列を単一ツールで扱えるため、設定の分散を避けられる。
 
-**How to apply**: 既存コードに警告が残る場合は、変更した package から警告ゼロに寄せる。CI 整備フェーズで `uv run ruff check .` / `uv run ruff format --check .` / `uv run ty check .` / `uv run mypy .` / `uv run pytest` を自動化する。
+**How to apply**: 既存コードに警告が残る場合は、変更した package から警告ゼロに寄せる。CI 整備フェーズで `uv run ruff check .` / `uv run ruff format --check .` / `uv run --group dev --group full ty check .` / `uv run pytest` を自動化する。
 
 ## 3. エラーハンドリング
 

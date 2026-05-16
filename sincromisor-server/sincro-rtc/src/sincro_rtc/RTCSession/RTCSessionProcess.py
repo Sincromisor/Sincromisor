@@ -67,7 +67,9 @@ class RTCSessionProcess(Process):
 
     async def __add_ice_candidate(self, candidate: dict | None) -> None:
         if self.__vcs is None:
-            self.__logger.warning("ICE candidate ignored: session is not initialized yet.")
+            self.__logger.warning(
+                "ICE candidate ignored: session is not initialized yet."
+            )
             return
         if candidate is None:
             # nullはend-of-candidates。aiortcにもNoneで明示的に渡す。
@@ -147,9 +149,7 @@ class RTCSessionProcess(Process):
         except Exception:
             error_message = traceback.format_exc()
             self.__logger.error(
-                (
-                    f"Failed to update offer in existing session.\n{error_message}"
-                ),
+                (f"Failed to update offer in existing session.\n{error_message}"),
             )
             self.__server_sdp_pipe.send(
                 {
@@ -176,7 +176,7 @@ class RTCSessionProcess(Process):
         return ice_servers
 
     def __init_peer(self) -> None:
-        self.__vcs = RTCVoiceChatSession(
+        vcs = RTCVoiceChatSession(
             peer=RTCPeerConnection(
                 configuration=RTCConfiguration(iceServers=self.__get_ice_servers()),
             ),
@@ -187,17 +187,18 @@ class RTCSessionProcess(Process):
             session_id=self.__session_id,
             talk_mode=self.__request_talk_mode,
         )
+        self.__vcs = vcs
         setproctitle(f"RTCSes[{self.__session_id[21:26]}]")
         self.relay = MediaRelay()
 
-        @self.__vcs.peer.on("datachannel")
+        @vcs.peer.on("datachannel")
         def on_datachannel(channel: RTCDataChannel):
             self.__logger.info(f"on_datachannel - {channel.label}")
             match channel.label:
                 case "telop_ch":
-                    self.__vcs.telop_ch = channel
+                    vcs.telop_ch = channel
                 case "text_ch":
-                    self.__vcs.text_ch = channel
+                    vcs.text_ch = channel
                 case _:
                     # 想定していないDataChannelが存在した場合
                     self.__rtc_finalize_event.set()
@@ -207,35 +208,37 @@ class RTCSessionProcess(Process):
             def on_message(message):
                 self.__logger.info(f"on_message - {channel.label} {message}")
 
-        @self.__vcs.peer.on("connectionstatechange")
+        @vcs.peer.on("connectionstatechange")
         async def on_connectionstatechange():
             self.__logger.info(
-                f"on_connectionstatechange - {self.__vcs.peer.connectionState}",
+                f"on_connectionstatechange - {vcs.peer.connectionState}",
             )
-            if self.__vcs.peer.connectionState == "failed":
+            if vcs.peer.connectionState == "failed":
                 self.__rtc_finalize_event.set()
-                await self.__vcs.close()
-            elif self.__vcs.peer.connectionState == "closed":
+                await vcs.close()
+            elif vcs.peer.connectionState == "closed":
                 self.__rtc_finalize_event.set()
 
-        @self.__vcs.peer.on("track")
+        @vcs.peer.on("track")
         def on_track(track):
             self.__logger.info(f"Track {track.kind} received.")
             if track.kind == "audio":
                 # 既存トランシーバ利用で再Offerが来るため、音声変換トラックは初回のみ追加する。
-                if self.__vcs.audio_transform_track is None:
-                    self.__vcs.audio_transform_track = VoiceTransformTrack(
+                if vcs.audio_transform_track is None:
+                    vcs.audio_transform_track = VoiceTransformTrack(
                         track=self.relay.subscribe(track),
-                        vcs=self.__vcs,
+                        vcs=vcs,
                         rtc_finalize_event=self.__rtc_finalize_event,
                         consul_agent_host=self.__consul_agent_host,
                         consul_agent_port=self.__consul_agent_port,
                         fallback_host=self.__fallback_host,
                         fallback_port=self.__fallback_port,
                     )
-                    self.__vcs.peer.addTrack(self.__vcs.audio_transform_track)
+                    vcs.peer.addTrack(vcs.audio_transform_track)
                 else:
-                    self.__logger.info("audio track already initialized. keep existing transform track.")
+                    self.__logger.info(
+                        "audio track already initialized. keep existing transform track."
+                    )
             else:
                 # 想定していないトラックが来た時はMediaBlackholeに投げないと、
                 # メモリリークしまくる模様。
