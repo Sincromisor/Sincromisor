@@ -63,6 +63,9 @@ export function applySincroAppSettingsPartial(
     if (partial.enableSincroPoseTracking != null) {
         dialogManager.setEnableSincroPoseTracking(partial.enableSincroPoseTracking);
     }
+    if (partial.forceSincroPoseTracking != null) {
+        dialogManager.setForceSincroPoseTracking(partial.forceSincroPoseTracking);
+    }
     if (partial.enableAutoMute != null) {
         dialogManager.setEnableAutoMute(partial.enableAutoMute);
     }

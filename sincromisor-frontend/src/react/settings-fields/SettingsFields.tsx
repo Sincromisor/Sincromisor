@@ -49,6 +49,8 @@ export const settingHelp = {
         "カメラから顔の向きや視線を読み取ります。顔の向きに合わせた演出や自動ミュートを使いたい時にオンにします。",
     enableSincroPoseTracking:
         "sincro で肩・上半身・腕の動きを低振幅で反映します。重い時や姿勢検出が不安定な時はオフにできます。",
+    forceSincroPoseTracking:
+        "低性能端末でのデバッグ用です。姿勢推論が遅くても face-only へ自動降格せず、PoseLandmarker の出力を観測し続けます。",
     enableAutoMute:
         "顔の向きに合わせて自動でミュートを切り替えます。展示やハンズフリー運用で、話していない時を静かにしたい場面に向いています。",
     characterMotionScale:
@@ -376,6 +378,19 @@ export function CharacterDisplayToggles({
                     checked={!!settings.enableSincroPoseTracking}
                     disabled={!settings.enableCharacter || !settings.enableCharacterGaze}
                     onChange={(checked) => onApplySettings({ enableSincroPoseTracking: checked })}
+                />
+                <SettingsToggle
+                    density={toggleDensity}
+                    label="姿勢を強制継続"
+                    help={settingHelp.forceSincroPoseTracking}
+                    checked={!!settings.forceSincroPoseTracking}
+                    disabled={
+                        uiState.forceSincroPoseTrackingDisabled ||
+                        !settings.enableCharacter ||
+                        !settings.enableCharacterGaze ||
+                        !settings.enableSincroPoseTracking
+                    }
+                    onChange={(checked) => onApplySettings({ forceSincroPoseTracking: checked })}
                 />
                 <SettingsToggle
                     density={toggleDensity}

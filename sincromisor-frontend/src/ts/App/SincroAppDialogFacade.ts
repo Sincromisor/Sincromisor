@@ -28,6 +28,7 @@ export type SincroAppDialogFacade = {
     enableTalk(): boolean;
     enableCharacterGaze(): boolean;
     enableSincroPoseTracking(): boolean;
+    forceSincroPoseTracking(): boolean;
     enableAutoMute(): boolean;
     enableNoiseSuppression(): boolean;
     enableEchoCancellation(): boolean;
@@ -51,6 +52,7 @@ export type SincroAppDialogFacade = {
     setEnableTalk(enabled: boolean): void;
     setEnableCharacterGaze(enabled: boolean): void;
     setEnableSincroPoseTracking(enabled: boolean): void;
+    setForceSincroPoseTracking(enabled: boolean): void;
     setEnableAutoMute(enabled: boolean): void;
     setEnableInspector(enabled: boolean): void;
     setEnableVR(enabled: boolean): void;

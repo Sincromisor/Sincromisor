@@ -7,6 +7,7 @@ export type DialogSettingKey =
     | "enableTalk"
     | "enableCharacterGaze"
     | "enableSincroPoseTracking"
+    | "forceSincroPoseTracking"
     | "enableAutoMute"
     | "enableNoiseSuppression"
     | "enableEchoCancellation"
@@ -30,6 +31,7 @@ type DialogSettingValueMap = {
     enableTalk: boolean;
     enableCharacterGaze: boolean;
     enableSincroPoseTracking: boolean;
+    forceSincroPoseTracking: boolean;
     enableAutoMute: boolean;
     enableNoiseSuppression: boolean;
     enableEchoCancellation: boolean;
@@ -52,6 +54,7 @@ type DialogSettingDisabledMap = {
     enableTalk: boolean;
     enableCharacterGaze: boolean;
     enableSincroPoseTracking: boolean;
+    forceSincroPoseTracking: boolean;
     enableAutoMute: boolean;
     enableNoiseSuppression: boolean;
     enableEchoCancellation: boolean;
@@ -87,6 +90,7 @@ export class DialogStateStore {
         enableTalk: true,
         enableCharacterGaze: true,
         enableSincroPoseTracking: true,
+        forceSincroPoseTracking: false,
         enableAutoMute: false,
         enableNoiseSuppression: true,
         enableEchoCancellation: true,
@@ -108,6 +112,7 @@ export class DialogStateStore {
         enableTalk: false,
         enableCharacterGaze: true,
         enableSincroPoseTracking: false,
+        forceSincroPoseTracking: false,
         enableAutoMute: true,
         enableNoiseSuppression: false,
         enableEchoCancellation: false,

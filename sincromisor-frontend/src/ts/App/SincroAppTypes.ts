@@ -28,6 +28,7 @@ export type SincroAppSettingsSnapshot = {
     enableTalk: boolean;
     enableCharacterGaze: boolean;
     enableSincroPoseTracking: boolean;
+    forceSincroPoseTracking: boolean;
     enableAutoMute: boolean;
     enableNoiseSuppression: boolean;
     enableEchoCancellation: boolean;
