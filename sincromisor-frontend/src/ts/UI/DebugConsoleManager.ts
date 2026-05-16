@@ -199,10 +199,18 @@ type SincroMotionSnapshot = {
         | "armIkMaxLiftRad"
         | "armIkMaxOpenRad"
         | "armIkMaxForearmFlexRad"
+        | "armIkMode"
     >;
     poseRetargetRuntime: Pick<
         SincroPoseRetargetFrame,
-        "active" | "confidence" | "ikMode" | "fallbackReason" | "anchor" | "leftArm" | "rightArm"
+        | "active"
+        | "confidence"
+        | "ikMode"
+        | "fallbackReason"
+        | "solverProbe"
+        | "anchor"
+        | "leftArm"
+        | "rightArm"
     >;
 };
 
@@ -335,12 +343,16 @@ function createDefaultSnapshot(): DebugConsoleSnapshot {
                 armIkMaxLiftRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxLiftRad,
                 armIkMaxOpenRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxOpenRad,
                 armIkMaxForearmFlexRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxForearmFlexRad,
+                armIkMode: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMode,
             },
             poseRetargetRuntime: {
                 active: false,
                 confidence: 0,
                 ikMode: "fallback",
                 fallbackReason: "neutral",
+                solverProbe: {
+                    ccdik: null,
+                },
                 anchor: {
                     active: false,
                     weight: 0,
@@ -352,18 +364,24 @@ function createDefaultSnapshot(): DebugConsoleSnapshot {
                     ikActive: false,
                     ikWeight: 0,
                     fallbackReason: "neutral",
+                    ikSolverMode: "none",
                     upperArm: { x: 0, y: 0, z: 0 },
                     lowerArm: { x: 0, y: 0, z: 0 },
                     wrist: { x: 0, y: 0, z: 0 },
+                    upperArmQuaternion: null,
+                    lowerArmQuaternion: null,
                 },
                 rightArm: {
                     active: false,
                     ikActive: false,
                     ikWeight: 0,
                     fallbackReason: "neutral",
+                    ikSolverMode: "none",
                     upperArm: { x: 0, y: 0, z: 0 },
                     lowerArm: { x: 0, y: 0, z: 0 },
                     wrist: { x: 0, y: 0, z: 0 },
+                    upperArmQuaternion: null,
+                    lowerArmQuaternion: null,
                 },
             },
         },
@@ -1110,6 +1128,14 @@ export class DebugConsoleManager {
                     confidence: frame.confidence,
                     ikMode: frame.ikMode,
                     fallbackReason: frame.fallbackReason,
+                    solverProbe: {
+                        ccdik: frame.solverProbe.ccdik
+                            ? {
+                                  ...frame.solverProbe.ccdik,
+                                  notes: [...frame.solverProbe.ccdik.notes],
+                              }
+                            : null,
+                    },
                     anchor: {
                         active: frame.anchor.active,
                         weight: frame.anchor.weight,
@@ -1190,6 +1216,7 @@ export class DebugConsoleManager {
                         0,
                         Math.PI / 2,
                     ),
+                    armIkMode: config.armIkMode ?? snapshot.sincroMotion.poseRetarget.armIkMode,
                 },
             },
         }));
