@@ -155,7 +155,11 @@ export class DialogStateStore {
         this.dialogUiState = { ...this.dialogUiState, isOpen };
     }
 
-    setDialogStartButtonState(startButtonDisabled: boolean, startButtonText: string, startButtonHint: string | null = null): void {
+    setDialogStartButtonState(
+        startButtonDisabled: boolean,
+        startButtonText: string,
+        startButtonHint: string | null = null,
+    ): void {
         this.dialogUiState = {
             ...this.dialogUiState,
             startButtonDisabled,

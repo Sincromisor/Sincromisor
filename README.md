@@ -7,39 +7,39 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
 
 ## 必要なもの
 
-* サーバー側
-  * Linuxサーバー(x86_64)
-  * Transformersが動作するNVIDIA GPU
-    * シンクロモード: VRAM 4GB(nemo)、8GB(nue)。
-    * チャットモード: 追加で8GB程度、合計16GB以上のVRAMが必要(Dify用)
-  * [Docker Engine](https://docs.docker.com/engine/install/ubuntu/)
-  * [NVIDIA Driver(nvidia-open)](https://www.nvidia.com/en-us/drivers/)
-  * [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
-* クライアント側
-  * GPUがそこそこの性能のPC、スマートフォン、タブレット
-  * マイク
-  * カメラ
-  * Webブラウザ
-  * かわいいVRM-1.0モデル
+- サーバー側
+    - Linuxサーバー(x86_64)
+    - Transformersが動作するNVIDIA GPU
+        - シンクロモード: VRAM 4GB(nemo)、8GB(nue)。
+        - チャットモード: 追加で8GB程度、合計16GB以上のVRAMが必要(Dify用)
+    - [Docker Engine](https://docs.docker.com/engine/install/ubuntu/)
+    - [NVIDIA Driver(nvidia-open)](https://www.nvidia.com/en-us/drivers/)
+    - [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+- クライアント側
+    - GPUがそこそこの性能のPC、スマートフォン、タブレット
+    - マイク
+    - カメラ
+    - Webブラウザ
+    - かわいいVRM-1.0モデル
 
 ## 検証済み環境
 
-* サーバー側(シンクロモード)
-  * ubuntu 24.04
-    * Core i5-12600K
-    * RTX3060(12GB)
-    * DDR4-3200 64GB
+- サーバー側(シンクロモード)
+    - ubuntu 24.04
+        - Core i5-12600K
+        - RTX3060(12GB)
+        - DDR4-3200 64GB
 
-* サーバー側(チャットモード)
-  * ubuntu 24.04
-    * Core i5-14500
-    * RTX4060Ti(16GB)
-    * DDR5-5600 64GB
+- サーバー側(チャットモード)
+    - ubuntu 24.04
+        - Core i5-14500
+        - RTX4060Ti(16GB)
+        - DDR5-5600 64GB
 
-* クライアント側
-  * Windows 11(Ryzen 2500U)
-  * Pixel 6
-  * iPad Air(gen3)
+- クライアント側
+    - Windows 11(Ryzen 2500U)
+    - Pixel 6
+    - iPad Air(gen3)
 
 ## とにかくローカル環境でサーバーを動かす
 
@@ -76,9 +76,9 @@ $ docker compose --profile full up -d
 
 通常利用ではトップページから次の導線を使います。
 
-* `Simple Interface (VRM 1.0)`: 通常会話の正規導線
-* `360deg Camera (VRM 1.0)`: 360 動画/カメラ向けの experimental 導線
-* `Looking Glass (VRM 1.0 / Three.js)`: [Looking Glass](https://lookingglassfactory.com/looking-glass-portrait) 向けの experimental 導線
+- `Simple Interface (VRM 1.0)`: 通常会話の正規導線
+- `360deg Camera (VRM 1.0)`: 360 動画/カメラ向けの experimental 導線
+- `Looking Glass (VRM 1.0 / Three.js)`: [Looking Glass](https://lookingglassfactory.com/looking-glass-portrait) 向けの experimental 導線
 
 `sincromisor-frontend/package.json` では、`npm run build` が `tsc -p tsconfig.modern.json && vite build` に対応しており、通常ビルドでは `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` を出力します。
 
@@ -120,17 +120,17 @@ Sincromisor,しんくろみそーる,200,product,true,false
 3. 作成した CSV を `volumes/proper-noun-dictionaries/` 配下へ置きます。
    たとえば `volumes/proper-noun-dictionaries/proper_nouns.csv` のようなパスにします。
 
-   `speech-recognizer` コンテナは非rootユーザーで動作するため、権限が厳しすぎると
-   辞書を読めません。配置後に次のスクリプトで権限を整えておくのを推奨します。
+    `speech-recognizer` コンテナは非rootユーザーで動作するため、権限が厳しすぎると
+    辞書を読めません。配置後に次のスクリプトで権限を整えておくのを推奨します。
 
 ```sh
 $ ./utils/setup/proper_noun_dictionary.sh
 ```
 
-   このスクリプトは `volumes/proper-noun-dictionaries/` 配下を
-   `directory=755`、`file=644` にそろえます。あわせて `.csv` の先頭行を確認し、
-   `surface,yomi,priority,category,enabled,ambiguous` ヘッダが無ければ自動で補います。
-   個別パスを指定することもできます。
+このスクリプトは `volumes/proper-noun-dictionaries/` 配下を
+`directory=755`、`file=644` にそろえます。あわせて `.csv` の先頭行を確認し、
+`surface,yomi,priority,category,enabled,ambiguous` ヘッダが無ければ自動で補います。
+個別パスを指定することもできます。
 
 ```sh
 $ ./utils/setup/proper_noun_dictionary.sh volumes/proper-noun-dictionaries/proper_nouns.csv
@@ -168,7 +168,6 @@ $ docker compose logs speech-recognizer
 `volumes/proper-noun-dictionaries` 配下のファイル配置、ディレクトリ/ファイル権限
 （`755/644`）を見直してください。
 
-
 ## チャットモードを利用する
 
 チャットモードで利用したい時は、別途[Dify](https://dify.ai/jp)が必要となります。
@@ -189,21 +188,21 @@ SINCRO_PROCESSOR_DIFY_TOKEN=app-W3Ef43iyPCBVfz47UDwGTHKU
 
 この機能は **Dify側のプロンプト設定が必須** です。設定されていない場合、応答本文は表示されますが表情は変化しません。
 
-* 感情コード（応答先頭に1回だけ出力）
-  * `^0` = 標準（neutral）
-  * `^1` = 楽しい（relaxed）
-  * `^2` = 悲しい（sad）
-  * `^3` = 怒り（angry）
-  * `^4` = 喜び（happy）
-  * `^5` = 驚き（surprised）
+- 感情コード（応答先頭に1回だけ出力）
+    - `^0` = 標準（neutral）
+    - `^1` = 楽しい（relaxed）
+    - `^2` = 悲しい（sad）
+    - `^3` = 怒り（angry）
+    - `^4` = 喜び（happy）
+    - `^5` = 驚き（surprised）
 
-* 出力例
+- 出力例
 
 ```txt
 ^4それはいいですね。すぐに試してみましょう。
 ```
 
-* Dify/LLMへの指示例（そのまま利用可）
+- Dify/LLMへの指示例（そのまま利用可）
 
 ```txt
 重要: 各応答の先頭に、感情コードを必ず1回だけ付けてください。
@@ -226,8 +225,9 @@ SINCRO_PROCESSOR_DIFY_TOKEN=app-W3Ef43iyPCBVfz47UDwGTHKU
 ```
 
 注意:
-* `^N` はサーバー側で自動的に除去されるため、通常はチャット表示や音声合成には含まれません。
-* `text-processor` / `sincro-rtc` のどちらか片方だけ更新すると、表情コードが `text_ch` へ伝搬しない場合があります。通信仕様変更を含むため、関連コンテナを合わせて再デプロイしてください。
+
+- `^N` はサーバー側で自動的に除去されるため、通常はチャット表示や音声合成には含まれません。
+- `text-processor` / `sincro-rtc` のどちらか片方だけ更新すると、表情コードが `text_ch` へ伝搬しない場合があります。通信仕様変更を含むため、関連コンテナを合わせて再デプロイしてください。
 
 ## 処理を分散させる
 
@@ -257,8 +257,8 @@ obs64.exe --enable-media-stream ^
 Google Chromeの設定を変えると、Chromium Embedded Framework側にも反映されます。
 カメラについては、OBSで利用するカメラやキャプチャーボードと重複すると動作しなくなるので注意してください。
 
-* <chrome://settings/content/camera>
-* [chrome://settings/content/microphone](chrome://settings/content/camera)
+- <chrome://settings/content/camera>
+- [chrome://settings/content/microphone](chrome://settings/content/camera)
 
 ## 音声認識・合成をコマンドラインで使いたい
 

@@ -1,4 +1,4 @@
-import { MathUtils } from 'three/src/math/MathUtils.js';
+import { MathUtils } from "three/src/math/MathUtils.js";
 
 export type CharacterMotionTuning = {
     motionScale: number;

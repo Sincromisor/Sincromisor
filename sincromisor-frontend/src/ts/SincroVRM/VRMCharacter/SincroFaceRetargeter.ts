@@ -87,7 +87,7 @@ export const DEFAULT_SINCRO_FACE_RETARGET_CONFIG: SincroFaceRetargetConfig = {
     headBoneWeights: {
         upperChest: 0.18,
         neck: 0.52,
-        head: 0.30,
+        head: 0.3,
     },
 };
 
@@ -159,14 +159,22 @@ export class SincroFaceRetargeter {
     }
 
     retarget(snapshot: SincroFaceMotionSnapshot, nowMs: number): SincroFaceRetargetFrame {
-        const deltaMs = this.lastUpdateAtMs == null
-            ? 1000 / 60
-            : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
+        const deltaMs =
+            this.lastUpdateAtMs == null
+                ? 1000 / 60
+                : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
         this.lastUpdateAtMs = nowMs;
 
         if (!this.snapshotIsUsable(snapshot)) {
             this.neutralStartedAtMs = null;
-            return this.smoothFrame(false, 0, NEUTRAL_HEAD, NEUTRAL_EXPRESSIONS, deltaMs, this.config.returnToNeutralMs);
+            return this.smoothFrame(
+                false,
+                0,
+                NEUTRAL_HEAD,
+                NEUTRAL_EXPRESSIONS,
+                deltaMs,
+                this.config.returnToNeutralMs,
+            );
         }
 
         this.updateNeutral(snapshot, nowMs);
@@ -184,9 +192,11 @@ export class SincroFaceRetargeter {
     }
 
     private snapshotIsUsable(snapshot: SincroFaceMotionSnapshot): boolean {
-        return snapshot.trackingEnabled
-            && snapshot.detected
-            && snapshot.confidence >= this.config.minConfidence;
+        return (
+            snapshot.trackingEnabled &&
+            snapshot.detected &&
+            snapshot.confidence >= this.config.minConfidence
+        );
     }
 
     private updateNeutral(snapshot: SincroFaceMotionSnapshot, nowMs: number): void {
@@ -203,7 +213,11 @@ export class SincroFaceRetargeter {
             return;
         }
 
-        const alpha = MathUtils.clamp((nowMs - this.neutralStartedAtMs) / this.config.neutralLearningMs, 0.08, 0.35);
+        const alpha = MathUtils.clamp(
+            (nowMs - this.neutralStartedAtMs) / this.config.neutralLearningMs,
+            0.08,
+            0.35,
+        );
         const currentNeutralPose = this.neutralPose;
         this.neutralPose = {
             yawDeg: lerp(currentNeutralPose.yawDeg, snapshot.headPose.yawDeg, alpha),
@@ -223,7 +237,11 @@ export class SincroFaceRetargeter {
         const headAlpha = smoothingAlpha(deltaMs, headTimeConstantMs);
         const expressionAlpha = smoothingAlpha(deltaMs, this.config.expressionSmoothingMs);
         this.smoothedHead = smoothHead(this.smoothedHead, targetHead, headAlpha);
-        this.smoothedExpressions = smoothExpressions(this.smoothedExpressions, targetExpressions, expressionAlpha);
+        this.smoothedExpressions = smoothExpressions(
+            this.smoothedExpressions,
+            targetExpressions,
+            expressionAlpha,
+        );
         return {
             active,
             confidence,
@@ -255,9 +273,15 @@ export function retargetSincroFaceHeadPose(
         config.headDeadbandDeg,
     );
     const clamped = {
-        x: MathUtils.degToRad(MathUtils.clamp(pitchDeg, -config.maxHeadDeg.pitch, config.maxHeadDeg.pitch)),
-        y: MathUtils.degToRad(MathUtils.clamp(yawDeg, -config.maxHeadDeg.yaw, config.maxHeadDeg.yaw)),
-        z: MathUtils.degToRad(MathUtils.clamp(-rollDeg, -config.maxHeadDeg.roll, config.maxHeadDeg.roll)),
+        x: MathUtils.degToRad(
+            MathUtils.clamp(pitchDeg, -config.maxHeadDeg.pitch, config.maxHeadDeg.pitch),
+        ),
+        y: MathUtils.degToRad(
+            MathUtils.clamp(yawDeg, -config.maxHeadDeg.yaw, config.maxHeadDeg.yaw),
+        ),
+        z: MathUtils.degToRad(
+            MathUtils.clamp(-rollDeg, -config.maxHeadDeg.roll, config.maxHeadDeg.roll),
+        ),
     };
     return {
         upperChest: scaleRotation(clamped, config.headBoneWeights.upperChest),
@@ -268,16 +292,28 @@ export function retargetSincroFaceHeadPose(
 
 export function retargetSincroFaceExpressions(
     blendshapes: Record<string, number>,
-    config: Pick<SincroFaceRetargetConfig, "expressionDeadband" | "blinkCalibration"> = DEFAULT_SINCRO_FACE_RETARGET_CONFIG,
+    config: Pick<
+        SincroFaceRetargetConfig,
+        "expressionDeadband" | "blinkCalibration"
+    > = DEFAULT_SINCRO_FACE_RETARGET_CONFIG,
 ): SincroFaceRetargetedExpressions {
-    const blinkLeft = calibrateBlink(maxBlendshape(blendshapes, EYE_BLINK_LEFT_KEYS), config.blinkCalibration);
-    const blinkRight = calibrateBlink(maxBlendshape(blendshapes, EYE_BLINK_RIGHT_KEYS), config.blinkCalibration);
+    const blinkLeft = calibrateBlink(
+        maxBlendshape(blendshapes, EYE_BLINK_LEFT_KEYS),
+        config.blinkCalibration,
+    );
+    const blinkRight = calibrateBlink(
+        maxBlendshape(blendshapes, EYE_BLINK_RIGHT_KEYS),
+        config.blinkCalibration,
+    );
     const blink = Math.max(blinkLeft, blinkRight);
     const jawOpen = maxBlendshape(blendshapes, MOUTH_OPEN_KEYS);
     const mouthClose = maxBlendshape(blendshapes, MOUTH_CLOSE_KEYS);
     const funnel = maxBlendshape(blendshapes, MOUTH_FUNNEL_KEYS);
     const pucker = maxBlendshape(blendshapes, MOUTH_PUCKER_KEYS);
-    const smile = (maxBlendshape(blendshapes, MOUTH_SMILE_LEFT_KEYS) + maxBlendshape(blendshapes, MOUTH_SMILE_RIGHT_KEYS)) / 2;
+    const smile =
+        (maxBlendshape(blendshapes, MOUTH_SMILE_LEFT_KEYS) +
+            maxBlendshape(blendshapes, MOUTH_SMILE_RIGHT_KEYS)) /
+        2;
     const openness = MathUtils.clamp(jawOpen * (1 - mouthClose * 0.72), 0, 1);
     const rounded = Math.max(funnel, pucker);
     const spread = smile * (1 - rounded * 0.5);
@@ -286,15 +322,33 @@ export function retargetSincroFaceExpressions(
         blink,
         blinkLeft,
         blinkRight,
-        lookLeft: applyExpressionDeadband(maxBlendshape(blendshapes, EYE_LOOK_LEFT_KEYS), config.expressionDeadband),
-        lookRight: applyExpressionDeadband(maxBlendshape(blendshapes, EYE_LOOK_RIGHT_KEYS), config.expressionDeadband),
-        lookUp: applyExpressionDeadband(maxBlendshape(blendshapes, EYE_LOOK_UP_KEYS), config.expressionDeadband),
-        lookDown: applyExpressionDeadband(maxBlendshape(blendshapes, EYE_LOOK_DOWN_KEYS), config.expressionDeadband),
+        lookLeft: applyExpressionDeadband(
+            maxBlendshape(blendshapes, EYE_LOOK_LEFT_KEYS),
+            config.expressionDeadband,
+        ),
+        lookRight: applyExpressionDeadband(
+            maxBlendshape(blendshapes, EYE_LOOK_RIGHT_KEYS),
+            config.expressionDeadband,
+        ),
+        lookUp: applyExpressionDeadband(
+            maxBlendshape(blendshapes, EYE_LOOK_UP_KEYS),
+            config.expressionDeadband,
+        ),
+        lookDown: applyExpressionDeadband(
+            maxBlendshape(blendshapes, EYE_LOOK_DOWN_KEYS),
+            config.expressionDeadband,
+        ),
         aa: applyExpressionDeadband(openness * (1 - rounded * 0.45), config.expressionDeadband),
-        ih: applyExpressionDeadband(spread * 0.72 + openness * spread * 0.18, config.expressionDeadband),
+        ih: applyExpressionDeadband(
+            spread * 0.72 + openness * spread * 0.18,
+            config.expressionDeadband,
+        ),
         ou: applyExpressionDeadband(rounded * (0.35 + openness * 0.25), config.expressionDeadband),
         ee: applyExpressionDeadband(spread * 0.82, config.expressionDeadband),
-        oh: applyExpressionDeadband(Math.max(funnel * 0.78, openness * rounded * 0.72), config.expressionDeadband),
+        oh: applyExpressionDeadband(
+            Math.max(funnel * 0.78, openness * rounded * 0.72),
+            config.expressionDeadband,
+        ),
     };
 }
 
@@ -392,10 +446,11 @@ function calibrateBlink(
 
     // MediaPipe の blink score は開眼時も閉眼時も端まで届きにくい。
     // しきい値間を smoothstep 化し、gamma で閉じ始めの反応を少し強める。
-    const normalized = (clamped - calibration.openThreshold)
-        / Math.max(0.001, calibration.closeThreshold - calibration.openThreshold);
+    const normalized =
+        (clamped - calibration.openThreshold) /
+        Math.max(0.001, calibration.closeThreshold - calibration.openThreshold);
     const eased = normalized * normalized * (3 - 2 * normalized);
-    return MathUtils.clamp(Math.pow(eased, calibration.gamma), 0, 1);
+    return MathUtils.clamp(eased ** calibration.gamma, 0, 1);
 }
 
 function applyDeadband(value: number, deadband: number): number {

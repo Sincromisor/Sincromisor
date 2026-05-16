@@ -73,29 +73,29 @@
 ## 入力信号
 
 - `CharacterGaze`
-  - 顔検出有無
-  - 鼻位置または顔中心位置
-  - `facing()` による正面度
-  - arrive/leave イベント
+    - 顔検出有無
+    - 鼻位置または顔中心位置
+    - `facing()` による正面度
+    - arrive/leave イベント
 - `UserMediaManager`
-  - `VadStateReport.isSpeech`
-  - `rms`
-  - `peak`
-  - 学習 VAD の speech probability
+    - `VadStateReport.isSpeech`
+    - `rms`
+    - `peak`
+    - 学習 VAD の speech probability
 - `TalkManager`
-  - `text_channel_message`
-  - `telop_channel_message`
-  - `currentMora()`
+    - `text_channel_message`
+    - `telop_channel_message`
+    - `currentMora()`
 - `ChatMessage`
-  - `message_type`
-  - `speech_id`
-  - `expression_code`
+    - `message_type`
+    - `speech_id`
+    - `expression_code`
 - `TelopChannelMessage`
-  - `speech_id`
-  - `vowel`
-  - `text`
-  - `length`
-  - `new_text`
+    - `speech_id`
+    - `vowel`
+    - `text`
+    - `length`
+    - `new_text`
 
 ## 目の動きの方針
 
@@ -103,16 +103,16 @@
 - VRM 標準の `lookUp/lookDown/lookLeft/lookRight` expression が使える場合は、それを優先して視線を表現する。
 - VRM の humanoid eye bones または VRM lookAt が扱える場合は、モデル差を確認した上で eye bone または lookAt 制御を検討する。
 - 目線は常にユーザーへ固定せず、以下を混ぜる。
-  - ユーザー発話中は視線維持を強める
-  - 考え中は 0.4 秒から 1.2 秒程度、斜め上または横へ視線を外す
-  - AI 発話中は文節の切れ目で短い視線移動を入れる
-  - 顔が画面端へ移動した場合は、首より先に目線が追い、少し遅れて首が追う
-  - 長時間固定を避けるため、低頻度の microsaccade を入れる
+    - ユーザー発話中は視線維持を強める
+    - 考え中は 0.4 秒から 1.2 秒程度、斜め上または横へ視線を外す
+    - AI 発話中は文節の切れ目で短い視線移動を入れる
+    - 顔が画面端へ移動した場合は、首より先に目線が追い、少し遅れて首が追う
+    - 長時間固定を避けるため、低頻度の microsaccade を入れる
 - まばたきは完全ランダムではなく、状態に応じて頻度を変える。
-  - 通常待機: 自然な間隔
-  - ユーザー発話開始直後: 少し抑制
-  - 考え中: やや増やす
-  - surprised: 短く目を開く方向の表情があれば優先
+    - 通常待機: 自然な間隔
+    - ユーザー発話開始直後: 少し抑制
+    - 考え中: やや増やす
+    - surprised: 短く目を開く方向の表情があれば優先
 - 目線変化は急激にしない。補間、clamp、deadband を必ず持つ。
 
 ## 自然さの制約
@@ -147,9 +147,9 @@
 ## 完了メモ
 
 - 2026-05-11:
-  - 子タスク `TASK-3049` から `TASK-3054` が完了済みのため、本 Epic も完了扱いとする。
-  - 後続の `sincro` 同期モーション基盤は `documents/tasks/character_sincro_motion/open/TASK-3100-sincro-motion-foundation-epic.md` へ分離した。
-  - `TASK-3100` 以降は、本タスクで整備した `CharacterBehaviorState`、`CharacterMotionOrchestrator`、eye / idle / AI speech motion を前提に進める。
+    - 子タスク `TASK-3049` から `TASK-3054` が完了済みのため、本 Epic も完了扱いとする。
+    - 後続の `sincro` 同期モーション基盤は `documents/tasks/character_sincro_motion/open/TASK-3100-sincro-motion-foundation-epic.md` へ分離した。
+    - `TASK-3100` 以降は、本タスクで整備した `CharacterBehaviorState`、`CharacterMotionOrchestrator`、eye / idle / AI speech motion を前提に進める。
 
 ## 実装対象候補
 

@@ -1,6 +1,6 @@
-import { VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
+import type { VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
 import { DebugConsoleManager } from "../../UI/DebugConsoleManager";
-import { CharacterBehaviorSnapshot } from "./CharacterBehaviorState";
+import type { CharacterBehaviorSnapshot } from "./CharacterBehaviorState";
 
 type EmotionPreset = "neutral" | "relaxed" | "happy" | "sad" | "angry" | "surprised";
 
@@ -53,10 +53,10 @@ export class FaceEmotionController {
 
         const speechId = snapshot.aiSpeech.speechId;
         if (
-            snapshot.aiSpeech.isSpeaking
-            && speechId != null
-            && snapshot.aiSpeech.expressionCode == null
-            && speechId !== this.neutralizedSpeechId
+            snapshot.aiSpeech.isSpeaking &&
+            speechId != null &&
+            snapshot.aiSpeech.expressionCode == null &&
+            speechId !== this.neutralizedSpeechId
         ) {
             this.neutralizedSpeechId = speechId;
             this.playEmotion("neutral", 0.0, 0, 1, snapshot.nowMs);
@@ -164,7 +164,9 @@ export class FaceEmotionController {
         } else if (nowMs < animation.fadeOutStartMs) {
             value = animation.intensity;
         } else if (nowMs < animation.endMs) {
-            value = animation.intensity * (1.0 - ((nowMs - animation.fadeOutStartMs) / animation.fadeInMs));
+            value =
+                animation.intensity *
+                (1.0 - (nowMs - animation.fadeOutStartMs) / animation.fadeInMs);
         } else {
             this.setEmotionPresetValues(animation.preset, 0.0);
             this.activeEmotion = null;
@@ -185,7 +187,9 @@ export class FaceEmotionController {
         const expressionMap = this.expressionManager.expressionMap;
         const names = Object.keys(expressionMap).sort();
         const required = ["neutral", "relaxed", "happy", "sad", "angry", "surprised"];
-        const availability = required.map((name) => `${name}:${names.includes(name) ? "yes" : "no"}`).join(", ");
+        const availability = required
+            .map((name) => `${name}:${names.includes(name) ? "yes" : "no"}`)
+            .join(", ");
         this.logger.addTextChannelLog(
             `[emotion] available expressions: ${names.join(", ") || "(none)"}\n`,
         );
@@ -214,7 +218,9 @@ export class FaceEmotionController {
         }
 
         if (mouthMorphBindKeys.size === 0) {
-            this.logger.addTextChannelLog("[emotion] mouth-viseme morph bind overlap check skipped (no viseme morph binds)\n");
+            this.logger.addTextChannelLog(
+                "[emotion] mouth-viseme morph bind overlap check skipped (no viseme morph binds)\n",
+            );
             return;
         }
 

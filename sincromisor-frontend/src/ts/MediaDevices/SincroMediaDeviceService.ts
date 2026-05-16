@@ -60,8 +60,7 @@ export class SincroMediaDeviceService {
         return SincroMediaDeviceService.instance;
     }
 
-    private constructor() {
-    }
+    private constructor() {}
 
     getSnapshot(): SincroMediaDeviceSnapshot {
         return {
@@ -106,7 +105,8 @@ export class SincroMediaDeviceService {
             isRefreshing: true,
             refreshError: null,
         });
-        this.refreshPromise = navigator.mediaDevices.enumerateDevices()
+        this.refreshPromise = navigator.mediaDevices
+            .enumerateDevices()
             .then((devices) => {
                 const normalized = normalizeMediaDeviceSnapshot(devices);
                 this.patchSnapshot({
@@ -134,9 +134,12 @@ export class SincroMediaDeviceService {
         kind: SincroMediaDeviceKind,
         selectedDeviceId: string | null,
     ): SincroMediaDeviceSelectionState {
-        const options = kind === "audioinput" ? this.snapshot.audioInputs : this.snapshot.videoInputs;
-        const matchedDevice = options.find((option) => option.deviceId === selectedDeviceId) ?? null;
-        const availabilityKnown = this.snapshot.lastUpdatedAt !== null || this.snapshot.refreshError !== null;
+        const options =
+            kind === "audioinput" ? this.snapshot.audioInputs : this.snapshot.videoInputs;
+        const matchedDevice =
+            options.find((option) => option.deviceId === selectedDeviceId) ?? null;
+        const availabilityKnown =
+            this.snapshot.lastUpdatedAt !== null || this.snapshot.refreshError !== null;
         return {
             selectedDeviceId,
             isSelected: !!selectedDeviceId,
@@ -168,7 +171,8 @@ export function buildSincroMediaDeviceSelections(params: {
     audioInput: SincroMediaDeviceSelectionState;
     videoInput: SincroMediaDeviceSelectionState;
 } {
-    const availabilityKnown = params.snapshot.lastUpdatedAt !== null || params.snapshot.refreshError !== null;
+    const availabilityKnown =
+        params.snapshot.lastUpdatedAt !== null || params.snapshot.refreshError !== null;
     return {
         audioInput: resolveMediaDeviceSelection(
             params.snapshot.audioInputs,
@@ -198,10 +202,9 @@ function resolveMediaDeviceSelection(
     };
 }
 
-function normalizeMediaDeviceSnapshot(devices: MediaDeviceInfo[]): Pick<
-    SincroMediaDeviceSnapshot,
-    "audioInputs" | "videoInputs" | "labelsResolved"
-> {
+function normalizeMediaDeviceSnapshot(
+    devices: MediaDeviceInfo[],
+): Pick<SincroMediaDeviceSnapshot, "audioInputs" | "videoInputs" | "labelsResolved"> {
     let audioInputCount = 0;
     let videoInputCount = 0;
     const audioInputs: SincroMediaDeviceOption[] = [];
@@ -221,7 +224,7 @@ function normalizeMediaDeviceSnapshot(devices: MediaDeviceInfo[]): Pick<
         }
         const index = device.kind === "audioinput" ? audioInputCount : videoInputCount;
         const option = normalizeMediaDeviceOption(
-            device as MediaDeviceInfo & { kind: SincroMediaDeviceKind; },
+            device as MediaDeviceInfo & { kind: SincroMediaDeviceKind },
             index,
         );
         if (device.kind === "audioinput") {
@@ -239,7 +242,7 @@ function normalizeMediaDeviceSnapshot(devices: MediaDeviceInfo[]): Pick<
 }
 
 function normalizeMediaDeviceOption(
-    device: MediaDeviceInfo & { kind: SincroMediaDeviceKind; },
+    device: MediaDeviceInfo & { kind: SincroMediaDeviceKind },
     index: number,
 ): SincroMediaDeviceOption {
     const fallbackLabel = buildMediaDeviceFallbackLabel(device.kind, index);
@@ -257,7 +260,5 @@ function normalizeMediaDeviceOption(
 }
 
 function buildMediaDeviceFallbackLabel(kind: SincroMediaDeviceKind, index: number): string {
-    return kind === "audioinput"
-        ? `マイク ${index}`
-        : `カメラ ${index}`;
+    return kind === "audioinput" ? `マイク ${index}` : `カメラ ${index}`;
 }

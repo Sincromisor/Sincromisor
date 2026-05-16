@@ -1,10 +1,12 @@
 import {
+    handleMappedDebugConsoleEvent,
+    type SincroAppRtcDebugState,
+} from "./SincroAppDebugSubscriptionFlow";
+import {
     mapChatMessageToAppEvent,
     mapDebugConsoleEvent,
     mapTalkManagerEventToAppEvent,
 } from "./SincroAppEventMappers";
-import { handleMappedDebugConsoleEvent, type SincroAppRtcDebugState } from "./SincroAppDebugSubscriptionFlow";
-import type { SincroAppEvent } from "./SincroAppTypes";
 import type {
     SincroAppChatSubscriptionFacade,
     SincroAppDebugSubscriptionFacade,
@@ -12,6 +14,7 @@ import type {
     SincroAppPopSubscriptionFacade,
     SincroAppTalkSubscriptionFacade,
 } from "./SincroAppManagerSubscriptionFacades";
+import type { SincroAppEvent } from "./SincroAppTypes";
 
 type EmitFn = (event: SincroAppEvent) => void;
 
@@ -30,7 +33,10 @@ type DialogSubscriptionParams = {
 };
 
 // manager / service 群の subscribe 本文を helper 側へ分離し、SincroAppController を orchestration 中心に保つ。
-export function bindChatServiceSubscription(chatMessageService: SincroAppChatSubscriptionFacade, emitEvent: EmitFn): void {
+export function bindChatServiceSubscription(
+    chatMessageService: SincroAppChatSubscriptionFacade,
+    emitEvent: EmitFn,
+): void {
     chatMessageService.subscribe((event) => {
         const appEvent = mapChatMessageToAppEvent(event);
         if (!appEvent) {
@@ -57,7 +63,10 @@ export function bindDebugManagerSubscription(params: DebugSubscriptionParams): v
     });
 }
 
-export function bindTalkManagerSubscription(talkManager: SincroAppTalkSubscriptionFacade, emitEvent: EmitFn): void {
+export function bindTalkManagerSubscription(
+    talkManager: SincroAppTalkSubscriptionFacade,
+    emitEvent: EmitFn,
+): void {
     talkManager.subscribe((event) => {
         const appEvent = mapTalkManagerEventToAppEvent(event);
         if (appEvent) {
@@ -66,7 +75,10 @@ export function bindTalkManagerSubscription(talkManager: SincroAppTalkSubscripti
     });
 }
 
-export function bindPopServiceSubscription(popMessageService: SincroAppPopSubscriptionFacade, emitEvent: EmitFn): void {
+export function bindPopServiceSubscription(
+    popMessageService: SincroAppPopSubscriptionFacade,
+    emitEvent: EmitFn,
+): void {
     // dialog 内 pop も AppEvent 化して、React が PopMessageService singleton を直接購読しない構成へ寄せる。
     popMessageService.subscribeDialogPop((message) => {
         emitEvent({ type: "dialog_pop_message", message });

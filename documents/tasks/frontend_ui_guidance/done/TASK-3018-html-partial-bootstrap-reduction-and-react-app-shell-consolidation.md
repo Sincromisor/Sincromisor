@@ -112,7 +112,7 @@
 - 本タスクは `SPA 化` ではなく、`MPA のままでも app shell を整理して modern 化する` タスクである。
 - 実装変更時は `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` の更新が必要になる。
 - 実施結果:
-  - `src/react/app-shell/SincroPageAppShell.tsx` と `bootstrapSincroPageAppShell.tsx` を追加し、modern 3 ページの UI 骨格を単一 React root に集約した。
-  - `src/partials/*.html` と `vite.config.js` の `htmlPartialsPlugin` を削除し、各ページ HTML は `div#sincroPageRoot` を持つ最小エントリへ簡素化した。
-  - `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` を current structure に合わせて更新した。
-  - `cd sincromisor-frontend && npm run build` は 2026-04-22 に成功した。
+    - `src/react/app-shell/SincroPageAppShell.tsx` と `bootstrapSincroPageAppShell.tsx` を追加し、modern 3 ページの UI 骨格を単一 React root に集約した。
+    - `src/partials/*.html` と `vite.config.js` の `htmlPartialsPlugin` を削除し、各ページ HTML は `div#sincroPageRoot` を持つ最小エントリへ簡素化した。
+    - `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` を current structure に合わせて更新した。
+    - `cd sincromisor-frontend && npm run build` は 2026-04-22 に成功した。

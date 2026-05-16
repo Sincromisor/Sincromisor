@@ -603,9 +603,21 @@ div#debugConsole select.audioControlSelect {
 
 div#debugConsole .audioPresetButtons {
     margin-top: 6px;
+    padding: 0;
+    border: 0;
+    min-width: 0;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
+}
+
+div#debugConsole .audioPresetButtons__legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
 }
 
 div#debugConsole button.audioPresetButton {

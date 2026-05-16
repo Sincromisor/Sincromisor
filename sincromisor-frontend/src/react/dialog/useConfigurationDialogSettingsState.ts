@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { SincroAppController } from "../../ts/App/SincroAppController";
 import type {
-    SincroAppEvent,
-    SincroAppLifecycleState,
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
+    SincroAppEvent,
+    SincroAppLifecycleState,
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
 } from "../../ts/App/SincroAppTypes";
@@ -14,11 +14,11 @@ import type {
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
 } from "../app/appSettingsTypes";
-import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
 import {
     hydrateDialogUiSnapshotsFromController,
     hydrateSettingsSnapshotsFromController,
 } from "../app/sincroAppStateSnapshotHydrators";
+import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
 import { useSincroMediaDeviceState } from "../app/useSincroMediaDeviceState";
 
 const defaultSettings: SincroAppSettingsSnapshot = {
@@ -96,13 +96,15 @@ const defaultConnectionState: {
 } = { value: "idle", detail: "" };
 
 type ConfigurationDialogEventHandlerMap = {
-    [K in SincroAppEvent["type"]]?: (event: Extract<SincroAppEvent, { type: K; }>) => void;
+    [K in SincroAppEvent["type"]]?: (event: Extract<SincroAppEvent, { type: K }>) => void;
 };
 
 // dialog 用の最小購読 hook。Control Panel 用 hook の全状態を持たず、settings 系 + VRM UI状態だけを扱う。
 export function useConfigurationDialogSettingsState() {
     const initialController = SincroAppController.getCurrent();
-    const [currentController, setCurrentController] = useState<SincroAppController | null>(initialController);
+    const [currentController, setCurrentController] = useState<SincroAppController | null>(
+        initialController,
+    );
     const [lifecycleState, setLifecycleState] = useState<SincroAppLifecycleState>("idle");
     const [connectionState, setConnectionState] = useState(defaultConnectionState);
     const [settings, setSettings] = useState<SincroAppSettingsSnapshot>(
@@ -120,12 +122,12 @@ export function useConfigurationDialogSettingsState() {
     const [dialogUiState, setDialogUiState] = useState<SincroAppDialogUiState>(
         initialController?.state.getDialogUiState() ?? defaultDialogUiState,
     );
-    const [startupSettingsStatus, setStartupSettingsStatus] = useState<SincroAppStartupSettingsStatus>(
-        initialController?.state.getStartupSettingsStatus() ?? defaultStartupSettingsStatus,
-    );
-    const [startupSettingsCapabilities, setStartupSettingsCapabilities] = useState<SincroAppStartupSettingsCapabilities>(
-        defaultStartupSettingsCapabilities,
-    );
+    const [startupSettingsStatus, setStartupSettingsStatus] =
+        useState<SincroAppStartupSettingsStatus>(
+            initialController?.state.getStartupSettingsStatus() ?? defaultStartupSettingsStatus,
+        );
+    const [startupSettingsCapabilities, setStartupSettingsCapabilities] =
+        useState<SincroAppStartupSettingsCapabilities>(defaultStartupSettingsCapabilities);
     const {
         snapshot: mediaDeviceSnapshot,
         audioInputSelection,
@@ -185,7 +187,9 @@ export function useConfigurationDialogSettingsState() {
                 setStartupSettingsStatus(controller.state.getStartupSettingsStatus());
             },
             onEvent: (event: SincroAppEvent) => {
-                const handler = eventHandlers[event.type] as ((value: SincroAppEvent) => void) | undefined;
+                const handler = eventHandlers[event.type] as
+                    | ((value: SincroAppEvent) => void)
+                    | undefined;
                 handler?.(event);
             },
         });

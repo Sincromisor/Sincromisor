@@ -40,15 +40,15 @@
 ## サブタスク
 
 1. `TASK-3028-overlay-close-button-and-token-consolidation`
-   - close button と最小 token を共通化する。
+    - close button と最小 token を共通化する。
 2. `TASK-3029-right-tool-frame-unification`
-   - 右側設定パネルと Debug Console の外側 frame を統一する。
+    - 右側設定パネルと Debug Console の外側 frame を統一する。
 3. `TASK-3030-startup-dialog-frame-and-legacy-css-reduction`
-   - 起動前 dialog の frame を整理し、legacy dialog CSS の責務を縮退する。
+    - 起動前 dialog の frame を整理し、legacy dialog CSS の責務を縮退する。
 4. `TASK-3031-settings-form-primitives-and-inline-style-reduction`
-   - 設定フォーム内の button / field / toggle / help / section card を共通 primitive へ寄せる。
+    - 設定フォーム内の button / field / toggle / help / section card を共通 primitive へ寄せる。
 5. `TASK-3032-overlay-visual-regression-and-doc-sync`
-   - modern 3ページの overlay 表示確認、設計文書同期、epic close 判定を行う。
+    - modern 3ページの overlay 表示確認、設計文書同期、epic close 判定を行う。
 
 ## 完了条件
 

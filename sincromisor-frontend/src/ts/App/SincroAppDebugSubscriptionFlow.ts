@@ -15,7 +15,9 @@ type HandleMappedDebugEventParams = {
 
 // DebugConsoleManager 由来イベントのうち、RTC state 更新は AppController 側の保持状態更新と
 // 派生 connection_state 通知が必要になるため、手順を helper に分離して再利用しやすくする。
-export function handleMappedDebugConsoleEvent(params: HandleMappedDebugEventParams): SincroAppRtcDebugState {
+export function handleMappedDebugConsoleEvent(
+    params: HandleMappedDebugEventParams,
+): SincroAppRtcDebugState {
     const { result, rtcState, emitEvent, emitDerivedConnectionState } = params;
     if (result.kind === "none") {
         return rtcState;

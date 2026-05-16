@@ -1,7 +1,13 @@
 import type { SincroFaceMotionSnapshot } from "./SincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "./SincroPoseMotionSnapshot";
 
-export type SincroTrackerWorkerStatus = "idle" | "loading" | "ready" | "running" | "fallback" | "unavailable";
+export type SincroTrackerWorkerStatus =
+    | "idle"
+    | "loading"
+    | "ready"
+    | "running"
+    | "fallback"
+    | "unavailable";
 
 export type SincroTrackerRuntimeMode = "worker" | "main-thread" | "fallback";
 

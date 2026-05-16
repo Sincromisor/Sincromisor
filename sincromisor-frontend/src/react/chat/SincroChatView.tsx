@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import type { ChatMessage } from "../../ts/RTC/RTCMessage";
-import type { ChatMessageViewRecord, SincroAppEvent } from "../../ts/App/SincroAppTypes";
 import { SincroAppController } from "../../ts/App/SincroAppController";
+import type { ChatMessageViewRecord, SincroAppEvent } from "../../ts/App/SincroAppTypes";
+import type { ChatMessage } from "../../ts/RTC/RTCMessage";
 import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
 
 type SincroChatViewProps = {
@@ -41,11 +41,18 @@ export function SincroChatView({ enableReactRendering = true }: SincroChatViewPr
     );
 
     useEffect(() => {
-        const applyChatViewRecord = (event: Extract<SincroAppEvent, {
-            type: "chat_message" | "system_message" | "error_message";
-        }>) => {
+        const applyChatViewRecord = (
+            event: Extract<
+                SincroAppEvent,
+                {
+                    type: "chat_message" | "system_message" | "error_message";
+                }
+            >,
+        ) => {
             setMessages((prev) => {
-                const index = prev.findIndex((m) => m.message.message_id === event.viewRecord.message.message_id);
+                const index = prev.findIndex(
+                    (m) => m.message.message_id === event.viewRecord.message.message_id,
+                );
                 if (index >= 0) {
                     const next = [...prev];
                     next[index] = event.viewRecord;
@@ -81,9 +88,9 @@ export function SincroChatView({ enableReactRendering = true }: SincroChatViewPr
                     return;
                 }
                 if (
-                    event.type === "chat_message"
-                    || event.type === "system_message"
-                    || event.type === "error_message"
+                    event.type === "chat_message" ||
+                    event.type === "system_message" ||
+                    event.type === "error_message"
                 ) {
                     applyChatViewRecord(event);
                 }
@@ -112,7 +119,11 @@ export function SincroChatView({ enableReactRendering = true }: SincroChatViewPr
                     </div>
                     {canRenderHtml(record) ? (
                         // 移行期間の方針: 許可した種別のみ既存互換のHTML描画を行う。
-                        <p className="sincroMessage__text" dangerouslySetInnerHTML={{ __html: record.message.message }} />
+                        <p
+                            className="sincroMessage__text"
+                            // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted_html は system/reset の既存互換HTMLだけを許可している。
+                            dangerouslySetInnerHTML={{ __html: record.message.message }}
+                        />
                     ) : (
                         <p className="sincroMessage__text">{record.message.message}</p>
                     )}

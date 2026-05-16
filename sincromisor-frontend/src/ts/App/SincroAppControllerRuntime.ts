@@ -1,9 +1,9 @@
+import { TalkManager } from "../RTC/TalkManager";
 import { SincroController } from "../SincroController";
 import { ChatMessageService } from "../UI/ChatMessageService";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { DialogManager } from "../UI/DialogManager";
 import { PopMessageService } from "../UI/PopMessageService";
-import { TalkManager } from "../RTC/TalkManager";
 import {
     createSincroAppChatBridge,
     createSincroAppDebugBridge,
@@ -36,9 +36,10 @@ export type SincroAppBridgeBundle = {
     rtcBridge: SincroAppRtcBridge;
 };
 
-export type SincroAppControllerRuntimeBundle = SincroAppUiDependencyBundle & SincroAppBridgeBundle & {
-    stateBridge: SincroAppStateBridge;
-};
+export type SincroAppControllerRuntimeBundle = SincroAppUiDependencyBundle &
+    SincroAppBridgeBundle & {
+        stateBridge: SincroAppStateBridge;
+    };
 
 // SincroAppController constructor から UI 依存の singleton / service 取得列挙を分離し、初期化ブロックの見通しを良くする。
 export function createSincroAppUiDependencyBundle(): SincroAppUiDependencyBundle {
@@ -54,14 +55,20 @@ export function createSincroAppUiDependencyBundle(): SincroAppUiDependencyBundle
 
 // UI dependency bundle を元に bridge 群をまとめて作成する helper。
 export function createSincroAppBridgeBundle(
-    uiDependencies: Pick<SincroAppUiDependencyBundle, "chatMessageService" | "debugConsoleManager" | "dialogManager" | "talkManager">,
-    callbacks: { stopRTC: () => void; },
+    uiDependencies: Pick<
+        SincroAppUiDependencyBundle,
+        "chatMessageService" | "debugConsoleManager" | "dialogManager" | "talkManager"
+    >,
+    callbacks: { stopRTC: () => void },
 ): SincroAppBridgeBundle {
     return {
         dialogBridge: createSincroAppDialogBridge({
             dialogManager: uiDependencies.dialogManager,
         }),
-        chatBridge: createSincroAppChatBridge(uiDependencies.chatMessageService, uiDependencies.talkManager),
+        chatBridge: createSincroAppChatBridge(
+            uiDependencies.chatMessageService,
+            uiDependencies.talkManager,
+        ),
         debugBridge: createSincroAppDebugBridge(uiDependencies.debugConsoleManager),
         rtcBridge: createSincroAppRtcBridge({ stopRTC: callbacks.stopRTC }),
     };

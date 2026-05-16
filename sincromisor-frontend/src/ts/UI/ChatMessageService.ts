@@ -1,4 +1,4 @@
-import { ChatMessage, ChatMessageBuilder } from "../RTC/RTCMessage";
+import { type ChatMessage, ChatMessageBuilder } from "../RTC/RTCMessage";
 
 export type ChatMessageViewRecord = {
     message: ChatMessage;
@@ -37,7 +37,7 @@ export class ChatMessageService {
     private messages: ChatMessageViewRecord[] = [];
 
     /* 同じエラーメッセージが何度も表示されないようにするために使用 */
-    lastErrorMessage: string = '';
+    lastErrorMessage: string = "";
 
     static getService(): ChatMessageService {
         if (!ChatMessageService.instance) {
@@ -88,9 +88,8 @@ export class ChatMessageService {
         return this.systemIconUrl;
     }
 
-
     private getMessageBox(messageID: string): HTMLDivElement | null {
-        return this.ensureChatBoxBound()?.querySelector('#msg' + messageID) ?? null;
+        return this.ensureChatBoxBound()?.querySelector("#msg" + messageID) ?? null;
     }
 
     // Chat欄にメッセージを追加、もしくはメッセージを更新する。
@@ -101,13 +100,12 @@ export class ChatMessageService {
         const box: HTMLDivElement | null = this.getMessageBox(cMessage.message_id);
         console.dir(["writeMessage", box, cMessage]);
         if (this.domRenderingEnabled && box) {
-            const ePara: HTMLParagraphElement | null = box.querySelector('p.sincroMessage__text');
+            const ePara: HTMLParagraphElement | null = box.querySelector("p.sincroMessage__text");
             if (ePara) {
                 if (isHTML) {
                     ePara.innerHTML = cMessage.message;
                 } else {
                     ePara.innerText = cMessage.message;
-
                 }
             }
         } else if (this.domRenderingEnabled) {
@@ -121,7 +119,13 @@ export class ChatMessageService {
         生成したメッセージのdiv要素を返す。
     */
     writeUnknownUserMessage(message: string, isHTML: boolean = false): HTMLDivElement {
-        const chatMessage: ChatMessage = new ChatMessageBuilder('user', 'UnknownUser', 'Unknown User', -1, message);
+        const chatMessage: ChatMessage = new ChatMessageBuilder(
+            "user",
+            "UnknownUser",
+            "Unknown User",
+            -1,
+            message,
+        );
         const box = this.createNewMessageBox(chatMessage, isHTML);
         this.emitMessage(chatMessage, isHTML);
         return box;
@@ -132,7 +136,13 @@ export class ChatMessageService {
         生成したメッセージのdiv要素を返す。
     */
     writeSystemMessage(message: string, isHTML: boolean = false): HTMLDivElement {
-        const chatMessage: ChatMessage = new ChatMessageBuilder('system', this.systemUserID, this.systemUserName, -1, message);
+        const chatMessage: ChatMessage = new ChatMessageBuilder(
+            "system",
+            this.systemUserID,
+            this.systemUserName,
+            -1,
+            message,
+        );
         const box = this.createNewMessageBox(chatMessage, isHTML);
         this.emitMessage(chatMessage, isHTML);
         return box;
@@ -144,11 +154,17 @@ export class ChatMessageService {
     */
     writeErrorMessage(message: string, force: boolean = false): HTMLDivElement | null {
         /* 同じエラーメッセージが何度も繰り返されないようにする。 */
-        if (!force && this.lastErrorMessage == message) {
+        if (!force && this.lastErrorMessage === message) {
             return null;
         }
         this.lastErrorMessage = message;
-        const chatMessage: ChatMessage = new ChatMessageBuilder('error', this.systemUserID, this.systemUserName, -1, message);
+        const chatMessage: ChatMessage = new ChatMessageBuilder(
+            "error",
+            this.systemUserID,
+            this.systemUserName,
+            -1,
+            message,
+        );
         const box = this.createNewMessageBox(chatMessage);
         this.emitMessage(chatMessage, false);
         return box;
@@ -159,7 +175,13 @@ export class ChatMessageService {
         メッセージのdiv要素を返す。
     */
     writeResetMessage(message: string): HTMLDivElement {
-        const chatMessage: ChatMessage = new ChatMessageBuilder('reset', this.systemUserID, this.systemUserName, -1, message);
+        const chatMessage: ChatMessage = new ChatMessageBuilder(
+            "reset",
+            this.systemUserID,
+            this.systemUserName,
+            -1,
+            message,
+        );
         const box = this.createNewMessageBox(chatMessage);
         this.emitMessage(chatMessage, false);
         return box;
@@ -171,7 +193,9 @@ export class ChatMessageService {
         this.systemIconUrl = iconUrl;
         const chatBox = this.ensureChatBoxBound();
         if (this.domRenderingEnabled && chatBox) {
-            const systemIcons = chatBox.querySelectorAll<HTMLImageElement>('div.sincroSystemMessage img.sincroMessage__icon');
+            const systemIcons = chatBox.querySelectorAll<HTMLImageElement>(
+                "div.sincroSystemMessage img.sincroMessage__icon",
+            );
             systemIcons.forEach((icon) => {
                 icon.src = this.systemIconUrl;
             });
@@ -197,7 +221,9 @@ export class ChatMessageService {
         const chatBox = this.ensureChatBoxBound();
         if (this.domRenderingEnabled && chatBox) {
             chatBox.prepend(e);
-            setTimeout(() => { e.style.opacity = '1'; }, 200);
+            setTimeout(() => {
+                e.style.opacity = "1";
+            }, 200);
             //this.autoScroll();
             this.removeOldMessage();
         }
@@ -212,7 +238,10 @@ export class ChatMessageService {
         }
         chatBox.innerHTML = "";
         for (const record of this.messages) {
-            const messageBox = this.createMessageBoxElement(record.message, record.renderMode === "trusted_html");
+            const messageBox = this.createMessageBoxElement(
+                record.message,
+                record.renderMode === "trusted_html",
+            );
             // React描画時と違い CSS 初期opacity=0 を使わないため、即座に表示状態へそろえる。
             messageBox.style.opacity = "1";
             chatBox.appendChild(messageBox);
@@ -234,7 +263,7 @@ export class ChatMessageService {
         const eIcon = document.createElement("img");
         eIcon.className = "sincroMessage__icon";
         // systemのみ動的アイコン、それ以外(message_type別)は従来の静的アイコンを使う。
-        if (cMessage.message_type === 'system') {
+        if (cMessage.message_type === "system") {
             eIcon.src = this.systemIconUrl;
         } else {
             eIcon.src = `../images/icon-${cMessage.message_type}.webp`;
@@ -295,7 +324,9 @@ export class ChatMessageService {
     // React描画向けの履歴正本。message_id ベースで更新/新規挿入を行う。
     private upsertMessageSnapshot(message: ChatMessage, isHTML: boolean): void {
         const renderMode: ChatMessageRenderMode = isHTML ? "trusted_html" : "text";
-        const existingIndex = this.messages.findIndex((m) => m.message.message_id === message.message_id);
+        const existingIndex = this.messages.findIndex(
+            (m) => m.message.message_id === message.message_id,
+        );
         if (existingIndex >= 0) {
             this.messages[existingIndex] = { message, renderMode };
             return;
@@ -306,7 +337,11 @@ export class ChatMessageService {
     // DOM描画を止めていても React UI が再構築できるよう、renderMode を含めて通知する。
     private emitMessage(message: ChatMessage, isHTML: boolean): void {
         const renderMode: ChatMessageRenderMode = isHTML ? "trusted_html" : "text";
-        const event: ChatMessageServiceEvent = { type: "message", message, viewRecord: { message, renderMode } };
+        const event: ChatMessageServiceEvent = {
+            type: "message",
+            message,
+            viewRecord: { message, renderMode },
+        };
         for (const listener of this.listeners) {
             listener(event);
         }
@@ -314,7 +349,10 @@ export class ChatMessageService {
 
     // systemアイコン差し替え（VRMサムネイル反映）を React UI にも伝える。
     private emitSystemIconChanged(): void {
-        const event: ChatMessageServiceEvent = { type: "system_icon_changed", systemIconUrl: this.systemIconUrl };
+        const event: ChatMessageServiceEvent = {
+            type: "system_icon_changed",
+            systemIconUrl: this.systemIconUrl,
+        };
         for (const listener of this.listeners) {
             listener(event);
         }

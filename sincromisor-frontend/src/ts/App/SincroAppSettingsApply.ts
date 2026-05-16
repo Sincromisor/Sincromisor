@@ -73,13 +73,19 @@ export function applySincroAppSettingsPartial(
         dialogManager.setEnableVR(partial.enableVR);
     }
     if (partial.characterMotionScale != null) {
-        dialogManager.setCharacterMotionScale(clampAndRoundToStep(partial.characterMotionScale, 0, 1.2, 0.05));
+        dialogManager.setCharacterMotionScale(
+            clampAndRoundToStep(partial.characterMotionScale, 0, 1.2, 0.05),
+        );
     }
     if (partial.sincroPoseRetargetScale != null) {
-        dialogManager.setSincroPoseRetargetScale(clampAndRoundToStep(partial.sincroPoseRetargetScale, 0, 1.2, 0.05));
+        dialogManager.setSincroPoseRetargetScale(
+            clampAndRoundToStep(partial.sincroPoseRetargetScale, 0, 1.2, 0.05),
+        );
     }
     if (partial.characterEyeTrackingScale != null) {
-        dialogManager.setCharacterEyeTrackingScale(clampAndRoundToStep(partial.characterEyeTrackingScale, 0, 1.2, 0.05));
+        dialogManager.setCharacterEyeTrackingScale(
+            clampAndRoundToStep(partial.characterEyeTrackingScale, 0, 1.2, 0.05),
+        );
     }
 
     // Looking Glass 設定は runtime config に正規化して反映する。

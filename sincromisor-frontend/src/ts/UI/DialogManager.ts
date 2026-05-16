@@ -1,18 +1,18 @@
-import {
-    DialogStateStore,
-    type DialogUiStateValue,
-    type DialogVrmUiStateValue,
-} from "./DialogStateStore";
+import { SincroMediaDeviceService } from "../MediaDevices/SincroMediaDeviceService";
+import { DialogEventHub } from "./DialogEventHub";
+import { DialogNotificationService } from "./DialogNotificationService";
 import {
     DialogSettingsPolicy,
     type DialogSettingsUiHints,
     type DialogSettingsUiState,
 } from "./DialogSettingsPolicy";
-import { SincroMediaDeviceService } from "../MediaDevices/SincroMediaDeviceService";
+import {
+    DialogStateStore,
+    type DialogUiStateValue,
+    type DialogVrmUiStateValue,
+} from "./DialogStateStore";
 import { DialogVrmFileService } from "./DialogVrmFileService";
 import { DialogVrmWorkflowService } from "./DialogVrmWorkflowService";
-import { DialogNotificationService } from "./DialogNotificationService";
-import { DialogEventHub } from "./DialogEventHub";
 import { HeaderTitleDomAdapter } from "./HeaderTitleDomAdapter";
 
 export type { DialogSettingsUiHints, DialogSettingsUiState } from "./DialogSettingsPolicy";
@@ -37,7 +37,7 @@ type BooleanDialogSettingKey =
 // 状態の正本は DialogStateStore、保存/復元/通知は各 Service に分離している。
 // dialog 本体の native API 呼び出しは React 側 platform adapter が担当する。
 export class DialogManager {
-    private static instance: DialogManager
+    private static instance: DialogManager;
     private readonly stateStore = new DialogStateStore();
     private readonly eventHub = new DialogEventHub();
     private readonly headerDom = new HeaderTitleDomAdapter();
@@ -63,11 +63,13 @@ export class DialogManager {
         this.bindMediaDeviceState();
         this.updateTitleText();
         this.showDialog();
-        this.loadVrmFile().then(() => {
-            console.log('VRM file loaded.')
-        }).catch((error) => {
-            console.error('VRM file load failed.', error);
-        });
+        this.loadVrmFile()
+            .then(() => {
+                console.log("VRM file loaded.");
+            })
+            .catch((error) => {
+                console.error("VRM file load failed.", error);
+            });
     }
 
     showDialog(): void {
@@ -394,14 +396,23 @@ export class DialogManager {
     private buildMediaDeviceUiContext() {
         return {
             isUserMediaAvailable: this.isUserMediaAvailable,
-            audioInputSelection: this.mediaDeviceService.getSelectionState("audioinput", this.stateStore.get("audioInputDeviceId")),
-            videoInputSelection: this.mediaDeviceService.getSelectionState("videoinput", this.stateStore.get("videoInputDeviceId")),
+            audioInputSelection: this.mediaDeviceService.getSelectionState(
+                "audioinput",
+                this.stateStore.get("audioInputDeviceId"),
+            ),
+            videoInputSelection: this.mediaDeviceService.getSelectionState(
+                "videoinput",
+                this.stateStore.get("videoInputDeviceId"),
+            ),
         };
     }
 
     private refreshMediaDeviceDerivedUiState(): void {
         const context = this.buildMediaDeviceUiContext();
-        const startButtonState = this.settingsPolicy.buildStartButtonState(this.stateStore, context);
+        const startButtonState = this.settingsPolicy.buildStartButtonState(
+            this.stateStore,
+            context,
+        );
         this.setDialogStartButtonState(
             startButtonState.startButtonDisabled,
             startButtonState.startButtonText,
@@ -428,21 +439,24 @@ export class DialogManager {
     }
 
     private updateVrmFile(file: File): void {
-        this.vrmWorkflowService.applySelectedVrmFile(file).then((result) => {
-            if (!result.ok) {
+        this.vrmWorkflowService
+            .applySelectedVrmFile(file)
+            .then((result) => {
+                if (!result.ok) {
+                    this.setVrmStatusText(result.statusText);
+                    this.notificationService.writeError(result.popError);
+                    return;
+                }
+                this.stateStore.setSelectedVrmUrl(result.vrmUrl);
                 this.setVrmStatusText(result.statusText);
-                this.notificationService.writeError(result.popError);
-                return;
-            }
-            this.stateStore.setSelectedVrmUrl(result.vrmUrl);
-            this.setVrmStatusText(result.statusText);
-            this.notificationService.writeInfo(result.popMessage);
-            console.log('VRM file updated.', file);
-        }).catch((error) => {
-            this.setVrmStatusText('VRMファイルの更新に失敗しました');
-            this.notificationService.writeError('VRMファイルの更新に失敗しました。');
-            console.error('VRM file update failed.', error);
-        });
+                this.notificationService.writeInfo(result.popMessage);
+                console.log("VRM file updated.", file);
+            })
+            .catch((error) => {
+                this.setVrmStatusText("VRMファイルの更新に失敗しました");
+                this.notificationService.writeError("VRMファイルの更新に失敗しました。");
+                console.error("VRM file update failed.", error);
+            });
     }
 
     private async loadVrmFile(): Promise<void> {
@@ -508,13 +522,17 @@ export class DialogManager {
     ): void {
         const current = this.stateStore.getDialogUiState();
         if (
-            current.startButtonDisabled === startButtonDisabled
-            && current.startButtonText === startButtonText
-            && current.startButtonHint === startButtonHint
+            current.startButtonDisabled === startButtonDisabled &&
+            current.startButtonText === startButtonText &&
+            current.startButtonHint === startButtonHint
         ) {
             return;
         }
-        this.stateStore.setDialogStartButtonState(startButtonDisabled, startButtonText, startButtonHint);
+        this.stateStore.setDialogStartButtonState(
+            startButtonDisabled,
+            startButtonText,
+            startButtonHint,
+        );
         // start button 状態は settingsChange と別イベントで通知し、React 側で dialog 表示状態の更新順を安定させる。
         this.emitDialogUiStateChanged();
     }

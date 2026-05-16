@@ -14,7 +14,10 @@ export class DialogEventHub {
         };
     }
 
-    subscribeVrmUiState(listener: (state: DialogVrmUiStateValue) => void, initialState: DialogVrmUiStateValue): () => void {
+    subscribeVrmUiState(
+        listener: (state: DialogVrmUiStateValue) => void,
+        initialState: DialogVrmUiStateValue,
+    ): () => void {
         this.vrmUiStateListeners.add(listener);
         // subscribe 直後に現在値を送って、React 側の初回描画で空表示を避ける。
         listener(initialState);
@@ -23,7 +26,10 @@ export class DialogEventHub {
         };
     }
 
-    subscribeDialogUiState(listener: (state: DialogUiStateValue) => void, initialState: DialogUiStateValue): () => void {
+    subscribeDialogUiState(
+        listener: (state: DialogUiStateValue) => void,
+        initialState: DialogUiStateValue,
+    ): () => void {
         this.dialogUiStateListeners.add(listener);
         listener(initialState);
         return () => {

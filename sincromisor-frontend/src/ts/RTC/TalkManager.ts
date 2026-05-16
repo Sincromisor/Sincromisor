@@ -1,13 +1,13 @@
-import { TelopChannelMessage, ChatMessage } from "./RTCMessage";
 import { ChatMessageService } from "../UI/ChatMessageService";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
+import type { ChatMessage, TelopChannelMessage } from "./RTCMessage";
 
 export type CurrentMora = {
-    'moraID': number,
-    'mora': TelopChannelMessage,
-    'msec': number,
-    'endTime': number
-}
+    moraID: number;
+    mora: TelopChannelMessage;
+    msec: number;
+    endTime: number;
+};
 
 export type TalkManagerEvent =
     | { type: "text_channel_message"; message: ChatMessage }
@@ -92,10 +92,10 @@ export class TalkManager {
         if (msg.new_text) {
             console.dir(msg);
             this.currentTelopChannelMessage = {
-                'moraID': this.moraID,
-                'mora': msg,
-                'msec': msg.length * 1000,
-                'endTime': performance.now() + msg.length * 1000
+                moraID: this.moraID,
+                mora: msg,
+                msec: msg.length * 1000,
+                endTime: performance.now() + msg.length * 1000,
             };
             this.moraID += 1;
             this.addTelopChar(msg.speech_id, msg.text);
@@ -126,7 +126,9 @@ export class TalkManager {
         if (!telopText) return;
 
         // speech_idに対応するspanを探す
-        let span: HTMLSpanElement | null = telopText.querySelector<HTMLSpanElement>(`span[data-speech-id="${speech_id}"]`);
+        let span: HTMLSpanElement | null = telopText.querySelector<HTMLSpanElement>(
+            `span[data-speech-id="${speech_id}"]`,
+        );
         if (!span) {
             span = document.createElement("span");
             span.classList.add("sincroFooterBox__telopText");
@@ -162,7 +164,9 @@ export class TalkManager {
             return;
         }
         const legacyTelopSpans = target.querySelectorAll("span.sincroFooterBox__telopText");
-        legacyTelopSpans.forEach((node) => node.remove());
+        legacyTelopSpans.forEach((node) => {
+            node.remove();
+        });
     }
 
     // footer内の日時など別要素を残したまま、旧DOMテロップだけを幅内へ切り詰める。
@@ -177,8 +181,9 @@ export class TalkManager {
         const telopClass = "sincroFooterBox__telopText";
         const getChildren = (): HTMLElement[] => Array.from(telopText.children) as HTMLElement[];
         const getTelopSpans = (): HTMLSpanElement[] =>
-            getChildren().filter((child): child is HTMLSpanElement =>
-                child instanceof HTMLSpanElement && child.classList.contains(telopClass),
+            getChildren().filter(
+                (child): child is HTMLSpanElement =>
+                    child instanceof HTMLSpanElement && child.classList.contains(telopClass),
             );
         const getReservedWidth = (): number =>
             getChildren()
@@ -224,22 +229,31 @@ export class TalkManager {
         // React footerテロップ用の保持データは、描画を壊しにくい単純ルールだけでtrimする。
         // 幅計算はReact側で行わず、ここでは件数と総文字数の上限だけを管理する。
         if (this.telopTextSegments.length > TalkManager.MAX_TELOP_SEGMENT_COUNT) {
-            this.telopTextSegments = this.telopTextSegments.slice(-TalkManager.MAX_TELOP_SEGMENT_COUNT);
+            this.telopTextSegments = this.telopTextSegments.slice(
+                -TalkManager.MAX_TELOP_SEGMENT_COUNT,
+            );
         }
         // 長時間稼働時に表示用文字列が肥大化しすぎないよう、保険として総文字数も上限制御する。
         this.trimTelopSegmentsByTotalChars(TalkManager.MAX_TELOP_TOTAL_CHARS);
         // 先頭の空白だけになった segment は詰める。
-        this.telopTextSegments = this.telopTextSegments.filter((segment) => segment.text.length > 0);
+        this.telopTextSegments = this.telopTextSegments.filter(
+            (segment) => segment.text.length > 0,
+        );
     }
 
     // 先頭（古いテロップ）から文字を落として、表示用バッファの総文字数を抑える。
     private trimTelopSegmentsByTotalChars(maxTotalChars: number): void {
-        let totalChars = this.telopTextSegments.reduce((acc, segment) => acc + segment.text.length, 0);
+        let totalChars = this.telopTextSegments.reduce(
+            (acc, segment) => acc + segment.text.length,
+            0,
+        );
         if (totalChars <= maxTotalChars) {
             return;
         }
 
-        const nextSegments: TelopTextSegment[] = this.telopTextSegments.map((segment) => ({ ...segment }));
+        const nextSegments: TelopTextSegment[] = this.telopTextSegments.map((segment) => ({
+            ...segment,
+        }));
         while (totalChars > maxTotalChars && nextSegments.length > 0) {
             const first = nextSegments[0];
             if (first.text.length <= 0) {

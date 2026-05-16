@@ -5,13 +5,21 @@ import type {
     SincroAppLifecycleState,
     SincroAppSettingsSnapshot,
 } from "../../ts/App/SincroAppTypes";
+import { prependPanelMessageLog } from "../app/panelLogHelpers";
+import {
+    hydrateSettingsSnapshotsFromController,
+    hydrateStartupSettingsStatusFromController,
+} from "../app/sincroAppStateSnapshotHydrators";
+import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
+import { UI_TUNING } from "../app/uiTuning";
+import { useSincroMediaDeviceState } from "../app/useSincroMediaDeviceState";
 import type {
     ApplySettingsFn,
     PanelConnectionState,
     PanelGazeState,
     PanelLearnedVadState,
-    PanelLookingGlassState,
     PanelLookingGlassConfigStatus,
+    PanelLookingGlassState,
     PanelMessageLog,
     PanelRtcState,
     PanelTelopLog,
@@ -20,14 +28,6 @@ import type {
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
 } from "./panelTypes";
-import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
-import {
-    hydrateSettingsSnapshotsFromController,
-    hydrateStartupSettingsStatusFromController,
-} from "../app/sincroAppStateSnapshotHydrators";
-import { prependPanelMessageLog } from "../app/panelLogHelpers";
-import { UI_TUNING } from "../app/uiTuning";
-import { useSincroMediaDeviceState } from "../app/useSincroMediaDeviceState";
 
 const defaultSettings: SincroAppSettingsSnapshot = {
     titleText: "Sincromisor",
@@ -124,7 +124,7 @@ type SimpleVrmPanelActions = {
 };
 
 type SimpleVrmPanelEventHandlerMap = {
-    [K in SincroAppEvent["type"]]?: (event: Extract<SincroAppEvent, { type: K; }>) => void;
+    [K in SincroAppEvent["type"]]?: (event: Extract<SincroAppEvent, { type: K }>) => void;
 };
 
 // AppController のイベント購読を React state に集約する、ページ共通の表示用 hook。
@@ -132,7 +132,9 @@ type SimpleVrmPanelEventHandlerMap = {
 export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelActions {
     const initialController = SincroAppController.getCurrent();
     const [hasActiveController, setHasActiveController] = useState<boolean>(!!initialController);
-    const [currentController, setCurrentController] = useState<SincroAppController | null>(initialController);
+    const [currentController, setCurrentController] = useState<SincroAppController | null>(
+        initialController,
+    );
     const [lifecycleState, setLifecycleState] = useState<SincroAppLifecycleState>("idle");
     const [settings, setSettings] = useState<SincroAppSettingsSnapshot>(
         initialController?.state.getSettingsSnapshot() ?? defaultSettings,
@@ -143,10 +145,12 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
     const [settingsUiHints, setSettingsUiHints] = useState<SincroAppSettingsUiHints>(
         initialController?.state.getSettingsUiHints() ?? defaultSettingsUiHints,
     );
-    const [startupSettingsStatus, setStartupSettingsStatus] = useState<SincroAppStartupSettingsStatus>(
-        initialController?.state.getStartupSettingsStatus() ?? defaultStartupSettingsStatus,
-    );
-    const [startupSettingsCapabilities, setStartupSettingsCapabilities] = useState<SincroAppStartupSettingsCapabilities>(defaultStartupSettingsCapabilities);
+    const [startupSettingsStatus, setStartupSettingsStatus] =
+        useState<SincroAppStartupSettingsStatus>(
+            initialController?.state.getStartupSettingsStatus() ?? defaultStartupSettingsStatus,
+        );
+    const [startupSettingsCapabilities, setStartupSettingsCapabilities] =
+        useState<SincroAppStartupSettingsCapabilities>(defaultStartupSettingsCapabilities);
     const {
         snapshot: mediaDeviceSnapshot,
         audioInputSelection,
@@ -158,20 +162,39 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
     });
     const [logs, setLogs] = useState<PanelMessageLog[]>([]);
     const [vadState, setVadState] = useState<"unknown" | "speech" | "silence">("unknown");
-    const [learnedVad, setLearnedVad] = useState<PanelLearnedVadState>({ status: "idle", probability: null });
-    const [gaze, setGaze] = useState<PanelGazeState>({ faceX: null, faceY: null, facing: null, watching: null });
-    const [rtcEvents, setRtcEvents] = useState<string[]>([]);
-    const [rtcState, setRtcState] = useState<PanelRtcState>({ iceConnectionState: "-", signalingState: "-" });
-    const [connectionState, setConnectionState] = useState<PanelConnectionState>({ value: "idle", detail: "" });
-    const [telopLogs, setTelopLogs] = useState<PanelTelopLog[]>([]);
-    const [lookingGlass, setLookingGlass] = useState<PanelLookingGlassState>({ state: "idle", code: "", message: "" });
-    const [lookingGlassConfigStatus, setLookingGlassConfigStatus] = useState<PanelLookingGlassConfigStatus>({
-        pendingForNextSession: false,
-        reloadRecommended: false,
-        changedKeys: [],
-        reloadRecommendedKeys: [],
-        nextSessionKeys: [],
+    const [learnedVad, setLearnedVad] = useState<PanelLearnedVadState>({
+        status: "idle",
+        probability: null,
     });
+    const [gaze, setGaze] = useState<PanelGazeState>({
+        faceX: null,
+        faceY: null,
+        facing: null,
+        watching: null,
+    });
+    const [rtcEvents, setRtcEvents] = useState<string[]>([]);
+    const [rtcState, setRtcState] = useState<PanelRtcState>({
+        iceConnectionState: "-",
+        signalingState: "-",
+    });
+    const [connectionState, setConnectionState] = useState<PanelConnectionState>({
+        value: "idle",
+        detail: "",
+    });
+    const [telopLogs, setTelopLogs] = useState<PanelTelopLog[]>([]);
+    const [lookingGlass, setLookingGlass] = useState<PanelLookingGlassState>({
+        state: "idle",
+        code: "",
+        message: "",
+    });
+    const [lookingGlassConfigStatus, setLookingGlassConfigStatus] =
+        useState<PanelLookingGlassConfigStatus>({
+            pendingForNextSession: false,
+            reloadRecommended: false,
+            changedKeys: [],
+            reloadRecommendedKeys: [],
+            nextSessionKeys: [],
+        });
 
     useEffect(() => {
         // event type -> state 更新処理を map にして、購読配線の見通しを保つ。
@@ -227,21 +250,29 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
                 setLearnedVad({ status: event.status, probability: event.probability });
             },
             rtc_event_log: (event) => {
-                setRtcEvents((prev) => [event.message, ...prev].slice(0, UI_TUNING.controlPanel.rtcEventLogLimit));
+                setRtcEvents((prev) =>
+                    [event.message, ...prev].slice(0, UI_TUNING.controlPanel.rtcEventLogLimit),
+                );
             },
             telop_message: (event) => {
-                setTelopLogs((prev) => [
-                    {
-                        text: event.message.text ?? "",
-                        message: event.message.message,
-                        newText: !!event.message.new_text,
-                        vowel: event.message.vowel ?? "",
-                    },
-                    ...prev,
-                ].slice(0, UI_TUNING.controlPanel.telopLogLimit));
+                setTelopLogs((prev) =>
+                    [
+                        {
+                            text: event.message.text ?? "",
+                            message: event.message.message,
+                            newText: !!event.message.new_text,
+                            vowel: event.message.vowel ?? "",
+                        },
+                        ...prev,
+                    ].slice(0, UI_TUNING.controlPanel.telopLogLimit),
+                );
             },
             looking_glass_state: (event) => {
-                setLookingGlass({ state: event.state, code: event.code ?? "", message: event.message ?? "" });
+                setLookingGlass({
+                    state: event.state,
+                    code: event.code ?? "",
+                    message: event.message ?? "",
+                });
             },
             looking_glass_config_status: (event) => {
                 setLookingGlassConfigStatus(event.status);
@@ -269,7 +300,9 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
             },
             onEvent: (event: SincroAppEvent) => {
                 // UI層は「イベントを state へ正規化する」責務に絞り、描画ロジックは component 側へ寄せる。
-                const handler = eventHandlers[event.type] as ((value: SincroAppEvent) => void) | undefined;
+                const handler = eventHandlers[event.type] as
+                    | ((value: SincroAppEvent) => void)
+                    | undefined;
                 handler?.(event);
             },
         });

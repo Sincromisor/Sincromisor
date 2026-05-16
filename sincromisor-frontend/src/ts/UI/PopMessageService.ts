@@ -23,7 +23,7 @@ export class PopMessageService {
 
     // 通常画面用 pop は既存 DOM 描画を継続し、dialog 内 pop は React event 描画を正式経路とする。
     private constructor() {
-        this.popBox = document.querySelector('div#sincroPopBox')!;
+        this.popBox = document.querySelector("div#sincroPopBox")!;
     }
 
     /* 通常メッセージ */
@@ -48,11 +48,11 @@ export class PopMessageService {
     }
 
     private writeMessage(message: string, error: boolean, targetBox: HTMLDivElement): void {
-        const messageElement: HTMLDivElement = document.createElement('div');
+        const messageElement: HTMLDivElement = document.createElement("div");
         if (error) {
-            messageElement.className = 'popMessage popError';
+            messageElement.className = "popMessage popError";
         } else {
-            messageElement.className = 'popMessage';
+            messageElement.className = "popMessage";
         }
         messageElement.textContent = message;
 
@@ -63,20 +63,20 @@ export class PopMessageService {
         if (this.messageQueue.length > this.MAX_MESSAGES) {
             const oldMessage = this.messageQueue.shift();
             if (oldMessage) {
-                oldMessage.classList.remove('showPop');
+                oldMessage.classList.remove("showPop");
                 setTimeout(() => oldMessage.remove(), 500);
             }
         }
 
         // メッセージを表示
-        setTimeout(() => messageElement.classList.add('showPop'), 10);
+        setTimeout(() => messageElement.classList.add("showPop"), 10);
 
         // AUTO_REMOVE_TIME秒後に削除
         setTimeout(() => {
-            messageElement.classList.remove('showPop');
+            messageElement.classList.remove("showPop");
             setTimeout(() => {
                 messageElement.remove();
-                this.messageQueue = this.messageQueue.filter(msg => msg !== messageElement);
+                this.messageQueue = this.messageQueue.filter((msg) => msg !== messageElement);
             }, 500);
         }, this.AUTO_REMOVE_TIME);
     }
@@ -89,7 +89,9 @@ export class PopMessageService {
             error,
             autoRemoveMs: this.AUTO_REMOVE_TIME,
         };
-        this.dialogPopListeners.forEach((listener) => listener(event));
+        this.dialogPopListeners.forEach((listener) => {
+            listener(event);
+        });
     }
 }
 

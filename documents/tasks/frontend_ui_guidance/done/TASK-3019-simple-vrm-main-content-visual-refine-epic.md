@@ -51,6 +51,6 @@
 - 本タスク自体では実装を直接抱え込まず、子タスクの境界管理と完了判定を担う。
 - `DESIGN.md` は模倣対象ではなく、dark surface、情報密度、rounded geometry、elevation の原則を参照する。
 - 完了記録:
-  - `TASK-3020` から `TASK-3024` で viewport 前提、legacy global style の隔離、header / chat / telop overlay の整理を完了した。
-  - `TASK-3025` で `documents/design/frontend_ui.md` の最終同期、`simple-vrm` desktop / mobile 確認、`vrm360` / `looking-glass-vrm` の shared shell 確認を実施した。
-  - 2026-04-24 時点で `cd sincromisor-frontend && npm run build` は成功し、shared 変更による modern 3 ページの明確な崩れは確認されなかった。
+    - `TASK-3020` から `TASK-3024` で viewport 前提、legacy global style の隔離、header / chat / telop overlay の整理を完了した。
+    - `TASK-3025` で `documents/design/frontend_ui.md` の最終同期、`simple-vrm` desktop / mobile 確認、`vrm360` / `looking-glass-vrm` の shared shell 確認を実施した。
+    - 2026-04-24 時点で `cd sincromisor-frontend && npm run build` は成功し、shared 変更による modern 3 ページの明確な崩れは確認されなかった。

@@ -20,8 +20,8 @@
 - 確認日時: 2026-05-01
 - 対象: `http://127.0.0.1:5173/simple-vrm/`
 - viewport:
-  - desktop: `1280x720`
-  - mobile: `390x844`
+    - desktop: `1280x720`
+    - mobile: `390x844`
 - backend 未起動のため `/api/v1/RTCSignalingServer/config.json` は 404、media permission は `NotAllowedError` になる。今回の判定対象は UI layout / 導線 / visual consistency とする。
 
 確認した状態:

@@ -1,6 +1,6 @@
-import { PerspectiveCamera } from "three/src/cameras/PerspectiveCamera.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import { PerspectiveCamera } from "three/src/cameras/PerspectiveCamera.js";
+import type { Vector3 } from "three/src/math/Vector3.js";
 
 // simple-vrm の初期自動フレーミング調整値。
 // 役割ごとにまとめ、実機確認時に「どれを触るべきか」を分かりやすくする。
@@ -35,7 +35,12 @@ export class VRMCamera {
         this.cameraFov = CAMERA_FOV;
         this.inputLayer = inputLayer;
         // 顔が見やすい距離・高さを既定にし、細かい差分は scene 側のキャラクター配置で吸収する。
-        this.camera = new PerspectiveCamera(CAMERA_FOV, window.innerWidth / window.innerHeight, 0.001, 100.0);
+        this.camera = new PerspectiveCamera(
+            CAMERA_FOV,
+            window.innerWidth / window.innerHeight,
+            0.001,
+            100.0,
+        );
         this.camera.position.set(0.0, 1.45, CAMERA_Z);
         this.controls = this.createOrbitControls();
         this.controls.update();
@@ -43,7 +48,7 @@ export class VRMCamera {
     }
 
     // renderer resize に追従して射影行列を更新する。
-    updateAspect(ratio: number){
+    updateAspect(ratio: number) {
         this.camera.aspect = ratio;
         this.camera.updateProjectionMatrix();
     }
@@ -80,7 +85,7 @@ export class VRMCamera {
         const span = Math.max(verticalSpan, 0.2);
         const marginScale = 1.7;
         const fitHeight = span * marginScale;
-        const fovRad = this.cameraFov * Math.PI / 180.0;
+        const fovRad = (this.cameraFov * Math.PI) / 180.0;
         const distance = (fitHeight * 0.5) / Math.tan(fovRad * 0.5);
 
         this.controls.target.copy(target);
@@ -95,10 +100,11 @@ export class VRMCamera {
         const span = Math.max(topY - bottomY, 0.2);
         const topPadding = span * SIMPLE_VRM_AUTO_FRAMING_CAMERA.topPaddingRatio;
         const bottomPadding = span * SIMPLE_VRM_AUTO_FRAMING_CAMERA.bottomPaddingRatio;
-        const upperExtent = Math.max((topY + topPadding) - target.y, 0.1);
+        const upperExtent = Math.max(topY + topPadding - target.y, 0.1);
         const lowerExtent = Math.max(target.y - (bottomY - bottomPadding), 0.1);
-        const halfHeight = Math.max(upperExtent, lowerExtent) * SIMPLE_VRM_AUTO_FRAMING_CAMERA.distanceSafetyScale;
-        const fovRad = this.cameraFov * Math.PI / 180.0;
+        const halfHeight =
+            Math.max(upperExtent, lowerExtent) * SIMPLE_VRM_AUTO_FRAMING_CAMERA.distanceSafetyScale;
+        const fovRad = (this.cameraFov * Math.PI) / 180.0;
         const distance = halfHeight / Math.tan(fovRad * 0.5);
 
         this.controls.target.copy(target);

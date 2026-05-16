@@ -1,4 +1,10 @@
 import {
+    SettingsShell,
+    SettingsStatusCard,
+    SettingsSummaryGrid,
+} from "../settings-shell/SettingsShell";
+import { settingsPageCopy } from "../settings-shell/settingsPageCopy";
+import {
     BasicSettingsSection,
     CharacterSettingsSection,
     LookingGlassSettingsSection,
@@ -8,8 +14,6 @@ import {
 } from "./components/SettingsSections";
 import { panelStyles } from "./panelStyles";
 import { useSimpleVrmPanelState } from "./useSimpleVrmPanelState";
-import { SettingsShell, SettingsStatusCard, SettingsSummaryGrid } from "../settings-shell/SettingsShell";
-import { settingsPageCopy } from "../settings-shell/settingsPageCopy";
 
 type SimpleVrmControlPanelProps = {
     title?: string;
@@ -65,25 +69,29 @@ export function SimpleVrmControlPanel({
 
     const isLookingGlassFocused = variant === "looking-glass-vrm";
     const hasStartupOptions = startupSettingsCapabilities.enableVR;
-    const connectionDetail = connectionState.detail || (hasActiveController ? "接続済みです。" : "");
+    const connectionDetail =
+        connectionState.detail || (hasActiveController ? "接続済みです。" : "");
     const lookingGlassStatusText = lookingGlass.code
         ? `${lookingGlass.state} [${lookingGlass.code}]`
         : lookingGlass.state;
-    const canStartLookingGlass = lookingGlass.state !== "starting" && lookingGlass.state !== "active";
-    const canStopLookingGlass = lookingGlass.state === "active" || lookingGlass.state === "starting";
-    const startupOptionHint = startupSettingsStatus.changedKeys.length > 0
-        ? `開始前だけ効く項目に変更があります: ${startupSettingsStatus.changedKeys.join(", ")}`
-        : "";
+    const canStartLookingGlass =
+        lookingGlass.state !== "starting" && lookingGlass.state !== "active";
+    const canStopLookingGlass =
+        lookingGlass.state === "active" || lookingGlass.state === "starting";
+    const startupOptionHint =
+        startupSettingsStatus.changedKeys.length > 0
+            ? `開始前だけ効く項目に変更があります: ${startupSettingsStatus.changedKeys.join(", ")}`
+            : "";
     const lookingGlassApplyLabel = lookingGlassConfigStatus.reloadRecommended
         ? "停止後に反映"
         : lookingGlassConfigStatus.pendingForNextSession
-            ? "次回起動で反映"
-            : "最新状態";
+          ? "次回起動で反映"
+          : "最新状態";
     const lookingGlassApplyDetail = lookingGlassConfigStatus.reloadRecommended
         ? "停止してから Looking Glass をもう一度開始すると反映されます。"
         : lookingGlassConfigStatus.changedKeys.length > 0
-            ? lookingGlassConfigStatus.changedKeys.join(", ")
-            : null;
+          ? lookingGlassConfigStatus.changedKeys.join(", ")
+          : null;
     const requestLookingGlassStart = (): void => {
         window.dispatchEvent(new CustomEvent("sincro:looking-glass-start-request"));
     };
@@ -101,89 +109,115 @@ export function SimpleVrmControlPanel({
                 navigationPlacement="top"
                 initialPageId={isLookingGlassFocused ? "looking-glass" : "conversation"}
                 pages={[
-                    ...(isLookingGlassFocused ? [{
-                        id: "looking-glass",
-                        label: settingsPageCopy.lookingGlass.label,
-                        title: settingsPageCopy.lookingGlass.title,
-                        content: (
-                            <>
-                                <SettingsSummaryGrid>
-                                    <SettingsStatusCard
-                                        label="表示状態"
-                                        value={lookingGlassStatusText}
-                                        detail={lookingGlass.message || null}
-                                        tone={lookingGlass.state === "active" ? "good" : lookingGlass.state === "error" ? "warn" : "neutral"}
-                                    />
-                                    <SettingsStatusCard
-                                        label="反映タイミング"
-                                        value={lookingGlassApplyLabel}
-                                        detail={lookingGlassApplyDetail}
-                                        tone={lookingGlassConfigStatus.reloadRecommended ? "warn" : "neutral"}
-                                    />
-                                </SettingsSummaryGrid>
-                                <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
-                                    <button
-                                        type="button"
-                                        onClick={requestLookingGlassStart}
-                                        disabled={!canStartLookingGlass}
-                                        style={panelStyles.button}
-                                    >
-                                        Looking Glass 開始
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={requestLookingGlassStop}
-                                        disabled={!canStopLookingGlass}
-                                        style={panelStyles.button}
-                                    >
-                                        Looking Glass 停止
-                                    </button>
-                                </div>
-                                <BasicSettingsSection
-                                    settings={settings}
-                                    uiState={settingsUiState}
-                                    onTitleChange={(titleText) => applySettings({ titleText })}
-                                    onTalkModeChange={changeTalkMode}
-                                    showTitle={false}
-                                    showTalkMode={true}
-                                    showSectionTitle={false}
-                                />
-                                <LookingGlassSettingsSection
-                                    settings={settings}
-                                    onApplySettings={applySettings}
-                                    showSectionTitle={false}
-                                />
-                            </>
-                        ),
-                    }] : []),
-                    ...(!isLookingGlassFocused ? [{
-                        id: "conversation",
-                        label: settingsPageCopy.conversation.label,
-                        title: settingsPageCopy.conversation.title,
-                        content: (
-                            <SettingsCategorySection
-                                title={settingsPageCopy.conversation.sectionTitle}
-                            >
-                                <BasicSettingsSection
-                                    settings={settings}
-                                    uiState={settingsUiState}
-                                    onTitleChange={(titleText) => applySettings({ titleText })}
-                                    onTalkModeChange={changeTalkMode}
-                                    showTitle={true}
-                                    showTalkMode={true}
-                                    showSectionTitle={false}
-                                />
-                            </SettingsCategorySection>
-                        ),
-                    }] : []),
+                    ...(isLookingGlassFocused
+                        ? [
+                              {
+                                  id: "looking-glass",
+                                  label: settingsPageCopy.lookingGlass.label,
+                                  title: settingsPageCopy.lookingGlass.title,
+                                  content: (
+                                      <>
+                                          <SettingsSummaryGrid>
+                                              <SettingsStatusCard
+                                                  label="表示状態"
+                                                  value={lookingGlassStatusText}
+                                                  detail={lookingGlass.message || null}
+                                                  tone={
+                                                      lookingGlass.state === "active"
+                                                          ? "good"
+                                                          : lookingGlass.state === "error"
+                                                            ? "warn"
+                                                            : "neutral"
+                                                  }
+                                              />
+                                              <SettingsStatusCard
+                                                  label="反映タイミング"
+                                                  value={lookingGlassApplyLabel}
+                                                  detail={lookingGlassApplyDetail}
+                                                  tone={
+                                                      lookingGlassConfigStatus.reloadRecommended
+                                                          ? "warn"
+                                                          : "neutral"
+                                                  }
+                                              />
+                                          </SettingsSummaryGrid>
+                                          <div
+                                              style={{
+                                                  display: "flex",
+                                                  gap: "8px",
+                                                  marginBottom: "14px",
+                                              }}
+                                          >
+                                              <button
+                                                  type="button"
+                                                  onClick={requestLookingGlassStart}
+                                                  disabled={!canStartLookingGlass}
+                                                  style={panelStyles.button}
+                                              >
+                                                  Looking Glass 開始
+                                              </button>
+                                              <button
+                                                  type="button"
+                                                  onClick={requestLookingGlassStop}
+                                                  disabled={!canStopLookingGlass}
+                                                  style={panelStyles.button}
+                                              >
+                                                  Looking Glass 停止
+                                              </button>
+                                          </div>
+                                          <BasicSettingsSection
+                                              settings={settings}
+                                              uiState={settingsUiState}
+                                              onTitleChange={(titleText) =>
+                                                  applySettings({ titleText })
+                                              }
+                                              onTalkModeChange={changeTalkMode}
+                                              showTitle={false}
+                                              showTalkMode={true}
+                                              showSectionTitle={false}
+                                          />
+                                          <LookingGlassSettingsSection
+                                              settings={settings}
+                                              onApplySettings={applySettings}
+                                              showSectionTitle={false}
+                                          />
+                                      </>
+                                  ),
+                              },
+                          ]
+                        : []),
+                    ...(!isLookingGlassFocused
+                        ? [
+                              {
+                                  id: "conversation",
+                                  label: settingsPageCopy.conversation.label,
+                                  title: settingsPageCopy.conversation.title,
+                                  content: (
+                                      <SettingsCategorySection
+                                          title={settingsPageCopy.conversation.sectionTitle}
+                                      >
+                                          <BasicSettingsSection
+                                              settings={settings}
+                                              uiState={settingsUiState}
+                                              onTitleChange={(titleText) =>
+                                                  applySettings({ titleText })
+                                              }
+                                              onTalkModeChange={changeTalkMode}
+                                              showTitle={true}
+                                              showTalkMode={true}
+                                              showSectionTitle={false}
+                                          />
+                                      </SettingsCategorySection>
+                                  ),
+                              },
+                          ]
+                        : []),
                     {
                         id: "devices",
                         label: settingsPageCopy.devices.label,
                         title: settingsPageCopy.devices.title,
                         content: (
-                            <SettingsCategorySection
-                                title={settingsPageCopy.devices.sectionTitle}
-                            >
+                            <SettingsCategorySection title={settingsPageCopy.devices.sectionTitle}>
                                 <MicSettingsSection
                                     settings={settings}
                                     uiState={settingsUiState}
@@ -291,18 +325,38 @@ export function SimpleVrmControlPanel({
                                             <div style={{ fontWeight: 700, lineHeight: 1.3 }}>
                                                 {connectionStatusLabel(connectionState.value)}
                                             </div>
-                                            {connectionDetail ? <div style={{ opacity: 0.78, lineHeight: 1.45 }}>
-                                                {connectionDetail}
-                                            </div> : null}
-                                            {startupOptionHint ? <div style={{ opacity: 0.72, lineHeight: 1.45 }}>
-                                                {startupOptionHint}
-                                            </div> : null}
+                                            {connectionDetail ? (
+                                                <div style={{ opacity: 0.78, lineHeight: 1.45 }}>
+                                                    {connectionDetail}
+                                                </div>
+                                            ) : null}
+                                            {startupOptionHint ? (
+                                                <div style={{ opacity: 0.72, lineHeight: 1.45 }}>
+                                                    {startupOptionHint}
+                                                </div>
+                                            ) : null}
                                         </div>
-                                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                            <button type="button" onClick={startAction} disabled={!hasActiveController} style={panelStyles.button}>
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                gap: "8px",
+                                                flexWrap: "wrap",
+                                            }}
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={startAction}
+                                                disabled={!hasActiveController}
+                                                style={panelStyles.button}
+                                            >
                                                 会話を開始
                                             </button>
-                                            <button type="button" onClick={stopAction} disabled={!hasActiveController} style={panelStyles.button}>
+                                            <button
+                                                type="button"
+                                                onClick={stopAction}
+                                                disabled={!hasActiveController}
+                                                style={panelStyles.button}
+                                            >
                                                 接続を停止
                                             </button>
                                         </div>

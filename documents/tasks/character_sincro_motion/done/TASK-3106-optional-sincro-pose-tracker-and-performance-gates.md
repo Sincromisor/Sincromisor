@@ -70,19 +70,19 @@
 
 - `SincroPoseMotionSnapshot` を追加し、`CharacterBehaviorSnapshot.poseMotion` として faceMotion から分離して保持するようにした。
 - `SincroPoseTracker` を追加した。
-  - MediaPipe `PoseLandmarker` Lite model を `/3rd_party/pose_landmarker_lite.task` から読み込む。
-  - 肩、肘、手首、腰 landmark から肩傾き、胴体傾き、上腕リフト、上腕開き、前腕屈曲、手首上げを正規化する。
-  - landmark visibility が低い部位は部位単位で無効化し、腕が画面外に出た時の暴れを抑える。
+    - MediaPipe `PoseLandmarker` Lite model を `/3rd_party/pose_landmarker_lite.task` から読み込む。
+    - 肩、肘、手首、腰 landmark から肩傾き、胴体傾き、上腕リフト、上腕開き、前腕屈曲、手首上げを正規化する。
+    - landmark visibility が低い部位は部位単位で無効化し、腕が画面外に出た時の暴れを抑える。
 - `TrackerRuntime` を face + optional pose の共有実行基盤に拡張した。
-  - FaceLandmarker は既定 15fps、PoseLandmarker は既定 12fps。
-  - Pose 推論が 38ms 以上で4回続く場合、または姿勢検出失敗が18回続く場合は pose だけを停止し、face-only に降格する。
-  - face runtime error 時は pose も停止するが、pose fallback 時は face tracking を継続する。
+    - FaceLandmarker は既定 15fps、PoseLandmarker は既定 12fps。
+    - Pose 推論が 38ms 以上で4回続く場合、または姿勢検出失敗が18回続く場合は pose だけを停止し、face-only に降格する。
+    - face runtime error 時は pose も停止するが、pose fallback 時は face tracking を継続する。
 - `SincroPoseRetargeter` を追加した。
-  - optional poseMotion から spine/chest/shoulder/arm 向けの低振幅 retarget frame を生成する。
-  - 強めの smoothing と neutral return を持ち、`degradedToFaceOnly` または低 confidence 時は自然に neutral へ戻す。
+    - optional poseMotion から spine/chest/shoulder/arm 向けの低振幅 retarget frame を生成する。
+    - 強めの smoothing と neutral return を持ち、`degradedToFaceOnly` または低 confidence 時は自然に neutral へ戻す。
 - `ArmBoneController` と `CharacterMotionOrchestrator` に pose retarget frame の入口を追加した。
-  - 上半身同期は肩・胸・spine に小さく加算する。
-  - 腕同期は既存の idle / speech gesture に低振幅 offset として加算する。
+    - 上半身同期は肩・胸・spine に小さく加算する。
+    - 腕同期は既存の idle / speech gesture に低振幅 offset として加算する。
 - `SincroCharacterGazeController` で `sincro` mode 時に optional pose tracking を起動し、fallback 状態を Debug Console の gaze target debug へ表示するようにした。
 - `documents/design/frontend_character.md` に実装後の pose fps / performance gate / face-only fallback を反映した。
 

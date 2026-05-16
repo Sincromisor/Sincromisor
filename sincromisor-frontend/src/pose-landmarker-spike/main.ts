@@ -1,15 +1,15 @@
-import {
-    DEFAULT_POSE_LANDMARKER_SPIKE_CONFIG,
-    POSE_LANDMARKER_SPIKE_MODEL_PATHS,
-    PoseLandmarkerSpike,
-} from "../ts/CharacterGaze/PoseLandmarkerSpike";
+import type { NormalizedLandmark, PoseLandmarkerResult } from "@mediapipe/tasks-vision";
+import { PoseLandmarker } from "@mediapipe/tasks-vision";
 import type {
     PoseLandmarkerSpikeConfig,
     PoseLandmarkerSpikeMetrics,
     PoseLandmarkerSpikeModelPreset,
 } from "../ts/CharacterGaze/PoseLandmarkerSpike";
-import { PoseLandmarker } from "@mediapipe/tasks-vision";
-import type { NormalizedLandmark, PoseLandmarkerResult } from "@mediapipe/tasks-vision";
+import {
+    DEFAULT_POSE_LANDMARKER_SPIKE_CONFIG,
+    POSE_LANDMARKER_SPIKE_MODEL_PATHS,
+    PoseLandmarkerSpike,
+} from "../ts/CharacterGaze/PoseLandmarkerSpike";
 import "./styles.css";
 
 const previewVideo = requireElement<HTMLVideoElement>("previewVideo");
@@ -111,17 +111,19 @@ function renderMetrics(metrics: PoseLandmarkerSpikeMetrics): void {
     poseMs.textContent = `${metrics.poseInferenceMs.toFixed(1)}ms`;
     poseAvgMax.textContent = `${metrics.poseInferenceAvgMs.toFixed(1)} / ${metrics.poseInferenceMaxMs.toFixed(1)}ms`;
     renderFps.textContent = `${metrics.renderFps.toFixed(1)}fps`;
-    faceMs.textContent = metrics.faceInferenceMs == null
-        ? "--"
-        : `${metrics.faceInferenceMs.toFixed(1)}ms avg ${metrics.faceInferenceAvgMs?.toFixed(1) ?? "--"}`;
-    droppedFrames.textContent = metrics.droppedVideoFrames == null ? "--" : String(metrics.droppedVideoFrames);
+    faceMs.textContent =
+        metrics.faceInferenceMs == null
+            ? "--"
+            : `${metrics.faceInferenceMs.toFixed(1)}ms avg ${metrics.faceInferenceAvgMs?.toFixed(1) ?? "--"}`;
+    droppedFrames.textContent =
+        metrics.droppedVideoFrames == null ? "--" : String(metrics.droppedVideoFrames);
     landmarkSummary.textContent = metrics.detected
         ? metrics.trackedLandmarks
-            .map((landmark) => {
-                const status = landmark.stable ? "ok" : "low";
-                return `${landmark.name.padEnd(14)} ${status} visibility=${landmark.visibility.toFixed(2)} x=${landmark.x.toFixed(2)} y=${landmark.y.toFixed(2)}`;
-            })
-            .join("\n")
+              .map((landmark) => {
+                  const status = landmark.stable ? "ok" : "low";
+                  return `${landmark.name.padEnd(14)} ${status} visibility=${landmark.visibility.toFixed(2)} x=${landmark.x.toFixed(2)} y=${landmark.y.toFixed(2)}`;
+              })
+              .join("\n")
         : `pose_not_detected${metrics.fallbackReason ? ` (${metrics.fallbackReason})` : ""}`;
 }
 
@@ -158,7 +160,11 @@ function syncCanvasSize(): void {
     }
 }
 
-function drawConnection(landmarks: NormalizedLandmark[], startIndex: number, endIndex: number): void {
+function drawConnection(
+    landmarks: NormalizedLandmark[],
+    startIndex: number,
+    endIndex: number,
+): void {
     const start = landmarks[startIndex];
     const end = landmarks[endIndex];
     if (!start || !end || start.visibility < 0.35 || end.visibility < 0.35) {

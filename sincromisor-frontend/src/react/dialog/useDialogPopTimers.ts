@@ -27,9 +27,13 @@ export function useDialogPopTimers() {
 
     const clearAll = useCallback(() => {
         // helper 内の show/hide/remove タイマーを一括解除し、unmount 後の遅延更新を防ぐ。
-        pendingTimerCleanupsRef.current.forEach((cleanup) => cleanup());
+        pendingTimerCleanupsRef.current.forEach((cleanup) => {
+            cleanup();
+        });
         pendingTimerCleanupsRef.current.clear();
-        cleanupRegistryTimersRef.current.forEach((timer) => clearTimeout(timer));
+        cleanupRegistryTimersRef.current.forEach((timer) => {
+            clearTimeout(timer);
+        });
         cleanupRegistryTimersRef.current.clear();
     }, []);
 

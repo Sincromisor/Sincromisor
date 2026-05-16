@@ -1,7 +1,7 @@
 import { SincroAppController } from "../App/SincroAppController";
 import { UserMediaManager } from "../RTC/UserMediaManager";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
-import { VRMScene } from './VRMScene/VRMScene';
+import { VRMScene } from "./VRMScene/VRMScene";
 
 const CHARACTER_BOX_SELECTOR = "div#sincroCharacterBox";
 const CHARACTER_CONTROL_LAYER_SELECTOR = "div#sincroCharacterControlLayer";
@@ -58,7 +58,7 @@ export class SincroVRMInitializer {
         });
         this.bindRuntimeSettingsSync();
 
-        if ('obsstudio' in window) {
+        if ("obsstudio" in window) {
             this.start();
         }
     }
@@ -100,7 +100,9 @@ export class SincroVRMInitializer {
     }
 
     private getCharacterControlLayer(): HTMLDivElement {
-        const controlLayer = document.querySelector<HTMLDivElement>(CHARACTER_CONTROL_LAYER_SELECTOR);
+        const controlLayer = document.querySelector<HTMLDivElement>(
+            CHARACTER_CONTROL_LAYER_SELECTOR,
+        );
         if (!controlLayer) {
             throw new Error(`${CHARACTER_CONTROL_LAYER_SELECTOR} is not found.`);
         }
@@ -116,15 +118,18 @@ export class SincroVRMInitializer {
 
     private loadCachedSystemIcon(): void {
         // VRMロード完了前でもチャット system icon を出せるよう、キャッシュ済みサムネイルを先に復元する。
-        this.appController.dialog.loadVrmThumbnailBlob().then((blob: Blob | null) => {
-            if (!blob) {
-                return;
-            }
-            const iconURL = URL.createObjectURL(blob);
-            this.applySystemIcon(iconURL);
-        }).catch((error) => {
-            console.error('Failed to load cached VRM thumbnail.', error);
-        });
+        this.appController.dialog
+            .loadVrmThumbnailBlob()
+            .then((blob: Blob | null) => {
+                if (!blob) {
+                    return;
+                }
+                const iconURL = URL.createObjectURL(blob);
+                this.applySystemIcon(iconURL);
+            })
+            .catch((error) => {
+                console.error("Failed to load cached VRM thumbnail.", error);
+            });
     }
 
     private start(): void {
@@ -184,7 +189,7 @@ export class SincroVRMInitializer {
             return;
         }
 
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         const width = thumbnailImage.naturalWidth || thumbnailImage.width;
         const height = thumbnailImage.naturalHeight || thumbnailImage.height;
         if (width === 0 || height === 0) {
@@ -193,7 +198,7 @@ export class SincroVRMInitializer {
 
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext("2d");
         if (!ctx) {
             return;
         }
@@ -202,7 +207,7 @@ export class SincroVRMInitializer {
             ctx.drawImage(thumbnailImage, 0, 0, width, height);
         } catch (error) {
             // cross-origin等でdrawImageが失敗するケースはキャッシュ保存を諦めて表示だけ更新する
-            console.warn('Failed to draw VRM thumbnail image.', error);
+            console.warn("Failed to draw VRM thumbnail image.", error);
             this.applySystemIcon(thumbnailImage.src);
             return;
         }
@@ -215,17 +220,17 @@ export class SincroVRMInitializer {
             }
             // 次回起動で即復元できるよう、チャット用サムネイルを dialog 側キャッシュへ保存する。
             this.appController.dialog.saveVrmThumbnailBlob(blob).catch((error) => {
-                console.error('Failed to cache VRM thumbnail.', error);
+                console.error("Failed to cache VRM thumbnail.", error);
             });
             const iconURL = URL.createObjectURL(blob);
             this.applySystemIcon(iconURL);
-        }, 'image/png');
+        }, "image/png");
     }
 
     protected applySystemIcon(iconURL: string): void {
         // 差し替えを繰り返してもblob URLがリークしないように先に解放する。
         this.revokeGeneratedSystemIconURL();
-        if (iconURL.startsWith('blob:')) {
+        if (iconURL.startsWith("blob:")) {
             this.generatedSystemIconURL = iconURL;
         }
 

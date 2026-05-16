@@ -1,11 +1,11 @@
-import { VRMScene } from "../VRMScene/VRMScene";
-import { LookingGlassXRController } from "./LookingGlassXRController";
 import { DoubleSide, RepeatWrapping, SRGBColorSpace } from "three/src/constants.js";
 import { CircleGeometry } from "three/src/geometries/CircleGeometry.js";
-import { MeshStandardMaterial } from "three/src/materials/MeshStandardMaterial.js";
-import { Mesh } from "three/src/objects/Mesh.js";
 import { TextureLoader } from "three/src/loaders/TextureLoader.js";
+import { MeshStandardMaterial } from "three/src/materials/MeshStandardMaterial.js";
 import { Vector3 } from "three/src/math/Vector3.js";
+import { Mesh } from "three/src/objects/Mesh.js";
+import { VRMScene } from "../VRMScene/VRMScene";
+import { LookingGlassXRController } from "./LookingGlassXRController";
 
 // Looking Glass 用の VRM シーン。
 // 360 背景動画は使わず、通常 VRMScene に Looking Glass 起動導線だけを追加する。
@@ -75,23 +75,31 @@ export class LookingGlassVRMScene extends VRMScene {
 
     private bindLookingGlassStateRecovery(): void {
         // LG セッション終了/再開後に OrbitControls の pointer 配線が不安定になるケースへの回復処理。
-        window.addEventListener("sincro:looking-glass-state", (event) => {
-            const detail = (event as CustomEvent<{ state: string; code?: string; }>).detail;
-            if (!detail) {
-                return;
-            }
-            if (detail.state === "starting" || detail.state === "recovering" || detail.state === "active") {
-                this.refreshCameraInteractionBindings();
-            }
-            if (detail.state === "recovering") {
-                // XR 終了直後は renderer/canvas のサイズが崩れることがあるため、次フレームで復元する。
-                requestAnimationFrame(() => {
-                    this.refreshRendererLayout();
-                });
-                requestAnimationFrame(() => {
-                    this.refreshRendererLayout();
-                });
-            }
-        }, { passive: true });
+        window.addEventListener(
+            "sincro:looking-glass-state",
+            (event) => {
+                const detail = (event as CustomEvent<{ state: string; code?: string }>).detail;
+                if (!detail) {
+                    return;
+                }
+                if (
+                    detail.state === "starting" ||
+                    detail.state === "recovering" ||
+                    detail.state === "active"
+                ) {
+                    this.refreshCameraInteractionBindings();
+                }
+                if (detail.state === "recovering") {
+                    // XR 終了直後は renderer/canvas のサイズが崩れることがあるため、次フレームで復元する。
+                    requestAnimationFrame(() => {
+                        this.refreshRendererLayout();
+                    });
+                    requestAnimationFrame(() => {
+                        this.refreshRendererLayout();
+                    });
+                }
+            },
+            { passive: true },
+        );
     }
 }

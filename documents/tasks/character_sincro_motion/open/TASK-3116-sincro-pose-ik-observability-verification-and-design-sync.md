@@ -91,18 +91,18 @@ playwright-cli resize 390 844
 ### 2026-05-16
 
 - Debug Console の `Sincro` tab に左右腕の solver output (`Left Solver` / `Right Solver`) を追加した。
-  - target availability (`Left/Right Targets`) と retarget frame (`ikMode`、anchor reason、腕ごとの `ikActive` / `fallbackReason` / additive rotation) を同じ tab で確認できる。
-  - 「検出していない」「target 欠損」「solver fallback」「VRM 適用 gate による neutral」を切り分ける表示にした。
+    - target availability (`Left/Right Targets`) と retarget frame (`ikMode`、anchor reason、腕ごとの `ikActive` / `fallbackReason` / additive rotation) を同じ tab で確認できる。
+    - 「検出していない」「target 欠損」「solver fallback」「VRM 適用 gate による neutral」を切り分ける表示にした。
 - Pose retarget 調整に IK 専用パラメータを追加した。
-  - `armIkStrength`
-  - `armIkTargetScale`
-  - `armIkMaxLiftRad`
-  - `armIkMaxOpenRad`
-  - `armIkMaxForearmFlexRad`
+    - `armIkStrength`
+    - `armIkTargetScale`
+    - `armIkMaxLiftRad`
+    - `armIkMaxOpenRad`
+    - `armIkMaxForearmFlexRad`
 - `documents/design/frontend_character.md` を更新し、簡易 IK 後の `SincroPoseRetargeter` / `SincroPoseRetargetFrame` / Debug Console 観測項目 / 手動確認観点を同期した。
 - `desktop 1280x720` と `mobile 390x844` で Debug Console / Settings の表示を確認した。
-  - `#debugConsole` / 基本設定 dialog の横 overflow は検出されなかった。
-  - backend 未起動のため `/api/v1/RTCSignalingServer/config.json` は 404、ブラウザ権限未許可のためカメラ/マイクは `Permission denied`。どちらも今回の UI 変更とは別の確認環境由来。
+    - `#debugConsole` / 基本設定 dialog の横 overflow は検出されなかった。
+    - backend 未起動のため `/api/v1/RTCSignalingServer/config.json` は 404、ブラウザ権限未許可のためカメラ/マイクは `Permission denied`。どちらも今回の UI 変更とは別の確認環境由来。
 
 ## 未完了の実機確認
 

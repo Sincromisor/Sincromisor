@@ -1,16 +1,10 @@
-import {
-    FaceLandmarker,
-} from "@mediapipe/tasks-vision";
-import type {
-    Category,
-    FaceLandmarkerResult,
-    Matrix,
-} from "@mediapipe/tasks-vision";
+import type { Category, FaceLandmarkerResult, Matrix } from "@mediapipe/tasks-vision";
+import { FaceLandmarker } from "@mediapipe/tasks-vision";
+import { loadMediaPipeVisionFileset } from "./MediaPipeVisionFileset";
 import {
     DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
-    SincroFaceMotionSnapshot,
+    type SincroFaceMotionSnapshot,
 } from "./SincroFaceMotionSnapshot";
-import { loadMediaPipeVisionFileset } from "./MediaPipeVisionFileset";
 
 const FACE_LANDMARKER_MODEL_PATH = "/3rd_party/face_landmarker.task";
 
@@ -29,12 +23,14 @@ export class SincroFaceTracker {
             return;
         }
         if (!this.initPromise) {
-            this.initPromise = this.createFaceLandmarker()
-                .catch((error) => {
-                    this.initPromise = null;
-                    this.snapshot = this.createFallbackSnapshot("FaceLandmarker の初期化に失敗しました。", performance.now());
-                    throw error;
-                });
+            this.initPromise = this.createFaceLandmarker().catch((error) => {
+                this.initPromise = null;
+                this.snapshot = this.createFallbackSnapshot(
+                    "FaceLandmarker の初期化に失敗しました。",
+                    performance.now(),
+                );
+                throw error;
+            });
         }
         await this.initPromise;
     }
@@ -45,7 +41,10 @@ export class SincroFaceTracker {
 
     detect(videoFrame: TexImageSource, timestampMs: number): SincroFaceMotionSnapshot {
         if (!this.faceLandmarker) {
-            this.snapshot = this.createFallbackSnapshot("FaceLandmarker model is not loaded.", timestampMs);
+            this.snapshot = this.createFallbackSnapshot(
+                "FaceLandmarker model is not loaded.",
+                timestampMs,
+            );
             return this.snapshot;
         }
 
@@ -53,9 +52,10 @@ export class SincroFaceTracker {
         const result = this.faceLandmarker.detectForVideo(videoFrame, timestampMs);
         const inferenceEndedAtMs = performance.now();
         const inferenceTimeMs = inferenceEndedAtMs - inferenceStartedAtMs;
-        const inferenceFps = this.lastInferenceEndedAtMs == null
-            ? 0
-            : 1000 / Math.max(1, inferenceEndedAtMs - this.lastInferenceEndedAtMs);
+        const inferenceFps =
+            this.lastInferenceEndedAtMs == null
+                ? 0
+                : 1000 / Math.max(1, inferenceEndedAtMs - this.lastInferenceEndedAtMs);
         this.lastInferenceEndedAtMs = inferenceEndedAtMs;
         this.snapshot = this.normalizeResult(result, inferenceTimeMs, inferenceFps, timestampMs);
         return this.snapshot;
@@ -69,7 +69,10 @@ export class SincroFaceTracker {
         };
     }
 
-    stop(reason: string | null = null, nowMs: number = performance.now()): SincroFaceMotionSnapshot {
+    stop(
+        reason: string | null = null,
+        nowMs: number = performance.now(),
+    ): SincroFaceMotionSnapshot {
         this.snapshot = {
             ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
             fallbackReason: reason,

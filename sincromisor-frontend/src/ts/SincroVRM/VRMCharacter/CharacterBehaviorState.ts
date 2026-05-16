@@ -1,20 +1,18 @@
-import { Detection } from "@mediapipe/tasks-vision";
-import { CharacterGaze } from "../../CharacterGaze/CharacterGaze";
-import {
-    DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
-} from "../../FaceTracking/SincroFaceMotionSnapshot";
+import type { Detection } from "@mediapipe/tasks-vision";
+import type { CharacterGaze } from "../../CharacterGaze/CharacterGaze";
 import type { SincroFaceMotionSnapshot } from "../../FaceTracking/SincroFaceMotionSnapshot";
-import {
-    DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
-    DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
-} from "../../FaceTracking/SincroPoseMotionSnapshot";
+import { DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT } from "../../FaceTracking/SincroFaceMotionSnapshot";
 import type {
     SincroPoseArmMotionSnapshot,
     SincroPoseMotionSnapshot,
 } from "../../FaceTracking/SincroPoseMotionSnapshot";
-import { ChatMessage, TelopChannelMessage } from "../../RTC/RTCMessage";
-import { TalkManager, TalkManagerEvent } from "../../RTC/TalkManager";
-import { VadStateReport } from "../../RTC/UserMediaManager";
+import {
+    DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
+    DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
+} from "../../FaceTracking/SincroPoseMotionSnapshot";
+import type { ChatMessage, TelopChannelMessage } from "../../RTC/RTCMessage";
+import { TalkManager, type TalkManagerEvent } from "../../RTC/TalkManager";
+import type { VadStateReport } from "../../RTC/UserMediaManager";
 
 export type CharacterInteractionState =
     | "idle"
@@ -89,7 +87,11 @@ export type CharacterBehaviorAiSpeechSnapshot = {
     lastEndedAtMs: number | null;
 };
 
-export type CharacterBehaviorAiSpeechBeatKind = "speech_start" | "cadence" | "phrase" | "punctuation";
+export type CharacterBehaviorAiSpeechBeatKind =
+    | "speech_start"
+    | "cadence"
+    | "phrase"
+    | "punctuation";
 
 export type CharacterBehaviorSnapshot = {
     talkMode: CharacterTalkMode;
@@ -215,29 +217,28 @@ export class CharacterBehaviorState {
         if (!report.isSpeech && !wasSpeech) {
             this.pendingRawSpeechStartedAtMs = null;
         }
-        const rawSpeechAgeMs = this.pendingRawSpeechStartedAtMs == null
-            ? 0
-            : nowMs - this.pendingRawSpeechStartedAtMs;
-        const acceptedRawSpeech = report.isSpeech && rawSpeechAgeMs >= BEHAVIOR_TIMING.vadOnsetDebounceMs;
+        const rawSpeechAgeMs =
+            this.pendingRawSpeechStartedAtMs == null ? 0 : nowMs - this.pendingRawSpeechStartedAtMs;
+        const acceptedRawSpeech =
+            report.isSpeech && rawSpeechAgeMs >= BEHAVIOR_TIMING.vadOnsetDebounceMs;
         const lastSpeechAtMs = report.isSpeech ? nowMs : this.vad.lastSpeechAtMs;
-        const isSpeech = acceptedRawSpeech || (
-            wasSpeech
-            && lastSpeechAtMs != null
-            && nowMs - lastSpeechAtMs <= BEHAVIOR_TIMING.vadSpeechHoldMs
-        );
+        const isSpeech =
+            acceptedRawSpeech ||
+            (wasSpeech &&
+                lastSpeechAtMs != null &&
+                nowMs - lastSpeechAtMs <= BEHAVIOR_TIMING.vadSpeechHoldMs);
         const speechStartedAtMs = isSpeech
-            ? this.vad.speechStartedAtMs ?? this.pendingRawSpeechStartedAtMs ?? nowMs
+            ? (this.vad.speechStartedAtMs ?? this.pendingRawSpeechStartedAtMs ?? nowMs)
             : null;
-        const speechDurationMs = wasSpeech
-            ? nowMs - (this.vad.speechStartedAtMs ?? nowMs)
-            : 0;
-        const completedMeaningfulSpeech = speechDurationMs >= BEHAVIOR_TIMING.vadMinimumMeaningfulSpeechMs;
-        const lastSpeechEndedAtMs = wasSpeech && !isSpeech && completedMeaningfulSpeech
-            ? nowMs
-            : this.vad.lastSpeechEndedAtMs;
-        const lastSpeechDurationMs = wasSpeech && !isSpeech
-            ? speechDurationMs
-            : this.vad.lastSpeechDurationMs;
+        const speechDurationMs = wasSpeech ? nowMs - (this.vad.speechStartedAtMs ?? nowMs) : 0;
+        const completedMeaningfulSpeech =
+            speechDurationMs >= BEHAVIOR_TIMING.vadMinimumMeaningfulSpeechMs;
+        const lastSpeechEndedAtMs =
+            wasSpeech && !isSpeech && completedMeaningfulSpeech
+                ? nowMs
+                : this.vad.lastSpeechEndedAtMs;
+        const lastSpeechDurationMs =
+            wasSpeech && !isSpeech ? speechDurationMs : this.vad.lastSpeechDurationMs;
 
         if (wasSpeech && !isSpeech && completedMeaningfulSpeech) {
             this.lastUserSpeechEndedAtMs = nowMs;
@@ -261,7 +262,11 @@ export class CharacterBehaviorState {
         };
     }
 
-    applyGazeState(characterGaze: CharacterGaze, detections: Detection[], nowMs: number = performance.now()): void {
+    applyGazeState(
+        characterGaze: CharacterGaze,
+        detections: Detection[],
+        nowMs: number = performance.now(),
+    ): void {
         const rawDetected = detections.length > 0;
         const detected = characterGaze.detecting();
         this.gaze = {
@@ -355,7 +360,11 @@ export class CharacterBehaviorState {
         this.setErrorSource("general", message, nowMs);
     }
 
-    setErrorSource(source: string, message: string | null, nowMs: number = performance.now()): void {
+    setErrorSource(
+        source: string,
+        message: string | null,
+        nowMs: number = performance.now(),
+    ): void {
         if (message) {
             this.errorMessagesBySource.set(source, message);
         } else {
@@ -417,15 +426,19 @@ export class CharacterBehaviorState {
         if (message.message_type !== "system") {
             return;
         }
-        const expressionCode = typeof message.expression_code === "number" ? message.expression_code : null;
+        const expressionCode =
+            typeof message.expression_code === "number" ? message.expression_code : null;
         this.expressionCodeBySpeechId.set(message.speech_id, expressionCode);
-        const shouldApplyToCurrentSpeech = this.aiSpeech.speechId == null
-            || this.aiSpeech.speechId === message.speech_id
-            || !this.aiSpeech.isSpeaking;
+        const shouldApplyToCurrentSpeech =
+            this.aiSpeech.speechId == null ||
+            this.aiSpeech.speechId === message.speech_id ||
+            !this.aiSpeech.isSpeaking;
         this.aiSpeech = {
             ...this.aiSpeech,
             speechId: shouldApplyToCurrentSpeech ? message.speech_id : this.aiSpeech.speechId,
-            expressionCode: shouldApplyToCurrentSpeech ? expressionCode : this.aiSpeech.expressionCode,
+            expressionCode: shouldApplyToCurrentSpeech
+                ? expressionCode
+                : this.aiSpeech.expressionCode,
             lastTextMessage: message,
             lastUpdatedAtMs: nowMs,
         };
@@ -439,7 +452,9 @@ export class CharacterBehaviorState {
             ...this.aiSpeech,
             isSpeaking: true,
             speechId: message.speech_id,
-            currentMoraId: message.new_text ? (this.aiSpeech.currentMoraId ?? -1) + 1 : this.aiSpeech.currentMoraId,
+            currentMoraId: message.new_text
+                ? (this.aiSpeech.currentMoraId ?? -1) + 1
+                : this.aiSpeech.currentMoraId,
             expressionCode: speechChanged
                 ? this.expressionCodeForSpeech(message.speech_id)
                 : this.aiSpeech.expressionCode,
@@ -461,8 +476,8 @@ export class CharacterBehaviorState {
     private refreshAiSpeechFromCurrentMora(nowMs: number): void {
         const currentMora = TalkManager.getManager().currentMora();
         const lastUpdatedAtMs = this.aiSpeech.lastUpdatedAtMs;
-        const heldByRecentTelop = lastUpdatedAtMs != null
-            && nowMs - lastUpdatedAtMs <= BEHAVIOR_TIMING.aiSpeechHoldMs;
+        const heldByRecentTelop =
+            lastUpdatedAtMs != null && nowMs - lastUpdatedAtMs <= BEHAVIOR_TIMING.aiSpeechHoldMs;
         const isSpeaking = currentMora != null || heldByRecentTelop;
         if (isSpeaking) {
             const currentSpeechId = currentMora?.mora.speech_id ?? this.aiSpeech.speechId;
@@ -471,9 +486,10 @@ export class CharacterBehaviorState {
                 isSpeaking: true,
                 speechId: currentSpeechId,
                 currentMoraId: currentMora?.moraID ?? this.aiSpeech.currentMoraId,
-                expressionCode: currentSpeechId == null
-                    ? this.aiSpeech.expressionCode
-                    : this.expressionCodeForSpeech(currentSpeechId),
+                expressionCode:
+                    currentSpeechId == null
+                        ? this.aiSpeech.expressionCode
+                        : this.expressionCodeForSpeech(currentSpeechId),
                 currentVowel: currentMora?.mora.vowel || this.aiSpeech.currentVowel,
                 currentText: currentMora?.mora.text || this.aiSpeech.currentText,
                 currentLengthSeconds: currentMora
@@ -511,16 +527,20 @@ export class CharacterBehaviorState {
             return "user_speaking";
         }
         if (
-            this.talkMode === "chat"
-            && this.lastUserSpeechEndedAtMs != null
-            && nowMs - this.lastUserSpeechEndedAtMs <= BEHAVIOR_TIMING.thinkingHoldMs
+            this.talkMode === "chat" &&
+            this.lastUserSpeechEndedAtMs != null &&
+            nowMs - this.lastUserSpeechEndedAtMs <= BEHAVIOR_TIMING.thinkingHoldMs
         ) {
             return "thinking";
         }
         if (this.talkMode === "chat" && this.gaze.trackingEnabled && !this.gaze.detected) {
             return "face_lost";
         }
-        if (this.talkMode === "sincro" && this.faceMotion.trackingEnabled && !this.faceMotion.detected) {
+        if (
+            this.talkMode === "sincro" &&
+            this.faceMotion.trackingEnabled &&
+            !this.faceMotion.detected
+        ) {
             return "face_lost";
         }
         if (this.talkMode === "chat" && this.gaze.detected) {
@@ -533,7 +553,8 @@ export class CharacterBehaviorState {
     }
 
     private buildMotionPolicy(nowMs: number): CharacterMotionPolicySnapshot {
-        const neutralTransition = nowMs - this.talkModeChangedAtMs <= BEHAVIOR_TIMING.modeNeutralTransitionMs;
+        const neutralTransition =
+            nowMs - this.talkModeChangedAtMs <= BEHAVIOR_TIMING.modeNeutralTransitionMs;
         if (this.talkMode === "sincro") {
             return {
                 talkMode: "sincro",
@@ -541,7 +562,8 @@ export class CharacterBehaviorState {
                 neutralTransition,
                 allowGazeMotion: false,
                 allowFaceRetarget: true,
-                allowPoseRetarget: this.poseMotion.trackingEnabled && !this.poseMotion.degradedToFaceOnly,
+                allowPoseRetarget:
+                    this.poseMotion.trackingEnabled && !this.poseMotion.degradedToFaceOnly,
                 allowAiSpeechGesture: false,
                 allowAiLipSync: false,
                 allowAiEmotion: false,
@@ -581,14 +603,15 @@ export class CharacterBehaviorState {
             return null;
         }
 
-        const speechChanged = !this.aiSpeech.isSpeaking || this.aiSpeech.speechId !== message.speech_id;
+        const speechChanged =
+            !this.aiSpeech.isSpeaking || this.aiSpeech.speechId !== message.speech_id;
         const text = message.text || message.message || null;
         const lengthSeconds = Math.max(0, Number(message.length) || 0);
         const isPunctuation = /[、。,.!?！？]/.test(message.text || "");
         const isPhrasePause = lengthSeconds >= BEHAVIOR_TIMING.aiSpeechPhrasePauseSeconds;
         const lastBeatAtMs = this.aiSpeech.lastBeatAtMs;
-        const enoughCadenceGap = lastBeatAtMs == null
-            || nowMs - lastBeatAtMs >= BEHAVIOR_TIMING.aiSpeechCadenceBeatMs;
+        const enoughCadenceGap =
+            lastBeatAtMs == null || nowMs - lastBeatAtMs >= BEHAVIOR_TIMING.aiSpeechCadenceBeatMs;
 
         if (speechChanged) {
             return { kind: "speech_start", text, intensity: 0.8 };
@@ -607,15 +630,15 @@ export class CharacterBehaviorState {
 
     private expressionCodeForSpeech(speechId: number): number | null {
         return this.expressionCodeBySpeechId.has(speechId)
-            ? this.expressionCodeBySpeechId.get(speechId) ?? null
+            ? (this.expressionCodeBySpeechId.get(speechId) ?? null)
             : null;
     }
 
     private refreshGazeStaleness(nowMs: number): void {
         if (
-            !this.gaze.trackingEnabled
-            || this.gaze.lastUpdatedAtMs == null
-            || nowMs - this.gaze.lastUpdatedAtMs <= BEHAVIOR_TIMING.gazeStaleMs
+            !this.gaze.trackingEnabled ||
+            this.gaze.lastUpdatedAtMs == null ||
+            nowMs - this.gaze.lastUpdatedAtMs <= BEHAVIOR_TIMING.gazeStaleMs
         ) {
             return;
         }

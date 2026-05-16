@@ -98,8 +98,8 @@ export class SincroAppRightToolPanelService {
 
     private updateState(nextState: RightToolPanelState): void {
         if (
-            nextState.activePanel === this.state.activePanel
-            && nextState.menuOpen === this.state.menuOpen
+            nextState.activePanel === this.state.activePanel &&
+            nextState.menuOpen === this.state.menuOpen
         ) {
             return;
         }

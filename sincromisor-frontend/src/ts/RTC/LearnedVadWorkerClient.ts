@@ -1,4 +1,10 @@
-export type LearnedVadStatus = "idle" | "loading" | "ready" | "running" | "fallback" | "unavailable";
+export type LearnedVadStatus =
+    | "idle"
+    | "loading"
+    | "ready"
+    | "running"
+    | "fallback"
+    | "unavailable";
 
 export type LearnedVadStateReport = {
     enabled: boolean;
@@ -67,7 +73,9 @@ export class LearnedVadWorkerClient {
         }
         this.status = "loading";
         this.publishState();
-        const worker = new Worker(new URL("./silero-vad.worker.ts", import.meta.url), { type: "module" });
+        const worker = new Worker(new URL("./silero-vad.worker.ts", import.meta.url), {
+            type: "module",
+        });
         this.worker = worker;
         worker.onmessage = (event: MessageEvent<LearnedVadWorkerMessage>) => {
             const data = event.data;
@@ -121,18 +129,30 @@ export class LearnedVadWorkerClient {
     setTuningConfig(config: Partial<LearnedVadTuningConfig>): void {
         this.tuning = {
             // 閾値レンジは Silero実測レンジ(小数点第4位付近)に合わせている。
-            onThreshold: config.onThreshold != null ? Math.max(0.0001, Math.min(0.1, config.onThreshold)) : this.tuning.onThreshold,
-            offThreshold: config.offThreshold != null ? Math.max(0.00005, Math.min(0.08, config.offThreshold)) : this.tuning.offThreshold,
-            hangoverMs: config.hangoverMs != null ? Math.max(0, Math.min(1200, Math.round(config.hangoverMs))) : this.tuning.hangoverMs,
-            minInferIntervalMs: config.minInferIntervalMs != null
-                ? Math.max(20, Math.min(400, Math.round(config.minInferIntervalMs)))
-                : this.tuning.minInferIntervalMs,
-            onConsecutiveFrames: config.onConsecutiveFrames != null
-                ? Math.max(1, Math.min(10, Math.round(config.onConsecutiveFrames)))
-                : this.tuning.onConsecutiveFrames,
-            offConsecutiveFrames: config.offConsecutiveFrames != null
-                ? Math.max(1, Math.min(10, Math.round(config.offConsecutiveFrames)))
-                : this.tuning.offConsecutiveFrames,
+            onThreshold:
+                config.onThreshold != null
+                    ? Math.max(0.0001, Math.min(0.1, config.onThreshold))
+                    : this.tuning.onThreshold,
+            offThreshold:
+                config.offThreshold != null
+                    ? Math.max(0.00005, Math.min(0.08, config.offThreshold))
+                    : this.tuning.offThreshold,
+            hangoverMs:
+                config.hangoverMs != null
+                    ? Math.max(0, Math.min(1200, Math.round(config.hangoverMs)))
+                    : this.tuning.hangoverMs,
+            minInferIntervalMs:
+                config.minInferIntervalMs != null
+                    ? Math.max(20, Math.min(400, Math.round(config.minInferIntervalMs)))
+                    : this.tuning.minInferIntervalMs,
+            onConsecutiveFrames:
+                config.onConsecutiveFrames != null
+                    ? Math.max(1, Math.min(10, Math.round(config.onConsecutiveFrames)))
+                    : this.tuning.onConsecutiveFrames,
+            offConsecutiveFrames:
+                config.offConsecutiveFrames != null
+                    ? Math.max(1, Math.min(10, Math.round(config.offConsecutiveFrames)))
+                    : this.tuning.offConsecutiveFrames,
         };
         // on/offの関係が崩れないように補正する。
         if (this.tuning.offThreshold >= this.tuning.onThreshold) {
@@ -160,7 +180,11 @@ export class LearnedVadWorkerClient {
 
     // AudioWorklet -> Worker の音声フレーム転送を有効/無効化する。
     // learnedモード時のみ転送し、Three.js描画と競合する余計な転送コストを抑える。
-    syncAudioFrameStreaming(vadNode: AudioWorkletNode | null, shouldEnable: boolean, force = false): void {
+    syncAudioFrameStreaming(
+        vadNode: AudioWorkletNode | null,
+        shouldEnable: boolean,
+        force = false,
+    ): void {
         if (!vadNode) {
             this.streamVadNode = null;
             return;

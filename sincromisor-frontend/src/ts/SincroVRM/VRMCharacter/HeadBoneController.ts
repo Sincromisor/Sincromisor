@@ -1,13 +1,13 @@
-import { VRM, VRMHumanBoneName } from '@pixiv/three-vrm';
-import { MathUtils } from 'three/src/math/MathUtils.js';
-import { Euler } from 'three/src/math/Euler.js';
-import { Vector3 } from 'three/src/math/Vector3.js';
-import { Object3D } from 'three/src/core/Object3D.js';
-import { CharacterGaze } from '../../CharacterGaze/CharacterGaze';
-import { PerspectiveCamera } from "three/src/cameras/PerspectiveCamera.js";
-import { VRMCamera } from '../VRMScene/VRMCamera';
-import { CharacterBehaviorSnapshot } from './CharacterBehaviorState';
-import type { SincroFaceRetargetFrame } from './SincroFaceRetargeter';
+import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
+import type { PerspectiveCamera } from "three/src/cameras/PerspectiveCamera.js";
+import type { Object3D } from "three/src/core/Object3D.js";
+import { Euler } from "three/src/math/Euler.js";
+import { MathUtils } from "three/src/math/MathUtils.js";
+import { Vector3 } from "three/src/math/Vector3.js";
+import { CharacterGaze } from "../../CharacterGaze/CharacterGaze";
+import type { VRMCamera } from "../VRMScene/VRMCamera";
+import type { CharacterBehaviorSnapshot } from "./CharacterBehaviorState";
+import type { SincroFaceRetargetFrame } from "./SincroFaceRetargeter";
 
 /*
     Humanoid bones
@@ -46,20 +46,36 @@ export class HeadBoneController {
             return;
         }
         const nowMs = snapshot?.nowMs ?? performance.now();
-        const deltaMs = this.lastUpdateAtMs == null
-            ? 1000 / 60
-            : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
+        const deltaMs =
+            this.lastUpdateAtMs == null
+                ? 1000 / 60
+                : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
         this.lastUpdateAtMs = nowMs;
-        if (snapshot?.motionPolicy.allowFaceRetarget && snapshot.faceMotion.trackingEnabled && sincroFace) {
+        if (
+            snapshot?.motionPolicy.allowFaceRetarget &&
+            snapshot.faceMotion.trackingEnabled &&
+            sincroFace
+        ) {
             this.applySincroFaceMotion(sincroFace);
             return;
         }
         // 顔認識機能の状況を元に、顔認識モードと、カメラの方向を向くモードを切り替える
-        if (snapshot?.motionPolicy.allowGazeMotion && (snapshot.gaze.trackingEnabled || this.characterGaze.modelIsLoaded())) {
+        if (
+            snapshot?.motionPolicy.allowGazeMotion &&
+            (snapshot.gaze.trackingEnabled || this.characterGaze.modelIsLoaded())
+        ) {
             const targetX = snapshot?.gaze.detected ? snapshot.gaze.targetX : 0.5;
             const targetY = snapshot?.gaze.detected ? snapshot.gaze.targetY : 0.5;
-            const targetRx = MathUtils.clamp((targetY - 0.5) * MathUtils.degToRad(24), MathUtils.degToRad(-10), MathUtils.degToRad(10));
-            const targetRy = MathUtils.clamp(-(targetX - 0.5) * MathUtils.degToRad(42), MathUtils.degToRad(-18), MathUtils.degToRad(18));
+            const targetRx = MathUtils.clamp(
+                (targetY - 0.5) * MathUtils.degToRad(24),
+                MathUtils.degToRad(-10),
+                MathUtils.degToRad(10),
+            );
+            const targetRy = MathUtils.clamp(
+                -(targetX - 0.5) * MathUtils.degToRad(42),
+                MathUtils.degToRad(-18),
+                MathUtils.degToRad(18),
+            );
             const timeConstantMs = snapshot?.gaze.detected ? 260 : 420;
             const alpha = 1 - Math.exp(-deltaMs / timeConstantMs);
             this.setEyeTarget(
@@ -106,14 +122,19 @@ export class HeadBoneController {
         const cameraDirection = camera.position.clone().sub(neckWorldPos).normalize();
 
         // X軸、Y軸の回転角度を計算し、setEyeTarget に反映
-        const angleX = -Math.atan2(cameraDirection.y, Math.sqrt(cameraDirection.x * cameraDirection.x + cameraDirection.z * cameraDirection.z));
+        const angleX = -Math.atan2(
+            cameraDirection.y,
+            Math.sqrt(
+                cameraDirection.x * cameraDirection.x + cameraDirection.z * cameraDirection.z,
+            ),
+        );
         const angleY = Math.atan2(cameraDirection.x, cameraDirection.z);
         // そのままだと首の上下方向の動きが激しすぎるので、1/2にしておく
         this.setEyeTarget(angleX / 2, angleY, 0);
     }
 
     private getHeadControlNode(): Object3D | null {
-        const fallbackOrder: VRMHumanBoneName[] = ['neck', 'head', 'upperChest', 'chest', 'spine'];
+        const fallbackOrder: VRMHumanBoneName[] = ["neck", "head", "upperChest", "chest", "spine"];
         for (const name of fallbackOrder) {
             const node = this.vrm.humanoid.getNormalizedBoneNode(name);
             if (node) {
@@ -127,7 +148,7 @@ export class HeadBoneController {
     }
 
     private captureSincroHeadBones(): void {
-        for (const name of ['upperChest', 'neck', 'head'] as const) {
+        for (const name of ["upperChest", "neck", "head"] as const) {
             const node = this.vrm.humanoid.getNormalizedBoneNode(name);
             if (!node) {
                 continue;
@@ -141,9 +162,9 @@ export class HeadBoneController {
 
     private applySincroFaceMotion(sincroFace: SincroFaceRetargetFrame): void {
         const appliedNodes = new Set<Object3D>();
-        this.applySincroBone('upperChest', sincroFace.head.upperChest, appliedNodes);
-        this.applySincroBone('neck', sincroFace.head.neck, appliedNodes);
-        this.applySincroBone('head', sincroFace.head.head, appliedNodes);
+        this.applySincroBone("upperChest", sincroFace.head.upperChest, appliedNodes);
+        this.applySincroBone("neck", sincroFace.head.neck, appliedNodes);
+        this.applySincroBone("head", sincroFace.head.head, appliedNodes);
         if (appliedNodes.size > 0 || !this.headControlNode) {
             return;
         }
@@ -173,29 +194,35 @@ export class HeadBoneController {
         appliedNodes.add(bone.node);
     }
 
-    private applyAiSpeechMotion(snapshot: CharacterBehaviorSnapshot, nowMs: number, deltaMs: number): void {
+    private applyAiSpeechMotion(
+        snapshot: CharacterBehaviorSnapshot,
+        nowMs: number,
+        deltaMs: number,
+    ): void {
         const expression = this.aiSpeechExpressionProfile(snapshot.aiSpeech.expressionCode);
-        const targetBlend = snapshot.motionPolicy.allowAiSpeechGesture && snapshot.aiSpeech.isSpeaking
-            ? expression.intentScale
-            : 0;
+        const targetBlend =
+            snapshot.motionPolicy.allowAiSpeechGesture && snapshot.aiSpeech.isSpeaking
+                ? expression.intentScale
+                : 0;
         const timeConstantMs = targetBlend > this.aiSpeechBlend ? 240 : 720;
         const alpha = 1 - Math.exp(-deltaMs / timeConstantMs);
         this.aiSpeechBlend += (targetBlend - this.aiSpeechBlend) * alpha;
 
         if (
-            snapshot.motionPolicy.allowAiSpeechGesture
-            && snapshot.aiSpeech.isSpeaking
-            && snapshot.aiSpeech.beatId !== this.lastAiSpeechBeatId
-            && snapshot.aiSpeech.beatIntensity > 0
+            snapshot.motionPolicy.allowAiSpeechGesture &&
+            snapshot.aiSpeech.isSpeaking &&
+            snapshot.aiSpeech.beatId !== this.lastAiSpeechBeatId &&
+            snapshot.aiSpeech.beatIntensity > 0
         ) {
             this.lastAiSpeechBeatId = snapshot.aiSpeech.beatId;
             this.aiSpeechBeatStartedAtMs = nowMs;
             this.aiSpeechBeatDirection *= -1;
-            const kindScale = snapshot.aiSpeech.beatKind === 'speech_start'
-                ? 1
-                : snapshot.aiSpeech.beatKind === 'punctuation'
-                    ? 0.5
-                    : 0.74;
+            const kindScale =
+                snapshot.aiSpeech.beatKind === "speech_start"
+                    ? 1
+                    : snapshot.aiSpeech.beatKind === "punctuation"
+                      ? 0.5
+                      : 0.74;
             this.aiSpeechBeatIntensity = MathUtils.clamp(
                 snapshot.aiSpeech.beatIntensity * expression.beatScale * kindScale,
                 0,
@@ -204,12 +231,14 @@ export class HeadBoneController {
         }
 
         const beat = this.currentAiSpeechBeat(nowMs, snapshot.aiSpeech.isSpeaking);
-        this.rotation.x += this.aiSpeechBlend * expression.pitchRad
-            - beat * MathUtils.degToRad(1.15);
-        this.rotation.y += beat * this.aiSpeechBeatDirection * MathUtils.degToRad(1.8)
-            + this.aiSpeechBlend * expression.yawRad;
-        this.rotation.z += beat * this.aiSpeechBeatDirection * MathUtils.degToRad(0.75)
-            + this.aiSpeechBlend * expression.rollRad;
+        this.rotation.x +=
+            this.aiSpeechBlend * expression.pitchRad - beat * MathUtils.degToRad(1.15);
+        this.rotation.y +=
+            beat * this.aiSpeechBeatDirection * MathUtils.degToRad(1.8) +
+            this.aiSpeechBlend * expression.yawRad;
+        this.rotation.z +=
+            beat * this.aiSpeechBeatDirection * MathUtils.degToRad(0.75) +
+            this.aiSpeechBlend * expression.rollRad;
     }
 
     private currentAiSpeechBeat(nowMs: number, isSpeaking: boolean): number {
@@ -287,7 +316,7 @@ type HeadSpeechExpressionProfile = {
     rollRad: number;
 };
 
-type SincroHeadBoneName = 'upperChest' | 'neck' | 'head';
+type SincroHeadBoneName = "upperChest" | "neck" | "head";
 
 type SincroHeadBone = {
     node: Object3D;

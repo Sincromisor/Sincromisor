@@ -1,11 +1,11 @@
 import {
     CHARACTER_GAZE_TRACKING_TUNING_PRESETS,
-    DebugConsoleManager,
     type CharacterGazeTrackingTuningPresetKey,
+    type DebugConsoleManager,
     type DebugConsoleSnapshot,
 } from "../../../ts/UI/DebugConsoleManager";
 import { RangeControl } from "../components/RangeControl";
-import { debugPanelClassName, type DebugPanelProps } from "../debugConsoleTypes";
+import { type DebugPanelProps, debugPanelClassName } from "../debugConsoleTypes";
 
 type GazePanelProps = DebugPanelProps & {
     snapshot: DebugConsoleSnapshot;
@@ -25,9 +25,22 @@ export function GazePanel({ snapshot, manager, isActive }: GazePanelProps) {
             <h3>Gaze</h3>
             <div className="gazePanelGrid">
                 <div id="characterGaze">
+                    {/* biome-ignore lint/a11y/useMediaCaption: カメラ追跡用プレビューであり、音声や字幕対象の映像ではない。 */}
                     <video id="characterGazeVideo" autoPlay={true} playsInline={true}></video>
-                    <svg id="characterGazeMarker" viewBox="0 0 320 240" version="1.1" xmlns="http://www.w3.org/2000/svg">
-                        <circle id="eyeTarget" cx="50%" cy="50%" r="5" fill="hsl(300 100% 50% / 50%)" />
+                    <svg
+                        id="characterGazeMarker"
+                        viewBox="0 0 320 240"
+                        version="1.1"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <title>Character gaze target marker</title>
+                        <circle
+                            id="eyeTarget"
+                            cx="50%"
+                            cy="50%"
+                            r="5"
+                            fill="hsl(300 100% 50% / 50%)"
+                        />
                     </svg>
                 </div>
                 <div className="gazePanelDetails">
@@ -47,14 +60,28 @@ export function GazePanel({ snapshot, manager, isActive }: GazePanelProps) {
                         <summary>高度な調整</summary>
                         <div className="audioControlGroup">
                             <div className="audioControlPresetButtons">
-                                {(["stable", "balanced", "responsive"] as CharacterGazeTrackingTuningPresetKey[]).map((presetKey) => (
+                                {(
+                                    [
+                                        "stable",
+                                        "balanced",
+                                        "responsive",
+                                    ] as CharacterGazeTrackingTuningPresetKey[]
+                                ).map((presetKey) => (
                                     <button
                                         key={presetKey}
                                         type="button"
                                         data-gaze-tuning-preset={presetKey}
-                                        onClick={() => manager.applyCharacterGazeTrackingTuning(CHARACTER_GAZE_TRACKING_TUNING_PRESETS[presetKey])}
+                                        onClick={() =>
+                                            manager.applyCharacterGazeTrackingTuning(
+                                                CHARACTER_GAZE_TRACKING_TUNING_PRESETS[presetKey],
+                                            )
+                                        }
                                     >
-                                        {presetKey === "stable" ? "安定重視" : presetKey === "balanced" ? "バランス" : "追従重視"}
+                                        {presetKey === "stable"
+                                            ? "安定重視"
+                                            : presetKey === "balanced"
+                                              ? "バランス"
+                                              : "追従重視"}
                                     </button>
                                 ))}
                             </div>
@@ -66,10 +93,12 @@ export function GazePanel({ snapshot, manager, isActive }: GazePanelProps) {
                                 max="2000"
                                 step="50"
                                 value={snapshot.gaze.tuning.minimumHoldMs}
-                                onChange={(value) => manager.applyCharacterGazeTrackingTuning({
-                                    ...snapshot.gaze.tuning,
-                                    minimumHoldMs: value,
-                                })}
+                                onChange={(value) =>
+                                    manager.applyCharacterGazeTrackingTuning({
+                                        ...snapshot.gaze.tuning,
+                                        minimumHoldMs: value,
+                                    })
+                                }
                             />
                             <RangeControl
                                 id="gazeSwitchMargin"
@@ -79,10 +108,12 @@ export function GazePanel({ snapshot, manager, isActive }: GazePanelProps) {
                                 max="0.5"
                                 step="0.01"
                                 value={snapshot.gaze.tuning.switchMargin}
-                                onChange={(value) => manager.applyCharacterGazeTrackingTuning({
-                                    ...snapshot.gaze.tuning,
-                                    switchMargin: value,
-                                })}
+                                onChange={(value) =>
+                                    manager.applyCharacterGazeTrackingTuning({
+                                        ...snapshot.gaze.tuning,
+                                        switchMargin: value,
+                                    })
+                                }
                             />
                             <RangeControl
                                 id="gazeRelinkDistance"
@@ -92,10 +123,12 @@ export function GazePanel({ snapshot, manager, isActive }: GazePanelProps) {
                                 max="0.5"
                                 step="0.01"
                                 value={snapshot.gaze.tuning.relinkDistance}
-                                onChange={(value) => manager.applyCharacterGazeTrackingTuning({
-                                    ...snapshot.gaze.tuning,
-                                    relinkDistance: value,
-                                })}
+                                onChange={(value) =>
+                                    manager.applyCharacterGazeTrackingTuning({
+                                        ...snapshot.gaze.tuning,
+                                        relinkDistance: value,
+                                    })
+                                }
                             />
                             <RangeControl
                                 id="gazeOneEuroMinCutoff"
@@ -105,10 +138,12 @@ export function GazePanel({ snapshot, manager, isActive }: GazePanelProps) {
                                 max="4"
                                 step="0.1"
                                 value={snapshot.gaze.tuning.oneEuroMinCutoff}
-                                onChange={(value) => manager.applyCharacterGazeTrackingTuning({
-                                    ...snapshot.gaze.tuning,
-                                    oneEuroMinCutoff: value,
-                                })}
+                                onChange={(value) =>
+                                    manager.applyCharacterGazeTrackingTuning({
+                                        ...snapshot.gaze.tuning,
+                                        oneEuroMinCutoff: value,
+                                    })
+                                }
                             />
                             <RangeControl
                                 id="gazeOneEuroBeta"
@@ -118,10 +153,12 @@ export function GazePanel({ snapshot, manager, isActive }: GazePanelProps) {
                                 max="0.2"
                                 step="0.005"
                                 value={snapshot.gaze.tuning.oneEuroBeta}
-                                onChange={(value) => manager.applyCharacterGazeTrackingTuning({
-                                    ...snapshot.gaze.tuning,
-                                    oneEuroBeta: value,
-                                })}
+                                onChange={(value) =>
+                                    manager.applyCharacterGazeTrackingTuning({
+                                        ...snapshot.gaze.tuning,
+                                        oneEuroBeta: value,
+                                    })
+                                }
                             />
                             <RangeControl
                                 id="gazeDeadband"
@@ -131,10 +168,12 @@ export function GazePanel({ snapshot, manager, isActive }: GazePanelProps) {
                                 max="0.02"
                                 step="0.0005"
                                 value={snapshot.gaze.tuning.deadband}
-                                onChange={(value) => manager.applyCharacterGazeTrackingTuning({
-                                    ...snapshot.gaze.tuning,
-                                    deadband: value,
-                                })}
+                                onChange={(value) =>
+                                    manager.applyCharacterGazeTrackingTuning({
+                                        ...snapshot.gaze.tuning,
+                                        deadband: value,
+                                    })
+                                }
                             />
                         </div>
                     </details>

@@ -1,5 +1,9 @@
-import type { SincroAppEvent, SincroAppLookingGlassConfigUpdatedEventDetail, SincroAppLookingGlassEventDetail } from "./SincroAppTypes";
 import type { SincroAppLookingGlassStateTracker } from "./SincroAppLookingGlassStateTracker";
+import type {
+    SincroAppEvent,
+    SincroAppLookingGlassConfigUpdatedEventDetail,
+    SincroAppLookingGlassEventDetail,
+} from "./SincroAppTypes";
 
 type SincroAppLookingGlassEventFlowContext = {
     tracker: SincroAppLookingGlassStateTracker;
@@ -29,7 +33,10 @@ function applyLookingGlassStateFlow(params: SincroAppLookingGlassStateFlowParams
     if (params.detail.state === "active") {
         // セッション開始直後に config status を先に通知しておくと、UI が active 表示へ切り替わる前後でも
         // 「pending/reloadRecommended」の表示が古いまま残りにくい。
-        params.emit({ type: "looking_glass_config_status", status: params.tracker.getConfigStatus() });
+        params.emit({
+            type: "looking_glass_config_status",
+            status: params.tracker.getConfigStatus(),
+        });
     }
 
     const state = params.tracker.getState();
@@ -48,14 +55,18 @@ export function handleLookingGlassStateFlow(params: SincroAppLookingGlassStateFl
     applyLookingGlassStateFlow(params);
 }
 
-function applyLookingGlassConfigUpdatedFlow(params: SincroAppLookingGlassConfigUpdatedFlowParams): void {
+function applyLookingGlassConfigUpdatedFlow(
+    params: SincroAppLookingGlassConfigUpdatedFlowParams,
+): void {
     // 現状は changedKeys のみ利用。config 本体は将来の差分比較用に event payload に残している。
     void params.detail.config;
     params.tracker.addChangedKeys(params.detail.changedKeys);
     params.emit({ type: "looking_glass_config_status", status: params.tracker.getConfigStatus() });
 }
 
-export function handleLookingGlassConfigUpdatedFlow(params: SincroAppLookingGlassConfigUpdatedFlowParams): void {
+export function handleLookingGlassConfigUpdatedFlow(
+    params: SincroAppLookingGlassConfigUpdatedFlowParams,
+): void {
     applyLookingGlassConfigUpdatedFlow(params);
 }
 

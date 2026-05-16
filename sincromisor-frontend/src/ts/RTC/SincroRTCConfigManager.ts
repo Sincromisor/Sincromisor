@@ -2,22 +2,21 @@ export type IceServerConfig = {
     urls: string;
     username?: string;
     credential?: string;
-}
+};
 
 export type SincroRTCConfig = {
     // 初回シグナリング（Offer/Answer）用エンドポイント
-    offerURL: string,
+    offerURL: string;
     // Trickle ICEで候補を後送するエンドポイント
-    candidateURL: string,
-    iceServers: IceServerConfig[]
-}
+    candidateURL: string;
+    iceServers: IceServerConfig[];
+};
 
 export class SincroRTCConfigManager {
     private static instance: SincroRTCConfigManager;
     config: SincroRTCConfig | null = null;
 
-    private constructor() {
-    }
+    private constructor() {}
 
     static getManager(onerror: (err: any) => void) {
         if (!SincroRTCConfigManager.instance) {
@@ -33,9 +32,11 @@ export class SincroRTCConfigManager {
     }
 
     private async getServers(onerror: (err: any) => void): Promise<void> {
-        const response: Response = await fetch('/api/v1/RTCSignalingServer/config.json');
+        const response: Response = await fetch("/api/v1/RTCSignalingServer/config.json");
         if (!response.ok) {
-            const err = new Error(`Failed to fetch /api/v1/RTCSignalingServer/config.json: ${response.statusText}`);
+            const err = new Error(
+                `Failed to fetch /api/v1/RTCSignalingServer/config.json: ${response.statusText}`,
+            );
             onerror(err);
             throw err;
         }

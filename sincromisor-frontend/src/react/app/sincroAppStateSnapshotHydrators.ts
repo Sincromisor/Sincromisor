@@ -10,7 +10,11 @@ import type {
 
 type SettingsSnapshotSetters = {
     // hook ごとの setState 実装差分を吸収するため、setter 形状だけ受け取る。
-    setSettings: (value: SincroAppSettingsSnapshot | ((prev: SincroAppSettingsSnapshot) => SincroAppSettingsSnapshot)) => void;
+    setSettings: (
+        value:
+            | SincroAppSettingsSnapshot
+            | ((prev: SincroAppSettingsSnapshot) => SincroAppSettingsSnapshot),
+    ) => void;
     setSettingsUiState: (value: SincroAppSettingsUiState) => void;
     setSettingsUiHints: (value: SincroAppSettingsUiHints) => void;
 };

@@ -1,5 +1,5 @@
-import { panelStyles } from "../panelStyles";
 import { UI_TUNING } from "../../app/uiTuning";
+import { panelStyles } from "../panelStyles";
 
 type PanelControlsProps = {
     hasActiveController: boolean;
@@ -13,10 +13,20 @@ export function PanelControls({ hasActiveController, onStart, onStop }: PanelCon
     return (
         // ボタン見た目は panelStyles、間隔は UI_TUNING で調整する。
         <div style={{ display: "flex", gap: `${styleTuning.controlsGapPx}px` }}>
-            <button type="button" onClick={onStart} disabled={!hasActiveController} style={panelStyles.button}>
+            <button
+                type="button"
+                onClick={onStart}
+                disabled={!hasActiveController}
+                style={panelStyles.button}
+            >
                 WebRTC 開始
             </button>
-            <button type="button" onClick={onStop} disabled={!hasActiveController} style={panelStyles.button}>
+            <button
+                type="button"
+                onClick={onStop}
+                disabled={!hasActiveController}
+                style={panelStyles.button}
+            >
                 WebRTC 停止
             </button>
         </div>

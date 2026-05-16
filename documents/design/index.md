@@ -7,13 +7,13 @@
 ## Frontend
 
 - [UI](frontend_ui.md)
-  - 基本となるユーザーインタフェース、デバッグコンソールなど
+    - 基本となるユーザーインタフェース、デバッグコンソールなど
 - [React Migration Plan](frontend_migration_react.md)
-  - React段階移行、Babylon.js切り離し、Looking GlassのVRM1.0対応計画
+    - React段階移行、Babylon.js切り離し、Looking GlassのVRM1.0対応計画
 - [VAD](frontend_vad.md)
-  - フロント側VAD（RMS/Peak・学習VAD・送信ゲート）の設計
+    - フロント側VAD（RMS/Peak・学習VAD・送信ゲート）の設計
 - [VRM Character](frontend_character.md)
-  - Three.js + VRM-1.0によるキャラクターレンダリングやアニメーションなどに関するもの全般
+    - Three.js + VRM-1.0によるキャラクターレンダリングやアニメーションなどに関するもの全般
 
 ## Backend
 
@@ -22,13 +22,13 @@
 - [Speech Extractor](backend_speech_extractor.md)
 - [Speech Recognizer (nemo / nue)](backend_speech_recognizer.md)
 - [Speech Recognizer Proper Noun Biasing](backend_speech_recognizer_proper_noun_biasing.md)
-  - Nemo recognizer に対する固有名詞補強、後処理、context biasing、N-best 再ランキングの段階導入設計
+    - Nemo recognizer に対する固有名詞補強、後処理、context biasing、N-best 再ランキングの段階導入設計
 - [Speech Recognizer Proper Noun Dictionary](backend_speech_recognizer_proper_noun_dictionary.md)
-  - 固有名詞補強で使う辞書フォーマット、列定義、運用ルール
+    - 固有名詞補強で使う辞書フォーマット、列定義、運用ルール
 - [Text Processor](backend_text_processor.md)
 - [Voice Synthesizer](backend_voice_synthesizer.md)
 - [Storage](backend_storage.md)
-  - Redis, SeaweedFS
+    - Redis, SeaweedFS
 
 ## Networking
 
@@ -45,24 +45,24 @@
 下記については廃止予定であるため、ドキュメントには記載しない。
 
 - Nue-ASR
-  - sincromisor-server/speech-recognizer 以下一式
-  - 公式リポジトリ消滅のため
+    - sincromisor-server/speech-recognizer 以下一式
+    - 公式リポジトリ消滅のため
 - Babylon.js
-  - sincromisor-frontend以下のキャラクター描画関連のうち、VRM1.0関連でないもの
-  - Three.js + VRM1.0に移行済み。近日中に削除予定
-  - VRM 1.0サポートが現状厳しいため
-    - https://forum.babylonjs.com/t/loading-vrm-humanoid-based-model/4980/28
+    - sincromisor-frontend以下のキャラクター描画関連のうち、VRM1.0関連でないもの
+    - Three.js + VRM1.0に移行済み。近日中に削除予定
+    - VRM 1.0サポートが現状厳しいため
+        - https://forum.babylonjs.com/t/loading-vrm-humanoid-based-model/4980/28
 - MinIO
-  - SeaweedFSに移行
-  - 公式OSS版が終了見込のため
+    - SeaweedFSに移行
+    - 公式OSS版が終了見込のため
 
 ## ToDo
 
 - Speech Extractor
-  - 現状はMediapipeのAudio Classification(Yamnet)
-  - RNNoiseにできないか検討中
-    - https://github.com/Sincromisor/RNNoisePy
-    - https://pypi.org/project/rnnoisepy/
+    - 現状はMediapipeのAudio Classification(Yamnet)
+    - RNNoiseにできないか検討中
+        - https://github.com/Sincromisor/RNNoisePy
+        - https://pypi.org/project/rnnoisepy/
 - VRM Character
-  - 現状は基本的な顔の動きのみ
-  - 感情表現や上半身の動作などを追加したい
+    - 現状は基本的な顔の動きのみ
+    - 感情表現や上半身の動作などを追加したい

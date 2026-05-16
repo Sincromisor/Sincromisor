@@ -7,9 +7,14 @@
     },
     "files": {
         "includes": [
-            "**",
+            "**/*.ts",
+            "**/*.tsx",
+            "**/*.js",
+            "**/*.json",
+            "**/*.jsonc",
             "!node_modules",
             "!dist",
+            "!public/mediapipe-wasm",
             "!vendor",
             "!bun.lock",
             "!skills-lock.json"

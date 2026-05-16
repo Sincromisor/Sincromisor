@@ -26,13 +26,13 @@
 ## スコープ
 
 - 共通 field / field group の抽出
-  - `TitleTextField`
-  - `TalkModeField`
-  - `AudioInputDeviceField`
-  - `VideoInputDeviceField`
-  - `AudioProcessingToggles`
-  - `CharacterDisplayToggles`
-  - `StartupBehaviorFields`
+    - `TitleTextField`
+    - `TalkModeField`
+    - `AudioInputDeviceField`
+    - `VideoInputDeviceField`
+    - `AudioProcessingToggles`
+    - `CharacterDisplayToggles`
+    - `StartupBehaviorFields`
 - 共通 help text / hint 生成 / device selection hint / selected device id normalization の整理
 - `DialogSettingsFormSections.tsx` と `SettingsSections.tsx` の重複削減
 - 起動前 dialog と常設 panel の UI 表示差分を維持したまま、設定値反映の配線を共有 component 側へ寄せる

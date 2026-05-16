@@ -22,8 +22,8 @@
 - Face / Pose tracker を Worker 実行できる構成へ分離する
 - Worker 内で MediaPipe Fileset / FaceLandmarker / PoseLandmarker を初期化する
 - main thread から Worker へ video frame を渡す転送方式を選定・実装する
-  - 第一候補: `createImageBitmap(video)` + Transferable
-  - 必要に応じて `OffscreenCanvas` / `VideoFrame` / main thread fallback を比較する
+    - 第一候補: `createImageBitmap(video)` + Transferable
+    - 必要に応じて `OffscreenCanvas` / `VideoFrame` / main thread fallback を比較する
 - Worker から `SincroFaceMotionSnapshot` / `SincroPoseMotionSnapshot` 相当の正規化済み snapshot だけを返す
 - `TrackerRuntime` から見た callback 契約をなるべく維持し、VRM controller / Debug UI へ MediaPipe の Worker 詳細を漏らさない
 - Worker 初期化中の UI 状態、ロード中表示、失敗時 fallback を Debug Console で確認できるようにする

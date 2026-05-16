@@ -8,7 +8,9 @@ type UseConfigurationDialogPlatformStateParams = {
 
 // HTMLDialogElement の platform API を React component 側へ閉じ込める hook。
 // 状態の正本は DialogManager/AppController に置き、ここは native dialog との同期だけを行う。
-export function useConfigurationDialogPlatformState(params: UseConfigurationDialogPlatformStateParams) {
+export function useConfigurationDialogPlatformState(
+    params: UseConfigurationDialogPlatformStateParams,
+) {
     const { isOpen, onClosed } = params;
     const dialogRef = useRef<HTMLDialogElement | null>(null);
     const adapterRef = useRef<DialogBridgeDomAdapter | null>(null);

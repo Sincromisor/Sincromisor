@@ -17,7 +17,11 @@ export function AudioMeter({ id, label, level, children }: AudioMeterProps) {
                 <span>{meterPercent(level)}</span>
             </div>
             <div className="audioMeterTrack">
-                <div id={id} className="audioMeterFill" style={{ width: `${clampedLevel * 100}%` }}></div>
+                <div
+                    id={id}
+                    className="audioMeterFill"
+                    style={{ width: `${clampedLevel * 100}%` }}
+                ></div>
             </div>
             {children}
         </div>

@@ -1,5 +1,5 @@
-import { useEffect, useId, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { getIntegratedTabId, IntegratedTabs } from "../integrated-tabs/IntegratedTabs";
 import "./settingsShell.css";
 
@@ -65,7 +65,9 @@ export function SettingsShell({
                 responsiveMode === "container" ? "is-containerResponsive" : "",
                 navigationDensity === "compact" ? "settingsShell--compactNavigation" : "",
                 navigationPlacement === "top" ? "settingsShell--topNavigation" : "",
-            ].filter(Boolean).join(" ")}
+            ]
+                .filter(Boolean)
+                .join(" ")}
             aria-label={ariaLabel}
         >
             <SettingsShellHeader badge={badge} title={title} description={description} />
@@ -82,7 +84,9 @@ export function SettingsShell({
                     ariaLabel={`${title} カテゴリ`}
                     groups={[
                         { items: primaryPages },
-                        ...(developerPages.length > 0 ? [{ heading: "開発者向け", items: developerPages }] : []),
+                        ...(developerPages.length > 0
+                            ? [{ heading: "開発者向け", items: developerPages }]
+                            : []),
                     ]}
                     activeId={activePage.id}
                     onSelect={setActivePageId}
@@ -100,7 +104,9 @@ export function SettingsShell({
                             <header className="settingsShell__pageHeader">
                                 <h2 className="settingsShell__pageTitle">{activePage.title}</h2>
                                 {activePage.description ? (
-                                    <p className="settingsShell__pageDescription">{activePage.description}</p>
+                                    <p className="settingsShell__pageDescription">
+                                        {activePage.description}
+                                    </p>
                                 ) : null}
                             </header>
                             <div className="settingsShell__content">{activePage.content}</div>

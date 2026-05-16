@@ -60,14 +60,19 @@ function buildTrendPoints(series: number[], maxValue: number): string {
     const width = 300;
     const height = 86;
     const xStep = series.length > 1 ? width / (series.length - 1) : 0;
-    return series.map((value, index) => {
-        const clamped = Math.max(0, Math.min(maxValue, value));
-        const x = series.length === 1 ? width / 2 : index * xStep;
-        const y = height - ((clamped / maxValue) * height);
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(" ");
+    return series
+        .map((value, index) => {
+            const clamped = Math.max(0, Math.min(maxValue, value));
+            const x = series.length === 1 ? width / 2 : index * xStep;
+            const y = height - (clamped / maxValue) * height;
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+        })
+        .join(" ");
 }
 
-export function renderTrendGraph(snapshot: DebugConsoleSnapshot, key: DebugConsoleTrendKey): string {
+export function renderTrendGraph(
+    snapshot: DebugConsoleSnapshot,
+    key: DebugConsoleTrendKey,
+): string {
     return buildTrendPoints(snapshot.rtc.trends[key], DEBUG_CONSOLE_TREND_MAX_VALUES[key]);
 }

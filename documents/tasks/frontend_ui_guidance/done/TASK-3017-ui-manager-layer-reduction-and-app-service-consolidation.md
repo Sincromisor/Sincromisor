@@ -115,7 +115,7 @@
 - 本タスクは `manager を全部消す` のではなく、`現在の責務に合わない manager 層を減らす` ためのタスクである。
 - 実装変更時は `documents/design/frontend_ui.md` と `documents/design/frontend_migration_react.md` の更新が必要になる。
 - 2026-04-24 進捗:
-  - `ChatMessageManager` を `ChatMessageService`、`PopManager` を `PopMessageService` へ改名した
-  - `SincroAppController` / runtime bundle / subscription helper の依存名を service 前提へ揃えた
-  - 右側ツール領域 owner は `SincroAppRightToolPanelService`、残す manager は `DialogManager` と `DebugConsoleManager` という整理を設計文書へ反映した
-  - `cd sincromisor-frontend && npm run build` が成功し、task-3017 の完了条件を満たしたため `done` へ移行する
+    - `ChatMessageManager` を `ChatMessageService`、`PopManager` を `PopMessageService` へ改名した
+    - `SincroAppController` / runtime bundle / subscription helper の依存名を service 前提へ揃えた
+    - 右側ツール領域 owner は `SincroAppRightToolPanelService`、残す manager は `DialogManager` と `DebugConsoleManager` という整理を設計文書へ反映した
+    - `cd sincromisor-frontend && npm run build` が成功し、task-3017 の完了条件を満たしたため `done` へ移行する

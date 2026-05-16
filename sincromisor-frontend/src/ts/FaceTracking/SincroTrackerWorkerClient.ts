@@ -41,7 +41,7 @@ export class SincroTrackerWorkerClient {
     private stats: SincroTrackerWorkerStats = { ...DEFAULT_STATS };
     private readonly onStatsChanged: (stats: SincroTrackerWorkerStats) => void;
 
-    constructor(onStatsChanged: (stats: SincroTrackerWorkerStats) => void = () => { }) {
+    constructor(onStatsChanged: (stats: SincroTrackerWorkerStats) => void = () => {}) {
         this.onStatsChanged = onStatsChanged;
     }
 
@@ -72,7 +72,12 @@ export class SincroTrackerWorkerClient {
         await this.initPromise;
     }
 
-    async detect(frame: ImageBitmap, timestampMs: number, poseEnabled: boolean, transferTimeMs: number): Promise<DetectResult> {
+    async detect(
+        frame: ImageBitmap,
+        timestampMs: number,
+        poseEnabled: boolean,
+        transferTimeMs: number,
+    ): Promise<DetectResult> {
         if (!this.worker) {
             frame.close();
             throw new Error("Sincro tracker worker is not running.");
@@ -102,13 +107,16 @@ export class SincroTrackerWorkerClient {
                 transferTimeMs,
             };
             this.publishStats();
-            this.worker?.postMessage({
-                type: "detect",
-                requestId,
-                frame,
-                timestampMs,
-                poseEnabled,
-            }, [frame]);
+            this.worker?.postMessage(
+                {
+                    type: "detect",
+                    requestId,
+                    frame,
+                    timestampMs,
+                    poseEnabled,
+                },
+                [frame],
+            );
         });
     }
 
@@ -147,9 +155,12 @@ export class SincroTrackerWorkerClient {
         if (this.worker) {
             return;
         }
-        const worker = new Worker(new URL("./sincro-tracker.worker.ts", import.meta.url), { type: "module" });
+        const worker = new Worker(new URL("./sincro-tracker.worker.ts", import.meta.url), {
+            type: "module",
+        });
         this.worker = worker;
-        worker.onmessage = (event: MessageEvent<SincroTrackerWorkerOutputMessage>) => this.handleWorkerMessage(event.data);
+        worker.onmessage = (event: MessageEvent<SincroTrackerWorkerOutputMessage>) =>
+            this.handleWorkerMessage(event.data);
         worker.onerror = (event: ErrorEvent) => {
             this.handleWorkerFailure(new Error(event.message));
         };
@@ -164,7 +175,9 @@ export class SincroTrackerWorkerClient {
                 this.pendingInitReject = null;
             }
             if (message.status === "unavailable") {
-                this.handleWorkerFailure(new Error(message.message || "Sincro tracker worker unavailable."));
+                this.handleWorkerFailure(
+                    new Error(message.message || "Sincro tracker worker unavailable."),
+                );
             }
             return;
         }
@@ -204,7 +217,11 @@ export class SincroTrackerWorkerClient {
         this.handleWorkerFailure(new Error(message.message));
     }
 
-    private applyStatus(status: SincroTrackerWorkerStatus, message = "", loadTimeMs?: number): void {
+    private applyStatus(
+        status: SincroTrackerWorkerStatus,
+        message = "",
+        loadTimeMs?: number,
+    ): void {
         this.stats = {
             ...this.stats,
             status,

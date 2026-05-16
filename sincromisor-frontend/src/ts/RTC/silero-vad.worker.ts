@@ -61,7 +61,10 @@ let offConsecutiveCount = 0;
 type OnnxDim = number | string | bigint | null;
 
 // メインスレッドへWorker状態を通知する。
-function postStatus(status: "idle" | "loading" | "ready" | "running" | "fallback" | "unavailable", message = ""): void {
+function postStatus(
+    status: "idle" | "loading" | "ready" | "running" | "fallback" | "unavailable",
+    message = "",
+): void {
     self.postMessage({
         type: "status",
         status,
@@ -122,7 +125,10 @@ function tensorSize(dims: ReadonlyArray<number>): number {
 }
 
 // `inputNames` と同順で返る `inputMetadata` から対象入力の次元情報を取り出す。
-function getInputDims(currentSession: ort.InferenceSession, inputName: string): ReadonlyArray<OnnxDim> | undefined {
+function getInputDims(
+    currentSession: ort.InferenceSession,
+    inputName: string,
+): ReadonlyArray<OnnxDim> | undefined {
     const inputIndex = currentSession.inputNames.indexOf(inputName);
     if (inputIndex < 0 || inputIndex >= currentSession.inputMetadata.length) {
         return undefined;
@@ -182,7 +188,11 @@ async function inferProbability(pcm: Float32Array, sampleRate: number): Promise<
                 const dims = getInputDims(session, inputName);
                 const resolvedDims = resolveDims(dims, [2, 1, 128]);
                 const stateSize = tensorSize(resolvedDims);
-                modelStateTensor = new ort.Tensor("float32", new Float32Array(stateSize), resolvedDims);
+                modelStateTensor = new ort.Tensor(
+                    "float32",
+                    new Float32Array(stateSize),
+                    resolvedDims,
+                );
             }
             feeds[inputName] = modelStateTensor;
             continue;
@@ -257,9 +267,9 @@ function updateSpeechState(probability: number): boolean {
         offConsecutiveCount = 0;
     }
     if (
-        offConsecutiveCount >= offConsecutiveFrames
-        && probability < modeOffThreshold
-        && now - lastSpeechAtMs > hangoverMs
+        offConsecutiveCount >= offConsecutiveFrames &&
+        probability < modeOffThreshold &&
+        now - lastSpeechAtMs > hangoverMs
     ) {
         isSpeech = false;
         offConsecutiveCount = 0;
@@ -297,18 +307,30 @@ self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
             modeOnThreshold = Math.max(0.0001, Math.min(0.1, data.onThreshold));
         }
         if (typeof data.offThreshold === "number" && Number.isFinite(data.offThreshold)) {
-            modeOffThreshold = Math.max(0.00005, Math.min(modeOnThreshold * 0.95, data.offThreshold));
+            modeOffThreshold = Math.max(
+                0.00005,
+                Math.min(modeOnThreshold * 0.95, data.offThreshold),
+            );
         }
         if (typeof data.hangoverMs === "number" && Number.isFinite(data.hangoverMs)) {
             hangoverMs = Math.max(0, Math.min(1200, Math.round(data.hangoverMs)));
         }
-        if (typeof data.minInferIntervalMs === "number" && Number.isFinite(data.minInferIntervalMs)) {
+        if (
+            typeof data.minInferIntervalMs === "number" &&
+            Number.isFinite(data.minInferIntervalMs)
+        ) {
             minInferIntervalMs = Math.max(20, Math.min(400, Math.round(data.minInferIntervalMs)));
         }
-        if (typeof data.onConsecutiveFrames === "number" && Number.isFinite(data.onConsecutiveFrames)) {
+        if (
+            typeof data.onConsecutiveFrames === "number" &&
+            Number.isFinite(data.onConsecutiveFrames)
+        ) {
             onConsecutiveFrames = Math.max(1, Math.min(10, Math.round(data.onConsecutiveFrames)));
         }
-        if (typeof data.offConsecutiveFrames === "number" && Number.isFinite(data.offConsecutiveFrames)) {
+        if (
+            typeof data.offConsecutiveFrames === "number" &&
+            Number.isFinite(data.offConsecutiveFrames)
+        ) {
             offConsecutiveFrames = Math.max(1, Math.min(10, Math.round(data.offConsecutiveFrames)));
         }
         return;

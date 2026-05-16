@@ -38,7 +38,10 @@ export function emitSincroAppInitialSnapshot(
     listener({ type: "dialog_ui_state", uiState: snapshot.dialogUiState });
     listener({ type: "dialog_vrm_ui_state", uiState: snapshot.dialogVrmUiState });
     listener({ type: "startup_settings_status", status: snapshot.startupSettingsStatus });
-    listener({ type: "startup_settings_capabilities", capabilities: snapshot.startupSettingsCapabilities });
+    listener({
+        type: "startup_settings_capabilities",
+        capabilities: snapshot.startupSettingsCapabilities,
+    });
     listener({
         type: "looking_glass_state",
         state: snapshot.lookingGlassState.state,

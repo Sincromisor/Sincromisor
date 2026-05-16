@@ -1,16 +1,15 @@
-import { VRMScene } from "../VRMScene/VRMScene";
+import { DoubleSide, SRGBColorSpace } from "three/src/constants.js";
 import { CircleGeometry } from "three/src/geometries/CircleGeometry.js";
 import { SphereGeometry } from "three/src/geometries/SphereGeometry.js";
 import { MeshBasicMaterial } from "three/src/materials/MeshBasicMaterial.js";
 import { MeshStandardMaterial } from "three/src/materials/MeshStandardMaterial.js";
+import type { Vector3 } from "three/src/math/Vector3.js";
 import { Mesh } from "three/src/objects/Mesh.js";
 import { CanvasTexture } from "three/src/textures/CanvasTexture.js";
-import { DoubleSide } from "three/src/constants.js";
-import { SphereVideo } from "./SphereVideo";
-import { VideoTexture } from "three/src/textures/VideoTexture.js";
-import { Vector3 } from "three/src/math/Vector3.js";
-import { SRGBColorSpace } from 'three/src/constants.js';
+import type { VideoTexture } from "three/src/textures/VideoTexture.js";
 import { LookingGlassXRController } from "../LookingGlass/LookingGlassXRController";
+import { VRMScene } from "../VRMScene/VRMScene";
+import { SphereVideo } from "./SphereVideo";
 //import { MathUtils } from "three/src/math/MathUtils.js";
 
 export class VRM360Scene extends VRMScene {
@@ -53,12 +52,12 @@ export class VRM360Scene extends VRMScene {
     private getVideoId(): string {
         const urlParams: URLSearchParams = new URLSearchParams(window.location.search);
         const regex: RegExp = /^(file|live)\/[a-zA-Z0-9_]{1,64}$/;
-        const video_id = urlParams.get('video_id') ?? 'file/default';
+        const video_id = urlParams.get("video_id") ?? "file/default";
 
         if (regex.test(video_id)) {
             return video_id;
         } else {
-            return 'file/default';
+            return "file/default";
         }
     }
 
@@ -101,27 +100,38 @@ export class VRM360Scene extends VRMScene {
         geometry.rotateX(-Math.PI / 2);
 
         const size: number = 256;
-        const canvas: HTMLCanvasElement = document.createElement('canvas');
+        const canvas: HTMLCanvasElement = document.createElement("canvas");
         canvas.width = size;
         canvas.height = size;
-        const ctx: CanvasRenderingContext2D | null = canvas.getContext('2d');
+        const ctx: CanvasRenderingContext2D | null = canvas.getContext("2d");
         if (ctx === null) {
-            throw new Error('Failed to get 2d context');
+            throw new Error("Failed to get 2d context");
         }
 
-        const gradient: CanvasGradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-        gradient.addColorStop(0, 'rgba(63,63,63,1)');
-        gradient.addColorStop(0.8, 'rgba(63,63,63,0.8)');
-        gradient.addColorStop(1, 'rgba(63,63,63,0)');
+        const gradient: CanvasGradient = ctx.createRadialGradient(
+            size / 2,
+            size / 2,
+            0,
+            size / 2,
+            size / 2,
+            size / 2,
+        );
+        gradient.addColorStop(0, "rgba(63,63,63,1)");
+        gradient.addColorStop(0.8, "rgba(63,63,63,0.8)");
+        gradient.addColorStop(1, "rgba(63,63,63,0)");
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, size, size);
 
         const texture: CanvasTexture = new CanvasTexture(canvas);
         const material: MeshStandardMaterial = new MeshStandardMaterial({
-            map: texture, transparent: true, side: DoubleSide, roughness: 0.8, metalness: 0.2
+            map: texture,
+            transparent: true,
+            side: DoubleSide,
+            roughness: 0.8,
+            metalness: 0.2,
         });
         const floor: Mesh = new Mesh(geometry, material);
-        floor.position.y = 0;  // キャラクターの位置に合わせる
+        floor.position.y = 0; // キャラクターの位置に合わせる
         floor.receiveShadow = true;
         this.scene.add(floor);
     }

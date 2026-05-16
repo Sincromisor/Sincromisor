@@ -78,13 +78,13 @@
 
 ## 子タスク責務マトリクス
 
-| タスク | 主責務 | 先行入力 | 主成果物 | 主な更新責任 | このタスクでやらないこと |
-| --- | --- | --- | --- | --- | --- |
-| `TASK-3009` | サポート範囲とページ分類の固定 | 現在の HTML エントリ、描画基盤、build/public 導線 | `modern / legacy / experimental / deprecated` 分類表、保守対象一覧 | `README.md`、`documents/design/frontend_ui.md`、`documents/design/frontend_migration_react.md` | CSS 実装整理、React 境界実装、Babylon 削除実装 |
-| `TASK-3010` | CSS 基盤と legacy style 境界の整理 | `TASK-3009` の分類結果 | token / layer / naming / nesting 方針、移行対象 CSS 一覧 | `documents/design/frontend_ui.md`、必要に応じて `README.md` | サポート範囲の再分類、React 境界整理 |
-| `TASK-3011` | React 側の残存 direct manager 依存整理 | `TASK-3009` の優先対象、既存 `SincroAppController` 設計 | direct manager 依存一覧、移行先、優先順位、必要な bridge 変更 | `documents/design/frontend_ui.md`、`documents/design/frontend_migration_react.md` | CSS 方針決定、ページ分類や legacy 導線判断のやり直し |
-| `TASK-3012` | legacy build/public 導線の文書同期 | `TASK-3009` の分類結果、現行 `build` / `build:all` 構成 | README・トップページ・設計文書の導線同期、`single` / `double` 扱い明文化 | `README.md`、`documents/design/frontend_ui.md`、`documents/design/frontend_migration_react.md` | build 分離の新規実装、Babylon 削除実装 |
-| `TASK-3013` | 不足コメントの対象限定整備 | `TASK-3009` から `TASK-3012` で固まった対象範囲と責務境界 | コメント対象一覧、責務の入口コメント、必要最小限の補足文書 | `documents/design/frontend_ui.md`、`documents/design/frontend_migration_react.md`、必要に応じて `README.md` | コメントの全面追加、前段タスクの判断のやり直し |
+| タスク      | 主責務                                 | 先行入力                                                  | 主成果物                                                                 | 主な更新責任                                                                                                | このタスクでやらないこと                             |
+| ----------- | -------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `TASK-3009` | サポート範囲とページ分類の固定         | 現在の HTML エントリ、描画基盤、build/public 導線         | `modern / legacy / experimental / deprecated` 分類表、保守対象一覧       | `README.md`、`documents/design/frontend_ui.md`、`documents/design/frontend_migration_react.md`              | CSS 実装整理、React 境界実装、Babylon 削除実装       |
+| `TASK-3010` | CSS 基盤と legacy style 境界の整理     | `TASK-3009` の分類結果                                    | token / layer / naming / nesting 方針、移行対象 CSS 一覧                 | `documents/design/frontend_ui.md`、必要に応じて `README.md`                                                 | サポート範囲の再分類、React 境界整理                 |
+| `TASK-3011` | React 側の残存 direct manager 依存整理 | `TASK-3009` の優先対象、既存 `SincroAppController` 設計   | direct manager 依存一覧、移行先、優先順位、必要な bridge 変更            | `documents/design/frontend_ui.md`、`documents/design/frontend_migration_react.md`                           | CSS 方針決定、ページ分類や legacy 導線判断のやり直し |
+| `TASK-3012` | legacy build/public 導線の文書同期     | `TASK-3009` の分類結果、現行 `build` / `build:all` 構成   | README・トップページ・設計文書の導線同期、`single` / `double` 扱い明文化 | `README.md`、`documents/design/frontend_ui.md`、`documents/design/frontend_migration_react.md`              | build 分離の新規実装、Babylon 削除実装               |
+| `TASK-3013` | 不足コメントの対象限定整備             | `TASK-3009` から `TASK-3012` で固まった対象範囲と責務境界 | コメント対象一覧、責務の入口コメント、必要最小限の補足文書               | `documents/design/frontend_ui.md`、`documents/design/frontend_migration_react.md`、必要に応じて `README.md` | コメントの全面追加、前段タスクの判断のやり直し       |
 
 ## 子タスク
 

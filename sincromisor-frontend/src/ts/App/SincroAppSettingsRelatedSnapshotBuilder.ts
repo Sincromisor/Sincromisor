@@ -1,6 +1,6 @@
 import type { SincroAppDialogFacade } from "./SincroAppDialogFacade";
-import type { SincroAppSettingsSnapshot, SincroAppStartupSettingsStatus } from "./SincroAppTypes";
 import { buildSincroAppSettingsSnapshot } from "./SincroAppSettingsSnapshotBuilder";
+import type { SincroAppSettingsSnapshot, SincroAppStartupSettingsStatus } from "./SincroAppTypes";
 import { buildSincroAppUiStateSnapshot } from "./SincroAppUiStateSnapshotBuilder";
 
 export type SincroAppSettingsRelatedSnapshotPayload = {
@@ -15,7 +15,9 @@ export type SincroAppSettingsRelatedSnapshotPayload = {
 export function buildSincroAppSettingsRelatedSnapshotPayload(params: {
     dialogManager: SincroAppDialogFacade;
     settings?: SincroAppSettingsSnapshot;
-    buildStartupSettingsStatus: (currentSettings: SincroAppSettingsSnapshot) => SincroAppStartupSettingsStatus;
+    buildStartupSettingsStatus: (
+        currentSettings: SincroAppSettingsSnapshot,
+    ) => SincroAppStartupSettingsStatus;
 }): SincroAppSettingsRelatedSnapshotPayload {
     const uiStateSnapshot = buildSincroAppUiStateSnapshot(params.dialogManager);
     const settings = params.settings ?? buildSincroAppSettingsSnapshot(params.dialogManager);

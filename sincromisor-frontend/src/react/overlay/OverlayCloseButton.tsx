@@ -13,9 +13,7 @@ export function OverlayCloseButton({
     children,
     ...buttonProps
 }: OverlayCloseButtonProps) {
-    const composedClassName = className
-        ? `overlayCloseButton ${className}`
-        : "overlayCloseButton";
+    const composedClassName = className ? `overlayCloseButton ${className}` : "overlayCloseButton";
 
     return (
         <button {...buttonProps} className={composedClassName} type="button" aria-label={ariaLabel}>

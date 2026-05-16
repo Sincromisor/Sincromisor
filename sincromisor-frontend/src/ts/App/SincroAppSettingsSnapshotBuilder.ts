@@ -4,7 +4,9 @@ import type { SincroAppSettingsSnapshot } from "./SincroAppTypes";
 
 // Dialog 設定値 + Looking Glass runtime config を合成して、
 // UI/API 共通の settings snapshot を作る helper。
-export function buildSincroAppSettingsSnapshot(dialogManager: SincroAppDialogFacade): SincroAppSettingsSnapshot {
+export function buildSincroAppSettingsSnapshot(
+    dialogManager: SincroAppDialogFacade,
+): SincroAppSettingsSnapshot {
     const lg = getLookingGlassRuntimeConfig();
     return {
         titleText: dialogManager.titleText(),

@@ -153,12 +153,24 @@ export class SincroPoseRetargeter {
         this.config = {
             ...this.config,
             ...config,
-            intensityScale: MathUtils.clamp(config.intensityScale ?? this.config.intensityScale, 0, 1.2),
+            intensityScale: MathUtils.clamp(
+                config.intensityScale ?? this.config.intensityScale,
+                0,
+                1.2,
+            ),
             minConfidence: MathUtils.clamp(config.minConfidence ?? this.config.minConfidence, 0, 1),
-            returnToNeutralMs: MathUtils.clamp(config.returnToNeutralMs ?? this.config.returnToNeutralMs, 80, 2000),
+            returnToNeutralMs: MathUtils.clamp(
+                config.returnToNeutralMs ?? this.config.returnToNeutralMs,
+                80,
+                2000,
+            ),
             smoothingMs: MathUtils.clamp(config.smoothingMs ?? this.config.smoothingMs, 40, 800),
             armIkStrength: MathUtils.clamp(config.armIkStrength ?? this.config.armIkStrength, 0, 1),
-            armIkTargetScale: MathUtils.clamp(config.armIkTargetScale ?? this.config.armIkTargetScale, 0.2, 1.5),
+            armIkTargetScale: MathUtils.clamp(
+                config.armIkTargetScale ?? this.config.armIkTargetScale,
+                0.2,
+                1.5,
+            ),
         };
     }
 
@@ -168,9 +180,10 @@ export class SincroPoseRetargeter {
     }
 
     retarget(snapshot: SincroPoseMotionSnapshot, nowMs: number): SincroPoseRetargetFrame {
-        const deltaMs = this.lastUpdateAtMs == null
-            ? 1000 / 60
-            : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 120);
+        const deltaMs =
+            this.lastUpdateAtMs == null
+                ? 1000 / 60
+                : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 120);
         this.lastUpdateAtMs = nowMs;
 
         const snapshotFallbackReason = this.snapshotFallbackReason(snapshot);
@@ -195,29 +208,43 @@ export class SincroPoseRetargeter {
             upperBody: {
                 spine: {
                     x: 0,
-                    y: -snapshot.upperBody.torsoLean * this.config.torsoLeanRad * 0.45 * upperBodyWeight,
-                    z: -snapshot.upperBody.shoulderRoll * this.config.shoulderRollRad * 0.35 * upperBodyWeight,
+                    y:
+                        -snapshot.upperBody.torsoLean *
+                        this.config.torsoLeanRad *
+                        0.45 *
+                        upperBodyWeight,
+                    z:
+                        -snapshot.upperBody.shoulderRoll *
+                        this.config.shoulderRollRad *
+                        0.35 *
+                        upperBodyWeight,
                 },
                 chest: {
                     x: 0,
-                    y: (
-                        -snapshot.upperBody.torsoLean * this.config.torsoLeanRad
-                        - anchor.shoulderOffset.x * this.config.shoulderAnchorOffsetRad
-                    ) * upperBodyWeight,
-                    z: (
-                        -snapshot.upperBody.shoulderRoll * this.config.shoulderRollRad
-                        - anchor.shoulderOffset.y * this.config.shoulderAnchorOffsetRad
-                    ) * upperBodyWeight,
+                    y:
+                        (-snapshot.upperBody.torsoLean * this.config.torsoLeanRad -
+                            anchor.shoulderOffset.x * this.config.shoulderAnchorOffsetRad) *
+                        upperBodyWeight,
+                    z:
+                        (-snapshot.upperBody.shoulderRoll * this.config.shoulderRollRad -
+                            anchor.shoulderOffset.y * this.config.shoulderAnchorOffsetRad) *
+                        upperBodyWeight,
                 },
                 leftShoulder: {
                     x: 0,
                     y: 0,
-                    z: -snapshot.upperBody.shoulderRoll * this.config.shoulderLiftRad * upperBodyWeight,
+                    z:
+                        -snapshot.upperBody.shoulderRoll *
+                        this.config.shoulderLiftRad *
+                        upperBodyWeight,
                 },
                 rightShoulder: {
                     x: 0,
                     y: 0,
-                    z: -snapshot.upperBody.shoulderRoll * this.config.shoulderLiftRad * upperBodyWeight,
+                    z:
+                        -snapshot.upperBody.shoulderRoll *
+                        this.config.shoulderLiftRad *
+                        upperBodyWeight,
                 },
             },
             leftArm,
@@ -250,17 +277,25 @@ export class SincroPoseRetargeter {
     private upperBodyAnchor(snapshot: SincroPoseMotionSnapshot): UpperBodyAnchor {
         const leftShoulder = snapshot.leftArm.targets.shoulder;
         const rightShoulder = snapshot.rightArm.targets.shoulder;
-        const shoulderTargetConfidence = Math.min(leftShoulder.confidence, rightShoulder.confidence);
+        const shoulderTargetConfidence = Math.min(
+            leftShoulder.confidence,
+            rightShoulder.confidence,
+        );
         // Shoulder anchors are deliberately weaker when hips are missing. This keeps close-up
         // camera framing usable without letting torso compensation fight the arm IK target.
         const targetConfidenceWeight = MathUtils.clamp(
-            (shoulderTargetConfidence - this.config.minConfidence) / Math.max(1 - this.config.minConfidence, 0.01),
+            (shoulderTargetConfidence - this.config.minConfidence) /
+                Math.max(1 - this.config.minConfidence, 0.01),
             0,
             1,
         );
         const widthWeight = MathUtils.clamp((snapshot.upperBody.shoulderWidth - 0.08) / 0.18, 0, 1);
         const hipWeight = snapshot.upperBody.hipCenterTracked ? 1 : 0.64;
-        const weight = MathUtils.clamp(Math.min(targetConfidenceWeight, widthWeight) * hipWeight, 0, 1);
+        const weight = MathUtils.clamp(
+            Math.min(targetConfidenceWeight, widthWeight) * hipWeight,
+            0,
+            1,
+        );
         const shoulderOffset = {
             x: MathUtils.clamp(snapshot.upperBody.shoulderCenterX - 0.5, -0.45, 0.45),
             y: MathUtils.clamp(snapshot.upperBody.shoulderCenterY - 0.38, -0.35, 0.35),
@@ -279,7 +314,10 @@ export class SincroPoseRetargeter {
         };
     }
 
-    private retargetArm(arm: SincroPoseArmMotionSnapshot, side: "left" | "right"): SincroPoseRetargetedArm {
+    private retargetArm(
+        arm: SincroPoseArmMotionSnapshot,
+        side: "left" | "right",
+    ): SincroPoseRetargetedArm {
         if (!arm.tracked || arm.confidence < this.config.minConfidence) {
             return withArmFallbackReason(
                 cloneArm(NEUTRAL_POSE_FRAME.leftArm),
@@ -295,7 +333,12 @@ export class SincroPoseRetargeter {
             upperArm: {
                 x: -positiveOnly(arm.upperArmLift) * this.config.upperArmLiftRad * scale,
                 y: sideSign * arm.upperArmOpen * this.config.upperArmOpenRad * scale,
-                z: -sideSign * positiveOnly(arm.upperArmLift) * this.config.upperArmOpenRad * 0.55 * scale,
+                z:
+                    -sideSign *
+                    positiveOnly(arm.upperArmLift) *
+                    this.config.upperArmOpenRad *
+                    0.55 *
+                    scale,
             },
             lowerArm: {
                 x: 0,
@@ -343,10 +386,21 @@ export class SincroPoseRetargeter {
         };
     }
 
-    private solveArmIk(targets: SincroPoseArmTargetSnapshot, side: "left" | "right"): ArmIkSolveResult {
+    private solveArmIk(
+        targets: SincroPoseArmTargetSnapshot,
+        side: "left" | "right",
+    ): ArmIkSolveResult {
         const metrics = this.armRigMetrics?.[side];
-        if (!metrics || !targets.shoulder.tracked || !targets.elbow.tracked || !targets.wrist.tracked) {
-            return { target: null, fallbackReason: metrics ? "ik_target_missing" : "ik_rig_metrics_missing" };
+        if (
+            !metrics ||
+            !targets.shoulder.tracked ||
+            !targets.elbow.tracked ||
+            !targets.wrist.tracked
+        ) {
+            return {
+                target: null,
+                fallbackReason: metrics ? "ik_target_missing" : "ik_rig_metrics_missing",
+            };
         }
         const targetConfidence = Math.min(
             targets.shoulder.confidence,
@@ -364,7 +418,10 @@ export class SincroPoseRetargeter {
         const elbowX = (targets.elbow.localX - targets.shoulder.localX) * modelScale;
         const elbowY = (targets.elbow.localY - targets.shoulder.localY) * modelScale;
         const maxReach = Math.max(metrics.upperArmLength + metrics.lowerArmLength, 0.01);
-        const minReach = Math.max(Math.abs(metrics.upperArmLength - metrics.lowerArmLength), maxReach * 0.18);
+        const minReach = Math.max(
+            Math.abs(metrics.upperArmLength - metrics.lowerArmLength),
+            maxReach * 0.18,
+        );
         const reach = MathUtils.clamp(Math.hypot(wristX, wristY), minReach, maxReach * 0.98);
         const normalizedReach = Math.max(reach, 1e-4);
 
@@ -372,14 +429,19 @@ export class SincroPoseRetargeter {
         // 手首方向を主軸、肘方向を pole の近似として使う。外れ値は角度へ変換する前に強く丸める。
         const openFromWrist = MathUtils.clamp((wristX * sideSign) / normalizedReach, -1, 1);
         const liftFromWrist = MathUtils.clamp(wristY / normalizedReach, -1, 1);
-        const openFromElbow = MathUtils.clamp((elbowX * sideSign) / Math.max(Math.hypot(elbowX, elbowY), 1e-4), -1, 1);
-        const liftFromElbow = MathUtils.clamp(elbowY / Math.max(Math.hypot(elbowX, elbowY), 1e-4), -1, 1);
+        const openFromElbow = MathUtils.clamp(
+            (elbowX * sideSign) / Math.max(Math.hypot(elbowX, elbowY), 1e-4),
+            -1,
+            1,
+        );
+        const liftFromElbow = MathUtils.clamp(
+            elbowY / Math.max(Math.hypot(elbowX, elbowY), 1e-4),
+            -1,
+            1,
+        );
         const elbowCos = MathUtils.clamp(
-            (
-                metrics.upperArmLength ** 2
-                + metrics.lowerArmLength ** 2
-                - reach ** 2
-            ) / (2 * metrics.upperArmLength * metrics.lowerArmLength),
+            (metrics.upperArmLength ** 2 + metrics.lowerArmLength ** 2 - reach ** 2) /
+                (2 * metrics.upperArmLength * metrics.lowerArmLength),
             -1,
             1,
         );
@@ -413,7 +475,11 @@ function positiveOnly(value: number): number {
     return Math.max(0, value);
 }
 
-function smoothFrame(current: SincroPoseRetargetFrame, target: SincroPoseRetargetFrame, alpha: number): SincroPoseRetargetFrame {
+function smoothFrame(
+    current: SincroPoseRetargetFrame,
+    target: SincroPoseRetargetFrame,
+    alpha: number,
+): SincroPoseRetargetFrame {
     return {
         active: target.active,
         confidence: MathUtils.lerp(current.confidence, target.confidence, alpha),
@@ -423,20 +489,36 @@ function smoothFrame(current: SincroPoseRetargetFrame, target: SincroPoseRetarge
             active: target.anchor.active,
             weight: MathUtils.lerp(current.anchor.weight, target.anchor.weight, alpha),
             reason: target.anchor.reason,
-            shoulderOffset: smoothVector2(current.anchor.shoulderOffset, target.anchor.shoulderOffset, alpha),
+            shoulderOffset: smoothVector2(
+                current.anchor.shoulderOffset,
+                target.anchor.shoulderOffset,
+                alpha,
+            ),
         },
         upperBody: {
             spine: smoothVector(current.upperBody.spine, target.upperBody.spine, alpha),
             chest: smoothVector(current.upperBody.chest, target.upperBody.chest, alpha),
-            leftShoulder: smoothVector(current.upperBody.leftShoulder, target.upperBody.leftShoulder, alpha),
-            rightShoulder: smoothVector(current.upperBody.rightShoulder, target.upperBody.rightShoulder, alpha),
+            leftShoulder: smoothVector(
+                current.upperBody.leftShoulder,
+                target.upperBody.leftShoulder,
+                alpha,
+            ),
+            rightShoulder: smoothVector(
+                current.upperBody.rightShoulder,
+                target.upperBody.rightShoulder,
+                alpha,
+            ),
         },
         leftArm: smoothArm(current.leftArm, target.leftArm, alpha),
         rightArm: smoothArm(current.rightArm, target.rightArm, alpha),
     };
 }
 
-function smoothArm(current: SincroPoseRetargetedArm, target: SincroPoseRetargetedArm, alpha: number): SincroPoseRetargetedArm {
+function smoothArm(
+    current: SincroPoseRetargetedArm,
+    target: SincroPoseRetargetedArm,
+    alpha: number,
+): SincroPoseRetargetedArm {
     return {
         active: target.active,
         ikActive: target.ikActive,
@@ -520,7 +602,10 @@ function cloneArm(arm: SincroPoseRetargetedArm): SincroPoseRetargetedArm {
     };
 }
 
-function withFallbackReason(frame: SincroPoseRetargetFrame, fallbackReason: string): SincroPoseRetargetFrame {
+function withFallbackReason(
+    frame: SincroPoseRetargetFrame,
+    fallbackReason: string,
+): SincroPoseRetargetFrame {
     return {
         ...cloneFrame(frame),
         active: false,
@@ -534,7 +619,10 @@ function withFallbackReason(frame: SincroPoseRetargetFrame, fallbackReason: stri
     };
 }
 
-function withArmFallbackReason(arm: SincroPoseRetargetedArm, fallbackReason: string): SincroPoseRetargetedArm {
+function withArmFallbackReason(
+    arm: SincroPoseRetargetedArm,
+    fallbackReason: string,
+): SincroPoseRetargetedArm {
     return {
         ...arm,
         active: false,
@@ -543,7 +631,10 @@ function withArmFallbackReason(arm: SincroPoseRetargetedArm, fallbackReason: str
     };
 }
 
-function ikModeForArms(leftArm: SincroPoseRetargetedArm, rightArm: SincroPoseRetargetedArm): SincroPoseIkMode {
+function ikModeForArms(
+    leftArm: SincroPoseRetargetedArm,
+    rightArm: SincroPoseRetargetedArm,
+): SincroPoseIkMode {
     if (leftArm.ikActive && rightArm.ikActive) {
         return "both_ik";
     }
@@ -563,9 +654,10 @@ function measureArmRigMetrics(vrm: VRM): Record<"left" | "right", ArmRigMetrics>
     vrm.scene.updateMatrixWorld(true);
     const leftShoulder = getBoneWorldPosition(vrm, "leftUpperArm");
     const rightShoulder = getBoneWorldPosition(vrm, "rightUpperArm");
-    const shoulderWidth = leftShoulder && rightShoulder
-        ? Math.max(leftShoulder.distanceTo(rightShoulder), 0.08)
-        : 0.32;
+    const shoulderWidth =
+        leftShoulder && rightShoulder
+            ? Math.max(leftShoulder.distanceTo(rightShoulder), 0.08)
+            : 0.32;
     const left = measureArmSide(vrm, "left", shoulderWidth);
     const right = measureArmSide(vrm, "right", shoulderWidth);
     if (!left || !right) {
@@ -574,7 +666,11 @@ function measureArmRigMetrics(vrm: VRM): Record<"left" | "right", ArmRigMetrics>
     return { left, right };
 }
 
-function measureArmSide(vrm: VRM, side: "left" | "right", shoulderWidth: number): ArmRigMetrics | null {
+function measureArmSide(
+    vrm: VRM,
+    side: "left" | "right",
+    shoulderWidth: number,
+): ArmRigMetrics | null {
     const upperArm = getBoneWorldPosition(vrm, `${side}UpperArm` as VRMHumanBoneName);
     const lowerArm = getBoneWorldPosition(vrm, `${side}LowerArm` as VRMHumanBoneName);
     const hand = getBoneWorldPosition(vrm, `${side}Hand` as VRMHumanBoneName);

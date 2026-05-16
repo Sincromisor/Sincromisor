@@ -1,5 +1,5 @@
-import { useId } from "react";
 import type { KeyboardEvent } from "react";
+import { useId } from "react";
 import "./integratedTabs.css";
 
 export type IntegratedTabItem = {
@@ -50,7 +50,10 @@ export function IntegratedTabs({
     }
 
     const selectByOffset = (offset: number): void => {
-        const activeIndex = Math.max(0, items.findIndex((item) => item.id === activeId));
+        const activeIndex = Math.max(
+            0,
+            items.findIndex((item) => item.id === activeId),
+        );
         const nextIndex = (activeIndex + offset + items.length) % items.length;
         onSelect(items[nextIndex]?.id ?? activeId);
     };
@@ -72,10 +75,20 @@ export function IntegratedTabs({
     };
 
     return (
-        <nav className={["integratedTabs", className ?? ""].filter(Boolean).join(" ")} aria-label={ariaLabel} role="tablist">
+        <div
+            className={["integratedTabs", className ?? ""].filter(Boolean).join(" ")}
+            aria-label={ariaLabel}
+            role="tablist"
+        >
             {visibleGroups.map((group, groupIndex) => (
-                <div key={group.heading ?? `group-${groupIndex}`} className="integratedTabs__section" role="presentation">
-                    {group.heading ? <div className="integratedTabs__sectionTitle">{group.heading}</div> : null}
+                <div
+                    key={group.heading ?? `group-${groupIndex}`}
+                    className="integratedTabs__section"
+                    role="presentation"
+                >
+                    {group.heading ? (
+                        <div className="integratedTabs__sectionTitle">{group.heading}</div>
+                    ) : null}
                     {group.items.map((item) => (
                         <button
                             key={item.id}
@@ -86,7 +99,9 @@ export function IntegratedTabs({
                                 "integratedTabs__tab",
                                 item.id === activeId ? "is-active" : "",
                                 item.tone === "developer" ? "is-developer" : "",
-                            ].filter(Boolean).join(" ")}
+                            ]
+                                .filter(Boolean)
+                                .join(" ")}
                             onClick={() => onSelect(item.id)}
                             onKeyDown={handleKeyDown}
                             aria-controls={getPanelId(resolvedIdPrefix, item.id)}
@@ -98,6 +113,6 @@ export function IntegratedTabs({
                     ))}
                 </div>
             ))}
-        </nav>
+        </div>
     );
 }
