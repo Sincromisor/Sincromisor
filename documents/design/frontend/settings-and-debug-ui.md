@@ -55,6 +55,7 @@
 - 現在ページで有効な項目がないカテゴリは通常表示しない。
 - `Ctrl+Alt+D` は Debug Console の導線として扱う。
 - 技術用語が必要な診断情報は Debug Console に置き、通常設定には混ぜない。
+- `forceSincroPoseTracking` は低性能端末での姿勢同期デバッグ用設定として扱い、通常利用では `pose_inference_too_slow` の自動降格を優先する。
 
 ## Change Checklist
 

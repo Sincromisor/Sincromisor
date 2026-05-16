@@ -9,6 +9,7 @@ export type DialogSettingsUiState = {
     enableCharacterDisabled: boolean;
     enableTalkDisabled: boolean;
     enableCharacterGazeDisabled: boolean;
+    forceSincroPoseTrackingDisabled: boolean;
     enableAutoMuteDisabled: boolean;
     enableNoiseSuppressionDisabled: boolean;
     enableEchoCancellationDisabled: boolean;
@@ -52,6 +53,7 @@ export class DialogSettingsPolicy {
             enableCharacterDisabled: stateStore.isDisabled("enableCharacter"),
             enableTalkDisabled: stateStore.isDisabled("enableTalk"),
             enableCharacterGazeDisabled: stateStore.isDisabled("enableCharacterGaze"),
+            forceSincroPoseTrackingDisabled: stateStore.isDisabled("forceSincroPoseTracking"),
             enableAutoMuteDisabled: stateStore.isDisabled("enableAutoMute"),
             enableNoiseSuppressionDisabled: stateStore.isDisabled("enableNoiseSuppression"),
             enableEchoCancellationDisabled: stateStore.isDisabled("enableEchoCancellation"),

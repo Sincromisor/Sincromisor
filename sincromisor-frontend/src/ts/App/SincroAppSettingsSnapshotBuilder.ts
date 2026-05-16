@@ -17,6 +17,7 @@ export function buildSincroAppSettingsSnapshot(
         enableTalk: dialogManager.enableTalk(),
         enableCharacterGaze: dialogManager.enableCharacterGaze(),
         enableSincroPoseTracking: dialogManager.enableSincroPoseTracking(),
+        forceSincroPoseTracking: dialogManager.forceSincroPoseTracking(),
         enableAutoMute: dialogManager.enableAutoMute(),
         enableNoiseSuppression: dialogManager.enableNoiseSuppression(),
         enableEchoCancellation: dialogManager.enableEchoCancellation(),

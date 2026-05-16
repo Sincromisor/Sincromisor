@@ -24,6 +24,7 @@ type BooleanDialogSettingKey =
     | "enableTalk"
     | "enableCharacterGaze"
     | "enableSincroPoseTracking"
+    | "forceSincroPoseTracking"
     | "enableAutoMute"
     | "enableNoiseSuppression"
     | "enableEchoCancellation"
@@ -169,6 +170,10 @@ export class DialogManager {
         this.setCheckboxValue("enableSincroPoseTracking", enabled);
     }
 
+    setForceSincroPoseTracking(enabled: boolean): void {
+        this.setCheckboxValue("forceSincroPoseTracking", enabled);
+    }
+
     setEnableAutoMute(enabled: boolean): void {
         this.setCheckboxValue("enableAutoMute", enabled);
     }
@@ -239,6 +244,10 @@ export class DialogManager {
 
     enableSincroPoseTracking(): boolean {
         return this.stateStore.get("enableSincroPoseTracking");
+    }
+
+    forceSincroPoseTracking(): boolean {
+        return this.stateStore.get("forceSincroPoseTracking");
     }
 
     enableAutoMute(): boolean {
@@ -426,6 +435,7 @@ export class DialogManager {
             enableTalk: "enableTalk",
             enableCharacterGaze: "enableCharacterGaze",
             enableSincroPoseTracking: "enableSincroPoseTracking",
+            forceSincroPoseTracking: "forceSincroPoseTracking",
             enableAutoMute: "enableAutoMute",
             enableNoiseSuppression: "enableNoiseSuppression",
             enableEchoCancellation: "enableEchoCancellation",

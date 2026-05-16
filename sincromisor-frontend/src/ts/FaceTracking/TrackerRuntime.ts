@@ -22,6 +22,12 @@ export type TrackerRuntimeCallbacks = {
     onError?: (error: unknown) => void;
 };
 
+type TrackerRuntimePoseOptions = {
+    enabled?: boolean;
+    targetInferenceFps?: number;
+    ignorePerformanceFallback?: boolean;
+};
+
 // Sincro 用 tracker の camera/video/loop 所有境界。
 // tracker core は DOM を知らず、runtime が video frame の readiness と fps 制限を担当する。
 export class TrackerRuntime {
@@ -41,6 +47,7 @@ export class TrackerRuntime {
     private targetPoseInferenceFps = DEFAULT_TARGET_POSE_INFERENCE_FPS;
     private poseTrackingEnabled = false;
     private poseDegradedToFaceOnly = false;
+    private ignorePosePerformanceFallback = false;
     private poseInferenceSampleCount = 0;
     private slowPoseInferenceCount = 0;
     private useWorkerTracking = false;
@@ -63,7 +70,7 @@ export class TrackerRuntime {
         videoTrack: MediaStreamTrack,
         callbacks: TrackerRuntimeCallbacks,
         targetInferenceFps: number = DEFAULT_TARGET_INFERENCE_FPS,
-        poseOptions: { enabled?: boolean; targetInferenceFps?: number } = {},
+        poseOptions: TrackerRuntimePoseOptions = {},
     ): Promise<void> {
         if (this.loopEnabled || this.callbacks) {
             this.stopFaceTracking("sincro_face_tracking_restarting");
@@ -72,6 +79,7 @@ export class TrackerRuntime {
         this.callbacks = callbacks;
         this.poseTrackingEnabled = !!poseOptions.enabled;
         this.poseDegradedToFaceOnly = false;
+        this.ignorePosePerformanceFallback = !!poseOptions.ignorePerformanceFallback;
         this.poseInferenceSampleCount = 0;
         this.slowPoseInferenceCount = 0;
         this.targetInferenceFps = Math.max(1, Math.min(30, targetInferenceFps));
@@ -106,6 +114,7 @@ export class TrackerRuntime {
         this.callbacks = null;
         this.poseTrackingEnabled = false;
         this.poseDegradedToFaceOnly = false;
+        this.ignorePosePerformanceFallback = false;
         this.poseInferenceSampleCount = 0;
         this.slowPoseInferenceCount = 0;
         this.useWorkerTracking = false;
@@ -317,6 +326,12 @@ export class TrackerRuntime {
     private applyPosePerformanceGate(snapshot: SincroPoseMotionSnapshot, nowMs: number): void {
         if (snapshot.consecutiveFailures >= POSE_FAILURE_LIMIT) {
             this.degradePoseToFaceOnly("pose_detection_failed_repeatedly", nowMs);
+            return;
+        }
+        if (this.ignorePosePerformanceFallback) {
+            // 低性能 GPU での調整中は 10fps 未満でも姿勢 snapshot を観測し続けたい。
+            // hard failure は別 gate に残し、性能 gate だけを明示設定でバイパスする。
+            this.slowPoseInferenceCount = 0;
             return;
         }
         this.poseInferenceSampleCount += 1;

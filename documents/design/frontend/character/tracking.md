@@ -69,6 +69,7 @@
 - 推論遅延または連続検出失敗:
     - pose のみ face-only に降格できる。
     - `pose_inference_too_slow` は起動直後の MediaPipe warm-up サンプルを除外し、target pose inference fps から算出した推論予算で判定する。
+    - `forceSincroPoseTracking` が有効な場合は、低性能端末でのデバッグを優先して `pose_inference_too_slow` による降格だけを無効化する。
 - Firefox GPU delegate 相性:
     - CPU delegate を使う。
 
