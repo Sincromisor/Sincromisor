@@ -1,0 +1,179 @@
+# 設計ドキュメント運用ガイド
+
+この文書は、Sincromisor の設計ドキュメントを作成・更新・分割・廃止する時の手順とベストプラクティスを定義する。
+
+## 1. 目的
+
+設計ドキュメントは、現在の実装を安全に変更するための正本である。作業ログや検討メモを溜め込む場所ではなく、次に読む人と LLM エージェントが短時間で判断できる状態を保つ。
+
+このガイドでは次を決める。
+
+- 文書種別ごとの役割
+- 新規文書を作る手順
+- 既存文書を更新・分割する判断基準
+- 作業ログ、設計判断、現在仕様の置き場所
+- `documents/design/index.md` からの導線ルール
+
+## 2. 基本方針
+
+- `documents/design/` は現在有効な設計と契約を置く。
+- 実装進捗、検証ログ、完了済み作業の詳細は `documents/tasks/` に置く。
+- 採用理由や棄却理由などの長期的な判断は `documents/design/decisions/` に置く。
+- 進行中の移行計画は `documents/design/initiatives/` に置き、完了後は現在設計へ反映して縮退する。
+- 1文書は原則 120-200 行を目安にし、300 行を超える場合は分割を検討する。
+- 同じ endpoint、payload、設定値を複数文書に重複記載しない。契約は `contracts/` を正本にし、サービス設計からリンクする。
+
+## 3. 文書種別
+
+### 3.1 Current Design
+
+現在の実装構造を説明する正本。実装変更時に最初に同期する。
+
+- 置き場所: `documents/design/frontend/`, `documents/design/backend/`, `documents/design/infrastructure/`
+- テンプレート: `documents/design/templates/current-design.md`
+- 含めるもの:
+    - 目的とスコープ
+    - コンポーネント責務
+    - 主要データ・状態
+    - 設定・運用・失敗時の切り分け
+    - 変更時チェックリスト
+- 含めないもの:
+    - 日付付きの作業経過
+    - 長い移行フェーズ表
+    - 完了済みタスクの詳細ログ
+
+### 3.2 Contract Spec
+
+サービス間またはフロント/サーバー間の変更互換性に関わる契約仕様。
+
+- 置き場所: `documents/design/contracts/`
+- テンプレート: `documents/design/templates/contract-spec.md`
+- 含めるもの:
+    - producer / consumer
+    - endpoint / channel / payload
+    - エラー仕様
+    - timeout / retry
+    - 互換性ポリシー
+- 含めないもの:
+    - 各サービス内部のクラス設計
+    - UI 表示方針
+
+### 3.3 Decision Record
+
+後から「なぜこの設計にしたか」を確認するための判断記録。
+
+- 置き場所: `documents/design/decisions/`
+- テンプレート: `documents/design/templates/decision-record.md`
+- ファイル名: `ADR-<YYMMDD>-<topic>.md`
+- 含めるもの:
+    - 背景
+    - 選択肢
+    - 決定
+    - 影響
+    - 見直し条件
+- 含めないもの:
+    - 実装チェックリスト
+    - 日々の作業ログ
+
+### 3.4 Initiative Plan
+
+進行中の移行・大きな設計変更の計画。完了したら縮退または archive する。
+
+- 置き場所: `documents/design/initiatives/`
+- テンプレート: `documents/design/templates/initiative-plan.md`
+- 含めるもの:
+    - ゴール
+    - フェーズ
+    - 完了条件
+    - 現在設計へ反映する項目
+- 含めないもの:
+    - 各コミットの詳細履歴
+    - 完了後も読む必要がない一時メモ
+
+## 4. 新規文書作成手順
+
+1. まず `documents/design/index.md` を確認し、既存文書へ追記できるか判断する。
+2. 文書種別を選ぶ。
+3. 対応するテンプレートをコピーし、不要な章を削る。
+4. `Summary` に LLM 向け要約を 3-5 行で書く。
+5. `Scope` に対象と非対象を明記する。
+6. 契約仕様を含む場合は `contracts/` に分離し、設計文書からリンクする。
+7. `Change Checklist` に同時確認が必要な実装ファイル、設定、確認コマンドを書く。
+8. `documents/design/index.md` に導線を追加する。
+
+## 5. 既存文書更新手順
+
+1. 変更が現在仕様、契約、判断記録、作業計画のどれに該当するか分類する。
+2. 現在仕様の変更は Current Design を更新する。
+3. endpoint、payload、DataChannel、msgpack model、環境変数などの変更は Contract Spec を更新する。
+4. 採用理由や棄却理由が重要な場合は Decision Record を追加する。
+5. 作業中の検証結果はタスクファイルに記録し、設計本文へ長く貼らない。
+6. `index.md` の説明が古くなっていないか確認する。
+
+## 6. 分割判断基準
+
+次のいずれかに当てはまる場合は分割を検討する。
+
+- 1文書が 300 行を超えた。
+- `Summary` が 5 行に収まらない。
+- 1つの文書に UI、通信契約、移行履歴、検証ログが混在している。
+- 同じ見出し配下に「現在の仕様」と「過去の経緯」が並んでいる。
+- 変更時に読むべき範囲が毎回 1 文書全体になる。
+
+分割時は、現在有効な内容を先に Current Design / Contract Spec へ移し、履歴と判断理由を Decision Record または task done へ移す。
+
+## 7. 導線ルール
+
+`documents/design/index.md` は、ファイル一覧ではなく「目的別の入口」として保つ。
+
+- まず読む文書を先頭に置く。
+- 変更対象別に読む順序を書く。
+- obsolete / archive は通常導線から分離する。
+- 新しい設計カテゴリを作ったら、index に 1 行説明を添える。
+- まだ再編前の旧ファイルは、移行中であることを明示する。
+
+## 8. ベストプラクティス
+
+- 文書の冒頭に、初見で判断できる `Summary` を置く。
+- 「何をするか」だけでなく、「何をしないか」を `Scope` に書く。
+- 契約仕様はコードと同じ厳しさで扱い、曖昧な prose だけにしない。
+- Mermaid 図は、本文を短くする効果がある場合だけ使う。
+- TODO は設計本文に溜めず、必要なら `documents/tasks/` に起票する。
+- 日付付き追記メモは長期的には ADR または task done へ移す。
+- 変更履歴は細かく積まない。重要な設計判断だけ ADR に残す。
+- LLM 向け要約は「現行構造」「変更時の注意」「正本リンク」を優先する。
+- 旧実装の説明は archive に置き、現在設計の本文では通常導線に混ぜない。
+
+## 9. LLM エージェント向けチェックリスト
+
+設計文書を変更する時は、次を確認する。
+
+- [ ] 変更内容は Current Design / Contract Spec / Decision Record / Initiative Plan のどれか。
+- [ ] 契約変更がある場合、フロントとサーバーの両側が同時に確認されている。
+- [ ] compose、env、設定クラス、実装が矛盾していない。
+- [ ] 長い作業ログを設計本文へ追加していない。
+- [ ] `documents/design/index.md` から辿れる。
+- [ ] 関連タスクに確認結果を残した。
+
+## 10. 再編状態
+
+2026-05-17 時点で、旧フラット構成の主要文書は `archive/legacy-flat/` へ退避し、現在設計・契約・判断記録・進行中計画の入口を分離した。
+
+通常更新する場所は次の通り。
+
+| 種別                         | 置き場所                                |
+| ---------------------------- | --------------------------------------- |
+| 全体構造                     | `documents/design/architecture/`        |
+| フロントエンド現在設計       | `documents/design/frontend/`            |
+| バックエンドサービス現在設計 | `documents/design/backend/services/`    |
+| 通信・ファイル仕様           | `documents/design/contracts/`           |
+| compose / Consul / storage   | `documents/design/infrastructure/`      |
+| 採用理由・棄却理由           | `documents/design/decisions/`           |
+| 進行中の大きな変更           | `documents/design/initiatives/`         |
+| 再編前の履歴参照             | `documents/design/archive/legacy-flat/` |
+
+今後の改善候補:
+
+1. `archive/legacy-flat/` のうち、現在設計へ未反映の重要仕様がないか task 単位で確認する。
+2. `documents/tasks/` 内の旧パス参照は、完了済み履歴はそのまま残し、open task から優先して新パスへ更新する。
+3. `template.md` は旧 15 章テンプレートとして残しているが、新規文書では `templates/` 配下を使う。

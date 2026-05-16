@@ -1,0 +1,54 @@
+# Frontend Character Overview
+
+## Summary
+
+- Character 層は Three.js + `@pixiv/three-vrm` で VRM 1.0 を読み込み、描画・表情・骨制御を行う。
+- `chat` は対話相手を見る会話モード、`sincro` はユーザーの顔・姿勢を retarget する同期モードとして扱う。
+- MediaPipe の生結果は controller へ直接渡さず、tracking snapshot と retargeter を挟む。
+
+## Scope
+
+- 対象:
+    - VRM scene / character manager
+    - face / motion / tracking の大枠
+    - talk mode による責務分離
+- 非対象:
+    - RTC payload の詳細
+    - backend のテロップ生成
+
+## Responsibilities
+
+- `VRMScene`
+    - renderer、camera、light、resize、render loop を持つ。
+- `VRMCharacterManager`
+    - VRM load、controller 初期化、毎 frame update を持つ。
+- `CharacterBehaviorState`
+    - VAD、gaze、text / telop、AI speech、error、talk mode を snapshot 化する。
+- Motion controllers
+    - head、eye、face、arm、leg、upper body を VRM 向け値で更新する。
+- Trackers / Retargeters
+    - MediaPipe 結果を正規化 snapshot へ変換し、VRM 向け値へ retarget する。
+
+## Talk Mode Boundary
+
+| 観点     | `chat`                             | `sincro`                                |
+| -------- | ---------------------------------- | --------------------------------------- |
+| 目的     | 対話相手を見る                     | ユーザーの顔・姿勢をまねる              |
+| 主入力   | `CharacterGaze`                    | `faceMotion`, optional `poseMotion`     |
+| 口形     | `telop_ch` の mora / vowel         | ユーザー口形 retarget 優先              |
+| motion   | idle、聞き姿勢、AI speech gesture  | retarget 優先、gesture は抑制           |
+| fallback | 顔未検出時は neutral / camera 方向 | confidence 低下時は neutral / face-only |
+
+## Change Checklist
+
+- motion policy を変える場合は `motion.md` を確認する。
+- MediaPipe / tracker を変える場合は `tracking.md` を確認する。
+- telop / mora 契約を変える場合は `contracts/frontend-rtc.md` を確認する。
+- VRM 個体差により欠損する bone / expression は例外停止ではなく fallback する。
+
+## References
+
+- `documents/design/frontend/character/motion.md`
+- `documents/design/frontend/character/tracking.md`
+- `documents/design/contracts/frontend-rtc.md`
+- `documents/design/archive/legacy-flat/frontend_character.md`
