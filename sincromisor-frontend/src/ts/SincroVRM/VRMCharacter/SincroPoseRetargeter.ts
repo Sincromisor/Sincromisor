@@ -89,8 +89,8 @@ export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
     upperArmOpenRad: MathUtils.degToRad(12.0),
     lowerArmFlexRad: MathUtils.degToRad(14.0),
     wristRaiseRad: MathUtils.degToRad(7.0),
-    armIkStrength: 0.58,
-    armIkTargetScale: 0.72,
+    armIkStrength: 1.0,
+    armIkTargetScale: 1.0,
     armIkMaxLiftRad: MathUtils.degToRad(34.0),
     armIkMaxOpenRad: MathUtils.degToRad(28.0),
     armIkMaxForearmFlexRad: MathUtils.degToRad(38.0),
@@ -896,9 +896,10 @@ function mapWorldTargetDeltaToVrm(
     const deltaX = (target.world.normalizedX ?? 0) - (shoulder.world.normalizedX ?? 0);
     const deltaY = (target.world.normalizedY ?? 0) - (shoulder.world.normalizedY ?? 0);
     const deltaZ = (target.world.normalizedZ ?? 0) - (shoulder.world.normalizedZ ?? 0);
-    // MediaPipe world target はカメラ側の人物座標なので、左右と奥行きをVRM表示側へ反転する。
+    // MediaPipe world target は入力 video と同じ左右で返るため、X は VRM 表示側でも維持する。
+    // Three.js/VRM は Y-up なので上下を反転し、Z は表示側の奥行きへ合わせて反転する。
     // Zは推定揺れが大きいため、横/縦より弱く使って肘の裏返りを抑える。
-    return new Vector3(-deltaX * scale, deltaY * scale, -deltaZ * scale * 0.72);
+    return new Vector3(deltaX * scale, -deltaY * scale, -deltaZ * scale * 0.72);
 }
 
 function armIkGateReason(targets: SincroPoseArmTargetSnapshot): string | null {

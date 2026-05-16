@@ -33,13 +33,15 @@ type SincroArmIkOptions = {
     maxLowerArmDeltaRad: number;
     minReachRatio: number;
     maxReachRatio: number;
+    overheadMinReachRatio: number;
 };
 
 const DEFAULT_OPTIONS: SincroArmIkOptions = {
-    maxUpperArmDeltaRad: MathUtils.degToRad(116),
+    maxUpperArmDeltaRad: MathUtils.degToRad(166),
     maxLowerArmDeltaRad: MathUtils.degToRad(154),
     minReachRatio: 0.2,
     maxReachRatio: 0.985,
+    overheadMinReachRatio: 0.9,
 };
 
 const MIN_DIRECTION_LENGTH = 1e-5;
@@ -167,7 +169,8 @@ export class SincroArmIkSolver {
             (this.upperArmLength + this.lowerArmLength) * this.options.minReachRatio,
         );
         const reach = target.length();
-        const clampedReach = MathUtils.clamp(reach, minReach, maxReach);
+        const overheadMinReach = this.overheadMinReach(target, maxReach);
+        const clampedReach = MathUtils.clamp(reach, Math.max(minReach, overheadMinReach), maxReach);
         if (reach <= MIN_DIRECTION_LENGTH) {
             return {
                 target: this.bindUpperDirectionInParent.clone().multiplyScalar(minReach),
@@ -178,6 +181,21 @@ export class SincroArmIkSolver {
             target: target.clone().multiplyScalar(clampedReach / reach),
             clamped: Math.abs(clampedReach - reach) > 1e-4,
         };
+    }
+
+    private overheadMinReach(target: Vector3, maxReach: number): number {
+        const reach = target.length();
+        if (reach <= MIN_DIRECTION_LENGTH) {
+            return 0;
+        }
+        const upwardRatio = target.y / reach;
+        const overheadWeight = MathUtils.smoothstep(upwardRatio, 0.48, 0.82);
+        if (overheadWeight <= 0) {
+            return 0;
+        }
+        // 腕を真上へ伸ばす姿勢では wrist/elbow/pole がほぼ同一直線になり、肘の pole が退化する。
+        // 到達距離を腕長寄りへ補正して、肘を横へ逃がさず上腕も上へ向かせる。
+        return maxReach * this.options.overheadMinReachRatio * overheadWeight;
     }
 
     private elbowPosition(target: Vector3, poleDirection: Vector3): Vector3 {
