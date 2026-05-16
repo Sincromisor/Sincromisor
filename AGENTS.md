@@ -16,7 +16,8 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
     - マルチページ構成（simple-vrm, looking-glass-vrm, vrm360 など）
 - 設計文書: `documents/design/`（本プロジェクトの設計情報の正本）
     - 入口: `documents/design/index.md`
-    - テンプレート: `documents/design/template.md`
+    - 運用ガイド: `documents/design/documentation-guide.md`
+    - テンプレート: `documents/design/templates/`
 
 ## 作業を行う際の心構え
 
@@ -111,12 +112,14 @@ kebab-case や snake_case のファイル名は使わない(`config-store.ts` / 
 2. `compose.yml`
 3. `examples/compose.env`
 4. `documents/design/index.md`
-5. `documents/design/template.md`
-6. `documents/tasks/README.md`
-7. `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
-8. `sincromisor-frontend/vite.config.js`
-9. `sincromisor-frontend/src/ts/SincroController.ts`
-10. `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
+5. `documents/design/documentation-guide.md`
+6. `documents/design/architecture/overview.md`
+7. `documents/design/contracts/frontend-rtc.md`
+8. `documents/tasks/README.md`
+9. `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
+10. `sincromisor-frontend/vite.config.js`
+11. `sincromisor-frontend/src/ts/SincroController.ts`
+12. `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
 
 ## ディレクトリマップ
 
@@ -140,11 +143,16 @@ kebab-case や snake_case のファイル名は使わない(`config-store.ts` / 
     - 各コンテナの Dockerfile と起動スクリプト
 - `documents/design/`
     - `index.md`: 設計文書の入口
-    - `frontend_*.md`: フロントエンド設計
-    - `backend_*.md`: バックエンド設計
-    - `networking_*.md`: 通信契約設計
-    - `service_*.md`: compose / Consul 設計
-    - `template.md`: 設計文書テンプレート
+    - `documentation-guide.md`: 設計文書の運用ルール
+    - `architecture/`: 全体構造と runtime flow
+    - `contracts/`: endpoint / channel / payload / file format などの契約正本
+    - `frontend/`: フロントエンド現在設計
+    - `backend/services/`: バックエンドサービス現在設計
+    - `infrastructure/`: compose / Consul / storage 設計
+    - `decisions/`: 採用理由・棄却理由を残す ADR
+    - `initiatives/`: 進行中の大きな設計変更
+    - `archive/legacy-flat/`: 再編前文書の履歴参照
+    - `templates/`: 文書種別ごとのテンプレート
 - `documents/tasks`
 
 ## 通信フロー（実装把握用）
@@ -201,14 +209,17 @@ docker compose --profile full up -d
 - WebRTC 接続仕様を変える場合
     - サーバー: `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
     - フロント: `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
+    - 契約正本: `documents/design/contracts/frontend-rtc.md`
     - 両側の payload / endpoint 整合を必ず確認
 - UI・3D 表示を変える場合
     - エントリ HTML と `src/ts/SincroVRM/**` をセットで確認
+    - 設計正本: `documents/design/frontend/app-shell.md` と `documents/design/frontend/character/`
     - モード別ページ（`simple-vrm`, `vrm360`, `looking-glass-vrm` など）の差分に注意
 - 設定追加時
     - `.env` 変数定義（`examples/compose.env`）
     - compose の environment
     - Python 側の引数・設定クラス（`sincro-config`）
+    - インフラ正本: `documents/design/infrastructure/compose.md`
 - 設計変更を伴う実装変更時
     - `documents/design/` の該当文書を同時更新
     - 入口の `documents/design/index.md` との整合を確認
