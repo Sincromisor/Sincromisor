@@ -1,5 +1,9 @@
 import type { SincroFaceMotionSnapshot } from "../../../ts/FaceTracking/SincroFaceMotionSnapshot";
-import type { SincroPoseArmMotionSnapshot, SincroPoseMotionSnapshot } from "../../../ts/FaceTracking/SincroPoseMotionSnapshot";
+import type {
+    SincroPoseArmMotionSnapshot,
+    SincroPoseMotionSnapshot,
+    SincroPoseTargetPointSnapshot,
+} from "../../../ts/FaceTracking/SincroPoseMotionSnapshot";
 import { DebugConsoleManager, type DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
 import { RangeControl } from "../components/RangeControl";
 import { debugPanelClassName, type DebugPanelProps } from "../debugConsoleTypes";
@@ -75,8 +79,12 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                         <dd>{formatUpperBody(pose)}</dd>
                         <dt>Left Arm</dt>
                         <dd>{formatArm(pose.leftArm)}</dd>
+                        <dt>Left Targets</dt>
+                        <dd>{formatArmTargets(pose.leftArm)}</dd>
                         <dt>Right Arm</dt>
                         <dd>{formatArm(pose.rightArm)}</dd>
+                        <dt>Right Targets</dt>
+                        <dd>{formatArmTargets(pose.rightArm)}</dd>
                         <dt>Inference</dt>
                         <dd>{formatInference(pose.inferenceTimeMs, pose.inferenceFps)}</dd>
                         <dt>Failures</dt>
@@ -197,6 +205,21 @@ function formatArm(snapshot: SincroPoseArmMotionSnapshot): string {
         return `lost (${formatRatio(snapshot.confidence)})`;
     }
     return `lift ${snapshot.upperArmLift.toFixed(2)} / open ${snapshot.upperArmOpen.toFixed(2)} / flex ${snapshot.lowerArmFlex.toFixed(2)} / wrist ${snapshot.wristRaise.toFixed(2)}`;
+}
+
+function formatArmTargets(snapshot: SincroPoseArmMotionSnapshot): string {
+    return [
+        `S ${formatTargetPoint(snapshot.targets.shoulder)}`,
+        `E ${formatTargetPoint(snapshot.targets.elbow)}`,
+        `W ${formatTargetPoint(snapshot.targets.wrist)}`,
+    ].join(" / ");
+}
+
+function formatTargetPoint(snapshot: SincroPoseTargetPointSnapshot): string {
+    if (!snapshot.tracked) {
+        return `lost ${formatRatio(snapshot.confidence)} ${snapshot.staleReason ?? "stale"}`;
+    }
+    return `(${snapshot.localX.toFixed(2)}, ${snapshot.localY.toFixed(2)}) ${formatRatio(snapshot.confidence)}`;
 }
 
 function formatInference(timeMs: number, fps: number): string {

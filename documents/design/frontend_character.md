@@ -159,7 +159,7 @@ flowchart LR
 
 - `TrackerRuntime`: camera track の取得・差し替え・解放、video element 接続、推論 loop の開始/停止、推論fps制限、runtime error の通知を担当する。`sincro` では原則として `createImageBitmap(video)` で切り出した frame を module Worker へ転送し、FaceLandmarker と optional PoseLandmarker の初期化・同期推論・snapshot 正規化を main thread から分離する。Worker 未対応、初期化失敗、転送失敗時は main-thread tracker へ fallback し、DOM / UI 更新、DebugConsole更新、VRM適用は runtime 外へ出す。カメラ、talk mode、Pose ON/OFF の切替で tracker を再起動する場合は、既存 loop と Worker を破棄してから現在の設定で再初期化する。
 - `SincroFaceTracker`: FaceLandmarker を初期化し、head pose、face blendshape、必要最小限の landmarks を `SincroFaceMotionSnapshot` へ正規化する。`CharacterGaze` のAutoMuteや注視計算は持たない。
-- `SincroPoseTracker`: PoseLandmarker を使う optional tracker。肩、上半身、腕の姿勢候補を `SincroPoseMotionSnapshot` へ正規化する。初期実装では肩・肘・手首・腰の normalized landmarks から肩傾き、胴体傾き、上腕リフト、上腕開き、前腕屈曲、手首上げを低振幅 retarget 用に算出する。`enableSincroPoseTracking` が false の場合は PoseLandmarker を起動せず、`poseMotion.trackingEnabled=false` として扱う。
+- `SincroPoseTracker`: PoseLandmarker を使う optional tracker。肩、上半身、腕の姿勢候補を `SincroPoseMotionSnapshot` へ正規化する。肩・肘・手首・腰の normalized landmarks から肩傾き、胴体傾き、上腕リフト、上腕開き、前腕屈曲、手首上げを低振幅 retarget 用に算出し、さらに左右腕の shoulder / elbow / wrist target を camera normalized 座標と肩中心・肩幅基準の local 座標へ正規化する。`enableSincroPoseTracking` が false の場合は PoseLandmarker を起動せず、`poseMotion.trackingEnabled=false` として扱う。
 - Retargeter: neutral calibration、軸変換、左右ミラー、clamp、deadband、smoothing、confidence gate を持つ。MediaPipe の category 名や行列を controller へ漏らさない。`CharacterBehaviorSnapshot.motionPolicy.allowPoseRetarget=false`、`poseMotion.degradedToFaceOnly=true`、confidence 不足、または Pose OFF の場合は neutral frame へ戻す。
 - Controller: retarget 済みのVRM向け値だけを受け取り、存在するボーン・expressionへ適用する。欠損部位は例外停止ではなく無効化または近い要素へfallbackする。
 
@@ -181,7 +181,7 @@ flowchart LR
   - `CharacterGaze`: `chat` 向けの顔キーポイント追跡、視線角推定、arrive/leaveイベント通知、AutoMute連動を担当する。`detectForVideo()` へ渡す前にvideo frameのreadyStateとdecode済み寸法を確認し、MediaPipe実行時例外では検出ループを停止して上位controllerへ通知する。`sincro` の head pose / blendshape / pose 同期責務は持たない
   - `TrackerRuntime`: `SincroFaceTracker` と optional `SincroPoseTracker` の共有実行基盤。camera track / video element / 推論 loop を所有し、二重 `getUserMedia` と二重推論 loop を避ける。Worker 経路では `SincroTrackerWorkerClient` を介して `sincro-tracker.worker.ts` へ `ImageBitmap` を転送し、snapshot と load / transfer / round-trip / dropped frame / fallback reason だけを受け取る。Pose OFF の場合は Worker 内でも PoseLandmarker を初期化しない。UI更新、DebugConsole更新、VRM適用はruntime coreへ持ち込まない
   - `SincroFaceTracker`: FaceLandmarker の `outputFaceBlendshapes` と `outputFacialTransformationMatrixes` を有効化し、検出有無、confidence相当、head pose、blendshape map、推論時間、推論fps、`lastUpdatedAtMs` を `SincroFaceMotionSnapshot` に正規化する
-  - `SincroPoseTracker`: PoseLandmarker の結果から肩・胴体・腕の大まかな姿勢を `SincroPoseMotionSnapshot` に正規化する optional module。推論fpsは face より低くし、性能ゲート超過時は `degradedToFaceOnly` を立てて face-only に戻す
+  - `SincroPoseTracker`: PoseLandmarker の結果から肩・胴体・腕の大まかな姿勢を `SincroPoseMotionSnapshot` に正規化する optional module。腕 target は MediaPipe 生ランドマークを外へ出さず、部位ごとに `tracked`、`confidence`、`visibility`、`presence`、`staleReason`、camera normalized 座標、肩幅基準 local 座標を持つ。推論fpsは face より低くし、性能ゲート超過時は `degradedToFaceOnly` を立てて face-only に戻す
   - `SincroFaceRetargeter`: `SincroFaceMotionSnapshot` を VRM の head / eye / blink / mouth expression 向け値へ変換する。neutral calibration、clamp、deadband、smoothing、confidence gate、左右ミラー補正をこの層で扱う
   - `SincroPoseRetargeter`: optional `SincroPoseMotionSnapshot` を spine/chest/shoulder/arm向け値へ変換する。初期段階では低振幅・強い smoothing をかけ、腕が画面外に出た場合は部位単位で neutral へ戻す。`intensityScale` は設定の `sincroPoseRetargetScale` と Debug Console の Pose retarget 調整から変更でき、`minConfidence` / `smoothingMs` / `returnToNeutralMs` は Debug Console で調整できる
 - 主要クラス/モジュールと対応ファイル:
@@ -219,7 +219,7 @@ flowchart LR
   - CharacterGazeの `movingAverage[6]`（右目/左目/鼻/口/右耳/左耳）
   - `CharacterBehaviorSnapshot`（VAD envelope、発話開始/終了時刻、直近発話時間、顔検出・顔位置・正面度、AI発話中speech_id/mora ID/母音/感情コード、AI speech beat、対話状態、source別エラーを集約した代表エラーを保持）
   - `SincroFaceMotionSnapshot`（`detected`、`confidence`、`headPose`、`blendshapes`、`inferenceTimeMs`、`inferenceFps`、`lastUpdatedAtMs`、`fallbackReason` を保持。MediaPipe生ランドマークは原則保持しない）
-  - `SincroPoseMotionSnapshot`（`trackingEnabled`、`detected`、`confidence`、肩・胴体・腕の正規化姿勢、`inferenceTimeMs`、`inferenceFps`、`consecutiveFailures`、`lastUpdatedAtMs`、`degradedToFaceOnly`、`fallbackReason` を保持。optional）
+  - `SincroPoseMotionSnapshot`（`trackingEnabled`、`detected`、`confidence`、肩・胴体・腕の正規化姿勢、左右腕の shoulder / elbow / wrist target、`inferenceTimeMs`、`inferenceFps`、`consecutiveFailures`、`lastUpdatedAtMs`、`degradedToFaceOnly`、`fallbackReason` を保持。optional）
   - `SincroFaceRetargetSnapshot`（head / eye / blink / mouth のVRM向け正規化値。controller はこの形式を読んでボーン・expressionへ適用する）
 - 永続化対象:
   - VRMモデルURL（`DialogManager.vrmUrl`）と、ローカル保存済みVRM（DialogManager経由）
@@ -437,6 +437,7 @@ flowchart LR
 | 2026-05-11 | TASK-3101 として `chat` 注視と `sincro` 同期の責務境界、`SincroFaceTracker` / optional `SincroPoseTracker`、retarget、性能ゲート、face-only fallback 方針を追記 |
 | 2026-05-11 | TASK-3104 として `CharacterBehaviorSnapshot.motionPolicy` を実装し、`chat` の対話 gesture と `sincro` の face retarget 優先を controller 共通方針として分離 |
 | 2026-05-16 | Pose tracking の実行時 ON/OFF、Worker tracker 再起動時の破棄、低振幅 pose retarget と後続 IK タスクの境界を現行実装に同期 |
+| 2026-05-16 | TASK-3113 として左右腕の shoulder / elbow / wrist target を camera normalized と肩幅基準 local 座標へ正規化する snapshot 契約を追記 |
 
 ## 15. 参照資料
 
@@ -449,7 +450,7 @@ flowchart LR
   - `documents/tasks/character_sincro_motion/done/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
   - `documents/tasks/character_sincro_motion/done/TASK-3111-sincro-pose-retarget-formalization-and-tuning.md`
   - `documents/tasks/character_sincro_motion/done/TASK-3112-sincro-tracker-workerization-and-load-isolation.md`
-  - `documents/tasks/character_sincro_motion/open/TASK-3113-sincro-pose-camera-space-arm-targets.md`
+  - `documents/tasks/character_sincro_motion/done/TASK-3113-sincro-pose-camera-space-arm-targets.md`
 - 参照実装:
   - `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
   - `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterBehaviorState.ts`

@@ -208,6 +208,7 @@ function createStoppedPoseSnapshot(reason: string | null, nowMs: number) {
             upperArmOpen: 0,
             lowerArmFlex: 0,
             wristRaise: 0,
+            targets: createStoppedArmTargets(),
         },
         rightArm: {
             tracked: false,
@@ -216,6 +217,7 @@ function createStoppedPoseSnapshot(reason: string | null, nowMs: number) {
             upperArmOpen: 0,
             lowerArmFlex: 0,
             wristRaise: 0,
+            targets: createStoppedArmTargets(),
         },
         inferenceTimeMs: 0,
         inferenceFps: 0,
@@ -223,5 +225,30 @@ function createStoppedPoseSnapshot(reason: string | null, nowMs: number) {
         degradedToFaceOnly: false,
         lastUpdatedAtMs: nowMs,
         fallbackReason: reason,
+    };
+}
+
+function createStoppedArmTargets() {
+    return {
+        shoulder: createStoppedTargetPoint(),
+        elbow: createStoppedTargetPoint(),
+        wrist: createStoppedTargetPoint(),
+    };
+}
+
+function createStoppedTargetPoint() {
+    return {
+        tracked: false,
+        confidence: 0,
+        visibility: 0,
+        presence: 0,
+        stale: true,
+        staleReason: "not_tracked",
+        cameraX: 0.5,
+        cameraY: 0.5,
+        cameraZ: null,
+        localX: 0,
+        localY: 0,
+        localZ: null,
     };
 }

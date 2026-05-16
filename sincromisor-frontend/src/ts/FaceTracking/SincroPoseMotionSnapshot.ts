@@ -1,3 +1,24 @@
+export type SincroPoseTargetPointSnapshot = {
+    tracked: boolean;
+    confidence: number;
+    visibility: number;
+    presence: number;
+    stale: boolean;
+    staleReason: string | null;
+    cameraX: number;
+    cameraY: number;
+    cameraZ: number | null;
+    localX: number;
+    localY: number;
+    localZ: number | null;
+};
+
+export type SincroPoseArmTargetSnapshot = {
+    shoulder: SincroPoseTargetPointSnapshot;
+    elbow: SincroPoseTargetPointSnapshot;
+    wrist: SincroPoseTargetPointSnapshot;
+};
+
 export type SincroPoseArmMotionSnapshot = {
     tracked: boolean;
     confidence: number;
@@ -5,6 +26,7 @@ export type SincroPoseArmMotionSnapshot = {
     upperArmOpen: number;
     lowerArmFlex: number;
     wristRaise: number;
+    targets: SincroPoseArmTargetSnapshot;
 };
 
 export type SincroPoseUpperBodyMotionSnapshot = {
@@ -30,6 +52,27 @@ export type SincroPoseMotionSnapshot = {
     fallbackReason: string | null;
 };
 
+export const DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT: SincroPoseTargetPointSnapshot = {
+    tracked: false,
+    confidence: 0,
+    visibility: 0,
+    presence: 0,
+    stale: true,
+    staleReason: "not_tracked",
+    cameraX: 0.5,
+    cameraY: 0.5,
+    cameraZ: null,
+    localX: 0,
+    localY: 0,
+    localZ: null,
+};
+
+export const DEFAULT_SINCRO_POSE_ARM_TARGET_SNAPSHOT: SincroPoseArmTargetSnapshot = {
+    shoulder: { ...DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT },
+    elbow: { ...DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT },
+    wrist: { ...DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT },
+};
+
 export const DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT: SincroPoseArmMotionSnapshot = {
     tracked: false,
     confidence: 0,
@@ -37,6 +80,11 @@ export const DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT: SincroPoseArmMotionSnapsho
     upperArmOpen: 0,
     lowerArmFlex: 0,
     wristRaise: 0,
+    targets: {
+        shoulder: { ...DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT },
+        elbow: { ...DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT },
+        wrist: { ...DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT },
+    },
 };
 
 export const DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT: SincroPoseMotionSnapshot = {

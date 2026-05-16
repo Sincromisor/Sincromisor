@@ -6,6 +6,7 @@ import type { SincroTrackerWorkerStats } from "../FaceTracking/SincroTrackerWork
 import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
+    type SincroPoseArmMotionSnapshot,
     type SincroPoseMotionSnapshot,
 } from "../FaceTracking/SincroPoseMotionSnapshot";
 import {
@@ -249,8 +250,8 @@ function createDefaultPoseMotionSnapshot(): SincroPoseMotionSnapshot {
     return {
         ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
         upperBody: { ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT.upperBody },
-        leftArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
-        rightArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
+        leftArm: clonePoseArmMotion(DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT),
+        rightArm: clonePoseArmMotion(DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT),
     };
 }
 
@@ -972,8 +973,8 @@ export class DebugConsoleManager {
                 pose: {
                     ...snapshot,
                     upperBody: { ...snapshot.upperBody },
-                    leftArm: { ...snapshot.leftArm },
-                    rightArm: { ...snapshot.rightArm },
+                    leftArm: clonePoseArmMotion(snapshot.leftArm),
+                    rightArm: clonePoseArmMotion(snapshot.rightArm),
                 },
             },
         }));
@@ -1113,6 +1114,17 @@ export class DebugConsoleManager {
             listener(event);
         }
     }
+}
+
+function clonePoseArmMotion(snapshot: SincroPoseArmMotionSnapshot): SincroPoseArmMotionSnapshot {
+    return {
+        ...snapshot,
+        targets: {
+            shoulder: { ...snapshot.targets.shoulder },
+            elbow: { ...snapshot.targets.elbow },
+            wrist: { ...snapshot.targets.wrist },
+        },
+    };
 }
 
 function clampNumber(value: number, min: number, max: number): number {

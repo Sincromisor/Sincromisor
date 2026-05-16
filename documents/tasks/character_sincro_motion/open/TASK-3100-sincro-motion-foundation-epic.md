@@ -90,6 +90,7 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3110-sincro-blink-open-threshold-tuning.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3111-sincro-pose-retarget-formalization-and-tuning.md`
 - Open: `documents/tasks/character_sincro_motion/open/TASK-3112-sincro-tracker-workerization-and-load-isolation.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3113-sincro-pose-camera-space-arm-targets.md`
 
 ## 完了条件
 
