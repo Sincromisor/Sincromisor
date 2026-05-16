@@ -39,6 +39,15 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 - ソースコードを変更した際など、documents/design以下の設計ドキュメントの更新が必要な場合はその旨を通知し、更新を促す
 - スタイルガイドラインに則っていない不適切なコードは、レビュワーから差し戻される
 
+## コーディング規約 (Python)
+
+型運用 / エラー / ログ / テスト / import / None / 日付 / TODO / env / 言語ポリシーなどの横断ルールは [documents/rules/coding-py.md](documents/rules/coding-py.md) を正本とする。
+本書ではディレクトリ・命名・サイズなど物理構造に関する原則のみ保持する。
+
+- 設計思想: (1) 負債が残りにくい方向を選ぶ (2) debug と更新のしやすさを維持する
+- ルールは原則 hard。**破る場合は同じ行または直前行に `# reason: <理由>` を付ける**(レビューでの差し戻し基準は理由の有無)
+- コミット前は `uv run ruff check .` / `uv run ruff format --check .` / `uv run ty check .` を必ず通す。`uv run mypy .` と `uv run pytest` は対象 package の整備状況に応じて実行する
+
 ## コーディング規約 (TypeScript)
 
 型運用 / エラー / ログ / テスト / import / null / 日付 / TODO / env / 言語ポリシーなどの横断ルールは [documents/rules/coding-ts.md](documents/rules/coding-ts.md) を正本とする。
