@@ -14,6 +14,7 @@
 ## Decision
 
 - 本流の腕 IK は、自前 3D two-bone IK + `@pixiv/three-vrm` normalized bone 適用を維持する。
+- 肩・肘・前腕の joint constraint と head / chest no-go zone は、既存 `SincroArmIkSolver` の軽量 safety として追加する。
 - `CCDIKSolver` は production path へ入れず、左腕 raw skeleton chain の互換性を確認する PoC 診断として残す。
 - Debug Console では `CCDIK PoC` として、raw chain 検出、normalized bone と skeleton の分離、one-iteration smoke test の状態を表示する。
 - `closed-chain-ik-js` は現時点では導入しない。full-body / multi-effector / 接地拘束が必要になった時に、worker 化と pose bridge の設計を先に切る。
@@ -31,6 +32,7 @@
 ## Consequences
 
 - 現行の `SincroPoseRetargeter` は confidence gate、mode selection、target scale、smoothing に集中し、IK の数学は `SincroArmIkSolver` に閉じ込める。
+- `SincroArmIkSolver` は腕単体の人体的 constraint と簡易 no-go zone までを担当する。MediaPipe target の時系列 stabilizer、mesh 精密 collision、full-body IK は別判断とする。
 - `CCDIKSolver` PoC はロード時診断に限定するため、通常フレーム更新の姿勢結果を変更しない。
 - 外部 solver を本番導入する場合は、raw skeleton で解くか、normalized pose へ橋渡しするかを先に ADR 化する。
 - dependency 追加は発生しない。`CCDIKSolver` は既存 `three` package の examples addon を利用する。

@@ -3,6 +3,19 @@ import type { Object3D } from "three/src/core/Object3D.js";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
 import { Vector3 } from "three/src/math/Vector3.js";
+import {
+    SincroArmIkConstraintResolver,
+    type SincroArmIkConstraintSnapshot,
+} from "./sincroArmIkConstraint";
+import {
+    bindPoleFromArm,
+    clampArmIkTarget,
+    directionInWorldQuaternionSpace,
+    elbowPosition,
+    localQuaternionFromParentDirection,
+    serializeQuaternion,
+    targetDirectionIsUsable,
+} from "./sincroArmIkGeometry";
 
 export type SincroArmSide = "left" | "right";
 
@@ -25,6 +38,7 @@ export type SincroArmIkSolveResult = {
     neutralUpperArmQuaternion: SincroArmIkQuaternion;
     neutralLowerArmQuaternion: SincroArmIkQuaternion;
     targetClamped: boolean;
+    constraint: SincroArmIkConstraintSnapshot;
     weight: number;
 };
 
@@ -34,17 +48,17 @@ type SincroArmIkOptions = {
     minReachRatio: number;
     maxReachRatio: number;
     overheadMinReachRatio: number;
+    poleFlipDotThreshold: number;
 };
 
 const DEFAULT_OPTIONS: SincroArmIkOptions = {
-    maxUpperArmDeltaRad: MathUtils.degToRad(166),
-    maxLowerArmDeltaRad: MathUtils.degToRad(154),
+    maxUpperArmDeltaRad: MathUtils.degToRad(142),
+    maxLowerArmDeltaRad: MathUtils.degToRad(132),
     minReachRatio: 0.2,
     maxReachRatio: 0.985,
     overheadMinReachRatio: 0.9,
+    poleFlipDotThreshold: -0.08,
 };
-
-const MIN_DIRECTION_LENGTH = 1e-5;
 
 // VRM normalized bone の現在姿勢を基準姿勢として測定し、MediaPipe 由来の肩相対 target を
 // upper/lower arm の local quaternion に変換する two-bone solver。
@@ -60,13 +74,21 @@ export class SincroArmIkSolver {
     private readonly bindUpperDirectionInParent: Vector3;
     private readonly bindLowerDirectionInUpper: Vector3;
     private readonly bindPoleDirection: Vector3;
+    private readonly constraintResolver: SincroArmIkConstraintResolver;
     private readonly options: SincroArmIkOptions;
+    private lastPoleDirection: Vector3 | null = null;
 
     static fromVrm(vrm: VRM, side: SincroArmSide): SincroArmIkSolver | null {
         vrm.scene.updateMatrixWorld(true);
         const upperArmNode = getNode(vrm, `${side}UpperArm` as VRMHumanBoneName);
         const lowerArmNode = getNode(vrm, `${side}LowerArm` as VRMHumanBoneName);
         const handNode = getNode(vrm, `${side}Hand` as VRMHumanBoneName);
+        const headNode = getNode(vrm, "head" as VRMHumanBoneName);
+        const chestNode = firstNode(vrm, [
+            "upperChest" as VRMHumanBoneName,
+            "chest" as VRMHumanBoneName,
+            "spine" as VRMHumanBoneName,
+        ]);
         const oppositeUpperArmNode = getNode(
             vrm,
             `${side === "left" ? "right" : "left"}UpperArm` as VRMHumanBoneName,
@@ -80,6 +102,8 @@ export class SincroArmIkSolver {
             lowerArmNode,
             handNode,
             oppositeUpperArmNode,
+            headNode,
+            chestNode,
             DEFAULT_OPTIONS,
         );
     }
@@ -90,6 +114,8 @@ export class SincroArmIkSolver {
         lowerArmNode: Object3D,
         handNode: Object3D,
         oppositeUpperArmNode: Object3D,
+        headNode: Object3D | null,
+        chestNode: Object3D | null,
         options: SincroArmIkOptions,
     ) {
         this.side = side;
@@ -110,11 +136,18 @@ export class SincroArmIkSolver {
             upperArmNode,
             elbow.clone().sub(shoulder),
         );
-        this.bindLowerDirectionInUpper = this.directionInWorldQuaternionSpace(
+        this.bindLowerDirectionInUpper = directionInWorldQuaternionSpace(
             upperArmNode.getWorldQuaternion(new Quaternion()),
             hand.clone().sub(elbow),
         );
-        this.bindPoleDirection = this.bindPoleFromArm(shoulder, elbow, hand);
+        this.bindPoleDirection = bindPoleFromArm(side, shoulder, elbow, hand);
+        this.constraintResolver = new SincroArmIkConstraintResolver({
+            side,
+            shoulderWidth: this.shoulderWidth,
+            bindPoleDirection: this.bindPoleDirection,
+            headCenterFromShoulder: headNode ? this.worldPosition(headNode).sub(shoulder) : null,
+            chestCenterFromShoulder: chestNode ? this.worldPosition(chestNode).sub(shoulder) : null,
+        });
     }
 
     solve(target: SincroArmIkTarget): SincroArmIkSolveResult | null {
@@ -125,9 +158,22 @@ export class SincroArmIkSolver {
         this.upperArmNode.parent?.updateMatrixWorld(true);
         this.upperArmNode.updateMatrixWorld(true);
         const targetVector = target.wrist.clone();
-        const targetClamp = this.clampTarget(targetVector);
+        const targetConstraint = this.constraintResolver.constrainShoulderTarget(targetVector);
+        const targetCollision = this.constraintResolver.avoidNoGoZones(targetConstraint.target);
+        const targetClamp = clampArmIkTarget(
+            targetCollision.target,
+            this.upperArmLength,
+            this.lowerArmLength,
+            this.bindUpperDirectionInParent,
+            this.options,
+        );
         const elbowPole = this.poleDirection(target.elbowPole, targetClamp.target);
-        const elbow = this.elbowPosition(targetClamp.target, elbowPole);
+        const elbow = elbowPosition(
+            targetClamp.target,
+            elbowPole.direction,
+            this.upperArmLength,
+            this.lowerArmLength,
+        );
         const upperDirection = elbow.clone().normalize();
         const lowerDirection = targetClamp.target.clone().sub(elbow).normalize();
 
@@ -136,146 +182,117 @@ export class SincroArmIkSolver {
         }
 
         const parentWorldQuaternion = this.parentWorldQuaternion();
-        const upperLocalQuaternion = this.localQuaternionFromParentDirection(
+        const upperLocalQuaternion = localQuaternionFromParentDirection(
             this.bindUpperDirectionInParent,
-            this.directionInWorldQuaternionSpace(parentWorldQuaternion, upperDirection),
+            directionInWorldQuaternionSpace(parentWorldQuaternion, upperDirection),
             this.neutralUpperArmQuaternion,
             this.options.maxUpperArmDeltaRad,
         );
         const upperSolvedWorldQuaternion = parentWorldQuaternion
             .clone()
-            .multiply(upperLocalQuaternion);
-        const lowerLocalQuaternion = this.localQuaternionFromParentDirection(
+            .multiply(upperLocalQuaternion.quaternion);
+        const lowerLocalQuaternion = localQuaternionFromParentDirection(
             this.bindLowerDirectionInUpper,
-            this.directionInWorldQuaternionSpace(upperSolvedWorldQuaternion, lowerDirection),
+            directionInWorldQuaternionSpace(upperSolvedWorldQuaternion, lowerDirection),
             this.neutralLowerArmQuaternion,
             this.options.maxLowerArmDeltaRad,
         );
+        const forearmCollision = this.constraintResolver.forearmCollisionReason(
+            elbow,
+            targetClamp.target,
+        );
+        const reasons = [
+            ...(targetConstraint.limited ? ["joint_limited"] : []),
+            ...(targetCollision.reason ? [targetCollision.reason] : []),
+            ...(elbowPole.stabilized ? ["elbow_pole_stabilized"] : []),
+            ...(upperLocalQuaternion.limited ? ["joint_limited"] : []),
+            ...(lowerLocalQuaternion.limited ? ["forearm_twist_limited"] : []),
+            ...(forearmCollision ? [forearmCollision] : []),
+        ];
+        const uniqueReasons = [...new Set(reasons)];
+        const collisionAvoided =
+            targetCollision.reason != null ||
+            forearmCollision === "head_collision_avoided" ||
+            forearmCollision === "chest_no_go_zone";
+        const jointLimited =
+            targetConstraint.limited ||
+            upperLocalQuaternion.limited ||
+            lowerLocalQuaternion.limited;
+        const weightScale = this.constraintResolver.constraintWeightScale(
+            jointLimited,
+            elbowPole.stabilized,
+            collisionAvoided,
+        );
+        this.lastPoleDirection = elbowPole.direction.clone();
 
         return {
-            upperArmQuaternion: serializeQuaternion(upperLocalQuaternion),
-            lowerArmQuaternion: serializeQuaternion(lowerLocalQuaternion),
+            upperArmQuaternion: serializeQuaternion(upperLocalQuaternion.quaternion),
+            lowerArmQuaternion: serializeQuaternion(lowerLocalQuaternion.quaternion),
             neutralUpperArmQuaternion: serializeQuaternion(this.neutralUpperArmQuaternion),
             neutralLowerArmQuaternion: serializeQuaternion(this.neutralLowerArmQuaternion),
             targetClamped: targetClamp.clamped,
-            weight: MathUtils.clamp(target.weight, 0, 1),
+            constraint: {
+                reasons: uniqueReasons,
+                jointLimited,
+                poleStabilized: elbowPole.stabilized,
+                collisionAvoided,
+                weightScale,
+                targetPushDistance: targetCollision.pushDistance,
+            },
+            weight: MathUtils.clamp(target.weight, 0, 1) * weightScale,
         };
     }
 
-    private clampTarget(target: Vector3): { target: Vector3; clamped: boolean } {
-        const maxReach = (this.upperArmLength + this.lowerArmLength) * this.options.maxReachRatio;
-        const minReach = Math.max(
-            Math.abs(this.upperArmLength - this.lowerArmLength),
-            (this.upperArmLength + this.lowerArmLength) * this.options.minReachRatio,
-        );
-        const reach = target.length();
-        const overheadMinReach = this.overheadMinReach(target, maxReach);
-        const clampedReach = MathUtils.clamp(reach, Math.max(minReach, overheadMinReach), maxReach);
-        if (reach <= MIN_DIRECTION_LENGTH) {
-            return {
-                target: this.bindUpperDirectionInParent.clone().multiplyScalar(minReach),
-                clamped: true,
-            };
-        }
-        return {
-            target: target.clone().multiplyScalar(clampedReach / reach),
-            clamped: Math.abs(clampedReach - reach) > 1e-4,
-        };
-    }
-
-    private overheadMinReach(target: Vector3, maxReach: number): number {
-        const reach = target.length();
-        if (reach <= MIN_DIRECTION_LENGTH) {
-            return 0;
-        }
-        const upwardRatio = target.y / reach;
-        const overheadWeight = MathUtils.smoothstep(upwardRatio, 0.48, 0.82);
-        if (overheadWeight <= 0) {
-            return 0;
-        }
-        // 腕を真上へ伸ばす姿勢では wrist/elbow/pole がほぼ同一直線になり、肘の pole が退化する。
-        // 到達距離を腕長寄りへ補正して、肘を横へ逃がさず上腕も上へ向かせる。
-        return maxReach * this.options.overheadMinReachRatio * overheadWeight;
-    }
-
-    private elbowPosition(target: Vector3, poleDirection: Vector3): Vector3 {
-        const reach = Math.max(target.length(), MIN_DIRECTION_LENGTH);
-        const targetDirection = target.clone().multiplyScalar(1 / reach);
-        const shoulderToElbow =
-            (this.upperArmLength ** 2 - this.lowerArmLength ** 2 + reach ** 2) / (2 * reach);
-        const elbowHeight = Math.sqrt(Math.max(this.upperArmLength ** 2 - shoulderToElbow ** 2, 0));
-        return targetDirection
-            .multiplyScalar(shoulderToElbow)
-            .add(poleDirection.clone().multiplyScalar(elbowHeight));
-    }
-
-    private poleDirection(elbowPole: Vector3, target: Vector3): Vector3 {
+    private poleDirection(
+        elbowPole: Vector3,
+        target: Vector3,
+    ): {
+        direction: Vector3;
+        stabilized: boolean;
+    } {
         const targetDirection = target.clone().normalize();
         const pole = elbowPole
             .clone()
             .sub(targetDirection.clone().multiplyScalar(elbowPole.dot(targetDirection)));
         if (targetDirectionIsUsable(pole)) {
-            return pole.normalize();
+            return this.stabilizePoleDirection(pole.normalize(), targetDirection);
         }
         const fallbackPole = this.bindPoleDirection
             .clone()
             .sub(
                 targetDirection.clone().multiplyScalar(this.bindPoleDirection.dot(targetDirection)),
             );
-        return targetDirectionIsUsable(fallbackPole)
+        const direction = targetDirectionIsUsable(fallbackPole)
             ? fallbackPole.normalize()
             : new Vector3(0, 1, 0);
+        return { direction, stabilized: true };
     }
 
-    private localQuaternionFromParentDirection(
-        bindDirection: Vector3,
-        desiredDirection: Vector3,
-        neutralQuaternion: Quaternion,
-        maxDeltaRad: number,
-    ): Quaternion {
-        const deltaQuaternion = new Quaternion().setFromUnitVectors(
-            bindDirection.clone().normalize(),
-            desiredDirection.clone().normalize(),
-        );
-        const solvedQuaternion = neutralQuaternion.clone().premultiply(deltaQuaternion);
-        const deltaRad = neutralQuaternion.angleTo(solvedQuaternion);
-        if (deltaRad <= maxDeltaRad) {
-            return solvedQuaternion.normalize();
-        }
-        return neutralQuaternion
+    private stabilizePoleDirection(
+        candidate: Vector3,
+        targetDirection: Vector3,
+    ): {
+        direction: Vector3;
+        stabilized: boolean;
+    } {
+        const fallback = this.lastPoleDirection ?? this.bindPoleDirection;
+        const projectedFallback = fallback
             .clone()
-            .slerp(solvedQuaternion, maxDeltaRad / Math.max(deltaRad, MIN_DIRECTION_LENGTH))
-            .normalize();
-    }
-
-    private bindPoleFromArm(shoulder: Vector3, elbow: Vector3, hand: Vector3): Vector3 {
-        const targetDirection = hand.clone().sub(shoulder).normalize();
-        const elbowPole = elbow
-            .clone()
-            .sub(shoulder)
-            .sub(
-                targetDirection
-                    .clone()
-                    .multiplyScalar(elbow.clone().sub(shoulder).dot(targetDirection)),
-            );
-        if (targetDirectionIsUsable(elbowPole)) {
-            return elbowPole.normalize();
+            .sub(targetDirection.clone().multiplyScalar(fallback.dot(targetDirection)));
+        if (!targetDirectionIsUsable(projectedFallback)) {
+            return { direction: candidate, stabilized: false };
         }
-        return this.side === "left" ? new Vector3(-1, 0, 0) : new Vector3(1, 0, 0);
+        if (candidate.dot(projectedFallback.normalize()) >= this.options.poleFlipDotThreshold) {
+            return { direction: candidate, stabilized: false };
+        }
+        return { direction: projectedFallback.normalize(), stabilized: true };
     }
 
     private directionInParentSpace(node: Object3D, direction: Vector3): Vector3 {
-        return this.directionInWorldQuaternionSpace(
+        return directionInWorldQuaternionSpace(
             node.parent?.getWorldQuaternion(new Quaternion()) ?? new Quaternion(),
             direction,
         );
-    }
-
-    private directionInWorldQuaternionSpace(
-        worldQuaternion: Quaternion,
-        direction: Vector3,
-    ): Vector3 {
-        return direction.clone().applyQuaternion(worldQuaternion.clone().invert()).normalize();
     }
 
     private parentWorldQuaternion(): Quaternion {
@@ -291,20 +308,12 @@ function getNode(vrm: VRM, name: VRMHumanBoneName): Object3D | null {
     return vrm.humanoid.getNormalizedBoneNode(name);
 }
 
-function targetDirectionIsUsable(direction: Vector3): boolean {
-    return (
-        Number.isFinite(direction.x) &&
-        Number.isFinite(direction.y) &&
-        Number.isFinite(direction.z) &&
-        direction.lengthSq() > MIN_DIRECTION_LENGTH ** 2
-    );
-}
-
-function serializeQuaternion(quaternion: Quaternion): SincroArmIkQuaternion {
-    return {
-        x: quaternion.x,
-        y: quaternion.y,
-        z: quaternion.z,
-        w: quaternion.w,
-    };
+function firstNode(vrm: VRM, names: VRMHumanBoneName[]): Object3D | null {
+    for (const name of names) {
+        const node = getNode(vrm, name);
+        if (node) {
+            return node;
+        }
+    }
+    return null;
 }
