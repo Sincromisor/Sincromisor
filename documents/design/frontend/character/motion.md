@@ -68,7 +68,7 @@
     - `feature_only` は従来の低振幅 Euler additive 値のみを使う。
     - `screen_space_ik` は 2D target から Euler additive 値を作る lightweight fallback として残す。
     - `world_3d_ik` は `SincroPoseTargetPointSnapshot.world` の normalized target を入力候補にし、VRM rig scale / bone length / handedness へ変換したうえで quaternion を出力する。
-    - MediaPipe world target は左右と奥行きを VRM 表示側へ反転し、Z は tracker 揺れを考慮して弱めに使う。
+    - MediaPipe world target は入力 video と同じ左右を維持し、上下・奥行きを VRM 表示側へ反転する。Z は tracker 揺れを考慮して弱めに使う。
     - `SincroPoseRetargetedArm.ikWeight` は Debug Console で full IK と weak IK を切り分けるための runtime 値。
     - `SincroPoseRetargetedArm.ikSolverMode` は `feature_only` / `screen_space_ik` / `world_3d_ik` の切り分けを Debug Console に表示する。
     - `solverProbe.ccdik` は external solver 採用判断用の診断値であり、実際の腕姿勢には適用しない。

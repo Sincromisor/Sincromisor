@@ -88,6 +88,16 @@ playwright-cli resize 390 844
 
 ## 実施ログ
 
+### 2026-05-17
+
+- 実カメラ観測で world 3D IK の腕方向が逆転して見えたため、MediaPipe world target から VRM target への軸変換を調整した。
+    - X は入力 video と同じ左右を維持する。
+    - Y は Three.js/VRM の Y-up に合わせて反転する。
+    - Z は表示側奥行きへ合わせて反転し、従来通り 0.72 倍に弱める。
+- 肩が上がりきらない挙動に対して、既定の IK 強度・target scale・上腕回転上限を上げた。
+- 片腕を完全に上げた時に上腕がTポーズ高さで止まる挙動に対して、上方向 target の到達距離下限を腕長寄りへ補正した。
+- 完全上げポーズで解いた姿勢が neutral 側へ戻りすぎないよう、既定の IK 強度を 1.0 にした。
+
 ### 2026-05-16
 
 - Debug Console の `Sincro` tab に左右腕の solver output (`Left Solver` / `Right Solver`) を追加した。
