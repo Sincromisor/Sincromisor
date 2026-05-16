@@ -12,6 +12,7 @@ import {
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
     type SincroPoseRetargetConfig,
+    type SincroPoseRetargetFrame,
 } from "../SincroVRM/VRMCharacter/SincroPoseRetargeter";
 
 type AudioMeterHandle = {
@@ -182,6 +183,7 @@ type SincroMotionSnapshot = {
     pose: SincroPoseMotionSnapshot;
     tracker: SincroTrackerWorkerStats;
     poseRetarget: Pick<SincroPoseRetargetConfig, "intensityScale" | "minConfidence" | "returnToNeutralMs" | "smoothingMs">;
+    poseRetargetRuntime: Pick<SincroPoseRetargetFrame, "active" | "confidence" | "ikMode" | "fallbackReason" | "anchor" | "leftArm" | "rightArm">;
 };
 
 type RtcSnapshot = {
@@ -307,6 +309,34 @@ function createDefaultSnapshot(): DebugConsoleSnapshot {
                 minConfidence: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.minConfidence,
                 returnToNeutralMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.returnToNeutralMs,
                 smoothingMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.smoothingMs,
+            },
+            poseRetargetRuntime: {
+                active: false,
+                confidence: 0,
+                ikMode: "fallback",
+                fallbackReason: "neutral",
+                anchor: {
+                    active: false,
+                    weight: 0,
+                    reason: "neutral",
+                    shoulderOffset: { x: 0, y: 0 },
+                },
+                leftArm: {
+                    active: false,
+                    ikActive: false,
+                    fallbackReason: "neutral",
+                    upperArm: { x: 0, y: 0, z: 0 },
+                    lowerArm: { x: 0, y: 0, z: 0 },
+                    wrist: { x: 0, y: 0, z: 0 },
+                },
+                rightArm: {
+                    active: false,
+                    ikActive: false,
+                    fallbackReason: "neutral",
+                    upperArm: { x: 0, y: 0, z: 0 },
+                    lowerArm: { x: 0, y: 0, z: 0 },
+                    wrist: { x: 0, y: 0, z: 0 },
+                },
             },
         },
         rtc: {
@@ -990,6 +1020,39 @@ export class DebugConsoleManager {
         }));
     }
 
+    updateSincroPoseRetargetFrame(frame: SincroPoseRetargetFrame): void {
+        this.updateSnapshot((currentSnapshot) => ({
+            ...currentSnapshot,
+            sincroMotion: {
+                ...currentSnapshot.sincroMotion,
+                poseRetargetRuntime: {
+                    active: frame.active,
+                    confidence: frame.confidence,
+                    ikMode: frame.ikMode,
+                    fallbackReason: frame.fallbackReason,
+                    anchor: {
+                        active: frame.anchor.active,
+                        weight: frame.anchor.weight,
+                        reason: frame.anchor.reason,
+                        shoulderOffset: { ...frame.anchor.shoulderOffset },
+                    },
+                    leftArm: {
+                        ...frame.leftArm,
+                        upperArm: { ...frame.leftArm.upperArm },
+                        lowerArm: { ...frame.leftArm.lowerArm },
+                        wrist: { ...frame.leftArm.wrist },
+                    },
+                    rightArm: {
+                        ...frame.rightArm,
+                        upperArm: { ...frame.rightArm.upperArm },
+                        lowerArm: { ...frame.rightArm.lowerArm },
+                        wrist: { ...frame.rightArm.wrist },
+                    },
+                },
+            },
+        }));
+    }
+
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
         this.updateSnapshot((snapshot) => ({
             ...snapshot,
@@ -1044,6 +1107,17 @@ export class DebugConsoleManager {
                         status: "idle",
                     },
                     poseRetarget: snapshot.sincroMotion.poseRetarget,
+                    poseRetargetRuntime: {
+                        ...snapshot.sincroMotion.poseRetargetRuntime,
+                        active: false,
+                        ikMode: "fallback",
+                        fallbackReason: "tracking_paused",
+                        anchor: {
+                            ...snapshot.sincroMotion.poseRetargetRuntime.anchor,
+                            active: false,
+                            reason: "tracking_paused",
+                        },
+                    },
                 },
             }));
             return;

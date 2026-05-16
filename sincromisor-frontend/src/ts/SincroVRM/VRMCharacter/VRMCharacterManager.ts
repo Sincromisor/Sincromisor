@@ -18,6 +18,7 @@ import type { SincroPoseRetargetConfig } from './SincroPoseRetargeter';
 import { VRMCamera } from '../VRMScene/VRMCamera';
 import { Vector3 } from 'three/src/math/Vector3.js';
 import { Box3 } from 'three/src/math/Box3.js';
+import { DebugConsoleManager } from '../../UI/DebugConsoleManager';
 // import { MToonMaterialLoaderPlugin } from '@pixiv/three-vrm';
 // import { MToonNodeMaterial } from '@pixiv/three-vrm/nodes';
 
@@ -283,9 +284,10 @@ export class VRMCharacterManager {
                     confidence: 0,
                     degradedToFaceOnly: true,
                     fallbackReason: "pose_retarget_disabled",
-                },
+            },
             this.latestBehaviorSnapshot.nowMs,
         );
+        DebugConsoleManager.getManager().updateSincroPoseRetargetFrame(sincroPose);
         this.headBoneController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.eyeBehaviorController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.mouthMorphController?.update(this.latestBehaviorSnapshot, sincroFace);

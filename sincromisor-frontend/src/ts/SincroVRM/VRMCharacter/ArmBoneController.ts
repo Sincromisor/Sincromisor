@@ -27,10 +27,15 @@ export class ArmBoneController {
         const armSway = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.arms.swayPeriodSeconds, Math.PI / 5);
         const elbowSway = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.arms.elbowPeriodSeconds, Math.PI / 2);
         const wristSway = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.arms.wristPeriodSeconds, Math.PI / 9);
-        const speechGesture = snapshot ? this.updateSpeechGesture(elapsedSeconds, snapshot) : 0;
+        const poseControlsLeftArm = pose?.leftArm.ikActive ?? false;
+        const poseControlsRightArm = pose?.rightArm.ikActive ?? false;
+        const poseControlsAnyArm = poseControlsLeftArm || poseControlsRightArm;
+        const speechGesture = snapshot && !poseControlsAnyArm ? this.updateSpeechGesture(elapsedSeconds, snapshot) : 0;
         const expression = this.speechExpressionProfile(snapshot?.aiSpeech.expressionCode ?? null);
-        const leftGesture = speechGesture * (this.speechGestureSide < 0 ? 1 : 0.42);
-        const rightGesture = speechGesture * (this.speechGestureSide > 0 ? 1 : 0.42);
+        const leftGesture = poseControlsLeftArm ? 0 : speechGesture * (this.speechGestureSide < 0 ? 1 : 0.42);
+        const rightGesture = poseControlsRightArm ? 0 : speechGesture * (this.speechGestureSide > 0 ? 1 : 0.42);
+        const leftIdleScale = poseControlsLeftArm ? 0.22 : 1;
+        const rightIdleScale = poseControlsRightArm ? 0.22 : 1;
 
         this.getNode('leftUpperArm')?.rotation.set(
             MathUtils.degToRad(5)
@@ -39,7 +44,7 @@ export class ArmBoneController {
             leftGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale
                 + (pose?.leftArm.upperArm.y ?? 0),
             MathUtils.degToRad(-75)
-                - armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad
+                - armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad * leftIdleScale
                 - leftGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale
                 + (pose?.leftArm.upperArm.z ?? 0),
         );
@@ -50,14 +55,14 @@ export class ArmBoneController {
             -rightGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale
                 + (pose?.rightArm.upperArm.y ?? 0),
             MathUtils.degToRad(75)
-                + armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad
+                + armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad * rightIdleScale
                 + rightGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad * expression.openScale
                 + (pose?.rightArm.upperArm.z ?? 0),
         );
         this.getNode('leftLowerArm')?.rotation.set(
             pose?.leftArm.lowerArm.x ?? 0,
             MathUtils.degToRad(-15)
-                - elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad
+                - elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad * leftIdleScale
                 - leftGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad * expression.flexScale
                 + (pose?.leftArm.lowerArm.y ?? 0),
             MathUtils.degToRad(5) + (pose?.leftArm.lowerArm.z ?? 0),
@@ -65,15 +70,15 @@ export class ArmBoneController {
         this.getNode('rightLowerArm')?.rotation.set(
             pose?.rightArm.lowerArm.x ?? 0,
             MathUtils.degToRad(15)
-                + elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad
+                + elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad * rightIdleScale
                 + rightGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad * expression.flexScale
                 + (pose?.rightArm.lowerArm.y ?? 0),
             MathUtils.degToRad(-5) + (pose?.rightArm.lowerArm.z ?? 0),
         );
 
-        this.updateLeftHand(this.getNode('leftHand'), wristSway, leftGesture * expression.wristScale, pose?.leftArm.wrist.z ?? 0);
+        this.updateLeftHand(this.getNode('leftHand'), wristSway * leftIdleScale, leftGesture * expression.wristScale, pose?.leftArm.wrist.z ?? 0);
         this.updateLeftThumb(this.getNode('leftThumbProximal'), wristSway);
-        this.updateRightHand(this.getNode('rightHand'), wristSway, rightGesture * expression.wristScale, pose?.rightArm.wrist.z ?? 0);
+        this.updateRightHand(this.getNode('rightHand'), wristSway * rightIdleScale, rightGesture * expression.wristScale, pose?.rightArm.wrist.z ?? 0);
         this.updateRightThumb(this.getNode('rightThumbProximal'), wristSway);
     }
 

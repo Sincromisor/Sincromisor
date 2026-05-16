@@ -178,7 +178,8 @@ export class SincroPoseTracker {
         const shoulderWidth = Math.max(distance2d(leftShoulder, rightShoulder), 0.08);
         const shoulderCenterX = (leftShoulder.x + rightShoulder.x) * 0.5;
         const shoulderCenterY = (leftShoulder.y + rightShoulder.y) * 0.5;
-        const hipCenterX = visibility(leftHip) >= MIN_LANDMARK_VISIBILITY && visibility(rightHip) >= MIN_LANDMARK_VISIBILITY
+        const hipCenterTracked = visibility(leftHip) >= MIN_LANDMARK_VISIBILITY && visibility(rightHip) >= MIN_LANDMARK_VISIBILITY;
+        const hipCenterX = hipCenterTracked
             ? (leftHip.x + rightHip.x) * 0.5
             : shoulderCenterX;
         const leftArm = this.armMotion(landmarks, "left", shoulderWidth, shoulderCenterX, shoulderCenterY);
@@ -198,6 +199,7 @@ export class SincroPoseTracker {
                 shoulderWidth,
                 shoulderCenterX,
                 shoulderCenterY,
+                hipCenterTracked,
             },
             leftArm,
             rightArm,
