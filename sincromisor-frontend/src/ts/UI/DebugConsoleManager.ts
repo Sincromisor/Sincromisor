@@ -182,7 +182,18 @@ type SincroMotionSnapshot = {
     face: SincroFaceMotionSnapshot;
     pose: SincroPoseMotionSnapshot;
     tracker: SincroTrackerWorkerStats;
-    poseRetarget: Pick<SincroPoseRetargetConfig, "intensityScale" | "minConfidence" | "returnToNeutralMs" | "smoothingMs">;
+    poseRetarget: Pick<
+        SincroPoseRetargetConfig,
+        | "intensityScale"
+        | "minConfidence"
+        | "returnToNeutralMs"
+        | "smoothingMs"
+        | "armIkStrength"
+        | "armIkTargetScale"
+        | "armIkMaxLiftRad"
+        | "armIkMaxOpenRad"
+        | "armIkMaxForearmFlexRad"
+    >;
     poseRetargetRuntime: Pick<SincroPoseRetargetFrame, "active" | "confidence" | "ikMode" | "fallbackReason" | "anchor" | "leftArm" | "rightArm">;
 };
 
@@ -309,6 +320,11 @@ function createDefaultSnapshot(): DebugConsoleSnapshot {
                 minConfidence: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.minConfidence,
                 returnToNeutralMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.returnToNeutralMs,
                 smoothingMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.smoothingMs,
+                armIkStrength: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkStrength,
+                armIkTargetScale: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkTargetScale,
+                armIkMaxLiftRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxLiftRad,
+                armIkMaxOpenRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxOpenRad,
+                armIkMaxForearmFlexRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxForearmFlexRad,
             },
             poseRetargetRuntime: {
                 active: false,
@@ -1064,6 +1080,11 @@ export class DebugConsoleManager {
                     minConfidence: clampNumber(config.minConfidence ?? snapshot.sincroMotion.poseRetarget.minConfidence, 0, 1),
                     returnToNeutralMs: clampNumber(config.returnToNeutralMs ?? snapshot.sincroMotion.poseRetarget.returnToNeutralMs, 80, 2000),
                     smoothingMs: clampNumber(config.smoothingMs ?? snapshot.sincroMotion.poseRetarget.smoothingMs, 40, 800),
+                    armIkStrength: clampNumber(config.armIkStrength ?? snapshot.sincroMotion.poseRetarget.armIkStrength, 0, 1),
+                    armIkTargetScale: clampNumber(config.armIkTargetScale ?? snapshot.sincroMotion.poseRetarget.armIkTargetScale, 0.2, 1.5),
+                    armIkMaxLiftRad: clampNumber(config.armIkMaxLiftRad ?? snapshot.sincroMotion.poseRetarget.armIkMaxLiftRad, 0, Math.PI / 2),
+                    armIkMaxOpenRad: clampNumber(config.armIkMaxOpenRad ?? snapshot.sincroMotion.poseRetarget.armIkMaxOpenRad, 0, Math.PI / 2),
+                    armIkMaxForearmFlexRad: clampNumber(config.armIkMaxForearmFlexRad ?? snapshot.sincroMotion.poseRetarget.armIkMaxForearmFlexRad, 0, Math.PI / 2),
                 },
             },
         }));
