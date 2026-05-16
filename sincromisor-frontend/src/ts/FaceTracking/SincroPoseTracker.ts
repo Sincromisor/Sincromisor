@@ -1,15 +1,19 @@
-import type { NormalizedLandmark, PoseLandmarkerResult } from "@mediapipe/tasks-vision";
+import type { Landmark, NormalizedLandmark, PoseLandmarkerResult } from "@mediapipe/tasks-vision";
 import { PoseLandmarker } from "@mediapipe/tasks-vision";
 import { loadMediaPipeVisionFileset } from "./MediaPipeVisionFileset";
 import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
+    DEFAULT_SINCRO_POSE_LOWER_BODY_TARGET_SNAPSHOT,
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
     type SincroPoseArmMotionSnapshot,
+    type SincroPoseLowerBodyTargetSnapshot,
     type SincroPoseMotionSnapshot,
     type SincroPoseTargetPointSnapshot,
 } from "./SincroPoseMotionSnapshot";
 import {
     createSincroPoseTargetPoint,
+    type PoseTargetPointOrigin,
+    type PoseWorldTargetOrigin,
     poseLandmarkVisibility,
     SINCRO_POSE_MIN_LANDMARK_VISIBILITY,
 } from "./sincroPoseTargetPoint";
@@ -25,6 +29,10 @@ const LANDMARK = {
     rightWrist: 16,
     leftHip: 23,
     rightHip: 24,
+    leftKnee: 25,
+    rightKnee: 26,
+    leftAnkle: 27,
+    rightAnkle: 28,
 } as const;
 
 type PoseSide = "left" | "right";
@@ -40,6 +48,7 @@ export class SincroPoseTracker {
         ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
         leftArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
         rightArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
+        lowerBodyTargets: cloneLowerBodyTargets(DEFAULT_SINCRO_POSE_LOWER_BODY_TARGET_SNAPSHOT),
     };
 
     async initVision(): Promise<void> {
@@ -91,6 +100,7 @@ export class SincroPoseTracker {
             upperBody: { ...this.snapshot.upperBody },
             leftArm: cloneArmSnapshot(this.snapshot.leftArm),
             rightArm: cloneArmSnapshot(this.snapshot.rightArm),
+            lowerBodyTargets: cloneLowerBodyTargets(this.snapshot.lowerBodyTargets),
         };
     }
 
@@ -102,6 +112,7 @@ export class SincroPoseTracker {
             ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
             leftArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
             rightArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
+            lowerBodyTargets: cloneLowerBodyTargets(DEFAULT_SINCRO_POSE_LOWER_BODY_TARGET_SNAPSHOT),
             fallbackReason: reason,
             lastUpdatedAtMs: nowMs,
         };
@@ -135,6 +146,7 @@ export class SincroPoseTracker {
             ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
             leftArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
             rightArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
+            lowerBodyTargets: cloneLowerBodyTargets(DEFAULT_SINCRO_POSE_LOWER_BODY_TARGET_SNAPSHOT),
             trackingEnabled: true,
             lastUpdatedAtMs: performance.now(),
         };
@@ -147,12 +159,16 @@ export class SincroPoseTracker {
         nowMs: number,
     ): SincroPoseMotionSnapshot {
         const landmarks = result.landmarks[0] ?? null;
+        const worldLandmarks = result.worldLandmarks[0] ?? null;
         if (!landmarks) {
             this.consecutiveFailures += 1;
             return {
                 ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
                 leftArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
                 rightArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
+                lowerBodyTargets: cloneLowerBodyTargets(
+                    DEFAULT_SINCRO_POSE_LOWER_BODY_TARGET_SNAPSHOT,
+                ),
                 trackingEnabled: true,
                 inferenceTimeMs,
                 inferenceFps,
@@ -173,6 +189,9 @@ export class SincroPoseTracker {
                 ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
                 leftArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
                 rightArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
+                lowerBodyTargets: cloneLowerBodyTargets(
+                    DEFAULT_SINCRO_POSE_LOWER_BODY_TARGET_SNAPSHOT,
+                ),
                 trackingEnabled: true,
                 inferenceTimeMs,
                 inferenceFps,
@@ -190,19 +209,37 @@ export class SincroPoseTracker {
             poseLandmarkVisibility(leftHip) >= SINCRO_POSE_MIN_LANDMARK_VISIBILITY &&
             poseLandmarkVisibility(rightHip) >= SINCRO_POSE_MIN_LANDMARK_VISIBILITY;
         const hipCenterX = hipCenterTracked ? (leftHip.x + rightHip.x) * 0.5 : shoulderCenterX;
+        const hipCenterY = hipCenterTracked ? (leftHip.y + rightHip.y) * 0.5 : shoulderCenterY;
+        const worldOrigins = createWorldTargetOrigins(worldLandmarks);
+        const shoulderImageOrigin = {
+            imageScale: shoulderWidth,
+            anchorX: shoulderCenterX,
+            anchorY: shoulderCenterY,
+        };
+        const hipsImageOrigin = {
+            imageScale: shoulderWidth,
+            anchorX: hipCenterX,
+            anchorY: hipCenterY,
+        };
         const leftArm = this.armMotion(
             landmarks,
+            worldLandmarks,
             "left",
-            shoulderWidth,
-            shoulderCenterX,
-            shoulderCenterY,
+            shoulderImageOrigin,
+            worldOrigins.shoulders,
         );
         const rightArm = this.armMotion(
             landmarks,
+            worldLandmarks,
             "right",
-            shoulderWidth,
-            shoulderCenterX,
-            shoulderCenterY,
+            shoulderImageOrigin,
+            worldOrigins.shoulders,
+        );
+        const lowerBodyTargets = this.lowerBodyTargets(
+            landmarks,
+            worldLandmarks,
+            hipsImageOrigin,
+            worldOrigins.hips,
         );
 
         return {
@@ -219,6 +256,7 @@ export class SincroPoseTracker {
             },
             leftArm,
             rightArm,
+            lowerBodyTargets,
             inferenceTimeMs,
             inferenceFps,
             consecutiveFailures: 0,
@@ -230,21 +268,44 @@ export class SincroPoseTracker {
 
     private armMotion(
         landmarks: NormalizedLandmark[],
+        worldLandmarks: Landmark[] | null,
         side: PoseSide,
-        shoulderWidth: number,
-        shoulderCenterX: number,
-        shoulderCenterY: number,
+        imageOrigin: PoseTargetPointOrigin,
+        worldOrigin: PoseWorldTargetOrigin | null,
     ): SincroPoseArmMotionSnapshot {
         const shoulder =
             landmarks[side === "left" ? LANDMARK.leftShoulder : LANDMARK.rightShoulder];
         const elbow = landmarks[side === "left" ? LANDMARK.leftElbow : LANDMARK.rightElbow];
         const wrist = landmarks[side === "left" ? LANDMARK.leftWrist : LANDMARK.rightWrist];
+        const worldShoulder =
+            worldLandmarks?.[side === "left" ? LANDMARK.leftShoulder : LANDMARK.rightShoulder];
+        const worldElbow =
+            worldLandmarks?.[side === "left" ? LANDMARK.leftElbow : LANDMARK.rightElbow];
+        const worldWrist =
+            worldLandmarks?.[side === "left" ? LANDMARK.leftWrist : LANDMARK.rightWrist];
         const confidence = averageVisibility([shoulder, elbow, wrist]);
-        const targetOrigin = { shoulderWidth, shoulderCenterX, shoulderCenterY };
         const targets = {
-            shoulder: createSincroPoseTargetPoint(shoulder, "shoulder", targetOrigin),
-            elbow: createSincroPoseTargetPoint(elbow, "elbow", targetOrigin),
-            wrist: createSincroPoseTargetPoint(wrist, "wrist", targetOrigin),
+            shoulder: createSincroPoseTargetPoint(
+                shoulder,
+                worldShoulder,
+                "shoulder",
+                imageOrigin,
+                worldOrigin,
+            ),
+            elbow: createSincroPoseTargetPoint(
+                elbow,
+                worldElbow,
+                "elbow",
+                imageOrigin,
+                worldOrigin,
+            ),
+            wrist: createSincroPoseTargetPoint(
+                wrist,
+                worldWrist,
+                "wrist",
+                imageOrigin,
+                worldOrigin,
+            ),
         };
         if (confidence < SINCRO_POSE_MIN_LANDMARK_VISIBILITY) {
             return {
@@ -259,11 +320,63 @@ export class SincroPoseTracker {
         return {
             tracked: true,
             confidence,
-            upperArmLift: clampSigned((shoulder.y - elbow.y) / shoulderWidth),
-            upperArmOpen: clampSigned(((elbow.x - shoulder.x) * sideSign) / shoulderWidth),
+            upperArmLift: clampSigned((shoulder.y - elbow.y) / imageOrigin.imageScale),
+            upperArmOpen: clampSigned(((elbow.x - shoulder.x) * sideSign) / imageOrigin.imageScale),
             lowerArmFlex: clamp01(1 - elbowAngle / Math.PI) * 2 - 1,
-            wristRaise: clampSigned((elbow.y - wrist.y) / shoulderWidth),
+            wristRaise: clampSigned((elbow.y - wrist.y) / imageOrigin.imageScale),
             targets,
+        };
+    }
+
+    private lowerBodyTargets(
+        landmarks: NormalizedLandmark[],
+        worldLandmarks: Landmark[] | null,
+        imageOrigin: PoseTargetPointOrigin,
+        worldOrigin: PoseWorldTargetOrigin | null,
+    ): SincroPoseLowerBodyTargetSnapshot {
+        return {
+            leftHip: createSincroPoseTargetPoint(
+                landmarks[LANDMARK.leftHip],
+                worldLandmarks?.[LANDMARK.leftHip],
+                "hip",
+                imageOrigin,
+                worldOrigin,
+            ),
+            rightHip: createSincroPoseTargetPoint(
+                landmarks[LANDMARK.rightHip],
+                worldLandmarks?.[LANDMARK.rightHip],
+                "hip",
+                imageOrigin,
+                worldOrigin,
+            ),
+            leftKnee: createSincroPoseTargetPoint(
+                landmarks[LANDMARK.leftKnee],
+                worldLandmarks?.[LANDMARK.leftKnee],
+                "knee",
+                imageOrigin,
+                worldOrigin,
+            ),
+            rightKnee: createSincroPoseTargetPoint(
+                landmarks[LANDMARK.rightKnee],
+                worldLandmarks?.[LANDMARK.rightKnee],
+                "knee",
+                imageOrigin,
+                worldOrigin,
+            ),
+            leftAnkle: createSincroPoseTargetPoint(
+                landmarks[LANDMARK.leftAnkle],
+                worldLandmarks?.[LANDMARK.leftAnkle],
+                "ankle",
+                imageOrigin,
+                worldOrigin,
+            ),
+            rightAnkle: createSincroPoseTargetPoint(
+                landmarks[LANDMARK.rightAnkle],
+                worldLandmarks?.[LANDMARK.rightAnkle],
+                "ankle",
+                imageOrigin,
+                worldOrigin,
+            ),
         };
     }
 
@@ -272,6 +385,7 @@ export class SincroPoseTracker {
             ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
             leftArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
             rightArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
+            lowerBodyTargets: cloneLowerBodyTargets(DEFAULT_SINCRO_POSE_LOWER_BODY_TARGET_SNAPSHOT),
             trackingEnabled: true,
             fallbackReason: reason,
             consecutiveFailures: this.consecutiveFailures,
@@ -298,6 +412,10 @@ function distance2d(a: NormalizedLandmark, b: NormalizedLandmark): number {
     return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+function distance3d(a: Landmark, b: Landmark): number {
+    return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+}
+
 function angleAt(center: NormalizedLandmark, a: NormalizedLandmark, b: NormalizedLandmark): number {
     const ax = a.x - center.x;
     const ay = a.y - center.y;
@@ -316,7 +434,10 @@ function clampSigned(value: number): number {
 }
 
 function cloneTargetPoint(snapshot: SincroPoseTargetPointSnapshot): SincroPoseTargetPointSnapshot {
-    return { ...snapshot };
+    return {
+        ...snapshot,
+        world: { ...snapshot.world },
+    };
 }
 
 function cloneArmSnapshot(snapshot: SincroPoseArmMotionSnapshot): SincroPoseArmMotionSnapshot {
@@ -328,4 +449,74 @@ function cloneArmSnapshot(snapshot: SincroPoseArmMotionSnapshot): SincroPoseArmM
             wrist: cloneTargetPoint(snapshot.targets.wrist),
         },
     };
+}
+
+function cloneLowerBodyTargets(
+    snapshot: SincroPoseLowerBodyTargetSnapshot,
+): SincroPoseLowerBodyTargetSnapshot {
+    return {
+        leftHip: cloneTargetPoint(snapshot.leftHip),
+        rightHip: cloneTargetPoint(snapshot.rightHip),
+        leftKnee: cloneTargetPoint(snapshot.leftKnee),
+        rightKnee: cloneTargetPoint(snapshot.rightKnee),
+        leftAnkle: cloneTargetPoint(snapshot.leftAnkle),
+        rightAnkle: cloneTargetPoint(snapshot.rightAnkle),
+    };
+}
+
+function createWorldTargetOrigins(worldLandmarks: Landmark[] | null): {
+    shoulders: PoseWorldTargetOrigin | null;
+    hips: PoseWorldTargetOrigin | null;
+} {
+    const leftShoulder = worldLandmarks?.[LANDMARK.leftShoulder];
+    const rightShoulder = worldLandmarks?.[LANDMARK.rightShoulder];
+    const leftHip = worldLandmarks?.[LANDMARK.leftHip];
+    const rightHip = worldLandmarks?.[LANDMARK.rightHip];
+    const shoulderScale =
+        leftShoulder && rightShoulder ? finiteDistance3d(leftShoulder, rightShoulder) : null;
+    const hipScale = leftHip && rightHip ? finiteDistance3d(leftHip, rightHip) : null;
+    const scale = shoulderScale ?? hipScale ?? null;
+
+    return {
+        shoulders:
+            leftShoulder && rightShoulder && scale
+                ? createWorldTargetOrigin("shoulder_center", leftShoulder, rightShoulder, scale)
+                : null,
+        hips:
+            leftHip && rightHip && scale
+                ? createWorldTargetOrigin("hips_center", leftHip, rightHip, scale)
+                : null,
+    };
+}
+
+function createWorldTargetOrigin(
+    anchor: PoseWorldTargetOrigin["anchor"],
+    left: Landmark,
+    right: Landmark,
+    scale: number,
+): PoseWorldTargetOrigin | null {
+    if (!landmark3dIsFinite(left) || !landmark3dIsFinite(right) || scale <= 0) {
+        return null;
+    }
+    return {
+        anchor,
+        anchorX: (left.x + right.x) * 0.5,
+        anchorY: (left.y + right.y) * 0.5,
+        anchorZ: (left.z + right.z) * 0.5,
+        scale,
+    };
+}
+
+function finiteDistance3d(a: Landmark, b: Landmark): number | null {
+    if (!landmark3dIsFinite(a) || !landmark3dIsFinite(b)) {
+        return null;
+    }
+    const distance = distance3d(a, b);
+    return distance > 1e-4 ? distance : null;
+}
+
+function landmark3dIsFinite(landmark: Landmark): boolean {
+    return (
+        Number.isFinite(landmark.x) && Number.isFinite(landmark.y) && Number.isFinite(landmark.z)
+    );
 }

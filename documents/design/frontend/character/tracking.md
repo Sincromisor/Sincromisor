@@ -33,6 +33,8 @@
 - `SincroPoseTracker`
     - optional PoseLandmarker から肩、胴体、腕 target を抽出する。
     - 腕 target は通常 retarget 用の `tracked` と IK 用の `quality` / `usableForIk` / `ikWeight` を分けて出力する。
+    - PoseLandmarker の `worldLandmarks` は tracker 内で `SincroPoseTargetPointSnapshot.world` へ正規化し、MediaPipe 生座標を controller / VRM 層へ直接渡さない。
+    - 3D target は肩基準（腕）または腰基準（下半身）の local target と、VRM rig scale へ変換する前の normalized target に分けて保持する。
     - performance gate により face-only fallback できる。
 - Retargeters
     - neutral calibration、clamp、deadband、smoothing、confidence gate を扱う。
@@ -51,6 +53,7 @@
     - trackingEnabled
     - detected
     - shoulder / torso / arm target
+    - lowerBodyTargets（hip / knee / ankle の観測確認用 target）
     - consecutiveFailures
     - degradedToFaceOnly
     - fallbackReason
@@ -59,6 +62,8 @@
     - `quality`: `strong` / `weak` / `lost`。`weak` は座標を IK に使えるが、強度を落とすべき状態。
     - `usableForIk`: IK solver が target として使える状態。wrist / elbow は低 confidence でも有限座標かつ画面近傍なら weak target になり得る。
     - `ikWeight`: weak target を使う時に IK 強度へ掛ける 0.0-1.0 の重み。
+    - `world`: MediaPipe world coordinates 由来の 3D target。`hasWorldCoordinates` / `worldQuality` / `worldIkWeight` / `worldStaleReason` を 2D target とは別に持つ。
+    - `world.normalizedX/Y/Z`: shoulder width または hip width 由来の人物スケールで割った local 3D target。VRM bone 長や左右反転の適用は retargeter / solver 側の責務とする。
 
 ## Failure Modes
 

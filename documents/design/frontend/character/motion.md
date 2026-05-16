@@ -53,6 +53,7 @@
 - `SincroPoseRetargetFrame`
     - upper body / arm の additive rotation と fallback reason
     - 腕 IK は `SincroPoseTargetPointSnapshot.quality` と `ikWeight` を読み、weak wrist / elbow では IK 強度を落として feature retarget と合成する。
+    - 3D IK は `SincroPoseTargetPointSnapshot.world` の normalized target を入力候補にする。MediaPipe world 座標から VRM rig scale / bone length / handedness へ変換する処理は tracker ではなく solver 側で行う。
     - `SincroPoseRetargetedArm.ikWeight` は Debug Console で full IK と weak IK を切り分けるための runtime 値。
 
 ## Change Checklist
