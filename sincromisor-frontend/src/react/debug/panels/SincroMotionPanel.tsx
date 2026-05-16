@@ -28,6 +28,7 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
     const pose = snapshot.sincroMotion.pose;
     const tracker = snapshot.sincroMotion.tracker;
     const poseRetarget = snapshot.sincroMotion.poseRetarget;
+    const poseRetargetRuntime = snapshot.sincroMotion.poseRetargetRuntime;
 
     return (
         <section
@@ -72,7 +73,11 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                         <dt>Status</dt>
                         <dd>{formatPoseStatus(pose)}</dd>
                         <dt>Retarget</dt>
-                        <dd>{formatPoseRetargetStatus(pose, poseRetarget.minConfidence)}</dd>
+                        <dd>{formatPoseRetargetStatus(pose, poseRetarget.minConfidence, poseRetargetRuntime)}</dd>
+                        <dt>IK</dt>
+                        <dd>{formatIkRuntime(poseRetargetRuntime)}</dd>
+                        <dt>Anchor</dt>
+                        <dd>{formatAnchorRuntime(poseRetargetRuntime)}</dd>
                         <dt>Confidence</dt>
                         <dd>{formatRatio(pose.confidence)}</dd>
                         <dt>Upper</dt>
@@ -176,7 +181,14 @@ function formatPoseStatus(snapshot: SincroPoseMotionSnapshot): string {
     return formatTrackingStatus(snapshot.trackingEnabled, snapshot.detected, snapshot.fallbackReason);
 }
 
-function formatPoseRetargetStatus(snapshot: SincroPoseMotionSnapshot, minConfidence: number): string {
+function formatPoseRetargetStatus(
+    snapshot: SincroPoseMotionSnapshot,
+    minConfidence: number,
+    runtime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"],
+): string {
+    if (runtime.fallbackReason) {
+        return `neutral (${runtime.fallbackReason})`;
+    }
     if (!snapshot.trackingEnabled) {
         return "off";
     }
@@ -190,6 +202,22 @@ function formatPoseRetargetStatus(snapshot: SincroPoseMotionSnapshot, minConfide
         return "neutral (confidence)";
     }
     return "active";
+}
+
+function formatIkRuntime(runtime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"]): string {
+    const armReasons = [
+        runtime.leftArm.ikActive ? "L ik" : `L ${runtime.leftArm.fallbackReason ?? "feature"}`,
+        runtime.rightArm.ikActive ? "R ik" : `R ${runtime.rightArm.fallbackReason ?? "feature"}`,
+    ].join(" / ");
+    if (runtime.fallbackReason) {
+        return `${runtime.ikMode} (${runtime.fallbackReason}) / ${armReasons}`;
+    }
+    return `${runtime.ikMode} / confidence ${formatRatio(runtime.confidence)} / ${armReasons}`;
+}
+
+function formatAnchorRuntime(runtime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"]): string {
+    const offset = runtime.anchor.shoulderOffset;
+    return `${runtime.anchor.active ? "active" : "fallback"} ${formatRatio(runtime.anchor.weight)} / ${runtime.anchor.reason} / offset ${offset.x.toFixed(2)}, ${offset.y.toFixed(2)}`;
 }
 
 function formatHeadPose(snapshot: SincroFaceMotionSnapshot): string {

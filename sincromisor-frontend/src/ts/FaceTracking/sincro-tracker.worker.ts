@@ -200,6 +200,7 @@ function createStoppedPoseSnapshot(reason: string | null, nowMs: number) {
             shoulderWidth: 0,
             shoulderCenterX: 0.5,
             shoulderCenterY: 0.5,
+            hipCenterTracked: false,
         },
         leftArm: {
             tracked: false,

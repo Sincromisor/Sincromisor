@@ -35,6 +35,7 @@ export type SincroPoseUpperBodyMotionSnapshot = {
     shoulderWidth: number;
     shoulderCenterX: number;
     shoulderCenterY: number;
+    hipCenterTracked: boolean;
 };
 
 export type SincroPoseMotionSnapshot = {
@@ -97,6 +98,7 @@ export const DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT: SincroPoseMotionSnapshot = {
         shoulderWidth: 0,
         shoulderCenterX: 0.5,
         shoulderCenterY: 0.5,
+        hipCenterTracked: false,
     },
     leftArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
     rightArm: { ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT },
