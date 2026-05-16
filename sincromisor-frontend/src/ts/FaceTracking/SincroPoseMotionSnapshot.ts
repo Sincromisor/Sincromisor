@@ -1,8 +1,14 @@
+export type SincroPoseTargetQuality = "strong" | "weak" | "lost";
+
 export type SincroPoseTargetPointSnapshot = {
     tracked: boolean;
+    quality: SincroPoseTargetQuality;
     confidence: number;
     visibility: number;
     presence: number;
+    hasFiniteCoordinates: boolean;
+    usableForIk: boolean;
+    ikWeight: number;
     stale: boolean;
     staleReason: string | null;
     cameraX: number;
@@ -55,9 +61,13 @@ export type SincroPoseMotionSnapshot = {
 
 export const DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT: SincroPoseTargetPointSnapshot = {
     tracked: false,
+    quality: "lost",
     confidence: 0,
     visibility: 0,
     presence: 0,
+    hasFiniteCoordinates: false,
+    usableForIk: false,
+    ikWeight: 0,
     stale: true,
     staleReason: "not_tracked",
     cameraX: 0.5,

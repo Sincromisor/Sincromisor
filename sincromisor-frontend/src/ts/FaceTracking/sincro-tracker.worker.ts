@@ -1,4 +1,5 @@
 import type { SincroFaceTracker } from "./SincroFaceTracker";
+import type { SincroPoseTargetPointSnapshot } from "./SincroPoseMotionSnapshot";
 import type { SincroPoseTracker } from "./SincroPoseTracker";
 import type {
     SincroTrackerWorkerDetectMessage,
@@ -248,12 +249,16 @@ function createStoppedArmTargets() {
     };
 }
 
-function createStoppedTargetPoint() {
+function createStoppedTargetPoint(): SincroPoseTargetPointSnapshot {
     return {
         tracked: false,
+        quality: "lost",
         confidence: 0,
         visibility: 0,
         presence: 0,
+        hasFiniteCoordinates: false,
+        usableForIk: false,
+        ikWeight: 0,
         stale: true,
         staleReason: "not_tracked",
         cameraX: 0.5,

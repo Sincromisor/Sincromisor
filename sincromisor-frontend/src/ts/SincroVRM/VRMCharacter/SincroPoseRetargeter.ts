@@ -5,11 +5,13 @@ import type {
     SincroPoseArmMotionSnapshot,
     SincroPoseArmTargetSnapshot,
     SincroPoseMotionSnapshot,
+    SincroPoseTargetPointSnapshot,
 } from "../../FaceTracking/SincroPoseMotionSnapshot";
 
 export type SincroPoseRetargetedArm = {
     active: boolean;
     ikActive: boolean;
+    ikWeight: number;
     fallbackReason: string | null;
     upperArm: { x: number; y: number; z: number };
     lowerArm: { x: number; y: number; z: number };
@@ -79,6 +81,8 @@ export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
     shoulderAnchorOffsetRad: MathUtils.degToRad(2.4),
 };
 
+const MIN_STRONG_TARGET_CONFIDENCE = 0.45;
+
 const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
     active: false,
     confidence: 0,
@@ -99,6 +103,7 @@ const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
     leftArm: {
         active: false,
         ikActive: false,
+        ikWeight: 0,
         fallbackReason: "neutral",
         upperArm: { x: 0, y: 0, z: 0 },
         lowerArm: { x: 0, y: 0, z: 0 },
@@ -107,6 +112,7 @@ const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
     rightArm: {
         active: false,
         ikActive: false,
+        ikWeight: 0,
         fallbackReason: "neutral",
         upperArm: { x: 0, y: 0, z: 0 },
         lowerArm: { x: 0, y: 0, z: 0 },
@@ -125,6 +131,7 @@ type ArmIkTarget = {
     open: number;
     flex: number;
     pole: number;
+    weight: number;
 };
 
 type UpperBodyAnchor = SincroPoseRetargetFrame["anchor"];
@@ -329,6 +336,7 @@ export class SincroPoseRetargeter {
         const featureArm: SincroPoseRetargetedArm = {
             active: true,
             ikActive: false,
+            ikWeight: 0,
             fallbackReason: null,
             upperArm: {
                 x: -positiveOnly(arm.upperArmLift) * this.config.upperArmLiftRad * scale,
@@ -362,6 +370,7 @@ export class SincroPoseRetargeter {
         const ikArm: SincroPoseRetargetedArm = {
             active: true,
             ikActive: true,
+            ikWeight: ikResult.target.weight,
             fallbackReason: null,
             upperArm: {
                 x: -ikResult.target.lift * this.config.armIkMaxLiftRad * ikScale,
@@ -380,8 +389,9 @@ export class SincroPoseRetargeter {
             },
         };
         return {
-            ...blendArm(featureArm, ikArm, this.config.armIkStrength),
+            ...blendArm(featureArm, ikArm, this.config.armIkStrength * ikResult.target.weight),
             ikActive: true,
+            ikWeight: ikResult.target.weight,
             fallbackReason: null,
         };
     }
@@ -391,25 +401,21 @@ export class SincroPoseRetargeter {
         side: "left" | "right",
     ): ArmIkSolveResult {
         const metrics = this.armRigMetrics?.[side];
-        if (
-            !metrics ||
-            !targets.shoulder.tracked ||
-            !targets.elbow.tracked ||
-            !targets.wrist.tracked
-        ) {
+        if (!metrics) {
             return {
                 target: null,
-                fallbackReason: metrics ? "ik_target_missing" : "ik_rig_metrics_missing",
+                fallbackReason: "ik_rig_metrics_missing",
             };
         }
-        const targetConfidence = Math.min(
-            targets.shoulder.confidence,
-            targets.elbow.confidence,
-            targets.wrist.confidence,
-        );
-        if (targetConfidence < this.config.minConfidence) {
-            return { target: null, fallbackReason: "ik_target_low_confidence" };
+        const gateReason = armIkGateReason(targets);
+        if (gateReason) {
+            return { target: null, fallbackReason: gateReason };
         }
+        const targetWeight = MathUtils.clamp(
+            Math.min(targets.shoulder.ikWeight, targets.elbow.ikWeight, targets.wrist.ikWeight),
+            0,
+            1,
+        );
 
         const sideSign = side === "left" ? -1 : 1;
         const modelScale = metrics.shoulderWidth * this.config.armIkTargetScale;
@@ -455,6 +461,7 @@ export class SincroPoseRetargeter {
                 open: MathUtils.clamp(openFromWrist * 0.7 + openFromElbow * 0.3, -0.75, 0.95),
                 flex: MathUtils.clamp(flexByReach * 1.25 + flexByPole, 0, 1),
                 pole: MathUtils.clamp(openFromElbow - openFromWrist * 0.35, -1, 1),
+                weight: targetWeight,
             },
             fallbackReason: null,
         };
@@ -522,6 +529,7 @@ function smoothArm(
     return {
         active: target.active,
         ikActive: target.ikActive,
+        ikWeight: MathUtils.lerp(current.ikWeight, target.ikWeight, alpha),
         fallbackReason: target.fallbackReason,
         upperArm: smoothVector(current.upperArm, target.upperArm, alpha),
         lowerArm: smoothVector(current.lowerArm, target.lowerArm, alpha),
@@ -538,6 +546,7 @@ function blendArm(
     return {
         active: featureArm.active || ikArm.active,
         ikActive: ikArm.ikActive,
+        ikWeight: ikArm.ikWeight,
         fallbackReason: ikArm.fallbackReason ?? featureArm.fallbackReason,
         upperArm: smoothVector(featureArm.upperArm, ikArm.upperArm, alpha),
         lowerArm: smoothVector(featureArm.lowerArm, ikArm.lowerArm, alpha),
@@ -595,6 +604,7 @@ function cloneArm(arm: SincroPoseRetargetedArm): SincroPoseRetargetedArm {
     return {
         active: arm.active,
         ikActive: arm.ikActive,
+        ikWeight: arm.ikWeight,
         fallbackReason: arm.fallbackReason,
         upperArm: { ...arm.upperArm },
         lowerArm: { ...arm.lowerArm },
@@ -627,8 +637,38 @@ function withArmFallbackReason(
         ...arm,
         active: false,
         ikActive: false,
+        ikWeight: 0,
         fallbackReason,
     };
+}
+
+function armIkGateReason(targets: SincroPoseArmTargetSnapshot): string | null {
+    if (!targets.shoulder.tracked) {
+        return armIkTargetReason("shoulder", targets.shoulder);
+    }
+    if (!targets.elbow.usableForIk) {
+        return armIkTargetReason("elbow", targets.elbow);
+    }
+    if (!targets.wrist.usableForIk) {
+        return armIkTargetReason("wrist", targets.wrist);
+    }
+    return null;
+}
+
+function armIkTargetReason(
+    joint: "shoulder" | "elbow" | "wrist",
+    target: SincroPoseTargetPointSnapshot,
+): string {
+    if (!target.hasFiniteCoordinates) {
+        return `ik_${joint}_coordinates_missing`;
+    }
+    if (target.staleReason === "out_of_frame") {
+        return `ik_${joint}_out_of_frame`;
+    }
+    if (target.confidence < MIN_STRONG_TARGET_CONFIDENCE) {
+        return `ik_${joint}_low_confidence`;
+    }
+    return `ik_${joint}_missing`;
 }
 
 function ikModeForArms(

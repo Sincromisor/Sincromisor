@@ -8,9 +8,13 @@ import {
     type SincroPoseMotionSnapshot,
     type SincroPoseTargetPointSnapshot,
 } from "./SincroPoseMotionSnapshot";
+import {
+    createSincroPoseTargetPoint,
+    poseLandmarkVisibility,
+    SINCRO_POSE_MIN_LANDMARK_VISIBILITY,
+} from "./sincroPoseTargetPoint";
 
 const POSE_LANDMARKER_MODEL_PATH = "/3rd_party/pose_landmarker_lite.task";
-const MIN_LANDMARK_VISIBILITY = 0.45;
 
 const LANDMARK = {
     leftShoulder: 11,
@@ -163,7 +167,7 @@ export class SincroPoseTracker {
         const leftHip = landmarks[LANDMARK.leftHip];
         const rightHip = landmarks[LANDMARK.rightHip];
         const shoulderConfidence = averageVisibility([leftShoulder, rightShoulder]);
-        if (shoulderConfidence < MIN_LANDMARK_VISIBILITY) {
+        if (shoulderConfidence < SINCRO_POSE_MIN_LANDMARK_VISIBILITY) {
             this.consecutiveFailures += 1;
             return {
                 ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
@@ -183,8 +187,8 @@ export class SincroPoseTracker {
         const shoulderCenterX = (leftShoulder.x + rightShoulder.x) * 0.5;
         const shoulderCenterY = (leftShoulder.y + rightShoulder.y) * 0.5;
         const hipCenterTracked =
-            visibility(leftHip) >= MIN_LANDMARK_VISIBILITY &&
-            visibility(rightHip) >= MIN_LANDMARK_VISIBILITY;
+            poseLandmarkVisibility(leftHip) >= SINCRO_POSE_MIN_LANDMARK_VISIBILITY &&
+            poseLandmarkVisibility(rightHip) >= SINCRO_POSE_MIN_LANDMARK_VISIBILITY;
         const hipCenterX = hipCenterTracked ? (leftHip.x + rightHip.x) * 0.5 : shoulderCenterX;
         const leftArm = this.armMotion(
             landmarks,
@@ -236,12 +240,13 @@ export class SincroPoseTracker {
         const elbow = landmarks[side === "left" ? LANDMARK.leftElbow : LANDMARK.rightElbow];
         const wrist = landmarks[side === "left" ? LANDMARK.leftWrist : LANDMARK.rightWrist];
         const confidence = averageVisibility([shoulder, elbow, wrist]);
+        const targetOrigin = { shoulderWidth, shoulderCenterX, shoulderCenterY };
         const targets = {
-            shoulder: this.targetPoint(shoulder, shoulderWidth, shoulderCenterX, shoulderCenterY),
-            elbow: this.targetPoint(elbow, shoulderWidth, shoulderCenterX, shoulderCenterY),
-            wrist: this.targetPoint(wrist, shoulderWidth, shoulderCenterX, shoulderCenterY),
+            shoulder: createSincroPoseTargetPoint(shoulder, "shoulder", targetOrigin),
+            elbow: createSincroPoseTargetPoint(elbow, "elbow", targetOrigin),
+            wrist: createSincroPoseTargetPoint(wrist, "wrist", targetOrigin),
         };
-        if (confidence < MIN_LANDMARK_VISIBILITY) {
+        if (confidence < SINCRO_POSE_MIN_LANDMARK_VISIBILITY) {
             return {
                 ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
                 confidence,
@@ -262,39 +267,6 @@ export class SincroPoseTracker {
         };
     }
 
-    private targetPoint(
-        landmark: NormalizedLandmark | undefined,
-        shoulderWidth: number,
-        shoulderCenterX: number,
-        shoulderCenterY: number,
-    ): SincroPoseTargetPointSnapshot {
-        const pointVisibility = visibility(landmark);
-        const pointPresence = presence(landmark);
-        const confidence = Math.min(pointVisibility, pointPresence);
-        const hasPoint = landmark != null && coordinatesAreFinite(landmark);
-        const tracked = hasPoint && confidence >= MIN_LANDMARK_VISIBILITY;
-        const cameraX = hasPoint ? clamp01(landmark.x) : 0.5;
-        const cameraY = hasPoint ? clamp01(landmark.y) : 0.5;
-        const cameraZ = hasPoint && Number.isFinite(landmark.z) ? landmark.z : null;
-
-        // IK は次タスクで解く。ここでは映像座標の Y-down と画角依存の大きさを隠し、
-        // 肩中心原点・肩幅 1.0・Y-up の 2D target として安定して渡す。
-        return {
-            tracked,
-            confidence,
-            visibility: pointVisibility,
-            presence: pointPresence,
-            stale: !tracked,
-            staleReason: tracked ? null : staleReason(hasPoint, confidence),
-            cameraX,
-            cameraY,
-            cameraZ,
-            localX: clampRange((cameraX - shoulderCenterX) / shoulderWidth, -3, 3),
-            localY: clampRange((shoulderCenterY - cameraY) / shoulderWidth, -3, 3),
-            localZ: cameraZ == null ? null : clampRange(cameraZ / shoulderWidth, -3, 3),
-        };
-    }
-
     private createFallbackSnapshot(reason: string, nowMs: number): SincroPoseMotionSnapshot {
         return {
             ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
@@ -312,22 +284,14 @@ export class SincroPoseTracker {
     }
 }
 
-function visibility(landmark: NormalizedLandmark | undefined): number {
-    return clamp01(landmark?.visibility ?? 0);
-}
-
-function presence(landmark: NormalizedLandmark | undefined): number {
-    const landmarkWithPresence = landmark as
-        | (NormalizedLandmark & { presence?: number })
-        | undefined;
-    return clamp01(landmarkWithPresence?.presence ?? landmark?.visibility ?? 0);
-}
-
 function averageVisibility(landmarks: (NormalizedLandmark | undefined)[]): number {
     if (landmarks.length === 0) {
         return 0;
     }
-    return landmarks.reduce((sum, landmark) => sum + visibility(landmark), 0) / landmarks.length;
+    return (
+        landmarks.reduce((sum, landmark) => sum + poseLandmarkVisibility(landmark), 0) /
+        landmarks.length
+    );
 }
 
 function distance2d(a: NormalizedLandmark, b: NormalizedLandmark): number {
@@ -349,24 +313,6 @@ function clamp01(value: number): number {
 
 function clampSigned(value: number): number {
     return Math.max(-1, Math.min(1, Number.isFinite(value) ? value : 0));
-}
-
-function clampRange(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, Number.isFinite(value) ? value : 0));
-}
-
-function coordinatesAreFinite(landmark: NormalizedLandmark): boolean {
-    return Number.isFinite(landmark.x) && Number.isFinite(landmark.y);
-}
-
-function staleReason(hasPoint: boolean, confidence: number): string {
-    if (!hasPoint) {
-        return "landmark_missing";
-    }
-    if (confidence < MIN_LANDMARK_VISIBILITY) {
-        return "low_confidence";
-    }
-    return "not_tracked";
 }
 
 function cloneTargetPoint(snapshot: SincroPoseTargetPointSnapshot): SincroPoseTargetPointSnapshot {
