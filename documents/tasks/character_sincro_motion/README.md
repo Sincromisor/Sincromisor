@@ -27,6 +27,7 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 - Done: `done/TASK-260517024504-sincro-pose-world-landmarks-and-3d-targets.md`
 - Done: `done/TASK-260517024505-sincro-vrm-3d-two-bone-ik-solver.md`
 - Done: `done/TASK-260517024506-sincro-ik-solver-comparison-and-adoption.md`
+- Open: `open/TASK-260517042345-sincro-motion-debug-page-for-ik-playwright.md`
 
 ## 前提
 
@@ -60,3 +61,4 @@ Pose Landmarker は face-only の本流と分けて進める。
 12. `TASK-260517024504`: MediaPipe `worldLandmarks` を 3D IK 用 target snapshot へ正規化する。
 13. `TASK-260517024505`: VRM normalized bones に適用する 3D two-bone IK solver を実装する。
 14. `TASK-260517024506`: `CCDIKSolver` など外部 solver と比較し、本流の IK 方針を採用判断する。
+15. `TASK-260517042345`: 本番 UI から独立した motion / IK デバッグ専用ページを用意し、Playwright 経由で調整・検証できるようにする。

@@ -38,6 +38,13 @@
     - performance gate により face-only fallback できる。
 - Retargeters
     - neutral calibration、clamp、deadband、smoothing、confidence gate を扱う。
+- `pose-landmarker-spike`
+    - MediaPipe PoseLandmarker の model / delegate / inference cost / landmark visibility を単体で確認する experimental page。
+    - VRM retarget や IK 適用後の姿勢比較は扱わない。
+- `motion-debug`
+    - `TrackerRuntime` が出力する `SincroPoseMotionSnapshot` を VRM retarget へ流し、カメラ映像上の Sincro pose target と VRM の動きを比較する developer page。
+    - Playwright 用 selector と `window.__SINCRO_MOTION_DEBUG__` は、手動調整の再現と screenshot / snapshot 取得のための内部 debug API とする。
+    - `ignorePerformanceFallback` を有効にして、低性能端末での IK 調整時も pose snapshot を観測し続ける。
 
 ## Data / State
 
@@ -86,6 +93,7 @@
 - MediaPipe の category 名や matrix を controller へ漏らさない。
 - Debug Console へ raw / normalized / retarget / applied のどこを表示するか決める。
 - Gaze camera device 切替時に preview / AutoMute / tracker が正しく再初期化されるか確認する。
+- IK 調整を行う場合は `motion-debug` で camera overlay、VRM、`poseRetargetRuntime` を同時に確認する。
 
 ## References
 

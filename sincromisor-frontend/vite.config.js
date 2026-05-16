@@ -1,7 +1,7 @@
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, resolve } from "node:path";
 import react from "@vitejs/plugin-react-swc";
-import { readFileSync } from "fs";
-import { createRequire } from "module";
-import { dirname, resolve } from "path";
 import { defineConfig } from "vite";
 
 const contents_src = resolve(__dirname, "src");
@@ -21,6 +21,7 @@ function buildInputMap() {
         simple_vrm: resolve(contents_src, "simple-vrm/index.html"),
         vrm360: resolve(contents_src, "vrm360/index.html"),
         looking_glass_vrm: resolve(contents_src, "looking-glass-vrm/index.html"),
+        motion_debug: resolve(contents_src, "motion-debug/index.html"),
     };
 }
 
