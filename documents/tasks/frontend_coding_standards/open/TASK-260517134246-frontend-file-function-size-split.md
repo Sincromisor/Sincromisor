@@ -328,6 +328,14 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 分割後の最大ファイルは `lookingGlassInputRecovery.ts` 122 行で、新規ファイルはすべて 200 行 soft 閾値以下に収めた。
     - Looking Glass 内部の責務分割のみで、UI 表示文言 / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: `EyeBehaviorController.ts` から eye behavior の型/定数、視線ターゲット生成、まばたき状態機械を分割した。
+    - 追加: `src/ts/SincroVRM/VRMCharacter/eyeBehaviorValues.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/eyeBehaviorTarget.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/EyeBlinkController.ts`
+    - `EyeBehaviorController.ts` は 417 行から 219 行まで縮小し、毎フレーム更新と VRM look expression / eye bone fallback 適用に寄せた。
+    - 分割後の対象ファイルはすべて 200 行 soft 閾値付近または以下に収め、対象領域の hard 超過ファイルは解消した。
+    - VRM eye behavior 内部の責務分割のみで、UI 表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
