@@ -132,13 +132,13 @@ export class TalkManager {
         if (!this.telopDomRenderingEnabled) {
             return;
         }
-        const telopText: HTMLDivElement | null = document.querySelector("div#sincroFooterBox");
+        const telopText = document.querySelector<HTMLDivElement>("div#sincroFooterBox");
         if (!telopText) return;
 
         // speech_idに対応するspanを探す
-        let span: HTMLSpanElement | null = telopText.querySelector<HTMLSpanElement>(
-            `span[data-speech-id="${speech_id}"]`,
-        );
+        let span =
+            telopText.querySelector<HTMLSpanElement>(`span[data-speech-id="${speech_id}"]`) ??
+            undefined;
         if (!span) {
             span = document.createElement("span");
             span.classList.add("sincroFooterBox__telopText");
@@ -152,7 +152,7 @@ export class TalkManager {
 
     // React island を外したあとでも直前のテロップを見返せるよう、保持済み snapshot を再描画する。
     private renderLegacyTelopSnapshot(): void {
-        const telopText: HTMLDivElement | null = document.querySelector("div#sincroFooterBox");
+        const telopText = document.querySelector<HTMLDivElement>("div#sincroFooterBox");
         if (!telopText) {
             return;
         }

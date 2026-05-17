@@ -425,7 +425,8 @@ export class LookingGlassXRController {
                 return;
             }
             if (!canvas.dataset.sincroPrevPointerEvents) {
-                canvas.dataset.sincroPrevPointerEvents = canvas.style.pointerEvents || "__empty__";
+                canvas.dataset.sincroPrevPointerEvents =
+                    canvas.style.pointerEvents === "" ? "__empty__" : canvas.style.pointerEvents;
             }
             canvas.style.pointerEvents = "none";
         });
@@ -438,7 +439,7 @@ export class LookingGlassXRController {
                 return;
             }
             const prev = canvas.dataset.sincroPrevPointerEvents;
-            if (prev == null) {
+            if (prev === undefined) {
                 return;
             }
             canvas.style.pointerEvents = prev === "__empty__" ? "" : prev;

@@ -70,7 +70,7 @@ type SettingsSubsectionTitleProps = {
     actions?: ReactNode;
 };
 
-function joinClassNames(...classNames: Array<string | false | null | undefined>): string {
+function joinClassNames(...classNames: Array<string | false | undefined>): string {
     return classNames.filter(Boolean).join(" ");
 }
 

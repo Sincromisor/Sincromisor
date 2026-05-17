@@ -15,7 +15,7 @@ import { SphereVideo } from "./SphereVideo";
 export class VRM360Scene extends VRMScene {
     private readonly sphereVideo: SphereVideo;
     private readonly lightSphere: Mesh;
-    private lookingGlassXRController: LookingGlassXRController | null = null;
+    private lookingGlassXRController?: LookingGlassXRController;
     /* 動画球の高さをだいたい身長 + カメラの高さ(1.9m)ぐらいに合わせる */
     private readonly videoPositionY: number = 1.9;
 
@@ -103,7 +103,7 @@ export class VRM360Scene extends VRMScene {
         const canvas: HTMLCanvasElement = document.createElement("canvas");
         canvas.width = size;
         canvas.height = size;
-        const ctx: CanvasRenderingContext2D | null = canvas.getContext("2d");
+        const ctx = canvas.getContext("2d");
         if (ctx === null) {
             throw new Error("Failed to get 2d context");
         }

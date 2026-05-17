@@ -110,6 +110,12 @@
     - VRM load 後 controller / root bone / behavior snapshot、CCDIK probe の探索失敗、脚 controller の bone lookup を `undefined` に寄せた。
     - `RTCIceCandidateInit | null` / `event.candidate === null` / `RTCSessionDescription | null` / ONNX metadata の `null` は WebRTC・ブラウザ・外部ライブラリ境界として維持した。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: React shell / legacy DOM fallback / Looking Glass 周辺の内部欠損表現を `undefined` へ追加整理した。
+    - 対象: `RightToolMenu` / `dialogPopAnimationHelpers` / `useConfigurationDialogPlatformState` / `ConfigurationDialogSettingsPanel` / `SettingsPrimitives` / `TalkManager` / `ChatMessageService` / `LookingGlassRuntimeConfig` / `LookingGlassXRController` / `LookingGlassVRMScene` / `VRM360Scene` / `SphereVideo` / `VRMCharacterManager`
+    - DOM query / React ref / vendor API が返す `null` は境界で受け、service 内部キャッシュ、timer、controller、adapter、HLS live sync 値は `undefined` に寄せた。
+    - `!= null` と既定値用途の `||` を、`!== undefined` または明示的な空文字判定へ置き換えた。
+    - 古いコメントアウト済み debug code を削除し、残存 `| null` / `== null` / `!= null` は 32 箇所まで縮小した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

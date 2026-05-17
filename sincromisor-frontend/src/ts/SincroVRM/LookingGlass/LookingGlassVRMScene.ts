@@ -10,7 +10,7 @@ import { LookingGlassXRController } from "./LookingGlassXRController";
 // Looking Glass 用の VRM シーン。
 // 360 背景動画は使わず、通常 VRMScene に Looking Glass 起動導線だけを追加する。
 export class LookingGlassVRMScene extends VRMScene {
-    private lookingGlassXRController: LookingGlassXRController | null = null;
+    private lookingGlassXRController?: LookingGlassXRController;
     private static readonly CAMERA_PITCH_COMPENSATION_DEG = -25;
     // 縦長 LKG 表示向けに、通常 preview も少し引いて下寄りの構図にする。
     private static readonly PREVIEW_CAMERA_TARGET = new Vector3(0, 0.95, 0);
