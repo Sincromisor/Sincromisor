@@ -23,13 +23,13 @@ export type SincroPoseRetargetedArm = {
     ikActive: boolean;
     ikWeight: number;
     ikSolverMode: SincroPoseArmIkMode | "none";
-    fallbackReason: string | null;
+    fallbackReason?: string;
     constraint: SincroArmIkConstraintSnapshot;
     upperArm: { x: number; y: number; z: number };
     lowerArm: { x: number; y: number; z: number };
     wrist: { x: number; y: number; z: number };
-    upperArmQuaternion: SincroArmIkQuaternion | null;
-    lowerArmQuaternion: SincroArmIkQuaternion | null;
+    upperArmQuaternion?: SincroArmIkQuaternion;
+    lowerArmQuaternion?: SincroArmIkQuaternion;
 };
 
 export type SincroPoseIkMode = "fallback" | SincroPoseArmIkMode;
@@ -38,9 +38,9 @@ export type SincroPoseRetargetFrame = {
     active: boolean;
     confidence: number;
     ikMode: SincroPoseIkMode;
-    fallbackReason: string | null;
+    fallbackReason?: string;
     solverProbe: {
-        ccdik: SincroCcdIkProbeResult | null;
+        ccdik?: SincroCcdIkProbeResult;
     };
     anchor: {
         active: boolean;
@@ -116,9 +116,7 @@ const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
     confidence: 0,
     ikMode: "fallback",
     fallbackReason: "neutral",
-    solverProbe: {
-        ccdik: null,
-    },
+    solverProbe: {},
     anchor: {
         active: false,
         weight: 0,
@@ -141,8 +139,8 @@ const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
         upperArm: { x: 0, y: 0, z: 0 },
         lowerArm: { x: 0, y: 0, z: 0 },
         wrist: { x: 0, y: 0, z: 0 },
-        upperArmQuaternion: null,
-        lowerArmQuaternion: null,
+        upperArmQuaternion: undefined,
+        lowerArmQuaternion: undefined,
     },
     rightArm: {
         active: false,
@@ -154,8 +152,8 @@ const NEUTRAL_POSE_FRAME: SincroPoseRetargetFrame = {
         upperArm: { x: 0, y: 0, z: 0 },
         lowerArm: { x: 0, y: 0, z: 0 },
         wrist: { x: 0, y: 0, z: 0 },
-        upperArmQuaternion: null,
-        lowerArmQuaternion: null,
+        upperArmQuaternion: undefined,
+        lowerArmQuaternion: undefined,
     },
 };
 
@@ -170,23 +168,23 @@ type ArmIkTarget = {
 type UpperBodyAnchor = SincroPoseRetargetFrame["anchor"];
 
 type ArmIkSolveResult = {
-    target: ArmIkTarget | null;
-    fallbackReason: string | null;
+    target?: ArmIkTarget;
+    fallbackReason?: string;
 };
 
 type WorldArmIkSolveResult = {
-    result: SincroArmIkSolveResult | null;
-    fallbackReason: string | null;
+    result?: SincroArmIkSolveResult;
+    fallbackReason?: string;
 };
 
 // Pose同期はまだoptionalなので、低振幅・強いsmoothingでVRM向け値へ変換する。
 // 腕が画面外へ出た時は部位単位で neutral に戻し、face-only の同期を邪魔しない。
 export class SincroPoseRetargeter {
     private config: SincroPoseRetargetConfig;
-    private lastUpdateAtMs: number | null = null;
+    private lastUpdateAtMs?: number;
     private smoothedFrame: SincroPoseRetargetFrame = cloneFrame(NEUTRAL_POSE_FRAME);
-    private armIkSolvers: Record<"left" | "right", SincroArmIkSolver> | null = null;
-    private ccdIkProbeResult: SincroCcdIkProbeResult | null = null;
+    private armIkSolvers?: Record<"left" | "right", SincroArmIkSolver>;
+    private ccdIkProbeResult?: SincroCcdIkProbeResult;
 
     constructor(config: Partial<SincroPoseRetargetConfig> = {}) {
         this.config = {
@@ -229,7 +227,7 @@ export class SincroPoseRetargeter {
 
     retarget(snapshot: SincroPoseMotionSnapshot, nowMs: number): SincroPoseRetargetFrame {
         const deltaMs =
-            this.lastUpdateAtMs == null
+            this.lastUpdateAtMs === undefined
                 ? 1000 / 60
                 : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 120);
         this.lastUpdateAtMs = nowMs;
@@ -254,7 +252,7 @@ export class SincroPoseRetargeter {
             active: true,
             confidence: snapshot.confidence,
             ikMode: ikModeForArms(leftArm, rightArm),
-            fallbackReason: null,
+            fallbackReason: undefined,
             solverProbe: this.solverProbeSnapshot(),
             anchor,
             upperBody: {
@@ -306,11 +304,11 @@ export class SincroPoseRetargeter {
     }
 
     reset(): void {
-        this.lastUpdateAtMs = null;
+        this.lastUpdateAtMs = undefined;
         this.smoothedFrame = cloneFrame(NEUTRAL_POSE_FRAME);
     }
 
-    private snapshotFallbackReason(snapshot: SincroPoseMotionSnapshot): string | null {
+    private snapshotFallbackReason(snapshot: SincroPoseMotionSnapshot): string | undefined {
         if (!snapshot.trackingEnabled) {
             return snapshot.fallbackReason ?? "tracking_disabled";
         }
@@ -323,7 +321,7 @@ export class SincroPoseRetargeter {
         if (snapshot.confidence < this.config.minConfidence) {
             return "pose_low_confidence";
         }
-        return null;
+        return undefined;
     }
 
     private upperBodyAnchor(snapshot: SincroPoseMotionSnapshot): UpperBodyAnchor {
@@ -383,7 +381,7 @@ export class SincroPoseRetargeter {
             ikActive: false,
             ikWeight: 0,
             ikSolverMode: "feature_only",
-            fallbackReason: null,
+            fallbackReason: undefined,
             constraint: cloneArmIkConstraint(NEUTRAL_ARM_IK_CONSTRAINT),
             upperArm: {
                 x: -positiveOnly(arm.upperArmLift) * this.config.upperArmLiftRad * scale,
@@ -405,15 +403,15 @@ export class SincroPoseRetargeter {
                 y: 0,
                 z: sideSign * arm.wristRaise * this.config.wristRaiseRad * scale,
             },
-            upperArmQuaternion: null,
-            lowerArmQuaternion: null,
+            upperArmQuaternion: undefined,
+            lowerArmQuaternion: undefined,
         };
 
         if (this.config.armIkMode === "feature_only" || this.config.armIkStrength <= 0) {
             return {
                 ...featureArm,
                 fallbackReason:
-                    this.config.armIkMode === "feature_only" ? null : "ik_strength_zero",
+                    this.config.armIkMode === "feature_only" ? undefined : "ik_strength_zero",
             };
         }
 
@@ -434,7 +432,7 @@ export class SincroPoseRetargeter {
             ikActive: true,
             ikWeight: ikResult.target.weight,
             ikSolverMode: "screen_space_ik",
-            fallbackReason: null,
+            fallbackReason: undefined,
             constraint: cloneArmIkConstraint(NEUTRAL_ARM_IK_CONSTRAINT),
             upperArm: {
                 x: -ikResult.target.lift * this.config.armIkMaxLiftRad * ikScale,
@@ -451,15 +449,15 @@ export class SincroPoseRetargeter {
                 y: 0,
                 z: featureArm.wrist.z,
             },
-            upperArmQuaternion: null,
-            lowerArmQuaternion: null,
+            upperArmQuaternion: undefined,
+            lowerArmQuaternion: undefined,
         };
         return {
             ...blendArm(featureArm, ikArm, this.config.armIkStrength * ikResult.target.weight),
             ikActive: true,
             ikWeight: ikResult.target.weight,
             ikSolverMode: "screen_space_ik",
-            fallbackReason: null,
+            fallbackReason: undefined,
         };
     }
 
@@ -483,7 +481,7 @@ export class SincroPoseRetargeter {
             ikSolverMode: "world_3d_ik",
             fallbackReason:
                 ikResult.result.constraint.reasons[0] ??
-                (ikResult.result.targetClamped ? "ik_target_clamped" : null),
+                (ikResult.result.targetClamped ? "ik_target_clamped" : undefined),
             constraint: cloneArmIkConstraint(ikResult.result.constraint),
             upperArm: { x: 0, y: 0, z: 0 },
             lowerArm: { x: 0, y: 0, z: 0 },
@@ -507,11 +505,11 @@ export class SincroPoseRetargeter {
     ): WorldArmIkSolveResult {
         const solver = this.armIkSolvers?.[side];
         if (!solver) {
-            return { result: null, fallbackReason: "ik_solver_missing" };
+            return { fallbackReason: "ik_solver_missing" };
         }
         const gateReason = armWorldIkGateReason(targets);
         if (gateReason) {
-            return { result: null, fallbackReason: gateReason };
+            return { fallbackReason: gateReason };
         }
         const wrist = mapWorldTargetDeltaToVrm(
             targets.shoulder,
@@ -533,8 +531,8 @@ export class SincroPoseRetargeter {
             1,
         );
         return {
-            result: solver.solve({ wrist, elbowPole, weight }),
-            fallbackReason: null,
+            result: solver.solve({ wrist, elbowPole, weight }) ?? undefined,
+            fallbackReason: undefined,
         };
     }
 
@@ -545,13 +543,12 @@ export class SincroPoseRetargeter {
         const solver = this.armIkSolvers?.[side];
         if (!solver) {
             return {
-                target: null,
                 fallbackReason: "ik_solver_missing",
             };
         }
         const gateReason = armIkGateReason(targets);
         if (gateReason) {
-            return { target: null, fallbackReason: gateReason };
+            return { fallbackReason: gateReason };
         }
         const targetWeight = MathUtils.clamp(
             Math.min(targets.shoulder.ikWeight, targets.elbow.ikWeight, targets.wrist.ikWeight),
@@ -605,7 +602,7 @@ export class SincroPoseRetargeter {
                 pole: MathUtils.clamp(openFromElbow - openFromWrist * 0.35, -1, 1),
                 weight: targetWeight,
             },
-            fallbackReason: null,
+            fallbackReason: undefined,
         };
     }
 
@@ -626,7 +623,7 @@ export class SincroPoseRetargeter {
                       ...this.ccdIkProbeResult,
                       notes: [...this.ccdIkProbeResult.notes],
                   }
-                : null,
+                : undefined,
         };
     }
 }
@@ -725,12 +722,12 @@ function blendArm(
 }
 
 function smoothQuaternion(
-    current: SincroArmIkQuaternion | null,
-    target: SincroArmIkQuaternion | null,
+    current: SincroArmIkQuaternion | undefined,
+    target: SincroArmIkQuaternion | undefined,
     alpha: number,
-): SincroArmIkQuaternion | null {
+): SincroArmIkQuaternion | undefined {
     if (!target) {
-        return null;
+        return undefined;
     }
     if (!current) {
         return { ...target };
@@ -823,8 +820,8 @@ function cloneArm(arm: SincroPoseRetargetedArm): SincroPoseRetargetedArm {
         upperArm: { ...arm.upperArm },
         lowerArm: { ...arm.lowerArm },
         wrist: { ...arm.wrist },
-        upperArmQuaternion: arm.upperArmQuaternion ? { ...arm.upperArmQuaternion } : null,
-        lowerArmQuaternion: arm.lowerArmQuaternion ? { ...arm.lowerArmQuaternion } : null,
+        upperArmQuaternion: arm.upperArmQuaternion ? { ...arm.upperArmQuaternion } : undefined,
+        lowerArmQuaternion: arm.lowerArmQuaternion ? { ...arm.lowerArmQuaternion } : undefined,
     };
 }
 
@@ -855,7 +852,7 @@ function cloneSolverProbe(
                   ...solverProbe.ccdik,
                   notes: [...solverProbe.ccdik.notes],
               }
-            : null,
+            : undefined,
     };
 }
 
@@ -893,7 +890,7 @@ function cloneArmIkConstraint(
     };
 }
 
-function armWorldIkGateReason(targets: SincroPoseArmTargetSnapshot): string | null {
+function armWorldIkGateReason(targets: SincroPoseArmTargetSnapshot): string | undefined {
     if (!targets.shoulder.world.worldUsableForIk) {
         return armWorldIkTargetReason("shoulder", targets.shoulder);
     }
@@ -903,7 +900,7 @@ function armWorldIkGateReason(targets: SincroPoseArmTargetSnapshot): string | nu
     if (!targets.wrist.world.worldUsableForIk) {
         return armWorldIkTargetReason("wrist", targets.wrist);
     }
-    return null;
+    return undefined;
 }
 
 function armWorldIkTargetReason(
@@ -933,7 +930,7 @@ function mapWorldTargetDeltaToVrm(
     return new Vector3(deltaX * scale, -deltaY * scale, -deltaZ * scale * 0.72);
 }
 
-function armIkGateReason(targets: SincroPoseArmTargetSnapshot): string | null {
+function armIkGateReason(targets: SincroPoseArmTargetSnapshot): string | undefined {
     if (!targets.shoulder.tracked) {
         return armIkTargetReason("shoulder", targets.shoulder);
     }
@@ -943,7 +940,7 @@ function armIkGateReason(targets: SincroPoseArmTargetSnapshot): string | null {
     if (!targets.wrist.usableForIk) {
         return armIkTargetReason("wrist", targets.wrist);
     }
-    return null;
+    return undefined;
 }
 
 function armIkTargetReason(
@@ -978,11 +975,11 @@ function ikModeForArms(
     return "fallback";
 }
 
-function measureArmIkSolvers(vrm: VRM): Record<"left" | "right", SincroArmIkSolver> | null {
+function measureArmIkSolvers(vrm: VRM): Record<"left" | "right", SincroArmIkSolver> | undefined {
     const left = SincroArmIkSolver.fromVrm(vrm, "left");
     const right = SincroArmIkSolver.fromVrm(vrm, "right");
     if (!left || !right) {
-        return null;
+        return undefined;
     }
     return { left, right };
 }

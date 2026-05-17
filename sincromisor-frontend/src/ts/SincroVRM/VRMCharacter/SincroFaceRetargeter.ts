@@ -129,9 +129,9 @@ const EYE_LOOK_DOWN_KEYS = ["eyeLookDownLeft", "eyeLookDownRight"] as const;
 // calibration と smoothing をここに閉じ込め、VRM controller が MediaPipe 名や軸補正を知らない構造にする。
 export class SincroFaceRetargeter {
     private readonly config: SincroFaceRetargetConfig;
-    private neutralPose: { yawDeg: number; pitchDeg: number; rollDeg: number } | null = null;
-    private neutralStartedAtMs: number | null = null;
-    private lastUpdateAtMs: number | null = null;
+    private neutralPose?: { yawDeg: number; pitchDeg: number; rollDeg: number };
+    private neutralStartedAtMs?: number;
+    private lastUpdateAtMs?: number;
     private smoothedHead: SincroFaceRetargetedHeadPose = cloneHead(NEUTRAL_HEAD);
     private smoothedExpressions: SincroFaceRetargetedExpressions = { ...NEUTRAL_EXPRESSIONS };
 
@@ -160,13 +160,13 @@ export class SincroFaceRetargeter {
 
     retarget(snapshot: SincroFaceMotionSnapshot, nowMs: number): SincroFaceRetargetFrame {
         const deltaMs =
-            this.lastUpdateAtMs == null
+            this.lastUpdateAtMs === undefined
                 ? 1000 / 60
                 : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
         this.lastUpdateAtMs = nowMs;
 
         if (!this.snapshotIsUsable(snapshot)) {
-            this.neutralStartedAtMs = null;
+            this.neutralStartedAtMs = undefined;
             return this.smoothFrame(
                 false,
                 0,
@@ -184,9 +184,9 @@ export class SincroFaceRetargeter {
     }
 
     reset(): void {
-        this.neutralPose = null;
-        this.neutralStartedAtMs = null;
-        this.lastUpdateAtMs = null;
+        this.neutralPose = undefined;
+        this.neutralStartedAtMs = undefined;
+        this.lastUpdateAtMs = undefined;
         this.smoothedHead = cloneHead(NEUTRAL_HEAD);
         this.smoothedExpressions = { ...NEUTRAL_EXPRESSIONS };
     }
@@ -200,7 +200,7 @@ export class SincroFaceRetargeter {
     }
 
     private updateNeutral(snapshot: SincroFaceMotionSnapshot, nowMs: number): void {
-        if (this.neutralStartedAtMs == null) {
+        if (this.neutralStartedAtMs === undefined) {
             this.neutralStartedAtMs = nowMs;
             this.neutralPose = {
                 yawDeg: snapshot.headPose.yawDeg,
@@ -209,7 +209,10 @@ export class SincroFaceRetargeter {
             };
             return;
         }
-        if (!this.neutralPose || nowMs - this.neutralStartedAtMs >= this.config.neutralLearningMs) {
+        if (
+            this.neutralPose === undefined ||
+            nowMs - this.neutralStartedAtMs >= this.config.neutralLearningMs
+        ) {
             return;
         }
 
@@ -253,7 +256,7 @@ export class SincroFaceRetargeter {
 
 export function retargetSincroFaceHeadPose(
     snapshot: SincroFaceMotionSnapshot,
-    neutralPose: { yawDeg: number; pitchDeg: number; rollDeg: number } | null,
+    neutralPose: { yawDeg: number; pitchDeg: number; rollDeg: number } | undefined,
     config: SincroFaceRetargetConfig = DEFAULT_SINCRO_FACE_RETARGET_CONFIG,
 ): SincroFaceRetargetedHeadPose {
     const neutral = neutralPose ?? { yawDeg: 0, pitchDeg: 0, rollDeg: 0 };

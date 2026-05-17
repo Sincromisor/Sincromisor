@@ -203,9 +203,7 @@ export function createDefaultSnapshot(): DebugConsoleSnapshot {
                 confidence: 0,
                 ikMode: "fallback",
                 fallbackReason: "neutral",
-                solverProbe: {
-                    ccdik: null,
-                },
+                solverProbe: {},
                 anchor: {
                     active: false,
                     weight: 0,
@@ -222,8 +220,8 @@ export function createDefaultSnapshot(): DebugConsoleSnapshot {
                     upperArm: { x: 0, y: 0, z: 0 },
                     lowerArm: { x: 0, y: 0, z: 0 },
                     wrist: { x: 0, y: 0, z: 0 },
-                    upperArmQuaternion: null,
-                    lowerArmQuaternion: null,
+                    upperArmQuaternion: undefined,
+                    lowerArmQuaternion: undefined,
                 },
                 rightArm: {
                     active: false,
@@ -235,8 +233,8 @@ export function createDefaultSnapshot(): DebugConsoleSnapshot {
                     upperArm: { x: 0, y: 0, z: 0 },
                     lowerArm: { x: 0, y: 0, z: 0 },
                     wrist: { x: 0, y: 0, z: 0 },
-                    upperArmQuaternion: null,
-                    lowerArmQuaternion: null,
+                    upperArmQuaternion: undefined,
+                    lowerArmQuaternion: undefined,
                 },
             },
         },

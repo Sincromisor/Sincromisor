@@ -40,9 +40,9 @@ type PoseSide = "left" | "right";
 // PoseLandmarker の上半身ランドマークを、低振幅 retarget 用の内部 snapshot へ正規化する。
 // ここでは高精度IKを狙わず、肩・上腕・前腕が暴れないことを優先して confidence gate を強めに置く。
 export class SincroPoseTracker {
-    private poseLandmarker: PoseLandmarker | null = null;
-    private initPromise: Promise<void> | null = null;
-    private lastInferenceEndedAtMs: number | null = null;
+    private poseLandmarker?: PoseLandmarker;
+    private initPromise?: Promise<void>;
+    private lastInferenceEndedAtMs?: number;
     private consecutiveFailures = 0;
     private snapshot: SincroPoseMotionSnapshot = {
         ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
@@ -57,7 +57,7 @@ export class SincroPoseTracker {
         }
         if (!this.initPromise) {
             this.initPromise = this.createPoseLandmarker().catch((error) => {
-                this.initPromise = null;
+                this.initPromise = undefined;
                 this.snapshot = this.createFallbackSnapshot(
                     "PoseLandmarker の初期化に失敗しました。",
                     performance.now(),
@@ -69,7 +69,7 @@ export class SincroPoseTracker {
     }
 
     modelIsLoaded(): boolean {
-        return this.poseLandmarker != null;
+        return this.poseLandmarker !== undefined;
     }
 
     detect(videoFrame: TexImageSource, timestampMs: number): SincroPoseMotionSnapshot {
@@ -86,7 +86,7 @@ export class SincroPoseTracker {
         const inferenceEndedAtMs = performance.now();
         const inferenceTimeMs = inferenceEndedAtMs - inferenceStartedAtMs;
         const inferenceFps =
-            this.lastInferenceEndedAtMs == null
+            this.lastInferenceEndedAtMs === undefined
                 ? 0
                 : 1000 / Math.max(1, inferenceEndedAtMs - this.lastInferenceEndedAtMs);
         this.lastInferenceEndedAtMs = inferenceEndedAtMs;
@@ -116,15 +116,15 @@ export class SincroPoseTracker {
             fallbackReason: reason,
             lastUpdatedAtMs: nowMs,
         };
-        this.lastInferenceEndedAtMs = null;
+        this.lastInferenceEndedAtMs = undefined;
         this.consecutiveFailures = 0;
         return this.getSnapshot();
     }
 
     dispose(): void {
         this.poseLandmarker?.close();
-        this.poseLandmarker = null;
-        this.initPromise = null;
+        this.poseLandmarker = undefined;
+        this.initPromise = undefined;
         this.stop("PoseLandmarker disposed.");
     }
 

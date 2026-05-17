@@ -76,9 +76,9 @@ export class SincroArmIkSolver {
     private readonly bindPoleDirection: Vector3;
     private readonly constraintResolver: SincroArmIkConstraintResolver;
     private readonly options: SincroArmIkOptions;
-    private lastPoleDirection: Vector3 | null = null;
+    private lastPoleDirection?: Vector3;
 
-    static fromVrm(vrm: VRM, side: SincroArmSide): SincroArmIkSolver | null {
+    static fromVrm(vrm: VRM, side: SincroArmSide): SincroArmIkSolver | undefined {
         vrm.scene.updateMatrixWorld(true);
         const upperArmNode = getNode(vrm, `${side}UpperArm` as VRMHumanBoneName);
         const lowerArmNode = getNode(vrm, `${side}LowerArm` as VRMHumanBoneName);
@@ -94,7 +94,7 @@ export class SincroArmIkSolver {
             `${side === "left" ? "right" : "left"}UpperArm` as VRMHumanBoneName,
         );
         if (!upperArmNode || !lowerArmNode || !handNode || !oppositeUpperArmNode) {
-            return null;
+            return undefined;
         }
         return new SincroArmIkSolver(
             side,
@@ -114,8 +114,8 @@ export class SincroArmIkSolver {
         lowerArmNode: Object3D,
         handNode: Object3D,
         oppositeUpperArmNode: Object3D,
-        headNode: Object3D | null,
-        chestNode: Object3D | null,
+        headNode: Object3D | undefined,
+        chestNode: Object3D | undefined,
         options: SincroArmIkOptions,
     ) {
         this.side = side;
@@ -145,14 +145,18 @@ export class SincroArmIkSolver {
             side,
             shoulderWidth: this.shoulderWidth,
             bindPoleDirection: this.bindPoleDirection,
-            headCenterFromShoulder: headNode ? this.worldPosition(headNode).sub(shoulder) : null,
-            chestCenterFromShoulder: chestNode ? this.worldPosition(chestNode).sub(shoulder) : null,
+            headCenterFromShoulder: headNode
+                ? this.worldPosition(headNode).sub(shoulder)
+                : undefined,
+            chestCenterFromShoulder: chestNode
+                ? this.worldPosition(chestNode).sub(shoulder)
+                : undefined,
         });
     }
 
-    solve(target: SincroArmIkTarget): SincroArmIkSolveResult | null {
+    solve(target: SincroArmIkTarget): SincroArmIkSolveResult | undefined {
         if (!targetDirectionIsUsable(target.wrist)) {
-            return null;
+            return undefined;
         }
 
         this.upperArmNode.parent?.updateMatrixWorld(true);
@@ -178,7 +182,7 @@ export class SincroArmIkSolver {
         const lowerDirection = targetClamp.target.clone().sub(elbow).normalize();
 
         if (!targetDirectionIsUsable(upperDirection) || !targetDirectionIsUsable(lowerDirection)) {
-            return null;
+            return undefined;
         }
 
         const parentWorldQuaternion = this.parentWorldQuaternion();
@@ -211,7 +215,7 @@ export class SincroArmIkSolver {
         ];
         const uniqueReasons = [...new Set(reasons)];
         const collisionAvoided =
-            targetCollision.reason != null ||
+            targetCollision.reason !== undefined ||
             forearmCollision === "head_collision_avoided" ||
             forearmCollision === "chest_no_go_zone";
         const jointLimited =
@@ -304,16 +308,16 @@ export class SincroArmIkSolver {
     }
 }
 
-function getNode(vrm: VRM, name: VRMHumanBoneName): Object3D | null {
-    return vrm.humanoid.getNormalizedBoneNode(name);
+function getNode(vrm: VRM, name: VRMHumanBoneName): Object3D | undefined {
+    return vrm.humanoid.getNormalizedBoneNode(name) ?? undefined;
 }
 
-function firstNode(vrm: VRM, names: VRMHumanBoneName[]): Object3D | null {
+function firstNode(vrm: VRM, names: VRMHumanBoneName[]): Object3D | undefined {
     for (const name of names) {
         const node = getNode(vrm, name);
         if (node) {
             return node;
         }
     }
-    return null;
+    return undefined;
 }

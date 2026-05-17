@@ -21,7 +21,7 @@ export function clonePoseRetargetRuntime(
                       ...frame.solverProbe.ccdik,
                       notes: [...frame.solverProbe.ccdik.notes],
                   }
-                : null,
+                : undefined,
         },
         anchor: {
             active: frame.anchor.active,

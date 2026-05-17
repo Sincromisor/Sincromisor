@@ -54,7 +54,7 @@ type TargetConstraintResult = {
 
 type TargetAvoidanceResult = {
     target: Vector3;
-    reason: string | null;
+    reason?: string;
     pushDistance: number;
 };
 
@@ -62,8 +62,8 @@ type SincroArmIkConstraintResolverOptions = {
     side: SincroArmSide;
     shoulderWidth: number;
     bindPoleDirection: Vector3;
-    headCenterFromShoulder: Vector3 | null;
-    chestCenterFromShoulder: Vector3 | null;
+    headCenterFromShoulder?: Vector3;
+    chestCenterFromShoulder?: Vector3;
     options?: SincroArmIkConstraintOptions;
 };
 
@@ -72,8 +72,8 @@ export class SincroArmIkConstraintResolver {
     private readonly side: SincroArmSide;
     private readonly shoulderWidth: number;
     private readonly bindPoleDirection: Vector3;
-    private readonly headCenterFromShoulder: Vector3 | null;
-    private readonly chestCenterFromShoulder: Vector3 | null;
+    private readonly headCenterFromShoulder?: Vector3;
+    private readonly chestCenterFromShoulder?: Vector3;
     private readonly options: SincroArmIkConstraintOptions;
 
     constructor(options: SincroArmIkConstraintResolverOptions) {
@@ -141,7 +141,7 @@ export class SincroArmIkConstraintResolver {
         };
     }
 
-    forearmCollisionReason(elbow: Vector3, wrist: Vector3): string | null {
+    forearmCollisionReason(elbow: Vector3, wrist: Vector3): string | undefined {
         const forearmHeadRadius =
             (this.options.headRadiusRatio + this.options.forearmRadiusRatio) * this.shoulderWidth;
         if (
@@ -164,7 +164,7 @@ export class SincroArmIkConstraintResolver {
         ) {
             return "chest_no_go_zone";
         }
-        return null;
+        return undefined;
     }
 
     constraintWeightScale(
@@ -195,17 +195,17 @@ export class SincroArmIkConstraintResolver {
 
     private pushPointOutOfSphere(
         target: Vector3,
-        center: Vector3 | null,
+        center: Vector3 | undefined,
         radius: number,
         reason: string,
     ): TargetAvoidanceResult {
         if (!center) {
-            return { target, reason: null, pushDistance: 0 };
+            return { target, pushDistance: 0 };
         }
         const fromCenter = target.clone().sub(center);
         const distance = fromCenter.length();
         if (distance >= radius) {
-            return { target, reason: null, pushDistance: 0 };
+            return { target, pushDistance: 0 };
         }
         const direction = targetDirectionIsUsable(fromCenter)
             ? fromCenter.normalize()
@@ -216,17 +216,17 @@ export class SincroArmIkConstraintResolver {
 
     private pushPointOutOfEllipsoid(
         target: Vector3,
-        center: Vector3 | null,
+        center: Vector3 | undefined,
         radii: Vector3,
         reason: string,
     ): TargetAvoidanceResult {
         if (!center || radii.x <= 0 || radii.y <= 0 || radii.z <= 0) {
-            return { target, reason: null, pushDistance: 0 };
+            return { target, pushDistance: 0 };
         }
         const offset = target.clone().sub(center);
         const scaledLength = Math.hypot(offset.x / radii.x, offset.y / radii.y, offset.z / radii.z);
         if (scaledLength >= 1) {
-            return { target, reason: null, pushDistance: 0 };
+            return { target, pushDistance: 0 };
         }
         const direction = targetDirectionIsUsable(offset)
             ? offset.multiplyScalar(1 / Math.max(scaledLength, MIN_DIRECTION_LENGTH))
@@ -238,7 +238,7 @@ export class SincroArmIkConstraintResolver {
     private segmentIntersectsSphere(
         start: Vector3,
         end: Vector3,
-        center: Vector3 | null,
+        center: Vector3 | undefined,
         radius: number,
     ): boolean {
         if (!center) {
@@ -250,7 +250,7 @@ export class SincroArmIkConstraintResolver {
     private segmentIntersectsEllipsoid(
         start: Vector3,
         end: Vector3,
-        center: Vector3 | null,
+        center: Vector3 | undefined,
         radii: Vector3,
     ): boolean {
         if (!center || radii.x <= 0 || radii.y <= 0 || radii.z <= 0) {
