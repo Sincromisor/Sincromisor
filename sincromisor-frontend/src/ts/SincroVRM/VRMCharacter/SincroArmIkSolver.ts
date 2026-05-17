@@ -1,4 +1,4 @@
-import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
+import type { VRM } from "@pixiv/three-vrm";
 import type { Object3D } from "three/src/core/Object3D.js";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
@@ -18,45 +18,22 @@ import {
     serializeQuaternion,
     targetDirectionIsUsable,
 } from "./sincroArmIkGeometry";
+import { resolveArmIkPoleDirection, type SincroArmIkElbowPole } from "./sincroArmIkPole";
+import { captureSincroArmIkSkeleton, type SincroArmIkSkeleton } from "./sincroArmIkSkeleton";
+import type {
+    SincroArmIkOptions,
+    SincroArmIkSolveResult,
+    SincroArmIkTarget,
+    SincroArmSide,
+} from "./sincroArmIkTypes";
 
-export type SincroArmSide = "left" | "right";
-
-export type SincroArmIkTarget = {
-    wrist: Vector3;
-    elbowPole: Vector3;
-    weight: number;
-};
-
-export type SincroArmIkQuaternion = {
-    x: number;
-    y: number;
-    z: number;
-    w: number;
-};
-
-export type SincroArmIkSolveResult = {
-    upperArmQuaternion: SincroArmIkQuaternion;
-    lowerArmQuaternion: SincroArmIkQuaternion;
-    neutralUpperArmQuaternion: SincroArmIkQuaternion;
-    neutralLowerArmQuaternion: SincroArmIkQuaternion;
-    targetClamped: boolean;
-    constraint: SincroArmIkConstraintSnapshot;
-    weight: number;
-};
-
-type SincroArmIkOptions = {
-    maxUpperArmDeltaRad: number;
-    maxLowerArmDeltaRad: number;
-    minReachRatio: number;
-    maxReachRatio: number;
-    overheadMinReachRatio: number;
-    poleFlipDotThreshold: number;
-};
-
-type SincroArmIkElbowPole = {
-    direction: Vector3;
-    stabilized: boolean;
-};
+export type {
+    SincroArmIkOptions,
+    SincroArmIkQuaternion,
+    SincroArmIkSolveResult,
+    SincroArmIkTarget,
+    SincroArmSide,
+} from "./sincroArmIkTypes";
 
 type SincroArmIkPreparedTarget = {
     targetConstraint: ReturnType<SincroArmIkConstraintResolver["constrainShoulderTarget"]>;
@@ -87,6 +64,10 @@ type SincroArmIkConstraintResultOptions = {
     forearmCollision: ReturnType<SincroArmIkConstraintResolver["forearmCollisionReason"]>;
 };
 
+type SincroArmIkSolverConstructorOptions = SincroArmIkSkeleton & {
+    options: SincroArmIkOptions;
+};
+
 const DEFAULT_OPTIONS: SincroArmIkOptions = {
     maxUpperArmDeltaRad: MathUtils.degToRad(142),
     maxLowerArmDeltaRad: MathUtils.degToRad(132),
@@ -115,45 +96,26 @@ export class SincroArmIkSolver {
     private lastPoleDirection?: Vector3;
 
     static fromVrm(vrm: VRM, side: SincroArmSide): SincroArmIkSolver | undefined {
-        vrm.scene.updateMatrixWorld(true);
-        const upperArmNode = getNode(vrm, `${side}UpperArm` as VRMHumanBoneName);
-        const lowerArmNode = getNode(vrm, `${side}LowerArm` as VRMHumanBoneName);
-        const handNode = getNode(vrm, `${side}Hand` as VRMHumanBoneName);
-        const headNode = getNode(vrm, "head" as VRMHumanBoneName);
-        const chestNode = firstNode(vrm, [
-            "upperChest" as VRMHumanBoneName,
-            "chest" as VRMHumanBoneName,
-            "spine" as VRMHumanBoneName,
-        ]);
-        const oppositeUpperArmNode = getNode(
-            vrm,
-            `${side === "left" ? "right" : "left"}UpperArm` as VRMHumanBoneName,
-        );
-        if (!upperArmNode || !lowerArmNode || !handNode || !oppositeUpperArmNode) {
+        const skeleton = captureSincroArmIkSkeleton(vrm, side);
+        if (!skeleton) {
             return undefined;
         }
-        return new SincroArmIkSolver(
-            side,
-            upperArmNode,
-            lowerArmNode,
-            handNode,
-            oppositeUpperArmNode,
-            headNode,
-            chestNode,
-            DEFAULT_OPTIONS,
-        );
+        return new SincroArmIkSolver({
+            ...skeleton,
+            options: DEFAULT_OPTIONS,
+        });
     }
 
-    private constructor(
-        side: SincroArmSide,
-        upperArmNode: Object3D,
-        lowerArmNode: Object3D,
-        handNode: Object3D,
-        oppositeUpperArmNode: Object3D,
-        headNode: Object3D | undefined,
-        chestNode: Object3D | undefined,
-        options: SincroArmIkOptions,
-    ) {
+    private constructor({
+        side,
+        upperArmNode,
+        lowerArmNode,
+        handNode,
+        oppositeUpperArmNode,
+        headNode,
+        chestNode,
+        options,
+    }: SincroArmIkSolverConstructorOptions) {
         this.side = side;
         this.upperArmNode = upperArmNode;
         this.neutralUpperArmQuaternion = upperArmNode.quaternion.clone();
@@ -239,7 +201,13 @@ export class SincroArmIkSolver {
             bindUpperDirection: this.bindUpperDirectionInParent,
             options: this.options,
         });
-        const elbowPole = this.poleDirection(target.elbowPole, targetClamp.target);
+        const elbowPole = resolveArmIkPoleDirection({
+            elbowPole: target.elbowPole,
+            target: targetClamp.target,
+            bindPoleDirection: this.bindPoleDirection,
+            lastPoleDirection: this.lastPoleDirection,
+            poleFlipDotThreshold: this.options.poleFlipDotThreshold,
+        });
         const elbow = elbowPosition(
             targetClamp.target,
             elbowPole.direction,
@@ -329,51 +297,6 @@ export class SincroArmIkSolver {
         };
     }
 
-    private poleDirection(
-        elbowPole: Vector3,
-        target: Vector3,
-    ): {
-        direction: Vector3;
-        stabilized: boolean;
-    } {
-        const targetDirection = target.clone().normalize();
-        const pole = elbowPole
-            .clone()
-            .sub(targetDirection.clone().multiplyScalar(elbowPole.dot(targetDirection)));
-        if (targetDirectionIsUsable(pole)) {
-            return this.stabilizePoleDirection(pole.normalize(), targetDirection);
-        }
-        const fallbackPole = this.bindPoleDirection
-            .clone()
-            .sub(
-                targetDirection.clone().multiplyScalar(this.bindPoleDirection.dot(targetDirection)),
-            );
-        const direction = targetDirectionIsUsable(fallbackPole)
-            ? fallbackPole.normalize()
-            : new Vector3(0, 1, 0);
-        return { direction, stabilized: true };
-    }
-
-    private stabilizePoleDirection(
-        candidate: Vector3,
-        targetDirection: Vector3,
-    ): {
-        direction: Vector3;
-        stabilized: boolean;
-    } {
-        const fallback = this.lastPoleDirection ?? this.bindPoleDirection;
-        const projectedFallback = fallback
-            .clone()
-            .sub(targetDirection.clone().multiplyScalar(fallback.dot(targetDirection)));
-        if (!targetDirectionIsUsable(projectedFallback)) {
-            return { direction: candidate, stabilized: false };
-        }
-        if (candidate.dot(projectedFallback.normalize()) >= this.options.poleFlipDotThreshold) {
-            return { direction: candidate, stabilized: false };
-        }
-        return { direction: projectedFallback.normalize(), stabilized: true };
-    }
-
     private directionInParentSpace(node: Object3D, direction: Vector3): Vector3 {
         return directionInWorldQuaternionSpace(
             node.parent?.getWorldQuaternion(new Quaternion()) ?? new Quaternion(),
@@ -388,18 +311,4 @@ export class SincroArmIkSolver {
     private worldPosition(node: Object3D): Vector3 {
         return node.getWorldPosition(new Vector3());
     }
-}
-
-function getNode(vrm: VRM, name: VRMHumanBoneName): Object3D | undefined {
-    return vrm.humanoid.getNormalizedBoneNode(name) ?? undefined;
-}
-
-function firstNode(vrm: VRM, names: VRMHumanBoneName[]): Object3D | undefined {
-    for (const name of names) {
-        const node = getNode(vrm, name);
-        if (node) {
-            return node;
-        }
-    }
-    return undefined;
 }
