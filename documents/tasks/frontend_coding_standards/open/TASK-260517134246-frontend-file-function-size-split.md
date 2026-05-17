@@ -67,6 +67,16 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
 4. `utils.ts` / `helpers.ts` / `common.ts` は作らず、責務名で命名する。
 5. テストのためだけに internal を export しない。
 
+## 進捗
+
+- 2026-05-17: `DebugConsoleManager.ts` から公開型/定数、初期 snapshot 生成、motion snapshot clone、Web Audio meter を分割した。
+    - 追加: `src/ts/UI/debugConsolePublicTypes.ts`
+    - 追加: `src/ts/UI/debugConsoleSnapshot.ts`
+    - 追加: `src/ts/UI/debugConsoleMotionSnapshot.ts`
+    - 追加: `src/ts/UI/debugConsoleAudioMeter.ts`
+    - `DebugConsoleManager.ts` は 1413 行から 895 行まで縮小したが、RTC / gaze / Sincro motion 更新責務がまだ残るため継続分割対象。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
+
 ## 完了条件
 
 - hard 超過ファイルと hard 超過関数に対し、分割済みまたは分割しない理由が明示されている。
