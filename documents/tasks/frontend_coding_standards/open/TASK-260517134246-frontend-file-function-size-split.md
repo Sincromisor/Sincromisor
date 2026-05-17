@@ -194,6 +194,57 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - `updateSpine` / `updateChest` / `updateShoulders` 相当の多引数処理は options object 入力の torso applier へ移した。
     - 呼び出し側の `CharacterMotionOrchestrator` import 契約と endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `SimpleVrmControlPanel.tsx` から page 生成、Looking Glass 操作ページ、通常設定ページ、接続状態ページを分割した。
+    - 追加: `src/react/simple-vrm/simpleVrmControlPanelPages.tsx`
+    - 追加: `src/react/simple-vrm/simpleVrmControlPanelTypes.ts`
+    - 追加: `src/react/simple-vrm/lookingGlassControlPage.tsx`
+    - 追加: `src/react/simple-vrm/simpleVrmSettingsPages.tsx`
+    - 追加: `src/react/simple-vrm/simpleVrmConnectionPage.tsx`
+    - `SimpleVrmControlPanel.tsx` は 373 行から 38 行まで縮小し、panel state hook と SettingsShell 配線だけに寄せた。
+    - 新規分割ファイルは最大 `simpleVrmSettingsPages.tsx` 126 行で、すべて 200 行 soft 閾値以下に収めた。
+    - 設定 UI の表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `AudioPanel.tsx` から Local Mic meter、詳細 audio filter controls、VAD controls、学習 VAD tuning controls を分割した。
+    - 追加: `src/react/debug/panels/audioPanelLocalMeter.tsx`
+    - 追加: `src/react/debug/panels/audioPanelAdvancedControls.tsx`
+    - 追加: `src/react/debug/panels/audioPanelVadControls.tsx`
+    - 追加: `src/react/debug/panels/audioPanelLearnedVadTuning.tsx`
+    - `AudioPanel.tsx` は debug tab shell と remote meter / controls 配線に寄せた。
+    - select 値の union 変換を parse helper に寄せ、`as` 型アサーションを使わない形にした。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `ConfigurationDialogSettingsPanel.tsx` から VRM file picker、drag/drop handlers、footer、settings page 生成を分割した。
+    - 追加: `src/react/dialog/configurationDialogVrmFilePicker.ts`
+    - 追加: `src/react/dialog/configurationDialogVrmDragDrop.ts`
+    - 追加: `src/react/dialog/configurationDialogSettingsFooter.tsx`
+    - 追加: `src/react/dialog/configurationDialogSettingsPages.tsx`
+    - 追加: `src/react/dialog/configurationDialogConnectionPage.tsx`
+    - `ConfigurationDialogSettingsPanel.tsx` は dialog state と `SettingsShell` 配線だけに寄せた。
+    - 初回セットアップ UI の表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `GazePanel.tsx` から camera preview、status table、gaze tuning controls を分割した。
+    - 追加: `src/react/debug/panels/gazePreview.tsx`
+    - 追加: `src/react/debug/panels/gazeStatusTable.tsx`
+    - 追加: `src/react/debug/panels/gazeTuningControls.tsx`
+    - `GazePanel.tsx` は debug tab shell と gaze section 配線だけに寄せた。
+    - tuning preset keys は型付き配列にし、`as` 型アサーションを使わない形にした。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `useSimpleVrmPanelState.ts` から AppController event state、event handler 生成、初期表示値を分割した。
+    - 追加: `src/react/simple-vrm/useSimpleVrmPanelEventState.ts`
+    - 追加: `src/react/simple-vrm/simpleVrmPanelEventHandlers.ts`
+    - 追加: `src/react/simple-vrm/simpleVrmPanelDefaults.ts`
+    - `useSimpleVrmPanelState.ts` は 359 行から 99 行まで縮小し、media device state と control action facade に寄せた。
+    - 分割後の新規ファイルはすべて 300 行未満に収め、対象領域の hard 超過関数は作らない形にした。
+    - 表示 UI / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `DialogManager.ts` から VRM 状態更新、media device 派生 UI、settingsChange batching、dialog UI state 通知を分割した。
+    - 追加: `src/ts/UI/dialogVrmStateController.ts`
+    - 追加: `src/ts/UI/dialogMediaDeviceUiController.ts`
+    - 追加: `src/ts/UI/dialogSettingsChangeBatcher.ts`
+    - 追加: `src/ts/UI/dialogUiStateController.ts`
+    - 追加: `src/ts/UI/dialogBooleanSettings.ts`
+    - `DialogManager.ts` は 558 行から 399 行まで縮小し、import / re-export / コメント / 空行を除く実装行は 294 行まで下げた。
+    - dialog public API、設定 UI の表示文言、endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
