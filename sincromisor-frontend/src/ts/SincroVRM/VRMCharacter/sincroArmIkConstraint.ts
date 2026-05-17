@@ -1,6 +1,6 @@
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { Vector3 } from "three/src/math/Vector3.js";
-import type { SincroArmSide } from "./SincroArmIkSolver";
+import type { SincroArmSide } from "./sincroArmIkTypes";
 
 export type SincroArmIkConstraintSnapshot = {
     reasons: string[];

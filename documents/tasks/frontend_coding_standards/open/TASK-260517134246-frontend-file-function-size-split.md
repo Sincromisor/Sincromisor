@@ -371,6 +371,15 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 変更後の AST スキャンでは 5 引数以上の関数は 0 件になった。
     - VRM / pose tracking / debug UI 内部の責務分割のみで、UI 表示文言 / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: `SincroArmIkSolver.ts` から公開型、VRM 腕 skeleton 取得、肘 pole 安定化を分割した。
+    - 追加: `src/ts/SincroVRM/VRMCharacter/sincroArmIkTypes.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/sincroArmIkSkeleton.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/sincroArmIkPole.ts`
+    - `SincroArmIkSolver.ts` は raw 314 行、import / re-export / コメント / 空行を除く実装 254 行まで縮小し、solver 本体を測定済み skeleton と two-bone solve orchestration に寄せた。
+    - constructor は options object 入力へ変更し、対象領域の 5 引数超関数は解消した。
+    - 既存の `SincroArmIkSolver.ts` からの型 re-export は維持し、呼び出し側の import 契約は変更していない。
+    - VRM 腕 IK 内部の責務分割のみで、UI 表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
