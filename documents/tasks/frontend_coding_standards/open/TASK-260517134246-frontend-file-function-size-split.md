@@ -143,6 +143,19 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - `CharacterBehaviorState.ts` は 678 行から 294 行まで縮小し、TalkManager 購読と入力状態集約の入口に寄せた。
     - 既存の `CharacterBehaviorState.ts` からの型 re-export は維持し、呼び出し側の import 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `UserMediaManager.ts` から WebAudio/VAD/学習VAD runtime、音声制約、track lifecycle、既定設定、型/定数を分割した。
+    - 追加: `src/ts/RTC/UserMediaAudioProcessor.ts`
+    - 追加: `src/ts/RTC/UserMediaVadRuntime.ts`
+    - 追加: `src/ts/RTC/userMediaAudioProfiles.ts`
+    - 追加: `src/ts/RTC/userMediaConstraints.ts`
+    - 追加: `src/ts/RTC/userMediaDefaultConfig.ts`
+    - 追加: `src/ts/RTC/userMediaTrackLifecycle.ts`
+    - 追加: `src/ts/RTC/userMediaTypes.ts`
+    - 追加: `src/ts/RTC/userMediaVadWorklet.ts`
+    - `UserMediaManager.ts` は 774 行から 259 行まで縮小し、MediaStream 取得・track lifecycle・公開 facade に寄せた。
+    - 分割後の主要ファイルは `UserMediaAudioProcessor.ts` 239 行、`UserMediaVadRuntime.ts` 276 行に収め、対象領域の hard 超過関数は解消した。
+    - 既存の `UserMediaManager.ts` からの型 re-export は維持し、呼び出し側の import 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
