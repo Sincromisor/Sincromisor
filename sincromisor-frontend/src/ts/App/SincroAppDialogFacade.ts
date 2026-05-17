@@ -23,8 +23,8 @@ export type SincroAppDialogFacade = {
 
     titleText(): string;
     talkMode(): string;
-    audioInputDeviceId(): string | null;
-    videoInputDeviceId(): string | null;
+    audioInputDeviceId(): string | undefined;
+    videoInputDeviceId(): string | undefined;
     enableTalk(): boolean;
     enableCharacterGaze(): boolean;
     enableSincroPoseTracking(): boolean;
@@ -41,8 +41,8 @@ export type SincroAppDialogFacade = {
 
     setTalkMode(value: string): void;
     setTitleText(value: string): void;
-    setAudioInputDeviceId(deviceId: string | null): void;
-    setVideoInputDeviceId(deviceId: string | null): void;
+    setAudioInputDeviceId(deviceId: string | undefined): void;
+    setVideoInputDeviceId(deviceId: string | undefined): void;
     setEnableAutoGainControl(enabled: boolean): void;
     setEnableNoiseSuppression(enabled: boolean): void;
     setEnableEchoCancellation(enabled: boolean): void;

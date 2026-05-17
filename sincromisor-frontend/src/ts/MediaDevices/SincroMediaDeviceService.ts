@@ -3,7 +3,7 @@ export type SincroMediaDeviceKind = "audioinput" | "videoinput";
 export type SincroMediaDeviceOption = {
     kind: SincroMediaDeviceKind;
     deviceId: string;
-    groupId: string | null;
+    groupId: string | undefined;
     label: string;
     rawLabel: string;
     fallbackLabel: string;
@@ -11,11 +11,11 @@ export type SincroMediaDeviceOption = {
 };
 
 export type SincroMediaDeviceSelectionState = {
-    selectedDeviceId: string | null;
+    selectedDeviceId: string | undefined;
     isSelected: boolean;
     availabilityKnown: boolean;
     isAvailable: boolean;
-    matchedDevice: SincroMediaDeviceOption | null;
+    matchedDevice: SincroMediaDeviceOption | undefined;
 };
 
 export type SincroMediaDeviceSnapshot = {
@@ -24,8 +24,8 @@ export type SincroMediaDeviceSnapshot = {
     videoInputs: SincroMediaDeviceOption[];
     labelsResolved: boolean;
     isRefreshing: boolean;
-    refreshError: string | null;
-    lastUpdatedAt: number | null;
+    refreshError: string | undefined;
+    lastUpdatedAt: number | undefined;
 };
 
 type SincroMediaDeviceListener = (snapshot: SincroMediaDeviceSnapshot) => void;
@@ -36,18 +36,18 @@ const EMPTY_SNAPSHOT: SincroMediaDeviceSnapshot = {
     videoInputs: [],
     labelsResolved: false,
     isRefreshing: false,
-    refreshError: null,
-    lastUpdatedAt: null,
+    refreshError: undefined,
+    lastUpdatedAt: undefined,
 };
 
 // ブラウザの mediaDevices を UI から独立して扱う singleton service。
 // enumerate / devicechange / 選択済みIDの有効性確認をここへ集約する。
 export class SincroMediaDeviceService {
-    private static instance: SincroMediaDeviceService | null = null;
+    private static instance: SincroMediaDeviceService | undefined;
 
     private readonly listeners = new Set<SincroMediaDeviceListener>();
     private snapshot: SincroMediaDeviceSnapshot = EMPTY_SNAPSHOT;
-    private refreshPromise: Promise<SincroMediaDeviceSnapshot> | null = null;
+    private refreshPromise: Promise<SincroMediaDeviceSnapshot> | undefined;
     private isWatching = false;
     private readonly handleDeviceChange = (): void => {
         void this.refresh();
@@ -103,7 +103,7 @@ export class SincroMediaDeviceService {
         }
         this.patchSnapshot({
             isRefreshing: true,
-            refreshError: null,
+            refreshError: undefined,
         });
         this.refreshPromise = navigator.mediaDevices
             .enumerateDevices()
@@ -112,7 +112,7 @@ export class SincroMediaDeviceService {
                 this.patchSnapshot({
                     ...normalized,
                     isRefreshing: false,
-                    refreshError: null,
+                    refreshError: undefined,
                     lastUpdatedAt: Date.now(),
                 });
                 return this.getSnapshot();
@@ -125,24 +125,23 @@ export class SincroMediaDeviceService {
                 return this.getSnapshot();
             })
             .finally(() => {
-                this.refreshPromise = null;
+                this.refreshPromise = undefined;
             });
         return this.refreshPromise;
     }
 
     getSelectionState(
         kind: SincroMediaDeviceKind,
-        selectedDeviceId: string | null,
+        selectedDeviceId: string | undefined,
     ): SincroMediaDeviceSelectionState {
         const options =
             kind === "audioinput" ? this.snapshot.audioInputs : this.snapshot.videoInputs;
-        const matchedDevice =
-            options.find((option) => option.deviceId === selectedDeviceId) ?? null;
+        const matchedDevice = resolveSelectedMediaDevice(options, selectedDeviceId);
         const availabilityKnown =
-            this.snapshot.lastUpdatedAt !== null || this.snapshot.refreshError !== null;
+            this.snapshot.lastUpdatedAt !== undefined || this.snapshot.refreshError !== undefined;
         return {
             selectedDeviceId,
-            isSelected: !!selectedDeviceId,
+            isSelected: selectedDeviceId !== undefined,
             availabilityKnown,
             isAvailable: !!matchedDevice,
             matchedDevice,
@@ -165,23 +164,23 @@ export class SincroMediaDeviceService {
 
 export function buildSincroMediaDeviceSelections(params: {
     snapshot: SincroMediaDeviceSnapshot;
-    audioInputDeviceId?: string | null;
-    videoInputDeviceId?: string | null;
+    audioInputDeviceId?: string | undefined;
+    videoInputDeviceId?: string | undefined;
 }): {
     audioInput: SincroMediaDeviceSelectionState;
     videoInput: SincroMediaDeviceSelectionState;
 } {
     const availabilityKnown =
-        params.snapshot.lastUpdatedAt !== null || params.snapshot.refreshError !== null;
+        params.snapshot.lastUpdatedAt !== undefined || params.snapshot.refreshError !== undefined;
     return {
         audioInput: resolveMediaDeviceSelection(
             params.snapshot.audioInputs,
-            params.audioInputDeviceId ?? null,
+            normalizeSelectedMediaDeviceId(params.audioInputDeviceId),
             availabilityKnown,
         ),
         videoInput: resolveMediaDeviceSelection(
             params.snapshot.videoInputs,
-            params.videoInputDeviceId ?? null,
+            normalizeSelectedMediaDeviceId(params.videoInputDeviceId),
             availabilityKnown,
         ),
     };
@@ -189,17 +188,35 @@ export function buildSincroMediaDeviceSelections(params: {
 
 function resolveMediaDeviceSelection(
     options: SincroMediaDeviceOption[],
-    selectedDeviceId: string | null,
+    selectedDeviceId: string | undefined,
     availabilityKnown: boolean,
 ): SincroMediaDeviceSelectionState {
-    const matchedDevice = options.find((option) => option.deviceId === selectedDeviceId) ?? null;
+    const matchedDevice = resolveSelectedMediaDevice(options, selectedDeviceId);
     return {
         selectedDeviceId,
-        isSelected: !!selectedDeviceId,
+        isSelected: selectedDeviceId !== undefined,
         availabilityKnown,
         isAvailable: !!matchedDevice,
         matchedDevice,
     };
+}
+
+function resolveSelectedMediaDevice(
+    options: SincroMediaDeviceOption[],
+    selectedDeviceId: string | undefined,
+): SincroMediaDeviceOption | undefined {
+    if (selectedDeviceId === undefined) {
+        return undefined;
+    }
+    return options.find((option) => option.deviceId === selectedDeviceId);
+}
+
+function normalizeSelectedMediaDeviceId(value: string | undefined): string | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? value : undefined;
 }
 
 function normalizeMediaDeviceSnapshot(
@@ -251,7 +268,7 @@ function normalizeMediaDeviceOption(
     return {
         kind: device.kind,
         deviceId: device.deviceId,
-        groupId: device.groupId || null,
+        groupId: device.groupId.trim().length > 0 ? device.groupId : undefined,
         label,
         rawLabel,
         fallbackLabel,

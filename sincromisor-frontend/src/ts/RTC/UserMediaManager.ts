@@ -179,7 +179,7 @@ export class UserMediaManager {
     }
 
     // 設定UIで選択されたマイク入力 deviceId を保持し、次回取得制約へ反映する。
-    setAudioInputDeviceId(deviceId: string | null): void {
+    setAudioInputDeviceId(deviceId: string | undefined): void {
         const audioConfig = this.config.audio;
         if (!audioConfig || typeof audioConfig === "boolean") {
             return;
@@ -191,10 +191,10 @@ export class UserMediaManager {
         delete audioConfig.deviceId;
     }
 
-    getAudioInputDeviceId(): string | null {
+    getAudioInputDeviceId(): string | undefined {
         const audioConfig = this.config.audio;
         if (!audioConfig || typeof audioConfig === "boolean") {
-            return null;
+            return undefined;
         }
         const deviceIdConstraint = audioConfig.deviceId;
         if (typeof deviceIdConstraint === "string") {
@@ -208,7 +208,7 @@ export class UserMediaManager {
         ) {
             return deviceIdConstraint.exact;
         }
-        return null;
+        return undefined;
     }
 
     // DebugConsole表示用に、AudioWorklet側VADの状態を通知する。

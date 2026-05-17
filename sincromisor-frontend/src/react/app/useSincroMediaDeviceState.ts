@@ -7,8 +7,8 @@ import {
 } from "../../ts/MediaDevices/SincroMediaDeviceService";
 
 type UseSincroMediaDeviceStateParams = {
-    audioInputDeviceId?: string | null;
-    videoInputDeviceId?: string | null;
+    audioInputDeviceId?: string | undefined;
+    videoInputDeviceId?: string | undefined;
 };
 
 type UseSincroMediaDeviceStateResult = {

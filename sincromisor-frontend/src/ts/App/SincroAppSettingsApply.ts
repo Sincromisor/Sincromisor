@@ -30,10 +30,10 @@ export function applySincroAppSettingsPartial(
     if (partial.titleText != null) {
         dialogManager.setTitleText(partial.titleText);
     }
-    if (partial.audioInputDeviceId !== undefined) {
+    if ("audioInputDeviceId" in partial) {
         dialogManager.setAudioInputDeviceId(partial.audioInputDeviceId);
     }
-    if (partial.videoInputDeviceId !== undefined) {
+    if ("videoInputDeviceId" in partial) {
         dialogManager.setVideoInputDeviceId(partial.videoInputDeviceId);
     }
     if (partial.enableAutoGainControl != null) {

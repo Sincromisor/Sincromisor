@@ -2,13 +2,13 @@
 // 音声用 getUserMedia と切り離し、選択カメラの再取得/解放を安全に行う。
 export class VideoInputManager {
     private videoTrack: MediaStreamTrack | null = null;
-    private videoInputDeviceId: string | null = null;
+    private videoInputDeviceId: string | undefined;
 
-    setVideoInputDeviceId(deviceId: string | null): void {
-        this.videoInputDeviceId = deviceId && deviceId.trim() !== "" ? deviceId : null;
+    setVideoInputDeviceId(deviceId: string | undefined): void {
+        this.videoInputDeviceId = deviceId && deviceId.trim() !== "" ? deviceId : undefined;
     }
 
-    getVideoInputDeviceId(): string | null {
+    getVideoInputDeviceId(): string | undefined {
         return this.videoInputDeviceId;
     }
 

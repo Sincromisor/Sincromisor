@@ -108,11 +108,11 @@ export class DialogManager {
         return this.stateStore.get("titleText") || "Sincromisor";
     }
 
-    audioInputDeviceId(): string | null {
+    audioInputDeviceId(): string | undefined {
         return this.stateStore.get("audioInputDeviceId");
     }
 
-    videoInputDeviceId(): string | null {
+    videoInputDeviceId(): string | undefined {
         return this.stateStore.get("videoInputDeviceId");
     }
 
@@ -127,13 +127,13 @@ export class DialogManager {
         this.emitSettingsChanged();
     }
 
-    setAudioInputDeviceId(deviceId: string | null): void {
+    setAudioInputDeviceId(deviceId: string | undefined): void {
         this.stateStore.set("audioInputDeviceId", deviceId);
         this.refreshMediaDeviceDerivedUiState();
         this.emitSettingsChanged();
     }
 
-    setVideoInputDeviceId(deviceId: string | null): void {
+    setVideoInputDeviceId(deviceId: string | undefined): void {
         this.stateStore.set("videoInputDeviceId", deviceId);
         this.refreshMediaDeviceDerivedUiState();
         this.emitSettingsChanged();
