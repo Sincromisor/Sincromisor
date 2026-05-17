@@ -107,6 +107,23 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - `SincroPoseRetargeter.ts` は 985 行から 258 行まで縮小し、retargeter 本体は設定・VRM attachment・frame orchestration に寄せた。
     - 新規分割ファイルはいずれも 300 行未満に収めた。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `RTCTalkClient.ts` から RTC 統計表示、ICE failure 診断、DataChannel 作成、PeerConnection event 配線、remote track DOM 配線、/offer negotiation、/candidate 送信、audio sender 操作、shutdown 処理を分割した。
+    - 追加: `src/ts/RTC/rtcStatsRecords.ts`
+    - 追加: `src/ts/RTC/rtcStatsReporter.ts`
+    - 追加: `src/ts/RTC/rtcIceDiagnostics.ts`
+    - 追加: `src/ts/RTC/rtcDataChannels.ts`
+    - 追加: `src/ts/RTC/rtcPeerConnectionEvents.ts`
+    - 追加: `src/ts/RTC/rtcRemoteTrackHandlers.ts`
+    - 追加: `src/ts/RTC/rtcIceCandidateSender.ts`
+    - 追加: `src/ts/RTC/rtcNegotiation.ts`
+    - 追加: `src/ts/RTC/rtcConnectionStateHandler.ts`
+    - 追加: `src/ts/RTC/rtcPeerConnectionShutdown.ts`
+    - 追加: `src/ts/RTC/rtcPeerConnectionFactory.ts`
+    - 追加: `src/ts/RTC/rtcAudioTrackSender.ts`
+    - `RTCTalkClient.ts` は 924 行から 293 行まで縮小し、WebRTC session lifecycle の入口に寄せた。
+    - 未使用だった `videoCodec` / `audioCodec` fields は参照元がなかったため削除した。
+    - endpoint / JSON payload の契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
