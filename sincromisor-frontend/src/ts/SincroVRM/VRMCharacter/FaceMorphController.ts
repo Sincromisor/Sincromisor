@@ -24,7 +24,8 @@ export class FaceMorphController {
     constructor(expressionManager: VRMExpressionManager) {
         this.expressionManager = expressionManager;
         for (const preset of MOUTH_PRESETS) {
-            if (this.expressionManager.getExpression(preset) !== null) {
+            const expression = this.expressionManager.getExpression(preset) ?? undefined;
+            if (expression !== undefined) {
                 this.availableMouthPresets.add(preset);
             }
         }

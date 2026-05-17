@@ -86,7 +86,8 @@ export class FaceEmotionController {
         const intensity = this.defaultIntensity(code);
         const holdMs = code === 5 ? 700 : 2200;
         const transitionMs = code === 5 ? 120 : 180;
-        const presetExists = this.expressionManager.getExpression(preset) !== null;
+        const expression = this.expressionManager.getExpression(preset) ?? undefined;
+        const presetExists = expression !== undefined;
         // 同じコードでもVRMごとに見え方がかなり違うため、実機調整しやすいよう
         // 適用先プリセット名と強度をログに残す。
         this.logger.addTextChannelLog(
