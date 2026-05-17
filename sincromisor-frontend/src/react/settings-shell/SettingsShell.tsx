@@ -57,68 +57,124 @@ export function SettingsShell({
     }
     const primaryPages = visiblePages.filter((page) => page.tone !== "developer");
     const developerPages = visiblePages.filter((page) => page.tone === "developer");
+    const className = settingsShellClassName({
+        responsiveMode,
+        navigationDensity,
+        navigationPlacement,
+    });
 
     return (
-        <section
-            className={[
-                "settingsShell",
-                responsiveMode === "container" ? "is-containerResponsive" : "",
-                navigationDensity === "compact" ? "settingsShell--compactNavigation" : "",
-                navigationPlacement === "top" ? "settingsShell--topNavigation" : "",
-            ]
-                .filter(Boolean)
-                .join(" ")}
-            aria-label={ariaLabel}
-        >
+        <section className={className} aria-label={ariaLabel}>
             <SettingsShellHeader badge={badge} title={title} description={description} />
-            <div className="settingsShell__layout">
-                <SettingsShellNavSelect
-                    title={title}
-                    primaryPages={primaryPages}
-                    developerPages={developerPages}
-                    activePageId={activePage.id}
-                    onSelectPage={setActivePageId}
-                />
-                <IntegratedTabs
-                    className="settingsShell__nav"
-                    ariaLabel={`${title} カテゴリ`}
-                    groups={[
-                        { items: primaryPages },
-                        ...(developerPages.length > 0
-                            ? [{ heading: "開発者向け", items: developerPages }]
-                            : []),
-                    ]}
-                    activeId={activePage.id}
-                    onSelect={setActivePageId}
-                    idPrefix={tabIdPrefix}
-                    getPanelId={getSettingsShellPanelId}
-                />
-                <div className="settingsShell__detail">
-                    <div className="settingsShell__detailScroll">
-                        <div
-                            id={getSettingsShellPanelId(tabIdPrefix, activePage.id)}
-                            className="settingsShell__pageSurface"
-                            role="tabpanel"
-                            aria-labelledby={getIntegratedTabId(tabIdPrefix, activePage.id)}
-                        >
-                            <header className="settingsShell__pageHeader">
-                                <h2 className="settingsShell__pageTitle">{activePage.title}</h2>
-                                {activePage.description ? (
-                                    <p className="settingsShell__pageDescription">
-                                        {activePage.description}
-                                    </p>
-                                ) : null}
-                            </header>
-                            <div className="settingsShell__content">{activePage.content}</div>
-                        </div>
-                        {activePage.footer ? (
-                            <div className="settingsShell__pageFooter">{activePage.footer}</div>
-                        ) : null}
-                    </div>
-                </div>
-            </div>
+            <SettingsShellBody
+                title={title}
+                tabIdPrefix={tabIdPrefix}
+                primaryPages={primaryPages}
+                developerPages={developerPages}
+                activePage={activePage}
+                onSelectPage={setActivePageId}
+            />
             {footer ? <div className="settingsShell__footer">{footer}</div> : null}
         </section>
+    );
+}
+
+type SettingsShellClassNameOptions = Pick<
+    SettingsShellProps,
+    "responsiveMode" | "navigationDensity" | "navigationPlacement"
+>;
+
+function settingsShellClassName({
+    responsiveMode,
+    navigationDensity,
+    navigationPlacement,
+}: Required<SettingsShellClassNameOptions>): string {
+    return [
+        "settingsShell",
+        responsiveMode === "container" ? "is-containerResponsive" : "",
+        navigationDensity === "compact" ? "settingsShell--compactNavigation" : "",
+        navigationPlacement === "top" ? "settingsShell--topNavigation" : "",
+    ]
+        .filter(Boolean)
+        .join(" ");
+}
+
+type SettingsShellBodyProps = {
+    title: string;
+    tabIdPrefix: string;
+    primaryPages: SettingsShellPage[];
+    developerPages: SettingsShellPage[];
+    activePage: SettingsShellPage;
+    onSelectPage: (pageId: string) => void;
+};
+
+function SettingsShellBody({
+    title,
+    tabIdPrefix,
+    primaryPages,
+    developerPages,
+    activePage,
+    onSelectPage,
+}: SettingsShellBodyProps) {
+    return (
+        <div className="settingsShell__layout">
+            <SettingsShellNavSelect
+                title={title}
+                primaryPages={primaryPages}
+                developerPages={developerPages}
+                activePageId={activePage.id}
+                onSelectPage={onSelectPage}
+            />
+            <IntegratedTabs
+                className="settingsShell__nav"
+                ariaLabel={`${title} カテゴリ`}
+                groups={[
+                    { items: primaryPages },
+                    ...(developerPages.length > 0
+                        ? [{ heading: "開発者向け", items: developerPages }]
+                        : []),
+                ]}
+                activeId={activePage.id}
+                onSelect={onSelectPage}
+                idPrefix={tabIdPrefix}
+                getPanelId={getSettingsShellPanelId}
+            />
+            <SettingsShellPageDetail activePage={activePage} tabIdPrefix={tabIdPrefix} />
+        </div>
+    );
+}
+
+function SettingsShellPageDetail({
+    activePage,
+    tabIdPrefix,
+}: {
+    activePage: SettingsShellPage;
+    tabIdPrefix: string;
+}) {
+    return (
+        <div className="settingsShell__detail">
+            <div className="settingsShell__detailScroll">
+                <div
+                    id={getSettingsShellPanelId(tabIdPrefix, activePage.id)}
+                    className="settingsShell__pageSurface"
+                    role="tabpanel"
+                    aria-labelledby={getIntegratedTabId(tabIdPrefix, activePage.id)}
+                >
+                    <header className="settingsShell__pageHeader">
+                        <h2 className="settingsShell__pageTitle">{activePage.title}</h2>
+                        {activePage.description ? (
+                            <p className="settingsShell__pageDescription">
+                                {activePage.description}
+                            </p>
+                        ) : null}
+                    </header>
+                    <div className="settingsShell__content">{activePage.content}</div>
+                </div>
+                {activePage.footer ? (
+                    <div className="settingsShell__pageFooter">{activePage.footer}</div>
+                ) : null}
+            </div>
+        </div>
     );
 }
 

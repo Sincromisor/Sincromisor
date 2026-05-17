@@ -48,7 +48,38 @@ export function IntegratedTabs({
     if (items.length === 0) {
         return null;
     }
+    const handleKeyDown = createIntegratedTabKeyHandler({ activeId, items, onSelect });
 
+    return (
+        <div
+            className={["integratedTabs", className ?? ""].filter(Boolean).join(" ")}
+            aria-label={ariaLabel}
+            role="tablist"
+        >
+            {visibleGroups.map((group, groupIndex) => (
+                <IntegratedTabGroupSection
+                    key={group.heading ?? `group-${groupIndex}`}
+                    group={group}
+                    activeId={activeId}
+                    idPrefix={resolvedIdPrefix}
+                    getPanelId={getPanelId}
+                    onSelect={onSelect}
+                    onKeyDown={handleKeyDown}
+                />
+            ))}
+        </div>
+    );
+}
+
+type IntegratedTabKeyHandlerOptions = Pick<IntegratedTabsProps, "activeId" | "onSelect"> & {
+    items: IntegratedTabItem[];
+};
+
+function createIntegratedTabKeyHandler({
+    activeId,
+    items,
+    onSelect,
+}: IntegratedTabKeyHandlerOptions): (event: KeyboardEvent<HTMLButtonElement>) => void {
     const selectByOffset = (offset: number): void => {
         const activeIndex = Math.max(
             0,
@@ -73,46 +104,83 @@ export function IntegratedTabs({
             onSelect(items[items.length - 1]?.id ?? activeId);
         }
     };
+    return handleKeyDown;
+}
 
+type IntegratedTabGroupSectionProps = {
+    group: IntegratedTabGroup;
+    activeId: string;
+    idPrefix: string;
+    getPanelId: NonNullable<IntegratedTabsProps["getPanelId"]>;
+    onSelect: (id: string) => void;
+    onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
+};
+
+function IntegratedTabGroupSection({
+    group,
+    activeId,
+    idPrefix,
+    getPanelId,
+    onSelect,
+    onKeyDown,
+}: IntegratedTabGroupSectionProps) {
     return (
-        <div
-            className={["integratedTabs", className ?? ""].filter(Boolean).join(" ")}
-            aria-label={ariaLabel}
-            role="tablist"
-        >
-            {visibleGroups.map((group, groupIndex) => (
-                <div
-                    key={group.heading ?? `group-${groupIndex}`}
-                    className="integratedTabs__section"
-                    role="presentation"
-                >
-                    {group.heading ? (
-                        <div className="integratedTabs__sectionTitle">{group.heading}</div>
-                    ) : null}
-                    {group.items.map((item) => (
-                        <button
-                            key={item.id}
-                            id={getIntegratedTabId(resolvedIdPrefix, item.id)}
-                            type="button"
-                            role="tab"
-                            className={[
-                                "integratedTabs__tab",
-                                item.id === activeId ? "is-active" : "",
-                                item.tone === "developer" ? "is-developer" : "",
-                            ]
-                                .filter(Boolean)
-                                .join(" ")}
-                            onClick={() => onSelect(item.id)}
-                            onKeyDown={handleKeyDown}
-                            aria-controls={getPanelId(resolvedIdPrefix, item.id)}
-                            aria-selected={item.id === activeId}
-                            tabIndex={item.id === activeId ? 0 : -1}
-                        >
-                            <span className="integratedTabs__tabLabel">{item.label}</span>
-                        </button>
-                    ))}
-                </div>
+        <div className="integratedTabs__section" role="presentation">
+            {group.heading ? (
+                <div className="integratedTabs__sectionTitle">{group.heading}</div>
+            ) : null}
+            {group.items.map((item) => (
+                <IntegratedTabButton
+                    key={item.id}
+                    item={item}
+                    idPrefix={idPrefix}
+                    activeId={activeId}
+                    getPanelId={getPanelId}
+                    onSelect={onSelect}
+                    onKeyDown={onKeyDown}
+                />
             ))}
         </div>
+    );
+}
+
+type IntegratedTabButtonProps = {
+    item: IntegratedTabItem;
+    idPrefix: string;
+    activeId: string;
+    getPanelId: NonNullable<IntegratedTabsProps["getPanelId"]>;
+    onSelect: (id: string) => void;
+    onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
+};
+
+function IntegratedTabButton({
+    item,
+    idPrefix,
+    activeId,
+    getPanelId,
+    onSelect,
+    onKeyDown,
+}: IntegratedTabButtonProps) {
+    const isActive = item.id === activeId;
+    return (
+        <button
+            id={getIntegratedTabId(idPrefix, item.id)}
+            type="button"
+            role="tab"
+            className={[
+                "integratedTabs__tab",
+                isActive ? "is-active" : "",
+                item.tone === "developer" ? "is-developer" : "",
+            ]
+                .filter(Boolean)
+                .join(" ")}
+            onClick={() => onSelect(item.id)}
+            onKeyDown={onKeyDown}
+            aria-controls={getPanelId(idPrefix, item.id)}
+            aria-selected={isActive}
+            tabIndex={isActive ? 0 : -1}
+        >
+            <span className="integratedTabs__tabLabel">{item.label}</span>
+        </button>
     );
 }

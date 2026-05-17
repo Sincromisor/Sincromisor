@@ -14,6 +14,7 @@ import {
 import { VRMScene } from "../ts/SincroVRM/VRMScene/VRMScene";
 import { DebugConsoleManager } from "../ts/UI/DebugConsoleManager";
 import { formatError, requireElement } from "./dom";
+import { requestMotionDebugCameraStream } from "./motionDebugCameraStream";
 import { MotionDebugControls } from "./motionDebugControls";
 import { MotionDebugFrameCapture } from "./motionDebugFrameCapture";
 import { createFixtureVideoStream } from "./motionDebugVideoSource";
@@ -31,7 +32,6 @@ const DEFAULT_VRM_URL = "/characters/default.vrm";
 const POSE_TARGET_INFERENCE_FPS = 12;
 const SNAPSHOT_RENDER_INTERVAL_MS = 180;
 const DEFAULT_WAIT_FOR_POSE_TIMEOUT_MS = 10000;
-const CAMERA_REQUEST_TIMEOUT_MS = 12000;
 
 // IK 調整ページの所有境界。RTC/chat/dialog を持ち込まず、
 // camera/video -> TrackerRuntime -> CharacterBehaviorState -> VRMScene の経路だけを接続する。
@@ -102,7 +102,7 @@ export class MotionDebugApp {
     async startCamera(): Promise<MotionDebugSnapshot> {
         this.setStatus("loading", "カメラ起動中");
         this.stopActiveRuntime("motion_debug_camera_restarting");
-        const stream = await this.requestCameraStream();
+        const stream = await requestMotionDebugCameraStream();
         await this.startRuntimeWithStream(stream, "camera");
         return this.getSnapshot();
     }
@@ -214,33 +214,6 @@ export class MotionDebugApp {
         );
         await this.video.play();
         this.setStatus("running", source === "camera" ? "カメラ実行中" : "fixture 実行中");
-    }
-
-    private requestCameraStream(): Promise<MediaStream> {
-        let timedOut = false;
-        let timeoutId = 0;
-        const request = navigator.mediaDevices
-            .getUserMedia({
-                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-                audio: false,
-            })
-            .then((stream) => {
-                if (timedOut) {
-                    stream.getTracks().forEach((track) => {
-                        track.stop();
-                    });
-                }
-                return stream;
-            });
-        const timeout = new Promise<MediaStream>((_, reject) => {
-            timeoutId = window.setTimeout(() => {
-                timedOut = true;
-                reject(new Error(`Camera request timed out after ${CAMERA_REQUEST_TIMEOUT_MS}ms.`));
-            }, CAMERA_REQUEST_TIMEOUT_MS);
-        });
-        return Promise.race([request, timeout]).finally(() => {
-            window.clearTimeout(timeoutId);
-        });
     }
 
     private stopActiveRuntime(reason: string): void {

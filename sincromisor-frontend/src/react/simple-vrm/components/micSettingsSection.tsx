@@ -20,11 +20,40 @@ export function MicSettingsSection({
     showSectionTitle = true,
     mode = "full",
 }: DeviceSettingsProps & { mode?: MicSettingsSectionMode }) {
-    const [refreshMessage, setRefreshMessage] = useState<string>("");
+    const { refreshMessage, handleRefreshDevices } = useMicDeviceRefresh(onRefreshDevices);
     const showDeviceSelection = mode !== "processing";
     const showProcessingOptions = mode !== "device";
 
-    const handleRefreshDevices = () => {
+    return (
+        <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
+            {showDeviceSelection ? (
+                <MicDeviceSelection
+                    settings={settings}
+                    uiState={uiState}
+                    uiHints={uiHints}
+                    mediaDeviceSnapshot={mediaDeviceSnapshot}
+                    audioInputSelection={audioInputSelection}
+                    onApplySettings={onApplySettings}
+                    onRefreshDevices={handleRefreshDevices}
+                    showSectionTitle={showSectionTitle}
+                    showProcessingOptions={showProcessingOptions}
+                />
+            ) : null}
+            {showProcessingOptions ? (
+                <AudioProcessingToggles
+                    settings={settings}
+                    uiState={uiState}
+                    onApplySettings={onApplySettings}
+                />
+            ) : null}
+            {refreshMessage ? <MicRefreshMessage text={refreshMessage} /> : null}
+        </div>
+    );
+}
+
+function useMicDeviceRefresh(onRefreshDevices: DeviceSettingsProps["onRefreshDevices"]) {
+    const [refreshMessage, setRefreshMessage] = useState<string>("");
+    const handleRefreshDevices = (): void => {
         setRefreshMessage("");
         void onRefreshDevices().then((nextSnapshot) => {
             if (nextSnapshot.refreshError) {
@@ -37,66 +66,92 @@ export function MicSettingsSection({
         });
     };
 
+    return { refreshMessage, handleRefreshDevices };
+}
+
+type MicDeviceSelectionProps = Omit<DeviceSettingsProps, "onRefreshDevices"> & {
+    onRefreshDevices: () => void;
+    showSectionTitle: boolean;
+    showProcessingOptions: boolean;
+};
+
+function MicDeviceSelection({
+    settings,
+    uiState,
+    uiHints,
+    mediaDeviceSnapshot,
+    audioInputSelection,
+    onApplySettings,
+    onRefreshDevices,
+    showSectionTitle,
+    showProcessingOptions,
+}: MicDeviceSelectionProps) {
     return (
-        <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            {showDeviceSelection ? (
-                <>
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: `${compactGapPx}px`,
-                            marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
-                        }}
-                    >
-                        {showSectionTitle ? (
-                            <SettingsHelpLabel text="マイク設定" />
-                        ) : (
-                            <span style={{ opacity: 0.8, fontWeight: 700 }}>マイク入力</span>
-                        )}
-                        <SettingsButton
-                            type="button"
-                            onClick={handleRefreshDevices}
-                            disabled={mediaDeviceSnapshot.isRefreshing}
-                        >
-                            {mediaDeviceSnapshot.isRefreshing ? "更新中..." : "再読み込み"}
-                        </SettingsButton>
-                    </div>
-                    <div
-                        style={{
-                            marginBottom: showProcessingOptions ? `${sectionSpacingPx}px` : "0",
-                        }}
-                    >
-                        <AudioInputDeviceField
-                            settings={settings}
-                            uiState={uiState}
-                            uiHints={uiHints}
-                            snapshot={mediaDeviceSnapshot}
-                            selection={audioInputSelection}
-                            onApplySettings={onApplySettings}
-                        />
-                    </div>
-                </>
-            ) : null}
-            {showProcessingOptions ? (
-                <AudioProcessingToggles
+        <>
+            <MicDeviceSelectionHeader
+                isRefreshing={mediaDeviceSnapshot.isRefreshing}
+                onRefreshDevices={onRefreshDevices}
+                showSectionTitle={showSectionTitle}
+            />
+            <div
+                style={{
+                    marginBottom: showProcessingOptions ? `${sectionSpacingPx}px` : "0",
+                }}
+            >
+                <AudioInputDeviceField
                     settings={settings}
                     uiState={uiState}
+                    uiHints={uiHints}
+                    snapshot={mediaDeviceSnapshot}
+                    selection={audioInputSelection}
                     onApplySettings={onApplySettings}
                 />
-            ) : null}
-            {refreshMessage ? (
-                <div
-                    style={{
-                        marginTop: `${settingsTuning.hintMarginTopPx}px`,
-                        opacity: 0.7,
-                        lineHeight: 1.3,
-                    }}
-                >
-                    {refreshMessage}
-                </div>
-            ) : null}
+            </div>
+        </>
+    );
+}
+
+function MicDeviceSelectionHeader({
+    isRefreshing,
+    onRefreshDevices,
+    showSectionTitle,
+}: {
+    isRefreshing: boolean;
+    onRefreshDevices: () => void;
+    showSectionTitle: boolean;
+}) {
+    return (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: `${compactGapPx}px`,
+                marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
+            }}
+        >
+            {showSectionTitle ? (
+                <SettingsHelpLabel text="マイク設定" />
+            ) : (
+                <span style={{ opacity: 0.8, fontWeight: 700 }}>マイク入力</span>
+            )}
+            <SettingsButton type="button" onClick={onRefreshDevices} disabled={isRefreshing}>
+                {isRefreshing ? "更新中..." : "再読み込み"}
+            </SettingsButton>
+        </div>
+    );
+}
+
+function MicRefreshMessage({ text }: { text: string }) {
+    return (
+        <div
+            style={{
+                marginTop: `${settingsTuning.hintMarginTopPx}px`,
+                opacity: 0.7,
+                lineHeight: 1.3,
+            }}
+        >
+            {text}
         </div>
     );
 }

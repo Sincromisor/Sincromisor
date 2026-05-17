@@ -1,89 +1,31 @@
-import type {
-    FaceLandmarkerResult,
-    NormalizedLandmark,
-    PoseLandmarkerResult,
-} from "@mediapipe/tasks-vision";
+import type { FaceLandmarkerResult, PoseLandmarkerResult } from "@mediapipe/tasks-vision";
 import { FaceLandmarker, PoseLandmarker } from "@mediapipe/tasks-vision";
 import { loadMediaPipeVisionFileset } from "../FaceTracking/MediaPipeVisionFileset";
+import {
+    averageSample,
+    extractTrackedLandmarks,
+    poseLandmarkerDetected,
+} from "./poseLandmarkerSpikeMetrics";
+import {
+    DEFAULT_FACE_LANDMARKER_MODEL_PATH,
+    DEFAULT_POSE_LANDMARKER_SPIKE_CONFIG,
+    MIN_VIDEO_DIMENSION_PX,
+    POSE_LANDMARKER_SPIKE_MODEL_PATHS,
+    type PoseLandmarkerSpikeCallbacks,
+    type PoseLandmarkerSpikeConfig,
+    type PoseLandmarkerSpikeMetrics,
+    type PoseLandmarkerSpikeModelPreset,
+    type PoseLandmarkerSpikeTrackedLandmark,
+    SAMPLE_WINDOW_SIZE,
+} from "./poseLandmarkerSpikeTypes";
 
-const DEFAULT_FACE_LANDMARKER_MODEL_PATH = "/3rd_party/face_landmarker.task";
-const MIN_VIDEO_DIMENSION_PX = 2;
-const SAMPLE_WINDOW_SIZE = 120;
-
-export type PoseLandmarkerSpikeModelPreset = "lite" | "full" | "heavy" | "custom";
-
-export type PoseLandmarkerSpikeConfig = {
-    modelPreset: PoseLandmarkerSpikeModelPreset;
-    modelAssetPath: string;
-    targetInferenceFps: number;
-    runFaceLandmarker: boolean;
-    faceModelAssetPath?: string;
-    delegate: "CPU" | "GPU";
-};
-
-export type PoseLandmarkerSpikeMetrics = {
-    poseInferenceMs: number;
-    poseInferenceAvgMs: number;
-    poseInferenceMaxMs: number;
-    poseInferenceFps: number;
-    faceInferenceMs?: number;
-    faceInferenceAvgMs?: number;
-    renderFps: number;
-    droppedVideoFrames?: number;
-    detected: boolean;
-    poseCount: number;
-    trackedLandmarks: PoseLandmarkerSpikeTrackedLandmark[];
-    fallbackReason?: string;
-};
-
-export type PoseLandmarkerSpikeTrackedLandmark = {
-    name: string;
-    x: number;
-    y: number;
-    z: number;
-    visibility: number;
-    stable: boolean;
-};
-
-type PoseLandmarkerSpikeCallbacks = {
-    onMetrics: (metrics: PoseLandmarkerSpikeMetrics) => void;
-    onPoseResult: (result: PoseLandmarkerResult | undefined) => void;
-    onStatus: (message: string) => void;
-    onError: (error: unknown) => void;
-};
-
-type LandmarkIndex = {
-    name: string;
-    index: number;
-};
-
-const TRACKED_UPPER_BODY_LANDMARKS: LandmarkIndex[] = [
-    { name: "left_shoulder", index: 11 },
-    { name: "right_shoulder", index: 12 },
-    { name: "left_elbow", index: 13 },
-    { name: "right_elbow", index: 14 },
-    { name: "left_wrist", index: 15 },
-    { name: "right_wrist", index: 16 },
-    { name: "left_hip", index: 23 },
-    { name: "right_hip", index: 24 },
-];
-
-export const POSE_LANDMARKER_SPIKE_MODEL_PATHS: Record<
-    Exclude<PoseLandmarkerSpikeModelPreset, "custom">,
-    string
-> = {
-    lite: "/3rd_party/pose_landmarker_lite.task",
-    full: "/3rd_party/pose_landmarker_full.task",
-    heavy: "/3rd_party/pose_landmarker_heavy.task",
-};
-
-export const DEFAULT_POSE_LANDMARKER_SPIKE_CONFIG: PoseLandmarkerSpikeConfig = {
-    modelPreset: "lite",
-    modelAssetPath: POSE_LANDMARKER_SPIKE_MODEL_PATHS.lite,
-    targetInferenceFps: 15,
-    runFaceLandmarker: false,
-    faceModelAssetPath: DEFAULT_FACE_LANDMARKER_MODEL_PATH,
-    delegate: navigator.userAgent.toLowerCase().includes("firefox") ? "CPU" : "GPU",
+export {
+    DEFAULT_POSE_LANDMARKER_SPIKE_CONFIG,
+    POSE_LANDMARKER_SPIKE_MODEL_PATHS,
+    type PoseLandmarkerSpikeConfig,
+    type PoseLandmarkerSpikeMetrics,
+    type PoseLandmarkerSpikeModelPreset,
+    type PoseLandmarkerSpikeTrackedLandmark,
 };
 
 // PoseLandmarker の同期 video 推論が main thread に与える影響を切り分けるための検証専用 runner。
@@ -267,30 +209,14 @@ export class PoseLandmarkerSpike {
             poseInferenceFps: this.estimatePoseInferenceFps(),
             faceInferenceMs: currentFaceSample,
             faceInferenceAvgMs:
-                this.faceSamples.length > 0 ? this.average(this.faceSamples) : undefined,
+                this.faceSamples.length > 0 ? averageSample(this.faceSamples) : undefined,
             renderFps: this.renderFps,
             droppedVideoFrames: this.readDroppedVideoFrames(),
-            detected: poseResult.landmarks.length > 0,
+            detected: poseLandmarkerDetected(poseResult),
             poseCount: poseResult.landmarks.length,
-            trackedLandmarks: this.extractTrackedLandmarks(poseResult.landmarks[0] ?? []),
+            trackedLandmarks: extractTrackedLandmarks(poseResult.landmarks[0] ?? []),
             fallbackReason: this.fallbackReason,
         };
-    }
-
-    private extractTrackedLandmarks(
-        landmarks: NormalizedLandmark[],
-    ): PoseLandmarkerSpikeTrackedLandmark[] {
-        return TRACKED_UPPER_BODY_LANDMARKS.map((landmark) => {
-            const value = landmarks[landmark.index];
-            return {
-                name: landmark.name,
-                x: value?.x ?? 0,
-                y: value?.y ?? 0,
-                z: value?.z ?? 0,
-                visibility: value?.visibility ?? 0,
-                stable: (value?.visibility ?? 0) >= 0.5,
-            };
-        });
     }
 
     private shouldRunInference(nowMs: number): boolean {
@@ -345,7 +271,7 @@ export class PoseLandmarkerSpike {
         if (samples.length === 0) {
             return 0;
         }
-        return samples.reduce((sum, value) => sum + value, 0) / samples.length;
+        return averageSample(samples);
     }
 
     private normalizeConfig(config: PoseLandmarkerSpikeConfig): PoseLandmarkerSpikeConfig {

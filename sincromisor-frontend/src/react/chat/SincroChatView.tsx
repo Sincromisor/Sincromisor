@@ -32,6 +32,22 @@ function canRenderHtml(record: ChatMessageViewRecord): boolean {
 
 // 既存のチャットCSS(class名)を再利用して、描画だけ React へ移す。
 export function SincroChatView({ enableReactRendering = true }: SincroChatViewProps) {
+    const { messages, systemIconUrl } = useSincroChatViewState(enableReactRendering);
+
+    return (
+        <>
+            {messages.map((record) => (
+                <ChatMessageItem
+                    key={record.message.message_id}
+                    record={record}
+                    systemIconUrl={systemIconUrl}
+                />
+            ))}
+        </>
+    );
+}
+
+function useSincroChatViewState(enableReactRendering: boolean) {
     const initialController = SincroAppController.getCurrent();
     const [messages, setMessages] = useState<ChatMessageViewRecord[]>(
         initialController?.chat.getMessageViewSnapshot() ?? [],
@@ -100,35 +116,40 @@ export function SincroChatView({ enableReactRendering = true }: SincroChatViewPr
         return unsubscribe;
     }, [enableReactRendering]);
 
+    return { messages, systemIconUrl };
+}
+
+function ChatMessageItem({
+    record,
+    systemIconUrl,
+}: {
+    record: ChatMessageViewRecord;
+    systemIconUrl: string;
+}) {
     return (
-        <>
-            {messages.map((record) => (
-                <div
-                    key={record.message.message_id}
-                    id={`msg${record.message.message_id}`}
-                    className={`${messageTypeToClassName(record.message.message_type)} sincroMessage`}
-                    // 既存CSSでは初期opacity=0のため、React描画では明示的に表示状態にする。
-                    style={{ opacity: 1 }}
-                >
-                    <div className="sincroMessage__iconBox">
-                        <img
-                            className="sincroMessage__icon"
-                            src={iconUrlForMessage(record.message, systemIconUrl)}
-                            alt=""
-                        />
-                    </div>
-                    {canRenderHtml(record) ? (
-                        // 移行期間の方針: 許可した種別のみ既存互換のHTML描画を行う。
-                        <p
-                            className="sincroMessage__text"
-                            // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted_html は system/reset の既存互換HTMLだけを許可している。
-                            dangerouslySetInnerHTML={{ __html: record.message.message }}
-                        />
-                    ) : (
-                        <p className="sincroMessage__text">{record.message.message}</p>
-                    )}
-                </div>
-            ))}
-        </>
+        <div
+            id={`msg${record.message.message_id}`}
+            className={`${messageTypeToClassName(record.message.message_type)} sincroMessage`}
+            // 既存CSSでは初期opacity=0のため、React描画では明示的に表示状態にする。
+            style={{ opacity: 1 }}
+        >
+            <div className="sincroMessage__iconBox">
+                <img
+                    className="sincroMessage__icon"
+                    src={iconUrlForMessage(record.message, systemIconUrl)}
+                    alt=""
+                />
+            </div>
+            {canRenderHtml(record) ? (
+                // 移行期間の方針: 許可した種別のみ既存互換のHTML描画を行う。
+                <p
+                    className="sincroMessage__text"
+                    // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted_html は system/reset の既存互換HTMLだけを許可している。
+                    dangerouslySetInnerHTML={{ __html: record.message.message }}
+                />
+            ) : (
+                <p className="sincroMessage__text">{record.message.message}</p>
+            )}
+        </div>
     );
 }
