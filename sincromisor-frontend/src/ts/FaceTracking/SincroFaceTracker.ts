@@ -11,9 +11,9 @@ const FACE_LANDMARKER_MODEL_PATH = "/3rd_party/face_landmarker.task";
 // FaceLandmarker の生結果を、VRM retarget が扱いやすい内部 snapshot へ正規化する。
 // DOM や UI 更新は持ち込まず、TrackerRuntime から渡された video frame だけを同期推論する。
 export class SincroFaceTracker {
-    private faceLandmarker: FaceLandmarker | null = null;
-    private initPromise: Promise<void> | null = null;
-    private lastInferenceEndedAtMs: number | null = null;
+    private faceLandmarker?: FaceLandmarker;
+    private initPromise?: Promise<void>;
+    private lastInferenceEndedAtMs?: number;
     private snapshot: SincroFaceMotionSnapshot = {
         ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
     };
@@ -24,7 +24,7 @@ export class SincroFaceTracker {
         }
         if (!this.initPromise) {
             this.initPromise = this.createFaceLandmarker().catch((error) => {
-                this.initPromise = null;
+                this.initPromise = undefined;
                 this.snapshot = this.createFallbackSnapshot(
                     "FaceLandmarker の初期化に失敗しました。",
                     performance.now(),
@@ -36,7 +36,7 @@ export class SincroFaceTracker {
     }
 
     modelIsLoaded(): boolean {
-        return this.faceLandmarker != null;
+        return this.faceLandmarker !== undefined;
     }
 
     detect(videoFrame: TexImageSource, timestampMs: number): SincroFaceMotionSnapshot {
@@ -53,7 +53,7 @@ export class SincroFaceTracker {
         const inferenceEndedAtMs = performance.now();
         const inferenceTimeMs = inferenceEndedAtMs - inferenceStartedAtMs;
         const inferenceFps =
-            this.lastInferenceEndedAtMs == null
+            this.lastInferenceEndedAtMs === undefined
                 ? 0
                 : 1000 / Math.max(1, inferenceEndedAtMs - this.lastInferenceEndedAtMs);
         this.lastInferenceEndedAtMs = inferenceEndedAtMs;
@@ -78,14 +78,14 @@ export class SincroFaceTracker {
             fallbackReason: reason,
             lastUpdatedAtMs: nowMs,
         };
-        this.lastInferenceEndedAtMs = null;
+        this.lastInferenceEndedAtMs = undefined;
         return this.getSnapshot();
     }
 
     dispose(): void {
         this.faceLandmarker?.close();
-        this.faceLandmarker = null;
-        this.initPromise = null;
+        this.faceLandmarker = undefined;
+        this.initPromise = undefined;
         this.stop("FaceLandmarker disposed.");
     }
 

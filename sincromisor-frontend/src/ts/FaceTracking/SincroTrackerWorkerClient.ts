@@ -31,11 +31,11 @@ const DEFAULT_STATS: SincroTrackerWorkerStats = {
 // MediaPipe の同期推論を Worker へ隔離する main-thread 側 adapter。
 // Runtime には snapshot 契約だけを返し、Worker の message protocol を UI/VRM 層へ漏らさない。
 export class SincroTrackerWorkerClient {
-    private worker: Worker | null = null;
-    private initPromise: Promise<void> | null = null;
-    private pendingInitResolve: (() => void) | null = null;
-    private pendingInitReject: ((reason: Error) => void) | null = null;
-    private pendingDetect: PendingDetect | null = null;
+    private worker?: Worker;
+    private initPromise?: Promise<void>;
+    private pendingInitResolve?: () => void;
+    private pendingInitReject?: (reason: Error) => void;
+    private pendingDetect?: PendingDetect;
     private requestId = 0;
     private stats: SincroTrackerWorkerStats = { ...DEFAULT_STATS };
     private readonly onStatsChanged: (stats: SincroTrackerWorkerStats) => void;
@@ -121,7 +121,7 @@ export class SincroTrackerWorkerClient {
 
     stop(reason?: string): void {
         this.pendingDetect?.reject(new Error(reason ?? "Sincro tracker worker stopped."));
-        this.pendingDetect = null;
+        this.pendingDetect = undefined;
         this.worker?.postMessage({
             type: "stop",
             reason,
@@ -137,11 +137,11 @@ export class SincroTrackerWorkerClient {
     dispose(): void {
         this.worker?.postMessage({ type: "dispose" });
         this.worker?.terminate();
-        this.worker = null;
-        this.initPromise = null;
-        this.pendingInitResolve = null;
-        this.pendingInitReject = null;
-        this.pendingDetect = null;
+        this.worker = undefined;
+        this.initPromise = undefined;
+        this.pendingInitResolve = undefined;
+        this.pendingInitReject = undefined;
+        this.pendingDetect = undefined;
         this.stats = { ...DEFAULT_STATS };
         this.publishStats();
     }
@@ -170,8 +170,8 @@ export class SincroTrackerWorkerClient {
             this.applyStatus(message.status, message.message, message.loadTimeMs);
             if (message.status === "ready") {
                 this.pendingInitResolve?.();
-                this.pendingInitResolve = null;
-                this.pendingInitReject = null;
+                this.pendingInitResolve = undefined;
+                this.pendingInitReject = undefined;
             }
             if (message.status === "unavailable") {
                 this.handleWorkerFailure(
@@ -190,7 +190,7 @@ export class SincroTrackerWorkerClient {
                 this.publishStats();
                 return;
             }
-            this.pendingDetect = null;
+            this.pendingDetect = undefined;
             this.stats = {
                 ...this.stats,
                 status: "running",
@@ -233,10 +233,10 @@ export class SincroTrackerWorkerClient {
     private handleWorkerFailure(error: Error): void {
         this.pendingInitReject?.(error);
         this.pendingDetect?.reject(error);
-        this.pendingInitResolve = null;
-        this.pendingInitReject = null;
-        this.pendingDetect = null;
-        this.initPromise = null;
+        this.pendingInitResolve = undefined;
+        this.pendingInitReject = undefined;
+        this.pendingDetect = undefined;
+        this.initPromise = undefined;
         this.stats = {
             ...this.stats,
             mode: "fallback",

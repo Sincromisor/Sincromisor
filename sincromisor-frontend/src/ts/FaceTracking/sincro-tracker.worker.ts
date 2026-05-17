@@ -33,11 +33,11 @@ mediaPipeWorkerGlobal.import ??= async (path: string) => {
     )(self);
 };
 
-let faceTracker: SincroFaceTracker | null = null;
-let poseTracker: SincroPoseTracker | null = null;
+let faceTracker: SincroFaceTracker | undefined;
+let poseTracker: SincroPoseTracker | undefined;
 
 let poseInitialized = false;
-let initializing: Promise<void> | null = null;
+let initializing: Promise<void> | undefined;
 
 function post(message: SincroTrackerWorkerOutputMessage): void {
     self.postMessage(message);
@@ -80,7 +80,7 @@ async function initialize(poseEnabled: boolean): Promise<void> {
         await initializing;
         postStatus("ready", "Sincro tracker worker ready", performance.now() - startedAtMs);
     } catch (error) {
-        initializing = null;
+        initializing = undefined;
         postStatus("unavailable", formatErrorDetail(error), performance.now() - startedAtMs);
         throw error;
     }

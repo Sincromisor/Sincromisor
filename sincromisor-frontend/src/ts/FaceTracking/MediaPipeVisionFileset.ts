@@ -7,7 +7,7 @@ const MEDIAPIPE_TASKS_VISION_CACHE_KEY = `tasks-vision-${__MEDIAPIPE_TASKS_VISIO
 const MEDIAPIPE_WORKER_WASM_LOADER_PATH = `${MEDIAPIPE_WASM_PATH}/vision_wasm_internal.js`;
 const MEDIAPIPE_WORKER_WASM_BINARY_PATH = `${MEDIAPIPE_WASM_PATH}/vision_wasm_internal.wasm`;
 
-let visionFilesetPromise: ReturnType<typeof FilesetResolver.forVisionTasks> | null = null;
+let visionFilesetPromise: ReturnType<typeof FilesetResolver.forVisionTasks> | undefined;
 
 // MediaPipe の JS glue と wasm は同じ npm package 由来で揃える必要がある。
 // public 配下の wasm は非 hash ファイル名なので、依存更新後のブラウザキャッシュ混在を query で避ける。

@@ -36,11 +36,11 @@ export class TrackerRuntime {
     private readonly faceTracker: SincroFaceTracker;
     private readonly poseTracker: SincroPoseTracker;
     private readonly workerClient: SincroTrackerWorkerClient;
-    private callbacks: TrackerRuntimeCallbacks | null = null;
+    private callbacks?: TrackerRuntimeCallbacks;
     private loopEnabled = false;
     private loopRunning = false;
-    private predictionFrameId: number | null = null;
-    private loadedDataHandlerBound: (() => void) | null = null;
+    private predictionFrameId?: number;
+    private loadedDataHandlerBound?: () => void;
     private lastVideoTime = -1;
     private lastInferenceAtMs = -1;
     private lastPoseInferenceAtMs = -1;
@@ -112,7 +112,7 @@ export class TrackerRuntime {
         }
         this.callbacks?.onFaceMotion(this.faceTracker.stop(reason));
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop(reason));
-        this.callbacks = null;
+        this.callbacks = undefined;
         this.poseTrackingEnabled = false;
         this.poseDegradedToFaceOnly = false;
         this.ignorePosePerformanceFallback = false;
@@ -190,15 +190,15 @@ export class TrackerRuntime {
     private stopLoop(): void {
         this.loopEnabled = false;
         this.loopRunning = false;
-        if (this.predictionFrameId != null) {
+        if (this.predictionFrameId !== undefined) {
             window.cancelAnimationFrame(this.predictionFrameId);
-            this.predictionFrameId = null;
+            this.predictionFrameId = undefined;
         }
     }
 
     private scheduleNextPrediction(): void {
         this.predictionFrameId = window.requestAnimationFrame(() => {
-            this.predictionFrameId = null;
+            this.predictionFrameId = undefined;
             this.predict();
         });
     }

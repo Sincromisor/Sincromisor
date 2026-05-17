@@ -91,6 +91,10 @@
     - idle / blink / speech gesture / emotion / mouth animation の内部タイマー・アクティブ状態を optional にし、three-vrm / WebRTC API 境界で受けた `null` は helper 内で `undefined` に寄せた。
     - RTC trend point の「未観測値」を `undefined` に統一し、bitrate 計算キャッシュも optional に変更した。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: FaceTracking runtime と VRM retargeter 周辺の内部欠損表現を `undefined` へ追加整理した。
+    - 対象: `SincroFaceTracker` / `SincroPoseTracker` / `SincroTrackerWorkerClient` / `TrackerRuntime` / `sincro-tracker.worker` / `SincroFaceRetargeter` / `SincroPoseRetargeter` / `SincroArmIkSolver` / `sincroArmIkConstraint` / debug console snapshot helper
+    - MediaPipe tracker の model / init promise / worker pending state、face neutral calibration、pose retarget の fallback reason / solver probe / IK quaternion を optional にし、DOM の `srcObject = null` など境界由来の `null` だけを残した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
