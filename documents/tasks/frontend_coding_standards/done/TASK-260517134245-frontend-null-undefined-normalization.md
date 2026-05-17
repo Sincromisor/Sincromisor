@@ -1,7 +1,7 @@
 # TASK-260517134245 frontend null undefined normalization
 
 - 作成日: 2026-05-17
-- ステータス: Open
+- ステータス: Done
 - 優先度: Medium
 - 種別: Task
 - 親タスク: `TASK-260517134241`
@@ -115,6 +115,11 @@
     - DOM query / React ref / vendor API が返す `null` は境界で受け、service 内部キャッシュ、timer、controller、adapter、HLS live sync 値は `undefined` に寄せた。
     - `!= null` と既定値用途の `||` を、`!== undefined` または明示的な空文字判定へ置き換えた。
     - 古いコメントアウト済み debug code を削除し、残存 `| null` / `== null` / `!= null` は 32 箇所まで縮小した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: RTC stats / DOM query / VRM expression lookup の境界値を `undefined` へ追加正規化し、タスクを完了した。
+    - 対象: `RTCTalkClient` / `EyeBehaviorController` / `FaceEmotionController` / `FaceMorphController`
+    - WebRTC stats の `port: null`、`localDescription: null`、DOM query の未検出、three-vrm expression lookup の未検出を境界で `undefined` に寄せた。
+    - 残存 `null` は React render / DOM ref / DOM・Canvas 代入 / WebRTC end-of-candidates / 外部ライブラリ型 / JSON formatter / サーバー payload 例に限定されることを確認した。
     - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件

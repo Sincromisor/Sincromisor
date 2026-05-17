@@ -31,8 +31,17 @@ type RtcStatsRecord = RTCStats & {
     relayProtocol?: string;
     address?: string;
     ip?: string;
+    port?: number | string;
+};
+
+type RawRtcStatsRecord = Omit<RtcStatsRecord, "port"> & {
     port?: number | string | null;
 };
+
+function normalizeRtcStatsRecord(stats: RTCStats): RtcStatsRecord {
+    const record: RawRtcStatsRecord = stats;
+    return { ...record, port: record.port ?? undefined };
+}
 
 // 1接続分の WebRTC セッションを管理するクライアント。
 // DataChannel(text/telop)・ICE/SDP診断表示・再接続制御までをまとめて担当する。
@@ -249,9 +258,9 @@ export class RTCTalkClient {
                 return peerConnection.setLocalDescription(offer);
             })
             .then(() => {
-                const offer: RTCSessionDescription | null = peerConnection.localDescription;
-                if (offer === null) {
-                    throw "Offer is null.";
+                const offer = peerConnection.localDescription ?? undefined;
+                if (offer === undefined) {
+                    throw new Error("Offer is undefined.");
                 }
                 /* コーデックのフィルタリング
                    offer.sdpは読み取り専用であるため、これではエラーとなる。
@@ -599,7 +608,7 @@ export class RTCTalkClient {
 
             report.forEach((stats) => {
                 if (stats.type === "candidate-pair") {
-                    const pairStats: RtcStatsRecord = stats;
+                    const pairStats = normalizeRtcStatsRecord(stats);
                     pairTotal += 1;
                     if (pairStats.state === "succeeded") {
                         pairSucceeded += 1;
@@ -609,13 +618,13 @@ export class RTCTalkClient {
                     }
                 }
                 if (stats.type === "local-candidate") {
-                    const candidateStats: RtcStatsRecord = stats;
+                    const candidateStats = normalizeRtcStatsRecord(stats);
                     localCandidates.set(candidateStats.id, candidateStats);
                     const t = candidateStats.candidateType ?? "unknown";
                     localTypeCount[t] = (localTypeCount[t] ?? 0) + 1;
                 }
                 if (stats.type === "remote-candidate") {
-                    const candidateStats: RtcStatsRecord = stats;
+                    const candidateStats = normalizeRtcStatsRecord(stats);
                     remoteCandidates.set(candidateStats.id, candidateStats);
                     const t = candidateStats.candidateType ?? "unknown";
                     remoteTypeCount[t] = (remoteTypeCount[t] ?? 0) + 1;
@@ -656,20 +665,22 @@ export class RTCTalkClient {
         peerConnection.addEventListener("track", (evt: RTCTrackEvent) => {
             if (evt.track.kind === "video") {
                 frontendLogger.warn("Unexpected remote video track received.");
-                const rtcVideo: HTMLVideoElement | null = document.querySelector("video#rtcVideo");
-                if (rtcVideo) {
+                const rtcVideo =
+                    document.querySelector<HTMLVideoElement>("video#rtcVideo") ?? undefined;
+                if (rtcVideo !== undefined) {
                     rtcVideo.srcObject = evt.streams[0];
                 } else {
-                    throw "video#rtcVideo is not found.";
+                    throw new Error("video#rtcVideo is not found.");
                 }
             } else {
-                const rtcAudio: HTMLAudioElement | null = document.querySelector("audio#rtcAudio");
-                if (rtcAudio) {
+                const rtcAudio =
+                    document.querySelector<HTMLAudioElement>("audio#rtcAudio") ?? undefined;
+                if (rtcAudio !== undefined) {
                     rtcAudio.srcObject = evt.streams[0];
                     this.logger.setRemoteAudioTrack(evt.track);
                     this.logger.addRtcEventLog(`remote track received: ${evt.track.kind}`);
                 } else {
-                    throw "audio#rtcAudio is not found.";
+                    throw new Error("audio#rtcAudio is not found.");
                 }
             }
         });
@@ -714,7 +725,7 @@ export class RTCTalkClient {
     }
 
     private candidatePort(candidate: RtcStatsRecord | undefined): string {
-        if (candidate?.port === null || candidate?.port === undefined) {
+        if (candidate?.port === undefined) {
             return "-";
         }
         return `${candidate.port}`;
@@ -765,7 +776,7 @@ export class RTCTalkClient {
         const remoteCandidates = new Map<string, RtcStatsRecord>();
 
         report.forEach((stats) => {
-            const statsRecord: RtcStatsRecord = stats;
+            const statsRecord = normalizeRtcStatsRecord(stats);
             if (
                 statsRecord.type === "outbound-rtp" &&
                 statsRecord.kind === "audio" &&

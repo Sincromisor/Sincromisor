@@ -77,12 +77,14 @@ export class EyeBehaviorController {
     constructor(vrm: VRM, expressionManager: VRMExpressionManager) {
         this.expressionManager = expressionManager;
         for (const preset of LOOK_PRESETS) {
-            if (this.expressionManager.getExpression(preset) !== null) {
+            const expression = this.expressionManager.getExpression(preset) ?? undefined;
+            if (expression !== undefined) {
                 this.availableLookPresets.add(preset);
             }
         }
         for (const preset of BLINK_PRESETS) {
-            if (this.expressionManager.getExpression(preset) !== null) {
+            const expression = this.expressionManager.getExpression(preset) ?? undefined;
+            if (expression !== undefined) {
                 this.availableBlinkPresets.add(preset);
             }
         }
