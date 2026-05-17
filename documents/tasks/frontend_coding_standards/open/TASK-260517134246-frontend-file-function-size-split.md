@@ -348,6 +348,14 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 分割後の新規ファイルはすべて 100 行未満に収め、既存の `TrackerRuntime` import 契約は変更していない。
     - Face/Pose tracking 内部の責務分割のみで、UI 表示文言 / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: `TalkManager.ts` から TalkManager 公開型、React footer テロップ履歴バッファ、旧 DOM footer テロップ描画を分割した。
+    - 追加: `src/ts/RTC/talkManagerTypes.ts`
+    - 追加: `src/ts/RTC/talkTelopSegmentBuffer.ts`
+    - 追加: `src/ts/RTC/talkLegacyTelopRenderer.ts`
+    - `TalkManager.ts` は 310 行から 130 行まで縮小し、text/telop channel 受信の橋渡しと event 通知に寄せた。
+    - 既存の `TalkManager.ts` からの型 re-export は維持し、呼び出し側の import 契約は変更していない。
+    - WebRTC DataChannel payload / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
