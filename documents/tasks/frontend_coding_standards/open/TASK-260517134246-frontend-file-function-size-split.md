@@ -275,6 +275,15 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 既存の `SincroFaceRetargeter.ts` からの型 / helper re-export は維持し、呼び出し側の import 契約は変更していない。
     - VRM 顔モーション内部の責務分割のみで、endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: `CharacterGaze.ts` から keypoint 平滑化、FaceDetector 推論ループ、target debug 表示文字列を分割した。
+    - 追加: `src/ts/CharacterGaze/CharacterGazeKeypointSmoother.ts`
+    - 追加: `src/ts/CharacterGaze/CharacterGazePredictionLoop.ts`
+    - 追加: `src/ts/CharacterGaze/characterGazeTargetDebugText.ts`
+    - 追加: `src/ts/CharacterGaze/characterGazeTypes.ts`
+    - `CharacterGaze.ts` は 484 行から 169 行まで縮小し、MediaPipe model load と公開 facade に寄せた。
+    - 分割後の最大ファイルは `CharacterGazePredictionLoop.ts` 298 行で、対象領域の 60 行超関数は解消した。
+    - Gaze 内部の責務分割のみで、endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
