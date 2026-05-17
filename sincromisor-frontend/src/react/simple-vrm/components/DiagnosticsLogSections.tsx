@@ -65,7 +65,8 @@ export function DiagnosticsLogSections({
                             style={panelStyles.miniLog}
                         >
                             <div style={{ opacity: 0.7 }}>
-                                {item.newText ? "new_text" : "continue"} / 母音:{item.vowel || "-"}
+                                {item.newText ? "new_text" : "continue"} / 母音:
+                                {item.vowel === undefined || item.vowel === "" ? "-" : item.vowel}
                             </div>
                             <div>{item.message}</div>
                             {item.text ? (

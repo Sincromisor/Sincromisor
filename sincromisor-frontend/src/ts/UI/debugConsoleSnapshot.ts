@@ -185,7 +185,6 @@ export function createDefaultSnapshot(): DebugConsoleSnapshot {
                 workerRoundTripMs: 0,
                 loadTimeMs: 0,
                 droppedFrames: 0,
-                fallbackReason: null,
             },
             poseRetarget: {
                 intensityScale: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.intensityScale,

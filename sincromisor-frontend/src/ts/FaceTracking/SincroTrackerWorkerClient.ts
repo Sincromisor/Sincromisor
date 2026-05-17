@@ -8,7 +8,7 @@ import type {
 
 type DetectResult = {
     face: SincroFaceMotionSnapshot;
-    pose: SincroPoseMotionSnapshot | null;
+    pose?: SincroPoseMotionSnapshot;
     stats: SincroTrackerWorkerStats;
 };
 
@@ -26,7 +26,6 @@ const DEFAULT_STATS: SincroTrackerWorkerStats = {
     workerRoundTripMs: 0,
     loadTimeMs: 0,
     droppedFrames: 0,
-    fallbackReason: null,
 };
 
 // MediaPipe の同期推論を Worker へ隔離する main-thread 側 adapter。
@@ -58,7 +57,7 @@ export class SincroTrackerWorkerClient {
             this.stats = {
                 ...this.stats,
                 status: "loading",
-                fallbackReason: null,
+                fallbackReason: undefined,
             };
             this.publishStats();
             this.initPromise = new Promise<void>((resolve, reject) => {
@@ -120,7 +119,7 @@ export class SincroTrackerWorkerClient {
         });
     }
 
-    stop(reason: string | null): void {
+    stop(reason?: string): void {
         this.pendingDetect?.reject(new Error(reason ?? "Sincro tracker worker stopped."));
         this.pendingDetect = null;
         this.worker?.postMessage({
@@ -176,7 +175,7 @@ export class SincroTrackerWorkerClient {
             }
             if (message.status === "unavailable") {
                 this.handleWorkerFailure(
-                    new Error(message.message || "Sincro tracker worker unavailable."),
+                    new Error(message.message ?? "Sincro tracker worker unavailable."),
                 );
             }
             return;
@@ -196,7 +195,7 @@ export class SincroTrackerWorkerClient {
                 ...this.stats,
                 status: "running",
                 workerRoundTripMs: performance.now() - pending.sentAtMs,
-                fallbackReason: null,
+                fallbackReason: undefined,
             };
             this.publishStats();
             pending.resolve({

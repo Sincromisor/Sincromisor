@@ -264,7 +264,8 @@ function normalizeMediaDeviceOption(
 ): SincroMediaDeviceOption {
     const fallbackLabel = buildMediaDeviceFallbackLabel(device.kind, index);
     const rawLabel = device.label ?? "";
-    const label = rawLabel.trim() || fallbackLabel;
+    const normalizedLabel = rawLabel.trim();
+    const label = normalizedLabel === "" ? fallbackLabel : normalizedLabel;
     return {
         kind: device.kind,
         deviceId: device.deviceId,

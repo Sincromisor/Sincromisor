@@ -103,7 +103,7 @@ export class TrackerRuntime {
         this.startLoopIfNeeded();
     }
 
-    stopFaceTracking(reason: string | null = "sincro_face_tracking_stopped"): void {
+    stopFaceTracking(reason: string | undefined = "sincro_face_tracking_stopped"): void {
         this.stopLoop();
         if (this.useWorkerTracking) {
             // Restarting with Pose OFF must not keep a Worker that already loaded PoseLandmarker.

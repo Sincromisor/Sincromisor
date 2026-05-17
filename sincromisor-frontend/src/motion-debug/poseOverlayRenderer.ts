@@ -48,8 +48,8 @@ export class MotionDebugPoseOverlayRenderer {
     }
 
     private syncCanvasSize(video: HTMLVideoElement): void {
-        const width = video.videoWidth || video.clientWidth || 2;
-        const height = video.videoHeight || video.clientHeight || 2;
+        const width = positiveDimensionOrDefault(video.videoWidth, video.clientWidth, 2);
+        const height = positiveDimensionOrDefault(video.videoHeight, video.clientHeight, 2);
         if (this.canvas.width !== width || this.canvas.height !== height) {
             this.canvas.width = width;
             this.canvas.height = height;
@@ -97,4 +97,8 @@ export class MotionDebugPoseOverlayRenderer {
         this.context.fill();
         this.context.fillText(target.name, x + 8, y - 8);
     }
+}
+
+function positiveDimensionOrDefault(...values: number[]): number {
+    return values.find((value) => value > 0) ?? 2;
 }

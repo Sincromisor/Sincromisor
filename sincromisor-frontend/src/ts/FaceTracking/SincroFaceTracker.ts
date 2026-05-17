@@ -70,7 +70,7 @@ export class SincroFaceTracker {
     }
 
     stop(
-        reason: string | null = null,
+        reason: string | undefined = undefined,
         nowMs: number = performance.now(),
     ): SincroFaceMotionSnapshot {
         this.snapshot = {
@@ -130,7 +130,7 @@ export class SincroFaceTracker {
         }
 
         const blendshapes = this.normalizeBlendshapes(result.faceBlendshapes[0]?.categories ?? []);
-        const matrix = result.facialTransformationMatrixes[0] ?? null;
+        const matrix = result.facialTransformationMatrixes[0];
         return {
             trackingEnabled: true,
             detected,
@@ -140,7 +140,6 @@ export class SincroFaceTracker {
             inferenceTimeMs,
             inferenceFps,
             lastUpdatedAtMs: nowMs,
-            fallbackReason: null,
         };
     }
 
@@ -155,14 +154,13 @@ export class SincroFaceTracker {
         return values;
     }
 
-    private normalizeHeadPose(matrix: Matrix | null) {
-        const values = matrix?.data?.length === 16 ? matrix.data : null;
-        if (!values) {
+    private normalizeHeadPose(matrix: Matrix | undefined) {
+        const values = matrix?.data?.length === 16 ? matrix.data : undefined;
+        if (values === undefined) {
             return {
                 yawDeg: 0,
                 pitchDeg: 0,
                 rollDeg: 0,
-                matrix: null,
             };
         }
 

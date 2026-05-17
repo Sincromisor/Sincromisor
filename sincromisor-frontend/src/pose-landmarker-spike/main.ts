@@ -152,8 +152,8 @@ function drawPoseOverlay(result: PoseLandmarkerResult | null): void {
 }
 
 function syncCanvasSize(): void {
-    const width = previewVideo.videoWidth || previewVideo.clientWidth;
-    const height = previewVideo.videoHeight || previewVideo.clientHeight;
+    const width = positiveDimensionOrDefault(previewVideo.videoWidth, previewVideo.clientWidth);
+    const height = positiveDimensionOrDefault(previewVideo.videoHeight, previewVideo.clientHeight);
     if (overlayCanvas.width !== width || overlayCanvas.height !== height) {
         overlayCanvas.width = width;
         overlayCanvas.height = height;
@@ -201,4 +201,8 @@ function requireElement<T extends HTMLElement>(id: string): T {
 
 function formatError(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+}
+
+function positiveDimensionOrDefault(...values: number[]): number {
+    return values.find((value) => value > 0) ?? 0;
 }

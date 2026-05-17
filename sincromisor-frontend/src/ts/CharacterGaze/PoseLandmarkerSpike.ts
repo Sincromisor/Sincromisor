@@ -354,7 +354,9 @@ export class PoseLandmarkerSpike {
             targetInferenceFps,
             modelAssetPath: config.modelAssetPath.trim(),
             faceModelAssetPath:
-                config.faceModelAssetPath?.trim() || DEFAULT_FACE_LANDMARKER_MODEL_PATH,
+                config.faceModelAssetPath?.trim() === ""
+                    ? DEFAULT_FACE_LANDMARKER_MODEL_PATH
+                    : (config.faceModelAssetPath?.trim() ?? DEFAULT_FACE_LANDMARKER_MODEL_PATH),
         };
     }
 

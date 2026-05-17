@@ -105,7 +105,8 @@ export class DialogManager {
     }
 
     titleText(): string {
-        return this.stateStore.get("titleText") || "Sincromisor";
+        const titleText = this.stateStore.get("titleText");
+        return titleText === "" ? "Sincromisor" : titleText;
     }
 
     audioInputDeviceId(): string | undefined {
@@ -122,7 +123,7 @@ export class DialogManager {
     }
 
     setTitleText(value: string): void {
-        this.stateStore.set("titleText", value || "Sincromisor");
+        this.stateStore.set("titleText", value === "" ? "Sincromisor" : value);
         this.updateTitleText();
         this.emitSettingsChanged();
     }

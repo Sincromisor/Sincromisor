@@ -18,7 +18,7 @@ export type SincroTrackerWorkerStats = {
     workerRoundTripMs: number;
     loadTimeMs: number;
     droppedFrames: number;
-    fallbackReason: string | null;
+    fallbackReason?: string;
 };
 
 export type SincroTrackerWorkerInitMessage = {
@@ -36,7 +36,7 @@ export type SincroTrackerWorkerDetectMessage = {
 
 export type SincroTrackerWorkerStopMessage = {
     type: "stop";
-    reason: string | null;
+    reason?: string;
     nowMs: number;
 };
 
@@ -61,7 +61,7 @@ export type SincroTrackerWorkerResultMessage = {
     type: "result";
     requestId: number;
     face: SincroFaceMotionSnapshot;
-    pose: SincroPoseMotionSnapshot | null;
+    pose?: SincroPoseMotionSnapshot;
     workerTimeMs: number;
 };
 

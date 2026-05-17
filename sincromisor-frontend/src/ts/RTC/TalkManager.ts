@@ -127,7 +127,7 @@ export class TalkManager {
     // 既存 footer DOM 向けの文字単位描画。
     // React移行後も fallback として残し、telopDomRenderingEnabled=false で停止できる。
     private addTelopChar(speech_id: number, char: string): void {
-        const normalizedChar = char || " ";
+        const normalizedChar = char === "" ? " " : char;
         this.upsertTelopTextSegment(speech_id, normalizedChar);
         if (!this.telopDomRenderingEnabled) {
             return;
@@ -184,8 +184,10 @@ export class TalkManager {
         if (telopText.clientWidth === 0) {
             return;
         }
-        const paddingLeftPx = parseInt(window.getComputedStyle(telopText).paddingLeft, 10) || 0;
-        const paddingRightPx = parseInt(window.getComputedStyle(telopText).paddingRight, 10) || 0;
+        const paddingLeft = Number.parseInt(window.getComputedStyle(telopText).paddingLeft, 10);
+        const paddingRight = Number.parseInt(window.getComputedStyle(telopText).paddingRight, 10);
+        const paddingLeftPx = Number.isNaN(paddingLeft) ? 0 : paddingLeft;
+        const paddingRightPx = Number.isNaN(paddingRight) ? 0 : paddingRight;
         // 1文字単位で先頭から削除。
         // footer内に日時など別要素がある構成では、その幅を差し引いた残りをテロップ用の幅とみなす。
         const telopClass = "sincroFooterBox__telopText";

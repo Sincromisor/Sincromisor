@@ -187,8 +187,8 @@ export class CharacterBehaviorState {
     }
 
     applyVadState(report: VadStateReport, nowMs: number = performance.now()): void {
-        const rms = Math.max(0, Number(report.rms) || 0);
-        const peak = Math.max(0, Number(report.peak) || 0);
+        const rms = nonNegativeNumberOrZero(report.rms);
+        const peak = nonNegativeNumberOrZero(report.peak);
         const wasSpeech = this.vad.isSpeech;
         const envelopeRms = this.smoothEnvelope(this.vad.envelopeRms, rms);
         const envelopePeak = this.smoothEnvelope(this.vad.envelopePeak, peak);
@@ -322,7 +322,7 @@ export class CharacterBehaviorState {
             trackingEnabled: enabled,
             detected: enabled ? this.faceMotion.detected : false,
             confidence: enabled ? this.faceMotion.confidence : 0,
-            fallbackReason: enabled ? this.faceMotion.fallbackReason : null,
+            fallbackReason: enabled ? this.faceMotion.fallbackReason : undefined,
             lastUpdatedAtMs: nowMs,
         };
     }
@@ -333,7 +333,7 @@ export class CharacterBehaviorState {
             trackingEnabled: enabled,
             detected: enabled ? this.poseMotion.detected : false,
             confidence: enabled ? this.poseMotion.confidence : 0,
-            fallbackReason: enabled ? this.poseMotion.fallbackReason : null,
+            fallbackReason: enabled ? this.poseMotion.fallbackReason : undefined,
             degradedToFaceOnly: enabled ? this.poseMotion.degradedToFaceOnly : false,
             lastUpdatedAtMs: nowMs,
         };
@@ -453,7 +453,7 @@ export class CharacterBehaviorState {
                 : this.aiSpeech.expressionCode,
             currentVowel: nonEmptyStringOrUndefined(message.vowel),
             currentText: nonEmptyStringOrUndefined(message.text),
-            currentLengthSeconds: Math.max(0, Number(message.length) || 0),
+            currentLengthSeconds: nonNegativeNumberOrZero(message.length),
             beatId: beat ? this.aiSpeech.beatId + 1 : this.aiSpeech.beatId,
             beatKind: beat?.kind ?? (speechChanged ? undefined : this.aiSpeech.beatKind),
             beatText: beat?.text ?? (speechChanged ? undefined : this.aiSpeech.beatText),
@@ -490,7 +490,7 @@ export class CharacterBehaviorState {
                 currentText:
                     nonEmptyStringOrUndefined(currentMora?.mora.text) ?? this.aiSpeech.currentText,
                 currentLengthSeconds: currentMora
-                    ? Math.max(0, Number(currentMora.mora.length) || 0)
+                    ? nonNegativeNumberOrZero(currentMora.mora.length)
                     : this.aiSpeech.currentLengthSeconds,
                 lastUpdatedAtMs: currentMora ? nowMs : this.aiSpeech.lastUpdatedAtMs,
                 lastEndedAtMs: undefined,
@@ -604,7 +604,7 @@ export class CharacterBehaviorState {
             !this.aiSpeech.isSpeaking || this.aiSpeech.speechId !== message.speech_id;
         const text =
             nonEmptyStringOrUndefined(message.text) ?? nonEmptyStringOrUndefined(message.message);
-        const lengthSeconds = Math.max(0, Number(message.length) || 0);
+        const lengthSeconds = nonNegativeNumberOrZero(message.length);
         const isPunctuation = /[、。,.!?！？]/.test(message.text);
         const isPhrasePause = lengthSeconds >= BEHAVIOR_TIMING.aiSpeechPhrasePauseSeconds;
         const lastBeatAtMs = this.aiSpeech.lastBeatAtMs;
@@ -670,4 +670,9 @@ function clonePoseArmMotion(snapshot: SincroPoseArmMotionSnapshot): SincroPoseAr
 
 function nonEmptyStringOrUndefined(value: string | undefined): string | undefined {
     return value === undefined || value === "" ? undefined : value;
+}
+
+function nonNegativeNumberOrZero(value: unknown): number {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? Math.max(0, numericValue) : 0;
 }
