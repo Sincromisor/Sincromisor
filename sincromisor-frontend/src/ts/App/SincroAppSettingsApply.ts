@@ -3,6 +3,8 @@ import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehav
 import type { SincroAppDialogFacade } from "./SincroAppDialogFacade";
 import type { SincroAppSettingsSnapshot } from "./SincroAppTypes";
 
+type LookingGlassRuntimeConfigPatch = Parameters<typeof updateLookingGlassRuntimeConfig>[0];
+
 // UI入力値の揺れを吸収し、runtime config を安全な範囲に正規化する。
 export function clampAndRoundToStep(value: number, min: number, max: number, step: number): number {
     if (!Number.isFinite(value)) {
@@ -17,6 +19,18 @@ export function clampAndRoundToStep(value: number, min: number, max: number, ste
 // AppController.applySettings(...) の実処理を分離し、
 // Dialog 設定の反映と Looking Glass runtime config 更新をまとめて扱う。
 export function applySincroAppSettingsPartial(
+    dialogManager: SincroAppDialogFacade,
+    partial: Partial<SincroAppSettingsSnapshot>,
+): void {
+    applyTextAndDeviceSettings(dialogManager, partial);
+    applyAudioSettings(dialogManager, partial);
+    applyCharacterSettings(dialogManager, partial);
+    applyInspectorSettings(dialogManager, partial);
+    applyMotionScaleSettings(dialogManager, partial);
+    applyLookingGlassSettings(partial);
+}
+
+function applyTextAndDeviceSettings(
     dialogManager: SincroAppDialogFacade,
     partial: Partial<SincroAppSettingsSnapshot>,
 ): void {
@@ -36,6 +50,12 @@ export function applySincroAppSettingsPartial(
     if ("videoInputDeviceId" in partial) {
         dialogManager.setVideoInputDeviceId(partial.videoInputDeviceId);
     }
+}
+
+function applyAudioSettings(
+    dialogManager: SincroAppDialogFacade,
+    partial: Partial<SincroAppSettingsSnapshot>,
+): void {
     if (partial.enableAutoGainControl !== undefined) {
         dialogManager.setEnableAutoGainControl(partial.enableAutoGainControl);
     }
@@ -51,6 +71,12 @@ export function applySincroAppSettingsPartial(
     if (partial.enableVenueNoiseMode !== undefined) {
         dialogManager.setEnableVenueNoiseMode(partial.enableVenueNoiseMode);
     }
+}
+
+function applyCharacterSettings(
+    dialogManager: SincroAppDialogFacade,
+    partial: Partial<SincroAppSettingsSnapshot>,
+): void {
     if (partial.enableCharacter !== undefined) {
         dialogManager.setEnableCharacter(partial.enableCharacter);
     }
@@ -69,12 +95,24 @@ export function applySincroAppSettingsPartial(
     if (partial.enableAutoMute !== undefined) {
         dialogManager.setEnableAutoMute(partial.enableAutoMute);
     }
+}
+
+function applyInspectorSettings(
+    dialogManager: SincroAppDialogFacade,
+    partial: Partial<SincroAppSettingsSnapshot>,
+): void {
     if (partial.enableInspector !== undefined) {
         dialogManager.setEnableInspector(partial.enableInspector);
     }
     if (partial.enableVR !== undefined) {
         dialogManager.setEnableVR(partial.enableVR);
     }
+}
+
+function applyMotionScaleSettings(
+    dialogManager: SincroAppDialogFacade,
+    partial: Partial<SincroAppSettingsSnapshot>,
+): void {
     if (partial.characterMotionScale !== undefined) {
         dialogManager.setCharacterMotionScale(
             clampAndRoundToStep(partial.characterMotionScale, 0, 1.2, 0.05),
@@ -90,10 +128,21 @@ export function applySincroAppSettingsPartial(
             clampAndRoundToStep(partial.characterEyeTrackingScale, 0, 1.2, 0.05),
         );
     }
+}
 
+function applyLookingGlassSettings(partial: Partial<SincroAppSettingsSnapshot>): void {
     // Looking Glass 設定は runtime config に正規化して反映する。
     // polyfill への反映タイミング判定は別の tracker/status ロジックで扱う。
-    const nextLookingGlassConfig: Parameters<typeof updateLookingGlassRuntimeConfig>[0] = {};
+    const nextLookingGlassConfig = buildLookingGlassRuntimeConfig(partial);
+    if (Object.keys(nextLookingGlassConfig).length > 0) {
+        updateLookingGlassRuntimeConfig(nextLookingGlassConfig);
+    }
+}
+
+function buildLookingGlassRuntimeConfig(
+    partial: Partial<SincroAppSettingsSnapshot>,
+): LookingGlassRuntimeConfigPatch {
+    const nextLookingGlassConfig: LookingGlassRuntimeConfigPatch = {};
     if (partial.lgTileHeight !== undefined) {
         nextLookingGlassConfig.tileHeight = clampAndRoundToStep(partial.lgTileHeight, 256, 2048, 1);
     }
@@ -115,7 +164,5 @@ export function applySincroAppSettingsPartial(
     if (partial.lgFovyDeg !== undefined) {
         nextLookingGlassConfig.fovyDeg = clampAndRoundToStep(partial.lgFovyDeg, 5, 80, 0.5);
     }
-    if (Object.keys(nextLookingGlassConfig).length > 0) {
-        updateLookingGlassRuntimeConfig(nextLookingGlassConfig);
-    }
+    return nextLookingGlassConfig;
 }

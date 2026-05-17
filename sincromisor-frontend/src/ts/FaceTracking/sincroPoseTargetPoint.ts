@@ -29,13 +29,21 @@ export type PoseWorldTargetOrigin = {
     scale: number;
 };
 
-export function createSincroPoseTargetPoint(
-    landmark: NormalizedLandmark | undefined,
-    worldLandmark: Landmark | undefined,
-    joint: PoseTargetJoint,
-    imageOrigin: PoseTargetPointOrigin,
-    worldOrigin: PoseWorldTargetOrigin | undefined,
-): SincroPoseTargetPointSnapshot {
+export type SincroPoseTargetPointOptions = {
+    landmark: NormalizedLandmark | undefined;
+    worldLandmark: Landmark | undefined;
+    joint: PoseTargetJoint;
+    imageOrigin: PoseTargetPointOrigin;
+    worldOrigin: PoseWorldTargetOrigin | undefined;
+};
+
+export function createSincroPoseTargetPoint({
+    landmark,
+    worldLandmark,
+    joint,
+    imageOrigin,
+    worldOrigin,
+}: SincroPoseTargetPointOptions): SincroPoseTargetPointSnapshot {
     const pointVisibility = visibility(landmark);
     const pointPresence = presence(landmark);
     const confidence = Math.min(pointVisibility, pointPresence);

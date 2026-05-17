@@ -14,6 +14,14 @@ export type SincroArmIkClampedTarget = {
     clamped: boolean;
 };
 
+export type SincroArmIkTargetClampOptions = {
+    target: Vector3;
+    upperArmLength: number;
+    lowerArmLength: number;
+    bindUpperDirection: Vector3;
+    options: SincroArmIkReachOptions;
+};
+
 export type SincroArmIkLimitedQuaternion = {
     quaternion: Quaternion;
     limited: boolean;
@@ -30,13 +38,13 @@ export function targetDirectionIsUsable(direction: Vector3): boolean {
     );
 }
 
-export function clampArmIkTarget(
-    target: Vector3,
-    upperArmLength: number,
-    lowerArmLength: number,
-    bindUpperDirection: Vector3,
-    options: SincroArmIkReachOptions,
-): SincroArmIkClampedTarget {
+export function clampArmIkTarget({
+    target,
+    upperArmLength,
+    lowerArmLength,
+    bindUpperDirection,
+    options,
+}: SincroArmIkTargetClampOptions): SincroArmIkClampedTarget {
     const maxReach = (upperArmLength + lowerArmLength) * options.maxReachRatio;
     const minReach = Math.max(
         Math.abs(upperArmLength - lowerArmLength),
