@@ -1,10 +1,11 @@
 import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
 import type { Object3D } from "three/src/core/Object3D.js";
-import { MathUtils } from "three/src/math/MathUtils.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
-import type { CharacterBehaviorSnapshot } from "./CharacterBehaviorState";
+import { applyArmHandPose } from "./armBoneHandPose";
+import { applyArmBoneRotations } from "./armBoneRotationPose";
+import { ArmSpeechGestureState, getArmSpeechExpressionProfile } from "./armBoneSpeechGesture";
 import { CHARACTER_IDLE_MOTION_CONFIG, sineWave } from "./CharacterMotionConfig";
-import type { SincroPoseRetargetedArm, SincroPoseRetargetFrame } from "./SincroPoseRetargeter";
+import type { CharacterBehaviorSnapshot } from "./characterBehaviorTypes";
+import type { SincroPoseRetargetFrame } from "./sincroPoseRetargetTypes";
 
 /*
     Humanoid bones: https://docs.unity3d.com/ja/2019.4/ScriptReference/HumanBodyBones.html
@@ -14,10 +15,7 @@ import type { SincroPoseRetargetedArm, SincroPoseRetargetFrame } from "./SincroP
 // 現状は待機姿勢の固定値 + 微小な揺れで、自然に見える静止ポーズを構成している。
 export class ArmBoneController {
     private vrm: VRM;
-    private lastSpeechBeatId = 0;
-    private speechGestureStartedAtSeconds: number | undefined;
-    private speechGestureIntensity = 0;
-    private speechGestureSide: -1 | 1 = 1;
+    private speechGestureState = new ArmSpeechGestureState();
 
     constructor(vrm: VRM) {
         this.vrm = vrm;
@@ -29,333 +27,85 @@ export class ArmBoneController {
         snapshot?: CharacterBehaviorSnapshot,
         pose?: SincroPoseRetargetFrame,
     ): void {
-        const armSway = sineWave(
-            elapsedSeconds,
-            CHARACTER_IDLE_MOTION_CONFIG.arms.swayPeriodSeconds,
-            Math.PI / 5,
-        );
-        const elbowSway = sineWave(
-            elapsedSeconds,
-            CHARACTER_IDLE_MOTION_CONFIG.arms.elbowPeriodSeconds,
-            Math.PI / 2,
-        );
-        const wristSway = sineWave(
-            elapsedSeconds,
-            CHARACTER_IDLE_MOTION_CONFIG.arms.wristPeriodSeconds,
-            Math.PI / 9,
-        );
+        const idleMotion = createIdleArmMotion(elapsedSeconds);
         const poseControlsLeftArm = pose?.leftArm.ikActive ?? false;
         const poseControlsRightArm = pose?.rightArm.ikActive ?? false;
         const poseControlsAnyArm = poseControlsLeftArm || poseControlsRightArm;
         const speechGesture =
             snapshot && !poseControlsAnyArm
-                ? this.updateSpeechGesture(elapsedSeconds, snapshot)
+                ? this.speechGestureState.update(elapsedSeconds, snapshot)
                 : 0;
-        const expression = this.speechExpressionProfile(snapshot?.aiSpeech.expressionCode);
+        const expression = getArmSpeechExpressionProfile(snapshot?.aiSpeech.expressionCode);
         const leftGesture = poseControlsLeftArm
             ? 0
-            : speechGesture * (this.speechGestureSide < 0 ? 1 : 0.42);
+            : speechGesture * (this.speechGestureState.side < 0 ? 1 : 0.42);
         const rightGesture = poseControlsRightArm
             ? 0
-            : speechGesture * (this.speechGestureSide > 0 ? 1 : 0.42);
+            : speechGesture * (this.speechGestureState.side > 0 ? 1 : 0.42);
         const leftIdleScale = poseControlsLeftArm ? 0.22 : 1;
         const rightIdleScale = poseControlsRightArm ? 0.22 : 1;
 
-        const leftUpperArm = this.getNode("leftUpperArm");
-        const rightUpperArm = this.getNode("rightUpperArm");
-        const leftLowerArm = this.getNode("leftLowerArm");
-        const rightLowerArm = this.getNode("rightLowerArm");
-
-        if (!this.applyIkQuaternion(leftUpperArm, pose?.leftArm, "upper")) {
-            leftUpperArm?.rotation.set(
-                MathUtils.degToRad(5) -
-                    leftGesture *
-                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmLiftRad *
-                        expression.liftScale +
-                    (pose?.leftArm.upperArm.x ?? 0),
-                leftGesture *
-                    CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad *
-                    expression.openScale +
-                    (pose?.leftArm.upperArm.y ?? 0),
-                MathUtils.degToRad(-75) -
-                    armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad * leftIdleScale -
-                    leftGesture *
-                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad *
-                        expression.openScale +
-                    (pose?.leftArm.upperArm.z ?? 0),
-            );
-        }
-        if (!this.applyIkQuaternion(rightUpperArm, pose?.rightArm, "upper")) {
-            rightUpperArm?.rotation.set(
-                MathUtils.degToRad(5) -
-                    rightGesture *
-                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmLiftRad *
-                        expression.liftScale +
-                    (pose?.rightArm.upperArm.x ?? 0),
-                -rightGesture *
-                    CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad *
-                    expression.openScale +
-                    (pose?.rightArm.upperArm.y ?? 0),
-                MathUtils.degToRad(75) +
-                    armSway * CHARACTER_IDLE_MOTION_CONFIG.arms.upperArmSwayRad * rightIdleScale +
-                    rightGesture *
-                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechUpperArmOpenRad *
-                        expression.openScale +
-                    (pose?.rightArm.upperArm.z ?? 0),
-            );
-        }
-        if (!this.applyIkQuaternion(leftLowerArm, pose?.leftArm, "lower")) {
-            leftLowerArm?.rotation.set(
-                pose?.leftArm.lowerArm.x ?? 0,
-                MathUtils.degToRad(-15) -
-                    elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad * leftIdleScale -
-                    leftGesture *
-                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad *
-                        expression.flexScale +
-                    (pose?.leftArm.lowerArm.y ?? 0),
-                MathUtils.degToRad(5) + (pose?.leftArm.lowerArm.z ?? 0),
-            );
-        }
-        if (!this.applyIkQuaternion(rightLowerArm, pose?.rightArm, "lower")) {
-            rightLowerArm?.rotation.set(
-                pose?.rightArm.lowerArm.x ?? 0,
-                MathUtils.degToRad(15) +
-                    elbowSway * CHARACTER_IDLE_MOTION_CONFIG.arms.lowerArmSwayRad * rightIdleScale +
-                    rightGesture *
-                        CHARACTER_IDLE_MOTION_CONFIG.arms.speechLowerArmFlexRad *
-                        expression.flexScale +
-                    (pose?.rightArm.lowerArm.y ?? 0),
-                MathUtils.degToRad(-5) + (pose?.rightArm.lowerArm.z ?? 0),
-            );
-        }
-
-        this.updateLeftHand(
-            this.getNode("leftHand"),
-            wristSway * leftIdleScale,
-            leftGesture * expression.wristScale,
-            pose?.leftArm.wrist.z ?? 0,
-        );
-        this.updateLeftThumb(this.getNode("leftThumbProximal"), wristSway);
-        this.updateRightHand(
-            this.getNode("rightHand"),
-            wristSway * rightIdleScale,
-            rightGesture * expression.wristScale,
-            pose?.rightArm.wrist.z ?? 0,
-        );
-        this.updateRightThumb(this.getNode("rightThumbProximal"), wristSway);
-    }
-
-    // 3D IK は到達位置を満たすため local quaternion を直接適用する。
-    // Euler 加算系の idle / speech gesture は同じ腕では弱め、手首だけ表情付けとして残す。
-    private applyIkQuaternion(
-        bone: Object3D | undefined,
-        arm: SincroPoseRetargetedArm | undefined,
-        segment: "upper" | "lower",
-    ): boolean {
-        const quaternion = segment === "upper" ? arm?.upperArmQuaternion : arm?.lowerArmQuaternion;
-        if (!bone || !isWorldIkArm(arm) || !quaternion) {
-            return false;
-        }
-        bone.quaternion.copy(
-            new Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w),
-        );
-        return true;
-    }
-
-    // 手指は末端まで再帰的に回転を入れて、握り込み気味の形を作る。
-    private updateLeftHand(
-        baseBone: Object3D | undefined,
-        wristSway: number,
-        speechGesture: number,
-        poseWristRoll: number,
-    ): void {
-        if (!baseBone) {
-            return;
-        }
-        baseBone.rotation.set(
-            0,
-            0,
-            -0.2 -
-                wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.wristSwayRad -
-                speechGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechWristRollRad +
-                poseWristRoll,
-        );
-        baseBone.children.forEach((childBone: Object3D) => {
-            this.updateLeftHand(
-                childBone,
-                wristSway * 0.35,
-                speechGesture * 0.4,
-                poseWristRoll * 0.25,
-            );
+        applyArmBoneRotations({
+            nodes: {
+                leftUpperArm: this.getNode("leftUpperArm"),
+                rightUpperArm: this.getNode("rightUpperArm"),
+                leftLowerArm: this.getNode("leftLowerArm"),
+                rightLowerArm: this.getNode("rightLowerArm"),
+            },
+            pose,
+            armSway: idleMotion.armSway,
+            elbowSway: idleMotion.elbowSway,
+            leftGesture,
+            rightGesture,
+            leftIdleScale,
+            rightIdleScale,
+            expression,
         });
-    }
 
-    private updateLeftThumb(baseBone: Object3D | undefined, wristSway: number): void {
-        if (!baseBone) {
-            return;
-        }
-        baseBone.rotation.set(
-            0,
-            0.2 + wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.thumbSwayRad,
-            0,
-        );
-        baseBone.children.forEach((childBone: Object3D) => {
-            this.updateLeftThumb(childBone, wristSway * 0.35);
-        });
-    }
-
-    private updateRightHand(
-        baseBone: Object3D | undefined,
-        wristSway: number,
-        speechGesture: number,
-        poseWristRoll: number,
-    ): void {
-        if (!baseBone) {
-            return;
-        }
-        baseBone.rotation.set(
-            0,
-            0,
-            0.2 +
-                wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.wristSwayRad +
-                speechGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechWristRollRad +
-                poseWristRoll,
-        );
-        baseBone.children.forEach((childBone: Object3D) => {
-            this.updateRightHand(
-                childBone,
-                wristSway * 0.35,
-                speechGesture * 0.4,
-                poseWristRoll * 0.25,
-            );
-        });
-    }
-
-    private updateRightThumb(baseBone: Object3D | undefined, wristSway: number): void {
-        if (!baseBone) {
-            return;
-        }
-        baseBone.rotation.set(
-            0,
-            -0.2 - wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.thumbSwayRad,
-            0,
-        );
-        baseBone.children.forEach((childBone: Object3D) => {
-            this.updateRightThumb(childBone, wristSway * 0.35);
+        applyArmHandPose({
+            nodes: {
+                leftHand: this.getNode("leftHand"),
+                leftThumbProximal: this.getNode("leftThumbProximal"),
+                rightHand: this.getNode("rightHand"),
+                rightThumbProximal: this.getNode("rightThumbProximal"),
+            },
+            pose,
+            wristSway: idleMotion.wristSway,
+            leftGesture,
+            rightGesture,
+            leftIdleScale,
+            rightIdleScale,
+            expression,
         });
     }
 
     private getNode(name: VRMHumanBoneName): Object3D | undefined {
         return this.vrm.humanoid.getNormalizedBoneNode(name) ?? undefined;
     }
-
-    private updateSpeechGesture(
-        elapsedSeconds: number,
-        snapshot: CharacterBehaviorSnapshot,
-    ): number {
-        if (
-            snapshot.motionPolicy.allowAiSpeechGesture &&
-            snapshot.aiSpeech.isSpeaking &&
-            snapshot.aiSpeech.beatId !== this.lastSpeechBeatId &&
-            snapshot.aiSpeech.beatIntensity > 0
-        ) {
-            this.lastSpeechBeatId = snapshot.aiSpeech.beatId;
-            this.speechGestureStartedAtSeconds = elapsedSeconds;
-            this.speechGestureSide *= -1;
-            const expression = this.speechExpressionProfile(snapshot.aiSpeech.expressionCode);
-            const kindScale =
-                snapshot.aiSpeech.beatKind === "speech_start"
-                    ? 1
-                    : snapshot.aiSpeech.beatKind === "punctuation"
-                      ? 0.45
-                      : 0.72;
-            this.speechGestureIntensity = MathUtils.clamp(
-                snapshot.aiSpeech.beatIntensity * expression.intensityScale * kindScale,
-                0,
-                1,
-            );
-        }
-        if (this.speechGestureStartedAtSeconds === undefined) {
-            return 0;
-        }
-        const progress =
-            (elapsedSeconds - this.speechGestureStartedAtSeconds) /
-            CHARACTER_IDLE_MOTION_CONFIG.arms.speechGestureDurationSeconds;
-        if (
-            progress >= 1 ||
-            !snapshot.aiSpeech.isSpeaking ||
-            !snapshot.motionPolicy.allowAiSpeechGesture
-        ) {
-            this.speechGestureStartedAtSeconds = undefined;
-            return 0;
-        }
-        return Math.sin(Math.PI * MathUtils.clamp(progress, 0, 1)) * this.speechGestureIntensity;
-    }
-
-    private speechExpressionProfile(
-        expressionCode: number | undefined,
-    ): ArmSpeechExpressionProfile {
-        switch (expressionCode) {
-            case 2:
-                return {
-                    intensityScale: 0.58,
-                    liftScale: 0.45,
-                    openScale: 0.34,
-                    flexScale: 0.55,
-                    wristScale: 0.45,
-                };
-            case 3:
-                return {
-                    intensityScale: 0.74,
-                    liftScale: 0.58,
-                    openScale: 0.38,
-                    flexScale: 0.82,
-                    wristScale: 0.55,
-                };
-            case 4:
-                return {
-                    intensityScale: 0.86,
-                    liftScale: 0.92,
-                    openScale: 1.0,
-                    flexScale: 0.78,
-                    wristScale: 0.82,
-                };
-            case 5:
-                return {
-                    intensityScale: 0.9,
-                    liftScale: 1.0,
-                    openScale: 0.86,
-                    flexScale: 0.62,
-                    wristScale: 1.0,
-                };
-            case 1:
-                return {
-                    intensityScale: 0.48,
-                    liftScale: 0.42,
-                    openScale: 0.5,
-                    flexScale: 0.42,
-                    wristScale: 0.56,
-                };
-            default:
-                return {
-                    intensityScale: 0.52,
-                    liftScale: 0.55,
-                    openScale: 0.52,
-                    flexScale: 0.5,
-                    wristScale: 0.52,
-                };
-        }
-    }
 }
 
-type ArmSpeechExpressionProfile = {
-    intensityScale: number;
-    liftScale: number;
-    openScale: number;
-    flexScale: number;
-    wristScale: number;
+type IdleArmMotion = {
+    armSway: number;
+    elbowSway: number;
+    wristSway: number;
 };
 
-function isWorldIkArm(arm: SincroPoseRetargetedArm | undefined): boolean {
-    return arm?.ikActive === true && arm.ikSolverMode === "world_3d_ik";
+function createIdleArmMotion(elapsedSeconds: number): IdleArmMotion {
+    return {
+        armSway: sineWave(
+            elapsedSeconds,
+            CHARACTER_IDLE_MOTION_CONFIG.arms.swayPeriodSeconds,
+            Math.PI / 5,
+        ),
+        elbowSway: sineWave(
+            elapsedSeconds,
+            CHARACTER_IDLE_MOTION_CONFIG.arms.elbowPeriodSeconds,
+            Math.PI / 2,
+        ),
+        wristSway: sineWave(
+            elapsedSeconds,
+            CHARACTER_IDLE_MOTION_CONFIG.arms.wristPeriodSeconds,
+            Math.PI / 9,
+        ),
+    };
 }
