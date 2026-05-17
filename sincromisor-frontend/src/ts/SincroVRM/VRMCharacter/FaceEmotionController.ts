@@ -188,9 +188,8 @@ export class FaceEmotionController {
         const availability = required
             .map((name) => `${name}:${names.includes(name) ? "yes" : "no"}`)
             .join(", ");
-        this.logger.addTextChannelLog(
-            `[emotion] available expressions: ${names.join(", ") || "(none)"}\n`,
-        );
+        const expressionList = names.length === 0 ? "(none)" : names.join(", ");
+        this.logger.addTextChannelLog(`[emotion] available expressions: ${expressionList}\n`);
         this.logger.addTextChannelLog(`[emotion] preset availability: ${availability}\n`);
     }
 

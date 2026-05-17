@@ -289,7 +289,7 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
 function formatTrackingStatus(
     enabled: boolean,
     detected: boolean,
-    fallbackReason: string | null,
+    fallbackReason: string | undefined,
 ): string {
     if (!enabled) {
         return fallbackReason ? `off (${fallbackReason})` : "off";
@@ -495,8 +495,8 @@ function radToDeg(value: number): number {
     return (value * 180) / Math.PI;
 }
 
-function formatUpdatedAt(value: number | null): string {
-    if (value == null) {
+function formatUpdatedAt(value: number | undefined): string {
+    if (value === undefined) {
         return "-";
     }
     return `${Math.round(value)}ms`;

@@ -3,8 +3,8 @@ export class MotionDebugFrameCapture {
 
     capture(video: HTMLVideoElement, overlayCanvas: HTMLCanvasElement): string {
         const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth || video.clientWidth || 2;
-        canvas.height = video.videoHeight || video.clientHeight || 2;
+        canvas.width = positiveDimensionOrDefault(video.videoWidth, video.clientWidth, 2);
+        canvas.height = positiveDimensionOrDefault(video.videoHeight, video.clientHeight, 2);
         const context = canvas.getContext("2d");
         if (!context) {
             throw new Error("2D canvas context is not available.");
@@ -22,4 +22,8 @@ export class MotionDebugFrameCapture {
     lastFrameCapturedAtMs(): number | null {
         return this.lastCapturedAtMs;
     }
+}
+
+function positiveDimensionOrDefault(...values: number[]): number {
+    return values.find((value) => value > 0) ?? 2;
 }

@@ -2,7 +2,7 @@ export type SincroFaceHeadPoseSnapshot = {
     yawDeg: number;
     pitchDeg: number;
     rollDeg: number;
-    matrix: number[] | null;
+    matrix?: number[];
 };
 
 export type SincroFaceMotionSnapshot = {
@@ -13,8 +13,8 @@ export type SincroFaceMotionSnapshot = {
     blendshapes: Record<string, number>;
     inferenceTimeMs: number;
     inferenceFps: number;
-    lastUpdatedAtMs: number | null;
-    fallbackReason: string | null;
+    lastUpdatedAtMs?: number;
+    fallbackReason?: string;
 };
 
 export const DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT: SincroFaceMotionSnapshot = {
@@ -25,11 +25,8 @@ export const DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT: SincroFaceMotionSnapshot = {
         yawDeg: 0,
         pitchDeg: 0,
         rollDeg: 0,
-        matrix: null,
     },
     blendshapes: {},
     inferenceTimeMs: 0,
     inferenceFps: 0,
-    lastUpdatedAtMs: null,
-    fallbackReason: null,
 };

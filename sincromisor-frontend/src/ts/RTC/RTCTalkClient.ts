@@ -224,7 +224,8 @@ export class RTCTalkClient {
             return;
         }
         await audioSender.replaceTrack(audioTrack);
-        this.logger.addRtcEventLog(`replace audio track: label=${audioTrack.label || "-"}`);
+        const audioTrackLabel = audioTrack.label === "" ? "-" : audioTrack.label;
+        this.logger.addRtcEventLog(`replace audio track: label=${audioTrackLabel}`);
     }
 
     private async negotiate(

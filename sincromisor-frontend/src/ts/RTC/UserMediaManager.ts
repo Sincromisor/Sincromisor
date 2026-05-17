@@ -478,7 +478,7 @@ export class UserMediaManager {
             const hasPcmPayload = data.pcm != null;
             if (data.type === "audio-frame" || hasPcmPayload) {
                 const pcm = this.normalizePcmFrame(data.pcm);
-                const sampleRate = Number(data.sampleRate) || 48000;
+                const sampleRate = positiveNumberOrDefault(data.sampleRate, 48000);
                 if (pcm && pcm.length > 0) {
                     this.learnedVadClient.postAudioFrame(pcm, sampleRate);
                 }
@@ -489,8 +489,8 @@ export class UserMediaManager {
             }
             const fallbackVadReport = {
                 isSpeech: !!data.isSpeech,
-                rms: Number(data.rms) || 0,
-                peak: Number(data.peak) || 0,
+                rms: nonNegativeNumberOrZero(data.rms),
+                peak: nonNegativeNumberOrZero(data.peak),
             };
             this.updateAutoVadThreshold(fallbackVadReport);
             if (
@@ -742,6 +742,16 @@ export class UserMediaManager {
         }
         this.disposeAudioProcessing();
     }
+}
+
+function positiveNumberOrDefault(value: unknown, defaultValue: number): number {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : defaultValue;
+}
+
+function nonNegativeNumberOrZero(value: unknown): number {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? Math.max(0, numericValue) : 0;
 }
 
 /*

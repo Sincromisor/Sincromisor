@@ -191,8 +191,11 @@ export class SincroVRMInitializer {
         }
 
         const canvas = document.createElement("canvas");
-        const width = thumbnailImage.naturalWidth || thumbnailImage.width;
-        const height = thumbnailImage.naturalHeight || thumbnailImage.height;
+        const width = positiveDimensionOrDefault(thumbnailImage.naturalWidth, thumbnailImage.width);
+        const height = positiveDimensionOrDefault(
+            thumbnailImage.naturalHeight,
+            thumbnailImage.height,
+        );
         if (width === 0 || height === 0) {
             return;
         }
@@ -279,4 +282,8 @@ export class SincroVRMInitializer {
         DebugConsoleManager.getManager().setSincroPoseRetargetConfig(poseRetargetConfig);
         this.activeScene.setSincroPoseRetargetConfig(poseRetargetConfig);
     }
+}
+
+function positiveDimensionOrDefault(...values: number[]): number {
+    return values.find((value) => value > 0) ?? 0;
 }

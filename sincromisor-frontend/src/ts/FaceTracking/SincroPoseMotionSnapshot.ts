@@ -10,16 +10,16 @@ export type SincroPoseWorldTargetSnapshot = {
     worldConfidence: number;
     worldUsableForIk: boolean;
     worldIkWeight: number;
-    worldStaleReason: string | null;
-    rawX: number | null;
-    rawY: number | null;
-    rawZ: number | null;
-    localX: number | null;
-    localY: number | null;
-    localZ: number | null;
-    normalizedX: number | null;
-    normalizedY: number | null;
-    normalizedZ: number | null;
+    worldStaleReason?: string;
+    rawX?: number;
+    rawY?: number;
+    rawZ?: number;
+    localX?: number;
+    localY?: number;
+    localZ?: number;
+    normalizedX?: number;
+    normalizedY?: number;
+    normalizedZ?: number;
 };
 
 export type SincroPoseTargetPointSnapshot = {
@@ -32,13 +32,13 @@ export type SincroPoseTargetPointSnapshot = {
     usableForIk: boolean;
     ikWeight: number;
     stale: boolean;
-    staleReason: string | null;
+    staleReason?: string;
     cameraX: number;
     cameraY: number;
-    cameraZ: number | null;
+    cameraZ?: number;
     localX: number;
     localY: number;
-    localZ: number | null;
+    localZ?: number;
     world: SincroPoseWorldTargetSnapshot;
 };
 
@@ -88,8 +88,8 @@ export type SincroPoseMotionSnapshot = {
     inferenceFps: number;
     consecutiveFailures: number;
     degradedToFaceOnly: boolean;
-    lastUpdatedAtMs: number | null;
-    fallbackReason: string | null;
+    lastUpdatedAtMs?: number;
+    fallbackReason?: string;
 };
 
 export const DEFAULT_SINCRO_POSE_WORLD_TARGET_SNAPSHOT: SincroPoseWorldTargetSnapshot = {
@@ -101,15 +101,6 @@ export const DEFAULT_SINCRO_POSE_WORLD_TARGET_SNAPSHOT: SincroPoseWorldTargetSna
     worldUsableForIk: false,
     worldIkWeight: 0,
     worldStaleReason: "world_not_tracked",
-    rawX: null,
-    rawY: null,
-    rawZ: null,
-    localX: null,
-    localY: null,
-    localZ: null,
-    normalizedX: null,
-    normalizedY: null,
-    normalizedZ: null,
 };
 
 export const DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT: SincroPoseTargetPointSnapshot = {
@@ -125,10 +116,8 @@ export const DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT: SincroPoseTargetPointSna
     staleReason: "not_tracked",
     cameraX: 0.5,
     cameraY: 0.5,
-    cameraZ: null,
     localX: 0,
     localY: 0,
-    localZ: null,
     world: { ...DEFAULT_SINCRO_POSE_WORLD_TARGET_SNAPSHOT },
 };
 
@@ -180,6 +169,4 @@ export const DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT: SincroPoseMotionSnapshot = {
     inferenceFps: 0,
     consecutiveFailures: 0,
     degradedToFaceOnly: false,
-    lastUpdatedAtMs: null,
-    fallbackReason: null,
 };

@@ -116,7 +116,7 @@ async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> 
         const pose =
             message.poseEnabled && poseInitialized
                 ? poseTracker.detect(message.frame, message.timestampMs)
-                : null;
+                : undefined;
         post({
             type: "result",
             requestId: message.requestId,
@@ -182,7 +182,7 @@ function normalizeMediaPipeImportPath(path: string): string {
     return path.replace("?import&", "?").replace("&import", "");
 }
 
-function createStoppedFaceSnapshot(reason: string | null, nowMs: number) {
+function createStoppedFaceSnapshot(reason: string | undefined, nowMs: number) {
     return {
         trackingEnabled: false,
         detected: false,
@@ -191,7 +191,6 @@ function createStoppedFaceSnapshot(reason: string | null, nowMs: number) {
             yawDeg: 0,
             pitchDeg: 0,
             rollDeg: 0,
-            matrix: null,
         },
         blendshapes: {},
         inferenceTimeMs: 0,
@@ -201,7 +200,7 @@ function createStoppedFaceSnapshot(reason: string | null, nowMs: number) {
     };
 }
 
-function createStoppedPoseSnapshot(reason: string | null, nowMs: number) {
+function createStoppedPoseSnapshot(reason: string | undefined, nowMs: number) {
     return {
         trackingEnabled: false,
         detected: false,

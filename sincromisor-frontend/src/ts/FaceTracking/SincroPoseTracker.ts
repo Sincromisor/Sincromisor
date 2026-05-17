@@ -105,7 +105,7 @@ export class SincroPoseTracker {
     }
 
     stop(
-        reason: string | null = null,
+        reason: string | undefined = undefined,
         nowMs: number = performance.now(),
     ): SincroPoseMotionSnapshot {
         this.snapshot = {
@@ -158,9 +158,9 @@ export class SincroPoseTracker {
         inferenceFps: number,
         nowMs: number,
     ): SincroPoseMotionSnapshot {
-        const landmarks = result.landmarks[0] ?? null;
-        const worldLandmarks = result.worldLandmarks[0] ?? null;
-        if (!landmarks) {
+        const landmarks = result.landmarks[0];
+        const worldLandmarks = result.worldLandmarks[0];
+        if (landmarks === undefined) {
             this.consecutiveFailures += 1;
             return {
                 ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
@@ -262,16 +262,15 @@ export class SincroPoseTracker {
             consecutiveFailures: 0,
             degradedToFaceOnly: false,
             lastUpdatedAtMs: nowMs,
-            fallbackReason: null,
         };
     }
 
     private armMotion(
         landmarks: NormalizedLandmark[],
-        worldLandmarks: Landmark[] | null,
+        worldLandmarks: Landmark[] | undefined,
         side: PoseSide,
         imageOrigin: PoseTargetPointOrigin,
-        worldOrigin: PoseWorldTargetOrigin | null,
+        worldOrigin: PoseWorldTargetOrigin | undefined,
     ): SincroPoseArmMotionSnapshot {
         const shoulder =
             landmarks[side === "left" ? LANDMARK.leftShoulder : LANDMARK.rightShoulder];
@@ -330,9 +329,9 @@ export class SincroPoseTracker {
 
     private lowerBodyTargets(
         landmarks: NormalizedLandmark[],
-        worldLandmarks: Landmark[] | null,
+        worldLandmarks: Landmark[] | undefined,
         imageOrigin: PoseTargetPointOrigin,
-        worldOrigin: PoseWorldTargetOrigin | null,
+        worldOrigin: PoseWorldTargetOrigin | undefined,
     ): SincroPoseLowerBodyTargetSnapshot {
         return {
             leftHip: createSincroPoseTargetPoint(
@@ -464,28 +463,28 @@ function cloneLowerBodyTargets(
     };
 }
 
-function createWorldTargetOrigins(worldLandmarks: Landmark[] | null): {
-    shoulders: PoseWorldTargetOrigin | null;
-    hips: PoseWorldTargetOrigin | null;
+function createWorldTargetOrigins(worldLandmarks: Landmark[] | undefined): {
+    shoulders: PoseWorldTargetOrigin | undefined;
+    hips: PoseWorldTargetOrigin | undefined;
 } {
     const leftShoulder = worldLandmarks?.[LANDMARK.leftShoulder];
     const rightShoulder = worldLandmarks?.[LANDMARK.rightShoulder];
     const leftHip = worldLandmarks?.[LANDMARK.leftHip];
     const rightHip = worldLandmarks?.[LANDMARK.rightHip];
     const shoulderScale =
-        leftShoulder && rightShoulder ? finiteDistance3d(leftShoulder, rightShoulder) : null;
-    const hipScale = leftHip && rightHip ? finiteDistance3d(leftHip, rightHip) : null;
-    const scale = shoulderScale ?? hipScale ?? null;
+        leftShoulder && rightShoulder ? finiteDistance3d(leftShoulder, rightShoulder) : undefined;
+    const hipScale = leftHip && rightHip ? finiteDistance3d(leftHip, rightHip) : undefined;
+    const scale = shoulderScale ?? hipScale;
 
     return {
         shoulders:
             leftShoulder && rightShoulder && scale
                 ? createWorldTargetOrigin("shoulder_center", leftShoulder, rightShoulder, scale)
-                : null,
+                : undefined,
         hips:
             leftHip && rightHip && scale
                 ? createWorldTargetOrigin("hips_center", leftHip, rightHip, scale)
-                : null,
+                : undefined,
     };
 }
 
@@ -494,9 +493,9 @@ function createWorldTargetOrigin(
     left: Landmark,
     right: Landmark,
     scale: number,
-): PoseWorldTargetOrigin | null {
+): PoseWorldTargetOrigin | undefined {
     if (!landmark3dIsFinite(left) || !landmark3dIsFinite(right) || scale <= 0) {
-        return null;
+        return undefined;
     }
     return {
         anchor,
@@ -507,12 +506,12 @@ function createWorldTargetOrigin(
     };
 }
 
-function finiteDistance3d(a: Landmark, b: Landmark): number | null {
+function finiteDistance3d(a: Landmark, b: Landmark): number | undefined {
     if (!landmark3dIsFinite(a) || !landmark3dIsFinite(b)) {
-        return null;
+        return undefined;
     }
     const distance = distance3d(a, b);
-    return distance > 1e-4 ? distance : null;
+    return distance > 1e-4 ? distance : undefined;
 }
 
 function landmark3dIsFinite(landmark: Landmark): boolean {

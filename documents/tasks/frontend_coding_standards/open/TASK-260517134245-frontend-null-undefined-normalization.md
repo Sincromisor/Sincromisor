@@ -81,6 +81,11 @@
     - `startButtonHint` を optional にし、未設定時に `null` を流さない形へ変更した。
     - Looking Glass 診断表示と RTC state 表示の既定値用途を `||` から `??` へ置換した。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: Sincro motion snapshot と一部診断値の未設定表現を `undefined` へ追加整理した。
+    - 対象: `SincroFaceMotionSnapshot` / `SincroPoseMotionSnapshot` / `SincroFaceTracker` / `SincroPoseTracker` / `SincroTrackerWorkerClient` / `TrackerRuntime` / `sincro-tracker.worker` / `SincroMotionPanel`
+    - face / pose motion snapshot の `lastUpdatedAtMs` / `fallbackReason` / matrix / pose target の未観測座標を optional にし、tracker worker の pose 未返却と fallback reason も `undefined` へ寄せた。
+    - `DialogManager` / `ConfigurationDialogSettingsPanel` / `TalkManager` / `UserMediaManager` / `silero-vad.worker` / VRM canvas sizing / motion debug の既定値用途を `??` または明示 helper へ置き換えた。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

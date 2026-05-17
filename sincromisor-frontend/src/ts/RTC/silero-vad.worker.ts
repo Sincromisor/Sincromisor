@@ -147,7 +147,7 @@ async function initialize(config?: InitMessage): Promise<void> {
         return;
     }
     initialized = true;
-    const modelUrl = config?.modelUrl || DEFAULT_MODEL_URL;
+    const modelUrl = config?.modelUrl ?? DEFAULT_MODEL_URL;
     try {
         // Worker 内で ONNX Runtime を初期化し、メインスレッドの描画負荷と分離する。
         session = await ort.InferenceSession.create(modelUrl, {
@@ -339,7 +339,7 @@ self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
         return;
     }
     const pcm = normalizePcmFrame(data.pcm);
-    const sampleRate = Number(data.sampleRate) || 48000;
+    const sampleRate = positiveNumberOrDefault(data.sampleRate, 48000);
     if (!pcm || pcm.length === 0) {
         return;
     }
@@ -381,3 +381,8 @@ self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
     }
     busy = false;
 };
+
+function positiveNumberOrDefault(value: unknown, defaultValue: number): number {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : defaultValue;
+}

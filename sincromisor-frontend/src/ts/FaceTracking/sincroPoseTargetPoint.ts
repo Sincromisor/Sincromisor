@@ -34,12 +34,12 @@ export function createSincroPoseTargetPoint(
     worldLandmark: Landmark | undefined,
     joint: PoseTargetJoint,
     imageOrigin: PoseTargetPointOrigin,
-    worldOrigin: PoseWorldTargetOrigin | null,
+    worldOrigin: PoseWorldTargetOrigin | undefined,
 ): SincroPoseTargetPointSnapshot {
     const pointVisibility = visibility(landmark);
     const pointPresence = presence(landmark);
     const confidence = Math.min(pointVisibility, pointPresence);
-    const hasPoint = landmark != null;
+    const hasPoint = landmark !== undefined;
     const hasFiniteCoordinates = hasPoint && coordinatesAreFinite(landmark);
     const withinIkFrame = hasFiniteCoordinates && coordinatesAreInIkFrame(landmark);
     const tracked = hasFiniteCoordinates && confidence >= SINCRO_POSE_MIN_LANDMARK_VISIBILITY;
@@ -48,7 +48,7 @@ export function createSincroPoseTargetPoint(
     const quality = targetQuality(tracked, usableForIk);
     const cameraX = hasFiniteCoordinates ? clamp01(landmark.x) : 0.5;
     const cameraY = hasFiniteCoordinates ? clamp01(landmark.y) : 0.5;
-    const cameraZ = hasPoint && Number.isFinite(landmark.z) ? landmark.z : null;
+    const cameraZ = hasPoint && Number.isFinite(landmark.z) ? landmark.z : undefined;
 
     // 2D image target と MediaPipe world target は寿命と品質 gate が異なる。
     // IK solver が段階導入できるよう、同じ joint snapshot 内で別々に評価する。
@@ -63,14 +63,15 @@ export function createSincroPoseTargetPoint(
         ikWeight,
         stale: !tracked,
         staleReason: tracked
-            ? null
+            ? undefined
             : staleReason(hasPoint, hasFiniteCoordinates, withinIkFrame, confidence),
         cameraX,
         cameraY,
         cameraZ,
         localX: clampRange((cameraX - imageOrigin.anchorX) / imageOrigin.imageScale, -3, 3),
         localY: clampRange((imageOrigin.anchorY - cameraY) / imageOrigin.imageScale, -3, 3),
-        localZ: cameraZ == null ? null : clampRange(cameraZ / imageOrigin.imageScale, -3, 3),
+        localZ:
+            cameraZ === undefined ? undefined : clampRange(cameraZ / imageOrigin.imageScale, -3, 3),
         world: createWorldTargetPoint(worldLandmark, joint, worldOrigin, confidence),
     };
 }
@@ -115,19 +116,19 @@ function coordinatesAreInIkFrame(landmark: NormalizedLandmark): boolean {
 function createWorldTargetPoint(
     landmark: Landmark | undefined,
     joint: PoseTargetJoint,
-    origin: PoseWorldTargetOrigin | null,
+    origin: PoseWorldTargetOrigin | undefined,
     imageConfidence: number,
 ): SincroPoseWorldTargetSnapshot {
-    const hasPoint = landmark != null;
+    const hasPoint = landmark !== undefined;
     const hasFiniteCoordinates = hasPoint && worldCoordinatesAreFinite(landmark);
-    const hasUsableOrigin = origin != null && worldOriginIsFinite(origin);
+    const hasUsableOrigin = origin !== undefined && worldOriginIsFinite(origin);
     const hasWorldCoordinates = hasFiniteCoordinates && hasUsableOrigin;
     const worldConfidence = Math.min(imageConfidence, visibility(landmark));
     const worldIkWeight = hasWorldCoordinates ? ikTargetWeight(worldConfidence, joint, true) : 0;
     const worldUsableForIk = worldIkWeight > 0;
-    const localX = hasWorldCoordinates ? landmark.x - origin.anchorX : null;
-    const localY = hasWorldCoordinates ? landmark.y - origin.anchorY : null;
-    const localZ = hasWorldCoordinates ? landmark.z - origin.anchorZ : null;
+    const localX = hasWorldCoordinates ? landmark.x - origin.anchorX : undefined;
+    const localY = hasWorldCoordinates ? landmark.y - origin.anchorY : undefined;
+    const localZ = hasWorldCoordinates ? landmark.z - origin.anchorZ : undefined;
 
     return {
         coordinateSystem: "mediapipe_world",
@@ -141,17 +142,26 @@ function createWorldTargetPoint(
         worldUsableForIk,
         worldIkWeight,
         worldStaleReason: hasWorldCoordinates
-            ? null
+            ? undefined
             : worldStaleReason(hasPoint, hasFiniteCoordinates, hasUsableOrigin),
-        rawX: hasPoint && Number.isFinite(landmark.x) ? landmark.x : null,
-        rawY: hasPoint && Number.isFinite(landmark.y) ? landmark.y : null,
-        rawZ: hasPoint && Number.isFinite(landmark.z) ? landmark.z : null,
+        rawX: hasPoint && Number.isFinite(landmark.x) ? landmark.x : undefined,
+        rawY: hasPoint && Number.isFinite(landmark.y) ? landmark.y : undefined,
+        rawZ: hasPoint && Number.isFinite(landmark.z) ? landmark.z : undefined,
         localX,
         localY,
         localZ,
-        normalizedX: localX == null || !origin ? null : clampRange(localX / origin.scale, -3, 3),
-        normalizedY: localY == null || !origin ? null : clampRange(localY / origin.scale, -3, 3),
-        normalizedZ: localZ == null || !origin ? null : clampRange(localZ / origin.scale, -3, 3),
+        normalizedX:
+            localX === undefined || origin === undefined
+                ? undefined
+                : clampRange(localX / origin.scale, -3, 3),
+        normalizedY:
+            localY === undefined || origin === undefined
+                ? undefined
+                : clampRange(localY / origin.scale, -3, 3),
+        normalizedZ:
+            localZ === undefined || origin === undefined
+                ? undefined
+                : clampRange(localZ / origin.scale, -3, 3),
     };
 }
 

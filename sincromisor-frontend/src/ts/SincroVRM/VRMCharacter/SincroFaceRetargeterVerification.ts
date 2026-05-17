@@ -27,13 +27,11 @@ const BASE_SNAPSHOT: SincroFaceMotionSnapshot = {
         yawDeg: 0,
         pitchDeg: 0,
         rollDeg: 0,
-        matrix: null,
     },
     blendshapes: {},
     inferenceTimeMs: 0,
     inferenceFps: 15,
     lastUpdatedAtMs: 0,
-    fallbackReason: null,
 };
 
 // Vitest 等の導入前でも、固定 snapshot の期待値を型付きの実行可能データとして残す。
@@ -155,9 +153,9 @@ export function evaluateSincroFaceRetargeterVerificationCases(): {
             sign(head.neck.z) === testCase.expected.headRollSign &&
             dominantMouth === testCase.expected.dominantMouth &&
             expressions.blink > 0.5 === testCase.expected.blinkActive &&
-            (testCase.expected.blinkLeftActive == null ||
+            (testCase.expected.blinkLeftActive === undefined ||
                 expressions.blinkLeft > 0.5 === testCase.expected.blinkLeftActive) &&
-            (testCase.expected.blinkRightActive == null ||
+            (testCase.expected.blinkRightActive === undefined ||
                 expressions.blinkRight > 0.5 === testCase.expected.blinkRightActive);
         return { name: testCase.name, passed };
     });

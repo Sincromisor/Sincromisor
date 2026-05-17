@@ -69,12 +69,12 @@ export function ConfigurationDialogSettingsPanel() {
     const dragDepthRef = useRef(0);
 
     const hasStartupOptions = startupSettingsCapabilities.enableVR;
-    const connectionDetail = connectionState.detail || "";
+    const connectionDetail = connectionState.detail ?? "";
     const startupOptionHint =
         startupSettingsStatus.changedKeys.length > 0
             ? `開始前だけ効く項目に変更があります: ${startupSettingsStatus.changedKeys.join(", ")}`
             : "";
-    const startButtonLabel = dialogUiState.startButtonText || "開始する";
+    const startButtonLabel = dialogUiState.startButtonText ?? "開始する";
     const startButtonHint = dialogUiState.startButtonHint ?? "";
 
     const resetDragState = (): void => {
