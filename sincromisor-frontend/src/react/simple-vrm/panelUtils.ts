@@ -17,8 +17,8 @@ export function getEffectiveConnectionState(
     rtcState: PanelRtcState,
 ): string {
     // AppController 導出の connection_state 移行前に使っていた簡易判定を、互換用途として残している。
-    const ice = (rtcState.iceConnectionState || "").toLowerCase();
-    const signaling = (rtcState.signalingState || "").toLowerCase();
+    const ice = (rtcState.iceConnectionState ?? "").toLowerCase();
+    const signaling = (rtcState.signalingState ?? "").toLowerCase();
 
     if (ice === "connected" || ice === "completed") {
         return `connected (ice:${ice})`;
@@ -41,5 +41,5 @@ export function getEffectiveConnectionState(
     if (lifecycleState === "stopped") {
         return "stopped";
     }
-    return lifecycleState || "idle";
+    return lifecycleState ?? "idle";
 }

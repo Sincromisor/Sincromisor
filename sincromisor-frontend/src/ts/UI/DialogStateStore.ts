@@ -70,7 +70,7 @@ export type DialogUiStateValue = {
     isOpen: boolean;
     startButtonDisabled: boolean;
     startButtonText: string;
-    startButtonHint: string | null;
+    startButtonHint?: string;
 };
 
 export type DialogVrmUiStateValue = {
@@ -126,7 +126,6 @@ export class DialogStateStore {
         isOpen: false,
         startButtonDisabled: false,
         startButtonText: "開始する",
-        startButtonHint: null,
     };
     private dialogVrmUiState: DialogVrmUiStateValue = {
         isDragOver: false,
@@ -163,7 +162,7 @@ export class DialogStateStore {
     setDialogStartButtonState(
         startButtonDisabled: boolean,
         startButtonText: string,
-        startButtonHint: string | null = null,
+        startButtonHint?: string,
     ): void {
         this.dialogUiState = {
             ...this.dialogUiState,

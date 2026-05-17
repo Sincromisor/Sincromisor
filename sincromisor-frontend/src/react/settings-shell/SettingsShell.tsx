@@ -194,7 +194,7 @@ export function SettingsSummaryGrid({ children }: SettingsSummaryGridProps) {
 type SettingsStatusCardProps = {
     label: string;
     value: string;
-    detail?: string | null;
+    detail?: string;
     tone?: "neutral" | "good" | "warn";
 };
 

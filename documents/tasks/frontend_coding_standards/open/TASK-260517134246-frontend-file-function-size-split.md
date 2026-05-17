@@ -91,6 +91,13 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 追加: `src/ts/UI/debugConsoleAudioMeterFactory.ts`
     - `DebugConsoleManager.ts` は 505 行から 444 行まで縮小し、snapshot/event listener 管理と Web Audio meter 低レベル更新処理を外出しした。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `DebugConsoleManager.ts` から Audio / RTC / Gaze / Sincro motion の操作 facade を分割した。
+    - 追加: `src/ts/UI/debugConsoleAudioControls.ts`
+    - 追加: `src/ts/UI/debugConsoleRtcControls.ts`
+    - 追加: `src/ts/UI/debugConsoleGazeControls.ts`
+    - 追加: `src/ts/UI/debugConsoleSincroMotionControls.ts`
+    - `DebugConsoleManager.ts` は 444 行から 328 行まで縮小し、import / re-export / コメント / 空行を除く実装行は hard 閾値未満まで下げた。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

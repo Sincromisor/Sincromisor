@@ -5,34 +5,10 @@ import type {
     SincroPoseRetargetConfig,
     SincroPoseRetargetFrame,
 } from "../SincroVRM/VRMCharacter/SincroPoseRetargeter";
-import { createDebugConsoleAudioMeter } from "./debugConsoleAudioMeterFactory";
-import {
-    type RuntimeAudioConstraintApplyStatus,
-    type RuntimeAudioConstraintKey,
-    updateAudioConstraintStatus,
-    updateAudioFilterConfig,
-    updateAudioLearnedVadPerformanceMode,
-    updateAudioLearnedVadReport,
-    updateAudioLearnedVadStrictMode,
-    updateAudioLearnedVadTuning,
-    updateAudioVadRmsThreshold,
-    updateAudioVadState,
-    updateAudioVadThresholdMode,
-} from "./debugConsoleAudioSnapshot";
+import { DebugConsoleAudioControls } from "./debugConsoleAudioControls";
+import type { RuntimeAudioConstraintApplyStatus } from "./debugConsoleAudioSnapshot";
 import { DebugConsoleEventHub } from "./debugConsoleEventHub";
-import {
-    updateGazeEyeStatus,
-    updateGazeFaceX,
-    updateGazeFaceY,
-    updateGazeFacing,
-    updateGazePaused,
-    updateGazeTargetDebug,
-    updateGazeTrackingTuning,
-} from "./debugConsoleGazeSnapshot";
-import {
-    cloneSincroFaceMotionSnapshot,
-    cloneSincroPoseMotionSnapshot,
-} from "./debugConsoleMotionSnapshot";
+import { DebugConsoleGazeControls } from "./debugConsoleGazeControls";
 import type {
     AudioFilterControlConfig,
     CharacterGazeTrackingTuningUiConfig,
@@ -42,22 +18,8 @@ import type {
     LearnedVadUiReport,
     VadThresholdMode,
 } from "./debugConsolePublicTypes";
-import {
-    appendRtcEventLog,
-    appendRtcTelopChannelLog,
-    appendRtcTextChannelLog,
-    isDebugConsoleMetricKey,
-    isDebugConsoleTrendKey,
-    pushRtcTrendPoint,
-    resetRtcRealtimeStats,
-    updateRtcMetric,
-    updateRtcSdp,
-    updateRtcState,
-} from "./debugConsoleRtcSnapshot";
-import {
-    clonePoseRetargetRuntime,
-    updatePoseRetargetConfig,
-} from "./debugConsoleSincroMotionRuntime";
+import { DebugConsoleRtcControls } from "./debugConsoleRtcControls";
+import { DebugConsoleSincroMotionControls } from "./debugConsoleSincroMotionControls";
 import { createDefaultSnapshot, type DebugConsoleSnapshot } from "./debugConsoleSnapshot";
 
 export type {
@@ -85,26 +47,24 @@ export class DebugConsoleManager {
 
     private snapshot: DebugConsoleSnapshot = createDefaultSnapshot();
     private readonly eventHub = new DebugConsoleEventHub();
-    private readonly localAudioConstraintApplyState: Partial<
-        Record<RuntimeAudioConstraintKey, RuntimeAudioConstraintApplyStatus>
-    > = {};
-    private readonly audioMeter = createDebugConsoleAudioMeter({
+    private readonly audioControls = new DebugConsoleAudioControls({
+        readSnapshot: () => this.snapshot,
         updateSnapshot: (updater) => this.updateSnapshot(updater),
-        updateLocalVadState: (isSpeech) => this.updateLocalVadState(isSpeech),
+        emitEvent: (event) => this.emitEvent(event),
+    });
+    private readonly sincroMotionControls = new DebugConsoleSincroMotionControls({
+        readSnapshot: () => this.snapshot,
+        updateSnapshot: (updater) => this.updateSnapshot(updater),
+    });
+    private readonly rtcControls = new DebugConsoleRtcControls({
+        updateSnapshot: (updater) => this.updateSnapshot(updater),
+        emitEvent: (event) => this.emitEvent(event),
+    });
+    private readonly gazeControls = new DebugConsoleGazeControls({
+        updateSnapshot: (updater) => this.updateSnapshot(updater),
+        emitEvent: (event) => this.emitEvent(event),
     });
     private rtcStopHandler: () => void = () => {};
-    private onLocalAudioFilterChange: (config: AudioFilterControlConfig) => void = () => {};
-    private onLocalLearnedVadTuningChange: (config: LearnedVadTuningUiConfig) => void = () => {};
-    private onLocalLearnedVadPerformanceModeChange: (mode: LearnedVadPerformanceMode) => void =
-        () => {};
-    private onLocalLearnedVadStrictModeChange: (enabled: boolean) => void = () => {};
-    private onLocalVadThresholdModeChange: (mode: VadThresholdMode) => void = () => {};
-    private onLocalVadRmsThresholdChange: (threshold: number) => void = () => {};
-    private onCharacterGazeTrackingTuningChange: (
-        config: CharacterGazeTrackingTuningUiConfig,
-    ) => void = () => {};
-    private onSincroPoseRetargetConfigChange: (config: Partial<SincroPoseRetargetConfig>) => void =
-        () => {};
 
     static getManager(): DebugConsoleManager {
         if (!DebugConsoleManager.instance) {
@@ -113,9 +73,7 @@ export class DebugConsoleManager {
         return DebugConsoleManager.instance;
     }
 
-    private constructor() {
-        this.renderLocalAudioConstraintApplyStatus();
-    }
+    private constructor() {}
 
     subscribe(listener: (event: DebugConsoleManagerEvent) => void): () => void {
         return this.eventHub.subscribeEvent(listener);
@@ -138,297 +96,223 @@ export class DebugConsoleManager {
     }
 
     setLocalVadThresholdMode(mode: VadThresholdMode): void {
-        this.updateSnapshot((snapshot) => updateAudioVadThresholdMode(snapshot, mode));
+        this.audioControls.setLocalVadThresholdMode(mode);
     }
 
     setLocalVadThresholdModeChangeCallback(callback: (mode: VadThresholdMode) => void): void {
-        this.onLocalVadThresholdModeChange = callback;
+        this.audioControls.setLocalVadThresholdModeChangeCallback(callback);
     }
 
     applyLocalVadThresholdMode(mode: VadThresholdMode): void {
-        this.setLocalVadThresholdMode(mode);
-        this.onLocalVadThresholdModeChange(mode);
+        this.audioControls.applyLocalVadThresholdMode(mode);
     }
 
     setLocalLearnedVadTuningChangeCallback(
         callback: (config: LearnedVadTuningUiConfig) => void,
     ): void {
-        this.onLocalLearnedVadTuningChange = callback;
+        this.audioControls.setLocalLearnedVadTuningChangeCallback(callback);
     }
 
     setLocalLearnedVadTuning(config: LearnedVadTuningUiConfig): void {
-        this.updateSnapshot((snapshot) => updateAudioLearnedVadTuning(snapshot, config));
+        this.audioControls.setLocalLearnedVadTuning(config);
     }
 
     applyLocalLearnedVadTuning(config: LearnedVadTuningUiConfig): void {
-        this.setLocalLearnedVadTuning(config);
-        this.onLocalLearnedVadTuningChange(config);
+        this.audioControls.applyLocalLearnedVadTuning(config);
     }
 
     setLocalLearnedVadPerformanceMode(mode: LearnedVadPerformanceMode): void {
-        this.updateSnapshot((snapshot) => updateAudioLearnedVadPerformanceMode(snapshot, mode));
+        this.audioControls.setLocalLearnedVadPerformanceMode(mode);
     }
 
     setLocalLearnedVadPerformanceModeChangeCallback(
         callback: (mode: LearnedVadPerformanceMode) => void,
     ): void {
-        this.onLocalLearnedVadPerformanceModeChange = callback;
+        this.audioControls.setLocalLearnedVadPerformanceModeChangeCallback(callback);
     }
 
     applyLocalLearnedVadPerformanceMode(mode: LearnedVadPerformanceMode): void {
-        this.setLocalLearnedVadPerformanceMode(mode);
-        this.onLocalLearnedVadPerformanceModeChange(mode);
+        this.audioControls.applyLocalLearnedVadPerformanceMode(mode);
     }
 
     setLocalLearnedVadStrictMode(enabled: boolean): void {
-        this.updateSnapshot((snapshot) => updateAudioLearnedVadStrictMode(snapshot, enabled));
+        this.audioControls.setLocalLearnedVadStrictMode(enabled);
     }
 
     setLocalLearnedVadStrictModeChangeCallback(callback: (enabled: boolean) => void): void {
-        this.onLocalLearnedVadStrictModeChange = callback;
+        this.audioControls.setLocalLearnedVadStrictModeChangeCallback(callback);
     }
 
     applyLocalLearnedVadStrictMode(enabled: boolean): void {
-        this.setLocalLearnedVadStrictMode(enabled);
-        this.onLocalLearnedVadStrictModeChange(enabled);
+        this.audioControls.applyLocalLearnedVadStrictMode(enabled);
     }
 
     setLocalAudioFilterConfig(config: AudioFilterControlConfig): void {
-        this.updateSnapshot((snapshot) => updateAudioFilterConfig(snapshot, config));
+        this.audioControls.setLocalAudioFilterConfig(config);
     }
 
     setLocalAudioFilterChangeCallback(callback: (config: AudioFilterControlConfig) => void): void {
-        this.onLocalAudioFilterChange = callback;
+        this.audioControls.setLocalAudioFilterChangeCallback(callback);
     }
 
     applyLocalAudioFilterConfig(config: AudioFilterControlConfig): void {
-        this.setLocalAudioFilterConfig(config);
-        this.onLocalAudioFilterChange(this.snapshot.audio.filterConfig);
+        this.audioControls.applyLocalAudioFilterConfig(config);
     }
 
     setLocalVadRmsThreshold(value: number): void {
-        this.updateSnapshot((snapshot) => updateAudioVadRmsThreshold(snapshot, value));
+        this.audioControls.setLocalVadRmsThreshold(value);
     }
 
     setLocalVadRmsThresholdChangeCallback(callback: (threshold: number) => void): void {
-        this.onLocalVadRmsThresholdChange = callback;
+        this.audioControls.setLocalVadRmsThresholdChangeCallback(callback);
     }
 
     applyLocalVadRmsThreshold(value: number): void {
-        this.setLocalVadRmsThreshold(value);
-        this.onLocalVadRmsThresholdChange(this.snapshot.audio.vadRmsThreshold);
+        this.audioControls.applyLocalVadRmsThreshold(value);
     }
 
     updateLocalVadState(isSpeech: boolean): void {
-        this.updateSnapshot((snapshot) => updateAudioVadState(snapshot, isSpeech));
-        this.emitEvent({ type: "local_vad_state", isSpeech });
+        this.audioControls.updateLocalVadState(isSpeech);
     }
 
     updateLearnedVadState(report: LearnedVadUiReport): void {
-        this.updateSnapshot((snapshot) => updateAudioLearnedVadReport(snapshot, report));
-        this.emitEvent({ type: "learned_vad_state", report });
+        this.audioControls.updateLearnedVadState(report);
     }
 
     updateLocalAudioConstraintApplyStatus(report: RuntimeAudioConstraintApplyStatus): void {
-        this.localAudioConstraintApplyState[report.key] = report;
-        this.renderLocalAudioConstraintApplyStatus();
-    }
-
-    private renderLocalAudioConstraintApplyStatus(): void {
-        this.updateSnapshot((snapshot) =>
-            updateAudioConstraintStatus(snapshot, this.localAudioConstraintApplyState),
-        );
+        this.audioControls.updateLocalAudioConstraintApplyStatus(report);
     }
 
     setLocalAudioTrack(track: MediaStreamTrack): void {
-        this.audioMeter.setLocalAudioTrack(track);
+        this.audioControls.setLocalAudioTrack(track);
     }
 
     setRemoteAudioTrack(track: MediaStreamTrack): void {
-        this.audioMeter.setRemoteAudioTrack(track);
+        this.audioControls.setRemoteAudioTrack(track);
     }
 
     resetRealtimeStats(): void {
-        this.updateSnapshot(resetRtcRealtimeStats);
+        this.rtcControls.resetRealtimeStats();
     }
 
     updateMetricValue(key: string, value: string): void {
-        if (!isDebugConsoleMetricKey(key)) {
-            return;
-        }
-        this.updateSnapshot((snapshot) => updateRtcMetric(snapshot, key, value));
+        this.rtcControls.updateMetricValue(key, value);
     }
 
     pushTrendPoint(trendKey: string, value: number | null): void {
-        if (!isDebugConsoleTrendKey(trendKey)) {
-            return;
-        }
-        this.updateSnapshot((snapshot) => pushRtcTrendPoint(snapshot, trendKey, value));
+        this.rtcControls.pushTrendPoint(trendKey, value);
     }
 
     addRtcEventLog(msg: string): void {
-        this.updateSnapshot((snapshot) => appendRtcEventLog(snapshot, msg));
-        this.emitEvent({ type: "rtc_event_log", message: msg });
+        this.rtcControls.addRtcEventLog(msg);
     }
 
     addTelopChannelLog(msg: string): void {
-        this.updateSnapshot((snapshot) => appendRtcTelopChannelLog(snapshot, msg));
+        this.rtcControls.addTelopChannelLog(msg);
     }
 
     addTextChannelLog(msg: string): void {
-        this.updateSnapshot((snapshot) => appendRtcTextChannelLog(snapshot, msg));
+        this.rtcControls.addTextChannelLog(msg);
     }
 
     newIceConnectionState(msg: string): void {
-        this.updateIceStateSnapshot("iceConnectionState", msg, true);
-        this.addRtcEventLog(`ICE connection state -> ${msg}`);
-        this.emitEvent({ type: "ice_connection_state", value: msg });
+        this.rtcControls.newIceConnectionState(msg);
     }
 
     updateIceConnectionState(msg: string): void {
-        this.updateIceStateSnapshot("iceConnectionState", msg, false);
-        this.emitEvent({ type: "ice_connection_state", value: msg });
+        this.rtcControls.updateIceConnectionState(msg);
     }
 
     newIceGatheringState(msg: string): void {
-        this.updateIceStateSnapshot("iceGatheringState", msg, true);
-        this.addRtcEventLog(`ICE gathering state -> ${msg}`);
+        this.rtcControls.newIceGatheringState(msg);
     }
 
     updateIceGatheringState(msg: string): void {
-        this.updateIceStateSnapshot("iceGatheringState", msg, false);
+        this.rtcControls.updateIceGatheringState(msg);
     }
 
     newSignalingState(msg: string): void {
-        this.updateIceStateSnapshot("signalingState", msg, true);
-        this.addRtcEventLog(`Signaling state -> ${msg}`);
-        this.emitEvent({ type: "signaling_state", value: msg });
+        this.rtcControls.newSignalingState(msg);
     }
 
     updateSignalingState(msg: string): void {
-        this.updateIceStateSnapshot("signalingState", msg, false);
-        this.emitEvent({ type: "signaling_state", value: msg });
+        this.rtcControls.updateSignalingState(msg);
     }
 
     offerSDP(msg: string): void {
-        this.updateSnapshot((snapshot) => updateRtcSdp(snapshot, "offerSdp", msg));
+        this.rtcControls.offerSDP(msg);
     }
 
     answerSDP(msg: string): void {
-        this.updateSnapshot((snapshot) => updateRtcSdp(snapshot, "answerSdp", msg));
+        this.rtcControls.answerSDP(msg);
     }
 
     updateFaceXLog(value: number): void {
-        this.updateSnapshot((snapshot) => updateGazeFaceX(snapshot, value));
-        this.emitEvent({ type: "face_x", value });
+        this.gazeControls.updateFaceXLog(value);
     }
 
     updateFaceYLog(value: number): void {
-        this.updateSnapshot((snapshot) => updateGazeFaceY(snapshot, value));
-        this.emitEvent({ type: "face_y", value });
+        this.gazeControls.updateFaceYLog(value);
     }
 
     updateFacing(value: number): void {
-        this.updateSnapshot((snapshot) => updateGazeFacing(snapshot, value));
-        this.emitEvent({ type: "facing", value });
+        this.gazeControls.updateFacing(value);
     }
 
     updateCharacterEyeStatus(watching: boolean): void {
-        this.updateSnapshot((snapshot) => updateGazeEyeStatus(snapshot, watching));
-        this.emitEvent({ type: "character_eye_status", watching });
+        this.gazeControls.updateCharacterEyeStatus(watching);
     }
 
     updateCharacterGazeTargetDebug(message: string): void {
-        this.updateSnapshot((snapshot) => updateGazeTargetDebug(snapshot, message));
-        this.emitEvent({ type: "gaze_target_debug", message });
+        this.gazeControls.updateCharacterGazeTargetDebug(message);
     }
 
     updateSincroFaceMotion(snapshot: SincroFaceMotionSnapshot): void {
-        this.updateSnapshot((currentSnapshot) => ({
-            ...currentSnapshot,
-            sincroMotion: {
-                ...currentSnapshot.sincroMotion,
-                face: cloneSincroFaceMotionSnapshot(snapshot),
-            },
-        }));
+        this.sincroMotionControls.updateSincroFaceMotion(snapshot);
     }
 
     updateSincroPoseMotion(snapshot: SincroPoseMotionSnapshot): void {
-        this.updateSnapshot((currentSnapshot) => ({
-            ...currentSnapshot,
-            sincroMotion: {
-                ...currentSnapshot.sincroMotion,
-                pose: cloneSincroPoseMotionSnapshot(snapshot),
-            },
-        }));
+        this.sincroMotionControls.updateSincroPoseMotion(snapshot);
     }
 
     updateSincroTrackerStats(snapshot: SincroTrackerWorkerStats): void {
-        this.updateSnapshot((currentSnapshot) => ({
-            ...currentSnapshot,
-            sincroMotion: {
-                ...currentSnapshot.sincroMotion,
-                tracker: { ...snapshot },
-            },
-        }));
+        this.sincroMotionControls.updateSincroTrackerStats(snapshot);
     }
 
     updateSincroPoseRetargetFrame(frame: SincroPoseRetargetFrame): void {
-        this.updateSnapshot((currentSnapshot) => ({
-            ...currentSnapshot,
-            sincroMotion: {
-                ...currentSnapshot.sincroMotion,
-                poseRetargetRuntime: clonePoseRetargetRuntime(frame),
-            },
-        }));
+        this.sincroMotionControls.updateSincroPoseRetargetFrame(frame);
     }
 
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            sincroMotion: {
-                ...snapshot.sincroMotion,
-                poseRetarget: updatePoseRetargetConfig(snapshot.sincroMotion.poseRetarget, config),
-            },
-        }));
+        this.sincroMotionControls.setSincroPoseRetargetConfig(config);
     }
 
     setSincroPoseRetargetConfigChangeCallback(
         callback: (config: Partial<SincroPoseRetargetConfig>) => void,
     ): void {
-        this.onSincroPoseRetargetConfigChange = callback;
+        this.sincroMotionControls.setSincroPoseRetargetConfigChangeCallback(callback);
     }
 
     applySincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
-        this.setSincroPoseRetargetConfig(config);
-        this.onSincroPoseRetargetConfigChange(this.snapshot.sincroMotion.poseRetarget);
+        this.sincroMotionControls.applySincroPoseRetargetConfig(config);
     }
 
     setCharacterGazePaused(paused: boolean): void {
-        this.updateSnapshot((snapshot) => updateGazePaused(snapshot, paused));
+        this.gazeControls.setCharacterGazePaused(paused);
     }
 
     setCharacterGazeTrackingTuning(config: CharacterGazeTrackingTuningUiConfig): void {
-        this.updateSnapshot((snapshot) => updateGazeTrackingTuning(snapshot, config));
+        this.gazeControls.setCharacterGazeTrackingTuning(config);
     }
 
     setCharacterGazeTrackingTuningChangeCallback(
         callback: (config: CharacterGazeTrackingTuningUiConfig) => void,
     ): void {
-        this.onCharacterGazeTrackingTuningChange = callback;
+        this.gazeControls.setCharacterGazeTrackingTuningChangeCallback(callback);
     }
 
     applyCharacterGazeTrackingTuning(config: CharacterGazeTrackingTuningUiConfig): void {
-        this.setCharacterGazeTrackingTuning(config);
-        this.onCharacterGazeTrackingTuningChange(config);
-    }
-
-    private updateIceStateSnapshot(
-        key: "iceConnectionState" | "iceGatheringState" | "signalingState",
-        state: string,
-        append: boolean,
-    ): void {
-        this.updateSnapshot((snapshot) => updateRtcState(snapshot, key, state, append));
+        this.gazeControls.applyCharacterGazeTrackingTuning(config);
     }
 
     private updateSnapshot(

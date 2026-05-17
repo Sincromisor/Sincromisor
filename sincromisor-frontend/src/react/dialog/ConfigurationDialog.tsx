@@ -11,7 +11,6 @@ const defaultDialogUiState: SincroAppDialogUiState = {
     isOpen: false,
     startButtonDisabled: false,
     startButtonText: "開始する",
-    startButtonHint: null,
 };
 
 // 起動前 dialog の native dialog 要素と React UI を束ねる root component。

@@ -76,6 +76,11 @@
     - RTC 設定未取得と current mora 未保持の内部状態を `undefined` に統一した。
     - `SincroFaceMotionSnapshot` / `SincroPoseMotionSnapshot` の `fallbackReason: null` は tracker snapshot 契約側の残件として維持した。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: Dialog UI state と simple-vrm 診断表示の未設定値を `undefined` / `??` へ追加整理した。
+    - 対象: `DialogStateStore` / `DialogManager` / `ConfigurationDialog` / `useConfigurationDialogSettingsState` / `SimpleVrmControlPanel` / `DiagnosticsStatusCards` / `SettingsStatusCard`
+    - `startButtonHint` を optional にし、未設定時に `null` を流さない形へ変更した。
+    - Looking Glass 診断表示と RTC state 表示の既定値用途を `||` から `??` へ置換した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
