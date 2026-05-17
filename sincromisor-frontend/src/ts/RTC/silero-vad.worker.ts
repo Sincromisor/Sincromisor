@@ -33,10 +33,10 @@ type WorkerInputMessage = InitMessage | SetEnabledMessage | SetParamsMessage | A
 let enabled = false;
 let initialized = false;
 let available = false;
-let session: ort.InferenceSession | null = null;
-let modelStateTensor: ort.Tensor | null = null;
+let session: ort.InferenceSession | undefined;
+let modelStateTensor: ort.Tensor | undefined;
 let busy = false;
-let pendingFrame: { pcm: Float32Array; sampleRate: number } | null = null;
+let pendingFrame: { pcm: Float32Array; sampleRate: number } | undefined;
 
 const DEFAULT_MODEL_URL = "/3rd_party/silero-vad/silero_vad.onnx";
 
@@ -164,9 +164,12 @@ async function initialize(config?: InitMessage): Promise<void> {
 
 // 1フレーム分の音声から speech probability を推論する。
 // できるだけモデル差異に強くするため、入力/出力名は文字列パターンで解決する。
-async function inferProbability(pcm: Float32Array, sampleRate: number): Promise<number | null> {
-    if (!available || !session) {
-        return null;
+async function inferProbability(
+    pcm: Float32Array,
+    sampleRate: number,
+): Promise<number | undefined> {
+    if (!available || session === undefined) {
+        return undefined;
     }
     const pcm16k = linearResample(pcm, sampleRate, 16000);
     const frame = normalizeWindow(pcm16k, 512);
@@ -207,7 +210,7 @@ async function inferProbability(pcm: Float32Array, sampleRate: number): Promise<
     }
 
     const result = await session.run(feeds);
-    let probability: number | null = null;
+    let probability: number | undefined;
     for (const outputName of session.outputNames) {
         const output = result[outputName];
         if (!output?.data || output.data.length === 0) {
@@ -227,7 +230,7 @@ async function inferProbability(pcm: Float32Array, sampleRate: number): Promise<
     return probability;
 }
 
-function normalizePcmFrame(raw: AudioFrameMessage["pcm"]): Float32Array | null {
+function normalizePcmFrame(raw: AudioFrameMessage["pcm"]): Float32Array | undefined {
     if (raw instanceof Float32Array) {
         return raw;
     }
@@ -240,11 +243,11 @@ function normalizePcmFrame(raw: AudioFrameMessage["pcm"]): Float32Array | null {
     if (Array.isArray(raw)) {
         const values = raw.map((v) => Number(v));
         if (values.some((v) => !Number.isFinite(v))) {
-            return null;
+            return undefined;
         }
         return Float32Array.from(values);
     }
-    return null;
+    return undefined;
 }
 
 // ON/OFF閾値 + 連続フレーム条件 + hangover で最終スピーチ状態を決定する。
@@ -292,7 +295,7 @@ self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
     if (data.type === "set-enabled") {
         enabled = !!data.enabled;
         if (!enabled) {
-            pendingFrame = null;
+            pendingFrame = undefined;
             busy = false;
             onConsecutiveCount = 0;
             offConsecutiveCount = 0;
@@ -353,14 +356,14 @@ self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
     busy = true;
     while (pendingFrame) {
         const current = pendingFrame;
-        pendingFrame = null;
+        pendingFrame = undefined;
         const now = Date.now();
         if (now - lastInferAtMs < minInferIntervalMs) {
             continue;
         }
         lastInferAtMs = now;
 
-        let probability: number | null = null;
+        let probability: number | undefined;
         try {
             probability = await inferProbability(current.pcm, current.sampleRate);
         } catch (e) {
@@ -368,7 +371,7 @@ self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
             postStatus("fallback", `${e}`);
         }
 
-        if (probability == null) {
+        if (probability === undefined) {
             const rms = rmsOf(current.pcm);
             probability = Math.max(0, Math.min(1, (rms - 0.01) * 18));
         }

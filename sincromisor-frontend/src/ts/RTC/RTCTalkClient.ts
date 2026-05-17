@@ -31,7 +31,7 @@ type RtcStatsRecord = RTCStats & {
     relayProtocol?: string;
     address?: string;
     ip?: string;
-    port?: number | string;
+    port?: number | string | null;
 };
 
 // 1接続分の WebRTC セッションを管理するクライアント。
@@ -47,22 +47,22 @@ export class RTCTalkClient {
     private sincroConfig: SincroRTCConfig;
     // /offer 応答で払い出されるサーバー側セッションID。
     // Trickle ICEの candidate 送信先セッションの特定に使う。
-    private sessionId: string | null = null;
+    private sessionId?: string;
     // /offer 応答より先に onicecandidate が発火するため、
     // セッションID取得前のcandidateを一時保管する。
     private pendingIceCandidates: Array<RTCIceCandidateInit | null> = [];
-    private statsIntervalId: number | null = null;
+    private statsIntervalId?: number;
     private previousOutboundAudio: { bytes: number; timestamp: number } | undefined;
     private previousInboundAudio: { bytes: number; timestamp: number } | undefined;
-    private currentRouteSignature: string | null = null;
+    private currentRouteSignature?: string;
     private iceFailureDiagnosticCaptured = false;
-    private reconnectTimerId: number | null = null;
+    private reconnectTimerId?: number;
     private isNegotiating = false;
     private reconnectAttempt = 0;
     private isMuted = false;
     // 直近で接続確立に成功したsession_id。
     // ICE切断後の再接続で「同一セッション更新」を試すために保持する。
-    private lastStableSessionId: string | null = null;
+    private lastStableSessionId?: string;
 
     /*
         default     Default codecs
@@ -79,7 +79,7 @@ export class RTCTalkClient {
     audioCodec: string = "default";
     telopChannelCallback: (msg: TelopChannelMessage) => void = () => {};
     textChannelCallback: (msg: ChatMessage) => void = () => {};
-    rtcHealthCallback: (message: string | null) => void = () => {};
+    rtcHealthCallback: (message?: string) => void = () => {};
 
     /* talk_mode: chat, sincro */
     constructor(sincroConfig: SincroRTCConfig, audioTrack: MediaStreamTrack, talkMode: string) {
@@ -114,21 +114,18 @@ export class RTCTalkClient {
 
     // 接続開始（または再接続開始）。
     // start() は RTCTalkClient の再利用前提で内部状態をリセットしてから negotiate を実行する。
-    start(
-        forceIceRestart: boolean = false,
-        preferredSessionId: string | null = null,
-    ): Promise<void> {
+    start(forceIceRestart: boolean = false, preferredSessionId?: string): Promise<void> {
         if (this.isNegotiating) {
             this.logger.addRtcEventLog("start skipped: negotiation already in progress");
             return Promise.resolve();
         }
-        if (this.reconnectTimerId != null) {
+        if (this.reconnectTimerId !== undefined) {
             clearTimeout(this.reconnectTimerId);
-            this.reconnectTimerId = null;
+            this.reconnectTimerId = undefined;
         }
-        this.sessionId = null;
+        this.sessionId = undefined;
         this.pendingIceCandidates = [];
-        this.currentRouteSignature = null;
+        this.currentRouteSignature = undefined;
         this.iceFailureDiagnosticCaptured = false;
         this.startStatsCollector();
         this.logger.addRtcEventLog(
@@ -139,16 +136,16 @@ export class RTCTalkClient {
     }
 
     stop(): void {
-        if (this.reconnectTimerId != null) {
+        if (this.reconnectTimerId !== undefined) {
             clearTimeout(this.reconnectTimerId);
-            this.reconnectTimerId = null;
+            this.reconnectTimerId = undefined;
         }
-        this.sessionId = null;
+        this.sessionId = undefined;
         this.pendingIceCandidates = [];
-        this.currentRouteSignature = null;
+        this.currentRouteSignature = undefined;
         this.iceFailureDiagnosticCaptured = false;
         this.reconnectAttempt = 0;
-        this.lastStableSessionId = null;
+        this.lastStableSessionId = undefined;
         this.stopStatsCollector();
         this.logger.resetRealtimeStats();
 
@@ -186,10 +183,10 @@ export class RTCTalkClient {
         const preferredSessionId = this.sessionId ?? this.lastStableSessionId;
         // 切断後に遅れて発火する onicecandidate を旧sessionへ送らないよう、
         // 再接続スケジュール時点で session_id を無効化する。
-        this.sessionId = null;
+        this.sessionId = undefined;
         this.pendingIceCandidates = [];
 
-        if (this.reconnectTimerId != null) {
+        if (this.reconnectTimerId !== undefined) {
             this.logger.addRtcEventLog("reconnect already scheduled");
             return;
         }
@@ -198,7 +195,7 @@ export class RTCTalkClient {
             `schedule reconnect in ${Math.round(waitMs)}ms (attempt=${this.reconnectAttempt}, preferredSessionId=${preferredSessionId ?? "-"})`,
         );
         this.reconnectTimerId = window.setTimeout(() => {
-            this.reconnectTimerId = null;
+            this.reconnectTimerId = undefined;
             void this.start(true, preferredSessionId);
         }, waitMs);
     }
@@ -231,7 +228,7 @@ export class RTCTalkClient {
     private async negotiate(
         peerConnection: RTCPeerConnection,
         forceIceRestart: boolean,
-        preferredSessionId: string | null,
+        preferredSessionId: string | undefined,
     ): Promise<void> {
         // glare/中途半端な状態で再度 offer を投げると失敗しやすいため、stable 以外は再接続へ回す。
         if (peerConnection.signalingState !== "stable") {
@@ -253,7 +250,7 @@ export class RTCTalkClient {
             })
             .then(() => {
                 const offer: RTCSessionDescription | null = peerConnection.localDescription;
-                if (offer == null) {
+                if (offer === null) {
                     throw "Offer is null.";
                 }
                 /* コーデックのフィルタリング
@@ -345,7 +342,7 @@ export class RTCTalkClient {
             })
             .catch((e) => {
                 // 失敗時は診断ログ・UI通知を残したうえで再接続へ移行する。
-                this.sessionId = null;
+                this.sessionId = undefined;
                 this.pendingIceCandidates = [];
                 this.chatMessageService.writeErrorMessage(
                     `RTCサーバーへの接続に失敗しました...。\n${e}`,
@@ -388,7 +385,7 @@ export class RTCTalkClient {
     private sendIceCandidate(candidate: RTCIceCandidateInit | null): Promise<void> {
         // Firefox等で candidateオブジェクト自体は存在するが candidate文字列が空のケースがある。
         // これは実質 end-of-candidates なので null として統一する。
-        if (candidate != null && (!candidate.candidate || candidate.candidate.trim() === "")) {
+        if (candidate !== null && (!candidate.candidate || candidate.candidate.trim() === "")) {
             candidate = null;
         }
 
@@ -551,14 +548,14 @@ export class RTCTalkClient {
                 break;
             case "connected":
                 this.iceFailureDiagnosticCaptured = false;
-                this.rtcHealthCallback(null);
+                this.rtcHealthCallback();
                 this.chatMessageService.writeSystemMessage(
                     "音声認識・合成システムに接続しました。",
                 );
                 break;
             case "completed":
                 this.iceFailureDiagnosticCaptured = false;
-                this.rtcHealthCallback(null);
+                this.rtcHealthCallback();
                 this.chatMessageService.writeSystemMessage(
                     "音声認識・合成システムとのセッションの確立に成功しました。",
                 );
@@ -625,18 +622,18 @@ export class RTCTalkClient {
                 }
             });
 
-            const selectedPair = selectedPairs[0] ?? null;
+            const selectedPair = selectedPairs[0];
             const local = selectedPair?.localCandidateId
                 ? localCandidates.get(selectedPair.localCandidateId)
-                : null;
+                : undefined;
             const remote = selectedPair?.remoteCandidateId
                 ? remoteCandidates.get(selectedPair.remoteCandidateId)
-                : null;
+                : undefined;
             const localType = local?.candidateType ?? "-";
             const remoteType = remote?.candidateType ?? "-";
             const pairState = selectedPair?.state ?? "-";
             const rttMs =
-                selectedPair?.currentRoundTripTime != null
+                selectedPair?.currentRoundTripTime !== undefined
                     ? `${(selectedPair.currentRoundTripTime * 1000).toFixed(1)}ms`
                     : "-";
 
@@ -691,9 +688,9 @@ export class RTCTalkClient {
     }
 
     private stopStatsCollector(): void {
-        if (this.statsIntervalId != null) {
+        if (this.statsIntervalId !== undefined) {
             clearInterval(this.statsIntervalId);
-            this.statsIntervalId = null;
+            this.statsIntervalId = undefined;
         }
         this.previousOutboundAudio = undefined;
         this.previousInboundAudio = undefined;
@@ -827,16 +824,20 @@ export class RTCTalkClient {
         const packetsSent = outboundAudio?.packetsSent;
         this.logger.updateMetricValue(
             "outboundPacketsSent",
-            packetsSent == null ? "-" : `${packetsSent}`,
+            packetsSent === undefined ? "-" : `${packetsSent}`,
         );
 
         const packetsLost = inboundAudio?.packetsLost;
         const packetsReceived = inboundAudio?.packetsReceived;
         this.logger.updateMetricValue(
             "inboundPacketsLost",
-            packetsLost == null ? "-" : `${packetsLost}`,
+            packetsLost === undefined ? "-" : `${packetsLost}`,
         );
-        if (packetsLost == null || packetsReceived == null || packetsLost + packetsReceived <= 0) {
+        if (
+            packetsLost === undefined ||
+            packetsReceived === undefined ||
+            packetsLost + packetsReceived <= 0
+        ) {
             this.logger.updateMetricValue("inboundPacketLossRate", "-");
             this.logger.pushTrendPoint("trendInboundPacketLossRate", undefined);
         } else {
@@ -845,7 +846,7 @@ export class RTCTalkClient {
             this.logger.pushTrendPoint("trendInboundPacketLossRate", lossRate);
         }
 
-        if (inboundAudio?.jitter == null) {
+        if (inboundAudio?.jitter === undefined) {
             this.logger.updateMetricValue("inboundJitter", "-");
         } else {
             this.logger.updateMetricValue(
@@ -854,7 +855,7 @@ export class RTCTalkClient {
             );
         }
 
-        if (selectedPair?.currentRoundTripTime == null) {
+        if (selectedPair?.currentRoundTripTime === undefined) {
             this.logger.updateMetricValue("rtcRoundTripTime", "-");
             this.logger.pushTrendPoint("trendRoundTripTime", undefined);
         } else {
@@ -883,7 +884,7 @@ export class RTCTalkClient {
             this.logger.updateMetricValue("rtcTransportProtocol", "-");
             this.logger.updateMetricValue("rtcLocalCandidate", "-");
             this.logger.updateMetricValue("rtcRemoteCandidate", "-");
-            this.currentRouteSignature = null;
+            this.currentRouteSignature = undefined;
         } else {
             const localType = localCandidate.candidateType ?? "unknown";
             const remoteType = remoteCandidate.candidateType ?? "unknown";

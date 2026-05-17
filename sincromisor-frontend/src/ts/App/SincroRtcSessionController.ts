@@ -42,7 +42,7 @@ export class SincroRtcSessionController {
         this.setTextChannelCallback(rtcc);
         this.setTelopChannelCallback(rtcc);
         rtcc.rtcHealthCallback = (message) => {
-            if (message === null) {
+            if (message === undefined) {
                 this.characterBehaviorState.clearErrorSource("rtc");
                 return;
             }

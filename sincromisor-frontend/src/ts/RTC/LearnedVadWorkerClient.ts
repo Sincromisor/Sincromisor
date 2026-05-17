@@ -181,11 +181,11 @@ export class LearnedVadWorkerClient {
     // AudioWorklet -> Worker の音声フレーム転送を有効/無効化する。
     // learnedモード時のみ転送し、Three.js描画と競合する余計な転送コストを抑える。
     syncAudioFrameStreaming(
-        vadNode: AudioWorkletNode | null,
+        vadNode: AudioWorkletNode | undefined,
         shouldEnable: boolean,
         force = false,
     ): void {
-        if (!vadNode) {
+        if (vadNode === undefined) {
             this.streamVadNode = undefined;
             return;
         }

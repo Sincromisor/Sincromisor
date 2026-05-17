@@ -203,9 +203,11 @@ export class FaceEmotionController {
         const mouthMorphBindKeys = new Set<string>();
 
         for (const preset of visemePresets) {
-            const expression = this.expressionManager.getExpression(preset) as unknown as {
-                binds?: unknown[];
-            } | null;
+            const expression = (this.expressionManager.getExpression(preset) ?? undefined) as
+                | {
+                      binds?: unknown[];
+                  }
+                | undefined;
             if (!expression?.binds) {
                 continue;
             }
@@ -225,10 +227,12 @@ export class FaceEmotionController {
 
         let removedBindCount = 0;
         for (const preset of this.animatedPresets) {
-            const expression = this.expressionManager.getExpression(preset) as unknown as {
-                binds?: unknown[];
-                deleteBind?: (bind: unknown) => void;
-            } | null;
+            const expression = (this.expressionManager.getExpression(preset) ?? undefined) as
+                | {
+                      binds?: unknown[];
+                      deleteBind?: (bind: unknown) => void;
+                  }
+                | undefined;
             if (!expression?.binds || !expression.deleteBind) {
                 continue;
             }
