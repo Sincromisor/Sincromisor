@@ -186,6 +186,14 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 分割後の最大ファイルは `lookingGlassSettingsSection.tsx` 188 行で、対象領域の新規ファイルはすべて 200 行 soft 閾値以下に収めた。
     - 設定 UI の表示文言 / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `CharacterMotionOrchestrator.ts` から optional bone capture、AI speech expression profile、torso rotation application を分割した。
+    - 追加: `src/ts/SincroVRM/VRMCharacter/characterMotionBones.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/characterMotionExpression.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/characterMotionTorsoApplier.ts`
+    - `CharacterMotionOrchestrator.ts` は 576 行から 292 行まで縮小し、時系列 blend / beat state と毎フレーム orchestration に寄せた。
+    - `updateSpine` / `updateChest` / `updateShoulders` 相当の多引数処理は options object 入力の torso applier へ移した。
+    - 呼び出し側の `CharacterMotionOrchestrator` import 契約と endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
