@@ -54,8 +54,8 @@ export class FaceEmotionController {
         const speechId = snapshot.aiSpeech.speechId;
         if (
             snapshot.aiSpeech.isSpeaking &&
-            speechId != null &&
-            snapshot.aiSpeech.expressionCode == null &&
+            speechId !== undefined &&
+            snapshot.aiSpeech.expressionCode === undefined &&
             speechId !== this.neutralizedSpeechId
         ) {
             this.neutralizedSpeechId = speechId;
@@ -67,7 +67,7 @@ export class FaceEmotionController {
             this.updateEmotionAnimation(snapshot.nowMs);
             return;
         }
-        if (speechId != null && msg.speech_id !== speechId) {
+        if (speechId !== undefined && msg.speech_id !== speechId) {
             this.updateEmotionAnimation(snapshot.nowMs);
             return;
         }

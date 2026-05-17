@@ -187,8 +187,8 @@ export class SincroCharacterGazeController {
             } else {
                 await this.startCharacterGazeTracking(characterGaze, nextVideoTrack);
             }
-            this.characterBehaviorState.setErrorSource("gaze", null);
-            this.characterBehaviorState.setErrorSource("faceMotion", null);
+            this.characterBehaviorState.clearErrorSource("gaze");
+            this.characterBehaviorState.clearErrorSource("faceMotion");
         } catch (error) {
             if (refreshToken !== this.pendingCameraRefreshToken) {
                 return;
@@ -355,7 +355,7 @@ export class SincroCharacterGazeController {
 
     private handleSincroPoseFallback(snapshot: SincroPoseMotionSnapshot): void {
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
-        this.characterBehaviorState.setErrorSource("poseMotion", null);
+        this.characterBehaviorState.clearErrorSource("poseMotion");
         this.debugConsoleManager.updateSincroPoseMotion(snapshot);
         this.debugConsoleManager.updateCharacterGazeTargetDebug(
             this.formatSincroPoseDebug(snapshot),

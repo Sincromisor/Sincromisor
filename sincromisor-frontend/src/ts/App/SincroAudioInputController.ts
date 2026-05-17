@@ -58,7 +58,7 @@ export class SincroAudioInputController {
 
         this.userMediaManager.getUserMedia(
             (audioTrack) => {
-                this.characterBehaviorState.setErrorSource("media", null);
+                this.characterBehaviorState.clearErrorSource("media");
                 onAudioTrack(audioTrack);
             },
             () => {},
@@ -230,7 +230,7 @@ export class SincroAudioInputController {
                 const selectedDeviceId = this.userMediaManager.getAudioInputDeviceId();
                 try {
                     const nextAudioTrack = await this.userMediaManager.reacquireAudioTrack();
-                    this.characterBehaviorState.setErrorSource("media", null);
+                    this.characterBehaviorState.clearErrorSource("media");
                     this.onAudioTrackReplaced(nextAudioTrack);
                 } catch (err) {
                     const detail = err instanceof Error ? err.message : String(err);

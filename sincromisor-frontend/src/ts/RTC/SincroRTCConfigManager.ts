@@ -7,7 +7,7 @@ type ErrorHandler = (err: unknown) => void;
 
 export class SincroRTCConfigManager {
     private static instance: SincroRTCConfigManager;
-    config: SincroRTCConfig | null = null;
+    config?: SincroRTCConfig;
 
     private constructor() {}
 

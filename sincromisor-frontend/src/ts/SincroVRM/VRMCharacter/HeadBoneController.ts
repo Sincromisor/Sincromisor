@@ -253,7 +253,9 @@ export class HeadBoneController {
         return Math.sin(Math.PI * MathUtils.clamp(progress, 0, 1)) * this.aiSpeechBeatIntensity;
     }
 
-    private aiSpeechExpressionProfile(expressionCode: number | null): HeadSpeechExpressionProfile {
+    private aiSpeechExpressionProfile(
+        expressionCode: number | undefined,
+    ): HeadSpeechExpressionProfile {
         switch (expressionCode) {
             case 2:
                 return {

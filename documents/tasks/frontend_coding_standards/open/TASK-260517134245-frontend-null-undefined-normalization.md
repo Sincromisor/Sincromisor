@@ -70,6 +70,12 @@
     - `probability` / gaze 値は optional にし、初期 state から `null` を除去した。
     - tuning patch の optional 判定を `!= null` から `!== undefined` へ変更した。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: CharacterBehavior snapshot と一部 RTC/Talk 内部状態の未観測値を `undefined` へ統一した。
+    - 対象: `CharacterBehaviorState` / `SincroRtcSessionController` / `SincroRTCConfigManager` / `TalkManager` / AI speech gesture controller 群
+    - `CharacterBehavior*Snapshot` の時刻・AI発話・エラー未設定値を optional にし、`setErrorSource(..., null)` は `clearErrorSource(...)` へ置き換えた。
+    - RTC 設定未取得と current mora 未保持の内部状態を `undefined` に統一した。
+    - `SincroFaceMotionSnapshot` / `SincroPoseMotionSnapshot` の `fallbackReason: null` は tracker snapshot 契約側の残件として維持した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
