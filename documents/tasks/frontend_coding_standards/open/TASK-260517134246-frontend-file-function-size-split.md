@@ -124,6 +124,14 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 未使用だった `videoCodec` / `audioCodec` fields は参照元がなかったため削除した。
     - endpoint / JSON payload の契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `SincroMotionPanel.tsx` から Face / Pose 表示 section、Pose retarget 調整 UI、表示フォーマット関数を分割した。
+    - 追加: `src/react/debug/panels/sincroMotionFaceSection.tsx`
+    - 追加: `src/react/debug/panels/sincroMotionPoseSection.tsx`
+    - 追加: `src/react/debug/panels/sincroPoseRetargetControls.tsx`
+    - 追加: `src/react/debug/panels/sincroMotionPanelFormatters.ts`
+    - `SincroMotionPanel.tsx` は 503 行から 39 行まで縮小し、debug tab shell と snapshot 配線だけに寄せた。
+    - 既存の debug console snapshot / 操作契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
