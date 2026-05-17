@@ -132,6 +132,17 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - `SincroMotionPanel.tsx` は 503 行から 39 行まで縮小し、debug tab shell と snapshot 配線だけに寄せた。
     - 既存の debug console snapshot / 操作契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `CharacterBehaviorState.ts` から型/タイミング定数、snapshot clone/初期化、gaze 更新、VAD 更新、状態/モーションポリシー導出、AI 発話更新を分割した。
+    - 追加: `src/ts/SincroVRM/VRMCharacter/characterBehaviorTypes.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/characterBehaviorSnapshots.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/characterBehaviorGaze.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/characterBehaviorVad.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/characterBehaviorAiSpeech.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/characterBehaviorStateDerivation.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/characterBehaviorValues.ts`
+    - `CharacterBehaviorState.ts` は 678 行から 294 行まで縮小し、TalkManager 購読と入力状態集約の入口に寄せた。
+    - 既存の `CharacterBehaviorState.ts` からの型 re-export は維持し、呼び出し側の import 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
