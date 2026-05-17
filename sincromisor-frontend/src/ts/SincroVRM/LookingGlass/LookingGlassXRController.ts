@@ -1,43 +1,23 @@
-// @ts-expect-error `@lookingglass/webxr` は型定義が不完全なため最小ラッパーで吸収する。
-import { LookingGlassConfig, LookingGlassWebXRPolyfill } from "@lookingglass/webxr";
 import type { WebGLRenderer } from "three/src/renderers/WebGLRenderer.js";
 import type { Scene } from "three/src/scenes/Scene.js";
 import { frontendLogger } from "../../logging/appLogger";
-import { getLookingGlassRuntimeConfig } from "./LookingGlassRuntimeConfig";
-
-type LookingGlassStateEventDetail = {
-    state: "idle" | "starting" | "recovering" | "active" | "error";
-    code?:
-        | "button_not_found"
-        | "webxr_unavailable"
-        | "session_start_failed"
-        | "polyfill_init_failed"
-        | "retry_after_error"
-        | "session_ended";
-    message?: string;
-};
-
-type LookingGlassPolyfillOptions = {
-    tileHeight: number;
-    numViews: number;
-    targetX: number;
-    targetY: number;
-    targetZ: number;
-    targetDiam: number;
-    fovy: number;
-    depthiness: number;
-    trackballX?: number;
-    trackballY?: number;
-};
+import {
+    disableExternalCanvasPointerEvents,
+    restoreExternalCanvasPointerEvents,
+} from "./lookingGlassCanvasPointerEvents";
+import { LookingGlassInputRecovery } from "./lookingGlassInputRecovery";
+import {
+    applyDefaultLookingGlassViewAngles,
+    initializeLookingGlassPolyfill,
+} from "./lookingGlassPolyfillLifecycle";
+import type { LookingGlassStateEventDetail } from "./lookingGlassWebXrState";
 
 // Babylon legacy の Looking Glass 起動処理を、Three.js/VRM1.0 側で再利用可能な最小コントローラとして切り出す。
 export class LookingGlassXRController {
-    // Preview 側（LookingGlassVRMScene）の視点補正と揃えるための LG セッション既定ピッチ。
-    // @lookingglass/webxr では trackballY が pitch 相当（radian）。
-    private static readonly DEFAULT_TRACKBALL_PITCH_DEG = 25;
     private readonly renderer: WebGLRenderer;
     private readonly scene: Scene;
     private readonly startButtonSelector: string;
+    private readonly inputRecovery = new LookingGlassInputRecovery();
     private polyfillInitialized = false;
     private polyfillSessionWarmupDone = false;
     private pendingPolyfillReinitAfterSessionEnd = false;
@@ -139,7 +119,7 @@ export class LookingGlassXRController {
             xrSession.addEventListener("end", () => {
                 this.renderer.xr.enabled = false;
                 this.renderer.domElement.style.display = "";
-                this.restoreExternalCanvasPointerEvents();
+                restoreExternalCanvasPointerEvents(this.renderer.domElement);
                 if (startButton) {
                     startButton.disabled = false;
                 }
@@ -159,19 +139,19 @@ export class LookingGlassXRController {
 
             // Looking Glass セッション中は通常キャンバスを隠し、既存 UX（legacy）に寄せる。
             this.renderer.domElement.style.display = "none";
-            this.disableExternalCanvasPointerEvents();
+            disableExternalCanvasPointerEvents(this.renderer.domElement);
             if (startButton) {
                 startButton.disabled = true;
             }
             frontendLogger.info("Looking Glass WebXR session started.");
             this.successfulSessionStarts += 1;
-            this.rebindLookingGlassInputHooks();
+            this.inputRecovery.rebindInputHooks();
             // @lookingglass/webxr 側のマウス入力が再開後に死ぬ環境向けの保険。
             // 初回は vendor 実装を優先し、再開以降のみ fallback 操作を有効化する。
             if (this.successfulSessionStarts >= 2) {
-                this.installFallbackPopupInteractionControls();
+                this.inputRecovery.installFallbackPopupInteractionControls();
             }
-            this.focusLookingGlassInteractiveSurface();
+            this.inputRecovery.focusInteractiveSurface();
             this.emitState({ state: "active" });
         } catch (error) {
             frontendLogger.error("Failed to start Looking Glass WebXR session.", { error });
@@ -192,24 +172,8 @@ export class LookingGlassXRController {
         // scene を受け取っているのは将来の Three.js 側統合（camera target 等）拡張用。
         void this.scene;
 
-        // polyfill は生成時オプションを持つため、毎回 runtime config を読み直して初期化する。
-        const runtimeConfig = getLookingGlassRuntimeConfig();
-        const options: LookingGlassPolyfillOptions = {
-            tileHeight: runtimeConfig.tileHeight,
-            numViews: runtimeConfig.numViews,
-            targetX: 0,
-            targetY: runtimeConfig.targetY,
-            targetZ: runtimeConfig.targetZ,
-            targetDiam: runtimeConfig.targetDiam,
-            fovy: (runtimeConfig.fovyDeg * Math.PI) / 180,
-            depthiness: runtimeConfig.depthiness,
-            // LG セッション中の視点は Three.js カメラではなく polyfill 設定で決まるため、
-            // preview と同じ「やや上から」の見え方に合わせる既定ピッチをここで与える。
-            trackballX: 0,
-            trackballY: (LookingGlassXRController.DEFAULT_TRACKBALL_PITCH_DEG * Math.PI) / 180,
-        };
         try {
-            new LookingGlassWebXRPolyfill(options);
+            initializeLookingGlassPolyfill();
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             this.emitState({ state: "error", code: "polyfill_init_failed", message });
@@ -290,160 +254,6 @@ export class LookingGlassXRController {
     };
 
     private applyDefaultLookingGlassViewAngles(): void {
-        // polyfill 再初期化の有無に関わらず、セッション開始時に既定の視点角を再適用する。
-        // @lookingglass/webxr の内部状態はグローバルに残るため、停止/再開後に前回値が残る環境差を吸収する。
-        const config = LookingGlassConfig as typeof LookingGlassConfig & {
-            trackballX?: number;
-            trackballY?: number;
-        };
-        config.trackballX = 0;
-        config.trackballY = (LookingGlassXRController.DEFAULT_TRACKBALL_PITCH_DEG * Math.PI) / 180;
-    }
-
-    private focusLookingGlassInteractiveSurface(): void {
-        // 再開後セッションで lkgCanvas 側の入力が死ぬケースに対し、popup/canvas を明示フォーカスする。
-        // @lookingglass/webxr のマウス/キー操作は lkgCanvas/appCanvas に直接 listener を張っている。
-        const config = LookingGlassConfig as typeof LookingGlassConfig & {
-            popup?: Window | null;
-            lkgCanvas?: HTMLCanvasElement | null;
-            appCanvas?: HTMLCanvasElement | null;
-        };
-        requestAnimationFrame(() => {
-            try {
-                config.popup?.focus?.();
-                if (config.lkgCanvas) {
-                    config.lkgCanvas.style.pointerEvents = "auto";
-                    config.lkgCanvas.tabIndex =
-                        config.lkgCanvas.tabIndex >= 0 ? config.lkgCanvas.tabIndex : 0;
-                    config.lkgCanvas.focus();
-                }
-                config.appCanvas?.blur?.();
-            } catch (error) {
-                frontendLogger.warn("Failed to focus Looking Glass popup/canvas.", { error });
-            }
-        });
-    }
-
-    private rebindLookingGlassInputHooks(): void {
-        // @lookingglass/webxr のマウス操作は lkgCanvas/appCanvas に直接 listener を張る実装。
-        // 再開時に listener が新しい canvas へ移らないケースに備え、公開 config API で再登録を促す。
-        // 期待動作: vendor 側が updateViewControls 経由で listener を再接続すること。
-        // 実際には効かない環境があるため、fallback controls を併用している（本関数だけでは不十分）。
-        const config = LookingGlassConfig as typeof LookingGlassConfig & {
-            appCanvas?: HTMLCanvasElement | null;
-            lkgCanvas?: HTMLCanvasElement | null;
-            updateViewControls?: (partial: {
-                appCanvas?: HTMLCanvasElement | null;
-                lkgCanvas?: HTMLCanvasElement | null;
-            }) => void;
-        };
-        const rebind = () => {
-            try {
-                config.updateViewControls?.({
-                    appCanvas: config.appCanvas ?? null,
-                    lkgCanvas: config.lkgCanvas ?? null,
-                });
-            } catch (error) {
-                frontendLogger.warn("Failed to rebind Looking Glass input hooks.", { error });
-            }
-        };
-        // 初期化直後と popup/canvas 配置後の両方を拾うため、数フレームずらして実行する。
-        rebind();
-        requestAnimationFrame(rebind);
-        requestAnimationFrame(() => requestAnimationFrame(rebind));
-    }
-
-    private installFallbackPopupInteractionControls(): void {
-        // vendor 側 listener が再開時に無効化されるケース向けの最小代替操作。
-        // LookingGlassConfig の trackball / target / targetDiam を直接更新して同等の視点操作を提供する。
-        // この処理は暫定回避策。vendor 側で再開後 input が安定したら削除対象。
-        // 削除時は「再開後でも wheel / 左ドラッグ / 右ドラッグ(または shift+左) が効く」ことを手動確認する。
-        const config = LookingGlassConfig as typeof LookingGlassConfig & {
-            lkgCanvas?: HTMLCanvasElement | null;
-            appCanvas?: HTMLCanvasElement | null;
-            targetDiam: number;
-            trackballX: number;
-            trackballY: number;
-            targetX: number;
-            targetY: number;
-            targetZ: number;
-        };
-        const canvas = config.lkgCanvas;
-        if (!canvas) {
-            return;
-        }
-        if (canvas.dataset.sincroLgFallbackControlsBound === "1") {
-            return;
-        }
-        canvas.dataset.sincroLgFallbackControlsBound = "1";
-
-        canvas.addEventListener("contextmenu", (event: MouseEvent) => {
-            event.preventDefault();
-        });
-        canvas.addEventListener(
-            "wheel",
-            (event: WheelEvent) => {
-                const zoomBase = 1.1;
-                const current = Math.max(config.targetDiam ?? 1, 1e-6);
-                const exponent = Math.log(current) / Math.log(zoomBase);
-                config.targetDiam = Math.max(1e-4, zoomBase ** (exponent + event.deltaY * 0.01));
-                event.preventDefault();
-            },
-            { passive: false },
-        );
-        canvas.addEventListener("mousemove", (event: MouseEvent) => {
-            const dx = event.movementX;
-            const dy = -event.movementY;
-            const isPan =
-                !!(event.buttons & 2) ||
-                (!!(event.buttons & 1) && (event.shiftKey || event.ctrlKey));
-            if (isPan) {
-                const tx = config.trackballX ?? 0;
-                const ty = config.trackballY ?? 0;
-                const targetDiam = config.targetDiam ?? 1;
-                const panX = -Math.cos(tx) * dx + Math.sin(tx) * Math.sin(ty) * dy;
-                const panY = -Math.cos(ty) * dy;
-                const panZ = Math.sin(tx) * dx + Math.cos(tx) * Math.sin(ty) * dy;
-                config.targetX = (config.targetX ?? 0) + panX * targetDiam * 1e-3;
-                config.targetY = (config.targetY ?? 0) + panY * targetDiam * 1e-3;
-                config.targetZ = (config.targetZ ?? 0) + panZ * targetDiam * 1e-3;
-                return;
-            }
-            if (event.buttons & 1) {
-                config.trackballX = (config.trackballX ?? 0) - dx * 0.01;
-                config.trackballY = (config.trackballY ?? 0) - dy * 0.01;
-            }
-        });
-    }
-
-    private disableExternalCanvasPointerEvents(): void {
-        // polyfill 側が追加する canvas が pointer を奪うと OrbitControls 操作が効かなくなるため、
-        // LG セッション中は renderer 本体以外の canvas を操作対象から外す。
-        const canvases = document.querySelectorAll<HTMLCanvasElement>("canvas");
-        canvases.forEach((canvas) => {
-            if (canvas === this.renderer.domElement) {
-                return;
-            }
-            if (!canvas.dataset.sincroPrevPointerEvents) {
-                canvas.dataset.sincroPrevPointerEvents =
-                    canvas.style.pointerEvents === "" ? "__empty__" : canvas.style.pointerEvents;
-            }
-            canvas.style.pointerEvents = "none";
-        });
-    }
-
-    private restoreExternalCanvasPointerEvents(): void {
-        const canvases = document.querySelectorAll<HTMLCanvasElement>("canvas");
-        canvases.forEach((canvas) => {
-            if (canvas === this.renderer.domElement) {
-                return;
-            }
-            const prev = canvas.dataset.sincroPrevPointerEvents;
-            if (prev === undefined) {
-                return;
-            }
-            canvas.style.pointerEvents = prev === "__empty__" ? "" : prev;
-            delete canvas.dataset.sincroPrevPointerEvents;
-        });
+        applyDefaultLookingGlassViewAngles();
     }
 }

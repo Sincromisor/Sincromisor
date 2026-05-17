@@ -319,6 +319,15 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - `SincroAppController.ts` は runtime service / bridge の保持を runtime bundle 参照へ寄せ、実装行数を hard 閾値未満まで下げた。
     - UI 表示文言 / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: `LookingGlassXRController.ts` から polyfill 初期化、再開後入力復旧、外部 canvas pointer 制御、state event 型を分割した。
+    - 追加: `src/ts/SincroVRM/LookingGlass/lookingGlassPolyfillLifecycle.ts`
+    - 追加: `src/ts/SincroVRM/LookingGlass/lookingGlassInputRecovery.ts`
+    - 追加: `src/ts/SincroVRM/LookingGlass/lookingGlassCanvasPointerEvents.ts`
+    - 追加: `src/ts/SincroVRM/LookingGlass/lookingGlassWebXrState.ts`
+    - `LookingGlassXRController.ts` は 449 行から 259 行まで縮小し、WebXR session lifecycle と custom event 配線の入口に寄せた。
+    - 分割後の最大ファイルは `lookingGlassInputRecovery.ts` 122 行で、新規ファイルはすべて 200 行 soft 閾値以下に収めた。
+    - Looking Glass 内部の責務分割のみで、UI 表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
