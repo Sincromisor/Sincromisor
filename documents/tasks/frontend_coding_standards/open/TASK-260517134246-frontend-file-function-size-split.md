@@ -309,6 +309,16 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - `SincroCharacterGazeController.ts` は Sincro motion event 反映、Gaze callback 配線、DOM overlay、設定差分、debug 表示文字列を分割し、実装行数を hard 閾値未満まで下げた。
     - UI 表示文言 / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: `SincroAppController.ts` から connection state 導出、初回購読 snapshot、manager 購読配線、window event 配線、settings apply flow、settings 関連 payload cache を分割した。
+    - 追加: `src/ts/App/SincroAppControllerConnectionState.ts`
+    - 追加: `src/ts/App/SincroAppControllerInitialSnapshot.ts`
+    - 追加: `src/ts/App/SincroAppControllerSubscriptions.ts`
+    - 追加: `src/ts/App/SincroAppControllerWindowEvents.ts`
+    - 追加: `src/ts/App/SincroAppSettingsApplyFlow.ts`
+    - 追加: `src/ts/App/SincroAppSettingsRelatedPayloadCache.ts`
+    - `SincroAppController.ts` は runtime service / bridge の保持を runtime bundle 参照へ寄せ、実装行数を hard 閾値未満まで下げた。
+    - UI 表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
