@@ -86,8 +86,8 @@ type SettingsFieldProps = FieldContainerProps & {
     uiState: SincroAppSettingsUiState;
 };
 
-export function normalizeSelectedDeviceId(value: string): string | null {
-    return value.trim().length > 0 ? value : null;
+export function normalizeSelectedDeviceId(value: string): string | undefined {
+    return value.trim().length > 0 ? value : undefined;
 }
 
 export function TitleTextField({

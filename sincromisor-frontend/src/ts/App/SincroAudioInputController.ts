@@ -272,5 +272,5 @@ type DialogMicSettingsSnapshot = {
     enableAutoGainControl: boolean;
     enableVadGate: boolean;
     enableVenueNoiseMode: boolean;
-    audioInputDeviceId: string | null;
+    audioInputDeviceId: string | undefined;
 };

@@ -22,8 +22,8 @@ export type SincroAppStartHooks = {
 export type SincroAppSettingsSnapshot = {
     titleText: string;
     talkMode: string;
-    audioInputDeviceId: string | null;
-    videoInputDeviceId: string | null;
+    audioInputDeviceId: string | undefined;
+    videoInputDeviceId: string | undefined;
     enableCharacter: boolean;
     enableTalk: boolean;
     enableCharacterGaze: boolean;

@@ -50,6 +50,13 @@
 3. `== null` は `value === undefined` または境界 helper へ置換する。
 4. `||` は論理条件と既定値用途を分け、`0` / `""` / `false` を壊さない。
 
+## 進捗
+
+- 2026-05-17: device selection の未選択状態を `undefined` へ統一した。
+    - 対象: `SincroMediaDeviceService` / `DialogStateStore` / `DialogManager` / `SincroAppSettingsSnapshot` / React settings hooks / `UserMediaManager` / `VideoInputManager`
+    - `Partial<SincroAppSettingsSnapshot>` で `undefined` を渡して既定デバイスへ戻す操作が落ちないよう、device id の apply は key presence 判定へ変更した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
+
 ## 完了条件
 
 - アプリ内部 model / state の新規欠損表現が `undefined` に統一されている。

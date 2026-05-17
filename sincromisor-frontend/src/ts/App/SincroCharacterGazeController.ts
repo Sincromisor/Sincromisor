@@ -451,6 +451,6 @@ type DialogGazeSettingsSnapshot = {
     enableCharacterGaze: boolean;
     enableSincroPoseTracking: boolean;
     forceSincroPoseTracking: boolean;
-    videoInputDeviceId: string | null;
+    videoInputDeviceId: string | undefined;
     talkMode: string;
 };

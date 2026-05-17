@@ -25,8 +25,8 @@ export type DialogSettingKey =
 type DialogSettingValueMap = {
     talkMode: string;
     titleText: string;
-    audioInputDeviceId: string | null;
-    videoInputDeviceId: string | null;
+    audioInputDeviceId: string | undefined;
+    videoInputDeviceId: string | undefined;
     enableCharacter: boolean;
     enableTalk: boolean;
     enableCharacterGaze: boolean;
@@ -84,8 +84,8 @@ export class DialogStateStore {
     private values: DialogSettingValueMap = {
         talkMode: "chat",
         titleText: "Sincromisor",
-        audioInputDeviceId: null,
-        videoInputDeviceId: null,
+        audioInputDeviceId: undefined,
+        videoInputDeviceId: undefined,
         enableCharacter: true,
         enableTalk: true,
         enableCharacterGaze: true,

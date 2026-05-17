@@ -24,8 +24,8 @@ import { useSincroMediaDeviceState } from "../app/useSincroMediaDeviceState";
 const defaultSettings: SincroAppSettingsSnapshot = {
     titleText: "Sincromisor",
     talkMode: "chat",
-    audioInputDeviceId: null,
-    videoInputDeviceId: null,
+    audioInputDeviceId: undefined,
+    videoInputDeviceId: undefined,
     enableCharacter: true,
     enableTalk: true,
     enableCharacterGaze: true,
