@@ -143,117 +143,133 @@ export const DEFAULT_RTC_METRICS: Record<DebugConsoleMetricKey, string> = {
 
 export function createDefaultSnapshot(): DebugConsoleSnapshot {
     return {
-        audio: {
-            localLevel: 0,
-            remoteLevel: 0,
-            localRms: 0,
-            localPeak: 0,
-            localVadIsSpeech: false,
-            localWarningState: "ok",
-            localWarningText: "Normal",
-            vadThresholdMode: "manual",
-            vadRmsThreshold: 0.015,
-            filterConfig: { ...DEFAULT_AUDIO_FILTER_CONFIG },
-            learnedVadPerformanceMode: "balanced",
-            learnedVadStrictMode: false,
-            learnedVadTuning: { ...DEFAULT_LEARNED_VAD_TUNING },
-            learnedVadReport: {
-                status: "idle",
-            },
-            constraintStatus: {
-                text: "NS/EC/AGC: 未確認",
-                title: "",
-                tone: "",
-            },
+        audio: createDefaultAudioSnapshot(),
+        gaze: createDefaultGazeSnapshot(),
+        sincroMotion: createDefaultSincroMotionSnapshot(),
+        rtc: createDefaultRtcSnapshot(),
+    };
+}
+
+function createDefaultAudioSnapshot(): AudioPanelSnapshot {
+    return {
+        localLevel: 0,
+        remoteLevel: 0,
+        localRms: 0,
+        localPeak: 0,
+        localVadIsSpeech: false,
+        localWarningState: "ok",
+        localWarningText: "Normal",
+        vadThresholdMode: "manual",
+        vadRmsThreshold: 0.015,
+        filterConfig: { ...DEFAULT_AUDIO_FILTER_CONFIG },
+        learnedVadPerformanceMode: "balanced",
+        learnedVadStrictMode: false,
+        learnedVadTuning: { ...DEFAULT_LEARNED_VAD_TUNING },
+        learnedVadReport: {
+            status: "idle",
         },
-        gaze: {
-            faceX: "",
-            faceY: "",
-            facing: "",
-            status: "みてない",
-            targetDebug: "-",
-            paused: false,
-            tuning: { ...DEFAULT_GAZE_TUNING },
+        constraintStatus: {
+            text: "NS/EC/AGC: 未確認",
+            title: "",
+            tone: "",
         },
-        sincroMotion: {
-            face: createDefaultFaceMotionSnapshot(),
-            pose: createDefaultPoseMotionSnapshot(),
-            tracker: {
-                mode: "main-thread",
-                status: "idle",
-                transferTimeMs: 0,
-                workerRoundTripMs: 0,
-                loadTimeMs: 0,
-                droppedFrames: 0,
-            },
-            poseRetarget: {
-                intensityScale: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.intensityScale,
-                minConfidence: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.minConfidence,
-                returnToNeutralMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.returnToNeutralMs,
-                smoothingMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.smoothingMs,
-                armIkStrength: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkStrength,
-                armIkTargetScale: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkTargetScale,
-                armIkMaxLiftRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxLiftRad,
-                armIkMaxOpenRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxOpenRad,
-                armIkMaxForearmFlexRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxForearmFlexRad,
-                armIkMode: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMode,
-            },
-            poseRetargetRuntime: {
-                active: false,
-                confidence: 0,
-                ikMode: "fallback",
-                fallbackReason: "neutral",
-                solverProbe: {},
-                anchor: {
-                    active: false,
-                    weight: 0,
-                    reason: "neutral",
-                    shoulderOffset: { x: 0, y: 0 },
-                },
-                leftArm: {
-                    active: false,
-                    ikActive: false,
-                    ikWeight: 0,
-                    fallbackReason: "neutral",
-                    ikSolverMode: "none",
-                    constraint: createNeutralArmIkConstraint(),
-                    upperArm: { x: 0, y: 0, z: 0 },
-                    lowerArm: { x: 0, y: 0, z: 0 },
-                    wrist: { x: 0, y: 0, z: 0 },
-                    upperArmQuaternion: undefined,
-                    lowerArmQuaternion: undefined,
-                },
-                rightArm: {
-                    active: false,
-                    ikActive: false,
-                    ikWeight: 0,
-                    fallbackReason: "neutral",
-                    ikSolverMode: "none",
-                    constraint: createNeutralArmIkConstraint(),
-                    upperArm: { x: 0, y: 0, z: 0 },
-                    lowerArm: { x: 0, y: 0, z: 0 },
-                    wrist: { x: 0, y: 0, z: 0 },
-                    upperArmQuaternion: undefined,
-                    lowerArmQuaternion: undefined,
-                },
-            },
+    };
+}
+
+function createDefaultGazeSnapshot(): GazeSnapshot {
+    return {
+        faceX: "",
+        faceY: "",
+        facing: "",
+        status: "みてない",
+        targetDebug: "-",
+        paused: false,
+        tuning: { ...DEFAULT_GAZE_TUNING },
+    };
+}
+
+function createDefaultSincroMotionSnapshot(): SincroMotionSnapshot {
+    return {
+        face: createDefaultFaceMotionSnapshot(),
+        pose: createDefaultPoseMotionSnapshot(),
+        tracker: {
+            mode: "main-thread",
+            status: "idle",
+            transferTimeMs: 0,
+            workerRoundTripMs: 0,
+            loadTimeMs: 0,
+            droppedFrames: 0,
         },
-        rtc: {
-            iceConnectionState: "",
-            iceGatheringState: "",
-            signalingState: "",
-            metrics: { ...DEFAULT_RTC_METRICS },
-            trends: {
-                trendOutboundAudioBitrate: [],
-                trendInboundAudioBitrate: [],
-                trendRoundTripTime: [],
-                trendInboundPacketLossRate: [],
-            },
-            textChannelLog: "",
-            telopChannelLog: "",
-            rtcEventLog: "",
-            offerSdp: "",
-            answerSdp: "",
+        poseRetarget: createDefaultPoseRetargetConfigSnapshot(),
+        poseRetargetRuntime: createDefaultPoseRetargetRuntimeSnapshot(),
+    };
+}
+
+function createDefaultPoseRetargetConfigSnapshot(): SincroMotionSnapshot["poseRetarget"] {
+    return {
+        intensityScale: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.intensityScale,
+        minConfidence: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.minConfidence,
+        returnToNeutralMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.returnToNeutralMs,
+        smoothingMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.smoothingMs,
+        armIkStrength: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkStrength,
+        armIkTargetScale: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkTargetScale,
+        armIkMaxLiftRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxLiftRad,
+        armIkMaxOpenRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxOpenRad,
+        armIkMaxForearmFlexRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxForearmFlexRad,
+        armIkMode: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMode,
+    };
+}
+
+function createDefaultPoseRetargetRuntimeSnapshot(): SincroMotionSnapshot["poseRetargetRuntime"] {
+    return {
+        active: false,
+        confidence: 0,
+        ikMode: "fallback",
+        fallbackReason: "neutral",
+        solverProbe: {},
+        anchor: {
+            active: false,
+            weight: 0,
+            reason: "neutral",
+            shoulderOffset: { x: 0, y: 0 },
         },
+        leftArm: createDefaultPoseRetargetArmRuntimeSnapshot(),
+        rightArm: createDefaultPoseRetargetArmRuntimeSnapshot(),
+    };
+}
+
+function createDefaultPoseRetargetArmRuntimeSnapshot(): SincroMotionSnapshot["poseRetargetRuntime"]["leftArm"] {
+    return {
+        active: false,
+        ikActive: false,
+        ikWeight: 0,
+        fallbackReason: "neutral",
+        ikSolverMode: "none",
+        constraint: createNeutralArmIkConstraint(),
+        upperArm: { x: 0, y: 0, z: 0 },
+        lowerArm: { x: 0, y: 0, z: 0 },
+        wrist: { x: 0, y: 0, z: 0 },
+        upperArmQuaternion: undefined,
+        lowerArmQuaternion: undefined,
+    };
+}
+
+function createDefaultRtcSnapshot(): RtcSnapshot {
+    return {
+        iceConnectionState: "",
+        iceGatheringState: "",
+        signalingState: "",
+        metrics: { ...DEFAULT_RTC_METRICS },
+        trends: {
+            trendOutboundAudioBitrate: [],
+            trendInboundAudioBitrate: [],
+            trendRoundTripTime: [],
+            trendInboundPacketLossRate: [],
+        },
+        textChannelLog: "",
+        telopChannelLog: "",
+        rtcEventLog: "",
+        offerSdp: "",
+        answerSdp: "",
     };
 }

@@ -4,6 +4,14 @@ import type { CharacterBehaviorSnapshot } from "./CharacterBehaviorState";
 
 type EmotionPreset = "neutral" | "relaxed" | "happy" | "sad" | "angry" | "surprised";
 
+type EmotionPlaybackOptions = {
+    preset: EmotionPreset;
+    intensity: number;
+    holdMs: number;
+    transitionMs: number;
+    nowMs: number;
+};
+
 // text_ch の ChatMessage.expression_code (先頭 ^N) を受け取り、
 // VRM標準表情プリセットを短時間だけ適用する controller。
 //
@@ -61,7 +69,13 @@ export class FaceEmotionController {
             speechId !== this.neutralizedSpeechId
         ) {
             this.neutralizedSpeechId = speechId;
-            this.playEmotion("neutral", 0.0, 0, 1, snapshot.nowMs);
+            this.playEmotion({
+                preset: "neutral",
+                intensity: 0.0,
+                holdMs: 0,
+                transitionMs: 1,
+                nowMs: snapshot.nowMs,
+            });
         }
 
         const msg = snapshot.aiSpeech.lastTextMessage;
@@ -93,7 +107,7 @@ export class FaceEmotionController {
         this.logger.addTextChannelLog(
             `[emotion] apply message_id=${msg.message_id} code=${code} preset=${preset} exists=${presetExists} intensity=${intensity.toFixed(2)}\n`,
         );
-        this.playEmotion(preset, intensity, holdMs, transitionMs, snapshot.nowMs);
+        this.playEmotion({ preset, intensity, holdMs, transitionMs, nowMs: snapshot.nowMs });
         this.updateEmotionAnimation(snapshot.nowMs);
     }
 
@@ -131,13 +145,13 @@ export class FaceEmotionController {
         }
     }
 
-    private playEmotion(
-        preset: EmotionPreset,
-        intensity: number,
-        holdMs: number,
-        transitionMs: number,
-        nowMs: number,
-    ): void {
+    private playEmotion({
+        preset,
+        intensity,
+        holdMs,
+        transitionMs,
+        nowMs,
+    }: EmotionPlaybackOptions): void {
         // 新しい応答が来たら前の感情アニメーションを打ち切り、最新応答を優先する。
         const startMs = nowMs;
         const fadeInMs = Math.max(transitionMs, 1);

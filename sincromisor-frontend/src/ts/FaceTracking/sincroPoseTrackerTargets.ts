@@ -35,6 +35,17 @@ type SincroPoseLowerBodyTargetOptions = {
     worldOrigin: PoseWorldTargetOrigin | undefined;
 };
 
+type SincroPoseArmTargetsOptions = {
+    shoulder: NormalizedLandmark | undefined;
+    elbow: NormalizedLandmark | undefined;
+    wrist: NormalizedLandmark | undefined;
+    worldShoulder: Landmark | undefined;
+    worldElbow: Landmark | undefined;
+    worldWrist: Landmark | undefined;
+    imageOrigin: PoseTargetPointOrigin;
+    worldOrigin: PoseWorldTargetOrigin | undefined;
+};
+
 // 腕 target は image 座標の低振幅 motion と world 座標 IK target を同じ landmark から生成する。
 export function createSincroPoseArmMotion({
     landmarks,
@@ -68,17 +79,16 @@ export function createSincroPoseArmMotion({
             side === "left" ? SINCRO_POSE_LANDMARK.leftWrist : SINCRO_POSE_LANDMARK.rightWrist
         ];
     const confidence = averagePoseLandmarkVisibility([shoulder, elbow, wrist]);
-    const targets = {
-        shoulder: createSincroPoseTargetPoint(
-            shoulder,
-            worldShoulder,
-            "shoulder",
-            imageOrigin,
-            worldOrigin,
-        ),
-        elbow: createSincroPoseTargetPoint(elbow, worldElbow, "elbow", imageOrigin, worldOrigin),
-        wrist: createSincroPoseTargetPoint(wrist, worldWrist, "wrist", imageOrigin, worldOrigin),
-    };
+    const targets = createSincroPoseArmTargets({
+        shoulder,
+        elbow,
+        wrist,
+        worldShoulder,
+        worldElbow,
+        worldWrist,
+        imageOrigin,
+        worldOrigin,
+    });
     if (confidence < SINCRO_POSE_MIN_LANDMARK_VISIBILITY) {
         return {
             ...DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
@@ -100,6 +110,41 @@ export function createSincroPoseArmMotion({
     };
 }
 
+function createSincroPoseArmTargets({
+    shoulder,
+    elbow,
+    wrist,
+    worldShoulder,
+    worldElbow,
+    worldWrist,
+    imageOrigin,
+    worldOrigin,
+}: SincroPoseArmTargetsOptions): SincroPoseArmMotionSnapshot["targets"] {
+    return {
+        shoulder: createSincroPoseTargetPoint({
+            landmark: shoulder,
+            worldLandmark: worldShoulder,
+            joint: "shoulder",
+            imageOrigin,
+            worldOrigin,
+        }),
+        elbow: createSincroPoseTargetPoint({
+            landmark: elbow,
+            worldLandmark: worldElbow,
+            joint: "elbow",
+            imageOrigin,
+            worldOrigin,
+        }),
+        wrist: createSincroPoseTargetPoint({
+            landmark: wrist,
+            worldLandmark: worldWrist,
+            joint: "wrist",
+            imageOrigin,
+            worldOrigin,
+        }),
+    };
+}
+
 export function createSincroPoseLowerBodyTargets({
     landmarks,
     worldLandmarks,
@@ -107,47 +152,47 @@ export function createSincroPoseLowerBodyTargets({
     worldOrigin,
 }: SincroPoseLowerBodyTargetOptions): SincroPoseLowerBodyTargetSnapshot {
     return {
-        leftHip: createSincroPoseTargetPoint(
-            landmarks[SINCRO_POSE_LANDMARK.leftHip],
-            worldLandmarks?.[SINCRO_POSE_LANDMARK.leftHip],
-            "hip",
+        leftHip: createSincroPoseTargetPoint({
+            landmark: landmarks[SINCRO_POSE_LANDMARK.leftHip],
+            worldLandmark: worldLandmarks?.[SINCRO_POSE_LANDMARK.leftHip],
+            joint: "hip",
             imageOrigin,
             worldOrigin,
-        ),
-        rightHip: createSincroPoseTargetPoint(
-            landmarks[SINCRO_POSE_LANDMARK.rightHip],
-            worldLandmarks?.[SINCRO_POSE_LANDMARK.rightHip],
-            "hip",
+        }),
+        rightHip: createSincroPoseTargetPoint({
+            landmark: landmarks[SINCRO_POSE_LANDMARK.rightHip],
+            worldLandmark: worldLandmarks?.[SINCRO_POSE_LANDMARK.rightHip],
+            joint: "hip",
             imageOrigin,
             worldOrigin,
-        ),
-        leftKnee: createSincroPoseTargetPoint(
-            landmarks[SINCRO_POSE_LANDMARK.leftKnee],
-            worldLandmarks?.[SINCRO_POSE_LANDMARK.leftKnee],
-            "knee",
+        }),
+        leftKnee: createSincroPoseTargetPoint({
+            landmark: landmarks[SINCRO_POSE_LANDMARK.leftKnee],
+            worldLandmark: worldLandmarks?.[SINCRO_POSE_LANDMARK.leftKnee],
+            joint: "knee",
             imageOrigin,
             worldOrigin,
-        ),
-        rightKnee: createSincroPoseTargetPoint(
-            landmarks[SINCRO_POSE_LANDMARK.rightKnee],
-            worldLandmarks?.[SINCRO_POSE_LANDMARK.rightKnee],
-            "knee",
+        }),
+        rightKnee: createSincroPoseTargetPoint({
+            landmark: landmarks[SINCRO_POSE_LANDMARK.rightKnee],
+            worldLandmark: worldLandmarks?.[SINCRO_POSE_LANDMARK.rightKnee],
+            joint: "knee",
             imageOrigin,
             worldOrigin,
-        ),
-        leftAnkle: createSincroPoseTargetPoint(
-            landmarks[SINCRO_POSE_LANDMARK.leftAnkle],
-            worldLandmarks?.[SINCRO_POSE_LANDMARK.leftAnkle],
-            "ankle",
+        }),
+        leftAnkle: createSincroPoseTargetPoint({
+            landmark: landmarks[SINCRO_POSE_LANDMARK.leftAnkle],
+            worldLandmark: worldLandmarks?.[SINCRO_POSE_LANDMARK.leftAnkle],
+            joint: "ankle",
             imageOrigin,
             worldOrigin,
-        ),
-        rightAnkle: createSincroPoseTargetPoint(
-            landmarks[SINCRO_POSE_LANDMARK.rightAnkle],
-            worldLandmarks?.[SINCRO_POSE_LANDMARK.rightAnkle],
-            "ankle",
+        }),
+        rightAnkle: createSincroPoseTargetPoint({
+            landmark: landmarks[SINCRO_POSE_LANDMARK.rightAnkle],
+            worldLandmark: worldLandmarks?.[SINCRO_POSE_LANDMARK.rightAnkle],
+            joint: "ankle",
             imageOrigin,
             worldOrigin,
-        ),
+        }),
     };
 }

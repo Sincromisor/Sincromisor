@@ -356,6 +356,21 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 既存の `TalkManager.ts` からの型 re-export は維持し、呼び出し側の import 契約は変更していない。
     - WebRTC DataChannel payload / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: 残存していた snapshot / settings apply / pose target / IK solver の hard 超過関数と 5 引数関数を分割した。
+    - 対象: `src/ts/UI/debugConsoleSnapshot.ts`
+    - 対象: `src/ts/App/SincroAppSettingsApply.ts`
+    - 対象: `src/ts/FaceTracking/sincroPoseTargetPoint.ts`
+    - 対象: `src/ts/FaceTracking/sincroPoseTrackerTargets.ts`
+    - 対象: `src/ts/SincroVRM/VRMCharacter/SincroArmIkSolver.ts`
+    - 対象: `src/ts/SincroVRM/VRMCharacter/sincroArmIkGeometry.ts`
+    - 対象: `src/ts/SincroVRM/VRMCharacter/FaceEmotionController.ts`
+    - `createDefaultSnapshot` は audio / gaze / Sincro motion / RTC の snapshot factory に分割した。
+    - `applySincroAppSettingsPartial` は Dialog 設定群、motion scale、Looking Glass runtime config 生成へ分割した。
+    - `createSincroPoseTargetPoint` / `clampArmIkTarget` / `playEmotion` は options object 入力へ変更し、引数 hard 超過を解消した。
+    - `SincroArmIkSolver.solve` は target 制約、local quaternion solve、constraint snapshot 構築へ分割した。
+    - 変更後の AST スキャンでは 5 引数以上の関数は 0 件になった。
+    - VRM / pose tracking / debug UI 内部の責務分割のみで、UI 表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

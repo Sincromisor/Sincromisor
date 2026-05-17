@@ -13,6 +13,8 @@ import {
     directionInWorldQuaternionSpace,
     elbowPosition,
     localQuaternionFromParentDirection,
+    type SincroArmIkClampedTarget,
+    type SincroArmIkLimitedQuaternion,
     serializeQuaternion,
     targetDirectionIsUsable,
 } from "./sincroArmIkGeometry";
@@ -49,6 +51,40 @@ type SincroArmIkOptions = {
     maxReachRatio: number;
     overheadMinReachRatio: number;
     poleFlipDotThreshold: number;
+};
+
+type SincroArmIkElbowPole = {
+    direction: Vector3;
+    stabilized: boolean;
+};
+
+type SincroArmIkPreparedTarget = {
+    targetConstraint: ReturnType<SincroArmIkConstraintResolver["constrainShoulderTarget"]>;
+    targetCollision: ReturnType<SincroArmIkConstraintResolver["avoidNoGoZones"]>;
+    targetClamp: SincroArmIkClampedTarget;
+    elbowPole: SincroArmIkElbowPole;
+    elbow: Vector3;
+    upperDirection: Vector3;
+    lowerDirection: Vector3;
+};
+
+type SincroArmIkSolvedQuaternions = {
+    upperLocalQuaternion: SincroArmIkLimitedQuaternion;
+    lowerLocalQuaternion: SincroArmIkLimitedQuaternion;
+};
+
+type SincroArmIkConstraintResult = {
+    constraint: SincroArmIkConstraintSnapshot;
+    weightScale: number;
+};
+
+type SincroArmIkConstraintResultOptions = {
+    targetConstraint: ReturnType<SincroArmIkConstraintResolver["constrainShoulderTarget"]>;
+    targetCollision: ReturnType<SincroArmIkConstraintResolver["avoidNoGoZones"]>;
+    elbowPole: SincroArmIkElbowPole;
+    upperLocalQuaternion: SincroArmIkLimitedQuaternion;
+    lowerLocalQuaternion: SincroArmIkLimitedQuaternion;
+    forearmCollision: ReturnType<SincroArmIkConstraintResolver["forearmCollisionReason"]>;
 };
 
 const DEFAULT_OPTIONS: SincroArmIkOptions = {
@@ -161,16 +197,48 @@ export class SincroArmIkSolver {
 
         this.upperArmNode.parent?.updateMatrixWorld(true);
         this.upperArmNode.updateMatrixWorld(true);
+        const prepared = this.prepareTarget(target);
+        if (!prepared) {
+            return undefined;
+        }
+
+        const solved = this.solveLocalQuaternions(prepared);
+        const forearmCollision = this.constraintResolver.forearmCollisionReason(
+            prepared.elbow,
+            prepared.targetClamp.target,
+        );
+        const constraintResult = this.buildConstraintResult({
+            targetConstraint: prepared.targetConstraint,
+            targetCollision: prepared.targetCollision,
+            elbowPole: prepared.elbowPole,
+            upperLocalQuaternion: solved.upperLocalQuaternion,
+            lowerLocalQuaternion: solved.lowerLocalQuaternion,
+            forearmCollision,
+        });
+        this.lastPoleDirection = prepared.elbowPole.direction.clone();
+
+        return {
+            upperArmQuaternion: serializeQuaternion(solved.upperLocalQuaternion.quaternion),
+            lowerArmQuaternion: serializeQuaternion(solved.lowerLocalQuaternion.quaternion),
+            neutralUpperArmQuaternion: serializeQuaternion(this.neutralUpperArmQuaternion),
+            neutralLowerArmQuaternion: serializeQuaternion(this.neutralLowerArmQuaternion),
+            targetClamped: prepared.targetClamp.clamped,
+            constraint: constraintResult.constraint,
+            weight: MathUtils.clamp(target.weight, 0, 1) * constraintResult.weightScale,
+        };
+    }
+
+    private prepareTarget(target: SincroArmIkTarget): SincroArmIkPreparedTarget | undefined {
         const targetVector = target.wrist.clone();
         const targetConstraint = this.constraintResolver.constrainShoulderTarget(targetVector);
         const targetCollision = this.constraintResolver.avoidNoGoZones(targetConstraint.target);
-        const targetClamp = clampArmIkTarget(
-            targetCollision.target,
-            this.upperArmLength,
-            this.lowerArmLength,
-            this.bindUpperDirectionInParent,
-            this.options,
-        );
+        const targetClamp = clampArmIkTarget({
+            target: targetCollision.target,
+            upperArmLength: this.upperArmLength,
+            lowerArmLength: this.lowerArmLength,
+            bindUpperDirection: this.bindUpperDirectionInParent,
+            options: this.options,
+        });
         const elbowPole = this.poleDirection(target.elbowPole, targetClamp.target);
         const elbow = elbowPosition(
             targetClamp.target,
@@ -180,11 +248,24 @@ export class SincroArmIkSolver {
         );
         const upperDirection = elbow.clone().normalize();
         const lowerDirection = targetClamp.target.clone().sub(elbow).normalize();
-
         if (!targetDirectionIsUsable(upperDirection) || !targetDirectionIsUsable(lowerDirection)) {
             return undefined;
         }
+        return {
+            targetConstraint,
+            targetCollision,
+            targetClamp,
+            elbowPole,
+            elbow,
+            upperDirection,
+            lowerDirection,
+        };
+    }
 
+    private solveLocalQuaternions({
+        upperDirection,
+        lowerDirection,
+    }: SincroArmIkPreparedTarget): SincroArmIkSolvedQuaternions {
         const parentWorldQuaternion = this.parentWorldQuaternion();
         const upperLocalQuaternion = localQuaternionFromParentDirection(
             this.bindUpperDirectionInParent,
@@ -195,16 +276,25 @@ export class SincroArmIkSolver {
         const upperSolvedWorldQuaternion = parentWorldQuaternion
             .clone()
             .multiply(upperLocalQuaternion.quaternion);
-        const lowerLocalQuaternion = localQuaternionFromParentDirection(
-            this.bindLowerDirectionInUpper,
-            directionInWorldQuaternionSpace(upperSolvedWorldQuaternion, lowerDirection),
-            this.neutralLowerArmQuaternion,
-            this.options.maxLowerArmDeltaRad,
-        );
-        const forearmCollision = this.constraintResolver.forearmCollisionReason(
-            elbow,
-            targetClamp.target,
-        );
+        return {
+            upperLocalQuaternion,
+            lowerLocalQuaternion: localQuaternionFromParentDirection(
+                this.bindLowerDirectionInUpper,
+                directionInWorldQuaternionSpace(upperSolvedWorldQuaternion, lowerDirection),
+                this.neutralLowerArmQuaternion,
+                this.options.maxLowerArmDeltaRad,
+            ),
+        };
+    }
+
+    private buildConstraintResult({
+        targetConstraint,
+        targetCollision,
+        elbowPole,
+        upperLocalQuaternion,
+        lowerLocalQuaternion,
+        forearmCollision,
+    }: SincroArmIkConstraintResultOptions): SincroArmIkConstraintResult {
         const reasons = [
             ...(targetConstraint.limited ? ["joint_limited"] : []),
             ...(targetCollision.reason ? [targetCollision.reason] : []),
@@ -213,7 +303,6 @@ export class SincroArmIkSolver {
             ...(lowerLocalQuaternion.limited ? ["forearm_twist_limited"] : []),
             ...(forearmCollision ? [forearmCollision] : []),
         ];
-        const uniqueReasons = [...new Set(reasons)];
         const collisionAvoided =
             targetCollision.reason !== undefined ||
             forearmCollision === "head_collision_avoided" ||
@@ -227,23 +316,16 @@ export class SincroArmIkSolver {
             elbowPole.stabilized,
             collisionAvoided,
         );
-        this.lastPoleDirection = elbowPole.direction.clone();
-
         return {
-            upperArmQuaternion: serializeQuaternion(upperLocalQuaternion.quaternion),
-            lowerArmQuaternion: serializeQuaternion(lowerLocalQuaternion.quaternion),
-            neutralUpperArmQuaternion: serializeQuaternion(this.neutralUpperArmQuaternion),
-            neutralLowerArmQuaternion: serializeQuaternion(this.neutralLowerArmQuaternion),
-            targetClamped: targetClamp.clamped,
             constraint: {
-                reasons: uniqueReasons,
+                reasons: [...new Set(reasons)],
                 jointLimited,
                 poleStabilized: elbowPole.stabilized,
                 collisionAvoided,
                 weightScale,
                 targetPushDistance: targetCollision.pushDistance,
             },
-            weight: MathUtils.clamp(target.weight, 0, 1) * weightScale,
+            weightScale,
         };
     }
 
