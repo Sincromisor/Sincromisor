@@ -257,6 +257,14 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 対象 4 ファイル内の 60 行超関数と 4 引数超関数は解消した。
     - 設定 UI の表示文言 / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: `ArmBoneController.ts` から speech gesture 状態管理、腕ボーン回転適用、手指ポーズ再帰更新を分割した。
+    - 追加: `src/ts/SincroVRM/VRMCharacter/armBoneSpeechGesture.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/armBoneRotationPose.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/armBoneHandPose.ts`
+    - `ArmBoneController.ts` は 361 行から 112 行まで縮小し、毎フレームの入力集約と helper 呼び出しだけに寄せた。
+    - 分割後の対象ファイルはすべて 200 行 soft 閾値以下に収め、対象領域の 60 行超関数は解消した。
+    - VRM 腕モーション内部の責務分割のみで、endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
