@@ -56,6 +56,15 @@
     - 対象: `SincroMediaDeviceService` / `DialogStateStore` / `DialogManager` / `SincroAppSettingsSnapshot` / React settings hooks / `UserMediaManager` / `VideoInputManager`
     - `Partial<SincroAppSettingsSnapshot>` で `undefined` を渡して既定デバイスへ戻す操作が落ちないよう、device id の apply は key presence 判定へ変更した。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: AppController 周辺の内部欠損表現を `undefined` へ追加整理した。
+    - 対象: `SincroAppActiveControllerRegistry` / `SincroAppController` / `SincroAppStartupSettings` / `SincroAppRightToolPanelService` / `SincroAppEventMappers` / `SincroAudioInputController` / `SincroCharacterGazeController`
+    - `Partial<SincroAppSettingsSnapshot>` の device id 以外の apply 判定を `!== undefined` に統一し、`map*ToAppEvent` の「イベントなし」も `undefined` に統一した。
+    - `CharacterBehaviorState.setErrorSource(..., null)` と `loadVrmThumbnailBlob(): Promise<Blob | null>` は clear API / ブラウザ境界由来の契約として残した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
+    - 追加確認: `npm run check` は `documents/rules/coding-py.md` の既存 Markdown 整形差分で失敗。
+- 2026-05-17: active controller registry の未登録状態を `undefined` へ統一した。
+    - 対象: `SincroAppActiveControllerRegistry` / `SincroAppController.getCurrent` / React active controller subscription hooks
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

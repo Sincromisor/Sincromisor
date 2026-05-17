@@ -108,10 +108,10 @@ export class SincroAppRightToolPanelService {
     }
 }
 
-let rightToolPanelService: SincroAppRightToolPanelService | null = null;
+let rightToolPanelService: SincroAppRightToolPanelService | undefined;
 
 export function getSincroAppRightToolPanelService(): SincroAppRightToolPanelService {
-    if (!rightToolPanelService) {
+    if (rightToolPanelService === undefined) {
         rightToolPanelService = new SincroAppRightToolPanelService();
     }
     return rightToolPanelService;

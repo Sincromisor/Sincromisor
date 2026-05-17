@@ -11,31 +11,33 @@ export type DebugEventMapResult =
 
 // singleton manager / service のイベント型を AppController 向けのイベントへ変換する pure mapper 群。
 // AppController 本体は状態更新と emit 順序に集中させる。
-export function mapChatMessageToAppEvent(event: ChatMessageServiceEvent): SincroAppEvent | null {
+export function mapChatMessageToAppEvent(
+    event: ChatMessageServiceEvent,
+): SincroAppEvent | undefined {
     if (event.type === "system_icon_changed") {
         if (!event.systemIconUrl) {
-            return null;
+            return undefined;
         }
         return { type: "chat_system_icon", iconUrl: event.systemIconUrl };
     }
     if (event.type !== "message" || !event.viewRecord) {
-        return null;
+        return undefined;
     }
     const { message } = event.viewRecord;
-    let eventType: SincroAppEvent["type"] = "chat_message";
     if (message.message_type === "system") {
-        eventType = "system_message";
-    } else if (message.message_type === "error") {
-        eventType = "error_message";
+        return { type: "system_message", message, viewRecord: event.viewRecord };
     }
-    return { type: eventType, message, viewRecord: event.viewRecord } as SincroAppEvent;
+    if (message.message_type === "error") {
+        return { type: "error_message", message, viewRecord: event.viewRecord };
+    }
+    return { type: "chat_message", message, viewRecord: event.viewRecord };
 }
 
-export function mapTalkManagerEventToAppEvent(event: TalkManagerEvent): SincroAppEvent | null {
+export function mapTalkManagerEventToAppEvent(event: TalkManagerEvent): SincroAppEvent | undefined {
     if (event.type === "telop_channel_message") {
         return { type: "telop_message", message: event.message };
     }
-    return null;
+    return undefined;
 }
 
 export function mapDebugConsoleEvent(event: DebugConsoleManagerEvent): DebugEventMapResult {

@@ -104,7 +104,7 @@ type ConfigurationDialogEventHandlerMap = {
 // dialog 用の最小購読 hook。Control Panel 用 hook の全状態を持たず、settings 系 + VRM UI状態だけを扱う。
 export function useConfigurationDialogSettingsState() {
     const initialController = SincroAppController.getCurrent();
-    const [currentController, setCurrentController] = useState<SincroAppController | null>(
+    const [currentController, setCurrentController] = useState<SincroAppController | undefined>(
         initialController,
     );
     const [lifecycleState, setLifecycleState] = useState<SincroAppLifecycleState>("idle");

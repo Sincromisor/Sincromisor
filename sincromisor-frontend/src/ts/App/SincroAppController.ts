@@ -105,9 +105,9 @@ export class SincroAppController {
     private afterStartHook: () => void = () => {};
     private suppressSettingsSnapshotEvent: boolean = false;
     // 同一同期処理中だけ有効な短命キャッシュ。settings 系 snapshot の重複組み立てを避ける。
-    private settingsRelatedPayloadCache: SincroAppSettingsRelatedSnapshotPayload | null = null;
+    private settingsRelatedPayloadCache: SincroAppSettingsRelatedSnapshotPayload | undefined;
     private settingsRelatedPayloadCacheDepth: number = 0;
-    private startupAppliedSettings: SincroAppStartupAppliedSettings | null = null;
+    private startupAppliedSettings: SincroAppStartupAppliedSettings | undefined;
     private startupSettingsCapabilities: SincroAppStartupSettingsCapabilities = {
         enableTalk: false,
         enableInspector: false,
@@ -167,13 +167,13 @@ export class SincroAppController {
 
     // Static active controller registry API
     // React側が「今アクティブなページの AppController」を購読するための入口。
-    static getCurrent(): SincroAppController | null {
+    static getCurrent(): SincroAppController | undefined {
         return SincroAppController.activeRegistry.getCurrent();
     }
 
     // MPAページ切り替えや initializer 差し替えを考慮し、active controller の変化も購読可能にする。
     static subscribeCurrent(
-        listener: (controller: SincroAppController | null) => void,
+        listener: (controller: SincroAppController | undefined) => void,
     ): () => void {
         return SincroAppController.activeRegistry.subscribe(listener);
     }
@@ -493,7 +493,7 @@ export class SincroAppController {
         } finally {
             this.settingsRelatedPayloadCacheDepth -= 1;
             if (this.settingsRelatedPayloadCacheDepth === 0) {
-                this.settingsRelatedPayloadCache = null;
+                this.settingsRelatedPayloadCache = undefined;
             }
         }
     }
@@ -504,7 +504,7 @@ export class SincroAppController {
         return buildSincroAppUiStateSnapshot(this.dialogManager);
     }
 
-    private static setCurrent(controller: SincroAppController | null): void {
+    private static setCurrent(controller: SincroAppController | undefined): void {
         // active controller の static 購読は React mount 後の attach 判定に使われる。
         SincroAppController.activeRegistry.setCurrent(controller);
     }
