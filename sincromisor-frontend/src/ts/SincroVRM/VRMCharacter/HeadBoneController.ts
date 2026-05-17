@@ -22,13 +22,13 @@ export class HeadBoneController {
     private scale: Vector3 = new Vector3(1, 1, 1);
     private vrm: VRM;
     private vrmCamera: VRMCamera;
-    private headControlNode: Object3D | null;
+    private headControlNode: Object3D | undefined;
     private readonly sincroHeadNodes = new Map<SincroHeadBoneName, SincroHeadBone>();
     private characterGaze: CharacterGaze;
-    private lastUpdateAtMs: number | null = null;
+    private lastUpdateAtMs: number | undefined;
     private aiSpeechBlend = 0;
     private lastAiSpeechBeatId = 0;
-    private aiSpeechBeatStartedAtMs: number | null = null;
+    private aiSpeechBeatStartedAtMs: number | undefined;
     private aiSpeechBeatIntensity = 0;
     private aiSpeechBeatDirection = 1;
 
@@ -47,7 +47,7 @@ export class HeadBoneController {
         }
         const nowMs = snapshot?.nowMs ?? performance.now();
         const deltaMs =
-            this.lastUpdateAtMs == null
+            this.lastUpdateAtMs === undefined
                 ? 1000 / 60
                 : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
         this.lastUpdateAtMs = nowMs;
@@ -133,7 +133,7 @@ export class HeadBoneController {
         this.setEyeTarget(angleX / 2, angleY, 0);
     }
 
-    private getHeadControlNode(): Object3D | null {
+    private getHeadControlNode(): Object3D | undefined {
         const fallbackOrder: VRMHumanBoneName[] = ["neck", "head", "upperChest", "chest", "spine"];
         for (const name of fallbackOrder) {
             const node = this.vrm.humanoid.getNormalizedBoneNode(name);
@@ -144,7 +144,7 @@ export class HeadBoneController {
                 return node;
             }
         }
-        return null;
+        return undefined;
     }
 
     private captureSincroHeadBones(): void {
@@ -242,12 +242,12 @@ export class HeadBoneController {
     }
 
     private currentAiSpeechBeat(nowMs: number, isSpeaking: boolean): number {
-        if (this.aiSpeechBeatStartedAtMs == null) {
+        if (this.aiSpeechBeatStartedAtMs === undefined) {
             return 0;
         }
         const progress = (nowMs - this.aiSpeechBeatStartedAtMs) / 520;
         if (progress >= 1 || !isSpeaking) {
-            this.aiSpeechBeatStartedAtMs = null;
+            this.aiSpeechBeatStartedAtMs = undefined;
             return 0;
         }
         return Math.sin(Math.PI * MathUtils.clamp(progress, 0, 1)) * this.aiSpeechBeatIntensity;

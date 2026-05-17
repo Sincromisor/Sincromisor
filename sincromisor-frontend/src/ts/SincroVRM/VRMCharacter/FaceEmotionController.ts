@@ -14,16 +14,18 @@ type EmotionPreset = "neutral" | "relaxed" | "happy" | "sad" | "angry" | "surpri
 export class FaceEmotionController {
     private readonly expressionManager: VRMExpressionManager;
     private readonly logger: DebugConsoleManager;
-    private handledMessageId: string | null = null;
-    private neutralizedSpeechId: number | null = null;
-    private activeEmotion: {
-        preset: EmotionPreset;
-        intensity: number;
-        startMs: number;
-        fadeInMs: number;
-        fadeOutStartMs: number;
-        endMs: number;
-    } | null = null;
+    private handledMessageId: string | undefined;
+    private neutralizedSpeechId: number | undefined;
+    private activeEmotion:
+        | {
+              preset: EmotionPreset;
+              intensity: number;
+              startMs: number;
+              fadeInMs: number;
+              fadeOutStartMs: number;
+              endMs: number;
+          }
+        | undefined;
     private readonly animatedPresets: VRMExpressionPresetName[] = [
         "relaxed",
         "happy",
@@ -46,7 +48,7 @@ export class FaceEmotionController {
     // 感情表情も CharacterBehaviorSnapshot を正本にし、text_ch/telop_ch の順序差を状態層へ閉じ込める。
     update(snapshot: CharacterBehaviorSnapshot): void {
         if (!snapshot.motionPolicy.allowAiEmotion) {
-            this.activeEmotion = null;
+            this.activeEmotion = undefined;
             this.setEmotionPresetValues("neutral", 0.0);
             return;
         }
@@ -84,7 +86,7 @@ export class FaceEmotionController {
         const intensity = this.defaultIntensity(code);
         const holdMs = code === 5 ? 700 : 2200;
         const transitionMs = code === 5 ? 120 : 180;
-        const presetExists = this.expressionManager.getExpression(preset) != null;
+        const presetExists = this.expressionManager.getExpression(preset) !== null;
         // 同じコードでもVRMごとに見え方がかなり違うため、実機調整しやすいよう
         // 適用先プリセット名と強度をログに残す。
         this.logger.addTextChannelLog(
@@ -142,7 +144,7 @@ export class FaceEmotionController {
         const endMs = fadeOutStartMs + fadeInMs;
 
         if (preset === "neutral") {
-            this.activeEmotion = null;
+            this.activeEmotion = undefined;
             this.setEmotionPresetValues("neutral", 0.0);
             return;
         }
@@ -167,7 +169,7 @@ export class FaceEmotionController {
                 (1.0 - (nowMs - animation.fadeOutStartMs) / animation.fadeInMs);
         } else {
             this.setEmotionPresetValues(animation.preset, 0.0);
-            this.activeEmotion = null;
+            this.activeEmotion = undefined;
             return;
         }
 

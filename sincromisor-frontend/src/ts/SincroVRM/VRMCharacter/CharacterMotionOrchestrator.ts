@@ -30,15 +30,15 @@ type MotionBone = {
 export class CharacterMotionOrchestrator {
     private readonly bones = new Map<OptionalBoneName, MotionBone>();
     private listeningBlend = 0;
-    private lastElapsedSeconds: number | null = null;
+    private lastElapsedSeconds: number | undefined;
     private lastBackchannelSpeechEndedAtMs: number | undefined;
     private lastBackchannelTriggeredAtMs: number | undefined;
-    private nodStartedAtSeconds: number | null = null;
+    private nodStartedAtSeconds: number | undefined;
     private nodIntensity = 0;
     private aiSpeakingBlend = 0;
-    private lastAiSpeakingElapsedSeconds: number | null = null;
+    private lastAiSpeakingElapsedSeconds: number | undefined;
     private lastAiSpeechBeatId = 0;
-    private aiSpeechBeatStartedAtSeconds: number | null = null;
+    private aiSpeechBeatStartedAtSeconds: number | undefined;
     private aiSpeechBeatIntensity = 0;
     private aiSpeechBeatDirection = 1;
     private tuning: CharacterMotionTuning = DEFAULT_CHARACTER_MOTION_TUNING;
@@ -323,7 +323,7 @@ export class CharacterMotionOrchestrator {
         snapshot: CharacterBehaviorSnapshot,
     ): number {
         const deltaSeconds =
-            this.lastElapsedSeconds == null
+            this.lastElapsedSeconds === undefined
                 ? 1 / 60
                 : MathUtils.clamp(elapsedSeconds - this.lastElapsedSeconds, 1 / 120, 0.1);
         this.lastElapsedSeconds = elapsedSeconds;
@@ -372,14 +372,14 @@ export class CharacterMotionOrchestrator {
             this.lastBackchannelSpeechEndedAtMs = snapshot.vad.lastSpeechEndedAtMs;
             this.lastBackchannelTriggeredAtMs = snapshot.nowMs;
         }
-        if (this.nodStartedAtSeconds == null) {
+        if (this.nodStartedAtSeconds === undefined) {
             return 0;
         }
         const progress =
             (elapsedSeconds - this.nodStartedAtSeconds) /
             CHARACTER_IDLE_MOTION_CONFIG.listening.nodDurationSeconds;
         if (progress >= 1) {
-            this.nodStartedAtSeconds = null;
+            this.nodStartedAtSeconds = undefined;
             return 0;
         }
         return Math.sin(Math.PI * MathUtils.clamp(progress, 0, 1)) * this.nodIntensity;
@@ -427,7 +427,7 @@ export class CharacterMotionOrchestrator {
         snapshot: CharacterBehaviorSnapshot,
     ): number {
         const deltaSeconds =
-            this.lastAiSpeakingElapsedSeconds == null
+            this.lastAiSpeakingElapsedSeconds === undefined
                 ? 1 / 60
                 : MathUtils.clamp(elapsedSeconds - this.lastAiSpeakingElapsedSeconds, 1 / 120, 0.1);
         this.lastAiSpeakingElapsedSeconds = elapsedSeconds;
@@ -472,14 +472,14 @@ export class CharacterMotionOrchestrator {
                 1,
             );
         }
-        if (this.aiSpeechBeatStartedAtSeconds == null) {
+        if (this.aiSpeechBeatStartedAtSeconds === undefined) {
             return 0;
         }
         const progress =
             (elapsedSeconds - this.aiSpeechBeatStartedAtSeconds) /
             CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.beatDurationSeconds;
         if (progress >= 1 || !snapshot.aiSpeech.isSpeaking) {
-            this.aiSpeechBeatStartedAtSeconds = null;
+            this.aiSpeechBeatStartedAtSeconds = undefined;
             return 0;
         }
         return Math.sin(Math.PI * MathUtils.clamp(progress, 0, 1)) * this.aiSpeechBeatIntensity;

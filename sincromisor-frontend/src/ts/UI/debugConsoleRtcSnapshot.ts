@@ -56,10 +56,10 @@ export function isDebugConsoleTrendKey(key: string): key is DebugConsoleTrendKey
 export function pushRtcTrendPoint(
     snapshot: DebugConsoleSnapshot,
     key: DebugConsoleTrendKey,
-    value: number | null,
+    value: number | undefined,
 ): DebugConsoleSnapshot {
     const nextSeries = [...snapshot.rtc.trends[key]];
-    nextSeries.push(value !== null && Number.isFinite(value) ? value : 0);
+    nextSeries.push(value !== undefined && Number.isFinite(value) ? value : 0);
     if (nextSeries.length > RTC_TREND_POINTS) {
         nextSeries.splice(0, nextSeries.length - RTC_TREND_POINTS);
     }

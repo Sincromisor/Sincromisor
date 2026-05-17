@@ -66,23 +66,23 @@ export class EyeBehaviorController {
     private smoothedTarget: EyeTarget = { x: 0.5, y: 0.5 };
     private microsaccade: EyeTarget = { x: 0, y: 0 };
     private nextMicrosaccadeAtMs = performance.now() + 900;
-    private aversionTarget: EyeTarget | null = null;
+    private aversionTarget: EyeTarget | undefined;
     private aversionUntilMs = 0;
     private nextAversionAtMs = performance.now() + 900;
-    private blinkStartedAtMs: number | null = null;
+    private blinkStartedAtMs: number | undefined;
     private nextBlinkAtMs = performance.now() + this.randomRange(1800, 4200);
-    private lastUpdateAtMs: number | null = null;
+    private lastUpdateAtMs: number | undefined;
     private tuning: CharacterMotionTuning = DEFAULT_CHARACTER_MOTION_TUNING;
 
     constructor(vrm: VRM, expressionManager: VRMExpressionManager) {
         this.expressionManager = expressionManager;
         for (const preset of LOOK_PRESETS) {
-            if (this.expressionManager.getExpression(preset) != null) {
+            if (this.expressionManager.getExpression(preset) !== null) {
                 this.availableLookPresets.add(preset);
             }
         }
         for (const preset of BLINK_PRESETS) {
-            if (this.expressionManager.getExpression(preset) != null) {
+            if (this.expressionManager.getExpression(preset) !== null) {
                 this.availableBlinkPresets.add(preset);
             }
         }
@@ -93,7 +93,7 @@ export class EyeBehaviorController {
     update(snapshot: CharacterBehaviorSnapshot, sincroFace?: SincroFaceRetargetFrame): void {
         const nowMs = snapshot.nowMs;
         const deltaMs =
-            this.lastUpdateAtMs == null
+            this.lastUpdateAtMs === undefined
                 ? 1000 / 60
                 : MathUtils.clamp(nowMs - this.lastUpdateAtMs, 1, 100);
         this.lastUpdateAtMs = nowMs;
@@ -188,14 +188,14 @@ export class EyeBehaviorController {
             snapshot.state !== "thinking" ||
             !snapshot.gaze.detected
         ) {
-            this.aversionTarget = null;
+            this.aversionTarget = undefined;
             return { x: 0, y: 0 };
         }
         if (this.aversionTarget && nowMs <= this.aversionUntilMs) {
             return this.aversionTarget;
         }
         if (nowMs < this.nextAversionAtMs) {
-            this.aversionTarget = null;
+            this.aversionTarget = undefined;
             return { x: 0, y: 0 };
         }
         const direction = Math.random() < 0.5 ? -1 : 1;
@@ -334,14 +334,14 @@ export class EyeBehaviorController {
         }
         if (this.isBlinkSuppressed(snapshot, nowMs)) {
             this.applyBlinkExpressions(0, 0);
-            this.blinkStartedAtMs = null;
+            this.blinkStartedAtMs = undefined;
             this.nextBlinkAtMs = Math.max(this.nextBlinkAtMs, nowMs + 450);
             return;
         }
-        if (this.blinkStartedAtMs == null && nowMs >= this.nextBlinkAtMs) {
+        if (this.blinkStartedAtMs === undefined && nowMs >= this.nextBlinkAtMs) {
             this.blinkStartedAtMs = nowMs;
         }
-        if (this.blinkStartedAtMs == null) {
+        if (this.blinkStartedAtMs === undefined) {
             this.applyBlinkExpressions(0, 0);
             return;
         }
@@ -350,7 +350,7 @@ export class EyeBehaviorController {
         const durationMs = EYE_BEHAVIOR_CONFIG.blinkDurationMs;
         if (elapsedMs >= durationMs) {
             this.applyBlinkExpressions(0, 0);
-            this.blinkStartedAtMs = null;
+            this.blinkStartedAtMs = undefined;
             this.nextBlinkAtMs = nowMs + this.nextBlinkDelayMs(snapshot.state);
             return;
         }
@@ -390,7 +390,7 @@ export class EyeBehaviorController {
     private isBlinkSuppressed(snapshot: CharacterBehaviorSnapshot, nowMs: number): boolean {
         return (
             snapshot.aiSpeech.expressionCode === 5 &&
-            snapshot.aiSpeech.lastUpdatedAtMs != null &&
+            snapshot.aiSpeech.lastUpdatedAtMs !== undefined &&
             nowMs - snapshot.aiSpeech.lastUpdatedAtMs <=
                 EYE_BEHAVIOR_CONFIG.surprisedBlinkSuppressMs
         );
