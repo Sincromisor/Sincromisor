@@ -79,7 +79,7 @@ export class LearnedVadWorkerClient {
         this.worker = worker;
         worker.onmessage = (event: MessageEvent<LearnedVadWorkerMessage>) => {
             const data = event.data;
-            if (!data || !data.type) {
+            if (!data?.type) {
                 return;
             }
             if (data.type === "status") {

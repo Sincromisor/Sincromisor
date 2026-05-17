@@ -84,11 +84,11 @@ export class CharacterGaze {
     // 顔のkeypointは、右目、左目、鼻、口、右耳、左耳の順に6要素の配列になっている。
     // とりあえず鼻の位置を追跡する。
     targetX(): number {
-        return this.movingAverage[2]["x"];
+        return this.movingAverage[2].x;
     }
 
     targetY(): number {
-        return this.movingAverage[2]["y"];
+        return this.movingAverage[2].y;
     }
 
     // Debug Console の簡易表示用（複数人検出時の選択結果確認）。
@@ -130,8 +130,8 @@ export class CharacterGaze {
     eyeAngles(): [number, number] {
         const cameraPos: [number, number, number] = [0, 0, 0];
         const [faceX, faceY, faceZ] = [
-            this.movingAverage[2]["x"] - 0.5,
-            this.movingAverage[2]["y"] - 0.5,
+            this.movingAverage[2].x - 0.5,
+            this.movingAverage[2].y - 0.5,
             1,
         ];
 
@@ -160,12 +160,8 @@ export class CharacterGaze {
         const rightEye = this.movingAverage[0];
         const leftEye = this.movingAverage[1];
         const nose = this.movingAverage[2];
-        const rEyeDist = Math.sqrt(
-            (rightEye["x"] - nose["x"]) ** 2 + (rightEye["y"] - nose["y"]) ** 2,
-        );
-        const lEyeDist = Math.sqrt(
-            (leftEye["x"] - nose["x"]) ** 2 + (leftEye["y"] - nose["y"]) ** 2,
-        );
+        const rEyeDist = Math.sqrt((rightEye.x - nose.x) ** 2 + (rightEye.y - nose.y) ** 2);
+        const lEyeDist = Math.sqrt((leftEye.x - nose.x) ** 2 + (leftEye.y - nose.y) ** 2);
         return rEyeDist / (rEyeDist + lEyeDist);
     }
 
@@ -447,16 +443,16 @@ export class CharacterGaze {
         timestampMs: number,
     ): void {
         for (let i = 0; i <= 5; i++) {
-            const rawX = this.clamp01(keypoints[i]["x"]);
-            const rawY = this.clamp01(keypoints[i]["y"]);
+            const rawX = this.clamp01(keypoints[i].x);
+            const rawY = this.clamp01(keypoints[i].y);
             const filteredX = this.keypointXFilters[i].filter(rawX, timestampMs);
             const filteredY = this.keypointYFilters[i].filter(rawY, timestampMs);
-            this.movingAverage[i]["x"] = this.applyDeadband(
-                this.movingAverage[i]["x"],
+            this.movingAverage[i].x = this.applyDeadband(
+                this.movingAverage[i].x,
                 this.clamp01(filteredX),
             );
-            this.movingAverage[i]["y"] = this.applyDeadband(
-                this.movingAverage[i]["y"],
+            this.movingAverage[i].y = this.applyDeadband(
+                this.movingAverage[i].y,
                 this.clamp01(filteredY),
             );
         }
@@ -465,13 +461,13 @@ export class CharacterGaze {
     // ニュートラルポジションにじわじわと戻す。
     // ToDo: 現状鼻だけ真ん中に戻ってしまうため、なんとかする。
     private updateKeypointsMovingAverageToNeutral(): void {
-        const deviation_x = 0.5 - this.movingAverage[2]["x"];
-        const deviation_y = 0.5 - this.movingAverage[2]["y"];
+        const deviation_x = 0.5 - this.movingAverage[2].x;
+        const deviation_y = 0.5 - this.movingAverage[2].y;
         if (Math.abs(deviation_x) < 0.01 && Math.abs(deviation_y) < 0.01) {
             return;
         }
-        this.movingAverage[2]["x"] = this.movingAverage[2]["x"] + deviation_x / 30;
-        this.movingAverage[2]["y"] = this.movingAverage[2]["y"] + deviation_y / 30;
+        this.movingAverage[2].x = this.movingAverage[2].x + deviation_x / 30;
+        this.movingAverage[2].y = this.movingAverage[2].y + deviation_y / 30;
     }
 
     private clamp01(value: number): number {

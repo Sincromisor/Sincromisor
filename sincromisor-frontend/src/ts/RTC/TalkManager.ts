@@ -174,8 +174,8 @@ export class TalkManager {
         if (telopText.clientWidth === 0) {
             return;
         }
-        const paddingLeftPx = parseInt(window.getComputedStyle(telopText).paddingLeft) || 0;
-        const paddingRightPx = parseInt(window.getComputedStyle(telopText).paddingRight) || 0;
+        const paddingLeftPx = parseInt(window.getComputedStyle(telopText).paddingLeft, 10) || 0;
+        const paddingRightPx = parseInt(window.getComputedStyle(telopText).paddingRight, 10) || 0;
         // 1文字単位で先頭から削除。
         // footer内に日時など別要素がある構成では、その幅を差し引いた残りをテロップ用の幅とみなす。
         const telopClass = "sincroFooterBox__telopText";

@@ -548,7 +548,6 @@ export class CharacterMotionOrchestrator {
                         CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.upperChestRollRad * 0.35,
                     shoulderOpenRad: CHARACTER_IDLE_MOTION_CONFIG.aiSpeaking.shoulderOpenRad * 0.4,
                 };
-            case 0:
             default:
                 return {
                     postureIntensity: 0.54,
