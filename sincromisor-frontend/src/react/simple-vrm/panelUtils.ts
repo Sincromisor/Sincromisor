@@ -2,11 +2,11 @@ import type { SincroAppLifecycleState } from "../../ts/App/SincroAppTypes";
 import type { PanelRtcState } from "./panelTypes";
 
 // Diagnostics 表示専用の軽量フォーマッタ。UI側に重い分岐を散らさないために分離している。
-export function formatMaybeNumber(value: number | null | undefined): string {
+export function formatMaybeNumber(value: number | undefined): string {
     return typeof value === "number" && Number.isFinite(value) ? value.toFixed(3) : "-";
 }
 
-export function formatMaybeProbability(value: number | null | undefined): string {
+export function formatMaybeProbability(value: number | undefined): string {
     return typeof value === "number" && Number.isFinite(value)
         ? `${(Math.max(0, Math.min(1, value)) * 100).toFixed(1)}%`
         : "-";

@@ -30,10 +30,10 @@ export type PanelTelopLog = {
 };
 
 export type PanelGazeState = {
-    faceX: number | null;
-    faceY: number | null;
-    facing: number | null;
-    watching: boolean | null;
+    faceX?: number;
+    faceY?: number;
+    facing?: number;
+    watching?: boolean;
 };
 
 export type PanelRtcState = {
@@ -43,7 +43,7 @@ export type PanelRtcState = {
 
 export type PanelLearnedVadState = {
     status: string;
-    probability: number | null;
+    probability?: number;
 };
 
 export type PanelConnectionState = {

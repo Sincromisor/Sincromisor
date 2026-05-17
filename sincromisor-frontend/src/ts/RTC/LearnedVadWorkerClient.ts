@@ -9,7 +9,7 @@ export type LearnedVadStatus =
 export type LearnedVadStateReport = {
     enabled: boolean;
     status: LearnedVadStatus;
-    probability: number | null;
+    probability?: number;
     isSpeech: boolean;
     txFrames?: number;
     rxPredictions?: number;
@@ -50,7 +50,7 @@ const DEFAULT_TUNING: LearnedVadTuningConfig = {
 export class LearnedVadWorkerClient {
     private worker: Worker | null = null;
     private status: LearnedVadStatus = "idle";
-    private probability: number | null = null;
+    private probability: number | undefined = undefined;
     private isSpeech: boolean = false;
     private enabled: boolean = false;
     private streamEnabled: boolean = false;
@@ -95,9 +95,9 @@ export class LearnedVadWorkerClient {
             }
             // 推論結果は Worker 側で1フレーム単位に更新されるため、ここでは UI 表示用に正規化して保持する。
             const p = Number(data.probability);
-            this.probability = Number.isFinite(p) ? Math.max(0, Math.min(1, p)) : null;
+            this.probability = Number.isFinite(p) ? Math.max(0, Math.min(1, p)) : undefined;
             this.isSpeech = !!data.isSpeech;
-            this.hasPrediction = this.probability != null;
+            this.hasPrediction = this.probability !== undefined;
             this.rxPredictions += 1;
             this.publishState();
         };
@@ -113,7 +113,7 @@ export class LearnedVadWorkerClient {
     setEnabled(enabled: boolean): void {
         this.ensureWorker();
         this.enabled = enabled;
-        this.probability = null;
+        this.probability = undefined;
         this.isSpeech = false;
         this.hasPrediction = false;
         this.txFrames = 0;
@@ -130,27 +130,27 @@ export class LearnedVadWorkerClient {
         this.tuning = {
             // 閾値レンジは Silero実測レンジ(小数点第4位付近)に合わせている。
             onThreshold:
-                config.onThreshold != null
+                config.onThreshold !== undefined
                     ? Math.max(0.0001, Math.min(0.1, config.onThreshold))
                     : this.tuning.onThreshold,
             offThreshold:
-                config.offThreshold != null
+                config.offThreshold !== undefined
                     ? Math.max(0.00005, Math.min(0.08, config.offThreshold))
                     : this.tuning.offThreshold,
             hangoverMs:
-                config.hangoverMs != null
+                config.hangoverMs !== undefined
                     ? Math.max(0, Math.min(1200, Math.round(config.hangoverMs)))
                     : this.tuning.hangoverMs,
             minInferIntervalMs:
-                config.minInferIntervalMs != null
+                config.minInferIntervalMs !== undefined
                     ? Math.max(20, Math.min(400, Math.round(config.minInferIntervalMs)))
                     : this.tuning.minInferIntervalMs,
             onConsecutiveFrames:
-                config.onConsecutiveFrames != null
+                config.onConsecutiveFrames !== undefined
                     ? Math.max(1, Math.min(10, Math.round(config.onConsecutiveFrames)))
                     : this.tuning.onConsecutiveFrames,
             offConsecutiveFrames:
-                config.offConsecutiveFrames != null
+                config.offConsecutiveFrames !== undefined
                     ? Math.max(1, Math.min(10, Math.round(config.offConsecutiveFrames)))
                     : this.tuning.offConsecutiveFrames,
         };
@@ -235,7 +235,7 @@ export class LearnedVadWorkerClient {
         }
         this.worker = null;
         this.status = "idle";
-        this.probability = null;
+        this.probability = undefined;
         this.isSpeech = false;
         this.enabled = false;
         this.streamEnabled = false;

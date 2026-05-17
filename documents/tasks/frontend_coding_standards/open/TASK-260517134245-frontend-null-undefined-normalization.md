@@ -65,6 +65,11 @@
 - 2026-05-17: active controller registry の未登録状態を `undefined` へ統一した。
     - 対象: `SincroAppActiveControllerRegistry` / `SincroAppController.getCurrent` / React active controller subscription hooks
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: 学習VADと simple-vrm 診断パネルの未観測値を `undefined` へ統一した。
+    - 対象: `LearnedVadWorkerClient` / `LearnedVadUiReport` / `SincroAppEvent.learned_vad_state` / `PanelGazeState` / `PanelLearnedVadState`
+    - `probability` / gaze 値は optional にし、初期 state から `null` を除去した。
+    - tuning patch の optional 判定を `!= null` から `!== undefined` へ変更した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
