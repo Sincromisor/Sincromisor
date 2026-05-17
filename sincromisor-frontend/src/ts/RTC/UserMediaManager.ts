@@ -1,3 +1,4 @@
+import { frontendLogger } from "../logging/appLogger";
 import {
     type LearnedVadStateReport,
     type LearnedVadTuningConfig,
@@ -384,21 +385,21 @@ export class UserMediaManager {
             .then(async (mediaStream) => {
                 for (const track of mediaStream.getTracks()) {
                     if (track.kind === "audio") {
-                        console.log(`AudioTrack: ${track.label}`);
+                        frontendLogger.info("Audio track acquired.");
                         this.rawAudioTrack = track;
                         this.audioTrack = await this.buildProcessedAudioTrack(track);
                         audioTrackCallback(this.audioTrack);
                     } else if (track.kind === "video") {
-                        console.log(`VideoTrack: ${track.label}`);
+                        frontendLogger.info("Video track acquired.");
                         this.videoTrack = track;
                         videoTrackCallback(this.videoTrack);
                     } else {
-                        console.error(`Unknown Track: ${track}`);
+                        frontendLogger.warn("Unknown media track acquired.", { kind: track.kind });
                     }
                 }
             })
             .catch((err) => {
-                console.error(`Could not acquire media: ${err}`);
+                frontendLogger.error("Could not acquire media.", { error: err });
                 errCallback(err);
             });
     }
@@ -611,7 +612,10 @@ export class UserMediaManager {
                 });
             })
             .catch((err) => {
-                console.warn(`Failed to apply audio constraint "${key}" to running track`, err);
+                frontendLogger.warn("Failed to apply audio constraint to running track.", {
+                    key,
+                    error: err,
+                });
                 this.onAudioConstraintRuntimeApplyCallback({
                     key,
                     enabled,
@@ -632,7 +636,7 @@ export class UserMediaManager {
             return;
         }
         this.audioContext.close().catch((e) => {
-            console.error(e);
+            frontendLogger.error("Failed to close audio context.", { error: e });
         });
         this.audioContext = null;
         this.outputGainNode = null;

@@ -3,6 +3,7 @@ import { CharacterGaze } from "../CharacterGaze/CharacterGaze";
 import type { SincroFaceMotionSnapshot } from "../FaceTracking/SincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../FaceTracking/SincroPoseMotionSnapshot";
 import { TrackerRuntime } from "../FaceTracking/TrackerRuntime";
+import { frontendLogger } from "../logging/appLogger";
 import { VideoInputManager } from "../RTC/VideoInputManager";
 import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehaviorState";
 import type { ChatMessageService } from "../UI/ChatMessageService";
@@ -188,7 +189,7 @@ export class SincroCharacterGazeController {
             if (refreshToken !== this.pendingCameraRefreshToken) {
                 return;
             }
-            console.error("Failed to init CharacterGaze camera.", error);
+            frontendLogger.error("Failed to init CharacterGaze camera.", { error });
             this.stopCharacterGazeCamera();
             const detail = error instanceof Error ? error.message : String(error);
             this.characterBehaviorState.setErrorSource(
@@ -211,7 +212,7 @@ export class SincroCharacterGazeController {
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
         await this.ensureVisionInitialized(characterGaze);
-        console.log("start CharacterGaze");
+        frontendLogger.info("Starting CharacterGaze tracking.");
         const started = await characterGaze.initCamera(
             nextVideoTrack,
             (detects: Detection[]) => {
@@ -250,7 +251,10 @@ export class SincroCharacterGazeController {
         this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.characterBehaviorState.setFaceMotionTrackingEnabled(true);
         this.characterBehaviorState.setPoseMotionTrackingEnabled(poseTrackingEnabled);
-        console.log("start SincroFaceTracker");
+        frontendLogger.info("Starting Sincro face tracker.", {
+            poseTrackingEnabled,
+            forcePoseTracking,
+        });
         await this.trackerRuntime.startFaceTracking(
             nextVideoTrack,
             {

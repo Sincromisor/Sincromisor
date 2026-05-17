@@ -1,3 +1,4 @@
+import { frontendLogger } from "../logging/appLogger";
 import { SincroMediaDeviceService } from "../MediaDevices/SincroMediaDeviceService";
 import { DialogEventHub } from "./DialogEventHub";
 import { DialogNotificationService } from "./DialogNotificationService";
@@ -66,10 +67,10 @@ export class DialogManager {
         this.showDialog();
         this.loadVrmFile()
             .then(() => {
-                console.log("VRM file loaded.");
+                frontendLogger.info("VRM file loaded.");
             })
             .catch((error) => {
-                console.error("VRM file load failed.", error);
+                frontendLogger.error("VRM file load failed.", { error });
             });
     }
 
@@ -460,12 +461,15 @@ export class DialogManager {
                 this.stateStore.setSelectedVrmUrl(result.vrmUrl);
                 this.setVrmStatusText(result.statusText);
                 this.notificationService.writeInfo(result.popMessage);
-                console.log("VRM file updated.", file);
+                frontendLogger.info("VRM file updated.", {
+                    size: file.size,
+                    type: file.type,
+                });
             })
             .catch((error) => {
                 this.setVrmStatusText("VRMファイルの更新に失敗しました");
                 this.notificationService.writeError("VRMファイルの更新に失敗しました。");
-                console.error("VRM file update failed.", error);
+                frontendLogger.error("VRM file update failed.", { error });
             });
     }
 

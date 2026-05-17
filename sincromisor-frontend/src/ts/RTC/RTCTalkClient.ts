@@ -1,3 +1,4 @@
+import { frontendLogger } from "../logging/appLogger";
 import { ChatMessageService } from "../UI/ChatMessageService";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import {
@@ -6,6 +7,7 @@ import {
     parseTelopChannelPayload,
     type TelopChannelMessage,
 } from "./RTCMessage";
+import { parseIceCandidateResponse, parseOfferResponse } from "./rtcBoundarySchema";
 import type { SincroRTCConfig } from "./SincroRTCConfigManager";
 
 type RtcStatsRecord = RTCStats & {
@@ -31,35 +33,6 @@ type RtcStatsRecord = RTCStats & {
     ip?: string;
     port?: number | string;
 };
-
-type OfferResponse = {
-    sdp: string;
-    type: RTCSdpType;
-    session_id: string;
-};
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null;
-}
-
-function parseOfferResponse(value: unknown): OfferResponse {
-    if (
-        !isRecord(value) ||
-        typeof value.sdp !== "string" ||
-        typeof value.type !== "string" ||
-        typeof value.session_id !== "string"
-    ) {
-        throw new Error("Invalid RTC offer response.");
-    }
-    if (value.type !== "answer" && value.type !== "offer" && value.type !== "pranswer") {
-        throw new Error(`Invalid RTC offer response type: ${value.type}`);
-    }
-    return {
-        sdp: value.sdp,
-        type: value.type,
-        session_id: value.session_id,
-    };
-}
 
 // 1接続分の WebRTC セッションを管理するクライアント。
 // DataChannel(text/telop)・ICE/SDP診断表示・再接続制御までをまとめて担当する。
@@ -120,7 +93,9 @@ export class RTCTalkClient {
         } else {
             //this.config["iceServers"] = [{ urls: ["stun:stun.l.google.com:19302"] }];
         }
-        console.dir(this.config);
+        frontendLogger.debug("RTC peer connection config prepared.", {
+            iceServerCount: this.config.iceServers?.length ?? 0,
+        });
         this.peerConnection = new RTCPeerConnection(this.config);
         this.setupICEEventLog(this.peerConnection);
         this.setupTrack(this.peerConnection);
@@ -320,10 +295,16 @@ export class RTCTalkClient {
                     case 200:
                         break;
                     case 429:
-                        console.error(response);
+                        frontendLogger.warn("RTC offer rejected by rate limit.", {
+                            status: response.status,
+                            statusText: response.statusText,
+                        });
                         throw `Too many requests - ${response.status} ${response.statusText}`;
                     default:
-                        console.error(response);
+                        frontendLogger.error("RTC offer failed with invalid response.", {
+                            status: response.status,
+                            statusText: response.statusText,
+                        });
                         throw `Invalid response - ${response.status} ${response.statusText}`;
                 }
                 return response.json();
@@ -370,7 +351,7 @@ export class RTCTalkClient {
                     true,
                 );
                 this.rtcHealthCallback(`RTCサーバーへの接続に失敗しました。${e}`);
-                console.error(e);
+                frontendLogger.error("RTC negotiation failed.", { error: e });
                 this.logger.addRtcEventLog(`negotiate failed: ${e}`);
                 this.reConnect();
             })
@@ -431,15 +412,19 @@ export class RTCTalkClient {
                         `Failed to send ICE candidate: ${response.status} ${response.statusText}`,
                     );
                 }
-                const result = await response.json().catch(() => null);
-                if (result?.status === false) {
+                const resultJson: unknown = await response.json().catch(() => undefined);
+                if (resultJson === undefined) {
+                    return;
+                }
+                const result = parseIceCandidateResponse(resultJson);
+                if (result.status === false) {
                     this.logger.addRtcEventLog(
                         `ICE candidate ignored by server: ${result.reason ?? "unknown_reason"}`,
                     );
                 }
             })
             .catch((e) => {
-                console.error(e);
+                frontendLogger.error("Failed to send ICE candidate.", { error: e });
                 this.logger.addTextChannelLog(`! failed to send ice candidate: ${e}\n`);
                 this.logger.addRtcEventLog(`candidate send failed: ${e}`);
             });
@@ -467,7 +452,7 @@ export class RTCTalkClient {
                 this.telopChannelCallback(parseTelopChannelPayload(String(evt.data)));
             } catch (error) {
                 this.logger.addRtcEventLog(`invalid telop_ch payload: ${error}`);
-                console.error(error);
+                frontendLogger.warn("Invalid telop channel payload.", { error });
             }
         };
         return dc;
@@ -490,7 +475,7 @@ export class RTCTalkClient {
                 this.textChannelCallback(parseChatMessagePayload(String(evt.data)));
             } catch (error) {
                 this.logger.addRtcEventLog(`invalid text_ch payload: ${error}`);
-                console.error(error);
+                frontendLogger.warn("Invalid text channel payload.", { error });
             }
         };
         return dc;
@@ -595,7 +580,7 @@ export class RTCTalkClient {
                 this.chatMessageService.writeErrorMessage(
                     `Unknown ICE Connection State - ${state}`,
                 );
-                console.error(state);
+                frontendLogger.error("Unknown ICE connection state.", { state });
         }
     }
 
@@ -665,14 +650,14 @@ export class RTCTalkClient {
             );
         } catch (e) {
             this.logger.addRtcEventLog(`ICE failure diagnostics collection failed: ${e}`);
-            console.error(e);
+            frontendLogger.error("ICE failure diagnostics collection failed.", { error: e });
         }
     }
 
     private setupTrack(peerConnection: RTCPeerConnection): RTCPeerConnection {
         peerConnection.addEventListener("track", (evt: RTCTrackEvent) => {
             if (evt.track.kind === "video") {
-                console.error("Unknown Video Track!");
+                frontendLogger.warn("Unexpected remote video track received.");
                 const rtcVideo: HTMLVideoElement | null = document.querySelector("video#rtcVideo");
                 if (rtcVideo) {
                     rtcVideo.srcObject = evt.streams[0];
@@ -699,7 +684,7 @@ export class RTCTalkClient {
         this.previousInboundAudio = null;
         this.statsIntervalId = window.setInterval(() => {
             this.collectAndRenderStats().catch((e) => {
-                console.error(e);
+                frontendLogger.error("RTC stats collection failed.", { error: e });
             });
         }, 1000);
     }

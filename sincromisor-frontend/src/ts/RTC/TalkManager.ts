@@ -1,3 +1,4 @@
+import { frontendLogger } from "../logging/appLogger";
 import { ChatMessageService } from "../UI/ChatMessageService";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import type { ChatMessage, TelopChannelMessage } from "./RTCMessage";
@@ -74,7 +75,12 @@ export class TalkManager {
 
     // text_ch は既存 chat manager へ委譲しつつ、React購読向けイベントも発火する。
     addTextChannelMessage(msg: ChatMessage): void {
-        console.dir(msg);
+        frontendLogger.debug("Text channel message received.", {
+            messageId: msg.message_id,
+            messageType: msg.message_type,
+            speechId: msg.speech_id,
+            textLength: msg.message.length,
+        });
         if (msg.message_type === "system") {
             // text_chの生JSONと別に、表情ヒントの有無だけを見やすく出す。
             // 現場で「Difyは^Nを返しているのに表情が変わらない」事象の切り分け用。
@@ -90,7 +96,11 @@ export class TalkManager {
     addTelopChannelMessage(msg: TelopChannelMessage): void {
         this.telopChannelMessage.push(msg);
         if (msg.new_text) {
-            console.dir(msg);
+            frontendLogger.debug("Telop channel segment received.", {
+                speechId: msg.speech_id,
+                textLength: msg.text.length,
+                durationMs: msg.length * 1000,
+            });
             this.currentTelopChannelMessage = {
                 moraID: this.moraID,
                 mora: msg,

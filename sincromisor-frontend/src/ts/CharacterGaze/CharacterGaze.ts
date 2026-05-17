@@ -1,5 +1,6 @@
 import { type Detection, FaceDetector } from "@mediapipe/tasks-vision";
 import { loadMediaPipeVisionFileset } from "../FaceTracking/MediaPipeVisionFileset";
+import { frontendLogger } from "../logging/appLogger";
 import { FaceTargetSelector } from "./FaceTargetSelector";
 import { OneEuroFilter1D } from "./OneEuroFilter";
 
@@ -209,11 +210,11 @@ export class CharacterGaze {
         errorCallback?: (error: unknown) => void,
     ): Promise<boolean> {
         if (!this.hasGetUserMedia()) {
-            console.error("This browser does not support getUserMedia.");
+            frontendLogger.error("This browser does not support getUserMedia.");
             return false;
         }
         if (!this.faceDetector) {
-            console.error("Model is still loading. Please try again.");
+            frontendLogger.warn("Character gaze model is still loading.");
             return false;
         }
 
@@ -351,11 +352,11 @@ export class CharacterGaze {
             const newStatus = this.detecting();
             if (this.detected !== newStatus) {
                 if (newStatus) {
-                    console.log("arrive!");
+                    frontendLogger.debug("Character gaze target arrived.");
                     this.arriveCallback();
                     this.videoElement.dispatchEvent(new Event("arrive"));
                 } else {
-                    console.log("leave!");
+                    frontendLogger.debug("Character gaze target left.");
                     this.leaveCallback();
                     this.videoElement.dispatchEvent(new Event("leave"));
                 }
@@ -394,7 +395,9 @@ export class CharacterGaze {
     }
 
     private handleDetectionRuntimeError(error: unknown): void {
-        console.error("CharacterGaze FaceDetector failed during video inference.", error);
+        frontendLogger.error("CharacterGaze FaceDetector failed during video inference.", {
+            error,
+        });
         const wasDetected = this.detected;
         this.stopPredictionLoop();
         this.detected = false;
@@ -427,7 +430,7 @@ export class CharacterGaze {
         this.updateKeypointsMovingAverageToNeutral();
         const newStatus = this.detecting();
         if (this.detected !== newStatus) {
-            console.log("leave!");
+            frontendLogger.debug("Character gaze target left after frozen video frame.");
             this.leaveCallback();
             this.videoElement.dispatchEvent(new Event("leave"));
             this.detected = newStatus;

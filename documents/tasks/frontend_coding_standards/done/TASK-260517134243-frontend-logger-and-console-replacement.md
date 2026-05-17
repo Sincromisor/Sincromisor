@@ -1,7 +1,7 @@
 # TASK-260517134243 frontend logger and console replacement
 
 - 作成日: 2026-05-17
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 - 種別: Task
 - 親タスク: `TASK-260517134241`
@@ -65,3 +65,14 @@ cd sincromisor-frontend
 npm run check:biome
 npm run build
 ```
+
+## 進捗
+
+- 2026-05-17: `src/ts/logging/appLogger.ts` を追加し、`debug` / `info` / `warn` / `error` の共通 logger API を定義した。
+- 2026-05-17: `console.*` 直書きを共通 logger 経由へ置き換えた。残る `console.*` は logger transport 内の 4 行のみで、各行に `// reason:` を明記した。
+- 2026-05-17: チャット本文、DataChannel payload 全文、デバイス label、選択ファイル名などの PII になり得る値を logger 出力へ載せない形にした。
+- 2026-05-17: `npm run check:biome` と `npm run build` が成功した。
+
+## 残件
+
+- なし。

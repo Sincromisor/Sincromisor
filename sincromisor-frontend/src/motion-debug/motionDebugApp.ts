@@ -5,6 +5,7 @@ import {
 } from "../ts/FaceTracking/SincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../ts/FaceTracking/SincroTrackerWorkerTypes";
 import { TrackerRuntime } from "../ts/FaceTracking/TrackerRuntime";
+import { frontendLogger } from "../ts/logging/appLogger";
 import { CharacterBehaviorState } from "../ts/SincroVRM/VRMCharacter/CharacterBehaviorState";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
@@ -284,7 +285,7 @@ export class MotionDebugApp {
         const message = formatError(error);
         this.behaviorState.setErrorSource("motionDebug", message);
         this.setStatus("error", message);
-        console.error(error);
+        frontendLogger.error("Motion debug operation failed.", { error });
     }
 
     private installWindowApi(): void {

@@ -1,63 +1,9 @@
-export type IceServerConfig = {
-    urls: string | string[];
-    username?: string;
-    credential?: string;
-};
+import { frontendLogger } from "../logging/appLogger";
+import { parseSincroRTCConfig, type SincroRTCConfig } from "./rtcBoundarySchema";
 
-export type SincroRTCConfig = {
-    // 初回シグナリング（Offer/Answer）用エンドポイント
-    offerURL: string;
-    // Trickle ICEで候補を後送するエンドポイント
-    candidateURL: string;
-    iceServers: IceServerConfig[];
-};
+export type { IceServerConfig, SincroRTCConfig } from "./rtcBoundarySchema";
 
-type UnknownRecord = Record<string, unknown>;
 type ErrorHandler = (err: unknown) => void;
-
-function isRecord(value: unknown): value is UnknownRecord {
-    return typeof value === "object" && value !== null;
-}
-
-function parseIceServerUrls(value: unknown): string | string[] {
-    if (typeof value === "string") {
-        return value;
-    }
-    if (Array.isArray(value) && value.every((url) => typeof url === "string")) {
-        return value;
-    }
-    throw new Error("Invalid RTC config: iceServers entry must include urls.");
-}
-
-function parseIceServerConfig(value: unknown): IceServerConfig {
-    if (!isRecord(value)) {
-        throw new Error("Invalid RTC config: iceServers entry must be an object.");
-    }
-    const config: IceServerConfig = { urls: parseIceServerUrls(value.urls) };
-    if (typeof value.username === "string") {
-        config.username = value.username;
-    }
-    if (typeof value.credential === "string") {
-        config.credential = value.credential;
-    }
-    return config;
-}
-
-function parseSincroRTCConfig(value: unknown): SincroRTCConfig {
-    if (
-        !isRecord(value) ||
-        typeof value.offerURL !== "string" ||
-        typeof value.candidateURL !== "string" ||
-        !Array.isArray(value.iceServers)
-    ) {
-        throw new Error("Invalid RTC config response.");
-    }
-    return {
-        offerURL: value.offerURL,
-        candidateURL: value.candidateURL,
-        iceServers: value.iceServers.map(parseIceServerConfig),
-    };
-}
 
 export class SincroRTCConfigManager {
     private static instance: SincroRTCConfigManager;
@@ -71,7 +17,7 @@ export class SincroRTCConfigManager {
             try {
                 void SincroRTCConfigManager.instance.getServers(onerror);
             } catch (err) {
-                console.error(err);
+                frontendLogger.error("Failed to start RTC config fetch.", { error: err });
                 onerror(err);
             }
         }

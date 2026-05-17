@@ -5,6 +5,7 @@ import type { Object3D } from "three/src/core/Object3D.js";
 import { Box3 } from "three/src/math/Box3.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import type { Scene } from "three/src/scenes/Scene.js";
+import { frontendLogger } from "../../logging/appLogger";
 import { DebugConsoleManager } from "../../UI/DebugConsoleManager";
 import type { VRMCamera } from "../VRMScene/VRMCamera";
 import { ArmBoneController } from "./ArmBoneController";
@@ -169,10 +170,12 @@ export class VRMCharacterManager {
                 });
             },
             (progress) => {
-                console.log("Loading model...", 100.0 * (progress.loaded / progress.total), "%");
+                frontendLogger.debug("Loading VRM model.", {
+                    percent: 100.0 * (progress.loaded / progress.total),
+                });
             },
             (error) => {
-                console.error(error);
+                frontendLogger.error("Failed to load VRM model.", { error });
                 throw new Error("Failed to load VRM model.");
             },
         );

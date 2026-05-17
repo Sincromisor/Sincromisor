@@ -2,6 +2,7 @@
 import { LookingGlassConfig, LookingGlassWebXRPolyfill } from "@lookingglass/webxr";
 import type { WebGLRenderer } from "three/src/renderers/WebGLRenderer.js";
 import type { Scene } from "three/src/scenes/Scene.js";
+import { frontendLogger } from "../../logging/appLogger";
 import { getLookingGlassRuntimeConfig } from "./LookingGlassRuntimeConfig";
 
 type LookingGlassStateEventDetail = {
@@ -99,7 +100,7 @@ export class LookingGlassXRController {
         try {
             await currentSession.end();
         } catch (error) {
-            console.error("Failed to stop Looking Glass WebXR session.", error);
+            frontendLogger.error("Failed to stop Looking Glass WebXR session.", { error });
             const message = error instanceof Error ? error.message : String(error);
             this.emitState({ state: "error", code: "session_start_failed", message });
         }
@@ -162,7 +163,7 @@ export class LookingGlassXRController {
             if (startButton) {
                 startButton.disabled = true;
             }
-            console.log("Looking Glass WebXR session started (Three.js/VRM1.0).");
+            frontendLogger.info("Looking Glass WebXR session started.");
             this.successfulSessionStarts += 1;
             this.rebindLookingGlassInputHooks();
             // @lookingglass/webxr 側のマウス入力が再開後に死ぬ環境向けの保険。
@@ -173,7 +174,7 @@ export class LookingGlassXRController {
             this.focusLookingGlassInteractiveSurface();
             this.emitState({ state: "active" });
         } catch (error) {
-            console.error("Failed to start Looking Glass WebXR session.", error);
+            frontendLogger.error("Failed to start Looking Glass WebXR session.", { error });
             const message = error instanceof Error ? error.message : String(error);
             const code = message.includes("WebXR API is not available")
                 ? "webxr_unavailable"
@@ -318,7 +319,7 @@ export class LookingGlassXRController {
                 }
                 config.appCanvas?.blur?.();
             } catch (error) {
-                console.warn("Failed to focus Looking Glass popup/canvas.", error);
+                frontendLogger.warn("Failed to focus Looking Glass popup/canvas.", { error });
             }
         });
     }
@@ -343,7 +344,7 @@ export class LookingGlassXRController {
                     lkgCanvas: config.lkgCanvas ?? null,
                 });
             } catch (error) {
-                console.warn("Failed to rebind Looking Glass input hooks.", error);
+                frontendLogger.warn("Failed to rebind Looking Glass input hooks.", { error });
             }
         };
         // 初期化直後と popup/canvas 配置後の両方を拾うため、数フレームずらして実行する。
