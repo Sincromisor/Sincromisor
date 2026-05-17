@@ -293,6 +293,22 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 分割後の対象ファイルは最大 `configurationDialogStateGroups.ts` 153 行で、すべて 200 行 soft 閾値以下に収めた。
     - 初回セットアップ UI の表示文言 / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: `SettingsPrimitives.tsx` と `SincroCharacterGazeController.ts` の責務分割を進めた。
+    - 追加: `src/react/settings-primitives/settingsActionControls.tsx`
+    - 追加: `src/react/settings-primitives/settingsClassNames.ts`
+    - 追加: `src/react/settings-primitives/settingsFieldControls.tsx`
+    - 追加: `src/react/settings-primitives/settingsHelp.tsx`
+    - 追加: `src/react/settings-primitives/settingsLayoutPrimitives.tsx`
+    - 追加: `src/react/settings-primitives/settingsTogglePrimitives.tsx`
+    - 追加: `src/ts/App/sincroCharacterGazeCallbacks.ts`
+    - 追加: `src/ts/App/sincroCharacterGazeDebugText.ts`
+    - 追加: `src/ts/App/sincroCharacterGazeOverlay.ts`
+    - 追加: `src/ts/App/sincroCharacterGazeSettings.ts`
+    - 追加: `src/ts/App/sincroCharacterMotionEventSink.ts`
+    - `SettingsPrimitives.tsx` は CSS 読み込みと既存 import 契約維持用の re-export に寄せ、help / field / toggle / layout / action primitive を分割した。
+    - `SincroCharacterGazeController.ts` は Sincro motion event 反映、Gaze callback 配線、DOM overlay、設定差分、debug 表示文字列を分割し、実装行数を hard 閾値未満まで下げた。
+    - UI 表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

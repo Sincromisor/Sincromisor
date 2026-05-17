@@ -1,7 +1,5 @@
 import type { Detection } from "@mediapipe/tasks-vision";
 import { CharacterGaze } from "../CharacterGaze/CharacterGaze";
-import type { SincroFaceMotionSnapshot } from "../FaceTracking/SincroFaceMotionSnapshot";
-import type { SincroPoseMotionSnapshot } from "../FaceTracking/SincroPoseMotionSnapshot";
 import { TrackerRuntime } from "../FaceTracking/TrackerRuntime";
 import { frontendLogger } from "../logging/appLogger";
 import { VideoInputManager } from "../RTC/VideoInputManager";
@@ -9,6 +7,19 @@ import { CharacterBehaviorState } from "../SincroVRM/VRMCharacter/CharacterBehav
 import type { ChatMessageService } from "../UI/ChatMessageService";
 import type { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import type { DialogManager } from "../UI/DialogManager";
+import { bindCharacterGazeCallbacks } from "./sincroCharacterGazeCallbacks";
+import { formatErrorDetail } from "./sincroCharacterGazeDebugText";
+import {
+    hideEyeTargetOverlay,
+    resolveTrackingVideoElement,
+    updateEyeTargetOverlay,
+} from "./sincroCharacterGazeOverlay";
+import {
+    compareDialogGazeSettings,
+    type DialogGazeSettingsSnapshot,
+    readDialogGazeSettingsSnapshot,
+} from "./sincroCharacterGazeSettings";
+import { SincroCharacterMotionEventSink } from "./sincroCharacterMotionEventSink";
 
 const SINCRO_POSE_TARGET_INFERENCE_FPS = 12;
 
@@ -19,6 +30,7 @@ export class SincroCharacterGazeController {
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly chatMessageService: ChatMessageService;
     private readonly characterBehaviorState: CharacterBehaviorState;
+    private readonly motionEventSink: SincroCharacterMotionEventSink;
     private readonly videoInputManager = new VideoInputManager();
     private readonly trackerRuntime: TrackerRuntime;
     private onMuteChange: ((mute: boolean) => void) | undefined;
@@ -37,7 +49,13 @@ export class SincroCharacterGazeController {
         this.debugConsoleManager = debugConsoleManager;
         this.chatMessageService = chatMessageService;
         this.characterBehaviorState = CharacterBehaviorState.getManager();
-        this.trackerRuntime = new TrackerRuntime(this.resolveTrackingVideoElement());
+        this.motionEventSink = new SincroCharacterMotionEventSink({
+            dialogManager,
+            debugConsoleManager,
+            chatMessageService,
+            characterBehaviorState: this.characterBehaviorState,
+        });
+        this.trackerRuntime = new TrackerRuntime(resolveTrackingVideoElement());
         const characterGaze = CharacterGaze.getManager();
         this.debugConsoleManager.setCharacterGazeTrackingTuning(characterGaze.getTrackingTuning());
         this.debugConsoleManager.setCharacterGazeTrackingTuningChangeCallback((config) => {
@@ -55,30 +73,22 @@ export class SincroCharacterGazeController {
         this.hasStarted = true;
 
         const characterGaze = CharacterGaze.getManager();
-        this.bindCharacterGazeCallbacks(characterGaze, onMuteChange);
+        bindCharacterGazeCallbacks({
+            characterGaze,
+            debugConsoleManager: this.debugConsoleManager,
+            dialogManager: this.dialogManager,
+            onMuteChange,
+        });
         this.applyDialogGazeSettings(true);
     }
 
     // Dialog 設定から Gaze runtime へ必要な差分だけを反映する。
     private applyDialogGazeSettings(forceAll: boolean): void {
-        const next = this.readDialogGazeSettingsSnapshot();
-        const prev = this.gazeSettingsSnapshot;
-        const videoDeviceChanged =
-            forceAll || prev === undefined || prev.videoInputDeviceId !== next.videoInputDeviceId;
-        const gazeEnabledChanged =
-            forceAll || prev === undefined || prev.enableCharacterGaze !== next.enableCharacterGaze;
-        const talkModeChanged = forceAll || prev === undefined || prev.talkMode !== next.talkMode;
-        const poseTrackingChanged =
-            forceAll ||
-            prev === undefined ||
-            prev.enableSincroPoseTracking !== next.enableSincroPoseTracking;
-        const forcePoseTrackingChanged =
-            forceAll ||
-            prev === undefined ||
-            prev.forceSincroPoseTracking !== next.forceSincroPoseTracking;
+        const next = readDialogGazeSettingsSnapshot(this.dialogManager);
+        const changes = compareDialogGazeSettings(this.gazeSettingsSnapshot, next, forceAll);
 
         this.characterBehaviorState.setTalkMode(next.talkMode);
-        if (videoDeviceChanged) {
+        if (changes.videoDeviceChanged) {
             this.videoInputManager.setVideoInputDeviceId(next.videoInputDeviceId);
         }
         this.gazeSettingsSnapshot = next;
@@ -88,40 +98,20 @@ export class SincroCharacterGazeController {
         }
 
         if (!next.enableCharacterGaze) {
-            if (gazeEnabledChanged || videoDeviceChanged) {
+            if (changes.gazeEnabledChanged || changes.videoDeviceChanged) {
                 this.stopCharacterGazeCamera();
             }
             return;
         }
         if (
-            gazeEnabledChanged ||
-            videoDeviceChanged ||
-            talkModeChanged ||
-            poseTrackingChanged ||
-            forcePoseTrackingChanged
+            changes.gazeEnabledChanged ||
+            changes.videoDeviceChanged ||
+            changes.talkModeChanged ||
+            changes.poseTrackingChanged ||
+            changes.forcePoseTrackingChanged
         ) {
             this.scheduleCameraRefresh();
         }
-    }
-
-    // CharacterGaze の在席/離席 callback は 1 つしか持てないため、毎回上書きして最新設定を参照する。
-    private bindCharacterGazeCallbacks(
-        characterGaze: CharacterGaze,
-        onMuteChange: (mute: boolean) => void,
-    ): void {
-        // AutoMute の実適用は RTC controller 側に残し、この controller は視線イベント変換のみ担当する。
-        characterGaze.arriveCallback = () => {
-            this.debugConsoleManager.updateCharacterEyeStatus(true);
-            if (this.dialogManager.enableAutoMute()) {
-                onMuteChange(false);
-            }
-        };
-        characterGaze.leaveCallback = () => {
-            this.debugConsoleManager.updateCharacterEyeStatus(false);
-            if (this.dialogManager.enableAutoMute()) {
-                onMuteChange(true);
-            }
-        };
     }
 
     private stopCharacterGazeCamera(): void {
@@ -134,8 +124,7 @@ export class SincroCharacterGazeController {
         this.videoInputManager.releaseVideoTrack();
         this.debugConsoleManager.setCharacterGazePaused(true);
         this.debugConsoleManager.updateCharacterGazeTargetDebug("停止中");
-        const eyeTargetElement = document.querySelector("#eyeTarget");
-        eyeTargetElement?.setAttribute("fill", "hsl(300 100% 50% / 0%)");
+        hideEyeTargetOverlay();
     }
 
     private scheduleCameraRefresh(): void {
@@ -157,7 +146,12 @@ export class SincroCharacterGazeController {
             return;
         }
         const characterGaze = CharacterGaze.getManager();
-        this.bindCharacterGazeCallbacks(characterGaze, this.onMuteChange);
+        bindCharacterGazeCallbacks({
+            characterGaze,
+            debugConsoleManager: this.debugConsoleManager,
+            dialogManager: this.dialogManager,
+            onMuteChange: this.onMuteChange,
+        });
         this.debugConsoleManager.setCharacterGazePaused(false);
         this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
@@ -234,7 +228,7 @@ export class SincroCharacterGazeController {
                     );
                     this.characterBehaviorState.applyGazeState(characterGaze, detects);
                 }
-                this.updateEyeTargetOverlay(characterGaze, gazeEnabled, detects);
+                updateEyeTargetOverlay(characterGaze, gazeEnabled, detects);
             },
             (error: unknown) => {
                 this.handleCharacterGazeRuntimeError(error);
@@ -249,7 +243,7 @@ export class SincroCharacterGazeController {
     private async startSincroFaceTracking(nextVideoTrack: MediaStreamTrack): Promise<void> {
         const characterGaze = CharacterGaze.getManager();
         characterGaze.detachCamera();
-        this.updateEyeTargetOverlay(characterGaze, false, []);
+        updateEyeTargetOverlay(characterGaze, false, []);
         const poseTrackingEnabled = this.dialogManager.enableSincroPoseTracking();
         const forcePoseTracking = this.dialogManager.forceSincroPoseTracking();
         this.characterBehaviorState.setGazeTrackingEnabled(false);
@@ -263,19 +257,19 @@ export class SincroCharacterGazeController {
             nextVideoTrack,
             {
                 onFaceMotion: (snapshot) => {
-                    this.handleSincroFaceMotion(snapshot);
+                    this.motionEventSink.handleFaceMotion(snapshot);
                 },
                 onPoseMotion: (snapshot) => {
-                    this.handleSincroPoseMotion(snapshot);
+                    this.motionEventSink.handlePoseMotion(snapshot);
                 },
                 onPoseFallback: (snapshot) => {
-                    this.handleSincroPoseFallback(snapshot);
+                    this.motionEventSink.handlePoseFallback(snapshot);
                 },
                 onTrackerStats: (snapshot) => {
                     this.debugConsoleManager.updateSincroTrackerStats(snapshot);
                 },
                 onError: (error) => {
-                    this.handleSincroFaceRuntimeError(error);
+                    this.motionEventSink.handleFaceRuntimeError(error);
                 },
             },
             undefined,
@@ -300,161 +294,17 @@ export class SincroCharacterGazeController {
         return this.visionInitPromise;
     }
 
-    private updateEyeTargetOverlay(
-        characterGaze: CharacterGaze,
-        gazeEnabled: boolean,
-        detects: Detection[],
-    ): void {
-        // 既存 SVG オーバーレイ表示。React へ移しきるまでここで更新を閉じ込める。
-        const eyeTargetElement = document.querySelector("#eyeTarget");
-        if (!eyeTargetElement) {
-            return;
-        }
-        if (gazeEnabled && detects.length > 0) {
-            eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 50%)");
-            eyeTargetElement.setAttribute("cx", `${characterGaze.targetX() * 100}%`);
-            eyeTargetElement.setAttribute("cy", `${characterGaze.targetY() * 100}%`);
-            return;
-        }
-        eyeTargetElement.setAttribute("fill", "hsl(300 100% 50% / 0%)");
-    }
-
-    private handleSincroFaceMotion(snapshot: SincroFaceMotionSnapshot): void {
-        if (
-            !this.dialogManager.enableCharacterGaze() ||
-            this.dialogManager.talkMode() !== "sincro"
-        ) {
-            return;
-        }
-        this.characterBehaviorState.applyFaceMotion(snapshot);
-        this.debugConsoleManager.updateCharacterEyeStatus(snapshot.detected);
-        this.debugConsoleManager.updateFaceXLog(snapshot.headPose.yawDeg);
-        this.debugConsoleManager.updateFaceYLog(snapshot.headPose.pitchDeg);
-        this.debugConsoleManager.updateFacing(snapshot.confidence);
-        this.debugConsoleManager.updateCharacterGazeTargetDebug(
-            this.formatSincroFaceDebug(snapshot),
-        );
-        this.debugConsoleManager.updateSincroFaceMotion(snapshot);
-    }
-
-    private handleSincroPoseMotion(snapshot: SincroPoseMotionSnapshot): void {
-        if (
-            !this.dialogManager.enableCharacterGaze() ||
-            this.dialogManager.talkMode() !== "sincro"
-        ) {
-            return;
-        }
-        this.characterBehaviorState.applyPoseMotion(snapshot);
-        this.debugConsoleManager.updateSincroPoseMotion(snapshot);
-        if (snapshot.degradedToFaceOnly || snapshot.fallbackReason) {
-            this.debugConsoleManager.updateCharacterGazeTargetDebug(
-                this.formatSincroPoseDebug(snapshot),
-            );
-        }
-    }
-
-    private handleSincroPoseFallback(snapshot: SincroPoseMotionSnapshot): void {
-        this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
-        this.characterBehaviorState.clearErrorSource("poseMotion");
-        this.debugConsoleManager.updateSincroPoseMotion(snapshot);
-        this.debugConsoleManager.updateCharacterGazeTargetDebug(
-            this.formatSincroPoseDebug(snapshot),
-        );
-    }
-
     private handleCharacterGazeRuntimeError(error: unknown): void {
         this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.characterBehaviorState.setErrorSource(
             "gaze",
-            `視線検出処理が停止しました。${this.formatErrorDetail(error)}`,
+            `視線検出処理が停止しました。${formatErrorDetail(error)}`,
         );
         this.debugConsoleManager.setCharacterGazePaused(true);
         this.debugConsoleManager.updateCharacterGazeTargetDebug("検出エラー");
-        this.updateEyeTargetOverlay(CharacterGaze.getManager(), false, []);
+        updateEyeTargetOverlay(CharacterGaze.getManager(), false, []);
         this.chatMessageService.writeErrorMessage(
-            `視線検出処理が停止しました。Gaze を一度OFF/ONするか、Firefoxでは別のカメラ設定を試してください。(${this.formatErrorDetail(error)})`,
+            `視線検出処理が停止しました。Gaze を一度OFF/ONするか、Firefoxでは別のカメラ設定を試してください。(${formatErrorDetail(error)})`,
         );
-    }
-
-    private handleSincroFaceRuntimeError(error: unknown): void {
-        this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
-        this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
-        this.characterBehaviorState.setErrorSource(
-            "faceMotion",
-            `顔同期トラッキングが停止しました。${this.formatErrorDetail(error)}`,
-        );
-        this.debugConsoleManager.setCharacterGazePaused(true);
-        this.debugConsoleManager.updateCharacterGazeTargetDebug("FaceLandmarker エラー");
-        this.chatMessageService.writeErrorMessage(
-            `顔同期トラッキングが停止しました。face_landmarker.task の配置とカメラ設定を確認してください。(${this.formatErrorDetail(error)})`,
-        );
-    }
-
-    private formatSincroFaceDebug(snapshot: SincroFaceMotionSnapshot): string {
-        if (snapshot.fallbackReason) {
-            return `sincro face: ${snapshot.fallbackReason}`;
-        }
-        return [
-            `sincro face:${snapshot.detected ? "detected" : "lost"}`,
-            `yaw:${snapshot.headPose.yawDeg.toFixed(1)}`,
-            `pitch:${snapshot.headPose.pitchDeg.toFixed(1)}`,
-            `roll:${snapshot.headPose.rollDeg.toFixed(1)}`,
-            `infer:${snapshot.inferenceTimeMs.toFixed(1)}ms`,
-            `fps:${snapshot.inferenceFps.toFixed(1)}`,
-        ].join(" ");
-    }
-
-    private formatSincroPoseDebug(snapshot: SincroPoseMotionSnapshot): string {
-        if (snapshot.degradedToFaceOnly) {
-            return `sincro pose: face-only fallback (${snapshot.fallbackReason ?? "performance_gate"})`;
-        }
-        if (snapshot.fallbackReason) {
-            return `sincro pose: ${snapshot.fallbackReason}`;
-        }
-        return [
-            `sincro pose:${snapshot.detected ? "detected" : "lost"}`,
-            `conf:${snapshot.confidence.toFixed(2)}`,
-            `targets:L${this.formatArmTargetAvailability(snapshot.leftArm)} R${this.formatArmTargetAvailability(snapshot.rightArm)}`,
-            `infer:${snapshot.inferenceTimeMs.toFixed(1)}ms`,
-            `fps:${snapshot.inferenceFps.toFixed(1)}`,
-        ].join(" ");
-    }
-
-    private formatArmTargetAvailability(arm: SincroPoseMotionSnapshot["leftArm"]): string {
-        return [
-            arm.targets.shoulder.tracked ? "S" : "-",
-            arm.targets.elbow.tracked ? "E" : "-",
-            arm.targets.wrist.tracked ? "W" : "-",
-        ].join("");
-    }
-
-    private formatErrorDetail(error: unknown): string {
-        return error instanceof Error ? error.message : String(error);
-    }
-
-    private readDialogGazeSettingsSnapshot(): DialogGazeSettingsSnapshot {
-        return {
-            enableCharacterGaze: this.dialogManager.enableCharacterGaze(),
-            enableSincroPoseTracking: this.dialogManager.enableSincroPoseTracking(),
-            forceSincroPoseTracking: this.dialogManager.forceSincroPoseTracking(),
-            videoInputDeviceId: this.dialogManager.videoInputDeviceId(),
-            talkMode: this.dialogManager.talkMode(),
-        };
-    }
-
-    private resolveTrackingVideoElement(): HTMLVideoElement {
-        const trackingVideo = document.querySelector<HTMLVideoElement>("video#characterGazeVideo");
-        if (!trackingVideo) {
-            throw "video#characterGazeVideo is not found.";
-        }
-        return trackingVideo;
     }
 }
-
-type DialogGazeSettingsSnapshot = {
-    enableCharacterGaze: boolean;
-    enableSincroPoseTracking: boolean;
-    forceSincroPoseTracking: boolean;
-    videoInputDeviceId: string | undefined;
-    talkMode: string;
-};
