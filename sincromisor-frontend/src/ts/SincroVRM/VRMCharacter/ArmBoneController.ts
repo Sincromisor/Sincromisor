@@ -51,7 +51,7 @@ export class ArmBoneController {
             snapshot && !poseControlsAnyArm
                 ? this.updateSpeechGesture(elapsedSeconds, snapshot)
                 : 0;
-        const expression = this.speechExpressionProfile(snapshot?.aiSpeech.expressionCode ?? null);
+        const expression = this.speechExpressionProfile(snapshot?.aiSpeech.expressionCode);
         const leftGesture = poseControlsLeftArm
             ? 0
             : speechGesture * (this.speechGestureSide < 0 ? 1 : 0.42);
@@ -293,7 +293,9 @@ export class ArmBoneController {
         return Math.sin(Math.PI * MathUtils.clamp(progress, 0, 1)) * this.speechGestureIntensity;
     }
 
-    private speechExpressionProfile(expressionCode: number | null): ArmSpeechExpressionProfile {
+    private speechExpressionProfile(
+        expressionCode: number | undefined,
+    ): ArmSpeechExpressionProfile {
         switch (expressionCode) {
             case 2:
                 return {

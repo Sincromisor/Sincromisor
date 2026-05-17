@@ -48,11 +48,11 @@ export type CharacterBehaviorVadSnapshot = {
     peak: number;
     envelopeRms: number;
     envelopePeak: number;
-    speechStartedAtMs: number | null;
-    lastSpeechEndedAtMs: number | null;
+    speechStartedAtMs?: number;
+    lastSpeechEndedAtMs?: number;
     lastSpeechDurationMs: number;
-    lastSpeechAtMs: number | null;
-    lastUpdatedAtMs: number | null;
+    lastSpeechAtMs?: number;
+    lastUpdatedAtMs?: number;
 };
 
 export type CharacterBehaviorGazeSnapshot = {
@@ -63,28 +63,28 @@ export type CharacterBehaviorGazeSnapshot = {
     targetY: number;
     facing: number;
     detectionCount: number;
-    lastDetectedAtMs: number | null;
-    lastUpdatedAtMs: number | null;
+    lastDetectedAtMs?: number;
+    lastUpdatedAtMs?: number;
 };
 
 export type CharacterBehaviorAiSpeechSnapshot = {
     isSpeaking: boolean;
-    speechId: number | null;
-    currentMoraId: number | null;
-    expressionCode: number | null;
-    currentVowel: string | null;
-    currentText: string | null;
+    speechId?: number;
+    currentMoraId?: number;
+    expressionCode?: number;
+    currentVowel?: string;
+    currentText?: string;
     currentLengthSeconds: number;
     beatId: number;
-    beatKind: CharacterBehaviorAiSpeechBeatKind | null;
-    beatText: string | null;
+    beatKind?: CharacterBehaviorAiSpeechBeatKind;
+    beatText?: string;
     beatIntensity: number;
-    lastBeatAtMs: number | null;
-    lastTextMessage: ChatMessage | null;
-    lastTelopMessage: TelopChannelMessage | null;
-    lastStartedAtMs: number | null;
-    lastUpdatedAtMs: number | null;
-    lastEndedAtMs: number | null;
+    lastBeatAtMs?: number;
+    lastTextMessage?: ChatMessage;
+    lastTelopMessage?: TelopChannelMessage;
+    lastStartedAtMs?: number;
+    lastUpdatedAtMs?: number;
+    lastEndedAtMs?: number;
 };
 
 export type CharacterBehaviorAiSpeechBeatKind =
@@ -105,7 +105,7 @@ export type CharacterBehaviorSnapshot = {
     faceMotion: SincroFaceMotionSnapshot;
     poseMotion: SincroPoseMotionSnapshot;
     aiSpeech: CharacterBehaviorAiSpeechSnapshot;
-    errorMessage: string | null;
+    errorMessage?: string;
 };
 
 const BEHAVIOR_TIMING = {
@@ -132,11 +132,11 @@ export class CharacterBehaviorState {
     private previousState: CharacterInteractionState = "idle";
     private state: CharacterInteractionState = "idle";
     private stateChangedAtMs = performance.now();
-    private errorMessage: string | null = null;
+    private errorMessage: string | undefined;
     private readonly errorMessagesBySource = new Map<string, string>();
-    private readonly expressionCodeBySpeechId = new Map<number, number | null>();
-    private lastUserSpeechEndedAtMs: number | null = null;
-    private pendingRawSpeechStartedAtMs: number | null = null;
+    private readonly expressionCodeBySpeechId = new Map<number, number>();
+    private lastUserSpeechEndedAtMs: number | undefined;
+    private pendingRawSpeechStartedAtMs: number | undefined;
     private vad: CharacterBehaviorVadSnapshot = {
         isSpeech: false,
         rawIsSpeech: false,
@@ -144,11 +144,7 @@ export class CharacterBehaviorState {
         peak: 0,
         envelopeRms: 0,
         envelopePeak: 0,
-        speechStartedAtMs: null,
-        lastSpeechEndedAtMs: null,
         lastSpeechDurationMs: 0,
-        lastSpeechAtMs: null,
-        lastUpdatedAtMs: null,
     };
     private gaze: CharacterBehaviorGazeSnapshot = {
         trackingEnabled: false,
@@ -158,8 +154,6 @@ export class CharacterBehaviorState {
         targetY: 0.5,
         facing: 0.5,
         detectionCount: 0,
-        lastDetectedAtMs: null,
-        lastUpdatedAtMs: null,
     };
     private faceMotion: SincroFaceMotionSnapshot = {
         ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
@@ -174,22 +168,9 @@ export class CharacterBehaviorState {
     };
     private aiSpeech: CharacterBehaviorAiSpeechSnapshot = {
         isSpeaking: false,
-        speechId: null,
-        currentMoraId: null,
-        expressionCode: null,
-        currentVowel: null,
-        currentText: null,
         currentLengthSeconds: 0,
         beatId: 0,
-        beatKind: null,
-        beatText: null,
         beatIntensity: 0,
-        lastBeatAtMs: null,
-        lastTextMessage: null,
-        lastTelopMessage: null,
-        lastStartedAtMs: null,
-        lastUpdatedAtMs: null,
-        lastEndedAtMs: null,
     };
 
     static getManager(): CharacterBehaviorState {
@@ -211,25 +192,27 @@ export class CharacterBehaviorState {
         const wasSpeech = this.vad.isSpeech;
         const envelopeRms = this.smoothEnvelope(this.vad.envelopeRms, rms);
         const envelopePeak = this.smoothEnvelope(this.vad.envelopePeak, peak);
-        if (report.isSpeech && this.pendingRawSpeechStartedAtMs == null) {
+        if (report.isSpeech && this.pendingRawSpeechStartedAtMs === undefined) {
             this.pendingRawSpeechStartedAtMs = nowMs;
         }
         if (!report.isSpeech && !wasSpeech) {
-            this.pendingRawSpeechStartedAtMs = null;
+            this.pendingRawSpeechStartedAtMs = undefined;
         }
         const rawSpeechAgeMs =
-            this.pendingRawSpeechStartedAtMs == null ? 0 : nowMs - this.pendingRawSpeechStartedAtMs;
+            this.pendingRawSpeechStartedAtMs === undefined
+                ? 0
+                : nowMs - this.pendingRawSpeechStartedAtMs;
         const acceptedRawSpeech =
             report.isSpeech && rawSpeechAgeMs >= BEHAVIOR_TIMING.vadOnsetDebounceMs;
         const lastSpeechAtMs = report.isSpeech ? nowMs : this.vad.lastSpeechAtMs;
         const isSpeech =
             acceptedRawSpeech ||
             (wasSpeech &&
-                lastSpeechAtMs != null &&
+                lastSpeechAtMs !== undefined &&
                 nowMs - lastSpeechAtMs <= BEHAVIOR_TIMING.vadSpeechHoldMs);
         const speechStartedAtMs = isSpeech
             ? (this.vad.speechStartedAtMs ?? this.pendingRawSpeechStartedAtMs ?? nowMs)
-            : null;
+            : undefined;
         const speechDurationMs = wasSpeech ? nowMs - (this.vad.speechStartedAtMs ?? nowMs) : 0;
         const completedMeaningfulSpeech =
             speechDurationMs >= BEHAVIOR_TIMING.vadMinimumMeaningfulSpeechMs;
@@ -244,7 +227,7 @@ export class CharacterBehaviorState {
             this.lastUserSpeechEndedAtMs = nowMs;
         }
         if (wasSpeech && !isSpeech) {
-            this.pendingRawSpeechStartedAtMs = report.isSpeech ? nowMs : null;
+            this.pendingRawSpeechStartedAtMs = report.isSpeech ? nowMs : undefined;
         }
 
         this.vad = {
@@ -320,8 +303,8 @@ export class CharacterBehaviorState {
 
         this.talkMode = nextMode;
         this.talkModeChangedAtMs = nowMs;
-        this.lastUserSpeechEndedAtMs = null;
-        this.pendingRawSpeechStartedAtMs = null;
+        this.lastUserSpeechEndedAtMs = undefined;
+        this.pendingRawSpeechStartedAtMs = undefined;
 
         // mode切替直後は古い入力状態を残さない。trackerの実停止/起動はApp層が担当する。
         if (nextMode === "sincro") {
@@ -356,20 +339,26 @@ export class CharacterBehaviorState {
         };
     }
 
-    setError(message: string | null, nowMs: number = performance.now()): void {
+    setError(message: string | undefined, nowMs: number = performance.now()): void {
+        if (message === undefined) {
+            this.clearErrorSource("general", nowMs);
+            return;
+        }
         this.setErrorSource("general", message, nowMs);
     }
 
-    setErrorSource(
-        source: string,
-        message: string | null,
-        nowMs: number = performance.now(),
-    ): void {
+    setErrorSource(source: string, message: string, nowMs: number = performance.now()): void {
         if (message) {
             this.errorMessagesBySource.set(source, message);
         } else {
             this.errorMessagesBySource.delete(source);
         }
+        this.errorMessage = this.currentErrorMessage();
+        this.update(nowMs);
+    }
+
+    clearErrorSource(source: string, nowMs: number = performance.now()): void {
+        this.errorMessagesBySource.delete(source);
         this.errorMessage = this.currentErrorMessage();
         this.update(nowMs);
     }
@@ -427,10 +416,14 @@ export class CharacterBehaviorState {
             return;
         }
         const expressionCode =
-            typeof message.expression_code === "number" ? message.expression_code : null;
-        this.expressionCodeBySpeechId.set(message.speech_id, expressionCode);
+            typeof message.expression_code === "number" ? message.expression_code : undefined;
+        if (expressionCode === undefined) {
+            this.expressionCodeBySpeechId.delete(message.speech_id);
+        } else {
+            this.expressionCodeBySpeechId.set(message.speech_id, expressionCode);
+        }
         const shouldApplyToCurrentSpeech =
-            this.aiSpeech.speechId == null ||
+            this.aiSpeech.speechId === undefined ||
             this.aiSpeech.speechId === message.speech_id ||
             !this.aiSpeech.isSpeaking;
         this.aiSpeech = {
@@ -458,18 +451,18 @@ export class CharacterBehaviorState {
             expressionCode: speechChanged
                 ? this.expressionCodeForSpeech(message.speech_id)
                 : this.aiSpeech.expressionCode,
-            currentVowel: message.vowel || null,
-            currentText: message.text || null,
+            currentVowel: nonEmptyStringOrUndefined(message.vowel),
+            currentText: nonEmptyStringOrUndefined(message.text),
             currentLengthSeconds: Math.max(0, Number(message.length) || 0),
             beatId: beat ? this.aiSpeech.beatId + 1 : this.aiSpeech.beatId,
-            beatKind: beat?.kind ?? (speechChanged ? null : this.aiSpeech.beatKind),
-            beatText: beat?.text ?? (speechChanged ? null : this.aiSpeech.beatText),
+            beatKind: beat?.kind ?? (speechChanged ? undefined : this.aiSpeech.beatKind),
+            beatText: beat?.text ?? (speechChanged ? undefined : this.aiSpeech.beatText),
             beatIntensity: beat?.intensity ?? (speechChanged ? 0 : this.aiSpeech.beatIntensity),
             lastBeatAtMs: beat ? nowMs : this.aiSpeech.lastBeatAtMs,
             lastTelopMessage: message,
             lastStartedAtMs: wasSpeaking ? this.aiSpeech.lastStartedAtMs : nowMs,
             lastUpdatedAtMs: nowMs,
-            lastEndedAtMs: null,
+            lastEndedAtMs: undefined,
         };
     }
 
@@ -477,8 +470,9 @@ export class CharacterBehaviorState {
         const currentMora = TalkManager.getManager().currentMora();
         const lastUpdatedAtMs = this.aiSpeech.lastUpdatedAtMs;
         const heldByRecentTelop =
-            lastUpdatedAtMs != null && nowMs - lastUpdatedAtMs <= BEHAVIOR_TIMING.aiSpeechHoldMs;
-        const isSpeaking = currentMora != null || heldByRecentTelop;
+            lastUpdatedAtMs !== undefined &&
+            nowMs - lastUpdatedAtMs <= BEHAVIOR_TIMING.aiSpeechHoldMs;
+        const isSpeaking = currentMora !== undefined || heldByRecentTelop;
         if (isSpeaking) {
             const currentSpeechId = currentMora?.mora.speech_id ?? this.aiSpeech.speechId;
             this.aiSpeech = {
@@ -487,16 +481,19 @@ export class CharacterBehaviorState {
                 speechId: currentSpeechId,
                 currentMoraId: currentMora?.moraID ?? this.aiSpeech.currentMoraId,
                 expressionCode:
-                    currentSpeechId == null
+                    currentSpeechId === undefined
                         ? this.aiSpeech.expressionCode
                         : this.expressionCodeForSpeech(currentSpeechId),
-                currentVowel: currentMora?.mora.vowel || this.aiSpeech.currentVowel,
-                currentText: currentMora?.mora.text || this.aiSpeech.currentText,
+                currentVowel:
+                    nonEmptyStringOrUndefined(currentMora?.mora.vowel) ??
+                    this.aiSpeech.currentVowel,
+                currentText:
+                    nonEmptyStringOrUndefined(currentMora?.mora.text) ?? this.aiSpeech.currentText,
                 currentLengthSeconds: currentMora
                     ? Math.max(0, Number(currentMora.mora.length) || 0)
                     : this.aiSpeech.currentLengthSeconds,
                 lastUpdatedAtMs: currentMora ? nowMs : this.aiSpeech.lastUpdatedAtMs,
-                lastEndedAtMs: null,
+                lastEndedAtMs: undefined,
             };
             return;
         }
@@ -504,12 +501,12 @@ export class CharacterBehaviorState {
             this.aiSpeech = {
                 ...this.aiSpeech,
                 isSpeaking: false,
-                currentVowel: null,
-                currentText: null,
+                currentVowel: undefined,
+                currentText: undefined,
                 currentLengthSeconds: 0,
-                currentMoraId: null,
-                beatKind: null,
-                beatText: null,
+                currentMoraId: undefined,
+                beatKind: undefined,
+                beatText: undefined,
                 beatIntensity: 0,
                 lastEndedAtMs: nowMs,
             };
@@ -528,7 +525,7 @@ export class CharacterBehaviorState {
         }
         if (
             this.talkMode === "chat" &&
-            this.lastUserSpeechEndedAtMs != null &&
+            this.lastUserSpeechEndedAtMs !== undefined &&
             nowMs - this.lastUserSpeechEndedAtMs <= BEHAVIOR_TIMING.thinkingHoldMs
         ) {
             return "thinking";
@@ -598,20 +595,22 @@ export class CharacterBehaviorState {
     private nextAiSpeechBeat(
         message: TelopChannelMessage,
         nowMs: number,
-    ): { kind: CharacterBehaviorAiSpeechBeatKind; text: string | null; intensity: number } | null {
+    ): { kind: CharacterBehaviorAiSpeechBeatKind; text?: string; intensity: number } | undefined {
         if (!message.new_text) {
-            return null;
+            return undefined;
         }
 
         const speechChanged =
             !this.aiSpeech.isSpeaking || this.aiSpeech.speechId !== message.speech_id;
-        const text = message.text || message.message || null;
+        const text =
+            nonEmptyStringOrUndefined(message.text) ?? nonEmptyStringOrUndefined(message.message);
         const lengthSeconds = Math.max(0, Number(message.length) || 0);
-        const isPunctuation = /[、。,.!?！？]/.test(message.text || "");
+        const isPunctuation = /[、。,.!?！？]/.test(message.text);
         const isPhrasePause = lengthSeconds >= BEHAVIOR_TIMING.aiSpeechPhrasePauseSeconds;
         const lastBeatAtMs = this.aiSpeech.lastBeatAtMs;
         const enoughCadenceGap =
-            lastBeatAtMs == null || nowMs - lastBeatAtMs >= BEHAVIOR_TIMING.aiSpeechCadenceBeatMs;
+            lastBeatAtMs === undefined ||
+            nowMs - lastBeatAtMs >= BEHAVIOR_TIMING.aiSpeechCadenceBeatMs;
 
         if (speechChanged) {
             return { kind: "speech_start", text, intensity: 0.8 };
@@ -625,19 +624,17 @@ export class CharacterBehaviorState {
         if (enoughCadenceGap) {
             return { kind: "cadence", text, intensity: 0.42 };
         }
-        return null;
+        return undefined;
     }
 
-    private expressionCodeForSpeech(speechId: number): number | null {
-        return this.expressionCodeBySpeechId.has(speechId)
-            ? (this.expressionCodeBySpeechId.get(speechId) ?? null)
-            : null;
+    private expressionCodeForSpeech(speechId: number): number | undefined {
+        return this.expressionCodeBySpeechId.get(speechId);
     }
 
     private refreshGazeStaleness(nowMs: number): void {
         if (
             !this.gaze.trackingEnabled ||
-            this.gaze.lastUpdatedAtMs == null ||
+            this.gaze.lastUpdatedAtMs === undefined ||
             nowMs - this.gaze.lastUpdatedAtMs <= BEHAVIOR_TIMING.gazeStaleMs
         ) {
             return;
@@ -654,9 +651,9 @@ export class CharacterBehaviorState {
         };
     }
 
-    private currentErrorMessage(): string | null {
+    private currentErrorMessage(): string | undefined {
         const first = this.errorMessagesBySource.values().next();
-        return first.done ? null : first.value;
+        return first.done ? undefined : first.value;
     }
 }
 
@@ -669,4 +666,8 @@ function clonePoseArmMotion(snapshot: SincroPoseArmMotionSnapshot): SincroPoseAr
             wrist: { ...snapshot.targets.wrist },
         },
     };
+}
+
+function nonEmptyStringOrUndefined(value: string | undefined): string | undefined {
+    return value === undefined || value === "" ? undefined : value;
 }

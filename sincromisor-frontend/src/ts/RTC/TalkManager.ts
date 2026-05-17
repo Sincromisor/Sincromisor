@@ -30,7 +30,7 @@ export class TalkManager {
     private readonly chatMessageService: ChatMessageService;
     private readonly debugConsoleManager: DebugConsoleManager;
     private telopChannelMessage: Array<TelopChannelMessage> = [];
-    private currentTelopChannelMessage: CurrentMora | null = null;
+    private currentTelopChannelMessage: CurrentMora | undefined;
     private moraID: number = 0;
     private readonly listeners = new Set<(event: TalkManagerEvent) => void>();
     private telopDomRenderingEnabled: boolean = true;
@@ -113,13 +113,13 @@ export class TalkManager {
         this.emitEvent({ type: "telop_channel_message", message: msg });
     }
 
-    currentMora(): CurrentMora | null {
+    currentMora(): CurrentMora | undefined {
         if (!this.currentTelopChannelMessage) {
-            return null;
+            return undefined;
         }
         if (this.currentTelopChannelMessage.endTime < performance.now()) {
-            this.currentTelopChannelMessage = null;
-            return null;
+            this.currentTelopChannelMessage = undefined;
+            return undefined;
         }
         return this.currentTelopChannelMessage;
     }

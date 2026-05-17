@@ -31,8 +31,8 @@ export class CharacterMotionOrchestrator {
     private readonly bones = new Map<OptionalBoneName, MotionBone>();
     private listeningBlend = 0;
     private lastElapsedSeconds: number | null = null;
-    private lastBackchannelSpeechEndedAtMs: number | null = null;
-    private lastBackchannelTriggeredAtMs: number | null = null;
+    private lastBackchannelSpeechEndedAtMs: number | undefined;
+    private lastBackchannelTriggeredAtMs: number | undefined;
     private nodStartedAtSeconds: number | null = null;
     private nodIntensity = 0;
     private aiSpeakingBlend = 0;
@@ -393,7 +393,7 @@ export class CharacterMotionOrchestrator {
             snapshot.motionPolicy.neutralTransition ||
             snapshot.state !== "thinking" ||
             snapshot.aiSpeech.isSpeaking ||
-            speechEndedAtMs == null ||
+            speechEndedAtMs === undefined ||
             speechEndedAtMs === this.lastBackchannelSpeechEndedAtMs ||
             snapshot.vad.lastSpeechDurationMs <
                 CHARACTER_IDLE_MOTION_CONFIG.listening.nodMinimumSpeechMs
@@ -401,7 +401,7 @@ export class CharacterMotionOrchestrator {
             return false;
         }
         if (
-            this.lastBackchannelTriggeredAtMs != null &&
+            this.lastBackchannelTriggeredAtMs !== undefined &&
             snapshot.nowMs - this.lastBackchannelTriggeredAtMs <
                 CHARACTER_IDLE_MOTION_CONFIG.listening.nodCooldownMs
         ) {
@@ -486,7 +486,7 @@ export class CharacterMotionOrchestrator {
     }
 
     private aiSpeechExpressionProfile(
-        expressionCode: number | null,
+        expressionCode: number | undefined,
     ): AiSpeechExpressionMotionProfile {
         switch (expressionCode) {
             case 2:

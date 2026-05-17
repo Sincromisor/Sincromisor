@@ -27,7 +27,8 @@ export class SincroRtcSessionController {
 
     // WebRTC接続を開始する。生成済みローカル音声トラックをRTCPeerConnectionへ渡す。
     start(audioTrack: MediaStreamTrack, talkMode: string): void {
-        if (!this.rtcConfigManager.config) {
+        const config = this.rtcConfigManager.config;
+        if (config === undefined) {
             // 設定取得前に start が呼ばれても、従来どおり例外化せず安全に無視する。
             return;
         }
@@ -35,12 +36,16 @@ export class SincroRtcSessionController {
         // フロント側の入力音量を可視化できるよう、ローカルトラックをデバッグへ渡す。
         this.debugConsoleManager.setLocalAudioTrack(audioTrack);
         this.characterBehaviorState.setTalkMode(talkMode);
-        this.characterBehaviorState.setErrorSource("rtc", null);
+        this.characterBehaviorState.clearErrorSource("rtc");
 
-        const rtcc = new RTCTalkClient(this.rtcConfigManager.config, audioTrack, talkMode);
+        const rtcc = new RTCTalkClient(config, audioTrack, talkMode);
         this.setTextChannelCallback(rtcc);
         this.setTelopChannelCallback(rtcc);
         rtcc.rtcHealthCallback = (message) => {
+            if (message === null) {
+                this.characterBehaviorState.clearErrorSource("rtc");
+                return;
+            }
             this.characterBehaviorState.setErrorSource("rtc", message);
         };
         this.rtcc = rtcc;
