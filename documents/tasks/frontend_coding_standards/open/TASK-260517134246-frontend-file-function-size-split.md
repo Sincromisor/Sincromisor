@@ -165,6 +165,27 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 分割後の新規ファイルはすべて 300 行未満に収め、`normalizeResult` 相当の巨大関数は options object 入力の純粋 helper へ移した。
     - 既存の worker / runtime からの `SincroPoseTracker` import 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `SettingsFields.tsx` と `SettingsSections.tsx` を UI 責務別ファイルへ分割した。
+    - 追加: `src/react/settings-fields/settingsHelp.ts`
+    - 追加: `src/react/settings-fields/settingsFieldTypes.ts`
+    - 追加: `src/react/settings-fields/textSettingsFields.tsx`
+    - 追加: `src/react/settings-fields/deviceSettingsFields.tsx`
+    - 追加: `src/react/settings-fields/audioProcessingToggles.tsx`
+    - 追加: `src/react/settings-fields/characterDisplayToggles.tsx`
+    - 追加: `src/react/settings-fields/startupBehaviorFields.tsx`
+    - 追加: `src/react/simple-vrm/components/settingsSectionLayout.ts`
+    - 追加: `src/react/simple-vrm/components/settingsSectionTypes.ts`
+    - 追加: `src/react/simple-vrm/components/settingsCategorySection.tsx`
+    - 追加: `src/react/simple-vrm/components/basicSettingsSection.tsx`
+    - 追加: `src/react/simple-vrm/components/micSettingsSection.tsx`
+    - 追加: `src/react/simple-vrm/components/characterSettingsSection.tsx`
+    - 追加: `src/react/simple-vrm/components/lookingGlassSettingsSection.tsx`
+    - 追加: `src/react/simple-vrm/components/numericSettingField.tsx`
+    - 追加: `src/react/simple-vrm/components/startupSettingsSection.tsx`
+    - `SettingsFields.tsx` は 532 行から 14 行、`SettingsSections.tsx` は 596 行から 6 行まで縮小し、既存 import 契約維持用の re-export に寄せた。
+    - 分割後の最大ファイルは `lookingGlassSettingsSection.tsx` 188 行で、対象領域の新規ファイルはすべて 200 行 soft 閾値以下に収めた。
+    - 設定 UI の表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
