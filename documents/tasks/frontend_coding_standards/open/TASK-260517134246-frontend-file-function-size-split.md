@@ -245,6 +245,18 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - `DialogManager.ts` は 558 行から 399 行まで縮小し、import / re-export / コメント / 空行を除く実装行は 294 行まで下げた。
     - dialog public API、設定 UI の表示文言、endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: React UI / dialog hook の残存 hard 超過関数を責務別 private component / hook へ分割した。
+    - 対象: `src/react/debug/panels/sincroPoseRetargetControls.tsx`
+    - 対象: `src/react/simple-vrm/components/lookingGlassSettingsSection.tsx`
+    - 対象: `src/react/settings-fields/characterDisplayToggles.tsx`
+    - 対象: `src/react/dialog/useConfigurationDialogSettingsState.ts`
+    - Pose retarget 調整 UI は IK mode / 基本調整 / 腕 IK 調整へ分割した。
+    - Looking Glass 設定 UI は header / preset / display numeric fields / target numeric fields へ分割した。
+    - Character display 設定 UI は toggle grid / motion ranges / hints へ分割した。
+    - Configuration dialog hook は controller state / settings snapshots / dialog UI snapshots / subscription / actions へ分割した。
+    - 対象 4 ファイル内の 60 行超関数と 4 引数超関数は解消した。
+    - 設定 UI の表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

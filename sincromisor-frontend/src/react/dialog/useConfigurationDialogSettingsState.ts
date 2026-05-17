@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
 import { SincroAppController } from "../../ts/App/SincroAppController";
 import type {
     SincroAppDialogUiState,
@@ -96,18 +96,138 @@ const defaultConnectionState: {
     detail: string;
 } = { value: "idle", detail: "" };
 
-type ConfigurationDialogEventHandlerMap = {
-    [K in SincroAppEvent["type"]]?: (event: Extract<SincroAppEvent, { type: K }>) => void;
+type ConfigurationDialogStateSetters = {
+    setCurrentController: Dispatch<SetStateAction<SincroAppController | undefined>>;
+    setLifecycleState: Dispatch<SetStateAction<SincroAppLifecycleState>>;
+    setConnectionState: Dispatch<SetStateAction<typeof defaultConnectionState>>;
+    setSettings: Dispatch<SetStateAction<SincroAppSettingsSnapshot>>;
+    setSettingsUiState: Dispatch<SetStateAction<SincroAppSettingsUiState>>;
+    setSettingsUiHints: Dispatch<SetStateAction<SincroAppSettingsUiHints>>;
+    setDialogVrmUiState: Dispatch<SetStateAction<SincroAppDialogVrmUiState>>;
+    setDialogUiState: Dispatch<SetStateAction<SincroAppDialogUiState>>;
+    setStartupSettingsStatus: Dispatch<SetStateAction<SincroAppStartupSettingsStatus>>;
+    setStartupSettingsCapabilities: Dispatch<SetStateAction<SincroAppStartupSettingsCapabilities>>;
 };
 
 // dialog 用の最小購読 hook。Control Panel 用 hook の全状態を持たず、settings 系 + VRM UI状態だけを扱う。
 export function useConfigurationDialogSettingsState() {
     const initialController = SincroAppController.getCurrent();
+    const controllerState = useConfigurationDialogControllerState(initialController);
+    const settingsState = useConfigurationDialogSettingsSnapshots(initialController);
+    const dialogState = useConfigurationDialogUiSnapshots(initialController);
+    const {
+        snapshot: mediaDeviceSnapshot,
+        audioInputSelection,
+        videoInputSelection,
+        refreshDevices,
+    } = useSincroMediaDeviceState({
+        audioInputDeviceId: settingsState.settings.audioInputDeviceId,
+        videoInputDeviceId: settingsState.settings.videoInputDeviceId,
+    });
+
+    const stateSetters = useConfigurationDialogStateSetters(
+        controllerState,
+        settingsState,
+        dialogState,
+    );
+    useConfigurationDialogControllerSubscription(stateSetters);
+    const actions = buildConfigurationDialogActions(controllerState.currentController);
+
+    return {
+        currentController: controllerState.currentController,
+        lifecycleState: controllerState.lifecycleState,
+        connectionState: controllerState.connectionState,
+        settings: settingsState.settings,
+        settingsUiState: settingsState.settingsUiState,
+        settingsUiHints: settingsState.settingsUiHints,
+        dialogVrmUiState: dialogState.dialogVrmUiState,
+        dialogUiState: dialogState.dialogUiState,
+        startupSettingsStatus: settingsState.startupSettingsStatus,
+        startupSettingsCapabilities: settingsState.startupSettingsCapabilities,
+        mediaDeviceSnapshot,
+        audioInputSelection,
+        videoInputSelection,
+        refreshDevices,
+        ...actions,
+    };
+}
+
+function useConfigurationDialogStateSetters(
+    controllerState: ReturnType<typeof useConfigurationDialogControllerState>,
+    settingsState: ReturnType<typeof useConfigurationDialogSettingsSnapshots>,
+    dialogState: ReturnType<typeof useConfigurationDialogUiSnapshots>,
+): ConfigurationDialogStateSetters {
+    return useMemo(
+        () => ({
+            setCurrentController: controllerState.setCurrentController,
+            setLifecycleState: controllerState.setLifecycleState,
+            setConnectionState: controllerState.setConnectionState,
+            setSettings: settingsState.setSettings,
+            setSettingsUiState: settingsState.setSettingsUiState,
+            setSettingsUiHints: settingsState.setSettingsUiHints,
+            setDialogVrmUiState: dialogState.setDialogVrmUiState,
+            setDialogUiState: dialogState.setDialogUiState,
+            setStartupSettingsStatus: settingsState.setStartupSettingsStatus,
+            setStartupSettingsCapabilities: settingsState.setStartupSettingsCapabilities,
+        }),
+        [
+            controllerState.setCurrentController,
+            controllerState.setLifecycleState,
+            controllerState.setConnectionState,
+            settingsState.setSettings,
+            settingsState.setSettingsUiState,
+            settingsState.setSettingsUiHints,
+            dialogState.setDialogVrmUiState,
+            dialogState.setDialogUiState,
+            settingsState.setStartupSettingsStatus,
+            settingsState.setStartupSettingsCapabilities,
+        ],
+    );
+}
+
+function buildConfigurationDialogActions(currentController: SincroAppController | undefined) {
+    const applySettings: ApplySettingsFn = (partial) => {
+        currentController?.applySettings(partial);
+    };
+    return {
+        applySettings,
+        changeTalkMode: (nextTalkMode: string): void => {
+            applySettings({ talkMode: nextTalkMode });
+        },
+        applySelectedVrmFile: (file: File): void => {
+            currentController?.dialog.applySelectedVrmFile(file);
+        },
+        setVrmDragOver: (isDragOver: boolean): void => {
+            currentController?.dialog.setVrmDragOver(isDragOver);
+        },
+        startApp: (): void => {
+            currentController?.start();
+        },
+    };
+}
+
+function useConfigurationDialogControllerState(initialController: SincroAppController | undefined) {
     const [currentController, setCurrentController] = useState<SincroAppController | undefined>(
         initialController,
     );
     const [lifecycleState, setLifecycleState] = useState<SincroAppLifecycleState>("idle");
     const [connectionState, setConnectionState] = useState(defaultConnectionState);
+    return useMemo(
+        () => ({
+            currentController,
+            lifecycleState,
+            connectionState,
+            setCurrentController,
+            setLifecycleState,
+            setConnectionState,
+        }),
+        [currentController, lifecycleState, connectionState],
+    );
+}
+
+function useConfigurationDialogSettingsSnapshots(
+    initialController: SincroAppController | undefined,
+) {
     const [settings, setSettings] = useState<SincroAppSettingsSnapshot>(
         initialController?.state.getSettingsSnapshot() ?? defaultSettings,
     );
@@ -117,127 +237,125 @@ export function useConfigurationDialogSettingsState() {
     const [settingsUiHints, setSettingsUiHints] = useState<SincroAppSettingsUiHints>(
         initialController?.state.getSettingsUiHints() ?? defaultSettingsUiHints,
     );
-    const [dialogVrmUiState, setDialogVrmUiState] = useState<SincroAppDialogVrmUiState>(
-        initialController?.state.getDialogVrmUiState() ?? defaultDialogVrmUiState,
-    );
-    const [dialogUiState, setDialogUiState] = useState<SincroAppDialogUiState>(
-        initialController?.state.getDialogUiState() ?? defaultDialogUiState,
-    );
     const [startupSettingsStatus, setStartupSettingsStatus] =
         useState<SincroAppStartupSettingsStatus>(
             initialController?.state.getStartupSettingsStatus() ?? defaultStartupSettingsStatus,
         );
     const [startupSettingsCapabilities, setStartupSettingsCapabilities] =
         useState<SincroAppStartupSettingsCapabilities>(defaultStartupSettingsCapabilities);
-    const {
-        snapshot: mediaDeviceSnapshot,
-        audioInputSelection,
-        videoInputSelection,
-        refreshDevices,
-    } = useSincroMediaDeviceState({
-        audioInputDeviceId: settings.audioInputDeviceId,
-        videoInputDeviceId: settings.videoInputDeviceId,
-    });
+    return useMemo(
+        () => ({
+            settings,
+            settingsUiState,
+            settingsUiHints,
+            startupSettingsStatus,
+            startupSettingsCapabilities,
+            setSettings,
+            setSettingsUiState,
+            setSettingsUiHints,
+            setStartupSettingsStatus,
+            setStartupSettingsCapabilities,
+        }),
+        [
+            settings,
+            settingsUiState,
+            settingsUiHints,
+            startupSettingsStatus,
+            startupSettingsCapabilities,
+        ],
+    );
+}
 
+function useConfigurationDialogUiSnapshots(initialController: SincroAppController | undefined) {
+    const [dialogVrmUiState, setDialogVrmUiState] = useState<SincroAppDialogVrmUiState>(
+        initialController?.state.getDialogVrmUiState() ?? defaultDialogVrmUiState,
+    );
+    const [dialogUiState, setDialogUiState] = useState<SincroAppDialogUiState>(
+        initialController?.state.getDialogUiState() ?? defaultDialogUiState,
+    );
+    return useMemo(
+        () => ({
+            dialogVrmUiState,
+            dialogUiState,
+            setDialogVrmUiState,
+            setDialogUiState,
+        }),
+        [dialogVrmUiState, dialogUiState],
+    );
+}
+
+function useConfigurationDialogControllerSubscription(
+    setters: ConfigurationDialogStateSetters,
+): void {
     useEffect(() => {
-        const eventHandlers: ConfigurationDialogEventHandlerMap = {
-            lifecycle: (event) => {
-                setLifecycleState(event.state);
-            },
-            connection_state: (event) => {
-                setConnectionState({ value: event.value, detail: event.detail ?? "" });
-            },
-            settings_snapshot: (event) => {
-                setSettings((prev) => ({ ...prev, ...event.settings }));
-            },
-            settings_ui_state: (event) => {
-                setSettingsUiState(event.uiState);
-            },
-            settings_ui_hints: (event) => {
-                setSettingsUiHints(event.uiHints);
-            },
-            dialog_vrm_ui_state: (event) => {
-                setDialogVrmUiState(event.uiState);
-            },
-            dialog_ui_state: (event) => {
-                setDialogUiState(event.uiState);
-            },
-            startup_settings_status: (event) => {
-                setStartupSettingsStatus(event.status);
-            },
-            startup_settings_capabilities: (event) => {
-                setStartupSettingsCapabilities(event.capabilities);
-            },
-        };
         const unsubscribeActiveController = subscribeActiveSincroAppEvents({
             onControllerChange: (controller) => {
-                setCurrentController(controller);
-                if (!controller) {
-                    return;
-                }
-                // active controller 差し替え時も subscribe 初回イベント前に最低限の snapshot を反映して空白を減らす。
-                hydrateSettingsSnapshotsFromController(controller, {
-                    setSettings,
-                    setSettingsUiState,
-                    setSettingsUiHints,
-                });
-                hydrateDialogUiSnapshotsFromController(controller, {
-                    setDialogUiState,
-                    setDialogVrmUiState,
-                });
-                setStartupSettingsStatus(controller.state.getStartupSettingsStatus());
+                hydrateConfigurationDialogFromController(controller, setters);
             },
-            onEvent: (event: SincroAppEvent) => {
-                const handler = eventHandlers[event.type] as
-                    | ((value: SincroAppEvent) => void)
-                    | undefined;
-                handler?.(event);
+            onEvent: (event) => {
+                applyConfigurationDialogEvent(event, setters);
             },
         });
         return () => {
             unsubscribeActiveController();
         };
-    }, []);
+    }, [setters]);
+}
 
-    const applySettings: ApplySettingsFn = (partial) => {
-        currentController?.applySettings(partial);
-    };
+function hydrateConfigurationDialogFromController(
+    controller: SincroAppController | undefined,
+    setters: ConfigurationDialogStateSetters,
+): void {
+    setters.setCurrentController(controller);
+    if (!controller) {
+        return;
+    }
+    // active controller 差し替え時も subscribe 初回イベント前に最低限の snapshot を反映して空白を減らす。
+    hydrateSettingsSnapshotsFromController(controller, {
+        setSettings: setters.setSettings,
+        setSettingsUiState: setters.setSettingsUiState,
+        setSettingsUiHints: setters.setSettingsUiHints,
+    });
+    hydrateDialogUiSnapshotsFromController(controller, {
+        setDialogUiState: setters.setDialogUiState,
+        setDialogVrmUiState: setters.setDialogVrmUiState,
+    });
+    setters.setStartupSettingsStatus(controller.state.getStartupSettingsStatus());
+}
 
-    const changeTalkMode = (nextTalkMode: string): void => {
-        applySettings({ talkMode: nextTalkMode });
-    };
-
-    const applySelectedVrmFile = (file: File): void => {
-        currentController?.dialog.applySelectedVrmFile(file);
-    };
-
-    const setVrmDragOver = (isDragOver: boolean): void => {
-        currentController?.dialog.setVrmDragOver(isDragOver);
-    };
-
-    const startApp = (): void => {
-        currentController?.start();
-    };
-
-    return {
-        currentController,
-        lifecycleState,
-        connectionState,
-        settings,
-        settingsUiState,
-        settingsUiHints,
-        dialogVrmUiState,
-        dialogUiState,
-        startupSettingsStatus,
-        startupSettingsCapabilities,
-        mediaDeviceSnapshot,
-        audioInputSelection,
-        videoInputSelection,
-        refreshDevices,
-        applySettings,
-        changeTalkMode,
-        applySelectedVrmFile,
-        setVrmDragOver,
-        startApp,
-    };
+function applyConfigurationDialogEvent(
+    event: SincroAppEvent,
+    setters: ConfigurationDialogStateSetters,
+): void {
+    switch (event.type) {
+        case "lifecycle":
+            setters.setLifecycleState(event.state);
+            return;
+        case "connection_state":
+            setters.setConnectionState({ value: event.value, detail: event.detail ?? "" });
+            return;
+        case "settings_snapshot":
+            setters.setSettings((prev) => ({ ...prev, ...event.settings }));
+            return;
+        case "settings_ui_state":
+            setters.setSettingsUiState(event.uiState);
+            return;
+        case "settings_ui_hints":
+            setters.setSettingsUiHints(event.uiHints);
+            return;
+        case "dialog_vrm_ui_state":
+            setters.setDialogVrmUiState(event.uiState);
+            return;
+        case "dialog_ui_state":
+            setters.setDialogUiState(event.uiState);
+            return;
+        case "startup_settings_status":
+            setters.setStartupSettingsStatus(event.status);
+            return;
+        case "startup_settings_capabilities":
+            setters.setStartupSettingsCapabilities(event.capabilities);
+            return;
+        default:
+            return;
+    }
 }
