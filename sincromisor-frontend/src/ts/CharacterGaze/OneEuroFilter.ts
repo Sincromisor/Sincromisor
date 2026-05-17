@@ -4,9 +4,9 @@ export class OneEuroFilter1D {
     private minCutoff: number;
     private beta: number;
     private dCutoff: number;
-    private prevValue: number | null = null;
+    private prevValue?: number;
     private prevFilteredDerivative = 0;
-    private prevTimestampMs: number | null = null;
+    private prevTimestampMs?: number;
 
     constructor(minCutoff: number, beta: number, dCutoff: number = 1.0) {
         this.minCutoff = minCutoff;
@@ -15,13 +15,13 @@ export class OneEuroFilter1D {
     }
 
     reset(): void {
-        this.prevValue = null;
+        this.prevValue = undefined;
         this.prevFilteredDerivative = 0;
-        this.prevTimestampMs = null;
+        this.prevTimestampMs = undefined;
     }
 
     filter(value: number, timestampMs: number): number {
-        if (this.prevValue == null || this.prevTimestampMs == null) {
+        if (this.prevValue === undefined || this.prevTimestampMs === undefined) {
             this.prevValue = value;
             this.prevTimestampMs = timestampMs;
             return value;

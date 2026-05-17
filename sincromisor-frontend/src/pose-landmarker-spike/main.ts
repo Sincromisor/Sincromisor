@@ -32,7 +32,7 @@ const uiLatency = requireElement<HTMLElement>("uiLatency");
 const landmarkSummary = requireElement<HTMLPreElement>("landmarkSummary");
 const overlayContext = overlayCanvas.getContext("2d");
 
-let lastMarkStartedAtMs: number | null = null;
+let lastMarkStartedAtMs: number | undefined;
 
 const spike = new PoseLandmarkerSpike(previewVideo, {
     onMetrics: renderMetrics,
@@ -71,11 +71,11 @@ stopButton.addEventListener("click", () => {
 markButton.addEventListener("click", () => {
     lastMarkStartedAtMs = performance.now();
     window.requestAnimationFrame(() => {
-        if (lastMarkStartedAtMs == null) {
+        if (lastMarkStartedAtMs === undefined) {
             return;
         }
         uiLatency.textContent = `${(performance.now() - lastMarkStartedAtMs).toFixed(1)}ms`;
-        lastMarkStartedAtMs = null;
+        lastMarkStartedAtMs = undefined;
     });
 });
 
@@ -112,11 +112,11 @@ function renderMetrics(metrics: PoseLandmarkerSpikeMetrics): void {
     poseAvgMax.textContent = `${metrics.poseInferenceAvgMs.toFixed(1)} / ${metrics.poseInferenceMaxMs.toFixed(1)}ms`;
     renderFps.textContent = `${metrics.renderFps.toFixed(1)}fps`;
     faceMs.textContent =
-        metrics.faceInferenceMs == null
+        metrics.faceInferenceMs === undefined
             ? "--"
             : `${metrics.faceInferenceMs.toFixed(1)}ms avg ${metrics.faceInferenceAvgMs?.toFixed(1) ?? "--"}`;
     droppedFrames.textContent =
-        metrics.droppedVideoFrames == null ? "--" : String(metrics.droppedVideoFrames);
+        metrics.droppedVideoFrames === undefined ? "--" : String(metrics.droppedVideoFrames);
     landmarkSummary.textContent = metrics.detected
         ? metrics.trackedLandmarks
               .map((landmark) => {
@@ -127,7 +127,7 @@ function renderMetrics(metrics: PoseLandmarkerSpikeMetrics): void {
         : `pose_not_detected${metrics.fallbackReason ? ` (${metrics.fallbackReason})` : ""}`;
 }
 
-function drawPoseOverlay(result: PoseLandmarkerResult | null): void {
+function drawPoseOverlay(result: PoseLandmarkerResult | undefined): void {
     if (!overlayContext) {
         return;
     }

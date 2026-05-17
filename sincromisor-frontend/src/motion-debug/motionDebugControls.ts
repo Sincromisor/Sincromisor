@@ -67,8 +67,9 @@ export class MotionDebugControls {
         this.snapshotText.textContent = JSON.stringify(snapshot, null, 2);
     }
 
-    renderCapture(dataUrl: string, capturedAtMs: number | null): void {
-        const capturedAtText = capturedAtMs == null ? "--" : `${(capturedAtMs / 1000).toFixed(2)}s`;
+    renderCapture(dataUrl: string, capturedAtMs: number | undefined): void {
+        const capturedAtText =
+            capturedAtMs === undefined ? "--" : `${(capturedAtMs / 1000).toFixed(2)}s`;
         this.capturePreview.src = dataUrl;
         this.captureDownload.href = dataUrl;
         this.captureDownload.download = this.captureFileName();

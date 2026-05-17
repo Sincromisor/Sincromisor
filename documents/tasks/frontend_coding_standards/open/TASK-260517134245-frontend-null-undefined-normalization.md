@@ -95,6 +95,10 @@
     - 対象: `SincroFaceTracker` / `SincroPoseTracker` / `SincroTrackerWorkerClient` / `TrackerRuntime` / `sincro-tracker.worker` / `SincroFaceRetargeter` / `SincroPoseRetargeter` / `SincroArmIkSolver` / `sincroArmIkConstraint` / debug console snapshot helper
     - MediaPipe tracker の model / init promise / worker pending state、face neutral calibration、pose retarget の fallback reason / solver probe / IK quaternion を optional にし、DOM の `srcObject = null` など境界由来の `null` だけを残した。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: CharacterGaze spike と motion-debug の内部欠損表現を `undefined` へ追加整理した。
+    - 対象: `PoseLandmarkerSpike` / `OneEuroFilter` / `pose-landmarker-spike/main.ts` / `motion-debug/**`
+    - spike metrics の未観測値、OneEuroFilter の前回値、motion-debug の capture / active stream 状態を optional にし、`JSON.stringify(value, null, 2)` と `srcObject = null` は境界・formatter として残した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

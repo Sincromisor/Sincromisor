@@ -17,7 +17,7 @@ export type MotionDebugCameraState = {
 
 export type MotionDebugRenderMetrics = {
     renderFps: number;
-    lastFrameCapturedAtMs: number | null;
+    lastFrameCapturedAtMs?: number;
 };
 
 export type MotionDebugSnapshot = {
