@@ -76,6 +76,11 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 追加: `src/ts/UI/debugConsoleAudioMeter.ts`
     - `DebugConsoleManager.ts` は 1413 行から 895 行まで縮小したが、RTC / gaze / Sincro motion 更新責務がまだ残るため継続分割対象。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `DebugConsoleManager.ts` から RTC snapshot 更新と Sincro motion retarget runtime 更新を分割した。
+    - 追加: `src/ts/UI/debugConsoleRtcSnapshot.ts`
+    - 追加: `src/ts/UI/debugConsoleSincroMotionRuntime.ts`
+    - `DebugConsoleManager.ts` は 895 行から 699 行まで縮小し、`setSincroPoseRetargetConfig` / `updateSincroPoseRetargetFrame` の巨大な更新処理を純粋 helper へ移した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

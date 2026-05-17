@@ -16,19 +16,28 @@ import type {
     AudioFilterControlConfig,
     CharacterGazeTrackingTuningUiConfig,
     DebugConsoleManagerEvent,
-    DebugConsoleMetricKey,
-    DebugConsoleTrendKey,
     LearnedVadPerformanceMode,
     LearnedVadTuningUiConfig,
     LearnedVadUiReport,
     VadThresholdMode,
 } from "./debugConsolePublicTypes";
-import { DEBUG_CONSOLE_TREND_MAX_VALUES } from "./debugConsolePublicTypes";
 import {
-    createDefaultSnapshot,
-    DEFAULT_RTC_METRICS,
-    type DebugConsoleSnapshot,
-} from "./debugConsoleSnapshot";
+    appendRtcEventLog,
+    appendRtcTelopChannelLog,
+    appendRtcTextChannelLog,
+    isDebugConsoleMetricKey,
+    isDebugConsoleTrendKey,
+    pushRtcTrendPoint,
+    resetRtcRealtimeStats,
+    updateRtcMetric,
+    updateRtcSdp,
+    updateRtcState,
+} from "./debugConsoleRtcSnapshot";
+import {
+    clonePoseRetargetRuntime,
+    updatePoseRetargetConfig,
+} from "./debugConsoleSincroMotionRuntime";
+import { createDefaultSnapshot, type DebugConsoleSnapshot } from "./debugConsoleSnapshot";
 
 export type {
     AudioFilterControlConfig,
@@ -63,9 +72,6 @@ type ConstraintStatusTone = "" | "state-ok" | "state-warn" | "state-error";
 // 既存 public API は維持し、RTC / Audio / Gaze 側からの呼び出し先は変えずに移行を進める。
 export class DebugConsoleManager {
     private static instance: DebugConsoleManager;
-    private static readonly EVENT_LOG_LINES = 80;
-    private static readonly CHANNEL_LOG_LINES = 30;
-    private static readonly TREND_POINTS = 60;
 
     private snapshot: DebugConsoleSnapshot = createDefaultSnapshot();
     private readonly listeners = new Set<(event: DebugConsoleManagerEvent) => void>();
@@ -402,114 +408,34 @@ export class DebugConsoleManager {
     }
 
     resetRealtimeStats(): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            rtc: {
-                ...snapshot.rtc,
-                metrics: { ...DEFAULT_RTC_METRICS },
-                trends: {
-                    trendOutboundAudioBitrate: [],
-                    trendInboundAudioBitrate: [],
-                    trendRoundTripTime: [],
-                    trendInboundPacketLossRate: [],
-                },
-            },
-        }));
+        this.updateSnapshot(resetRtcRealtimeStats);
     }
 
     updateMetricValue(key: string, value: string): void {
-        if (!(key in DEFAULT_RTC_METRICS)) {
+        if (!isDebugConsoleMetricKey(key)) {
             return;
         }
-        const metricKey = key as DebugConsoleMetricKey;
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            rtc: {
-                ...snapshot.rtc,
-                metrics: {
-                    ...snapshot.rtc.metrics,
-                    [metricKey]: value,
-                },
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateRtcMetric(snapshot, key, value));
     }
 
     pushTrendPoint(trendKey: string, value: number | null): void {
-        if (!(trendKey in DEBUG_CONSOLE_TREND_MAX_VALUES)) {
+        if (!isDebugConsoleTrendKey(trendKey)) {
             return;
         }
-        const key = trendKey as DebugConsoleTrendKey;
-        this.updateSnapshot((snapshot) => {
-            const nextSeries = [...snapshot.rtc.trends[key]];
-            if (value != null && Number.isFinite(value)) {
-                nextSeries.push(value);
-            } else {
-                nextSeries.push(0);
-            }
-            if (nextSeries.length > DebugConsoleManager.TREND_POINTS) {
-                nextSeries.splice(0, nextSeries.length - DebugConsoleManager.TREND_POINTS);
-            }
-            return {
-                ...snapshot,
-                rtc: {
-                    ...snapshot.rtc,
-                    trends: {
-                        ...snapshot.rtc.trends,
-                        [key]: nextSeries,
-                    },
-                },
-            };
-        });
+        this.updateSnapshot((snapshot) => pushRtcTrendPoint(snapshot, trendKey, value));
     }
 
     addRtcEventLog(msg: string): void {
-        const timestamp = new Date().toLocaleTimeString("ja-JP", {
-            hour12: false,
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-        });
-        const logLine = `[${timestamp}] ${msg}\n`;
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            rtc: {
-                ...snapshot.rtc,
-                rtcEventLog: this.appendLog(
-                    snapshot.rtc.rtcEventLog,
-                    logLine,
-                    DebugConsoleManager.EVENT_LOG_LINES,
-                ),
-            },
-        }));
+        this.updateSnapshot((snapshot) => appendRtcEventLog(snapshot, msg));
         this.emitEvent({ type: "rtc_event_log", message: msg });
     }
 
     addTelopChannelLog(msg: string): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            rtc: {
-                ...snapshot.rtc,
-                telopChannelLog: this.appendLog(
-                    snapshot.rtc.telopChannelLog,
-                    msg,
-                    DebugConsoleManager.CHANNEL_LOG_LINES,
-                ),
-            },
-        }));
+        this.updateSnapshot((snapshot) => appendRtcTelopChannelLog(snapshot, msg));
     }
 
     addTextChannelLog(msg: string): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            rtc: {
-                ...snapshot.rtc,
-                textChannelLog: this.appendLog(
-                    snapshot.rtc.textChannelLog,
-                    msg,
-                    DebugConsoleManager.CHANNEL_LOG_LINES,
-                ),
-            },
-        }));
+        this.updateSnapshot((snapshot) => appendRtcTextChannelLog(snapshot, msg));
     }
 
     newIceConnectionState(msg: string): void {
@@ -544,23 +470,11 @@ export class DebugConsoleManager {
     }
 
     offerSDP(msg: string): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            rtc: {
-                ...snapshot.rtc,
-                offerSdp: msg,
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateRtcSdp(snapshot, "offerSdp", msg));
     }
 
     answerSDP(msg: string): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            rtc: {
-                ...snapshot.rtc,
-                answerSdp: msg,
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateRtcSdp(snapshot, "answerSdp", msg));
     }
 
     updateFaceXLog(value: number): void {
@@ -653,46 +567,7 @@ export class DebugConsoleManager {
             ...currentSnapshot,
             sincroMotion: {
                 ...currentSnapshot.sincroMotion,
-                poseRetargetRuntime: {
-                    active: frame.active,
-                    confidence: frame.confidence,
-                    ikMode: frame.ikMode,
-                    fallbackReason: frame.fallbackReason,
-                    solverProbe: {
-                        ccdik: frame.solverProbe.ccdik
-                            ? {
-                                  ...frame.solverProbe.ccdik,
-                                  notes: [...frame.solverProbe.ccdik.notes],
-                              }
-                            : null,
-                    },
-                    anchor: {
-                        active: frame.anchor.active,
-                        weight: frame.anchor.weight,
-                        reason: frame.anchor.reason,
-                        shoulderOffset: { ...frame.anchor.shoulderOffset },
-                    },
-                    leftArm: {
-                        ...frame.leftArm,
-                        constraint: {
-                            ...frame.leftArm.constraint,
-                            reasons: [...frame.leftArm.constraint.reasons],
-                        },
-                        upperArm: { ...frame.leftArm.upperArm },
-                        lowerArm: { ...frame.leftArm.lowerArm },
-                        wrist: { ...frame.leftArm.wrist },
-                    },
-                    rightArm: {
-                        ...frame.rightArm,
-                        constraint: {
-                            ...frame.rightArm.constraint,
-                            reasons: [...frame.rightArm.constraint.reasons],
-                        },
-                        upperArm: { ...frame.rightArm.upperArm },
-                        lowerArm: { ...frame.rightArm.lowerArm },
-                        wrist: { ...frame.rightArm.wrist },
-                    },
-                },
+                poseRetargetRuntime: clonePoseRetargetRuntime(frame),
             },
         }));
     }
@@ -702,60 +577,7 @@ export class DebugConsoleManager {
             ...snapshot,
             sincroMotion: {
                 ...snapshot.sincroMotion,
-                poseRetarget: {
-                    ...snapshot.sincroMotion.poseRetarget,
-                    intensityScale: clampNumber(
-                        config.intensityScale ?? snapshot.sincroMotion.poseRetarget.intensityScale,
-                        0,
-                        1.2,
-                    ),
-                    minConfidence: clampNumber(
-                        config.minConfidence ?? snapshot.sincroMotion.poseRetarget.minConfidence,
-                        0,
-                        1,
-                    ),
-                    returnToNeutralMs: clampNumber(
-                        config.returnToNeutralMs ??
-                            snapshot.sincroMotion.poseRetarget.returnToNeutralMs,
-                        80,
-                        2000,
-                    ),
-                    smoothingMs: clampNumber(
-                        config.smoothingMs ?? snapshot.sincroMotion.poseRetarget.smoothingMs,
-                        40,
-                        800,
-                    ),
-                    armIkStrength: clampNumber(
-                        config.armIkStrength ?? snapshot.sincroMotion.poseRetarget.armIkStrength,
-                        0,
-                        1,
-                    ),
-                    armIkTargetScale: clampNumber(
-                        config.armIkTargetScale ??
-                            snapshot.sincroMotion.poseRetarget.armIkTargetScale,
-                        0.2,
-                        1.5,
-                    ),
-                    armIkMaxLiftRad: clampNumber(
-                        config.armIkMaxLiftRad ??
-                            snapshot.sincroMotion.poseRetarget.armIkMaxLiftRad,
-                        0,
-                        Math.PI / 2,
-                    ),
-                    armIkMaxOpenRad: clampNumber(
-                        config.armIkMaxOpenRad ??
-                            snapshot.sincroMotion.poseRetarget.armIkMaxOpenRad,
-                        0,
-                        Math.PI / 2,
-                    ),
-                    armIkMaxForearmFlexRad: clampNumber(
-                        config.armIkMaxForearmFlexRad ??
-                            snapshot.sincroMotion.poseRetarget.armIkMaxForearmFlexRad,
-                        0,
-                        Math.PI / 2,
-                    ),
-                    armIkMode: config.armIkMode ?? snapshot.sincroMotion.poseRetarget.armIkMode,
-                },
+                poseRetarget: updatePoseRetargetConfig(snapshot.sincroMotion.poseRetarget, config),
             },
         }));
     }
@@ -854,21 +676,7 @@ export class DebugConsoleManager {
         state: string,
         append: boolean,
     ): void {
-        this.updateSnapshot((snapshot) => {
-            const previous = snapshot.rtc[key];
-            const nextValue = append && previous ? `${previous} -> ${state}` : state;
-            return {
-                ...snapshot,
-                rtc: {
-                    ...snapshot.rtc,
-                    [key]: nextValue,
-                },
-            };
-        });
-    }
-
-    private appendLog(text: string, msg: string, lines: number): string {
-        return `${text}${msg}`.split("\n").slice(-lines).join("\n");
+        this.updateSnapshot((snapshot) => updateRtcState(snapshot, key, state, append));
     }
 
     private updateSnapshot(
@@ -885,11 +693,4 @@ export class DebugConsoleManager {
             listener(event);
         }
     }
-}
-
-function clampNumber(value: number, min: number, max: number): number {
-    if (!Number.isFinite(value)) {
-        return min;
-    }
-    return Math.max(min, Math.min(max, value));
 }
