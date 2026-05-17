@@ -1,3 +1,4 @@
+import { frontendLogger } from "../logging/appLogger";
 import type { SincroFaceMotionSnapshot } from "./SincroFaceMotionSnapshot";
 import { SincroFaceTracker } from "./SincroFaceTracker";
 import type { SincroPoseMotionSnapshot } from "./SincroPoseMotionSnapshot";
@@ -137,9 +138,9 @@ export class TrackerRuntime {
                 this.useWorkerTracking = true;
                 return;
             } catch (error) {
-                console.warn(
+                frontendLogger.warn(
                     "Sincro tracker worker initialization failed. Falling back to main-thread tracking.",
-                    error,
+                    { error },
                 );
                 this.publishMainThreadFallbackStats(this.formatErrorDetail(error));
             }
@@ -158,9 +159,9 @@ export class TrackerRuntime {
         try {
             await this.poseTracker.initVision();
         } catch (error) {
-            console.warn(
+            frontendLogger.warn(
                 "Sincro PoseLandmarker initialization failed. Continuing with face-only tracking.",
-                error,
+                { error },
             );
             this.degradePoseToFaceOnly(this.formatErrorDetail(error), performance.now());
         }
@@ -295,9 +296,9 @@ export class TrackerRuntime {
             this.callbacks.onPoseMotion?.(snapshot);
             this.applyPosePerformanceGate(snapshot, nowMs);
         } catch (error) {
-            console.warn(
+            frontendLogger.warn(
                 "Sincro PoseLandmarker failed during video inference. Falling back to face-only.",
-                error,
+                { error },
             );
             this.degradePoseToFaceOnly(this.formatErrorDetail(error), nowMs);
         }
@@ -379,7 +380,7 @@ export class TrackerRuntime {
     }
 
     private handleRuntimeError(error: unknown): void {
-        console.error("Sincro FaceLandmarker failed during video inference.", error);
+        frontendLogger.error("Sincro FaceLandmarker failed during video inference.", { error });
         this.callbacks?.onFaceMotion(this.faceTracker.stop(this.formatErrorDetail(error)));
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop("face_tracking_runtime_error"));
         this.callbacks?.onError?.(error);

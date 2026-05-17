@@ -3,6 +3,7 @@ import { GridHelper } from "three/src/helpers/GridHelper.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import { WebGLRenderer } from "three/src/renderers/WebGLRenderer.js";
 import { Scene } from "three/src/scenes/Scene.js";
+import { frontendLogger } from "../../logging/appLogger";
 import type { CharacterMotionTuning } from "../VRMCharacter/CharacterMotionConfig";
 import type { SincroPoseRetargetConfig } from "../VRMCharacter/SincroPoseRetargeter";
 import { VRMCharacterManager } from "../VRMCharacter/VRMCharacterManager";
@@ -167,15 +168,15 @@ export class VRMScene {
                 // 'immersive-vr'モードがサポートされているかチェック
                 const isSupported = await navigator.xr?.isSessionSupported(this.xrSessionMode);
                 if (isSupported) {
-                    console.log("WebXR VRモードがサポートされています");
+                    frontendLogger.info("WebXR VR mode is supported.");
                 } else {
-                    console.log("このブラウザはWebXR VRモードをサポートしていません");
+                    frontendLogger.info("WebXR VR mode is not supported.");
                 }
             } catch (err) {
-                console.error("WebXR対応確認中にエラーが発生しました:", err);
+                frontendLogger.error("Failed to check WebXR support.", { error: err });
             }
         } else {
-            console.warn("このブラウザはWebXR APIをサポートしていません");
+            frontendLogger.warn("WebXR API is not supported.");
         }
     }
 

@@ -2,6 +2,7 @@ import { LinearFilter, RGBFormat, SRGBColorSpace } from "three/src/constants.js"
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import { VideoTexture } from "three/src/textures/VideoTexture.js";
+import { frontendLogger } from "../../logging/appLogger";
 
 /* フレーム毎の光源の情報 */
 type FrameInfo = {
@@ -64,11 +65,15 @@ export class SphereVideo {
                 return res.json();
             })
             .then((info: VideoInfo) => {
-                console.log(info);
+                frontendLogger.debug("VRM360 video info loaded.", {
+                    fps: info.fps,
+                    totalFrames: info.totalFrames,
+                    totalDuration: info.totalDuration,
+                });
                 this.videoInfo = info;
             })
             .catch((e) => {
-                console.error(e);
+                frontendLogger.error("Failed to load VRM360 video info.", { error: e });
             });
     }
 
@@ -120,7 +125,7 @@ export class SphereVideo {
         const frameNo = this.getCurrentFrameNo();
         const frameInfo: FrameInfo = this.videoInfo.frameInfo[frameNo];
         if (!frameInfo) {
-            console.error(`frameNo ${frameNo} is not contain frameInfo.`);
+            frontendLogger.error("VRM360 frame info is missing.", { frameNo });
             return new Vector3(0, 0, 0);
         }
         //return this.sphericalToCartesian(frameInfo['lat'], frameInfo['lon'] - 110, 95);
@@ -135,7 +140,7 @@ export class SphereVideo {
         const frameNo = this.getCurrentFrameNo();
         const frameInfo: FrameInfo = this.videoInfo.frameInfo[frameNo];
         if (!frameInfo) {
-            console.error(`frameNo ${frameNo} is not contain frameInfo.`);
+            frontendLogger.error("VRM360 frame info is missing.", { frameNo });
             return 0;
         }
         return frameInfo.brightness / 255;
@@ -155,7 +160,7 @@ export class SphereVideo {
     // live/file 両対応だが、ライト推定の利用は file 動画のみ。
     private async loadHls(video: HTMLVideoElement, m3u8Path: string): Promise<void> {
         const retryPause: number = 5000;
-        console.log(`Loading HLS stream from: ${m3u8Path}`);
+        frontendLogger.info("Loading HLS stream.", { path: m3u8Path });
         const { default: Hls } = await import("hls.js");
         if (Hls.isSupported() && !this.isIOS()) {
             const hls = new Hls({
@@ -163,18 +168,20 @@ export class SphereVideo {
             });
 
             hls.on(Hls.Events.ERROR, (_evt, data) => {
-                console.error(`HLS error: ${data.type} - ${data.details} - ${data.fatal}`);
+                frontendLogger.error("HLS error occurred.", {
+                    type: data.type,
+                    details: data.details,
+                    fatal: data.fatal,
+                });
                 if (data.fatal) {
                     hls.destroy();
 
                     if (data.details === "manifestIncompatibleCodecsError") {
-                        console.error(
-                            "stream makes use of codecs which are not compatible with this browser or operative system",
-                        );
+                        frontendLogger.error("HLS stream uses incompatible codecs.");
                     } else if (data.response && data.response.code === 404) {
-                        console.error("stream not found, retrying in some seconds");
+                        frontendLogger.error("HLS stream not found; retrying.");
                     } else {
-                        console.error(`${data.error}, retrying in some seconds`);
+                        frontendLogger.error("HLS fatal error; retrying.", { error: data.error });
                     }
 
                     setTimeout(() => {
@@ -184,12 +191,12 @@ export class SphereVideo {
             });
 
             hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-                console.log("HLS media attached");
+                frontendLogger.info("HLS media attached.");
                 hls.loadSource(`${m3u8Path}${window.location.search}`);
             });
 
             hls.on(Hls.Events.MANIFEST_LOADED, () => {
-                console.log("HLS manifest loaded");
+                frontendLogger.info("HLS manifest loaded.");
                 video.play();
             });
 

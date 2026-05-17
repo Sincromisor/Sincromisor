@@ -1,3 +1,4 @@
+import { frontendLogger } from "../logging/appLogger";
 import { type ChatMessage, ChatMessageBuilder } from "../RTC/RTCMessage";
 
 export type ChatMessageViewRecord = {
@@ -92,7 +93,12 @@ export class ChatMessageService {
     writeMessage(cMessage: ChatMessage, isHTML: boolean = false): void {
         this.upsertMessageSnapshot(cMessage, isHTML);
         const box: HTMLDivElement | null = this.getMessageBox(cMessage.message_id);
-        console.dir(["writeMessage", box, cMessage]);
+        frontendLogger.debug("Chat message render requested.", {
+            messageId: cMessage.message_id,
+            messageType: cMessage.message_type,
+            renderMode: isHTML ? "trusted_html" : "text",
+            hasLegacyDomBox: box != null,
+        });
         if (this.domRenderingEnabled && box) {
             const ePara: HTMLParagraphElement | null = box.querySelector("p.sincroMessage__text");
             if (ePara) {

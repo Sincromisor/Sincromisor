@@ -1,4 +1,5 @@
 import { SincroAppController } from "../App/SincroAppController";
+import { frontendLogger } from "../logging/appLogger";
 import { UserMediaManager } from "../RTC/UserMediaManager";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
 import { VRMScene } from "./VRMScene/VRMScene";
@@ -128,7 +129,7 @@ export class SincroVRMInitializer {
                 this.applySystemIcon(iconURL);
             })
             .catch((error) => {
-                console.error("Failed to load cached VRM thumbnail.", error);
+                frontendLogger.warn("Failed to load cached VRM thumbnail.", { error });
             });
     }
 
@@ -207,7 +208,7 @@ export class SincroVRMInitializer {
             ctx.drawImage(thumbnailImage, 0, 0, width, height);
         } catch (error) {
             // cross-origin等でdrawImageが失敗するケースはキャッシュ保存を諦めて表示だけ更新する
-            console.warn("Failed to draw VRM thumbnail image.", error);
+            frontendLogger.warn("Failed to draw VRM thumbnail image.", { error });
             this.applySystemIcon(thumbnailImage.src);
             return;
         }
@@ -220,7 +221,7 @@ export class SincroVRMInitializer {
             }
             // 次回起動で即復元できるよう、チャット用サムネイルを dialog 側キャッシュへ保存する。
             this.appController.dialog.saveVrmThumbnailBlob(blob).catch((error) => {
-                console.error("Failed to cache VRM thumbnail.", error);
+                frontendLogger.warn("Failed to cache VRM thumbnail.", { error });
             });
             const iconURL = URL.createObjectURL(blob);
             this.applySystemIcon(iconURL);

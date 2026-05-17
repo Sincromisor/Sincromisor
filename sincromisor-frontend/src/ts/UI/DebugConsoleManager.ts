@@ -12,6 +12,7 @@ import {
     type SincroPoseTargetPointSnapshot,
 } from "../FaceTracking/SincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../FaceTracking/SincroTrackerWorkerTypes";
+import { frontendLogger } from "../logging/appLogger";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
     type SincroPoseRetargetConfig,
@@ -748,7 +749,9 @@ export class DebugConsoleManager {
         cancelAnimationFrame(handle.frameId);
         handle.sourceNode.disconnect();
         handle.analyser.disconnect();
-        handle.audioContext.close().catch((error) => console.error(error));
+        handle.audioContext.close().catch((error) => {
+            frontendLogger.error("Failed to close audio meter context.", { error });
+        });
         if (target === "local") {
             this.localAudioMeterHandle = null;
             this.localAudioWarningState = "ok";

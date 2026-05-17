@@ -1,3 +1,4 @@
+import { frontendLogger } from "../ts/logging/appLogger";
 import { SincroVRM360Initializer } from "../ts/SincroVRM/SincroVRM360Initializer";
 import { DialogManager } from "../ts/UI/DialogManager";
 
@@ -8,6 +9,6 @@ window.addEventListener("load", () => {
     dialogManager.updateEnableCharacterGazeStatus(false);
     dialogManager.updateAutoMuteStatus();
     void SincroVRM360Initializer.bootstrap().catch((error) => {
-        console.error("Failed to bootstrap vrm360 page.", error);
+        frontendLogger.error("Failed to bootstrap vrm360 page.", { error });
     });
 });
