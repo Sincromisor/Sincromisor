@@ -73,6 +73,19 @@ export function LookingGlassSettingsSection({
 }: LookingGlassSettingsSectionProps) {
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
+            <LookingGlassSectionHeader showSectionTitle={showSectionTitle} />
+            <LookingGlassPresetButtons onApplySettings={onApplySettings} />
+            <LookingGlassNumericSettingsGrid
+                settings={settings}
+                onApplySettings={onApplySettings}
+            />
+        </div>
+    );
+}
+
+function LookingGlassSectionHeader({ showSectionTitle }: { showSectionTitle: boolean }) {
+    return (
+        <>
             {showSectionTitle ? (
                 <SettingsHelpLabel text="Looking Glass 設定" />
             ) : (
@@ -93,96 +106,138 @@ export function LookingGlassSettingsSection({
                 ピンボケ気味の場合は、まず <code>Target Z</code> と <code>Target Diam</code>{" "}
                 を少しずつ調整してください。
             </div>
-            {/* プリセットは初期位置合わせの近道。最終的な値は下の数値入力で追い込む。 */}
-            <div
-                style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: `${compactGapPx}px`,
-                    marginBottom: `${rowGapPx}px`,
-                }}
-            >
-                {LOOKING_GLASS_PRESETS.map((preset) => (
-                    <SettingsButton
-                        key={preset.label}
-                        type="button"
-                        onClick={() => onApplySettings(preset.values)}
-                    >
-                        {preset.label}
-                    </SettingsButton>
-                ))}
-            </div>
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: `${compactGapPx}px`,
-                }}
-            >
-                <NumericSettingField
-                    label="タイル高さ (Tile Height)"
-                    help={settingHelp.lgTileHeight}
-                    value={settings.lgTileHeight}
-                    min={256}
-                    max={2048}
-                    step={1}
-                    onChange={(value) => onApplySettings({ lgTileHeight: value })}
-                />
-                <NumericSettingField
-                    label="視差ビュー数 (Views)"
-                    help={settingHelp.lgNumViews}
-                    value={settings.lgNumViews}
-                    min={8}
-                    max={64}
-                    step={1}
-                    onChange={(value) => onApplySettings({ lgNumViews: value })}
-                />
-                <NumericSettingField
-                    label="注視高さ (Target Y)"
-                    help={settingHelp.lgTargetY}
-                    value={settings.lgTargetY}
-                    min={-2}
-                    max={4}
-                    step={0.05}
-                    onChange={(value) => onApplySettings({ lgTargetY: value })}
-                />
-                <NumericSettingField
-                    label="注視奥行き (Target Z)"
-                    help={settingHelp.lgTargetZ}
-                    value={settings.lgTargetZ}
-                    min={-1}
-                    max={2}
-                    step={0.05}
-                    onChange={(value) => onApplySettings({ lgTargetZ: value })}
-                />
-                <NumericSettingField
-                    label="注視範囲 (Target Diam)"
-                    help={settingHelp.lgTargetDiam}
-                    value={settings.lgTargetDiam}
-                    min={0.1}
-                    max={3}
-                    step={0.05}
-                    onChange={(value) => onApplySettings({ lgTargetDiam: value })}
-                />
-                <NumericSettingField
-                    label="奥行き強調 (Depthiness)"
-                    help={settingHelp.lgDepthiness}
-                    value={settings.lgDepthiness}
-                    min={0}
-                    max={4}
-                    step={0.05}
-                    onChange={(value) => onApplySettings({ lgDepthiness: value })}
-                />
-                <NumericSettingField
-                    label="縦FOV (FOV Y, deg)"
-                    help={settingHelp.lgFovyDeg}
-                    value={settings.lgFovyDeg}
-                    min={5}
-                    max={80}
-                    step={0.5}
-                    onChange={(value) => onApplySettings({ lgFovyDeg: value })}
-                />
-            </div>
+        </>
+    );
+}
+
+function LookingGlassPresetButtons({
+    onApplySettings,
+}: Pick<LookingGlassSettingsSectionProps, "onApplySettings">) {
+    return (
+        <div
+            style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: `${compactGapPx}px`,
+                marginBottom: `${rowGapPx}px`,
+            }}
+        >
+            {LOOKING_GLASS_PRESETS.map((preset) => (
+                <SettingsButton
+                    key={preset.label}
+                    type="button"
+                    onClick={() => onApplySettings(preset.values)}
+                >
+                    {preset.label}
+                </SettingsButton>
+            ))}
         </div>
+    );
+}
+
+function LookingGlassNumericSettingsGrid({
+    settings,
+    onApplySettings,
+}: Pick<LookingGlassSettingsSectionProps, "settings" | "onApplySettings">) {
+    return (
+        <div
+            style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: `${compactGapPx}px`,
+            }}
+        >
+            <LookingGlassDisplaySettingsFields
+                settings={settings}
+                onApplySettings={onApplySettings}
+            />
+            <LookingGlassTargetSettingsFields
+                settings={settings}
+                onApplySettings={onApplySettings}
+            />
+        </div>
+    );
+}
+
+function LookingGlassDisplaySettingsFields({
+    settings,
+    onApplySettings,
+}: Pick<LookingGlassSettingsSectionProps, "settings" | "onApplySettings">) {
+    return (
+        <>
+            <NumericSettingField
+                label="タイル高さ (Tile Height)"
+                help={settingHelp.lgTileHeight}
+                value={settings.lgTileHeight}
+                min={256}
+                max={2048}
+                step={1}
+                onChange={(value) => onApplySettings({ lgTileHeight: value })}
+            />
+            <NumericSettingField
+                label="視差ビュー数 (Views)"
+                help={settingHelp.lgNumViews}
+                value={settings.lgNumViews}
+                min={8}
+                max={64}
+                step={1}
+                onChange={(value) => onApplySettings({ lgNumViews: value })}
+            />
+            <NumericSettingField
+                label="奥行き強調 (Depthiness)"
+                help={settingHelp.lgDepthiness}
+                value={settings.lgDepthiness}
+                min={0}
+                max={4}
+                step={0.05}
+                onChange={(value) => onApplySettings({ lgDepthiness: value })}
+            />
+            <NumericSettingField
+                label="縦FOV (FOV Y, deg)"
+                help={settingHelp.lgFovyDeg}
+                value={settings.lgFovyDeg}
+                min={5}
+                max={80}
+                step={0.5}
+                onChange={(value) => onApplySettings({ lgFovyDeg: value })}
+            />
+        </>
+    );
+}
+
+function LookingGlassTargetSettingsFields({
+    settings,
+    onApplySettings,
+}: Pick<LookingGlassSettingsSectionProps, "settings" | "onApplySettings">) {
+    return (
+        <>
+            <NumericSettingField
+                label="注視高さ (Target Y)"
+                help={settingHelp.lgTargetY}
+                value={settings.lgTargetY}
+                min={-2}
+                max={4}
+                step={0.05}
+                onChange={(value) => onApplySettings({ lgTargetY: value })}
+            />
+            <NumericSettingField
+                label="注視奥行き (Target Z)"
+                help={settingHelp.lgTargetZ}
+                value={settings.lgTargetZ}
+                min={-1}
+                max={2}
+                step={0.05}
+                onChange={(value) => onApplySettings({ lgTargetZ: value })}
+            />
+            <NumericSettingField
+                label="注視範囲 (Target Diam)"
+                help={settingHelp.lgTargetDiam}
+                value={settings.lgTargetDiam}
+                min={0.1}
+                max={3}
+                step={0.05}
+                onChange={(value) => onApplySettings({ lgTargetDiam: value })}
+            />
+        </>
     );
 }
