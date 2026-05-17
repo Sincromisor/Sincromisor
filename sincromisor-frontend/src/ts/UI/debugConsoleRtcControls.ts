@@ -36,7 +36,7 @@ export class DebugConsoleRtcControls {
         this.params.updateSnapshot((snapshot) => updateRtcMetric(snapshot, key, value));
     }
 
-    pushTrendPoint(trendKey: string, value: number | null): void {
+    pushTrendPoint(trendKey: string, value: number | undefined): void {
         if (!isDebugConsoleTrendKey(trendKey)) {
             return;
         }

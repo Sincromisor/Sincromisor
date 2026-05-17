@@ -86,6 +86,11 @@
     - face / pose motion snapshot の `lastUpdatedAtMs` / `fallbackReason` / matrix / pose target の未観測座標を optional にし、tracker worker の pose 未返却と fallback reason も `undefined` へ寄せた。
     - `DialogManager` / `ConfigurationDialogSettingsPanel` / `TalkManager` / `UserMediaManager` / `silero-vad.worker` / VRM canvas sizing / motion debug の既定値用途を `??` または明示 helper へ置き換えた。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: VRMCharacter controller と RTC trend 診断の内部欠損表現を `undefined` へ追加整理した。
+    - 対象: `CharacterMotionOrchestrator` / `ArmBoneController` / `EyeBehaviorController` / `FaceEmotionController` / `FaceMorphController` / `HeadBoneController` / `DebugConsoleManager` / `debugConsoleRtcControls` / `debugConsoleRtcSnapshot` / `RTCTalkClient`
+    - idle / blink / speech gesture / emotion / mouth animation の内部タイマー・アクティブ状態を optional にし、three-vrm / WebRTC API 境界で受けた `null` は helper 内で `undefined` に寄せた。
+    - RTC trend point の「未観測値」を `undefined` に統一し、bitrate 計算キャッシュも optional に変更した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

@@ -52,8 +52,8 @@ export class RTCTalkClient {
     // セッションID取得前のcandidateを一時保管する。
     private pendingIceCandidates: Array<RTCIceCandidateInit | null> = [];
     private statsIntervalId: number | null = null;
-    private previousOutboundAudio: { bytes: number; timestamp: number } | null = null;
-    private previousInboundAudio: { bytes: number; timestamp: number } | null = null;
+    private previousOutboundAudio: { bytes: number; timestamp: number } | undefined;
+    private previousInboundAudio: { bytes: number; timestamp: number } | undefined;
     private currentRouteSignature: string | null = null;
     private iceFailureDiagnosticCaptured = false;
     private reconnectTimerId: number | null = null;
@@ -681,8 +681,8 @@ export class RTCTalkClient {
 
     private startStatsCollector(): void {
         this.stopStatsCollector();
-        this.previousOutboundAudio = null;
-        this.previousInboundAudio = null;
+        this.previousOutboundAudio = undefined;
+        this.previousInboundAudio = undefined;
         this.statsIntervalId = window.setInterval(() => {
             this.collectAndRenderStats().catch((e) => {
                 frontendLogger.error("RTC stats collection failed.", { error: e });
@@ -695,12 +695,12 @@ export class RTCTalkClient {
             clearInterval(this.statsIntervalId);
             this.statsIntervalId = null;
         }
-        this.previousOutboundAudio = null;
-        this.previousInboundAudio = null;
+        this.previousOutboundAudio = undefined;
+        this.previousInboundAudio = undefined;
     }
 
-    private formatBitrate(bitsPerSecond: number | null): string {
-        if (bitsPerSecond == null || !Number.isFinite(bitsPerSecond) || bitsPerSecond < 0) {
+    private formatBitrate(bitsPerSecond: number | undefined): string {
+        if (bitsPerSecond === undefined || !Number.isFinite(bitsPerSecond) || bitsPerSecond < 0) {
             return "-";
         }
         if (bitsPerSecond >= 1_000_000) {
@@ -712,18 +712,18 @@ export class RTCTalkClient {
         return `${bitsPerSecond.toFixed(0)} bps`;
     }
 
-    private candidateAddress(candidate: RtcStatsRecord | null): string {
+    private candidateAddress(candidate: RtcStatsRecord | undefined): string {
         return candidate?.address ?? candidate?.ip ?? "-";
     }
 
-    private candidatePort(candidate: RtcStatsRecord | null): string {
+    private candidatePort(candidate: RtcStatsRecord | undefined): string {
         if (candidate?.port === null || candidate?.port === undefined) {
             return "-";
         }
         return `${candidate.port}`;
     }
 
-    private candidateEndpointLabel(candidate: RtcStatsRecord | null): string {
+    private candidateEndpointLabel(candidate: RtcStatsRecord | undefined): string {
         if (!candidate) {
             return "-";
         }
@@ -737,20 +737,20 @@ export class RTCTalkClient {
     private calcBitrate(
         currentBytes: number | undefined,
         currentTimestamp: number | undefined,
-        prev: { bytes: number; timestamp: number } | null,
-    ): { bitrate: number | null; next: { bytes: number; timestamp: number } | null } {
-        if (currentBytes == null || currentTimestamp == null) {
-            return { bitrate: null, next: prev };
+        prev: { bytes: number; timestamp: number } | undefined,
+    ): { bitrate: number | undefined; next: { bytes: number; timestamp: number } | undefined } {
+        if (currentBytes === undefined || currentTimestamp === undefined) {
+            return { bitrate: undefined, next: prev };
         }
-        if (!prev) {
+        if (prev === undefined) {
             return {
-                bitrate: null,
+                bitrate: undefined,
                 next: { bytes: currentBytes, timestamp: currentTimestamp },
             };
         }
         const durationSec = (currentTimestamp - prev.timestamp) / 1000;
         if (durationSec <= 0) {
-            return { bitrate: null, next: prev };
+            return { bitrate: undefined, next: prev };
         }
         const bitrate = ((currentBytes - prev.bytes) * 8) / durationSec;
         return {
@@ -797,9 +797,9 @@ export class RTCTalkClient {
             }
         });
 
-        const outboundAudio = outboundAudioStats[0] ?? null;
-        const inboundAudio = inboundAudioStats[0] ?? null;
-        const selectedPair = selectedPairs[0] ?? null;
+        const outboundAudio = outboundAudioStats[0];
+        const inboundAudio = inboundAudioStats[0];
+        const selectedPair = selectedPairs[0];
         const outboundResult = this.calcBitrate(
             outboundAudio?.bytesSent,
             outboundAudio?.timestamp,
@@ -838,7 +838,7 @@ export class RTCTalkClient {
         );
         if (packetsLost == null || packetsReceived == null || packetsLost + packetsReceived <= 0) {
             this.logger.updateMetricValue("inboundPacketLossRate", "-");
-            this.logger.pushTrendPoint("trendInboundPacketLossRate", null);
+            this.logger.pushTrendPoint("trendInboundPacketLossRate", undefined);
         } else {
             const lossRate = (packetsLost / (packetsLost + packetsReceived)) * 100;
             this.logger.updateMetricValue("inboundPacketLossRate", `${lossRate.toFixed(2)}%`);
@@ -856,7 +856,7 @@ export class RTCTalkClient {
 
         if (selectedPair?.currentRoundTripTime == null) {
             this.logger.updateMetricValue("rtcRoundTripTime", "-");
-            this.logger.pushTrendPoint("trendRoundTripTime", null);
+            this.logger.pushTrendPoint("trendRoundTripTime", undefined);
         } else {
             this.logger.updateMetricValue(
                 "rtcRoundTripTime",
@@ -869,15 +869,15 @@ export class RTCTalkClient {
         }
         this.logger.updateMetricValue(
             "rtcAvailableOutgoingBitrate",
-            this.formatBitrate(selectedPair?.availableOutgoingBitrate ?? null),
+            this.formatBitrate(selectedPair?.availableOutgoingBitrate),
         );
 
         const localCandidate = selectedPair?.localCandidateId
             ? localCandidates.get(selectedPair.localCandidateId)
-            : null;
+            : undefined;
         const remoteCandidate = selectedPair?.remoteCandidateId
             ? remoteCandidates.get(selectedPair.remoteCandidateId)
-            : null;
+            : undefined;
         if (!localCandidate || !remoteCandidate) {
             this.logger.updateMetricValue("rtcCandidatePair", "-");
             this.logger.updateMetricValue("rtcTransportProtocol", "-");

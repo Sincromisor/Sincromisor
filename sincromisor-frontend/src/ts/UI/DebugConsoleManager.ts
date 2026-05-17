@@ -199,7 +199,7 @@ export class DebugConsoleManager {
         this.rtcControls.updateMetricValue(key, value);
     }
 
-    pushTrendPoint(trendKey: string, value: number | null): void {
+    pushTrendPoint(trendKey: string, value: number | undefined): void {
         this.rtcControls.pushTrendPoint(trendKey, value);
     }
 

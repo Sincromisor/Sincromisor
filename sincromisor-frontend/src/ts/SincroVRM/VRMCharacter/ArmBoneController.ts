@@ -15,7 +15,7 @@ import type { SincroPoseRetargetedArm, SincroPoseRetargetFrame } from "./SincroP
 export class ArmBoneController {
     private vrm: VRM;
     private lastSpeechBeatId = 0;
-    private speechGestureStartedAtSeconds: number | null = null;
+    private speechGestureStartedAtSeconds: number | undefined;
     private speechGestureIntensity = 0;
     private speechGestureSide: -1 | 1 = 1;
 
@@ -148,7 +148,7 @@ export class ArmBoneController {
     // 3D IK は到達位置を満たすため local quaternion を直接適用する。
     // Euler 加算系の idle / speech gesture は同じ腕では弱め、手首だけ表情付けとして残す。
     private applyIkQuaternion(
-        bone: Object3D | null,
+        bone: Object3D | undefined,
         arm: SincroPoseRetargetedArm | undefined,
         segment: "upper" | "lower",
     ): boolean {
@@ -164,7 +164,7 @@ export class ArmBoneController {
 
     // 手指は末端まで再帰的に回転を入れて、握り込み気味の形を作る。
     private updateLeftHand(
-        baseBone: Object3D | null,
+        baseBone: Object3D | undefined,
         wristSway: number,
         speechGesture: number,
         poseWristRoll: number,
@@ -190,7 +190,7 @@ export class ArmBoneController {
         });
     }
 
-    private updateLeftThumb(baseBone: Object3D | null, wristSway: number): void {
+    private updateLeftThumb(baseBone: Object3D | undefined, wristSway: number): void {
         if (!baseBone) {
             return;
         }
@@ -205,7 +205,7 @@ export class ArmBoneController {
     }
 
     private updateRightHand(
-        baseBone: Object3D | null,
+        baseBone: Object3D | undefined,
         wristSway: number,
         speechGesture: number,
         poseWristRoll: number,
@@ -231,7 +231,7 @@ export class ArmBoneController {
         });
     }
 
-    private updateRightThumb(baseBone: Object3D | null, wristSway: number): void {
+    private updateRightThumb(baseBone: Object3D | undefined, wristSway: number): void {
         if (!baseBone) {
             return;
         }
@@ -245,9 +245,8 @@ export class ArmBoneController {
         });
     }
 
-    private getNode(name: VRMHumanBoneName): Object3D | null {
-        const node: Object3D | null = this.vrm.humanoid.getNormalizedBoneNode(name);
-        return node;
+    private getNode(name: VRMHumanBoneName): Object3D | undefined {
+        return this.vrm.humanoid.getNormalizedBoneNode(name) ?? undefined;
     }
 
     private updateSpeechGesture(
@@ -276,7 +275,7 @@ export class ArmBoneController {
                 1,
             );
         }
-        if (this.speechGestureStartedAtSeconds == null) {
+        if (this.speechGestureStartedAtSeconds === undefined) {
             return 0;
         }
         const progress =
@@ -287,7 +286,7 @@ export class ArmBoneController {
             !snapshot.aiSpeech.isSpeaking ||
             !snapshot.motionPolicy.allowAiSpeechGesture
         ) {
-            this.speechGestureStartedAtSeconds = null;
+            this.speechGestureStartedAtSeconds = undefined;
             return 0;
         }
         return Math.sin(Math.PI * MathUtils.clamp(progress, 0, 1)) * this.speechGestureIntensity;

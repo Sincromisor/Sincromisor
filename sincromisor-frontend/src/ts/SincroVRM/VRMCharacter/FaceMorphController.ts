@@ -13,16 +13,18 @@ export class FaceMorphController {
     private readonly expressionManager: VRMExpressionManager;
     private readonly availableMouthPresets = new Set<VRMExpressionPresetName>();
     private currentMoraID: number = -1;
-    private activeMouth: {
-        preset: VRMExpressionPresetName;
-        startMs: number;
-        durationMs: number;
-    } | null = null;
+    private activeMouth:
+        | {
+              preset: VRMExpressionPresetName;
+              startMs: number;
+              durationMs: number;
+          }
+        | undefined;
 
     constructor(expressionManager: VRMExpressionManager) {
         this.expressionManager = expressionManager;
         for (const preset of MOUTH_PRESETS) {
-            if (this.expressionManager.getExpression(preset) != null) {
+            if (this.expressionManager.getExpression(preset) !== null) {
                 this.availableMouthPresets.add(preset);
             }
         }
@@ -37,7 +39,7 @@ export class FaceMorphController {
             sincroFace
         ) {
             this.currentMoraID = -1;
-            this.activeMouth = null;
+            this.activeMouth = undefined;
             this.applySincroMouth(sincroFace);
             return;
         }
@@ -46,10 +48,10 @@ export class FaceMorphController {
         if (
             !snapshot.motionPolicy.allowAiLipSync ||
             !snapshot.aiSpeech.isSpeaking ||
-            moraId == null
+            moraId === undefined
         ) {
             this.currentMoraID = -1;
-            this.activeMouth = null;
+            this.activeMouth = undefined;
             this.resetMouthPresets();
             return;
         }
@@ -128,7 +130,7 @@ export class FaceMorphController {
         const elapsedMs = nowMs - this.activeMouth.startMs;
         if (elapsedMs >= this.activeMouth.durationMs) {
             this.expressionManager.setValue(this.activeMouth.preset, 0.0);
-            this.activeMouth = null;
+            this.activeMouth = undefined;
             return;
         }
         const halfDurationMs = this.activeMouth.durationMs / 2;
