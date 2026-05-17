@@ -1,7 +1,7 @@
 # TASK-260517134247 frontend camelCase path rename plan
 
 - 作成日: 2026-05-17
-- ステータス: Open
+- ステータス: Done
 - 優先度: Medium
 - 種別: Task
 - 親タスク: `TASK-260517134241`
@@ -73,3 +73,38 @@ cd sincromisor-frontend
 npm run check:biome
 npm run build
 ```
+
+## 決定事項
+
+- URL ルートに対応する下記 top-level page directory は、ユーザー向け URL と Vite MPA entry の安定性を優先し、当面の規約例外とする。
+    - `src/simple-vrm/`
+    - `src/looking-glass-vrm/`
+    - `src/motion-debug/`
+    - `src/pose-landmarker-spike/`
+    - `src/vrm360/`
+- URL は維持し、各 page directory 内の entry file は camelCase へ移す。
+- `src/ts/**` / `src/react/**` の class / component 名由来の PascalCase ファイルと PascalCase directory は、URL 契約と独立しているため、次の rename 実装タスクで領域単位に移行する。
+- worker entry (`*.worker.ts`) は bundler 出力と runtime load path の確認が必要なため、通常 entry とは別の小タスクで扱う。
+
+## 実施内容
+
+- `src/ts/main-vrm.ts` を `src/ts/mainVrm.ts` へリネームした。
+- page directory 内の薄い HTML entry を camelCase へリネームした。
+    - `src/simple-vrm/main-react.tsx` -> `src/simple-vrm/mainReact.tsx`
+    - `src/looking-glass-vrm/main-react.tsx` -> `src/looking-glass-vrm/mainReact.tsx`
+    - `src/looking-glass-vrm/main-vrm-looking-glass.ts` -> `src/looking-glass-vrm/mainVrmLookingGlass.ts`
+    - `src/vrm360/main-react.tsx` -> `src/vrm360/mainReact.tsx`
+    - `src/vrm360/main-vrm360.ts` -> `src/vrm360/mainVrm360.ts`
+- 対応する HTML script path を追従した。
+- 画面 URL は変更していないため、endpoint / JSON / 再デプロイ手順への追加影響はない。
+
+## 確認結果
+
+```sh
+cd sincromisor-frontend
+npm run check:biome
+npm run build
+```
+
+- `npm run check:biome`: 成功
+- `npm run build`: 成功

@@ -14,16 +14,16 @@ PoC では下記 2 軸を最優先する。
 
 ## 1. Python 型運用
 
-| ルール                                                         | 強制度 | 補足                                                                 |
-| -------------------------------------------------------------- | ------ | -------------------------------------------------------------------- |
-| 公開関数 / メソッドの引数・戻り値型を明示                     | hard   | `__init__` は `-> None` を明示                                       |
-| `Any` 禁止。外部 I/O は `object` で受けて Pydantic parse       | hard   | ライブラリ都合で必要な場合は `# reason:` 必須                       |
-| `cast()` 禁止                                                  | hard   | ガード節 / `isinstance` / Pydantic model で潰す                      |
-| `# type: ignore` / `# ty: ignore` 禁止                         | hard   | 使う場合は rule 指定 + `# reason: ... / 解消条件: ...` 必須          |
-| `Optional[T]` ではなく `T | None` を使う                       | hard   | Python 3.12 前提                                                     |
-| `list` / `dict` / `tuple` は要素型まで書く                     | soft   | 例: `list[ChatMessage]` / `dict[str, object]`                        |
-| `Callable` / `Protocol` は境界が読みにくい場合だけ使う         | soft   | 抽象化のための抽象化を避ける                                        |
-| `assert` を外部 I/O validation に使わない                      | hard   | `if not ...: raise ValueError(...)` または Pydantic validation       |
+| ルール                                                   | 強制度 | 補足                                                           |
+| -------------------------------------------------------- | ------ | -------------------------------------------------------------- |
+| 公開関数 / メソッドの引数・戻り値型を明示                | hard   | `__init__` は `-> None` を明示                                 |
+| `Any` 禁止。外部 I/O は `object` で受けて Pydantic parse | hard   | ライブラリ都合で必要な場合は `# reason:` 必須                  |
+| `cast()` 禁止                                            | hard   | ガード節 / `isinstance` / Pydantic model で潰す                |
+| `# type: ignore` / `# ty: ignore` 禁止                   | hard   | 使う場合は rule 指定 + `# reason: ... / 解消条件: ...` 必須    |
+| `Optional[T]` ではなく `T \| None` を使う                | hard   | Python 3.12 前提                                               |
+| `list` / `dict` / `tuple` は要素型まで書く               | soft   | 例: `list[ChatMessage]` / `dict[str, object]`                  |
+| `Callable` / `Protocol` は境界が読みにくい場合だけ使う   | soft   | 抽象化のための抽象化を避ける                                   |
+| `assert` を外部 I/O validation に使わない                | hard   | `if not ...: raise ValueError(...)` または Pydantic validation |
 
 **Why**: `Any` / `cast()` / 雑な `dict` は「型は通っているが実体が違う」状態を作り、debug を最も困難にする。Python は実行時に壊れるまで検出できないため、境界で Pydantic による検証を行い、内側は型が読める状態を維持する。
 
@@ -172,16 +172,16 @@ PoC では下記 2 軸を最優先する。
 
 ## 11. 言語ポリシー
 
-| 対象                             | 言語                                                                                 |
-| -------------------------------- | ------------------------------------------------------------------------------------ |
-| identifier(変数 / 関数 / 型)     | 英語                                                                                 |
-| ログ / Error message             | 英語(運用 / 検索しやすさ)                                                           |
-| ソースコード内コメント           | 日本語(AGENTS.md と整合)                                                            |
-| docstring                        | 日本語。公開 API / 外部利用を想定する package は英語も可                            |
-| ドキュメント (`documents/**`)    | 日本語                                                                               |
-| ユーザー向け文言                 | 日本語                                                                               |
-| Pydantic field description       | 日本語または英語。ユーザー表示用は日本語、開発者向け診断は英語でも可                |
-| コミットメッセージ               | 日本語可(type prefix は英語 — `feat:` / `fix:` / `docs:` / `chore:` / `refactor:` / `test:`) |
+| 対象                          | 言語                                                                                         |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| identifier(変数 / 関数 / 型)  | 英語                                                                                         |
+| ログ / Error message          | 英語(運用 / 検索しやすさ)                                                                    |
+| ソースコード内コメント        | 日本語(AGENTS.md と整合)                                                                     |
+| docstring                     | 日本語。公開 API / 外部利用を想定する package は英語も可                                     |
+| ドキュメント (`documents/**`) | 日本語                                                                                       |
+| ユーザー向け文言              | 日本語                                                                                       |
+| Pydantic field description    | 日本語または英語。ユーザー表示用は日本語、開発者向け診断は英語でも可                         |
+| コミットメッセージ            | 日本語可(type prefix は英語 — `feat:` / `fix:` / `docs:` / `chore:` / `refactor:` / `test:`) |
 
 ## 12. その他の負債抑制ルール
 

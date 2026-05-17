@@ -1,7 +1,7 @@
 # TASK-260517134241 frontend coding standard refactor epic
 
 - 作成日: 2026-05-17
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 - 種別: Epic
 
@@ -78,3 +78,23 @@ cd sincromisor-frontend
 npm run build
 npm run check
 ```
+
+## 完了時点の結果
+
+- 子タスク `TASK-260517134242` から `TASK-260517134248` はすべて `done` へ移動済み。
+- `npm run test` を導入し、RTC runtime boundary schema の最小テストを追加した。
+- URL ルートに関係する page directory は当面の規約例外として明示し、低リスクな entry file 名を camelCase へ移行した。
+- 画面 URL / endpoint / JSON payload 契約の変更は行っていない。
+
+## 完了確認
+
+```sh
+cd sincromisor-frontend
+npm run test
+npm run build
+npm run check
+```
+
+- `npm run test`: 成功
+- `npm run build`: 成功
+- `npm run check`: 成功

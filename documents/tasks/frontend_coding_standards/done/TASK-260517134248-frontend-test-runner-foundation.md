@@ -1,7 +1,7 @@
 # TASK-260517134248 frontend test runner foundation
 
 - 作成日: 2026-05-17
-- ステータス: Open
+- ステータス: Done
 - 優先度: Low
 - 種別: Task
 - 親タスク: `TASK-260517134241`
@@ -63,3 +63,23 @@ npm run test
 npm run build
 npm run check
 ```
+
+## 実施内容
+
+- Vite / TypeScript と相性のよい test runner として Vitest を devDependency に追加した。
+- `npm run test` script を追加した。
+- `src/ts/RTC/__tests__/rtcBoundarySchema.test.ts` を追加し、RTC config / offer response / ICE candidate response / DataChannel payload parse の最小テストを追加した。
+- テストのためだけの production export 追加は行っていない。
+
+## 確認結果
+
+```sh
+cd sincromisor-frontend
+npm run test
+npm run build
+npm run check
+```
+
+- `npm run test`: 1 ファイル / 8 テスト成功
+- `npm run build`: 成功
+- `npm run check`: 成功
