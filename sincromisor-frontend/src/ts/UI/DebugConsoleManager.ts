@@ -5,7 +5,7 @@ import type {
     SincroPoseRetargetConfig,
     SincroPoseRetargetFrame,
 } from "../SincroVRM/VRMCharacter/SincroPoseRetargeter";
-import { DebugConsoleAudioMeter } from "./debugConsoleAudioMeter";
+import { createDebugConsoleAudioMeter } from "./debugConsoleAudioMeterFactory";
 import {
     type RuntimeAudioConstraintApplyStatus,
     type RuntimeAudioConstraintKey,
@@ -19,6 +19,7 @@ import {
     updateAudioVadState,
     updateAudioVadThresholdMode,
 } from "./debugConsoleAudioSnapshot";
+import { DebugConsoleEventHub } from "./debugConsoleEventHub";
 import {
     updateGazeEyeStatus,
     updateGazeFaceX,
@@ -83,65 +84,13 @@ export class DebugConsoleManager {
     private static instance: DebugConsoleManager;
 
     private snapshot: DebugConsoleSnapshot = createDefaultSnapshot();
-    private readonly listeners = new Set<(event: DebugConsoleManagerEvent) => void>();
-    private readonly snapshotListeners = new Set<() => void>();
+    private readonly eventHub = new DebugConsoleEventHub();
     private readonly localAudioConstraintApplyState: Partial<
         Record<RuntimeAudioConstraintKey, RuntimeAudioConstraintApplyStatus>
     > = {};
-    private readonly audioMeter = new DebugConsoleAudioMeter({
-        onLocalReset: () => {
-            this.updateSnapshot((snapshot) => ({
-                ...snapshot,
-                audio: {
-                    ...snapshot.audio,
-                    localLevel: 0,
-                    localRms: 0,
-                    localPeak: 0,
-                    localWarningState: "ok",
-                    localWarningText: "Normal",
-                },
-            }));
-            this.updateLocalVadState(false);
-        },
-        onRemoteReset: () => {
-            this.updateSnapshot((snapshot) => ({
-                ...snapshot,
-                audio: {
-                    ...snapshot.audio,
-                    remoteLevel: 0,
-                },
-            }));
-        },
-        onLocalStats: ({ level, rms, peak }) => {
-            this.updateSnapshot((snapshot) => ({
-                ...snapshot,
-                audio: {
-                    ...snapshot.audio,
-                    localLevel: level,
-                    localRms: rms,
-                    localPeak: peak,
-                },
-            }));
-        },
-        onRemoteLevel: (level) => {
-            this.updateSnapshot((snapshot) => ({
-                ...snapshot,
-                audio: {
-                    ...snapshot.audio,
-                    remoteLevel: level,
-                },
-            }));
-        },
-        onLocalWarning: ({ state, text }) => {
-            this.updateSnapshot((snapshot) => ({
-                ...snapshot,
-                audio: {
-                    ...snapshot.audio,
-                    localWarningState: state,
-                    localWarningText: text,
-                },
-            }));
-        },
+    private readonly audioMeter = createDebugConsoleAudioMeter({
+        updateSnapshot: (updater) => this.updateSnapshot(updater),
+        updateLocalVadState: (isSpeech) => this.updateLocalVadState(isSpeech),
     });
     private rtcStopHandler: () => void = () => {};
     private onLocalAudioFilterChange: (config: AudioFilterControlConfig) => void = () => {};
@@ -169,17 +118,11 @@ export class DebugConsoleManager {
     }
 
     subscribe(listener: (event: DebugConsoleManagerEvent) => void): () => void {
-        this.listeners.add(listener);
-        return () => {
-            this.listeners.delete(listener);
-        };
+        return this.eventHub.subscribeEvent(listener);
     }
 
     subscribeSnapshot(listener: () => void): () => void {
-        this.snapshotListeners.add(listener);
-        return () => {
-            this.snapshotListeners.delete(listener);
-        };
+        return this.eventHub.subscribeSnapshot(listener);
     }
 
     getSnapshot(): DebugConsoleSnapshot {
@@ -492,14 +435,10 @@ export class DebugConsoleManager {
         updater: (snapshot: DebugConsoleSnapshot) => DebugConsoleSnapshot,
     ): void {
         this.snapshot = updater(this.snapshot);
-        for (const listener of this.snapshotListeners) {
-            listener();
-        }
+        this.eventHub.emitSnapshotChanged();
     }
 
     private emitEvent(event: DebugConsoleManagerEvent): void {
-        for (const listener of this.listeners) {
-            listener(event);
-        }
+        this.eventHub.emitEvent(event);
     }
 }

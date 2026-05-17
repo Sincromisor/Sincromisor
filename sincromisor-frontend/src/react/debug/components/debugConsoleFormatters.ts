@@ -12,8 +12,8 @@ export function metricPercent(value: number): string {
     return `${(Math.max(0, Math.min(1, value)) * 100).toFixed(1)}%`;
 }
 
-export function vadProbabilityLabel(value: number | null): string {
-    if (value == null || !Number.isFinite(value)) {
+export function vadProbabilityLabel(value: number | undefined): string {
+    if (value === undefined || !Number.isFinite(value)) {
         return "-";
     }
     return `${(Math.max(0, Math.min(1, value)) * 100).toFixed(1)}%`;

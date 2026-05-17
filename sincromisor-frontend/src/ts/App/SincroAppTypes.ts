@@ -154,7 +154,7 @@ export type SincroAppEvent =
     | {
           type: "learned_vad_state";
           status: string;
-          probability: number | null;
+          probability?: number;
       }
     | {
           type: "telop_message";

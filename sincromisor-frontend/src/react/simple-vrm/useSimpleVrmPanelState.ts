@@ -166,14 +166,8 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
     const [vadState, setVadState] = useState<"unknown" | "speech" | "silence">("unknown");
     const [learnedVad, setLearnedVad] = useState<PanelLearnedVadState>({
         status: "idle",
-        probability: null,
     });
-    const [gaze, setGaze] = useState<PanelGazeState>({
-        faceX: null,
-        faceY: null,
-        facing: null,
-        watching: null,
-    });
+    const [gaze, setGaze] = useState<PanelGazeState>({});
     const [rtcEvents, setRtcEvents] = useState<string[]>([]);
     const [rtcState, setRtcState] = useState<PanelRtcState>({
         iceConnectionState: "-",

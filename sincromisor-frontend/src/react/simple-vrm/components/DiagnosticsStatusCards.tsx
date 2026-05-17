@@ -38,7 +38,7 @@ export function DiagnosticsStatusCards({
             <StatusCard label="VAD" value={vadState} />
             <StatusCard
                 label="Gaze"
-                value={gaze.watching == null ? "-" : gaze.watching ? "注視" : "外れ"}
+                value={gaze.watching === undefined ? "-" : gaze.watching ? "注視" : "外れ"}
             />
             <StatusCard label="顔X (faceX)" value={formatMaybeNumber(gaze.faceX)} />
             <StatusCard label="顔Y (faceY)" value={formatMaybeNumber(gaze.faceY)} />

@@ -159,7 +159,6 @@ export function createDefaultSnapshot(): DebugConsoleSnapshot {
             learnedVadTuning: { ...DEFAULT_LEARNED_VAD_TUNING },
             learnedVadReport: {
                 status: "idle",
-                probability: null,
             },
             constraintStatus: {
                 text: "NS/EC/AGC: 未確認",

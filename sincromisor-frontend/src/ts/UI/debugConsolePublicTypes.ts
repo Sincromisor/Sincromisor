@@ -8,7 +8,7 @@ export type VadThresholdMode = "manual" | "auto" | "learned";
 
 export type LearnedVadUiReport = {
     status: "idle" | "loading" | "ready" | "running" | "fallback" | "unavailable";
-    probability: number | null;
+    probability?: number;
     txFrames?: number;
     rxPredictions?: number;
     message?: string;

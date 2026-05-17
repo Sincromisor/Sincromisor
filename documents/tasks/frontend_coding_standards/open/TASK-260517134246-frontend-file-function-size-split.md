@@ -86,6 +86,11 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 追加: `src/ts/UI/debugConsoleGazeSnapshot.ts`
     - `DebugConsoleManager.ts` は 696 行から 505 行まで縮小し、音声設定 clamp / constraint status 表示文字列 / gaze 停止時の motion snapshot 初期化を純粋 helper へ移した。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `DebugConsoleManager.ts` から購読管理と AudioMeter callback 配線を分割した。
+    - 追加: `src/ts/UI/debugConsoleEventHub.ts`
+    - 追加: `src/ts/UI/debugConsoleAudioMeterFactory.ts`
+    - `DebugConsoleManager.ts` は 505 行から 444 行まで縮小し、snapshot/event listener 管理と Web Audio meter 低レベル更新処理を外出しした。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
