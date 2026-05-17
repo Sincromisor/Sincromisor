@@ -7,10 +7,30 @@ import type {
 } from "../SincroVRM/VRMCharacter/SincroPoseRetargeter";
 import { DebugConsoleAudioMeter } from "./debugConsoleAudioMeter";
 import {
+    type RuntimeAudioConstraintApplyStatus,
+    type RuntimeAudioConstraintKey,
+    updateAudioConstraintStatus,
+    updateAudioFilterConfig,
+    updateAudioLearnedVadPerformanceMode,
+    updateAudioLearnedVadReport,
+    updateAudioLearnedVadStrictMode,
+    updateAudioLearnedVadTuning,
+    updateAudioVadRmsThreshold,
+    updateAudioVadState,
+    updateAudioVadThresholdMode,
+} from "./debugConsoleAudioSnapshot";
+import {
+    updateGazeEyeStatus,
+    updateGazeFaceX,
+    updateGazeFaceY,
+    updateGazeFacing,
+    updateGazePaused,
+    updateGazeTargetDebug,
+    updateGazeTrackingTuning,
+} from "./debugConsoleGazeSnapshot";
+import {
     cloneSincroFaceMotionSnapshot,
     cloneSincroPoseMotionSnapshot,
-    createDefaultFaceMotionSnapshot,
-    createDefaultPoseMotionSnapshot,
 } from "./debugConsoleMotionSnapshot";
 import type {
     AudioFilterControlConfig,
@@ -56,17 +76,6 @@ export {
     DEBUG_CONSOLE_TREND_MAX_VALUES,
 } from "./debugConsolePublicTypes";
 export type { DebugConsoleSnapshot } from "./debugConsoleSnapshot";
-
-type RuntimeAudioConstraintKey = "autoGainControl" | "noiseSuppression" | "echoCancellation";
-
-type RuntimeAudioConstraintApplyStatus = {
-    key: RuntimeAudioConstraintKey;
-    enabled: boolean;
-    status: "pending" | "applied" | "failed";
-    message?: string;
-};
-
-type ConstraintStatusTone = "" | "state-ok" | "state-warn" | "state-error";
 
 // DOM 主導だった旧 Debug Console を、React view が購読する診断 snapshot 供給元へ縮退する。
 // 既存 public API は維持し、RTC / Audio / Gaze 側からの呼び出し先は変えずに移行を進める。
@@ -186,13 +195,7 @@ export class DebugConsoleManager {
     }
 
     setLocalVadThresholdMode(mode: VadThresholdMode): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            audio: {
-                ...snapshot.audio,
-                vadThresholdMode: mode,
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateAudioVadThresholdMode(snapshot, mode));
     }
 
     setLocalVadThresholdModeChangeCallback(callback: (mode: VadThresholdMode) => void): void {
@@ -211,17 +214,7 @@ export class DebugConsoleManager {
     }
 
     setLocalLearnedVadTuning(config: LearnedVadTuningUiConfig): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            audio: {
-                ...snapshot.audio,
-                learnedVadTuning: {
-                    ...config,
-                    onConsecutiveFrames: Math.max(1, Math.round(config.onConsecutiveFrames)),
-                    offConsecutiveFrames: Math.max(1, Math.round(config.offConsecutiveFrames)),
-                },
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateAudioLearnedVadTuning(snapshot, config));
     }
 
     applyLocalLearnedVadTuning(config: LearnedVadTuningUiConfig): void {
@@ -230,13 +223,7 @@ export class DebugConsoleManager {
     }
 
     setLocalLearnedVadPerformanceMode(mode: LearnedVadPerformanceMode): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            audio: {
-                ...snapshot.audio,
-                learnedVadPerformanceMode: mode,
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateAudioLearnedVadPerformanceMode(snapshot, mode));
     }
 
     setLocalLearnedVadPerformanceModeChangeCallback(
@@ -251,13 +238,7 @@ export class DebugConsoleManager {
     }
 
     setLocalLearnedVadStrictMode(enabled: boolean): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            audio: {
-                ...snapshot.audio,
-                learnedVadStrictMode: enabled,
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateAudioLearnedVadStrictMode(snapshot, enabled));
     }
 
     setLocalLearnedVadStrictModeChangeCallback(callback: (enabled: boolean) => void): void {
@@ -270,17 +251,7 @@ export class DebugConsoleManager {
     }
 
     setLocalAudioFilterConfig(config: AudioFilterControlConfig): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            audio: {
-                ...snapshot.audio,
-                filterConfig: {
-                    highpassHz: Math.max(60, Math.min(300, Math.round(config.highpassHz))),
-                    lowpassEnabled: !!config.lowpassEnabled,
-                    lowpassHz: Math.max(2500, Math.min(10000, Math.round(config.lowpassHz))),
-                },
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateAudioFilterConfig(snapshot, config));
     }
 
     setLocalAudioFilterChangeCallback(callback: (config: AudioFilterControlConfig) => void): void {
@@ -293,14 +264,7 @@ export class DebugConsoleManager {
     }
 
     setLocalVadRmsThreshold(value: number): void {
-        const clamped = Math.max(0.005, Math.min(0.2, value));
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            audio: {
-                ...snapshot.audio,
-                vadRmsThreshold: clamped,
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateAudioVadRmsThreshold(snapshot, value));
     }
 
     setLocalVadRmsThresholdChangeCallback(callback: (threshold: number) => void): void {
@@ -313,24 +277,12 @@ export class DebugConsoleManager {
     }
 
     updateLocalVadState(isSpeech: boolean): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            audio: {
-                ...snapshot.audio,
-                localVadIsSpeech: isSpeech,
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateAudioVadState(snapshot, isSpeech));
         this.emitEvent({ type: "local_vad_state", isSpeech });
     }
 
     updateLearnedVadState(report: LearnedVadUiReport): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            audio: {
-                ...snapshot.audio,
-                learnedVadReport: { ...report },
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateAudioLearnedVadReport(snapshot, report));
         this.emitEvent({ type: "learned_vad_state", report });
     }
 
@@ -340,63 +292,9 @@ export class DebugConsoleManager {
     }
 
     private renderLocalAudioConstraintApplyStatus(): void {
-        const order: RuntimeAudioConstraintKey[] = [
-            "noiseSuppression",
-            "echoCancellation",
-            "autoGainControl",
-        ];
-        const labels: Record<RuntimeAudioConstraintKey, string> = {
-            noiseSuppression: "NS",
-            echoCancellation: "EC",
-            autoGainControl: "AGC",
-        };
-        const text = order
-            .map((key) => {
-                const state = this.localAudioConstraintApplyState[key];
-                if (!state) {
-                    return `${labels[key]}:未確認`;
-                }
-                if (state.status === "pending") {
-                    return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(次回開始時)`;
-                }
-                if (state.status === "applied") {
-                    return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(反映)`;
-                }
-                return `${labels[key]}:${state.enabled ? "ON" : "OFF"}(未反映)`;
-            })
-            .join(" / ");
-        const title = order
-            .map((key) => {
-                const state = this.localAudioConstraintApplyState[key];
-                if (!state?.message) {
-                    return "";
-                }
-                return `${labels[key]}: ${state.message}`;
-            })
-            .filter((line) => line.length > 0)
-            .join("\n");
-        const hasFailed = order.some(
-            (key) => this.localAudioConstraintApplyState[key]?.status === "failed",
+        this.updateSnapshot((snapshot) =>
+            updateAudioConstraintStatus(snapshot, this.localAudioConstraintApplyState),
         );
-        const hasPending = order.some(
-            (key) => this.localAudioConstraintApplyState[key]?.status === "pending",
-        );
-        const tone: ConstraintStatusTone = hasFailed
-            ? "state-error"
-            : hasPending
-              ? "state-warn"
-              : "state-ok";
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            audio: {
-                ...snapshot.audio,
-                constraintStatus: {
-                    text,
-                    title,
-                    tone,
-                },
-            },
-        }));
     }
 
     setLocalAudioTrack(track: MediaStreamTrack): void {
@@ -478,57 +376,27 @@ export class DebugConsoleManager {
     }
 
     updateFaceXLog(value: number): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            gaze: {
-                ...snapshot.gaze,
-                faceX: `${value}`,
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateGazeFaceX(snapshot, value));
         this.emitEvent({ type: "face_x", value });
     }
 
     updateFaceYLog(value: number): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            gaze: {
-                ...snapshot.gaze,
-                faceY: `${value}`,
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateGazeFaceY(snapshot, value));
         this.emitEvent({ type: "face_y", value });
     }
 
     updateFacing(value: number): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            gaze: {
-                ...snapshot.gaze,
-                facing: `${value}`,
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateGazeFacing(snapshot, value));
         this.emitEvent({ type: "facing", value });
     }
 
     updateCharacterEyeStatus(watching: boolean): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            gaze: {
-                ...snapshot.gaze,
-                status: watching ? "みてる" : "みてない",
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateGazeEyeStatus(snapshot, watching));
         this.emitEvent({ type: "character_eye_status", watching });
     }
 
     updateCharacterGazeTargetDebug(message: string): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            gaze: {
-                ...snapshot.gaze,
-                targetDebug: message,
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateGazeTargetDebug(snapshot, message));
         this.emitEvent({ type: "gaze_target_debug", message });
     }
 
@@ -594,70 +462,11 @@ export class DebugConsoleManager {
     }
 
     setCharacterGazePaused(paused: boolean): void {
-        if (paused) {
-            this.updateSnapshot((snapshot) => ({
-                ...snapshot,
-                gaze: {
-                    ...snapshot.gaze,
-                    paused: true,
-                    faceX: "停止中",
-                    faceY: "停止中",
-                    facing: "停止中",
-                    status: "停止中",
-                    targetDebug: "停止中",
-                },
-                sincroMotion: {
-                    face: {
-                        ...createDefaultFaceMotionSnapshot(),
-                        fallbackReason: "tracking_paused",
-                        lastUpdatedAtMs: performance.now(),
-                    },
-                    pose: {
-                        ...createDefaultPoseMotionSnapshot(),
-                        fallbackReason: "tracking_paused",
-                        lastUpdatedAtMs: performance.now(),
-                    },
-                    tracker: {
-                        ...snapshot.sincroMotion.tracker,
-                        status: "idle",
-                    },
-                    poseRetarget: snapshot.sincroMotion.poseRetarget,
-                    poseRetargetRuntime: {
-                        ...snapshot.sincroMotion.poseRetargetRuntime,
-                        active: false,
-                        ikMode: "fallback",
-                        fallbackReason: "tracking_paused",
-                        anchor: {
-                            ...snapshot.sincroMotion.poseRetargetRuntime.anchor,
-                            active: false,
-                            reason: "tracking_paused",
-                        },
-                    },
-                },
-            }));
-            return;
-        }
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            gaze: {
-                ...snapshot.gaze,
-                paused: false,
-                status: "みてない",
-                targetDebug: "-",
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateGazePaused(snapshot, paused));
     }
 
     setCharacterGazeTrackingTuning(config: CharacterGazeTrackingTuningUiConfig): void {
-        this.updateSnapshot((snapshot) => ({
-            ...snapshot,
-            gaze: {
-                ...snapshot.gaze,
-                tuning: {
-                    ...config,
-                },
-            },
-        }));
+        this.updateSnapshot((snapshot) => updateGazeTrackingTuning(snapshot, config));
     }
 
     setCharacterGazeTrackingTuningChangeCallback(
