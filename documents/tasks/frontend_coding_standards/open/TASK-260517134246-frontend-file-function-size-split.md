@@ -284,6 +284,15 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 分割後の最大ファイルは `CharacterGazePredictionLoop.ts` 298 行で、対象領域の 60 行超関数は解消した。
     - Gaze 内部の責務分割のみで、endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: `useConfigurationDialogSettingsState.ts` から dialog 初期値、状態 group、controller event 購読、action facade を分割した。
+    - 追加: `src/react/dialog/configurationDialogStateDefaults.ts`
+    - 追加: `src/react/dialog/configurationDialogStateGroups.ts`
+    - 追加: `src/react/dialog/configurationDialogEventSubscription.ts`
+    - 追加: `src/react/dialog/configurationDialogActions.ts`
+    - `useConfigurationDialogSettingsState.ts` は 361 行から 53 行まで縮小し、dialog 設定 hook の orchestration だけに寄せた。
+    - 分割後の対象ファイルは最大 `configurationDialogStateGroups.ts` 153 行で、すべて 200 行 soft 閾値以下に収めた。
+    - 初回セットアップ UI の表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
