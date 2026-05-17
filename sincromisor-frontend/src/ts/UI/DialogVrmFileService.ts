@@ -17,13 +17,13 @@ export class DialogVrmFileService {
         await cache.put(DialogVrmFileService.vrmFileCacheKey, new Response(file));
     }
 
-    async loadVrmFileBlob(): Promise<Blob | null> {
+    async loadVrmFileBlob(): Promise<Blob | undefined> {
         const cache = await caches.open(DialogVrmFileService.fileCacheName);
         const response: Response | undefined = await cache.match(
             DialogVrmFileService.vrmFileCacheKey,
         );
         if (!response) {
-            return null;
+            return undefined;
         }
         // 呼び出し側で ObjectURL 化して scene に渡す。
         return response.blob();
@@ -36,13 +36,13 @@ export class DialogVrmFileService {
     }
 
     // 起動時に前回使用したサムネイルを復元する。
-    async loadVrmThumbnailBlob(): Promise<Blob | null> {
+    async loadVrmThumbnailBlob(): Promise<Blob | undefined> {
         const cache = await caches.open(DialogVrmFileService.fileCacheName);
         const response: Response | undefined = await cache.match(
             DialogVrmFileService.vrmThumbnailCacheKey,
         );
         if (!response) {
-            return null;
+            return undefined;
         }
         return response.blob();
     }

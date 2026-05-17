@@ -17,7 +17,7 @@ export type SincroAppDialogFacade = {
     enableCharacter(): boolean;
     enableVR(): boolean;
     enableInspector(): boolean;
-    loadVrmThumbnailBlob(): Promise<Blob | null>;
+    loadVrmThumbnailBlob(): Promise<Blob | undefined>;
     saveVrmThumbnailBlob(blob: Blob): Promise<void>;
     getSelectedVrmUrl(): string;
 

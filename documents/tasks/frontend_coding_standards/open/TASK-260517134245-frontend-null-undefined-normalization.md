@@ -99,6 +99,11 @@
     - 対象: `PoseLandmarkerSpike` / `OneEuroFilter` / `pose-landmarker-spike/main.ts` / `motion-debug/**`
     - spike metrics の未観測値、OneEuroFilter の前回値、motion-debug の capture / active stream 状態を optional にし、`JSON.stringify(value, null, 2)` と `srcObject = null` は境界・formatter として残した。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: CharacterGaze selector / VRM thumbnail cache / 一部 meter handle の内部欠損表現を `undefined` へ追加整理した。
+    - 対象: `CharacterGaze` / `FaceTargetSelector` / `VideoInputManager` / `DialogVrmFileService` / `DialogVrmWorkflowService` / `SincroVRMInitializer` / `VRMScene` / `VRMCharacterManager` / `DebugConsoleAudioMeter` / `LearnedVadWorkerClient`
+    - 顔ターゲット未選択、animation frame id、callback、カメラ track、VRM cache miss、生成済み system icon URL、active scene、audio meter / learned VAD worker handle を optional にした。
+    - `querySelector` / `srcObject = null` / `canvas.toBlob` など DOM・Canvas 境界由来の `null` は維持した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

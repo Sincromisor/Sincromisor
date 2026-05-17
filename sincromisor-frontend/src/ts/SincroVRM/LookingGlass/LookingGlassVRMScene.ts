@@ -21,7 +21,7 @@ export class LookingGlassVRMScene extends VRMScene {
         characterControlLayer: HTMLElement,
         vrmUrl: string,
         xrMode: boolean = false,
-        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void,
+        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void,
     ) {
         super(canvasRoot, characterControlLayer, vrmUrl, xrMode, onThumbnailLoaded);
         // LG の WebXR 描画経路は vrm360 で使っていた renderer 設定に依存するケースがあるため互換設定を維持する。

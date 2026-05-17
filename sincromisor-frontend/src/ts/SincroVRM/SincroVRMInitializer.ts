@@ -14,9 +14,9 @@ export class SincroVRMInitializer {
     protected readonly characterControlLayer: HTMLDivElement;
     protected readonly appController: SincroAppController;
     // 自前生成したblob URLのみ解放対象として保持する。
-    private generatedSystemIconURL: string | null = null;
+    private generatedSystemIconURL?: string;
     private appUiStarted = false;
-    protected activeScene: VRMScene | null = null;
+    protected activeScene?: VRMScene;
 
     public static async bootstrap<TInitializer extends SincroVRMInitializer>(
         this: new () => TInitializer,
@@ -121,7 +121,7 @@ export class SincroVRMInitializer {
         // VRMロード完了前でもチャット system icon を出せるよう、キャッシュ済みサムネイルを先に復元する。
         this.appController.dialog
             .loadVrmThumbnailBlob()
-            .then((blob: Blob | null) => {
+            .then((blob: Blob | undefined) => {
                 if (!blob) {
                     return;
                 }
@@ -185,7 +185,7 @@ export class SincroVRMInitializer {
         */
     }
 
-    protected updateSystemIconFromThumbnail(thumbnailImage: HTMLImageElement | null): void {
+    protected updateSystemIconFromThumbnail(thumbnailImage: HTMLImageElement | undefined): void {
         if (!thumbnailImage) {
             return;
         }
@@ -248,7 +248,7 @@ export class SincroVRMInitializer {
             return;
         }
         URL.revokeObjectURL(this.generatedSystemIconURL);
-        this.generatedSystemIconURL = null;
+        this.generatedSystemIconURL = undefined;
     }
 
     // Character ON/OFF は起動後の設定変更でも見た目に反映されるよう、scene へ追従させる。

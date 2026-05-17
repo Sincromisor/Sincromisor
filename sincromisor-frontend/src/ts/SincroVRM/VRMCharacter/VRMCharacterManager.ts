@@ -86,7 +86,7 @@ export class VRMCharacterManager {
     private latestBehaviorSnapshot: CharacterBehaviorSnapshot | null = null;
     private motionElapsedSeconds = 0;
     // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
-    private readonly onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void;
+    private readonly onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void;
     private readonly enableInitialUpperBodyFraming: boolean;
     private visible: boolean = true;
 
@@ -94,7 +94,7 @@ export class VRMCharacterManager {
         scene: Scene,
         vrmCamera: VRMCamera,
         vrmUrl: string,
-        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void,
+        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void,
         enableInitialUpperBodyFraming: boolean = false,
     ) {
         this.scene = scene;
@@ -162,7 +162,7 @@ export class VRMCharacterManager {
                     this.applyInitialUpperBodyFraming();
                 }
                 //this.setEvent(this.vrm);
-                // サムネイルはVRM1.0のみ対象。未設定時はnullを通知してフォールバックさせる。
+                // サムネイルはVRM1.0のみ対象。未設定時は呼び出し側でフォールバックさせる。
                 this.onThumbnailLoaded?.(this.getVRMThumbnailImage());
 
                 this.vrm.scene.traverse((obj: Object3D) => {
@@ -181,12 +181,12 @@ export class VRMCharacterManager {
         );
     }
 
-    private getVRMThumbnailImage(): HTMLImageElement | null {
+    private getVRMThumbnailImage(): HTMLImageElement | undefined {
         // VRM0.xはthumbnailImageではなくtexture運用のため、本実装では対象外とする。
         if (!this.vrm || this.vrm.meta.metaVersion !== "1") {
-            return null;
+            return undefined;
         }
-        return this.vrm.meta.thumbnailImage ?? null;
+        return this.vrm.meta.thumbnailImage ?? undefined;
     }
 
     // キャラクター身長差を吸収するため、ロード直後に胸〜頭が収まる初期構図へ合わせる。

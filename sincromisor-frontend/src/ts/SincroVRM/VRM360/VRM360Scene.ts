@@ -24,7 +24,7 @@ export class VRM360Scene extends VRMScene {
         characterControlLayer: HTMLElement,
         vrmUrl: string,
         xrMode: boolean = false,
-        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void,
+        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void,
     ) {
         super(canvasRoot, characterControlLayer, vrmUrl, xrMode, onThumbnailLoaded);
         // 360 背景動画 + floor/light 補助を追加して、通常 VRMScene から 360 向け構成へ拡張する。

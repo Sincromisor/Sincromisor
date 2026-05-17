@@ -476,7 +476,7 @@ export class DialogManager {
 
     private async loadVrmFile(): Promise<void> {
         const result = await this.vrmWorkflowService.loadInitialVrmSelection();
-        if (result.vrmUrl) {
+        if (result.vrmUrl !== undefined) {
             this.stateStore.setSelectedVrmUrl(result.vrmUrl);
         }
         this.setVrmStatusText(result.statusText);
@@ -488,7 +488,7 @@ export class DialogManager {
     }
 
     // 起動時に前回使用したサムネイルを復元する。
-    async loadVrmThumbnailBlob(): Promise<Blob | null> {
+    async loadVrmThumbnailBlob(): Promise<Blob | undefined> {
         return this.vrmFileService.loadVrmThumbnailBlob();
     }
 

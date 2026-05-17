@@ -13,7 +13,7 @@ type FaceCandidate = {
 };
 
 export type FaceTargetSelectionResult = {
-    selectedIndex: number | null;
+    selectedIndex?: number;
     candidateCount: number;
     holdLocked: boolean;
     selectedScore?: number;
@@ -22,14 +22,14 @@ export type FaceTargetSelectionResult = {
 // 複数顔検出時に「誰を見るか」を決める小さな selector。
 // 毎フレームの最高スコアだけで切り替えると迷いやすいため、保持時間と切替マージンでヒステリシスをかける。
 export class FaceTargetSelector {
-    private currentNose: { x: number; y: number } | null = null;
+    private currentNose?: { x: number; y: number };
     private lastSwitchAtMs = 0;
     private minimumHoldMs = 900;
     private switchMargin = 0.15;
     private relinkDistance = 0.2;
 
     reset(): void {
-        this.currentNose = null;
+        this.currentNose = undefined;
         this.lastSwitchAtMs = 0;
     }
 
@@ -61,8 +61,8 @@ export class FaceTargetSelector {
     select(detections: Detection[], nowMs: number): FaceTargetSelectionResult {
         const candidates = this.buildCandidates(detections);
         if (candidates.length === 0) {
-            this.currentNose = null;
-            return { selectedIndex: null, candidateCount: 0, holdLocked: false };
+            this.currentNose = undefined;
+            return { candidateCount: 0, holdLocked: false };
         }
 
         candidates.sort((a, b) => b.score - a.score);
@@ -185,8 +185,8 @@ export class FaceTargetSelector {
     private findCurrentCandidate(
         candidates: FaceCandidate[],
         current: { x: number; y: number },
-    ): FaceCandidate | null {
-        let best: FaceCandidate | null = null;
+    ): FaceCandidate | undefined {
+        let best: FaceCandidate | undefined;
         let bestDist = Number.POSITIVE_INFINITY;
         for (const candidate of candidates) {
             const dist = this.distance(candidate.nose, current);

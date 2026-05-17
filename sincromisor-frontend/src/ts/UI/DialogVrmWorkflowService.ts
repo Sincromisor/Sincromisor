@@ -14,7 +14,7 @@ export type DialogVrmSelectResult =
       };
 
 export type DialogVrmInitialLoadResult = {
-    vrmUrl: string | null;
+    vrmUrl?: string;
     statusText: string;
 };
 
@@ -54,7 +54,6 @@ export class DialogVrmWorkflowService {
         const blob = await this.fileService.loadVrmFileBlob();
         if (!blob) {
             return {
-                vrmUrl: null,
                 statusText: "既定のVRMモデルを使用中",
             };
         }
