@@ -26,14 +26,14 @@ export type PoseLandmarkerSpikeMetrics = {
     poseInferenceAvgMs: number;
     poseInferenceMaxMs: number;
     poseInferenceFps: number;
-    faceInferenceMs: number | null;
-    faceInferenceAvgMs: number | null;
+    faceInferenceMs?: number;
+    faceInferenceAvgMs?: number;
     renderFps: number;
-    droppedVideoFrames: number | null;
+    droppedVideoFrames?: number;
     detected: boolean;
     poseCount: number;
     trackedLandmarks: PoseLandmarkerSpikeTrackedLandmark[];
-    fallbackReason: string | null;
+    fallbackReason?: string;
 };
 
 export type PoseLandmarkerSpikeTrackedLandmark = {
@@ -47,7 +47,7 @@ export type PoseLandmarkerSpikeTrackedLandmark = {
 
 type PoseLandmarkerSpikeCallbacks = {
     onMetrics: (metrics: PoseLandmarkerSpikeMetrics) => void;
-    onPoseResult: (result: PoseLandmarkerResult | null) => void;
+    onPoseResult: (result: PoseLandmarkerResult | undefined) => void;
     onStatus: (message: string) => void;
     onError: (error: unknown) => void;
 };
@@ -91,19 +91,19 @@ export const DEFAULT_POSE_LANDMARKER_SPIKE_CONFIG: PoseLandmarkerSpikeConfig = {
 export class PoseLandmarkerSpike {
     private readonly videoElement: HTMLVideoElement;
     private readonly callbacks: PoseLandmarkerSpikeCallbacks;
-    private poseLandmarker: PoseLandmarker | null = null;
-    private faceLandmarker: FaceLandmarker | null = null;
-    private stream: MediaStream | null = null;
+    private poseLandmarker?: PoseLandmarker;
+    private faceLandmarker?: FaceLandmarker;
+    private stream?: MediaStream;
     private config: PoseLandmarkerSpikeConfig = { ...DEFAULT_POSE_LANDMARKER_SPIKE_CONFIG };
     private loopEnabled = false;
-    private animationFrameId: number | null = null;
+    private animationFrameId?: number;
     private lastInferenceAtMs = -1;
-    private lastPoseInferenceEndedAtMs: number | null = null;
-    private lastRenderFrameAtMs: number | null = null;
+    private lastPoseInferenceEndedAtMs?: number;
+    private lastRenderFrameAtMs?: number;
     private renderFps = 0;
     private poseSamples: number[] = [];
     private faceSamples: number[] = [];
-    private fallbackReason: string | null = null;
+    private fallbackReason?: string;
 
     constructor(videoElement: HTMLVideoElement, callbacks: PoseLandmarkerSpikeCallbacks) {
         this.videoElement = videoElement;
@@ -117,8 +117,8 @@ export class PoseLandmarkerSpike {
         this.poseSamples = [];
         this.faceSamples = [];
         this.lastInferenceAtMs = -1;
-        this.lastPoseInferenceEndedAtMs = null;
-        this.fallbackReason = null;
+        this.lastPoseInferenceEndedAtMs = undefined;
+        this.fallbackReason = undefined;
         this.callbacks.onStatus("MediaPipe vision runtime を初期化しています。");
         const vision = await loadMediaPipeVisionFileset();
         this.poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
@@ -155,12 +155,12 @@ export class PoseLandmarkerSpike {
         this.scheduleNextFrame();
     }
 
-    stop(reason: string | null = "pose_landmarker_spike_stopped"): void {
+    stop(reason: string | undefined = "pose_landmarker_spike_stopped"): void {
         this.stopLoop();
         this.disposeLandmarkers();
         this.stopCamera();
         this.fallbackReason = reason;
-        this.callbacks.onPoseResult(null);
+        this.callbacks.onPoseResult(undefined);
         this.callbacks.onStatus("PoseLandmarker spike を停止しました。");
     }
 
@@ -195,12 +195,12 @@ export class PoseLandmarkerSpike {
         this.stream?.getTracks().forEach((track) => {
             track.stop();
         });
-        this.stream = null;
+        this.stream = undefined;
     }
 
     private scheduleNextFrame(): void {
         this.animationFrameId = window.requestAnimationFrame((nowMs) => {
-            this.animationFrameId = null;
+            this.animationFrameId = undefined;
             this.updateRenderFps(nowMs);
             this.runFrame(nowMs);
         });
@@ -246,9 +246,9 @@ export class PoseLandmarkerSpike {
         return result;
     }
 
-    private detectFace(timestampMs: number): FaceLandmarkerResult | null {
+    private detectFace(timestampMs: number): FaceLandmarkerResult | undefined {
         if (!this.faceLandmarker) {
-            return null;
+            return undefined;
         }
         const startedAtMs = performance.now();
         const result = this.faceLandmarker.detectForVideo(this.videoElement, timestampMs);
@@ -259,14 +259,15 @@ export class PoseLandmarkerSpike {
 
     private createMetrics(poseResult: PoseLandmarkerResult): PoseLandmarkerSpikeMetrics {
         const currentPoseSample = this.poseSamples[this.poseSamples.length - 1] ?? 0;
-        const currentFaceSample = this.faceSamples[this.faceSamples.length - 1] ?? null;
+        const currentFaceSample = this.faceSamples[this.faceSamples.length - 1];
         return {
             poseInferenceMs: currentPoseSample,
             poseInferenceAvgMs: this.average(this.poseSamples),
             poseInferenceMaxMs: Math.max(...this.poseSamples, 0),
             poseInferenceFps: this.estimatePoseInferenceFps(),
             faceInferenceMs: currentFaceSample,
-            faceInferenceAvgMs: this.faceSamples.length > 0 ? this.average(this.faceSamples) : null,
+            faceInferenceAvgMs:
+                this.faceSamples.length > 0 ? this.average(this.faceSamples) : undefined,
             renderFps: this.renderFps,
             droppedVideoFrames: this.readDroppedVideoFrames(),
             detected: poseResult.landmarks.length > 0,
@@ -308,7 +309,7 @@ export class PoseLandmarkerSpike {
     }
 
     private updateRenderFps(nowMs: number): void {
-        if (this.lastRenderFrameAtMs != null) {
+        if (this.lastRenderFrameAtMs !== undefined) {
             const instantFps = 1000 / Math.max(1, nowMs - this.lastRenderFrameAtMs);
             this.renderFps =
                 this.renderFps === 0 ? instantFps : this.renderFps * 0.9 + instantFps * 0.1;
@@ -317,7 +318,7 @@ export class PoseLandmarkerSpike {
     }
 
     private estimatePoseInferenceFps(): number {
-        if (this.lastPoseInferenceEndedAtMs == null || this.lastInferenceAtMs < 0) {
+        if (this.lastPoseInferenceEndedAtMs === undefined || this.lastInferenceAtMs < 0) {
             return 0;
         }
         return Math.min(
@@ -326,11 +327,11 @@ export class PoseLandmarkerSpike {
         );
     }
 
-    private readDroppedVideoFrames(): number | null {
+    private readDroppedVideoFrames(): number | undefined {
         const video = this.videoElement as HTMLVideoElement & {
             getVideoPlaybackQuality?: () => VideoPlaybackQuality;
         };
-        return video.getVideoPlaybackQuality?.().droppedVideoFrames ?? null;
+        return video.getVideoPlaybackQuality?.().droppedVideoFrames;
     }
 
     private pushSample(samples: number[], value: number): void {
@@ -362,17 +363,17 @@ export class PoseLandmarkerSpike {
 
     private stopLoop(): void {
         this.loopEnabled = false;
-        if (this.animationFrameId != null) {
+        if (this.animationFrameId !== undefined) {
             window.cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
+            this.animationFrameId = undefined;
         }
     }
 
     private disposeLandmarkers(): void {
         this.poseLandmarker?.close();
         this.faceLandmarker?.close();
-        this.poseLandmarker = null;
-        this.faceLandmarker = null;
+        this.poseLandmarker = undefined;
+        this.faceLandmarker = undefined;
     }
 
     private formatError(error: unknown): string {

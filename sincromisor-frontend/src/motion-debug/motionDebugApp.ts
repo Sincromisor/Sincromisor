@@ -45,8 +45,8 @@ export class MotionDebugApp {
     private readonly overlayRenderer = new MotionDebugPoseOverlayRenderer(this.overlayCanvas);
     private readonly frameCapture = new MotionDebugFrameCapture();
     private readonly scene: VRMScene;
-    private activeStream: MediaStream | null = null;
-    private activeFixtureVideo: HTMLVideoElement | null = null;
+    private activeStream?: MediaStream;
+    private activeFixtureVideo?: HTMLVideoElement;
     private cameraSource: MotionDebugCameraState["source"] = "none";
     private status: MotionDebugStatus = "idle";
     private message = "待機中";
@@ -249,8 +249,8 @@ export class MotionDebugApp {
             track.stop();
         });
         this.activeFixtureVideo?.pause();
-        this.activeFixtureVideo = null;
-        this.activeStream = null;
+        this.activeFixtureVideo = undefined;
+        this.activeStream = undefined;
         this.cameraSource = "none";
         this.behaviorState.setFaceMotionTrackingEnabled(false);
         this.behaviorState.setPoseMotionTrackingEnabled(false);

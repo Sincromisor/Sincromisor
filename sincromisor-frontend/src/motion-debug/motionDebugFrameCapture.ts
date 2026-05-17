@@ -1,5 +1,5 @@
 export class MotionDebugFrameCapture {
-    private lastCapturedAtMs: number | null = null;
+    private lastCapturedAtMs?: number;
 
     capture(video: HTMLVideoElement, overlayCanvas: HTMLCanvasElement): string {
         const canvas = document.createElement("canvas");
@@ -19,7 +19,7 @@ export class MotionDebugFrameCapture {
         return canvas.toDataURL("image/png");
     }
 
-    lastFrameCapturedAtMs(): number | null {
+    lastFrameCapturedAtMs(): number | undefined {
         return this.lastCapturedAtMs;
     }
 }
