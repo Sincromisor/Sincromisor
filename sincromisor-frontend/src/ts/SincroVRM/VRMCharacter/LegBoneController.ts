@@ -51,8 +51,7 @@ export class LegBoneController {
         );
     }
 
-    private getNode(name: VRMHumanBoneName): Object3D | null {
-        const node: Object3D | null = this.vrm.humanoid.getNormalizedBoneNode(name);
-        return node;
+    private getNode(name: VRMHumanBoneName): Object3D | undefined {
+        return this.vrm.humanoid.getNormalizedBoneNode(name) ?? undefined;
     }
 }

@@ -22,9 +22,9 @@ export type SincroCcdIkProbeResult = {
 };
 
 type ArmChain = {
-    upperArm: Object3D | null;
-    lowerArm: Object3D | null;
-    hand: Object3D | null;
+    upperArm?: Object3D;
+    lowerArm?: Object3D;
+    hand?: Object3D;
 };
 
 type CcdIkChain = {
@@ -109,10 +109,12 @@ function getHumanoidBone(
     vrm: VRM,
     name: VRMHumanBoneName,
     space: "raw" | "normalized",
-): Object3D | null {
-    return space === "raw"
-        ? vrm.humanoid.getRawBoneNode(name)
-        : vrm.humanoid.getNormalizedBoneNode(name);
+): Object3D | undefined {
+    const bone =
+        space === "raw"
+            ? vrm.humanoid.getRawBoneNode(name)
+            : vrm.humanoid.getNormalizedBoneNode(name);
+    return bone ?? undefined;
 }
 
 function collectSkinnedMeshes(root: Object3D): SkinnedMesh[] {
@@ -139,13 +141,13 @@ function chainInAnySkeleton(skinnedMeshes: SkinnedMesh[], chain: ArmChain): bool
     });
 }
 
-function findCcdIkChain(skinnedMeshes: SkinnedMesh[], chain: ArmChain): CcdIkChain | null {
+function findCcdIkChain(skinnedMeshes: SkinnedMesh[], chain: ArmChain): CcdIkChain | undefined {
     if (
         !isBoneObject(chain.upperArm) ||
         !isBoneObject(chain.lowerArm) ||
         !isBoneObject(chain.hand)
     ) {
-        return null;
+        return undefined;
     }
     const upperBone = chain.upperArm as Bone;
     const lowerBone = chain.lowerArm as Bone;
@@ -171,18 +173,18 @@ function findCcdIkChain(skinnedMeshes: SkinnedMesh[], chain: ArmChain): CcdIkCha
             handBone,
         };
     }
-    return null;
+    return undefined;
 }
 
 function isSkinnedMeshObject(object: Object3D): boolean {
     return (object as Object3D & { isSkinnedMesh?: boolean }).isSkinnedMesh === true;
 }
 
-function isBoneObject(object: Object3D | null): boolean {
-    return (object as (Object3D & { isBone?: boolean }) | null)?.isBone === true;
+function isBoneObject(object: Object3D | undefined): boolean {
+    return (object as (Object3D & { isBone?: boolean }) | undefined)?.isBone === true;
 }
 
-function smokeTestCcdIk(chain: CcdIkChain): string | null {
+function smokeTestCcdIk(chain: CcdIkChain): string | undefined {
     const targetBone = createProbeTargetBone(chain);
     const targetIndex = chain.mesh.skeleton.bones.length;
     const initialQuaternions = new Map<Bone, Quaternion>([
@@ -206,7 +208,7 @@ function smokeTestCcdIk(chain: CcdIkChain): string | null {
             blendFactor: 0,
         };
         new CCDIKSolver(chain.mesh, [ik]).update();
-        return null;
+        return undefined;
     } catch (error) {
         return error instanceof Error ? error.message : "unknown_ccdik_error";
     } finally {

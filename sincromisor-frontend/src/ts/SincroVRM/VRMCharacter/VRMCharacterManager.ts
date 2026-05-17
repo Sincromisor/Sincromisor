@@ -66,24 +66,24 @@ const SIMPLE_VRM_AUTO_FRAMING_BBOX_FALLBACK = {
 // 指定URLのVRM1.0モデルを読み込み、骨/表情コントローラ更新とシーン配置を担当する。
 // scene 側は render loop で update() を呼ぶだけにし、VRM固有処理をここへ閉じ込める。
 export class VRMCharacterManager {
-    public vrm: VRM | null = null;
+    public vrm?: VRM;
     public clock: Clock;
     private scene: Scene;
     private vrmCamera: VRMCamera;
-    public headBoneController: HeadBoneController | null = null;
-    public armBoneController: ArmBoneController | null = null;
-    public legBoneController: LegBoneController | null = null;
-    public motionOrchestrator: CharacterMotionOrchestrator | null = null;
-    public mouthMorphController: FaceMorphController | null = null;
-    public emotionMorphController: FaceEmotionController | null = null;
-    public eyeBehaviorController: EyeBehaviorController | null = null;
+    public headBoneController?: HeadBoneController;
+    public armBoneController?: ArmBoneController;
+    public legBoneController?: LegBoneController;
+    public motionOrchestrator?: CharacterMotionOrchestrator;
+    public mouthMorphController?: FaceMorphController;
+    public emotionMorphController?: FaceEmotionController;
+    public eyeBehaviorController?: EyeBehaviorController;
     public characterPosition: Vector3 = new Vector3(0, 0, 0);
     private defaultPosition: Vector3 = new Vector3(0, 0, 0);
-    private rootBone: Object3D | null = null;
+    private rootBone?: Object3D;
     private readonly behaviorState: CharacterBehaviorState;
     private readonly sincroFaceRetargeter = new SincroFaceRetargeter();
     private readonly sincroPoseRetargeter = new SincroPoseRetargeter();
-    private latestBehaviorSnapshot: CharacterBehaviorSnapshot | null = null;
+    private latestBehaviorSnapshot?: CharacterBehaviorSnapshot;
     private motionElapsedSeconds = 0;
     // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
     private readonly onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void;
@@ -152,9 +152,9 @@ export class VRMCharacterManager {
                 VRMUtils.combineMorphs(this.vrm);
                 // キャラクター全体の配置調整は hips 基準で扱う。
                 // Looking Glass / simple-vrm の位置合わせ時もここが基準点になる。
-                this.rootBone = this.vrm?.humanoid.getNormalizedBoneNode("hips");
+                this.rootBone = this.vrm.humanoid.getNormalizedBoneNode("hips") ?? undefined;
                 if (this.rootBone) {
-                    this.defaultPosition = this.rootBone?.position.clone();
+                    this.defaultPosition = this.rootBone.position.clone();
                 }
                 this.scene.add(this.vrm.scene);
                 this.vrm.scene.visible = this.visible;
@@ -237,7 +237,7 @@ export class VRMCharacterManager {
             const eyeCenterPos =
                 leftEyePos && rightEyePos
                     ? leftEyePos.clone().add(rightEyePos).multiplyScalar(0.5)
-                    : null;
+                    : undefined;
             const faceAimPos = eyeCenterPos
                 ? eyeCenterPos
                       .clone()
@@ -277,13 +277,13 @@ export class VRMCharacterManager {
 
     private getHumanoidBoneWorldPosition(
         boneName: "head" | "neck" | "leftEye" | "rightEye" | "upperChest" | "chest" | "spine",
-    ): Vector3 | null {
+    ): Vector3 | undefined {
         if (!this.vrm) {
-            return null;
+            return undefined;
         }
         const boneNode = this.vrm.humanoid.getNormalizedBoneNode(boneName);
         if (!boneNode) {
-            return null;
+            return undefined;
         }
         return boneNode.getWorldPosition(new Vector3());
     }

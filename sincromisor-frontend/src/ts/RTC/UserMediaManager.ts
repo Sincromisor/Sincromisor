@@ -120,13 +120,13 @@ export class UserMediaManager {
     private onAudioConstraintRuntimeApplyCallback: (
         report: AudioConstraintRuntimeApplyReport,
     ) => void = () => {};
-    private audioContext: AudioContext | null = null;
-    private rawAudioTrack: MediaStreamTrack | null = null;
+    private audioContext?: AudioContext;
+    private rawAudioTrack?: MediaStreamTrack;
     private vadGateEnabled: boolean = false;
-    private outputGainNode: GainNode | null = null;
-    private vadNode: AudioWorkletNode | null = null;
-    private highpassNode: BiquadFilterNode | null = null;
-    private lowpassNode: BiquadFilterNode | null = null;
+    private outputGainNode?: GainNode;
+    private vadNode?: AudioWorkletNode;
+    private highpassNode?: BiquadFilterNode;
+    private lowpassNode?: BiquadFilterNode;
     private learnedVadClient: LearnedVadWorkerClient;
     private audioFilterProfile: AudioFilterConfig = UserMediaManager.DEFAULT_FILTER_PROFILE;
     private vadThresholdMode: VadThresholdMode = "manual";
@@ -247,13 +247,13 @@ export class UserMediaManager {
     // VADの閾値を更新し、処理中であればAudioWorkletへ即時反映する。
     // manualモードの正本は manualVadThresholdConfig とし、実効値は applyVadThresholds 経由で同期する。
     setVadThresholds(config: Partial<VadThresholdConfig>): void {
-        if (config.rmsThreshold != null && Number.isFinite(config.rmsThreshold)) {
+        if (config.rmsThreshold !== undefined && Number.isFinite(config.rmsThreshold)) {
             this.manualVadThresholdConfig.rmsThreshold = Math.max(
                 0.001,
                 Math.min(0.2, config.rmsThreshold),
             );
         }
-        if (config.peakThreshold != null && Number.isFinite(config.peakThreshold)) {
+        if (config.peakThreshold !== undefined && Number.isFinite(config.peakThreshold)) {
             this.manualVadThresholdConfig.peakThreshold = Math.max(
                 0.01,
                 Math.min(0.99, config.peakThreshold),
@@ -340,19 +340,19 @@ export class UserMediaManager {
 
     // HPF/LPF設定を更新し、処理中であればフィルタへ即時反映する。
     setAudioFilterConfig(config: Partial<Omit<AudioFilterConfig, "vadThreshold">>): void {
-        if (config.highpassHz != null && Number.isFinite(config.highpassHz)) {
+        if (config.highpassHz !== undefined && Number.isFinite(config.highpassHz)) {
             this.audioFilterProfile = {
                 ...this.audioFilterProfile,
                 highpassHz: Math.max(60, Math.min(300, config.highpassHz)),
             };
         }
-        if (config.lowpassEnabled != null) {
+        if (config.lowpassEnabled !== undefined) {
             this.audioFilterProfile = {
                 ...this.audioFilterProfile,
                 lowpassEnabled: !!config.lowpassEnabled,
             };
         }
-        if (config.lowpassHz != null && Number.isFinite(config.lowpassHz)) {
+        if (config.lowpassHz !== undefined && Number.isFinite(config.lowpassHz)) {
             this.audioFilterProfile = {
                 ...this.audioFilterProfile,
                 lowpassHz: Math.max(2500, Math.min(10000, config.lowpassHz)),
@@ -475,11 +475,11 @@ export class UserMediaManager {
             if (!data) {
                 return;
             }
-            const hasPcmPayload = data.pcm != null;
+            const hasPcmPayload = data.pcm !== undefined;
             if (data.type === "audio-frame" || hasPcmPayload) {
                 const pcm = this.normalizePcmFrame(data.pcm);
                 const sampleRate = positiveNumberOrDefault(data.sampleRate, 48000);
-                if (pcm && pcm.length > 0) {
+                if (pcm !== undefined && pcm.length > 0) {
                     this.learnedVadClient.postAudioFrame(pcm, sampleRate);
                 }
                 return;
@@ -542,7 +542,7 @@ export class UserMediaManager {
     }
 
     // AudioWorkletからのPCMをブラウザ差異に依存しない形で正規化する。
-    private normalizePcmFrame(raw: unknown): Float32Array | null {
+    private normalizePcmFrame(raw: unknown): Float32Array | undefined {
         if (raw instanceof Float32Array) {
             return raw;
         }
@@ -558,11 +558,11 @@ export class UserMediaManager {
         if (Array.isArray(raw)) {
             const values = raw.map((v) => Number(v));
             if (values.some((v) => !Number.isFinite(v))) {
-                return null;
+                return undefined;
             }
             return Float32Array.from(values);
         }
-        return null;
+        return undefined;
     }
 
     // 設定ダイアログのAGC設定を getUserMedia 制約へ反映する。
@@ -638,11 +638,11 @@ export class UserMediaManager {
         this.audioContext.close().catch((e) => {
             frontendLogger.error("Failed to close audio context.", { error: e });
         });
-        this.audioContext = null;
-        this.outputGainNode = null;
-        this.vadNode = null;
-        this.highpassNode = null;
-        this.lowpassNode = null;
+        this.audioContext = undefined;
+        this.outputGainNode = undefined;
+        this.vadNode = undefined;
+        this.highpassNode = undefined;
+        this.lowpassNode = undefined;
         this.learnedVadClient.dispose();
     }
 
@@ -731,15 +731,20 @@ export class UserMediaManager {
 
     // 取得したメディアトラックと音声処理リソースを停止する。
     close(): void {
+        const audioTrack = this.audioTrack;
+        const rawAudioTrack = this.rawAudioTrack;
         if (this.videoTrack) {
             this.videoTrack.stop();
+            this.videoTrack = undefined;
         }
-        if (this.audioTrack) {
-            this.audioTrack.stop();
+        if (audioTrack) {
+            audioTrack.stop();
+            this.audioTrack = undefined;
         }
-        if (this.rawAudioTrack && this.rawAudioTrack !== this.audioTrack) {
-            this.rawAudioTrack.stop();
+        if (rawAudioTrack && rawAudioTrack !== audioTrack) {
+            rawAudioTrack.stop();
         }
+        this.rawAudioTrack = undefined;
         this.disposeAudioProcessing();
     }
 }

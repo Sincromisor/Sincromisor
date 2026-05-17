@@ -104,6 +104,12 @@
     - 顔ターゲット未選択、animation frame id、callback、カメラ track、VRM cache miss、生成済み system icon URL、active scene、audio meter / learned VAD worker handle を optional にした。
     - `querySelector` / `srcObject = null` / `canvas.toBlob` など DOM・Canvas 境界由来の `null` は維持した。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: RTC セッション・音声処理・VRMCharacter 周辺の内部欠損表現を `undefined` へ追加整理した。
+    - 対象: `RTCTalkClient` / `SincroRtcSessionController` / `UserMediaManager` / `LearnedVadWorkerClient` / `silero-vad.worker` / `VRMCharacterManager` / `sincroCcdIkProbe` / `LegBoneController` / `FaceEmotionController`
+    - RTC の session id / timer id / health clear 通知、AudioContext / AudioWorklet node / raw track、Silero worker の session / pending frame / 推論未返却値を optional にした。
+    - VRM load 後 controller / root bone / behavior snapshot、CCDIK probe の探索失敗、脚 controller の bone lookup を `undefined` に寄せた。
+    - `RTCIceCandidateInit | null` / `event.candidate === null` / `RTCSessionDescription | null` / ONNX metadata の `null` は WebRTC・ブラウザ・外部ライブラリ境界として維持した。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
