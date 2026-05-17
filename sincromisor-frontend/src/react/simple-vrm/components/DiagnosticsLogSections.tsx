@@ -19,11 +19,18 @@ export function DiagnosticsLogSections({
     telopLogs,
     messageLogs,
 }: DiagnosticsLogSectionsProps) {
+    return (
+        <>
+            <RtcEventLogSection rtcEvents={rtcEvents} />
+            <TelopLogSection telopLogs={telopLogs} />
+            <MessageLogSection messageLogs={messageLogs} />
+        </>
+    );
+}
+
+function RtcEventLogSection({ rtcEvents }: { rtcEvents: string[] }) {
     const diagnosticsTuning = UI_TUNING.controlPanel.diagnostics;
     const rtcEventKeyCounts = new Map<string, number>();
-    const telopLogKeyCounts = new Map<string, number>();
-    const messageLogKeyCounts = new Map<string, number>();
-    // 直近数件のみを表示し、常時表示しても画面占有が増えすぎないようにしている。
     return (
         <>
             <SectionTitle title="最近のRTCイベント" />
@@ -44,7 +51,16 @@ export function DiagnosticsLogSections({
                     ))
                 )}
             </div>
+        </>
+    );
+}
 
+function TelopLogSection({ telopLogs }: { telopLogs: PanelTelopLog[] }) {
+    const diagnosticsTuning = UI_TUNING.controlPanel.diagnostics;
+    const telopLogKeyCounts = new Map<string, number>();
+    // 直近数件のみを表示し、常時表示しても画面占有が増えすぎないようにしている。
+    return (
+        <>
             <SectionTitle title="最近のテロップ" />
             <div
                 style={{
@@ -76,7 +92,15 @@ export function DiagnosticsLogSections({
                     ))
                 )}
             </div>
+        </>
+    );
+}
 
+function MessageLogSection({ messageLogs }: { messageLogs: PanelMessageLog[] }) {
+    const diagnosticsTuning = UI_TUNING.controlPanel.diagnostics;
+    const messageLogKeyCounts = new Map<string, number>();
+    return (
+        <>
             <SectionTitle title="最近のメッセージ" />
             <div
                 style={{

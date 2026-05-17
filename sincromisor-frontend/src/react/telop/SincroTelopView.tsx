@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SincroAppController } from "../../ts/App/SincroAppController";
 import type { TelopTextSegment } from "../../ts/App/SincroAppTypes";
 import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
@@ -9,6 +9,12 @@ type SincroTelopViewProps = {
 
 // 既存 footer CSS (`.sincroFooterBox__telopText`) を再利用し、テロップ描画を React 化する。
 export function SincroTelopView({ enableReactRendering = true }: SincroTelopViewProps) {
+    const { segments, containerRef } = useSincroTelopSegments(enableReactRendering);
+
+    return <TelopSegmentContainer containerRef={containerRef} segments={segments} />;
+}
+
+function useSincroTelopSegments(enableReactRendering: boolean) {
     const initialController = SincroAppController.getCurrent();
     const [segments, setSegments] = useState<TelopTextSegment[]>(
         initialController?.state.getTelopTextSegmentsSnapshot() ?? [],
@@ -55,6 +61,16 @@ export function SincroTelopView({ enableReactRendering = true }: SincroTelopView
         node.scrollLeft = maxScrollLeft;
     });
 
+    return { segments, containerRef };
+}
+
+function TelopSegmentContainer({
+    containerRef,
+    segments,
+}: {
+    containerRef: RefObject<HTMLDivElement | null>;
+    segments: TelopTextSegment[];
+}) {
     return (
         <div
             ref={containerRef}

@@ -17,6 +17,10 @@ import {
     type SincroPoseRetargetConfig,
     type SincroPoseRetargetFrame,
 } from "./sincroPoseRetargetTypes";
+import {
+    createSincroPoseUpperBodyAnchor,
+    createSincroPoseUpperBodyFrame,
+} from "./sincroPoseRetargetUpperBody";
 
 export type {
     SincroPoseArmIkMode,
@@ -26,8 +30,6 @@ export type {
     SincroPoseRetargetFrame,
 } from "./sincroPoseRetargetTypes";
 export { DEFAULT_SINCRO_POSE_RETARGET_CONFIG } from "./sincroPoseRetargetTypes";
-
-type UpperBodyAnchor = SincroPoseRetargetFrame["anchor"];
 
 // Pose同期はまだoptionalなので、低振幅・強いsmoothingでVRM向け値へ変換する。
 // 腕が画面外へ出た時は部位単位で neutral に戻し、face-only の同期を邪魔しない。
@@ -96,7 +98,7 @@ export class SincroPoseRetargeter {
             );
         }
 
-        const anchor = this.upperBodyAnchor(snapshot);
+        const anchor = createSincroPoseUpperBodyAnchor(snapshot, this.config);
         const upperBodyWeight = anchor.weight * this.config.intensityScale;
         const leftArm = retargetPoseArm({
             arm: snapshot.leftArm,
@@ -117,48 +119,12 @@ export class SincroPoseRetargeter {
             fallbackReason: undefined,
             solverProbe: this.solverProbeSnapshot(),
             anchor,
-            upperBody: {
-                spine: {
-                    x: 0,
-                    y:
-                        -snapshot.upperBody.torsoLean *
-                        this.config.torsoLeanRad *
-                        0.45 *
-                        upperBodyWeight,
-                    z:
-                        -snapshot.upperBody.shoulderRoll *
-                        this.config.shoulderRollRad *
-                        0.35 *
-                        upperBodyWeight,
-                },
-                chest: {
-                    x: 0,
-                    y:
-                        (-snapshot.upperBody.torsoLean * this.config.torsoLeanRad -
-                            anchor.shoulderOffset.x * this.config.shoulderAnchorOffsetRad) *
-                        upperBodyWeight,
-                    z:
-                        (-snapshot.upperBody.shoulderRoll * this.config.shoulderRollRad -
-                            anchor.shoulderOffset.y * this.config.shoulderAnchorOffsetRad) *
-                        upperBodyWeight,
-                },
-                leftShoulder: {
-                    x: 0,
-                    y: 0,
-                    z:
-                        -snapshot.upperBody.shoulderRoll *
-                        this.config.shoulderLiftRad *
-                        upperBodyWeight,
-                },
-                rightShoulder: {
-                    x: 0,
-                    y: 0,
-                    z:
-                        -snapshot.upperBody.shoulderRoll *
-                        this.config.shoulderLiftRad *
-                        upperBodyWeight,
-                },
-            },
+            upperBody: createSincroPoseUpperBodyFrame({
+                snapshot,
+                config: this.config,
+                anchor,
+                upperBodyWeight,
+            }),
             leftArm,
             rightArm,
         };
@@ -184,46 +150,6 @@ export class SincroPoseRetargeter {
             return "pose_low_confidence";
         }
         return undefined;
-    }
-
-    private upperBodyAnchor(snapshot: SincroPoseMotionSnapshot): UpperBodyAnchor {
-        const leftShoulder = snapshot.leftArm.targets.shoulder;
-        const rightShoulder = snapshot.rightArm.targets.shoulder;
-        const shoulderTargetConfidence = Math.min(
-            leftShoulder.confidence,
-            rightShoulder.confidence,
-        );
-        // Shoulder anchors are deliberately weaker when hips are missing. This keeps close-up
-        // camera framing usable without letting torso compensation fight the arm IK target.
-        const targetConfidenceWeight = MathUtils.clamp(
-            (shoulderTargetConfidence - this.config.minConfidence) /
-                Math.max(1 - this.config.minConfidence, 0.01),
-            0,
-            1,
-        );
-        const widthWeight = MathUtils.clamp((snapshot.upperBody.shoulderWidth - 0.08) / 0.18, 0, 1);
-        const hipWeight = snapshot.upperBody.hipCenterTracked ? 1 : 0.64;
-        const weight = MathUtils.clamp(
-            Math.min(targetConfidenceWeight, widthWeight) * hipWeight,
-            0,
-            1,
-        );
-        const shoulderOffset = {
-            x: MathUtils.clamp(snapshot.upperBody.shoulderCenterX - 0.5, -0.45, 0.45),
-            y: MathUtils.clamp(snapshot.upperBody.shoulderCenterY - 0.38, -0.35, 0.35),
-        };
-        let reason = "shoulder_width_anchor";
-        if (weight <= 0.18) {
-            reason = "anchor_low_confidence";
-        } else if (!snapshot.upperBody.hipCenterTracked) {
-            reason = "hips_fallback_to_shoulders";
-        }
-        return {
-            active: weight > 0.18,
-            weight,
-            reason,
-            shoulderOffset,
-        };
     }
 
     private smoothFrame(

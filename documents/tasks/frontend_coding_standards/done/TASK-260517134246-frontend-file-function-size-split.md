@@ -380,6 +380,37 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 既存の `SincroArmIkSolver.ts` からの型 re-export は維持し、呼び出し側の import 契約は変更していない。
     - VRM 腕 IK 内部の責務分割のみで、UI 表示文言 / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: 残存していた UI component / worker / motion debug / VRM 初期フレーミングの hard 超過をまとめて分割した。
+    - 対象: `src/react/simple-vrm/components/DiagnosticsLogSections.tsx`
+    - 対象: `src/react/chat/SincroChatView.tsx`
+    - 対象: `src/react/debug/panels/RtcPanel.tsx`
+    - 対象: `src/react/debug/panels/StatusPanel.tsx`
+    - 対象: `src/react/debug/RightToolMenu.tsx`
+    - 対象: `src/react/settings-shell/SettingsShell.tsx`
+    - 対象: `src/react/simple-vrm/components/micSettingsSection.tsx`
+    - 対象: `src/react/integrated-tabs/IntegratedTabs.tsx`
+    - 対象: `src/react/telop/SincroTelopView.tsx`
+    - 対象: `src/ts/FaceTracking/sincroPoseTrackerNormalizer.ts`
+    - 対象: `src/ts/SincroVRM/VRMCharacter/SincroPoseRetargeter.ts`
+    - 対象: `src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`
+    - 対象: `src/ts/SincroVRM/VRMCharacter/characterMotionExpression.ts`
+    - 対象: `src/ts/CharacterGaze/PoseLandmarkerSpike.ts`
+    - 対象: `src/ts/RTC/silero-vad.worker.ts`
+    - 対象: `src/motion-debug/motionDebugApp.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/sincroPoseRetargetUpperBody.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/vrmInitialUpperBodyFraming.ts`
+    - 追加: `src/ts/CharacterGaze/poseLandmarkerSpikeTypes.ts`
+    - 追加: `src/ts/CharacterGaze/poseLandmarkerSpikeMetrics.ts`
+    - 追加: `src/ts/RTC/sileroVadPcm.ts`
+    - 追加: `src/ts/RTC/sileroVadSpeechState.ts`
+    - 追加: `src/motion-debug/motionDebugCameraStream.ts`
+    - UI component は section / hook / item component へ分割し、JSX return の肥大化を解消した。
+    - Pose normalizer / pose retargeter / VRM 初期フレーミングは snapshot 生成・上半身 retarget・骨/bbox framing helper に分割した。
+    - PoseLandmarker spike は公開型/定数と metrics 抽出を分離し、Silero VAD worker は PCM 正規化と speech state を分離した。
+    - motion debug は camera stream request を専用 helper へ分離した。
+    - AST スキャンで hard 超過ファイル、60 行超関数、5 引数以上の関数が 0 件であることを確認した。
+    - UI 表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 

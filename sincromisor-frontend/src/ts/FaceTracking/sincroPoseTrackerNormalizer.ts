@@ -30,6 +30,24 @@ type NormalizedSincroPoseResult = {
     consecutiveFailures: number;
 };
 
+type PoseLandmarkOrigins = {
+    shoulderImageOrigin: {
+        imageScale: number;
+        anchorX: number;
+        anchorY: number;
+    };
+    hipsImageOrigin: {
+        imageScale: number;
+        anchorX: number;
+        anchorY: number;
+    };
+    worldOrigins: ReturnType<typeof createSincroPoseWorldTargetOrigins>;
+    shoulderWidth: number;
+    shoulderCenterX: number;
+    shoulderCenterY: number;
+    hipCenterTracked: boolean;
+};
+
 // PoseLandmarkerResult を retargeter/debug UI が読む低振幅 snapshot へ正規化する。
 export function normalizeSincroPoseLandmarkerResult({
     result,
@@ -65,60 +83,87 @@ export function normalizeSincroPoseLandmarkerResult({
         });
     }
 
-    const shoulderWidth = Math.max(poseLandmarkDistance2d(leftShoulder, rightShoulder), 0.08);
-    const shoulderCenterX = (leftShoulder.x + rightShoulder.x) * 0.5;
-    const shoulderCenterY = (leftShoulder.y + rightShoulder.y) * 0.5;
-    const hipCenterTracked =
-        poseLandmarkVisibility(leftHip) >= SINCRO_POSE_MIN_LANDMARK_VISIBILITY &&
-        poseLandmarkVisibility(rightHip) >= SINCRO_POSE_MIN_LANDMARK_VISIBILITY;
-    const hipCenterX = hipCenterTracked ? (leftHip.x + rightHip.x) * 0.5 : shoulderCenterX;
-    const hipCenterY = hipCenterTracked ? (leftHip.y + rightHip.y) * 0.5 : shoulderCenterY;
-    const worldOrigins = createSincroPoseWorldTargetOrigins(worldLandmarks);
-    const shoulderImageOrigin = {
-        imageScale: shoulderWidth,
-        anchorX: shoulderCenterX,
-        anchorY: shoulderCenterY,
-    };
-    const hipsImageOrigin = {
-        imageScale: shoulderWidth,
-        anchorX: hipCenterX,
-        anchorY: hipCenterY,
-    };
+    const origins = createPoseLandmarkOrigins({
+        leftShoulder,
+        rightShoulder,
+        leftHip,
+        rightHip,
+        worldLandmarks,
+    });
     const leftArm = createSincroPoseArmMotion({
         landmarks,
         worldLandmarks,
         side: "left",
-        imageOrigin: shoulderImageOrigin,
-        worldOrigin: worldOrigins.shoulders,
+        imageOrigin: origins.shoulderImageOrigin,
+        worldOrigin: origins.worldOrigins.shoulders,
     });
     const rightArm = createSincroPoseArmMotion({
         landmarks,
         worldLandmarks,
         side: "right",
-        imageOrigin: shoulderImageOrigin,
-        worldOrigin: worldOrigins.shoulders,
+        imageOrigin: origins.shoulderImageOrigin,
+        worldOrigin: origins.worldOrigins.shoulders,
     });
 
+    return createDetectedPoseResult({
+        landmarks,
+        worldLandmarks,
+        leftShoulder,
+        rightShoulder,
+        shoulderConfidence,
+        leftArm,
+        rightArm,
+        origins,
+        inferenceTimeMs,
+        inferenceFps,
+        nowMs,
+    });
+}
+
+type DetectedPoseResultOptions = {
+    landmarks: PoseLandmarkerResult["landmarks"][number];
+    worldLandmarks: PoseLandmarkerResult["worldLandmarks"][number] | undefined;
+    leftShoulder: PoseLandmarkerResult["landmarks"][number][number];
+    rightShoulder: PoseLandmarkerResult["landmarks"][number][number];
+    shoulderConfidence: number;
+    leftArm: SincroPoseMotionSnapshot["leftArm"];
+    rightArm: SincroPoseMotionSnapshot["rightArm"];
+    origins: PoseLandmarkOrigins;
+    inferenceTimeMs: number;
+    inferenceFps: number;
+    nowMs: number;
+};
+
+function createDetectedPoseResult({
+    landmarks,
+    worldLandmarks,
+    leftShoulder,
+    rightShoulder,
+    shoulderConfidence,
+    leftArm,
+    rightArm,
+    origins,
+    inferenceTimeMs,
+    inferenceFps,
+    nowMs,
+}: DetectedPoseResultOptions): NormalizedSincroPoseResult {
     return {
         snapshot: {
             trackingEnabled: true,
             detected: true,
             confidence: Math.max(shoulderConfidence, leftArm.confidence, rightArm.confidence),
-            upperBody: {
-                shoulderRoll: clampSigned((rightShoulder.y - leftShoulder.y) / shoulderWidth),
-                torsoLean: clampSigned((hipCenterX - shoulderCenterX) / shoulderWidth),
-                shoulderWidth,
-                shoulderCenterX,
-                shoulderCenterY,
-                hipCenterTracked,
-            },
+            upperBody: createUpperBodySnapshot({
+                leftShoulder,
+                rightShoulder,
+                origins,
+            }),
             leftArm,
             rightArm,
             lowerBodyTargets: createSincroPoseLowerBodyTargets({
                 landmarks,
                 worldLandmarks,
-                imageOrigin: hipsImageOrigin,
-                worldOrigin: worldOrigins.hips,
+                imageOrigin: origins.hipsImageOrigin,
+                worldOrigin: origins.worldOrigins.hips,
             }),
             inferenceTimeMs,
             inferenceFps,
@@ -127,6 +172,65 @@ export function normalizeSincroPoseLandmarkerResult({
             lastUpdatedAtMs: nowMs,
         },
         consecutiveFailures: 0,
+    };
+}
+
+function createUpperBodySnapshot({
+    leftShoulder,
+    rightShoulder,
+    origins,
+}: Pick<DetectedPoseResultOptions, "leftShoulder" | "rightShoulder" | "origins">) {
+    return {
+        shoulderRoll: clampSigned((rightShoulder.y - leftShoulder.y) / origins.shoulderWidth),
+        torsoLean: clampSigned(
+            (origins.hipsImageOrigin.anchorX - origins.shoulderCenterX) / origins.shoulderWidth,
+        ),
+        shoulderWidth: origins.shoulderWidth,
+        shoulderCenterX: origins.shoulderCenterX,
+        shoulderCenterY: origins.shoulderCenterY,
+        hipCenterTracked: origins.hipCenterTracked,
+    };
+}
+
+type PoseLandmarkOriginsOptions = {
+    leftShoulder: PoseLandmarkerResult["landmarks"][number][number];
+    rightShoulder: PoseLandmarkerResult["landmarks"][number][number];
+    leftHip: PoseLandmarkerResult["landmarks"][number][number];
+    rightHip: PoseLandmarkerResult["landmarks"][number][number];
+    worldLandmarks: PoseLandmarkerResult["worldLandmarks"][number] | undefined;
+};
+
+function createPoseLandmarkOrigins({
+    leftShoulder,
+    rightShoulder,
+    leftHip,
+    rightHip,
+    worldLandmarks,
+}: PoseLandmarkOriginsOptions): PoseLandmarkOrigins {
+    const shoulderWidth = Math.max(poseLandmarkDistance2d(leftShoulder, rightShoulder), 0.08);
+    const shoulderCenterX = (leftShoulder.x + rightShoulder.x) * 0.5;
+    const shoulderCenterY = (leftShoulder.y + rightShoulder.y) * 0.5;
+    const hipCenterTracked =
+        poseLandmarkVisibility(leftHip) >= SINCRO_POSE_MIN_LANDMARK_VISIBILITY &&
+        poseLandmarkVisibility(rightHip) >= SINCRO_POSE_MIN_LANDMARK_VISIBILITY;
+    const hipCenterX = hipCenterTracked ? (leftHip.x + rightHip.x) * 0.5 : shoulderCenterX;
+    const hipCenterY = hipCenterTracked ? (leftHip.y + rightHip.y) * 0.5 : shoulderCenterY;
+    return {
+        shoulderImageOrigin: {
+            imageScale: shoulderWidth,
+            anchorX: shoulderCenterX,
+            anchorY: shoulderCenterY,
+        },
+        hipsImageOrigin: {
+            imageScale: shoulderWidth,
+            anchorX: hipCenterX,
+            anchorY: hipCenterY,
+        },
+        worldOrigins: createSincroPoseWorldTargetOrigins(worldLandmarks),
+        shoulderWidth,
+        shoulderCenterX,
+        shoulderCenterY,
+        hipCenterTracked,
     };
 }
 
