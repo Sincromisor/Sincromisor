@@ -70,7 +70,7 @@ export function SimpleVrmControlPanel({
     const isLookingGlassFocused = variant === "looking-glass-vrm";
     const hasStartupOptions = startupSettingsCapabilities.enableVR;
     const connectionDetail =
-        connectionState.detail || (hasActiveController ? "接続済みです。" : "");
+        connectionState.detail ?? (hasActiveController ? "接続済みです。" : "");
     const lookingGlassStatusText = lookingGlass.code
         ? `${lookingGlass.state} [${lookingGlass.code}]`
         : lookingGlass.state;
@@ -91,7 +91,7 @@ export function SimpleVrmControlPanel({
         ? "停止してから Looking Glass をもう一度開始すると反映されます。"
         : lookingGlassConfigStatus.changedKeys.length > 0
           ? lookingGlassConfigStatus.changedKeys.join(", ")
-          : null;
+          : undefined;
     const requestLookingGlassStart = (): void => {
         window.dispatchEvent(new CustomEvent("sincro:looking-glass-start-request"));
     };
@@ -121,7 +121,7 @@ export function SimpleVrmControlPanel({
                                               <SettingsStatusCard
                                                   label="表示状態"
                                                   value={lookingGlassStatusText}
-                                                  detail={lookingGlass.message || null}
+                                                  detail={lookingGlass.message}
                                                   tone={
                                                       lookingGlass.state === "active"
                                                           ? "good"

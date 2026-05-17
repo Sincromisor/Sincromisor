@@ -426,11 +426,11 @@ export class DialogManager {
         this.setDialogStartButtonState(
             startButtonState.startButtonDisabled,
             startButtonState.startButtonText,
-            startButtonState.startButtonHint ?? null,
+            startButtonState.startButtonHint,
         );
     }
 
-    private mapBooleanSettingId(id: string): BooleanDialogSettingKey | null {
+    private mapBooleanSettingId(id: string): BooleanDialogSettingKey | undefined {
         const mapping: Record<string, BooleanDialogSettingKey | undefined> = {
             enableCharacter: "enableCharacter",
             enableTalk: "enableTalk",
@@ -446,7 +446,7 @@ export class DialogManager {
             enableInspector: "enableInspector",
             enableVR: "enableVR",
         };
-        return mapping[id] ?? null;
+        return mapping[id];
     }
 
     private updateVrmFile(file: File): void {
@@ -532,7 +532,7 @@ export class DialogManager {
     private setDialogStartButtonState(
         startButtonDisabled: boolean,
         startButtonText: string,
-        startButtonHint: string | null = null,
+        startButtonHint?: string,
     ): void {
         const current = this.stateStore.getDialogUiState();
         if (

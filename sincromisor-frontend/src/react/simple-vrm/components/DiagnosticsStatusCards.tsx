@@ -47,8 +47,8 @@ export function DiagnosticsStatusCards({
             <StatusCard label="学習VAD" value={learnedVad.status} />
             <StatusCard label="L-VAD確率" value={formatMaybeProbability(learnedVad.probability)} />
             <StatusCard label="Looking Glass状態" value={lookingGlass.state} />
-            <StatusCard label="LGコード" value={lookingGlass.code || "-"} />
-            <StatusCard label="LG詳細" value={lookingGlass.message || "-"} />
+            <StatusCard label="LGコード" value={lookingGlass.code ?? "-"} />
+            <StatusCard label="LG詳細" value={lookingGlass.message ?? "-"} />
         </div>
     );
 }
