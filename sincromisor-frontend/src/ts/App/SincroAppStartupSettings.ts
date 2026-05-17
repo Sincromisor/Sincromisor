@@ -13,9 +13,9 @@ export type SincroAppStartupAppliedSettings = Pick<
 export function buildStartupSettingsStatus(params: {
     lifecycleState: SincroAppLifecycleState;
     current: SincroAppSettingsSnapshot;
-    applied: SincroAppStartupAppliedSettings | null;
+    applied: SincroAppStartupAppliedSettings | undefined;
 }): SincroAppStartupSettingsStatus {
-    if (params.applied == null) {
+    if (params.applied === undefined) {
         return {
             requiresRestart: false,
             willApplyOnNextStart: false,

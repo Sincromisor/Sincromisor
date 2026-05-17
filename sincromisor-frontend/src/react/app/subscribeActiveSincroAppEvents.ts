@@ -4,7 +4,7 @@ import { subscribeActiveSincroAppController } from "./subscribeActiveSincroAppCo
 
 type ActiveEventOptions = {
     // active controller 差し替え時の local state 同期用。
-    onControllerChange?: (controller: SincroAppController | null) => void;
+    onControllerChange?: (controller: SincroAppController | undefined) => void;
     // controller.subscribe() 前に bridge 設定（DOM 描画停止など）を行うためのフック。
     onBeforeSubscribe?: (controller: SincroAppController) => void;
     // controller 差し替えや React unmount 時に、bridge 設定を元へ戻すためのフック。

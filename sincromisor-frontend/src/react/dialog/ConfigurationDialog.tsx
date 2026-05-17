@@ -18,7 +18,7 @@ const defaultDialogUiState: SincroAppDialogUiState = {
 // visible UI は React が所有し、HTMLDialogElement の開閉同期だけを platform hook 経由で扱う。
 export function ConfigurationDialog() {
     const initialController = SincroAppController.getCurrent();
-    const [currentController, setCurrentController] = useState<SincroAppController | null>(
+    const [currentController, setCurrentController] = useState<SincroAppController | undefined>(
         initialController,
     );
     const [dialogUiState, setDialogUiState] = useState<SincroAppDialogUiState>(

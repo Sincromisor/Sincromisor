@@ -21,13 +21,13 @@ export function applySincroAppSettingsPartial(
     partial: Partial<SincroAppSettingsSnapshot>,
 ): void {
     // Dialog 設定（UI/RTC/描画系のトグル）は DialogManager facade 経由で即時反映する。
-    if (partial.talkMode != null) {
+    if (partial.talkMode !== undefined) {
         dialogManager.setTalkMode(partial.talkMode);
         // RTCのtalk_modeは接続開始時の契約なので、実行中の音声経路変更は再接続で反映する。
         // ここではキャラクターのlocal motion policyだけを即時更新する。
         CharacterBehaviorState.getManager().setTalkMode(partial.talkMode);
     }
-    if (partial.titleText != null) {
+    if (partial.titleText !== undefined) {
         dialogManager.setTitleText(partial.titleText);
     }
     if ("audioInputDeviceId" in partial) {
@@ -36,56 +36,56 @@ export function applySincroAppSettingsPartial(
     if ("videoInputDeviceId" in partial) {
         dialogManager.setVideoInputDeviceId(partial.videoInputDeviceId);
     }
-    if (partial.enableAutoGainControl != null) {
+    if (partial.enableAutoGainControl !== undefined) {
         dialogManager.setEnableAutoGainControl(partial.enableAutoGainControl);
     }
-    if (partial.enableNoiseSuppression != null) {
+    if (partial.enableNoiseSuppression !== undefined) {
         dialogManager.setEnableNoiseSuppression(partial.enableNoiseSuppression);
     }
-    if (partial.enableEchoCancellation != null) {
+    if (partial.enableEchoCancellation !== undefined) {
         dialogManager.setEnableEchoCancellation(partial.enableEchoCancellation);
     }
-    if (partial.enableVadGate != null) {
+    if (partial.enableVadGate !== undefined) {
         dialogManager.setEnableVadGate(partial.enableVadGate);
     }
-    if (partial.enableVenueNoiseMode != null) {
+    if (partial.enableVenueNoiseMode !== undefined) {
         dialogManager.setEnableVenueNoiseMode(partial.enableVenueNoiseMode);
     }
-    if (partial.enableCharacter != null) {
+    if (partial.enableCharacter !== undefined) {
         dialogManager.setEnableCharacter(partial.enableCharacter);
     }
-    if (partial.enableTalk != null) {
+    if (partial.enableTalk !== undefined) {
         dialogManager.setEnableTalk(partial.enableTalk);
     }
-    if (partial.enableCharacterGaze != null) {
+    if (partial.enableCharacterGaze !== undefined) {
         dialogManager.setEnableCharacterGaze(partial.enableCharacterGaze);
     }
-    if (partial.enableSincroPoseTracking != null) {
+    if (partial.enableSincroPoseTracking !== undefined) {
         dialogManager.setEnableSincroPoseTracking(partial.enableSincroPoseTracking);
     }
-    if (partial.forceSincroPoseTracking != null) {
+    if (partial.forceSincroPoseTracking !== undefined) {
         dialogManager.setForceSincroPoseTracking(partial.forceSincroPoseTracking);
     }
-    if (partial.enableAutoMute != null) {
+    if (partial.enableAutoMute !== undefined) {
         dialogManager.setEnableAutoMute(partial.enableAutoMute);
     }
-    if (partial.enableInspector != null) {
+    if (partial.enableInspector !== undefined) {
         dialogManager.setEnableInspector(partial.enableInspector);
     }
-    if (partial.enableVR != null) {
+    if (partial.enableVR !== undefined) {
         dialogManager.setEnableVR(partial.enableVR);
     }
-    if (partial.characterMotionScale != null) {
+    if (partial.characterMotionScale !== undefined) {
         dialogManager.setCharacterMotionScale(
             clampAndRoundToStep(partial.characterMotionScale, 0, 1.2, 0.05),
         );
     }
-    if (partial.sincroPoseRetargetScale != null) {
+    if (partial.sincroPoseRetargetScale !== undefined) {
         dialogManager.setSincroPoseRetargetScale(
             clampAndRoundToStep(partial.sincroPoseRetargetScale, 0, 1.2, 0.05),
         );
     }
-    if (partial.characterEyeTrackingScale != null) {
+    if (partial.characterEyeTrackingScale !== undefined) {
         dialogManager.setCharacterEyeTrackingScale(
             clampAndRoundToStep(partial.characterEyeTrackingScale, 0, 1.2, 0.05),
         );
@@ -94,25 +94,25 @@ export function applySincroAppSettingsPartial(
     // Looking Glass 設定は runtime config に正規化して反映する。
     // polyfill への反映タイミング判定は別の tracker/status ロジックで扱う。
     const nextLookingGlassConfig: Parameters<typeof updateLookingGlassRuntimeConfig>[0] = {};
-    if (partial.lgTileHeight != null) {
+    if (partial.lgTileHeight !== undefined) {
         nextLookingGlassConfig.tileHeight = clampAndRoundToStep(partial.lgTileHeight, 256, 2048, 1);
     }
-    if (partial.lgNumViews != null) {
+    if (partial.lgNumViews !== undefined) {
         nextLookingGlassConfig.numViews = clampAndRoundToStep(partial.lgNumViews, 8, 64, 1);
     }
-    if (partial.lgTargetY != null) {
+    if (partial.lgTargetY !== undefined) {
         nextLookingGlassConfig.targetY = clampAndRoundToStep(partial.lgTargetY, -2, 4, 0.05);
     }
-    if (partial.lgTargetZ != null) {
+    if (partial.lgTargetZ !== undefined) {
         nextLookingGlassConfig.targetZ = clampAndRoundToStep(partial.lgTargetZ, -1, 2, 0.05);
     }
-    if (partial.lgTargetDiam != null) {
+    if (partial.lgTargetDiam !== undefined) {
         nextLookingGlassConfig.targetDiam = clampAndRoundToStep(partial.lgTargetDiam, 0.1, 3, 0.05);
     }
-    if (partial.lgDepthiness != null) {
+    if (partial.lgDepthiness !== undefined) {
         nextLookingGlassConfig.depthiness = clampAndRoundToStep(partial.lgDepthiness, 0, 4, 0.05);
     }
-    if (partial.lgFovyDeg != null) {
+    if (partial.lgFovyDeg !== undefined) {
         nextLookingGlassConfig.fovyDeg = clampAndRoundToStep(partial.lgFovyDeg, 5, 80, 0.5);
     }
     if (Object.keys(nextLookingGlassConfig).length > 0) {

@@ -94,7 +94,7 @@ const defaultStartupSettingsCapabilities: SincroAppStartupSettingsCapabilities =
 
 type SimpleVrmPanelState = {
     hasActiveController: boolean;
-    currentController: SincroAppController | null;
+    currentController: SincroAppController | undefined;
     lifecycleState: SincroAppLifecycleState;
     settings: SincroAppSettingsSnapshot;
     settingsUiState: SincroAppSettingsUiState;
@@ -134,7 +134,7 @@ type SimpleVrmPanelEventHandlerMap = {
 export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelActions {
     const initialController = SincroAppController.getCurrent();
     const [hasActiveController, setHasActiveController] = useState<boolean>(!!initialController);
-    const [currentController, setCurrentController] = useState<SincroAppController | null>(
+    const [currentController, setCurrentController] = useState<SincroAppController | undefined>(
         initialController,
     );
     const [lifecycleState, setLifecycleState] = useState<SincroAppLifecycleState>("idle");

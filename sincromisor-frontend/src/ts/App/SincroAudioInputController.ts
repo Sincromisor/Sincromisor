@@ -22,7 +22,7 @@ export class SincroAudioInputController {
     private readonly chatMessageService: ChatMessageService;
     private readonly userMediaManager: UserMediaManager;
     private readonly characterBehaviorState: CharacterBehaviorState;
-    private dialogMicSettingsSnapshot: DialogMicSettingsSnapshot | null = null;
+    private dialogMicSettingsSnapshot: DialogMicSettingsSnapshot | undefined;
     private suppressNextDialogMicSettingsSync = false;
     private onAudioTrackReplaced: (audioTrack: MediaStreamTrack) => void = () => {};
     private hasStarted = false;
@@ -173,26 +173,42 @@ export class SincroAudioInputController {
         const next = this.readDialogMicSettingsSnapshot();
         const prev = this.dialogMicSettingsSnapshot;
 
-        if (forceAll || !prev || prev.audioInputDeviceId !== next.audioInputDeviceId) {
+        if (forceAll || prev === undefined || prev.audioInputDeviceId !== next.audioInputDeviceId) {
             this.userMediaManager.setAudioInputDeviceId(next.audioInputDeviceId);
-            if (!forceAll && prev && this.hasStarted) {
+            if (!forceAll && prev !== undefined && this.hasStarted) {
                 this.scheduleAudioInputRefresh();
             }
         }
 
-        if (forceAll || !prev || prev.enableNoiseSuppression !== next.enableNoiseSuppression) {
+        if (
+            forceAll ||
+            prev === undefined ||
+            prev.enableNoiseSuppression !== next.enableNoiseSuppression
+        ) {
             this.userMediaManager.setNoiseSuppression(next.enableNoiseSuppression);
         }
-        if (forceAll || !prev || prev.enableEchoCancellation !== next.enableEchoCancellation) {
+        if (
+            forceAll ||
+            prev === undefined ||
+            prev.enableEchoCancellation !== next.enableEchoCancellation
+        ) {
             this.userMediaManager.setEchoCancellation(next.enableEchoCancellation);
         }
-        if (forceAll || !prev || prev.enableAutoGainControl !== next.enableAutoGainControl) {
+        if (
+            forceAll ||
+            prev === undefined ||
+            prev.enableAutoGainControl !== next.enableAutoGainControl
+        ) {
             this.userMediaManager.setAutoGainControl(next.enableAutoGainControl);
         }
-        if (forceAll || !prev || prev.enableVadGate !== next.enableVadGate) {
+        if (forceAll || prev === undefined || prev.enableVadGate !== next.enableVadGate) {
             this.userMediaManager.setVadGateEnabled(next.enableVadGate);
         }
-        if (forceAll || !prev || prev.enableVenueNoiseMode !== next.enableVenueNoiseMode) {
+        if (
+            forceAll ||
+            prev === undefined ||
+            prev.enableVenueNoiseMode !== next.enableVenueNoiseMode
+        ) {
             this.userMediaManager.setVenueNoiseModeEnabled(next.enableVenueNoiseMode);
             // Venue preset は HPF/LPF と VAD閾値を同時変更するため、Debug UI も合わせて更新する。
             this.syncDebugConsoleFromUserMedia();

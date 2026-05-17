@@ -21,10 +21,10 @@ export class SincroCharacterGazeController {
     private readonly characterBehaviorState: CharacterBehaviorState;
     private readonly videoInputManager = new VideoInputManager();
     private readonly trackerRuntime: TrackerRuntime;
-    private onMuteChange: ((mute: boolean) => void) | null = null;
-    private visionInitPromise: Promise<void> | null = null;
+    private onMuteChange: ((mute: boolean) => void) | undefined;
+    private visionInitPromise: Promise<void> | undefined;
     private hasStarted = false;
-    private gazeSettingsSnapshot: DialogGazeSettingsSnapshot | null = null;
+    private gazeSettingsSnapshot: DialogGazeSettingsSnapshot | undefined;
     private pendingCameraRefreshToken = 0;
     private cameraRefreshChain: Promise<void> = Promise.resolve();
 
@@ -64,14 +64,18 @@ export class SincroCharacterGazeController {
         const next = this.readDialogGazeSettingsSnapshot();
         const prev = this.gazeSettingsSnapshot;
         const videoDeviceChanged =
-            forceAll || !prev || prev.videoInputDeviceId !== next.videoInputDeviceId;
+            forceAll || prev === undefined || prev.videoInputDeviceId !== next.videoInputDeviceId;
         const gazeEnabledChanged =
-            forceAll || !prev || prev.enableCharacterGaze !== next.enableCharacterGaze;
-        const talkModeChanged = forceAll || !prev || prev.talkMode !== next.talkMode;
+            forceAll || prev === undefined || prev.enableCharacterGaze !== next.enableCharacterGaze;
+        const talkModeChanged = forceAll || prev === undefined || prev.talkMode !== next.talkMode;
         const poseTrackingChanged =
-            forceAll || !prev || prev.enableSincroPoseTracking !== next.enableSincroPoseTracking;
+            forceAll ||
+            prev === undefined ||
+            prev.enableSincroPoseTracking !== next.enableSincroPoseTracking;
         const forcePoseTrackingChanged =
-            forceAll || !prev || prev.forceSincroPoseTracking !== next.forceSincroPoseTracking;
+            forceAll ||
+            prev === undefined ||
+            prev.forceSincroPoseTracking !== next.forceSincroPoseTracking;
 
         this.characterBehaviorState.setTalkMode(next.talkMode);
         if (videoDeviceChanged) {
@@ -79,7 +83,7 @@ export class SincroCharacterGazeController {
         }
         this.gazeSettingsSnapshot = next;
 
-        if (!this.hasStarted || !this.onMuteChange) {
+        if (!this.hasStarted || this.onMuteChange === undefined) {
             return;
         }
 
@@ -149,7 +153,7 @@ export class SincroCharacterGazeController {
     }
 
     private async refreshCharacterGazeCamera(refreshToken: number): Promise<void> {
-        if (!this.dialogManager.enableCharacterGaze() || !this.onMuteChange) {
+        if (!this.dialogManager.enableCharacterGaze() || this.onMuteChange === undefined) {
             return;
         }
         const characterGaze = CharacterGaze.getManager();
@@ -287,9 +291,9 @@ export class SincroCharacterGazeController {
         if (characterGaze.modelIsLoaded()) {
             return Promise.resolve();
         }
-        if (!this.visionInitPromise) {
+        if (this.visionInitPromise === undefined) {
             this.visionInitPromise = characterGaze.initVision().catch((error) => {
-                this.visionInitPromise = null;
+                this.visionInitPromise = undefined;
                 throw error;
             });
         }
