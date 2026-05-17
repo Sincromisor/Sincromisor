@@ -156,6 +156,15 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 分割後の主要ファイルは `UserMediaAudioProcessor.ts` 239 行、`UserMediaVadRuntime.ts` 276 行に収め、対象領域の hard 超過関数は解消した。
     - 既存の `UserMediaManager.ts` からの型 re-export は維持し、呼び出し側の import 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `SincroPoseTracker.ts` から pose snapshot clone/fallback、landmark geometry、PoseLandmarkerResult 正規化、腕/下半身 target 生成を分割した。
+    - 追加: `src/ts/FaceTracking/sincroPoseMotionSnapshotClone.ts`
+    - 追加: `src/ts/FaceTracking/sincroPoseLandmarkGeometry.ts`
+    - 追加: `src/ts/FaceTracking/sincroPoseTrackerNormalizer.ts`
+    - 追加: `src/ts/FaceTracking/sincroPoseTrackerTargets.ts`
+    - `SincroPoseTracker.ts` は 521 行から 146 行まで縮小し、MediaPipe lifecycle と推論呼び出しの入口に寄せた。
+    - 分割後の新規ファイルはすべて 300 行未満に収め、`normalizeResult` 相当の巨大関数は options object 入力の純粋 helper へ移した。
+    - 既存の worker / runtime からの `SincroPoseTracker` import 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
