@@ -336,6 +336,18 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 分割後の対象ファイルはすべて 200 行 soft 閾値付近または以下に収め、対象領域の hard 超過ファイルは解消した。
     - VRM eye behavior 内部の責務分割のみで、UI 表示文言 / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-18: `TrackerRuntime.ts` から tracker runtime の型/既定値、video element 操作、推論 cadence、engine 初期化、Worker fallback stats、frame loop、Pose performance gate を分割した。
+    - 追加: `src/ts/FaceTracking/trackerRuntimeTypes.ts`
+    - 追加: `src/ts/FaceTracking/trackerRuntimeVideoElement.ts`
+    - 追加: `src/ts/FaceTracking/trackerRuntimeCadence.ts`
+    - 追加: `src/ts/FaceTracking/trackerRuntimeEngineInitializer.ts`
+    - 追加: `src/ts/FaceTracking/trackerRuntimeFallbackStats.ts`
+    - 追加: `src/ts/FaceTracking/trackerRuntimeFrameLoop.ts`
+    - 追加: `src/ts/FaceTracking/trackerRuntimePosePerformanceGate.ts`
+    - `TrackerRuntime.ts` は 405 行から 292 行まで縮小し、MediaPipe / Worker 推論 lifecycle の公開 facade と frame ごとの orchestration に寄せた。
+    - 分割後の新規ファイルはすべて 100 行未満に収め、既存の `TrackerRuntime` import 契約は変更していない。
+    - Face/Pose tracking 内部の責務分割のみで、UI 表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
