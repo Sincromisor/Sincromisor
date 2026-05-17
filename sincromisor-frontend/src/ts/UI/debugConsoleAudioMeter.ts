@@ -44,8 +44,8 @@ export class DebugConsoleAudioMeter {
     private static readonly AUDIO_WARNING_SWITCH_HOLD_FRAMES = 18;
     private static readonly AUDIO_METER_UPDATE_INTERVAL_MS = 80;
 
-    private localAudioMeterHandle: AudioMeterHandle | null = null;
-    private remoteAudioMeterHandle: AudioMeterHandle | null = null;
+    private localAudioMeterHandle?: AudioMeterHandle;
+    private remoteAudioMeterHandle?: AudioMeterHandle;
     private localAudioWarningState: LocalWarningState = "ok";
     private localAudioWarningPendingState: LocalWarningState = "ok";
     private localAudioWarningPendingFrames = 0;
@@ -87,7 +87,7 @@ export class DebugConsoleAudioMeter {
         this.callbacks.onLocalWarning({ state: nextState, text });
     }
 
-    private stopAudioMeter(handle: AudioMeterHandle | null, target: AudioMeterTarget): void {
+    private stopAudioMeter(handle: AudioMeterHandle | undefined, target: AudioMeterTarget): void {
         if (!handle) {
             return;
         }
@@ -98,23 +98,23 @@ export class DebugConsoleAudioMeter {
             frontendLogger.error("Failed to close audio meter context.", { error });
         });
         if (target === "local") {
-            this.localAudioMeterHandle = null;
+            this.localAudioMeterHandle = undefined;
             this.localAudioWarningState = "ok";
             this.localAudioWarningPendingState = "ok";
             this.localAudioWarningPendingFrames = 0;
             this.callbacks.onLocalReset();
             return;
         }
-        this.remoteAudioMeterHandle = null;
+        this.remoteAudioMeterHandle = undefined;
         this.callbacks.onRemoteReset();
     }
 
     private startAudioMeter(
         track: MediaStreamTrack,
         target: AudioMeterTarget,
-    ): AudioMeterHandle | null {
+    ): AudioMeterHandle | undefined {
         if (track.kind !== "audio") {
-            return null;
+            return undefined;
         }
         const audioContext = new AudioContext();
         const mediaStream = new MediaStream([track]);

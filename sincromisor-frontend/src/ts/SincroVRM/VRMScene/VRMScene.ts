@@ -27,7 +27,7 @@ export class VRMScene {
         characterControlLayer: HTMLElement,
         vrmUrl: string,
         xrMode: boolean = false,
-        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | null) => void,
+        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void,
         enableInitialUpperBodyFraming: boolean = false,
     ) {
         this.scene = new Scene();

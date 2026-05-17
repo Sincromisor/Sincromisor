@@ -11,7 +11,7 @@ export type SincroAppDialogBridge = {
     isCharacterEnabled: () => boolean;
     isVREnabled: () => boolean;
     isInspectorEnabled: () => boolean;
-    loadVrmThumbnailBlob: () => Promise<Blob | null>;
+    loadVrmThumbnailBlob: () => Promise<Blob | undefined>;
     saveVrmThumbnailBlob: (blob: Blob) => Promise<void>;
     getSelectedVrmUrl: () => string;
 };

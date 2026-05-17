@@ -1,7 +1,7 @@
 // CharacterGaze 用のカメラ取得を専用管理する helper。
 // 音声用 getUserMedia と切り離し、選択カメラの再取得/解放を安全に行う。
 export class VideoInputManager {
-    private videoTrack: MediaStreamTrack | null = null;
+    private videoTrack?: MediaStreamTrack;
     private videoInputDeviceId: string | undefined;
 
     setVideoInputDeviceId(deviceId: string | undefined): void {
@@ -32,7 +32,7 @@ export class VideoInputManager {
 
     releaseVideoTrack(): void {
         this.videoTrack?.stop();
-        this.videoTrack = null;
+        this.videoTrack = undefined;
     }
 
     private buildVideoConstraints(): MediaTrackConstraints {

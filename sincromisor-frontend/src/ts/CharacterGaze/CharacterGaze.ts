@@ -35,10 +35,10 @@ export class CharacterGaze {
     leaveCallback: () => void = () => {};
     private predictionLoopEnabled: boolean = false;
     private predictionLoopRunning: boolean = false;
-    private predictionFrameId: number | null = null;
-    private detectionCallback: ((detection: Detection[]) => void) | null = null;
-    private detectionErrorCallback: ((error: unknown) => void) | null = null;
-    private loadedDataHandlerBound: (() => void) | null = null;
+    private predictionFrameId?: number;
+    private detectionCallback?: (detection: Detection[]) => void;
+    private detectionErrorCallback?: (error: unknown) => void;
+    private loadedDataHandlerBound?: () => void;
     private readonly faceTargetSelector = new FaceTargetSelector();
     // 6 keypoints (rightEye, leftEye, nose, mouth, rightEar, leftEar) の x/y を個別に平滑化する。
     private readonly keypointXFilters: OneEuroFilter1D[] = [...Array(6)].map(
@@ -225,7 +225,7 @@ export class CharacterGaze {
         this.videoElement.setAttribute("muted", "true");
         this.videoElement.srcObject = videoStream;
         this.detectionCallback = callback;
-        this.detectionErrorCallback = errorCallback ?? null;
+        this.detectionErrorCallback = errorCallback;
         this.predictionLoopEnabled = true;
         if (!this.loadedDataHandlerBound) {
             this.loadedDataHandlerBound = () => {
@@ -245,8 +245,8 @@ export class CharacterGaze {
     // OFF 時やカメラ切替途中に呼び、次回の再取得を安全にする。
     detachCamera(): void {
         this.stopPredictionLoop();
-        this.detectionCallback = null;
-        this.detectionErrorCallback = null;
+        this.detectionCallback = undefined;
+        this.detectionErrorCallback = undefined;
         this.detected = false;
         this.lastVideoTime = -1;
         this.lastVideoFrameUpdatedAtMs = -1;
@@ -262,9 +262,9 @@ export class CharacterGaze {
         this.predictionLoopRunning = false;
         this.faceTargetSelector.reset();
         this.lastTargetDebugText = "停止中";
-        if (this.predictionFrameId !== null) {
+        if (this.predictionFrameId !== undefined) {
             window.cancelAnimationFrame(this.predictionFrameId);
-            this.predictionFrameId = null;
+            this.predictionFrameId = undefined;
         }
     }
 
@@ -289,7 +289,7 @@ export class CharacterGaze {
         }
         if (!this.videoFrameIsReadyForDetection()) {
             this.predictionFrameId = window.requestAnimationFrame(() => {
-                this.predictionFrameId = null;
+                this.predictionFrameId = undefined;
                 this.startPredictionLoopIfNeeded();
             });
             return;
@@ -303,7 +303,7 @@ export class CharacterGaze {
     private async predictCam(callback: (detection: Detection[]) => void): Promise<void> {
         if (!this.predictionLoopEnabled) {
             this.predictionLoopRunning = false;
-            this.predictionFrameId = null;
+            this.predictionFrameId = undefined;
             return;
         }
         if (!this.faceDetector) {
@@ -333,10 +333,10 @@ export class CharacterGaze {
             if (detections.length > 0) {
                 const selected = this.faceTargetSelector.select(detections, startTimeMs);
                 this.lastTargetDebugText =
-                    selected.selectedIndex == null
+                    selected.selectedIndex === undefined
                         ? `候補:${selected.candidateCount}`
                         : `対象:${selected.selectedIndex} 候補:${selected.candidateCount} score:${(selected.selectedScore ?? 0).toFixed(2)}${selected.holdLocked ? " 固定中" : ""}`;
-                if (selected.selectedIndex != null) {
+                if (selected.selectedIndex !== undefined) {
                     const targetDetection = detections[selected.selectedIndex];
                     this.updateKeypointsMovingAverage(
                         targetDetection.keypoints as NormalizedKeypoint[],

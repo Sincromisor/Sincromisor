@@ -48,13 +48,13 @@ const DEFAULT_TUNING: LearnedVadTuningConfig = {
 // Worker側の学習VAD推論を管理するクライアント。
 // UserMediaManagerからは「有効化」「音声フレーム転送」「現在状態参照」のみ扱えるように責務を限定する。
 export class LearnedVadWorkerClient {
-    private worker: Worker | null = null;
+    private worker?: Worker;
     private status: LearnedVadStatus = "idle";
     private probability: number | undefined = undefined;
     private isSpeech: boolean = false;
     private enabled: boolean = false;
     private streamEnabled: boolean = false;
-    private streamVadNode: AudioWorkletNode | null = null;
+    private streamVadNode?: AudioWorkletNode;
     private hasPrediction: boolean = false;
     private txFrames: number = 0;
     private rxPredictions: number = 0;
@@ -186,7 +186,7 @@ export class LearnedVadWorkerClient {
         force = false,
     ): void {
         if (!vadNode) {
-            this.streamVadNode = null;
+            this.streamVadNode = undefined;
             return;
         }
         const nodeChanged = this.streamVadNode !== vadNode;
@@ -233,13 +233,13 @@ export class LearnedVadWorkerClient {
         if (this.worker) {
             this.worker.terminate();
         }
-        this.worker = null;
+        this.worker = undefined;
         this.status = "idle";
         this.probability = undefined;
         this.isSpeech = false;
         this.enabled = false;
         this.streamEnabled = false;
-        this.streamVadNode = null;
+        this.streamVadNode = undefined;
         this.hasPrediction = false;
         this.txFrames = 0;
         this.rxPredictions = 0;
