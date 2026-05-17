@@ -98,6 +98,15 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - 追加: `src/ts/UI/debugConsoleSincroMotionControls.ts`
     - `DebugConsoleManager.ts` は 444 行から 328 行まで縮小し、import / re-export / コメント / 空行を除く実装行は hard 閾値未満まで下げた。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-17: `SincroPoseRetargeter.ts` から型/既定値、frame clone/smoothing、target gate、腕 retarget、腕 IK solve を分割した。
+    - 追加: `src/ts/SincroVRM/VRMCharacter/sincroPoseRetargetTypes.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/sincroPoseRetargetFrame.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/sincroPoseRetargetTargets.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/sincroPoseArmRetargeter.ts`
+    - 追加: `src/ts/SincroVRM/VRMCharacter/sincroPoseArmIkSolve.ts`
+    - `SincroPoseRetargeter.ts` は 985 行から 258 行まで縮小し、retargeter 本体は設定・VRM attachment・frame orchestration に寄せた。
+    - 新規分割ファイルはいずれも 300 行未満に収めた。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
 
 ## 完了条件
 
