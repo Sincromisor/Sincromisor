@@ -34,10 +34,7 @@ function connectionStatusLabel(value: string): string {
     }
 }
 
-function hasFileDragPayload(dataTransfer: DataTransfer | null): boolean {
-    if (!dataTransfer) {
-        return false;
-    }
+function hasFileDragPayload(dataTransfer: DataTransfer): boolean {
     return Array.from(dataTransfer.types).includes("Files");
 }
 

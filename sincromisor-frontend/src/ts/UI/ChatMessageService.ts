@@ -19,7 +19,7 @@ export type ChatMessageServiceEvent = {
 // 既存コードは write* API を変更せず利用でき、React UI は subscribe + snapshot API で同期する。
 export class ChatMessageService {
     private static instance: ChatMessageService;
-    private chatBox: HTMLDivElement | null;
+    private chatBox: HTMLDivElement | undefined;
     private readonly systemUserID: string = "GloriousAI";
     private readonly systemUserName: string = "Glorious AI";
     // systemメッセージだけは、VRMのthumbnailImageに動的に差し替え可能にする。
@@ -36,13 +36,14 @@ export class ChatMessageService {
 
     static getService(): ChatMessageService {
         if (!ChatMessageService.instance) {
-            const chatBox: HTMLDivElement | null = document.querySelector("div#sincroChatBox");
+            const chatBox =
+                document.querySelector<HTMLDivElement>("div#sincroChatBox") ?? undefined;
             ChatMessageService.instance = new ChatMessageService(chatBox);
         }
         return ChatMessageService.instance;
     }
 
-    private constructor(chatBox: HTMLDivElement | null) {
+    private constructor(chatBox: HTMLDivElement | undefined) {
         this.chatBox = chatBox;
     }
 
@@ -83,8 +84,11 @@ export class ChatMessageService {
         return this.systemIconUrl;
     }
 
-    private getMessageBox(messageID: string): HTMLDivElement | null {
-        return this.ensureChatBoxBound()?.querySelector(`#msg${messageID}`) ?? null;
+    private getMessageBox(messageID: string): HTMLDivElement | undefined {
+        return (
+            this.ensureChatBoxBound()?.querySelector<HTMLDivElement>(`#msg${messageID}`) ??
+            undefined
+        );
     }
 
     // Chat欄にメッセージを追加、もしくはメッセージを更新する。
@@ -92,15 +96,15 @@ export class ChatMessageService {
     // 既存のものがある場合はp.message要素の中身を直接書き換える。
     writeMessage(cMessage: ChatMessage, isHTML: boolean = false): void {
         this.upsertMessageSnapshot(cMessage, isHTML);
-        const box: HTMLDivElement | null = this.getMessageBox(cMessage.message_id);
+        const box = this.getMessageBox(cMessage.message_id);
         frontendLogger.debug("Chat message render requested.", {
             messageId: cMessage.message_id,
             messageType: cMessage.message_type,
             renderMode: isHTML ? "trusted_html" : "text",
-            hasLegacyDomBox: box != null,
+            hasLegacyDomBox: box !== undefined,
         });
         if (this.domRenderingEnabled && box) {
-            const ePara: HTMLParagraphElement | null = box.querySelector("p.sincroMessage__text");
+            const ePara = box.querySelector<HTMLParagraphElement>("p.sincroMessage__text");
             if (ePara) {
                 if (isHTML) {
                     ePara.innerHTML = cMessage.message;
@@ -152,10 +156,10 @@ export class ChatMessageService {
         システムのエラーメッセージとしてメッセージを出力する。
         メッセージのdiv要素を返す。
     */
-    writeErrorMessage(message: string, force: boolean = false): HTMLDivElement | null {
+    writeErrorMessage(message: string, force: boolean = false): HTMLDivElement | undefined {
         /* 同じエラーメッセージが何度も繰り返されないようにする。 */
         if (!force && this.lastErrorMessage === message) {
-            return null;
+            return undefined;
         }
         this.lastErrorMessage = message;
         const chatMessage: ChatMessage = new ChatMessageBuilder(
@@ -304,11 +308,11 @@ export class ChatMessageService {
     }
 
     // React shell が後から mount される構成でも、旧 DOM fallback を安全に再接続する。
-    private ensureChatBoxBound(): HTMLDivElement | null {
+    private ensureChatBoxBound(): HTMLDivElement | undefined {
         if (this.chatBox?.isConnected) {
             return this.chatBox;
         }
-        const nextChatBox: HTMLDivElement | null = document.querySelector("div#sincroChatBox");
+        const nextChatBox = document.querySelector<HTMLDivElement>("div#sincroChatBox");
         if (!nextChatBox) {
             return this.chatBox;
         }

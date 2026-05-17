@@ -203,8 +203,8 @@ export class SphereVideo {
             video.onplay = () => {
                 /* ライブ配信の場合、最新の映像が見れるようliveSyncPositionまでシークする */
                 if (this.videoType === "live") {
-                    const pos: number | null = hls.liveSyncPosition;
-                    if (pos !== null) {
+                    const pos = hls.liveSyncPosition ?? undefined;
+                    if (pos !== undefined) {
                         video.currentTime = pos;
                     }
                 }

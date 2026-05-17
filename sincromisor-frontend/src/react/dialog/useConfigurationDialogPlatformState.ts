@@ -13,9 +13,9 @@ export function useConfigurationDialogPlatformState(
 ) {
     const { isOpen, onClosed } = params;
     const dialogRef = useRef<HTMLDialogElement | null>(null);
-    const adapterRef = useRef<DialogBridgeDomAdapter | null>(null);
+    const adapterRef = useRef<DialogBridgeDomAdapter | undefined>(undefined);
 
-    if (adapterRef.current == null) {
+    if (adapterRef.current === undefined) {
         adapterRef.current = new DialogBridgeDomAdapter();
     }
 

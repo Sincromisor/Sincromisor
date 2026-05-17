@@ -41,7 +41,7 @@ export function updateLookingGlassRuntimeConfig(
     const changedKeys = Object.keys(partial).filter((key) => {
         const typedKey = key as keyof LookingGlassRuntimeConfig;
         const nextValue = partial[typedKey];
-        return nextValue != null && currentConfig[typedKey] !== nextValue;
+        return nextValue !== undefined && currentConfig[typedKey] !== nextValue;
     }) as Array<keyof LookingGlassRuntimeConfig>;
 
     // React UI の部分更新を安全に取り込めるよう shallow merge にしている。

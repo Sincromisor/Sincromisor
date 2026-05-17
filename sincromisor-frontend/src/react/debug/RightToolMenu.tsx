@@ -17,12 +17,11 @@ export function RightToolMenu() {
 
     useEffect(() => {
         const handleClick = (event: MouseEvent): void => {
-            const target = event.target as Node | null;
-            if (!target) {
+            if (!(event.target instanceof Node)) {
                 return;
             }
             const debugMenu = document.getElementById("debugMenu");
-            if (state.menuOpen && debugMenu && !debugMenu.contains(target)) {
+            if (state.menuOpen && debugMenu && !debugMenu.contains(event.target)) {
                 closeRightToolMenu();
             }
         };

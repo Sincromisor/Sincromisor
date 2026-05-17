@@ -362,21 +362,4 @@ export class VRMCharacterManager {
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
         this.sincroPoseRetargeter.setConfig(config);
     }
-    /*
-    private setEvent(vrm: VRM): void {
-        window.addEventListener('mousemove', function (event) {
-            const CAMERA_FOV: number = 30.0;
-            const CAMERA_Z: number = 6.0;
-            const range: number = CAMERA_Z * Math.tan(CAMERA_FOV / 360.0 * Math.PI);
-            const px: number = (2.0 * event.clientX - window.innerWidth) / window.innerHeight * range;
-            const py: number = - (2.0 * event.clientY - window.innerHeight) / window.innerHeight * range;
-
-            const hipNode: Object3D | null = vrm.humanoid.getNormalizedBoneNode('hips');
-            if (hipNode) {
-                hipNode.position.set(px, py, 0.0);
-                hipNode.rotation.set(MathUtils.degToRad(0), MathUtils.degToRad(0), 0);
-            }
-        });
-    }
-    */
 }
