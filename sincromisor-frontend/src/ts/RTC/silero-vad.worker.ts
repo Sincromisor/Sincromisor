@@ -282,7 +282,7 @@ function updateSpeechState(probability: number): boolean {
 // - audio-frame は推論系（最新フレームのみ保持して負荷上昇を抑制）
 self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
     const data = event.data;
-    if (!data || !data.type) {
+    if (!data?.type) {
         return;
     }
     if (data.type === "init") {

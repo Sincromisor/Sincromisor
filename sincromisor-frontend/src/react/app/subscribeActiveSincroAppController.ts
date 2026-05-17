@@ -1,6 +1,6 @@
 import { SincroAppController } from "../../ts/App/SincroAppController";
 
-type BindControllerFn = (controller: SincroAppController | null) => (() => void) | void;
+type BindControllerFn = (controller: SincroAppController | null) => (() => void) | undefined;
 
 // active AppController の差し替え（MPA/initializer再生成）を吸収しつつ、controller.subscribe の解放も一箇所にまとめる。
 export function subscribeActiveSincroAppController(bindController: BindControllerFn): () => void {

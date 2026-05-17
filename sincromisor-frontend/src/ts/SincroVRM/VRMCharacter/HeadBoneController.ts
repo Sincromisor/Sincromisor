@@ -295,7 +295,6 @@ export class HeadBoneController {
                     yawRad: MathUtils.degToRad(0.12),
                     rollRad: MathUtils.degToRad(0.28),
                 };
-            case 0:
             default:
                 return {
                     intentScale: 0.52,

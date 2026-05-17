@@ -1,7 +1,65 @@
 import { ChatMessageService } from "../UI/ChatMessageService";
 import { DebugConsoleManager } from "../UI/DebugConsoleManager";
-import type { ChatMessage, TelopChannelMessage } from "./RTCMessage";
+import {
+    type ChatMessage,
+    parseChatMessagePayload,
+    parseTelopChannelPayload,
+    type TelopChannelMessage,
+} from "./RTCMessage";
 import type { SincroRTCConfig } from "./SincroRTCConfigManager";
+
+type RtcStatsRecord = RTCStats & {
+    kind?: string;
+    isRemote?: boolean;
+    bytesSent?: number;
+    bytesReceived?: number;
+    packetsSent?: number;
+    packetsLost?: number;
+    packetsReceived?: number;
+    jitter?: number;
+    selected?: boolean;
+    nominated?: boolean;
+    state?: string;
+    localCandidateId?: string;
+    remoteCandidateId?: string;
+    currentRoundTripTime?: number;
+    availableOutgoingBitrate?: number;
+    candidateType?: string;
+    protocol?: string;
+    relayProtocol?: string;
+    address?: string;
+    ip?: string;
+    port?: number | string;
+};
+
+type OfferResponse = {
+    sdp: string;
+    type: RTCSdpType;
+    session_id: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+}
+
+function parseOfferResponse(value: unknown): OfferResponse {
+    if (
+        !isRecord(value) ||
+        typeof value.sdp !== "string" ||
+        typeof value.type !== "string" ||
+        typeof value.session_id !== "string"
+    ) {
+        throw new Error("Invalid RTC offer response.");
+    }
+    if (value.type !== "answer" && value.type !== "offer" && value.type !== "pranswer") {
+        throw new Error(`Invalid RTC offer response type: ${value.type}`);
+    }
+    return {
+        sdp: value.sdp,
+        type: value.type,
+        session_id: value.session_id,
+    };
+}
 
 // 1接続分の WebRTC セッションを管理するクライアント。
 // DataChannel(text/telop)・ICE/SDP診断表示・再接続制御までをまとめて担当する。
@@ -58,7 +116,7 @@ export class RTCTalkClient {
         this.config = this.defaultConfig();
         this.sincroConfig = sincroConfig;
         if (sincroConfig) {
-            this.config["iceServers"] = sincroConfig.iceServers;
+            this.config.iceServers = sincroConfig.iceServers;
         } else {
             //this.config["iceServers"] = [{ urls: ["stun:stun.l.google.com:19302"] }];
         }
@@ -249,12 +307,6 @@ export class RTCTalkClient {
                 this.logger.addRtcEventLog(
                     `send offer: mode=${preferredSessionId ? "session-update" : "new-session"}, targetSessionId=${preferredSessionId ?? "-"}`,
                 );
-                console.log(
-                    JSON.stringify({
-                        sdp: offer.sdp,
-                        type: offer.type,
-                    }),
-                );
                 return fetch(this.sincroConfig.offerURL, {
                     body: JSON.stringify(offerPayload),
                     headers: {
@@ -276,8 +328,8 @@ export class RTCTalkClient {
                 }
                 return response.json();
             })
-            .then((answer) => {
-                console.log(answer);
+            .then((answerJson: unknown) => {
+                const answer = parseOfferResponse(answerJson);
                 this.logger.answerSDP(answer.sdp);
                 this.sessionId = answer.session_id;
                 this.lastStableSessionId = answer.session_id;
@@ -410,8 +462,13 @@ export class RTCTalkClient {
             this.logger.addRtcEventLog("telop_ch opened");
         };
         dc.onmessage = (evt) => {
-            this.logger.addTelopChannelLog("< [telop_ch] " + evt.data + "\n");
-            this.telopChannelCallback(JSON.parse(evt.data) as TelopChannelMessage);
+            this.logger.addTelopChannelLog(`< [telop_ch] ${evt.data}\n`);
+            try {
+                this.telopChannelCallback(parseTelopChannelPayload(String(evt.data)));
+            } catch (error) {
+                this.logger.addRtcEventLog(`invalid telop_ch payload: ${error}`);
+                console.error(error);
+            }
         };
         return dc;
     }
@@ -428,8 +485,13 @@ export class RTCTalkClient {
             this.logger.addRtcEventLog("text_ch opened");
         };
         dc.onmessage = (evt) => {
-            this.logger.addTextChannelLog("< [text_ch] " + evt.data + "\n");
-            this.textChannelCallback(JSON.parse(evt.data) as ChatMessage);
+            this.logger.addTextChannelLog(`< [text_ch] ${evt.data}\n`);
+            try {
+                this.textChannelCallback(parseChatMessagePayload(String(evt.data)));
+            } catch (error) {
+                this.logger.addRtcEventLog(`invalid text_ch payload: ${error}`);
+                console.error(error);
+            }
         };
         return dc;
     }
@@ -544,36 +606,40 @@ export class RTCTalkClient {
         this.iceFailureDiagnosticCaptured = true;
         try {
             const report = await this.peerConnection.getStats();
-            let selectedPair: any = null;
+            const selectedPairs: RtcStatsRecord[] = [];
             let pairTotal = 0;
             let pairSucceeded = 0;
-            const localCandidates = new Map<string, any>();
-            const remoteCandidates = new Map<string, any>();
+            const localCandidates = new Map<string, RtcStatsRecord>();
+            const remoteCandidates = new Map<string, RtcStatsRecord>();
             const localTypeCount: Record<string, number> = {};
             const remoteTypeCount: Record<string, number> = {};
 
-            report.forEach((stats: any) => {
+            report.forEach((stats) => {
                 if (stats.type === "candidate-pair") {
+                    const pairStats: RtcStatsRecord = stats;
                     pairTotal += 1;
-                    if (stats.state === "succeeded") {
+                    if (pairStats.state === "succeeded") {
                         pairSucceeded += 1;
                     }
-                    if (stats.selected || stats.nominated) {
-                        selectedPair = stats;
+                    if (pairStats.selected || pairStats.nominated) {
+                        selectedPairs.push(pairStats);
                     }
                 }
                 if (stats.type === "local-candidate") {
-                    localCandidates.set(stats.id, stats);
-                    const t = stats.candidateType ?? "unknown";
+                    const candidateStats: RtcStatsRecord = stats;
+                    localCandidates.set(candidateStats.id, candidateStats);
+                    const t = candidateStats.candidateType ?? "unknown";
                     localTypeCount[t] = (localTypeCount[t] ?? 0) + 1;
                 }
                 if (stats.type === "remote-candidate") {
-                    remoteCandidates.set(stats.id, stats);
-                    const t = stats.candidateType ?? "unknown";
+                    const candidateStats: RtcStatsRecord = stats;
+                    remoteCandidates.set(candidateStats.id, candidateStats);
+                    const t = candidateStats.candidateType ?? "unknown";
                     remoteTypeCount[t] = (remoteTypeCount[t] ?? 0) + 1;
                 }
             });
 
+            const selectedPair = selectedPairs[0] ?? null;
             const local = selectedPair?.localCandidateId
                 ? localCandidates.get(selectedPair.localCandidateId)
                 : null;
@@ -660,18 +726,18 @@ export class RTCTalkClient {
         return `${bitsPerSecond.toFixed(0)} bps`;
     }
 
-    private candidateAddress(candidate: any): string {
+    private candidateAddress(candidate: RtcStatsRecord | null): string {
         return candidate?.address ?? candidate?.ip ?? "-";
     }
 
-    private candidatePort(candidate: any): string {
+    private candidatePort(candidate: RtcStatsRecord | null): string {
         if (candidate?.port === null || candidate?.port === undefined) {
             return "-";
         }
         return `${candidate.port}`;
     }
 
-    private candidateEndpointLabel(candidate: any): string {
+    private candidateEndpointLabel(candidate: RtcStatsRecord | null): string {
         if (!candidate) {
             return "-";
         }
@@ -709,30 +775,45 @@ export class RTCTalkClient {
 
     private async collectAndRenderStats(): Promise<void> {
         const report = await this.peerConnection.getStats();
-        let outboundAudio: any = null;
-        let inboundAudio: any = null;
-        let selectedPair: any = null;
-        const localCandidates = new Map<string, any>();
-        const remoteCandidates = new Map<string, any>();
+        const outboundAudioStats: RtcStatsRecord[] = [];
+        const inboundAudioStats: RtcStatsRecord[] = [];
+        const selectedPairs: RtcStatsRecord[] = [];
+        const localCandidates = new Map<string, RtcStatsRecord>();
+        const remoteCandidates = new Map<string, RtcStatsRecord>();
 
-        report.forEach((stats: any) => {
-            if (stats.type === "outbound-rtp" && stats.kind === "audio" && !stats.isRemote) {
-                outboundAudio = stats;
+        report.forEach((stats) => {
+            const statsRecord: RtcStatsRecord = stats;
+            if (
+                statsRecord.type === "outbound-rtp" &&
+                statsRecord.kind === "audio" &&
+                !statsRecord.isRemote
+            ) {
+                outboundAudioStats.push(statsRecord);
             }
-            if (stats.type === "inbound-rtp" && stats.kind === "audio" && !stats.isRemote) {
-                inboundAudio = stats;
+            if (
+                statsRecord.type === "inbound-rtp" &&
+                statsRecord.kind === "audio" &&
+                !statsRecord.isRemote
+            ) {
+                inboundAudioStats.push(statsRecord);
             }
-            if (stats.type === "candidate-pair" && (stats.selected || stats.nominated)) {
-                selectedPair = stats;
+            if (
+                statsRecord.type === "candidate-pair" &&
+                (statsRecord.selected || statsRecord.nominated)
+            ) {
+                selectedPairs.push(statsRecord);
             }
-            if (stats.type === "local-candidate") {
-                localCandidates.set(stats.id, stats);
+            if (statsRecord.type === "local-candidate") {
+                localCandidates.set(statsRecord.id, statsRecord);
             }
-            if (stats.type === "remote-candidate") {
-                remoteCandidates.set(stats.id, stats);
+            if (statsRecord.type === "remote-candidate") {
+                remoteCandidates.set(statsRecord.id, statsRecord);
             }
         });
 
+        const outboundAudio = outboundAudioStats[0] ?? null;
+        const inboundAudio = inboundAudioStats[0] ?? null;
+        const selectedPair = selectedPairs[0] ?? null;
         const outboundResult = this.calcBitrate(
             outboundAudio?.bytesSent,
             outboundAudio?.timestamp,

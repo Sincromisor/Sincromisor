@@ -24,12 +24,6 @@ export class ChatMessageService {
     // systemメッセージだけは、VRMのthumbnailImageに動的に差し替え可能にする。
     // 取得前/未設定VRM向けに既存アイコンをデフォルト値として保持する。
     private systemIconUrl: string = "../images/icon-system.webp";
-    /*
-        メッセージのID。メッセージを一意に識別するために使用
-        メッセージのIDは、メッセージが追加されるたびにインクリメントされる。
-    */
-    private messageID: number = 0;
-
     /* 画面上に表示される最大メッセージ数 */
     private readonly maxMessageCount: number = 30;
     private readonly listeners = new Set<(event: ChatMessageServiceEvent) => void>();
@@ -89,7 +83,7 @@ export class ChatMessageService {
     }
 
     private getMessageBox(messageID: string): HTMLDivElement | null {
-        return this.ensureChatBoxBound()?.querySelector("#msg" + messageID) ?? null;
+        return this.ensureChatBoxBound()?.querySelector(`#msg${messageID}`) ?? null;
     }
 
     // Chat欄にメッセージを追加、もしくはメッセージを更新する。
@@ -255,7 +249,7 @@ export class ChatMessageService {
 
         const eUserName = document.createElement("span");
         eUserName.className = "username";
-        eUserName.innerText = "@" + cMessage.speaker_id;
+        eUserName.innerText = `@${cMessage.speaker_id}`;
 
         const eIconBox = document.createElement("div");
         eIconBox.className = "sincroMessage__iconBox";
@@ -280,7 +274,6 @@ export class ChatMessageService {
 
         const e = document.createElement("div");
         e.id = `msg${cMessage.message_id}`;
-        this.messageID += 1;
         /* message_typeはsystem, user, error, resetのいずれか */
         e.className = `${this.messageTypeToMessageClassName(cMessage.message_type)} sincroMessage`;
         e.appendChild(eIconBox);

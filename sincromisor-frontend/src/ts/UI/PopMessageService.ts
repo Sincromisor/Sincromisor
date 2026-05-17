@@ -23,7 +23,11 @@ export class PopMessageService {
 
     // 通常画面用 pop は既存 DOM 描画を継続し、dialog 内 pop は React event 描画を正式経路とする。
     private constructor() {
-        this.popBox = document.querySelector("div#sincroPopBox")!;
+        const popBox = document.querySelector<HTMLDivElement>("div#sincroPopBox");
+        if (!popBox) {
+            throw new Error("div#sincroPopBox is not found.");
+        }
+        this.popBox = popBox;
     }
 
     /* 通常メッセージ */

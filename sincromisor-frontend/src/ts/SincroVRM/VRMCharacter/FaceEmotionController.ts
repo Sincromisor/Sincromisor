@@ -106,7 +106,6 @@ export class FaceEmotionController {
                 return "happy";
             case 5:
                 return "surprised";
-            case 0:
             default:
                 return "neutral";
         }
@@ -124,7 +123,6 @@ export class FaceEmotionController {
                 return 0.34;
             case 5:
                 return 0.46;
-            case 0:
             default:
                 return 0.0;
         }

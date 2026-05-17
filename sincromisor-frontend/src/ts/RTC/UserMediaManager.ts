@@ -34,6 +34,15 @@ export type AudioConstraintRuntimeApplyReport = {
     message?: string;
 };
 
+type VadWorkletMessage = {
+    type?: string;
+    pcm?: unknown;
+    sampleRate?: unknown;
+    rms?: unknown;
+    peak?: unknown;
+    isSpeech?: unknown;
+};
+
 // マイク/カメラ取得と、送信用音声トラックの前処理（HPF/LPF/VAD/学習VAD連携）を担当する。
 // React移行後も UI は controller 経由でこのクラスを操作し、音声処理の実装詳細はここに閉じ込める。
 export class UserMediaManager {
@@ -368,7 +377,7 @@ export class UserMediaManager {
     getUserMedia(
         audioTrackCallback: (audioTrack: MediaStreamTrack) => void,
         videoTrackCallback: (videoTrack: MediaStreamTrack) => void,
-        errCallback: (err: any) => void,
+        errCallback: (err: unknown) => void,
     ): void {
         navigator.mediaDevices
             .getUserMedia(this.config)
@@ -442,12 +451,12 @@ export class UserMediaManager {
         // 低周波ノイズ（空調/振動）を抑えるため、VAD前段にHPFを入れる。
         const highpass = context.createBiquadFilter();
         highpass.type = "highpass";
-        highpass.Q.value = 0.707;
+        highpass.Q.value = Math.SQRT1_2;
         this.highpassNode = highpass;
         // 高域ノイズ/残響を抑えるLPF。未使用時もチェーンは固定して切替時の再配線を避ける。
         const lowpass = context.createBiquadFilter();
         lowpass.type = "lowpass";
-        lowpass.Q.value = 0.707;
+        lowpass.Q.value = Math.SQRT1_2;
         this.lowpassNode = lowpass;
         this.applyFilterNodes();
 
@@ -460,7 +469,7 @@ export class UserMediaManager {
         gateGain.gain.value = this.vadGateEnabled ? 0 : 1;
         // AudioWorklet -> main thread の VADメトリクス受信点。
         // DebugConsole表示更新と learned VAD へのフレーム転送制御の両方をここで行う。
-        vadNode.port.onmessage = (event: MessageEvent<any>) => {
+        vadNode.port.onmessage = (event: MessageEvent<VadWorkletMessage>) => {
             const data = event.data;
             if (!data) {
                 return;
@@ -477,7 +486,12 @@ export class UserMediaManager {
             if (data.type !== "vad") {
                 return;
             }
-            this.updateAutoVadThreshold(data);
+            const fallbackVadReport = {
+                isSpeech: !!data.isSpeech,
+                rms: Number(data.rms) || 0,
+                peak: Number(data.peak) || 0,
+            };
+            this.updateAutoVadThreshold(fallbackVadReport);
             if (
                 this.vadThresholdMode === "learned" &&
                 !this.learnedVadClient.hasValidPrediction()
@@ -493,18 +507,18 @@ export class UserMediaManager {
                 this.vadThresholdMode === "learned"
                     ? this.learnedVadClient.hasValidPrediction()
                         ? this.learnedVadStrictMode
-                            ? this.learnedVadClient.getSpeechState() && !!data.isSpeech
+                            ? this.learnedVadClient.getSpeechState() && fallbackVadReport.isSpeech
                             : this.learnedVadClient.getSpeechState()
-                        : !!data.isSpeech
-                    : !!data.isSpeech;
+                        : fallbackVadReport.isSpeech
+                    : fallbackVadReport.isSpeech;
             if (this.vadGateEnabled && this.audioContext) {
                 const nextGain = speechState ? 1 : 0;
                 gateGain.gain.setTargetAtTime(nextGain, this.audioContext.currentTime, 0.02);
             }
             this.onVadStateCallback({
                 isSpeech: speechState,
-                rms: Number(data.rms) || 0,
-                peak: Number(data.peak) || 0,
+                rms: fallbackVadReport.rms,
+                peak: fallbackVadReport.peak,
             });
         };
         this.syncLearnedVadStreamState();
@@ -609,7 +623,7 @@ export class UserMediaManager {
 
     // 顔認識機能未使用時などにカメラ取得を無効化する。
     disableVideo(): void {
-        this.config["video"] = false;
+        this.config.video = false;
     }
 
     // AudioContext/Node/Worker を破棄して再初期化可能な状態へ戻す。

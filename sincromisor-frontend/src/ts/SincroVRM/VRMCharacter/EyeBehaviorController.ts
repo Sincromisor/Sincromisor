@@ -177,7 +177,6 @@ export class EyeBehaviorController {
                 return { x: 0, y: -0.02 };
             case 1:
                 return { x: 0.008, y: -0.004 };
-            case 0:
             default:
                 return { x: 0, y: -0.004 };
         }

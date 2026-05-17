@@ -56,7 +56,7 @@ export class SphereVideo {
 
     // 事前解析済みのフレーム光源情報を取得する（file動画のみ）。
     private async getVideoInfo(videoID: string): Promise<void> {
-        await fetch(this.videoPath + "/" + videoID + "/movie.json")
+        await fetch(`${this.videoPath}/${videoID}/movie.json`)
             .then((res) => {
                 if (!res.ok) {
                     throw new Error(`HTTP error! status: ${res.status}`);
@@ -82,7 +82,7 @@ export class SphereVideo {
         video.autoplay = true;
         video.setAttribute("playsinline", "");
         video.setAttribute("webkit-playsinline", "");
-        void this.loadHls(video, this.videoPath + "/" + videoID + "/index.m3u8");
+        void this.loadHls(video, `${this.videoPath}/${videoID}/index.m3u8`);
         return video;
     }
 
@@ -124,7 +124,7 @@ export class SphereVideo {
             return new Vector3(0, 0, 0);
         }
         //return this.sphericalToCartesian(frameInfo['lat'], frameInfo['lon'] - 110, 95);
-        return this.sphericalToCartesian(frameInfo["lat"], frameInfo["lon"] - 180, 8);
+        return this.sphericalToCartesian(frameInfo.lat, frameInfo.lon - 180, 8);
     }
 
     /* 動画から現在の照度を得る(0.0～1.0)。デフォルトは1.0 */
@@ -138,7 +138,7 @@ export class SphereVideo {
             console.error(`frameNo ${frameNo} is not contain frameInfo.`);
             return 0;
         }
-        return frameInfo["brightness"] / 255;
+        return frameInfo.brightness / 255;
     }
 
     /* 緯度・経度・半径から、直交座標を得る。 */
