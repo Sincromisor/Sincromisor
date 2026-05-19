@@ -89,17 +89,15 @@ export class SincroAudioInputController {
 
     private bindDebugConsoleAndVadState(): void {
         // DebugConsole の初期表示値を UserMediaManager の内部状態に合わせる。
+        this.syncInitialDebugConsoleAudioState();
+        this.bindDebugConsoleAudioControlCallbacks();
+        this.bindUserMediaStateCallbacks();
+    }
+
+    private syncInitialDebugConsoleAudioState(): void {
         this.debugConsoleManager.setLocalAudioFilterConfig(
             this.userMediaManager.getAudioFilterConfig(),
         );
-        this.debugConsoleManager.setLocalAudioFilterChangeCallback(
-            (config: AudioFilterControlConfig) => {
-                this.userMediaManager.setAudioFilterConfig(config);
-                // Venue preset 有効中にDebugで個別調整した場合は、preset状態を解除して表示を実効値へ揃える。
-                this.clearVenuePresetIfEnabledWithoutResync();
-            },
-        );
-
         this.debugConsoleManager.setLocalVadRmsThreshold(
             this.userMediaManager.getVadThresholds().rmsThreshold,
         );
@@ -114,8 +112,17 @@ export class SincroAudioInputController {
         );
         // 学習VADは balanced を初期プリセットとして採用し、必要時にUIから変更できるようにする。
         this.debugConsoleManager.setLocalLearnedVadPerformanceMode("balanced");
+    }
 
+    private bindDebugConsoleAudioControlCallbacks(): void {
         // DebugConsole での調整操作を UserMediaManager 側の実処理へ反映する。
+        this.debugConsoleManager.setLocalAudioFilterChangeCallback(
+            (config: AudioFilterControlConfig) => {
+                this.userMediaManager.setAudioFilterConfig(config);
+                // Venue preset 有効中にDebugで個別調整した場合は、preset状態を解除して表示を実効値へ揃える。
+                this.clearVenuePresetIfEnabledWithoutResync();
+            },
+        );
         this.debugConsoleManager.setLocalVadThresholdModeChangeCallback(
             (mode: DebugVadThresholdMode) => {
                 this.userMediaManager.setVadThresholdMode(mode as UserMediaVadThresholdMode);
@@ -140,7 +147,9 @@ export class SincroAudioInputController {
             // Venue preset が保持する閾値から外れるため、UI上の preset 表示は解除しておく。
             this.clearVenuePresetIfEnabledWithoutResync();
         });
+    }
 
+    private bindUserMediaStateCallbacks(): void {
         // UserMedia 側で更新される状態を DebugConsole へ戻し、UI表示と内部状態を同期する。
         // 双方向同期にしているのは、内部補正（学習VADプリセット適用など）を UI に反映するため。
         this.userMediaManager.setVadThresholdCallback((config) => {

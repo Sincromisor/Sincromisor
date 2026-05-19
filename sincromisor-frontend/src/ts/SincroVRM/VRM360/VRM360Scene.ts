@@ -8,7 +8,7 @@ import { Mesh } from "three/src/objects/Mesh.js";
 import { CanvasTexture } from "three/src/textures/CanvasTexture.js";
 import type { VideoTexture } from "three/src/textures/VideoTexture.js";
 import { LookingGlassXRController } from "../LookingGlass/LookingGlassXRController";
-import { VRMScene } from "../VRMScene/VRMScene";
+import { VRMScene, type VRMSceneOptions } from "../VRMScene/VRMScene";
 import { SphereVideo } from "./SphereVideo";
 //import { MathUtils } from "three/src/math/MathUtils.js";
 
@@ -19,14 +19,8 @@ export class VRM360Scene extends VRMScene {
     /* 動画球の高さをだいたい身長 + カメラの高さ(1.9m)ぐらいに合わせる */
     private readonly videoPositionY: number = 1.9;
 
-    constructor(
-        canvasRoot: HTMLDivElement,
-        characterControlLayer: HTMLElement,
-        vrmUrl: string,
-        xrMode: boolean = false,
-        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void,
-    ) {
-        super(canvasRoot, characterControlLayer, vrmUrl, xrMode, onThumbnailLoaded);
+    constructor(options: VRMSceneOptions) {
+        super(options);
         // 360 背景動画 + floor/light 補助を追加して、通常 VRMScene から 360 向け構成へ拡張する。
         this.sphereVideo = new SphereVideo(this.getVideoId());
         this.createWorldSphere(this.sphereVideo.videoTexture);

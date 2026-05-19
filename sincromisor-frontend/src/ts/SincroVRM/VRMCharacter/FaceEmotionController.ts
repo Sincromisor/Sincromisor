@@ -34,7 +34,7 @@ export class FaceEmotionController {
               endMs: number;
           }
         | undefined;
-    private readonly animatedPresets: VRMExpressionPresetName[] = [
+    private readonly animatedPresets: EmotionPreset[] = [
         "relaxed",
         "happy",
         "sad",
@@ -214,14 +214,30 @@ export class FaceEmotionController {
         // three-vrm の expression bind から morph target の識別子（primitive uuid + morph index）を抜き出し、
         // 口パク用visemeと感情プリセットが同じ morph を共有している場合のみ感情側 bind を外す。
         // これにより、モデル差が大きい「目/眉個別morph名」の知識を持たなくても競合を減らせる。
+        const mouthMorphBindKeys = this.collectMouthMorphBindKeys();
+        if (mouthMorphBindKeys.size === 0) {
+            this.logger.addTextChannelLog(
+                "[emotion] mouth-viseme morph bind overlap check skipped (no viseme morph binds)\n",
+            );
+            return;
+        }
+
+        let removedBindCount = 0;
+        for (const preset of this.animatedPresets) {
+            removedBindCount += this.detachOverlappingEmotionBinds(preset, mouthMorphBindKeys);
+        }
+
+        this.logger.addTextChannelLog(
+            `[emotion] detached ${removedBindCount} emotion morph binds overlapping mouth visemes\n`,
+        );
+    }
+
+    private collectMouthMorphBindKeys(): Set<string> {
         const visemePresets: VRMExpressionPresetName[] = ["aa", "ih", "ou", "oh", "ee"];
         const mouthMorphBindKeys = new Set<string>();
-
         for (const preset of visemePresets) {
             const expression = (this.expressionManager.getExpression(preset) ?? undefined) as
-                | {
-                      binds?: unknown[];
-                  }
+                | { binds?: unknown[] }
                 | undefined;
             if (!expression?.binds) {
                 continue;
@@ -232,44 +248,32 @@ export class FaceEmotionController {
                 }
             }
         }
+        return mouthMorphBindKeys;
+    }
 
-        if (mouthMorphBindKeys.size === 0) {
-            this.logger.addTextChannelLog(
-                "[emotion] mouth-viseme morph bind overlap check skipped (no viseme morph binds)\n",
-            );
-            return;
+    private detachOverlappingEmotionBinds(
+        preset: EmotionPreset,
+        mouthMorphBindKeys: Set<string>,
+    ): number {
+        const expression = (this.expressionManager.getExpression(preset) ?? undefined) as
+            | {
+                  binds?: unknown[];
+                  deleteBind?: (bind: unknown) => void;
+              }
+            | undefined;
+        if (!expression?.binds || !expression.deleteBind) {
+            return 0;
         }
-
         let removedBindCount = 0;
-        for (const preset of this.animatedPresets) {
-            const expression = (this.expressionManager.getExpression(preset) ?? undefined) as
-                | {
-                      binds?: unknown[];
-                      deleteBind?: (bind: unknown) => void;
-                  }
-                | undefined;
-            if (!expression?.binds || !expression.deleteBind) {
-                continue;
-            }
-
-            // deleteBind() で配列が変化するため、スナップショットを走査する。
-            for (const bind of [...expression.binds]) {
-                const bindKeys = this.extractMorphBindKeys(bind);
-                if (bindKeys.length === 0) {
-                    continue;
-                }
-                const overlaps = bindKeys.some((key) => mouthMorphBindKeys.has(key));
-                if (!overlaps) {
-                    continue;
-                }
+        // deleteBind() で配列が変化するため、スナップショットを走査する。
+        for (const bind of [...expression.binds]) {
+            const bindKeys = this.extractMorphBindKeys(bind);
+            if (bindKeys.some((key) => mouthMorphBindKeys.has(key))) {
                 expression.deleteBind(bind);
                 removedBindCount += 1;
             }
         }
-
-        this.logger.addTextChannelLog(
-            `[emotion] detached ${removedBindCount} emotion morph binds overlapping mouth visemes\n`,
-        );
+        return removedBindCount;
     }
 
     private extractMorphBindKeys(bind: unknown): string[] {

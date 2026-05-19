@@ -91,6 +91,21 @@ export class LookingGlassXRController {
             return;
         }
         this.isStarting = true;
+
+        try {
+            await this.prepareSessionStart();
+            const xrSession = await this.requestLookingGlassSession(startButton);
+            // Three.js の XR session 設定後に通常 canvas を隠す。失敗時に先に隠さないよう順序を守る。
+            await this.renderer.xr.setSession(xrSession);
+            this.activateLookingGlassSession(startButton);
+        } catch (error) {
+            this.handleSessionStartError(error);
+        } finally {
+            this.isStarting = false;
+        }
+    }
+
+    private async prepareSessionStart(): Promise<void> {
         if (this.lastState === "error" || this.lastState === "recovering") {
             this.emitState({
                 state: "recovering",
@@ -99,70 +114,78 @@ export class LookingGlassXRController {
             });
         }
         this.emitState({ state: "starting" });
+        // 非active時に設定変更されていれば、handleConfigUpdated() で false に戻される。
+        this.ensurePolyfill();
+        this.applyDefaultLookingGlassViewAngles();
 
-        try {
-            // 非active時に設定変更されていれば、handleConfigUpdated() で false に戻される。
-            this.ensurePolyfill();
-            this.applyDefaultLookingGlassViewAngles();
-
-            if (!("xr" in navigator) || !navigator.xr) {
-                throw new Error("WebXR API is not available in this browser.");
-            }
-
-            await this.ensurePolyfillSessionWarmup();
-
-            this.renderer.xr.enabled = true;
-            const sessionInit: XRSessionInit = {
-                optionalFeatures: ["local-floor"],
-            };
-            const xrSession = await navigator.xr.requestSession("immersive-vr", sessionInit);
-            xrSession.addEventListener("end", () => {
-                this.renderer.xr.enabled = false;
-                this.renderer.domElement.style.display = "";
-                restoreExternalCanvasPointerEvents(this.renderer.domElement);
-                if (startButton) {
-                    startButton.disabled = false;
-                }
-                // 実行中に設定変更された場合だけ、終了後に次回再起動向け reinit を許可する。
-                if (this.pendingPolyfillReinitAfterSessionEnd) {
-                    this.pendingPolyfillReinitAfterSessionEnd = false;
-                    this.markPolyfillReinitReady();
-                }
-                this.emitState({
-                    state: "recovering",
-                    code: "session_ended",
-                    message: "session ended; ready to retry",
-                });
-            });
-            // Three.js の XR session 設定後に通常 canvas を隠す。失敗時に先に隠さないよう順序を守る。
-            await this.renderer.xr.setSession(xrSession);
-
-            // Looking Glass セッション中は通常キャンバスを隠し、既存 UX（legacy）に寄せる。
-            this.renderer.domElement.style.display = "none";
-            disableExternalCanvasPointerEvents(this.renderer.domElement);
-            if (startButton) {
-                startButton.disabled = true;
-            }
-            frontendLogger.info("Looking Glass WebXR session started.");
-            this.successfulSessionStarts += 1;
-            this.inputRecovery.rebindInputHooks();
-            // @lookingglass/webxr 側のマウス入力が再開後に死ぬ環境向けの保険。
-            // 初回は vendor 実装を優先し、再開以降のみ fallback 操作を有効化する。
-            if (this.successfulSessionStarts >= 2) {
-                this.inputRecovery.installFallbackPopupInteractionControls();
-            }
-            this.inputRecovery.focusInteractiveSurface();
-            this.emitState({ state: "active" });
-        } catch (error) {
-            frontendLogger.error("Failed to start Looking Glass WebXR session.", { error });
-            const message = error instanceof Error ? error.message : String(error);
-            const code = message.includes("WebXR API is not available")
-                ? "webxr_unavailable"
-                : "session_start_failed";
-            this.emitState({ state: "error", code, message });
-        } finally {
-            this.isStarting = false;
+        if (!("xr" in navigator) || !navigator.xr) {
+            throw new Error("WebXR API is not available in this browser.");
         }
+
+        await this.ensurePolyfillSessionWarmup();
+        this.renderer.xr.enabled = true;
+    }
+
+    private async requestLookingGlassSession(
+        startButton: HTMLButtonElement | undefined,
+    ): Promise<XRSession> {
+        const xrSession = await navigator.xr?.requestSession("immersive-vr", {
+            optionalFeatures: ["local-floor"],
+        });
+        if (!xrSession) {
+            throw new Error("WebXR API is not available in this browser.");
+        }
+        xrSession.addEventListener("end", () => {
+            this.handleSessionEnd(startButton);
+        });
+        return xrSession;
+    }
+
+    private handleSessionEnd(startButton: HTMLButtonElement | undefined): void {
+        this.renderer.xr.enabled = false;
+        this.renderer.domElement.style.display = "";
+        restoreExternalCanvasPointerEvents(this.renderer.domElement);
+        if (startButton) {
+            startButton.disabled = false;
+        }
+        // 実行中に設定変更された場合だけ、終了後に次回再起動向け reinit を許可する。
+        if (this.pendingPolyfillReinitAfterSessionEnd) {
+            this.pendingPolyfillReinitAfterSessionEnd = false;
+            this.markPolyfillReinitReady();
+        }
+        this.emitState({
+            state: "recovering",
+            code: "session_ended",
+            message: "session ended; ready to retry",
+        });
+    }
+
+    private activateLookingGlassSession(startButton: HTMLButtonElement | undefined): void {
+        // Looking Glass セッション中は通常キャンバスを隠し、既存 UX（legacy）に寄せる。
+        this.renderer.domElement.style.display = "none";
+        disableExternalCanvasPointerEvents(this.renderer.domElement);
+        if (startButton) {
+            startButton.disabled = true;
+        }
+        frontendLogger.info("Looking Glass WebXR session started.");
+        this.successfulSessionStarts += 1;
+        this.inputRecovery.rebindInputHooks();
+        // @lookingglass/webxr 側のマウス入力が再開後に死ぬ環境向けの保険。
+        // 初回は vendor 実装を優先し、再開以降のみ fallback 操作を有効化する。
+        if (this.successfulSessionStarts >= 2) {
+            this.inputRecovery.installFallbackPopupInteractionControls();
+        }
+        this.inputRecovery.focusInteractiveSurface();
+        this.emitState({ state: "active" });
+    }
+
+    private handleSessionStartError(error: unknown): void {
+        frontendLogger.error("Failed to start Looking Glass WebXR session.", { error });
+        const message = error instanceof Error ? error.message : String(error);
+        const code = message.includes("WebXR API is not available")
+            ? "webxr_unavailable"
+            : "session_start_failed";
+        this.emitState({ state: "error", code, message });
     }
 
     private ensurePolyfill(): void {

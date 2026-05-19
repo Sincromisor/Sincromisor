@@ -63,7 +63,33 @@ export function StartupBehaviorFields({
         return null;
     }
 
-    const toggles = (
+    const toggles = renderStartupToggles(items, gridDensity, toggleDensity);
+
+    return (
+        <>
+            {renderHint(isRunning ? introText.running : introText.stopped)}
+            {renderStartupStatusHint(startupStatus, changedLabel, renderHint)}
+            {useFieldStack ? <SettingsFieldStack>{toggles}</SettingsFieldStack> : toggles}
+        </>
+    );
+}
+
+type StartupToggleItem = {
+    key: "enableVR";
+    label: string;
+    checked: boolean;
+    disabled: boolean;
+    supported: boolean;
+    help: string;
+    onChange: (checked: boolean) => void;
+};
+
+function renderStartupToggles(
+    items: StartupToggleItem[],
+    gridDensity: ToggleGroupProps["gridDensity"],
+    toggleDensity: ToggleGroupProps["toggleDensity"],
+): ReactNode {
+    return (
         <SettingsToggleGrid density={gridDensity}>
             {items.map((item) => (
                 <SettingsToggle
@@ -78,20 +104,21 @@ export function StartupBehaviorFields({
             ))}
         </SettingsToggleGrid>
     );
+}
 
-    return (
-        <>
-            {renderHint(isRunning ? introText.running : introText.stopped)}
-            {startupStatus.requiresRestart
-                ? renderHint(
-                      `変更した内容を反映するには、いったん停止してからもう一度始めてください。${changedLabel}`,
-                      "warning",
-                  )
-                : null}
-            {!startupStatus.requiresRestart && startupStatus.willApplyOnNextStart
-                ? renderHint(`変更した内容は次に始める時に反映されます。${changedLabel}`, "info")
-                : null}
-            {useFieldStack ? <SettingsFieldStack>{toggles}</SettingsFieldStack> : toggles}
-        </>
-    );
+function renderStartupStatusHint(
+    startupStatus: SincroAppStartupSettingsStatus,
+    changedLabel: string,
+    renderHint: (message: string, tone?: "muted" | "info" | "warning") => ReactNode,
+): ReactNode {
+    if (startupStatus.requiresRestart) {
+        return renderHint(
+            `変更した内容を反映するには、いったん停止してからもう一度始めてください。${changedLabel}`,
+            "warning",
+        );
+    }
+    if (startupStatus.willApplyOnNextStart) {
+        return renderHint(`変更した内容は次に始める時に反映されます。${changedLabel}`, "info");
+    }
+    return null;
 }

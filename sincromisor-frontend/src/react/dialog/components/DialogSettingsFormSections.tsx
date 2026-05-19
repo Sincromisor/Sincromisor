@@ -104,20 +104,7 @@ export function DialogDeviceSettingsSection({
     onRefreshDevices,
     showSectionTitle = true,
 }: DialogDeviceSettingsSectionProps) {
-    const [refreshMessage, setRefreshMessage] = useState<string>("");
-
-    const handleRefreshDevices = () => {
-        setRefreshMessage("");
-        void onRefreshDevices().then((nextSnapshot) => {
-            if (nextSnapshot.refreshError) {
-                setRefreshMessage(
-                    `デバイス一覧の再取得に失敗しました: ${nextSnapshot.refreshError}`,
-                );
-                return;
-            }
-            setRefreshMessage("デバイス一覧を更新しました。");
-        });
-    };
+    const { refreshMessage, handleRefreshDevices } = useDeviceRefreshMessage(onRefreshDevices);
 
     return (
         <div className="settingsPrimitiveFieldStack">
@@ -153,6 +140,29 @@ export function DialogDeviceSettingsSection({
             {refreshMessage ? <SettingsHint>{refreshMessage}</SettingsHint> : null}
         </div>
     );
+}
+
+function useDeviceRefreshMessage(onRefreshDevices: () => Promise<SincroMediaDeviceSnapshot>): {
+    refreshMessage: string;
+    handleRefreshDevices: () => void;
+} {
+    const [refreshMessage, setRefreshMessage] = useState<string>("");
+    return {
+        refreshMessage,
+        handleRefreshDevices: () => {
+            setRefreshMessage("");
+            void onRefreshDevices().then((nextSnapshot) => {
+                setRefreshMessage(createDeviceRefreshMessage(nextSnapshot));
+            });
+        },
+    };
+}
+
+function createDeviceRefreshMessage(snapshot: SincroMediaDeviceSnapshot): string {
+    if (snapshot.refreshError) {
+        return `デバイス一覧の再取得に失敗しました: ${snapshot.refreshError}`;
+    }
+    return "デバイス一覧を更新しました。";
 }
 
 export function DialogMicSettingsSection({

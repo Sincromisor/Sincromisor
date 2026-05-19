@@ -21,17 +21,40 @@ export function applyCharacterBehaviorVadReport(
 ): CharacterBehaviorVadUpdate {
     const rms = nonNegativeNumberOrZero(options.report.rms);
     const peak = nonNegativeNumberOrZero(options.report.peak);
-    const wasSpeech = options.currentVad.isSpeech;
     const envelopeRms = smoothEnvelope(options.currentVad.envelopeRms, rms);
     const envelopePeak = smoothEnvelope(options.currentVad.envelopePeak, peak);
-    let pendingRawSpeechStartedAtMs = options.pendingRawSpeechStartedAtMs;
-    if (options.report.isSpeech && pendingRawSpeechStartedAtMs === undefined) {
-        pendingRawSpeechStartedAtMs = options.nowMs;
-    }
-    if (!options.report.isSpeech && !wasSpeech) {
-        pendingRawSpeechStartedAtMs = undefined;
-    }
+    const speech = deriveVadSpeechTiming(options);
 
+    return {
+        vad: {
+            isSpeech: speech.isSpeech,
+            rawIsSpeech: options.report.isSpeech,
+            rms,
+            peak,
+            envelopeRms,
+            envelopePeak,
+            speechStartedAtMs: speech.speechStartedAtMs,
+            lastSpeechEndedAtMs: speech.lastSpeechEndedAtMs,
+            lastSpeechDurationMs: speech.lastSpeechDurationMs,
+            lastSpeechAtMs: speech.lastSpeechAtMs,
+            lastUpdatedAtMs: options.nowMs,
+        },
+        pendingRawSpeechStartedAtMs: speech.pendingRawSpeechStartedAtMs,
+        lastUserSpeechEndedAtMs: speech.lastUserSpeechEndedAtMs,
+    };
+}
+
+function deriveVadSpeechTiming(options: ApplyCharacterBehaviorVadReportOptions): {
+    isSpeech: boolean;
+    pendingRawSpeechStartedAtMs?: number;
+    speechStartedAtMs?: number;
+    lastSpeechEndedAtMs?: number;
+    lastSpeechDurationMs: number;
+    lastSpeechAtMs?: number;
+    lastUserSpeechEndedAtMs?: number;
+} {
+    const wasSpeech = options.currentVad.isSpeech;
+    let pendingRawSpeechStartedAtMs = updatePendingRawSpeechStart(options, wasSpeech);
     const rawSpeechAgeMs =
         pendingRawSpeechStartedAtMs === undefined ? 0 : options.nowMs - pendingRawSpeechStartedAtMs;
     const acceptedRawSpeech =
@@ -44,46 +67,47 @@ export function applyCharacterBehaviorVadReport(
         (wasSpeech &&
             lastSpeechAtMs !== undefined &&
             options.nowMs - lastSpeechAtMs <= BEHAVIOR_TIMING.vadSpeechHoldMs);
-    const speechStartedAtMs = isSpeech
-        ? (options.currentVad.speechStartedAtMs ?? pendingRawSpeechStartedAtMs ?? options.nowMs)
-        : undefined;
     const speechDurationMs = wasSpeech
         ? options.nowMs - (options.currentVad.speechStartedAtMs ?? options.nowMs)
         : 0;
     const completedMeaningfulSpeech =
         speechDurationMs >= BEHAVIOR_TIMING.vadMinimumMeaningfulSpeechMs;
-    const lastSpeechEndedAtMs =
-        wasSpeech && !isSpeech && completedMeaningfulSpeech
-            ? options.nowMs
-            : options.currentVad.lastSpeechEndedAtMs;
-    const lastSpeechDurationMs =
-        wasSpeech && !isSpeech ? speechDurationMs : options.currentVad.lastSpeechDurationMs;
-    const lastUserSpeechEndedAtMs =
-        wasSpeech && !isSpeech && completedMeaningfulSpeech
-            ? options.nowMs
-            : options.lastUserSpeechEndedAtMs;
 
     if (wasSpeech && !isSpeech) {
         pendingRawSpeechStartedAtMs = options.report.isSpeech ? options.nowMs : undefined;
     }
 
     return {
-        vad: {
-            isSpeech,
-            rawIsSpeech: options.report.isSpeech,
-            rms,
-            peak,
-            envelopeRms,
-            envelopePeak,
-            speechStartedAtMs,
-            lastSpeechEndedAtMs,
-            lastSpeechDurationMs,
-            lastSpeechAtMs,
-            lastUpdatedAtMs: options.nowMs,
-        },
+        isSpeech,
         pendingRawSpeechStartedAtMs,
-        lastUserSpeechEndedAtMs,
+        speechStartedAtMs: isSpeech
+            ? (options.currentVad.speechStartedAtMs ?? pendingRawSpeechStartedAtMs ?? options.nowMs)
+            : undefined,
+        lastSpeechEndedAtMs:
+            wasSpeech && !isSpeech && completedMeaningfulSpeech
+                ? options.nowMs
+                : options.currentVad.lastSpeechEndedAtMs,
+        lastSpeechDurationMs:
+            wasSpeech && !isSpeech ? speechDurationMs : options.currentVad.lastSpeechDurationMs,
+        lastSpeechAtMs,
+        lastUserSpeechEndedAtMs:
+            wasSpeech && !isSpeech && completedMeaningfulSpeech
+                ? options.nowMs
+                : options.lastUserSpeechEndedAtMs,
     };
+}
+
+function updatePendingRawSpeechStart(
+    options: ApplyCharacterBehaviorVadReportOptions,
+    wasSpeech: boolean,
+): number | undefined {
+    if (options.report.isSpeech && options.pendingRawSpeechStartedAtMs === undefined) {
+        return options.nowMs;
+    }
+    if (!options.report.isSpeech && !wasSpeech) {
+        return undefined;
+    }
+    return options.pendingRawSpeechStartedAtMs;
 }
 
 function smoothEnvelope(previous: number, next: number): number {

@@ -128,8 +128,15 @@ async function inferProbability(
     }
     const pcm16k = linearResample(pcm, sampleRate, 16000);
     const frame = normalizeWindow(pcm16k, 512);
-    const feeds: Record<string, ort.Tensor> = {};
+    const result = await session.run(buildInferenceFeeds(frame));
+    return readInferenceProbability(result);
+}
 
+function buildInferenceFeeds(frame: Float32Array): Record<string, ort.Tensor> {
+    const feeds: Record<string, ort.Tensor> = {};
+    if (!session) {
+        return feeds;
+    }
     // モデル差分に耐えるため、input/output 名を厳密固定せずパターンで解決する。
     for (const inputName of session.inputNames) {
         const lower = `${inputName}`.toLowerCase();
@@ -163,8 +170,13 @@ async function inferProbability(
         const size = tensorSize(resolvedDims);
         feeds[inputName] = new ort.Tensor("float32", new Float32Array(size), resolvedDims);
     }
+    return feeds;
+}
 
-    const result = await session.run(feeds);
+function readInferenceProbability(result: Record<string, ort.Tensor>): number | undefined {
+    if (!session) {
+        return undefined;
+    }
     let probability: number | undefined;
     for (const outputName of session.outputNames) {
         const output = result[outputName];

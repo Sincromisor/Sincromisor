@@ -78,6 +78,37 @@ export class DialogSettingsPolicy {
             context,
         ).startButtonDisabled;
         const characterGazeEnabled = stateStore.get("enableCharacterGaze");
+
+        let enableCharacterReason: string | undefined;
+        if (characterDisabled) {
+            enableCharacterReason = "このページまたは端末では Character 表示を利用できません。";
+        }
+        const { audioInputDeviceReason, videoInputDeviceReason, selectedVideoUnavailable } =
+            this.buildMediaDeviceHints(context, characterGazeEnabled);
+
+        return {
+            audioInputDeviceReason,
+            videoInputDeviceReason,
+            enableCharacterReason,
+            enableCharacterGazeReason: this.buildCharacterGazeHint({
+                characterDisabled,
+                characterGazeEnabled,
+                gazeDisabled,
+                selectedVideoUnavailable,
+                startUnavailable,
+            }),
+            enableAutoMuteReason: this.buildAutoMuteHint(autoMuteDisabled, characterGazeEnabled),
+        };
+    }
+
+    private buildMediaDeviceHints(
+        context: DialogMediaDeviceUiContext,
+        characterGazeEnabled: boolean,
+    ): {
+        audioInputDeviceReason?: string;
+        videoInputDeviceReason?: string;
+        selectedVideoUnavailable: boolean;
+    } {
         const selectedAudioUnavailable =
             context.audioInputSelection.isSelected &&
             context.audioInputSelection.availabilityKnown &&
@@ -87,57 +118,50 @@ export class DialogSettingsPolicy {
             context.videoInputSelection.availabilityKnown &&
             !context.videoInputSelection.isAvailable;
 
-        let audioInputDeviceReason: string | undefined;
-        if (!context.isUserMediaAvailable) {
-            audioInputDeviceReason = "このブラウザではマイク入力を取得できません。";
-        } else if (selectedAudioUnavailable) {
-            audioInputDeviceReason =
-                "選択中のマイクが見つからないため、開始前に別のマイクかブラウザ既定へ切り替えてください。";
-        }
-
-        let videoInputDeviceReason: string | undefined;
-        if (selectedVideoUnavailable) {
-            videoInputDeviceReason = characterGazeEnabled
-                ? "選択中の視線用カメラが見つからないため、Gaze を使う前に別のカメラかブラウザ既定へ切り替えてください。"
-                : "選択中の視線用カメラは現在見つかりません。Gaze を使うときは別のカメラかブラウザ既定へ切り替えてください。";
-        }
-
-        let enableCharacterReason: string | undefined;
-        if (characterDisabled) {
-            enableCharacterReason = "このページまたは端末では Character 表示を利用できません。";
-        }
-
-        let enableCharacterGazeReason: string | undefined;
-        if (gazeDisabled) {
-            if (startUnavailable) {
-                enableCharacterGazeReason =
-                    "開始条件を満たしていないため、Gaze を有効化できません。";
-            } else if (characterDisabled) {
-                enableCharacterGazeReason = "先に Character を有効にしてください。";
-            } else {
-                enableCharacterGazeReason = "現在の構成では Gaze を利用できません。";
-            }
-        } else if (characterGazeEnabled && selectedVideoUnavailable) {
-            enableCharacterGazeReason =
-                "選択中の視線用カメラが見つからないため、このままでは Gaze を開始できません。";
-        }
-
-        let enableAutoMuteReason: string | undefined;
-        if (autoMuteDisabled) {
-            if (!characterGazeEnabled) {
-                enableAutoMuteReason = "AutoMute を使うには Gaze を有効にしてください。";
-            } else {
-                enableAutoMuteReason = "現在の構成では AutoMute を利用できません。";
-            }
-        }
-
         return {
-            audioInputDeviceReason,
-            videoInputDeviceReason,
-            enableCharacterReason,
-            enableCharacterGazeReason,
-            enableAutoMuteReason,
+            audioInputDeviceReason: buildAudioInputDeviceHint(
+                context.isUserMediaAvailable,
+                selectedAudioUnavailable,
+            ),
+            videoInputDeviceReason: buildVideoInputDeviceHint(
+                selectedVideoUnavailable,
+                characterGazeEnabled,
+            ),
+            selectedVideoUnavailable,
         };
+    }
+
+    private buildCharacterGazeHint(options: {
+        characterDisabled: boolean;
+        characterGazeEnabled: boolean;
+        gazeDisabled: boolean;
+        selectedVideoUnavailable: boolean;
+        startUnavailable: boolean;
+    }): string | undefined {
+        if (options.gazeDisabled) {
+            if (options.startUnavailable) {
+                return "開始条件を満たしていないため、Gaze を有効化できません。";
+            }
+            return options.characterDisabled
+                ? "先に Character を有効にしてください。"
+                : "現在の構成では Gaze を利用できません。";
+        }
+        if (options.characterGazeEnabled && options.selectedVideoUnavailable) {
+            return "選択中の視線用カメラが見つからないため、このままでは Gaze を開始できません。";
+        }
+        return undefined;
+    }
+
+    private buildAutoMuteHint(
+        autoMuteDisabled: boolean,
+        characterGazeEnabled: boolean,
+    ): string | undefined {
+        if (!autoMuteDisabled) {
+            return undefined;
+        }
+        return characterGazeEnabled
+            ? "現在の構成では AutoMute を利用できません。"
+            : "AutoMute を使うには Gaze を有効にしてください。";
     }
 
     buildStartButtonState(
@@ -217,4 +241,29 @@ export class DialogSettingsPolicy {
             stateStore.set("enableAutoMute", false);
         }
     }
+}
+
+function buildAudioInputDeviceHint(
+    isUserMediaAvailable: boolean,
+    selectedAudioUnavailable: boolean,
+): string | undefined {
+    if (!isUserMediaAvailable) {
+        return "このブラウザではマイク入力を取得できません。";
+    }
+    if (selectedAudioUnavailable) {
+        return "選択中のマイクが見つからないため、開始前に別のマイクかブラウザ既定へ切り替えてください。";
+    }
+    return undefined;
+}
+
+function buildVideoInputDeviceHint(
+    selectedVideoUnavailable: boolean,
+    characterGazeEnabled: boolean,
+): string | undefined {
+    if (!selectedVideoUnavailable) {
+        return undefined;
+    }
+    return characterGazeEnabled
+        ? "選択中の視線用カメラが見つからないため、Gaze を使う前に別のカメラかブラウザ既定へ切り替えてください。"
+        : "選択中の視線用カメラは現在見つかりません。Gaze を使うときは別のカメラかブラウザ既定へ切り替えてください。";
 }

@@ -10,6 +10,15 @@ import { VRMCharacterManager } from "../VRMCharacter/VRMCharacterManager";
 import { VRMCamera } from "./VRMCamera";
 import { VRMLight } from "./VRMLight";
 
+export type VRMSceneOptions = {
+    canvasRoot: HTMLDivElement;
+    characterControlLayer: HTMLElement;
+    vrmUrl: string;
+    xrMode?: boolean;
+    onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void;
+    enableInitialUpperBodyFraming?: boolean;
+};
+
 // VRM表示ページの共通ベースシーン。
 // キャラクター・カメラ・ライト・renderer の基本構成をまとめ、派生クラスは updateScene() を上書きする。
 export class VRMScene {
@@ -22,14 +31,8 @@ export class VRMScene {
     private readonly xrSessionMode: XRSessionMode = "immersive-vr";
     private readonly xrMode: boolean;
 
-    constructor(
-        canvasRoot: HTMLDivElement,
-        characterControlLayer: HTMLElement,
-        vrmUrl: string,
-        xrMode: boolean = false,
-        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void,
-        enableInitialUpperBodyFraming: boolean = false,
-    ) {
+    constructor(options: VRMSceneOptions) {
+        const xrMode = options.xrMode ?? false;
         this.scene = new Scene();
         this.vrmLight = new VRMLight();
         this.scene.add(this.vrmLight.light);
@@ -44,24 +47,24 @@ export class VRMScene {
         this.scene.add(axesHelper);
         */
         // OrbitControls を含むカメラ設定は専用クラスへ分離し、ページ差分から独立させる。
-        this.vrmCamera = new VRMCamera(characterControlLayer);
+        this.vrmCamera = new VRMCamera(options.characterControlLayer);
         // VRMロード完了時にサムネイル取得結果を呼び出し元へ返し、UIアイコン更新に利用する。
-        this.vrmCharacterManager = new VRMCharacterManager(
-            this.scene,
-            this.vrmCamera,
-            vrmUrl,
-            onThumbnailLoaded,
-            enableInitialUpperBodyFraming,
-        );
+        this.vrmCharacterManager = new VRMCharacterManager({
+            scene: this.scene,
+            vrmCamera: this.vrmCamera,
+            vrmUrl: options.vrmUrl,
+            onThumbnailLoaded: options.onThumbnailLoaded,
+            enableInitialUpperBodyFraming: options.enableInitialUpperBodyFraming,
+        });
 
         // レンダラーを設定する。背景透過にして UI オーバーレイ（chat/telop/debug）と重ねる。
         this.renderer = new WebGLRenderer({ alpha: true, antialias: true });
         this.renderer.setSize(
-            positiveDimensionOrDefault(canvasRoot.clientWidth, window.innerWidth),
-            positiveDimensionOrDefault(canvasRoot.clientHeight, window.innerHeight),
+            positiveDimensionOrDefault(options.canvasRoot.clientWidth, window.innerWidth),
+            positiveDimensionOrDefault(options.canvasRoot.clientHeight, window.innerHeight),
         );
         this.renderer.setPixelRatio(window.devicePixelRatio);
-        canvasRoot.appendChild(this.renderer.domElement);
+        options.canvasRoot.appendChild(this.renderer.domElement);
 
         this.setupResizeHandler();
 

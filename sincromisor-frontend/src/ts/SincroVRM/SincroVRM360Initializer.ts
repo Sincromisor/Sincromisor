@@ -17,15 +17,15 @@ export class SincroVRM360Initializer extends SincroVRMInitializer {
 
     protected override initializeSincroScene(): VRM360Scene {
         // 360 ページも VRM サムネイル生成/保存フローは base と同じ callback を使う。
-        const vrmScene: VRM360Scene = new VRM360Scene(
-            this.charCanvas,
-            this.characterControlLayer,
-            this.appController.dialog.getSelectedVrmUrl(),
-            true,
-            (thumbnailImage) => {
+        const vrmScene: VRM360Scene = new VRM360Scene({
+            canvasRoot: this.charCanvas,
+            characterControlLayer: this.characterControlLayer,
+            vrmUrl: this.appController.dialog.getSelectedVrmUrl(),
+            xrMode: true,
+            onThumbnailLoaded: (thumbnailImage) => {
                 this.updateSystemIconFromThumbnail(thumbnailImage);
             },
-        );
+        });
         // VRM1.0系から Looking Glass を起動する入口。Babylon legacy を経由しない。
         vrmScene.enableLookingGlassStartButton();
         vrmScene.start();

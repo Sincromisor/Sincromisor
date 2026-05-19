@@ -1,4 +1,4 @@
-import type { DragEvent } from "react";
+import type { DragEvent, MutableRefObject } from "react";
 import { useRef } from "react";
 
 type ConfigurationDialogVrmDragDropOptions = {
@@ -25,58 +25,86 @@ export function useConfigurationDialogVrmDragDrop({
 }: ConfigurationDialogVrmDragDropOptions): ConfigurationDialogVrmDragDrop {
     const dragDepthRef = useRef(0);
 
-    const resetDragState = (): void => {
-        dragDepthRef.current = 0;
-        setVrmDragOver(false);
-    };
-
-    const handleDialogDragEnter = (event: DragEvent<HTMLFieldSetElement>): void => {
-        if (!hasFileDragPayload(event.dataTransfer)) {
-            return;
-        }
-        event.preventDefault();
-        dragDepthRef.current += 1;
-        setVrmDragOver(true);
-    };
-
-    const handleDialogDragOver = (event: DragEvent<HTMLFieldSetElement>): void => {
-        if (!hasFileDragPayload(event.dataTransfer)) {
-            return;
-        }
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "copy";
-        if (!isDragOver) {
-            setVrmDragOver(true);
-        }
-    };
-
-    const handleDialogDragLeave = (event: DragEvent<HTMLFieldSetElement>): void => {
-        if (!hasFileDragPayload(event.dataTransfer)) {
-            return;
-        }
-        event.preventDefault();
-        dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
-        if (dragDepthRef.current === 0) {
-            setVrmDragOver(false);
-        }
-    };
-
-    const handleDialogDrop = (event: DragEvent<HTMLFieldSetElement>): void => {
-        if (!hasFileDragPayload(event.dataTransfer)) {
-            return;
-        }
-        event.preventDefault();
-        const file = event.dataTransfer.files?.[0];
-        resetDragState();
-        if (file) {
-            applySelectedVrmFile(file);
-        }
-    };
-
     return {
-        handleDialogDragEnter,
-        handleDialogDragOver,
-        handleDialogDragLeave,
-        handleDialogDrop,
+        handleDialogDragEnter: (event) => {
+            handleVrmDragEnter(event, dragDepthRef, setVrmDragOver);
+        },
+        handleDialogDragOver: (event) => {
+            handleVrmDragOver(event, isDragOver, setVrmDragOver);
+        },
+        handleDialogDragLeave: (event) => {
+            handleVrmDragLeave(event, dragDepthRef, setVrmDragOver);
+        },
+        handleDialogDrop: (event) => {
+            handleVrmDrop(event, dragDepthRef, setVrmDragOver, applySelectedVrmFile);
+        },
     };
+}
+
+function resetDragState(
+    dragDepthRef: MutableRefObject<number>,
+    setVrmDragOver: (isDragOver: boolean) => void,
+): void {
+    dragDepthRef.current = 0;
+    setVrmDragOver(false);
+}
+
+function handleVrmDragEnter(
+    event: DragEvent<HTMLFieldSetElement>,
+    dragDepthRef: MutableRefObject<number>,
+    setVrmDragOver: (isDragOver: boolean) => void,
+): void {
+    if (!hasFileDragPayload(event.dataTransfer)) {
+        return;
+    }
+    event.preventDefault();
+    dragDepthRef.current += 1;
+    setVrmDragOver(true);
+}
+
+function handleVrmDragOver(
+    event: DragEvent<HTMLFieldSetElement>,
+    isDragOver: boolean,
+    setVrmDragOver: (isDragOver: boolean) => void,
+): void {
+    if (!hasFileDragPayload(event.dataTransfer)) {
+        return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    if (!isDragOver) {
+        setVrmDragOver(true);
+    }
+}
+
+function handleVrmDragLeave(
+    event: DragEvent<HTMLFieldSetElement>,
+    dragDepthRef: MutableRefObject<number>,
+    setVrmDragOver: (isDragOver: boolean) => void,
+): void {
+    if (!hasFileDragPayload(event.dataTransfer)) {
+        return;
+    }
+    event.preventDefault();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+        setVrmDragOver(false);
+    }
+}
+
+function handleVrmDrop(
+    event: DragEvent<HTMLFieldSetElement>,
+    dragDepthRef: MutableRefObject<number>,
+    setVrmDragOver: (isDragOver: boolean) => void,
+    applySelectedVrmFile: (file: File) => void,
+): void {
+    if (!hasFileDragPayload(event.dataTransfer)) {
+        return;
+    }
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    resetDragState(dragDepthRef, setVrmDragOver);
+    if (file) {
+        applySelectedVrmFile(file);
+    }
 }

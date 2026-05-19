@@ -49,62 +49,80 @@ export class CharacterMotionOrchestrator {
         hipsBasePosition: Vector3,
         pose?: SincroPoseRetargetFrame,
     ): void {
-        const breath = sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.breath.periodSeconds);
-        const breathSecondary = sineWave(
-            elapsedSeconds,
-            CHARACTER_IDLE_MOTION_CONFIG.breath.periodSeconds,
-            Math.PI / 2,
-        );
-        const balanceSide = sineWave(
-            elapsedSeconds,
-            CHARACTER_IDLE_MOTION_CONFIG.balance.sidePeriodSeconds,
-            Math.PI / 7,
-        );
-        const intensity = this.intensityForState(snapshot);
-        const listening = this.updateListeningBlend(elapsedSeconds, snapshot);
-        const backchannelNod = this.updateBackchannelNod(elapsedSeconds, snapshot);
-        const aiSpeaking = this.updateAiSpeakingBlend(elapsedSeconds, snapshot);
-        const aiGesture = this.updateAiSpeechBeat(elapsedSeconds, snapshot);
+        const motion = this.createMotionFrame(elapsedSeconds, snapshot);
         const expression = getAiSpeechExpressionMotionProfile(snapshot.aiSpeech.expressionCode);
         const motionScale = this.tuning.motionScale * snapshot.motionPolicy.idleMotionScale;
 
         this.stabilizeHips(hipsBasePosition);
         applySpineMotion(this.bones.get("spine"), {
-            breathWave: breath,
-            sideWave: balanceSide,
-            intensity,
-            listening,
-            backchannelNod,
-            aiSpeaking,
-            aiGesture,
+            breathWave: motion.breath,
+            sideWave: motion.balanceSide,
+            intensity: motion.intensity,
+            listening: motion.listening,
+            backchannelNod: motion.backchannelNod,
+            aiSpeaking: motion.aiSpeaking,
+            aiGesture: motion.aiGesture,
             aiSpeechBeatDirection: this.aiSpeechBeatDirection,
             expression,
             motionScale,
             pose,
         });
         applyChestMotion(this.bones.get("chest"), this.bones.get("upperChest"), {
-            breathWave: breath,
-            secondaryWave: breathSecondary,
-            intensity,
-            listening,
-            backchannelNod,
-            aiSpeaking,
-            aiGesture,
+            breathWave: motion.breath,
+            secondaryWave: motion.breathSecondary,
+            intensity: motion.intensity,
+            listening: motion.listening,
+            backchannelNod: motion.backchannelNod,
+            aiSpeaking: motion.aiSpeaking,
+            aiGesture: motion.aiGesture,
             expression,
             motionScale,
             pose,
         });
         applyShoulderMotion(this.bones.get("leftShoulder"), this.bones.get("rightShoulder"), {
-            breathWave: breath,
-            secondaryWave: breathSecondary,
-            intensity,
-            listening,
-            aiSpeaking,
-            aiGesture,
+            breathWave: motion.breath,
+            secondaryWave: motion.breathSecondary,
+            intensity: motion.intensity,
+            listening: motion.listening,
+            aiSpeaking: motion.aiSpeaking,
+            aiGesture: motion.aiGesture,
             expression,
             motionScale,
             pose,
         });
+    }
+
+    private createMotionFrame(
+        elapsedSeconds: number,
+        snapshot: CharacterBehaviorSnapshot,
+    ): {
+        breath: number;
+        breathSecondary: number;
+        balanceSide: number;
+        intensity: number;
+        listening: number;
+        backchannelNod: number;
+        aiSpeaking: number;
+        aiGesture: number;
+    } {
+        return {
+            breath: sineWave(elapsedSeconds, CHARACTER_IDLE_MOTION_CONFIG.breath.periodSeconds),
+            breathSecondary: sineWave(
+                elapsedSeconds,
+                CHARACTER_IDLE_MOTION_CONFIG.breath.periodSeconds,
+                Math.PI / 2,
+            ),
+            balanceSide: sineWave(
+                elapsedSeconds,
+                CHARACTER_IDLE_MOTION_CONFIG.balance.sidePeriodSeconds,
+                Math.PI / 7,
+            ),
+            intensity: this.intensityForState(snapshot),
+            listening: this.updateListeningBlend(elapsedSeconds, snapshot),
+            backchannelNod: this.updateBackchannelNod(elapsedSeconds, snapshot),
+            aiSpeaking: this.updateAiSpeakingBlend(elapsedSeconds, snapshot),
+            aiGesture: this.updateAiSpeechBeat(elapsedSeconds, snapshot),
+        };
     }
 
     setTuning(partial: Partial<CharacterMotionTuning>): void {

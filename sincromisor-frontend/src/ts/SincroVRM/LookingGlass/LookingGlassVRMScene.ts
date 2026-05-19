@@ -4,7 +4,7 @@ import { TextureLoader } from "three/src/loaders/TextureLoader.js";
 import { MeshStandardMaterial } from "three/src/materials/MeshStandardMaterial.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import { Mesh } from "three/src/objects/Mesh.js";
-import { VRMScene } from "../VRMScene/VRMScene";
+import { VRMScene, type VRMSceneOptions } from "../VRMScene/VRMScene";
 import { LookingGlassXRController } from "./LookingGlassXRController";
 
 // Looking Glass 用の VRM シーン。
@@ -16,14 +16,8 @@ export class LookingGlassVRMScene extends VRMScene {
     private static readonly PREVIEW_CAMERA_TARGET = new Vector3(0, 0.95, 0);
     private static readonly PREVIEW_CAMERA_POSITION = new Vector3(0, 1.05, 2.2);
 
-    constructor(
-        canvasRoot: HTMLDivElement,
-        characterControlLayer: HTMLElement,
-        vrmUrl: string,
-        xrMode: boolean = false,
-        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void,
-    ) {
-        super(canvasRoot, characterControlLayer, vrmUrl, xrMode, onThumbnailLoaded);
+    constructor(options: VRMSceneOptions) {
+        super(options);
         // LG の WebXR 描画経路は vrm360 で使っていた renderer 設定に依存するケースがあるため互換設定を維持する。
         // 背景360動画は使わないが、色空間/影設定は LG ページでも合わせておく。
         this.renderer.shadowMap.enabled = true;

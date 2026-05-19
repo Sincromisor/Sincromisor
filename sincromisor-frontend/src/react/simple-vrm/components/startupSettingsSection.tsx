@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { StartupBehaviorFields } from "../../settings-fields/SettingsFields";
 import { SettingsHelpLabel } from "../../settings-primitives/SettingsPrimitives";
 import type {
@@ -29,19 +30,7 @@ export function StartupSettingsSection({
     }
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            {showSectionTitle ? (
-                <SettingsHelpLabel text="開始時の動作" />
-            ) : (
-                <div
-                    style={{
-                        opacity: 0.8,
-                        fontWeight: 700,
-                        marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
-                    }}
-                >
-                    ページ開始時の動作
-                </div>
-            )}
+            {renderStartupSectionLabel(showSectionTitle)}
             <StartupBehaviorFields
                 settings={settings}
                 uiState={uiState}
@@ -74,6 +63,23 @@ export function StartupSettingsSection({
                     </div>
                 )}
             />
+        </div>
+    );
+}
+
+function renderStartupSectionLabel(showSectionTitle: boolean): ReactNode {
+    if (showSectionTitle) {
+        return <SettingsHelpLabel text="開始時の動作" />;
+    }
+    return (
+        <div
+            style={{
+                opacity: 0.8,
+                fontWeight: 700,
+                marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
+            }}
+        >
+            ページ開始時の動作
         </div>
     );
 }

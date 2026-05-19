@@ -326,12 +326,8 @@ export class DialogManager {
         this.settingsChangeBatcher.emit();
     }
 
-    private getTitleText(): string {
-        return this.titleText();
-    }
-
     updateTitleText(): void {
-        this.headerDom.setHeaderTitle(this.getTitleText());
+        this.headerDom.setHeaderTitle(this.titleText());
     }
 
     updateCharacterStatus(available: boolean): void {
