@@ -1,5 +1,5 @@
-import { frontendLogger } from "../../ts/logging/appLogger";
-import { SincroLookingGlassVRMInitializer } from "../../ts/sincroVrm/sincroLookingGlassVrmInitializer";
+import { SincroLookingGlassVRMInitializer } from "../../character/lookingGlass/sincroLookingGlassVrmInitializer";
+import { frontendLogger } from "../../shared/logging/appLogger";
 
 // Looking Glass VRM ページ専用の最小エントリ。
 // ページ差分は initializer 側へ閉じ、ここでは HTML からの起動経路だけを示す。

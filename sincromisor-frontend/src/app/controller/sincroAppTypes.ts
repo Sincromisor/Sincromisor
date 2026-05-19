@@ -1,14 +1,14 @@
-import type { ChatMessage, TelopChannelMessage } from "../../ts/rtc/rtcMessage";
-import type { TelopTextSegment } from "../../ts/rtc/talkManager";
-import type { LookingGlassRuntimeConfig } from "../../ts/sincroVrm/lookingGlass/lookingGlassRuntimeConfig";
-import type { ChatMessageViewRecord } from "../../ts/ui/chatMessageService";
+import type { LookingGlassRuntimeConfig } from "../../character/lookingGlass/lookingGlassRuntimeConfig";
+import type { ChatMessageViewRecord } from "../../features/conversation/chat/model/chatMessageService";
+import type { TelopTextSegment } from "../../features/conversation/talk/talkManager";
 import type {
     DialogSettingsUiHints,
     DialogSettingsUiState,
     DialogUiState,
     DialogVrmUiState,
-} from "../../ts/ui/dialogManager";
-import type { DialogPopEvent } from "../../ts/ui/popMessageService";
+} from "../../features/dialog/model/dialogManager";
+import type { DialogPopEvent } from "../../features/dialog/model/popMessageService";
+import type { ChatMessage, TelopChannelMessage } from "../../features/rtc/rtcMessage";
 
 // SincroAppController を境界にした UI 向けの共通型定義。
 // React UI / initializer / helper 群で同じ契約を共有するために Controller 本体から分離している。

@@ -20,6 +20,17 @@
 
 ## Responsibilities
 
+- `src/features/settings/react`
+    - settings field、primitive、shell を置く。
+    - `fields` は設定項目入力、`primitives` は表示部品、`shell` はカテゴリ構造を担当する。
+- `src/features/dialog`
+    - 起動前 dialog の model / service / React component を置く。
+    - settings field 自体は `features/settings` を参照し、dialog 固有の状態・通知・VRM workflow だけを所有する。
+- `src/features/debug`
+    - Debug Console の model / controls / React panels を置く。
+    - RTC / media / character runtime から React debug UI へ直接依存しない。
+- `src/app/shell/react/overlay`
+    - dialog / right tool の外枠 chrome を置く。
 - `SettingsShell`
     - 設定カテゴリと本文の情報設計を持つ。
     - overlay frame や fixed position は持たない。
@@ -62,7 +73,7 @@
 - 設定項目を追加したら startup dialog と settings panel の両方の扱いを決める。
 - 実行時変更可能か、再開始が必要かを文言に反映する。
 - Debug Console に診断項目を追加する場合は、どの snapshot provider が責務を持つか確認する。
-- overlay 外枠の変更は `src/react/overlay/*` と `overlay.css` を優先する。
+- overlay 外枠の変更は `src/app/shell/react/overlay/*` と `overlay.css` を優先する。
 
 ## References
 

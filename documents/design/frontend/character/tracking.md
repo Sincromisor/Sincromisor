@@ -19,6 +19,14 @@
 
 ## Responsibilities
 
+- `src/features/gaze/characterGaze`
+    - `chat` mode の顔位置検出、注視 target、AutoMute 連動を置く。
+- `src/features/gaze/faceTracking`
+    - FaceLandmarker 結果から face motion snapshot を作る tracker を置く。
+- `src/features/gaze/poseTracking`
+    - PoseLandmarker 結果から pose motion snapshot / pose target を作る tracker と spike page runtime を置く。
+- `src/features/gaze/trackingRuntime`
+    - MediaPipe fileset、worker client、camera frame loop、fallback stats、performance gate を置く。
 - `CharacterGaze`
     - FaceDetector による顔位置検出。
     - `chat` mode の注視入力。

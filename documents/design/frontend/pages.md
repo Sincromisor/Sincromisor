@@ -33,6 +33,8 @@
 - Entry files:
     - `src/pages/*` 配下に置き、ページ固有 initializer を呼ぶ薄い入口に保つ。
     - source directory は camelCase、公開 URL は既存 kebab-case route を維持する。
+    - `simple-vrm` の VRM entry は `src/pages/simpleVrm/mainVrm.ts`、React panel は `src/pages/simpleVrm/react/*` に置く。
+    - `vrm360` / `looking-glass-vrm` の React panel は各 `src/pages/<page>/react/*` に置き、通常 app shell の上へ page-specific control panel として渡す。
 - Vite route alias:
     - dev では旧公開 URL を `src/pages/*` の HTML へ内部 rewrite する。
     - build 後は `dist/pages/*/index.html` を `dist/<public-route>/index.html` へ移し、preview / 配信 URL を変えない。

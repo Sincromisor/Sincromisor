@@ -2,6 +2,6 @@ import { bootstrapSincroPageAppShell } from "../../app/shell/bootstrapSincroPage
 
 // looking-glass-vrm でも app shell は共通化し、LG 専用設定だけを page panel に残す。
 bootstrapSincroPageAppShell(
-    () => import("../../react/lookingGlassVrm/lookingGlassVrmControlPanel"),
+    () => import("./react/lookingGlassVrmControlPanel"),
     (module) => <module.LookingGlassVrmControlPanel />,
 );

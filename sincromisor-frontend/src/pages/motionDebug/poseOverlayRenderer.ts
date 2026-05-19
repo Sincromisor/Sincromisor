@@ -1,4 +1,4 @@
-import type { SincroPoseMotionSnapshot } from "../../ts/faceTracking/sincroPoseMotionSnapshot";
+import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { MotionDebugPoseTarget } from "./types";
 
 const TARGET_CONNECTIONS = [
