@@ -14,15 +14,15 @@ export class SincroLookingGlassVRMInitializer extends SincroVRMInitializer {
     }
 
     protected override initializeSincroScene(): LookingGlassVRMScene {
-        const vrmScene: LookingGlassVRMScene = new LookingGlassVRMScene(
-            this.charCanvas,
-            this.characterControlLayer,
-            this.appController.dialog.getSelectedVrmUrl(),
-            true,
-            (thumbnailImage) => {
+        const vrmScene: LookingGlassVRMScene = new LookingGlassVRMScene({
+            canvasRoot: this.charCanvas,
+            characterControlLayer: this.characterControlLayer,
+            vrmUrl: this.appController.dialog.getSelectedVrmUrl(),
+            xrMode: true,
+            onThumbnailLoaded: (thumbnailImage) => {
                 this.updateSystemIconFromThumbnail(thumbnailImage);
             },
-        );
+        });
         vrmScene.enableLookingGlassStartButton();
         vrmScene.start();
         this.activeScene = vrmScene;

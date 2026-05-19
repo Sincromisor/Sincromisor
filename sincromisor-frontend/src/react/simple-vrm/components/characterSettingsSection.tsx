@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { SincroMediaDeviceSelectionState } from "../../../ts/MediaDevices/SincroMediaDeviceService";
 import {
     CharacterDisplayToggles,
@@ -33,31 +34,18 @@ export function CharacterSettingsSection({
               : "キャラクターと視線";
     return (
         <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
-            {showSectionTitle ? (
-                <SettingsHelpLabel text="キャラクター設定" />
-            ) : (
-                <div
-                    style={{
-                        opacity: 0.8,
-                        fontWeight: 700,
-                        marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
-                    }}
-                >
-                    {sectionLabel}
-                </div>
-            )}
-            {showCameraSelection ? (
-                <div style={{ marginBottom: showDisplayOptions ? `${sectionSpacingPx}px` : "0" }}>
-                    <VideoInputDeviceField
-                        settings={settings}
-                        uiState={uiState}
-                        uiHints={uiHints}
-                        snapshot={mediaDeviceSnapshot}
-                        selection={videoInputSelection}
-                        onApplySettings={onApplySettings}
-                    />
-                </div>
-            ) : null}
+            {renderCharacterSectionLabel(showSectionTitle, sectionLabel)}
+            {showCameraSelection
+                ? renderCharacterCameraField({
+                      settings,
+                      uiState,
+                      uiHints,
+                      mediaDeviceSnapshot,
+                      videoInputSelection,
+                      onApplySettings,
+                      showDisplayOptions,
+                  })
+                : null}
             {showDisplayOptions ? (
                 <CharacterDisplayToggles
                     settings={settings}
@@ -80,3 +68,45 @@ export function CharacterSettingsSection({
         </div>
     );
 }
+
+function renderCharacterSectionLabel(showSectionTitle: boolean, sectionLabel: string): ReactNode {
+    if (showSectionTitle) {
+        return <SettingsHelpLabel text="キャラクター設定" />;
+    }
+    return (
+        <div
+            style={{
+                opacity: 0.8,
+                fontWeight: 700,
+                marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
+            }}
+        >
+            {sectionLabel}
+        </div>
+    );
+}
+
+function renderCharacterCameraField(props: CharacterCameraFieldProps): ReactNode {
+    return (
+        <div style={{ marginBottom: props.showDisplayOptions ? `${sectionSpacingPx}px` : "0" }}>
+            <VideoInputDeviceField
+                settings={props.settings}
+                uiState={props.uiState}
+                uiHints={props.uiHints}
+                snapshot={props.mediaDeviceSnapshot}
+                selection={props.videoInputSelection}
+                onApplySettings={props.onApplySettings}
+            />
+        </div>
+    );
+}
+
+type CharacterCameraFieldProps = {
+    settings: CharacterSettingsSectionProps["settings"];
+    uiState: CharacterSettingsSectionProps["uiState"];
+    uiHints: CharacterSettingsSectionProps["uiHints"];
+    mediaDeviceSnapshot: CharacterSettingsSectionProps["mediaDeviceSnapshot"];
+    videoInputSelection: SincroMediaDeviceSelectionState;
+    onApplySettings: CharacterSettingsSectionProps["onApplySettings"];
+    showDisplayOptions: boolean;
+};

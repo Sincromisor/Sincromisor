@@ -55,37 +55,25 @@ function useSincroChatViewState(enableReactRendering: boolean) {
     const [systemIconUrl, setSystemIconUrl] = useState<string>(
         initialController?.chat.getSystemIconUrl() ?? "../images/icon-system.webp",
     );
+    useSincroChatEventSubscription(enableReactRendering, setMessages, setSystemIconUrl);
 
+    return { messages, systemIconUrl };
+}
+
+function useSincroChatEventSubscription(
+    enableReactRendering: boolean,
+    setMessages: (updater: (prev: ChatMessageViewRecord[]) => ChatMessageViewRecord[]) => void,
+    setSystemIconUrl: (iconUrl: string) => void,
+): void {
     useEffect(() => {
-        const applyChatViewRecord = (
-            event: Extract<
-                SincroAppEvent,
-                {
-                    type: "chat_message" | "system_message" | "error_message";
-                }
-            >,
-        ) => {
-            setMessages((prev) => {
-                const index = prev.findIndex(
-                    (m) => m.message.message_id === event.viewRecord.message.message_id,
-                );
-                if (index >= 0) {
-                    const next = [...prev];
-                    next[index] = event.viewRecord;
-                    return next;
-                }
-                return [event.viewRecord, ...prev].slice(0, 30);
-            });
-        };
-
         const unsubscribe = subscribeActiveSincroAppEvents({
             onControllerChange: (controller) => {
                 if (!controller) {
-                    setMessages([]);
+                    setMessages(() => []);
                     setSystemIconUrl("../images/icon-system.webp");
                     return;
                 }
-                setMessages(controller.chat.getMessageViewSnapshot());
+                setMessages(() => controller.chat.getMessageViewSnapshot());
                 setSystemIconUrl(controller.chat.getSystemIconUrl());
             },
             onBeforeSubscribe: (controller) => {
@@ -108,15 +96,33 @@ function useSincroChatViewState(enableReactRendering: boolean) {
                     event.type === "system_message" ||
                     event.type === "error_message"
                 ) {
-                    applyChatViewRecord(event);
+                    setMessages((prev) => applyChatViewRecord(prev, event));
                 }
             },
         });
 
         return unsubscribe;
-    }, [enableReactRendering]);
+    }, [enableReactRendering, setMessages, setSystemIconUrl]);
+}
 
-    return { messages, systemIconUrl };
+function applyChatViewRecord(
+    prev: ChatMessageViewRecord[],
+    event: Extract<
+        SincroAppEvent,
+        {
+            type: "chat_message" | "system_message" | "error_message";
+        }
+    >,
+): ChatMessageViewRecord[] {
+    const index = prev.findIndex(
+        (m) => m.message.message_id === event.viewRecord.message.message_id,
+    );
+    if (index >= 0) {
+        const next = [...prev];
+        next[index] = event.viewRecord;
+        return next;
+    }
+    return [event.viewRecord, ...prev].slice(0, 30);
 }
 
 function ChatMessageItem({

@@ -54,38 +54,19 @@ export function createSincroPoseArmMotion({
     imageOrigin,
     worldOrigin,
 }: SincroPoseArmMotionOptions): SincroPoseArmMotionSnapshot {
-    const shoulder =
-        landmarks[
-            side === "left" ? SINCRO_POSE_LANDMARK.leftShoulder : SINCRO_POSE_LANDMARK.rightShoulder
-        ];
-    const elbow =
-        landmarks[
-            side === "left" ? SINCRO_POSE_LANDMARK.leftElbow : SINCRO_POSE_LANDMARK.rightElbow
-        ];
-    const wrist =
-        landmarks[
-            side === "left" ? SINCRO_POSE_LANDMARK.leftWrist : SINCRO_POSE_LANDMARK.rightWrist
-        ];
-    const worldShoulder =
-        worldLandmarks?.[
-            side === "left" ? SINCRO_POSE_LANDMARK.leftShoulder : SINCRO_POSE_LANDMARK.rightShoulder
-        ];
-    const worldElbow =
-        worldLandmarks?.[
-            side === "left" ? SINCRO_POSE_LANDMARK.leftElbow : SINCRO_POSE_LANDMARK.rightElbow
-        ];
-    const worldWrist =
-        worldLandmarks?.[
-            side === "left" ? SINCRO_POSE_LANDMARK.leftWrist : SINCRO_POSE_LANDMARK.rightWrist
-        ];
-    const confidence = averagePoseLandmarkVisibility([shoulder, elbow, wrist]);
+    const armLandmarks = pickArmLandmarks(landmarks, worldLandmarks, side);
+    const confidence = averagePoseLandmarkVisibility([
+        armLandmarks.shoulder,
+        armLandmarks.elbow,
+        armLandmarks.wrist,
+    ]);
     const targets = createSincroPoseArmTargets({
-        shoulder,
-        elbow,
-        wrist,
-        worldShoulder,
-        worldElbow,
-        worldWrist,
+        shoulder: armLandmarks.shoulder,
+        elbow: armLandmarks.elbow,
+        wrist: armLandmarks.wrist,
+        worldShoulder: armLandmarks.worldShoulder,
+        worldElbow: armLandmarks.worldElbow,
+        worldWrist: armLandmarks.worldWrist,
         imageOrigin,
         worldOrigin,
     });
@@ -98,15 +79,59 @@ export function createSincroPoseArmMotion({
     }
 
     const sideSign = side === "left" ? -1 : 1;
-    const elbowAngle = poseLandmarkAngleAt(elbow, shoulder, wrist);
+    const elbowAngle = poseLandmarkAngleAt(
+        armLandmarks.elbow,
+        armLandmarks.shoulder,
+        armLandmarks.wrist,
+    );
     return {
         tracked: true,
         confidence,
-        upperArmLift: clampSigned((shoulder.y - elbow.y) / imageOrigin.imageScale),
-        upperArmOpen: clampSigned(((elbow.x - shoulder.x) * sideSign) / imageOrigin.imageScale),
+        upperArmLift: clampSigned(
+            (armLandmarks.shoulder.y - armLandmarks.elbow.y) / imageOrigin.imageScale,
+        ),
+        upperArmOpen: clampSigned(
+            ((armLandmarks.elbow.x - armLandmarks.shoulder.x) * sideSign) / imageOrigin.imageScale,
+        ),
         lowerArmFlex: clamp01(1 - elbowAngle / Math.PI) * 2 - 1,
-        wristRaise: clampSigned((elbow.y - wrist.y) / imageOrigin.imageScale),
+        wristRaise: clampSigned(
+            (armLandmarks.elbow.y - armLandmarks.wrist.y) / imageOrigin.imageScale,
+        ),
         targets,
+    };
+}
+
+function pickArmLandmarks(
+    landmarks: NormalizedLandmark[],
+    worldLandmarks: Landmark[] | undefined,
+    side: "left" | "right",
+): {
+    shoulder: NormalizedLandmark;
+    elbow: NormalizedLandmark;
+    wrist: NormalizedLandmark;
+    worldShoulder: Landmark | undefined;
+    worldElbow: Landmark | undefined;
+    worldWrist: Landmark | undefined;
+} {
+    const indices =
+        side === "left"
+            ? {
+                  shoulder: SINCRO_POSE_LANDMARK.leftShoulder,
+                  elbow: SINCRO_POSE_LANDMARK.leftElbow,
+                  wrist: SINCRO_POSE_LANDMARK.leftWrist,
+              }
+            : {
+                  shoulder: SINCRO_POSE_LANDMARK.rightShoulder,
+                  elbow: SINCRO_POSE_LANDMARK.rightElbow,
+                  wrist: SINCRO_POSE_LANDMARK.rightWrist,
+              };
+    return {
+        shoulder: landmarks[indices.shoulder],
+        elbow: landmarks[indices.elbow],
+        wrist: landmarks[indices.wrist],
+        worldShoulder: worldLandmarks?.[indices.shoulder],
+        worldElbow: worldLandmarks?.[indices.elbow],
+        worldWrist: worldLandmarks?.[indices.wrist],
     };
 }
 

@@ -86,37 +86,59 @@ export class LookingGlassInputRecovery {
         });
         canvas.addEventListener(
             "wheel",
-            (event: WheelEvent) => {
-                const zoomBase = 1.1;
-                const current = Math.max(config.targetDiam ?? 1, 1e-6);
-                const exponent = Math.log(current) / Math.log(zoomBase);
-                config.targetDiam = Math.max(1e-4, zoomBase ** (exponent + event.deltaY * 0.01));
-                event.preventDefault();
+            (event: WheelEvent) => handleFallbackWheel(event, config),
+            {
+                passive: false,
             },
-            { passive: false },
         );
-        canvas.addEventListener("mousemove", (event: MouseEvent) => {
-            const dx = event.movementX;
-            const dy = -event.movementY;
-            const isPan =
-                !!(event.buttons & 2) ||
-                (!!(event.buttons & 1) && (event.shiftKey || event.ctrlKey));
-            if (isPan) {
-                const tx = config.trackballX ?? 0;
-                const ty = config.trackballY ?? 0;
-                const targetDiam = config.targetDiam ?? 1;
-                const panX = -Math.cos(tx) * dx + Math.sin(tx) * Math.sin(ty) * dy;
-                const panY = -Math.cos(ty) * dy;
-                const panZ = Math.sin(tx) * dx + Math.cos(tx) * Math.sin(ty) * dy;
-                config.targetX = (config.targetX ?? 0) + panX * targetDiam * 1e-3;
-                config.targetY = (config.targetY ?? 0) + panY * targetDiam * 1e-3;
-                config.targetZ = (config.targetZ ?? 0) + panZ * targetDiam * 1e-3;
-                return;
-            }
-            if (event.buttons & 1) {
-                config.trackballX = (config.trackballX ?? 0) - dx * 0.01;
-                config.trackballY = (config.trackballY ?? 0) - dy * 0.01;
-            }
-        });
+        canvas.addEventListener("mousemove", (event: MouseEvent) =>
+            handleFallbackMouseMove(event, config),
+        );
     }
+}
+
+type FallbackLookingGlassConfig = typeof LookingGlassConfig & {
+    lkgCanvas?: HTMLCanvasElement | null;
+    appCanvas?: HTMLCanvasElement | null;
+    targetDiam: number;
+    trackballX: number;
+    trackballY: number;
+    targetX: number;
+    targetY: number;
+    targetZ: number;
+};
+
+function handleFallbackWheel(event: WheelEvent, config: FallbackLookingGlassConfig): void {
+    const zoomBase = 1.1;
+    const current = Math.max(config.targetDiam ?? 1, 1e-6);
+    const exponent = Math.log(current) / Math.log(zoomBase);
+    config.targetDiam = Math.max(1e-4, zoomBase ** (exponent + event.deltaY * 0.01));
+    event.preventDefault();
+}
+
+function handleFallbackMouseMove(event: MouseEvent, config: FallbackLookingGlassConfig): void {
+    const dx = event.movementX;
+    const dy = -event.movementY;
+    const isPan =
+        !!(event.buttons & 2) || (!!(event.buttons & 1) && (event.shiftKey || event.ctrlKey));
+    if (isPan) {
+        panFallbackTarget(config, dx, dy);
+        return;
+    }
+    if (event.buttons & 1) {
+        config.trackballX = (config.trackballX ?? 0) - dx * 0.01;
+        config.trackballY = (config.trackballY ?? 0) - dy * 0.01;
+    }
+}
+
+function panFallbackTarget(config: FallbackLookingGlassConfig, dx: number, dy: number): void {
+    const tx = config.trackballX ?? 0;
+    const ty = config.trackballY ?? 0;
+    const targetDiam = config.targetDiam ?? 1;
+    const panX = -Math.cos(tx) * dx + Math.sin(tx) * Math.sin(ty) * dy;
+    const panY = -Math.cos(ty) * dy;
+    const panZ = Math.sin(tx) * dx + Math.cos(tx) * Math.sin(ty) * dy;
+    config.targetX = (config.targetX ?? 0) + panX * targetDiam * 1e-3;
+    config.targetY = (config.targetY ?? 0) + panY * targetDiam * 1e-3;
+    config.targetZ = (config.targetZ ?? 0) + panZ * targetDiam * 1e-3;
 }

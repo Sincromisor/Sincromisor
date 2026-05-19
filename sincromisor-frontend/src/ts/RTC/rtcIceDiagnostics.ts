@@ -12,45 +12,13 @@ type RtcIceDiagnosticsParams = {
 export async function captureIceFailureDiagnostics(params: RtcIceDiagnosticsParams): Promise<void> {
     try {
         const report = await params.peerConnection.getStats();
-        const selectedPairs: RtcStatsRecord[] = [];
-        let pairTotal = 0;
-        let pairSucceeded = 0;
-        const localCandidates = new Map<string, RtcStatsRecord>();
-        const remoteCandidates = new Map<string, RtcStatsRecord>();
-        const localTypeCount: Record<string, number> = {};
-        const remoteTypeCount: Record<string, number> = {};
-
-        report.forEach((stats) => {
-            if (stats.type === "candidate-pair") {
-                const pairStats = normalizeRtcStatsRecord(stats);
-                pairTotal += 1;
-                if (pairStats.state === "succeeded") {
-                    pairSucceeded += 1;
-                }
-                if (pairStats.selected || pairStats.nominated) {
-                    selectedPairs.push(pairStats);
-                }
-            }
-            if (stats.type === "local-candidate") {
-                const candidateStats = normalizeRtcStatsRecord(stats);
-                localCandidates.set(candidateStats.id, candidateStats);
-                const candidateType = candidateStats.candidateType ?? "unknown";
-                localTypeCount[candidateType] = (localTypeCount[candidateType] ?? 0) + 1;
-            }
-            if (stats.type === "remote-candidate") {
-                const candidateStats = normalizeRtcStatsRecord(stats);
-                remoteCandidates.set(candidateStats.id, candidateStats);
-                const candidateType = candidateStats.candidateType ?? "unknown";
-                remoteTypeCount[candidateType] = (remoteTypeCount[candidateType] ?? 0) + 1;
-            }
-        });
-
-        const selectedPair = selectedPairs[0];
+        const diagnostics = collectIceDiagnostics(report);
+        const selectedPair = diagnostics.selectedPairs[0];
         const local = selectedPair?.localCandidateId
-            ? localCandidates.get(selectedPair.localCandidateId)
+            ? diagnostics.localCandidates.get(selectedPair.localCandidateId)
             : undefined;
         const remote = selectedPair?.remoteCandidateId
-            ? remoteCandidates.get(selectedPair.remoteCandidateId)
+            ? diagnostics.remoteCandidates.get(selectedPair.remoteCandidateId)
             : undefined;
         const localType = local?.candidateType ?? "-";
         const remoteType = remote?.candidateType ?? "-";
@@ -61,10 +29,10 @@ export async function captureIceFailureDiagnostics(params: RtcIceDiagnosticsPara
                 : "-";
 
         params.logger.addRtcEventLog(
-            `ICE failure diagnostics: reason=${params.reason}, pair=${pairState} ${localType}->${remoteType}, rtt=${rttMs}, pairs=${pairSucceeded}/${pairTotal}(succeeded/total)`,
+            `ICE failure diagnostics: reason=${params.reason}, pair=${pairState} ${localType}->${remoteType}, rtt=${rttMs}, pairs=${diagnostics.pairSucceeded}/${diagnostics.pairTotal}(succeeded/total)`,
         );
         params.logger.addRtcEventLog(
-            `ICE failure diagnostics: localCandidates=${JSON.stringify(localTypeCount)}, remoteCandidates=${JSON.stringify(remoteTypeCount)}, ua=${navigator.userAgent}`,
+            `ICE failure diagnostics: localCandidates=${JSON.stringify(diagnostics.localTypeCount)}, remoteCandidates=${JSON.stringify(diagnostics.remoteTypeCount)}, ua=${navigator.userAgent}`,
         );
         params.logger.addRtcEventLog(
             `ICE failure diagnostics: signaling=${params.peerConnection.signalingState}, gathering=${params.peerConnection.iceGatheringState}, session_id=${params.sessionId ?? "-"}`,
@@ -73,4 +41,63 @@ export async function captureIceFailureDiagnostics(params: RtcIceDiagnosticsPara
         params.logger.addRtcEventLog(`ICE failure diagnostics collection failed: ${error}`);
         frontendLogger.error("ICE failure diagnostics collection failed.", { error });
     }
+}
+
+function collectIceDiagnostics(report: RTCStatsReport): {
+    selectedPairs: RtcStatsRecord[];
+    pairTotal: number;
+    pairSucceeded: number;
+    localCandidates: Map<string, RtcStatsRecord>;
+    remoteCandidates: Map<string, RtcStatsRecord>;
+    localTypeCount: Record<string, number>;
+    remoteTypeCount: Record<string, number>;
+} {
+    const diagnostics = {
+        selectedPairs: [] as RtcStatsRecord[],
+        pairTotal: 0,
+        pairSucceeded: 0,
+        localCandidates: new Map<string, RtcStatsRecord>(),
+        remoteCandidates: new Map<string, RtcStatsRecord>(),
+        localTypeCount: {} as Record<string, number>,
+        remoteTypeCount: {} as Record<string, number>,
+    };
+    report.forEach((stats) => {
+        addIceDiagnosticStats(diagnostics, stats);
+    });
+    return diagnostics;
+}
+
+function addIceDiagnosticStats(
+    diagnostics: ReturnType<typeof collectIceDiagnostics>,
+    stats: RTCStats,
+): void {
+    if (stats.type === "candidate-pair") {
+        const pairStats = normalizeRtcStatsRecord(stats);
+        diagnostics.pairTotal += 1;
+        if (pairStats.state === "succeeded") {
+            diagnostics.pairSucceeded += 1;
+        }
+        if (pairStats.selected || pairStats.nominated) {
+            diagnostics.selectedPairs.push(pairStats);
+        }
+    }
+    if (stats.type === "local-candidate" || stats.type === "remote-candidate") {
+        addIceCandidateStats(diagnostics, stats);
+    }
+}
+
+function addIceCandidateStats(
+    diagnostics: ReturnType<typeof collectIceDiagnostics>,
+    stats: RTCStats,
+): void {
+    const candidateStats = normalizeRtcStatsRecord(stats);
+    const typeCount =
+        stats.type === "local-candidate" ? diagnostics.localTypeCount : diagnostics.remoteTypeCount;
+    const candidates =
+        stats.type === "local-candidate"
+            ? diagnostics.localCandidates
+            : diagnostics.remoteCandidates;
+    candidates.set(candidateStats.id, candidateStats);
+    const candidateType = candidateStats.candidateType ?? "unknown";
+    typeCount[candidateType] = (typeCount[candidateType] ?? 0) + 1;
 }

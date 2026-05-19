@@ -85,7 +85,12 @@ export class MotionDebugApp {
                 this.setRetargetConfig(config);
             },
         });
-        this.scene = new VRMScene(characterRoot, characterControlLayer, DEFAULT_VRM_URL, false);
+        this.scene = new VRMScene({
+            canvasRoot: characterRoot,
+            characterControlLayer,
+            vrmUrl: DEFAULT_VRM_URL,
+            xrMode: false,
+        });
         this.scene.start();
         this.scene.setSincroPoseRetargetConfig(this.retargetConfig);
         this.behaviorState.setTalkMode("sincro");

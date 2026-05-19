@@ -70,8 +70,6 @@ export function normalizeSincroPoseLandmarkerResult({
 
     const leftShoulder = landmarks[SINCRO_POSE_LANDMARK.leftShoulder];
     const rightShoulder = landmarks[SINCRO_POSE_LANDMARK.rightShoulder];
-    const leftHip = landmarks[SINCRO_POSE_LANDMARK.leftHip];
-    const rightHip = landmarks[SINCRO_POSE_LANDMARK.rightHip];
     const shoulderConfidence = averagePoseLandmarkVisibility([leftShoulder, rightShoulder]);
     if (shoulderConfidence < SINCRO_POSE_MIN_LANDMARK_VISIBILITY) {
         return createFailedPoseResult({
@@ -83,40 +81,62 @@ export function normalizeSincroPoseLandmarkerResult({
         });
     }
 
+    return createTrackedPoseResult({
+        landmarks,
+        worldLandmarks,
+        shoulderConfidence,
+        inferenceTimeMs,
+        inferenceFps,
+        nowMs,
+    });
+}
+
+function createTrackedPoseResult(options: {
+    landmarks: PoseLandmarkerResult["landmarks"][number];
+    worldLandmarks: PoseLandmarkerResult["worldLandmarks"][number] | undefined;
+    shoulderConfidence: number;
+    inferenceTimeMs: number;
+    inferenceFps: number;
+    nowMs: number;
+}): NormalizedSincroPoseResult {
+    const leftShoulder = options.landmarks[SINCRO_POSE_LANDMARK.leftShoulder];
+    const rightShoulder = options.landmarks[SINCRO_POSE_LANDMARK.rightShoulder];
+    const leftHip = options.landmarks[SINCRO_POSE_LANDMARK.leftHip];
+    const rightHip = options.landmarks[SINCRO_POSE_LANDMARK.rightHip];
     const origins = createPoseLandmarkOrigins({
         leftShoulder,
         rightShoulder,
         leftHip,
         rightHip,
-        worldLandmarks,
+        worldLandmarks: options.worldLandmarks,
     });
     const leftArm = createSincroPoseArmMotion({
-        landmarks,
-        worldLandmarks,
+        landmarks: options.landmarks,
+        worldLandmarks: options.worldLandmarks,
         side: "left",
         imageOrigin: origins.shoulderImageOrigin,
         worldOrigin: origins.worldOrigins.shoulders,
     });
     const rightArm = createSincroPoseArmMotion({
-        landmarks,
-        worldLandmarks,
+        landmarks: options.landmarks,
+        worldLandmarks: options.worldLandmarks,
         side: "right",
         imageOrigin: origins.shoulderImageOrigin,
         worldOrigin: origins.worldOrigins.shoulders,
     });
 
     return createDetectedPoseResult({
-        landmarks,
-        worldLandmarks,
+        landmarks: options.landmarks,
+        worldLandmarks: options.worldLandmarks,
         leftShoulder,
         rightShoulder,
-        shoulderConfidence,
+        shoulderConfidence: options.shoulderConfidence,
         leftArm,
         rightArm,
         origins,
-        inferenceTimeMs,
-        inferenceFps,
-        nowMs,
+        inferenceTimeMs: options.inferenceTimeMs,
+        inferenceFps: options.inferenceFps,
+        nowMs: options.nowMs,
     });
 }
 

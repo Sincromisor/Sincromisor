@@ -69,14 +69,7 @@ export class FaceTargetSelector {
         const best = candidates[0];
 
         if (!this.currentNose) {
-            this.currentNose = best.nose;
-            this.lastSwitchAtMs = nowMs;
-            return {
-                selectedIndex: best.index,
-                candidateCount: candidates.length,
-                holdLocked: false,
-                selectedScore: best.score,
-            };
+            return this.switchToCandidate(best, candidates.length, nowMs);
         }
 
         const matchedCurrent = this.findCurrentCandidate(candidates, this.currentNose);
@@ -84,24 +77,11 @@ export class FaceTargetSelector {
 
         // 現在ターゲット相当の候補が残っている間は、一定時間は優先保持して「迷う」挙動を抑える。
         if (matchedCurrent && holdElapsedMs < this.minimumHoldMs) {
-            this.currentNose = matchedCurrent.nose;
-            return {
-                selectedIndex: matchedCurrent.index,
-                candidateCount: candidates.length,
-                holdLocked: true,
-                selectedScore: matchedCurrent.score,
-            };
+            return this.keepCandidate(matchedCurrent, candidates.length, true);
         }
 
         if (!matchedCurrent) {
-            this.currentNose = best.nose;
-            this.lastSwitchAtMs = nowMs;
-            return {
-                selectedIndex: best.index,
-                candidateCount: candidates.length,
-                holdLocked: false,
-                selectedScore: best.score,
-            };
+            return this.switchToCandidate(best, candidates.length, nowMs);
         }
 
         // 切替は「少し良い」では行わず、十分優位な場合だけ実行する。
@@ -109,22 +89,38 @@ export class FaceTargetSelector {
             best.index !== matchedCurrent.index &&
             best.score > matchedCurrent.score + this.switchMargin
         ) {
-            this.currentNose = best.nose;
-            this.lastSwitchAtMs = nowMs;
-            return {
-                selectedIndex: best.index,
-                candidateCount: candidates.length,
-                holdLocked: false,
-                selectedScore: best.score,
-            };
+            return this.switchToCandidate(best, candidates.length, nowMs);
         }
 
-        this.currentNose = matchedCurrent.nose;
+        return this.keepCandidate(matchedCurrent, candidates.length, false);
+    }
+
+    private switchToCandidate(
+        candidate: FaceCandidate,
+        candidateCount: number,
+        nowMs: number,
+    ): FaceTargetSelectionResult {
+        this.currentNose = candidate.nose;
+        this.lastSwitchAtMs = nowMs;
         return {
-            selectedIndex: matchedCurrent.index,
-            candidateCount: candidates.length,
+            selectedIndex: candidate.index,
+            candidateCount,
             holdLocked: false,
-            selectedScore: matchedCurrent.score,
+            selectedScore: candidate.score,
+        };
+    }
+
+    private keepCandidate(
+        candidate: FaceCandidate,
+        candidateCount: number,
+        holdLocked: boolean,
+    ): FaceTargetSelectionResult {
+        this.currentNose = candidate.nose;
+        return {
+            selectedIndex: candidate.index,
+            candidateCount,
+            holdLocked,
+            selectedScore: candidate.score,
         };
     }
 

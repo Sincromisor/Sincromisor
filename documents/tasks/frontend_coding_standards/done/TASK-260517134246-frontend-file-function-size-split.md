@@ -1,8 +1,8 @@
 # TASK-260517134246 frontend file function size split
 
 - 作成日: 2026-05-17
-- ステータス: Open
-- 優先度: Medium
+- ステータス: Done
+- 優先度: High
 - 種別: Task
 - 親タスク: `TASK-260517134241`
 
@@ -411,6 +411,71 @@ UI 更新 / 外部 I/O / 純粋計算が混在している箇所は、行数に�
     - AST スキャンで hard 超過ファイル、60 行超関数、5 引数以上の関数が 0 件であることを確認した。
     - UI 表示文言 / endpoint / JSON payload 契約は変更していない。
     - 確認: `npm run check:biome` / `npm run build` 成功。
+- 2026-05-19: 再オープン時に残存していた hard 超過を追加分割した。
+    - 対象: `src/ts/UI/DialogManager.ts`
+    - 対象: `src/react/chat/SincroChatView.tsx`
+    - 対象: `src/react/settings-primitives/settingsHelp.tsx`
+    - 対象: `src/react/settings-fields/startupBehaviorFields.tsx`
+    - 対象: `src/react/simple-vrm/components/characterSettingsSection.tsx`
+    - 対象: `src/react/simple-vrm/components/startupSettingsSection.tsx`
+    - 対象: `src/react/dialog/configurationDialogVrmDragDrop.ts`
+    - 対象: `src/react/dialog/components/DialogSettingsFormSections.tsx`
+    - 対象: `src/ts/App/SincroAudioInputController.ts`
+    - 対象: `src/ts/CharacterGaze/FaceTargetSelector.ts`
+    - 対象: `src/ts/FaceTracking/sincroPoseTrackerNormalizer.ts`
+    - 対象: `src/ts/FaceTracking/sincroPoseTrackerTargets.ts`
+    - 対象: `src/ts/RTC/RTCMessage.ts`
+    - 対象: `src/ts/RTC/rtcIceDiagnostics.ts`
+    - 対象: `src/ts/RTC/silero-vad.worker.ts`
+    - 対象: `src/ts/SincroVRM/LookingGlass/LookingGlassXRController.ts`
+    - 対象: `src/ts/SincroVRM/LookingGlass/lookingGlassInputRecovery.ts`
+    - 対象: `src/ts/SincroVRM/LookingGlass/LookingGlassVRMScene.ts`
+    - 対象: `src/ts/SincroVRM/VRM360/VRM360Scene.ts`
+    - 対象: `src/ts/SincroVRM/VRMCharacter/CharacterMotionOrchestrator.ts`
+    - 対象: `src/ts/SincroVRM/VRMCharacter/FaceEmotionController.ts`
+    - 対象: `src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`
+    - 対象: `src/ts/SincroVRM/VRMCharacter/characterBehaviorVad.ts`
+    - 対象: `src/ts/SincroVRM/VRMScene/VRMScene.ts`
+    - 多引数 constructor は `VRMSceneOptions` / `VRMCharacterManagerOptions` / `ChatMessageBuilderOptions` などの options object 入力へ変更した。
+    - 再確認用の簡易スキャンは、Node + TypeScript Compiler API で `sincromisor-frontend/src` を走査し、(1) 空行 / import / 行コメントを除外した実効行数 300 行超、(2) AST node の開始/終了行差 60 行超、(3) parameter 数 5 以上の関数 / constructor を集計する手順で実施した。
+    - 再スキャン結果: hard 超過ファイル 0 件、60 行超関数 0 件、5 引数以上の関数 / constructor 0 件。
+    - UI 表示文言 / endpoint / JSON payload 契約は変更していない。
+    - 確認: `npm run check:biome` / `npm run build` 成功。
+
+## 2026-05-19 再オープン理由
+
+`frontend_coding_standards` の done 状態を再確認したところ、本タスクは `done/` 配下に移動されていた一方、本文ステータスは `Open` のままで、実装側にもサイズ閾値の残件が確認されたため `open/` に戻す。
+
+再確認結果:
+
+- `npm run test`: 成功(1 file / 8 tests)
+- `npm run check`: 成功(Biome 333 files + Markdown Prettier)
+- `npm run build`: 成功(Vite の 500kB 超 chunk warning は継続)
+- 実効行数(空行 / import / 行コメントを除外する簡易集計)で hard 超過ファイルが残存
+    - `src/ts/UI/ChatMessageService.ts`: 307 行
+    - `src/ts/UI/DialogManager.ts`: 301 行
+- AST ベースの簡易スキャンで 60 行超関数が 10 件残存
+    - `src/react/chat/SincroChatView.tsx`: `useSincroChatViewState`
+    - `src/react/settings-primitives/settingsHelp.tsx`: `SettingsHelpTooltip`
+    - `src/ts/App/SincroAudioInputController.ts`: `bindDebugConsoleAndVadState`
+    - `src/ts/CharacterGaze/FaceTargetSelector.ts`: `select`
+    - `src/ts/FaceTracking/sincroPoseTrackerNormalizer.ts`: `normalizeSincroPoseLandmarkerResult`
+    - `src/ts/RTC/rtcIceDiagnostics.ts`: `captureIceFailureDiagnostics`
+    - `src/ts/SincroVRM/LookingGlass/LookingGlassXRController.ts`: `start`
+    - `src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`: `load`
+    - `src/ts/SincroVRM/VRMCharacter/characterBehaviorVad.ts`: `applyCharacterBehaviorVadReport`
+    - `src/ts/UI/DialogSettingsPolicy.ts`: `buildUiHints`
+- AST ベースの簡易スキャンで 5 引数以上の関数 / constructor が 5 件残存
+    - `src/ts/RTC/RTCMessage.ts`: `ChatMessageBuilder` constructor
+    - `src/ts/SincroVRM/LookingGlass/LookingGlassVRMScene.ts`: constructor
+    - `src/ts/SincroVRM/VRM360/VRM360Scene.ts`: constructor
+    - `src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`: constructor
+    - `src/ts/SincroVRM/VRMScene/VRMScene.ts`: constructor
+
+追加完了条件:
+
+- 上記の hard 超過ファイル / 60 行超関数 / 5 引数以上の関数を解消する、または同じ行・直前行に `// reason: <理由>` を明示して残す。
+- 再確認用の簡易スキャン手順をタスク本文または後続の tooling タスクに残し、done 移動時に同じ観点で再確認できる状態にする。
 
 ## 完了条件
 

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { joinClassNames } from "./settingsClassNames";
 
@@ -21,35 +21,8 @@ export function SettingsHelpTooltip({ help, children }: HelpTooltipProps) {
     const [visible, setVisible] = useState<boolean>(false);
     const [align, setAlign] = useState<"left" | "right">("left");
 
-    useEffect(() => {
-        if (!visible) {
-            return;
-        }
-        const handlePointerDown = (event: PointerEvent) => {
-            const root = containerRef.current;
-            if (!root) {
-                return;
-            }
-            if (event.target instanceof Node && !root.contains(event.target)) {
-                setVisible(false);
-            }
-        };
-        document.addEventListener("pointerdown", handlePointerDown);
-        return () => document.removeEventListener("pointerdown", handlePointerDown);
-    }, [visible]);
-
-    useEffect(() => {
-        if (!visible) {
-            return;
-        }
-        const root = containerRef.current;
-        if (!root) {
-            return;
-        }
-        // 狭い dialog / side panel 内でも説明 bubble が viewport 外へ出にくい向きを選ぶ。
-        const rect = root.getBoundingClientRect();
-        setAlign(rect.left < window.innerWidth / 2 ? "left" : "right");
-    }, [visible]);
+    useDismissTooltipOnOutsidePointer(visible, containerRef, setVisible);
+    useTooltipViewportAlignment(visible, containerRef, setAlign);
 
     if (!help) {
         return <>{children}</>;
@@ -86,6 +59,48 @@ export function SettingsHelpTooltip({ help, children }: HelpTooltipProps) {
             ) : null}
         </button>
     );
+}
+
+function useDismissTooltipOnOutsidePointer(
+    visible: boolean,
+    containerRef: RefObject<HTMLButtonElement | null>,
+    setVisible: (visible: boolean) => void,
+): void {
+    useEffect(() => {
+        if (!visible) {
+            return;
+        }
+        const handlePointerDown = (event: PointerEvent) => {
+            const root = containerRef.current;
+            if (!root) {
+                return;
+            }
+            if (event.target instanceof Node && !root.contains(event.target)) {
+                setVisible(false);
+            }
+        };
+        document.addEventListener("pointerdown", handlePointerDown);
+        return () => document.removeEventListener("pointerdown", handlePointerDown);
+    }, [visible, containerRef, setVisible]);
+}
+
+function useTooltipViewportAlignment(
+    visible: boolean,
+    containerRef: RefObject<HTMLButtonElement | null>,
+    setAlign: (align: "left" | "right") => void,
+): void {
+    useEffect(() => {
+        if (!visible) {
+            return;
+        }
+        const root = containerRef.current;
+        if (!root) {
+            return;
+        }
+        // 狭い dialog / side panel 内でも説明 bubble が viewport 外へ出にくい向きを選ぶ。
+        const rect = root.getBoundingClientRect();
+        setAlign(rect.left < window.innerWidth / 2 ? "left" : "right");
+    }, [visible, containerRef, setAlign]);
 }
 
 export function SettingsHelpBadge({ help }: HelpBadgeProps) {

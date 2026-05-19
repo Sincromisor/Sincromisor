@@ -21,6 +21,14 @@ import type { SincroPoseRetargetConfig } from "./SincroPoseRetargeter";
 import { SincroPoseRetargeter } from "./SincroPoseRetargeter";
 import { applyInitialUpperBodyFraming } from "./vrmInitialUpperBodyFraming";
 
+export type VRMCharacterManagerOptions = {
+    scene: Scene;
+    vrmCamera: VRMCamera;
+    vrmUrl: string;
+    onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void;
+    enableInitialUpperBodyFraming?: boolean;
+};
+
 // import { MToonMaterialLoaderPlugin } from '@pixiv/three-vrm';
 // import { MToonNodeMaterial } from '@pixiv/three-vrm/nodes';
 
@@ -51,21 +59,15 @@ export class VRMCharacterManager {
     private readonly enableInitialUpperBodyFraming: boolean;
     private visible: boolean = true;
 
-    constructor(
-        scene: Scene,
-        vrmCamera: VRMCamera,
-        vrmUrl: string,
-        onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void,
-        enableInitialUpperBodyFraming: boolean = false,
-    ) {
-        this.scene = scene;
-        this.vrmCamera = vrmCamera;
-        this.onThumbnailLoaded = onThumbnailLoaded;
-        this.enableInitialUpperBodyFraming = enableInitialUpperBodyFraming;
+    constructor(options: VRMCharacterManagerOptions) {
+        this.scene = options.scene;
+        this.vrmCamera = options.vrmCamera;
+        this.onThumbnailLoaded = options.onThumbnailLoaded;
+        this.enableInitialUpperBodyFraming = options.enableInitialUpperBodyFraming ?? false;
         this.behaviorState = CharacterBehaviorState.getManager();
         this.clock = new Clock();
         this.clock.start();
-        this.load(vrmUrl);
+        this.load(options.vrmUrl);
     }
 
     // VRMキャラクターの load。
@@ -88,47 +90,7 @@ export class VRMCharacterManager {
         loader.load(
             url,
             (gltf: GLTF) => {
-                this.vrm = gltf.userData.vrm as VRM;
-                // 視線/姿勢/表情の更新責務を個別 controller に分け、update() でまとめて進める。
-                this.headBoneController = new HeadBoneController(this.vrm, this.vrmCamera);
-                this.armBoneController = new ArmBoneController(this.vrm);
-                this.armBoneController.update(this.motionElapsedSeconds);
-                this.sincroPoseRetargeter.attachVrm(this.vrm);
-                this.legBoneController = new LegBoneController(this.vrm);
-                this.legBoneController.update(this.motionElapsedSeconds);
-                this.motionOrchestrator = new CharacterMotionOrchestrator(this.vrm);
-                if (this.vrm.expressionManager) {
-                    this.mouthMorphController = new FaceMorphController(this.vrm.expressionManager);
-                    this.emotionMorphController = new FaceEmotionController(
-                        this.vrm.expressionManager,
-                    );
-                    this.eyeBehaviorController = new EyeBehaviorController(
-                        this.vrm,
-                        this.vrm.expressionManager,
-                    );
-                }
-
-                VRMUtils.removeUnnecessaryVertices(gltf.scene);
-                VRMUtils.combineSkeletons(gltf.scene);
-                VRMUtils.combineMorphs(this.vrm);
-                // キャラクター全体の配置調整は hips 基準で扱う。
-                // Looking Glass / simple-vrm の位置合わせ時もここが基準点になる。
-                this.rootBone = this.vrm.humanoid.getNormalizedBoneNode("hips") ?? undefined;
-                if (this.rootBone) {
-                    this.defaultPosition = this.rootBone.position.clone();
-                }
-                this.scene.add(this.vrm.scene);
-                this.vrm.scene.visible = this.visible;
-                if (this.enableInitialUpperBodyFraming) {
-                    applyInitialUpperBodyFraming(this.vrm, this.vrmCamera);
-                }
-                //this.setEvent(this.vrm);
-                // サムネイルはVRM1.0のみ対象。未設定時は呼び出し側でフォールバックさせる。
-                this.onThumbnailLoaded?.(this.getVRMThumbnailImage());
-
-                this.vrm.scene.traverse((obj: Object3D) => {
-                    obj.castShadow = true;
-                });
+                this.attachLoadedVrm(gltf);
             },
             (progress) => {
                 frontendLogger.debug("Loading VRM model.", {
@@ -140,6 +102,64 @@ export class VRMCharacterManager {
                 throw new Error("Failed to load VRM model.");
             },
         );
+    }
+
+    private attachLoadedVrm(gltf: GLTF): void {
+        this.vrm = gltf.userData.vrm as VRM;
+        this.initializeVrmControllers(this.vrm);
+        this.optimizeLoadedVrm(gltf);
+        this.captureDefaultRootPosition();
+        this.scene.add(this.vrm.scene);
+        this.vrm.scene.visible = this.visible;
+        if (this.enableInitialUpperBodyFraming) {
+            applyInitialUpperBodyFraming(this.vrm, this.vrmCamera);
+        }
+        // サムネイルはVRM1.0のみ対象。未設定時は呼び出し側でフォールバックさせる。
+        this.onThumbnailLoaded?.(this.getVRMThumbnailImage());
+        this.enableVrmSceneShadows(this.vrm.scene);
+    }
+
+    private initializeVrmControllers(vrm: VRM): void {
+        // 視線/姿勢/表情の更新責務を個別 controller に分け、update() でまとめて進める。
+        this.headBoneController = new HeadBoneController(vrm, this.vrmCamera);
+        this.armBoneController = new ArmBoneController(vrm);
+        this.armBoneController.update(this.motionElapsedSeconds);
+        this.sincroPoseRetargeter.attachVrm(vrm);
+        this.legBoneController = new LegBoneController(vrm);
+        this.legBoneController.update(this.motionElapsedSeconds);
+        this.motionOrchestrator = new CharacterMotionOrchestrator(vrm);
+        if (vrm.expressionManager) {
+            this.mouthMorphController = new FaceMorphController(vrm.expressionManager);
+            this.emotionMorphController = new FaceEmotionController(vrm.expressionManager);
+            this.eyeBehaviorController = new EyeBehaviorController(vrm, vrm.expressionManager);
+        }
+    }
+
+    private optimizeLoadedVrm(gltf: GLTF): void {
+        if (!this.vrm) {
+            return;
+        }
+        VRMUtils.removeUnnecessaryVertices(gltf.scene);
+        VRMUtils.combineSkeletons(gltf.scene);
+        VRMUtils.combineMorphs(this.vrm);
+    }
+
+    private captureDefaultRootPosition(): void {
+        if (!this.vrm) {
+            return;
+        }
+        // キャラクター全体の配置調整は hips 基準で扱う。
+        // Looking Glass / simple-vrm の位置合わせ時もここが基準点になる。
+        this.rootBone = this.vrm.humanoid.getNormalizedBoneNode("hips") ?? undefined;
+        if (this.rootBone) {
+            this.defaultPosition = this.rootBone.position.clone();
+        }
+    }
+
+    private enableVrmSceneShadows(scene: Object3D): void {
+        scene.traverse((obj: Object3D) => {
+            obj.castShadow = true;
+        });
     }
 
     private getVRMThumbnailImage(): HTMLImageElement | undefined {

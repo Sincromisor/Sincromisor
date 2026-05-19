@@ -10,6 +10,14 @@ export {
     parseTelopChannelPayload,
 } from "./rtcBoundarySchema";
 
+export type ChatMessageBuilderOptions = {
+    messageType: string;
+    speakerId: string;
+    speakerName: string;
+    speechId: number;
+    message: string;
+};
+
 export class ChatMessageBuilder implements ChatMessage {
     private static serial_no: number = 0;
     message_id: string;
@@ -20,19 +28,13 @@ export class ChatMessageBuilder implements ChatMessage {
     message: string;
     created_at: number;
 
-    constructor(
-        message_type: string,
-        speaker_id: string,
-        speaker_name: string,
-        speech_id: number,
-        message: string,
-    ) {
+    constructor(options: ChatMessageBuilderOptions) {
         this.message_id = this.get_message_id();
-        this.message_type = message_type;
-        this.speaker_id = speaker_id;
-        this.speaker_name = speaker_name;
-        this.speech_id = speech_id;
-        this.message = message;
+        this.message_type = options.messageType;
+        this.speaker_id = options.speakerId;
+        this.speaker_name = options.speakerName;
+        this.speech_id = options.speechId;
+        this.message = options.message;
         this.created_at = Date.now();
     }
 

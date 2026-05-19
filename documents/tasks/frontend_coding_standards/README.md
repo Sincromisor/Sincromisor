@@ -5,6 +5,13 @@
 ## 現状メモ
 
 - `npm run build` は成功する。
-- `npm run check:biome` は warning / info が残っている。
+- 初回棚卸し時点では `npm run check:biome` に warning / info が残っていたが、現在は `npm run check` が成功する。
 - 規約違反は命名・型境界・logger・null 方針・ファイルサイズに広く分散しているため、1 タスクで全面修正しない。
 - runtime validation は、通常版 Zod を外部 I/O 境界へ限定導入する方針とする。worker message や DOM event まで一律に Zod 化しない。
+
+## 2026-05-19 再確認メモ
+
+- `npm run test` / `npm run check` / `npm run build` は成功する。
+- `TASK-260517134246 frontend file function size split` は hard 閾値残件を解消し、`done/` に戻した。
+- `TASK-260517134247 frontend camelCase path rename plan` の後続として、`TASK-260519191620 frontend camelCase path full migration` を起票した。
+- `TASK-260517134244 frontend runtime boundary schema and any removal` の後続として、`TASK-260519191621 frontend type assertion and suppression cleanup` を起票した。

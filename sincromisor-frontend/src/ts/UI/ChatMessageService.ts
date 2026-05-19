@@ -123,13 +123,13 @@ export class ChatMessageService {
         生成したメッセージのdiv要素を返す。
     */
     writeUnknownUserMessage(message: string, isHTML: boolean = false): HTMLDivElement {
-        const chatMessage: ChatMessage = new ChatMessageBuilder(
-            "user",
-            "UnknownUser",
-            "Unknown User",
-            -1,
+        const chatMessage: ChatMessage = new ChatMessageBuilder({
+            messageType: "user",
+            speakerId: "UnknownUser",
+            speakerName: "Unknown User",
+            speechId: -1,
             message,
-        );
+        });
         const box = this.createNewMessageBox(chatMessage, isHTML);
         this.emitMessage(chatMessage, isHTML);
         return box;
@@ -140,13 +140,13 @@ export class ChatMessageService {
         生成したメッセージのdiv要素を返す。
     */
     writeSystemMessage(message: string, isHTML: boolean = false): HTMLDivElement {
-        const chatMessage: ChatMessage = new ChatMessageBuilder(
-            "system",
-            this.systemUserID,
-            this.systemUserName,
-            -1,
+        const chatMessage: ChatMessage = new ChatMessageBuilder({
+            messageType: "system",
+            speakerId: this.systemUserID,
+            speakerName: this.systemUserName,
+            speechId: -1,
             message,
-        );
+        });
         const box = this.createNewMessageBox(chatMessage, isHTML);
         this.emitMessage(chatMessage, isHTML);
         return box;
@@ -162,13 +162,13 @@ export class ChatMessageService {
             return undefined;
         }
         this.lastErrorMessage = message;
-        const chatMessage: ChatMessage = new ChatMessageBuilder(
-            "error",
-            this.systemUserID,
-            this.systemUserName,
-            -1,
+        const chatMessage: ChatMessage = new ChatMessageBuilder({
+            messageType: "error",
+            speakerId: this.systemUserID,
+            speakerName: this.systemUserName,
+            speechId: -1,
             message,
-        );
+        });
         const box = this.createNewMessageBox(chatMessage);
         this.emitMessage(chatMessage, false);
         return box;
@@ -179,13 +179,13 @@ export class ChatMessageService {
         メッセージのdiv要素を返す。
     */
     writeResetMessage(message: string): HTMLDivElement {
-        const chatMessage: ChatMessage = new ChatMessageBuilder(
-            "reset",
-            this.systemUserID,
-            this.systemUserName,
-            -1,
+        const chatMessage: ChatMessage = new ChatMessageBuilder({
+            messageType: "reset",
+            speakerId: this.systemUserID,
+            speakerName: this.systemUserName,
+            speechId: -1,
             message,
-        );
+        });
         const box = this.createNewMessageBox(chatMessage);
         this.emitMessage(chatMessage, false);
         return box;
