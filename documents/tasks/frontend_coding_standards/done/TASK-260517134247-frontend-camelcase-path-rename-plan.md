@@ -108,3 +108,9 @@ npm run build
 
 - `npm run check:biome`: 成功
 - `npm run build`: 成功
+
+## 2026-05-19 追記
+
+本タスクは「移行方針の決定」と「低リスク entry file のリネーム」としては完了済み。ただし、本文の決定事項に残した `src/ts/**` / `src/react/**` の PascalCase path 移行は未起票だったため、実装タスクとして `TASK-260519191620 frontend camelCase path full migration` を追加した。
+
+`TASK-260519191620` は完了済みで、URL 例外と `__tests__` を除いた `src/ts/**` / `src/react/**` の TS/TSX ファイル名・ディレクトリ名は camelCase へ移行済み。
