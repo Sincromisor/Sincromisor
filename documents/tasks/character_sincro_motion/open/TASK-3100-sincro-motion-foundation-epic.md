@@ -22,18 +22,22 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 
 ## 関連設計
 
-- `documents/design/frontend_character.md`
-- `documents/design/frontend_migration_react.md`
-- `documents/design/networking_rtc.md`
-- `sincromisor-frontend/src/ts/CharacterGaze/CharacterGaze.ts`
-- `sincromisor-frontend/src/ts/App/SincroCharacterGazeController.ts`
-- `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterBehaviorState.ts`
-- `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`
-- `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/HeadBoneController.ts`
-- `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/EyeBehaviorController.ts`
-- `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/FaceMorphController.ts`
-- `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterMotionOrchestrator.ts`
-- `sincromisor-frontend/src/ts/UI/DialogManager.ts`
+- `documents/design/frontend/character/overview.md`
+- `documents/design/frontend/character/tracking.md`
+- `documents/design/frontend/character/motion.md`
+- `documents/design/frontend/app-shell.md`
+- `documents/design/frontend/pages.md`
+- `documents/design/initiatives/react-migration.md`
+- `documents/design/contracts/frontend-rtc.md`
+- `sincromisor-frontend/src/features/gaze/characterGaze/characterGaze.ts`
+- `sincromisor-frontend/src/app/controller/sincroCharacterGazeController.ts`
+- `sincromisor-frontend/src/character/behavior/characterBehaviorState.ts`
+- `sincromisor-frontend/src/character/vrmCharacter/vrmCharacterManager.ts`
+- `sincromisor-frontend/src/character/behavior/headBoneController.ts`
+- `sincromisor-frontend/src/character/behavior/eyeBehaviorController.ts`
+- `sincromisor-frontend/src/character/behavior/faceMorphController.ts`
+- `sincromisor-frontend/src/character/vrmCharacter/characterMotionOrchestrator.ts`
+- `sincromisor-frontend/src/features/dialog/model/dialogManager.ts`
 
 ## スコープ
 
@@ -95,9 +99,12 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3115-sincro-pose-upper-body-anchor-and-ik-fallback.md`
 - Open: `documents/tasks/character_sincro_motion/open/TASK-3116-sincro-pose-ik-observability-verification-and-design-sync.md`
 - Open: `documents/tasks/character_sincro_motion/open/TASK-260517014025-sincro-pose-ik-wrist-confidence-gate.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-260517020308-sincro-pose-inference-warmup-gate.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-260517020748-sincro-pose-force-tracking-setting.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-260517024504-sincro-pose-world-landmarks-and-3d-targets.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-260517024505-sincro-vrm-3d-two-bone-ik-solver.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-260517024506-sincro-ik-solver-comparison-and-adoption.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-260517053106-sincro-arm-ik-joint-constraints-and-collision.md`
 
 ## 完了条件
 
@@ -116,7 +123,13 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 - 外部 IK solver は PoC と採用判断を経て導入し、bundle size、保守性、VRM 差分耐性、Debug Console での説明可能性を比較する。
 - 複数 VRM で、存在しないボーンや expression により例外停止しない。
 - `cd sincromisor-frontend && npm run build` が成功する。
-- `documents/design/frontend_character.md` が新しい構成に更新されている。
+- `documents/design/frontend/character/overview.md`、`documents/design/frontend/character/tracking.md`、`documents/design/frontend/character/motion.md` が新しい構成に更新されている。
+
+## 現状確認 2026-05-20
+
+- フロントエンド実装は `src/ts/**` から `src/app/**`、`src/features/**`、`src/character/**`、`src/pages/**` へ再配置済み。
+- 設計文書は legacy flat な `documents/design/frontend_character.md` ではなく、`documents/design/frontend/character/` 配下と `documents/design/frontend/pages.md` を正本として参照する。
+- `motion-debug` と `pose-landmarker-spike` は Vite MPA の input と dev route alias に登録済み。
 
 ## 確認コマンド案
 
