@@ -36,17 +36,14 @@ export class FaceTargetSelector {
     setTuning(
         params: Partial<{ minimumHoldMs: number; switchMargin: number; relinkDistance: number }>,
     ): void {
-        if (Number.isFinite(params.minimumHoldMs)) {
-            this.minimumHoldMs = Math.max(
-                0,
-                Math.min(5000, Math.round(params.minimumHoldMs as number)),
-            );
+        if (isFiniteNumber(params.minimumHoldMs)) {
+            this.minimumHoldMs = Math.max(0, Math.min(5000, Math.round(params.minimumHoldMs)));
         }
-        if (Number.isFinite(params.switchMargin)) {
-            this.switchMargin = Math.max(0, Math.min(1, params.switchMargin as number));
+        if (isFiniteNumber(params.switchMargin)) {
+            this.switchMargin = Math.max(0, Math.min(1, params.switchMargin));
         }
-        if (Number.isFinite(params.relinkDistance)) {
-            this.relinkDistance = Math.max(0.02, Math.min(1, params.relinkDistance as number));
+        if (isFiniteNumber(params.relinkDistance)) {
+            this.relinkDistance = Math.max(0.02, Math.min(1, params.relinkDistance));
         }
     }
 
@@ -127,7 +124,7 @@ export class FaceTargetSelector {
     private buildCandidates(detections: Detection[]): FaceCandidate[] {
         const out: FaceCandidate[] = [];
         for (let i = 0; i < detections.length; i += 1) {
-            const keypoints = detections[i].keypoints as NormalizedKeypoint[] | undefined;
+            const keypoints = detections[i].keypoints;
             if (!keypoints || keypoints.length < 6) {
                 continue;
             }
@@ -207,4 +204,8 @@ export class FaceTargetSelector {
         }
         return Number.isFinite(point.x) && Number.isFinite(point.y);
     }
+}
+
+function isFiniteNumber(value: number | undefined): value is number {
+    return typeof value === "number" && Number.isFinite(value);
 }

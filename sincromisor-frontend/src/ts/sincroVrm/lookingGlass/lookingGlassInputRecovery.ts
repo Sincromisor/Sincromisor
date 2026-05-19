@@ -1,4 +1,3 @@
-// @ts-expect-error `@lookingglass/webxr` は型定義が不完全なため最小ラッパーで吸収する。
 import { LookingGlassConfig } from "@lookingglass/webxr";
 import { frontendLogger } from "../../logging/appLogger";
 
@@ -7,21 +6,18 @@ export class LookingGlassInputRecovery {
     focusInteractiveSurface(): void {
         // 再開後セッションで lkgCanvas 側の入力が死ぬケースに対し、popup/canvas を明示フォーカスする。
         // @lookingglass/webxr のマウス/キー操作は lkgCanvas/appCanvas に直接 listener を張っている。
-        const config = LookingGlassConfig as typeof LookingGlassConfig & {
-            popup?: Window | null;
-            lkgCanvas?: HTMLCanvasElement | null;
-            appCanvas?: HTMLCanvasElement | null;
-        };
         requestAnimationFrame(() => {
             try {
-                config.popup?.focus?.();
-                if (config.lkgCanvas) {
-                    config.lkgCanvas.style.pointerEvents = "auto";
-                    config.lkgCanvas.tabIndex =
-                        config.lkgCanvas.tabIndex >= 0 ? config.lkgCanvas.tabIndex : 0;
-                    config.lkgCanvas.focus();
+                LookingGlassConfig.popup?.focus?.();
+                if (LookingGlassConfig.lkgCanvas) {
+                    LookingGlassConfig.lkgCanvas.style.pointerEvents = "auto";
+                    LookingGlassConfig.lkgCanvas.tabIndex =
+                        LookingGlassConfig.lkgCanvas.tabIndex >= 0
+                            ? LookingGlassConfig.lkgCanvas.tabIndex
+                            : 0;
+                    LookingGlassConfig.lkgCanvas.focus();
                 }
-                config.appCanvas?.blur?.();
+                LookingGlassConfig.appCanvas?.blur?.();
             } catch (error) {
                 frontendLogger.warn("Failed to focus Looking Glass popup/canvas.", { error });
             }
@@ -33,19 +29,11 @@ export class LookingGlassInputRecovery {
         // 再開時に listener が新しい canvas へ移らないケースに備え、公開 config API で再登録を促す。
         // 期待動作: vendor 側が updateViewControls 経由で listener を再接続すること。
         // 実際には効かない環境があるため、fallback controls を併用している（本関数だけでは不十分）。
-        const config = LookingGlassConfig as typeof LookingGlassConfig & {
-            appCanvas?: HTMLCanvasElement | null;
-            lkgCanvas?: HTMLCanvasElement | null;
-            updateViewControls?: (partial: {
-                appCanvas?: HTMLCanvasElement | null;
-                lkgCanvas?: HTMLCanvasElement | null;
-            }) => void;
-        };
         const rebind = () => {
             try {
-                config.updateViewControls?.({
-                    appCanvas: config.appCanvas ?? null,
-                    lkgCanvas: config.lkgCanvas ?? null,
+                LookingGlassConfig.updateViewControls?.({
+                    appCanvas: LookingGlassConfig.appCanvas ?? null,
+                    lkgCanvas: LookingGlassConfig.lkgCanvas ?? null,
                 });
             } catch (error) {
                 frontendLogger.warn("Failed to rebind Looking Glass input hooks.", { error });
@@ -62,17 +50,7 @@ export class LookingGlassInputRecovery {
         // LookingGlassConfig の trackball / target / targetDiam を直接更新して同等の視点操作を提供する。
         // この処理は暫定回避策。vendor 側で再開後 input が安定したら削除対象。
         // 削除時は「再開後でも wheel / 左ドラッグ / 右ドラッグ(または shift+左) が効く」ことを手動確認する。
-        const config = LookingGlassConfig as typeof LookingGlassConfig & {
-            lkgCanvas?: HTMLCanvasElement | null;
-            appCanvas?: HTMLCanvasElement | null;
-            targetDiam: number;
-            trackballX: number;
-            trackballY: number;
-            targetX: number;
-            targetY: number;
-            targetZ: number;
-        };
-        const canvas = config.lkgCanvas;
+        const canvas = LookingGlassConfig.lkgCanvas;
         if (!canvas) {
             return;
         }
@@ -86,27 +64,16 @@ export class LookingGlassInputRecovery {
         });
         canvas.addEventListener(
             "wheel",
-            (event: WheelEvent) => handleFallbackWheel(event, config),
-            {
-                passive: false,
-            },
+            (event: WheelEvent) => handleFallbackWheel(event, LookingGlassConfig),
+            { passive: false },
         );
         canvas.addEventListener("mousemove", (event: MouseEvent) =>
-            handleFallbackMouseMove(event, config),
+            handleFallbackMouseMove(event, LookingGlassConfig),
         );
     }
 }
 
-type FallbackLookingGlassConfig = typeof LookingGlassConfig & {
-    lkgCanvas?: HTMLCanvasElement | null;
-    appCanvas?: HTMLCanvasElement | null;
-    targetDiam: number;
-    trackballX: number;
-    trackballY: number;
-    targetX: number;
-    targetY: number;
-    targetZ: number;
-};
+type FallbackLookingGlassConfig = typeof LookingGlassConfig;
 
 function handleFallbackWheel(event: WheelEvent, config: FallbackLookingGlassConfig): void {
     const zoomBase = 1.1;

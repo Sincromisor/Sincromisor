@@ -1,8 +1,3 @@
-type CaptureStreamElement = HTMLVideoElement & {
-    captureStream?: () => MediaStream;
-    mozCaptureStream?: () => MediaStream;
-};
-
 export async function createFixtureVideoStream(url: string): Promise<{
     stream: MediaStream;
     video: HTMLVideoElement;
@@ -21,12 +16,13 @@ export async function createFixtureVideoStream(url: string): Promise<{
 }
 
 function captureVideoStream(sourceVideo: HTMLVideoElement): MediaStream {
-    const element = sourceVideo as CaptureStreamElement;
-    const stream = element.captureStream?.() ?? element.mozCaptureStream?.();
-    if (!stream) {
-        throw new Error("HTMLVideoElement.captureStream() is not supported.");
+    if ("captureStream" in sourceVideo && typeof sourceVideo.captureStream === "function") {
+        return sourceVideo.captureStream();
     }
-    return stream;
+    if ("mozCaptureStream" in sourceVideo && typeof sourceVideo.mozCaptureStream === "function") {
+        return sourceVideo.mozCaptureStream();
+    }
+    throw new Error("HTMLVideoElement.captureStream() is not supported.");
 }
 
 function waitForVideoFrame(video: HTMLVideoElement): Promise<void> {

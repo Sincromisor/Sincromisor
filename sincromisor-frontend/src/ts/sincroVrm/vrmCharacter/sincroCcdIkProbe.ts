@@ -6,7 +6,7 @@ import { Matrix4 } from "three/src/math/Matrix4.js";
 import type { Quaternion } from "three/src/math/Quaternion.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import { Bone } from "three/src/objects/Bone.js";
-import type { SkinnedMesh } from "three/src/objects/SkinnedMesh.js";
+import { SkinnedMesh } from "three/src/objects/SkinnedMesh.js";
 
 export type SincroCcdIkProbeStatus = "ready" | "unsupported" | "failed";
 
@@ -35,6 +35,26 @@ type CcdIkChain = {
     upperBone: Bone;
     lowerBone: Bone;
     handBone: Bone;
+};
+
+const ARM_BONE_NAMES: Record<
+    "left" | "right",
+    {
+        upperArm: VRMHumanBoneName;
+        lowerArm: VRMHumanBoneName;
+        hand: VRMHumanBoneName;
+    }
+> = {
+    left: {
+        upperArm: "leftUpperArm",
+        lowerArm: "leftLowerArm",
+        hand: "leftHand",
+    },
+    right: {
+        upperArm: "rightUpperArm",
+        lowerArm: "rightLowerArm",
+        hand: "rightHand",
+    },
 };
 
 // CCDIKSolver は SkinnedMesh.skeleton.bones の index を前提にするため、VRM normalized
@@ -98,10 +118,11 @@ export function runSincroCcdIkProbe(
 }
 
 function armChain(vrm: VRM, side: "left" | "right", space: "raw" | "normalized"): ArmChain {
+    const names = ARM_BONE_NAMES[side];
     return {
-        upperArm: getHumanoidBone(vrm, `${side}UpperArm` as VRMHumanBoneName, space),
-        lowerArm: getHumanoidBone(vrm, `${side}LowerArm` as VRMHumanBoneName, space),
-        hand: getHumanoidBone(vrm, `${side}Hand` as VRMHumanBoneName, space),
+        upperArm: getHumanoidBone(vrm, names.upperArm, space),
+        lowerArm: getHumanoidBone(vrm, names.lowerArm, space),
+        hand: getHumanoidBone(vrm, names.hand, space),
     };
 }
 
@@ -121,23 +142,26 @@ function collectSkinnedMeshes(root: Object3D): SkinnedMesh[] {
     const skinnedMeshes: SkinnedMesh[] = [];
     root.traverse((object) => {
         if (isSkinnedMeshObject(object)) {
-            skinnedMeshes.push(object as SkinnedMesh);
+            skinnedMeshes.push(object);
         }
     });
     return skinnedMeshes;
 }
 
 function chainInAnySkeleton(skinnedMeshes: SkinnedMesh[], chain: ArmChain): boolean {
-    if (!chain.upperArm || !chain.lowerArm || !chain.hand) {
+    if (
+        !isBoneObject(chain.upperArm) ||
+        !isBoneObject(chain.lowerArm) ||
+        !isBoneObject(chain.hand)
+    ) {
         return false;
     }
+    const upperArm = chain.upperArm;
+    const lowerArm = chain.lowerArm;
+    const hand = chain.hand;
     return skinnedMeshes.some((mesh) => {
         const bones = mesh.skeleton.bones;
-        return (
-            bones.includes(chain.upperArm as Bone) &&
-            bones.includes(chain.lowerArm as Bone) &&
-            bones.includes(chain.hand as Bone)
-        );
+        return bones.includes(upperArm) && bones.includes(lowerArm) && bones.includes(hand);
     });
 }
 
@@ -149,9 +173,9 @@ function findCcdIkChain(skinnedMeshes: SkinnedMesh[], chain: ArmChain): CcdIkCha
     ) {
         return undefined;
     }
-    const upperBone = chain.upperArm as Bone;
-    const lowerBone = chain.lowerArm as Bone;
-    const handBone = chain.hand as Bone;
+    const upperBone = chain.upperArm;
+    const lowerBone = chain.lowerArm;
+    const handBone = chain.hand;
     for (const mesh of skinnedMeshes) {
         const bones = mesh.skeleton.bones;
         const upperIndex = bones.indexOf(upperBone);
@@ -176,12 +200,12 @@ function findCcdIkChain(skinnedMeshes: SkinnedMesh[], chain: ArmChain): CcdIkCha
     return undefined;
 }
 
-function isSkinnedMeshObject(object: Object3D): boolean {
-    return (object as Object3D & { isSkinnedMesh?: boolean }).isSkinnedMesh === true;
+function isSkinnedMeshObject(object: Object3D): object is SkinnedMesh {
+    return object instanceof SkinnedMesh;
 }
 
-function isBoneObject(object: Object3D | undefined): boolean {
-    return (object as (Object3D & { isBone?: boolean }) | undefined)?.isBone === true;
+function isBoneObject(object: Object3D | undefined): object is Bone {
+    return object instanceof Bone;
 }
 
 function smokeTestCcdIk(chain: CcdIkChain): string | undefined {

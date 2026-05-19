@@ -254,10 +254,13 @@ export class PoseLandmarkerSpike {
     }
 
     private readDroppedVideoFrames(): number | undefined {
-        const video = this.videoElement as HTMLVideoElement & {
-            getVideoPlaybackQuality?: () => VideoPlaybackQuality;
-        };
-        return video.getVideoPlaybackQuality?.().droppedVideoFrames;
+        if (
+            "getVideoPlaybackQuality" in this.videoElement &&
+            typeof this.videoElement.getVideoPlaybackQuality === "function"
+        ) {
+            return this.videoElement.getVideoPlaybackQuality().droppedVideoFrames;
+        }
+        return undefined;
     }
 
     private pushSample(samples: number[], value: number): void {

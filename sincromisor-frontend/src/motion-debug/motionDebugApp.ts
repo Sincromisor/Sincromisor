@@ -36,8 +36,8 @@ const DEFAULT_WAIT_FOR_POSE_TIMEOUT_MS = 10000;
 // IK 調整ページの所有境界。RTC/chat/dialog を持ち込まず、
 // camera/video -> TrackerRuntime -> CharacterBehaviorState -> VRMScene の経路だけを接続する。
 export class MotionDebugApp {
-    private readonly video = requireElement<HTMLVideoElement>("motionDebugCameraVideo");
-    private readonly overlayCanvas = requireElement<HTMLCanvasElement>("motionDebugPoseOverlay");
+    private readonly video = requireElement("motionDebugCameraVideo", HTMLVideoElement);
+    private readonly overlayCanvas = requireElement("motionDebugPoseOverlay", HTMLCanvasElement);
     private readonly controls: MotionDebugControls;
     private readonly debugConsole = DebugConsoleManager.getManager();
     private readonly behaviorState = CharacterBehaviorState.getManager();
@@ -66,9 +66,9 @@ export class MotionDebugApp {
     private renderFpsStartedAtMs = performance.now();
 
     constructor() {
-        const vrmStage = requireElement<HTMLDivElement>("motionDebugVrmStage");
-        const characterRoot = requireElement<HTMLDivElement>("sincroCharacterBox");
-        const characterControlLayer = requireElement<HTMLDivElement>("sincroCharacterControlLayer");
+        const vrmStage = requireElement("motionDebugVrmStage", HTMLDivElement);
+        const characterRoot = requireElement("sincroCharacterBox", HTMLDivElement);
+        const characterControlLayer = requireElement("sincroCharacterControlLayer", HTMLDivElement);
         this.controls = new MotionDebugControls({
             onStart: () => {
                 this.startCamera().catch((error) => {
@@ -278,8 +278,7 @@ export class MotionDebugApp {
             waitForPoseDetected: (timeoutMs) => this.waitForPoseDetected(timeoutMs),
             loadVideoFixture: (url) => this.loadVideoFixture(url),
         };
-        (window as unknown as { __SINCRO_MOTION_DEBUG__: MotionDebugApi }).__SINCRO_MOTION_DEBUG__ =
-            api;
+        window.__SINCRO_MOTION_DEBUG__ = api;
     }
 
     private startRenderLoop(): void {

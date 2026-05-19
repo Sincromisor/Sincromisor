@@ -12,6 +12,14 @@ type EmotionPlaybackOptions = {
     nowMs: number;
 };
 
+type ExpressionWithBinds = {
+    binds: unknown[];
+};
+
+type ExpressionWithMutableBinds = ExpressionWithBinds & {
+    deleteBind: (bind: unknown) => void;
+};
+
 // text_ch の ChatMessage.expression_code (先頭 ^N) を受け取り、
 // VRM標準表情プリセットを短時間だけ適用する controller。
 //
@@ -236,10 +244,8 @@ export class FaceEmotionController {
         const visemePresets: VRMExpressionPresetName[] = ["aa", "ih", "ou", "oh", "ee"];
         const mouthMorphBindKeys = new Set<string>();
         for (const preset of visemePresets) {
-            const expression = (this.expressionManager.getExpression(preset) ?? undefined) as
-                | { binds?: unknown[] }
-                | undefined;
-            if (!expression?.binds) {
+            const expression = this.expressionManager.getExpression(preset) ?? undefined;
+            if (!hasExpressionBinds(expression)) {
                 continue;
             }
             for (const bind of expression.binds) {
@@ -255,13 +261,8 @@ export class FaceEmotionController {
         preset: EmotionPreset,
         mouthMorphBindKeys: Set<string>,
     ): number {
-        const expression = (this.expressionManager.getExpression(preset) ?? undefined) as
-            | {
-                  binds?: unknown[];
-                  deleteBind?: (bind: unknown) => void;
-              }
-            | undefined;
-        if (!expression?.binds || !expression.deleteBind) {
+        const expression = this.expressionManager.getExpression(preset) ?? undefined;
+        if (!hasMutableExpressionBinds(expression)) {
             return 0;
         }
         let removedBindCount = 0;
@@ -278,16 +279,32 @@ export class FaceEmotionController {
 
     private extractMorphBindKeys(bind: unknown): string[] {
         // MorphTargetBind だけを対象にし、Material/Texture系 bind はここでは干渉対象にしない。
-        const candidate = bind as {
-            index?: number;
-            primitives?: Array<{ uuid?: string }>;
-        };
-        if (typeof candidate.index !== "number" || !Array.isArray(candidate.primitives)) {
+        if (!bind || typeof bind !== "object" || !("index" in bind) || !("primitives" in bind)) {
             return [];
         }
-        return candidate.primitives
-            .map((primitive) => primitive?.uuid)
-            .filter((uuid): uuid is string => typeof uuid === "string")
-            .map((uuid) => `${uuid}:${candidate.index}`);
+        if (typeof bind.index !== "number" || !Array.isArray(bind.primitives)) {
+            return [];
+        }
+        return bind.primitives
+            .map((primitive) => primitiveUuid(primitive))
+            .filter((uuid): uuid is string => uuid !== undefined)
+            .map((uuid) => `${uuid}:${bind.index}`);
     }
+}
+
+function hasExpressionBinds(value: unknown): value is ExpressionWithBinds {
+    return !!value && typeof value === "object" && "binds" in value && Array.isArray(value.binds);
+}
+
+function hasMutableExpressionBinds(value: unknown): value is ExpressionWithMutableBinds {
+    return (
+        hasExpressionBinds(value) && "deleteBind" in value && typeof value.deleteBind === "function"
+    );
+}
+
+function primitiveUuid(value: unknown): string | undefined {
+    if (!value || typeof value !== "object" || !("uuid" in value)) {
+        return undefined;
+    }
+    return typeof value.uuid === "string" ? value.uuid : undefined;
 }

@@ -77,8 +77,10 @@ export function applyAudioBooleanConstraintToTrack(options: {
         });
         return;
     }
+    const constraints: MediaTrackConstraints = {};
+    constraints[key] = enabled;
     void rawTrack
-        .applyConstraints({ [key]: enabled } as MediaTrackConstraints)
+        .applyConstraints(constraints)
         .then(() => {
             onReport({ key, enabled, status: "applied" });
         })

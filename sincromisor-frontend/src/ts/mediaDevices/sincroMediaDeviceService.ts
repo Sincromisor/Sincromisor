@@ -240,10 +240,7 @@ function normalizeMediaDeviceSnapshot(
             videoInputCount += 1;
         }
         const index = device.kind === "audioinput" ? audioInputCount : videoInputCount;
-        const option = normalizeMediaDeviceOption(
-            device as MediaDeviceInfo & { kind: SincroMediaDeviceKind },
-            index,
-        );
+        const option = normalizeMediaDeviceOption(device, device.kind, index);
         if (device.kind === "audioinput") {
             audioInputs.push(option);
             return;
@@ -259,15 +256,16 @@ function normalizeMediaDeviceSnapshot(
 }
 
 function normalizeMediaDeviceOption(
-    device: MediaDeviceInfo & { kind: SincroMediaDeviceKind },
+    device: MediaDeviceInfo,
+    kind: SincroMediaDeviceKind,
     index: number,
 ): SincroMediaDeviceOption {
-    const fallbackLabel = buildMediaDeviceFallbackLabel(device.kind, index);
+    const fallbackLabel = buildMediaDeviceFallbackLabel(kind, index);
     const rawLabel = device.label ?? "";
     const normalizedLabel = rawLabel.trim();
     const label = normalizedLabel === "" ? fallbackLabel : normalizedLabel;
     return {
-        kind: device.kind,
+        kind,
         deviceId: device.deviceId,
         groupId: device.groupId.trim().length > 0 ? device.groupId : undefined,
         label,

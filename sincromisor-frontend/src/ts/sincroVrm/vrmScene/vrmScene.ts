@@ -109,7 +109,11 @@ export class VRMScene {
         const resizeObserver = new ResizeObserver(() => {
             this.handleResize();
         });
-        resizeObserver.observe(this.renderer.domElement.parentElement as Element);
+        const parentElement = this.renderer.domElement.parentElement;
+        if (!parentElement) {
+            throw new Error("VRM renderer canvas does not have a parent element.");
+        }
+        resizeObserver.observe(parentElement);
     }
 
     private handleResize(): void {
