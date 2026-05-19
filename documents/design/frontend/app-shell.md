@@ -20,9 +20,11 @@
 
 ## Responsibilities
 
-- `SincroPageAppShell.tsx`
+- `src/app/shell/sincroPageAppShell.tsx`
     - modern 3D ページの React root。
     - dialog、header、chat、telop、right tool panel、settings、debug をまとめて描画する。
+- `src/app/shell/bootstrapSincroPageAppShell.tsx`
+    - page entry から React root を mount し、ページ別 control panel を app shell へ渡す。
 - `SincroAppController`
     - UI と core の facade。
     - 起動設定、RTC、media device、debug snapshot、right tool panel state を束ねる。

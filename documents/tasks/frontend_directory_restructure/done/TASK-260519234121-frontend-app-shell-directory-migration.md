@@ -1,7 +1,7 @@
 # TASK-260519234121 frontend app shell directory migration
 
 - 作成日: 2026-05-19
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 - 種別: Task
 
@@ -33,3 +33,14 @@ React app shell を `src/app/shell` に移し、ページ entry から起動さ�
 cd sincromisor-frontend
 npm run build
 ```
+
+## 実施結果
+
+- `src/react/appShell/**` を `src/app/shell/**` へ移動した。
+- `src/pages/*/mainReact.tsx` の app shell import を `src/app/shell` へ更新した。
+- `src/app/shell/sincroPageAppShell.tsx` は引き続き dialog / header / chat / telop / settings / debug を束ねる React root として維持した。
+- `documents/design/frontend/app-shell.md` に `src/app/shell` の所在地を反映した。
+
+## 確認結果
+
+- `cd sincromisor-frontend && npm run build`: 成功。

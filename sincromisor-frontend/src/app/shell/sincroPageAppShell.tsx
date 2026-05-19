@@ -3,13 +3,13 @@ import {
     hideRightToolDebugPanel,
     hideRightToolSettingsPanel,
     useRightToolPanelState,
-} from "../app/useRightToolPanelState";
-import { SincroChatView } from "../chat/sincroChatView";
-import { DebugConsole } from "../debug/debugConsole";
-import { RightToolMenu } from "../debug/rightToolMenu";
-import { ConfigurationDialog } from "../dialog/configurationDialog";
-import { RightToolFrame } from "../overlay/rightToolFrame";
-import { SincroTelopView } from "../telop/sincroTelopView";
+} from "../../react/app/useRightToolPanelState";
+import { SincroChatView } from "../../react/chat/sincroChatView";
+import { DebugConsole } from "../../react/debug/debugConsole";
+import { RightToolMenu } from "../../react/debug/rightToolMenu";
+import { ConfigurationDialog } from "../../react/dialog/configurationDialog";
+import { RightToolFrame } from "../../react/overlay/rightToolFrame";
+import { SincroTelopView } from "../../react/telop/sincroTelopView";
 
 type SincroPageAppShellProps = {
     controlPanel: ReactElement;
