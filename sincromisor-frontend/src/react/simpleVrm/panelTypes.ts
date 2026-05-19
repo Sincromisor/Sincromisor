@@ -1,15 +1,13 @@
 import type {
+    ApplySettingsFn,
     SincroAppLifecycleState,
     SincroAppLookingGlassConfigStatus,
-    SincroAppStartupSettingsCapabilities,
-    SincroAppStartupSettingsStatus,
-} from "../../ts/app/sincroAppTypes";
-import type {
-    ApplySettingsFn,
     SincroAppSettingsSnapshot,
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
-} from "../app/appSettingsTypes";
+    SincroAppStartupSettingsCapabilities,
+    SincroAppStartupSettingsStatus,
+} from "../../app/controller";
 
 // Control Panel 表示専用の view-model 型。
 // AppController event/snapshot を UI 表示都合（ログ、診断カード、LG状態表示）に整形して保持する。

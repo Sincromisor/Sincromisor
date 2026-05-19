@@ -1,3 +1,4 @@
+import type { SincroAppEvent } from "../../app/controller/sincroAppTypes";
 import type { TalkManager } from "../rtc/talkManager";
 import type { ChatMessageService } from "../ui/chatMessageService";
 import type { DebugConsoleManager } from "../ui/debugConsoleManager";
@@ -10,7 +11,6 @@ import {
     bindPopServiceSubscription,
     bindTalkManagerSubscription,
 } from "./sincroAppManagerSubscriptionBinder";
-import type { SincroAppEvent } from "./sincroAppTypes";
 
 type SincroAppControllerSubscriptionParams = {
     chatMessageService: ChatMessageService;

@@ -1,9 +1,12 @@
+import type {
+    SincroAppSettingsSnapshot,
+    SincroAppStartupSettingsStatus,
+} from "../../app/controller/sincroAppTypes";
 import type { SincroAppDialogFacade } from "./sincroAppDialogFacade";
 import {
     buildSincroAppSettingsRelatedSnapshotPayload,
     type SincroAppSettingsRelatedSnapshotPayload,
 } from "./sincroAppSettingsRelatedSnapshotBuilder";
-import type { SincroAppSettingsSnapshot, SincroAppStartupSettingsStatus } from "./sincroAppTypes";
 
 type SincroAppSettingsRelatedPayloadCacheParams = {
     dialogManager: SincroAppDialogFacade;

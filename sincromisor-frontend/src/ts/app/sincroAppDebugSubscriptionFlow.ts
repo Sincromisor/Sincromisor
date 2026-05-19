@@ -1,5 +1,5 @@
+import type { SincroAppEvent } from "../../app/controller/sincroAppTypes";
 import type { DebugEventMapResult } from "./sincroAppEventMappers";
-import type { SincroAppEvent } from "./sincroAppTypes";
 
 export type SincroAppRtcDebugState = {
     iceConnectionState: string;

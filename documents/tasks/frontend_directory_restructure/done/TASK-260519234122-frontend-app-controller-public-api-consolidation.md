@@ -1,7 +1,7 @@
 # TASK-260519234122 frontend app controller public api consolidation
 
 - 作成日: 2026-05-19
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 - 種別: Task
 
@@ -34,3 +34,9 @@
 cd sincromisor-frontend
 npm run build
 ```
+
+## 実施結果
+
+- `SincroAppController` / `SincroController` / 公開型 / active controller 購読 API を `src/app/controller` に移動した。
+- React UI からの AppController 参照を `src/app/controller` 経由へ更新した。
+- `npm run build` が成功した。

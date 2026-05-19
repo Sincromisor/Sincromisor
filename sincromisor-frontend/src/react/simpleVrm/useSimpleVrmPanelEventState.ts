@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { SincroAppController } from "../../ts/app/sincroAppController";
-import type { SincroAppEvent, SincroAppLifecycleState } from "../../ts/app/sincroAppTypes";
+import type { SincroAppEvent, SincroAppLifecycleState } from "../../app/controller";
+import { SincroAppController } from "../../app/controller";
 import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
 import type {
     PanelConnectionState,

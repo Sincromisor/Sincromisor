@@ -1,4 +1,4 @@
-import type { SincroAppDialogVrmUiState } from "../../../ts/app/sincroAppController";
+import type { SincroAppDialogVrmUiState } from "../../../app/controller";
 
 // 起動前 dialog の VRM 置き換え導線（ファイル選択 / D&D状態表示）をまとめる。
 type VrmModelSectionProps = {

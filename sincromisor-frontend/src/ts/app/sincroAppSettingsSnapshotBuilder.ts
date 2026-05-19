@@ -1,6 +1,6 @@
+import type { SincroAppSettingsSnapshot } from "../../app/controller/sincroAppTypes";
 import { getLookingGlassRuntimeConfig } from "../sincroVrm/lookingGlass/lookingGlassRuntimeConfig";
 import type { SincroAppDialogFacade } from "./sincroAppDialogFacade";
-import type { SincroAppSettingsSnapshot } from "./sincroAppTypes";
 
 // Dialog 設定値 + Looking Glass runtime config を合成して、
 // UI/API 共通の settings snapshot を作る helper。

@@ -1,10 +1,10 @@
-import type { SincroAppDialogFacade } from "./sincroAppDialogFacade";
 import type {
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
-} from "./sincroAppTypes";
+} from "../../app/controller/sincroAppTypes";
+import type { SincroAppDialogFacade } from "./sincroAppDialogFacade";
 
 export type SincroAppUiStateSnapshot = {
     settingsUiState: SincroAppSettingsUiState;

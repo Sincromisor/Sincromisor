@@ -1,6 +1,5 @@
 import { useEffect } from "react";
-import type { SincroAppController } from "../../ts/app/sincroAppController";
-import type { SincroAppEvent } from "../../ts/app/sincroAppTypes";
+import type { SincroAppController, SincroAppEvent } from "../../app/controller";
 import {
     hydrateDialogUiSnapshotsFromController,
     hydrateSettingsSnapshotsFromController,

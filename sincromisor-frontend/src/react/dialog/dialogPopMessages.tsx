@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import type { SincroAppDialogPopMessage, SincroAppEvent } from "../../ts/app/sincroAppTypes";
+import type { SincroAppDialogPopMessage, SincroAppEvent } from "../../app/controller";
+import { subscribeActiveSincroAppController } from "../../app/controller";
 import { prependCappedItem } from "../app/panelLogHelpers";
-import { subscribeActiveSincroAppController } from "../app/subscribeActiveSincroAppController";
 import { UI_TUNING } from "../app/uiTuning";
 import { DIALOG_POP_TIMING, scheduleDialogPopVisibility } from "./dialogPopAnimationHelpers";
 import { useDialogPopTimers } from "./useDialogPopTimers";

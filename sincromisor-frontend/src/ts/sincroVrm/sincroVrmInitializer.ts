@@ -1,4 +1,4 @@
-import { SincroAppController } from "../app/sincroAppController";
+import { SincroAppController } from "../../app/controller";
 import { frontendLogger } from "../logging/appLogger";
 import { UserMediaManager } from "../rtc/userMediaManager";
 import { DebugConsoleManager } from "../ui/debugConsoleManager";

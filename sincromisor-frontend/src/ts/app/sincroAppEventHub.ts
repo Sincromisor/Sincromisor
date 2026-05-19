@@ -1,4 +1,4 @@
-import type { SincroAppEvent } from "./sincroAppTypes";
+import type { SincroAppEvent } from "../../app/controller/sincroAppTypes";
 
 // SincroAppController の instance listener 管理を分離する軽量 event hub。
 // static な active controller 購読とは別に、AppEvent 配信だけを担当する。

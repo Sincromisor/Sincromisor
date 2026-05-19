@@ -1,7 +1,7 @@
+import type { SincroAppSettingsSnapshot } from "../../app/controller/sincroAppTypes";
 import { updateLookingGlassRuntimeConfig } from "../sincroVrm/lookingGlass/lookingGlassRuntimeConfig";
 import { CharacterBehaviorState } from "../sincroVrm/vrmCharacter/characterBehaviorState";
 import type { SincroAppDialogFacade } from "./sincroAppDialogFacade";
-import type { SincroAppSettingsSnapshot } from "./sincroAppTypes";
 
 type LookingGlassRuntimeConfigPatch = Parameters<typeof updateLookingGlassRuntimeConfig>[0];
 

@@ -1,6 +1,5 @@
-import type { SincroAppController } from "../../ts/app/sincroAppController";
-import type { SincroAppEvent } from "../../ts/app/sincroAppTypes";
-import { subscribeActiveSincroAppController } from "./subscribeActiveSincroAppController";
+import type { SincroAppController, SincroAppEvent } from "../../app/controller";
+import { subscribeActiveSincroAppController } from "../../app/controller";
 
 type ActiveEventOptions = {
     // active controller 差し替え時の local state 同期用。

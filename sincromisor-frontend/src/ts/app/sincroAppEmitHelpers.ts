@@ -6,7 +6,7 @@ import type {
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
     SincroAppStartupSettingsStatus,
-} from "./sincroAppTypes";
+} from "../../app/controller/sincroAppTypes";
 
 // AppController からの event emit 順序を helper 化し、Controller 本体を「いつ通知するか」に集中させる。
 export function emitSincroAppLifecycle(

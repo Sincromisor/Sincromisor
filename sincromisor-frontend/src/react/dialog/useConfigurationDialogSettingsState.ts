@@ -1,4 +1,4 @@
-import { SincroAppController } from "../../ts/app/sincroAppController";
+import { SincroAppController } from "../../app/controller";
 import { useSincroMediaDeviceState } from "../app/useSincroMediaDeviceState";
 import { buildConfigurationDialogActions } from "./configurationDialogActions";
 import { useConfigurationDialogControllerSubscription } from "./configurationDialogEventSubscription";

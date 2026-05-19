@@ -1,9 +1,9 @@
-import type { SincroAppLookingGlassStateTracker } from "./sincroAppLookingGlassStateTracker";
 import type {
     SincroAppEvent,
     SincroAppLookingGlassConfigUpdatedEventDetail,
     SincroAppLookingGlassEventDetail,
-} from "./sincroAppTypes";
+} from "../../app/controller/sincroAppTypes";
+import type { SincroAppLookingGlassStateTracker } from "./sincroAppLookingGlassStateTracker";
 
 type SincroAppLookingGlassEventFlowContext = {
     tracker: SincroAppLookingGlassStateTracker;

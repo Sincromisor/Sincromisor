@@ -1,14 +1,12 @@
 import type {
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
-    SincroAppStartupSettingsCapabilities,
-    SincroAppStartupSettingsStatus,
-} from "../../ts/app/sincroAppTypes";
-import type {
     SincroAppSettingsSnapshot,
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
-} from "../app/appSettingsTypes";
+    SincroAppStartupSettingsCapabilities,
+    SincroAppStartupSettingsStatus,
+} from "../../app/controller";
 
 export type ConfigurationDialogConnectionState = {
     value: "idle" | "starting" | "connecting" | "connected" | "degraded" | "stopping" | "stopped";

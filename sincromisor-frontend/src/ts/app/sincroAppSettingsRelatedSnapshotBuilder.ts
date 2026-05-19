@@ -1,12 +1,15 @@
+import type {
+    SincroAppSettingsSnapshot,
+    SincroAppStartupSettingsStatus,
+} from "../../app/controller/sincroAppTypes";
 import type { SincroAppDialogFacade } from "./sincroAppDialogFacade";
 import { buildSincroAppSettingsSnapshot } from "./sincroAppSettingsSnapshotBuilder";
-import type { SincroAppSettingsSnapshot, SincroAppStartupSettingsStatus } from "./sincroAppTypes";
 import { buildSincroAppUiStateSnapshot } from "./sincroAppUiStateSnapshotBuilder";
 
 export type SincroAppSettingsRelatedSnapshotPayload = {
     settings: SincroAppSettingsSnapshot;
-    settingsUiState: import("./sincroAppTypes").SincroAppSettingsUiState;
-    settingsUiHints: import("./sincroAppTypes").SincroAppSettingsUiHints;
+    settingsUiState: import("../../app/controller/sincroAppTypes").SincroAppSettingsUiState;
+    settingsUiHints: import("../../app/controller/sincroAppTypes").SincroAppSettingsUiHints;
     startupSettingsStatus: SincroAppStartupSettingsStatus;
 };
 

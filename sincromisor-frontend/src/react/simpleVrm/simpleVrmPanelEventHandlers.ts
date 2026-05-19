@@ -1,6 +1,9 @@
 import type { Dispatch, SetStateAction } from "react";
-import type { SincroAppController } from "../../ts/app/sincroAppController";
-import type { SincroAppEvent, SincroAppLifecycleState } from "../../ts/app/sincroAppTypes";
+import type {
+    SincroAppController,
+    SincroAppEvent,
+    SincroAppLifecycleState,
+} from "../../app/controller";
 import { prependPanelMessageLog } from "../app/panelLogHelpers";
 import {
     hydrateSettingsSnapshotsFromController,

@@ -1,3 +1,4 @@
+import type { SincroAppEvent } from "../../app/controller/sincroAppTypes";
 import {
     handleMappedDebugConsoleEvent,
     type SincroAppRtcDebugState,
@@ -14,7 +15,6 @@ import type {
     SincroAppPopSubscriptionFacade,
     SincroAppTalkSubscriptionFacade,
 } from "./sincroAppManagerSubscriptionFacades";
-import type { SincroAppEvent } from "./sincroAppTypes";
 
 type EmitFn = (event: SincroAppEvent) => void;
 

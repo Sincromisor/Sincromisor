@@ -10,7 +10,7 @@ import type {
     SincroAppSettingsUiState,
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
-} from "./sincroAppTypes";
+} from "../../app/controller/sincroAppTypes";
 
 export type SincroAppInitialSnapshot = {
     lifecycleState: SincroAppLifecycleState;

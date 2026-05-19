@@ -1,17 +1,15 @@
 import { type Dispatch, type SetStateAction, useMemo, useState } from "react";
-import type { SincroAppController } from "../../ts/app/sincroAppController";
 import type {
+    SincroAppController,
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
     SincroAppLifecycleState,
-    SincroAppStartupSettingsCapabilities,
-    SincroAppStartupSettingsStatus,
-} from "../../ts/app/sincroAppTypes";
-import type {
     SincroAppSettingsSnapshot,
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
-} from "../app/appSettingsTypes";
+    SincroAppStartupSettingsCapabilities,
+    SincroAppStartupSettingsStatus,
+} from "../../app/controller";
 import {
     type ConfigurationDialogConnectionState,
     defaultConnectionState,

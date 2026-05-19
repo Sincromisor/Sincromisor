@@ -22,7 +22,7 @@ export type SincroAppChatBridge = {
     setSystemIcon: (iconUrl: string) => void;
     setDomRenderingEnabled: (enabled: boolean) => void;
     setTelopDomRenderingEnabled: (enabled: boolean) => void;
-    getMessageViewSnapshot: () => import("./sincroAppTypes").ChatMessageViewRecord[];
+    getMessageViewSnapshot: () => import("../../app/controller/sincroAppTypes").ChatMessageViewRecord[];
     getSystemIconUrl: () => string;
 };
 
@@ -46,11 +46,11 @@ export type SincroAppRtcBridge = {
 };
 
 export type SincroAppStateBridge = {
-    getSettingsSnapshot: () => import("./sincroAppTypes").SincroAppSettingsSnapshot;
-    getSettingsUiState: () => import("./sincroAppTypes").SincroAppSettingsUiState;
-    getSettingsUiHints: () => import("./sincroAppTypes").SincroAppSettingsUiHints;
-    getDialogUiState: () => import("./sincroAppTypes").SincroAppDialogUiState;
-    getDialogVrmUiState: () => import("./sincroAppTypes").SincroAppDialogVrmUiState;
-    getStartupSettingsStatus: () => import("./sincroAppTypes").SincroAppStartupSettingsStatus;
-    getTelopTextSegmentsSnapshot: () => import("./sincroAppTypes").TelopTextSegment[];
+    getSettingsSnapshot: () => import("../../app/controller/sincroAppTypes").SincroAppSettingsSnapshot;
+    getSettingsUiState: () => import("../../app/controller/sincroAppTypes").SincroAppSettingsUiState;
+    getSettingsUiHints: () => import("../../app/controller/sincroAppTypes").SincroAppSettingsUiHints;
+    getDialogUiState: () => import("../../app/controller/sincroAppTypes").SincroAppDialogUiState;
+    getDialogVrmUiState: () => import("../../app/controller/sincroAppTypes").SincroAppDialogVrmUiState;
+    getStartupSettingsStatus: () => import("../../app/controller/sincroAppTypes").SincroAppStartupSettingsStatus;
+    getTelopTextSegmentsSnapshot: () => import("../../app/controller/sincroAppTypes").TelopTextSegment[];
 };

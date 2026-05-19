@@ -1,5 +1,5 @@
+import { SincroController } from "../../app/controller/sincroController";
 import { TalkManager } from "../rtc/talkManager";
-import { SincroController } from "../sincroController";
 import { ChatMessageService } from "../ui/chatMessageService";
 import { DebugConsoleManager } from "../ui/debugConsoleManager";
 import { DialogManager } from "../ui/dialogManager";
@@ -76,13 +76,13 @@ export function createSincroAppBridgeBundle(
 
 export function createSincroAppRuntimeBundle(params: {
     stopRTC: () => void;
-    getSettingsSnapshot: () => import("./sincroAppTypes").SincroAppSettingsSnapshot;
-    getSettingsUiState: () => import("./sincroAppTypes").SincroAppSettingsUiState;
-    getSettingsUiHints: () => import("./sincroAppTypes").SincroAppSettingsUiHints;
-    getDialogUiState: () => import("./sincroAppTypes").SincroAppDialogUiState;
-    getDialogVrmUiState: () => import("./sincroAppTypes").SincroAppDialogVrmUiState;
-    getStartupSettingsStatus: () => import("./sincroAppTypes").SincroAppStartupSettingsStatus;
-    getTelopTextSegmentsSnapshot: () => import("./sincroAppTypes").TelopTextSegment[];
+    getSettingsSnapshot: () => import("../../app/controller/sincroAppTypes").SincroAppSettingsSnapshot;
+    getSettingsUiState: () => import("../../app/controller/sincroAppTypes").SincroAppSettingsUiState;
+    getSettingsUiHints: () => import("../../app/controller/sincroAppTypes").SincroAppSettingsUiHints;
+    getDialogUiState: () => import("../../app/controller/sincroAppTypes").SincroAppDialogUiState;
+    getDialogVrmUiState: () => import("../../app/controller/sincroAppTypes").SincroAppDialogVrmUiState;
+    getStartupSettingsStatus: () => import("../../app/controller/sincroAppTypes").SincroAppStartupSettingsStatus;
+    getTelopTextSegmentsSnapshot: () => import("../../app/controller/sincroAppTypes").TelopTextSegment[];
 }): SincroAppControllerRuntimeBundle {
     // UI 依存取得 -> bridge 生成 -> state bridge 生成を1か所にまとめる。
     // Controller 本体では field 代入と bind 順序だけを読めるようにする。

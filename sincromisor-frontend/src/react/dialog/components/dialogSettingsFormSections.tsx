@@ -1,17 +1,17 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type {
-    SincroMediaDeviceSelectionState,
-    SincroMediaDeviceSnapshot,
-} from "../../../ts/mediaDevices/sincroMediaDeviceService";
-import type {
     ApplySettingsFn,
     SincroAppSettingsSnapshot,
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
-} from "../../app/appSettingsTypes";
+} from "../../../app/controller";
+import type {
+    SincroMediaDeviceSelectionState,
+    SincroMediaDeviceSnapshot,
+} from "../../../ts/mediaDevices/sincroMediaDeviceService";
 import {
     AudioInputDeviceField,
     AudioProcessingToggles,

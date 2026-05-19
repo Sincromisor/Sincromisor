@@ -1,7 +1,7 @@
 import type {
     SincroAppLookingGlassConfigUpdatedEventDetail,
     SincroAppLookingGlassEventDetail,
-} from "./sincroAppTypes";
+} from "../../app/controller/sincroAppTypes";
 
 export type SincroAppWindowEventHandlers = {
     onLookingGlassState: (event: CustomEvent<SincroAppLookingGlassEventDetail>) => void;
