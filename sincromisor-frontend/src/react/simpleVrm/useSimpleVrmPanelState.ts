@@ -1,0 +1,99 @@
+import type { SincroAppController } from "../../ts/app/sincroAppController";
+import type { SincroAppLifecycleState } from "../../ts/app/sincroAppTypes";
+import { useSincroMediaDeviceState } from "../app/useSincroMediaDeviceState";
+import type {
+    ApplySettingsFn,
+    PanelConnectionState,
+    PanelGazeState,
+    PanelLearnedVadState,
+    PanelLookingGlassConfigStatus,
+    PanelLookingGlassState,
+    PanelMessageLog,
+    PanelRtcState,
+    PanelTelopLog,
+    SincroAppSettingsSnapshot,
+    SincroAppSettingsUiHints,
+    SincroAppSettingsUiState,
+    SincroAppStartupSettingsCapabilities,
+    SincroAppStartupSettingsStatus,
+} from "./panelTypes";
+import { useSimpleVrmPanelEventState } from "./useSimpleVrmPanelEventState";
+
+type SimpleVrmPanelState = {
+    hasActiveController: boolean;
+    currentController: SincroAppController | undefined;
+    lifecycleState: SincroAppLifecycleState;
+    settings: SincroAppSettingsSnapshot;
+    settingsUiState: SincroAppSettingsUiState;
+    settingsUiHints: SincroAppSettingsUiHints;
+    startupSettingsStatus: SincroAppStartupSettingsStatus;
+    startupSettingsCapabilities: SincroAppStartupSettingsCapabilities;
+    mediaDeviceSnapshot: ReturnType<typeof useSincroMediaDeviceState>["snapshot"];
+    audioInputSelection: ReturnType<typeof useSincroMediaDeviceState>["audioInputSelection"];
+    videoInputSelection: ReturnType<typeof useSincroMediaDeviceState>["videoInputSelection"];
+    logs: PanelMessageLog[];
+    vadState: "unknown" | "speech" | "silence";
+    learnedVad: PanelLearnedVadState;
+    gaze: PanelGazeState;
+    rtcEvents: string[];
+    rtcState: PanelRtcState;
+    connectionState: PanelConnectionState;
+    telopLogs: PanelTelopLog[];
+    lookingGlass: PanelLookingGlassState;
+    lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
+};
+
+// Control Panel から呼ぶ UI 操作。実処理は AppController に集約し、hook は委譲のみ行う。
+type SimpleVrmPanelActions = {
+    startAction: () => void;
+    stopAction: () => void;
+    applySettings: ApplySettingsFn;
+    changeTalkMode: (nextTalkMode: string) => void;
+    refreshDevices: ReturnType<typeof useSincroMediaDeviceState>["refreshDevices"];
+};
+
+// AppController のイベント購読を React state に集約する、ページ共通の表示用 hook。
+// simple-vrm / vrm360 / looking-glass-vrm で同じ購読ロジックを再利用する。
+export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelActions {
+    const eventState = useSimpleVrmPanelEventState();
+    const {
+        snapshot: mediaDeviceSnapshot,
+        audioInputSelection,
+        videoInputSelection,
+        refreshDevices,
+    } = useSincroMediaDeviceState({
+        audioInputDeviceId: eventState.settings.audioInputDeviceId,
+        videoInputDeviceId: eventState.settings.videoInputDeviceId,
+    });
+
+    const startAction = (): void => {
+        // 開始の順序制御（hooks/lifecycle）は AppController に任せる。
+        eventState.currentController?.start();
+    };
+
+    const stopAction = (): void => {
+        // stop も AppController 経由で行い、RTC停止の順序/状態遷移をUI側で持たない。
+        eventState.currentController?.stop();
+    };
+
+    const applySettings: ApplySettingsFn = (partial) => {
+        // 設定適用ロジックは AppController 側に集約し、hook は委譲のみ行う。
+        eventState.currentController?.applySettings(partial);
+    };
+
+    const changeTalkMode = (nextTalkMode: string): void => {
+        applySettings({ talkMode: nextTalkMode });
+    };
+
+    return {
+        ...eventState,
+        mediaDeviceSnapshot,
+        audioInputSelection,
+        videoInputSelection,
+        startAction,
+        stopAction,
+        applySettings,
+        changeTalkMode,
+        refreshDevices,
+    };
+}

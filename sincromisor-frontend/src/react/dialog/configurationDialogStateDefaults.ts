@@ -3,7 +3,7 @@ import type {
     SincroAppDialogVrmUiState,
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
-} from "../../ts/App/SincroAppTypes";
+} from "../../ts/app/sincroAppTypes";
 import type {
     SincroAppSettingsSnapshot,
     SincroAppSettingsUiHints,

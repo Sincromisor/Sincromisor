@@ -1,4 +1,4 @@
-import type { SincroAppController } from "../../ts/App/SincroAppController";
+import type { SincroAppController } from "../../ts/app/sincroAppController";
 import type {
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
@@ -6,7 +6,7 @@ import type {
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
     SincroAppStartupSettingsStatus,
-} from "../../ts/App/SincroAppTypes";
+} from "../../ts/app/sincroAppTypes";
 
 type SettingsSnapshotSetters = {
     // hook ごとの setState 実装差分を吸収するため、setter 形状だけ受け取る。

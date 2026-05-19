@@ -1,18 +1,18 @@
-import type { SincroFaceMotionSnapshot } from "../ts/FaceTracking/SincroFaceMotionSnapshot";
+import type { SincroFaceMotionSnapshot } from "../ts/faceTracking/sincroFaceMotionSnapshot";
 import {
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
     type SincroPoseMotionSnapshot,
-} from "../ts/FaceTracking/SincroPoseMotionSnapshot";
-import type { SincroTrackerWorkerStats } from "../ts/FaceTracking/SincroTrackerWorkerTypes";
-import { TrackerRuntime } from "../ts/FaceTracking/TrackerRuntime";
+} from "../ts/faceTracking/sincroPoseMotionSnapshot";
+import type { SincroTrackerWorkerStats } from "../ts/faceTracking/sincroTrackerWorkerTypes";
+import { TrackerRuntime } from "../ts/faceTracking/trackerRuntime";
 import { frontendLogger } from "../ts/logging/appLogger";
-import { CharacterBehaviorState } from "../ts/SincroVRM/VRMCharacter/CharacterBehaviorState";
+import { CharacterBehaviorState } from "../ts/sincroVrm/vrmCharacter/characterBehaviorState";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
     type SincroPoseRetargetConfig,
-} from "../ts/SincroVRM/VRMCharacter/SincroPoseRetargeter";
-import { VRMScene } from "../ts/SincroVRM/VRMScene/VRMScene";
-import { DebugConsoleManager } from "../ts/UI/DebugConsoleManager";
+} from "../ts/sincroVrm/vrmCharacter/sincroPoseRetargeter";
+import { VRMScene } from "../ts/sincroVrm/vrmScene/vrmScene";
+import { DebugConsoleManager } from "../ts/ui/debugConsoleManager";
 import { formatError, requireElement } from "./dom";
 import { requestMotionDebugCameraStream } from "./motionDebugCameraStream";
 import { MotionDebugControls } from "./motionDebugControls";

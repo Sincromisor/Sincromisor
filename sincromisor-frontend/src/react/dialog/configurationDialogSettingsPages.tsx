@@ -1,13 +1,13 @@
-import type { SettingsShellPage } from "../settings-shell/SettingsShell";
-import { settingsPageCopy } from "../settings-shell/settingsPageCopy";
+import { settingsPageCopy } from "../settingsShell/settingsPageCopy";
+import type { SettingsShellPage } from "../settingsShell/settingsShell";
 import {
     DialogBasicSettingsSection,
     DialogCharacterSettingsSection,
     DialogDeviceSettingsSection,
     DialogMicSettingsSection,
     DialogSettingsCategory,
-} from "./components/DialogSettingsFormSections";
-import { DialogVrmDropStatusCard, VrmModelSection } from "./components/DialogSettingsSections";
+} from "./components/dialogSettingsFormSections";
+import { DialogVrmDropStatusCard, VrmModelSection } from "./components/dialogSettingsSections";
 import { ConfigurationDialogConnectionPage } from "./configurationDialogConnectionPage";
 import type { useConfigurationDialogSettingsState } from "./useConfigurationDialogSettingsState";
 

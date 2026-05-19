@@ -4,7 +4,7 @@ import {
     type SincroMediaDeviceSelectionState,
     SincroMediaDeviceService,
     type SincroMediaDeviceSnapshot,
-} from "../../ts/MediaDevices/SincroMediaDeviceService";
+} from "../../ts/mediaDevices/sincroMediaDeviceService";
 
 type UseSincroMediaDeviceStateParams = {
     audioInputDeviceId?: string | undefined;

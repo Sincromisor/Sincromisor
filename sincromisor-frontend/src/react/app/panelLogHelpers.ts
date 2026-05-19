@@ -1,5 +1,5 @@
-import type { SincroAppEvent } from "../../ts/App/SincroAppTypes";
-import type { PanelMessageLog } from "../simple-vrm/panelTypes";
+import type { SincroAppEvent } from "../../ts/app/sincroAppTypes";
+import type { PanelMessageLog } from "../simpleVrm/panelTypes";
 import { UI_TUNING } from "./uiTuning";
 
 type ChatLikeEvent = Extract<

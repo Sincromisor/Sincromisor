@@ -1,6 +1,6 @@
-import type { SincroPoseArmIkMode } from "../../../ts/SincroVRM/VRMCharacter/SincroPoseRetargeter";
-import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
-import { RangeControl } from "../components/RangeControl";
+import type { SincroPoseArmIkMode } from "../../../ts/sincroVrm/vrmCharacter/sincroPoseRetargeter";
+import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../../ts/ui/debugConsoleManager";
+import { RangeControl } from "../components/rangeControl";
 import { radToDeg } from "./sincroMotionPanelFormatters";
 
 type SincroPoseRetargetControlsProps = {

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { DialogBridgeDomAdapter } from "../../ts/UI/DialogBridgeDomAdapter";
+import { DialogBridgeDomAdapter } from "../../ts/ui/dialogBridgeDomAdapter";
 
 type UseConfigurationDialogPlatformStateParams = {
     isOpen: boolean;

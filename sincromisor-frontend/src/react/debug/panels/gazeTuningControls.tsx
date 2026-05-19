@@ -4,8 +4,8 @@ import {
     type CharacterGazeTrackingTuningUiConfig,
     type DebugConsoleManager,
     type DebugConsoleSnapshot,
-} from "../../../ts/UI/DebugConsoleManager";
-import { RangeControl } from "../components/RangeControl";
+} from "../../../ts/ui/debugConsoleManager";
+import { RangeControl } from "../components/rangeControl";
 
 const GAZE_TUNING_PRESET_KEYS: CharacterGazeTrackingTuningPresetKey[] = [
     "stable",

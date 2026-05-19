@@ -3,7 +3,7 @@ import {
     DEFAULT_RIGHT_TOOL_PANEL_STATE,
     getSincroAppRightToolPanelService,
     type RightToolPanelState,
-} from "../../ts/App/SincroAppRightToolPanelService";
+} from "../../ts/app/sincroAppRightToolPanelService";
 
 const rightToolPanelService = getSincroAppRightToolPanelService();
 

@@ -1,5 +1,5 @@
-import type { DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
-import { AudioMeter } from "../components/AudioMeter";
+import type { DebugConsoleSnapshot } from "../../../ts/ui/debugConsoleManager";
+import { AudioMeter } from "../components/audioMeter";
 import {
     learnedVadFramesLabel,
     localVadEngineLabel,

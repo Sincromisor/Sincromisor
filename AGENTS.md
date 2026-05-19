@@ -127,8 +127,8 @@ kebab-case や snake_case のファイル名は使わない(`config-store.ts` / 
 8. `documents/tasks/README.md`
 9. `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
 10. `sincromisor-frontend/vite.config.js`
-11. `sincromisor-frontend/src/ts/SincroController.ts`
-12. `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
+11. `sincromisor-frontend/src/ts/sincroController.ts`
+12. `sincromisor-frontend/src/ts/rtc/rtcTalkClient.ts`
 
 ## ディレクトリマップ
 
@@ -141,9 +141,9 @@ kebab-case や snake_case のファイル名は使わない(`config-store.ts` / 
     - `sincro-config/`: 設定ロード・サービス発見共通処理
     - `sincro-models/`: サービス間データモデル
 - `sincromisor-frontend/`
-    - `src/ts/RTC/`: WebRTC 接続ロジック
-    - `src/ts/SincroVRM/`: VRM 1.0 キャラクター描画
-    - `src/ts/UI/`: チャットやデバッグ UI
+    - `src/ts/rtc/`: WebRTC 接続ロジック
+    - `src/ts/sincroVrm/`: VRM 1.0 キャラクター描画
+    - `src/ts/ui/`: チャットやデバッグ UI
     - `src/*.html`, `src/**/index.html`: 画面エントリ
     - `public/characters/default.vrm`: デフォルトキャラクター
 - `compose/`
@@ -217,11 +217,11 @@ docker compose --profile full up -d
 
 - WebRTC 接続仕様を変える場合
     - サーバー: `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
-    - フロント: `sincromisor-frontend/src/ts/RTC/RTCTalkClient.ts`
+    - フロント: `sincromisor-frontend/src/ts/rtc/rtcTalkClient.ts`
     - 契約正本: `documents/design/contracts/frontend-rtc.md`
     - 両側の payload / endpoint 整合を必ず確認
 - UI・3D 表示を変える場合
-    - エントリ HTML と `src/ts/SincroVRM/**` をセットで確認
+    - エントリ HTML と `src/ts/sincroVrm/**` をセットで確認
     - 設計正本: `documents/design/frontend/app-shell.md` と `documents/design/frontend/character/`
     - モード別ページ（`simple-vrm`, `vrm360`, `looking-glass-vrm` など）の差分に注意
 - 設定追加時

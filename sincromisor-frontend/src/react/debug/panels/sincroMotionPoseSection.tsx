@@ -1,4 +1,4 @@
-import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
+import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../../ts/ui/debugConsoleManager";
 import {
     formatAnchorRuntime,
     formatArm,

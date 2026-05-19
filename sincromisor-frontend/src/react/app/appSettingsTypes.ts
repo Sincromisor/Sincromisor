@@ -4,7 +4,7 @@ import type {
     SincroAppSettingsUiState,
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
-} from "../../ts/App/SincroAppTypes";
+} from "../../ts/app/sincroAppTypes";
 
 export type {
     SincroAppSettingsSnapshot,

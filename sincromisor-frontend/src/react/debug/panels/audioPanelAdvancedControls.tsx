@@ -1,5 +1,5 @@
-import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
-import { RangeControl } from "../components/RangeControl";
+import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../../ts/ui/debugConsoleManager";
+import { RangeControl } from "../components/rangeControl";
 import { AudioPanelVadControls } from "./audioPanelVadControls";
 
 type AudioPanelAdvancedControlsProps = {

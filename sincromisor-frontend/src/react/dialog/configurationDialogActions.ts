@@ -1,4 +1,4 @@
-import type { SincroAppController } from "../../ts/App/SincroAppController";
+import type { SincroAppController } from "../../ts/app/sincroAppController";
 import type { ApplySettingsFn } from "../app/appSettingsTypes";
 
 export function buildConfigurationDialogActions(

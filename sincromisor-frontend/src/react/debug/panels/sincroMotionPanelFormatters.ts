@@ -1,11 +1,11 @@
-import type { SincroFaceMotionSnapshot } from "../../../ts/FaceTracking/SincroFaceMotionSnapshot";
+import type { SincroFaceMotionSnapshot } from "../../../ts/faceTracking/sincroFaceMotionSnapshot";
 import type {
     SincroPoseArmMotionSnapshot,
     SincroPoseMotionSnapshot,
     SincroPoseTargetPointSnapshot,
-} from "../../../ts/FaceTracking/SincroPoseMotionSnapshot";
-import type { SincroPoseRetargetedArm } from "../../../ts/SincroVRM/VRMCharacter/SincroPoseRetargeter";
-import type { DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
+} from "../../../ts/faceTracking/sincroPoseMotionSnapshot";
+import type { SincroPoseRetargetedArm } from "../../../ts/sincroVrm/vrmCharacter/sincroPoseRetargeter";
+import type { DebugConsoleSnapshot } from "../../../ts/ui/debugConsoleManager";
 
 export function formatTrackingStatus(
     enabled: boolean,
