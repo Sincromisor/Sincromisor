@@ -1,4 +1,4 @@
-import { bootstrapSincroPageAppShell } from "../../react/appShell/bootstrapSincroPageAppShell";
+import { bootstrapSincroPageAppShell } from "../../app/shell/bootstrapSincroPageAppShell";
 
 // vrm360 でも UI 起動経路を simple-vrm と揃え、scene 差分だけを page panel に閉じる。
 bootstrapSincroPageAppShell(
