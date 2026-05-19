@@ -48,11 +48,14 @@ MediaPipe 顔認識の起動、停止、カメラ接続、エラー処理、モ�
 
 ## 実装対象候補
 
-- `sincromisor-frontend/src/ts/CharacterGaze/CharacterGaze.ts`
-- `sincromisor-frontend/src/ts/CharacterGaze/SincroFaceTracker.ts` または `src/ts/FaceTracking/**`
-- `sincromisor-frontend/src/ts/CharacterGaze/TrackerRuntime.ts` または `src/ts/FaceTracking/**`
-- `sincromisor-frontend/src/ts/App/SincroCharacterGazeController.ts`
-- `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/CharacterBehaviorState.ts`
+- `sincromisor-frontend/src/features/gaze/characterGaze/characterGaze.ts`
+- `sincromisor-frontend/src/features/gaze/faceTracking/sincroFaceTracker.ts`
+- `sincromisor-frontend/src/features/gaze/faceTracking/sincroFaceMotionSnapshot.ts`
+- `sincromisor-frontend/src/features/gaze/trackingRuntime/trackerRuntime.ts`
+- `sincromisor-frontend/src/features/gaze/trackingRuntime/trackerRuntimeTypes.ts`
+- `sincromisor-frontend/src/features/gaze/trackingRuntime/trackerRuntimeEngineInitializer.ts`
+- `sincromisor-frontend/src/app/controller/sincroCharacterGazeController.ts`
+- `sincromisor-frontend/src/character/behavior/characterBehaviorState.ts`
 - `sincromisor-frontend/public/3rd_party/README.md`
 - `sincromisor-frontend/public/3rd_party/*face_landmarker*`
 
@@ -77,10 +80,15 @@ MediaPipe 顔認識の起動、停止、カメラ接続、エラー処理、モ�
 ## 進捗メモ
 
 - 2026-05-11:
-    - `src/ts/FaceTracking/` に `TrackerRuntime`、`SincroFaceTracker`、`SincroFaceMotionSnapshot` を追加。
+    - `src/features/gaze/` 配下に `TrackerRuntime`、`SincroFaceTracker`、`SincroFaceMotionSnapshot` を追加。
     - `CharacterBehaviorState` に `faceMotion` snapshot と更新 API を追加。
     - `SincroCharacterGazeController` で `chat` は既存 `CharacterGaze`、`sincro` は `TrackerRuntime` + `SincroFaceTracker` を起動する分岐を追加。
     - `FaceLandmarker` は `outputFaceBlendshapes` / `outputFacialTransformationMatrixes` を有効化し、head pose / blendshape / 推論時間 / 推論 fps / fallback reason を snapshot 化。
     - `public/3rd_party/README.md` に `face_landmarker.task` の配置先と未配置時 fallback を追記。
     - `cd sincromisor-frontend && npm run build` 成功。
     - 未確認: 実カメラ + `face_landmarker.task` 配置状態での head pose / blink / mouth blendshape 実測。
+
+### 2026-05-20 現状確認
+
+- リファクタリング後の配置に合わせ、実装対象候補を `src/features/gaze/**`、`src/app/controller/**`、`src/character/behavior/**` へ更新した。
+- `src/ts/**` 配下の旧候補は現行 tree に存在しないため参照しない。

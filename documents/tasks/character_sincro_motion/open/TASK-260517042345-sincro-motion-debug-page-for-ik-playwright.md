@@ -45,9 +45,10 @@
 ## 実装方針
 
 1. 専用ページを追加する。
-    - `sincromisor-frontend/src/motion-debug/index.html`
-    - `sincromisor-frontend/src/motion-debug/main.ts`
-    - `sincromisor-frontend/src/motion-debug/styles.css`
+    - `sincromisor-frontend/src/pages/motionDebug/index.html`
+    - `sincromisor-frontend/src/pages/motionDebug/main.ts`
+    - `sincromisor-frontend/src/pages/motionDebug/motionDebugApp.ts`
+    - `sincromisor-frontend/src/pages/motionDebug/styles.css`
     - `vite.config.js` の input に `motion_debug` を追加する。
 2. 本番 AppShell は使わない。
     - RTC / chat / dialog を持ち込まず、IK 観察に必要な画面だけにする。
@@ -86,15 +87,18 @@
 ## 実装対象候補
 
 - `sincromisor-frontend/vite.config.js`
-- `sincromisor-frontend/src/motion-debug/index.html`
-- `sincromisor-frontend/src/motion-debug/main.ts`
-- `sincromisor-frontend/src/motion-debug/styles.css`
-- `sincromisor-frontend/src/pose-landmarker-spike/main.ts`
-- `sincromisor-frontend/src/ts/FaceTracking/TrackerRuntime.ts`
-- `sincromisor-frontend/src/ts/FaceTracking/SincroPoseTracker.ts`
-- `sincromisor-frontend/src/ts/SincroVRM/VRMScene/VRMScene.ts`
-- `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/VRMCharacterManager.ts`
-- `sincromisor-frontend/src/ts/UI/DebugConsoleManager.ts`
+- `sincromisor-frontend/src/pages/motionDebug/index.html`
+- `sincromisor-frontend/src/pages/motionDebug/main.ts`
+- `sincromisor-frontend/src/pages/motionDebug/motionDebugApp.ts`
+- `sincromisor-frontend/src/pages/motionDebug/motionDebugControls.ts`
+- `sincromisor-frontend/src/pages/motionDebug/poseOverlayRenderer.ts`
+- `sincromisor-frontend/src/pages/motionDebug/styles.css`
+- `sincromisor-frontend/src/pages/poseLandmarkerSpike/main.ts`
+- `sincromisor-frontend/src/features/gaze/trackingRuntime/trackerRuntime.ts`
+- `sincromisor-frontend/src/features/gaze/poseTracking/sincroPoseTracker.ts`
+- `sincromisor-frontend/src/character/scene/vrmScene.ts`
+- `sincromisor-frontend/src/character/vrmCharacter/vrmCharacterManager.ts`
+- `sincromisor-frontend/src/features/debug/model/debugConsoleManager.ts`
 - `documents/design/frontend/pages.md`
 - `documents/design/frontend/character/motion.md`
 - `documents/design/frontend/character/tracking.md`
@@ -183,3 +187,9 @@ const snapshot = await page.evaluate(() =>
     - `Capture` button が無反応に見える問題を修正。
     - capture 後に preview、captured time、PNG download link を画面へ表示する。
     - Playwright で `motion-debug-capture-result` / preview image / download link の表示を確認。
+
+### 2026-05-20 現状確認
+
+- ページ実装は `src/pages/motionDebug/**` に配置済み。URL は引き続き `http://127.0.0.1:5173/motion-debug/`。
+- `vite.config.js` は `pages/motionDebug/index.html` を `motion_debug` input と dev route alias に登録している。
+- tracker / retarget / VRM / debug 参照は `src/features/**`、`src/character/**` の現行配置へ更新した。

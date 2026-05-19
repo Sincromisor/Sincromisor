@@ -43,7 +43,13 @@ MediaPipe `PoseLandmarker` を Sincromisor の将来の手・腕・上半身同�
 
 ## 実装対象候補
 
-- `sincromisor-frontend/src/ts/CharacterGaze/PoseLandmarkerSpike.ts` または一時的な検証用ファイル
+- `sincromisor-frontend/src/features/gaze/poseTracking/spike/poseLandmarkerSpike.ts`
+- `sincromisor-frontend/src/features/gaze/poseTracking/spike/poseLandmarkerSpikeTypes.ts`
+- `sincromisor-frontend/src/features/gaze/poseTracking/spike/poseLandmarkerSpikeMetrics.ts`
+- `sincromisor-frontend/src/pages/poseLandmarkerSpike/index.html`
+- `sincromisor-frontend/src/pages/poseLandmarkerSpike/main.ts`
+- `sincromisor-frontend/src/pages/poseLandmarkerSpike/styles.css`
+- `sincromisor-frontend/vite.config.js`
 - `sincromisor-frontend/public/3rd_party/README.md`
 - `documents/tasks/character_sincro_motion/open/TASK-3105-pose-landmarker-feasibility-spike.md`
 
@@ -72,14 +78,14 @@ MediaPipe `PoseLandmarker` を Sincromisor の将来の手・腕・上半身同�
 
 ### PoC 実装
 
-- `sincromisor-frontend/src/ts/CharacterGaze/PoseLandmarkerSpike.ts` を追加した。
+- `sincromisor-frontend/src/features/gaze/poseTracking/spike/poseLandmarkerSpike.ts` を追加した。
     - `PoseLandmarker` を `runningMode: "VIDEO"`、`numPoses: 1`、`outputSegmentationMasks: false` で初期化する。
     - Lite / Full / Heavy の配置候補を `/3rd_party/pose_landmarker_{lite,full,heavy}.task` として切り替え可能にした。
     - 10fps / 15fps / 30fps の推論間引き、CPU / GPU delegate、FaceLandmarker 同時実行を切り替えられる。
     - 推論時間、平均 / 最大推論時間、描画 FPS、FaceLandmarker 推論時間、video dropped frame、肩・肘・手首・腰の visibility を計測する。
-- `sincromisor-frontend/src/pose-landmarker-spike/index.html` を追加した。
+- `sincromisor-frontend/src/pages/poseLandmarkerSpike/index.html` を追加した。
     - Vite dev server で `http://127.0.0.1:5173/pose-landmarker-spike/` を直接開く検証専用ページ。
-    - `vite.config.js` の production input には追加していないため、通常画面の起動経路には入らない。
+    - 現在は `vite.config.js` の MPA input と dev route alias に登録済み。通常画面の起動経路には入らないが、production build の対象には含まれる。
 - `sincromisor-frontend/public/3rd_party/README.md` に PoseLandmarker model の配置候補を追記した。
 
 ### モデル候補
@@ -119,3 +125,8 @@ MediaPipe `PoseLandmarker` を Sincromisor の将来の手・腕・上半身同�
     - Pose の初期化、推論遅延、連続検出失敗は face tracker を巻き込まず face-only に降格する。
     - 肩・腕 retarget は低振幅に限定し、実カメラ確認で過大回転が見えた場合は振幅または fps を下げる。
 - 未実測の実カメラ負荷と landmark 安定性は `TASK-3107` の pose 観測性・確認項目へ引き継ぐ。
+
+### 現状確認 2026-05-20
+
+- リファクタリング後、PoC core は `src/features/gaze/poseTracking/spike/**`、ページ入口は `src/pages/poseLandmarkerSpike/**` に配置されている。
+- `pose-landmarker-spike` は Vite MPA の build input に含まれるため、現状は production build の対象として扱う。

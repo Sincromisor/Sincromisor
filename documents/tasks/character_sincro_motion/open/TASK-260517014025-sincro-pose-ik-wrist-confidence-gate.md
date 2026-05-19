@@ -39,7 +39,7 @@ Debug Console の `Sincro` tab で以下のような状態になる。
 - `SincroPoseRetargeter` が weak target を使う場合は、confidence に応じて IK 強度を落とす。
 - Debug Console で、`tracked`、座標有効性、confidence、IK 使用可否、IK 強度 weight を切り分けて確認できるようにする。
 - 実カメラ確認結果を `TASK-3116` または本タスクへ追記する。
-- 必要に応じて `documents/design/frontend/character/` または legacy flat の同期先に、target quality / IK gate の仕様を反映する。
+- 必要に応じて `documents/design/frontend/character/tracking.md` と `documents/design/frontend/character/motion.md` に、target quality / IK gate の仕様を反映する。
 
 ## 非対象
 
@@ -69,11 +69,17 @@ Debug Console の `Sincro` tab で以下のような状態になる。
 
 ## 実装対象候補
 
-- `sincromisor-frontend/src/ts/FaceTracking/SincroPoseMotionSnapshot.ts`
-- `sincromisor-frontend/src/ts/FaceTracking/SincroPoseTracker.ts`
-- `sincromisor-frontend/src/ts/SincroVRM/VRMCharacter/SincroPoseRetargeter.ts`
-- `sincromisor-frontend/src/ts/UI/DebugConsoleManager.ts`
-- `sincromisor-frontend/src/react/debug/panels/SincroMotionPanel.tsx`
+- `sincromisor-frontend/src/features/gaze/poseTracking/sincroPoseMotionSnapshot.ts`
+- `sincromisor-frontend/src/features/gaze/poseTracking/sincroPoseTracker.ts`
+- `sincromisor-frontend/src/features/gaze/poseTracking/sincroPoseTargetPoint.ts`
+- `sincromisor-frontend/src/features/gaze/poseTracking/sincroPoseTrackerTargets.ts`
+- `sincromisor-frontend/src/character/retargeting/sincroPoseRetargeter.ts`
+- `sincromisor-frontend/src/character/ik/sincroArmIkSolver.ts`
+- `sincromisor-frontend/src/features/debug/model/debugConsoleManager.ts`
+- `sincromisor-frontend/src/features/debug/model/debugConsoleSincroMotionRuntime.ts`
+- `sincromisor-frontend/src/features/debug/react/panels/sincroMotionPanel.tsx`
+- `sincromisor-frontend/src/features/debug/react/panels/sincroMotionPoseSection.tsx`
+- `sincromisor-frontend/src/features/debug/react/panels/sincroPoseRetargetControls.tsx`
 - `documents/design/frontend/character/motion.md`
 - `documents/design/frontend/character/tracking.md`
 - `documents/tasks/character_sincro_motion/open/TASK-3116-sincro-pose-ik-observability-verification-and-design-sync.md`
@@ -141,3 +147,8 @@ playwright-cli open http://127.0.0.1:5173/simple-vrm/
     - 肘曲げ。
     - 片腕欠損。
     - 近距離上半身構図。
+
+## 現状確認 2026-05-20
+
+- 実装候補を `src/features/gaze/poseTracking/**`、`src/character/retargeting/**`、`src/character/ik/**`、`src/features/debug/**` の現行配置へ更新した。
+- legacy flat design document への同期先記述は削除し、`documents/design/frontend/character/` 配下の正本に集約した。

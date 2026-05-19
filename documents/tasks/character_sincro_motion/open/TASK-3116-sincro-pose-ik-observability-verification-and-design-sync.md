@@ -16,14 +16,14 @@ IK は見た目の破綻が環境差やモデル差で出やすい。実装だ�
 
 - `TASK-3111` では低振幅 retarget として正式化されたが、簡易 IK 導入後は確認観点が変わる。
 - 腕 IK は肩幅、カメラ距離、VRM の腕長・初期姿勢、MediaPipe confidence に強く依存する。
-- 本プロジェクトでは設計文書 `documents/design/` を正本として扱うため、実装後に `frontend_character.md` の同期が必要になる。
+- 本プロジェクトでは設計文書 `documents/design/` を正本として扱うため、実装後に `documents/design/frontend/character/` 配下の同期が必要になる。
 
 ## スコープ
 
 - Debug Console に IK mode、target availability、arm confidence、anchor/fallback reason、solver output の主要値を表示する
 - IK 強度、target smoothing、return-to-neutral、max rotation など主要パラメータを調整できるようにする
 - 実カメラ確認手順をタスク本文または設計文書へ残す
-- `documents/design/frontend_character.md` を簡易 IK 導入後の仕様へ更新する
+- `documents/design/frontend/character/motion.md` と `documents/design/frontend/character/tracking.md` を簡易 IK 導入後の仕様へ更新する
 - 必要に応じて `documents/tasks/character_sincro_motion/README.md` と `TASK-3100` のタスク一覧を同期する
 - desktop / mobile viewport で Settings / Debug Console の表示崩れを確認する
 
@@ -43,12 +43,16 @@ IK は見た目の破綻が環境差やモデル差で出やすい。実装だ�
 
 ## 実装対象候補
 
-- `sincromisor-frontend/src/ts/UI/DebugConsoleManager.ts`
-- `sincromisor-frontend/src/react/debug/**`
-- `sincromisor-frontend/src/react/settings-fields/SettingsFields.tsx`
-- `sincromisor-frontend/src/ts/UI/DialogManager.ts`
-- `sincromisor-frontend/src/ts/UI/DialogStateStore.ts`
-- `documents/design/frontend_character.md`
+- `sincromisor-frontend/src/features/debug/model/debugConsoleManager.ts`
+- `sincromisor-frontend/src/features/debug/model/debugConsoleSincroMotionRuntime.ts`
+- `sincromisor-frontend/src/features/debug/react/**`
+- `sincromisor-frontend/src/features/settings/react/fields/settingsFields.tsx`
+- `sincromisor-frontend/src/pages/simpleVrm/react/components/settingsSections.tsx`
+- `sincromisor-frontend/src/features/dialog/model/dialogManager.ts`
+- `sincromisor-frontend/src/features/dialog/model/dialogStateStore.ts`
+- `documents/design/frontend/character/motion.md`
+- `documents/design/frontend/character/tracking.md`
+- `documents/design/frontend/pages.md`
 - `documents/tasks/character_sincro_motion/README.md`
 - `documents/tasks/character_sincro_motion/open/TASK-3100-sincro-motion-foundation-epic.md`
 
@@ -59,7 +63,7 @@ IK は見た目の破綻が環境差やモデル差で出やすい。実装だ�
 - 実カメラで、片手上げ、横開き、肘曲げ、片腕欠損、両腕欠損、近距離上半身構図を確認済み。
 - 複数 VRM で破綻が許容範囲に収まることを確認済み。
 - Settings / Debug Console が desktop / mobile viewport で崩れない。
-- `documents/design/frontend_character.md` が簡易 IK 後の仕様に更新されている。
+- `documents/design/frontend/character/motion.md` と `documents/design/frontend/character/tracking.md` が簡易 IK 後の仕様に更新されている。
 - `cd sincromisor-frontend && npm run build` が成功する。
 
 ## 確認コマンド案
@@ -109,7 +113,7 @@ playwright-cli resize 390 844
     - `armIkMaxLiftRad`
     - `armIkMaxOpenRad`
     - `armIkMaxForearmFlexRad`
-- `documents/design/frontend_character.md` を更新し、簡易 IK 後の `SincroPoseRetargeter` / `SincroPoseRetargetFrame` / Debug Console 観測項目 / 手動確認観点を同期した。
+- `documents/design/frontend/character/motion.md` と `documents/design/frontend/character/tracking.md` を更新し、簡易 IK 後の `SincroPoseRetargeter` / `SincroPoseRetargetFrame` / Debug Console 観測項目 / 手動確認観点を同期した。
 - `desktop 1280x720` と `mobile 390x844` で Debug Console / Settings の表示を確認した。
     - `#debugConsole` / 基本設定 dialog の横 overflow は検出されなかった。
     - backend 未起動のため `/api/v1/RTCSignalingServer/config.json` は 404、ブラウザ権限未許可のためカメラ/マイクは `Permission denied`。どちらも今回の UI 変更とは別の確認環境由来。
@@ -123,3 +127,8 @@ playwright-cli resize 390 844
 ## 後続検討
 
 - 簡易 IK の限界が明確になったら、`worldLandmarks` 利用、Kalidokit 等の局所導入、または独自 3D solver を比較するタスクを別途作る。
+
+## 現状確認 2026-05-20
+
+- 実装対象候補を `src/features/debug/**`、`src/features/settings/**`、`src/features/dialog/**`、`src/pages/simpleVrm/**` の現行配置へ更新した。
+- 設計同期先は legacy flat の `documents/design/frontend_character.md` ではなく、`documents/design/frontend/character/motion.md` と `documents/design/frontend/character/tracking.md` に集約した。
