@@ -1,3 +1,11 @@
+import type {
+    SincroAppDialogUiState,
+    SincroAppDialogVrmUiState,
+    SincroAppSettingsSnapshot,
+    SincroAppSettingsUiHints,
+    SincroAppSettingsUiState,
+    SincroAppStartupSettingsStatus,
+} from "../../app/controller/sincroAppTypes";
 import type { TalkManager } from "../rtc/talkManager";
 import type { ChatMessageService } from "../ui/chatMessageService";
 import type { DebugConsoleManager } from "../ui/debugConsoleManager";
@@ -10,14 +18,6 @@ import type {
 } from "./sincroAppBridges";
 import type { SincroAppDialogFacade } from "./sincroAppDialogFacade";
 import { getSincroAppRightToolPanelService } from "./sincroAppRightToolPanelService";
-import type {
-    SincroAppDialogUiState,
-    SincroAppDialogVrmUiState,
-    SincroAppSettingsSnapshot,
-    SincroAppSettingsUiHints,
-    SincroAppSettingsUiState,
-    SincroAppStartupSettingsStatus,
-} from "./sincroAppTypes";
 
 // AppController から公開する bridge 実装を factory に分離し、
 // Controller 本体を「依存の束ね役」に寄せる。
@@ -141,7 +141,7 @@ export function createSincroAppStateBridge(params: {
     getDialogUiState: () => SincroAppDialogUiState;
     getDialogVrmUiState: () => SincroAppDialogVrmUiState;
     getStartupSettingsStatus: () => SincroAppStartupSettingsStatus;
-    getTelopTextSegmentsSnapshot: () => import("./sincroAppTypes").TelopTextSegment[];
+    getTelopTextSegmentsSnapshot: () => import("../../app/controller/sincroAppTypes").TelopTextSegment[];
 }): SincroAppStateBridge {
     // React hook が subscribe 前に初期値を同期取得するための読み取り専用 bridge。
     return {

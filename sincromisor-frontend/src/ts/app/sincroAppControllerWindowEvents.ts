@@ -1,14 +1,14 @@
+import type {
+    SincroAppEvent,
+    SincroAppLookingGlassConfigUpdatedEventDetail,
+    SincroAppLookingGlassEventDetail,
+} from "../../app/controller/sincroAppTypes";
 import {
     emitLookingGlassConfigStatus,
     handleLookingGlassConfigUpdatedFlow,
     handleLookingGlassStateFlow,
 } from "./sincroAppLookingGlassEventFlow";
 import type { SincroAppLookingGlassStateTracker } from "./sincroAppLookingGlassStateTracker";
-import type {
-    SincroAppEvent,
-    SincroAppLookingGlassConfigUpdatedEventDetail,
-    SincroAppLookingGlassEventDetail,
-} from "./sincroAppTypes";
 import { bindSincroAppWindowEvents } from "./sincroAppWindowEventBinder";
 
 type SincroAppControllerWindowEventParams = {

@@ -1,4 +1,4 @@
-import type { SincroAppEvent } from "../../ts/app/sincroAppTypes";
+import type { SincroAppEvent } from "../../app/controller";
 import type { PanelMessageLog } from "../simpleVrm/panelTypes";
 import { UI_TUNING } from "./uiTuning";
 

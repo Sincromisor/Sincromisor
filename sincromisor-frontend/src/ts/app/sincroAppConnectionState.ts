@@ -1,4 +1,4 @@
-import type { SincroAppEvent, SincroAppLifecycleState } from "./sincroAppTypes";
+import type { SincroAppEvent, SincroAppLifecycleState } from "../../app/controller/sincroAppTypes";
 
 // DebugConsole 由来の ICE/signaling と App lifecycle を合成し、
 // UI向けの単純化された接続状態イベントを生成する pure helper。

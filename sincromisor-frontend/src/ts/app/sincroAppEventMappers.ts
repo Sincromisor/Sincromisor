@@ -1,7 +1,7 @@
+import type { SincroAppEvent } from "../../app/controller/sincroAppTypes";
 import type { TalkManagerEvent } from "../rtc/talkManager";
 import type { ChatMessageServiceEvent } from "../ui/chatMessageService";
 import type { DebugConsoleManagerEvent } from "../ui/debugConsoleManager";
-import type { SincroAppEvent } from "./sincroAppTypes";
 
 export type DebugEventMapResult =
     | { kind: "none" }

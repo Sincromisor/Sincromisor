@@ -1,4 +1,4 @@
-import { SincroAppController } from "../../ts/app/sincroAppController";
+import { SincroAppController } from "./sincroAppController";
 
 type BindControllerFn = (controller: SincroAppController | undefined) => (() => void) | undefined;
 

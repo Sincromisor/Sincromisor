@@ -1,6 +1,6 @@
+import type { SincroAppEvent, SincroAppLifecycleState } from "../../app/controller/sincroAppTypes";
 import { buildSincroAppConnectionStateEvent } from "./sincroAppConnectionState";
 import { emitSincroAppConnectionState } from "./sincroAppEmitHelpers";
-import type { SincroAppEvent, SincroAppLifecycleState } from "./sincroAppTypes";
 
 type SincroAppControllerConnectionStateParams = {
     lifecycleState: SincroAppLifecycleState;

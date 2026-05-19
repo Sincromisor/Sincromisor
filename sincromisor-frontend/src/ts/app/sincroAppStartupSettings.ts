@@ -2,7 +2,7 @@ import type {
     SincroAppLifecycleState,
     SincroAppSettingsSnapshot,
     SincroAppStartupSettingsStatus,
-} from "./sincroAppTypes";
+} from "../../app/controller/sincroAppTypes";
 
 export type SincroAppStartupAppliedSettings = Pick<
     SincroAppSettingsSnapshot,

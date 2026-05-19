@@ -1,8 +1,8 @@
-import type { LookingGlassRuntimeConfig } from "../sincroVrm/lookingGlass/lookingGlassRuntimeConfig";
 import type {
     SincroAppLookingGlassConfigStatus,
     SincroAppLookingGlassEventDetail,
-} from "./sincroAppTypes";
+} from "../../app/controller/sincroAppTypes";
+import type { LookingGlassRuntimeConfig } from "../sincroVrm/lookingGlass/lookingGlassRuntimeConfig";
 
 // Looking Glass のUI表示向け状態を AppController から切り出した tracker。
 // runtime config の変更履歴とセッション状態を持ち、再読込/次回セッション反映の判定を集中管理する。

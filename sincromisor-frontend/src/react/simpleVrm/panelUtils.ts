@@ -1,4 +1,4 @@
-import type { SincroAppLifecycleState } from "../../ts/app/sincroAppTypes";
+import type { SincroAppLifecycleState } from "../../app/controller";
 import type { PanelRtcState } from "./panelTypes";
 
 // Diagnostics 表示専用の軽量フォーマッタ。UI側に重い分岐を散らさないために分離している。

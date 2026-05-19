@@ -1,5 +1,4 @@
-import type { SincroAppController } from "../../ts/app/sincroAppController";
-import type { SincroAppLifecycleState } from "../../ts/app/sincroAppTypes";
+import type { SincroAppController, SincroAppLifecycleState } from "../../app/controller";
 import { useSincroMediaDeviceState } from "../app/useSincroMediaDeviceState";
 import type {
     ApplySettingsFn,

@@ -1,14 +1,14 @@
 import type { CSSProperties } from "react";
 import type {
-    SincroMediaDeviceSelectionState,
-    SincroMediaDeviceSnapshot,
-} from "../../ts/mediaDevices/sincroMediaDeviceService";
-import type {
     ApplySettingsFn,
     SincroAppSettingsSnapshot,
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
-} from "../app/appSettingsTypes";
+} from "../../app/controller";
+import type {
+    SincroMediaDeviceSelectionState,
+    SincroMediaDeviceSnapshot,
+} from "../../ts/mediaDevices/sincroMediaDeviceService";
 
 export type FieldContainerProps = {
     className?: string;

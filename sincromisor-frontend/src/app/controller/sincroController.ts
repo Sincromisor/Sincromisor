@@ -1,11 +1,11 @@
-import { SincroAudioInputController } from "./app/sincroAudioInputController";
-import { SincroCharacterGazeController } from "./app/sincroCharacterGazeController";
-import { SincroRtcSessionController } from "./app/sincroRtcSessionController";
-import { SincroRTCConfigManager } from "./rtc/sincroRtcConfigManager";
-import { TalkManager } from "./rtc/talkManager";
-import { ChatMessageService } from "./ui/chatMessageService";
-import { DebugConsoleManager } from "./ui/debugConsoleManager";
-import { DialogManager } from "./ui/dialogManager";
+import { SincroAudioInputController } from "../../ts/app/sincroAudioInputController";
+import { SincroCharacterGazeController } from "../../ts/app/sincroCharacterGazeController";
+import { SincroRtcSessionController } from "../../ts/app/sincroRtcSessionController";
+import { SincroRTCConfigManager } from "../../ts/rtc/sincroRtcConfigManager";
+import { TalkManager } from "../../ts/rtc/talkManager";
+import { ChatMessageService } from "../../ts/ui/chatMessageService";
+import { DebugConsoleManager } from "../../ts/ui/debugConsoleManager";
+import { DialogManager } from "../../ts/ui/dialogManager";
 
 // 旧来のアプリ本体 controller。
 // 以前は巨大 constructor に UI/RTC/Media/Gaze の配線を集中させていたが、

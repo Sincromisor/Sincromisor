@@ -1,6 +1,3 @@
-import type { SincroAppLookingGlassStateTracker } from "./sincroAppLookingGlassStateTracker";
-import type { SincroAppSettingsRelatedPayloadCache } from "./sincroAppSettingsRelatedPayloadCache";
-import { emitSincroAppInitialSnapshot } from "./sincroAppSubscriptionSnapshot";
 import type {
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
@@ -9,7 +6,10 @@ import type {
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
     SincroAppStartupSettingsCapabilities,
-} from "./sincroAppTypes";
+} from "../../app/controller/sincroAppTypes";
+import type { SincroAppLookingGlassStateTracker } from "./sincroAppLookingGlassStateTracker";
+import type { SincroAppSettingsRelatedPayloadCache } from "./sincroAppSettingsRelatedPayloadCache";
+import { emitSincroAppInitialSnapshot } from "./sincroAppSubscriptionSnapshot";
 
 type SincroAppControllerInitialSnapshotParams = {
     listener: (event: SincroAppEvent) => void;

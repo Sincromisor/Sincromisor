@@ -1,9 +1,12 @@
+import type {
+    SincroAppEvent,
+    SincroAppSettingsSnapshot,
+} from "../../app/controller/sincroAppTypes";
 import type { SincroAppDialogFacade } from "./sincroAppDialogFacade";
 import { emitSincroAppSettingsApplyEvents } from "./sincroAppEmitHelpers";
 import type { SincroAppLookingGlassStateTracker } from "./sincroAppLookingGlassStateTracker";
 import { applySincroAppSettingsPartial } from "./sincroAppSettingsApply";
 import type { SincroAppSettingsRelatedPayloadCache } from "./sincroAppSettingsRelatedPayloadCache";
-import type { SincroAppEvent, SincroAppSettingsSnapshot } from "./sincroAppTypes";
 
 type SincroAppSettingsApplyFlowParams = {
     dialogManager: SincroAppDialogFacade;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { SincroAppController } from "../../ts/app/sincroAppController";
-import type { ChatMessageViewRecord, SincroAppEvent } from "../../ts/app/sincroAppTypes";
+import type { ChatMessageViewRecord, SincroAppEvent } from "../../app/controller";
+import { SincroAppController } from "../../app/controller";
 import type { ChatMessage } from "../../ts/rtc/rtcMessage";
 import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
 

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type {
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
-} from "../app/appSettingsTypes";
+} from "../../app/controller";
 import {
     SettingsFieldStack,
     SettingsHint,

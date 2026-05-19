@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { SincroAppController } from "../../ts/app/sincroAppController";
-import type { SincroAppDialogUiState, SincroAppEvent } from "../../ts/app/sincroAppTypes";
+import type { SincroAppDialogUiState, SincroAppEvent } from "../../app/controller";
+import { SincroAppController } from "../../app/controller";
 import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
 import { StartupDialogFrame } from "../overlay/startupDialogFrame";
 import { ConfigurationDialogSettingsPanel } from "./configurationDialogSettingsPanel";

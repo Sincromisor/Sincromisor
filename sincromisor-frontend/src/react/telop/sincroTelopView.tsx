@@ -1,6 +1,6 @@
 import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { SincroAppController } from "../../ts/app/sincroAppController";
-import type { TelopTextSegment } from "../../ts/app/sincroAppTypes";
+import type { TelopTextSegment } from "../../app/controller";
+import { SincroAppController } from "../../app/controller";
 import { subscribeActiveSincroAppEvents } from "../app/subscribeActiveSincroAppEvents";
 
 type SincroTelopViewProps = {
