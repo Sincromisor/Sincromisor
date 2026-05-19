@@ -1,7 +1,6 @@
 import {
     type AudioConstraintRuntimeApplyReport,
     UserMediaManager,
-    type VadThresholdMode as UserMediaVadThresholdMode,
     type VadStateReport,
 } from "../rtc/userMediaManager";
 import { CharacterBehaviorState } from "../sincroVrm/vrmCharacter/characterBehaviorState";
@@ -9,7 +8,6 @@ import type { ChatMessageService } from "../ui/chatMessageService";
 import type {
     AudioFilterControlConfig,
     DebugConsoleManager,
-    VadThresholdMode as DebugVadThresholdMode,
     LearnedVadPerformanceMode,
 } from "../ui/debugConsoleManager";
 import type { DialogManager } from "../ui/dialogManager";
@@ -123,11 +121,9 @@ export class SincroAudioInputController {
                 this.clearVenuePresetIfEnabledWithoutResync();
             },
         );
-        this.debugConsoleManager.setLocalVadThresholdModeChangeCallback(
-            (mode: DebugVadThresholdMode) => {
-                this.userMediaManager.setVadThresholdMode(mode as UserMediaVadThresholdMode);
-            },
-        );
+        this.debugConsoleManager.setLocalVadThresholdModeChangeCallback((mode) => {
+            this.userMediaManager.setVadThresholdMode(mode);
+        });
         this.debugConsoleManager.setLocalLearnedVadPerformanceModeChangeCallback(
             (mode: LearnedVadPerformanceMode) => {
                 this.userMediaManager.setLearnedVadPerformanceMode(mode);

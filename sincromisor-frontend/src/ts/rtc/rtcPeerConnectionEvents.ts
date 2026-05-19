@@ -29,15 +29,21 @@ export function setupRtcPeerConnectionEvents(params: RtcPeerConnectionEventParam
     });
     params.peerConnection.addEventListener("icecandidateerror", (event) => {
         // STUN/TURN への疎通失敗をブラウザが検知した場合の詳細ログ。
-        const err = event as RTCPeerConnectionIceErrorEvent;
-        params.logger.addRtcEventLog(
-            `ICE candidate error: url=${err.url ?? "-"}, code=${err.errorCode}, text=${err.errorText ?? "-"}`,
-        );
+        params.logger.addRtcEventLog(formatIceCandidateError(event));
     });
 
     setupIceGatheringStateLog(params);
     setupIceConnectionStateLog(params);
     setupSignalingStateLog(params);
+}
+
+function formatIceCandidateError(event: Event): string {
+    const url = "url" in event && typeof event.url === "string" ? event.url : "-";
+    const errorCode =
+        "errorCode" in event && typeof event.errorCode === "number" ? event.errorCode : "-";
+    const errorText =
+        "errorText" in event && typeof event.errorText === "string" ? event.errorText : "-";
+    return `ICE candidate error: url=${url}, code=${errorCode}, text=${errorText}`;
 }
 
 function setupIceGatheringStateLog(params: RtcPeerConnectionEventParams): void {

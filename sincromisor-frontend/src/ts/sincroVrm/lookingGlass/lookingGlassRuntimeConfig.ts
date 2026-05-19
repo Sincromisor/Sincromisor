@@ -23,6 +23,16 @@ const defaultLookingGlassRuntimeConfig: LookingGlassRuntimeConfig = {
 
 let currentConfig: LookingGlassRuntimeConfig = { ...defaultLookingGlassRuntimeConfig };
 
+const LOOKING_GLASS_RUNTIME_CONFIG_KEYS: Array<keyof LookingGlassRuntimeConfig> = [
+    "tileHeight",
+    "numViews",
+    "targetY",
+    "targetZ",
+    "targetDiam",
+    "depthiness",
+    "fovyDeg",
+];
+
 type LookingGlassRuntimeConfigChangedDetail = {
     config: LookingGlassRuntimeConfig;
     changedKeys: Array<keyof LookingGlassRuntimeConfig>;
@@ -38,11 +48,10 @@ export function updateLookingGlassRuntimeConfig(
     partial: Partial<LookingGlassRuntimeConfig>,
 ): LookingGlassRuntimeConfig {
     // 実際に変わったキーだけを抽出し、AppController 側の「反映タイミング表示」に使う。
-    const changedKeys = Object.keys(partial).filter((key) => {
-        const typedKey = key as keyof LookingGlassRuntimeConfig;
-        const nextValue = partial[typedKey];
-        return nextValue !== undefined && currentConfig[typedKey] !== nextValue;
-    }) as Array<keyof LookingGlassRuntimeConfig>;
+    const changedKeys = LOOKING_GLASS_RUNTIME_CONFIG_KEYS.filter((key) => {
+        const nextValue = partial[key];
+        return nextValue !== undefined && currentConfig[key] !== nextValue;
+    });
 
     // React UI の部分更新を安全に取り込めるよう shallow merge にしている。
     currentConfig = {

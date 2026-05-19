@@ -59,9 +59,10 @@ export class FaceMorphController {
 
         if (moraId !== this.currentMoraID) {
             this.currentMoraID = moraId;
-            if (snapshot.aiSpeech.currentVowel) {
+            const currentVowel = parseMouseVowel(snapshot.aiSpeech.currentVowel);
+            if (currentVowel) {
                 this.setMouseVowel(
-                    snapshot.aiSpeech.currentVowel.toUpperCase() as MouseVowel,
+                    currentVowel,
                     snapshot.aiSpeech.currentLengthSeconds * 1000,
                     snapshot.nowMs,
                 );
@@ -152,6 +153,21 @@ export class FaceMorphController {
             this.expressionManager.setValue(preset, 0.0);
         }
     }
+}
+
+function parseMouseVowel(value: string | undefined): MouseVowel | undefined {
+    const normalized = value?.toUpperCase();
+    if (
+        normalized === "A" ||
+        normalized === "I" ||
+        normalized === "U" ||
+        normalized === "E" ||
+        normalized === "O" ||
+        normalized === "N"
+    ) {
+        return normalized;
+    }
+    return undefined;
 }
 
 /*

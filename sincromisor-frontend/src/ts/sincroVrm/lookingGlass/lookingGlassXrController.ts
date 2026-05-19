@@ -42,10 +42,7 @@ export class LookingGlassXRController {
         this.scene = scene;
         this.startButtonSelector = startButtonSelector;
         // React UI からのLG設定更新を、次回 start() の polyfill 初期化へ反映する。
-        window.addEventListener(
-            "sincro:looking-glass-config-updated",
-            this.handleConfigUpdated as EventListener,
-        );
+        window.addEventListener("sincro:looking-glass-config-updated", this.handleConfigUpdated);
         // Debug Console 以外（React 設定パネル等）からも起動/停止できるようにする。
         this.bindCommandEvents();
     }
@@ -260,11 +257,11 @@ export class LookingGlassXRController {
         // looking-glass-vrm の Control Panel から start/stop を操作する導線。
         window.addEventListener(
             "sincro:looking-glass-start-request",
-            this.handleExternalStartRequest as EventListener,
+            this.handleExternalStartRequest,
         );
         window.addEventListener(
             "sincro:looking-glass-stop-request",
-            this.handleExternalStopRequest as EventListener,
+            this.handleExternalStopRequest,
         );
     }
 

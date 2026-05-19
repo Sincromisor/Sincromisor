@@ -12,24 +12,24 @@ import {
 } from "../ts/characterGaze/poseLandmarkerSpike";
 import "./styles.css";
 
-const previewVideo = requireElement<HTMLVideoElement>("previewVideo");
-const overlayCanvas = requireElement<HTMLCanvasElement>("overlayCanvas");
-const modelPresetInput = requireElement<HTMLSelectElement>("modelPreset");
-const modelPathInput = requireElement<HTMLInputElement>("modelPath");
-const targetFpsInput = requireElement<HTMLSelectElement>("targetFps");
-const delegateInput = requireElement<HTMLSelectElement>("delegate");
-const runFaceLandmarkerInput = requireElement<HTMLInputElement>("runFaceLandmarker");
-const startButton = requireElement<HTMLButtonElement>("startButton");
-const stopButton = requireElement<HTMLButtonElement>("stopButton");
-const markButton = requireElement<HTMLButtonElement>("markButton");
-const statusText = requireElement<HTMLParagraphElement>("statusText");
-const poseMs = requireElement<HTMLElement>("poseMs");
-const poseAvgMax = requireElement<HTMLElement>("poseAvgMax");
-const renderFps = requireElement<HTMLElement>("renderFps");
-const faceMs = requireElement<HTMLElement>("faceMs");
-const droppedFrames = requireElement<HTMLElement>("droppedFrames");
-const uiLatency = requireElement<HTMLElement>("uiLatency");
-const landmarkSummary = requireElement<HTMLPreElement>("landmarkSummary");
+const previewVideo = requireElement("previewVideo", HTMLVideoElement);
+const overlayCanvas = requireElement("overlayCanvas", HTMLCanvasElement);
+const modelPresetInput = requireElement("modelPreset", HTMLSelectElement);
+const modelPathInput = requireElement("modelPath", HTMLInputElement);
+const targetFpsInput = requireElement("targetFps", HTMLSelectElement);
+const delegateInput = requireElement("delegate", HTMLSelectElement);
+const runFaceLandmarkerInput = requireElement("runFaceLandmarker", HTMLInputElement);
+const startButton = requireElement("startButton", HTMLButtonElement);
+const stopButton = requireElement("stopButton", HTMLButtonElement);
+const markButton = requireElement("markButton", HTMLButtonElement);
+const statusText = requireElement("statusText", HTMLParagraphElement);
+const poseMs = requireElement("poseMs", HTMLElement);
+const poseAvgMax = requireElement("poseAvgMax", HTMLElement);
+const renderFps = requireElement("renderFps", HTMLElement);
+const faceMs = requireElement("faceMs", HTMLElement);
+const droppedFrames = requireElement("droppedFrames", HTMLElement);
+const uiLatency = requireElement("uiLatency", HTMLElement);
+const landmarkSummary = requireElement("landmarkSummary", HTMLPreElement);
 const overlayContext = overlayCanvas.getContext("2d");
 
 let lastMarkStartedAtMs: number | undefined;
@@ -48,7 +48,7 @@ const spike = new PoseLandmarkerSpike(previewVideo, {
 });
 
 modelPresetInput.addEventListener("change", () => {
-    const preset = modelPresetInput.value as PoseLandmarkerSpikeModelPreset;
+    const preset = parsePoseLandmarkerSpikeModelPreset(modelPresetInput.value);
     if (preset !== "custom") {
         modelPathInput.value = POSE_LANDMARKER_SPIKE_MODEL_PATHS[preset];
     }
@@ -99,11 +99,11 @@ async function startSpike(): Promise<void> {
 function readConfig(): PoseLandmarkerSpikeConfig {
     return {
         ...DEFAULT_POSE_LANDMARKER_SPIKE_CONFIG,
-        modelPreset: modelPresetInput.value as PoseLandmarkerSpikeModelPreset,
+        modelPreset: parsePoseLandmarkerSpikeModelPreset(modelPresetInput.value),
         modelAssetPath: modelPathInput.value,
         targetInferenceFps: Number(targetFpsInput.value),
         runFaceLandmarker: runFaceLandmarkerInput.checked,
-        delegate: delegateInput.value as "CPU" | "GPU",
+        delegate: parseMediaPipeDelegate(delegateInput.value),
     };
 }
 
@@ -191,12 +191,22 @@ function drawPoint(landmark: NormalizedLandmark): void {
     overlayContext?.fill();
 }
 
-function requireElement<T extends HTMLElement>(id: string): T {
+type HtmlElementConstructor<T extends HTMLElement> = {
+    new (): T;
+};
+
+function requireElement<T extends HTMLElement>(
+    id: string,
+    elementConstructor: HtmlElementConstructor<T>,
+): T {
     const element = document.getElementById(id);
     if (!element) {
         throw new Error(`Missing element: ${id}`);
     }
-    return element as T;
+    if (!(element instanceof elementConstructor)) {
+        throw new Error(`Element ${id} is not ${elementConstructor.name}.`);
+    }
+    return element;
 }
 
 function formatError(error: unknown): string {
@@ -205,4 +215,18 @@ function formatError(error: unknown): string {
 
 function positiveDimensionOrDefault(...values: number[]): number {
     return values.find((value) => value > 0) ?? 0;
+}
+
+function parsePoseLandmarkerSpikeModelPreset(value: string): PoseLandmarkerSpikeModelPreset {
+    if (value === "lite" || value === "full" || value === "heavy" || value === "custom") {
+        return value;
+    }
+    throw new Error(`Unsupported PoseLandmarker model preset: ${value}`);
+}
+
+function parseMediaPipeDelegate(value: string): "CPU" | "GPU" {
+    if (value === "CPU" || value === "GPU") {
+        return value;
+    }
+    throw new Error(`Unsupported MediaPipe delegate: ${value}`);
 }

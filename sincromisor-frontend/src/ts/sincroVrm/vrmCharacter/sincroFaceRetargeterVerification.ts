@@ -19,6 +19,10 @@ type SincroFaceRetargeterVerificationCase = {
     };
 };
 
+type DominantMouth = SincroFaceRetargeterVerificationCase["expected"]["dominantMouth"];
+
+const MOUTH_EXPRESSION_NAMES: Exclude<DominantMouth, "none">[] = ["aa", "ih", "ou", "ee", "oh"];
+
 const BASE_SNAPSHOT: SincroFaceMotionSnapshot = {
     trackingEnabled: true,
     detected: true,
@@ -163,20 +167,17 @@ export function evaluateSincroFaceRetargeterVerificationCases(): {
 
 function dominantMouthExpression(
     expressions: ReturnType<typeof retargetSincroFaceExpressions>,
-): SincroFaceRetargeterVerificationCase["expected"]["dominantMouth"] {
-    const mouthValues = {
-        aa: expressions.aa,
-        ih: expressions.ih,
-        ou: expressions.ou,
-        ee: expressions.ee,
-        oh: expressions.oh,
-    };
-    const [name, value] = Object.entries(mouthValues).sort(
-        (left, right) => right[1] - left[1],
-    )[0] ?? ["none", 0];
-    return value > 0
-        ? (name as SincroFaceRetargeterVerificationCase["expected"]["dominantMouth"])
-        : "none";
+): DominantMouth {
+    let selectedName: DominantMouth = "none";
+    let selectedValue = 0;
+    for (const name of MOUTH_EXPRESSION_NAMES) {
+        const value = expressions[name];
+        if (value > selectedValue) {
+            selectedName = name;
+            selectedValue = value;
+        }
+    }
+    return selectedValue > 0 ? selectedName : "none";
 }
 
 function sign(value: number): -1 | 0 | 1 {

@@ -1,4 +1,4 @@
-import * as ort from "onnxruntime-web";
+import { InferenceSession, Tensor } from "onnxruntime-web";
 import {
     linearResample,
     normalizePcmFrame,
@@ -41,8 +41,8 @@ type WorkerInputMessage = InitMessage | SetEnabledMessage | SetParamsMessage | A
 let enabled = false;
 let initialized = false;
 let available = false;
-let session: ort.InferenceSession | undefined;
-let modelStateTensor: ort.Tensor | undefined;
+let session: InferenceSession | undefined;
+let modelStateTensor: Tensor | undefined;
 let busy = false;
 let pendingFrame: { pcm: Float32Array; sampleRate: number } | undefined;
 
@@ -55,6 +55,10 @@ let lastInferAtMs = 0;
 const speechState = new SileroVadSpeechState();
 
 type OnnxDim = number | string | bigint | null;
+
+type OnnxInputMetadata = {
+    dimensions?: ReadonlyArray<OnnxDim>;
+};
 
 // メインスレッドへWorker状態を通知する。
 function postStatus(
@@ -81,19 +85,22 @@ function tensorSize(dims: ReadonlyArray<number>): number {
 
 // `inputNames` と同順で返る `inputMetadata` から対象入力の次元情報を取り出す。
 function getInputDims(
-    currentSession: ort.InferenceSession,
+    currentSession: InferenceSession,
     inputName: string,
 ): ReadonlyArray<OnnxDim> | undefined {
     const inputIndex = currentSession.inputNames.indexOf(inputName);
     if (inputIndex < 0 || inputIndex >= currentSession.inputMetadata.length) {
         return undefined;
     }
-    const metadata = currentSession.inputMetadata[inputIndex] as unknown;
-    if (!metadata || typeof metadata !== "object" || !("dimensions" in metadata)) {
-        return undefined;
+    const metadata: unknown = currentSession.inputMetadata[inputIndex];
+    return isOnnxInputMetadata(metadata) ? metadata.dimensions : undefined;
+}
+
+function isOnnxInputMetadata(value: unknown): value is OnnxInputMetadata {
+    if (!value || typeof value !== "object" || !("dimensions" in value)) {
+        return false;
     }
-    const dimensions = (metadata as { dimensions?: ReadonlyArray<OnnxDim> }).dimensions;
-    return dimensions;
+    return value.dimensions === undefined || Array.isArray(value.dimensions);
 }
 
 // ONNX Runtimeセッションを初期化する。失敗時はfallbackモードへ遷移する。
@@ -105,7 +112,7 @@ async function initialize(config?: InitMessage): Promise<void> {
     const modelUrl = config?.modelUrl ?? DEFAULT_MODEL_URL;
     try {
         // Worker 内で ONNX Runtime を初期化し、メインスレッドの描画負荷と分離する。
-        session = await ort.InferenceSession.create(modelUrl, {
+        session = await InferenceSession.create(modelUrl, {
             executionProviders: ["wasm"],
             graphOptimizationLevel: "all",
         });
@@ -132,8 +139,8 @@ async function inferProbability(
     return readInferenceProbability(result);
 }
 
-function buildInferenceFeeds(frame: Float32Array): Record<string, ort.Tensor> {
-    const feeds: Record<string, ort.Tensor> = {};
+function buildInferenceFeeds(frame: Float32Array): Record<string, Tensor> {
+    const feeds: Record<string, Tensor> = {};
     if (!session) {
         return feeds;
     }
@@ -141,11 +148,11 @@ function buildInferenceFeeds(frame: Float32Array): Record<string, ort.Tensor> {
     for (const inputName of session.inputNames) {
         const lower = `${inputName}`.toLowerCase();
         if (lower.includes("input")) {
-            feeds[inputName] = new ort.Tensor("float32", frame, [1, frame.length]);
+            feeds[inputName] = new Tensor("float32", frame, [1, frame.length]);
             continue;
         }
         if (lower.includes("sr")) {
-            feeds[inputName] = new ort.Tensor("int64", new BigInt64Array([16000n]), [1]);
+            feeds[inputName] = new Tensor("int64", new BigInt64Array([16000n]), [1]);
             continue;
         }
         if (lower.includes("state")) {
@@ -153,11 +160,7 @@ function buildInferenceFeeds(frame: Float32Array): Record<string, ort.Tensor> {
                 const dims = getInputDims(session, inputName);
                 const resolvedDims = resolveDims(dims, [2, 1, 128]);
                 const stateSize = tensorSize(resolvedDims);
-                modelStateTensor = new ort.Tensor(
-                    "float32",
-                    new Float32Array(stateSize),
-                    resolvedDims,
-                );
+                modelStateTensor = new Tensor("float32", new Float32Array(stateSize), resolvedDims);
             }
             feeds[inputName] = modelStateTensor;
             continue;
@@ -168,12 +171,12 @@ function buildInferenceFeeds(frame: Float32Array): Record<string, ort.Tensor> {
         }
         const resolvedDims = resolveDims(dims, [1]);
         const size = tensorSize(resolvedDims);
-        feeds[inputName] = new ort.Tensor("float32", new Float32Array(size), resolvedDims);
+        feeds[inputName] = new Tensor("float32", new Float32Array(size), resolvedDims);
     }
     return feeds;
 }
 
-function readInferenceProbability(result: Record<string, ort.Tensor>): number | undefined {
+function readInferenceProbability(result: Record<string, Tensor>): number | undefined {
     if (!session) {
         return undefined;
     }

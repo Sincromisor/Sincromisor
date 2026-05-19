@@ -23,9 +23,17 @@ export function DebugConsoleTabs({ activeTab, onSelect }: DebugConsoleTabsProps)
             ariaLabel="Developer diagnostics panels"
             groups={[{ items: DEBUG_TABS }]}
             activeId={activeTab}
-            onSelect={(tabKey) => onSelect(tabKey as DebugTabKey)}
+            onSelect={(tabKey) => {
+                if (isDebugTabKey(tabKey)) {
+                    onSelect(tabKey);
+                }
+            }}
             idPrefix="debug-console"
             getPanelId={(_, tabKey) => `debug-console-panel-${tabKey}`}
         />
     );
+}
+
+function isDebugTabKey(value: string): value is DebugTabKey {
+    return DEBUG_TABS.some((tab) => tab.id === value);
 }

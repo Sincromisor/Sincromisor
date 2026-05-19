@@ -41,6 +41,12 @@ export type MotionDebugApi = {
     loadVideoFixture: (url: string) => Promise<MotionDebugSnapshot>;
 };
 
+declare global {
+    interface Window {
+        __SINCRO_MOTION_DEBUG__?: MotionDebugApi;
+    }
+}
+
 export type MotionDebugRetargetUiConfig = Pick<
     SincroPoseRetargetConfig,
     "armIkMode" | "armIkStrength" | "armIkTargetScale" | "smoothingMs" | "minConfidence"

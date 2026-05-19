@@ -15,36 +15,42 @@ type MotionDebugControlCallbacks = {
 // DOM control の読み書きを runtime から分離する。Playwright API と画面操作は
 // MotionDebugApp の同じ setRetargetConfig() に合流させ、調整経路を 1 つに保つ。
 export class MotionDebugControls {
-    private readonly statusText = requireElement<HTMLElement>("motionDebugStatus");
-    private readonly snapshotText = requireElement<HTMLPreElement>("motionDebugSnapshot");
-    private readonly startButton = requireElement<HTMLButtonElement>("motionDebugStart");
-    private readonly stopButton = requireElement<HTMLButtonElement>("motionDebugStop");
-    private readonly captureButton = requireElement<HTMLButtonElement>("motionDebugCapture");
-    private readonly ikModeInput = requireElement<HTMLSelectElement>("motionDebugIkMode");
-    private readonly ikStrengthInput = requireElement<HTMLInputElement>("motionDebugIkStrength");
-    private readonly targetScaleInput = requireElement<HTMLInputElement>("motionDebugTargetScale");
-    private readonly smoothingInput = requireElement<HTMLInputElement>("motionDebugSmoothing");
-    private readonly minConfidenceInput = requireElement<HTMLInputElement>(
+    private readonly statusText = requireElement("motionDebugStatus", HTMLElement);
+    private readonly snapshotText = requireElement("motionDebugSnapshot", HTMLPreElement);
+    private readonly startButton = requireElement("motionDebugStart", HTMLButtonElement);
+    private readonly stopButton = requireElement("motionDebugStop", HTMLButtonElement);
+    private readonly captureButton = requireElement("motionDebugCapture", HTMLButtonElement);
+    private readonly ikModeInput = requireElement("motionDebugIkMode", HTMLSelectElement);
+    private readonly ikStrengthInput = requireElement("motionDebugIkStrength", HTMLInputElement);
+    private readonly targetScaleInput = requireElement("motionDebugTargetScale", HTMLInputElement);
+    private readonly smoothingInput = requireElement("motionDebugSmoothing", HTMLInputElement);
+    private readonly minConfidenceInput = requireElement(
         "motionDebugMinConfidence",
+        HTMLInputElement,
     );
-    private readonly ikStrengthValue = requireElement<HTMLOutputElement>(
+    private readonly ikStrengthValue = requireElement(
         "motionDebugIkStrengthValue",
+        HTMLOutputElement,
     );
-    private readonly targetScaleValue = requireElement<HTMLOutputElement>(
+    private readonly targetScaleValue = requireElement(
         "motionDebugTargetScaleValue",
+        HTMLOutputElement,
     );
-    private readonly smoothingValue = requireElement<HTMLOutputElement>(
+    private readonly smoothingValue = requireElement(
         "motionDebugSmoothingValue",
+        HTMLOutputElement,
     );
-    private readonly minConfidenceValue = requireElement<HTMLOutputElement>(
+    private readonly minConfidenceValue = requireElement(
         "motionDebugMinConfidenceValue",
+        HTMLOutputElement,
     );
-    private readonly captureResult = requireElement<HTMLElement>("motionDebugCaptureResult");
-    private readonly capturePreview = requireElement<HTMLImageElement>("motionDebugCapturePreview");
-    private readonly captureDownload = requireElement<HTMLAnchorElement>(
+    private readonly captureResult = requireElement("motionDebugCaptureResult", HTMLElement);
+    private readonly capturePreview = requireElement("motionDebugCapturePreview", HTMLImageElement);
+    private readonly captureDownload = requireElement(
         "motionDebugCaptureDownload",
+        HTMLAnchorElement,
     );
-    private readonly captureStatus = requireElement<HTMLElement>("motionDebugCaptureStatus");
+    private readonly captureStatus = requireElement("motionDebugCaptureStatus", HTMLElement);
 
     constructor(callbacks: MotionDebugControlCallbacks) {
         this.startButton.addEventListener("click", callbacks.onStart);
@@ -104,7 +110,7 @@ export class MotionDebugControls {
 
     private readRetargetConfig(): MotionDebugRetargetUiConfig {
         return {
-            armIkMode: this.ikModeInput.value as SincroPoseArmIkMode,
+            armIkMode: parseSincroPoseArmIkMode(this.ikModeInput.value),
             armIkStrength: Number(this.ikStrengthInput.value),
             armIkTargetScale: Number(this.targetScaleInput.value),
             smoothingMs: Number(this.smoothingInput.value),
@@ -126,4 +132,11 @@ export class MotionDebugControls {
         const stamp = new Date().toISOString().replace(/[:.]/g, "-");
         return `sincro-motion-debug-${stamp}.png`;
     }
+}
+
+function parseSincroPoseArmIkMode(value: string): SincroPoseArmIkMode {
+    if (value === "feature_only" || value === "screen_space_ik" || value === "world_3d_ik") {
+        return value;
+    }
+    throw new Error(`Unsupported arm IK mode: ${value}`);
 }

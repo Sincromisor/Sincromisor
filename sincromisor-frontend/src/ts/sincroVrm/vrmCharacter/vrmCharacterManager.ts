@@ -105,7 +105,11 @@ export class VRMCharacterManager {
     }
 
     private attachLoadedVrm(gltf: GLTF): void {
-        this.vrm = gltf.userData.vrm as VRM;
+        const loadedVrm: unknown = gltf.userData.vrm;
+        if (!isLoadedVrm(loadedVrm)) {
+            throw new Error("Loaded GLTF does not contain a VRM instance.");
+        }
+        this.vrm = loadedVrm;
         this.initializeVrmControllers(this.vrm);
         this.optimizeLoadedVrm(gltf);
         this.captureDefaultRootPosition();
@@ -244,4 +248,8 @@ export class VRMCharacterManager {
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
         this.sincroPoseRetargeter.setConfig(config);
     }
+}
+
+function isLoadedVrm(value: unknown): value is VRM {
+    return !!value && typeof value === "object" && "scene" in value && "humanoid" in value;
 }

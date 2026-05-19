@@ -12,18 +12,41 @@ export type SincroArmIkSkeleton = {
     chestNode?: Object3D;
 };
 
+const ARM_BONE_NAMES: Record<
+    SincroArmSide,
+    {
+        upperArm: VRMHumanBoneName;
+        lowerArm: VRMHumanBoneName;
+        hand: VRMHumanBoneName;
+        oppositeUpperArm: VRMHumanBoneName;
+    }
+> = {
+    left: {
+        upperArm: "leftUpperArm",
+        lowerArm: "leftLowerArm",
+        hand: "leftHand",
+        oppositeUpperArm: "rightUpperArm",
+    },
+    right: {
+        upperArm: "rightUpperArm",
+        lowerArm: "rightLowerArm",
+        hand: "rightHand",
+        oppositeUpperArm: "leftUpperArm",
+    },
+};
+
+const TORSO_BONE_FALLBACKS: VRMHumanBoneName[] = ["upperChest", "chest", "spine"];
+
 export function captureSincroArmIkSkeleton(
     vrm: VRM,
     side: SincroArmSide,
 ): SincroArmIkSkeleton | undefined {
     vrm.scene.updateMatrixWorld(true);
-    const upperArmNode = getNode(vrm, `${side}UpperArm` as VRMHumanBoneName);
-    const lowerArmNode = getNode(vrm, `${side}LowerArm` as VRMHumanBoneName);
-    const handNode = getNode(vrm, `${side}Hand` as VRMHumanBoneName);
-    const oppositeUpperArmNode = getNode(
-        vrm,
-        `${side === "left" ? "right" : "left"}UpperArm` as VRMHumanBoneName,
-    );
+    const names = ARM_BONE_NAMES[side];
+    const upperArmNode = getNode(vrm, names.upperArm);
+    const lowerArmNode = getNode(vrm, names.lowerArm);
+    const handNode = getNode(vrm, names.hand);
+    const oppositeUpperArmNode = getNode(vrm, names.oppositeUpperArm);
     if (!upperArmNode || !lowerArmNode || !handNode || !oppositeUpperArmNode) {
         return undefined;
     }
@@ -33,12 +56,8 @@ export function captureSincroArmIkSkeleton(
         lowerArmNode,
         handNode,
         oppositeUpperArmNode,
-        headNode: getNode(vrm, "head" as VRMHumanBoneName),
-        chestNode: firstNode(vrm, [
-            "upperChest" as VRMHumanBoneName,
-            "chest" as VRMHumanBoneName,
-            "spine" as VRMHumanBoneName,
-        ]),
+        headNode: getNode(vrm, "head"),
+        chestNode: firstNode(vrm, TORSO_BONE_FALLBACKS),
     };
 }
 

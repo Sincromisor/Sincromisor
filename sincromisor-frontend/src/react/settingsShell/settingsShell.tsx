@@ -254,17 +254,24 @@ type SettingsStatusCardProps = {
     tone?: "neutral" | "good" | "warn";
 };
 
-const statusToneStyles: Record<NonNullable<SettingsStatusCardProps["tone"]>, CSSProperties> = {
+type SettingsStatusStyle = CSSProperties & {
+    "--settings-status-accent": string;
+};
+
+const statusToneStyles: Record<
+    NonNullable<SettingsStatusCardProps["tone"]>,
+    SettingsStatusStyle
+> = {
     neutral: {
-        ["--settings-status-accent" as string]: "rgba(157, 176, 204, 0.18)",
+        "--settings-status-accent": "rgba(157, 176, 204, 0.18)",
     },
     good: {
-        ["--settings-status-accent" as string]: "rgba(119, 233, 168, 0.84)",
+        "--settings-status-accent": "rgba(119, 233, 168, 0.84)",
         borderColor: "rgba(119, 233, 168, 0.22)",
         background: "rgba(119, 233, 168, 0.06)",
     },
     warn: {
-        ["--settings-status-accent" as string]: "rgba(255, 198, 120, 0.88)",
+        "--settings-status-accent": "rgba(255, 198, 120, 0.88)",
         borderColor: "rgba(255, 198, 120, 0.24)",
         background: "rgba(255, 198, 120, 0.06)",
     },

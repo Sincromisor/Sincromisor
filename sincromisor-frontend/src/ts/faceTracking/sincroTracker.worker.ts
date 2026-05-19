@@ -12,7 +12,7 @@ type MediaPipeWorkerGlobal = typeof self & {
     import?: (path: string) => Promise<unknown>;
 };
 
-const mediaPipeWorkerGlobal = self as MediaPipeWorkerGlobal;
+const mediaPipeWorkerGlobal: MediaPipeWorkerGlobal = self;
 
 // MediaPipe Tasks Vision の wasm loader は Worker global の `import()` hook を参照する。
 // module Worker では `self.import` が標準提供されないため、MediaPipe を読み込む前に dynamic import へ橋渡しする。

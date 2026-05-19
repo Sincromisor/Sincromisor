@@ -58,14 +58,18 @@ export class OneEuroFilter1D {
     }
 
     setParams(params: Partial<{ minCutoff: number; beta: number; dCutoff: number }>): void {
-        if (Number.isFinite(params.minCutoff)) {
-            this.minCutoff = Math.max(0.01, params.minCutoff as number);
+        if (isFiniteNumber(params.minCutoff)) {
+            this.minCutoff = Math.max(0.01, params.minCutoff);
         }
-        if (Number.isFinite(params.beta)) {
-            this.beta = Math.max(0, params.beta as number);
+        if (isFiniteNumber(params.beta)) {
+            this.beta = Math.max(0, params.beta);
         }
-        if (Number.isFinite(params.dCutoff)) {
-            this.dCutoff = Math.max(0.01, params.dCutoff as number);
+        if (isFiniteNumber(params.dCutoff)) {
+            this.dCutoff = Math.max(0.01, params.dCutoff);
         }
     }
+}
+
+function isFiniteNumber(value: number | undefined): value is number {
+    return typeof value === "number" && Number.isFinite(value);
 }

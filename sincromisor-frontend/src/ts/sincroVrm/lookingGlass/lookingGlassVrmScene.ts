@@ -72,7 +72,7 @@ export class LookingGlassVRMScene extends VRMScene {
         window.addEventListener(
             "sincro:looking-glass-state",
             (event) => {
-                const detail = (event as CustomEvent<{ state: string; code?: string }>).detail;
+                const detail = event.detail;
                 if (!detail) {
                     return;
                 }

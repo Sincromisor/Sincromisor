@@ -9,6 +9,16 @@ type RtcIceDiagnosticsParams = {
     sessionId?: string;
 };
 
+type IceDiagnostics = {
+    selectedPairs: RtcStatsRecord[];
+    pairTotal: number;
+    pairSucceeded: number;
+    localCandidates: Map<string, RtcStatsRecord>;
+    remoteCandidates: Map<string, RtcStatsRecord>;
+    localTypeCount: Record<string, number>;
+    remoteTypeCount: Record<string, number>;
+};
+
 export async function captureIceFailureDiagnostics(params: RtcIceDiagnosticsParams): Promise<void> {
     try {
         const report = await params.peerConnection.getStats();
@@ -43,23 +53,15 @@ export async function captureIceFailureDiagnostics(params: RtcIceDiagnosticsPara
     }
 }
 
-function collectIceDiagnostics(report: RTCStatsReport): {
-    selectedPairs: RtcStatsRecord[];
-    pairTotal: number;
-    pairSucceeded: number;
-    localCandidates: Map<string, RtcStatsRecord>;
-    remoteCandidates: Map<string, RtcStatsRecord>;
-    localTypeCount: Record<string, number>;
-    remoteTypeCount: Record<string, number>;
-} {
-    const diagnostics = {
-        selectedPairs: [] as RtcStatsRecord[],
+function collectIceDiagnostics(report: RTCStatsReport): IceDiagnostics {
+    const diagnostics: IceDiagnostics = {
+        selectedPairs: [],
         pairTotal: 0,
         pairSucceeded: 0,
         localCandidates: new Map<string, RtcStatsRecord>(),
         remoteCandidates: new Map<string, RtcStatsRecord>(),
-        localTypeCount: {} as Record<string, number>,
-        remoteTypeCount: {} as Record<string, number>,
+        localTypeCount: {},
+        remoteTypeCount: {},
     };
     report.forEach((stats) => {
         addIceDiagnosticStats(diagnostics, stats);
