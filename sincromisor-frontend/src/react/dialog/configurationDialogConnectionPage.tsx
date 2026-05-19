@@ -1,8 +1,8 @@
-import { settingsPageCopy } from "../settings-shell/settingsPageCopy";
+import { settingsPageCopy } from "../settingsShell/settingsPageCopy";
 import {
     DialogSettingsCategory,
     DialogStartupSettingsSection,
-} from "./components/DialogSettingsFormSections";
+} from "./components/dialogSettingsFormSections";
 import type { useConfigurationDialogSettingsState } from "./useConfigurationDialogSettingsState";
 
 type ConfigurationDialogSettingsState = ReturnType<typeof useConfigurationDialogSettingsState>;

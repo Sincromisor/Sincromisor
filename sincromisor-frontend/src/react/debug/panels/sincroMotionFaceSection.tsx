@@ -1,4 +1,4 @@
-import type { DebugConsoleSnapshot } from "../../../ts/UI/DebugConsoleManager";
+import type { DebugConsoleSnapshot } from "../../../ts/ui/debugConsoleManager";
 import {
     formatHeadPose,
     formatInference,

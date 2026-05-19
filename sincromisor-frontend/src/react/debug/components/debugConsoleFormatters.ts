@@ -2,7 +2,7 @@ import {
     DEBUG_CONSOLE_TREND_MAX_VALUES,
     type DebugConsoleSnapshot,
     type DebugConsoleTrendKey,
-} from "../../../ts/UI/DebugConsoleManager";
+} from "../../../ts/ui/debugConsoleManager";
 
 export function meterPercent(value: number): string {
     return `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;

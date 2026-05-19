@@ -2,8 +2,8 @@ import type {
     DebugConsoleManager,
     DebugConsoleSnapshot,
     LearnedVadTuningUiConfig,
-} from "../../../ts/UI/DebugConsoleManager";
-import { RangeControl } from "../components/RangeControl";
+} from "../../../ts/ui/debugConsoleManager";
+import { RangeControl } from "../components/rangeControl";
 import { AudioPanelLearnedVadTuning } from "./audioPanelLearnedVadTuning";
 
 const VAD_RMS_PRESETS = [

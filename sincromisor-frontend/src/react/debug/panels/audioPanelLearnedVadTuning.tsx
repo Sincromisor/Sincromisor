@@ -3,8 +3,8 @@ import type {
     DebugConsoleSnapshot,
     LearnedVadPerformanceMode,
     LearnedVadTuningUiConfig,
-} from "../../../ts/UI/DebugConsoleManager";
-import { RangeControl } from "../components/RangeControl";
+} from "../../../ts/ui/debugConsoleManager";
+import { RangeControl } from "../components/rangeControl";
 
 type AudioPanelLearnedVadTuningProps = {
     audio: DebugConsoleSnapshot["audio"];
