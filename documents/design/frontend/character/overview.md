@@ -18,6 +18,18 @@
 
 ## Responsibilities
 
+- `src/character/scene`
+    - VRM scene、camera、light、通常 VRM initializer を置く。
+- `src/character/behavior`
+    - 会話、VAD、gaze、表情、視線、まばたきなどの振る舞い状態と controller を置く。
+- `src/character/retargeting`
+    - face / pose tracking snapshot から VRM 向け motion value へ変換する処理を置く。
+- `src/character/ik`
+    - arm IK solver、geometry、constraint、probe を置く。
+- `src/character/lookingGlass` / `src/character/vrm360`
+    - Looking Glass / VRM360 固有 scene runtime と initializer を置く。
+- `src/character/vrmCharacter`
+    - VRM character manager と motion controller のうち、behavior / retargeting / IK に属さない VRM 適用処理を置く。
 - `VRMScene`
     - renderer、camera、light、resize、render loop を持つ。
 - `VRMCharacterManager`

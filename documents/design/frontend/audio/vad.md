@@ -18,6 +18,12 @@
 
 ## Responsibilities
 
+- `src/features/media/userMedia`
+    - microphone / camera stream、device constraint、track lifecycle、audio profile を置く。
+- `src/features/media/vad`
+    - Silero VAD worker、learned VAD client、audio processing runtime、speech state を置く。
+- `src/features/media/devices`
+    - media device list service を置く。
 - UserMedia / audio processing:
     - microphone stream から volume envelope を計算する。
 - VAD state:

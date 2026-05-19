@@ -20,6 +20,14 @@
 
 ## Responsibilities
 
+- `src/character/behavior`
+    - `CharacterBehaviorState` と eye / face / head controller を置き、会話・VAD・gaze 由来の状態解釈を担当する。
+- `src/character/retargeting`
+    - `SincroFaceRetargeter` / `SincroPoseRetargeter` と retarget frame / target 型を置く。
+- `src/character/ik`
+    - `SincroArmIkSolver` と solver probe / constraint / geometry / pole を置く。
+- `src/character/vrmCharacter`
+    - arm / leg / torso / motion orchestrator と `VRMCharacterManager` を置く。
 - `FaceMorphController`
     - `telop_ch` 由来の mora / vowel で口形を駆動する。
     - `sincro` ではユーザー口形 retarget を優先する。

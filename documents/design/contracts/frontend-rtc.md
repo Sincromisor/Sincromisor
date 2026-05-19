@@ -20,7 +20,7 @@
 
 - DataChannel 名、endpoint path、必須 JSON field の変更は破壊的変更として扱う。
 - `text_ch` の `expression_code` は任意 field とし、欠落時は neutral 相当として扱う。
-- 破壊的変更時は `RTCTalkClient.ts`、`RTCSignalingServer.py`、`RTCSessionOffer.py`、関連 task を同時更新する。
+- 破壊的変更時は `src/features/rtc/rtcTalkClient.ts`、`RTCSignalingServer.py`、`RTCSessionOffer.py`、関連 task を同時更新する。
 
 ## Endpoints / Channels
 

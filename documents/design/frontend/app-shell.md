@@ -5,6 +5,7 @@
 - フロントエンドは Vite MPA を維持し、modern ページは単一 React app shell へ集約している。
 - `simple-vrm`、`vrm360`、`looking-glass-vrm` は `div#sincroPageRoot` 配下で dialog / header / chat / telop / settings / debug を描画する。
 - WebRTC、UserMedia、CharacterGaze、VRM scene の起動は `SincroAppController` と下位 controller が束ねる。
+- 物理構成は `app` / `features` / `character` / `shared` / `pages` を上位境界とし、旧 `src/ts` / `src/react` には新規実装を置かない。
 - RTC 契約の正本は `contracts/frontend-rtc.md` に置く。
 
 ## Scope
@@ -34,6 +35,27 @@
     - PeerConnection、Offer/Answer、ICE candidate、DataChannel event を扱う。
 - React settings / debug components
     - 表示と操作に専念し、WebRTC や MediaPipe の生制御を直接持たない。
+
+## Physical Structure
+
+- `src/app/controller`
+    - `SincroAppController` / `SincroController` と、RTC・audio・gaze を束ねる app-level controller を置く。
+- `src/app/events`
+    - AppController の event hub、snapshot emission、active subscription wiring、window event binder を置く。
+- `src/app/bridges`
+    - AppController と legacy manager / service singleton の接続点、bridge 型、runtime bundle factory を置く。
+- `src/app/settings`
+    - settings snapshot / apply / startup status / related payload cache を置く。
+- `src/app/react`
+    - active AppController subscription hook、panel state helper、UI tuning など app shell から使う React helper を置く。
+- `src/features`
+    - RTC、media、conversation、dialog、debug、settings、gaze などユーザー機能単位の model / React / runtime を置く。
+- `src/character`
+    - VRM scene、behavior、retargeting、IK、page-specific VRM runtime を置く。
+- `src/shared`
+    - logging と横断型など、feature 固有ではない基盤を置く。
+- `src/pages`
+    - Vite MPA の HTML / entry / page-specific React panel / developer page runtime を置く。
 
 ## Data / State
 

@@ -4,32 +4,32 @@ import type {
     SincroAppDialogBridge,
     SincroAppRtcBridge,
     SincroAppStateBridge,
-} from "../../ts/app/sincroAppBridges";
-import {
-    buildSincroAppControllerConnectionStateEvent,
-    emitSincroAppControllerConnectionState,
-} from "../../ts/app/sincroAppControllerConnectionState";
-import { emitSincroAppControllerInitialSnapshot } from "../../ts/app/sincroAppControllerInitialSnapshot";
+} from "../bridges/sincroAppBridges";
 import {
     createSincroAppRuntimeBundle,
     type SincroAppControllerRuntimeBundle,
-} from "../../ts/app/sincroAppControllerRuntime";
-import { bindSincroAppControllerSubscriptions } from "../../ts/app/sincroAppControllerSubscriptions";
-import { bindSincroAppControllerWindowEvents } from "../../ts/app/sincroAppControllerWindowEvents";
+} from "../bridges/sincroAppControllerRuntime";
+import {
+    buildSincroAppControllerConnectionStateEvent,
+    emitSincroAppControllerConnectionState,
+} from "../events/sincroAppControllerConnectionState";
+import { emitSincroAppControllerInitialSnapshot } from "../events/sincroAppControllerInitialSnapshot";
+import { bindSincroAppControllerSubscriptions } from "../events/sincroAppControllerSubscriptions";
+import { bindSincroAppControllerWindowEvents } from "../events/sincroAppControllerWindowEvents";
 import {
     emitSincroAppLifecycle,
     emitSincroAppSettingsRelatedSnapshots,
-} from "../../ts/app/sincroAppEmitHelpers";
-import { SincroAppEventHub } from "../../ts/app/sincroAppEventHub";
-import { SincroAppLookingGlassStateTracker } from "../../ts/app/sincroAppLookingGlassStateTracker";
-import { applySincroAppControllerSettings } from "../../ts/app/sincroAppSettingsApplyFlow";
-import { SincroAppSettingsRelatedPayloadCache } from "../../ts/app/sincroAppSettingsRelatedPayloadCache";
-import { buildSincroAppSettingsSnapshot } from "../../ts/app/sincroAppSettingsSnapshotBuilder";
+} from "../events/sincroAppEmitHelpers";
+import { SincroAppEventHub } from "../events/sincroAppEventHub";
+import { SincroAppLookingGlassStateTracker } from "../events/sincroAppLookingGlassStateTracker";
+import { applySincroAppControllerSettings } from "../settings/sincroAppSettingsApplyFlow";
+import { SincroAppSettingsRelatedPayloadCache } from "../settings/sincroAppSettingsRelatedPayloadCache";
+import { buildSincroAppSettingsSnapshot } from "../settings/sincroAppSettingsSnapshotBuilder";
 import {
     buildStartupSettingsStatus,
     type SincroAppStartupAppliedSettings,
-} from "../../ts/app/sincroAppStartupSettings";
-import { buildSincroAppUiStateSnapshot } from "../../ts/app/sincroAppUiStateSnapshotBuilder";
+} from "../settings/sincroAppStartupSettings";
+import { buildSincroAppUiStateSnapshot } from "../settings/sincroAppUiStateSnapshotBuilder";
 import { SincroAppActiveControllerRegistry } from "./sincroAppActiveControllerRegistry";
 import type {
     SincroAppDialogUiState,
@@ -50,7 +50,7 @@ export type {
     SincroAppDialogBridge,
     SincroAppRtcBridge,
     SincroAppStateBridge,
-} from "../../ts/app/sincroAppBridges";
+} from "../bridges/sincroAppBridges";
 export type {
     SincroAppDialogPopMessage,
     SincroAppDialogUiState,
