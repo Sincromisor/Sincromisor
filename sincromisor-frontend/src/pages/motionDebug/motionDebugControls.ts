@@ -1,7 +1,7 @@
 import type {
     SincroPoseArmIkMode,
     SincroPoseRetargetConfig,
-} from "../ts/sincroVrm/vrmCharacter/sincroPoseRetargeter";
+} from "../../ts/sincroVrm/vrmCharacter/sincroPoseRetargeter";
 import { requireElement } from "./dom";
 import type { MotionDebugRetargetUiConfig, MotionDebugStatus } from "./types";
 

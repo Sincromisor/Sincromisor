@@ -4,6 +4,7 @@
 
 - modern frontend は `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug` の 5 ページを通常ビルド対象にする。
 - Babylon.js legacy ページは通常導線と通常ビルドから外れている。
+- source entry は `sincromisor-frontend/src/pages/*` に集約し、Vite の route alias で既存公開 URL を維持する。
 - ページ差分は entry / initializer / scene option / page-specific settings に閉じ込める。
 
 ## Scope
@@ -18,18 +19,23 @@
 
 ## Page Matrix
 
-| Page                | 分類         | 役割                    | 主な確認文書                                                     |
-| ------------------- | ------------ | ----------------------- | ---------------------------------------------------------------- |
-| `main`              | modern       | 通常導線の入口          | `frontend/app-shell.md`                                          |
-| `simple-vrm`        | modern       | 通常会話の正規ルート    | `frontend/app-shell.md`, `frontend/character/overview.md`        |
-| `vrm360`            | experimental | 360 表示実験            | `frontend/character/overview.md`                                 |
-| `looking-glass-vrm` | experimental | Looking Glass + VRM 1.0 | `frontend/character/overview.md`                                 |
-| `motion-debug`      | experimental | Pose retarget / IK 調整 | `frontend/character/motion.md`, `frontend/character/tracking.md` |
+| Page                    | Source entry                               | 公開 URL                  | 分類         | 役割                    | 主な確認文書                                                     |
+| ----------------------- | ------------------------------------------ | ------------------------- | ------------ | ----------------------- | ---------------------------------------------------------------- |
+| `main`                  | `src/pages/main/index.html`                | `/`                       | modern       | 通常導線の入口          | `frontend/app-shell.md`                                          |
+| `simple-vrm`            | `src/pages/simpleVrm/index.html`           | `/simple-vrm/`            | modern       | 通常会話の正規ルート    | `frontend/app-shell.md`, `frontend/character/overview.md`        |
+| `vrm360`                | `src/pages/vrm360/index.html`              | `/vrm360/`                | experimental | 360 表示実験            | `frontend/character/overview.md`                                 |
+| `looking-glass-vrm`     | `src/pages/lookingGlassVrm/index.html`     | `/looking-glass-vrm/`     | experimental | Looking Glass + VRM 1.0 | `frontend/character/overview.md`                                 |
+| `motion-debug`          | `src/pages/motionDebug/index.html`         | `/motion-debug/`          | experimental | Pose retarget / IK 調整 | `frontend/character/motion.md`, `frontend/character/tracking.md` |
+| `pose-landmarker-spike` | `src/pages/poseLandmarkerSpike/index.html` | `/pose-landmarker-spike/` | experimental | MediaPipe Pose 性能検証 | `frontend/character/tracking.md`                                 |
 
 ## Responsibilities
 
 - Entry files:
-    - ページ固有 initializer を呼ぶ薄い入口に保つ。
+    - `src/pages/*` 配下に置き、ページ固有 initializer を呼ぶ薄い入口に保つ。
+    - source directory は camelCase、公開 URL は既存 kebab-case route を維持する。
+- Vite route alias:
+    - dev では旧公開 URL を `src/pages/*` の HTML へ内部 rewrite する。
+    - build 後は `dist/pages/*/index.html` を `dist/<public-route>/index.html` へ移し、preview / 配信 URL を変えない。
 - Initializer:
     - scene / page option を組み立て、app controller の起動へ委譲する。
 - React app shell:
@@ -42,6 +48,7 @@
 
 - 新しい通常ページを追加する場合:
     - Vite build input
+    - Vite route alias
     - app shell mount
     - settings / debug availability
     - `documents/design/index.md`

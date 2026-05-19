@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import react from "@vitejs/plugin-react-swc";
@@ -14,14 +14,89 @@ const mediapipeTasksVisionPackageJson = JSON.parse(
 );
 const mediapipeTasksVisionVersion = mediapipeTasksVisionPackageJson.version;
 const reactRuntimePackages = ["/react/", "/react-dom/", "/scheduler/"];
+const pageRouteAliases = [
+    {
+        source: "pages/main/index.html",
+        publicPath: "index.html",
+        devRoutes: ["/", "/index.html"],
+    },
+    {
+        source: "pages/simpleVrm/index.html",
+        publicPath: "simple-vrm/index.html",
+        devRoutes: ["/simple-vrm", "/simple-vrm/", "/simple-vrm/index.html"],
+    },
+    {
+        source: "pages/vrm360/index.html",
+        publicPath: "vrm360/index.html",
+        devRoutes: ["/vrm360", "/vrm360/", "/vrm360/index.html"],
+    },
+    {
+        source: "pages/lookingGlassVrm/index.html",
+        publicPath: "looking-glass-vrm/index.html",
+        devRoutes: ["/looking-glass-vrm", "/looking-glass-vrm/", "/looking-glass-vrm/index.html"],
+    },
+    {
+        source: "pages/motionDebug/index.html",
+        publicPath: "motion-debug/index.html",
+        devRoutes: ["/motion-debug", "/motion-debug/", "/motion-debug/index.html"],
+    },
+    {
+        source: "pages/poseLandmarkerSpike/index.html",
+        publicPath: "pose-landmarker-spike/index.html",
+        devRoutes: [
+            "/pose-landmarker-spike",
+            "/pose-landmarker-spike/",
+            "/pose-landmarker-spike/index.html",
+        ],
+    },
+];
+
+function rewritePageRouteRequest(req, _res, next) {
+    if (!req.url) {
+        next();
+        return;
+    }
+    const queryStartIndex = req.url.indexOf("?");
+    const requestPath = queryStartIndex === -1 ? req.url : req.url.slice(0, queryStartIndex);
+    const query = queryStartIndex === -1 ? "" : req.url.slice(queryStartIndex);
+    const routeAlias = pageRouteAliases.find((alias) => alias.devRoutes.includes(requestPath));
+    if (routeAlias) {
+        req.url = `/${routeAlias.source}${query}`;
+    }
+    next();
+}
+
+function sincroPageRouteAliasPlugin() {
+    return {
+        name: "sincro-page-route-alias",
+        configureServer(server) {
+            server.middlewares.use(rewritePageRouteRequest);
+        },
+        writeBundle(options) {
+            if (!options.dir) {
+                return;
+            }
+            for (const routeAlias of pageRouteAliases) {
+                const sourcePath = resolve(options.dir, routeAlias.source);
+                if (!existsSync(sourcePath)) {
+                    continue;
+                }
+                const publicPath = resolve(options.dir, routeAlias.publicPath);
+                mkdirSync(dirname(publicPath), { recursive: true });
+                renameSync(sourcePath, publicPath);
+            }
+        },
+    };
+}
 
 function buildInputMap() {
     return {
-        main: resolve(contents_src, "index.html"),
-        simple_vrm: resolve(contents_src, "simple-vrm/index.html"),
-        vrm360: resolve(contents_src, "vrm360/index.html"),
-        looking_glass_vrm: resolve(contents_src, "looking-glass-vrm/index.html"),
-        motion_debug: resolve(contents_src, "motion-debug/index.html"),
+        main: resolve(contents_src, "pages/main/index.html"),
+        simple_vrm: resolve(contents_src, "pages/simpleVrm/index.html"),
+        vrm360: resolve(contents_src, "pages/vrm360/index.html"),
+        looking_glass_vrm: resolve(contents_src, "pages/lookingGlassVrm/index.html"),
+        motion_debug: resolve(contents_src, "pages/motionDebug/index.html"),
+        pose_landmarker_spike: resolve(contents_src, "pages/poseLandmarkerSpike/index.html"),
     };
 }
 
@@ -36,7 +111,7 @@ export default defineConfig({
     worker: {
         format: "es",
     },
-    plugins: [react()],
+    plugins: [react(), sincroPageRouteAliasPlugin()],
     root: contents_src,
     publicDir: resolve(__dirname, "public"),
     build: {

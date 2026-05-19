@@ -1,10 +1,10 @@
 import type {
     SincroPoseMotionSnapshot,
     SincroPoseTargetPointSnapshot,
-} from "../ts/faceTracking/sincroPoseMotionSnapshot";
-import type { SincroTrackerWorkerStats } from "../ts/faceTracking/sincroTrackerWorkerTypes";
-import type { SincroPoseRetargetConfig } from "../ts/sincroVrm/vrmCharacter/sincroPoseRetargeter";
-import type { DebugConsoleSnapshot } from "../ts/ui/debugConsoleManager";
+} from "../../ts/faceTracking/sincroPoseMotionSnapshot";
+import type { SincroTrackerWorkerStats } from "../../ts/faceTracking/sincroTrackerWorkerTypes";
+import type { SincroPoseRetargetConfig } from "../../ts/sincroVrm/vrmCharacter/sincroPoseRetargeter";
+import type { DebugConsoleSnapshot } from "../../ts/ui/debugConsoleManager";
 
 export type MotionDebugStatus = "idle" | "loading" | "running" | "stopped" | "error";
 

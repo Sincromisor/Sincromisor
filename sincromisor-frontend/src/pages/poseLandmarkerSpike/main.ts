@@ -4,12 +4,12 @@ import type {
     PoseLandmarkerSpikeConfig,
     PoseLandmarkerSpikeMetrics,
     PoseLandmarkerSpikeModelPreset,
-} from "../ts/characterGaze/poseLandmarkerSpike";
+} from "../../ts/characterGaze/poseLandmarkerSpike";
 import {
     DEFAULT_POSE_LANDMARKER_SPIKE_CONFIG,
     POSE_LANDMARKER_SPIKE_MODEL_PATHS,
     PoseLandmarkerSpike,
-} from "../ts/characterGaze/poseLandmarkerSpike";
+} from "../../ts/characterGaze/poseLandmarkerSpike";
 import "./styles.css";
 
 const previewVideo = requireElement("previewVideo", HTMLVideoElement);
