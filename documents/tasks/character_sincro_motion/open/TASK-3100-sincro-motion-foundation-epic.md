@@ -83,10 +83,10 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 ## 子タスク
 
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3101-sincro-motion-architecture-and-design-doc.md`
-- Open: `documents/tasks/character_sincro_motion/open/TASK-3102-face-tracking-runtime-and-sincro-face-tracker.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3102-face-tracking-runtime-and-sincro-face-tracker.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3103-sincro-face-retargeting-head-eye-mouth.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
-- Open: `documents/tasks/character_sincro_motion/open/TASK-3105-pose-landmarker-feasibility-spike.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-3105-pose-landmarker-feasibility-spike.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3106-optional-sincro-pose-tracker-and-performance-gates.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3107-sincro-motion-observability-settings-and-verification.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3108-sincro-head-pitch-direction-fix.md`
@@ -98,13 +98,14 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3114-sincro-lightweight-two-bone-arm-ik.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-3115-sincro-pose-upper-body-anchor-and-ik-fallback.md`
 - Open: `documents/tasks/character_sincro_motion/open/TASK-3116-sincro-pose-ik-observability-verification-and-design-sync.md`
-- Open: `documents/tasks/character_sincro_motion/open/TASK-260517014025-sincro-pose-ik-wrist-confidence-gate.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-260517014025-sincro-pose-ik-wrist-confidence-gate.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-260517020308-sincro-pose-inference-warmup-gate.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-260517020748-sincro-pose-force-tracking-setting.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-260517024504-sincro-pose-world-landmarks-and-3d-targets.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-260517024505-sincro-vrm-3d-two-bone-ik-solver.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-260517024506-sincro-ik-solver-comparison-and-adoption.md`
 - Done: `documents/tasks/character_sincro_motion/done/TASK-260517053106-sincro-arm-ik-joint-constraints-and-collision.md`
+- Done: `documents/tasks/character_sincro_motion/done/TASK-260517042345-sincro-motion-debug-page-for-ik-playwright.md`
 
 ## 完了条件
 
@@ -130,6 +131,12 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 - フロントエンド実装は `src/ts/**` から `src/app/**`、`src/features/**`、`src/character/**`、`src/pages/**` へ再配置済み。
 - 設計文書は legacy flat な `documents/design/frontend_character.md` ではなく、`documents/design/frontend/character/` 配下と `documents/design/frontend/pages.md` を正本として参照する。
 - `motion-debug` と `pose-landmarker-spike` は Vite MPA の input と dev route alias に登録済み。
+
+## 現状確認 2026-05-25
+
+- 実装済みだが実機確認だけが残っていた `TASK-3102`、`TASK-3105`、`TASK-260517014025`、`TASK-260517042345` は Done へ整理した。
+- 残タスクは、本 Epic と `TASK-3116` の最終実機検証に集約する。
+- `TASK-3116` では、実カメラ、複数 VRM、複数 viewport、`motion-debug` 経由の camera / pose 検出、IK 既定値を確認する。
 
 ## 確認コマンド案
 

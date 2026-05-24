@@ -1,7 +1,7 @@
 # TASK-3102 Face Tracking Runtime と SincroFaceTracker 基盤
 
 - 作成日: 2026-05-11
-- ステータス: Open
+- ステータス: Done
 - 優先度: Critical
 - 親タスク: `TASK-3100`
 - 依存: `TASK-3101`
@@ -92,3 +92,8 @@ MediaPipe 顔認識の起動、停止、カメラ接続、エラー処理、モ�
 
 - リファクタリング後の配置に合わせ、実装対象候補を `src/features/gaze/**`、`src/app/controller/**`、`src/character/behavior/**` へ更新した。
 - `src/ts/**` 配下の旧候補は現行 tree に存在しないため参照しない。
+
+### 2026-05-25 整理
+
+- 実装、設計反映、build 確認は完了済みのため Done とする。
+- 実カメラ + `face_landmarker.task` 配置状態での head pose / blink / mouth blendshape 実測は、基盤実装タスクではなく最終実機検証として `TASK-3116` に集約する。

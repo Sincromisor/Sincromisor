@@ -1,7 +1,7 @@
 # TASK-3105 Pose Landmarker 実現性・性能検証 Spike
 
 - 作成日: 2026-05-11
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 - 親タスク: `TASK-3100`
 - 依存: `TASK-3101`
@@ -51,7 +51,7 @@ MediaPipe `PoseLandmarker` を Sincromisor の将来の手・腕・上半身同�
 - `sincromisor-frontend/src/pages/poseLandmarkerSpike/styles.css`
 - `sincromisor-frontend/vite.config.js`
 - `sincromisor-frontend/public/3rd_party/README.md`
-- `documents/tasks/character_sincro_motion/open/TASK-3105-pose-landmarker-feasibility-spike.md`
+- `documents/tasks/character_sincro_motion/done/TASK-3105-pose-landmarker-feasibility-spike.md`
 
 ## 完了条件
 
@@ -130,3 +130,8 @@ MediaPipe `PoseLandmarker` を Sincromisor の将来の手・腕・上半身同�
 
 - リファクタリング後、PoC core は `src/features/gaze/poseTracking/spike/**`、ページ入口は `src/pages/poseLandmarkerSpike/**` に配置されている。
 - `pose-landmarker-spike` は Vite MPA の build input に含まれるため、現状は production build の対象として扱う。
+
+### 2026-05-25 整理
+
+- Spike と条件付き採用判断は完了済みで、後続の `TASK-3106` 以降も実装済みのため Done とする。
+- 実カメラでの推論負荷、FaceLandmarker 同時実行負荷、上半身 landmark 安定性は、Pose 採用判断の blocker ではなく最終実機検証として `TASK-3116` に集約する。

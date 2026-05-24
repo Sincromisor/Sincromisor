@@ -2,7 +2,7 @@
 
 ## Summary
 
-- modern frontend は `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug` の 5 ページを通常ビルド対象にする。
+- modern frontend は `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` の 6 ページを通常ビルド対象にする。
 - Babylon.js legacy ページは通常導線と通常ビルドから外れている。
 - source entry は `sincromisor-frontend/src/pages/*` に集約し、Vite の route alias で既存公開 URL を維持する。
 - ページ差分は entry / initializer / scene option / page-specific settings に閉じ込める。

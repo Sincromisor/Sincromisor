@@ -8,10 +8,10 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 
 - Open: `open/TASK-3100-sincro-motion-foundation-epic.md`
 - Done: `done/TASK-3101-sincro-motion-architecture-and-design-doc.md`
-- Open: `open/TASK-3102-face-tracking-runtime-and-sincro-face-tracker.md`
+- Done: `done/TASK-3102-face-tracking-runtime-and-sincro-face-tracker.md`
 - Done: `done/TASK-3103-sincro-face-retargeting-head-eye-mouth.md`
 - Done: `done/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
-- Open: `open/TASK-3105-pose-landmarker-feasibility-spike.md`
+- Done: `done/TASK-3105-pose-landmarker-feasibility-spike.md`
 - Done: `done/TASK-3106-optional-sincro-pose-tracker-and-performance-gates.md`
 - Done: `done/TASK-3107-sincro-motion-observability-settings-and-verification.md`
 - Done: `done/TASK-3108-sincro-head-pitch-direction-fix.md`
@@ -23,11 +23,12 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 - Done: `done/TASK-3114-sincro-lightweight-two-bone-arm-ik.md`
 - Done: `done/TASK-3115-sincro-pose-upper-body-anchor-and-ik-fallback.md`
 - Open: `open/TASK-3116-sincro-pose-ik-observability-verification-and-design-sync.md`
-- Open: `open/TASK-260517014025-sincro-pose-ik-wrist-confidence-gate.md`
+- Done: `done/TASK-260517014025-sincro-pose-ik-wrist-confidence-gate.md`
 - Done: `done/TASK-260517024504-sincro-pose-world-landmarks-and-3d-targets.md`
 - Done: `done/TASK-260517024505-sincro-vrm-3d-two-bone-ik-solver.md`
 - Done: `done/TASK-260517024506-sincro-ik-solver-comparison-and-adoption.md`
-- Open: `open/TASK-260517042345-sincro-motion-debug-page-for-ik-playwright.md`
+- Done: `done/TASK-260517042345-sincro-motion-debug-page-for-ik-playwright.md`
+- Done: `done/TASK-260517053106-sincro-arm-ik-joint-constraints-and-collision.md`
 
 ## 前提
 
@@ -56,9 +57,15 @@ Pose Landmarker は face-only の本流と分けて進める。
 7. `TASK-3113`: 簡易 IK の入力として、肩・肘・手首 target を snapshot に正規化する。
 8. `TASK-3114`: 新規外部ライブラリへ置き換えず、軽量 two-bone arm IK で腕先を target へ寄せる。
 9. `TASK-3115`: 上半身 anchor、motion priority、部位別 fallback を調整して IK の破綻を抑える。
-10. `TASK-3116`: IK の観測性、実カメラ検証、設計文書同期を行う。
-11. `TASK-260517014025`: 実カメラで手首 confidence が低く IK が落ちる gate を改善する。
-12. `TASK-260517024504`: MediaPipe `worldLandmarks` を 3D IK 用 target snapshot へ正規化する。
-13. `TASK-260517024505`: VRM normalized bones に適用する 3D two-bone IK solver を実装する。
-14. `TASK-260517024506`: `CCDIKSolver` など外部 solver と比較し、本流の IK 方針を採用判断する。
-15. `TASK-260517042345`: 本番 UI から独立した motion / IK デバッグ専用ページを用意し、Playwright 経由で調整・検証できるようにする。
+10. `TASK-260517014025`: 実カメラで手首 confidence が低く IK が落ちる gate を改善する。
+11. `TASK-260517024504`: MediaPipe `worldLandmarks` を 3D IK 用 target snapshot へ正規化する。
+12. `TASK-260517024505`: VRM normalized bones に適用する 3D two-bone IK solver を実装する。
+13. `TASK-260517024506`: `CCDIKSolver` など外部 solver と比較し、本流の IK 方針を採用判断する。
+14. `TASK-260517042345`: 本番 UI から独立した motion / IK デバッグ専用ページを用意し、Playwright 経由で調整・検証できるようにする。
+15. `TASK-260517053106`: 腕 IK の関節制約と簡易 collision / no-go zone を追加する。
+16. `TASK-3116`: 実カメラ、複数 VRM、複数 viewport で最終検証し、必要な調整値と確認結果を記録する。
+
+## 現在の残タスク
+
+- `TASK-3100`: Sincro motion 全体 Epic。子タスク完了と最終確認を受けて閉じる。
+- `TASK-3116`: Sincro Pose IK の最終実機検証。実装済みの tracker / retarget / IK / Debug Console / motion-debug を使い、実カメラ・複数 VRM・既定値を確認する。
