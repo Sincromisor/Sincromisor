@@ -1,3 +1,4 @@
+import { createCoreSettingsPage } from "../../../features/settings/react/pages/coreSettingsPages";
 import { settingsPageCopy } from "../../../features/settings/react/shell/settingsPageCopy";
 import type { SettingsShellPage } from "../../../features/settings/react/shell/settingsShell";
 import { LookingGlassControlPage } from "./lookingGlassControlPage";
@@ -33,11 +34,5 @@ function createLookingGlassPage(panelState: SimpleVrmPanelState): SettingsShellP
 }
 
 function createConnectionPage(panelState: SimpleVrmPanelState): SettingsShellPage {
-    return {
-        id: "connection",
-        label: settingsPageCopy.connection.label,
-        title: settingsPageCopy.connection.title,
-        description: settingsPageCopy.connection.description,
-        content: <ConnectionSettingsPage panelState={panelState} />,
-    };
+    return createCoreSettingsPage("connection", <ConnectionSettingsPage panelState={panelState} />);
 }

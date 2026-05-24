@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
     AudioInputDeviceField,
     AudioProcessingToggles,
@@ -7,6 +6,7 @@ import {
     SettingsButton,
     SettingsHelpLabel,
 } from "../../../../features/settings/react/primitives/settingsPrimitives";
+import { useSettingsDeviceRefresh } from "../../../../features/settings/react/sections/settingsDeviceRefresh";
 import { compactGapPx, sectionSpacingPx, settingsTuning } from "./settingsSectionLayout";
 import type { DeviceSettingsProps } from "./settingsSectionTypes";
 
@@ -23,7 +23,7 @@ export function MicSettingsSection({
     showSectionTitle = true,
     mode = "full",
 }: DeviceSettingsProps & { mode?: MicSettingsSectionMode }) {
-    const { refreshMessage, handleRefreshDevices } = useMicDeviceRefresh(onRefreshDevices);
+    const { refreshMessage, handleRefreshDevices } = useSettingsDeviceRefresh(onRefreshDevices);
     const showDeviceSelection = mode !== "processing";
     const showProcessingOptions = mode !== "device";
 
@@ -52,24 +52,6 @@ export function MicSettingsSection({
             {refreshMessage ? <MicRefreshMessage text={refreshMessage} /> : null}
         </div>
     );
-}
-
-function useMicDeviceRefresh(onRefreshDevices: DeviceSettingsProps["onRefreshDevices"]) {
-    const [refreshMessage, setRefreshMessage] = useState<string>("");
-    const handleRefreshDevices = (): void => {
-        setRefreshMessage("");
-        void onRefreshDevices().then((nextSnapshot) => {
-            if (nextSnapshot.refreshError) {
-                setRefreshMessage(
-                    `デバイス一覧の再取得に失敗しました: ${nextSnapshot.refreshError}`,
-                );
-                return;
-            }
-            setRefreshMessage("デバイス一覧を更新しました。");
-        });
-    };
-
-    return { refreshMessage, handleRefreshDevices };
 }
 
 type MicDeviceSelectionProps = Omit<DeviceSettingsProps, "onRefreshDevices"> & {

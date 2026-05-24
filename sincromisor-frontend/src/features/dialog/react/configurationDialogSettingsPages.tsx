@@ -1,3 +1,5 @@
+import { createCoreSettingsPages } from "../../settings/react/pages/coreSettingsPages";
+import { SettingsCategorySection } from "../../settings/react/sections/settingsCategorySection";
 import { settingsPageCopy } from "../../settings/react/shell/settingsPageCopy";
 import type { SettingsShellPage } from "../../settings/react/shell/settingsShell";
 import {
@@ -5,7 +7,6 @@ import {
     DialogCharacterSettingsSection,
     DialogDeviceSettingsSection,
     DialogMicSettingsSection,
-    DialogSettingsCategory,
 } from "./components/dialogSettingsFormSections";
 import { DialogVrmDropStatusCard, VrmModelSection } from "./components/dialogSettingsSections";
 import { ConfigurationDialogConnectionPage } from "./configurationDialogConnectionPage";
@@ -22,22 +23,9 @@ export function createConfigurationDialogSettingsPages({
     state,
     onOpenFilePicker,
 }: ConfigurationDialogSettingsPagesOptions): SettingsShellPage[] {
-    return [
-        createConversationPage(state),
-        createDevicesPage(state),
-        createAudioPage(state),
-        createDisplayPage({ state, onOpenFilePicker }),
-        createConnectionPage(state),
-    ];
-}
-
-function createConversationPage(state: ConfigurationDialogSettingsState): SettingsShellPage {
-    return {
-        id: "conversation",
-        label: settingsPageCopy.conversation.label,
-        title: settingsPageCopy.conversation.title,
-        content: (
-            <DialogSettingsCategory title={settingsPageCopy.conversation.sectionTitle}>
+    return createCoreSettingsPages({
+        conversation: (
+            <SettingsCategorySection title={settingsPageCopy.conversation.sectionTitle}>
                 <DialogBasicSettingsSection
                     settings={state.settings}
                     uiState={state.settingsUiState}
@@ -45,18 +33,10 @@ function createConversationPage(state: ConfigurationDialogSettingsState): Settin
                     onTalkModeChange={state.changeTalkMode}
                     showSectionTitle={false}
                 />
-            </DialogSettingsCategory>
+            </SettingsCategorySection>
         ),
-    };
-}
-
-function createDevicesPage(state: ConfigurationDialogSettingsState): SettingsShellPage {
-    return {
-        id: "devices",
-        label: settingsPageCopy.devices.label,
-        title: settingsPageCopy.devices.title,
-        content: (
-            <DialogSettingsCategory title={settingsPageCopy.devices.sectionTitle}>
+        devices: (
+            <SettingsCategorySection title={settingsPageCopy.devices.sectionTitle}>
                 <DialogDeviceSettingsSection
                     settings={state.settings}
                     uiState={state.settingsUiState}
@@ -68,19 +48,10 @@ function createDevicesPage(state: ConfigurationDialogSettingsState): SettingsShe
                     onRefreshDevices={state.refreshDevices}
                     showSectionTitle={false}
                 />
-            </DialogSettingsCategory>
+            </SettingsCategorySection>
         ),
-    };
-}
-
-function createAudioPage(state: ConfigurationDialogSettingsState): SettingsShellPage {
-    return {
-        id: "audio",
-        label: settingsPageCopy.audio.label,
-        title: settingsPageCopy.audio.title,
-        description: settingsPageCopy.audio.description,
-        content: (
-            <DialogSettingsCategory>
+        audio: (
+            <SettingsCategorySection>
                 <DialogMicSettingsSection
                     settings={state.settings}
                     uiState={state.settingsUiState}
@@ -88,9 +59,11 @@ function createAudioPage(state: ConfigurationDialogSettingsState): SettingsShell
                     showSectionTitle={false}
                     sectionTitle={settingsPageCopy.audio.sectionTitle}
                 />
-            </DialogSettingsCategory>
+            </SettingsCategorySection>
         ),
-    };
+        display: <DisplaySettingsPage state={state} onOpenFilePicker={onOpenFilePicker} />,
+        connection: <ConfigurationDialogConnectionPage state={state} />,
+    });
 }
 
 type DisplayPageOptions = {
@@ -98,36 +71,22 @@ type DisplayPageOptions = {
     onOpenFilePicker: () => void;
 };
 
-function createDisplayPage({ state, onOpenFilePicker }: DisplayPageOptions): SettingsShellPage {
-    return {
-        id: "display",
-        label: settingsPageCopy.display.label,
-        title: settingsPageCopy.display.title,
-        content: (
-            <>
-                <DialogSettingsCategory title={settingsPageCopy.display.sectionTitle}>
-                    <DialogCharacterSettingsSection
-                        settings={state.settings}
-                        uiState={state.settingsUiState}
-                        uiHints={state.settingsUiHints}
-                        onApplySettings={state.applySettings}
-                        showSectionTitle={false}
-                    />
-                </DialogSettingsCategory>
-                <DialogSettingsCategory title={settingsPageCopy.display.vrmSectionTitle}>
-                    <VrmModelSection onOpenFilePicker={onOpenFilePicker} />
-                    <DialogVrmDropStatusCard uiState={state.dialogVrmUiState} />
-                </DialogSettingsCategory>
-            </>
-        ),
-    };
-}
-
-function createConnectionPage(state: ConfigurationDialogSettingsState): SettingsShellPage {
-    return {
-        id: "connection",
-        label: settingsPageCopy.connection.label,
-        title: settingsPageCopy.connection.title,
-        content: <ConfigurationDialogConnectionPage state={state} />,
-    };
+function DisplaySettingsPage({ state, onOpenFilePicker }: DisplayPageOptions) {
+    return (
+        <>
+            <SettingsCategorySection title={settingsPageCopy.display.sectionTitle}>
+                <DialogCharacterSettingsSection
+                    settings={state.settings}
+                    uiState={state.settingsUiState}
+                    uiHints={state.settingsUiHints}
+                    onApplySettings={state.applySettings}
+                    showSectionTitle={false}
+                />
+            </SettingsCategorySection>
+            <SettingsCategorySection title={settingsPageCopy.display.vrmSectionTitle}>
+                <VrmModelSection onOpenFilePicker={onOpenFilePicker} />
+                <DialogVrmDropStatusCard uiState={state.dialogVrmUiState} />
+            </SettingsCategorySection>
+        </>
+    );
 }

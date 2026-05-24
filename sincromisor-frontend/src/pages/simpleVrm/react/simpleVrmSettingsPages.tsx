@@ -1,10 +1,11 @@
+import { createCoreSettingsPages } from "../../../features/settings/react/pages/coreSettingsPages";
+import { SettingsCategorySection } from "../../../features/settings/react/sections/settingsCategorySection";
 import { settingsPageCopy } from "../../../features/settings/react/shell/settingsPageCopy";
 import type { SettingsShellPage } from "../../../features/settings/react/shell/settingsShell";
 import {
     BasicSettingsSection,
     CharacterSettingsSection,
     MicSettingsSection,
-    SettingsCategorySection,
 } from "./components/settingsSections";
 import type {
     SimpleVrmControlPanelPageProps,
@@ -12,33 +13,12 @@ import type {
 } from "./simpleVrmControlPanelTypes";
 
 export function createSimpleVrmSettingsPages(panelState: SimpleVrmPanelState): SettingsShellPage[] {
-    return [
-        {
-            id: "conversation",
-            label: settingsPageCopy.conversation.label,
-            title: settingsPageCopy.conversation.title,
-            content: <ConversationSettingsPage panelState={panelState} />,
-        },
-        {
-            id: "devices",
-            label: settingsPageCopy.devices.label,
-            title: settingsPageCopy.devices.title,
-            content: <DeviceSettingsPage panelState={panelState} />,
-        },
-        {
-            id: "audio",
-            label: settingsPageCopy.audio.label,
-            title: settingsPageCopy.audio.title,
-            description: settingsPageCopy.audio.description,
-            content: <AudioSettingsPage panelState={panelState} />,
-        },
-        {
-            id: "display",
-            label: settingsPageCopy.display.label,
-            title: settingsPageCopy.display.title,
-            content: <DisplaySettingsPage panelState={panelState} />,
-        },
-    ];
+    return createCoreSettingsPages({
+        conversation: <ConversationSettingsPage panelState={panelState} />,
+        devices: <DeviceSettingsPage panelState={panelState} />,
+        audio: <AudioSettingsPage panelState={panelState} />,
+        display: <DisplaySettingsPage panelState={panelState} />,
+    });
 }
 
 function ConversationSettingsPage({ panelState }: SimpleVrmControlPanelPageProps) {
