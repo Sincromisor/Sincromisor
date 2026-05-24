@@ -4,8 +4,10 @@ import {
     CharacterDisplayToggles,
     VideoInputDeviceField,
 } from "../../../../features/settings/react/fields/settingsFields";
-import { SettingsHelpLabel } from "../../../../features/settings/react/primitives/settingsPrimitives";
-import { sectionSpacingPx, settingsTuning } from "./settingsSectionLayout";
+import {
+    SettingsHelpLabel,
+    SettingsHint,
+} from "../../../../features/settings/react/primitives/settingsPrimitives";
 import type { DeviceSettingsProps } from "./settingsSectionTypes";
 
 type CharacterSettingsSectionProps = DeviceSettingsProps & {
@@ -33,7 +35,7 @@ export function CharacterSettingsSection({
               ? "キャラクター表示"
               : "キャラクターと視線";
     return (
-        <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
+        <div className="settingsPrimitiveSectionBlock">
             {renderCharacterSectionLabel(showSectionTitle, sectionLabel)}
             {showCameraSelection
                 ? renderCharacterCameraField({
@@ -53,15 +55,9 @@ export function CharacterSettingsSection({
                     uiHints={uiHints}
                     onApplySettings={onApplySettings}
                     renderHint={(label, message) => (
-                        <div
-                            style={{
-                                marginTop: `${settingsTuning.hintMarginTopPx}px`,
-                                opacity: 0.7,
-                                lineHeight: 1.3,
-                            }}
-                        >
+                        <SettingsHint className="settingsPrimitiveHint--topGap">
                             {label}: {message}
-                        </div>
+                        </SettingsHint>
                     )}
                 />
             ) : null}
@@ -73,22 +69,12 @@ function renderCharacterSectionLabel(showSectionTitle: boolean, sectionLabel: st
     if (showSectionTitle) {
         return <SettingsHelpLabel text="キャラクター設定" />;
     }
-    return (
-        <div
-            style={{
-                opacity: 0.8,
-                fontWeight: 700,
-                marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
-            }}
-        >
-            {sectionLabel}
-        </div>
-    );
+    return <div className="settingsPrimitiveSectionLead">{sectionLabel}</div>;
 }
 
 function renderCharacterCameraField(props: CharacterCameraFieldProps): ReactNode {
     return (
-        <div style={{ marginBottom: props.showDisplayOptions ? `${sectionSpacingPx}px` : "0" }}>
+        <div className={props.showDisplayOptions ? "settingsPrimitiveSectionBlock" : undefined}>
             <VideoInputDeviceField
                 settings={props.settings}
                 uiState={props.uiState}

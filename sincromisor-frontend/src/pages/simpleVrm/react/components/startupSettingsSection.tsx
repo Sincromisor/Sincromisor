@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
 import { StartupBehaviorFields } from "../../../../features/settings/react/fields/settingsFields";
-import { SettingsHelpLabel } from "../../../../features/settings/react/primitives/settingsPrimitives";
+import {
+    SettingsHelpLabel,
+    SettingsHint,
+} from "../../../../features/settings/react/primitives/settingsPrimitives";
 import type {
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
 } from "../panelTypes";
-import { compactGapPx, sectionSpacingPx, settingsTuning } from "./settingsSectionLayout";
 import type { SettingsApplyProps } from "./settingsSectionTypes";
 
 type StartupSettingsSectionProps = SettingsApplyProps & {
@@ -29,7 +31,7 @@ export function StartupSettingsSection({
         return null;
     }
     return (
-        <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
+        <div className="settingsPrimitiveSectionBlock">
             {renderStartupSectionLabel(showSectionTitle)}
             <StartupBehaviorFields
                 settings={settings}
@@ -46,21 +48,16 @@ export function StartupSettingsSection({
                         "開始した時の動きを決めます。必要なものだけオンにしてから始めてください。",
                 }}
                 renderHint={(message, tone) => (
-                    <div
-                        style={{
-                            opacity: tone ? 1 : 0.6,
-                            marginBottom: `${compactGapPx}px`,
-                            color:
-                                tone === "warning"
-                                    ? "#ffd38a"
-                                    : tone === "info"
-                                      ? "#b8e0ff"
-                                      : undefined,
-                            lineHeight: 1.3,
-                        }}
+                    <SettingsHint
+                        tone={tone ?? "muted"}
+                        className={
+                            tone
+                                ? "settingsPrimitiveHint--bottomGap"
+                                : "settingsPrimitiveHint--bottomGap settingsPrimitiveHint--soft"
+                        }
                     >
                         {message}
-                    </div>
+                    </SettingsHint>
                 )}
             />
         </div>
@@ -71,15 +68,5 @@ function renderStartupSectionLabel(showSectionTitle: boolean): ReactNode {
     if (showSectionTitle) {
         return <SettingsHelpLabel text="開始時の動作" />;
     }
-    return (
-        <div
-            style={{
-                opacity: 0.8,
-                fontWeight: 700,
-                marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
-            }}
-        >
-            ページ開始時の動作
-        </div>
-    );
+    return <div className="settingsPrimitiveSectionLead">ページ開始時の動作</div>;
 }

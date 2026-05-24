@@ -3,10 +3,10 @@ import { settingHelp } from "../../../../features/settings/react/fields/settings
 import {
     SettingsButton,
     SettingsHelpLabel,
+    SettingsHint,
 } from "../../../../features/settings/react/primitives/settingsPrimitives";
 import type { ApplySettingsFn, SincroAppSettingsSnapshot } from "../panelTypes";
 import { NumericSettingField } from "./numericSettingField";
-import { compactGapPx, rowGapPx, sectionSpacingPx, settingsTuning } from "./settingsSectionLayout";
 
 type LookingGlassSettingsSectionProps = {
     settings: SincroAppSettingsSnapshot;
@@ -75,7 +75,7 @@ export function LookingGlassSettingsSection({
     showSectionTitle = true,
 }: LookingGlassSettingsSectionProps) {
     return (
-        <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
+        <div className="settingsPrimitiveSectionBlock">
             <LookingGlassSectionHeader showSectionTitle={showSectionTitle} />
             <LookingGlassPresetButtons onApplySettings={onApplySettings} />
             <LookingGlassNumericSettingsGrid
@@ -92,23 +92,15 @@ function LookingGlassSectionHeader({ showSectionTitle }: { showSectionTitle: boo
             {showSectionTitle ? (
                 <SettingsHelpLabel text="Looking Glass 設定" />
             ) : (
-                <div
-                    style={{
-                        opacity: 0.8,
-                        fontWeight: 700,
-                        marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
-                    }}
-                >
-                    Looking Glass 表示
-                </div>
+                <div className="settingsPrimitiveSectionLead">Looking Glass 表示</div>
             )}
-            <div style={{ opacity: 0.6, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
+            <SettingsHint className="settingsPrimitiveHint--bottomGap settingsPrimitiveHint--soft">
                 これらの値は、次回の Looking Glass 起動時に適用されます。
-            </div>
-            <div style={{ opacity: 0.7, marginBottom: `${compactGapPx}px`, lineHeight: 1.3 }}>
+            </SettingsHint>
+            <SettingsHint className="settingsPrimitiveHint--bottomGap">
                 ピンボケ気味の場合は、まず <code>Target Z</code> と <code>Target Diam</code>{" "}
                 を少しずつ調整してください。
-            </div>
+            </SettingsHint>
         </>
     );
 }
@@ -117,14 +109,7 @@ function LookingGlassPresetButtons({
     onApplySettings,
 }: Pick<LookingGlassSettingsSectionProps, "onApplySettings">) {
     return (
-        <div
-            style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: `${compactGapPx}px`,
-                marginBottom: `${rowGapPx}px`,
-            }}
-        >
+        <div className="settingsPrimitiveButtonRow">
             {LOOKING_GLASS_PRESETS.map((preset) => (
                 <SettingsButton
                     key={preset.label}
@@ -143,13 +128,7 @@ function LookingGlassNumericSettingsGrid({
     onApplySettings,
 }: Pick<LookingGlassSettingsSectionProps, "settings" | "onApplySettings">) {
     return (
-        <div
-            style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: `${compactGapPx}px`,
-            }}
-        >
+        <div className="settingsPrimitiveTwoColumnGrid">
             <LookingGlassDisplaySettingsFields
                 settings={settings}
                 onApplySettings={onApplySettings}

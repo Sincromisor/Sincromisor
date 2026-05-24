@@ -4,6 +4,7 @@ import {
     getIntegratedTabId,
     IntegratedTabs,
 } from "../../../../app/shell/react/integratedTabs/integratedTabs";
+import { joinClassNames } from "../primitives/settingsClassNames";
 import "./settingsShell.css";
 
 export type SettingsShellPage = {
@@ -24,6 +25,7 @@ type SettingsShellProps = {
     pages: SettingsShellPage[];
     initialPageId?: string;
     footer?: ReactNode;
+    className?: string;
     responsiveMode?: "viewport" | "container";
     navigationDensity?: "regular" | "compact";
     navigationPlacement?: "auto" | "top";
@@ -39,6 +41,7 @@ export function SettingsShell({
     pages,
     initialPageId,
     footer,
+    className,
     responsiveMode = "viewport",
     navigationDensity = "regular",
     navigationPlacement = "auto",
@@ -60,14 +63,15 @@ export function SettingsShell({
     }
     const primaryPages = visiblePages.filter((page) => page.tone !== "developer");
     const developerPages = visiblePages.filter((page) => page.tone === "developer");
-    const className = settingsShellClassName({
+    const shellClassName = settingsShellClassName({
+        className,
         responsiveMode,
         navigationDensity,
         navigationPlacement,
     });
 
     return (
-        <section className={className} aria-label={ariaLabel}>
+        <section className={shellClassName} aria-label={ariaLabel}>
             <SettingsShellHeader badge={badge} title={title} description={description} />
             <SettingsShellBody
                 title={title}
@@ -84,22 +88,22 @@ export function SettingsShell({
 
 type SettingsShellClassNameOptions = Pick<
     SettingsShellProps,
-    "responsiveMode" | "navigationDensity" | "navigationPlacement"
+    "className" | "responsiveMode" | "navigationDensity" | "navigationPlacement"
 >;
 
 function settingsShellClassName({
+    className,
     responsiveMode,
     navigationDensity,
     navigationPlacement,
-}: Required<SettingsShellClassNameOptions>): string {
-    return [
+}: SettingsShellClassNameOptions): string {
+    return joinClassNames(
         "settingsShell",
         responsiveMode === "container" ? "is-containerResponsive" : "",
         navigationDensity === "compact" ? "settingsShell--compactNavigation" : "",
         navigationPlacement === "top" ? "settingsShell--topNavigation" : "",
-    ]
-        .filter(Boolean)
-        .join(" ");
+        className,
+    );
 }
 
 type SettingsShellBodyProps = {
