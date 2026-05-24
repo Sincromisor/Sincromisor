@@ -1,6 +1,9 @@
 import type { SincroPoseArmIkMode } from "../../../../character/retargeting/sincroPoseRetargeter";
 import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../model/debugConsoleManager";
-import { RangeControl } from "../components/rangeControl";
+import {
+    type DebugRangeControlItem,
+    DebugRangeControlList,
+} from "../components/debugRangeControls";
 import { radToDeg } from "./sincroMotionPanelFormatters";
 
 type SincroPoseRetargetControlsProps = {
@@ -50,58 +53,54 @@ function ArmIkModeSelect({ poseRetarget, manager }: SincroPoseRetargetControlsPr
 }
 
 function PoseRetargetBaseControls({ poseRetarget, manager }: SincroPoseRetargetControlsProps) {
-    return (
-        <>
-            <RangeControl
-                id="sincroPoseRetargetIntensity"
-                label="Intensity"
-                valueLabel={`${Math.round(poseRetarget.intensityScale * 100)}%`}
-                min="0"
-                max="1.2"
-                step="0.05"
-                value={poseRetarget.intensityScale}
-                onChange={(value) =>
-                    applyPoseRetargetPatch(manager, poseRetarget, { intensityScale: value })
-                }
-            />
-            <RangeControl
-                id="sincroPoseRetargetMinConfidence"
-                label="Min Confidence"
-                valueLabel={poseRetarget.minConfidence.toFixed(2)}
-                min="0"
-                max="1"
-                step="0.05"
-                value={poseRetarget.minConfidence}
-                onChange={(value) =>
-                    applyPoseRetargetPatch(manager, poseRetarget, { minConfidence: value })
-                }
-            />
-            <RangeControl
-                id="sincroPoseRetargetSmoothing"
-                label="Smoothing"
-                valueLabel={`${Math.round(poseRetarget.smoothingMs)}ms`}
-                min="40"
-                max="800"
-                step="10"
-                value={poseRetarget.smoothingMs}
-                onChange={(value) =>
-                    applyPoseRetargetPatch(manager, poseRetarget, { smoothingMs: value })
-                }
-            />
-            <RangeControl
-                id="sincroPoseRetargetNeutralReturn"
-                label="Neutral Return"
-                valueLabel={`${Math.round(poseRetarget.returnToNeutralMs)}ms`}
-                min="80"
-                max="2000"
-                step="20"
-                value={poseRetarget.returnToNeutralMs}
-                onChange={(value) =>
-                    applyPoseRetargetPatch(manager, poseRetarget, { returnToNeutralMs: value })
-                }
-            />
-        </>
-    );
+    const ranges: DebugRangeControlItem[] = [
+        {
+            id: "sincroPoseRetargetIntensity",
+            label: "Intensity",
+            valueLabel: `${Math.round(poseRetarget.intensityScale * 100)}%`,
+            min: 0,
+            max: 1.2,
+            step: 0.05,
+            value: poseRetarget.intensityScale,
+            onChange: (value) =>
+                applyPoseRetargetPatch(manager, poseRetarget, { intensityScale: value }),
+        },
+        {
+            id: "sincroPoseRetargetMinConfidence",
+            label: "Min Confidence",
+            valueLabel: poseRetarget.minConfidence.toFixed(2),
+            min: 0,
+            max: 1,
+            step: 0.05,
+            value: poseRetarget.minConfidence,
+            onChange: (value) =>
+                applyPoseRetargetPatch(manager, poseRetarget, { minConfidence: value }),
+        },
+        {
+            id: "sincroPoseRetargetSmoothing",
+            label: "Smoothing",
+            valueLabel: `${Math.round(poseRetarget.smoothingMs)}ms`,
+            min: 40,
+            max: 800,
+            step: 10,
+            value: poseRetarget.smoothingMs,
+            onChange: (value) =>
+                applyPoseRetargetPatch(manager, poseRetarget, { smoothingMs: value }),
+        },
+        {
+            id: "sincroPoseRetargetNeutralReturn",
+            label: "Neutral Return",
+            valueLabel: `${Math.round(poseRetarget.returnToNeutralMs)}ms`,
+            min: 80,
+            max: 2000,
+            step: 20,
+            value: poseRetarget.returnToNeutralMs,
+            onChange: (value) =>
+                applyPoseRetargetPatch(manager, poseRetarget, { returnToNeutralMs: value }),
+        },
+    ];
+
+    return <DebugRangeControlList items={ranges} />;
 }
 
 function PoseRetargetArmIkControls({ poseRetarget, manager }: SincroPoseRetargetControlsProps) {
@@ -117,82 +116,77 @@ function PoseRetargetArmIkStrengthControls({
     poseRetarget,
     manager,
 }: SincroPoseRetargetControlsProps) {
-    return (
-        <>
-            <RangeControl
-                id="sincroPoseRetargetIkStrength"
-                label="IK Strength"
-                valueLabel={`${Math.round(poseRetarget.armIkStrength * 100)}%`}
-                min="0"
-                max="1"
-                step="0.05"
-                value={poseRetarget.armIkStrength}
-                onChange={(value) =>
-                    applyPoseRetargetPatch(manager, poseRetarget, { armIkStrength: value })
-                }
-            />
-            <RangeControl
-                id="sincroPoseRetargetIkTargetScale"
-                label="IK Target Scale"
-                valueLabel={poseRetarget.armIkTargetScale.toFixed(2)}
-                min="0.2"
-                max="1.5"
-                step="0.05"
-                value={poseRetarget.armIkTargetScale}
-                onChange={(value) =>
-                    applyPoseRetargetPatch(manager, poseRetarget, { armIkTargetScale: value })
-                }
-            />
-        </>
-    );
+    const ranges: DebugRangeControlItem[] = [
+        {
+            id: "sincroPoseRetargetIkStrength",
+            label: "IK Strength",
+            valueLabel: `${Math.round(poseRetarget.armIkStrength * 100)}%`,
+            min: 0,
+            max: 1,
+            step: 0.05,
+            value: poseRetarget.armIkStrength,
+            onChange: (value) =>
+                applyPoseRetargetPatch(manager, poseRetarget, { armIkStrength: value }),
+        },
+        {
+            id: "sincroPoseRetargetIkTargetScale",
+            label: "IK Target Scale",
+            valueLabel: poseRetarget.armIkTargetScale.toFixed(2),
+            min: 0.2,
+            max: 1.5,
+            step: 0.05,
+            value: poseRetarget.armIkTargetScale,
+            onChange: (value) =>
+                applyPoseRetargetPatch(manager, poseRetarget, { armIkTargetScale: value }),
+        },
+    ];
+
+    return <DebugRangeControlList items={ranges} />;
 }
 
 function PoseRetargetArmIkAngleControls({
     poseRetarget,
     manager,
 }: SincroPoseRetargetControlsProps) {
-    return (
-        <>
-            <RangeControl
-                id="sincroPoseRetargetIkMaxLift"
-                label="Max Lift"
-                valueLabel={`${Math.round(radToDeg(poseRetarget.armIkMaxLiftRad))}deg`}
-                min="0"
-                max={String(Math.PI / 2)}
-                step="0.02"
-                value={poseRetarget.armIkMaxLiftRad}
-                onChange={(value) =>
-                    applyPoseRetargetPatch(manager, poseRetarget, { armIkMaxLiftRad: value })
-                }
-            />
-            <RangeControl
-                id="sincroPoseRetargetIkMaxOpen"
-                label="Max Open"
-                valueLabel={`${Math.round(radToDeg(poseRetarget.armIkMaxOpenRad))}deg`}
-                min="0"
-                max={String(Math.PI / 2)}
-                step="0.02"
-                value={poseRetarget.armIkMaxOpenRad}
-                onChange={(value) =>
-                    applyPoseRetargetPatch(manager, poseRetarget, { armIkMaxOpenRad: value })
-                }
-            />
-            <RangeControl
-                id="sincroPoseRetargetIkMaxFlex"
-                label="Max Flex"
-                valueLabel={`${Math.round(radToDeg(poseRetarget.armIkMaxForearmFlexRad))}deg`}
-                min="0"
-                max={String(Math.PI / 2)}
-                step="0.02"
-                value={poseRetarget.armIkMaxForearmFlexRad}
-                onChange={(value) =>
-                    applyPoseRetargetPatch(manager, poseRetarget, {
-                        armIkMaxForearmFlexRad: value,
-                    })
-                }
-            />
-        </>
-    );
+    const ranges: DebugRangeControlItem[] = [
+        {
+            id: "sincroPoseRetargetIkMaxLift",
+            label: "Max Lift",
+            valueLabel: `${Math.round(radToDeg(poseRetarget.armIkMaxLiftRad))}deg`,
+            min: 0,
+            max: Math.PI / 2,
+            step: 0.02,
+            value: poseRetarget.armIkMaxLiftRad,
+            onChange: (value) =>
+                applyPoseRetargetPatch(manager, poseRetarget, { armIkMaxLiftRad: value }),
+        },
+        {
+            id: "sincroPoseRetargetIkMaxOpen",
+            label: "Max Open",
+            valueLabel: `${Math.round(radToDeg(poseRetarget.armIkMaxOpenRad))}deg`,
+            min: 0,
+            max: Math.PI / 2,
+            step: 0.02,
+            value: poseRetarget.armIkMaxOpenRad,
+            onChange: (value) =>
+                applyPoseRetargetPatch(manager, poseRetarget, { armIkMaxOpenRad: value }),
+        },
+        {
+            id: "sincroPoseRetargetIkMaxFlex",
+            label: "Max Flex",
+            valueLabel: `${Math.round(radToDeg(poseRetarget.armIkMaxForearmFlexRad))}deg`,
+            min: 0,
+            max: Math.PI / 2,
+            step: 0.02,
+            value: poseRetarget.armIkMaxForearmFlexRad,
+            onChange: (value) =>
+                applyPoseRetargetPatch(manager, poseRetarget, {
+                    armIkMaxForearmFlexRad: value,
+                }),
+        },
+    ];
+
+    return <DebugRangeControlList items={ranges} />;
 }
 
 function applyPoseRetargetPatch(

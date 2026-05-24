@@ -1,5 +1,9 @@
 import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../model/debugConsoleManager";
-import { RangeControl } from "../components/rangeControl";
+import { DebugCheckboxControl } from "../components/debugCheckboxControl";
+import {
+    type DebugRangeControlItem,
+    DebugRangeControlList,
+} from "../components/debugRangeControls";
 import { AudioPanelVadControls } from "./audioPanelVadControls";
 
 type AudioPanelAdvancedControlsProps = {
@@ -8,56 +12,56 @@ type AudioPanelAdvancedControlsProps = {
 };
 
 export function AudioPanelAdvancedControls({ audio, manager }: AudioPanelAdvancedControlsProps) {
+    const ranges: DebugRangeControlItem[] = [
+        {
+            id: "localAudioHighpassCutoff",
+            label: "HPF Cutoff",
+            valueLabel: `${Math.round(audio.filterConfig.highpassHz)}Hz`,
+            min: 60,
+            max: 300,
+            step: 5,
+            value: audio.filterConfig.highpassHz,
+            onChange: (value) =>
+                manager.applyLocalAudioFilterConfig({
+                    ...audio.filterConfig,
+                    highpassHz: value,
+                }),
+        },
+        {
+            id: "localAudioLowpassCutoff",
+            label: "LPF Cutoff",
+            valueLabel: `${Math.round(audio.filterConfig.lowpassHz)}Hz`,
+            min: 2500,
+            max: 10000,
+            step: 100,
+            value: audio.filterConfig.lowpassHz,
+            onChange: (value) =>
+                manager.applyLocalAudioFilterConfig({
+                    ...audio.filterConfig,
+                    lowpassHz: value,
+                }),
+        },
+    ];
+
     return (
         <div className="audioMeterPanel audioMeterPanel--controls">
             <details className="audioInlineDetails audioInlineDetails--controls">
                 <summary>高度な調整</summary>
-                <RangeControl
-                    id="localAudioHighpassCutoff"
-                    label="HPF Cutoff"
-                    valueLabel={`${Math.round(audio.filterConfig.highpassHz)}Hz`}
-                    min="60"
-                    max="300"
-                    step="5"
-                    value={audio.filterConfig.highpassHz}
-                    onChange={(value) =>
-                        manager.applyLocalAudioFilterConfig({
-                            ...audio.filterConfig,
-                            highpassHz: value,
-                        })
-                    }
-                />
+                <DebugRangeControlList items={ranges.slice(0, 1)} />
                 <div className="audioControlGroup">
-                    <label className="audioControlCheckLabel" htmlFor="localAudioLowpassEnabled">
-                        <input
-                            id="localAudioLowpassEnabled"
-                            type="checkbox"
-                            checked={audio.filterConfig.lowpassEnabled}
-                            onChange={(event) =>
-                                manager.applyLocalAudioFilterConfig({
-                                    ...audio.filterConfig,
-                                    lowpassEnabled: event.currentTarget.checked,
-                                })
-                            }
-                        />
-                        LPFを有効化
-                    </label>
+                    <DebugCheckboxControl
+                        id="localAudioLowpassEnabled"
+                        label="LPFを有効化"
+                        checked={audio.filterConfig.lowpassEnabled}
+                        onChange={(checked) =>
+                            manager.applyLocalAudioFilterConfig({
+                                ...audio.filterConfig,
+                                lowpassEnabled: checked,
+                            })
+                        }
+                    />
                 </div>
-                <RangeControl
-                    id="localAudioLowpassCutoff"
-                    label="LPF Cutoff"
-                    valueLabel={`${Math.round(audio.filterConfig.lowpassHz)}Hz`}
-                    min="2500"
-                    max="10000"
-                    step="100"
-                    value={audio.filterConfig.lowpassHz}
-                    onChange={(value) =>
-                        manager.applyLocalAudioFilterConfig({
-                            ...audio.filterConfig,
-                            lowpassHz: value,
-                        })
-                    }
-                />
+                <DebugRangeControlList items={ranges.slice(1)} />
                 <AudioPanelVadControls audio={audio} manager={manager} />
             </details>
         </div>

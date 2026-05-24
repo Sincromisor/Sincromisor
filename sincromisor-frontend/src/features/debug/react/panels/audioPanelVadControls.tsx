@@ -3,7 +3,12 @@ import type {
     DebugConsoleSnapshot,
     LearnedVadTuningUiConfig,
 } from "../../model/debugConsoleManager";
-import { RangeControl } from "../components/rangeControl";
+import { DebugCheckboxControl } from "../components/debugCheckboxControl";
+import {
+    DebugPresetButtonGroup,
+    type DebugPresetButtonItem,
+} from "../components/debugPresetButtonGroup";
+import { DebugRangeControl } from "../components/debugRangeControls";
 import { AudioPanelLearnedVadTuning } from "./audioPanelLearnedVadTuning";
 
 const VAD_RMS_PRESETS = [
@@ -47,90 +52,69 @@ type AudioPanelVadControlChildProps = {
 
 function LearnedVadEnabledControl({ audio, manager }: AudioPanelVadControlChildProps) {
     return (
-        <label className="audioControlCheckLabel" htmlFor="localVadLearnedEnabled">
-            <input
-                id="localVadLearnedEnabled"
-                type="checkbox"
-                checked={audio.vadThresholdMode === "learned"}
-                onChange={(event) =>
-                    manager.applyLocalVadThresholdMode(
-                        event.currentTarget.checked
-                            ? "learned"
-                            : audio.vadThresholdMode === "auto"
-                              ? "auto"
-                              : "manual",
-                    )
-                }
-            />
-            学習VAD（Silero）を有効化
-        </label>
+        <DebugCheckboxControl
+            id="localVadLearnedEnabled"
+            label="学習VAD（Silero）を有効化"
+            checked={audio.vadThresholdMode === "learned"}
+            onChange={(checked) =>
+                manager.applyLocalVadThresholdMode(
+                    checked ? "learned" : audio.vadThresholdMode === "auto" ? "auto" : "manual",
+                )
+            }
+        />
     );
 }
 
 function LearnedVadStrictControl({ audio, manager }: AudioPanelVadControlChildProps) {
     return (
-        <label className="audioControlCheckLabel" htmlFor="localVadLearnedStrictMode">
-            <input
-                id="localVadLearnedStrictMode"
-                type="checkbox"
-                checked={audio.learnedVadStrictMode}
-                disabled={audio.vadThresholdMode !== "learned"}
-                onChange={(event) =>
-                    manager.applyLocalLearnedVadStrictMode(event.currentTarget.checked)
-                }
-            />
-            厳格判定（Learned + RMS）
-        </label>
+        <DebugCheckboxControl
+            id="localVadLearnedStrictMode"
+            label="厳格判定（Learned + RMS）"
+            checked={audio.learnedVadStrictMode}
+            disabled={audio.vadThresholdMode !== "learned"}
+            onChange={(checked) => manager.applyLocalLearnedVadStrictMode(checked)}
+        />
     );
 }
 
 function VadAutoThresholdControl({ audio, manager }: AudioPanelVadControlChildProps) {
     return (
-        <label className="audioControlCheckLabel" htmlFor="localVadThresholdAutoEnabled">
-            <input
-                id="localVadThresholdAutoEnabled"
-                type="checkbox"
-                checked={audio.vadThresholdMode === "auto"}
-                disabled={audio.vadThresholdMode === "learned"}
-                onChange={(event) =>
-                    manager.applyLocalVadThresholdMode(
-                        event.currentTarget.checked ? "auto" : "manual",
-                    )
-                }
-            />
-            VAD閾値を自動追従（ノイズフロア）
-        </label>
+        <DebugCheckboxControl
+            id="localVadThresholdAutoEnabled"
+            label="VAD閾値を自動追従（ノイズフロア）"
+            checked={audio.vadThresholdMode === "auto"}
+            disabled={audio.vadThresholdMode === "learned"}
+            onChange={(checked) => manager.applyLocalVadThresholdMode(checked ? "auto" : "manual")}
+        />
     );
 }
 
 function VadRmsThresholdControls({ audio, manager }: AudioPanelVadControlChildProps) {
+    const presetItems: DebugPresetButtonItem[] = VAD_RMS_PRESETS.map((preset) => ({
+        id: String(preset.value),
+        label: preset.label,
+        disabled: audio.vadThresholdMode !== "manual",
+        onClick: () => manager.applyLocalVadRmsThreshold(preset.value),
+    }));
+
     return (
         <>
-            <RangeControl
+            <DebugRangeControl
                 id="localVadRmsThreshold"
                 label="VAD RMS Threshold"
                 valueLabel={`${(audio.vadRmsThreshold * 100).toFixed(1)}%`}
-                min="0.005"
-                max="0.20"
-                step="0.001"
+                min={0.005}
+                max={0.2}
+                step={0.001}
                 value={audio.vadRmsThreshold}
                 disabled={audio.vadThresholdMode !== "manual"}
                 onChange={(value) => manager.applyLocalVadRmsThreshold(value)}
             />
-            <fieldset className="audioPresetButtons">
-                <legend className="audioPresetButtons__legend">VAD RMS Presets</legend>
-                {VAD_RMS_PRESETS.map((preset) => (
-                    <button
-                        key={preset.value}
-                        type="button"
-                        className="audioPresetButton"
-                        disabled={audio.vadThresholdMode !== "manual"}
-                        onClick={() => manager.applyLocalVadRmsThreshold(preset.value)}
-                    >
-                        {preset.label}
-                    </button>
-                ))}
-            </fieldset>
+            <DebugPresetButtonGroup
+                items={presetItems}
+                legend="VAD RMS Presets"
+                buttonClassName="audioPresetButton"
+            />
         </>
     );
 }
