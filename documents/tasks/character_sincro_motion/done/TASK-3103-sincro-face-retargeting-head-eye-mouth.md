@@ -1,7 +1,7 @@
 # TASK-3103 Sincro Face Retargeting（頭部・目・口）
 
 - 作成日: 2026-05-11
-- ステータス: Open
+- ステータス: Done
 - 優先度: Critical
 - 親タスク: `TASK-3100`
 - 依存: `TASK-3102`

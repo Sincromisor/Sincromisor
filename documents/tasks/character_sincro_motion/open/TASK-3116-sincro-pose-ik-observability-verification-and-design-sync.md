@@ -2,15 +2,15 @@
 
 - 作成日: 2026-05-14
 - ステータス: Open
-- 優先度: Medium
+- 優先度: High
 - 親タスク: `TASK-3100`
-- 依存: `TASK-3115`
+- 依存: `TASK-3115`, `TASK-260517014025`, `TASK-260517042345`, `TASK-260517053106`
 
 ## 目的
 
-簡易 IK 化した `sincro` pose retarget を、実カメラ・複数 VRM・複数 viewport で確認し、調整値と設計文書を同期する。
+簡易 IK 化した `sincro` pose retarget を、実カメラ・複数 VRM・複数 viewport で最終確認し、調整値と確認結果を正本タスクへ残す。
 
-IK は見た目の破綻が環境差やモデル差で出やすい。実装だけで完了扱いにせず、Debug Console の観測性、手動確認シナリオ、設計文書の正本化まで行う。
+IK は見た目の破綻が環境差やモデル差で出やすい。実装だけで完了扱いにせず、Debug Console と `motion-debug` で入力、target、solver、VRM 適用を切り分けながら、最後に人間の目で許容範囲を判断する。
 
 ## 背景
 
@@ -20,12 +20,13 @@ IK は見た目の破綻が環境差やモデル差で出やすい。実装だ�
 
 ## スコープ
 
-- Debug Console に IK mode、target availability、arm confidence、anchor/fallback reason、solver output の主要値を表示する
-- IK 強度、target smoothing、return-to-neutral、max rotation など主要パラメータを調整できるようにする
-- 実カメラ確認手順をタスク本文または設計文書へ残す
-- `documents/design/frontend/character/motion.md` と `documents/design/frontend/character/tracking.md` を簡易 IK 導入後の仕様へ更新する
-- 必要に応じて `documents/tasks/character_sincro_motion/README.md` と `TASK-3100` のタスク一覧を同期する
-- desktop / mobile viewport で Settings / Debug Console の表示崩れを確認する
+- 実カメラ確認手順と結果をタスク本文へ残す
+- `simple-vrm` と `motion-debug` の両方で pose / IK の状態を確認する
+- Debug Console と `motion-debug` snapshot で、検出、target quality、solver、VRM 適用 gate、fallback を切り分ける
+- IK 強度、target smoothing、return-to-neutral、max rotation など主要パラメータの既定値を最終判断する
+- 複数 VRM で、腕長・初期姿勢・欠損ボーン差分による破綻が許容範囲か確認する
+- desktop / mobile viewport で Settings / Debug Console / `motion-debug` の表示崩れを確認する
+- 確認結果から仕様差分が出た場合のみ、`documents/design/frontend/character/motion.md` と `documents/design/frontend/character/tracking.md` を追記する
 
 ## 非対象
 
@@ -58,12 +59,13 @@ IK は見た目の破綻が環境差やモデル差で出やすい。実装だ�
 
 ## 完了条件
 
-- Debug Console で IK の入力、solver、VRM 適用 gate、fallback を切り分けられる。
-- IK 強度と主要 smoothing / clamp 値を調整できる。
-- 実カメラで、片手上げ、横開き、肘曲げ、片腕欠損、両腕欠損、近距離上半身構図を確認済み。
+- Debug Console と `motion-debug` で IK の入力、solver、VRM 適用 gate、fallback を切り分けられる。
+- IK 強度と主要 smoothing / clamp 値の既定値が決まっている。
+- 実カメラで、両腕が見えているが手首 confidence が低い構図、片手上げ、横開き、肘曲げ、片腕欠損、両腕欠損、近距離上半身構図を確認済み。
 - 複数 VRM で破綻が許容範囲に収まることを確認済み。
-- Settings / Debug Console が desktop / mobile viewport で崩れない。
-- `documents/design/frontend/character/motion.md` と `documents/design/frontend/character/tracking.md` が簡易 IK 後の仕様に更新されている。
+- Settings / Debug Console / `motion-debug` が desktop / mobile viewport で崩れない。
+- `motion-debug` で camera permission を伴う `startCamera()` と `waitForPoseDetected()` の成功または環境由来の失敗理由を記録している。
+- `documents/design/frontend/character/motion.md` と `documents/design/frontend/character/tracking.md` に追記が必要な仕様差分がない、または追記済み。
 - `cd sincromisor-frontend && npm run build` が成功する。
 
 ## 確認コマンド案
@@ -120,9 +122,13 @@ playwright-cli resize 390 844
 
 ## 未完了の実機確認
 
+- 実カメラ + `face_landmarker.task` 配置状態での head pose / blink / mouth blendshape 実測。
+- 実カメラでの Pose 推論負荷、FaceLandmarker 同時実行負荷、上半身 landmark 安定性。
+- 実カメラでの低 wrist confidence 構図における weak IK 起動と jitter 確認。
 - 実カメラでの片手上げ、横開き、肘曲げ、片腕欠損、両腕欠損、近距離上半身構図の確認。
 - 複数 VRM での破綻確認。
 - IK OFF / 低強度 / 標準強度 / 高強度を切り替えた既定値の最終決定。
+- `motion-debug` で camera permission を伴う `startCamera()` / `waitForPoseDetected()` の確認。
 
 ## 後続検討
 
@@ -132,3 +138,8 @@ playwright-cli resize 390 844
 
 - 実装対象候補を `src/features/debug/**`、`src/features/settings/**`、`src/features/dialog/**`、`src/pages/simpleVrm/**` の現行配置へ更新した。
 - 設計同期先は legacy flat の `documents/design/frontend_character.md` ではなく、`documents/design/frontend/character/motion.md` と `documents/design/frontend/character/tracking.md` に集約した。
+
+## 現状確認 2026-05-25
+
+- 実装・設計同期・Debug Console / `motion-debug` 整備は完了済みとして、残作業を実機確認へ集約した。
+- `TASK-3102` と `TASK-3105` の未実測項目、`TASK-260517014025` の gate 改善後実機確認、`TASK-260517042345` の camera permission 付き検証を本タスクでまとめて確認する。

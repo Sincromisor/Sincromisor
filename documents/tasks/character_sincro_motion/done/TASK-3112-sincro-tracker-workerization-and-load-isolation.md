@@ -1,7 +1,7 @@
 # TASK-3112 Sincro Tracker の Worker 化とロード分離
 
 - 作成日: 2026-05-12
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 - 親タスク: `TASK-3100`
 - 依存: `TASK-3102`, `TASK-3106`, `TASK-3111`

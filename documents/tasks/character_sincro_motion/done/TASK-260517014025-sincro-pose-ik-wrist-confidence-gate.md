@@ -1,10 +1,10 @@
 # TASK-260517014025 Sincro Pose IK の手首 confidence gate 改善
 
 - 作成日: 2026-05-17
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 - 親タスク: `TASK-3100`
-- 依存: `TASK-3113`, `TASK-3114`, `TASK-3115`, `TASK-3116`
+- 依存: `TASK-3113`, `TASK-3114`, `TASK-3115`
 
 ## 目的
 
@@ -152,3 +152,9 @@ playwright-cli open http://127.0.0.1:5173/simple-vrm/
 
 - 実装候補を `src/features/gaze/poseTracking/**`、`src/character/retargeting/**`、`src/character/ik/**`、`src/features/debug/**` の現行配置へ更新した。
 - legacy flat design document への同期先記述は削除し、`documents/design/frontend/character/` 配下の正本に集約した。
+
+## 2026-05-25 整理
+
+- weak target / IK weight / Debug Console / 設計同期 / build 確認は完了済みのため Done とする。
+- 本タスクは `TASK-3116` の実機確認中に見つかった gate 改善であり、`TASK-3116` の依存先ではなく、`TASK-3116` を進めるための前提改善として扱う。
+- 実カメラでの低 wrist confidence 構図、片手上げ、横開き、肘曲げ、片腕欠損、近距離上半身構図の最終確認は `TASK-3116` に集約する。

@@ -1,10 +1,10 @@
 # TASK-260517042345 Sincro Motion / IK デバッグ専用ページ
 
 - 作成日: 2026-05-17
-- ステータス: Open
+- ステータス: Done
 - 優先度: High
 - 親タスク: `TASK-3100`
-- 依存: `TASK-3116`, `TASK-260517024504`, `TASK-260517024505`, `TASK-260517024506`
+- 依存: `TASK-260517024504`, `TASK-260517024505`, `TASK-260517024506`
 
 ## 目的
 
@@ -193,3 +193,9 @@ const snapshot = await page.evaluate(() =>
 - ページ実装は `src/pages/motionDebug/**` に配置済み。URL は引き続き `http://127.0.0.1:5173/motion-debug/`。
 - `vite.config.js` は `pages/motionDebug/index.html` を `motion_debug` input と dev route alias に登録している。
 - tracker / retarget / VRM / debug 参照は `src/features/**`、`src/character/**` の現行配置へ更新した。
+
+### 2026-05-25 整理
+
+- 専用ページ、Playwright 用 API、安定 selector、snapshot / capture、設計同期、build / check / Playwright 表示確認は完了済みのため Done とする。
+- 本タスクは `TASK-3116` の後続ではなく、`TASK-3116` の実カメラ・複数 VRM 検証を再現可能にする前提ツールとして扱う。
+- 実カメラ permission を伴う `startCamera()` / `waitForPoseDetected()` の成功確認は、最終実機検証として `TASK-3116` に集約する。
