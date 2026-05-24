@@ -145,6 +145,18 @@
         color: #ffd38a;
     }
 
+    .settingsPrimitiveHint--topGap {
+        margin-top: var(--sincro-space-100);
+    }
+
+    .settingsPrimitiveHint--bottomGap {
+        margin-bottom: var(--sincro-space-150);
+    }
+
+    .settingsPrimitiveHint--soft {
+        opacity: 0.6;
+    }
+
     .settingsPrimitiveHintList {
         display: grid;
         gap: var(--sincro-space-150);
@@ -184,6 +196,47 @@
 
     .settingsPrimitiveSectionCard__body {
         min-width: 0;
+    }
+
+    .settingsPrimitiveSectionBlock {
+        margin-bottom: var(--sincro-space-250);
+    }
+
+    .settingsPrimitiveSectionLead {
+        opacity: 0.8;
+        font-weight: 700;
+        margin-bottom: var(--sincro-space-100);
+    }
+
+    .settingsPrimitiveSectionLead--inline {
+        margin-bottom: 0;
+    }
+
+    .settingsPrimitiveInlineActions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--sincro-space-150);
+        margin-bottom: var(--sincro-space-100);
+    }
+
+    .settingsPrimitiveButtonRow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--sincro-space-150);
+        margin-bottom: var(--sincro-space-200);
+    }
+
+    .settingsPrimitiveTwoColumnGrid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--sincro-space-150);
+    }
+
+    @media (max-width: 640px) {
+        .settingsPrimitiveTwoColumnGrid {
+            grid-template-columns: 1fr;
+        }
     }
 
     .settingsPrimitiveToggleGrid {

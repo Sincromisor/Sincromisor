@@ -5,9 +5,9 @@ import {
 import {
     SettingsButton,
     SettingsHelpLabel,
+    SettingsHint,
 } from "../../../../features/settings/react/primitives/settingsPrimitives";
 import { useSettingsDeviceRefresh } from "../../../../features/settings/react/sections/settingsDeviceRefresh";
-import { compactGapPx, sectionSpacingPx, settingsTuning } from "./settingsSectionLayout";
 import type { DeviceSettingsProps } from "./settingsSectionTypes";
 
 type MicSettingsSectionMode = "full" | "device" | "processing";
@@ -28,7 +28,7 @@ export function MicSettingsSection({
     const showProcessingOptions = mode !== "device";
 
     return (
-        <div style={{ marginBottom: `${sectionSpacingPx}px` }}>
+        <div className="settingsPrimitiveSectionBlock">
             {showDeviceSelection ? (
                 <MicDeviceSelection
                     settings={settings}
@@ -78,11 +78,7 @@ function MicDeviceSelection({
                 onRefreshDevices={onRefreshDevices}
                 showSectionTitle={showSectionTitle}
             />
-            <div
-                style={{
-                    marginBottom: showProcessingOptions ? `${sectionSpacingPx}px` : "0",
-                }}
-            >
+            <div className={showProcessingOptions ? "settingsPrimitiveSectionBlock" : undefined}>
                 <AudioInputDeviceField
                     settings={settings}
                     uiState={uiState}
@@ -106,19 +102,13 @@ function MicDeviceSelectionHeader({
     showSectionTitle: boolean;
 }) {
     return (
-        <div
-            style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: `${compactGapPx}px`,
-                marginBottom: `${settingsTuning.helpLabelMarginBottomPx}px`,
-            }}
-        >
+        <div className="settingsPrimitiveInlineActions">
             {showSectionTitle ? (
                 <SettingsHelpLabel text="マイク設定" />
             ) : (
-                <span style={{ opacity: 0.8, fontWeight: 700 }}>マイク入力</span>
+                <span className="settingsPrimitiveSectionLead settingsPrimitiveSectionLead--inline">
+                    マイク入力
+                </span>
             )}
             <SettingsButton type="button" onClick={onRefreshDevices} disabled={isRefreshing}>
                 {isRefreshing ? "更新中..." : "再読み込み"}
@@ -128,15 +118,5 @@ function MicDeviceSelectionHeader({
 }
 
 function MicRefreshMessage({ text }: { text: string }) {
-    return (
-        <div
-            style={{
-                marginTop: `${settingsTuning.hintMarginTopPx}px`,
-                opacity: 0.7,
-                lineHeight: 1.3,
-            }}
-        >
-            {text}
-        </div>
-    );
+    return <SettingsHint className="settingsPrimitiveHint--topGap">{text}</SettingsHint>;
 }

@@ -47,6 +47,7 @@ export function ConfigurationDialogSettingsPanel() {
             <SettingsShell
                 ariaLabel="初回セットアップウィザード"
                 title="初回セットアップ"
+                className="settingsShell--startupDialog"
                 navigationPlacement="top"
                 initialPageId="conversation"
                 pages={pages}
