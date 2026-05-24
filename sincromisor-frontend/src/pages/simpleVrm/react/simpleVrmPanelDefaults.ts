@@ -1,3 +1,10 @@
+import {
+    createDefaultSincroAppSettingsSnapshot,
+    createDefaultSincroAppSettingsUiState,
+    createDefaultSincroAppStartupSettingsCapabilities,
+    createDefaultSincroAppStartupSettingsStatus,
+    defaultSincroAppSettingsUiHints,
+} from "../../../app/settings/sincroAppSettingsDefaults";
 import type {
     PanelConnectionState,
     PanelLookingGlassConfigStatus,
@@ -11,69 +18,20 @@ import type {
 } from "./panelTypes";
 
 // AppController の初回 snapshot が届く前に control panel が表示する安全な既定値。
-export const defaultSimpleVrmPanelSettings: SincroAppSettingsSnapshot = {
-    titleText: "Sincromisor",
-    talkMode: "chat",
-    audioInputDeviceId: undefined,
-    videoInputDeviceId: undefined,
-    enableCharacter: true,
-    enableTalk: true,
-    enableCharacterGaze: true,
-    enableSincroPoseTracking: true,
-    forceSincroPoseTracking: false,
-    enableAutoMute: false,
-    enableNoiseSuppression: true,
-    enableEchoCancellation: true,
-    enableAutoGainControl: false,
-    enableVadGate: false,
-    enableVenueNoiseMode: false,
-    enableInspector: false,
-    enableVR: false,
-    characterMotionScale: 0.72,
-    sincroPoseRetargetScale: 0.68,
-    characterEyeTrackingScale: 0.68,
-    lgTileHeight: 512,
-    lgNumViews: 45,
-    lgTargetY: 0.95,
-    lgTargetZ: 0.05,
-    lgTargetDiam: 1.25,
-    lgDepthiness: 0.85,
-    lgFovyDeg: 24,
-};
+export const defaultSimpleVrmPanelSettings: SincroAppSettingsSnapshot =
+    createDefaultSincroAppSettingsSnapshot();
 
-export const defaultSimpleVrmPanelSettingsUiState: SincroAppSettingsUiState = {
-    titleTextDisabled: false,
-    talkModeDisabled: false,
-    audioInputDeviceDisabled: false,
-    videoInputDeviceDisabled: false,
-    enableCharacterDisabled: false,
-    enableTalkDisabled: false,
-    enableCharacterGazeDisabled: false,
-    forceSincroPoseTrackingDisabled: false,
-    enableAutoMuteDisabled: false,
-    enableNoiseSuppressionDisabled: false,
-    enableEchoCancellationDisabled: false,
-    enableAutoGainControlDisabled: false,
-    enableVadGateDisabled: false,
-    enableVenueNoiseModeDisabled: false,
-    enableInspectorDisabled: false,
-    enableVRDisabled: false,
-};
+export const defaultSimpleVrmPanelSettingsUiState: SincroAppSettingsUiState =
+    createDefaultSincroAppSettingsUiState();
 
-export const defaultSimpleVrmPanelSettingsUiHints: SincroAppSettingsUiHints = {};
+export const defaultSimpleVrmPanelSettingsUiHints: SincroAppSettingsUiHints =
+    defaultSincroAppSettingsUiHints;
 
-export const defaultSimpleVrmPanelStartupSettingsStatus: SincroAppStartupSettingsStatus = {
-    requiresRestart: false,
-    willApplyOnNextStart: false,
-    changedKeys: [],
-};
+export const defaultSimpleVrmPanelStartupSettingsStatus: SincroAppStartupSettingsStatus =
+    createDefaultSincroAppStartupSettingsStatus();
 
 export const defaultSimpleVrmPanelStartupSettingsCapabilities: SincroAppStartupSettingsCapabilities =
-    {
-        enableTalk: false,
-        enableInspector: false,
-        enableVR: false,
-    };
+    createDefaultSincroAppStartupSettingsCapabilities();
 
 export const defaultSimpleVrmPanelRtcState: PanelRtcState = {
     iceConnectionState: "-",

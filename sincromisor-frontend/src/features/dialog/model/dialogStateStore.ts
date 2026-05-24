@@ -1,49 +1,14 @@
-export type DialogSettingKey =
-    | "talkMode"
-    | "titleText"
-    | "audioInputDeviceId"
-    | "videoInputDeviceId"
-    | "enableCharacter"
-    | "enableTalk"
-    | "enableCharacterGaze"
-    | "enableSincroPoseTracking"
-    | "forceSincroPoseTracking"
-    | "enableAutoMute"
-    | "enableNoiseSuppression"
-    | "enableEchoCancellation"
-    | "enableAutoGainControl"
-    | "enableVadGate"
-    | "enableVenueNoiseMode"
-    | "enableInspector"
-    | "enableVR"
-    | "characterMotionScale"
-    | "sincroPoseRetargetScale"
-    | "characterEyeTrackingScale";
+import {
+    createDefaultDialogBackedSettings,
+    type DialogBackedSincroAppSettingKey,
+    type DialogBackedSincroAppSettings,
+    defaultDialogSettingsDisabledState,
+} from "../../../app/settings/sincroAppSettingsDefaults";
 
-// DialogStateStore 内で保持する設定値の型マップ。
+export type DialogSettingKey = DialogBackedSincroAppSettingKey;
+
 // DialogManager の generic getter/setter から key-safe に扱うために定義している。
-type DialogSettingValueMap = {
-    talkMode: string;
-    titleText: string;
-    audioInputDeviceId: string | undefined;
-    videoInputDeviceId: string | undefined;
-    enableCharacter: boolean;
-    enableTalk: boolean;
-    enableCharacterGaze: boolean;
-    enableSincroPoseTracking: boolean;
-    forceSincroPoseTracking: boolean;
-    enableAutoMute: boolean;
-    enableNoiseSuppression: boolean;
-    enableEchoCancellation: boolean;
-    enableAutoGainControl: boolean;
-    enableVadGate: boolean;
-    enableVenueNoiseMode: boolean;
-    enableInspector: boolean;
-    enableVR: boolean;
-    characterMotionScale: number;
-    sincroPoseRetargetScale: number;
-    characterEyeTrackingScale: number;
-};
+type DialogSettingValueMap = DialogBackedSincroAppSettings;
 
 type DialogSettingDisabledMap = {
     titleText: boolean;
@@ -81,47 +46,8 @@ export type DialogVrmUiStateValue = {
 // DialogManager の getter/setter を DOM 直読みに依存させすぎないための軽量 state store。
 // bridge DOM は同期先として残し、React/UI 層はこの値を間接的に使う構成へ寄せる。
 export class DialogStateStore {
-    private values: DialogSettingValueMap = {
-        talkMode: "chat",
-        titleText: "Sincromisor",
-        audioInputDeviceId: undefined,
-        videoInputDeviceId: undefined,
-        enableCharacter: true,
-        enableTalk: true,
-        enableCharacterGaze: true,
-        enableSincroPoseTracking: true,
-        forceSincroPoseTracking: false,
-        enableAutoMute: false,
-        enableNoiseSuppression: true,
-        enableEchoCancellation: true,
-        enableAutoGainControl: false,
-        enableVadGate: true,
-        enableVenueNoiseMode: false,
-        enableInspector: false,
-        enableVR: false,
-        characterMotionScale: 0.72,
-        sincroPoseRetargetScale: 0.68,
-        characterEyeTrackingScale: 0.68,
-    };
-    private disabled: DialogSettingDisabledMap = {
-        titleText: false,
-        talkMode: false,
-        audioInputDeviceId: false,
-        videoInputDeviceId: false,
-        enableCharacter: true,
-        enableTalk: false,
-        enableCharacterGaze: true,
-        enableSincroPoseTracking: false,
-        forceSincroPoseTracking: false,
-        enableAutoMute: true,
-        enableNoiseSuppression: false,
-        enableEchoCancellation: false,
-        enableAutoGainControl: false,
-        enableVadGate: false,
-        enableVenueNoiseMode: false,
-        enableInspector: false,
-        enableVR: false,
-    };
+    private values: DialogSettingValueMap = createDefaultDialogBackedSettings();
+    private disabled: DialogSettingDisabledMap = { ...defaultDialogSettingsDisabledState };
     private dialogUiState: DialogUiStateValue = {
         isOpen: false,
         startButtonDisabled: false,

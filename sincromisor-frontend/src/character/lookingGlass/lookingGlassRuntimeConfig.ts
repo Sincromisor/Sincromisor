@@ -1,3 +1,5 @@
+import { defaultSincroAppLookingGlassRuntimeConfig } from "../../app/settings/sincroAppSettingsDefaults";
+
 export type LookingGlassRuntimeConfig = {
     tileHeight: number;
     numViews: number;
@@ -9,17 +11,8 @@ export type LookingGlassRuntimeConfig = {
 };
 
 // Looking Glass の runtime 調整値（UI から更新され、次回セッション開始時の polyfill 初期化に使う）。
-const defaultLookingGlassRuntimeConfig: LookingGlassRuntimeConfig = {
-    tileHeight: 512,
-    numViews: 45,
-    // 展示用の縦長画角で全身を収めやすいよう、既定値はやや下寄りにする。
-    targetY: 0.85,
-    // 展示実機で焦点が合いやすかった「Focus」系の値をベースに、全身が入りやすいよう少し引く。
-    targetZ: 0.2,
-    targetDiam: 1.5,
-    depthiness: 0.85,
-    fovyDeg: 24,
-};
+const defaultLookingGlassRuntimeConfig: LookingGlassRuntimeConfig =
+    defaultSincroAppLookingGlassRuntimeConfig;
 
 let currentConfig: LookingGlassRuntimeConfig = { ...defaultLookingGlassRuntimeConfig };
 

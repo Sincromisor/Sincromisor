@@ -3,6 +3,7 @@ import type {
     SincroAppSettingsSnapshot,
     SincroAppStartupSettingsStatus,
 } from "../controller/sincroAppTypes";
+import { createDefaultSincroAppStartupSettingsStatus } from "./sincroAppSettingsDefaults";
 
 export type SincroAppStartupAppliedSettings = Pick<
     SincroAppSettingsSnapshot,
@@ -16,11 +17,7 @@ export function buildStartupSettingsStatus(params: {
     applied: SincroAppStartupAppliedSettings | undefined;
 }): SincroAppStartupSettingsStatus {
     if (params.applied === undefined) {
-        return {
-            requiresRestart: false,
-            willApplyOnNextStart: false,
-            changedKeys: [],
-        };
+        return createDefaultSincroAppStartupSettingsStatus();
     }
 
     const changedKeys: SincroAppStartupSettingsStatus["changedKeys"] = [];
@@ -34,11 +31,7 @@ export function buildStartupSettingsStatus(params: {
         changedKeys.push("enableVR");
     }
     if (changedKeys.length === 0) {
-        return {
-            requiresRestart: false,
-            willApplyOnNextStart: false,
-            changedKeys,
-        };
+        return createDefaultSincroAppStartupSettingsStatus();
     }
     if (params.lifecycleState === "running" || params.lifecycleState === "starting") {
         return {

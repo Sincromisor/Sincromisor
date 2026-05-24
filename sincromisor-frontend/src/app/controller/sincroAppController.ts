@@ -23,6 +23,7 @@ import {
 import { SincroAppEventHub } from "../events/sincroAppEventHub";
 import { SincroAppLookingGlassStateTracker } from "../events/sincroAppLookingGlassStateTracker";
 import { applySincroAppControllerSettings } from "../settings/sincroAppSettingsApplyFlow";
+import { createDefaultSincroAppStartupSettingsCapabilities } from "../settings/sincroAppSettingsDefaults";
 import { SincroAppSettingsRelatedPayloadCache } from "../settings/sincroAppSettingsRelatedPayloadCache";
 import { buildSincroAppSettingsSnapshot } from "../settings/sincroAppSettingsSnapshotBuilder";
 import {
@@ -82,11 +83,8 @@ export class SincroAppController {
     private suppressSettingsSnapshotEvent: boolean = false;
     private readonly settingsRelatedPayloadCache: SincroAppSettingsRelatedPayloadCache;
     private startupAppliedSettings: SincroAppStartupAppliedSettings | undefined;
-    private startupSettingsCapabilities: SincroAppStartupSettingsCapabilities = {
-        enableTalk: false,
-        enableInspector: false,
-        enableVR: false,
-    };
+    private startupSettingsCapabilities: SincroAppStartupSettingsCapabilities =
+        createDefaultSincroAppStartupSettingsCapabilities();
     private readonly lookingGlassTracker = new SincroAppLookingGlassStateTracker();
     // 呼び出し側では `appController.dialog.*` の方が意図が読み取りやすいため getter を用意する。
     get dialog(): SincroAppDialogBridge {
