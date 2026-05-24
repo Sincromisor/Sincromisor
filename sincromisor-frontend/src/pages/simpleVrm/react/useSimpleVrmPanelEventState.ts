@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { SincroAppEvent, SincroAppLifecycleState } from "../../../app/controller";
 import { SincroAppController } from "../../../app/controller";
-import { subscribeActiveSincroAppEvents } from "../../../app/react/subscribeActiveSincroAppEvents";
+import { useSincroAppControllerSettingsState } from "../../../app/react/useSincroAppControllerSettingsState";
 import type {
     PanelConnectionState,
     PanelGazeState,
@@ -18,21 +18,13 @@ import type {
     SincroAppStartupSettingsStatus,
 } from "./panelTypes";
 import {
-    defaultSimpleVrmPanelConnectionState,
     defaultSimpleVrmPanelLookingGlassConfigStatus,
     defaultSimpleVrmPanelLookingGlassState,
     defaultSimpleVrmPanelRtcState,
-    defaultSimpleVrmPanelSettings,
-    defaultSimpleVrmPanelSettingsUiHints,
-    defaultSimpleVrmPanelSettingsUiState,
-    defaultSimpleVrmPanelStartupSettingsCapabilities,
-    defaultSimpleVrmPanelStartupSettingsStatus,
 } from "./simpleVrmPanelDefaults";
 import {
-    createSimpleVrmPanelEventHandlers,
-    type SimpleVrmPanelControllerEventSetters,
+    createSimpleVrmPanelRuntimeEventHandlers,
     type SimpleVrmPanelRuntimeEventSetters,
-    syncSimpleVrmPanelController,
 } from "./simpleVrmPanelEventHandlers";
 
 type SimpleVrmPanelEventState = {
@@ -56,17 +48,6 @@ type SimpleVrmPanelEventState = {
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
 };
 
-type SimpleVrmPanelControllerEventState = {
-    hasActiveController: boolean;
-    currentController: SincroAppController | undefined;
-    lifecycleState: SincroAppLifecycleState;
-    settings: SincroAppSettingsSnapshot;
-    settingsUiState: SincroAppSettingsUiState;
-    settingsUiHints: SincroAppSettingsUiHints;
-    startupSettingsStatus: SincroAppStartupSettingsStatus;
-    startupSettingsCapabilities: SincroAppStartupSettingsCapabilities;
-};
-
 type SimpleVrmPanelRuntimeEventState = {
     logs: PanelMessageLog[];
     vadState: "unknown" | "speech" | "silence";
@@ -74,69 +55,10 @@ type SimpleVrmPanelRuntimeEventState = {
     gaze: PanelGazeState;
     rtcEvents: string[];
     rtcState: PanelRtcState;
-    connectionState: PanelConnectionState;
     telopLogs: PanelTelopLog[];
     lookingGlass: PanelLookingGlassState;
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
 };
-
-function useSimpleVrmPanelControllerEventState(
-    initialController: SincroAppController | undefined,
-): {
-    state: SimpleVrmPanelControllerEventState;
-    setters: SimpleVrmPanelControllerEventSetters;
-} {
-    const [hasActiveController, setHasActiveController] = useState<boolean>(!!initialController);
-    const [currentController, setCurrentController] = useState<SincroAppController | undefined>(
-        initialController,
-    );
-    const [lifecycleState, setLifecycleState] = useState<SincroAppLifecycleState>("idle");
-    const [settings, setSettings] = useState<SincroAppSettingsSnapshot>(
-        initialController?.state.getSettingsSnapshot() ?? defaultSimpleVrmPanelSettings,
-    );
-    const [settingsUiState, setSettingsUiState] = useState<SincroAppSettingsUiState>(
-        initialController?.state.getSettingsUiState() ?? defaultSimpleVrmPanelSettingsUiState,
-    );
-    const [settingsUiHints, setSettingsUiHints] = useState<SincroAppSettingsUiHints>(
-        initialController?.state.getSettingsUiHints() ?? defaultSimpleVrmPanelSettingsUiHints,
-    );
-    const [startupSettingsStatus, setStartupSettingsStatus] =
-        useState<SincroAppStartupSettingsStatus>(
-            initialController?.state.getStartupSettingsStatus() ??
-                defaultSimpleVrmPanelStartupSettingsStatus,
-        );
-    const [startupSettingsCapabilities, setStartupSettingsCapabilities] =
-        useState<SincroAppStartupSettingsCapabilities>(
-            defaultSimpleVrmPanelStartupSettingsCapabilities,
-        );
-    const setters = useMemo<SimpleVrmPanelControllerEventSetters>(
-        () => ({
-            setHasActiveController,
-            setCurrentController,
-            setLifecycleState,
-            setSettings,
-            setSettingsUiState,
-            setSettingsUiHints,
-            setStartupSettingsStatus,
-            setStartupSettingsCapabilities,
-        }),
-        [],
-    );
-
-    return {
-        state: {
-            hasActiveController,
-            currentController,
-            lifecycleState,
-            settings,
-            settingsUiState,
-            settingsUiHints,
-            startupSettingsStatus,
-            startupSettingsCapabilities,
-        },
-        setters,
-    };
-}
 
 function useSimpleVrmPanelRuntimeEventState(): {
     state: SimpleVrmPanelRuntimeEventState;
@@ -148,9 +70,6 @@ function useSimpleVrmPanelRuntimeEventState(): {
     const [gaze, setGaze] = useState<PanelGazeState>({});
     const [rtcEvents, setRtcEvents] = useState<string[]>([]);
     const [rtcState, setRtcState] = useState<PanelRtcState>(defaultSimpleVrmPanelRtcState);
-    const [connectionState, setConnectionState] = useState<PanelConnectionState>(
-        defaultSimpleVrmPanelConnectionState,
-    );
     const [telopLogs, setTelopLogs] = useState<PanelTelopLog[]>([]);
     const [lookingGlass, setLookingGlass] = useState<PanelLookingGlassState>(
         defaultSimpleVrmPanelLookingGlassState,
@@ -165,7 +84,6 @@ function useSimpleVrmPanelRuntimeEventState(): {
             setGaze,
             setRtcEvents,
             setRtcState,
-            setConnectionState,
             setTelopLogs,
             setLookingGlass,
             setLookingGlassConfigStatus,
@@ -181,7 +99,6 @@ function useSimpleVrmPanelRuntimeEventState(): {
             gaze,
             rtcEvents,
             rtcState,
-            connectionState,
             telopLogs,
             lookingGlass,
             lookingGlassConfigStatus,
@@ -193,31 +110,28 @@ function useSimpleVrmPanelRuntimeEventState(): {
 // AppController event を control panel 表示用 state に正規化する。
 export function useSimpleVrmPanelEventState(): SimpleVrmPanelEventState {
     const initialController = SincroAppController.getCurrent();
-    const controllerEventState = useSimpleVrmPanelControllerEventState(initialController);
     const runtimeEventState = useSimpleVrmPanelRuntimeEventState();
-
-    useEffect(() => {
-        const eventHandlers = createSimpleVrmPanelEventHandlers(
-            controllerEventState.setters,
-            runtimeEventState.setters,
-        );
-
-        const unsubscribeActiveController = subscribeActiveSincroAppEvents({
-            onControllerChange: (controller) => {
-                syncSimpleVrmPanelController(controller, controllerEventState.setters);
-            },
-            onEvent: (event: SincroAppEvent) => {
-                const handler = eventHandlers[event.type] as
-                    | ((value: SincroAppEvent) => void)
-                    | undefined;
-                handler?.(event);
-            },
-        });
-        return () => unsubscribeActiveController();
-    }, [controllerEventState.setters, runtimeEventState.setters]);
+    const eventHandlers = useMemo(
+        () => createSimpleVrmPanelRuntimeEventHandlers(runtimeEventState.setters),
+        [runtimeEventState.setters],
+    );
+    const applyRuntimeEvent = useCallback(
+        (event: SincroAppEvent) => {
+            const handler = eventHandlers[event.type] as
+                | ((value: SincroAppEvent) => void)
+                | undefined;
+            handler?.(event);
+        },
+        [eventHandlers],
+    );
+    const controllerEventState = useSincroAppControllerSettingsState({
+        initialController,
+        resetLifecycleOnControllerClear: true,
+        onEvent: applyRuntimeEvent,
+    });
 
     return {
-        ...controllerEventState.state,
+        ...controllerEventState,
         ...runtimeEventState.state,
     };
 }

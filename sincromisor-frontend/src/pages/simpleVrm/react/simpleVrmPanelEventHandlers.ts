@@ -1,17 +1,8 @@
 import type { Dispatch, SetStateAction } from "react";
-import type {
-    SincroAppController,
-    SincroAppEvent,
-    SincroAppLifecycleState,
-} from "../../../app/controller";
+import type { SincroAppEvent } from "../../../app/controller";
 import { prependPanelMessageLog } from "../../../app/react/panelLogHelpers";
-import {
-    hydrateSettingsSnapshotsFromController,
-    hydrateStartupSettingsStatusFromController,
-} from "../../../app/react/sincroAppStateSnapshotHydrators";
 import { UI_TUNING } from "../../../app/react/uiTuning";
 import type {
-    PanelConnectionState,
     PanelGazeState,
     PanelLearnedVadState,
     PanelLookingGlassConfigStatus,
@@ -19,26 +10,10 @@ import type {
     PanelMessageLog,
     PanelRtcState,
     PanelTelopLog,
-    SincroAppSettingsSnapshot,
-    SincroAppSettingsUiHints,
-    SincroAppSettingsUiState,
-    SincroAppStartupSettingsCapabilities,
-    SincroAppStartupSettingsStatus,
 } from "./panelTypes";
 
 export type SimpleVrmPanelEventHandlerMap = {
     [K in SincroAppEvent["type"]]?: (event: Extract<SincroAppEvent, { type: K }>) => void;
-};
-
-export type SimpleVrmPanelControllerEventSetters = {
-    setHasActiveController: Dispatch<SetStateAction<boolean>>;
-    setCurrentController: Dispatch<SetStateAction<SincroAppController | undefined>>;
-    setLifecycleState: Dispatch<SetStateAction<SincroAppLifecycleState>>;
-    setSettings: Dispatch<SetStateAction<SincroAppSettingsSnapshot>>;
-    setSettingsUiState: Dispatch<SetStateAction<SincroAppSettingsUiState>>;
-    setSettingsUiHints: Dispatch<SetStateAction<SincroAppSettingsUiHints>>;
-    setStartupSettingsStatus: Dispatch<SetStateAction<SincroAppStartupSettingsStatus>>;
-    setStartupSettingsCapabilities: Dispatch<SetStateAction<SincroAppStartupSettingsCapabilities>>;
 };
 
 export type SimpleVrmPanelRuntimeEventSetters = {
@@ -48,50 +23,18 @@ export type SimpleVrmPanelRuntimeEventSetters = {
     setGaze: Dispatch<SetStateAction<PanelGazeState>>;
     setRtcEvents: Dispatch<SetStateAction<string[]>>;
     setRtcState: Dispatch<SetStateAction<PanelRtcState>>;
-    setConnectionState: Dispatch<SetStateAction<PanelConnectionState>>;
     setTelopLogs: Dispatch<SetStateAction<PanelTelopLog[]>>;
     setLookingGlass: Dispatch<SetStateAction<PanelLookingGlassState>>;
     setLookingGlassConfigStatus: Dispatch<SetStateAction<PanelLookingGlassConfigStatus>>;
 };
 
-export function syncSimpleVrmPanelController(
-    controller: SincroAppController | undefined,
-    setters: SimpleVrmPanelControllerEventSetters,
-): void {
-    setters.setCurrentController(controller);
-    setters.setHasActiveController(!!controller);
-    if (!controller) {
-        setters.setLifecycleState("idle");
-        return;
-    }
-    hydrateSettingsSnapshotsFromController(controller, setters);
-    hydrateStartupSettingsStatusFromController(controller, setters);
-}
-
-export function createSimpleVrmPanelEventHandlers(
-    controllerSetters: SimpleVrmPanelControllerEventSetters,
+export function createSimpleVrmPanelRuntimeEventHandlers(
     runtimeSetters: SimpleVrmPanelRuntimeEventSetters,
 ): SimpleVrmPanelEventHandlerMap {
     return {
-        ...createSettingsEventHandlers(controllerSetters),
         ...createMessageEventHandlers(runtimeSetters),
         ...createRuntimeStatusEventHandlers(runtimeSetters),
         ...createLookingGlassEventHandlers(runtimeSetters),
-    };
-}
-
-function createSettingsEventHandlers(
-    setters: SimpleVrmPanelControllerEventSetters,
-): SimpleVrmPanelEventHandlerMap {
-    return {
-        lifecycle: (event) => setters.setLifecycleState(event.state),
-        settings_snapshot: (event) =>
-            setters.setSettings((prev) => ({ ...prev, ...event.settings })),
-        settings_ui_state: (event) => setters.setSettingsUiState(event.uiState),
-        settings_ui_hints: (event) => setters.setSettingsUiHints(event.uiHints),
-        startup_settings_status: (event) => setters.setStartupSettingsStatus(event.status),
-        startup_settings_capabilities: (event) =>
-            setters.setStartupSettingsCapabilities(event.capabilities),
     };
 }
 
@@ -138,8 +81,6 @@ function createRuntimeStatusEventHandlers(
                 iceConnectionState: event.iceConnectionState ?? prev.iceConnectionState,
                 signalingState: event.signalingState ?? prev.signalingState,
             })),
-        connection_state: (event) =>
-            setters.setConnectionState({ value: event.value, detail: event.detail ?? "" }),
         learned_vad_state: (event) =>
             setters.setLearnedVad({ status: event.status, probability: event.probability }),
     };
