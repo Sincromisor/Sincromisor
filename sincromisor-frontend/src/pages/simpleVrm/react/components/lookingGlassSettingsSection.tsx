@@ -1,3 +1,4 @@
+import { defaultSincroAppSettingsSnapshot } from "../../../../app/settings/sincroAppSettingsDefaults";
 import { settingHelp } from "../../../../features/settings/react/fields/settingsFields";
 import {
     SettingsButton,
@@ -19,15 +20,15 @@ const LOOKING_GLASS_PRESETS: Array<{
 }> = [
     {
         label: "標準 (Default)",
-        // 既定値は展示実機で焦点を合わせやすかった Focus 値を採用する。
+        // アプリ全体の Looking Glass 既定値と同じ値へ戻すための preset。
         values: {
-            lgTileHeight: 512,
-            lgNumViews: 45,
-            lgTargetY: 0.95,
-            lgTargetZ: 0.05,
-            lgTargetDiam: 1.25,
-            lgDepthiness: 0.85,
-            lgFovyDeg: 24,
+            lgTileHeight: defaultSincroAppSettingsSnapshot.lgTileHeight,
+            lgNumViews: defaultSincroAppSettingsSnapshot.lgNumViews,
+            lgTargetY: defaultSincroAppSettingsSnapshot.lgTargetY,
+            lgTargetZ: defaultSincroAppSettingsSnapshot.lgTargetZ,
+            lgTargetDiam: defaultSincroAppSettingsSnapshot.lgTargetDiam,
+            lgDepthiness: defaultSincroAppSettingsSnapshot.lgDepthiness,
+            lgFovyDeg: defaultSincroAppSettingsSnapshot.lgFovyDeg,
         },
     },
     {
@@ -56,7 +57,6 @@ const LOOKING_GLASS_PRESETS: Array<{
     },
     {
         label: "焦点調整用 (Focus)",
-        // 展示構図（全身を収めやすい引き気味・下寄り）も合わせて既定値に寄せる。
         values: {
             lgTileHeight: 512,
             lgNumViews: 45,

@@ -45,7 +45,8 @@
 - `src/app/bridges`
     - AppController と legacy manager / service singleton の接続点、bridge 型、runtime bundle factory を置く。
 - `src/app/settings`
-    - settings snapshot / apply / startup status / related payload cache を置く。
+    - settings defaults / snapshot / apply / startup status / related payload cache を置く。
+    - `sincroAppSettingsDefaults.ts` は AppController snapshot、React fallback、DialogStateStore、Looking Glass runtime の既定値の正本を持つ。
 - `src/app/react`
     - active AppController subscription hook、panel state helper、UI tuning など app shell から使う React helper を置く。
 - `src/features`
@@ -109,6 +110,7 @@
 - UI shell を変更したら `frontend/pages.md` と `frontend/settings-and-debug-ui.md` の影響を確認する。
 - RTC 接続仕様を変更したら `contracts/frontend-rtc.md` と backend を同時確認する。
 - media device 設定を変更したら startup dialog と settings panel の両方を確認する。
+- settings 既定値を変更したら startup dialog、settings panel、Looking Glass runtime snapshot の初期値一致を確認する。
 - modern page の layout を変えたら desktop / mobile の表示確認を行う。
 
 ## References

@@ -2,6 +2,10 @@ import { CharacterBehaviorState } from "../../character/behavior/characterBehavi
 import { updateLookingGlassRuntimeConfig } from "../../character/lookingGlass/lookingGlassRuntimeConfig";
 import type { SincroAppDialogFacade } from "../bridges/sincroAppDialogFacade";
 import type { SincroAppSettingsSnapshot } from "../controller/sincroAppTypes";
+import {
+    type SincroAppNumericSettingKey,
+    sincroAppNumericSettingConstraints,
+} from "./sincroAppSettingsDefaults";
 
 type LookingGlassRuntimeConfigPatch = Parameters<typeof updateLookingGlassRuntimeConfig>[0];
 
@@ -115,17 +119,23 @@ function applyMotionScaleSettings(
 ): void {
     if (partial.characterMotionScale !== undefined) {
         dialogManager.setCharacterMotionScale(
-            clampAndRoundToStep(partial.characterMotionScale, 0, 1.2, 0.05),
+            clampSincroAppNumericSetting("characterMotionScale", partial.characterMotionScale),
         );
     }
     if (partial.sincroPoseRetargetScale !== undefined) {
         dialogManager.setSincroPoseRetargetScale(
-            clampAndRoundToStep(partial.sincroPoseRetargetScale, 0, 1.2, 0.05),
+            clampSincroAppNumericSetting(
+                "sincroPoseRetargetScale",
+                partial.sincroPoseRetargetScale,
+            ),
         );
     }
     if (partial.characterEyeTrackingScale !== undefined) {
         dialogManager.setCharacterEyeTrackingScale(
-            clampAndRoundToStep(partial.characterEyeTrackingScale, 0, 1.2, 0.05),
+            clampSincroAppNumericSetting(
+                "characterEyeTrackingScale",
+                partial.characterEyeTrackingScale,
+            ),
         );
     }
 }
@@ -144,25 +154,51 @@ function buildLookingGlassRuntimeConfig(
 ): LookingGlassRuntimeConfigPatch {
     const nextLookingGlassConfig: LookingGlassRuntimeConfigPatch = {};
     if (partial.lgTileHeight !== undefined) {
-        nextLookingGlassConfig.tileHeight = clampAndRoundToStep(partial.lgTileHeight, 256, 2048, 1);
+        nextLookingGlassConfig.tileHeight = clampSincroAppNumericSetting(
+            "lgTileHeight",
+            partial.lgTileHeight,
+        );
     }
     if (partial.lgNumViews !== undefined) {
-        nextLookingGlassConfig.numViews = clampAndRoundToStep(partial.lgNumViews, 8, 64, 1);
+        nextLookingGlassConfig.numViews = clampSincroAppNumericSetting(
+            "lgNumViews",
+            partial.lgNumViews,
+        );
     }
     if (partial.lgTargetY !== undefined) {
-        nextLookingGlassConfig.targetY = clampAndRoundToStep(partial.lgTargetY, -2, 4, 0.05);
+        nextLookingGlassConfig.targetY = clampSincroAppNumericSetting(
+            "lgTargetY",
+            partial.lgTargetY,
+        );
     }
     if (partial.lgTargetZ !== undefined) {
-        nextLookingGlassConfig.targetZ = clampAndRoundToStep(partial.lgTargetZ, -1, 2, 0.05);
+        nextLookingGlassConfig.targetZ = clampSincroAppNumericSetting(
+            "lgTargetZ",
+            partial.lgTargetZ,
+        );
     }
     if (partial.lgTargetDiam !== undefined) {
-        nextLookingGlassConfig.targetDiam = clampAndRoundToStep(partial.lgTargetDiam, 0.1, 3, 0.05);
+        nextLookingGlassConfig.targetDiam = clampSincroAppNumericSetting(
+            "lgTargetDiam",
+            partial.lgTargetDiam,
+        );
     }
     if (partial.lgDepthiness !== undefined) {
-        nextLookingGlassConfig.depthiness = clampAndRoundToStep(partial.lgDepthiness, 0, 4, 0.05);
+        nextLookingGlassConfig.depthiness = clampSincroAppNumericSetting(
+            "lgDepthiness",
+            partial.lgDepthiness,
+        );
     }
     if (partial.lgFovyDeg !== undefined) {
-        nextLookingGlassConfig.fovyDeg = clampAndRoundToStep(partial.lgFovyDeg, 5, 80, 0.5);
+        nextLookingGlassConfig.fovyDeg = clampSincroAppNumericSetting(
+            "lgFovyDeg",
+            partial.lgFovyDeg,
+        );
     }
     return nextLookingGlassConfig;
+}
+
+function clampSincroAppNumericSetting(key: SincroAppNumericSettingKey, value: number): number {
+    const constraints = sincroAppNumericSettingConstraints[key];
+    return clampAndRoundToStep(value, constraints.min, constraints.max, constraints.step);
 }
