@@ -1,16 +1,22 @@
-type RangeControlProps = {
+export type DebugRangeControlItem = {
     id: string;
     label: string;
     valueLabel: string;
-    min: string;
-    max: string;
-    step: string;
+    min: number | string;
+    max: number | string;
+    step: number | string;
     value: number;
     disabled?: boolean;
     onChange: (value: number) => void;
 };
 
-export function RangeControl({
+type DebugRangeControlProps = DebugRangeControlItem;
+
+type DebugRangeControlListProps = {
+    items: readonly DebugRangeControlItem[];
+};
+
+export function DebugRangeControl({
     id,
     label,
     valueLabel,
@@ -20,7 +26,7 @@ export function RangeControl({
     value,
     disabled = false,
     onChange,
-}: RangeControlProps) {
+}: DebugRangeControlProps) {
     return (
         <div className="audioControlGroup">
             <label className="audioControlLabel" htmlFor={id}>
@@ -39,5 +45,15 @@ export function RangeControl({
                 onChange={(event) => onChange(Number.parseFloat(event.currentTarget.value))}
             />
         </div>
+    );
+}
+
+export function DebugRangeControlList({ items }: DebugRangeControlListProps) {
+    return (
+        <>
+            {items.map((item) => (
+                <DebugRangeControl key={item.id} {...item} />
+            ))}
+        </>
     );
 }

@@ -5,7 +5,14 @@ import {
     type DebugConsoleManager,
     type DebugConsoleSnapshot,
 } from "../../model/debugConsoleManager";
-import { RangeControl } from "../components/rangeControl";
+import {
+    DebugPresetButtonGroup,
+    type DebugPresetButtonItem,
+} from "../components/debugPresetButtonGroup";
+import {
+    type DebugRangeControlItem,
+    DebugRangeControlList,
+} from "../components/debugRangeControls";
 
 const GAZE_TUNING_PRESET_KEYS: CharacterGazeTrackingTuningPresetKey[] = [
     "stable",
@@ -43,24 +50,17 @@ type GazeTuningPresetButtonsProps = {
 };
 
 function GazeTuningPresetButtons({ manager }: GazeTuningPresetButtonsProps) {
-    return (
-        <div className="audioControlPresetButtons">
-            {GAZE_TUNING_PRESET_KEYS.map((presetKey) => (
-                <button
-                    key={presetKey}
-                    type="button"
-                    data-gaze-tuning-preset={presetKey}
-                    onClick={() =>
-                        manager.applyCharacterGazeTrackingTuning(
-                            CHARACTER_GAZE_TRACKING_TUNING_PRESETS[presetKey],
-                        )
-                    }
-                >
-                    {gazePresetLabel(presetKey)}
-                </button>
-            ))}
-        </div>
-    );
+    const items: DebugPresetButtonItem[] = GAZE_TUNING_PRESET_KEYS.map((presetKey) => ({
+        id: presetKey,
+        label: gazePresetLabel(presetKey),
+        dataAttributes: { "data-gaze-tuning-preset": presetKey },
+        onClick: () =>
+            manager.applyCharacterGazeTrackingTuning(
+                CHARACTER_GAZE_TRACKING_TUNING_PRESETS[presetKey],
+            ),
+    }));
+
+    return <DebugPresetButtonGroup items={items} />;
 }
 
 type GazeTuningRangeControlsProps = {
@@ -69,77 +69,77 @@ type GazeTuningRangeControlsProps = {
 };
 
 function GazeTimingControls({ gaze, onTuningChange }: GazeTuningRangeControlsProps) {
-    return (
-        <>
-            <RangeControl
-                id="gazeHoldMs"
-                label="Hold"
-                valueLabel={`${Math.round(gaze.tuning.minimumHoldMs)}ms`}
-                min="0"
-                max="2000"
-                step="50"
-                value={gaze.tuning.minimumHoldMs}
-                onChange={(value) => onTuningChange({ minimumHoldMs: value })}
-            />
-            <RangeControl
-                id="gazeSwitchMargin"
-                label="Switch Margin"
-                valueLabel={gaze.tuning.switchMargin.toFixed(2)}
-                min="0"
-                max="0.5"
-                step="0.01"
-                value={gaze.tuning.switchMargin}
-                onChange={(value) => onTuningChange({ switchMargin: value })}
-            />
-            <RangeControl
-                id="gazeRelinkDistance"
-                label="Relink Dist"
-                valueLabel={gaze.tuning.relinkDistance.toFixed(2)}
-                min="0.05"
-                max="0.5"
-                step="0.01"
-                value={gaze.tuning.relinkDistance}
-                onChange={(value) => onTuningChange({ relinkDistance: value })}
-            />
-        </>
-    );
+    const ranges: DebugRangeControlItem[] = [
+        {
+            id: "gazeHoldMs",
+            label: "Hold",
+            valueLabel: `${Math.round(gaze.tuning.minimumHoldMs)}ms`,
+            min: 0,
+            max: 2000,
+            step: 50,
+            value: gaze.tuning.minimumHoldMs,
+            onChange: (value) => onTuningChange({ minimumHoldMs: value }),
+        },
+        {
+            id: "gazeSwitchMargin",
+            label: "Switch Margin",
+            valueLabel: gaze.tuning.switchMargin.toFixed(2),
+            min: 0,
+            max: 0.5,
+            step: 0.01,
+            value: gaze.tuning.switchMargin,
+            onChange: (value) => onTuningChange({ switchMargin: value }),
+        },
+        {
+            id: "gazeRelinkDistance",
+            label: "Relink Dist",
+            valueLabel: gaze.tuning.relinkDistance.toFixed(2),
+            min: 0.05,
+            max: 0.5,
+            step: 0.01,
+            value: gaze.tuning.relinkDistance,
+            onChange: (value) => onTuningChange({ relinkDistance: value }),
+        },
+    ];
+
+    return <DebugRangeControlList items={ranges} />;
 }
 
 function GazeFilterControls({ gaze, onTuningChange }: GazeTuningRangeControlsProps) {
-    return (
-        <>
-            <RangeControl
-                id="gazeOneEuroMinCutoff"
-                label="OneEuro Min"
-                valueLabel={gaze.tuning.oneEuroMinCutoff.toFixed(2)}
-                min="0.1"
-                max="4"
-                step="0.1"
-                value={gaze.tuning.oneEuroMinCutoff}
-                onChange={(value) => onTuningChange({ oneEuroMinCutoff: value })}
-            />
-            <RangeControl
-                id="gazeOneEuroBeta"
-                label="OneEuro Beta"
-                valueLabel={gaze.tuning.oneEuroBeta.toFixed(3)}
-                min="0"
-                max="0.2"
-                step="0.005"
-                value={gaze.tuning.oneEuroBeta}
-                onChange={(value) => onTuningChange({ oneEuroBeta: value })}
-            />
-            <RangeControl
-                id="gazeDeadband"
-                label="Deadband"
-                valueLabel={gaze.tuning.deadband.toFixed(4)}
-                min="0"
-                max="0.02"
-                step="0.0005"
-                value={gaze.tuning.deadband}
-                onChange={(value) => onTuningChange({ deadband: value })}
-            />
-        </>
-    );
+    const ranges: DebugRangeControlItem[] = [
+        {
+            id: "gazeOneEuroMinCutoff",
+            label: "OneEuro Min",
+            valueLabel: gaze.tuning.oneEuroMinCutoff.toFixed(2),
+            min: 0.1,
+            max: 4,
+            step: 0.1,
+            value: gaze.tuning.oneEuroMinCutoff,
+            onChange: (value) => onTuningChange({ oneEuroMinCutoff: value }),
+        },
+        {
+            id: "gazeOneEuroBeta",
+            label: "OneEuro Beta",
+            valueLabel: gaze.tuning.oneEuroBeta.toFixed(3),
+            min: 0,
+            max: 0.2,
+            step: 0.005,
+            value: gaze.tuning.oneEuroBeta,
+            onChange: (value) => onTuningChange({ oneEuroBeta: value }),
+        },
+        {
+            id: "gazeDeadband",
+            label: "Deadband",
+            valueLabel: gaze.tuning.deadband.toFixed(4),
+            min: 0,
+            max: 0.02,
+            step: 0.0005,
+            value: gaze.tuning.deadband,
+            onChange: (value) => onTuningChange({ deadband: value }),
+        },
+    ];
+
+    return <DebugRangeControlList items={ranges} />;
 }
 
 function gazePresetLabel(presetKey: CharacterGazeTrackingTuningPresetKey): string {

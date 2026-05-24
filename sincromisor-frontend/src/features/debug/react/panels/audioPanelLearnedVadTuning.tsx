@@ -4,7 +4,10 @@ import type {
     LearnedVadPerformanceMode,
     LearnedVadTuningUiConfig,
 } from "../../model/debugConsoleManager";
-import { RangeControl } from "../components/rangeControl";
+import {
+    type DebugRangeControlItem,
+    DebugRangeControlList,
+} from "../components/debugRangeControls";
 
 type AudioPanelLearnedVadTuningProps = {
     audio: DebugConsoleSnapshot["audio"];
@@ -62,54 +65,55 @@ type LearnedVadThresholdControlsProps = {
 };
 
 function LearnedVadThresholdControls({ audio, onTuningChange }: LearnedVadThresholdControlsProps) {
-    return (
-        <>
-            <RangeControl
-                id="localVadLearnedOnThreshold"
-                label="ON Threshold"
-                valueLabel={audio.learnedVadTuning.onThreshold.toFixed(4)}
-                min="0.0001"
-                max="0.1000"
-                step="0.0001"
-                value={audio.learnedVadTuning.onThreshold}
-                disabled={audio.vadThresholdMode !== "learned"}
-                onChange={(value) => onTuningChange({ onThreshold: value })}
-            />
-            <RangeControl
-                id="localVadLearnedOffThreshold"
-                label="OFF Threshold"
-                valueLabel={audio.learnedVadTuning.offThreshold.toFixed(4)}
-                min="0.00005"
-                max="0.0900"
-                step="0.00005"
-                value={audio.learnedVadTuning.offThreshold}
-                disabled={audio.vadThresholdMode !== "learned"}
-                onChange={(value) => onTuningChange({ offThreshold: value })}
-            />
-            <RangeControl
-                id="localVadLearnedHangoverMs"
-                label="Hangover"
-                valueLabel={`${Math.round(audio.learnedVadTuning.hangoverMs)}ms`}
-                min="0"
-                max="1200"
-                step="10"
-                value={audio.learnedVadTuning.hangoverMs}
-                disabled={audio.vadThresholdMode !== "learned"}
-                onChange={(value) => onTuningChange({ hangoverMs: value })}
-            />
-            <RangeControl
-                id="localVadLearnedInferIntervalMs"
-                label="Infer Interval"
-                valueLabel={`${Math.round(audio.learnedVadTuning.minInferIntervalMs)}ms`}
-                min="20"
-                max="400"
-                step="10"
-                value={audio.learnedVadTuning.minInferIntervalMs}
-                disabled={audio.vadThresholdMode !== "learned"}
-                onChange={(value) => onTuningChange({ minInferIntervalMs: value })}
-            />
-        </>
-    );
+    const disabled = audio.vadThresholdMode !== "learned";
+    const ranges: DebugRangeControlItem[] = [
+        {
+            id: "localVadLearnedOnThreshold",
+            label: "ON Threshold",
+            valueLabel: audio.learnedVadTuning.onThreshold.toFixed(4),
+            min: 0.0001,
+            max: 0.1,
+            step: 0.0001,
+            value: audio.learnedVadTuning.onThreshold,
+            disabled,
+            onChange: (value) => onTuningChange({ onThreshold: value }),
+        },
+        {
+            id: "localVadLearnedOffThreshold",
+            label: "OFF Threshold",
+            valueLabel: audio.learnedVadTuning.offThreshold.toFixed(4),
+            min: 0.00005,
+            max: 0.09,
+            step: 0.00005,
+            value: audio.learnedVadTuning.offThreshold,
+            disabled,
+            onChange: (value) => onTuningChange({ offThreshold: value }),
+        },
+        {
+            id: "localVadLearnedHangoverMs",
+            label: "Hangover",
+            valueLabel: `${Math.round(audio.learnedVadTuning.hangoverMs)}ms`,
+            min: 0,
+            max: 1200,
+            step: 10,
+            value: audio.learnedVadTuning.hangoverMs,
+            disabled,
+            onChange: (value) => onTuningChange({ hangoverMs: value }),
+        },
+        {
+            id: "localVadLearnedInferIntervalMs",
+            label: "Infer Interval",
+            valueLabel: `${Math.round(audio.learnedVadTuning.minInferIntervalMs)}ms`,
+            min: 20,
+            max: 400,
+            step: 10,
+            value: audio.learnedVadTuning.minInferIntervalMs,
+            disabled,
+            onChange: (value) => onTuningChange({ minInferIntervalMs: value }),
+        },
+    ];
+
+    return <DebugRangeControlList items={ranges} />;
 }
 
 function parseLearnedVadPerformanceMode(value: string): LearnedVadPerformanceMode {
