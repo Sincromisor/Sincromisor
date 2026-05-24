@@ -6,7 +6,6 @@ import {
     defaultSincroAppSettingsUiHints,
 } from "../../../app/settings/sincroAppSettingsDefaults";
 import type {
-    PanelConnectionState,
     PanelLookingGlassConfigStatus,
     PanelLookingGlassState,
     PanelRtcState,
@@ -36,11 +35,6 @@ export const defaultSimpleVrmPanelStartupSettingsCapabilities: SincroAppStartupS
 export const defaultSimpleVrmPanelRtcState: PanelRtcState = {
     iceConnectionState: "-",
     signalingState: "-",
-};
-
-export const defaultSimpleVrmPanelConnectionState: PanelConnectionState = {
-    value: "idle",
-    detail: "",
 };
 
 export const defaultSimpleVrmPanelLookingGlassState: PanelLookingGlassState = {
