@@ -1,8 +1,10 @@
-import { settingsPageCopy } from "../../settings/react/shell/settingsPageCopy";
+import { SettingsCategorySection } from "../../settings/react/sections/settingsCategorySection";
 import {
-    DialogSettingsCategory,
-    DialogStartupSettingsSection,
-} from "./components/dialogSettingsFormSections";
+    connectionStatusLabel,
+    createStartupOptionHint,
+} from "../../settings/react/sections/settingsConnectionText";
+import { settingsPageCopy } from "../../settings/react/shell/settingsPageCopy";
+import { DialogStartupSettingsSection } from "./components/dialogSettingsFormSections";
 import type { useConfigurationDialogSettingsState } from "./useConfigurationDialogSettingsState";
 
 type ConfigurationDialogSettingsState = ReturnType<typeof useConfigurationDialogSettingsState>;
@@ -15,10 +17,7 @@ export function ConfigurationDialogConnectionPage({
     state,
 }: ConfigurationDialogConnectionPageProps) {
     const hasStartupOptions = state.startupSettingsCapabilities.enableVR;
-    const startupOptionHint =
-        state.startupSettingsStatus.changedKeys.length > 0
-            ? `開始前だけ効く項目に変更があります: ${state.startupSettingsStatus.changedKeys.join(", ")}`
-            : "";
+    const startupOptionHint = createStartupOptionHint(state.startupSettingsStatus);
 
     return (
         <>
@@ -30,7 +29,7 @@ export function ConfigurationDialogConnectionPage({
 
 function ConnectionStartupSection({ state }: ConfigurationDialogConnectionPageProps) {
     return (
-        <DialogSettingsCategory title={settingsPageCopy.connection.startupSectionTitle}>
+        <SettingsCategorySection title={settingsPageCopy.connection.startupSectionTitle}>
             <DialogStartupSettingsSection
                 settings={state.settings}
                 uiState={state.settingsUiState}
@@ -40,7 +39,7 @@ function ConnectionStartupSection({ state }: ConfigurationDialogConnectionPagePr
                 isRunning={state.lifecycleState === "running"}
                 showSectionTitle={false}
             />
-        </DialogSettingsCategory>
+        </SettingsCategorySection>
     );
 }
 
@@ -53,7 +52,7 @@ function ConnectionStatusSection({ state, startupOptionHint }: ConnectionStatusS
     const connectionDetail = state.connectionState.detail ?? "";
 
     return (
-        <DialogSettingsCategory title={settingsPageCopy.connection.statusSectionTitle}>
+        <SettingsCategorySection title={settingsPageCopy.connection.statusSectionTitle}>
             <div className="configurationDialogReactSettingsPanel__connectionPage">
                 <div className="configurationDialogReactSettingsPanel__statusPanel">
                     <div className="configurationDialogReactSettingsPanel__statusValue">
@@ -71,26 +70,6 @@ function ConnectionStatusSection({ state, startupOptionHint }: ConnectionStatusS
                     </div>
                 ) : null}
             </div>
-        </DialogSettingsCategory>
+        </SettingsCategorySection>
     );
-}
-
-function connectionStatusLabel(value: string): string {
-    switch (value) {
-        case "connected":
-            return "接続済み";
-        case "starting":
-            return "開始準備中";
-        case "connecting":
-            return "接続中";
-        case "degraded":
-            return "要確認";
-        case "stopping":
-            return "停止中";
-        case "stopped":
-        case "idle":
-            return "未接続";
-        default:
-            return value;
-    }
 }

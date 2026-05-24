@@ -1,3 +1,7 @@
+import {
+    connectionStatusLabel,
+    createStartupOptionHint,
+} from "../../../features/settings/react/sections/settingsConnectionText";
 import { settingsPageCopy } from "../../../features/settings/react/shell/settingsPageCopy";
 import { SettingsCategorySection, StartupSettingsSection } from "./components/settingsSections";
 import { panelStyles } from "./panelStyles";
@@ -34,10 +38,7 @@ function ConnectionStatusCategory({ panelState }: SimpleVrmControlPanelPageProps
     const detail =
         panelState.connectionState.detail ??
         (panelState.hasActiveController ? "接続済みです。" : "");
-    const startupOptionHint =
-        panelState.startupSettingsStatus.changedKeys.length > 0
-            ? `開始前だけ効く項目に変更があります: ${panelState.startupSettingsStatus.changedKeys.join(", ")}`
-            : "";
+    const startupOptionHint = createStartupOptionHint(panelState.startupSettingsStatus);
 
     return (
         <SettingsCategorySection title={settingsPageCopy.connection.statusSectionTitle}>
@@ -101,24 +102,4 @@ function ConnectionActionButtons({ panelState }: SimpleVrmControlPanelPageProps)
             </button>
         </div>
     );
-}
-
-function connectionStatusLabel(value: string): string {
-    switch (value) {
-        case "connected":
-            return "接続済み";
-        case "starting":
-            return "開始準備中";
-        case "connecting":
-            return "接続中";
-        case "degraded":
-            return "要確認";
-        case "stopping":
-            return "停止中";
-        case "stopped":
-        case "idle":
-            return "未接続";
-        default:
-            return value;
-    }
 }

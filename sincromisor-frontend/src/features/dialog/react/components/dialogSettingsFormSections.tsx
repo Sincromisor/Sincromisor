@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-import { useState } from "react";
 import type {
     ApplySettingsFn,
     SincroAppSettingsSnapshot,
@@ -17,16 +15,15 @@ import {
     AudioProcessingToggles,
     CharacterDisplayToggles,
     StartupBehaviorFields,
-    TalkModeField,
-    TitleTextField,
     VideoInputDeviceField,
 } from "../../../settings/react/fields/settingsFields";
 import {
     SettingsButton,
     SettingsHint,
-    SettingsSectionCard,
     SettingsSubsectionTitle,
 } from "../../../settings/react/primitives/settingsPrimitives";
+import { SettingsBasicSection } from "../../../settings/react/sections/settingsBasicSection";
+import { useSettingsDeviceRefresh } from "../../../settings/react/sections/settingsDeviceRefresh";
 
 // 起動前 dialog 専用の文言と表示対象を保持し、見た目は settings-primitives に委譲する。
 type CommonProps = {
@@ -42,24 +39,6 @@ type DialogBasicSettingsSectionProps = {
     onTalkModeChange: (talkMode: string) => void;
 };
 
-type DialogSettingsCategoryProps = {
-    title?: string;
-    description?: string;
-    children: ReactNode;
-};
-
-export function DialogSettingsCategory({
-    title,
-    description,
-    children,
-}: DialogSettingsCategoryProps) {
-    return (
-        <SettingsSectionCard title={title} description={description}>
-            {children}
-        </SettingsSectionCard>
-    );
-}
-
 export function DialogBasicSettingsSection({
     settings,
     uiState,
@@ -68,15 +47,13 @@ export function DialogBasicSettingsSection({
     showSectionTitle = true,
 }: DialogBasicSettingsSectionProps & { showSectionTitle?: boolean }) {
     return (
-        <div className="settingsPrimitiveFieldStack">
-            {showSectionTitle ? <SettingsSubsectionTitle>基本設定</SettingsSubsectionTitle> : null}
-            <TitleTextField settings={settings} uiState={uiState} onTitleChange={onTitleChange} />
-            <TalkModeField
-                settings={settings}
-                uiState={uiState}
-                onTalkModeChange={onTalkModeChange}
-            />
-        </div>
+        <SettingsBasicSection
+            settings={settings}
+            uiState={uiState}
+            onTitleChange={onTitleChange}
+            onTalkModeChange={onTalkModeChange}
+            showSectionTitle={showSectionTitle}
+        />
     );
 }
 
@@ -104,7 +81,7 @@ export function DialogDeviceSettingsSection({
     onRefreshDevices,
     showSectionTitle = true,
 }: DialogDeviceSettingsSectionProps) {
-    const { refreshMessage, handleRefreshDevices } = useDeviceRefreshMessage(onRefreshDevices);
+    const { refreshMessage, handleRefreshDevices } = useSettingsDeviceRefresh(onRefreshDevices);
 
     return (
         <div className="settingsPrimitiveFieldStack">
@@ -140,29 +117,6 @@ export function DialogDeviceSettingsSection({
             {refreshMessage ? <SettingsHint>{refreshMessage}</SettingsHint> : null}
         </div>
     );
-}
-
-function useDeviceRefreshMessage(onRefreshDevices: () => Promise<SincroMediaDeviceSnapshot>): {
-    refreshMessage: string;
-    handleRefreshDevices: () => void;
-} {
-    const [refreshMessage, setRefreshMessage] = useState<string>("");
-    return {
-        refreshMessage,
-        handleRefreshDevices: () => {
-            setRefreshMessage("");
-            void onRefreshDevices().then((nextSnapshot) => {
-                setRefreshMessage(createDeviceRefreshMessage(nextSnapshot));
-            });
-        },
-    };
-}
-
-function createDeviceRefreshMessage(snapshot: SincroMediaDeviceSnapshot): string {
-    if (snapshot.refreshError) {
-        return `デバイス一覧の再取得に失敗しました: ${snapshot.refreshError}`;
-    }
-    return "デバイス一覧を更新しました。";
 }
 
 export function DialogMicSettingsSection({
