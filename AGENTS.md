@@ -65,9 +65,28 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 | クラス / Zod schema           | PascalCase(`ConfigStore`)                    |
 | 関数 / 変数                   | camelCase                                    |
 | 定数                          | UPPER_SNAKE                                  |
-| `.md` ファイル(ドキュメント)  | kebab-case                                   |
 
 kebab-case や snake_case のファイル名は使わない(`config-store.ts` / `config_store.ts` 不可)。
+
+## ドキュメント規約 (Markdown)
+
+構成 / 見出し / リンク / コードブロック / 表 / TODO / 言語 / フォーマットなどの横断ルールは [documents/rules/coding-md.md](documents/rules/coding-md.md) を正本とする。
+本書ではタスク管理、設計文書の正本運用、ファイル命名の入口のみ保持する。
+
+- 設計思想: (1) 現在有効な情報を読みやすく保つ (2) リンクで正本へ誘導する (3) フォーマット差分を作らない
+- ルールは原則 hard。**破る場合は同じ箇条書きまたは直前行に `<!-- reason: <理由> -->` を付ける**(レビューでの差し戻し基準は理由の有無)
+- コミット前は `cd sincromisor-frontend && npm run check:md` を必ず通す。TypeScript 変更を含む場合は `npm run check` でまとめて確認する
+
+### 命名規約(Markdown)
+
+| 対象                         | 規約                                 |
+| ---------------------------- | ------------------------------------ |
+| `.md` ファイル(ドキュメント) | kebab-case(`documentation-guide.md`) |
+| README                       | `README.md`                          |
+| タスクファイル               | `TASK-<yymmddhhmmss>-<概要>.md`      |
+| ADR                          | `ADR-<YYMMDD>-<topic>.md`            |
+
+snake_case や camelCase の Markdown ファイル名は使わない(`documentation_guide.md` / `documentationGuide.md` 不可)。
 
 ## タスク管理とコミットのルール
 
