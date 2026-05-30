@@ -1,7 +1,7 @@
 # コーディング規約(Markdown)
 
 > **Scope**: Markdown 文書横断の記述規約(構成 / 見出し / リンク / コードブロック / 表 / TODO / 言語 / フォーマット)
-> **AGENTS.md との関係**: 基本原則(PoC 心構え / タスク管理 / 設計文書の正本運用 / ファイル命名規約)は [AGENTS.md](../../AGENTS.md) に常駐。本書は AGENTS.md でカバーされない Markdown 固有の横断ルールを保持する。
+> **AGENTS.md との関係**: [AGENTS.md](../../AGENTS.md) は初動ガイドと正本リンクを保持する。タスク管理は [documents/tasks/README.md](../tasks/README.md)、コード構造は [code-structure.md](code-structure.md)、設計文書運用は [documents/design/documentation-guide.md](../design/documentation-guide.md) を正本とし、本書は Markdown 固有の横断ルールを保持する。
 
 ## 0. 設計思想
 

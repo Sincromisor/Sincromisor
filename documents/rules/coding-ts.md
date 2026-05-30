@@ -1,7 +1,7 @@
 # コーディング規約(TypeScript)
 
 > **Scope**: TypeScriptコードベース横断のコーディング規約(型運用 / エラー / ログ / テスト / import / null / 日付 / TODO / env / 言語)
-> **AGENTS.md との関係**: 基本原則(PoC 心構え / サイズ閾値 / 命名規約 / 主要アンチパターン)は [AGENTS.md](../../AGENTS.md) に常駐。本書は AGENTS.md でカバーされない横断ルールを保持する。
+> **AGENTS.md との関係**: [AGENTS.md](../../AGENTS.md) は初動ガイドと正本リンクを保持する。サイズ閾値 / 分割判断 / 主要アンチパターンは [code-structure.md](code-structure.md) を正本とし、本書は TypeScript 固有の横断ルールを保持する。
 
 ## 0. 設計思想
 
@@ -36,20 +36,20 @@ PoC では下記 2 軸を最優先する。
 | フォーマッタ (TS / JS / JSON) | **Biome**                         |
 | フォーマッタ (Markdown)       | **Prettier**(`*.md` のみスコープ) |
 | 型チェック                    | TypeScript (`npm run build` 経由) |
-| テスト                        | `npm run test`(scripts 導入後)    |
+| テスト                        | `npm run test`                    |
 
 - Biome の設定は [biome.json](../../sincromisor-frontend/biome.json) を正本とする。lint は `recommended` を有効化し、PoC で支障が出る項目のみ明示オプトアウト
 - Prettier は **Markdown 専用**。Biome 2.x が Markdown 未対応のため、ドキュメント整形だけ Prettier を残す。設定ファイルを導入する場合はリポジトリ直下に置き、`*.md` のみに適用する
 - コミット前の確認項目:
     1. `npm run build`(型チェック + Vite build)
-    2. `npm run check`(Biome lint+format / Prettier md。scripts 導入後)
-    3. `npm run test`(変更レイヤ。scripts 導入後)
+    2. `npm run check`(Biome lint+format / Prettier md)
+    3. `npm run test`(変更レイヤ)
 - lint 警告を局所的に抑制する場合は `// biome-ignore <rule>: <reason>` を付ける(本書 §0 の `// reason:` ルールに準ずる)
 - pre-commit hook (lefthook / husky 等) は現時点で未導入。コミット漏れによる手戻りが見えた時点で導入を検討する
 
 **Why**: lint と format の取りこぼしは手動チェックでは必ず発生し、後で大量修正の負債になる。Biome は単一バイナリで TS / JS / JSON の lint + format を兼ね、Prettier は Markdown 専用に限定することで設定衝突を最小化する。Biome が Markdown 対応した時点で Prettier を撤去する(本書 §2 を更新する宿題)。
 
-**How to apply**: 現時点では `npm run build` を最低確認とする。`check` / `test` scripts 導入後は、新規ファイルだけでなく既存ファイルにも `npm run check` を一度通し、初回コミット以降は警告ゼロを維持する。CI 整備フェーズで上記 3 点(`npm run check:ci` / `npm run build` / `npm run test`)を自動化する。
+**How to apply**: 現時点では `npm run build` と `npm run check` を最低確認とする。テスト対象を変更した場合は `npm run test` も実行する。CI 整備フェーズで上記 3 点(`npm run check` / `npm run build` / `npm run test`)を自動化する。
 
 ## 3. エラーハンドリング
 

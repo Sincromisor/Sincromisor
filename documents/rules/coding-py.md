@@ -1,7 +1,7 @@
 # コーディング規約(Python)
 
 > **Scope**: Pythonコードベース横断のコーディング規約(型運用 / エラー / ログ / テスト / import / None / 日付 / TODO / env / 言語)
-> **AGENTS.md との関係**: 基本原則(PoC 心構え / サイズ閾値 / 主要アンチパターン)は [AGENTS.md](../../AGENTS.md) に常駐。本書は AGENTS.md でカバーされない Python 固有の横断ルールを保持する。
+> **AGENTS.md との関係**: [AGENTS.md](../../AGENTS.md) は初動ガイドと正本リンクを保持する。サイズ閾値 / 分割判断 / 主要アンチパターンは [code-structure.md](code-structure.md) を正本とし、本書は Python 固有の横断ルールを保持する。
 
 ## 0. 設計思想
 
