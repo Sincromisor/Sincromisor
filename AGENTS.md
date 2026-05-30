@@ -1,279 +1,144 @@
 # AGENTS.md
 
-このファイルは、LLMエージェントが **Sincromisor** を短時間で理解し、安全に変更するための作業ガイドです。
+このファイルは、LLM エージェントが **Sincromisor** を短時間で理解し、安全に変更するための初動ガイドである。
+詳細なルールや設計情報は各正本文書を参照する。
 
 ## プロジェクト概要
 
-Sincromisor は、ブラウザ上で 3D キャラクターと音声対話するためのサービス基盤です。
+Sincromisor は、ブラウザ上で 3D キャラクターと音声対話するためのサービス基盤である。
 
 - サーバー: `sincromisor-server`（Python）
-    - WebRTC シグナリング
-    - 音声抽出 / 音声認識 / テキスト処理 / 音声合成
-    - サービス発見（Consul）を利用した疎結合構成
+    - WebRTC シグナリング、音声抽出、音声認識、テキスト処理、音声合成を分離した構成。
+    - サービス発見には Consul を使う。
 - クライアント: `sincromisor-frontend`（TypeScript + Vite）
-    - WebRTC 接続
-    - `three` / `@pixiv/three-vrm` による 3D キャラクター描画
-    - マルチページ構成（simple-vrm, looking-glass-vrm, vrm360 など）
-- 設計文書: `documents/design/`（本プロジェクトの設計情報の正本）
+    - Vite MPA + React app shell + Three.js / VRM 1.0 で画面とキャラクターを描画する。
+    - `simple-vrm`、`vrm360`、`looking-glass-vrm` などのページを持つ。
+- 設計文書: `documents/design/`
     - 入口: `documents/design/index.md`
     - 運用ガイド: `documents/design/documentation-guide.md`
-    - テンプレート: `documents/design/templates/`
 
-## 作業を行う際の心構え
+## 最初に読む
 
-- これは**趣味プロダクト**であり、現状で最良のものを作ることが目標
-    - 後方互換性の考慮はほとんどの場合で不要
-    - 技術的負債を残さないことを常に心がける
-    - 最小変更にこだわらず、変えるべき時は変える
-- 既存の通信契約（endpoint / JSON）を変更する際は、明示して指示を仰ぐ(再デプロイが必要な場面を明確にする)
-- フロントとサーバーの変更を片側だけで終わらせない
-- compose + 設定 + 実装の 3 点を整合させる
-- 再現手順と確認結果を残す
-
-## コメントの記述とドキュメントの更新
-
-- ソースコードには積極的にコメントを記述する
-- コメントは、Googleのスタイルガイドラインを熟読して確実に記述し、他社が素早くコンテキストを理解できる内容とすることを心掛ける
-    - <https://google.github.io/styleguide/tsguide.html#comments-documentation>
-    - <https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings>
-- ソースコードを変更した際など、documents/design以下の設計ドキュメントの更新が必要な場合はその旨を通知し、更新を促す
-- スタイルガイドラインに則っていない不適切なコードは、レビュワーから差し戻される
-
-## コーディング規約 (Python)
-
-型運用 / エラー / ログ / テスト / import / None / 日付 / TODO / env / 言語ポリシーなどの横断ルールは [documents/rules/coding-py.md](documents/rules/coding-py.md) を正本とする。
-本書ではディレクトリ・命名・サイズなど物理構造に関する原則のみ保持する。
-
-- 設計思想: (1) 負債が残りにくい方向を選ぶ (2) debug と更新のしやすさを維持する
-- ルールは原則 hard。**破る場合は同じ行または直前行に `# reason: <理由>` を付ける**(レビューでの差し戻し基準は理由の有無)
-- コミット前は `uv run ruff check .` / `uv run ruff format --check .` / `uv run --group dev --group full ty check .` を必ず通す。`uv run pytest` は対象 package の整備状況に応じて実行する
-
-## コーディング規約 (TypeScript)
-
-型運用 / エラー / ログ / テスト / import / null / 日付 / TODO / env / 言語ポリシーなどの横断ルールは [documents/rules/coding-ts.md](documents/rules/coding-ts.md) を正本とする。
-本書ではディレクトリ・命名・サイズなど物理構造に関する原則のみ保持する。
-
-- 設計思想: (1) 負債が残りにくい方向を選ぶ (2) debug と更新のしやすさを維持する
-- ルールは原則 hard。**破る場合は同じ行に `// reason: <理由>` を付ける**(レビューでの差し戻し基準は理由の有無)
-- コミット前は `npm run build` を必ず通す。`npm run check`(Biome lint+format / Prettier md) と `npm run test` は scripts 導入後に必須化する
-
-### 命名規約(TypeScript)
-
-| 対象                          | 規約                                         |
-| ----------------------------- | -------------------------------------------- |
-| `.ts` ファイル / ディレクトリ | camelCase(`configStore.ts` / `configStore/`) |
-| クラス / Zod schema           | PascalCase(`ConfigStore`)                    |
-| 関数 / 変数                   | camelCase                                    |
-| 定数                          | UPPER_SNAKE                                  |
-
-kebab-case や snake_case のファイル名は使わない(`config-store.ts` / `config_store.ts` 不可)。
-
-## ドキュメント規約 (Markdown)
-
-構成 / 見出し / リンク / コードブロック / 表 / TODO / 言語 / フォーマットなどの横断ルールは [documents/rules/coding-md.md](documents/rules/coding-md.md) を正本とする。
-本書ではタスク管理、設計文書の正本運用、ファイル命名の入口のみ保持する。
-
-- 設計思想: (1) 現在有効な情報を読みやすく保つ (2) リンクで正本へ誘導する (3) フォーマット差分を作らない
-- ルールは原則 hard。**破る場合は同じ箇条書きまたは直前行に `<!-- reason: <理由> -->` を付ける**(レビューでの差し戻し基準は理由の有無)
-- コミット前は `cd sincromisor-frontend && npm run check:md` を必ず通す。TypeScript 変更を含む場合は `npm run check` でまとめて確認する
-
-### 命名規約(Markdown)
-
-| 対象                         | 規約                                 |
-| ---------------------------- | ------------------------------------ |
-| `.md` ファイル(ドキュメント) | kebab-case(`documentation-guide.md`) |
-| README                       | `README.md`                          |
-| タスクファイル               | `TASK-<yymmddhhmmss>-<概要>.md`      |
-| ADR                          | `ADR-<YYMMDD>-<topic>.md`            |
-
-snake_case や camelCase の Markdown ファイル名は使わない(`documentation_guide.md` / `documentationGuide.md` 不可)。
-
-## タスク管理とコミットのルール
-
-- タスクは`documents/tasks/<大分類>/open/TASK-<タスクID>-<タスク概要>.md`に記述する
-- 最低限のラインとして、タスク単位でコミットを行う
-    - 1タスク内でも必要に応じてコミットを行い、差分が巨大にならないようにする
-    - コミットは自律的に行ってもよい
-- コミット時は、関連するタスクIDを明記する
-- タスクIDは、%y%m%d%H%M%Sとする
-    - 例: 2026年4月1日 23:59:00秒に起票したタスクは"260401235900"
-- タスクが完了したら、タスクファイルを`done`に移動する
-- コミットメッセージは、何をどのような意図で行ったのかが明確になるように記述する
-
-## ファイル・関数サイズと分割のルール
-
-読み流せない長さのファイル / 関数はバグ温床。下記閾値を守る。
-
-### サイズ閾値
-
-| 区分                | ソフト | ハード | 備考                                                                                 |
-| ------------------- | ------ | ------ | ------------------------------------------------------------------------------------ |
-| **ファイル**        | 200 行 | 300 行 | import / コメント / 空行を除く。超過時は分割を**検討**(ソフト)/ **原則実施**(ハード) |
-| **関数 / メソッド** | 40 行  | 60 行  | 中括弧と return 文を除く。超過時は private 関数 / 別モジュールへ抽出                 |
-| **関数の引数数**    | 3 個   | 4 個   | 超えるなら options オブジェクトに集約                                                |
-| **ネスト深さ**      | 3 段   | 4 段   | 早期 return / ガード節 / 関数抽出で平坦化                                            |
-
-「UI 更新 / 外部 I/O / 純粋計算」が同一ファイル・同一関数に混在し始めたら、行数に関わらず分割する。
-
-### 基本原則
-
-- **1 ファイル = 1 主要 export**(controller / service / manager / component / schema 群 のいずれか)
-- `index.ts` は **barrel 専用**。実装ロジックを書かない
-- 補助関数 / 内部型はファイル内 private に留め、2 箇所目で利用された時点で別ファイルに抽出(Rule of Three の手前で動く)
-- **テスト都合だけの export 公開禁止** — 必要 = 独立モジュール化のサイン
-- **「将来のために」分割しない** — 必要になってから変える
-- **コメントで段落分けしたくなったら関数抽出のサイン**(`// ---- Step 1: 〜 ----` 等)
-
-### アンチパターン(明示禁止)
-
-| パターン                                             | 代わりに                                  |
-| ---------------------------------------------------- | ----------------------------------------- |
-| `utils.ts` / `helpers.ts` / `common.ts`              | 責務名で命名(`ids.ts` / `errors.ts` 等)   |
-| `index.ts` に実装を書く                              | barrel 専用、実装は別ファイル + re-export |
-| 1 ファイルに複数 controller / service / manager 定義 | 1 ファイル 1 主役                         |
-| 100 行超の単一関数                                   | 段階的に private 関数へ抽出               |
-| テスト用に内部関数を `export`                        | 別ファイルへ抽出                          |
-
-## 最初に読むファイル（推奨順）
+作業対象が未確定なら、次の順に読む。
 
 1. `README.md`
 2. `compose.yml`
 3. `examples/compose.env`
 4. `documents/design/index.md`
-5. `documents/design/documentation-guide.md`
-6. `documents/design/architecture/overview.md`
-7. `documents/design/contracts/frontend-rtc.md`
-8. `documents/tasks/README.md`
-9. `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
-10. `sincromisor-frontend/vite.config.js`
-11. `sincromisor-frontend/src/ts/sincroController.ts`
-12. `sincromisor-frontend/src/ts/rtc/rtcTalkClient.ts`
+5. `documents/design/architecture/overview.md`
+6. `documents/tasks/README.md`
+
+対象別の正本は次を優先する。
+
+- WebRTC 契約: `documents/design/contracts/frontend-rtc.md`
+- フロント UI / app shell: `documents/design/frontend/app-shell.md`
+- フロントページ構成: `documents/design/frontend/pages.md`
+- バックエンドサービス: `documents/design/backend/services/`
+- compose / Consul / storage: `documents/design/infrastructure/`
+- タスク管理: `documents/tasks/README.md`
+- コード構造ルール: `documents/rules/code-structure.md`
+- Python 規約: `documents/rules/coding-py.md`
+- TypeScript 規約: `documents/rules/coding-ts.md`
+- Markdown 規約: `documents/rules/coding-md.md`
 
 ## ディレクトリマップ
 
 - `sincromisor-server/`
-    - `sincro-rtc/`: WebRTC シグナリングサーバー（FastAPI + uvicorn）
-    - `speech-extractor/`: 音声区間抽出
-    - `speech-recognizer/`, `speech-recognizer-nemo/`: 音声認識
-    - `text-processor/`: チャット応答生成（Dify 連携あり）
-    - `voice-synthesizer/`: 音声合成
-    - `sincro-config/`: 設定ロード・サービス発見共通処理
-    - `sincro-models/`: サービス間データモデル
-- `sincromisor-frontend/`
-    - `src/ts/rtc/`: WebRTC 接続ロジック
-    - `src/ts/sincroVrm/`: VRM 1.0 キャラクター描画
-    - `src/ts/ui/`: チャットやデバッグ UI
-    - `src/*.html`, `src/**/index.html`: 画面エントリ
-    - `public/characters/default.vrm`: デフォルトキャラクター
-- `compose/`
-    - 各マイクロサービスの compose 定義
-- `Docker/`
-    - 各コンテナの Dockerfile と起動スクリプト
-- `documents/design/`
-    - `index.md`: 設計文書の入口
-    - `documentation-guide.md`: 設計文書の運用ルール
-    - `architecture/`: 全体構造と runtime flow
-    - `contracts/`: endpoint / channel / payload / file format などの契約正本
-    - `frontend/`: フロントエンド現在設計
-    - `backend/services/`: バックエンドサービス現在設計
-    - `infrastructure/`: compose / Consul / storage 設計
-    - `decisions/`: 採用理由・棄却理由を残す ADR
-    - `initiatives/`: 進行中の大きな設計変更
-    - `archive/legacy-flat/`: 再編前文書の履歴参照
-    - `templates/`: 文書種別ごとのテンプレート
-- `documents/tasks`
+    - `sincro-rtc/`: WebRTC シグナリングサーバー。
+    - `speech-extractor/`: 音声区間抽出。
+    - `speech-recognizer/`, `speech-recognizer-nemo/`: 音声認識。
+    - `text-processor/`: チャット応答生成。
+    - `voice-synthesizer/`: 音声合成。
+    - `sincro-config/`, `sincro-models/`: 設定ロード、サービス発見、サービス間モデル。
+- `sincromisor-frontend/src/`
+    - `app/`: app controller、shell、settings、event / bridge。
+    - `features/`: RTC、media、conversation、dialog、debug、settings、gaze などの機能単位。
+    - `character/`: VRM scene、behavior、retargeting、IK、Looking Glass / VRM360 runtime。
+    - `pages/`: Vite MPA の HTML / entry / page-specific React panel。
+    - `shared/`: logging と横断型。
+    - `ts/`, `react/`: 旧構成。新規実装は原則置かない。
+- `documents/design/`: 現在有効な設計、契約、ADR、initiative。
+- `documents/rules/`: コーディング、構造、文書運用の横断ルール。
+- `documents/tasks/`: 作業タスクと検証ログ。
 
-## 通信フロー（実装把握用）
+## 作業原則
 
-1. フロントが設定取得
-    - `GET /api/v1/RTCSignalingServer/config.json`
-2. フロントが WebRTC Offer を送信
-    - `POST /api/v1/RTCSignalingServer/offer`
-3. サーバーが Answer を返し、PeerConnection を確立
-4. DataChannel でメッセージ受信
-    - `text_ch`: テキスト（チャット）
-    - `telop_ch`: テロップ情報
+- 趣味プロダクトとして、現状で最良のものを作る。後方互換性より負債を残さないことを優先する。
+- 既存の通信契約（endpoint / JSON / DataChannel / msgpack）を変更する場合は、破壊的変更として明示し、フロントとサーバーを同時に確認する。
+- compose、設定、実装、設計文書を片側だけ更新しない。
+- 再現手順と確認結果はタスク文書に残す。
+- ソースコードのコメントは、公開 API、境界、非自明な判断、制約理由を中心に書く。自明な処理説明は増やさない。
+- コメント方針は Google の TypeScript / Python style guide を基準にし、他者が素早く文脈を理解できる内容にする。
+- 設計変更を伴う実装変更では、`documents/design/` の該当文書と `documents/design/index.md` の導線を確認する。
 
-フロント側の主制御は `SincroController`、WebRTC 接続処理は `RTCTalkClient` が担当します。
-
-## ローカルセットアップ（開発時）
-
-### Server (Python)
-
-```sh
-./utils/setup/server.sh
-```
-
-- `uv sync --group full` を実行
-- 依存パッケージはルート `pyproject.toml` の workspace 設定で解決
-
-### Frontend (TypeScript)
-
-```sh
-./utils/setup/frontend.sh
-```
-
-- `npm install`
-- MediaPipe wasm を `public/mediapipe-wasm` に配置
-- `npm run build`
-
-### Frontend 単体起動
-
-```sh
-cd sincromisor-frontend
-npm run dev
-```
-
-### Compose 起動
-
-```sh
-cp examples/compose.env .env
-chmod 600 .env
-docker compose --profile full up -d
-```
-
-## 変更時の指針（LLM 向け）
+## 変更時の確認先
 
 - WebRTC 接続仕様を変える場合
     - サーバー: `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
-    - フロント: `sincromisor-frontend/src/ts/rtc/rtcTalkClient.ts`
+    - フロント: `sincromisor-frontend/src/features/rtc/rtcTalkClient.ts`
     - 契約正本: `documents/design/contracts/frontend-rtc.md`
-    - 両側の payload / endpoint 整合を必ず確認
-- UI・3D 表示を変える場合
-    - エントリ HTML と `src/ts/sincroVrm/**` をセットで確認
-    - 設計正本: `documents/design/frontend/app-shell.md` と `documents/design/frontend/character/`
-    - モード別ページ（`simple-vrm`, `vrm360`, `looking-glass-vrm` など）の差分に注意
-- 設定追加時
-    - `.env` 変数定義（`examples/compose.env`）
-    - compose の environment
-    - Python 側の引数・設定クラス（`sincro-config`）
+- UI / 3D 表示を変える場合
+    - `sincromisor-frontend/src/pages/**`
+    - `sincromisor-frontend/src/app/**`
+    - `sincromisor-frontend/src/features/**`
+    - `sincromisor-frontend/src/character/**`
+    - 設計正本: `documents/design/frontend/`
+- 設定を追加する場合
+    - `.env` サンプル: `examples/compose.env`
+    - compose environment: `compose/` と `compose.yml`
+    - Python 側の引数・設定クラス: `sincro-config` など
     - インフラ正本: `documents/design/infrastructure/compose.md`
-- 設計変更を伴う実装変更時
-    - `documents/design/` の該当文書を同時更新
-    - 入口の `documents/design/index.md` との整合を確認
 
-## よくある落とし穴
+## タスクとコミット
 
-- フロントのマイク/カメラ権限がないと接続処理が途中で止まる
-- `offerURL` や ICE サーバー設定不一致で WebRTC ネゴシエーションに失敗
-- 新しい環境変数を追加しても compose / 設定クラスの片側だけ更新してしまう
-- `@mediapipe/tasks-vision` の wasm 配置漏れで CharacterGaze が動作しない
+- タスクは `documents/tasks/<大分類>/open/TASK-<yymmddhhmmss>-<概要>.md` に作る。
+- 完了したら `open/` から `done/` へ移動する。
+- 最低限、タスク単位でコミットする。コミットメッセージには関連する TASK ID を含める。
+- 詳細は `documents/tasks/README.md` を正本とする。
 
-## 変更後の最低確認
+## 通信フロー概要
 
-- フロントビルド
+1. フロントが `GET /api/v1/RTCSignalingServer/config.json` で接続設定を取得する。
+2. フロントが `POST /api/v1/RTCSignalingServer/offer` で Offer を送る。
+3. フロントが `POST /api/v1/RTCSignalingServer/candidate` で ICE candidate を送る。
+4. サーバーが Answer を返し、PeerConnection を確立する。
+5. DataChannel の `text_ch` と `telop_ch` でチャット、テロップ、口形同期情報を受ける。
+
+詳細は `documents/design/contracts/frontend-rtc.md` を正本とする。
+
+## ローカル確認
+
+- フロント:
 
     ```sh
-    cd sincromisor-frontend && npm run build
+    cd sincromisor-frontend
+    npm run build
+    npm run check
+    npm run test
     ```
 
-- Python 静的チェック（必要に応じて）
+- Python:
 
     ```sh
     uv run ruff check .
+    uv run ruff format --check .
+    uv run --group dev --group full ty check .
+    uv run pytest
     ```
 
-- 起動確認
-    - `docker compose --profile full up -d`
-    - フロント画面遷移
-    - 音声入出力 + テキスト/テロップ受信
+- Compose:
+
+    ```sh
+    cp examples/compose.env .env
+    chmod 600 .env
+    docker compose --profile full up -d
+    ```
+
+実行範囲は変更内容に応じて絞ってよい。実行できなかった確認は、理由をタスク文書と最終報告に残す。
+
+## よくある落とし穴
+
+- フロントのマイク / カメラ権限がないと接続処理や CharacterGaze が途中で止まる。
+- `offerURL`、`candidateURL`、ICE server 設定の不一致で WebRTC ネゴシエーションに失敗する。
+- 新しい環境変数を compose、設定クラス、サンプル env の片側だけに追加してしまう。
+- `@mediapipe/tasks-vision` の wasm 配置漏れで tracking 系機能が動作しない。
