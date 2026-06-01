@@ -2,7 +2,7 @@ id: "task-3102-face-tracking-runtime-and-sincro-face-tracker"
 title: "face tracking runtime and sincro face tracker"
 category: "character-sincro-motion"
 status: "done"
-depends_on: []
+depends_on: ["task-3101-sincro-motion-architecture-and-design-doc"]
 superseded_by: null
 review: null
 verdict: "PASS"

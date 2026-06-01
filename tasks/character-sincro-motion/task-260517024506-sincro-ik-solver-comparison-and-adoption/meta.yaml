@@ -2,7 +2,7 @@ id: "task-260517024506-sincro-ik-solver-comparison-and-adoption"
 title: "sincro ik solver comparison and adoption"
 category: "character-sincro-motion"
 status: "done"
-depends_on: []
+depends_on: ["task-260517024505-sincro-vrm-3d-two-bone-ik-solver"]
 superseded_by: null
 review: null
 verdict: "PASS"
