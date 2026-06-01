@@ -45,12 +45,15 @@ Sincromisor のタスク管理を、Codex の subagent 利用を前提にした 
 
 ## 確認
 
-- [ ] `tasks:new` で新規タスクが作成できる。
-- [ ] `tasks:set` で `meta.yaml` を決定的に更新できる。
-- [ ] `tasks:index` / `tasks:index:check` が通る。
-- [ ] 旧 `documents/tasks` 参照の残存を `rg "documents/tasks|TASK-"` で確認し、必要な参照を更新済みまたは意図的残置として説明できる。
-- [ ] pilot task の `review.md`, `impl.md`, `eval.md` が揃っている。
+- [x] `tasks:new` で新規タスクが作成できる。
+- [x] `tasks:set` で `meta.yaml` を決定的に更新できる。
+- [x] `tasks:index` / `tasks:index:check` が通る。
+- [x] 旧 `documents/tasks` 参照の残存を `rg "documents/tasks|TASK-"` で確認し、必要な参照を更新済みまたは意図的残置として説明できる。
+- [x] pilot task の `review.md`, `impl.md`, `eval.md` が揃っている。
 
 ## 結果
 
--
+- 子タスク `TASK-260601214724` から `TASK-260601214729` までを完了した。
+- 新レイアウト `tasks/<category>/task-<id>-<slug>/`、task 操作スクリプト、Codex role skills、旧タスク移行、参照更新、検証 tooling を整備した。
+- Pilot task `task-260601225653-clarify-legacy-task-redirect` で reviewer / implementer / evaluator / parent close の分離運用を確認した。
+- 旧 `documents/tasks/...` と `TASK-...` 参照は migrated task 本文や archive の履歴として残る。新規運用では `tasks/README.md` と canonical `task-<id>-<slug>` を正本にする。
