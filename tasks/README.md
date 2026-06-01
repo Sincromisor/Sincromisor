@@ -22,10 +22,7 @@
 ```text
 <type>(<scope>): <summary>
 
-Why: <変更理由>
-What: <主な変更>
-Verify: <実行した確認>
-Risk: <残リスク、未確認事項>
+<body: 変更理由、主な変更、実行した確認、残リスク・未確認事項>
 
 Refs: task-260601153000-example
 ```
@@ -34,9 +31,10 @@ Refs: task-260601153000-example
 - `scope` は任意だが、履歴検索のため原則付ける。
 - 関連タスクは footer の `Refs:` に canonical task ID を書く。legacy タスクの場合は `Refs: TASK-...` も許容する。
 - subject は変更内容を表す。task ID だけ、または `Implement ...` だけの subject は避ける。
-- タスクに紐づく commit では、実装、文書、close、生成 index 更新を問わず body に `Why:` / `What:` / `Verify:` / `Risk:` を必ず書く。
-- 該当事項がない場合も省略せず、`Verify: 未実行 (理由)` や `Risk: なし` のように明示する。
-- `Verify:` は 1 commit body 内で 1 回だけ使う。複数コマンドは `; ` 区切りの 1 行にまとめる。
+- タスクに紐づく commit の body には、実装、文書、close、生成 index 更新を問わず、変更理由、主な変更、実行した確認、残リスク・未確認事項が後から追えるだけの情報を書く。
+- `Why:` / `What:` / `Verify:` / `Risk:` は推奨テンプレートとする。小さな変更では自然文や短い箇条書きでもよいが、上記 4 点の情報を欠落させない。
+- 該当事項がない場合も、`Verify: 未実行 (理由)`、`Risk: なし`、または同等の自然文で明示する。
+- `Verify:` ラベルを使う場合は 1 commit body 内で 1 回だけ使う。複数コマンドは `; ` 区切りの 1 行にまとめる。
 - `Verify:` が長くなりすぎる場合は、`Verify:` の直後に箇条書きを連続して置く。コマンドごとに空行を挟んだ `Verify:` 行を繰り返さない。
 
 複数コマンドの記録例:
