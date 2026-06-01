@@ -9,10 +9,10 @@
         "test": "vitest run",
         "check": "npm run check:biome && npm run check:md",
         "check:biome": "biome check .",
-        "check:md": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --check \"../*.md\" \"../documents/**/*.md\" \"**/*.md\"",
+        "check:md": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --check \"../*.md\" \"../documents/**/*.md\" \"../tasks/**/*.md\" \"**/*.md\"",
         "format": "npm run format:biome && npm run format:md",
         "format:biome": "biome check --write .",
-        "format:md": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --write \"../*.md\" \"../documents/**/*.md\" \"**/*.md\"",
+        "format:md": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --write \"../*.md\" \"../documents/**/*.md\" \"../tasks/**/*.md\" \"**/*.md\"",
         "preview": "vite preview"
     },
     "devDependencies": {

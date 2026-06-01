@@ -1,0 +1,12 @@
+id: "task-260519191621-frontend-type-assertion-and-suppression-cleanup"
+title: "frontend type assertion and suppression cleanup"
+category: "frontend-coding-standards"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-260519191621"]
+created_at: null
+closed_at: null

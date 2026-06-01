@@ -1,0 +1,12 @@
+id: "task-260517020748-sincro-pose-force-tracking-setting"
+title: "sincro pose force tracking setting"
+category: "character-sincro-motion"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-260517020748"]
+created_at: null
+closed_at: null

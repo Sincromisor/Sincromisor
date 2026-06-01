@@ -1,0 +1,12 @@
+id: "task-3052-eye-behavior-gaze-blink-and-microsaccade"
+title: "eye behavior gaze blink and microsaccade"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3052"]
+created_at: null
+closed_at: null

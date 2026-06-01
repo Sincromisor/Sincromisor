@@ -1,0 +1,12 @@
+id: "task-260519234132-frontend-dialog-feature-colocation"
+title: "frontend dialog feature colocation"
+category: "frontend-directory-restructure"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-260519234132"]
+created_at: null
+closed_at: null

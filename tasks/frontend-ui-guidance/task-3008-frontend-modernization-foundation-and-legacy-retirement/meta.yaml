@@ -1,0 +1,12 @@
+id: "task-3008-frontend-modernization-foundation-and-legacy-retirement"
+title: "frontend modernization foundation and legacy retirement"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3008"]
+created_at: null
+closed_at: null

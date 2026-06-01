@@ -1,0 +1,12 @@
+id: "task-3017-ui-manager-layer-reduction-and-app-service-consolidation"
+title: "ui manager layer reduction and app service consolidation"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3017"]
+created_at: null
+closed_at: null

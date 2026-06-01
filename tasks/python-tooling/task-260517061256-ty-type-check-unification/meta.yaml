@@ -1,0 +1,12 @@
+id: "task-260517061256-ty-type-check-unification"
+title: "ty type check unification"
+category: "python-tooling"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-260517061256"]
+created_at: null
+closed_at: null

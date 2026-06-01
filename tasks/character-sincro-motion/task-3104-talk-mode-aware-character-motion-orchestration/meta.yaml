@@ -1,0 +1,12 @@
+id: "task-3104-talk-mode-aware-character-motion-orchestration"
+title: "talk mode aware character motion orchestration"
+category: "character-sincro-motion"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3104"]
+created_at: null
+closed_at: null

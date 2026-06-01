@@ -1,0 +1,12 @@
+id: "task-3101-sincro-motion-architecture-and-design-doc"
+title: "sincro motion architecture and design doc"
+category: "character-sincro-motion"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3101"]
+created_at: null
+closed_at: null

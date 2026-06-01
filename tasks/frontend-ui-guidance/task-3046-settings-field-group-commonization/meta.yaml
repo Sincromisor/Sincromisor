@@ -1,0 +1,12 @@
+id: "task-3046-settings-field-group-commonization"
+title: "settings field group commonization"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3046"]
+created_at: null
+closed_at: null

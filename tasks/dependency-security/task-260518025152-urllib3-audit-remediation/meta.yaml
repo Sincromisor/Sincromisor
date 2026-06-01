@@ -1,0 +1,12 @@
+id: "task-260518025152-urllib3-audit-remediation"
+title: "urllib3 audit remediation"
+category: "dependency-security"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-260518025152"]
+created_at: null
+closed_at: null

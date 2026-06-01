@@ -1,0 +1,12 @@
+id: "task-3000-settings-panel-and-debug-console-role-separation"
+title: "settings panel and debug console role separation"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3000"]
+created_at: null
+closed_at: null

@@ -1,0 +1,12 @@
+id: "task-3007-settings-shell-sidebar-stability-and-summary-reduction-fix"
+title: "settings shell sidebar stability and summary reduction fix"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3007"]
+created_at: null
+closed_at: null

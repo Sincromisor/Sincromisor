@@ -1,0 +1,12 @@
+id: "task-3114-sincro-lightweight-two-bone-arm-ik"
+title: "sincro lightweight two bone arm ik"
+category: "character-sincro-motion"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3114"]
+created_at: null
+closed_at: null

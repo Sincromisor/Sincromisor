@@ -1,0 +1,12 @@
+id: "task-2006-device-selection-ui-polish-and-status-alignment"
+title: "device selection ui polish and status alignment"
+category: "media-device-selection"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-2006"]
+created_at: null
+closed_at: null

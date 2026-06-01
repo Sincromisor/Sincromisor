@@ -1,0 +1,12 @@
+id: "task-3113-sincro-pose-camera-space-arm-targets"
+title: "sincro pose camera space arm targets"
+category: "character-sincro-motion"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3113"]
+created_at: null
+closed_at: null

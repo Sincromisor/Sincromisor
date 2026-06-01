@@ -1,0 +1,12 @@
+id: "task-3034-chat-overlay-fixed-viewport-height"
+title: "chat overlay fixed viewport height"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3034"]
+created_at: null
+closed_at: null

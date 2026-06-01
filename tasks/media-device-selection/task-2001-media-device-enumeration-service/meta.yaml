@@ -1,0 +1,12 @@
+id: "task-2001-media-device-enumeration-service"
+title: "media device enumeration service"
+category: "media-device-selection"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-2001"]
+created_at: null
+closed_at: null

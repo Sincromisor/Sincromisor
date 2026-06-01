@@ -1,0 +1,12 @@
+id: "task-260525010932-controller-settings-state-hook-commonization"
+title: "controller settings state hook commonization"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-260525010932"]
+created_at: null
+closed_at: null
