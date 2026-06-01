@@ -1,0 +1,12 @@
+id: "task-260601225653-clarify-legacy-task-redirect"
+title: "clarify legacy task redirect"
+category: "task-management"
+status: "done"
+depends_on: ["task-260601214729-pilot-codex-subagent-task-flow"]
+superseded_by: null
+review: "APPROVED"
+verdict: "PASS"
+attempts: 1
+legacy_ids: []
+created_at: "2026-06-01"
+closed_at: "2026-06-01"
