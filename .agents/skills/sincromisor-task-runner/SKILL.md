@@ -19,18 +19,43 @@ or use this runner skill.
 
 1. Read `task.md`, `meta.yaml`, `tasks/README.md`, and relevant project docs.
 2. Start a reviewer subagent with the `task-reviewer` skill. The reviewer writes only `review.md`.
-3. If review is approved, run `npm run tasks:set -- <task-dir> review=APPROVED`. If not, set
+3. After the reviewer finishes, read `review.md` and report the review completion summary to the
+   user before continuing.
+4. If review is approved, run `npm run tasks:set -- <task-dir> review=APPROVED`. If not, set
    `review=NEEDS_REVISION` and return the needed task-spec changes to the user.
-4. Start an implementer subagent with the `task-implementer` skill. The implementer writes
+5. Start an implementer subagent with the `task-implementer` skill. The implementer writes
    implementation files, tests, and `impl.md`, then commits the implementation change.
-5. Start an evaluator subagent with the `impl-evaluator` skill. The evaluator writes only
+6. After the implementer finishes, read `impl.md` and report the implementation completion summary
+   to the user before starting evaluation.
+7. Start an evaluator subagent with the `impl-evaluator` skill. The evaluator writes only
    `eval.md` and optional `acceptance/` files.
-6. If evaluation fails, run `npm run tasks:set -- <task-dir> verdict=FAIL attempts=<n>` and send
+8. After the evaluator finishes, read `eval.md` and report the evaluation completion summary to the
+   user before deciding PASS / FAIL handling.
+9. If evaluation fails, run `npm run tasks:set -- <task-dir> verdict=FAIL attempts=<n>` and send
    `eval.md` findings back to the implementer. Repeat within the user-approved iteration budget.
-7. If evaluation passes, run `npm run tasks:set -- <task-dir> status=done verdict=PASS attempts=<n>`
+10. If evaluation passes, run `npm run tasks:set -- <task-dir> status=done verdict=PASS attempts=<n>`
    and the required task tooling checks.
-8. Create the close commit containing review/eval/acceptance/meta/index changes. Include the task ID
+11. Create the close commit containing review/eval/acceptance/meta/index changes. Include the task ID
    in the commit message.
+12. Report the close completion summary to the user with the final status, commits, checks, and
+   residual risks or follow-ups.
+
+## Completion Reports
+
+Parent Codex must give a short user-facing report whenever a role finishes. Do not wait until the
+whole pipeline is closed to reveal subagent results.
+
+Use the role artifact's summary section as the source of truth, then include:
+
+- role and task ID
+- verdict or status
+- changed files or reviewed surface, when relevant
+- checks run and their result
+- checks not run and why
+- residual risks, blockers, or next action
+
+If a role artifact does not contain a usable summary, parent Codex must synthesize one from the
+artifact before continuing and should note that the summary was synthesized.
 
 ## Ownership
 

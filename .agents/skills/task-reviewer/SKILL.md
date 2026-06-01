@@ -53,3 +53,11 @@ NEEDS_REVISION
 ```
 
 Then include concise sections for findings, required changes, recommended checks, and implementation notes. Use file paths and line references when useful.
+
+Include a `## Summary for Parent` section near the top. It must be short enough for parent Codex to
+relay directly to the user and include:
+
+- verdict
+- main findings or approval reason
+- required task-spec changes, if any
+- recommended next action

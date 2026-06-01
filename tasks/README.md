@@ -9,6 +9,8 @@
 - 設計の現在仕様は `documents/design/` に置き、作業ログを設計本文へ溜め込まない。
 - 実装、設定、compose、設計文書は必要に応じて同じタスク内で同期する。
 - 実行した確認、実行できなかった確認、残リスクは `impl.md` または `eval.md` に残す。
+- 通常 Codex 作業でも subagent 作業でも、作業完了時はユーザーに作業概要、結果、確認、
+  未実行確認、特記事項を報告する。
 - 最低限、1 タスク 1 コミットを基本とする。コミットメッセージには関連する task ID または legacy `TASK-...` ID を含める。
 
 ## レイアウト
@@ -35,6 +37,10 @@ tasks/<category>/
 ## ファイルの役割
 
 通常タスクでは、作業を担当する Codex が `task.md` に沿って実装し、確認結果を `impl.md` に記録する。`review.md` と `eval.md` は subagent pipeline を明示して実行する場合、またはユーザーが独立レビュー / 独立評価を求める場合に必須とする。小変更では `review.md` / `eval.md` が未記入でもよいが、close する前に担当 Codex が実行した確認、未実行理由、残リスクを `impl.md` に残す。
+
+担当 Codex は作業完了時に、`impl.md` の completion summary を元にユーザーへ短く報告する。
+報告には、作業概要、変更ファイル、確認結果、実行できなかった確認と理由、残リスク、
+次アクションを含める。該当がない項目は「なし」と明示してよい。
 
 | ファイル      | 書き手                | 役割                                                    |
 | ------------- | --------------------- | ------------------------------------------------------- |
@@ -131,13 +137,28 @@ Role 手順は Git 追跡対象の Codex skills として管理する。
 - `.agents/skills/impl-evaluator/SKILL.md`: 独立評価
 
 1. reviewer は `task.md`, `meta.yaml`, 関連設計、関連コードを読み、`review.md` だけを書く。
-2. parent Codex は reviewer 判定を `tasks:set` で `meta.yaml` に転記する。
+2. parent Codex は `review.md` の summary を読み、レビュー結果をユーザーへ報告してから、reviewer 判定を `tasks:set` で `meta.yaml` に転記する。
 3. implementer は `task.md`, `review.md`, 必要に応じて前回 `eval.md` を読み、実装、テスト、`impl.md` 追記、実装コミットを行う。`meta.yaml` と `eval.md` は触らない。
-4. evaluator は committed diff と成果物を独立検証し、`eval.md` と必要な `acceptance/` だけを書く。実装コードは変更しない。
-5. FAIL の場合、parent Codex は `eval.md` の残課題を implementer に渡し、上限回数内で再実装を回す。
-6. PASS の場合、parent Codex が `tasks:set status=done verdict=PASS attempts=<n>` と `tasks:index` を実行し、close commit を作る。
+4. parent Codex は `impl.md` の completion summary を読み、実装結果をユーザーへ報告してから evaluator を起動する。
+5. evaluator は committed diff と成果物を独立検証し、`eval.md` と必要な `acceptance/` だけを書く。実装コードは変更しない。
+6. parent Codex は `eval.md` の completion summary を読み、評価結果をユーザーへ報告してから PASS / FAIL の処理に進む。
+7. FAIL の場合、parent Codex は `eval.md` の残課題を implementer に渡し、上限回数内で再実装を回す。
+8. PASS の場合、parent Codex が `tasks:set status=done verdict=PASS attempts=<n>` と `tasks:index` を実行し、close commit を作る。
+9. close commit 後、parent Codex は最終状態、関連 commit、実行した task tooling checks、残リスクをユーザーへ報告する。
 
 実装 commit には実装差分、テスト、`impl.md` を含める。close commit には `review.md`, `eval.md`, `acceptance/`, `meta.yaml`, `index.md` を含める。
+
+### 完了報告
+
+各 role の成果物には、parent Codex がそのまま要約に使える summary を置く。
+
+- `review.md`: `## Summary for Parent`
+- `impl.md`: `## Completion Summary`
+- `eval.md`: `## Completion Summary`
+
+parent Codex は subagent 完了通知を受けたら該当ファイルを読み、ユーザーへ短く報告する。
+報告を後回しにして pipeline 全体の最後にまとめない。報告には verdict / status、主要な変更や
+指摘、確認結果、未実行確認、残リスク、次アクションを含める。
 
 close 前の task tooling checks は必須とする。
 
