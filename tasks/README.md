@@ -97,6 +97,7 @@ TODO は新規コードでは `TODO(task-260601153000-example): ...` を推奨�
 | `npm run tasks:set -- <task-dir> key=value ...`                             | `meta.yaml` を決定的に更新する                            |
 | `npm run tasks:index`                                                       | カテゴリ別 `index.md` を生成する                          |
 | `npm run tasks:index:check`                                                 | `index.md` が最新か検証する                               |
+| `npm run tasks:check`                                                       | task directory と `meta.yaml` の整合性を検証する          |
 | `npm run tasks:fixlinks`                                                    | 壊れた Markdown 相対リンクの修正候補を dry-run で表示する |
 | `npm run tasks:fixlinks -- --apply`                                         | 修正候補を適用する                                        |
 | `npm run tasks:migrate:legacy`                                              | 旧 `documents/tasks` レイアウトの移行計画を dry-run する  |
@@ -109,6 +110,7 @@ npm run tasks:new -- task-management "Update task rules" -- --slug=update-task-r
 npm run tasks:set -- tasks/task-management/task-260601153000-update-task-rules review=APPROVED
 npm run tasks:set -- tasks/task-management/task-260601153000-update-task-rules status=done verdict=PASS attempts=1
 npm run tasks:index
+npm run tasks:check
 ```
 
 ## Codex subagent パイプライン
