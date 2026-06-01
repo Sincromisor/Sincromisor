@@ -11,18 +11,19 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 
 ## Task Index
 
-### done (9)
+### done (10)
 
-| Task                                                                                                                               | Title                                    | Review   | Verdict | Attempts | Depends on                                         |
-| ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------- | -------- | -------------------------------------------------- |
-| [task-260601214723-codex-subagent-task-management-epic](./task-260601214723-codex-subagent-task-management-epic/task.md)           | codex subagent task management epic      | APPROVED | PASS    | 1        | -                                                  |
-| [task-260601214724-new-task-layout-and-scripts](./task-260601214724-new-task-layout-and-scripts/task.md)                           | new task layout and scripts              | -        | PASS    | 0        | -                                                  |
-| [task-260601214725-codex-subagent-runner-and-skills](./task-260601214725-codex-subagent-runner-and-skills/task.md)                 | codex subagent runner and skills         | -        | PASS    | 0        | -                                                  |
-| [task-260601214726-migrate-legacy-task-documents](./task-260601214726-migrate-legacy-task-documents/task.md)                       | migrate legacy task documents            | -        | PASS    | 1        | -                                                  |
-| [task-260601214727-update-agents-and-rules-task-references](./task-260601214727-update-agents-and-rules-task-references/task.md)   | update agents and rules task references  | APPROVED | PASS    | 1        | -                                                  |
-| [task-260601214728-task-index-link-and-verification-tooling](./task-260601214728-task-index-link-and-verification-tooling/task.md) | task index link and verification tooling | APPROVED | PASS    | 1        | -                                                  |
-| [task-260601214729-pilot-codex-subagent-task-flow](./task-260601214729-pilot-codex-subagent-task-flow/task.md)                     | pilot codex subagent task flow           | APPROVED | PASS    | 1        | -                                                  |
-| [task-260601225653-clarify-legacy-task-redirect](./task-260601225653-clarify-legacy-task-redirect/task.md)                         | clarify legacy task redirect             | APPROVED | PASS    | 1        | `task-260601214729-pilot-codex-subagent-task-flow` |
-| [task-260601233125-task-completion-reporting-contract](./task-260601233125-task-completion-reporting-contract/task.md)             | Add task completion reporting contract   | -        | PASS    | 1        | -                                                  |
+| Task                                                                                                                               | Title                                      | Review   | Verdict | Attempts | Depends on                                         |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | -------- | ------- | -------- | -------------------------------------------------- |
+| [task-260601214723-codex-subagent-task-management-epic](./task-260601214723-codex-subagent-task-management-epic/task.md)           | codex subagent task management epic        | APPROVED | PASS    | 1        | -                                                  |
+| [task-260601214724-new-task-layout-and-scripts](./task-260601214724-new-task-layout-and-scripts/task.md)                           | new task layout and scripts                | -        | PASS    | 0        | -                                                  |
+| [task-260601214725-codex-subagent-runner-and-skills](./task-260601214725-codex-subagent-runner-and-skills/task.md)                 | codex subagent runner and skills           | -        | PASS    | 0        | -                                                  |
+| [task-260601214726-migrate-legacy-task-documents](./task-260601214726-migrate-legacy-task-documents/task.md)                       | migrate legacy task documents              | -        | PASS    | 1        | -                                                  |
+| [task-260601214727-update-agents-and-rules-task-references](./task-260601214727-update-agents-and-rules-task-references/task.md)   | update agents and rules task references    | APPROVED | PASS    | 1        | -                                                  |
+| [task-260601214728-task-index-link-and-verification-tooling](./task-260601214728-task-index-link-and-verification-tooling/task.md) | task index link and verification tooling   | APPROVED | PASS    | 1        | -                                                  |
+| [task-260601214729-pilot-codex-subagent-task-flow](./task-260601214729-pilot-codex-subagent-task-flow/task.md)                     | pilot codex subagent task flow             | APPROVED | PASS    | 1        | -                                                  |
+| [task-260601225653-clarify-legacy-task-redirect](./task-260601225653-clarify-legacy-task-redirect/task.md)                         | clarify legacy task redirect               | APPROVED | PASS    | 1        | `task-260601214729-pilot-codex-subagent-task-flow` |
+| [task-260601233125-task-completion-reporting-contract](./task-260601233125-task-completion-reporting-contract/task.md)             | Add task completion reporting contract     | -        | PASS    | 1        | -                                                  |
+| [task-260602004608-adopt-conventional-commits](./task-260602004608-adopt-conventional-commits/task.md)                             | Adopt Conventional Commits for future work | -        | PASS    | 1        | -                                                  |
 
 <!-- AUTOGEN:tasks END -->

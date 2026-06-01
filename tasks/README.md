@@ -11,7 +11,91 @@
 - 実行した確認、実行できなかった確認、残リスクは `impl.md` または `eval.md` に残す。
 - 通常 Codex 作業でも subagent 作業でも、作業完了時はユーザーに作業概要、結果、確認、
   未実行確認、特記事項を報告する。
-- 最低限、1 タスク 1 コミットを基本とする。コミットメッセージには関連する task ID または legacy `TASK-...` ID を含める。
+- 最低限、1 タスク 1 コミットを基本とする。コミットメッセージは Conventional Commits ベースで書き、関連する task ID または legacy `TASK-...` ID を footer の `Refs:` に含める。
+
+## コミットメッセージ
+
+今後のコミットは [Conventional Commits 1.0.0](https://www.conventionalcommits.org/ja/v1.0.0/) をベースにする。過去コミットは履歴を書き換えず、新規コミットから適用する。
+
+基本形:
+
+```text
+<type>(<scope>): <summary>
+
+<body>
+
+Refs: task-260601153000-example
+```
+
+- `type` は英語小文字で書く。`summary` は日本語でも英語でもよい。
+- `scope` は任意だが、履歴検索のため原則付ける。
+- 関連タスクは footer の `Refs:` に canonical task ID を書く。legacy タスクの場合は `Refs: TASK-...` も許容する。
+- subject は変更内容を表す。task ID だけ、または `Implement ...` だけの subject は避ける。
+- 実装 commit と close commit は、必要に応じて body に理由、主な変更、確認、残リスクを書く。
+- 小さな文書修正など、subject と `Refs:` で意図が明確な場合は body を省略してよい。
+
+推奨 type:
+
+| type       | 用途                                    |
+| ---------- | --------------------------------------- |
+| `feat`     | 機能追加                                |
+| `fix`      | バグ修正                                |
+| `docs`     | 文書のみの変更                          |
+| `refactor` | 振る舞いを変えない整理                  |
+| `test`     | テスト追加・修正                        |
+| `chore`    | タスク管理、メタデータ、生成物整理      |
+| `build`    | build、依存、compose、パッケージ周辺    |
+| `ci`       | CI、自動化                              |
+| `perf`     | 性能改善                                |
+| `revert`   | revert                                  |
+
+推奨 scope:
+
+| scope       | 用途                         |
+| ----------- | ---------------------------- |
+| `frontend`  | フロントエンド全般           |
+| `server`    | Python サーバー全般          |
+| `rtc`       | WebRTC / シグナリング契約    |
+| `character` | VRM、モーション、表示制御    |
+| `settings`  | 設定 UI / 設定モデル         |
+| `tasks`     | タスク管理、subagent 成果物  |
+| `docs`      | 設計文書、ルール文書         |
+| `compose`   | compose / Consul / storage   |
+| `agents`    | agent skill / workflow       |
+| `deps`      | 依存関係                     |
+
+破壊的変更は `!` または `BREAKING CHANGE:` footer で明示する。通信契約、設定名、保存形式、公開 API を変える場合は、body に移行理由と影響範囲を書く。
+
+```text
+feat(rtc)!: change offer response schema
+
+Update the frontend and RTC signaling server to use the new response shape.
+
+BREAKING CHANGE: RTCSignalingServer offer response no longer includes ...
+Refs: task-260601153000-example
+```
+
+実装 commit 例:
+
+```text
+feat(settings): add camera device preference
+
+Store the selected camera device in the app settings model and apply it
+during media initialization.
+
+Verify: npm run check
+Refs: task-260601153000-example
+```
+
+close commit 例:
+
+```text
+chore(tasks): close camera device preference task
+
+Record PASS evaluation and refresh generated task indexes.
+
+Refs: task-260601153000-example
+```
 
 ## レイアウト
 

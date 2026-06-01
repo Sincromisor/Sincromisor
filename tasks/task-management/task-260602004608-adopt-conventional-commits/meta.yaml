@@ -1,0 +1,12 @@
+id: "task-260602004608-adopt-conventional-commits"
+title: "Adopt Conventional Commits for future work"
+category: "task-management"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 1
+legacy_ids: []
+created_at: "2026-06-01"
+closed_at: "2026-06-01"
