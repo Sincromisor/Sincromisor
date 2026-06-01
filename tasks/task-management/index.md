@@ -14,14 +14,13 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 
 ## Task Index
 
-### open (2)
+### open (1)
 
 | Task                                                                                                                     | Title                               | Review | Verdict | Attempts | Depends on |
 | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | ------ | ------- | -------- | ---------- |
 | [task-260601214723-codex-subagent-task-management-epic](./task-260601214723-codex-subagent-task-management-epic/task.md) | codex subagent task management epic | -      | -       | 0        | -          |
-| [task-260601214729-pilot-codex-subagent-task-flow](./task-260601214729-pilot-codex-subagent-task-flow/task.md)           | pilot codex subagent task flow      | -      | -       | 0        | -          |
 
-### done (6)
+### done (7)
 
 | Task                                                                                                                               | Title                                    | Review   | Verdict | Attempts | Depends on                                         |
 | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------- | -------- | -------------------------------------------------- |
@@ -30,6 +29,7 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 | [task-260601214726-migrate-legacy-task-documents](./task-260601214726-migrate-legacy-task-documents/task.md)                       | migrate legacy task documents            | -        | PASS    | 1        | -                                                  |
 | [task-260601214727-update-agents-and-rules-task-references](./task-260601214727-update-agents-and-rules-task-references/task.md)   | update agents and rules task references  | APPROVED | PASS    | 1        | -                                                  |
 | [task-260601214728-task-index-link-and-verification-tooling](./task-260601214728-task-index-link-and-verification-tooling/task.md) | task index link and verification tooling | APPROVED | PASS    | 1        | -                                                  |
+| [task-260601214729-pilot-codex-subagent-task-flow](./task-260601214729-pilot-codex-subagent-task-flow/task.md)                     | pilot codex subagent task flow           | APPROVED | PASS    | 1        | -                                                  |
 | [task-260601225653-clarify-legacy-task-redirect](./task-260601225653-clarify-legacy-task-redirect/task.md)                         | clarify legacy task redirect             | APPROVED | PASS    | 1        | `task-260601214729-pilot-codex-subagent-task-flow` |
 
 <!-- AUTOGEN:tasks END -->

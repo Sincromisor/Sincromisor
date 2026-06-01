@@ -43,12 +43,15 @@
 
 ## 確認
 
-- [ ] parent Codex の入力だけで reviewer が仕様レビューできる。
-- [ ] implementer が `meta.yaml` と `eval.md` を触っていない。
-- [ ] evaluator が source code を変更していない。
-- [ ] evaluator が品質ゲートを独立実行している。
-- [ ] close 後に `tasks:index:check` が通る。
+- [x] parent Codex の入力だけで reviewer が仕様レビューできる。
+- [x] implementer が `meta.yaml` と `eval.md` を触っていない。
+- [x] evaluator が source code を変更していない。
+- [x] evaluator が品質ゲートを独立実行している。
+- [x] close 後に `tasks:index:check` が通る。
 
 ## 結果
 
--
+- Pilot task `task-260601225653-clarify-legacy-task-redirect` を新レイアウトで起票した。
+- reviewer / implementer / evaluator を別 subagent として実行し、成果物を `review.md`, `impl.md`, `eval.md` に分離した。
+- implementer は実装 commit `b059e336e10b20a360b099d8edebc8a747183d78` を作成した。
+- parent Codex が pilot task を `status=done`, `verdict=PASS` へ close し、close commit `6ab1025` を作成した。
