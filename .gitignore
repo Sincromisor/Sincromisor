@@ -7,6 +7,17 @@
 __pycache__
 .env
 .agents
+!.agents/
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/sincromisor-task-runner/
+!.agents/skills/sincromisor-task-runner/**
+!.agents/skills/task-reviewer/
+!.agents/skills/task-reviewer/**
+!.agents/skills/task-implementer/
+!.agents/skills/task-implementer/**
+!.agents/skills/impl-evaluator/
+!.agents/skills/impl-evaluator/**
 samples
 volumes/consul-data
 volumes/sincro-cache

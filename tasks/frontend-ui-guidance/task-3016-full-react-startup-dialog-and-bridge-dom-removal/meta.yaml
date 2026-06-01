@@ -1,0 +1,12 @@
+id: "task-3016-full-react-startup-dialog-and-bridge-dom-removal"
+title: "full react startup dialog and bridge dom removal"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3016"]
+created_at: null
+closed_at: null

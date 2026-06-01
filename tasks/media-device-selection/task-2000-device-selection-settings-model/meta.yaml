@@ -1,0 +1,12 @@
+id: "task-2000-device-selection-settings-model"
+title: "device selection settings model"
+category: "media-device-selection"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-2000"]
+created_at: null
+closed_at: null

@@ -1,0 +1,12 @@
+id: "task-3109-sincro-separate-blink-expression-calibration"
+title: "sincro separate blink expression calibration"
+category: "character-sincro-motion"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3109"]
+created_at: null
+closed_at: null

@@ -1,0 +1,12 @@
+id: "task-3041-ui-text-simplification-and-structure-reduction-epic"
+title: "ui text simplification and structure reduction epic"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3041"]
+created_at: null
+closed_at: null

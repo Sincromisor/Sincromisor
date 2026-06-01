@@ -1,0 +1,12 @@
+id: "task-3044-startup-settings-and-looking-glass-session-cleanup"
+title: "startup settings and looking glass session cleanup"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3044"]
+created_at: null
+closed_at: null

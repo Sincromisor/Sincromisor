@@ -1,0 +1,12 @@
+id: "task-260525010934-debug-settings-control-primitives-commonization"
+title: "debug settings control primitives commonization"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-260525010934"]
+created_at: null
+closed_at: null

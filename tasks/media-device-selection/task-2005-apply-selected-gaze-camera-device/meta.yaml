@@ -1,0 +1,12 @@
+id: "task-2005-apply-selected-gaze-camera-device"
+title: "apply selected gaze camera device"
+category: "media-device-selection"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-2005"]
+created_at: null
+closed_at: null

@@ -1,0 +1,12 @@
+id: "task-3040-orbit-controls-input-layer-separation"
+title: "orbit controls input layer separation"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3040"]
+created_at: null
+closed_at: null

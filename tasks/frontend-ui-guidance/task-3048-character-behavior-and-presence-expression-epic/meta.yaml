@@ -1,0 +1,12 @@
+id: "task-3048-character-behavior-and-presence-expression-epic"
+title: "character behavior and presence expression epic"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3048"]
+created_at: null
+closed_at: null

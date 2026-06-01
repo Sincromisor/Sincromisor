@@ -1,0 +1,12 @@
+id: "task-3111-sincro-pose-retarget-formalization-and-tuning"
+title: "sincro pose retarget formalization and tuning"
+category: "character-sincro-motion"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3111"]
+created_at: null
+closed_at: null

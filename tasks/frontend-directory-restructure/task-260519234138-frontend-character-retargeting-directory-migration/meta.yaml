@@ -1,0 +1,12 @@
+id: "task-260519234138-frontend-character-retargeting-directory-migration"
+title: "frontend character retargeting directory migration"
+category: "frontend-directory-restructure"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-260519234138"]
+created_at: null
+closed_at: null

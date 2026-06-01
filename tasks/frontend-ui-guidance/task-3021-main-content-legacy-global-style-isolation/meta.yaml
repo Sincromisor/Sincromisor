@@ -1,0 +1,12 @@
+id: "task-3021-main-content-legacy-global-style-isolation"
+title: "main content legacy global style isolation"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3021"]
+created_at: null
+closed_at: null

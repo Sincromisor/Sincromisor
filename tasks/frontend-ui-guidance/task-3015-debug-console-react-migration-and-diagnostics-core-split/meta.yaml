@@ -1,0 +1,12 @@
+id: "task-3015-debug-console-react-migration-and-diagnostics-core-split"
+title: "debug console react migration and diagnostics core split"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3015"]
+created_at: null
+closed_at: null

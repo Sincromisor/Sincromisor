@@ -1,0 +1,12 @@
+id: "task-3107-sincro-motion-observability-settings-and-verification"
+title: "sincro motion observability settings and verification"
+category: "character-sincro-motion"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3107"]
+created_at: null
+closed_at: null

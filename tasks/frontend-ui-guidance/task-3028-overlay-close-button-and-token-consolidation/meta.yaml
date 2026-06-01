@@ -1,0 +1,12 @@
+id: "task-3028-overlay-close-button-and-token-consolidation"
+title: "overlay close button and token consolidation"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3028"]
+created_at: null
+closed_at: null

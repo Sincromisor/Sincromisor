@@ -1,0 +1,12 @@
+id: "task-260517134247-frontend-camelcase-path-rename-plan"
+title: "frontend camelcase path rename plan"
+category: "frontend-coding-standards"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-260517134247"]
+created_at: null
+closed_at: null

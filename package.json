@@ -1,0 +1,13 @@
+{
+  "name": "sincromisor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tasks:new": "node scripts/tasks/newTask.mjs",
+    "tasks:set": "node scripts/tasks/setMeta.mjs",
+    "tasks:index": "node scripts/tasks/genIndex.mjs",
+    "tasks:index:check": "node scripts/tasks/genIndex.mjs --check",
+    "tasks:fixlinks": "node scripts/tasks/fixLinks.mjs",
+    "tasks:migrate:legacy": "node scripts/tasks/migrateLegacyTasks.mjs"
+  }
+}

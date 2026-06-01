@@ -1,0 +1,12 @@
+id: "task-3032-overlay-visual-regression-and-doc-sync"
+title: "overlay visual regression and doc sync"
+category: "frontend-ui-guidance"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3032"]
+created_at: null
+closed_at: null

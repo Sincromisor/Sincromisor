@@ -1,0 +1,12 @@
+id: "task-260517002603-frontend-biome-prettier"
+title: "frontend biome prettier"
+category: "frontend-tooling"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-260517002603"]
+created_at: null
+closed_at: null

@@ -1,0 +1,12 @@
+id: "task-1001-proper-noun-dictionary-loader-and-config"
+title: "proper noun dictionary loader and config"
+category: "proper-noun-biasing"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-1001"]
+created_at: null
+closed_at: null

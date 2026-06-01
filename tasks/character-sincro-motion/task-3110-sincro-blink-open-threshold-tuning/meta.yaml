@@ -1,0 +1,12 @@
+id: "task-3110-sincro-blink-open-threshold-tuning"
+title: "sincro blink open threshold tuning"
+category: "character-sincro-motion"
+status: "done"
+depends_on: []
+superseded_by: null
+review: null
+verdict: "PASS"
+attempts: 0
+legacy_ids: ["TASK-3110"]
+created_at: null
+closed_at: null
