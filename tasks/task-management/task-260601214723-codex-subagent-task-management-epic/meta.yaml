@@ -1,12 +1,12 @@
 id: "task-260601214723-codex-subagent-task-management-epic"
 title: "codex subagent task management epic"
 category: "task-management"
-status: "open"
+status: "done"
 depends_on: []
 superseded_by: null
-review: null
-verdict: null
-attempts: 0
+review: "APPROVED"
+verdict: "PASS"
+attempts: 1
 legacy_ids: ["TASK-260601214723"]
 created_at: null
-closed_at: null
+closed_at: "2026-06-01"

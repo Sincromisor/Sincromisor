@@ -14,16 +14,11 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 
 ## Task Index
 
-### open (1)
-
-| Task                                                                                                                     | Title                               | Review | Verdict | Attempts | Depends on |
-| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | ------ | ------- | -------- | ---------- |
-| [task-260601214723-codex-subagent-task-management-epic](./task-260601214723-codex-subagent-task-management-epic/task.md) | codex subagent task management epic | -      | -       | 0        | -          |
-
-### done (7)
+### done (8)
 
 | Task                                                                                                                               | Title                                    | Review   | Verdict | Attempts | Depends on                                         |
 | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------- | -------- | -------------------------------------------------- |
+| [task-260601214723-codex-subagent-task-management-epic](./task-260601214723-codex-subagent-task-management-epic/task.md)           | codex subagent task management epic      | APPROVED | PASS    | 1        | -                                                  |
 | [task-260601214724-new-task-layout-and-scripts](./task-260601214724-new-task-layout-and-scripts/task.md)                           | new task layout and scripts              | -        | PASS    | 0        | -                                                  |
 | [task-260601214725-codex-subagent-runner-and-skills](./task-260601214725-codex-subagent-runner-and-skills/task.md)                 | codex subagent runner and skills         | -        | PASS    | 0        | -                                                  |
 | [task-260601214726-migrate-legacy-task-documents](./task-260601214726-migrate-legacy-task-documents/task.md)                       | migrate legacy task documents            | -        | PASS    | 1        | -                                                  |
