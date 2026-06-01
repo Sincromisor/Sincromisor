@@ -1,7 +1,7 @@
 # コーディング規約(Markdown)
 
 > **Scope**: Markdown 文書横断の記述規約(構成 / 見出し / リンク / コードブロック / 表 / TODO / 言語 / フォーマット)
-> **AGENTS.md との関係**: [AGENTS.md](../../AGENTS.md) は初動ガイドと正本リンクを保持する。タスク管理は [documents/tasks/README.md](../tasks/README.md)、コード構造は [code-structure.md](code-structure.md)、設計文書運用は [documents/design/documentation-guide.md](../design/documentation-guide.md) を正本とし、本書は Markdown 固有の横断ルールを保持する。
+> **AGENTS.md との関係**: [AGENTS.md](../../AGENTS.md) は初動ガイドと正本リンクを保持する。タスク管理は [tasks/README.md](../../tasks/README.md)、コード構造は [code-structure.md](code-structure.md)、設計文書運用は [documents/design/documentation-guide.md](../design/documentation-guide.md) を正本とし、本書は Markdown 固有の横断ルールを保持する。
 
 ## 0. 設計思想
 
@@ -15,18 +15,19 @@ Markdown は「次に読む人と LLM エージェントが短時間で判断で
 
 ## 1. ファイル配置 / 命名
 
-| 対象                  | ルール                     |
-| --------------------- | -------------------------- |
-| Markdown ファイル名   | kebab-case                 |
-| README                | `README.md` のみ例外       |
-| タスクファイル        | `TASK-<yymmddhhmmss>-*.md` |
-| ADR                   | `ADR-<YYMMDD>-<topic>.md`  |
-| 一時メモ / 作業中メモ | `documents/tasks/` に置く  |
-| 現在有効な設計 / 契約 | `documents/design/` に置く |
+| 対象                  | ルール                               |
+| --------------------- | ------------------------------------ |
+| Markdown ファイル名   | kebab-case                           |
+| README                | `README.md` のみ例外                 |
+| タスクディレクトリ    | `tasks/<category>/task-<id>-<slug>/` |
+| タスク本文            | `task.md`                            |
+| ADR                   | `ADR-<YYMMDD>-<topic>.md`            |
+| 一時メモ / 作業中メモ | 対応 task directory の `artifacts/`  |
+| 現在有効な設計 / 契約 | `documents/design/` に置く           |
 
 - snake_case / camelCase の `.md` ファイル名を新規追加しない。
 - 設計文書の作成・更新・分割は [documents/design/documentation-guide.md](../design/documentation-guide.md) を正本とする。
-- タスクは `documents/tasks/<大分類>/open/` に作成し、完了後に `done/` へ移動する。
+- タスクは `tasks/<category>/task-<id>-<slug>/` に作成し、状態は `meta.yaml` の `status` で管理する。
 
 **Why**: ファイル名と配置の規則が揺れると、LLM エージェントが `rg --files` で対象を絞りにくくなり、更新漏れの温床になる。
 
@@ -119,10 +120,11 @@ npm run check:md
 
 ## 9. TODO / コメントアウト
 
-- TODO 形式: `TODO(TASK-yymmddhhmmss): <内容>`
+- TODO 形式: `TODO(task-<id>-<slug>): <内容>`
+- 旧 `TODO(TASK-yymmddhhmmss): <内容>` は移行互換として許容する。新規 TODO は canonical task ID を使う。
 - ID なし TODO は禁止。必要なら先にタスクを作る。
 - Markdown comment で本文を隠して残さない。不要な記述は削除し、必要なら task done または ADR に残す。
-- 未確定の検討メモを設計本文に置かない。`documents/tasks/` の open task に置く。
+- 未確定の検討メモを設計本文に置かない。対応 task directory の `artifacts/` または `impl.md` に置く。
 
 **Why**: Markdown の TODO は grep されにくく、放置されやすい。タスク ID と結び付けて追跡可能にする。
 

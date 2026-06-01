@@ -1,12 +1,14 @@
 # Sincromisor プロジェクトについて
 
-Sincromisorは、オンプレミス環境でAIエージェントとの音声対話を実現するプロジェクトです。
+Sincromisor は、ブラウザ上で 3D キャラクターと音声対話するためのサービス基盤です。
+
+初動ガイドは [AGENTS.md](../AGENTS.md)、タスク管理の正本は [tasks/README.md](../tasks/README.md) を参照してください。
 
 ## プロジェクト構成
 
 - **sincromisor-server**: サーバーサイドのコード（Python + uv + ruff）
-- **sincromisor-frontend**: クライアントサイドのコード（Vite + プレーンTypeScript）
-- **Docker**: Docker Compose関連のコード
+- **sincromisor-frontend**: クライアントサイドのコード（TypeScript + Vite + React app shell）
+- **Docker**: Docker Compose 関連のコード
 
 ## 技術スタック
 
@@ -19,7 +21,7 @@ Sincromisorは、オンプレミス環境でAIエージェントとの音声対�
 
 ### クライアントサイド
 - Vite
-- TypeScript (フレームワークなし)
+- TypeScript + React app shell
   - Three.js (キャラクター・背景の描画)
     - pixiv/three-vrm (キャラクターモデル: VRM-1.0)
   - mediapipe/tasks-vision (顔認識)
@@ -59,4 +61,4 @@ Sincromisorは、オンプレミス環境でAIエージェントとの音声対�
 - オンプレミス環境での動作
 - ブラウザベースのインターフェース
 
-コードを生成する際は、これらの技術スタックと設計原則に従ってください。また、コードはパフォーマンス、セキュリティ、保守性を考慮したものであるべきです。
+コードを生成する際は、これらの技術スタックと設計原則に従ってください。作業タスクは `tasks/<category>/task-<id>-<slug>/` に置き、状態は `meta.yaml` で管理します。

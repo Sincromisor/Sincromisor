@@ -43,11 +43,13 @@
 
 ## 確認
 
-- [ ] `rg "documents/tasks|tasks/README|open/|done/" AGENTS.md .github/copilot-instructions.md documents/rules documents/design -g '*.md'` で参照を確認する。
-- [ ] 新タスク起票手順と close 手順が矛盾していない。
-- [ ] フロント / Python / Compose の確認コマンドが新運用文書にも反映されている。
-- [ ] 参照先の `tasks/` パスが移行後に存在し、`tasks:fixlinks` または同等のリンク検証で壊れていない。
+- [x] `rg "documents/tasks|tasks/README|open/|done/" AGENTS.md .github/copilot-instructions.md documents/rules documents/design -g '*.md'` で参照を確認する。
+- [x] 新タスク起票手順と close 手順が矛盾していない。
+- [x] フロント / Python / Compose の確認コマンドが新運用文書にも反映されている。
+- [x] 参照先の `tasks/` パスが移行後に存在し、`tasks:fixlinks` または同等のリンク検証で壊れていない。
 
 ## 結果
 
--
+- `AGENTS.md`、`.github/copilot-instructions.md`、`documents/rules/`、`documents/design/` の現行運用参照を `tasks/` 正本へ更新した。
+- TODO 形式は canonical `task-<id>-<slug>` を新規推奨とし、legacy `TASK-...` を移行互換として明記した。
+- `documents/design/archive/legacy-flat/` の旧 `documents/tasks/...` 参照は履歴として意図的に残した。
