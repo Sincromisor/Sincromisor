@@ -22,7 +22,10 @@
 ```text
 <type>(<scope>): <summary>
 
-<body>
+Why: <変更理由>
+What: <主な変更>
+Verify: <実行した確認>
+Risk: <残リスク、未確認事項>
 
 Refs: task-260601153000-example
 ```
@@ -31,8 +34,26 @@ Refs: task-260601153000-example
 - `scope` は任意だが、履歴検索のため原則付ける。
 - 関連タスクは footer の `Refs:` に canonical task ID を書く。legacy タスクの場合は `Refs: TASK-...` も許容する。
 - subject は変更内容を表す。task ID だけ、または `Implement ...` だけの subject は避ける。
-- 実装 commit と close commit は、必要に応じて body に理由、主な変更、確認、残リスクを書く。
-- 小さな文書修正など、subject と `Refs:` で意図が明確な場合は body を省略してよい。
+- タスクに紐づく commit では、実装、文書、close、生成 index 更新を問わず body に `Why:` / `What:` / `Verify:` / `Risk:` を必ず書く。
+- 該当事項がない場合も省略せず、`Verify: 未実行 (理由)` や `Risk: なし` のように明示する。
+- `Verify:` は 1 commit body 内で 1 回だけ使う。複数コマンドは `; ` 区切りの 1 行にまとめる。
+- `Verify:` が長くなりすぎる場合は、`Verify:` の直後に箇条書きを連続して置く。コマンドごとに空行を挟んだ `Verify:` 行を繰り返さない。
+
+複数コマンドの記録例:
+
+```text
+Verify: npm run tasks:index; npm run tasks:index:check; npm run tasks:check
+```
+
+コマンド数が多い場合:
+
+```text
+Verify:
+- npm run tasks:index
+- npm run tasks:index:check
+- npm run tasks:check
+Risk: なし
+```
 
 推奨 type:
 
@@ -69,7 +90,10 @@ Refs: task-260601153000-example
 ```text
 feat(rtc)!: change offer response schema
 
-Update the frontend and RTC signaling server to use the new response shape.
+Why: Align the RTC contract with the new session negotiation model.
+What: Update the frontend and RTC signaling server to use the new response shape.
+Verify: npm run check; npm run test
+Risk: Existing clients must be updated with the new response parser.
 
 BREAKING CHANGE: RTCSignalingServer offer response no longer includes ...
 Refs: task-260601153000-example
@@ -80,10 +104,10 @@ Refs: task-260601153000-example
 ```text
 feat(settings): add camera device preference
 
-Store the selected camera device in the app settings model and apply it
-during media initialization.
-
+Why: Users need their preferred camera to persist across sessions.
+What: Store the selected camera device in the app settings model and apply it during media initialization.
 Verify: npm run check
+Risk: なし
 Refs: task-260601153000-example
 ```
 
@@ -92,8 +116,10 @@ close commit 例:
 ```text
 chore(tasks): close camera device preference task
 
-Record PASS evaluation and refresh generated task indexes.
-
+Why: The task passed evaluation and can be marked done.
+What: Record PASS evaluation and refresh generated task indexes.
+Verify: npm run tasks:index; npm run tasks:index:check; npm run tasks:check
+Risk: なし
 Refs: task-260601153000-example
 ```
 

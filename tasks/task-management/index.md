@@ -11,7 +11,7 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 
 ## Task Index
 
-### done (10)
+### done (11)
 
 | Task                                                                                                                               | Title                                      | Review   | Verdict | Attempts | Depends on                                                                                                                                                                                                                                                                          |
 | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | -------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -25,5 +25,6 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 | [task-260601225653-clarify-legacy-task-redirect](./task-260601225653-clarify-legacy-task-redirect/task.md)                         | clarify legacy task redirect               | APPROVED | PASS    | 1        | `task-260601214729-pilot-codex-subagent-task-flow`                                                                                                                                                                                                                                  |
 | [task-260601233125-task-completion-reporting-contract](./task-260601233125-task-completion-reporting-contract/task.md)             | Add task completion reporting contract     | -        | PASS    | 1        | -                                                                                                                                                                                                                                                                                   |
 | [task-260602004608-adopt-conventional-commits](./task-260602004608-adopt-conventional-commits/task.md)                             | Adopt Conventional Commits for future work | -        | PASS    | 1        | -                                                                                                                                                                                                                                                                                   |
+| [task-260602012356-tighten-commit-message-body-rules](./task-260602012356-tighten-commit-message-body-rules/task.md)               | Tighten commit message body rules          | -        | PASS    | 1        | -                                                                                                                                                                                                                                                                                   |
 
 <!-- AUTOGEN:tasks END -->
