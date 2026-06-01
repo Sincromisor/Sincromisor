@@ -32,6 +32,7 @@ overwrite reviewer or evaluator output.
    changes.
 4. Run relevant checks from `tasks/README.md`.
 5. Append to `impl.md`:
+    - completion summary for parent Codex
     - attempt number
     - changed files and rationale
     - verification commands and results
@@ -46,3 +47,15 @@ overwrite reviewer or evaluator output.
   otherwise.
 - Avoid broad refactors outside the task scope.
 - If evaluation failed, address the concrete findings in `eval.md` and record the retry in `impl.md`.
+
+## Completion Summary
+
+`impl.md` must include a `## Completion Summary` section for parent Codex to relay to the user after
+the implementer finishes. Include:
+
+- implementation status
+- changed files and rationale
+- commit hash, if commit succeeded
+- verification commands and results
+- checks not run and why
+- deviations, residual risks, or follow-ups

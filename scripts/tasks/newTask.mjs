@@ -86,11 +86,11 @@ const taskMd = `# ${title}
 
 ## 受け入れ条件
 
-- [ ] 
+- [ ]
 
 ## 確認
 
-- [ ] 
+- [ ]
 
 ## 実行できなかった検証
 
@@ -108,7 +108,11 @@ const reviewMd = `# Review
 
 ## Verdict
 
-- 
+-
+
+## Summary for Parent
+
+-
 
 ## Notes
 
@@ -116,6 +120,10 @@ const reviewMd = `# Review
 `;
 
 const implMd = `# Implementation Log
+
+## Completion Summary
+
+-
 
 ## Attempts
 
@@ -133,6 +141,10 @@ const implMd = `# Implementation Log
 const evalMd = `# Evaluation
 
 ## Verdict
+
+-
+
+## Completion Summary
 
 -
 

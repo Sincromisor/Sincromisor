@@ -58,3 +58,12 @@ FAIL
 ```
 
 Then include evidence, commands run, findings, and residual risk. For FAIL, list concrete fixes the implementer can act on.
+
+Include a `## Completion Summary` section near the top. It must be short enough for parent Codex to
+relay directly to the user and include:
+
+- verdict
+- evidence for PASS, or concrete blocking findings for FAIL
+- independent checks run and their results
+- checks not run and why
+- residual risks or next action

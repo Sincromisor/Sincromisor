@@ -11,7 +11,7 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 
 ## Task Index
 
-### done (8)
+### done (9)
 
 | Task                                                                                                                               | Title                                    | Review   | Verdict | Attempts | Depends on                                         |
 | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------- | -------- | -------------------------------------------------- |
@@ -23,5 +23,6 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 | [task-260601214728-task-index-link-and-verification-tooling](./task-260601214728-task-index-link-and-verification-tooling/task.md) | task index link and verification tooling | APPROVED | PASS    | 1        | -                                                  |
 | [task-260601214729-pilot-codex-subagent-task-flow](./task-260601214729-pilot-codex-subagent-task-flow/task.md)                     | pilot codex subagent task flow           | APPROVED | PASS    | 1        | -                                                  |
 | [task-260601225653-clarify-legacy-task-redirect](./task-260601225653-clarify-legacy-task-redirect/task.md)                         | clarify legacy task redirect             | APPROVED | PASS    | 1        | `task-260601214729-pilot-codex-subagent-task-flow` |
+| [task-260601233125-task-completion-reporting-contract](./task-260601233125-task-completion-reporting-contract/task.md)             | Add task completion reporting contract   | -        | PASS    | 1        | -                                                  |
 
 <!-- AUTOGEN:tasks END -->
