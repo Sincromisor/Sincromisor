@@ -9,15 +9,15 @@ Use this skill only as a reviewer subagent in the Sincromisor task pipeline.
 
 ## Read
 
-- `tasks/<category>/<task-id>/task.md`
-- `tasks/<category>/<task-id>/meta.yaml`
+- `tasks/<category>/task-<id>-<slug>/task.md`
+- `tasks/<category>/task-<id>-<slug>/meta.yaml`
 - `AGENTS.md`
 - `tasks/README.md`
 - Relevant `documents/design/`, `documents/rules/`, and source files
 
 ## Write
 
-- Only `tasks/<category>/<task-id>/review.md`
+- Only `tasks/<category>/task-<id>-<slug>/review.md`
 
 Do not edit source code, tests, `meta.yaml`, `impl.md`, `eval.md`, or `index.md`. Do not commit.
 

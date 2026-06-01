@@ -2,10 +2,7 @@
 
 Codex での作業効率化、タスク管理刷新、subagent ベースの作業パイプライン整備に関するタスクを管理します。
 
-- 未着手/進行中: `open/`
-- 完了: `done/`
-
-各タスクは `TASK-<タスクID>-<概要>.md` の形式で記述します。
+現在のタスクは `tasks/<category>/task-<id>-<slug>/` で管理し、状態は各 `meta.yaml` の `status` を正本にします。新規タスクの作成、状態更新、index 再生成の詳細は `../README.md` を参照してください。
 
 > Migrated from `documents/tasks/task_management/README.md`.
 > Legacy task count in this category: 7.

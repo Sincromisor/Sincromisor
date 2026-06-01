@@ -2,10 +2,7 @@
 
 フロントエンドのマイク入力デバイス / 視線検出用カメラの選択機能に関するタスクを管理します。
 
-- 未着手/進行中: `open/`
-- 完了: `done/`
-
-各タスクは `TASK-<タスクID>-<概要>.md` の形式で記述します。
+現在のタスクは `tasks/<category>/task-<id>-<slug>/` で管理し、状態は各 `meta.yaml` の `status` を正本にします。旧 `open/` / `done/` と `TASK-...` 形式の説明は移行元の履歴としてのみ扱います。
 
 > Migrated from `documents/tasks/media_device_selection/README.md`.
 > Legacy task count in this category: 7.
