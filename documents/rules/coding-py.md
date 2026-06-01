@@ -152,7 +152,7 @@ PoC では下記 2 軸を最優先する。
 
 ## 9. TODO / FIXME / `@deprecated`
 
-- 形式: `# TODO(TASK-yymmddhhmmss): <内容>` — タスク ID 紐付け必須。ID 無しの TODO はレビューで差し戻し
+- 形式: `# TODO(task-<id>-<slug>): <内容>` — canonical task ID 紐付け必須。旧 `TODO(TASK-yymmddhhmmss): ...` は移行互換として許容する。ID 無しの TODO はレビューで差し戻し
 - `FIXME` は使わない(`TODO` に統一)
 - deprecation コメントを付けたら **同タスク or 次タスクで削除**。残置禁止
 - コメントに「あとで」「いずれ」だけ書くのは禁止 — 必ずタスク化する

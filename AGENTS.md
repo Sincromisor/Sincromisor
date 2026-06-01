@@ -26,7 +26,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 3. `examples/compose.env`
 4. `documents/design/index.md`
 5. `documents/design/architecture/overview.md`
-6. `documents/tasks/README.md`
+6. `tasks/README.md`
 
 対象別の正本は次を優先する。
 
@@ -35,7 +35,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 - フロントページ構成: `documents/design/frontend/pages.md`
 - バックエンドサービス: `documents/design/backend/services/`
 - compose / Consul / storage: `documents/design/infrastructure/`
-- タスク管理: `documents/tasks/README.md`
+- タスク管理: `tasks/README.md`
 - コード構造ルール: `documents/rules/code-structure.md`
 - Python 規約: `documents/rules/coding-py.md`
 - TypeScript 規約: `documents/rules/coding-ts.md`
@@ -59,7 +59,8 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
     - `ts/`, `react/`: 旧構成。新規実装は原則置かない。
 - `documents/design/`: 現在有効な設計、契約、ADR、initiative。
 - `documents/rules/`: コーディング、構造、文書運用の横断ルール。
-- `documents/tasks/`: 作業タスクと検証ログ。
+- `tasks/`: 作業タスク、検証ログ、subagent 成果物。
+- `documents/tasks/`: 旧タスク管理からの移行案内。
 
 ## 作業原則
 
@@ -91,10 +92,11 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 
 ## タスクとコミット
 
-- タスクは `documents/tasks/<大分類>/open/TASK-<yymmddhhmmss>-<概要>.md` に作る。
-- 完了したら `open/` から `done/` へ移動する。
-- 最低限、タスク単位でコミットする。コミットメッセージには関連する TASK ID を含める。
-- 詳細は `documents/tasks/README.md` を正本とする。
+- タスクは `tasks/<category>/task-<id>-<slug>/` に作る。
+- 状態は物理ディレクトリではなく `meta.yaml` の `status` を正本にする。
+- review / implementation log / evaluation は `review.md`, `impl.md`, `eval.md` に分離する。
+- 最低限、タスク単位でコミットする。コミットメッセージには関連する task ID または legacy `TASK-...` ID を含める。
+- 詳細は `tasks/README.md` を正本とする。
 
 ## 通信フロー概要
 
@@ -135,6 +137,14 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
     ```
 
 実行範囲は変更内容に応じて絞ってよい。実行できなかった確認は、理由をタスク文書と最終報告に残す。
+
+- タスク管理:
+
+    ```sh
+    npm run tasks:index
+    npm run tasks:index:check
+    npm run tasks:check
+    ```
 
 ## よくある落とし穴
 
