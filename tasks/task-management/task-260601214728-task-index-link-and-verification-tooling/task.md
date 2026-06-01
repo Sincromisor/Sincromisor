@@ -45,12 +45,14 @@
 
 ## 確認
 
-- [ ] `tasks:index` を 2 回実行して 2 回目に差分が出ないことを確認する。
-- [ ] `tasks:index:check` が通る。
-- [ ] `tasks:fixlinks` dry-run の結果を確認する。
-- [ ] 可能なら `tasks:check` を追加し、移行後の全 task directory に対して実行する。
-- [ ] `npm run check:md` または同等のコマンドで、`tasks/` 配下の Markdown が対象になることを確認する。
+- [x] `tasks:index` を 2 回実行して 2 回目に差分が出ないことを確認する。
+- [x] `tasks:index:check` が通る。
+- [x] `tasks:fixlinks` dry-run の結果を確認する。
+- [x] 可能なら `tasks:check` を追加し、移行後の全 task directory に対して実行する。
+- [x] `npm run check:md` または同等のコマンドで、`tasks/` 配下の Markdown が対象になることを確認する。
 
 ## 結果
 
--
+- `scripts/tasks/checkTasks.mjs` を追加し、task directory と `meta.yaml` の基本整合性を確認できるようにした。
+- `npm run tasks:check` を追加し、`tasks/README.md` に運用コマンドとして記載した。
+- `tasks:index` の冪等性、`tasks:index:check`、`tasks:fixlinks` dry-run、`tasks:check`、`npm run check:md` を確認した。

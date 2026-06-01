@@ -1,12 +1,12 @@
 id: "task-260601214728-task-index-link-and-verification-tooling"
 title: "task index link and verification tooling"
 category: "task-management"
-status: "open"
+status: "done"
 depends_on: []
 superseded_by: null
-review: null
-verdict: null
-attempts: 0
+review: "APPROVED"
+verdict: "PASS"
+attempts: 1
 legacy_ids: ["TASK-260601214728"]
 created_at: null
-closed_at: null
+closed_at: "2026-06-01"
