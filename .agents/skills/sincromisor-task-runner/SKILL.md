@@ -28,7 +28,7 @@ or use this runner skill.
 6. If evaluation fails, run `npm run tasks:set -- <task-dir> verdict=FAIL attempts=<n>` and send
    `eval.md` findings back to the implementer. Repeat within the user-approved iteration budget.
 7. If evaluation passes, run `npm run tasks:set -- <task-dir> status=done verdict=PASS attempts=<n>`
-   and `npm run tasks:index`.
+   and the required task tooling checks.
 8. Create the close commit containing review/eval/acceptance/meta/index changes. Include the task ID
    in the commit message.
 
@@ -61,6 +61,7 @@ before close:
 ```sh
 npm run tasks:index
 npm run tasks:index:check
+npm run tasks:check
 ```
 
 When Markdown is touched, run:

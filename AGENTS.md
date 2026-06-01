@@ -110,41 +110,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 
 ## ローカル確認
 
-- フロント:
-
-    ```sh
-    cd sincromisor-frontend
-    npm run build
-    npm run check
-    npm run test
-    ```
-
-- Python:
-
-    ```sh
-    uv run ruff check .
-    uv run ruff format --check .
-    uv run --group dev --group full ty check .
-    uv run pytest
-    ```
-
-- Compose:
-
-    ```sh
-    cp examples/compose.env .env
-    chmod 600 .env
-    docker compose --profile full up -d
-    ```
-
-実行範囲は変更内容に応じて絞ってよい。実行できなかった確認は、理由をタスク文書と最終報告に残す。
-
-- タスク管理:
-
-    ```sh
-    npm run tasks:index
-    npm run tasks:index:check
-    npm run tasks:check
-    ```
+変更内容に応じてフロント、Python、Compose、Markdown、task tooling の確認範囲を選ぶ。具体的なコマンドと task close 前の必須確認は `tasks/README.md` を正本とする。実行できなかった確認は、理由をタスク文書と最終報告に残す。
 
 ## よくある落とし穴
 

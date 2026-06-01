@@ -6,6 +6,8 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 
 ## タスク一覧
 
+以下は移行元 README にあった旧 `open/` / `done/` ベースの計画メモです。現在の状態は、このページ下部の AUTOGEN index と各タスクの `meta.yaml` を正本にします。
+
 - Open: `open/TASK-3100-sincro-motion-foundation-epic.md`
 - Done: `done/TASK-3101-sincro-motion-architecture-and-design-doc.md`
 - Done: `done/TASK-3102-face-tracking-runtime-and-sincro-face-tracker.md`
@@ -30,13 +32,13 @@ Sincromisor 本来の目的である「ものまね / 同期」キャラクタ�
 - Done: `done/TASK-260517042345-sincro-motion-debug-page-for-ik-playwright.md`
 - Done: `done/TASK-260517053106-sincro-arm-ik-joint-constraints-and-collision.md`
 
-## 前提
+## 移行元メモ
 
 - `TASK-3048` のキャラクター対話存在感強化は完了済みとして扱う。
 - 3100 系は `TASK-3048` で追加された `CharacterBehaviorState`、`CharacterMotionOrchestrator`、eye / idle / AI speech motion を前提に、`sincro` の同期モーション基盤を後続拡張する。
 - WebRTC の `talk_mode` 契約は既存のまま使い、endpoint / JSON を変更する場合は別途明示して判断する。
 
-## 推奨実行順とフェーズゲート
+## 移行元の推奨実行順とフェーズゲート
 
 1. `TASK-3101`: 設計文書を更新し、用語、責務境界、mode 切替仕様、性能ゲートを正本化する。
 2. `TASK-3102`: 共有 camera / tracker runtime と `SincroFaceTracker` を実装する。
@@ -65,7 +67,7 @@ Pose Landmarker は face-only の本流と分けて進める。
 15. `TASK-260517053106`: 腕 IK の関節制約と簡易 collision / no-go zone を追加する。
 16. `TASK-3116`: 実カメラ、複数 VRM、複数 viewport で最終検証し、必要な調整値と確認結果を記録する。
 
-## 現在の残タスク
+## 移行元時点の残タスクメモ
 
 - `TASK-3100`: Sincro motion 全体 Epic。子タスク完了と最終確認を受けて閉じる。
 - `TASK-3116`: Sincro Pose IK の最終実機検証。実装済みの tracker / retarget / IK / Debug Console / motion-debug を使い、実カメラ・複数 VRM・既定値を確認する。

@@ -34,12 +34,14 @@ tasks/<category>/
 
 ## ファイルの役割
 
+通常タスクでは、作業を担当する Codex が `task.md` に沿って実装し、確認結果を `impl.md` に記録する。`review.md` と `eval.md` は subagent pipeline を明示して実行する場合、またはユーザーが独立レビュー / 独立評価を求める場合に必須とする。小変更では `review.md` / `eval.md` が未記入でもよいが、close する前に担当 Codex が実行した確認、未実行理由、残リスクを `impl.md` に残す。
+
 | ファイル      | 書き手                | 役割                                                    |
 | ------------- | --------------------- | ------------------------------------------------------- |
 | `task.md`     | 起票者 / parent Codex | タスク仕様、変更範囲、受け入れ条件。review 後は原則固定 |
 | `meta.yaml`   | parent Codex          | 状態メタデータの正本。`tasks:set` で更新                |
 | `review.md`   | reviewer subagent     | 実装前レビュー、承認可否、リスク、確認観点              |
-| `impl.md`     | implementer subagent  | 実装ログ、変更内容、確認結果、実行できなかった検証      |
+| `impl.md`     | 担当 Codex            | 実装ログ、変更内容、確認結果、実行できなかった検証      |
 | `eval.md`     | evaluator subagent    | 独立評価、品質ゲート結果、PASS / FAIL                   |
 | `acceptance/` | evaluator subagent    | 独立検証用の補助ファイル                                |
 | `artifacts/`  | 各 role               | タスク固有のログ、CSV、スクリーンショット、調査メモ     |
@@ -69,7 +71,7 @@ closed_at: null
 | ------------ | ---------------------------------------------- |
 | `open`       | 未完。着手前、実装中、または FAIL 後の継続対象 |
 | `blocked`    | 外部要因、依存、意思決定待ちで停止中           |
-| `done`       | evaluator が PASS し close 済み                |
+| `done`       | PASS 判定で close 済み                         |
 | `cancelled`  | 後継なしで取りやめ                             |
 | `superseded` | 後継タスクに置き換え                           |
 
@@ -86,6 +88,8 @@ closed_at: null
 TODO は新規コードでは `TODO(task-260601153000-example): ...` を推奨する。既存の `TODO(TASK-...)` は移行互換として残してよい。
 
 旧 done タスクは正確な完了日が本文から機械的に取れないため、移行時の `closed_at` は `null` のまま保持する。新方式で close するタスクは `tasks:set status=done` が `closed_at` を設定する。
+
+移行済みタスクの `status: done` と `verdict: PASS` は、旧 `done/` 配下にあった完了状態を `tasks:check` と新 index で扱うための互換メタデータである。`attempts: 0`、未記入の `review.md`、未記入の `eval.md` がある legacy タスクは、subagent reviewer / evaluator を実行済みとは限らない。新方式で close するタスクでは、subagent pipeline を使った場合は `review.md` / `eval.md` に成果物を残し、通常作業の場合も `impl.md` に担当 Codex の確認結果を残す。
 
 ## スクリプト
 
@@ -117,6 +121,8 @@ npm run tasks:check
 
 subagent pipeline を明示して実行するタスクでは、parent Codex が reviewer -> implementer -> evaluator -> close を調停する。
 
+pipeline は、ユーザーが subagent / runner skill / 独立 review / 独立 eval を明示した場合、または大きめの実装で独立評価が必要と判断した場合に使う。通常の小変更では、担当 Codex が直接実装して `impl.md` に記録し、必要な確認を通してから `tasks:set status=done verdict=PASS attempts=<n>` と index 更新で close してよい。
+
 Role 手順は Git 追跡対象の Codex skills として管理する。
 
 - `.agents/skills/sincromisor-task-runner/SKILL.md`: parent Codex の orchestration
@@ -132,6 +138,14 @@ Role 手順は Git 追跡対象の Codex skills として管理する。
 6. PASS の場合、parent Codex が `tasks:set status=done verdict=PASS attempts=<n>` と `tasks:index` を実行し、close commit を作る。
 
 実装 commit には実装差分、テスト、`impl.md` を含める。close commit には `review.md`, `eval.md`, `acceptance/`, `meta.yaml`, `index.md` を含める。
+
+close 前の task tooling checks は必須とする。
+
+```sh
+npm run tasks:index
+npm run tasks:index:check
+npm run tasks:check
+```
 
 ## 確認コマンド
 
