@@ -2,7 +2,7 @@ id: "task-260601214729-pilot-codex-subagent-task-flow"
 title: "pilot codex subagent task flow"
 category: "task-management"
 status: "done"
-depends_on: []
+depends_on: ["task-260601214724-new-task-layout-and-scripts", "task-260601214725-codex-subagent-runner-and-skills", "task-260601214726-migrate-legacy-task-documents", "task-260601214728-task-index-link-and-verification-tooling", "task-260601214727-update-agents-and-rules-task-references"]
 superseded_by: null
 review: "APPROVED"
 verdict: "PASS"

@@ -1,4 +1,4 @@
-# TASK-3034 chat overlay fixed viewport height
+# task-3034-chat-overlay-fixed-viewport-height
 
 - 作成日: 2026-05-01
 - 完了日: 2026-05-01

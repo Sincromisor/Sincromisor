@@ -2,7 +2,7 @@ id: "task-260601214726-migrate-legacy-task-documents"
 title: "migrate legacy task documents"
 category: "task-management"
 status: "done"
-depends_on: []
+depends_on: ["task-260601214724-new-task-layout-and-scripts"]
 superseded_by: null
 review: null
 verdict: "PASS"

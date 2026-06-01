@@ -2,7 +2,7 @@ id: "task-3038-right-tool-regression-and-design-sync"
 title: "right tool regression and design sync"
 category: "frontend-ui-guidance"
 status: "done"
-depends_on: []
+depends_on: ["task-3034-right-tool-menu-state-and-popover", "task-3035-settings-debug-handoff-cleanup", "task-3036-right-settings-panel-compact-navigation", "task-3037-debug-console-mobile-header-tabs"]
 superseded_by: null
 review: null
 verdict: "PASS"

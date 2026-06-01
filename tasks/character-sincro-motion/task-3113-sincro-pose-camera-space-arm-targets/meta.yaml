@@ -2,7 +2,7 @@ id: "task-3113-sincro-pose-camera-space-arm-targets"
 title: "sincro pose camera space arm targets"
 category: "character-sincro-motion"
 status: "done"
-depends_on: []
+depends_on: ["task-3111-sincro-pose-retarget-formalization-and-tuning", "task-3112-sincro-tracker-workerization-and-load-isolation"]
 superseded_by: null
 review: null
 verdict: "PASS"

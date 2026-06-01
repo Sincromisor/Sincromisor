@@ -2,7 +2,7 @@ id: "task-3039-settings-shell-integrated-tab-navigation"
 title: "settings shell integrated tab navigation"
 category: "frontend-ui-guidance"
 status: "done"
-depends_on: []
+depends_on: ["task-3036-right-settings-panel-compact-navigation", "task-3038-right-tool-regression-and-design-sync"]
 superseded_by: null
 review: null
 verdict: "PASS"

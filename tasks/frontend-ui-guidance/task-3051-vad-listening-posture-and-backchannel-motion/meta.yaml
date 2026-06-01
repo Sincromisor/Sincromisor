@@ -2,7 +2,7 @@ id: "task-3051-vad-listening-posture-and-backchannel-motion"
 title: "vad listening posture and backchannel motion"
 category: "frontend-ui-guidance"
 status: "done"
-depends_on: []
+depends_on: ["task-3049-character-behavior-state-and-input-aggregation", "task-3050-character-idle-breathing-and-upper-body-motion"]
 superseded_by: null
 review: null
 verdict: "PASS"

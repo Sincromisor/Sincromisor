@@ -2,7 +2,7 @@ id: "task-3052-eye-behavior-gaze-blink-and-microsaccade"
 title: "eye behavior gaze blink and microsaccade"
 category: "frontend-ui-guidance"
 status: "done"
-depends_on: []
+depends_on: ["task-3049-character-behavior-state-and-input-aggregation"]
 superseded_by: null
 review: null
 verdict: "PASS"

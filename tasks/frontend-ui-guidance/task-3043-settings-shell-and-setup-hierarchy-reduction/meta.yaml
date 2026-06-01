@@ -2,7 +2,7 @@ id: "task-3043-settings-shell-and-setup-hierarchy-reduction"
 title: "settings shell and setup hierarchy reduction"
 category: "frontend-ui-guidance"
 status: "done"
-depends_on: []
+depends_on: ["task-3042-right-tool-and-panel-label-simplification"]
 superseded_by: null
 review: null
 verdict: "PASS"

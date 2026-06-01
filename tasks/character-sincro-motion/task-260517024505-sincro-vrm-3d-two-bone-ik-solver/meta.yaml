@@ -2,7 +2,7 @@ id: "task-260517024505-sincro-vrm-3d-two-bone-ik-solver"
 title: "sincro vrm 3d two bone ik solver"
 category: "character-sincro-motion"
 status: "done"
-depends_on: []
+depends_on: ["task-260517024504-sincro-pose-world-landmarks-and-3d-targets"]
 superseded_by: null
 review: null
 verdict: "PASS"

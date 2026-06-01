@@ -6,6 +6,10 @@
 
 このタスクは `task-260601214729-pilot-codex-subagent-task-flow` の pilot として、review -> implement -> evaluate -> close の分離運用を確認するために小さく保つ。
 
+## 依存
+
+- `task-260601214729-pilot-codex-subagent-task-flow`
+
 ## 変更範囲
 
 - `documents/tasks/README.md`
