@@ -49,5 +49,5 @@
 - `../../../tasks/character-sincro-motion/task-260517024506-sincro-ik-solver-comparison-and-adoption/task.md`
 - `../../../tasks/character-sincro-motion/task-260517024505-sincro-vrm-3d-two-bone-ik-solver/task.md`
 - `documents/design/frontend/character/motion.md`
-- `sincromisor-frontend/src/ts/sincroVrm/vrmCharacter/sincroArmIkSolver.ts`
-- `sincromisor-frontend/src/ts/sincroVrm/vrmCharacter/sincroCcdIkProbe.ts`
+- `sincromisor-frontend/src/character/ik/sincroArmIkSolver.ts`
+- `sincromisor-frontend/src/character/ik/sincroCcdIkProbe.ts`
