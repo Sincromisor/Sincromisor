@@ -35,6 +35,29 @@ Do not edit implementation files, tests, `meta.yaml`, `impl.md`, generated `inde
 
 Run independent checks rather than trusting `impl.md`. Choose commands from `tasks/README.md` according to touched files. For documentation-only tasks, at minimum run task index checks and Markdown checks when feasible.
 
+Use the same checkout by default. Before evaluating, confirm there is no uncommitted implementation
+diff left from the implementer. A physical `git worktree` is optional and should be used only when
+the parent requests stronger isolation or the existing checkout has conflicting dirty changes.
+
+Run verification-only commands. Do not use `--fix`, `--write`, formatter write mode, or any command
+that rewrites implementation files. If a normal project command would mutate files, choose the
+check-only variant or record why it was not run.
+
+The 3 point gate is:
+
+- lint / format check
+- type check or build
+- tests that cover the acceptance conditions
+
+Evaluate test adequacy, not only command success. A passing test run with missing acceptance coverage
+can still be a FAIL.
+
+## Acceptance Artifacts
+
+Additional evaluator-created checks, notes, screenshots, or fixtures must stay under `acceptance/`.
+Do not modify implementation code, implementation tests, task metadata, `impl.md`, or generated
+indexes. Do not commit evaluator artifacts; the parent Codex owns the close commit.
+
 ## Output Format
 
 Write `eval.md` with:

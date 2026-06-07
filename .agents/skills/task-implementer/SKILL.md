@@ -27,18 +27,21 @@ overwrite reviewer or evaluator output.
 ## Workflow
 
 1. Confirm `review.md` verdict is `APPROVED`.
-2. Implement the smallest coherent change that satisfies `task.md` and review constraints.
-3. Update corresponding docs, compose, sample env, or design docs when behavior or configuration
+2. Confirm the parent has established a clean boundary. Prefer the existing checkout and a
+   `codex/<task-id>` branch; do not create a physical `git worktree` unless the parent explicitly
+   asks for isolation.
+3. Implement the smallest coherent change that satisfies `task.md` and review constraints.
+4. Update corresponding docs, compose, sample env, or design docs when behavior or configuration
    changes.
-4. Run relevant checks from `tasks/README.md`.
-5. Append to `impl.md`:
+5. Run relevant checks from `tasks/README.md`, including the 3 point gate for the changed surface.
+6. Append to `impl.md`:
     - completion summary for parent Codex
     - attempt number
     - changed files and rationale
     - verification commands and results
     - checks not run and why
     - deviations from review, if any
-6. Commit implementation changes and `impl.md`. Include the canonical task ID in the commit message.
+7. Commit implementation changes and `impl.md`. Include the canonical task ID in the commit message.
 
 ## Guardrails
 
@@ -47,6 +50,29 @@ overwrite reviewer or evaluator output.
   otherwise.
 - Avoid broad refactors outside the task scope.
 - If evaluation failed, address the concrete findings in `eval.md` and record the retry in `impl.md`.
+- Do not edit evaluator-owned `acceptance/` files, `eval.md`, `meta.yaml`, or generated indexes.
+- Do not report completion with uncommitted implementation changes left in the working tree.
+
+## Implementation Log
+
+`impl.md` is append-only after the first attempt. Do not delete or rewrite earlier attempt notes.
+For each attempt, add a new attempt section that records why choices were made, deviations from the
+approved task or review, verification results, skipped checks, and remaining risk. Keep large command
+logs in `artifacts/` when they are useful, and summarize the important result in `impl.md`.
+
+The commit is the source of truth for what changed. `impl.md` should explain context, judgment, and
+verification rather than duplicating the full diff.
+
+## Verification Gate
+
+Run the changed surface's 3 point gate before completion:
+
+- lint / format check
+- type check or build
+- tests that cover the acceptance conditions
+
+Use project commands from `tasks/README.md`. If a check is too expensive or not relevant, record the
+reason and residual risk in `impl.md` instead of silently skipping it.
 
 ## Completion Summary
 

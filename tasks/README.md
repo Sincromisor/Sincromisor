@@ -55,33 +55,33 @@ Risk: なし
 
 推奨 type:
 
-| type       | 用途                                    |
-| ---------- | --------------------------------------- |
-| `feat`     | 機能追加                                |
-| `fix`      | バグ修正                                |
-| `docs`     | 文書のみの変更                          |
-| `refactor` | 振る舞いを変えない整理                  |
-| `test`     | テスト追加・修正                        |
-| `chore`    | タスク管理、メタデータ、生成物整理      |
-| `build`    | build、依存、compose、パッケージ周辺    |
-| `ci`       | CI、自動化                              |
-| `perf`     | 性能改善                                |
-| `revert`   | revert                                  |
+| type       | 用途                                 |
+| ---------- | ------------------------------------ |
+| `feat`     | 機能追加                             |
+| `fix`      | バグ修正                             |
+| `docs`     | 文書のみの変更                       |
+| `refactor` | 振る舞いを変えない整理               |
+| `test`     | テスト追加・修正                     |
+| `chore`    | タスク管理、メタデータ、生成物整理   |
+| `build`    | build、依存、compose、パッケージ周辺 |
+| `ci`       | CI、自動化                           |
+| `perf`     | 性能改善                             |
+| `revert`   | revert                               |
 
 推奨 scope:
 
-| scope       | 用途                         |
-| ----------- | ---------------------------- |
-| `frontend`  | フロントエンド全般           |
-| `server`    | Python サーバー全般          |
-| `rtc`       | WebRTC / シグナリング契約    |
-| `character` | VRM、モーション、表示制御    |
-| `settings`  | 設定 UI / 設定モデル         |
-| `tasks`     | タスク管理、subagent 成果物  |
-| `docs`      | 設計文書、ルール文書         |
-| `compose`   | compose / Consul / storage   |
-| `agents`    | agent skill / workflow       |
-| `deps`      | 依存関係                     |
+| scope       | 用途                        |
+| ----------- | --------------------------- |
+| `frontend`  | フロントエンド全般          |
+| `server`    | Python サーバー全般         |
+| `rtc`       | WebRTC / シグナリング契約   |
+| `character` | VRM、モーション、表示制御   |
+| `settings`  | 設定 UI / 設定モデル        |
+| `tasks`     | タスク管理、subagent 成果物 |
+| `docs`      | 設計文書、ルール文書        |
+| `compose`   | compose / Consul / storage  |
+| `agents`    | agent skill / workflow      |
+| `deps`      | 依存関係                    |
 
 破壊的変更は `!` または `BREAKING CHANGE:` footer で明示する。通信契約、設定名、保存形式、公開 API を変える場合は、body に移行理由と影響範囲を書く。
 
@@ -231,6 +231,18 @@ npm run tasks:index
 npm run tasks:check
 ```
 
+## ブランチライフサイクル
+
+Sincromisor の runner は、Disk I/O とローカル処理時間を増やしすぎないため、既定では単一 checkout 上で進める。role ごとに物理 `git worktree` を作らず、commit と `git status` で clean boundary を保つ。
+
+- parent Codex は role の前後で `git status --porcelain` と現在 HEAD を確認し、ユーザーの未追跡・未コミット変更を誤って巻き込まない。
+- reviewer は実装を変更しないため、原則として専用ブランチや物理 worktree を作らない。
+- implementer は現在ブランチの HEAD を基点に `codex/<task-id>` ブランチを作る。既に作業ブランチ上にいる場合は、parent Codex が継続可否を判断して記録する。
+- implementer は実装差分、テスト、`impl.md` を commit してから evaluator に渡す。`meta.yaml`, `eval.md`, category `index.md` は触らない。
+- evaluator は同じ checkout で、未コミットの実装差分が残っていないことを確認してから独立検証する。評価用の追加ファイルは `acceptance/` に限定し、実装コードや実装者のテストは変更しない。
+- PASS 後、parent Codex は必要に応じて実装ブランチを基点ブランチへ反映し、`tasks:set`, `tasks:index`, task tooling checks を実行して close commit を作る。
+- 物理 `git worktree` は、既存の dirty 変更と衝突する場合、評価を強く隔離したい場合、または破壊的変更の検証で必要な場合だけ使う。
+
 ## Codex subagent パイプライン
 
 subagent pipeline を明示して実行するタスクでは、parent Codex が reviewer -> implementer -> evaluator -> close を調停する。
@@ -250,7 +262,7 @@ Role 手順は Git 追跡対象の Codex skills として管理する。
 4. parent Codex は `impl.md` の completion summary を読み、実装結果をユーザーへ報告してから evaluator を起動する。
 5. evaluator は committed diff と成果物を独立検証し、`eval.md` と必要な `acceptance/` だけを書く。実装コードは変更しない。
 6. parent Codex は `eval.md` の completion summary を読み、評価結果をユーザーへ報告してから PASS / FAIL の処理に進む。
-7. FAIL の場合、parent Codex は `eval.md` の残課題を implementer に渡し、上限回数内で再実装を回す。
+7. FAIL の場合、parent Codex は `eval.md` の残課題を implementer に渡し、原則 2 回まで再実装を回す。上限を変える場合はユーザーに明示する。
 8. PASS の場合、parent Codex が `tasks:set status=done verdict=PASS attempts=<n>` と `tasks:index` を実行し、close commit を作る。
 9. close commit 後、parent Codex は最終状態、関連 commit、実行した task tooling checks、残リスクをユーザーへ報告する。
 
@@ -279,6 +291,18 @@ npm run tasks:check
 ## 確認コマンド
 
 変更内容に応じて実行範囲を絞ってよい。実行できなかった確認は理由を記録する。
+
+### 3 点ゲート
+
+実装者は完了報告前に、評価者は実装者の報告を鵜呑みにせず独立に、変更範囲に応じた 3 点ゲートを通す。評価者は差分を生む `--fix`, `--write`, format 実行版を使わず、検証専用のコマンドを選ぶ。
+
+| ゲート             | 実装者                                                        | 評価者                                               |
+| ------------------ | ------------------------------------------------------------- | ---------------------------------------------------- |
+| lint / format      | `npm run check`, `uv run ruff check .` など                   | `npm run check`, `uv run ruff format --check .` など |
+| 型チェック / build | `npm run build`, `uv run --group dev --group full ty check .` | 同左。差分を生まない build / type check を使う       |
+| test               | 変更範囲の `npm run test`, `uv run pytest`                    | 同左。受け入れ条件を満たすか批判的に確認する         |
+
+タスク管理のみの変更では、少なくとも task tooling checks を実行する。Markdown を触った場合は Markdown check を追加する。
 
 Frontend:
 
