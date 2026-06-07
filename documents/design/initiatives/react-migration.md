@@ -3,7 +3,7 @@
 ## Summary
 
 - React 移行は UI shell から始め、RTC / Media / VRM core は TypeScript 実装を再利用する。
-- Babylon.js legacy は通常導線から外れ、modern pages は React app shell に集約済みである。
+- Babylon.js legacy は通常導線から外れ、modern 3D pages は React app shell に集約済みである。
 - この文書は残りの移行・整理観点だけを扱い、完了済みの詳細ログは archive と task done を参照する。
 
 ## Goal
@@ -26,7 +26,7 @@
 ## Current State
 
 - modern 3D ページは `div#sincroPageRoot` 配下の React app shell に集約済み。
-- `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` が通常 build input。
+- `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` が通常 build input。
 - Babylon.js legacy は通常導線から削除済み。
 - Debug Console と settings panel は right tool frame 配下で相互排他表示する。
 

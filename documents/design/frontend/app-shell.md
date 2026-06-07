@@ -2,7 +2,7 @@
 
 ## Summary
 
-- フロントエンドは Vite MPA を維持し、modern ページは単一 React app shell へ集約している。
+- フロントエンドは Vite MPA を維持し、modern 3D ページは単一 React app shell へ集約している。
 - `simple-vrm`、`vrm360`、`looking-glass-vrm` は `div#sincroPageRoot` 配下で dialog / header / chat / telop / settings / debug を描画する。
 - WebRTC、UserMedia、CharacterGaze、VRM scene の起動は `SincroAppController` と下位 controller が束ねる。
 - 物理構成は `app` / `features` / `character` / `shared` / `pages` を上位境界とし、旧 `src/ts` / `src/react` には新規実装を置かない。
@@ -97,10 +97,12 @@
     - `simple-vrm`
     - `vrm360`
     - `looking-glass-vrm`
+    - `motion-debug`
+    - `pose-landmarker-spike`
 
 ## Observability / Failure Modes
 
-- Debug Console は `Status` / `Audio` / `Messages` / `Gaze` / `RTC` / `SDP` のタブ型診断を提供する。
+- Debug Console は `Status` / `Audio` / `Messages` / `Gaze` / `Sincro` / `RTC` / `SDP` のタブ型診断を提供する。
 - backend 未起動時は `config.json` 取得が失敗する。
 - ブラウザ権限未付与時は `getUserMedia` が失敗する。
 - `OrbitControls` の入力対象は character control layer に限定し、header / chat / telop / right tool と競合させない。
