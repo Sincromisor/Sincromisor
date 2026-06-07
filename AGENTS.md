@@ -95,6 +95,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 - タスクは `tasks/<category>/task-<id>-<slug>/` に作る。
 - 状態は物理ディレクトリではなく `meta.yaml` の `status` を正本にする。
 - review / implementation log / evaluation は `review.md`, `impl.md`, `eval.md` に分離する。
+- 標準の subagent 実行入口は `.agents/skills/sincromisor-task-runner/SKILL.md` とする。既定では単一 checkout で進め、role 間は commit と `git status` で境界を保つ。物理 `git worktree` は衝突回避や高リスク評価が必要な場合だけ使う。
 - 最低限、タスク単位でコミットする。コミットメッセージは Conventional Commits ベースで書き、body には変更理由、主な変更、確認結果、残リスクを、footer には関連 task ID または legacy `TASK-...` ID の `Refs:` を含める。
 - 詳細は `tasks/README.md` を正本とする。
 

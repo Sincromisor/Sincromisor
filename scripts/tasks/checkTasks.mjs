@@ -13,6 +13,7 @@ import {
     REVIEWS,
     STATUSES,
     TASKS_ROOT,
+    TERMINAL_STATUSES,
     VERDICTS,
 } from "./lib.mjs";
 
@@ -43,6 +44,14 @@ function formatAllowed(values) {
 
 function addIssue(issues, taskId, message) {
     issues.push(`${taskId}: ${message}`);
+}
+
+function isDateString(value) {
+    return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function isLegacyTerminalWithoutClosedAt(meta) {
+    return meta.closed_at == null && meta.created_at == null && meta.attempts === 0;
 }
 
 async function readRawMeta(metaPath, fallbackTaskId, issues) {
@@ -98,8 +107,14 @@ for (const task of taskDirs) {
     if (!isStringOrNull(raw.closed_at)) addIssue(issues, taskId, "closed_at must be a string or null");
 
     const meta = await readMeta(metaPath);
+    const isTerminal = TERMINAL_STATUSES.includes(meta.status);
     if (meta.status === "done" && meta.verdict !== "PASS") addIssue(issues, taskId, "status=done requires verdict=PASS");
     if (meta.status !== "done" && meta.verdict === "PASS") addIssue(issues, taskId, "verdict=PASS requires status=done");
+    if (isTerminal && !meta.closed_at && !isLegacyTerminalWithoutClosedAt(meta)) {
+        addIssue(issues, taskId, "terminal status requires closed_at");
+    }
+    if (!isTerminal && meta.closed_at) addIssue(issues, taskId, "closed_at is only valid for terminal status");
+    if (meta.closed_at && !isDateString(meta.closed_at)) addIssue(issues, taskId, "closed_at must use YYYY-MM-DD");
     if (meta.status === "superseded" && !meta.superseded_by) addIssue(issues, taskId, "status=superseded requires superseded_by");
     if (meta.superseded_by && meta.status !== "superseded") addIssue(issues, taskId, "superseded_by is only valid with status=superseded");
 

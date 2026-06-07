@@ -18,27 +18,55 @@ or use this runner skill.
 ## Parent Workflow
 
 1. Read `task.md`, `meta.yaml`, `tasks/README.md`, and relevant project docs.
-2. Start a reviewer subagent with the `task-reviewer` skill. The reviewer writes only `review.md`.
-3. After the reviewer finishes, read `review.md` and report the review completion summary to the
+2. Record the current HEAD and `git status --porcelain`. Preserve unrelated user changes and do
+   not create a physical `git worktree` unless isolation is necessary.
+3. Start a reviewer subagent with the `task-reviewer` skill. The reviewer writes only `review.md`.
+4. After the reviewer finishes, read `review.md` and report the review completion summary to the
    user before continuing.
-4. If review is approved, run `npm run tasks:set -- <task-dir> review=APPROVED`. If not, set
+5. If review is approved, run `npm run tasks:set -- <task-dir> review=APPROVED`. If not, set
    `review=NEEDS_REVISION` and return the needed task-spec changes to the user.
-5. Start an implementer subagent with the `task-implementer` skill. The implementer writes
+6. Ensure the implementation boundary is clean enough to proceed. Prefer a `codex/<task-id>` branch
+   in the same checkout; use a physical worktree only for dirty-conflict isolation or high-risk
+   verification.
+7. Start an implementer subagent with the `task-implementer` skill. The implementer writes
    implementation files, tests, and `impl.md`, then commits the implementation change.
-6. After the implementer finishes, read `impl.md` and report the implementation completion summary
+8. After the implementer finishes, confirm implementation changes are committed, read `impl.md`,
+   and report the implementation completion summary
    to the user before starting evaluation.
-7. Start an evaluator subagent with the `impl-evaluator` skill. The evaluator writes only
+9. Start an evaluator subagent with the `impl-evaluator` skill. The evaluator writes only
    `eval.md` and optional `acceptance/` files.
-8. After the evaluator finishes, read `eval.md` and report the evaluation completion summary to the
+10. After the evaluator finishes, read `eval.md` and report the evaluation completion summary to the
    user before deciding PASS / FAIL handling.
-9. If evaluation fails, run `npm run tasks:set -- <task-dir> verdict=FAIL attempts=<n>` and send
-   `eval.md` findings back to the implementer. Repeat within the user-approved iteration budget.
-10. If evaluation passes, run `npm run tasks:set -- <task-dir> status=done verdict=PASS attempts=<n>`
+11. If evaluation fails, run `npm run tasks:set -- <task-dir> verdict=FAIL attempts=<n>` and send
+   `eval.md` findings back to the implementer. Repeat up to 2 attempts by default, unless the user
+   approves a different iteration budget.
+12. If evaluation passes, run `npm run tasks:set -- <task-dir> status=done verdict=PASS attempts=<n>`
    and the required task tooling checks.
-11. Create the close commit containing review/eval/acceptance/meta/index changes. Include the task ID
+13. Create the close commit containing review/eval/acceptance/meta/index changes. Include the task ID
    in the commit message.
-12. Report the close completion summary to the user with the final status, commits, checks, and
+14. Report the close completion summary to the user with the final status, commits, checks, and
    residual risks or follow-ups.
+
+## Clean Boundary
+
+Clean boundary means the role handoff is clear, not that every role gets a new checkout. The default
+is a single checkout to avoid unnecessary Disk I/O and local setup time.
+
+- Before implementation and evaluation, inspect `git status --porcelain` and current HEAD.
+- Implementer work should be committed before evaluation starts.
+- Evaluator may use the same checkout when no uncommitted implementation diff remains.
+- Physical `git worktree` is optional and reserved for dirty changes that would conflict, strongly
+  isolated evaluation, or broad/high-risk changes where the extra I/O is justified.
+
+## Branch And Close
+
+- Prefer `codex/<task-id>` for task implementation branches.
+- Implementation commits contain implementation files, tests, and `impl.md`.
+- Evaluator does not commit and does not modify implementation files or implementation tests.
+- Close commit is parent Codex owned and contains `review.md`, `eval.md`, `acceptance/`,
+  `meta.yaml`, and regenerated category `index.md`.
+- For FAIL after the attempt budget is exhausted, keep `status=open`, record
+  `verdict=FAIL attempts=<n>`, and report concrete remaining work.
 
 ## Completion Reports
 
