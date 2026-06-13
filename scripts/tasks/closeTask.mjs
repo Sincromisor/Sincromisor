@@ -79,17 +79,33 @@ async function main() {
         verdict === "PASS"
             ? ["status=done", "verdict=PASS", `attempts=${attempts}`]
             : ["verdict=FAIL", `attempts=${attempts}`];
-    const message =
+    const subject =
         verdict === "PASS"
             ? `chore(tasks): close ${meta.id} (PASS, attempts=${attempts})`
             : `chore(tasks): record verdict=FAIL attempts=${attempts} (${meta.id})`;
+    const refs = [meta.id, ...meta.legacy_ids].filter(Boolean).join(", ");
+    const body =
+        verdict === "PASS"
+            ? [
+                  "Why: The task passed evaluation and can be marked done.",
+                  `What: Record PASS, attempts=${attempts}, closed_at, refreshed task indexes, and task artifacts.`,
+                  "Verify: npm run tasks:index (via tasks:close); git diff --cached --name-only",
+                  "Risk: Product-level residual risk is documented in the task evaluation artifacts.",
+              ].join("\n")
+            : [
+                  "Why: The task reached the evaluation retry limit or otherwise needs a FAIL record.",
+                  `What: Record FAIL, attempts=${attempts}, refreshed task indexes, and task artifacts while leaving the task open.`,
+                  "Verify: npm run tasks:index (via tasks:close); git diff --cached --name-only",
+                  "Risk: The task remains open and requires follow-up before it can be closed as done.",
+              ].join("\n");
+    const footer = `Refs: ${refs}`;
 
     const node = process.execPath; // 呼び出し元と同じランタイム（node / bun）で子スクリプトを回す
     const steps = [
         [node, join(SCRIPTS_DIR, "setMeta.mjs"), taskDir, ...setArgs],
         [node, join(SCRIPTS_DIR, "genIndex.mjs")],
         ["git", "add", taskDir, categoryIndex],
-        ["git", "commit", "-m", message],
+        ["git", "commit", "-m", subject, "-m", body, "-m", footer],
     ];
     if (dryRun) {
         console.log("[dry-run] 実行予定:");

@@ -28,6 +28,17 @@ Implementation commit: created after this log update; parent Codex should report
 - Updated `AGENTS.md`, `tasks/README.md`, and `tasks/AUTHORING-CHECKLIST.md` to document the new
   workflow, `reviewed_sha`, freshness check, generated artifacts, and close flow.
 
+### Review follow-up
+
+- Addressed P1 by making isolated evaluator artifacts explicit in `/run-task`: the orchestrator now
+  records the main task dir, passes the worktree task dir to evaluator, copies `eval.md`,
+  `acceptance/`, and related task artifacts back to the main checkout before removal, then removes
+  the worktree with explicit `--discard`.
+- Added a dirty-worktree guard to `scripts/eval/setupWorktree.mjs remove` so evaluation artifacts
+  cannot be silently deleted by the standard remove path.
+- Addressed P2 by changing `tasks:close` to generate a Conventional Commits close message with
+  `Why:`, `What:`, `Verify:`, `Risk:`, and `Refs:` sections instead of a subject-only commit.
+
 ## Verification
 
 - `npm run gen:codex` passed.
@@ -40,6 +51,11 @@ Implementation commit: created after this log update; parent Codex should report
 - `npm run gate` passed: frontend check/Markdown check, build, and tests succeeded. Build emitted the
   existing Vite chunk-size warning only.
 - `cd sincromisor-frontend && npm run check:md` passed.
+- Review follow-up: `npm run gen:codex`, `npm run gen:codex:check`, `npm run tasks:check`,
+  `npm run tasks:index:check`, and `npm run tasks:close -- --dry-run ... verdict=PASS attempts=1`
+  passed.
+- Review follow-up: verified `eval:worktree remove` rejects a dirty isolated worktree without
+  `--discard`, then successfully removed the test worktree with `--discard`.
 
 ## Not Run
 

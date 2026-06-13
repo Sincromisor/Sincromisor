@@ -227,6 +227,7 @@ TODO は新規コードでは `TODO(task-260601153000-example): ...` を推奨�
 | `npm run tasks:metrics`                                                     | task lead time と agent 実績を集計する                             |
 | `npm run gate`                                                              | `package.json` の `gateSteps` をキャッシュ付きで実行する           |
 | `npm run eval:worktree -- add <sha>`                                        | 評価用の隔離 worktree を作る                                       |
+| `npm run eval:worktree -- remove <path> --discard`                          | 回収済みの評価 worktree を明示破棄する                             |
 | `npm run gen:codex`                                                         | `.claude/` から Codex 用 `.agents/skills/` と `.codex/` を生成する |
 | `npm run gen:codex:check`                                                   | Codex 生成物が `.claude/` と同期しているか検証する                 |
 
@@ -248,9 +249,9 @@ Sincromisor の runner は、Disk I/O とローカル処理時間を増やしす
 - reviewer は実装を変更しないため、原則として専用ブランチや物理 worktree を作らない。
 - implementer は現在ブランチの HEAD を基点に `codex/<task-id>` ブランチを作る。既に作業ブランチ上にいる場合は、parent Codex が継続可否を判断して記録する。
 - implementer は実装差分、テスト、`impl.md` を commit してから evaluator に渡す。`meta.yaml`, `eval.md`, category `index.md` は触らない。
-- evaluator は同じ checkout で、未コミットの実装差分が残っていないことを確認してから独立検証する。評価用の追加ファイルは `acceptance/` に限定し、実装コードや実装者のテストは変更しない。
+- `/run-task` の evaluator は実装者 HEAD から作った隔離 worktree で独立検証する。評価用の追加ファイルは `acceptance/` に限定し、実装コードや実装者のテストは変更しない。`eval.md` / `acceptance/` は削除前にメイン checkout の task dir へ戻し込む。
 - PASS 後、parent Codex は必要に応じて実装ブランチを基点ブランチへ反映し、`tasks:set`, `tasks:index`, task tooling checks を実行して close commit を作る。
-- 物理 `git worktree` は、既存の dirty 変更と衝突する場合、評価を強く隔離したい場合、または破壊的変更の検証で必要な場合だけ使う。
+- 実装 role 用の物理 `git worktree` は、既存の dirty 変更と衝突する場合、または破壊的変更の検証で必要な場合だけ使う。
 
 ## Agent workflow
 
@@ -278,12 +279,13 @@ Role 定義:
 3. APPROVED 後にコード差分がある場合は `task-freshness-checker` で前提の鮮度だけを確認する。
 4. 未 APPROVED または STALE の場合は `task-reviewer` を実行し、APPROVED なら `tasks:set review=APPROVED reviewed_sha=<sha>` を記録する。NEEDS_REVISION なら停止する。
 5. implementer が `codex/<task-id>` ブランチ上で実装し、`npm run gate` と必要確認を通して `impl.md` を更新し、実装 commit を作る。
-6. evaluator が committed diff を独立検証する。必要なら `npm run eval:worktree -- add <sha>` で隔離 worktree を使う。
+6. evaluator が committed diff を独立検証する。`npm run eval:worktree -- add <sha>` で隔離 worktree を作り、評価後は `eval.md` / `acceptance/` をメイン checkout に戻してから `npm run eval:worktree -- remove <path> --discard` で片付ける。
 7. FAIL の場合は `eval.md` の残課題を implementer に戻し、原則 2 回まで再実装する。
 8. PASS の場合は `npm run tasks:close -- <task-dir> verdict=PASS attempts=<n>` で close する。
 
 実装 commit には実装差分、テスト、`impl.md` を含める。close commit には `review.md`,
-`eval.md`, `acceptance/`, `meta.yaml`, `index.md` を含める。upstream workflow との差分は
+`eval.md`, `acceptance/`, `meta.yaml`, `index.md` を含める。`tasks:close` が作る close commit
+message も `Why:` / `What:` / `Verify:` / `Risk:` / `Refs:` を含む。upstream workflow との差分は
 `.agents/CUSTOMIZATIONS.md` に記録する。
 
 ### 完了報告

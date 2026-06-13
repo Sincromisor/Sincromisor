@@ -27,7 +27,10 @@ developer_instructions = '''
 - 構築: `npm run eval:worktree -- add IMPLEMENTATION_HEAD_SHA`（worktree 展開・依存ディレクトリの
   symlink・gitignore された設定ファイルのコピーまでを行い、worktree パスを stdout 最終行に
   出力する。対象は `package.json` の `evalWorktree` 設定が正本）
-- 片付け: 評価完了後に `npm run eval:worktree -- remove WORKTREE_PATH`
+- 評価時の `task-dir` は worktree 側の task dir（例: `WORKTREE_PATH/tasks/.../task-...`）を
+  指す。`eval.md` / `acceptance/` はその worktree 側に書く
+- 片付けと成果物のメイン checkout への戻し込みはオーケストレーターの責務。最終メッセージでは、
+  隔離 worktree 側に書いた `eval.md` / `acceptance/` の有無を必ず明記し、remove 前の回収を促す
 
 ## 手順
 
