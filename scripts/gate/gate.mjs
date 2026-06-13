@@ -21,8 +21,9 @@
  * キャッシュキー = sha256(step + command + HEAD SHA + ロックファイルハッシュ + 作業ツリーハッシュ)。
  *   - 作業ツリーがクリーン（`git status --porcelain` が空）のときキーは **コミット由来のみ** に
  *     なり、worktree をまたいで共有される（評価者の隔離 worktree は同一コミットで即ヒット）。
- *   - dirty ツリーは差分内容までキーに含めるため、**完全に同一の状態** が再現したときだけ再利用
- *     される（= 編集のたびに実質フレッシュ実行。誤ヒットなし）。
+ *   - dirty ツリーは tracked diff と untracked file contents までキーに含めるため、
+ *     **完全に同一の状態** が再現したときだけ再利用される（= 編集のたびに実質フレッシュ実行。
+ *     誤ヒットなし）。
  *
  * 安全側の原則:
  *   - **PASS (exit 0) のみ記録**。失敗は決して記録せず常に再実行する（赤をキャッシュしない）。
@@ -47,6 +48,24 @@ const sha = (s) => createHash("sha256").update(s).digest("hex");
 function gitText(args) {
     const r = spawnSync("git", args, { encoding: "utf8" });
     return r.status === 0 ? (r.stdout ?? "") : "";
+}
+
+function untrackedHash() {
+    const r = spawnSync("git", ["ls-files", "--others", "--exclude-standard", "-z"], {
+        encoding: "buffer",
+    });
+    if (r.status !== 0 || !r.stdout?.length) return "";
+    const parts = [];
+    for (const raw of r.stdout.toString("utf8").split("\0")) {
+        if (!raw) continue;
+        try {
+            const contentHash = createHash("sha256").update(readFileSync(raw)).digest("hex");
+            parts.push(`${raw}\0${contentHash}`);
+        } catch (error) {
+            parts.push(`${raw}\0unreadable:${error?.code ?? "unknown"}`);
+        }
+    }
+    return parts.sort().join("\0");
 }
 
 function loadSteps() {
@@ -147,7 +166,7 @@ async function main() {
     const diff = gitText(["diff", "HEAD"]);
     const clean = porcelain.trim() === "";
     const lock = lockHash();
-    const treeHash = sha(`${porcelain}\n${diff}`);
+    const treeHash = sha(`${porcelain}\n${diff}\n${untrackedHash()}`);
 
     const commonDir = gitText(["rev-parse", "--git-common-dir"]).trim() || ".git";
     const cacheRoot = path.join(path.resolve(commonDir), "gate-cache");
