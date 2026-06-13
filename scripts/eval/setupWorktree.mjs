@@ -11,27 +11,27 @@
  *
  *   {
  *       "evalWorktree": {
- *           "symlinks": ["node_modules", "frontend/node_modules"],  // メインツリーから symlink する
+ *           "symlinks": [".gate-cache", "node_modules", "frontend/node_modules"], // メインツリーから symlink する
  *           "copies": [".env", "frontend/.env"]                      // メインツリーからコピーする
  *       }
  *   }
  *
- *   既定: { "symlinks": ["node_modules"], "copies": [".env"] }
+ *   既定: { "symlinks": [".gate-cache", "node_modules"], "copies": [".env"] }
  *   いずれもリポジトリルートからの相対パス。存在しないものは黙ってスキップされる。
  *
  * submodule を持つプロジェクトでは展開を本スクリプトに足してカスタマイズする
  * （未 push の gitlink はローカル submodule から `git clone --shared` + gitlink checkout で補える）。
  *
- * gate キャッシュは `$(git rev-parse --git-common-dir)/gate-cache` 経由で worktree 間共有のため、
- * 実装者が同一コミットで gate を通していれば評価側の gate は即キャッシュヒットする。
+ * gate キャッシュは既定の `.gate-cache/` を symlink して worktree 間共有するため、実装者が
+ * 同一コミットで gate を通していれば評価側の gate は即キャッシュヒットする。
  */
 
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdtempSync, readFileSync, symlinkSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-const DEFAULT_CONFIG = { symlinks: ["node_modules"], copies: [".env"] };
+const DEFAULT_CONFIG = { symlinks: [".gate-cache", "node_modules"], copies: [".env"] };
 
 function fail(msg) {
     console.error(`エラー: ${msg}`);
@@ -74,6 +74,9 @@ function add(sha) {
     for (const rel of config.symlinks) {
         const src = join(root, rel);
         const dst = join(wt, rel);
+        if (rel === ".gate-cache" && !existsSync(src)) {
+            mkdirSync(src, { recursive: true });
+        }
         if (existsSync(src) && existsSync(dirname(dst)) && !existsSync(dst)) {
             symlinkSync(src, dst, "dir");
             console.log(`symlink: ${rel}`);
