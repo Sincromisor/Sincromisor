@@ -91,7 +91,10 @@ function sortById(a, b) {
 }
 
 function renderText(assessments, readyOnly) {
-    const ready = assessments.filter((a) => a.readiness === "ready").sort(sortReady);
+    const ready = assessments
+        .filter((a) => a.readiness === "ready")
+        .filter((a) => !readyOnly || a.readyKind !== "needs-review")
+        .sort(sortReady);
     const lines = [];
 
     const runnable = ready.filter((a) => a.readyKind !== "needs-review");

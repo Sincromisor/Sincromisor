@@ -6,6 +6,7 @@
 .vscode
 __pycache__
 .env
+.gate-cache/
 .agents
 !.agents/
 !.agents/CUSTOMIZATIONS.md

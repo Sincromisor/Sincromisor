@@ -27,7 +27,8 @@
  *
  * 安全側の原則:
  *   - **PASS (exit 0) のみ記録**。失敗は決して記録せず常に再実行する（赤をキャッシュしない）。
- *   - キャッシュは `$(git rev-parse --git-common-dir)/gate-cache` 配下（worktree 間共有・git 管理外）。
+ *   - キャッシュは `GATE_CACHE_DIR`、未指定ならリポジトリ直下 `.gate-cache/` に置く。
+ *     Codex の通常 workspace sandbox でも書けるよう、既定では `.git/` 配下を使わない。
  *   - 限界: gitignore 対象ファイル（.env / 生成物）はキーに含まれない。ゲートに登録するステップは
  *     外部依存を mock した決定的なコマンドに限ること（非決定的な実機検証は対象外＝別コマンドで都度実行）。
  *   - 生成物のコミットを伴う条件付きステップ（例: 公開型定義の再生成）も対象外とし、都度実行する。
@@ -168,8 +169,7 @@ async function main() {
     const lock = lockHash();
     const treeHash = sha(`${porcelain}\n${diff}\n${untrackedHash()}`);
 
-    const commonDir = gitText(["rev-parse", "--git-common-dir"]).trim() || ".git";
-    const cacheRoot = path.join(path.resolve(commonDir), "gate-cache");
+    const cacheRoot = path.resolve(process.env.GATE_CACHE_DIR || ".gate-cache");
     mkdirSync(cacheRoot, { recursive: true });
 
     const sha7 = head.slice(0, 7);
