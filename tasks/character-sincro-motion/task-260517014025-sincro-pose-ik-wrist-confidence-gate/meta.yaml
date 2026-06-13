@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-3113-sincro-pose-camera-space-arm-targets", "task-3114-sincro-lightweight-two-bone-arm-ik", "task-3115-sincro-pose-upper-body-anchor-and-ik-fallback"]
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: "PASS"
 attempts: 0
 legacy_ids: ["TASK-260517014025"]

@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-3035-settings-debug-handoff-cleanup"]
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: "PASS"
 attempts: 0
 legacy_ids: ["TASK-3036"]

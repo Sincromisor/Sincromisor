@@ -1,0 +1,13 @@
+id: "task-260614024901-adopt-latest-run-task-agents-workflow"
+title: "run-task-agents latest workflow adoption"
+category: "task-management"
+status: "open"
+depends_on: []
+superseded_by: null
+review: "APPROVED"
+reviewed_sha: "7c454215cf38396caecc45c4b2cf3090ec523e4d"
+verdict: null
+attempts: 0
+legacy_ids: []
+created_at: "2026-06-13"
+closed_at: null

@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-3049-character-behavior-state-and-input-aggregation", "task-3050-character-idle-breathing-and-upper-body-motion", "task-3051-vad-listening-posture-and-backchannel-motion", "task-3052-eye-behavior-gaze-blink-and-microsaccade", "task-3053-ai-speech-telop-emotion-synchronized-motion"]
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: "PASS"
 attempts: 0
 legacy_ids: ["TASK-3054"]

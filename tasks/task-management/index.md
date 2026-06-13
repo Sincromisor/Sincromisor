@@ -11,6 +11,12 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 
 ## Task Index
 
+### open (1)
+
+| Task                                                                                                                         | Title                                    | Review   | Verdict | Attempts | Depends on |
+| ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------- | -------- | ---------- |
+| [task-260614024901-adopt-latest-run-task-agents-workflow](./task-260614024901-adopt-latest-run-task-agents-workflow/task.md) | run-task-agents latest workflow adoption | APPROVED | -       | 0        | -          |
+
 ### done (11)
 
 | Task                                                                                                                               | Title                                      | Review   | Verdict | Attempts | Depends on                                                                                                                                                                                                                                                                          |

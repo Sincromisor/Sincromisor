@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-3102-face-tracking-runtime-and-sincro-face-tracker", "task-3106-optional-sincro-pose-tracker-and-performance-gates", "task-3111-sincro-pose-retarget-formalization-and-tuning"]
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: "PASS"
 attempts: 0
 legacy_ids: ["TASK-3112"]

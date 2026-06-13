@@ -27,6 +27,7 @@ const META_KEYS = [
     "depends_on",
     "superseded_by",
     "review",
+    "reviewed_sha",
     "verdict",
     "attempts",
     "legacy_ids",
@@ -100,6 +101,12 @@ for (const task of taskDirs) {
     if (!Array.isArray(raw.depends_on)) addIssue(issues, taskId, "depends_on must be an array");
     if (!isStringOrNull(raw.superseded_by)) addIssue(issues, taskId, "superseded_by must be a string or null");
     if (raw.review != null && !isReview(raw.review)) addIssue(issues, taskId, `review must be ${formatAllowed(REVIEWS)} or null`);
+    if (
+        raw.reviewed_sha != null &&
+        (typeof raw.reviewed_sha !== "string" || !/^[0-9a-f]{7,40}$/i.test(raw.reviewed_sha))
+    ) {
+        addIssue(issues, taskId, "reviewed_sha must be null or a 7-40 character hex commit SHA");
+    }
     if (raw.verdict != null && !isVerdict(raw.verdict)) addIssue(issues, taskId, `verdict must be ${formatAllowed(VERDICTS)} or null`);
     if (!Number.isInteger(raw.attempts) || raw.attempts < 0) addIssue(issues, taskId, "attempts must be a non-negative integer");
     if (!Array.isArray(raw.legacy_ids)) addIssue(issues, taskId, "legacy_ids must be an array");

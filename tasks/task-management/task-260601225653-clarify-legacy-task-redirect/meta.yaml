@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-260601214729-pilot-codex-subagent-task-flow"]
 superseded_by: null
 review: "APPROVED"
+reviewed_sha: null
 verdict: "PASS"
 attempts: 1
 legacy_ids: []

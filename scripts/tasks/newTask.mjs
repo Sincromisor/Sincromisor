@@ -63,6 +63,7 @@ const meta = {
     depends_on: dependsOn,
     superseded_by: null,
     review: null,
+    reviewed_sha: null,
     verdict: null,
     attempts: 0,
     legacy_ids: [],

@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-260517024505-sincro-vrm-3d-two-bone-ik-solver"]
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: "PASS"
 attempts: 0
 legacy_ids: ["TASK-260517024506"]

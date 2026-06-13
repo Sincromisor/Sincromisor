@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-260517024504-sincro-pose-world-landmarks-and-3d-targets", "task-260517024505-sincro-vrm-3d-two-bone-ik-solver", "task-260517024506-sincro-ik-solver-comparison-and-adoption"]
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: "PASS"
 attempts: 0
 legacy_ids: ["TASK-260517042345"]

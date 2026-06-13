@@ -2,13 +2,50 @@
   "name": "sincromisor",
   "private": true,
   "type": "module",
-  "scripts": {
-    "tasks:new": "node scripts/tasks/newTask.mjs",
-    "tasks:set": "node scripts/tasks/setMeta.mjs",
-    "tasks:index": "node scripts/tasks/genIndex.mjs",
-    "tasks:index:check": "node scripts/tasks/genIndex.mjs --check",
-    "tasks:check": "node scripts/tasks/checkTasks.mjs",
-    "tasks:fixlinks": "node scripts/tasks/fixLinks.mjs",
-    "tasks:migrate:legacy": "node scripts/tasks/migrateLegacyTasks.mjs"
-  }
+    "scripts": {
+        "tasks:new": "node scripts/tasks/newTask.mjs",
+        "tasks:set": "node scripts/tasks/setMeta.mjs",
+        "tasks:index": "node scripts/tasks/genIndex.mjs",
+        "tasks:index:check": "node scripts/tasks/genIndex.mjs --check",
+        "tasks:check": "node scripts/tasks/checkTasks.mjs",
+        "tasks:fixlinks": "node scripts/tasks/fixLinks.mjs",
+        "tasks:migrate:legacy": "node scripts/tasks/migrateLegacyTasks.mjs",
+        "gate": "node scripts/gate/gate.mjs",
+        "tasks:close": "node scripts/tasks/closeTask.mjs",
+        "tasks:metrics": "node scripts/tasks/metrics.mjs",
+        "eval:worktree": "node scripts/eval/setupWorktree.mjs",
+        "tasks:next": "node scripts/tasks/nextTasks.mjs",
+        "gen:codex": "node scripts/gen/genCodex.mjs",
+        "gen:codex:check": "node scripts/gen/genCodex.mjs --check"
+    },
+    "codexGen": {
+        "modelMap": {},
+        "hookCommand": "node scripts/metrics/logAgentRun.mjs"
+    },
+    "gateSteps": [
+        {
+            "id": "lint",
+            "cmd": "cd sincromisor-frontend && npm run check",
+            "label": "frontend lint/format and Markdown check"
+        },
+        {
+            "id": "build",
+            "cmd": "cd sincromisor-frontend && npm run build",
+            "label": "frontend type check and build"
+        },
+        {
+            "id": "test",
+            "cmd": "cd sincromisor-frontend && npm run test",
+            "label": "frontend tests"
+        }
+    ],
+    "evalWorktree": {
+        "symlinks": [
+            "sincromisor-frontend/node_modules"
+        ],
+        "copies": [
+            ".env",
+            "sincromisor-frontend/.env"
+        ]
+    }
 }

@@ -170,6 +170,7 @@ status: "open"
 depends_on: []
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: null
 attempts: 0
 legacy_ids: []
@@ -192,6 +193,7 @@ closed_at: null
 - 終端 status は `done`, `cancelled`, `superseded` とする。
 - 終端 status に変更すると、`closed_at` が未指定なら当日で自動設定される。
 - `review` は `APPROVED` または `NEEDS_REVISION`、`verdict` は `PASS` または `FAIL` とする。
+- `reviewed_sha` は `review=APPROVED` を記録した時点の HEAD SHA とする。`/run-task` はこの SHA からの差分でレビュー段の機械スキップまたは freshness check を判断する。
 - `review` と `verdict` は `status` と分け、二重管理を避ける。
 - `superseded` では `superseded_by` に後継 task ID を入れる。
 
@@ -209,23 +211,30 @@ TODO は新規コードでは `TODO(task-260601153000-example): ...` を推奨�
 
 ルートで実行する。
 
-| コマンド                                                                    | 用途                                                      |
-| --------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `npm run tasks:new -- <category> "<title>" [--slug=<slug>] [--depends=a,b]` | 新規タスクを作る                                          |
-| `npm run tasks:set -- <task-dir> key=value ...`                             | `meta.yaml` を決定的に更新する                            |
-| `npm run tasks:index`                                                       | カテゴリ別 `index.md` を生成する                          |
-| `npm run tasks:index:check`                                                 | `index.md` が最新か検証する                               |
-| `npm run tasks:check`                                                       | task directory と `meta.yaml` の整合性を検証する          |
-| `npm run tasks:fixlinks`                                                    | 壊れた Markdown 相対リンクの修正候補を dry-run で表示する |
-| `npm run tasks:fixlinks -- --apply`                                         | 修正候補を適用する                                        |
-| `npm run tasks:migrate:legacy`                                              | 旧 `documents/tasks` レイアウトの移行計画を dry-run する  |
-| `npm run tasks:migrate:legacy -- --apply`                                   | 旧 `documents/tasks` レイアウトを `tasks/` へ移行する     |
+| コマンド                                                                    | 用途                                                               |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `npm run tasks:new -- <category> "<title>" [--slug=<slug>] [--depends=a,b]` | 新規タスクを作る                                                   |
+| `npm run tasks:set -- <task-dir> key=value ...`                             | `meta.yaml` を決定的に更新する                                     |
+| `npm run tasks:index`                                                       | カテゴリ別 `index.md` を生成する                                   |
+| `npm run tasks:index:check`                                                 | `index.md` が最新か検証する                                        |
+| `npm run tasks:check`                                                       | task directory と `meta.yaml` の整合性を検証する                   |
+| `npm run tasks:fixlinks`                                                    | 壊れた Markdown 相対リンクの修正候補を dry-run で表示する          |
+| `npm run tasks:fixlinks -- --apply`                                         | 修正候補を適用する                                                 |
+| `npm run tasks:migrate:legacy`                                              | 旧 `documents/tasks` レイアウトの移行計画を dry-run する           |
+| `npm run tasks:migrate:legacy -- --apply`                                   | 旧 `documents/tasks` レイアウトを `tasks/` へ移行する              |
+| `npm run tasks:next`                                                        | 依存が解けて実行できる次タスクを表示する                           |
+| `npm run tasks:close -- <task-dir> verdict=PASS attempts=1`                 | meta 更新、index 再生成、close commit をまとめて行う               |
+| `npm run tasks:metrics`                                                     | task lead time と agent 実績を集計する                             |
+| `npm run gate`                                                              | `package.json` の `gateSteps` をキャッシュ付きで実行する           |
+| `npm run eval:worktree -- add <sha>`                                        | 評価用の隔離 worktree を作る                                       |
+| `npm run gen:codex`                                                         | `.claude/` から Codex 用 `.agents/skills/` と `.codex/` を生成する |
+| `npm run gen:codex:check`                                                   | Codex 生成物が `.claude/` と同期しているか検証する                 |
 
 例:
 
 ```sh
 npm run tasks:new -- task-management "Update task rules" -- --slug=update-task-rules
-npm run tasks:set -- tasks/task-management/task-260601153000-update-task-rules review=APPROVED
+npm run tasks:set -- tasks/task-management/task-260601153000-update-task-rules review=APPROVED reviewed_sha=7c45421
 npm run tasks:set -- tasks/task-management/task-260601153000-update-task-rules status=done verdict=PASS attempts=1
 npm run tasks:index
 npm run tasks:check
@@ -243,30 +252,39 @@ Sincromisor の runner は、Disk I/O とローカル処理時間を増やしす
 - PASS 後、parent Codex は必要に応じて実装ブランチを基点ブランチへ反映し、`tasks:set`, `tasks:index`, task tooling checks を実行して close commit を作る。
 - 物理 `git worktree` は、既存の dirty 変更と衝突する場合、評価を強く隔離したい場合、または破壊的変更の検証で必要な場合だけ使う。
 
-## Codex subagent パイプライン
+## Agent workflow
 
-subagent pipeline を明示して実行するタスクでは、parent Codex が reviewer -> implementer -> evaluator -> close を調停する。
+Agent workflow の正本は `.claude/` である。Codex 用の `.agents/skills/` と `.codex/agents/` は
+`npm run gen:codex` で生成し、直接編集しない。生成物 drift は `npm run gen:codex:check` で検出する。
 
-pipeline は、ユーザーが subagent / runner skill / 独立 review / 独立 eval を明示した場合、または大きめの実装で独立評価が必要と判断した場合に使う。通常の小変更では、担当 Codex が直接実装して `impl.md` に記録し、必要な確認を通してから `tasks:set status=done verdict=PASS attempts=<n>` と index 更新で close してよい。
+主な入口:
 
-Role 手順は Git 追跡対象の Codex skills として管理する。
+- `/new-task`: 対話文脈から task を起票し、独立 review を通して `review=APPROVED` と `reviewed_sha` を記録する。
+- `/review-task`: 既存 `task.md` を単体で独立 review し、`review` と `reviewed_sha` だけを更新する。
+- `/next-task`: `tasks:next` で READY / WAITING / BLOCKED を読み取り、次に実行できる task を提示する。
+- `/run-task`: review freshness check -> implementation -> independent evaluation -> close を調停する。
 
-- `.agents/skills/sincromisor-task-runner/SKILL.md`: parent Codex の orchestration
-- `.agents/skills/task-reviewer/SKILL.md`: 実装前レビュー
-- `.agents/skills/task-implementer/SKILL.md`: 実装、確認、実装コミット
-- `.agents/skills/impl-evaluator/SKILL.md`: 独立評価
+Role 定義:
 
-1. reviewer は `task.md`, `meta.yaml`, 関連設計、関連コードを読み、`review.md` だけを書く。
-2. parent Codex は `review.md` の summary を読み、レビュー結果をユーザーへ報告してから、reviewer 判定を `tasks:set` で `meta.yaml` に転記する。
-3. implementer は `task.md`, `review.md`, 必要に応じて前回 `eval.md` を読み、実装、テスト、`impl.md` 追記、実装コミットを行う。`meta.yaml` と `eval.md` は触らない。
-4. parent Codex は `impl.md` の completion summary を読み、実装結果をユーザーへ報告してから evaluator を起動する。
-5. evaluator は committed diff と成果物を独立検証し、`eval.md` と必要な `acceptance/` だけを書く。実装コードは変更しない。
-6. parent Codex は `eval.md` の completion summary を読み、評価結果をユーザーへ報告してから PASS / FAIL の処理に進む。
-7. FAIL の場合、parent Codex は `eval.md` の残課題を implementer に渡し、原則 2 回まで再実装を回す。上限を変える場合はユーザーに明示する。
-8. PASS の場合、parent Codex が `tasks:set status=done verdict=PASS attempts=<n>` と `tasks:index` を実行し、close commit を作る。
-9. close commit 後、parent Codex は最終状態、関連 commit、実行した task tooling checks、残リスクをユーザーへ報告する。
+- `.claude/agents/task-reviewer.md`: task specification review。`review.md` だけを書く。
+- `.claude/agents/task-freshness-checker.md`: `reviewed_sha` 以降のコード変更で APPROVED の前提が古くなっていないかだけを見る。ファイルは書かない。
+- `.claude/agents/task-implementer.md`: 実装、確認、`impl.md`、実装 commit を担当する。
+- `.claude/agents/impl-evaluator.md`: 独立評価、`eval.md`、必要な `acceptance/` を担当する。
 
-実装 commit には実装差分、テスト、`impl.md` を含める。close commit には `review.md`, `eval.md`, `acceptance/`, `meta.yaml`, `index.md` を含める。
+`/run-task` の流れ:
+
+1. `meta.yaml` の `review` / `reviewed_sha` を読む。
+2. `review=APPROVED` かつ `reviewed_sha` から現在 HEAD までの task 外差分がなければ review 段を機械スキップする。
+3. APPROVED 後にコード差分がある場合は `task-freshness-checker` で前提の鮮度だけを確認する。
+4. 未 APPROVED または STALE の場合は `task-reviewer` を実行し、APPROVED なら `tasks:set review=APPROVED reviewed_sha=<sha>` を記録する。NEEDS_REVISION なら停止する。
+5. implementer が `codex/<task-id>` ブランチ上で実装し、`npm run gate` と必要確認を通して `impl.md` を更新し、実装 commit を作る。
+6. evaluator が committed diff を独立検証する。必要なら `npm run eval:worktree -- add <sha>` で隔離 worktree を使う。
+7. FAIL の場合は `eval.md` の残課題を implementer に戻し、原則 2 回まで再実装する。
+8. PASS の場合は `npm run tasks:close -- <task-dir> verdict=PASS attempts=<n>` で close する。
+
+実装 commit には実装差分、テスト、`impl.md` を含める。close commit には `review.md`,
+`eval.md`, `acceptance/`, `meta.yaml`, `index.md` を含める。upstream workflow との差分は
+`.agents/CUSTOMIZATIONS.md` に記録する。
 
 ### 完了報告
 
@@ -295,6 +313,10 @@ npm run tasks:check
 ### 3 点ゲート
 
 実装者は完了報告前に、評価者は実装者の報告を鵜呑みにせず独立に、変更範囲に応じた 3 点ゲートを通す。評価者は差分を生む `--fix`, `--write`, format 実行版を使わず、検証専用のコマンドを選ぶ。
+
+標準 gate は `npm run gate` で実行する。`package.json` の `gateSteps` は frontend の `check`,
+`build`, `test` を実行し、`check` に Markdown check を含める。Python 全体確認は実行時間と環境依存が
+大きいため標準 gate には入れず、Python server を変更する task で下記 Python コマンドを個別に実行する。
 
 | ゲート             | 実装者                                                        | 評価者                                               |
 | ------------------ | ------------------------------------------------------------- | ---------------------------------------------------- |
