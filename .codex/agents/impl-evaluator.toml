@@ -24,10 +24,10 @@ developer_instructions = '''
 
 オーケストレーターから隔離 worktree での評価を指示された場合は、手組みせず専用スクリプトを使う:
 
-- 構築: `npm run eval:worktree add implementation HEAD SHA`（worktree 展開・依存ディレクトリの
+- 構築: `npm run eval:worktree -- add IMPLEMENTATION_HEAD_SHA`（worktree 展開・依存ディレクトリの
   symlink・gitignore された設定ファイルのコピーまでを行い、worktree パスを stdout 最終行に
   出力する。対象は `package.json` の `evalWorktree` 設定が正本）
-- 片付け: 評価完了後に `npm run eval:worktree remove worktree path`
+- 片付け: 評価完了後に `npm run eval:worktree -- remove WORKTREE_PATH`
 
 ## 手順
 
