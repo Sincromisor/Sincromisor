@@ -77,7 +77,8 @@ impl-evaluator サブエージェントで実装を独立検証させ、結果�
        プロジェクトは `scripts/eval/setupWorktree.mjs` に展開処理を足してカスタマイズする）
     2. 評価完了後は `npm run eval:worktree -- remove WORKTREE_PATH` で片付ける
 
-    gate キャッシュは worktree 間共有のため、同一コミットなら評価側でも即キャッシュヒットする
+    gate キャッシュは `.gate-cache/` を symlink して worktree 間共有するため、同一コミットなら
+    評価側でも即キャッシュヒットする
 
 - 評価者はクリーンな状態で 3 点ゲートを **`npm run gate`** で独立実行する。実装者が
   同一コミットで既に通していれば**キャッシュヒットで即時**（独立性はコンテンツアドレス＝
