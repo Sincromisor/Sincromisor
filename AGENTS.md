@@ -16,6 +16,9 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 - 設計文書: `documents/design/`
     - 入口: `documents/design/index.md`
     - 運用ガイド: `documents/design/documentation-guide.md`
+- 使用言語
+    - 開発者は日本語ネイティブであるため、原則として日本語を用いる。
+    - 技術用語など、日本語では表現が不自然になるものについては、適宜英語を用いても構わない。
 
 ## 最初に読む
 
