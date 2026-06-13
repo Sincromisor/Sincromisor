@@ -5,6 +5,7 @@ status: "open"
 depends_on: []
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: null
 attempts: 0
 legacy_ids: ["TASK-3100"]

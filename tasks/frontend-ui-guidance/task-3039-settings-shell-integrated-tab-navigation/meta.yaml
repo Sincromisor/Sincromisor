@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-3036-right-settings-panel-compact-navigation", "task-3038-right-tool-regression-and-design-sync"]
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: "PASS"
 attempts: 0
 legacy_ids: ["TASK-3039"]

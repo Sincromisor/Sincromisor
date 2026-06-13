@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-3105-pose-landmarker-feasibility-spike"]
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: "PASS"
 attempts: 0
 legacy_ids: ["TASK-3106"]

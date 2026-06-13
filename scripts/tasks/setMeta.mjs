@@ -72,6 +72,12 @@ for (const pair of pairs) {
             }
             meta.review = nullish ? null : rawValue;
             break;
+        case "reviewed_sha":
+            if (!nullish && !/^[0-9a-f]{7,40}$/i.test(rawValue)) {
+                fail(`reviewed_sha must be a 7-40 character hex commit SHA or null: ${rawValue}`);
+            }
+            meta.reviewed_sha = nullish ? null : rawValue.toLowerCase();
+            break;
         case "verdict":
             if (!nullish && !isVerdict(rawValue)) {
                 fail(`verdict must be one of ${VERDICTS.join("|")} or null: ${rawValue}`);

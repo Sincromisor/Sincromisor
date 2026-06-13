@@ -5,6 +5,7 @@ status: "done"
 depends_on: []
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: "PASS"
 attempts: 0
 legacy_ids: ["TASK-260525010933"]

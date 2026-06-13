@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-260601214724-new-task-layout-and-scripts", "task-260601214726-migrate-legacy-task-documents"]
 superseded_by: null
 review: "APPROVED"
+reviewed_sha: null
 verdict: "PASS"
 attempts: 1
 legacy_ids: ["TASK-260601214728"]

@@ -1,0 +1,247 @@
+#!/usr/bin/env node
+/**
+ * gen:codex — Claude Code 定義（`.claude/`）を単一ソースに、Codex CLI 用の成果物を派生生成する。
+ *
+ * Node / Bun 両対応・依存は `yaml` のみ（タスク系スクリプトと共通）。`.claude/` を正本とし、
+ * 編集はそちらに対して行い、本スクリプトで Codex 側を同期する（手で `.codex/` を書かない）。
+ *
+ * 生成物:
+ *   .claude/agents/<name>.md      → .codex/agents/<name>.toml          （サブエージェント定義）
+ *   .claude/commands/<name>.md    → .agents/skills/<name>/SKILL.md      （スラッシュコマンド相当）
+ *   .claude/settings.json の hook → .codex/hooks.json                  （SubagentStop メトリクス）
+ *
+ * 対応関係（詳細は README「Codex 対応」を参照）:
+ *   - Claude の agent `tools:` には粒度の対応物が Codex に無いため、`sandbox_mode`
+ *     （read-only / workspace-write）+ 本文の禁止事項で境界を担保する。
+ *   - Claude のモデル名 → Codex モデルは package.json `codexGen.modelMap` で対応づける
+ *     （未定義なら `model` を省略し、Codex のセッションモデルを継承させる）。
+ *   - skill は description マッチで暗黙起動され得る点が slash command と異なる。
+ *
+ * 使い方:
+ *   npm run gen:codex            # 生成（既存を上書き）
+ *   npm run gen:codex:check      # 生成物が最新か検証（差分があれば exit 1。CI 向け）
+ *
+ * ルートは既定で cwd。`--root <dir>` か環境変数 `CLAUDE_PROJECT_DIR` で上書きできる
+ * （キット自身でも、展開先リポジトリのルートでも同じスクリプトが動く）。
+ */
+
+import { existsSync } from "node:fs";
+import { readdir, readFile } from "node:fs/promises";
+import { basename, join } from "node:path";
+import { writeFileEnsured } from "../tasks/lib.mjs";
+
+const args = process.argv.slice(2);
+const CHECK = args.includes("--check");
+const rootFlagIdx = args.indexOf("--root");
+const ROOT =
+    rootFlagIdx >= 0 && args[rootFlagIdx + 1]
+        ? args[rootFlagIdx + 1]
+        : (process.env.CLAUDE_PROJECT_DIR ?? process.cwd());
+
+/**
+ * frontmatter（先頭の `---\n...\n---\n`）と本文を分離する。
+ * 値に `: ` を含む（例: `argument-hint: <dir>（例: tasks/...）`）ため厳密 YAML では落ちる。
+ * これらの frontmatter は 1 行 1 キーの単純な `key: value` なので、最初の `:` で分割する
+ * 行ベースの寛容なパーサで読む（Claude Code 側の寛容さに合わせる）。
+ */
+function splitFrontmatter(text) {
+    const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+    if (!m) return { meta: {}, body: text.trim() };
+    const meta = {};
+    for (const raw of m[1].split(/\r?\n/)) {
+        const line = raw.trim();
+        if (!line || line.startsWith("#")) continue;
+        const ci = line.indexOf(":");
+        if (ci < 0) continue;
+        const key = line.slice(0, ci).trim();
+        let val = line.slice(ci + 1).trim();
+        if (
+            (val.startsWith('"') && val.endsWith('"')) ||
+            (val.startsWith("'") && val.endsWith("'"))
+        ) {
+            val = val.slice(1, -1);
+        }
+        if (key) meta[key] = val;
+    }
+    return { meta, body: m[2].trim() };
+}
+
+/** Claude の `tools:` 文字列 → Codex の sandbox_mode。書き込み系を含めば workspace-write。 */
+function toSandboxMode(tools) {
+    const list = String(tools ?? "")
+        .split(",")
+        .map((t) => t.trim());
+    return list.includes("Write") || list.includes("Edit") ? "workspace-write" : "read-only";
+}
+
+/** TOML の複数行リテラル文字列（''' 区切り・エスケープ不要）。本文に ''' があれば例外で気づける。 */
+function tomlLiteralBlock(s) {
+    if (s.includes("'''")) {
+        throw new Error("本文に ''' が含まれており TOML リテラル文字列に埋め込めません");
+    }
+    return `'''\n${s}\n'''`;
+}
+
+/** TOML の基本文字列（1 行・name など単純値用）。 */
+function tomlBasicString(s) {
+    return `"${String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+/** 相対リンクの深さを 1 段深くする（.claude/commands/ → .agents/skills/<name>/ で +1 階層）。 */
+function deepenLinks(body) {
+    return body.replace(/\]\(\.\.\/\.\.\//g, "](../../../");
+}
+
+const CODEX_AGENT_PREAMBLE = (sandbox) =>
+    `> 実行環境: Codex サブエージェント（sandbox_mode = "${sandbox}"）。Claude 版の \`tools:\` に当たる\n` +
+    `> ツール単位の制限は Codex に無いため、**下記の本文の禁止事項を厳守すること**で同等の境界を保つ\n` +
+    `> （「Edit / Bash を持たない」等のツール表現は Claude 固有の説明。Codex では該当操作を行わない\n` +
+    `> という規範として読むこと）。\n`;
+
+const CODEX_SKILL_PREAMBLE =
+    `> このスキルは Codex CLI 用に \`.claude/commands/\` から生成されたもの。本文中の \`$1\` /\n` +
+    `> \`$ARGUMENTS\` は、ユーザーがこのスキルを起動した際に指定したタスクディレクトリ等の引数を指す。\n` +
+    `> サブエージェント（task-reviewer 等）は Codex では自動起動しないため、本文の手順どおり明示的に\n` +
+    `> 順に起動すること。\n`;
+
+async function readDefs(subdir) {
+    const dir = join(ROOT, ".claude", subdir);
+    const out = [];
+    let names;
+    try {
+        names = (await readdir(dir)).filter((n) => n.endsWith(".md")).sort();
+    } catch {
+        return out;
+    }
+    for (const file of names) {
+        const { meta, body } = splitFrontmatter(await readFile(join(dir, file), "utf8"));
+        out.push({ name: basename(file, ".md"), meta, body });
+    }
+    return out;
+}
+
+function renderAgentToml(def, modelMap) {
+    const name = def.meta.name ?? def.name;
+    const description = def.meta.description ?? "";
+    const sandbox = toSandboxMode(def.meta.tools);
+    const codexModel = modelMap[def.meta.model];
+    const instructions = `${CODEX_AGENT_PREAMBLE(sandbox)}\n${def.body}`;
+
+    const lines = [
+        `# このファイルは scripts/gen/genCodex.mjs が .claude/agents/${def.name}.md から生成したもの。`,
+        `# 直接編集しない。編集は .claude/agents/${def.name}.md に対して行い、gen:codex で再生成する。`,
+        `name = ${tomlBasicString(name)}`,
+        `description = ${tomlLiteralBlock(description)}`,
+        `sandbox_mode = ${tomlBasicString(sandbox)}`,
+    ];
+    if (codexModel) lines.push(`model = ${tomlBasicString(codexModel)}`);
+    lines.push(`developer_instructions = ${tomlLiteralBlock(instructions)}`);
+    return `${lines.join("\n")}\n`;
+}
+
+function renderSkillMd(def) {
+    const name = def.meta.name ?? def.name;
+    const description = def.meta.description ?? "";
+    const body = deepenLinks(def.body);
+    const fm = [
+        "---",
+        `name: ${name}`,
+        // description は : や " を含み得るため YAML のブロックスカラーで安全に出す
+        `description: |-`,
+        ...String(description)
+            .split("\n")
+            .map((l) => `    ${l}`),
+        "---",
+    ].join("\n");
+    return `<!-- generated by scripts/gen/genCodex.mjs from .claude/commands/${def.name}.md — edit the source, then run gen:codex -->\n${fm}\n\n${CODEX_SKILL_PREAMBLE}\n${body}\n`;
+}
+
+function renderHooksJson(hookCommand) {
+    return `${JSON.stringify(
+        {
+            _comment:
+                "generated by scripts/gen/genCodex.mjs — Codex のサブエージェント実績の記録。Codex はサブエージェントを multi_agent ツール（spawn_agent / wait_agent / close_agent）として実行するため、Claude と同じく PostToolUse でツール完了を捕捉する（close_agent = サブエージェント 1 件の完了に対応）。logAgentRun は Codex/Claude 両形式を防御的に解釈する。注意: project スコープの hook は対話 TUI でのみ発火し、非対話 `codex exec` では発火しないことを 0.139.0 で確認済み（メトリクスは fail-safe。発火しなくても行が出ないだけ）。",
+            hooks: {
+                PostToolUse: [
+                    {
+                        matcher: "close_agent",
+                        hooks: [{ type: "command", command: hookCommand }],
+                    },
+                ],
+            },
+        },
+        null,
+        2,
+    )}\n`;
+}
+
+async function loadConfig() {
+    const pkgPath = join(ROOT, "package.json");
+    let cfg = {};
+    if (existsSync(pkgPath)) {
+        try {
+            cfg = JSON.parse(await readFile(pkgPath, "utf8")).codexGen ?? {};
+        } catch {
+            cfg = {};
+        }
+    }
+    return {
+        modelMap: cfg.modelMap ?? {},
+        // Codex は hook input JSON に cwd を含む。command は cwd（リポジトリルート想定）からの相対で解決する。
+        hookCommand: cfg.hookCommand ?? "node scripts/metrics/logAgentRun.mjs",
+    };
+}
+
+async function main() {
+    const cfg = await loadConfig();
+    const agents = await readDefs("agents");
+    const commands = await readDefs("commands");
+
+    /** @type {{path: string, content: string}[]} */
+    const outputs = [];
+    for (const def of agents) {
+        outputs.push({
+            path: join(ROOT, ".codex", "agents", `${def.name}.toml`),
+            content: renderAgentToml(def, cfg.modelMap),
+        });
+    }
+    for (const def of commands) {
+        outputs.push({
+            path: join(ROOT, ".agents", "skills", def.name, "SKILL.md"),
+            content: renderSkillMd(def),
+        });
+    }
+    outputs.push({
+        path: join(ROOT, ".codex", "hooks.json"),
+        content: renderHooksJson(cfg.hookCommand),
+    });
+
+    if (CHECK) {
+        const stale = [];
+        for (const { path, content } of outputs) {
+            const current = existsSync(path) ? await readFile(path, "utf8") : null;
+            if (current !== content) stale.push(path);
+        }
+        if (stale.length) {
+            console.error(
+                `gen:codex --check: 次の生成物が最新ではありません（\`gen:codex\` を実行して下さい）:\n` +
+                    stale.map((p) => `  - ${p}`).join("\n"),
+            );
+            process.exit(1);
+        }
+        console.log(`gen:codex --check: ${outputs.length} 件すべて最新です。`);
+        return;
+    }
+
+    for (const { path, content } of outputs) {
+        await writeFileEnsured(path, content);
+    }
+    console.log(
+        `gen:codex: ${agents.length} agents → .codex/agents/, ${commands.length} commands → .agents/skills/, hooks → .codex/hooks.json`,
+    );
+}
+
+main().catch((err) => {
+    console.error(err?.stack ?? String(err));
+    process.exit(1);
+});

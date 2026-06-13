@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-3111-sincro-pose-retarget-formalization-and-tuning", "task-3112-sincro-tracker-workerization-and-load-isolation"]
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: "PASS"
 attempts: 0
 legacy_ids: ["TASK-3113"]

@@ -5,6 +5,7 @@ status: "done"
 depends_on: ["task-3042-right-tool-and-panel-label-simplification", "task-3043-settings-shell-and-setup-hierarchy-reduction", "task-3044-startup-settings-and-looking-glass-session-cleanup"]
 superseded_by: null
 review: null
+reviewed_sha: null
 verdict: "PASS"
 attempts: 0
 legacy_ids: ["TASK-3045"]
