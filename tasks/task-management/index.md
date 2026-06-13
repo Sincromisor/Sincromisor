@@ -11,13 +11,7 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 
 ## Task Index
 
-### open (1)
-
-| Task                                                                                                                         | Title                                    | Review   | Verdict | Attempts | Depends on |
-| ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------- | -------- | ---------- |
-| [task-260614024901-adopt-latest-run-task-agents-workflow](./task-260614024901-adopt-latest-run-task-agents-workflow/task.md) | run-task-agents latest workflow adoption | APPROVED | -       | 0        | -          |
-
-### done (11)
+### done (12)
 
 | Task                                                                                                                               | Title                                      | Review   | Verdict | Attempts | Depends on                                                                                                                                                                                                                                                                          |
 | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | -------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -32,5 +26,6 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 | [task-260601233125-task-completion-reporting-contract](./task-260601233125-task-completion-reporting-contract/task.md)             | Add task completion reporting contract     | -        | PASS    | 1        | -                                                                                                                                                                                                                                                                                   |
 | [task-260602004608-adopt-conventional-commits](./task-260602004608-adopt-conventional-commits/task.md)                             | Adopt Conventional Commits for future work | -        | PASS    | 1        | -                                                                                                                                                                                                                                                                                   |
 | [task-260602012356-tighten-commit-message-body-rules](./task-260602012356-tighten-commit-message-body-rules/task.md)               | Tighten commit message body rules          | -        | PASS    | 1        | -                                                                                                                                                                                                                                                                                   |
+| [task-260614024901-adopt-latest-run-task-agents-workflow](./task-260614024901-adopt-latest-run-task-agents-workflow/task.md)       | run-task-agents latest workflow adoption   | APPROVED | PASS    | 1        | -                                                                                                                                                                                                                                                                                   |
 
 <!-- AUTOGEN:tasks END -->
