@@ -77,12 +77,23 @@ impl-evaluator サブエージェントで実装を独立検証させ、結果�
 - 評価に渡す前に実装者の変更がすべてコミット済みか確認する（未コミット変更が残っていると
   「クリーンな状態」が崩れる）
 - **評価は実装者 HEAD から作った隔離 worktree で行わせる**。構築・破棄は専用スクリプトに
-  固定化済みで、手組みさせない:
+  固定化済みで、手組みさせない。隔離 worktree 内の `eval.md` / `acceptance/` は
+  worktree 削除で消えるため、削除前に必ずメイン checkout の task dir へ戻す:
+    0. メイン checkout 側で `MAIN_TASK_DIR`（`$1` の絶対パス）と `REL_TASK_DIR`
+       （リポジトリルートからの相対パス。例: `tasks/.../task-...`）を控える
     1. `npm run eval:worktree -- add IMPLEMENTATION_HEAD_SHA` — worktree 展開・依存ディレクトリの
        symlink・gitignore された設定ファイルのコピーまでを行い、worktree パスを stdout 最終行に
        出力する（対象は `package.json` の `evalWorktree` 設定が正本。submodule を持つ
        プロジェクトは `scripts/eval/setupWorktree.mjs` に展開処理を足してカスタマイズする）
-    2. 評価完了後は `npm run eval:worktree -- remove WORKTREE_PATH` で片付ける
+    2. evaluator には `WORKTREE_PATH/REL_TASK_DIR` を task-dir として渡し、評価成果物は
+       worktree 側の task dir に書かせる
+    3. 評価完了後、`WORKTREE_PATH/REL_TASK_DIR/eval.md` と
+       `WORKTREE_PATH/REL_TASK_DIR/acceptance/`（存在する場合）を `MAIN_TASK_DIR/` へコピーする。
+       `artifacts/` など evaluator が作った task 成果物があれば同様に戻す
+    4. 戻し込み後にメイン checkout 側の `eval.md` / `acceptance/` を Read し、判定と成果物が
+       失われていないことを確認する
+    5. 最後に `npm run eval:worktree -- remove WORKTREE_PATH --discard` で片付ける。
+       `--discard` なしの remove は dirty worktree を拒否するため、未回収成果物の削除事故を防ぐ
 
     gate キャッシュは `.gate-cache/` を symlink して worktree 間共有するため、同一コミットなら
     評価側でも即キャッシュヒットする

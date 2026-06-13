@@ -5,7 +5,8 @@
  * gitignore された設定ファイルのコピー）を決定論化し、漏れによる失敗・リトライを無くす。
  *
  *   node scripts/eval/setupWorktree.mjs add <commit-sha>        # 構築。worktree パスを stdout 最終行に出力
- *   node scripts/eval/setupWorktree.mjs remove <worktree-path>  # 片付け（git worktree remove --force）
+ *   node scripts/eval/setupWorktree.mjs remove <worktree-path>  # 片付け（dirty なら拒否）
+ *   node scripts/eval/setupWorktree.mjs remove <worktree-path> --discard  # 回収済み差分を明示破棄
  *
  * 対象は展開先 `package.json` の **`evalWorktree`** 設定を正本とする（無ければ既定値）:
  *
@@ -96,21 +97,39 @@ function add(sha) {
     console.log(wt);
 }
 
-function remove(wtPath) {
+function gitStatus(wtPath) {
+    return execFileSync("git", ["-C", wtPath, "status", "--porcelain"], { encoding: "utf8" }).trim();
+}
+
+function remove(wtPath, { discard = false } = {}) {
     if (!existsSync(wtPath)) fail(`worktree が見つかりません: ${wtPath}`);
+    const status = gitStatus(wtPath);
+    if (status && !discard) {
+        fail(
+            [
+                "worktree に未回収の差分があります。",
+                "評価成果物（eval.md / acceptance/ など）をメイン checkout の task dir に戻してから、",
+                "`setupWorktree.mjs remove <worktree-path> --discard` を明示的に実行してください。",
+                "",
+                status,
+            ].join("\n"),
+        );
+    }
     execFileSync("git", ["worktree", "remove", "--force", wtPath], { stdio: "inherit" });
     console.log(`削除: ${wtPath}`);
 }
 
 function main() {
-    const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
-    const [cmd, target] = args;
+    const args = process.argv.slice(2);
+    const [cmd, target, ...flags] = args;
+    const unknownFlags = flags.filter((a) => a !== "--discard");
+    if (unknownFlags.length > 0) fail(`未知の引数: ${unknownFlags.join(" ")}`);
     if (cmd === "add" && target) {
         add(target);
     } else if (cmd === "remove" && target) {
-        remove(target);
+        remove(target, { discard: flags.includes("--discard") });
     } else {
-        fail("使い方: setupWorktree.mjs add <commit-sha> | remove <worktree-path>");
+        fail("使い方: setupWorktree.mjs add <commit-sha> | remove <worktree-path> [--discard]");
     }
 }
 
