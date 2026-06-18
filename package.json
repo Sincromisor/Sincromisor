@@ -1,15 +1,18 @@
 {
-  "name": "sincromisor",
-  "private": true,
-  "type": "module",
+    "name": "sincromisor",
+    "private": true,
+    "type": "module",
+    "taskBranchPrefix": "codex/",
     "scripts": {
         "tasks:new": "node scripts/tasks/newTask.mjs",
         "tasks:set": "node scripts/tasks/setMeta.mjs",
         "tasks:index": "node scripts/tasks/genIndex.mjs",
         "tasks:index:check": "node scripts/tasks/genIndex.mjs --check",
+        "tasks:reindex": "node scripts/tasks/reindex.mjs",
         "tasks:check": "node scripts/tasks/checkTasks.mjs",
         "tasks:fixlinks": "node scripts/tasks/fixLinks.mjs",
         "tasks:migrate:legacy": "node scripts/tasks/migrateLegacyTasks.mjs",
+        "tasks:migrate:reviewed-sha": "node scripts/tasks/migrateReviewedSha.mjs",
         "gate": "node scripts/gate/gate.mjs",
         "tasks:close": "node scripts/tasks/closeTask.mjs",
         "tasks:metrics": "node scripts/tasks/metrics.mjs",
@@ -21,6 +24,9 @@
     "codexGen": {
         "modelMap": {},
         "hookCommand": "node scripts/metrics/logAgentRun.mjs"
+    },
+    "taskClose": {
+        "commitTemplate": "Why: The task reached a final evaluation state.\nWhat: Record {verdict}, attempts={attempts}, and task artifacts.\nVerify: npm run tasks:check\nRisk: See {taskDir}/eval.md and impl.md.\nRefs: {id}"
     },
     "gateSteps": [
         {
@@ -48,5 +54,8 @@
             ".env",
             "sincromisor-frontend/.env"
         ]
+    },
+    "dependencies": {
+        "yaml": "^2.5.0"
     }
 }

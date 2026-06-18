@@ -1,132 +1,165 @@
 #!/usr/bin/env node
+/**
+ * 新規タスクの雛形（task.md + meta.yaml）を生成する。
+ *
+ *   node scripts/tasks/newTask.mjs <category> "<タイトル>" [--slug=<slug>] [--depends=a,b]
+ *   bun  scripts/tasks/newTask.mjs <category> "<タイトル>" [--slug=<slug>] [--depends=a,b]
+ *
+ * 例:
+ *   node scripts/tasks/newTask.mjs feature "ログイン画面にパスワード再設定を追加"
+ *
+ * - id = task-<yyMMddHHmmss>-<slug>
+ * - slug は --slug 未指定ならタイトルから生成（英数とハイフンのみ）。
+ *   日本語タイトルなど英数字を含まない場合は --slug=<英数とハイフン> が必須。
+ * - status=open / created_at=当日 で meta.yaml を作成する。
+ */
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { stringifyMeta, TASKS_ROOT, today, writeFileEnsured } from "./lib.mjs";
 
-function fail(message) {
-    console.error(`Error: ${message}`);
+function fail(msg) {
+    console.error(`エラー: ${msg}`);
     process.exit(1);
 }
 
 function timestamp() {
-    const date = new Date();
-    const pad = (value) => String(value).padStart(2, "0");
-    return `${String(date.getFullYear()).slice(2)}${pad(date.getMonth() + 1)}${pad(date.getDate())}${pad(
-        date.getHours(),
-    )}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, "0");
+    return (
+        String(d.getFullYear()).slice(2) +
+        p(d.getMonth() + 1) +
+        p(d.getDate()) +
+        p(d.getHours()) +
+        p(d.getMinutes()) +
+        p(d.getSeconds())
+    );
 }
 
-function slugify(value) {
-    return value
+function slugify(s) {
+    return s
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "")
-        .slice(0, 64);
+        .slice(0, 60);
 }
 
-function parseArgs(args) {
+async function main() {
+    const args = process.argv.slice(2);
     const flags = new Map();
     const positional = [];
-    for (const arg of args) {
-        const match = arg.match(/^--([^=]+)=(.*)$/);
-        if (match) flags.set(match[1], match[2]);
-        else positional.push(arg);
+    for (const a of args) {
+        const m = a.match(/^--([^=]+)=(.*)$/);
+        if (m) flags.set(m[1], m[2]);
+        else positional.push(a);
     }
-    return { flags, positional };
-}
+    const [category, title] = positional;
+    if (!category || !title) {
+        fail(
+            '使い方: node scripts/tasks/newTask.mjs <category> "<タイトル>" [--slug=..] [--depends=a,b]',
+        );
+    }
 
-const { flags, positional } = parseArgs(process.argv.slice(2));
-const [category, title] = positional;
+    const slug = flags.get("slug") ? slugify(flags.get("slug")) : slugify(title);
+    if (!slug) fail("slug を生成できません。--slug=<英数とハイフン> を指定してください。");
 
-if (!category || !title) {
-    fail('Usage: node scripts/tasks/newTask.mjs <category> "<title>" [--slug=slug] [--depends=a,b]');
-}
+    const id = `task-${timestamp()}-${slug}`;
+    const dir = join(TASKS_ROOT, category, id);
+    if (existsSync(join(dir, "meta.yaml"))) fail(`既に存在します: ${dir}`);
 
-const slug = flags.has("slug") ? slugify(flags.get("slug")) : slugify(title);
-if (!slug) fail("Could not derive an ASCII slug. Pass --slug=<ascii-slug>.");
+    const depends = (flags.get("depends") ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
 
-const id = `task-${timestamp()}-${slug}`;
-const dir = join(TASKS_ROOT, category, id);
-if (existsSync(dir)) fail(`Task already exists: ${dir}`);
+    /** @type {import("./lib.mjs").TaskMeta} */
+    const meta = {
+        id,
+        title,
+        category,
+        status: "open",
+        depends_on: depends,
+        superseded_by: null,
+        review: null,
+        reviewed_sha: null,
+        verdict: null,
+        attempts: 0,
+        created_at: today(),
+        closed_at: null,
+        extra: {
+            legacy_ids: [],
+        },
+    };
 
-const dependsOn = (flags.get("depends") ?? "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
+    const taskMd = `# ${title}
 
-const meta = {
-    id,
-    title,
-    category,
-    status: "open",
-    depends_on: dependsOn,
-    superseded_by: null,
-    review: null,
-    reviewed_sha: null,
-    verdict: null,
-    attempts: 0,
-    legacy_ids: [],
-    created_at: today(),
-    closed_at: null,
-};
+<!--
+  起票の入口は /new-task（起票 + 独立レビューを一括）。既存 task.md を後から再レビューする
+  場合は /review-task <task-dir> を使う。いずれも APPROVED を得てから /run-task に渡す。
+  各節は ${TASKS_ROOT}/AUTHORING-CHECKLIST.md（task-reviewer 評価観点の正本）に対応する。
+  初回 NEEDS_REVISION の最頻出根拠は「設計判断の未確定」と「ドキュメント同期要否の未記載」。
+-->
 
-const taskMd = `# ${title}
+## 背景 / 目的
 
-## 目的
+<!-- なぜこのタスクが必要か。解決する問題・参照する設計ドキュメント -->
 
--
+## 完了条件（受け入れ条件）
 
-## 変更範囲
+<!-- 検証可能・期待値が一意な形で書く（「改善する」ではなく「〜のとき〜を返す」）。異常系/境界も。 -->
 
--
+- [ ] <検証可能な条件1>
+- [ ] <検証可能な条件2>
 
-## 設計同期
+## 設計判断（着手前に確定済み）
 
-- [ ] 実装、設定、compose、設計文書の更新要否を確認する。
+<!-- 実装者に「どちらでもよい」を残さない。チェックリスト観点2。
+  - 新規型・モジュール・データ構造の所在（file path）と最小スキーマ
+  - 解釈余地のある箇所（フォーマット/識別方式/経路）をどれに決めたか + 不採用案を退ける理由
+  - 外部境界（ネットワーク/外部 API/LLM/DB 等）の入力検証・失敗時挙動の方針
+  確定すべき判断が無ければ「なし」と明記する。 -->
 
-## 受け入れ条件
+## スコープ境界
 
-- [ ]
+<!-- 本タスクの作業 / 依存タスクの責務の分界。スコープ外（やらないこと）。チェックリスト観点4。 -->
 
-## 確認
+## 実装方針（既存コード整合: file:line）
 
-- [ ]
+<!-- 触るファイルを file:line で参照し、前提（行番号/シグネチャ/契約）が現状と一致することを確認。
+  採用するライブラリや機能・既存パターンへの整合。チェックリスト観点3。 -->
 
-## 実行できなかった検証
+## テスト
 
--
+<!-- プロジェクトの 3 点ゲート（lint / 型・ビルド / テスト）でどう完了を検証するか。
+  受け入れ条件に対応し、期待値が一意なテスト。 -->
 
-## subagent 成果物
+## ドキュメント同期の要否
 
-- review: \`review.md\`
-- implementation log: \`impl.md\`
-- evaluation: \`eval.md\`
-- acceptance artifacts: \`acceptance/\`
+<!-- 公開 API / 通信契約 / 公開挙動への影響を判定。チェックリスト観点6。
+  要なら同期先（API スキーマ / 利用例 / README / 設計資料など）を具体名で受け入れ条件に書く。
+  不要ならその理由を 1 行。公開バレル/生成物を変えるなら再生成とコミットを方針に含める。 -->
 `;
 
-const reviewMd = `# Review
+    await writeFileEnsured(join(dir, "meta.yaml"), stringifyMeta(meta));
+    await writeFileEnsured(join(dir, "task.md"), taskMd);
+    await writeFileEnsured(
+        join(dir, "review.md"),
+        `# Review: ${id}
 
-## Verdict
+## 判定
 
 -
 
 ## Summary for Parent
 
 -
-
-## Notes
-
--
-`;
-
-const implMd = `# Implementation Log
+`,
+    );
+    await writeFileEnsured(
+        join(dir, "impl.md"),
+        `# Implementation Log: ${id}
 
 ## Completion Summary
-
--
-
-## Attempts
 
 -
 
@@ -137,11 +170,13 @@ const implMd = `# Implementation Log
 ## Not Run
 
 -
-`;
+`,
+    );
+    await writeFileEnsured(
+        join(dir, "eval.md"),
+        `# Evaluation: ${id}
 
-const evalMd = `# Evaluation
-
-## Verdict
+## 判定
 
 -
 
@@ -152,19 +187,14 @@ const evalMd = `# Evaluation
 ## Verification
 
 -
+`,
+    );
+    await writeFileEnsured(join(dir, "acceptance", ".gitkeep"), "");
+    await writeFileEnsured(join(dir, "artifacts", ".gitkeep"), "");
+    console.log(`作成: ${dir}/`);
+    console.log("  - task.md");
+    console.log(`  - meta.yaml (status=open, created_at=${meta.created_at})`);
+    console.log("\n次: task.md を記述 → tasks:index で index.md を再生成。");
+}
 
-## Residual Risk
-
--
-`;
-
-await writeFileEnsured(join(dir, "meta.yaml"), stringifyMeta(meta));
-await writeFileEnsured(join(dir, "task.md"), taskMd);
-await writeFileEnsured(join(dir, "review.md"), reviewMd);
-await writeFileEnsured(join(dir, "impl.md"), implMd);
-await writeFileEnsured(join(dir, "eval.md"), evalMd);
-await writeFileEnsured(join(dir, "acceptance", ".gitkeep"), "");
-await writeFileEnsured(join(dir, "artifacts", ".gitkeep"), "");
-
-console.log(`created: ${dir}`);
-console.log("next: edit task.md, then run npm run tasks:index");
+await main();
