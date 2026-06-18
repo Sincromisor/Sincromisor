@@ -1,13 +1,15 @@
-id: "task-3100-sincro-motion-foundation-epic"
-title: "sincro motion foundation epic"
-category: "character-sincro-motion"
-status: "open"
-depends_on: []
+id: task-3100-sincro-motion-foundation-epic
+title: sincro motion foundation epic
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-3116-sincro-pose-ik-observability-verification-and-design-sync
 superseded_by: null
 review: null
 reviewed_sha: null
 verdict: null
 attempts: 0
-legacy_ids: ["TASK-3100"]
 created_at: null
 closed_at: null
+legacy_ids:
+  - TASK-3100

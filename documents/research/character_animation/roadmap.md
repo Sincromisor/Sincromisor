@@ -208,14 +208,14 @@ VrmPoseApplier
 
 `CanonicalUpperBodyState` では、次の空間を混同しない。
 
-| 空間                       | 主な用途                         | 注意                                      |
-| -------------------------- | -------------------------------- | ----------------------------------------- |
-| `ImageSpace2D`             | 画面内位置、border risk、overlay | preview mirror と内部左右を混同しない     |
-| `MediaPipeWorldSpace`      | 相対方向、骨長整合性、z 補助     | 絶対 3D として過信しない                  |
-| `CameraObservationSpace`   | Pose / Hand / Face の統合        | 外部 contract へ漏らさない                |
-| `BodyLocalSpace`           | canonical state                  | 後段が共有する中心 contract               |
-| `AvatarControlSpace`       | IK target、style 補正            | VRM bone rotation ではない                |
-| `VRMNormalizedLocalPose`   | three-vrm への適用               | `VRMHumanBoneName` keyed quaternion pose |
+| 空間                     | 主な用途                         | 注意                                     |
+| ------------------------ | -------------------------------- | ---------------------------------------- |
+| `ImageSpace2D`           | 画面内位置、border risk、overlay | preview mirror と内部左右を混同しない    |
+| `MediaPipeWorldSpace`    | 相対方向、骨長整合性、z 補助     | 絶対 3D として過信しない                 |
+| `CameraObservationSpace` | Pose / Hand / Face の統合        | 外部 contract へ漏らさない               |
+| `BodyLocalSpace`         | canonical state                  | 後段が共有する中心 contract              |
+| `AvatarControlSpace`     | IK target、style 補正            | VRM bone rotation ではない               |
+| `VRMNormalizedLocalPose` | three-vrm への適用               | `VRMHumanBoneName` keyed quaternion pose |
 
 左右の定義:
 
@@ -225,15 +225,15 @@ VrmPoseApplier
 
 腕の主要 canonical 値:
 
-| 値                 | 値域 / 型        | 用途                                      |
-| ------------------ | ---------------- | ----------------------------------------- |
-| `reach`            | `0..1.15`        | reach clamp / overextension               |
-| `elevationRad`     | `[-pi/2, pi/2]`  | arm raise                                 |
-| `openness`         | `[-1, 1]`        | 横開き / 交差                             |
-| `forwardness`      | `0..1`           | 前出し。world z 単独ではなく複合スコア    |
-| `elbowFlexionRad`  | `[0, pi]`        | pole / extension 判定                     |
-| `armConfidence`    | `0..1`           | IK weight / filter / fallback             |
-| `classification`   | enum             | side / front / diagonal / unknown         |
+| 値                | 値域 / 型       | 用途                                   |
+| ----------------- | --------------- | -------------------------------------- |
+| `reach`           | `0..1.15`       | reach clamp / overextension            |
+| `elevationRad`    | `[-pi/2, pi/2]` | arm raise                              |
+| `openness`        | `[-1, 1]`       | 横開き / 交差                          |
+| `forwardness`     | `0..1`          | 前出し。world z 単独ではなく複合スコア |
+| `elbowFlexionRad` | `[0, pi]`       | pole / extension 判定                  |
+| `armConfidence`   | `0..1`          | IK weight / filter / fallback          |
+| `classification`  | enum            | side / front / diagonal / unknown      |
 
 head / wrist / hand の入力優先順位:
 
@@ -242,7 +242,34 @@ head / wrist / hand の入力優先順位:
 - Hand Landmarker は palm basis、finger curl、finger splay、thumb oppose、gesture 補助に使う。
 - 指は全関節 3D rotation ではなく、まず `open / half / closed` と curl / splay / oppose の低次元表現へ落とす。
 
+## タスク化前の大フェーズ
+
+本章は、詳細な `Phase 1` から `Phase 11` をそのままタスクへ分解する前に、親タスクまたは initiative として扱うための大きな順序を定める。
+
+既存の `TASK-3100` 系では、`sincro` mode の face / pose tracking、Worker 化、簡易 2-bone IK、`motion-debug`、Debug Console 観測性がすでに整っている。本 roadmap はそれを破棄せず、現行基盤を Phase 0 として固定した上で、評価可能性、contract、安定化、表現力の順に積み上げる。
+
+| 大フェーズ                                | 対応する詳細フェーズ                  | 目的                                                                                                              | フェーズゲート                                                                                                                                        |
+| ----------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 0: 現行 `sincro` 基盤の確定         | 既存 `TASK-3100` 系、特に `TASK-3116` | 現行の face / pose / IK / debug 基盤を長期改善の出発点として固定する。                                            | `motion-debug`、Debug Console、設計文書が現行実装を説明でき、未実機確認や既知限界がタスク文書に残っている。                                           |
+| Phase A: 評価・再現性・contract           | `Phase 1`、`Phase 2`                  | 変更前後を比較できる replay / metrics と、後段が共有する `CanonicalUpperBodyState` を先に固める。                 | 同一入力ログで同一結果を replay でき、canonical state が debug / replay / metrics に保存され、後段が同じ名前・単位を読む。                            |
+| Phase B: 入力時刻・観測品質・信頼度       | `Phase 3`、`Phase 4`                  | camera frame 基準の時刻、実 camera quality、部位別 reliability を導入し、不安定な観測値を説明可能にする。         | Pose / Hand / Face / Gesture の timestamp と confidence 低下理由を debug で追え、悪い観測が即破棄ではなく低 weight として下流へ渡る。                 |
+| Phase C: 時系列安定化・安全な姿勢合成     | `Phase 5`、`Phase 6`                  | dropout、再検出ジャンプ、肘反転、手首 roll 暴れを、状態推定と `VrmPoseComposer` で抑える。                        | `Tracked` / `Suspect` / `Predicted` / `Lost` / `Recovering` を replay で確認でき、同一 frame の final pose 書き手が `VrmPoseComposer` に集約される。  |
+| Phase D: モデル差分・ユーザー差分への適応 | `Phase 7`、`Phase 8`                  | VRM 個体差、ユーザー体型、camera framing、Hand / Face ROI を扱い、安定した上半身同期の対応範囲を広げる。          | 複数 VRM と同一 replay log を比較でき、calibration 失敗時の再試行、optional bone fallback、ROI 失敗時 fallback が成立している。                       |
+| Phase E: 意図表現・性能劣化・QA           | `Phase 9`、`Phase 10`                 | 完全追従ではなく意図が伝わる motion として磨き、端末負荷が上がっても段階的に品質を落とす。                        | `MotionIntent`、gesture hysteresis、finger 低次元制御、degradation profile、固定テストモーション、metrics regression が `motion-debug` と接続される。 |
+| Phase F: 任意最適化                       | `Phase 11`                            | rule-based pipeline の限界が replay / metrics で見えた後にだけ、軽量最適化や learned post-processing を検討する。 | 学習・最適化の入力と出力が canonical control に閉じ、VRM bone rotation や avatar profile の責務を ML に背負わせない判断ができている。                 |
+
+タスクへ落とすときは、まず大フェーズを親タスクとして作り、詳細 `Phase 1` から `Phase 11` の実装項目を子タスク候補に分ける。各大フェーズは「実装」「debug / replay / metrics」「設計文書同期」「確認結果の記録」を同じ完了条件に含める。
+
+順序を入れ替える場合でも、次の依存は守る。
+
+- 表現力を上げる前に、replay / metrics と canonical contract を作る。
+- solver や IK の高度化前に、reliability と temporal state を通す。
+- calibration / profile は、VRM 側構造と人間側観測基準を分けた後に行う。
+- ROI、gesture、finger、ML は、失敗時 fallback と degradation が説明できる状態で追加する。
+
 ## ロードマップ
+
+以下は、大フェーズを構成する詳細フェーズである。
 
 ### Phase 1: Motion evaluation harness
 
@@ -445,11 +472,11 @@ Pose を全体検出、Hand / Face を ROI 検出として扱う。
 - 端末クラス別に camera resolution、Pose fps、Hand / Face fps、Gesture fps、debug log 粒度を切り替える。
 - high-end desktop、standard laptop、mobile / Safari、debug mode の profile を用意する。
 - degradation order を定義する。
-  1. Gesture の fps / event 判定を下げる。
-  2. Hand / Face optional pass を lower fps にする。
-  3. ROI / hand を一時停止し、Pose-only upper body にする。
-  4. Pose fps / camera resolution を下げる。
-  5. face-only / idle / comfortable pose に退避する。
+    1. Gesture の fps / event 判定を下げる。
+    2. Hand / Face optional pass を lower fps にする。
+    3. ROI / hand を一時停止し、Pose-only upper body にする。
+    4. Pose fps / camera resolution を下げる。
+    5. face-only / idle / comfortable pose に退避する。
 - debug log は numeric metrics を ring buffer で常時持ち、PNG / overlay / full dump は明示 capture または低頻度にする。
 - 固定テストモーション、主観評価フォーム、metrics regression を `motion-debug` と接続する。
 
@@ -480,34 +507,34 @@ Pose を全体検出、Hand / Face を ROI 検出として扱う。
 
 最初に潰すべき破綻は次とする。
 
-| 優先度 | 破綻                | 対応層                                                |
-| -----: | ------------------- | ----------------------------------------------------- |
-|      1 | 胴体・頭部の jitter | FrameClock、Reliability、Temporal                     |
-|      2 | 再検出時のジャンプ  | dropout state、recovery blending、raw result replay   |
-|      3 | 肘反転              | Canonical arm、Pole state、IK constraint              |
-|      4 | 肩崩れ / 肩めり込み | AvatarMotionProfile、shoulder / chest 分配            |
-|      5 | 腕の伸び切り        | reach scale、depth compression、clamp                 |
-|      6 | 手首 roll 暴れ      | Hand reliability、wrist roll damping、forearm twist   |
-|      7 | 指のちらつき        | curl state、hysteresis、semantic gesture              |
-|      8 | 左右入れ替え        | Pose-seeded ROI、side consistency、anatomical side    |
-|      9 | 性能劣化で固まる    | Worker、degradation policy、debug ring buffer         |
+| 優先度 | 破綻                | 対応層                                              |
+| -----: | ------------------- | --------------------------------------------------- |
+|      1 | 胴体・頭部の jitter | FrameClock、Reliability、Temporal                   |
+|      2 | 再検出時のジャンプ  | dropout state、recovery blending、raw result replay |
+|      3 | 肘反転              | Canonical arm、Pole state、IK constraint            |
+|      4 | 肩崩れ / 肩めり込み | AvatarMotionProfile、shoulder / chest 分配          |
+|      5 | 腕の伸び切り        | reach scale、depth compression、clamp               |
+|      6 | 手首 roll 暴れ      | Hand reliability、wrist roll damping、forearm twist |
+|      7 | 指のちらつき        | curl state、hysteresis、semantic gesture            |
+|      8 | 左右入れ替え        | Pose-seeded ROI、side consistency、anatomical side  |
+|      9 | 性能劣化で固まる    | Worker、degradation policy、debug ring buffer       |
 
 ## Metrics
 
 最低限の metrics:
 
-| metric                    | 主な入力                                           |
-| ------------------------- | -------------------------------------------------- |
-| neutral jitter            | canonical torso / head / wrist、final VRMPose      |
-| elbow flip count          | elbow pole、upper/lower arm quaternion             |
-| recovery jump angle       | Temporal state、final VRMPose                      |
-| angular velocity spike    | applied normalized pose                            |
-| reach clamp occupancy     | IK target、reach ratio、clamp result               |
-| tracking loss duration    | ReliabilityMap、Temporal state                     |
-| side swap count           | anatomical side assignment、Hand handedness        |
-| camera framing failure    | CameraQualityScore、border risk                    |
-| degradation duration      | performance profile、degradation state             |
-| gesture flicker           | MotionIntent、gesture label、stable duration       |
+| metric                 | 主な入力                                      |
+| ---------------------- | --------------------------------------------- |
+| neutral jitter         | canonical torso / head / wrist、final VRMPose |
+| elbow flip count       | elbow pole、upper/lower arm quaternion        |
+| recovery jump angle    | Temporal state、final VRMPose                 |
+| angular velocity spike | applied normalized pose                       |
+| reach clamp occupancy  | IK target、reach ratio、clamp result          |
+| tracking loss duration | ReliabilityMap、Temporal state                |
+| side swap count        | anatomical side assignment、Hand handedness   |
+| camera framing failure | CameraQualityScore、border risk               |
+| degradation duration   | performance profile、degradation state        |
+| gesture flicker        | MotionIntent、gesture label、stable duration  |
 
 metrics は debug 画面に表示するだけでなく、replay 実行時の比較結果として保存できるようにする。
 

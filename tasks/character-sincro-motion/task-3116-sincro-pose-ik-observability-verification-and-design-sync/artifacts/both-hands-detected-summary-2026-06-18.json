@@ -1,0 +1,65 @@
+{
+  "date": "2026-06-18",
+  "url": "http://127.0.0.1:5173/motion-debug/",
+  "browser": "Playwright Chromium via playwright-cli",
+  "result": "PASS",
+  "scenario": "both hands visible",
+  "camera": {
+    "source": "camera",
+    "width": 1280,
+    "height": 720,
+    "readyState": 4
+  },
+  "pose": {
+    "detected": true,
+    "confidence": 0.9999,
+    "leftArmTracked": true,
+    "rightArmTracked": true
+  },
+  "targets": {
+    "left": {
+      "shoulder": "strong",
+      "elbow": "strong",
+      "wrist": "strong",
+      "wristUsableForIk": true,
+      "wristWorldQuality": "strong",
+      "wristWorldUsableForIk": true
+    },
+    "right": {
+      "shoulder": "strong",
+      "elbow": "strong",
+      "wrist": "strong",
+      "wristUsableForIk": true,
+      "wristWorldQuality": "strong",
+      "wristWorldUsableForIk": true
+    }
+  },
+  "retargetRuntime": {
+    "active": true,
+    "ikMode": "world_3d_ik",
+    "anchorReason": "hips_fallback_to_shoulders",
+    "leftArm": {
+      "active": true,
+      "ikActive": true,
+      "ikWeight": 0.9,
+      "ikSolverMode": "world_3d_ik",
+      "fallbackReason": "joint_limited",
+      "constraintReasons": ["joint_limited"]
+    },
+    "rightArm": {
+      "active": true,
+      "ikActive": true,
+      "ikWeight": 0.9,
+      "ikSolverMode": "world_3d_ik",
+      "fallbackReason": "joint_limited",
+      "constraintReasons": ["joint_limited"]
+    }
+  },
+  "artifacts": ["motion-debug-both-hands-detected-2026-06-18.png"],
+  "notes": [
+    "Both wrists were strong and usable for IK on the first wait attempt.",
+    "Both arms activated world_3d_ik.",
+    "The solver reported joint_limited on both arms, with no collision-avoidance reason in this snapshot.",
+    "The screenshot shows both camera overlay landmarks and VRM hand motion without an obvious static arm flip."
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "date": "2026-06-18",
+  "browser": "Playwright Chromium via playwright-cli",
+  "devServer": "http://127.0.0.1:5173/",
+  "build": {
+    "command": "cd sincromisor-frontend && npm run build",
+    "result": "PASS"
+  },
+  "pages": [
+    {
+      "url": "http://127.0.0.1:5173/simple-vrm/",
+      "desktop1280x720": {
+        "result": "PASS",
+        "bodyOverflowX": false,
+        "artifact": "simple-vrm-desktop-1280x720.png"
+      },
+      "mobile390x844": {
+        "result": "PASS",
+        "bodyOverflowX": false,
+        "artifact": "simple-vrm-mobile-390x844.png"
+      },
+      "notes": [
+        "VRM file loaded.",
+        "RTC config request returned 404 because backend was not running."
+      ]
+    },
+    {
+      "url": "http://127.0.0.1:5173/motion-debug/",
+      "desktop1280x720": {
+        "result": "PASS",
+        "bodyOverflowX": false,
+        "consoleErrors": 0,
+        "consoleWarnings": 0,
+        "artifact": "motion-debug-desktop-1280x720.png"
+      },
+      "mobile390x844": {
+        "result": "PASS",
+        "bodyOverflowX": false,
+        "artifact": "motion-debug-mobile-390x844.png"
+      },
+      "windowApiKeys": [
+        "captureFrame",
+        "getSnapshot",
+        "loadVideoFixture",
+        "setRetargetConfig",
+        "startCamera",
+        "stopCamera",
+        "waitForPoseDetected"
+      ],
+      "cameraAttempt": {
+        "result": "BLOCKED",
+        "message": "Camera request timed out after 12000ms.",
+        "reason": "The Playwright session did not receive a host camera stream."
+      }
+    }
+  ],
+  "vrmAssets": {
+    "availableVrmFiles": ["sincromisor-frontend/public/characters/default.vrm"],
+    "result": "BLOCKED",
+    "reason": "The repository currently exposes only one VRM asset, but task acceptance requires at least two VRMs."
+  },
+  "manualPosePatterns": {
+    "result": "NOT_RUN",
+    "reason": "Real-camera pose patterns require an operator-visible camera session and at least two VRMs."
+  },
+  "taskVerdict": "FAIL"
+}

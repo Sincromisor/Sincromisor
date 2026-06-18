@@ -1,0 +1,82 @@
+{
+  "checkedAt": "2026-06-18",
+  "pageUrl": "http://127.0.0.1:5173/pages/motionDebug/?vrm=/characters/aoi-1.0.7.vrm",
+  "vrmUrl": "/characters/aoi-1.0.7.vrm",
+  "modelVisible": true,
+  "console": {
+    "applicationErrors": 0,
+    "applicationWarnings": 0,
+    "mediapipeMessagesObserved": true,
+    "notes": [
+      "MediaPipe / TFLite emitted WebGL, XNNPACK, and normalized-rect diagnostics during tracker startup."
+    ]
+  },
+  "camera": {
+    "source": "camera",
+    "width": 1280,
+    "height": 720,
+    "readyState": 4
+  },
+  "initialPoseDetection": {
+    "result": "PASS",
+    "attempt": 1,
+    "poseDetected": true,
+    "poseConfidence": 0.9999240040779114,
+    "runtimeActive": true,
+    "ikMode": "world_3d_ik",
+    "leftArm": {
+      "ikActive": true,
+      "ikWeight": 0.38358490363994435,
+      "ikSolverMode": "world_3d_ik",
+      "fallbackReason": "joint_limited"
+    },
+    "rightArm": {
+      "ikActive": true,
+      "ikWeight": 0.38358490363994435,
+      "ikSolverMode": "world_3d_ik",
+      "fallbackReason": "joint_limited"
+    }
+  },
+  "stabilitySample": {
+    "result": "PASS",
+    "durationMs": 12000,
+    "sampleIntervalMs": 500,
+    "sampleCount": 24,
+    "detectedCount": 24,
+    "runtimeActiveCount": 24,
+    "leftIkActiveCount": 24,
+    "rightIkActiveCount": 24,
+    "leftWristQualities": ["strong"],
+    "rightWristQualities": ["strong"],
+    "leftIkWeightRange": [0.7343545726328579, 0.9301799403288689],
+    "rightIkWeightRange": [0.7039634804605239, 0.9772740293769653],
+    "maxIkWeightDelta": {
+      "left": 0.1579866679577815,
+      "right": 0.1795351872611224
+    },
+    "minAdjacentQuaternionDot": {
+      "leftUpperArm": 0.7609160638094403,
+      "rightUpperArm": 0.7648587011707699,
+      "leftLowerArm": 0.7009288195727491,
+      "rightLowerArm": 0.8033866218567745
+    },
+    "renderFpsRange": [59.37067089068203, 60.67723624904744],
+    "observedFallbackReasons": [
+      "chest_no_go_zone",
+      "joint_limited",
+      "ik_target_clamped"
+    ]
+  },
+  "visualJudgment": {
+    "armFlipObserved": false,
+    "stuckTPoseObserved": false,
+    "persistentWristRollJitterObserved": false,
+    "deepShoulderPenetrationObserved": false,
+    "notes": [
+      "Visual judgment is based on the Playwright screenshot and live sampling window, not a recorded video artifact."
+    ]
+  },
+  "artifacts": {
+    "screenshot": "motion-debug-aoi-detected-2026-06-18.png"
+  }
+}

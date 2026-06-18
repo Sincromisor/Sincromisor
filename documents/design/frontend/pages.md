@@ -44,6 +44,7 @@
     - 共通 UI を描画し、ページ差分は props / controller option へ閉じ込める。
 - Developer pages:
     - `motion-debug` は AppShell / RTC / chat / startup dialog を持たず、camera / tracker / VRM retarget の観測に限定する。
+    - `motion-debug` は `?vrm=/characters/<file>.vrm` で public `characters/` 配下の VRM を指定できる。指定がない場合や、cross-origin / `characters/` 外の URL は `/characters/default.vrm` に戻す。
     - Playwright から使う `window.__SINCRO_MOTION_DEBUG__` は frontend developer tooling の内部 API として扱い、本番 endpoint / JSON 契約には含めない。
 
 ## Change Checklist
