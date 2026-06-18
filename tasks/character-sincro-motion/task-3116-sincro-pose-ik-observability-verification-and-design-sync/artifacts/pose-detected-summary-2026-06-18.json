@@ -1,0 +1,57 @@
+{
+  "date": "2026-06-18",
+  "url": "http://127.0.0.1:5173/motion-debug/",
+  "browser": "Playwright Chromium via playwright-cli",
+  "result": "PASS",
+  "camera": {
+    "source": "camera",
+    "width": 1280,
+    "height": 720,
+    "readyState": 4
+  },
+  "tracker": {
+    "mode": "worker",
+    "status": "running",
+    "droppedFrames": 0
+  },
+  "pose": {
+    "detected": true,
+    "confidence": 0.9996,
+    "inferenceTimeMs": 14.8,
+    "inferenceFps": 7.23,
+    "hipCenterTracked": false
+  },
+  "targets": {
+    "leftShoulder": "strong",
+    "rightShoulder": "strong",
+    "leftElbow": "lost_low_confidence",
+    "rightElbow": "strong",
+    "leftWrist": "lost_out_of_frame",
+    "rightWrist": "lost_out_of_frame_with_weak_world_target"
+  },
+  "retargetRuntime": {
+    "active": true,
+    "ikMode": "world_3d_ik",
+    "anchorReason": "hips_fallback_to_shoulders",
+    "leftArm": {
+      "active": false,
+      "ikActive": false,
+      "ikSolverMode": "none",
+      "fallbackReason": "arm_not_tracked"
+    },
+    "rightArm": {
+      "active": true,
+      "ikActive": true,
+      "ikWeight": 0.2481,
+      "ikSolverMode": "world_3d_ik",
+      "fallbackReason": "joint_limited",
+      "constraintReasons": ["joint_limited"]
+    }
+  },
+  "artifacts": ["motion-debug-pose-detected-2026-06-18.png"],
+  "notes": [
+    "Pose detection succeeded on the first 6000ms wait attempt after the operator adjusted framing.",
+    "The snapshot cleanly separates detected shoulders, out-of-frame wrists, right-arm IK activation, left-arm fallback, and solver-side joint limiting.",
+    "This confirms the motion-debug camera and pose-observability path, but it does not complete the full required pose-pattern matrix or multi-VRM visual evaluation."
+  ]
+}

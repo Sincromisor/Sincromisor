@@ -82,30 +82,30 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 
 ## 子タスク
 
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3101-sincro-motion-architecture-and-design-doc.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3102-face-tracking-runtime-and-sincro-face-tracker.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3103-sincro-face-retargeting-head-eye-mouth.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3104-talk-mode-aware-character-motion-orchestration.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3105-pose-landmarker-feasibility-spike.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3106-optional-sincro-pose-tracker-and-performance-gates.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3107-sincro-motion-observability-settings-and-verification.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3108-sincro-head-pitch-direction-fix.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3109-sincro-separate-blink-expression-calibration.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3110-sincro-blink-open-threshold-tuning.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3111-sincro-pose-retarget-formalization-and-tuning.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3112-sincro-tracker-workerization-and-load-isolation.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3113-sincro-pose-camera-space-arm-targets.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3114-sincro-lightweight-two-bone-arm-ik.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-3115-sincro-pose-upper-body-anchor-and-ik-fallback.md`
-- Open: `documents/tasks/character_sincro_motion/open/TASK-3116-sincro-pose-ik-observability-verification-and-design-sync.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-260517014025-sincro-pose-ik-wrist-confidence-gate.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-260517020308-sincro-pose-inference-warmup-gate.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-260517020748-sincro-pose-force-tracking-setting.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-260517024504-sincro-pose-world-landmarks-and-3d-targets.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-260517024505-sincro-vrm-3d-two-bone-ik-solver.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-260517024506-sincro-ik-solver-comparison-and-adoption.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-260517053106-sincro-arm-ik-joint-constraints-and-collision.md`
-- Done: `documents/tasks/character_sincro_motion/done/TASK-260517042345-sincro-motion-debug-page-for-ik-playwright.md`
+- Done: [task-3101-sincro-motion-architecture-and-design-doc](../task-3101-sincro-motion-architecture-and-design-doc/task.md)
+- Done: [task-3102-face-tracking-runtime-and-sincro-face-tracker](../task-3102-face-tracking-runtime-and-sincro-face-tracker/task.md)
+- Done: [task-3103-sincro-face-retargeting-head-eye-mouth](../task-3103-sincro-face-retargeting-head-eye-mouth/task.md)
+- Done: [task-3104-talk-mode-aware-character-motion-orchestration](../task-3104-talk-mode-aware-character-motion-orchestration/task.md)
+- Done: [task-3105-pose-landmarker-feasibility-spike](../task-3105-pose-landmarker-feasibility-spike/task.md)
+- Done: [task-3106-optional-sincro-pose-tracker-and-performance-gates](../task-3106-optional-sincro-pose-tracker-and-performance-gates/task.md)
+- Done: [task-3107-sincro-motion-observability-settings-and-verification](../task-3107-sincro-motion-observability-settings-and-verification/task.md)
+- Done: [task-3108-sincro-head-pitch-direction-fix](../task-3108-sincro-head-pitch-direction-fix/task.md)
+- Done: [task-3109-sincro-separate-blink-expression-calibration](../task-3109-sincro-separate-blink-expression-calibration/task.md)
+- Done: [task-3110-sincro-blink-open-threshold-tuning](../task-3110-sincro-blink-open-threshold-tuning/task.md)
+- Done: [task-3111-sincro-pose-retarget-formalization-and-tuning](../task-3111-sincro-pose-retarget-formalization-and-tuning/task.md)
+- Done: [task-3112-sincro-tracker-workerization-and-load-isolation](../task-3112-sincro-tracker-workerization-and-load-isolation/task.md)
+- Done: [task-3113-sincro-pose-camera-space-arm-targets](../task-3113-sincro-pose-camera-space-arm-targets/task.md)
+- Done: [task-3114-sincro-lightweight-two-bone-arm-ik](../task-3114-sincro-lightweight-two-bone-arm-ik/task.md)
+- Done: [task-3115-sincro-pose-upper-body-anchor-and-ik-fallback](../task-3115-sincro-pose-upper-body-anchor-and-ik-fallback/task.md)
+- Open: [task-3116-sincro-pose-ik-observability-verification-and-design-sync](../task-3116-sincro-pose-ik-observability-verification-and-design-sync/task.md)
+- Done: [task-260517014025-sincro-pose-ik-wrist-confidence-gate](../task-260517014025-sincro-pose-ik-wrist-confidence-gate/task.md)
+- Done: [task-260517020308-sincro-pose-inference-warmup-gate](../task-260517020308-sincro-pose-inference-warmup-gate/task.md)
+- Done: [task-260517020748-sincro-pose-force-tracking-setting](../task-260517020748-sincro-pose-force-tracking-setting/task.md)
+- Done: [task-260517024504-sincro-pose-world-landmarks-and-3d-targets](../task-260517024504-sincro-pose-world-landmarks-and-3d-targets/task.md)
+- Done: [task-260517024505-sincro-vrm-3d-two-bone-ik-solver](../task-260517024505-sincro-vrm-3d-two-bone-ik-solver/task.md)
+- Done: [task-260517024506-sincro-ik-solver-comparison-and-adoption](../task-260517024506-sincro-ik-solver-comparison-and-adoption/task.md)
+- Done: [task-260517053106-sincro-arm-ik-joint-constraints-and-collision](../task-260517053106-sincro-arm-ik-joint-constraints-and-collision/task.md)
+- Done: [task-260517042345-sincro-motion-debug-page-for-ik-playwright](../task-260517042345-sincro-motion-debug-page-for-ik-playwright/task.md)
 
 ## 完了条件
 
@@ -137,6 +137,14 @@ Sincromisor 本来の目的である `sincro`（ものまね / 同期）モー�
 - 実装済みだが実機確認だけが残っていた `TASK-3102`、`TASK-3105`、`TASK-260517014025`、`TASK-260517042345` は Done へ整理した。
 - 残タスクは、本 Epic と `TASK-3116` の最終実機検証に集約する。
 - `TASK-3116` では、実カメラ、複数 VRM、複数 viewport、`motion-debug` 経由の camera / pose 検出、IK 既定値を確認する。
+
+## Roadmap Phase 0 としての扱い
+
+`documents/research/character_animation/roadmap.md` の「Phase 0: 現行 `sincro` 基盤の確定」は、本 Epic と `task-3116-sincro-pose-ik-observability-verification-and-design-sync` を閉じるための gate として扱う。
+
+この Epic は新規実装を増やすタスクではなく、`task-3116` の実機確認結果を受けて `sincro` 現行基盤の到達点、既知限界、後続 Phase A 以降へ送る課題を確定する umbrella task とする。`task-3116` が未完の間は、本 Epic も未完とする。
+
+Phase A 以降の replay / metrics、`CanonicalUpperBodyState`、`ReliabilityMap`、`TemporalStateEstimator` などは、本 Epic へ追加せず、roadmap の大フェーズに沿って別タスク化する。
 
 ## 確認コマンド案
 

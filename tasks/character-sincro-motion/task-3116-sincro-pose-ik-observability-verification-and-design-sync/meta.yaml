@@ -1,13 +1,18 @@
-id: "task-3116-sincro-pose-ik-observability-verification-and-design-sync"
-title: "sincro pose ik observability verification and design sync"
-category: "character-sincro-motion"
-status: "open"
-depends_on: ["task-3115-sincro-pose-upper-body-anchor-and-ik-fallback", "task-260517014025-sincro-pose-ik-wrist-confidence-gate", "task-260517042345-sincro-motion-debug-page-for-ik-playwright", "task-260517053106-sincro-arm-ik-joint-constraints-and-collision"]
+id: task-3116-sincro-pose-ik-observability-verification-and-design-sync
+title: sincro pose ik observability verification and design sync
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-3115-sincro-pose-upper-body-anchor-and-ik-fallback
+  - task-260517014025-sincro-pose-ik-wrist-confidence-gate
+  - task-260517042345-sincro-motion-debug-page-for-ik-playwright
+  - task-260517053106-sincro-arm-ik-joint-constraints-and-collision
 superseded_by: null
-review: null
-reviewed_sha: null
-verdict: null
-attempts: 0
-legacy_ids: ["TASK-3116"]
+review: APPROVED
+reviewed_sha: 5f254194cf5d172be0bb9e96e7c42e41e61c2982
+verdict: FAIL
+attempts: 1
 created_at: null
 closed_at: null
+legacy_ids:
+  - TASK-3116

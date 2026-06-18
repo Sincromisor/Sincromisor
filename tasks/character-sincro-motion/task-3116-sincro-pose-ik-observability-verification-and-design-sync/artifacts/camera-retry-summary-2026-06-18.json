@@ -1,0 +1,38 @@
+{
+  "date": "2026-06-18",
+  "url": "http://127.0.0.1:5173/motion-debug/",
+  "browser": "Playwright Chromium via playwright-cli",
+  "result": "PARTIAL",
+  "camera": {
+    "permission": "granted",
+    "startCamera": "PASS",
+    "source": "camera",
+    "width": 1280,
+    "height": 720,
+    "readyState": 4
+  },
+  "tracker": {
+    "mode": "worker",
+    "status": "running",
+    "loadTimeMs": 692.9,
+    "droppedFrames": 0
+  },
+  "pose": {
+    "waitForPoseDetectedMs": 5000,
+    "result": "FAIL",
+    "message": "Pose was not detected within 5000ms.",
+    "fallbackReason": "pose_lost"
+  },
+  "assets": {
+    "vrmFiles": [
+      "sincromisor-frontend/public/characters/default.vrm",
+      "sincromisor-frontend/public/characters/aoi-1.0.7.vrm"
+    ]
+  },
+  "artifacts": ["motion-debug-camera-running-2026-06-18.png"],
+  "notes": [
+    "The previous camera timeout blocker is resolved.",
+    "The camera frame was visible, but the captured framing did not produce a pose detection within the 5 second wait window.",
+    "motion-debug currently uses /characters/default.vrm by default."
+  ]
+}

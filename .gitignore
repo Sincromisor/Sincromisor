@@ -38,4 +38,5 @@ sincromisor-frontend/public/characters/*.jpg
 sincromisor-frontend/public/characters/*.json
 sincromisor-frontend/public/characters/*.glb
 sincromisor-frontend/public/characters/*.png
+tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/artifacts/*.png
 SincromisorCLI

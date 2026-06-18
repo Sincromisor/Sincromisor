@@ -1,0 +1,69 @@
+{
+  "checkedAt": "2026-06-18",
+  "browser": "external Chrome via Codex extension",
+  "pageUrl": "http://127.0.0.1:5173/motion-debug/?vrm=/characters/aoi-1.0.7.vrm",
+  "vrmUrl": "/characters/aoi-1.0.7.vrm",
+  "camera": {
+    "result": "PASS",
+    "source": "camera",
+    "width": 1280,
+    "height": 720,
+    "readyState": 4
+  },
+  "baselinePose": {
+    "result": "PASS",
+    "poseDetected": true,
+    "poseConfidence": 0.9976635277271272,
+    "poseTrackingEnabled": true,
+    "runtimeActive": true,
+    "ikMode": "world_3d_ik",
+    "left": {
+      "shoulderQuality": "strong",
+      "elbowQuality": "strong",
+      "wristQuality": "strong"
+    },
+    "right": {
+      "shoulderQuality": "strong",
+      "elbowQuality": "strong",
+      "wristQuality": "strong"
+    }
+  },
+  "singleArmMissingRetry": {
+    "result": "ACCEPTED_WITH_MEDIAPIPE_INFERENCE",
+    "sampleCount": 60,
+    "intervalMs": 500,
+    "acceptanceDecision": {
+      "accepted": true,
+      "decidedAt": "2026-06-19",
+      "reason": "The operator visually confirmed the left side was fully outside the camera frame. MediaPipe retained the same-side elbow as an inferred strong target, while the wrist became lost/out_of_frame and unusable for IK."
+    },
+    "observed": {
+      "poseDetected": true,
+      "poseConfidence": 0.9649636447429656,
+      "left": {
+        "shoulderQuality": "strong",
+        "elbowQuality": "strong",
+        "wristQuality": "lost",
+        "wristStaleReason": "out_of_frame",
+        "wristUsableForIk": false,
+        "ikActive": true,
+        "ikWeight": 0.778177168866742,
+        "fallbackReason": "joint_limited"
+      },
+      "right": {
+        "shoulderQuality": "strong",
+        "elbowQuality": "strong",
+        "wristQuality": "strong",
+        "wristUsableForIk": true,
+        "ikActive": true,
+        "ikWeight": 0.8999999999999999,
+        "fallbackReason": "joint_limited"
+      }
+    },
+    "fullSingleArmLossObserved": false,
+    "notes": [
+      "The observed wrist lost/out_of_frame with usableForIk=false is accepted as the single-arm missing evidence because MediaPipe retained the elbow as an inferred target.",
+      "A later sample lost both arms together after pose detection dropped to false, so it does not satisfy the single-arm missing acceptance condition."
+    ]
+  }
+}

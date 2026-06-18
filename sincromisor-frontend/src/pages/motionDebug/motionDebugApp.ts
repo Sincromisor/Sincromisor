@@ -29,9 +29,40 @@ import type {
 } from "./types";
 
 const DEFAULT_VRM_URL = "/characters/default.vrm";
+const VRM_URL_QUERY_PARAM = "vrm";
 const POSE_TARGET_INFERENCE_FPS = 12;
 const SNAPSHOT_RENDER_INTERVAL_MS = 180;
 const DEFAULT_WAIT_FOR_POSE_TIMEOUT_MS = 10000;
+
+function getMotionDebugVrmUrl(): string {
+    const requestedUrl = new URLSearchParams(window.location.search).get(VRM_URL_QUERY_PARAM);
+    if (!requestedUrl) {
+        return DEFAULT_VRM_URL;
+    }
+
+    try {
+        const resolvedUrl = new URL(requestedUrl, window.location.origin);
+        if (resolvedUrl.origin !== window.location.origin) {
+            frontendLogger.warn("Ignored cross-origin motion-debug VRM URL.", {
+                requestedUrl,
+            });
+            return DEFAULT_VRM_URL;
+        }
+        if (!resolvedUrl.pathname.startsWith("/characters/")) {
+            frontendLogger.warn("Ignored motion-debug VRM URL outside /characters/.", {
+                requestedUrl,
+            });
+            return DEFAULT_VRM_URL;
+        }
+        return `${resolvedUrl.pathname}${resolvedUrl.search}${resolvedUrl.hash}`;
+    } catch (error) {
+        frontendLogger.warn("Ignored invalid motion-debug VRM URL.", {
+            error: formatError(error),
+            requestedUrl,
+        });
+        return DEFAULT_VRM_URL;
+    }
+}
 
 // IK 調整ページの所有境界。RTC/chat/dialog を持ち込まず、
 // camera/video -> TrackerRuntime -> CharacterBehaviorState -> VRMScene の経路だけを接続する。
@@ -88,7 +119,7 @@ export class MotionDebugApp {
         this.scene = new VRMScene({
             canvasRoot: characterRoot,
             characterControlLayer,
-            vrmUrl: DEFAULT_VRM_URL,
+            vrmUrl: getMotionDebugVrmUrl(),
             xrMode: false,
         });
         this.scene.start();

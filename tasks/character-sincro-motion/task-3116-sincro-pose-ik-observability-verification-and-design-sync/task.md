@@ -8,7 +8,7 @@
 
 ## 目的
 
-簡易 IK 化した `sincro` pose retarget を、実カメラ・複数 VRM・複数 viewport で最終確認し、調整値と確認結果を正本タスクへ残す。
+簡易 IK 化した `sincro` pose retarget を、実カメラ・複数 VRM・複数 viewport で最終確認し、調整値と確認結果を `impl.md`、`eval.md`、`acceptance/`、`artifacts/` に残す。
 
 IK は見た目の破綻が環境差やモデル差で出やすい。実装だけで完了扱いにせず、Debug Console と `motion-debug` で入力、target、solver、VRM 適用を切り分けながら、最後に人間の目で許容範囲を判断する。
 
@@ -20,7 +20,7 @@ IK は見た目の破綻が環境差やモデル差で出やすい。実装だ�
 
 ## スコープ
 
-- 実カメラ確認手順と結果をタスク本文へ残す
+- 実カメラ確認手順と結果を `impl.md`、`eval.md`、`acceptance/`、`artifacts/` へ残す
 - `simple-vrm` と `motion-debug` の両方で pose / IK の状態を確認する
 - Debug Console と `motion-debug` snapshot で、検出、target quality、solver、VRM 適用 gate、fallback を切り分ける
 - IK 強度、target smoothing、return-to-neutral、max rotation など主要パラメータの既定値を最終判断する
@@ -41,21 +41,76 @@ IK は見た目の破綻が環境差やモデル差で出やすい。実装だ�
 2. ユーザー向け設定は ON/OFF と強度を中心にし、詳細パラメータは Debug Console に寄せる。
 3. `chat` と `sincro` の motion priority 差分を文書へ明記する。
 4. 確認結果には、うまくいく構図だけでなく破綻しやすい構図も残す。
+5. review 後の `task.md` は仕様として固定し、実施ログやスクリーンショット、snapshot は `impl.md`、`eval.md`、`acceptance/`、`artifacts/` に保存する。
 
 ## 実装対象候補
+
+手編集候補:
 
 - `sincromisor-frontend/src/features/debug/model/debugConsoleManager.ts`
 - `sincromisor-frontend/src/features/debug/model/debugConsoleSincroMotionRuntime.ts`
 - `sincromisor-frontend/src/features/debug/react/**`
-- `sincromisor-frontend/src/features/settings/react/fields/settingsFields.tsx`
-- `sincromisor-frontend/src/pages/simpleVrm/react/components/settingsSections.tsx`
 - `sincromisor-frontend/src/features/dialog/model/dialogManager.ts`
 - `sincromisor-frontend/src/features/dialog/model/dialogStateStore.ts`
 - `documents/design/frontend/character/motion.md`
 - `documents/design/frontend/character/tracking.md`
 - `documents/design/frontend/pages.md`
-- `documents/tasks/character_sincro_motion/README.md`
-- `documents/tasks/character_sincro_motion/open/TASK-3100-sincro-motion-foundation-epic.md`
+- `tasks/character-sincro-motion/task-3100-sincro-motion-foundation-epic/task.md`
+
+参照・生成・確認対象:
+
+- `sincromisor-frontend/src/features/settings/react/fields/settingsFields.tsx`
+- `sincromisor-frontend/src/pages/simpleVrm/react/components/settingsSections.tsx`
+- `tasks/character-sincro-motion/index.md` は `npm run tasks:index` で更新し、手編集しない。
+
+## 検証条件
+
+最低構成:
+
+- ブラウザ: Playwright / Chromium を基本にする。別ブラウザで確認した場合は追加結果として扱う。
+- URL:
+    - `http://127.0.0.1:5173/simple-vrm/`
+    - `http://127.0.0.1:5173/motion-debug/`
+- viewport:
+    - desktop: `1280x720`
+    - mobile: `390x844`
+- VRM:
+    - 2 体以上を確認する。
+    - 1 体は通常利用する default / reference VRM とする。
+    - もう 1 体以上は、体型または humanoid optional bone 構成が異なる VRM とする。優先例は、`upperChest` なし、shoulder bone なし、finger bone 一部欠落、頭身または腕長が大きく異なるモデル。
+    - 2 体目を用意できない場合、このタスクは PASS にしない。`impl.md` に未実行理由と残リスクを残し、評価は FAIL または blocked 判断へ回す。
+
+姿勢パターン:
+
+- 両腕が見えているが手首 confidence が低い構図。
+- 片手上げ。
+- 横開き。
+- 肘曲げ。
+- 片腕欠損。
+- 両腕欠損。
+- 近距離上半身構図。
+
+OK 条件:
+
+- `simple-vrm` と `motion-debug` のどちらでも、検出、target quality、solver、VRM 適用 gate、fallback のどこで状態が変わったかを snapshot または Debug Console 表示から説明できる。
+- 各 VRM で、腕が一瞬で 180 度近く反転する、肩が胴体へ深くめり込む、手首 roll が継続的に暴れる、腕が T pose 付近へ固定されたまま戻らない、のいずれも再現しない。
+- tracking loss または low confidence では、急停止ではなく neutral / face-only / fallback へ戻る理由を記録できる。
+- desktop / mobile viewport で、Settings、Debug Console、`motion-debug` の主要操作が表示領域外へ消えず、テキスト重なりや横スクロールによって確認不能にならない。
+- IK 既定値を変更した場合は変更前後の snapshot またはスクリーンショットを保存し、変更しない場合は現行既定値を採用値として `impl.md` に記録する。
+
+NG 条件:
+
+- `simple-vrm` または `motion-debug` の初期表示、VRM 読み込み、camera start、pose detection、snapshot 取得のいずれかで未説明の例外が出る。
+- 1 体目の VRM だけで成功し、2 体目以降の VRM 差分を確認していない。
+- 崩れや fallback の有無をスクリーンショット、snapshot、または `impl.md` の観察ログで後から追えない。
+- viewport 確認が `simple-vrm` だけで、`motion-debug` の desktop / mobile を確認していない。
+
+保存先:
+
+- 実施ログと採用判断: `tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/impl.md`
+- 評価判定: `tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/eval.md`
+- チェックリストや手順メモ: `tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/acceptance/`
+- スクリーンショット、snapshot JSON、console log、runtime metrics: `tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/artifacts/`
 
 ## 完了条件
 
@@ -84,6 +139,22 @@ playwright-cli open http://127.0.0.1:5173/simple-vrm/
 playwright-cli resize 1280 720
 playwright-cli resize 390 844
 ```
+
+```sh
+playwright-cli open http://127.0.0.1:5173/motion-debug/
+playwright-cli resize 1280 720
+playwright-cli resize 390 844
+```
+
+`motion-debug` では、ブラウザ console または Playwright 経由で次を確認する。
+
+```js
+await window.__SINCRO_MOTION_DEBUG__.startCamera();
+await window.__SINCRO_MOTION_DEBUG__.waitForPoseDetected();
+await window.__SINCRO_MOTION_DEBUG__.getSnapshot();
+```
+
+camera permission や MediaPipe asset 不足で失敗した場合は、例外 message、browser、URL、viewport、再現手順を `impl.md` に記録し、可能なら console log を `artifacts/` に保存する。
 
 ## 手動確認観点
 
@@ -143,3 +214,11 @@ playwright-cli resize 390 844
 
 - 実装・設計同期・Debug Console / `motion-debug` 整備は完了済みとして、残作業を実機確認へ集約した。
 - `TASK-3102` と `TASK-3105` の未実測項目、`TASK-260517014025` の gate 改善後実機確認、`TASK-260517042345` の camera permission 付き検証を本タスクでまとめて確認する。
+
+## Roadmap Phase 0 gate
+
+`documents/research/character_animation/roadmap.md` の「Phase 0: 現行 `sincro` 基盤の確定」は、本タスクの完了を前提にする。
+
+本タスクでは、現行の face / pose / IK / debug 基盤について、実機で確認できたこと、確認できなかったこと、既知限界、後続タスクへ送るべき課題を記録する。Phase A 以降の replay / metrics、`CanonicalUpperBodyState`、`ReliabilityMap`、`TemporalStateEstimator` などの新規基盤実装は本タスクへ追加しない。
+
+実機確認の結果、現行基盤の延長で直せる軽微な調整が必要になった場合は本タスク内で扱ってよい。評価基盤や中間 contract の新設が必要な場合は、roadmap の大フェーズに沿う後続タスクとして切り出す。

@@ -1,0 +1,89 @@
+{
+  "date": "2026-06-18",
+  "url": "http://127.0.0.1:5173/motion-debug/",
+  "browser": "Playwright Chromium via playwright-cli",
+  "patterns": [
+    {
+      "name": "baseline_both_hands_visible",
+      "result": "PASS",
+      "poseConfidence": 0.9993,
+      "leftTargets": "shoulder/elbow/wrist strong",
+      "rightTargets": "shoulder/elbow/wrist strong",
+      "runtime": "both arms world_3d_ik, ikWeight=0.9, joint_limited",
+      "artifact": "pattern-baseline-both-hands-2026-06-18.png"
+    },
+    {
+      "name": "low_wrist_confidence",
+      "result": "PASS",
+      "poseConfidence": 0.9994,
+      "leftTargets": "wrist weak low_confidence, usableForIk=true, world weak",
+      "rightTargets": "wrist strong",
+      "runtime": "left ikWeight=0.6597, right ikWeight=0.8999, both world_3d_ik",
+      "artifact": "pattern-low-wrist-confidence-2026-06-18.png"
+    },
+    {
+      "name": "one_hand_raised",
+      "result": "PASS",
+      "poseConfidence": 0.9982,
+      "leftTargets": "wrist at lower edge; world strong",
+      "rightTargets": "raised wrist at upper edge; world strong",
+      "runtime": "left joint_limited, right ik_target_clamped",
+      "artifact": "pattern-one-hand-raised-2026-06-18.png"
+    },
+    {
+      "name": "arms_spread",
+      "result": "PASS",
+      "poseConfidence": 0.9997,
+      "leftTargets": "wrist strong near right side of camera frame",
+      "rightTargets": "wrist strong near left side of camera frame",
+      "runtime": "both arms world_3d_ik, ikWeight=0.9, joint_limited",
+      "artifact": "pattern-arms-spread-2026-06-18.png"
+    },
+    {
+      "name": "elbow_bend",
+      "result": "PASS",
+      "poseConfidence": 0.9999,
+      "leftTargets": "shoulder/elbow/wrist strong",
+      "rightTargets": "shoulder/elbow/wrist strong",
+      "runtime": "both arms world_3d_ik; joint_limited, forearm_twist_limited, chest_no_go_zone observed",
+      "artifact": "pattern-elbow-bend-2026-06-18.png"
+    },
+    {
+      "name": "one_arm_missing",
+      "result": "ACCEPTED_WITH_MEDIAPIPE_INFERENCE",
+      "poseConfidence": 0.9597,
+      "leftTargets": "elbow/wrist weak low_confidence",
+      "rightTargets": "shoulder/elbow/wrist strong",
+      "runtime": "left ikWeight=0.4267, right ikWeight=0.7020, both world_3d_ik",
+      "artifact": "pattern-one-arm-weak-target-2026-06-18.png",
+      "notes": "Attempts did not produce a fully lost single-arm snapshot; MediaPipe kept inferred targets. External Chrome retry later captured wrist lost/out_of_frame while the operator visually confirmed the side was off-frame, so this pattern is accepted as MediaPipe off-frame inference behavior."
+    },
+    {
+      "name": "both_arms_missing",
+      "result": "PASS",
+      "poseConfidence": 0.9989,
+      "leftTargets": "elbow/wrist lost out_of_frame",
+      "rightTargets": "wrist lost out_of_frame",
+      "runtime": "low-weight world_3d_ik still active from remaining world targets",
+      "artifact": "pattern-both-arms-missing-2026-06-18.png"
+    },
+    {
+      "name": "close_upper_body",
+      "result": "PASS",
+      "poseConfidence": 0.9994,
+      "shoulderWidth": 0.4174,
+      "leftTargets": "elbow/wrist lost out_of_frame",
+      "rightTargets": "elbow/wrist lost out_of_frame",
+      "runtime": "feature_only fallback, world_ik_elbow_low_confidence",
+      "artifact": "pattern-close-upper-body-2026-06-18.png"
+    }
+  ],
+  "overall": {
+    "camera": "PASS",
+    "poseDetection": "PASS",
+    "patternMatrix": "PASS_WITH_MEDIAPIPE_INFERENCE_ACCEPTED",
+    "remainingBlockers": [
+      "full npm run gate is blocked by Markdown formatting warnings outside task-local changed files"
+    ]
+  }
+}

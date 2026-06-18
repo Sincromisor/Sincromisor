@@ -1,0 +1,62 @@
+{
+  "checkedAt": "2026-06-18",
+  "pageUrl": "http://127.0.0.1:5173/motion-debug/?vrm=/characters/aoi-1.0.7.vrm",
+  "vrmUrl": "/characters/aoi-1.0.7.vrm",
+  "route": "public-alias",
+  "initial": {
+    "title": "Sincro Motion Debug",
+    "stageReady": true,
+    "apiKeys": [
+      "startCamera",
+      "stopCamera",
+      "setRetargetConfig",
+      "getSnapshot",
+      "captureFrame",
+      "waitForPoseDetected",
+      "loadVideoFixture"
+    ]
+  },
+  "camera": {
+    "source": "camera",
+    "width": 1280,
+    "height": 720,
+    "readyState": 4
+  },
+  "pose": {
+    "detected": true,
+    "attempt": 1,
+    "confidence": 0.9999481439590454,
+    "leftWristQuality": "strong",
+    "rightWristQuality": "strong"
+  },
+  "runtime": {
+    "active": true,
+    "ikMode": "world_3d_ik",
+    "leftArm": {
+      "ikActive": true,
+      "ikWeight": 0.2481329237353075,
+      "ikSolverMode": "world_3d_ik",
+      "fallbackReason": "joint_limited",
+      "constraintReasons": [
+        "joint_limited",
+        "chest_no_go_zone",
+        "forearm_twist_limited"
+      ]
+    },
+    "rightArm": {
+      "ikActive": true,
+      "ikWeight": 0.23324494831118903,
+      "ikSolverMode": "world_3d_ik",
+      "fallbackReason": "joint_limited",
+      "constraintReasons": [
+        "joint_limited",
+        "elbow_pole_stabilized",
+        "forearm_twist_limited",
+        "chest_no_go_zone"
+      ]
+    }
+  },
+  "artifacts": {
+    "screenshot": "motion-debug-aoi-public-route-detected-2026-06-18.png"
+  }
+}
