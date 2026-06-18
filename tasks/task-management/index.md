@@ -11,13 +11,7 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 
 ## タスク一覧（自動生成 / 全 13 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                                   | タイトル                              | 判定 | 依存 |
-| -------------------------------------------------------------------------------------------------------- | ------------------------------------- | ---- | ---- |
-| [task-260618213712-refresh-run-task-agents-v13](./task-260618213712-refresh-run-task-agents-v13/task.md) | Refresh run-task-agents v1.3 workflow | —    | —    |
-
-### done（完了） — 12 件
+### done（完了） — 13 件
 
 | タスク                                                                                                                             | タイトル                                   | 判定    | 依存                                                                                                                                                                                                                                                                                |
 | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -33,5 +27,6 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 | [task-260602004608-adopt-conventional-commits](./task-260602004608-adopt-conventional-commits/task.md)                             | Adopt Conventional Commits for future work | ✅ PASS | —                                                                                                                                                                                                                                                                                   |
 | [task-260602012356-tighten-commit-message-body-rules](./task-260602012356-tighten-commit-message-body-rules/task.md)               | Tighten commit message body rules          | ✅ PASS | —                                                                                                                                                                                                                                                                                   |
 | [task-260614024901-adopt-latest-run-task-agents-workflow](./task-260614024901-adopt-latest-run-task-agents-workflow/task.md)       | run-task-agents latest workflow adoption   | ✅ PASS | —                                                                                                                                                                                                                                                                                   |
+| [task-260618213712-refresh-run-task-agents-v13](./task-260618213712-refresh-run-task-agents-v13/task.md)                           | Refresh run-task-agents v1.3 workflow      | ✅ PASS | —                                                                                                                                                                                                                                                                                   |
 
 <!-- AUTOGEN:tasks END -->
