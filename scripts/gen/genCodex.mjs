@@ -166,7 +166,7 @@ function renderSkillMd(def) {
             .map((l) => `    ${l}`),
         "---",
     ].join("\n");
-    return `${SKILL_MARKER} from .claude/commands/${def.name}.md — edit the source, then run gen:codex -->\n${fm}\n\n${CODEX_SKILL_PREAMBLE}\n${body}\n`;
+    return `${fm}\n\n${SKILL_MARKER} from .claude/commands/${def.name}.md — edit the source, then run gen:codex -->\n\n${CODEX_SKILL_PREAMBLE}\n${body}\n`;
 }
 
 function renderHooksJson(hookCommand) {
@@ -243,7 +243,7 @@ async function findOrphans(expected) {
         const path = join(skillsDir, entry.name, "SKILL.md");
         if (expected.has(path)) continue;
         const head = await readFile(path, "utf8").catch(() => "");
-        if (head.startsWith(SKILL_MARKER)) orphans.push(path);
+        if (head.includes(SKILL_MARKER)) orphans.push(path);
     }
 
     return orphans.sort();
