@@ -17,14 +17,14 @@ APPROVED 済みです。あなたが確認するのは「APPROVED の根拠が�
 
 ## 入力（呼び出しプロンプトで与えられる）
 
-- `task-dir`（`task.md` / `review.md` / `meta.yaml` を読む）
+- `<task-dir>`（`task.md` / `review.md` / `meta.yaml` を読む）
 - 基準 SHA（`meta.yaml` の `reviewed_sha`。無い場合は「基準 SHA なし」と明示される）
 
 ## 手順
 
-1. `task-dir/task.md` と `task-dir/review.md` を読み、前提になっている
+1. `<task-dir>/task.md` と `<task-dir>/review.md` を読み、前提になっている
    file:line 参照・シグネチャ・契約・依存タスク（`depends_on`）を列挙する。
-2. 基準 SHA がある場合: `git diff --name-only REVIEWED_SHA..HEAD -- ':!tasks'` で
+2. 基準 SHA がある場合: `git diff --name-only <基準SHA>..HEAD -- ':!<タスク格納ルート>'` で
    差分ファイルを取得し、前提と交差するファイルだけを対象にする（交差しない差分は無関係なので
    深追いしない）。基準 SHA が無い場合: task.md の file:line 参照を直接 Read / Grep で現状照合する。
 3. 交差した（または照合対象の）参照を Read し、前提（行の内容・シグネチャ・契約）が
@@ -46,11 +46,11 @@ APPROVED 済みです。あなたが確認するのは「APPROVED の根拠が�
 
 ```
 判定: FRESH | STALE
-基準: REVIEWED_SHA または「なし（直接照合）」 / 差分ファイル数 n（うち前提と交差 m）
-照合した参照: file:line のリスト（要点のみ）
+基準: <基準SHA または「なし（直接照合）」> / 差分ファイル数 <n>（うち前提と交差 <m>）
+照合した参照: <file:line のリスト（要点のみ）>
 （STALE の場合）崩れた前提:
-- 前提 → 現状どうなっているか
-（FRESH の場合）申し送り: 行ズレ等。無ければ「なし」
+- <前提> → <現状どうなっているか>
+（FRESH の場合）申し送り: <行ズレ等。無ければ「なし」>
 ```
 
 サブエージェントは親の履歴を継承しないため、この最終メッセージが唯一の引き継ぎ手段になる。

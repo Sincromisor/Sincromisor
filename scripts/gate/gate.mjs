@@ -19,55 +19,141 @@
  *     ]
  *
  * キャッシュキー = sha256(step + command + HEAD SHA + ロックファイルハッシュ + 作業ツリーハッシュ)。
- *   - 作業ツリーがクリーン（`git status --porcelain` が空）のときキーは **コミット由来のみ** に
- *     なり、worktree をまたいで共有される（評価者の隔離 worktree は同一コミットで即ヒット）。
- *   - dirty ツリーは tracked diff と untracked file contents までキーに含めるため、
- *     **完全に同一の状態** が再現したときだけ再利用される（= 編集のたびに実質フレッシュ実行。
- *     誤ヒットなし）。
+ *   - 作業ツリーがクリーン（`git status --porcelain` が空 かつ 未追跡ファイル無し）のときキーは
+ *     **コミット由来のみ** になり、worktree をまたいで共有される（評価者の隔離 worktree は同一
+ *     コミットで即ヒット）。
+ *   - dirty ツリーは差分内容までキーに含めるため、**完全に同一の状態** が再現したときだけ再利用
+ *     される（= 編集のたびに実質フレッシュ実行。誤ヒットなし）。
+ *   - 作業ツリーハッシュには tracked 変更（`git diff HEAD`）と `git status --porcelain` に加え、
+ *     **未追跡（非 ignore）ファイルの内容ハッシュ**（`git ls-files --others --exclude-standard` で
+ *     列挙）を含める。`status --porcelain` は未追跡ディレクトリを畳む / 内容を持たないため、未追跡
+ *     ファイルの内容編集や既存未追跡ディレクトリへの追加が key に反映されず**陳腐化キャッシュ**に
+ *     ヒットし得る問題を防ぐ（内容をパスソート順で連結 → 1 ハッシュ化し決定性を担保）。
  *
  * 安全側の原則:
  *   - **PASS (exit 0) のみ記録**。失敗は決して記録せず常に再実行する（赤をキャッシュしない）。
- *   - キャッシュは `GATE_CACHE_DIR`、未指定ならリポジトリ直下 `.gate-cache/` に置く。
- *     Codex の通常 workspace sandbox でも書けるよう、既定では `.git/` 配下を使わない。
- *   - 限界: gitignore 対象ファイル（.env / 生成物）はキーに含まれない。ゲートに登録するステップは
+ *   - 記録は **temp + rename** でアトミックに行う（`atomicWrite`）。`.gate-cache` を worktree 間で
+ *     symlink 共有して同一キーに gate が並走しても、第三者リーダーは「古い完全なファイル」か「新しい
+ *     完全なファイル」のどちらかしか観測しない（torn read を構造排除）。書き込み順は log → meta
+ *     （meta を最後に rename）: リーダーは meta の `code === 0` で hit 判定し `.log` を参照するため。
+ *   - キャッシュの置き場所は `GATE_CACHE_DIR`（環境変数）> 既定 `<repo root>/.gate-cache` の順で
+ *     解決する（`.git` 配下には置かない: sandbox で `.git` 書込が制限される環境を回避）。`<repo root>`
+ *     は `git rev-parse --show-toplevel`。`GATE_CACHE_DIR` の相対パスは実行 cwd 基準。worktree 間共有は
+ *     eval worktree に `.gate-cache` symlink を張ることで担保する（setupWorktree.mjs 参照）。
+ *     `.gate-cache/` はプロジェクトの `.gitignore` に追加すること。
+ *   - 限界: gitignore 対象ファイル（.env / 生成物）は **依然キーに含まれない**（未追跡 content は
+ *     含めるようになったが、`--exclude-standard` で ignore 済みは除外される）。ゲートに登録するステップは
  *     外部依存を mock した決定的なコマンドに限ること（非決定的な実機検証は対象外＝別コマンドで都度実行）。
  *   - 生成物のコミットを伴う条件付きステップ（例: 公開型定義の再生成）も対象外とし、都度実行する。
  *
  * 使い方:
- *   npm run gate              # gateSteps を順に（キャッシュ有効）
- *   npm run gate -- test      # 指定ステップのみ
- *   npm run gate -- --no-cache # 読込スキップして必ず実行（PASS なら記録は更新）
+ *   <RUNNER> run gate              # gateSteps を順に（キャッシュ有効）
+ *   <RUNNER> run gate test         # 指定ステップのみ
+ *   <RUNNER> run gate --no-cache   # 読込スキップして必ず実行（PASS なら記録は更新）
  */
 
 import { spawn, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const sha = (s) => createHash("sha256").update(s).digest("hex");
+
+/**
+ * キャッシュルートを決定する。
+ *   1. `GATE_CACHE_DIR`（環境変数）があればそれを使う。相対パスは実行 cwd 基準で解決。
+ *   2. 無ければ `<repo root>/.gate-cache`。`repoRoot` は `git rev-parse --show-toplevel`。
+ * `.git` 配下には置かない（sandbox での `.git` 書込制限を回避）。
+ * @param {Record<string, string | undefined>} env
+ * @param {string} repoRoot
+ * @returns {string}
+ */
+function resolveCacheRoot(env, repoRoot) {
+    const override = env.GATE_CACHE_DIR && env.GATE_CACHE_DIR.trim();
+    if (override) return path.resolve(override);
+    return path.join(repoRoot, ".gate-cache");
+}
 
 function gitText(args) {
     const r = spawnSync("git", args, { encoding: "utf8" });
     return r.status === 0 ? (r.stdout ?? "") : "";
 }
 
-function untrackedHash() {
-    const r = spawnSync("git", ["ls-files", "--others", "--exclude-standard", "-z"], {
-        encoding: "buffer",
+/** 読み取れない未追跡ファイルに混ぜる固定マーカー（状態を「読めない」として差に残す）。 */
+const UNREADABLE_MARKER = " <gate:unreadable> ";
+
+/**
+ * 未追跡（非 ignore）ファイルの内容ハッシュを算出する純関数。
+ *
+ *   - `git ls-files --others --exclude-standard` で未追跡ファイルを列挙する
+ *     （`status --porcelain` の `??` には頼らない: 未追跡ディレクトリ畳み込みを回避し、
+ *     既存未追跡ディレクトリへの追加も個別ファイルとして拾う）。gitignore 済みは除外される。
+ *   - パスでソートし、各ファイルの内容を連結 → 1 ハッシュ化する（順序非依存の決定性を担保）。
+ *   - 読み取れないファイル（パーミッション・特殊ファイル等）は内容の代わりに固定マーカーを
+ *     混ぜる（無視せずエラーにもせず、必ず差として現れる）。
+ *   - 未追跡ファイルが 0 件なら安定した空リストのハッシュを返す（clean ツリーでは常に同じ値に
+ *     収束 = コミット由来キーの worktree 間共有を壊さない）。
+ *
+ * @param {string} cwd リポジトリルート（gate はルートで実行される前提。`ls-files` は cwd 起点の相対パス）。
+ * @returns {string}
+ */
+function untrackedContentHash(cwd) {
+    const r = spawnSync("git", ["ls-files", "--others", "--exclude-standard"], {
+        cwd,
+        encoding: "utf8",
     });
-    if (r.status !== 0 || !r.stdout?.length) return "";
+    const out = r.status === 0 ? (r.stdout ?? "") : "";
+    const files = out
+        .split("\n")
+        .map((l) => l.replace(/\s+$/, ""))
+        .filter((l) => l.length > 0)
+        .sort();
     const parts = [];
-    for (const raw of r.stdout.toString("utf8").split("\0")) {
-        if (!raw) continue;
+    for (const rel of files) {
+        let content;
         try {
-            const contentHash = createHash("sha256").update(readFileSync(raw)).digest("hex");
-            parts.push(`${raw}\0${contentHash}`);
-        } catch (error) {
-            parts.push(`${raw}\0unreadable:${error?.code ?? "unknown"}`);
+            content = readFileSync(path.join(cwd, rel)).toString("base64");
+        } catch {
+            content = UNREADABLE_MARKER;
         }
+        parts.push(`${rel} ${content}`);
     }
-    return parts.sort().join("\0");
+    return sha(parts.join(" \n"));
 }
+
+/**
+ * 同一ディレクトリ内の一時ファイルへ書き → `rename` で確定するアトミック書き込み。
+ *
+ *   - `rename(2)` は同一ファイルシステム上でアトミックなため、リーダーは「古い完全なファイル」か
+ *     「新しい完全なファイル」のどちらかのみを観測し、途中状態を観測しない（torn read 排除）。
+ *   - tmp は **必ず `dst` と同ディレクトリ** に作る（`os.tmpdir()` は別 FS の可能性があり rename が
+ *     EXDEV で失敗する）。`.gate-cache` はリポジトリルート配下なので同一 FS が保証される。
+ *   - tmp 名は `<basename>.<pid>.<rand>.tmp`。同一キーへ並走する書き込みでも衝突しない。
+ *     サフィックスは `.tmp` 固定（将来 glob 走査で除外しやすい）。
+ *   - rename に至らず例外で抜けた場合、共有ディレクトリへの残骸累積を避けるため tmp を
+ *     best-effort で unlink する（失敗は無視）。
+ * @param {string} dst
+ * @param {string} data
+ */
+function atomicWrite(dst, data) {
+    const dir = path.dirname(dst);
+    const base = path.basename(dst);
+    const tmp = path.join(dir, `${base}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`);
+    try {
+        writeFileSync(tmp, data);
+        renameSync(tmp, dst);
+    } catch (err) {
+        try {
+            unlinkSync(tmp);
+        } catch {
+            /* best-effort: tmp が無い / 消せない場合は無視 */
+        }
+        throw err;
+    }
+}
+
+export { atomicWrite, untrackedContentHash };
 
 function loadSteps() {
     let pkg;
@@ -167,9 +253,11 @@ async function main() {
     const diff = gitText(["diff", "HEAD"]);
     const clean = porcelain.trim() === "";
     const lock = lockHash();
-    const treeHash = sha(`${porcelain}\n${diff}\n${untrackedHash()}`);
-
-    const cacheRoot = path.resolve(process.env.GATE_CACHE_DIR || ".gate-cache");
+    const repoRoot = gitText(["rev-parse", "--show-toplevel"]).trim() || process.cwd();
+    // 未追跡（非 ignore）ファイルの内容も key に折り込む（porcelain/diff は内容を取りこぼすため）。
+    const untrackedHash = untrackedContentHash(repoRoot);
+    const treeHash = sha(`${porcelain}\n${diff}\n${untrackedHash}`);
+    const cacheRoot = resolveCacheRoot(process.env, repoRoot);
     mkdirSync(cacheRoot, { recursive: true });
 
     const sha7 = head.slice(0, 7);
@@ -216,8 +304,10 @@ async function main() {
 
         if (code === 0) {
             // PASS のみ記録。フル出力をテキストログに残す。
-            writeFileSync(logPath, output);
-            writeFileSync(
+            // log → meta の順で temp+rename（meta を最後に確定）: リーダーは meta の code===0 を見て
+            // hit 判定し log を参照するため、meta が見えた時点で log が揃っている必要がある。
+            atomicWrite(logPath, output);
+            atomicWrite(
                 metaPath,
                 JSON.stringify(
                     {
@@ -248,4 +338,12 @@ async function main() {
     process.exit(failed ? 1 : 0);
 }
 
-await main();
+// テストから純関数（untrackedContentHash）を import するときに main を走らせないため、
+// CLI として直接実行されたとき（このファイルがエントリポイント）のみ起動する。
+// Bun は import.meta.main を提供する。Node ESM では argv[1] と import.meta.url を比較する。
+const isMain =
+    import.meta.main ??
+    (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url);
+if (isMain) {
+    await main();
+}

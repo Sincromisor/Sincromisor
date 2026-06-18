@@ -222,11 +222,14 @@ TODO は新規コードでは `TODO(task-260601153000-example): ...` を推奨�
 | `npm run tasks:fixlinks -- --apply`                                         | 修正候補を適用する                                                 |
 | `npm run tasks:migrate:legacy`                                              | 旧 `documents/tasks` レイアウトの移行計画を dry-run する           |
 | `npm run tasks:migrate:legacy -- --apply`                                   | 旧 `documents/tasks` レイアウトを `tasks/` へ移行する              |
+| `npm run tasks:migrate:reviewed-sha`                                        | 既存 `meta.yaml` へ `reviewed_sha` を dry-run で付与計画する       |
 | `npm run tasks:next`                                                        | 依存が解けて実行できる次タスクを表示する                           |
-| `npm run tasks:close -- <task-dir> verdict=PASS attempts=1`                 | meta 更新、index 再生成、close commit をまとめて行う               |
+| `npm run tasks:close -- <task-dir> verdict=PASS attempts=1`                 | meta 更新、自 task dir の close commit を行う                      |
+| `npm run tasks:reindex`                                                     | 全カテゴリ `index.md` を再生成し、変更があれば commit する         |
 | `npm run tasks:metrics`                                                     | task lead time と agent 実績を集計する                             |
 | `npm run gate`                                                              | `package.json` の `gateSteps` をキャッシュ付きで実行する           |
 | `npm run eval:worktree -- add <sha>`                                        | 評価用の隔離 worktree を作る                                       |
+| `npm run eval:worktree -- add <sha> --branch codex/<task-id>`               | 実装用の名前付き worktree を作る                                   |
 | `npm run eval:worktree -- remove <path> --discard`                          | 回収済みの評価 worktree を明示破棄する                             |
 | `npm run gen:codex`                                                         | `.claude/` から Codex 用 `.agents/skills/` と `.codex/` を生成する |
 | `npm run gen:codex:check`                                                   | Codex 生成物が `.claude/` と同期しているか検証する                 |
@@ -243,15 +246,18 @@ npm run tasks:check
 
 ## ブランチライフサイクル
 
-Sincromisor の runner は、Disk I/O とローカル処理時間を増やしすぎないため、既定では単一 checkout 上で進める。role ごとに物理 `git worktree` を作らず、commit と `git status` で clean boundary を保つ。
+Sincromisor の runner は v1.3 workflow に合わせ、実装フェーズも評価フェーズも隔離 `git worktree` で進める。
+メイン checkout は orchestration と task 成果物の集約に使い、実装中のファイル編集やコミットは専用 worktree に閉じ込める。
 
-- parent Codex は role の前後で `git status --porcelain` と現在 HEAD を確認し、ユーザーの未追跡・未コミット変更を誤って巻き込まない。
-- reviewer は実装を変更しないため、原則として専用ブランチや物理 worktree を作らない。
-- implementer は現在ブランチの HEAD を基点に `codex/<task-id>` ブランチを作る。既に作業ブランチ上にいる場合は、parent Codex が継続可否を判断して記録する。
-- implementer は実装差分、テスト、`impl.md` を commit してから evaluator に渡す。`meta.yaml`, `eval.md`, category `index.md` は触らない。
-- `/run-task` の evaluator は実装者 HEAD から作った隔離 worktree で独立検証する。評価用の追加ファイルは `acceptance/` に限定し、実装コードや実装者のテストは変更しない。`eval.md` / `acceptance/` は削除前にメイン checkout の task dir へ戻し込む。
-- PASS 後、parent Codex は必要に応じて実装ブランチを基点ブランチへ反映し、`tasks:set`, `tasks:index`, task tooling checks を実行して close commit を作る。
-- 実装 role 用の物理 `git worktree` は、既存の dirty 変更と衝突する場合、または破壊的変更の検証で必要な場合だけ使う。
+- reviewer は実装を変更しないため、専用ブランチや物理 worktree を作らない。
+- implementer 用 worktree は `npm run eval:worktree -- add <base-sha> --branch codex/<task-id>` で作る。`codex/` prefix は `package.json` の `taskBranchPrefix` を正本にする。
+- implementer は渡された worktree 絶対パスを cwd とし、実装差分、テスト、実装 commit を `codex/<task-id>` ブランチへ載せる。`impl.md` はメイン checkout 側の task dir に追記する。
+- `npm run gate` は `.gate-cache/` を worktree 間で共有し、同一 content / commit の PASS をキャッシュする。
+- evaluator は実装者 HEAD から detach worktree を作り、クリーンな状態で独立検証する。評価用の追加ファイルは `acceptance/` に限定し、実装コードや実装者のテストは変更しない。
+- evaluator が worktree 側へ書いた `eval.md`, `acceptance/`, `artifacts/` は、worktree 削除前にメイン checkout 側の task dir へ戻し込む。
+- PASS 後、parent Codex は基点ブランチで `git merge codex/<task-id>` を行い、`npm run tasks:close -- <task-dir> verdict=PASS attempts=<n>` で自 task dir の close commit を作る。
+- global な `index.md` 更新は close から分離し、基点ブランチ上の直列ステップとして `npm run tasks:reindex` で 1 commit にまとめる。
+- `git worktree remove` は branch を削除しない。実装 branch は履歴確認や再開のため残し、不要になった場合だけ別途整理する。
 
 ## Agent workflow
 
@@ -278,13 +284,13 @@ Role 定義:
 2. `review=APPROVED` かつ `reviewed_sha` から現在 HEAD までの task 外差分がなければ review 段を機械スキップする。
 3. APPROVED 後にコード差分がある場合は `task-freshness-checker` で前提の鮮度だけを確認する。
 4. 未 APPROVED または STALE の場合は `task-reviewer` を実行し、APPROVED なら `tasks:set review=APPROVED reviewed_sha=<sha>` を記録する。NEEDS_REVISION なら停止する。
-5. implementer が `codex/<task-id>` ブランチ上で実装し、`npm run gate` と必要確認を通して `impl.md` を更新し、実装 commit を作る。
-6. evaluator が committed diff を独立検証する。`npm run eval:worktree -- add <sha>` で隔離 worktree を作り、評価後は `eval.md` / `acceptance/` をメイン checkout に戻してから `npm run eval:worktree -- remove <path> --discard` で片付ける。
+5. parent Codex が `npm run eval:worktree -- add <sha> --branch codex/<task-id>` で実装 worktree を作り、implementer がその worktree 上で実装、`npm run gate`、実装 commit を行う。`impl.md` はメイン checkout 側に追記する。
+6. evaluator が committed diff を独立検証する。`npm run eval:worktree -- add <sha>` で隔離 worktree を作り、評価後は `eval.md` / `acceptance/` / `artifacts/` をメイン checkout に戻してから `npm run eval:worktree -- remove <path> --discard` で片付ける。
 7. FAIL の場合は `eval.md` の残課題を implementer に戻し、原則 2 回まで再実装する。
-8. PASS の場合は `npm run tasks:close -- <task-dir> verdict=PASS attempts=<n>` で close する。
+8. PASS の場合は実装 branch を基点ブランチへ merge し、`npm run tasks:close -- <task-dir> verdict=PASS attempts=<n>` で close する。その後 `npm run tasks:reindex` で `index.md` を直列更新する。
 
 実装 commit には実装差分、テスト、`impl.md` を含める。close commit には `review.md`,
-`eval.md`, `acceptance/`, `meta.yaml`, `index.md` を含める。`tasks:close` が作る close commit
+`eval.md`, `acceptance/`, `meta.yaml` を含める。`index.md` は `tasks:reindex` commit に含める。`tasks:close` が作る close commit
 message も `Why:` / `What:` / `Verify:` / `Risk:` / `Refs:` を含む。upstream workflow との差分は
 `.agents/CUSTOMIZATIONS.md` に記録する。
 
@@ -304,6 +310,7 @@ close 前の task tooling checks は必須とする。
 
 ```sh
 npm run tasks:index
+npm run tasks:reindex -- --dry-run
 npm run tasks:index:check
 npm run tasks:check
 ```

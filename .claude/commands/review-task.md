@@ -1,6 +1,6 @@
 ---
 description: task-reviewer サブエージェントを単体で呼び出し、タスク記述ファイルをレビューさせる（実装・close は行わない）
-argument-hint: task-dir（例: tasks/feature/task-260601153000-foo）
+argument-hint: <task-dir>（例: tasks/feature/task-260601153000-foo）
 ---
 
 `$1` のタスク記述を task-reviewer サブエージェントにレビューさせる。実装・評価・close は

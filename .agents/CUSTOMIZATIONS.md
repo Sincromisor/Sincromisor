@@ -8,6 +8,8 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 - Target files: `scripts/tasks/lib.mjs`, `scripts/tasks/setMeta.mjs`,
   `scripts/tasks/newTask.mjs`, `scripts/tasks/checkTasks.mjs`, existing `tasks/**/meta.yaml`
 - Upstream difference: Sincromisor keeps `legacy_ids` while adding upstream `reviewed_sha`.
+  `legacy_ids` is preserved as an upstream-compatible custom/extra meta field, and new tasks
+  still get `legacy_ids: []` so `tasks:check` passes immediately.
 - Reason: migrated legacy task IDs and historical references must remain valid.
 - Future refresh check: run `npm run tasks:check` and confirm both `legacy_ids` and
   `reviewed_sha` are validated.
@@ -17,7 +19,8 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 - Target files: `scripts/tasks/checkTasks.mjs`, `scripts/tasks/migrateLegacyTasks.mjs`,
   `package.json`
 - Upstream difference: upstream does not include Sincromisor's `tasks:check` or
-  `tasks:migrate:legacy`; both remain package scripts.
+  `tasks:migrate:legacy`; both remain package scripts. Sincromisor also exposes upstream
+  `tasks:migrate:reviewed-sha` and `tasks:reindex`.
 - Reason: the repository has migrated task history that still needs schema and legacy migration
   verification.
 - Future refresh check: keep these scripts unless all legacy migration support is intentionally
@@ -35,11 +38,30 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 
 ## Branch Prefix
 
-- Target files: `AGENTS.md`, `tasks/README.md`, `.claude/commands/run-task.md`,
-  `.claude/agents/task-implementer.md`
-- Upstream difference: Sincromisor uses `codex/task-id` rather than upstream `task/task-id`.
+- Target files: `package.json`, `AGENTS.md`, `tasks/README.md`
+- Upstream difference: Sincromisor sets `taskBranchPrefix` to `codex/`, so implementation
+  worktrees use `codex/<task-id>` rather than upstream `task/<task-id>`.
 - Reason: the Codex desktop environment uses the `codex/` prefix for assistant-owned branches.
 - Future refresh check: keep the prefix aligned with repository and app-level Git guidance.
+
+## Close Commit Template
+
+- Target file: `package.json`
+- Upstream difference: Sincromisor defines `taskClose.commitTemplate` with `Why`, `What`,
+  `Verify`, `Risk`, and `Refs` fields.
+- Reason: repository commit rules require Conventional Commits bodies to preserve reason,
+  verification, and residual-risk context.
+- Future refresh check: dry-run `npm run tasks:close -- <task-dir> verdict=PASS attempts=1 --dry-run`
+  and confirm the generated body still satisfies `tasks/README.md` commit guidance.
+
+## Task Scaffold Completeness
+
+- Target file: `scripts/tasks/newTask.mjs`
+- Upstream difference: Sincromisor's scaffold creates `review.md`, `impl.md`, `eval.md`,
+  `acceptance/.gitkeep`, and `artifacts/.gitkeep` in addition to upstream `task.md` and
+  `meta.yaml`.
+- Reason: `tasks:check` validates the full task directory layout for all tasks.
+- Future refresh check: create a dry-run or temporary task and run `npm run tasks:check`.
 
 ## Canonical Documentation Links
 

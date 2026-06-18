@@ -3,22 +3,20 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { parse as yamlParse } from "yaml";
 import {
-    isReview,
     isStatus,
-    isVerdict,
     listDirs,
-    parseMetaYaml,
     readMeta,
-    REVIEWS,
     STATUSES,
     TASKS_ROOT,
     TERMINAL_STATUSES,
-    VERDICTS,
 } from "./lib.mjs";
 
 const REQUIRED_FILES = ["task.md", "review.md", "impl.md", "eval.md"];
 const REQUIRED_DIRS = ["acceptance", "artifacts"];
+const REVIEWS = ["APPROVED", "NEEDS_REVISION"];
+const VERDICTS = ["PASS", "FAIL"];
 const META_KEYS = [
     "id",
     "title",
@@ -57,11 +55,19 @@ function isLegacyTerminalWithoutClosedAt(meta) {
 
 async function readRawMeta(metaPath, fallbackTaskId, issues) {
     try {
-        return parseMetaYaml(await readFile(metaPath, "utf8"));
+        return yamlParse(await readFile(metaPath, "utf8")) ?? {};
     } catch (error) {
         addIssue(issues, fallbackTaskId, `meta.yaml parse failed: ${error.message}`);
         return null;
     }
+}
+
+function isReview(value) {
+    return typeof value === "string" && REVIEWS.includes(value);
+}
+
+function isVerdict(value) {
+    return typeof value === "string" && VERDICTS.includes(value);
 }
 
 async function collectTaskDirs(root) {

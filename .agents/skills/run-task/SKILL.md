@@ -19,8 +19,9 @@ description: |-
 かつ対応する状態ファイル（`review.md` / `impl.md` / `eval.md`）を必ず Read** してから次へ進む。
 サブエージェントは親の履歴を継承しないため、最終メッセージと状態ファイルが唯一の引き継ぎ手段になる。
 
-> 補足: 下記の `tasks:set` / `tasks:index` / `tasks:close` / `tasks:metrics` / `eval:worktree` /
-> `gate` はリポジトリルートで `npm run` 経由で実行する。
+> 補足: 下記の `tasks:set` / `tasks:index` / `tasks:reindex` / `tasks:close` / `tasks:metrics` /
+> `eval:worktree` / `gate` はプロジェクトのスクリプトランナーで実行する
+> （例: `npm run tasks:set ...` / `pnpm tasks:set ...` / `bun run tasks:set ...`）。
 > 「3 点ゲート」= lint/format 検証・型/ビルド・テスト。`npm run gate`（`scripts/gate/gate.mjs`）で
 > 回し、ステップの実コマンドは `package.json` の `gateSteps` を正本とする。
 
@@ -31,7 +32,7 @@ description: |-
 ### 1-a. 機械スキップ（エージェント起動なし）
 
 `review=APPROVED` かつ `reviewed_sha` があり、
-`git diff --name-only reviewed_sha..HEAD -- ':!tasks'` が**空**なら、レビュー時点から
+`git diff --name-only <reviewed_sha>..HEAD -- ':!<タスク格納ルート>'` が**空**なら、レビュー時点から
 コードベースは進んでいない。レビュー段を**スキップ**して実装へ進む
 （サマリ報告にスキップ根拠として `reviewed_sha` を記す）。
 
@@ -56,19 +57,39 @@ task-freshness-checker サブエージェントに `$1` と基準 SHA（`reviewe
 
 ## 2. 実装
 
-task-implementer サブエージェントで実装させる。
+task-implementer サブエージェントで、**実装フェーズ専用の隔離 worktree 上で**実装させる。
+メインチェックアウトでは編集・コミットさせない（同一 clone で `/run-task` を並走させたとき、
+メインの作業ツリー・HEAD を共有しないため安全になる。並列実行モデルは `tasks/README.md`
+「ブランチライフサイクル」参照）。
 
-- 呼び出しプロンプトに `$1/task.md` と `$1/review.md` のパスを明記すること
-  （サブエージェントは親の履歴を継承しないため）。1-b の freshness 申し送りがあればそれも含める
-- 実装に入る前に作業ツリーが clean か確認する（`git status`）。未コミット変更が
-  あれば停止して報告する。`codex/task-id` ブランチは現在ブランチの HEAD を基点に切る
-- 実装者は `codex/task-id` ブランチ上で、区切りごとにコミットする
+- 実装ブランチ名は `package.json` の `taskBranchPrefix`（既定 `task/`、未設定時も `task/`）を読み
+  `<prefix><task-id>`（既定 `task/<task-id>`）とする。
+- **worktree を構築する**: `npm run eval:worktree add <現在ブランチ HEAD SHA> --branch <prefix><task-id>`
+  を実行する。指定ブランチが未存在なら現在 HEAD を基点に新規作成、既存（再実装ループ）なら
+  そのブランチを checkout した worktree を、依存ディレクトリの symlink・gitignore された設定ファイルの
+  コピー（`package.json` の `evalWorktree` 設定が正本。`.gate-cache` 既定含む）つきで構築し、worktree
+  絶対パスを stdout 最終行に出力する。この **worktree 絶対パスを `<wt>` として implementer に渡す**。
+    - 実装フェーズはメインチェックアウトを dirty にしないため、着手前のメイン側 `git status`
+      clean 判定は行わない（従来の `git status` ゲートは TOCTOU で並走に無力だったため撤去）。
+      隔離の保証は「専用 worktree に新規ブランチを切る」こと自体が担う。
+- 呼び出しプロンプトに `$1/task.md` と `$1/review.md` のパス、および構築済み `<wt>` 絶対パスを
+  明記すること（サブエージェントは親の履歴を継承しないため）。1-b の freshness 申し送りが
+  あればそれも含める
+- 実装者は **`<wt>` を作業ディレクトリとして**全ファイル操作・コミット・`npm run gate` を行う
+  （Edit は `<wt>` 配下の絶対パス、git は `git -C <wt>`、gate は `<wt>` を cwd に実行）。状態ファイル
+  （`task.md` / `review.md` / `impl.md`）は従来どおりメインチェックアウト側の `$1`（`<task-dir>`）を
+  読み書きする（worktree には置かない）
+- 実装者は `<prefix><task-id>` ブランチ上で、区切りごとにコミットする
 - 開発の赤→緑ループは**変更レイヤだけ**を高速に回させる（テストランナーのパス/フィルタ指定）。
   フルビルドや全テストを毎イテレーションで回さない
 - 完了報告の前に 3 点ゲートを **`npm run gate`** で通させる（lint/format 検証・型/ビルド・
   テスト。`gate` は PASS 結果をコミット SHA 単位でキャッシュするため、後段の評価者が
-  同一コミットを検証する際に再実行ゼロでヒットする。仕組みは `scripts/gate/gate.mjs`）
-- 実装者は作業ログ（判断・逸脱・詰まり）を `$1/impl.md` に追記する。`task.md` は触らせない
+  同一コミットを検証する際に再実行ゼロでヒットする。`.gate-cache` は worktree 間で symlink 共有
+  される。仕組みは `scripts/gate/gate.mjs`）
+- 実装者は作業ログ（判断・逸脱・詰まり）をメインチェックアウト側の `$1/impl.md` に追記する。
+  `task.md` は触らせない
+- **実装 worktree はこの段では破棄しない**。再実装ループ（§4）で再利用し、最終確定（§5）の後に
+  片付ける
 
 ## 3. 評価
 
@@ -77,27 +98,22 @@ impl-evaluator サブエージェントで実装を独立検証させ、結果�
 - 評価に渡す前に実装者の変更がすべてコミット済みか確認する（未コミット変更が残っていると
   「クリーンな状態」が崩れる）
 - **評価は実装者 HEAD から作った隔離 worktree で行わせる**。構築・破棄は専用スクリプトに
-  固定化済みで、手組みさせない。隔離 worktree 内の `eval.md` / `acceptance/` は
-  worktree 削除で消えるため、削除前に必ずメイン checkout の task dir へ戻す:
-    0. メイン checkout 側で `MAIN_TASK_DIR`（`$1` の絶対パス）と `REL_TASK_DIR`
-       （リポジトリルートからの相対パス。例: `tasks/.../task-...`）を控える
-    1. `npm run eval:worktree -- add IMPLEMENTATION_HEAD_SHA` — worktree 展開・依存ディレクトリの
+  固定化済みで、手組みさせない:
+    1. `npm run eval:worktree add <実装者 HEAD SHA>` — worktree 展開・依存ディレクトリの
        symlink・gitignore された設定ファイルのコピーまでを行い、worktree パスを stdout 最終行に
        出力する（対象は `package.json` の `evalWorktree` 設定が正本。submodule を持つ
        プロジェクトは `scripts/eval/setupWorktree.mjs` に展開処理を足してカスタマイズする）
-    2. evaluator には `WORKTREE_PATH/REL_TASK_DIR` を task-dir として渡し、評価成果物は
-       worktree 側の task dir に書かせる
-    3. 評価完了後、`WORKTREE_PATH/REL_TASK_DIR/eval.md` と
-       `WORKTREE_PATH/REL_TASK_DIR/acceptance/`（存在する場合）を `MAIN_TASK_DIR/` へコピーする。
-       `artifacts/` など evaluator が作った task 成果物があれば同様に戻す
-    4. 戻し込み後にメイン checkout 側の `eval.md` / `acceptance/` を Read し、判定と成果物が
-       失われていないことを確認する
-    5. 最後に `npm run eval:worktree -- remove WORKTREE_PATH --discard` で片付ける。
-       `--discard` なしの remove は dirty worktree を拒否するため、未回収成果物の削除事故を防ぐ
+    2. 評価完了後は `npm run eval:worktree remove <パス>` で片付ける。dirty（未追跡・
+       未コミット変更あり）な worktree は既定で削除を拒否し保全候補パスを表示する（安全網）。
+       コピーバック漏れがあっても無言破棄しない。破棄してよいと確認できた場合のみ `--discard`
+       を付ける
 
-    gate キャッシュは `.gate-cache/` を symlink して worktree 間共有するため、同一コミットなら
-    評価側でも即キャッシュヒットする
+    gate キャッシュは worktree 間共有のため、同一コミットなら評価側でも即キャッシュヒットする
 
+- **評価成果物の出力先**: `eval.md` は**常に main checkout 側の `$1`（`<task-dir>`）に書く**
+  （worktree は gate 実行・検証専用。`eval.md` をコピーバックする必要は無い）。検証テストを
+  worktree 内で生成・実行した場合は、**`eval:worktree remove` の前に** worktree の `acceptance/` を
+  main checkout の `$1/acceptance/` へコピーバックする（コピーバック後に remove）
 - 評価者はクリーンな状態で 3 点ゲートを **`npm run gate`** で独立実行する。実装者が
   同一コミットで既に通していれば**キャッシュヒットで即時**（独立性はコンテンツアドレス＝
   実ツリー SHA をキーに担保。実装者の自己申告ではない）。そのうえでカバレッジの十分性まで
@@ -112,19 +128,41 @@ impl-evaluator サブエージェントで実装を独立検証させ、結果�
 
 - 最大 2 回まで反復する
 - PASS または上限到達で停止する
+- **再実装は §2 で構築した同一の実装 worktree（`<wt>`）を再利用する**（実装ブランチ
+  `<prefix><task-id>` がそこに checkout されたまま追加コミットを載せる）。worktree を破棄して
+  しまった場合は `npm run eval:worktree add <最新 HEAD SHA> --branch <prefix><task-id>` で
+  同一ブランチを別 worktree に再展開してよい（既存ブランチを checkout する）
 - 再実装時も実装者は `$1/impl.md` に `## attempt <n>` を追記する（過去ログは消さない）
 
 ## 5. 最終確定と close
 
-- PASS した場合のみ、task-implementer に最終確定を指示してよい
-  （履歴整理 / squash / 本流への `--no-ff` マージ。方針は運用に従う）
-- フォーマッタが Markdown を対象とするプロジェクトでは、md 成果物（`review.md` /
-  `impl.md` / `eval.md` 等）を整形してから close する（非冪等な再整形による後追い差分を防ぐ）
-- close は本流マージ後に **`npm run tasks:close -- $1 verdict=PASS attempts=N`** で確定する
-  （meta 更新〔closed_at 自動〕→ `tasks:index` → タスクディレクトリ一式 + カテゴリ index.md の
-  コミットまでを 1 コマンドで行う）。
+PASS した場合のみ最終確定する。実装ブランチ `<prefix><task-id>` は実装 worktree（`<wt>`）に
+checkout されたままなので、**同一ブランチを 2 箇所で checkout できない git 制約**を踏まえ、
+**マージ → close → index 再生成（reindex）→ worktree 片付け**の順で確定する（順序を入れ替えない）:
+
+1. **マージ（メインチェックアウトの基点ブランチ上）**: メインチェックアウトは基点ブランチを
+   checkout したまま、`git merge <prefix><task-id>` で実装ブランチを取り込む（履歴整理 / squash /
+   本流への `--no-ff` マージは運用方針に従う）。git は他 worktree が checkout 中のブランチでも、
+   それを**自分が checkout しない**マージは許可するため、実装 worktree を先に片付ける必要はない。
+   最終確定は task-implementer に指示してよい（マージ自体は基点ブランチ＝メインチェックアウト側）。
+2. **close（基点ブランチ上）**: **`tasks:close $1 verdict=PASS attempts=<反復回数>`** で確定する
+   （meta 更新〔closed_at 自動〕→ **自タスクディレクトリのみ**のコミットまでを 1 コマンドで行う）。
+   **グローバル index 再生成（カテゴリ `index.md`）は close から分離した**ため、close は index.md を
+   一切 stage / commit しない。フォーマッタが Markdown を対象とするプロジェクトでは、md 成果物
+   （`review.md` / `impl.md` / `eval.md` 等）を整形してから close する（非冪等な再整形による
+   後追い差分を防ぐ）。
+3. **index 再生成（基点ブランチ上・直列ステップ）**: **`tasks:reindex`** で全カテゴリ `index.md` を
+   再生成し、変更があれば `chore(tasks): reindex` で 1 コミットする（変更が無ければ何もコミット
+   しない）。マージは git により基点ブランチ上で直列化されるため、この reindex も同じ直列区間に
+   入り、index は常にマージ後の全体ビューから一意に生成される（per-task close は互いに素なパスのみ
+   を触り、並列・worktree マージで index.md が衝突しない）。
+4. **worktree 片付け**: マージ・close・reindex 完了後に **`eval:worktree remove <wt>`** で実装
+   worktree を破棄する（`git worktree remove` はブランチを消さないため、実装ブランチは残る）。dirty
+   なら拒否される（コミット漏れの安全網）。
+
 - FAIL のまま上限到達した場合は status は open のまま、
-  **`npm run tasks:close -- $1 verdict=FAIL attempts=N`** で記録・コミットしてから残課題を報告する。
+  **`tasks:close $1 verdict=FAIL attempts=<反復回数>`** で記録・コミットしてから残課題を報告する。
+  実装ブランチ・実装 worktree は破棄せず保持する（再開のため）。
 
 ## 6. サマリ報告（テンプレ固定）
 
@@ -135,7 +173,7 @@ impl-evaluator サブエージェントで実装を独立検証させ、結果�
 （受け入れ条件と対応づけた変更概要・実装コミット範囲・最終 status / verdict）
 
 ### 各エージェントからの報告事項
-- reviewer: 判定と申し送りの要点。1-a でスキップした場合は「スキップ（reviewed_sha から差分なし）」、
+- reviewer: 判定と申し送りの要点。1-a でスキップした場合は「スキップ（reviewed_sha=<sha> から差分なし）」、
   1-b の場合は freshness 判定と申し送り
 - implementer: 変更概要・review.md 申し送りへの対応・逸脱・詰まり
 - evaluator: 判定・カバレッジ/ドキュメント整合の所見
@@ -150,5 +188,5 @@ impl-evaluator サブエージェントで実装を独立検証させ、結果�
 ### その他特記事項
 
 ### 次のタスク提案
-- `tasks:next` を実行し、READY 先頭の推奨タスクと `/run-task dir` への投入可否を提示する
+- `tasks:next` を実行し、READY 先頭の推奨タスクと `/run-task <dir>` への投入可否を提示する
 ```

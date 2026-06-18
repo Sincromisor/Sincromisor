@@ -20,9 +20,9 @@ description: |-
 
 ### 1. 雛形生成
 
-`npm run tasks:new -- task-management "タイトル" --slug=ascii-slug` のように、
-カテゴリ、タイトル、必要なら slug を指定して `task.md` + `meta.yaml` の雛形を生成する。
-英数を含まないタイトルは `--slug=ascii-slug` が必須。
+`npm run tasks:new <大分類> "<タイトル>"` で `task.md` + `meta.yaml` の雛形を生成する
+。英数を含まないタイトルは `--slug=<英数とハイフン>`
+が必須。
 
 ### 2. 起票（あなた＝対話中のエージェントが記述する）
 
@@ -41,13 +41,13 @@ description: |-
 
 ### 3. 独立レビュー（レビュー専用サブエージェント）
 
-task-reviewer サブエージェントを呼び、`task-dir/task.md` をレビューさせ、結果を
-`task-dir/review.md` に出力させる。
+task-reviewer サブエージェントを呼び、`<task-dir>/task.md` をレビューさせ、結果を
+`<task-dir>/review.md` に出力させる。
 
 - サブエージェントは親（このセッション）の履歴を継承しない。**あなたの対話文脈は渡らず、
   `task.md` 単体で独立評価される**——これが独立レビューの担保。自分自身での自己レビューで
   代替しないこと（同一文脈での自己採点を避ける）。
-- 呼び出しプロンプトに対象パス `task-dir` を明記する。
+- 呼び出しプロンプトに対象パス `<task-dir>` を明記する。
 - サブエージェントの最終メッセージ（判定と要点）を確認し、`review.md` を必ず Read する。
 
 ### 4. 改訂ループ（NEEDS_REVISION の場合）
@@ -66,18 +66,18 @@ reviewer は `task.md` を書き換えない（判定の独立性）ため、改
 
 APPROVED に収束したら、判定とレビュー時点の HEAD を `meta.yaml` に記録し、起票をコミットする:
 
-1. `tasks:set task-dir review=APPROVED reviewed_sha=$(git rev-parse HEAD)`
+1. `tasks:set <task-dir> review=APPROVED reviewed_sha=$(git rev-parse HEAD)`
 2. `tasks:index`
 3. タスクディレクトリ（`task.md` / `meta.yaml` / `review.md`）と該当カテゴリの `index.md` を
-   コミットする（例: `chore(tasks): 起票 + レビュー APPROVED (task-id)`）
+   コミットする（例: `chore(tasks): 起票 + レビュー APPROVED (<task-id>)`）
 
 `reviewed_sha` は `/run-task` のレビュー段スキップ判定（3 段ゲート）の基準になる。
 記録しないと `/run-task` で同じフルレビューが再実行される。
 
 ### 6. 完了報告
 
-起票したタスクの `task-dir` と要点（背景・完了条件・確定した設計判断・
-ドキュメント同期の要否）をユーザーに提示する。実装まで回す場合は `/run-task task-dir` を
+起票したタスクの `<task-dir>` と要点（背景・完了条件・確定した設計判断・
+ドキュメント同期の要否）をユーザーに提示する。実装まで回す場合は `/run-task <task-dir>` を
 案内する（`/run-task` のレビュー段は、`reviewed_sha` から差分がなければエージェント起動なしで
 スキップされる）。
 

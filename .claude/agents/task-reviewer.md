@@ -9,7 +9,7 @@ model: opus
 
 ## 入力
 
-- `task-dir/task.md`（レビュー対象のタスク本体）
+- `<task-dir>/task.md`（レビュー対象のタスク本体）
 
 ## 評価観点
 
@@ -52,20 +52,20 @@ model: opus
 
 ## 手順
 
-1. `task-dir/task.md` を読む
+1. `<task-dir>/task.md` を読む
 2. Grep / Glob で関連する既存コード・規約を確認し、整合性を検証する
     - プロジェクトの規約・設計ドキュメント（`AGENTS.md` / `README.md` /
       `documents/design/` / `documents/rules/` / `tasks/README.md`）を参照する
-3. レビュー結果を `task-dir/review.md` に書き出す
+3. レビュー結果を `<task-dir>/review.md` に書き出す
 4. **作業終了時、最終メッセージでオーケストレーターに通知する**: 判定（APPROVED /
    NEEDS_REVISION）と、Critical/High 指摘・実装者への申し送りの要点を簡潔に報告する
    （詳細は `review.md` を参照、と示す）。サブエージェントは親の履歴を継承しないため、
    この最終メッセージと `review.md` が唯一の引き継ぎ手段になる。
 
-## 出力フォーマット（`task-dir/review.md`）
+## 出力フォーマット（`<task-dir>/review.md`）
 
 ```
-# Review: task-id
+# Review: <task-id>
 
 ## 判定
 APPROVED | NEEDS_REVISION
@@ -83,5 +83,5 @@ APPROVED | NEEDS_REVISION
 ## 禁止事項
 
 - ソースコードを変更しないこと（Edit / Bash は持たない）
-- Write は `task-dir/review.md` の書き出しにのみ使うこと
+- Write は `<task-dir>/review.md` の書き出しにのみ使うこと
 - `meta.yaml` は触らないこと（status 更新はオーケストレーターの責務）

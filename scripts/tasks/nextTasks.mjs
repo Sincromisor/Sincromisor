@@ -91,10 +91,7 @@ function sortById(a, b) {
 }
 
 function renderText(assessments, readyOnly) {
-    const ready = assessments
-        .filter((a) => a.readiness === "ready")
-        .filter((a) => !readyOnly || a.readyKind !== "needs-review")
-        .sort(sortReady);
+    const ready = assessments.filter((a) => a.readiness === "ready").sort(sortReady);
     const lines = [];
 
     const runnable = ready.filter((a) => a.readyKind !== "needs-review");
@@ -191,10 +188,12 @@ async function main() {
 
     if (json) {
         const result = toJson(assessments);
-        const ready = readyOnly
-            ? result.ready.filter((r) => r.readyKind !== "needs-review")
-            : result.ready;
-        const filtered = readyOnly ? { recommended: ready[0] ?? null, ready } : result;
+        const filtered = readyOnly
+            ? {
+                  recommended: result.recommended,
+                  ready: result.ready.filter((r) => r.readyKind !== "needs-review"),
+              }
+            : result;
         console.log(JSON.stringify(filtered, null, 2));
         return;
     }
