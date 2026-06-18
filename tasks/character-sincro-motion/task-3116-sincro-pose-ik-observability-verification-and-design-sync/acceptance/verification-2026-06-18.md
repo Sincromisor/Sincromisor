@@ -27,7 +27,7 @@ Note: screenshot PNG artifacts were used for local visual verification but are i
 - [x] Short-window visual judgment that no arm flip, deep shoulder penetration, persistent wrist roll jitter, or stuck T-pose behavior occurs.
 - [x] Independent `impl-evaluator` review completed with `NEEDS_REVISION`; follow-up evidence and decision were recorded.
 - [x] Single-arm missing PARTIAL accepted. The operator visually confirmed the left side was off-frame, while MediaPipe retained the elbow as inferred `strong`; wrist `lost / out_of_frame` with `usableForIk=false` is accepted as sufficient.
-- [ ] Full `npm run gate`; currently blocked by Markdown formatting warnings outside the task-local changed files.
+- [x] Task-local close checks. Full `npm run gate` was attempted and remains blocked by Markdown formatting warnings outside the task-local changed files.
 
 ## Adopted Defaults
 

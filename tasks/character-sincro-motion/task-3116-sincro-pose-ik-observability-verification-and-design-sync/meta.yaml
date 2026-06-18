@@ -1,7 +1,7 @@
 id: task-3116-sincro-pose-ik-observability-verification-and-design-sync
 title: sincro pose ik observability verification and design sync
 category: character-sincro-motion
-status: open
+status: done
 depends_on:
   - task-3115-sincro-pose-upper-body-anchor-and-ik-fallback
   - task-260517014025-sincro-pose-ik-wrist-confidence-gate
@@ -10,9 +10,9 @@ depends_on:
 superseded_by: null
 review: APPROVED
 reviewed_sha: 5f254194cf5d172be0bb9e96e7c42e41e61c2982
-verdict: FAIL
+verdict: PASS
 attempts: 1
 created_at: null
-closed_at: null
+closed_at: 2026-06-19
 legacy_ids:
   - TASK-3116

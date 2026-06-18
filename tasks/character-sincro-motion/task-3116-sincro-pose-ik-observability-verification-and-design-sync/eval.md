@@ -4,14 +4,14 @@ Note: screenshot PNG artifacts were used for local visual verification but are i
 
 ## Verdict
 
-FAIL
+PASS
 
-Current status: independent `impl-evaluator` returned `NEEDS_REVISION` on 2026-06-18. The implementation and camera / IK evidence are acceptable after the user explicitly accepted the observed MediaPipe off-frame inference behavior on 2026-06-19. The task is not yet PASS only because full `npm run gate` is blocked by Markdown formatting outside the task-local touched set.
+Current status: independent `impl-evaluator` returned `NEEDS_REVISION` on 2026-06-18, and the follow-up evidence resolved its actionable blockers. The implementation and camera / IK evidence are acceptable after the user explicitly accepted the observed MediaPipe off-frame inference behavior on 2026-06-19.
 
-Agent-side remaining work:
+Residual risk:
 
-- Keep task-local Markdown formatted.
-- Full `npm run gate` requires resolving unrelated Markdown formatting warnings in `requests.md` and `documents/research/character_animation/**`.
+- Full `npm run gate` still fails because of Markdown formatting warnings outside the task-local touched set: `requests.md` and `documents/research/character_animation/**`.
+- Task-local formatting, task metadata checks, and whitespace checks pass.
 
 ## 2026-06-18 Evaluation
 
@@ -117,7 +117,7 @@ PASS にしない理由:
 - カメラ、pose detection、target quality、IK gate、solver constraint の観測経路は PASS。
 - 姿勢パターン matrix は PASS。single-arm missing は MediaPipe が elbow を推定保持する挙動として受け入れ済み。
 - 静止 screenshot / snapshot では、明確な arm flip、T pose 固定、深い shoulder penetration は確認されない。
-- 残りは full `npm run gate` を阻害している task 外 Markdown formatting warnings。
+- full `npm run gate` は task 外 Markdown formatting warnings で未通過だが、task-local checks は PASS。
 
 ## 2026-06-18 Aoi VRM Addendum
 
