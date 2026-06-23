@@ -1,0 +1,14 @@
+id: task-260624013705-character-animation-3-canonical-upper-body-state-contract
+title: character animation 3.0 canonical upper body state contract
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260623221644-character-animation-3-motion-debug-layered-viewer
+superseded_by: null
+review: APPROVED
+reviewed_sha: 7a5308f408ef49ec9cc9a50630ce0222183daedf
+verdict: null
+attempts: 0
+created_at: 2026-06-24
+closed_at: null
+legacy_ids: []

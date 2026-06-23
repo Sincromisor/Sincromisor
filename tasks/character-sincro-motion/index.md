@@ -77,7 +77,16 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 30 件）
+## タスク一覧（自動生成 / 全 34 件）
+
+### open（未完） — 4 件
+
+| タスク                                                                                                                                                               | タイトル                                                    | 判定 | 依存                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [task-260624013705-character-animation-3-canonical-upper-body-state-contract](./task-260624013705-character-animation-3-canonical-upper-body-state-contract/task.md) | character animation 3.0 canonical upper body state contract | —    | `task-260623221644-character-animation-3-motion-debug-layered-viewer`                                                                             |
+| [task-260624013712-character-animation-3-canonical-torso-frame-estimator](./task-260624013712-character-animation-3-canonical-torso-frame-estimator/task.md)         | character animation 3.0 canonical torso frame estimator     | —    | `task-260624013705-character-animation-3-canonical-upper-body-state-contract`                                                                     |
+| [task-260624013718-character-animation-3-canonical-arm-feature-extraction](./task-260624013718-character-animation-3-canonical-arm-feature-extraction/task.md)       | character animation 3.0 canonical arm feature extraction    | —    | `task-260624013712-character-animation-3-canonical-torso-frame-estimator`                                                                         |
+| [task-260624013721-character-animation-3-canonical-debug-replay-integration](./task-260624013721-character-animation-3-canonical-debug-replay-integration/task.md)   | character animation 3.0 canonical debug replay integration  | —    | `task-260624013718-character-animation-3-canonical-arm-feature-extraction`, `task-260623221644-character-animation-3-motion-debug-layered-viewer` |
 
 ### done（完了） — 30 件
 
