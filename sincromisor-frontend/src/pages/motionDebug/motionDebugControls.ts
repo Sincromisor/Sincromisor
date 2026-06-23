@@ -3,12 +3,19 @@ import type {
     SincroPoseRetargetConfig,
 } from "../../character/retargeting/sincroPoseRetargeter";
 import { requireElement } from "./dom";
-import type { MotionDebugRetargetUiConfig, MotionDebugStatus } from "./types";
+import type {
+    MotionDebugRecordingDownloadResult,
+    MotionDebugRetargetUiConfig,
+    MotionDebugStatus,
+} from "./types";
 
 type MotionDebugControlCallbacks = {
     onStart: () => void;
     onStop: () => void;
     onCapture: () => void;
+    onRecordStart: () => void;
+    onRecordStop: () => void;
+    onRecordDownload: () => void;
     onRetargetConfigChange: (config: MotionDebugRetargetUiConfig) => void;
 };
 
@@ -20,6 +27,16 @@ export class MotionDebugControls {
     private readonly startButton = requireElement("motionDebugStart", HTMLButtonElement);
     private readonly stopButton = requireElement("motionDebugStop", HTMLButtonElement);
     private readonly captureButton = requireElement("motionDebugCapture", HTMLButtonElement);
+    private readonly recordStartButton = requireElement(
+        "motionDebugRecordStart",
+        HTMLButtonElement,
+    );
+    private readonly recordStopButton = requireElement("motionDebugRecordStop", HTMLButtonElement);
+    private readonly recordDownloadButton = requireElement(
+        "motionDebugRecordDownload",
+        HTMLButtonElement,
+    );
+    private readonly recordStatus = requireElement("motionDebugRecordStatus", HTMLElement);
     private readonly ikModeInput = requireElement("motionDebugIkMode", HTMLSelectElement);
     private readonly ikStrengthInput = requireElement("motionDebugIkStrength", HTMLInputElement);
     private readonly targetScaleInput = requireElement("motionDebugTargetScale", HTMLInputElement);
@@ -56,6 +73,9 @@ export class MotionDebugControls {
         this.startButton.addEventListener("click", callbacks.onStart);
         this.stopButton.addEventListener("click", callbacks.onStop);
         this.captureButton.addEventListener("click", callbacks.onCapture);
+        this.recordStartButton.addEventListener("click", callbacks.onRecordStart);
+        this.recordStopButton.addEventListener("click", callbacks.onRecordStop);
+        this.recordDownloadButton.addEventListener("click", callbacks.onRecordDownload);
         for (const element of this.retargetInputs()) {
             element.addEventListener("input", () => {
                 callbacks.onRetargetConfigChange(this.readRetargetConfig());
@@ -67,6 +87,27 @@ export class MotionDebugControls {
         this.statusText.textContent = message;
         this.startButton.disabled = status === "loading" || status === "running";
         this.stopButton.disabled = status !== "loading" && status !== "running";
+    }
+
+    renderRecordingState(snapshot: {
+        status: string;
+        frameCount: number;
+        durationMs: number;
+    }): void {
+        this.recordStartButton.disabled =
+            snapshot.status === "recording" || snapshot.status === "exporting";
+        this.recordStopButton.disabled = snapshot.status !== "recording";
+        this.recordDownloadButton.disabled =
+            snapshot.status !== "stopped" || snapshot.frameCount === 0;
+        this.recordStatus.textContent = `${snapshot.status} / ${snapshot.frameCount} frames / ${Math.round(snapshot.durationMs)}ms`;
+    }
+
+    renderRecordingDownload(result: MotionDebugRecordingDownloadResult): void {
+        if (result.ok) {
+            this.recordStatus.textContent = `downloaded ${result.fileName} (${result.byteLength} bytes)`;
+            return;
+        }
+        this.recordStatus.textContent = `${result.code}: ${result.message}`;
     }
 
     renderSnapshot(snapshot: unknown): void {

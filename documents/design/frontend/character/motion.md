@@ -48,7 +48,9 @@
 - `motion-debug`
     - `TrackerRuntime` / `SincroPoseTracker` / `SincroPoseRetargeter` / `SincroArmIkSolver` の本番経路を使う IK 調整専用ページ。
     - camera preview、Sincro pose target overlay、VRM 表示、retarget runtime snapshot を同一画面に並べる。
-    - `window.__SINCRO_MOTION_DEBUG__` から `startCamera()`、`loadVideoFixture()`、`setRetargetConfig()`、`waitForPoseDetected()`、`getSnapshot()`、`captureFrame()` を呼べる。
+    - `window.__SINCRO_MOTION_DEBUG__` から `startCamera()`、`loadVideoFixture()`、`setRetargetConfig()`、`waitForPoseDetected()`、`getSnapshot()`、`captureFrame()`、`startRecording()`、`stopRecording()`、`downloadRecording()`、`getRecordingState()` を呼べる。
+    - `startRecording()` は live camera / video fixture 起動後だけ成功し、`MotionDebugApp` が full manifest を生成して `MotionDebugRecorder` に渡す。
+    - `downloadRecording()` は stopped recorder から NDJSON / gzip NDJSON / Brotli request fallback の Blob を作り、DOM download link は `motion-debug` ページ側で生成する。
     - Debug Console と同じ retarget config / runtime snapshot を内部的に更新するが、RTC / chat / telop は起動しない。
 - `SincroArmIkSolver`
     - VRM normalized arm chain の neutral quaternion、腕長、肩幅、pole 方向をロード時に測定する。
@@ -96,8 +98,12 @@
 - motion evaluation log
     - developer 向け評価ログの schema は `src/character/motionEvaluation/motionDebugLogSchema.ts` を正本とする。
     - schema version は `sincro.motion-debug-log.v1` とし、NDJSON の 1 行目を manifest record、2 行目以降を frame record として保存する。
+    - recorder core は `src/character/motionEvaluation/motionDebugRecorder.ts` に置き、manifest / frame validation、dedupe、maxDuration / maxFrames stop、NDJSON / Blob export を DOM 非依存で扱う。
     - replay / metrics が読む正規化 pose snapshot の保存先は `frame.poseSnapshot` に固定し、MediaPipe raw result や solver 出力とは別 slot に分ける。
-    - camera の `deviceId` / `groupId` は raw 値を保存せず、必要な場合も hash 済みの `deviceIdHash` / `groupIdHash` だけを許可する。
+    - frame は pose callback / pose fallback callback 起点で記録し、render loop は recording state 表示だけを更新する。
+    - v1 frame は最低限 `frame.timestamp.mediaTimeMs`、`frame.video.width`、`frame.video.height`、`frame.poseSnapshot`、`frame.solver.poseRetarget`、`frame.solver.poseRetargetRuntime`、`frame.metrics.receivedAtPerformanceMs`、`frame.metrics.tracker` を保存する。`timestamp.receivedAtPerformanceMs` や top-level `tracker` は schema 外なので追加しない。
+    - camera の `deviceId` / `groupId` は raw 値を保存しない。保存が必要になった場合も export 単位の salt で hash し、cross-export stable hash を残さない。
+    - `MediaStreamTrack.getSettings()` 由来の camera settings は `MotionDebugApp` で scrub してから manifest へ渡し、recorder core は scrub 済み manifest を strict schema で検証する。
 
 ## IK Solver Policy
 

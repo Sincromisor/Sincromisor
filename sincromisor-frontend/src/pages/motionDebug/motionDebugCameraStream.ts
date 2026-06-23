@@ -1,13 +1,15 @@
 const CAMERA_REQUEST_TIMEOUT_MS = 12000;
 
+export const MOTION_DEBUG_CAMERA_CONSTRAINTS: MediaStreamConstraints = {
+    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+    audio: false,
+};
+
 export function requestMotionDebugCameraStream(): Promise<MediaStream> {
     let timedOut = false;
     let timeoutId = 0;
     const request = navigator.mediaDevices
-        .getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-            audio: false,
-        })
+        .getUserMedia(MOTION_DEBUG_CAMERA_CONSTRAINTS)
         .then((stream) => {
             if (timedOut) {
                 stream.getTracks().forEach((track) => {

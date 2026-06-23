@@ -144,6 +144,20 @@ button:disabled {
     font-size: 0.84rem;
 }
 
+.recordingPanel {
+    display: grid;
+    grid-template-columns: minmax(96px, 0.8fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    color: #c9d5df;
+    font-size: 0.84rem;
+}
+
+.recordingPanel output {
+    color: #f4f8fb;
+    font-variant-numeric: tabular-nums;
+}
+
 .controlPanel select,
 .controlPanel input {
     min-height: 34px;
