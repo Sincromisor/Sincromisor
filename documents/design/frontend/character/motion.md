@@ -107,6 +107,11 @@
     - motion-debug の `frame.canonical` slot にそのまま保存できる plain object として扱い、replay / metrics / temporal / intent / IK が同じ名前・単位で読む。
     - 左右は `left` / `right` の解剖学的 side に固定し、camera preview や screen mirror の左右は表さない。
     - `torso.coordinateSystem` は `body_local` に固定し、`shoulderCenter`、`bodyRight`、`bodyUp`、`bodyFront`、`shoulderWidth`、`torsoScale`、`yawRad` を finite number / 3 要素 tuple で保存する。
+    - torso frame 推定は `SincroPoseMotionSnapshot` の左右 shoulder world target を最優先する。両肩の `world.hasWorldCoordinates` が true で、`normalizedX/Y/Z` が finite の場合だけ `shoulderCenter`、解剖学的右方向の `bodyRight`、`shoulderWidth` を pose 由来として採用する。
+    - 左右 hip world target が同じ条件で有効な場合だけ `hipCenter` と `bodyUp = normalize(shoulderCenter - hipCenter)` を pose 由来で作る。hip world target 欠損時は `previous.torso.hipCenter` がある場合だけ引き継ぎ、ない場合は `hipCenter` を省略する。`calibration.torsoScale` は `torsoScale` fallback にだけ使い、synthetic hip center は作らない。
+    - `bodyFront` は `normalize(cross(bodyRight, bodyUp))` を候補にする。前フレームの `bodyFront` と dot product が負の場合は前フレームを維持し、`front_flip_rejected` warning を付ける。前フレームがない場合は有効な Face yaw から `normalize([sin(yawRad), 0, cos(yawRad)])` を hint にし、hint と逆向きの候補を反転して同じ warning を残す。
+    - Face yaw は `SincroFaceMotionSnapshot.headPose.yawDeg` を radian 化して `yawRad` に保存する。Face 未検出、confidence `< 0.08`、または Face snapshot 欠損時は yaw hint を使わず、`previous.torso.yawRad`、`calibration.neutralYawRad` の順に fallback する。
+    - calibration 未指定時は `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` を使う。肩幅が pose 由来で有効に取れた frame では、戻り値の `calibration.shoulderWidth` を同じ値へ更新し、replay / metrics が同じスケールを参照できるようにする。
     - `arms.left` / `arms.right` は `reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`、`classification` と part meta を保存する。値域外の入力は parse 時に reject し、計算側が clamp した場合だけ `outOfRangeFields` に元値と clamp 後の値を残す。
     - `calibration` は default / initial / online / replay の snapshot とし、未実装時も `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` を保存して replay の決定性を保つ。
     - `SincroPoseRetargetFrame` の VRM additive rotation や IK solver の quaternion は canonical state へ入れず、retarget / final pose の別 slot に分ける。
