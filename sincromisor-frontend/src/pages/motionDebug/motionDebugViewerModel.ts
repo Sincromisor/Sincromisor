@@ -1,3 +1,7 @@
+import {
+    type CanonicalUpperBodyState,
+    parseCanonicalUpperBodyState,
+} from "../../character/canonical/canonicalUpperBodyState";
 import type {
     SincroMotionDebugFrame,
     SincroMotionDebugLogManifest,
@@ -8,6 +12,7 @@ import type {
     MotionMetricSummary,
 } from "../../character/motionEvaluation/motionMetrics";
 import type {
+    CanonicalLayerParseError,
     MotionDebugLayerKey,
     MotionDebugLayerSnapshot,
     MotionDebugReplayState,
@@ -112,7 +117,7 @@ function createLayerSnapshots(
             false,
         ),
         reliability: createLayerSnapshot("reliability", context.replayFrame?.reliability, true),
-        canonical: createLayerSnapshot("canonical", context.replayFrame?.canonical, true),
+        canonical: createLayerSnapshot("canonical", resolveCanonicalValue(context), true),
         temporal: createLayerSnapshot("temporal", context.replayFrame?.temporal, true),
         intent: createLayerSnapshot("intent", context.replayFrame?.intent, true),
         solver: createLayerSnapshot(
@@ -123,6 +128,29 @@ function createLayerSnapshots(
         finalPose: createLayerSnapshot("finalPose", context.replayFrame?.finalPose, true),
         applied: createLayerSnapshot("applied", context.replayFrame?.applied, true),
         metrics: createMetricsLayerSnapshot(context.metrics),
+    };
+}
+
+function resolveCanonicalValue(
+    context: MotionDebugViewerContext,
+): CanonicalUpperBodyState | CanonicalLayerParseError | undefined {
+    if (context.replayFrame?.canonical !== undefined) {
+        return parseCanonicalLayerValue(context.replayFrame.canonical);
+    }
+    return context.liveSnapshot.canonical;
+}
+
+function parseCanonicalLayerValue(
+    value: unknown,
+): CanonicalUpperBodyState | CanonicalLayerParseError {
+    const parsed = parseCanonicalUpperBodyState(value);
+    if (parsed.ok) {
+        return parsed.state;
+    }
+    return {
+        parseStatus: "invalid",
+        errors: parsed.errors,
+        raw: value,
     };
 }
 

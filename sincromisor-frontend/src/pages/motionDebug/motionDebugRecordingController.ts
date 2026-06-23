@@ -1,3 +1,4 @@
+import type { CanonicalUpperBodyState } from "../../character/canonical/canonicalUpperBodyState";
 import type { SincroMotionDebugLogManifest } from "../../character/motionEvaluation/motionDebugLogSchema";
 import { SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION } from "../../character/motionEvaluation/motionDebugLogSchema";
 import {
@@ -8,9 +9,11 @@ import {
     type MotionDebugRecorderState,
 } from "../../character/motionEvaluation/motionDebugRecorder";
 import type { DebugConsoleSnapshot } from "../../features/debug/model/debugConsoleManager";
+import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
 import { MOTION_DEBUG_CAMERA_CONSTRAINTS } from "./motionDebugCameraStream";
+import { createMotionDebugCanonicalState } from "./motionDebugCanonicalState";
 import { downloadMotionDebugRecording } from "./motionDebugRecordingDownload";
 import type {
     MotionDebugCameraState,
@@ -26,13 +29,16 @@ type MotionDebugRecordingControllerParams = {
     getRetargetConfig: () => MotionDebugRetargetUiConfig;
     getTrackerStats: () => SincroTrackerWorkerStats;
     getDebugSnapshot: () => DebugConsoleSnapshot["sincroMotion"];
+    getFaceSnapshot: () => SincroFaceMotionSnapshot;
     getVrmUrl: () => string;
     poseTargetInferenceFps: number;
+    onCanonicalStateChange: (state: CanonicalUpperBodyState | undefined) => void;
     onStateChange: (state: MotionDebugRecorderState) => void;
 };
 
 export class MotionDebugRecordingController {
     private recorder = new MotionDebugRecorder();
+    private latestCanonical?: CanonicalUpperBodyState;
 
     constructor(private readonly params: MotionDebugRecordingControllerParams) {}
 
@@ -67,6 +73,9 @@ export class MotionDebugRecordingController {
 
     stop(reason: MotionDebugRecorderState["stopReason"] = "user"): MotionDebugRecorderResult {
         const result = this.recorder.stop(reason);
+        if (result.ok) {
+            this.resetCanonicalState();
+        }
         this.params.onStateChange(result.state);
         return result;
     }
@@ -89,14 +98,23 @@ export class MotionDebugRecordingController {
     recordPoseFrame(
         snapshot: SincroPoseMotionSnapshot,
     ): MotionDebugRecorderRecordFrameResult | undefined {
+        const mediaTimeMs = Number.isFinite(this.params.video.currentTime)
+            ? this.params.video.currentTime * 1000
+            : 0;
+        const canonical = createMotionDebugCanonicalState({
+            pose: snapshot,
+            face: this.params.getFaceSnapshot(),
+            previous: this.latestCanonical,
+            mediaTimeMs,
+        });
+        this.latestCanonical = canonical;
+        this.params.onCanonicalStateChange(canonical);
+
         if (this.recorder.getState().status !== "recording") {
             return undefined;
         }
 
         const debugSnapshot = this.params.getDebugSnapshot();
-        const mediaTimeMs = Number.isFinite(this.params.video.currentTime)
-            ? this.params.video.currentTime * 1000
-            : 0;
         const result = this.recorder.recordFrame({
             timestamp: {
                 mediaTimeMs,
@@ -106,6 +124,7 @@ export class MotionDebugRecordingController {
                 height: this.params.video.videoHeight,
             },
             poseSnapshot: snapshot,
+            canonical,
             solver: {
                 poseRetarget: debugSnapshot.poseRetarget,
                 poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
@@ -125,6 +144,11 @@ export class MotionDebugRecordingController {
 
     getState(): MotionDebugRecorderState {
         return this.recorder.getState();
+    }
+
+    resetCanonicalState(): void {
+        this.latestCanonical = undefined;
+        this.params.onCanonicalStateChange(undefined);
     }
 
     private createManifest(): SincroMotionDebugLogManifest | undefined {

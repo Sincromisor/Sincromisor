@@ -1,4 +1,8 @@
 import type {
+    CanonicalUpperBodyState,
+    CanonicalUpperBodyStateParseError,
+} from "../../character/canonical/canonicalUpperBodyState";
+import type {
     MotionDebugRecorderConfig,
     MotionDebugRecorderResult,
     MotionDebugRecorderState,
@@ -35,6 +39,12 @@ export type MotionDebugCameraState = {
 export type MotionDebugRenderMetrics = {
     renderFps: number;
     lastFrameCapturedAtMs?: number;
+};
+
+export type CanonicalLayerParseError = {
+    parseStatus: "invalid";
+    errors: CanonicalUpperBodyStateParseError[];
+    raw: unknown;
 };
 
 export type MotionDebugViewerMode = "live" | "recording" | "replay" | "metrics";
@@ -88,6 +98,7 @@ export type MotionDebugSnapshot = {
     camera: MotionDebugCameraState;
     recording: MotionDebugRecorderState;
     pose: SincroPoseMotionSnapshot;
+    canonical?: CanonicalUpperBodyState | CanonicalLayerParseError;
     tracker: SincroTrackerWorkerStats;
     poseRetarget: DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
     poseRetargetRuntime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"];

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+    CANONICAL_UPPER_BODY_SCHEMA_VERSION,
+    type CanonicalArmState,
+    type CanonicalPartMeta,
+    type CanonicalUpperBodyState,
+    DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
+} from "../../../character/canonical/canonicalUpperBodyState";
+import {
     SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION,
     type SincroMotionDebugLogManifest,
 } from "../../../character/motionEvaluation/motionDebugLogSchema";
@@ -108,7 +115,78 @@ function createPoseSnapshot(mediaTimeMs: number): SincroPoseMotionSnapshot {
     });
 }
 
-function createLiveSnapshot(): MotionDebugSnapshot {
+const BASE_CANONICAL_META: CanonicalPartMeta = {
+    confidence: 1,
+    source: "pose",
+    warnings: [],
+    outOfRangeFields: [],
+};
+
+function createCanonicalArmState(overrides: Partial<CanonicalArmState> = {}): CanonicalArmState {
+    return {
+        ...BASE_CANONICAL_META,
+        reach: 0.52,
+        elevationRad: 0.12,
+        openness: 0.24,
+        forwardness: 0.7,
+        elbowFlexionRad: 1.05,
+        classification: "front",
+        bodyLocalWrist: [0.12, 0.2, 0.4],
+        bodyLocalElbow: [0.08, 0.12, 0.22],
+        ...overrides,
+    };
+}
+
+function createCanonicalState(mediaTimeMs: number): CanonicalUpperBodyState {
+    return {
+        schemaVersion: CANONICAL_UPPER_BODY_SCHEMA_VERSION,
+        timestamp: {
+            mediaTimeMs,
+            poseLastUpdatedAtMs: mediaTimeMs - 10,
+        },
+        torso: {
+            ...BASE_CANONICAL_META,
+            coordinateSystem: "body_local",
+            shoulderCenter: [0, 1, 0],
+            hipCenter: [0, 0, 0],
+            bodyRight: [1, 0, 0],
+            bodyUp: [0, 1, 0],
+            bodyFront: [0, 0, 1],
+            shoulderWidth: 1,
+            torsoScale: 1,
+            yawRad: 0,
+        },
+        arms: {
+            left: createCanonicalArmState({
+                source: "mixed",
+                warnings: ["missing_world_coordinates"],
+                outOfRangeFields: [
+                    {
+                        path: "reach",
+                        value: 1.3,
+                        max: 1.15,
+                        clampedValue: 1.15,
+                    },
+                ],
+            }),
+            right: createCanonicalArmState({
+                source: "pose",
+                classification: "side",
+                openness: 0.8,
+                forwardness: 0.2,
+            }),
+        },
+        calibration: {
+            ...DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
+            id: `calibration-${mediaTimeMs}`,
+        },
+        warnings: ["missing_world_coordinates"],
+    };
+}
+
+function createLiveSnapshot(
+    options: Pick<MotionDebugSnapshot, "canonical"> = {},
+): MotionDebugSnapshot {
     const debugSnapshot = createDefaultSnapshot().sincroMotion;
     return {
         status: "running",
@@ -126,6 +204,7 @@ function createLiveSnapshot(): MotionDebugSnapshot {
             compression: "gzip",
         },
         pose: createPoseSnapshot(120),
+        canonical: options.canonical,
         tracker: debugSnapshot.tracker,
         poseRetarget: debugSnapshot.poseRetarget,
         poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
@@ -230,5 +309,139 @@ describe("createMotionDebugViewerSnapshot", () => {
         });
 
         expect(viewer.layers.solver.status).toBe("not_recorded");
+    });
+
+    it("uses live snapshot canonical as the canonical layer fallback", () => {
+        const liveSnapshot = createLiveSnapshot({
+            canonical: createCanonicalState(120),
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "live",
+            selectedLayer: "canonical",
+            liveSnapshot,
+            replayState: {
+                status: "idle",
+                frameCount: 0,
+            },
+        });
+
+        expect(viewer.layers.canonical.status).toBe("available");
+        expect(viewer.layers.canonical.value).toMatchObject({
+            schemaVersion: CANONICAL_UPPER_BODY_SCHEMA_VERSION,
+            timestamp: {
+                mediaTimeMs: 120,
+            },
+            arms: {
+                left: {
+                    reach: 0.52,
+                    elevationRad: 0.12,
+                    openness: 0.24,
+                    forwardness: 0.7,
+                    elbowFlexionRad: 1.05,
+                    classification: "front",
+                    source: "mixed",
+                    warnings: ["missing_world_coordinates"],
+                    outOfRangeFields: [
+                        {
+                            path: "reach",
+                            clampedValue: 1.15,
+                        },
+                    ],
+                },
+                right: {
+                    classification: "side",
+                },
+            },
+            calibration: {
+                id: "calibration-120",
+            },
+        });
+    });
+
+    it("prefers replay frame canonical over live snapshot canonical", () => {
+        const liveSnapshot = createLiveSnapshot({
+            canonical: createCanonicalState(120),
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "canonical",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                canonical: createCanonicalState(240),
+            },
+        });
+
+        expect(viewer.layers.canonical.status).toBe("available");
+        expect(viewer.layers.canonical.value).toMatchObject({
+            timestamp: {
+                mediaTimeMs: 240,
+            },
+            calibration: {
+                id: "calibration-240",
+            },
+        });
+    });
+
+    it("shows invalid replay canonical as an available parse error summary", () => {
+        const liveSnapshot = createLiveSnapshot({
+            canonical: createCanonicalState(120),
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "canonical",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                canonical: {
+                    schemaVersion: CANONICAL_UPPER_BODY_SCHEMA_VERSION,
+                    timestamp: {
+                        mediaTimeMs: 240,
+                    },
+                },
+            },
+        });
+
+        expect(viewer.layers.canonical.status).toBe("available");
+        expect(viewer.layers.canonical.value).toMatchObject({
+            parseStatus: "invalid",
+            errors: expect.arrayContaining([
+                expect.objectContaining({
+                    code: "invalid_state",
+                }),
+            ]),
+            raw: {
+                schemaVersion: CANONICAL_UPPER_BODY_SCHEMA_VERSION,
+            },
+        });
     });
 });

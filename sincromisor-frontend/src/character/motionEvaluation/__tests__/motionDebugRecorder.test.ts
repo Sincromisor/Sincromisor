@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+    CANONICAL_UPPER_BODY_SCHEMA_VERSION,
+    type CanonicalArmState,
+    type CanonicalPartMeta,
+    type CanonicalUpperBodyState,
+    DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
+    parseCanonicalUpperBodyState,
+} from "../../canonical/canonicalUpperBodyState";
+import {
     parseMotionDebugLogLines,
     SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION,
     type SincroMotionDebugLogManifest,
@@ -48,6 +56,56 @@ function createValidManifest(): SincroMotionDebugLogManifest {
     };
 }
 
+const BASE_CANONICAL_META: CanonicalPartMeta = {
+    confidence: 1,
+    source: "pose",
+    warnings: [],
+    outOfRangeFields: [],
+};
+
+function createCanonicalArmState(overrides: Partial<CanonicalArmState> = {}): CanonicalArmState {
+    return {
+        ...BASE_CANONICAL_META,
+        reach: 0.42,
+        elevationRad: 0.1,
+        openness: 0.2,
+        forwardness: 0.64,
+        elbowFlexionRad: 1.2,
+        classification: "front",
+        bodyLocalWrist: [0.1, 0.2, 0.3],
+        bodyLocalElbow: [0.08, 0.16, 0.24],
+        ...overrides,
+    };
+}
+
+function createCanonicalState(mediaTimeMs: number): CanonicalUpperBodyState {
+    return {
+        schemaVersion: CANONICAL_UPPER_BODY_SCHEMA_VERSION,
+        timestamp: {
+            mediaTimeMs,
+            poseLastUpdatedAtMs: 300,
+        },
+        torso: {
+            ...BASE_CANONICAL_META,
+            coordinateSystem: "body_local",
+            shoulderCenter: [0, 1, 0],
+            hipCenter: [0, 0, 0],
+            bodyRight: [1, 0, 0],
+            bodyUp: [0, 1, 0],
+            bodyFront: [0, 0, 1],
+            shoulderWidth: 1,
+            torsoScale: 1,
+            yawRad: 0,
+        },
+        arms: {
+            left: createCanonicalArmState(),
+            right: createCanonicalArmState({ classification: "side", forwardness: 0.2 }),
+        },
+        calibration: DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
+        warnings: [],
+    };
+}
+
 function createValidFrameInput(mediaTimeMs = 120): MotionDebugRecorderFrameInput {
     return {
         timestamp: {
@@ -61,6 +119,7 @@ function createValidFrameInput(mediaTimeMs = 120): MotionDebugRecorderFrameInput
             detected: true,
             lastUpdatedAtMs: 300,
         },
+        canonical: createCanonicalState(mediaTimeMs),
         solver: {
             poseRetarget: {
                 armIkMode: "world_3d_ik",
@@ -117,6 +176,15 @@ describe("MotionDebugRecorder", () => {
             },
         });
         expect(parsed.frames[0]?.timestamp).toEqual({ mediaTimeMs: 120 });
+        const canonical = parsed.frames[0]?.canonical;
+        expect(canonical).toBeDefined();
+        const canonicalParse = parseCanonicalUpperBodyState(canonical);
+        expect(canonicalParse.ok).toBe(true);
+        if (!canonicalParse.ok) {
+            return;
+        }
+        expect(canonicalParse.state.schemaVersion).toBe(CANONICAL_UPPER_BODY_SCHEMA_VERSION);
+        expect(canonicalParse.state.arms.left.classification).toBe("front");
     });
 
     it("rejects invalid manifest and invalid frame payloads", () => {

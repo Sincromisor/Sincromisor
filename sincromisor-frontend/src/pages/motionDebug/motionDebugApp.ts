@@ -1,4 +1,8 @@
 import { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
+import {
+    type CanonicalUpperBodyState,
+    parseCanonicalUpperBodyState,
+} from "../../character/canonical/canonicalUpperBodyState";
 import type {
     MotionDebugRecorderConfig,
     MotionDebugRecorderResult,
@@ -9,6 +13,7 @@ import {
     type MotionMetricConfig,
     type MotionMetricSummary,
 } from "../../character/motionEvaluation/motionMetrics";
+import type { MotionReplayApplyContext } from "../../character/motionEvaluation/motionReplayPlayer";
 import { MotionReplayPlayer } from "../../character/motionEvaluation/motionReplayPlayer";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
@@ -26,6 +31,7 @@ import { TrackerRuntime } from "../../features/gaze/trackingRuntime/trackerRunti
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { formatError, requireElement } from "./dom";
 import { requestMotionDebugCameraStream } from "./motionDebugCameraStream";
+import { createMotionDebugCanonicalState } from "./motionDebugCanonicalState";
 import { MotionDebugControls } from "./motionDebugControls";
 import { MotionDebugFrameCapture } from "./motionDebugFrameCapture";
 import { MotionDebugRecordingController } from "./motionDebugRecordingController";
@@ -97,8 +103,7 @@ export class MotionDebugApp {
     private readonly frameCapture = new MotionDebugFrameCapture();
     private readonly recording: MotionDebugRecordingController;
     private readonly replay = new MotionReplayPlayer<MotionDebugSnapshot>({
-        applyPoseSnapshot: (snapshot, context) =>
-            this.applyReplayPoseSnapshot(snapshot, context.mediaTimeMs),
+        applyPoseSnapshot: (snapshot, context) => this.applyReplayPoseSnapshot(snapshot, context),
         readSnapshot: () => this.getSnapshot(),
     });
     private readonly scene: VRMScene;
@@ -109,7 +114,10 @@ export class MotionDebugApp {
     private cameraSource: MotionDebugCameraState["source"] = "none";
     private status: MotionDebugStatus = "idle";
     private message = "待機中";
+    private latestFaceSnapshot: SincroFaceMotionSnapshot =
+        this.debugConsole.getSnapshot().sincroMotion.face;
     private latestPoseSnapshot: SincroPoseMotionSnapshot = DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT;
+    private latestCanonical?: MotionDebugSnapshot["canonical"];
     private latestTrackerStats: SincroTrackerWorkerStats =
         this.debugConsole.getSnapshot().sincroMotion.tracker;
     private retargetConfig: MotionDebugRetargetUiConfig = {
@@ -176,8 +184,12 @@ export class MotionDebugApp {
             getRetargetConfig: () => this.retargetConfig,
             getTrackerStats: () => this.latestTrackerStats,
             getDebugSnapshot: () => this.debugConsole.getSnapshot().sincroMotion,
+            getFaceSnapshot: () => this.latestFaceSnapshot,
             getVrmUrl: () => getMotionDebugVrmUrl(),
             poseTargetInferenceFps: POSE_TARGET_INFERENCE_FPS,
+            onCanonicalStateChange: (state) => {
+                this.latestCanonical = state;
+            },
             onStateChange: (state) => {
                 this.controls.renderRecordingState(state);
             },
@@ -238,6 +250,7 @@ export class MotionDebugApp {
             camera: this.cameraState(),
             recording: this.recording.getState(),
             pose: this.latestPoseSnapshot,
+            canonical: this.latestCanonical,
             tracker: this.latestTrackerStats,
             poseRetarget: debugSnapshot.poseRetarget,
             poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
@@ -327,6 +340,7 @@ export class MotionDebugApp {
         }
 
         const result = this.replay.loadRecordingText(textInput.text);
+        this.resetCanonicalState();
         if (result.ok) {
             this.stopActiveRuntime("motion_debug_replay_loaded");
             this.setStatus("stopped", "replay 読み込み済み");
@@ -456,6 +470,7 @@ export class MotionDebugApp {
         this.activeFixtureUrl = undefined;
         this.activeStream = undefined;
         this.cameraSource = "none";
+        this.resetCanonicalState();
         this.behaviorState.setFaceMotionTrackingEnabled(false);
         this.behaviorState.setPoseMotionTrackingEnabled(false);
         this.controls.setStatus(this.status, this.message);
@@ -490,6 +505,7 @@ export class MotionDebugApp {
     }
 
     private handleFaceMotion(snapshot: SincroFaceMotionSnapshot): void {
+        this.latestFaceSnapshot = snapshot;
         this.behaviorState.applyFaceMotion(snapshot);
         this.debugConsole.updateSincroFaceMotion(snapshot);
     }
@@ -511,14 +527,52 @@ export class MotionDebugApp {
 
     private applyReplayPoseSnapshot(
         snapshot: SincroPoseMotionSnapshot,
-        mediaTimeMs: number,
+        context: MotionReplayApplyContext,
     ): MotionDebugSnapshot {
         this.latestPoseSnapshot = snapshot;
-        this.behaviorState.applyPoseMotion(snapshot, mediaTimeMs);
+        this.updateReplayCanonical(snapshot, context);
+        this.behaviorState.applyPoseMotion(snapshot, context.mediaTimeMs);
         this.debugConsole.updateSincroPoseMotion(snapshot);
         this.overlayRenderer.render(snapshot, this.video);
-        this.scene.renderOnce(mediaTimeMs);
+        this.scene.renderOnce(context.mediaTimeMs);
         return this.getSnapshot();
+    }
+
+    private updateReplayCanonical(
+        snapshot: SincroPoseMotionSnapshot,
+        context: MotionReplayApplyContext,
+    ): void {
+        if (context.frame.canonical !== undefined) {
+            const parsed = parseCanonicalUpperBodyState(context.frame.canonical);
+            this.latestCanonical = parsed.ok
+                ? parsed.state
+                : {
+                      parseStatus: "invalid",
+                      errors: parsed.errors,
+                      raw: context.frame.canonical,
+                  };
+            return;
+        }
+
+        this.latestCanonical = createMotionDebugCanonicalState({
+            pose: snapshot,
+            face: this.latestFaceSnapshot,
+            previous: this.latestValidCanonical(),
+            mediaTimeMs: context.mediaTimeMs,
+        });
+    }
+
+    private latestValidCanonical(): CanonicalUpperBodyState | undefined {
+        const canonical = this.latestCanonical;
+        if (canonical === undefined || "parseStatus" in canonical) {
+            return undefined;
+        }
+        return canonical;
+    }
+
+    private resetCanonicalState(): void {
+        this.latestCanonical = undefined;
+        this.recording.resetCanonicalState();
     }
 
     private scheduleNextReplayFrame(currentFrameIndex: number): void {
