@@ -113,8 +113,10 @@
     - Face yaw は `SincroFaceMotionSnapshot.headPose.yawDeg` を radian 化して `yawRad` に保存する。Face 未検出、confidence `< 0.08`、または Face snapshot 欠損時は yaw hint を使わず、`previous.torso.yawRad`、`calibration.neutralYawRad` の順に fallback する。
     - calibration 未指定時は `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` を使う。肩幅が pose 由来で有効に取れた frame では、戻り値の `calibration.shoulderWidth` を同じ値へ更新し、replay / metrics が同じスケールを参照できるようにする。
     - `arms.left` / `arms.right` は `reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`、`classification` と part meta を保存する。値域外の入力は parse 時に reject し、計算側が clamp した場合だけ `outOfRangeFields` に元値と clamp 後の値を残す。
+    - canonical arm feature は `SincroPoseMotionSnapshot` の shoulder / elbow / wrist target と torso frame だけから抽出する。`reach` は shoulder-wrist body-local 距離を肩-肘 + 肘-手首の腕長で割った無次元値、`elevationRad` は body-local 方向 Y 成分の radian、`openness` は解剖学的 side 方向を正にした `-1..1`、`forwardness` は body-front 方向・MediaPipe world Z・2D 投影短縮を重み付き再正規化した `0..1`、`elbowFlexionRad` は伸び切り `0` から屈曲 `Math.PI` へ近づく radian とする。
+    - `classification` は deterministic rule で、`confidence < 0.15` を `unknown`、`openness < -0.25` を `crossed` 優先、`forwardness >= 0.62 && abs(openness) < 0.35` を `front`、`abs(openness) >= 0.45 && forwardness < 0.45` を `side`、`forwardness >= 0.35 && abs(openness) >= 0.25` を `diagonal`、それ以外を `unknown` とする。
     - `calibration` は default / initial / online / replay の snapshot とし、未実装時も `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` を保存して replay の決定性を保つ。
-    - `SincroPoseRetargetFrame` の VRM additive rotation や IK solver の quaternion は canonical state へ入れず、retarget / final pose の別 slot に分ける。
+    - `SincroPoseRetargetFrame` の VRM additive rotation、IK solver の quaternion、AnimationMixer 出力は canonical arm feature の入力にも canonical state にも入れず、retarget / final pose の別 slot に分ける。
 - `motion-debug` snapshot
     - `pose`、`tracker`、`poseRetarget`、`poseRetargetRuntime`、camera readiness、render fps をまとめて返す。
     - 既存 field 名は維持し、optional `viewer` field に viewer mode、selected layer、layer status / value、recording、replay、metrics summary を追加する。

@@ -1,9 +1,11 @@
 # Evaluation: task-260624013712-character-animation-3-canonical-torso-frame-estimator
 
 ## 判定
+
 PASS
 
 ## 受け入れ条件チェックリスト
+
 - [✓] `canonicalTorsoFrameEstimator.ts` を追加し、`estimateCanonicalTorsoFrame(input)`、`CanonicalTorsoFrameInput`、`CanonicalTorsoFrameResult` を export している。
 - [✓] shoulder world target は `world.hasWorldCoordinates === true` かつ `normalizedX/Y/Z` が finite の場合だけ使い、`rawX/Y/Z` を主入力にしていない。
 - [✓] 左右 hip world target が有効な場合だけ `hipCenter` と `bodyUp` を hip 由来で作っている。
@@ -19,14 +21,17 @@ PASS
 - [✓] `documents/design/frontend/character/motion.md` に torso frame 推定の入力優先順位、front flip reject、Face yaw fallback、calibration fallback が同期されている。
 
 ## テスト結果
+
 - `npm run gate` を評価 worktree `/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-bb09d0a48fbb-ZPgPI0` で実行: passed。
 - gate 詳細: `gate:lint` CACHE HIT、`gate:build` CACHE HIT、`gate:test` CACHE HIT。対象は `bb09d0a` の clean tree。
 - test summary: `54 passed (54)`。
 - カバレッジ評価: 受け入れ条件の主要分岐は focused unit test で十分に押さえられている。前回不足していた `hipCenterTracked === false` かつ hip world target 有効時の confidence clamp も追加テストで確認済み。
 
 ## ドキュメント整合性
+
 - 公開通信契約や外部 API の変更はない。
 - character motion の内部 contract 変更として `documents/design/frontend/character/motion.md` は attempt 1 で更新済み。attempt 2 は既存文書契約どおりに実装を合わせる修正で、追加の文書差分は不要。
 
 ## 残課題（FAIL の場合）
+
 - なし。
