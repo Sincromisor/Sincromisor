@@ -269,7 +269,11 @@ export function estimateCanonicalTorsoFrame(
         calibration.shoulderWidth = shoulders.shoulderWidth;
     }
 
-    const usedFallback = !shoulders.fromPose || !hips.fromPose || bodyFront.usedFallback;
+    const usedFallback =
+        !shoulders.fromPose ||
+        !hips.fromPose ||
+        bodyFront.usedFallback ||
+        input.pose.upperBody.hipCenterTracked === false;
     const confidence = usedFallback
         ? Math.min(shoulders.confidence, hips.confidence, FALLBACK_CONFIDENCE_MAX)
         : Math.min(shoulders.confidence, hips.confidence);

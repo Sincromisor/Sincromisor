@@ -211,6 +211,26 @@ describe("estimateCanonicalTorsoFrame", () => {
         expect(result.torso.warnings).toContain("missing_world_coordinates");
     });
 
+    it("clamps confidence when hipCenterTracked is false even with valid hip world targets", () => {
+        const result = estimateCanonicalTorsoFrame({
+            pose: createPose({
+                leftShoulder: [-0.5, 1, 0],
+                rightShoulder: [0.5, 1, 0],
+                leftHip: [-0.25, 0, 0],
+                rightHip: [0.25, 0, 0],
+                shoulderConfidence: 0.95,
+                hipConfidence: 0.9,
+                hipCenterTracked: false,
+            }),
+            mediaTimeMs: 1150,
+        });
+
+        expectTupleClose(result.torso.hipCenter, [0, 0, 0]);
+        expect(result.torso.confidence).toBeLessThanOrEqual(0.45);
+        expect(result.torso.confidence).toBeCloseTo(0.45);
+        expect(result.torso.warnings).toContain("missing_world_coordinates");
+    });
+
     it("rejects a front candidate that flips against the previous frame", () => {
         const result = estimateCanonicalTorsoFrame({
             pose: createPose({
