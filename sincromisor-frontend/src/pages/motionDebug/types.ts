@@ -4,7 +4,9 @@ import type {
     MotionDebugRecorderState,
 } from "../../character/motionEvaluation/motionDebugRecorder";
 import type {
+    MotionMetricComparison,
     MotionMetricConfig,
+    MotionMetricKey,
     MotionMetricSummary,
 } from "../../character/motionEvaluation/motionMetrics";
 import type {
@@ -35,6 +37,51 @@ export type MotionDebugRenderMetrics = {
     lastFrameCapturedAtMs?: number;
 };
 
+export type MotionDebugViewerMode = "live" | "recording" | "replay" | "metrics";
+
+export type MotionDebugLayerKey =
+    | "camera"
+    | "mediapipe"
+    | "poseSnapshot"
+    | "reliability"
+    | "canonical"
+    | "temporal"
+    | "intent"
+    | "solver"
+    | "finalPose"
+    | "applied"
+    | "metrics";
+
+export type MotionDebugLayerStatus =
+    | "available"
+    | "not_recorded"
+    | "not_implemented"
+    | "not_calculated";
+
+export type MotionDebugLayerSnapshot = {
+    status: MotionDebugLayerStatus;
+    label: string;
+    value?: unknown;
+};
+
+export type MotionDebugViewerSnapshot = {
+    mode: MotionDebugViewerMode;
+    selectedLayer: MotionDebugLayerKey;
+    layers: Record<MotionDebugLayerKey, MotionDebugLayerSnapshot>;
+    recording?: Pick<
+        MotionDebugRecorderState,
+        "status" | "frameCount" | "durationMs" | "compression" | "compressionFallbackReason"
+    > & {
+        scrubbedCameraSettings?: boolean;
+    };
+    replay?: Pick<
+        MotionReplayState,
+        "status" | "mode" | "frameCount" | "currentFrameIndex" | "lastResult"
+    >;
+    metrics?: MotionMetricSummary;
+    metricComparison?: Partial<Record<MotionMetricKey, MotionMetricComparison>>;
+};
+
 export type MotionDebugSnapshot = {
     status: MotionDebugStatus;
     message: string;
@@ -45,6 +92,7 @@ export type MotionDebugSnapshot = {
     poseRetarget: DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
     poseRetargetRuntime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"];
     render: MotionDebugRenderMetrics;
+    viewer?: MotionDebugViewerSnapshot;
 };
 
 export type MotionDebugRecordingDownloadResult =

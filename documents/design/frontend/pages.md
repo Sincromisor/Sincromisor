@@ -45,6 +45,7 @@
 - Developer pages:
     - `motion-debug` は AppShell / RTC / chat / startup dialog を持たず、camera / tracker / VRM retarget の観測に限定する。
     - `motion-debug` は `?vrm=/characters/<file>.vrm` で public `characters/` 配下の VRM を指定できる。指定がない場合や、cross-origin / `characters/` 外の URL は `/characters/default.vrm` に戻す。
+    - `motion-debug` は developer viewer として live / recording / replay / metrics mode を持ち、recorded motion log の layer status、replay state、`MotionMetricSummary` を同じ画面で確認する。
     - Playwright から使う `window.__SINCRO_MOTION_DEBUG__` は frontend developer tooling の内部 API として扱い、本番 endpoint / JSON 契約には含めない。
 
 ## Change Checklist

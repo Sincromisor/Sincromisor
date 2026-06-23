@@ -222,6 +222,142 @@ button:disabled {
     padding: 12px;
 }
 
+.viewerToolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.viewerToolbar label {
+    display: grid;
+    gap: 4px;
+    color: #c9d5df;
+    font-size: 0.78rem;
+}
+
+.viewerToolbar select {
+    min-width: 0;
+    min-height: 34px;
+    box-sizing: border-box;
+    border: 1px solid rgb(255 255 255 / 16%);
+    border-radius: 6px;
+    color: #f4f8fb;
+    background: #11171c;
+    padding: 0 8px;
+}
+
+.viewerPanel {
+    display: grid;
+    gap: 10px;
+}
+
+.viewerSummary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+}
+
+.viewerSummaryRow {
+    display: grid;
+    grid-template-columns: minmax(96px, 0.7fr) minmax(0, 1fr);
+    gap: 6px;
+    align-items: center;
+    min-width: 0;
+    color: #c9d5df;
+    font-size: 0.78rem;
+}
+
+.viewerSummaryRow output {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: #f4f8fb;
+    font-variant-numeric: tabular-nums;
+}
+
+.layerStatus {
+    width: fit-content;
+    max-width: 100%;
+    border: 1px solid rgb(255 255 255 / 14%);
+    border-radius: 6px;
+    color: #f4f8fb;
+    background: #24323d;
+    padding: 6px 8px;
+    overflow-wrap: anywhere;
+    font-size: 0.78rem;
+}
+
+.layerStatus[data-status="available"] {
+    background: #244532;
+}
+
+.layerStatus[data-status="not_recorded"],
+.layerStatus[data-status="not_calculated"] {
+    background: #4b3f22;
+}
+
+.layerStatus[data-status="not_implemented"] {
+    background: #4b2a2f;
+}
+
+.layerValue {
+    min-height: 88px;
+    max-height: 180px;
+    overflow: auto;
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 6px;
+    background: #11171c;
+    padding: 10px;
+}
+
+.metricsPanel {
+    margin-top: 12px;
+    overflow-x: auto;
+}
+
+.metricsPanel table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: collapse;
+    font-size: 0.76rem;
+}
+
+.metricsPanel th,
+.metricsPanel td {
+    border-bottom: 1px solid rgb(255 255 255 / 10%);
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.metricsPanel th {
+    color: #a9b4c2;
+    font-weight: 640;
+}
+
+.metricsPanel tr[data-status="pass"] td {
+    color: #c7f1d5;
+}
+
+.metricsPanel tr[data-status="warn"] td,
+.metricsPanel tr[data-status="not_available"] td {
+    color: #f4d58e;
+}
+
+.metricsPanel tr[data-status="fail"] td {
+    color: #f3a3a3;
+}
+
+.rawSnapshotDetails {
+    margin-top: 12px;
+    color: #c9d5df;
+}
+
+.rawSnapshotDetails summary {
+    cursor: pointer;
+    font-size: 0.82rem;
+}
+
 .snapshotPanel pre {
     margin: 0;
     white-space: pre-wrap;
@@ -248,5 +384,10 @@ button:disabled {
 
     .motionDebugStage {
         grid-template-rows: minmax(320px, 44vh) minmax(320px, 44vh);
+    }
+
+    .viewerToolbar,
+    .viewerSummary {
+        grid-template-columns: 1fr;
     }
 }

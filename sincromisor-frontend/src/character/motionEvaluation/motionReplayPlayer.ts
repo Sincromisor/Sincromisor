@@ -153,6 +153,19 @@ export class MotionReplayPlayer<TSnapshot = unknown> {
         return this.frames;
     }
 
+    replayManifest(): SincroMotionDebugLogManifest | undefined {
+        return this.manifest;
+    }
+
+    replayFrame(
+        frameIndex: number | undefined = this.state.currentFrameIndex,
+    ): SincroMotionDebugFrame | undefined {
+        if (frameIndex === undefined) {
+            return undefined;
+        }
+        return this.frames[frameIndex];
+    }
+
     private applyFrame(
         mode: MotionReplayMode,
         frameIndex: number,

@@ -7,6 +7,7 @@ import type {
 import {
     calculateMotionMetricSummary,
     type MotionMetricConfig,
+    type MotionMetricSummary,
 } from "../../character/motionEvaluation/motionMetrics";
 import { MotionReplayPlayer } from "../../character/motionEvaluation/motionReplayPlayer";
 import {
@@ -29,10 +30,12 @@ import { MotionDebugControls } from "./motionDebugControls";
 import { MotionDebugFrameCapture } from "./motionDebugFrameCapture";
 import { MotionDebugRecordingController } from "./motionDebugRecordingController";
 import { createFixtureVideoStream } from "./motionDebugVideoSource";
+import { createMotionDebugViewerSnapshot } from "./motionDebugViewerModel";
 import { MotionDebugPoseOverlayRenderer } from "./poseOverlayRenderer";
 import type {
     MotionDebugApi,
     MotionDebugCameraState,
+    MotionDebugLayerKey,
     MotionDebugRecordingDownloadResult,
     MotionDebugRenderMetrics,
     MotionDebugReplayFrameResult,
@@ -42,6 +45,7 @@ import type {
     MotionDebugRetargetUiConfig,
     MotionDebugSnapshot,
     MotionDebugStatus,
+    MotionDebugViewerMode,
 } from "./types";
 
 const DEFAULT_VRM_URL = "/characters/default.vrm";
@@ -119,6 +123,10 @@ export class MotionDebugApp {
     private renderFps = 0;
     private renderFrames = 0;
     private renderFpsStartedAtMs = performance.now();
+    private viewerMode: MotionDebugViewerMode = "live";
+    private selectedLayer: MotionDebugLayerKey = "poseSnapshot";
+    private viewerModePinned = false;
+    private latestMetricSummary?: MotionMetricSummary;
 
     constructor() {
         const vrmStage = requireElement("motionDebugVrmStage", HTMLDivElement);
@@ -149,6 +157,15 @@ export class MotionDebugApp {
             },
             onRetargetConfigChange: (config) => {
                 this.setRetargetConfig(config);
+            },
+            onViewerModeChange: (mode) => {
+                this.viewerMode = mode;
+                this.viewerModePinned = true;
+                this.renderSnapshot();
+            },
+            onViewerLayerChange: (layer) => {
+                this.selectedLayer = layer;
+                this.renderSnapshot();
             },
         });
         this.recording = new MotionDebugRecordingController({
@@ -196,6 +213,7 @@ export class MotionDebugApp {
 
     stopCamera(): void {
         this.stopActiveRuntime("motion_debug_stopped");
+        this.setAutoViewerMode("live");
         this.setStatus("stopped", "停止中");
         this.renderSnapshot();
     }
@@ -214,7 +232,7 @@ export class MotionDebugApp {
 
     getSnapshot(): MotionDebugSnapshot {
         const debugSnapshot = this.debugConsole.getSnapshot().sincroMotion;
-        return {
+        const liveSnapshot: Omit<MotionDebugSnapshot, "viewer"> = {
             status: this.status,
             message: this.message,
             camera: this.cameraState(),
@@ -224,6 +242,18 @@ export class MotionDebugApp {
             poseRetarget: debugSnapshot.poseRetarget,
             poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
             render: this.renderMetrics(),
+        };
+        return {
+            ...liveSnapshot,
+            viewer: createMotionDebugViewerSnapshot({
+                mode: this.viewerMode,
+                selectedLayer: this.selectedLayer,
+                liveSnapshot,
+                replayState: this.replay.getReplayState(),
+                replayManifest: this.replay.replayManifest(),
+                replayFrame: this.replay.replayFrame(),
+                metrics: this.latestMetricSummary,
+            }),
         };
     }
 
@@ -263,6 +293,9 @@ export class MotionDebugApp {
 
     startRecording(config?: Partial<MotionDebugRecorderConfig>): MotionDebugRecorderResult {
         const result = this.recording.start(config);
+        if (result.ok) {
+            this.setAutoViewerMode("recording");
+        }
         this.renderSnapshot();
         return result;
     }
@@ -315,6 +348,9 @@ export class MotionDebugApp {
             mode: options.mode,
             autoplay: options.autoplay,
         });
+        if (result.ok) {
+            this.setAutoViewerMode("replay");
+        }
         this.updateReplayStatus(result, options.autoplay === true);
         if (result.ok && options.autoplay === true) {
             this.scheduleNextReplayFrame(result.frameIndex);
@@ -351,10 +387,15 @@ export class MotionDebugApp {
                 message: "Motion replay has no loaded recording.",
             };
         }
-        return {
+        const summary = calculateMotionMetricSummary(this.replay.replayFrames(), config);
+        const result: MotionDebugReplayMetricsResult = {
             ok: true,
-            summary: calculateMotionMetricSummary(this.replay.replayFrames(), config),
+            summary,
         };
+        this.latestMetricSummary = summary;
+        this.setAutoViewerMode("metrics");
+        this.renderSnapshot();
+        return result;
     }
 
     private async startRuntimeWithStream(
@@ -590,6 +631,13 @@ export class MotionDebugApp {
         this.message = message;
         this.controls.setStatus(status, message);
         this.renderSnapshot();
+    }
+
+    private setAutoViewerMode(mode: MotionDebugViewerMode): void {
+        if (this.viewerModePinned) {
+            return;
+        }
+        this.viewerMode = mode;
     }
 
     private renderSnapshot(): void {
