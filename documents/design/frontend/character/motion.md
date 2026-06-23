@@ -93,6 +93,11 @@
     - `pose`、`tracker`、`poseRetarget`、`poseRetargetRuntime`、camera readiness、render fps をまとめて返す。
     - Playwright からの調整値変更は UI control と同じ retarget config に反映し、画面 snapshot と window API の観測値を揃える。
     - 複数 VRM の IK 検証では `motion-debug/?vrm=/characters/<file>.vrm` を使い、同じ camera / tracker / retarget 経路で model 差分を確認する。
+- motion evaluation log
+    - developer 向け評価ログの schema は `src/character/motionEvaluation/motionDebugLogSchema.ts` を正本とする。
+    - schema version は `sincro.motion-debug-log.v1` とし、NDJSON の 1 行目を manifest record、2 行目以降を frame record として保存する。
+    - replay / metrics が読む正規化 pose snapshot の保存先は `frame.poseSnapshot` に固定し、MediaPipe raw result や solver 出力とは別 slot に分ける。
+    - camera の `deviceId` / `groupId` は raw 値を保存せず、必要な場合も hash 済みの `deviceIdHash` / `groupIdHash` だけを許可する。
 
 ## IK Solver Policy
 
