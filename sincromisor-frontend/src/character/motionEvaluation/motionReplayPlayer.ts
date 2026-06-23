@@ -145,6 +145,14 @@ export class MotionReplayPlayer<TSnapshot = unknown> {
         return this.frames[frameIndex]?.timestamp.mediaTimeMs;
     }
 
+    hasLoadedRecording(): boolean {
+        return this.manifest !== undefined;
+    }
+
+    replayFrames(): readonly SincroMotionDebugFrame[] {
+        return this.frames;
+    }
+
     private applyFrame(
         mode: MotionReplayMode,
         frameIndex: number,

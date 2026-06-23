@@ -4,6 +4,10 @@ import type {
     MotionDebugRecorderState,
 } from "../../character/motionEvaluation/motionDebugRecorder";
 import type {
+    MotionMetricConfig,
+    MotionMetricSummary,
+} from "../../character/motionEvaluation/motionMetrics";
+import type {
     MotionReplayFrameResult,
     MotionReplayLoadResult,
     MotionReplayMode,
@@ -61,6 +65,9 @@ export type MotionDebugRecordingDownloadResult =
 export type MotionDebugReplayFrameResult = MotionReplayFrameResult<MotionDebugSnapshot>;
 export type MotionDebugReplayLoadResult = MotionReplayLoadResult<MotionDebugSnapshot>;
 export type MotionDebugReplayState = MotionReplayState<MotionDebugSnapshot>;
+export type MotionDebugReplayMetricsResult =
+    | { ok: true; summary: MotionMetricSummary }
+    | { ok: false; code: "no_recording_loaded"; message: string };
 
 export type MotionDebugApi = {
     startCamera: () => Promise<MotionDebugSnapshot>;
@@ -84,6 +91,7 @@ export type MotionDebugApi = {
     stepReplay: (frameIndex: number) => MotionDebugReplayFrameResult;
     stopReplay: () => MotionDebugReplayState;
     getReplayState: () => MotionDebugReplayState;
+    calculateReplayMetrics: (config: MotionMetricConfig) => MotionDebugReplayMetricsResult;
 };
 
 declare global {

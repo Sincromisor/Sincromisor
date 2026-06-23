@@ -96,6 +96,11 @@
     - 同一 `video.currentTime` かつ同一 `SincroPoseMotionSnapshot.lastUpdatedAtMs` の連続入力は duplicate frame として recorder が捨てる。
     - camera 実設定を manifest に残す場合、raw `deviceId` / `groupId` は保存しない。hash を保存する場合も export 単位だけで比較可能にし、export をまたいで安定する識別子を残さない。
     - exported NDJSON は `parseMotionDebugLogLines()` が manifest と frame records を validation できる schema に固定する。
+- motion metrics input boundary
+    - `trackingLossDurationMs` は `frame.poseSnapshot.detected`、`degradedToFaceOnly`、`frame.timestamp.mediaTimeMs` を入力境界とし、lost / degraded の連続区間を timestamp 差分で合計する。
+    - `sideSwapCount` は `frame.poseSnapshot.leftArm.targets.wrist.cameraX` / `rightArm.targets.wrist.cameraX` と両 wrist の `confidence > 0.5` を入力境界とし、低 confidence の frame では左右反転を数えない。
+    - `addedLatencyMs` は `frame.metrics.tracker.workerRoundTripMs` の p95 を入力境界とする。`frame.timestamp.mediaTimeMs` と `frame.metrics.receivedAtPerformanceMs` は時刻原点が異なるため、latency metric では差分を取らない。
+    - `recoveryJumpAngleDeg` は lost / degraded から recovered へ戻った frame の `mediaTimeMs` を起点に、500ms window の `frame.applied.angularVelocityDegPerSec` を優先し、欠落時だけ `frame.solver.poseRetarget` の arm quaternion 連続差分へ fallback する。
 - `SincroPoseRetargetedArm.constraint`
     - `reasons`: solver-side safety の発火理由。入力欠損とは分けて、joint limit / pole stabilization / collision avoidance を表示する。
     - `weightScale`: constraint / collision による IK weight 減衰率。最終 IK weight は target confidence 由来 weight とこの値を掛けたものになる。

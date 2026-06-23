@@ -4,6 +4,10 @@ import type {
     MotionDebugRecorderResult,
     MotionDebugRecorderState,
 } from "../../character/motionEvaluation/motionDebugRecorder";
+import {
+    calculateMotionMetricSummary,
+    type MotionMetricConfig,
+} from "../../character/motionEvaluation/motionMetrics";
 import { MotionReplayPlayer } from "../../character/motionEvaluation/motionReplayPlayer";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
@@ -33,6 +37,7 @@ import type {
     MotionDebugRenderMetrics,
     MotionDebugReplayFrameResult,
     MotionDebugReplayLoadResult,
+    MotionDebugReplayMetricsResult,
     MotionDebugReplayState,
     MotionDebugRetargetUiConfig,
     MotionDebugSnapshot,
@@ -338,6 +343,20 @@ export class MotionDebugApp {
         return this.replay.getReplayState();
     }
 
+    calculateReplayMetrics(config: MotionMetricConfig): MotionDebugReplayMetricsResult {
+        if (!this.replay.hasLoadedRecording()) {
+            return {
+                ok: false,
+                code: "no_recording_loaded",
+                message: "Motion replay has no loaded recording.",
+            };
+        }
+        return {
+            ok: true,
+            summary: calculateMotionMetricSummary(this.replay.replayFrames(), config),
+        };
+    }
+
     private async startRuntimeWithStream(
         stream: MediaStream,
         source: MotionDebugCameraState["source"],
@@ -538,6 +557,7 @@ export class MotionDebugApp {
             stepReplay: (frameIndex) => this.stepReplay(frameIndex),
             stopReplay: () => this.stopReplay(),
             getReplayState: () => this.getReplayState(),
+            calculateReplayMetrics: (config) => this.calculateReplayMetrics(config),
         };
         window.__SINCRO_MOTION_DEBUG__ = api;
     }
