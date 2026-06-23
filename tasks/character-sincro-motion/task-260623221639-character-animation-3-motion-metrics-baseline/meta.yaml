@@ -1,0 +1,15 @@
+id: task-260623221639-character-animation-3-motion-metrics-baseline
+title: character animation 3.0 motion metrics baseline
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260623221623-character-animation-3-motion-debug-log-schema
+  - task-260623221635-character-animation-3-mediapipe-raw-replay-player
+superseded_by: null
+review: APPROVED
+reviewed_sha: 0d6ba803a3cfc0d0fbb2337e018c868df379461b
+verdict: null
+attempts: 0
+created_at: 2026-06-23
+closed_at: null
+legacy_ids: []
