@@ -24,6 +24,9 @@
     - `CharacterBehaviorState` と eye / face / head controller を置き、会話・VAD・gaze 由来の状態解釈を担当する。
 - `src/character/retargeting`
     - `SincroFaceRetargeter` / `SincroPoseRetargeter` と retarget frame / target 型を置く。
+- `src/character/canonical`
+    - 後段 motion pipeline が共有する `CanonicalUpperBodyState` contract を置く。
+    - 保存対象は body-local の意味量に限定し、VRM bone rotation、Three.js object、MediaPipe landmark object は含めない。
 - `src/character/ik`
     - `SincroArmIkSolver` と solver probe / constraint / geometry / pole を置く。
 - `src/character/vrmCharacter`
@@ -99,6 +102,14 @@
     - `SincroPoseRetargetedArm.ikSolverMode` は `feature_only` / `screen_space_ik` / `world_3d_ik` の切り分けを Debug Console に表示する。
     - `SincroPoseRetargetedArm.constraint` は `joint_limited`、`elbow_pole_stabilized`、`head_collision_avoided`、`chest_no_go_zone`、`forearm_twist_limited` など、solver-side safety が効いた理由と weight scale を表示する。
     - `solverProbe.ccdik` は external solver 採用判断用の診断値であり、実際の腕姿勢には適用しない。
+- `CanonicalUpperBodyState`
+    - `sincro.canonical-upper-body.v1` を schema version とする、JSON 保存可能な upper body contract。
+    - motion-debug の `frame.canonical` slot にそのまま保存できる plain object として扱い、replay / metrics / temporal / intent / IK が同じ名前・単位で読む。
+    - 左右は `left` / `right` の解剖学的 side に固定し、camera preview や screen mirror の左右は表さない。
+    - `torso.coordinateSystem` は `body_local` に固定し、`shoulderCenter`、`bodyRight`、`bodyUp`、`bodyFront`、`shoulderWidth`、`torsoScale`、`yawRad` を finite number / 3 要素 tuple で保存する。
+    - `arms.left` / `arms.right` は `reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`、`classification` と part meta を保存する。値域外の入力は parse 時に reject し、計算側が clamp した場合だけ `outOfRangeFields` に元値と clamp 後の値を残す。
+    - `calibration` は default / initial / online / replay の snapshot とし、未実装時も `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` を保存して replay の決定性を保つ。
+    - `SincroPoseRetargetFrame` の VRM additive rotation や IK solver の quaternion は canonical state へ入れず、retarget / final pose の別 slot に分ける。
 - `motion-debug` snapshot
     - `pose`、`tracker`、`poseRetarget`、`poseRetargetRuntime`、camera readiness、render fps をまとめて返す。
     - 既存 field 名は維持し、optional `viewer` field に viewer mode、selected layer、layer status / value、recording、replay、metrics summary を追加する。

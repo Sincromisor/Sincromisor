@@ -25,6 +25,9 @@
     - FaceLandmarker 結果から face motion snapshot を作る tracker を置く。
 - `src/features/gaze/poseTracking`
     - PoseLandmarker 結果から pose motion snapshot / pose target を作る tracker と spike page runtime を置く。
+- `src/character/canonical`
+    - tracker 観測から独立した後段共有 contract として `CanonicalUpperBodyState` を置く。
+    - tracker は MediaPipe 生結果を直接 canonical state と同一視せず、後続 estimator が body-local 意味量へ変換する。
 - `src/features/gaze/trackingRuntime`
     - MediaPipe fileset、worker client、camera frame loop、fallback stats、performance gate を置く。
 - `CharacterGaze`
@@ -79,6 +82,14 @@
     - consecutiveFailures
     - degradedToFaceOnly
     - fallbackReason
+    - MediaPipe / camera 由来の観測 snapshot であり、後段共有の `CanonicalUpperBodyState` ではない。
+    - `leftArm` / `rightArm` の target は tracking 入力 video の観測値を正規化したもので、body-local な reach / elevation / openness などの意味量は canonical estimator の責務とする。
+- `CanonicalUpperBodyState`
+    - `sincro.canonical-upper-body.v1` の schema version を持つ、body-local upper body の意味量 contract。
+    - `SincroPoseMotionSnapshot` を置き換えず、tracking 観測、temporal、intent、IK、metrics が共有する中間表現として別 slot に保存する。
+    - 保存形式は finite number、string enum、3 要素 tuple、plain object に限定し、MediaPipe landmark object、Three.js object、VRM bone keyed pose は入れない。
+    - 左右は解剖学的な `left` / `right` に固定し、camera preview の mirror 表示や screen-space の左右反転とは分けて扱う。
+    - `parseCanonicalUpperBodyState()` は log / replay 境界の検証 API であり、未知 schema version、値域外 scalar、非 finite number、runtime object 風 extra key を reject する。
 - `SincroPoseTargetPointSnapshot`
     - `tracked`: 通常 target として十分な confidence と有限座標を持つ状態。
     - `quality`: `strong` / `weak` / `lost`。`weak` は座標を IK に使えるが、強度を落とすべき状態。

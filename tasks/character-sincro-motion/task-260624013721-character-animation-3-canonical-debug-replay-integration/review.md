@@ -1,11 +1,13 @@
 # Review: task-260624013721-character-animation-3-canonical-debug-replay-integration
 
 ## 判定
+
 APPROVED
 
 Blocking になる Critical / High はない。`frame.canonical` 保存、window snapshot、viewer fallback、invalid parse 表示、文書同期が受け入れ条件に明記されており、現行 `motion-debug` / recorder / replay の責務境界とも整合している。
 
 ## 指摘事項
+
 （深刻度順: Critical > High > Medium > Low）
 
 - [Medium] `MotionDebugSnapshot.canonical` の型が、受け入れ条件では `CanonicalUpperBodyState` と書かれている一方、最小 integration shape では `CanonicalUpperBodyState | CanonicalLayerParseError` になっている（`task.md:13`, `task.md:33-45`）。判定を止めるほどではないが、公開 window API の型なので、実装時は `CanonicalLayerParseError` を `snapshot.canonical` に載せるのか、`viewer.layers.canonical.value` のみに閉じるのかを task.md の設計判断どおりに一貫させること。
