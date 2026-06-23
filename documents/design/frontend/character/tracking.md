@@ -58,8 +58,8 @@
     - `TrackerRuntime` が出力する `SincroPoseMotionSnapshot` を VRM retarget へ流し、カメラ映像上の Sincro pose target と VRM の動きを比較する developer page。
     - Playwright 用 selector と `window.__SINCRO_MOTION_DEBUG__` は、手動調整の再現と screenshot / snapshot 取得のための内部 debug API とする。
     - `ignorePerformanceFallback` を有効にして、低性能端末での IK 調整時も pose snapshot を観測し続ける。
-    - 構造化 motion log recording は pose callback / pose fallback callback 起点で `MotionDebugRecorder.recordFrame()` に渡し、TrackerRuntime や tracker worker には DOM / download / UI の責務を持たせない。
-    - 構造化 motion log replay は `MotionReplayPlayer` が plain NDJSON を parse し、`pose-snapshot` mode では `frame.poseSnapshot` だけを後段の behavior / retarget 経路へ再投入する。
+    - 構造化 motion log recording は pose callback / pose fallback callback 起点で canonical upper body state を生成してから `MotionDebugRecorder.recordFrame()` に渡し、TrackerRuntime や tracker worker には canonical 生成、DOM / download / UI の責務を持たせない。
+    - 構造化 motion log replay は `MotionReplayPlayer` が plain NDJSON を parse し、`pose-snapshot` mode では `frame.poseSnapshot` を後段の behavior / retarget 経路へ再投入する。`frame.canonical` がある場合は saved canonical を viewer / snapshot の正本にし、無い場合だけ live fallback の canonical を使う。invalid canonical は replay failure にせず、canonical layer の parse error summary として表示する。
     - replay 中は `TrackerRuntime.startFaceTracking()` を呼ばず、live camera / video fixture runtime と camera track を停止してから進める。raw MediaPipe result からの再推論は Phase 1 の対象外である。
     - `mediapipe-raw-result` mode は `frame.mediapipe` slot の予約であり、Pose / Hand / Face raw serializer が揃うまでは `unsupported_mode` を返す。
     - live camera / video fixture の source 判定、camera setting scrub、manifest 生成、download link 生成は `src/pages/motionDebug/` 側の責務とする。
@@ -101,6 +101,7 @@
     - `world.worldIkWeight`: weak target を許容する腕末端ほど低 confidence でも 0 より大きくなり得る。solver は最小 weight を腕全体の IK blend に使う。
 - motion evaluation log frame
     - `sincro.motion-debug-log.v1` の保存単位は NDJSON の frame record であり、tracker が出力する正規化 pose snapshot は `frame.poseSnapshot` に保存する。
+    - `frame.canonical` は motion-debug page 側で `SincroPoseMotionSnapshot` と latest face snapshot から生成した `CanonicalUpperBodyState` を保存する optional slot である。`parseMotionDebugLogLines()` は unknown optional slot として保持し、replay / viewer 境界で `parseCanonicalUpperBodyState()` により valid / invalid を判定する。
     - MediaPipe raw result は必要な場合も `frame.mediapipe` に分け、`frame.poseSnapshot` には `SincroPoseMotionSnapshot` 相当の normalized data を置く。
     - replay API の `loadRecording()` は plain NDJSON `string` または `File` だけを受け付ける。`startReplay({ mode })`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` は developer-only の window API として公開する。
     - `video.currentTime` を `frame.timestamp.mediaTimeMs`、callback 受信時の `performance.now()` を `frame.metrics.receivedAtPerformanceMs` として保存する。tracker stats は `frame.metrics.tracker` に入れ、top-level `tracker` は使わない。
