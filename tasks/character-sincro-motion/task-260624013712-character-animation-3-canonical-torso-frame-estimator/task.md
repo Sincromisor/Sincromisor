@@ -26,7 +26,10 @@
 ```ts
 type CanonicalTorsoFrameInput = {
     pose: SincroPoseMotionSnapshot;
-    face?: Pick<SincroFaceMotionSnapshot, "detected" | "confidence" | "headPose">;
+    face?: Pick<
+        SincroFaceMotionSnapshot,
+        "detected" | "confidence" | "headPose"
+    >;
     previous?: Pick<CanonicalUpperBodyState, "torso" | "calibration">;
     calibration?: CanonicalCalibrationSnapshot;
     mediaTimeMs: number;

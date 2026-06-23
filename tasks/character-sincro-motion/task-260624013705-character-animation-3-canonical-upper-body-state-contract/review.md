@@ -1,6 +1,7 @@
 # Review: task-260624013705-character-animation-3-canonical-upper-body-state-contract
 
 ## 判定
+
 APPROVED
 
 前回の blocking High 2 件は、parse result shape と default calibration constant の受け入れ条件・設計判断が追加されたことで解消済み。改訂箇所から実装を破綻させる新たな Critical / High は見つからないため、実装に進めてよい。
