@@ -137,6 +137,32 @@ describe("parseCanonicalUpperBodyState", () => {
         expectErrorCode(parseCanonicalUpperBodyState(canonical), "invalid_state");
     });
 
+    it("classifies tuple length mismatches as invalid state", () => {
+        const canonical = createCanonicalState();
+        const invalidCanonical = {
+            ...canonical,
+            torso: {
+                ...canonical.torso,
+                bodyFront: [0, 0],
+            },
+        };
+
+        const result = parseCanonicalUpperBodyState(invalidCanonical);
+
+        expectErrorCode(result, "invalid_state");
+        if (result.ok) {
+            return;
+        }
+        expect(result.errors).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    code: "invalid_state",
+                    path: ["torso", "bodyFront"],
+                }),
+            ]),
+        );
+    });
+
     it("rejects runtime object style extra keys", () => {
         const canonical = createCanonicalState();
         const withRuntimeObject = {

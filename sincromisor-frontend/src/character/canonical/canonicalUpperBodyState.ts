@@ -263,7 +263,11 @@ function zodPathToStrings(path: readonly PropertyKey[]): string[] {
 }
 
 function classifyIssue(issue: z.core.$ZodIssue): CanonicalUpperBodyStateParseErrorCode {
-    if (issue.code === "too_small" || issue.code === "too_big") {
+    if (
+        (issue.code === "too_small" || issue.code === "too_big") &&
+        "origin" in issue &&
+        issue.origin === "number"
+    ) {
         return "out_of_range";
     }
     return "invalid_state";
