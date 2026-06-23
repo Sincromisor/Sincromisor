@@ -182,10 +182,10 @@ export class VRMCharacterManager {
     // 2) ボーン/表情 controller
     // 3) VRM内部 update
     // 4) hips基準の位置オフセット反映
-    update(): void {
+    update(nowMs: number = performance.now()): void {
         const deltaSeconds = this.clock.getDelta();
         this.motionElapsedSeconds += deltaSeconds;
-        this.latestBehaviorSnapshot = this.behaviorState.update();
+        this.latestBehaviorSnapshot = this.behaviorState.update(nowMs);
         const sincroFace = this.sincroFaceRetargeter.retarget(
             this.latestBehaviorSnapshot.faceMotion,
             this.latestBehaviorSnapshot.nowMs,

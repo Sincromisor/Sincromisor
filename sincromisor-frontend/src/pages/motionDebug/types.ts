@@ -3,6 +3,12 @@ import type {
     MotionDebugRecorderResult,
     MotionDebugRecorderState,
 } from "../../character/motionEvaluation/motionDebugRecorder";
+import type {
+    MotionReplayFrameResult,
+    MotionReplayLoadResult,
+    MotionReplayMode,
+    MotionReplayState,
+} from "../../character/motionEvaluation/motionReplayPlayer";
 import type { SincroPoseRetargetConfig } from "../../character/retargeting/sincroPoseRetargeter";
 import type { DebugConsoleSnapshot } from "../../features/debug/model/debugConsoleManager";
 import type {
@@ -52,6 +58,10 @@ export type MotionDebugRecordingDownloadResult =
           state: MotionDebugRecorderState;
       };
 
+export type MotionDebugReplayFrameResult = MotionReplayFrameResult<MotionDebugSnapshot>;
+export type MotionDebugReplayLoadResult = MotionReplayLoadResult<MotionDebugSnapshot>;
+export type MotionDebugReplayState = MotionReplayState<MotionDebugSnapshot>;
+
 export type MotionDebugApi = {
     startCamera: () => Promise<MotionDebugSnapshot>;
     stopCamera: () => void;
@@ -66,6 +76,14 @@ export type MotionDebugApi = {
         compression?: MotionDebugRecorderConfig["compression"];
     }) => Promise<MotionDebugRecordingDownloadResult>;
     getRecordingState: () => MotionDebugRecorderState;
+    loadRecording: (fileOrText: File | string) => Promise<MotionDebugReplayLoadResult>;
+    startReplay: (options: {
+        mode: MotionReplayMode;
+        autoplay?: boolean;
+    }) => MotionDebugReplayFrameResult;
+    stepReplay: (frameIndex: number) => MotionDebugReplayFrameResult;
+    stopReplay: () => MotionDebugReplayState;
+    getReplayState: () => MotionDebugReplayState;
 };
 
 declare global {

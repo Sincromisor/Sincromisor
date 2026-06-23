@@ -56,6 +56,9 @@
     - Playwright 用 selector と `window.__SINCRO_MOTION_DEBUG__` は、手動調整の再現と screenshot / snapshot 取得のための内部 debug API とする。
     - `ignorePerformanceFallback` を有効にして、低性能端末での IK 調整時も pose snapshot を観測し続ける。
     - 構造化 motion log recording は pose callback / pose fallback callback 起点で `MotionDebugRecorder.recordFrame()` に渡し、TrackerRuntime や tracker worker には DOM / download / UI の責務を持たせない。
+    - 構造化 motion log replay は `MotionReplayPlayer` が plain NDJSON を parse し、`pose-snapshot` mode では `frame.poseSnapshot` だけを後段の behavior / retarget 経路へ再投入する。
+    - replay 中は `TrackerRuntime.startFaceTracking()` を呼ばず、live camera / video fixture runtime と camera track を停止してから進める。raw MediaPipe result からの再推論は Phase 1 の対象外である。
+    - `mediapipe-raw-result` mode は `frame.mediapipe` slot の予約であり、Pose / Hand / Face raw serializer が揃うまでは `unsupported_mode` を返す。
     - live camera / video fixture の source 判定、camera setting scrub、manifest 生成、download link 生成は `src/pages/motionDebug/` 側の責務とする。
 
 ## Data / State
@@ -88,6 +91,7 @@
 - motion evaluation log frame
     - `sincro.motion-debug-log.v1` の保存単位は NDJSON の frame record であり、tracker が出力する正規化 pose snapshot は `frame.poseSnapshot` に保存する。
     - MediaPipe raw result は必要な場合も `frame.mediapipe` に分け、`frame.poseSnapshot` には `SincroPoseMotionSnapshot` 相当の normalized data を置く。
+    - replay API の `loadRecording()` は plain NDJSON `string` または `File` だけを受け付ける。`startReplay({ mode })`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` は developer-only の window API として公開する。
     - `video.currentTime` を `frame.timestamp.mediaTimeMs`、callback 受信時の `performance.now()` を `frame.metrics.receivedAtPerformanceMs` として保存する。tracker stats は `frame.metrics.tracker` に入れ、top-level `tracker` は使わない。
     - 同一 `video.currentTime` かつ同一 `SincroPoseMotionSnapshot.lastUpdatedAtMs` の連続入力は duplicate frame として recorder が捨てる。
     - camera 実設定を manifest に残す場合、raw `deviceId` / `groupId` は保存しない。hash を保存する場合も export 単位だけで比較可能にし、export をまたいで安定する識別子を残さない。
