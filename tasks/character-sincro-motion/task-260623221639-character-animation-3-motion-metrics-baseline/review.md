@@ -1,6 +1,7 @@
 # Review: task-260623221639-character-animation-3-motion-metrics-baseline
 
 ## 判定
+
 APPROVED
 
 前回 blocking だった `reachClampOccupancy` / `recoveryJumpAngleDeg` / `calculateReplayMetrics(config)` / `addedLatencyMs` の契約は、現 HEAD の保存 slot と実装境界に揃っており、実装に進めてよい。残る注意点は実装時に妥当に決定できる範囲、または記述の軽微な取りこぼしであり blocking ではない。

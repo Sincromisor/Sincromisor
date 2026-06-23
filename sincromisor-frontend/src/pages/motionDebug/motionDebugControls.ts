@@ -3,10 +3,14 @@ import type {
     SincroPoseRetargetConfig,
 } from "../../character/retargeting/sincroPoseRetargeter";
 import { requireElement } from "./dom";
+import { MotionDebugViewerRenderer } from "./motionDebugViewerRenderer";
 import type {
+    MotionDebugLayerKey,
     MotionDebugRecordingDownloadResult,
     MotionDebugRetargetUiConfig,
+    MotionDebugSnapshot,
     MotionDebugStatus,
+    MotionDebugViewerMode,
 } from "./types";
 
 type MotionDebugControlCallbacks = {
@@ -17,13 +21,15 @@ type MotionDebugControlCallbacks = {
     onRecordStop: () => void;
     onRecordDownload: () => void;
     onRetargetConfigChange: (config: MotionDebugRetargetUiConfig) => void;
+    onViewerModeChange: (mode: MotionDebugViewerMode) => void;
+    onViewerLayerChange: (layer: MotionDebugLayerKey) => void;
 };
 
 // DOM control の読み書きを runtime から分離する。Playwright API と画面操作は
 // MotionDebugApp の同じ setRetargetConfig() に合流させ、調整経路を 1 つに保つ。
 export class MotionDebugControls {
     private readonly statusText = requireElement("motionDebugStatus", HTMLElement);
-    private readonly snapshotText = requireElement("motionDebugSnapshot", HTMLPreElement);
+    private readonly snapshotText = requireElement("motionDebugSnapshotRaw", HTMLPreElement);
     private readonly startButton = requireElement("motionDebugStart", HTMLButtonElement);
     private readonly stopButton = requireElement("motionDebugStop", HTMLButtonElement);
     private readonly captureButton = requireElement("motionDebugCapture", HTMLButtonElement);
@@ -68,8 +74,13 @@ export class MotionDebugControls {
         HTMLAnchorElement,
     );
     private readonly captureStatus = requireElement("motionDebugCaptureStatus", HTMLElement);
+    private readonly viewerRenderer: MotionDebugViewerRenderer;
 
     constructor(callbacks: MotionDebugControlCallbacks) {
+        this.viewerRenderer = new MotionDebugViewerRenderer({
+            onViewerModeChange: callbacks.onViewerModeChange,
+            onViewerLayerChange: callbacks.onViewerLayerChange,
+        });
         this.startButton.addEventListener("click", callbacks.onStart);
         this.stopButton.addEventListener("click", callbacks.onStop);
         this.captureButton.addEventListener("click", callbacks.onCapture);
@@ -110,7 +121,10 @@ export class MotionDebugControls {
         this.recordStatus.textContent = `${result.code}: ${result.message}`;
     }
 
-    renderSnapshot(snapshot: unknown): void {
+    renderSnapshot(snapshot: MotionDebugSnapshot): void {
+        if (snapshot.viewer !== undefined) {
+            this.viewerRenderer.render(snapshot.viewer, snapshot);
+        }
         this.snapshotText.textContent = JSON.stringify(snapshot, null, 2);
     }
 

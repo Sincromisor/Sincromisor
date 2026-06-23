@@ -50,6 +50,10 @@
     - camera preview、Sincro pose target overlay、VRM 表示、retarget runtime snapshot を同一画面に並べる。
     - `window.__SINCRO_MOTION_DEBUG__` から `startCamera()`、`loadVideoFixture()`、`setRetargetConfig()`、`waitForPoseDetected()`、`getSnapshot()`、`captureFrame()`、`startRecording()`、`stopRecording()`、`downloadRecording()`、`getRecordingState()` を呼べる。
     - replay 操作は同じ window API の developer-only surface とし、`loadRecording(fileOrText)`、`startReplay(options)`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` を公開する。入力は plain NDJSON `string` または `File` に限定し、compressed Blob import は扱わない。
+    - snapshot panel は `live`、`recording`、`replay`、`metrics` の viewer mode を持つ。`camera`、`mediapipe`、`poseSnapshot`、`reliability`、`canonical`、`temporal`、`intent`、`solver`、`finalPose`、`applied`、`metrics` を layer selector で切り替え、値あり / 未記録 / 未実装 / 未計算を区別する。
+    - `recording` mode は frame count、duration、compression、compression fallback、scrub 済み camera settings の有無を表示する。
+    - `replay` mode は replay mode、current frame、source timestamp、determinism check result、最新 `poseRetargetRuntime` summary を表示する。
+    - `metrics` mode は `calculateReplayMetrics(config)` が返した `MotionMetricSummary` を表で表示し、metric key、value、status、severity、threshold、baseline comparison を確認できる。`not_available` metric は pass 色にしない。
     - `startRecording()` は live camera / video fixture 起動後だけ成功し、`MotionDebugApp` が full manifest を生成して `MotionDebugRecorder` に渡す。
     - `downloadRecording()` は stopped recorder から NDJSON / gzip NDJSON / Brotli request fallback の Blob を作り、DOM download link は `motion-debug` ページ側で生成する。
     - `pose-snapshot` replay は `frame.poseSnapshot` を `CharacterBehaviorState.applyPoseMotion()` 相当の入口へ流し、live camera と同じ `VRMCharacterManager.update()` 内で `SincroPoseRetargeter.retarget()` を呼ぶ。
@@ -97,6 +101,7 @@
     - `solverProbe.ccdik` は external solver 採用判断用の診断値であり、実際の腕姿勢には適用しない。
 - `motion-debug` snapshot
     - `pose`、`tracker`、`poseRetarget`、`poseRetargetRuntime`、camera readiness、render fps をまとめて返す。
+    - 既存 field 名は維持し、optional `viewer` field に viewer mode、selected layer、layer status / value、recording、replay、metrics summary を追加する。
     - Playwright からの調整値変更は UI control と同じ retarget config に反映し、画面 snapshot と window API の観測値を揃える。
     - 複数 VRM の IK 検証では `motion-debug/?vrm=/characters/<file>.vrm` を使い、同じ camera / tracker / retarget 経路で model 差分を確認する。
 - motion evaluation log
