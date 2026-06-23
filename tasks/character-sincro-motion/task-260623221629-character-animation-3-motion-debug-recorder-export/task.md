@@ -42,7 +42,12 @@ type MotionDebugRecorderState = {
     frameCount: number;
     startedAtIso?: string;
     durationMs: number;
-    stopReason?: "user" | "max_duration" | "max_frames" | "source_stopped" | "error";
+    stopReason?:
+        | "user"
+        | "max_duration"
+        | "max_frames"
+        | "source_stopped"
+        | "error";
     compression: "none" | "gzip" | "brotli";
     compressionFallbackReason?: string;
     lastError?: string;
@@ -50,7 +55,17 @@ type MotionDebugRecorderState = {
 
 type MotionDebugRecorderResult =
     | { ok: true; state: MotionDebugRecorderState }
-    | { ok: false; code: "source_not_ready" | "already_recording" | "not_recording" | "no_frames" | "export_failed"; message: string; state: MotionDebugRecorderState };
+    | {
+          ok: false;
+          code:
+              | "source_not_ready"
+              | "already_recording"
+              | "not_recording"
+              | "no_frames"
+              | "export_failed";
+          message: string;
+          state: MotionDebugRecorderState;
+      };
 ```
 
 window API の最小 signature:

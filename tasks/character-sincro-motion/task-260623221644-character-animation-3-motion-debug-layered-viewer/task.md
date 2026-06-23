@@ -53,28 +53,41 @@ type MotionDebugLayerStatus =
 type MotionDebugViewerSnapshot = {
     mode: MotionDebugViewerMode;
     selectedLayer: MotionDebugLayerKey;
-    layers: Record<MotionDebugLayerKey, { status: MotionDebugLayerStatus; label: string; value?: unknown }>;
-    recording?: Pick<MotionDebugRecorderState, "status" | "frameCount" | "durationMs" | "compression" | "compressionFallbackReason">;
-    replay?: Pick<MotionReplayState, "status" | "mode" | "frameCount" | "currentFrameIndex" | "lastResult">;
+    layers: Record<
+        MotionDebugLayerKey,
+        { status: MotionDebugLayerStatus; label: string; value?: unknown }
+    >;
+    recording?: Pick<
+        MotionDebugRecorderState,
+        | "status"
+        | "frameCount"
+        | "durationMs"
+        | "compression"
+        | "compressionFallbackReason"
+    >;
+    replay?: Pick<
+        MotionReplayState,
+        "status" | "mode" | "frameCount" | "currentFrameIndex" | "lastResult"
+    >;
     metrics?: MotionMetricSummary;
 };
 ```
 
 layer 判定表:
 
-| layer | source | slot が値あり | slot 欠落 | `{}` | Phase 1 予約のみ |
-| --- | --- | --- | --- | --- | --- |
-| `camera` | live snapshot / manifest camera | `available` | `not_recorded` | `not_recorded` | なし |
-| `mediapipe` | `frame.mediapipe` | `available` | `not_recorded` | `not_recorded` | raw serializer 未実装なら `not_implemented` |
-| `poseSnapshot` | `frame.poseSnapshot` or live `pose` | `available` | `not_recorded` | `not_recorded` | なし |
-| `reliability` | `frame.reliability` | `available` | `not_recorded` | `not_recorded` | Phase 1 では `not_implemented` |
-| `canonical` | `frame.canonical` | `available` | `not_recorded` | `not_recorded` | Phase 1 では `not_implemented` |
-| `temporal` | `frame.temporal` | `available` | `not_recorded` | `not_recorded` | Phase 1 では `not_implemented` |
-| `intent` | `frame.intent` | `available` | `not_recorded` | `not_recorded` | Phase 1 では `not_implemented` |
-| `solver` | `frame.solver` / live `poseRetarget` | `available` | `not_recorded` | `not_recorded` | なし |
-| `finalPose` | `frame.finalPose` | `available` | `not_recorded` | `not_recorded` | composer 未実装なら `not_implemented` |
-| `applied` | `frame.applied` | `available` | `not_recorded` | `not_recorded` | composer 未実装なら `not_implemented` |
-| `metrics` | `MotionMetricSummary` | `available` | `not_calculated` | `not_calculated` | なし |
+| layer          | source                               | slot が値あり | slot 欠落        | `{}`             | Phase 1 予約のみ                            |
+| -------------- | ------------------------------------ | ------------- | ---------------- | ---------------- | ------------------------------------------- |
+| `camera`       | live snapshot / manifest camera      | `available`   | `not_recorded`   | `not_recorded`   | なし                                        |
+| `mediapipe`    | `frame.mediapipe`                    | `available`   | `not_recorded`   | `not_recorded`   | raw serializer 未実装なら `not_implemented` |
+| `poseSnapshot` | `frame.poseSnapshot` or live `pose`  | `available`   | `not_recorded`   | `not_recorded`   | なし                                        |
+| `reliability`  | `frame.reliability`                  | `available`   | `not_recorded`   | `not_recorded`   | Phase 1 では `not_implemented`              |
+| `canonical`    | `frame.canonical`                    | `available`   | `not_recorded`   | `not_recorded`   | Phase 1 では `not_implemented`              |
+| `temporal`     | `frame.temporal`                     | `available`   | `not_recorded`   | `not_recorded`   | Phase 1 では `not_implemented`              |
+| `intent`       | `frame.intent`                       | `available`   | `not_recorded`   | `not_recorded`   | Phase 1 では `not_implemented`              |
+| `solver`       | `frame.solver` / live `poseRetarget` | `available`   | `not_recorded`   | `not_recorded`   | なし                                        |
+| `finalPose`    | `frame.finalPose`                    | `available`   | `not_recorded`   | `not_recorded`   | composer 未実装なら `not_implemented`       |
+| `applied`      | `frame.applied`                      | `available`   | `not_recorded`   | `not_recorded`   | composer 未実装なら `not_implemented`       |
+| `metrics`      | `MotionMetricSummary`                | `available`   | `not_calculated` | `not_calculated` | なし                                        |
 
 テスト fixture は `manifest + 2 frame` の plain NDJSON とし、frame には `poseSnapshot` と `solver.poseRetarget` を含める。metrics view は manifest の `metricSummary` ではなく、依存タスクの `calculateReplayMetrics()` が返す `MotionMetricSummary` を入力にする。
 

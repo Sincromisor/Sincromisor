@@ -94,7 +94,11 @@ type SincroMotionDebugLogParseError = {
 };
 
 type SincroMotionDebugLogParseResult =
-    | { ok: true; manifest: SincroMotionDebugLogManifest; frames: SincroMotionDebugFrame[] }
+    | {
+          ok: true;
+          manifest: SincroMotionDebugLogManifest;
+          frames: SincroMotionDebugFrame[];
+      }
     | { ok: false; errors: SincroMotionDebugLogParseError[] };
 ```
 

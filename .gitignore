@@ -9,6 +9,7 @@ __pycache__
 node_modules/
 work/
 .env
+.gate-cache
 .gate-cache/
 .agents
 !.agents/
