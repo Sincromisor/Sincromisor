@@ -1,4 +1,9 @@
 import { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
+import type {
+    MotionDebugRecorderConfig,
+    MotionDebugRecorderResult,
+    MotionDebugRecorderState,
+} from "../../character/motionEvaluation/motionDebugRecorder";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
     type SincroPoseRetargetConfig,
@@ -17,11 +22,13 @@ import { formatError, requireElement } from "./dom";
 import { requestMotionDebugCameraStream } from "./motionDebugCameraStream";
 import { MotionDebugControls } from "./motionDebugControls";
 import { MotionDebugFrameCapture } from "./motionDebugFrameCapture";
+import { MotionDebugRecordingController } from "./motionDebugRecordingController";
 import { createFixtureVideoStream } from "./motionDebugVideoSource";
 import { MotionDebugPoseOverlayRenderer } from "./poseOverlayRenderer";
 import type {
     MotionDebugApi,
     MotionDebugCameraState,
+    MotionDebugRecordingDownloadResult,
     MotionDebugRenderMetrics,
     MotionDebugRetargetUiConfig,
     MotionDebugSnapshot,
@@ -75,9 +82,11 @@ export class MotionDebugApp {
     private readonly trackerRuntime = new TrackerRuntime(this.video);
     private readonly overlayRenderer = new MotionDebugPoseOverlayRenderer(this.overlayCanvas);
     private readonly frameCapture = new MotionDebugFrameCapture();
+    private readonly recording: MotionDebugRecordingController;
     private readonly scene: VRMScene;
     private activeStream?: MediaStream;
     private activeFixtureVideo?: HTMLVideoElement;
+    private activeFixtureUrl?: string;
     private cameraSource: MotionDebugCameraState["source"] = "none";
     private status: MotionDebugStatus = "idle";
     private message = "待機中";
@@ -112,8 +121,33 @@ export class MotionDebugApp {
             onCapture: () => {
                 this.handleCaptureButton();
             },
+            onRecordStart: () => {
+                this.startRecording();
+            },
+            onRecordStop: () => {
+                this.stopRecording();
+            },
+            onRecordDownload: () => {
+                this.downloadRecording().catch((error) => {
+                    this.handleError(error);
+                });
+            },
             onRetargetConfigChange: (config) => {
                 this.setRetargetConfig(config);
+            },
+        });
+        this.recording = new MotionDebugRecordingController({
+            video: this.video,
+            getActiveStream: () => this.activeStream,
+            getCameraSource: () => this.cameraSource,
+            getActiveFixtureUrl: () => this.activeFixtureUrl,
+            getRetargetConfig: () => this.retargetConfig,
+            getTrackerStats: () => this.latestTrackerStats,
+            getDebugSnapshot: () => this.debugConsole.getSnapshot().sincroMotion,
+            getVrmUrl: () => getMotionDebugVrmUrl(),
+            poseTargetInferenceFps: POSE_TARGET_INFERENCE_FPS,
+            onStateChange: (state) => {
+                this.controls.renderRecordingState(state);
             },
         });
         this.scene = new VRMScene({
@@ -130,6 +164,7 @@ export class MotionDebugApp {
         this.setStatus("idle", "待機中");
         vrmStage.dataset.ready = "true";
         this.controls.syncConfig(this.retargetConfig);
+        this.controls.renderRecordingState(this.recording.getState());
         window.addEventListener("beforeunload", () => {
             this.stopActiveRuntime("motion_debug_page_unload");
         });
@@ -138,6 +173,7 @@ export class MotionDebugApp {
     async startCamera(): Promise<MotionDebugSnapshot> {
         this.setStatus("loading", "カメラ起動中");
         this.stopActiveRuntime("motion_debug_camera_restarting");
+        this.activeFixtureUrl = undefined;
         const stream = await requestMotionDebugCameraStream();
         await this.startRuntimeWithStream(stream, "camera");
         return this.getSnapshot();
@@ -167,6 +203,7 @@ export class MotionDebugApp {
             status: this.status,
             message: this.message,
             camera: this.cameraState(),
+            recording: this.recording.getState(),
             pose: this.latestPoseSnapshot,
             tracker: this.latestTrackerStats,
             poseRetarget: debugSnapshot.poseRetarget,
@@ -204,8 +241,34 @@ export class MotionDebugApp {
         this.stopActiveRuntime("motion_debug_fixture_restarting");
         const { stream, video } = await createFixtureVideoStream(url);
         this.activeFixtureVideo = video;
+        this.activeFixtureUrl = url;
         await this.startRuntimeWithStream(stream, "fixture");
         return this.getSnapshot();
+    }
+
+    startRecording(config?: Partial<MotionDebugRecorderConfig>): MotionDebugRecorderResult {
+        const result = this.recording.start(config);
+        this.renderSnapshot();
+        return result;
+    }
+
+    stopRecording(): MotionDebugRecorderResult {
+        const result = this.recording.stop("user");
+        this.renderSnapshot();
+        return result;
+    }
+
+    async downloadRecording(options?: {
+        compression?: MotionDebugRecorderConfig["compression"];
+    }): Promise<MotionDebugRecordingDownloadResult> {
+        const result = await this.recording.download(options);
+        this.controls.renderRecordingDownload(result);
+        this.renderSnapshot();
+        return result;
+    }
+
+    getRecordingState(): MotionDebugRecorderState {
+        return this.recording.getState();
     }
 
     private async startRuntimeWithStream(
@@ -253,17 +316,31 @@ export class MotionDebugApp {
     }
 
     private stopActiveRuntime(reason: string): void {
+        if (this.recording.getState().status === "recording") {
+            this.recording.stop("source_stopped");
+        }
         this.trackerRuntime.stopFaceTracking(reason);
         this.activeStream?.getTracks().forEach((track) => {
             track.stop();
         });
         this.activeFixtureVideo?.pause();
         this.activeFixtureVideo = undefined;
+        this.activeFixtureUrl = undefined;
         this.activeStream = undefined;
         this.cameraSource = "none";
         this.behaviorState.setFaceMotionTrackingEnabled(false);
         this.behaviorState.setPoseMotionTrackingEnabled(false);
         this.controls.setStatus(this.status, this.message);
+    }
+
+    private recordPoseFrame(snapshot: SincroPoseMotionSnapshot): void {
+        const result = this.recording.recordPoseFrame(snapshot);
+        if (result !== undefined && !result.ok) {
+            frontendLogger.warn("Motion debug frame was not recorded.", {
+                code: result.code,
+                message: result.message,
+            });
+        }
     }
 
     private handleFaceMotion(snapshot: SincroFaceMotionSnapshot): void {
@@ -275,6 +352,7 @@ export class MotionDebugApp {
         this.latestPoseSnapshot = snapshot;
         this.behaviorState.applyPoseMotion(snapshot);
         this.debugConsole.updateSincroPoseMotion(snapshot);
+        this.recordPoseFrame(snapshot);
         this.overlayRenderer.render(snapshot, this.video);
     }
 
@@ -282,6 +360,7 @@ export class MotionDebugApp {
         this.latestPoseSnapshot = snapshot;
         this.behaviorState.applyPoseMotion(snapshot);
         this.debugConsole.updateSincroPoseMotion(snapshot);
+        this.recordPoseFrame(snapshot);
     }
 
     private handleCaptureButton(): void {
@@ -308,6 +387,10 @@ export class MotionDebugApp {
             captureFrame: () => this.captureFrame(),
             waitForPoseDetected: (timeoutMs) => this.waitForPoseDetected(timeoutMs),
             loadVideoFixture: (url) => this.loadVideoFixture(url),
+            startRecording: (config) => this.startRecording(config),
+            stopRecording: () => this.stopRecording(),
+            downloadRecording: (options) => this.downloadRecording(options),
+            getRecordingState: () => this.getRecordingState(),
         };
         window.__SINCRO_MOTION_DEBUG__ = api;
     }
@@ -344,6 +427,7 @@ export class MotionDebugApp {
 
     private renderSnapshot(): void {
         this.lastSnapshotRenderedAtMs = performance.now();
+        this.controls.renderRecordingState(this.recording.getState());
         this.controls.renderSnapshot(this.getSnapshot());
     }
 
