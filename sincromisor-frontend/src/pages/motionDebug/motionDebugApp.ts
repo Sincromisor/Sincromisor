@@ -4,6 +4,7 @@ import type {
     MotionDebugRecorderResult,
     MotionDebugRecorderState,
 } from "../../character/motionEvaluation/motionDebugRecorder";
+import { MotionReplayPlayer } from "../../character/motionEvaluation/motionReplayPlayer";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
     type SincroPoseRetargetConfig,
@@ -30,6 +31,9 @@ import type {
     MotionDebugCameraState,
     MotionDebugRecordingDownloadResult,
     MotionDebugRenderMetrics,
+    MotionDebugReplayFrameResult,
+    MotionDebugReplayLoadResult,
+    MotionDebugReplayState,
     MotionDebugRetargetUiConfig,
     MotionDebugSnapshot,
     MotionDebugStatus,
@@ -83,10 +87,16 @@ export class MotionDebugApp {
     private readonly overlayRenderer = new MotionDebugPoseOverlayRenderer(this.overlayCanvas);
     private readonly frameCapture = new MotionDebugFrameCapture();
     private readonly recording: MotionDebugRecordingController;
+    private readonly replay = new MotionReplayPlayer<MotionDebugSnapshot>({
+        applyPoseSnapshot: (snapshot, context) =>
+            this.applyReplayPoseSnapshot(snapshot, context.mediaTimeMs),
+        readSnapshot: () => this.getSnapshot(),
+    });
     private readonly scene: VRMScene;
     private activeStream?: MediaStream;
     private activeFixtureVideo?: HTMLVideoElement;
     private activeFixtureUrl?: string;
+    private replayTimerId?: number;
     private cameraSource: MotionDebugCameraState["source"] = "none";
     private status: MotionDebugStatus = "idle";
     private message = "待機中";
@@ -271,6 +281,63 @@ export class MotionDebugApp {
         return this.recording.getState();
     }
 
+    async loadRecording(fileOrText: unknown): Promise<MotionDebugReplayLoadResult> {
+        this.clearReplayTimer();
+        const textInput = await this.readReplayText(fileOrText);
+        if (!textInput.ok) {
+            return textInput;
+        }
+
+        const result = this.replay.loadRecordingText(textInput.text);
+        if (result.ok) {
+            this.stopActiveRuntime("motion_debug_replay_loaded");
+            this.setStatus("stopped", "replay 読み込み済み");
+        } else {
+            this.setStatus("error", result.message);
+        }
+        this.renderSnapshot();
+        return result;
+    }
+
+    startReplay(options: {
+        mode: NonNullable<MotionDebugReplayState["mode"]>;
+        autoplay?: boolean;
+    }): MotionDebugReplayFrameResult {
+        this.clearReplayTimer();
+        this.stopActiveRuntime("motion_debug_replay_started");
+        this.behaviorState.setTalkMode("sincro");
+        const result = this.replay.startReplay({
+            mode: options.mode,
+            autoplay: options.autoplay,
+        });
+        this.updateReplayStatus(result, options.autoplay === true);
+        if (result.ok && options.autoplay === true) {
+            this.scheduleNextReplayFrame(result.frameIndex);
+        }
+        this.renderSnapshot();
+        return result;
+    }
+
+    stepReplay(frameIndex: number): MotionDebugReplayFrameResult {
+        this.clearReplayTimer();
+        const result = this.replay.stepReplay(frameIndex);
+        this.updateReplayStatus(result, false);
+        this.renderSnapshot();
+        return result;
+    }
+
+    stopReplay(): MotionDebugReplayState {
+        this.clearReplayTimer();
+        const state = this.replay.stopReplay();
+        this.setStatus("stopped", "replay 停止中");
+        this.renderSnapshot();
+        return state;
+    }
+
+    getReplayState(): MotionDebugReplayState {
+        return this.replay.getReplayState();
+    }
+
     private async startRuntimeWithStream(
         stream: MediaStream,
         source: MotionDebugCameraState["source"],
@@ -316,6 +383,7 @@ export class MotionDebugApp {
     }
 
     private stopActiveRuntime(reason: string): void {
+        this.clearReplayTimer();
         if (this.recording.getState().status === "recording") {
             this.recording.stop("source_stopped");
         }
@@ -331,6 +399,24 @@ export class MotionDebugApp {
         this.behaviorState.setFaceMotionTrackingEnabled(false);
         this.behaviorState.setPoseMotionTrackingEnabled(false);
         this.controls.setStatus(this.status, this.message);
+    }
+
+    private async readReplayText(
+        fileOrText: unknown,
+    ): Promise<
+        { ok: true; text: string } | { ok: false; code: "unsupported_input"; message: string }
+    > {
+        if (typeof fileOrText === "string") {
+            return { ok: true, text: fileOrText };
+        }
+        if (typeof File !== "undefined" && fileOrText instanceof File) {
+            return { ok: true, text: await fileOrText.text() };
+        }
+        return {
+            ok: false,
+            code: "unsupported_input",
+            message: "Motion replay accepts only plain NDJSON string or File inputs.",
+        };
     }
 
     private recordPoseFrame(snapshot: SincroPoseMotionSnapshot): void {
@@ -363,6 +449,62 @@ export class MotionDebugApp {
         this.recordPoseFrame(snapshot);
     }
 
+    private applyReplayPoseSnapshot(
+        snapshot: SincroPoseMotionSnapshot,
+        mediaTimeMs: number,
+    ): MotionDebugSnapshot {
+        this.latestPoseSnapshot = snapshot;
+        this.behaviorState.applyPoseMotion(snapshot, mediaTimeMs);
+        this.debugConsole.updateSincroPoseMotion(snapshot);
+        this.overlayRenderer.render(snapshot, this.video);
+        this.scene.renderOnce(mediaTimeMs);
+        return this.getSnapshot();
+    }
+
+    private scheduleNextReplayFrame(currentFrameIndex: number): void {
+        const nextFrameIndex = currentFrameIndex + 1;
+        if (nextFrameIndex >= this.replay.frameCount()) {
+            this.stopReplay();
+            return;
+        }
+
+        const currentMediaTimeMs = this.replay.frameMediaTimeMs(currentFrameIndex);
+        const nextMediaTimeMs = this.replay.frameMediaTimeMs(nextFrameIndex);
+        const delayMs =
+            currentMediaTimeMs === undefined || nextMediaTimeMs === undefined
+                ? 0
+                : Math.max(0, nextMediaTimeMs - currentMediaTimeMs);
+        this.replayTimerId = window.setTimeout(() => {
+            const result = this.replay.stepReplay(nextFrameIndex, { autoplay: true });
+            this.updateReplayStatus(result, true);
+            this.renderSnapshot();
+            if (result.ok) {
+                this.scheduleNextReplayFrame(result.frameIndex);
+            }
+        }, delayMs);
+    }
+
+    private clearReplayTimer(): void {
+        if (this.replayTimerId === undefined) {
+            return;
+        }
+        window.clearTimeout(this.replayTimerId);
+        this.replayTimerId = undefined;
+    }
+
+    private updateReplayStatus(result: MotionDebugReplayFrameResult, autoplay: boolean): void {
+        if (!result.ok) {
+            this.setStatus("error", result.message);
+            return;
+        }
+        this.setStatus(
+            "running",
+            autoplay
+                ? `replay 再生中 ${result.frameIndex + 1}/${this.replay.frameCount()}`
+                : `replay frame ${result.frameIndex}`,
+        );
+    }
+
     private handleCaptureButton(): void {
         const dataUrl = this.captureFrame();
         this.controls.renderCapture(dataUrl, this.frameCapture.lastFrameCapturedAtMs());
@@ -391,6 +533,11 @@ export class MotionDebugApp {
             stopRecording: () => this.stopRecording(),
             downloadRecording: (options) => this.downloadRecording(options),
             getRecordingState: () => this.getRecordingState(),
+            loadRecording: (fileOrText) => this.loadRecording(fileOrText),
+            startReplay: (options) => this.startReplay(options),
+            stepReplay: (frameIndex) => this.stepReplay(frameIndex),
+            stopReplay: () => this.stopReplay(),
+            getReplayState: () => this.getReplayState(),
         };
         window.__SINCRO_MOTION_DEBUG__ = api;
     }

@@ -173,6 +173,12 @@ export class VRMScene {
         this.vrmCharacterManager.setSincroPoseRetargetConfig(config);
     }
 
+    renderOnce(nowMs: number = performance.now()): void {
+        this.updateScene();
+        this.vrmCharacterManager.update(nowMs);
+        this.renderer.render(this.scene, this.vrmCamera.camera);
+    }
+
     /* WebXR対応チェック */
     private async checkXRSupport(): Promise<void> {
         if ("xr" in navigator) {
