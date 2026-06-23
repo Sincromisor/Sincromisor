@@ -148,8 +148,8 @@ three-vrm 層は、MediaPipe や IK の不確実性を解く場所ではない�
 - `ReliabilityMap`
 - `CanonicalUpperBodyState`
 - `TemporalStateEstimator`
+- `MinimalAvatarMotionProfile` / `AvatarMotionProfile`
 - `MotionIntent`
-- `AvatarMotionProfile`
 - `VrmPoseComposer` / `VrmPoseApplier`
 
 ## 目標アーキテクチャ
@@ -235,6 +235,16 @@ VrmPoseApplier
 | `armConfidence`   | `0..1`          | IK weight / filter / fallback          |
 | `classification`  | enum            | side / front / diagonal / unknown      |
 
+canonical state は replay / debug log の保存単位でもあるため、保存形式は JSON 化しやすい tuple / number / enum を基本にし、`THREE.Vector3` や `THREE.Quaternion` の runtime object を直接保存しない。
+
+各 canonical part には、最低限次を持たせる。
+
+- `confidence`: その部位の制御信頼度
+- `source`: `pose` / `hand` / `face` / `previous` / `predicted` / `neutral` / `mixed`
+- `warnings`: front flip reject、left-right swap suspect、dropout、recovery blend など
+- `outOfRangeFields`: 値域違反や clamp された canonical field
+- `calibration`: replay 再現に必要な calibration id と主要値
+
 head / wrist / hand の入力優先順位:
 
 - head orientation は Face transformation matrix を主入力にし、Pose nose / ears / eyes を fallback にする。
@@ -264,6 +274,7 @@ head / wrist / hand の入力優先順位:
 
 - 表現力を上げる前に、replay / metrics と canonical contract を作る。
 - solver や IK の高度化前に、reliability と temporal state を通す。
+- `MotionSolver` が scale / depth / reach を読む前に、少なくとも default 値を持つ `MinimalAvatarMotionProfile` を作る。
 - calibration / profile は、VRM 側構造と人間側観測基準を分けた後に行う。
 - ROI、gesture、finger、ML は、失敗時 fallback と degradation が説明できる状態で追加する。
 
@@ -280,12 +291,16 @@ head / wrist / hand の入力優先順位:
 - `motion-debug` に `MotionDebugRecorder` を追加する。
 - debug log は `NDJSON + gzip/Brotli` を基本形にする。
 - 1 行目に manifest、以降に frame record を保存する。
-- manifest には schema version、build / package versions、config hash、source、camera settings、pipeline config、avatar profile を保存する。
+- manifest には schema version、build / package versions、config hash、source、scrub 済み camera settings、pipeline config、avatar profile を保存する。
+- camera settings の `deviceId` / `groupId` は export 時に hash 化または省略し、生の識別子を log に残さない。
 - frame record には video timestamp、camera metadata、MediaPipe raw result、reliability、canonical、temporal、intent、solver snapshot、final pose、applied pose、metrics を保存できるようにする。
 - `MotionReplayPlayer` を作り、ライブカメラなしで同じ pipeline に同じ入力を再投入できるようにする。
 - 最初の replay mode は MediaPipe raw result replay とする。video re-inference replay は後段でよい。
-- `neutral jitter`、`elbow flip count`、`recovery jump`、`angular velocity spike`、`reach clamp occupancy`、`tracking loss duration` を計測する。
-- 固定テストモーションを用意し、同じ入力でパラメータ差分を比較できるようにする。
+- canonical state replay と final pose playback も mode として分ける。前者は後段評価、後者は visual QA / regression preview 用とする。
+- `neutral jitter`、`elbow flip count`、`recovery jump`、`angular velocity spike`、`reach clamp occupancy`、`tracking loss duration`、`added latency`、`side swap count` を計測する。
+- P0 固定テストモーションとして、neutral 10 秒、片手をゆっくり上げる、両手をゆっくり上げる、片手を画面外へ出して戻す、腕を交差する、速い手振りを用意する。
+- metrics には pass / warn / fail の初期閾値を持たせる。初期値は replay 結果で調整するが、閾値なしの主観比較だけで完了扱いにしない。
+- 固定テストモーションと metrics summary を regression fixture として保存できるようにする。
 
 完了条件:
 
@@ -293,6 +308,7 @@ head / wrist / hand の入力優先順位:
 - `motion-debug` で MediaPipe raw、reliability、canonical、temporal、solver、final pose を層別に見られる。
 - 調整前後の品質差を主観だけでなく数値で比較できる。
 - replay log が schema validation でき、旧 schema は version で分岐できる。
+- P0 固定テストモーションの metrics summary を保存し、baseline / candidate の pass / warn / fail を比較できる。
 
 ### Phase 2: CanonicalUpperBodyState contract
 
@@ -302,10 +318,13 @@ head / wrist / hand の入力優先順位:
 
 - `CanonicalUpperBodyState` の TypeScript 型を定義する。
 - `ImageSpace2D`、`MediaPipeWorldSpace`、`BodyLocalSpace`、`AvatarControlSpace`、`VRMNormalizedLocalPose` の責務を文書化する。
+- replay / debug 保存用の canonical 型は tuple / number / enum で定義し、runtime object 依存を避ける。
 - torso frame を `shoulderCenter`、`hipCenter`、Face matrix、前フレーム、calibrated neutral から推定する。
 - `bodyFront` の符号反転を前フレームと Face yaw で抑制する。
 - 腕を `reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`、`classification` へ落とす。
 - `forwardness` は body-local direction、world z 補助、投影短縮、hand size から作る複合スコアにする。
+- canonical part ごとに `confidence`、`source`、`warnings`、`outOfRangeFields` を持たせる。
+- calibration snapshot は id だけでなく、replay 再現に必要な neutral yaw、shoulder width、torso scale、hand baseline の主要値を保存する。
 - canonical state に VRM bone rotation を入れない。
 - `motion-debug` で canonical 値、値域外、急変、左右入れ替えを表示する。
 
@@ -315,6 +334,7 @@ head / wrist / hand の入力優先順位:
 - wrist absolute position ではなく、body-local な意味量で腕の動きを説明できる。
 - IK、Temporal、MotionIntent、AvatarMotionProfile が同じ canonical 名と単位を読む。
 - canonical 層より後段で MediaPipe landmark を再解釈しない。
+- debug / replay で canonical の source、warning、out-of-range、calibration reason を確認できる。
 
 ### Phase 3: FrameClock / CameraQuality / performance baseline
 
@@ -382,6 +402,8 @@ MediaPipe confidence をそのまま使わず、制御用の信頼度を部位�
 
 既存 IK の数学を活かしつつ、target、pole、constraint、pose 合成の責務を明確化する。
 
+この Phase は `AvatarMotionProfile` の完成版を待つ必要はないが、IK target の scale / depth / reach を決めるため、Phase 6 開始時点で `MinimalAvatarMotionProfile` を先に用意する。`MinimalAvatarMotionProfile` は VRM load 時の optional bone、shoulder width、upper / lower arm length、head size、default reach scale、depth compression、shoulder damping、wrist roll influence を持つ。
+
 実装:
 
 - 既存 2-bone analytic IK を主方式として継続する。
@@ -398,6 +420,7 @@ MediaPipe confidence をそのまま使わず、制御用の信頼度を部位�
 完了条件:
 
 - `VRMHumanBoneName` keyed の normalized local pose として final pose が成立している。
+- `MinimalAvatarMotionProfile` から reach scale、depth compression、lateral / vertical scale、optional bone capability を読める。
 - 同一 frame で AnimationMixer、IK、semantic clip が同じ bone を直接上書きしない。
 - `upperChest` なし、shoulder bone なし、finger bone 一部欠落の VRM でも破綻せず fallback できる。
 - 肘反転、腕の伸び切り、肩崩れ、手首 roll 暴れが metrics と replay で比較できる。
@@ -413,8 +436,11 @@ VRM モデル差分とユーザー体型差を品質問題として扱う。
 - torso の optional fallback は `spine + chest + upperChest`、`spine + chest`、`spine only` で分配を変える。
 - 初期 calibration は T pose ではなく、4-5 秒の 3-step を標準にする。
 - 3-step は「正面自然姿勢」「軽い A pose」「軽く開いた手」とし、顔左右は任意 step にする。
+- calibration status は `ready` / `ready_without_hands` / `retry_recommended` / `failed` に分ける。
 - `ready_without_hands` を許容し、手指だけ不安定な場合でも腕・頭・体幹の同期を開始できるようにする。
-- online calibration は人間側の neutral yaw / shoulder width / body scale / hand open baseline だけを高信頼度・near-neutral 時に低速更新する。
+- online calibration は人間側の neutral yaw / shoulder width / body scale / hand open baseline だけを高信頼度・near-neutral 時に低速更新する。torso / head / arm の信頼度、border risk、motion blur risk、bone length consistency、低い arm activity を gate とする。
+- online calibration は `candidate` と `committed` を分け、3-5 秒以上安定した候補だけ committed に反映する。
+- drift guard として、shoulder width、body scale、neutral yaw、head pitch / roll、hand scale には初期 calibration からの許容逸脱範囲を持たせる。
 - VRM rest rotation、bone length、humanoid mapping、handedness mapping、関節 limit、palm basis 軸定義は online calibration で変えない。
 
 完了条件:
@@ -423,6 +449,7 @@ VRM モデル差分とユーザー体型差を品質問題として扱う。
 - profile 差分により、腕の伸び切り、顔めり込み、肩崩れを調整できる。
 - calibration 失敗時に全体をやり直さず、失敗 step だけ再試行できる。
 - ユーザー向け UI は内部用語を見せず、修正可能な行動として案内できる。
+- calibration status、retry reason、online calibration freeze reason、drift clamp を replay / debug で確認できる。
 
 ### Phase 8: Pose-seeded Hand / Face ROI
 
