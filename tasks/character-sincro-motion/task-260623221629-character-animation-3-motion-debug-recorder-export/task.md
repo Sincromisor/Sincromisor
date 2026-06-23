@@ -16,14 +16,14 @@ Phase 1 の評価基盤では、ライブ camera / fixture 実行中の motion p
 - [ ] manifest の `source.kind` は camera 実行時 `"live-camera"`、`loadVideoFixture()` 実行時 `"video-fixture"`、未起動時は recording 開始不可にする。
 - [ ] `MediaStreamTrack.getSettings()` から取得した camera settings は export 前に scrub し、`deviceId` / `groupId` は raw 値を保存しない。保存する場合は同一 export 内だけ比較可能な SHA-256 hash を `deviceIdHash` / `groupIdHash` に入れる。
 - [ ] frame 生成は pose callback / pose fallback callback 起点に固定し、render loop は recording state 表示だけを更新する。`handlePoseMotion()` / `handlePoseFallback()` から `recordFrame()` を呼び、同一 `video.currentTime` かつ同一 pose `lastUpdatedAtMs` の連続入力は重複 frame として捨てる。
-- [ ] frame payload は最低限 `timestamp.mediaTimeMs`、`timestamp.receivedAtPerformanceMs`、`video.width`、`video.height`、`poseSnapshot`、`tracker`、`solver.poseRetarget`、`solver.poseRetargetRuntime` を保存する。normalized pose replay 用の field 名は依存 schema と同じ `frame.poseSnapshot` に固定する。
+- [ ] frame payload は依存 schema の top-level slot だけを使い、最低限 `timestamp.mediaTimeMs`、`video.width`、`video.height`、`poseSnapshot`、`solver.poseRetarget`、`solver.poseRetargetRuntime`、`metrics.receivedAtPerformanceMs`、`metrics.tracker` を保存する。normalized pose replay 用の field 名は依存 schema と同じ `frame.poseSnapshot` に固定し、`timestamp.receivedAtPerformanceMs` や top-level `tracker` は追加しない。
 - [ ] 10 秒以上の recording で `parseMotionDebugLogLines()` が manifest と frame records を validation できる。
 - [ ] `documents/design/frontend/character/motion.md` と `documents/design/frontend/character/tracking.md` へ record/export API、camera setting scrub、schema validation、frame 記録起点を同期する。
 
 ## 設計判断（着手前に確定済み）
 
 - recorder core は `src/character/motionEvaluation/` に置き、DOM download と UI control は `src/pages/motionDebug/` に閉じる。
-- `requestVideoFrameCallback` 連携はこのタスクでは必須にしない。Phase 3 の FrameClock 前でも Phase 1 を進めるため、v1 は `video.currentTime` と `performance.now()` を保存し、`requestVideoFrameCallback` metadata slot は optional にする。
+- `requestVideoFrameCallback` 連携はこのタスクでは必須にしない。Phase 3 の FrameClock 前でも Phase 1 を進めるため、v1 は `video.currentTime` を `frame.timestamp.mediaTimeMs`、`performance.now()` を `frame.metrics.receivedAtPerformanceMs` として保存し、`requestVideoFrameCallback` metadata slot は optional にする。
 - export 形式の第一候補は NDJSON text、圧縮は browser capability に応じた best effort とする。圧縮失敗で recording 内容を失うより、plain NDJSON を返すことを優先する。
 - recorder は ring buffer ではなく、初期実装では `maxFrames` と `maxDurationMs` による明示上限でメモリを守る。初期値は `maxDurationMs: 30000`、`maxFrames: 1800` とし、超過時は stop して state reason を残す。
 - 生 video frame image と overlay PNG は構造化 log へ保存しない。Phase 1 raw result replay の主データは snapshot / raw result / retarget state とし、画像は既存 `captureFrame()` の責務に留める。
@@ -31,6 +31,11 @@ Phase 1 の評価基盤では、ライブ camera / fixture 実行中の motion p
 recorder core の最小 API:
 
 ```ts
+import type {
+    SincroMotionDebugFrame,
+    SincroMotionDebugLogManifest,
+} from "./motionDebugLogSchema";
+
 type MotionDebugRecorderConfig = {
     maxDurationMs: number; // default 30000
     maxFrames: number; // default 1800
@@ -66,7 +71,88 @@ type MotionDebugRecorderResult =
           message: string;
           state: MotionDebugRecorderState;
       };
+
+type MotionDebugRecorderManifestInput = SincroMotionDebugLogManifest;
+
+type MotionDebugRecorderFrameInput = Omit<
+    SincroMotionDebugFrame,
+    "frameIndex"
+> & {
+    dedupeKey: {
+        mediaTimeMs: number;
+        poseLastUpdatedAtMs?: number | null;
+    };
+};
+
+type MotionDebugRecorderRecordFrameResult =
+    | {
+          ok: true;
+          recorded: true;
+          frameIndex: number;
+          state: MotionDebugRecorderState;
+      }
+    | {
+          ok: true;
+          recorded: false;
+          skippedReason: "duplicate_frame";
+          state: MotionDebugRecorderState;
+      }
+    | {
+          ok: false;
+          code:
+              | "not_recording"
+              | "invalid_frame"
+              | "max_duration"
+              | "max_frames";
+          message: string;
+          state: MotionDebugRecorderState;
+      };
+
+type MotionDebugRecorderNdjsonResult =
+    | { ok: true; ndjson: string; state: MotionDebugRecorderState }
+    | {
+          ok: false;
+          code: "not_stopped" | "no_frames" | "export_failed";
+          message: string;
+          state: MotionDebugRecorderState;
+      };
+
+type MotionDebugRecorderBlobResult =
+    | {
+          ok: true;
+          blob: Blob;
+          compression: "none" | "gzip" | "brotli";
+          fileExtension: ".ndjson" | ".ndjson.gz" | ".ndjson.br";
+          mimeType: string;
+          state: MotionDebugRecorderState;
+      }
+    | {
+          ok: false;
+          code: "not_stopped" | "no_frames" | "export_failed";
+          message: string;
+          state: MotionDebugRecorderState;
+      };
+
+class MotionDebugRecorder {
+    constructor(config?: Partial<MotionDebugRecorderConfig>);
+    start(
+        manifestInput: MotionDebugRecorderManifestInput,
+    ): MotionDebugRecorderResult;
+    recordFrame(
+        frameInput: MotionDebugRecorderFrameInput,
+    ): MotionDebugRecorderRecordFrameResult;
+    stop(
+        reason?: MotionDebugRecorderState["stopReason"],
+    ): MotionDebugRecorderResult;
+    exportNdjson(): MotionDebugRecorderNdjsonResult;
+    exportBlob(options?: {
+        compression?: "none" | "gzip" | "brotli";
+    }): Promise<MotionDebugRecorderBlobResult>;
+    getState(): MotionDebugRecorderState;
+}
 ```
+
+`MotionDebugApp` が full manifest を生成して `start()` に渡し、recorder core は manifest / frame を schema validation して保存する。`frameIndex` は recorder が 0 始まりで付与する。`dedupeKey` は重複判定専用で、export する `SincroMotionDebugFrame` には含めない。同一 `dedupeKey.mediaTimeMs` かつ同一 `dedupeKey.poseLastUpdatedAtMs` の連続入力は `recorded: false` / `skippedReason: "duplicate_frame"` を返し、state は error にしない。
 
 window API の最小 signature:
 
