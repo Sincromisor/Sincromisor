@@ -1,6 +1,7 @@
 # Review: task-3100-sincro-motion-foundation-epic
 
 ## 判定
+
 APPROVED
 
 Critical / High の blocking 指摘はない。`task-3116` は `meta.yaml` 上 `done/PASS` で、3100 の umbrella 方針は「新規実装を増やさず Phase 0 到達点を固定する」ものとして成立している。

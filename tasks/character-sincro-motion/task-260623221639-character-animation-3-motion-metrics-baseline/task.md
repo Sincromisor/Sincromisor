@@ -59,7 +59,9 @@ type MotionMetricSummary = {
 type MotionMetricConfig = {
     fixtureId?: MotionP0FixtureId;
     generatedAtIso: string;
-    thresholds?: Partial<Record<MotionMetricKey, { pass: number; warn: number; fail: number }>>;
+    thresholds?: Partial<
+        Record<MotionMetricKey, { pass: number; warn: number; fail: number }>
+    >;
     thresholdVersion: "initial-v1" | "custom";
 };
 ```
@@ -70,16 +72,16 @@ type MotionMetricConfig = {
 
 初期 metric 契約:
 
-| key | input slot | 欠損条件 | 計算 / 単位 | direction | pass / warn / fail |
-| --- | --- | --- | --- | --- | --- |
-| `neutralJitter` | `frame.poseSnapshot.upperBody.shoulderCenterX/Y`, `frame.poseSnapshot.leftArm.targets.wrist.cameraX/Y`, `frame.poseSnapshot.rightArm.targets.wrist.cameraX/Y` | `fixtureId !== "neutral-10s"` または有効 sample 30 未満 | 各 target の平均との差分 RMS の最大値 / `ratio` | `lower_is_better` | `0.015 / 0.035 / 0.06` |
-| `elbowFlipCount` | `frame.solver.poseRetarget.leftArm.constraint.reasons`, `frame.solver.poseRetarget.rightArm.constraint.reasons` | `frame.solver.poseRetarget` 欠落 | reason に `elbow_pole_stabilized` または `elbow_flip` を含む frame 数 / `count` | `lower_is_better` | `0 / 2 / 5` |
-| `recoveryJumpAngleDeg` | `frame.applied.angularVelocityDegPerSec`、fallback として `frame.solver.poseRetarget` quaternion slot | 両方欠落 | recovery 直後 500ms の最大角速度を 60fps 換算角度へ変換 / `deg`。両方ある場合は `applied` を優先 | `lower_is_better` | `8 / 18 / 35` |
-| `angularVelocitySpikeCount` | `frame.applied.angularVelocityDegPerSec` | `frame.applied` 欠落 | 720deg/s 超過 bone-frame 数 / `count` | `lower_is_better` | `0 / 3 / 8` |
-| `reachClampOccupancy` | `frame.solver.poseRetarget.leftArm.constraint.reasons`, `rightArm.constraint.reasons` | `frame.solver.poseRetarget` 欠落 | reason に `reach_clamped` を含む frame 比 / `ratio` | `lower_is_better` | `0.05 / 0.18 / 0.35` |
-| `trackingLossDurationMs` | `frame.poseSnapshot.detected`, `frame.poseSnapshot.degradedToFaceOnly`, `frame.timestamp.mediaTimeMs` | `frame.poseSnapshot` 欠落 | `detected === false || degradedToFaceOnly === true` の連続区間合計 / `ms` | `lower_is_better` | `250 / 1000 / 2500` |
-| `sideSwapCount` | `frame.poseSnapshot.leftArm.targets.wrist.cameraX`, `rightArm.targets.wrist.cameraX` | `frame.poseSnapshot` 欠落 | 左右 wrist の screen x order が前後 frame で反転し、両腕 confidence > 0.5 の回数 / `count` | `lower_is_better` | `0 / 1 / 3` |
-| `addedLatencyMs` | `frame.timestamp.presentationTimeMs`, `frame.timestamp.receivedAtPerformanceMs` | timestamp 片方欠落 | `receivedAtPerformanceMs - presentationTimeMs` の p95 / `ms` | `lower_is_better` | `80 / 160 / 260` |
+| key                         | input slot                                                                                                                                                    | 欠損条件                                                | 計算 / 単位                                                                                      | direction         | pass / warn / fail                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------- | ------------------------------------------------ | ----------------- | ------------------- |
+| `neutralJitter`             | `frame.poseSnapshot.upperBody.shoulderCenterX/Y`, `frame.poseSnapshot.leftArm.targets.wrist.cameraX/Y`, `frame.poseSnapshot.rightArm.targets.wrist.cameraX/Y` | `fixtureId !== "neutral-10s"` または有効 sample 30 未満 | 各 target の平均との差分 RMS の最大値 / `ratio`                                                  | `lower_is_better` | `0.015 / 0.035 / 0.06`                           |
+| `elbowFlipCount`            | `frame.solver.poseRetarget.leftArm.constraint.reasons`, `frame.solver.poseRetarget.rightArm.constraint.reasons`                                               | `frame.solver.poseRetarget` 欠落                        | reason に `elbow_pole_stabilized` または `elbow_flip` を含む frame 数 / `count`                  | `lower_is_better` | `0 / 2 / 5`                                      |
+| `recoveryJumpAngleDeg`      | `frame.applied.angularVelocityDegPerSec`、fallback として `frame.solver.poseRetarget` quaternion slot                                                         | 両方欠落                                                | recovery 直後 500ms の最大角速度を 60fps 換算角度へ変換 / `deg`。両方ある場合は `applied` を優先 | `lower_is_better` | `8 / 18 / 35`                                    |
+| `angularVelocitySpikeCount` | `frame.applied.angularVelocityDegPerSec`                                                                                                                      | `frame.applied` 欠落                                    | 720deg/s 超過 bone-frame 数 / `count`                                                            | `lower_is_better` | `0 / 3 / 8`                                      |
+| `reachClampOccupancy`       | `frame.solver.poseRetarget.leftArm.constraint.reasons`, `rightArm.constraint.reasons`                                                                         | `frame.solver.poseRetarget` 欠落                        | reason に `reach_clamped` を含む frame 比 / `ratio`                                              | `lower_is_better` | `0.05 / 0.18 / 0.35`                             |
+| `trackingLossDurationMs`    | `frame.poseSnapshot.detected`, `frame.poseSnapshot.degradedToFaceOnly`, `frame.timestamp.mediaTimeMs`                                                         | `frame.poseSnapshot` 欠落                               | `detected === false                                                                              |                   | degradedToFaceOnly === true`の連続区間合計 /`ms` | `lower_is_better` | `250 / 1000 / 2500` |
+| `sideSwapCount`             | `frame.poseSnapshot.leftArm.targets.wrist.cameraX`, `rightArm.targets.wrist.cameraX`                                                                          | `frame.poseSnapshot` 欠落                               | 左右 wrist の screen x order が前後 frame で反転し、両腕 confidence > 0.5 の回数 / `count`       | `lower_is_better` | `0 / 1 / 3`                                      |
+| `addedLatencyMs`            | `frame.timestamp.presentationTimeMs`, `frame.timestamp.receivedAtPerformanceMs`                                                                               | timestamp 片方欠落                                      | `receivedAtPerformanceMs - presentationTimeMs` の p95 / `ms`                                     | `lower_is_better` | `80 / 160 / 260`                                 |
 
 comparison shape:
 
@@ -115,7 +117,17 @@ baseline parser の export 名は `parseMotionMetricBaseline(value: unknown)` �
 ```ts
 type MotionMetricBaselineParseResult =
     | { ok: true; baseline: MotionMetricBaseline }
-    | { ok: false; errors: { code: "invalid_baseline" | "unknown_fixture_id" | "invalid_metric_summary"; message: string; path: string[] }[] };
+    | {
+          ok: false;
+          errors: {
+              code:
+                  | "invalid_baseline"
+                  | "unknown_fixture_id"
+                  | "invalid_metric_summary";
+              message: string;
+              path: string[];
+          }[];
+      };
 ```
 
 ## スコープ境界

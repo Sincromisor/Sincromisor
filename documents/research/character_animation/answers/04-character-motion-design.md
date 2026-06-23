@@ -43,13 +43,13 @@ MediaPipe observations
 
 設計原則は次です。
 
-| 原則              | 内容                                                      |
-| --------------- | ------------------------------------------------------- |
-| 大部位は安定優先        | 胴体、頭、肩は低振幅・低周波・強い平滑化を基本にする。                             |
-| 小部位は表現優先        | 手、指、短いgestureは、confidenceが高い場合にやや誇張してよい。                |
-| 追従より意図          | 手振り、指差し、サムズアップ、ピース、顔近くの手は、raw trackingではなくintent化して見せる。 |
-| 低confidence時は縮退 | 動きを止めず、振幅を落としてcomfortable poseへ移る。                      |
-| clipは全身上書きしない   | semantic clipはadditive補助とし、trackingと合成する。               |
+| 原則                   | 内容                                                                                         |
+| ---------------------- | -------------------------------------------------------------------------------------------- |
+| 大部位は安定優先       | 胴体、頭、肩は低振幅・低周波・強い平滑化を基本にする。                                       |
+| 小部位は表現優先       | 手、指、短いgestureは、confidenceが高い場合にやや誇張してよい。                              |
+| 追従より意図           | 手振り、指差し、サムズアップ、ピース、顔近くの手は、raw trackingではなくintent化して見せる。 |
+| 低confidence時は縮退   | 動きを止めず、振幅を落としてcomfortable poseへ移る。                                         |
+| clipは全身上書きしない | semantic clipはadditive補助とし、trackingと合成する。                                        |
 
 既存レポートでも、かわいく自然に見せるうえで最も避けるべき破綻は、胴体・頭部jitter、肘反転、肩崩れ、手首roll暴れ、腕の伸び切り、指のちらつきの順とされています。大きい部位ほど安定、小さい部位ほど表現的に動かす設計が推奨されます。
 
@@ -81,24 +81,24 @@ exaggeration:
 
 ### 3.1 似ている必要が高い部位
 
-| 部位 / 状態  | 重要度 | 理由                                                              |
-| -------- | --: | --------------------------------------------------------------- |
-| 手の高さ     |   高 | 手を上げた、顔の近くに持ってきた、胸前に出した、という意図が最も伝わりやすい。                         |
-| 手の左右位置   |   高 | 手振り、横へ広げる、片手だけ使う、両手を近づけるなどの印象に直結する。                             |
-| 手の開閉     |   高 | Open_Palm、Closed_Fist、Thumb_Up、Victoryなどのgesture identityに直結する。 |
-| 頭のyaw    | 中〜高 | 顔の向きは「まねている」印象に効くが、揺れすぎると不安定に見える。                               |
-| 腕の大まかな角度 |   中 | 肘・前腕まで完全一致しなくても、手先位置と腕の方向が合えば意図は伝わる。                            |
-| 体幹の向き    |   中 | 全体の向きとして必要。ただし低振幅で十分。                                           |
+| 部位 / 状態      | 重要度 | 理由                                                                           |
+| ---------------- | -----: | ------------------------------------------------------------------------------ |
+| 手の高さ         |     高 | 手を上げた、顔の近くに持ってきた、胸前に出した、という意図が最も伝わりやすい。 |
+| 手の左右位置     |     高 | 手振り、横へ広げる、片手だけ使う、両手を近づけるなどの印象に直結する。         |
+| 手の開閉         |     高 | Open_Palm、Closed_Fist、Thumb_Up、Victoryなどのgesture identityに直結する。    |
+| 頭のyaw          | 中〜高 | 顔の向きは「まねている」印象に効くが、揺れすぎると不安定に見える。             |
+| 腕の大まかな角度 |     中 | 肘・前腕まで完全一致しなくても、手先位置と腕の方向が合えば意図は伝わる。       |
+| 体幹の向き       |     中 | 全体の向きとして必要。ただし低振幅で十分。                                     |
 
 ### 3.2 丸めてよい部位
 
-| 部位 / 成分    | 方針                                                          |
-| ---------- | ----------------------------------------------------------- |
-| 奥行き方向の手先位置 | 単眼推定では不安定なため、強く圧縮する。                                        |
-| 手首roll     | 最も暴れやすいので25〜60%程度に抑える。既存資料でもroll成分は強く平滑化または前腕twistへ逃がす方針です。 |
-| 肘pole      | 実測だけに寄せず、前フレーム・fallback pole・外側biasを混ぜる。                    |
-| 肩・胸        | clip側で大きく上書きしない。tracking寄りに保つ。                              |
-| 指の各関節3D回転  | 単眼ではちらつきやすいため、curl中心にする。                                    |
+| 部位 / 成分          | 方針                                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------- |
+| 奥行き方向の手先位置 | 単眼推定では不安定なため、強く圧縮する。                                                                 |
+| 手首roll             | 最も暴れやすいので25〜60%程度に抑える。既存資料でもroll成分は強く平滑化または前腕twistへ逃がす方針です。 |
+| 肘pole               | 実測だけに寄せず、前フレーム・fallback pole・外側biasを混ぜる。                                          |
+| 肩・胸               | clip側で大きく上書きしない。tracking寄りに保つ。                                                         |
+| 指の各関節3D回転     | 単眼ではちらつきやすいため、curl中心にする。                                                             |
 
 既存資料では、指制御は最初から各関節3D回転を狙わず、まず全指open/close、次に親指・人差し指・中指・薬指小指グループのcurlへ進めるのが安全とされています。
 
@@ -120,43 +120,39 @@ MediaPipe Gesture Recognizerは、リアルタイムの手gesture認識結果と
 
 ```ts
 type ArmMotionIntent =
-  | "tracking"
-  | "wave"
-  | "pointing"
-  | "thumbsUp"
-  | "peace"
-  | "nearFace"
-  | "explain"
-  | "clapLike"
-  | "guarded"
-  | "lost"
-  | "fallback";
+    | "tracking"
+    | "wave"
+    | "pointing"
+    | "thumbsUp"
+    | "peace"
+    | "nearFace"
+    | "explain"
+    | "clapLike"
+    | "guarded"
+    | "lost"
+    | "fallback";
 
-type TorsoMotionIntent =
-  | "neutral"
-  | "leaning"
-  | "turning"
-  | "settling";
+type TorsoMotionIntent = "neutral" | "leaning" | "turning" | "settling";
 
 type MotionIntentState = {
-  leftArm: {
-    intent: ArmMotionIntent;
-    confidence: number;
-    reliability: number;
-    expressiveness: number;
-    ageMs: number;
-  };
-  rightArm: {
-    intent: ArmMotionIntent;
-    confidence: number;
-    reliability: number;
-    expressiveness: number;
-    ageMs: number;
-  };
-  torso: {
-    intent: TorsoMotionIntent;
-    confidence: number;
-  };
+    leftArm: {
+        intent: ArmMotionIntent;
+        confidence: number;
+        reliability: number;
+        expressiveness: number;
+        ageMs: number;
+    };
+    rightArm: {
+        intent: ArmMotionIntent;
+        confidence: number;
+        reliability: number;
+        expressiveness: number;
+        ageMs: number;
+    };
+    torso: {
+        intent: TorsoMotionIntent;
+        confidence: number;
+    };
 };
 ```
 
@@ -164,19 +160,19 @@ type MotionIntentState = {
 
 基本条件は、既存資料にある通り、`gesture confidence > 0.70`、`hand reliability > 0.60`、条件継続150〜250ms、cooldown 300〜800ms を初期値にします。
 
-| Intent     | 発火条件                                 | 補助条件                              | minimum duration |  cooldown |
-| ---------- | ------------------------------------ | --------------------------------- | ---------------: | --------: |
-| `tracking` | 明示gestureなし、pose/hand reliabilityが十分 | 通常状態                              |              0ms |       0ms |
-| `wave`     | `Open_Palm` + 手が肩〜顔高さ + 左右速度の符号反転    | 0.5〜1.2秒内に2回以上の左右往復               |            400ms | 500〜800ms |
-| `pointing` | `Pointing_Up` 継続                     | 人差し指curl低、他指curl高                 |            200ms | 400〜700ms |
-| `thumbsUp` | `Thumb_Up` 継続                        | 手が胸前〜肩高さ                          |            200ms |     500ms |
-| `peace`    | `Victory` 継続                         | index/middle open、ringLittle curl |            200ms |     500ms |
-| `nearFace` | 手首またはpalm中心が顔bbox近傍                  | hand confidence低下時も200〜300ms保持    |            250ms |     300ms |
-| `explain`  | Open_Palmまたはhalf-open + 片手が胸前        | 小さな左右/上下速度、会話中の説明姿勢               |            300ms |     400ms |
-| `clapLike` | 両手距離が近い + 相対速度が対向                    | 実際の拍手音検出は不要。clipは控えめ              |            150ms |     800ms |
-| `guarded`  | 両手が胴体前で交差/近接、左右同定が不安定                | 左右入れ替えを即反映しない                     |            250ms |     500ms |
-| `lost`     | hand reliability低下                   | Pose wristがあれば腕は継続                |            200ms |       0ms |
-| `fallback` | pose/hand/face全体が低confidence         | comfortable poseへ退避               |            300ms |       0ms |
+| Intent     | 発火条件                                          | 補助条件                              | minimum duration |   cooldown |
+| ---------- | ------------------------------------------------- | ------------------------------------- | ---------------: | ---------: |
+| `tracking` | 明示gestureなし、pose/hand reliabilityが十分      | 通常状態                              |              0ms |        0ms |
+| `wave`     | `Open_Palm` + 手が肩〜顔高さ + 左右速度の符号反転 | 0.5〜1.2秒内に2回以上の左右往復       |            400ms | 500〜800ms |
+| `pointing` | `Pointing_Up` 継続                                | 人差し指curl低、他指curl高            |            200ms | 400〜700ms |
+| `thumbsUp` | `Thumb_Up` 継続                                   | 手が胸前〜肩高さ                      |            200ms |      500ms |
+| `peace`    | `Victory` 継続                                    | index/middle open、ringLittle curl    |            200ms |      500ms |
+| `nearFace` | 手首またはpalm中心が顔bbox近傍                    | hand confidence低下時も200〜300ms保持 |            250ms |      300ms |
+| `explain`  | Open_Palmまたはhalf-open + 片手が胸前             | 小さな左右/上下速度、会話中の説明姿勢 |            300ms |      400ms |
+| `clapLike` | 両手距離が近い + 相対速度が対向                   | 実際の拍手音検出は不要。clipは控えめ  |            150ms |      800ms |
+| `guarded`  | 両手が胴体前で交差/近接、左右同定が不安定         | 左右入れ替えを即反映しない            |            250ms |      500ms |
+| `lost`     | hand reliability低下                              | Pose wristがあれば腕は継続            |            200ms |        0ms |
+| `fallback` | pose/hand/face全体が低confidence                  | comfortable poseへ退避                |            300ms |        0ms |
 
 手振りは `Open_Palm` だけで発火させないことが重要です。既存資料でも、手振りはOpenPalmだけでは誤発火しやすく、手が肩〜顔の高さにあり、左右速度の符号反転が0.5〜1.2秒内に2回以上ある条件を加えるとよいとされています。
 
@@ -188,28 +184,28 @@ type MotionIntentState = {
 
 Semantic clipは全身上書きではなく、tracking poseへのadditive補助にします。既存資料でも、短い上半身clipは常時上書きではなくadditive blendとして使い、状況に応じてtrackingとsemantic clipの比率を変える方針が示されています。
 
-| 状況                    |  tracking | semantic clip | fallback / comfort | 備考                    |
-| --------------------- | --------: | ------------: | -----------------: | --------------------- |
-| 通常tracking            | 0.85〜0.95 |     0.05〜0.15 |               0.00 | 微小な丸め・breathing程度。    |
-| 軽い意図検出                | 0.70〜0.85 |     0.15〜0.30 |               0.00 | explain / nearFace初期。 |
-| 指差し / ピース安定           | 0.60〜0.75 |     0.25〜0.40 |               0.00 | 手首・指はclip寄り。          |
-| 手振り                   | 0.40〜0.70 |     0.30〜0.60 |               0.00 | 手先軌道をclipで安定化。        |
-| tracking低下中のgesture継続 | 0.30〜0.50 |     0.50〜0.70 |          0.00〜0.20 | nearFace / wave維持。    |
-| hand lost 200〜700ms   | 0.20〜0.40 |     0.00〜0.20 |          0.40〜0.70 | 腕はcomfortableへ。       |
-| fallback              | 0.00〜0.20 |          0.00 |          0.80〜1.00 | 動きを止めず自然姿勢へ。          |
+| 状況                        |   tracking | semantic clip | fallback / comfort | 備考                        |
+| --------------------------- | ---------: | ------------: | -----------------: | --------------------------- |
+| 通常tracking                | 0.85〜0.95 |    0.05〜0.15 |               0.00 | 微小な丸め・breathing程度。 |
+| 軽い意図検出                | 0.70〜0.85 |    0.15〜0.30 |               0.00 | explain / nearFace初期。    |
+| 指差し / ピース安定         | 0.60〜0.75 |    0.25〜0.40 |               0.00 | 手首・指はclip寄り。        |
+| 手振り                      | 0.40〜0.70 |    0.30〜0.60 |               0.00 | 手先軌道をclipで安定化。    |
+| tracking低下中のgesture継続 | 0.30〜0.50 |    0.50〜0.70 |         0.00〜0.20 | nearFace / wave維持。       |
+| hand lost 200〜700ms        | 0.20〜0.40 |    0.00〜0.20 |         0.40〜0.70 | 腕はcomfortableへ。         |
+| fallback                    | 0.00〜0.20 |          0.00 |         0.80〜1.00 | 動きを止めず自然姿勢へ。    |
 
 ### 5.2 部位別ブレンド
 
-| 部位                         | tracking寄り | semantic寄り | fallback寄り | 方針                          |
-| -------------------------- | ---------: | ---------: | ---------: | --------------------------- |
-| spine / chest / upperChest |          高 |          低 |          中 | 低振幅・安定優先。                   |
-| neck / head                |          中 |          低 |          中 | head yawは追従、pitch/rollは控えめ。 |
-| shoulder                   |          高 |          低 |          中 | clipで大きく上書きしない。             |
-| upperArm                   |        中〜高 |          中 |          中 | 意図に応じて30%程度clip。            |
-| lowerArm                   |          中 |        中〜高 |          中 | 指差し・手振りでclip寄り。             |
-| wrist pitch/yaw            |          中 |        中〜高 |          中 | gesture印象に効く。               |
-| wrist roll                 |          低 |        低〜中 |          高 | 強く抑制。                       |
-| fingers                    |          中 |          高 |          中 | semantic gesture時はclip寄り。   |
+| 部位                       | tracking寄り | semantic寄り | fallback寄り | 方針                                 |
+| -------------------------- | -----------: | -----------: | -----------: | ------------------------------------ |
+| spine / chest / upperChest |           高 |           低 |           中 | 低振幅・安定優先。                   |
+| neck / head                |           中 |           低 |           中 | head yawは追従、pitch/rollは控えめ。 |
+| shoulder                   |           高 |           低 |           中 | clipで大きく上書きしない。           |
+| upperArm                   |       中〜高 |           中 |           中 | 意図に応じて30%程度clip。            |
+| lowerArm                   |           中 |       中〜高 |           中 | 指差し・手振りでclip寄り。           |
+| wrist pitch/yaw            |           中 |       中〜高 |           中 | gesture印象に効く。                  |
+| wrist roll                 |           低 |       低〜中 |           高 | 強く抑制。                           |
+| fingers                    |           中 |           高 |           中 | semantic gesture時はclip寄り。       |
 
 three-vrm適用では、Animation / IK / semantic / fallbackをそれぞれpose deltaとして出力し、`PoseComposer` で1つの `finalPose` に合成してから `setNormalizedPose(finalPose)` を1回だけ呼び、最後に `vrm.update(delta)` を呼ぶ設計にします。これは同じboneに複数の書き手を作らないためです。
 
@@ -221,16 +217,16 @@ three-vrmの `VRMHumanoid.getNormalizedPose()` / `setNormalizedPose()` は、各
 
 最初に用意すべきclipは、検出が不安定になりやすいがユーザー意図としては重要なものに限定します。添付依頼でも、手振り、指差し、サムズアップ、ピース、顔近くの手などのclip設計が期待成果物に含まれています。
 
-| Clip                  | 対応Intent            |         長さ / 周期 | 主に触るbone                             | trackingに残すbone                    |  推奨weight |
-| --------------------- | ------------------- | --------------: | ------------------------------------ | ---------------------------------- | --------: |
+| Clip                  | 対応Intent          |      長さ / 周期 | 主に触るbone                         | trackingに残すbone                    | 推奨weight |
+| --------------------- | ------------------- | ---------------: | ------------------------------------ | ------------------------------------- | ---------: |
 | `small_wave`          | `wave`              |   0.8〜1.2s loop | forearm, wrist, fingers              | torso, head, shoulder, upperArmの大枠 | 0.30〜0.60 |
-| `point_forward_or_up` | `pointing`          | 0.35〜0.60s hold | wrist, index, other fingers, forearm | shoulder, upperArm, torso          | 0.25〜0.40 |
-| `thumbs_up_hold`      | `thumbsUp`          |   0.4〜0.8s hold | thumb, wrist, fingers                | arm target, torso                  | 0.25〜0.45 |
-| `peace_hold`          | `peace`             |   0.4〜0.8s hold | index, middle, ringLittle, wrist     | arm target, torso                  | 0.25〜0.45 |
-| `shy_hand_near_face`  | `nearFace`          |   0.5〜1.0s hold | wrist, fingers, lowerArm             | head yaw, shoulder, torso          | 0.20〜0.40 |
-| `explain_open_palm`   | `explain`           |   0.6〜1.2s loop | wrist, fingers, lowerArm             | upperArm, shoulder, torso          | 0.15〜0.30 |
-| `soft_clap_like`      | `clapLike`          |        0.3〜0.6s | both wrists, fingers                 | shoulders, chest                   | 0.20〜0.35 |
-| `lost_to_comfort`     | `lost` / `fallback` |        0.5〜0.9s | arm, wrist, fingers                  | head/torso low-frequency tracking  | 0.40〜1.00 |
+| `point_forward_or_up` | `pointing`          | 0.35〜0.60s hold | wrist, index, other fingers, forearm | shoulder, upperArm, torso             | 0.25〜0.40 |
+| `thumbs_up_hold`      | `thumbsUp`          |   0.4〜0.8s hold | thumb, wrist, fingers                | arm target, torso                     | 0.25〜0.45 |
+| `peace_hold`          | `peace`             |   0.4〜0.8s hold | index, middle, ringLittle, wrist     | arm target, torso                     | 0.25〜0.45 |
+| `shy_hand_near_face`  | `nearFace`          |   0.5〜1.0s hold | wrist, fingers, lowerArm             | head yaw, shoulder, torso             | 0.20〜0.40 |
+| `explain_open_palm`   | `explain`           |   0.6〜1.2s loop | wrist, fingers, lowerArm             | upperArm, shoulder, torso             | 0.15〜0.30 |
+| `soft_clap_like`      | `clapLike`          |        0.3〜0.6s | both wrists, fingers                 | shoulders, chest                      | 0.20〜0.35 |
+| `lost_to_comfort`     | `lost` / `fallback` |        0.5〜0.9s | arm, wrist, fingers                  | head/torso low-frequency tracking     | 0.40〜1.00 |
 
 ここで重要なのは、clipの「完全再生」を目的にしないことです。既存資料でも、`small_wave`、`point_up`、`thumbs_up`、`shy_hand_near_face`、`clap_like`、`explain_gesture` などを短い上半身clipとして用意し、tracking結果とadditive blendする方針が示されています。
 
@@ -242,17 +238,17 @@ three-vrmの `VRMHumanoid.getNormalizedPose()` / `setNormalizedPose()` は、各
 
 ```ts
 type SincroMotionStyle = {
-  expressiveness: number;        // 0.0 - 1.0 全体の表現量
-  trackingFidelity: number;      // 0.0 - 1.0 実写追従度
-  semanticAssist: number;        // 0.0 - 1.0 clip補助の強さ
-  cutenessRoundness: number;     // 0.0 - 1.0 軌道の丸め、ease強度
-  gestureBoldness: number;       // 0.0 - 1.0 gesture時の強調
-  torsoDamping: number;          // 0.0 - 1.0 胴体安定化
-  headDamping: number;           // 0.0 - 1.0 頭部安定化
-  shoulderDamping: number;       // 0.0 - 1.0 肩の抑制
-  wristRollInfluence: number;    // 0.25 - 0.60
-  depthCompression: number;      // 0.45 - 0.75
-  lostMotionGraceMs: number;     // 200 - 700
+    expressiveness: number; // 0.0 - 1.0 全体の表現量
+    trackingFidelity: number; // 0.0 - 1.0 実写追従度
+    semanticAssist: number; // 0.0 - 1.0 clip補助の強さ
+    cutenessRoundness: number; // 0.0 - 1.0 軌道の丸め、ease強度
+    gestureBoldness: number; // 0.0 - 1.0 gesture時の強調
+    torsoDamping: number; // 0.0 - 1.0 胴体安定化
+    headDamping: number; // 0.0 - 1.0 頭部安定化
+    shoulderDamping: number; // 0.0 - 1.0 肩の抑制
+    wristRollInfluence: number; // 0.25 - 0.60
+    depthCompression: number; // 0.45 - 0.75
+    lostMotionGraceMs: number; // 200 - 700
 };
 ```
 
@@ -268,11 +264,11 @@ VRoid系の小柄・大きな頭のキャラクターでは、肩幅・腕の到
 
 ```ts
 const confidenceAdjustedExpressiveness =
-  smoothstep(0.25, 0.85, partReliability) * style.expressiveness;
+    smoothstep(0.25, 0.85, partReliability) * style.expressiveness;
 
 motionAmplitude = baseAmplitude * confidenceAdjustedExpressiveness;
 semanticWeight *= smoothstep(0.45, 0.75, gestureReliability);
-trackingWeight *= smoothstep(0.30, 0.80, trackingReliability);
+trackingWeight *= smoothstep(0.3, 0.8, trackingReliability);
 fallbackWeight = 1.0 - max(trackingWeight, semanticWeight);
 ```
 
@@ -280,11 +276,11 @@ fallbackWeight = 1.0 - max(trackingWeight, semanticWeight);
 
 既存資料の推奨に合わせ、手が一時的に消えた場合は部位別に退避します。
 
-|        時間 | 腕                           | 肘pole                | 手首                       | 指            | semantic    |
-| --------: | --------------------------- | -------------------- | ------------------------ | ------------ | ----------- |
-|   0〜200ms | Pose wristがあれば継続。なければ速度減衰予測 | 前フレーム保持 + fallback混合 | 直前姿勢保持                   | 直前姿勢保持       | 200〜300ms保持 |
-| 200〜700ms | comfortable poseへ戻す         | fallback比率を上げる       | forearm-aligned neutralへ | 半開きneutralへ  | fade out    |
-|   700ms以降 | rest寄りに安定                   | fallback中心           | neutral維持                | relaxed hand | inactive    |
+|       時間 | 腕                                           | 肘pole                        | 手首                      | 指              | semantic       |
+| ---------: | -------------------------------------------- | ----------------------------- | ------------------------- | --------------- | -------------- |
+|   0〜200ms | Pose wristがあれば継続。なければ速度減衰予測 | 前フレーム保持 + fallback混合 | 直前姿勢保持              | 直前姿勢保持    | 200〜300ms保持 |
+| 200〜700ms | comfortable poseへ戻す                       | fallback比率を上げる          | forearm-aligned neutralへ | 半開きneutralへ | fade out       |
+|  700ms以降 | rest寄りに安定                               | fallback中心                  | neutral維持               | relaxed hand    | inactive       |
 
 ### 8.3 頭部欠落時
 
@@ -327,28 +323,28 @@ MotionIntentEstimator
 
 ```ts
 type PoseLayer = {
-  name: "tracking" | "semantic" | "fallback" | "style";
-  pose: VRMPose;
-  weight: number;
-  mode: "override" | "additive";
-  ownedBones: VRMHumanBoneName[];
+    name: "tracking" | "semantic" | "fallback" | "style";
+    pose: VRMPose;
+    weight: number;
+    mode: "override" | "additive";
+    ownedBones: VRMHumanBoneName[];
 };
 
 type FinalUpperBodyPose = {
-  pose: VRMPose;
-  confidence: {
-    torso: number;
-    head: number;
-    leftArm: number;
-    rightArm: number;
-    leftHand: number;
-    rightHand: number;
-  };
-  debug: {
-    activeIntents: string[];
-    semanticWeights: Record<string, number>;
-    clampedBones: VRMHumanBoneName[];
-  };
+    pose: VRMPose;
+    confidence: {
+        torso: number;
+        head: number;
+        leftArm: number;
+        rightArm: number;
+        leftHand: number;
+        rightHand: number;
+    };
+    debug: {
+        activeIntents: string[];
+        semanticWeights: Record<string, number>;
+        clampedBones: VRMHumanBoneName[];
+    };
 };
 ```
 
@@ -360,39 +356,39 @@ type FinalUpperBodyPose = {
 
 ### 11.1 ものまねらしさ
 
-| チェック         | 合格基準                                        |
-| ------------ | ------------------------------------------- |
-| 手を上げたとき      | キャラも同じ側の手を上げたと感じられる。                        |
-| 手を振ったとき      | 手先の左右周期が見え、jitterではなくwaveに見える。              |
-| 指差し          | 指差し方向が完全一致しなくても、指差しgestureとして認識できる。         |
-| サムズアップ / ピース | 指形状が1秒程度安定して見える。                            |
-| 顔近くの手        | 手が急に落ちず、顔近くの仕草として保持される。                     |
-| 両手動作         | 左右入れ替えが一瞬起きても、見た目のsemantic continuityが保たれる。 |
+| チェック              | 合格基準                                                            |
+| --------------------- | ------------------------------------------------------------------- |
+| 手を上げたとき        | キャラも同じ側の手を上げたと感じられる。                            |
+| 手を振ったとき        | 手先の左右周期が見え、jitterではなくwaveに見える。                  |
+| 指差し                | 指差し方向が完全一致しなくても、指差しgestureとして認識できる。     |
+| サムズアップ / ピース | 指形状が1秒程度安定して見える。                                     |
+| 顔近くの手            | 手が急に落ちず、顔近くの仕草として保持される。                      |
+| 両手動作              | 左右入れ替えが一瞬起きても、見た目のsemantic continuityが保たれる。 |
 
 ### 11.2 会話中の邪魔にならなさ
 
-| チェック        | 合格基準                       |
-| ----------- | -------------------------- |
-| neutral 10秒 | 胴体・頭が揺れて壊れて見えない。           |
-| 発話中の小動作     | 手の動きが発話内容への注意を奪わない。        |
-| 大きな手振り      | 画面内で収まり、顔や胴体にめり込まない。       |
-| tracking低下  | 急停止・急落下ではなく、自然に小さな動きへ縮退する。 |
-| 長時間視聴       | 目が疲れるjitterや過剰な揺れがない。      |
+| チェック       | 合格基準                                             |
+| -------------- | ---------------------------------------------------- |
+| neutral 10秒   | 胴体・頭が揺れて壊れて見えない。                     |
+| 発話中の小動作 | 手の動きが発話内容への注意を奪わない。               |
+| 大きな手振り   | 画面内で収まり、顔や胴体にめり込まない。             |
+| tracking低下   | 急停止・急落下ではなく、自然に小さな動きへ縮退する。 |
+| 長時間視聴     | 目が疲れるjitterや過剰な揺れがない。                 |
 
 ### 11.3 破綻チェック
 
 既存ロードマップの破綻優先順位に従い、次を必須確認項目にします。
 
-| 優先度 | 項目          | 観測方法                                       |
-| --: | ----------- | ------------------------------------------ |
-|   1 | 胴体・頭部jitter | neutral 10秒の角速度spike                       |
-|   2 | 肘反転         | elbow pole符号反転回数                           |
-|   3 | 肩崩れ / 肩めり込み | 腕上げ時の肩・胸の変形確認                              |
-|   4 | 手首roll暴れ    | wrist roll角速度、手の見た目                        |
-|   5 | 腕の伸び切り      | reach clamp occupancy                      |
-|   6 | 指のちらつき      | gesture label flicker、finger curl variance |
-|   7 | 左右入れ替え      | handedness swap count                      |
-|   8 | 再検出ジャンプ     | dropout recovery jump                      |
+| 優先度 | 項目                | 観測方法                                    |
+| -----: | ------------------- | ------------------------------------------- |
+|      1 | 胴体・頭部jitter    | neutral 10秒の角速度spike                   |
+|      2 | 肘反転              | elbow pole符号反転回数                      |
+|      3 | 肩崩れ / 肩めり込み | 腕上げ時の肩・胸の変形確認                  |
+|      4 | 手首roll暴れ        | wrist roll角速度、手の見た目                |
+|      5 | 腕の伸び切り        | reach clamp occupancy                       |
+|      6 | 指のちらつき        | gesture label flicker、finger curl variance |
+|      7 | 左右入れ替え        | handedness swap count                       |
+|      8 | 再検出ジャンプ      | dropout recovery jump                       |
 
 ---
 
