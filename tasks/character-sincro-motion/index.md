@@ -77,7 +77,15 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 34 件）
+## タスク一覧（自動生成 / 全 37 件）
+
+### open（未完） — 3 件
+
+| タスク                                                                                                                                                         | タイトル                                                 | 判定 | 依存                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------------------- |
+| [task-260624222255-character-animation-3-video-frame-clock](./task-260624222255-character-animation-3-video-frame-clock/task.md)                               | character animation 3.0 video frame clock                | —    | `task-260624013721-character-animation-3-canonical-debug-replay-integration`                                                |
+| [task-260624222300-character-animation-3-camera-quality-score](./task-260624222300-character-animation-3-camera-quality-score/task.md)                         | character animation 3.0 camera quality score             | —    | `task-260624222255-character-animation-3-video-frame-clock`                                                                 |
+| [task-260624222304-character-animation-3-performance-degradation-baseline](./task-260624222304-character-animation-3-performance-degradation-baseline/task.md) | character animation 3.0 performance degradation baseline | —    | `task-260624222255-character-animation-3-video-frame-clock`, `task-260624222300-character-animation-3-camera-quality-score` |
 
 ### done（完了） — 34 件
 
