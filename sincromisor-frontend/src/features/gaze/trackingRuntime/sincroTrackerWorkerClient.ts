@@ -195,6 +195,7 @@ export class SincroTrackerWorkerClient {
                 ...this.stats,
                 status: "running",
                 workerRoundTripMs: performance.now() - pending.sentAtMs,
+                workerTimeMs: message.workerTimeMs,
                 fallbackReason: undefined,
             };
             this.publishStats();

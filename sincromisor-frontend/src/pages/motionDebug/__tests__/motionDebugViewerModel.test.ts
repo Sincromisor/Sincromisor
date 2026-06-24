@@ -25,6 +25,7 @@ import {
     type CameraQualityComponent,
     type CameraQualityScore,
 } from "../../../features/gaze/trackingRuntime/cameraQualityScore";
+import { TRACKER_PERFORMANCE_BUDGET_SCHEMA_VERSION } from "../../../features/gaze/trackingRuntime/trackerRuntimePerformanceBudget";
 import { createMotionDebugViewerSnapshot } from "../motionDebugViewerModel";
 import type { MotionDebugSnapshot } from "../types";
 
@@ -574,5 +575,74 @@ describe("createMotionDebugViewerSnapshot", () => {
             },
         });
         expect(viewer.layers.camera.value).not.toHaveProperty("actualSettings");
+    });
+
+    it("shows replay tracker performance budget in the metrics layer JSON", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const trackerBudget = {
+            schemaVersion: TRACKER_PERFORMANCE_BUDGET_SCHEMA_VERSION,
+            target: {
+                faceTargetFps: 15,
+                poseTargetFps: 12,
+                frameBudgetMs: 66.66666666666667,
+                poseBudgetMs: 83.33333333333333,
+            },
+            observed: {
+                clockSource: "request-video-frame-callback",
+                workerRoundTripMs: 78,
+                workerTimeMs: 61,
+                droppedFrames: 1,
+            },
+            budgetStatus: "warn",
+            degradation: {
+                state: "full",
+            },
+            reasonCodes: ["worker_round_trip_warn", "worker_pending_frame_dropped"],
+        };
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "metrics",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                metrics: {
+                    tracker: {
+                        mode: "worker",
+                        status: "running",
+                        transferTimeMs: 3,
+                        workerRoundTripMs: 78,
+                        workerTimeMs: 61,
+                        loadTimeMs: 120,
+                        droppedFrames: 1,
+                        budget: trackerBudget,
+                    },
+                },
+            },
+        });
+
+        expect(viewer.layers.metrics.status).toBe("available");
+        expect(viewer.layers.metrics.value).toMatchObject({
+            tracker: {
+                budget: {
+                    schemaVersion: TRACKER_PERFORMANCE_BUDGET_SCHEMA_VERSION,
+                    budgetStatus: "warn",
+                },
+            },
+        });
+        expect(viewer.metrics).toBeUndefined();
     });
 });

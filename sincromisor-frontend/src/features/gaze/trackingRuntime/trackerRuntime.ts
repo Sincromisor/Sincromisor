@@ -3,6 +3,7 @@ import { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import { SincroPoseTracker } from "../poseTracking/sincroPoseTracker";
 import { SincroTrackerWorkerClient } from "./sincroTrackerWorkerClient";
+import type { SincroTrackerWorkerStats } from "./sincroTrackerWorkerTypes";
 import { shouldRunTrackerInference, shouldRunTrackerPoseInference } from "./trackerRuntimeCadence";
 import {
     formatTrackerRuntimeErrorDetail,
@@ -10,7 +11,15 @@ import {
 } from "./trackerRuntimeEngineInitializer";
 import { publishTrackerRuntimeFallbackStats } from "./trackerRuntimeFallbackStats";
 import { TrackerRuntimeFrameLoop } from "./trackerRuntimeFrameLoop";
-import { TrackerRuntimePosePerformanceGate } from "./trackerRuntimePosePerformanceGate";
+import {
+    createTrackerPerformanceBudgetReport,
+    type TrackerPerformanceReasonCode,
+    type TrackerRuntimeDegradationState,
+} from "./trackerRuntimePerformanceBudget";
+import {
+    TrackerRuntimePosePerformanceGate,
+    type TrackerRuntimePosePerformanceGateResult,
+} from "./trackerRuntimePosePerformanceGate";
 import {
     DEFAULT_TARGET_INFERENCE_FPS,
     DEFAULT_TARGET_POSE_INFERENCE_FPS,
@@ -19,6 +28,9 @@ import {
     type TrackerVideoFrameTiming,
 } from "./trackerRuntimeTypes";
 import { attachTrackerVideoTrack, trackerVideoFrameIsReady } from "./trackerRuntimeVideoElement";
+
+const MAIN_THREAD_FALLBACK_FACE_FPS_LIMIT = 8;
+const MAIN_THREAD_FALLBACK_POSE_FPS_LIMIT = 4;
 
 // Sincro 用 tracker の camera/video/loop 所有境界。
 // tracker core は DOM を知らず、runtime が video frame の readiness と fps 制限を担当する。
@@ -41,6 +53,11 @@ export class TrackerRuntime {
     private poseDegradedToFaceOnly = false;
     private useWorkerTracking = false;
     private switchingToMainThreadFallback = false;
+    private degradationState: TrackerRuntimeDegradationState = "full";
+    private degradationReason?: TrackerPerformanceReasonCode;
+    private degradationSinceMediaTimeMs?: number;
+    private mainThreadFallbackReason?: string;
+    private ignorePosePerformanceFallback = false;
 
     constructor(
         videoElement: HTMLVideoElement,
@@ -68,6 +85,11 @@ export class TrackerRuntime {
         this.callbacks = callbacks;
         this.poseTrackingEnabled = !!poseOptions.enabled;
         this.poseDegradedToFaceOnly = false;
+        this.degradationState = "full";
+        this.degradationReason = undefined;
+        this.degradationSinceMediaTimeMs = undefined;
+        this.mainThreadFallbackReason = undefined;
+        this.ignorePosePerformanceFallback = !!poseOptions.ignorePerformanceFallback;
         this.targetInferenceFps = Math.max(1, Math.min(30, targetInferenceFps));
         this.targetPoseInferenceFps = Math.max(
             1,
@@ -75,7 +97,7 @@ export class TrackerRuntime {
         );
         this.posePerformanceGate.configure({
             targetPoseInferenceFps: this.targetPoseInferenceFps,
-            ignorePerformanceFallback: !!poseOptions.ignorePerformanceFallback,
+            ignorePerformanceFallback: this.ignorePosePerformanceFallback,
         });
         this.useWorkerTracking = await this.initializeTrackerEngine(true);
         attachTrackerVideoTrack(this.videoElement, videoTrack);
@@ -106,6 +128,11 @@ export class TrackerRuntime {
         this.posePerformanceGate.reset();
         this.useWorkerTracking = false;
         this.switchingToMainThreadFallback = false;
+        this.degradationState = "full";
+        this.degradationReason = undefined;
+        this.degradationSinceMediaTimeMs = undefined;
+        this.mainThreadFallbackReason = undefined;
+        this.ignorePosePerformanceFallback = false;
         this.videoElement.pause();
         this.videoElement.srcObject = null;
     }
@@ -125,7 +152,7 @@ export class TrackerRuntime {
             poseTrackingEnabled: this.poseTrackingEnabled,
             preferWorker,
             onWorkerFallback: (reason) => {
-                this.publishMainThreadFallbackStats(reason);
+                this.applyMainThreadFallback(reason);
             },
             onPoseInitializationFallback: (reason, nowMs) => {
                 this.degradePoseToFaceOnly(reason, nowMs);
@@ -164,12 +191,21 @@ export class TrackerRuntime {
             void this.predictWithWorker(timing);
             return;
         }
+        const detectStartedAtMs = performance.now();
         try {
             const snapshot = this.faceTracker.detect(this.videoElement, nowMs);
             this.callbacks.onFaceMotion(snapshot, timing);
+            let poseInferenceTimeMs: number | undefined;
             if (this.shouldRunPoseInference(nowMs)) {
-                this.runPoseInference(timing);
+                poseInferenceTimeMs = this.runPoseInference(timing);
             }
+            this.callbacks.onTrackerStats?.(
+                this.createMainThreadStats(
+                    timing,
+                    performance.now() - detectStartedAtMs,
+                    poseInferenceTimeMs,
+                ),
+            );
         } catch (error) {
             this.handleRuntimeError(error);
             return;
@@ -196,12 +232,14 @@ export class TrackerRuntime {
                 this.frameLoop.markStopped();
                 return;
             }
-            this.callbacks.onTrackerStats?.(result.stats);
             this.callbacks.onFaceMotion(result.face, timing);
             if (result.pose) {
                 this.callbacks.onPoseMotion?.(result.pose, timing);
                 this.applyPosePerformanceGate(result.pose, nowMs, timing);
             }
+            this.callbacks.onTrackerStats?.(
+                this.withBudget(result.stats, timing, result.pose?.inferenceTimeMs),
+            );
             this.frameLoop.schedule();
         } catch (error) {
             await this.switchToMainThreadFallback(error);
@@ -218,9 +256,9 @@ export class TrackerRuntime {
         });
     }
 
-    private runPoseInference(timing: TrackerVideoFrameTiming): void {
+    private runPoseInference(timing: TrackerVideoFrameTiming): number | undefined {
         if (!this.callbacks) {
-            return;
+            return undefined;
         }
         const nowMs = timing.mediaTimeMs;
         this.lastPoseInferenceAtMs = nowMs;
@@ -228,12 +266,14 @@ export class TrackerRuntime {
             const snapshot = this.poseTracker.detect(this.videoElement, nowMs);
             this.callbacks.onPoseMotion?.(snapshot, timing);
             this.applyPosePerformanceGate(snapshot, nowMs, timing);
+            return snapshot.inferenceTimeMs;
         } catch (error) {
             frontendLogger.warn(
                 "Sincro PoseLandmarker failed during video inference. Falling back to face-only.",
                 { error },
             );
             this.degradePoseToFaceOnly(formatTrackerRuntimeErrorDetail(error), nowMs, timing);
+            return undefined;
         }
     }
 
@@ -242,7 +282,7 @@ export class TrackerRuntime {
             return;
         }
         this.switchingToMainThreadFallback = true;
-        this.publishMainThreadFallbackStats(formatTrackerRuntimeErrorDetail(error));
+        this.applyMainThreadFallback(formatTrackerRuntimeErrorDetail(error));
         this.workerClient.dispose();
         this.useWorkerTracking = false;
         try {
@@ -262,9 +302,10 @@ export class TrackerRuntime {
         nowMs: number,
         timing?: TrackerVideoFrameTiming,
     ): void {
-        const degradedReason = this.posePerformanceGate.evaluate(snapshot);
-        if (degradedReason) {
-            this.degradePoseToFaceOnly(degradedReason, nowMs, timing);
+        const result = this.posePerformanceGate.evaluate(snapshot);
+        this.applyPoseGateResult(result, nowMs);
+        if (result.shouldDegradeToFaceOnly && result.fallbackReason) {
+            this.degradePoseToFaceOnly(result.fallbackReason, nowMs, timing, result.reason);
         }
     }
 
@@ -272,8 +313,12 @@ export class TrackerRuntime {
         reason: string,
         nowMs: number,
         timing?: TrackerVideoFrameTiming,
+        reasonCode?: TrackerPerformanceReasonCode,
     ): void {
         this.poseDegradedToFaceOnly = true;
+        this.degradationState = "face-only";
+        this.degradationReason = reasonCode;
+        this.degradationSinceMediaTimeMs = nowMs;
         const snapshot = {
             ...this.poseTracker.stop(reason, nowMs),
             degradedToFaceOnly: true,
@@ -292,6 +337,105 @@ export class TrackerRuntime {
     }
 
     private publishMainThreadFallbackStats(reason: string): void {
-        publishTrackerRuntimeFallbackStats(this.callbacks, this.workerClient.getStats(), reason);
+        publishTrackerRuntimeFallbackStats(
+            this.callbacks,
+            this.workerClient.getStats(),
+            reason,
+            this.targetInferenceFps,
+            this.targetPoseInferenceFps,
+        );
+    }
+
+    private applyMainThreadFallback(reason: string): void {
+        this.targetInferenceFps = Math.min(
+            this.targetInferenceFps,
+            MAIN_THREAD_FALLBACK_FACE_FPS_LIMIT,
+        );
+        this.targetPoseInferenceFps = Math.min(
+            this.targetPoseInferenceFps,
+            MAIN_THREAD_FALLBACK_POSE_FPS_LIMIT,
+        );
+        this.posePerformanceGate.configure({
+            targetPoseInferenceFps: this.targetPoseInferenceFps,
+            ignorePerformanceFallback: this.ignorePosePerformanceFallback,
+        });
+        this.degradationState = "main-thread-low-fps";
+        this.degradationReason = "main_thread_fallback";
+        this.degradationSinceMediaTimeMs = this.videoElement.currentTime * 1000;
+        this.mainThreadFallbackReason = reason;
+        this.publishMainThreadFallbackStats(reason);
+    }
+
+    private applyPoseGateResult(
+        result: TrackerRuntimePosePerformanceGateResult,
+        nowMs: number,
+    ): void {
+        if (result.state === "full") {
+            if (!this.poseDegradedToFaceOnly && this.degradationState !== "main-thread-low-fps") {
+                this.degradationState = "full";
+                this.degradationReason = undefined;
+                this.degradationSinceMediaTimeMs = undefined;
+            }
+            return;
+        }
+        this.degradationState = result.state;
+        this.degradationReason = result.reason;
+        this.degradationSinceMediaTimeMs = nowMs;
+    }
+
+    private createMainThreadStats(
+        timing: TrackerVideoFrameTiming,
+        mainThreadDetectTimeMs: number,
+        poseInferenceTimeMs: number | undefined,
+    ): SincroTrackerWorkerStats {
+        const workerStats = this.workerClient.getStats();
+        return this.withBudget(
+            {
+                mode: "main-thread",
+                status: this.mainThreadFallbackReason === undefined ? "running" : "fallback",
+                transferTimeMs: 0,
+                workerRoundTripMs: 0,
+                mainThreadDetectTimeMs,
+                loadTimeMs: workerStats.loadTimeMs,
+                droppedFrames: workerStats.droppedFrames,
+                fallbackReason: this.mainThreadFallbackReason,
+                effectiveFaceFps: this.targetInferenceFps,
+                effectivePoseFps: this.targetPoseInferenceFps,
+            },
+            timing,
+            poseInferenceTimeMs,
+        );
+    }
+
+    private withBudget(
+        stats: SincroTrackerWorkerStats,
+        timing: TrackerVideoFrameTiming,
+        poseInferenceTimeMs: number | undefined,
+    ): SincroTrackerWorkerStats {
+        const effectiveFaceFps = stats.effectiveFaceFps ?? this.targetInferenceFps;
+        const effectivePoseFps = stats.effectivePoseFps ?? this.targetPoseInferenceFps;
+        const fallbackReason = stats.fallbackReason ?? this.mainThreadFallbackReason;
+        return {
+            ...stats,
+            effectiveFaceFps,
+            effectivePoseFps,
+            budget: createTrackerPerformanceBudgetReport({
+                targetInferenceFps: this.targetInferenceFps,
+                targetPoseInferenceFps: this.targetPoseInferenceFps,
+                clockSource: timing.source,
+                transferTimeMs: stats.transferTimeMs,
+                workerRoundTripMs: stats.workerRoundTripMs,
+                workerTimeMs: stats.workerTimeMs,
+                mainThreadDetectTimeMs: stats.mainThreadDetectTimeMs,
+                poseInferenceTimeMs,
+                droppedFrames: stats.droppedFrames,
+                effectiveFaceFps,
+                effectivePoseFps,
+                degradationState: this.degradationState,
+                degradationReason: this.degradationReason,
+                degradationSinceMediaTimeMs: this.degradationSinceMediaTimeMs,
+                fallbackReason,
+            }),
+        };
     }
 }

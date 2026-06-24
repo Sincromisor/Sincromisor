@@ -5,6 +5,7 @@
 - `CharacterGaze` は `chat` 向けの注視入力と AutoMute を担当する。
 - `SincroFaceTracker` / `SincroPoseTracker` は `sincro` 向けの同期入力を担当し、MediaPipe 生結果を正規化 snapshot へ変換する。
 - Tracker runtime は camera track、video element、推論 loop、Worker fallback を所有し、UI 更新や VRM 適用は持たない。
+- Tracker runtime は performance budget report と degradation state を Debug Console / motion-debug に出し、Worker round trip、Worker 内推論、main-thread fallback を切り分ける。
 
 ## Scope
 
@@ -29,7 +30,7 @@
     - tracker 観測から独立した後段共有 contract として `CanonicalUpperBodyState` を置く。
     - tracker は MediaPipe 生結果を直接 canonical state と同一視せず、後続 estimator が body-local 意味量へ変換する。
 - `src/features/gaze/trackingRuntime`
-    - MediaPipe fileset、worker client、video frame clock、fallback stats、performance gate を置く。
+    - MediaPipe fileset、worker client、video frame clock、fallback stats、performance budget report、performance gate を置く。
 - `CharacterGaze`
     - FaceDetector による顔位置検出。
     - `chat` mode の注視入力。
@@ -40,6 +41,10 @@
     - `requestVideoFrameCallback()` 対応環境では `mediaTime` / `presentationTime` / `expectedDisplayTime` / `presentedFrames` を `TrackerVideoFrameTiming` として callback 第 2 引数へ渡す。
     - `requestVideoFrameCallback()` 非対応環境では `requestAnimationFrame + video.currentTime`、RAF も使えない test / hidden runtime 境界では 5fps timer fallback を使う。fallback の rVFC 固有 field は欠損のままにする。
     - Worker 経路と main-thread fallback。
+    - Worker が使える環境では Worker 経路を標準にし、Worker unavailable / 初期化失敗 / Worker detect failure では main-thread fallback へ切り替える。
+    - main-thread fallback では effective target を face `<= 8fps`、pose `<= 4fps` に clamp し、`SincroTrackerWorkerStats.budget.degradation.state = "main-thread-low-fps"` として保存する。
+    - `SincroTrackerWorkerStats.budget` は `sincro.tracker-performance-budget.v1` の report で、`target`、`observed`、`budgetStatus`、`degradation`、`reasonCodes` を持つ。`observed.clockSource` は `TrackerVideoFrameTiming.source` を使い、欠損値は `undefined` のままにする。
+    - `budgetStatus` は Worker round trip と Pose inference cost を対象に、target frame / pose budget の `0.9x` 超を `warn`、`1.25x` 超を `over_budget` とする。
 - `SincroFaceTracker`
     - FaceLandmarker から head pose、blendshape、confidence を抽出する。
     - `SincroFaceMotionSnapshot` を出力する。
@@ -114,6 +119,7 @@
     - replay API の `loadRecording()` は plain NDJSON `string` または `File` だけを受け付ける。`startReplay({ mode })`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` は developer-only の window API として公開する。
     - `frame.timestamp.mediaTimeMs` は tracker callback の `TrackerVideoFrameTiming.mediaTimeMs` を正本にする。fallback 時だけ `video.currentTime * 1000` を使う。
     - callback 受信時の `performance.now()` は `frame.metrics.receivedAtPerformanceMs` として保存する。tracker stats は `frame.metrics.tracker` に入れ、`timestamp.receivedAtPerformanceMs` や top-level `tracker` は使わない。
+    - tracker performance budget は `frame.metrics.tracker.budget` に保存する。`reasonCodes` は dropped frame、Worker pending detect、Worker failure / unavailable、pose repeated failures、pose inference too slow、main-thread fallback を enum として保持し、既存 `fallbackReason` の文字列は互換のため変更しない。
     - 同一 `presentedFrames` と同一 `SincroPoseMotionSnapshot.lastUpdatedAtMs` の連続入力は duplicate frame として recorder が捨てる。`presentedFrames` が無い fallback / legacy 入力では、同一 `mediaTimeMs` と同一 `lastUpdatedAtMs` を duplicate とする。
     - camera 実設定を manifest に残す場合、raw `deviceId` / `groupId` は保存しない。hash を保存する場合も export 単位だけで比較可能にし、export をまたいで安定する識別子を残さない。
     - frame ごとの camera quality は `frame.metrics.cameraQuality` に保存する。top-level `cameraQuality` は schema 外とし、manifest の camera settings と同じく raw device identifier は持たない。
@@ -133,11 +139,13 @@
 - MediaPipe model / wasm 配置漏れ:
     - tracking を無効化し、UI / Debug Console に理由を表示する。
 - Worker 初期化失敗:
-    - main-thread tracker へ fallback する。
+    - main-thread tracker へ fallback し、effective target を face `<= 8fps`、pose `<= 4fps` に clamp する。
+    - `degradation.state` は `"main-thread-low-fps"`、reason code は `main_thread_fallback` とし、Worker unavailable / failure は `reasonCodes` で切り分ける。
 - 推論遅延または連続検出失敗:
     - pose のみ face-only に降格できる。
+    - 既存 `fallbackReason` は `pose_inference_too_slow` を維持し、budget の `reasonCodes` では `pose_inference_warn` / `pose_inference_over_budget` に写像する。
     - `pose_inference_too_slow` は起動直後の MediaPipe warm-up サンプルを除外し、target pose inference fps から算出した推論予算で判定する。
-    - `forceSincroPoseTracking` が有効な場合は、低性能端末でのデバッグを優先して `pose_inference_too_slow` による降格だけを無効化する。
+    - `forceSincroPoseTracking` が有効な場合は、低性能端末でのデバッグを優先して `pose_inference_too_slow` による face-only 降格だけを無効化する。この場合も budget の `degradation.state` と reason code は残す。
 - Firefox GPU delegate 相性:
     - CPU delegate を使う。
 

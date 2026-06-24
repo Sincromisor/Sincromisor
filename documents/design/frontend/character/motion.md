@@ -54,6 +54,7 @@
     - `window.__SINCRO_MOTION_DEBUG__` から `startCamera()`、`loadVideoFixture()`、`setRetargetConfig()`、`waitForPoseDetected()`、`getSnapshot()`、`captureFrame()`、`startRecording()`、`stopRecording()`、`downloadRecording()`、`getRecordingState()` を呼べる。
     - replay 操作は同じ window API の developer-only surface とし、`loadRecording(fileOrText)`、`startReplay(options)`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` を公開する。入力は plain NDJSON `string` または `File` に限定し、compressed Blob import は扱わない。
     - snapshot panel は `live`、`recording`、`replay`、`metrics` の viewer mode を持つ。`camera`、`mediapipe`、`poseSnapshot`、`reliability`、`canonical`、`temporal`、`intent`、`solver`、`finalPose`、`applied`、`metrics` を layer selector で切り替え、値あり / 未記録 / 未実装 / 未計算を区別する。
+    - `metrics` layer は replay frame に `frame.metrics` がある場合、motion metric summary 未計算でも保存済み metrics JSON を表示する。tracker performance budget は `frame.metrics.tracker.budget` で確認し、motion metric summary の固定 key は増やさない。
     - `canonical` layer は replay frame の `frame.canonical` を優先し、保存値がない場合だけ live snapshot の `canonical` へ fallback する。valid canonical は `schemaVersion`、`timestamp.mediaTimeMs`、左右腕特徴、`source`、`warnings`、`outOfRangeFields`、`calibration.id` を JSON value として確認できる。invalid canonical は replay failure にせず、`parseStatus: "invalid"` と parse error summary を `available` layer value として表示する。
     - `recording` mode は frame count、duration、compression、compression fallback、scrub 済み camera settings の有無を表示する。
     - `replay` mode は replay mode、current frame、source timestamp、determinism check result、最新 `poseRetargetRuntime` summary を表示する。
@@ -138,6 +139,7 @@
     - v1 frame は最低限 `frame.timestamp.mediaTimeMs`、`frame.video.width`、`frame.video.height`、`frame.poseSnapshot`、`frame.canonical`、`frame.solver.poseRetarget`、`frame.solver.poseRetargetRuntime`、`frame.metrics.receivedAtPerformanceMs`、`frame.metrics.tracker` を保存する。
     - `frame.timestamp` は optional で `presentationTimeMs`、`expectedDisplayTimeMs`、`presentedFrames`、`droppedPresentedFrames`、`clockSource` を保存できる。`clockSource` は `request-video-frame-callback`、`request-animation-frame`、`timer` のいずれかで、fallback では rVFC 固有 field を欠損のままにする。
     - frame ごとの camera quality は optional `frame.metrics.cameraQuality` に保存する。top-level `cameraQuality` は追加しない。replay viewer の camera layer はこの frame 値がある場合、manifest camera settings より優先して表示する。
+    - tracker performance budget は optional `frame.metrics.tracker.budget` として保存する。schema version は `sincro.tracker-performance-budget.v1`、degradation state は `"full"`、`"main-thread-low-fps"`、`"pose-reduced-fps"`、`"face-only"`、`"fallback"` の固定 enum とする。
     - `timestamp.receivedAtPerformanceMs` や top-level `tracker` は schema 外なので追加しない。`mediaTimeMs` と `metrics.receivedAtPerformanceMs` は時刻原点が異なるため、latency として差分を取らない。
     - recorder の duplicate 判定は rVFC の `presentedFrames` がある場合はそれを優先し、同じ `presentedFrames` の連続入力を保存しない。`presentedFrames` が 2 以上進んだ場合、clock は `droppedPresentedFrames = 差分 - 1` を保存する。
     - camera の `deviceId` / `groupId` は raw 値を保存しない。保存が必要になった場合も export 単位の salt で hash し、cross-export stable hash を残さない。
@@ -146,6 +148,7 @@
 - motion metrics
     - metrics core は `src/character/motionEvaluation/motionMetrics.ts` を正本とし、`SincroMotionDebugFrame[]` と `MotionMetricConfig` だけを読む pure function とする。
     - summary schema は `sincro.motion-metrics.v1` とし、`neutralJitter`、`elbowFlipCount`、`recoveryJumpAngleDeg`、`angularVelocitySpikeCount`、`reachClampOccupancy`、`trackingLossDurationMs`、`sideSwapCount`、`addedLatencyMs` を固定 key とする。
+    - tracker budget overrun は Phase 1 metrics key へ追加しない。budget overrun は `frame.metrics.tracker.budget.budgetStatus` と `reasonCodes` を replay viewer の metrics layer で確認し、集計 metric 化は別タスクで扱う。
     - 入力 slot が不足する metric は `status: "not_available"`、`severity: "warn"`、`value: null` とし、summary 全体を pass 扱いにしない。
     - 初期閾値は `DEFAULT_MOTION_METRIC_THRESHOLDS` に固定し、比較は `compareMotionMetricSummaries()` が metric ごとに `improved` / `unchanged` / `regressed` / `not_comparable` を返す。
     - P0 fixture ID は `neutral-10s`、`single-arm-slow-raise`、`both-arms-slow-raise`、`hand-out-and-return`、`arms-cross`、`fast-wave` に固定する。

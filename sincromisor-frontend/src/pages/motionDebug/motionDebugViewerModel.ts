@@ -127,7 +127,7 @@ function createLayerSnapshots(
         ),
         finalPose: createLayerSnapshot("finalPose", context.replayFrame?.finalPose, true),
         applied: createLayerSnapshot("applied", context.replayFrame?.applied, true),
-        metrics: createMetricsLayerSnapshot(context.metrics),
+        metrics: createMetricsLayerSnapshot(context),
     };
 }
 
@@ -194,10 +194,16 @@ function createLayerSnapshot(
     };
 }
 
-function createMetricsLayerSnapshot(
-    metrics: MotionMetricSummary | undefined,
-): MotionDebugLayerSnapshot {
+function createMetricsLayerSnapshot(context: MotionDebugViewerContext): MotionDebugLayerSnapshot {
+    const metrics = context.metrics;
     if (metrics === undefined || !hasRecordedValue(metrics.metrics)) {
+        if (hasRecordedValue(context.replayFrame?.metrics)) {
+            return {
+                status: "available",
+                label: LAYER_LABELS.metrics,
+                value: context.replayFrame?.metrics,
+            };
+        }
         return {
             status: "not_calculated",
             label: LAYER_LABELS.metrics,

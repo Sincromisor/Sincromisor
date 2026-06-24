@@ -1,5 +1,6 @@
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
+import type { TrackerPerformanceBudgetReport } from "./trackerRuntimePerformanceBudget";
 
 export type SincroTrackerWorkerStatus =
     | "idle"
@@ -16,9 +17,14 @@ export type SincroTrackerWorkerStats = {
     status: SincroTrackerWorkerStatus;
     transferTimeMs: number;
     workerRoundTripMs: number;
+    workerTimeMs?: number;
+    mainThreadDetectTimeMs?: number;
+    effectiveFaceFps?: number;
+    effectivePoseFps?: number;
     loadTimeMs: number;
     droppedFrames: number;
     fallbackReason?: string;
+    budget?: TrackerPerformanceBudgetReport;
 };
 
 export type SincroTrackerWorkerInitMessage = {
