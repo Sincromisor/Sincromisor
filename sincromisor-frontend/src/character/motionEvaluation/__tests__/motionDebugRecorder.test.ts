@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+    CAMERA_QUALITY_SCHEMA_VERSION,
+    type CameraQualityComponent,
+    type CameraQualityScore,
+} from "../../../features/gaze/trackingRuntime/cameraQualityScore";
+import {
     CANONICAL_UPPER_BODY_SCHEMA_VERSION,
     type CanonicalArmState,
     type CanonicalPartMeta,
@@ -103,6 +108,41 @@ function createCanonicalState(mediaTimeMs: number): CanonicalUpperBodyState {
         },
         calibration: DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
         warnings: [],
+    };
+}
+
+function createCameraQuality(mediaTimeMs: number): CameraQualityScore {
+    const goodComponent: CameraQualityComponent = { score: 1, status: "good", reasonCodes: [] };
+    return {
+        schemaVersion: CAMERA_QUALITY_SCHEMA_VERSION,
+        overall: {
+            score: 1,
+            status: "good",
+        },
+        components: {
+            resolution: goodComponent,
+            cadence: goodComponent,
+            torsoInFrame: goodComponent,
+            handsInFrame: goodComponent,
+            borderRisk: goodComponent,
+            handSmallRisk: goodComponent,
+            motionBlurRisk: goodComponent,
+        },
+        reasons: [],
+        guideMessages: [],
+        track: {
+            width: 1280,
+            height: 720,
+            frameRate: 30,
+            readyState: "live",
+        },
+        sample: {
+            mediaTimeMs,
+            videoWidth: 1280,
+            videoHeight: 720,
+            poseDetected: true,
+            poseConfidence: 0.82,
+        },
     };
 }
 
@@ -210,6 +250,45 @@ describe("MotionDebugRecorder", () => {
         expect(canonicalParse.state.arms.left.classification).toBe("front");
     });
 
+    it("exports camera quality only under frame metrics", () => {
+        const recorder = new MotionDebugRecorder({ compression: "none" });
+        expect(recorder.start(createValidManifest()).ok).toBe(true);
+        const frameInput = createValidFrameInput();
+        expect(
+            recorder.recordFrame({
+                ...frameInput,
+                metrics: {
+                    receivedAtPerformanceMs: 456,
+                    tracker: {
+                        mode: "main-thread",
+                    },
+                    cameraQuality: createCameraQuality(120),
+                },
+            }).ok,
+        ).toBe(true);
+        expect(recorder.stop().ok).toBe(true);
+
+        const exportResult = recorder.exportNdjson();
+        expect(exportResult.ok).toBe(true);
+        if (!exportResult.ok) {
+            return;
+        }
+        const parsed = parseMotionDebugLogLines(exportResult.ndjson.trimEnd().split("\n"));
+        expect(parsed.ok).toBe(true);
+        if (!parsed.ok) {
+            return;
+        }
+        expect(parsed.frames[0]?.metrics).toMatchObject({
+            cameraQuality: {
+                schemaVersion: CAMERA_QUALITY_SCHEMA_VERSION,
+                sample: {
+                    mediaTimeMs: 120,
+                },
+            },
+        });
+        expect(parsed.frames[0]).not.toHaveProperty("cameraQuality");
+    });
+
     it("exports video frame clock timestamp fields without moving receivedAt into timestamp", () => {
         const recorder = new MotionDebugRecorder({ compression: "none" });
         expect(recorder.start(createValidManifest()).ok).toBe(true);
@@ -292,6 +371,17 @@ describe("MotionDebugRecorder", () => {
             return;
         }
         expect(recordResult.code).toBe("invalid_frame");
+
+        const frameWithTopLevelCameraQuality = {
+            ...createValidFrameInput(240),
+            cameraQuality: createCameraQuality(240),
+        };
+        const topLevelCameraQuality = recorder.recordFrame(frameWithTopLevelCameraQuality);
+        expect(topLevelCameraQuality.ok).toBe(false);
+        if (topLevelCameraQuality.ok) {
+            return;
+        }
+        expect(topLevelCameraQuality.code).toBe("invalid_frame");
     });
 
     it("skips consecutive duplicate frames without entering error state", () => {

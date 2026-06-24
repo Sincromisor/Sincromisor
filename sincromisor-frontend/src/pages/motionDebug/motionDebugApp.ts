@@ -26,6 +26,11 @@ import {
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
     type SincroPoseMotionSnapshot,
 } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import {
+    type CameraQualityPoseSample,
+    type CameraQualityScore,
+    createCameraQualityScore,
+} from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
 import { TrackerRuntime } from "../../features/gaze/trackingRuntime/trackerRuntime";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
@@ -60,6 +65,8 @@ const VRM_URL_QUERY_PARAM = "vrm";
 const POSE_TARGET_INFERENCE_FPS = 12;
 const SNAPSHOT_RENDER_INTERVAL_MS = 180;
 const DEFAULT_WAIT_FOR_POSE_TIMEOUT_MS = 10000;
+const CAMERA_QUALITY_TIMING_HISTORY_LIMIT = 30;
+const CAMERA_QUALITY_POSE_SAMPLE_LIMIT = 10;
 
 function getMotionDebugVrmUrl(): string {
     const requestedUrl = new URLSearchParams(window.location.search).get(VRM_URL_QUERY_PARAM);
@@ -122,6 +129,9 @@ export class MotionDebugApp {
     private latestTrackerStats: SincroTrackerWorkerStats =
         this.debugConsole.getSnapshot().sincroMotion.tracker;
     private latestFrameTiming?: TrackerVideoFrameTiming;
+    private latestCameraQuality?: CameraQualityScore;
+    private frameTimingHistory: TrackerVideoFrameTiming[] = [];
+    private poseQualitySamples: CameraQualityPoseSample[] = [];
     private retargetConfig: MotionDebugRetargetUiConfig = {
         armIkMode: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMode,
         armIkStrength: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkStrength,
@@ -473,6 +483,9 @@ export class MotionDebugApp {
         this.activeStream = undefined;
         this.cameraSource = "none";
         this.latestFrameTiming = undefined;
+        this.latestCameraQuality = undefined;
+        this.frameTimingHistory = [];
+        this.poseQualitySamples = [];
         this.resetCanonicalState();
         this.behaviorState.setFaceMotionTrackingEnabled(false);
         this.behaviorState.setPoseMotionTrackingEnabled(false);
@@ -501,7 +514,7 @@ export class MotionDebugApp {
         snapshot: SincroPoseMotionSnapshot,
         timing?: TrackerVideoFrameTiming,
     ): void {
-        const result = this.recording.recordPoseFrame(snapshot, timing);
+        const result = this.recording.recordPoseFrame(snapshot, timing, this.latestCameraQuality);
         if (result !== undefined && !result.ok) {
             frontendLogger.warn("Motion debug frame was not recorded.", {
                 code: result.code,
@@ -526,6 +539,7 @@ export class MotionDebugApp {
     ): void {
         this.latestFrameTiming = timing;
         this.latestPoseSnapshot = snapshot;
+        this.updateCameraQuality(snapshot, timing);
         this.behaviorState.applyPoseMotion(snapshot);
         this.debugConsole.updateSincroPoseMotion(snapshot);
         this.recordPoseFrame(snapshot, timing);
@@ -538,6 +552,7 @@ export class MotionDebugApp {
     ): void {
         this.latestFrameTiming = timing;
         this.latestPoseSnapshot = snapshot;
+        this.updateCameraQuality(snapshot, timing);
         this.behaviorState.applyPoseMotion(snapshot);
         this.debugConsole.updateSincroPoseMotion(snapshot);
         this.recordPoseFrame(snapshot, timing);
@@ -591,6 +606,41 @@ export class MotionDebugApp {
     private resetCanonicalState(): void {
         this.latestCanonical = undefined;
         this.recording.resetCanonicalState();
+    }
+
+    private updateCameraQuality(
+        snapshot: SincroPoseMotionSnapshot,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
+        if (timing !== undefined) {
+            this.frameTimingHistory = [...this.frameTimingHistory, timing].slice(
+                -CAMERA_QUALITY_TIMING_HISTORY_LIMIT,
+            );
+        }
+        this.poseQualitySamples = [
+            ...this.poseQualitySamples,
+            {
+                poseDetected: snapshot.detected,
+                poseConfidence: snapshot.confidence,
+            },
+        ].slice(-CAMERA_QUALITY_POSE_SAMPLE_LIMIT);
+
+        const [track] = this.activeStream?.getVideoTracks() ?? [];
+        if (this.cameraSource === "none") {
+            this.latestCameraQuality = undefined;
+            return;
+        }
+        this.latestCameraQuality = createCameraQualityScore({
+            source: this.cameraSource,
+            trackSettings: track?.getSettings(),
+            trackReadyState: track?.readyState,
+            videoWidth: this.video.videoWidth,
+            videoHeight: this.video.videoHeight,
+            pose: snapshot,
+            timing,
+            timingHistory: this.frameTimingHistory,
+            poseSamples: this.poseQualitySamples,
+        });
     }
 
     private scheduleNextReplayFrame(currentFrameIndex: number): void {
@@ -725,6 +775,7 @@ export class MotionDebugApp {
             height: this.video.videoHeight,
             readyState: this.video.readyState,
             frameTiming: this.latestFrameTiming,
+            quality: this.latestCameraQuality,
         };
     }
 

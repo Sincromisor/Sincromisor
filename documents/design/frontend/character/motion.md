@@ -118,9 +118,11 @@
     - `classification` は deterministic rule で、`confidence < 0.15` を `unknown`、`openness < -0.25` を `crossed` 優先、`forwardness >= 0.62 && abs(openness) < 0.35` を `front`、`abs(openness) >= 0.45 && forwardness < 0.45` を `side`、`forwardness >= 0.35 && abs(openness) >= 0.25` を `diagonal`、それ以外を `unknown` とする。
     - `calibration` は default / initial / online / replay の snapshot とし、未実装時も `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` を保存して replay の決定性を保つ。
     - `SincroPoseRetargetFrame` の VRM additive rotation、IK solver の quaternion、AnimationMixer 出力は canonical arm feature の入力にも canonical state にも入れず、retarget / final pose の別 slot に分ける。
-- `motion-debug` snapshot
+    - `motion-debug` snapshot
     - `pose`、`tracker`、`poseRetarget`、`poseRetargetRuntime`、camera readiness、render fps をまとめて返す。
     - live camera / video fixture の最新 video frame timing は optional `camera.frameTiming` に載せる。field は `source`、`receivedAtPerformanceMs`、`mediaTimeMs`、`videoCurrentTimeMs`、optional `presentationTimeMs`、optional `expectedDisplayTimeMs`、optional `presentedFrames`、`droppedPresentedFrames` を持つ。
+    - live camera / video fixture の camera quality は optional `camera.quality` に `sincro.camera-quality.v1` として載せる。source が `none` の場合は score を生成せず、viewer camera layer は従来どおり未記録扱いになる。
+    - `CameraQualityScore` の guide message は reason code から `"少し下がってください"`、`"体を画面中央に入れてください"`、`"手が画面から出ないようにしてください"`、`"部屋を明るくしてください"`、`"カメラ解像度を上げてください"` の固定文言へ決定的に変換する。v1 は ReliabilityMap / retarget weight / IK weight へは接続しない。
     - live camera / video fixture / replay pose-snapshot の最新 `CanonicalUpperBodyState` は optional `canonical` field に載せる。replay frame の `frame.canonical` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
     - 既存 field 名は維持し、optional `viewer` field に viewer mode、selected layer、layer status / value、recording、replay、metrics summary を追加する。
     - Playwright からの調整値変更は UI control と同じ retarget config に反映し、画面 snapshot と window API の観測値を揃える。
@@ -135,9 +137,11 @@
     - `MotionDebugRecordingController.recordPoseFrame()` は同じ pose callback / fallback callback 起点で `estimateCanonicalTorsoFrame()`、`createCanonicalUpperBodyState()` を呼び、`frame.canonical` に JSON 保存可能な `CanonicalUpperBodyState` を保存する。連続 frame の `bodyFront` 反転抑制は previous canonical を torso estimator へ渡して効かせ、recording 停止、source 停止、replay 読み込み時に previous を reset する。
     - v1 frame は最低限 `frame.timestamp.mediaTimeMs`、`frame.video.width`、`frame.video.height`、`frame.poseSnapshot`、`frame.canonical`、`frame.solver.poseRetarget`、`frame.solver.poseRetargetRuntime`、`frame.metrics.receivedAtPerformanceMs`、`frame.metrics.tracker` を保存する。
     - `frame.timestamp` は optional で `presentationTimeMs`、`expectedDisplayTimeMs`、`presentedFrames`、`droppedPresentedFrames`、`clockSource` を保存できる。`clockSource` は `request-video-frame-callback`、`request-animation-frame`、`timer` のいずれかで、fallback では rVFC 固有 field を欠損のままにする。
+    - frame ごとの camera quality は optional `frame.metrics.cameraQuality` に保存する。top-level `cameraQuality` は追加しない。replay viewer の camera layer はこの frame 値がある場合、manifest camera settings より優先して表示する。
     - `timestamp.receivedAtPerformanceMs` や top-level `tracker` は schema 外なので追加しない。`mediaTimeMs` と `metrics.receivedAtPerformanceMs` は時刻原点が異なるため、latency として差分を取らない。
     - recorder の duplicate 判定は rVFC の `presentedFrames` がある場合はそれを優先し、同じ `presentedFrames` の連続入力を保存しない。`presentedFrames` が 2 以上進んだ場合、clock は `droppedPresentedFrames = 差分 - 1` を保存する。
     - camera の `deviceId` / `groupId` は raw 値を保存しない。保存が必要になった場合も export 単位の salt で hash し、cross-export stable hash を残さない。
+    - `CameraQualityScore.track` も raw `deviceId` / `groupId` / `label` を保存せず、`width`、`height`、`frameRate`、`facingMode`、`readyState` だけを持つ。
     - `MediaStreamTrack.getSettings()` 由来の camera settings は `MotionDebugApp` で scrub してから manifest へ渡し、recorder core は scrub 済み manifest を strict schema で検証する。
 - motion metrics
     - metrics core は `src/character/motionEvaluation/motionMetrics.ts` を正本とし、`SincroMotionDebugFrame[]` と `MotionMetricConfig` だけを読む pure function とする。

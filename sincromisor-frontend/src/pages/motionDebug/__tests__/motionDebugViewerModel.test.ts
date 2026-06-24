@@ -20,6 +20,11 @@ import {
     type SincroPoseMotionSnapshot,
 } from "../../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import { cloneSincroPoseMotionSnapshot } from "../../../features/gaze/poseTracking/sincroPoseMotionSnapshotClone";
+import {
+    CAMERA_QUALITY_SCHEMA_VERSION,
+    type CameraQualityComponent,
+    type CameraQualityScore,
+} from "../../../features/gaze/trackingRuntime/cameraQualityScore";
 import { createMotionDebugViewerSnapshot } from "../motionDebugViewerModel";
 import type { MotionDebugSnapshot } from "../types";
 
@@ -184,18 +189,61 @@ function createCanonicalState(mediaTimeMs: number): CanonicalUpperBodyState {
     };
 }
 
+function createCameraQuality(mediaTimeMs: number): CameraQualityScore {
+    const goodComponent: CameraQualityComponent = { score: 1, status: "good", reasonCodes: [] };
+    return {
+        schemaVersion: CAMERA_QUALITY_SCHEMA_VERSION,
+        overall: {
+            score: 1,
+            status: "good",
+        },
+        components: {
+            resolution: goodComponent,
+            cadence: goodComponent,
+            torsoInFrame: goodComponent,
+            handsInFrame: goodComponent,
+            borderRisk: goodComponent,
+            handSmallRisk: goodComponent,
+            motionBlurRisk: goodComponent,
+        },
+        reasons: [],
+        guideMessages: [],
+        track: {
+            width: 1280,
+            height: 720,
+            frameRate: 30,
+            facingMode: "user",
+            readyState: "live",
+        },
+        sample: {
+            mediaTimeMs,
+            clockSource: "request-video-frame-callback",
+            droppedPresentedFrames: 0,
+            videoWidth: 1280,
+            videoHeight: 720,
+            poseDetected: true,
+            poseConfidence: 0.86,
+        },
+    };
+}
+
 function createLiveSnapshot(
-    options: Pick<MotionDebugSnapshot, "canonical"> = {},
+    options: {
+        canonical?: MotionDebugSnapshot["canonical"];
+        cameraQuality?: CameraQualityScore;
+        cameraSource?: MotionDebugSnapshot["camera"]["source"];
+    } = {},
 ): MotionDebugSnapshot {
     const debugSnapshot = createDefaultSnapshot().sincroMotion;
     return {
         status: "running",
         message: "test",
         camera: {
-            source: "fixture",
+            source: options.cameraSource ?? "fixture",
             width: 1280,
             height: 720,
             readyState: 4,
+            quality: options.cameraQuality,
         },
         recording: {
             status: "stopped",
@@ -443,5 +491,88 @@ describe("createMotionDebugViewerSnapshot", () => {
                 schemaVersion: CANONICAL_UPPER_BODY_SCHEMA_VERSION,
             },
         });
+    });
+
+    it("shows live camera quality in the camera layer", () => {
+        const liveSnapshot = createLiveSnapshot({
+            cameraQuality: createCameraQuality(120),
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "live",
+            selectedLayer: "camera",
+            liveSnapshot,
+            replayState: {
+                status: "idle",
+                frameCount: 0,
+            },
+        });
+
+        expect(viewer.layers.camera.status).toBe("available");
+        expect(viewer.layers.camera.value).toMatchObject({
+            source: "fixture",
+            quality: {
+                schemaVersion: CAMERA_QUALITY_SCHEMA_VERSION,
+                sample: {
+                    mediaTimeMs: 120,
+                },
+            },
+        });
+    });
+
+    it("keeps source none camera layer unrecorded when quality is absent", () => {
+        const liveSnapshot = createLiveSnapshot({
+            cameraSource: "none",
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "live",
+            selectedLayer: "camera",
+            liveSnapshot,
+            replayState: {
+                status: "idle",
+                frameCount: 0,
+            },
+        });
+
+        expect(viewer.layers.camera.status).toBe("not_recorded");
+    });
+
+    it("prefers replay frame metrics cameraQuality over replay manifest camera", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "camera",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayManifest: createManifest(),
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                metrics: {
+                    cameraQuality: createCameraQuality(240),
+                },
+            },
+        });
+
+        expect(viewer.layers.camera.status).toBe("available");
+        expect(viewer.layers.camera.value).toMatchObject({
+            schemaVersion: CAMERA_QUALITY_SCHEMA_VERSION,
+            sample: {
+                mediaTimeMs: 240,
+            },
+        });
+        expect(viewer.layers.camera.value).not.toHaveProperty("actualSettings");
     });
 });
