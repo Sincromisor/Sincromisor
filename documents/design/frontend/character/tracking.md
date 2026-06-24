@@ -29,6 +29,9 @@
 - `src/character/canonical`
     - tracker 観測から独立した後段共有 contract として `CanonicalUpperBodyState` を置く。
     - tracker は MediaPipe 生結果を直接 canonical state と同一視せず、後続 estimator が body-local 意味量へ変換する。
+- `src/character/reliability`
+    - tracker / camera / temporal 由来の観測品質を後段へ渡す `ReliabilityMap` v1 contract を置く。
+    - MediaPipe confidence は入力材料に留め、IK / filter / fallback が読む制御用 weight は joint / part / gesture 単位の `finalWeight` と component `score` として保存する。
 - `src/features/gaze/trackingRuntime`
     - MediaPipe fileset、worker client、video frame clock、fallback stats、performance budget report、performance gate を置く。
 - `CharacterGaze`
@@ -103,6 +106,11 @@
     - 保存形式は finite number、string enum、3 要素 tuple、plain object に限定し、MediaPipe landmark object、Three.js object、VRM bone keyed pose は入れない。
     - 左右は解剖学的な `left` / `right` に固定し、camera preview の mirror 表示や screen-space の左右反転とは分けて扱う。
     - `parseCanonicalUpperBodyState()` は log / replay 境界の検証 API であり、未知 schema version、値域外 scalar、非 finite number、runtime object 風 extra key を reject する。
+- `ReliabilityMap`
+    - `sincro.reliability-map.v1` の schema version を持つ、tracking 観測品質の保存 contract。
+    - `timestamp`、`camera`、`joints`、`parts`、`gesture`、`warnings` を持ち、`frame.reliability` optional slot に保存する。v1 は finite number、lower-case enum、plain object に限定し、Three.js object、MediaPipe landmark object、class instance は入れない。
+    - `JointReliability` / `PartReliability` の `finalWeight` と各 component `score` は `0..1` で、低 weight 観測も parse 成功として保持する。threshold 未満の観測を破棄するかどうかは後続 estimator / controller が判断する。
+    - `parseReliabilityMap()` は未知 `schemaVersion` を先に `unknown_schema_version` として返し、値域外 scalar は `out_of_range`、構造違反や unknown enum / extra key は `invalid_state` として返す。
 - `SincroPoseTargetPointSnapshot`
     - `tracked`: 通常 target として十分な confidence と有限座標を持つ状態。
     - `quality`: `strong` / `weak` / `lost`。`weak` は座標を IK に使えるが、強度を落とすべき状態。
@@ -115,6 +123,7 @@
 - motion evaluation log frame
     - `sincro.motion-debug-log.v1` の保存単位は NDJSON の frame record であり、tracker が出力する正規化 pose snapshot は `frame.poseSnapshot` に保存する。
     - `frame.canonical` は motion-debug page 側で `SincroPoseMotionSnapshot` と latest face snapshot から生成した `CanonicalUpperBodyState` を保存する optional slot である。`parseMotionDebugLogLines()` は unknown optional slot として保持し、replay / viewer 境界で `parseCanonicalUpperBodyState()` により valid / invalid を判定する。
+    - `frame.reliability` は motion-debug page 側で生成する `ReliabilityMap` の optional slot である。`parseMotionDebugLogLines()` は unknown optional slot として保持し、replay / viewer 境界で `parseReliabilityMap()` により valid / invalid を判定する。
     - MediaPipe raw result は必要な場合も `frame.mediapipe` に分け、`frame.poseSnapshot` には `SincroPoseMotionSnapshot` 相当の normalized data を置く。
     - replay API の `loadRecording()` は plain NDJSON `string` または `File` だけを受け付ける。`startReplay({ mode })`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` は developer-only の window API として公開する。
     - `frame.timestamp.mediaTimeMs` は tracker callback の `TrackerVideoFrameTiming.mediaTimeMs` を正本にする。fallback 時だけ `video.currentTime * 1000` を使う。
