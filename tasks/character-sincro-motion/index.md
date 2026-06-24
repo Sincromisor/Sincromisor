@@ -77,7 +77,16 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 37 件）
+## タスク一覧（自動生成 / 全 41 件）
+
+### open（未完） — 4 件
+
+| タスク                                                                                                                                                             | タイトル                                                           | 判定 | 依存                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [task-260625035438-character-animation-3-phase-4-downstream-weights](./task-260625035438-character-animation-3-phase-4-downstream-weights/task.md)                 | Character animation 3 Phase 4 reliability downstream weights       | —    | `task-260625035438-character-animation-3-phase-4-reliability-contract`, `task-260625035438-character-animation-3-phase-4-pose-reliability-estimator`, `task-260625035438-character-animation-3-phase-4-reliability-debug-replay` |
+| [task-260625035438-character-animation-3-phase-4-pose-reliability-estimator](./task-260625035438-character-animation-3-phase-4-pose-reliability-estimator/task.md) | Character animation 3 Phase 4 pose reliability estimator           | —    | `task-260625035438-character-animation-3-phase-4-reliability-contract`                                                                                                                                                           |
+| [task-260625035438-character-animation-3-phase-4-reliability-contract](./task-260625035438-character-animation-3-phase-4-reliability-contract/task.md)             | Character animation 3 Phase 4 ReliabilityMap contract              | —    | —                                                                                                                                                                                                                                |
+| [task-260625035438-character-animation-3-phase-4-reliability-debug-replay](./task-260625035438-character-animation-3-phase-4-reliability-debug-replay/task.md)     | Character animation 3 Phase 4 reliability debug replay integration | —    | `task-260625035438-character-animation-3-phase-4-reliability-contract`, `task-260625035438-character-animation-3-phase-4-pose-reliability-estimator`                                                                             |
 
 ### done（完了） — 37 件
 
