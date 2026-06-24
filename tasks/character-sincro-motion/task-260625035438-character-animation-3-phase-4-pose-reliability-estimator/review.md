@@ -1,6 +1,7 @@
 # Review: task-260625035438-character-animation-3-phase-4-pose-reliability-estimator
 
 ## 判定
+
 APPROVED
 
 前回の新規 High 指摘は、task.md:26 のドキュメント同期条件が改訂後 input shape と一致するよう更新されており解消済み。

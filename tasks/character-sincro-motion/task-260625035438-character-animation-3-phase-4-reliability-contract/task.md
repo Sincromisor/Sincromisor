@@ -32,7 +32,12 @@ character-animation-3.0 の Phase 4 は、MediaPipe confidence をそのまま I
 - v1 の完全な保存 schema は次に固定する。不足値を optional にすると後続 debug の解釈が揺れるため、未計算 component は `score: 0`、対応する `reasonCodes`、`warnings` で表す。
 
 ```ts
-type ReliabilityPartState = "tracked" | "suspect" | "predicted" | "lost" | "recovering";
+type ReliabilityPartState =
+    | "tracked"
+    | "suspect"
+    | "predicted"
+    | "lost"
+    | "recovering";
 
 type ReliabilitySource =
     | "pose"
