@@ -8,6 +8,7 @@ import {
     type SincroPoseArmMotionSnapshot,
     type SincroPoseTargetPointSnapshot,
 } from "../../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import { createDefaultReliabilityMap, type ReliabilityMap } from "../../reliability/reliabilityMap";
 import {
     createCanonicalUpperBodyState,
     extractCanonicalArmState,
@@ -126,6 +127,39 @@ function createArm(
     };
 }
 
+function createTrackedReliabilityMap(mediaTimeMs = 1234): ReliabilityMap {
+    const reliability = createDefaultReliabilityMap(mediaTimeMs);
+    reliability.warnings = [];
+    for (const joint of [
+        reliability.joints.leftShoulder,
+        reliability.joints.leftElbow,
+        reliability.joints.leftWrist,
+        reliability.joints.rightShoulder,
+        reliability.joints.rightElbow,
+        reliability.joints.rightWrist,
+    ]) {
+        joint.state = "tracked";
+        joint.finalWeight = 1;
+        joint.source = "pose";
+        joint.warnings = [];
+        for (const component of Object.values(joint.components)) {
+            component.score = 1;
+            component.reasonCodes = [];
+        }
+    }
+    for (const part of [reliability.parts.leftArm, reliability.parts.rightArm]) {
+        part.state = "tracked";
+        part.finalWeight = 1;
+        part.source = "pose";
+        part.warnings = [];
+        for (const component of Object.values(part.components)) {
+            component.score = 1;
+            component.reasonCodes = [];
+        }
+    }
+    return reliability;
+}
+
 describe("extractCanonicalArmState", () => {
     it("returns neutral parseable state when pose arm data is missing", () => {
         const state = createCanonicalUpperBodyState({
@@ -233,5 +267,106 @@ describe("extractCanonicalArmState", () => {
                 }),
             ]),
         );
+    });
+
+    it("keeps old confidence when reliability is not provided", () => {
+        const arm = createArm("right", [0.5, 0, 0], [1, 0, 0], [1.5, 0, 0], {
+            confidence: 0.8,
+        });
+
+        const state = extractCanonicalArmState({
+            side: "right",
+            arm,
+            torso: createTorsoFrame(),
+        });
+
+        expect(state.confidence).toBe(0.8);
+        expect(state.source).toBe("pose");
+    });
+
+    it("keeps confidence nearly unchanged when reliability is high", () => {
+        const reliability = createTrackedReliabilityMap();
+        const arm = createArm("right", [0.5, 0, 0], [1, 0, 0], [1.5, 0, 0], {
+            confidence: 0.8,
+        });
+
+        const state = extractCanonicalArmState({
+            side: "right",
+            arm,
+            torso: createTorsoFrame(),
+            reliability,
+        });
+
+        expect(state.confidence).toBeCloseTo(0.8);
+        expect(state.source).toBe("pose");
+    });
+
+    it("downweights suspect reliability without discarding the pose source", () => {
+        const reliability = createTrackedReliabilityMap();
+        reliability.parts.leftArm.state = "suspect";
+        reliability.parts.leftArm.finalWeight = 0.25;
+        reliability.joints.leftWrist.state = "suspect";
+        reliability.joints.leftWrist.finalWeight = 0.64;
+        const arm = createArm("left", [-0.5, 0, 0], [-1, 0, 0], [-1.5, 0, 0]);
+
+        const state = extractCanonicalArmState({
+            side: "left",
+            arm,
+            torso: createTorsoFrame(),
+            reliability,
+        });
+
+        expect(state.confidence).toBeCloseTo(0.4);
+        expect(state.source).toBe("pose");
+        expect(state.warnings).toContain("low_confidence");
+    });
+
+    it("turns lost reliability into neutral source with zero confidence", () => {
+        const reliability = createTrackedReliabilityMap();
+        reliability.parts.leftArm.state = "lost";
+        reliability.parts.leftArm.finalWeight = 0;
+        const arm = createArm("left", [-0.5, 0, 0], [-1, 0, 0], [-1.5, 0, 0]);
+
+        const state = extractCanonicalArmState({
+            side: "left",
+            arm,
+            torso: createTorsoFrame(),
+            reliability,
+        });
+
+        expect(state.confidence).toBe(0);
+        expect(state.source).toBe("neutral");
+        expect(state.warnings).toContain("low_confidence");
+    });
+
+    it("maps reliability reason codes into canonical warnings", () => {
+        const reliability = createTrackedReliabilityMap();
+        reliability.parts.leftArm.components.side.reasonCodes = ["side_inconsistent"];
+        reliability.joints.leftElbow.components.boneLength.reasonCodes = [
+            "bone_length_inconsistent",
+        ];
+        reliability.parts.rightArm.components.bodyScale.reasonCodes = ["body_scale_jump"];
+        const pose = {
+            ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
+            detected: true,
+            confidence: 1,
+            leftArm: createArm("left", [-0.5, 0, 0], [-1, 0, 0], [-1.5, 0, 0]),
+            rightArm: createArm("right", [0.5, 0, 0], [1, 0, 0], [1.5, 0, 0]),
+        };
+
+        const state = createCanonicalUpperBodyState({
+            pose,
+            torso: createTorsoFrame(),
+            mediaTimeMs: 1234,
+            reliability,
+        });
+
+        expect(state.arms.left.warnings).toContain("left_right_swap_suspect");
+        expect(state.arms.left.warnings).toContain("out_of_range");
+        expect(state.arms.right.warnings).toContain("out_of_range");
+        expect(state.warnings).toEqual(
+            expect.arrayContaining(["left_right_swap_suspect", "out_of_range"]),
+        );
+        expect(parseCanonicalUpperBodyState(state).ok).toBe(true);
     });
 });
