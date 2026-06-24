@@ -1,6 +1,7 @@
 # Review: task-260624222304-character-animation-3-performance-degradation-baseline
 
 ## 判定
+
 APPROVED
 
 Critical / High の blocking 指摘はない。公開通信契約は変えず、Debug Console / motion-debug / motion log という developer 向け公開挙動の変更は `documents/design/frontend/character/tracking.md` と `documents/design/frontend/character/motion.md` への同期が受け入れ条件に明記されているため、実装へ進めてよい。

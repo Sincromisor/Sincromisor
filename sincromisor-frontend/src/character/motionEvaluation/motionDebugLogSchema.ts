@@ -82,6 +82,13 @@ const motionDebugLogManifestSchema = z
 const motionDebugFrameTimestampSchema = z
     .object({
         mediaTimeMs: z.number().finite(),
+        presentationTimeMs: z.number().finite().optional(),
+        expectedDisplayTimeMs: z.number().finite().optional(),
+        presentedFrames: z.number().int().nonnegative().optional(),
+        droppedPresentedFrames: z.number().int().nonnegative().optional(),
+        clockSource: z
+            .enum(["request-video-frame-callback", "request-animation-frame", "timer"])
+            .optional(),
     })
     .strict();
 

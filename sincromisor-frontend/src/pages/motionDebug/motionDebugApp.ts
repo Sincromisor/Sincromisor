@@ -28,6 +28,7 @@ import {
 } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
 import { TrackerRuntime } from "../../features/gaze/trackingRuntime/trackerRuntime";
+import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { formatError, requireElement } from "./dom";
 import { requestMotionDebugCameraStream } from "./motionDebugCameraStream";
@@ -120,6 +121,7 @@ export class MotionDebugApp {
     private latestCanonical?: MotionDebugSnapshot["canonical"];
     private latestTrackerStats: SincroTrackerWorkerStats =
         this.debugConsole.getSnapshot().sincroMotion.tracker;
+    private latestFrameTiming?: TrackerVideoFrameTiming;
     private retargetConfig: MotionDebugRetargetUiConfig = {
         armIkMode: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMode,
         armIkStrength: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkStrength,
@@ -428,14 +430,14 @@ export class MotionDebugApp {
         await this.trackerRuntime.startFaceTracking(
             track,
             {
-                onFaceMotion: (snapshot) => {
-                    this.handleFaceMotion(snapshot);
+                onFaceMotion: (snapshot, timing) => {
+                    this.handleFaceMotion(snapshot, timing);
                 },
-                onPoseMotion: (snapshot) => {
-                    this.handlePoseMotion(snapshot);
+                onPoseMotion: (snapshot, timing) => {
+                    this.handlePoseMotion(snapshot, timing);
                 },
-                onPoseFallback: (snapshot) => {
-                    this.handlePoseFallback(snapshot);
+                onPoseFallback: (snapshot, timing) => {
+                    this.handlePoseFallback(snapshot, timing);
                 },
                 onTrackerStats: (snapshot) => {
                     this.latestTrackerStats = snapshot;
@@ -470,6 +472,7 @@ export class MotionDebugApp {
         this.activeFixtureUrl = undefined;
         this.activeStream = undefined;
         this.cameraSource = "none";
+        this.latestFrameTiming = undefined;
         this.resetCanonicalState();
         this.behaviorState.setFaceMotionTrackingEnabled(false);
         this.behaviorState.setPoseMotionTrackingEnabled(false);
@@ -494,8 +497,11 @@ export class MotionDebugApp {
         };
     }
 
-    private recordPoseFrame(snapshot: SincroPoseMotionSnapshot): void {
-        const result = this.recording.recordPoseFrame(snapshot);
+    private recordPoseFrame(
+        snapshot: SincroPoseMotionSnapshot,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
+        const result = this.recording.recordPoseFrame(snapshot, timing);
         if (result !== undefined && !result.ok) {
             frontendLogger.warn("Motion debug frame was not recorded.", {
                 code: result.code,
@@ -504,25 +510,37 @@ export class MotionDebugApp {
         }
     }
 
-    private handleFaceMotion(snapshot: SincroFaceMotionSnapshot): void {
+    private handleFaceMotion(
+        snapshot: SincroFaceMotionSnapshot,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
+        this.latestFrameTiming = timing;
         this.latestFaceSnapshot = snapshot;
         this.behaviorState.applyFaceMotion(snapshot);
         this.debugConsole.updateSincroFaceMotion(snapshot);
     }
 
-    private handlePoseMotion(snapshot: SincroPoseMotionSnapshot): void {
+    private handlePoseMotion(
+        snapshot: SincroPoseMotionSnapshot,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
+        this.latestFrameTiming = timing;
         this.latestPoseSnapshot = snapshot;
         this.behaviorState.applyPoseMotion(snapshot);
         this.debugConsole.updateSincroPoseMotion(snapshot);
-        this.recordPoseFrame(snapshot);
+        this.recordPoseFrame(snapshot, timing);
         this.overlayRenderer.render(snapshot, this.video);
     }
 
-    private handlePoseFallback(snapshot: SincroPoseMotionSnapshot): void {
+    private handlePoseFallback(
+        snapshot: SincroPoseMotionSnapshot,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
+        this.latestFrameTiming = timing;
         this.latestPoseSnapshot = snapshot;
         this.behaviorState.applyPoseMotion(snapshot);
         this.debugConsole.updateSincroPoseMotion(snapshot);
-        this.recordPoseFrame(snapshot);
+        this.recordPoseFrame(snapshot, timing);
     }
 
     private applyReplayPoseSnapshot(
@@ -706,6 +724,7 @@ export class MotionDebugApp {
             width: this.video.videoWidth,
             height: this.video.videoHeight,
             readyState: this.video.readyState,
+            frameTiming: this.latestFrameTiming,
         };
     }
 

@@ -141,6 +141,29 @@ function createValidFrameInput(mediaTimeMs = 120): MotionDebugRecorderFrameInput
     };
 }
 
+function createFrameInputWithClockTiming(
+    mediaTimeMs: number,
+    presentedFrames: number,
+    droppedPresentedFrames: number,
+): MotionDebugRecorderFrameInput {
+    return {
+        ...createValidFrameInput(mediaTimeMs),
+        timestamp: {
+            mediaTimeMs,
+            presentationTimeMs: mediaTimeMs + 1,
+            expectedDisplayTimeMs: mediaTimeMs + 16,
+            presentedFrames,
+            droppedPresentedFrames,
+            clockSource: "request-video-frame-callback",
+        },
+        dedupeKey: {
+            mediaTimeMs,
+            poseLastUpdatedAtMs: 300,
+            presentedFrames,
+        },
+    };
+}
+
 afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -185,6 +208,56 @@ describe("MotionDebugRecorder", () => {
         }
         expect(canonicalParse.state.schemaVersion).toBe(CANONICAL_UPPER_BODY_SCHEMA_VERSION);
         expect(canonicalParse.state.arms.left.classification).toBe("front");
+    });
+
+    it("exports video frame clock timestamp fields without moving receivedAt into timestamp", () => {
+        const recorder = new MotionDebugRecorder({ compression: "none" });
+        expect(recorder.start(createValidManifest()).ok).toBe(true);
+        expect(recorder.recordFrame(createFrameInputWithClockTiming(120, 10, 0)).ok).toBe(true);
+        expect(recorder.stop().ok).toBe(true);
+
+        const exportResult = recorder.exportNdjson();
+        expect(exportResult.ok).toBe(true);
+        if (!exportResult.ok) {
+            return;
+        }
+        const parsed = parseMotionDebugLogLines(exportResult.ndjson.trimEnd().split("\n"));
+        expect(parsed.ok).toBe(true);
+        if (!parsed.ok) {
+            return;
+        }
+        expect(parsed.frames[0]?.timestamp).toEqual({
+            mediaTimeMs: 120,
+            presentationTimeMs: 121,
+            expectedDisplayTimeMs: 136,
+            presentedFrames: 10,
+            droppedPresentedFrames: 0,
+            clockSource: "request-video-frame-callback",
+        });
+        expect(parsed.frames[0]?.metrics).toEqual({
+            receivedAtPerformanceMs: 456,
+            tracker: {
+                mode: "main-thread",
+            },
+        });
+    });
+
+    it("dedupes consecutive rVFC frames with the same presentedFrames", () => {
+        const recorder = new MotionDebugRecorder();
+        expect(recorder.start(createValidManifest()).ok).toBe(true);
+        const first = recorder.recordFrame(createFrameInputWithClockTiming(120, 10, 0));
+        const duplicate = recorder.recordFrame(createFrameInputWithClockTiming(153, 10, 0));
+        const next = recorder.recordFrame(createFrameInputWithClockTiming(186, 13, 2));
+
+        expect(first.ok).toBe(true);
+        expect(duplicate.ok).toBe(true);
+        expect(next.ok).toBe(true);
+        if (!duplicate.ok || duplicate.recorded) {
+            return;
+        }
+        expect(duplicate.skippedReason).toBe("duplicate_frame");
+        expect(duplicate.state.frameCount).toBe(1);
+        expect(next.state.frameCount).toBe(2);
     });
 
     it("rejects invalid manifest and invalid frame payloads", () => {

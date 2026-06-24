@@ -120,6 +120,7 @@
     - `SincroPoseRetargetFrame` の VRM additive rotation、IK solver の quaternion、AnimationMixer 出力は canonical arm feature の入力にも canonical state にも入れず、retarget / final pose の別 slot に分ける。
 - `motion-debug` snapshot
     - `pose`、`tracker`、`poseRetarget`、`poseRetargetRuntime`、camera readiness、render fps をまとめて返す。
+    - live camera / video fixture の最新 video frame timing は optional `camera.frameTiming` に載せる。field は `source`、`receivedAtPerformanceMs`、`mediaTimeMs`、`videoCurrentTimeMs`、optional `presentationTimeMs`、optional `expectedDisplayTimeMs`、optional `presentedFrames`、`droppedPresentedFrames` を持つ。
     - live camera / video fixture / replay pose-snapshot の最新 `CanonicalUpperBodyState` は optional `canonical` field に載せる。replay frame の `frame.canonical` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
     - 既存 field 名は維持し、optional `viewer` field に viewer mode、selected layer、layer status / value、recording、replay、metrics summary を追加する。
     - Playwright からの調整値変更は UI control と同じ retarget config に反映し、画面 snapshot と window API の観測値を揃える。
@@ -129,10 +130,13 @@
     - schema version は `sincro.motion-debug-log.v1` とし、NDJSON の 1 行目を manifest record、2 行目以降を frame record として保存する。
     - recorder core は `src/character/motionEvaluation/motionDebugRecorder.ts` に置き、manifest / frame validation、dedupe、maxDuration / maxFrames stop、NDJSON / Blob export を DOM 非依存で扱う。
     - replay / metrics が読む正規化 pose snapshot の保存先は `frame.poseSnapshot` に固定し、MediaPipe raw result や solver 出力とは別 slot に分ける。
-    - replay は `frame.timestamp.mediaTimeMs` を正本時刻として使い、autoplay の順序と手動 step の対象 frame を `performance.now()` へ依存させない。
+    - replay は `frame.timestamp.mediaTimeMs` を正本時刻として使い、autoplay の順序と手動 step の対象 frame を `performance.now()` へ依存させない。`mediaTimeMs` は video frame clock の media time 基準であり、MediaPipe / Worker detect timestamp と tracker cadence 判定も同じ値を使う。
     - frame は pose callback / pose fallback callback 起点で記録し、render loop は recording state 表示だけを更新する。
     - `MotionDebugRecordingController.recordPoseFrame()` は同じ pose callback / fallback callback 起点で `estimateCanonicalTorsoFrame()`、`createCanonicalUpperBodyState()` を呼び、`frame.canonical` に JSON 保存可能な `CanonicalUpperBodyState` を保存する。連続 frame の `bodyFront` 反転抑制は previous canonical を torso estimator へ渡して効かせ、recording 停止、source 停止、replay 読み込み時に previous を reset する。
-    - v1 frame は最低限 `frame.timestamp.mediaTimeMs`、`frame.video.width`、`frame.video.height`、`frame.poseSnapshot`、`frame.canonical`、`frame.solver.poseRetarget`、`frame.solver.poseRetargetRuntime`、`frame.metrics.receivedAtPerformanceMs`、`frame.metrics.tracker` を保存する。`timestamp.receivedAtPerformanceMs` や top-level `tracker` は schema 外なので追加しない。
+    - v1 frame は最低限 `frame.timestamp.mediaTimeMs`、`frame.video.width`、`frame.video.height`、`frame.poseSnapshot`、`frame.canonical`、`frame.solver.poseRetarget`、`frame.solver.poseRetargetRuntime`、`frame.metrics.receivedAtPerformanceMs`、`frame.metrics.tracker` を保存する。
+    - `frame.timestamp` は optional で `presentationTimeMs`、`expectedDisplayTimeMs`、`presentedFrames`、`droppedPresentedFrames`、`clockSource` を保存できる。`clockSource` は `request-video-frame-callback`、`request-animation-frame`、`timer` のいずれかで、fallback では rVFC 固有 field を欠損のままにする。
+    - `timestamp.receivedAtPerformanceMs` や top-level `tracker` は schema 外なので追加しない。`mediaTimeMs` と `metrics.receivedAtPerformanceMs` は時刻原点が異なるため、latency として差分を取らない。
+    - recorder の duplicate 判定は rVFC の `presentedFrames` がある場合はそれを優先し、同じ `presentedFrames` の連続入力を保存しない。`presentedFrames` が 2 以上進んだ場合、clock は `droppedPresentedFrames = 差分 - 1` を保存する。
     - camera の `deviceId` / `groupId` は raw 値を保存しない。保存が必要になった場合も export 単位の salt で hash し、cross-export stable hash を残さない。
     - `MediaStreamTrack.getSettings()` 由来の camera settings は `MotionDebugApp` で scrub してから manifest へ渡し、recorder core は scrub 済み manifest を strict schema で検証する。
 - motion metrics

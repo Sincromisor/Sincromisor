@@ -4,6 +4,7 @@ import { SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION } from "../../character/motionEv
 import {
     MotionDebugRecorder,
     type MotionDebugRecorderConfig,
+    type MotionDebugRecorderFrameInput,
     type MotionDebugRecorderRecordFrameResult,
     type MotionDebugRecorderResult,
     type MotionDebugRecorderState,
@@ -12,6 +13,7 @@ import type { DebugConsoleSnapshot } from "../../features/debug/model/debugConso
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
+import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 import { MOTION_DEBUG_CAMERA_CONSTRAINTS } from "./motionDebugCameraStream";
 import { createMotionDebugCanonicalState } from "./motionDebugCanonicalState";
 import { downloadMotionDebugRecording } from "./motionDebugRecordingDownload";
@@ -97,10 +99,9 @@ export class MotionDebugRecordingController {
 
     recordPoseFrame(
         snapshot: SincroPoseMotionSnapshot,
+        timing?: TrackerVideoFrameTiming,
     ): MotionDebugRecorderRecordFrameResult | undefined {
-        const mediaTimeMs = Number.isFinite(this.params.video.currentTime)
-            ? this.params.video.currentTime * 1000
-            : 0;
+        const mediaTimeMs = timing?.mediaTimeMs ?? fallbackVideoMediaTimeMs(this.params.video);
         const canonical = createMotionDebugCanonicalState({
             pose: snapshot,
             face: this.params.getFaceSnapshot(),
@@ -116,9 +117,7 @@ export class MotionDebugRecordingController {
 
         const debugSnapshot = this.params.getDebugSnapshot();
         const result = this.recorder.recordFrame({
-            timestamp: {
-                mediaTimeMs,
-            },
+            timestamp: createMotionDebugFrameTimestamp(mediaTimeMs, timing),
             video: {
                 width: this.params.video.videoWidth,
                 height: this.params.video.videoHeight,
@@ -136,6 +135,7 @@ export class MotionDebugRecordingController {
             dedupeKey: {
                 mediaTimeMs,
                 poseLastUpdatedAtMs: snapshot.lastUpdatedAtMs ?? null,
+                presentedFrames: timing?.presentedFrames,
             },
         });
         this.params.onStateChange(result.state);
@@ -207,6 +207,27 @@ export class MotionDebugRecordingController {
         }
         return undefined;
     }
+}
+
+function createMotionDebugFrameTimestamp(
+    mediaTimeMs: number,
+    timing?: TrackerVideoFrameTiming,
+): MotionDebugRecorderFrameInput["timestamp"] {
+    if (timing === undefined) {
+        return { mediaTimeMs };
+    }
+    return {
+        mediaTimeMs,
+        presentationTimeMs: timing.presentationTimeMs,
+        expectedDisplayTimeMs: timing.expectedDisplayTimeMs,
+        presentedFrames: timing.presentedFrames,
+        droppedPresentedFrames: timing.droppedPresentedFrames,
+        clockSource: timing.source,
+    };
+}
+
+function fallbackVideoMediaTimeMs(video: HTMLVideoElement): number {
+    return Number.isFinite(video.currentTime) ? video.currentTime * 1000 : 0;
 }
 
 function scrubCameraSettings(
