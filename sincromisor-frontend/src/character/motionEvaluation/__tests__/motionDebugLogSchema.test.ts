@@ -132,6 +132,83 @@ describe("parseMotionDebugLogLines", () => {
         expect(result.frames[0]?.timestamp).toEqual({ mediaTimeMs: 120 });
     });
 
+    it("accepts legacy tracker stats without performance budget", () => {
+        const frame = {
+            ...createValidFrame(0),
+            metrics: {
+                tracker: {
+                    mode: "main-thread",
+                    status: "running",
+                    transferTimeMs: 0,
+                    workerRoundTripMs: 0,
+                    loadTimeMs: 0,
+                    droppedFrames: 0,
+                },
+            },
+        };
+
+        const result = parseMotionDebugLogLines(createLogLines(createValidManifest(), [frame]));
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) {
+            return;
+        }
+        expect(result.frames[0]?.metrics).toEqual(frame.metrics);
+    });
+
+    it("accepts tracker stats with performance budget in frame metrics", () => {
+        const frame = {
+            ...createValidFrame(0),
+            metrics: {
+                tracker: {
+                    mode: "worker",
+                    status: "running",
+                    transferTimeMs: 3,
+                    workerRoundTripMs: 70,
+                    workerTimeMs: 58,
+                    loadTimeMs: 120,
+                    droppedFrames: 1,
+                    budget: {
+                        schemaVersion: "sincro.tracker-performance-budget.v1",
+                        target: {
+                            faceTargetFps: 15,
+                            poseTargetFps: 12,
+                            frameBudgetMs: 66.66666666666667,
+                            poseBudgetMs: 83.33333333333333,
+                        },
+                        observed: {
+                            clockSource: "request-video-frame-callback",
+                            transferTimeMs: 3,
+                            workerRoundTripMs: 70,
+                            workerTimeMs: 58,
+                            poseInferenceTimeMs: 76,
+                            droppedFrames: 1,
+                            effectiveFaceFps: 15,
+                            effectivePoseFps: 12,
+                        },
+                        budgetStatus: "warn",
+                        degradation: {
+                            state: "full",
+                        },
+                        reasonCodes: [
+                            "worker_round_trip_warn",
+                            "pose_inference_warn",
+                            "worker_pending_frame_dropped",
+                        ],
+                    },
+                },
+            },
+        };
+
+        const result = parseMotionDebugLogLines(createLogLines(createValidManifest(), [frame]));
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) {
+            return;
+        }
+        expect(result.frames[0]?.metrics).toEqual(frame.metrics);
+    });
+
     it("accepts video frame clock timestamp fields", () => {
         const frame = {
             ...createValidFrame(0),
