@@ -106,6 +106,19 @@ export type MotionDebugViewerSnapshot = {
     metricComparison?: Partial<Record<MotionMetricKey, MotionMetricComparison>>;
 };
 
+export type MotionDebugCanonicalReliabilityInput = {
+    schemaVersion: ReliabilityMap["schemaVersion"];
+    mediaTimeMs: number;
+    leftArm: {
+        partWeight: number;
+        minJointWeight: number;
+    };
+    rightArm: {
+        partWeight: number;
+        minJointWeight: number;
+    };
+};
+
 export type MotionDebugSnapshot = {
     status: MotionDebugStatus;
     message: string;
@@ -114,6 +127,7 @@ export type MotionDebugSnapshot = {
     pose: SincroPoseMotionSnapshot;
     reliability?: ReliabilityMap | ReliabilityLayerParseError;
     canonical?: CanonicalUpperBodyState | CanonicalLayerParseError;
+    canonicalReliabilityInput?: MotionDebugCanonicalReliabilityInput;
     tracker: SincroTrackerWorkerStats;
     poseRetarget: DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
     poseRetargetRuntime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"];

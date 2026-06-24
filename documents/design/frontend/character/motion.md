@@ -123,6 +123,9 @@
     - `arms.left` / `arms.right` は `reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`、`classification` と part meta を保存する。値域外の入力は parse 時に reject し、計算側が clamp した場合だけ `outOfRangeFields` に元値と clamp 後の値を残す。
     - canonical arm feature は `SincroPoseMotionSnapshot` の shoulder / elbow / wrist target と torso frame だけから抽出する。`reach` は shoulder-wrist body-local 距離を肩-肘 + 肘-手首の腕長で割った無次元値、`elevationRad` は body-local 方向 Y 成分の radian、`openness` は解剖学的 side 方向を正にした `-1..1`、`forwardness` は body-front 方向・MediaPipe world Z・2D 投影短縮を重み付き再正規化した `0..1`、`elbowFlexionRad` は伸び切り `0` から屈曲 `Math.PI` へ近づく radian とする。
     - `classification` は deterministic rule で、`confidence < 0.15` を `unknown`、`openness < -0.25` を `crossed` 優先、`forwardness >= 0.62 && abs(openness) < 0.35` を `front`、`abs(openness) >= 0.45 && forwardness < 0.45` を `side`、`forwardness >= 0.35 && abs(openness) >= 0.25` を `diagonal`、それ以外を `unknown` とする。
+    - Phase 4 時点では optional `ReliabilityMap` を受け取った場合だけ、arm confidence を `poseConfidence * sqrt(partWeight * minJointWeight)` で downweight する。`partWeight` は該当 arm の `PartReliability.finalWeight`、`minJointWeight` は shoulder / elbow / wrist joint `finalWeight` の最小値とする。
+    - arm reliability が `lost` の場合は canonical arm source を `neutral`、confidence を `0` にする。`suspect` は source `pose` の低 confidence 観測として保持し、TemporalStateEstimator / MotionSolver が後続 Phase 5 / 6 で扱う。
+    - canonical warning 変換は `ReliabilityWarningCode` ではなく、該当 arm の part / joint `components.side.reasonCodes`、`components.boneLength.reasonCodes`、`components.bodyScale.reasonCodes` を読む。`side_inconsistent` は `left_right_swap_suspect`、`bone_length_inconsistent` / `body_scale_jump` は `out_of_range` へ写す。
     - `calibration` は default / initial / online / replay の snapshot とし、未実装時も `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` を保存して replay の決定性を保つ。
     - `SincroPoseRetargetFrame` の VRM additive rotation、IK solver の quaternion、AnimationMixer 出力は canonical arm feature の入力にも canonical state にも入れず、retarget / final pose の別 slot に分ける。
     - `motion-debug` snapshot
@@ -132,6 +135,7 @@
     - `CameraQualityScore` の guide message は reason code から `"少し下がってください"`、`"体を画面中央に入れてください"`、`"手が画面から出ないようにしてください"`、`"部屋を明るくしてください"`、`"カメラ解像度を上げてください"` の固定文言へ決定的に変換する。v1 は ReliabilityMap / retarget weight / IK weight へは接続しない。
     - live camera / video fixture / replay pose-snapshot の最新 `CanonicalUpperBodyState` は optional `canonical` field に載せる。replay frame の `frame.canonical` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
     - live camera / video fixture / replay pose-snapshot の最新 `ReliabilityMap` は optional `reliability` field に載せる。replay frame の `frame.reliability` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
+    - Phase 4 の reliability downstream 接続は canonical confidence / source / warnings と developer-only `canonicalReliabilityInput` までに限定する。`canonicalReliabilityInput` は canonical 生成に使った左右 arm の `partWeight` / `minJointWeight` と reliability `schemaVersion` / `mediaTimeMs` を保存し、retarget / IK solver weight へはまだ接続しない。
     - 既存 field 名は維持し、optional `viewer` field に viewer mode、selected layer、layer status / value、recording、replay、metrics summary を追加する。
     - Playwright からの調整値変更は UI control と同じ retarget config に反映し、画面 snapshot と window API の観測値を揃える。
     - 複数 VRM の IK 検証では `motion-debug/?vrm=/characters/<file>.vrm` を使い、同じ camera / tracker / retarget 経路で model 差分を確認する。

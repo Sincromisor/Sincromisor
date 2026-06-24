@@ -20,10 +20,14 @@ import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cam
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 import { MOTION_DEBUG_CAMERA_CONSTRAINTS } from "./motionDebugCameraStream";
-import { createMotionDebugCanonicalState } from "./motionDebugCanonicalState";
+import {
+    createMotionDebugCanonicalReliabilityInput,
+    createMotionDebugCanonicalState,
+} from "./motionDebugCanonicalState";
 import { downloadMotionDebugRecording } from "./motionDebugRecordingDownload";
 import type {
     MotionDebugCameraState,
+    MotionDebugCanonicalReliabilityInput,
     MotionDebugRecordingDownloadResult,
     MotionDebugRetargetUiConfig,
 } from "./types";
@@ -40,6 +44,9 @@ type MotionDebugRecordingControllerParams = {
     getVrmUrl: () => string;
     poseTargetInferenceFps: number;
     onCanonicalStateChange: (state: CanonicalUpperBodyState | undefined) => void;
+    onCanonicalReliabilityInputChange: (
+        state: MotionDebugCanonicalReliabilityInput | undefined,
+    ) => void;
     onReliabilityStateChange: (state: ReliabilityMap | undefined) => void;
     onStateChange: (state: MotionDebugRecorderState) => void;
 };
@@ -116,9 +123,13 @@ export class MotionDebugRecordingController {
             face: this.params.getFaceSnapshot(),
             previous: this.latestCanonical,
             mediaTimeMs,
+            reliability,
         });
         this.latestCanonical = canonical;
         this.params.onCanonicalStateChange(canonical);
+        this.params.onCanonicalReliabilityInputChange(
+            createMotionDebugCanonicalReliabilityInput(reliability),
+        );
         const frameReliability = reliability ?? createDefaultReliabilityMap(mediaTimeMs);
         this.params.onReliabilityStateChange(frameReliability);
 
@@ -162,6 +173,7 @@ export class MotionDebugRecordingController {
     resetCanonicalState(): void {
         this.latestCanonical = undefined;
         this.params.onCanonicalStateChange(undefined);
+        this.params.onCanonicalReliabilityInputChange(undefined);
     }
 
     resetReliabilityState(): void {

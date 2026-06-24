@@ -42,7 +42,10 @@ import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntim
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { formatError, requireElement } from "./dom";
 import { requestMotionDebugCameraStream } from "./motionDebugCameraStream";
-import { createMotionDebugCanonicalState } from "./motionDebugCanonicalState";
+import {
+    createMotionDebugCanonicalReliabilityInput,
+    createMotionDebugCanonicalState,
+} from "./motionDebugCanonicalState";
 import { MotionDebugControls } from "./motionDebugControls";
 import { MotionDebugFrameCapture } from "./motionDebugFrameCapture";
 import { MotionDebugRecordingController } from "./motionDebugRecordingController";
@@ -138,6 +141,7 @@ export class MotionDebugApp {
         this.debugConsole.getSnapshot().sincroMotion.face;
     private latestPoseSnapshot: SincroPoseMotionSnapshot = DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT;
     private latestCanonical?: MotionDebugSnapshot["canonical"];
+    private latestCanonicalReliabilityInput?: MotionDebugSnapshot["canonicalReliabilityInput"];
     private latestReliability?: MotionDebugSnapshot["reliability"];
     private latestTrackerStats: SincroTrackerWorkerStats =
         this.debugConsole.getSnapshot().sincroMotion.tracker;
@@ -215,6 +219,9 @@ export class MotionDebugApp {
             onCanonicalStateChange: (state) => {
                 this.latestCanonical = state;
             },
+            onCanonicalReliabilityInputChange: (state) => {
+                this.latestCanonicalReliabilityInput = state;
+            },
             onReliabilityStateChange: (state) => {
                 this.latestReliability = state;
             },
@@ -280,6 +287,7 @@ export class MotionDebugApp {
             pose: this.latestPoseSnapshot,
             reliability: this.latestReliability,
             canonical: this.latestCanonical,
+            canonicalReliabilityInput: this.latestCanonicalReliabilityInput,
             tracker: this.latestTrackerStats,
             poseRetarget: debugSnapshot.poseRetarget,
             poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
@@ -592,8 +600,8 @@ export class MotionDebugApp {
     ): MotionDebugSnapshot {
         const previousPose = this.latestPoseSnapshot;
         this.latestPoseSnapshot = snapshot;
-        this.updateReplayCanonical(snapshot, context);
         this.updateReplayReliability(snapshot, previousPose, context);
+        this.updateReplayCanonical(snapshot, context);
         this.behaviorState.applyPoseMotion(snapshot, context.mediaTimeMs);
         this.debugConsole.updateSincroPoseMotion(snapshot);
         this.overlayRenderer.render(snapshot, this.video);
@@ -614,15 +622,22 @@ export class MotionDebugApp {
                       errors: parsed.errors,
                       raw: context.frame.canonical,
                   };
+            this.latestCanonicalReliabilityInput = createMotionDebugCanonicalReliabilityInput(
+                this.latestValidReliability(),
+            );
             return;
         }
 
+        const reliability = this.latestValidReliability();
         this.latestCanonical = createMotionDebugCanonicalState({
             pose: snapshot,
             face: this.latestFaceSnapshot,
             previous: this.latestValidCanonical(),
             mediaTimeMs: context.mediaTimeMs,
+            reliability,
         });
+        this.latestCanonicalReliabilityInput =
+            createMotionDebugCanonicalReliabilityInput(reliability);
     }
 
     private latestValidCanonical(): CanonicalUpperBodyState | undefined {
@@ -701,6 +716,7 @@ export class MotionDebugApp {
 
     private resetCanonicalState(): void {
         this.latestCanonical = undefined;
+        this.latestCanonicalReliabilityInput = undefined;
         this.recording.resetCanonicalState();
     }
 
