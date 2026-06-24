@@ -120,6 +120,40 @@ describe("parseMotionDebugLogLines", () => {
         expect(result.frames[0]?.poseSnapshot).toEqual({ detected: true });
     });
 
+    it("accepts legacy v1 frames with only timestamp.mediaTimeMs", () => {
+        const result = parseMotionDebugLogLines(
+            createLogLines(createValidManifest(), [createValidFrame(0)]),
+        );
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) {
+            return;
+        }
+        expect(result.frames[0]?.timestamp).toEqual({ mediaTimeMs: 120 });
+    });
+
+    it("accepts video frame clock timestamp fields", () => {
+        const frame = {
+            ...createValidFrame(0),
+            timestamp: {
+                mediaTimeMs: 120,
+                presentationTimeMs: 122,
+                expectedDisplayTimeMs: 138,
+                presentedFrames: 14,
+                droppedPresentedFrames: 2,
+                clockSource: "request-video-frame-callback",
+            },
+        };
+
+        const result = parseMotionDebugLogLines(createLogLines(createValidManifest(), [frame]));
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) {
+            return;
+        }
+        expect(result.frames[0]?.timestamp).toEqual(frame.timestamp);
+    });
+
     it("rejects empty input with a deterministic error code", () => {
         expectErrorCode(parseMotionDebugLogLines([]), "empty_input");
     });

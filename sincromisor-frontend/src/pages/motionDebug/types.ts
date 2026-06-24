@@ -26,6 +26,7 @@ import type {
     SincroPoseTargetPointSnapshot,
 } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
+import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 
 export type MotionDebugStatus = "idle" | "loading" | "running" | "stopped" | "error";
 
@@ -34,6 +35,7 @@ export type MotionDebugCameraState = {
     width: number;
     height: number;
     readyState: number;
+    frameTiming?: TrackerVideoFrameTiming;
 };
 
 export type MotionDebugRenderMetrics = {

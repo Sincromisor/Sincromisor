@@ -69,7 +69,11 @@ export type CameraQualityScore = {
         CameraQualityComponent
     >;
     reasons: CameraQualityReasonCode[];
-    guideMessages: { code: CameraQualityReasonCode; text: string; severity: "warn" | "bad" }[];
+    guideMessages: {
+        code: CameraQualityReasonCode;
+        text: string;
+        severity: "warn" | "bad";
+    }[];
     track: {
         width?: number;
         height?: number;

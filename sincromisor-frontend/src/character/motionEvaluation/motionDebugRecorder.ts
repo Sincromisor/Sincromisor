@@ -327,6 +327,16 @@ export class MotionDebugRecorder {
         if (this.lastDedupeKey === undefined) {
             return false;
         }
+        if (
+            this.lastDedupeKey.presentedFrames !== undefined &&
+            dedupeKey.presentedFrames !== undefined
+        ) {
+            return (
+                this.lastDedupeKey.presentedFrames === dedupeKey.presentedFrames &&
+                (this.lastDedupeKey.poseLastUpdatedAtMs ?? null) ===
+                    (dedupeKey.poseLastUpdatedAtMs ?? null)
+            );
+        }
         return (
             this.lastDedupeKey.mediaTimeMs === dedupeKey.mediaTimeMs &&
             (this.lastDedupeKey.poseLastUpdatedAtMs ?? null) ===

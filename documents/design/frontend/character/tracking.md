@@ -29,14 +29,16 @@
     - tracker 観測から独立した後段共有 contract として `CanonicalUpperBodyState` を置く。
     - tracker は MediaPipe 生結果を直接 canonical state と同一視せず、後続 estimator が body-local 意味量へ変換する。
 - `src/features/gaze/trackingRuntime`
-    - MediaPipe fileset、worker client、camera frame loop、fallback stats、performance gate を置く。
+    - MediaPipe fileset、worker client、video frame clock、fallback stats、performance gate を置く。
 - `CharacterGaze`
     - FaceDetector による顔位置検出。
     - `chat` mode の注視入力。
     - arrive / leave event と AutoMute 連動。
 - `TrackerRuntime`
     - camera track の取得・差し替え・解放。
-    - video frame の推論 loop。
+    - video frame metadata 基準の推論 loop。
+    - `requestVideoFrameCallback()` 対応環境では `mediaTime` / `presentationTime` / `expectedDisplayTime` / `presentedFrames` を `TrackerVideoFrameTiming` として callback 第 2 引数へ渡す。
+    - `requestVideoFrameCallback()` 非対応環境では `requestAnimationFrame + video.currentTime`、RAF も使えない test / hidden runtime 境界では 5fps timer fallback を使う。fallback の rVFC 固有 field は欠損のままにする。
     - Worker 経路と main-thread fallback。
 - `SincroFaceTracker`
     - FaceLandmarker から head pose、blendshape、confidence を抽出する。
@@ -62,6 +64,7 @@
     - 構造化 motion log replay は `MotionReplayPlayer` が plain NDJSON を parse し、`pose-snapshot` mode では `frame.poseSnapshot` を後段の behavior / retarget 経路へ再投入する。`frame.canonical` がある場合は saved canonical を viewer / snapshot の正本にし、無い場合だけ live fallback の canonical を使う。invalid canonical は replay failure にせず、canonical layer の parse error summary として表示する。
     - replay 中は `TrackerRuntime.startFaceTracking()` を呼ばず、live camera / video fixture runtime と camera track を停止してから進める。raw MediaPipe result からの再推論は Phase 1 の対象外である。
     - `mediapipe-raw-result` mode は `frame.mediapipe` slot の予約であり、Pose / Hand / Face raw serializer が揃うまでは `unsupported_mode` を返す。
+    - live snapshot の camera state は optional `camera.frameTiming` に最新 `TrackerVideoFrameTiming` を載せ、既存 top-level `status`、`camera.source`、`camera.width`、`camera.height`、`pose`、`tracker`、`canonical` の field 名は維持する。
     - live camera / video fixture の source 判定、camera setting scrub、manifest 生成、download link 生成は `src/pages/motionDebug/` 側の責務とする。
 
 ## Data / State
@@ -104,8 +107,9 @@
     - `frame.canonical` は motion-debug page 側で `SincroPoseMotionSnapshot` と latest face snapshot から生成した `CanonicalUpperBodyState` を保存する optional slot である。`parseMotionDebugLogLines()` は unknown optional slot として保持し、replay / viewer 境界で `parseCanonicalUpperBodyState()` により valid / invalid を判定する。
     - MediaPipe raw result は必要な場合も `frame.mediapipe` に分け、`frame.poseSnapshot` には `SincroPoseMotionSnapshot` 相当の normalized data を置く。
     - replay API の `loadRecording()` は plain NDJSON `string` または `File` だけを受け付ける。`startReplay({ mode })`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` は developer-only の window API として公開する。
-    - `video.currentTime` を `frame.timestamp.mediaTimeMs`、callback 受信時の `performance.now()` を `frame.metrics.receivedAtPerformanceMs` として保存する。tracker stats は `frame.metrics.tracker` に入れ、top-level `tracker` は使わない。
-    - 同一 `video.currentTime` かつ同一 `SincroPoseMotionSnapshot.lastUpdatedAtMs` の連続入力は duplicate frame として recorder が捨てる。
+    - `frame.timestamp.mediaTimeMs` は tracker callback の `TrackerVideoFrameTiming.mediaTimeMs` を正本にする。fallback 時だけ `video.currentTime * 1000` を使う。
+    - callback 受信時の `performance.now()` は `frame.metrics.receivedAtPerformanceMs` として保存する。tracker stats は `frame.metrics.tracker` に入れ、`timestamp.receivedAtPerformanceMs` や top-level `tracker` は使わない。
+    - 同一 `presentedFrames` と同一 `SincroPoseMotionSnapshot.lastUpdatedAtMs` の連続入力は duplicate frame として recorder が捨てる。`presentedFrames` が無い fallback / legacy 入力では、同一 `mediaTimeMs` と同一 `lastUpdatedAtMs` を duplicate とする。
     - camera 実設定を manifest に残す場合、raw `deviceId` / `groupId` は保存しない。hash を保存する場合も export 単位だけで比較可能にし、export をまたいで安定する識別子を残さない。
     - exported NDJSON は `parseMotionDebugLogLines()` が manifest と frame records を validation できる schema に固定する。
 - motion metrics input boundary

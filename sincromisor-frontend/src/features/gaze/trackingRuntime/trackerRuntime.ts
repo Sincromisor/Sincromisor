@@ -16,6 +16,7 @@ import {
     DEFAULT_TARGET_POSE_INFERENCE_FPS,
     type TrackerRuntimeCallbacks,
     type TrackerRuntimePoseOptions,
+    type TrackerVideoFrameTiming,
 } from "./trackerRuntimeTypes";
 import { attachTrackerVideoTrack, trackerVideoFrameIsReady } from "./trackerRuntimeVideoElement";
 
@@ -26,12 +27,11 @@ export class TrackerRuntime {
     private readonly faceTracker: SincroFaceTracker;
     private readonly poseTracker: SincroPoseTracker;
     private readonly workerClient: SincroTrackerWorkerClient;
-    private readonly frameLoop = new TrackerRuntimeFrameLoop(() => {
-        this.predict();
+    private readonly frameLoop = new TrackerRuntimeFrameLoop((timing) => {
+        this.predict(timing);
     });
     private callbacks?: TrackerRuntimeCallbacks;
     private loadedDataHandlerBound?: () => void;
-    private lastVideoTime = -1;
     private lastInferenceAtMs = -1;
     private lastPoseInferenceAtMs = -1;
     private targetInferenceFps = DEFAULT_TARGET_INFERENCE_FPS;
@@ -80,7 +80,6 @@ export class TrackerRuntime {
         this.useWorkerTracking = await this.initializeTrackerEngine(true);
         attachTrackerVideoTrack(this.videoElement, videoTrack);
         this.frameLoop.enable();
-        this.lastVideoTime = -1;
         this.lastInferenceAtMs = -1;
         this.lastPoseInferenceAtMs = -1;
         if (!this.loadedDataHandlerBound) {
@@ -138,13 +137,13 @@ export class TrackerRuntime {
         this.frameLoop.startIfNeeded(this.videoElement, this.callbacks);
     }
 
-    private predict(): void {
+    private predict(timing: TrackerVideoFrameTiming): void {
         if (!this.frameLoop.enabled || !this.callbacks) {
             this.frameLoop.markStopped();
             return;
         }
 
-        const nowMs = performance.now();
+        const nowMs = timing.mediaTimeMs;
         if (!trackerVideoFrameIsReady(this.videoElement)) {
             this.frameLoop.schedule();
             return;
@@ -159,23 +158,17 @@ export class TrackerRuntime {
             this.frameLoop.schedule();
             return;
         }
-        if (this.videoElement.currentTime === this.lastVideoTime) {
-            void this.videoElement.play();
-            this.frameLoop.schedule();
-            return;
-        }
 
-        this.lastVideoTime = this.videoElement.currentTime;
         this.lastInferenceAtMs = nowMs;
         if (this.useWorkerTracking) {
-            void this.predictWithWorker(nowMs);
+            void this.predictWithWorker(timing);
             return;
         }
         try {
             const snapshot = this.faceTracker.detect(this.videoElement, nowMs);
-            this.callbacks.onFaceMotion(snapshot);
+            this.callbacks.onFaceMotion(snapshot, timing);
             if (this.shouldRunPoseInference(nowMs)) {
-                this.runPoseInference(nowMs);
+                this.runPoseInference(timing);
             }
         } catch (error) {
             this.handleRuntimeError(error);
@@ -184,11 +177,12 @@ export class TrackerRuntime {
         this.frameLoop.schedule();
     }
 
-    private async predictWithWorker(nowMs: number): Promise<void> {
+    private async predictWithWorker(timing: TrackerVideoFrameTiming): Promise<void> {
         if (!this.frameLoop.enabled || !this.callbacks) {
             this.frameLoop.markStopped();
             return;
         }
+        const nowMs = timing.mediaTimeMs;
         const runPose = this.shouldRunPoseInference(nowMs);
         if (runPose) {
             this.lastPoseInferenceAtMs = nowMs;
@@ -198,11 +192,15 @@ export class TrackerRuntime {
             const frame = await createImageBitmap(this.videoElement);
             const transferTimeMs = performance.now() - transferStartedAtMs;
             const result = await this.workerClient.detect(frame, nowMs, runPose, transferTimeMs);
+            if (!this.frameLoop.enabled || !this.callbacks) {
+                this.frameLoop.markStopped();
+                return;
+            }
             this.callbacks.onTrackerStats?.(result.stats);
-            this.callbacks.onFaceMotion(result.face);
+            this.callbacks.onFaceMotion(result.face, timing);
             if (result.pose) {
-                this.callbacks.onPoseMotion?.(result.pose);
-                this.applyPosePerformanceGate(result.pose, nowMs);
+                this.callbacks.onPoseMotion?.(result.pose, timing);
+                this.applyPosePerformanceGate(result.pose, nowMs, timing);
             }
             this.frameLoop.schedule();
         } catch (error) {
@@ -220,21 +218,22 @@ export class TrackerRuntime {
         });
     }
 
-    private runPoseInference(nowMs: number): void {
+    private runPoseInference(timing: TrackerVideoFrameTiming): void {
         if (!this.callbacks) {
             return;
         }
+        const nowMs = timing.mediaTimeMs;
         this.lastPoseInferenceAtMs = nowMs;
         try {
             const snapshot = this.poseTracker.detect(this.videoElement, nowMs);
-            this.callbacks.onPoseMotion?.(snapshot);
-            this.applyPosePerformanceGate(snapshot, nowMs);
+            this.callbacks.onPoseMotion?.(snapshot, timing);
+            this.applyPosePerformanceGate(snapshot, nowMs, timing);
         } catch (error) {
             frontendLogger.warn(
                 "Sincro PoseLandmarker failed during video inference. Falling back to face-only.",
                 { error },
             );
-            this.degradePoseToFaceOnly(formatTrackerRuntimeErrorDetail(error), nowMs);
+            this.degradePoseToFaceOnly(formatTrackerRuntimeErrorDetail(error), nowMs, timing);
         }
     }
 
@@ -258,22 +257,30 @@ export class TrackerRuntime {
         }
     }
 
-    private applyPosePerformanceGate(snapshot: SincroPoseMotionSnapshot, nowMs: number): void {
+    private applyPosePerformanceGate(
+        snapshot: SincroPoseMotionSnapshot,
+        nowMs: number,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
         const degradedReason = this.posePerformanceGate.evaluate(snapshot);
         if (degradedReason) {
-            this.degradePoseToFaceOnly(degradedReason, nowMs);
+            this.degradePoseToFaceOnly(degradedReason, nowMs, timing);
         }
     }
 
-    private degradePoseToFaceOnly(reason: string, nowMs: number): void {
+    private degradePoseToFaceOnly(
+        reason: string,
+        nowMs: number,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
         this.poseDegradedToFaceOnly = true;
         const snapshot = {
             ...this.poseTracker.stop(reason, nowMs),
             degradedToFaceOnly: true,
             fallbackReason: reason,
         };
-        this.callbacks?.onPoseMotion?.(snapshot);
-        this.callbacks?.onPoseFallback?.(snapshot);
+        this.callbacks?.onPoseMotion?.(snapshot, timing);
+        this.callbacks?.onPoseFallback?.(snapshot, timing);
     }
 
     private handleRuntimeError(error: unknown): void {

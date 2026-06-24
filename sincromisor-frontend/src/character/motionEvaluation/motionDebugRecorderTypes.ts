@@ -39,6 +39,7 @@ export type MotionDebugRecorderFrameInput = Omit<SincroMotionDebugFrame, "frameI
     dedupeKey: {
         mediaTimeMs: number;
         poseLastUpdatedAtMs?: number | null;
+        presentedFrames?: number;
     };
 };
 
