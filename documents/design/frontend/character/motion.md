@@ -30,6 +30,7 @@
 - `src/character/reliability`
     - 後続 estimator / replay / temporal state が共有する `ReliabilityMap` v1 contract を置く。
     - MediaPipe confidence をそのまま制御重みにせず、joint / part / gesture ごとの保存可能な信頼度 snapshot として扱う。
+    - Phase 4a の `PoseReliabilityEstimator` は `SincroPoseMotionSnapshot` と optional `CameraQualityScore`、optional `previous.pose` / `previous.mediaTimeMs` / `previous.reliability`、caller 指定の `mediaTimeMs`、`video` size から `ReliabilityMap` を作る pure function とする。Pose snapshot で未観測の Head / Hand / Finger / Gesture / ROI は placeholder に固定し、Face / Hand / Gesture 専用 estimator は後続 Phase 8 / 9 で接続する。
 - `src/character/ik`
     - `SincroArmIkSolver` と solver probe / constraint / geometry / pole を置く。
 - `src/character/vrmCharacter`

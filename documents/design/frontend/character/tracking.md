@@ -111,6 +111,12 @@
     - `timestamp`、`camera`、`joints`、`parts`、`gesture`、`warnings` を持ち、`frame.reliability` optional slot に保存する。v1 は finite number、lower-case enum、plain object に限定し、Three.js object、MediaPipe landmark object、class instance は入れない。
     - `JointReliability` / `PartReliability` の `finalWeight` と各 component `score` は `0..1` で、低 weight 観測も parse 成功として保持する。threshold 未満の観測を破棄するかどうかは後続 estimator / controller が判断する。
     - `parseReliabilityMap()` は未知 `schemaVersion` を先に `unknown_schema_version` として返し、値域外 scalar は `out_of_range`、構造違反や unknown enum / extra key は `invalid_state` として返す。
+- `PoseReliabilityEstimator`
+    - `src/character/reliability/poseReliabilityEstimator.ts` の `createPoseReliabilityMap()` は Phase 4a の pure estimator であり、`pose: SincroPoseMotionSnapshot`、optional `cameraQuality: CameraQualityScore`、optional `previous: { pose: SincroPoseMotionSnapshot; mediaTimeMs: number; reliability?: ReliabilityMap }`、caller が渡す `mediaTimeMs`、`video: { width: number; height: number }` だけを入力にする。
+    - estimator 内で `performance.now()` は呼ばず、temporal component は `mediaTimeMs - previous.mediaTimeMs` と wrist / elbow / shoulder の normalized image coordinate 差分だけで計算する。`previous.reliability` は入力 shape に含めるが、Phase 4a の boneLength / bodyScale / temporal の主計算は前回 pose を正本にする。
+    - joint component は `modelPresence`、`modelVisibility`、`tracking`、`border`、`boneLength`、`bodyScale`、`temporal`、`side`、`roi`、`cameraQuality` を常に埋める。`boneLength` は左右 arm の upper / lower world length ratio と前回 total arm length ratio、`bodyScale` は `upperBody.shoulderWidth`、`cameraQuality` は `CameraQualityScore.overall.score` を使う。
+    - `finalWeight` は component score の幾何平均で、0 score は `0.001` として扱う。state 境界は `>= 0.65` が `tracked`、`0.05..0.65` が `suspect`、`< 0.05` が `lost` であり、`predicted` / `recovering` は TemporalStateEstimator の責務として Phase 4a では返さない。
+    - Pose snapshot だけで観測できない `head`、`leftHand`、`rightHand`、finger、gesture は lost placeholder とし、`not_available_in_pose_snapshot` または `no_observation` を残す。Face / Hand / ROI / Gesture 専用 reliability は Phase 8 / 9 の責務である。
 - `SincroPoseTargetPointSnapshot`
     - `tracked`: 通常 target として十分な confidence と有限座標を持つ状態。
     - `quality`: `strong` / `weak` / `lost`。`weak` は座標を IK に使えるが、強度を落とすべき状態。
