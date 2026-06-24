@@ -9,6 +9,10 @@ import {
     type MotionDebugRecorderResult,
     type MotionDebugRecorderState,
 } from "../../character/motionEvaluation/motionDebugRecorder";
+import {
+    createDefaultReliabilityMap,
+    type ReliabilityMap,
+} from "../../character/reliability/reliabilityMap";
 import type { DebugConsoleSnapshot } from "../../features/debug/model/debugConsoleManager";
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
@@ -36,6 +40,7 @@ type MotionDebugRecordingControllerParams = {
     getVrmUrl: () => string;
     poseTargetInferenceFps: number;
     onCanonicalStateChange: (state: CanonicalUpperBodyState | undefined) => void;
+    onReliabilityStateChange: (state: ReliabilityMap | undefined) => void;
     onStateChange: (state: MotionDebugRecorderState) => void;
 };
 
@@ -78,6 +83,7 @@ export class MotionDebugRecordingController {
         const result = this.recorder.stop(reason);
         if (result.ok) {
             this.resetCanonicalState();
+            this.resetReliabilityState();
         }
         this.params.onStateChange(result.state);
         return result;
@@ -102,6 +108,7 @@ export class MotionDebugRecordingController {
         snapshot: SincroPoseMotionSnapshot,
         timing?: TrackerVideoFrameTiming,
         cameraQuality?: CameraQualityScore,
+        reliability?: ReliabilityMap,
     ): MotionDebugRecorderRecordFrameResult | undefined {
         const mediaTimeMs = timing?.mediaTimeMs ?? fallbackVideoMediaTimeMs(this.params.video);
         const canonical = createMotionDebugCanonicalState({
@@ -112,6 +119,8 @@ export class MotionDebugRecordingController {
         });
         this.latestCanonical = canonical;
         this.params.onCanonicalStateChange(canonical);
+        const frameReliability = reliability ?? createDefaultReliabilityMap(mediaTimeMs);
+        this.params.onReliabilityStateChange(frameReliability);
 
         if (this.recorder.getState().status !== "recording") {
             return undefined;
@@ -125,6 +134,7 @@ export class MotionDebugRecordingController {
                 height: this.params.video.videoHeight,
             },
             poseSnapshot: snapshot,
+            reliability: frameReliability,
             canonical,
             solver: {
                 poseRetarget: debugSnapshot.poseRetarget,
@@ -152,6 +162,10 @@ export class MotionDebugRecordingController {
     resetCanonicalState(): void {
         this.latestCanonical = undefined;
         this.params.onCanonicalStateChange(undefined);
+    }
+
+    resetReliabilityState(): void {
+        this.params.onReliabilityStateChange(undefined);
     }
 
     private createManifest(): SincroMotionDebugLogManifest | undefined {

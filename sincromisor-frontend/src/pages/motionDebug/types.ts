@@ -19,6 +19,10 @@ import type {
     MotionReplayMode,
     MotionReplayState,
 } from "../../character/motionEvaluation/motionReplayPlayer";
+import type {
+    ReliabilityMap,
+    ReliabilityMapParseResult,
+} from "../../character/reliability/reliabilityMap";
 import type { SincroPoseRetargetConfig } from "../../character/retargeting/sincroPoseRetargeter";
 import type { DebugConsoleSnapshot } from "../../features/debug/model/debugConsoleManager";
 import type {
@@ -48,6 +52,12 @@ export type MotionDebugRenderMetrics = {
 export type CanonicalLayerParseError = {
     parseStatus: "invalid";
     errors: CanonicalUpperBodyStateParseError[];
+    raw: unknown;
+};
+
+export type ReliabilityLayerParseError = {
+    parseStatus: "invalid";
+    errors: Extract<ReliabilityMapParseResult, { ok: false }>["errors"];
     raw: unknown;
 };
 
@@ -102,6 +112,7 @@ export type MotionDebugSnapshot = {
     camera: MotionDebugCameraState;
     recording: MotionDebugRecorderState;
     pose: SincroPoseMotionSnapshot;
+    reliability?: ReliabilityMap | ReliabilityLayerParseError;
     canonical?: CanonicalUpperBodyState | CanonicalLayerParseError;
     tracker: SincroTrackerWorkerStats;
     poseRetarget: DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];

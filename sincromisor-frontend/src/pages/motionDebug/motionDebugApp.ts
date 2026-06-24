@@ -15,6 +15,11 @@ import {
 } from "../../character/motionEvaluation/motionMetrics";
 import type { MotionReplayApplyContext } from "../../character/motionEvaluation/motionReplayPlayer";
 import { MotionReplayPlayer } from "../../character/motionEvaluation/motionReplayPlayer";
+import { createPoseReliabilityMap } from "../../character/reliability/poseReliabilityEstimator";
+import {
+    parseReliabilityMap,
+    type ReliabilityMap,
+} from "../../character/reliability/reliabilityMap";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
     type SincroPoseRetargetConfig,
@@ -98,6 +103,13 @@ function getMotionDebugVrmUrl(): string {
     }
 }
 
+function resolvePoseReliabilityMediaTimeMs(
+    snapshot: SincroPoseMotionSnapshot,
+    timing?: TrackerVideoFrameTiming,
+): number {
+    return timing?.mediaTimeMs ?? snapshot.lastUpdatedAtMs ?? 0;
+}
+
 // IK 調整ページの所有境界。RTC/chat/dialog を持ち込まず、
 // camera/video -> TrackerRuntime -> CharacterBehaviorState -> VRMScene の経路だけを接続する。
 export class MotionDebugApp {
@@ -126,6 +138,7 @@ export class MotionDebugApp {
         this.debugConsole.getSnapshot().sincroMotion.face;
     private latestPoseSnapshot: SincroPoseMotionSnapshot = DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT;
     private latestCanonical?: MotionDebugSnapshot["canonical"];
+    private latestReliability?: MotionDebugSnapshot["reliability"];
     private latestTrackerStats: SincroTrackerWorkerStats =
         this.debugConsole.getSnapshot().sincroMotion.tracker;
     private latestFrameTiming?: TrackerVideoFrameTiming;
@@ -202,6 +215,9 @@ export class MotionDebugApp {
             onCanonicalStateChange: (state) => {
                 this.latestCanonical = state;
             },
+            onReliabilityStateChange: (state) => {
+                this.latestReliability = state;
+            },
             onStateChange: (state) => {
                 this.controls.renderRecordingState(state);
             },
@@ -262,6 +278,7 @@ export class MotionDebugApp {
             camera: this.cameraState(),
             recording: this.recording.getState(),
             pose: this.latestPoseSnapshot,
+            reliability: this.latestReliability,
             canonical: this.latestCanonical,
             tracker: this.latestTrackerStats,
             poseRetarget: debugSnapshot.poseRetarget,
@@ -353,6 +370,7 @@ export class MotionDebugApp {
 
         const result = this.replay.loadRecordingText(textInput.text);
         this.resetCanonicalState();
+        this.resetReliabilityState();
         if (result.ok) {
             this.stopActiveRuntime("motion_debug_replay_loaded");
             this.setStatus("stopped", "replay 読み込み済み");
@@ -487,6 +505,7 @@ export class MotionDebugApp {
         this.frameTimingHistory = [];
         this.poseQualitySamples = [];
         this.resetCanonicalState();
+        this.resetReliabilityState();
         this.behaviorState.setFaceMotionTrackingEnabled(false);
         this.behaviorState.setPoseMotionTrackingEnabled(false);
         this.controls.setStatus(this.status, this.message);
@@ -514,7 +533,12 @@ export class MotionDebugApp {
         snapshot: SincroPoseMotionSnapshot,
         timing?: TrackerVideoFrameTiming,
     ): void {
-        const result = this.recording.recordPoseFrame(snapshot, timing, this.latestCameraQuality);
+        const result = this.recording.recordPoseFrame(
+            snapshot,
+            timing,
+            this.latestCameraQuality,
+            this.latestValidReliability(),
+        );
         if (result !== undefined && !result.ok) {
             frontendLogger.warn("Motion debug frame was not recorded.", {
                 code: result.code,
@@ -537,9 +561,11 @@ export class MotionDebugApp {
         snapshot: SincroPoseMotionSnapshot,
         timing?: TrackerVideoFrameTiming,
     ): void {
+        const previousPose = this.latestPoseSnapshot;
         this.latestFrameTiming = timing;
         this.latestPoseSnapshot = snapshot;
         this.updateCameraQuality(snapshot, timing);
+        this.updatePoseReliability(snapshot, previousPose, timing);
         this.behaviorState.applyPoseMotion(snapshot);
         this.debugConsole.updateSincroPoseMotion(snapshot);
         this.recordPoseFrame(snapshot, timing);
@@ -550,9 +576,11 @@ export class MotionDebugApp {
         snapshot: SincroPoseMotionSnapshot,
         timing?: TrackerVideoFrameTiming,
     ): void {
+        const previousPose = this.latestPoseSnapshot;
         this.latestFrameTiming = timing;
         this.latestPoseSnapshot = snapshot;
         this.updateCameraQuality(snapshot, timing);
+        this.updatePoseReliability(snapshot, previousPose, timing);
         this.behaviorState.applyPoseMotion(snapshot);
         this.debugConsole.updateSincroPoseMotion(snapshot);
         this.recordPoseFrame(snapshot, timing);
@@ -562,8 +590,10 @@ export class MotionDebugApp {
         snapshot: SincroPoseMotionSnapshot,
         context: MotionReplayApplyContext,
     ): MotionDebugSnapshot {
+        const previousPose = this.latestPoseSnapshot;
         this.latestPoseSnapshot = snapshot;
         this.updateReplayCanonical(snapshot, context);
+        this.updateReplayReliability(snapshot, previousPose, context);
         this.behaviorState.applyPoseMotion(snapshot, context.mediaTimeMs);
         this.debugConsole.updateSincroPoseMotion(snapshot);
         this.overlayRenderer.render(snapshot, this.video);
@@ -603,9 +633,80 @@ export class MotionDebugApp {
         return canonical;
     }
 
+    private updatePoseReliability(
+        snapshot: SincroPoseMotionSnapshot,
+        previousPose: SincroPoseMotionSnapshot,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
+        const previousReliability = this.latestValidReliability();
+        this.latestReliability = createPoseReliabilityMap({
+            pose: snapshot,
+            cameraQuality: this.latestCameraQuality,
+            previous:
+                previousReliability === undefined
+                    ? undefined
+                    : {
+                          pose: previousPose,
+                          mediaTimeMs: previousReliability.timestamp.mediaTimeMs,
+                          reliability: previousReliability,
+                      },
+            mediaTimeMs: resolvePoseReliabilityMediaTimeMs(snapshot, timing),
+            video: {
+                width: this.video.videoWidth,
+                height: this.video.videoHeight,
+            },
+        });
+    }
+
+    private updateReplayReliability(
+        snapshot: SincroPoseMotionSnapshot,
+        previousPose: SincroPoseMotionSnapshot,
+        context: MotionReplayApplyContext,
+    ): void {
+        if (context.frame.reliability !== undefined) {
+            const parsed = parseReliabilityMap(context.frame.reliability);
+            this.latestReliability = parsed.ok
+                ? parsed.map
+                : {
+                      parseStatus: "invalid",
+                      errors: parsed.errors,
+                      raw: context.frame.reliability,
+                  };
+            return;
+        }
+
+        const previousReliability = this.latestValidReliability();
+        this.latestReliability = createPoseReliabilityMap({
+            pose: snapshot,
+            previous:
+                previousReliability === undefined
+                    ? undefined
+                    : {
+                          pose: previousPose,
+                          mediaTimeMs: previousReliability.timestamp.mediaTimeMs,
+                          reliability: previousReliability,
+                      },
+            mediaTimeMs: context.mediaTimeMs,
+            video: context.frame.video,
+        });
+    }
+
+    private latestValidReliability(): ReliabilityMap | undefined {
+        const reliability = this.latestReliability;
+        if (reliability === undefined || "parseStatus" in reliability) {
+            return undefined;
+        }
+        return reliability;
+    }
+
     private resetCanonicalState(): void {
         this.latestCanonical = undefined;
         this.recording.resetCanonicalState();
+    }
+
+    private resetReliabilityState(): void {
+        this.latestReliability = undefined;
+        this.recording.resetReliabilityState();
     }
 
     private updateCameraQuality(

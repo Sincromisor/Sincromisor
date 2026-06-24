@@ -12,6 +12,7 @@ import {
     DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
     parseCanonicalUpperBodyState,
 } from "../../canonical/canonicalUpperBodyState";
+import { createDefaultReliabilityMap, parseReliabilityMap } from "../../reliability/reliabilityMap";
 import {
     parseMotionDebugLogLines,
     SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION,
@@ -159,6 +160,7 @@ function createValidFrameInput(mediaTimeMs = 120): MotionDebugRecorderFrameInput
             detected: true,
             lastUpdatedAtMs: 300,
         },
+        reliability: createDefaultReliabilityMap(mediaTimeMs),
         canonical: createCanonicalState(mediaTimeMs),
         solver: {
             poseRetarget: {
@@ -248,6 +250,14 @@ describe("MotionDebugRecorder", () => {
         }
         expect(canonicalParse.state.schemaVersion).toBe(CANONICAL_UPPER_BODY_SCHEMA_VERSION);
         expect(canonicalParse.state.arms.left.classification).toBe("front");
+        const reliability = parsed.frames[0]?.reliability;
+        expect(reliability).toBeDefined();
+        const reliabilityParse = parseReliabilityMap(reliability);
+        expect(reliabilityParse.ok).toBe(true);
+        if (!reliabilityParse.ok) {
+            return;
+        }
+        expect(reliabilityParse.map.timestamp.mediaTimeMs).toBe(120);
     });
 
     it("exports camera quality only under frame metrics", () => {

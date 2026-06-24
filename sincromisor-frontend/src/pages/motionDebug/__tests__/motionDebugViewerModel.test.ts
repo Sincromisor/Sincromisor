@@ -12,6 +12,11 @@ import {
 } from "../../../character/motionEvaluation/motionDebugLogSchema";
 import { calculateMotionMetricSummary } from "../../../character/motionEvaluation/motionMetrics";
 import { MotionReplayPlayer } from "../../../character/motionEvaluation/motionReplayPlayer";
+import {
+    createDefaultReliabilityMap,
+    RELIABILITY_MAP_SCHEMA_VERSION,
+    type ReliabilityMap,
+} from "../../../character/reliability/reliabilityMap";
 import { createDefaultSnapshot } from "../../../features/debug/model/debugConsoleSnapshot";
 import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
@@ -228,9 +233,22 @@ function createCameraQuality(mediaTimeMs: number): CameraQualityScore {
     };
 }
 
+function createReliabilityMap(mediaTimeMs: number): ReliabilityMap {
+    const reliability = createDefaultReliabilityMap(mediaTimeMs);
+    return {
+        ...reliability,
+        camera: {
+            ...reliability.camera,
+            videoWidth: 1280,
+            videoHeight: 720,
+        },
+    };
+}
+
 function createLiveSnapshot(
     options: {
         canonical?: MotionDebugSnapshot["canonical"];
+        reliability?: MotionDebugSnapshot["reliability"];
         cameraQuality?: CameraQualityScore;
         cameraSource?: MotionDebugSnapshot["camera"]["source"];
     } = {},
@@ -253,6 +271,7 @@ function createLiveSnapshot(
             compression: "gzip",
         },
         pose: createPoseSnapshot(120),
+        reliability: options.reliability,
         canonical: options.canonical,
         tracker: debugSnapshot.tracker,
         poseRetarget: debugSnapshot.poseRetarget,
@@ -492,6 +511,180 @@ describe("createMotionDebugViewerSnapshot", () => {
                 schemaVersion: CANONICAL_UPPER_BODY_SCHEMA_VERSION,
             },
         });
+    });
+
+    it("uses live snapshot reliability as the reliability layer fallback", () => {
+        const liveSnapshot = createLiveSnapshot({
+            reliability: createReliabilityMap(120),
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "live",
+            selectedLayer: "reliability",
+            liveSnapshot,
+            replayState: {
+                status: "idle",
+                frameCount: 0,
+            },
+        });
+
+        expect(viewer.layers.reliability.status).toBe("available");
+        expect(viewer.layers.reliability.value).toMatchObject({
+            schemaVersion: RELIABILITY_MAP_SCHEMA_VERSION,
+            timestamp: {
+                mediaTimeMs: 120,
+            },
+        });
+    });
+
+    it("uses saved replay reliability when live snapshot reliability is absent", () => {
+        const liveSnapshot = createLiveSnapshot();
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "reliability",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                poseSnapshot: createPoseSnapshot(240),
+                reliability: createReliabilityMap(240),
+            },
+        });
+
+        expect(viewer.layers.reliability.status).toBe("available");
+        expect(viewer.layers.reliability.value).toMatchObject({
+            timestamp: {
+                mediaTimeMs: 240,
+            },
+        });
+    });
+
+    it("shows invalid replay reliability as an available parse error summary", () => {
+        const liveSnapshot = createLiveSnapshot();
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "reliability",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                poseSnapshot: createPoseSnapshot(240),
+                reliability: {
+                    schemaVersion: RELIABILITY_MAP_SCHEMA_VERSION,
+                    timestamp: {
+                        mediaTimeMs: 240,
+                    },
+                },
+            },
+        });
+
+        expect(viewer.layers.reliability.status).toBe("available");
+        expect(viewer.layers.reliability.value).toMatchObject({
+            parseStatus: "invalid",
+            errors: expect.arrayContaining([
+                expect.objectContaining({
+                    code: "invalid_state",
+                }),
+            ]),
+            raw: {
+                schemaVersion: RELIABILITY_MAP_SCHEMA_VERSION,
+            },
+        });
+    });
+
+    it("recalculates replay reliability from legacy poseSnapshot frames", () => {
+        const liveSnapshot = createLiveSnapshot();
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "reliability",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 640,
+                    height: 360,
+                },
+                poseSnapshot: createPoseSnapshot(230),
+            },
+        });
+
+        expect(viewer.layers.reliability.status).toBe("available");
+        expect(viewer.layers.reliability.value).toMatchObject({
+            schemaVersion: RELIABILITY_MAP_SCHEMA_VERSION,
+            timestamp: {
+                mediaTimeMs: 240,
+                poseLastUpdatedAtMs: 230,
+            },
+            camera: {
+                videoWidth: 640,
+                videoHeight: 360,
+            },
+        });
+    });
+
+    it("marks legacy replay reliability as not recorded when poseSnapshot is missing", () => {
+        const liveSnapshot = createLiveSnapshot();
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "reliability",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+            },
+        });
+
+        expect(viewer.layers.reliability.status).toBe("not_recorded");
+        expect(viewer.layers.reliability.value).toBeUndefined();
     });
 
     it("shows live camera quality in the camera layer", () => {

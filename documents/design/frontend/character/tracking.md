@@ -69,7 +69,9 @@
     - Playwright 用 selector と `window.__SINCRO_MOTION_DEBUG__` は、手動調整の再現と screenshot / snapshot 取得のための内部 debug API とする。
     - `ignorePerformanceFallback` を有効にして、低性能端末での IK 調整時も pose snapshot を観測し続ける。
     - 構造化 motion log recording は pose callback / pose fallback callback 起点で canonical upper body state を生成してから `MotionDebugRecorder.recordFrame()` に渡し、TrackerRuntime や tracker worker には canonical 生成、DOM / download / UI の責務を持たせない。
+    - 構造化 motion log recording は同じ pose callback / pose fallback callback 起点で `ReliabilityMap` を生成し、`frame.reliability` へ保存する。reliability が未計算の frame でも slot は省略せず、同じ `mediaTimeMs` の default reliability map を保存する。
     - 構造化 motion log replay は `MotionReplayPlayer` が plain NDJSON を parse し、`pose-snapshot` mode では `frame.poseSnapshot` を後段の behavior / retarget 経路へ再投入する。`frame.canonical` がある場合は saved canonical を viewer / snapshot の正本にし、無い場合だけ live fallback の canonical を使う。invalid canonical は replay failure にせず、canonical layer の parse error summary として表示する。
+    - reliability layer は live snapshot、saved `frame.reliability`、旧 log の `frame.poseSnapshot` 再計算の順に解決する。saved reliability は `parseReliabilityMap()` で検証し、invalid な場合も replay failure にせず `parseStatus: "invalid"`、parse errors、raw value を `available` layer value として表示する。`frame.reliability` と `frame.poseSnapshot` の両方が無い旧 log だけ `not_recorded` とする。
     - replay 中は `TrackerRuntime.startFaceTracking()` を呼ばず、live camera / video fixture runtime と camera track を停止してから進める。raw MediaPipe result からの再推論は Phase 1 の対象外である。
     - `mediapipe-raw-result` mode は `frame.mediapipe` slot の予約であり、Pose / Hand / Face raw serializer が揃うまでは `unsupported_mode` を返す。
     - live snapshot の camera state は optional `camera.frameTiming` に最新 `TrackerVideoFrameTiming` を載せ、既存 top-level `status`、`camera.source`、`camera.width`、`camera.height`、`pose`、`tracker`、`canonical` の field 名は維持する。
@@ -130,6 +132,7 @@
     - `sincro.motion-debug-log.v1` の保存単位は NDJSON の frame record であり、tracker が出力する正規化 pose snapshot は `frame.poseSnapshot` に保存する。
     - `frame.canonical` は motion-debug page 側で `SincroPoseMotionSnapshot` と latest face snapshot から生成した `CanonicalUpperBodyState` を保存する optional slot である。`parseMotionDebugLogLines()` は unknown optional slot として保持し、replay / viewer 境界で `parseCanonicalUpperBodyState()` により valid / invalid を判定する。
     - `frame.reliability` は motion-debug page 側で生成する `ReliabilityMap` の optional slot である。`parseMotionDebugLogLines()` は unknown optional slot として保持し、replay / viewer 境界で `parseReliabilityMap()` により valid / invalid を判定する。
+    - 旧 log で `frame.reliability` が欠損している場合、replay viewer は `frame.poseSnapshot`、`frame.timestamp.mediaTimeMs`、`frame.video.width` / `height` から `createPoseReliabilityMap()` を再計算する。再計算にも使える `poseSnapshot` が無い場合だけ reliability layer は `not_recorded` になる。
     - MediaPipe raw result は必要な場合も `frame.mediapipe` に分け、`frame.poseSnapshot` には `SincroPoseMotionSnapshot` 相当の normalized data を置く。
     - replay API の `loadRecording()` は plain NDJSON `string` または `File` だけを受け付ける。`startReplay({ mode })`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` は developer-only の window API として公開する。
     - `frame.timestamp.mediaTimeMs` は tracker callback の `TrackerVideoFrameTiming.mediaTimeMs` を正本にする。fallback 時だけ `video.currentTime * 1000` を使う。
