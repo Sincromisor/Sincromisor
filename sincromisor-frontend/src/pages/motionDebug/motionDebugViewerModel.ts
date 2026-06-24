@@ -155,6 +155,10 @@ function parseCanonicalLayerValue(
 }
 
 function resolveCameraValue(context: MotionDebugViewerContext): unknown {
+    const frameCameraQuality = resolveFrameCameraQuality(context.replayFrame);
+    if (frameCameraQuality !== undefined) {
+        return frameCameraQuality;
+    }
     if (context.replayManifest !== undefined) {
         return context.replayManifest.camera;
     }
@@ -162,6 +166,13 @@ function resolveCameraValue(context: MotionDebugViewerContext): unknown {
         return undefined;
     }
     return context.liveSnapshot.camera;
+}
+
+function resolveFrameCameraQuality(frame: SincroMotionDebugFrame | undefined): unknown {
+    if (!isRecord(frame?.metrics)) {
+        return undefined;
+    }
+    return frame.metrics.cameraQuality;
 }
 
 function createLayerSnapshot(

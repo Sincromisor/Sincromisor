@@ -12,6 +12,7 @@ import {
 import type { DebugConsoleSnapshot } from "../../features/debug/model/debugConsoleManager";
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 import { MOTION_DEBUG_CAMERA_CONSTRAINTS } from "./motionDebugCameraStream";
@@ -100,6 +101,7 @@ export class MotionDebugRecordingController {
     recordPoseFrame(
         snapshot: SincroPoseMotionSnapshot,
         timing?: TrackerVideoFrameTiming,
+        cameraQuality?: CameraQualityScore,
     ): MotionDebugRecorderRecordFrameResult | undefined {
         const mediaTimeMs = timing?.mediaTimeMs ?? fallbackVideoMediaTimeMs(this.params.video);
         const canonical = createMotionDebugCanonicalState({
@@ -131,6 +133,7 @@ export class MotionDebugRecordingController {
             metrics: {
                 receivedAtPerformanceMs: performance.now(),
                 tracker: this.params.getTrackerStats(),
+                cameraQuality,
             },
             dedupeKey: {
                 mediaTimeMs,

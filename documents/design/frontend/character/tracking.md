@@ -65,6 +65,11 @@
     - replay 中は `TrackerRuntime.startFaceTracking()` を呼ばず、live camera / video fixture runtime と camera track を停止してから進める。raw MediaPipe result からの再推論は Phase 1 の対象外である。
     - `mediapipe-raw-result` mode は `frame.mediapipe` slot の予約であり、Pose / Hand / Face raw serializer が揃うまでは `unsupported_mode` を返す。
     - live snapshot の camera state は optional `camera.frameTiming` に最新 `TrackerVideoFrameTiming` を載せ、既存 top-level `status`、`camera.source`、`camera.width`、`camera.height`、`pose`、`tracker`、`canonical` の field 名は維持する。
+    - live snapshot の camera state は source が `camera` / `fixture` の場合だけ optional `camera.quality` に `sincro.camera-quality.v1` の `CameraQualityScore` を載せる。source が `none` の場合は score を生成せず、viewer の camera layer は未記録扱いにする。
+    - `CameraQualityScore` は resolution、cadence、torso / hands in frame、border risk、hand small risk、motion blur risk の 7 component を持つ pure score である。guide message は reason code から固定文言へ変換し、自由文生成は行わない。
+    - `CameraQualityScore.track` は scrub 済みの `width`、`height`、`frameRate`、`facingMode`、`readyState` だけを保存し、raw `deviceId`、`groupId`、`label` は保存しない。
+    - v1 の `motionBlurRisk` は cadence、actual `frameRate`、低 pose confidence 継続だけを見る proxy であり、pixel blur / brightness 解析は行わない。
+    - CameraQualityScore は Phase 3 の debug / recording 表示用であり、ReliabilityMap、TemporalStateEstimator、IK weight にはまだ接続しない。
     - live camera / video fixture の source 判定、camera setting scrub、manifest 生成、download link 生成は `src/pages/motionDebug/` 側の責務とする。
 
 ## Data / State
@@ -111,6 +116,7 @@
     - callback 受信時の `performance.now()` は `frame.metrics.receivedAtPerformanceMs` として保存する。tracker stats は `frame.metrics.tracker` に入れ、`timestamp.receivedAtPerformanceMs` や top-level `tracker` は使わない。
     - 同一 `presentedFrames` と同一 `SincroPoseMotionSnapshot.lastUpdatedAtMs` の連続入力は duplicate frame として recorder が捨てる。`presentedFrames` が無い fallback / legacy 入力では、同一 `mediaTimeMs` と同一 `lastUpdatedAtMs` を duplicate とする。
     - camera 実設定を manifest に残す場合、raw `deviceId` / `groupId` は保存しない。hash を保存する場合も export 単位だけで比較可能にし、export をまたいで安定する識別子を残さない。
+    - frame ごとの camera quality は `frame.metrics.cameraQuality` に保存する。top-level `cameraQuality` は schema 外とし、manifest の camera settings と同じく raw device identifier は持たない。
     - exported NDJSON は `parseMotionDebugLogLines()` が manifest と frame records を validation できる schema に固定する。
 - motion metrics input boundary
     - `trackingLossDurationMs` は `frame.poseSnapshot.detected`、`degradedToFaceOnly`、`frame.timestamp.mediaTimeMs` を入力境界とし、lost / degraded の連続区間を timestamp 差分で合計する。
