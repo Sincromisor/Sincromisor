@@ -1,0 +1,14 @@
+id: task-260624222255-character-animation-3-video-frame-clock
+title: character animation 3.0 video frame clock
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260624013721-character-animation-3-canonical-debug-replay-integration
+superseded_by: null
+review: APPROVED
+reviewed_sha: 2c19e38e2d749cae5aedce5ff09ff4dfd59ff734
+verdict: null
+attempts: 0
+created_at: 2026-06-24
+closed_at: null
+legacy_ids: []

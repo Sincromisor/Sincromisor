@@ -1,0 +1,15 @@
+id: task-260624222304-character-animation-3-performance-degradation-baseline
+title: character animation 3.0 performance degradation baseline
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260624222255-character-animation-3-video-frame-clock
+  - task-260624222300-character-animation-3-camera-quality-score
+superseded_by: null
+review: APPROVED
+reviewed_sha: 2c19e38e2d749cae5aedce5ff09ff4dfd59ff734
+verdict: null
+attempts: 0
+created_at: 2026-06-24
+closed_at: null
+legacy_ids: []
