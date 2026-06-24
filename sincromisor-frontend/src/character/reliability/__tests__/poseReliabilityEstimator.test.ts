@@ -79,6 +79,23 @@ describe("createPoseReliabilityMap", () => {
         expect(reliability.joints.rightWrist.finalWeight).toBeCloseTo((0.9 * 0.9 * 0.5) ** 0.1, 6);
     });
 
+    it("keeps weak pose targets with tracking score 0.45", () => {
+        const reliability = createMap(
+            createPose({
+                leftWrist: createPoint([0.26, 0.68], [-1.3, -0.6, 0], {
+                    quality: "weak",
+                }),
+            }),
+        );
+
+        expect(reliability.joints.leftWrist.components.tracking).toEqual({
+            score: 0.45,
+            reasonCodes: ["weak_tracking"],
+        });
+        expect(reliability.joints.leftWrist.state).toBe("tracked");
+        expect(reliability.joints.leftWrist.finalWeight).toBeCloseTo((0.9 * 0.9 * 0.45) ** 0.1, 6);
+    });
+
     it("maps bad camera quality into the camera component without hiding pose observations", () => {
         const reliability = createMap(createPose(), { cameraQuality: createCameraQuality(0) });
 
@@ -93,6 +110,37 @@ describe("createPoseReliabilityMap", () => {
         });
         expect(reliability.joints.leftWrist.state).toBe("suspect");
         expect(reliability.joints.leftWrist.finalWeight).toBeCloseTo((0.9 * 0.9 * 0.001) ** 0.1, 6);
+    });
+
+    it("zeros finalWeight when component degradation makes a non-forced joint lost", () => {
+        const previous = createPose({
+            leftWrist: createPoint([-0.7, 0.68], [-1.3, -0.6, 0]),
+        });
+        const degradedWrist = {
+            ...createPoint([0.02, 0.68], [-1.3, -0.6, 0], {
+                hasWorldCoordinates: false,
+            }),
+            presence: 0,
+            visibility: 0,
+        };
+        const reliability = createMap(
+            createPose({
+                shoulderWidth: 0,
+                leftWrist: degradedWrist,
+            }),
+            {
+                cameraQuality: createCameraQuality(0),
+                previous: { pose: previous, mediaTimeMs: 900 },
+                mediaTimeMs: 1000,
+            },
+        );
+
+        expect(reliability.joints.leftWrist.components.tracking).toEqual({
+            score: 1,
+            reasonCodes: [],
+        });
+        expect(reliability.joints.leftWrist.state).toBe("lost");
+        expect(reliability.joints.leftWrist.finalWeight).toBe(0);
     });
 
     it("fixes temporal jump thresholds from the previous pose media time", () => {
