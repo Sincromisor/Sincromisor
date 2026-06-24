@@ -30,10 +30,11 @@ export function createReliability(
             warnings: warningsFromComponents(components),
         };
     }
-    const finalWeight = geometricMean(Object.values(components).map((entry) => entry.score));
+    const provisionalWeight = geometricMean(Object.values(components).map((entry) => entry.score));
+    const state = stateFromWeight(provisionalWeight);
     return {
-        state: stateFromWeight(finalWeight),
-        finalWeight,
+        state,
+        finalWeight: state === "lost" ? 0 : provisionalWeight,
         source,
         components,
         warnings: warningsFromComponents(components),
