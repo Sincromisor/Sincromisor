@@ -27,6 +27,9 @@
 - `src/character/canonical`
     - 後段 motion pipeline が共有する `CanonicalUpperBodyState` contract を置く。
     - 保存対象は body-local の意味量に限定し、VRM bone rotation、Three.js object、MediaPipe landmark object は含めない。
+- `src/character/reliability`
+    - 後続 estimator / replay / temporal state が共有する `ReliabilityMap` v1 contract を置く。
+    - MediaPipe confidence をそのまま制御重みにせず、joint / part / gesture ごとの保存可能な信頼度 snapshot として扱う。
 - `src/character/ik`
     - `SincroArmIkSolver` と solver probe / constraint / geometry / pole を置く。
 - `src/character/vrmCharacter`
@@ -137,6 +140,9 @@
     - frame は pose callback / pose fallback callback 起点で記録し、render loop は recording state 表示だけを更新する。
     - `MotionDebugRecordingController.recordPoseFrame()` は同じ pose callback / fallback callback 起点で `estimateCanonicalTorsoFrame()`、`createCanonicalUpperBodyState()` を呼び、`frame.canonical` に JSON 保存可能な `CanonicalUpperBodyState` を保存する。連続 frame の `bodyFront` 反転抑制は previous canonical を torso estimator へ渡して効かせ、recording 停止、source 停止、replay 読み込み時に previous を reset する。
     - v1 frame は最低限 `frame.timestamp.mediaTimeMs`、`frame.video.width`、`frame.video.height`、`frame.poseSnapshot`、`frame.canonical`、`frame.solver.poseRetarget`、`frame.solver.poseRetargetRuntime`、`frame.metrics.receivedAtPerformanceMs`、`frame.metrics.tracker` を保存する。
+    - `frame.reliability` は optional slot として `sincro.reliability-map.v1` の `ReliabilityMap` を保存する。v1 は `timestamp`、`camera`、`joints`、`parts`、`gesture`、`warnings` を持つ JSON contract であり、finite number、lower-case enum、plain object だけを許可する。
+    - `ReliabilityMap` の `finalWeight` と component `score` は `0..1` の低 weight 観測を含めて保存する。`finalWeight < threshold` は parse failure ではなく観測値として保持し、破棄や downstream weight 反映は後続 estimator / controller task の責務とする。
+    - `parseReliabilityMap()` は replay / viewer 境界の検証 API であり、未知 `schemaVersion`、値域外 scalar、非 finite number、unknown joint / part key、runtime object 風 extra key を reject する。
     - `frame.timestamp` は optional で `presentationTimeMs`、`expectedDisplayTimeMs`、`presentedFrames`、`droppedPresentedFrames`、`clockSource` を保存できる。`clockSource` は `request-video-frame-callback`、`request-animation-frame`、`timer` のいずれかで、fallback では rVFC 固有 field を欠損のままにする。
     - frame ごとの camera quality は optional `frame.metrics.cameraQuality` に保存する。top-level `cameraQuality` は追加しない。replay viewer の camera layer はこの frame 値がある場合、manifest camera settings より優先して表示する。
     - tracker performance budget は optional `frame.metrics.tracker.budget` として保存する。schema version は `sincro.tracker-performance-budget.v1`、degradation state は `"full"`、`"main-thread-low-fps"`、`"pose-reduced-fps"`、`"face-only"`、`"fallback"` の固定 enum とする。
