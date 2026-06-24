@@ -11,6 +11,12 @@ import type {
     MotionMetricKey,
     MotionMetricSummary,
 } from "../../character/motionEvaluation/motionMetrics";
+import { parseReplayPoseSnapshot } from "../../character/motionEvaluation/motionReplayPoseSnapshotSchema";
+import { createPoseReliabilityMap } from "../../character/reliability/poseReliabilityEstimator";
+import {
+    parseReliabilityMap,
+    type ReliabilityMap,
+} from "../../character/reliability/reliabilityMap";
 import type {
     CanonicalLayerParseError,
     MotionDebugLayerKey,
@@ -19,6 +25,7 @@ import type {
     MotionDebugSnapshot,
     MotionDebugViewerMode,
     MotionDebugViewerSnapshot,
+    ReliabilityLayerParseError,
 } from "./types";
 
 export const MOTION_DEBUG_LAYER_KEYS: MotionDebugLayerKey[] = [
@@ -58,7 +65,6 @@ const LAYER_LABELS: Record<MotionDebugLayerKey, string> = {
 
 const RESERVED_PHASE_1_LAYERS = new Set<MotionDebugLayerKey>([
     "mediapipe",
-    "reliability",
     "canonical",
     "temporal",
     "intent",
@@ -116,7 +122,7 @@ function createLayerSnapshots(
             context.replayFrame?.poseSnapshot ?? context.liveSnapshot.pose,
             false,
         ),
-        reliability: createLayerSnapshot("reliability", context.replayFrame?.reliability, true),
+        reliability: createLayerSnapshot("reliability", resolveReliabilityValue(context), false),
         canonical: createLayerSnapshot("canonical", resolveCanonicalValue(context), true),
         temporal: createLayerSnapshot("temporal", context.replayFrame?.temporal, true),
         intent: createLayerSnapshot("intent", context.replayFrame?.intent, true),
@@ -128,6 +134,45 @@ function createLayerSnapshots(
         finalPose: createLayerSnapshot("finalPose", context.replayFrame?.finalPose, true),
         applied: createLayerSnapshot("applied", context.replayFrame?.applied, true),
         metrics: createMetricsLayerSnapshot(context),
+    };
+}
+
+function resolveReliabilityValue(
+    context: MotionDebugViewerContext,
+): ReliabilityMap | ReliabilityLayerParseError | undefined {
+    if (context.liveSnapshot.reliability !== undefined) {
+        return context.liveSnapshot.reliability;
+    }
+    const frame = context.replayFrame;
+    if (frame === undefined) {
+        return undefined;
+    }
+    if (frame.reliability !== undefined) {
+        return parseReliabilityLayerValue(frame.reliability);
+    }
+    if (frame.poseSnapshot === undefined) {
+        return undefined;
+    }
+    const pose = parseReplayPoseSnapshot(frame.poseSnapshot);
+    if (pose === undefined) {
+        return undefined;
+    }
+    return createPoseReliabilityMap({
+        pose,
+        mediaTimeMs: frame.timestamp.mediaTimeMs,
+        video: frame.video,
+    });
+}
+
+function parseReliabilityLayerValue(value: unknown): ReliabilityMap | ReliabilityLayerParseError {
+    const parsed = parseReliabilityMap(value);
+    if (parsed.ok) {
+        return parsed.map;
+    }
+    return {
+        parseStatus: "invalid",
+        errors: parsed.errors,
+        raw: value,
     };
 }
 
