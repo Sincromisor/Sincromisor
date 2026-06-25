@@ -163,6 +163,14 @@ describe("AvatarMotionProfile", () => {
             "out_of_range",
             ["metrics", "shoulderWidth"],
         );
+        expectErrorCode(
+            parseAvatarMotionProfile({
+                ...profile,
+                metrics: { ...profile.metrics, shoulderWidth: Number.NaN },
+            }),
+            "out_of_range",
+            ["metrics", "shoulderWidth"],
+        );
     });
 
     it("rejects unknown schema versions, unknown enums, and extra keys", () => {
