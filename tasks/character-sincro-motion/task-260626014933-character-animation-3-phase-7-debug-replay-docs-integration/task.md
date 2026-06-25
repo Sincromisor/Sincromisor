@@ -42,7 +42,10 @@ export type MotionDebugPhase7Snapshot = {
 type SolverSubLayerValue =
     | { status: "available"; value: unknown }
     | { status: "not_recorded"; value?: undefined }
-    | { status: "invalid"; value: { parseStatus: "invalid"; errors: unknown[]; raw: unknown } };
+    | {
+          status: "invalid";
+          value: { parseStatus: "invalid"; errors: unknown[]; raw: unknown };
+      };
 
 type SolverLayerValue = {
     phase6: SolverSubLayerValue;

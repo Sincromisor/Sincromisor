@@ -40,14 +40,19 @@ export type AvatarMotionProfile = {
         bones: Partial<Record<VRMHumanBoneName, boolean>>;
         fingerChains: Record<
             "left" | "right",
-            Record<"thumb" | "index" | "middle" | "ring" | "little", {
-                proximal: boolean;
-                intermediate: boolean;
-                distal: boolean;
-            }>
+            Record<
+                "thumb" | "index" | "middle" | "ring" | "little",
+                {
+                    proximal: boolean;
+                    intermediate: boolean;
+                    distal: boolean;
+                }
+            >
         >;
     };
-    restLocalRotation: Partial<Record<VRMHumanBoneName, readonly [number, number, number, number]>>;
+    restLocalRotation: Partial<
+        Record<VRMHumanBoneName, readonly [number, number, number, number]>
+    >;
     metrics: {
         shoulderWidth?: number;
         torsoLength?: number;
@@ -76,7 +81,11 @@ export type AvatarMotionProfile = {
     fingers: {
         curlScale: number;
         curlMode: "grouped" | "perFinger";
-        curlDistribution: { proximal: number; intermediate: number; distal: number };
+        curlDistribution: {
+            proximal: number;
+            intermediate: number;
+            distal: number;
+        };
         splayLimitDeg: number;
     };
     risk: {
@@ -93,23 +102,23 @@ export type AvatarMotionProfile = {
 - `torso.distribution` は capability から決定する。`spine+chest+upperChest` は `{0.25, 0.40, 0.35}`、`spine+chest` は `{0.35, 0.65, 0}`、`spine only` は `{1, 0, 0}` とする。
 - parser 値域は次に固定する。
 
-| field | 値域 |
-| --- | --- |
-| `metrics.*` | optional。存在する場合は finite number かつ `> 0` |
-| `torso.distribution.*` | finite `0..1`、3 値合計は `1.0 ± 0.001` |
-| `torso.chestFollow` | finite `0..1` |
-| `arm.reachScale` | finite `0.5..1.2` |
-| `arm.lateralScale` | finite `0.5..1.2` |
-| `arm.verticalScale` | finite `0.5..1.2` |
-| `arm.depthCompression` | finite `0.2..0.9` |
-| `arm.elbowOutwardBias` | finite `0..0.6` |
-| `arm.shoulderDamping` | finite `0..1` |
-| `wrist.wristRollInfluence` | finite `0..1` |
-| `wrist.lowerArmTwistShare` / `wrist.handTwistShare` | finite `0..1`、2 値合計は `1.0 ± 0.001` |
-| `fingers.curlScale` | finite `0..1.2` |
-| `fingers.curlDistribution.*` | finite `0..1`、3 値合計は `1.0 ± 0.001` |
-| `fingers.splayLimitDeg` | finite `0..30` |
-| `risk.smallBodyLargeHead` / `risk.constraintRisk` | finite `0..1` |
+| field                                               | 値域                                              |
+| --------------------------------------------------- | ------------------------------------------------- |
+| `metrics.*`                                         | optional。存在する場合は finite number かつ `> 0` |
+| `torso.distribution.*`                              | finite `0..1`、3 値合計は `1.0 ± 0.001`           |
+| `torso.chestFollow`                                 | finite `0..1`                                     |
+| `arm.reachScale`                                    | finite `0.5..1.2`                                 |
+| `arm.lateralScale`                                  | finite `0.5..1.2`                                 |
+| `arm.verticalScale`                                 | finite `0.5..1.2`                                 |
+| `arm.depthCompression`                              | finite `0.2..0.9`                                 |
+| `arm.elbowOutwardBias`                              | finite `0..0.6`                                   |
+| `arm.shoulderDamping`                               | finite `0..1`                                     |
+| `wrist.wristRollInfluence`                          | finite `0..1`                                     |
+| `wrist.lowerArmTwistShare` / `wrist.handTwistShare` | finite `0..1`、2 値合計は `1.0 ± 0.001`           |
+| `fingers.curlScale`                                 | finite `0..1.2`                                   |
+| `fingers.curlDistribution.*`                        | finite `0..1`、3 値合計は `1.0 ± 0.001`           |
+| `fingers.splayLimitDeg`                             | finite `0..30`                                    |
+| `risk.smallBodyLargeHead` / `risk.constraintRisk`   | finite `0..1`                                     |
 
 - 測定式は次に固定する。全て `vrm.scene.updateMatrixWorld(true)` 後の normalized bone world position distance を使い、非 finite は `undefined` にする。
     - `shoulderWidth`: `leftUpperArm` と `rightUpperArm`、min clamp `0.08`。
