@@ -62,6 +62,7 @@ type SincroArmIkConstraintResultOptions = {
     upperLocalQuaternion: SincroArmIkLimitedQuaternion;
     lowerLocalQuaternion: SincroArmIkLimitedQuaternion;
     forearmCollision: ReturnType<SincroArmIkConstraintResolver["forearmCollisionReason"]>;
+    wristRollInfluence?: number;
 };
 
 type SincroArmIkSolverConstructorOptions = SincroArmIkSkeleton & {
@@ -176,6 +177,7 @@ export class SincroArmIkSolver {
             upperLocalQuaternion: solved.upperLocalQuaternion,
             lowerLocalQuaternion: solved.lowerLocalQuaternion,
             forearmCollision,
+            wristRollInfluence: target.wristRollInfluence,
         });
         this.lastPoleDirection = prepared.elbowPole.direction.clone();
 
@@ -192,6 +194,9 @@ export class SincroArmIkSolver {
 
     private prepareTarget(target: SincroArmIkTarget): SincroArmIkPreparedTarget | undefined {
         const targetVector = target.wrist.clone();
+        const targetReachRatio =
+            target.targetReachRatio ??
+            targetVector.length() / (this.upperArmLength + this.lowerArmLength);
         const targetConstraint = this.constraintResolver.constrainShoulderTarget(targetVector);
         const targetCollision = this.constraintResolver.avoidNoGoZones(targetConstraint.target);
         const targetClamp = clampArmIkTarget({
@@ -206,7 +211,12 @@ export class SincroArmIkSolver {
             target: targetClamp.target,
             bindPoleDirection: this.bindPoleDirection,
             lastPoleDirection: this.lastPoleDirection,
+            previousPoleDirection: this.lastPoleDirection,
             poleFlipDotThreshold: this.options.poleFlipDotThreshold,
+            temporalState: target.temporalState,
+            elbowFlexionRad: target.elbowFlexionRad,
+            recoveringBlendProgress: target.recoveringBlendProgress,
+            targetReachRatio,
         });
         const elbow = elbowPosition(
             targetClamp.target,
@@ -262,6 +272,7 @@ export class SincroArmIkSolver {
         upperLocalQuaternion,
         lowerLocalQuaternion,
         forearmCollision,
+        wristRollInfluence,
     }: SincroArmIkConstraintResultOptions): SincroArmIkConstraintResult {
         const reasons = [
             ...(targetConstraint.limited ? ["joint_limited"] : []),
@@ -279,11 +290,13 @@ export class SincroArmIkSolver {
             targetConstraint.limited ||
             upperLocalQuaternion.limited ||
             lowerLocalQuaternion.limited;
-        const weightScale = this.constraintResolver.constraintWeightScale(
-            jointLimited,
-            elbowPole.stabilized,
-            collisionAvoided,
-        );
+        const weightScale =
+            this.constraintResolver.constraintWeightScale(
+                jointLimited,
+                elbowPole.stabilized,
+                collisionAvoided,
+            ) * elbowPole.weightScale;
+        const reasonCodes = [...new Set([...reasons, ...elbowPole.reasonCodes])];
         return {
             constraint: {
                 reasons: [...new Set(reasons)],
@@ -292,6 +305,13 @@ export class SincroArmIkSolver {
                 collisionAvoided,
                 weightScale,
                 targetPushDistance: targetCollision.pushDistance,
+                poleState: elbowPole.state,
+                reasonCodes,
+                angularVelocityClamped: false,
+                wristRollDamped: false,
+                wristRollInfluence: isFiniteNumber(wristRollInfluence)
+                    ? MathUtils.clamp(wristRollInfluence, 0, 1)
+                    : undefined,
             },
             weightScale,
         };
@@ -311,4 +331,8 @@ export class SincroArmIkSolver {
     private worldPosition(node: Object3D): Vector3 {
         return node.getWorldPosition(new Vector3());
     }
+}
+
+function isFiniteNumber(value: number | undefined): value is number {
+    return typeof value === "number" && Number.isFinite(value);
 }

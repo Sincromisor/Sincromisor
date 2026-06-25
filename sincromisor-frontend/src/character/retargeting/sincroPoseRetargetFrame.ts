@@ -188,6 +188,7 @@ export function cloneArmIkConstraint(
     return {
         ...constraint,
         reasons: [...constraint.reasons],
+        reasonCodes: constraint.reasonCodes ? [...constraint.reasonCodes] : undefined,
     };
 }
 
