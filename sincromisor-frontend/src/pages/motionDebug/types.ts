@@ -24,6 +24,10 @@ import type {
     ReliabilityMapParseResult,
 } from "../../character/reliability/reliabilityMap";
 import type { SincroPoseRetargetConfig } from "../../character/retargeting/sincroPoseRetargeter";
+import type {
+    TemporalUpperBodyState,
+    TemporalUpperBodyStateParseResult,
+} from "../../character/temporal/temporalUpperBodyState";
 import type { DebugConsoleSnapshot } from "../../features/debug/model/debugConsoleManager";
 import type {
     SincroPoseMotionSnapshot,
@@ -58,6 +62,12 @@ export type CanonicalLayerParseError = {
 export type ReliabilityLayerParseError = {
     parseStatus: "invalid";
     errors: Extract<ReliabilityMapParseResult, { ok: false }>["errors"];
+    raw: unknown;
+};
+
+export type TemporalLayerParseError = {
+    parseStatus: "invalid";
+    errors: Extract<TemporalUpperBodyStateParseResult, { ok: false }>["errors"];
     raw: unknown;
 };
 
@@ -127,6 +137,7 @@ export type MotionDebugSnapshot = {
     pose: SincroPoseMotionSnapshot;
     reliability?: ReliabilityMap | ReliabilityLayerParseError;
     canonical?: CanonicalUpperBodyState | CanonicalLayerParseError;
+    temporal?: TemporalUpperBodyState | TemporalLayerParseError;
     canonicalReliabilityInput?: MotionDebugCanonicalReliabilityInput;
     tracker: SincroTrackerWorkerStats;
     poseRetarget: DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];

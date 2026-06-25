@@ -17,6 +17,10 @@ import {
     parseReliabilityMap,
     type ReliabilityMap,
 } from "../../character/reliability/reliabilityMap";
+import {
+    parseTemporalUpperBodyState,
+    type TemporalUpperBodyState,
+} from "../../character/temporal/temporalUpperBodyState";
 import type {
     CanonicalLayerParseError,
     MotionDebugLayerKey,
@@ -26,6 +30,7 @@ import type {
     MotionDebugViewerMode,
     MotionDebugViewerSnapshot,
     ReliabilityLayerParseError,
+    TemporalLayerParseError,
 } from "./types";
 
 export const MOTION_DEBUG_LAYER_KEYS: MotionDebugLayerKey[] = [
@@ -66,7 +71,6 @@ const LAYER_LABELS: Record<MotionDebugLayerKey, string> = {
 const RESERVED_PHASE_1_LAYERS = new Set<MotionDebugLayerKey>([
     "mediapipe",
     "canonical",
-    "temporal",
     "intent",
     "finalPose",
     "applied",
@@ -124,7 +128,7 @@ function createLayerSnapshots(
         ),
         reliability: createLayerSnapshot("reliability", resolveReliabilityValue(context), false),
         canonical: createLayerSnapshot("canonical", resolveCanonicalValue(context), true),
-        temporal: createLayerSnapshot("temporal", context.replayFrame?.temporal, true),
+        temporal: createLayerSnapshot("temporal", resolveTemporalValue(context), false),
         intent: createLayerSnapshot("intent", context.replayFrame?.intent, true),
         solver: createLayerSnapshot(
             "solver",
@@ -189,6 +193,30 @@ function parseCanonicalLayerValue(
     value: unknown,
 ): CanonicalUpperBodyState | CanonicalLayerParseError {
     const parsed = parseCanonicalUpperBodyState(value);
+    if (parsed.ok) {
+        return parsed.state;
+    }
+    return {
+        parseStatus: "invalid",
+        errors: parsed.errors,
+        raw: value,
+    };
+}
+
+function resolveTemporalValue(
+    context: MotionDebugViewerContext,
+): TemporalUpperBodyState | TemporalLayerParseError | undefined {
+    if (context.replayFrame !== undefined) {
+        if (context.replayFrame.temporal === undefined) {
+            return undefined;
+        }
+        return parseTemporalLayerValue(context.replayFrame.temporal);
+    }
+    return context.liveSnapshot.temporal;
+}
+
+function parseTemporalLayerValue(value: unknown): TemporalUpperBodyState | TemporalLayerParseError {
+    const parsed = parseTemporalUpperBodyState(value);
     if (parsed.ok) {
         return parsed.state;
     }

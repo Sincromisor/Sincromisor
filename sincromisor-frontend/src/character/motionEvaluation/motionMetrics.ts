@@ -1,5 +1,11 @@
 import { Quaternion } from "three/src/math/Quaternion.js";
 import { z } from "zod";
+import {
+    parseTemporalUpperBodyState,
+    type TemporalArmState,
+    type TemporalTuple3,
+    type TemporalUpperBodyState,
+} from "../temporal/temporalUpperBodyState";
 import type { SincroMotionDebugFrame } from "./motionDebugLogSchema";
 
 export const MOTION_P0_FIXTURE_IDS = [
@@ -21,7 +27,12 @@ export type MotionMetricKey =
     | "reachClampOccupancy"
     | "trackingLossDurationMs"
     | "sideSwapCount"
-    | "addedLatencyMs";
+    | "addedLatencyMs"
+    | "temporalPredictedArmFrameCount"
+    | "temporalRecoveringArmFrameCount"
+    | "temporalLostArmDurationMs"
+    | "temporalMaxRecoveryJumpDegEquivalent"
+    | "temporalNeutralWristJitter";
 
 export type MotionMetricSeverity = "pass" | "warn" | "fail";
 export type MotionMetricStatus = MotionMetricSeverity | "not_available";
@@ -77,6 +88,11 @@ export const MOTION_METRIC_KEYS: MotionMetricKey[] = [
     "trackingLossDurationMs",
     "sideSwapCount",
     "addedLatencyMs",
+    "temporalPredictedArmFrameCount",
+    "temporalRecoveringArmFrameCount",
+    "temporalLostArmDurationMs",
+    "temporalMaxRecoveryJumpDegEquivalent",
+    "temporalNeutralWristJitter",
 ];
 
 export const DEFAULT_MOTION_METRIC_THRESHOLDS: Record<MotionMetricKey, MotionMetricThreshold> = {
@@ -88,6 +104,11 @@ export const DEFAULT_MOTION_METRIC_THRESHOLDS: Record<MotionMetricKey, MotionMet
     trackingLossDurationMs: { pass: 250, warn: 1000, fail: 2500 },
     sideSwapCount: { pass: 0, warn: 1, fail: 3 },
     addedLatencyMs: { pass: 80, warn: 160, fail: 260 },
+    temporalPredictedArmFrameCount: { pass: 0, warn: 40, fail: 120 },
+    temporalRecoveringArmFrameCount: { pass: 0, warn: 30, fail: 90 },
+    temporalLostArmDurationMs: { pass: 250, warn: 1000, fail: 2500 },
+    temporalMaxRecoveryJumpDegEquivalent: { pass: 15, warn: 25, fail: 45 },
+    temporalNeutralWristJitter: { pass: 0.015, warn: 0.035, fail: 0.06 },
 };
 
 const METRIC_DEFINITIONS: Record<
@@ -102,6 +123,11 @@ const METRIC_DEFINITIONS: Record<
     trackingLossDurationMs: { unit: "ms", direction: "lower_is_better" },
     sideSwapCount: { unit: "count", direction: "lower_is_better" },
     addedLatencyMs: { unit: "ms", direction: "lower_is_better" },
+    temporalPredictedArmFrameCount: { unit: "count", direction: "lower_is_better" },
+    temporalRecoveringArmFrameCount: { unit: "count", direction: "lower_is_better" },
+    temporalLostArmDurationMs: { unit: "ms", direction: "lower_is_better" },
+    temporalMaxRecoveryJumpDegEquivalent: { unit: "deg", direction: "lower_is_better" },
+    temporalNeutralWristJitter: { unit: "ratio", direction: "lower_is_better" },
 };
 
 const poseWristSchema = z
@@ -235,6 +261,11 @@ function parseMetrics(frame: SincroMotionDebugFrame): z.infer<typeof metricsSche
     return parsed.success ? parsed.data : undefined;
 }
 
+function parseTemporal(frame: SincroMotionDebugFrame): TemporalUpperBodyState | undefined {
+    const parsed = parseTemporalUpperBodyState(frame.temporal);
+    return parsed.ok ? parsed.state : undefined;
+}
+
 function resolveThresholds(
     config: MotionMetricConfig,
 ): Record<MotionMetricKey, MotionMetricThreshold> {
@@ -259,6 +290,21 @@ function resolveThresholds(
             config.thresholds?.sideSwapCount ?? DEFAULT_MOTION_METRIC_THRESHOLDS.sideSwapCount,
         addedLatencyMs:
             config.thresholds?.addedLatencyMs ?? DEFAULT_MOTION_METRIC_THRESHOLDS.addedLatencyMs,
+        temporalPredictedArmFrameCount:
+            config.thresholds?.temporalPredictedArmFrameCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.temporalPredictedArmFrameCount,
+        temporalRecoveringArmFrameCount:
+            config.thresholds?.temporalRecoveringArmFrameCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.temporalRecoveringArmFrameCount,
+        temporalLostArmDurationMs:
+            config.thresholds?.temporalLostArmDurationMs ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.temporalLostArmDurationMs,
+        temporalMaxRecoveryJumpDegEquivalent:
+            config.thresholds?.temporalMaxRecoveryJumpDegEquivalent ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.temporalMaxRecoveryJumpDegEquivalent,
+        temporalNeutralWristJitter:
+            config.thresholds?.temporalNeutralWristJitter ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.temporalNeutralWristJitter,
     };
 }
 
@@ -779,6 +825,205 @@ function quaternionAngleDeg(
     );
 }
 
+type ArmSide = "left" | "right";
+
+const ARM_SIDES: ArmSide[] = ["left", "right"];
+
+function calculateTemporalArmStateCount(
+    frames: readonly SincroMotionDebugFrame[],
+    state: "predicted" | "recovering",
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const temporal = parseTemporal(frame);
+        if (temporal === undefined) {
+            continue;
+        }
+        for (const side of ARM_SIDES) {
+            sampleCount += 1;
+            if (temporal.arms[side].state === state) {
+                count += 1;
+            }
+        }
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: `temporal ${state} arm-frame count requires frame.temporal.`,
+            sampleCount,
+        };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
+function calculateTemporalLostArmDurationMs(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let durationMs = 0;
+    let previous: TemporalUpperBodyState | undefined;
+    for (const frame of frames) {
+        const temporal = parseTemporal(frame);
+        if (temporal === undefined) {
+            continue;
+        }
+        sampleCount += 1;
+        if (previous !== undefined) {
+            const dtMs = clamp(
+                frame.timestamp.mediaTimeMs - previous.timestamp.mediaTimeMs,
+                0,
+                250,
+            );
+            for (const side of ARM_SIDES) {
+                if (previous.arms[side].state === "lost") {
+                    durationMs += dtMs;
+                }
+            }
+        }
+        previous = temporal;
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "temporalLostArmDurationMs requires frame.temporal.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: durationMs, sampleCount };
+}
+
+function calculateTemporalMaxRecoveryJumpDegEquivalent(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let maxJumpDeg = 0;
+    let previous: TemporalUpperBodyState | undefined;
+    for (const frame of frames) {
+        const temporal = parseTemporal(frame);
+        if (temporal === undefined) {
+            continue;
+        }
+        if (previous !== undefined) {
+            for (const side of ARM_SIDES) {
+                const currentArm = temporal.arms[side];
+                const previousArm = previous.arms[side];
+                if (currentArm.state !== "recovering") {
+                    continue;
+                }
+                sampleCount += 1;
+                maxJumpDeg = Math.max(
+                    maxJumpDeg,
+                    temporalArmScalarJumpDegEquivalent(previousArm, currentArm),
+                );
+            }
+        }
+        previous = temporal;
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "temporalMaxRecoveryJumpDegEquivalent requires consecutive recovering temporal arm samples.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: maxJumpDeg, sampleCount };
+}
+
+function temporalArmScalarJumpDegEquivalent(
+    previous: TemporalArmState,
+    current: TemporalArmState,
+): number {
+    return Math.max(
+        Math.abs(current.elevationRad - previous.elevationRad) * (180 / Math.PI),
+        Math.abs(current.elbowFlexionRad - previous.elbowFlexionRad) * (180 / Math.PI),
+        Math.abs(current.reach - previous.reach) * 90,
+        Math.abs(current.forwardness - previous.forwardness) * 90,
+        Math.abs(current.openness - previous.openness) * 45,
+    );
+}
+
+function calculateTemporalNeutralWristJitter(
+    frames: readonly SincroMotionDebugFrame[],
+    fixtureId: MotionP0FixtureId | undefined,
+): NumericMetricComputation {
+    if (fixtureId !== "neutral-10s") {
+        return {
+            ok: false,
+            reason: "temporalNeutralWristJitter requires fixtureId neutral-10s.",
+            sampleCount: 0,
+        };
+    }
+
+    const samples: Record<ArmSide, TemporalTuple3[]> = {
+        left: [],
+        right: [],
+    };
+    for (const frame of frames) {
+        const temporal = parseTemporal(frame);
+        if (temporal === undefined) {
+            continue;
+        }
+        for (const side of ARM_SIDES) {
+            const arm = temporal.arms[side];
+            if (
+                (arm.state === "tracked" || arm.state === "suspect") &&
+                arm.bodyLocalWrist !== undefined
+            ) {
+                samples[side].push(arm.bodyLocalWrist);
+            }
+        }
+    }
+
+    const sampleCount = samples.left.length + samples.right.length;
+    if (sampleCount < 2) {
+        return {
+            ok: false,
+            reason: "temporalNeutralWristJitter requires at least 2 temporal wrist samples.",
+            sampleCount,
+        };
+    }
+
+    const squaredDistances: number[] = [];
+    for (const side of ARM_SIDES) {
+        const sideSamples = samples[side];
+        for (let index = 1; index < sideSamples.length; index += 1) {
+            const previous = sideSamples[index - 1];
+            const current = sideSamples[index];
+            if (previous === undefined || current === undefined) {
+                continue;
+            }
+            squaredDistances.push(squaredTupleDistance(previous, current));
+        }
+    }
+    if (squaredDistances.length === 0) {
+        return {
+            ok: false,
+            reason: "temporalNeutralWristJitter requires consecutive temporal wrist samples.",
+            sampleCount,
+        };
+    }
+
+    return {
+        ok: true,
+        value: Math.sqrt(
+            squaredDistances.reduce((sum, distance) => sum + distance, 0) / squaredDistances.length,
+        ),
+        sampleCount,
+    };
+}
+
+function squaredTupleDistance(left: TemporalTuple3, right: TemporalTuple3): number {
+    const dx = right[0] - left[0];
+    const dy = right[1] - left[1];
+    const dz = right[2] - left[2];
+    return dx * dx + dy * dy + dz * dz;
+}
+
+function clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+}
+
 export function calculateMotionMetricSummary(
     frames: readonly SincroMotionDebugFrame[],
     config: MotionMetricConfig,
@@ -824,6 +1069,31 @@ export function calculateMotionMetricSummary(
             "addedLatencyMs",
             thresholds.addedLatencyMs,
             calculateAddedLatencyMs(frames),
+        ),
+        temporalPredictedArmFrameCount: createMetricResult(
+            "temporalPredictedArmFrameCount",
+            thresholds.temporalPredictedArmFrameCount,
+            calculateTemporalArmStateCount(frames, "predicted"),
+        ),
+        temporalRecoveringArmFrameCount: createMetricResult(
+            "temporalRecoveringArmFrameCount",
+            thresholds.temporalRecoveringArmFrameCount,
+            calculateTemporalArmStateCount(frames, "recovering"),
+        ),
+        temporalLostArmDurationMs: createMetricResult(
+            "temporalLostArmDurationMs",
+            thresholds.temporalLostArmDurationMs,
+            calculateTemporalLostArmDurationMs(frames),
+        ),
+        temporalMaxRecoveryJumpDegEquivalent: createMetricResult(
+            "temporalMaxRecoveryJumpDegEquivalent",
+            thresholds.temporalMaxRecoveryJumpDegEquivalent,
+            calculateTemporalMaxRecoveryJumpDegEquivalent(frames),
+        ),
+        temporalNeutralWristJitter: createMetricResult(
+            "temporalNeutralWristJitter",
+            thresholds.temporalNeutralWristJitter,
+            calculateTemporalNeutralWristJitter(frames, config.fixtureId),
         ),
     };
 
@@ -885,6 +1155,27 @@ export function compareMotionMetricSummaries(
         trackingLossDurationMs: compareMetric("trackingLossDurationMs", baseline, candidate),
         sideSwapCount: compareMetric("sideSwapCount", baseline, candidate),
         addedLatencyMs: compareMetric("addedLatencyMs", baseline, candidate),
+        temporalPredictedArmFrameCount: compareMetric(
+            "temporalPredictedArmFrameCount",
+            baseline,
+            candidate,
+        ),
+        temporalRecoveringArmFrameCount: compareMetric(
+            "temporalRecoveringArmFrameCount",
+            baseline,
+            candidate,
+        ),
+        temporalLostArmDurationMs: compareMetric("temporalLostArmDurationMs", baseline, candidate),
+        temporalMaxRecoveryJumpDegEquivalent: compareMetric(
+            "temporalMaxRecoveryJumpDegEquivalent",
+            baseline,
+            candidate,
+        ),
+        temporalNeutralWristJitter: compareMetric(
+            "temporalNeutralWristJitter",
+            baseline,
+            candidate,
+        ),
     };
 }
 
