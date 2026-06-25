@@ -1,14 +1,14 @@
 id: task-260625194536-character-animation-3-phase-5-dropout-prediction-recovery
 title: character animation 3.0 phase 5 dropout prediction recovery
 category: character-sincro-motion
-status: open
+status: done
 depends_on:
   - task-260625194536-character-animation-3-phase-5-temporal-state-estimator-filte
 superseded_by: null
 review: APPROVED
 reviewed_sha: a5dbcd94732d8cd0cf2a61e56af4c1609b6aee6d
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 2
 created_at: 2026-06-25
-closed_at: null
+closed_at: 2026-06-25
 legacy_ids: []
