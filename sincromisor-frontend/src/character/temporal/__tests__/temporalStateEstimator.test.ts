@@ -248,6 +248,35 @@ describe("TemporalStateEstimator", () => {
         expect(committed.arms.left.warnings).not.toContain("classification_held");
     });
 
+    it("restarts classification hold duration after a low-confidence interruption", () => {
+        const estimator = new TemporalStateEstimator();
+
+        estimator.update({
+            canonical: createCanonical(0, { classification: "front", confidence: 1 }),
+            reliability: createTrackedReliability(0),
+            mediaTimeMs: 0,
+        });
+        estimator.update({
+            canonical: createCanonical(100, { classification: "front", confidence: 1 }),
+            reliability: createTrackedReliability(100),
+            mediaTimeMs: 100,
+        });
+        estimator.update({
+            canonical: createCanonical(200, { classification: "front", confidence: 0.2 }),
+            reliability: createTrackedReliability(200),
+            mediaTimeMs: 200,
+        });
+
+        const temporal = estimator.update({
+            canonical: createCanonical(260, { classification: "front", confidence: 1 }),
+            reliability: createTrackedReliability(260),
+            mediaTimeMs: 260,
+        });
+
+        expect(temporal.arms.left.classification).toBe("side");
+        expect(temporal.arms.left.warnings).toContain("classification_held");
+    });
+
     it("reinitializes temporal state, filters, and classification hold on reset", () => {
         const estimator = new TemporalStateEstimator(createDefaultTemporalStateEstimatorConfig());
         estimator.update({
