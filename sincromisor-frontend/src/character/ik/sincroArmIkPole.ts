@@ -51,36 +51,24 @@ export function resolveArmIkPoleDirection({
         .sub(targetDirection.clone().multiplyScalar(elbowPole.dot(targetDirection)));
     const fallbackPole = projectPoleDirection(bindPoleDirection, targetDirection);
     const directionFallback = fallbackPole ?? fallbackPoleDirection(targetDirection);
-    if (targetDirectionIsUsable(pole)) {
-        return stabilizePoleDirection({
-            candidate: pole.normalize(),
-            targetDirection,
-            fallbackPole: directionFallback,
-            previousPoleDirection: previousPoleDirection ?? lastPoleDirection,
-            poleFlipDotThreshold,
-            temporalState,
-            elbowFlexionRad,
-            recoveringBlendProgress,
-            targetReachRatio,
-        });
-    }
-    return {
-        direction: directionFallback,
-        stabilized: true,
-        state: stateFromTemporalAndReach({
-            temporalState,
-            elbowFlexionRad,
-            targetReachRatio,
-            hardRejected: false,
-        }),
-        reasonCodes: [],
-        blendWeight: 0,
-        weightScale: 1,
-    };
+    const candidateUsable = targetDirectionIsUsable(pole);
+    return stabilizePoleDirection({
+        candidate: candidateUsable ? pole.normalize() : directionFallback.clone(),
+        candidateUsable,
+        targetDirection,
+        fallbackPole: directionFallback,
+        previousPoleDirection: previousPoleDirection ?? lastPoleDirection,
+        poleFlipDotThreshold,
+        temporalState,
+        elbowFlexionRad,
+        recoveringBlendProgress,
+        targetReachRatio,
+    });
 }
 
 type StabilizePoleDirectionOptions = {
     candidate: Vector3;
+    candidateUsable: boolean;
     targetDirection: Vector3;
     fallbackPole: Vector3;
     previousPoleDirection?: Vector3;
@@ -93,6 +81,7 @@ type StabilizePoleDirectionOptions = {
 
 function stabilizePoleDirection({
     candidate,
+    candidateUsable,
     targetDirection,
     fallbackPole,
     previousPoleDirection,
@@ -105,8 +94,8 @@ function stabilizePoleDirection({
     const previousPole =
         projectPoleDirection(previousPoleDirection, targetDirection) ?? fallbackPole.clone();
     const dot = candidate.dot(previousPole);
-    const hardRejected = dot < poleFlipDotThreshold;
-    const softDownweighted = !hardRejected && dot < SOFT_POLE_DOT_THRESHOLD;
+    const hardRejected = candidateUsable && dot < poleFlipDotThreshold;
+    const softDownweighted = candidateUsable && !hardRejected && dot < SOFT_POLE_DOT_THRESHOLD;
     const state = stateFromTemporalAndReach({
         temporalState,
         elbowFlexionRad,
@@ -127,7 +116,7 @@ function stabilizePoleDirection({
     });
     return {
         direction,
-        stabilized: state !== "stable" || hardRejected,
+        stabilized: !candidateUsable || state !== "stable" || hardRejected,
         state,
         reasonCodes,
         blendWeight,

@@ -1,4 +1,3 @@
-import type { VRM } from "@pixiv/three-vrm";
 import type { Object3D } from "three/src/core/Object3D.js";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
@@ -19,7 +18,11 @@ import {
     targetDirectionIsUsable,
 } from "./sincroArmIkGeometry";
 import { resolveArmIkPoleDirection, type SincroArmIkElbowPole } from "./sincroArmIkPole";
-import { captureSincroArmIkSkeleton, type SincroArmIkSkeleton } from "./sincroArmIkSkeleton";
+import {
+    captureSincroArmIkSkeleton,
+    type SincroArmIkSkeleton,
+    type SincroArmIkVrmSource,
+} from "./sincroArmIkSkeleton";
 import type {
     SincroArmIkOptions,
     SincroArmIkSolveResult,
@@ -96,7 +99,7 @@ export class SincroArmIkSolver {
     private readonly options: SincroArmIkOptions;
     private lastPoleDirection?: Vector3;
 
-    static fromVrm(vrm: VRM, side: SincroArmSide): SincroArmIkSolver | undefined {
+    static fromVrm(vrm: SincroArmIkVrmSource, side: SincroArmSide): SincroArmIkSolver | undefined {
         const skeleton = captureSincroArmIkSkeleton(vrm, side);
         if (!skeleton) {
             return undefined;
