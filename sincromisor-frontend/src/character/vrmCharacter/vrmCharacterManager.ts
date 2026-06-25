@@ -132,6 +132,9 @@ export class VRMCharacterManager {
         this.armBoneController = new ArmBoneController(vrm);
         this.armBoneController.update(this.motionElapsedSeconds);
         this.sincroPoseRetargeter.attachVrm(vrm);
+        DebugConsoleManager.getManager().updateAvatarMotionProfile(
+            this.sincroPoseRetargeter.getAvatarMotionProfile(),
+        );
         this.legBoneController = new LegBoneController(vrm);
         this.legBoneController.update(this.motionElapsedSeconds);
         this.motionOrchestrator = new CharacterMotionOrchestrator(vrm);

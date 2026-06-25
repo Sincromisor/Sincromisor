@@ -99,6 +99,30 @@ export function formatAnchorRuntime(
     return `${runtime.anchor.active ? "active" : "fallback"} ${formatRatio(runtime.anchor.weight)} / ${runtime.anchor.reason} / offset ${offset.x.toFixed(2)}, ${offset.y.toFixed(2)}`;
 }
 
+export function formatAvatarMotionProfile(
+    runtime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"],
+): string {
+    const profile = runtime.avatarMotionProfile;
+    if (!profile) {
+        return "not measured";
+    }
+    const measurements = profile.measurements;
+    const optionalBones = Object.entries(profile.optionalBones)
+        .filter((entry) => !entry[1])
+        .map((entry) => entry[0]);
+    const missingBones =
+        optionalBones.length === 0 ? "optional ok" : `missing ${optionalBones.join(",")}`;
+    return [
+        profile.schemaVersion,
+        `shoulder ${formatOptionalNumber(measurements.shoulderWidth)}`,
+        `L ${formatOptionalNumber(measurements.leftUpperArmLength)}+${formatOptionalNumber(measurements.leftLowerArmLength)}`,
+        `R ${formatOptionalNumber(measurements.rightUpperArmLength)}+${formatOptionalNumber(measurements.rightLowerArmLength)}`,
+        `head ${formatOptionalNumber(measurements.headSize)}`,
+        missingBones,
+        `warnings ${profile.warnings.length}`,
+    ].join(" / ");
+}
+
 export function formatHeadPose(snapshot: SincroFaceMotionSnapshot): string {
     return `yaw ${snapshot.headPose.yawDeg.toFixed(1)} / pitch ${snapshot.headPose.pitchDeg.toFixed(1)} / roll ${snapshot.headPose.rollDeg.toFixed(1)}`;
 }
@@ -223,4 +247,8 @@ function formatVector(value: { x: number; y: number; z: number }): string {
 
 function formatQuaternion(value: { x: number; y: number; z: number; w: number }): string {
     return `${value.x.toFixed(2)}, ${value.y.toFixed(2)}, ${value.z.toFixed(2)}, ${value.w.toFixed(2)}`;
+}
+
+function formatOptionalNumber(value: number | undefined): string {
+    return value === undefined ? "-" : value.toFixed(3);
 }

@@ -1,3 +1,4 @@
+import type { MinimalAvatarMotionProfile } from "../../../character/avatarProfile/minimalAvatarMotionProfile";
 import type {
     SincroPoseRetargetConfig,
     SincroPoseRetargetFrame,
@@ -281,6 +282,10 @@ export class DebugConsoleManager {
 
     updateSincroPoseRetargetFrame(frame: SincroPoseRetargetFrame): void {
         this.sincroMotionControls.updateSincroPoseRetargetFrame(frame);
+    }
+
+    updateAvatarMotionProfile(profile: MinimalAvatarMotionProfile | undefined): void {
+        this.sincroMotionControls.updateAvatarMotionProfile(profile);
     }
 
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {

@@ -154,6 +154,16 @@
     - recovering 中の 1 frame あたり scalar jump は `maxRecoveringAngleJumpRad: 15deg` 相当に clamp する。`elevationRad` / `elbowFlexionRad` は radian clamp、`reach` / `openness` / `forwardness` は各値域に同じ比率を掛けた clamp を使う。prediction / comfortable fallback / recovering は左右腕ごとに独立して処理する。
     - canonical `head` が存在する frame だけ、yaw / pitch / roll に arm と同じ `tracked` / `predicted` / `lost` / `recovering` policy を optional に適用する。v1 では Face matrix 由来 head reliability は扱わず、Head / Face 専用 reliability 接続は Phase 8 以降に残す。
     - VRM quaternion、IK pole、final pose smoothing は TemporalStateEstimator では扱わず、Phase 6 以降の MotionSolver / IK / VrmPoseComposer の責務に残す。
+- `MinimalAvatarMotionProfile`
+    - `src/character/avatarProfile/minimalAvatarMotionProfile.ts` を正本とする、VRM load 時に測れる最小 avatar-local profile contract。
+    - schema version は `sincro.minimal-avatar-motion-profile.v1` に固定し、`optionalBones`、`measurements`、`solverDefaults`、`warnings` だけを持つ plain object として保存する。`THREE.Vector3`、`THREE.Quaternion`、`Object3D`、`VRM` instance は profile に保持しない。
+    - `optionalBones` は `upperChest`、`leftShoulder`、`rightShoulder`、`leftHand`、`rightHand`、`leftThumbProximal`、`rightThumbProximal`、`leftIndexProximal`、`rightIndexProximal` の boolean capability とする。欠損しても throw せず、該当 field を `false` にして `missing_<bone>` 系 reason code を `warnings` に重複なく残す。
+    - `measurements` は `shoulderWidth`、`leftUpperArmLength`、`leftLowerArmLength`、`rightUpperArmLength`、`rightLowerArmLength`、`headSize` を optional number として持つ。計測不能値は `undefined` にし、`NaN` / `Infinity` は保存しない。
+    - 腕長と肩幅は `SincroArmIkSolver` と同じく `vrm.scene.updateMatrixWorld(true)` 後の `vrm.humanoid.getNormalizedBoneNode()` と world position distance を使う。upper / lower arm length は node が揃う場合 `Math.max(distance, 0.04)`、shoulder width は左右 upper arm node が揃う場合 `Math.max(distance, 0.08)` とする。
+    - `headSize` は neck-head の world distance を優先し、neck / head が揃わず shoulder width が測れている場合だけ `shoulderWidth * 0.75` で推定し、`head_size_estimated_from_shoulder_width` を `warnings` に残す。どちらも不可なら `headSize` は `undefined` とし、`head_size_unmeasured` を残す。
+    - `solverDefaults` は `defaultReachScale: 1.0`、`depthCompression: 0.55`、`lateralScale: 1.0`、`verticalScale: 0.92`、`shoulderDamping: 0.65`、`wristRollInfluence: 0.25` に固定する。
+    - Phase 6 では `SincroPoseRetargeter.attachVrm()` が profile を生成・保持し、Debug Console / `motion-debug` の `poseRetargetRuntime.avatarMotionProfile` から観測できるようにする。ただし IK / retarget の計算結果、target 変換式、constraint、smoothing、motion metric key は profile で変更しない。
+    - 完成版 `AvatarMotionProfile`、user / online calibration、モデル別 calibration UX、profile を使った MotionSolver / VrmPoseComposer の scale 適用は Phase 7 以降に残す。
     - `motion-debug` snapshot
     - `pose`、`tracker`、`poseRetarget`、`poseRetargetRuntime`、camera readiness、render fps をまとめて返す。
     - live camera / video fixture の最新 video frame timing は optional `camera.frameTiming` に載せる。field は `source`、`receivedAtPerformanceMs`、`mediaTimeMs`、`videoCurrentTimeMs`、optional `presentationTimeMs`、optional `expectedDisplayTimeMs`、optional `presentedFrames`、`droppedPresentedFrames` を持つ。
@@ -162,6 +172,7 @@
     - live camera / video fixture / replay pose-snapshot の最新 `CanonicalUpperBodyState` は optional `canonical` field に載せる。replay frame の `frame.canonical` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
     - live camera / video fixture / replay pose-snapshot の最新 `ReliabilityMap` は optional `reliability` field に載せる。replay frame の `frame.reliability` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
     - live camera / video fixture / replay pose-snapshot の最新 `TemporalUpperBodyState` は optional `temporal` field に載せる。replay frame の `frame.temporal` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
+    - VRM load 後の最新 `MinimalAvatarMotionProfile` は `poseRetargetRuntime.avatarMotionProfile` に optional field として載せる。Debug Console と `motion-debug` は同じ snapshot を共有し、Phase 6 では観測専用として扱う。
     - Phase 4 の reliability downstream 接続は canonical confidence / source / warnings と developer-only `canonicalReliabilityInput` までに限定する。`canonicalReliabilityInput` は canonical 生成に使った左右 arm の `partWeight` / `minJointWeight` と reliability `schemaVersion` / `mediaTimeMs` を保存し、retarget / IK solver weight へはまだ接続しない。
     - 既存 field 名は維持し、optional `viewer` field に viewer mode、selected layer、layer status / value、recording、replay、metrics summary を追加する。
     - Playwright からの調整値変更は UI control と同じ retarget config に反映し、画面 snapshot と window API の観測値を揃える。
