@@ -32,7 +32,7 @@ export type MotionDebugPhase6SolverSnapshot = {
     profile: {
         schemaVersion: "sincro.minimal-avatar-motion-profile.v1";
         optionalBones: Record<string, boolean>;
-        measurements: Record<string, number | undefined>;
+        measurements: Record<string, number>;
         solverDefaults: Record<string, number>;
         warnings: string[];
     };
@@ -44,7 +44,7 @@ export type MotionDebugPhase6SolverSnapshot = {
 };
 
 export type MotionDebugPhase6ArmSolverSnapshot = {
-    bridge?: TemporalArmIkBridgeResult;
+    bridge?: MotionDebugTemporalArmIkBridgeSnapshot;
     ik?: {
         active: boolean;
         targetClamped: boolean;
@@ -54,8 +54,27 @@ export type MotionDebugPhase6ArmSolverSnapshot = {
         fallbackReason?: string;
     };
 };
+
+export type MotionDebugTemporalArmIkBridgeSnapshot = {
+    target?: {
+        wrist: readonly [number, number, number];
+        elbowPole: readonly [number, number, number];
+        weight: number;
+        temporalState?: TemporalPartState;
+        elbowFlexionRad?: number;
+        recoveringBlendProgress?: number;
+        targetReachRatio?: number;
+        wristRollInfluence?: number;
+    };
+    reasonCodes: string[];
+    scale: TemporalArmIkScaleSnapshot;
+    sourceState: TemporalPartState;
+    debug: TemporalArmIkDebugSnapshot;
+};
 ```
 
+- `profile.measurements` は保存時に finite number の field だけを含め、未計測の `undefined` field は omit する。
+- `MotionDebugTemporalArmIkBridgeSnapshot` は `TemporalArmIkBridgeResult` の保存専用 serialized shape とする。runtime `SincroArmIkTarget` の `Vector3` は保存せず、`target.wrist` / `target.elbowPole` は finite number tuple に変換する。
 - `frame.finalPose` の最小 schema は `VrmPoseComposerResult` そのものとし、`schemaVersion: "sincro.vrm-pose-composer-result.v1"` を top-level に追加する。`ownedBones`、`suppressedLayers`、`clampedBones` は `vrm pose composer` タスクの item schema と ordering に従う。
 - metrics key は Phase 6 用に追加する。Phase 3 の performance task では metrics key 追加を避けたが、本タスクは Phase 6 ゲートの比較が目的なので追加を必須にする。
 - Phase 6 metrics の計算仕様は次に固定する。
@@ -69,6 +88,7 @@ export type MotionDebugPhase6ArmSolverSnapshot = {
 | `finalPoseOwnedBoneConflictCount`    | `frame.finalPose.warnings` の `owned_bone_conflict:` 件数の合計                            | `not_available`   | pass `0`, warn `0`, fail `> 0`             |
 
 - 各 metric の `sampleCount` は valid frame 数ではなく、上記 denominator に使った arm-frame または bone-frame 数を入れる。`solverReachClampOccupancy` の `value` は ratio、他は count とする。
+- 既存 `MotionMetricThreshold` に保存する threshold は finite number に限定し、lower-is-better の判定として `pass <= pass`、`warn <= warn`、それ以外を fail とする。上表の `fail > N` は保存値ではなく説明であり、`fail` field には既存 convention に合わせた finite 境界値を入れる。
 - `invalid` 表示は parser が未知 schemaVersion、非 finite number、unknown enum、plain object 以外の runtime object を検出した場合に使う。slot 欠落は `not_recorded`、schema はあるが対象 arm / pose が無い場合は `not_available` にする。
 - 旧 log 互換は parse success + `not_recorded` 表示とする。旧 log を live recompute で隠す案は replay の再現性を損なうため採用しない。
 - `roadmap.md` は research source のまま保持し、現在仕様の正本は design docs に置く。
