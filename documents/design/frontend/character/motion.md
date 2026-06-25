@@ -27,6 +27,9 @@
 - `src/character/canonical`
     - 後段 motion pipeline が共有する `CanonicalUpperBodyState` contract を置く。
     - 保存対象は body-local の意味量に限定し、VRM bone rotation、Three.js object、MediaPipe landmark object は含めない。
+- `src/character/calibration`
+    - `InitialSincroCalibrationSession` と step 評価を置き、初期 calibration の status / retry reason / canonical snapshot 変換を担当する。
+    - 評価入力は `ReliabilityMap`、optional `CameraQualityScore`、optional `CanonicalUpperBodyState`、`validDurationMs` に閉じ、MediaPipe raw landmark や browser camera API は読まない。
 - `src/character/reliability`
     - 後続 estimator / replay / temporal state が共有する `ReliabilityMap` v1 contract を置く。
     - MediaPipe confidence をそのまま制御重みにせず、joint / part / gesture ごとの保存可能な信頼度 snapshot として扱う。
@@ -218,6 +221,11 @@
     - 既存 field 名は維持し、optional `viewer` field に viewer mode、selected layer、layer status / value、recording、replay、metrics summary を追加する。
     - Playwright からの調整値変更は UI control と同じ retarget config に反映し、画面 snapshot と window API の観測値を揃える。
     - 複数 VRM の IK 検証では `motion-debug/?vrm=/characters/<file>.vrm` を使い、同じ camera / tracker / retarget 経路で model 差分を確認する。
+- Initial calibration
+    - `InitialSincroCalibrationSession.schemaVersion` は `sincro.initial-calibration.v1` に固定する。標準 step は `precheck`、`neutral`、`a_pose`、`hand_open` で、`face_yaw_optional` は失敗しても session status を下げない optional step とする。
+    - session status は `not_started`、`ready`、`ready_without_hands`、`retry_recommended`、`failed` の固定 enum とする。`hand_open` は optional hand step として扱い、`precheck` / `neutral` / `a_pose` が ready で `hand_open` だけ degraded / retry / failed / skipped の場合は `ready_without_hands` を返す。
+    - step 評価は `ReliabilityMap`、optional `CameraQualityScore`、optional `CanonicalUpperBodyState`、`validDurationMs` の pure input だけを読む。通常 UI は score や内部 field 名を出さず、retry reason を固定文言へ最大 2 件に絞って表示する。debug UI / motion-debug は step status、retry reason、score、measurements、debug field を developer-visible JSON として表示できる。
+    - `createCanonicalCalibrationFromInitialSession()` は completed session の measurements から `CanonicalCalibrationSnapshot` を作る。`id` は `initial-calibration:<startedAtMediaTimeMs>:<completedAtMediaTimeMs>`、`source` は `initial`、`capturedAtMediaTimeMs` は completion 時刻に固定し、欠損 measurement は `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` へ fallback する。
 - motion evaluation log
     - developer 向け評価ログの schema は `src/character/motionEvaluation/motionDebugLogSchema.ts` を正本とする。
     - schema version は `sincro.motion-debug-log.v1` とし、NDJSON の 1 行目を manifest record、2 行目以降を frame record として保存する。
