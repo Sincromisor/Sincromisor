@@ -29,6 +29,9 @@
 - `src/character/canonical`
     - tracker 観測から独立した後段共有 contract として `CanonicalUpperBodyState` を置く。
     - tracker は MediaPipe 生結果を直接 canonical state と同一視せず、後続 estimator が body-local 意味量へ変換する。
+- `src/character/calibration`
+    - initial calibration は tracker runtime の外側で `ReliabilityMap`、optional `CameraQualityScore`、optional `CanonicalUpperBodyState`、`validDurationMs` を読み、`InitialSincroCalibrationSession` を更新する pure boundary とする。
+    - tracker runtime / Worker / MediaPipe 正規化 snapshot は step 遷移、camera permission retry、保存、UI wizard を所有しない。
 - `src/character/reliability`
     - tracker / camera / temporal 由来の観測品質を後段へ渡す `ReliabilityMap` v1 contract を置く。
     - MediaPipe confidence は入力材料に留め、IK / filter / fallback が読む制御用 weight は joint / part / gesture 単位の `finalWeight` と component `score` として保存する。
@@ -132,6 +135,12 @@
     - joint component は `modelPresence`、`modelVisibility`、`tracking`、`border`、`boneLength`、`bodyScale`、`temporal`、`side`、`roi`、`cameraQuality` を常に埋める。`boneLength` は左右 arm の upper / lower world length ratio と前回 total arm length ratio、`bodyScale` は `upperBody.shoulderWidth`、`cameraQuality` は `CameraQualityScore.overall.score` を使う。
     - `finalWeight` は component score の幾何平均で、0 score は `0.001` として扱う。state 境界は `>= 0.65` が `tracked`、`0.05..0.65` が `suspect`、`< 0.05` が `lost` であり、`predicted` / `recovering` は TemporalStateEstimator の責務として Phase 4a では返さない。
     - Pose snapshot だけで観測できない `head`、`leftHand`、`rightHand`、finger、gesture は lost placeholder とし、`not_available_in_pose_snapshot` または `no_observation` を残す。Face / Hand / ROI / Gesture 専用 reliability は Phase 8 / 9 の責務である。
+- Initial calibration input boundary
+    - step id は `precheck`、`neutral`、`a_pose`、`hand_open`、`face_yaw_optional` の固定 enum とする。標準完了判定は `precheck` / `neutral` / `a_pose` / `hand_open` を使い、`face_yaw_optional` は debug / 改善案内用の optional step として扱う。
+    - `precheck` は `CameraQualityScore.overall.status` と `components.torsoInFrame`、`neutral` は torso / head reliability と canonical torso yaw、`a_pose` は elbow / wrist reliability と border risk、`hand_open` は hand reliability と hand small risk、`face_yaw_optional` は head reliability と canonical torso yaw だけを読む。該当 camera component が無い場合はその camera check だけ skipped とし、reliability / canonical の欠損は threshold 未満の入力として扱う。
+    - status は `not_started`、`ready`、`ready_without_hands`、`retry_recommended`、`failed` の固定 enum とする。手だけが degraded / retry / failed / skipped の場合は、腕・頭・体幹を開始できる `ready_without_hands` に落とし、`hand_open` 単独の不調を session 全体の `failed` にしない。
+    - retry reason は `shoulders_out_of_frame`、`face_not_front`、`elbow_or_wrist_hidden`、`hand_not_visible`、`too_dark`、`motion_blur`、`low_reliability`、`camera_unavailable` の固定 enum とする。通常 UI はこの reason を固定日本語文言へ最大 2 件に変換して表示し、score、raw component 名、debug object は出さない。
+    - debug UI / motion-debug は step status、retry reason、score、validDurationMs、measurements、debug field を developer-visible JSON として表示できる。MediaPipe raw landmark、camera device id / label、browser permission object は initial calibration session に保存しない。
 - `SincroPoseTargetPointSnapshot`
     - `tracked`: 通常 target として十分な confidence と有限座標を持つ状態。
     - `quality`: `strong` / `weak` / `lost`。`weak` は座標を IK に使えるが、強度を落とすべき状態。
