@@ -60,13 +60,13 @@ export type MotionDebugPhase6ArmSolverSnapshot = {
 - metrics key は Phase 6 用に追加する。Phase 3 の performance task では metrics key 追加を避けたが、本タスクは Phase 6 ゲートの比較が目的なので追加を必須にする。
 - Phase 6 metrics の計算仕様は次に固定する。
 
-| key | unit / 集計 | missing / invalid | threshold 初期値 |
-| --- | --- | --- | --- |
-| `solverElbowFlipRejectCount` | 左右腕それぞれの `constraintReasonCodes` に `pole_flip_rejected` がある arm-frame 数の合計 | `not_available` | pass `<= 1`, warn `<= 3`, fail `> 3` |
-| `solverReachClampOccupancy` | `ik.targetClamped === true` の arm-frame 数 / valid arm-frame 数。`0..1` ratio | `not_available` | pass `<= 0.2`, warn `<= 0.4`, fail `> 0.4` |
-| `solverPoleUncertainFrameCount` | `poleState === "uncertain"` の arm-frame 数の合計 | `not_available` | pass `<= 2`, warn `<= 5`, fail `> 5` |
-| `finalPoseAngularVelocityClampCount` | `frame.finalPose.clampedBones[].reason === "angular_velocity"` の bone-frame 数の合計 | `not_available` | pass `0`, warn `<= 2`, fail `> 2` |
-| `finalPoseOwnedBoneConflictCount` | `frame.finalPose.warnings` の `owned_bone_conflict:` 件数の合計 | `not_available` | pass `0`, warn `0`, fail `> 0` |
+| key                                  | unit / 集計                                                                                | missing / invalid | threshold 初期値                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ | ----------------- | ------------------------------------------ |
+| `solverElbowFlipRejectCount`         | 左右腕それぞれの `constraintReasonCodes` に `pole_flip_rejected` がある arm-frame 数の合計 | `not_available`   | pass `<= 1`, warn `<= 3`, fail `> 3`       |
+| `solverReachClampOccupancy`          | `ik.targetClamped === true` の arm-frame 数 / valid arm-frame 数。`0..1` ratio             | `not_available`   | pass `<= 0.2`, warn `<= 0.4`, fail `> 0.4` |
+| `solverPoleUncertainFrameCount`      | `poleState === "uncertain"` の arm-frame 数の合計                                          | `not_available`   | pass `<= 2`, warn `<= 5`, fail `> 5`       |
+| `finalPoseAngularVelocityClampCount` | `frame.finalPose.clampedBones[].reason === "angular_velocity"` の bone-frame 数の合計      | `not_available`   | pass `0`, warn `<= 2`, fail `> 2`          |
+| `finalPoseOwnedBoneConflictCount`    | `frame.finalPose.warnings` の `owned_bone_conflict:` 件数の合計                            | `not_available`   | pass `0`, warn `0`, fail `> 0`             |
 
 - 各 metric の `sampleCount` は valid frame 数ではなく、上記 denominator に使った arm-frame または bone-frame 数を入れる。`solverReachClampOccupancy` の `value` は ratio、他は count とする。
 - `invalid` 表示は parser が未知 schemaVersion、非 finite number、unknown enum、plain object 以外の runtime object を検出した場合に使う。slot 欠落は `not_recorded`、schema はあるが対象 arm / pose が無い場合は `not_available` にする。
