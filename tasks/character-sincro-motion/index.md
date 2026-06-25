@@ -77,7 +77,16 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 41 件）
+## タスク一覧（自動生成 / 全 45 件）
+
+### open（未完） — 4 件
+
+| タスク                                                                                                                                                                     | タイトル                                                         | 判定 | 依存                                                                                                                                                                                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [task-260625194536-character-animation-3-phase-5-dropout-prediction-recovery](./task-260625194536-character-animation-3-phase-5-dropout-prediction-recovery/task.md)       | character animation 3.0 phase 5 dropout prediction recovery      | —    | `task-260625194536-character-animation-3-phase-5-temporal-state-estimator-filte`                                                                                                                                        |
+| [task-260625194536-character-animation-3-phase-5-temporal-debug-replay-metrics](./task-260625194536-character-animation-3-phase-5-temporal-debug-replay-metrics/task.md)   | character animation 3.0 phase 5 temporal debug replay metrics    | —    | `task-260625194536-character-animation-3-phase-5-dropout-prediction-recovery`, `task-260623221639-character-animation-3-motion-metrics-baseline`, `task-260623221644-character-animation-3-motion-debug-layered-viewer` |
+| [task-260625194536-character-animation-3-phase-5-temporal-state-contract](./task-260625194536-character-animation-3-phase-5-temporal-state-contract/task.md)               | character animation 3.0 phase 5 temporal state contract          | —    | `task-260625035438-character-animation-3-phase-4-downstream-weights`                                                                                                                                                    |
+| [task-260625194536-character-animation-3-phase-5-temporal-state-estimator-filte](./task-260625194536-character-animation-3-phase-5-temporal-state-estimator-filte/task.md) | character animation 3.0 phase 5 temporal state estimator filters | —    | `task-260625194536-character-animation-3-phase-5-temporal-state-contract`, `task-260625035438-character-animation-3-phase-4-downstream-weights`                                                                         |
 
 ### done（完了） — 41 件
 
