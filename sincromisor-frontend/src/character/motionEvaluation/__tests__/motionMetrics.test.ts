@@ -1,4 +1,11 @@
 import { describe, expect, it } from "vitest";
+import {
+    createDefaultTemporalUpperBodyState,
+    type TemporalArmState,
+    type TemporalPartState,
+    type TemporalTuple3,
+    type TemporalUpperBodyState,
+} from "../../temporal/temporalUpperBodyState";
 import type { SincroMotionDebugFrame } from "../motionDebugLogSchema";
 import {
     calculateMotionMetricSummary,
@@ -20,6 +27,7 @@ function createFrame(
         solver?: unknown;
         applied?: unknown;
         metrics?: unknown;
+        temporal?: unknown;
     },
 ): SincroMotionDebugFrame {
     return {
@@ -33,6 +41,7 @@ function createFrame(
         solver: options?.solver,
         applied: options?.applied,
         metrics: options?.metrics,
+        temporal: options?.temporal,
     };
 }
 
@@ -131,6 +140,59 @@ function createPoseRetarget(options?: {
                 },
             },
         },
+    };
+}
+
+function createTemporalArm(
+    base: TemporalArmState,
+    options?: {
+        state?: TemporalPartState;
+        wrist?: TemporalTuple3;
+        reach?: number;
+        elevationRad?: number;
+        openness?: number;
+        forwardness?: number;
+        elbowFlexionRad?: number;
+    },
+): TemporalArmState {
+    return {
+        ...base,
+        state: options?.state ?? "tracked",
+        confidence: options?.state === "lost" ? 0 : 0.9,
+        source: options?.state === "recovering" ? "mixed" : "canonical",
+        warnings: options?.state === "recovering" ? ["recovery_blend"] : [],
+        bodyLocalWrist: options?.wrist ?? [0.1, 0.2, 0.3],
+        reach: options?.reach ?? base.reach,
+        elevationRad: options?.elevationRad ?? base.elevationRad,
+        openness: options?.openness ?? base.openness,
+        forwardness: options?.forwardness ?? base.forwardness,
+        elbowFlexionRad: options?.elbowFlexionRad ?? base.elbowFlexionRad,
+        recoveringBlend:
+            options?.state === "recovering"
+                ? {
+                      from: "predicted",
+                      progress: 0.5,
+                      durationMs: 260,
+                  }
+                : undefined,
+    };
+}
+
+function createTemporalState(
+    mediaTimeMs: number,
+    options?: {
+        left?: Parameters<typeof createTemporalArm>[1];
+        right?: Parameters<typeof createTemporalArm>[1];
+    },
+): TemporalUpperBodyState {
+    const temporal = createDefaultTemporalUpperBodyState(mediaTimeMs);
+    return {
+        ...temporal,
+        arms: {
+            left: createTemporalArm(temporal.arms.left, options?.left),
+            right: createTemporalArm(temporal.arms.right, options?.right),
+        },
+        warnings: [],
     };
 }
 
@@ -276,6 +338,94 @@ describe("calculateMotionMetricSummary", () => {
             value: 20,
             status: "fail",
             sampleCount: 2,
+        });
+    });
+
+    it("calculates temporal arm-frame counts and recovery jump thresholds", () => {
+        const summary = calculateMotionMetricSummary(
+            [
+                createFrame(0, 0, {
+                    temporal: createTemporalState(0, {
+                        left: { state: "predicted", elevationRad: 0 },
+                        right: { state: "tracked", elevationRad: 0 },
+                    }),
+                }),
+                createFrame(1, 100, {
+                    temporal: createTemporalState(100, {
+                        left: {
+                            state: "recovering",
+                            elevationRad: (20 * Math.PI) / 180,
+                        },
+                        right: {
+                            state: "recovering",
+                            reach: 0.35,
+                        },
+                    }),
+                }),
+            ],
+            CONFIG,
+        );
+
+        expect(summary.metrics.temporalPredictedArmFrameCount).toMatchObject({
+            value: 1,
+            unit: "count",
+            status: "warn",
+            sampleCount: 4,
+            threshold: { pass: 0, warn: 40, fail: 120 },
+        });
+        expect(summary.metrics.temporalRecoveringArmFrameCount).toMatchObject({
+            value: 2,
+            unit: "count",
+            status: "warn",
+            sampleCount: 4,
+            threshold: { pass: 0, warn: 30, fail: 90 },
+        });
+        expect(summary.metrics.temporalMaxRecoveryJumpDegEquivalent).toMatchObject({
+            value: 20,
+            unit: "deg",
+            status: "warn",
+            sampleCount: 2,
+            threshold: { pass: 15, warn: 25, fail: 45 },
+        });
+    });
+
+    it("calculates temporal lost duration and neutral wrist jitter from temporal samples", () => {
+        const summary = calculateMotionMetricSummary(
+            [
+                createFrame(0, 0, {
+                    temporal: createTemporalState(0, {
+                        left: { state: "lost" },
+                        right: { state: "tracked", wrist: [0, 0, 0] },
+                    }),
+                }),
+                createFrame(1, 300, {
+                    temporal: createTemporalState(300, {
+                        left: { state: "lost" },
+                        right: { state: "suspect", wrist: [0.02, 0, 0] },
+                    }),
+                }),
+                createFrame(2, 400, {
+                    temporal: createTemporalState(400, {
+                        left: { state: "tracked", wrist: [0.01, 0, 0] },
+                        right: { state: "tracked", wrist: [0.04, 0, 0] },
+                    }),
+                }),
+            ],
+            CONFIG,
+        );
+
+        expect(summary.metrics.temporalLostArmDurationMs).toMatchObject({
+            value: 350,
+            unit: "ms",
+            status: "warn",
+            sampleCount: 3,
+            threshold: { pass: 250, warn: 1000, fail: 2500 },
+        });
+        expect(summary.metrics.temporalNeutralWristJitter).toMatchObject({
+            value: 0.02,
+            unit: "ratio",
+            status: "warn",
+            sampleCount: 4,
         });
     });
 });

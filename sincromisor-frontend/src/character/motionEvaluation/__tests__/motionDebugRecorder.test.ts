@@ -14,6 +14,10 @@ import {
 } from "../../canonical/canonicalUpperBodyState";
 import { createDefaultReliabilityMap, parseReliabilityMap } from "../../reliability/reliabilityMap";
 import {
+    createDefaultTemporalUpperBodyState,
+    parseTemporalUpperBodyState,
+} from "../../temporal/temporalUpperBodyState";
+import {
     parseMotionDebugLogLines,
     SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION,
     type SincroMotionDebugLogManifest,
@@ -162,6 +166,7 @@ function createValidFrameInput(mediaTimeMs = 120): MotionDebugRecorderFrameInput
         },
         reliability: createDefaultReliabilityMap(mediaTimeMs),
         canonical: createCanonicalState(mediaTimeMs),
+        temporal: createDefaultTemporalUpperBodyState(mediaTimeMs),
         solver: {
             poseRetarget: {
                 armIkMode: "world_3d_ik",
@@ -258,6 +263,14 @@ describe("MotionDebugRecorder", () => {
             return;
         }
         expect(reliabilityParse.map.timestamp.mediaTimeMs).toBe(120);
+        const temporal = parsed.frames[0]?.temporal;
+        expect(temporal).toBeDefined();
+        const temporalParse = parseTemporalUpperBodyState(temporal);
+        expect(temporalParse.ok).toBe(true);
+        if (!temporalParse.ok) {
+            return;
+        }
+        expect(temporalParse.state.timestamp.mediaTimeMs).toBe(120);
     });
 
     it("exports camera quality only under frame metrics", () => {

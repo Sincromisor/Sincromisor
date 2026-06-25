@@ -3,7 +3,11 @@ import {
     type MotionMetricBaseline,
     parseMotionMetricBaseline,
 } from "../motionMetricBaselineSchema";
-import { calculateMotionMetricSummary, type MotionMetricConfig } from "../motionMetrics";
+import {
+    calculateMotionMetricSummary,
+    MOTION_METRIC_KEYS,
+    type MotionMetricConfig,
+} from "../motionMetrics";
 
 const CONFIG: MotionMetricConfig = {
     fixtureId: "neutral-10s",
@@ -30,6 +34,12 @@ describe("parseMotionMetricBaseline", () => {
             return;
         }
         expect(result.baseline.fixtureId).toBe("neutral-10s");
+        expect(Object.keys(result.baseline.metricSummary.metrics).sort()).toEqual(
+            [...MOTION_METRIC_KEYS].sort(),
+        );
+        expect(
+            result.baseline.metricSummary.metrics.temporalPredictedArmFrameCount.value,
+        ).toBeNull();
     });
 
     it("reports unknown fixture ids separately", () => {

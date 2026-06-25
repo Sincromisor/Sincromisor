@@ -20,8 +20,8 @@ PASS
 
 - `npm run gate`（評価用 worktree `/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-aebfa4da5603-VtHIQY`）: passed。`gate:lint` / `gate:build` / `gate:test` はすべて cache hit。frontend tests は記録上 `162 passed (162)`。
 - 追加 acceptance:
-  - コマンド: `/usr/bin/env EVAL_WORKTREE=/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-aebfa4da5603-VtHIQY sincromisor-frontend/node_modules/.bin/vitest run --root /Users/aki/projects/Sincromisor/tasks/character-sincro-motion/task-260625194536-character-animation-3-phase-5-dropout-prediction-recovery/acceptance comfortable-classification.test.mjs`
-  - 結果: passed。`1 file passed` / `1 test passed`。
+    - コマンド: `/usr/bin/env EVAL_WORKTREE=/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-aebfa4da5603-VtHIQY sincromisor-frontend/node_modules/.bin/vitest run --root /Users/aki/projects/Sincromisor/tasks/character-sincro-motion/task-260625194536-character-animation-3-phase-5-dropout-prediction-recovery/acceptance comfortable-classification.test.mjs`
+    - 結果: passed。`1 file passed` / `1 test passed`。
 - カバレッジ評価: 受け入れ条件の state transition、warning、duration / clamp、左右独立、reset、optional head、comfortable classification 固定を確認できており、本タスクの合否判定に十分。
 
 ## ドキュメント整合性

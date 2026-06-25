@@ -13,12 +13,19 @@ import {
     createDefaultReliabilityMap,
     type ReliabilityMap,
 } from "../../character/reliability/reliabilityMap";
+import { TemporalStateEstimator } from "../../character/temporal/temporalStateEstimator";
+import type {
+    TemporalUpperBodyState,
+    TemporalWarningCode,
+} from "../../character/temporal/temporalUpperBodyState";
+import { uniqueWarnings } from "../../character/temporal/temporalWarnings";
 import type { DebugConsoleSnapshot } from "../../features/debug/model/debugConsoleManager";
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
+import { frontendLogger } from "../../shared/logging/appLogger";
 import { MOTION_DEBUG_CAMERA_CONSTRAINTS } from "./motionDebugCameraStream";
 import {
     createMotionDebugCanonicalReliabilityInput,
@@ -48,11 +55,13 @@ type MotionDebugRecordingControllerParams = {
         state: MotionDebugCanonicalReliabilityInput | undefined,
     ) => void;
     onReliabilityStateChange: (state: ReliabilityMap | undefined) => void;
+    onTemporalStateChange: (state: TemporalUpperBodyState | undefined) => void;
     onStateChange: (state: MotionDebugRecorderState) => void;
 };
 
 export class MotionDebugRecordingController {
     private recorder = new MotionDebugRecorder();
+    private readonly temporalEstimator = new TemporalStateEstimator();
     private latestCanonical?: CanonicalUpperBodyState;
 
     constructor(private readonly params: MotionDebugRecordingControllerParams) {}
@@ -91,6 +100,7 @@ export class MotionDebugRecordingController {
         if (result.ok) {
             this.resetCanonicalState();
             this.resetReliabilityState();
+            this.resetTemporalState();
         }
         this.params.onStateChange(result.state);
         return result;
@@ -116,6 +126,7 @@ export class MotionDebugRecordingController {
         timing?: TrackerVideoFrameTiming,
         cameraQuality?: CameraQualityScore,
         reliability?: ReliabilityMap,
+        temporal?: TemporalUpperBodyState,
     ): MotionDebugRecorderRecordFrameResult | undefined {
         const mediaTimeMs = timing?.mediaTimeMs ?? fallbackVideoMediaTimeMs(this.params.video);
         const canonical = createMotionDebugCanonicalState({
@@ -132,6 +143,13 @@ export class MotionDebugRecordingController {
         );
         const frameReliability = reliability ?? createDefaultReliabilityMap(mediaTimeMs);
         this.params.onReliabilityStateChange(frameReliability);
+        const frameTemporal = this.resolveTemporalState({
+            canonical,
+            reliability: frameReliability,
+            mediaTimeMs,
+            temporal,
+        });
+        this.params.onTemporalStateChange(frameTemporal);
 
         if (this.recorder.getState().status !== "recording") {
             return undefined;
@@ -147,6 +165,7 @@ export class MotionDebugRecordingController {
             poseSnapshot: snapshot,
             reliability: frameReliability,
             canonical,
+            temporal: frameTemporal,
             solver: {
                 poseRetarget: debugSnapshot.poseRetarget,
                 poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
@@ -178,6 +197,26 @@ export class MotionDebugRecordingController {
 
     resetReliabilityState(): void {
         this.params.onReliabilityStateChange(undefined);
+    }
+
+    resetTemporalState(): void {
+        this.temporalEstimator.reset();
+        this.params.onTemporalStateChange(undefined);
+    }
+
+    private resolveTemporalState(options: ResolveTemporalStateOptions): TemporalUpperBodyState {
+        if (options.temporal === undefined) {
+            return this.temporalEstimator.update({
+                canonical: options.canonical,
+                reliability: options.reliability,
+                mediaTimeMs: options.mediaTimeMs,
+            });
+        }
+        if (!hasTemporalTimestampMismatch(options.temporal, options.mediaTimeMs)) {
+            return options.temporal;
+        }
+        warnTemporalTimestampMismatch(options.temporal, options.mediaTimeMs);
+        return addTemporalWarning(options.temporal, "out_of_range");
     }
 
     private createManifest(): SincroMotionDebugLogManifest | undefined {
@@ -236,6 +275,40 @@ export class MotionDebugRecordingController {
         }
         return undefined;
     }
+}
+
+type ResolveTemporalStateOptions = {
+    canonical: CanonicalUpperBodyState;
+    reliability: ReliabilityMap;
+    mediaTimeMs: number;
+    temporal?: TemporalUpperBodyState;
+};
+
+function addTemporalWarning(
+    temporal: TemporalUpperBodyState,
+    warning: TemporalWarningCode,
+): TemporalUpperBodyState {
+    return {
+        ...temporal,
+        warnings: uniqueWarnings([...temporal.warnings, warning]),
+    };
+}
+
+function hasTemporalTimestampMismatch(
+    temporal: TemporalUpperBodyState,
+    mediaTimeMs: number,
+): boolean {
+    return temporal.timestamp.mediaTimeMs !== mediaTimeMs;
+}
+
+function warnTemporalTimestampMismatch(
+    temporal: TemporalUpperBodyState,
+    mediaTimeMs: number,
+): void {
+    frontendLogger.warn("Motion debug temporal timestamp differs from frame timestamp.", {
+        frameMediaTimeMs: mediaTimeMs,
+        temporalMediaTimeMs: temporal.timestamp.mediaTimeMs,
+    });
 }
 
 function createMotionDebugFrameTimestamp(

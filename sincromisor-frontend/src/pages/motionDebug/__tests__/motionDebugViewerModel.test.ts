@@ -17,6 +17,11 @@ import {
     RELIABILITY_MAP_SCHEMA_VERSION,
     type ReliabilityMap,
 } from "../../../character/reliability/reliabilityMap";
+import {
+    createDefaultTemporalUpperBodyState,
+    TEMPORAL_UPPER_BODY_SCHEMA_VERSION,
+    type TemporalUpperBodyState,
+} from "../../../character/temporal/temporalUpperBodyState";
 import { createDefaultSnapshot } from "../../../features/debug/model/debugConsoleSnapshot";
 import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
@@ -245,10 +250,62 @@ function createReliabilityMap(mediaTimeMs: number): ReliabilityMap {
     };
 }
 
+function createTemporalState(mediaTimeMs: number): TemporalUpperBodyState {
+    const temporal = createDefaultTemporalUpperBodyState(mediaTimeMs);
+    return {
+        ...temporal,
+        timestamp: {
+            mediaTimeMs,
+            canonicalMediaTimeMs: mediaTimeMs,
+            poseLastUpdatedAtMs: mediaTimeMs - 10,
+        },
+        arms: {
+            left: {
+                ...temporal.arms.left,
+                state: "recovering",
+                confidence: 0.72,
+                source: "mixed",
+                stateAgeMs: 32,
+                observedAgeMs: 0,
+                warnings: ["recovery_blend"],
+                reach: 0.46,
+                elevationRad: 0.14,
+                openness: 0.2,
+                forwardness: 0.65,
+                elbowFlexionRad: 1.1,
+                bodyLocalWrist: [0.1, 0.2, 0.3],
+                velocity: {
+                    wrist: [0.01, 0.02, 0.03],
+                    reachPerSec: 0.4,
+                    elevationRadPerSec: 0.2,
+                    opennessPerSec: 0.1,
+                    forwardnessPerSec: 0.3,
+                    elbowFlexionRadPerSec: 0.5,
+                },
+                recoveringBlend: {
+                    from: "predicted",
+                    progress: 0.5,
+                    durationMs: 260,
+                },
+            },
+            right: {
+                ...temporal.arms.right,
+                state: "tracked",
+                confidence: 0.9,
+                source: "canonical",
+                warnings: [],
+                bodyLocalWrist: [0.2, 0.2, 0.3],
+            },
+        },
+        warnings: ["recovery_blend"],
+    };
+}
+
 function createLiveSnapshot(
     options: {
         canonical?: MotionDebugSnapshot["canonical"];
         reliability?: MotionDebugSnapshot["reliability"];
+        temporal?: MotionDebugSnapshot["temporal"];
         cameraQuality?: CameraQualityScore;
         cameraSource?: MotionDebugSnapshot["camera"]["source"];
     } = {},
@@ -273,6 +330,7 @@ function createLiveSnapshot(
         pose: createPoseSnapshot(120),
         reliability: options.reliability,
         canonical: options.canonical,
+        temporal: options.temporal,
         tracker: debugSnapshot.tracker,
         poseRetarget: debugSnapshot.poseRetarget,
         poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
@@ -511,6 +569,158 @@ describe("createMotionDebugViewerSnapshot", () => {
                 schemaVersion: CANONICAL_UPPER_BODY_SCHEMA_VERSION,
             },
         });
+    });
+
+    it("uses live snapshot temporal as the temporal layer value", () => {
+        const liveSnapshot = createLiveSnapshot({
+            temporal: createTemporalState(120),
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "live",
+            selectedLayer: "temporal",
+            liveSnapshot,
+            replayState: {
+                status: "idle",
+                frameCount: 0,
+            },
+        });
+
+        expect(viewer.layers.temporal.status).toBe("available");
+        expect(viewer.layers.temporal.value).toMatchObject({
+            schemaVersion: TEMPORAL_UPPER_BODY_SCHEMA_VERSION,
+            arms: {
+                left: {
+                    state: "recovering",
+                    confidence: 0.72,
+                    source: "mixed",
+                    stateAgeMs: 32,
+                    observedAgeMs: 0,
+                    warnings: ["recovery_blend"],
+                    recoveringBlend: {
+                        progress: 0.5,
+                    },
+                    velocity: {
+                        wrist: [0.01, 0.02, 0.03],
+                    },
+                    bodyLocalWrist: [0.1, 0.2, 0.3],
+                },
+            },
+        });
+    });
+
+    it("prefers saved replay temporal over live snapshot temporal", () => {
+        const liveSnapshot = createLiveSnapshot({
+            temporal: createTemporalState(120),
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "temporal",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                temporal: createTemporalState(240),
+            },
+        });
+
+        expect(viewer.layers.temporal.status).toBe("available");
+        expect(viewer.layers.temporal.value).toMatchObject({
+            timestamp: {
+                mediaTimeMs: 240,
+            },
+        });
+    });
+
+    it("shows invalid replay temporal as an available parse error summary", () => {
+        const liveSnapshot = createLiveSnapshot({
+            temporal: createTemporalState(120),
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "temporal",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                temporal: {
+                    schemaVersion: TEMPORAL_UPPER_BODY_SCHEMA_VERSION,
+                    timestamp: {
+                        mediaTimeMs: 240,
+                    },
+                },
+            },
+        });
+
+        expect(viewer.layers.temporal.status).toBe("available");
+        expect(viewer.layers.temporal.value).toMatchObject({
+            parseStatus: "invalid",
+            errors: expect.arrayContaining([
+                expect.objectContaining({
+                    code: "invalid_state",
+                }),
+            ]),
+            raw: {
+                schemaVersion: TEMPORAL_UPPER_BODY_SCHEMA_VERSION,
+            },
+        });
+    });
+
+    it("marks replay temporal as not recorded when old logs do not have frame.temporal", () => {
+        const liveSnapshot = createLiveSnapshot({
+            temporal: createTemporalState(120),
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "temporal",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+            },
+        });
+
+        expect(viewer.layers.temporal.status).toBe("not_recorded");
+        expect(viewer.layers.temporal.value).toBeUndefined();
     });
 
     it("uses live snapshot reliability as the reliability layer fallback", () => {
