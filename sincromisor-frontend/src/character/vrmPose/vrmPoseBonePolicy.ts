@@ -19,6 +19,7 @@ const RIGHT_ARM_BONES: VRMHumanBoneName[] = [
     "rightThumbProximal",
     "rightIndexProximal",
 ];
+const TORSO_BONES: VRMHumanBoneName[] = ["spine", "chest", "upperChest"];
 const REQUIRED_ARM_BONES: VRMHumanBoneName[] = [
     "leftUpperArm",
     "leftLowerArm",
@@ -27,6 +28,7 @@ const REQUIRED_ARM_BONES: VRMHumanBoneName[] = [
 ];
 const OPTIONAL_BONE_KEYS: Partial<Record<VRMHumanBoneName, keyof AvatarOptionalBoneCapabilities>> =
     {
+        upperChest: "upperChest",
         leftShoulder: "leftShoulder",
         rightShoulder: "rightShoulder",
         leftHand: "leftHand",
@@ -40,6 +42,7 @@ const OPTIONAL_BONE_KEYS: Partial<Record<VRMHumanBoneName, keyof AvatarOptionalB
 export function isSupportedOwnedBone(bone: VRMHumanBoneName): boolean {
     return (
         REQUIRED_ARM_BONES.includes(bone) ||
+        TORSO_BONES.includes(bone) ||
         LEFT_ARM_BONES.includes(bone) ||
         RIGHT_ARM_BONES.includes(bone)
     );
@@ -50,6 +53,9 @@ export function isAvailableBone(
     optionalBones: AvatarOptionalBoneCapabilities,
 ): boolean {
     if (REQUIRED_ARM_BONES.includes(bone)) {
+        return true;
+    }
+    if (bone === "spine" || bone === "chest") {
         return true;
     }
     const optionalKey = OPTIONAL_BONE_KEYS[bone];

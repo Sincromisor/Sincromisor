@@ -39,7 +39,7 @@
     - `ArmPoleState` v1 は `"stable"`、`"uncertain"`、`"extended"`、`"lost"`、`"recovering"` の lower-case enum とし、IK pole resolver が決定する。TemporalStateEstimator は VRM quaternion / IK pole を扱わない。
 - `src/character/vrmPose`
     - `VrmPoseComposer` と VRM normalized local pose contract を置く。
-    - v1 は腕周辺 bone だけを対象にし、`leftUpperArm` / `leftLowerArm` / `leftHand`、`rightUpperArm` / `rightLowerArm` / `rightHand`、存在する場合の shoulder / finger fallback capability を扱う。head / torso / leg / expression はまだ composer へ移さない。
+    - v1 は腕周辺 bone と torso fallback を対象にし、`leftUpperArm` / `leftLowerArm` / `leftHand`、`rightUpperArm` / `rightLowerArm` / `rightHand`、存在する場合の shoulder / finger fallback capability、`spine` / `chest` / `upperChest` の torso distribution を扱う。head / neck / leg / expression はまだ composer へ移さない。
     - 入力 layer は `fallback`、`tracking`、`idle`、`style` の順に合成し、`limit` は layer ではなく composer 内部の final limit / clamp stage として扱う。
 - `src/character/vrmCharacter`
     - arm / leg / torso / motion orchestrator と `VRMCharacterManager` を置く。
@@ -98,9 +98,11 @@
     - `VrmNormalizedLocalPose` は `VRMHumanBoneName` key の plain quaternion object とし、`THREE.Quaternion` instance は計算中だけ使う。
     - `ownedBones` は composer order の first-seen unique な出力対象 bone とし、重複所有は `owned_bone_conflict:<bone>` warning に残す。tracking layer の IK quaternion が同じ腕の bone を所有している場合、idle / speech gesture 相当の additive はその bone だけ `tracking_owns_bone` として抑制する。
     - `MinimalAvatarMotionProfile.optionalBones` を読み、欠損している hand / finger bone は final pose へ出さない。欠損 shoulder への補正は `solverDefaults.shoulderDamping` で damp して upperArm へ分配する。
+    - torso fallback helper は完成版 `AvatarMotionProfile.torso.distribution` を正本として torso delta quaternion を `spine` / `chest` / `upperChest` に分配する。profile distribution が非 finite、negative、または合計 `1.0 ± 0.001` から外れる場合は capability default へ戻し、warning code は `invalid_torso_distribution_profile_defaulted` だけを使う。
+    - capability default distribution は `spine+chest+upperChest` で `{ spine: 0.25, chest: 0.40, upperChest: 0.35 }`、`spine+chest` で `{ spine: 0.35, chest: 0.65, upperChest: 0 }`、それ以外で `{ spine: 1, chest: 0, upperChest: 0 }` とする。helper は存在する torso bone だけを `ownedBones` に含め、composer は欠損 `upperChest` を `missing_optional_bone` として抑制する。
     - final limit / clamp stage は quaternion normalize と angular velocity clamp hook を持つ。angular velocity clamp は `previousFinalPose` と `deltaSeconds > 0` がある場合だけ実行し、既定値は `720deg/sec` とする。
-    - v1 は developer-only path として motion-debug / helper から同じ input で呼べる contract を固める段階であり、本番の `ArmBoneController` bone 書き込みや `VRMCharacterManager.update()` の順序は変更しない。motion-debug は recording / live snapshot 用に tracking layer 由来の composer result を生成し、`finalPose`、`ownedBones`、`suppressedLayers`、`clampedBones`、`warnings` を保存・表示する。
-    - `vrm.humanoid.setNormalizedPose(finalPose)` への全面移行は後続 task に残す。移行ゲートは、head / torso / leg / expression の所有境界、motion-debug final pose replay、既存 controller との二重書き込み排除、複数 VRM での clamp / optional bone 検証が揃うこととする。
+    - v1 は developer-only path として motion-debug / helper から同じ input で呼べる contract を固める段階であり、本番の `ArmBoneController` / `CharacterMotionTorsoApplier` bone 書き込みや `VRMCharacterManager.update()` の順序は変更しない。motion-debug は recording / live snapshot 用に tracking layer 由来の composer result を生成し、`finalPose`、`ownedBones`、`suppressedLayers`、`clampedBones`、`warnings` を保存・表示する。
+    - `CharacterMotionTorsoApplier` の置き換えと `vrm.humanoid.setNormalizedPose(finalPose)` への全面移行は後続 task に残す。移行ゲートは、head / neck / leg / expression の所有境界、motion-debug final pose replay、既存 controller との二重書き込み排除、複数 VRM での clamp / optional bone 検証が揃うこととする。
 - `sincroCcdIkProbe`
     - Three.js 公式 addon `CCDIKSolver` と VRM raw / normalized bone の相性を見るための PoC 診断。
     - 左腕 raw skeleton chain に対して one-iteration smoke test を行い、結果を Debug Console の `CCDIK PoC` に表示する。
