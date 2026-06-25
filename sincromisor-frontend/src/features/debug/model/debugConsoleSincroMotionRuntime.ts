@@ -1,3 +1,7 @@
+import {
+    cloneMinimalAvatarMotionProfile,
+    type MinimalAvatarMotionProfile,
+} from "../../../character/avatarProfile/minimalAvatarMotionProfile";
 import type {
     SincroPoseRetargetConfig,
     SincroPoseRetargetFrame,
@@ -9,6 +13,7 @@ type PoseRetargetRuntimeSnapshot = DebugConsoleSnapshot["sincroMotion"]["poseRet
 
 export function clonePoseRetargetRuntime(
     frame: SincroPoseRetargetFrame,
+    avatarMotionProfile?: MinimalAvatarMotionProfile,
 ): PoseRetargetRuntimeSnapshot {
     return {
         active: frame.active,
@@ -31,7 +36,16 @@ export function clonePoseRetargetRuntime(
         },
         leftArm: clonePoseRetargetArmRuntime(frame.leftArm),
         rightArm: clonePoseRetargetArmRuntime(frame.rightArm),
+        avatarMotionProfile: avatarMotionProfile
+            ? cloneMinimalAvatarMotionProfile(avatarMotionProfile)
+            : undefined,
     };
+}
+
+export function cloneAvatarMotionProfile(
+    profile: MinimalAvatarMotionProfile | undefined,
+): MinimalAvatarMotionProfile | undefined {
+    return profile ? cloneMinimalAvatarMotionProfile(profile) : undefined;
 }
 
 export function updatePoseRetargetConfig(

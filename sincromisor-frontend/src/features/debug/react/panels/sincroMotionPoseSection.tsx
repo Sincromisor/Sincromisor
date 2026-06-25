@@ -3,6 +3,7 @@ import {
     formatAnchorRuntime,
     formatArm,
     formatArmTargets,
+    formatAvatarMotionProfile,
     formatCcdIkProbe,
     formatIkRuntime,
     formatInference,
@@ -49,6 +50,8 @@ export function SincroMotionPoseSection({
                 <dd>{formatCcdIkProbe(poseRetargetRuntime)}</dd>
                 <dt>Anchor</dt>
                 <dd>{formatAnchorRuntime(poseRetargetRuntime)}</dd>
+                <dt>Avatar Profile</dt>
+                <dd>{formatAvatarMotionProfile(poseRetargetRuntime)}</dd>
                 <dt>Confidence</dt>
                 <dd>{formatRatio(pose.confidence)}</dd>
                 <dt>Upper</dt>

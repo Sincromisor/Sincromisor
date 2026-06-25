@@ -1,3 +1,4 @@
+import type { MinimalAvatarMotionProfile } from "../../../character/avatarProfile/minimalAvatarMotionProfile";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
     type SincroPoseRetargetConfig,
@@ -84,7 +85,9 @@ type SincroMotionSnapshot = {
         | "anchor"
         | "leftArm"
         | "rightArm"
-    >;
+    > & {
+        avatarMotionProfile?: MinimalAvatarMotionProfile;
+    };
 };
 
 type RtcSnapshot = {
@@ -235,6 +238,7 @@ function createDefaultPoseRetargetRuntimeSnapshot(): SincroMotionSnapshot["poseR
         },
         leftArm: createDefaultPoseRetargetArmRuntimeSnapshot(),
         rightArm: createDefaultPoseRetargetArmRuntimeSnapshot(),
+        avatarMotionProfile: undefined,
     };
 }
 

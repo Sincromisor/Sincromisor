@@ -1,3 +1,4 @@
+import type { MinimalAvatarMotionProfile } from "../../../character/avatarProfile/minimalAvatarMotionProfile";
 import type {
     SincroPoseRetargetConfig,
     SincroPoseRetargetFrame,
@@ -10,6 +11,7 @@ import {
     cloneSincroPoseMotionSnapshot,
 } from "./debugConsoleMotionSnapshot";
 import {
+    cloneAvatarMotionProfile,
     clonePoseRetargetRuntime,
     updatePoseRetargetConfig,
 } from "./debugConsoleSincroMotionRuntime";
@@ -63,7 +65,23 @@ export class DebugConsoleSincroMotionControls {
             ...currentSnapshot,
             sincroMotion: {
                 ...currentSnapshot.sincroMotion,
-                poseRetargetRuntime: clonePoseRetargetRuntime(frame),
+                poseRetargetRuntime: clonePoseRetargetRuntime(
+                    frame,
+                    currentSnapshot.sincroMotion.poseRetargetRuntime.avatarMotionProfile,
+                ),
+            },
+        }));
+    }
+
+    updateAvatarMotionProfile(profile: MinimalAvatarMotionProfile | undefined): void {
+        this.params.updateSnapshot((currentSnapshot) => ({
+            ...currentSnapshot,
+            sincroMotion: {
+                ...currentSnapshot.sincroMotion,
+                poseRetargetRuntime: {
+                    ...currentSnapshot.sincroMotion.poseRetargetRuntime,
+                    avatarMotionProfile: cloneAvatarMotionProfile(profile),
+                },
             },
         }));
     }
