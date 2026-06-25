@@ -64,7 +64,9 @@ export type InitialSincroCalibrationSession = {
     status: InitialCalibrationStatus;
     startedAtMediaTimeMs: number;
     completedAtMediaTimeMs?: number;
-    steps: Partial<Record<InitialCalibrationStepId, InitialCalibrationStepResult>>;
+    steps: Partial<
+        Record<InitialCalibrationStepId, InitialCalibrationStepResult>
+    >;
     userGuideMessages: string[];
     debugReasons: InitialCalibrationRetryReason[];
 };
@@ -73,18 +75,18 @@ export type InitialSincroCalibrationSession = {
 - threshold は初期値として固定し、後続で metrics に基づき調整する。required ready は `validDurationMs >= 1000`、degraded は `>= 700`、torso reliability ready `>= 0.75` / degraded `>= 0.60`、head reliability ready `>= 0.70` / degraded `>= 0.55`、elbow/wrist ready `>= 0.65` / degraded `>= 0.50`、border risk ready `< 0.30` / degraded `< 0.45` とする。
 - step 別 field mapping は次に固定する。
 
-| step | 入力 field | ready | degraded | retry reason |
-| --- | --- | --- | --- | --- |
-| `precheck` | `cameraQuality.overall.status !== "bad"` または camera quality 未指定 | true | true | `camera_unavailable` |
-| `precheck` | `cameraQuality.components.torsoInFrame.score` | `>= 0.75` | `>= 0.60` | `shoulders_out_of_frame` |
-| `neutral` | `reliability.parts.torso.finalWeight` | `>= 0.75` | `>= 0.60` | `low_reliability` |
-| `neutral` | `reliability.parts.head.finalWeight` | `>= 0.70` | `>= 0.55` | `low_reliability` |
-| `neutral` | `Math.abs(canonical.torso.yawRad)` | `<= 10deg` | `<= 15deg` | `face_not_front` |
-| `a_pose` | min of left/right elbow and wrist joint `finalWeight` | `>= 0.65` | `>= 0.50` | `elbow_or_wrist_hidden` |
-| `a_pose` | `cameraQuality.components.borderRisk.score` converted to risk `1 - score` | `< 0.30` | `< 0.45` | `shoulders_out_of_frame` |
-| `hand_open` | max of `reliability.parts.leftHand.finalWeight` / `rightHand.finalWeight` | `>= 0.65` | `>= 0.50` | `hand_not_visible` |
-| `hand_open` | `cameraQuality.components.handSmallRisk.score` converted to risk `1 - score` | `< 0.45` | `< 0.65` | `hand_not_visible` |
-| `face_yaw_optional` | `reliability.parts.head.finalWeight` and `canonical.torso.yawRad` | same as neutral | same as neutral | `face_not_front` |
+| step                | 入力 field                                                                   | ready           | degraded        | retry reason             |
+| ------------------- | ---------------------------------------------------------------------------- | --------------- | --------------- | ------------------------ |
+| `precheck`          | `cameraQuality.overall.status !== "bad"` または camera quality 未指定        | true            | true            | `camera_unavailable`     |
+| `precheck`          | `cameraQuality.components.torsoInFrame.score`                                | `>= 0.75`       | `>= 0.60`       | `shoulders_out_of_frame` |
+| `neutral`           | `reliability.parts.torso.finalWeight`                                        | `>= 0.75`       | `>= 0.60`       | `low_reliability`        |
+| `neutral`           | `reliability.parts.head.finalWeight`                                         | `>= 0.70`       | `>= 0.55`       | `low_reliability`        |
+| `neutral`           | `Math.abs(canonical.torso.yawRad)`                                           | `<= 10deg`      | `<= 15deg`      | `face_not_front`         |
+| `a_pose`            | min of left/right elbow and wrist joint `finalWeight`                        | `>= 0.65`       | `>= 0.50`       | `elbow_or_wrist_hidden`  |
+| `a_pose`            | `cameraQuality.components.borderRisk.score` converted to risk `1 - score`    | `< 0.30`        | `< 0.45`        | `shoulders_out_of_frame` |
+| `hand_open`         | max of `reliability.parts.leftHand.finalWeight` / `rightHand.finalWeight`    | `>= 0.65`       | `>= 0.50`       | `hand_not_visible`       |
+| `hand_open`         | `cameraQuality.components.handSmallRisk.score` converted to risk `1 - score` | `< 0.45`        | `< 0.65`        | `hand_not_visible`       |
+| `face_yaw_optional` | `reliability.parts.head.finalWeight` and `canonical.torso.yawRad`            | same as neutral | same as neutral | `face_not_front`         |
 
 - `CameraQualityScore` に該当 component が存在しない場合は、その camera-quality 判定だけを skipped 扱いにし、step 全体の status は reliability / canonical 判定で決める。`ReliabilityMap` / `CanonicalUpperBodyState` の該当 field がない場合は failed input として扱う。
 - step status は、全 required checks が ready なら `ready`、全 required checks が degraded 以上かつ 1 つ以上 ready 未満なら `degraded`、required checks のいずれかが degraded 未満なら `retry`、precheck の `camera_unavailable` だけは `failed` とする。
@@ -92,16 +94,16 @@ export type InitialSincroCalibrationSession = {
 - `measurements` の生成元は次に固定する。`neutral` step は `canonical.torso.yawRad` を `neutralYawRad`、`canonical.torso.shoulderWidth` を `shoulderWidth`、`canonical.torso.torsoScale` を `torsoScale` として保存する。`hand_open` step は `canonical.calibration.handBaseline` を `handBaseline` として保存する。複数 step に同じ measurement がある場合は `neutral`、`a_pose`、`hand_open` の順に後者で上書きしない。
 - retry reason priority と文言は次に固定する。重複 reason は最初の 1 件だけ残し、priority 上位 2 件を返す。
 
-| priority | reason | message |
-| ---: | --- | --- |
-| 1 | `camera_unavailable` | `カメラを確認してください。` |
-| 2 | `shoulders_out_of_frame` | `肩まで画面に入るように、少し下がってください。` |
-| 3 | `face_not_front` | `正面を向いてください。` |
-| 4 | `elbow_or_wrist_hidden` | `肘と手が見えるようにしてください。` |
-| 5 | `hand_not_visible` | `手をカメラに見える位置へ移動してください。` |
-| 6 | `too_dark` | `部屋を明るくしてください。` |
-| 7 | `motion_blur` | `ゆっくり動くか、部屋を明るくしてください。` |
-| 8 | `low_reliability` | `姿勢をもう一度合わせてください。` |
+| priority | reason                   | message                                          |
+| -------: | ------------------------ | ------------------------------------------------ |
+|        1 | `camera_unavailable`     | `カメラを確認してください。`                     |
+|        2 | `shoulders_out_of_frame` | `肩まで画面に入るように、少し下がってください。` |
+|        3 | `face_not_front`         | `正面を向いてください。`                         |
+|        4 | `elbow_or_wrist_hidden`  | `肘と手が見えるようにしてください。`             |
+|        5 | `hand_not_visible`       | `手をカメラに見える位置へ移動してください。`     |
+|        6 | `too_dark`               | `部屋を明るくしてください。`                     |
+|        7 | `motion_blur`            | `ゆっくり動くか、部屋を明るくしてください。`     |
+|        8 | `low_reliability`        | `姿勢をもう一度合わせてください。`               |
 
 - user-facing message は内部語を出さず、上記固定文言から選ぶ。主警告 1 件 + 補助 1 件の最大 2 件にする。
 - 外部 API / backend / WebRTC は変更しない。camera permission などの hard failure は本 module では reason code に変換するだけで、ブラウザ API 呼び出しはしない。

@@ -66,11 +66,14 @@ export type OnlineSincroCalibrationState = {
 
 export type OnlineSincroCalibrationStateParseResult =
     | { ok: true; state: OnlineSincroCalibrationState }
-    | { ok: false; errors: Array<{
-        code: "unknown_schema_version" | "invalid_state" | "out_of_range";
-        path: string[];
-        message: string;
-    }> };
+    | {
+          ok: false;
+          errors: Array<{
+              code: "unknown_schema_version" | "invalid_state" | "out_of_range";
+              path: string[];
+              message: string;
+          }>;
+      };
 ```
 
 - gate threshold は `torsoReliability > 0.85`、`headReliability > 0.80`、`borderRisk < 0.30`、`motionBlurRisk < 0.50`、`armActivity < 0.20`、`faceYawAbsRad < 12deg`、`boneLengthConsistency > 0.80` に固定する。
