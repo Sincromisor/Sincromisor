@@ -33,7 +33,7 @@
 - `src/character/vrmCharacter`
     - VRM character manager と motion controller のうち、behavior / retargeting / IK に属さない VRM 適用処理を置く。
 - `src/character/motionEvaluation`
-    - motion-debug log schema、Phase 6 solver / finalPose snapshot parser、replay metrics、baseline parser を置く。
+    - motion-debug log schema、Phase 6 solver / Phase 7 profile-calibration / finalPose snapshot parser、replay metrics、baseline parser を置く。
 - `VRMScene`
     - renderer、camera、light、resize、render loop を持つ。
 - `VRMCharacterManager`
@@ -47,7 +47,8 @@
 - IK / Pose Composer
     - `SincroArmIkSolver` は腕 IK quaternion と constraint reason を返す。
     - `VrmPoseComposer` は tracking / idle / style layer から normalized local pose と `ownedBones` を作る。
-    - Phase 6 時点の motion-debug は solver / finalPose snapshot を保存・表示・計測するが、本番の `VRMCharacterManager.update()` の bone 書き込み順序はまだ全面移行しない。
+    - motion-debug は `frame.solver.phase6` に Phase 6 solver snapshot、`frame.solver.phase7` に Phase 7 の完成版 `AvatarMotionProfile` / calibration snapshot、`frame.finalPose` に composer result を保存・表示する。本番の `VRMCharacterManager.update()` の bone 書き込み順序はまだ全面移行しない。
+    - 完成版 `AvatarMotionProfile` は `VRMScene.getAvatarMotionProfile()` / `VRMCharacterManager.getAvatarMotionProfile()` から debug 用 clone として公開する。Debug Console と Phase 6 snapshot の `avatarMotionProfile` は `MinimalAvatarMotionProfile` のまま維持する。
 
 ## Talk Mode Boundary
 

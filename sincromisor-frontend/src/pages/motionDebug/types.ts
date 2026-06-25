@@ -6,7 +6,12 @@ import type {
     MotionDebugFinalPoseParseResult,
     MotionDebugFinalPoseSnapshot,
     MotionDebugPhase6SolverParseResult,
+    MotionDebugPhase6SolverSnapshot,
 } from "../../character/motionEvaluation/motionDebugPhase6Snapshot";
+import type {
+    MotionDebugPhase7Snapshot,
+    MotionDebugPhase7SnapshotParseResult,
+} from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import type {
     MotionDebugRecorderConfig,
     MotionDebugRecorderResult,
@@ -78,8 +83,20 @@ export type TemporalLayerParseError = {
 
 export type SolverLayerParseError = {
     parseStatus: "invalid";
-    errors: Extract<MotionDebugPhase6SolverParseResult, { ok: false }>["errors"];
+    errors:
+        | Extract<MotionDebugPhase6SolverParseResult, { ok: false }>["errors"]
+        | Extract<MotionDebugPhase7SnapshotParseResult, { ok: false }>["errors"];
     raw: unknown;
+};
+
+export type SolverSubLayerValue =
+    | { status: "available"; value: MotionDebugPhase6SolverSnapshot | MotionDebugPhase7Snapshot }
+    | { status: "not_recorded" }
+    | { status: "invalid"; value: SolverLayerParseError };
+
+export type SolverLayerValue = {
+    phase6: SolverSubLayerValue;
+    phase7: SolverSubLayerValue;
 };
 
 export type FinalPoseLayerParseError = {
@@ -160,6 +177,7 @@ export type MotionDebugSnapshot = {
     tracker: SincroTrackerWorkerStats;
     poseRetarget: DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
     poseRetargetRuntime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"];
+    phase7?: MotionDebugPhase7Snapshot;
     finalPose?: MotionDebugFinalPoseSnapshot;
     render: MotionDebugRenderMetrics;
     viewer?: MotionDebugViewerSnapshot;
