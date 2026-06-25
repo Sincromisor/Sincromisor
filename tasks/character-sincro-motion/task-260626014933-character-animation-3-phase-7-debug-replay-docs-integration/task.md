@@ -13,7 +13,8 @@ Phase 7 で追加する `AvatarMotionProfile`、initial calibration、online cal
 - [ ] `SincroMotionDebugFrame.solver` 直下に `phase7` slot を追加し、recording 時に `frame.solver.phase7` として保存する。top-level `profile` / `calibration` slot は追加しない。
 - [ ] replay viewer の `solver` layer は `phase6` と `phase7` を分けて表示できる。旧 log に `phase7` がない場合は `not_recorded`、schema 違反は `invalid` とし、log load 自体は失敗させない。
 - [ ] `viewer.layers.solver.value` は `{ phase6: SolverSubLayerValue; phase7: SolverSubLayerValue }` に固定する。`phase6` が valid で `phase7` missing / invalid の場合も外側 `viewer.layers.solver.status` は `available` とし、substatus だけを `not_recorded` / `invalid` にする。
-- [ ] live snapshot では `poseRetargetRuntime.avatarMotionProfile` の完成版 profile、`MotionDebugRecordingController` params から受け取る initial calibration session / online calibration state、`latestCanonical.calibration` 由来の active canonical calibration id/source を確認できる。
+- [ ] live snapshot では `MotionDebugRecordingController` params の `getAvatarMotionProfile()` から受け取る完成版 profile、`getInitialCalibrationSession()` / `getOnlineCalibrationState()` から受け取る calibration state、`latestCanonical.calibration` 由来の active canonical calibration id/source を確認できる。既存 `DebugConsoleSnapshot.sincroMotion.poseRetargetRuntime.avatarMotionProfile` は Phase 6 互換の `MinimalAvatarMotionProfile` のまま維持し、完成版 profile の接続元にしない。
+- [ ] `VRMCharacterManager` / `VRMScene` は motion-debug 用に clone 済み完成版 `AvatarMotionProfile` getter を公開し、`MotionDebugRecordingController` params の `getAvatarMotionProfile()` へ渡す。Debug Console 型を完成版 profile へ広げない。
 - [ ] 未実行時の live Phase 7 snapshot は `profile` があれば保存し、`initialCalibration` / `onlineCalibration` は省略、`activeCanonicalCalibration` は `latestCanonical?.calibration` がある場合だけ保存する。未実行を default session で埋めない。
 - [ ] `MotionDebugRecorder` の manifest / frame validation は `phase7` を unknown object として許容し、Phase 7 parser が layer 境界で厳密検証する。既存 `phase6` parser は変更しない。
 - [ ] `sincromisor-frontend/src/pages/motionDebug/__tests__/motionDebugViewerModel.test.ts` または新規 test で、valid phase7、missing phase7、invalid phase7、live phase7、旧 log 互換を検証する。
@@ -35,7 +36,7 @@ export type MotionDebugPhase7Snapshot = {
 };
 ```
 
-- parser は Phase 6 と同じ parse result union にする。unknown schema、invalid state、out-of-range を error code として返し、例外 throw しない。
+- parser は Phase 6 と同じ parse result union にする。unknown schema、invalid state、out-of-range を error code として返し、例外 throw しない。`profile` は `parseAvatarMotionProfile()`、`onlineCalibration` は `parseOnlineSincroCalibrationState()` を使う。`initialCalibration` は現行 initial calibration module に parser / clone export が無いため、Phase 7 snapshot module 内に `InitialSincroCalibrationSession` 用の local strict schema / clone を持ち、Phase 7 snapshot 境界で検証する。
 - solver layer の viewer value は次に固定する。
 
 ```ts
@@ -54,7 +55,7 @@ type SolverLayerValue = {
 ```
 
 - `phase6` と `phase7` の両方が `not_recorded` の場合だけ外側 `viewer.layers.solver.status` を `not_recorded` にする。どちらか片方でも `available` または `invalid` なら外側 status は `available` とし、詳細は substatus で表す。
-- live 接続元は `DebugConsoleSnapshot.sincroMotion.poseRetargetRuntime.avatarMotionProfile`、`MotionDebugRecordingController` params の `getInitialCalibrationSession()` / `getOnlineCalibrationState()`、`MotionDebugRecordingController.latestCanonical?.calibration` に固定する。`DebugConsoleSnapshot` へ calibration state を直接持たせる案は、Debug Console が calibration owner ではないため採用しない。
+- live 接続元は `MotionDebugRecordingController` params の `getAvatarMotionProfile()`、`getInitialCalibrationSession()`、`getOnlineCalibrationState()`、および `MotionDebugRecordingController.latestCanonical?.calibration` に固定する。完成版 profile は `VRMScene.getAvatarMotionProfile()` / `VRMCharacterManager.getAvatarMotionProfile()` 経由で `SincroPoseRetargeter.getAvatarMotionProfile()` の clone を渡す。`DebugConsoleSnapshot.sincroMotion.poseRetargetRuntime.avatarMotionProfile` は Phase 6 互換の minimal profile として維持し、完成版 profile の接続元にしない。`DebugConsoleSnapshot` へ calibration state を直接持たせる案は、Debug Console が calibration owner ではないため採用しない。
 - viewer の selected layer は既存 `solver` のままとし、新しい top-level `calibration` layer は作らない。理由: Phase 7 の主目的は solver/profile/calibration が同じ replay frame で比較できることにあり、UI の layer 増加は Phase 10 QA で再整理する。
 - 通常 UI 文言は保存しない。debug/replay には reason code と status を保存し、通常 UI で表示した文言は再計算可能な派生値として扱う。
 
@@ -62,6 +63,7 @@ type SolverLayerValue = {
 
 - 本タスクでやること:
     - Phase 7 debug snapshot schema / parser。
+    - 完成版 `AvatarMotionProfile` を motion-debug recording params へ渡すための `VRMCharacterManager` / `VRMScene` getter 追加。
     - motion-debug live snapshot、recording、replay viewer への接続。
     - 旧 log 互換の tests。
     - design docs 同期。
@@ -71,6 +73,7 @@ type SolverLayerValue = {
     - metrics key の新規追加。
     - `setNormalizedPose` 全面移行。
     - profile 永続化、ユーザー設定保存。
+    - `DebugConsoleSnapshot.sincroMotion.poseRetargetRuntime.avatarMotionProfile` を完成版 profile に変更すること。
 - 依存タスクとの境界:
     - profile contract task が `AvatarMotionProfile` parser / clone を提供する。
     - torso fallback task は `profile.torso.distribution` と capability を実際に使う側であり、本タスクでは Phase 7 snapshot の profile 表示でその値を観測できるようにする。
@@ -83,7 +86,9 @@ type SolverLayerValue = {
 - recording controller は現在 `phase6` と `finalPose` を作り、`solver.phase6` に保存している（`sincromisor-frontend/src/pages/motionDebug/motionDebugRecordingController.ts:162`、`sincromisor-frontend/src/pages/motionDebug/motionDebugRecordingController.ts:163`、`sincromisor-frontend/src/pages/motionDebug/motionDebugRecordingController.ts:175`、`sincromisor-frontend/src/pages/motionDebug/motionDebugRecordingController.ts:178`）。Phase 7 は同じ場所で `phase7` を追加する。
 - viewer model は replay frame の `solver.phase6` を読み、missing を `undefined`、invalid を parse error object として扱う（`sincromisor-frontend/src/pages/motionDebug/motionDebugViewerModel.ts:148`、`sincromisor-frontend/src/pages/motionDebug/motionDebugViewerModel.ts:158`、`sincromisor-frontend/src/pages/motionDebug/motionDebugViewerModel.ts:165`）。Phase 7 viewer も同じ failure semantics を使う。
 - `MotionDebugLayerSnapshot` は外側 layer ごとに単一 `status` と `value` を持つ（`sincromisor-frontend/src/pages/motionDebug/types.ts:113`、`sincromisor-frontend/src/pages/motionDebug/types.ts:116`）。Phase 7 は外側 schema を変えず、`solver.value` 内の substatus で phase6 / phase7 を分ける。
-- Debug Console live snapshot は現状 `poseRetargetRuntime.avatarMotionProfile` だけを持ち、calibration state は持たない（`sincromisor-frontend/src/features/debug/model/debugConsoleSnapshot.ts:61`、`sincromisor-frontend/src/features/debug/model/debugConsoleSnapshot.ts:78`、`sincromisor-frontend/src/features/debug/model/debugConsoleSnapshot.ts:89`）。本タスクでは calibration state を motion-debug recording params から渡す。
+- Debug Console live snapshot は現状 `poseRetargetRuntime.avatarMotionProfile` だけを持ち、calibration state は持たない（`sincromisor-frontend/src/features/debug/model/debugConsoleSnapshot.ts:61`、`sincromisor-frontend/src/features/debug/model/debugConsoleSnapshot.ts:78`、`sincromisor-frontend/src/features/debug/model/debugConsoleSnapshot.ts:89`）。現 HEAD の `poseRetargetRuntime.avatarMotionProfile` は Phase 6 互換の `MinimalAvatarMotionProfile` であり、完成版 `AvatarMotionProfile` ではない。本タスクでは completion profile と calibration state を motion-debug recording params から渡す。
+- `SincroPoseRetargeter.getAvatarMotionProfile()` は完成版 profile の clone を返す（`sincromisor-frontend/src/character/retargeting/sincroPoseRetargeter.ts:89`）。`VRMCharacterManager` は Debug Console へ渡す前に `toMinimalAvatarMotionProfile()` で minimal 互換へ変換している（`sincromisor-frontend/src/character/vrmCharacter/vrmCharacterManager.ts:136`、`sincromisor-frontend/src/character/vrmCharacter/vrmCharacterManager.ts:138`）。本タスクでは Debug Console 境界を維持しつつ、motion-debug 専用 getter で完成版 profile を渡す。
+- initial calibration module は `InitialSincroCalibrationSession`、`summarizeInitialCalibrationSession()`、`createCanonicalCalibrationFromInitialSession()` を export するが、parser / clone は export していない（`sincromisor-frontend/src/character/calibration/initialSincroCalibration.ts`）。Phase 7 snapshot parser は initial session 用の local strict schema / clone を持つ。
 - motion-debug live snapshot は `latestCanonical` と `poseRetargetRuntime` を同じ snapshot に持っている（`sincromisor-frontend/src/pages/motionDebug/motionDebugApp.ts:289`、`sincromisor-frontend/src/pages/motionDebug/motionDebugApp.ts:297`、`sincromisor-frontend/src/pages/motionDebug/motionDebugApp.ts:302`）。active canonical calibration は `latestCanonical?.calibration` から取る。
 - Phase 6 snapshot parser は schema version を固定し、profile を minimal shape で検証している（`sincromisor-frontend/src/character/motionEvaluation/motionDebugPhase6Snapshot.ts:14`、`sincromisor-frontend/src/character/motionEvaluation/motionDebugPhase6Snapshot.ts:174`、`sincromisor-frontend/src/character/motionEvaluation/motionDebugPhase6Snapshot.ts:226`）。Phase 7 は別 file / 別 schema にして Phase 6 を変更しない。
 - motion design doc は motion-debug layer と frame slots を正本化している（`documents/design/frontend/character/motion.md:63`、`documents/design/frontend/character/motion.md:68`、`documents/design/frontend/character/motion.md:74`、`documents/design/frontend/character/motion.md:216`）。Phase 7 slot を同じ文書へ同期する。
