@@ -4,6 +4,7 @@ import {
     CANONICAL_UPPER_BODY_SCHEMA_VERSION,
     type CanonicalArmState,
     type CanonicalPartMeta,
+    type CanonicalUpperBodyState as CanonicalState,
     type CanonicalUpperBodyState,
     DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
 } from "../../canonical/canonicalUpperBodyState";
@@ -39,12 +40,25 @@ function createArm(overrides: Partial<CanonicalArmState> = {}): CanonicalArmStat
     };
 }
 
+function createHead(
+    overrides: Partial<NonNullable<CanonicalState["head"]>> = {},
+): NonNullable<CanonicalState["head"]> {
+    return {
+        ...BASE_META,
+        yawRad: 0.1,
+        pitchRad: 0.05,
+        rollRad: -0.05,
+        ...overrides,
+    };
+}
+
 function createCanonical(
     mediaTimeMs: number,
     leftOverrides: Partial<CanonicalArmState> = {},
     rightOverrides: Partial<CanonicalArmState> = {},
+    headOverrides?: Partial<NonNullable<CanonicalState["head"]>>,
 ): CanonicalUpperBodyState {
-    return {
+    const canonical: CanonicalUpperBodyState = {
         schemaVersion: CANONICAL_UPPER_BODY_SCHEMA_VERSION,
         timestamp: {
             mediaTimeMs,
@@ -69,12 +83,17 @@ function createCanonical(
         calibration: DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
         warnings: [],
     };
+    if (headOverrides !== undefined) {
+        canonical.head = createHead(headOverrides);
+    }
+    return canonical;
 }
 
 function createTrackedReliability(mediaTimeMs: number): ReliabilityMap {
     const reliability = createDefaultReliabilityMap(mediaTimeMs);
     setArmReliability(reliability, "left", "tracked");
     setArmReliability(reliability, "right", "tracked");
+    setHeadReliability(reliability, "tracked");
     return reliability;
 }
 
@@ -94,6 +113,11 @@ function setArmReliability(
     reliability.joints.rightShoulder.state = state;
     reliability.joints.rightElbow.state = state;
     reliability.joints.rightWrist.state = state;
+}
+
+function setHeadReliability(reliability: ReliabilityMap, state: ReliabilityPartState): void {
+    reliability.parts.head.state = state;
+    reliability.joints.head.state = state;
 }
 
 describe("TemporalStateEstimator", () => {
@@ -173,7 +197,42 @@ describe("TemporalStateEstimator", () => {
         expect(temporal.arms.left.warnings).toEqual(["classification_held"]);
     });
 
-    it("keeps previous filtered values on lost frames", () => {
+    it("predicts a 200ms dropout from the previous filtered arm", () => {
+        const estimator = new TemporalStateEstimator();
+        estimator.update({
+            canonical: createCanonical(0),
+            reliability: createTrackedReliability(0),
+            mediaTimeMs: 0,
+        });
+        const moving = estimator.update({
+            canonical: createCanonical(100, { reach: 0.8 }),
+            reliability: createTrackedReliability(100),
+            mediaTimeMs: 100,
+        });
+
+        const temporal = estimator.update({
+            canonical: createCanonical(300, { confidence: 0.01, reach: 0.9 }),
+            reliability: createTrackedReliability(300),
+            mediaTimeMs: 300,
+        });
+
+        expect(temporal.arms.left).toMatchObject({
+            state: "predicted",
+            source: "predicted",
+            confidence: 0.01,
+            observedAgeMs: 200,
+        });
+        expect(temporal.arms.left.reach).toBeGreaterThan(moving.arms.left.reach);
+        expect(temporal.arms.left.source).not.toBe("neutral");
+        expect(temporal.arms.left.warnings).toEqual(
+            expect.arrayContaining(["prediction_active", "velocity_damped"]),
+        );
+        expect(temporal.arms.left.velocity.reachPerSec).toBeLessThan(
+            moving.arms.left.velocity.reachPerSec,
+        );
+    });
+
+    it("keeps dropout inside 700ms away from neutral", () => {
         const estimator = new TemporalStateEstimator();
         estimator.update({
             canonical: createCanonical(0),
@@ -182,20 +241,127 @@ describe("TemporalStateEstimator", () => {
         });
 
         const temporal = estimator.update({
-            canonical: createCanonical(100, { confidence: 0.01, reach: 0.9 }),
-            reliability: createTrackedReliability(100),
-            mediaTimeMs: 100,
+            canonical: createCanonical(200, { confidence: 0.01, reach: 0.9 }),
+            reliability: createTrackedReliability(200),
+            mediaTimeMs: 200,
         });
 
-        expect(temporal.arms.left).toMatchObject({
-            state: "lost",
-            source: "neutral",
-            confidence: 0.01,
-            observedAgeMs: 100,
-            reach: 0.4,
-            warnings: ["low_confidence", "dropout", "classification_held"],
+        expect(temporal.arms.left.state).toBe("predicted");
+        expect(temporal.arms.left.source).toBe("predicted");
+        expect(temporal.arms.left.reach).toBe(0.4);
+    });
+
+    it("moves to the comfortable fallback after the prediction window expires", () => {
+        const estimator = new TemporalStateEstimator();
+        estimator.update({
+            canonical: createCanonical(0, {
+                reach: 0.9,
+                elevationRad: 0.7,
+                openness: 0.8,
+                forwardness: 0.7,
+                elbowFlexionRad: 2.1,
+            }),
+            reliability: createTrackedReliability(0),
+            mediaTimeMs: 0,
         });
-        expect(temporal.arms.left.velocity.reachPerSec).toBe(0);
+        estimator.update({
+            canonical: createCanonical(200, { confidence: 0.01 }),
+            reliability: createTrackedReliability(200),
+            mediaTimeMs: 200,
+        });
+        const predicted = estimator.update({
+            canonical: createCanonical(450, { confidence: 0.01 }),
+            reliability: createTrackedReliability(450),
+            mediaTimeMs: 450,
+        });
+        estimator.update({
+            canonical: createCanonical(650, { confidence: 0.01 }),
+            reliability: createTrackedReliability(650),
+            mediaTimeMs: 650,
+        });
+
+        const comfortable = estimator.update({
+            canonical: createCanonical(800, { confidence: 0.01 }),
+            reliability: createTrackedReliability(800),
+            mediaTimeMs: 800,
+        });
+
+        expect(comfortable.arms.left.state).toBe("lost");
+        expect(comfortable.arms.left.source).toBe("comfortable");
+        expect(comfortable.arms.left.warnings).toContain("prediction_expired");
+        expect(Math.abs(comfortable.arms.left.reach - 0.35)).toBeLessThan(
+            Math.abs(predicted.arms.left.reach - 0.35),
+        );
+        expect(comfortable.arms.left.openness).toBeGreaterThan(0);
+        expect(comfortable.arms.left.bodyLocalWrist?.[0]).toBeLessThan(0);
+        expect(comfortable.arms.right.bodyLocalWrist?.[0]).toBeGreaterThan(0);
+    });
+
+    it("recovers with a mixed source and clamps one-frame scalar jumps", () => {
+        const estimator = new TemporalStateEstimator();
+        estimator.update({
+            canonical: createCanonical(0),
+            reliability: createTrackedReliability(0),
+            mediaTimeMs: 0,
+        });
+        estimator.update({
+            canonical: createCanonical(200, { confidence: 0.01 }),
+            reliability: createTrackedReliability(200),
+            mediaTimeMs: 200,
+        });
+        const beforeRecovery = estimator.update({
+            canonical: createCanonical(450, { confidence: 0.01 }),
+            reliability: createTrackedReliability(450),
+            mediaTimeMs: 450,
+        });
+
+        const recovered = estimator.update({
+            canonical: createCanonical(550, {
+                reach: 1.15,
+                elevationRad: Math.PI / 2,
+                openness: 1,
+                forwardness: 1,
+                elbowFlexionRad: Math.PI,
+                confidence: 1,
+            }),
+            reliability: createTrackedReliability(550),
+            mediaTimeMs: 550,
+        });
+
+        expect(recovered.arms.left.state).toBe("recovering");
+        expect(recovered.arms.left.source).toBe("mixed");
+        expect(recovered.arms.left.recoveringBlend).toMatchObject({
+            from: "predicted",
+            durationMs: 260,
+        });
+        expect(recovered.arms.left.warnings).toContain("recovery_blend");
+        expect(
+            Math.abs(recovered.arms.left.elevationRad - beforeRecovery.arms.left.elevationRad),
+        ).toBeLessThanOrEqual((15 * Math.PI) / 180 + 1e-12);
+        expect(
+            Math.abs(
+                recovered.arms.left.elbowFlexionRad - beforeRecovery.arms.left.elbowFlexionRad,
+            ),
+        ).toBeLessThanOrEqual((15 * Math.PI) / 180 + 1e-12);
+    });
+
+    it("updates prediction independently for left and right arms", () => {
+        const estimator = new TemporalStateEstimator();
+        estimator.update({
+            canonical: createCanonical(0),
+            reliability: createTrackedReliability(0),
+            mediaTimeMs: 0,
+        });
+
+        const temporal = estimator.update({
+            canonical: createCanonical(200, { confidence: 0.01 }, { reach: 0.75 }),
+            reliability: createTrackedReliability(200),
+            mediaTimeMs: 200,
+        });
+
+        expect(temporal.arms.left.state).toBe("predicted");
+        expect(temporal.arms.right.state).toBe("tracked");
+        expect(temporal.arms.right.source).toBe("canonical");
     });
 
     it("does not update filters when dt is invalid", () => {
@@ -301,5 +467,83 @@ describe("TemporalStateEstimator", () => {
         expect(temporal.arms.left.stateAgeMs).toBe(0);
         expect(temporal.arms.left.classification).toBe("side");
         expect(temporal.arms.left.warnings).toContain("classification_held");
+        expect(temporal.arms.left.recoveringBlend).toBeUndefined();
+    });
+
+    it("clears prediction and recovery state on reset", () => {
+        const estimator = new TemporalStateEstimator(createDefaultTemporalStateEstimatorConfig());
+        estimator.update({
+            canonical: createCanonical(0),
+            reliability: createTrackedReliability(0),
+            mediaTimeMs: 0,
+        });
+        estimator.update({
+            canonical: createCanonical(200, { confidence: 0.01 }),
+            reliability: createTrackedReliability(200),
+            mediaTimeMs: 200,
+        });
+        estimator.update({
+            canonical: createCanonical(300, { reach: 1, confidence: 1 }),
+            reliability: createTrackedReliability(300),
+            mediaTimeMs: 300,
+        });
+
+        estimator.reset();
+        const temporal = estimator.update({
+            canonical: createCanonical(1000, { reach: 0.7, confidence: 1 }),
+            reliability: createTrackedReliability(1000),
+            mediaTimeMs: 1000,
+        });
+
+        expect(temporal.arms.left.state).toBe("tracked");
+        expect(temporal.arms.left.source).toBe("canonical");
+        expect(temporal.arms.left.recoveringBlend).toBeUndefined();
+        expect(temporal.arms.left.warnings).not.toContain("recovery_blend");
+        expect(temporal.arms.left.warnings).not.toContain("prediction_active");
+    });
+
+    it("applies the optional head dropout and recovery policy only when canonical head exists", () => {
+        const estimator = new TemporalStateEstimator();
+        const noHead = estimator.update({
+            canonical: createCanonical(0),
+            reliability: createTrackedReliability(0),
+            mediaTimeMs: 0,
+        });
+
+        expect(noHead.head).toBeUndefined();
+
+        estimator.update({
+            canonical: createCanonical(100, {}, {}, { yawRad: 0.1, confidence: 1 }),
+            reliability: createTrackedReliability(100),
+            mediaTimeMs: 100,
+        });
+        estimator.update({
+            canonical: createCanonical(200, {}, {}, { yawRad: 0.2, confidence: 1 }),
+            reliability: createTrackedReliability(200),
+            mediaTimeMs: 200,
+        });
+        const predicted = estimator.update({
+            canonical: createCanonical(400, {}, {}, { yawRad: 0, confidence: 0.01 }),
+            reliability: createTrackedReliability(400),
+            mediaTimeMs: 400,
+        });
+        const recovering = estimator.update({
+            canonical: createCanonical(500, {}, {}, { yawRad: 0.8, confidence: 1 }),
+            reliability: createTrackedReliability(500),
+            mediaTimeMs: 500,
+        });
+
+        expect(predicted.head).toMatchObject({
+            state: "predicted",
+            source: "predicted",
+        });
+        expect(predicted.head?.warnings).toEqual(
+            expect.arrayContaining(["prediction_active", "velocity_damped"]),
+        );
+        expect(recovering.head).toMatchObject({
+            state: "recovering",
+            source: "mixed",
+        });
+        expect(recovering.head?.warnings).toContain("recovery_blend");
     });
 });
