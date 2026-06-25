@@ -181,11 +181,14 @@ function createTemporalArm(
 function createTemporalState(
     mediaTimeMs: number,
     options?: {
+        temporalMediaTimeMs?: number;
         left?: Parameters<typeof createTemporalArm>[1];
         right?: Parameters<typeof createTemporalArm>[1];
     },
 ): TemporalUpperBodyState {
-    const temporal = createDefaultTemporalUpperBodyState(mediaTimeMs);
+    const temporal = createDefaultTemporalUpperBodyState(
+        options?.temporalMediaTimeMs ?? mediaTimeMs,
+    );
     return {
         ...temporal,
         arms: {
@@ -426,6 +429,35 @@ describe("calculateMotionMetricSummary", () => {
             unit: "ratio",
             status: "warn",
             sampleCount: 4,
+        });
+    });
+
+    it("uses frame timestamps for temporal lost duration when temporal timestamps mismatch", () => {
+        const summary = calculateMotionMetricSummary(
+            [
+                createFrame(0, 0, {
+                    temporal: createTemporalState(0, {
+                        temporalMediaTimeMs: 1000,
+                        left: { state: "lost" },
+                        right: { state: "lost" },
+                    }),
+                }),
+                createFrame(1, 400, {
+                    temporal: createTemporalState(400, {
+                        temporalMediaTimeMs: 1010,
+                        left: { state: "tracked" },
+                        right: { state: "tracked" },
+                    }),
+                }),
+            ],
+            CONFIG,
+        );
+
+        expect(summary.metrics.temporalLostArmDurationMs).toMatchObject({
+            value: 500,
+            unit: "ms",
+            status: "warn",
+            sampleCount: 2,
         });
     });
 });

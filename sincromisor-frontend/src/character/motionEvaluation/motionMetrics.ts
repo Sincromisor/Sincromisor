@@ -862,7 +862,12 @@ function calculateTemporalLostArmDurationMs(
 ): NumericMetricComputation {
     let sampleCount = 0;
     let durationMs = 0;
-    let previous: TemporalUpperBodyState | undefined;
+    let previous:
+        | {
+              frameMediaTimeMs: number;
+              temporal: TemporalUpperBodyState;
+          }
+        | undefined;
     for (const frame of frames) {
         const temporal = parseTemporal(frame);
         if (temporal === undefined) {
@@ -870,18 +875,17 @@ function calculateTemporalLostArmDurationMs(
         }
         sampleCount += 1;
         if (previous !== undefined) {
-            const dtMs = clamp(
-                frame.timestamp.mediaTimeMs - previous.timestamp.mediaTimeMs,
-                0,
-                250,
-            );
+            const dtMs = clamp(frame.timestamp.mediaTimeMs - previous.frameMediaTimeMs, 0, 250);
             for (const side of ARM_SIDES) {
-                if (previous.arms[side].state === "lost") {
+                if (previous.temporal.arms[side].state === "lost") {
                     durationMs += dtMs;
                 }
             }
         }
-        previous = temporal;
+        previous = {
+            frameMediaTimeMs: frame.timestamp.mediaTimeMs,
+            temporal,
+        };
     }
     if (sampleCount === 0) {
         return {
