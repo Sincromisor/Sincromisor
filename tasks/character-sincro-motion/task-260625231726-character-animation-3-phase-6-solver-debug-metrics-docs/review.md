@@ -4,17 +4,16 @@
 
 APPROVED
 
-前回 blocking だった `frame.solver` 保存 schema と Phase 6 metrics 計算仕様は、改訂で最小 schema / field path / per-arm 集計 / sampleCount / missing-invalid 方針まで固定された。残る注意点は既存型への落とし込み時の補足で足りるため、実装に進めてよい。
+前回 blocking だった `TemporalArmIkBridgeResult` runtime 型の直接保存は、保存専用 `MotionDebugTemporalArmIkBridgeSnapshot` と tuple 化された `target.wrist` / `target.elbowPole` に差し替わっており解消済み。`profile.measurements` と metrics threshold も finite number 保存に固定され、plain object / array / finite number 制約と矛盾しない。
 
 ## 指摘事項
 
-- [Medium] metrics table の `threshold 初期値` は判定規則としては明確だが、既存 `MotionMetricThreshold` は `pass` / `warn` / `fail` の finite number を保持する（`sincromisor-frontend/src/character/motionEvaluation/motionMetrics.ts:42`、`sincromisor-frontend/src/character/motionEvaluation/motionMetricBaselineSchema.ts:37`）。`fail > 3` などの表記はそのまま object にできないため、実装時は `fail` field に保存する finite number を既存 convention に合わせて決める必要がある。判定自体は lower-is-better の `pass <= N` / `warn <= N` / それ以外 fail で一意なので、blocking ではない。
-- [Low] `MotionDebugPhase6SolverSnapshot.profile.measurements` に `number | undefined` が含まれる一方、保存値は finite number / plain JSON value に限定されている。NDJSON 保存時に `undefined` field は消えるため、実装時は undefined を保存しない、または optional field として omit する扱いに揃えるとよい。
+なし。
 
 ## 実装者への申し送り
 
-- 前回 High の `frame.solver` schema 未確定は解消済み。既存 `frame.solver.poseRetarget` / `poseRetargetRuntime` は維持し、Phase 6 は `frame.solver.phase6` に追加する方針で進める。
-- 前回 High の Phase 6 metrics 仕様未確定は解消済み。新 key は table の arm-frame / bone-frame 定義と `not_available` 方針に従う。
-- 前回 Medium の `invalid` 表示条件は、未知 schemaVersion、非 finite number、unknown enum、runtime object 検出時と明記されたため解消済み。
-- 前回 Medium の依存 task 特定は、canonical task ID と提供 contract が追記されたため解消済み。
-- `meta.yaml` の review / reviewed_sha 更新はオーケストレーター側で行うこと。
+- `MotionDebugTemporalArmIkBridgeSnapshot` は保存専用 shape として扱い、runtime `TemporalArmIkBridgeResult.target` の `SincroArmIkTarget` をそのまま spread / JSON 化しないこと。`target.wrist` / `target.elbowPole` は `Vector3` から `readonly [number, number, number]` へ明示変換する（根拠: `sincromisor-frontend/src/character/motionSolver/temporalArmSolverBridge.ts:50`, `sincromisor-frontend/src/character/ik/sincroArmIkTypes.ts:7`, `task.md:58`）。
+- `TemporalArmIkScaleSnapshot` / `TemporalArmIkDebugSnapshot` は current HEAD では finite number、boolean、`TemporalTuple3` で構成されているため、保存時 parser では非 finite number と unknown enum を弾けばよい（`sincromisor-frontend/src/character/motionSolver/temporalArmSolverBridge.ts:20`, `sincromisor-frontend/src/character/motionSolver/temporalArmSolverBridge.ts:32`, `sincromisor-frontend/src/character/temporal/temporalUpperBodyState.ts:43`）。
+- `MinimalAvatarMotionProfile.measurements` は runtime では optional number field を持つため、task.md どおり保存時は finite number の field だけを残し、未計測 `undefined` は omit する（`sincromisor-frontend/src/character/avatarProfile/minimalAvatarMotionProfile.ts:20`, `task.md:76`）。
+- Phase 6 metrics key 追加時は `MotionMetricKey` / `MOTION_METRIC_KEYS` / default thresholds / baseline parser の同期が必要。threshold は既存 `MotionMetricThreshold` の `pass` / `warn` / `fail` finite number object に保存し、表の `fail > N` は保存値ではなく判定説明として扱う（`sincromisor-frontend/src/character/motionEvaluation/motionMetrics.ts:22`, `sincromisor-frontend/src/character/motionEvaluation/motionMetrics.ts:42`, `sincromisor-frontend/src/character/motionEvaluation/motionMetricBaselineSchema.ts:37`, `task.md:91`）。
+- 公開 WebRTC / backend 契約は変更しない一方、developer-visible な motion debug log、metrics baseline、VRM pose 適用責務は変わる。task.md は design docs 同期を受け入れ条件に含めているため、実装時は `documents/design/frontend/character/` の同期を忘れないこと。
