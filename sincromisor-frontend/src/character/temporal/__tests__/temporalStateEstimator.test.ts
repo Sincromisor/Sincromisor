@@ -297,6 +297,39 @@ describe("TemporalStateEstimator", () => {
         expect(comfortable.arms.right.bodyLocalWrist?.[0]).toBeGreaterThan(0);
     });
 
+    it("forces comfortable fallback classification to side after a committed classification", () => {
+        for (const classification of ["front", "diagonal"] as const) {
+            const estimator = new TemporalStateEstimator();
+            estimator.update({
+                canonical: createCanonical(0, { classification }),
+                reliability: createTrackedReliability(0),
+                mediaTimeMs: 0,
+            });
+            const committed = estimator.update({
+                canonical: createCanonical(200, { classification }),
+                reliability: createTrackedReliability(200),
+                mediaTimeMs: 200,
+            });
+            expect(committed.arms.left.classification).toBe(classification);
+
+            for (const mediaTimeMs of [400, 650, 850]) {
+                estimator.update({
+                    canonical: createCanonical(mediaTimeMs, { classification, confidence: 0.01 }),
+                    reliability: createTrackedReliability(mediaTimeMs),
+                    mediaTimeMs,
+                });
+            }
+            const comfortable = estimator.update({
+                canonical: createCanonical(950, { classification, confidence: 0.01 }),
+                reliability: createTrackedReliability(950),
+                mediaTimeMs: 950,
+            });
+
+            expect(comfortable.arms.left.source).toBe("comfortable");
+            expect(comfortable.arms.left.classification).toBe("side");
+        }
+    });
+
     it("recovers with a mixed source and clamps one-frame scalar jumps", () => {
         const estimator = new TemporalStateEstimator();
         estimator.update({
@@ -343,6 +376,15 @@ describe("TemporalStateEstimator", () => {
                 recovered.arms.left.elbowFlexionRad - beforeRecovery.arms.left.elbowFlexionRad,
             ),
         ).toBeLessThanOrEqual((15 * Math.PI) / 180 + 1e-12);
+        expect(
+            Math.abs(recovered.arms.left.reach - beforeRecovery.arms.left.reach),
+        ).toBeLessThanOrEqual(1.15 * (15 / 180) + 1e-12);
+        expect(
+            Math.abs(recovered.arms.left.openness - beforeRecovery.arms.left.openness),
+        ).toBeLessThanOrEqual(2 * (15 / 180) + 1e-12);
+        expect(
+            Math.abs(recovered.arms.left.forwardness - beforeRecovery.arms.left.forwardness),
+        ).toBeLessThanOrEqual(15 / 180 + 1e-12);
     });
 
     it("updates prediction independently for left and right arms", () => {

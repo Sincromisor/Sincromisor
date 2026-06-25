@@ -52,7 +52,6 @@ export function createComfortableArm(
     context: ArmUpdateContext,
     baseArm: TemporalArmState,
     warnings: TemporalWarningCode[],
-    classification: ArmClassification,
     observedAgeMs: number,
 ): TemporalArmState {
     const target = comfortableArmValues(context.side);
@@ -71,7 +70,7 @@ export function createComfortableArm(
         openness: blended.openness,
         forwardness: blended.forwardness,
         elbowFlexionRad: blended.elbowFlexionRad,
-        classification,
+        classification: "side",
         bodyLocalWrist: blended.bodyLocalWrist,
         bodyLocalElbow: blendTuple(baseArm.bodyLocalElbow, target.bodyLocalElbow, alpha),
         velocity: calculateVelocity(blended, context.previousArm, context.dtMs),

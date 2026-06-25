@@ -120,13 +120,7 @@ export function updateTemporalArm(context: ArmUpdateContext): {
             Math.max(context.config.comfortableFallbackAfterMs, context.config.predictionMaxMs)
         ) {
             return {
-                arm: createComfortableArm(
-                    context,
-                    baseArm,
-                    warnings,
-                    classification.value,
-                    observedAgeMs,
-                ),
+                arm: createComfortableArm(context, baseArm, warnings, observedAgeMs),
                 classificationHold: classification.hold,
             };
         }
