@@ -3,6 +3,11 @@ import type {
     CanonicalUpperBodyStateParseError,
 } from "../../character/canonical/canonicalUpperBodyState";
 import type {
+    MotionDebugFinalPoseParseResult,
+    MotionDebugFinalPoseSnapshot,
+    MotionDebugPhase6SolverParseResult,
+} from "../../character/motionEvaluation/motionDebugPhase6Snapshot";
+import type {
     MotionDebugRecorderConfig,
     MotionDebugRecorderResult,
     MotionDebugRecorderState,
@@ -71,6 +76,18 @@ export type TemporalLayerParseError = {
     raw: unknown;
 };
 
+export type SolverLayerParseError = {
+    parseStatus: "invalid";
+    errors: Extract<MotionDebugPhase6SolverParseResult, { ok: false }>["errors"];
+    raw: unknown;
+};
+
+export type FinalPoseLayerParseError = {
+    parseStatus: "invalid";
+    errors: Extract<MotionDebugFinalPoseParseResult, { ok: false }>["errors"];
+    raw: unknown;
+};
+
 export type MotionDebugViewerMode = "live" | "recording" | "replay" | "metrics";
 
 export type MotionDebugLayerKey =
@@ -90,7 +107,8 @@ export type MotionDebugLayerStatus =
     | "available"
     | "not_recorded"
     | "not_implemented"
-    | "not_calculated";
+    | "not_calculated"
+    | "invalid";
 
 export type MotionDebugLayerSnapshot = {
     status: MotionDebugLayerStatus;
@@ -142,6 +160,7 @@ export type MotionDebugSnapshot = {
     tracker: SincroTrackerWorkerStats;
     poseRetarget: DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
     poseRetargetRuntime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"];
+    finalPose?: MotionDebugFinalPoseSnapshot;
     render: MotionDebugRenderMetrics;
     viewer?: MotionDebugViewerSnapshot;
 };

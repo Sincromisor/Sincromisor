@@ -50,6 +50,7 @@ import {
 } from "./motionDebugCanonicalState";
 import { MotionDebugControls } from "./motionDebugControls";
 import { MotionDebugFrameCapture } from "./motionDebugFrameCapture";
+import { createMotionDebugLiveFinalPoseSnapshot } from "./motionDebugPhase6Snapshots";
 import { MotionDebugRecordingController } from "./motionDebugRecordingController";
 import { createFixtureVideoStream } from "./motionDebugVideoSource";
 import { createMotionDebugViewerSnapshot } from "./motionDebugViewerModel";
@@ -299,6 +300,7 @@ export class MotionDebugApp {
             tracker: this.latestTrackerStats,
             poseRetarget: debugSnapshot.poseRetarget,
             poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
+            finalPose: createMotionDebugLiveFinalPoseSnapshot(debugSnapshot.poseRetargetRuntime),
             render: this.renderMetrics(),
         };
         return {

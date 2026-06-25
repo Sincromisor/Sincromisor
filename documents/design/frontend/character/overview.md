@@ -26,10 +26,14 @@
     - face / pose tracking snapshot から VRM 向け motion value へ変換する処理を置く。
 - `src/character/ik`
     - arm IK solver、geometry、constraint、probe を置く。
+- `src/character/vrmPose`
+    - VRM normalized local pose、`VrmPoseComposer`、owned bone / clamp / warning の composer contract を置く。
 - `src/character/lookingGlass` / `src/character/vrm360`
     - Looking Glass / VRM360 固有 scene runtime と initializer を置く。
 - `src/character/vrmCharacter`
     - VRM character manager と motion controller のうち、behavior / retargeting / IK に属さない VRM 適用処理を置く。
+- `src/character/motionEvaluation`
+    - motion-debug log schema、Phase 6 solver / finalPose snapshot parser、replay metrics、baseline parser を置く。
 - `VRMScene`
     - renderer、camera、light、resize、render loop を持つ。
 - `VRMCharacterManager`
@@ -40,6 +44,10 @@
     - head、eye、face、arm、leg、upper body を VRM 向け値で更新する。
 - Trackers / Retargeters
     - MediaPipe 結果を正規化 snapshot へ変換し、VRM 向け値へ retarget する。
+- IK / Pose Composer
+    - `SincroArmIkSolver` は腕 IK quaternion と constraint reason を返す。
+    - `VrmPoseComposer` は tracking / idle / style layer から normalized local pose と `ownedBones` を作る。
+    - Phase 6 時点の motion-debug は solver / finalPose snapshot を保存・表示・計測するが、本番の `VRMCharacterManager.update()` の bone 書き込み順序はまだ全面移行しない。
 
 ## Talk Mode Boundary
 

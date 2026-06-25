@@ -10,6 +10,7 @@ import {
     SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION,
     type SincroMotionDebugLogManifest,
 } from "../../../character/motionEvaluation/motionDebugLogSchema";
+import type { MotionDebugFinalPoseSnapshot } from "../../../character/motionEvaluation/motionDebugPhase6Snapshot";
 import { calculateMotionMetricSummary } from "../../../character/motionEvaluation/motionMetrics";
 import { MotionReplayPlayer } from "../../../character/motionEvaluation/motionReplayPlayer";
 import {
@@ -301,6 +302,99 @@ function createTemporalState(mediaTimeMs: number): TemporalUpperBodyState {
     };
 }
 
+function createAvatarMotionProfile(): NonNullable<
+    MotionDebugSnapshot["poseRetargetRuntime"]["avatarMotionProfile"]
+> {
+    return {
+        schemaVersion: "sincro.minimal-avatar-motion-profile.v1",
+        optionalBones: {
+            upperChest: true,
+            leftShoulder: true,
+            rightShoulder: true,
+            leftHand: true,
+            rightHand: true,
+            leftThumbProximal: true,
+            rightThumbProximal: true,
+            leftIndexProximal: true,
+            rightIndexProximal: true,
+        },
+        measurements: {
+            shoulderWidth: 0.4,
+            leftUpperArmLength: 0.24,
+            leftLowerArmLength: 0.22,
+            rightUpperArmLength: 0.24,
+            rightLowerArmLength: 0.22,
+        },
+        solverDefaults: {
+            defaultReachScale: 1,
+            depthCompression: 0.55,
+            lateralScale: 1,
+            verticalScale: 0.92,
+            shoulderDamping: 0.65,
+            wristRollInfluence: 0.25,
+        },
+        warnings: [],
+    };
+}
+
+function createPhase6Solver(): unknown {
+    return {
+        schemaVersion: "sincro.phase6-solver.v1",
+        profile: {
+            schemaVersion: "sincro.minimal-avatar-motion-profile.v1",
+            optionalBones: {
+                leftHand: true,
+            },
+            measurements: {
+                shoulderWidth: 0.4,
+            },
+            solverDefaults: {
+                defaultReachScale: 1,
+                depthCompression: 0.55,
+                lateralScale: 1,
+                verticalScale: 0.92,
+                shoulderDamping: 0.65,
+                wristRollInfluence: 0.25,
+            },
+            warnings: [],
+        },
+        arms: {
+            left: {
+                ik: {
+                    active: true,
+                    targetClamped: false,
+                    weight: 0.8,
+                    poleState: "uncertain",
+                    constraintReasonCodes: ["pole_flip_rejected"],
+                },
+            },
+            right: {
+                ik: {
+                    active: true,
+                    targetClamped: false,
+                    weight: 0.7,
+                    poleState: "stable",
+                    constraintReasonCodes: [],
+                },
+            },
+        },
+        warnings: [],
+    };
+}
+
+function createFinalPose(): MotionDebugFinalPoseSnapshot {
+    return {
+        schemaVersion: "sincro.vrm-pose-composer-result.v1",
+        finalPose: {
+            leftUpperArm: { x: 0, y: 0, z: 0, w: 1 },
+        },
+        ownedBones: ["leftUpperArm"],
+        suppressedLayers: [],
+        clampedBones: [],
+        warnings: [],
+    };
+}
+
 function createLiveSnapshot(
     options: {
         canonical?: MotionDebugSnapshot["canonical"];
@@ -308,6 +402,7 @@ function createLiveSnapshot(
         temporal?: MotionDebugSnapshot["temporal"];
         cameraQuality?: CameraQualityScore;
         cameraSource?: MotionDebugSnapshot["camera"]["source"];
+        finalPose?: MotionDebugSnapshot["finalPose"];
     } = {},
 ): MotionDebugSnapshot {
     const debugSnapshot = createDefaultSnapshot().sincroMotion;
@@ -334,6 +429,7 @@ function createLiveSnapshot(
         tracker: debugSnapshot.tracker,
         poseRetarget: debugSnapshot.poseRetarget,
         poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
+        finalPose: options.finalPose,
         render: {
             renderFps: 60,
         },
@@ -435,6 +531,181 @@ describe("createMotionDebugViewerSnapshot", () => {
         });
 
         expect(viewer.layers.solver.status).toBe("not_recorded");
+    });
+
+    it("marks legacy solver logs without phase6 as not recorded", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "solver",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                solver: {
+                    poseRetarget: createDefaultSnapshot().sincroMotion.poseRetargetRuntime,
+                },
+            },
+        });
+
+        expect(viewer.layers.solver.status).toBe("not_recorded");
+    });
+
+    it("shows live Phase 6 solver snapshot when avatar profile is available", () => {
+        const liveSnapshot = createLiveSnapshot();
+        liveSnapshot.poseRetargetRuntime.avatarMotionProfile = createAvatarMotionProfile();
+        liveSnapshot.poseRetargetRuntime.leftArm.constraint = {
+            ...liveSnapshot.poseRetargetRuntime.leftArm.constraint,
+            poleState: "uncertain",
+            reasonCodes: ["pole_flip_rejected"],
+        };
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "live",
+            selectedLayer: "solver",
+            liveSnapshot,
+            replayState: {
+                status: "idle",
+                frameCount: 0,
+            },
+        });
+
+        expect(viewer.layers.solver.status).toBe("available");
+        expect(viewer.layers.solver.value).toMatchObject({
+            schemaVersion: "sincro.phase6-solver.v1",
+            profile: {
+                schemaVersion: "sincro.minimal-avatar-motion-profile.v1",
+                measurements: {
+                    shoulderWidth: 0.4,
+                },
+            },
+            arms: {
+                left: {
+                    ik: {
+                        poleState: "uncertain",
+                        constraintReasonCodes: ["pole_flip_rejected"],
+                    },
+                },
+            },
+        });
+    });
+
+    it("shows invalid solver and finalPose snapshots as invalid layers", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "solver",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                solver: {
+                    phase6: {
+                        schemaVersion: "sincro.phase6-solver.v1",
+                        profile: {
+                            schemaVersion: "sincro.minimal-avatar-motion-profile.v1",
+                        },
+                    },
+                },
+                finalPose: {
+                    schemaVersion: "sincro.vrm-pose-composer-result.v1",
+                    ownedBones: ["leftUpperArm"],
+                },
+            },
+        });
+
+        expect(viewer.layers.solver.status).toBe("invalid");
+        expect(viewer.layers.finalPose.status).toBe("invalid");
+    });
+
+    it("shows saved Phase 6 solver and finalPose replay layers as available", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "finalPose",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                solver: {
+                    phase6: createPhase6Solver(),
+                },
+                finalPose: createFinalPose(),
+            },
+        });
+
+        expect(viewer.layers.solver.status).toBe("available");
+        expect(viewer.layers.solver.value).toMatchObject({
+            arms: {
+                left: {
+                    ik: {
+                        poleState: "uncertain",
+                    },
+                },
+            },
+        });
+        expect(viewer.layers.finalPose.status).toBe("available");
+        expect(viewer.layers.finalPose.value).toMatchObject({
+            schemaVersion: "sincro.vrm-pose-composer-result.v1",
+            ownedBones: ["leftUpperArm"],
+        });
+    });
+
+    it("shows live finalPose snapshot when the app supplies a composer result", () => {
+        const liveSnapshot = createLiveSnapshot({
+            finalPose: createFinalPose(),
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "live",
+            selectedLayer: "finalPose",
+            liveSnapshot,
+            replayState: {
+                status: "idle",
+                frameCount: 0,
+            },
+        });
+
+        expect(viewer.layers.finalPose.status).toBe("available");
+        expect(viewer.layers.finalPose.value).toMatchObject({
+            ownedBones: ["leftUpperArm"],
+        });
     });
 
     it("uses live snapshot canonical as the canonical layer fallback", () => {

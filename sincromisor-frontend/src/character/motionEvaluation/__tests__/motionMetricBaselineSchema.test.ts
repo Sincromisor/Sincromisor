@@ -75,4 +75,41 @@ describe("parseMotionMetricBaseline", () => {
             ]),
         );
     });
+
+    it("fills newly added metric keys as missing values for older baselines", () => {
+        const baseline = createBaseline();
+        const oldMetrics = Object.fromEntries(
+            Object.entries(baseline.metricSummary.metrics).filter(
+                ([key]) =>
+                    key !== "solverElbowFlipRejectCount" &&
+                    key !== "finalPoseOwnedBoneConflictCount",
+            ),
+        );
+        const oldBaseline = {
+            ...baseline,
+            metricSummary: {
+                ...baseline.metricSummary,
+                severity: "pass",
+                metrics: oldMetrics,
+            },
+        };
+
+        const result = parseMotionMetricBaseline(oldBaseline);
+        expect(result.ok).toBe(true);
+        if (!result.ok) {
+            return;
+        }
+        expect(result.baseline.metricSummary.severity).toBe("warn");
+        expect(result.baseline.metricSummary.metrics.solverElbowFlipRejectCount).toMatchObject({
+            value: null,
+            status: "not_available",
+            unavailableReason: "Metric key was missing from an older baseline.",
+        });
+        expect(result.baseline.metricSummary.metrics.finalPoseOwnedBoneConflictCount).toMatchObject(
+            {
+                value: null,
+                status: "not_available",
+            },
+        );
+    });
 });
