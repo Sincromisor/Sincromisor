@@ -7,6 +7,12 @@ import {
     type TemporalUpperBodyState,
 } from "../temporal/temporalUpperBodyState";
 import type { SincroMotionDebugFrame } from "./motionDebugLogSchema";
+import {
+    type MotionDebugFinalPoseSnapshot,
+    type MotionDebugPhase6SolverSnapshot,
+    parseMotionDebugFinalPoseSnapshot,
+    parseMotionDebugPhase6SolverSnapshot,
+} from "./motionDebugPhase6Snapshot";
 
 export const MOTION_P0_FIXTURE_IDS = [
     "neutral-10s",
@@ -32,7 +38,12 @@ export type MotionMetricKey =
     | "temporalRecoveringArmFrameCount"
     | "temporalLostArmDurationMs"
     | "temporalMaxRecoveryJumpDegEquivalent"
-    | "temporalNeutralWristJitter";
+    | "temporalNeutralWristJitter"
+    | "solverElbowFlipRejectCount"
+    | "solverReachClampOccupancy"
+    | "solverPoleUncertainFrameCount"
+    | "finalPoseAngularVelocityClampCount"
+    | "finalPoseOwnedBoneConflictCount";
 
 export type MotionMetricSeverity = "pass" | "warn" | "fail";
 export type MotionMetricStatus = MotionMetricSeverity | "not_available";
@@ -93,6 +104,11 @@ export const MOTION_METRIC_KEYS: MotionMetricKey[] = [
     "temporalLostArmDurationMs",
     "temporalMaxRecoveryJumpDegEquivalent",
     "temporalNeutralWristJitter",
+    "solverElbowFlipRejectCount",
+    "solverReachClampOccupancy",
+    "solverPoleUncertainFrameCount",
+    "finalPoseAngularVelocityClampCount",
+    "finalPoseOwnedBoneConflictCount",
 ];
 
 export const DEFAULT_MOTION_METRIC_THRESHOLDS: Record<MotionMetricKey, MotionMetricThreshold> = {
@@ -109,6 +125,11 @@ export const DEFAULT_MOTION_METRIC_THRESHOLDS: Record<MotionMetricKey, MotionMet
     temporalLostArmDurationMs: { pass: 250, warn: 1000, fail: 2500 },
     temporalMaxRecoveryJumpDegEquivalent: { pass: 15, warn: 25, fail: 45 },
     temporalNeutralWristJitter: { pass: 0.015, warn: 0.035, fail: 0.06 },
+    solverElbowFlipRejectCount: { pass: 1, warn: 3, fail: 3 },
+    solverReachClampOccupancy: { pass: 0.2, warn: 0.4, fail: 0.4 },
+    solverPoleUncertainFrameCount: { pass: 2, warn: 5, fail: 5 },
+    finalPoseAngularVelocityClampCount: { pass: 0, warn: 2, fail: 2 },
+    finalPoseOwnedBoneConflictCount: { pass: 0, warn: 0, fail: 0 },
 };
 
 const METRIC_DEFINITIONS: Record<
@@ -128,6 +149,11 @@ const METRIC_DEFINITIONS: Record<
     temporalLostArmDurationMs: { unit: "ms", direction: "lower_is_better" },
     temporalMaxRecoveryJumpDegEquivalent: { unit: "deg", direction: "lower_is_better" },
     temporalNeutralWristJitter: { unit: "ratio", direction: "lower_is_better" },
+    solverElbowFlipRejectCount: { unit: "count", direction: "lower_is_better" },
+    solverReachClampOccupancy: { unit: "ratio", direction: "lower_is_better" },
+    solverPoleUncertainFrameCount: { unit: "count", direction: "lower_is_better" },
+    finalPoseAngularVelocityClampCount: { unit: "count", direction: "lower_is_better" },
+    finalPoseOwnedBoneConflictCount: { unit: "count", direction: "lower_is_better" },
 };
 
 const poseWristSchema = z
@@ -238,6 +264,10 @@ type NumericMetricComputation =
     | { ok: true; value: number; sampleCount: number }
     | { ok: false; reason: string; sampleCount: number };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function parsePoseSnapshot(frame: SincroMotionDebugFrame): PoseSnapshotMetricInput | undefined {
     const parsed = poseSnapshotSchema.safeParse(frame.poseSnapshot);
     return parsed.success ? parsed.data : undefined;
@@ -264,6 +294,21 @@ function parseMetrics(frame: SincroMotionDebugFrame): z.infer<typeof metricsSche
 function parseTemporal(frame: SincroMotionDebugFrame): TemporalUpperBodyState | undefined {
     const parsed = parseTemporalUpperBodyState(frame.temporal);
     return parsed.ok ? parsed.state : undefined;
+}
+
+function parsePhase6Solver(
+    frame: SincroMotionDebugFrame,
+): MotionDebugPhase6SolverSnapshot | undefined {
+    if (!isRecord(frame.solver)) {
+        return undefined;
+    }
+    const parsed = parseMotionDebugPhase6SolverSnapshot(frame.solver.phase6);
+    return parsed.ok ? parsed.snapshot : undefined;
+}
+
+function parseFinalPose(frame: SincroMotionDebugFrame): MotionDebugFinalPoseSnapshot | undefined {
+    const parsed = parseMotionDebugFinalPoseSnapshot(frame.finalPose);
+    return parsed.ok ? parsed.snapshot : undefined;
 }
 
 function resolveThresholds(
@@ -305,6 +350,21 @@ function resolveThresholds(
         temporalNeutralWristJitter:
             config.thresholds?.temporalNeutralWristJitter ??
             DEFAULT_MOTION_METRIC_THRESHOLDS.temporalNeutralWristJitter,
+        solverElbowFlipRejectCount:
+            config.thresholds?.solverElbowFlipRejectCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.solverElbowFlipRejectCount,
+        solverReachClampOccupancy:
+            config.thresholds?.solverReachClampOccupancy ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.solverReachClampOccupancy,
+        solverPoleUncertainFrameCount:
+            config.thresholds?.solverPoleUncertainFrameCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.solverPoleUncertainFrameCount,
+        finalPoseAngularVelocityClampCount:
+            config.thresholds?.finalPoseAngularVelocityClampCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.finalPoseAngularVelocityClampCount,
+        finalPoseOwnedBoneConflictCount:
+            config.thresholds?.finalPoseOwnedBoneConflictCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.finalPoseOwnedBoneConflictCount,
     };
 }
 
@@ -1017,6 +1077,151 @@ function calculateTemporalNeutralWristJitter(
     };
 }
 
+function calculateSolverElbowFlipRejectCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const phase6 = parsePhase6Solver(frame);
+        if (phase6 === undefined) {
+            continue;
+        }
+        for (const side of ARM_SIDES) {
+            const ik = phase6.arms[side].ik;
+            if (ik === undefined) {
+                continue;
+            }
+            sampleCount += 1;
+            if (ik.constraintReasonCodes.includes("pole_flip_rejected")) {
+                count += 1;
+            }
+        }
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "solverElbowFlipRejectCount requires frame.solver.phase6 arm ik snapshots.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
+function calculateSolverReachClampOccupancy(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const phase6 = parsePhase6Solver(frame);
+        if (phase6 === undefined) {
+            continue;
+        }
+        for (const side of ARM_SIDES) {
+            const ik = phase6.arms[side].ik;
+            if (ik === undefined) {
+                continue;
+            }
+            sampleCount += 1;
+            if (ik.targetClamped) {
+                count += 1;
+            }
+        }
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "solverReachClampOccupancy requires frame.solver.phase6 arm ik snapshots.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: count / sampleCount, sampleCount };
+}
+
+function calculateSolverPoleUncertainFrameCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const phase6 = parsePhase6Solver(frame);
+        if (phase6 === undefined) {
+            continue;
+        }
+        for (const side of ARM_SIDES) {
+            const ik = phase6.arms[side].ik;
+            if (ik === undefined) {
+                continue;
+            }
+            sampleCount += 1;
+            if (ik.poleState === "uncertain") {
+                count += 1;
+            }
+        }
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "solverPoleUncertainFrameCount requires frame.solver.phase6 arm ik snapshots.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
+function calculateFinalPoseAngularVelocityClampCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const finalPose = parseFinalPose(frame);
+        if (finalPose === undefined) {
+            continue;
+        }
+        sampleCount += finalPose.ownedBones.length;
+        for (const clamped of finalPose.clampedBones) {
+            if (clamped.reason === "angular_velocity") {
+                count += 1;
+            }
+        }
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "finalPoseAngularVelocityClampCount requires frame.finalPose.clampedBones.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
+function calculateFinalPoseOwnedBoneConflictCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const finalPose = parseFinalPose(frame);
+        if (finalPose === undefined) {
+            continue;
+        }
+        sampleCount += finalPose.ownedBones.length;
+        count += finalPose.warnings.filter((warning) =>
+            warning.startsWith("owned_bone_conflict:"),
+        ).length;
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "finalPoseOwnedBoneConflictCount requires frame.finalPose.warnings.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
 function squaredTupleDistance(left: TemporalTuple3, right: TemporalTuple3): number {
     const dx = right[0] - left[0];
     const dy = right[1] - left[1];
@@ -1099,6 +1304,31 @@ export function calculateMotionMetricSummary(
             thresholds.temporalNeutralWristJitter,
             calculateTemporalNeutralWristJitter(frames, config.fixtureId),
         ),
+        solverElbowFlipRejectCount: createMetricResult(
+            "solverElbowFlipRejectCount",
+            thresholds.solverElbowFlipRejectCount,
+            calculateSolverElbowFlipRejectCount(frames),
+        ),
+        solverReachClampOccupancy: createMetricResult(
+            "solverReachClampOccupancy",
+            thresholds.solverReachClampOccupancy,
+            calculateSolverReachClampOccupancy(frames),
+        ),
+        solverPoleUncertainFrameCount: createMetricResult(
+            "solverPoleUncertainFrameCount",
+            thresholds.solverPoleUncertainFrameCount,
+            calculateSolverPoleUncertainFrameCount(frames),
+        ),
+        finalPoseAngularVelocityClampCount: createMetricResult(
+            "finalPoseAngularVelocityClampCount",
+            thresholds.finalPoseAngularVelocityClampCount,
+            calculateFinalPoseAngularVelocityClampCount(frames),
+        ),
+        finalPoseOwnedBoneConflictCount: createMetricResult(
+            "finalPoseOwnedBoneConflictCount",
+            thresholds.finalPoseOwnedBoneConflictCount,
+            calculateFinalPoseOwnedBoneConflictCount(frames),
+        ),
     };
 
     return {
@@ -1177,6 +1407,27 @@ export function compareMotionMetricSummaries(
         ),
         temporalNeutralWristJitter: compareMetric(
             "temporalNeutralWristJitter",
+            baseline,
+            candidate,
+        ),
+        solverElbowFlipRejectCount: compareMetric(
+            "solverElbowFlipRejectCount",
+            baseline,
+            candidate,
+        ),
+        solverReachClampOccupancy: compareMetric("solverReachClampOccupancy", baseline, candidate),
+        solverPoleUncertainFrameCount: compareMetric(
+            "solverPoleUncertainFrameCount",
+            baseline,
+            candidate,
+        ),
+        finalPoseAngularVelocityClampCount: compareMetric(
+            "finalPoseAngularVelocityClampCount",
+            baseline,
+            candidate,
+        ),
+        finalPoseOwnedBoneConflictCount: compareMetric(
+            "finalPoseOwnedBoneConflictCount",
             baseline,
             candidate,
         ),

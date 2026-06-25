@@ -1,7 +1,9 @@
 import { z } from "zod";
 import {
+    DEFAULT_MOTION_METRIC_THRESHOLDS,
     MOTION_METRIC_KEYS,
     MOTION_P0_FIXTURE_IDS,
+    type MotionMetricKey,
     type MotionMetricResult,
     type MotionMetricSeverity,
     type MotionMetricSummary,
@@ -143,6 +145,10 @@ const baselineFixtureProbeSchema = z
     })
     .passthrough();
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function summaryContainsNotAvailable(summary: MotionMetricSummary): boolean {
     return MOTION_METRIC_KEYS.some((key) => summary.metrics[key].status === "not_available");
 }
@@ -202,7 +208,7 @@ export function parseMotionMetricBaseline(value: unknown): MotionMetricBaselineP
         };
     }
 
-    const parsed = motionMetricBaselineSchema.safeParse(value);
+    const parsed = motionMetricBaselineSchema.safeParse(normalizeMissingMetricKeys(value));
     if (!parsed.success) {
         return {
             ok: false,
@@ -215,4 +221,103 @@ export function parseMotionMetricBaseline(value: unknown): MotionMetricBaselineP
     }
 
     return { ok: true, baseline: parsed.data };
+}
+
+function normalizeMissingMetricKeys(value: unknown): unknown {
+    if (!isRecord(value) || !isRecord(value.metricSummary)) {
+        return value;
+    }
+    const metricSummary = value.metricSummary;
+    if (!isRecord(metricSummary.metrics)) {
+        return value;
+    }
+    const metrics: Record<string, unknown> = { ...metricSummary.metrics };
+    let filledMissingMetric = false;
+    for (const key of MOTION_METRIC_KEYS) {
+        if (metrics[key] === undefined) {
+            metrics[key] = createMissingMetricResult(key);
+            filledMissingMetric = true;
+        }
+    }
+    if (!filledMissingMetric) {
+        return value;
+    }
+    const normalizedSummary = {
+        ...metricSummary,
+        metrics,
+        severity: maxMetricSeverityFromUnknownMetrics(metrics),
+    };
+    return {
+        ...value,
+        metricSummary: normalizedSummary,
+    };
+}
+
+function createMissingMetricResult(key: MotionMetricKey): MotionMetricResult {
+    const definition = metricDefinition(key);
+    return {
+        key,
+        value: null,
+        unit: definition.unit,
+        status: "not_available",
+        severity: "warn",
+        direction: definition.direction,
+        threshold: DEFAULT_MOTION_METRIC_THRESHOLDS[key],
+        sampleCount: 0,
+        unavailableReason: "Metric key was missing from an older baseline.",
+    };
+}
+
+function metricDefinition(key: MotionMetricKey): Pick<MotionMetricResult, "unit" | "direction"> {
+    switch (key) {
+        case "recoveryJumpAngleDeg":
+        case "temporalMaxRecoveryJumpDegEquivalent":
+            return { unit: "deg", direction: "lower_is_better" };
+        case "trackingLossDurationMs":
+        case "addedLatencyMs":
+        case "temporalLostArmDurationMs":
+            return { unit: "ms", direction: "lower_is_better" };
+        case "neutralJitter":
+        case "reachClampOccupancy":
+        case "temporalNeutralWristJitter":
+        case "solverReachClampOccupancy":
+            return { unit: "ratio", direction: "lower_is_better" };
+        case "elbowFlipCount":
+        case "angularVelocitySpikeCount":
+        case "sideSwapCount":
+        case "temporalPredictedArmFrameCount":
+        case "temporalRecoveringArmFrameCount":
+        case "solverElbowFlipRejectCount":
+        case "solverPoleUncertainFrameCount":
+        case "finalPoseAngularVelocityClampCount":
+        case "finalPoseOwnedBoneConflictCount":
+            return { unit: "count", direction: "lower_is_better" };
+    }
+}
+
+function maxMetricSeverityFromUnknownMetrics(
+    metrics: Record<string, unknown>,
+): MotionMetricSeverity {
+    let severity: MotionMetricSeverity = "pass";
+    for (const key of MOTION_METRIC_KEYS) {
+        const metric = metrics[key];
+        if (!isRecord(metric)) {
+            continue;
+        }
+        const metricSeverity = metricSeverityFromUnknown(metric.severity, metric.status);
+        if (severityRank(metricSeverity) > severityRank(severity)) {
+            severity = metricSeverity;
+        }
+    }
+    return severity;
+}
+
+function metricSeverityFromUnknown(severity: unknown, status: unknown): MotionMetricSeverity {
+    if (severity === "fail" || status === "fail") {
+        return "fail";
+    }
+    if (severity === "warn" || status === "warn" || status === "not_available") {
+        return "warn";
+    }
+    return "pass";
 }

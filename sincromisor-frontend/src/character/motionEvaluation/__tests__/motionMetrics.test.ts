@@ -25,6 +25,7 @@ function createFrame(
     options?: {
         poseSnapshot?: unknown;
         solver?: unknown;
+        finalPose?: unknown;
         applied?: unknown;
         metrics?: unknown;
         temporal?: unknown;
@@ -39,9 +40,91 @@ function createFrame(
         },
         poseSnapshot: options?.poseSnapshot,
         solver: options?.solver,
+        finalPose: options?.finalPose,
         applied: options?.applied,
         metrics: options?.metrics,
         temporal: options?.temporal,
+    };
+}
+
+function createPhase6Solver(options?: {
+    leftPoleFlip?: boolean;
+    rightPoleFlip?: boolean;
+    leftTargetClamped?: boolean;
+    rightTargetClamped?: boolean;
+    leftPoleUncertain?: boolean;
+}): unknown {
+    return {
+        phase6: {
+            schemaVersion: "sincro.phase6-solver.v1",
+            profile: {
+                schemaVersion: "sincro.minimal-avatar-motion-profile.v1",
+                optionalBones: {
+                    leftHand: true,
+                    rightHand: true,
+                },
+                measurements: {
+                    shoulderWidth: 0.4,
+                },
+                solverDefaults: {
+                    defaultReachScale: 1,
+                    depthCompression: 0.55,
+                    lateralScale: 1,
+                    verticalScale: 0.92,
+                    shoulderDamping: 0.65,
+                    wristRollInfluence: 0.25,
+                },
+                warnings: [],
+            },
+            arms: {
+                left: {
+                    ik: {
+                        active: true,
+                        targetClamped: options?.leftTargetClamped ?? false,
+                        weight: 0.8,
+                        poleState: options?.leftPoleUncertain ? "uncertain" : "stable",
+                        constraintReasonCodes: options?.leftPoleFlip ? ["pole_flip_rejected"] : [],
+                    },
+                },
+                right: {
+                    ik: {
+                        active: true,
+                        targetClamped: options?.rightTargetClamped ?? false,
+                        weight: 0.7,
+                        poleState: "stable",
+                        constraintReasonCodes: options?.rightPoleFlip ? ["pole_flip_rejected"] : [],
+                    },
+                },
+            },
+            warnings: [],
+        },
+    };
+}
+
+function createFinalPose(options?: {
+    angularVelocityClamped?: boolean;
+    ownedBoneConflict?: boolean;
+}): unknown {
+    return {
+        schemaVersion: "sincro.vrm-pose-composer-result.v1",
+        finalPose: {
+            leftUpperArm: { x: 0, y: 0, z: 0, w: 1 },
+            rightUpperArm: { x: 0, y: 0, z: 0, w: 1 },
+        },
+        ownedBones: ["leftUpperArm", "rightUpperArm"],
+        suppressedLayers: [],
+        clampedBones: options?.angularVelocityClamped
+            ? [
+                  {
+                      bone: "leftUpperArm",
+                      reason: "angular_velocity",
+                      after: { x: 0, y: 0, z: 0, w: 1 },
+                  },
+              ]
+            : [],
+        warnings: options?.ownedBoneConflict
+            ? ["owned_bone_conflict:leftUpperArm", "unsupported_bone:hips"]
+            : ["unsupported_bone:hips"],
     };
 }
 
@@ -264,7 +347,58 @@ describe("calculateMotionMetricSummary", () => {
             status: "not_available",
             severity: "warn",
         });
+        expect(summary.metrics.solverReachClampOccupancy).toMatchObject({
+            value: null,
+            status: "not_available",
+            severity: "warn",
+        });
         expect(summary.severity).toBe("warn");
+    });
+
+    it("calculates Phase 6 solver and finalPose metrics from saved snapshots", () => {
+        const summary = calculateMotionMetricSummary(
+            [
+                createFrame(0, 0, {
+                    solver: createPhase6Solver({
+                        leftPoleFlip: true,
+                        leftTargetClamped: true,
+                        leftPoleUncertain: true,
+                    }),
+                    finalPose: createFinalPose({ angularVelocityClamped: true }),
+                }),
+                createFrame(1, 100, {
+                    solver: createPhase6Solver({ rightTargetClamped: true }),
+                    finalPose: createFinalPose({ ownedBoneConflict: true }),
+                }),
+            ],
+            CONFIG,
+        );
+
+        expect(summary.metrics.solverElbowFlipRejectCount).toMatchObject({
+            value: 1,
+            status: "pass",
+            sampleCount: 4,
+        });
+        expect(summary.metrics.solverReachClampOccupancy).toMatchObject({
+            value: 0.5,
+            status: "fail",
+            sampleCount: 4,
+        });
+        expect(summary.metrics.solverPoleUncertainFrameCount).toMatchObject({
+            value: 1,
+            status: "pass",
+            sampleCount: 4,
+        });
+        expect(summary.metrics.finalPoseAngularVelocityClampCount).toMatchObject({
+            value: 1,
+            status: "warn",
+            sampleCount: 4,
+        });
+        expect(summary.metrics.finalPoseOwnedBoneConflictCount).toMatchObject({
+            value: 1,
+            status: "fail",
+            sampleCount: 4,
+        });
     });
 
     it("uses tracker.workerRoundTripMs p95 for addedLatencyMs", () => {

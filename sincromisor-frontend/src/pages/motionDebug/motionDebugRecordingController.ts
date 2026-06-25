@@ -31,6 +31,10 @@ import {
     createMotionDebugCanonicalReliabilityInput,
     createMotionDebugCanonicalState,
 } from "./motionDebugCanonicalState";
+import {
+    createMotionDebugLiveFinalPoseSnapshot,
+    createMotionDebugLivePhase6SolverSnapshot,
+} from "./motionDebugPhase6Snapshots";
 import { downloadMotionDebugRecording } from "./motionDebugRecordingDownload";
 import type {
     MotionDebugCameraState,
@@ -156,6 +160,8 @@ export class MotionDebugRecordingController {
         }
 
         const debugSnapshot = this.params.getDebugSnapshot();
+        const phase6 = createMotionDebugLivePhase6SolverSnapshot(debugSnapshot.poseRetargetRuntime);
+        const finalPose = createMotionDebugLiveFinalPoseSnapshot(debugSnapshot.poseRetargetRuntime);
         const result = this.recorder.recordFrame({
             timestamp: createMotionDebugFrameTimestamp(mediaTimeMs, timing),
             video: {
@@ -169,7 +175,9 @@ export class MotionDebugRecordingController {
             solver: {
                 poseRetarget: debugSnapshot.poseRetarget,
                 poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
+                phase6,
             },
+            finalPose,
             metrics: {
                 receivedAtPerformanceMs: performance.now(),
                 tracker: this.params.getTrackerStats(),

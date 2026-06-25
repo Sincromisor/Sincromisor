@@ -22,6 +22,10 @@ import {
     SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION,
     type SincroMotionDebugLogManifest,
 } from "../motionDebugLogSchema";
+import {
+    parseMotionDebugFinalPoseSnapshot,
+    parseMotionDebugPhase6SolverSnapshot,
+} from "../motionDebugPhase6Snapshot";
 import { MotionDebugRecorder, type MotionDebugRecorderFrameInput } from "../motionDebugRecorder";
 
 function createValidManifest(): SincroMotionDebugLogManifest {
@@ -64,6 +68,10 @@ function createValidManifest(): SincroMotionDebugLogManifest {
             boneCapabilities: {},
         },
     };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 const BASE_CANONICAL_META: CanonicalPartMeta = {
@@ -174,6 +182,17 @@ function createValidFrameInput(mediaTimeMs = 120): MotionDebugRecorderFrameInput
             poseRetargetRuntime: {
                 active: true,
             },
+            phase6: createPhase6SolverSnapshot(),
+        },
+        finalPose: {
+            schemaVersion: "sincro.vrm-pose-composer-result.v1",
+            finalPose: {
+                leftUpperArm: { x: 0, y: 0, z: 0, w: 1 },
+            },
+            ownedBones: ["leftUpperArm"],
+            suppressedLayers: [],
+            clampedBones: [],
+            warnings: [],
         },
         metrics: {
             receivedAtPerformanceMs: 456,
@@ -185,6 +204,52 @@ function createValidFrameInput(mediaTimeMs = 120): MotionDebugRecorderFrameInput
             mediaTimeMs,
             poseLastUpdatedAtMs: 300,
         },
+    };
+}
+
+function createPhase6SolverSnapshot(): unknown {
+    return {
+        schemaVersion: "sincro.phase6-solver.v1",
+        profile: {
+            schemaVersion: "sincro.minimal-avatar-motion-profile.v1",
+            optionalBones: {
+                leftHand: true,
+                rightHand: true,
+            },
+            measurements: {
+                shoulderWidth: 0.42,
+            },
+            solverDefaults: {
+                defaultReachScale: 1,
+                depthCompression: 0.55,
+                lateralScale: 1,
+                verticalScale: 0.92,
+                shoulderDamping: 0.65,
+                wristRollInfluence: 0.25,
+            },
+            warnings: [],
+        },
+        arms: {
+            left: {
+                ik: {
+                    active: true,
+                    targetClamped: false,
+                    weight: 0.8,
+                    poleState: "stable",
+                    constraintReasonCodes: [],
+                },
+            },
+            right: {
+                ik: {
+                    active: true,
+                    targetClamped: false,
+                    weight: 0.8,
+                    poleState: "stable",
+                    constraintReasonCodes: [],
+                },
+            },
+        },
+        warnings: [],
     };
 }
 
@@ -271,6 +336,24 @@ describe("MotionDebugRecorder", () => {
             return;
         }
         expect(temporalParse.state.timestamp.mediaTimeMs).toBe(120);
+        const solver = parsed.frames[0]?.solver;
+        expect(solver).toMatchObject({
+            phase6: {
+                profile: {
+                    schemaVersion: "sincro.minimal-avatar-motion-profile.v1",
+                },
+            },
+        });
+        const phase6Parse = parseMotionDebugPhase6SolverSnapshot(
+            isRecord(solver) ? solver.phase6 : undefined,
+        );
+        expect(phase6Parse.ok).toBe(true);
+        const finalPoseParse = parseMotionDebugFinalPoseSnapshot(parsed.frames[0]?.finalPose);
+        expect(finalPoseParse.ok).toBe(true);
+        if (!finalPoseParse.ok) {
+            return;
+        }
+        expect(finalPoseParse.snapshot.ownedBones).toEqual(["leftUpperArm"]);
     });
 
     it("exports camera quality only under frame metrics", () => {

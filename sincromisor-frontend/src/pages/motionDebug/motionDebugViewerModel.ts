@@ -6,6 +6,12 @@ import type {
     SincroMotionDebugFrame,
     SincroMotionDebugLogManifest,
 } from "../../character/motionEvaluation/motionDebugLogSchema";
+import {
+    type MotionDebugFinalPoseSnapshot,
+    type MotionDebugPhase6SolverSnapshot,
+    parseMotionDebugFinalPoseSnapshot,
+    parseMotionDebugPhase6SolverSnapshot,
+} from "../../character/motionEvaluation/motionDebugPhase6Snapshot";
 import type {
     MotionMetricComparison,
     MotionMetricKey,
@@ -21,8 +27,10 @@ import {
     parseTemporalUpperBodyState,
     type TemporalUpperBodyState,
 } from "../../character/temporal/temporalUpperBodyState";
+import { createMotionDebugLivePhase6SolverSnapshot } from "./motionDebugPhase6Snapshots";
 import type {
     CanonicalLayerParseError,
+    FinalPoseLayerParseError,
     MotionDebugLayerKey,
     MotionDebugLayerSnapshot,
     MotionDebugReplayState,
@@ -30,6 +38,7 @@ import type {
     MotionDebugViewerMode,
     MotionDebugViewerSnapshot,
     ReliabilityLayerParseError,
+    SolverLayerParseError,
     TemporalLayerParseError,
 } from "./types";
 
@@ -72,7 +81,6 @@ const RESERVED_PHASE_1_LAYERS = new Set<MotionDebugLayerKey>([
     "mediapipe",
     "canonical",
     "intent",
-    "finalPose",
     "applied",
 ]);
 
@@ -130,14 +138,67 @@ function createLayerSnapshots(
         canonical: createLayerSnapshot("canonical", resolveCanonicalValue(context), true),
         temporal: createLayerSnapshot("temporal", resolveTemporalValue(context), false),
         intent: createLayerSnapshot("intent", context.replayFrame?.intent, true),
-        solver: createLayerSnapshot(
-            "solver",
-            context.replayFrame?.solver ?? context.liveSnapshot.poseRetarget,
-            false,
-        ),
-        finalPose: createLayerSnapshot("finalPose", context.replayFrame?.finalPose, true),
+        solver: createParsedLayerSnapshot("solver", resolveSolverValue(context)),
+        finalPose: createParsedLayerSnapshot("finalPose", resolveFinalPoseValue(context)),
         applied: createLayerSnapshot("applied", context.replayFrame?.applied, true),
         metrics: createMetricsLayerSnapshot(context),
+    };
+}
+
+function resolveSolverValue(
+    context: MotionDebugViewerContext,
+): MotionDebugPhase6SolverSnapshot | SolverLayerParseError | undefined {
+    if (context.replayFrame !== undefined) {
+        const phase6 = resolveReplayPhase6SolverValue(context.replayFrame);
+        return phase6 === undefined ? undefined : parseSolverLayerValue(phase6);
+    }
+    return createMotionDebugLivePhase6SolverSnapshot(context.liveSnapshot.poseRetargetRuntime);
+}
+
+function resolveReplayPhase6SolverValue(frame: SincroMotionDebugFrame): unknown | undefined {
+    if (!isRecord(frame.solver)) {
+        return undefined;
+    }
+    return frame.solver.phase6;
+}
+
+function parseSolverLayerValue(
+    value: unknown,
+): MotionDebugPhase6SolverSnapshot | SolverLayerParseError {
+    const parsed = parseMotionDebugPhase6SolverSnapshot(value);
+    if (parsed.ok) {
+        return parsed.snapshot;
+    }
+    return {
+        parseStatus: "invalid",
+        errors: parsed.errors,
+        raw: value,
+    };
+}
+
+function resolveFinalPoseValue(
+    context: MotionDebugViewerContext,
+): MotionDebugFinalPoseSnapshot | FinalPoseLayerParseError | undefined {
+    if (context.replayFrame !== undefined) {
+        if (context.replayFrame.finalPose === undefined) {
+            return undefined;
+        }
+        return parseFinalPoseLayerValue(context.replayFrame.finalPose);
+    }
+    return context.liveSnapshot.finalPose;
+}
+
+function parseFinalPoseLayerValue(
+    value: unknown,
+): MotionDebugFinalPoseSnapshot | FinalPoseLayerParseError {
+    const parsed = parseMotionDebugFinalPoseSnapshot(value);
+    if (parsed.ok) {
+        return parsed.snapshot;
+    }
+    return {
+        parseStatus: "invalid",
+        errors: parsed.errors,
+        raw: value,
     };
 }
 
@@ -267,6 +328,20 @@ function createLayerSnapshot(
     };
 }
 
+function createParsedLayerSnapshot(
+    key: MotionDebugLayerKey,
+    value: unknown,
+): MotionDebugLayerSnapshot {
+    if (isInvalidLayerValue(value)) {
+        return {
+            status: "invalid",
+            label: LAYER_LABELS[key],
+            value,
+        };
+    }
+    return createLayerSnapshot(key, value, false);
+}
+
 function createMetricsLayerSnapshot(context: MotionDebugViewerContext): MotionDebugLayerSnapshot {
     const metrics = context.metrics;
     if (metrics === undefined || !hasRecordedValue(metrics.metrics)) {
@@ -301,4 +376,8 @@ function hasRecordedValue(value: unknown): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isInvalidLayerValue(value: unknown): boolean {
+    return isRecord(value) && value.parseStatus === "invalid";
 }
