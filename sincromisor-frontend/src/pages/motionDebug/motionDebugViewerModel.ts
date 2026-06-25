@@ -12,6 +12,10 @@ import {
     parseMotionDebugFinalPoseSnapshot,
     parseMotionDebugPhase6SolverSnapshot,
 } from "../../character/motionEvaluation/motionDebugPhase6Snapshot";
+import {
+    type MotionDebugPhase7Snapshot,
+    parseMotionDebugPhase7Snapshot,
+} from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import type {
     MotionMetricComparison,
     MotionMetricKey,
@@ -39,6 +43,7 @@ import type {
     MotionDebugViewerSnapshot,
     ReliabilityLayerParseError,
     SolverLayerParseError,
+    SolverLayerValue,
     TemporalLayerParseError,
 } from "./types";
 
@@ -138,21 +143,26 @@ function createLayerSnapshots(
         canonical: createLayerSnapshot("canonical", resolveCanonicalValue(context), true),
         temporal: createLayerSnapshot("temporal", resolveTemporalValue(context), false),
         intent: createLayerSnapshot("intent", context.replayFrame?.intent, true),
-        solver: createParsedLayerSnapshot("solver", resolveSolverValue(context)),
+        solver: createSolverLayerSnapshot(resolveSolverValue(context)),
         finalPose: createParsedLayerSnapshot("finalPose", resolveFinalPoseValue(context)),
         applied: createLayerSnapshot("applied", context.replayFrame?.applied, true),
         metrics: createMetricsLayerSnapshot(context),
     };
 }
 
-function resolveSolverValue(
-    context: MotionDebugViewerContext,
-): MotionDebugPhase6SolverSnapshot | SolverLayerParseError | undefined {
+function resolveSolverValue(context: MotionDebugViewerContext): SolverLayerValue {
     if (context.replayFrame !== undefined) {
-        const phase6 = resolveReplayPhase6SolverValue(context.replayFrame);
-        return phase6 === undefined ? undefined : parseSolverLayerValue(phase6);
+        return {
+            phase6: parsePhase6SolverSubLayer(resolveReplayPhase6SolverValue(context.replayFrame)),
+            phase7: parsePhase7SolverSubLayer(resolveReplayPhase7SolverValue(context.replayFrame)),
+        };
     }
-    return createMotionDebugLivePhase6SolverSnapshot(context.liveSnapshot.poseRetargetRuntime);
+    return {
+        phase6: createAvailableSolverSubLayer(
+            createMotionDebugLivePhase6SolverSnapshot(context.liveSnapshot.poseRetargetRuntime),
+        ),
+        phase7: createAvailableSolverSubLayer(context.liveSnapshot.phase7),
+    };
 }
 
 function resolveReplayPhase6SolverValue(frame: SincroMotionDebugFrame): unknown | undefined {
@@ -162,10 +172,62 @@ function resolveReplayPhase6SolverValue(frame: SincroMotionDebugFrame): unknown 
     return frame.solver.phase6;
 }
 
-function parseSolverLayerValue(
+function resolveReplayPhase7SolverValue(frame: SincroMotionDebugFrame): unknown | undefined {
+    if (!isRecord(frame.solver)) {
+        return undefined;
+    }
+    return frame.solver.phase7;
+}
+
+function parsePhase6SolverSubLayer(value: unknown): SolverLayerValue["phase6"] {
+    if (value === undefined) {
+        return { status: "not_recorded" };
+    }
+    const parsed = parsePhase6SolverLayerValue(value);
+    if (isSolverLayerParseError(parsed)) {
+        return { status: "invalid", value: parsed };
+    }
+    return { status: "available", value: parsed };
+}
+
+function parsePhase7SolverSubLayer(value: unknown): SolverLayerValue["phase7"] {
+    if (value === undefined) {
+        return { status: "not_recorded" };
+    }
+    const parsed = parsePhase7SolverLayerValue(value);
+    if (isSolverLayerParseError(parsed)) {
+        return { status: "invalid", value: parsed };
+    }
+    return { status: "available", value: parsed };
+}
+
+function createAvailableSolverSubLayer(
+    value: MotionDebugPhase6SolverSnapshot | MotionDebugPhase7Snapshot | undefined,
+): SolverLayerValue["phase6"] | SolverLayerValue["phase7"] {
+    if (value === undefined) {
+        return { status: "not_recorded" };
+    }
+    return { status: "available", value };
+}
+
+function parsePhase6SolverLayerValue(
     value: unknown,
 ): MotionDebugPhase6SolverSnapshot | SolverLayerParseError {
     const parsed = parseMotionDebugPhase6SolverSnapshot(value);
+    if (parsed.ok) {
+        return parsed.snapshot;
+    }
+    return {
+        parseStatus: "invalid",
+        errors: parsed.errors,
+        raw: value,
+    };
+}
+
+function parsePhase7SolverLayerValue(
+    value: unknown,
+): MotionDebugPhase7Snapshot | SolverLayerParseError {
+    const parsed = parseMotionDebugPhase7Snapshot(value);
     if (parsed.ok) {
         return parsed.snapshot;
     }
@@ -342,6 +404,20 @@ function createParsedLayerSnapshot(
     return createLayerSnapshot(key, value, false);
 }
 
+function createSolverLayerSnapshot(value: SolverLayerValue): MotionDebugLayerSnapshot {
+    if (value.phase6.status === "not_recorded" && value.phase7.status === "not_recorded") {
+        return {
+            status: "not_recorded",
+            label: LAYER_LABELS.solver,
+        };
+    }
+    return {
+        status: "available",
+        label: LAYER_LABELS.solver,
+        value,
+    };
+}
+
 function createMetricsLayerSnapshot(context: MotionDebugViewerContext): MotionDebugLayerSnapshot {
     const metrics = context.metrics;
     if (metrics === undefined || !hasRecordedValue(metrics.metrics)) {
@@ -380,4 +456,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isInvalidLayerValue(value: unknown): boolean {
     return isRecord(value) && value.parseStatus === "invalid";
+}
+
+function isSolverLayerParseError(
+    value: MotionDebugPhase6SolverSnapshot | MotionDebugPhase7Snapshot | SolverLayerParseError,
+): value is SolverLayerParseError {
+    return isInvalidLayerValue(value);
 }

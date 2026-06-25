@@ -3,6 +3,7 @@ import {
     type CanonicalUpperBodyState,
     parseCanonicalUpperBodyState,
 } from "../../character/canonical/canonicalUpperBodyState";
+import { createMotionDebugPhase7Snapshot } from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import type {
     MotionDebugRecorderConfig,
     MotionDebugRecorderResult,
@@ -219,6 +220,7 @@ export class MotionDebugApp {
             getTrackerStats: () => this.latestTrackerStats,
             getDebugSnapshot: () => this.debugConsole.getSnapshot().sincroMotion,
             getFaceSnapshot: () => this.latestFaceSnapshot,
+            getAvatarMotionProfile: () => this.currentAvatarMotionProfile(),
             getVrmUrl: () => getMotionDebugVrmUrl(),
             poseTargetInferenceFps: POSE_TARGET_INFERENCE_FPS,
             onCanonicalStateChange: (state) => {
@@ -300,6 +302,7 @@ export class MotionDebugApp {
             tracker: this.latestTrackerStats,
             poseRetarget: debugSnapshot.poseRetarget,
             poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
+            phase7: this.createLivePhase7Snapshot(),
             finalPose: createMotionDebugLiveFinalPoseSnapshot(debugSnapshot.poseRetargetRuntime),
             render: this.renderMetrics(),
         };
@@ -660,6 +663,17 @@ export class MotionDebugApp {
             return undefined;
         }
         return canonical;
+    }
+
+    private currentAvatarMotionProfile(): ReturnType<VRMScene["getAvatarMotionProfile"]> {
+        return this.scene.getAvatarMotionProfile();
+    }
+
+    private createLivePhase7Snapshot(): ReturnType<typeof createMotionDebugPhase7Snapshot> {
+        return createMotionDebugPhase7Snapshot({
+            profile: this.currentAvatarMotionProfile(),
+            activeCanonicalCalibration: this.latestValidCanonical()?.calibration,
+        });
     }
 
     private updateReplayTemporal(context: MotionReplayApplyContext): void {

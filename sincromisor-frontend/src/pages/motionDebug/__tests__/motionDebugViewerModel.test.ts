@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+    AVATAR_MOTION_PROFILE_SCHEMA_VERSION,
+    type AvatarMotionProfile,
+} from "../../../character/avatarProfile/avatarMotionProfile";
+import {
     CANONICAL_UPPER_BODY_SCHEMA_VERSION,
     type CanonicalArmState,
     type CanonicalPartMeta,
@@ -11,6 +15,10 @@ import {
     type SincroMotionDebugLogManifest,
 } from "../../../character/motionEvaluation/motionDebugLogSchema";
 import type { MotionDebugFinalPoseSnapshot } from "../../../character/motionEvaluation/motionDebugPhase6Snapshot";
+import {
+    MOTION_DEBUG_PHASE7_SCHEMA_VERSION,
+    type MotionDebugPhase7Snapshot,
+} from "../../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import { calculateMotionMetricSummary } from "../../../character/motionEvaluation/motionMetrics";
 import { MotionReplayPlayer } from "../../../character/motionEvaluation/motionReplayPlayer";
 import {
@@ -382,6 +390,32 @@ function createPhase6Solver(): unknown {
     };
 }
 
+function createPhase7Snapshot(id = "phase7-calibration"): MotionDebugPhase7Snapshot {
+    return {
+        schemaVersion: MOTION_DEBUG_PHASE7_SCHEMA_VERSION,
+        profile: createFullAvatarMotionProfile(),
+        activeCanonicalCalibration: {
+            id,
+            source: "online",
+            neutralYawRad: 0.02,
+            shoulderWidth: 0.42,
+            torsoScale: 1.04,
+            handBaseline: {
+                left: {
+                    palmSize: 0.08,
+                    openSpread: 0.18,
+                },
+                right: {
+                    palmSize: 0.081,
+                    openSpread: 0.176,
+                },
+            },
+            capturedAtMediaTimeMs: 240,
+        },
+        warnings: [],
+    };
+}
+
 function createFinalPose(): MotionDebugFinalPoseSnapshot {
     return {
         schemaVersion: "sincro.vrm-pose-composer-result.v1",
@@ -395,6 +429,97 @@ function createFinalPose(): MotionDebugFinalPoseSnapshot {
     };
 }
 
+function createFullAvatarMotionProfile(): AvatarMotionProfile {
+    const fingerChain = {
+        proximal: true,
+        intermediate: true,
+        distal: true,
+    };
+    const hand = {
+        thumb: fingerChain,
+        index: fingerChain,
+        middle: fingerChain,
+        ring: fingerChain,
+        little: fingerChain,
+    };
+    return {
+        schemaVersion: AVATAR_MOTION_PROFILE_SCHEMA_VERSION,
+        model: {
+            vrmVersion: "1.0",
+            modelName: "Motion debug avatar",
+        },
+        capabilities: {
+            bones: {
+                upperChest: true,
+                leftShoulder: true,
+                rightShoulder: true,
+                leftHand: true,
+                rightHand: true,
+            },
+            fingerChains: {
+                left: hand,
+                right: hand,
+            },
+        },
+        restLocalRotation: {},
+        metrics: {
+            shoulderWidth: 0.42,
+            torsoLength: 0.5,
+            headSize: 0.22,
+            upperArmLength: {
+                left: 0.24,
+                right: 0.24,
+            },
+            lowerArmLength: {
+                left: 0.22,
+                right: 0.22,
+            },
+            handSize: {
+                left: 0.08,
+                right: 0.081,
+            },
+        },
+        torso: {
+            distribution: {
+                spine: 0.25,
+                chest: 0.4,
+                upperChest: 0.35,
+            },
+            chestFollow: 0.55,
+        },
+        arm: {
+            reachScale: 0.92,
+            lateralScale: 0.9,
+            verticalScale: 0.95,
+            depthCompression: 0.6,
+            elbowOutwardBias: 0.25,
+            shoulderDamping: 0.55,
+        },
+        wrist: {
+            wristRollInfluence: 0.4,
+            lowerArmTwistShare: 0.65,
+            handTwistShare: 0.35,
+        },
+        fingers: {
+            curlScale: 0.8,
+            curlMode: "grouped",
+            curlDistribution: {
+                proximal: 0.5,
+                intermediate: 0.3,
+                distal: 0.2,
+            },
+            splayLimitDeg: 12,
+        },
+        risk: {
+            smallBodyLargeHead: 0.2,
+            missingUpperChest: false,
+            missingShoulders: false,
+            constraintRisk: 0.1,
+        },
+        warnings: [],
+    };
+}
+
 function createLiveSnapshot(
     options: {
         canonical?: MotionDebugSnapshot["canonical"];
@@ -402,6 +527,7 @@ function createLiveSnapshot(
         temporal?: MotionDebugSnapshot["temporal"];
         cameraQuality?: CameraQualityScore;
         cameraSource?: MotionDebugSnapshot["camera"]["source"];
+        phase7?: MotionDebugPhase7Snapshot;
         finalPose?: MotionDebugSnapshot["finalPose"];
     } = {},
 ): MotionDebugSnapshot {
@@ -429,6 +555,7 @@ function createLiveSnapshot(
         tracker: debugSnapshot.tracker,
         poseRetarget: debugSnapshot.poseRetarget,
         poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
+        phase7: options.phase7,
         finalPose: options.finalPose,
         render: {
             renderFps: 60,
@@ -584,25 +711,33 @@ describe("createMotionDebugViewerSnapshot", () => {
 
         expect(viewer.layers.solver.status).toBe("available");
         expect(viewer.layers.solver.value).toMatchObject({
-            schemaVersion: "sincro.phase6-solver.v1",
-            profile: {
-                schemaVersion: "sincro.minimal-avatar-motion-profile.v1",
-                measurements: {
-                    shoulderWidth: 0.4,
-                },
-            },
-            arms: {
-                left: {
-                    ik: {
-                        poleState: "uncertain",
-                        constraintReasonCodes: ["pole_flip_rejected"],
+            phase6: {
+                status: "available",
+                value: {
+                    schemaVersion: "sincro.phase6-solver.v1",
+                    profile: {
+                        schemaVersion: "sincro.minimal-avatar-motion-profile.v1",
+                        measurements: {
+                            shoulderWidth: 0.4,
+                        },
+                    },
+                    arms: {
+                        left: {
+                            ik: {
+                                poleState: "uncertain",
+                                constraintReasonCodes: ["pole_flip_rejected"],
+                            },
+                        },
                     },
                 },
+            },
+            phase7: {
+                status: "not_recorded",
             },
         });
     });
 
-    it("shows invalid solver and finalPose snapshots as invalid layers", () => {
+    it("shows invalid solver sublayers without failing finalPose invalid handling", () => {
         const liveSnapshot = createLiveSnapshot();
         const viewer = createMotionDebugViewerSnapshot({
             mode: "replay",
@@ -638,7 +773,21 @@ describe("createMotionDebugViewerSnapshot", () => {
             },
         });
 
-        expect(viewer.layers.solver.status).toBe("invalid");
+        expect(viewer.layers.solver.status).toBe("available");
+        expect(viewer.layers.solver.value).toMatchObject({
+            phase6: {
+                status: "invalid",
+                value: {
+                    parseStatus: "invalid",
+                    raw: {
+                        schemaVersion: "sincro.phase6-solver.v1",
+                    },
+                },
+            },
+            phase7: {
+                status: "not_recorded",
+            },
+        });
         expect(viewer.layers.finalPose.status).toBe("invalid");
     });
 
@@ -672,18 +821,174 @@ describe("createMotionDebugViewerSnapshot", () => {
 
         expect(viewer.layers.solver.status).toBe("available");
         expect(viewer.layers.solver.value).toMatchObject({
-            arms: {
-                left: {
-                    ik: {
-                        poleState: "uncertain",
+            phase6: {
+                status: "available",
+                value: {
+                    arms: {
+                        left: {
+                            ik: {
+                                poleState: "uncertain",
+                            },
+                        },
                     },
                 },
+            },
+            phase7: {
+                status: "not_recorded",
             },
         });
         expect(viewer.layers.finalPose.status).toBe("available");
         expect(viewer.layers.finalPose.value).toMatchObject({
             schemaVersion: "sincro.vrm-pose-composer-result.v1",
             ownedBones: ["leftUpperArm"],
+        });
+    });
+
+    it("shows saved Phase 7 replay sublayer next to Phase 6", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "solver",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                solver: {
+                    phase6: createPhase6Solver(),
+                    phase7: createPhase7Snapshot("phase7-replay"),
+                },
+            },
+        });
+
+        expect(viewer.layers.solver.status).toBe("available");
+        expect(viewer.layers.solver.value).toMatchObject({
+            phase6: {
+                status: "available",
+            },
+            phase7: {
+                status: "available",
+                value: {
+                    schemaVersion: MOTION_DEBUG_PHASE7_SCHEMA_VERSION,
+                    profile: {
+                        schemaVersion: AVATAR_MOTION_PROFILE_SCHEMA_VERSION,
+                    },
+                    activeCanonicalCalibration: {
+                        id: "phase7-replay",
+                    },
+                },
+            },
+        });
+    });
+
+    it("keeps solver available when Phase 7 replay sublayer is invalid", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "solver",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                solver: {
+                    phase6: createPhase6Solver(),
+                    phase7: {
+                        schemaVersion: MOTION_DEBUG_PHASE7_SCHEMA_VERSION,
+                        activeCanonicalCalibration: {
+                            id: "phase7-invalid",
+                            source: "online",
+                            neutralYawRad: 0.02,
+                            shoulderWidth: -1,
+                            torsoScale: 1.04,
+                            handBaseline: {
+                                left: {
+                                    palmSize: 0.08,
+                                    openSpread: 0.18,
+                                },
+                                right: {
+                                    palmSize: 0.081,
+                                    openSpread: 0.176,
+                                },
+                            },
+                            capturedAtMediaTimeMs: 240,
+                        },
+                        warnings: [],
+                    },
+                },
+            },
+        });
+
+        expect(viewer.layers.solver.status).toBe("available");
+        expect(viewer.layers.solver.value).toMatchObject({
+            phase6: {
+                status: "available",
+            },
+            phase7: {
+                status: "invalid",
+                value: {
+                    parseStatus: "invalid",
+                    errors: expect.arrayContaining([
+                        expect.objectContaining({
+                            code: "out_of_range",
+                            path: ["activeCanonicalCalibration", "shoulderWidth"],
+                        }),
+                    ]),
+                },
+            },
+        });
+    });
+
+    it("shows live Phase 7 snapshot from live snapshot state", () => {
+        const liveSnapshot = createLiveSnapshot({
+            phase7: createPhase7Snapshot("phase7-live"),
+        });
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "live",
+            selectedLayer: "solver",
+            liveSnapshot,
+            replayState: {
+                status: "idle",
+                frameCount: 0,
+            },
+        });
+
+        expect(viewer.layers.solver.status).toBe("available");
+        expect(viewer.layers.solver.value).toMatchObject({
+            phase6: {
+                status: "not_recorded",
+            },
+            phase7: {
+                status: "available",
+                value: {
+                    activeCanonicalCalibration: {
+                        id: "phase7-live",
+                    },
+                },
+            },
         });
     });
 

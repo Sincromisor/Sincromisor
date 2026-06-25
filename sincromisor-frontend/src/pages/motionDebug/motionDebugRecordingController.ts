@@ -1,6 +1,10 @@
+import type { AvatarMotionProfile } from "../../character/avatarProfile/avatarMotionProfile";
+import type { InitialSincroCalibrationSession } from "../../character/calibration/initialSincroCalibration";
+import type { OnlineSincroCalibrationState } from "../../character/calibration/onlineSincroCalibrationTypes";
 import type { CanonicalUpperBodyState } from "../../character/canonical/canonicalUpperBodyState";
 import type { SincroMotionDebugLogManifest } from "../../character/motionEvaluation/motionDebugLogSchema";
 import { SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION } from "../../character/motionEvaluation/motionDebugLogSchema";
+import { createMotionDebugPhase7Snapshot } from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import {
     MotionDebugRecorder,
     type MotionDebugRecorderConfig,
@@ -52,6 +56,9 @@ type MotionDebugRecordingControllerParams = {
     getTrackerStats: () => SincroTrackerWorkerStats;
     getDebugSnapshot: () => DebugConsoleSnapshot["sincroMotion"];
     getFaceSnapshot: () => SincroFaceMotionSnapshot;
+    getAvatarMotionProfile: () => AvatarMotionProfile | undefined;
+    getInitialCalibrationSession?: () => InitialSincroCalibrationSession | undefined;
+    getOnlineCalibrationState?: () => OnlineSincroCalibrationState | undefined;
     getVrmUrl: () => string;
     poseTargetInferenceFps: number;
     onCanonicalStateChange: (state: CanonicalUpperBodyState | undefined) => void;
@@ -161,6 +168,12 @@ export class MotionDebugRecordingController {
 
         const debugSnapshot = this.params.getDebugSnapshot();
         const phase6 = createMotionDebugLivePhase6SolverSnapshot(debugSnapshot.poseRetargetRuntime);
+        const phase7 = createMotionDebugPhase7Snapshot({
+            profile: this.params.getAvatarMotionProfile(),
+            initialCalibration: this.params.getInitialCalibrationSession?.(),
+            onlineCalibration: this.params.getOnlineCalibrationState?.(),
+            activeCanonicalCalibration: canonical.calibration,
+        });
         const finalPose = createMotionDebugLiveFinalPoseSnapshot(debugSnapshot.poseRetargetRuntime);
         const result = this.recorder.recordFrame({
             timestamp: createMotionDebugFrameTimestamp(mediaTimeMs, timing),
@@ -176,6 +189,7 @@ export class MotionDebugRecordingController {
                 poseRetarget: debugSnapshot.poseRetarget,
                 poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
                 phase6,
+                phase7,
             },
             finalPose,
             metrics: {

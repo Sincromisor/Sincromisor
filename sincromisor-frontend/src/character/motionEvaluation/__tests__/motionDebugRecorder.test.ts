@@ -26,6 +26,7 @@ import {
     parseMotionDebugFinalPoseSnapshot,
     parseMotionDebugPhase6SolverSnapshot,
 } from "../motionDebugPhase6Snapshot";
+import { parseMotionDebugPhase7Snapshot } from "../motionDebugPhase7Snapshot";
 import { MotionDebugRecorder, type MotionDebugRecorderFrameInput } from "../motionDebugRecorder";
 
 function createValidManifest(): SincroMotionDebugLogManifest {
@@ -183,6 +184,7 @@ function createValidFrameInput(mediaTimeMs = 120): MotionDebugRecorderFrameInput
                 active: true,
             },
             phase6: createPhase6SolverSnapshot(),
+            phase7: createPhase7Snapshot(),
         },
         finalPose: {
             schemaVersion: "sincro.vrm-pose-composer-result.v1",
@@ -249,6 +251,14 @@ function createPhase6SolverSnapshot(): unknown {
                 },
             },
         },
+        warnings: [],
+    };
+}
+
+function createPhase7Snapshot(): unknown {
+    return {
+        schemaVersion: "sincro.phase7-profile-calibration.v1",
+        activeCanonicalCalibration: DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
         warnings: [],
     };
 }
@@ -348,6 +358,10 @@ describe("MotionDebugRecorder", () => {
             isRecord(solver) ? solver.phase6 : undefined,
         );
         expect(phase6Parse.ok).toBe(true);
+        const phase7Parse = parseMotionDebugPhase7Snapshot(
+            isRecord(solver) ? solver.phase7 : undefined,
+        );
+        expect(phase7Parse.ok).toBe(true);
         const finalPoseParse = parseMotionDebugFinalPoseSnapshot(parsed.frames[0]?.finalPose);
         expect(finalPoseParse.ok).toBe(true);
         if (!finalPoseParse.ok) {
@@ -488,6 +502,44 @@ describe("MotionDebugRecorder", () => {
             return;
         }
         expect(topLevelCameraQuality.code).toBe("invalid_frame");
+    });
+
+    it("allows Phase 7 solver payload validation to stay in the layer parser", () => {
+        const recorder = new MotionDebugRecorder({ compression: "none" });
+        expect(recorder.start(createValidManifest()).ok).toBe(true);
+        const frameInput = createValidFrameInput();
+        const recordResult = recorder.recordFrame({
+            ...frameInput,
+            solver: {
+                phase6: createPhase6SolverSnapshot(),
+                phase7: {
+                    schemaVersion: "sincro.phase7-profile-calibration.v1",
+                    activeCanonicalCalibration: {
+                        ...DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
+                        shoulderWidth: -1,
+                    },
+                    warnings: [],
+                },
+            },
+        });
+
+        expect(recordResult.ok).toBe(true);
+        expect(recorder.stop().ok).toBe(true);
+        const exportResult = recorder.exportNdjson();
+        expect(exportResult.ok).toBe(true);
+        if (!exportResult.ok) {
+            return;
+        }
+        const parsed = parseMotionDebugLogLines(exportResult.ndjson.trimEnd().split("\n"));
+        expect(parsed.ok).toBe(true);
+        if (!parsed.ok) {
+            return;
+        }
+        const solver = parsed.frames[0]?.solver;
+        const phase7Parse = parseMotionDebugPhase7Snapshot(
+            isRecord(solver) ? solver.phase7 : undefined,
+        );
+        expect(phase7Parse.ok).toBe(false);
     });
 
     it("skips consecutive duplicate frames without entering error state", () => {
