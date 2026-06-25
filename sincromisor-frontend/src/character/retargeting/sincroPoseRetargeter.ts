@@ -2,10 +2,10 @@ import type { VRM } from "@pixiv/three-vrm";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import {
-    cloneMinimalAvatarMotionProfile,
-    createMinimalAvatarMotionProfile,
-    type MinimalAvatarMotionProfile,
-} from "../avatarProfile/minimalAvatarMotionProfile";
+    type AvatarMotionProfile,
+    cloneAvatarMotionProfile,
+    createAvatarMotionProfile,
+} from "../avatarProfile/avatarMotionProfile";
 import { SincroArmIkSolver } from "../ik/sincroArmIkSolver";
 import { runSincroCcdIkProbe, type SincroCcdIkProbeResult } from "../ik/sincroCcdIkProbe";
 import { retargetPoseArm } from "./sincroPoseArmRetargeter";
@@ -44,7 +44,7 @@ export class SincroPoseRetargeter {
     private smoothedFrame: SincroPoseRetargetFrame = cloneFrame(NEUTRAL_POSE_FRAME);
     private armIkSolvers?: Record<"left" | "right", SincroArmIkSolver>;
     private ccdIkProbeResult?: SincroCcdIkProbeResult;
-    private avatarMotionProfile?: MinimalAvatarMotionProfile;
+    private avatarMotionProfile?: AvatarMotionProfile;
 
     constructor(config: Partial<SincroPoseRetargetConfig> = {}) {
         this.config = {
@@ -80,15 +80,15 @@ export class SincroPoseRetargeter {
     }
 
     attachVrm(vrm: VRM): void {
-        this.avatarMotionProfile = createMinimalAvatarMotionProfile(vrm);
+        this.avatarMotionProfile = createAvatarMotionProfile(vrm);
         this.armIkSolvers = measureArmIkSolvers(vrm);
         this.ccdIkProbeResult = runSincroCcdIkProbe(vrm, "left");
         this.reset();
     }
 
-    getAvatarMotionProfile(): MinimalAvatarMotionProfile | undefined {
+    getAvatarMotionProfile(): AvatarMotionProfile | undefined {
         return this.avatarMotionProfile
-            ? cloneMinimalAvatarMotionProfile(this.avatarMotionProfile)
+            ? cloneAvatarMotionProfile(this.avatarMotionProfile)
             : undefined;
     }
 

@@ -6,6 +6,7 @@ import { Vector3 } from "three/src/math/Vector3.js";
 import type { Scene } from "three/src/scenes/Scene.js";
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { frontendLogger } from "../../shared/logging/appLogger";
+import { toMinimalAvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
 import {
     type CharacterBehaviorSnapshot,
     CharacterBehaviorState,
@@ -132,8 +133,9 @@ export class VRMCharacterManager {
         this.armBoneController = new ArmBoneController(vrm);
         this.armBoneController.update(this.motionElapsedSeconds);
         this.sincroPoseRetargeter.attachVrm(vrm);
+        const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
         DebugConsoleManager.getManager().updateAvatarMotionProfile(
-            this.sincroPoseRetargeter.getAvatarMotionProfile(),
+            avatarMotionProfile ? toMinimalAvatarMotionProfile(avatarMotionProfile) : undefined,
         );
         this.legBoneController = new LegBoneController(vrm);
         this.legBoneController.update(this.motionElapsedSeconds);
