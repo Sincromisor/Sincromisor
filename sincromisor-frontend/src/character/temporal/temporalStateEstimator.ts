@@ -2,16 +2,14 @@ import type { CanonicalUpperBodyState } from "../canonical/canonicalUpperBodySta
 import type { ReliabilityMap } from "../reliability/reliabilityMap";
 import type { OneEuroFilterConfig } from "./oneEuroFilter";
 import { createArmFilters, resetArmFilters } from "./temporalArmFilters";
-import {
-    type ClassificationHold,
-    uniqueWarnings,
-    updateTemporalArm,
-} from "./temporalArmStateEstimator";
+import { type ClassificationHold, updateTemporalArm } from "./temporalArmStateEstimator";
+import { updateTemporalHead } from "./temporalHeadStateEstimator";
 import { aggregateArmReliability } from "./temporalReliabilityAggregation";
 import {
     TEMPORAL_UPPER_BODY_SCHEMA_VERSION,
     type TemporalUpperBodyState,
 } from "./temporalUpperBodyState";
+import { uniqueWarnings } from "./temporalWarnings";
 
 export type TemporalStateEstimatorConfig = {
     armFilter: OneEuroFilterConfig;
@@ -20,6 +18,11 @@ export type TemporalStateEstimatorConfig = {
     classificationConfidenceThreshold: number;
     classificationHoldMs: number;
     maxFilterDtMs: number;
+    predictionMaxMs: number;
+    predictionVelocityDampingPerSec: number;
+    comfortableFallbackAfterMs: number;
+    recoveringBlendMs: number;
+    maxRecoveringAngleJumpRad: number;
 };
 
 export type TemporalStateEstimatorInput = {
@@ -42,6 +45,11 @@ export function createDefaultTemporalStateEstimatorConfig(): TemporalStateEstima
         classificationConfidenceThreshold: 0.35,
         classificationHoldMs: 160,
         maxFilterDtMs: 250,
+        predictionMaxMs: 700,
+        predictionVelocityDampingPerSec: 0.55,
+        comfortableFallbackAfterMs: 700,
+        recoveringBlendMs: 260,
+        maxRecoveringAngleJumpRad: (15 * Math.PI) / 180,
     };
 }
 
@@ -56,9 +64,9 @@ export class TemporalStateEstimator {
     constructor(
         config: TemporalStateEstimatorConfig = createDefaultTemporalStateEstimatorConfig(),
     ) {
-        this.#config = config;
-        this.#leftFilters = createArmFilters(config.armFilter);
-        this.#rightFilters = createArmFilters(config.armFilter);
+        this.#config = normalizeConfig(config);
+        this.#leftFilters = createArmFilters(this.#config.armFilter);
+        this.#rightFilters = createArmFilters(this.#config.armFilter);
     }
 
     update(input: TemporalStateEstimatorInput): TemporalUpperBodyState {
@@ -97,6 +105,15 @@ export class TemporalStateEstimator {
         this.#leftClassificationHold = left.classificationHold;
         this.#rightClassificationHold = right.classificationHold;
 
+        const head = updateTemporalHead({
+            canonicalHead: input.canonical.head,
+            reliability: input.reliability,
+            previousHead: this.#previous?.head,
+            dtMs: safeDtMs,
+            isInvalidDt,
+            config: this.#config,
+        });
+
         const state: TemporalUpperBodyState = {
             schemaVersion: TEMPORAL_UPPER_BODY_SCHEMA_VERSION,
             timestamp: {
@@ -110,6 +127,10 @@ export class TemporalStateEstimator {
             },
             warnings: uniqueWarnings([...left.arm.warnings, ...right.arm.warnings]),
         };
+        if (head !== undefined) {
+            state.head = head;
+        }
+        state.warnings = uniqueWarnings([...state.warnings, ...(state.head?.warnings ?? [])]);
 
         this.#previous = state;
         return state;
@@ -122,4 +143,16 @@ export class TemporalStateEstimator {
         resetArmFilters(this.#leftFilters);
         resetArmFilters(this.#rightFilters);
     }
+}
+
+function normalizeConfig(config: TemporalStateEstimatorConfig): TemporalStateEstimatorConfig {
+    return {
+        ...config,
+        armFilter: { ...config.armFilter },
+        recoveringBlendMs: clamp(config.recoveringBlendMs, 180, 400),
+    };
+}
+
+function clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
 }

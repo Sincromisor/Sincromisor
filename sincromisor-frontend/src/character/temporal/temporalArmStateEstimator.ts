@@ -1,8 +1,14 @@
 import type { CanonicalArmState } from "../canonical/canonicalUpperBodyState";
 import {
+    createComfortableArm,
+    createPredictedArm,
+    createRecoveringArm,
+} from "./temporalArmDropout";
+import {
     type ArmFilters,
     calculateVelocity,
     createZeroVelocity,
+    type FilteredArmValues,
     filterObservedArm,
     holdPreviousArm,
     tupleOrUndefined,
@@ -15,6 +21,7 @@ import {
     type TemporalPartState,
     type TemporalWarningCode,
 } from "./temporalUpperBodyState";
+import { uniqueWarnings } from "./temporalWarnings";
 
 type ArmClassification = TemporalArmState["classification"];
 
@@ -39,18 +46,17 @@ export function updateTemporalArm(context: ArmUpdateContext): {
     arm: TemporalArmState;
     classificationHold: ClassificationHold | undefined;
 } {
-    const state = determineArmState(
+    const observedState = determineArmState(
         context.canonicalArm.confidence,
         context.reliability,
         context.config,
     );
-    const shouldUseCanonical = state !== "lost";
     const previousArm = context.previousArm;
     const defaultArm = createDefaultTemporalUpperBodyState(0).arms[context.side];
     const baseArm = previousArm ?? defaultArm;
     const warnings = buildWarnings(
         context.canonicalArm.confidence,
-        state,
+        observedState,
         context.isInvalidDt,
         context.config,
     );
@@ -67,39 +73,144 @@ export function updateTemporalArm(context: ArmUpdateContext): {
         warnings.push("classification_held");
     }
 
-    const filtered =
-        shouldUseCanonical && !context.isInvalidDt
-            ? filterObservedArm(context.canonicalArm, context.filters, context.dtMs)
-            : holdPreviousArm(baseArm);
-    const velocity =
-        shouldUseCanonical && !context.isInvalidDt
-            ? calculateVelocity(filtered, previousArm, context.dtMs)
-            : createZeroVelocity(previousArm);
+    if (context.isInvalidDt) {
+        return {
+            arm: createObservedArm(
+                context,
+                observedState,
+                baseArm,
+                holdPreviousArm(baseArm),
+                createZeroVelocity(previousArm),
+                uniqueWarnings(warnings),
+                classification.value,
+            ),
+            classificationHold: classification.hold,
+        };
+    }
+
+    if (
+        observedState === "tracked" &&
+        previousArm !== undefined &&
+        (previousArm.state === "lost" ||
+            previousArm.state === "predicted" ||
+            previousArm.state === "recovering")
+    ) {
+        return {
+            arm: createRecoveringArm(context, baseArm, warnings, classification.value),
+            classificationHold: classification.hold,
+        };
+    }
+
+    if (observedState === "lost" && previousArm !== undefined) {
+        const observedAgeMs = (previousArm?.observedAgeMs ?? 0) + context.dtMs;
+        if (observedAgeMs <= context.config.predictionMaxMs) {
+            return {
+                arm: createPredictedArm(
+                    context,
+                    baseArm,
+                    warnings,
+                    classification.value,
+                    observedAgeMs,
+                ),
+                classificationHold: classification.hold,
+            };
+        }
+        if (
+            observedAgeMs >
+            Math.max(context.config.comfortableFallbackAfterMs, context.config.predictionMaxMs)
+        ) {
+            return {
+                arm: createComfortableArm(
+                    context,
+                    baseArm,
+                    warnings,
+                    classification.value,
+                    observedAgeMs,
+                ),
+                classificationHold: classification.hold,
+            };
+        }
+        return {
+            arm: {
+                ...createObservedArm(
+                    context,
+                    observedState,
+                    baseArm,
+                    holdPreviousArm(baseArm),
+                    createZeroVelocity(previousArm),
+                    uniqueWarnings([...warnings, "prediction_expired"]),
+                    classification.value,
+                ),
+                source: "previous",
+                observedAgeMs,
+            },
+            classificationHold: classification.hold,
+        };
+    }
+    if (observedState === "lost") {
+        return {
+            arm: createObservedArm(
+                context,
+                observedState,
+                baseArm,
+                holdPreviousArm(baseArm),
+                createZeroVelocity(previousArm),
+                uniqueWarnings(warnings),
+                classification.value,
+            ),
+            classificationHold: classification.hold,
+        };
+    }
+
+    const filtered = filterObservedArm(context.canonicalArm, context.filters, context.dtMs);
+    const velocity = calculateVelocity(filtered, previousArm, context.dtMs);
 
     return {
-        arm: {
-            state,
-            confidence: context.canonicalArm.confidence,
-            source: shouldUseCanonical ? "canonical" : "neutral",
-            stateAgeMs:
-                previousArm !== undefined && previousArm.state === state
-                    ? previousArm.stateAgeMs + context.dtMs
-                    : 0,
-            observedAgeMs: state === "lost" ? (previousArm?.observedAgeMs ?? 0) + context.dtMs : 0,
-            warnings: uniqueWarnings(warnings),
-            reach: filtered.reach,
-            elevationRad: filtered.elevationRad,
-            openness: filtered.openness,
-            forwardness: filtered.forwardness,
-            elbowFlexionRad: filtered.elbowFlexionRad,
-            classification: classification.value,
-            bodyLocalWrist: filtered.bodyLocalWrist,
-            bodyLocalElbow: shouldUseCanonical
-                ? tupleOrUndefined(context.canonicalArm.bodyLocalElbow)
-                : baseArm.bodyLocalElbow,
+        arm: createObservedArm(
+            context,
+            observedState,
+            baseArm,
+            filtered,
             velocity,
-        },
+            uniqueWarnings(warnings),
+            classification.value,
+        ),
         classificationHold: classification.hold,
+    };
+}
+
+function createObservedArm(
+    context: ArmUpdateContext,
+    state: TemporalPartState,
+    baseArm: TemporalArmState,
+    filtered: FilteredArmValues,
+    velocity: TemporalArmState["velocity"],
+    warnings: TemporalWarningCode[],
+    classification: ArmClassification,
+): TemporalArmState {
+    const shouldUseCanonical = state !== "lost";
+    return {
+        state,
+        confidence: context.canonicalArm.confidence,
+        source: shouldUseCanonical ? "canonical" : "neutral",
+        stateAgeMs:
+            context.previousArm !== undefined && context.previousArm.state === state
+                ? context.previousArm.stateAgeMs + context.dtMs
+                : 0,
+        observedAgeMs:
+            state === "lost" ? (context.previousArm?.observedAgeMs ?? 0) + context.dtMs : 0,
+        warnings,
+        reach: filtered.reach,
+        elevationRad: filtered.elevationRad,
+        openness: filtered.openness,
+        forwardness: filtered.forwardness,
+        elbowFlexionRad: filtered.elbowFlexionRad,
+        classification,
+        bodyLocalWrist: filtered.bodyLocalWrist,
+        bodyLocalElbow: shouldUseCanonical
+            ? tupleOrUndefined(context.canonicalArm.bodyLocalElbow)
+            : baseArm.bodyLocalElbow,
+        velocity,
     };
 }
 
@@ -180,14 +291,4 @@ function buildWarnings(
         warnings.push("out_of_range");
     }
     return warnings;
-}
-
-export function uniqueWarnings(warnings: TemporalWarningCode[]): TemporalWarningCode[] {
-    const unique: TemporalWarningCode[] = [];
-    for (const warning of warnings) {
-        if (!unique.includes(warning)) {
-            unique.push(warning);
-        }
-    }
-    return unique;
 }
