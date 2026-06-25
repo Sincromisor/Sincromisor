@@ -864,7 +864,7 @@ function classifyIssue(issue: z.core.$ZodIssue): AvatarMotionProfileParseError["
             "origin" in issue &&
             issue.origin === "number") ||
         issue.message.toLowerCase().includes("finite") ||
-        issue.message === "Invalid input: expected number, received number"
+        issue.message.startsWith("Invalid input: expected number, received")
     ) {
         return "out_of_range";
     }
