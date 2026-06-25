@@ -1,5 +1,6 @@
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { Vector3 } from "three/src/math/Vector3.js";
+import type { ArmPoleState } from "./sincroArmIkPole";
 import type { SincroArmSide } from "./sincroArmIkTypes";
 
 export type SincroArmIkConstraintSnapshot = {
@@ -9,6 +10,11 @@ export type SincroArmIkConstraintSnapshot = {
     collisionAvoided: boolean;
     weightScale: number;
     targetPushDistance: number;
+    poleState?: ArmPoleState;
+    reasonCodes?: string[];
+    angularVelocityClamped?: boolean;
+    wristRollDamped?: boolean;
+    wristRollInfluence?: number;
 };
 
 export type SincroArmIkConstraintOptions = {

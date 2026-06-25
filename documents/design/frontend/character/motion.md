@@ -36,6 +36,7 @@
     - 保存対象は時系列状態、canonical arm scalar、body-local wrist / elbow tuple、速度、recovering blend に限定し、VRM bone rotation、quaternion、IK solver 出力は含めない。
 - `src/character/ik`
     - `SincroArmIkSolver` と solver probe / constraint / geometry / pole を置く。
+    - `ArmPoleState` v1 は `"stable"`、`"uncertain"`、`"extended"`、`"lost"`、`"recovering"` の lower-case enum とし、IK pole resolver が決定する。TemporalStateEstimator は VRM quaternion / IK pole を扱わない。
 - `src/character/vrmCharacter`
     - arm / leg / torso / motion orchestrator と `VRMCharacterManager` を置く。
 - `FaceMorphController`
@@ -80,8 +81,13 @@
     - 肩相対の wrist target と elbow pole target から upper/lower arm の local quaternion を返す。
     - 到達不能 target は腕長内へ clamp し、neutral からの最大角で急な反転を抑える。
     - 肩の lift / open / depth、lower arm delta、elbow pole 反転を solver-side constraint として制限する。
+    - `ArmPoleState` は input temporal state、肘屈曲、target reach ratio、candidate pole と previous / bind pole の dot から決める。`lost` input は `"lost"`、`recovering` input は `"recovering"`、`elbowFlexionRad < 0.18` または target reach ratio `> 0.96` は `"extended"`、candidate hard reject は `"uncertain"`、それ以外は `"stable"` とする。
+    - pole blend は state ごとに measured / previous / bind fallback を選ぶ。`"stable"` は measured、`"uncertain"` は previous 70% / bind fallback 30%、`"extended"` は previous 50% / bind fallback 50%、`"recovering"` は `recoveringBlendProgress` で previous から measured へ復帰、`"lost"` は previous 100% とする。previous が無い場合は bind pole を previous とみなす。
+    - candidate と previous / bind projected pole の dot が `poleFlipDotThreshold` 未満なら reason code `pole_flip_rejected` と pole weight scale `0.68` を返す。dot が `poleFlipDotThreshold <= dot < 0.18` なら `pole_uncertain_downweighted` と pole weight scale `0.82` を返す。solver の最終 `constraint.weightScale` は既存 constraint weight と pole weight scale の乗算とする。
     - head sphere と chest ellipsoid の軽量 no-go zone で、hand target と forearm segment の深い貫通を抑える。
     - constraint / collision 発火時は target の押し戻しと IK weight 減衰を優先し、入力 target の品質補正や外れ値除去は持たない。
+    - `SincroArmIkConstraintSnapshot` は既存 `reasons`、`jointLimited`、`poleStabilized`、`collisionAvoided`、`weightScale`、`targetPushDistance` に加え、optional `poleState`、`reasonCodes`、`angularVelocityClamped`、`wristRollDamped`、`wristRollInfluence` を持つ。`reasonCodes` は pole hard reject / soft downweight を含む developer-visible reason code の重複なし配列として扱う。
+    - `wristRollInfluence` は IK target から `0..1` clamp して snapshot に保存するだけに留める。forearm / wrist twist 分配、wrist roll damping、angular velocity clamp の最終 quaternion 反映は Phase 6 composer 側で完成させる。
 - `sincroCcdIkProbe`
     - Three.js 公式 addon `CCDIKSolver` と VRM raw / normalized bone の相性を見るための PoC 診断。
     - 左腕 raw skeleton chain に対して one-iteration smoke test を行い、結果を Debug Console の `CCDIK PoC` に表示する。
