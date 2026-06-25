@@ -1,15 +1,15 @@
 id: task-260626014918-character-animation-3-phase-7-torso-optional-fallback-distri
 title: character animation 3.0 phase 7 torso optional fallback distribution
 category: character-sincro-motion
-status: open
+status: done
 depends_on:
   - task-260626014911-character-animation-3-phase-7-avatar-motion-profile-contract
   - task-260625231726-character-animation-3-phase-6-vrm-pose-composer
 superseded_by: null
 review: APPROVED
 reviewed_sha: 92ad60a351c29b72bc5b002ead505015ed4f39c0
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-06-26
-closed_at: null
+closed_at: 2026-06-26
 legacy_ids: []
