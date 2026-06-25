@@ -1,0 +1,14 @@
+id: task-260625231726-character-animation-3-phase-6-solver-debug-metrics-docs
+title: character animation 3.0 phase 6 solver debug metrics docs
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260625231726-character-animation-3-phase-6-vrm-pose-composer
+superseded_by: null
+review: APPROVED
+reviewed_sha: 9c48474df3c3e483e31539c778bac721724fdbaa
+verdict: null
+attempts: 0
+created_at: 2026-06-25
+closed_at: null
+legacy_ids: []
