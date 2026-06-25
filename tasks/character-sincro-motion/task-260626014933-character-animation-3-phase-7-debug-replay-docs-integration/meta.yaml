@@ -1,0 +1,18 @@
+id: task-260626014933-character-animation-3-phase-7-debug-replay-docs-integration
+title: character animation 3.0 phase 7 debug replay docs integration
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260626014911-character-animation-3-phase-7-avatar-motion-profile-contract
+  - task-260626014918-character-animation-3-phase-7-torso-optional-fallback-distri
+  - task-260626014922-character-animation-3-phase-7-initial-calibration-contract
+  - task-260626014928-character-animation-3-phase-7-online-calibration-guard
+  - task-260625231726-character-animation-3-phase-6-solver-debug-metrics-docs
+superseded_by: null
+review: APPROVED
+reviewed_sha: 92ad60a351c29b72bc5b002ead505015ed4f39c0
+verdict: null
+attempts: 0
+created_at: 2026-06-26
+closed_at: null
+legacy_ids: []
