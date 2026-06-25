@@ -37,6 +37,10 @@
 - `src/character/ik`
     - `SincroArmIkSolver` と solver probe / constraint / geometry / pole を置く。
     - `ArmPoleState` v1 は `"stable"`、`"uncertain"`、`"extended"`、`"lost"`、`"recovering"` の lower-case enum とし、IK pole resolver が決定する。TemporalStateEstimator は VRM quaternion / IK pole を扱わない。
+- `src/character/vrmPose`
+    - `VrmPoseComposer` と VRM normalized local pose contract を置く。
+    - v1 は腕周辺 bone だけを対象にし、`leftUpperArm` / `leftLowerArm` / `leftHand`、`rightUpperArm` / `rightLowerArm` / `rightHand`、存在する場合の shoulder / finger fallback capability を扱う。head / torso / leg / expression はまだ composer へ移さない。
+    - 入力 layer は `fallback`、`tracking`、`idle`、`style` の順に合成し、`limit` は layer ではなく composer 内部の final limit / clamp stage として扱う。
 - `src/character/vrmCharacter`
     - arm / leg / torso / motion orchestrator と `VRMCharacterManager` を置く。
 - `FaceMorphController`
@@ -88,6 +92,13 @@
     - constraint / collision 発火時は target の押し戻しと IK weight 減衰を優先し、入力 target の品質補正や外れ値除去は持たない。
     - `SincroArmIkConstraintSnapshot` は既存 `reasons`、`jointLimited`、`poleStabilized`、`collisionAvoided`、`weightScale`、`targetPushDistance` に加え、optional `poleState`、`reasonCodes`、`angularVelocityClamped`、`wristRollDamped`、`wristRollInfluence` を持つ。`reasonCodes` は pole hard reject / soft downweight を含む developer-visible reason code の重複なし配列として扱う。
     - `wristRollInfluence` は IK target から `0..1` clamp して snapshot に保存するだけに留める。forearm / wrist twist 分配、wrist roll damping、angular velocity clamp の最終 quaternion 反映は Phase 6 composer 側で完成させる。
+- `VrmPoseComposer`
+    - `VrmNormalizedLocalPose` は `VRMHumanBoneName` key の plain quaternion object とし、`THREE.Quaternion` instance は計算中だけ使う。
+    - `ownedBones` は composer order の first-seen unique な出力対象 bone とし、重複所有は `owned_bone_conflict:<bone>` warning に残す。tracking layer の IK quaternion が同じ腕の bone を所有している場合、idle / speech gesture 相当の additive はその bone だけ `tracking_owns_bone` として抑制する。
+    - `MinimalAvatarMotionProfile.optionalBones` を読み、欠損している hand / finger bone は final pose へ出さない。欠損 shoulder への補正は `solverDefaults.shoulderDamping` で damp して upperArm へ分配する。
+    - final limit / clamp stage は quaternion normalize と angular velocity clamp hook を持つ。angular velocity clamp は `previousFinalPose` と `deltaSeconds > 0` がある場合だけ実行し、既定値は `720deg/sec` とする。
+    - v1 は developer-only path として motion-debug / helper から同じ input で呼べる contract を固める段階であり、本番の `ArmBoneController` bone 書き込みや `VRMCharacterManager.update()` の順序は変更しない。
+    - `vrm.humanoid.setNormalizedPose(finalPose)` への全面移行は後続 task に残す。移行ゲートは、head / torso / leg / expression の所有境界、motion-debug final pose replay、既存 controller との二重書き込み排除、複数 VRM での clamp / optional bone 検証が揃うこととする。
 - `sincroCcdIkProbe`
     - Three.js 公式 addon `CCDIKSolver` と VRM raw / normalized bone の相性を見るための PoC 診断。
     - 左腕 raw skeleton chain に対して one-iteration smoke test を行い、結果を Debug Console の `CCDIK PoC` に表示する。
