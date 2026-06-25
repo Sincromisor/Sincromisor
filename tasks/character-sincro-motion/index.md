@@ -77,7 +77,17 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 45 件）
+## タスク一覧（自動生成 / 全 50 件）
+
+### open（未完） — 5 件
+
+| タスク                                                                                                                                                                   | タイトル                                                      | 判定 | 依存                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [task-260625231715-character-animation-3-phase-6-minimal-avatar-motion-profile](./task-260625231715-character-animation-3-phase-6-minimal-avatar-motion-profile/task.md) | character animation 3.0 phase 6 minimal avatar motion profile | —    | —                                                                                                                                                    |
+| [task-260625231726-character-animation-3-phase-6-arm-pole-constraints](./task-260625231726-character-animation-3-phase-6-arm-pole-constraints/task.md)                   | character animation 3.0 phase 6 arm pole constraints          | —    | `task-260625231715-character-animation-3-phase-6-minimal-avatar-motion-profile`                                                                      |
+| [task-260625231726-character-animation-3-phase-6-solver-debug-metrics-docs](./task-260625231726-character-animation-3-phase-6-solver-debug-metrics-docs/task.md)         | character animation 3.0 phase 6 solver debug metrics docs     | —    | `task-260625231726-character-animation-3-phase-6-vrm-pose-composer`                                                                                  |
+| [task-260625231726-character-animation-3-phase-6-temporal-arm-solver-bridge](./task-260625231726-character-animation-3-phase-6-temporal-arm-solver-bridge/task.md)       | character animation 3.0 phase 6 temporal arm solver bridge    | —    | `task-260625231715-character-animation-3-phase-6-minimal-avatar-motion-profile`                                                                      |
+| [task-260625231726-character-animation-3-phase-6-vrm-pose-composer](./task-260625231726-character-animation-3-phase-6-vrm-pose-composer/task.md)                         | character animation 3.0 phase 6 vrm pose composer             | —    | `task-260625231726-character-animation-3-phase-6-temporal-arm-solver-bridge`, `task-260625231726-character-animation-3-phase-6-arm-pole-constraints` |
 
 ### done（完了） — 45 件
 
