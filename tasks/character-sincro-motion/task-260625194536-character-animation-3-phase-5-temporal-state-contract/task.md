@@ -18,8 +18,19 @@
 - [ ] `TemporalUpperBodyState` の保存 shape は次に固定する。`arms.left/right` は canonical arm scalar と body-local tuple を持ち、VRM bone rotation / quaternion は含めない。
 
 ```ts
-type TemporalPartState = "tracked" | "suspect" | "predicted" | "lost" | "recovering";
-type TemporalSource = "canonical" | "previous" | "predicted" | "comfortable" | "neutral" | "mixed";
+type TemporalPartState =
+    | "tracked"
+    | "suspect"
+    | "predicted"
+    | "lost"
+    | "recovering";
+type TemporalSource =
+    | "canonical"
+    | "previous"
+    | "predicted"
+    | "comfortable"
+    | "neutral"
+    | "mixed";
 type TemporalWarningCode =
     | "low_confidence"
     | "dropout"
