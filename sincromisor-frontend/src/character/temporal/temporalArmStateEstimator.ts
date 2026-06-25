@@ -128,7 +128,14 @@ function updateClassification(
     isInvalidDt: boolean,
     config: TemporalStateEstimatorConfig,
 ): { value: ArmClassification; hold: ClassificationHold | undefined; wasHeld: boolean } {
-    if (arm.confidence < config.classificationConfidenceThreshold || isInvalidDt) {
+    if (arm.confidence < config.classificationConfidenceThreshold) {
+        return {
+            value: previousClassification,
+            hold: undefined,
+            wasHeld: arm.classification !== previousClassification,
+        };
+    }
+    if (isInvalidDt) {
         return {
             value: previousClassification,
             hold: previousHold,
