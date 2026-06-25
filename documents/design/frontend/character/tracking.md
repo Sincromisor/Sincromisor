@@ -32,6 +32,9 @@
 - `src/character/reliability`
     - tracker / camera / temporal 由来の観測品質を後段へ渡す `ReliabilityMap` v1 contract を置く。
     - MediaPipe confidence は入力材料に留め、IK / filter / fallback が読む制御用 weight は joint / part / gesture 単位の `finalWeight` と component `score` として保存する。
+- `src/character/temporal`
+    - tracker が直接出す観測 snapshot ではなく、`CanonicalUpperBodyState` と `ReliabilityMap` の後段で共有する `TemporalUpperBodyState` v1 contract を置く。
+    - dropout、prediction、recovering などの時系列状態を保存するが、MediaPipe raw result、Three.js object、VRM bone pose、IK quaternion は持たない。
 - `src/features/gaze/trackingRuntime`
     - MediaPipe fileset、worker client、video frame clock、fallback stats、performance budget report、performance gate を置く。
 - `CharacterGaze`
@@ -113,6 +116,12 @@
     - `timestamp`、`camera`、`joints`、`parts`、`gesture`、`warnings` を持ち、`frame.reliability` optional slot に保存する。v1 は finite number、lower-case enum、plain object に限定し、Three.js object、MediaPipe landmark object、class instance は入れない。
     - `JointReliability` / `PartReliability` の `finalWeight` と各 component `score` は `0..1` で、低 weight 観測も parse 成功として保持する。threshold 未満の観測を破棄するかどうかは後続 estimator / controller が判断する。
     - `parseReliabilityMap()` は未知 `schemaVersion` を先に `unknown_schema_version` として返し、値域外 scalar は `out_of_range`、構造違反や unknown enum / extra key は `invalid_state` として返す。
+- `TemporalUpperBodyState`
+    - `sincro.temporal-upper-body.v1` の schema version を持つ、canonical upper body の時間方向 state contract。
+    - `TemporalPartState` は `"tracked"`、`"suspect"`、`"predicted"`、`"lost"`、`"recovering"` の lower-case enum に固定し、`ReliabilityMap` の同名 enum とは別型として扱う。Reliability は観測品質、Temporal は時系列推定状態を表す。
+    - `frame.temporal` optional slot に保存する plain object であり、`arms.left` / `arms.right` は canonical arm scalar と optional body-local wrist / elbow tuple、velocity、optional recovering blend を持つ。head は optional で、未観測時は省略できる。
+    - `parseTemporalUpperBodyState()` は未知 `schemaVersion` を `unknown_schema_version`、値域外 scalar / blend duration / blend progress を `out_of_range`、非 finite number / unknown enum / extra key / class instance を `invalid_state` として返す。
+    - Temporal は canonical / reliability の後段に位置し、tracker runtime、Worker、MediaPipe 正規化 snapshot の責務ではない。VRM pose 合成、IK solver quaternion、final applied pose は MotionSolver / VrmPoseComposer と final pose 系 slot の責務に残す。
 - `PoseReliabilityEstimator`
     - `src/character/reliability/poseReliabilityEstimator.ts` の `createPoseReliabilityMap()` は Phase 4a の pure estimator であり、`pose: SincroPoseMotionSnapshot`、optional `cameraQuality: CameraQualityScore`、optional `previous: { pose: SincroPoseMotionSnapshot; mediaTimeMs: number; reliability?: ReliabilityMap }`、caller が渡す `mediaTimeMs`、`video: { width: number; height: number }` だけを入力にする。
     - estimator 内で `performance.now()` は呼ばず、temporal component は `mediaTimeMs - previous.mediaTimeMs` と wrist / elbow / shoulder の normalized image coordinate 差分だけで計算する。`previous.reliability` は入力 shape に含めるが、Phase 4a の boneLength / bodyScale / temporal の主計算は前回 pose を正本にする。
@@ -132,6 +141,7 @@
     - `sincro.motion-debug-log.v1` の保存単位は NDJSON の frame record であり、tracker が出力する正規化 pose snapshot は `frame.poseSnapshot` に保存する。
     - `frame.canonical` は motion-debug page 側で `SincroPoseMotionSnapshot` と latest face snapshot から生成した `CanonicalUpperBodyState` を保存する optional slot である。`parseMotionDebugLogLines()` は unknown optional slot として保持し、replay / viewer 境界で `parseCanonicalUpperBodyState()` により valid / invalid を判定する。
     - `frame.reliability` は motion-debug page 側で生成する `ReliabilityMap` の optional slot である。`parseMotionDebugLogLines()` は unknown optional slot として保持し、replay / viewer 境界で `parseReliabilityMap()` により valid / invalid を判定する。
+    - `frame.temporal` は temporal estimator 接続後に `TemporalUpperBodyState` を保存する optional slot である。Phase 5 contract 時点では parser / default factory だけを固定し、recording への実接続、live snapshot 表示、prediction / recovering blend の計算は後続 task で扱う。
     - 旧 log で `frame.reliability` が欠損している場合、replay viewer は `frame.poseSnapshot`、`frame.timestamp.mediaTimeMs`、`frame.video.width` / `height` から `createPoseReliabilityMap()` を再計算する。再計算にも使える `poseSnapshot` が無い場合だけ reliability layer は `not_recorded` になる。
     - MediaPipe raw result は必要な場合も `frame.mediapipe` に分け、`frame.poseSnapshot` には `SincroPoseMotionSnapshot` 相当の normalized data を置く。
     - replay API の `loadRecording()` は plain NDJSON `string` または `File` だけを受け付ける。`startReplay({ mode })`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` は developer-only の window API として公開する。

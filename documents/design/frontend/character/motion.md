@@ -31,6 +31,9 @@
     - 後続 estimator / replay / temporal state が共有する `ReliabilityMap` v1 contract を置く。
     - MediaPipe confidence をそのまま制御重みにせず、joint / part / gesture ごとの保存可能な信頼度 snapshot として扱う。
     - Phase 4a の `PoseReliabilityEstimator` は `SincroPoseMotionSnapshot` と optional `CameraQualityScore`、optional `previous.pose` / `previous.mediaTimeMs` / `previous.reliability`、caller 指定の `mediaTimeMs`、`video` size から `ReliabilityMap` を作る pure function とする。Pose snapshot で未観測の Head / Hand / Finger / Gesture / ROI は placeholder に固定し、Face / Hand / Gesture 専用 estimator は後続 Phase 8 / 9 で接続する。
+- `src/character/temporal`
+    - canonical / reliability の後段で共有する `TemporalUpperBodyState` v1 contract を置く。
+    - 保存対象は時系列状態、canonical arm scalar、body-local wrist / elbow tuple、速度、recovering blend に限定し、VRM bone rotation、quaternion、IK solver 出力は含めない。
 - `src/character/ik`
     - `SincroArmIkSolver` と solver probe / constraint / geometry / pole を置く。
 - `src/character/vrmCharacter`
@@ -128,6 +131,15 @@
     - canonical warning 変換は `ReliabilityWarningCode` ではなく、該当 arm の part / joint `components.side.reasonCodes`、`components.boneLength.reasonCodes`、`components.bodyScale.reasonCodes` を読む。`side_inconsistent` は `left_right_swap_suspect`、`bone_length_inconsistent` / `body_scale_jump` は `out_of_range` へ写す。
     - `calibration` は default / initial / online / replay の snapshot とし、未実装時も `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` を保存して replay の決定性を保つ。
     - `SincroPoseRetargetFrame` の VRM additive rotation、IK solver の quaternion、AnimationMixer 出力は canonical arm feature の入力にも canonical state にも入れず、retarget / final pose の別 slot に分ける。
+- `TemporalUpperBodyState`
+    - `sincro.temporal-upper-body.v1` を schema version とする、canonical / reliability の後段で使う JSON 保存可能な時系列 state contract。
+    - motion-debug の `frame.temporal` optional slot に保存する plain object として扱い、replay / viewer / metrics / intent / IK が同じ state enum と scalar を読めるようにする。
+    - `TemporalPartState` は `"tracked"`、`"suspect"`、`"predicted"`、`"lost"`、`"recovering"` の lower-case enum に固定する。roadmap 上の大文字表記は文書上の呼称であり、保存値と log 境界では使わない。
+    - `arms.left` / `arms.right` は `reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`、`classification`、optional `bodyLocalWrist` / `bodyLocalElbow`、velocity、optional `recoveringBlend` を保存する。
+    - `head` は optional で、未観測 frame では省略できる。保存する場合は yaw / pitch / roll と angular velocity、part meta、optional `recoveringBlend` だけを持つ。
+    - 値域は parser で固定し、`confidence` と `recoveringBlend.progress` は `0..1`、`stateAgeMs` / `observedAgeMs` は `>= 0`、arm scalar と recovering duration は contract の範囲外を `out_of_range` として reject する。
+    - `parseTemporalUpperBodyState()` は replay / viewer 境界の検証 API であり、未知 `schemaVersion` は `unknown_schema_version`、非 finite number / unknown enum / extra key / class instance は `invalid_state` として返す。
+    - `TemporalUpperBodyState` は CanonicalUpperBodyState の時間方向の状態推定 contract であり、VRM normalized pose、IK target quaternion、AnimationMixer 出力は Phase 6 以降の MotionSolver / VrmPoseComposer と `finalPose` 系 slot の責務に残す。
     - `motion-debug` snapshot
     - `pose`、`tracker`、`poseRetarget`、`poseRetargetRuntime`、camera readiness、render fps をまとめて返す。
     - live camera / video fixture の最新 video frame timing は optional `camera.frameTiming` に載せる。field は `source`、`receivedAtPerformanceMs`、`mediaTimeMs`、`videoCurrentTimeMs`、optional `presentationTimeMs`、optional `expectedDisplayTimeMs`、optional `presentedFrames`、`droppedPresentedFrames` を持つ。
