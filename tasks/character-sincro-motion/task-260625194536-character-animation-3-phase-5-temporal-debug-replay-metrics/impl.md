@@ -51,7 +51,7 @@
 - 評価 FAIL は `temporalLostArmDurationMs` の dt 計算が saved temporal timestamp を参照していた一点。recording は timestamp mismatch を warning に留める仕様なので、metrics は task.md 指定どおり frame timestamp を正本にする必要があった。
 - `calculateTemporalLostArmDurationMs()` の previous state を `TemporalUpperBodyState` 単体ではなく `{ frameMediaTimeMs, temporal }` として保持し、dt は必ず現在 frame の `frame.timestamp.mediaTimeMs - previous.frameMediaTimeMs` を `0..250` clamp するよう修正した。
 - lost arm 数はこれまで通り interval 開始側、つまり previous temporal の left / right arm state を見て合算する。
-- regression test として、`frame.timestamp.mediaTimeMs` と `frame.temporal.timestamp.mediaTimeMs` がずれている 2 frame でも、lost duration が frame timestamp 基準で 2 arms * clamp(400ms, 0..250) = 500ms になるケースを追加した。
+- regression test として、`frame.timestamp.mediaTimeMs` と `frame.temporal.timestamp.mediaTimeMs` がずれている 2 frame でも、lost duration が frame timestamp 基準で 2 arms \* clamp(400ms, 0..250) = 500ms になるケースを追加した。
 
 ### ドキュメント同期
 
