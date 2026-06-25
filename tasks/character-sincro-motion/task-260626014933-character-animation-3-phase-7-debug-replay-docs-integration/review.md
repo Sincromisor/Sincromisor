@@ -1,19 +1,17 @@
 # Review: task-260626014933-character-animation-3-phase-7-debug-replay-docs-integration
 
 ## 判定
-
 APPROVED
 
-前回 blocking だった solver layer の戻り値/status 集約と live Phase 7 snapshot の接続元は、task.md の受け入れ条件と設計判断で一意に固定された。改訂箇所に起因する新たな破綻は確認できない。
+前回 blocking だった live Phase 7 profile の接続元矛盾と initial calibration parser/clone 未確定は、task.md 上で実装経路が固定され解消されている。Debug Console / Phase 6 の `MinimalAvatarMotionProfile` 境界も維持する方針になっており、実装者判断に残る blocking ambiguity はない。
 
 ## 指摘事項
-
 なし
 
 ## 実装者への申し送り
-
-- `viewer.layers.solver.value` は `{ phase6, phase7 }` の substatus 付き object に固定されている。外側 `viewer.layers.solver.status` は両方 `not_recorded` のときだけ `not_recorded`、片方でも `available` または `invalid` なら `available` とする。
-- live Phase 7 snapshot は `DebugConsoleSnapshot` に calibration state を直接追加せず、`MotionDebugRecordingController` params の `getInitialCalibrationSession()` / `getOnlineCalibrationState()` と `latestCanonical?.calibration` から組み立てる方針に従う。
-- 既存の `SincroMotionDebugFrame.solver` は unknown optional slot なので、recording/manifest 側は `phase7` を unknown object として許容し、厳密検証は Phase 7 layer parser に閉じる。
-- 依存 task の成果物である `AvatarMotionProfile`、initial calibration、online calibration state、canonical calibration snapshot の clone/parser contract を使い、runtime object を debug log に保存しない。
-- docs 同期は受け入れ条件どおり `documents/design/frontend/character/motion.md`、`documents/design/frontend/character/tracking.md`、`documents/design/frontend/character/overview.md` を対象にする。
+- 完成版 `AvatarMotionProfile` は `DebugConsoleSnapshot.sincroMotion.poseRetargetRuntime.avatarMotionProfile` から読まないこと。task.md の通り `VRMScene.getAvatarMotionProfile()` / `VRMCharacterManager.getAvatarMotionProfile()` を追加し、`SincroPoseRetargeter.getAvatarMotionProfile()` の clone を `MotionDebugRecordingController` params の `getAvatarMotionProfile()` へ渡す。
+- Debug Console と Phase 6 snapshot schema の `avatarMotionProfile` は `MinimalAvatarMotionProfile` のまま維持する。`VRMCharacterManager` の既存 Debug Console 更新経路では `toMinimalAvatarMotionProfile()` 変換を残し、完成版 profile は `frame.solver.phase7.profile` 側だけに保存する。
+- `initialCalibration` は現行 module に parser / clone export がないため、task.md の通り `motionDebugPhase7Snapshot.ts` 内に local strict schema / clone を置く。`profile` は `parseAvatarMotionProfile()`、`onlineCalibration` は `parseOnlineSincroCalibrationState()` を使い、既存 module の contract を広げない。
+- `activeCanonicalCalibration` も runtime object を保存せず、`latestCanonical?.calibration` 由来の plain snapshot として扱う。単体 parser export はないため、Phase 7 snapshot 境界で strict schema / clone を持つか、既存 canonical / online calibration の schema 形状に合わせて検証する。
+- `viewer.layers.solver.value` は `{ phase6, phase7 }` の substatus 方式に固定し、外側 `solver.status` は task.md の条件通り判定する。旧 log 互換では `phase7` missing を `not_recorded`、schema 違反を `invalid` にして log load 自体は失敗させない。
+- developer-visible な replay/debug schema を変えるため、受け入れ条件通り `documents/design/frontend/character/motion.md`、`tracking.md`、`overview.md` を実装と同時に同期する。
