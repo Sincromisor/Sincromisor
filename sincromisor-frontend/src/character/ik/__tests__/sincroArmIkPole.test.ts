@@ -105,6 +105,30 @@ describe("resolveArmIkPoleDirection", () => {
         expectVectorClose(pole.direction, previous);
     });
 
+    it("keeps lost temporal input on previous pole when measured pole is unusable", () => {
+        const previous = new Vector3(0, 0, 1);
+        const pole = resolvePole({
+            elbowPole: TARGET,
+            previousPoleDirection: previous,
+            temporalState: "lost",
+        });
+
+        expect(pole.state).toBe("lost");
+        expect(pole.blendWeight).toBe(0);
+        expect(pole.weightScale).toBe(1);
+        expectVectorClose(pole.direction, previous);
+    });
+
+    it("uses bind pole as previous when measured pole is unusable and previous is missing", () => {
+        const pole = resolvePole({
+            elbowPole: TARGET,
+            temporalState: "lost",
+        });
+
+        expect(pole.state).toBe("lost");
+        expectVectorClose(pole.direction, BIND_POLE);
+    });
+
     it("blends recovering temporal input from previous to measured pole", () => {
         const previous = new Vector3(0, 0, 1);
         const measured = new Vector3(0, 1, 0);
