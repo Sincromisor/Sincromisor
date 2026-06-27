@@ -1,9 +1,11 @@
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
+import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "./sincroTrackerWorkerTypes";
 
 export const DEFAULT_TARGET_INFERENCE_FPS = 15;
 export const DEFAULT_TARGET_POSE_INFERENCE_FPS = 12;
+export const DEFAULT_TARGET_HAND_INFERENCE_FPS = 4;
 
 export type TrackerVideoFrameClockSource =
     | "request-video-frame-callback"
@@ -23,6 +25,7 @@ export type TrackerVideoFrameTiming = {
 
 export type TrackerRuntimeCallbacks = {
     onFaceMotion: (snapshot: SincroFaceMotionSnapshot, timing?: TrackerVideoFrameTiming) => void;
+    onHandMotion?: (snapshot: SincroHandMotionSnapshot, timing?: TrackerVideoFrameTiming) => void;
     onPoseMotion?: (snapshot: SincroPoseMotionSnapshot, timing?: TrackerVideoFrameTiming) => void;
     onPoseFallback?: (snapshot: SincroPoseMotionSnapshot, timing?: TrackerVideoFrameTiming) => void;
     onTrackerStats?: (snapshot: SincroTrackerWorkerStats) => void;
@@ -33,4 +36,8 @@ export type TrackerRuntimePoseOptions = {
     enabled?: boolean;
     targetInferenceFps?: number;
     ignorePerformanceFallback?: boolean;
+    hand?: {
+        enabled?: boolean;
+        targetInferenceFps?: number;
+    };
 };

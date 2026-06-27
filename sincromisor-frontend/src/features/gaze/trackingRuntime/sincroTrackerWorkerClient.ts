@@ -1,4 +1,5 @@
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
+import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type {
     SincroTrackerWorkerOutputMessage,
@@ -9,6 +10,7 @@ import type {
 type DetectResult = {
     face: SincroFaceMotionSnapshot;
     pose?: SincroPoseMotionSnapshot;
+    hand?: SincroHandMotionSnapshot;
     stats: SincroTrackerWorkerStats;
 };
 
@@ -48,7 +50,7 @@ export class SincroTrackerWorkerClient {
         return typeof Worker !== "undefined" && typeof createImageBitmap === "function";
     }
 
-    async init(poseEnabled: boolean): Promise<void> {
+    async init(poseEnabled: boolean, handEnabled: boolean): Promise<void> {
         if (!SincroTrackerWorkerClient.isSupported()) {
             throw new Error("Sincro tracker worker is not supported in this browser.");
         }
@@ -64,9 +66,9 @@ export class SincroTrackerWorkerClient {
                 this.pendingInitResolve = resolve;
                 this.pendingInitReject = reject;
             });
-            this.worker?.postMessage({ type: "init", poseEnabled });
-        } else if (poseEnabled) {
-            this.worker?.postMessage({ type: "init", poseEnabled });
+            this.worker?.postMessage({ type: "init", poseEnabled, handEnabled });
+        } else if (poseEnabled || handEnabled) {
+            this.worker?.postMessage({ type: "init", poseEnabled, handEnabled });
         }
         await this.initPromise;
     }
@@ -75,6 +77,7 @@ export class SincroTrackerWorkerClient {
         frame: ImageBitmap,
         timestampMs: number,
         poseEnabled: boolean,
+        handEnabled: boolean,
         transferTimeMs: number,
     ): Promise<DetectResult> {
         if (!this.worker) {
@@ -113,6 +116,7 @@ export class SincroTrackerWorkerClient {
                     frame,
                     timestampMs,
                     poseEnabled,
+                    handEnabled,
                 },
                 [frame],
             );
@@ -202,6 +206,7 @@ export class SincroTrackerWorkerClient {
             pending.resolve({
                 face: message.face,
                 pose: message.pose,
+                hand: message.hand,
                 stats: this.getStats(),
             });
             return;

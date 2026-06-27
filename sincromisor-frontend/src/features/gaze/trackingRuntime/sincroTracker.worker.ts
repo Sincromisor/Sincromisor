@@ -1,5 +1,8 @@
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
+import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
+import { createSincroHandFallbackSnapshot } from "../handTracking/sincroHandMotionSnapshot";
+import type { SincroHandTracker } from "../handTracking/sincroHandTracker";
 import { DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { SincroPoseTracker } from "../poseTracking/sincroPoseTracker";
 import type {
@@ -36,8 +39,11 @@ mediaPipeWorkerGlobal.import ??= async (path: string) => {
 
 let faceTracker: SincroFaceTracker | undefined;
 let poseTracker: SincroPoseTracker | undefined;
+let handTracker: SincroHandTracker | undefined;
 
 let poseInitialized = false;
+let handInitialized = false;
+let handInitializationFailureReason: string | undefined;
 let initializing: Promise<void> | undefined;
 
 function post(message: SincroTrackerWorkerOutputMessage): void {
@@ -53,20 +59,20 @@ function postStatus(status: SincroTrackerWorkerStatus, message = "", loadTimeMs?
     });
 }
 
-async function initialize(poseEnabled: boolean): Promise<void> {
+async function initialize(poseEnabled: boolean, handEnabled: boolean): Promise<void> {
     await ensureTrackers();
     if (initializing) {
         await initializing;
         if (poseEnabled && !poseInitialized) {
             await initializePose();
         }
+        if (poseEnabled && handEnabled && !handInitialized) {
+            await initializeHand();
+        }
         return;
     }
     const startedAtMs = performance.now();
-    postStatus(
-        "loading",
-        poseEnabled ? "Loading FaceLandmarker and PoseLandmarker" : "Loading FaceLandmarker",
-    );
+    postStatus("loading", loadingMessage(poseEnabled, handEnabled));
     const currentFaceTracker = faceTracker;
     if (!currentFaceTracker) {
         throw new Error("SincroFaceTracker is not loaded.");
@@ -75,6 +81,9 @@ async function initialize(poseEnabled: boolean): Promise<void> {
         await currentFaceTracker.initVision();
         if (poseEnabled) {
             await initializePose();
+        }
+        if (poseEnabled && handEnabled) {
+            await initializeHand();
         }
     })();
     try {
@@ -95,24 +104,44 @@ async function initializePose(): Promise<void> {
     poseInitialized = true;
 }
 
-async function ensureTrackers(): Promise<void> {
-    if (faceTracker && poseTracker) {
+async function initializeHand(): Promise<void> {
+    if (!handTracker) {
+        handInitializationFailureReason = "SincroHandTracker is not loaded.";
         return;
     }
-    const [{ SincroFaceTracker: FaceTracker }, { SincroPoseTracker: PoseTracker }] =
-        await Promise.all([
-            import("../faceTracking/sincroFaceTracker"),
-            import("../poseTracking/sincroPoseTracker"),
-        ]);
+    try {
+        await handTracker.initVision();
+        handInitialized = true;
+        handInitializationFailureReason = undefined;
+    } catch (error) {
+        handInitialized = false;
+        handInitializationFailureReason = formatErrorDetail(error);
+    }
+}
+
+async function ensureTrackers(): Promise<void> {
+    if (faceTracker && poseTracker && handTracker) {
+        return;
+    }
+    const [
+        { SincroFaceTracker: FaceTracker },
+        { SincroPoseTracker: PoseTracker },
+        { SincroHandTracker: HandTracker },
+    ] = await Promise.all([
+        import("../faceTracking/sincroFaceTracker"),
+        import("../poseTracking/sincroPoseTracker"),
+        import("../handTracking/sincroHandTracker"),
+    ]);
     faceTracker = new FaceTracker();
     poseTracker = new PoseTracker();
+    handTracker = new HandTracker();
 }
 
 async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> {
     const startedAtMs = performance.now();
     try {
-        await initialize(message.poseEnabled);
-        if (!faceTracker || !poseTracker) {
+        await initialize(message.poseEnabled, message.handEnabled);
+        if (!faceTracker || !poseTracker || !handTracker) {
             throw new Error("Sincro tracker worker is not initialized.");
         }
         postStatus("running");
@@ -124,11 +153,13 @@ async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> 
             pose && !pose.degradedToFaceOnly
                 ? faceTracker.detectWithRoi(message.frame, pose, message.timestampMs)
                 : faceTracker.detect(message.frame, message.timestampMs);
+        const hand = detectHand(message, pose);
         post({
             type: "result",
             requestId: message.requestId,
             face,
             pose,
+            hand,
             workerTimeMs: performance.now() - startedAtMs,
         });
     } finally {
@@ -144,7 +175,7 @@ self.onmessage = (event: MessageEvent<SincroTrackerWorkerInputMessage>) => {
         return;
     }
     if (data.type === "init") {
-        initialize(data.poseEnabled).catch((error) => {
+        initialize(data.poseEnabled, data.handEnabled).catch((error) => {
             post({
                 type: "error",
                 message: formatErrorDetail(error),
@@ -171,15 +202,39 @@ self.onmessage = (event: MessageEvent<SincroTrackerWorkerInputMessage>) => {
             pose:
                 poseTracker?.stop(data.reason, data.nowMs) ??
                 createStoppedPoseSnapshot(data.reason, data.nowMs),
+            hand:
+                handTracker?.stop(data.reason, data.nowMs) ??
+                createStoppedHandSnapshot(data.reason, data.nowMs),
         });
         return;
     }
     if (data.type === "dispose") {
         faceTracker?.dispose();
         poseTracker?.dispose();
+        handTracker?.dispose();
         close();
     }
 };
+
+function detectHand(
+    message: SincroTrackerWorkerDetectMessage,
+    pose: ReturnType<SincroPoseTracker["detect"]> | undefined,
+): SincroHandMotionSnapshot | undefined {
+    if (!message.handEnabled) {
+        return undefined;
+    }
+    if (!message.poseEnabled || pose === undefined) {
+        return handTracker?.stop("hand_tracking_requires_pose", message.timestampMs);
+    }
+    if (!handInitialized) {
+        return createSincroHandFallbackSnapshot({
+            reason: handInitializationFailureReason ?? "HandLandmarker model is not loaded.",
+            nowMs: message.timestampMs,
+            warnings: ["model_not_loaded"],
+        });
+    }
+    return handTracker?.detect(message.frame, pose, message.timestampMs);
+}
 
 function formatErrorDetail(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
@@ -187,6 +242,13 @@ function formatErrorDetail(error: unknown): string {
 
 function normalizeMediaPipeImportPath(path: string): string {
     return path.replace("?import&", "?").replace("&import", "");
+}
+
+function loadingMessage(poseEnabled: boolean, handEnabled: boolean): string {
+    if (poseEnabled && handEnabled) {
+        return "Loading FaceLandmarker, PoseLandmarker and HandLandmarker";
+    }
+    return poseEnabled ? "Loading FaceLandmarker and PoseLandmarker" : "Loading FaceLandmarker";
 }
 
 function createStoppedFaceSnapshot(
@@ -258,6 +320,17 @@ function createStoppedPoseSnapshot(reason: string | undefined, nowMs: number) {
         lastUpdatedAtMs: nowMs,
         fallbackReason: reason,
     };
+}
+
+function createStoppedHandSnapshot(
+    reason: string | undefined,
+    nowMs: number,
+): SincroHandMotionSnapshot {
+    return createSincroHandFallbackSnapshot({
+        reason,
+        nowMs,
+        trackingEnabled: false,
+    });
 }
 
 function createStoppedArmTargets() {

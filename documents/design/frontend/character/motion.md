@@ -34,6 +34,12 @@
     - 後続 estimator / replay / temporal state が共有する `ReliabilityMap` v1 contract を置く。
     - MediaPipe confidence をそのまま制御重みにせず、joint / part / gesture ごとの保存可能な信頼度 snapshot として扱う。
     - Phase 4a の `PoseReliabilityEstimator` は `SincroPoseMotionSnapshot` と optional `CameraQualityScore`、optional `previous.pose` / `previous.mediaTimeMs` / `previous.reliability`、caller 指定の `mediaTimeMs`、`video` size から `ReliabilityMap` を作る pure function とする。Pose snapshot で未観測の Head / Hand / Finger / Gesture / ROI は placeholder に固定し、Face / Hand / Gesture 専用 estimator は後続 Phase 8 / 9 で接続する。
+- `src/features/gaze/handTracking`
+    - Phase 8 の HandLandmarker 観測層を置く。
+    - `SincroHandMotionSnapshot` は palm normal / direction、finger curl / splay、thumb oppose、openness、handedness summary、ROI observation、full-frame wrist だけを保存する低次元 contract であり、MediaPipe landmark object、crop object、raw landmarks は持たない。
+    - Hand feature の scalar と confidence は `0..1` に clamp し、palm tuple は正規化済み 3 要素 tuple に固定する。landmark 欠損または confidence `< 0.2` の hand openness は `unknown` とする。
+    - Hand wrist は reliability / palm / finger feature の材料であり、腕 IK の主 target にはしない。腕 IK target は引き続き `SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` を正本にする。
+    - Gesture Recognizer / MotionIntent / finger bone 適用は Phase 9 以降の責務とし、Phase 8 の motion pipeline へ gesture label は流さない。
 - `src/features/gaze/trackingRuntime/roiTracking`
     - Phase 8 の Hand / Face tracker 入力境界として、Pose wrist / shoulder 由来の ROI rect と crop-local / full-frame 座標変換を置く。
     - ROI observation は JSON 保存可能な `number`、string enum、plain object、`[number, number]` tuple だけで構成し、MediaPipe landmark object、ImageBitmap / canvas、Three.js object、class instance は含めない。
@@ -151,6 +157,8 @@
     - v1 は axis-aligned square / rectangle のみを扱い、rotated crop、`rotationRad`、palm basis、手首 roll は ROI rect に混ぜない。Hand / Face result 後段の feature として別 contract に渡す。
     - Pose wrist が finite で `quality !== "lost"` の場合だけ Hand ROI は `source: "pose-wrist"` になる。欠損時は throw せず `source: "none"`、`confidence: 0`、`roi_missing` warning の observation を返し、Pose-only / fallback 継続を妨げない。
     - Face ROI は左右 shoulder center と shoulder width を主入力にする。Pose 未検出または shoulderWidth が finite positive でない場合は `source: "none"`、`confidence: 0` の failure observation として扱う。
+    - Hand tracker は left / right の ROI が両方 invalid の場合だけ full-frame fallback を同一 frame で 1 回実行する。片側 ROI だけ invalid な場合はその side を lost にし、反対側の valid ROI 推論を継続する。
+    - Hand full-frame fallback の左右 assignment は復元後 wrist と Pose wrist の距離を主条件にし、同じ hand result の二重割当は拒否する。
     - ROI rect clamp は left / top / right / bottom を clip して center / size を再計算する。`validateRoiRect()` の順序は finite check、edge clip、min size check、confidence clamp に固定する。
     - ROI consistency は Pose wrist / face expected point と ROI 由来 full-frame point の距離から score `0..1` を返す。`roi_inconsistent` は ROI contract の warning であり、ReliabilityMap へは後続 task で明示的に写像する。
 - `SincroFaceMotionSnapshot` の ROI metadata
