@@ -12,6 +12,14 @@ type TrackerPoseInferenceCadenceOptions = {
     nowMs: number;
 };
 
+type TrackerHandInferenceCadenceOptions = {
+    handTrackingEnabled: boolean;
+    poseDegradedToFaceOnly: boolean;
+    lastHandInferenceAtMs: number;
+    targetHandInferenceFps: number;
+    nowMs: number;
+};
+
 export function shouldRunTrackerInference(options: TrackerInferenceCadenceOptions): boolean {
     if (options.lastInferenceAtMs < 0) {
         return true;
@@ -29,4 +37,16 @@ export function shouldRunTrackerPoseInference(
         return true;
     }
     return options.nowMs - options.lastPoseInferenceAtMs >= 1000 / options.targetPoseInferenceFps;
+}
+
+export function shouldRunTrackerHandInference(
+    options: TrackerHandInferenceCadenceOptions,
+): boolean {
+    if (options.handTrackingEnabled === false || options.poseDegradedToFaceOnly) {
+        return false;
+    }
+    if (options.lastHandInferenceAtMs < 0) {
+        return true;
+    }
+    return options.nowMs - options.lastHandInferenceAtMs >= 1000 / options.targetHandInferenceFps;
 }

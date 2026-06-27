@@ -1,4 +1,5 @@
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
+import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { TrackerPerformanceBudgetReport } from "./trackerRuntimePerformanceBudget";
 
@@ -21,6 +22,7 @@ export type SincroTrackerWorkerStats = {
     mainThreadDetectTimeMs?: number;
     effectiveFaceFps?: number;
     effectivePoseFps?: number;
+    effectiveHandFps?: number;
     loadTimeMs: number;
     droppedFrames: number;
     fallbackReason?: string;
@@ -30,6 +32,7 @@ export type SincroTrackerWorkerStats = {
 export type SincroTrackerWorkerInitMessage = {
     type: "init";
     poseEnabled: boolean;
+    handEnabled: boolean;
 };
 
 export type SincroTrackerWorkerDetectMessage = {
@@ -38,6 +41,7 @@ export type SincroTrackerWorkerDetectMessage = {
     frame: ImageBitmap;
     timestampMs: number;
     poseEnabled: boolean;
+    handEnabled: boolean;
 };
 
 export type SincroTrackerWorkerStopMessage = {
@@ -68,6 +72,7 @@ export type SincroTrackerWorkerResultMessage = {
     requestId: number;
     face: SincroFaceMotionSnapshot;
     pose?: SincroPoseMotionSnapshot;
+    hand?: SincroHandMotionSnapshot;
     workerTimeMs: number;
 };
 
@@ -75,6 +80,7 @@ export type SincroTrackerWorkerStoppedMessage = {
     type: "stopped";
     face: SincroFaceMotionSnapshot;
     pose: SincroPoseMotionSnapshot;
+    hand: SincroHandMotionSnapshot;
 };
 
 export type SincroTrackerWorkerErrorMessage = {

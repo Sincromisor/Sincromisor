@@ -8,6 +8,7 @@ export function publishTrackerRuntimeFallbackStats(
     reason: string,
     targetInferenceFps: number,
     targetPoseInferenceFps: number,
+    targetHandInferenceFps: number,
 ): void {
     callbacks?.onTrackerStats?.({
         mode: "main-thread",
@@ -19,6 +20,7 @@ export function publishTrackerRuntimeFallbackStats(
         fallbackReason: reason,
         effectiveFaceFps: targetInferenceFps,
         effectivePoseFps: targetPoseInferenceFps,
+        effectiveHandFps: targetHandInferenceFps,
         budget: createTrackerPerformanceBudgetReport({
             targetInferenceFps,
             targetPoseInferenceFps,

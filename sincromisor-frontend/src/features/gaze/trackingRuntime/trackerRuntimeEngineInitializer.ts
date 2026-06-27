@@ -1,13 +1,16 @@
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import type { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
+import type { SincroHandTracker } from "../handTracking/sincroHandTracker";
 import type { SincroPoseTracker } from "../poseTracking/sincroPoseTracker";
 import { SincroTrackerWorkerClient } from "./sincroTrackerWorkerClient";
 
 type TrackerRuntimeEngineInitializerOptions = {
     faceTracker: SincroFaceTracker;
     poseTracker: SincroPoseTracker;
+    handTracker: SincroHandTracker;
     workerClient: SincroTrackerWorkerClient;
     poseTrackingEnabled: boolean;
+    handTrackingEnabled: boolean;
     preferWorker: boolean;
     onWorkerFallback: (reason: string) => void;
     onPoseInitializationFallback: (reason: string, nowMs: number) => void;
@@ -18,7 +21,10 @@ export async function initializeTrackerRuntimeEngine(
 ): Promise<boolean> {
     if (options.preferWorker && SincroTrackerWorkerClient.isSupported()) {
         try {
-            await options.workerClient.init(options.poseTrackingEnabled);
+            await options.workerClient.init(
+                options.poseTrackingEnabled,
+                options.handTrackingEnabled,
+            );
             return true;
         } catch (error) {
             frontendLogger.warn(
@@ -51,6 +57,17 @@ async function initializeMainThreadTrackers(
         options.onPoseInitializationFallback(
             formatTrackerRuntimeErrorDetail(error),
             performance.now(),
+        );
+    }
+    if (!options.handTrackingEnabled) {
+        return;
+    }
+    try {
+        await options.handTracker.initVision();
+    } catch (error) {
+        frontendLogger.warn(
+            "Sincro HandLandmarker initialization failed. Continuing without hand tracking.",
+            { error },
         );
     }
 }

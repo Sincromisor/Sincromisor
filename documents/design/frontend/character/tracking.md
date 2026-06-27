@@ -4,6 +4,7 @@
 
 - `CharacterGaze` は `chat` 向けの注視入力と AutoMute を担当する。
 - `SincroFaceTracker` / `SincroPoseTracker` は `sincro` 向けの同期入力を担当し、MediaPipe 生結果を正規化 snapshot へ変換する。
+- `SincroHandTracker` は Pose wrist 由来 ROI で HandLandmarker を実行し、palm / finger の低次元 snapshot だけを出力する。
 - Tracker runtime は camera track、video element、推論 loop、Worker fallback を所有し、UI 更新や VRM 適用は持たない。
 - Tracker runtime は performance budget report と degradation state を Debug Console / motion-debug に出し、Worker round trip、Worker 内推論、main-thread fallback を切り分ける。
 - Phase 8 の Hand / Face ROI は Pose 起点の full-frame normalized coordinate contract として `roiTracking` に置き、MediaPipe 実行や ReliabilityMap 変換とは分ける。
@@ -13,7 +14,7 @@
 - 対象:
     - FaceDetector / FaceLandmarker / PoseLandmarker の責務境界
     - tracker runtime
-    - face / pose motion snapshot
+    - face / pose / hand motion snapshot
     - Hand / Face ROI coordinate contract
     - Worker / main-thread fallback
 - 非対象:
@@ -28,6 +29,12 @@
     - FaceLandmarker 結果から face motion snapshot を作る tracker を置く。
 - `src/features/gaze/poseTracking`
     - PoseLandmarker 結果から pose motion snapshot / pose target を作る tracker と spike page runtime を置く。
+- `src/features/gaze/handTracking`
+    - HandLandmarker 結果から hand motion snapshot を作る tracker を置く。
+    - Hand snapshot は `SincroHandMotionSnapshot`、左右 `SincroHandSideSnapshot`、`SincroHandFeatureSnapshot` の plain object に固定する。
+    - 保存対象は `fullFrameWrist`、palm normal / direction、finger curl / splay、thumb oppose、openness、confidence、handedness summary、ROI observation、warning だけに限定する。MediaPipe landmark object、crop object、raw landmarks は保存しない。
+    - `openness` は index / middle / ring / little の平均 curl から決め、`<= 0.35` を `open`、`0.35..0.72` を `half`、`>= 0.72` を `closed`、landmark 欠損または confidence `< 0.2` を `unknown` とする。
+    - `palmNormal` / `palmDirection` は正規化済み 3 要素 tuple、scalar feature / confidence / handedness score は `0..1` に clamp する。
 - `src/character/canonical`
     - tracker 観測から独立した後段共有 contract として `CanonicalUpperBodyState` を置く。
     - tracker は MediaPipe 生結果を直接 canonical state と同一視せず、後続 estimator が body-local 意味量へ変換する。
@@ -61,6 +68,8 @@
     - Worker 経路と main-thread fallback。
     - Worker が使える環境では Worker 経路を標準にし、Worker unavailable / 初期化失敗 / Worker detect failure では main-thread fallback へ切り替える。
     - main-thread fallback では effective target を face `<= 8fps`、pose `<= 4fps` に clamp し、`SincroTrackerWorkerStats.budget.degradation.state = "main-thread-low-fps"` として保存する。
+    - Hand tracking は `poseOptions.enabled === true` かつ `poseOptions.hand?.enabled === true` の場合だけ有効にする。`onHandMotion` callback の有無だけでは起動しない。
+    - Hand cadence は既定 `4fps`、指定範囲 `1..8fps` とし、main-thread fallback では effective hand fps を `<= 4fps` に clamp する。Worker stats は optional `effectiveHandFps` を持つ。
     - `SincroTrackerWorkerStats.budget` は `sincro.tracker-performance-budget.v1` の report で、`target`、`observed`、`budgetStatus`、`degradation`、`reasonCodes` を持つ。`observed.clockSource` は `TrackerVideoFrameTiming.source` を使い、欠損値は `undefined` のままにする。
     - `budgetStatus` は Worker round trip と Pose inference cost を対象に、target frame / pose budget の `0.9x` 超を `warn`、`1.25x` 超を `over_budget` とする。
 - `SincroFaceTracker`
@@ -75,6 +84,15 @@
     - PoseLandmarker の `worldLandmarks` は tracker 内で `SincroPoseTargetPointSnapshot.world` へ正規化し、MediaPipe 生座標を controller / VRM 層へ直接渡さない。
     - 3D target は肩基準（腕）または腰基準（下半身）の local target と、VRM rig scale へ変換する前の normalized target に分けて保持する。
     - performance gate により face-only fallback できる。
+- `SincroHandTracker`
+    - HandLandmarker を `/3rd_party/hand_landmarker.task` から初期化する。
+    - Pose が実行された frame の `SincroPoseMotionSnapshot` から left / right hand ROI を作り、valid な side だけ crop 推論する。両 side の ROI が invalid の場合だけ、同一 frame で full-frame fallback を 1 回実行する。
+    - ROI crop-local landmark は `mapCropPointToFullFrame()` で full-frame normalized coordinate へ戻してから feature 化し、snapshot には crop object や raw landmark を残さない。
+    - 左右 assignment は Hand handedness 単独で決めず、復元後 wrist と Pose wrist の距離を主条件にする。距離 `> 0.18` は `side_inconsistent` として捨てる。
+    - full-frame fallback では同じ hand result を両 side に割り当てず、duplicate は `duplicate_assignment` warning として lost side に残す。同距離 tie は前フレーム assignment、次に wrist confidence で片側だけ採用する。
+    - Hand wrist は palm / finger reliability 材料であり、`SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` を上書きしない。
+    - HandLandmarker の未ロード、初期化失敗、推論例外は lost hand snapshot に落とし、Face / Pose 経路は継続する。
+    - Gesture Recognizer と MotionIntent への接続は Phase 9 に残し、Phase 8 の Hand snapshot には gesture label を流さない。
 - Retargeters
     - neutral calibration、clamp、deadband、smoothing、confidence gate を扱う。
     - MediaPipe target の欠損や confidence 低下は retargeter の gate で扱い、人体的 joint constraint と head / chest no-go zone は `SincroArmIkSolver` の責務とする。
@@ -131,6 +149,17 @@
     - fallbackReason
     - MediaPipe / camera 由来の観測 snapshot であり、後段共有の `CanonicalUpperBodyState` ではない。
     - `leftArm` / `rightArm` の target は tracking 入力 video の観測値を正規化したもので、body-local な reach / elevation / openness などの意味量は canonical estimator の責務とする。
+- `SincroHandMotionSnapshot`
+    - `trackingEnabled`
+    - `detected`
+    - `leftHand` / `rightHand`
+    - `inferenceTimeMs`
+    - `inferenceFps`
+    - `lastUpdatedAtMs`
+    - `fallbackReason`
+    - 左右 hand snapshot は `detected`、`assignedSide`、`source`、`confidence`、optional `handednessLabel`、`handednessScore`、optional `roi`、optional `fullFrameWrist`、`features`、`warnings` を持つ。
+    - default lost hand は `detected: false`、`source: "lost"`、`confidence: 0`、`handednessScore: 0`、`fullFrameWrist: undefined`、`palmNormal: [0, 0, 1]`、`palmDirection: [0, -1, 0]`、scalar feature `0`、`openness: "unknown"`、`warnings: ["landmarks_missing"]` とする。
+    - `source` は `"roi"`、`"full-frame-fallback"`、`"previous"`、`"lost"` の固定 enum とする。`previous` は後続 temporal / reliability 接続用の予約値であり、Phase 8 tracker は raw landmark replay を保存しない。
 - `CanonicalUpperBodyState`
     - `sincro.canonical-upper-body.v1` の schema version を持つ、body-local upper body の意味量 contract。
     - `SincroPoseMotionSnapshot` を置き換えず、tracking 観測、temporal、intent、IK、metrics が共有する中間表現として別 slot に保存する。

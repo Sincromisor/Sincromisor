@@ -1,10 +1,16 @@
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
+import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
+import { SincroHandTracker } from "../handTracking/sincroHandTracker";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import { SincroPoseTracker } from "../poseTracking/sincroPoseTracker";
 import { SincroTrackerWorkerClient } from "./sincroTrackerWorkerClient";
 import type { SincroTrackerWorkerStats } from "./sincroTrackerWorkerTypes";
-import { shouldRunTrackerInference, shouldRunTrackerPoseInference } from "./trackerRuntimeCadence";
+import {
+    shouldRunTrackerHandInference,
+    shouldRunTrackerInference,
+    shouldRunTrackerPoseInference,
+} from "./trackerRuntimeCadence";
 import {
     formatTrackerRuntimeErrorDetail,
     initializeTrackerRuntimeEngine,
@@ -21,6 +27,7 @@ import {
     type TrackerRuntimePosePerformanceGateResult,
 } from "./trackerRuntimePosePerformanceGate";
 import {
+    DEFAULT_TARGET_HAND_INFERENCE_FPS,
     DEFAULT_TARGET_INFERENCE_FPS,
     DEFAULT_TARGET_POSE_INFERENCE_FPS,
     type TrackerRuntimeCallbacks,
@@ -31,6 +38,7 @@ import { attachTrackerVideoTrack, trackerVideoFrameIsReady } from "./trackerRunt
 
 const MAIN_THREAD_FALLBACK_FACE_FPS_LIMIT = 8;
 const MAIN_THREAD_FALLBACK_POSE_FPS_LIMIT = 4;
+const MAIN_THREAD_FALLBACK_HAND_FPS_LIMIT = 4;
 
 // Sincro 用 tracker の camera/video/loop 所有境界。
 // tracker core は DOM を知らず、runtime が video frame の readiness と fps 制限を担当する。
@@ -38,6 +46,7 @@ export class TrackerRuntime {
     private readonly videoElement: HTMLVideoElement;
     private readonly faceTracker: SincroFaceTracker;
     private readonly poseTracker: SincroPoseTracker;
+    private readonly handTracker: SincroHandTracker;
     private readonly workerClient: SincroTrackerWorkerClient;
     private readonly frameLoop = new TrackerRuntimeFrameLoop((timing) => {
         this.predict(timing);
@@ -46,10 +55,13 @@ export class TrackerRuntime {
     private loadedDataHandlerBound?: () => void;
     private lastInferenceAtMs = -1;
     private lastPoseInferenceAtMs = -1;
+    private lastHandInferenceAtMs = -1;
     private targetInferenceFps = DEFAULT_TARGET_INFERENCE_FPS;
     private targetPoseInferenceFps = DEFAULT_TARGET_POSE_INFERENCE_FPS;
+    private targetHandInferenceFps = DEFAULT_TARGET_HAND_INFERENCE_FPS;
     private readonly posePerformanceGate = new TrackerRuntimePosePerformanceGate();
     private poseTrackingEnabled = false;
+    private handTrackingEnabled = false;
     private poseDegradedToFaceOnly = false;
     private useWorkerTracking = false;
     private switchingToMainThreadFallback = false;
@@ -63,10 +75,12 @@ export class TrackerRuntime {
         videoElement: HTMLVideoElement,
         faceTracker: SincroFaceTracker = new SincroFaceTracker(),
         poseTracker: SincroPoseTracker = new SincroPoseTracker(),
+        handTracker: SincroHandTracker = new SincroHandTracker(),
     ) {
         this.videoElement = videoElement;
         this.faceTracker = faceTracker;
         this.poseTracker = poseTracker;
+        this.handTracker = handTracker;
         this.workerClient = new SincroTrackerWorkerClient((stats) => {
             this.callbacks?.onTrackerStats?.(stats);
         });
@@ -84,6 +98,8 @@ export class TrackerRuntime {
 
         this.callbacks = callbacks;
         this.poseTrackingEnabled = !!poseOptions.enabled;
+        this.handTrackingEnabled =
+            this.poseTrackingEnabled === true && poseOptions.hand?.enabled === true;
         this.poseDegradedToFaceOnly = false;
         this.degradationState = "full";
         this.degradationReason = undefined;
@@ -95,6 +111,10 @@ export class TrackerRuntime {
             1,
             Math.min(15, poseOptions.targetInferenceFps ?? DEFAULT_TARGET_POSE_INFERENCE_FPS),
         );
+        this.targetHandInferenceFps = Math.max(
+            1,
+            Math.min(8, poseOptions.hand?.targetInferenceFps ?? DEFAULT_TARGET_HAND_INFERENCE_FPS),
+        );
         this.posePerformanceGate.configure({
             targetPoseInferenceFps: this.targetPoseInferenceFps,
             ignorePerformanceFallback: this.ignorePosePerformanceFallback,
@@ -104,6 +124,7 @@ export class TrackerRuntime {
         this.frameLoop.enable();
         this.lastInferenceAtMs = -1;
         this.lastPoseInferenceAtMs = -1;
+        this.lastHandInferenceAtMs = -1;
         if (!this.loadedDataHandlerBound) {
             this.loadedDataHandlerBound = () => {
                 this.startLoopIfNeeded();
@@ -122,8 +143,10 @@ export class TrackerRuntime {
         }
         this.callbacks?.onFaceMotion(this.faceTracker.stop(reason));
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop(reason));
+        this.callbacks?.onHandMotion?.(this.handTracker.stop(reason));
         this.callbacks = undefined;
         this.poseTrackingEnabled = false;
+        this.handTrackingEnabled = false;
         this.poseDegradedToFaceOnly = false;
         this.posePerformanceGate.reset();
         this.useWorkerTracking = false;
@@ -141,6 +164,7 @@ export class TrackerRuntime {
         this.stopFaceTracking("sincro_face_tracking_disposed");
         this.faceTracker.dispose();
         this.poseTracker.dispose();
+        this.handTracker.dispose();
         this.workerClient.dispose();
     }
 
@@ -148,8 +172,10 @@ export class TrackerRuntime {
         return initializeTrackerRuntimeEngine({
             faceTracker: this.faceTracker,
             poseTracker: this.poseTracker,
+            handTracker: this.handTracker,
             workerClient: this.workerClient,
             poseTrackingEnabled: this.poseTrackingEnabled,
+            handTrackingEnabled: this.handTrackingEnabled,
             preferWorker,
             onWorkerFallback: (reason) => {
                 this.applyMainThreadFallback(reason);
@@ -201,6 +227,9 @@ export class TrackerRuntime {
                     ? this.faceTracker.detectWithRoi(this.videoElement, poseResult.snapshot, nowMs)
                     : this.faceTracker.detect(this.videoElement, nowMs);
             this.callbacks.onFaceMotion(snapshot, timing);
+            if (poseResult && this.shouldRunHandInference(nowMs)) {
+                this.runHandInference(timing, poseResult.snapshot);
+            }
             this.callbacks.onTrackerStats?.(
                 this.createMainThreadStats(
                     timing,
@@ -222,14 +251,24 @@ export class TrackerRuntime {
         }
         const nowMs = timing.mediaTimeMs;
         const runPose = this.shouldRunPoseInference(nowMs);
+        const runHand = runPose && this.shouldRunHandInference(nowMs);
         if (runPose) {
             this.lastPoseInferenceAtMs = nowMs;
+        }
+        if (runHand) {
+            this.lastHandInferenceAtMs = nowMs;
         }
         try {
             const transferStartedAtMs = performance.now();
             const frame = await createImageBitmap(this.videoElement);
             const transferTimeMs = performance.now() - transferStartedAtMs;
-            const result = await this.workerClient.detect(frame, nowMs, runPose, transferTimeMs);
+            const result = await this.workerClient.detect(
+                frame,
+                nowMs,
+                runPose,
+                runHand,
+                transferTimeMs,
+            );
             if (!this.frameLoop.enabled || !this.callbacks) {
                 this.frameLoop.markStopped();
                 return;
@@ -238,6 +277,9 @@ export class TrackerRuntime {
             if (result.pose) {
                 this.callbacks.onPoseMotion?.(result.pose, timing);
                 this.applyPosePerformanceGate(result.pose, nowMs, timing);
+            }
+            if (result.hand) {
+                this.callbacks.onHandMotion?.(result.hand, timing);
             }
             this.callbacks.onTrackerStats?.(
                 this.withBudget(result.stats, timing, result.pose?.inferenceTimeMs),
@@ -254,6 +296,16 @@ export class TrackerRuntime {
             poseDegradedToFaceOnly: this.poseDegradedToFaceOnly,
             lastPoseInferenceAtMs: this.lastPoseInferenceAtMs,
             targetPoseInferenceFps: this.targetPoseInferenceFps,
+            nowMs,
+        });
+    }
+
+    private shouldRunHandInference(nowMs: number): boolean {
+        return shouldRunTrackerHandInference({
+            handTrackingEnabled: this.handTrackingEnabled,
+            poseDegradedToFaceOnly: this.poseDegradedToFaceOnly,
+            lastHandInferenceAtMs: this.lastHandInferenceAtMs,
+            targetHandInferenceFps: this.targetHandInferenceFps,
             nowMs,
         });
     }
@@ -282,6 +334,23 @@ export class TrackerRuntime {
             this.degradePoseToFaceOnly(formatTrackerRuntimeErrorDetail(error), nowMs, timing);
             return undefined;
         }
+    }
+
+    private runHandInference(
+        timing: TrackerVideoFrameTiming,
+        poseSnapshot: SincroPoseMotionSnapshot,
+    ): { snapshot: SincroHandMotionSnapshot; inferenceTimeMs: number } | undefined {
+        if (!this.callbacks) {
+            return undefined;
+        }
+        const nowMs = timing.mediaTimeMs;
+        this.lastHandInferenceAtMs = nowMs;
+        const snapshot = this.handTracker.detect(this.videoElement, poseSnapshot, nowMs);
+        this.callbacks.onHandMotion?.(snapshot, timing);
+        return {
+            snapshot,
+            inferenceTimeMs: snapshot.inferenceTimeMs,
+        };
     }
 
     private async switchToMainThreadFallback(error: unknown): Promise<void> {
@@ -333,12 +402,14 @@ export class TrackerRuntime {
         };
         this.callbacks?.onPoseMotion?.(snapshot, timing);
         this.callbacks?.onPoseFallback?.(snapshot, timing);
+        this.callbacks?.onHandMotion?.(this.handTracker.stop(reason, nowMs), timing);
     }
 
     private handleRuntimeError(error: unknown): void {
         frontendLogger.error("Sincro FaceLandmarker failed during video inference.", { error });
         this.callbacks?.onFaceMotion(this.faceTracker.stop(formatTrackerRuntimeErrorDetail(error)));
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop("face_tracking_runtime_error"));
+        this.callbacks?.onHandMotion?.(this.handTracker.stop("face_tracking_runtime_error"));
         this.callbacks?.onError?.(error);
         this.frameLoop.stop();
     }
@@ -350,6 +421,7 @@ export class TrackerRuntime {
             reason,
             this.targetInferenceFps,
             this.targetPoseInferenceFps,
+            this.targetHandInferenceFps,
         );
     }
 
@@ -361,6 +433,10 @@ export class TrackerRuntime {
         this.targetPoseInferenceFps = Math.min(
             this.targetPoseInferenceFps,
             MAIN_THREAD_FALLBACK_POSE_FPS_LIMIT,
+        );
+        this.targetHandInferenceFps = Math.min(
+            this.targetHandInferenceFps,
+            MAIN_THREAD_FALLBACK_HAND_FPS_LIMIT,
         );
         this.posePerformanceGate.configure({
             targetPoseInferenceFps: this.targetPoseInferenceFps,
@@ -408,6 +484,9 @@ export class TrackerRuntime {
                 fallbackReason: this.mainThreadFallbackReason,
                 effectiveFaceFps: this.targetInferenceFps,
                 effectivePoseFps: this.targetPoseInferenceFps,
+                effectiveHandFps: this.handTrackingEnabled
+                    ? this.targetHandInferenceFps
+                    : undefined,
             },
             timing,
             poseInferenceTimeMs,
@@ -421,11 +500,15 @@ export class TrackerRuntime {
     ): SincroTrackerWorkerStats {
         const effectiveFaceFps = stats.effectiveFaceFps ?? this.targetInferenceFps;
         const effectivePoseFps = stats.effectivePoseFps ?? this.targetPoseInferenceFps;
+        const effectiveHandFps =
+            stats.effectiveHandFps ??
+            (this.handTrackingEnabled ? this.targetHandInferenceFps : undefined);
         const fallbackReason = stats.fallbackReason ?? this.mainThreadFallbackReason;
         return {
             ...stats,
             effectiveFaceFps,
             effectivePoseFps,
+            effectiveHandFps,
             budget: createTrackerPerformanceBudgetReport({
                 targetInferenceFps: this.targetInferenceFps,
                 targetPoseInferenceFps: this.targetPoseInferenceFps,
