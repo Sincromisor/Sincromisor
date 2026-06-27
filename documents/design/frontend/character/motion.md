@@ -50,6 +50,9 @@
 - `src/character/temporal`
     - canonical / reliability の後段で共有する `TemporalUpperBodyState` v1 contract を置く。
     - 保存対象は時系列状態、canonical arm scalar、body-local wrist / elbow tuple、速度、recovering blend に限定し、VRM bone rotation、quaternion、IK solver 出力は含めない。
+- `src/character/motionIntent`
+    - canonical / temporal / reliability / hand / gesture の後段で共有する `MotionIntentState` v1 contract を置く。
+    - 保存対象は左右腕と torso の motion intent、confidence / reliability / expressiveness、入力由来、警告、Gesture Recognizer raw label の説明用 field に限定し、VRM bone rotation、semantic clip、finger bone rotation は含めない。
 - `src/character/ik`
     - `SincroArmIkSolver` と solver probe / constraint / geometry / pole を置く。
     - `ArmPoleState` v1 は `"stable"`、`"uncertain"`、`"extended"`、`"lost"`、`"recovering"` の lower-case enum とし、IK pole resolver が決定する。TemporalStateEstimator は VRM quaternion / IK pole を扱わない。
@@ -89,6 +92,7 @@
     - `MotionDebugSnapshot.hand` と `frame.hand` は optional Hand snapshot slot として扱う。replay viewer の reliability layer は saved `frame.reliability` を正本にし、旧 log に Hand / Face reliability が無い場合だけ pose-only fallback を使う。replay 時に raw MediaPipe result や missing hand snapshot から reliability を再推定しない。
     - `canonical` layer は replay frame の `frame.canonical` を優先し、保存値がない場合だけ live snapshot の `canonical` へ fallback する。valid canonical は `schemaVersion`、`timestamp.mediaTimeMs`、左右腕特徴、`source`、`warnings`、`outOfRangeFields`、`calibration.id` を JSON value として確認できる。invalid canonical は replay failure にせず、`parseStatus: "invalid"` と parse error summary を `available` layer value として表示する。
     - `temporal` layer は replay frame の saved `frame.temporal` を最優先し、保存値がない live snapshot では latest temporal を表示する。replay frame に `frame.temporal` が無い旧 log は live recompute で隠さず `not_recorded` とする。saved temporal は `parseTemporalUpperBodyState()` で検証し、invalid な場合も replay failure にはせず、`parseStatus: "invalid"`、parse errors、raw value を `available` layer value として表示する。
+    - `intent` layer は replay frame の saved `frame.intent` だけを正本にする。旧 log で `frame.intent` が無い場合は `not_recorded` とし、live snapshot から再推定しない。saved intent は `parseMotionIntentState()` で検証し、valid な場合は `MotionIntentState` を表示、invalid な場合は replay failure にせず `parseStatus: "invalid"`、parse errors、raw value を invalid layer value として表示する。
     - `solver` layer は `value.phase6` と `value.phase7` の substatus を持つ。Phase 6 は `frame.solver.phase6`、Phase 7 は `frame.solver.phase7` を正本にし、旧 log の `frame.solver.poseRetarget` / `frame.solver.poseRetargetRuntime` は保持するが Phase 6 / Phase 7 snapshot としては live recompute しない。
     - replay viewer の `solver` 外側 status は、`phase6` と `phase7` が両方 `not_recorded` の場合だけ `not_recorded` とする。どちらか片方でも `available` または `invalid` なら外側 status は `available` とし、missing / invalid は substatus に閉じる。
     - saved `phase6` は `parseMotionDebugPhase6SolverSnapshot()` で検証し、未知 schemaVersion、非 finite number、unknown enum、runtime object 風 value は `phase6.status = "invalid"` として表示する。
@@ -213,6 +217,17 @@
     - recovering 中の 1 frame あたり scalar jump は `maxRecoveringAngleJumpRad: 15deg` 相当に clamp する。`elevationRad` / `elbowFlexionRad` は radian clamp、`reach` / `openness` / `forwardness` は各値域に同じ比率を掛けた clamp を使う。prediction / comfortable fallback / recovering は左右腕ごとに独立して処理する。
     - canonical `head` が存在する frame だけ、yaw / pitch / roll に arm と同じ `tracked` / `predicted` / `lost` / `recovering` policy を optional に適用する。v1 では Face matrix 由来 head reliability は扱わず、Head / Face 専用 reliability 接続は Phase 8 以降に残す。
     - VRM quaternion、IK pole、final pose smoothing は TemporalStateEstimator では扱わず、Phase 6 以降の MotionSolver / IK / VrmPoseComposer の責務に残す。
+- `MotionIntentState`
+    - `sincro.motion-intent.v1` を schema version とする、canonical / temporal / reliability の後段、semantic pose / IK / finger bone 適用の前段で使う JSON 保存可能な motion intent contract。
+    - motion-debug の `frame.intent` optional slot に保存する plain object として扱う。motion-debug log schema では `z.unknown().optional()` のまま保持し、log load 全体の互換性は壊さない。
+    - `arms.left` / `arms.right` の `intent` は `"tracking"`、`"wave"`、`"pointing"`、`"thumbsUp"`、`"peace"`、`"nearFace"`、`"explain"`、`"clapLike"`、`"guarded"`、`"lost"`、`"fallback"` に固定する。保存値は lower camel case とし、`"thumbs_up"`、`"openPalm"`、Gesture Recognizer の raw label は arm intent として保存しない。
+    - `torso.intent` は `"neutral"`、`"leaning"`、`"turning"`、`"settling"` に固定する。v1 では腕と同じ semantic gesture 名を torso に入れない。
+    - `sourceGestureLabel` は Gesture Recognizer の raw label を説明用に保存する optional field であり、`intent` の代替値にはしない。
+    - `confidence`、`reliability`、`expressiveness` は `0..1`、`ageMs`、`stableDurationMs`、`cooldownRemainingMs`、`timestamp.mediaTimeMs` は finite かつ `>= 0` に固定する。
+    - warning code は `"low_hand_reliability"`、`"low_pose_reliability"`、`"gesture_unstable"`、`"gesture_cooldown"`、`"wave_motion_missing"`、`"near_face_hold"`、`"left_right_swap_suspect"`、`"fallback_active"`、`"invalid_dt"` に固定する。
+    - `parseMotionIntentState()` は replay / viewer 境界の検証 API であり、未知 `schemaVersion` は `unknown_schema_version`、範囲外 number は `out_of_range`、非 finite number / unknown enum / extra key / class instance / function / Three.js runtime object 風 field は `invalid_state` として返す。
+    - default state は caller 指定の `mediaTimeMs` を保存し、左右腕を `intent: "tracking"`、`confidence: 0`、`reliability: 0`、`expressiveness: 0`、`source: "fallback"` にする。`performance.now()` は呼ばず、top-level warning には `fallback_active` を含める。
+    - 本 contract は intent 名と保存境界の足場であり、Gesture Recognizer の初期化、intent estimator、semantic clip、finger bone rotation、`VRMCharacterManager.update()` の適用順序変更は後続 task に残す。
 - `TemporalUpperBodyState` → arm IK bridge
     - Phase 6 bridge は `src/character/motionSolver/temporalArmSolverBridge.ts` の `createTemporalArmIkInput()` を正本とし、既存 `solveWorldArmIk()` の Pose snapshot 入力経路は残す。bridge は本番切替ではなく、Temporal / profile 由来の solver input 候補を作る純粋 helper として扱う。
     - 入力は `TemporalUpperBodyState`、腕 side、`MinimalAvatarMotionProfile`、`SincroArmIkSolver` と同等の `shoulderWidth` / `upperArmLength` / `lowerArmLength` measurement である。scale snapshot は profile measurement を優先し、欠損時だけ solver measurement に fallback する。`maxReachRatio` は `0.985` に固定する。

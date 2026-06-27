@@ -1,11 +1,13 @@
 # Review: task-260627180718-character-animation-3-0-phase-9-gesture-intent-estimator-hys
 
 ## 判定
+
 APPROVED
 
 前回の残指摘 3 点はいずれも解消されている。今回指定された範囲では、実装に進めない新たな破綻は見つからなかった。
 
 ## 指摘事項
+
 （深刻度順: Critical > High > Medium > Low）
 
 - なし。
