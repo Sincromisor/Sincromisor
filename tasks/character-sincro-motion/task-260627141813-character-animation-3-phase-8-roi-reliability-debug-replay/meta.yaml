@@ -1,0 +1,15 @@
+id: task-260627141813-character-animation-3-phase-8-roi-reliability-debug-replay
+title: character animation 3.0 phase 8 ROI reliability debug replay integration
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260627141812-character-animation-3-phase-8-pose-seeded-hand-roi-tracking
+  - task-260627141812-character-animation-3-phase-8-pose-seeded-face-roi-tracking
+superseded_by: null
+review: APPROVED
+reviewed_sha: d0f1f2b4c2623aa581b0c53137ece3030428222f
+verdict: null
+attempts: 0
+created_at: 2026-06-27
+closed_at: null
+legacy_ids: []

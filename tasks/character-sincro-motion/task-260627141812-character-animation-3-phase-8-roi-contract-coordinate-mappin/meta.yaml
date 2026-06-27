@@ -1,0 +1,14 @@
+id: task-260627141812-character-animation-3-phase-8-roi-contract-coordinate-mappin
+title: character animation 3.0 phase 8 ROI contract and coordinate mapping
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260626014933-character-animation-3-phase-7-debug-replay-docs-integration
+superseded_by: null
+review: APPROVED
+reviewed_sha: d0f1f2b4c2623aa581b0c53137ece3030428222f
+verdict: null
+attempts: 0
+created_at: 2026-06-27
+closed_at: null
+legacy_ids: []
