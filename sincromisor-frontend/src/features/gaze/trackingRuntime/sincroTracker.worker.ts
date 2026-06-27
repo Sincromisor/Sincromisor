@@ -45,6 +45,7 @@ let poseInitialized = false;
 let handInitialized = false;
 let handInitializationFailureReason: string | undefined;
 let initializing: Promise<void> | undefined;
+let latestPose: ReturnType<SincroPoseTracker["detect"]> | undefined;
 
 function post(message: SincroTrackerWorkerOutputMessage): void {
     self.postMessage(message);
@@ -59,30 +60,34 @@ function postStatus(status: SincroTrackerWorkerStatus, message = "", loadTimeMs?
     });
 }
 
-async function initialize(poseEnabled: boolean, handEnabled: boolean): Promise<void> {
+async function initialize(
+    poseEnabled: boolean,
+    handEnabled: boolean,
+    faceRoiEnabled: boolean,
+): Promise<void> {
     await ensureTrackers();
     if (initializing) {
         await initializing;
-        if (poseEnabled && !poseInitialized) {
+        if ((poseEnabled || faceRoiEnabled || handEnabled) && !poseInitialized) {
             await initializePose();
         }
-        if (poseEnabled && handEnabled && !handInitialized) {
+        if (handEnabled && !handInitialized) {
             await initializeHand();
         }
         return;
     }
     const startedAtMs = performance.now();
-    postStatus("loading", loadingMessage(poseEnabled, handEnabled));
+    postStatus("loading", loadingMessage(poseEnabled, handEnabled, faceRoiEnabled));
     const currentFaceTracker = faceTracker;
     if (!currentFaceTracker) {
         throw new Error("SincroFaceTracker is not loaded.");
     }
     initializing = (async () => {
         await currentFaceTracker.initVision();
-        if (poseEnabled) {
+        if (poseEnabled || faceRoiEnabled || handEnabled) {
             await initializePose();
         }
-        if (poseEnabled && handEnabled) {
+        if (handEnabled) {
             await initializeHand();
         }
     })();
@@ -140,7 +145,7 @@ async function ensureTrackers(): Promise<void> {
 async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> {
     const startedAtMs = performance.now();
     try {
-        await initialize(message.poseEnabled, message.handEnabled);
+        await initialize(message.poseEnabled, message.handEnabled, message.faceRoiEnabled);
         if (!faceTracker || !poseTracker || !handTracker) {
             throw new Error("Sincro tracker worker is not initialized.");
         }
@@ -149,11 +154,15 @@ async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> 
             message.poseEnabled && poseInitialized
                 ? poseTracker.detect(message.frame, message.timestampMs)
                 : undefined;
+        if (pose !== undefined) {
+            latestPose = pose;
+        }
+        const roiPose = pose ?? latestPose;
         const face =
-            pose && !pose.degradedToFaceOnly
-                ? faceTracker.detectWithRoi(message.frame, pose, message.timestampMs)
+            message.faceRoiEnabled && roiPose !== undefined && !roiPose.degradedToFaceOnly
+                ? faceTracker.detectWithRoi(message.frame, roiPose, message.timestampMs)
                 : faceTracker.detect(message.frame, message.timestampMs);
-        const hand = detectHand(message, pose);
+        const hand = detectHand(message, roiPose);
         post({
             type: "result",
             requestId: message.requestId,
@@ -175,7 +184,7 @@ self.onmessage = (event: MessageEvent<SincroTrackerWorkerInputMessage>) => {
         return;
     }
     if (data.type === "init") {
-        initialize(data.poseEnabled, data.handEnabled).catch((error) => {
+        initialize(data.poseEnabled, data.handEnabled, data.faceRoiEnabled).catch((error) => {
             post({
                 type: "error",
                 message: formatErrorDetail(error),
@@ -223,7 +232,7 @@ function detectHand(
     if (!message.handEnabled) {
         return undefined;
     }
-    if (!message.poseEnabled || pose === undefined) {
+    if (pose === undefined) {
         return handTracker?.stop("hand_tracking_requires_pose", message.timestampMs);
     }
     if (!handInitialized) {
@@ -244,11 +253,18 @@ function normalizeMediaPipeImportPath(path: string): string {
     return path.replace("?import&", "?").replace("&import", "");
 }
 
-function loadingMessage(poseEnabled: boolean, handEnabled: boolean): string {
+function loadingMessage(
+    poseEnabled: boolean,
+    handEnabled: boolean,
+    faceRoiEnabled: boolean,
+): string {
     if (poseEnabled && handEnabled) {
         return "Loading FaceLandmarker, PoseLandmarker and HandLandmarker";
     }
-    return poseEnabled ? "Loading FaceLandmarker and PoseLandmarker" : "Loading FaceLandmarker";
+    if (poseEnabled || handEnabled || faceRoiEnabled) {
+        return "Loading FaceLandmarker and PoseLandmarker";
+    }
+    return "Loading FaceLandmarker";
 }
 
 function createStoppedFaceSnapshot(

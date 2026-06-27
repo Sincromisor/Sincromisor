@@ -1656,6 +1656,13 @@ describe("createMotionDebugViewerSnapshot", () => {
             },
             reasonCodes: ["worker_round_trip_warn", "worker_pending_frame_dropped"],
         };
+        const roiStats = {
+            pauseState: "hand-paused",
+            fallbackCount: 2,
+            skippedFrames: 4,
+            consecutiveOverBudgetFrames: 0,
+            reasonCodes: ["face_roi_skipped", "roi_fallback_full_frame", "hand_roi_paused"],
+        };
 
         const viewer = createMotionDebugViewerSnapshot({
             mode: "replay",
@@ -1683,8 +1690,10 @@ describe("createMotionDebugViewerSnapshot", () => {
                         transferTimeMs: 3,
                         workerRoundTripMs: 78,
                         workerTimeMs: 61,
+                        effectiveFaceRoiFps: 3,
                         loadTimeMs: 120,
                         droppedFrames: 1,
+                        roi: roiStats,
                         budget: trackerBudget,
                     },
                 },
@@ -1694,6 +1703,8 @@ describe("createMotionDebugViewerSnapshot", () => {
         expect(viewer.layers.metrics.status).toBe("available");
         expect(viewer.layers.metrics.value).toMatchObject({
             tracker: {
+                roi: roiStats,
+                effectiveFaceRoiFps: 3,
                 budget: {
                     schemaVersion: TRACKER_PERFORMANCE_BUDGET_SCHEMA_VERSION,
                     budgetStatus: "warn",

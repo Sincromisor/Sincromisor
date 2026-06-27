@@ -50,6 +50,7 @@
 - Reliability / Debug Replay
     - motion-debug は live snapshot と `frame.reliability` に `ReliabilityMap` を保存し、saved reliability を replay viewer の正本にする。
     - `MotionDebugSnapshot.hand` / `frame.hand` は Hand snapshot の debug / replay 用 optional slot であり、raw landmarks や crop object は含めない。
+    - `frame.metrics.tracker.roi` は Hand / Face ROI の pause state、fallback count、skip count、over-budget count、reason code を保存する debug / replay 用 optional stats である。full-frame Face / Pose の既存 cadence と budget target / observed shape は維持する。
     - 旧 log に `frame.reliability` が無い場合だけ pose snapshot 由来の pose-only placeholder reliability を fallback 表示し、保存されていない Hand / Face 観測は再構成しない。
 - IK / Pose Composer
     - `SincroArmIkSolver` は腕 IK quaternion と constraint reason を返す。
