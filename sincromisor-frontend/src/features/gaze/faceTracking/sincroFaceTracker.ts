@@ -42,7 +42,8 @@ export type SincroFaceTrackerOptions = {
 export class SincroFaceTracker {
     private faceLandmarker?: SincroFaceLandmarkerLike;
     private initPromise?: Promise<void>;
-    private lastInferenceEndedAtMs?: number;
+    private lastFullFrameInferenceEndedAtMs?: number;
+    private lastRoiInferenceEndedAtMs?: number;
     private snapshot: SincroFaceMotionSnapshot = {
         ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
         headPose: { ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT.headPose },
@@ -97,10 +98,10 @@ export class SincroFaceTracker {
         const inferenceEndedAtMs = performance.now();
         const inferenceTimeMs = inferenceEndedAtMs - inferenceStartedAtMs;
         const inferenceFps = calculateFaceInferenceFps({
-            lastInferenceEndedAtMs: this.lastInferenceEndedAtMs,
+            lastInferenceEndedAtMs: this.lastFullFrameInferenceEndedAtMs,
             inferenceEndedAtMs,
         });
-        this.lastInferenceEndedAtMs = inferenceEndedAtMs;
+        this.lastFullFrameInferenceEndedAtMs = inferenceEndedAtMs;
         this.snapshot = normalizeSincroFaceLandmarkerResult({
             result,
             inferenceTimeMs,
@@ -167,10 +168,10 @@ export class SincroFaceTracker {
         }
 
         const inferenceFps = calculateFaceInferenceFps({
-            lastInferenceEndedAtMs: this.lastInferenceEndedAtMs,
+            lastInferenceEndedAtMs: this.lastRoiInferenceEndedAtMs,
             inferenceEndedAtMs: roiDetection.inferenceEndedAtMs,
         });
-        this.lastInferenceEndedAtMs = roiDetection.inferenceEndedAtMs;
+        this.lastRoiInferenceEndedAtMs = roiDetection.inferenceEndedAtMs;
         this.snapshot = normalizeSincroFaceLandmarkerResult({
             result: roiDetection.result,
             inferenceTimeMs: roiDetection.inferenceTimeMs,
@@ -205,7 +206,8 @@ export class SincroFaceTracker {
             fallbackReason: reason,
             lastUpdatedAtMs: nowMs,
         };
-        this.lastInferenceEndedAtMs = undefined;
+        this.lastFullFrameInferenceEndedAtMs = undefined;
+        this.lastRoiInferenceEndedAtMs = undefined;
         return this.getSnapshot();
     }
 
@@ -263,10 +265,10 @@ export class SincroFaceTracker {
         const fallback = this.runFaceLandmarker(videoFrame, timestampMs);
         const inferenceEndedAtMs = fallback.inferenceEndedAtMs;
         const inferenceFps = calculateFaceInferenceFps({
-            lastInferenceEndedAtMs: this.lastInferenceEndedAtMs,
+            lastInferenceEndedAtMs: this.lastRoiInferenceEndedAtMs,
             inferenceEndedAtMs,
         });
-        this.lastInferenceEndedAtMs = inferenceEndedAtMs;
+        this.lastRoiInferenceEndedAtMs = inferenceEndedAtMs;
         this.snapshot = normalizeSincroFaceLandmarkerResult({
             result: fallback.result,
             inferenceTimeMs: previousInferenceTimeMs + fallback.inferenceTimeMs,

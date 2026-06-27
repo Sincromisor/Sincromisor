@@ -158,15 +158,17 @@ async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> 
             latestPose = pose;
         }
         const roiPose = pose ?? latestPose;
-        const face =
+        const face = faceTracker.detect(message.frame, message.timestampMs);
+        const faceRoi =
             message.faceRoiEnabled && roiPose !== undefined && !roiPose.degradedToFaceOnly
                 ? faceTracker.detectWithRoi(message.frame, roiPose, message.timestampMs)
-                : faceTracker.detect(message.frame, message.timestampMs);
+                : undefined;
         const hand = detectHand(message, roiPose);
         post({
             type: "result",
             requestId: message.requestId,
             face,
+            faceRoi,
             pose,
             hand,
             workerTimeMs: performance.now() - startedAtMs,

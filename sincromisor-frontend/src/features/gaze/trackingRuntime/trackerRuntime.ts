@@ -256,7 +256,9 @@ export class TrackerRuntime {
                 : undefined;
             const roiPose = this.resolveFreshPoseSnapshot(nowMs, poseResult?.snapshot);
             const runFaceRoi = this.shouldRunFaceRoiInference(nowMs, roiPose !== undefined);
-            const faceSnapshot = this.runFaceInference(timing, roiPose, runFaceRoi);
+            const faceRoiSnapshot =
+                runFaceRoi && roiPose ? this.runFaceRoiInference(timing, roiPose) : undefined;
+            const faceSnapshot = this.runFaceInference(timing, roiPose, faceRoiSnapshot);
             this.callbacks.onFaceMotion(faceSnapshot, timing);
             const runHand = this.shouldRunHandInference(nowMs, roiPose !== undefined);
             const handResult =
@@ -268,7 +270,7 @@ export class TrackerRuntime {
                 handRan: runHand,
                 faceRoiRan: runFaceRoi,
                 handResult,
-                faceSnapshot,
+                faceRoiSnapshot,
                 skippedReasons: this.collectRoiSkipReasons(
                     runHand,
                     runFaceRoi,
@@ -343,7 +345,7 @@ export class TrackerRuntime {
                     result.hand === undefined
                         ? undefined
                         : { snapshot: result.hand, inferenceTimeMs: result.hand.inferenceTimeMs },
-                faceSnapshot: result.face,
+                faceRoiSnapshot: result.faceRoi,
                 skippedReasons: this.collectRoiSkipReasons(runHand, runFaceRoi, expectedFreshPose),
             });
             this.callbacks.onTrackerStats?.(
@@ -436,18 +438,26 @@ export class TrackerRuntime {
     private runFaceInference(
         timing: TrackerVideoFrameTiming,
         poseSnapshot: SincroPoseMotionSnapshot | undefined,
-        runFaceRoi: boolean,
+        faceRoiSnapshot: SincroFaceMotionSnapshot | undefined,
     ): SincroFaceMotionSnapshot {
         const nowMs = timing.mediaTimeMs;
-        if (runFaceRoi && poseSnapshot !== undefined) {
-            this.lastFaceRoiInferenceAtMs = nowMs;
-            return this.faceTracker.detectWithRoi(this.videoElement, poseSnapshot, nowMs);
-        }
         const snapshot = this.faceTracker.detect(this.videoElement, nowMs);
+        if (faceRoiSnapshot !== undefined) {
+            return this.withFaceRoiMetadata(snapshot, faceRoiSnapshot);
+        }
         if (this.faceRoiTrackingEnabled && this.roiBudget.faceRoiIsPaused()) {
             return this.withPausedFaceRoiWarning(snapshot, poseSnapshot);
         }
         return snapshot;
+    }
+
+    private runFaceRoiInference(
+        timing: TrackerVideoFrameTiming,
+        poseSnapshot: SincroPoseMotionSnapshot,
+    ): SincroFaceMotionSnapshot {
+        const nowMs = timing.mediaTimeMs;
+        this.lastFaceRoiInferenceAtMs = nowMs;
+        return this.faceTracker.detectWithRoi(this.videoElement, poseSnapshot, nowMs);
     }
 
     private async switchToMainThreadFallback(error: unknown): Promise<void> {
@@ -666,7 +676,7 @@ export class TrackerRuntime {
         handRan: boolean;
         faceRoiRan: boolean;
         handResult?: { snapshot: SincroHandMotionSnapshot; inferenceTimeMs: number };
-        faceSnapshot: SincroFaceMotionSnapshot;
+        faceRoiSnapshot?: SincroFaceMotionSnapshot;
         skippedReasons: SincroTrackerRoiReasonCode[];
     }): SincroTrackerRoiStats {
         return this.roiBudget.recordFrame({
@@ -674,12 +684,12 @@ export class TrackerRuntime {
             faceRoiRan: input.faceRoiRan,
             handInferenceTimeMs: input.handResult?.inferenceTimeMs,
             faceRoiInferenceTimeMs: input.faceRoiRan
-                ? input.faceSnapshot.inferenceTimeMs
+                ? input.faceRoiSnapshot?.inferenceTimeMs
                 : undefined,
             handUsedFullFrameFallback:
                 input.handResult?.snapshot.leftHand.source === "full-frame-fallback" ||
                 input.handResult?.snapshot.rightHand.source === "full-frame-fallback",
-            faceUsedFullFrameFallback: input.faceSnapshot.source === "full-frame-fallback",
+            faceUsedFullFrameFallback: input.faceRoiSnapshot?.source === "full-frame-fallback",
             skippedReasons: input.skippedReasons,
             targetPoseInferenceFps: this.targetPoseInferenceFps,
         });
@@ -755,8 +765,36 @@ export class TrackerRuntime {
             warnings: uniqueStrings([...snapshot.warnings, "face_roi_paused"]),
         };
     }
+
+    private withFaceRoiMetadata(
+        snapshot: SincroFaceMotionSnapshot,
+        faceRoiSnapshot: SincroFaceMotionSnapshot,
+    ): SincroFaceMotionSnapshot {
+        return {
+            ...snapshot,
+            roi: cloneFaceRoiObservation(faceRoiSnapshot.roi),
+            warnings: uniqueStrings([...snapshot.warnings, ...faceRoiSnapshot.warnings]),
+        };
+    }
 }
 
 function uniqueStrings<T extends string>(values: T[]): T[] {
     return values.filter((value, index) => values.indexOf(value) === index);
+}
+
+function cloneFaceRoiObservation(
+    roi: SincroFaceMotionSnapshot["roi"],
+): SincroFaceMotionSnapshot["roi"] {
+    if (roi === undefined) {
+        return undefined;
+    }
+    return {
+        ...roi,
+        rect: { ...roi.rect },
+        referencePoint:
+            roi.referencePoint === undefined
+                ? undefined
+                : [roi.referencePoint[0], roi.referencePoint[1]],
+        warnings: [...roi.warnings],
+    };
 }
