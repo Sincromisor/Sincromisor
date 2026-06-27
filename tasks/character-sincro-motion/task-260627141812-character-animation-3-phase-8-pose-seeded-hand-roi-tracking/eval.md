@@ -1,9 +1,11 @@
 # Evaluation: task-260627141812-character-animation-3-phase-8-pose-seeded-hand-roi-tracking
 
 ## 判定
+
 PASS
 
 ## 受け入れ条件チェックリスト
+
 - [✓] Hand snapshot module/export — `sincroHandMotionSnapshot.ts` が `SincroHandMotionSnapshot`、左右 side / feature snapshot、default snapshot を export している。
 - [✓] Snapshot schema — `trackingEnabled`、`detected`、左右 hand、inference stats、`fallbackReason` と、左右 hand の `assignedSide` / `source` / `roi` / `fullFrameWrist` / `features` / `warnings` が固定 schema で実装されている。
 - [✓] 型 enum/tuple の固定 — `SincroHandTuple3 = readonly [number, number, number]`、`SincroHandPoint2 = readonly [number, number]`、source/warning enum が task.md の最小 schema と一致する。
@@ -25,6 +27,7 @@ PASS
 - [✓] Docs sync — `documents/design/frontend/character/tracking.md` と `motion.md` に Hand snapshot、値域、ROI fallback、Hand wrist を IK 主 target にしない境界、Gesture/MotionIntent を Phase 9 以降に残す方針が同期されている。
 
 ## テスト結果
+
 - `npm run gate`（評価 worktree `/private/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-a677355cec96-aVlxQm`、HEAD `a677355`、clean）: PASS
 - gate 詳細:
     - `gate:lint`: CACHE HIT / PASS
@@ -33,8 +36,10 @@ PASS
 - 追加の acceptance test は作成していない。実装者テストは helper 中心だが、受け入れ条件で明示された Hand feature/assignment/ROI 復元の観点を満たしている。Worker/runtime の enable 条件、fallback、callback 非指定互換は差分の静的確認で補完した。
 
 ## ドキュメント整合性
+
 - 契約/公開挙動の変更あり: developer-visible な `SincroHandMotionSnapshot`、`TrackerRuntimeCallbacks.onHandMotion?`、Worker `handEnabled` protocol、stats `effectiveHandFps?` が追加されている。
 - 同期状況: 同期済み。`documents/design/frontend/character/tracking.md` と `documents/design/frontend/character/motion.md` に Hand snapshot schema、feature 値域、ROI fallback、assignment、cadence、Hand wrist/IK 境界、Gesture / MotionIntent を Phase 9 に残す方針が反映されている。
 
 ## 残課題（FAIL の場合）
+
 - なし。

@@ -33,7 +33,10 @@
 - `src/character/reliability`
     - 後続 estimator / replay / temporal state が共有する `ReliabilityMap` v1 contract を置く。
     - MediaPipe confidence をそのまま制御重みにせず、joint / part / gesture ごとの保存可能な信頼度 snapshot として扱う。
-    - Phase 4a の `PoseReliabilityEstimator` は `SincroPoseMotionSnapshot` と optional `CameraQualityScore`、optional `previous.pose` / `previous.mediaTimeMs` / `previous.reliability`、caller 指定の `mediaTimeMs`、`video` size から `ReliabilityMap` を作る pure function とする。Pose snapshot で未観測の Head / Hand / Finger / Gesture / ROI は placeholder に固定し、Face / Hand / Gesture 専用 estimator は後続 Phase 8 / 9 で接続する。
+    - Phase 8 の `PoseReliabilityEstimator` は `SincroPoseMotionSnapshot` と optional `SincroHandMotionSnapshot` / `SincroFaceMotionSnapshot` / `CameraQualityScore`、optional `previous.pose` / `previous.mediaTimeMs` / `previous.reliability`、caller 指定の `mediaTimeMs`、`video` size から `ReliabilityMap` を作る pure function とする。Hand / Face 入力が省略された旧経路では Head / Hand / Finger は pose-only placeholder を維持し、Hand / Face 入力がある frame だけ `source: "hand"` / `"face"` の reliability を埋める。
+    - Face reliability の ROI component は `face.roi.confidence` を正本にし、Face center consistency は tracker 側の full-frame fallback 判断に閉じる。Hand reliability の ROI component は `calculateRoiConsistency({ expected: hand.roi.referencePoint, observed: hand.fullFrameWrist })` を正本にする。
+    - ROI reason は snapshot 自体が無い旧経路では既存 placeholder、snapshot はあるが `roi` field が無い旧 snapshot / 旧 replay log では `not_available_in_pose_snapshot`、ROI metadata の failure warning では `roi_missing` / `roi_inconsistent` に固定する。`roi_missing` と `not_available_in_pose_snapshot` は同じ欠損に同時付与しない。
+    - Gesture reliability は Phase 9 まで `source: "neutral"` の placeholder に固定する。Phase 8 の Hand snapshot は palm / finger reliability の材料であり、gesture label や MotionIntent は生成しない。
 - `src/features/gaze/handTracking`
     - Phase 8 の HandLandmarker 観測層を置く。
     - `SincroHandMotionSnapshot` は palm normal / direction、finger curl / splay、thumb oppose、openness、handedness summary、ROI observation、full-frame wrist だけを保存する低次元 contract であり、MediaPipe landmark object、crop object、raw landmarks は持たない。
@@ -80,8 +83,9 @@
     - replay 操作は同じ window API の developer-only surface とし、`loadRecording(fileOrText)`、`startReplay(options)`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` を公開する。入力は plain NDJSON `string` または `File` に限定し、compressed Blob import は扱わない。
     - snapshot panel は `live`、`recording`、`replay`、`metrics` の viewer mode を持つ。`camera`、`mediapipe`、`poseSnapshot`、`reliability`、`canonical`、`temporal`、`intent`、`solver`、`finalPose`、`applied`、`metrics` を layer selector で切り替え、値あり / 未記録 / schema invalid / 未実装 / 未計算を区別する。
     - `metrics` layer は replay frame に `frame.metrics` がある場合、motion metric summary 未計算でも保存済み metrics JSON を表示する。tracker performance budget は `frame.metrics.tracker.budget` で確認し、budget overrun の metric 化は別タスクで扱う。
-    - `reliability` layer は live snapshot の `ReliabilityMap` を最優先し、無い場合は saved `frame.reliability`、さらに無い旧 log では `frame.poseSnapshot` から再計算した reliability を表示する。`RESERVED_PHASE_1_LAYERS` ではなく実装済み layer として扱い、`poseSnapshot` も無い frame だけ `not_recorded` にする。
+    - `reliability` layer は live snapshot の `ReliabilityMap` を最優先し、無い場合は saved `frame.reliability`、さらに無い旧 log では `frame.poseSnapshot` から再計算した pose-only reliability を表示する。`RESERVED_PHASE_1_LAYERS` ではなく実装済み layer として扱い、`poseSnapshot` も無い frame だけ `not_recorded` にする。
     - saved `frame.reliability` は `parseReliabilityMap()` で検証し、valid な場合は保存値をそのまま表示する。invalid な場合も replay failure にはせず、`parseStatus: "invalid"`、parse errors、raw value を `available` layer value として表示する。
+    - `MotionDebugSnapshot.hand` と `frame.hand` は optional Hand snapshot slot として扱う。replay viewer の reliability layer は saved `frame.reliability` を正本にし、旧 log に Hand / Face reliability が無い場合だけ pose-only fallback を使う。replay 時に raw MediaPipe result や missing hand snapshot から reliability を再推定しない。
     - `canonical` layer は replay frame の `frame.canonical` を優先し、保存値がない場合だけ live snapshot の `canonical` へ fallback する。valid canonical は `schemaVersion`、`timestamp.mediaTimeMs`、左右腕特徴、`source`、`warnings`、`outOfRangeFields`、`calibration.id` を JSON value として確認できる。invalid canonical は replay failure にせず、`parseStatus: "invalid"` と parse error summary を `available` layer value として表示する。
     - `temporal` layer は replay frame の saved `frame.temporal` を最優先し、保存値がない live snapshot では latest temporal を表示する。replay frame に `frame.temporal` が無い旧 log は live recompute で隠さず `not_recorded` とする。saved temporal は `parseTemporalUpperBodyState()` で検証し、invalid な場合も replay failure にはせず、`parseStatus: "invalid"`、parse errors、raw value を `available` layer value として表示する。
     - `solver` layer は `value.phase6` と `value.phase7` の substatus を持つ。Phase 6 は `frame.solver.phase6`、Phase 7 は `frame.solver.phase7` を正本にし、旧 log の `frame.solver.poseRetarget` / `frame.solver.poseRetargetRuntime` は保持するが Phase 6 / Phase 7 snapshot としては live recompute しない。
@@ -167,7 +171,7 @@
     - ROI crop の FaceLandmarker result は crop-local result として扱い、`headPose.matrix` は従来どおり FaceLandmarker の transformation matrix number array だけを保存する。crop-local face landmark 全点、canvas、ImageBitmap、MediaPipe raw result は保存しない。
     - ROI が no-face の場合、または Pose face ROI center と Face result center の consistency score が `0` の場合は同一 frame で full-frame fallback を 1 回だけ使う。fallback でも未検出なら `source: "lost"`、`fallbackReason: "face_not_detected"` とし、`roi_missing` または `roi_inconsistent` warning を残す。
     - Worker / TrackerRuntime は Pose が実行された frame だけ Face ROI を試す。Pose 未実行 frame と face-only fallback 中は full-frame Face tracking を続け、Face retarget や head temporal の cadence を Pose cadence に合わせない。
-    - Face / ROI 専用 reliability と motion-debug viewer への warning 表示は後続 task の責務とし、本節では tracker snapshot metadata までを現在仕様とする。
+    - Face / ROI 専用 reliability は Phase 8 で `ReliabilityMap.joints.head` / `parts.head` に接続済みである。Face retarget の入力値は従来どおり `detected`、`confidence`、`headPose`、`blendshapes` を読み、ROI metadata は reliability / debug / replay の説明材料に留める。
 - `CanonicalUpperBodyState`
     - `sincro.canonical-upper-body.v1` を schema version とする、JSON 保存可能な upper body contract。
     - motion-debug の `frame.canonical` slot にそのまま保存できる plain object として扱い、replay / metrics / temporal / intent / IK が同じ名前・単位で読む。

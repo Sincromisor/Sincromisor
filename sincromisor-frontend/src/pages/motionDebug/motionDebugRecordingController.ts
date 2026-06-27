@@ -25,6 +25,7 @@ import type {
 import { uniqueWarnings } from "../../character/temporal/temporalWarnings";
 import type { DebugConsoleSnapshot } from "../../features/debug/model/debugConsoleManager";
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
@@ -56,6 +57,7 @@ type MotionDebugRecordingControllerParams = {
     getTrackerStats: () => SincroTrackerWorkerStats;
     getDebugSnapshot: () => DebugConsoleSnapshot["sincroMotion"];
     getFaceSnapshot: () => SincroFaceMotionSnapshot;
+    getHandSnapshot: () => SincroHandMotionSnapshot | undefined;
     getAvatarMotionProfile: () => AvatarMotionProfile | undefined;
     getInitialCalibrationSession?: () => InitialSincroCalibrationSession | undefined;
     getOnlineCalibrationState?: () => OnlineSincroCalibrationState | undefined;
@@ -182,6 +184,7 @@ export class MotionDebugRecordingController {
                 height: this.params.video.videoHeight,
             },
             poseSnapshot: snapshot,
+            hand: this.params.getHandSnapshot(),
             reliability: frameReliability,
             canonical,
             temporal: frameTemporal,

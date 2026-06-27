@@ -39,6 +39,7 @@ import type {
     TemporalUpperBodyStateParseResult,
 } from "../../character/temporal/temporalUpperBodyState";
 import type { DebugConsoleSnapshot } from "../../features/debug/model/debugConsoleManager";
+import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type {
     SincroPoseMotionSnapshot,
     SincroPoseTargetPointSnapshot,
@@ -170,6 +171,7 @@ export type MotionDebugSnapshot = {
     camera: MotionDebugCameraState;
     recording: MotionDebugRecorderState;
     pose: SincroPoseMotionSnapshot;
+    hand?: SincroHandMotionSnapshot;
     reliability?: ReliabilityMap | ReliabilityLayerParseError;
     canonical?: CanonicalUpperBodyState | CanonicalLayerParseError;
     temporal?: TemporalUpperBodyState | TemporalLayerParseError;

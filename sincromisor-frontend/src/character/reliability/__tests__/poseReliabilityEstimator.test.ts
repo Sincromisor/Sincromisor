@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import type { SincroFaceMotionSnapshot } from "../../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import {
+    DEFAULT_SINCRO_HAND_FEATURE_SNAPSHOT,
+    DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
+    type SincroHandMotionSnapshot,
+    type SincroHandSideSnapshot,
+} from "../../../features/gaze/handTracking/sincroHandMotionSnapshot";
+import type { SincroRoiObservation } from "../../../features/gaze/trackingRuntime/roiTracking/roiTrackingTypes";
 import { parseReliabilityMap } from "../reliabilityMap";
 import {
     createCameraQuality,
@@ -7,6 +15,96 @@ import {
     createPoint,
     createPose,
 } from "./poseReliabilityEstimatorFixtures";
+
+function createRoi(
+    side: SincroRoiObservation["side"],
+    options: Partial<SincroRoiObservation> = {},
+): SincroRoiObservation {
+    return {
+        side,
+        source: side === "face" ? "pose-face" : "pose-wrist",
+        rect: {
+            centerX: 0.5,
+            centerY: 0.5,
+            width: 0.24,
+            height: 0.24,
+            clamped: false,
+        },
+        confidence: 0.88,
+        referencePoint: side === "right" ? [0.74, 0.68] : [0.26, 0.68],
+        warnings: [],
+        ...options,
+    };
+}
+
+function createFaceSnapshot(
+    overrides: Partial<SincroFaceMotionSnapshot> = {},
+): SincroFaceMotionSnapshot {
+    return {
+        trackingEnabled: true,
+        detected: true,
+        confidence: 0.86,
+        headPose: {
+            yawDeg: 3,
+            pitchDeg: -2,
+            rollDeg: 1,
+        },
+        blendshapes: {},
+        roi: createRoi("face", {
+            referencePoint: [0.5, 0.32],
+            confidence: 0.82,
+        }),
+        source: "roi",
+        warnings: [],
+        inferenceTimeMs: 4,
+        inferenceFps: 15,
+        ...overrides,
+    };
+}
+
+function createHandSide(
+    side: "left" | "right",
+    overrides: Partial<SincroHandSideSnapshot> = {},
+): SincroHandSideSnapshot {
+    const referencePoint: readonly [number, number] = side === "left" ? [0.26, 0.68] : [0.74, 0.68];
+    return {
+        detected: true,
+        assignedSide: side,
+        source: "roi",
+        confidence: 0.84,
+        handednessScore: 0.9,
+        roi: createRoi(side, { referencePoint }),
+        fullFrameWrist: referencePoint,
+        features: {
+            ...DEFAULT_SINCRO_HAND_FEATURE_SNAPSHOT,
+            fingerCurl: {
+                thumb: 0.2,
+                index: 0.3,
+                middle: 0.32,
+                ring: 0.34,
+                little: 0.36,
+            },
+            openness: "open",
+        },
+        warnings: [],
+        ...overrides,
+    };
+}
+
+function createHandSnapshot(
+    overrides: Partial<SincroHandMotionSnapshot> = {},
+): SincroHandMotionSnapshot {
+    return {
+        ...DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
+        trackingEnabled: true,
+        detected: true,
+        leftHand: createHandSide("left"),
+        rightHand: createHandSide("right"),
+        inferenceTimeMs: 6,
+        inferenceFps: 4,
+        ...overrides,
+    };
+}
 
 describe("createPoseReliabilityMap", () => {
     it("creates a parseable pose reliability map with pose placeholders", () => {
@@ -207,5 +305,121 @@ describe("createPoseReliabilityMap", () => {
             reasonCodes: ["body_scale_missing"],
         });
         expect(parseReliabilityMap(reliability).ok).toBe(true);
+    });
+
+    it("uses detected face ROI metadata for head reliability", () => {
+        const reliability = createMap(createPose(), {
+            face: createFaceSnapshot(),
+        });
+
+        expect(reliability.joints.head).toMatchObject({
+            state: "tracked",
+            source: "face",
+            components: {
+                modelPresence: { score: 0.86, reasonCodes: [] },
+                tracking: { score: 0.86, reasonCodes: [] },
+                roi: { score: 0.82, reasonCodes: [] },
+            },
+        });
+        expect(parseReliabilityMap(reliability).ok).toBe(true);
+    });
+
+    it("uses detected hand ROI consistency for hand and finger reliability", () => {
+        const reliability = createMap(createPose(), {
+            hand: createHandSnapshot(),
+        });
+
+        expect(reliability.joints.leftHand).toMatchObject({
+            state: "tracked",
+            source: "hand",
+            components: {
+                roi: { score: 1, reasonCodes: [] },
+                side: { score: 1, reasonCodes: [] },
+            },
+        });
+        expect(reliability.parts.leftHand).toMatchObject({
+            state: "tracked",
+            source: "hand",
+            joints: ["leftWrist", "leftHand"],
+        });
+        expect(reliability.parts.leftFinger).toMatchObject({
+            state: "tracked",
+            source: "hand",
+            joints: ["leftHand"],
+            components: {
+                modelPresence: { score: 1, reasonCodes: [] },
+            },
+        });
+        expect(parseReliabilityMap(reliability).ok).toBe(true);
+    });
+
+    it("downweights side-inconsistent hands to suspect reliability", () => {
+        const reliability = createMap(createPose(), {
+            hand: createHandSnapshot({
+                leftHand: createHandSide("left", {
+                    warnings: ["side_inconsistent"],
+                }),
+            }),
+        });
+
+        expect(reliability.joints.leftHand.state).toBe("suspect");
+        expect(reliability.joints.leftHand.finalWeight).toBeLessThanOrEqual(0.45);
+        expect(reliability.joints.leftHand.components.side).toEqual({
+            score: 0.35,
+            reasonCodes: ["side_inconsistent"],
+        });
+        expect(reliability.joints.leftHand.warnings).toEqual(
+            expect.arrayContaining(["side_inconsistent", "low_confidence"]),
+        );
+    });
+
+    it("keeps ROI metadata absence distinct from ROI failure warnings", () => {
+        const reliability = createMap(createPose(), {
+            hand: createHandSnapshot({
+                leftHand: createHandSide("left", {
+                    roi: undefined,
+                    fullFrameWrist: [0.26, 0.68],
+                }),
+                rightHand: createHandSide("right", {
+                    roi: createRoi("right", {
+                        confidence: 0,
+                        warnings: ["roi_missing"],
+                    }),
+                }),
+            }),
+            face: createFaceSnapshot({
+                detected: false,
+                roi: undefined,
+                source: "lost",
+            }),
+        });
+
+        expect(reliability.joints.leftHand.components.roi).toEqual({
+            score: 0.55,
+            reasonCodes: ["not_available_in_pose_snapshot"],
+        });
+        expect(reliability.joints.rightHand.components.roi.reasonCodes).toEqual(["roi_missing"]);
+        expect(reliability.joints.rightHand.components.roi.reasonCodes).not.toContain(
+            "not_available_in_pose_snapshot",
+        );
+        expect(reliability.joints.head.components.roi).toEqual({
+            score: 0.55,
+            reasonCodes: ["not_available_in_pose_snapshot"],
+        });
+    });
+
+    it("keeps gesture reliability as a neutral placeholder with hand input", () => {
+        const reliability = createMap(createPose(), {
+            hand: createHandSnapshot(),
+        });
+
+        expect(reliability.gesture).toMatchObject({
+            state: "lost",
+            finalWeight: 0,
+            source: "neutral",
+            confidence: 0,
+            warnings: ["no_observation"],
+        });
+        expect(reliability.gesture.label).toBeUndefined();
     });
 });

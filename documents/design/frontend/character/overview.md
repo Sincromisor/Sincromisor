@@ -34,6 +34,9 @@
     - VRM character manager と motion controller のうち、behavior / retargeting / IK に属さない VRM 適用処理を置く。
 - `src/character/motionEvaluation`
     - motion-debug log schema、Phase 6 solver / Phase 7 profile-calibration / finalPose snapshot parser、replay metrics、baseline parser を置く。
+- `src/character/reliability`
+    - `ReliabilityMap` v1 を置き、Pose / Hand / Face / ROI / camera quality 由来の観測品質を developer-visible snapshot として保存する。
+    - Phase 8 では Hand / Face 入力がある frame の head / hand / finger reliability を埋める。Gesture reliability と MotionIntent への接続は Phase 9 に残す。
 - `VRMScene`
     - renderer、camera、light、resize、render loop を持つ。
 - `VRMCharacterManager`
@@ -44,6 +47,10 @@
     - head、eye、face、arm、leg、upper body を VRM 向け値で更新する。
 - Trackers / Retargeters
     - MediaPipe 結果を正規化 snapshot へ変換し、VRM 向け値へ retarget する。
+- Reliability / Debug Replay
+    - motion-debug は live snapshot と `frame.reliability` に `ReliabilityMap` を保存し、saved reliability を replay viewer の正本にする。
+    - `MotionDebugSnapshot.hand` / `frame.hand` は Hand snapshot の debug / replay 用 optional slot であり、raw landmarks や crop object は含めない。
+    - 旧 log に `frame.reliability` が無い場合だけ pose snapshot 由来の pose-only placeholder reliability を fallback 表示し、保存されていない Hand / Face 観測は再構成しない。
 - IK / Pose Composer
     - `SincroArmIkSolver` は腕 IK quaternion と constraint reason を返す。
     - `VrmPoseComposer` は tracking / idle / style layer から normalized local pose と `ownedBones` を作る。

@@ -106,6 +106,7 @@ const motionDebugFrameSchema = z
         video: motionDebugFrameVideoSchema,
         mediapipe: z.unknown().optional(),
         poseSnapshot: z.unknown().optional(),
+        hand: z.unknown().optional(),
         reliability: z.unknown().optional(),
         canonical: z.unknown().optional(),
         temporal: z.unknown().optional(),
