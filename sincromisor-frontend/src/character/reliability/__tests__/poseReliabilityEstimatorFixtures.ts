@@ -1,3 +1,5 @@
+import type { SincroFaceMotionSnapshot } from "../../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import type { SincroHandMotionSnapshot } from "../../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
@@ -140,12 +142,16 @@ export function createMap(
     pose: SincroPoseMotionSnapshot,
     options: {
         cameraQuality?: CameraQualityScore;
+        hand?: SincroHandMotionSnapshot;
+        face?: SincroFaceMotionSnapshot;
         previous?: { pose: SincroPoseMotionSnapshot; mediaTimeMs: number };
         mediaTimeMs?: number;
     } = {},
 ) {
     return createPoseReliabilityMap({
         pose,
+        ...(options.hand === undefined ? {} : { hand: options.hand }),
+        ...(options.face === undefined ? {} : { face: options.face }),
         cameraQuality: options.cameraQuality ?? createCameraQuality(1),
         previous: options.previous,
         mediaTimeMs: options.mediaTimeMs ?? 1000,

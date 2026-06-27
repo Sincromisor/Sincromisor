@@ -91,7 +91,7 @@ const RELIABILITY_PART_NAME_VALUES = [
     "rightFinger",
 ] as const;
 
-type ReliabilitySource = (typeof RELIABILITY_SOURCE_VALUES)[number];
+export type ReliabilitySource = (typeof RELIABILITY_SOURCE_VALUES)[number];
 type GestureReliabilitySource = (typeof GESTURE_RELIABILITY_SOURCE_VALUES)[number];
 type ReliabilityJointName = (typeof RELIABILITY_JOINT_NAME_VALUES)[number];
 type ReliabilityPartName = (typeof RELIABILITY_PART_NAME_VALUES)[number];

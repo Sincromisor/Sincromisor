@@ -33,6 +33,10 @@ import {
 } from "../../../character/temporal/temporalUpperBodyState";
 import { createDefaultSnapshot } from "../../../features/debug/model/debugConsoleSnapshot";
 import {
+    DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
+    type SincroHandMotionSnapshot,
+} from "../../../features/gaze/handTracking/sincroHandMotionSnapshot";
+import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
     DEFAULT_SINCRO_POSE_LOWER_BODY_TARGET_SNAPSHOT,
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
@@ -255,6 +259,40 @@ function createReliabilityMap(mediaTimeMs: number): ReliabilityMap {
             ...reliability.camera,
             videoWidth: 1280,
             videoHeight: 720,
+        },
+    };
+}
+
+function createHandSnapshot(): SincroHandMotionSnapshot {
+    return {
+        ...DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
+        trackingEnabled: true,
+        detected: true,
+        leftHand: {
+            ...DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT.leftHand,
+            detected: true,
+            source: "roi",
+            confidence: 0.84,
+            roi: {
+                side: "left",
+                source: "pose-wrist",
+                rect: {
+                    centerX: 0.34,
+                    centerY: 0.58,
+                    width: 0.22,
+                    height: 0.22,
+                    clamped: false,
+                },
+                confidence: 0.8,
+                referencePoint: [0.36, 0.58],
+                warnings: [],
+            },
+            fullFrameWrist: [0.36, 0.58],
+            features: {
+                ...DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT.leftHand.features,
+                openness: "open",
+            },
+            warnings: [],
         },
     };
 }
@@ -525,6 +563,7 @@ function createLiveSnapshot(
         canonical?: MotionDebugSnapshot["canonical"];
         reliability?: MotionDebugSnapshot["reliability"];
         temporal?: MotionDebugSnapshot["temporal"];
+        hand?: MotionDebugSnapshot["hand"];
         cameraQuality?: CameraQualityScore;
         cameraSource?: MotionDebugSnapshot["camera"]["source"];
         phase7?: MotionDebugPhase7Snapshot;
@@ -549,6 +588,7 @@ function createLiveSnapshot(
             compression: "gzip",
         },
         pose: createPoseSnapshot(120),
+        hand: options.hand,
         reliability: options.reliability,
         canonical: options.canonical,
         temporal: options.temporal,
@@ -1300,8 +1340,14 @@ describe("createMotionDebugViewerSnapshot", () => {
     });
 
     it("uses live snapshot reliability as the reliability layer fallback", () => {
+        const reliability = createReliabilityMap(120);
+        reliability.joints.leftHand = {
+            ...reliability.joints.leftHand,
+            source: "hand",
+        };
         const liveSnapshot = createLiveSnapshot({
-            reliability: createReliabilityMap(120),
+            hand: createHandSnapshot(),
+            reliability,
         });
 
         const viewer = createMotionDebugViewerSnapshot({
@@ -1319,6 +1365,20 @@ describe("createMotionDebugViewerSnapshot", () => {
             schemaVersion: RELIABILITY_MAP_SCHEMA_VERSION,
             timestamp: {
                 mediaTimeMs: 120,
+            },
+            joints: {
+                leftHand: {
+                    source: "hand",
+                },
+            },
+        });
+        expect(liveSnapshot.hand).toMatchObject({
+            detected: true,
+            leftHand: {
+                source: "roi",
+                roi: {
+                    source: "pose-wrist",
+                },
             },
         });
     });
@@ -1354,6 +1414,13 @@ describe("createMotionDebugViewerSnapshot", () => {
         expect(viewer.layers.reliability.value).toMatchObject({
             timestamp: {
                 mediaTimeMs: 240,
+            },
+        });
+        expect(viewer.layers.reliability.value).toMatchObject({
+            joints: {
+                leftHand: {
+                    source: "neutral",
+                },
             },
         });
     });
@@ -1402,6 +1469,7 @@ describe("createMotionDebugViewerSnapshot", () => {
                 schemaVersion: RELIABILITY_MAP_SCHEMA_VERSION,
             },
         });
+        expect(viewer.layers.reliability.value).toHaveProperty("raw");
     });
 
     it("recalculates replay reliability from legacy poseSnapshot frames", () => {
@@ -1440,6 +1508,16 @@ describe("createMotionDebugViewerSnapshot", () => {
             camera: {
                 videoWidth: 640,
                 videoHeight: 360,
+            },
+            joints: {
+                leftHand: {
+                    source: "neutral",
+                    components: {
+                        roi: {
+                            reasonCodes: ["not_available_in_pose_snapshot"],
+                        },
+                    },
+                },
             },
         });
     });

@@ -10,6 +10,7 @@ import type {
     ReliabilityMap,
     ReliabilityPartState,
     ReliabilityReasonCode,
+    ReliabilitySource,
     ReliabilityWarningCode,
 } from "./reliabilityMap";
 
@@ -17,7 +18,7 @@ const TRACKED_WEIGHT_THRESHOLD = 0.65;
 const LOST_WEIGHT_THRESHOLD = 0.05;
 
 export function createReliability(
-    source: "pose",
+    source: ReliabilitySource,
     components: ReliabilityComponentSet,
     forceLost: boolean,
 ): Omit<JointReliability, "joints"> {
@@ -135,6 +136,8 @@ function warningFromReason(reason: ReliabilityReasonCode): ReliabilityWarningCod
             return "side_inconsistent";
         case "roi_inconsistent":
             return "roi_inconsistent";
+        case "no_observation":
+            return "no_observation";
         default:
             return "no_observation";
     }

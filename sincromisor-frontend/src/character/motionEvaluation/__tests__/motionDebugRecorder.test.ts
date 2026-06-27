@@ -173,6 +173,51 @@ function createValidFrameInput(mediaTimeMs = 120): MotionDebugRecorderFrameInput
             detected: true,
             lastUpdatedAtMs: 300,
         },
+        hand: {
+            trackingEnabled: true,
+            detected: true,
+            leftHand: {
+                detected: true,
+                assignedSide: "left",
+                source: "roi",
+                confidence: 0.8,
+                handednessScore: 0.9,
+                roi: {
+                    side: "left",
+                    source: "pose-wrist",
+                    rect: {
+                        centerX: 0.32,
+                        centerY: 0.58,
+                        width: 0.2,
+                        height: 0.2,
+                        clamped: false,
+                    },
+                    confidence: 0.82,
+                    referencePoint: [0.36, 0.58],
+                    warnings: [],
+                },
+                fullFrameWrist: [0.36, 0.58],
+                features: {
+                    palmNormal: [0, 0, 1],
+                    palmDirection: [0, -1, 0],
+                    fingerCurl: {
+                        thumb: 0.2,
+                        index: 0.3,
+                        middle: 0.32,
+                        ring: 0.34,
+                        little: 0.36,
+                    },
+                    fingerSplay: {
+                        indexMiddle: 0.1,
+                        middleRing: 0.1,
+                        ringLittle: 0.1,
+                    },
+                    thumbOppose: 0.2,
+                    openness: "open",
+                },
+                warnings: [],
+            },
+        },
         reliability: createDefaultReliabilityMap(mediaTimeMs),
         canonical: createCanonicalState(mediaTimeMs),
         temporal: createDefaultTemporalUpperBodyState(mediaTimeMs),
@@ -318,6 +363,15 @@ describe("MotionDebugRecorder", () => {
             receivedAtPerformanceMs: 456,
             tracker: {
                 mode: "main-thread",
+            },
+        });
+        expect(parsed.frames[0]?.hand).toMatchObject({
+            detected: true,
+            leftHand: {
+                source: "roi",
+                roi: {
+                    source: "pose-wrist",
+                },
             },
         });
         expect(parsed.frames[0]?.timestamp).toEqual({ mediaTimeMs: 120 });

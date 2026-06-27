@@ -1,4 +1,14 @@
+import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import type {
+    SincroHandMotionSnapshot,
+    SincroHandSideSnapshot,
+} from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseTargetPointSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import { calculateRoiConsistency } from "../../features/gaze/trackingRuntime/roiTracking/roiCoordinateMapping";
+import type {
+    SincroRoiObservation,
+    SincroRoiWarningCode,
+} from "../../features/gaze/trackingRuntime/roiTracking/roiTrackingTypes";
 import {
     averageComponentSets,
     averageComponents,
@@ -34,9 +44,14 @@ import {
     type PartReliability,
     RELIABILITY_MAP_SCHEMA_VERSION,
     type ReliabilityMap,
+    type ReliabilityReasonCode,
 } from "./reliabilityMap";
 
 export type { PoseReliabilityEstimatorInput } from "./poseReliabilityTypes";
+
+const ROI_METADATA_FALLBACK_SCORE = 0.55;
+const SIDE_INCONSISTENT_SCORE = 0.35;
+const SIDE_INCONSISTENT_WEIGHT_CAP = 0.45;
 
 export function createPoseReliabilityMap(input: PoseReliabilityEstimatorInput): ReliabilityMap {
     const cameraQuality = evaluateCameraQuality(input.cameraQuality);
@@ -126,9 +141,9 @@ function createJoints(
             bodyScale,
             cameraQuality,
         }),
-        head: createUnavailableJoint(),
-        leftHand: createUnavailableJoint(),
-        rightHand: createUnavailableJoint(),
+        head: createHeadJointReliability(input, cameraQuality),
+        leftHand: createHandJointReliability("left", input, cameraQuality),
+        rightHand: createHandJointReliability("right", input, cameraQuality),
     };
 }
 
@@ -173,13 +188,218 @@ function createParts(
 ): ReliabilityMap["parts"] {
     return {
         torso: createTorsoPartReliability(input, joints, bodyScale, cameraQuality),
-        head: createUnavailablePart(["head"]),
+        head: createHeadPartReliability(input, joints),
         leftArm: createArmPartReliability("left", input, joints, bodyScale, cameraQuality),
         rightArm: createArmPartReliability("right", input, joints, bodyScale, cameraQuality),
-        leftHand: createUnavailablePart(["leftWrist", "leftHand"]),
-        rightHand: createUnavailablePart(["rightWrist", "rightHand"]),
-        leftFinger: createUnavailablePart(["leftHand"]),
-        rightFinger: createUnavailablePart(["rightHand"]),
+        leftHand: createHandPartReliability("left", input, joints),
+        rightHand: createHandPartReliability("right", input, joints),
+        leftFinger: createFingerPartReliability("left", input, joints),
+        rightFinger: createFingerPartReliability("right", input, joints),
+    };
+}
+
+function createHeadJointReliability(
+    input: PoseReliabilityEstimatorInput,
+    cameraQuality: ReliabilityScoreComponent,
+): JointReliability {
+    if (!hasOwnInput(input, "face")) {
+        return createUnavailableJoint();
+    }
+    const face = input.face;
+    if (face === undefined || !face.detected) {
+        return createLostFaceReliability(face, cameraQuality);
+    }
+
+    const confidence = finiteOrZero(face.confidence);
+    const components: ReliabilityComponentSet = {
+        modelPresence: component(confidence, confidence < 0.5 ? ["model_presence_low"] : []),
+        modelVisibility: component(confidence, []),
+        tracking:
+            face.source === "lost" ? component(0, ["tracking_lost"]) : component(confidence, []),
+        border: goodComponent(),
+        boneLength: goodComponent(),
+        bodyScale: goodComponent(),
+        temporal: goodComponent(),
+        side: goodComponent(),
+        roi: createRoiMetadataComponent(face.roi),
+        cameraQuality,
+    };
+    return createReliability("face", components, face.source === "lost");
+}
+
+function createLostFaceReliability(
+    face: SincroFaceMotionSnapshot | undefined,
+    cameraQuality: ReliabilityScoreComponent,
+): JointReliability {
+    const components: ReliabilityComponentSet = {
+        modelPresence: component(0, ["no_observation"]),
+        modelVisibility: component(0, ["no_observation"]),
+        tracking: component(0, ["no_observation"]),
+        border: goodComponent(),
+        boneLength: goodComponent(),
+        bodyScale: goodComponent(),
+        temporal: goodComponent(),
+        side: goodComponent(),
+        roi:
+            face === undefined
+                ? component(0, ["no_observation"])
+                : createRoiMetadataComponent(face.roi),
+        cameraQuality,
+    };
+    return createReliability("face", components, true);
+}
+
+function createHandJointReliability(
+    side: ArmSide,
+    input: PoseReliabilityEstimatorInput,
+    cameraQuality: ReliabilityScoreComponent,
+): JointReliability {
+    if (!hasOwnInput(input, "hand")) {
+        return createUnavailableJoint();
+    }
+    const hand = handSide(input.hand, side);
+    if (hand === undefined || !hand.detected) {
+        return createLostHandReliability(hand, cameraQuality);
+    }
+
+    const confidence = finiteOrZero(hand.confidence);
+    const components: ReliabilityComponentSet = {
+        modelPresence: component(confidence, confidence < 0.5 ? ["model_presence_low"] : []),
+        modelVisibility: component(confidence, []),
+        tracking:
+            hand.source === "lost" ? component(0, ["tracking_lost"]) : component(confidence, []),
+        border: goodComponent(),
+        boneLength: goodComponent(),
+        bodyScale: goodComponent(),
+        temporal: goodComponent(),
+        side: hand.warnings.includes("side_inconsistent")
+            ? component(SIDE_INCONSISTENT_SCORE, ["side_inconsistent"])
+            : goodComponent(),
+        roi: createHandRoiComponent(hand),
+        cameraQuality,
+    };
+    return capSideInconsistentReliability(
+        createReliability("hand", components, hand.source === "lost"),
+        hand.warnings.includes("side_inconsistent"),
+    );
+}
+
+function createLostHandReliability(
+    hand: SincroHandSideSnapshot | undefined,
+    cameraQuality: ReliabilityScoreComponent,
+): JointReliability {
+    const components: ReliabilityComponentSet = {
+        modelPresence: component(0, ["no_observation"]),
+        modelVisibility: component(0, ["no_observation"]),
+        tracking: component(0, ["no_observation"]),
+        border: goodComponent(),
+        boneLength: goodComponent(),
+        bodyScale: goodComponent(),
+        temporal: goodComponent(),
+        side: goodComponent(),
+        roi:
+            hand === undefined
+                ? component(0, ["no_observation"])
+                : createRoiMetadataComponent(hand.roi),
+        cameraQuality,
+    };
+    return createReliability("hand", components, true);
+}
+
+function createHeadPartReliability(
+    input: PoseReliabilityEstimatorInput,
+    joints: ReliabilityMap["joints"],
+): PartReliability {
+    if (!hasOwnInput(input, "face")) {
+        return createUnavailablePart(["head"]);
+    }
+    return {
+        ...createReliability("face", joints.head.components, joints.head.state === "lost"),
+        joints: ["head"],
+    };
+}
+
+function createHandPartReliability(
+    side: ArmSide,
+    input: PoseReliabilityEstimatorInput,
+    joints: ReliabilityMap["joints"],
+): PartReliability {
+    if (!hasOwnInput(input, "hand")) {
+        return createUnavailablePart(handPartJointNames(side));
+    }
+    const handJoint = side === "left" ? joints.leftHand : joints.rightHand;
+    const poseWrist =
+        side === "left" ? input.pose.leftArm.targets.wrist : input.pose.rightArm.targets.wrist;
+    return {
+        ...createReliability(
+            "hand",
+            handJoint.components,
+            handJoint.state === "lost" || isPoseTargetLost(input.pose, poseWrist),
+        ),
+        joints: handPartJointNames(side),
+    };
+}
+
+function createFingerPartReliability(
+    side: ArmSide,
+    input: PoseReliabilityEstimatorInput,
+    joints: ReliabilityMap["joints"],
+): PartReliability {
+    if (!hasOwnInput(input, "hand")) {
+        return createUnavailablePart([handJointName(side)]);
+    }
+    const hand = handSide(input.hand, side);
+    if (hand === undefined || hand.features.openness === "unknown") {
+        return createLostFingerReliability(hand, side, joints);
+    }
+
+    const handPart =
+        side === "left"
+            ? createHandPartReliability("left", input, joints)
+            : createHandPartReliability("right", input, joints);
+    const finiteCurlScore = allFingerCurlFinite(hand) ? 1 : 0;
+    const components: ReliabilityComponentSet = {
+        ...handPart.components,
+        tracking: component(finiteOrZero(hand.confidence), []),
+        modelPresence: component(
+            finiteCurlScore,
+            finiteCurlScore < 0.5 ? ["model_presence_low"] : [],
+        ),
+    };
+    const reliability = createReliability("hand", components, handPart.state === "lost");
+    return {
+        ...reliability,
+        warnings: allFingerCurlFinite(hand)
+            ? reliability.warnings
+            : uniqueWarnings([...reliability.warnings, "low_confidence"]),
+        joints: [handJointName(side)],
+    };
+}
+
+function createLostFingerReliability(
+    hand: SincroHandSideSnapshot | undefined,
+    side: ArmSide,
+    joints: ReliabilityMap["joints"],
+): PartReliability {
+    const handJoint = side === "left" ? joints.leftHand : joints.rightHand;
+    const components: ReliabilityComponentSet = {
+        modelPresence: component(0, ["no_observation"]),
+        modelVisibility: component(0, ["no_observation"]),
+        tracking: component(0, ["no_observation"]),
+        border: goodComponent(),
+        boneLength: goodComponent(),
+        bodyScale: goodComponent(),
+        temporal: goodComponent(),
+        side: handJoint.components.side,
+        roi:
+            hand === undefined
+                ? component(0, ["no_observation"])
+                : createRoiMetadataComponent(hand.roi),
+        cameraQuality: handJoint.components.cameraQuality,
+    };
+    return {
+        ...createReliability("neutral", components, true),
+        joints: [handJointName(side)],
     };
 }
 
@@ -264,4 +484,98 @@ function armJointNames(
     return side === "left"
         ? ["leftShoulder", "leftElbow", "leftWrist"]
         : ["rightShoulder", "rightElbow", "rightWrist"];
+}
+
+function handPartJointNames(side: ArmSide): [ReliabilityJointName, ReliabilityJointName] {
+    return side === "left" ? ["leftWrist", "leftHand"] : ["rightWrist", "rightHand"];
+}
+
+function handJointName(side: ArmSide): ReliabilityJointName {
+    return side === "left" ? "leftHand" : "rightHand";
+}
+
+function handSide(
+    snapshot: SincroHandMotionSnapshot | undefined,
+    side: ArmSide,
+): SincroHandSideSnapshot | undefined {
+    if (snapshot === undefined) {
+        return undefined;
+    }
+    return side === "left" ? snapshot.leftHand : snapshot.rightHand;
+}
+
+function createRoiMetadataComponent(
+    roi: SincroRoiObservation | undefined,
+): ReliabilityScoreComponent {
+    if (roi === undefined) {
+        return component(ROI_METADATA_FALLBACK_SCORE, ["not_available_in_pose_snapshot"]);
+    }
+    return component(roi.confidence, mapRoiWarnings(roi.warnings));
+}
+
+function createHandRoiComponent(hand: SincroHandSideSnapshot): ReliabilityScoreComponent {
+    if (
+        hand.roi === undefined ||
+        hand.roi.referencePoint === undefined ||
+        hand.fullFrameWrist === undefined
+    ) {
+        return component(ROI_METADATA_FALLBACK_SCORE, ["not_available_in_pose_snapshot"]);
+    }
+    const consistency = calculateRoiConsistency({
+        expected: hand.roi.referencePoint,
+        observed: hand.fullFrameWrist,
+    });
+    return component(
+        consistency.score,
+        mapRoiWarnings([...hand.roi.warnings, ...consistency.warnings]),
+    );
+}
+
+export function mapRoiWarnings(warnings: readonly SincroRoiWarningCode[]): ReliabilityReasonCode[] {
+    const reasons: ReliabilityReasonCode[] = [];
+    for (const warning of warnings) {
+        if (warning === "roi_missing") {
+            reasons.push("roi_missing");
+        }
+        if (
+            warning === "roi_inconsistent" ||
+            warning === "roi_clamped" ||
+            warning === "roi_too_small" ||
+            warning === "low_pose_quality" ||
+            warning === "invalid_pose_point"
+        ) {
+            reasons.push("roi_inconsistent");
+        }
+    }
+    return [...new Set(reasons)];
+}
+
+function capSideInconsistentReliability(
+    reliability: JointReliability,
+    sideInconsistent: boolean,
+): JointReliability {
+    if (!sideInconsistent) {
+        return reliability;
+    }
+    return {
+        ...reliability,
+        state: reliability.state === "tracked" ? "suspect" : reliability.state,
+        finalWeight: Math.min(reliability.finalWeight, SIDE_INCONSISTENT_WEIGHT_CAP),
+        warnings: uniqueWarnings([...reliability.warnings, "side_inconsistent", "low_confidence"]),
+    };
+}
+
+function allFingerCurlFinite(hand: SincroHandSideSnapshot): boolean {
+    const curl = hand.features.fingerCurl;
+    return (
+        isFiniteNumber(curl.thumb) &&
+        isFiniteNumber(curl.index) &&
+        isFiniteNumber(curl.middle) &&
+        isFiniteNumber(curl.ring) &&
+        isFiniteNumber(curl.little)
+    );
+}
+
+function hasOwnInput(input: PoseReliabilityEstimatorInput, key: "hand" | "face"): boolean {
+    return key in input;
 }

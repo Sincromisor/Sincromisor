@@ -1,9 +1,13 @@
+import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { ReliabilityMap } from "./reliabilityMap";
 
 export type PoseReliabilityEstimatorInput = {
     pose: SincroPoseMotionSnapshot;
+    hand?: SincroHandMotionSnapshot;
+    face?: SincroFaceMotionSnapshot;
     cameraQuality?: CameraQualityScore;
     previous?: {
         pose: SincroPoseMotionSnapshot;

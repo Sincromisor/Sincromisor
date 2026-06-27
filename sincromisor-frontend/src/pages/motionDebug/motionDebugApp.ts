@@ -30,6 +30,7 @@ import { TemporalStateEstimator } from "../../character/temporal/temporalStateEs
 import { parseTemporalUpperBodyState } from "../../character/temporal/temporalUpperBodyState";
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import {
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
     type SincroPoseMotionSnapshot,
@@ -144,6 +145,7 @@ export class MotionDebugApp {
     private message = "待機中";
     private latestFaceSnapshot: SincroFaceMotionSnapshot =
         this.debugConsole.getSnapshot().sincroMotion.face;
+    private latestHandSnapshot?: SincroHandMotionSnapshot;
     private latestPoseSnapshot: SincroPoseMotionSnapshot = DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT;
     private latestCanonical?: MotionDebugSnapshot["canonical"];
     private latestTemporal?: MotionDebugSnapshot["temporal"];
@@ -220,6 +222,7 @@ export class MotionDebugApp {
             getTrackerStats: () => this.latestTrackerStats,
             getDebugSnapshot: () => this.debugConsole.getSnapshot().sincroMotion,
             getFaceSnapshot: () => this.latestFaceSnapshot,
+            getHandSnapshot: () => this.latestHandSnapshot,
             getAvatarMotionProfile: () => this.currentAvatarMotionProfile(),
             getVrmUrl: () => getMotionDebugVrmUrl(),
             poseTargetInferenceFps: POSE_TARGET_INFERENCE_FPS,
@@ -295,6 +298,7 @@ export class MotionDebugApp {
             camera: this.cameraState(),
             recording: this.recording.getState(),
             pose: this.latestPoseSnapshot,
+            hand: this.latestHandSnapshot,
             reliability: this.latestReliability,
             canonical: this.latestCanonical,
             temporal: this.latestTemporal,
@@ -484,6 +488,9 @@ export class MotionDebugApp {
                 onFaceMotion: (snapshot, timing) => {
                     this.handleFaceMotion(snapshot, timing);
                 },
+                onHandMotion: (snapshot, timing) => {
+                    this.handleHandMotion(snapshot, timing);
+                },
                 onPoseMotion: (snapshot, timing) => {
                     this.handlePoseMotion(snapshot, timing);
                 },
@@ -503,6 +510,9 @@ export class MotionDebugApp {
                 enabled: true,
                 targetInferenceFps: POSE_TARGET_INFERENCE_FPS,
                 ignorePerformanceFallback: true,
+                hand: {
+                    enabled: true,
+                },
             },
         );
         await this.video.play();
@@ -579,6 +589,14 @@ export class MotionDebugApp {
         this.latestFaceSnapshot = snapshot;
         this.behaviorState.applyFaceMotion(snapshot);
         this.debugConsole.updateSincroFaceMotion(snapshot);
+    }
+
+    private handleHandMotion(
+        snapshot: SincroHandMotionSnapshot,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
+        this.latestFrameTiming = timing;
+        this.latestHandSnapshot = snapshot;
     }
 
     private handlePoseMotion(
@@ -709,6 +727,8 @@ export class MotionDebugApp {
         const previousReliability = this.latestValidReliability();
         this.latestReliability = createPoseReliabilityMap({
             pose: snapshot,
+            ...(this.latestHandSnapshot === undefined ? {} : { hand: this.latestHandSnapshot }),
+            face: this.latestFaceSnapshot,
             cameraQuality: this.latestCameraQuality,
             previous:
                 previousReliability === undefined
