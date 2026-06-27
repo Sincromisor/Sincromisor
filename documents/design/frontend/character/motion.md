@@ -34,6 +34,10 @@
     - 後続 estimator / replay / temporal state が共有する `ReliabilityMap` v1 contract を置く。
     - MediaPipe confidence をそのまま制御重みにせず、joint / part / gesture ごとの保存可能な信頼度 snapshot として扱う。
     - Phase 4a の `PoseReliabilityEstimator` は `SincroPoseMotionSnapshot` と optional `CameraQualityScore`、optional `previous.pose` / `previous.mediaTimeMs` / `previous.reliability`、caller 指定の `mediaTimeMs`、`video` size から `ReliabilityMap` を作る pure function とする。Pose snapshot で未観測の Head / Hand / Finger / Gesture / ROI は placeholder に固定し、Face / Hand / Gesture 専用 estimator は後続 Phase 8 / 9 で接続する。
+- `src/features/gaze/trackingRuntime/roiTracking`
+    - Phase 8 の Hand / Face tracker 入力境界として、Pose wrist / shoulder 由来の ROI rect と crop-local / full-frame 座標変換を置く。
+    - ROI observation は JSON 保存可能な `number`、string enum、plain object、`[number, number]` tuple だけで構成し、MediaPipe landmark object、ImageBitmap / canvas、Three.js object、class instance は含めない。
+    - ROI warning は ReliabilityMap の warning enum とは別型で保持する。motion pipeline は後続 reliability task の明示変換が入るまで ROI warning を IK weight や retarget weight に直接接続しない。
 - `src/character/temporal`
     - canonical / reliability の後段で共有する `TemporalUpperBodyState` v1 contract を置く。
     - 保存対象は時系列状態、canonical arm scalar、body-local wrist / elbow tuple、速度、recovering blend に限定し、VRM bone rotation、quaternion、IK solver 出力は含めない。
@@ -141,6 +145,14 @@
     - `SincroPoseRetargetedArm.ikSolverMode` は `feature_only` / `screen_space_ik` / `world_3d_ik` の切り分けを Debug Console に表示する。
     - `SincroPoseRetargetedArm.constraint` は `joint_limited`、`elbow_pole_stabilized`、`head_collision_avoided`、`chest_no_go_zone`、`forearm_twist_limited` など、solver-side safety が効いた理由と weight scale を表示する。
     - `solverProbe.ccdik` は external solver 採用判断用の診断値であり、実際の腕姿勢には適用しない。
+- `SincroRoiObservation`
+    - Hand / Face Landmarker の前段で使う ROI 保存 contract であり、`side`、`source`、`rect`、`confidence`、optional `referencePoint`、`warnings` を持つ。
+    - `rect` は full-frame normalized image coordinate の center 形式に固定し、`centerX`、`centerY`、`width`、`height`、`clamped` を保存する。crop-local point は `0..1`、full-frame point も `0..1` の `[number, number]` tuple とする。
+    - v1 は axis-aligned square / rectangle のみを扱い、rotated crop、`rotationRad`、palm basis、手首 roll は ROI rect に混ぜない。Hand / Face result 後段の feature として別 contract に渡す。
+    - Pose wrist が finite で `quality !== "lost"` の場合だけ Hand ROI は `source: "pose-wrist"` になる。欠損時は throw せず `source: "none"`、`confidence: 0`、`roi_missing` warning の observation を返し、Pose-only / fallback 継続を妨げない。
+    - Face ROI は左右 shoulder center と shoulder width を主入力にする。Pose 未検出または shoulderWidth が finite positive でない場合は `source: "none"`、`confidence: 0` の failure observation として扱う。
+    - ROI rect clamp は left / top / right / bottom を clip して center / size を再計算する。`validateRoiRect()` の順序は finite check、edge clip、min size check、confidence clamp に固定する。
+    - ROI consistency は Pose wrist / face expected point と ROI 由来 full-frame point の距離から score `0..1` を返す。`roi_inconsistent` は ROI contract の warning であり、ReliabilityMap へは後続 task で明示的に写像する。
 - `CanonicalUpperBodyState`
     - `sincro.canonical-upper-body.v1` を schema version とする、JSON 保存可能な upper body contract。
     - motion-debug の `frame.canonical` slot にそのまま保存できる plain object として扱い、replay / metrics / temporal / intent / IK が同じ名前・単位で読む。

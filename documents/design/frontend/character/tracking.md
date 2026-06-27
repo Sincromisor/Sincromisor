@@ -6,6 +6,7 @@
 - `SincroFaceTracker` / `SincroPoseTracker` は `sincro` 向けの同期入力を担当し、MediaPipe 生結果を正規化 snapshot へ変換する。
 - Tracker runtime は camera track、video element、推論 loop、Worker fallback を所有し、UI 更新や VRM 適用は持たない。
 - Tracker runtime は performance budget report と degradation state を Debug Console / motion-debug に出し、Worker round trip、Worker 内推論、main-thread fallback を切り分ける。
+- Phase 8 の Hand / Face ROI は Pose 起点の full-frame normalized coordinate contract として `roiTracking` に置き、MediaPipe 実行や ReliabilityMap 変換とは分ける。
 
 ## Scope
 
@@ -13,6 +14,7 @@
     - FaceDetector / FaceLandmarker / PoseLandmarker の責務境界
     - tracker runtime
     - face / pose motion snapshot
+    - Hand / Face ROI coordinate contract
     - Worker / main-thread fallback
 - 非対象:
     - VRM controller の最終適用
@@ -40,6 +42,13 @@
     - dropout、prediction、recovering などの時系列状態を保存するが、MediaPipe raw result、Three.js object、VRM bone pose、IK quaternion は持たない。
 - `src/features/gaze/trackingRuntime`
     - MediaPipe fileset、worker client、video frame clock、fallback stats、performance budget report、performance gate を置く。
+- `src/features/gaze/trackingRuntime/roiTracking`
+    - Pose wrist / shoulder 由来の Hand / Face ROI contract と crop-local / full-frame 座標変換を置く。
+    - ROI は full-frame normalized image coordinate の `centerX`、`centerY`、`width`、`height`、`clamped` だけを rect に持つ。
+    - `SincroRoiObservation` は `side`、`source`、`rect`、`confidence`、optional `referencePoint`、`warnings` を持つ JSON 保存可能な plain object とする。
+    - `referencePoint` と変換対象 point は `readonly [number, number]` の tuple に固定し、`{ x, y }` object、pixel 座標、MediaPipe landmark object、ImageBitmap / canvas / Three.js object は contract に入れない。
+    - v1 は axis-aligned square / rectangle のみを扱い、rotated crop や `rotationRad` は保存しない。手首 roll、palm basis、Hand handedness は Hand result 後段の feature として扱う。
+    - ROI warning は `SincroRoiWarningCode` として ReliabilityMap の warning enum とは別型にする。後続 reliability task は ROI warning を reason / warning へ明示変換する。
 - `CharacterGaze`
     - FaceDetector による顔位置検出。
     - `chat` mode の注視入力。
@@ -131,6 +140,14 @@
     - `frame.temporal` optional slot に保存する plain object であり、`arms.left` / `arms.right` は canonical arm scalar と optional body-local wrist / elbow tuple、velocity、optional recovering blend を持つ。head は optional で、未観測時は省略できる。
     - `parseTemporalUpperBodyState()` は未知 `schemaVersion` を `unknown_schema_version`、値域外 scalar / blend duration / blend progress を `out_of_range`、非 finite number / unknown enum / extra key / class instance を `invalid_state` として返す。
     - Temporal は canonical / reliability の後段に位置し、tracker runtime、Worker、MediaPipe 正規化 snapshot の責務ではない。VRM pose 合成、IK solver quaternion、final applied pose は MotionSolver / VrmPoseComposer と final pose 系 slot の責務に残す。
+- `SincroRoiObservation`
+    - `side` は `"left"`、`"right"`、`"face"` に固定する。左右は解剖学的な side とし、camera preview の mirror 表示とは分ける。
+    - `source` は `"pose-wrist"`、`"pose-face"`、`"full-frame-fallback"`、`"previous"`、`"none"` の固定 enum とする。Pose wrist / face region が欠損した場合は例外にせず `source: "none"`、`confidence: 0`、`roi_missing` warning を持つ observation を返す。
+    - rect は full-frame normalized image coordinate の center 形式を正本にする。左上 `x/y/width/height` 形式は採用せず、crop-local normalized point から full-frame normalized point へ戻す式を左右対称に保つ。
+    - rect clamp は left / top / right / bottom を `0..1` に clip してから center / size を再計算する。center だけを寄せて size を維持する方式は使わない。
+    - `validateRoiRect()` は finite check、edge clip、min size check、confidence clamp の順に処理する。edge clip では `roi_clamped`、clip 後の width / height が `0.08` 未満なら `roi_too_small` と `confidence: 0` を残す。
+    - `mapCropPointToFullFrame()` と `mapFullFramePointToCrop()` は ROI rect と normalized tuple だけを読む pure function とし、round-trip は `1e-6` 以下に保つ。
+    - ROI consistency は expected point と observed full-frame point の正規化距離から算出し、`<= 0.04` は score `1`、`0.04..0.18` は線形低下、`> 0.18` は score `0` と `roi_inconsistent` warning にする。
 - `PoseReliabilityEstimator`
     - `src/character/reliability/poseReliabilityEstimator.ts` の `createPoseReliabilityMap()` は Phase 4a の pure estimator であり、`pose: SincroPoseMotionSnapshot`、optional `cameraQuality: CameraQualityScore`、optional `previous: { pose: SincroPoseMotionSnapshot; mediaTimeMs: number; reliability?: ReliabilityMap }`、caller が渡す `mediaTimeMs`、`video: { width: number; height: number }` だけを入力にする。
     - estimator 内で `performance.now()` は呼ばず、temporal component は `mediaTimeMs - previous.mediaTimeMs` と wrist / elbow / shoulder の normalized image coordinate 差分だけで計算する。`previous.reliability` は入力 shape に含めるが、Phase 4a の boneLength / bodyScale / temporal の主計算は前回 pose を正本にする。
