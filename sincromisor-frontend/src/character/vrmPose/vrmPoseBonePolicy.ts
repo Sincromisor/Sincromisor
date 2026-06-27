@@ -8,16 +8,46 @@ const LEFT_ARM_BONES: VRMHumanBoneName[] = [
     "leftUpperArm",
     "leftLowerArm",
     "leftHand",
-    "leftThumbProximal",
-    "leftIndexProximal",
 ];
 const RIGHT_ARM_BONES: VRMHumanBoneName[] = [
     "rightShoulder",
     "rightUpperArm",
     "rightLowerArm",
     "rightHand",
+];
+const LEFT_FINGER_BONES: VRMHumanBoneName[] = [
+    "leftThumbMetacarpal",
+    "leftThumbProximal",
+    "leftThumbDistal",
+    "leftIndexProximal",
+    "leftIndexIntermediate",
+    "leftIndexDistal",
+    "leftMiddleProximal",
+    "leftMiddleIntermediate",
+    "leftMiddleDistal",
+    "leftRingProximal",
+    "leftRingIntermediate",
+    "leftRingDistal",
+    "leftLittleProximal",
+    "leftLittleIntermediate",
+    "leftLittleDistal",
+];
+const RIGHT_FINGER_BONES: VRMHumanBoneName[] = [
+    "rightThumbMetacarpal",
     "rightThumbProximal",
+    "rightThumbDistal",
     "rightIndexProximal",
+    "rightIndexIntermediate",
+    "rightIndexDistal",
+    "rightMiddleProximal",
+    "rightMiddleIntermediate",
+    "rightMiddleDistal",
+    "rightRingProximal",
+    "rightRingIntermediate",
+    "rightRingDistal",
+    "rightLittleProximal",
+    "rightLittleIntermediate",
+    "rightLittleDistal",
 ];
 const TORSO_BONES: VRMHumanBoneName[] = ["spine", "chest", "upperChest"];
 const REQUIRED_ARM_BONES: VRMHumanBoneName[] = [
@@ -44,7 +74,9 @@ export function isSupportedOwnedBone(bone: VRMHumanBoneName): boolean {
         REQUIRED_ARM_BONES.includes(bone) ||
         TORSO_BONES.includes(bone) ||
         LEFT_ARM_BONES.includes(bone) ||
-        RIGHT_ARM_BONES.includes(bone)
+        RIGHT_ARM_BONES.includes(bone) ||
+        LEFT_FINGER_BONES.includes(bone) ||
+        RIGHT_FINGER_BONES.includes(bone)
     );
 }
 
@@ -59,7 +91,10 @@ export function isAvailableBone(
         return true;
     }
     const optionalKey = OPTIONAL_BONE_KEYS[bone];
-    return optionalKey !== undefined && optionalBones[optionalKey];
+    if (optionalKey !== undefined) {
+        return optionalBones[optionalKey];
+    }
+    return LEFT_FINGER_BONES.includes(bone) || RIGHT_FINGER_BONES.includes(bone);
 }
 
 export function missingShoulderFallbackBone(
@@ -76,10 +111,10 @@ export function missingShoulderFallbackBone(
 }
 
 export function armSide(bone: VRMHumanBoneName): ArmSide | undefined {
-    if (LEFT_ARM_BONES.includes(bone)) {
+    if (LEFT_ARM_BONES.includes(bone) || LEFT_FINGER_BONES.includes(bone)) {
         return "left";
     }
-    if (RIGHT_ARM_BONES.includes(bone)) {
+    if (RIGHT_ARM_BONES.includes(bone) || RIGHT_FINGER_BONES.includes(bone)) {
         return "right";
     }
     return undefined;

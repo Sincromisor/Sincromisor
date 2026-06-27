@@ -41,6 +41,7 @@
     - `MotionIntentState` v1 を置き、temporal / reliability / hand / gesture の後段で左右腕と torso の motion intent を保存可能な developer-visible contract として表す。
     - `schemaVersion` は `sincro.motion-intent.v1` に固定し、Gesture Recognizer の raw label は `sourceGestureLabel` に閉じて `intent` enum へ混ぜない。
     - `createSemanticMotionPoseLayer()` は `MotionIntentState` と完成版 `AvatarMotionProfile` から `semantic` pose layer を作る helper であり、preset id、partial arm override、debug snapshot を developer-only に観測できるようにする。本番の VRM bone 書き込み順序は変更しない。
+    - `createFingerCurlPoseLayer()` は `SincroHandMotionSnapshot` と `MotionIntentState`、完成版 `AvatarMotionProfile` から finger curl 用の `semantic` pose layer を作る helper である。入力は低次元 hand feature と profile capability に限定し、MediaPipe raw landmark、VRM Object3D、raw bone node は読まない。
 - `VRMScene`
     - renderer、camera、light、resize、render loop を持つ。
 - `VRMCharacterManager`
@@ -60,6 +61,8 @@
 - IK / Pose Composer
     - `SincroArmIkSolver` は腕 IK quaternion と constraint reason を返す。
     - `VrmPoseComposer` は fallback / tracking / semantic / idle / style layer から normalized local pose と `ownedBones` を作る。semantic layer は `small_wave`、`point_forward_or_up`、`thumbs_up_hold`、`peace_hold`、`shy_hand_near_face`、`explain_open_palm`、`soft_clap_like`、`lost_to_comfort` の preset id を持ち、upperArm / lowerArm / hand 相当の partial override に限定する。
+    - finger curl semantic layer は arm semantic preset とは別に `finger-curl:<side>` として作る。finger group は `thumb`、`index`、`middle`、`ringLittle` に固定し、`ring` / `little` は同じ group curl を使う。curl distribution は `AvatarMotionProfile.fingers.curlDistribution` を正本にし、欠損 finger chain は存在 bone の weight だけを正規化して fallback する。
+    - finger quaternion は curl local `+X`、splay local `+Z`、thumb oppose local `+Y` の低次元 mapping から作り、左右の splay / oppose 符号だけを反転する。raw landmark から per-finger 3D rotation を直接作らず、layer / debug には plain quaternion object だけを保存する。
     - authored clip や AnimationMixer を使う場合も staging に留め、composer へ渡す最終表現は `semantic` pose delta とする。
     - motion-debug は `frame.solver.phase6` に Phase 6 solver snapshot、`frame.solver.phase7` に Phase 7 の完成版 `AvatarMotionProfile` / calibration snapshot、`frame.finalPose` に composer result を保存・表示する。本番の `VRMCharacterManager.update()` の bone 書き込み順序はまだ全面移行しない。
     - 完成版 `AvatarMotionProfile` は `VRMScene.getAvatarMotionProfile()` / `VRMCharacterManager.getAvatarMotionProfile()` から debug 用 clone として公開する。Debug Console と Phase 6 snapshot の `avatarMotionProfile` は `MinimalAvatarMotionProfile` のまま維持する。
