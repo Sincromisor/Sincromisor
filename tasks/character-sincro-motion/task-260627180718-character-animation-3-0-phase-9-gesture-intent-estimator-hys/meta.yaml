@@ -1,0 +1,14 @@
+id: task-260627180718-character-animation-3-0-phase-9-gesture-intent-estimator-hys
+title: character animation 3.0 phase 9 gesture intent estimator hysteresis
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260627180715-character-animation-3-0-phase-9-motion-intent-contract
+superseded_by: null
+review: APPROVED
+reviewed_sha: 8b7ac4d63744cfeade7f4b551ac29c2d327d635a
+verdict: null
+attempts: 0
+created_at: 2026-06-27
+closed_at: null
+legacy_ids: []

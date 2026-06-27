@@ -77,7 +77,17 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 60 件）
+## タスク一覧（自動生成 / 全 65 件）
+
+### open（未完） — 5 件
+
+| タスク                                                                                                                                                                     | タイトル                                                            | 判定 | 依存                                                                             |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---- | -------------------------------------------------------------------------------- |
+| [task-260627180715-character-animation-3-0-phase-9-motion-intent-contract](./task-260627180715-character-animation-3-0-phase-9-motion-intent-contract/task.md)             | character animation 3.0 phase 9 motion intent contract              | —    | `task-260627141813-character-animation-3-phase-8-roi-cadence-fallback-docs`      |
+| [task-260627180718-character-animation-3-0-phase-9-gesture-intent-estimator-hys](./task-260627180718-character-animation-3-0-phase-9-gesture-intent-estimator-hys/task.md) | character animation 3.0 phase 9 gesture intent estimator hysteresis | —    | `task-260627180715-character-animation-3-0-phase-9-motion-intent-contract`       |
+| [task-260627180722-character-animation-3-0-phase-9-semantic-pose-layer-composer](./task-260627180722-character-animation-3-0-phase-9-semantic-pose-layer-composer/task.md) | character animation 3.0 phase 9 semantic pose layer composer bridge | —    | `task-260627180718-character-animation-3-0-phase-9-gesture-intent-estimator-hys` |
+| [task-260627180726-character-animation-3-0-phase-9-finger-curl-pose-mapping](./task-260627180726-character-animation-3-0-phase-9-finger-curl-pose-mapping/task.md)         | character animation 3.0 phase 9 finger curl pose mapping            | —    | `task-260627180722-character-animation-3-0-phase-9-semantic-pose-layer-composer` |
+| [task-260627180730-character-animation-3-0-phase-9-debug-replay-docs-integratio](./task-260627180730-character-animation-3-0-phase-9-debug-replay-docs-integratio/task.md) | character animation 3.0 phase 9 debug replay docs integration       | —    | `task-260627180726-character-animation-3-0-phase-9-finger-curl-pose-mapping`     |
 
 ### done（完了） — 60 件
 
