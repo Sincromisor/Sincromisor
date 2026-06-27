@@ -2,6 +2,10 @@ import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionS
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "./sincroTrackerWorkerTypes";
+import type {
+    TrackerRuntimePerformanceProfile,
+    TrackerRuntimePerformanceProfileId,
+} from "./trackerRuntimePerformanceProfile";
 
 export const DEFAULT_TARGET_INFERENCE_FPS = 15;
 export const DEFAULT_TARGET_POSE_INFERENCE_FPS = 12;
@@ -37,6 +41,8 @@ export type TrackerRuntimePoseOptions = {
     enabled?: boolean;
     targetInferenceFps?: number;
     ignorePerformanceFallback?: boolean;
+    performanceProfileId?: TrackerRuntimePerformanceProfileId;
+    performanceProfile?: TrackerRuntimePerformanceProfile;
     hand?: {
         enabled?: boolean;
         targetInferenceFps?: number;

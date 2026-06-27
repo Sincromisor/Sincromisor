@@ -282,6 +282,8 @@
     - `pose`、`tracker`、`poseRetarget`、`poseRetargetRuntime`、camera readiness、render fps をまとめて返す。
     - live camera / video fixture の最新 video frame timing は optional `camera.frameTiming` に載せる。field は `source`、`receivedAtPerformanceMs`、`mediaTimeMs`、`videoCurrentTimeMs`、optional `presentationTimeMs`、optional `expectedDisplayTimeMs`、optional `presentedFrames`、`droppedPresentedFrames` を持つ。
     - live camera / video fixture の camera quality は optional `camera.quality` に `sincro.camera-quality.v1` として載せる。source が `none` の場合は score を生成せず、viewer camera layer は従来どおり未記録扱いになる。
+    - live camera / video fixture の active runtime performance profile は `camera.performanceProfile` を正本にする。schema version は `sincro.tracker-performance-profile.v1` で、camera constraints、Face / Pose / Hand / Face ROI / Gesture cadence、debug log 粒度、degradation budget の説明値を持つ。`tracker.budget` や frame metrics へ profile を重複保存しない。
+    - `window.__SINCRO_MOTION_DEBUG__.startCamera(options?)` は optional `performanceProfileId` / `performanceProfile` を受け付ける。未指定時は `debug` profile を使い、`performanceProfileId` 指定時は固定 `POSE_TARGET_INFERENCE_FPS` override ではなく profile cadence の Pose fps を `TrackerRuntime` default として使う。
     - `CameraQualityScore` の guide message は reason code から `"少し下がってください"`、`"体を画面中央に入れてください"`、`"手が画面から出ないようにしてください"`、`"部屋を明るくしてください"`、`"カメラ解像度を上げてください"` の固定文言へ決定的に変換する。v1 は ReliabilityMap / retarget weight / IK weight へは接続しない。
     - live camera / video fixture / replay pose-snapshot の最新 `CanonicalUpperBodyState` は optional `canonical` field に載せる。replay frame の `frame.canonical` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
     - live camera / video fixture / replay pose-snapshot の最新 `ReliabilityMap` は optional `reliability` field に載せる。replay frame の `frame.reliability` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
@@ -309,6 +311,9 @@
 - motion evaluation log
     - developer 向け評価ログの schema は `src/character/motionEvaluation/motionDebugLogSchema.ts` を正本とする。
     - schema version は `sincro.motion-debug-log.v1` とし、NDJSON の 1 行目を manifest record、2 行目以降を frame record として保存する。
+    - recording の active runtime performance profile は `manifest.pipeline.performanceProfile` を正本にする。`frame.metrics.tracker`、`frame.metrics.cameraQuality`、`tracker.budget` には profile を保存せず、frame ごとの重複を避ける。
+    - `manifest.pipeline.performanceProfile.debugLog` は numeric ring buffer の既定 frame 数と dump / overlay capture の既定粒度を説明する。常時記録は numeric 値に限定し、PNG / overlay / full dump の連続保存は profile 既定では有効化しない。
+    - `manifest.pipeline.performanceProfile.degradationBudget` は後続 ordered degradation policy が読む入力 contract であり、recording 時点の自動 degradation 履歴ではない。実際の over-budget / fallback 状態は従来どおり `frame.metrics.tracker.budget` と ROI stats に保存する。
     - recorder core は `src/character/motionEvaluation/motionDebugRecorder.ts` に置き、manifest / frame validation、dedupe、maxDuration / maxFrames stop、NDJSON / Blob export を DOM 非依存で扱う。
     - replay / metrics が読む正規化 pose snapshot の保存先は `frame.poseSnapshot` に固定し、MediaPipe raw result や solver 出力とは別 slot に分ける。
     - replay は `frame.timestamp.mediaTimeMs` を正本時刻として使い、autoplay の順序と手動 step の対象 frame を `performance.now()` へ依存させない。`mediaTimeMs` は video frame clock の media time 基準であり、MediaPipe / Worker detect timestamp と tracker cadence 判定も同じ値を使う。

@@ -133,6 +133,27 @@
 
 ## Data / State
 
+- `TrackerRuntimePerformanceProfile`
+    - `src/features/gaze/trackingRuntime/trackerRuntimePerformanceProfile.ts` を正本とする runtime profile contract。
+    - schema version は `sincro.tracker-performance-profile.v1` に固定し、`id`、optional `requestedId`、`camera`、`cadence`、`debugLog`、`degradationBudget`、`warnings` だけを持つ JSON 保存可能な plain object とする。
+    - profile id は `high-end-desktop`、`standard-laptop`、`mobile-safari`、`debug` の 4 種に固定する。未知 id は throw せず `standard-laptop` に fallback し、`warnings: ["unknown_profile_id_defaulted"]` と `requestedId` に caller 指定値を残す。
+    - resolver 入力は `{ performanceProfileId?: string; performanceProfile?: unknown; defaultProfileId?: TrackerRuntimePerformanceProfileId }` とし、通常 runtime の default は `standard-laptop`、motion-debug 呼び出し時だけ caller が `defaultProfileId: "debug"` を渡す。
+    - `performanceProfile` と `performanceProfileId` が同時指定された場合、実体は `performanceProfile` を優先し、`performanceProfileId` は `requestedId` と debug 表示用の要求値としてだけ扱う。
+    - custom profile は finite number、固定 enum、plain object だけを受け付ける。`NaN` / `Infinity`、DOM object、runtime class instance、function は invalid custom profile として `standard-laptop` fallback に落とす。
+    - camera constraints は profile の `camera` から `idealWidth`、`idealHeight`、`idealFrameRate`、`maxFrameRate`、`facingMode: "user"` を読む。browser `getUserMedia()` へ渡す際は `ideal` / `max` だけを使い、`exact` や強い `min` は使わない。
+    - cadence は Face / Pose / Hand / Face ROI / Gesture の target fps default である。`TrackerRuntime.startFaceTracking()` は明示 `targetInferenceFps`、`poseOptions.targetInferenceFps`、`poseOptions.hand.targetInferenceFps`、`poseOptions.faceRoi.targetInferenceFps` がある場合は明示値を優先し、未指定 field だけ profile cadence を使う。
+    - profile 固定値:
+
+        | id                 | camera           | cadence Face/Pose/Hand/Face ROI/Gesture | numeric ring buffer |
+        | ------------------ | ---------------- | --------------------------------------- | ------------------- |
+        | `high-end-desktop` | `1280x720 30fps` | `15/12/8/10/6`                          | `600`               |
+        | `standard-laptop`  | `960x540 24fps`  | `12/8/4/6/3`                            | `600`               |
+        | `mobile-safari`    | `640x480 15fps`  | `8/4/2/3/1`                             | `600`               |
+        | `debug`            | `1280x720 30fps` | `15/12/4/6/2`                           | `1800`              |
+
+    - `debugLog.captureFullDumpByDefault` は全 profile で `false`、`overlayCaptureFps` は `1` 以下に固定する。常時記録は numeric ring buffer に限定し、PNG / overlay / full dump は明示操作または後続 debug tool の責務とする。
+    - `degradationBudget` は Phase 3 / Phase 8 の既定値として `workerRoundTripWarnRatio: 0.9`、`workerRoundTripOverBudgetRatio: 1.25`、`roiBudgetRatio: 0.55`、`consecutiveOverBudgetFrames: 5`、`recoveryFrames: 30` を持つ。Phase 10 後続の ordered degradation policy はこの profile と budget を入力にするが、本 profile contract 自体は自動 profile downgrade や fps 低下の state machine を持たない。
+
 - `SincroFaceMotionSnapshot`
     - detected
     - confidence

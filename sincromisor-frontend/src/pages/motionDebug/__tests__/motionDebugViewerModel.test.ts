@@ -50,6 +50,7 @@ import {
     type CameraQualityScore,
 } from "../../../features/gaze/trackingRuntime/cameraQualityScore";
 import { TRACKER_PERFORMANCE_BUDGET_SCHEMA_VERSION } from "../../../features/gaze/trackingRuntime/trackerRuntimePerformanceBudget";
+import { resolveTrackerRuntimePerformanceProfile } from "../../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
 import { createMotionDebugViewerSnapshot } from "../motionDebugViewerModel";
 import type { MotionDebugSnapshot } from "../types";
 
@@ -605,6 +606,9 @@ function createLiveSnapshot(
             width: 1280,
             height: 720,
             readyState: 4,
+            performanceProfile: resolveTrackerRuntimePerformanceProfile({
+                defaultProfileId: "debug",
+            }).profile,
             quality: options.cameraQuality,
         },
         recording: {
