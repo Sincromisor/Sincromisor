@@ -9,6 +9,7 @@ import type {
 
 type DetectResult = {
     face: SincroFaceMotionSnapshot;
+    faceRoi?: SincroFaceMotionSnapshot;
     pose?: SincroPoseMotionSnapshot;
     hand?: SincroHandMotionSnapshot;
     stats: SincroTrackerWorkerStats;
@@ -207,6 +208,7 @@ export class SincroTrackerWorkerClient {
             this.publishStats();
             pending.resolve({
                 face: message.face,
+                faceRoi: message.faceRoi,
                 pose: message.pose,
                 hand: message.hand,
                 stats: this.getStats(),

@@ -94,6 +94,7 @@ export type SincroTrackerWorkerResultMessage = {
     type: "result";
     requestId: number;
     face: SincroFaceMotionSnapshot;
+    faceRoi?: SincroFaceMotionSnapshot;
     pose?: SincroPoseMotionSnapshot;
     hand?: SincroHandMotionSnapshot;
     workerTimeMs: number;
