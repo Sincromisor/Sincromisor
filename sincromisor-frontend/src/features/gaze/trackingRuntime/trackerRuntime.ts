@@ -193,17 +193,19 @@ export class TrackerRuntime {
         }
         const detectStartedAtMs = performance.now();
         try {
-            const snapshot = this.faceTracker.detect(this.videoElement, nowMs);
+            const poseResult = this.shouldRunPoseInference(nowMs)
+                ? this.runPoseInference(timing)
+                : undefined;
+            const snapshot =
+                poseResult && !this.poseDegradedToFaceOnly
+                    ? this.faceTracker.detectWithRoi(this.videoElement, poseResult.snapshot, nowMs)
+                    : this.faceTracker.detect(this.videoElement, nowMs);
             this.callbacks.onFaceMotion(snapshot, timing);
-            let poseInferenceTimeMs: number | undefined;
-            if (this.shouldRunPoseInference(nowMs)) {
-                poseInferenceTimeMs = this.runPoseInference(timing);
-            }
             this.callbacks.onTrackerStats?.(
                 this.createMainThreadStats(
                     timing,
                     performance.now() - detectStartedAtMs,
-                    poseInferenceTimeMs,
+                    poseResult?.inferenceTimeMs,
                 ),
             );
         } catch (error) {
@@ -256,7 +258,9 @@ export class TrackerRuntime {
         });
     }
 
-    private runPoseInference(timing: TrackerVideoFrameTiming): number | undefined {
+    private runPoseInference(
+        timing: TrackerVideoFrameTiming,
+    ): { snapshot: SincroPoseMotionSnapshot; inferenceTimeMs: number } | undefined {
         if (!this.callbacks) {
             return undefined;
         }
@@ -266,7 +270,10 @@ export class TrackerRuntime {
             const snapshot = this.poseTracker.detect(this.videoElement, nowMs);
             this.callbacks.onPoseMotion?.(snapshot, timing);
             this.applyPosePerformanceGate(snapshot, nowMs, timing);
-            return snapshot.inferenceTimeMs;
+            return {
+                snapshot,
+                inferenceTimeMs: snapshot.inferenceTimeMs,
+            };
         } catch (error) {
             frontendLogger.warn(
                 "Sincro PoseLandmarker failed during video inference. Falling back to face-only.",

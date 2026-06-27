@@ -1,5 +1,6 @@
 import type { SincroArmIkConstraintSnapshot } from "../../../character/ik/sincroArmIkConstraint";
 import {
+    cloneSincroRoiObservation,
     DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
     type SincroFaceMotionSnapshot,
 } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
@@ -20,6 +21,8 @@ export function cloneSincroFaceMotionSnapshot(
         ...snapshot,
         headPose: { ...snapshot.headPose },
         blendshapes: { ...snapshot.blendshapes },
+        roi: cloneSincroRoiObservation(snapshot.roi),
+        warnings: [...snapshot.warnings],
     };
 }
 

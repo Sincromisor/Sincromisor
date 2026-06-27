@@ -153,6 +153,13 @@
     - Face ROI は左右 shoulder center と shoulder width を主入力にする。Pose 未検出または shoulderWidth が finite positive でない場合は `source: "none"`、`confidence: 0` の failure observation として扱う。
     - ROI rect clamp は left / top / right / bottom を clip して center / size を再計算する。`validateRoiRect()` の順序は finite check、edge clip、min size check、confidence clamp に固定する。
     - ROI consistency は Pose wrist / face expected point と ROI 由来 full-frame point の距離から score `0..1` を返す。`roi_inconsistent` は ROI contract の warning であり、ReliabilityMap へは後続 task で明示的に写像する。
+- `SincroFaceMotionSnapshot` の ROI metadata
+    - Face ROI は head orientation / face reliability の入力品質を観測するための metadata として、既存 `SincroFaceMotionSnapshot` に optional `roi`、`source`、`warnings` を追加して扱う。別の Face ROI snapshot は作らない。
+    - `source` は `"roi"`、`"full-frame"`、`"full-frame-fallback"`、`"lost"` に固定する。既存 retarget は `detected`、`confidence`、`headPose`、`blendshapes` を従来どおり読む。
+    - ROI crop の FaceLandmarker result は crop-local result として扱い、`headPose.matrix` は従来どおり FaceLandmarker の transformation matrix number array だけを保存する。crop-local face landmark 全点、canvas、ImageBitmap、MediaPipe raw result は保存しない。
+    - ROI が no-face の場合、または Pose face ROI center と Face result center の consistency score が `0` の場合は同一 frame で full-frame fallback を 1 回だけ使う。fallback でも未検出なら `source: "lost"`、`fallbackReason: "face_not_detected"` とし、`roi_missing` または `roi_inconsistent` warning を残す。
+    - Worker / TrackerRuntime は Pose が実行された frame だけ Face ROI を試す。Pose 未実行 frame と face-only fallback 中は full-frame Face tracking を続け、Face retarget や head temporal の cadence を Pose cadence に合わせない。
+    - Face / ROI 専用 reliability と motion-debug viewer への warning 表示は後続 task の責務とし、本節では tracker snapshot metadata までを現在仕様とする。
 - `CanonicalUpperBodyState`
     - `sincro.canonical-upper-body.v1` を schema version とする、JSON 保存可能な upper body contract。
     - motion-debug の `frame.canonical` slot にそのまま保存できる plain object として扱い、replay / metrics / temporal / intent / IK が同じ名前・単位で読む。
