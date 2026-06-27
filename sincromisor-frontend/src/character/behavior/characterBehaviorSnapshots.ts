@@ -1,5 +1,8 @@
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
-import { DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import {
+    cloneSincroRoiObservation,
+    DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
+} from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type {
     SincroPoseArmMotionSnapshot,
     SincroPoseMotionSnapshot,
@@ -98,6 +101,8 @@ export function cloneFaceMotionSnapshot(
         ...snapshot,
         headPose: { ...snapshot.headPose },
         blendshapes: { ...snapshot.blendshapes },
+        roi: cloneSincroRoiObservation(snapshot.roi),
+        warnings: [...snapshot.warnings],
         lastUpdatedAtMs: snapshot.lastUpdatedAtMs ?? nowMs,
     };
 }

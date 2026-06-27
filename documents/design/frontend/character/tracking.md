@@ -66,6 +66,9 @@
 - `SincroFaceTracker`
     - FaceLandmarker から head pose、blendshape、confidence を抽出する。
     - `SincroFaceMotionSnapshot` を出力する。
+    - `detect()` は従来どおり full-frame FaceLandmarker 推論を行う。
+    - `detectWithRoi(videoFrame, poseSnapshot, timestampMs, options?)` は Pose face ROI が valid な frame だけ crop 推論を試し、ROI 欠損、ROI no-face、consistency score `0` では同一 frame で full-frame fallback を 1 回だけ実行する。v1 の `options` は空 object の予約枠であり設定 field は持たない。
+    - ROI 推論の crop-local landmark は consistency 判定にだけ使い、snapshot には `SincroRoiObservation`、`source`、`warnings` だけを残す。ImageBitmap / canvas / MediaPipe raw result は保存しない。
 - `SincroPoseTracker`
     - optional PoseLandmarker から肩、胴体、腕 target を抽出する。
     - 腕 target は通常 retarget 用の `tracked` と IK 用の `quality` / `usableForIk` / `ikWeight` を分けて出力する。
@@ -110,9 +113,14 @@
     - confidence
     - headPose
     - blendshapes
+    - roi（optional `SincroRoiObservation`。ROI crop や MediaPipe raw result は含めない）
+    - source（`"roi"`、`"full-frame"`、`"full-frame-fallback"`、`"lost"`）
+    - warnings
     - inferenceTimeMs
     - inferenceFps
     - fallbackReason
+    - FaceLandmarker の full-frame 既存経路では `source: "full-frame"`、`warnings: []` を返す。ROI fallback で full-frame が検出した場合は `source: "full-frame-fallback"`、fallback でも未検出の場合は `source: "lost"`、`fallbackReason: "face_not_detected"` を返す。
+    - Worker / TrackerRuntime は Pose が実行された frame だけ Pose snapshot から Face ROI を作る。Pose が未実行の frame、または pose performance gate により face-only fallback 中の frame では full-frame Face tracking を継続し、Face cadence を Pose cadence に引きずらない。
 - `SincroPoseMotionSnapshot`
     - trackingEnabled
     - detected

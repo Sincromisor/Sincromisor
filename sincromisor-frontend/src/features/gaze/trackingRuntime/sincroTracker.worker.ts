@@ -1,3 +1,4 @@
+import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
 import { DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { SincroPoseTracker } from "../poseTracking/sincroPoseTracker";
@@ -115,11 +116,14 @@ async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> 
             throw new Error("Sincro tracker worker is not initialized.");
         }
         postStatus("running");
-        const face = faceTracker.detect(message.frame, message.timestampMs);
         const pose =
             message.poseEnabled && poseInitialized
                 ? poseTracker.detect(message.frame, message.timestampMs)
                 : undefined;
+        const face =
+            pose && !pose.degradedToFaceOnly
+                ? faceTracker.detectWithRoi(message.frame, pose, message.timestampMs)
+                : faceTracker.detect(message.frame, message.timestampMs);
         post({
             type: "result",
             requestId: message.requestId,
@@ -185,7 +189,10 @@ function normalizeMediaPipeImportPath(path: string): string {
     return path.replace("?import&", "?").replace("&import", "");
 }
 
-function createStoppedFaceSnapshot(reason: string | undefined, nowMs: number) {
+function createStoppedFaceSnapshot(
+    reason: string | undefined,
+    nowMs: number,
+): SincroFaceMotionSnapshot {
     return {
         trackingEnabled: false,
         detected: false,
@@ -196,6 +203,8 @@ function createStoppedFaceSnapshot(reason: string | undefined, nowMs: number) {
             rollDeg: 0,
         },
         blendshapes: {},
+        source: "lost",
+        warnings: [],
         inferenceTimeMs: 0,
         inferenceFps: 0,
         lastUpdatedAtMs: nowMs,
