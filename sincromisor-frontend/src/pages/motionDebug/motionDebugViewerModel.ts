@@ -22,6 +22,10 @@ import type {
     MotionMetricSummary,
 } from "../../character/motionEvaluation/motionMetrics";
 import { parseReplayPoseSnapshot } from "../../character/motionEvaluation/motionReplayPoseSnapshotSchema";
+import {
+    type MotionIntentState,
+    parseMotionIntentState,
+} from "../../character/motionIntent/motionIntentState";
 import { createPoseReliabilityMap } from "../../character/reliability/poseReliabilityEstimator";
 import {
     parseReliabilityMap,
@@ -41,6 +45,7 @@ import type {
     MotionDebugSnapshot,
     MotionDebugViewerMode,
     MotionDebugViewerSnapshot,
+    MotionIntentLayerParseError,
     ReliabilityLayerParseError,
     SolverLayerParseError,
     SolverLayerValue,
@@ -82,12 +87,7 @@ const LAYER_LABELS: Record<MotionDebugLayerKey, string> = {
     metrics: "Metrics",
 };
 
-const RESERVED_PHASE_1_LAYERS = new Set<MotionDebugLayerKey>([
-    "mediapipe",
-    "canonical",
-    "intent",
-    "applied",
-]);
+const RESERVED_PHASE_1_LAYERS = new Set<MotionDebugLayerKey>(["mediapipe", "canonical", "applied"]);
 
 export type MotionDebugViewerContext = {
     mode: MotionDebugViewerMode;
@@ -142,7 +142,7 @@ function createLayerSnapshots(
         reliability: createLayerSnapshot("reliability", resolveReliabilityValue(context), false),
         canonical: createLayerSnapshot("canonical", resolveCanonicalValue(context), true),
         temporal: createLayerSnapshot("temporal", resolveTemporalValue(context), false),
-        intent: createLayerSnapshot("intent", context.replayFrame?.intent, true),
+        intent: createParsedLayerSnapshot("intent", resolveIntentValue(context)),
         solver: createSolverLayerSnapshot(resolveSolverValue(context)),
         finalPose: createParsedLayerSnapshot("finalPose", resolveFinalPoseValue(context)),
         applied: createLayerSnapshot("applied", context.replayFrame?.applied, true),
@@ -340,6 +340,27 @@ function resolveTemporalValue(
 
 function parseTemporalLayerValue(value: unknown): TemporalUpperBodyState | TemporalLayerParseError {
     const parsed = parseTemporalUpperBodyState(value);
+    if (parsed.ok) {
+        return parsed.state;
+    }
+    return {
+        parseStatus: "invalid",
+        errors: parsed.errors,
+        raw: value,
+    };
+}
+
+function resolveIntentValue(
+    context: MotionDebugViewerContext,
+): MotionIntentState | MotionIntentLayerParseError | undefined {
+    if (context.replayFrame === undefined || context.replayFrame.intent === undefined) {
+        return undefined;
+    }
+    return parseIntentLayerValue(context.replayFrame.intent);
+}
+
+function parseIntentLayerValue(value: unknown): MotionIntentState | MotionIntentLayerParseError {
+    const parsed = parseMotionIntentState(value);
     if (parsed.ok) {
         return parsed.state;
     }

@@ -21,6 +21,7 @@ import {
 } from "../../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import { calculateMotionMetricSummary } from "../../../character/motionEvaluation/motionMetrics";
 import { MotionReplayPlayer } from "../../../character/motionEvaluation/motionReplayPlayer";
+import { createDefaultMotionIntentState } from "../../../character/motionIntent/motionIntentState";
 import {
     createDefaultReliabilityMap,
     RELIABILITY_MAP_SCHEMA_VERSION,
@@ -728,6 +729,118 @@ describe("createMotionDebugViewerSnapshot", () => {
         });
 
         expect(viewer.layers.solver.status).toBe("not_recorded");
+    });
+
+    it("marks missing replay intent as not recorded", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "intent",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+            },
+        });
+
+        expect(viewer.layers.intent.status).toBe("not_recorded");
+    });
+
+    it("shows saved replay intent after strict parsing", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const intent = createDefaultMotionIntentState(120);
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "intent",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                intent,
+            },
+        });
+
+        expect(viewer.layers.intent.status).toBe("available");
+        expect(viewer.layers.intent.value).toMatchObject({
+            schemaVersion: "sincro.motion-intent.v1",
+            arms: {
+                left: {
+                    intent: "tracking",
+                    source: "fallback",
+                },
+            },
+            warnings: ["fallback_active"],
+        });
+    });
+
+    it("marks invalid saved replay intent without failing log load", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "intent",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                intent: {
+                    ...createDefaultMotionIntentState(120),
+                    arms: {
+                        left: {
+                            ...createDefaultMotionIntentState(120).arms.left,
+                            intent: "thumbs_up",
+                        },
+                        right: createDefaultMotionIntentState(120).arms.right,
+                    },
+                },
+            },
+        });
+
+        expect(viewer.layers.intent.status).toBe("invalid");
+        expect(viewer.layers.intent.value).toMatchObject({
+            parseStatus: "invalid",
+            errors: expect.arrayContaining([
+                expect.objectContaining({
+                    code: "invalid_state",
+                    path: ["arms", "left", "intent"],
+                }),
+            ]),
+        });
     });
 
     it("shows live Phase 6 solver snapshot when avatar profile is available", () => {

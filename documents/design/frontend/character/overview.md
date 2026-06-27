@@ -37,6 +37,9 @@
 - `src/character/reliability`
     - `ReliabilityMap` v1 を置き、Pose / Hand / Face / ROI / camera quality 由来の観測品質を developer-visible snapshot として保存する。
     - Phase 8 では Hand / Face 入力がある frame の head / hand / finger reliability を埋める。Gesture reliability と MotionIntent への接続は Phase 9 に残す。
+- `src/character/motionIntent`
+    - `MotionIntentState` v1 を置き、temporal / reliability / hand / gesture の後段で左右腕と torso の motion intent を保存可能な developer-visible contract として表す。
+    - `schemaVersion` は `sincro.motion-intent.v1` に固定し、Gesture Recognizer の raw label は `sourceGestureLabel` に閉じて `intent` enum へ混ぜない。
 - `VRMScene`
     - renderer、camera、light、resize、render loop を持つ。
 - `VRMCharacterManager`
@@ -52,6 +55,7 @@
     - `MotionDebugSnapshot.hand` / `frame.hand` は Hand snapshot の debug / replay 用 optional slot であり、raw landmarks や crop object は含めない。
     - `frame.metrics.tracker.roi` は Hand / Face ROI の pause state、fallback count、skip count、over-budget count、reason code を保存する debug / replay 用 optional stats である。full-frame Face / Pose の既存 cadence と budget target / observed shape は維持する。
     - 旧 log に `frame.reliability` が無い場合だけ pose snapshot 由来の pose-only placeholder reliability を fallback 表示し、保存されていない Hand / Face 観測は再構成しない。
+    - `frame.intent` は MotionIntent v1 の optional slot として保存できる。replay viewer は saved `frame.intent` を `parseMotionIntentState()` で検証し、欠損を `not_recorded`、schema 違反を `invalid` として表示するが、旧 log 互換のため log load 全体では strict validation しない。
 - IK / Pose Composer
     - `SincroArmIkSolver` は腕 IK quaternion と constraint reason を返す。
     - `VrmPoseComposer` は tracking / idle / style layer から normalized local pose と `ownedBones` を作る。

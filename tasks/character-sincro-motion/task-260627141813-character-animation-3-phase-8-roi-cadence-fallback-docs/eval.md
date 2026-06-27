@@ -1,9 +1,11 @@
 # Evaluation: task-260627141813-character-animation-3-phase-8-roi-cadence-fallback-docs
 
 ## 判定
+
 PASS
 
 ## 受け入れ条件チェックリスト
+
 - [✓] 依存成果物の存在確認 — `SincroHandMotionSnapshot`、`TrackerRuntimePoseOptions.hand`、`SincroTrackerWorkerResultMessage.hand`、`SincroTrackerWorkerStats.effectiveHandFps`、`SincroFaceMotionSnapshot.roi/source/warnings` は HEAD に存在する。
 - [✓] `shouldRunTrackerFaceRoiInference()` 追加 — `trackerRuntimeCadence.ts` に追加され、Hand cadence は既存 `lastHandInferenceAtMs` / `targetHandInferenceFps` を維持し、Face ROI 既定 fps は `DEFAULT_TARGET_FACE_ROI_INFERENCE_FPS = 6`。
 - [✓] `TrackerRuntimePoseOptions.faceRoi` 追加と未指定 disabled 互換 — `poseOptions.faceRoi?.enabled === true` の場合だけ有効化され、`TrackerRuntimePerceptionOptions` は追加されていない。
@@ -21,6 +23,7 @@ PASS
 - [✓] docs 同期 — `documents/design/frontend/character/tracking.md`、`motion.md`、`overview.md` に Phase 8 cadence / fallback / reason / debug metrics が同期されている。
 
 ## テスト結果
+
 - `npm run gate`（評価 worktree `/private/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-7be061ada529-yCk20a`、HEAD `7be061a`、clean）: passed
     - `gate:lint`: CACHE HIT / passed
     - `gate:build`: CACHE HIT / passed
@@ -28,9 +31,11 @@ PASS
 - カバレッジ評価: 受け入れ条件の主要リスクだった Face ROI による full-frame Face 置換は、実装レビューと runtime-level regression test の両方で解消を確認した。Worker 経路もコード上 `face` と `faceRoi` が分離されている。
 
 ## ドキュメント整合性
+
 - 公開 WebRTC / backend 契約の変更はなし。
 - developer-visible tracking runtime options、worker stats、degradation policy、debug metrics の変更はあり。
 - 対応ドキュメントは `documents/design/frontend/character/tracking.md`、`documents/design/frontend/character/motion.md`、`documents/design/frontend/character/overview.md` に同期済み。attempt 2 は文書化済みの「Face ROI は optional lower fps pass、full-frame Face cadence は維持」に実装を合わせる修正で、追加のドキュメント未同期はない。
 
 ## 残課題（FAIL の場合）
+
 - なし。

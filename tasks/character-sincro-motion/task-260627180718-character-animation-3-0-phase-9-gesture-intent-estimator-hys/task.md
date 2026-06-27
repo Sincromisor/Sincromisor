@@ -36,10 +36,12 @@ export type IntentTimingConfig = {
 };
 
 export type MotionIntentEstimatorConfig = {
-    timing?: Partial<Record<
-        Exclude<ArmMotionIntent, "tracking" | "lost" | "wave">,
-        Partial<IntentTimingConfig>
-    >>;
+    timing?: Partial<
+        Record<
+            Exclude<ArmMotionIntent, "tracking" | "lost" | "wave">,
+            Partial<IntentTimingConfig>
+        >
+    >;
     thresholds?: Partial<{
         gestureConfidence: number; // default 0.70
         handConfidence: number; // default 0.60

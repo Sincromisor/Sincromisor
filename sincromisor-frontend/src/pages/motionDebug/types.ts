@@ -29,6 +29,7 @@ import type {
     MotionReplayMode,
     MotionReplayState,
 } from "../../character/motionEvaluation/motionReplayPlayer";
+import type { MotionIntentParseResult } from "../../character/motionIntent/motionIntentState";
 import type {
     ReliabilityMap,
     ReliabilityMapParseResult,
@@ -79,6 +80,12 @@ export type ReliabilityLayerParseError = {
 export type TemporalLayerParseError = {
     parseStatus: "invalid";
     errors: Extract<TemporalUpperBodyStateParseResult, { ok: false }>["errors"];
+    raw: unknown;
+};
+
+export type MotionIntentLayerParseError = {
+    parseStatus: "invalid";
+    errors: Extract<MotionIntentParseResult, { ok: false }>["errors"];
     raw: unknown;
 };
 
