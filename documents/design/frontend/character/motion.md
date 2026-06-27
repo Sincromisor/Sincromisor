@@ -59,7 +59,7 @@
 - `src/character/vrmPose`
     - `VrmPoseComposer` と VRM normalized local pose contract を置く。
     - v1 は腕周辺 bone と torso fallback を対象にし、`leftUpperArm` / `leftLowerArm` / `leftHand`、`rightUpperArm` / `rightLowerArm` / `rightHand`、存在する場合の shoulder / finger fallback capability、`spine` / `chest` / `upperChest` の torso distribution を扱う。head / neck / leg / expression はまだ composer へ移さない。
-    - 入力 layer は `fallback`、`tracking`、`idle`、`style` の順に合成し、`limit` は layer ではなく composer 内部の final limit / clamp stage として扱う。
+    - 入力 layer は `fallback`、`tracking`、`semantic`、`idle`、`style` の順に合成し、`limit` は layer ではなく composer 内部の final limit / clamp stage として扱う。
 - `src/character/vrmCharacter`
     - arm / leg / torso / motion orchestrator と `VRMCharacterManager` を置く。
 - `FaceMorphController`
@@ -122,6 +122,8 @@
 - `VrmPoseComposer`
     - `VrmNormalizedLocalPose` は `VRMHumanBoneName` key の plain quaternion object とし、`THREE.Quaternion` instance は計算中だけ使う。
     - `ownedBones` は composer order の first-seen unique な出力対象 bone とし、重複所有は `owned_bone_conflict:<bone>` warning に残す。tracking layer の IK quaternion が同じ腕の bone を所有している場合、idle / speech gesture 相当の additive はその bone だけ `tracking_owns_bone` として抑制する。
+    - `semantic` layer は `MotionIntentState` から作る developer-visible な意図表現 layer とし、tracking pose の後、idle / style の前で partial override / additive として扱う。同じ upperArm / lowerArm / hand bone を tracking layer が所有している場合、semantic metadata の `intentConfidence` が `0.65` 未満ならその bone だけ `semantic_conflict` として抑制する。metadata が無い semantic layer は confidence `0` とみなす。
+    - semantic preset id は `small_wave`、`point_forward_or_up`、`thumbs_up_hold`、`peace_hold`、`shy_hand_near_face`、`explain_open_palm`、`soft_clap_like`、`lost_to_comfort` に固定する。v1 の semantic pose は upperArm / lowerArm / hand 相当の VRM humanoid bone quaternion だけを出し、spine / chest / head / expression / finger chain 全体は所有しない。
     - `MinimalAvatarMotionProfile.optionalBones` を読み、欠損している hand / finger bone は final pose へ出さない。欠損 shoulder への補正は `solverDefaults.shoulderDamping` で damp して upperArm へ分配する。
     - torso fallback helper は完成版 `AvatarMotionProfile.torso.distribution` を正本として torso delta quaternion を `spine` / `chest` / `upperChest` に分配する。profile distribution が非 finite、negative、または合計 `1.0 ± 0.001` から外れる場合は capability default へ戻し、warning code は `invalid_torso_distribution_profile_defaulted` だけを使う。
     - capability default distribution は `spine+chest+upperChest` で `{ spine: 0.25, chest: 0.40, upperChest: 0.35 }`、`spine+chest` で `{ spine: 0.35, chest: 0.65, upperChest: 0 }`、それ以外で `{ spine: 1, chest: 0, upperChest: 0 }` とする。helper は存在する torso bone だけを `ownedBones` に含め、composer は欠損 `upperChest` を `missing_optional_bone` として抑制する。
@@ -236,7 +238,8 @@
     - `guarded` は arm classification `crossed`、左右 wrist 2D 距離 `<= 0.18` かつ左右どちらかの `forwardness >= 0.35`、または Reliability / Hand warning の `side_inconsistent` で candidate にする。`side_inconsistent` 後は既定 500ms の間、前回 semantic intent を同じ side に保持し、`left_right_swap_suspect` を付ける。
     - hand / pose lost 時は temporal arm state が `predicted` / `recovering` なら前回 semantic intent を既定 500ms まで保持し、その間 `fallback_active` は付けない。`observedAgeMs > 700` または `state === "lost" && confidence < 0.15` の side は `lost` にする。fallback 判定の torso confidence は `reliability.parts.torso.finalWeight` を優先し、欠損時は左右 temporal arm confidence 平均を使う。左右両腕が lost または confidence `< 0.15` で torso confidence も `< 0.15` の場合だけ arms を `fallback` にする。
     - `MotionIntentEstimator.reset()` は camera stop、video fixture load、recording load、replay stop、source reset で呼び、過去 frame の hysteresis / cooldown / wave 窓を破棄する。`dtMs <= 0`、`dtMs > 250`、非 finite dt の frame は counters を更新せず、`invalid_dt` warning を返す。`createMotionIntentState(input, config?)` は単発 helper であり、過去 frame が必要な semantic intent は初回 frame では発火しない。
-    - Gesture Recognizer の初期化、semantic clip、finger bone rotation、`VRMCharacterManager.update()` の適用順序変更は後続 task に残す。
+    - `createSemanticMotionPoseLayer()` は `MotionIntentState`、完成版 `AvatarMotionProfile`、optional previous semantic debug snapshot、optional `deltaSeconds` だけを入力にし、Temporal / Hand / raw gesture / MediaPipe raw landmark は読まない。`tracking` と `guarded` は no-op、片側だけの `clapLike` も no-op とし、左右両方が `clapLike` の場合だけ `side: "both"` の `soft_clap_like` を 1 layer 返す。
+    - Gesture Recognizer の初期化、authored semantic clip asset、finger bone rotation、`VRMCharacterManager.update()` の適用順序変更は後続 task に残す。AnimationMixer を使う場合も semantic clip 再生は staging に留め、最終的には pose delta を `VrmPoseComposer` の semantic layer として渡す。
 - `TemporalUpperBodyState` → arm IK bridge
     - Phase 6 bridge は `src/character/motionSolver/temporalArmSolverBridge.ts` の `createTemporalArmIkInput()` を正本とし、既存 `solveWorldArmIk()` の Pose snapshot 入力経路は残す。bridge は本番切替ではなく、Temporal / profile 由来の solver input 候補を作る純粋 helper として扱う。
     - 入力は `TemporalUpperBodyState`、腕 side、`MinimalAvatarMotionProfile`、`SincroArmIkSolver` と同等の `shoulderWidth` / `upperArmLength` / `lowerArmLength` measurement である。scale snapshot は profile measurement を優先し、欠損時だけ solver measurement に fallback する。`maxReachRatio` は `0.985` に固定する。

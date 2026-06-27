@@ -40,6 +40,7 @@
 - `src/character/motionIntent`
     - `MotionIntentState` v1 を置き、temporal / reliability / hand / gesture の後段で左右腕と torso の motion intent を保存可能な developer-visible contract として表す。
     - `schemaVersion` は `sincro.motion-intent.v1` に固定し、Gesture Recognizer の raw label は `sourceGestureLabel` に閉じて `intent` enum へ混ぜない。
+    - `createSemanticMotionPoseLayer()` は `MotionIntentState` と完成版 `AvatarMotionProfile` から `semantic` pose layer を作る helper であり、preset id、partial arm override、debug snapshot を developer-only に観測できるようにする。本番の VRM bone 書き込み順序は変更しない。
 - `VRMScene`
     - renderer、camera、light、resize、render loop を持つ。
 - `VRMCharacterManager`
@@ -58,7 +59,8 @@
     - `frame.intent` は MotionIntent v1 の optional slot として保存できる。replay viewer は saved `frame.intent` を `parseMotionIntentState()` で検証し、欠損を `not_recorded`、schema 違反を `invalid` として表示するが、旧 log 互換のため log load 全体では strict validation しない。
 - IK / Pose Composer
     - `SincroArmIkSolver` は腕 IK quaternion と constraint reason を返す。
-    - `VrmPoseComposer` は tracking / idle / style layer から normalized local pose と `ownedBones` を作る。
+    - `VrmPoseComposer` は fallback / tracking / semantic / idle / style layer から normalized local pose と `ownedBones` を作る。semantic layer は `small_wave`、`point_forward_or_up`、`thumbs_up_hold`、`peace_hold`、`shy_hand_near_face`、`explain_open_palm`、`soft_clap_like`、`lost_to_comfort` の preset id を持ち、upperArm / lowerArm / hand 相当の partial override に限定する。
+    - authored clip や AnimationMixer を使う場合も staging に留め、composer へ渡す最終表現は `semantic` pose delta とする。
     - motion-debug は `frame.solver.phase6` に Phase 6 solver snapshot、`frame.solver.phase7` に Phase 7 の完成版 `AvatarMotionProfile` / calibration snapshot、`frame.finalPose` に composer result を保存・表示する。本番の `VRMCharacterManager.update()` の bone 書き込み順序はまだ全面移行しない。
     - 完成版 `AvatarMotionProfile` は `VRMScene.getAvatarMotionProfile()` / `VRMCharacterManager.getAvatarMotionProfile()` から debug 用 clone として公開する。Debug Console と Phase 6 snapshot の `avatarMotionProfile` は `MinimalAvatarMotionProfile` のまま維持する。
 
