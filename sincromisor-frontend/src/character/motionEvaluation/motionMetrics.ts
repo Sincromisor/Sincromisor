@@ -1,6 +1,12 @@
 import { Quaternion } from "three/src/math/Quaternion.js";
 import { z } from "zod";
 import {
+    type ArmMotionIntent,
+    type MotionIntentSideState,
+    type MotionIntentState,
+    parseMotionIntentState,
+} from "../motionIntent/motionIntentState";
+import {
     parseTemporalUpperBodyState,
     type TemporalArmState,
     type TemporalTuple3,
@@ -43,7 +49,11 @@ export type MotionMetricKey =
     | "solverReachClampOccupancy"
     | "solverPoleUncertainFrameCount"
     | "finalPoseAngularVelocityClampCount"
-    | "finalPoseOwnedBoneConflictCount";
+    | "finalPoseOwnedBoneConflictCount"
+    | "gestureFlickerCount"
+    | "semanticFallbackFrameCount"
+    | "intentCooldownSuppressionCount"
+    | "intentInvalidFrameCount";
 
 export type MotionMetricSeverity = "pass" | "warn" | "fail";
 export type MotionMetricStatus = MotionMetricSeverity | "not_available";
@@ -109,6 +119,10 @@ export const MOTION_METRIC_KEYS: MotionMetricKey[] = [
     "solverPoleUncertainFrameCount",
     "finalPoseAngularVelocityClampCount",
     "finalPoseOwnedBoneConflictCount",
+    "gestureFlickerCount",
+    "semanticFallbackFrameCount",
+    "intentCooldownSuppressionCount",
+    "intentInvalidFrameCount",
 ];
 
 export const DEFAULT_MOTION_METRIC_THRESHOLDS: Record<MotionMetricKey, MotionMetricThreshold> = {
@@ -130,6 +144,10 @@ export const DEFAULT_MOTION_METRIC_THRESHOLDS: Record<MotionMetricKey, MotionMet
     solverPoleUncertainFrameCount: { pass: 2, warn: 5, fail: 5 },
     finalPoseAngularVelocityClampCount: { pass: 0, warn: 2, fail: 2 },
     finalPoseOwnedBoneConflictCount: { pass: 0, warn: 0, fail: 0 },
+    gestureFlickerCount: { pass: 0, warn: 2, fail: 5 },
+    semanticFallbackFrameCount: { pass: 30, warn: 120, fail: 240 },
+    intentCooldownSuppressionCount: { pass: 0, warn: 20, fail: 60 },
+    intentInvalidFrameCount: { pass: 0, warn: 1, fail: 3 },
 };
 
 const METRIC_DEFINITIONS: Record<
@@ -154,6 +172,10 @@ const METRIC_DEFINITIONS: Record<
     solverPoleUncertainFrameCount: { unit: "count", direction: "lower_is_better" },
     finalPoseAngularVelocityClampCount: { unit: "count", direction: "lower_is_better" },
     finalPoseOwnedBoneConflictCount: { unit: "count", direction: "lower_is_better" },
+    gestureFlickerCount: { unit: "count", direction: "lower_is_better" },
+    semanticFallbackFrameCount: { unit: "count", direction: "lower_is_better" },
+    intentCooldownSuppressionCount: { unit: "count", direction: "lower_is_better" },
+    intentInvalidFrameCount: { unit: "count", direction: "lower_is_better" },
 };
 
 const poseWristSchema = z
@@ -264,6 +286,11 @@ type NumericMetricComputation =
     | { ok: true; value: number; sampleCount: number }
     | { ok: false; reason: string; sampleCount: number };
 
+type ParsedIntentFrame =
+    | { status: "missing" }
+    | { status: "invalid" }
+    | { status: "valid"; intent: MotionIntentState };
+
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -309,6 +336,17 @@ function parsePhase6Solver(
 function parseFinalPose(frame: SincroMotionDebugFrame): MotionDebugFinalPoseSnapshot | undefined {
     const parsed = parseMotionDebugFinalPoseSnapshot(frame.finalPose);
     return parsed.ok ? parsed.snapshot : undefined;
+}
+
+function parseIntent(frame: SincroMotionDebugFrame): ParsedIntentFrame {
+    if (frame.intent === undefined) {
+        return { status: "missing" };
+    }
+    const parsed = parseMotionIntentState(frame.intent);
+    if (!parsed.ok) {
+        return { status: "invalid" };
+    }
+    return { status: "valid", intent: parsed.state };
 }
 
 function resolveThresholds(
@@ -365,6 +403,18 @@ function resolveThresholds(
         finalPoseOwnedBoneConflictCount:
             config.thresholds?.finalPoseOwnedBoneConflictCount ??
             DEFAULT_MOTION_METRIC_THRESHOLDS.finalPoseOwnedBoneConflictCount,
+        gestureFlickerCount:
+            config.thresholds?.gestureFlickerCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.gestureFlickerCount,
+        semanticFallbackFrameCount:
+            config.thresholds?.semanticFallbackFrameCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.semanticFallbackFrameCount,
+        intentCooldownSuppressionCount:
+            config.thresholds?.intentCooldownSuppressionCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.intentCooldownSuppressionCount,
+        intentInvalidFrameCount:
+            config.thresholds?.intentInvalidFrameCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.intentInvalidFrameCount,
     };
 }
 
@@ -1222,6 +1272,102 @@ function calculateFinalPoseOwnedBoneConflictCount(
     return { ok: true, value: count, sampleCount };
 }
 
+function calculateIntentInvalidFrameCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const intent = parseIntent(frame);
+        if (intent.status === "missing") {
+            continue;
+        }
+        sampleCount += 1;
+        if (intent.status === "invalid") {
+            count += 1;
+        }
+    }
+    if (sampleCount === 0) {
+        return { ok: false, reason: "intent_not_recorded", sampleCount };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
+function calculateGestureFlickerCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    const previous: Partial<Record<ArmSide, MotionIntentSideState>> = {};
+    for (const frame of frames) {
+        const parsed = parseIntent(frame);
+        if (parsed.status !== "valid") {
+            continue;
+        }
+        for (const side of ARM_SIDES) {
+            const current = parsed.intent.arms[side];
+            const previousSide = previous[side];
+            sampleCount += 1;
+            if (
+                previousSide !== undefined &&
+                isSemanticIntent(previousSide.intent) &&
+                previousSide.stableDurationMs < 150 &&
+                (current.intent === "tracking" ||
+                    (isSemanticIntent(current.intent) && current.intent !== previousSide.intent))
+            ) {
+                count += 1;
+            }
+            previous[side] = current;
+        }
+    }
+    if (sampleCount === 0) {
+        return { ok: false, reason: "intent_not_recorded", sampleCount };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
+function calculateSemanticFallbackFrameCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    return calculateIntentSideSampleCount(frames, (side) =>
+        side.intent === "lost" || side.intent === "fallback" ? 1 : 0,
+    );
+}
+
+function calculateIntentCooldownSuppressionCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    return calculateIntentSideSampleCount(frames, (side) =>
+        side.warnings.includes("gesture_cooldown") ? 1 : 0,
+    );
+}
+
+function calculateIntentSideSampleCount(
+    frames: readonly SincroMotionDebugFrame[],
+    countForSide: (side: MotionIntentSideState) => number,
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const parsed = parseIntent(frame);
+        if (parsed.status !== "valid") {
+            continue;
+        }
+        for (const side of ARM_SIDES) {
+            sampleCount += 1;
+            count += countForSide(parsed.intent.arms[side]);
+        }
+    }
+    if (sampleCount === 0) {
+        return { ok: false, reason: "intent_not_recorded", sampleCount };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
+function isSemanticIntent(intent: ArmMotionIntent): boolean {
+    return intent !== "tracking" && intent !== "lost" && intent !== "fallback";
+}
+
 function squaredTupleDistance(left: TemporalTuple3, right: TemporalTuple3): number {
     const dx = right[0] - left[0];
     const dy = right[1] - left[1];
@@ -1329,6 +1475,26 @@ export function calculateMotionMetricSummary(
             thresholds.finalPoseOwnedBoneConflictCount,
             calculateFinalPoseOwnedBoneConflictCount(frames),
         ),
+        gestureFlickerCount: createMetricResult(
+            "gestureFlickerCount",
+            thresholds.gestureFlickerCount,
+            calculateGestureFlickerCount(frames),
+        ),
+        semanticFallbackFrameCount: createMetricResult(
+            "semanticFallbackFrameCount",
+            thresholds.semanticFallbackFrameCount,
+            calculateSemanticFallbackFrameCount(frames),
+        ),
+        intentCooldownSuppressionCount: createMetricResult(
+            "intentCooldownSuppressionCount",
+            thresholds.intentCooldownSuppressionCount,
+            calculateIntentCooldownSuppressionCount(frames),
+        ),
+        intentInvalidFrameCount: createMetricResult(
+            "intentInvalidFrameCount",
+            thresholds.intentInvalidFrameCount,
+            calculateIntentInvalidFrameCount(frames),
+        ),
     };
 
     return {
@@ -1431,6 +1597,18 @@ export function compareMotionMetricSummaries(
             baseline,
             candidate,
         ),
+        gestureFlickerCount: compareMetric("gestureFlickerCount", baseline, candidate),
+        semanticFallbackFrameCount: compareMetric(
+            "semanticFallbackFrameCount",
+            baseline,
+            candidate,
+        ),
+        intentCooldownSuppressionCount: compareMetric(
+            "intentCooldownSuppressionCount",
+            baseline,
+            candidate,
+        ),
+        intentInvalidFrameCount: compareMetric("intentInvalidFrameCount", baseline, candidate),
     };
 }
 

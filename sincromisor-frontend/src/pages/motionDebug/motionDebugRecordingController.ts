@@ -6,6 +6,10 @@ import type { SincroMotionDebugLogManifest } from "../../character/motionEvaluat
 import { SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION } from "../../character/motionEvaluation/motionDebugLogSchema";
 import { createMotionDebugPhase7Snapshot } from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import {
+    createMotionDebugPhase9SemanticSnapshot,
+    type MotionDebugPhase9SemanticSnapshot,
+} from "../../character/motionEvaluation/motionDebugPhase9Snapshot";
+import {
     MotionDebugRecorder,
     type MotionDebugRecorderConfig,
     type MotionDebugRecorderFrameInput,
@@ -13,6 +17,8 @@ import {
     type MotionDebugRecorderResult,
     type MotionDebugRecorderState,
 } from "../../character/motionEvaluation/motionDebugRecorder";
+import { MotionIntentEstimator } from "../../character/motionIntent/motionIntentEstimator";
+import type { MotionIntentState } from "../../character/motionIntent/motionIntentState";
 import {
     createDefaultReliabilityMap,
     type ReliabilityMap,
@@ -69,13 +75,16 @@ type MotionDebugRecordingControllerParams = {
     ) => void;
     onReliabilityStateChange: (state: ReliabilityMap | undefined) => void;
     onTemporalStateChange: (state: TemporalUpperBodyState | undefined) => void;
+    onIntentStateChange: (state: MotionIntentState | undefined) => void;
     onStateChange: (state: MotionDebugRecorderState) => void;
 };
 
 export class MotionDebugRecordingController {
     private recorder = new MotionDebugRecorder();
     private readonly temporalEstimator = new TemporalStateEstimator();
+    private readonly intentEstimator = new MotionIntentEstimator();
     private latestCanonical?: CanonicalUpperBodyState;
+    private latestPhase9?: MotionDebugPhase9SemanticSnapshot;
 
     constructor(private readonly params: MotionDebugRecordingControllerParams) {}
 
@@ -163,6 +172,20 @@ export class MotionDebugRecordingController {
             temporal,
         });
         this.params.onTemporalStateChange(frameTemporal);
+        const intent = this.intentEstimator.update({
+            temporal: frameTemporal,
+            reliability: frameReliability,
+            hand: this.params.getHandSnapshot(),
+            mediaTimeMs,
+        });
+        this.params.onIntentStateChange(intent);
+        const phase9 = createMotionDebugPhase9SemanticSnapshot({
+            intent,
+            profile: this.params.getAvatarMotionProfile(),
+            hand: this.params.getHandSnapshot(),
+            previousFinger: this.latestPhase9?.finger,
+        });
+        this.latestPhase9 = phase9;
 
         if (this.recorder.getState().status !== "recording") {
             return undefined;
@@ -188,11 +211,13 @@ export class MotionDebugRecordingController {
             reliability: frameReliability,
             canonical,
             temporal: frameTemporal,
+            intent,
             solver: {
                 poseRetarget: debugSnapshot.poseRetarget,
                 poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
                 phase6,
                 phase7,
+                phase9,
             },
             finalPose,
             metrics: {
@@ -226,7 +251,10 @@ export class MotionDebugRecordingController {
 
     resetTemporalState(): void {
         this.temporalEstimator.reset();
+        this.intentEstimator.reset();
+        this.latestPhase9 = undefined;
         this.params.onTemporalStateChange(undefined);
+        this.params.onIntentStateChange(undefined);
     }
 
     private resolveTemporalState(options: ResolveTemporalStateOptions): TemporalUpperBodyState {

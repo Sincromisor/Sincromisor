@@ -291,6 +291,10 @@ function metricDefinition(key: MotionMetricKey): Pick<MotionMetricResult, "unit"
         case "solverPoleUncertainFrameCount":
         case "finalPoseAngularVelocityClampCount":
         case "finalPoseOwnedBoneConflictCount":
+        case "gestureFlickerCount":
+        case "semanticFallbackFrameCount":
+        case "intentCooldownSuppressionCount":
+        case "intentInvalidFrameCount":
             return { unit: "count", direction: "lower_is_better" };
     }
 }

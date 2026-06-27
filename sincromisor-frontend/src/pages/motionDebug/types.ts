@@ -13,6 +13,10 @@ import type {
     MotionDebugPhase7SnapshotParseResult,
 } from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import type {
+    MotionDebugPhase9SemanticSnapshot,
+    MotionDebugPhase9SnapshotParseResult,
+} from "../../character/motionEvaluation/motionDebugPhase9Snapshot";
+import type {
     MotionDebugRecorderConfig,
     MotionDebugRecorderResult,
     MotionDebugRecorderState,
@@ -29,7 +33,10 @@ import type {
     MotionReplayMode,
     MotionReplayState,
 } from "../../character/motionEvaluation/motionReplayPlayer";
-import type { MotionIntentParseResult } from "../../character/motionIntent/motionIntentState";
+import type {
+    MotionIntentParseResult,
+    MotionIntentState,
+} from "../../character/motionIntent/motionIntentState";
 import type {
     ReliabilityMap,
     ReliabilityMapParseResult,
@@ -89,22 +96,35 @@ export type MotionIntentLayerParseError = {
     raw: unknown;
 };
 
+export type MotionDebugSnapshotIntentParseError = {
+    parseStatus: "invalid";
+    errors: unknown;
+};
+
 export type SolverLayerParseError = {
     parseStatus: "invalid";
     errors:
         | Extract<MotionDebugPhase6SolverParseResult, { ok: false }>["errors"]
-        | Extract<MotionDebugPhase7SnapshotParseResult, { ok: false }>["errors"];
+        | Extract<MotionDebugPhase7SnapshotParseResult, { ok: false }>["errors"]
+        | Extract<MotionDebugPhase9SnapshotParseResult, { ok: false }>["errors"];
     raw: unknown;
 };
 
 export type SolverSubLayerValue =
-    | { status: "available"; value: MotionDebugPhase6SolverSnapshot | MotionDebugPhase7Snapshot }
+    | {
+          status: "available";
+          value:
+              | MotionDebugPhase6SolverSnapshot
+              | MotionDebugPhase7Snapshot
+              | MotionDebugPhase9SemanticSnapshot;
+      }
     | { status: "not_recorded" }
     | { status: "invalid"; value: SolverLayerParseError };
 
 export type SolverLayerValue = {
     phase6: SolverSubLayerValue;
     phase7: SolverSubLayerValue;
+    phase9: SolverSubLayerValue;
 };
 
 export type FinalPoseLayerParseError = {
@@ -182,6 +202,7 @@ export type MotionDebugSnapshot = {
     reliability?: ReliabilityMap | ReliabilityLayerParseError;
     canonical?: CanonicalUpperBodyState | CanonicalLayerParseError;
     temporal?: TemporalUpperBodyState | TemporalLayerParseError;
+    intent?: MotionIntentState | MotionDebugSnapshotIntentParseError;
     canonicalReliabilityInput?: MotionDebugCanonicalReliabilityInput;
     tracker: SincroTrackerWorkerStats;
     poseRetarget: DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];

@@ -16,6 +16,10 @@ import {
     type MotionDebugPhase7Snapshot,
     parseMotionDebugPhase7Snapshot,
 } from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
+import {
+    type MotionDebugPhase9SemanticSnapshot,
+    parseMotionDebugPhase9SemanticSnapshot,
+} from "../../character/motionEvaluation/motionDebugPhase9Snapshot";
 import type {
     MotionMetricComparison,
     MotionMetricKey,
@@ -155,6 +159,7 @@ function resolveSolverValue(context: MotionDebugViewerContext): SolverLayerValue
         return {
             phase6: parsePhase6SolverSubLayer(resolveReplayPhase6SolverValue(context.replayFrame)),
             phase7: parsePhase7SolverSubLayer(resolveReplayPhase7SolverValue(context.replayFrame)),
+            phase9: parsePhase9SolverSubLayer(resolveReplayPhase9SolverValue(context.replayFrame)),
         };
     }
     return {
@@ -162,6 +167,7 @@ function resolveSolverValue(context: MotionDebugViewerContext): SolverLayerValue
             createMotionDebugLivePhase6SolverSnapshot(context.liveSnapshot.poseRetargetRuntime),
         ),
         phase7: createAvailableSolverSubLayer(context.liveSnapshot.phase7),
+        phase9: createAvailableSolverSubLayer(undefined),
     };
 }
 
@@ -177,6 +183,13 @@ function resolveReplayPhase7SolverValue(frame: SincroMotionDebugFrame): unknown 
         return undefined;
     }
     return frame.solver.phase7;
+}
+
+function resolveReplayPhase9SolverValue(frame: SincroMotionDebugFrame): unknown | undefined {
+    if (!isRecord(frame.solver)) {
+        return undefined;
+    }
+    return frame.solver.phase9;
 }
 
 function parsePhase6SolverSubLayer(value: unknown): SolverLayerValue["phase6"] {
@@ -201,9 +214,24 @@ function parsePhase7SolverSubLayer(value: unknown): SolverLayerValue["phase7"] {
     return { status: "available", value: parsed };
 }
 
+function parsePhase9SolverSubLayer(value: unknown): SolverLayerValue["phase9"] {
+    if (value === undefined) {
+        return { status: "not_recorded" };
+    }
+    const parsed = parsePhase9SolverLayerValue(value);
+    if (isSolverLayerParseError(parsed)) {
+        return { status: "invalid", value: parsed };
+    }
+    return { status: "available", value: parsed };
+}
+
 function createAvailableSolverSubLayer(
-    value: MotionDebugPhase6SolverSnapshot | MotionDebugPhase7Snapshot | undefined,
-): SolverLayerValue["phase6"] | SolverLayerValue["phase7"] {
+    value:
+        | MotionDebugPhase6SolverSnapshot
+        | MotionDebugPhase7Snapshot
+        | MotionDebugPhase9SemanticSnapshot
+        | undefined,
+): SolverLayerValue["phase6"] | SolverLayerValue["phase7"] | SolverLayerValue["phase9"] {
     if (value === undefined) {
         return { status: "not_recorded" };
     }
@@ -228,6 +256,20 @@ function parsePhase7SolverLayerValue(
     value: unknown,
 ): MotionDebugPhase7Snapshot | SolverLayerParseError {
     const parsed = parseMotionDebugPhase7Snapshot(value);
+    if (parsed.ok) {
+        return parsed.snapshot;
+    }
+    return {
+        parseStatus: "invalid",
+        errors: parsed.errors,
+        raw: value,
+    };
+}
+
+function parsePhase9SolverLayerValue(
+    value: unknown,
+): MotionDebugPhase9SemanticSnapshot | SolverLayerParseError {
+    const parsed = parseMotionDebugPhase9SemanticSnapshot(value);
     if (parsed.ok) {
         return parsed.snapshot;
     }
@@ -352,11 +394,14 @@ function parseTemporalLayerValue(value: unknown): TemporalUpperBodyState | Tempo
 
 function resolveIntentValue(
     context: MotionDebugViewerContext,
-): MotionIntentState | MotionIntentLayerParseError | undefined {
-    if (context.replayFrame === undefined || context.replayFrame.intent === undefined) {
-        return undefined;
+): MotionDebugSnapshot["intent"] | MotionIntentLayerParseError | undefined {
+    if (context.replayFrame !== undefined) {
+        if (context.replayFrame.intent === undefined) {
+            return undefined;
+        }
+        return parseIntentLayerValue(context.replayFrame.intent);
     }
-    return parseIntentLayerValue(context.replayFrame.intent);
+    return context.liveSnapshot.intent;
 }
 
 function parseIntentLayerValue(value: unknown): MotionIntentState | MotionIntentLayerParseError {
@@ -426,7 +471,11 @@ function createParsedLayerSnapshot(
 }
 
 function createSolverLayerSnapshot(value: SolverLayerValue): MotionDebugLayerSnapshot {
-    if (value.phase6.status === "not_recorded" && value.phase7.status === "not_recorded") {
+    if (
+        value.phase6.status === "not_recorded" &&
+        value.phase7.status === "not_recorded" &&
+        value.phase9.status === "not_recorded"
+    ) {
         return {
             status: "not_recorded",
             label: LAYER_LABELS.solver,
@@ -480,7 +529,11 @@ function isInvalidLayerValue(value: unknown): boolean {
 }
 
 function isSolverLayerParseError(
-    value: MotionDebugPhase6SolverSnapshot | MotionDebugPhase7Snapshot | SolverLayerParseError,
+    value:
+        | MotionDebugPhase6SolverSnapshot
+        | MotionDebugPhase7Snapshot
+        | MotionDebugPhase9SemanticSnapshot
+        | SolverLayerParseError,
 ): value is SolverLayerParseError {
     return isInvalidLayerValue(value);
 }
