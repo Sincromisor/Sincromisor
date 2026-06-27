@@ -1,6 +1,7 @@
 # Review: task-260627141812-character-animation-3-phase-8-roi-contract-coordinate-mappin
 
 ## 判定
+
 APPROVED
 
 前回 blocking だった ROI contract / utility signature、clamp 規則、ドキュメント同期の受け入れ条件漏れはいずれも解消済み。改訂で新たに実装を止める破綻は見当たらないため、実装へ進めてよい。

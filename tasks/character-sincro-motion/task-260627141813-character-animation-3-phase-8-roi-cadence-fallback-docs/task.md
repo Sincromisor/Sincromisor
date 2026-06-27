@@ -25,7 +25,11 @@ export type SincroTrackerRoiReasonCode =
     | "hand_roi_paused"
     | "face_roi_paused";
 
-export type SincroTrackerRoiPauseState = "active" | "hand-paused" | "face-paused" | "all-paused";
+export type SincroTrackerRoiPauseState =
+    | "active"
+    | "hand-paused"
+    | "face-paused"
+    | "all-paused";
 
 export type SincroTrackerRoiStats = {
     pauseState: SincroTrackerRoiPauseState;

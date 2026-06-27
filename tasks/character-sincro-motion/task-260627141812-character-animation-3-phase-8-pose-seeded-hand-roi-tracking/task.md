@@ -13,7 +13,11 @@ Phase 8 では、Pose wrist を起点に left / right hand crop を作り、Hand
 - [ ] snapshot の最小 schema は次に固定する。`SincroHandTuple3` は `readonly [number, number, number]`、`SincroHandPoint2` は `readonly [number, number]` とする。
 
 ```ts
-export type SincroHandSource = "roi" | "full-frame-fallback" | "previous" | "lost";
+export type SincroHandSource =
+    | "roi"
+    | "full-frame-fallback"
+    | "previous"
+    | "lost";
 export type SincroHandWarningCode =
     | "roi_missing"
     | "roi_inconsistent"
