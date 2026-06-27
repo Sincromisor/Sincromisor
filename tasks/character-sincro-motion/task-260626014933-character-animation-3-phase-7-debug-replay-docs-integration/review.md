@@ -1,14 +1,17 @@
 # Review: task-260626014933-character-animation-3-phase-7-debug-replay-docs-integration
 
 ## 判定
+
 APPROVED
 
 前回 blocking だった live Phase 7 profile の接続元矛盾と initial calibration parser/clone 未確定は、task.md 上で実装経路が固定され解消されている。Debug Console / Phase 6 の `MinimalAvatarMotionProfile` 境界も維持する方針になっており、実装者判断に残る blocking ambiguity はない。
 
 ## 指摘事項
+
 なし
 
 ## 実装者への申し送り
+
 - 完成版 `AvatarMotionProfile` は `DebugConsoleSnapshot.sincroMotion.poseRetargetRuntime.avatarMotionProfile` から読まないこと。task.md の通り `VRMScene.getAvatarMotionProfile()` / `VRMCharacterManager.getAvatarMotionProfile()` を追加し、`SincroPoseRetargeter.getAvatarMotionProfile()` の clone を `MotionDebugRecordingController` params の `getAvatarMotionProfile()` へ渡す。
 - Debug Console と Phase 6 snapshot schema の `avatarMotionProfile` は `MinimalAvatarMotionProfile` のまま維持する。`VRMCharacterManager` の既存 Debug Console 更新経路では `toMinimalAvatarMotionProfile()` 変換を残し、完成版 profile は `frame.solver.phase7.profile` 側だけに保存する。
 - `initialCalibration` は現行 module に parser / clone export がないため、task.md の通り `motionDebugPhase7Snapshot.ts` 内に local strict schema / clone を置く。`profile` は `parseAvatarMotionProfile()`、`onlineCalibration` は `parseOnlineSincroCalibrationState()` を使い、既存 module の contract を広げない。

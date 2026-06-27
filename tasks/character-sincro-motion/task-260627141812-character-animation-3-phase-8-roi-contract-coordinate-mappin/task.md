@@ -75,7 +75,11 @@ export function mapFullFramePointToCrop(
 export function calculateRoiConsistency(input: {
     expected: SincroRoiPoint | undefined;
     observed: SincroRoiPoint | undefined;
-}): { score: number; distance: number | null; warnings: SincroRoiWarningCode[] };
+}): {
+    score: number;
+    distance: number | null;
+    warnings: SincroRoiWarningCode[];
+};
 ```
 
 - [ ] `createHandRoiFromPoseArm()` は Pose wrist が finite かつ `quality !== "lost"` の場合だけ `source = "pose-wrist"` の ROI を返す。wrist が欠損する場合は `source = "none"`、`confidence = 0`、warning `roi_missing` を返し、例外を投げない。
