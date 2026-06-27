@@ -35,9 +35,10 @@ import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
+import type { TrackerRuntimePerformanceProfile } from "../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 import { frontendLogger } from "../../shared/logging/appLogger";
-import { MOTION_DEBUG_CAMERA_CONSTRAINTS } from "./motionDebugCameraStream";
+import { createMotionDebugCameraConstraints } from "./motionDebugCameraStream";
 import {
     createMotionDebugCanonicalReliabilityInput,
     createMotionDebugCanonicalState,
@@ -67,8 +68,8 @@ type MotionDebugRecordingControllerParams = {
     getAvatarMotionProfile: () => AvatarMotionProfile | undefined;
     getInitialCalibrationSession?: () => InitialSincroCalibrationSession | undefined;
     getOnlineCalibrationState?: () => OnlineSincroCalibrationState | undefined;
+    getActivePerformanceProfile: () => TrackerRuntimePerformanceProfile;
     getVrmUrl: () => string;
-    poseTargetInferenceFps: number;
     onCanonicalStateChange: (state: CanonicalUpperBodyState | undefined) => void;
     onCanonicalReliabilityInputChange: (
         state: MotionDebugCanonicalReliabilityInput | undefined,
@@ -278,6 +279,7 @@ export class MotionDebugRecordingController {
         if (source === undefined || track === undefined) {
             return undefined;
         }
+        const performanceProfile = this.params.getActivePerformanceProfile();
 
         return {
             schemaVersion: SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION,
@@ -300,12 +302,13 @@ export class MotionDebugRecordingController {
             camera: {
                 requestedConstraints:
                     this.params.getCameraSource() === "camera"
-                        ? MOTION_DEBUG_CAMERA_CONSTRAINTS
+                        ? createMotionDebugCameraConstraints(performanceProfile)
                         : { fixtureUrl: this.params.getActiveFixtureUrl() },
                 actualSettings: scrubCameraSettings(track.getSettings()),
             },
             pipeline: {
-                poseTargetInferenceFps: this.params.poseTargetInferenceFps,
+                poseTargetInferenceFps: performanceProfile.cadence.poseFps,
+                performanceProfile,
                 retargetConfig: this.params.getRetargetConfig(),
             },
             avatar: {

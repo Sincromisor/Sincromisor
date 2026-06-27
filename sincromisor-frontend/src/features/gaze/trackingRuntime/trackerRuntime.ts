@@ -33,6 +33,7 @@ import {
     type TrackerPerformanceReasonCode,
     type TrackerRuntimeDegradationState,
 } from "./trackerRuntimePerformanceBudget";
+import { resolveTrackerRuntimePerformanceProfile } from "./trackerRuntimePerformanceProfile";
 import {
     TrackerRuntimePosePerformanceGate,
     type TrackerRuntimePosePerformanceGateResult,
@@ -105,13 +106,17 @@ export class TrackerRuntime {
     async startFaceTracking(
         videoTrack: MediaStreamTrack,
         callbacks: TrackerRuntimeCallbacks,
-        targetInferenceFps: number = DEFAULT_TARGET_INFERENCE_FPS,
+        targetInferenceFps?: number,
         poseOptions: TrackerRuntimePoseOptions = {},
     ): Promise<void> {
         if (this.frameLoop.enabled || this.callbacks) {
             this.stopFaceTracking("sincro_face_tracking_restarting");
         }
 
+        const performanceProfile = resolveTrackerRuntimePerformanceProfile({
+            performanceProfileId: poseOptions.performanceProfileId,
+            performanceProfile: poseOptions.performanceProfile,
+        }).profile;
         this.callbacks = callbacks;
         this.poseTrackingEnabled = !!poseOptions.enabled;
         this.handTrackingEnabled =
@@ -126,20 +131,23 @@ export class TrackerRuntime {
         this.degradationSinceMediaTimeMs = undefined;
         this.mainThreadFallbackReason = undefined;
         this.ignorePosePerformanceFallback = !!poseOptions.ignorePerformanceFallback;
-        this.targetInferenceFps = Math.max(1, Math.min(30, targetInferenceFps));
+        this.targetInferenceFps = Math.max(
+            1,
+            Math.min(30, targetInferenceFps ?? performanceProfile.cadence.faceFps),
+        );
         this.targetPoseInferenceFps = Math.max(
             1,
-            Math.min(15, poseOptions.targetInferenceFps ?? DEFAULT_TARGET_POSE_INFERENCE_FPS),
+            Math.min(15, poseOptions.targetInferenceFps ?? performanceProfile.cadence.poseFps),
         );
         this.targetHandInferenceFps = Math.max(
             1,
-            Math.min(8, poseOptions.hand?.targetInferenceFps ?? DEFAULT_TARGET_HAND_INFERENCE_FPS),
+            Math.min(8, poseOptions.hand?.targetInferenceFps ?? performanceProfile.cadence.handFps),
         );
         this.targetFaceRoiInferenceFps = Math.max(
             1,
             Math.min(
                 12,
-                poseOptions.faceRoi?.targetInferenceFps ?? DEFAULT_TARGET_FACE_ROI_INFERENCE_FPS,
+                poseOptions.faceRoi?.targetInferenceFps ?? performanceProfile.cadence.faceRoiFps,
             ),
         );
         this.posePerformanceGate.configure({

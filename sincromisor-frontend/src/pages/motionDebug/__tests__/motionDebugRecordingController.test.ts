@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { MotionIntentState } from "../../../character/motionIntent/motionIntentState";
 import { createDefaultReliabilityMap } from "../../../character/reliability/reliabilityMap";
 import {
@@ -19,6 +19,11 @@ import {
     type SincroPoseMotionSnapshot,
 } from "../../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
+import {
+    resolveTrackerRuntimePerformanceProfile,
+    TRACKER_RUNTIME_PERFORMANCE_PROFILE_SCHEMA_VERSION,
+    type TrackerRuntimePerformanceProfile,
+} from "../../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
 import type { TrackerVideoFrameTiming } from "../../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 import { MotionDebugRecordingController } from "../motionDebugRecordingController";
 
@@ -30,6 +35,11 @@ type ResetScenario = {
 type ControllerHarness = {
     controller: MotionDebugRecordingController;
     getLatestIntent: () => MotionIntentState | undefined;
+};
+
+type ControllerHarnessOptions = {
+    activeStream?: MediaStream;
+    performanceProfile?: TrackerRuntimePerformanceProfile;
 };
 
 const RESET_SCENARIOS: ResetScenario[] = [
@@ -56,6 +66,10 @@ const RESET_SCENARIOS: ResetScenario[] = [
         },
     },
 ];
+
+afterEach(() => {
+    vi.unstubAllGlobals();
+});
 
 describe("MotionDebugRecordingController intent reset lifecycle", () => {
     for (const scenario of RESET_SCENARIOS) {
@@ -141,12 +155,44 @@ describe("MotionDebugRecordingController intent reset lifecycle", () => {
     });
 });
 
-function createControllerHarness(): ControllerHarness {
+describe("MotionDebugRecordingController manifest", () => {
+    it("saves the active performance profile in manifest.pipeline", () => {
+        vi.stubGlobal("window", {
+            devicePixelRatio: 2,
+            innerWidth: 1280,
+            innerHeight: 720,
+        });
+        vi.stubGlobal("navigator", {
+            userAgent: "vitest",
+        });
+        const performanceProfile = resolveTrackerRuntimePerformanceProfile({
+            performanceProfileId: "mobile-safari",
+        }).profile;
+        const harness = createControllerHarness({
+            activeStream: createMediaStream(),
+            performanceProfile,
+        });
+
+        // biome-ignore lint/complexity/useLiteralKeys: manifest の保存契約を公開 API にせず直接検証する。
+        const manifest = harness.controller["createManifest"]();
+
+        expect(manifest?.pipeline.performanceProfile).toMatchObject({
+            schemaVersion: TRACKER_RUNTIME_PERFORMANCE_PROFILE_SCHEMA_VERSION,
+            id: "mobile-safari",
+        });
+        expect(manifest?.pipeline.poseTargetInferenceFps).toBe(4);
+    });
+});
+
+function createControllerHarness(options: ControllerHarnessOptions = {}): ControllerHarness {
     let latestIntent: ReturnType<ControllerHarness["getLatestIntent"]>;
     const debugSnapshot = createDefaultSnapshot().sincroMotion;
+    const performanceProfile =
+        options.performanceProfile ??
+        resolveTrackerRuntimePerformanceProfile({ defaultProfileId: "debug" }).profile;
     const controller = new MotionDebugRecordingController({
         video: createVideoElement(),
-        getActiveStream: () => undefined,
+        getActiveStream: () => options.activeStream,
         getCameraSource: () => "fixture",
         getActiveFixtureUrl: () => "/fixtures/source-reset.mp4",
         getRetargetConfig: () => ({
@@ -161,8 +207,8 @@ function createControllerHarness(): ControllerHarness {
         getFaceSnapshot: () => createFaceSnapshot(),
         getHandSnapshot: () => createHandSnapshot(),
         getAvatarMotionProfile: () => undefined,
+        getActivePerformanceProfile: () => performanceProfile,
         getVrmUrl: () => "/characters/default.vrm",
-        poseTargetInferenceFps: 12,
         onCanonicalStateChange: () => {},
         onCanonicalReliabilityInputChange: () => {},
         onReliabilityStateChange: () => {},
@@ -186,6 +232,27 @@ function createVideoElement(): HTMLVideoElement {
         currentTime: { value: 0 },
     });
     return video;
+}
+
+function createMediaStream(): MediaStream {
+    const stream: MediaStream = Object.create(null);
+    Object.defineProperty(stream, "getVideoTracks", {
+        value: () => [createVideoTrack()],
+    });
+    return stream;
+}
+
+function createVideoTrack(): MediaStreamTrack {
+    const track: MediaStreamTrack = Object.create(null);
+    Object.defineProperty(track, "getSettings", {
+        value: () => ({
+            width: 640,
+            height: 480,
+            frameRate: 15,
+            facingMode: "user",
+        }),
+    });
+    return track;
 }
 
 function createFrameTiming(mediaTimeMs: number): TrackerVideoFrameTiming {

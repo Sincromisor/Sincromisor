@@ -1,6 +1,7 @@
 # Review: task-260627234129-character-animation-3-0-phase-10-fixed-motion-qa-regression-
 
 ## 判定
+
 APPROVED
 
 前回の残り High だった `runQaRegression(config)` の config / result 型未確定は解消済みです。今回の改訂範囲で新たな blocking 破綻は見当たりません。

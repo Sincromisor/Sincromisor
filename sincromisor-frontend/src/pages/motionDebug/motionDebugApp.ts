@@ -44,6 +44,10 @@ import {
 } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
 import { TrackerRuntime } from "../../features/gaze/trackingRuntime/trackerRuntime";
+import {
+    resolveTrackerRuntimePerformanceProfile,
+    type TrackerRuntimePerformanceProfile,
+} from "../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { formatError, requireElement } from "./dom";
@@ -71,13 +75,13 @@ import type {
     MotionDebugReplayState,
     MotionDebugRetargetUiConfig,
     MotionDebugSnapshot,
+    MotionDebugStartCameraOptions,
     MotionDebugStatus,
     MotionDebugViewerMode,
 } from "./types";
 
 const DEFAULT_VRM_URL = "/characters/default.vrm";
 const VRM_URL_QUERY_PARAM = "vrm";
-const POSE_TARGET_INFERENCE_FPS = 12;
 const SNAPSHOT_RENDER_INTERVAL_MS = 180;
 const DEFAULT_WAIT_FOR_POSE_TIMEOUT_MS = 10000;
 const CAMERA_QUALITY_TIMING_HISTORY_LIMIT = 30;
@@ -144,6 +148,9 @@ export class MotionDebugApp {
     private activeFixtureUrl?: string;
     private replayTimerId?: number;
     private cameraSource: MotionDebugCameraState["source"] = "none";
+    private activePerformanceProfile = resolveTrackerRuntimePerformanceProfile({
+        defaultProfileId: "debug",
+    }).profile;
     private status: MotionDebugStatus = "idle";
     private message = "待機中";
     private latestFaceSnapshot: SincroFaceMotionSnapshot =
@@ -228,8 +235,8 @@ export class MotionDebugApp {
             getFaceSnapshot: () => this.latestFaceSnapshot,
             getHandSnapshot: () => this.latestHandSnapshot,
             getAvatarMotionProfile: () => this.currentAvatarMotionProfile(),
+            getActivePerformanceProfile: () => this.currentPerformanceProfile(),
             getVrmUrl: () => getMotionDebugVrmUrl(),
-            poseTargetInferenceFps: POSE_TARGET_INFERENCE_FPS,
             onCanonicalStateChange: (state) => {
                 this.latestCanonical = state;
             },
@@ -269,12 +276,20 @@ export class MotionDebugApp {
         });
     }
 
-    async startCamera(): Promise<MotionDebugSnapshot> {
+    async startCamera(options?: MotionDebugStartCameraOptions): Promise<MotionDebugSnapshot> {
         this.setStatus("loading", "カメラ起動中");
         this.stopActiveRuntime("motion_debug_camera_restarting");
         this.activeFixtureUrl = undefined;
-        const stream = await requestMotionDebugCameraStream();
-        await this.startRuntimeWithStream(stream, "camera");
+        const performanceProfile = resolveTrackerRuntimePerformanceProfile({
+            performanceProfileId: options?.performanceProfileId,
+            performanceProfile: options?.performanceProfile,
+            defaultProfileId: "debug",
+        }).profile;
+        const stream = await requestMotionDebugCameraStream({
+            performanceProfile,
+            defaultProfileId: "debug",
+        });
+        await this.startRuntimeWithStream(stream, "camera", performanceProfile);
         return this.getSnapshot();
     }
 
@@ -362,7 +377,11 @@ export class MotionDebugApp {
         const { stream, video } = await createFixtureVideoStream(url);
         this.activeFixtureVideo = video;
         this.activeFixtureUrl = url;
-        await this.startRuntimeWithStream(stream, "fixture");
+        await this.startRuntimeWithStream(
+            stream,
+            "fixture",
+            resolveTrackerRuntimePerformanceProfile({ defaultProfileId: "debug" }).profile,
+        );
         return this.getSnapshot();
     }
 
@@ -480,6 +499,7 @@ export class MotionDebugApp {
     private async startRuntimeWithStream(
         stream: MediaStream,
         source: MotionDebugCameraState["source"],
+        performanceProfile: TrackerRuntimePerformanceProfile,
     ): Promise<void> {
         const [track] = stream.getVideoTracks();
         if (!track) {
@@ -487,6 +507,7 @@ export class MotionDebugApp {
         }
         this.activeStream = stream;
         this.cameraSource = source;
+        this.activePerformanceProfile = performanceProfile;
         this.behaviorState.setTalkMode("sincro");
         this.behaviorState.setFaceMotionTrackingEnabled(true);
         this.behaviorState.setPoseMotionTrackingEnabled(true);
@@ -516,8 +537,8 @@ export class MotionDebugApp {
             undefined,
             {
                 enabled: true,
-                targetInferenceFps: POSE_TARGET_INFERENCE_FPS,
                 ignorePerformanceFallback: true,
+                performanceProfile,
                 hand: {
                     enabled: true,
                 },
@@ -541,6 +562,9 @@ export class MotionDebugApp {
         this.activeFixtureUrl = undefined;
         this.activeStream = undefined;
         this.cameraSource = "none";
+        this.activePerformanceProfile = resolveTrackerRuntimePerformanceProfile({
+            defaultProfileId: "debug",
+        }).profile;
         this.latestFrameTiming = undefined;
         this.latestCameraQuality = undefined;
         this.frameTimingHistory = [];
@@ -923,7 +947,7 @@ export class MotionDebugApp {
 
     private installWindowApi(): void {
         const api: MotionDebugApi = {
-            startCamera: () => this.startCamera(),
+            startCamera: (options) => this.startCamera(options),
             stopCamera: () => {
                 this.stopCamera();
             },
@@ -995,9 +1019,16 @@ export class MotionDebugApp {
             width: this.video.videoWidth,
             height: this.video.videoHeight,
             readyState: this.video.readyState,
+            performanceProfile: this.currentPerformanceProfile(),
             frameTiming: this.latestFrameTiming,
             quality: this.latestCameraQuality,
         };
+    }
+
+    private currentPerformanceProfile(): TrackerRuntimePerformanceProfile {
+        return resolveTrackerRuntimePerformanceProfile({
+            performanceProfile: this.activePerformanceProfile,
+        }).profile;
     }
 
     private renderMetrics(): MotionDebugRenderMetrics {

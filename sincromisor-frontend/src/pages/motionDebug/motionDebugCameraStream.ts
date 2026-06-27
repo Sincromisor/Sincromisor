@@ -1,23 +1,52 @@
+import {
+    resolveTrackerRuntimePerformanceProfile,
+    type TrackerRuntimePerformanceProfile,
+    type TrackerRuntimePerformanceProfileResolverInput,
+} from "../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
+
 const CAMERA_REQUEST_TIMEOUT_MS = 12000;
 
-export const MOTION_DEBUG_CAMERA_CONSTRAINTS: MediaStreamConstraints = {
-    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-    audio: false,
-};
+export const MOTION_DEBUG_CAMERA_CONSTRAINTS: MediaStreamConstraints =
+    createMotionDebugCameraConstraints(
+        resolveTrackerRuntimePerformanceProfile({ defaultProfileId: "debug" }).profile,
+    );
 
-export function requestMotionDebugCameraStream(): Promise<MediaStream> {
+export function createMotionDebugCameraConstraints(
+    profile: TrackerRuntimePerformanceProfile,
+): MediaStreamConstraints {
+    return {
+        video: {
+            width: { ideal: profile.camera.idealWidth },
+            height: { ideal: profile.camera.idealHeight },
+            frameRate: {
+                ideal: profile.camera.idealFrameRate,
+                max: profile.camera.maxFrameRate,
+            },
+            facingMode: { ideal: profile.camera.facingMode },
+        },
+        audio: false,
+    };
+}
+
+export function requestMotionDebugCameraStream(
+    input?: TrackerRuntimePerformanceProfileResolverInput,
+): Promise<MediaStream> {
+    const constraints = createMotionDebugCameraConstraints(
+        resolveTrackerRuntimePerformanceProfile({
+            ...input,
+            defaultProfileId: input?.defaultProfileId ?? "debug",
+        }).profile,
+    );
     let timedOut = false;
     let timeoutId = 0;
-    const request = navigator.mediaDevices
-        .getUserMedia(MOTION_DEBUG_CAMERA_CONSTRAINTS)
-        .then((stream) => {
-            if (timedOut) {
-                stream.getTracks().forEach((track) => {
-                    track.stop();
-                });
-            }
-            return stream;
-        });
+    const request = navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+        if (timedOut) {
+            stream.getTracks().forEach((track) => {
+                track.stop();
+            });
+        }
+        return stream;
+    });
     const timeout = new Promise<MediaStream>((_, reject) => {
         timeoutId = window.setTimeout(() => {
             timedOut = true;

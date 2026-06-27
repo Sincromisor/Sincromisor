@@ -54,6 +54,7 @@ import type {
 } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
+import type { TrackerRuntimePerformanceProfile } from "../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 
 export type MotionDebugStatus = "idle" | "loading" | "running" | "stopped" | "error";
@@ -63,6 +64,7 @@ export type MotionDebugCameraState = {
     width: number;
     height: number;
     readyState: number;
+    performanceProfile: TrackerRuntimePerformanceProfile;
     frameTiming?: TrackerVideoFrameTiming;
     quality?: CameraQualityScore;
 };
@@ -235,8 +237,13 @@ export type MotionDebugReplayMetricsResult =
     | { ok: true; summary: MotionMetricSummary }
     | { ok: false; code: "no_recording_loaded"; message: string };
 
+export type MotionDebugStartCameraOptions = {
+    performanceProfileId?: string;
+    performanceProfile?: TrackerRuntimePerformanceProfile;
+};
+
 export type MotionDebugApi = {
-    startCamera: () => Promise<MotionDebugSnapshot>;
+    startCamera: (options?: MotionDebugStartCameraOptions) => Promise<MotionDebugSnapshot>;
     stopCamera: () => void;
     setRetargetConfig: (config: Partial<SincroPoseRetargetConfig>) => MotionDebugSnapshot;
     getSnapshot: () => MotionDebugSnapshot;
