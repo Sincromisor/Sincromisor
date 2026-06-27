@@ -16,6 +16,8 @@ import {
 } from "../../character/motionEvaluation/motionMetrics";
 import type { MotionReplayApplyContext } from "../../character/motionEvaluation/motionReplayPlayer";
 import { MotionReplayPlayer } from "../../character/motionEvaluation/motionReplayPlayer";
+import { MotionIntentEstimator } from "../../character/motionIntent/motionIntentEstimator";
+import type { MotionIntentState } from "../../character/motionIntent/motionIntentState";
 import { createPoseReliabilityMap } from "../../character/reliability/poseReliabilityEstimator";
 import {
     parseReliabilityMap,
@@ -130,6 +132,7 @@ export class MotionDebugApp {
     private readonly overlayRenderer = new MotionDebugPoseOverlayRenderer(this.overlayCanvas);
     private readonly frameCapture = new MotionDebugFrameCapture();
     private readonly temporalEstimator = new TemporalStateEstimator();
+    private readonly intentEstimator = new MotionIntentEstimator();
     private readonly recording: MotionDebugRecordingController;
     private readonly replay = new MotionReplayPlayer<MotionDebugSnapshot>({
         applyPoseSnapshot: (snapshot, context) => this.applyReplayPoseSnapshot(snapshot, context),
@@ -149,6 +152,7 @@ export class MotionDebugApp {
     private latestPoseSnapshot: SincroPoseMotionSnapshot = DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT;
     private latestCanonical?: MotionDebugSnapshot["canonical"];
     private latestTemporal?: MotionDebugSnapshot["temporal"];
+    private latestIntent?: MotionIntentState;
     private latestCanonicalReliabilityInput?: MotionDebugSnapshot["canonicalReliabilityInput"];
     private latestReliability?: MotionDebugSnapshot["reliability"];
     private latestTrackerStats: SincroTrackerWorkerStats =
@@ -238,6 +242,9 @@ export class MotionDebugApp {
             onTemporalStateChange: (state) => {
                 this.latestTemporal = state;
             },
+            onIntentStateChange: (state) => {
+                this.latestIntent = state;
+            },
             onStateChange: (state) => {
                 this.controls.renderRecordingState(state);
             },
@@ -302,6 +309,7 @@ export class MotionDebugApp {
             reliability: this.latestReliability,
             canonical: this.latestCanonical,
             temporal: this.latestTemporal,
+            intent: this.latestIntent,
             canonicalReliabilityInput: this.latestCanonicalReliabilityInput,
             tracker: this.latestTrackerStats,
             poseRetarget: debugSnapshot.poseRetarget,
@@ -637,6 +645,7 @@ export class MotionDebugApp {
         this.updateReplayReliability(snapshot, previousPose, context);
         this.updateReplayCanonical(snapshot, context);
         this.updateReplayTemporal(context);
+        this.updateReplayIntent(context);
         this.behaviorState.applyPoseMotion(snapshot, context.mediaTimeMs);
         this.debugConsole.updateSincroPoseMotion(snapshot);
         this.overlayRenderer.render(snapshot, this.video);
@@ -715,6 +724,20 @@ export class MotionDebugApp {
         this.latestTemporal = this.temporalEstimator.update({
             canonical,
             reliability: this.latestValidReliability(),
+            mediaTimeMs: context.mediaTimeMs,
+        });
+    }
+
+    private updateReplayIntent(context: MotionReplayApplyContext): void {
+        const temporal = this.latestTemporal;
+        if (temporal === undefined || "parseStatus" in temporal) {
+            this.latestIntent = undefined;
+            return;
+        }
+        this.latestIntent = this.intentEstimator.update({
+            temporal,
+            reliability: this.latestValidReliability(),
+            hand: this.latestHandSnapshot,
             mediaTimeMs: context.mediaTimeMs,
         });
     }
@@ -800,7 +823,9 @@ export class MotionDebugApp {
 
     private resetTemporalState(): void {
         this.latestTemporal = undefined;
+        this.latestIntent = undefined;
         this.temporalEstimator.reset();
+        this.intentEstimator.reset();
         this.recording.resetTemporalState();
     }
 

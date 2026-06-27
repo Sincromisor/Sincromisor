@@ -12,6 +12,7 @@ import {
     DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
     parseCanonicalUpperBodyState,
 } from "../../canonical/canonicalUpperBodyState";
+import { createDefaultMotionIntentState } from "../../motionIntent/motionIntentState";
 import { createDefaultReliabilityMap, parseReliabilityMap } from "../../reliability/reliabilityMap";
 import {
     createDefaultTemporalUpperBodyState,
@@ -27,6 +28,7 @@ import {
     parseMotionDebugPhase6SolverSnapshot,
 } from "../motionDebugPhase6Snapshot";
 import { parseMotionDebugPhase7Snapshot } from "../motionDebugPhase7Snapshot";
+import { parseMotionDebugPhase9SemanticSnapshot } from "../motionDebugPhase9Snapshot";
 import { MotionDebugRecorder, type MotionDebugRecorderFrameInput } from "../motionDebugRecorder";
 
 function createValidManifest(): SincroMotionDebugLogManifest {
@@ -221,6 +223,7 @@ function createValidFrameInput(mediaTimeMs = 120): MotionDebugRecorderFrameInput
         reliability: createDefaultReliabilityMap(mediaTimeMs),
         canonical: createCanonicalState(mediaTimeMs),
         temporal: createDefaultTemporalUpperBodyState(mediaTimeMs),
+        intent: createDefaultMotionIntentState(mediaTimeMs),
         solver: {
             poseRetarget: {
                 armIkMode: "world_3d_ik",
@@ -230,6 +233,7 @@ function createValidFrameInput(mediaTimeMs = 120): MotionDebugRecorderFrameInput
             },
             phase6: createPhase6SolverSnapshot(),
             phase7: createPhase7Snapshot(),
+            phase9: createPhase9Snapshot(mediaTimeMs),
         },
         finalPose: {
             schemaVersion: "sincro.vrm-pose-composer-result.v1",
@@ -304,6 +308,24 @@ function createPhase7Snapshot(): unknown {
     return {
         schemaVersion: "sincro.phase7-profile-calibration.v1",
         activeCanonicalCalibration: DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
+        warnings: [],
+    };
+}
+
+function createPhase9Snapshot(mediaTimeMs: number): unknown {
+    const intent = createDefaultMotionIntentState(mediaTimeMs);
+    return {
+        schemaVersion: "sincro.phase9-semantic-motion.v1",
+        timestamp: { mediaTimeMs },
+        intent,
+        semantic: {
+            schemaVersion: "sincro.phase9-semantic-motion.v1",
+            timestamp: { mediaTimeMs },
+            presets: [],
+            warnings: [],
+        },
+        finger: {},
+        layers: [],
         warnings: [],
     };
 }
@@ -400,6 +422,10 @@ describe("MotionDebugRecorder", () => {
             return;
         }
         expect(temporalParse.state.timestamp.mediaTimeMs).toBe(120);
+        expect(parsed.frames[0]?.intent).toMatchObject({
+            schemaVersion: "sincro.motion-intent.v1",
+            timestamp: { mediaTimeMs: 120 },
+        });
         const solver = parsed.frames[0]?.solver;
         expect(solver).toMatchObject({
             phase6: {
@@ -416,6 +442,20 @@ describe("MotionDebugRecorder", () => {
             isRecord(solver) ? solver.phase7 : undefined,
         );
         expect(phase7Parse.ok).toBe(true);
+        const phase9Parse = parseMotionDebugPhase9SemanticSnapshot(
+            isRecord(solver) ? solver.phase9 : undefined,
+        );
+        expect(phase9Parse.ok).toBe(true);
+        if (!phase9Parse.ok) {
+            return;
+        }
+        expect(phase9Parse.snapshot).toMatchObject({
+            schemaVersion: "sincro.phase9-semantic-motion.v1",
+            timestamp: { mediaTimeMs: 120 },
+            intent: {
+                schemaVersion: "sincro.motion-intent.v1",
+            },
+        });
         const finalPoseParse = parseMotionDebugFinalPoseSnapshot(parsed.frames[0]?.finalPose);
         expect(finalPoseParse.ok).toBe(true);
         if (!finalPoseParse.ok) {

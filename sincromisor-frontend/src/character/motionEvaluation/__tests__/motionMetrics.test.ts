@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+    type ArmMotionIntent,
+    createDefaultMotionIntentState,
+    type MotionIntentWarningCode,
+} from "../../motionIntent/motionIntentState";
+import {
     createDefaultTemporalUpperBodyState,
     type TemporalArmState,
     type TemporalPartState,
@@ -29,6 +34,7 @@ function createFrame(
         applied?: unknown;
         metrics?: unknown;
         temporal?: unknown;
+        intent?: unknown;
     },
 ): SincroMotionDebugFrame {
     return {
@@ -44,6 +50,7 @@ function createFrame(
         applied: options?.applied,
         metrics: options?.metrics,
         temporal: options?.temporal,
+        intent: options?.intent,
     };
 }
 
@@ -279,6 +286,43 @@ function createTemporalState(
             right: createTemporalArm(temporal.arms.right, options?.right),
         },
         warnings: [],
+    };
+}
+
+function createIntentState(
+    mediaTimeMs: number,
+    options?: {
+        left?: Partial<{
+            intent: ArmMotionIntent;
+            stableDurationMs: number;
+            warnings: MotionIntentWarningCode[];
+        }>;
+        right?: Partial<{
+            intent: ArmMotionIntent;
+            stableDurationMs: number;
+            warnings: MotionIntentWarningCode[];
+        }>;
+    },
+): ReturnType<typeof createDefaultMotionIntentState> {
+    const state = createDefaultMotionIntentState(mediaTimeMs);
+    return {
+        ...state,
+        arms: {
+            left: {
+                ...state.arms.left,
+                intent: options?.left?.intent ?? state.arms.left.intent,
+                stableDurationMs:
+                    options?.left?.stableDurationMs ?? state.arms.left.stableDurationMs,
+                warnings: options?.left?.warnings ?? state.arms.left.warnings,
+            },
+            right: {
+                ...state.arms.right,
+                intent: options?.right?.intent ?? state.arms.right.intent,
+                stableDurationMs:
+                    options?.right?.stableDurationMs ?? state.arms.right.stableDurationMs,
+                warnings: options?.right?.warnings ?? state.arms.right.warnings,
+            },
+        },
     };
 }
 
@@ -592,6 +636,139 @@ describe("calculateMotionMetricSummary", () => {
             unit: "ms",
             status: "warn",
             sampleCount: 2,
+        });
+    });
+
+    it("calculates intent metrics from saved frame intent", () => {
+        const summary = calculateMotionMetricSummary(
+            [
+                createFrame(0, 0, {
+                    intent: createIntentState(0, {
+                        left: { intent: "wave", stableDurationMs: 80 },
+                    }),
+                }),
+                createFrame(1, 100, {
+                    intent: createIntentState(100, {
+                        left: { intent: "tracking", warnings: ["gesture_cooldown"] },
+                        right: { intent: "fallback" },
+                    }),
+                }),
+                createFrame(2, 200, {
+                    intent: createIntentState(200, {
+                        left: { intent: "pointing", stableDurationMs: 120 },
+                        right: { intent: "lost" },
+                    }),
+                }),
+                createFrame(3, 300, {
+                    intent: createIntentState(300, {
+                        left: { intent: "peace", stableDurationMs: 40 },
+                    }),
+                }),
+            ],
+            CONFIG,
+        );
+
+        expect(summary.metrics.gestureFlickerCount).toMatchObject({
+            value: 2,
+            unit: "count",
+            direction: "lower_is_better",
+            status: "warn",
+            threshold: { pass: 0, warn: 2, fail: 5 },
+            sampleCount: 8,
+        });
+        expect(summary.metrics.semanticFallbackFrameCount).toMatchObject({
+            value: 2,
+            unit: "count",
+            status: "pass",
+            threshold: { pass: 30, warn: 120, fail: 240 },
+            sampleCount: 8,
+        });
+        expect(summary.metrics.intentCooldownSuppressionCount).toMatchObject({
+            value: 1,
+            unit: "count",
+            status: "warn",
+            threshold: { pass: 0, warn: 20, fail: 60 },
+            sampleCount: 8,
+        });
+        expect(summary.metrics.intentInvalidFrameCount).toMatchObject({
+            value: 0,
+            unit: "count",
+            status: "pass",
+            threshold: { pass: 0, warn: 1, fail: 3 },
+            sampleCount: 4,
+        });
+    });
+
+    it("marks intent metrics as not_available for older logs without frame intent", () => {
+        const summary = calculateMotionMetricSummary([createFrame(0, 0)], CONFIG);
+
+        expect(summary.metrics.gestureFlickerCount).toMatchObject({
+            value: null,
+            status: "not_available",
+            sampleCount: 0,
+            unavailableReason: "intent_not_recorded",
+        });
+        expect(summary.metrics.semanticFallbackFrameCount).toMatchObject({
+            value: null,
+            status: "not_available",
+            sampleCount: 0,
+            unavailableReason: "intent_not_recorded",
+        });
+        expect(summary.metrics.intentCooldownSuppressionCount).toMatchObject({
+            value: null,
+            status: "not_available",
+            sampleCount: 0,
+            unavailableReason: "intent_not_recorded",
+        });
+        expect(summary.metrics.intentInvalidFrameCount).toMatchObject({
+            value: null,
+            status: "not_available",
+            sampleCount: 0,
+            unavailableReason: "intent_not_recorded",
+        });
+    });
+
+    it("counts invalid intent frames only in intentInvalidFrameCount", () => {
+        const summary = calculateMotionMetricSummary(
+            [
+                createFrame(0, 0, {
+                    intent: {
+                        ...createIntentState(0),
+                        arms: {
+                            ...createIntentState(0).arms,
+                            left: {
+                                ...createIntentState(0).arms.left,
+                                intent: "thumbs_up",
+                            },
+                        },
+                    },
+                }),
+            ],
+            CONFIG,
+        );
+
+        expect(summary.metrics.intentInvalidFrameCount).toMatchObject({
+            value: 1,
+            status: "warn",
+            sampleCount: 1,
+        });
+        expect(summary.metrics.gestureFlickerCount).toMatchObject({
+            value: null,
+            status: "not_available",
+            sampleCount: 0,
+            unavailableReason: "intent_not_recorded",
+        });
+        expect(summary.metrics.semanticFallbackFrameCount).toMatchObject({
+            value: null,
+            status: "not_available",
+            sampleCount: 0,
+            unavailableReason: "intent_not_recorded",
+        });
+        expect(summary.metrics.intentCooldownSuppressionCount).toMatchObject({
+            value: null,
+            status: "not_available",
+            sampleCount: 0,
+            unavailableReason: "intent_not_recorded",
         });
     });
 });

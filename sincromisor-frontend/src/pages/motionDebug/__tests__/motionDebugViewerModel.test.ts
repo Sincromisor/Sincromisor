@@ -455,6 +455,31 @@ function createPhase7Snapshot(id = "phase7-calibration"): MotionDebugPhase7Snaps
     };
 }
 
+function createPhase9Snapshot(mediaTimeMs = 120) {
+    const intent = createDefaultMotionIntentState(mediaTimeMs);
+    return {
+        schemaVersion: "sincro.phase9-semantic-motion.v1",
+        timestamp: { mediaTimeMs },
+        intent,
+        semantic: {
+            schemaVersion: "sincro.phase9-semantic-motion.v1",
+            timestamp: { mediaTimeMs },
+            presets: [],
+            warnings: [],
+        },
+        finger: {},
+        layers: [
+            {
+                id: "semantic:left:small_wave",
+                kind: "semantic",
+                weight: 0.5,
+                ownedBones: ["leftUpperArm"],
+            },
+        ],
+        warnings: [],
+    };
+}
+
 function createFinalPose(): MotionDebugFinalPoseSnapshot {
     return {
         schemaVersion: "sincro.vrm-pose-composer-result.v1",
@@ -887,6 +912,9 @@ describe("createMotionDebugViewerSnapshot", () => {
             phase7: {
                 status: "not_recorded",
             },
+            phase9: {
+                status: "not_recorded",
+            },
         });
     });
 
@@ -1107,6 +1135,118 @@ describe("createMotionDebugViewerSnapshot", () => {
                         expect.objectContaining({
                             code: "out_of_range",
                             path: ["activeCanonicalCalibration", "shoulderWidth"],
+                        }),
+                    ]),
+                },
+            },
+        });
+    });
+
+    it("shows saved Phase 9 replay sublayer as available", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "solver",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                solver: {
+                    phase9: createPhase9Snapshot(120),
+                },
+            },
+        });
+
+        expect(viewer.layers.solver.status).toBe("available");
+        expect(viewer.layers.solver.value).toMatchObject({
+            phase6: {
+                status: "not_recorded",
+            },
+            phase7: {
+                status: "not_recorded",
+            },
+            phase9: {
+                status: "available",
+                value: {
+                    schemaVersion: "sincro.phase9-semantic-motion.v1",
+                    timestamp: { mediaTimeMs: 120 },
+                    intent: {
+                        schemaVersion: "sincro.motion-intent.v1",
+                    },
+                    layers: [
+                        {
+                            id: "semantic:left:small_wave",
+                            kind: "semantic",
+                            weight: 0.5,
+                            ownedBones: ["leftUpperArm"],
+                        },
+                    ],
+                },
+            },
+        });
+    });
+
+    it("keeps solver available when Phase 9 replay sublayer is invalid", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "solver",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                solver: {
+                    phase9: {
+                        ...createPhase9Snapshot(120),
+                        intent: {
+                            ...createDefaultMotionIntentState(120),
+                            arms: {
+                                left: {
+                                    ...createDefaultMotionIntentState(120).arms.left,
+                                    intent: "thumbs_up",
+                                },
+                                right: createDefaultMotionIntentState(120).arms.right,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        expect(viewer.layers.solver.status).toBe("available");
+        expect(viewer.layers.solver.value).toMatchObject({
+            phase9: {
+                status: "invalid",
+                value: {
+                    parseStatus: "invalid",
+                    errors: expect.arrayContaining([
+                        expect.objectContaining({
+                            code: "invalid_state",
+                            path: ["intent", "arms", "left", "intent"],
                         }),
                     ]),
                 },

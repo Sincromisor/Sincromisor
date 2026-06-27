@@ -33,10 +33,10 @@
 - `src/character/vrmCharacter`
     - VRM character manager と motion controller のうち、behavior / retargeting / IK に属さない VRM 適用処理を置く。
 - `src/character/motionEvaluation`
-    - motion-debug log schema、Phase 6 solver / Phase 7 profile-calibration / finalPose snapshot parser、replay metrics、baseline parser を置く。
+    - motion-debug log schema、Phase 6 solver / Phase 7 profile-calibration / Phase 9 semantic-motion / finalPose snapshot parser、replay metrics、baseline parser を置く。
 - `src/character/reliability`
     - `ReliabilityMap` v1 を置き、Pose / Hand / Face / ROI / camera quality 由来の観測品質を developer-visible snapshot として保存する。
-    - Phase 8 では Hand / Face 入力がある frame の head / hand / finger reliability を埋める。Gesture reliability と MotionIntent への接続は Phase 9 に残す。
+    - Phase 8 では Hand / Face 入力がある frame の head / hand / finger reliability を埋める。Gesture reliability は placeholder のまま維持し、Phase 9 の MotionIntent estimator が temporal / reliability / hand / optional gesture observation から semantic intent を推定する。
 - `src/character/motionIntent`
     - `MotionIntentState` v1 を置き、temporal / reliability / hand / gesture の後段で左右腕と torso の motion intent を保存可能な developer-visible contract として表す。
     - `schemaVersion` は `sincro.motion-intent.v1` に固定し、Gesture Recognizer の raw label は `sourceGestureLabel` に閉じて `intent` enum へ混ぜない。
@@ -57,14 +57,15 @@
     - `MotionDebugSnapshot.hand` / `frame.hand` は Hand snapshot の debug / replay 用 optional slot であり、raw landmarks や crop object は含めない。
     - `frame.metrics.tracker.roi` は Hand / Face ROI の pause state、fallback count、skip count、over-budget count、reason code を保存する debug / replay 用 optional stats である。full-frame Face / Pose の既存 cadence と budget target / observed shape は維持する。
     - 旧 log に `frame.reliability` が無い場合だけ pose snapshot 由来の pose-only placeholder reliability を fallback 表示し、保存されていない Hand / Face 観測は再構成しない。
-    - `frame.intent` は MotionIntent v1 の optional slot として保存できる。replay viewer は saved `frame.intent` を `parseMotionIntentState()` で検証し、欠損を `not_recorded`、schema 違反を `invalid` として表示するが、旧 log 互換のため log load 全体では strict validation しない。
+    - `frame.intent` は MotionIntent v1 の optional slot として保存する。replay viewer は saved `frame.intent` を `parseMotionIntentState()` で検証し、欠損を `not_recorded`、schema 違反を `invalid` として表示するが、旧 log 互換のため log load 全体では strict validation しない。`pose-snapshot` replay の live snapshot には pipeline 再実行結果としての latest intent を別に出し、saved intent で estimator state は上書きしない。
 - IK / Pose Composer
     - `SincroArmIkSolver` は腕 IK quaternion と constraint reason を返す。
     - `VrmPoseComposer` は fallback / tracking / semantic / idle / style layer から normalized local pose と `ownedBones` を作る。semantic layer は `small_wave`、`point_forward_or_up`、`thumbs_up_hold`、`peace_hold`、`shy_hand_near_face`、`explain_open_palm`、`soft_clap_like`、`lost_to_comfort` の preset id を持ち、upperArm / lowerArm / hand 相当の partial override に限定する。
     - finger curl semantic layer は arm semantic preset とは別に `finger-curl:<side>` として作る。finger group は `thumb`、`index`、`middle`、`ringLittle` に固定し、`ring` / `little` は同じ group curl を使う。curl distribution は `AvatarMotionProfile.fingers.curlDistribution` を正本にし、欠損 finger chain は存在 bone の weight だけを正規化して fallback する。
     - finger quaternion は curl local `+X`、splay local `+Z`、thumb oppose local `+Y` の低次元 mapping から作り、左右の splay / oppose 符号だけを反転する。raw landmark から per-finger 3D rotation を直接作らず、layer / debug には plain quaternion object だけを保存する。
     - authored clip や AnimationMixer を使う場合も staging に留め、composer へ渡す最終表現は `semantic` pose delta とする。
-    - motion-debug は `frame.solver.phase6` に Phase 6 solver snapshot、`frame.solver.phase7` に Phase 7 の完成版 `AvatarMotionProfile` / calibration snapshot、`frame.finalPose` に composer result を保存・表示する。本番の `VRMCharacterManager.update()` の bone 書き込み順序はまだ全面移行しない。
+    - motion-debug は `frame.solver.phase6` に Phase 6 solver snapshot、`frame.solver.phase7` に Phase 7 の完成版 `AvatarMotionProfile` / calibration snapshot、`frame.solver.phase9` に Phase 9 semantic / finger debug snapshot、`frame.finalPose` に composer result を保存・表示する。本番の `VRMCharacterManager.update()` の bone 書き込み順序はまだ全面移行しない。
+    - motion metrics は saved `frame.intent` から `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount` を計算する。invalid intent は `intentInvalidFrameCount` だけに数え、他の Phase 9 metrics では valid intent sample が無い場合 `not_available` にする。
     - 完成版 `AvatarMotionProfile` は `VRMScene.getAvatarMotionProfile()` / `VRMCharacterManager.getAvatarMotionProfile()` から debug 用 clone として公開する。Debug Console と Phase 6 snapshot の `avatarMotionProfile` は `MinimalAvatarMotionProfile` のまま維持する。
 
 ## Talk Mode Boundary
