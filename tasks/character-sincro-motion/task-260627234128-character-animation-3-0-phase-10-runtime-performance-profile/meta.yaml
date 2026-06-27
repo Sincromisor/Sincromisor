@@ -1,0 +1,14 @@
+id: task-260627234128-character-animation-3-0-phase-10-runtime-performance-profile
+title: character animation 3.0 phase 10 runtime performance profiles
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260627180730-character-animation-3-0-phase-9-debug-replay-docs-integratio
+superseded_by: null
+review: APPROVED
+reviewed_sha: 6d1a8dfe219090d71547197eba6dbd9b79f2387c
+verdict: null
+attempts: 0
+created_at: 2026-06-27
+closed_at: null
+legacy_ids: []

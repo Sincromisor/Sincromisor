@@ -77,7 +77,16 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 65 件）
+## タスク一覧（自動生成 / 全 69 件）
+
+### open（未完） — 4 件
+
+| タスク                                                                                                                                                                     | タイトル                                                            | 判定 | 依存                                                                             |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---- | -------------------------------------------------------------------------------- |
+| [task-260627234128-character-animation-3-0-phase-10-ordered-degradation-policy](./task-260627234128-character-animation-3-0-phase-10-ordered-degradation-policy/task.md)   | character animation 3.0 phase 10 ordered degradation policy         | —    | `task-260627234128-character-animation-3-0-phase-10-runtime-performance-profile` |
+| [task-260627234128-character-animation-3-0-phase-10-runtime-performance-profile](./task-260627234128-character-animation-3-0-phase-10-runtime-performance-profile/task.md) | character animation 3.0 phase 10 runtime performance profiles       | —    | `task-260627180730-character-animation-3-0-phase-9-debug-replay-docs-integratio` |
+| [task-260627234129-character-animation-3-0-phase-10-degradation-metrics](./task-260627234129-character-animation-3-0-phase-10-degradation-metrics/task.md)                 | character animation 3.0 phase 10 degradation metrics                | —    | `task-260627234128-character-animation-3-0-phase-10-ordered-degradation-policy`  |
+| [task-260627234129-character-animation-3-0-phase-10-fixed-motion-qa-regression-](./task-260627234129-character-animation-3-0-phase-10-fixed-motion-qa-regression-/task.md) | character animation 3.0 phase 10 fixed motion qa regression harness | —    | `task-260627234129-character-animation-3-0-phase-10-degradation-metrics`         |
 
 ### done（完了） — 65 件
 
