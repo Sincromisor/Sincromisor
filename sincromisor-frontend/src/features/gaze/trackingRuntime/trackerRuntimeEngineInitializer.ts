@@ -11,6 +11,7 @@ type TrackerRuntimeEngineInitializerOptions = {
     workerClient: SincroTrackerWorkerClient;
     poseTrackingEnabled: boolean;
     handTrackingEnabled: boolean;
+    faceRoiTrackingEnabled: boolean;
     preferWorker: boolean;
     onWorkerFallback: (reason: string) => void;
     onPoseInitializationFallback: (reason: string, nowMs: number) => void;
@@ -24,6 +25,7 @@ export async function initializeTrackerRuntimeEngine(
             await options.workerClient.init(
                 options.poseTrackingEnabled,
                 options.handTrackingEnabled,
+                options.faceRoiTrackingEnabled,
             );
             return true;
         } catch (error) {

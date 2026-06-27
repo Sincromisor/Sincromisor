@@ -15,7 +15,14 @@ export type TrackerPerformanceReasonCode =
     | "pose_detection_failed_repeatedly"
     | "worker_unavailable"
     | "worker_failed"
-    | "main_thread_fallback";
+    | "main_thread_fallback"
+    | "hand_roi_skipped"
+    | "face_roi_skipped"
+    | "roi_fallback_full_frame"
+    | "roi_inference_over_budget"
+    | "pose_stale_for_roi"
+    | "hand_roi_paused"
+    | "face_roi_paused";
 
 export type TrackerPerformanceBudgetStatus = "ok" | "warn" | "over_budget";
 

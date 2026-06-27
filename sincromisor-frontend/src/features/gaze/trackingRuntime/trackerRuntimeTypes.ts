@@ -6,6 +6,7 @@ import type { SincroTrackerWorkerStats } from "./sincroTrackerWorkerTypes";
 export const DEFAULT_TARGET_INFERENCE_FPS = 15;
 export const DEFAULT_TARGET_POSE_INFERENCE_FPS = 12;
 export const DEFAULT_TARGET_HAND_INFERENCE_FPS = 4;
+export const DEFAULT_TARGET_FACE_ROI_INFERENCE_FPS = 6;
 
 export type TrackerVideoFrameClockSource =
     | "request-video-frame-callback"
@@ -37,6 +38,10 @@ export type TrackerRuntimePoseOptions = {
     targetInferenceFps?: number;
     ignorePerformanceFallback?: boolean;
     hand?: {
+        enabled?: boolean;
+        targetInferenceFps?: number;
+    };
+    faceRoi?: {
         enabled?: boolean;
         targetInferenceFps?: number;
     };

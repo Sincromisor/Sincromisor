@@ -13,6 +13,25 @@ export type SincroTrackerWorkerStatus =
 
 export type SincroTrackerRuntimeMode = "worker" | "main-thread" | "fallback";
 
+export type SincroTrackerRoiReasonCode =
+    | "hand_roi_skipped"
+    | "face_roi_skipped"
+    | "roi_fallback_full_frame"
+    | "roi_inference_over_budget"
+    | "pose_stale_for_roi"
+    | "hand_roi_paused"
+    | "face_roi_paused";
+
+export type SincroTrackerRoiPauseState = "active" | "hand-paused" | "face-paused" | "all-paused";
+
+export type SincroTrackerRoiStats = {
+    pauseState: SincroTrackerRoiPauseState;
+    fallbackCount: number;
+    skippedFrames: number;
+    consecutiveOverBudgetFrames: number;
+    reasonCodes: SincroTrackerRoiReasonCode[];
+};
+
 export type SincroTrackerWorkerStats = {
     mode: SincroTrackerRuntimeMode;
     status: SincroTrackerWorkerStatus;
@@ -23,16 +42,19 @@ export type SincroTrackerWorkerStats = {
     effectiveFaceFps?: number;
     effectivePoseFps?: number;
     effectiveHandFps?: number;
+    effectiveFaceRoiFps?: number;
     loadTimeMs: number;
     droppedFrames: number;
     fallbackReason?: string;
     budget?: TrackerPerformanceBudgetReport;
+    roi?: SincroTrackerRoiStats;
 };
 
 export type SincroTrackerWorkerInitMessage = {
     type: "init";
     poseEnabled: boolean;
     handEnabled: boolean;
+    faceRoiEnabled: boolean;
 };
 
 export type SincroTrackerWorkerDetectMessage = {
@@ -42,6 +64,7 @@ export type SincroTrackerWorkerDetectMessage = {
     timestampMs: number;
     poseEnabled: boolean;
     handEnabled: boolean;
+    faceRoiEnabled: boolean;
 };
 
 export type SincroTrackerWorkerStopMessage = {

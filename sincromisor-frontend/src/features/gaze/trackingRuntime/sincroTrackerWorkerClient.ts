@@ -50,7 +50,7 @@ export class SincroTrackerWorkerClient {
         return typeof Worker !== "undefined" && typeof createImageBitmap === "function";
     }
 
-    async init(poseEnabled: boolean, handEnabled: boolean): Promise<void> {
+    async init(poseEnabled: boolean, handEnabled: boolean, faceRoiEnabled: boolean): Promise<void> {
         if (!SincroTrackerWorkerClient.isSupported()) {
             throw new Error("Sincro tracker worker is not supported in this browser.");
         }
@@ -66,9 +66,9 @@ export class SincroTrackerWorkerClient {
                 this.pendingInitResolve = resolve;
                 this.pendingInitReject = reject;
             });
-            this.worker?.postMessage({ type: "init", poseEnabled, handEnabled });
-        } else if (poseEnabled || handEnabled) {
-            this.worker?.postMessage({ type: "init", poseEnabled, handEnabled });
+            this.worker?.postMessage({ type: "init", poseEnabled, handEnabled, faceRoiEnabled });
+        } else if (poseEnabled || handEnabled || faceRoiEnabled) {
+            this.worker?.postMessage({ type: "init", poseEnabled, handEnabled, faceRoiEnabled });
         }
         await this.initPromise;
     }
@@ -78,6 +78,7 @@ export class SincroTrackerWorkerClient {
         timestampMs: number,
         poseEnabled: boolean,
         handEnabled: boolean,
+        faceRoiEnabled: boolean,
         transferTimeMs: number,
     ): Promise<DetectResult> {
         if (!this.worker) {
@@ -117,6 +118,7 @@ export class SincroTrackerWorkerClient {
                     timestampMs,
                     poseEnabled,
                     handEnabled,
+                    faceRoiEnabled,
                 },
                 [frame],
             );

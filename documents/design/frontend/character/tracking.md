@@ -8,6 +8,7 @@
 - Tracker runtime は camera track、video element、推論 loop、Worker fallback を所有し、UI 更新や VRM 適用は持たない。
 - Tracker runtime は performance budget report と degradation state を Debug Console / motion-debug に出し、Worker round trip、Worker 内推論、main-thread fallback を切り分ける。
 - Phase 8 の Hand / Face ROI は Pose 起点の full-frame normalized coordinate contract として `roiTracking` に置き、MediaPipe 実行や ReliabilityMap 変換とは分ける。
+- Hand / Face ROI は lower fps の optional pass として扱い、Pose stale、ROI over-budget、main-thread fallback を stats と motion-debug metrics で観測できる。
 
 ## Scope
 
@@ -67,11 +68,15 @@
     - `requestVideoFrameCallback()` 非対応環境では `requestAnimationFrame + video.currentTime`、RAF も使えない test / hidden runtime 境界では 5fps timer fallback を使う。fallback の rVFC 固有 field は欠損のままにする。
     - Worker 経路と main-thread fallback。
     - Worker が使える環境では Worker 経路を標準にし、Worker unavailable / 初期化失敗 / Worker detect failure では main-thread fallback へ切り替える。
-    - main-thread fallback では effective target を face `<= 8fps`、pose `<= 4fps` に clamp し、`SincroTrackerWorkerStats.budget.degradation.state = "main-thread-low-fps"` として保存する。
+    - main-thread fallback では effective target を face `<= 8fps`、pose `<= 4fps`、Hand ROI `<= 2fps`、Face ROI `<= 3fps` に clamp し、`SincroTrackerWorkerStats.budget.degradation.state = "main-thread-low-fps"` として保存する。
     - Hand tracking は `poseOptions.enabled === true` かつ `poseOptions.hand?.enabled === true` の場合だけ有効にする。`onHandMotion` callback の有無だけでは起動しない。
-    - Hand cadence は既定 `4fps`、指定範囲 `1..8fps` とし、main-thread fallback では effective hand fps を `<= 4fps` に clamp する。Worker stats は optional `effectiveHandFps` を持つ。
+    - Hand cadence は既定 `4fps`、指定範囲 `1..8fps` とする。`poseOptions.faceRoi?.enabled === true` の場合だけ Face ROI を有効にし、Face ROI cadence は既定 `6fps`、指定範囲 `1..12fps` とする。どちらも `SincroPoseMotionSnapshot.lastUpdatedAtMs` が `mediaTimeMs - lastUpdatedAtMs > 250` の場合は `pose_stale_for_roi` として skip し、full-frame Face cadence は従来どおり `DEFAULT_TARGET_INFERENCE_FPS` を正本にする。
+    - ROI pause state は `"active" -> "hand-paused" -> "face-paused" -> "all-paused"` の順に進む。`hand-paused` は Hand ROI だけを止め、`face-paused` は Hand / Face ROI を止めるが full-frame Face は継続する。`all-paused` でも camera / full-frame Face は止めず、既存 Pose face-only fallback へ委譲する。
+    - ROI over-budget は `handInferenceTimeMs + faceRoiInferenceTimeMs > 1000 / max(1, targetPoseInferenceFps) * 0.55` で判定する。5 ROI 実行 frame 連続で pause state を 1 段進め、budget 内 30 ROI 実行 frame 連続で 1 段戻す。
+    - Worker stats は optional `effectiveHandFps`、`effectiveFaceRoiFps`、`roi` を持つ。`roi` は pause state、fallbackCount、skippedFrames、consecutiveOverBudgetFrames、ROI reason code を保持し、既存 `effectiveFaceFps` / `effectivePoseFps` の意味は変えない。
     - `SincroTrackerWorkerStats.budget` は `sincro.tracker-performance-budget.v1` の report で、`target`、`observed`、`budgetStatus`、`degradation`、`reasonCodes` を持つ。`observed.clockSource` は `TrackerVideoFrameTiming.source` を使い、欠損値は `undefined` のままにする。
     - `budgetStatus` は Worker round trip と Pose inference cost を対象に、target frame / pose budget の `0.9x` 超を `warn`、`1.25x` 超を `over_budget` とする。
+    - ROI reason code は `hand_roi_skipped`、`face_roi_skipped`、`roi_fallback_full_frame`、`roi_inference_over_budget`、`pose_stale_for_roi`、`hand_roi_paused`、`face_roi_paused` を使う。budget report の `target` / `observed` shape は変えず、詳細は `SincroTrackerWorkerStats.roi` に閉じる。
 - `SincroFaceTracker`
     - FaceLandmarker から head pose、blendshape、confidence を抽出する。
     - `SincroFaceMotionSnapshot` を出力する。
@@ -138,7 +143,7 @@
     - inferenceFps
     - fallbackReason
     - FaceLandmarker の full-frame 既存経路では `source: "full-frame"`、`warnings: []` を返す。ROI fallback で full-frame が検出した場合は `source: "full-frame-fallback"`、fallback でも未検出の場合は `source: "lost"`、`fallbackReason: "face_not_detected"` を返す。
-    - Worker / TrackerRuntime は Pose が実行された frame だけ Pose snapshot から Face ROI を作る。Pose が未実行の frame、または pose performance gate により face-only fallback 中の frame では full-frame Face tracking を継続し、Face cadence を Pose cadence に引きずらない。
+    - Worker / TrackerRuntime は最新 Pose snapshot が fresh な場合だけ Pose snapshot から Face ROI を作る。Pose が stale、Face ROI が cadence skip / pause、または pose performance gate により face-only fallback 中の frame では full-frame Face tracking を継続し、Face cadence を Pose cadence に引きずらない。Face ROI pause 中の snapshot は `face_roi_paused` warning を持ち、motion-debug / reliability が stale と pause を区別できる。
 - `SincroPoseMotionSnapshot`
     - trackingEnabled
     - detected
@@ -223,7 +228,7 @@
     - replay API の `loadRecording()` は plain NDJSON `string` または `File` だけを受け付ける。`startReplay({ mode })`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` は developer-only の window API として公開する。
     - `frame.timestamp.mediaTimeMs` は tracker callback の `TrackerVideoFrameTiming.mediaTimeMs` を正本にする。fallback 時だけ `video.currentTime * 1000` を使う。
     - callback 受信時の `performance.now()` は `frame.metrics.receivedAtPerformanceMs` として保存する。tracker stats は `frame.metrics.tracker` に入れ、`timestamp.receivedAtPerformanceMs` や top-level `tracker` は使わない。
-    - tracker performance budget は `frame.metrics.tracker.budget` に保存する。`reasonCodes` は dropped frame、Worker pending detect、Worker failure / unavailable、pose repeated failures、pose inference too slow、main-thread fallback を enum として保持し、既存 `fallbackReason` の文字列は互換のため変更しない。
+    - tracker performance budget は `frame.metrics.tracker.budget` に保存する。`reasonCodes` は dropped frame、Worker pending detect、Worker failure / unavailable、pose repeated failures、pose inference too slow、main-thread fallback、ROI skip / pause / fallback / over-budget を enum として保持し、既存 `fallbackReason` の文字列は互換のため変更しない。ROI の累積 stats は `frame.metrics.tracker.roi` で確認する。
     - 同一 `presentedFrames` と同一 `SincroPoseMotionSnapshot.lastUpdatedAtMs` の連続入力は duplicate frame として recorder が捨てる。`presentedFrames` が無い fallback / legacy 入力では、同一 `mediaTimeMs` と同一 `lastUpdatedAtMs` を duplicate とする。
     - camera 実設定を manifest に残す場合、raw `deviceId` / `groupId` は保存しない。hash を保存する場合も export 単位だけで比較可能にし、export をまたいで安定する識別子を残さない。
     - frame ごとの camera quality は `frame.metrics.cameraQuality` に保存する。top-level `cameraQuality` は schema 外とし、manifest の camera settings と同じく raw device identifier は持たない。
@@ -244,8 +249,11 @@
 - MediaPipe model / wasm 配置漏れ:
     - tracking を無効化し、UI / Debug Console に理由を表示する。
 - Worker 初期化失敗:
-    - main-thread tracker へ fallback し、effective target を face `<= 8fps`、pose `<= 4fps` に clamp する。
+    - main-thread tracker へ fallback し、effective target を face `<= 8fps`、pose `<= 4fps`、Hand ROI `<= 2fps`、Face ROI `<= 3fps` に clamp する。
     - `degradation.state` は `"main-thread-low-fps"`、reason code は `main_thread_fallback` とし、Worker unavailable / failure は `reasonCodes` で切り分ける。
+- ROI over-budget:
+    - Hand ROI、Face ROI の順で optional pass を落とし、full-frame Face と camera loop は継続する。
+    - pause 中の Hand は `fallbackReason: "hand_roi_paused"` の lost snapshot を出し、Face は full-frame snapshot に `face_roi_paused` warning を残す。
 - 推論遅延または連続検出失敗:
     - pose のみ face-only に降格できる。
     - 既存 `fallbackReason` は `pose_inference_too_slow` を維持し、budget の `reasonCodes` では `pose_inference_warn` / `pose_inference_over_budget` に写像する。

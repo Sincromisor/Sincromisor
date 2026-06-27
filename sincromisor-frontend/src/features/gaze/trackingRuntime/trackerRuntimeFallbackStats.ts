@@ -1,4 +1,4 @@
-import type { SincroTrackerWorkerStats } from "./sincroTrackerWorkerTypes";
+import type { SincroTrackerRoiStats, SincroTrackerWorkerStats } from "./sincroTrackerWorkerTypes";
 import { createTrackerPerformanceBudgetReport } from "./trackerRuntimePerformanceBudget";
 import type { TrackerRuntimeCallbacks } from "./trackerRuntimeTypes";
 
@@ -9,6 +9,8 @@ export function publishTrackerRuntimeFallbackStats(
     targetInferenceFps: number,
     targetPoseInferenceFps: number,
     targetHandInferenceFps: number,
+    targetFaceRoiInferenceFps: number,
+    roiStats: SincroTrackerRoiStats,
 ): void {
     callbacks?.onTrackerStats?.({
         mode: "main-thread",
@@ -21,6 +23,8 @@ export function publishTrackerRuntimeFallbackStats(
         effectiveFaceFps: targetInferenceFps,
         effectivePoseFps: targetPoseInferenceFps,
         effectiveHandFps: targetHandInferenceFps,
+        effectiveFaceRoiFps: targetFaceRoiInferenceFps,
+        roi: roiStats,
         budget: createTrackerPerformanceBudgetReport({
             targetInferenceFps,
             targetPoseInferenceFps,
@@ -30,6 +34,7 @@ export function publishTrackerRuntimeFallbackStats(
             degradationState: "main-thread-low-fps",
             degradationReason: "main_thread_fallback",
             fallbackReason: reason,
+            reasonCodes: roiStats.reasonCodes,
         }),
     });
 }

@@ -14,7 +14,8 @@ export type SincroRoiWarningCode =
     | "roi_inconsistent"
     | "pose_not_detected"
     | "invalid_pose_point"
-    | "low_pose_quality";
+    | "low_pose_quality"
+    | "face_roi_paused";
 
 export type SincroRoiPoint = readonly [number, number];
 

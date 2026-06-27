@@ -125,6 +125,27 @@ describe("createTrackerPerformanceBudgetReport", () => {
         expect(report.reasonCodes).toEqual(["main_thread_fallback", "worker_failed"]);
     });
 
+    it("carries ROI reason codes without changing target or observed shapes", () => {
+        const report = createTrackerPerformanceBudgetReport({
+            targetInferenceFps: 15,
+            targetPoseInferenceFps: 12,
+            workerRoundTripMs: 10,
+            droppedFrames: 0,
+            reasonCodes: ["face_roi_skipped", "roi_inference_over_budget"],
+        });
+
+        expect(report.reasonCodes).toEqual(["face_roi_skipped", "roi_inference_over_budget"]);
+        expect(Object.keys(report.target).sort()).toEqual([
+            "faceTargetFps",
+            "frameBudgetMs",
+            "poseBudgetMs",
+            "poseTargetFps",
+        ]);
+        expect(report.target).not.toHaveProperty("faceRoiTargetFps");
+        expect(report.observed).not.toHaveProperty("effectiveFaceRoiFps");
+        expect(report.observed).not.toHaveProperty("roi");
+    });
+
     it("drops non-finite optional observations and accepts unknown optional input fields", () => {
         const input = {
             targetInferenceFps: 15,
