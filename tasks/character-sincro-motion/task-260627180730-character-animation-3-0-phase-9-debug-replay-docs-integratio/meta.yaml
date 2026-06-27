@@ -1,0 +1,14 @@
+id: task-260627180730-character-animation-3-0-phase-9-debug-replay-docs-integratio
+title: character animation 3.0 phase 9 debug replay docs integration
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260627180726-character-animation-3-0-phase-9-finger-curl-pose-mapping
+superseded_by: null
+review: APPROVED
+reviewed_sha: 8b7ac4d63744cfeade7f4b551ac29c2d327d635a
+verdict: null
+attempts: 0
+created_at: 2026-06-27
+closed_at: null
+legacy_ids: []
