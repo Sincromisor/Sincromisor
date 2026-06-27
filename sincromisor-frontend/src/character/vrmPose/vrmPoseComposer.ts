@@ -17,6 +17,7 @@ import {
     overrideQuaternion,
     serializeQuaternion,
 } from "./vrmPoseQuaternionMath";
+import { shouldSuppressSemanticConflict } from "./vrmPoseSemanticPolicy";
 import type {
     VrmPoseComposerInput,
     VrmPoseComposerResult,
@@ -25,7 +26,13 @@ import type {
     VrmPoseQuaternion,
 } from "./vrmPoseTypes";
 
-const LAYER_ORDER: VrmPoseLayerKind[] = ["fallback", "tracking", "idle", "style"];
+export const LAYER_ORDER: VrmPoseLayerKind[] = [
+    "fallback",
+    "tracking",
+    "semantic",
+    "idle",
+    "style",
+];
 
 type PoseWrite = {
     bone: VRMHumanBoneName;
@@ -82,6 +89,16 @@ function applyLayer(
         }
         if (shouldSuppressTrackingOwnedBone(layer, write.bone, trackingOwnership)) {
             addSuppressedLayer(result, layer, write.sourceBone, "tracking_owns_bone");
+            continue;
+        }
+        if (
+            shouldSuppressSemanticConflict(
+                layer,
+                write.bone,
+                isTrackingOwnedBone(write.bone, trackingOwnership),
+            )
+        ) {
+            addSuppressedLayer(result, layer, write.sourceBone, "semantic_conflict");
             continue;
         }
         if (hasOwnedBoneConflict(layer, write.bone, result.ownedBones)) {
@@ -253,6 +270,14 @@ function hasOwnedBoneConflict(
     ownedBones: VRMHumanBoneName[],
 ): boolean {
     return layer.kind !== "tracking" && ownedBones.includes(bone);
+}
+
+function isTrackingOwnedBone(
+    bone: VRMHumanBoneName,
+    trackingOwnership: TrackingOwnership,
+): boolean {
+    const side = armSide(bone);
+    return side !== undefined && trackingOwnership[side].has(bone);
 }
 
 function shouldSuppressZeroWeight(weight: number): boolean {

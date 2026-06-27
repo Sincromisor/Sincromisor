@@ -1,5 +1,6 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import type { MinimalAvatarMotionProfile } from "../avatarProfile/minimalAvatarMotionProfile";
+import type { ArmMotionIntent } from "../motionIntent/motionIntentState";
 
 export type VrmPoseQuaternion = {
     x: number;
@@ -10,7 +11,7 @@ export type VrmPoseQuaternion = {
 
 export type VrmNormalizedLocalPose = Partial<Record<VRMHumanBoneName, VrmPoseQuaternion>>;
 
-export type VrmPoseLayerKind = "fallback" | "tracking" | "idle" | "style";
+export type VrmPoseLayerKind = "fallback" | "tracking" | "semantic" | "idle" | "style";
 
 export type VrmPoseBlendMode = "override" | "additive";
 
@@ -21,6 +22,14 @@ export type VrmPoseLayer = {
     weight: number;
     pose: VrmNormalizedLocalPose;
     ownedBones: VRMHumanBoneName[];
+    metadata?: {
+        semantic?: {
+            side?: "left" | "right" | "both";
+            intent: ArmMotionIntent;
+            intentConfidence: number;
+            conflictSuppressionThreshold: number;
+        };
+    };
 };
 
 export type VrmPoseComposerInput = {
@@ -38,7 +47,11 @@ export type VrmPoseComposerResult = {
         id: string;
         kind: VrmPoseLayerKind;
         bone: VRMHumanBoneName;
-        reason: "tracking_owns_bone" | "missing_optional_bone" | "zero_weight";
+        reason:
+            | "tracking_owns_bone"
+            | "missing_optional_bone"
+            | "zero_weight"
+            | "semantic_conflict";
     }>;
     clampedBones: Array<{
         bone: VRMHumanBoneName;

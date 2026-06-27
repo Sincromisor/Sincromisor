@@ -2,7 +2,7 @@ import { MathUtils } from "three/src/math/MathUtils.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
 import { describe, expect, it } from "vitest";
 import type { MinimalAvatarMotionProfile } from "../../avatarProfile/minimalAvatarMotionProfile";
-import { composeVrmPose } from "../vrmPoseComposer";
+import { composeVrmPose, LAYER_ORDER } from "../vrmPoseComposer";
 import {
     angleFromIdentity,
     COMPLETE_PROFILE,
@@ -12,6 +12,50 @@ import {
 } from "./vrmPoseComposerTestHelpers";
 
 describe("composeVrmPose", () => {
+    it("applies semantic layers after tracking and before idle or style", () => {
+        const tracking = layer({
+            id: "tracking",
+            kind: "tracking",
+            pose: { leftLowerArm: eulerQuaternion(0, 0.2, 0) },
+            ownedBones: ["leftLowerArm"],
+        });
+        const semantic = layer({
+            id: "semantic:left:point_forward_or_up",
+            kind: "semantic",
+            pose: { leftLowerArm: eulerQuaternion(0, 0.6, 0) },
+            ownedBones: ["leftLowerArm"],
+            metadata: {
+                semantic: {
+                    side: "left",
+                    intent: "pointing",
+                    intentConfidence: 0.85,
+                    conflictSuppressionThreshold: 0.2,
+                },
+            },
+        });
+        const idle = layer({
+            id: "idle",
+            kind: "idle",
+            pose: { leftLowerArm: eulerQuaternion(0, 0.9, 0) },
+            ownedBones: ["leftLowerArm"],
+        });
+
+        const result = composeVrmPose({
+            layers: [idle, semantic, tracking],
+            profile: COMPLETE_PROFILE,
+        });
+
+        expect(LAYER_ORDER).toEqual(["fallback", "tracking", "semantic", "idle", "style"]);
+        expectNormalizedQuaternion(result.finalPose.leftLowerArm, eulerQuaternion(0, 0.6, 0));
+        expect(result.suppressedLayers).toContainEqual({
+            id: "idle",
+            kind: "idle",
+            bone: "leftLowerArm",
+            reason: "tracking_owns_bone",
+        });
+        expect(result.warnings).toContain("owned_bone_conflict:leftLowerArm");
+    });
+
     it("suppresses idle and speech style additives for bones owned by active tracking IK", () => {
         const tracking = layer({
             id: "tracking-left-ik",

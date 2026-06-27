@@ -1,11 +1,13 @@
 # Evaluation: task-260627180718-character-animation-3-0-phase-9-gesture-intent-estimator-hys
 
 ## 判定
+
 PASS
 
 前回 FAIL の残課題だった `predicted` / `recovering` semantic hold と all-arms fallback の優先順は、commit `b523cb0d1e8fcec3a95b24a6611718b20c9fbbd6` で解消されている。評価 worktree は clean で、`npm run gate` も同 commit に対して PASS した。
 
 ## 受け入れ条件チェックリスト
+
 - [✓] 依存 `MotionIntentState` / `ArmMotionIntent` / parser が HEAD に存在する — `sincromisor-frontend/src/character/motionIntent/motionIntentState.ts` の contract と parser を import している。
 - [✓] `motionIntentEstimator.ts` と要求 export を追加 — `MotionIntentEstimator`、`MotionIntentEstimatorConfig`、`MotionIntentEstimatorInput`、`GestureIntentObservation`、`createMotionIntentState()` を export 済み。
 - [✓] estimator input boundary を限定 — 入力は `temporal` / optional `reliability` / optional `hand` / optional `gesture` / `mediaTimeMs` に閉じており、`performance.now()`、DOM、MediaPipe raw landmark、VRM pose、`AnimationMixer` は参照していない。
@@ -25,6 +27,7 @@ PASS
 - [✓] design docs 同期 — `documents/design/frontend/character/motion.md` に input boundary、gesture mapping、confidence gate、minimum duration / cooldown、wave 発火条件、nearFace / clapLike / guarded、lost / fallback、reset / invalid dt、Gesture Recognizer を主制御器にしない方針が同期されている。
 
 ## テスト結果
+
 - `npm run gate`（cwd: `/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-b523cb0d1e8f-qF5K3M`）: PASS。commit `b523cb0` clean、3 step すべて cache hit。
 - `gate:lint`: PASS / CACHE HIT。frontend lint/format and Markdown check。
 - `gate:build`: PASS / CACHE HIT。frontend type check and build。既存の chunk size warning のみ。
@@ -33,9 +36,11 @@ PASS
 - カバレッジ評価: 受け入れ条件の主要分岐は unit test で網羅されている。前回不足していた predicted / recovering semantic hold と all-arms fallback の競合ケースも追加 regression test で覆われたため、今回のタスク範囲では十分。
 
 ## ドキュメント整合性
+
 - 公開 WebRTC / backend / compose / env 契約の変更はなし。
 - developer-visible な motion intent 推定規則は追加されており、対応ドキュメント `documents/design/frontend/character/motion.md` は同じ変更で同期済み。
 - attempt 2 は仕様文言の追加変更ではなく、attempt 1 で同期済みの predicted semantic hold / fallback 優先規則に対する実装バグ修正のため、追加のドキュメント更新は不要。
 
 ## 残課題（FAIL の場合）
+
 - なし。
