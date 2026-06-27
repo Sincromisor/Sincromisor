@@ -421,6 +421,63 @@ describe("MotionIntentEstimator", () => {
         expect(fallback.arms.right.intent).toBe("fallback");
     });
 
+    it.each([
+        "predicted",
+        "recovering",
+    ] as const)("prioritizes %s semantic hold over all-arms fallback", (state) => {
+        const estimator = new MotionIntentEstimator();
+        const gestures = {
+            left: { label: "Pointing_Up", confidence: 0.95 },
+            right: { label: "Thumb_Up", confidence: 0.95 },
+        };
+
+        updateEstimator(estimator, 0, { gesture: gestures });
+        const semantic = updateEstimator(estimator, 250, { gesture: gestures });
+        expect(semantic.arms.left.intent).toBe("pointing");
+        expect(semantic.arms.right.intent).toBe("thumbsUp");
+
+        const lowConfidenceInput = {
+            left: { state, confidence: 0.05 },
+            right: { state, confidence: 0.05 },
+            hand: createHand({
+                leftDetected: false,
+                rightDetected: false,
+                leftConfidence: 0,
+                rightConfidence: 0,
+            }),
+            reliability: createReliability({ mediaTimeMs: 450, torso: 0.01 }),
+            gesture: {
+                left: { label: "None", confidence: 1 },
+                right: { label: "None", confidence: 1 },
+            },
+        };
+
+        updateEstimator(estimator, 450, lowConfidenceInput);
+        updateEstimator(estimator, 650, {
+            ...lowConfidenceInput,
+            reliability: createReliability({ mediaTimeMs: 650, torso: 0.01 }),
+        });
+        const held = updateEstimator(estimator, 750, {
+            ...lowConfidenceInput,
+            reliability: createReliability({ mediaTimeMs: 750, torso: 0.01 }),
+        });
+
+        expect(held.arms.left.intent).toBe("pointing");
+        expect(held.arms.right.intent).toBe("thumbsUp");
+        expect(held.arms.left.warnings).not.toContain("fallback_active");
+        expect(held.arms.right.warnings).not.toContain("fallback_active");
+
+        const expired = updateEstimator(estimator, 1000, {
+            ...lowConfidenceInput,
+            reliability: createReliability({ mediaTimeMs: 1000, torso: 0.01 }),
+        });
+
+        expect(expired.arms.left.intent).toBe("fallback");
+        expect(expired.arms.right.intent).toBe("fallback");
+        expect(expired.arms.left.warnings).toContain("fallback_active");
+        expect(expired.arms.right.warnings).toContain("fallback_active");
+    });
+
     it("resets hysteresis and returns invalid_dt without advancing counters", () => {
         const estimator = new MotionIntentEstimator();
         const gesture = { left: { label: "Pointing_Up", confidence: 0.95 } };

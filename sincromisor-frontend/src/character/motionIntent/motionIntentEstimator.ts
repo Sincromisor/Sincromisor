@@ -939,6 +939,11 @@ export class MotionIntentEstimator {
             memory.lastState = held;
             return held;
         }
+        const predictedHold = this.getPredictedSemanticHold(ctx, memory, warnings);
+        if (predictedHold !== undefined) {
+            memory.lastState = predictedHold;
+            return predictedHold;
+        }
         if (fallbackActive) {
             return this.commitState(
                 ctx,
@@ -948,11 +953,6 @@ export class MotionIntentEstimator {
                     warnings,
                 }),
             );
-        }
-        const predictedHold = this.getPredictedSemanticHold(ctx, memory, warnings);
-        if (predictedHold !== undefined) {
-            memory.lastState = predictedHold;
-            return predictedHold;
         }
         if (isSideLost(ctx.arm, this.config.thresholds.fallbackConfidence)) {
             return this.commitState(ctx, createLostSideState(ctx.arm, warnings));
