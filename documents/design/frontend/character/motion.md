@@ -53,6 +53,13 @@
 - `src/character/motionIntent`
     - canonical / temporal / reliability / hand / gesture の後段で共有する `MotionIntentState` v1 contract を置く。
     - 保存対象は左右腕と torso の motion intent、confidence / reliability / expressiveness、入力由来、警告、Gesture Recognizer raw label の説明用 field に限定し、VRM bone rotation、semantic clip、finger bone rotation は含めない。
+    - `motionIntentEstimator.ts` は `MotionIntentEstimator` / `createMotionIntentState()` の既存 import 互換入口と公開型 re-export だけを担当する。
+    - `motionIntentEstimatorTypes.ts` は estimator input / config、side memory、candidate、frame context の型境界を担当する。公開型は facade から re-export する。
+    - `motionIntentEstimatorConfig.ts` は default timing / threshold と normalize を担当し、しきい値の範囲補正を estimator 本体から分離する。
+    - `motionIntentCandidateDetectors.ts` は gesture / near-face / wave / motion fallback の candidate 生成を担当する。
+    - `motionIntentGlobalDetectors.ts` は clap-like、guarded、side-swap warning など左右横断の観測判定を担当する。
+    - `motionIntentSideState.ts` は tracking / lost / fallback / semantic intent の side state builder と warning dedupe を担当する。
+    - `motionIntentSideMachine.ts` は side memory、semantic hold、cooldown、candidate stabilization を担当し、candidate 生成とは分ける。
     - `createFingerCurlPoseLayer()` は `SincroHandMotionSnapshot`、`MotionIntentState`、完成版 `AvatarMotionProfile`、caller 指定 `mediaTimeMs`、optional previous finger debug snapshot だけを入力にする。MediaPipe raw landmark、Gesture Recognizer raw result、VRM Object3D、raw bone node は読まない。
 - `src/character/motionPostProcessing`
     - Phase 11 の後続 post-processing / lightweight optimization が共有する `MotionPostProcessingResult` v1 contract を置く。
