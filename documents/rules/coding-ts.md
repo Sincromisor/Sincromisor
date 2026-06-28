@@ -168,3 +168,88 @@ PoC では下記 2 軸を最優先する。
 - **コメントアウトでの「とりあえず無効化」禁止** — 不要コードは削除する(git history が正本)
 - **型 / Zod schema は境界ごとに正本を 1 箇所**。同型を別ファイルで再定義しない
 - **「将来の差し替えのため」の抽象を作らない** — 必要になった時点で抽出する(Rule of Three 手前で動く / AGENTS.md と整合)
+
+## 13. ソースコードコメント品質
+
+コメントは「読めば分かる処理説明」ではなく、公開 API、境界、非自明な判断、制約理由、保存
+contract を後続の開発者が安全に変更するための文脈を残すために書く。コメントで責務分割を代替しない。
+[code-structure.md](code-structure.md) の「コメントで段落分けしたくなったら関数抽出を検討する」方針に従い、
+まず命名、関数分割、型定義、options object で明確化できないか確認する。
+
+### 13.1 コメントが必須の対象
+
+次の対象は、名前や型だけでは変更時の安全条件が読めないためコメントを必須とする。
+
+- `export` される、または public な class / function / type / interface / component / hook / module /
+  domain-significant `const`
+- `schemaVersion` を持つ保存 contract、replay log、debug snapshot、parser
+- Worker / DOM / MediaStream / MediaPipe / WebRTC / filesystem / replay log などの境界 module
+- coordinate system、単位、左右定義、時刻基準、frame index、confidence / reliability の意味
+- threshold、fallback、degradation、recovery、cooldown、hysteresis、clamp、side assignment、ROI 判定などの
+  heuristic
+- cleanup 所有者、resource lifecycle、例外を fallback に落とす理由
+
+### 13.2 記法の使い分け
+
+- export / public API のコメントは原則 JSDoc / TSDoc とする。生成ドキュメントが無い場合でも、
+  editor hover とレビューで契約を読める形にする。
+- 実装内部の補足は通常の block comment または line comment でよい。ただし対象は §13.5 に限定する。
+- ソースコード内コメントの言語は §11 に従い日本語とする。Error message やログの英語方針は変えない。
+
+例:
+
+```ts
+/**
+ * replay log v2 の gaze sample を runtime で扱う正規化形式へ変換する。
+ *
+ * v1 log は `confidence` を持たないため `undefined` として受理する。
+ * frame index が単調増加でない sample は、再生順序の復元に失敗するため reject する。
+ *
+ * @throws ReplayLogParseError 受理できない version または frame index の場合。
+ */
+export function parseGazeReplaySample(input: unknown): GazeReplaySample {
+  ...
+}
+```
+
+### 13.3 最低限含める内容
+
+対象別に、コメントへ次の情報を含める。
+
+| 対象                | 最低限書く内容                                                                  |
+| ------------------- | ------------------------------------------------------------------------------- |
+| public export       | 責務、入力境界、返す値または observable output の意味、失敗条件、副作用、非対象 |
+| 境界 module         | 外部仕様、受け取る raw 値、正規化後の contract、失敗時の扱い、cleanup 所有者    |
+| schema / parser     | 受理する旧 log / version、reject する値、fallback 方針、破壊的変更の確認先      |
+| coordinate / 単位   | 座標系、単位、左右定義、時刻基準、frame index の基準、confidence の意味         |
+| heuristic           | 値の意味、採用理由、変更時の確認先、誤調整した場合の見え方または失敗モード      |
+| lifecycle / cleanup | resource の所有者、解放タイミング、二重解放やリークを避けるための不変条件       |
+| fallback / 例外処理 | 例外を握り潰さず fallback に落とす理由、ユーザー影響、ログや復旧の観測点        |
+
+### 13.4 省略できる条件
+
+コメントを省略できるのは、private helper で名前、型、周辺 public コメントから責務が明らかであり、かつ境界 /
+heuristic / lifecycle / schema を持たない場合に限る。迷う場合は、コメントを書く前に関数名、型名、引数名、
+戻り値型、呼び出し側の責務分割を見直す。
+
+### 13.5 許容する実装コメント
+
+実装コメントは、次のどれかに該当する場合に限る。
+
+- 複雑な分岐やアルゴリズムの不変条件
+- workaround と、その外部要因または削除条件
+- 性能上の理由
+- ブラウザ、MediaPipe、WebRTC、VRM など外部仕様由来の制約
+- cleanup / lifecycle / fallback の安全条件
+
+`catch` で fallback へ落とす場合は §3 に従い、ログ + 再 throw か、明示的なハンドル理由をコメントで残す。
+TODO は §9 の形式に従い、canonical task ID と削除条件を持たせる。
+
+### 13.6 禁止するコメント
+
+- `// 値を返す`、`// ループする` のような処理説明だけのコメント
+- 古い実装経緯だけを残し、現在の判断や契約を説明しないコメント
+- 根拠のない `temporary`、`workaround`、`magic`
+- 理由、削除条件、canonical task / issue ID、期限または判断基準がない TODO
+- 実装と同期しない設計メモ、更新されず stale になったコメント
+- コメントアウトしたコードの残置。不要コードは削除し、必要な判断は task または ADR に残す

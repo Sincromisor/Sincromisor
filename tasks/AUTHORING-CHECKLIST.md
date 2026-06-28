@@ -57,3 +57,17 @@ reviewer の High 指摘になりやすい）。
 - [ ] 同期が **要**なら、同期先ドキュメントを **具体名**で受け入れ条件に書いた。
 - [ ] 同期が **不要**なら、その理由（内部クローズドな変更等）を 1 行書いた。
 - [ ] 公開バレル / 生成物（型定義・ビルド成果物など）を変える場合、その再生成とコミットを方針に含めた。
+
+## 7. ソースコードコメント品質（TypeScript production code）
+
+TypeScript production code を変更するタスクは、[documents/rules/coding-ts.md](../documents/rules/coding-ts.md)
+の「ソースコードコメント品質」に照らした comment audit / comment acceptance を `task.md` の受け入れ条件へ
+含める。対象変更なのにコメント観点が無い場合、task-reviewer は受け入れ条件不足として指摘する。
+
+- [ ] TypeScript production code 変更の有無を判定した（test / fixture / docs のみなら対象外理由を書いた）。
+- [ ] export / public API、schemaVersion を持つ保存 contract、Worker / DOM / MediaStream / MediaPipe /
+      WebRTC などの境界、coordinate / threshold / fallback / cleanup などの heuristic・lifecycle を
+      追加または変更するか確認した。
+- [ ] 対象がある場合、コメント追加または既存コメント更新を受け入れ条件に含めた。
+- [ ] 対象がある場合、実装と矛盾する stale comment の削除・更新を受け入れ条件に含めた。
+- [ ] コメントで補う前に、命名、関数分割、型定義、options object で明確化できないかを確認する条件を含めた。
