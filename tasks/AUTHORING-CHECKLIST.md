@@ -65,9 +65,14 @@ TypeScript production code を変更するタスクは、[documents/rules/coding
 含める。対象変更なのにコメント観点が無い場合、task-reviewer は受け入れ条件不足として指摘する。
 
 - [ ] TypeScript production code 変更の有無を判定した（test / fixture / docs のみなら対象外理由を書いた）。
-- [ ] export / public API、schemaVersion を持つ保存 contract、Worker / DOM / MediaStream / MediaPipe /
-      WebRTC などの境界、coordinate / threshold / fallback / cleanup などの heuristic・lifecycle を
-      追加または変更するか確認した。
-- [ ] 対象がある場合、コメント追加または既存コメント更新を受け入れ条件に含めた。
+- [ ] public export / public component / hook / module、schemaVersion を持つ保存 contract、Worker /
+      DOM / MediaStream / MediaPipe / WebRTC などの boundary、coordinate / threshold / fallback /
+      cleanup などの heuristic / lifecycle、schema/parser を追加または変更するか確認した。
+- [ ] 対象がある場合、JSDoc/TSDoc を含むコメント追加または既存コメント更新を受け入れ条件に含めた。
+- [ ] public export の目的、契約、入力境界、返す値または observable output、失敗条件、副作用、
+      非対象のうち、変更対象に必要な情報を task acceptance に定義した。
+- [ ] コメントを省略する対象がある場合、省略理由を受け入れ条件または実装ログ記録条件に含めた。
 - [ ] 対象がある場合、実装と矛盾する stale comment の削除・更新を受け入れ条件に含めた。
+- [ ] TODO を追加または変更する場合、TODO 必須情報（理由、削除条件、canonical task/issue ID、
+      期限または判断基準）を受け入れ条件に含めた。
 - [ ] コメントで補う前に、命名、関数分割、型定義、options object で明確化できないかを確認する条件を含めた。

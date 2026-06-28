@@ -6,6 +6,7 @@
 *.zip
 .vscode
 __pycache__
+node_modules
 node_modules/
 work/
 .env

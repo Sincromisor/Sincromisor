@@ -80,3 +80,7 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 - Reason: Codex sessions need local skills and agent definitions without a separate generation step.
 - Future refresh check: run `npm run gen:codex` and `npm run gen:codex:check` after editing
   `.claude/`.
+- Sincromisor-specific gate: keep the agent comment quality checks aligned with
+  `documents/rules/coding-ts.md` and `tasks/AUTHORING-CHECKLIST.md`. Upstream refreshes must
+  preserve task-reviewer High checks, task-implementer `impl.md` audit logging, and
+  impl-evaluator FAIL conditions for TypeScript production code comment acceptance.
