@@ -48,6 +48,7 @@
     ],
     "evalWorktree": {
         "symlinks": [
+            "node_modules",
             ".gate-cache",
             "sincromisor-frontend/node_modules"
         ],
