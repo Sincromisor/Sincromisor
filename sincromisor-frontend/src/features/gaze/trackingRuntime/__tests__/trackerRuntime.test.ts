@@ -5,6 +5,10 @@ import {
     type SincroFaceMotionSnapshot,
 } from "../../faceTracking/sincroFaceMotionSnapshot";
 import { SincroFaceTracker } from "../../faceTracking/sincroFaceTracker";
+import {
+    DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
+    type SincroHandMotionSnapshot,
+} from "../../handTracking/sincroHandMotionSnapshot";
 import { SincroHandTracker } from "../../handTracking/sincroHandTracker";
 import {
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
@@ -13,7 +17,9 @@ import {
 import { cloneSincroPoseMotionSnapshot } from "../../poseTracking/sincroPoseMotionSnapshotClone";
 import { SincroPoseTracker } from "../../poseTracking/sincroPoseTracker";
 import type { SincroRoiObservation } from "../roiTracking/roiTrackingTypes";
+import type { SincroTrackerWorkerStats } from "../sincroTrackerWorkerTypes";
 import { TrackerRuntime } from "../trackerRuntime";
+import { resolveTrackerRuntimePerformanceProfile } from "../trackerRuntimePerformanceProfile";
 import type { TrackerRuntimeCallbacks } from "../trackerRuntimeTypes";
 
 class RecordingFaceTracker extends SincroFaceTracker {
@@ -50,18 +56,57 @@ class RecordingFaceTracker extends SincroFaceTracker {
 
 class FreshPoseTracker extends SincroPoseTracker {
     readonly timestamps: number[] = [];
+    inferenceTimeMs = 1;
 
     override async initVision(): Promise<void> {}
 
     override detect(videoFrame: TexImageSource, timestampMs: number): SincroPoseMotionSnapshot {
         void videoFrame;
         this.timestamps.push(timestampMs);
-        return createFreshPose(timestampMs);
+        return createFreshPose(timestampMs, this.inferenceTimeMs);
+    }
+}
+
+class SequencedPoseTracker extends FreshPoseTracker {
+    private readonly inferenceTimesMs: number[];
+
+    constructor(inferenceTimesMs: number[]) {
+        super();
+        this.inferenceTimesMs = inferenceTimesMs;
+    }
+
+    override detect(videoFrame: TexImageSource, timestampMs: number): SincroPoseMotionSnapshot {
+        this.inferenceTimeMs = this.inferenceTimesMs.shift() ?? 1;
+        return super.detect(videoFrame, timestampMs);
     }
 }
 
 class NoopHandTracker extends SincroHandTracker {
     override async initVision(): Promise<void> {}
+}
+
+class RecordingHandTracker extends SincroHandTracker {
+    readonly timestamps: number[] = [];
+
+    override async initVision(): Promise<void> {}
+
+    override detect(
+        videoFrame: TexImageSource,
+        poseSnapshot: SincroPoseMotionSnapshot,
+        timestampMs: number,
+    ): SincroHandMotionSnapshot {
+        void videoFrame;
+        void poseSnapshot;
+        this.timestamps.push(timestampMs);
+        return {
+            ...DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
+            trackingEnabled: true,
+            detected: true,
+            inferenceTimeMs: 1,
+            inferenceFps: 4,
+            lastUpdatedAtMs: timestampMs,
+        };
+    }
 }
 
 type FakeVideo = {
@@ -104,6 +149,56 @@ describe("TrackerRuntime", () => {
         expect(faceTracker.roiTimestamps).toEqual([1000]);
         expect(faceSnapshots[0]?.source).toBe("full-frame");
         expect(faceSnapshots[0]?.roi?.source).toBe("pose-face");
+        runtime.stopFaceTracking("test_done");
+    });
+
+    it("resumes Pose, Face ROI, and Hand after policy face-only and comfortable-idle recovery", async () => {
+        vi.stubGlobal("HTMLMediaElement", { HAVE_CURRENT_DATA: 2 });
+        vi.stubGlobal("MediaStream", FakeMediaStream);
+        const { video, getFrameCallback } = createFakeVideo();
+        const faceTracker = new RecordingFaceTracker();
+        const poseTracker = new SequencedPoseTracker([
+            2000, 2000, 2000, 2000, 2000, 2000, 1, 1, 1, 1, 1, 1,
+        ]);
+        const handTracker = new RecordingHandTracker();
+        const runtime = new TrackerRuntime(video, faceTracker, poseTracker, handTracker);
+        const poseSnapshots: SincroPoseMotionSnapshot[] = [];
+        const stats: SincroTrackerWorkerStats[] = [];
+        const callbacks: TrackerRuntimeCallbacks = {
+            onFaceMotion: () => {},
+            onPoseMotion: (snapshot) => {
+                poseSnapshots.push(snapshot);
+            },
+            onTrackerStats: (snapshot) => {
+                stats.push(snapshot);
+            },
+        };
+
+        await runtime.startFaceTracking(createFakeTrack(), callbacks, 15, {
+            enabled: true,
+            targetInferenceFps: 12,
+            hand: { enabled: true, targetInferenceFps: 8 },
+            faceRoi: { enabled: true, targetInferenceFps: 10 },
+            performanceProfile: createFastRecoveryProfile(),
+        });
+        for (let frame = 1; frame <= 12; frame += 1) {
+            getFrameCallback()?.(frame * 1000, createVideoFrameMetadata(frame, frame));
+        }
+
+        const stages = stats.map((snapshot) => snapshot.degradationPolicy?.stage);
+        const comfortableIdleIndex = stages.indexOf("comfortable-idle");
+        const recoveredPoseIndex = stages.indexOf("pose-reduced-fps", comfortableIdleIndex);
+        expect(stages).toContain("face-only");
+        expect(comfortableIdleIndex).toBeGreaterThan(-1);
+        expect(recoveredPoseIndex).toBeGreaterThan(comfortableIdleIndex);
+        expect(poseTracker.timestamps).toContain(8000);
+        expect(poseSnapshots.some((snapshot) => snapshot.degradedToFaceOnly)).toBe(true);
+        expect(poseSnapshots[poseSnapshots.length - 1]).toMatchObject({
+            detected: true,
+            degradedToFaceOnly: false,
+        });
+        expect(faceTracker.roiTimestamps.some((timestamp) => timestamp >= 9000)).toBe(true);
+        expect(handTracker.timestamps.some((timestamp) => timestamp >= 11000)).toBe(true);
         runtime.stopFaceTracking("test_done");
     });
 });
@@ -198,12 +293,13 @@ function createFaceSnapshot(input: {
     };
 }
 
-function createFreshPose(timestampMs: number): SincroPoseMotionSnapshot {
+function createFreshPose(timestampMs: number, inferenceTimeMs = 1): SincroPoseMotionSnapshot {
     return cloneSincroPoseMotionSnapshot({
         ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
         trackingEnabled: true,
         detected: true,
         confidence: 0.9,
+        inferenceTimeMs,
         upperBody: {
             ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT.upperBody,
             shoulderWidth: 0.2,
@@ -228,5 +324,21 @@ function createFaceRoi(): SincroRoiObservation {
         confidence: 0.9,
         referencePoint: [0.5, 0.22],
         warnings: [],
+    };
+}
+
+function createFastRecoveryProfile(): ReturnType<
+    typeof resolveTrackerRuntimePerformanceProfile
+>["profile"] {
+    const base = resolveTrackerRuntimePerformanceProfile({
+        performanceProfileId: "high-end-desktop",
+    }).profile;
+    return {
+        ...base,
+        degradationBudget: {
+            ...base.degradationBudget,
+            consecutiveOverBudgetFrames: 1,
+            recoveryFrames: 1,
+        },
     };
 }

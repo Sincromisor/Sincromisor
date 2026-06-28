@@ -398,13 +398,19 @@ export class TrackerRuntime {
     }
 
     private shouldRunPoseInference(nowMs: number): boolean {
+        const poseDegradedToFaceOnly =
+            this.poseDegradedToFaceOnly && !this.shouldRunPoseRecoveryProbe();
         return shouldRunTrackerPoseInference({
             poseTrackingEnabled: this.poseTrackingEnabled,
-            poseDegradedToFaceOnly: this.poseDegradedToFaceOnly,
+            poseDegradedToFaceOnly,
             lastPoseInferenceAtMs: this.lastPoseInferenceAtMs,
             targetPoseInferenceFps: this.targetPoseInferenceFps,
             nowMs,
         });
+    }
+
+    private shouldRunPoseRecoveryProbe(): boolean {
+        return policyStageStopsPose(this.degradationPolicy.getState().stage);
     }
 
     private shouldRunHandInference(nowMs: number, hasFreshPoseSnapshot = true): boolean {
@@ -744,6 +750,13 @@ export class TrackerRuntime {
             ignorePerformanceFallback: this.ignorePosePerformanceFallback,
         });
 
+        if (
+            this.poseDegradedToFaceOnly &&
+            !policyStageStopsPose(decision.state.stage) &&
+            policyStageStopsPose(decision.state.previousStage)
+        ) {
+            this.resumePoseTrackingFromPolicyRecovery();
+        }
         if (this.poseDegradedToFaceOnly && decision.trackerDegradationState === "full") {
             this.degradationState = "face-only";
         } else {
@@ -763,6 +776,11 @@ export class TrackerRuntime {
             this.enterComfortableIdle(timing);
         }
         return appliedCadence;
+    }
+
+    private resumePoseTrackingFromPolicyRecovery(): void {
+        this.poseDegradedToFaceOnly = false;
+        this.comfortableIdleActive = false;
     }
 
     private capPolicyCadence(
@@ -933,6 +951,12 @@ function resolvePrimaryPolicyReason(
     decision: TrackerRuntimeDegradationPolicyDecision,
 ): TrackerPerformanceReasonCode | undefined {
     return decision.reasonCodes[0];
+}
+
+function policyStageStopsPose(
+    stage: TrackerRuntimeDegradationPolicyDecision["state"]["stage"] | undefined,
+): boolean {
+    return stage === "face-only" || stage === "comfortable-idle";
 }
 
 function cloneFaceRoiObservation(
