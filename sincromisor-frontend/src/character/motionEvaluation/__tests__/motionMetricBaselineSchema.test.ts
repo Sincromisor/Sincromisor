@@ -15,6 +15,14 @@ const CONFIG: MotionMetricConfig = {
     thresholdVersion: "initial-v1",
 };
 
+const PHASE_10_METRIC_KEYS = [
+    "trackerBudgetOverrunFrameCount",
+    "trackerDroppedFrameCount",
+    "degradationStageFrameCount",
+    "degradationRecoveryFrameCount",
+    "roiPausedFrameCount",
+] as const;
+
 function createBaseline(): MotionMetricBaseline {
     return {
         schemaVersion: "sincro.motion-metric-baseline.v1",
@@ -82,7 +90,8 @@ describe("parseMotionMetricBaseline", () => {
             Object.entries(baseline.metricSummary.metrics).filter(
                 ([key]) =>
                     key !== "solverElbowFlipRejectCount" &&
-                    key !== "finalPoseOwnedBoneConflictCount",
+                    key !== "finalPoseOwnedBoneConflictCount" &&
+                    !PHASE_10_METRIC_KEYS.some((phase10Key) => phase10Key === key),
             ),
         );
         const oldBaseline = {
@@ -111,5 +120,22 @@ describe("parseMotionMetricBaseline", () => {
                 status: "not_available",
             },
         );
+        for (const key of PHASE_10_METRIC_KEYS) {
+            expect(result.baseline.metricSummary.metrics[key]).toMatchObject({
+                value: null,
+                status: "not_available",
+                severity: "warn",
+                unit: "count",
+                direction: "lower_is_better",
+                unavailableReason: "Metric key was missing from an older baseline.",
+            });
+        }
+        expect(
+            result.baseline.metricSummary.metrics.trackerBudgetOverrunFrameCount.threshold,
+        ).toEqual({
+            pass: 0,
+            warn: 30,
+            fail: 90,
+        });
     });
 });

@@ -26,9 +26,9 @@ PASS
 ## テスト結果
 
 - `npm run gate`（evaluation worktree: `/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-173537dfb864-SO4Xd6`, SHA `173537dfb86442f21eac7bbaec216e2161b8a25a`）: PASS
-  - gate:lint CACHE HIT — frontend lint / format / Markdown check passed at `173537d (clean)`.
-  - gate:build CACHE HIT — frontend type check / build passed at `173537d (clean)`.
-  - gate:test CACHE HIT — frontend tests passed, 353 tests passed at `173537d (clean)`.
+    - gate:lint CACHE HIT — frontend lint / format / Markdown check passed at `173537d (clean)`.
+    - gate:build CACHE HIT — frontend type check / build passed at `173537d (clean)`.
+    - gate:test CACHE HIT — frontend tests passed, 353 tests passed at `173537d (clean)`.
 - カバレッジ評価: 受け入れ条件に対して十分。前回 FAIL 1 の `budgetStatus: "ok"` かつ `roi === undefined` は focused unit test で固定済み。前回 FAIL 2 の runtime 実復帰は policy-owned `face-only` / `comfortable-idle` 到達後、healthy Pose probe で `pose-reduced-fps` へ戻り、Face ROI と Hand inference が再開する integration test で固定済み。
 
 ## ドキュメント整合性

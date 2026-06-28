@@ -295,6 +295,11 @@ function metricDefinition(key: MotionMetricKey): Pick<MotionMetricResult, "unit"
         case "semanticFallbackFrameCount":
         case "intentCooldownSuppressionCount":
         case "intentInvalidFrameCount":
+        case "trackerBudgetOverrunFrameCount":
+        case "trackerDroppedFrameCount":
+        case "degradationStageFrameCount":
+        case "degradationRecoveryFrameCount":
+        case "roiPausedFrameCount":
             return { unit: "count", direction: "lower_is_better" };
     }
 }

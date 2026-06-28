@@ -53,7 +53,12 @@ export type MotionMetricKey =
     | "gestureFlickerCount"
     | "semanticFallbackFrameCount"
     | "intentCooldownSuppressionCount"
-    | "intentInvalidFrameCount";
+    | "intentInvalidFrameCount"
+    | "trackerBudgetOverrunFrameCount"
+    | "trackerDroppedFrameCount"
+    | "degradationStageFrameCount"
+    | "degradationRecoveryFrameCount"
+    | "roiPausedFrameCount";
 
 export type MotionMetricSeverity = "pass" | "warn" | "fail";
 export type MotionMetricStatus = MotionMetricSeverity | "not_available";
@@ -123,6 +128,11 @@ export const MOTION_METRIC_KEYS: MotionMetricKey[] = [
     "semanticFallbackFrameCount",
     "intentCooldownSuppressionCount",
     "intentInvalidFrameCount",
+    "trackerBudgetOverrunFrameCount",
+    "trackerDroppedFrameCount",
+    "degradationStageFrameCount",
+    "degradationRecoveryFrameCount",
+    "roiPausedFrameCount",
 ];
 
 export const DEFAULT_MOTION_METRIC_THRESHOLDS: Record<MotionMetricKey, MotionMetricThreshold> = {
@@ -148,6 +158,11 @@ export const DEFAULT_MOTION_METRIC_THRESHOLDS: Record<MotionMetricKey, MotionMet
     semanticFallbackFrameCount: { pass: 30, warn: 120, fail: 240 },
     intentCooldownSuppressionCount: { pass: 0, warn: 20, fail: 60 },
     intentInvalidFrameCount: { pass: 0, warn: 1, fail: 3 },
+    trackerBudgetOverrunFrameCount: { pass: 0, warn: 30, fail: 90 },
+    trackerDroppedFrameCount: { pass: 0, warn: 15, fail: 60 },
+    degradationStageFrameCount: { pass: 0, warn: 45, fail: 150 },
+    degradationRecoveryFrameCount: { pass: 0, warn: 60, fail: 180 },
+    roiPausedFrameCount: { pass: 0, warn: 60, fail: 180 },
 };
 
 const METRIC_DEFINITIONS: Record<
@@ -176,7 +191,25 @@ const METRIC_DEFINITIONS: Record<
     semanticFallbackFrameCount: { unit: "count", direction: "lower_is_better" },
     intentCooldownSuppressionCount: { unit: "count", direction: "lower_is_better" },
     intentInvalidFrameCount: { unit: "count", direction: "lower_is_better" },
+    trackerBudgetOverrunFrameCount: { unit: "count", direction: "lower_is_better" },
+    trackerDroppedFrameCount: { unit: "count", direction: "lower_is_better" },
+    degradationStageFrameCount: { unit: "count", direction: "lower_is_better" },
+    degradationRecoveryFrameCount: { unit: "count", direction: "lower_is_better" },
+    roiPausedFrameCount: { unit: "count", direction: "lower_is_better" },
 };
+
+const trackerBudgetStatusSchema = z.enum(["ok", "warn", "over_budget"]);
+const trackerDroppedFramesSchema = z.number().int().nonnegative();
+const trackerDegradationStageSchema = z.enum([
+    "full",
+    "gesture-reduced-fps",
+    "optional-pass-reduced-fps",
+    "roi-hand-paused",
+    "pose-reduced-fps",
+    "face-only",
+    "comfortable-idle",
+]);
+const trackerRoiPauseStateSchema = z.enum(["active", "hand-paused", "face-paused", "all-paused"]);
 
 const poseWristSchema = z
     .object({
@@ -415,6 +448,21 @@ function resolveThresholds(
         intentInvalidFrameCount:
             config.thresholds?.intentInvalidFrameCount ??
             DEFAULT_MOTION_METRIC_THRESHOLDS.intentInvalidFrameCount,
+        trackerBudgetOverrunFrameCount:
+            config.thresholds?.trackerBudgetOverrunFrameCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.trackerBudgetOverrunFrameCount,
+        trackerDroppedFrameCount:
+            config.thresholds?.trackerDroppedFrameCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.trackerDroppedFrameCount,
+        degradationStageFrameCount:
+            config.thresholds?.degradationStageFrameCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.degradationStageFrameCount,
+        degradationRecoveryFrameCount:
+            config.thresholds?.degradationRecoveryFrameCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.degradationRecoveryFrameCount,
+        roiPausedFrameCount:
+            config.thresholds?.roiPausedFrameCount ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.roiPausedFrameCount,
     };
 }
 
@@ -726,6 +774,207 @@ function calculateAddedLatencyMs(
         };
     }
     return { ok: true, value: percentile(samples, 0.95), sampleCount: samples.length };
+}
+
+function trackerMetricsRecord(frame: SincroMotionDebugFrame): Record<string, unknown> | undefined {
+    if (!isRecord(frame.metrics) || !isRecord(frame.metrics.tracker)) {
+        return undefined;
+    }
+    return frame.metrics.tracker;
+}
+
+function parseTrackerBudgetStatus(
+    frame: SincroMotionDebugFrame,
+): z.infer<typeof trackerBudgetStatusSchema> | undefined {
+    const tracker = trackerMetricsRecord(frame);
+    if (!isRecord(tracker?.budget)) {
+        return undefined;
+    }
+    const parsed = trackerBudgetStatusSchema.safeParse(tracker.budget.budgetStatus);
+    return parsed.success ? parsed.data : undefined;
+}
+
+function parseTrackerDroppedFrames(frame: SincroMotionDebugFrame): number | undefined {
+    const tracker = trackerMetricsRecord(frame);
+    const parsed = trackerDroppedFramesSchema.safeParse(tracker?.droppedFrames);
+    return parsed.success ? parsed.data : undefined;
+}
+
+function parseTrackerDegradationStage(
+    frame: SincroMotionDebugFrame,
+): z.infer<typeof trackerDegradationStageSchema> | undefined {
+    const tracker = trackerMetricsRecord(frame);
+    if (!isRecord(tracker?.degradationPolicy)) {
+        return undefined;
+    }
+    const parsed = trackerDegradationStageSchema.safeParse(tracker.degradationPolicy.stage);
+    return parsed.success ? parsed.data : undefined;
+}
+
+function parseTrackerLegacyDegradationState(frame: SincroMotionDebugFrame): string | undefined {
+    const tracker = trackerMetricsRecord(frame);
+    if (!isRecord(tracker?.budget) || !isRecord(tracker.budget.degradation)) {
+        return undefined;
+    }
+    const parsed = z.string().safeParse(tracker.budget.degradation.state);
+    return parsed.success ? parsed.data : undefined;
+}
+
+function parseTrackerDegradationRecovering(frame: SincroMotionDebugFrame): boolean | undefined {
+    const tracker = trackerMetricsRecord(frame);
+    if (!isRecord(tracker?.degradationPolicy)) {
+        return undefined;
+    }
+    const parsed = z.boolean().safeParse(tracker.degradationPolicy.recovering);
+    return parsed.success ? parsed.data : undefined;
+}
+
+function parseTrackerRoiPauseState(
+    frame: SincroMotionDebugFrame,
+): z.infer<typeof trackerRoiPauseStateSchema> | undefined {
+    const tracker = trackerMetricsRecord(frame);
+    if (!isRecord(tracker?.roi)) {
+        return undefined;
+    }
+    const parsed = trackerRoiPauseStateSchema.safeParse(tracker.roi.pauseState);
+    return parsed.success ? parsed.data : undefined;
+}
+
+function calculateTrackerBudgetOverrunFrameCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const budgetStatus = parseTrackerBudgetStatus(frame);
+        if (budgetStatus === undefined) {
+            continue;
+        }
+        sampleCount += 1;
+        if (budgetStatus === "over_budget") {
+            count += 1;
+        }
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "trackerBudgetOverrunFrameCount requires frame.metrics.tracker.budget.budgetStatus.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
+function calculateTrackerDroppedFrameCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    let previousTrackerDroppedFrames: number | undefined;
+    for (const frame of frames) {
+        const timestampDroppedFrames = frame.timestamp.droppedPresentedFrames;
+        const trackerDroppedFrames = parseTrackerDroppedFrames(frame);
+        let trackerDroppedFrameDelta: number | undefined;
+        if (trackerDroppedFrames !== undefined) {
+            trackerDroppedFrameDelta =
+                previousTrackerDroppedFrames === undefined
+                    ? 0
+                    : Math.max(0, trackerDroppedFrames - previousTrackerDroppedFrames);
+            previousTrackerDroppedFrames = trackerDroppedFrames;
+        }
+        if (timestampDroppedFrames === undefined && trackerDroppedFrameDelta === undefined) {
+            continue;
+        }
+        sampleCount += 1;
+        count += Math.max(timestampDroppedFrames ?? 0, trackerDroppedFrameDelta ?? 0);
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "trackerDroppedFrameCount requires frame.timestamp.droppedPresentedFrames or frame.metrics.tracker.droppedFrames.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
+function calculateDegradationStageFrameCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const policyStage = parseTrackerDegradationStage(frame);
+        const legacyState = parseTrackerLegacyDegradationState(frame);
+        if (policyStage === undefined && legacyState === undefined) {
+            continue;
+        }
+        sampleCount += 1;
+        if (
+            (policyStage !== undefined && policyStage !== "full") ||
+            (legacyState !== undefined && legacyState !== "full")
+        ) {
+            count += 1;
+        }
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "degradationStageFrameCount requires frame.metrics.tracker.degradationPolicy.stage or frame.metrics.tracker.budget.degradation.state.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
+function calculateDegradationRecoveryFrameCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const recovering = parseTrackerDegradationRecovering(frame);
+        if (recovering === undefined) {
+            continue;
+        }
+        sampleCount += 1;
+        if (recovering) {
+            count += 1;
+        }
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "degradationRecoveryFrameCount requires frame.metrics.tracker.degradationPolicy.recovering.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: count, sampleCount };
+}
+
+function calculateRoiPausedFrameCount(
+    frames: readonly SincroMotionDebugFrame[],
+): NumericMetricComputation {
+    let sampleCount = 0;
+    let count = 0;
+    for (const frame of frames) {
+        const pauseState = parseTrackerRoiPauseState(frame);
+        if (pauseState === undefined) {
+            continue;
+        }
+        sampleCount += 1;
+        if (pauseState !== "active") {
+            count += 1;
+        }
+    }
+    if (sampleCount === 0) {
+        return {
+            ok: false,
+            reason: "roiPausedFrameCount requires frame.metrics.tracker.roi.pauseState.",
+            sampleCount,
+        };
+    }
+    return { ok: true, value: count, sampleCount };
 }
 
 function percentile(samples: readonly number[], percentileValue: number): number {
@@ -1495,6 +1744,31 @@ export function calculateMotionMetricSummary(
             thresholds.intentInvalidFrameCount,
             calculateIntentInvalidFrameCount(frames),
         ),
+        trackerBudgetOverrunFrameCount: createMetricResult(
+            "trackerBudgetOverrunFrameCount",
+            thresholds.trackerBudgetOverrunFrameCount,
+            calculateTrackerBudgetOverrunFrameCount(frames),
+        ),
+        trackerDroppedFrameCount: createMetricResult(
+            "trackerDroppedFrameCount",
+            thresholds.trackerDroppedFrameCount,
+            calculateTrackerDroppedFrameCount(frames),
+        ),
+        degradationStageFrameCount: createMetricResult(
+            "degradationStageFrameCount",
+            thresholds.degradationStageFrameCount,
+            calculateDegradationStageFrameCount(frames),
+        ),
+        degradationRecoveryFrameCount: createMetricResult(
+            "degradationRecoveryFrameCount",
+            thresholds.degradationRecoveryFrameCount,
+            calculateDegradationRecoveryFrameCount(frames),
+        ),
+        roiPausedFrameCount: createMetricResult(
+            "roiPausedFrameCount",
+            thresholds.roiPausedFrameCount,
+            calculateRoiPausedFrameCount(frames),
+        ),
     };
 
     return {
@@ -1609,6 +1883,23 @@ export function compareMotionMetricSummaries(
             candidate,
         ),
         intentInvalidFrameCount: compareMetric("intentInvalidFrameCount", baseline, candidate),
+        trackerBudgetOverrunFrameCount: compareMetric(
+            "trackerBudgetOverrunFrameCount",
+            baseline,
+            candidate,
+        ),
+        trackerDroppedFrameCount: compareMetric("trackerDroppedFrameCount", baseline, candidate),
+        degradationStageFrameCount: compareMetric(
+            "degradationStageFrameCount",
+            baseline,
+            candidate,
+        ),
+        degradationRecoveryFrameCount: compareMetric(
+            "degradationRecoveryFrameCount",
+            baseline,
+            candidate,
+        ),
+        roiPausedFrameCount: compareMetric("roiPausedFrameCount", baseline, candidate),
     };
 }
 

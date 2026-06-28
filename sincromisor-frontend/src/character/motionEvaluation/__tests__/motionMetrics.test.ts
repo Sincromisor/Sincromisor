@@ -35,11 +35,16 @@ function createFrame(
         metrics?: unknown;
         temporal?: unknown;
         intent?: unknown;
+        droppedPresentedFrames?: number;
     },
 ): SincroMotionDebugFrame {
+    const timestamp =
+        options?.droppedPresentedFrames === undefined
+            ? { mediaTimeMs }
+            : { mediaTimeMs, droppedPresentedFrames: options.droppedPresentedFrames };
     return {
         frameIndex,
-        timestamp: { mediaTimeMs },
+        timestamp,
         video: {
             width: 1280,
             height: 720,
@@ -51,6 +56,64 @@ function createFrame(
         metrics: options?.metrics,
         temporal: options?.temporal,
         intent: options?.intent,
+    };
+}
+
+function createTrackerMetrics(options?: {
+    budgetStatus?: "ok" | "warn" | "over_budget";
+    droppedFrames?: number;
+    policyStage?:
+        | "full"
+        | "gesture-reduced-fps"
+        | "optional-pass-reduced-fps"
+        | "roi-hand-paused"
+        | "pose-reduced-fps"
+        | "face-only"
+        | "comfortable-idle";
+    legacyDegradationState?: string;
+    recovering?: boolean;
+    roiPauseState?: "active" | "hand-paused" | "face-paused" | "all-paused";
+}): unknown {
+    return {
+        tracker: {
+            droppedFrames: options?.droppedFrames,
+            budget:
+                options?.budgetStatus !== undefined || options?.legacyDegradationState !== undefined
+                    ? {
+                          budgetStatus: options?.budgetStatus,
+                          degradation:
+                              options?.legacyDegradationState === undefined
+                                  ? undefined
+                                  : { state: options.legacyDegradationState },
+                      }
+                    : undefined,
+            degradationPolicy:
+                options?.policyStage === undefined && options?.recovering === undefined
+                    ? undefined
+                    : {
+                          schemaVersion: "sincro.tracker-degradation-policy.v1",
+                          stage: options?.policyStage ?? "full",
+                          reasonCodes: [],
+                          effectiveCadence: {
+                              faceFps: 12,
+                              poseFps: 8,
+                              handFps: 4,
+                              faceRoiFps: 6,
+                              gestureFps: 3,
+                          },
+                          recovering: options?.recovering ?? false,
+                      },
+            roi:
+                options?.roiPauseState === undefined
+                    ? undefined
+                    : {
+                          pauseState: options.roiPauseState,
+                          fallbackCount: 0,
+                          skippedFrames: 0,
+                          consecutiveOverBudgetFrames: 0,
+                          reasonCodes: [],
+                      },
+        },
     };
 }
 
@@ -465,6 +528,152 @@ describe("calculateMotionMetricSummary", () => {
         });
     });
 
+    it("counts Phase 10 tracker degradation metrics from saved tracker stats", () => {
+        const summary = calculateMotionMetricSummary(
+            [
+                createFrame(0, 0, {
+                    droppedPresentedFrames: 0,
+                    metrics: createTrackerMetrics({
+                        budgetStatus: "ok",
+                        droppedFrames: 0,
+                        policyStage: "full",
+                        recovering: false,
+                        roiPauseState: "active",
+                    }),
+                }),
+                createFrame(1, 100, {
+                    droppedPresentedFrames: 1,
+                    metrics: createTrackerMetrics({
+                        budgetStatus: "warn",
+                        droppedFrames: 2,
+                        policyStage: "gesture-reduced-fps",
+                        recovering: false,
+                        roiPauseState: "hand-paused",
+                    }),
+                }),
+                createFrame(2, 200, {
+                    droppedPresentedFrames: 5,
+                    metrics: createTrackerMetrics({
+                        budgetStatus: "over_budget",
+                        droppedFrames: 3,
+                        policyStage: "full",
+                        recovering: true,
+                        roiPauseState: "active",
+                    }),
+                }),
+                createFrame(3, 300, {
+                    metrics: createTrackerMetrics({
+                        budgetStatus: "over_budget",
+                        droppedFrames: 7,
+                        legacyDegradationState: "face-only",
+                        roiPauseState: "face-paused",
+                    }),
+                }),
+            ],
+            CONFIG,
+        );
+
+        expect(summary.metrics.trackerBudgetOverrunFrameCount).toMatchObject({
+            value: 2,
+            unit: "count",
+            direction: "lower_is_better",
+            status: "warn",
+            sampleCount: 4,
+            threshold: { pass: 0, warn: 30, fail: 90 },
+        });
+        expect(summary.metrics.trackerDroppedFrameCount).toMatchObject({
+            value: 11,
+            unit: "count",
+            status: "warn",
+            sampleCount: 4,
+            threshold: { pass: 0, warn: 15, fail: 60 },
+        });
+        expect(summary.metrics.degradationStageFrameCount).toMatchObject({
+            value: 2,
+            unit: "count",
+            status: "warn",
+            sampleCount: 4,
+            threshold: { pass: 0, warn: 45, fail: 150 },
+        });
+        expect(summary.metrics.degradationRecoveryFrameCount).toMatchObject({
+            value: 1,
+            unit: "count",
+            status: "warn",
+            sampleCount: 3,
+            threshold: { pass: 0, warn: 60, fail: 180 },
+        });
+        expect(summary.metrics.roiPausedFrameCount).toMatchObject({
+            value: 2,
+            unit: "count",
+            status: "warn",
+            sampleCount: 4,
+            threshold: { pass: 0, warn: 60, fail: 180 },
+        });
+    });
+
+    it("uses the larger per-frame dropped source without double-counting tracker cumulative frames", () => {
+        const summary = calculateMotionMetricSummary(
+            [
+                createFrame(0, 0, {
+                    droppedPresentedFrames: 1,
+                    metrics: createTrackerMetrics({ droppedFrames: 10 }),
+                }),
+                createFrame(1, 100, {
+                    droppedPresentedFrames: 1,
+                    metrics: createTrackerMetrics({ droppedFrames: 12 }),
+                }),
+                createFrame(2, 200, {
+                    droppedPresentedFrames: 5,
+                    metrics: createTrackerMetrics({ droppedFrames: 15 }),
+                }),
+            ],
+            CONFIG,
+        );
+
+        expect(summary.metrics.trackerDroppedFrameCount).toMatchObject({
+            value: 8,
+            status: "warn",
+            sampleCount: 3,
+        });
+    });
+
+    it("uses legacy budget degradation state but keeps new policy-only metrics unavailable", () => {
+        const summary = calculateMotionMetricSummary(
+            [
+                createFrame(0, 0, {
+                    metrics: createTrackerMetrics({
+                        legacyDegradationState: "pose-reduced-fps",
+                    }),
+                }),
+            ],
+            CONFIG,
+        );
+
+        expect(summary.metrics.degradationStageFrameCount).toMatchObject({
+            value: 1,
+            status: "warn",
+            sampleCount: 1,
+        });
+        expect(summary.metrics.degradationRecoveryFrameCount).toMatchObject({
+            value: null,
+            status: "not_available",
+            severity: "warn",
+            sampleCount: 0,
+        });
+        expect(summary.metrics.roiPausedFrameCount).toMatchObject({
+            value: null,
+            status: "not_available",
+            severity: "warn",
+            sampleCount: 0,
+        });
+        expect(summary.metrics.trackerBudgetOverrunFrameCount).toMatchObject({
+            value: null,
+            status: "not_available",
+            severity: "warn",
+            sampleCount: 0,
+        });
+    });
+
     it("counts side swaps only when both wrist confidences are above 0.5", () => {
         const summary = calculateMotionMetricSummary(
             [
@@ -777,8 +986,14 @@ describe("compareMotionMetricSummaries", () => {
     it("reports regressed when candidate moves in the worse direction", () => {
         const baseline = calculateMotionMetricSummary(
             [
-                createFrame(0, 0, { solver: createPoseRetarget() }),
-                createFrame(1, 100, { solver: createPoseRetarget() }),
+                createFrame(0, 0, {
+                    solver: createPoseRetarget(),
+                    metrics: createTrackerMetrics({ budgetStatus: "ok" }),
+                }),
+                createFrame(1, 100, {
+                    solver: createPoseRetarget(),
+                    metrics: createTrackerMetrics({ budgetStatus: "ok" }),
+                }),
             ],
             CONFIG,
         );
@@ -786,9 +1001,11 @@ describe("compareMotionMetricSummaries", () => {
             [
                 createFrame(0, 0, {
                     solver: createPoseRetarget({ leftJointLimited: true }),
+                    metrics: createTrackerMetrics({ budgetStatus: "over_budget" }),
                 }),
                 createFrame(1, 100, {
                     solver: createPoseRetarget({ rightTargetPushDistance: 0.1 }),
+                    metrics: createTrackerMetrics({ budgetStatus: "ok" }),
                 }),
             ],
             CONFIG,
@@ -802,5 +1019,13 @@ describe("compareMotionMetricSummaries", () => {
                 severityChanged: true,
             },
         );
+        expect(
+            compareMotionMetricSummaries(baseline, candidate).trackerBudgetOverrunFrameCount,
+        ).toMatchObject({
+            status: "regressed",
+            baselineValue: 0,
+            candidateValue: 1,
+            severityChanged: true,
+        });
     });
 });
