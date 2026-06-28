@@ -261,7 +261,11 @@ function isOverBudgetFrame(input: TrackerRuntimeDegradationPolicyInput): boolean
 }
 
 function isWithinBudgetFrame(input: TrackerRuntimeDegradationPolicyInput): boolean {
-    return input.budgetStatus === "ok" && (input.roi?.consecutiveOverBudgetFrames ?? 0) === 0;
+    return (
+        input.budgetStatus === "ok" &&
+        input.roi !== undefined &&
+        input.roi.consecutiveOverBudgetFrames === 0
+    );
 }
 
 function resolveNextStage(

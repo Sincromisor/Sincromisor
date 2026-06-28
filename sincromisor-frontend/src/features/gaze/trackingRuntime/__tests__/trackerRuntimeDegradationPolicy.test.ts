@@ -76,6 +76,27 @@ describe("TrackerRuntimeDegradationPolicyController", () => {
         });
     });
 
+    it("does not recover on ok budget status when ROI input is missing", () => {
+        const controller = new TrackerRuntimeDegradationPolicyController();
+        const profile = createProfile();
+        advanceOverBudget(controller, profile);
+        expect(controller.getState().stage).toBe("gesture-reduced-fps");
+
+        const decision = controller.update({
+            mediaTimeMs: 200,
+            profile,
+            budgetStatus: "ok",
+            poseDetected: true,
+            poseInferenceTimeMs: 1,
+        });
+
+        expect(decision.state).toMatchObject({
+            stage: "gesture-reduced-fps",
+            consecutiveOverBudgetFrames: 0,
+            consecutiveWithinBudgetFrames: 0,
+        });
+    });
+
     it("recovers in reverse order and gates face-only recovery on healthy pose", () => {
         const controller = new TrackerRuntimeDegradationPolicyController();
         const profile = createProfile();
