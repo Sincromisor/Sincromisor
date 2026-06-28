@@ -1,12 +1,15 @@
 import type { ReliabilityMap } from "../reliability/reliabilityMap";
+import type { TemporalArmState } from "../temporal/temporalUpperBodyState";
 import type {
     ArmSide,
     IntentCandidate,
+    MotionIntentEstimatorInput,
     NormalizedEstimatorConfig,
     SideFrameContext,
     SideMemory,
     TimedArmIntent,
 } from "./motionIntentEstimatorTypes";
+import { calculateTorsoConfidence } from "./motionIntentGlobalDetectors";
 import type { MotionIntentWarningCode } from "./motionIntentState";
 
 export const GESTURE_INTENT_MAP: Record<string, TimedArmIntent | undefined> = {
@@ -113,6 +116,19 @@ export function createMotionCandidate(
         gestureCandidate ??
         createNearFaceCandidate(ctx, config)
     );
+}
+
+export function detectMotionFallbackCandidate(
+    input: MotionIntentEstimatorInput,
+    config: NormalizedEstimatorConfig,
+): boolean {
+    const torsoConfidence = calculateTorsoConfidence(input);
+    const leftLow = isArmLostOrLow(input.temporal.arms.left, config.thresholds.fallbackConfidence);
+    const rightLow = isArmLostOrLow(
+        input.temporal.arms.right,
+        config.thresholds.fallbackConfidence,
+    );
+    return leftLow && rightLow && torsoConfidence < config.thresholds.fallbackConfidence;
 }
 
 function createGestureCandidate(
@@ -236,4 +252,8 @@ function countAlternations(samples: readonly { sign: -1 | 1 }[]): number {
         }
     }
     return alternations;
+}
+
+function isArmLostOrLow(arm: TemporalArmState, threshold: number): boolean {
+    return arm.state === "lost" || arm.confidence < threshold;
 }
