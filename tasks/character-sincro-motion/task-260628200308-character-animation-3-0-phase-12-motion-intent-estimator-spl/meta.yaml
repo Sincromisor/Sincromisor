@@ -1,0 +1,14 @@
+id: task-260628200308-character-animation-3-0-phase-12-motion-intent-estimator-spl
+title: character animation 3.0 phase 12 motion intent estimator split
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260628200308-character-animation-3-0-phase-12-code-structure-guard
+superseded_by: null
+review: APPROVED
+reviewed_sha: e490f2df148537bb839d1dc5fbad49f0af26e673
+verdict: null
+attempts: 0
+created_at: 2026-06-28
+closed_at: null
+legacy_ids: []

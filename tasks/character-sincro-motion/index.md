@@ -77,7 +77,17 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 73 件）
+## タスク一覧（自動生成 / 全 78 件）
+
+### open（未完） — 5 件
+
+| タスク                                                                                                                                                                     | タイトル                                                           | 判定 | 依存                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [task-260628200308-character-animation-3-0-phase-12-code-structure-guard](./task-260628200308-character-animation-3-0-phase-12-code-structure-guard/task.md)               | character animation 3.0 phase 12 code structure guard              | —    | —                                                                                                                                                           |
+| [task-260628200308-character-animation-3-0-phase-12-motion-debug-app-controller](./task-260628200308-character-animation-3-0-phase-12-motion-debug-app-controller/task.md) | character animation 3.0 phase 12 motion debug app controller split | —    | `task-260628200308-character-animation-3-0-phase-12-code-structure-guard`, `task-260628200308-character-animation-3-0-phase-12-tracker-runtime-facade-spli` |
+| [task-260628200308-character-animation-3-0-phase-12-motion-intent-estimator-spl](./task-260628200308-character-animation-3-0-phase-12-motion-intent-estimator-spl/task.md) | character animation 3.0 phase 12 motion intent estimator split     | —    | `task-260628200308-character-animation-3-0-phase-12-code-structure-guard`                                                                                   |
+| [task-260628200308-character-animation-3-0-phase-12-motion-metrics-module-split](./task-260628200308-character-animation-3-0-phase-12-motion-metrics-module-split/task.md) | character animation 3.0 phase 12 motion metrics module split       | —    | `task-260628200308-character-animation-3-0-phase-12-code-structure-guard`                                                                                   |
+| [task-260628200308-character-animation-3-0-phase-12-tracker-runtime-facade-spli](./task-260628200308-character-animation-3-0-phase-12-tracker-runtime-facade-spli/task.md) | character animation 3.0 phase 12 tracker runtime facade split      | —    | `task-260628200308-character-animation-3-0-phase-12-code-structure-guard`                                                                                   |
 
 ### done（完了） — 73 件
 
