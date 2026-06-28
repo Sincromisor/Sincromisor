@@ -703,6 +703,85 @@ describe("createMotionDebugViewerSnapshot", () => {
         expect(viewer.metrics?.metrics.neutralJitter.status).toBe("not_available");
     });
 
+    it("projects Phase 10 degradation metric results into the metrics layer JSON", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const summary = calculateMotionMetricSummary(
+            [
+                {
+                    frameIndex: 0,
+                    timestamp: {
+                        mediaTimeMs: 0,
+                        droppedPresentedFrames: 2,
+                    },
+                    video: {
+                        width: 1280,
+                        height: 720,
+                    },
+                    metrics: {
+                        tracker: {
+                            droppedFrames: 0,
+                            budget: {
+                                budgetStatus: "over_budget",
+                                degradation: {
+                                    state: "full",
+                                },
+                            },
+                        },
+                    },
+                },
+            ],
+            {
+                generatedAtIso: "2026-06-23T12:02:00.000Z",
+                thresholdVersion: "initial-v1",
+            },
+        );
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "metrics",
+            selectedLayer: "metrics",
+            liveSnapshot,
+            replayState: {
+                status: "idle",
+                frameCount: 0,
+                currentFrameIndex: 0,
+            },
+            metrics: summary,
+        });
+
+        expect(viewer.layers.metrics.status).toBe("available");
+        expect(viewer.layers.metrics.value).toMatchObject({
+            metrics: {
+                trackerBudgetOverrunFrameCount: {
+                    value: 1,
+                    severity: "warn",
+                    threshold: { pass: 0, warn: 30, fail: 90 },
+                },
+                trackerDroppedFrameCount: {
+                    value: 2,
+                    severity: "warn",
+                    threshold: { pass: 0, warn: 15, fail: 60 },
+                },
+                degradationStageFrameCount: {
+                    value: 0,
+                    severity: "pass",
+                    threshold: { pass: 0, warn: 45, fail: 150 },
+                },
+                degradationRecoveryFrameCount: {
+                    value: null,
+                    severity: "warn",
+                    unavailableReason:
+                        "degradationRecoveryFrameCount requires frame.metrics.tracker.degradationPolicy.recovering.",
+                },
+                roiPausedFrameCount: {
+                    value: null,
+                    severity: "warn",
+                    unavailableReason:
+                        "roiPausedFrameCount requires frame.metrics.tracker.roi.pauseState.",
+                },
+            },
+        });
+    });
+
     it("does not mark empty recorded layer objects as available", () => {
         const liveSnapshot = createLiveSnapshot();
         const viewer = createMotionDebugViewerSnapshot({
