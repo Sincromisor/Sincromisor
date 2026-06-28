@@ -1,18 +1,16 @@
 # Review: task-260628231541-frontend-typescript-comment-policy-audit-checklist
 
 ## 判定
-
 APPROVED
 
-Blocking となる Critical / High はない。コメント品質の必須対象、最低限含める内容、省略条件、禁止コメント、同期先が task.md 上で一意に定義されており、実装に進めてよい。
+Blocking となる Critical / High はない。受け入れ条件は対象ファイル、追加する規約内容、同期先、スコープ外、検証コマンドまで具体化されており、実装者の設計判断で成果物が変わる未確定事項は残っていない。
 
 ## 指摘事項
-
 なし
 
 ## 実装者への申し送り
-
-- `documents/rules/coding-ts.md:54`、`:133`、`:152`、`documents/rules/code-structure.md:30`、`tasks/AUTHORING-CHECKLIST.md:15` 以降、`AGENTS.md` のコメント方針という前提は現状と整合している。
-- `documents/rules/coding-ts.md` は現状 `## 12. その他の負債抑制ルール` までなので、新節は task.md どおり `## 13. ソースコードコメント品質` として末尾追加する。
-- `tasks/AUTHORING-CHECKLIST.md` は reviewer の正本なので、comment acceptance 欠落が High になり得る条件を、既存の 6 観点と矛盾しない形で追加する。
-- `code-structure.md` との整合では、コメントを責務分割の代替にしないことを明示し、`コメントで段落分けしたくなったら関数抽出を検討する` 方針を弱めない。
+- `documents/rules/coding-ts.md` は現状 `## 12. その他の負債抑制ルール` までなので、task.md どおり `## 13. ソースコードコメント品質` を末尾追加すれば既存節番号を揺らさず実装できる。
+- `documents/rules/coding-ts.md:54`、`:133`、`:152` はそれぞれ該当節の入口で、実際の catch / TODO / コメント言語ルールは同節内の近接行にある。編集時は節単位の文脈を確認すること。
+- `tasks/AUTHORING-CHECKLIST.md` は task-reviewer 評価観点の正本なので、TypeScript production code 変更タスクに comment audit / comment acceptance を受け入れ条件として要求する、というレビュー基準まで読み取れる書き方にする。
+- `AGENTS.md` のコメント方針を弱めず、詳細正本を `documents/rules/coding-ts.md` の新節へ誘導する。JSDoc / TSDoc、失敗条件、副作用、TODO 必須情報、stale comment 更新、命名・分割・型による明確化の方針は維持する。
+- `documents/rules/code-structure.md:30` の「コメントで段落分けしたくなったら関数抽出を検討する」方針と矛盾しないよう、コメントは責務分割の代替ではなく、境界と理由を伝える補助だと明記する。
