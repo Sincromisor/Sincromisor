@@ -77,7 +77,16 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 69 件）
+## タスク一覧（自動生成 / 全 73 件）
+
+### open（未完） — 4 件
+
+| タスク                                                                                                                                                                 | タイトル                                                   | 判定 | 依存                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [task-260628161547-character-animation-3-0-phase-11-post-processing-contract](./task-260628161547-character-animation-3-0-phase-11-post-processing-contract/task.md)   | character animation 3.0 phase 11 post-processing contract  | —    | `task-260627234129-character-animation-3-0-phase-10-fixed-motion-qa-regression-`                                                                          |
+| [task-260628161551-character-animation-3-0-phase-11-replay-failure-mining](./task-260628161551-character-animation-3-0-phase-11-replay-failure-mining/task.md)         | character animation 3.0 phase 11 replay failure mining     | —    | `task-260628161547-character-animation-3-0-phase-11-post-processing-contract`                                                                             |
+| [task-260628161554-character-animation-3-0-phase-11-constrained-ik-refinement](./task-260628161554-character-animation-3-0-phase-11-constrained-ik-refinement/task.md) | character animation 3.0 phase 11 constrained ik refinement | —    | `task-260628161551-character-animation-3-0-phase-11-replay-failure-mining`                                                                                |
+| [task-260628161558-character-animation-3-0-phase-11-sequence-classifiers](./task-260628161558-character-animation-3-0-phase-11-sequence-classifiers/task.md)           | character animation 3.0 phase 11 sequence classifiers      | —    | `task-260628161547-character-animation-3-0-phase-11-post-processing-contract`, `task-260628161551-character-animation-3-0-phase-11-replay-failure-mining` |
 
 ### done（完了） — 69 件
 
