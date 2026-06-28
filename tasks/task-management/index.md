@@ -9,7 +9,13 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 13 件）
+## タスク一覧（自動生成 / 全 14 件）
+
+### open（未完） — 1 件
+
+| タスク                                                                                                               | タイトル                          | 判定 | 依存                                                                   |
+| -------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ---- | ---------------------------------------------------------------------- |
+| [task-260628231541-task-agents-comment-quality-gates](./task-260628231541-task-agents-comment-quality-gates/task.md) | task agents comment quality gates | —    | `task-260628231541-frontend-typescript-comment-policy-audit-checklist` |
 
 ### done（完了） — 13 件
 

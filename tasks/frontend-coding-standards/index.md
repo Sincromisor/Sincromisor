@@ -21,7 +21,13 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 10 件）
+## タスク一覧（自動生成 / 全 11 件）
+
+### open（未完） — 1 件
+
+| タスク                                                                                                                                                 | タイトル                                               | 判定 | 依存 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ---- | ---- |
+| [task-260628231541-frontend-typescript-comment-policy-audit-checklist](./task-260628231541-frontend-typescript-comment-policy-audit-checklist/task.md) | frontend TypeScript comment policy and audit checklist | —    | —    |
 
 ### done（完了） — 10 件
 
