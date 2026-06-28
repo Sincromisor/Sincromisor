@@ -1,3 +1,7 @@
+/**
+ * replay playback の timer cadence と step scheduling を管理する。
+ * 実 frame apply や parser は所有せず、timer cleanup により replay stop 後の callback 漏れを防ぐ。
+ */
 import type {
     MotionDebugReplayFrameResult,
     MotionDebugReplayState,

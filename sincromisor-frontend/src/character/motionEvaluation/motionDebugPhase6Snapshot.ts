@@ -1,3 +1,7 @@
+/**
+ * Phase 6 solver と final pose の motion-debug snapshot contract / parser を定義する。
+ * 保存値は plain object と finite number に限定し、VRM / Three.js runtime object や quaternion instance は schema 境界で受理しない。
+ */
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import { z } from "zod";
 import type { MinimalAvatarMotionProfile } from "../avatarProfile/minimalAvatarMotionProfile";

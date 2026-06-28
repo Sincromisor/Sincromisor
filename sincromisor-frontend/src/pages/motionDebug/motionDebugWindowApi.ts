@@ -1,3 +1,7 @@
+/**
+ * `window.__SINCRO_MOTION_DEBUG__` を install / replace する developer-only API 境界。
+ * 公開 surface は MotionDebugApi 型を正本にし、runtime object や private controller を window へ直接漏らさない。
+ */
 import type {
     MotionDebugApi,
     MotionDebugReplayMetricsResult,

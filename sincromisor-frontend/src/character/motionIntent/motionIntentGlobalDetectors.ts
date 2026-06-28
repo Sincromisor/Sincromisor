@@ -1,3 +1,7 @@
+/**
+ * clap-like、guarded、side-swap suspect など左右横断の intent candidate を判定する。
+ * 左右 assignment warning は短時間 semantic を保持するための入力であり、Hand / Pose snapshot 自体の修正は行わない。
+ */
 import type {
     SincroHandMotionSnapshot,
     SincroHandSideSnapshot,

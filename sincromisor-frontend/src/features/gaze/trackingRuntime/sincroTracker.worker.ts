@@ -1,3 +1,7 @@
+/**
+ * Tracker Worker 内で Face / Pose / Hand tracker を所有し、detect message を低次元 snapshot へ変換する境界。
+ * Worker は MediaPipe instance と最新 pose だけを保持し、UI 更新、VRM 適用、motion-debug recorder の責務を持たない。
+ */
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";

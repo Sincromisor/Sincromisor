@@ -1,3 +1,7 @@
+/**
+ * main thread から Tracker Worker の初期化、detect、stop、dispose を直列化する client lifecycle 境界。
+ * Worker failure は caller が main-thread fallback へ落とせるよう status / error message に変換し、DOM や tracker instance は保持しない。
+ */
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";

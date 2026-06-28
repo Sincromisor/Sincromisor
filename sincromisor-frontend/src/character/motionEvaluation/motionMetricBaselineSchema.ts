@@ -1,3 +1,7 @@
+/**
+ * Motion QA baseline JSON の parser 境界。
+ * 未知 metric key や値域外 threshold は reject し、旧 baseline の missing metric は comparison / summary 側で not_available として補完する。
+ */
 import { z } from "zod";
 import {
     DEFAULT_MOTION_METRIC_THRESHOLDS,

@@ -1,3 +1,7 @@
+/**
+ * motion-debug canvas / video overlay の screenshot capture を担当する DOM utility。
+ * capture は developer 操作用の一時 artifact であり、motion-debug NDJSON recording contract には影響しない。
+ */
 export class MotionDebugFrameCapture {
     private lastCapturedAtMs?: number;
 

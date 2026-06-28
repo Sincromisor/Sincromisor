@@ -1,3 +1,7 @@
+/**
+ * P0 fixture id、metric key、default threshold、metric definition を定義する。
+ * threshold は regression severity の公開挙動に直結するため、変更時は motion design の QA regression と baseline tests を確認する。
+ */
 import type {
     MotionMetricConfig,
     MotionMetricDirection,

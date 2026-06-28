@@ -1,3 +1,7 @@
+/**
+ * frame ごとの Face / Pose / Hand / Face ROI 実行計画を作る純粋 helper。
+ * cadence、policy stage、ROI pause、pose stale を合成するだけで、MediaPipe 実行や callback publish は行わない。
+ */
 import {
     shouldRunTrackerFaceRoiInference,
     shouldRunTrackerHandInference,

@@ -1,3 +1,7 @@
+/**
+ * CameraQualityScore 用に pose snapshot の画面内配置を評価する純粋計算を集約する。
+ * 座標は full-frame normalized image coordinate として読み、境界 margin の調整時は tracking design の camera quality component と motion-debug 表示を確認する。
+ */
 import type {
     SincroPoseMotionSnapshot,
     SincroPoseTargetPointSnapshot,

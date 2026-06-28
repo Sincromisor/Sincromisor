@@ -1,3 +1,7 @@
+/**
+ * ROI 実行可否と skipped / paused snapshot を解決する純粋 helper 群。
+ * Pose stale、ROI pause、fallback の reason code を stats / motion-debug に残し、crop object や MediaPipe raw result は扱わない。
+ */
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import { createSincroHandFallbackSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";

@@ -1,3 +1,7 @@
+/**
+ * main-thread stats、performance budget、degradation policy、ROI stats を Worker stats 互換へ合成する。
+ * 既存 effective fps の意味を保ったまま optional ROI / policy field を追加観測として載せる境界。
+ */
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type {

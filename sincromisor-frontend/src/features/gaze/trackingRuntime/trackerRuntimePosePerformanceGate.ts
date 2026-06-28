@@ -1,3 +1,7 @@
+/**
+ * Pose 推論コストから face-only fallback を判断する performance gate。
+ * 連続失敗と recovery の hysteresis は一時的な spike で姿勢が点滅しないためのもので、threshold 変更時は tracking design と motion-debug 観測を確認する。
+ */
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type {
     TrackerPerformanceReasonCode,

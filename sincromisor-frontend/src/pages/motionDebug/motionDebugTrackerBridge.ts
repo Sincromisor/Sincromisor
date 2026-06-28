@@ -1,3 +1,7 @@
+/**
+ * TrackerRuntime callback から retarget、reliability、temporal、intent、recording を接続する bridge。
+ * tracker runtime / Worker は canonical 生成や recorder を所有しないため、この module が motion-debug page 側の同期点になる。
+ */
 import type { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
 import { createPoseReliabilityMap } from "../../character/reliability/poseReliabilityEstimator";
 import {

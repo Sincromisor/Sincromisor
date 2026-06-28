@@ -1,3 +1,7 @@
+/**
+ * motion-debug recording の manifest と frame index を所有する recorder。
+ * recordFrame は caller が解決した canonical / reliability / temporal / intent を保存するだけで、tracker runtime や DOM download の責務を持たない。
+ */
 import {
     parseMotionDebugLogLines,
     type SincroMotionDebugFrame,

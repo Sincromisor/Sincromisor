@@ -1,3 +1,7 @@
+/**
+ * temporal recovery / final pose の jump angle を測る calculator。
+ * quaternion 差分は保存済み final pose layer から読むだけで、runtime pose や VRM object は参照しない。
+ */
 import { Quaternion } from "three/src/math/Quaternion.js";
 import type { SincroMotionDebugFrame } from "./motionDebugLogSchema";
 import {

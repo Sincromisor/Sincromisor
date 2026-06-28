@@ -1,3 +1,7 @@
+/**
+ * Worker unavailable / failure 時に main thread で Face / Pose / Hand / Face ROI 推論を進める pipeline。
+ * 低 fps clamp と ROI budget を前提に snapshot callback だけを publish し、Worker message contract や DOM lifecycle は扱わない。
+ */
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";

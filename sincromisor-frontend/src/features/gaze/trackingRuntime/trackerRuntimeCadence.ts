@@ -1,3 +1,7 @@
+/**
+ * Face / Pose / Hand / Face ROI の推論 cadence 判定を純粋関数として集約する。
+ * 時刻基準は mediaTimeMs で、fps や last run の扱いを変える場合は tracking design の cadence と focused trackerRuntime tests を確認する。
+ */
 type TrackerInferenceCadenceOptions = {
     lastInferenceAtMs: number;
     targetInferenceFps: number;

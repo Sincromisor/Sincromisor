@@ -1,3 +1,7 @@
+/**
+ * `sincro.motion-debug-log.v1` の NDJSON frame / manifest parser 境界。
+ * 未知 optional slot は replay / viewer 側で個別 parse できるよう保持し、未知 schemaVersion や frame record でない値は parse error として reject する。
+ */
 import { z } from "zod";
 
 export const SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION = "sincro.motion-debug-log.v1" as const;

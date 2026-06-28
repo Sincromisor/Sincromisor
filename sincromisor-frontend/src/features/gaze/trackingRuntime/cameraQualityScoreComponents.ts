@@ -1,3 +1,7 @@
+/**
+ * camera quality の component score と reason code を決める heuristic を集約する。
+ * threshold を変える場合は tracking design の camera quality component と motion-debug の guide 表示を同時に確認する。
+ */
 import type {
     SincroPoseMotionSnapshot,
     SincroPoseTargetPointSnapshot,

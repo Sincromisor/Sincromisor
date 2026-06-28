@@ -1,3 +1,7 @@
+/**
+ * motion-debug recorder の config、state、manifest / frame input、Blob result の型境界。
+ * 圧縮方式は出力 transport の違いだけを表し、NDJSON schemaVersion や frame shape はここでは変えない。
+ */
 import type { SincroMotionDebugFrame, SincroMotionDebugLogManifest } from "./motionDebugLogSchema";
 
 export type MotionDebugRecorderCompression = "none" | "gzip" | "brotli";

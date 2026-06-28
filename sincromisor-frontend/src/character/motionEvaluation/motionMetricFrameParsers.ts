@@ -1,3 +1,7 @@
+/**
+ * motion metric calculator が読む replay frame slot を個別 parser で正規化する境界。
+ * invalid optional layer は recording 全体の失敗にせず、layer 単位の parse error / undefined として summary に渡す。
+ */
 import { z } from "zod";
 import { type MotionIntentState, parseMotionIntentState } from "../motionIntent/motionIntentState";
 import {

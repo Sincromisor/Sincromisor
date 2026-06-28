@@ -1,3 +1,7 @@
+/**
+ * ordered degradation policy の decision を runtime の effective cadence / ROI pause state へ反映する変換層。
+ * policy stage の意味は stats と motion-debug に露出するため、stage 名や停止対象を変更する場合は tracking design の ordered stage を確認する。
+ */
 import type { SincroTrackerRoiPauseState } from "./sincroTrackerWorkerTypes";
 import type {
     TrackerRuntimeDegradationPolicyCadence,

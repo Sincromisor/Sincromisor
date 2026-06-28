@@ -1,3 +1,7 @@
+/**
+ * Tracker Worker と main thread の postMessage contract を定義する。
+ * ROI reason、degradation policy、budget report は debug / replay 観測用の plain object に限定し、MediaPipe raw result や transferable object を保存 contract に含めない。
+ */
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";

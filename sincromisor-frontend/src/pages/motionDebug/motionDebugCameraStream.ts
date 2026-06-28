@@ -1,3 +1,7 @@
+/**
+ * motion-debug 用 getUserMedia constraints と camera stream request の境界。
+ * device id / label は保存 contract に持ち込まず、ideal constraint だけで browser に要求する。
+ */
 import {
     resolveTrackerRuntimePerformanceProfile,
     type TrackerRuntimePerformanceProfile,

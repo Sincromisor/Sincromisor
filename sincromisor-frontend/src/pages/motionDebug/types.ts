@@ -1,3 +1,7 @@
+/**
+ * motion-debug page、viewer、window API、snapshot layer の developer-visible 型を定義する。
+ * 公開 API は手動調整と Playwright 検証用であり、raw MediaPipe result、VRM instance、browser permission object を保存 contract に含めない。
+ */
 import type {
     CanonicalUpperBodyState,
     CanonicalUpperBodyStateParseError,

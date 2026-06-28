@@ -1,3 +1,7 @@
+/**
+ * `sincro.camera-quality.v1` の保存 contract と reason / threshold 定数を定義する。
+ * 保存値は finite number、固定 enum、plain object に限定し、raw device id / label / permission object は contract に含めない。
+ */
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { TrackerVideoFrameTiming } from "./trackerRuntimeTypes";
 

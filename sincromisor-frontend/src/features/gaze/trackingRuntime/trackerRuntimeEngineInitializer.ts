@@ -1,3 +1,7 @@
+/**
+ * Face / Pose / Hand tracker の MediaPipe 初期化を TrackerRuntime から分離する lifecycle 境界。
+ * 初期化例外は user-facing fallback 判断に使える短い detail へ変換し、callback publish や DOM cleanup は caller に残す。
+ */
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import type { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
 import type { SincroHandTracker } from "../handTracking/sincroHandTracker";

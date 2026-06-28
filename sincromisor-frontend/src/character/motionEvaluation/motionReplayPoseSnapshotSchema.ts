@@ -1,3 +1,7 @@
+/**
+ * 旧 log / replay 境界で pose snapshot slot を緩く検証する parser。
+ * 必須の低次元 field が無い値は undefined に落とし、runtime object や raw MediaPipe result は pose snapshot として受理しない。
+ */
 import { z } from "zod";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 

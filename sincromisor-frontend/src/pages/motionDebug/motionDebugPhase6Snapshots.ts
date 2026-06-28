@@ -1,3 +1,7 @@
+/**
+ * live runtime から Phase 6 solver / final pose debug snapshot を作る bridge。
+ * IK solver や composer を再構成せず、既存 runtime snapshot と avatar profile から保存可能な debug layer を生成する。
+ */
 import {
     createMotionDebugFinalPoseSnapshot,
     createMotionDebugPhase6SolverSnapshot,

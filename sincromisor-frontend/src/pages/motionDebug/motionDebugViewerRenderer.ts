@@ -1,3 +1,7 @@
+/**
+ * MotionDebugViewerSnapshot を DOM 表示へ反映する renderer。
+ * JSON 表示は developer-facing debug surface であり、snapshot の parse / metric 計算や state mutation は行わない。
+ */
 import { MOTION_METRIC_KEYS } from "../../character/motionEvaluation/motionMetrics";
 import { requireElement } from "./dom";
 import { MOTION_DEBUG_LAYER_KEYS, MOTION_DEBUG_VIEWER_MODES } from "./motionDebugViewerModel";

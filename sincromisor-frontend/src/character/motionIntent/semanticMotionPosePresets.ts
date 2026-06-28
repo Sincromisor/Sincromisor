@@ -1,3 +1,7 @@
+/**
+ * semantic intent ごとの authored pose preset と conflict suppression threshold を定義する。
+ * VRM bone rotation は preset 由来の低振幅 delta に限定し、threshold 調整時は motion design の semantic layer と motion-debug 表示を確認する。
+ */
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import { Euler } from "three/src/math/Euler.js";
 import { Quaternion } from "three/src/math/Quaternion.js";

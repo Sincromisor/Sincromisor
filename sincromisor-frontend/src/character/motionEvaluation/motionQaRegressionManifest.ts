@@ -1,3 +1,7 @@
+/**
+ * Motion QA fixture manifest の fixture 検証と log text 正規化を担当する。
+ * P0 fixture id subset と required-all 判定のため、fixture id の fallback を暗黙生成せず caller へ validation result を返す。
+ */
 import { MOTION_P0_FIXTURE_IDS, type MotionP0FixtureId } from "./motionMetrics";
 import type { MotionQaFixtureResult, MotionQaSubjectiveChecklistItem } from "./motionQaRegression";
 

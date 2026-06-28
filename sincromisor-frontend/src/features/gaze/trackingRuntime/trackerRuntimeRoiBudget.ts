@@ -1,3 +1,7 @@
+/**
+ * Hand / Face ROI optional pass の pause / recovery を管理する budget controller。
+ * ROI pause は camera と full-frame Face を止めない縮退であり、counter threshold を変える場合は tracking design の ROI budget と stats 表示を確認する。
+ */
 import type {
     SincroTrackerRoiPauseState,
     SincroTrackerRoiReasonCode,

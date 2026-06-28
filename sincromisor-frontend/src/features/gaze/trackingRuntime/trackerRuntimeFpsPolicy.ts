@@ -1,3 +1,7 @@
+/**
+ * main-thread fallback 時の Face / Pose / Hand / Face ROI target fps clamp を定義する。
+ * UI フリーズを避けるための safety limit であり、値を変える場合は tracking design の fallback fps と performance budget tests を確認する。
+ */
 export type TrackerRuntimeFpsTargets = {
     targetInferenceFps: number;
     targetPoseInferenceFps: number;

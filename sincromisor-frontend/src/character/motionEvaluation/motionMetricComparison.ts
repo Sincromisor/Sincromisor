@@ -1,3 +1,7 @@
+/**
+ * candidate summary と baseline summary を metric key 単位で比較する。
+ * regression 判定は threshold と direction を正本にし、保存済み baseline 自体の parse / fallback は別 module に残す。
+ */
 import type {
     MotionMetricComparison,
     MotionMetricKey,

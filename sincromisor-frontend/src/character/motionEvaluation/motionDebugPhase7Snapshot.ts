@@ -1,3 +1,7 @@
+/**
+ * Phase 7 avatar profile / calibration snapshot の作成と parser 境界。
+ * profile / calibration の invalid slot は debug 表示の parse error に留め、recording 全体の replay 互換性は壊さない。
+ */
 import { z } from "zod";
 import {
     type AvatarMotionProfile,

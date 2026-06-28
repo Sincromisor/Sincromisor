@@ -1,3 +1,7 @@
+/**
+ * requestVideoFrameCallback、RAF、timer fallback を同じ TrackerVideoFrameTiming contract へ正規化する clock。
+ * rVFC 固有値が取れない環境では undefined を保持し、推論側が clock source を観測できるようにする。
+ */
 import type { TrackerVideoFrameTiming } from "./trackerRuntimeTypes";
 
 const TIMER_FALLBACK_INTERVAL_MS = 200;

@@ -1,3 +1,7 @@
+/**
+ * TrackerRuntime の callback、cadence 既定値、video frame timing、mutable state contract を定義する。
+ * 時刻は mediaTimeMs / performanceMs を区別し、rVFC 非対応環境では欠損 field を undefined のまま保持する。
+ */
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";

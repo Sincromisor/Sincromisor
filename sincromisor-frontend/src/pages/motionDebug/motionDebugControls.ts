@@ -1,3 +1,7 @@
+/**
+ * motion-debug の form / button / viewer 操作を MotionDebugApp へ橋渡しする DOM controller。
+ * business logic や replay parse は保持せず、event listener cleanup を page lifecycle に合わせる。
+ */
 import type {
     SincroPoseArmIkMode,
     SincroPoseRetargetConfig,

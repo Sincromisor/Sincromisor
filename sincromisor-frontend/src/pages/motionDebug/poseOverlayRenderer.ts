@@ -1,3 +1,7 @@
+/**
+ * camera preview 上へ Sincro pose target overlay を描画する renderer。
+ * 座標は normalized pose snapshot から canvas pixel へ写すだけで、retarget / IK / reliability 判定は行わない。
+ */
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { MotionDebugPoseTarget } from "./types";
 

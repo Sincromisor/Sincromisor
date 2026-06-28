@@ -1,3 +1,7 @@
+/**
+ * `sincro.tracker-performance-budget.v1` の budget report を生成する。
+ * warn / over_budget は Worker round trip と pose / ROI cost の観測用 heuristic で、fallback stage の直接適用は degradation policy 側に閉じる。
+ */
 export type TrackerRuntimeDegradationState =
     | "full"
     | "main-thread-low-fps"

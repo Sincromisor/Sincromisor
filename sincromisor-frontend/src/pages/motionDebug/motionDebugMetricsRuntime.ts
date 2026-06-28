@@ -1,3 +1,7 @@
+/**
+ * loaded recording から metric summary、QA regression、optimization candidate report を実行する runtime。
+ * 外部 telemetry、model training、runtime correction は行わず、motion evaluation module の結果を UI / window API へ返す。
+ */
 import type { SincroMotionDebugFrame } from "../../character/motionEvaluation/motionDebugLogSchema";
 import {
     calculateMotionMetricSummary,

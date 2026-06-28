@@ -1,3 +1,7 @@
+/**
+ * motion-debug snapshot viewer の layer / mode と表示用 snapshot model を作る。
+ * schema invalid、未記録、未実装、未計算を区別し、parser 失敗を recording 全体の失敗にしない。
+ */
 import {
     type CanonicalUpperBodyState,
     parseCanonicalUpperBodyState,

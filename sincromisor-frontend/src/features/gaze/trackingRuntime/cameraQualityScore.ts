@@ -1,3 +1,7 @@
+/**
+ * pose / camera / frame timing から `sincro.camera-quality.v1` を生成する境界。
+ * 出力は replay / motion-debug に保存できる plain object に限定し、MediaStreamTrack や browser permission object は保持しない。
+ */
 import { createCameraQualityGuideMessages } from "./cameraQualityGuideMessages";
 import {
     cameraQualityComponentNames,

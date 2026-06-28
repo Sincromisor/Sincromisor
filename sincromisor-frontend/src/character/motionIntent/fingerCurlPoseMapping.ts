@@ -1,3 +1,7 @@
+/**
+ * finger curl group を VRM humanoid bone quaternion へ写す mapping helper。
+ * profile の curl distribution と splay limit を尊重し、per-finger raw landmark rotation は生成しない。
+ */
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
