@@ -77,7 +77,13 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 78 件）
+## タスク一覧（自動生成 / 全 79 件）
+
+### open（未完） — 1 件
+
+| タスク                                                                                                                                                                   | タイトル                                                    | 判定 | 依存                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------- |
+| [task-260628231542-character-animation-3-0-phase-13-source-comment-remediation](./task-260628231542-character-animation-3-0-phase-13-source-comment-remediation/task.md) | character animation 3.0 phase 13 source comment remediation | —    | `task-260628231541-frontend-typescript-comment-policy-audit-checklist`, `task-260628231541-task-agents-comment-quality-gates` |
 
 ### done（完了） — 78 件
 
