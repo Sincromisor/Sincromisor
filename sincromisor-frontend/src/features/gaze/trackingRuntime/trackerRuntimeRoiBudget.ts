@@ -28,6 +28,7 @@ const PAUSE_ORDER: SincroTrackerRoiPauseState[] = [
 
 export class TrackerRuntimeRoiBudgetController {
     private pauseState: SincroTrackerRoiPauseState = "active";
+    private policyPauseState?: SincroTrackerRoiPauseState;
     private fallbackCount = 0;
     private skippedFrames = 0;
     private consecutiveOverBudgetFrames = 0;
@@ -36,6 +37,7 @@ export class TrackerRuntimeRoiBudgetController {
 
     reset(): void {
         this.pauseState = "active";
+        this.policyPauseState = undefined;
         this.fallbackCount = 0;
         this.skippedFrames = 0;
         this.consecutiveOverBudgetFrames = 0;
@@ -44,15 +46,23 @@ export class TrackerRuntimeRoiBudgetController {
     }
 
     getPauseState(): SincroTrackerRoiPauseState {
-        return this.pauseState;
+        return this.resolveEffectivePauseState();
+    }
+
+    setPolicyPauseState(pauseState: SincroTrackerRoiPauseState | undefined): void {
+        this.policyPauseState = pauseState === "active" ? undefined : pauseState;
+        if (this.policyPauseState === "hand-paused") {
+            this.reasonCodes.add("hand_roi_paused");
+        }
     }
 
     handIsPaused(): boolean {
-        return this.pauseState !== "active";
+        return this.resolveEffectivePauseState() !== "active";
     }
 
     faceRoiIsPaused(): boolean {
-        return this.pauseState === "face-paused" || this.pauseState === "all-paused";
+        const pauseState = this.resolveEffectivePauseState();
+        return pauseState === "face-paused" || pauseState === "all-paused";
     }
 
     recordFrame(frame: TrackerRuntimeRoiBudgetFrame): SincroTrackerRoiStats {
@@ -70,7 +80,7 @@ export class TrackerRuntimeRoiBudgetController {
 
     getStats(): SincroTrackerRoiStats {
         return {
-            pauseState: this.pauseState,
+            pauseState: this.resolveEffectivePauseState(),
             fallbackCount: this.fallbackCount,
             skippedFrames: this.skippedFrames,
             consecutiveOverBudgetFrames: this.consecutiveOverBudgetFrames,
@@ -82,7 +92,12 @@ export class TrackerRuntimeRoiBudgetController {
         if (reasons.length === 0) {
             return;
         }
-        this.skippedFrames += 1;
+        const budgetSkippedReasons = reasons.filter(
+            (reason) => !(this.policyPauseState === "hand-paused" && reason === "hand_roi_paused"),
+        );
+        if (budgetSkippedReasons.length > 0) {
+            this.skippedFrames += 1;
+        }
         for (const reason of reasons) {
             this.reasonCodes.add(reason);
         }
@@ -120,6 +135,13 @@ export class TrackerRuntimeRoiBudgetController {
         this.pauseState = PAUSE_ORDER[Math.max(currentIndex - 1, 0)];
         this.consecutiveOverBudgetFrames = 0;
         this.consecutiveWithinBudgetFrames = 0;
+    }
+
+    private resolveEffectivePauseState(): SincroTrackerRoiPauseState {
+        const budgetIndex = PAUSE_ORDER.indexOf(this.pauseState);
+        const policyIndex =
+            this.policyPauseState === undefined ? 0 : PAUSE_ORDER.indexOf(this.policyPauseState);
+        return PAUSE_ORDER[Math.max(budgetIndex, policyIndex)];
     }
 }
 

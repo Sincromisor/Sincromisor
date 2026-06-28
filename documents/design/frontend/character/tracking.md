@@ -7,6 +7,7 @@
 - `SincroHandTracker` は Pose wrist 由来 ROI で HandLandmarker を実行し、palm / finger の低次元 snapshot だけを出力する。
 - Tracker runtime は camera track、video element、推論 loop、Worker fallback を所有し、UI 更新や VRM 適用は持たない。
 - Tracker runtime は performance budget report と degradation state を Debug Console / motion-debug に出し、Worker round trip、Worker 内推論、main-thread fallback を切り分ける。
+- Tracker runtime は ordered degradation policy v1 により、負荷上昇時の fps 低下、ROI pause、face-only / comfortable-idle 退避を固定順序で進める。既存 budget degradation state は互換のため維持し、詳細 stage は `SincroTrackerWorkerStats.degradationPolicy` に閉じる。
 - Phase 8 の Hand / Face ROI は Pose 起点の full-frame normalized coordinate contract として `roiTracking` に置き、MediaPipe 実行や ReliabilityMap 変換とは分ける。
 - Hand / Face ROI は lower fps の optional pass として扱い、Pose stale、ROI over-budget、main-thread fallback を stats と motion-debug metrics で観測できる。
 
@@ -49,7 +50,7 @@
     - tracker が直接出す観測 snapshot ではなく、`CanonicalUpperBodyState` と `ReliabilityMap` の後段で共有する `TemporalUpperBodyState` v1 contract を置く。
     - dropout、prediction、recovering などの時系列状態を保存するが、MediaPipe raw result、Three.js object、VRM bone pose、IK quaternion は持たない。
 - `src/features/gaze/trackingRuntime`
-    - MediaPipe fileset、worker client、video frame clock、fallback stats、performance budget report、performance gate を置く。
+    - MediaPipe fileset、worker client、video frame clock、fallback stats、performance budget report、ordered degradation policy、performance gate を置く。
 - `src/features/gaze/trackingRuntime/roiTracking`
     - Pose wrist / shoulder 由来の Hand / Face ROI contract と crop-local / full-frame 座標変換を置く。
     - ROI は full-frame normalized image coordinate の `centerX`、`centerY`、`width`、`height`、`clamped` だけを rect に持つ。
@@ -69,12 +70,19 @@
     - Worker 経路と main-thread fallback。
     - Worker が使える環境では Worker 経路を標準にし、Worker unavailable / 初期化失敗 / Worker detect failure では main-thread fallback へ切り替える。
     - main-thread fallback では effective target を face `<= 8fps`、pose `<= 4fps`、Hand ROI `<= 2fps`、Face ROI `<= 3fps` に clamp し、`SincroTrackerWorkerStats.budget.degradation.state = "main-thread-low-fps"` として保存する。
+    - Ordered degradation policy v1 は詳細 stage を `"full" -> "gesture-reduced-fps" -> "optional-pass-reduced-fps" -> "roi-hand-paused" -> "pose-reduced-fps" -> "face-only" -> "comfortable-idle"` の順に 1 段ずつ進める。`budgetStatus === "over_budget"` または ROI over-budget が profile の `consecutiveOverBudgetFrames` に達した frame を over-budget frame とし、stage 進行後は over-budget / recovery counter を reset する。
+    - Recovery は逆順に 1 段ずつ進め、`budgetStatus === "ok"` かつ ROI over-budget counter `0` の frame が profile の `recoveryFrames` 続いた場合だけ戻る。`face-only` から `pose-reduced-fps` へ戻るには、Pose が検出済みで、Pose inference time が profile 由来 pose budget 以下であることも必要とする。
+    - `gesture-reduced-fps` は `gestureFps = max(1, floor(profile.cadence.gestureFps / 2))` を stats / debug に出すだけで、Gesture Recognizer runtime は本 stage では起動しない。`optional-pass-reduced-fps` は Hand / Face ROI cadence を半減し、`pose-reduced-fps` は Pose cadence を `max(2, floor(profile.cadence.poseFps / 2))` に下げる。Face full-frame cadence は維持する。
+    - `roi-hand-paused` は policy 由来の `hand-paused` として ROI budget controller の effective pause state に合成する。`hand_roi_paused` reason code は stats に出すが、policy pause だけで ROI controller の `fallbackCount` / `skippedFrames` は増やさない。
+    - `face-only` は既存 `degradePoseToFaceOnly()` 経路を使い、Pose / Hand を止めて full-frame Face tracking を継続する。`comfortable-idle` は camera / Face tracking を止めず、Pose / Hand / Face ROI を止めて Pose fallback と Hand lost snapshot を出す。comfortable pose の実際の blend は tracker runtime ではなく Temporal / MotionSolver / VrmPoseComposer 側の責務に残す。
+    - `ignorePerformanceFallback` は `face-only` と `comfortable-idle` への自動遷移だけを抑制する。`gesture-reduced-fps`、`optional-pass-reduced-fps`、`roi-hand-paused`、`pose-reduced-fps` の cadence 低下と `degradationPolicy` stats は抑制しない。
     - Hand tracking は `poseOptions.enabled === true` かつ `poseOptions.hand?.enabled === true` の場合だけ有効にする。`onHandMotion` callback の有無だけでは起動しない。
     - Hand cadence は既定 `4fps`、指定範囲 `1..8fps` とする。`poseOptions.faceRoi?.enabled === true` の場合だけ Face ROI を有効にし、Face ROI cadence は既定 `6fps`、指定範囲 `1..12fps` とする。どちらも `SincroPoseMotionSnapshot.lastUpdatedAtMs` が `mediaTimeMs - lastUpdatedAtMs > 250` の場合は `pose_stale_for_roi` として skip し、full-frame Face cadence は従来どおり `DEFAULT_TARGET_INFERENCE_FPS` を正本にする。
     - ROI pause state は `"active" -> "hand-paused" -> "face-paused" -> "all-paused"` の順に進む。`hand-paused` は Hand ROI だけを止め、`face-paused` は Hand / Face ROI を止めるが full-frame Face は継続する。`all-paused` でも camera / full-frame Face は止めず、既存 Pose face-only fallback へ委譲する。
     - ROI over-budget は `handInferenceTimeMs + faceRoiInferenceTimeMs > 1000 / max(1, targetPoseInferenceFps) * 0.55` で判定する。5 ROI 実行 frame 連続で pause state を 1 段進め、budget 内 30 ROI 実行 frame 連続で 1 段戻す。
     - Worker stats は optional `effectiveHandFps`、`effectiveFaceRoiFps`、`roi` を持つ。`roi` は pause state、fallbackCount、skippedFrames、consecutiveOverBudgetFrames、ROI reason code を保持し、既存 `effectiveFaceFps` / `effectivePoseFps` の意味は変えない。
     - `SincroTrackerWorkerStats.budget` は `sincro.tracker-performance-budget.v1` の report で、`target`、`observed`、`budgetStatus`、`degradation`、`reasonCodes` を持つ。`observed.clockSource` は `TrackerVideoFrameTiming.source` を使い、欠損値は `undefined` のままにする。
+    - `SincroTrackerWorkerStats.degradationPolicy` は optional `sincro.tracker-degradation-policy.v1` snapshot で、`stage`、`previousStage`、`reasonCodes`、`sinceMediaTimeMs`、`effectiveCadence`、`recovering` を持つ。既存 `TrackerRuntimeDegradationState` は `"full"`、`"main-thread-low-fps"`、`"pose-reduced-fps"`、`"face-only"`、`"fallback"` のまま維持し、policy 詳細 stage へ rename しない。
     - `budgetStatus` は Worker round trip と Pose inference cost を対象に、target frame / pose budget の `0.9x` 超を `warn`、`1.25x` 超を `over_budget` とする。
     - ROI reason code は `hand_roi_skipped`、`face_roi_skipped`、`roi_fallback_full_frame`、`roi_inference_over_budget`、`pose_stale_for_roi`、`hand_roi_paused`、`face_roi_paused` を使う。budget report の `target` / `observed` shape は変えず、詳細は `SincroTrackerWorkerStats.roi` に閉じる。
 - `SincroFaceTracker`
@@ -109,6 +117,7 @@
     - `TrackerRuntime` が出力する `SincroPoseMotionSnapshot` を VRM retarget へ流し、カメラ映像上の Sincro pose target と VRM の動きを比較する developer page。
     - Playwright 用 selector と `window.__SINCRO_MOTION_DEBUG__` は、手動調整の再現と screenshot / snapshot 取得のための内部 debug API とする。
     - `ignorePerformanceFallback` を有効にして、低性能端末での IK 調整時も pose snapshot を観測し続ける。
+    - `ignorePerformanceFallback` 有効時も ordered degradation policy の reduced fps / ROI pause stage と `degradationPolicy` stats は記録する。face-only / comfortable-idle 退避だけを抑制し、motion-debug の IK 調整で Pose 観測を継続できるようにする。
     - 構造化 motion log recording は pose callback / pose fallback callback 起点で canonical upper body state を生成してから `MotionDebugRecorder.recordFrame()` に渡し、TrackerRuntime や tracker worker には canonical 生成、DOM / download / UI の責務を持たせない。
     - 構造化 motion log recording は同じ pose callback / pose fallback callback 起点で `ReliabilityMap` を生成し、`frame.reliability` へ保存する。reliability が未計算の frame でも slot は省略せず、同じ `mediaTimeMs` の default reliability map を保存する。
     - 構造化 motion log recording は canonical / reliability 解決後に motion-debug page 側の `TemporalStateEstimator.update()` を呼び、`frame.temporal` へ `TemporalUpperBodyState` を保存する。camera stop、video fixture load、recording load、replay stop、source reset では temporal estimator を reset する。
@@ -254,6 +263,7 @@
     - `frame.timestamp.mediaTimeMs` は tracker callback の `TrackerVideoFrameTiming.mediaTimeMs` を正本にする。fallback 時だけ `video.currentTime * 1000` を使う。
     - callback 受信時の `performance.now()` は `frame.metrics.receivedAtPerformanceMs` として保存する。tracker stats は `frame.metrics.tracker` に入れ、`timestamp.receivedAtPerformanceMs` や top-level `tracker` は使わない。
     - tracker performance budget は `frame.metrics.tracker.budget` に保存する。`reasonCodes` は dropped frame、Worker pending detect、Worker failure / unavailable、pose repeated failures、pose inference too slow、main-thread fallback、ROI skip / pause / fallback / over-budget を enum として保持し、既存 `fallbackReason` の文字列は互換のため変更しない。ROI の累積 stats は `frame.metrics.tracker.roi` で確認する。
+    - ordered degradation policy snapshot は `frame.metrics.tracker.degradationPolicy` に保存する。motion-debug viewer の metrics layer は `degradationPolicy.stage`、`reasonCodes`、`effectiveCadence` と active runtime performance profile を developer-visible JSON として表示する。camera resolution 再交渉と Gesture Recognizer runtime 実行はこの policy snapshot の予約情報に留め、実適用は後続 task に残す。
     - 同一 `presentedFrames` と同一 `SincroPoseMotionSnapshot.lastUpdatedAtMs` の連続入力は duplicate frame として recorder が捨てる。`presentedFrames` が無い fallback / legacy 入力では、同一 `mediaTimeMs` と同一 `lastUpdatedAtMs` を duplicate とする。
     - camera 実設定を manifest に残す場合、raw `deviceId` / `groupId` は保存しない。hash を保存する場合も export 単位だけで比較可能にし、export をまたいで安定する識別子を残さない。
     - frame ごとの camera quality は `frame.metrics.cameraQuality` に保存する。top-level `cameraQuality` は schema 外とし、manifest の camera settings と同じく raw device identifier は持たない。

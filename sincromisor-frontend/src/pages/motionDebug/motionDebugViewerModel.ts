@@ -495,7 +495,7 @@ function createMetricsLayerSnapshot(context: MotionDebugViewerContext): MotionDe
             return {
                 status: "available",
                 label: LAYER_LABELS.metrics,
-                value: context.replayFrame?.metrics,
+                value: createReplayMetricsLayerValue(context),
             };
         }
         return {
@@ -507,6 +507,16 @@ function createMetricsLayerSnapshot(context: MotionDebugViewerContext): MotionDe
         status: "available",
         label: LAYER_LABELS.metrics,
         value: metrics,
+    };
+}
+
+function createReplayMetricsLayerValue(context: MotionDebugViewerContext): unknown {
+    if (!isRecord(context.replayFrame?.metrics)) {
+        return context.replayFrame?.metrics;
+    }
+    return {
+        ...context.replayFrame.metrics,
+        activePerformanceProfile: context.liveSnapshot.camera.performanceProfile,
     };
 }
 
