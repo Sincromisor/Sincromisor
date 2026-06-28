@@ -19,6 +19,16 @@ import {
 } from "./sincroArmIkGeometry";
 import { resolveArmIkPoleDirection, type SincroArmIkElbowPole } from "./sincroArmIkPole";
 import {
+    createDefaultSincroArmIkRefinementConfig,
+    createSincroArmIkRefinementCandidates,
+    createSincroArmIkRefinementResult,
+    REJECTED_SINCRO_ARM_IK_REFINEMENT_CANDIDATE_COST,
+    type SincroArmIkRefinementCandidate,
+    type SincroArmIkRefinementCandidateSummary,
+    type SincroArmIkRefinementConfig,
+    type SincroArmIkRefinementResult,
+} from "./sincroArmIkRefinement";
+import {
     captureSincroArmIkSkeleton,
     type SincroArmIkSkeleton,
     type SincroArmIkVrmSource,
@@ -30,6 +40,12 @@ import type {
     SincroArmSide,
 } from "./sincroArmIkTypes";
 
+export {
+    createDefaultSincroArmIkRefinementConfig,
+    type SincroArmIkRefinementCandidate,
+    type SincroArmIkRefinementConfig,
+    type SincroArmIkRefinementResult,
+} from "./sincroArmIkRefinement";
 export type {
     SincroArmIkOptions,
     SincroArmIkQuaternion,
@@ -67,6 +83,16 @@ type SincroArmIkConstraintResultOptions = {
     forearmCollision: ReturnType<SincroArmIkConstraintResolver["forearmCollisionReason"]>;
     wristRollInfluence?: number;
 };
+
+type SincroArmIkEvaluatedTarget = {
+    result: SincroArmIkSolveResult;
+    prepared: SincroArmIkPreparedTarget;
+    solved: SincroArmIkSolvedQuaternions;
+};
+
+type SincroArmIkCandidateEvaluation = {
+    evaluation?: SincroArmIkEvaluatedTarget;
+} & SincroArmIkRefinementCandidateSummary;
 
 type SincroArmIkSolverConstructorOptions = SincroArmIkSkeleton & {
     options: SincroArmIkOptions;
@@ -163,36 +189,47 @@ export class SincroArmIkSolver {
 
         this.upperArmNode.parent?.updateMatrixWorld(true);
         this.upperArmNode.updateMatrixWorld(true);
-        const prepared = this.prepareTarget(target);
-        if (!prepared) {
+        const evaluated = this.evaluateTarget(target);
+        if (!evaluated) {
             return undefined;
         }
 
-        const solved = this.solveLocalQuaternions(prepared);
-        const forearmCollision = this.constraintResolver.forearmCollisionReason(
-            prepared.elbow,
-            prepared.targetClamp.target,
-        );
-        const constraintResult = this.buildConstraintResult({
-            targetConstraint: prepared.targetConstraint,
-            targetCollision: prepared.targetCollision,
-            elbowPole: prepared.elbowPole,
-            upperLocalQuaternion: solved.upperLocalQuaternion,
-            lowerLocalQuaternion: solved.lowerLocalQuaternion,
-            forearmCollision,
-            wristRollInfluence: target.wristRollInfluence,
-        });
-        this.lastPoleDirection = prepared.elbowPole.direction.clone();
+        this.commitPoleDirection(evaluated.prepared);
+        return evaluated.result;
+    }
 
-        return {
-            upperArmQuaternion: serializeQuaternion(solved.upperLocalQuaternion.quaternion),
-            lowerArmQuaternion: serializeQuaternion(solved.lowerLocalQuaternion.quaternion),
-            neutralUpperArmQuaternion: serializeQuaternion(this.neutralUpperArmQuaternion),
-            neutralLowerArmQuaternion: serializeQuaternion(this.neutralLowerArmQuaternion),
-            targetClamped: prepared.targetClamp.clamped,
-            constraint: constraintResult.constraint,
-            weight: MathUtils.clamp(target.weight, 0, 1) * constraintResult.weightScale,
+    solveRefined(
+        target: SincroArmIkTarget,
+        config?: Partial<SincroArmIkRefinementConfig>,
+    ): SincroArmIkSolveResult | undefined {
+        const refinementConfig = {
+            ...createDefaultSincroArmIkRefinementConfig(),
+            ...config,
         };
+        if (refinementConfig.enabled !== true) {
+            return this.solve(target);
+        }
+        this.upperArmNode.parent?.updateMatrixWorld(true);
+        this.upperArmNode.updateMatrixWorld(true);
+
+        const candidates = createSincroArmIkRefinementCandidates(target.wrist, refinementConfig);
+        const evaluations = candidates.map((candidate) =>
+            this.evaluateRefinementCandidate(target, candidate, refinementConfig),
+        );
+        const selected = selectBestEvaluation(evaluations);
+        const original = evaluations[0];
+        if (!selected?.evaluation || !original?.evaluation) {
+            return undefined;
+        }
+
+        this.commitPoleDirection(selected.evaluation.prepared);
+        const refinement = createSincroArmIkRefinementResult(evaluations, selected, original);
+        const result = attachRefinementResult(
+            selected.evaluation.result,
+            refinement,
+            selected.candidate.index !== 0,
+        );
+        return result;
     }
 
     private prepareTarget(target: SincroArmIkTarget): SincroArmIkPreparedTarget | undefined {
@@ -240,6 +277,71 @@ export class SincroArmIkSolver {
             elbow,
             upperDirection,
             lowerDirection,
+        };
+    }
+
+    private evaluateTarget(target: SincroArmIkTarget): SincroArmIkEvaluatedTarget | undefined {
+        const prepared = this.prepareTarget(target);
+        if (!prepared) {
+            return undefined;
+        }
+
+        const solved = this.solveLocalQuaternions(prepared);
+        const forearmCollision = this.constraintResolver.forearmCollisionReason(
+            prepared.elbow,
+            prepared.targetClamp.target,
+        );
+        const constraintResult = this.buildConstraintResult({
+            targetConstraint: prepared.targetConstraint,
+            targetCollision: prepared.targetCollision,
+            elbowPole: prepared.elbowPole,
+            upperLocalQuaternion: solved.upperLocalQuaternion,
+            lowerLocalQuaternion: solved.lowerLocalQuaternion,
+            forearmCollision,
+            wristRollInfluence: target.wristRollInfluence,
+        });
+
+        return {
+            prepared,
+            solved,
+            result: {
+                upperArmQuaternion: serializeQuaternion(solved.upperLocalQuaternion.quaternion),
+                lowerArmQuaternion: serializeQuaternion(solved.lowerLocalQuaternion.quaternion),
+                neutralUpperArmQuaternion: serializeQuaternion(this.neutralUpperArmQuaternion),
+                neutralLowerArmQuaternion: serializeQuaternion(this.neutralLowerArmQuaternion),
+                targetClamped: prepared.targetClamp.clamped,
+                constraint: constraintResult.constraint,
+                weight: MathUtils.clamp(target.weight, 0, 1) * constraintResult.weightScale,
+            },
+        };
+    }
+
+    private evaluateRefinementCandidate(
+        originalTarget: SincroArmIkTarget,
+        candidate: SincroArmIkRefinementCandidate,
+        config: SincroArmIkRefinementConfig,
+    ): SincroArmIkCandidateEvaluation {
+        const armLength = this.upperArmLength + this.lowerArmLength;
+        const deltaRatio = candidate.wrist.distanceTo(originalTarget.wrist) / armLength;
+        if (deltaRatio > config.maxTargetDeltaRatio) {
+            return rejectedEvaluation(candidate, "target_delta_exceeded");
+        }
+        if (!targetDirectionIsUsable(candidate.wrist)) {
+            return rejectedEvaluation(candidate, "unusable_direction");
+        }
+
+        const evaluation = this.evaluateTarget({
+            ...originalTarget,
+            wrist: candidate.wrist,
+        });
+        if (!evaluation) {
+            return rejectedEvaluation(candidate, "unusable_direction");
+        }
+        return {
+            candidate,
+            evaluation,
+            cost: refinementCost(evaluation, deltaRatio),
+            rejected: false,
         };
     }
 
@@ -320,6 +422,10 @@ export class SincroArmIkSolver {
         };
     }
 
+    private commitPoleDirection(prepared: SincroArmIkPreparedTarget): void {
+        this.lastPoleDirection = prepared.elbowPole.direction.clone();
+    }
+
     private directionInParentSpace(node: Object3D, direction: Vector3): Vector3 {
         return directionInWorldQuaternionSpace(
             node.parent?.getWorldQuaternion(new Quaternion()) ?? new Quaternion(),
@@ -338,4 +444,61 @@ export class SincroArmIkSolver {
 
 function isFiniteNumber(value: number | undefined): value is number {
     return typeof value === "number" && Number.isFinite(value);
+}
+
+function rejectedEvaluation(
+    candidate: SincroArmIkRefinementCandidate,
+    rejectReason: "target_delta_exceeded" | "unusable_direction",
+): SincroArmIkCandidateEvaluation {
+    return {
+        candidate,
+        cost: REJECTED_SINCRO_ARM_IK_REFINEMENT_CANDIDATE_COST,
+        rejected: true,
+        rejectReason,
+    };
+}
+
+function refinementCost(evaluation: SincroArmIkEvaluatedTarget, deltaRatio: number): number {
+    const reasonCodes = evaluation.result.constraint.reasonCodes ?? [];
+    return (
+        (evaluation.prepared.targetClamp.clamped ? 3 : 0) +
+        (reasonCodes.includes("pole_flip_rejected") ? 4 : 0) +
+        (reasonCodes.includes("pole_uncertain_downweighted") ? 1.5 : 0) +
+        (evaluation.result.constraint.collisionAvoided === true ? 2 : 0) +
+        (evaluation.solved.upperLocalQuaternion.limited ? 1 : 0) +
+        (evaluation.solved.lowerLocalQuaternion.limited ? 1 : 0) +
+        0.5 * deltaRatio
+    );
+}
+
+function selectBestEvaluation(
+    evaluations: SincroArmIkCandidateEvaluation[],
+): SincroArmIkCandidateEvaluation | undefined {
+    let best: SincroArmIkCandidateEvaluation | undefined;
+    for (const evaluation of evaluations) {
+        if (evaluation.rejected || !evaluation.evaluation) {
+            continue;
+        }
+        if (!best || evaluation.cost < best.cost) {
+            best = evaluation;
+        }
+    }
+    return best;
+}
+
+function attachRefinementResult(
+    result: SincroArmIkSolveResult,
+    refinement: SincroArmIkRefinementResult,
+    applied: boolean,
+): SincroArmIkSolveResult {
+    return {
+        ...result,
+        constraint: {
+            ...result.constraint,
+            reasonCodes: applied
+                ? [...new Set([...(result.constraint.reasonCodes ?? []), "phase11_ik_refined"])]
+                : result.constraint.reasonCodes,
+        },
+        refinement,
+    };
 }

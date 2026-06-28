@@ -1,6 +1,7 @@
 import type { Vector3 } from "three/src/math/Vector3.js";
 import type { TemporalPartState } from "../temporal/temporalUpperBodyState";
 import type { SincroArmIkConstraintSnapshot } from "./sincroArmIkConstraint";
+import type { SincroArmIkRefinementResult } from "./sincroArmIkRefinement";
 
 export type SincroArmSide = "left" | "right";
 
@@ -30,6 +31,7 @@ export type SincroArmIkSolveResult = {
     targetClamped: boolean;
     constraint: SincroArmIkConstraintSnapshot;
     weight: number;
+    refinement?: SincroArmIkRefinementResult;
 };
 
 export type SincroArmIkOptions = {
