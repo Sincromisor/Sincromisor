@@ -3,6 +3,10 @@ import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionS
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "./sincroTrackerWorkerTypes";
 import type {
+    TrackerPerformanceReasonCode,
+    TrackerRuntimeDegradationState,
+} from "./trackerRuntimePerformanceBudget";
+import type {
     TrackerRuntimePerformanceProfile,
     TrackerRuntimePerformanceProfileId,
 } from "./trackerRuntimePerformanceProfile";
@@ -52,3 +56,57 @@ export type TrackerRuntimePoseOptions = {
         targetInferenceFps?: number;
     };
 };
+
+export type TrackerRuntimeMutableState = {
+    lastInferenceAtMs: number;
+    lastPoseInferenceAtMs: number;
+    lastHandInferenceAtMs: number;
+    lastFaceRoiInferenceAtMs: number;
+    targetInferenceFps: number;
+    targetPoseInferenceFps: number;
+    targetHandInferenceFps: number;
+    targetFaceRoiInferenceFps: number;
+    baseTargetInferenceFps: number;
+    baseTargetPoseInferenceFps: number;
+    baseTargetHandInferenceFps: number;
+    baseTargetFaceRoiInferenceFps: number;
+    latestPoseSnapshot?: SincroPoseMotionSnapshot;
+    poseTrackingEnabled: boolean;
+    handTrackingEnabled: boolean;
+    faceRoiTrackingEnabled: boolean;
+    poseDegradedToFaceOnly: boolean;
+    useWorkerTracking: boolean;
+    switchingToMainThreadFallback: boolean;
+    degradationState: TrackerRuntimeDegradationState;
+    degradationReason?: TrackerPerformanceReasonCode;
+    degradationSinceMediaTimeMs?: number;
+    mainThreadFallbackReason?: string;
+    ignorePosePerformanceFallback: boolean;
+    comfortableIdleActive: boolean;
+};
+
+export function createTrackerRuntimeMutableState(): TrackerRuntimeMutableState {
+    return {
+        lastInferenceAtMs: -1,
+        lastPoseInferenceAtMs: -1,
+        lastHandInferenceAtMs: -1,
+        lastFaceRoiInferenceAtMs: -1,
+        targetInferenceFps: DEFAULT_TARGET_INFERENCE_FPS,
+        targetPoseInferenceFps: DEFAULT_TARGET_POSE_INFERENCE_FPS,
+        targetHandInferenceFps: DEFAULT_TARGET_HAND_INFERENCE_FPS,
+        targetFaceRoiInferenceFps: DEFAULT_TARGET_FACE_ROI_INFERENCE_FPS,
+        baseTargetInferenceFps: DEFAULT_TARGET_INFERENCE_FPS,
+        baseTargetPoseInferenceFps: DEFAULT_TARGET_POSE_INFERENCE_FPS,
+        baseTargetHandInferenceFps: DEFAULT_TARGET_HAND_INFERENCE_FPS,
+        baseTargetFaceRoiInferenceFps: DEFAULT_TARGET_FACE_ROI_INFERENCE_FPS,
+        poseTrackingEnabled: false,
+        handTrackingEnabled: false,
+        faceRoiTrackingEnabled: false,
+        poseDegradedToFaceOnly: false,
+        useWorkerTracking: false,
+        switchingToMainThreadFallback: false,
+        degradationState: "full",
+        ignorePosePerformanceFallback: false,
+        comfortableIdleActive: false,
+    };
+}

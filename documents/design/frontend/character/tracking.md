@@ -51,6 +51,13 @@
     - dropout、prediction、recovering などの時系列状態を保存するが、MediaPipe raw result、Three.js object、VRM bone pose、IK quaternion は持たない。
 - `src/features/gaze/trackingRuntime`
     - MediaPipe fileset、worker client、video frame clock、fallback stats、performance budget report、ordered degradation policy、performance gate を置く。
+    - `trackerRuntime.ts` は `TrackerRuntime` の public facade と lifecycle state 接続を担当し、constructor / start / stop / dispose の公開挙動を保持する。
+    - `trackerRuntimePredictionPlan.ts` は Face / Pose / Hand / Face ROI の cadence 判定を pure helper としてまとめる。
+    - `trackerRuntimeMainThreadPipeline.ts` は main-thread 推論順序、snapshot callback publish、ROI stats への接続を担当する。
+    - `trackerRuntimeWorkerPipeline.ts` は Worker detect、ImageBitmap transfer、Worker failure 時の main-thread fallback 起点を担当する。
+    - `trackerRuntimeDegradationApplication.ts` は ordered degradation policy decision を runtime state と effective cadence へ反映する。
+    - `trackerRuntimeStats.ts` は main-thread stats と performance budget / degradation policy / ROI stats の合成を担当する。
+    - `trackerRuntimeRoiSnapshot.ts` は Face ROI metadata clone、pause warning、Pose stale 時の ROI skipped reason を担当する。
 - `src/features/gaze/trackingRuntime/roiTracking`
     - Pose wrist / shoulder 由来の Hand / Face ROI contract と crop-local / full-frame 座標変換を置く。
     - ROI は full-frame normalized image coordinate の `centerX`、`centerY`、`width`、`height`、`clamped` だけを rect に持つ。
