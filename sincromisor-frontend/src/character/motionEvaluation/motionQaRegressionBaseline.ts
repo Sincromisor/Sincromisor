@@ -1,3 +1,7 @@
+/**
+ * Motion QA baseline import を parser に接続する薄い互換入口。
+ * missing metric の補完や severity 判定は baseline parser / comparison 側に残し、この module は fallback policy を増やさない。
+ */
 import { type MotionMetricBaseline, parseMotionMetricBaseline } from "./motionMetricBaselineSchema";
 import { MOTION_METRIC_KEYS } from "./motionMetrics";
 

@@ -1,3 +1,7 @@
+/**
+ * MotionReplayPlayer と scene / tracker bridge を接続する replay lifecycle owner。
+ * replay stop は timer と applied pose state を必ず閉じ、camera / recording runtime の resource は所有しない。
+ */
 import type { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
 import {
     type CanonicalUpperBodyState,

@@ -1,3 +1,7 @@
+/**
+ * `sincro.motion-intent.v1` の保存 contract、parser、default / clone helper を定義する。
+ * parser は未知 schemaVersion、値域外 number、unknown enum、runtime object 風 value を reject し、旧 log fallback は default state 生成側に閉じる。
+ */
 import { z } from "zod";
 
 export const MOTION_INTENT_SCHEMA_VERSION = "sincro.motion-intent.v1" as const;

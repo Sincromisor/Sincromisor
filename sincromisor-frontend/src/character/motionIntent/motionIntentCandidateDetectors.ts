@@ -1,3 +1,7 @@
+/**
+ * 片腕単位の gesture / near-face / wave / fallback candidate を検出する heuristic 群。
+ * confidence gate、minimum duration、cooldown の意味を変える場合は motion design の MotionIntentState と focused estimator tests を確認する。
+ */
 import type { ReliabilityMap } from "../reliability/reliabilityMap";
 import type { TemporalArmState } from "../temporal/temporalUpperBodyState";
 import type {

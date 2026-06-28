@@ -1,3 +1,7 @@
+/**
+ * replay frame 群から MotionMetricSummary を作る集約入口。
+ * metric key 順序、threshold、not_available 方針を固定し、QA regression harness が同じ summary contract を読めるようにする。
+ */
 import type { SincroMotionDebugFrame } from "./motionDebugLogSchema";
 import {
     calculateAddedLatencyMs,

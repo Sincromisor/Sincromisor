@@ -1,3 +1,7 @@
+/**
+ * Phase 9 semantic motion / finger curl の debug snapshot contract を定義する。
+ * semantic layer、finger layer、hand snapshot は保存可能な低次元値だけを受け、VRM bone node や raw landmark は含めない。
+ */
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import { z } from "zod";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";

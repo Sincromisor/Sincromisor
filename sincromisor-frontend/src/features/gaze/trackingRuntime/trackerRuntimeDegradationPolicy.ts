@@ -1,3 +1,7 @@
+/**
+ * `sincro.tracker-degradation-policy.v1` の state machine と snapshot contract を持つ。
+ * over-budget / recovery counter は負荷揺れで stage が振動しないための hysteresis であり、threshold 変更時は tracking design と trackerRuntime focused tests を確認する。
+ */
 import type {
     SincroTrackerRoiPauseState,
     SincroTrackerRoiReasonCode,

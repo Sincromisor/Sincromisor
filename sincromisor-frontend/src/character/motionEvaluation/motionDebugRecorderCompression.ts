@@ -1,3 +1,7 @@
+/**
+ * motion-debug NDJSON を compression 設定に応じて Blob 化する出力境界。
+ * CompressionStream 非対応時は非圧縮 fallback を返し、recording contract や frame 内容は変更しない。
+ */
 import type {
     MotionDebugCompressedBlob,
     MotionDebugRecorderCompression,

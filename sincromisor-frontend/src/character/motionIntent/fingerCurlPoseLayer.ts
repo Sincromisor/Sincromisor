@@ -1,3 +1,7 @@
+/**
+ * Hand snapshot と MotionIntentState から VRM finger curl 用の semantic pose layer を作る。
+ * MediaPipe raw landmark や Gesture Recognizer raw result は読まず、低次元 finger feature と profile distribution だけを入力境界にする。
+ */
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";

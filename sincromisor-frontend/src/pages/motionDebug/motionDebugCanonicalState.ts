@@ -1,3 +1,7 @@
+/**
+ * tracker callback 由来の pose / face / hand snapshot から canonical と reliability 入力を作る橋渡し。
+ * MediaPipe raw result や VRM object は読まず、motion-debug recording に保存可能な低次元 slot だけを生成する。
+ */
 import { createCanonicalUpperBodyState } from "../../character/canonical/canonicalArmFeatureExtractor";
 import { estimateCanonicalTorsoFrame } from "../../character/canonical/canonicalTorsoFrameEstimator";
 import type { CanonicalUpperBodyState } from "../../character/canonical/canonicalUpperBodyState";

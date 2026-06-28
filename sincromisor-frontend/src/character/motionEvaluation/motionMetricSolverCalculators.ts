@@ -1,3 +1,7 @@
+/**
+ * solver / final pose 由来の elbow flip、reach clamp、pole uncertainty、angular velocity metric を計算する。
+ * Phase 6 snapshot の parse 結果を入力にし、IK solver を再実行しないことで replay 評価を決定的に保つ。
+ */
 import type { SincroMotionDebugFrame } from "./motionDebugLogSchema";
 import {
     type AppliedMetricInput,

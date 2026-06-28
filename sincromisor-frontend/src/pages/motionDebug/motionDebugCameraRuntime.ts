@@ -1,3 +1,7 @@
+/**
+ * motion-debug の camera / video fixture source と TrackerRuntime start / stop を管理する lifecycle owner。
+ * source reset 時に temporal / intent estimator を caller 経由で reset できるよう、MediaStream cleanup と state publish をここに閉じる。
+ */
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import {
     type CameraQualityPoseSample,

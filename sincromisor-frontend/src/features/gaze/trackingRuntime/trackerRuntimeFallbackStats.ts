@@ -1,3 +1,7 @@
+/**
+ * fallback 中でも Debug Console / motion-debug が読める Worker stats 互換 snapshot を publish する。
+ * 実推論が無い状態を full success と誤読させないよう、budget reason と ROI stats は degraded / fallback として保持する。
+ */
 import type { SincroTrackerRoiStats, SincroTrackerWorkerStats } from "./sincroTrackerWorkerTypes";
 import { createTrackerPerformanceBudgetReport } from "./trackerRuntimePerformanceBudget";
 import type { TrackerRuntimeCallbacks } from "./trackerRuntimeTypes";

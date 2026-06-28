@@ -1,3 +1,7 @@
+/**
+ * motion-debug 起動時に利用する VRM URL を query / default から解決する。
+ * invalid URL は user-visible error ではなく frontend logger と default fallback に落とし、モデル読み込み lifecycle は scene runtime に残す。
+ */
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { formatError } from "./dom";
 

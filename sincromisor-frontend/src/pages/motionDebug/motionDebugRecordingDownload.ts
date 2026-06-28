@@ -1,3 +1,7 @@
+/**
+ * motion-debug recording Blob を user download として発火する DOM 境界。
+ * Object URL はこの helper が revoke し、recording schema や compression policy は recorder 側に残す。
+ */
 import type { MotionDebugRecorderBlobResult } from "../../character/motionEvaluation/motionDebugRecorder";
 
 export type MotionDebugRecordingDownloadSuccess = {

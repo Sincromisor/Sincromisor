@@ -1,3 +1,7 @@
+/**
+ * TemporalUpperBodyState 由来の arm state、lost duration、recovery jump、neutral jitter metric を計算する。
+ * Temporal parser が invalid とした frame は metric 内で補正せず、入力不足として扱う。
+ */
 import type {
     TemporalArmState,
     TemporalTuple3,

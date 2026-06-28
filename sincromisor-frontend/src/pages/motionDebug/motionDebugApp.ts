@@ -1,3 +1,7 @@
+/**
+ * motion-debug page の developer-facing facade と window API 実装を束ねる app controller。
+ * camera / fixture / replay / recording / scene runtime の cleanup 順序を調停し、tracker runtime や Worker の内部責務は持たない。
+ */
 import { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
 import { createMotionDebugPhase7Snapshot } from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import type {

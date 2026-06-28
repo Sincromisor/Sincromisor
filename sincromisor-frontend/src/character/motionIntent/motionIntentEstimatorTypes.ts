@@ -1,3 +1,7 @@
+/**
+ * MotionIntentEstimator の入力、config、candidate、side memory の型境界を定義する。
+ * 型は replay / motion-debug に保存する MotionIntentState そのものではなく、estimator 内部の hysteresis と detection context を表す。
+ */
 import type {
     SincroHandMotionSnapshot,
     SincroHandSideSnapshot,

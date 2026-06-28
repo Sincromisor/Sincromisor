@@ -1,3 +1,7 @@
+/**
+ * camera track、video element、frame loop、Worker / main-thread fallback を束ねる TrackerRuntime facade。
+ * UI 更新と VRM 適用は callback 先の責務に残し、start / stop / dispose が取得 resource の cleanup 境界になる。
+ */
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
 import { SincroHandTracker } from "../handTracking/sincroHandTracker";

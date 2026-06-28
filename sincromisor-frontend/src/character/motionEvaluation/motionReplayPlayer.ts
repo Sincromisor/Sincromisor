@@ -1,3 +1,7 @@
+/**
+ * motion-debug replay log を frame index / playback mode 付きで適用する stateful player。
+ * pose-snapshot mode 以外の unsupported mode は explicit error にし、MediaPipe raw result の再推論や DOM 操作は所有しない。
+ */
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import {
     parseMotionDebugLogLines,

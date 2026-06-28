@@ -1,3 +1,7 @@
+/**
+ * motion-debug recording の start / stop / frame append と recorder lifecycle を管理する。
+ * tracker callback と同じ mediaTimeMs の canonical / reliability / temporal / intent を保存し、download DOM は別 module に残す。
+ */
 import type { AvatarMotionProfile } from "../../character/avatarProfile/avatarMotionProfile";
 import type { InitialSincroCalibrationSession } from "../../character/calibration/initialSincroCalibration";
 import type { OnlineSincroCalibrationState } from "../../character/calibration/onlineSincroCalibrationTypes";

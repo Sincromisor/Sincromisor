@@ -1,3 +1,7 @@
+/**
+ * P0 motion QA の基礎 metric を replay frame から計算する純粋 helper 群。
+ * missing layer は not_available 相当の入力不足として扱い、旧 log fallback や parser policy は frame parser 側に閉じる。
+ */
 import type { SincroMotionDebugFrame } from "./motionDebugLogSchema";
 import {
     type PoseRetargetMetricInput,

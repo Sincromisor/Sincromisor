@@ -1,3 +1,7 @@
+/**
+ * video frame clock から TrackerRuntime の detect loop を駆動する lifecycle owner。
+ * start / stop は rVFC、RAF、timer fallback の二重起動を避ける境界であり、callback 側の推論や cleanup は所有しない。
+ */
 import type { TrackerVideoFrameTiming } from "./trackerRuntimeTypes";
 import { VideoFrameClock } from "./videoFrameClock";
 

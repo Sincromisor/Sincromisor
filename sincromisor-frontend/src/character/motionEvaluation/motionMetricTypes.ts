@@ -1,3 +1,7 @@
+/**
+ * Motion QA metric の key、severity、unit、threshold、summary、comparison 型を定義する。
+ * metric key は regression artifact と baseline の結合キーであり、追加・削除時は thresholds と design doc を同時に確認する。
+ */
 // motion metrics の保存 contract は summary JSON の schemaVersion と fixed metric key を境界にする。
 // この module は公開型だけを持ち、replay frame の検証、metric 計算、QA regression の判定は扱わない。
 export type MotionP0FixtureId =

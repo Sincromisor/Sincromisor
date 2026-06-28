@@ -1,3 +1,7 @@
+/**
+ * CameraQualityScore の reason code を固定の案内文へ変換する UI 境界。
+ * 自由文生成や device label の露出は持ち込まず、reason priority と表示文言の同期だけを担当する。
+ */
 import {
     CAMERA_QUALITY_REASON_PRIORITY,
     type CameraQualityComponents,

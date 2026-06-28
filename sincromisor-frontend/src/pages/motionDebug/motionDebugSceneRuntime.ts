@@ -1,3 +1,7 @@
+/**
+ * motion-debug の VRM scene、retarget config、render loop、snapshot 取得を所有する lifecycle module。
+ * camera / tracker source は受け取るだけで、MediaStream や Worker lifecycle は扱わない。
+ */
 import type { SincroPoseRetargetConfig } from "../../character/retargeting/sincroPoseRetargeter";
 import { VRMScene } from "../../character/scene/vrmScene";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";

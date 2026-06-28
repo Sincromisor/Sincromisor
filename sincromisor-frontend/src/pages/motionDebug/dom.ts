@@ -1,3 +1,7 @@
+/**
+ * motion-debug page の DOM query と error formatting を集約する薄い helper。
+ * 見つからない element は起動失敗として throw し、UI state や cleanup lifecycle は caller module に残す。
+ */
 type HtmlElementConstructor<T extends HTMLElement> = {
     new (): T;
 };

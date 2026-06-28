@@ -1,3 +1,7 @@
+/**
+ * `sincro.tracker-performance-profile.v1` の profile resolver と parser 境界。
+ * 未知 id や invalid custom profile は throw せず standard-laptop fallback と warnings に落とし、DOM object / function / 非 finite number は受理しない。
+ */
 import { z } from "zod";
 
 export const TRACKER_RUNTIME_PERFORMANCE_PROFILE_SCHEMA_VERSION =

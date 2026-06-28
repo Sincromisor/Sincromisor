@@ -1,3 +1,7 @@
+/**
+ * MotionIntentState 由来の invalid frame、gesture flicker、semantic fallback、cooldown suppression metric を計算する。
+ * semantic intent の意味は `sincro.motion-intent.v1` を正本にし、raw gesture label は直接 metric key にしない。
+ */
 import type { ArmMotionIntent, MotionIntentSideState } from "../motionIntent/motionIntentState";
 import type { SincroMotionDebugFrame } from "./motionDebugLogSchema";
 import { parseIntent } from "./motionMetricFrameParsers";

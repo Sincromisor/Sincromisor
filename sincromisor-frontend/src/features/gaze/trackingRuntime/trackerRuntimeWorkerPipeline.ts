@@ -1,3 +1,7 @@
+/**
+ * ImageBitmap transfer を使って Worker detect を呼び、Worker failure を fallback 起点へ変換する pipeline。
+ * transfer / close の lifecycle をここで閉じ、snapshot 適用や VRM 更新は callback 先の責務に残す。
+ */
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerClient } from "./sincroTrackerWorkerClient";
 import type { SincroTrackerRoiStats } from "./sincroTrackerWorkerTypes";

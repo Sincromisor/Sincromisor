@@ -1,3 +1,7 @@
+/**
+ * side ごとの semantic hold、minimum duration、cooldown、fallback transition を管理する state machine。
+ * dt が invalid な frame では counter を進めず、replay / live の時刻飛びで intent が誤発火しないようにする。
+ */
 import type { TemporalArmState } from "../temporal/temporalUpperBodyState";
 import {
     createMotionCandidate,

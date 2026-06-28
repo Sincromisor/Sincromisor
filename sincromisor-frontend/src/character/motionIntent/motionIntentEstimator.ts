@@ -1,3 +1,7 @@
+/**
+ * MotionIntentEstimator の既存 import 互換 facade と stateful estimator 本体。
+ * 入力は temporal / reliability / hand / optional gesture と caller 指定 mediaTimeMs に限定し、reset は camera stop や replay source reset で hysteresis を破棄する lifecycle 境界になる。
+ */
 import { clamp01, normalizeConfig, SIDES } from "./motionIntentEstimatorConfig";
 import type {
     MotionIntentEstimatorConfig,

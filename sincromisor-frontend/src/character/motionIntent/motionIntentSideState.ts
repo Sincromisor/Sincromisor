@@ -1,3 +1,7 @@
+/**
+ * MotionIntent side state と side memory を作る factory / helper 群。
+ * warning dedupe と semantic hold は保存 contract の安定性を守るための処理で、candidate 検出や global 判定は別 module に残す。
+ */
 import type { TemporalArmState } from "../temporal/temporalUpperBodyState";
 import { clamp01 } from "./motionIntentEstimatorConfig";
 import type {

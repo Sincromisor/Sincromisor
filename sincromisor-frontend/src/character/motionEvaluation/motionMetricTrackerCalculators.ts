@@ -1,3 +1,7 @@
+/**
+ * tracker performance budget、dropped frame、degradation stage、ROI pause の metric を計算する。
+ * tracker stats は optional debug slot なので、欠損時は replay 失敗ではなく not_available 用の 0 件入力として扱う。
+ */
 import { z } from "zod";
 import type { SincroMotionDebugFrame } from "./motionDebugLogSchema";
 import { isRecord } from "./motionMetricFrameParsers";

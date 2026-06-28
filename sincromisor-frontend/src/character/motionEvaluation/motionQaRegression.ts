@@ -1,3 +1,7 @@
+/**
+ * Motion QA fixture manifest と replay log から regression result を作る developer-visible harness。
+ * 外部 telemetry や動画再推論は行わず、manifest subset、baseline comparison、subjective checklist echo に責務を限定する。
+ */
 import { parseMotionDebugLogLines } from "./motionDebugLogSchema";
 import {
     calculateMotionMetricSummary,

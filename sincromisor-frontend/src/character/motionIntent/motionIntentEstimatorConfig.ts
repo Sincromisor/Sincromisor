@@ -1,3 +1,7 @@
+/**
+ * MotionIntentEstimator の timing / threshold 既定値と normalize 処理を集約する。
+ * clamp は invalid config で runtime state が壊れないための safety で、値域変更時は motion design の minimum duration / cooldown と estimator tests を確認する。
+ */
 import type {
     IntentTimingConfig,
     MotionIntentEstimatorConfig,
