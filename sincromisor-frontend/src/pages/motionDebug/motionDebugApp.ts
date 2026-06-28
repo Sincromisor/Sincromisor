@@ -3,6 +3,7 @@ import {
     type CanonicalUpperBodyState,
     parseCanonicalUpperBodyState,
 } from "../../character/canonical/canonicalUpperBodyState";
+import type { SincroMotionDebugLogManifest } from "../../character/motionEvaluation/motionDebugLogSchema";
 import { createMotionDebugPhase7Snapshot } from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import type {
     MotionDebugRecorderConfig,
@@ -11,9 +12,12 @@ import type {
 } from "../../character/motionEvaluation/motionDebugRecorder";
 import {
     calculateMotionMetricSummary,
+    MOTION_P0_FIXTURE_IDS,
     type MotionMetricConfig,
     type MotionMetricSummary,
+    type MotionP0FixtureId,
 } from "../../character/motionEvaluation/motionMetrics";
+import { runMotionQaRegression } from "../../character/motionEvaluation/motionQaRegression";
 import type { MotionReplayApplyContext } from "../../character/motionEvaluation/motionReplayPlayer";
 import { MotionReplayPlayer } from "../../character/motionEvaluation/motionReplayPlayer";
 import { MotionIntentEstimator } from "../../character/motionIntent/motionIntentEstimator";
@@ -67,6 +71,8 @@ import type {
     MotionDebugApi,
     MotionDebugCameraState,
     MotionDebugLayerKey,
+    MotionDebugQaRegressionApiResult,
+    MotionDebugQaRegressionConfig,
     MotionDebugRecordingDownloadResult,
     MotionDebugRenderMetrics,
     MotionDebugReplayFrameResult,
@@ -86,6 +92,14 @@ const SNAPSHOT_RENDER_INTERVAL_MS = 180;
 const DEFAULT_WAIT_FOR_POSE_TIMEOUT_MS = 10000;
 const CAMERA_QUALITY_TIMING_HISTORY_LIMIT = 30;
 const CAMERA_QUALITY_POSE_SAMPLE_LIMIT = 10;
+
+function isMotionP0FixtureId(value: unknown): value is MotionP0FixtureId {
+    return MOTION_P0_FIXTURE_IDS.some((fixtureId) => fixtureId === value);
+}
+
+function replayManifestFixtureId(value: unknown): MotionP0FixtureId | undefined {
+    return isMotionP0FixtureId(value) ? value : undefined;
+}
 
 function getMotionDebugVrmUrl(): string {
     const requestedUrl = new URLSearchParams(window.location.search).get(VRM_URL_QUERY_PARAM);
@@ -494,6 +508,59 @@ export class MotionDebugApp {
         this.setAutoViewerMode("metrics");
         this.renderSnapshot();
         return result;
+    }
+
+    async runQaRegression(
+        config: MotionDebugQaRegressionConfig,
+    ): Promise<MotionDebugQaRegressionApiResult> {
+        if (!this.replay.hasLoadedRecording()) {
+            return {
+                ok: false,
+                code: "no_recording_loaded",
+                message: "Motion replay has no loaded recording.",
+            };
+        }
+
+        const replayManifest = this.replay.replayManifest();
+        const fixtureId =
+            config.fixtureId ?? replayManifestFixtureId(replayManifest?.source.fixtureId);
+        if (fixtureId === undefined || replayManifest === undefined) {
+            return {
+                ok: false,
+                code: "fixture_id_required",
+                message:
+                    "Motion QA regression requires config.fixtureId when the loaded recording source.fixtureId is not a P0 fixture id.",
+            };
+        }
+
+        const result = await runMotionQaRegression({
+            manifest: {
+                schemaVersion: "sincro.motion-qa-fixture-manifest.v1",
+                fixtures: [
+                    {
+                        fixtureId,
+                        logText: this.createReplayLogText(replayManifest),
+                    },
+                ],
+            },
+            config,
+        });
+        const firstFixture = result.fixtures[0];
+        if (firstFixture?.summary !== undefined) {
+            this.latestMetricSummary = firstFixture.summary;
+        }
+        this.setAutoViewerMode("metrics");
+        this.renderSnapshot();
+        return { ok: true, result };
+    }
+
+    private createReplayLogText(replayManifest: SincroMotionDebugLogManifest): string {
+        return [
+            JSON.stringify({ recordType: "manifest", manifest: replayManifest }),
+            ...this.replay
+                .replayFrames()
+                .map((frame) => JSON.stringify({ recordType: "frame", frame })),
+        ].join("\n");
     }
 
     private async startRuntimeWithStream(
@@ -966,6 +1033,7 @@ export class MotionDebugApp {
             stopReplay: () => this.stopReplay(),
             getReplayState: () => this.getReplayState(),
             calculateReplayMetrics: (config) => this.calculateReplayMetrics(config),
+            runQaRegression: (config) => this.runQaRegression(config),
         };
         window.__SINCRO_MOTION_DEBUG__ = api;
     }

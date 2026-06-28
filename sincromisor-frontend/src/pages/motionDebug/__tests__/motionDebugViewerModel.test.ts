@@ -52,6 +52,7 @@ import {
 import { TRACKER_RUNTIME_DEGRADATION_POLICY_SCHEMA_VERSION } from "../../../features/gaze/trackingRuntime/trackerRuntimeDegradationPolicy";
 import { TRACKER_PERFORMANCE_BUDGET_SCHEMA_VERSION } from "../../../features/gaze/trackingRuntime/trackerRuntimePerformanceBudget";
 import { resolveTrackerRuntimePerformanceProfile } from "../../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
+import { MotionDebugApp } from "../motionDebugApp";
 import { createMotionDebugViewerSnapshot } from "../motionDebugViewerModel";
 import type { MotionDebugSnapshot } from "../types";
 
@@ -701,6 +702,47 @@ describe("createMotionDebugViewerSnapshot", () => {
         expect(viewer.layers.canonical.status).toBe("not_implemented");
         expect(viewer.metrics?.metrics.elbowFlipCount.key).toBe("elbowFlipCount");
         expect(viewer.metrics?.metrics.neutralJitter.status).toBe("not_available");
+    });
+
+    it("runs QA regression from the motion-debug replay API surface", async () => {
+        const liveSnapshot = createLiveSnapshot();
+        const player = new MotionReplayPlayer<MotionDebugSnapshot>({
+            applyPoseSnapshot: (snapshot) => ({
+                ...liveSnapshot,
+                pose: snapshot,
+            }),
+            readSnapshot: () => liveSnapshot,
+        });
+        const logText = createMinimalLogText();
+        expect(player.loadRecordingText(logText).ok).toBe(true);
+
+        const app = Object.create(MotionDebugApp.prototype);
+        Object.defineProperty(app, "replay", { value: player });
+        Object.defineProperty(app, "setAutoViewerMode", { value: () => undefined });
+        Object.defineProperty(app, "renderSnapshot", { value: () => undefined });
+
+        const result = await MotionDebugApp.prototype.runQaRegression.call(app, {
+            generatedAtIso: "2026-06-23T12:03:00.000Z",
+            thresholdVersion: "initial-v1",
+            fixtureId: "neutral-10s",
+        });
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) {
+            return;
+        }
+        expect(result.result).toMatchObject({
+            overall: "warn",
+            fixtures: [
+                {
+                    fixtureId: "neutral-10s",
+                    status: "warn",
+                    summary: {
+                        severity: "warn",
+                    },
+                },
+            ],
+        });
     });
 
     it("projects Phase 10 degradation metric results into the metrics layer JSON", () => {
