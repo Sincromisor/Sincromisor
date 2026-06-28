@@ -59,6 +59,10 @@
     - `sincro.motion-post-processing.v1` は補正対象を `CanonicalUpperBodyState`、`TemporalUpperBodyState`、`MotionIntentState` に限定する。VRM normalized pose、VRM bone rotation、IK quaternion、avatar profile、MediaPipe raw result、Three.js runtime object は output に含めない。
     - v1 runtime は `NoopMotionPostProcessor` だけを接続し、`processor: { id: "noop", version: "v1", mode: "disabled" }`、`warnings: ["processor_disabled"]`、`corrections: []`、`output: {}` を返す。入力 canonical / temporal / intent は output へ複製しない。
     - `MotionPostProcessingInput.mediaTimeMs` は caller 指定を正本にし、helper / processor 内で `performance.now()` や `Date.now()` は呼ばない。
+    - Phase 11 sequence classifier baseline は `MotionSequenceWindow` と `classifyMotionSequence()` に分ける。window は `TemporalUpperBodyState`、`MotionIntentState`、`ReliabilityMap`、`SincroHandMotionSnapshot` だけを低次元 sample として保持し、MediaPipe raw landmark、Gesture Recognizer raw result、VideoFrame / ImageBitmap、Three.js runtime object は受け取らない。
+    - `sincro.motion-sequence-window.v1` は最大 1200ms / 90 samples の short window から side ごとの intent transition、semantic hold、gesture flicker、tracking loss、side swap suspect、wrist velocity sign change、hand open/close transition を集約する。Hand availability は sequence feature 専用で、`MotionPostProcessingResult.inputAvailability` へは写さない。
+    - `sincro.motion-sequence-classifier.v1` は learned classifier ではなく rule-based baseline とする。出力 event は `wave_sequence`、`gesture_flicker`、`side_swap_anomaly`、`tracking_loss_anomaly`、`stable_semantic_hold` に固定し、`gesture_flicker` / `side_swap_anomaly` / `tracking_loss_anomaly` だけを correction として返す。
+    - sequence classifier は correction-only helper であり、`MotionIntentEstimator.update()`、live runtime、replay runtime の state を自動で書き換えない。`wave_sequence` と `stable_semantic_hold` は観測 event に留め、post-processing `output` は `{}` のままにする。
 - `src/character/ik`
     - `SincroArmIkSolver` と solver probe / constraint / geometry / pole を置く。
     - `ArmPoleState` v1 は `"stable"`、`"uncertain"`、`"extended"`、`"lost"`、`"recovering"` の lower-case enum とし、IK pole resolver が決定する。TemporalStateEstimator は VRM quaternion / IK pole を扱わない。
