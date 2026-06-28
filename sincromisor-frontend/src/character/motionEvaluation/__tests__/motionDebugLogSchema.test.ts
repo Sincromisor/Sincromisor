@@ -209,6 +209,23 @@ describe("parseMotionDebugLogLines", () => {
         expect(result.frames[0]?.metrics).toEqual(frame.metrics);
     });
 
+    it("accepts optional postProcessing frame slot without strict validation", () => {
+        const frame = {
+            ...createValidFrame(0),
+            postProcessing: {
+                arbitrary: "checked by parseMotionPostProcessingResult",
+            },
+        };
+
+        const result = parseMotionDebugLogLines(createLogLines(createValidManifest(), [frame]));
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) {
+            return;
+        }
+        expect(result.frames[0]?.postProcessing).toEqual(frame.postProcessing);
+    });
+
     it("accepts video frame clock timestamp fields", () => {
         const frame = {
             ...createValidFrame(0),

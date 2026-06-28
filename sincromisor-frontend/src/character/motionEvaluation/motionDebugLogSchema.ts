@@ -111,6 +111,7 @@ const motionDebugFrameSchema = z
         canonical: z.unknown().optional(),
         temporal: z.unknown().optional(),
         intent: z.unknown().optional(),
+        postProcessing: z.unknown().optional(),
         solver: z.unknown().optional(),
         finalPose: z.unknown().optional(),
         applied: z.unknown().optional(),

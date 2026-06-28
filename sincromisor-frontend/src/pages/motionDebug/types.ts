@@ -43,6 +43,10 @@ import type {
     MotionIntentState,
 } from "../../character/motionIntent/motionIntentState";
 import type {
+    MotionPostProcessingParseResult,
+    MotionPostProcessingResult,
+} from "../../character/motionPostProcessing/motionPostProcessingState";
+import type {
     ReliabilityMap,
     ReliabilityMapParseResult,
 } from "../../character/reliability/reliabilityMap";
@@ -103,6 +107,12 @@ export type MotionIntentLayerParseError = {
     raw: unknown;
 };
 
+export type MotionPostProcessingLayerParseError = {
+    parseStatus: "invalid";
+    errors: Extract<MotionPostProcessingParseResult, { ok: false }>["errors"];
+    raw: unknown;
+};
+
 export type MotionDebugSnapshotIntentParseError = {
     parseStatus: "invalid";
     errors: unknown;
@@ -150,6 +160,7 @@ export type MotionDebugLayerKey =
     | "canonical"
     | "temporal"
     | "intent"
+    | "postProcessing"
     | "solver"
     | "finalPose"
     | "applied"
@@ -210,6 +221,7 @@ export type MotionDebugSnapshot = {
     canonical?: CanonicalUpperBodyState | CanonicalLayerParseError;
     temporal?: TemporalUpperBodyState | TemporalLayerParseError;
     intent?: MotionIntentState | MotionDebugSnapshotIntentParseError;
+    postProcessing?: MotionPostProcessingResult | MotionPostProcessingLayerParseError;
     canonicalReliabilityInput?: MotionDebugCanonicalReliabilityInput;
     tracker: SincroTrackerWorkerStats;
     poseRetarget: DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];

@@ -22,6 +22,7 @@ import {
 import { calculateMotionMetricSummary } from "../../../character/motionEvaluation/motionMetrics";
 import { MotionReplayPlayer } from "../../../character/motionEvaluation/motionReplayPlayer";
 import { createDefaultMotionIntentState } from "../../../character/motionIntent/motionIntentState";
+import { createNoopMotionPostProcessingResult } from "../../../character/motionPostProcessing/motionPostProcessingState";
 import {
     createDefaultReliabilityMap,
     RELIABILITY_MAP_SCHEMA_VERSION,
@@ -597,6 +598,7 @@ function createLiveSnapshot(
         cameraSource?: MotionDebugSnapshot["camera"]["source"];
         phase7?: MotionDebugPhase7Snapshot;
         finalPose?: MotionDebugSnapshot["finalPose"];
+        postProcessing?: MotionDebugSnapshot["postProcessing"];
     } = {},
 ): MotionDebugSnapshot {
     const debugSnapshot = createDefaultSnapshot().sincroMotion;
@@ -624,6 +626,7 @@ function createLiveSnapshot(
         reliability: options.reliability,
         canonical: options.canonical,
         temporal: options.temporal,
+        postProcessing: options.postProcessing,
         tracker: debugSnapshot.tracker,
         poseRetarget: debugSnapshot.poseRetarget,
         poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
@@ -989,6 +992,132 @@ describe("createMotionDebugViewerSnapshot", () => {
                 expect.objectContaining({
                     code: "invalid_state",
                     path: ["arms", "left", "intent"],
+                }),
+            ]),
+        });
+    });
+
+    it("marks missing replay postProcessing as not recorded", () => {
+        const liveSnapshot = createLiveSnapshot({
+            postProcessing: createNoopMotionPostProcessingResult({
+                mediaTimeMs: 120,
+                source: "live",
+            }),
+        });
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "postProcessing",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+            },
+        });
+
+        expect(viewer.layers.postProcessing.status).toBe("not_recorded");
+    });
+
+    it("shows saved replay postProcessing after strict parsing", () => {
+        const liveSnapshot = createLiveSnapshot();
+        const postProcessing = createNoopMotionPostProcessingResult({
+            mediaTimeMs: 120,
+            source: "replay",
+        });
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "postProcessing",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                postProcessing,
+            },
+        });
+
+        expect(viewer.layers.postProcessing.status).toBe("available");
+        expect(viewer.layers.postProcessing.value).toMatchObject({
+            schemaVersion: "sincro.motion-post-processing.v1",
+            processor: {
+                id: "noop",
+                mode: "disabled",
+            },
+            output: {},
+            corrections: [],
+            warnings: ["processor_disabled"],
+        });
+    });
+
+    it("marks invalid saved replay postProcessing without live fallback", () => {
+        const liveSnapshot = createLiveSnapshot({
+            postProcessing: createNoopMotionPostProcessingResult({
+                mediaTimeMs: 120,
+                source: "live",
+            }),
+        });
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "postProcessing",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 120,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                postProcessing: {
+                    ...createNoopMotionPostProcessingResult({
+                        mediaTimeMs: 120,
+                        source: "replay",
+                    }),
+                    processor: {
+                        id: "noop",
+                        version: "v1",
+                        mode: "off",
+                    },
+                },
+            },
+        });
+
+        expect(viewer.layers.postProcessing.status).toBe("invalid");
+        expect(viewer.layers.postProcessing.value).toMatchObject({
+            parseStatus: "invalid",
+            errors: expect.arrayContaining([
+                expect.objectContaining({
+                    code: "invalid_state",
+                    path: ["processor", "mode"],
                 }),
             ]),
         });

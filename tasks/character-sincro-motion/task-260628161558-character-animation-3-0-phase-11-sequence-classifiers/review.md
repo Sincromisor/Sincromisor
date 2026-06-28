@@ -1,6 +1,7 @@
 # Review: task-260628161558-character-animation-3-0-phase-11-sequence-classifiers
 
 ## 判定
+
 APPROVED
 
 前回 High 指摘 2 点は解消済み。post-processing contract task は依存欄に明示され、`MotionSequenceWindowSnapshot.inputAvailability` と `MotionPostProcessingResult.inputAvailability` の変換も一意に固定されているため、実装を止める破綻はない。
