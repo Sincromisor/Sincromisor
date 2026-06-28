@@ -30,6 +30,10 @@ import {
     type MotionIntentState,
     parseMotionIntentState,
 } from "../../character/motionIntent/motionIntentState";
+import {
+    type MotionPostProcessingResult,
+    parseMotionPostProcessingResult,
+} from "../../character/motionPostProcessing/motionPostProcessingState";
 import { createPoseReliabilityMap } from "../../character/reliability/poseReliabilityEstimator";
 import {
     parseReliabilityMap,
@@ -50,6 +54,7 @@ import type {
     MotionDebugViewerMode,
     MotionDebugViewerSnapshot,
     MotionIntentLayerParseError,
+    MotionPostProcessingLayerParseError,
     ReliabilityLayerParseError,
     SolverLayerParseError,
     SolverLayerValue,
@@ -64,6 +69,7 @@ export const MOTION_DEBUG_LAYER_KEYS: MotionDebugLayerKey[] = [
     "canonical",
     "temporal",
     "intent",
+    "postProcessing",
     "solver",
     "finalPose",
     "applied",
@@ -85,6 +91,7 @@ const LAYER_LABELS: Record<MotionDebugLayerKey, string> = {
     canonical: "Canonical",
     temporal: "Temporal",
     intent: "Intent",
+    postProcessing: "Post-processing",
     solver: "Solver",
     finalPose: "Final pose",
     applied: "Applied",
@@ -147,6 +154,10 @@ function createLayerSnapshots(
         canonical: createLayerSnapshot("canonical", resolveCanonicalValue(context), true),
         temporal: createLayerSnapshot("temporal", resolveTemporalValue(context), false),
         intent: createParsedLayerSnapshot("intent", resolveIntentValue(context)),
+        postProcessing: createParsedLayerSnapshot(
+            "postProcessing",
+            resolvePostProcessingValue(context),
+        ),
         solver: createSolverLayerSnapshot(resolveSolverValue(context)),
         finalPose: createParsedLayerSnapshot("finalPose", resolveFinalPoseValue(context)),
         applied: createLayerSnapshot("applied", context.replayFrame?.applied, true),
@@ -408,6 +419,32 @@ function parseIntentLayerValue(value: unknown): MotionIntentState | MotionIntent
     const parsed = parseMotionIntentState(value);
     if (parsed.ok) {
         return parsed.state;
+    }
+    return {
+        parseStatus: "invalid",
+        errors: parsed.errors,
+        raw: value,
+    };
+}
+
+function resolvePostProcessingValue(
+    context: MotionDebugViewerContext,
+): MotionPostProcessingResult | MotionPostProcessingLayerParseError | undefined {
+    if (context.replayFrame !== undefined) {
+        if (context.replayFrame.postProcessing === undefined) {
+            return undefined;
+        }
+        return parsePostProcessingLayerValue(context.replayFrame.postProcessing);
+    }
+    return context.liveSnapshot.postProcessing;
+}
+
+function parsePostProcessingLayerValue(
+    value: unknown,
+): MotionPostProcessingResult | MotionPostProcessingLayerParseError {
+    const parsed = parseMotionPostProcessingResult(value);
+    if (parsed.ok) {
+        return parsed.result;
     }
     return {
         parseStatus: "invalid",

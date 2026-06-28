@@ -19,6 +19,8 @@ import {
 } from "../../character/motionEvaluation/motionDebugRecorder";
 import { MotionIntentEstimator } from "../../character/motionIntent/motionIntentEstimator";
 import type { MotionIntentState } from "../../character/motionIntent/motionIntentState";
+import type { MotionPostProcessingResult } from "../../character/motionPostProcessing/motionPostProcessingState";
+import { NoopMotionPostProcessor } from "../../character/motionPostProcessing/noopMotionPostProcessor";
 import {
     createDefaultReliabilityMap,
     type ReliabilityMap,
@@ -77,6 +79,7 @@ type MotionDebugRecordingControllerParams = {
     onReliabilityStateChange: (state: ReliabilityMap | undefined) => void;
     onTemporalStateChange: (state: TemporalUpperBodyState | undefined) => void;
     onIntentStateChange: (state: MotionIntentState | undefined) => void;
+    onPostProcessingStateChange: (state: MotionPostProcessingResult | undefined) => void;
     onStateChange: (state: MotionDebugRecorderState) => void;
 };
 
@@ -84,6 +87,7 @@ export class MotionDebugRecordingController {
     private recorder = new MotionDebugRecorder();
     private readonly temporalEstimator = new TemporalStateEstimator();
     private readonly intentEstimator = new MotionIntentEstimator();
+    private readonly postProcessor = new NoopMotionPostProcessor();
     private latestCanonical?: CanonicalUpperBodyState;
     private latestPhase9?: MotionDebugPhase9SemanticSnapshot;
 
@@ -180,6 +184,15 @@ export class MotionDebugRecordingController {
             mediaTimeMs,
         });
         this.params.onIntentStateChange(intent);
+        const postProcessing = this.postProcessor.process({
+            canonical,
+            temporal: frameTemporal,
+            intent,
+            reliability: frameReliability,
+            mediaTimeMs,
+            source: this.params.getCameraSource() === "fixture" ? "fixture" : "live",
+        });
+        this.params.onPostProcessingStateChange(postProcessing);
         const phase9 = createMotionDebugPhase9SemanticSnapshot({
             intent,
             profile: this.params.getAvatarMotionProfile(),
@@ -213,6 +226,7 @@ export class MotionDebugRecordingController {
             canonical,
             temporal: frameTemporal,
             intent,
+            postProcessing,
             solver: {
                 poseRetarget: debugSnapshot.poseRetarget,
                 poseRetargetRuntime: debugSnapshot.poseRetargetRuntime,
@@ -256,6 +270,7 @@ export class MotionDebugRecordingController {
         this.latestPhase9 = undefined;
         this.params.onTemporalStateChange(undefined);
         this.params.onIntentStateChange(undefined);
+        this.params.onPostProcessingStateChange(undefined);
     }
 
     private resolveTemporalState(options: ResolveTemporalStateOptions): TemporalUpperBodyState {

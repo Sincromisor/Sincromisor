@@ -216,6 +216,7 @@ function createControllerHarness(options: ControllerHarnessOptions = {}): Contro
         onIntentStateChange: (state) => {
             latestIntent = state;
         },
+        onPostProcessingStateChange: () => {},
         onStateChange: () => {},
     });
     return {

@@ -1,14 +1,17 @@
 # Review: task-260628161551-character-animation-3-0-phase-11-replay-failure-mining
 
 ## 判定
+
 APPROVED
 
 前回の High 指摘 3 件は、candidate order / id、必須フィールド、frame scan の期待値が `task.md` 上で一意に固定され解消されている。改訂で追加された metric key / 型 / motion-debug API 前提も既存コードと整合しており、新たな blocking 破綻は見つからない。
 
 ## 指摘事項
+
 - なし
 
 ## 実装者への申し送り
+
 - `candidateId` は `task.md:56` の通り、`qaResult.fixtures` 順かつ fixture 内 target order 順で生成し、同一 fixture 内 0-based index の `fixtureId:target:index` に固定する。
 - `evidence`、`requiresHumanLabel`、`notes`、report `warnings` は `task.md:57` から `task.md:62` の固定値に従う。特に `not_available` だけで warn になった fixture は `do_not_optimize` candidate にまとめる。
 - `frameRange` は `task.md:63` から `task.md:65` の通り、v1 では `gestureFlickerCount` と `sideSwapCount` の最初に見つかった event だけを保存する。

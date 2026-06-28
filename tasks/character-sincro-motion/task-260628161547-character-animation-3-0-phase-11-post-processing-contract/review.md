@@ -1,6 +1,7 @@
 # Review: task-260628161547-character-animation-3-0-phase-11-post-processing-contract
 
 ## 判定
+
 APPROVED
 
 Critical / High の blocking 指摘はない。受け入れ条件は contract、保存 slot、viewer 表示、no-op runtime、テスト、設計文書同期まで検証可能に固定されており、既存コード・設計文書の前提とも整合している。
