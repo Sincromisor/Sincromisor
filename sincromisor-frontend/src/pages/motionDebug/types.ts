@@ -42,6 +42,7 @@ import type {
     MotionIntentParseResult,
     MotionIntentState,
 } from "../../character/motionIntent/motionIntentState";
+import type { MotionOptimizationCandidateReport } from "../../character/motionPostProcessing/motionOptimizationCandidateReport";
 import type {
     MotionPostProcessingParseResult,
     MotionPostProcessingResult,
@@ -266,6 +267,14 @@ export type MotionDebugQaRegressionApiResult =
           message: string;
       };
 
+export type MotionDebugOptimizationCandidateApiResult =
+    | { ok: true; report: MotionOptimizationCandidateReport }
+    | {
+          ok: false;
+          code: "no_recording_loaded" | "fixture_id_required";
+          message: string;
+      };
+
 export type MotionDebugStartCameraOptions = {
     performanceProfileId?: string;
     performanceProfile?: TrackerRuntimePerformanceProfile;
@@ -297,6 +306,9 @@ export type MotionDebugApi = {
     runQaRegression: (
         config: MotionDebugQaRegressionConfig,
     ) => Promise<MotionDebugQaRegressionApiResult>;
+    analyzeOptimizationCandidates: (
+        config: MotionDebugQaRegressionConfig,
+    ) => Promise<MotionDebugOptimizationCandidateApiResult>;
 };
 
 declare global {

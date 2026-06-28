@@ -3,7 +3,10 @@ import {
     type CanonicalUpperBodyState,
     parseCanonicalUpperBodyState,
 } from "../../character/canonical/canonicalUpperBodyState";
-import type { SincroMotionDebugLogManifest } from "../../character/motionEvaluation/motionDebugLogSchema";
+import type {
+    SincroMotionDebugFrame,
+    SincroMotionDebugLogManifest,
+} from "../../character/motionEvaluation/motionDebugLogSchema";
 import { createMotionDebugPhase7Snapshot } from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import type {
     MotionDebugRecorderConfig,
@@ -22,6 +25,7 @@ import type { MotionReplayApplyContext } from "../../character/motionEvaluation/
 import { MotionReplayPlayer } from "../../character/motionEvaluation/motionReplayPlayer";
 import { MotionIntentEstimator } from "../../character/motionIntent/motionIntentEstimator";
 import type { MotionIntentState } from "../../character/motionIntent/motionIntentState";
+import { analyzeMotionOptimizationCandidates } from "../../character/motionPostProcessing/motionOptimizationCandidateReport";
 import { parseMotionPostProcessingResult } from "../../character/motionPostProcessing/motionPostProcessingState";
 import { createPoseReliabilityMap } from "../../character/reliability/poseReliabilityEstimator";
 import {
@@ -72,6 +76,7 @@ import type {
     MotionDebugApi,
     MotionDebugCameraState,
     MotionDebugLayerKey,
+    MotionDebugOptimizationCandidateApiResult,
     MotionDebugQaRegressionApiResult,
     MotionDebugQaRegressionConfig,
     MotionDebugRecordingDownloadResult,
@@ -558,6 +563,32 @@ export class MotionDebugApp {
         this.setAutoViewerMode("metrics");
         this.renderSnapshot();
         return { ok: true, result };
+    }
+
+    async analyzeOptimizationCandidates(
+        config: MotionDebugQaRegressionConfig,
+    ): Promise<MotionDebugOptimizationCandidateApiResult> {
+        const qaResult = await this.runQaRegression(config);
+        if (!qaResult.ok) {
+            return qaResult;
+        }
+
+        const framesByFixtureId: Partial<
+            Record<MotionP0FixtureId, readonly SincroMotionDebugFrame[]>
+        > = {};
+        const firstFixtureId = qaResult.result.fixtures[0]?.fixtureId;
+        if (isMotionP0FixtureId(firstFixtureId)) {
+            framesByFixtureId[firstFixtureId] = this.replay.replayFrames();
+        }
+
+        return {
+            ok: true,
+            report: analyzeMotionOptimizationCandidates({
+                qaResult: qaResult.result,
+                framesByFixtureId,
+                generatedAtIso: config.generatedAtIso,
+            }),
+        };
     }
 
     private createReplayLogText(replayManifest: SincroMotionDebugLogManifest): string {
@@ -1057,6 +1088,7 @@ export class MotionDebugApp {
             getReplayState: () => this.getReplayState(),
             calculateReplayMetrics: (config) => this.calculateReplayMetrics(config),
             runQaRegression: (config) => this.runQaRegression(config),
+            analyzeOptimizationCandidates: (config) => this.analyzeOptimizationCandidates(config),
         };
         window.__SINCRO_MOTION_DEBUG__ = api;
     }
