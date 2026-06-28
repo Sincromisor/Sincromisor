@@ -151,15 +151,15 @@ PoC では下記 2 軸を最優先する。
 
 ## 11. 言語ポリシー
 
-| 対象                          | 言語                                                                                                     |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------- |
-| identifier(変数 / 関数 / 型)  | 英語                                                                                                     |
-| ログ / Error message          | 英語(運用 / 検索しやすさ)                                                                                |
-| ソースコード内コメント        | 日本語(AGENTS.md と整合)                                                                                 |
-| ドキュメント (`documents/**`) | 日本語                                                                                                   |
-| ユーザー向け文言              | 日本語                                                                                                   |
-| Zod schema の `.describe()`   | 日本語または英語。ユーザー表示用は日本語、開発者向け診断は英語でも可                                     |
-| コミットメッセージ            | 日本語。形式は [tasks/README.md](../../tasks/README.md) の Conventional Commits ベース規約を正本とする.  |
+| 対象                          | 言語                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| identifier(変数 / 関数 / 型)  | 英語                                                                                                    |
+| ログ / Error message          | 英語(運用 / 検索しやすさ)                                                                               |
+| ソースコード内コメント        | 日本語(AGENTS.md と整合)                                                                                |
+| ドキュメント (`documents/**`) | 日本語                                                                                                  |
+| ユーザー向け文言              | 日本語                                                                                                  |
+| Zod schema の `.describe()`   | 日本語または英語。ユーザー表示用は日本語、開発者向け診断は英語でも可                                    |
+| コミットメッセージ            | 日本語。形式は [tasks/README.md](../../tasks/README.md) の Conventional Commits ベース規約を正本とする. |
 
 ## 12. その他の負債抑制ルール
 
@@ -172,13 +172,17 @@ PoC では下記 2 軸を最優先する。
 ## 13. ソースコードコメント品質
 
 コメントは「読めば分かる処理説明」ではなく、公開 API、境界、非自明な判断、制約理由、保存
-contract を後続の開発者が安全に変更するための文脈を残すために書く。コメントで責務分割を代替しない。
-[code-structure.md](code-structure.md) の「コメントで段落分けしたくなったら関数抽出を検討する」方針に従い、
-まず命名、関数分割、型定義、options object で明確化できないか確認する。
+contract を後続の開発者が安全に変更するための文脈を残すために書く。コメント作業は「コメントを追加する」
+作業ではない。既存コメントと不足している保守知識を `keep` / `rewrite` / `delete` / `add` に分類し、
+コードだけでは安全に判断できない情報だけを残す audit として扱う。
 
-### 13.1 コメントが必須の対象
+コメントで責務分割を代替しない。[code-structure.md](code-structure.md) の「コメントで段落分けしたくなったら
+関数抽出を検討する」方針に従い、まず命名、関数分割、型定義、options object で明確化できないか確認する。
 
-次の対象は、名前や型だけでは変更時の安全条件が読めないためコメントを必須とする。
+### 13.1 コメントが必須の対象と audit 単位
+
+comment audit の最小単位は file ではなく、対象 symbol または decision である。次の対象は、名前や型だけでは
+変更時の安全条件が読めないためコメントを必須とし、個別に audit する。
 
 - `export` される、または public な class / function / type / interface / component / hook / module /
   domain-significant `const`
@@ -188,6 +192,20 @@ contract を後続の開発者が安全に変更するための文脈を残す�
 - threshold、fallback、degradation、recovery、cooldown、hysteresis、clamp、side assignment、ROI 判定などの
   heuristic
 - cleanup 所有者、resource lifecycle、例外を fallback に落とす理由
+
+audit artifact を作る場合は、少なくとも次の列を持たせる。file 単位で「module comment に集約」とだけ書いた
+ものは完了扱いにしない。
+
+| 列                               | 内容                                                                 |
+| -------------------------------- | -------------------------------------------------------------------- |
+| `path`                           | 対象ファイル                                                         |
+| `symbol or decision`             | public export 名、境界 module 名、heuristic / lifecycle などの判断名 |
+| `kind`                           | public export / parser / lifecycle / heuristic / boundary など       |
+| `current comment`                | 既存コメントの有無と、残す場合に依拠する内容                         |
+| `decision`                       | `keep` / `rewrite` / `delete` / `add`                                |
+| `required maintenance knowledge` | 後続保守者が安全に変更するために必要な、コードだけでは読めない知識   |
+| `action`                         | 実施した編集、または省略理由                                         |
+| `reviewer note`                  | reviewer / evaluator が照合すべき実コード上の観点                    |
 
 ### 13.2 記法の使い分け
 
@@ -216,21 +234,27 @@ export function parseGazeReplaySample(input: unknown): GazeReplaySample {
 
 対象別に、コメントへ次の情報を含める。
 
-| 対象                | 最低限書く内容                                                                  |
-| ------------------- | ------------------------------------------------------------------------------- |
-| public export       | 責務、入力境界、返す値または observable output の意味、失敗条件、副作用、非対象 |
-| 境界 module         | 外部仕様、受け取る raw 値、正規化後の contract、失敗時の扱い、cleanup 所有者    |
-| schema / parser     | 受理する旧 log / version、reject する値、fallback 方針、破壊的変更の確認先      |
-| coordinate / 単位   | 座標系、単位、左右定義、時刻基準、frame index の基準、confidence の意味         |
-| heuristic           | 値の意味、採用理由、変更時の確認先、誤調整した場合の見え方または失敗モード      |
-| lifecycle / cleanup | resource の所有者、解放タイミング、二重解放やリークを避けるための不変条件       |
-| fallback / 例外処理 | 例外を握り潰さず fallback に落とす理由、ユーザー影響、ログや復旧の観測点        |
+| 対象                | 最低限書く内容                                                                                     |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| public export       | 責務、入力境界、返す値または observable output の意味、失敗条件、副作用、非対象                    |
+| 境界 module         | 外部仕様、受け取る raw 値、正規化後の contract、失敗時の扱い、cleanup 所有者                       |
+| schema / parser     | 受理する旧 log / version、reject する値、fallback 方針、caller に返る失敗の形、破壊的変更の確認先  |
+| coordinate / 単位   | 座標系、単位、左右定義、時刻基準、frame index の基準、confidence の意味                            |
+| threshold           | 値の意味、採用理由または由来、変更時に確認する表示・テスト、誤調整した場合の見え方または失敗モード |
+| heuristic           | 入力前提、値の意味、採用理由、変更時の確認先、誤調整した場合の見え方または失敗モード               |
+| lifecycle / cleanup | resource の所有者、解放タイミング、解放順序、二重解放やリークを避けるための不変条件                |
+| fallback / 例外処理 | 例外を握り潰さず fallback に落とす理由、ユーザー影響、ログや復旧の観測点                           |
 
-### 13.4 省略できる条件
+### 13.4 省略と module TSDoc への集約
 
 コメントを省略できるのは、private helper で名前、型、周辺 public コメントから責務が明らかであり、かつ境界 /
 heuristic / lifecycle / schema を持たない場合に限る。迷う場合は、コメントを書く前に関数名、型名、引数名、
 戻り値型、呼び出し側の責務分割を見直す。
+
+module TSDoc へ個別 export の保守知識を集約できるのは、file 内の public export が単一責務を共有し、module
+comment が各 export の入力境界、observable output、失敗条件、副作用、非対象を具体的に覆う場合に限る。
+単なる file の責務要約、設計文書への誘導、または「各 export は module comment を参照」といった宣言だけでは
+集約条件を満たさない。
 
 ### 13.5 許容する実装コメント
 
@@ -249,6 +273,12 @@ TODO は §9 の形式に従い、canonical task ID と削除条件を持たせ�
 
 - `// 値を返す`、`// ループする` のような処理説明だけのコメント
 - 古い実装経緯だけを残し、現在の判断や契約を説明しないコメント
+- 「design doc / focused tests を確認する」とだけ書き、実コード上の入力境界、失敗条件、副作用、確認観点を
+  説明しないコメント
+- 名前や型から分かる責務要約だけのコメント
+- heuristic / threshold の存在だけを書き、誤調整時の見え方や失敗モード、値の由来を説明しないコメント
+- audit artifact で `public export のため追加`、`既存コメントで十分` のような定型文だけを書き、
+  symbol / decision 固有の保守知識を示さない理由
 - 根拠のない `temporary`、`workaround`、`magic`
 - 理由、削除条件、canonical task / issue ID、期限または判断基準がない TODO
 - 実装と同期しない設計メモ、更新されず stale になったコメント
