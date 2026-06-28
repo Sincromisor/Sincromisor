@@ -28,6 +28,8 @@
 - [ ] TrackerRuntime class の直前コメントに、DOM / video / Worker 所有境界、UI / VRM / canonical / reliability を所有しないことを日本語で明記する。
 - [ ] Worker fallback、Pose stale for ROI、ordered degradation stage のような非自明な判断に日本語コメントを追加する。
 - [ ] `documents/design/frontend/character/tracking.md` の TrackerRuntime responsibilities に、分割後の内部 module 境界を同期する。
+- [ ] structure guard の本タスク責任範囲は、`sincromisor-frontend/src/features/gaze/trackingRuntime/trackerRuntime.ts` と本タスクで新規作成・変更した production `.ts` module に限定する。これらは 300 行以下、または同じ行に `// reason: structure-threshold-exception <理由>` を持つ。
+- [ ] `npm run tasks:check:frontend-structure` は実行して出力を `impl.md` に記録する。現行 branch では `git diff main` 由来の既存 strict failure が本タスク範囲外にも出るため、コマンド全体が非 0 でも即 FAIL にはしない。本タスク範囲外の failure は「pre-existing branch-wide strict failure」として path 一覧を記録し、本タスクで変更したファイルに failure が残っていないことを確認する。
 
 ## 設計判断（着手前に確定済み）
 
@@ -51,6 +53,7 @@
     - motion-debug page controller の分割。
 - 依存タスクとの境界:
     - code structure guard は悪化防止を提供する。本タスクは TrackerRuntime 内部だけを分割し、motion-debug 側の orchestration は別タスクに残す。
+    - code structure guard の strict 対象は branch-wide な `git diff main --name-only -- sincromisor-frontend/src` である。本タスクはその出力全体の解消ではなく、TrackerRuntime 分割で触るファイルだけを structure threshold に適合させる。既存 branch-wide failure の一括解消は別タスクに残す。
 
 ## 実装方針（既存コード整合: file:line）
 
@@ -69,7 +72,7 @@
 - `cd sincromisor-frontend && npm run test -- trackerRuntimeRoiBudget`
 - `cd sincromisor-frontend && npm run build`
 - `cd sincromisor-frontend && npm run check`
-- `npm run tasks:check:frontend-structure`
+- `npm run tasks:check:frontend-structure`（非 0 の場合は、本タスクで変更した file の failure がないことと、本タスク範囲外の pre-existing failure 一覧を `impl.md` に記録する）
 - `npm run tasks:check`
 
 ## ドキュメント同期の要否
