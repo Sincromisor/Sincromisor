@@ -14,12 +14,14 @@
 
 - [ ] `.claude/agents/task-reviewer.md` を更新し、TypeScript production code を変更する task で comment audit / comment acceptance が task.md に無い場合は High 指摘にする、と明記する。
 - [ ] `task-reviewer` の High 指摘条件に、次を追加する。
-    - public export / boundary / heuristic / schema / lifecycle を変更するのに、コメント追加・更新・省略理由の受け入れ条件がない。
+    - public export / public component / hook / module / boundary / heuristic / schema / lifecycle を変更するのに、JSDoc / TSDoc を含むコメント追加・更新・省略理由の受け入れ条件がない。
+    - public export の目的、契約、入力境界、返す値または observable output、失敗条件、副作用、非対象のうち必要な情報が task acceptance に定義されていない。
     - 「コメントを追加する」とだけ書かれ、対象・期待内容・検証方法が一意でない。
     - 大規模 refactor / module split task で、新旧 module の責務境界コメントの扱いが未定義。
-- [ ] `.claude/agents/task-implementer.md` を更新し、TypeScript production code を変更する場合は `documents/rules/coding-ts.md` のコメント品質節を読み、変更した export / boundary / heuristic の comment audit 結果を `impl.md` に記録するよう明記する。
-- [ ] `.claude/agents/impl-evaluator.md` を更新し、TypeScript production code を変更した実装では、コメント品質の受け入れ条件を実装差分と照合し、不足していれば FAIL にするよう明記する。
-- [ ] `tasks/AUTHORING-CHECKLIST.md` の comment quality 観点と agent 文面の用語を揃える。用語は `public export`、`boundary`、`heuristic`、`schema/parser`、`lifecycle`、`省略理由` に固定する。
+    - TODO の理由、削除条件、canonical task/issue ID、期限または判断基準、stale comment 更新・削除の扱いが未定義。
+- [ ] `.claude/agents/task-implementer.md` を更新し、TypeScript production code を変更する場合は `documents/rules/coding-ts.md` のコメント品質節を読み、変更した export / boundary / heuristic の comment audit 結果、TODO 必須情報、stale comment 更新有無を `impl.md` に記録するよう明記する。
+- [ ] `.claude/agents/impl-evaluator.md` を更新し、TypeScript production code を変更した実装では、コメント品質の受け入れ条件を実装差分と照合し、不足や stale comment があれば FAIL にするよう明記する。
+- [ ] `tasks/AUTHORING-CHECKLIST.md` の comment quality 観点と agent 文面の用語を揃える。用語は `public export`、`public component`、`hook`、`module`、`JSDoc/TSDoc`、`boundary`、`heuristic`、`schema/parser`、`lifecycle`、`失敗条件`、`副作用`、`省略理由`、`stale comment`、`TODO 必須情報` に固定する。
 - [ ] `.agents/CUSTOMIZATIONS.md` に、Sincromisor 固有の agent comment quality gate を upstream refresh 時に維持する必要があると追記する。
 - [ ] `npm run gen:codex` を実行し、`.agents/skills/**` と `.codex/agents/*.toml` を `.claude/` 変更から再生成する。
 - [ ] `npm run gen:codex:check` が成功する。

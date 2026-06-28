@@ -22,13 +22,15 @@ Phase 12 の分割により `trackerRuntime.ts` や `motionDebugApp.ts` は小�
     - `sincromisor-frontend/src/pages/motionDebug/*.ts`
 - [ ] audit 対象から `**/__tests__/**`、`*.test.ts`、fixture / acceptance 用 `.ts`、生成物ではない task artifact を除外する。除外した path pattern は `comment-audit.md` の冒頭に明記する。
 - [ ] `main.ts`、`dom.ts` のような薄い entry / DOM helper も audit 対象に含めるが、コメント省略可なら audit に理由を書く。
-- [ ] 各対象 file の `export class` / `export function` / `export type` / `export interface` / domain-significant `export const` に、責務・入力境界・返す値の意味・非対象のいずれか必要な情報がコメントまたは近接する module comment で説明されていることを確認する。
+- [ ] 各対象 file の `export` される、または public な class / function / type / interface / component / hook / module / domain-significant `const` に、責務・入力境界・返す値または observable output の意味・失敗条件・副作用・非対象のいずれか必要な情報がコメントまたは近接する module comment で説明されていることを確認する。
+- [ ] export / public API のコメントは原則 JSDoc / TSDoc とし、省略または module comment へ集約する場合は `comment-audit.md` に理由を書く。
 - [ ] schemaVersion を持つ保存 contract、Zod parser、replay log parser、debug snapshot parser には、受理する値、reject する値、旧 log / fallback 方針を説明するコメントを追加または更新する。
 - [ ] Worker / DOM / MediaStream / MediaPipe / replay log / VRM scene / window debug API に接する module には、所有する resource、cleanup 責務、持ち込まない責務を説明する module comment または public export comment を追加する。
 - [ ] threshold、fallback、degradation、recovery、cooldown、hysteresis、clamp、ROI、side assignment、coordinate mapping、時刻基準のうち対象 file に存在するものは、なぜその判断をするか、変更時に確認すべきテスト / design doc をコメントで説明する。
 - [ ] コメントは日本語で書く。ただし schemaVersion、API 名、enum 値、metric key、technical term は英語のままでよい。
-- [ ] `// 値を返す` のような処理説明だけのコメント、実装と同期しない経緯コメント、タスク ID のない TODO は追加しない。
-- [ ] コメント追加に伴って責務混在が見つかった場合は、コメントで覆い隠さず、`impl.md` に「分割すべき follow-up」として file / 理由 / 推奨 task 化単位を記録する。
+- [ ] 実装コメントは、複雑な分岐、アルゴリズム、workaround、性能理由、外部仕様による制約、invariant の説明に限定する。
+- [ ] `// 値を返す` のような処理説明だけのコメント、実装と同期しない経緯コメント、更新されず stale になったコメント、理由・削除条件・canonical task/issue ID・期限または判断基準がない TODO は追加しない。
+- [ ] コメント追加に伴って責務混在が見つかった場合は、コメントで覆い隠さず、`impl.md` に「分割すべき follow-up」として file / 理由 / 推奨 task 化単位を記録する。命名・関数分割・型定義・options object で明確にすべき箇所も、挙動変更禁止の範囲を超える場合は follow-up として記録する。
 - [ ] 挙動変更をしない。production code の runtime logic、type shape、schemaVersion、threshold 値、export 名は変更しない。
 - [ ] `documents/design/frontend/character/tracking.md` と `documents/design/frontend/character/motion.md` の既存記述と矛盾するコメントを追加しない。矛盾を見つけた場合は、実装コメントではなく design doc 同期の要否を `impl.md` に記録する。
 

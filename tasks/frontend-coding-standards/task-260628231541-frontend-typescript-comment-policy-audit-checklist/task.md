@@ -13,18 +13,20 @@
 - [ ] `documents/rules/coding-ts.md` に新しい節 `## 13. ソースコードコメント品質` を追加する。既存節番号は変更しない。
 - [ ] 新節は、コメントの目的を「読めば分かる処理説明」ではなく「公開 API、境界、非自明な判断、制約理由、保存 contract を後続の開発者が安全に変更するための文脈」と定義する。
 - [ ] 新節は、少なくとも次の対象にコメントを必須とする。
-    - `export class` / `export function` / `export type` / `export interface` / domain-significant `export const`
+    - `export` される、または public な class / function / type / interface / component / hook / module / domain-significant `const`
     - `schemaVersion` を持つ保存 contract / replay log / debug snapshot / parser
     - Worker / DOM / MediaStream / MediaPipe / WebRTC / filesystem / replay log などの境界 module
     - coordinate system、単位、左右定義、時刻基準、frame index、confidence / reliability の意味
     - threshold、fallback、degradation、recovery、cooldown、hysteresis、clamp、side assignment、ROI 判定などの heuristic
     - cleanup 所有者、resource lifecycle、例外を fallback に落とす理由
-- [ ] 新節は、コメントに最低限含める内容を対象別に定義する。例: public export は「責務・入力境界・返す値の意味・非対象」、heuristic は「値の意味・採用理由・変更時の確認先」、schema parser は「受理する旧 log / reject する値 / fallback 方針」。
-- [ ] 新節は、禁止するコメントを定義する。例: `// 値を返す` のような処理説明だけのコメント、古い実装経緯だけのコメント、根拠のない「temporary」、タスク ID なしの TODO、実装と同期しない設計メモ。
+- [ ] 新節は、export / public API のコメントは原則 JSDoc / TSDoc とし、実装内部の補足コメントとは使い分けることを定義する。受け入れる記法と記述例は `AGENTS.md` の基本原則と矛盾させない。
+- [ ] 新節は、コメントに最低限含める内容を対象別に定義する。例: public export は「責務・入力境界・返す値または observable output の意味・失敗条件・副作用・非対象」、heuristic は「値の意味・採用理由・変更時の確認先」、schema parser は「受理する旧 log / reject する値 / fallback 方針」。
+- [ ] 新節は、実装コメントを許容する対象を、複雑な分岐、アルゴリズム、workaround、性能理由、外部仕様による制約、invariant に限定することを定義する。
+- [ ] 新節は、禁止するコメントを定義する。例: `// 値を返す` のような処理説明だけのコメント、古い実装経緯だけのコメント、根拠のない「temporary」、理由・削除条件・canonical task/issue ID・期限または判断基準がない TODO、実装と同期しない設計メモ、更新されず stale になったコメント。
 - [ ] コメントを省略できる条件を一意に定義する。候補は「private helper で名前・型・周辺 public コメントから責務が明らか、かつ境界 / heuristic / lifecycle / schema を持たない場合」に限定する。
 - [ ] `tasks/AUTHORING-CHECKLIST.md` に「ソースコードコメント品質」観点を追加し、TypeScript production code を変更する task は comment audit / comment acceptance を task.md の受け入れ条件へ含める必要があると明記する。
 - [ ] `AGENTS.md` の作業原則にあるコメント方針が新しい `documents/rules/coding-ts.md` 節へ誘導するよう、正本リンクまたは参照文を更新する。
-- [ ] `documents/rules/code-structure.md` の「コメントで段落分けしたくなったら関数抽出」方針と矛盾しないことを明記する。コメントは分割の代替ではなく、境界と理由を伝える補助であると書く。
+- [ ] `documents/rules/code-structure.md` の「コメントで段落分けしたくなったら関数抽出」方針と矛盾しないことを明記する。コメントは分割の代替ではなく、境界と理由を伝える補助であり、まず命名・関数分割・型定義・options object で明確化できないか確認すると書く。
 
 ## 設計判断（着手前に確定済み）
 
@@ -55,7 +57,7 @@
 - `documents/rules/coding-ts.md:54` は catch のコメント、`documents/rules/coding-ts.md:133` は TODO 形式を定めている。新節はこれらを上書きせず、コメント品質の総則として参照する。
 - `documents/rules/code-structure.md:29` は「コメントで段落分けしたくなったら関数抽出」を定めている。新節では、コメントを責務分割の代替にしないことを明記する。
 - `tasks/AUTHORING-CHECKLIST.md:15` 以降は受け入れ条件、設計判断、既存コード整合、テスト、ドキュメント同期をレビュー観点にしているが、source comment quality の観点がない。新観点を追加する。
-- `AGENTS.md` は「ソースコードのコメントは、公開 API、境界、非自明な判断、制約理由を中心に、積極的に記述する」としている。詳細正本を新節へ委譲する。
+- `AGENTS.md` は、コメントを「公開 API、境界、非自明な判断、制約理由」を中心に、後続保守者が安全に変更するための文脈として書く方針を定めている。詳細正本を新節へ委譲しつつ、JSDoc / TSDoc、失敗条件、副作用、TODO 必須情報、stale comment 更新、命名・分割・型による明確化を弱めない。
 
 ## テスト
 
