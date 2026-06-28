@@ -5,7 +5,7 @@ status: open
 depends_on:
   - task-260628200308-character-animation-3-0-phase-12-code-structure-guard
 superseded_by: null
-review: APPROVED
+review: NEEDS_REVISION
 reviewed_sha: e490f2df148537bb839d1dc5fbad49f0af26e673
 verdict: null
 attempts: 0
