@@ -1,6 +1,7 @@
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
+import type { TrackerRuntimeDegradationPolicySnapshot } from "./trackerRuntimeDegradationPolicy";
 import type { TrackerPerformanceBudgetReport } from "./trackerRuntimePerformanceBudget";
 
 export type SincroTrackerWorkerStatus =
@@ -48,6 +49,7 @@ export type SincroTrackerWorkerStats = {
     fallbackReason?: string;
     budget?: TrackerPerformanceBudgetReport;
     roi?: SincroTrackerRoiStats;
+    degradationPolicy?: TrackerRuntimeDegradationPolicySnapshot;
 };
 
 export type SincroTrackerWorkerInitMessage = {

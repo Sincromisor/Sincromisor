@@ -49,6 +49,7 @@ import {
     type CameraQualityComponent,
     type CameraQualityScore,
 } from "../../../features/gaze/trackingRuntime/cameraQualityScore";
+import { TRACKER_RUNTIME_DEGRADATION_POLICY_SCHEMA_VERSION } from "../../../features/gaze/trackingRuntime/trackerRuntimeDegradationPolicy";
 import { TRACKER_PERFORMANCE_BUDGET_SCHEMA_VERSION } from "../../../features/gaze/trackingRuntime/trackerRuntimePerformanceBudget";
 import { resolveTrackerRuntimePerformanceProfile } from "../../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
 import { createMotionDebugViewerSnapshot } from "../motionDebugViewerModel";
@@ -1920,6 +1921,21 @@ describe("createMotionDebugViewerSnapshot", () => {
             consecutiveOverBudgetFrames: 0,
             reasonCodes: ["face_roi_skipped", "roi_fallback_full_frame", "hand_roi_paused"],
         };
+        const degradationPolicy = {
+            schemaVersion: TRACKER_RUNTIME_DEGRADATION_POLICY_SCHEMA_VERSION,
+            stage: "roi-hand-paused",
+            previousStage: "optional-pass-reduced-fps",
+            reasonCodes: ["worker_round_trip_warn", "hand_roi_paused"],
+            sinceMediaTimeMs: 220,
+            effectiveCadence: {
+                faceFps: 15,
+                poseFps: 12,
+                handFps: 4,
+                faceRoiFps: 5,
+                gestureFps: 3,
+            },
+            recovering: false,
+        };
 
         const viewer = createMotionDebugViewerSnapshot({
             mode: "replay",
@@ -1952,6 +1968,7 @@ describe("createMotionDebugViewerSnapshot", () => {
                         droppedFrames: 1,
                         roi: roiStats,
                         budget: trackerBudget,
+                        degradationPolicy,
                     },
                 },
             },
@@ -1961,11 +1978,24 @@ describe("createMotionDebugViewerSnapshot", () => {
         expect(viewer.layers.metrics.value).toMatchObject({
             tracker: {
                 roi: roiStats,
+                degradationPolicy: {
+                    schemaVersion: TRACKER_RUNTIME_DEGRADATION_POLICY_SCHEMA_VERSION,
+                    stage: "roi-hand-paused",
+                    reasonCodes: ["worker_round_trip_warn", "hand_roi_paused"],
+                    effectiveCadence: {
+                        handFps: 4,
+                        faceRoiFps: 5,
+                        gestureFps: 3,
+                    },
+                },
                 effectiveFaceRoiFps: 3,
                 budget: {
                     schemaVersion: TRACKER_PERFORMANCE_BUDGET_SCHEMA_VERSION,
                     budgetStatus: "warn",
                 },
+            },
+            activePerformanceProfile: {
+                id: "debug",
             },
         });
         expect(viewer.metrics).toBeUndefined();

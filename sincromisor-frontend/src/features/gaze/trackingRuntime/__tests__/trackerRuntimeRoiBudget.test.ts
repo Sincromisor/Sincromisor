@@ -66,6 +66,26 @@ describe("TrackerRuntimeRoiBudgetController", () => {
             reasonCodes: ["pose_stale_for_roi", "hand_roi_skipped", "roi_fallback_full_frame"],
         });
     });
+
+    it("merges policy pause and budget reasons without duplicate skip stats", () => {
+        const controller = new TrackerRuntimeRoiBudgetController();
+        controller.setPolicyPauseState("hand-paused");
+
+        const stats = controller.recordFrame({
+            handRan: false,
+            faceRoiRan: true,
+            faceRoiInferenceTimeMs: 1,
+            skippedReasons: ["hand_roi_paused", "hand_roi_paused"],
+            targetPoseInferenceFps: 12,
+        });
+
+        expect(stats).toMatchObject({
+            pauseState: "hand-paused",
+            fallbackCount: 0,
+            skippedFrames: 0,
+            reasonCodes: ["hand_roi_paused"],
+        });
+    });
 });
 
 describe("clampTrackerRuntimeTargetsForMainThreadFallback", () => {

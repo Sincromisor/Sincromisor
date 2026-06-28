@@ -22,6 +22,11 @@ import {
     shouldRunTrackerPoseInference,
 } from "./trackerRuntimeCadence";
 import {
+    type TrackerRuntimeDegradationPolicyCadence,
+    TrackerRuntimeDegradationPolicyController,
+    type TrackerRuntimeDegradationPolicyDecision,
+} from "./trackerRuntimeDegradationPolicy";
+import {
     formatTrackerRuntimeErrorDetail,
     initializeTrackerRuntimeEngine,
 } from "./trackerRuntimeEngineInitializer";
@@ -33,7 +38,10 @@ import {
     type TrackerPerformanceReasonCode,
     type TrackerRuntimeDegradationState,
 } from "./trackerRuntimePerformanceBudget";
-import { resolveTrackerRuntimePerformanceProfile } from "./trackerRuntimePerformanceProfile";
+import {
+    resolveTrackerRuntimePerformanceProfile,
+    type TrackerRuntimePerformanceProfile,
+} from "./trackerRuntimePerformanceProfile";
 import {
     TrackerRuntimePosePerformanceGate,
     type TrackerRuntimePosePerformanceGateResult,
@@ -73,8 +81,15 @@ export class TrackerRuntime {
     private targetPoseInferenceFps = DEFAULT_TARGET_POSE_INFERENCE_FPS;
     private targetHandInferenceFps = DEFAULT_TARGET_HAND_INFERENCE_FPS;
     private targetFaceRoiInferenceFps = DEFAULT_TARGET_FACE_ROI_INFERENCE_FPS;
+    private baseTargetInferenceFps = DEFAULT_TARGET_INFERENCE_FPS;
+    private baseTargetPoseInferenceFps = DEFAULT_TARGET_POSE_INFERENCE_FPS;
+    private baseTargetHandInferenceFps = DEFAULT_TARGET_HAND_INFERENCE_FPS;
+    private baseTargetFaceRoiInferenceFps = DEFAULT_TARGET_FACE_ROI_INFERENCE_FPS;
     private readonly posePerformanceGate = new TrackerRuntimePosePerformanceGate();
     private readonly roiBudget = new TrackerRuntimeRoiBudgetController();
+    private readonly degradationPolicy = new TrackerRuntimeDegradationPolicyController();
+    private performanceProfile: TrackerRuntimePerformanceProfile =
+        resolveTrackerRuntimePerformanceProfile().profile;
     private latestPoseSnapshot?: SincroPoseMotionSnapshot;
     private poseTrackingEnabled = false;
     private handTrackingEnabled = false;
@@ -87,6 +102,7 @@ export class TrackerRuntime {
     private degradationSinceMediaTimeMs?: number;
     private mainThreadFallbackReason?: string;
     private ignorePosePerformanceFallback = false;
+    private comfortableIdleActive = false;
 
     constructor(
         videoElement: HTMLVideoElement,
@@ -117,6 +133,7 @@ export class TrackerRuntime {
             performanceProfileId: poseOptions.performanceProfileId,
             performanceProfile: poseOptions.performanceProfile,
         }).profile;
+        this.performanceProfile = performanceProfile;
         this.callbacks = callbacks;
         this.poseTrackingEnabled = !!poseOptions.enabled;
         this.handTrackingEnabled =
@@ -126,30 +143,36 @@ export class TrackerRuntime {
         this.poseDegradedToFaceOnly = false;
         this.latestPoseSnapshot = undefined;
         this.roiBudget.reset();
+        this.degradationPolicy.reset();
         this.degradationState = "full";
         this.degradationReason = undefined;
         this.degradationSinceMediaTimeMs = undefined;
         this.mainThreadFallbackReason = undefined;
         this.ignorePosePerformanceFallback = !!poseOptions.ignorePerformanceFallback;
-        this.targetInferenceFps = Math.max(
+        this.comfortableIdleActive = false;
+        this.baseTargetInferenceFps = Math.max(
             1,
             Math.min(30, targetInferenceFps ?? performanceProfile.cadence.faceFps),
         );
-        this.targetPoseInferenceFps = Math.max(
+        this.baseTargetPoseInferenceFps = Math.max(
             1,
             Math.min(15, poseOptions.targetInferenceFps ?? performanceProfile.cadence.poseFps),
         );
-        this.targetHandInferenceFps = Math.max(
+        this.baseTargetHandInferenceFps = Math.max(
             1,
             Math.min(8, poseOptions.hand?.targetInferenceFps ?? performanceProfile.cadence.handFps),
         );
-        this.targetFaceRoiInferenceFps = Math.max(
+        this.baseTargetFaceRoiInferenceFps = Math.max(
             1,
             Math.min(
                 12,
                 poseOptions.faceRoi?.targetInferenceFps ?? performanceProfile.cadence.faceRoiFps,
             ),
         );
+        this.targetInferenceFps = this.baseTargetInferenceFps;
+        this.targetPoseInferenceFps = this.baseTargetPoseInferenceFps;
+        this.targetHandInferenceFps = this.baseTargetHandInferenceFps;
+        this.targetFaceRoiInferenceFps = this.baseTargetFaceRoiInferenceFps;
         this.posePerformanceGate.configure({
             targetPoseInferenceFps: this.targetPoseInferenceFps,
             ignorePerformanceFallback: this.ignorePosePerformanceFallback,
@@ -187,6 +210,7 @@ export class TrackerRuntime {
         this.poseDegradedToFaceOnly = false;
         this.latestPoseSnapshot = undefined;
         this.roiBudget.reset();
+        this.degradationPolicy.reset();
         this.posePerformanceGate.reset();
         this.useWorkerTracking = false;
         this.switchingToMainThreadFallback = false;
@@ -195,6 +219,7 @@ export class TrackerRuntime {
         this.degradationSinceMediaTimeMs = undefined;
         this.mainThreadFallbackReason = undefined;
         this.ignorePosePerformanceFallback = false;
+        this.comfortableIdleActive = false;
         this.videoElement.pause();
         this.videoElement.srcObject = null;
     }
@@ -290,6 +315,7 @@ export class TrackerRuntime {
                     timing,
                     performance.now() - detectStartedAtMs,
                     poseResult?.inferenceTimeMs,
+                    poseResult?.snapshot.detected,
                     roiStats,
                 ),
             );
@@ -357,7 +383,13 @@ export class TrackerRuntime {
                 skippedReasons: this.collectRoiSkipReasons(runHand, runFaceRoi, expectedFreshPose),
             });
             this.callbacks.onTrackerStats?.(
-                this.withBudget(result.stats, timing, result.pose?.inferenceTimeMs, roiStats),
+                this.withBudget(
+                    result.stats,
+                    timing,
+                    result.pose?.inferenceTimeMs,
+                    result.pose?.detected,
+                    roiStats,
+                ),
             );
             this.frameLoop.schedule();
         } catch (error) {
@@ -586,6 +618,7 @@ export class TrackerRuntime {
         timing: TrackerVideoFrameTiming,
         mainThreadDetectTimeMs: number,
         poseInferenceTimeMs: number | undefined,
+        poseDetected: boolean | undefined,
         roiStats: SincroTrackerRoiStats,
     ): SincroTrackerWorkerStats {
         const workerStats = this.workerClient.getStats();
@@ -611,6 +644,7 @@ export class TrackerRuntime {
             },
             timing,
             poseInferenceTimeMs,
+            poseDetected,
             roiStats,
         );
     }
@@ -619,27 +653,64 @@ export class TrackerRuntime {
         stats: SincroTrackerWorkerStats,
         timing: TrackerVideoFrameTiming,
         poseInferenceTimeMs: number | undefined,
+        poseDetected: boolean | undefined,
         roiStats: SincroTrackerRoiStats = this.roiBudget.getStats(),
     ): SincroTrackerWorkerStats {
+        const targetInferenceFps = this.targetInferenceFps;
+        const targetPoseInferenceFps = this.targetPoseInferenceFps;
         const effectiveFaceFps = stats.effectiveFaceFps ?? this.targetInferenceFps;
         const effectivePoseFps = stats.effectivePoseFps ?? this.targetPoseInferenceFps;
-        const effectiveHandFps =
-            stats.effectiveHandFps ??
-            (this.handTrackingEnabled ? this.targetHandInferenceFps : undefined);
         const fallbackReason = stats.fallbackReason ?? this.mainThreadFallbackReason;
-        const effectiveFaceRoiFps =
-            stats.effectiveFaceRoiFps ??
-            (this.faceRoiTrackingEnabled ? this.targetFaceRoiInferenceFps : undefined);
-        return {
-            ...stats,
+        const budget = createTrackerPerformanceBudgetReport({
+            targetInferenceFps,
+            targetPoseInferenceFps,
+            clockSource: timing.source,
+            transferTimeMs: stats.transferTimeMs,
+            workerRoundTripMs: stats.workerRoundTripMs,
+            workerTimeMs: stats.workerTimeMs,
+            mainThreadDetectTimeMs: stats.mainThreadDetectTimeMs,
+            poseInferenceTimeMs,
+            droppedFrames: stats.droppedFrames,
             effectiveFaceFps,
             effectivePoseFps,
-            effectiveHandFps,
-            effectiveFaceRoiFps,
-            roi: roiStats,
+            degradationState: this.degradationState,
+            degradationReason: this.degradationReason,
+            degradationSinceMediaTimeMs: this.degradationSinceMediaTimeMs,
+            fallbackReason,
+            reasonCodes: roiStats.reasonCodes,
+        });
+        const decision = this.degradationPolicy.update({
+            mediaTimeMs: timing.mediaTimeMs,
+            profile: this.performanceProfile,
+            budgetStatus: budget.budgetStatus,
+            budgetReasonCodes: budget.reasonCodes,
+            poseInferenceTimeMs,
+            poseDetected,
+            roi: {
+                pauseState: roiStats.pauseState,
+                consecutiveOverBudgetFrames: roiStats.consecutiveOverBudgetFrames,
+                reasonCodes: roiStats.reasonCodes,
+            },
+            mainThreadFallbackActive: this.mainThreadFallbackReason !== undefined,
+            ignorePerformanceFallback: this.ignorePosePerformanceFallback,
+        });
+        const appliedCadence = this.applyDegradationPolicyDecision(decision, timing);
+        const degradationPolicy = {
+            ...decision.snapshot,
+            effectiveCadence: appliedCadence,
+        };
+        const updatedRoiStats = this.roiBudget.getStats();
+        return {
+            ...stats,
+            effectiveFaceFps: appliedCadence.faceFps,
+            effectivePoseFps: appliedCadence.poseFps,
+            effectiveHandFps: appliedCadence.handFps,
+            effectiveFaceRoiFps: appliedCadence.faceRoiFps,
+            roi: updatedRoiStats,
+            degradationPolicy,
             budget: createTrackerPerformanceBudgetReport({
-                targetInferenceFps: this.targetInferenceFps,
-                targetPoseInferenceFps: this.targetPoseInferenceFps,
+                targetInferenceFps,
+                targetPoseInferenceFps,
                 clockSource: timing.source,
                 transferTimeMs: stats.transferTimeMs,
                 workerRoundTripMs: stats.workerRoundTripMs,
@@ -647,15 +718,83 @@ export class TrackerRuntime {
                 mainThreadDetectTimeMs: stats.mainThreadDetectTimeMs,
                 poseInferenceTimeMs,
                 droppedFrames: stats.droppedFrames,
-                effectiveFaceFps,
-                effectivePoseFps,
+                effectiveFaceFps: appliedCadence.faceFps,
+                effectivePoseFps: appliedCadence.poseFps,
                 degradationState: this.degradationState,
                 degradationReason: this.degradationReason,
                 degradationSinceMediaTimeMs: this.degradationSinceMediaTimeMs,
                 fallbackReason,
-                reasonCodes: roiStats.reasonCodes,
+                reasonCodes: decision.reasonCodes,
             }),
         };
+    }
+
+    private applyDegradationPolicyDecision(
+        decision: TrackerRuntimeDegradationPolicyDecision,
+        timing: TrackerVideoFrameTiming,
+    ): TrackerRuntimeDegradationPolicyCadence {
+        const appliedCadence = this.capPolicyCadence(decision.effectiveCadence);
+        this.targetInferenceFps = Math.max(1, appliedCadence.faceFps);
+        this.targetPoseInferenceFps = Math.max(1, appliedCadence.poseFps);
+        this.targetHandInferenceFps = Math.max(1, appliedCadence.handFps);
+        this.targetFaceRoiInferenceFps = Math.max(1, appliedCadence.faceRoiFps);
+        this.roiBudget.setPolicyPauseState(decision.roiPauseState);
+        this.posePerformanceGate.configure({
+            targetPoseInferenceFps: this.targetPoseInferenceFps,
+            ignorePerformanceFallback: this.ignorePosePerformanceFallback,
+        });
+
+        if (this.poseDegradedToFaceOnly && decision.trackerDegradationState === "full") {
+            this.degradationState = "face-only";
+        } else {
+            this.degradationState = decision.trackerDegradationState;
+            this.degradationReason = resolvePrimaryPolicyReason(decision);
+            this.degradationSinceMediaTimeMs = decision.state.sinceMediaTimeMs;
+        }
+        if (decision.shouldDegradeToFaceOnly && !this.poseDegradedToFaceOnly) {
+            this.degradePoseToFaceOnly(
+                "tracker_degradation_policy_face_only",
+                timing.mediaTimeMs,
+                timing,
+                "pose_detection_failed_repeatedly",
+            );
+        }
+        if (decision.shouldEnterComfortableIdle && !this.comfortableIdleActive) {
+            this.enterComfortableIdle(timing);
+        }
+        return appliedCadence;
+    }
+
+    private capPolicyCadence(
+        cadence: TrackerRuntimeDegradationPolicyCadence,
+    ): TrackerRuntimeDegradationPolicyCadence {
+        return {
+            faceFps: Math.min(this.baseTargetInferenceFps, cadence.faceFps),
+            poseFps:
+                cadence.poseFps === 0
+                    ? 0
+                    : Math.min(this.baseTargetPoseInferenceFps, cadence.poseFps),
+            handFps:
+                cadence.handFps === 0
+                    ? 0
+                    : Math.min(this.baseTargetHandInferenceFps, cadence.handFps),
+            faceRoiFps:
+                cadence.faceRoiFps === 0
+                    ? 0
+                    : Math.min(this.baseTargetFaceRoiInferenceFps, cadence.faceRoiFps),
+            gestureFps: cadence.gestureFps,
+        };
+    }
+
+    private enterComfortableIdle(timing: TrackerVideoFrameTiming): void {
+        this.comfortableIdleActive = true;
+        this.poseDegradedToFaceOnly = true;
+        const reason = "tracker_degradation_policy_comfortable_idle";
+        const poseSnapshot = this.poseTracker.stop(reason, timing.mediaTimeMs);
+        this.callbacks?.onPoseMotion?.(poseSnapshot, timing);
+        this.callbacks?.onPoseFallback?.(poseSnapshot, timing);
+        this.callbacks?.onHandMotion?.(this.handTracker.stop(reason, timing.mediaTimeMs), timing);
+        this.latestPoseSnapshot = undefined;
     }
 
     private resolveFreshPoseSnapshot(
@@ -788,6 +927,12 @@ export class TrackerRuntime {
 
 function uniqueStrings<T extends string>(values: T[]): T[] {
     return values.filter((value, index) => values.indexOf(value) === index);
+}
+
+function resolvePrimaryPolicyReason(
+    decision: TrackerRuntimeDegradationPolicyDecision,
+): TrackerPerformanceReasonCode | undefined {
+    return decision.reasonCodes[0];
 }
 
 function cloneFaceRoiObservation(
