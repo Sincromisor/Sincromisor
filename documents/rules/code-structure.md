@@ -56,3 +56,15 @@
 - Python: 同じ行または直前行に `# reason: <理由>`
 - TypeScript: 同じ行に `// reason: <理由>`
 - Markdown: 同じ箇条書きまたは直前行に `<!-- reason: <理由> -->`
+
+### frontend structure guard
+
+frontend の TypeScript / TSX では、`npm run tasks:check:frontend-structure` を使って
+`sincromisor-frontend/src/**/*.ts` と `*.tsx` の物理行数を確認する。この guard は既存の 300 行超
+ファイルを inventory として一覧化し、`git diff main --name-only -- sincromisor-frontend/src` で
+取得した変更ファイルだけを strict gate として扱う。`**/__tests__/**`、`*.test.ts`、`*.test.tsx`、
+`*.d.ts` は対象外とする。
+
+strict 対象のファイルが 300 行を超える場合は分割する。やむを得ない例外は同じファイル内に
+`// reason: structure-threshold-exception <理由>` を置く。このコメントは frontend structure guard
+専用の固定形式であり、理由なしの例外は認めない。
