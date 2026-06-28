@@ -1,13 +1,13 @@
 id: task-260628231541-frontend-typescript-comment-policy-audit-checklist
 title: frontend TypeScript comment policy and audit checklist
 category: frontend-coding-standards
-status: open
+status: done
 depends_on: []
 superseded_by: null
-review: NEEDS_REVISION
-reviewed_sha: null
-verdict: null
-attempts: 0
+review: APPROVED
+reviewed_sha: 105f1ee9c2e1f45f256d29c2005a18c84ac7a38d
+verdict: PASS
+attempts: 1
 created_at: 2026-06-28
-closed_at: null
+closed_at: 2026-06-29
 legacy_ids: []
