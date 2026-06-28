@@ -26,7 +26,12 @@ import type {
     MotionMetricConfig,
     MotionMetricKey,
     MotionMetricSummary,
+    MotionP0FixtureId,
 } from "../../character/motionEvaluation/motionMetrics";
+import type {
+    MotionQaRegressionConfig,
+    MotionQaRegressionResult,
+} from "../../character/motionEvaluation/motionQaRegression";
 import type {
     MotionReplayFrameResult,
     MotionReplayLoadResult,
@@ -237,6 +242,18 @@ export type MotionDebugReplayMetricsResult =
     | { ok: true; summary: MotionMetricSummary }
     | { ok: false; code: "no_recording_loaded"; message: string };
 
+export type MotionDebugQaRegressionConfig = MotionQaRegressionConfig & {
+    fixtureId?: MotionP0FixtureId;
+};
+
+export type MotionDebugQaRegressionApiResult =
+    | { ok: true; result: MotionQaRegressionResult }
+    | {
+          ok: false;
+          code: "no_recording_loaded" | "fixture_id_required";
+          message: string;
+      };
+
 export type MotionDebugStartCameraOptions = {
     performanceProfileId?: string;
     performanceProfile?: TrackerRuntimePerformanceProfile;
@@ -265,6 +282,9 @@ export type MotionDebugApi = {
     stopReplay: () => MotionDebugReplayState;
     getReplayState: () => MotionDebugReplayState;
     calculateReplayMetrics: (config: MotionMetricConfig) => MotionDebugReplayMetricsResult;
+    runQaRegression: (
+        config: MotionDebugQaRegressionConfig,
+    ) => Promise<MotionDebugQaRegressionApiResult>;
 };
 
 declare global {
