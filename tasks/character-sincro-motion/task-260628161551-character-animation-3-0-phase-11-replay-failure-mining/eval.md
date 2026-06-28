@@ -1,9 +1,11 @@
 # Evaluation: task-260628161551-character-animation-3-0-phase-11-replay-failure-mining
 
 ## 判定
+
 PASS
 
 ## 受け入れ条件チェックリスト
+
 - [✓] candidate report helper / schema / input が追加されている — `motionOptimizationCandidateReport.ts` で `MOTION_OPTIMIZATION_CANDIDATE_REPORT_SCHEMA_VERSION`、input/report/candidate types、`analyzeMotionOptimizationCandidates(input)` を export。`generatedAtIso` は input から返却され、helper 内で現在時刻を読んでいない。
 - [✓] metric key to target mapping が固定仕様どおり — IK、temporal、gesture、anomaly、performance、do_not_optimize の分類が task.md の一覧と一致し、candidate target order も固定配列で実装されている。
 - [✓] candidate 生成対象 / skip warning が仕様どおり — `warn` / `fail` fixture のみ candidate 化し、`pass` / `invalid_fixture` などは `fixture_skipped:${fixtureId}:${status}`、errors ありなら `:${errors.join("|")}` を付けて warnings に残す。
@@ -17,6 +19,7 @@ PASS
 - [✓] design doc が同期されている — `documents/design/frontend/character/motion.md` に Phase 11 candidate report v1、metric-to-target rule、performance_policy の非 ML 方針、補正適用 / 学習を行わない方針、motion-debug API が追記されている。
 
 ## テスト結果
+
 - `cd sincromisor-frontend && npm run test -- motionOptimizationCandidateReport` — passed: 1 file / 5 tests.
 - `cd sincromisor-frontend && npm run test -- motionDebugViewerModel` — passed: 1 file / 38 tests.
 - `npm run gate` — PASS。`gate:lint` / `gate:build` / `gate:test` は commit `4b4f28c` clean tree の cache hit。test summary は 385 passed。
@@ -24,13 +27,16 @@ PASS
 - カバレッジ評価: 受け入れ条件の主要な分類・順序・ID・evidence・not_available・frameRange・API error surface は unit / viewer model test とコード照合で十分確認されている。未検証の実ブラウザ手動操作は developer API 追加に対する残リスクとして軽微。
 
 ## ドキュメント整合性
+
 - 公開 WebRTC / backend 契約の変更はなし。
 - developer-visible な `window.__SINCRO_MOTION_DEBUG__.analyzeOptimizationCandidates(config)` と Phase 11 candidate report artifact が追加されたためドキュメント同期が必要。`documents/design/frontend/character/motion.md` に schema version、input の時刻方針、metric-to-target rule、`performance_policy` 非 ML 方針、補正 / 学習 / telemetry を行わないこと、API error semantics が同期済み。
 
 ## 残課題（FAIL の場合）
+
 - なし。
 
 ## 評価メモ
+
 - 評価 worktree: `/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-4b4f28cc9c21-n9PkUO`
 - 実装 commit: `4b4f28cc9c21e46d7341af81bd2a19c49d8b3662`
 - 評価終了時の評価 worktree は clean。

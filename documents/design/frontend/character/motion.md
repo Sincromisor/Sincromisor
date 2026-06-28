@@ -62,6 +62,10 @@
 - `src/character/ik`
     - `SincroArmIkSolver` と solver probe / constraint / geometry / pole を置く。
     - `ArmPoleState` v1 は `"stable"`、`"uncertain"`、`"extended"`、`"lost"`、`"recovering"` の lower-case enum とし、IK pole resolver が決定する。TemporalStateEstimator は VRM quaternion / IK pole を扱わない。
+    - Phase 11 constrained IK refinement は `SincroArmIkSolver.solveRefined()` の dev-only / opt-in API として置く。既定の `solve()` と production runtime の姿勢適用は変更せず、motion-debug UI toggle も別 task に残す。
+    - refinement 候補は original wrist を index `0` に固定し、以降は reach scale、elevation offset、depth scale の deterministic order で最大 5 件だけ評価する。candidate wrist は depth scale、elevation offset、reach scale の順に適用し、original wrist から腕長比 `maxTargetDeltaRatio` を超える候補は破棄する。
+    - refinement cost は既存 solver の reach clamp、pole reason code、collisionAvoided、upper/lower quaternion limit、original からの normalized delta だけを読む。評価中に `lastPoleDirection` は更新せず、選ばれた candidate の pole direction だけを最後に commit する。
+    - `SincroArmIkRefinementResult` は replay / unit test で保存しやすい plain object debug snapshot とし、候補 index、cost、reject reason、selected / original cost を含める。本番接続、recording slot、motion-debug 操作面への露出は後続 task の責務とする。
 - `src/character/vrmPose`
     - `VrmPoseComposer` と VRM normalized local pose contract を置く。
     - v1 は腕周辺 bone と torso fallback を対象にし、`leftUpperArm` / `leftLowerArm` / `leftHand`、`rightUpperArm` / `rightLowerArm` / `rightHand`、存在する場合の shoulder / finger fallback capability、`spine` / `chest` / `upperChest` の torso distribution を扱う。head / neck / leg / expression はまだ composer へ移さない。
