@@ -181,7 +181,7 @@ PoC では下記 2 軸を最優先する。
 | ドキュメント (`documents/**`) | 日本語                                                                                                   |
 | ユーザー向け文言              | 日本語                                                                                                   |
 | Pydantic field description    | 日本語または英語。ユーザー表示用は日本語、開発者向け診断は英語でも可                                     |
-| コミットメッセージ            | 日本語可。形式は [tasks/README.md](../../tasks/README.md) の Conventional Commits ベース規約を正本とする |
+| コミットメッセージ            | 日本語。形式は [tasks/README.md](../../tasks/README.md) の Conventional Commits ベース規約を正本とする   |
 
 ## 12. その他の負債抑制ルール
 
