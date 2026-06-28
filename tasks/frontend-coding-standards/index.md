@@ -23,13 +23,7 @@
 
 ## タスク一覧（自動生成 / 全 12 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                                                                           | タイトル                                        | 判定 | 依存 |
-| ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- | ---- | ---- |
-| [task-260629022214-tighten-typescript-source-comment-quality-rules](./task-260629022214-tighten-typescript-source-comment-quality-rules/task.md) | tighten TypeScript source comment quality rules | —    | —    |
-
-### done（完了） — 11 件
+### done（完了） — 12 件
 
 | タスク                                                                                                                                                 | タイトル                                               | 判定    | 依存 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ------- | ---- |
@@ -44,5 +38,6 @@
 | [task-260519191620-frontend-camelcase-path-full-migration](./task-260519191620-frontend-camelcase-path-full-migration/task.md)                         | frontend camelcase path full migration                 | ✅ PASS | —    |
 | [task-260519191621-frontend-type-assertion-and-suppression-cleanup](./task-260519191621-frontend-type-assertion-and-suppression-cleanup/task.md)       | frontend type assertion and suppression cleanup        | ✅ PASS | —    |
 | [task-260628231541-frontend-typescript-comment-policy-audit-checklist](./task-260628231541-frontend-typescript-comment-policy-audit-checklist/task.md) | frontend TypeScript comment policy and audit checklist | ✅ PASS | —    |
+| [task-260629022214-tighten-typescript-source-comment-quality-rules](./task-260629022214-tighten-typescript-source-comment-quality-rules/task.md)       | tighten TypeScript source comment quality rules        | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->
