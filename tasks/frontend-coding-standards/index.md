@@ -21,7 +21,13 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 11 件）
+## タスク一覧（自動生成 / 全 12 件）
+
+### open（未完） — 1 件
+
+| タスク                                                                                                                                           | タイトル                                        | 判定 | 依存 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- | ---- | ---- |
+| [task-260629022214-tighten-typescript-source-comment-quality-rules](./task-260629022214-tighten-typescript-source-comment-quality-rules/task.md) | tighten TypeScript source comment quality rules | —    | —    |
 
 ### done（完了） — 11 件
 

@@ -77,7 +77,13 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 79 件）
+## タスク一覧（自動生成 / 全 80 件）
+
+### open（未完） — 1 件
+
+| タスク                                                                                                                                                         | タイトル                                                    | 判定 | 依存                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| [task-260629022225-redo-character-source-comment-remediation-symbol-audit](./task-260629022225-redo-character-source-comment-remediation-symbol-audit/task.md) | redo character source comment remediation with symbol audit | —    | `task-260629022214-tighten-typescript-source-comment-quality-rules`, `task-260629022219-tighten-task-agent-source-comment-quality-prompts` |
 
 ### done（完了） — 79 件
 
