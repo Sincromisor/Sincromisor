@@ -748,6 +748,71 @@ describe("createMotionDebugViewerSnapshot", () => {
         });
     });
 
+    it("analyzes optimization candidates from the loaded recording API surface", async () => {
+        const liveSnapshot = createLiveSnapshot();
+        const player = new MotionReplayPlayer<MotionDebugSnapshot>({
+            applyPoseSnapshot: (snapshot) => ({
+                ...liveSnapshot,
+                pose: snapshot,
+            }),
+            readSnapshot: () => liveSnapshot,
+        });
+        expect(player.loadRecordingText(createMinimalLogText()).ok).toBe(true);
+
+        const app = Object.create(MotionDebugApp.prototype);
+        Object.defineProperty(app, "replay", { value: player });
+        Object.defineProperty(app, "setAutoViewerMode", { value: () => undefined });
+        Object.defineProperty(app, "renderSnapshot", { value: () => undefined });
+
+        const result = await MotionDebugApp.prototype.analyzeOptimizationCandidates.call(app, {
+            generatedAtIso: "2026-06-23T12:04:00.000Z",
+            thresholdVersion: "initial-v1",
+            fixtureId: "neutral-10s",
+        });
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) {
+            return;
+        }
+        expect(result.report).toMatchObject({
+            schemaVersion: "sincro.motion-optimization-candidates.v1",
+            sourceQaOverall: "warn",
+            candidates: [
+                {
+                    candidateId: "neutral-10s:do_not_optimize:0",
+                    fixtureId: "neutral-10s",
+                    target: "do_not_optimize",
+                    requiresHumanLabel: false,
+                },
+            ],
+        });
+    });
+
+    it("keeps fixture_id_required for candidate analysis when the loaded source is not a P0 fixture", async () => {
+        const liveSnapshot = createLiveSnapshot();
+        const player = new MotionReplayPlayer<MotionDebugSnapshot>({
+            applyPoseSnapshot: (snapshot) => ({
+                ...liveSnapshot,
+                pose: snapshot,
+            }),
+            readSnapshot: () => liveSnapshot,
+        });
+        expect(player.loadRecordingText(createMinimalLogText()).ok).toBe(true);
+
+        const app = Object.create(MotionDebugApp.prototype);
+        Object.defineProperty(app, "replay", { value: player });
+
+        const result = await MotionDebugApp.prototype.analyzeOptimizationCandidates.call(app, {
+            generatedAtIso: "2026-06-23T12:05:00.000Z",
+            thresholdVersion: "initial-v1",
+        });
+
+        expect(result).toMatchObject({
+            ok: false,
+            code: "fixture_id_required",
+        });
+    });
+
     it("projects Phase 10 degradation metric results into the metrics layer JSON", () => {
         const liveSnapshot = createLiveSnapshot();
         const summary = calculateMotionMetricSummary(
