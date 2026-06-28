@@ -1,4 +1,3 @@
-import type { TemporalArmState } from "../temporal/temporalUpperBodyState";
 import { clamp01, normalizeConfig, SIDES } from "./motionIntentEstimatorConfig";
 import type {
     MotionIntentEstimatorConfig,
@@ -36,8 +35,6 @@ export class MotionIntentEstimator {
     private readonly config: NormalizedEstimatorConfig;
     private readonly sideMachine: MotionIntentSideMachine;
     private previousMediaTimeMs: number | undefined;
-    private fallbackCandidateStartedAtMs: number | undefined;
-    private fallbackStableDurationMs = 0;
     private sideSwapHoldUntilMs = 0;
 
     constructor(config?: MotionIntentEstimatorConfig) {
@@ -62,7 +59,11 @@ export class MotionIntentEstimator {
         const sideSwapHoldActive = mediaTimeMs <= this.sideSwapHoldUntilMs;
         const globalClapLike = detectGlobalClapLike(input, this.config);
         const globalGuarded = detectGlobalGuarded(input, this.config, sideSwapSuspect);
-        const fallbackActive = this.updateFallbackCandidate(input, mediaTimeMs, validDtMs);
+        const fallback = this.sideMachine.updateFallbackCandidate({
+            frame: input,
+            mediaTimeMs,
+            validDtMs,
+        });
         const arms = {
             left: this.sideMachine.updateSide({
                 ctx: {
@@ -78,8 +79,8 @@ export class MotionIntentEstimator {
                     globalClapLike,
                     sideSwapSuspect: sideSwapHoldActive,
                 },
-                fallbackActive,
-                fallbackStableDurationMs: this.fallbackStableDurationMs,
+                fallbackActive: fallback.active,
+                fallbackStableDurationMs: fallback.stableDurationMs,
             }),
             right: this.sideMachine.updateSide({
                 ctx: {
@@ -95,8 +96,8 @@ export class MotionIntentEstimator {
                     globalClapLike,
                     sideSwapSuspect: sideSwapHoldActive,
                 },
-                fallbackActive,
-                fallbackStableDurationMs: this.fallbackStableDurationMs,
+                fallbackActive: fallback.active,
+                fallbackStableDurationMs: fallback.stableDurationMs,
             }),
         };
 
@@ -140,45 +141,9 @@ export class MotionIntentEstimator {
 
     reset(): void {
         this.previousMediaTimeMs = undefined;
-        this.fallbackCandidateStartedAtMs = undefined;
-        this.fallbackStableDurationMs = 0;
         this.sideSwapHoldUntilMs = 0;
         this.sideMachine.reset();
     }
-
-    private updateFallbackCandidate(
-        input: MotionIntentEstimatorInput,
-        mediaTimeMs: number,
-        validDtMs: number | undefined,
-    ): boolean {
-        const torsoConfidence = calculateTorsoConfidence(input);
-        const leftLow = isArmLostOrLow(
-            input.temporal.arms.left,
-            this.config.thresholds.fallbackConfidence,
-        );
-        const rightLow = isArmLostOrLow(
-            input.temporal.arms.right,
-            this.config.thresholds.fallbackConfidence,
-        );
-        const fallbackCandidate =
-            leftLow && rightLow && torsoConfidence < this.config.thresholds.fallbackConfidence;
-        if (!fallbackCandidate) {
-            this.fallbackCandidateStartedAtMs = undefined;
-            this.fallbackStableDurationMs = 0;
-            return false;
-        }
-        if (this.fallbackCandidateStartedAtMs === undefined) {
-            this.fallbackCandidateStartedAtMs = mediaTimeMs;
-            this.fallbackStableDurationMs = 0;
-        } else if (validDtMs !== undefined) {
-            this.fallbackStableDurationMs += validDtMs;
-        }
-        return this.fallbackStableDurationMs >= this.config.timing.fallback.minimumDurationMs;
-    }
-}
-
-function isArmLostOrLow(arm: TemporalArmState, threshold: number): boolean {
-    return arm.state === "lost" || arm.confidence < threshold;
 }
 
 export function createMotionIntentState(

@@ -59,7 +59,7 @@
     - `motionIntentCandidateDetectors.ts` は gesture / near-face / wave / motion fallback の candidate 生成を担当する。
     - `motionIntentGlobalDetectors.ts` は clap-like、guarded、side-swap warning など左右横断の観測判定を担当する。
     - `motionIntentSideState.ts` は tracking / lost / fallback / semantic intent の side state builder と warning dedupe を担当する。
-    - `motionIntentSideMachine.ts` は side memory、semantic hold、cooldown、candidate stabilization を担当し、candidate 生成とは分ける。
+    - `motionIntentSideMachine.ts` は side memory、semantic hold、cooldown、fallback duration、candidate stabilization を担当し、candidate 生成とは分ける。
     - `createFingerCurlPoseLayer()` は `SincroHandMotionSnapshot`、`MotionIntentState`、完成版 `AvatarMotionProfile`、caller 指定 `mediaTimeMs`、optional previous finger debug snapshot だけを入力にする。MediaPipe raw landmark、Gesture Recognizer raw result、VRM Object3D、raw bone node は読まない。
 - `src/character/motionPostProcessing`
     - Phase 11 の後続 post-processing / lightweight optimization が共有する `MotionPostProcessingResult` v1 contract を置く。

@@ -1,6 +1,7 @@
 import type { TemporalArmState } from "../temporal/temporalUpperBodyState";
 import {
     createMotionCandidate,
+    detectMotionFallbackCandidate,
     GESTURE_INTENT_MAP,
     getSideReliability,
     passesGestureGate,
@@ -9,6 +10,7 @@ import { SIDES } from "./motionIntentEstimatorConfig";
 import type {
     ArmSide,
     IntentCandidate,
+    MotionIntentEstimatorInput,
     NormalizedEstimatorConfig,
     SideFrameContext,
     SideMemory,
@@ -29,11 +31,36 @@ import type { MotionIntentSideState, MotionIntentWarningCode } from "./motionInt
 
 export class MotionIntentSideMachine {
     private readonly sides: Record<ArmSide, SideMemory>;
+    private fallbackCandidateStartedAtMs: number | undefined;
+    private fallbackStableDurationMs = 0;
 
     constructor(private readonly config: NormalizedEstimatorConfig) {
         this.sides = {
             left: createInitialMemory(),
             right: createInitialMemory(),
+        };
+    }
+
+    updateFallbackCandidate(input: {
+        frame: MotionIntentEstimatorInput;
+        mediaTimeMs: number;
+        validDtMs: number | undefined;
+    }): { active: boolean; stableDurationMs: number } {
+        const fallbackCandidate = detectMotionFallbackCandidate(input.frame, this.config);
+        if (!fallbackCandidate) {
+            this.fallbackCandidateStartedAtMs = undefined;
+            this.fallbackStableDurationMs = 0;
+            return { active: false, stableDurationMs: 0 };
+        }
+        if (this.fallbackCandidateStartedAtMs === undefined) {
+            this.fallbackCandidateStartedAtMs = input.mediaTimeMs;
+            this.fallbackStableDurationMs = 0;
+        } else if (input.validDtMs !== undefined) {
+            this.fallbackStableDurationMs += input.validDtMs;
+        }
+        return {
+            active: this.fallbackStableDurationMs >= this.config.timing.fallback.minimumDurationMs,
+            stableDurationMs: this.fallbackStableDurationMs,
         };
     }
 
@@ -85,6 +112,8 @@ export class MotionIntentSideMachine {
     }
 
     reset(): void {
+        this.fallbackCandidateStartedAtMs = undefined;
+        this.fallbackStableDurationMs = 0;
         for (const side of SIDES) {
             this.sides[side] = createInitialMemory();
         }
