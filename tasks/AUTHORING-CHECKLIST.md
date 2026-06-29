@@ -63,16 +63,30 @@ reviewer の High 指摘になりやすい）。
 TypeScript production code を変更するタスクは、[documents/rules/coding-ts.md](../documents/rules/coding-ts.md)
 の「ソースコードコメント品質」に照らした comment audit / comment acceptance を `task.md` の受け入れ条件へ
 含める。対象変更なのにコメント観点が無い場合、task-reviewer は受け入れ条件不足として指摘する。
+コメント改善タスクでは file 単位の module TSDoc 集約や定型理由だけで完了できないよう、
+symbol / decision 単位で対象と期待値を定義する。
 
 - [ ] TypeScript production code 変更の有無を判定した（test / fixture / docs のみなら対象外理由を書いた）。
 - [ ] public export / public component / hook / module、schemaVersion を持つ保存 contract、Worker /
       DOM / MediaStream / MediaPipe / WebRTC などの boundary、coordinate / threshold / fallback /
       cleanup などの heuristic / lifecycle、schema/parser を追加または変更するか確認した。
-- [ ] 対象がある場合、JSDoc/TSDoc を含むコメント追加または既存コメント更新を受け入れ条件に含めた。
+- [ ] 対象がある場合、`path`、`symbol or decision`、`kind`、`current comment`、`decision`
+      （`keep` / `rewrite` / `delete` / `add`）、`required maintenance knowledge`、`action`、
+      `reviewer note` を含む symbol / decision 単位の comment audit schema を受け入れ条件に含めた。
+- [ ] 対象がある場合、JSDoc/TSDoc を含むコメント追加・更新だけでなく、弱い既存コメントの
+      delete / rewrite 条件を受け入れ条件に含めた。
 - [ ] public export の目的、契約、入力境界、返す値または observable output、失敗条件、副作用、
       非対象のうち、変更対象に必要な情報を task acceptance に定義した。
+- [ ] module TSDoc へ集約できる条件（file 内の public export が単一責務を共有し、各 export の
+      入力境界、observable output、失敗条件、副作用、非対象を具体的に覆う場合のみ）を定義し、
+      file 単位の責務要約だけで完了できないことを明記した。
 - [ ] コメントを省略する対象がある場合、省略理由を受け入れ条件または実装ログ記録条件に含めた。
 - [ ] 対象がある場合、実装と矛盾する stale comment の削除・更新を受け入れ条件に含めた。
 - [ ] TODO を追加または変更する場合、TODO 必須情報（理由、削除条件、canonical task/issue ID、
       期限または判断基準）を受け入れ条件に含めた。
 - [ ] コメントで補う前に、命名、関数分割、型定義、options object で明確化できないかを確認する条件を含めた。
+- [ ] コメント改善タスクが 10 file を超える広域一括作業を要求する場合、slice 分割または
+      symbol-level sampling 方針を task.md に明記した。
+- [ ] 評価時に少なくとも 5 symbols / decisions（変更数が 5 未満なら全件）を実コードと照合し、
+      名前・型から分かるだけのコメント、確認先だけのコメント、失敗モードのない heuristic コメント、
+      定型 audit 理由があれば FAIL にする条件を含めた。

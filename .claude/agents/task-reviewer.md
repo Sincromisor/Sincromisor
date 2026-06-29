@@ -27,7 +27,9 @@ model: opus
    漏れていれば High 指摘とする）
 7. コメント品質（TypeScript production code を変更するタスクで、
    `documents/rules/coding-ts.md` の「ソースコードコメント品質」に基づく comment audit /
-   comment acceptance が **受け入れ条件として task.md に明記されているか**。漏れていれば
+   comment acceptance が **受け入れ条件として task.md に明記されているか**。audit は file
+   単位ではなく symbol / decision 単位で、対象、`keep` / `rewrite` / `delete` / `add` の判断、
+   required maintenance knowledge、action、reviewer note を追える schema を求める。漏れていれば
    High 指摘とする）
 
 ## 判定基準（NEEDS_REVISION か APPROVED + 申し送りか）
@@ -42,9 +44,17 @@ model: opus
     - TypeScript production code の public export / public component / hook / module / boundary /
       heuristic / schema/parser / lifecycle を変更するのに、JSDoc/TSDoc を含むコメント追加・更新・
       省略理由の受け入れ条件が無い。
+    - TypeScript production code のコメント改善タスクなのに、symbol / decision 単位の comment
+      audit schema が task.md に無い。
     - public export の目的、契約、入力境界、返す値または observable output、失敗条件、副作用、
       非対象のうち、変更対象に必要な情報が task acceptance に定義されていない。
+    - comment acceptance が file 単位の「module comment に集約」、または「必要情報のいずれか」
+      だけで完了でき、個別 export / boundary / heuristic / lifecycle の保守知識を検証できない。
     - 「コメントを追加する」とだけ書かれ、対象・期待内容・検証方法が一意でない。
+    - コメント改善タスクが 10 file を超える広域一括作業を要求するのに、slice 分割または
+      symbol-level sampling 方針が task.md に明記されていない。
+    - 弱い既存コメントを削除または rewrite する条件がなく、定型 audit 理由や module TSDoc
+      一括追加で完了できる。
     - 大規模 refactor / module split task で、新旧 module の責務境界コメントの扱いが未定義。
     - TODO 必須情報（理由、削除条件、canonical task/issue ID、期限または判断基準）と、
       stale comment 更新・削除の扱いが未定義。
