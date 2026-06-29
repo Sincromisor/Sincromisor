@@ -32,6 +32,7 @@ export class SincroCharacterGazeController {
     private readonly characterBehaviorState: CharacterBehaviorState;
     private readonly motionEventSink: SincroCharacterMotionEventSink;
     private readonly videoInputManager = new VideoInputManager();
+    private readonly trackingVideoElement: HTMLVideoElement;
     private readonly trackerRuntime: TrackerRuntime;
     private onMuteChange: ((mute: boolean) => void) | undefined;
     private visionInitPromise: Promise<void> | undefined;
@@ -49,13 +50,15 @@ export class SincroCharacterGazeController {
         this.debugConsoleManager = debugConsoleManager;
         this.chatMessageService = chatMessageService;
         this.characterBehaviorState = CharacterBehaviorState.getManager();
+        this.trackingVideoElement = resolveTrackingVideoElement();
         this.motionEventSink = new SincroCharacterMotionEventSink({
             dialogManager,
             debugConsoleManager,
             chatMessageService,
             characterBehaviorState: this.characterBehaviorState,
+            readVideoSize: () => this.readTrackingVideoSize(),
         });
-        this.trackerRuntime = new TrackerRuntime(resolveTrackingVideoElement());
+        this.trackerRuntime = new TrackerRuntime(this.trackingVideoElement);
         const characterGaze = CharacterGaze.getManager();
         this.debugConsoleManager.setCharacterGazeTrackingTuning(characterGaze.getTrackingTuning());
         this.debugConsoleManager.setCharacterGazeTrackingTuningChangeCallback((config) => {
@@ -92,6 +95,9 @@ export class SincroCharacterGazeController {
             this.videoInputManager.setVideoInputDeviceId(next.videoInputDeviceId);
         }
         this.gazeSettingsSnapshot = next;
+        if (changes.gazeEnabledChanged || changes.videoDeviceChanged || changes.talkModeChanged) {
+            this.motionEventSink.resetObserveOnlyPipeline();
+        }
 
         if (!this.hasStarted || this.onMuteChange === undefined) {
             return;
@@ -118,6 +124,7 @@ export class SincroCharacterGazeController {
         const characterGaze = CharacterGaze.getManager();
         characterGaze.detachCamera();
         this.trackerRuntime.stopFaceTracking("sincro_face_tracking_stopped");
+        this.motionEventSink.resetObserveOnlyPipeline();
         this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
@@ -145,6 +152,7 @@ export class SincroCharacterGazeController {
         if (!this.dialogManager.enableCharacterGaze() || this.onMuteChange === undefined) {
             return;
         }
+        this.motionEventSink.resetObserveOnlyPipeline();
         const characterGaze = CharacterGaze.getManager();
         bindCharacterGazeCallbacks({
             characterGaze,
@@ -207,6 +215,7 @@ export class SincroCharacterGazeController {
         nextVideoTrack: MediaStreamTrack,
     ): Promise<void> {
         this.trackerRuntime.stopFaceTracking("chat_mode_selected");
+        this.motionEventSink.resetObserveOnlyPipeline();
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
         await this.ensureVisionInitialized(characterGaze);
@@ -244,6 +253,7 @@ export class SincroCharacterGazeController {
         const characterGaze = CharacterGaze.getManager();
         characterGaze.detachCamera();
         updateEyeTargetOverlay(characterGaze, false, []);
+        this.motionEventSink.resetObserveOnlyPipeline();
         const poseTrackingEnabled = this.dialogManager.enableSincroPoseTracking();
         const forcePoseTracking = this.dialogManager.forceSincroPoseTracking();
         this.characterBehaviorState.setGazeTrackingEnabled(false);
@@ -256,14 +266,14 @@ export class SincroCharacterGazeController {
         await this.trackerRuntime.startFaceTracking(
             nextVideoTrack,
             {
-                onFaceMotion: (snapshot) => {
-                    this.motionEventSink.handleFaceMotion(snapshot);
+                onFaceMotion: (snapshot, timing) => {
+                    this.motionEventSink.handleFaceMotion(snapshot, timing);
                 },
-                onPoseMotion: (snapshot) => {
-                    this.motionEventSink.handlePoseMotion(snapshot);
+                onPoseMotion: (snapshot, timing) => {
+                    this.motionEventSink.handlePoseMotion(snapshot, timing);
                 },
-                onPoseFallback: (snapshot) => {
-                    this.motionEventSink.handlePoseFallback(snapshot);
+                onPoseFallback: (snapshot, timing) => {
+                    this.motionEventSink.handlePoseFallback(snapshot, timing);
                 },
                 onTrackerStats: (snapshot) => {
                     this.debugConsoleManager.updateSincroTrackerStats(snapshot);
@@ -306,5 +316,16 @@ export class SincroCharacterGazeController {
         this.chatMessageService.writeErrorMessage(
             `視線検出処理が停止しました。Gaze を一度OFF/ONするか、Firefoxでは別のカメラ設定を試してください。(${formatErrorDetail(error)})`,
         );
+    }
+
+    private readTrackingVideoSize(): { width: number; height: number } {
+        return {
+            width:
+                this.trackingVideoElement.videoWidth || this.trackingVideoElement.clientWidth || 1,
+            height:
+                this.trackingVideoElement.videoHeight ||
+                this.trackingVideoElement.clientHeight ||
+                1,
+        };
     }
 }

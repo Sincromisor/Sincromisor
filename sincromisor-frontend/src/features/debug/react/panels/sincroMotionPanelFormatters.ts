@@ -1,4 +1,5 @@
 import type { SincroPoseRetargetedArm } from "../../../../character/retargeting/sincroPoseRetargeter";
+import type { SincroMotionObserveOnlySummary } from "../../../../character/runtime/sincroMotionObserveOnlyPipeline";
 import type { SincroFaceMotionSnapshot } from "../../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type {
     SincroPoseArmMotionSnapshot,
@@ -120,6 +121,22 @@ export function formatAvatarMotionProfile(
         `head ${formatOptionalNumber(measurements.headSize)}`,
         missingBones,
         `warnings ${profile.warnings.length}`,
+    ].join(" / ");
+}
+
+/**
+ * production observe-only pipeline の常時表示を stage summary に圧縮する。
+ *
+ * ReliabilityMap / Canonical / Temporal / Intent の詳細値は大きく変化頻度も高いため、
+ * Debug Console では availability、時刻、警告数だけを表示して再描画負荷と読みづらさを抑える。
+ */
+export function formatObserveOnlySummary(summary: SincroMotionObserveOnlySummary): string {
+    return [
+        `rel ${formatObserveOnlyStage(summary.reliability)}`,
+        `canon ${formatObserveOnlyStage(summary.canonical)}`,
+        `temp ${formatObserveOnlyStage(summary.temporal)}`,
+        `intent ${formatObserveOnlyStage(summary.intent)}`,
+        `updated ${formatUpdatedAt(summary.updatedAtMs)}`,
     ].join(" / ");
 }
 
@@ -251,4 +268,12 @@ function formatQuaternion(value: { x: number; y: number; z: number; w: number })
 
 function formatOptionalNumber(value: number | undefined): string {
     return value === undefined ? "-" : value.toFixed(3);
+}
+
+function formatObserveOnlyStage(stage: SincroMotionObserveOnlySummary["reliability"]): string {
+    if (stage.status !== "available") {
+        return stage.reason ? `${stage.status}(${stage.reason})` : stage.status;
+    }
+    const warningText = stage.warnings.length > 0 ? ` warn ${stage.warnings.length}` : "";
+    return `${stage.status}@${formatUpdatedAt(stage.mediaTimeMs)}${warningText}`;
 }

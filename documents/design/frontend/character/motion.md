@@ -53,6 +53,18 @@
 - `src/character/temporal`
     - canonical / reliability の後段で共有する `TemporalUpperBodyState` v1 contract を置く。
     - 保存対象は時系列状態、canonical arm scalar、body-local wrist / elbow tuple、速度、recovering blend に限定し、VRM bone rotation、quaternion、IK solver 出力は含めない。
+- `src/character/runtime/sincroMotionObserveOnlyPipeline.ts`
+    - production `sincro` runtime の Face / Pose callback から `ReliabilityMap`、`CanonicalUpperBodyState`、
+      `TemporalUpperBodyState`、`MotionIntentState` を計算し、`SincroMotionPipelineState` へ保存する
+      observe-only service を置く。
+    - `mediaTimeMs` は TrackerRuntime の video frame timing を優先し、欠損時だけ controller / sink 側の
+      callback 受信時刻を明示的に渡す。service / estimator 内部では `performance.now()` を読まない。
+    - 本 service は VRM bone / expression / root position、`VRMCharacterManager.update()` の controller
+      呼び出し順序、`CharacterBehaviorSnapshot` shape、`composerDryRun` を変更しない。dry-run composer と
+      実適用は後続 task の責務に残す。
+    - Face-only callback は Pose が無い間 `not_computed` summary に留め、旧 pose-only frame は Face / Hand
+      reliability を placeholder として扱う。ReliabilityMap 欠損や optional ROI 欠損を production callback
+      の例外にはしない。
 - `src/character/motionIntent`
     - canonical / temporal / reliability / hand / gesture の後段で共有する `MotionIntentState` v1 contract を置く。
     - 保存対象は左右腕と torso の motion intent、confidence / reliability / expressiveness、入力由来、警告、Gesture Recognizer raw label の説明用 field に限定し、VRM bone rotation、semantic clip、finger bone rotation は含めない。
@@ -207,6 +219,11 @@
     - state clone は Face / Pose / Hand / MotionIntent の既存 clone helper を優先し、helper が無い
       downstream slot は defensive clone で warning 配列や tuple を後続変更から分離する。
     - THREE instance、MediaPipe raw result、DOM、MediaStream、VideoFrame は state に含めない。
+- `SincroMotionObserveOnlySummary`
+    - Debug Console の `Sincro Motion` panel に常時表示する小さい state summary とする。
+    - `reliability`、`canonical`、`temporal`、`intent` ごとに `available` / `not_computed` /
+      `invalid_input`、短い reason、警告数を表示する。`SincroMotionPipelineState` 本体や巨大 JSON dump は
+      常時描画せず、詳細 inspection は後続 debug tooling / motion-debug の責務に残す。
 - `CharacterMotionConfig`
     - motion scale
     - easing

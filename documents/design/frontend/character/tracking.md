@@ -74,6 +74,9 @@
     - video frame metadata 基準の推論 loop。
     - `requestVideoFrameCallback()` 対応環境では `mediaTime` / `presentationTime` / `expectedDisplayTime` / `presentedFrames` を `TrackerVideoFrameTiming` として callback 第 2 引数へ渡す。
     - `requestVideoFrameCallback()` 非対応環境では `requestAnimationFrame + video.currentTime`、RAF も使えない test / hidden runtime 境界では 5fps timer fallback を使う。fallback の rVFC 固有 field は欠損のままにする。
+    - production `sincro` の observe-only motion pipeline へは Face / Pose callback の `TrackerVideoFrameTiming.mediaTimeMs`
+      を渡す。stop など timing が無い callback では controller / sink 側が callback 受信時刻を明示的に渡し、
+      estimator 内部の現在時刻参照には戻さない。
     - Worker 経路と main-thread fallback。
     - Worker が使える環境では Worker 経路を標準にし、Worker unavailable / 初期化失敗 / Worker detect failure では main-thread fallback へ切り替える。
     - main-thread fallback では effective target を face `<= 8fps`、pose `<= 4fps`、Hand ROI `<= 2fps`、Face ROI `<= 3fps` に clamp し、`SincroTrackerWorkerStats.budget.degradation.state = "main-thread-low-fps"` として保存する。
@@ -129,6 +132,9 @@
     - 構造化 motion log recording は同じ pose callback / pose fallback callback 起点で `ReliabilityMap` を生成し、`frame.reliability` へ保存する。reliability が未計算の frame でも slot は省略せず、同じ `mediaTimeMs` の default reliability map を保存する。
     - 構造化 motion log recording は canonical / reliability 解決後に motion-debug page 側の `TemporalStateEstimator.update()` を呼び、`frame.temporal` へ `TemporalUpperBodyState` を保存する。camera stop、video fixture load、recording load、replay stop、source reset では temporal estimator を reset する。
     - 構造化 motion log recording は temporal 解決後に同じ `mediaTimeMs` で motion-debug page 側の `MotionIntentEstimator.update()` を呼び、`frame.intent` へ `MotionIntentState` を保存する。recording 中でない live snapshot でも latest intent を保持し、reset timing は temporal estimator と揃える。
+    - production `sincro` の observe-only pipeline でも `TemporalStateEstimator` と `MotionIntentEstimator` の
+      reset timing は揃える。mode 切替、camera refresh、tracking stop、runtime error では pipeline を reset し、
+      過去 frame の filter / hysteresis / cooldown を次の camera source へ持ち越さない。
     - 構造化 motion log recording は tracker callback と同じ `mediaTimeMs` で、motion-debug page 側の debug runtime snapshot から `frame.solver.phase6`、`frame.solver.phase7`、`frame.solver.phase9`、`frame.finalPose` を保存する。tracker runtime / Worker は Phase 6 solver snapshot、Phase 7 profile / calibration snapshot、Phase 9 semantic / finger debug snapshot、VrmPoseComposer result、baseline metrics を所有しない。
     - 構造化 motion log replay は `MotionReplayPlayer` が plain NDJSON を parse し、`pose-snapshot` mode では `frame.poseSnapshot` を後段の behavior / retarget 経路へ再投入する。`frame.canonical` がある場合は saved canonical を viewer / snapshot の正本にし、無い場合だけ live fallback の canonical を使う。invalid canonical は replay failure にせず、canonical layer の parse error summary として表示する。
     - reliability layer は live snapshot、saved `frame.reliability`、旧 log の `frame.poseSnapshot` 再計算の順に解決する。saved reliability は `parseReliabilityMap()` で検証し、invalid な場合も replay failure にせず `parseStatus: "invalid"`、parse errors、raw value を `available` layer value として表示する。`frame.reliability` と `frame.poseSnapshot` の両方が無い旧 log だけ `not_recorded` とする。
