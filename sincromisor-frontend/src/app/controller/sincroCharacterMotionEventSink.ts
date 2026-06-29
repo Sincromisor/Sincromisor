@@ -5,6 +5,7 @@ import type { ChatMessageService } from "../../features/conversation/chat/model/
 import type { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import type { DialogManager } from "../../features/dialog/model/dialogManager";
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 import {
@@ -83,6 +84,17 @@ export class SincroCharacterMotionEventSink {
         this.debugConsoleManager.updateSincroPoseMotion(snapshot);
         this.debugConsoleManager.updateSincroObserveOnlySummary(observeOnly.summary);
         this.debugConsoleManager.updateCharacterGazeTargetDebug(formatSincroPoseDebug(snapshot));
+    }
+
+    handleHandMotion(snapshot: SincroHandMotionSnapshot, timing?: TrackerVideoFrameTiming): void {
+        if (!this.isSincroTrackingEnabled()) {
+            return;
+        }
+        const observeOnly = this.observeOnlyPipeline.updateHand(
+            snapshot,
+            this.createObserveOnlyInput(timing),
+        );
+        this.debugConsoleManager.updateSincroObserveOnlySummary(observeOnly.summary);
     }
 
     handleFaceRuntimeError(error: unknown): void {

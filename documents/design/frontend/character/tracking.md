@@ -88,6 +88,8 @@
     - `ignorePerformanceFallback` は `face-only` と `comfortable-idle` への自動遷移だけを抑制する。`gesture-reduced-fps`、`optional-pass-reduced-fps`、`roi-hand-paused`、`pose-reduced-fps` の cadence 低下と `degradationPolicy` stats は抑制しない。
     - Hand tracking は `poseOptions.enabled === true` かつ `poseOptions.hand?.enabled === true` の場合だけ有効にする。`onHandMotion` callback の有無だけでは起動しない。
     - Hand cadence は既定 `4fps`、指定範囲 `1..8fps` とする。`poseOptions.faceRoi?.enabled === true` の場合だけ Face ROI を有効にし、Face ROI cadence は既定 `6fps`、指定範囲 `1..12fps` とする。どちらも `SincroPoseMotionSnapshot.lastUpdatedAtMs` が `mediaTimeMs - lastUpdatedAtMs > 250` の場合は `pose_stale_for_roi` として skip し、full-frame Face cadence は従来どおり `DEFAULT_TARGET_INFERENCE_FPS` を正本にする。
+    - production `sincro` の `startSincroFaceTracking()` は `enableSincroPoseTracking()` が true のときだけ `poseOptions.hand.enabled` と `poseOptions.faceRoi.enabled` を true で渡し、`onHandMotion` を observe-only pipeline / Debug Console summary へ接続する。Pose tracking が disabled の場合は Hand / Face ROI も起動しない。
+    - production Debug Console は Hand availability、source、ROI warning、openness、confidence の低頻度 summary だけを表示する。MediaPipe raw landmark、crop object、Hand wrist 座標は常時 snapshot に入れない。
     - ROI pause state は `"active" -> "hand-paused" -> "face-paused" -> "all-paused"` の順に進む。`hand-paused` は Hand ROI だけを止め、`face-paused` は Hand / Face ROI を止めるが full-frame Face は継続する。`all-paused` でも camera / full-frame Face は止めず、既存 Pose face-only fallback へ委譲する。
     - ROI over-budget は `handInferenceTimeMs + faceRoiInferenceTimeMs > 1000 / max(1, targetPoseInferenceFps) * 0.55` で判定する。5 ROI 実行 frame 連続で pause state を 1 段進め、budget 内 30 ROI 実行 frame 連続で 1 段戻す。
     - Worker stats は optional `effectiveHandFps`、`effectiveFaceRoiFps`、`roi` を持つ。`roi` は pause state、fallbackCount、skippedFrames、consecutiveOverBudgetFrames、ROI reason code を保持し、既存 `effectiveFaceFps` / `effectivePoseFps` の意味は変えない。
@@ -304,6 +306,9 @@
 - ROI over-budget:
     - Hand ROI、Face ROI の順で optional pass を落とし、full-frame Face と camera loop は継続する。
     - pause 中の Hand は `fallbackReason: "hand_roi_paused"` の lost snapshot を出し、Face は full-frame snapshot に `face_roi_paused` warning を残す。
+- HandLandmarker 初期化失敗:
+    - Face / Pose tracking は継続し、Hand は `model_not_loaded` warning を持つ lost snapshot と Debug Console summary に落とす。
+    - production observe-only pipeline は Hand 欠損を例外にせず、次の Pose callback で pose-only / face-only の既存 downstream 更新を続ける。
 - 推論遅延または連続検出失敗:
     - pose のみ face-only に降格できる。
     - 既存 `fallbackReason` は `pose_inference_too_slow` を維持し、budget の `reasonCodes` では `pose_inference_warn` / `pose_inference_over_budget` に写像する。

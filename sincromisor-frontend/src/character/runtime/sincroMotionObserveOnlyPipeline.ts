@@ -7,6 +7,7 @@
  * composer dry-run はこの service の非対象であり、失敗時も既存表示姿勢へ fallback させない。
  */
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import { createCanonicalUpperBodyState } from "../canonical/canonicalArmFeatureExtractor";
 import { estimateCanonicalTorsoFrame } from "../canonical/canonicalTorsoFrameEstimator";
@@ -20,6 +21,7 @@ import {
     type SincroMotionObserveOnlyPipelineInput,
     type SincroMotionObserveOnlyPipelineUpdateResult,
     type SincroMotionObserveOnlySummary,
+    summarizeObserveOnlyHand,
     summarizeObserveOnlyStage,
 } from "./sincroMotionObserveOnlyPipelineTypes";
 import {
@@ -30,6 +32,8 @@ import {
 
 export type {
     SincroMotionObserveOnlyAvailability,
+    SincroMotionObserveOnlyHandSideSummary,
+    SincroMotionObserveOnlyHandSummary,
     SincroMotionObserveOnlyPipelineInput,
     SincroMotionObserveOnlyPipelineUpdateResult,
     SincroMotionObserveOnlyStageSummary,
@@ -151,6 +155,36 @@ export class SincroMotionObserveOnlyPipeline {
         return this.createResult();
     }
 
+    /**
+     * Hand callback から latest Hand snapshot と Debug Console summary だけを更新する。
+     *
+     * Hand wrist は reliability / finger feature の材料であり、腕 IK target を置き換えない。Pose が既に
+     * 到着している場合だけ downstream を再計算し、Temporal / Intent の stateful memory は次の Pose
+     * callback まで進めない。Hand 初期化失敗や ROI pause の lost snapshot も例外にせず保存する。
+     */
+    updateHand(
+        snapshot: SincroHandMotionSnapshot,
+        input: SincroMotionObserveOnlyPipelineInput,
+    ): SincroMotionObserveOnlyPipelineUpdateResult {
+        const timing = resolveObserveOnlyTiming(input);
+        this.state = cloneSincroMotionPipelineState({
+            ...this.state,
+            hand: snapshot,
+            updatedAtMs: timing.updatedAtMs,
+        });
+        if (timing.status === "invalid_input") {
+            return this.createResult("invalid_input", timing.reason);
+        }
+        if (this.hasPose) {
+            this.updateDownstream({
+                mediaTimeMs: timing.mediaTimeMs,
+                video: normalizeObserveOnlyVideoSize(input.video),
+                updateStatefulEstimators: false,
+            });
+        }
+        return this.createResult();
+    }
+
     private updateDownstream(input: {
         mediaTimeMs: number;
         video: { width: number; height: number };
@@ -245,6 +279,11 @@ export class SincroMotionObserveOnlyPipeline {
                     reason ?? (this.hasPose ? "intent_not_computed" : "pose_not_available"),
                     state.intent?.warnings,
                 ),
+                hand: summarizeObserveOnlyHand(
+                    state.hand,
+                    overrideStatus,
+                    reason ?? "hand_not_available",
+                ),
                 updatedAtMs: state.updatedAtMs,
             },
         };
@@ -287,4 +326,18 @@ export function updatePose(
     input: SincroMotionObserveOnlyPipelineInput,
 ): SincroMotionObserveOnlyPipelineUpdateResult {
     return pipeline.updatePose(snapshot, input);
+}
+
+/**
+ * Hand callback 用の module-level export。
+ *
+ * latest Hand snapshot を observe-only state と Debug Console summary に保存する。Hand wrist は腕 IK
+ * target の正本にせず、Pose snapshot の wrist target と既存 retarget 経路を変更しない。
+ */
+export function updateHand(
+    pipeline: SincroMotionObserveOnlyPipeline,
+    snapshot: SincroHandMotionSnapshot,
+    input: SincroMotionObserveOnlyPipelineInput,
+): SincroMotionObserveOnlyPipelineUpdateResult {
+    return pipeline.updateHand(snapshot, input);
 }

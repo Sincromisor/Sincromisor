@@ -19,6 +19,7 @@ type TrackerRuntimeEngineInitializerOptions = {
     preferWorker: boolean;
     onWorkerFallback: (reason: string) => void;
     onPoseInitializationFallback: (reason: string, nowMs: number) => void;
+    onHandInitializationFallback: (reason: string, nowMs: number) => void;
 };
 
 export async function initializeTrackerRuntimeEngine(
@@ -74,6 +75,10 @@ async function initializeMainThreadTrackers(
         frontendLogger.warn(
             "Sincro HandLandmarker initialization failed. Continuing without hand tracking.",
             { error },
+        );
+        options.onHandInitializationFallback(
+            formatTrackerRuntimeErrorDetail(error),
+            performance.now(),
         );
     }
 }

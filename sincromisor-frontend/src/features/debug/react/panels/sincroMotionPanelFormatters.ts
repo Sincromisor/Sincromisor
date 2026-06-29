@@ -140,6 +140,24 @@ export function formatObserveOnlySummary(summary: SincroMotionObserveOnlySummary
     ].join(" / ");
 }
 
+export function formatObserveOnlyHandSummary(summary: SincroMotionObserveOnlySummary): string {
+    if (summary.hand.status !== "available") {
+        const reason = summary.hand.reason ? `(${summary.hand.reason})` : "";
+        return `${summary.hand.status}${reason}`;
+    }
+    const warningText =
+        summary.hand.warnings.length > 0 ? ` / warn ${summary.hand.warnings.join(",")}` : "";
+    return (
+        [
+            summary.hand.trackingEnabled ? "on" : "off",
+            summary.hand.detected ? "detected" : "lost",
+            `L ${formatObserveOnlyHandSide(summary.hand.left)}`,
+            `R ${formatObserveOnlyHandSide(summary.hand.right)}`,
+            `updated ${formatUpdatedAt(summary.hand.mediaTimeMs)}`,
+        ].join(" / ") + warningText
+    );
+}
+
 export function formatHeadPose(snapshot: SincroFaceMotionSnapshot): string {
     return `yaw ${snapshot.headPose.yawDeg.toFixed(1)} / pitch ${snapshot.headPose.pitchDeg.toFixed(1)} / roll ${snapshot.headPose.rollDeg.toFixed(1)}`;
 }
@@ -276,4 +294,10 @@ function formatObserveOnlyStage(stage: SincroMotionObserveOnlySummary["reliabili
     }
     const warningText = stage.warnings.length > 0 ? ` warn ${stage.warnings.length}` : "";
     return `${stage.status}@${formatUpdatedAt(stage.mediaTimeMs)}${warningText}`;
+}
+
+function formatObserveOnlyHandSide(side: SincroMotionObserveOnlySummary["hand"]["left"]): string {
+    const roiWarning = side.roiWarning ? ` roi ${side.roiWarning}` : "";
+    const state = side.detected ? "detected" : "lost";
+    return `${state} ${side.source} open ${side.openness} conf ${formatRatio(side.confidence)}${roiWarning}`;
 }

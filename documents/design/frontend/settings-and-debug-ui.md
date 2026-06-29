@@ -44,6 +44,7 @@
 - `DebugConsole`
     - diagnostics snapshot を表示する。
     - WebRTC / MediaPipe / Audio の生制御を直接所有しない。
+    - Sincro Hand は availability、source、ROI warning、openness、confidence の summary だけを表示し、raw landmarks や crop object は持たない。
 
 ## Information Architecture
 
