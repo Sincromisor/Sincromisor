@@ -1,0 +1,14 @@
+id: task-260629225936-production-sincro-vrm-pose-composer-dry-run
+title: Dry run VrmPoseComposer in production sincro
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260629225925-production-sincro-motion-observe-only
+superseded_by: null
+review: APPROVED
+reviewed_sha: 7c7ea543e5188b17bc2215d63af080537d00fb97
+verdict: null
+attempts: 0
+created_at: 2026-06-29
+closed_at: null
+legacy_ids: []
