@@ -28,7 +28,7 @@ import type { MotionIntentState } from "../motionIntent/motionIntentState";
 import { cloneMotionIntentState } from "../motionIntent/motionIntentState";
 import type { ReliabilityMap } from "../reliability/reliabilityMap";
 import type { TemporalUpperBodyState } from "../temporal/temporalUpperBodyState";
-import type { VrmPoseComposerResult } from "../vrmPose/vrmPoseTypes";
+import type { SincroVrmPoseComposerDryRunResult } from "./sincroVrmPoseComposerDryRun";
 
 /**
  * Tracker から本番 motion pipeline へ入る正規化済み入力 snapshot。
@@ -47,16 +47,17 @@ export type SincroMotionPipelineInputSnapshot = {
  * 本番 sincro runtime の低次元 motion pipeline 現在値。
  *
  * `face` / `pose` / `hand` は tracker 入力、`reliability` / `canonical` / `temporal` / `intent`
- * は motion-debug で整備済みの JSON 保存可能 contract、`composerDryRun` は後続 observe-only
- * task が VRM 書き込み前に生成する pose composer result を表す。`updatedAtMs` は caller が選ぶ
- * runtime clock の時刻で、module 内では `performance.now()` を読まない。
+ * は motion-debug で整備済みの JSON 保存可能 contract、`composerDryRun` は production dry-run の
+ * status 付き result contract を表す。`status !== "available"` では result を持たないため、
+ * Debug Console や recorder は stale final pose を現在 frame として扱わない。`updatedAtMs` は caller
+ * が選ぶ runtime clock の時刻で、module 内では `performance.now()` を読まない。
  */
 export type SincroMotionPipelineState = SincroMotionPipelineInputSnapshot & {
     reliability?: ReliabilityMap;
     canonical?: CanonicalUpperBodyState;
     temporal?: TemporalUpperBodyState;
     intent?: MotionIntentState;
-    composerDryRun?: VrmPoseComposerResult;
+    composerDryRun?: SincroVrmPoseComposerDryRunResult;
     updatedAtMs: number;
 };
 

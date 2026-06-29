@@ -3,7 +3,10 @@ import type {
     SincroPoseRetargetConfig,
     SincroPoseRetargetFrame,
 } from "../../../character/retargeting/sincroPoseRetargeter";
-import type { SincroMotionObserveOnlySummary } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
+import type {
+    SincroMotionComposerDryRunSummary,
+    SincroMotionObserveOnlySummary,
+} from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../gaze/trackingRuntime/sincroTrackerWorkerTypes";
@@ -283,6 +286,10 @@ export class DebugConsoleManager {
 
     updateSincroObserveOnlySummary(summary: SincroMotionObserveOnlySummary): void {
         this.sincroMotionControls.updateSincroObserveOnlySummary(summary);
+    }
+
+    updateSincroComposerDryRunSummary(summary: SincroMotionComposerDryRunSummary): void {
+        this.sincroMotionControls.updateSincroComposerDryRunSummary(summary);
     }
 
     updateSincroPoseRetargetFrame(frame: SincroPoseRetargetFrame): void {

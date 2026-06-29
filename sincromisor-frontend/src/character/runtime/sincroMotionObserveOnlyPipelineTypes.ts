@@ -3,6 +3,7 @@ import type {
     SincroHandSideSnapshot,
 } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroMotionPipelineState } from "./sincroMotionPipelineState";
+import type { SincroVrmPoseComposerDryRunStatus } from "./sincroVrmPoseComposerDryRun";
 
 /**
  * Debug Console に出す observe-only stage の計算状態。
@@ -58,10 +59,25 @@ export type SincroMotionObserveOnlyHandSummary = {
 };
 
 /**
+ * production VrmPoseComposer dry-run の Debug Console summary。
+ *
+ * `status` は service result contract と同じ 4 状態をそのまま表示する。`result` 本体は大きいため
+ * 常時表示では warning、suppressed layer、clamped bone の短い一覧だけに圧縮し、finalPose は
+ * `SincroMotionPipelineState.composerDryRun.result` 側の inspection surface に残す。
+ */
+export type SincroMotionComposerDryRunSummary = {
+    status: SincroVrmPoseComposerDryRunStatus;
+    warnings: readonly string[];
+    suppressedLayers: readonly string[];
+    clampedBones: readonly string[];
+};
+
+/**
  * production Debug Console に出す observe-only pipeline の最新 summary。
  *
  * 各 stage が `available` / `not_computed` / `invalid_input` のどれかを個別に示すため、
- * Face-only、pose-only、invalid timing を JSON dump なしで切り分けられる。
+ * Face-only、pose-only、invalid timing を JSON dump なしで切り分けられる。composer dry-run は
+ * VRM 適用を伴わない production manager 側の観測値として同じ summary surface に載せる。
  */
 export type SincroMotionObserveOnlySummary = {
     reliability: SincroMotionObserveOnlyStageSummary;
@@ -69,6 +85,7 @@ export type SincroMotionObserveOnlySummary = {
     temporal: SincroMotionObserveOnlyStageSummary;
     intent: SincroMotionObserveOnlyStageSummary;
     hand: SincroMotionObserveOnlyHandSummary;
+    composerDryRun: SincroMotionComposerDryRunSummary;
     updatedAtMs: number;
 };
 
@@ -220,6 +237,41 @@ export function summarizeObserveOnlyHand(
         warnings: [
             ...new Set([...snapshot.leftHand.warnings, ...snapshot.rightHand.warnings]),
         ].slice(0, 6),
+    };
+}
+
+/**
+ * dry-run result contract を Debug Console 常時表示用の小さい summary へ圧縮する。
+ *
+ * `status !== "available"` では result 詳細を読まず、warning だけを表示する。available result でも
+ * finalPose 全体は返さず、suppressed layer / clamped bone の先頭だけを診断入口として返す。
+ */
+export function summarizeComposerDryRun(
+    result: SincroMotionPipelineState["composerDryRun"],
+): SincroMotionComposerDryRunSummary {
+    if (result === undefined) {
+        return {
+            status: "not_ready",
+            warnings: ["composer_dry_run_not_started"],
+            suppressedLayers: [],
+            clampedBones: [],
+        };
+    }
+    return {
+        status: result.status,
+        warnings: [...result.warnings].slice(0, 6),
+        suppressedLayers:
+            result.result === undefined
+                ? []
+                : result.result.suppressedLayers
+                      .map((layer) => `${layer.id}:${layer.kind}:${layer.bone}:${layer.reason}`)
+                      .slice(0, 6),
+        clampedBones:
+            result.result === undefined
+                ? []
+                : result.result.clampedBones
+                      .map((bone) => `${bone.bone}:${bone.reason}`)
+                      .slice(0, 6),
     };
 }
 
