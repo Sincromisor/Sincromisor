@@ -64,6 +64,17 @@ export type SincroMotionObserveOnlyPipelineUpdateResult = {
     summary: SincroMotionObserveOnlySummary;
 };
 
+/**
+ * observe-only pipeline が downstream estimator へ渡す時刻解決結果。
+ *
+ * `mediaTimeMs` は Reliability / Canonical / Temporal / Intent の timestamp に使う video-frame 基準の時刻、
+ * `updatedAtMs` は Debug Console の最新更新表示に使う callback 受信側の runtime 時刻である。
+ * Tracker timing が有効なら両者は分離でき、`mediaTimeMs` 欠損時だけ `receivedAtMs` を両方へ fallback する。
+ *
+ * `status: "invalid_input"` は `mediaTimeMs` と fallback 用 `receivedAtMs` の両方が非 finite / 欠損の失敗条件を表す。
+ * この状態では snapshot 保存と summary 更新だけを許可し、Temporal / MotionIntent などの stateful downstream
+ * estimator は進めない。caller は例外ではなく Debug Console の `invalid_input` summary と reason を観測点にする。
+ */
 export type SincroMotionObserveOnlyTiming = {
     status: SincroMotionObserveOnlyAvailability;
     mediaTimeMs: number;
