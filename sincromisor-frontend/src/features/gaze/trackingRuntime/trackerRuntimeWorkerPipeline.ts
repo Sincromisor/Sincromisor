@@ -1,6 +1,9 @@
 /**
- * ImageBitmap transfer を使って Worker detect を呼び、Worker failure を fallback 起点へ変換する pipeline。
- * transfer / close の lifecycle をここで閉じ、snapshot 適用や VRM 更新は callback 先の責務に残す。
+ * ImageBitmap transfer を使う Worker 推論 pipeline。
+ *
+ * video frame の transfer cost を Worker stats へ渡し、Worker detect / transfer failure は例外で止めず
+ * main-thread fallback へ切り替える。callback は tracker snapshot と stats の publish に限定し、VRM
+ * 適用や motion-debug recording は caller 側の責務に残す。
  */
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerClient } from "./sincroTrackerWorkerClient";
@@ -14,6 +17,14 @@ import {
 import type { TrackerRuntimeRoiFrameInput } from "./trackerRuntimeStats";
 import type { TrackerRuntimeCallbacks, TrackerVideoFrameTiming } from "./trackerRuntimeTypes";
 
+/**
+ * 1 video frame を Worker へ送り、Face / Pose / Hand / ROI の結果を runtime callbacks へ publish する。
+ *
+ * frame loop が停止済み、または callbacks が解放済みの場合は推論結果を捨てて loop を stopped 扱いにする。
+ * Hand が cadence / ROI pause / Pose stale により実行されなかった frame では lost/skip snapshot を publish
+ * し、後段 reliability が「未実行」と「未検出」を区別できるようにする。失敗時の observable output は
+ * `switchToMainThreadFallback(error)` であり、この関数は Worker 失敗を caller へ再 throw しない。
+ */
 export async function runTrackerRuntimeWorkerPipeline(input: {
     videoElement: HTMLVideoElement;
     callbacks?: TrackerRuntimeCallbacks;

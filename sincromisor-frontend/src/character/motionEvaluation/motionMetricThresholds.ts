@@ -1,6 +1,8 @@
 /**
- * P0 fixture id、metric key、default threshold、metric definition を定義する。
- * threshold は regression severity の公開挙動に直結するため、変更時は motion design の QA regression と baseline tests を確認する。
+ * Motion QA regression の fixture id、metric key、threshold 定義を固定する contract module。
+ *
+ * ここで定義する key 順序と threshold は baseline JSON、summary severity、optimization candidate
+ * 分類の結合点になる。metric 計算、旧 log fallback、summary parser は別 module の責務である。
  */
 import type {
     MotionMetricConfig,
@@ -10,8 +12,12 @@ import type {
     MotionMetricUnit,
 } from "./motionMetricTypes";
 
-// metric group の境界は fixed key の順序、unit、direction、初期 threshold に限定する。
-// 保存済み summary の parser、replay frame の検証、metric 計算本体はこの module では扱わない。
+/**
+ * Motion QA regression の P0 fixture id。
+ *
+ * subset 実行時の明示 id と manifest validation の結合キーであり、ここに無い id は自動 fallback しない。
+ * 追加・削除時は manifest tests と motion-debug の fixture selection を同時に確認する。
+ */
 export const MOTION_P0_FIXTURE_IDS = [
     "neutral-10s",
     "single-arm-slow-raise",
@@ -21,8 +27,20 @@ export const MOTION_P0_FIXTURE_IDS = [
     "fast-wave",
 ] as const;
 
+/**
+ * P0 fixture manifest で受理する fixture id。
+ *
+ * 型は `MOTION_P0_FIXTURE_IDS` から生成し、文字列 literal の重複定義で manifest validation とずれないようにする。
+ */
 export type MotionP0FixtureId = (typeof MOTION_P0_FIXTURE_IDS)[number];
 
+/**
+ * Motion metric summary / baseline / comparison を結合する固定 key 順序。
+ *
+ * 新しい key を足す場合、`DEFAULT_MOTION_METRIC_THRESHOLDS` と `METRIC_DEFINITIONS` へ同時に追加する。
+ * missing key は旧 baseline 互換では `not_available` として補完されるため、key rename は既存 baseline の
+ * severity を変える破壊的変更になる。
+ */
 export const MOTION_METRIC_KEYS: MotionMetricKey[] = [
     "neutralJitter",
     "elbowFlipCount",
@@ -53,7 +71,14 @@ export const MOTION_METRIC_KEYS: MotionMetricKey[] = [
     "roiPausedFrameCount",
 ];
 
-// 初期 threshold は motion.md の QA regression 契約値を移したもの。baseline 比較の互換性のため値を変えない。
+/**
+ * Motion QA regression の default threshold。
+ *
+ * 値は Phase 10 の QA baseline 契約から来ており、低いほど厳しい metric と count/duration 系が混在する。
+ * 下げすぎると neutral jitter、tracker budget、ROI pause のような環境依存 metric が false fail になり、
+ * 上げすぎると elbow flip、side swap、semantic fallback の見た目の破綻を PASS へ隠す。調整時は
+ * `motionMetrics` / `motionQaRegression` tests と P0 fixture replay summary を確認する。
+ */
 export const DEFAULT_MOTION_METRIC_THRESHOLDS: Record<MotionMetricKey, MotionMetricThreshold> = {
     neutralJitter: { pass: 0.015, warn: 0.035, fail: 0.06 },
     elbowFlipCount: { pass: 0, warn: 2, fail: 5 },
@@ -84,6 +109,12 @@ export const DEFAULT_MOTION_METRIC_THRESHOLDS: Record<MotionMetricKey, MotionMet
     roiPausedFrameCount: { pass: 0, warn: 60, fail: 180 },
 };
 
+/**
+ * 各 metric の単位と severity 比較方向。
+ *
+ * 現行 metric はすべて `lower_is_better` であり、direction を変えると baseline comparison の regression
+ * 判定が反転する。unit は UI 表示と report 解釈用で、計算値の正規化は calculator 側で行う。
+ */
 export const METRIC_DEFINITIONS: Record<
     MotionMetricKey,
     { unit: MotionMetricUnit; direction: MotionMetricDirection }
@@ -117,6 +148,12 @@ export const METRIC_DEFINITIONS: Record<
     roiPausedFrameCount: { unit: "count", direction: "lower_is_better" },
 };
 
+/**
+ * caller 指定 threshold override を default threshold に重ねる。
+ *
+ * parser ではないため override の値域検証や unknown key reject は行わない。欠損 key だけ default で補い、
+ * returned object は全 `MotionMetricKey` を必ず持つ。
+ */
 export function resolveThresholds(
     config: MotionMetricConfig,
 ): Record<MotionMetricKey, MotionMetricThreshold> {

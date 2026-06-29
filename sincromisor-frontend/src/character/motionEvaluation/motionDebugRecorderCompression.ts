@@ -1,6 +1,8 @@
 /**
- * motion-debug NDJSON を compression 設定に応じて Blob 化する出力境界。
- * CompressionStream 非対応時は非圧縮 fallback を返し、recording contract や frame 内容は変更しない。
+ * motion-debug NDJSON を download 用 Blob へ変換する compression 境界。
+ *
+ * 圧縮方式は transport だけの違いであり、NDJSON schemaVersion、frame 内容、manifest は変更しない。
+ * browser の CompressionStream 非対応や圧縮失敗は非圧縮 Blob の fallbackReason として返す。
  */
 import type {
     MotionDebugCompressedBlob,
@@ -10,6 +12,12 @@ import type {
 const NDJSON_MIME_TYPE = "application/x-ndjson";
 const GZIP_MIME_TYPE = "application/gzip";
 
+/**
+ * requested compression に応じて NDJSON Blob または gzip Blob を作成する。
+ *
+ * `brotli` は現行 browser API でサポートしないため、例外ではなく非圧縮 fallback を返す。gzip 中の例外も
+ * caller の recording 完了を失敗させず、`fallbackReason` で UI / impl log が観測できる形にする。
+ */
 export async function createMotionDebugRecordingBlob(
     ndjson: string,
     requestedCompression: MotionDebugRecorderCompression,

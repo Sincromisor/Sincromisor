@@ -1,6 +1,10 @@
 /**
- * MotionReplayPlayer と scene / tracker bridge を接続する replay lifecycle owner。
- * replay stop は timer と applied pose state を必ず閉じ、camera / recording runtime の resource は所有しない。
+ * MotionReplayPlayer と tracker / scene / viewer state を接続する replay lifecycle owner。
+ *
+ * replay は実 camera runtime を止めて saved pose frame を再適用する developer-only 境界であり、camera
+ * track、recording download、DOM input の resource は所有しない。stop / load / source reset では
+ * timer と temporal / intent estimator state を破棄し、古い replay frame の hysteresis を次 source へ
+ * 持ち越さない。
  */
 import type { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
 import {
@@ -48,6 +52,13 @@ type MotionDebugReplayRuntimeParams = {
     renderSnapshot: () => void;
 };
 
+/**
+ * motion-debug page の replay 操作と replay-derived snapshot state を管理する。
+ *
+ * saved canonical / temporal / postProcessing slot が invalid な場合は replay 全体を失敗させず、viewer に
+ * `parseStatus: "invalid"` と raw value を渡す。slot が無い旧 log では runtime 側で canonical /
+ * temporal / intent を再計算する。
+ */
 export class MotionDebugReplayRuntime {
     // reason: structure-threshold-exception replay playback and replay-derived temporal/intent reset timing remain grouped to preserve behavior.
     readonly player: MotionReplayPlayer<MotionDebugSnapshot>;
@@ -80,6 +91,12 @@ export class MotionDebugReplayRuntime {
         });
     }
 
+    /**
+     * File または plain text の recording を読み込み、replay player と derived state を reset する。
+     *
+     * 成功時は active camera / fixture runtime を止める。読み込み失敗時も timer は止め、既存 temporal /
+     * intent state を残さない。
+     */
     async loadRecording(fileOrText: unknown): Promise<MotionDebugReplayLoadResult> {
         this.clearTimer();
         const textInput = await readMotionDebugReplayText(fileOrText);
@@ -101,6 +118,12 @@ export class MotionDebugReplayRuntime {
         return result;
     }
 
+    /**
+     * 読み込み済み recording を指定 mode で開始する。
+     *
+     * mode の解釈と unsupported mode error は `MotionReplayPlayer` に委譲する。autoplay 時は
+     * `MotionDebugReplayTimer` が次 frame scheduling を所有し、この method は camera resource を再取得しない。
+     */
     startReplay(options: {
         mode: NonNullable<MotionDebugReplayState["mode"]>;
         autoplay?: boolean;
@@ -132,6 +155,12 @@ export class MotionDebugReplayRuntime {
         return result;
     }
 
+    /**
+     * replay timer と replay-derived temporal / intent state を停止時に破棄する。
+     *
+     * camera / recording runtime は所有していないため触らない。二重 stop でも timer clear と state reset
+     * だけを行う。
+     */
     stopReplay(): MotionDebugReplayState {
         this.clearTimer();
         const state = this.player.stopReplay();
@@ -178,6 +207,12 @@ export class MotionDebugReplayRuntime {
         this.latestPostProcessing = state;
     }
 
+    /**
+     * live snapshot に合成する replay-derived layer state を返す。
+     *
+     * 戻り値は内部 state の参照を含むため、caller は表示用 snapshot へ読み込むだけにし、ここから mutation
+     * しない。
+     */
     snapshotState(): Pick<
         MotionDebugSnapshot,
         "canonical" | "temporal" | "intent" | "postProcessing" | "canonicalReliabilityInput"
@@ -191,6 +226,12 @@ export class MotionDebugReplayRuntime {
         };
     }
 
+    /**
+     * Temporal / intent 再計算に使える valid canonical だけを返す。
+     *
+     * saved canonical slot が invalid だった frame では undefined を返し、invalid raw value を後段 estimator
+     * に渡さない。
+     */
     latestValidCanonical(): CanonicalUpperBodyState | undefined {
         const canonical = this.latestCanonical;
         if (canonical === undefined || "parseStatus" in canonical) {

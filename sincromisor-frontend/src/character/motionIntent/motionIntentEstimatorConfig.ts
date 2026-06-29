@@ -1,6 +1,9 @@
 /**
- * MotionIntentEstimator の timing / threshold 既定値と normalize 処理を集約する。
- * clamp は invalid config で runtime state が壊れないための safety で、値域変更時は motion design の minimum duration / cooldown と estimator tests を確認する。
+ * MotionIntentEstimator の tuning 値を正規化する境界。
+ *
+ * caller 指定 config は UI / motion-debug から来る調整値を含むため、非 finite 値や範囲外値は
+ * estimator の side memory を壊さないよう default へ戻すか clamp する。この module は
+ * MotionIntentState の保存 schema や candidate 検出順序を変更しない。
  */
 import type {
     IntentTimingConfig,
@@ -9,6 +12,11 @@ import type {
     TimedArmIntent,
 } from "./motionIntentEstimatorTypes";
 
+/**
+ * MotionIntent の side 正本。
+ *
+ * 左右は解剖学的 side であり、camera preview の mirror 表示や image-space の左右反転とは分けて扱う。
+ */
 export const SIDES = ["left", "right"] as const;
 
 const TIMED_INTENTS: readonly TimedArmIntent[] = [
@@ -33,6 +41,16 @@ const DEFAULT_TIMING: Record<TimedArmIntent, IntentTimingConfig> = {
     fallback: { minimumDurationMs: 300, cooldownMs: 0 },
 };
 
+/**
+ * MotionIntentEstimator の既定 timing / threshold。
+ *
+ * confidence 系 threshold は Hand / ReliabilityMap の低信頼 frame を semantic intent へ昇格させない
+ * gate であり、下げすぎると gesture flicker や semantic fallback frame が増える。near-face /
+ * clap / guarded の距離・角度 threshold は body-local scalar と image-space distance の混在値なので、
+ * 調整時は `motionIntentEstimator` focused tests と motion-debug replay の `gestureFlickerCount` /
+ * `intentInvalidFrameCount` を確認する。値自体は Phase 9 の固定 baseline で、ここでは runtime
+ * profile や avatar profile による自動変更を行わない。
+ */
 export const DEFAULT_CONFIG: NormalizedEstimatorConfig = {
     timing: DEFAULT_TIMING,
     thresholds: {
@@ -90,6 +108,12 @@ function finiteOrDefault(value: number | undefined, defaultValue: number): numbe
     return value === undefined || !Number.isFinite(value) ? defaultValue : value;
 }
 
+/**
+ * optional gesture / reliability 入力を confidence gate に渡す前の `0..1` 正規化に使う。
+ *
+ * 非 finite 値は tracker / replay 境界の欠損として扱い、例外ではなく `0` に落とす。caller に
+ * parse error を返す関数ではないため、保存 schema の検証には使わない。
+ */
 export function clamp01(value: number): number {
     if (!Number.isFinite(value)) {
         return 0;
@@ -97,6 +121,13 @@ export function clamp01(value: number): number {
     return Math.min(1, Math.max(0, value));
 }
 
+/**
+ * 部分指定された estimator config を、全 timed intent と wave detector が読める正規化済み config へ変換する。
+ *
+ * timing は `0..2000ms` に制限し、semantic hold は prediction window と recovery 表示が破綻しない
+ * `200..700ms` に留める。返り値は新しい object で、`DEFAULT_CONFIG` や caller の config を変更しない。
+ * invalid 値は throw せず default / clamp に落ちるため、調整 UI は入力失敗をこの関数からは観測しない。
+ */
 export function normalizeConfig(
     config: MotionIntentEstimatorConfig | undefined,
 ): NormalizedEstimatorConfig {
