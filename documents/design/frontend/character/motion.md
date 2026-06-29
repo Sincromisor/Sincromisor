@@ -192,6 +192,20 @@
     - talk mode
     - faceMotion / poseMotion
     - motion policy
+- `SincroMotionPipelineState`
+    - 本番 `sincro` runtime の observe-only / dry-run 用低次元 motion pipeline state として
+      `src/character/runtime/sincroMotionPipelineState.ts` に置く。
+    - `face`、`pose`、optional `hand`、optional `reliability`、optional `canonical`、optional
+      `temporal`、optional `intent`、optional `composerDryRun`、`updatedAtMs` を持つ plain object に固定する。
+    - `CharacterBehaviorSnapshot` は既存どおり face / pose / VAD / AI speech の集約点として維持し、
+      canonical / temporal / intent を直接追加しない。`CharacterBehaviorState` への接続も後続
+      observe-only task の責務に残す。
+    - runtime 内部の現在値 contract であり、保存境界ではないため schemaVersion と parser は持たない。
+      replay / recording へ出す場合は既存 motion-debug log の `frame.reliability`、`frame.canonical`、
+      `frame.temporal`、`frame.intent`、`frame.finalPose` slot と各 parser を使う。
+    - state clone は Face / Pose / Hand / MotionIntent の既存 clone helper を優先し、helper が無い
+      downstream slot は defensive clone で warning 配列や tuple を後続変更から分離する。
+    - THREE instance、MediaPipe raw result、DOM、MediaStream、VideoFrame は state に含めない。
 - `CharacterMotionConfig`
     - motion scale
     - easing
