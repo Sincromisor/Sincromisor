@@ -68,6 +68,9 @@
     - Face-only callback は Pose が無い間 `not_computed` summary に留め、旧 pose-only frame は Face / Hand
       reliability を placeholder として扱う。ReliabilityMap 欠損や optional ROI 欠損を production callback
       の例外にはしない。
+    - Degradation 中の Face-only callback は stateful temporal / intent estimator を進めない。Pose callback が
+      `mediaTimeMs` 付きで再到着した frame だけ downstream estimator を進め、recovery 時は
+      `TemporalUpperBodyState` の `recovering` または comfortable fallback 状態を経由して snap を抑える。
     - production `sincro` では Hand snapshot を `onHandMotion` から `SincroMotionPipelineState.hand` へ保存し、Debug Console へ availability、source、ROI warning、openness、confidence の summary だけを出す。raw landmark、crop object、Hand wrist 座標は常時 UI snapshot に保存しない。
     - Hand snapshot は ReliabilityMap / MotionIntent / finger feature の observe-only 入力に留める。腕 IK target は引き続き `SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` を正本にし、Hand wrist で上書きしない。
 - `src/character/motionIntent`
@@ -193,6 +196,9 @@
     - v1 は developer-only path として motion-debug / helper から同じ input で呼べる contract を固める段階であり、本番の `ArmBoneController` / `CharacterMotionTorsoApplier` bone 書き込みや `VRMCharacterManager.update()` の順序は変更しない。motion-debug は recording / live snapshot 用に tracking layer 由来の composer result を生成し、`finalPose`、`ownedBones`、`suppressedLayers`、`clampedBones`、`warnings` を保存・表示する。
     - production `sincro` runtime では `src/character/runtime/sincroVrmPoseComposerDryRun.ts` の dry-run service が `VRMCharacterManager.update()` 内で `composeVrmPose()` を observe-only 実行する。入力は latest `SincroPoseRetargetFrame`、`AvatarMotionProfile` / `MinimalAvatarMotionProfile`、service が保持する optional previous final pose、`deltaSeconds` に限定し、生成 layer は fallback と tracking だけにする。semantic / finger layer は後続の適用 feature flag で所有境界を確定するまで混ぜない。
     - production dry-run result は `{ status: "available" | "not_ready" | "invalid_input" | "missing_profile"; result?: VrmPoseComposerResult; warnings: string[] }` とし、`status !== "available"` では `result` を持たない。available result の `finalPose` は次 frame の angular velocity clamp 入力としてだけ保持し、Debug Console には status、warnings、suppressed layer、clamped bones の summary を表示する。
+    - `face-only` / `comfortable-idle` などで latest retarget frame が無い frame は `not_ready` として扱い、前回
+      `available` の `finalPose` を現在 frame の適用候補として返さない。古い `finalPose` は angular velocity
+      clamp の内部入力にだけ使い、実 VRM 適用や Debug Console の current result には昇格させない。
     - dry-run は `vrm.humanoid.setNormalizedPose()`、normalized bone node の `rotation` / `quaternion`、expression、root position を更新しない。既存 controller 呼び出し順と `vrm.update(deltaSeconds)` の位置も変更しないため、本番表示は従来の direct bone write を正本に保つ。
     - optional bone fallback の検証結果は task artifact
       [optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)
