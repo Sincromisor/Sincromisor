@@ -82,5 +82,7 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
   `.claude/`.
 - Sincromisor-specific gate: keep the agent comment quality checks aligned with
   `documents/rules/coding-ts.md` and `tasks/AUTHORING-CHECKLIST.md`. Upstream refreshes must
-  preserve task-reviewer High checks, task-implementer `impl.md` audit logging, and
-  impl-evaluator FAIL conditions for TypeScript production code comment acceptance.
+  preserve task-reviewer High checks for symbol / decision audit schemas and overbroad
+  comment-remediation tasks, task-implementer `impl.md` audit logging with `keep` / `rewrite` /
+  `delete` / `add` decisions, and impl-evaluator spot checks plus FAIL conditions for TypeScript
+  production code comment acceptance.

@@ -46,7 +46,9 @@ worktree を既定で拒否するが、コピーバックを remove の前に済
 4. TypeScript production code を変更した実装では、コメント品質の受け入れ条件を実装差分と
    照合する。public export / public component / hook / module / boundary / heuristic /
    schema/parser / lifecycle の JSDoc/TSDoc、失敗条件、副作用、省略理由、TODO 必須情報が
-   不足している場合、または stale comment が残っている場合は FAIL とする。
+   不足している場合、または stale comment が残っている場合は FAIL とする。コメント変更を
+   評価する場合は、少なくとも 5 symbols / decisions（変更数が 5 未満なら全件）を実コードと
+   照合する。
 5. 3 点ゲート（`npm run gate`）を独立実行し、結果を判定根拠とする（テスト方針を参照）
 6. **ドキュメント整合性を検証する**（ドキュメント整合性方針を参照）
 7. 評価結果を `<task-dir>/eval.md` に書き出す
@@ -69,7 +71,15 @@ worktree を既定で拒否するが、コピーバックを remove の前に済
 - TypeScript production code の comment acceptance が task.md に含まれている場合は、実装差分と
   impl.md の comment audit 記録を照合する。実装が public export / public component / hook /
   module / boundary / heuristic / schema/parser / lifecycle を変えているのに、JSDoc/TSDoc の
-  更新、省略理由、失敗条件、副作用、stale comment、TODO 必須情報の扱いが不足していれば FAIL とする
+  更新、省略理由、失敗条件、副作用、stale comment、TODO 必須情報の扱いが不足していれば FAIL とする。
+  コメント変更を評価する場合は、少なくとも 5 symbols / decisions（変更数が 5 未満なら全件）を
+  実コードと照合し、次のいずれかがあれば FAIL とする。
+    - 名前・型から分かるだけのコメント。
+    - 設計文書や focused tests など確認先だけを示し、実コード上の入力境界、失敗条件、副作用、
+      確認観点を説明しないコメント。
+    - heuristic / threshold / fallback の存在だけを書き、誤調整時の見え方や失敗モードが無いコメント。
+    - audit artifact の `public export のため追加`、`既存コメントで十分` などの定型理由だけで、
+      symbol / decision 固有の required maintenance knowledge を示さない記録。
 - 必要なら独立した検証テストを追加してよい
     - 置き場は **`<task-dir>/acceptance/` に限定**する（タスクと一緒に検証根拠が残る）
     - 実装コード（プロジェクトのソース）および実装者のテストは一切変更しないこと

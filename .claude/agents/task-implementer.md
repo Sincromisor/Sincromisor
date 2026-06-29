@@ -22,7 +22,8 @@ model: opus
 - TypeScript production code を変更する場合は、着手前に
   `documents/rules/coding-ts.md` の「ソースコードコメント品質」を読み、public export /
   public component / hook / module / boundary / heuristic / schema/parser / lifecycle に対する
-  JSDoc/TSDoc、失敗条件、副作用、省略理由、stale comment、TODO 必須情報の基準を確認する。
+  JSDoc/TSDoc、symbol / decision 単位の comment audit、失敗条件、副作用、省略理由、
+  stale comment、TODO 必須情報の基準を確認する。
 - テスト・ビルド・実行コマンドはプロジェクトのものを使う（後述の「3 点ゲート」参照）。
 
 ## 手順
@@ -33,8 +34,10 @@ model: opus
 3. 既存のコード規約・パターン（プロジェクト規約ドキュメント / 周辺コード）に従う。
 4. TypeScript production code を変更した場合は、変更した public export / public component /
    hook / module / boundary / heuristic / schema/parser / lifecycle の comment audit を行い、
+   既存コメントと不足している保守知識を `keep` / `rewrite` / `delete` / `add` に分類する。
    必要な JSDoc/TSDoc の追加・更新、失敗条件・副作用の明記、省略理由、stale comment の更新・
-   削除、TODO 必須情報の充足を確認する。
+   削除、TODO 必須情報の充足を確認する。弱い既存コメントは追加で補うだけでなく削除または
+   rewrite を検討し、module TSDoc の一括追加を既定解にしない。
 5. 開発中のテストを実行し、緑になるまで修正する（テスト方針を参照）。
 6. **ドキュメントを同期する**（ドキュメント同期方針を参照）。コードと同一コミット/同一
    ブランチで反映し、後追いコミットにしない。
@@ -57,8 +60,11 @@ model: opus
 - ファイルが無ければ新規作成、あれば末尾に追記する。
 - TypeScript production code を変更した場合は、変更した public export / public component /
   hook / module / boundary / heuristic / schema/parser / lifecycle の comment audit 結果、
-  JSDoc/TSDoc の追加・更新または省略理由、失敗条件、副作用、TODO 必須情報、stale comment
-  更新・削除の有無を記録する。対象外の場合も、docs/test/fixture のみ等の理由を記録する。
+  symbol / decision、`keep` / `rewrite` / `delete` / `add` の判断、required maintenance
+  knowledge、action、JSDoc/TSDoc の追加・更新または省略理由、失敗条件、副作用、
+  TODO 必須情報、stale comment 更新・削除の有無を記録する。module TSDoc に集約した場合は、
+  各 export の入力境界、observable output、失敗条件、副作用、非対象を具体的に覆う理由も
+  記録する。対象外の場合も、docs/test/fixture のみ等の理由を記録する。
 
 ## ドキュメント同期方針（lint / 型 / test で検出できない領域）
 
