@@ -22,13 +22,13 @@ PASS
 ## テスト結果
 
 - `npm run gate` in `/private/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-ef33d2868bb7-isvyqo`: passed。
-  - `gate:lint`: CACHE HIT。
-  - `gate:build`: CACHE HIT。
-  - `gate:test`: CACHE HIT、405 tests passed。
+    - `gate:lint`: CACHE HIT。
+    - `gate:build`: CACHE HIT。
+    - `gate:test`: CACHE HIT、405 tests passed。
 - 追加の独立検証:
-  - `git diff --name-status HEAD~1..HEAD`: 対象 10 production `.ts` file のみ変更。
-  - `git diff --check HEAD~1..HEAD`: passed。
-  - audit artifact table parse: 必須列あり、55 rows、10 unique paths、bad decisions なし。
+    - `git diff --name-status HEAD~1..HEAD`: 対象 10 production `.ts` file のみ変更。
+    - `git diff --check HEAD~1..HEAD`: passed。
+    - audit artifact table parse: 必須列あり、55 rows、10 unique paths、bad decisions なし。
 - カバレッジ評価: task の中心である comment remediation は静的レビューが主判定。gate は挙動非変更の退行確認として十分で、diff がコメントのみのため追加 acceptance test は作成しなかった。
 
 ## ドキュメント整合性
