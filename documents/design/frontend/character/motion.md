@@ -5,6 +5,9 @@
 - Character motion は `CharacterBehaviorSnapshot` を入力に、head / eye / face / body / arm を低振幅で合成する。
 - `chat` では会話の存在感を優先し、`sincro` では face / pose retarget を優先する。
 - 各 controller は MediaPipe の生値ではなく、retarget 済みの VRM 向け値を読む。
+- 本番 runtime の現在の bone / expression / root position 書き込み順序は task artifact
+  [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)
+  を参照する。現時点では `VRMCharacterManager.update()` の本番書き込み順序を変更しない。
 
 ## Scope
 
@@ -170,6 +173,9 @@
     - capability default distribution は `spine+chest+upperChest` で `{ spine: 0.25, chest: 0.40, upperChest: 0.35 }`、`spine+chest` で `{ spine: 0.35, chest: 0.65, upperChest: 0 }`、それ以外で `{ spine: 1, chest: 0, upperChest: 0 }` とする。helper は存在する torso bone だけを `ownedBones` に含め、composer は欠損 `upperChest` を `missing_optional_bone` として抑制する。
     - final limit / clamp stage は quaternion normalize と angular velocity clamp hook を持つ。angular velocity clamp は `previousFinalPose` と `deltaSeconds > 0` がある場合だけ実行し、既定値は `720deg/sec` とする。
     - v1 は developer-only path として motion-debug / helper から同じ input で呼べる contract を固める段階であり、本番の `ArmBoneController` / `CharacterMotionTorsoApplier` bone 書き込みや `VRMCharacterManager.update()` の順序は変更しない。motion-debug は recording / live snapshot 用に tracking layer 由来の composer result を生成し、`finalPose`、`ownedBones`、`suppressedLayers`、`clampedBones`、`warnings` を保存・表示する。
+    - 本番 runtime の現行 ownership map は task artifact
+      [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)
+      を正本にする。移行前の `move-to-composer` / `keep-controller-owned` / `needs-decision` 分類は設計本文へ重複展開しない。
     - `CharacterMotionTorsoApplier` の置き換えと `vrm.humanoid.setNormalizedPose(finalPose)` への全面移行は後続 task に残す。移行ゲートは、head / neck / leg / expression の所有境界、motion-debug final pose replay、既存 controller との二重書き込み排除、複数 VRM での clamp / optional bone 検証が揃うこととする。
 - `sincroCcdIkProbe`
     - Three.js 公式 addon `CCDIKSolver` と VRM raw / normalized bone の相性を見るための PoC 診断。
