@@ -11,3 +11,54 @@
 ## Not Run
 
 -
+
+## attempt 1
+
+### 判断 / 申し送り対応
+
+- review.md は APPROVED。Freshness 申し送りの通り、production `startSincroFaceTracking()` から `onHandMotion` と `poseOptions.hand` / `faceRoi` を接続した。
+- Hand / Face ROI は `enableSincroPoseTracking()` が true の場合だけ起動する。Dialog UI の新設定は追加していない。
+- Hand snapshot は `SincroMotionPipelineState.hand` と Debug Console の低次元 summary に保存した。raw landmarks、crop object、Hand wrist 座標は Debug Console summary に保存していない。
+- Hand wrist は腕 IK target に使っていない。腕 target は引き続き `SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` が正本。
+- Hand 初期化失敗は `model_not_loaded` warning 付き lost hand snapshot を callback publish し、Face / Pose tracking を継続する。
+- `onHandMotion` は sink 側の `enableCharacterGaze() && talkMode() === "sincro"` gate を通る場合だけ observe-only state へ反映する。mode / camera / stop / error lifecycle の `resetObserveOnlyPipeline()` で hand summary/state も `not_computed` に戻る。
+- `npm run check` が既存の別 task `task-260629225925-production-sincro-motion-observe-only/impl.md` の Markdown 整形不一致を拾ったため、worktree 側で Prettier-only 整形を同一コミットに含めた。対象 task-dir の状態ファイルは main checkout 側の本 `impl.md` だけを更新した。
+
+### ドキュメント同期
+
+- `documents/design/frontend/character/tracking.md`: production `sincro` の Hand / Face ROI 起動条件、Debug Console hand summary、Hand 初期化失敗 fallback を同期。
+- `documents/design/frontend/character/motion.md`: Hand snapshot の observe-only 保存先と、腕 IK target を Hand wrist で上書きしない契約を同期。
+- `documents/design/frontend/settings-and-debug-ui.md`: Debug Console の Hand summary 表示範囲と raw 非保持を同期。
+
+### Verification
+
+- `cd sincromisor-frontend && npm run test -- trackerRuntime`
+- `cd sincromisor-frontend && npm run test -- sincroHandMotionSnapshot`
+- `cd sincromisor-frontend && npm run test -- sincroMotionPipelineObserveOnly`
+- `cd sincromisor-frontend && npm run check`
+- `cd sincromisor-frontend && npm run build`
+- `npm run tasks:check`
+- `npm run gate` at commit `381a559` (`gate:lint`, `gate:build`, `gate:test`; 53 files / 414 tests)
+
+### Comment Audit
+
+| path | symbol or decision | kind | current comment | decision | required maintenance knowledge | action | reviewer note |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `sincromisor-frontend/src/app/controller/sincroCharacterGazeController.ts` | `startSincroFaceTracking()` hand / faceRoi option decision | boundary decision | controller class comment only。option decision の保守知識は無し | add | Hand / Face ROI は production `sincro` の observe-only 入力で、Pose disabled のときは起動しない。Dialog UI 設定は追加しない。 | `poseOptions.hand.enabled` / `faceRoi.enabled` 付近に decision comment を追加。 | `enableSincroPoseTracking()` false で `handTrackingEnabled` / `faceRoiTrackingEnabled` が false になること。 |
+| `sincromisor-frontend/src/app/controller/sincroCharacterMotionEventSink.ts` | `onHandMotion` handling | boundary | `resetObserveOnlyPipeline()` の lifecycle TSDoc は既存。Hand callback の個別 comment は無し | add | Hand callback は `talkMode === "sincro"` かつ CharacterGaze enabled のときだけ observe-only state / Debug Console summary に入れる。VRM / CharacterBehaviorState へは適用しない。 | `handleHandMotion()` を追加し、既存 `isSincroTrackingEnabled()` gate と observe-only summary 更新に閉じた。追加 comment は型・関数名と reset TSDoc で十分なため省略。 | `handleHandMotion()` が `characterBehaviorState.applyPoseMotion()` や腕 target 更新を呼ばないこと。 |
+| `sincromisor-frontend/src/app/controller/sincroCharacterMotionEventSink.ts` | mode 切替時の stale hand reset | lifecycle | `resetObserveOnlyPipeline()` に mode / camera / tracking lifecycle と Debug Console summary reset の TSDoc あり | keep | reset は temporal / intent memory だけでなく latest hand snapshot / hand summary も次 session へ持ち越さない。 | 既存 reset TSDoc を維持し、pipeline default state に hand slot を持たせないことで stale hand を clear。 | mode / camera / stop / runtime error から `resetObserveOnlyPipeline()` が呼ばれること。 |
+| `sincromisor-frontend/src/character/runtime/sincroMotionObserveOnlyPipeline.ts` | `updateHand()` | public export / boundary | なし | add | Hand snapshot は latest state と Debug Console summary だけを更新する。Pose がある場合だけ downstream を stateless recalculation し、Temporal / Intent stateful memory は Pose callback まで進めない。 | method TSDoc と module-level `updateHand()` TSDoc を追加。 | `updateHand()` が `updateStatefulEstimators: false` で downstream を呼ぶこと。 |
+| `sincromisor-frontend/src/character/runtime/sincroMotionObserveOnlyPipelineTypes.ts` | `SincroMotionObserveOnlyHandSummary` / `SincroMotionObserveOnlyHandSideSummary` | public export | なし | add | Debug Console 常時表示は availability / source / ROI warning / openness / confidence に限定し、raw landmark / crop object / wrist coordinate を保存しない。 | 各 type に TSDoc を追加。 | 型に raw landmarks、crop、wrist coordinate field が無いこと。 |
+| `sincromisor-frontend/src/character/runtime/sincroMotionObserveOnlyPipelineTypes.ts` | `summarizeObserveOnlyHand()` | public export / formatter boundary | なし | add | Hand summary は warning を短く切り詰め、ROI warning は ROI observation warning を優先し、無い場合だけ side warning から拾う。 | 関数名と Hand summary type TSDoc で契約を示し、追加 TSDoc は省略。 | raw landmark 由来 field を読まず、side summary だけ作ること。 |
+| `sincromisor-frontend/src/features/gaze/trackingRuntime/trackerRuntimeEngineInitializer.ts` | Hand ROI failure fallback | fallback / lifecycle | module TSDoc に初期化例外の fallback 境界あり | keep | Hand 初期化失敗は Face / Pose を止めず、lost hand snapshot と `model_not_loaded` warning を publish する。 | 既存 module TSDoc を維持し、`onHandInitializationFallback` callback を追加。 | Hand init catch が throw せず、callback が呼ばれること。 |
+| `sincromisor-frontend/src/features/gaze/trackingRuntime/trackerRuntime.ts` | HandLandmarker init failure publish | fallback | class comment は lifecycle facade 境界のみ | add | `SincroHandTracker.initVision()` 失敗時、Face / Pose loop 継続のため runtime error にはせず lost hand snapshot を callback する。 | `createSincroHandFallbackSnapshot({ warnings: ["model_not_loaded"] })` を publish。関数名と initializer TSDoc で十分なため追加 comment は省略。 | `trackerRuntime.test.ts` が Face / Pose 継続と hand lost warning を確認すること。 |
+| `sincromisor-frontend/src/features/gaze/trackingRuntime/trackerRuntimeRoiSnapshot.ts` | Face ROI failure fallback | fallback | module TSDoc と `withPausedTrackerFaceRoiWarning()` 既存実装あり | keep | Face ROI pause / skip は full-frame Face snapshot に warning / ROI metadata を残し、Face motion callback を止めない。 | 本タスクでは既存 Face ROI fallback を変更せず、production option 接続だけ実施。 | Face callback が `runFaceInference()` で常に full-frame Face を publish すること。 |
+| `sincromisor-frontend/src/features/gaze/handTracking/sincroHandTracker.ts` | 腕 IK target を Hand wrist で上書きしない判断 | boundary decision | class comment に「wrist は assignment と信頼度材料、腕 IK target は Pose snapshot 正本」と明記済み | keep | Hand wrist は reliability / palm / finger feature の材料であり、腕 IK target は Pose wrist を正本にする。 | コメントは stale でなく設計と一致するため維持。motion/tracking docs も同期。 | `SincroCharacterMotionEventSink.handleHandMotion()` が pose retarget / IK target を変更しないこと。 |
+| `sincromisor-frontend/src/features/debug/model/debugConsoleSincroMotionRuntime.ts` | `cloneObserveOnlySummary()` hand clone | public export / clone boundary | observe-only summary clone の TSDoc あり | rewrite | Debug Console snapshot に流すのは summary だけ。Hand summary 追加後も pipeline state 本体や raw data を流さない。 | 既存 TSDoc は summary 限定の契約を満たすため本文は維持し、Hand field clone を追加。 | `cloneObserveOnlySummary()` が `summary.hand.left/right` の scalar fields だけ複製すること。 |
+| `sincromisor-frontend/src/features/debug/react/panels/sincroMotionPanelFormatters.ts` | `formatObserveOnlyHandSummary()` | public export / formatter | `formatObserveOnlySummary()` の TSDoc は既存。Hand formatter は無し | add | Hand availability、source、ROI warning、openness、confidence を低頻度 summary として表示する。raw landmarks は表示しない。 | `formatObserveOnlyHandSummary()` を追加。周辺 formatter と同じ単純表示のため個別 TSDoc は省略。 | panel に raw JSON dump が無いこと。 |
+| `documents/design/frontend/character/tracking.md` / `documents/design/frontend/character/motion.md` | Hand / Face ROI production contract sync | documentation | Hand wrist 非上書きと ROI fallback 既存記述あり | rewrite | 本番 `sincro` で Hand / Face ROI が observe-only として起動し、Hand snapshot は IK target を上書きしない。 | production 起動条件、Debug summary、Hand init fallback、IK target 契約を追記。 | task.md のドキュメント同期要否を満たすこと。 |
+
+### 残リスク
+
+- Gesture Recognizer / finger bone / semantic pose 適用は仕様通り未接続。
+- `npm run build` / `npm run gate` では既存の Vite chunk size warning が出るが、ビルド自体は PASS。
