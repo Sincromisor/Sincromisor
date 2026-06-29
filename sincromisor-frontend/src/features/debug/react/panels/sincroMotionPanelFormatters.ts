@@ -158,6 +158,31 @@ export function formatObserveOnlyHandSummary(summary: SincroMotionObserveOnlySum
     );
 }
 
+/**
+ * composer dry-run の status と診断入口を 1 行表示へ整形する。
+ *
+ * finalPose 全体は常時表示せず、warning / suppressed layer / clamped bone だけを出す。これにより
+ * observe-only の不変条件を保ったまま、missing optional bone や angular velocity clamp の有無を確認できる。
+ */
+export function formatComposerDryRunSummary(summary: SincroMotionObserveOnlySummary): string {
+    const dryRun = summary.composerDryRun;
+    if (dryRun.status !== "available") {
+        const warningText = dryRun.warnings.length > 0 ? ` (${dryRun.warnings.join(",")})` : "";
+        return `${dryRun.status}${warningText}`;
+    }
+    const parts = ["available"];
+    if (dryRun.warnings.length > 0) {
+        parts.push(`warn ${dryRun.warnings.join(",")}`);
+    }
+    if (dryRun.suppressedLayers.length > 0) {
+        parts.push(`suppressed ${dryRun.suppressedLayers.join(",")}`);
+    }
+    if (dryRun.clampedBones.length > 0) {
+        parts.push(`clamped ${dryRun.clampedBones.join(",")}`);
+    }
+    return parts.join(" / ");
+}
+
 export function formatHeadPose(snapshot: SincroFaceMotionSnapshot): string {
     return `yaw ${snapshot.headPose.yawDeg.toFixed(1)} / pitch ${snapshot.headPose.pitchDeg.toFixed(1)} / roll ${snapshot.headPose.rollDeg.toFixed(1)}`;
 }

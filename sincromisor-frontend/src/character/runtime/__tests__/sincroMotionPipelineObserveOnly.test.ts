@@ -84,6 +84,7 @@ describe("SincroMotionObserveOnlyPipeline", () => {
         expect(result.summary.reliability.status).toBe("not_computed");
         expect(result.summary.reliability.reason).toBe("pose_not_available");
         expect(result.summary.hand.status).toBe("not_computed");
+        expect(result.summary.composerDryRun.status).toBe("not_ready");
     });
 
     it("computes observe-only state from a pose-only legacy frame without throwing", () => {
@@ -101,6 +102,7 @@ describe("SincroMotionObserveOnlyPipeline", () => {
         expect(result.summary.intent.status).toBe("available");
         expect(result.state.reliability?.joints.head.state).toBe("lost");
         expect(result.state.composerDryRun).toBeUndefined();
+        expect(result.summary.composerDryRun.warnings).toEqual(["composer_dry_run_not_started"]);
     });
 
     it("stores latest hand snapshot as low-frequency summary without requiring pose", () => {
@@ -172,6 +174,7 @@ describe("SincroMotionObserveOnlyPipeline", () => {
         expect(summary.temporal.status).toBe("not_computed");
         expect(summary.intent.status).toBe("not_computed");
         expect(summary.hand.status).toBe("not_computed");
+        expect(summary.composerDryRun.status).toBe("not_ready");
         expect(pipeline.getState().temporal).toBeUndefined();
         expect(pipeline.getState().intent).toBeUndefined();
         expect(pipeline.getState().hand).toBeUndefined();

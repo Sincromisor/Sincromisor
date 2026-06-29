@@ -252,6 +252,12 @@ function createDefaultObserveOnlySummary(): SincroMotionObserveOnlySummary {
             },
             warnings: [],
         },
+        composerDryRun: {
+            status: "not_ready",
+            warnings: ["composer_dry_run_not_started"],
+            suppressedLayers: [],
+            clampedBones: [],
+        },
         updatedAtMs: 0,
     };
 }

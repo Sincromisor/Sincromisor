@@ -5,6 +5,7 @@ import {
     formatArmTargets,
     formatAvatarMotionProfile,
     formatCcdIkProbe,
+    formatComposerDryRunSummary,
     formatIkRuntime,
     formatInference,
     formatLowerBodyTargets,
@@ -58,6 +59,8 @@ export function SincroMotionPoseSection({
                 <dd>{formatAvatarMotionProfile(poseRetargetRuntime)}</dd>
                 <dt>Observe Only</dt>
                 <dd>{formatObserveOnlySummary(observeOnly)}</dd>
+                <dt>Composer Dry Run</dt>
+                <dd>{formatComposerDryRunSummary(observeOnly)}</dd>
                 <dt>Hand</dt>
                 <dd>{formatObserveOnlyHandSummary(observeOnly)}</dd>
                 <dt>Confidence</dt>

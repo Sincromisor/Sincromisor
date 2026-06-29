@@ -37,6 +37,12 @@ export function cloneObserveOnlySummary(
             right: { ...summary.hand.right },
             warnings: [...summary.hand.warnings],
         },
+        composerDryRun: {
+            status: summary.composerDryRun.status,
+            warnings: [...summary.composerDryRun.warnings],
+            suppressedLayers: [...summary.composerDryRun.suppressedLayers],
+            clampedBones: [...summary.composerDryRun.clampedBones],
+        },
         updatedAtMs: summary.updatedAtMs,
     };
 }

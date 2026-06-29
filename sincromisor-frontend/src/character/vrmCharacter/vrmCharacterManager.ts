@@ -21,6 +21,13 @@ import { HeadBoneController } from "../behavior/headBoneController";
 import { SincroFaceRetargeter } from "../retargeting/sincroFaceRetargeter";
 import type { SincroPoseRetargetConfig } from "../retargeting/sincroPoseRetargeter";
 import { SincroPoseRetargeter } from "../retargeting/sincroPoseRetargeter";
+import { summarizeComposerDryRun } from "../runtime/sincroMotionObserveOnlyPipelineTypes";
+import {
+    cloneSincroMotionPipelineState,
+    createDefaultSincroMotionPipelineState,
+    type SincroMotionPipelineState,
+} from "../runtime/sincroMotionPipelineState";
+import { SincroVrmPoseComposerDryRunService } from "../runtime/sincroVrmPoseComposerDryRun";
 import type { VRMCamera } from "../scene/vrmCamera";
 import { ArmBoneController } from "./armBoneController";
 import type { CharacterMotionTuning } from "./characterMotionConfig";
@@ -59,6 +66,9 @@ export class VRMCharacterManager {
     private readonly behaviorState: CharacterBehaviorState;
     private readonly sincroFaceRetargeter = new SincroFaceRetargeter();
     private readonly sincroPoseRetargeter = new SincroPoseRetargeter();
+    private readonly composerDryRun = new SincroVrmPoseComposerDryRunService();
+    private sincroMotionPipelineState: SincroMotionPipelineState =
+        createDefaultSincroMotionPipelineState();
     private latestBehaviorSnapshot?: CharacterBehaviorSnapshot;
     private motionElapsedSeconds = 0;
     // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
@@ -136,6 +146,7 @@ export class VRMCharacterManager {
         this.armBoneController = new ArmBoneController(vrm);
         this.armBoneController.update(this.motionElapsedSeconds);
         this.sincroPoseRetargeter.attachVrm(vrm);
+        this.composerDryRun.reset();
         const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
         DebugConsoleManager.getManager().updateAvatarMotionProfile(
             avatarMotionProfile ? toMinimalAvatarMotionProfile(avatarMotionProfile) : undefined,
@@ -198,19 +209,35 @@ export class VRMCharacterManager {
             this.latestBehaviorSnapshot.faceMotion,
             this.latestBehaviorSnapshot.nowMs,
         );
+        const poseMotionForRetarget = this.latestBehaviorSnapshot.motionPolicy.allowPoseRetarget
+            ? this.latestBehaviorSnapshot.poseMotion
+            : {
+                  ...this.latestBehaviorSnapshot.poseMotion,
+                  detected: false,
+                  confidence: 0,
+                  degradedToFaceOnly: true,
+                  fallbackReason: "pose_retarget_disabled",
+              };
         const sincroPose = this.sincroPoseRetargeter.retarget(
-            this.latestBehaviorSnapshot.motionPolicy.allowPoseRetarget
-                ? this.latestBehaviorSnapshot.poseMotion
-                : {
-                      ...this.latestBehaviorSnapshot.poseMotion,
-                      detected: false,
-                      confidence: 0,
-                      degradedToFaceOnly: true,
-                      fallbackReason: "pose_retarget_disabled",
-                  },
+            poseMotionForRetarget,
             this.latestBehaviorSnapshot.nowMs,
         );
         DebugConsoleManager.getManager().updateSincroPoseRetargetFrame(sincroPose);
+        const composerDryRun = this.composerDryRun.compose({
+            frame: sincroPose,
+            profile: this.sincroPoseRetargeter.getAvatarMotionProfile(),
+            deltaSeconds,
+        });
+        this.sincroMotionPipelineState = cloneSincroMotionPipelineState({
+            ...this.sincroMotionPipelineState,
+            face: this.latestBehaviorSnapshot.faceMotion,
+            pose: poseMotionForRetarget,
+            composerDryRun,
+            updatedAtMs: nowMs,
+        });
+        DebugConsoleManager.getManager().updateSincroComposerDryRunSummary(
+            summarizeComposerDryRun(this.sincroMotionPipelineState.composerDryRun),
+        );
         this.headBoneController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.eyeBehaviorController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.mouthMorphController?.update(this.latestBehaviorSnapshot, sincroFace);

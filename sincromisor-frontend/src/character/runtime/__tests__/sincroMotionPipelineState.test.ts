@@ -10,12 +10,12 @@ import {
 import { createDefaultMotionIntentState } from "../../motionIntent/motionIntentState";
 import { createDefaultReliabilityMap } from "../../reliability/reliabilityMap";
 import { createDefaultTemporalUpperBodyState } from "../../temporal/temporalUpperBodyState";
-import type { VrmPoseComposerResult } from "../../vrmPose/vrmPoseTypes";
 import {
     cloneSincroMotionPipelineState,
     createDefaultSincroMotionPipelineState,
     type SincroMotionPipelineState,
 } from "../sincroMotionPipelineState";
+import type { SincroVrmPoseComposerDryRunResult } from "../sincroVrmPoseComposerDryRun";
 
 function expectDefined<T>(value: T | undefined): T {
     if (value === undefined) {
@@ -82,28 +82,32 @@ function createCanonicalUpperBodyState(): CanonicalUpperBodyState {
     };
 }
 
-function createComposerDryRun(): VrmPoseComposerResult {
+function createComposerDryRun(): SincroVrmPoseComposerDryRunResult {
     return {
-        finalPose: {
-            leftUpperArm: { x: 0, y: 0.1, z: 0, w: 1 },
+        status: "available",
+        result: {
+            finalPose: {
+                leftUpperArm: { x: 0, y: 0.1, z: 0, w: 1 },
+            },
+            ownedBones: ["leftUpperArm"],
+            suppressedLayers: [
+                {
+                    id: "semantic:left",
+                    kind: "semantic",
+                    bone: "leftHand",
+                    reason: "semantic_conflict",
+                },
+            ],
+            clampedBones: [
+                {
+                    bone: "leftUpperArm",
+                    reason: "angular_velocity",
+                    before: { x: 0, y: 1, z: 0, w: 1 },
+                    after: { x: 0, y: 0.1, z: 0, w: 1 },
+                },
+            ],
+            warnings: ["owned_bone_conflict:leftUpperArm"],
         },
-        ownedBones: ["leftUpperArm"],
-        suppressedLayers: [
-            {
-                id: "semantic:left",
-                kind: "semantic",
-                bone: "leftHand",
-                reason: "semantic_conflict",
-            },
-        ],
-        clampedBones: [
-            {
-                bone: "leftUpperArm",
-                reason: "angular_velocity",
-                before: { x: 0, y: 1, z: 0, w: 1 },
-                after: { x: 0, y: 0.1, z: 0, w: 1 },
-            },
-        ],
         warnings: ["owned_bone_conflict:leftUpperArm"],
     };
 }
@@ -162,7 +166,7 @@ describe("cloneSincroMotionPipelineState", () => {
         expectDefined(state.canonical).warnings.push("dropout");
         expectDefined(state.temporal).arms.left.warnings.push("prediction_active");
         expectDefined(state.intent).arms.left.warnings.push("gesture_cooldown");
-        expectDefined(state.composerDryRun).ownedBones.push("leftLowerArm");
+        expectDefined(state.composerDryRun).result?.ownedBones.push("leftLowerArm");
         expectDefined(state.composerDryRun).warnings.push("after_clone");
 
         expect(clone.face.headPose.matrix).toEqual([1, 2, 3]);
@@ -179,7 +183,7 @@ describe("cloneSincroMotionPipelineState", () => {
         expect(expectDefined(clone.canonical).warnings).toEqual(["front_flip_rejected"]);
         expect(expectDefined(clone.temporal).arms.left.warnings).toEqual(["dropout"]);
         expect(expectDefined(clone.intent).arms.left.warnings).toEqual(["fallback_active"]);
-        expect(expectDefined(clone.composerDryRun).ownedBones).toEqual(["leftUpperArm"]);
+        expect(expectDefined(clone.composerDryRun).result?.ownedBones).toEqual(["leftUpperArm"]);
         expect(expectDefined(clone.composerDryRun).warnings).toEqual([
             "owned_bone_conflict:leftUpperArm",
         ]);
@@ -191,8 +195,8 @@ describe("cloneSincroMotionPipelineState", () => {
         expect(expectDefined(clone.temporal).arms.left.bodyLocalWrist).not.toBe(
             expectDefined(state.temporal).arms.left.bodyLocalWrist,
         );
-        expect(expectDefined(clone.composerDryRun).suppressedLayers).not.toBe(
-            expectDefined(state.composerDryRun).suppressedLayers,
+        expect(expectDefined(clone.composerDryRun).result?.suppressedLayers).not.toBe(
+            expectDefined(state.composerDryRun).result?.suppressedLayers,
         );
     });
 });

@@ -21,6 +21,7 @@ import {
     type SincroMotionObserveOnlyPipelineInput,
     type SincroMotionObserveOnlyPipelineUpdateResult,
     type SincroMotionObserveOnlySummary,
+    summarizeComposerDryRun,
     summarizeObserveOnlyHand,
     summarizeObserveOnlyStage,
 } from "./sincroMotionObserveOnlyPipelineTypes";
@@ -31,6 +32,7 @@ import {
 } from "./sincroMotionPipelineState";
 
 export type {
+    SincroMotionComposerDryRunSummary,
     SincroMotionObserveOnlyAvailability,
     SincroMotionObserveOnlyHandSideSummary,
     SincroMotionObserveOnlyHandSummary,
@@ -284,6 +286,7 @@ export class SincroMotionObserveOnlyPipeline {
                     overrideStatus,
                     reason ?? "hand_not_available",
                 ),
+                composerDryRun: summarizeComposerDryRun(state.composerDryRun),
                 updatedAtMs: state.updatedAtMs,
             },
         };
