@@ -1,10 +1,18 @@
 /**
- * video frame clock から TrackerRuntime の detect loop を駆動する lifecycle owner。
- * start / stop は rVFC、RAF、timer fallback の二重起動を避ける境界であり、callback 側の推論や cleanup は所有しない。
+ * TrackerRuntime の detect loop を `VideoFrameClock` で駆動する lifecycle owner。
+ *
+ * rVFC、RAF、timer fallback の選択は `VideoFrameClock` に閉じ、この class は loop の二重起動と
+ * 停止済み callback の再入を防ぐ。推論 pipeline、camera track、callback の cleanup は所有しない。
  */
 import type { TrackerVideoFrameTiming } from "./trackerRuntimeTypes";
 import { VideoFrameClock } from "./videoFrameClock";
 
+/**
+ * Hidden video element の frame clock と runtime 推論 callback の接続を管理する。
+ *
+ * `startIfNeeded()` は `enable()` 済みかつ video が `HAVE_CURRENT_DATA` 以上の場合だけ clock を作る。
+ * `stop()` と `markStopped()` は idempotent で、二重解放時も古い clock へ次 frame を要求しない。
+ */
 export class TrackerRuntimeFrameLoop {
     private loopEnabled = false;
     private loopRunning = false;

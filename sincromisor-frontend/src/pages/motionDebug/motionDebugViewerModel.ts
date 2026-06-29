@@ -1,6 +1,9 @@
 /**
- * motion-debug snapshot viewer の layer / mode と表示用 snapshot model を作る。
- * schema invalid、未記録、未実装、未計算を区別し、parser 失敗を recording 全体の失敗にしない。
+ * motion-debug snapshot viewer の表示用 layer model を作る。
+ *
+ * replay / live / metrics の入力を同じ layer status に正規化し、`invalid`、`not_recorded`、
+ * `not_implemented`、`not_calculated` を区別する。layer parser の失敗は recording 全体の失敗ではなく、
+ * 該当 layer の raw value と parse error として表示する。
  */
 import {
     type CanonicalUpperBodyState,
@@ -65,6 +68,12 @@ import type {
     TemporalLayerParseError,
 } from "./types";
 
+/**
+ * motion-debug viewer の固定 layer 順序。
+ *
+ * selector、snapshot JSON、tests がこの順序を前提にするため、追加・削除時は `LAYER_LABELS` と
+ * `createLayerSnapshots()` を同時に更新する。
+ */
 export const MOTION_DEBUG_LAYER_KEYS: MotionDebugLayerKey[] = [
     "camera",
     "mediapipe",
@@ -80,6 +89,12 @@ export const MOTION_DEBUG_LAYER_KEYS: MotionDebugLayerKey[] = [
     "metrics",
 ];
 
+/**
+ * viewer が持つ top-level mode。
+ *
+ * `metrics` は replay frame の保存済み metrics と計算済み summary を同じ UI に出すための表示 mode で、
+ * tracker runtime の推論 mode ではない。
+ */
 export const MOTION_DEBUG_VIEWER_MODES: MotionDebugViewerMode[] = [
     "live",
     "recording",
@@ -104,6 +119,12 @@ const LAYER_LABELS: Record<MotionDebugLayerKey, string> = {
 
 const RESERVED_PHASE_1_LAYERS = new Set<MotionDebugLayerKey>(["mediapipe", "canonical", "applied"]);
 
+/**
+ * viewer snapshot を作るための入力境界。
+ *
+ * replay frame がある場合は saved slot を優先し、無い layer は live snapshot または `not_recorded` に落とす。
+ * `metricComparison` は optional で、summary 未計算の replay metrics JSON を表示する経路とは独立している。
+ */
 export type MotionDebugViewerContext = {
     mode: MotionDebugViewerMode;
     selectedLayer: MotionDebugLayerKey;
@@ -115,6 +136,12 @@ export type MotionDebugViewerContext = {
     metricComparison?: Partial<Record<MotionMetricKey, MotionMetricComparison>>;
 };
 
+/**
+ * motion-debug panel が表示する viewer model を作る。
+ *
+ * 入力の parser 失敗は throw せず layer status `invalid` に変換する。camera settings は manifest /
+ * frame metrics / live camera の順に解決し、raw device label を再導入しない。
+ */
 export function createMotionDebugViewerSnapshot(
     context: MotionDebugViewerContext,
 ): MotionDebugViewerSnapshot {
@@ -337,6 +364,8 @@ function resolveReliabilityValue(
     if (frame.poseSnapshot === undefined) {
         return undefined;
     }
+    // 旧 log は reliability slot を持たないため、pose snapshot から再計算して viewer 上の欠損を減らす。
+    // parse 不能な pose は recording 全体の失敗にせず、reliability layer を未記録扱いにする。
     const pose = parseReplayPoseSnapshot(frame.poseSnapshot);
     if (pose === undefined) {
         return undefined;
@@ -533,6 +562,8 @@ function createMetricsLayerSnapshot(context: MotionDebugViewerContext): MotionDe
     const metrics = context.metrics;
     if (metrics === undefined || !hasRecordedValue(metrics.metrics)) {
         if (hasRecordedValue(context.replayFrame?.metrics)) {
+            // 保存済み metrics JSON は summary 未計算でも表示する。active profile は比較用の補助情報で、
+            // replay frame 自体の metrics contract へ書き戻さない。
             return {
                 status: "available",
                 label: LAYER_LABELS.metrics,

@@ -1,9 +1,18 @@
 /**
- * `sincro.motion-debug-log.v1` の NDJSON frame / manifest parser 境界。
- * 未知 optional slot は replay / viewer 側で個別 parse できるよう保持し、未知 schemaVersion や frame record でない値は parse error として reject する。
+ * `sincro.motion-debug-log.v1` の NDJSON manifest / frame parser 境界。
+ *
+ * manifest と frame の envelope だけを厳密に検証し、canonical / temporal / solver などの optional slot は
+ * viewer 側の layer parser が個別に扱えるよう `unknown` のまま保持する。旧 log 互換は「optional slot
+ * 欠損を許す」ことで担保し、未知 schemaVersion や frame-before-manifest は log 全体の parse error にする。
  */
 import { z } from "zod";
 
+/**
+ * motion-debug NDJSON manifest が宣言する唯一の受理 version。
+ *
+ * version mismatch は旧 optional slot fallback では吸収せず、`unknown_schema_version` として log 全体を
+ * reject する。
+ */
 export const SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION = "sincro.motion-debug-log.v1" as const;
 
 const sourceKindSchema = z.enum(["live-camera", "video-fixture", "synthetic"]);
@@ -180,10 +189,35 @@ const frameTimestampProbeSchema = z
     })
     .passthrough();
 
+/**
+ * motion-debug NDJSON の manifest record。
+ *
+ * camera settings は scrub 済み field だけを受け、raw device label / MediaStreamTrack / browser permission
+ * object は schema の strict object で reject する。
+ */
 export type SincroMotionDebugLogManifest = z.infer<typeof motionDebugLogManifestSchema>;
+
+/**
+ * motion-debug NDJSON の frame record。
+ *
+ * `timestamp.mediaTimeMs` と `video` は replay / metrics の時刻・解像度基準として必須にし、各 motion
+ * layer は旧 log 互換のため optional `unknown` slot として保持する。
+ */
 export type SincroMotionDebugFrame = z.infer<typeof motionDebugFrameSchema>;
+
+/**
+ * manifest または frame の line-level union。
+ *
+ * 通常 caller は `parseMotionDebugLogLines()` を使い、line ごとの schema は直接公開 parser としては扱わない。
+ */
 export type SincroMotionDebugLogLine = z.infer<typeof motionDebugLogLineSchema>;
 
+/**
+ * parser が caller へ返す固定 error code。
+ *
+ * `unknown_schema_version` は manifest の version mismatch 専用で、optional layer の schema mismatch は
+ * viewer layer 側の parse error として扱う。
+ */
 export type SincroMotionDebugLogParseErrorCode =
     | "empty_input"
     | "invalid_json"
@@ -194,12 +228,23 @@ export type SincroMotionDebugLogParseErrorCode =
     | "missing_timestamp"
     | "invalid_record";
 
+/**
+ * NDJSON line 単位の parse error。
+ *
+ * `lineIndex: null` は空入力や最終的な manifest 欠損など、特定行に結びつかない失敗を表す。
+ */
 export type SincroMotionDebugLogParseError = {
     code: SincroMotionDebugLogParseErrorCode;
     lineIndex: number | null;
     message: string;
 };
 
+/**
+ * motion-debug log parser の戻り値。
+ *
+ * 失敗時は最初に検出した境界違反を `errors` に入れて返し、例外は投げない。成功時の frame 配列は
+ * 入力順を維持し、frameIndex の連番補正や欠番補完は行わない。
+ */
 export type SincroMotionDebugLogParseResult =
     | { ok: true; manifest: SincroMotionDebugLogManifest; frames: SincroMotionDebugFrame[] }
     | { ok: false; errors: SincroMotionDebugLogParseError[] };
@@ -312,6 +357,14 @@ function parseFrameLine(
     return frame.data;
 }
 
+/**
+ * NDJSON lines を manifest と replay frames に変換する。
+ *
+ * 受理する schemaVersion は `sincro.motion-debug-log.v1` のみ。1 行目は manifest 必須で、manifest の
+ * 再出現、負の frameIndex、`timestamp.mediaTimeMs` 欠損、unknown recordType は reject する。optional
+ * layer の invalid schema はここでは reject せず、viewer / metrics の layer parser が `invalid` 表示へ
+ * 変換する。
+ */
 export function parseMotionDebugLogLines(lines: string[]): SincroMotionDebugLogParseResult {
     if (lines.length === 0) {
         return {
