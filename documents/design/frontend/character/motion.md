@@ -194,6 +194,10 @@
     - production `sincro` runtime では `src/character/runtime/sincroVrmPoseComposerDryRun.ts` の dry-run service が `VRMCharacterManager.update()` 内で `composeVrmPose()` を observe-only 実行する。入力は latest `SincroPoseRetargetFrame`、`AvatarMotionProfile` / `MinimalAvatarMotionProfile`、service が保持する optional previous final pose、`deltaSeconds` に限定し、生成 layer は fallback と tracking だけにする。semantic / finger layer は後続の適用 feature flag で所有境界を確定するまで混ぜない。
     - production dry-run result は `{ status: "available" | "not_ready" | "invalid_input" | "missing_profile"; result?: VrmPoseComposerResult; warnings: string[] }` とし、`status !== "available"` では `result` を持たない。available result の `finalPose` は次 frame の angular velocity clamp 入力としてだけ保持し、Debug Console には status、warnings、suppressed layer、clamped bones の summary を表示する。
     - dry-run は `vrm.humanoid.setNormalizedPose()`、normalized bone node の `rotation` / `quaternion`、expression、root position を更新しない。既存 controller 呼び出し順と `vrm.update(deltaSeconds)` の位置も変更しないため、本番表示は従来の direct bone write を正本に保つ。
+    - optional bone fallback の検証結果は task artifact
+      [optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)
+      を参照する。`default.vrm` と `aoi-1.0.7.vrm` は full upper body capability として確認済みで、missing
+      `upperChest`、missing shoulder、reduced finger chain は実 asset ではなく synthetic profile / unit test で確認済みである。実 VRM の欠損個体での visual 確認は `setNormalizedPose(finalPose)` 適用前の残リスクとして残す。
     - 本番 runtime の現行 ownership map は task artifact
       [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)
       を正本にする。移行前の `move-to-composer` / `keep-controller-owned` / `needs-decision` 分類は設計本文へ重複展開しない。
