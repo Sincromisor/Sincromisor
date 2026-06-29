@@ -41,8 +41,10 @@ worktree を既定で拒否するが、コピーバックを remove の前に済
    照合する。public export / public component / hook / module / boundary / heuristic /
    schema/parser / lifecycle の JSDoc/TSDoc、失敗条件、副作用、省略理由、TODO 必須情報が
    不足している場合、または stale comment が残っている場合は FAIL とする。コメント変更を
-   評価する場合は、少なくとも 5 symbols / decisions（変更数が 5 未満なら全件）を実コードと
-   照合する。
+   評価する場合は、変更された symbols / decisions を全件、実コードと照合することを原則とする。
+   広域変更で全件照合が現実的でない場合でも、固定件数で打ち切ってはならない。public API、境界、
+   heuristic / lifecycle、rewrite / delete 判断、実装者 audit が定型的な箇所を優先して、
+   合否判断に十分なリスクベースの範囲を照合し、未照合範囲と残リスクを `eval.md` に明記する。
 5. 3 点ゲート（`npm run gate`）を独立実行し、結果を判定根拠とする（テスト方針を参照）
 6. **ドキュメント整合性を検証する**（ドキュメント整合性方針を参照）
 7. 評価結果を `<task-dir>/eval.md` に書き出す
@@ -66,8 +68,11 @@ worktree を既定で拒否するが、コピーバックを remove の前に済
   impl.md の comment audit 記録を照合する。実装が public export / public component / hook /
   module / boundary / heuristic / schema/parser / lifecycle を変えているのに、JSDoc/TSDoc の
   更新、省略理由、失敗条件、副作用、stale comment、TODO 必須情報の扱いが不足していれば FAIL とする。
-  コメント変更を評価する場合は、少なくとも 5 symbols / decisions（変更数が 5 未満なら全件）を
-  実コードと照合し、次のいずれかがあれば FAIL とする。
+  コメント変更を評価する場合は、変更された symbols / decisions の全件照合を原則とする。
+  広域変更で全件照合が現実的でない場合でも、固定件数だけ見て完了扱いにしてはならない。
+  public API、境界、heuristic / lifecycle、rewrite / delete 判断、実装者 audit が定型的な箇所を
+  優先したリスクベースの照合範囲を選び、未照合範囲と残リスクを `eval.md` に記録する。その照合範囲に
+  次のいずれかがあれば FAIL とする。
     - 名前・型から分かるだけのコメント。
     - 設計文書や focused tests など確認先だけを示し、実コード上の入力境界、失敗条件、副作用、
       確認観点を説明しないコメント。
