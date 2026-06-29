@@ -109,6 +109,12 @@ class RecordingHandTracker extends SincroHandTracker {
     }
 }
 
+class FailingInitHandTracker extends SincroHandTracker {
+    override async initVision(): Promise<void> {
+        throw new Error("hand init failed");
+    }
+}
+
 type FakeVideo = {
     video: HTMLVideoElement;
     getFrameCallback: () => VideoFrameRequestCallback | undefined;
@@ -199,6 +205,53 @@ describe("TrackerRuntime", () => {
         });
         expect(faceTracker.roiTimestamps.some((timestamp) => timestamp >= 9000)).toBe(true);
         expect(handTracker.timestamps.some((timestamp) => timestamp >= 11000)).toBe(true);
+        runtime.stopFaceTracking("test_done");
+    });
+
+    it("publishes a lost hand snapshot when Hand initialization fails without stopping Face and Pose", async () => {
+        vi.stubGlobal("HTMLMediaElement", { HAVE_CURRENT_DATA: 2 });
+        vi.stubGlobal("MediaStream", FakeMediaStream);
+        const { video, getFrameCallback } = createFakeVideo();
+        const faceTracker = new RecordingFaceTracker();
+        const poseTracker = new FreshPoseTracker();
+        const handTracker = new FailingInitHandTracker();
+        const runtime = new TrackerRuntime(video, faceTracker, poseTracker, handTracker);
+        const faceSnapshots: SincroFaceMotionSnapshot[] = [];
+        const poseSnapshots: SincroPoseMotionSnapshot[] = [];
+        const handSnapshots: SincroHandMotionSnapshot[] = [];
+
+        await runtime.startFaceTracking(
+            createFakeTrack(),
+            {
+                onFaceMotion: (snapshot) => {
+                    faceSnapshots.push(snapshot);
+                },
+                onPoseMotion: (snapshot) => {
+                    poseSnapshots.push(snapshot);
+                },
+                onHandMotion: (snapshot) => {
+                    handSnapshots.push(snapshot);
+                },
+            },
+            15,
+            {
+                enabled: true,
+                targetInferenceFps: 12,
+                hand: { enabled: true, targetInferenceFps: 8 },
+            },
+        );
+        getFrameCallback()?.(1000, createVideoFrameMetadata(1, 1));
+
+        expect(handSnapshots.some((snapshot) => snapshot.detected === false)).toBe(true);
+        expect(
+            handSnapshots.some(
+                (snapshot) =>
+                    snapshot.fallbackReason === "hand init failed" &&
+                    snapshot.leftHand.warnings.includes("model_not_loaded"),
+            ),
+        ).toBe(true);
+        expect(faceSnapshots.some((snapshot) => snapshot.detected)).toBe(true);
+        expect(poseSnapshots.some((snapshot) => snapshot.detected)).toBe(true);
         runtime.stopFaceTracking("test_done");
     });
 });

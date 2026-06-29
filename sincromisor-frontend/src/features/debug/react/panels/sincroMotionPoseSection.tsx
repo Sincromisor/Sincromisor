@@ -8,6 +8,7 @@ import {
     formatIkRuntime,
     formatInference,
     formatLowerBodyTargets,
+    formatObserveOnlyHandSummary,
     formatObserveOnlySummary,
     formatPoseRetargetStatus,
     formatPoseStatus,
@@ -57,6 +58,8 @@ export function SincroMotionPoseSection({
                 <dd>{formatAvatarMotionProfile(poseRetargetRuntime)}</dd>
                 <dt>Observe Only</dt>
                 <dd>{formatObserveOnlySummary(observeOnly)}</dd>
+                <dt>Hand</dt>
+                <dd>{formatObserveOnlyHandSummary(observeOnly)}</dd>
                 <dt>Confidence</dt>
                 <dd>{formatRatio(pose.confidence)}</dd>
                 <dt>Upper</dt>

@@ -4,6 +4,10 @@ import {
     type SincroFaceMotionSnapshot,
 } from "../../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import {
+    DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
+    type SincroHandMotionSnapshot,
+} from "../../../features/gaze/handTracking/sincroHandMotionSnapshot";
+import {
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
     type SincroPoseMotionSnapshot,
 } from "../../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
@@ -12,6 +16,7 @@ import {
     reset,
     SincroMotionObserveOnlyPipeline,
     updateFace,
+    updateHand,
     updatePose,
 } from "../sincroMotionObserveOnlyPipeline";
 
@@ -43,6 +48,27 @@ function createPose(overrides: Partial<SincroPoseMotionSnapshot> = {}): SincroPo
     };
 }
 
+function createHand(overrides: Partial<SincroHandMotionSnapshot> = {}): SincroHandMotionSnapshot {
+    return {
+        ...DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
+        trackingEnabled: true,
+        detected: true,
+        leftHand: {
+            ...DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT.leftHand,
+            detected: true,
+            source: "roi",
+            confidence: 0.7,
+            features: {
+                ...DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT.leftHand.features,
+                openness: "open",
+            },
+            warnings: ["roi_inconsistent"],
+        },
+        lastUpdatedAtMs: 120,
+        ...overrides,
+    };
+}
+
 describe("SincroMotionObserveOnlyPipeline", () => {
     it("keeps face-only callbacks as not_computed until a pose frame exists", () => {
         const pipeline = new SincroMotionObserveOnlyPipeline();
@@ -57,6 +83,7 @@ describe("SincroMotionObserveOnlyPipeline", () => {
         expect(result.state.reliability).toBeUndefined();
         expect(result.summary.reliability.status).toBe("not_computed");
         expect(result.summary.reliability.reason).toBe("pose_not_available");
+        expect(result.summary.hand.status).toBe("not_computed");
     });
 
     it("computes observe-only state from a pose-only legacy frame without throwing", () => {
@@ -74,6 +101,27 @@ describe("SincroMotionObserveOnlyPipeline", () => {
         expect(result.summary.intent.status).toBe("available");
         expect(result.state.reliability?.joints.head.state).toBe("lost");
         expect(result.state.composerDryRun).toBeUndefined();
+    });
+
+    it("stores latest hand snapshot as low-frequency summary without requiring pose", () => {
+        const pipeline = new SincroMotionObserveOnlyPipeline();
+
+        const result = updateHand(pipeline, createHand(), {
+            mediaTimeMs: 120,
+            receivedAtMs: 130,
+            video: { width: 640, height: 480 },
+        });
+
+        expect(result.state.hand?.leftHand.detected).toBe(true);
+        expect(result.summary.hand.status).toBe("available");
+        expect(result.summary.hand.left).toMatchObject({
+            detected: true,
+            source: "roi",
+            roiWarning: "roi_inconsistent",
+            openness: "open",
+            confidence: 0.7,
+        });
+        expect(result.summary.reliability.status).toBe("not_computed");
     });
 
     it("uses explicit mediaTimeMs for downstream timestamps and receivedAtMs for runtime update time", () => {
@@ -123,7 +171,9 @@ describe("SincroMotionObserveOnlyPipeline", () => {
         const summary = pipeline.getSummary();
         expect(summary.temporal.status).toBe("not_computed");
         expect(summary.intent.status).toBe("not_computed");
+        expect(summary.hand.status).toBe("not_computed");
         expect(pipeline.getState().temporal).toBeUndefined();
         expect(pipeline.getState().intent).toBeUndefined();
+        expect(pipeline.getState().hand).toBeUndefined();
     });
 });

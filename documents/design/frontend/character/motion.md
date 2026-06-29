@@ -65,6 +65,8 @@
     - Face-only callback は Pose が無い間 `not_computed` summary に留め、旧 pose-only frame は Face / Hand
       reliability を placeholder として扱う。ReliabilityMap 欠損や optional ROI 欠損を production callback
       の例外にはしない。
+    - production `sincro` では Hand snapshot を `onHandMotion` から `SincroMotionPipelineState.hand` へ保存し、Debug Console へ availability、source、ROI warning、openness、confidence の summary だけを出す。raw landmark、crop object、Hand wrist 座標は常時 UI snapshot に保存しない。
+    - Hand snapshot は ReliabilityMap / MotionIntent / finger feature の observe-only 入力に留める。腕 IK target は引き続き `SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` を正本にし、Hand wrist で上書きしない。
 - `src/character/motionIntent`
     - canonical / temporal / reliability / hand / gesture の後段で共有する `MotionIntentState` v1 contract を置く。
     - 保存対象は左右腕と torso の motion intent、confidence / reliability / expressiveness、入力由来、警告、Gesture Recognizer raw label の説明用 field に限定し、VRM bone rotation、semantic clip、finger bone rotation は含めない。

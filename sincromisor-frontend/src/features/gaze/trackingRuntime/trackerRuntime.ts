@@ -4,6 +4,7 @@
  */
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
+import { createSincroHandFallbackSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import { SincroHandTracker } from "../handTracking/sincroHandTracker";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import { SincroPoseTracker } from "../poseTracking/sincroPoseTracker";
@@ -196,6 +197,14 @@ export class TrackerRuntime {
             onWorkerFallback: (reason) => this.applyMainThreadFallback(reason),
             onPoseInitializationFallback: (reason, nowMs) =>
                 this.degradePoseToFaceOnly(reason, nowMs),
+            onHandInitializationFallback: (reason, nowMs) =>
+                this.callbacks?.onHandMotion?.(
+                    createSincroHandFallbackSnapshot({
+                        reason,
+                        nowMs,
+                        warnings: ["model_not_loaded"],
+                    }),
+                ),
         });
     }
 

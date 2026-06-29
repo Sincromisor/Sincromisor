@@ -233,6 +233,25 @@ function createDefaultObserveOnlySummary(): SincroMotionObserveOnlySummary {
             reason: "pipeline_not_started",
             warnings: [],
         },
+        hand: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            trackingEnabled: false,
+            detected: false,
+            left: {
+                detected: false,
+                source: "lost",
+                openness: "unknown",
+                confidence: 0,
+            },
+            right: {
+                detected: false,
+                source: "lost",
+                openness: "unknown",
+                confidence: 0,
+            },
+            warnings: [],
+        },
         updatedAtMs: 0,
     };
 }

@@ -1,4 +1,7 @@
-import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
+import type {
+    SincroHandMotionSnapshot,
+    SincroHandSideSnapshot,
+} from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroMotionPipelineState } from "./sincroMotionPipelineState";
 
 /**
@@ -23,6 +26,38 @@ export type SincroMotionObserveOnlyStageSummary = {
 };
 
 /**
+ * Hand tracker の常時表示用 side summary。
+ *
+ * Hand snapshot 本体は palm / finger feature を持つが、Debug Console の常時表示では左右ごとの検出状態、
+ * source、ROI warning、openness、confidence だけへ圧縮する。MediaPipe raw landmark、crop object、
+ * full-frame wrist 座標はこの summary に載せない。
+ */
+export type SincroMotionObserveOnlyHandSideSummary = {
+    detected: boolean;
+    source: SincroHandSideSnapshot["source"];
+    roiWarning?: string;
+    openness: SincroHandSideSnapshot["features"]["openness"];
+    confidence: number;
+};
+
+/**
+ * production Debug Console に出す Hand snapshot の低次元 summary。
+ *
+ * availability と左右 side summary だけを持ち、Gesture / finger bone 適用や腕 IK target の入力にはしない。
+ * Hand wrist は reliability / finger feature の材料であり、腕 target は Pose snapshot 側を正本に保つ。
+ */
+export type SincroMotionObserveOnlyHandSummary = {
+    status: SincroMotionObserveOnlyAvailability;
+    mediaTimeMs?: number;
+    reason?: string;
+    trackingEnabled: boolean;
+    detected: boolean;
+    left: SincroMotionObserveOnlyHandSideSummary;
+    right: SincroMotionObserveOnlyHandSideSummary;
+    warnings: readonly string[];
+};
+
+/**
  * production Debug Console に出す observe-only pipeline の最新 summary。
  *
  * 各 stage が `available` / `not_computed` / `invalid_input` のどれかを個別に示すため、
@@ -33,6 +68,7 @@ export type SincroMotionObserveOnlySummary = {
     canonical: SincroMotionObserveOnlyStageSummary;
     temporal: SincroMotionObserveOnlyStageSummary;
     intent: SincroMotionObserveOnlyStageSummary;
+    hand: SincroMotionObserveOnlyHandSummary;
     updatedAtMs: number;
 };
 
@@ -160,6 +196,81 @@ export function summarizeObserveOnlyStage(
         mediaTimeMs,
         warnings: [...(warnings ?? [])].slice(0, 6),
     };
+}
+
+export function summarizeObserveOnlyHand(
+    snapshot: SincroMotionPipelineState["hand"],
+    overrideStatus: SincroMotionObserveOnlyAvailability | undefined,
+    reason: string,
+): SincroMotionObserveOnlyHandSummary {
+    if (overrideStatus === "invalid_input") {
+        return createNotComputedHandSummary("invalid_input", reason);
+    }
+    if (snapshot === undefined) {
+        return createNotComputedHandSummary("not_computed", reason);
+    }
+    return {
+        status: "available",
+        mediaTimeMs: snapshot.lastUpdatedAtMs,
+        reason: snapshot.fallbackReason,
+        trackingEnabled: snapshot.trackingEnabled,
+        detected: snapshot.detected,
+        left: summarizeObserveOnlyHandSide(snapshot.leftHand),
+        right: summarizeObserveOnlyHandSide(snapshot.rightHand),
+        warnings: [
+            ...new Set([...snapshot.leftHand.warnings, ...snapshot.rightHand.warnings]),
+        ].slice(0, 6),
+    };
+}
+
+function createNotComputedHandSummary(
+    status: SincroMotionObserveOnlyAvailability,
+    reason: string,
+): SincroMotionObserveOnlyHandSummary {
+    return {
+        status,
+        reason,
+        trackingEnabled: false,
+        detected: false,
+        left: {
+            detected: false,
+            source: "lost",
+            openness: "unknown",
+            confidence: 0,
+        },
+        right: {
+            detected: false,
+            source: "lost",
+            openness: "unknown",
+            confidence: 0,
+        },
+        warnings: [],
+    };
+}
+
+function summarizeObserveOnlyHandSide(
+    side: SincroHandSideSnapshot,
+): SincroMotionObserveOnlyHandSideSummary {
+    return {
+        detected: side.detected,
+        source: side.source,
+        roiWarning: resolveHandRoiWarning(side),
+        openness: side.features.openness,
+        confidence: side.confidence,
+    };
+}
+
+function resolveHandRoiWarning(side: SincroHandSideSnapshot): string | undefined {
+    const roiWarning = side.roi?.warnings[0];
+    if (roiWarning !== undefined) {
+        return roiWarning;
+    }
+    return side.warnings.find(
+        (warning) =>
+            warning === "roi_missing" ||
+            warning === "roi_inconsistent" ||
+            warning === "pose_stale_for_roi",
+    );
 }
 
 function isFiniteNonNegative(value: number | undefined): value is number {

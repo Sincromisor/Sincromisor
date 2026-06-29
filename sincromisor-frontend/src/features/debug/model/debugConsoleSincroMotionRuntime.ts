@@ -27,6 +27,16 @@ export function cloneObserveOnlySummary(
         canonical: cloneObserveOnlyStage(summary.canonical),
         temporal: cloneObserveOnlyStage(summary.temporal),
         intent: cloneObserveOnlyStage(summary.intent),
+        hand: {
+            status: summary.hand.status,
+            mediaTimeMs: summary.hand.mediaTimeMs,
+            reason: summary.hand.reason,
+            trackingEnabled: summary.hand.trackingEnabled,
+            detected: summary.hand.detected,
+            left: { ...summary.hand.left },
+            right: { ...summary.hand.right },
+            warnings: [...summary.hand.warnings],
+        },
         updatedAtMs: summary.updatedAtMs,
     };
 }
