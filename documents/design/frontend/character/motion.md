@@ -8,6 +8,9 @@
 - 本番 runtime の現在の bone / expression / root position 書き込み順序は task artifact
   [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)
   を参照する。現時点では `VRMCharacterManager.update()` の本番書き込み順序を変更しない。
+- torso / shoulder の composer 所有移行計画は task artifact
+  [torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)
+  を参照する。torso / shoulder 移行は腕 composer 適用 flag とは別段階で扱う。
 
 ## Scope
 
@@ -194,7 +197,10 @@
     - 本番 runtime の現行 ownership map は task artifact
       [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)
       を正本にする。移行前の `move-to-composer` / `keep-controller-owned` / `needs-decision` 分類は設計本文へ重複展開しない。
-    - `CharacterMotionTorsoApplier` の置き換えと `vrm.humanoid.setNormalizedPose(finalPose)` への全面移行は後続 task に残す。移行ゲートは、head / neck / leg / expression の所有境界、motion-debug final pose replay、既存 controller との二重書き込み排除、複数 VRM での clamp / optional bone 検証が揃うこととする。
+    - `CharacterMotionTorsoApplier` の置き換え計画は task artifact
+      [torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)
+      を正本にする。torso / shoulder 移行は腕 composer 適用 flag と別段階で進め、shoulder bone 欠損時の upperArm fallback だけを境界確認点にする。
+    - `vrm.humanoid.setNormalizedPose(finalPose)` への全面移行は後続 task に残す。移行ゲートは、head / neck / leg / expression の所有境界、motion-debug final pose replay、既存 controller との二重書き込み排除、複数 VRM での clamp / optional bone 検証が揃うこととする。
 - `sincroCcdIkProbe`
     - Three.js 公式 addon `CCDIKSolver` と VRM raw / normalized bone の相性を見るための PoC 診断。
     - 左腕 raw skeleton chain に対して one-iteration smoke test を行い、結果を Debug Console の `CCDIK PoC` に表示する。
