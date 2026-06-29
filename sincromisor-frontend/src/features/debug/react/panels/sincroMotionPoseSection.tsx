@@ -8,6 +8,7 @@ import {
     formatIkRuntime,
     formatInference,
     formatLowerBodyTargets,
+    formatObserveOnlySummary,
     formatPoseRetargetStatus,
     formatPoseStatus,
     formatRatio,
@@ -19,6 +20,7 @@ import { SincroPoseRetargetControls } from "./sincroPoseRetargetControls";
 
 type SincroMotionPoseSectionProps = {
     pose: DebugConsoleSnapshot["sincroMotion"]["pose"];
+    observeOnly: DebugConsoleSnapshot["sincroMotion"]["observeOnly"];
     poseRetarget: DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
     poseRetargetRuntime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"];
     manager: DebugConsoleManager;
@@ -26,6 +28,7 @@ type SincroMotionPoseSectionProps = {
 
 export function SincroMotionPoseSection({
     pose,
+    observeOnly,
     poseRetarget,
     poseRetargetRuntime,
     manager,
@@ -52,6 +55,8 @@ export function SincroMotionPoseSection({
                 <dd>{formatAnchorRuntime(poseRetargetRuntime)}</dd>
                 <dt>Avatar Profile</dt>
                 <dd>{formatAvatarMotionProfile(poseRetargetRuntime)}</dd>
+                <dt>Observe Only</dt>
+                <dd>{formatObserveOnlySummary(observeOnly)}</dd>
                 <dt>Confidence</dt>
                 <dd>{formatRatio(pose.confidence)}</dd>
                 <dt>Upper</dt>

@@ -6,10 +6,30 @@ import type {
     SincroPoseRetargetConfig,
     SincroPoseRetargetFrame,
 } from "../../../character/retargeting/sincroPoseRetargeter";
+import type { SincroMotionObserveOnlySummary } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
 import type { DebugConsoleSnapshot } from "./debugConsoleSnapshot";
 
 type PoseRetargetConfigSnapshot = DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
 type PoseRetargetRuntimeSnapshot = DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"];
+type ObserveOnlySummarySnapshot = DebugConsoleSnapshot["sincroMotion"]["observeOnly"];
+
+/**
+ * observe-only summary を Debug Console snapshot 用に clone する。
+ *
+ * 常時表示するのは availability / reason / warning count の入口情報に限定し、
+ * `SincroMotionPipelineState` 本体を React snapshot へ流して大きな JSON を再描画し続けない。
+ */
+export function cloneObserveOnlySummary(
+    summary: SincroMotionObserveOnlySummary,
+): ObserveOnlySummarySnapshot {
+    return {
+        reliability: cloneObserveOnlyStage(summary.reliability),
+        canonical: cloneObserveOnlyStage(summary.canonical),
+        temporal: cloneObserveOnlyStage(summary.temporal),
+        intent: cloneObserveOnlyStage(summary.intent),
+        updatedAtMs: summary.updatedAtMs,
+    };
+}
 
 export function clonePoseRetargetRuntime(
     frame: SincroPoseRetargetFrame,
@@ -99,6 +119,17 @@ function clonePoseRetargetArmRuntime(
         upperArm: { ...arm.upperArm },
         lowerArm: { ...arm.lowerArm },
         wrist: { ...arm.wrist },
+    };
+}
+
+function cloneObserveOnlyStage(
+    stage: SincroMotionObserveOnlySummary["reliability"],
+): ObserveOnlySummarySnapshot["reliability"] {
+    return {
+        status: stage.status,
+        mediaTimeMs: stage.mediaTimeMs,
+        reason: stage.reason,
+        warnings: [...stage.warnings],
     };
 }
 

@@ -4,6 +4,7 @@ import {
     type SincroPoseRetargetConfig,
     type SincroPoseRetargetFrame,
 } from "../../../character/retargeting/sincroPoseRetargeter";
+import type { SincroMotionObserveOnlySummary } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../gaze/trackingRuntime/sincroTrackerWorkerTypes";
@@ -62,6 +63,7 @@ type SincroMotionSnapshot = {
     face: SincroFaceMotionSnapshot;
     pose: SincroPoseMotionSnapshot;
     tracker: SincroTrackerWorkerStats;
+    observeOnly: SincroMotionObserveOnlySummary;
     poseRetarget: Pick<
         SincroPoseRetargetConfig,
         | "intensityScale"
@@ -203,8 +205,35 @@ function createDefaultSincroMotionSnapshot(): SincroMotionSnapshot {
             loadTimeMs: 0,
             droppedFrames: 0,
         },
+        observeOnly: createDefaultObserveOnlySummary(),
         poseRetarget: createDefaultPoseRetargetConfigSnapshot(),
         poseRetargetRuntime: createDefaultPoseRetargetRuntimeSnapshot(),
+    };
+}
+
+function createDefaultObserveOnlySummary(): SincroMotionObserveOnlySummary {
+    return {
+        reliability: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            warnings: [],
+        },
+        canonical: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            warnings: [],
+        },
+        temporal: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            warnings: [],
+        },
+        intent: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            warnings: [],
+        },
+        updatedAtMs: 0,
     };
 }
 
