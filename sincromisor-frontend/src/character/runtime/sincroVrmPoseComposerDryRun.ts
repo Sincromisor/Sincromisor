@@ -7,6 +7,7 @@ import {
 } from "../avatarProfile/avatarMotionProfile";
 import type { MinimalAvatarMotionProfile } from "../avatarProfile/minimalAvatarMotionProfile";
 import type {
+    FullNormalizedPoseApplicationMode,
     SincroPoseRetargetedArm,
     SincroPoseRetargetFrame,
 } from "../retargeting/sincroPoseRetargeter";
@@ -62,6 +63,17 @@ export type SincroVrmPoseComposerDryRunResult = {
     status: SincroVrmPoseComposerDryRunStatus;
     result?: VrmPoseComposerResult;
     warnings: string[];
+    /**
+     * manager 側の full `setNormalizedPose(finalPose)` 適用結果を Debug Console へ渡す runtime metadata。
+     *
+     * dry-run service 自体は VRM を受け取らないため、この field は service では設定しない。`applied=false`
+     * でも `status !== "available"` の result 欠損契約は変えず、rollback reason だけを表示面へ残す。
+     */
+    fullNormalizedPoseApplication?: {
+        mode: FullNormalizedPoseApplicationMode;
+        applied: boolean;
+        rollbackReason?: string;
+    };
 };
 
 const FALLBACK_BONES: VRMHumanBoneName[] = [

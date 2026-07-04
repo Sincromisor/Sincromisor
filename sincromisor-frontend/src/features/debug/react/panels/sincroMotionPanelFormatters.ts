@@ -166,11 +166,15 @@ export function formatObserveOnlyHandSummary(summary: SincroMotionObserveOnlySum
  */
 export function formatComposerDryRunSummary(summary: SincroMotionObserveOnlySummary): string {
     const dryRun = summary.composerDryRun;
+    const fullApplication = formatFullNormalizedPoseApplication(dryRun);
     if (dryRun.status !== "available") {
         const warningText = dryRun.warnings.length > 0 ? ` (${dryRun.warnings.join(",")})` : "";
-        return `${dryRun.status}${warningText}`;
+        return [fullApplication, `${dryRun.status}${warningText}`].filter(Boolean).join(" / ");
     }
     const parts = ["available"];
+    if (fullApplication) {
+        parts.push(fullApplication);
+    }
     if (dryRun.warnings.length > 0) {
         parts.push(`warn ${dryRun.warnings.join(",")}`);
     }
@@ -181,6 +185,19 @@ export function formatComposerDryRunSummary(summary: SincroMotionObserveOnlySumm
         parts.push(`clamped ${dryRun.clampedBones.join(",")}`);
     }
     return parts.join(" / ");
+}
+
+function formatFullNormalizedPoseApplication(
+    dryRun: SincroMotionObserveOnlySummary["composerDryRun"],
+): string | undefined {
+    const application = dryRun.fullNormalizedPoseApplication;
+    if (!application) {
+        return undefined;
+    }
+    if (application.applied) {
+        return `full ${application.mode} applied`;
+    }
+    return `full ${application.mode} rollback ${application.rollbackReason ?? "none"}`;
 }
 
 export function formatHeadPose(snapshot: SincroFaceMotionSnapshot): string {

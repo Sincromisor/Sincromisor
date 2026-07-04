@@ -2,6 +2,7 @@ import type {
     SincroHandMotionSnapshot,
     SincroHandSideSnapshot,
 } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
+import type { FullNormalizedPoseApplicationMode } from "../retargeting/sincroPoseRetargeter";
 import type { SincroMotionPipelineState } from "./sincroMotionPipelineState";
 import type { SincroVrmPoseComposerDryRunStatus } from "./sincroVrmPoseComposerDryRun";
 
@@ -70,6 +71,11 @@ export type SincroMotionComposerDryRunSummary = {
     warnings: readonly string[];
     suppressedLayers: readonly string[];
     clampedBones: readonly string[];
+    fullNormalizedPoseApplication?: {
+        mode: FullNormalizedPoseApplicationMode;
+        applied: boolean;
+        rollbackReason?: string;
+    };
 };
 
 /**
@@ -255,6 +261,7 @@ export function summarizeComposerDryRun(
             warnings: ["composer_dry_run_not_started"],
             suppressedLayers: [],
             clampedBones: [],
+            fullNormalizedPoseApplication: undefined,
         };
     }
     return {
@@ -272,6 +279,14 @@ export function summarizeComposerDryRun(
                 : result.result.clampedBones
                       .map((bone) => `${bone.bone}:${bone.reason}`)
                       .slice(0, 6),
+        fullNormalizedPoseApplication:
+            result.fullNormalizedPoseApplication === undefined
+                ? undefined
+                : {
+                      mode: result.fullNormalizedPoseApplication.mode,
+                      applied: result.fullNormalizedPoseApplication.applied,
+                      rollbackReason: result.fullNormalizedPoseApplication.rollbackReason,
+                  },
     };
 }
 

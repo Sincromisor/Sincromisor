@@ -31,6 +31,7 @@ export type {
     ComposerArmApplicationMode,
     ComposerSemanticFingerApplicationMode,
     ComposerTorsoShoulderApplicationMode,
+    FullNormalizedPoseApplicationMode,
     SincroPoseArmIkMode,
     SincroPoseIkMode,
     SincroPoseRetargetConfig,

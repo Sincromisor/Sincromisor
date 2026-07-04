@@ -89,6 +89,10 @@ export class DebugConsoleSincroMotionControls {
                         warnings: [...summary.warnings],
                         suppressedLayers: [...summary.suppressedLayers],
                         clampedBones: [...summary.clampedBones],
+                        fullNormalizedPoseApplication:
+                            summary.fullNormalizedPoseApplication === undefined
+                                ? undefined
+                                : { ...summary.fullNormalizedPoseApplication },
                     },
                 },
             },

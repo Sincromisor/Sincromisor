@@ -80,6 +80,7 @@ type SincroMotionSnapshot = {
         | "composerArmApplicationMode"
         | "composerTorsoShoulderApplicationMode"
         | "composerSemanticFingerApplicationMode"
+        | "fullNormalizedPoseApplicationMode"
     >;
     poseRetargetRuntime: Pick<
         SincroPoseRetargetFrame,
@@ -262,6 +263,7 @@ function createDefaultObserveOnlySummary(): SincroMotionObserveOnlySummary {
             warnings: ["composer_dry_run_not_started"],
             suppressedLayers: [],
             clampedBones: [],
+            fullNormalizedPoseApplication: undefined,
         },
         updatedAtMs: 0,
     };
@@ -284,6 +286,8 @@ function createDefaultPoseRetargetConfigSnapshot(): SincroMotionSnapshot["poseRe
             DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerTorsoShoulderApplicationMode,
         composerSemanticFingerApplicationMode:
             DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerSemanticFingerApplicationMode,
+        fullNormalizedPoseApplicationMode:
+            DEFAULT_SINCRO_POSE_RETARGET_CONFIG.fullNormalizedPoseApplicationMode,
     };
 }
 

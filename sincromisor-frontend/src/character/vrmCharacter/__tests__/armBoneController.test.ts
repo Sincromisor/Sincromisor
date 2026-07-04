@@ -2,11 +2,24 @@ import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
 import { Object3D } from "three/src/core/Object3D.js";
 import { Euler } from "three/src/math/Euler.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
+import { Vector3 } from "three/src/math/Vector3.js";
 import { describe, expect, it, vi } from "vitest";
+import { DebugConsoleManager } from "../../../features/debug/model/debugConsoleManager";
+import {
+    buildCharacterBehaviorSnapshot,
+    createDefaultBehaviorAiSpeechSnapshot,
+    createDefaultBehaviorFaceMotionSnapshot,
+    createDefaultBehaviorGazeSnapshot,
+    createDefaultBehaviorPoseMotionSnapshot,
+    createDefaultBehaviorVadSnapshot,
+} from "../../behavior/characterBehaviorSnapshots";
+import type { CharacterBehaviorSnapshot } from "../../behavior/characterBehaviorTypes";
+import { NEUTRAL_POSE_FRAME } from "../../retargeting/sincroPoseRetargetTypes";
+import { createDefaultSincroMotionPipelineState } from "../../runtime/sincroMotionPipelineState";
 import type { SincroVrmPoseComposerDryRunResult } from "../../runtime/sincroVrmPoseComposerDryRun";
 import type { VrmPoseQuaternion } from "../../vrmPose/vrmPoseTypes";
 import { ArmBoneController } from "../armBoneController";
-import { VRMCharacterManager } from "../vrmCharacterManager";
+import { applyFullNormalizedPoseApplication, VRMCharacterManager } from "../vrmCharacterManager";
 
 describe("ArmBoneController composer arm application", () => {
     it("keeps the direct write path when composer arm application is off", () => {
@@ -304,6 +317,152 @@ describe("VRMCharacterManager composer arm application lifecycle", () => {
         expect(manager.composerSemanticFingerApplicationMode).toBe("off");
         expect(setConfig).toHaveBeenCalledWith({ composerSemanticFingerApplicationMode: "off" });
     });
+
+    it("resets production dry-run previous final pose when full normalized pose mode changes", () => {
+        const reset = vi.fn();
+        const setConfig = vi.fn();
+        const manager = Object.create(
+            VRMCharacterManager.prototype,
+        ) as ComposerModeManagerTestDouble;
+        Object.assign(manager, {
+            composerArmApplicationMode: "left",
+            composerTorsoShoulderApplicationMode: "composer",
+            composerSemanticFingerApplicationMode: "composer",
+            fullNormalizedPoseApplicationMode: "off",
+            composerDryRun: { reset },
+            sincroPoseRetargeter: { setConfig },
+        });
+
+        manager.setSincroPoseRetargetConfig({ fullNormalizedPoseApplicationMode: "upper_body" });
+
+        expect(reset).toHaveBeenCalledTimes(1);
+        expect(manager.composerArmApplicationMode).toBe("left");
+        expect(manager.composerTorsoShoulderApplicationMode).toBe("composer");
+        expect(manager.composerSemanticFingerApplicationMode).toBe("composer");
+        expect(manager.fullNormalizedPoseApplicationMode).toBe("upper_body");
+        expect(setConfig).toHaveBeenCalledWith({
+            fullNormalizedPoseApplicationMode: "upper_body",
+        });
+    });
+});
+
+describe("VRMCharacterManager full normalized pose application", () => {
+    it("applies available finalPose once without using setNormalizedPose in off mode", () => {
+        const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
+        const finalPose = { leftUpperArm: eulerQuaternion(0.8, 0.1, 0) };
+        const dryRun = createAvailableDryRun(finalPose);
+
+        const offResult = applyFullNormalizedPoseApplication(vrm, "off", dryRun);
+        const fullResult = applyFullNormalizedPoseApplication(vrm, "upper_body", dryRun);
+
+        expect(offResult).toEqual({
+            mode: "off",
+            applied: false,
+            rollbackReason: "full_normalized_pose_application_off",
+            warnings: [],
+        });
+        expect(fullResult).toEqual({ mode: "upper_body", applied: true, warnings: [] });
+        expect(setNormalizedPose).toHaveBeenCalledTimes(1);
+        expect(setNormalizedPose).toHaveBeenCalledWith(toVrmPose(finalPose));
+    });
+
+    it("does not promote stale finalPose when the current dry-run frame is unavailable", () => {
+        const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
+
+        const result = applyFullNormalizedPoseApplication(vrm, "upper_body", {
+            status: "missing_profile",
+            warnings: ["avatar_motion_profile_missing"],
+        });
+
+        expect(result).toEqual({
+            mode: "upper_body",
+            applied: false,
+            rollbackReason: "full_normalized_pose_application_unavailable:missing_profile",
+            warnings: ["full_normalized_pose_application_unavailable:missing_profile"],
+        });
+        expect(setNormalizedPose).not.toHaveBeenCalled();
+    });
+
+    it("skips direct upper body controllers when full finalPose applies", () => {
+        const debugManager = createDebugManagerDouble();
+        const debugSpy = vi
+            .spyOn(DebugConsoleManager, "getManager")
+            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
+        const snapshot = createBehaviorSnapshot();
+        const finalPose = { leftUpperArm: eulerQuaternion(0.8, 0.1, 0) };
+        const dryRun = createAvailableDryRun(finalPose);
+        const armUpdate = vi.fn();
+        const motionUpdate = vi.fn();
+        const { manager, setNormalizedPose } = createUpdateManagerDouble({
+            snapshot,
+            dryRun,
+            armUpdate,
+            motionUpdate,
+            fullNormalizedPoseApplicationMode: "upper_body",
+        });
+
+        try {
+            manager.update(1000);
+        } finally {
+            debugSpy.mockRestore();
+        }
+
+        expect(setNormalizedPose).toHaveBeenCalledTimes(1);
+        expect(setNormalizedPose).toHaveBeenCalledWith(toVrmPose(finalPose));
+        expect(armUpdate).not.toHaveBeenCalled();
+        expect(motionUpdate).not.toHaveBeenCalled();
+        expect(manager.legBoneController.update).toHaveBeenCalledTimes(1);
+        expect(manager.vrm.update).toHaveBeenCalledTimes(1);
+        expect(debugManager.updateSincroComposerDryRunSummary).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                fullNormalizedPoseApplication: {
+                    mode: "upper_body",
+                    applied: true,
+                    rollbackReason: undefined,
+                },
+            }),
+        );
+    });
+
+    it("rolls back to staged application when full finalPose is unavailable", () => {
+        const debugManager = createDebugManagerDouble();
+        const debugSpy = vi
+            .spyOn(DebugConsoleManager, "getManager")
+            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
+        const snapshot = createBehaviorSnapshot();
+        const armUpdate = vi.fn(() => ({ composerArmApplicationWarnings: [] }));
+        const motionUpdate = vi.fn(() => ({ composerTorsoShoulderApplicationWarnings: [] }));
+        const { manager, setNormalizedPose } = createUpdateManagerDouble({
+            snapshot,
+            dryRun: { status: "invalid_input", warnings: ["delta_seconds_invalid"] },
+            armUpdate,
+            motionUpdate,
+            fullNormalizedPoseApplicationMode: "upper_body",
+        });
+
+        try {
+            manager.update(1000);
+        } finally {
+            debugSpy.mockRestore();
+        }
+
+        expect(setNormalizedPose).not.toHaveBeenCalled();
+        expect(armUpdate).toHaveBeenCalledTimes(1);
+        expect(motionUpdate).toHaveBeenCalledTimes(1);
+        expect(debugManager.updateSincroComposerDryRunSummary).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                warnings: [
+                    "delta_seconds_invalid",
+                    "full_normalized_pose_application_unavailable:invalid_input",
+                ],
+                fullNormalizedPoseApplication: {
+                    mode: "upper_body",
+                    applied: false,
+                    rollbackReason: "full_normalized_pose_application_unavailable:invalid_input",
+                },
+            }),
+        );
+    });
 });
 
 type ComposerModeManagerTestDouble = {
@@ -311,8 +470,17 @@ type ComposerModeManagerTestDouble = {
     composerArmApplicationMode: "off" | "left" | "right" | "both";
     composerTorsoShoulderApplicationMode: "direct" | "composer";
     composerSemanticFingerApplicationMode: "off" | "composer";
+    fullNormalizedPoseApplicationMode: "off" | "upper_body";
     composerDryRun: { reset: () => void };
     sincroPoseRetargeter: { setConfig: (config: unknown) => void };
+};
+
+type UpdateManagerTestDouble = VRMCharacterManager & {
+    legBoneController: { update: ReturnType<typeof vi.fn> };
+    vrm: {
+        update: ReturnType<typeof vi.fn>;
+        humanoid: { setNormalizedPose: ReturnType<typeof vi.fn> };
+    };
 };
 
 function createController(options?: { missingBones?: VRMHumanBoneName[] }): {
@@ -369,6 +537,106 @@ function createController(options?: { missingBones?: VRMHumanBoneName[] }): {
     };
 }
 
+function createVrmWithSetNormalizedPose(): {
+    vrm: VRM;
+    setNormalizedPose: ReturnType<typeof vi.fn>;
+} {
+    const setNormalizedPose = vi.fn();
+    return {
+        vrm: {
+            humanoid: {
+                setNormalizedPose,
+            },
+        } as unknown as VRM,
+        setNormalizedPose,
+    };
+}
+
+function createBehaviorSnapshot(): CharacterBehaviorSnapshot {
+    return buildCharacterBehaviorSnapshot({
+        talkMode: "sincro",
+        motionPolicy: {
+            talkMode: "sincro",
+            primaryInput: "faceMotion",
+            neutralTransition: false,
+            allowGazeMotion: false,
+            allowFaceRetarget: true,
+            allowPoseRetarget: true,
+            allowAiSpeechGesture: false,
+            allowAiLipSync: false,
+            allowAiEmotion: false,
+            allowThinkingAversion: false,
+            idleMotionScale: 0.42,
+        },
+        state: "idle",
+        previousState: "idle",
+        stateChangedAtMs: 0,
+        nowMs: 1000,
+        vad: createDefaultBehaviorVadSnapshot(),
+        gaze: createDefaultBehaviorGazeSnapshot(),
+        faceMotion: createDefaultBehaviorFaceMotionSnapshot(),
+        poseMotion: createDefaultBehaviorPoseMotionSnapshot(),
+        sincroMotionPipeline: createDefaultSincroMotionPipelineState(),
+        aiSpeech: createDefaultBehaviorAiSpeechSnapshot(),
+    });
+}
+
+function createDebugManagerDouble(): Pick<
+    DebugConsoleManager,
+    | "updateSincroPoseRetargetFrame"
+    | "updateSincroComposerDryRunSummary"
+    | "updateSincroComposerDryRunResult"
+> {
+    return {
+        updateSincroPoseRetargetFrame: vi.fn(),
+        updateSincroComposerDryRunSummary: vi.fn(),
+        updateSincroComposerDryRunResult: vi.fn(),
+    };
+}
+
+function createUpdateManagerDouble(options: {
+    snapshot: CharacterBehaviorSnapshot;
+    dryRun: SincroVrmPoseComposerDryRunResult;
+    armUpdate: ReturnType<typeof vi.fn>;
+    motionUpdate: ReturnType<typeof vi.fn>;
+    fullNormalizedPoseApplicationMode: "off" | "upper_body";
+}): { manager: UpdateManagerTestDouble; setNormalizedPose: ReturnType<typeof vi.fn> } {
+    const setNormalizedPose = vi.fn();
+    const manager = Object.create(VRMCharacterManager.prototype) as UpdateManagerTestDouble;
+    Object.assign(manager, {
+        clock: { getDelta: () => 1 / 60 },
+        motionElapsedSeconds: 0,
+        behaviorState: { update: () => options.snapshot },
+        latestBehaviorSnapshot: undefined,
+        sincroFaceRetargeter: { retarget: vi.fn(() => ({})) },
+        sincroPoseRetargeter: {
+            retarget: vi.fn(() => NEUTRAL_POSE_FRAME),
+            getAvatarMotionProfile: vi.fn(() => undefined),
+        },
+        composerDryRun: { compose: vi.fn(() => options.dryRun) },
+        composerArmApplicationMode: "both",
+        composerTorsoShoulderApplicationMode: "composer",
+        composerSemanticFingerApplicationMode: "composer",
+        fullNormalizedPoseApplicationMode: options.fullNormalizedPoseApplicationMode,
+        sincroMotionPipelineState: createDefaultSincroMotionPipelineState(),
+        headBoneController: { update: vi.fn() },
+        eyeBehaviorController: { update: vi.fn() },
+        mouthMorphController: { update: vi.fn() },
+        emotionMorphController: { update: vi.fn() },
+        armBoneController: { update: options.armUpdate },
+        legBoneController: { update: vi.fn() },
+        motionOrchestrator: { update: options.motionUpdate },
+        characterPosition: new Vector3(),
+        defaultPosition: new Vector3(),
+        rootBone: new Object3D(),
+        vrm: {
+            update: vi.fn(),
+            humanoid: { setNormalizedPose },
+        },
+    });
+    return { manager, setNormalizedPose };
+}
+
 function createAvailableDryRun(
     finalPose: Partial<Record<VRMHumanBoneName, VrmPoseQuaternion>>,
 ): SincroVrmPoseComposerDryRunResult {
@@ -383,6 +651,21 @@ function createAvailableDryRun(
             warnings: [],
         },
     };
+}
+
+function toVrmPose(
+    finalPose: Partial<Record<VRMHumanBoneName, VrmPoseQuaternion>>,
+): Partial<Record<VRMHumanBoneName, { rotation: [number, number, number, number] }>> {
+    const pose: Partial<Record<VRMHumanBoneName, { rotation: [number, number, number, number] }>> =
+        {};
+    for (const bone of Object.keys(finalPose) as VRMHumanBoneName[]) {
+        const quaternion = finalPose[bone];
+        if (quaternion === undefined) {
+            continue;
+        }
+        pose[bone] = { rotation: [quaternion.x, quaternion.y, quaternion.z, quaternion.w] };
+    }
+    return pose;
 }
 
 function eulerQuaternion(x: number, y: number, z: number): VrmPoseQuaternion {

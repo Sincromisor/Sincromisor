@@ -34,6 +34,15 @@ export type ComposerTorsoShoulderApplicationMode = "direct" | "composer";
  */
 export type ComposerSemanticFingerApplicationMode = "off" | "composer";
 
+/**
+ * production dry-run の `finalPose` を `setNormalizedPose()` へ全面適用する developer rollback flag。
+ *
+ * `"off"` は arm / torso / shoulder / semantic / finger の段階別適用を維持する既定値である。
+ * `"upper_body"` は dry-run が同一 frame で `available` result を返す場合だけ、upper body finalPose を
+ * `VRMCharacterManager.update()` から 1 回適用する。通常設定 UI や永続設定 contract には広げない。
+ */
+export type FullNormalizedPoseApplicationMode = "off" | "upper_body";
+
 export type SincroPoseRetargetedArm = {
     active: boolean;
     ikActive: boolean;
@@ -119,6 +128,15 @@ export type SincroPoseRetargetConfig = {
      * observe-only に残したまま composer input から semantic / finger layer だけを外す。
      */
     composerSemanticFingerApplicationMode: ComposerSemanticFingerApplicationMode;
+    /**
+     * upper body composer finalPose の full normalized pose 適用を切り替える developer rollback flag。
+     *
+     * 既定の `"off"` は直前 pass stage の段階別 application path をそのまま使い、前段 flag は
+     * 暗黙に変更しない。`"upper_body"` は dry-run が current frame の available result を持つ場合だけ
+     * `setNormalizedPose(finalPose)` を 1 回呼び、unavailable / invalid / missing profile では stale result を
+     * 昇格せず段階別 path へ戻す。
+     */
+    fullNormalizedPoseApplicationMode: FullNormalizedPoseApplicationMode;
 };
 
 export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
@@ -143,6 +161,7 @@ export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
     composerArmApplicationMode: "off",
     composerTorsoShoulderApplicationMode: "direct",
     composerSemanticFingerApplicationMode: "composer",
+    fullNormalizedPoseApplicationMode: "off",
 };
 
 export const NEUTRAL_ARM_IK_CONSTRAINT: SincroArmIkConstraintSnapshot = {

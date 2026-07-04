@@ -43,6 +43,10 @@ export function cloneObserveOnlySummary(
             warnings: [...summary.composerDryRun.warnings],
             suppressedLayers: [...summary.composerDryRun.suppressedLayers],
             clampedBones: [...summary.composerDryRun.clampedBones],
+            fullNormalizedPoseApplication:
+                summary.composerDryRun.fullNormalizedPoseApplication === undefined
+                    ? undefined
+                    : { ...summary.composerDryRun.fullNormalizedPoseApplication },
         },
         updatedAtMs: summary.updatedAtMs,
     };
@@ -137,6 +141,8 @@ export function updatePoseRetargetConfig(
         composerSemanticFingerApplicationMode:
             config.composerSemanticFingerApplicationMode ??
             current.composerSemanticFingerApplicationMode,
+        fullNormalizedPoseApplicationMode:
+            config.fullNormalizedPoseApplicationMode ?? current.fullNormalizedPoseApplicationMode,
     };
 }
 
