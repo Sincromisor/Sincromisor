@@ -470,6 +470,23 @@
 | semantic / finger application                   | torso / shoulder migration の exit criteria を満たし、`MotionIntentState`、semantic layer、finger curl layer、完成版 `AvatarMotionProfile` が valid snapshot として保存・replay できること。 | semantic preset と finger curl が composer layer としてだけ適用され、tracking layer の所有 bone と衝突する場合は confidence gate / suppression reason で説明できること。                              | `frame.intent`、`frame.solver.phase9`、semantic / finger debug snapshot、composer finalPose snapshot、profile capability snapshot。                | `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount` が pass、finger 欠損 chain で composer conflict が 0 であること。               | Hand open / half / closed、thumbs-up、peace、near-face、soft clap-like、hand lost / recovered を複数 VRM と reduced finger chain で確認する。                                               | semantic intent が短時間 flicker する、finger chain 欠損で例外または過伸展が出る、tracking pose を semantic が不透明に上書きする場合は semantic / finger flag を off に戻す。                     |
 | full `setNormalizedPose(finalPose)` application | arm、torso / shoulder、semantic / finger の exit criteria をすべて満たし、head / neck / leg / expression の所有境界と非対象が明文化されていること。                                          | `VRMCharacterManager.update()` の direct bone write と composer write が二重適用されず、`vrm.humanoid.setNormalizedPose(finalPose)` で upper body の正本を 1 回だけ適用できること。                   | full finalPose replay、runtime ownership map、composer comparison summary、optional bone fallback verification、複数 VRM manual verification log。 | 全 P0 fixture の motion metrics と composer metrics が pass、`not_available` metric は artifact 欠損理由付きで gate 判定から除外されていること。                                                 | `default.vrm`、`aoi-1.0.7.vrm`、欠損 bone synthetic profile、camera degradation / recovery、chat / sincro mode 切替で見た目と rollback 操作を確認する。                                     | head / neck / leg / expression が意図せず composer 所有になる、既存 controller と二重書き込みする、複数 VRM の clamp / optional bone で fail が出る場合は段階別 flag を直前の pass stage へ戻す。 |
 
+`arm application flag` の production 適用境界は `ArmBoneController` の direct write 後であり、
+`composerArmApplicationMode` が `"left"` / `"right"` / `"both"` のときだけ対象腕の
+`upperArm` / `lowerArm` / `hand` を composer dry-run `finalPose` で上書きする。`"off"` と対象外腕は
+dry-run availability / result を fallback 判定に使わず、その frame の direct write を正本として残す。
+
+arm flag の Debug Console warning は dry-run summary の `warnings` へ合流する。fallback reason は
+`composer_arm_application_unavailable:<status>`、`composer_arm_application_result_missing`、
+`composer_arm_application_final_pose_missing:<bone>`、`composer_arm_application_normalized_node_missing:<bone>` を使い、
+どの段階で direct write fallback へ落ちたかを区別する。mode 切替 frame では production dry-run service の
+previous final pose を reset し、前 mode の final pose を angular velocity clamp の previous として持ち越さない。
+
+この stage では shoulder / torso / finger / head / expression を composer 所有へ移さない。
+`vrm.humanoid.setNormalizedPose()` も呼ばず、full normalized pose 適用は後続の
+`full setNormalizedPose(finalPose) application` stage まで行わない。Hand ROI は palm / finger reliability と
+ROI 観測の材料に限定し、腕 IK target は引き続き
+`SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` を正本にする。
+
 補助リンク: [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)、[torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)、[optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)。
 
 ## IK Solver Policy

@@ -51,7 +51,8 @@ const COMPOSER_ARM_BONES = {
  * 通常経路は待機姿勢、speech gesture、pose retarget の direct bone write で完結する。
  * `composerArmApplicationMode` が `"off"` 以外の developer 実験時だけ、direct write 後に対象腕の
  * upperArm / lowerArm / hand を composer dry-run の `finalPose` で上書きする。dry-run が unavailable、
- * または対象 bone の quaternion が欠損する場合は direct write の結果を残し、Debug Console 用 warning を返す。
+ * result、対象 bone quaternion、normalized bone node が欠損する場合は direct write の結果を残し、
+ * Debug Console 用 warning を返す。
  * `vrm.humanoid.setNormalizedPose()` は呼ばず、torso / shoulder / finger / head / expression も所有しない。
  */
 export class ArmBoneController {
@@ -65,8 +66,9 @@ export class ArmBoneController {
     /**
      * 毎フレーム、腕の基準待機ポーズへ低振幅の idle offset を足して適用する。
      *
-     * `composerArmApplication` が省略、または mode `"off"` の場合は既存 direct write 経路だけを実行する。
-     * mode が有効な場合も direct write を先に完了させるため、composer result 欠損時の fallback は追加書き込みなしで成立する。
+     * `composerArmApplication` が省略、または mode `"off"` の場合は既存 direct write 経路だけを実行し、
+     * dry-run status や result は読まない。mode が有効な場合も direct write を先に完了させるため、
+     * composer result 欠損時の fallback は追加書き込みなしで成立する。
      */
     update(
         elapsedSeconds: number,
@@ -165,15 +167,24 @@ type ComposerArmApplicationState = {
     nodes: Partial<Record<(typeof COMPOSER_ARM_BONES)[ArmSide][number], Object3D | undefined>>;
 };
 
+/*
+    composer arm application は direct write の後段だけを差し替える。
+    mode off では dry-run availability すら読まず、mode 有効時も fallback reason を Debug Console へ返すだけで
+    neutral pose や full normalized pose 適用へは拡張しない。
+*/
 function applyComposerArmApplication(input: ComposerArmApplicationState): string[] {
     if (input.mode === "off") {
         return [];
     }
 
-    if (input.composerDryRun?.status !== "available" || input.composerDryRun.result === undefined) {
+    if (input.composerDryRun?.status !== "available") {
         return [
             `composer_arm_application_unavailable:${input.composerDryRun?.status ?? "missing"}`,
         ];
+    }
+
+    if (input.composerDryRun.result === undefined) {
+        return ["composer_arm_application_result_missing"];
     }
 
     const warnings: string[] = [];
@@ -181,8 +192,12 @@ function applyComposerArmApplication(input: ComposerArmApplicationState): string
         for (const bone of COMPOSER_ARM_BONES[side]) {
             const quaternion = input.composerDryRun.result.finalPose[bone];
             const node = input.nodes[bone];
-            if (!quaternion || !node) {
-                warnings.push(`composer_arm_application_fallback:${bone}`);
+            if (quaternion === undefined) {
+                warnings.push(`composer_arm_application_final_pose_missing:${bone}`);
+                continue;
+            }
+            if (!node) {
+                warnings.push(`composer_arm_application_normalized_node_missing:${bone}`);
                 continue;
             }
             copyComposerQuaternion(node, quaternion);

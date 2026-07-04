@@ -52,8 +52,13 @@ export type VRMCharacterManagerOptions = {
 // import { MToonMaterialLoaderPlugin } from '@pixiv/three-vrm';
 // import { MToonNodeMaterial } from '@pixiv/three-vrm/nodes';
 
-// 指定URLのVRM1.0モデルを読み込み、骨/表情コントローラ更新とシーン配置を担当する。
-// scene 側は render loop で update() を呼ぶだけにし、VRM固有処理をここへ閉じ込める。
+/**
+ * 指定 URL の VRM 1.0 モデルを読み込み、骨 / 表情 controller 更新と scene 配置を担当する。
+ *
+ * caller は render loop から `update()` を呼ぶだけにし、VRM instance、normalized bone node、
+ * expression manager、root position の副作用をこの境界へ閉じ込める。composer dry-run は観測と
+ * arm application flag の入力に限定し、full `setNormalizedPose()` 適用はこの stage の非対象である。
+ */
 export class VRMCharacterManager {
     public vrm?: VRM;
     public clock: Clock;
@@ -299,6 +304,13 @@ export class VRMCharacterManager {
         this.eyeBehaviorController?.setTuning(tuning);
     }
 
+    /**
+     * Debug Console などから pose retarget 設定を runtime へ反映する。
+     *
+     * `composerArmApplicationMode` の切替時だけ production dry-run の previous final pose を reset し、
+     * 前 mode の angular velocity clamp 基準を次 frame に持ち越さない。retargeter config は常に転送するが、
+     * VRM normalized pose や expression はここでは書き込まない。
+     */
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
         const nextComposerArmApplicationMode =
             config.composerArmApplicationMode ?? this.composerArmApplicationMode;
@@ -323,6 +335,11 @@ function appendComposerArmApplicationWarnings(
     composerDryRun: SincroVrmPoseComposerDryRunResult,
     warnings: string[],
 ): SincroVrmPoseComposerDryRunResult {
+    /*
+        Debug Console は composer dry-run summary を単一の観測口にしている。
+        arm application fallback だけ別 channel に分けると rollback 判断が散るため、dry-run service 自体の
+        warning 配列に append して同じ summary へ流す。warning が無い frame は object identity を保つ。
+    */
     if (warnings.length === 0) {
         return composerDryRun;
     }
