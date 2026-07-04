@@ -29,6 +29,7 @@ import {
 
 export type {
     ComposerArmApplicationMode,
+    ComposerSemanticFingerApplicationMode,
     ComposerTorsoShoulderApplicationMode,
     SincroPoseArmIkMode,
     SincroPoseIkMode,

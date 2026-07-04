@@ -6,6 +6,10 @@ import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/
 import type { VadStateReport } from "../../features/media/userMedia/userMediaManager";
 import type { ChatMessage, TelopChannelMessage } from "../../features/rtc/rtcMessage";
 import {
+    cloneSincroMotionPipelineState,
+    type SincroMotionPipelineState,
+} from "../runtime/sincroMotionPipelineState";
+import {
     applyTelopChannelMessageToAiSpeech,
     applyTextChannelMessageToAiSpeech,
     refreshAiSpeechFromCurrentMora,
@@ -70,6 +74,7 @@ export class CharacterBehaviorState {
     private gaze: CharacterBehaviorGazeSnapshot = createDefaultBehaviorGazeSnapshot();
     private faceMotion: SincroFaceMotionSnapshot = createDefaultBehaviorFaceMotionSnapshot();
     private poseMotion: SincroPoseMotionSnapshot = createDefaultBehaviorPoseMotionSnapshot();
+    private sincroMotionPipeline: SincroMotionPipelineState | undefined;
     private aiSpeech: CharacterBehaviorAiSpeechSnapshot = createDefaultBehaviorAiSpeechSnapshot();
 
     static getManager(): CharacterBehaviorState {
@@ -123,6 +128,18 @@ export class CharacterBehaviorState {
         this.poseMotion = clonePoseMotionSnapshot(snapshot, nowMs);
     }
 
+    /**
+     * observe-only pipeline が確定した保存可能 state を character runtime へ渡す。
+     *
+     * VRM manager はここから `MotionIntentState` と低次元 Hand snapshot だけを読み、MediaPipe raw
+     * landmark、Gesture Recognizer raw result、VRM runtime object を production composer 入力へ持ち込まない。
+     * clone 不能な contract 外 object が渡された場合は defensive clone が例外を送出し得る。
+     */
+    applySincroMotionPipelineState(state: SincroMotionPipelineState | undefined): void {
+        this.sincroMotionPipeline =
+            state === undefined ? undefined : cloneSincroMotionPipelineState(state);
+    }
+
     setTalkMode(mode: string, nowMs: number = performance.now()): void {
         const nextMode = this.normalizeTalkMode(mode);
         if (nextMode === this.talkMode) {
@@ -133,6 +150,7 @@ export class CharacterBehaviorState {
         this.talkModeChangedAtMs = nowMs;
         this.lastUserSpeechEndedAtMs = undefined;
         this.pendingRawSpeechStartedAtMs = undefined;
+        this.sincroMotionPipeline = undefined;
 
         // mode切替直後は古い入力状態を残さない。trackerの実停止/起動はApp層が担当する。
         if (nextMode === "sincro") {
@@ -216,6 +234,7 @@ export class CharacterBehaviorState {
             gaze: this.gaze,
             faceMotion: this.faceMotion,
             poseMotion: this.poseMotion,
+            sincroMotionPipeline: this.sincroMotionPipeline,
             aiSpeech: this.aiSpeech,
             errorMessage: this.errorMessage,
         });

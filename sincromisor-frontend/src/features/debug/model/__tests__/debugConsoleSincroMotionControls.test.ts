@@ -74,4 +74,26 @@ describe("DebugConsoleSincroMotionControls", () => {
             "composer",
         );
     });
+
+    it("applies semantic finger composer mode separately from arm and torso modes", () => {
+        let snapshot = createDefaultSnapshot();
+        const controls = new DebugConsoleSincroMotionControls({
+            readSnapshot: () => snapshot,
+            updateSnapshot: (updater: (current: DebugConsoleSnapshot) => DebugConsoleSnapshot) => {
+                snapshot = updater(snapshot);
+            },
+        });
+
+        controls.applySincroPoseRetargetConfig({
+            composerSemanticFingerApplicationMode: "off",
+        });
+
+        expect(snapshot.sincroMotion.poseRetarget.composerArmApplicationMode).toBe("off");
+        expect(snapshot.sincroMotion.poseRetarget.composerTorsoShoulderApplicationMode).toBe(
+            "direct",
+        );
+        expect(snapshot.sincroMotion.poseRetarget.composerSemanticFingerApplicationMode).toBe(
+            "off",
+        );
+    });
 });

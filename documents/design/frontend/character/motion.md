@@ -506,6 +506,30 @@ composer layer の selected bone overwrite として適用する。missing shoul
 `invalid_torso_distribution_profile_defaulted` を warning として合流させ、rollback reason を同じ観測口で
 確認できる。
 
+`semantic / finger application` の production 適用境界は `SincroVrmPoseComposerDryRunService.compose()` の
+composer input 生成位置である。`composerSemanticFingerApplicationMode` は `"composer"` / `"off"` の独立
+developer flag とし、既定の `"composer"` では保存済み `MotionIntentState`、低次元 Hand snapshot、
+完成版 `AvatarMotionProfile` が valid な frame だけ `kind: "semantic"` layer を production dry-run input へ
+追加する。`"off"` では observe-only の intent / Hand 推定と recording は残し、semantic / finger layer だけを
+composer input から外す。arm flag と torso / shoulder flag とは共有 enum にせず、いずれかの rollback が
+他方の ownership を暗黙に変更しない。
+
+semantic layer は `createSemanticMotionPoseLayer()`、finger curl layer は `createFingerCurlPoseLayers()` を
+正本にし、Gesture Recognizer raw result、MediaPipe raw landmark、VRM Object3D、raw bone node は
+production layer 生成入力にしない。`MotionIntentState` が parser で invalid、profile が
+`MinimalAvatarMotionProfile` だけ、または Hand snapshot が欠損する場合は
+`semantic_finger_application_*` warning を dry-run summary へ出し、該当 layer を追加しない。tracking layer が
+所有する arm bone と semantic preset が競合する場合は、`semantic_conflict` suppression または
+`owned_bone_conflict:<bone>` warning で説明する。finger curl layer は finger bone だけを所有し、reduced finger
+chain では存在 bone へ curl weight を再分配するため、欠損 chain は composer conflict ではなく
+`missing_finger_chain:<side>:<group>` warning として観測する。
+
+motion-debug の `frame.finalPose` は production dry-run result が `available` の場合、その
+`VrmPoseComposerResult` から作った `sincro.motion-debug-final-pose.v1` snapshot を保存・表示する。これにより
+`frame.solver.phase9` の semantic / finger debug snapshot と同じ production composer input が finalPose に反映された
+証跡になる。dry-run result が無い旧 live snapshot / 旧 log だけ、従来の debug-only tracking finalPose bridge へ
+fallback する。
+
 補助リンク: [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)、[torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)、[optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)。
 
 ## IK Solver Policy

@@ -24,6 +24,16 @@ export type ComposerArmApplicationMode = "off" | "left" | "right" | "both";
  */
 export type ComposerTorsoShoulderApplicationMode = "direct" | "composer";
 
+/**
+ * semantic pose / finger curl layer の composer input 接続を切り替える developer rollback flag。
+ *
+ * `"composer"` は保存済み `MotionIntentState`、低次元 Hand snapshot、完成版 `AvatarMotionProfile` が
+ * valid な frame だけ semantic / finger layer を dry-run composer へ追加する。`"off"` は arm / torso
+ * flag とは独立に semantic / finger layer だけを外し、既存 tracking / torso composer 検証を維持する。
+ * 通常設定 UI や永続設定 contract には広げない。
+ */
+export type ComposerSemanticFingerApplicationMode = "off" | "composer";
+
 export type SincroPoseRetargetedArm = {
     active: boolean;
     ikActive: boolean;
@@ -101,6 +111,14 @@ export type SincroPoseRetargetConfig = {
      * この値を暗黙に変更しない。
      */
     composerTorsoShoulderApplicationMode: ComposerTorsoShoulderApplicationMode;
+    /**
+     * semantic / finger の composer layer 接続を切り替える developer rollback flag。
+     *
+     * 既定の `"composer"` は production semantic/finger application stage を有効にし、valid snapshot が
+     * 揃わない frame では warning 付きで layer を追加しない。`"off"` は MotionIntent / Hand 推定自体は
+     * observe-only に残したまま composer input から semantic / finger layer だけを外す。
+     */
+    composerSemanticFingerApplicationMode: ComposerSemanticFingerApplicationMode;
 };
 
 export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
@@ -124,6 +142,7 @@ export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
     shoulderAnchorOffsetRad: MathUtils.degToRad(2.4),
     composerArmApplicationMode: "off",
     composerTorsoShoulderApplicationMode: "direct",
+    composerSemanticFingerApplicationMode: "composer",
 };
 
 export const NEUTRAL_ARM_IK_CONSTRAINT: SincroArmIkConstraintSnapshot = {

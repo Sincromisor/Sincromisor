@@ -30,6 +30,9 @@ export function createMotionDebugLivePhase6SolverSnapshot(
 export function createMotionDebugLiveFinalPoseSnapshot(
     runtime: PoseRetargetRuntimeSnapshot,
 ): MotionDebugFinalPoseSnapshot | undefined {
+    if (runtime.composerDryRun?.status === "available" && runtime.composerDryRun.result) {
+        return createMotionDebugFinalPoseSnapshot(runtime.composerDryRun.result);
+    }
     const profile = runtime.avatarMotionProfile;
     if (profile === undefined) {
         return undefined;

@@ -5,6 +5,7 @@ import {
     type SincroPoseRetargetFrame,
 } from "../../../character/retargeting/sincroPoseRetargeter";
 import type { SincroMotionObserveOnlySummary } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
+import type { SincroVrmPoseComposerDryRunResult } from "../../../character/runtime/sincroVrmPoseComposerDryRun";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../gaze/trackingRuntime/sincroTrackerWorkerTypes";
@@ -78,6 +79,7 @@ type SincroMotionSnapshot = {
         | "armIkMode"
         | "composerArmApplicationMode"
         | "composerTorsoShoulderApplicationMode"
+        | "composerSemanticFingerApplicationMode"
     >;
     poseRetargetRuntime: Pick<
         SincroPoseRetargetFrame,
@@ -91,6 +93,7 @@ type SincroMotionSnapshot = {
         | "rightArm"
     > & {
         avatarMotionProfile?: MinimalAvatarMotionProfile;
+        composerDryRun?: SincroVrmPoseComposerDryRunResult;
     };
 };
 
@@ -279,6 +282,8 @@ function createDefaultPoseRetargetConfigSnapshot(): SincroMotionSnapshot["poseRe
         composerArmApplicationMode: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerArmApplicationMode,
         composerTorsoShoulderApplicationMode:
             DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerTorsoShoulderApplicationMode,
+        composerSemanticFingerApplicationMode:
+            DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerSemanticFingerApplicationMode,
     };
 }
 

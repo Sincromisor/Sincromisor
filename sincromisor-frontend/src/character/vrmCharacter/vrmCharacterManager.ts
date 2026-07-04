@@ -82,6 +82,8 @@ export class VRMCharacterManager {
         DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerArmApplicationMode;
     private composerTorsoShoulderApplicationMode =
         DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerTorsoShoulderApplicationMode;
+    private composerSemanticFingerApplicationMode =
+        DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerSemanticFingerApplicationMode;
     private sincroMotionPipelineState: SincroMotionPipelineState =
         createDefaultSincroMotionPipelineState();
     private latestBehaviorSnapshot?: CharacterBehaviorSnapshot;
@@ -241,6 +243,11 @@ export class VRMCharacterManager {
         const composerDryRun = this.composerDryRun.compose({
             frame: sincroPose,
             profile: this.sincroPoseRetargeter.getAvatarMotionProfile(),
+            semanticFinger: {
+                mode: this.composerSemanticFingerApplicationMode,
+                intent: this.latestBehaviorSnapshot.sincroMotionPipeline?.intent,
+                hand: this.latestBehaviorSnapshot.sincroMotionPipeline?.hand,
+            },
             deltaSeconds,
         });
         this.headBoneController?.update(this.latestBehaviorSnapshot, sincroFace);
@@ -270,6 +277,7 @@ export class VRMCharacterManager {
         DebugConsoleManager.getManager().updateSincroComposerDryRunSummary(
             summarizeComposerDryRun(this.sincroMotionPipelineState.composerDryRun),
         );
+        DebugConsoleManager.getManager().updateSincroComposerDryRunResult(observedComposerDryRun);
         this.legBoneController?.update(this.motionElapsedSeconds);
         this.vrm?.update(deltaSeconds);
         if (this.rootBone) {
@@ -301,6 +309,9 @@ export class VRMCharacterManager {
                 DebugConsoleManager.getManager().updateSincroComposerDryRunSummary(
                     summarizeComposerDryRun(this.sincroMotionPipelineState.composerDryRun),
                 );
+                DebugConsoleManager.getManager().updateSincroComposerDryRunResult(
+                    nextComposerDryRun,
+                );
             }
         }
     }
@@ -331,9 +342,9 @@ export class VRMCharacterManager {
      * Debug Console などから pose retarget 設定を runtime へ反映する。
      *
      * composer application flag の切替時だけ production dry-run の previous final pose を reset し、
-     * 前 mode の angular velocity clamp 基準を次 frame に持ち越さない。arm と torso / shoulder は別 flag として
-     * 保持し、片方の mode 変更がもう片方の所有境界を暗黙に変えない。retargeter config は常に転送するが、
-     * VRM normalized pose や expression はここでは書き込まない。
+     * 前 mode の angular velocity clamp 基準や finger previous hold を次 frame に持ち越さない。arm、
+     * torso / shoulder、semantic / finger は別 flag として保持し、片方の mode 変更がもう片方の所有境界を
+     * 暗黙に変えない。retargeter config は常に転送するが、VRM normalized pose や expression はここでは書き込まない。
      */
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
         const nextComposerArmApplicationMode =
@@ -341,18 +352,25 @@ export class VRMCharacterManager {
         const nextComposerTorsoShoulderApplicationMode =
             config.composerTorsoShoulderApplicationMode ??
             this.composerTorsoShoulderApplicationMode;
+        const nextComposerSemanticFingerApplicationMode =
+            config.composerSemanticFingerApplicationMode ??
+            this.composerSemanticFingerApplicationMode;
         if (
             nextComposerArmApplicationMode !== this.composerArmApplicationMode ||
-            nextComposerTorsoShoulderApplicationMode !== this.composerTorsoShoulderApplicationMode
+            nextComposerTorsoShoulderApplicationMode !==
+                this.composerTorsoShoulderApplicationMode ||
+            nextComposerSemanticFingerApplicationMode !== this.composerSemanticFingerApplicationMode
         ) {
             /*
                 feature flag の切替 frame では、前 mode で生成された composer final pose を
-                angular velocity clamp の previous として使わない。適用自体は selected bone の上書きなので
-                残留 state を持たないが、dry-run の previousFinalPose は表示差分に影響する。
+                angular velocity clamp の previous として使わず、finger previous hold も破棄する。
+                適用自体は selected bone の上書きなので残留 state を持たないが、dry-run の
+                previousFinalPose は表示差分に影響する。
             */
             this.composerDryRun.reset();
             this.composerArmApplicationMode = nextComposerArmApplicationMode;
             this.composerTorsoShoulderApplicationMode = nextComposerTorsoShoulderApplicationMode;
+            this.composerSemanticFingerApplicationMode = nextComposerSemanticFingerApplicationMode;
         }
         this.sincroPoseRetargeter.setConfig(config);
     }
