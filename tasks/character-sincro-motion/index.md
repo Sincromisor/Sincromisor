@@ -77,13 +77,18 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 93 件）
+## タスク一覧（自動生成 / 全 98 件）
 
-### open（未完） — 1 件
+### open（未完） — 6 件
 
-| タスク                                                                                                                                                 | タイトル                                                 | 判定 | 依存                                                                |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ---- | ------------------------------------------------------------------- |
-| [task-260629230017-production-sincro-motion-integration-rollout-tasks](./task-260629230017-production-sincro-motion-integration-rollout-tasks/task.md) | Split production sincro motion integration rollout tasks | —    | `task-260629230012-production-sincro-motion-application-gates-docs` |
+| タスク                                                                                                                                                 | タイトル                                                 | 判定 | 依存                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [task-260629230017-production-sincro-motion-integration-rollout-tasks](./task-260629230017-production-sincro-motion-integration-rollout-tasks/task.md) | Split production sincro motion integration rollout tasks | —    | `task-260629230012-production-sincro-motion-application-gates-docs`                                                                                                                                                   |
+| [task-260705004400-arm-composer-application-hardening](./task-260705004400-arm-composer-application-hardening/task.md)                                 | Harden composer arm production application               | —    | `task-260629225946-feature-flag-composer-arm-application`, `task-260629230012-production-sincro-motion-application-gates-docs`                                                                                        |
+| [task-260705004405-torso-shoulder-composer-migration](./task-260705004405-torso-shoulder-composer-migration/task.md)                                   | Migrate torso and shoulder composer ownership            | —    | `task-260705004400-arm-composer-application-hardening`, `task-260629225951-torso-shoulder-composer-ownership-migration-plan`, `task-260629225957-composer-optional-bone-fallback-vrm-verification`                    |
+| [task-260705004410-semantic-finger-production-application](./task-260705004410-semantic-finger-production-application/task.md)                         | Apply semantic and finger composer layers in production  | —    | `task-260705004405-torso-shoulder-composer-migration`, `task-260627180722-character-animation-3-0-phase-9-semantic-pose-layer-composer`, `task-260627180726-character-animation-3-0-phase-9-finger-curl-pose-mapping` |
+| [task-260705004415-full-normalized-pose-application](./task-260705004415-full-normalized-pose-application/task.md)                                     | Apply full normalized final pose in production           | —    | `task-260705004410-semantic-finger-production-application`, `task-260629225907-sincro-runtime-motion-ownership-map`, `task-260629225957-composer-optional-bone-fallback-vrm-verification`                             |
+| [task-260705004418-production-motion-rollback-and-cleanup](./task-260705004418-production-motion-rollback-and-cleanup/task.md)                         | Add production motion rollback and cleanup               | —    | `task-260705004415-full-normalized-pose-application`                                                                                                                                                                  |
 
 ### done（完了） — 92 件
 
