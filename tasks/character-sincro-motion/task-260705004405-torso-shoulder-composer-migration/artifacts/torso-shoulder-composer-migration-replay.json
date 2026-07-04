@@ -1,0 +1,276 @@
+{
+    "schemaVersion": "sincro.torso-shoulder-composer-migration-replay.v1",
+    "generatedBy": "attempt-2 synthetic replay audit",
+    "source": {
+        "runtimeEntry": "sincromisor-frontend/src/character/vrmCharacter/characterMotionOrchestrator.ts",
+        "layerFactory": "sincromisor-frontend/src/character/vrmCharacter/characterMotionTorsoComposerLayer.ts",
+        "testCoverage": [
+            "sincromisor-frontend/src/character/vrmCharacter/__tests__/characterMotionTorsoComposerLayer.test.ts",
+            "sincromisor-frontend/src/character/vrmCharacter/__tests__/armBoneController.test.ts",
+            "sincromisor-frontend/src/features/debug/model/__tests__/debugConsoleSincroMotionControls.test.ts"
+        ]
+    },
+    "globalAssertions": {
+        "setNormalizedPoseCalled": false,
+        "ownedBoneConflictWarningPrefix": "owned_bone_conflict:",
+        "nonOwnedBones": [
+            "head",
+            "neck",
+            "leftUpperLeg",
+            "rightUpperLeg",
+            "leftLowerLeg",
+            "rightLowerLeg",
+            "leftFoot",
+            "rightFoot",
+            "leftThumbProximal",
+            "rightThumbProximal",
+            "leftIndexProximal",
+            "rightIndexProximal"
+        ],
+        "composerArmModeDuringReplay": "off",
+        "composerTorsoShoulderModeDuringReplay": "composer"
+    },
+    "frames": [
+        {
+            "frameId": "torso-full-capability-frame-001",
+            "label": "spine+chest+upperChest torso capability",
+            "input": {
+                "profile": {
+                    "optionalBones": {
+                        "upperChest": true,
+                        "leftShoulder": true,
+                        "rightShoulder": true
+                    },
+                    "torsoDistribution": {
+                        "spine": 0.25,
+                        "chest": 0.4,
+                        "upperChest": 0.35
+                    }
+                },
+                "poseFallbackReason": null,
+                "retargetUpperBodyActive": true,
+                "availableCapturedBones": [
+                    "spine",
+                    "chest",
+                    "upperChest",
+                    "leftShoulder",
+                    "rightShoulder",
+                    "leftUpperArm",
+                    "rightUpperArm"
+                ]
+            },
+            "observed": {
+                "finalPoseBones": [
+                    "spine",
+                    "chest",
+                    "upperChest",
+                    "leftShoulder",
+                    "rightShoulder"
+                ],
+                "suppressedLayers": [],
+                "warnings": [],
+                "finalPoseOwnedBoneConflictCount": 0,
+                "staleFinalPosePromoted": false,
+                "rollbackReason": null,
+                "nonOwnedBonesPresent": []
+            }
+        },
+        {
+            "frameId": "torso-spine-chest-frame-002",
+            "label": "spine+chest torso capability without upperChest",
+            "input": {
+                "profile": {
+                    "optionalBones": {
+                        "upperChest": false,
+                        "leftShoulder": true,
+                        "rightShoulder": true
+                    },
+                    "torsoDistribution": {
+                        "spine": 0.35,
+                        "chest": 0.65,
+                        "upperChest": 0
+                    }
+                },
+                "poseFallbackReason": null,
+                "retargetUpperBodyActive": true,
+                "availableCapturedBones": [
+                    "spine",
+                    "chest",
+                    "leftShoulder",
+                    "rightShoulder",
+                    "leftUpperArm",
+                    "rightUpperArm"
+                ]
+            },
+            "observed": {
+                "finalPoseBones": ["spine", "chest", "leftShoulder", "rightShoulder"],
+                "suppressedLayers": [
+                    {
+                        "id": "production:torso-shoulder",
+                        "kind": "tracking",
+                        "bone": "upperChest",
+                        "reason": "missing_optional_bone"
+                    }
+                ],
+                "warnings": [],
+                "finalPoseOwnedBoneConflictCount": 0,
+                "staleFinalPosePromoted": false,
+                "rollbackReason": null,
+                "nonOwnedBonesPresent": []
+            }
+        },
+        {
+            "frameId": "torso-spine-only-frame-003",
+            "label": "spine-only torso capability",
+            "input": {
+                "profile": {
+                    "optionalBones": {
+                        "upperChest": false,
+                        "leftShoulder": true,
+                        "rightShoulder": true
+                    },
+                    "torsoDistribution": {
+                        "spine": 1,
+                        "chest": 0,
+                        "upperChest": 0
+                    }
+                },
+                "poseFallbackReason": null,
+                "retargetUpperBodyActive": true,
+                "availableCapturedBones": ["spine", "leftShoulder", "rightShoulder"]
+            },
+            "observed": {
+                "finalPoseBones": ["spine", "leftShoulder", "rightShoulder"],
+                "suppressedLayers": [],
+                "warnings": [],
+                "finalPoseOwnedBoneConflictCount": 0,
+                "staleFinalPosePromoted": false,
+                "rollbackReason": null,
+                "nonOwnedBonesPresent": []
+            }
+        },
+        {
+            "frameId": "missing-shoulder-frame-004",
+            "label": "missing shoulder synthetic profile",
+            "input": {
+                "profile": {
+                    "optionalBones": {
+                        "upperChest": true,
+                        "leftShoulder": false,
+                        "rightShoulder": true
+                    },
+                    "torsoDistribution": {
+                        "spine": 0.25,
+                        "chest": 0.4,
+                        "upperChest": 0.35
+                    },
+                    "shoulderDamping": 0.65
+                },
+                "poseFallbackReason": null,
+                "retargetUpperBodyActive": true,
+                "availableCapturedBones": [
+                    "spine",
+                    "chest",
+                    "upperChest",
+                    "rightShoulder",
+                    "leftUpperArm",
+                    "rightUpperArm"
+                ]
+            },
+            "observed": {
+                "finalPoseBones": [
+                    "spine",
+                    "chest",
+                    "upperChest",
+                    "leftUpperArm",
+                    "rightShoulder"
+                ],
+                "suppressedLayers": [
+                    {
+                        "id": "production:torso-shoulder",
+                        "kind": "tracking",
+                        "bone": "leftShoulder",
+                        "reason": "missing_optional_bone"
+                    }
+                ],
+                "warnings": ["composer_torso_shoulder_application_upper_arm_fallback:leftUpperArm"],
+                "finalPoseOwnedBoneConflictCount": 0,
+                "staleFinalPosePromoted": false,
+                "rollbackReason": null,
+                "nonOwnedBonesPresent": []
+            }
+        },
+        {
+            "frameId": "face-only-recovery-frame-005",
+            "label": "Face-only recovery after previous available finalPose",
+            "input": {
+                "previousFrameId": "torso-full-capability-frame-001",
+                "profile": {
+                    "optionalBones": {
+                        "upperChest": true,
+                        "leftShoulder": true,
+                        "rightShoulder": true
+                    },
+                    "torsoDistribution": {
+                        "spine": 0.25,
+                        "chest": 0.4,
+                        "upperChest": 0.35
+                    }
+                },
+                "poseFallbackReason": "pose_retarget_disabled",
+                "retargetUpperBodyActive": false,
+                "upperBodyPoseDelta": {
+                    "spine": { "x": 0, "y": 0, "z": 0 },
+                    "chest": { "x": 0, "y": 0, "z": 0 },
+                    "leftShoulder": { "x": 0, "y": 0, "z": 0 },
+                    "rightShoulder": { "x": 0, "y": 0, "z": 0 }
+                },
+                "availableCapturedBones": [
+                    "spine",
+                    "chest",
+                    "upperChest",
+                    "leftShoulder",
+                    "rightShoulder"
+                ]
+            },
+            "observed": {
+                "finalPoseBones": [
+                    "spine",
+                    "chest",
+                    "upperChest",
+                    "leftShoulder",
+                    "rightShoulder"
+                ],
+                "suppressedLayers": [],
+                "warnings": [],
+                "finalPoseOwnedBoneConflictCount": 0,
+                "staleFinalPosePromoted": false,
+                "previousFrameFinalPoseReusedAsCurrent": false,
+                "rollbackReason": null,
+                "inputFallbackReasonPreserved": "pose_retarget_disabled",
+                "nonOwnedBonesPresent": []
+            }
+        },
+        {
+            "frameId": "profile-missing-rollback-frame-006",
+            "label": "profile missing rollback to direct controller",
+            "input": {
+                "profile": null,
+                "poseFallbackReason": "pose_retarget_disabled",
+                "retargetUpperBodyActive": false,
+                "availableCapturedBones": ["spine", "chest", "leftShoulder", "rightShoulder"]
+            },
+            "observed": {
+                "finalPoseBones": [],
+                "suppressedLayers": [],
+                "warnings": ["composer_torso_shoulder_application_profile_missing"],
+                "finalPoseOwnedBoneConflictCount": 0,
+                "staleFinalPosePromoted": false,
+                "previousFrameFinalPoseReusedAsCurrent": false,
+                "rollbackReason": "composer_torso_shoulder_application_profile_missing",
+                "directControllerWriteRetained": true,
+                "nonOwnedBonesPresent": []
+            }
+        }
+    ]
+}
