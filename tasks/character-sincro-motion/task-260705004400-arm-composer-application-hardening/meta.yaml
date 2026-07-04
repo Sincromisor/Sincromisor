@@ -1,0 +1,15 @@
+id: task-260705004400-arm-composer-application-hardening
+title: Harden composer arm production application
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260629225946-feature-flag-composer-arm-application
+  - task-260629230012-production-sincro-motion-application-gates-docs
+superseded_by: null
+review: APPROVED
+reviewed_sha: edf9f7d63b8843663a44bfaa9fcdce43ed20aa7f
+verdict: null
+attempts: 0
+created_at: 2026-07-05
+closed_at: null
+legacy_ids: []

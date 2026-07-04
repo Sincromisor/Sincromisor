@@ -1,0 +1,16 @@
+id: task-260705004410-semantic-finger-production-application
+title: Apply semantic and finger composer layers in production
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260705004405-torso-shoulder-composer-migration
+  - task-260627180722-character-animation-3-0-phase-9-semantic-pose-layer-composer
+  - task-260627180726-character-animation-3-0-phase-9-finger-curl-pose-mapping
+superseded_by: null
+review: APPROVED
+reviewed_sha: edf9f7d63b8843663a44bfaa9fcdce43ed20aa7f
+verdict: null
+attempts: 0
+created_at: 2026-07-05
+closed_at: null
+legacy_ids: []
