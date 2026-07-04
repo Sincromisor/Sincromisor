@@ -72,6 +72,7 @@
 - `Ctrl+Alt+D` は Debug Console の導線として扱う。
 - 技術用語が必要な診断情報は Debug Console に置き、通常設定には混ぜない。
 - `forceSincroPoseTracking` は低性能端末での姿勢同期デバッグ用設定として扱い、通常利用では `pose_inference_too_slow` の自動降格を優先する。
+- `composerArmApplicationMode` は Pose retarget 調整内の developer experimental flag として扱い、通常設定 UI には出さない。既定 `"off"` は従来の direct arm write と同じで、`"left"` / `"right"` / `"both"` のときだけ対象腕の upperArm / lowerArm / hand を composer dry-run result から限定適用する。dry-run unavailable や bone 欠損の fallback は Debug Console の composer dry-run warning で観測する。
 
 ## Change Checklist
 

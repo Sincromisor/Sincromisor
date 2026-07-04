@@ -120,6 +120,8 @@ export function updatePoseRetargetConfig(
             Math.PI / 2,
         ),
         armIkMode: config.armIkMode ?? current.armIkMode,
+        composerArmApplicationMode:
+            config.composerArmApplicationMode ?? current.composerArmApplicationMode,
     };
 }
 

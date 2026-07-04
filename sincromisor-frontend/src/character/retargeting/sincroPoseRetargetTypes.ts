@@ -5,6 +5,15 @@ import type { SincroCcdIkProbeResult } from "../ik/sincroCcdIkProbe";
 
 export type SincroPoseArmIkMode = "feature_only" | "screen_space_ik" | "world_3d_ik";
 
+/**
+ * production composer dry-run result を腕表示へどこまで適用するかを切り替える developer flag。
+ *
+ * `"off"` は既存 direct write と同じ表示経路を保つ安定既定値である。その他の mode は
+ * Debug Console / motion-debug からの実験用で、対象腕の upperArm / lowerArm / hand だけを
+ * dry-run `available` frame の `finalPose` から適用する。通常設定 UI や保存設定の contract ではない。
+ */
+export type ComposerArmApplicationMode = "off" | "left" | "right" | "both";
+
 export type SincroPoseRetargetedArm = {
     active: boolean;
     ikActive: boolean;
@@ -64,6 +73,15 @@ export type SincroPoseRetargetConfig = {
     armIkMaxForearmFlexRad: number;
     armIkMode: SincroPoseArmIkMode;
     shoulderAnchorOffsetRad: number;
+    /**
+     * VrmPoseComposer dry-run result を本番腕表示へ限定適用する developer flag。
+     *
+     * 既定の `"off"` は現行 ArmBoneController direct write と同じ経路を維持し、composer result の
+     * availability 確認や fallback warning 生成も行わない。`"left"` / `"right"` / `"both"` は
+     * dry-run が `available` の frame だけ対象腕の upperArm / lowerArm / hand を composer `finalPose`
+     * の quaternion で上書きする実験経路であり、torso / shoulder / finger / head / expression は対象外。
+     */
+    composerArmApplicationMode: ComposerArmApplicationMode;
 };
 
 export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
@@ -85,6 +103,7 @@ export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
     armIkMaxForearmFlexRad: MathUtils.degToRad(38.0),
     armIkMode: "world_3d_ik",
     shoulderAnchorOffsetRad: MathUtils.degToRad(2.4),
+    composerArmApplicationMode: "off",
 };
 
 export const NEUTRAL_ARM_IK_CONSTRAINT: SincroArmIkConstraintSnapshot = {

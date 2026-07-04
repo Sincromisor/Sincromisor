@@ -1,6 +1,7 @@
 # Review: task-260629225942-production-retarget-composer-motion-metrics-comparison
 
 ## 判定
+
 APPROVED
 
 前回 High の 2 点は、現在の `task.md` で metric 値定義 / 集計 / threshold / severity と
@@ -8,9 +9,11 @@ APPROVED
 残る注意点は実装時に既存 snapshot の意味を取り違えないための申し送りで足りる。
 
 ## 指摘事項
+
 なし
 
 ## 実装者への申し送り
+
 - 前回 High のうち、5 metric の available 時の値定義・summary 集計・unit / direction / threshold は
   `task.md:21`-`task.md:25` で固定済み。summary severity と unavailable reason の扱いも
   `task.md:26`-`task.md:30` で固定されている。

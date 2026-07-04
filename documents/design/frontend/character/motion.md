@@ -120,6 +120,10 @@
 - `ArmBoneController`
     - idle gesture と optional pose retarget の腕補正を加算する。
     - `world_3d_ik` では `SincroArmIkSolver` が返す local quaternion を優先し、同じ腕の idle / speech gesture は競合させない。
+    - `SincroPoseRetargetConfig.composerArmApplicationMode` は developer experimental flag として Debug Console の既存 pose retarget config 経路からだけ変更する。既定 `"off"` では従来の direct write と同じ経路を通り、composer result の availability 確認や warning 生成も行わない。
+    - `"left"` / `"right"` / `"both"` では direct write 後に対象腕の `upperArm` / `lowerArm` / `hand` だけを production composer dry-run の `finalPose` quaternion で上書きする。dry-run `status !== "available"`、result 欠損、または対象 bone 欠損時は該当 bone を direct write のまま残し、Debug Console の composer dry-run warning に fallback reason を出す。
+    - composer arm application は `vrm.humanoid.setNormalizedPose(finalPose)` を呼ばない。torso / shoulder / finger / head / expression は本 flag の対象外で、shoulder fallback が composer result に含まれていても ArmBoneController 側では適用しない。
+    - `composerArmApplicationMode` が切り替わる frame では production dry-run service の previous final pose を reset し、前 mode の final pose を angular velocity clamp の previous として持ち越さない。腕適用自体は毎 frame direct write 後の上書きであり、mode off / 対象外腕では direct write が必ず再適用される。
 - `SincroPoseRetargeter`
     - pose target の confidence gate、IK mode selection、smoothing、fallback frame 生成を担当する。
     - IK の数学は `SincroArmIkSolver` に委譲し、retargeter 自体は MediaPipe target と VRM rig scale の橋渡しに留める。
