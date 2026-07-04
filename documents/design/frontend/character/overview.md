@@ -65,6 +65,7 @@
     - finger quaternion は curl local `+X`、splay local `+Z`、thumb oppose local `+Y` の低次元 mapping から作り、左右の splay / oppose 符号だけを反転する。raw landmark から per-finger 3D rotation を直接作らず、layer / debug には plain quaternion object だけを保存する。
     - authored clip や AnimationMixer を使う場合も staging に留め、composer へ渡す最終表現は `semantic` pose delta とする。
     - motion-debug は `frame.solver.phase6` に Phase 6 solver snapshot、`frame.solver.phase7` に Phase 7 の完成版 `AvatarMotionProfile` / calibration snapshot、`frame.solver.phase9` に Phase 9 semantic / finger debug snapshot、`frame.finalPose` に composer result を保存・表示する。本番の `VRMCharacterManager.update()` の bone 書き込み順序はまだ全面移行しない。
+    - production dry-run は semantic / finger application stage で、保存済み `MotionIntentState`、低次元 Hand snapshot、完成版 `AvatarMotionProfile` が valid な frame だけ semantic pose / finger curl layer を composer input へ追加する。`composerSemanticFingerApplicationMode` は developer rollback flag であり、raw landmark、Gesture Recognizer raw result、VRM Object3D、raw bone node は layer 生成入力にしない。
     - motion metrics は saved `frame.intent` から `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount` を計算する。invalid intent は `intentInvalidFrameCount` だけに数え、他の Phase 9 metrics では valid intent sample が無い場合 `not_available` にする。
     - 完成版 `AvatarMotionProfile` は `VRMScene.getAvatarMotionProfile()` / `VRMCharacterManager.getAvatarMotionProfile()` から debug 用 clone として公開する。Debug Console と Phase 6 snapshot の `avatarMotionProfile` は `MinimalAvatarMotionProfile` のまま維持する。
 

@@ -46,6 +46,7 @@ export class SincroCharacterMotionEventSink {
             snapshot,
             this.createObserveOnlyInput(timing),
         );
+        this.characterBehaviorState.applySincroMotionPipelineState(observeOnly.state);
         this.characterBehaviorState.applyFaceMotion(snapshot);
         this.debugConsoleManager.updateCharacterEyeStatus(snapshot.detected);
         this.debugConsoleManager.updateFaceXLog(snapshot.headPose.yawDeg);
@@ -64,6 +65,7 @@ export class SincroCharacterMotionEventSink {
             snapshot,
             this.createObserveOnlyInput(timing),
         );
+        this.characterBehaviorState.applySincroMotionPipelineState(observeOnly.state);
         this.characterBehaviorState.applyPoseMotion(snapshot);
         this.debugConsoleManager.updateSincroPoseMotion(snapshot);
         this.debugConsoleManager.updateSincroObserveOnlySummary(observeOnly.summary);
@@ -79,6 +81,7 @@ export class SincroCharacterMotionEventSink {
             snapshot,
             this.createObserveOnlyInput(timing),
         );
+        this.characterBehaviorState.applySincroMotionPipelineState(observeOnly.state);
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
         this.characterBehaviorState.clearErrorSource("poseMotion");
         this.debugConsoleManager.updateSincroPoseMotion(snapshot);
@@ -94,6 +97,7 @@ export class SincroCharacterMotionEventSink {
             snapshot,
             this.createObserveOnlyInput(timing),
         );
+        this.characterBehaviorState.applySincroMotionPipelineState(observeOnly.state);
         this.debugConsoleManager.updateSincroObserveOnlySummary(observeOnly.summary);
     }
 
@@ -126,6 +130,9 @@ export class SincroCharacterMotionEventSink {
      */
     resetObserveOnlyPipeline(): void {
         this.observeOnlyPipeline.reset();
+        this.characterBehaviorState.applySincroMotionPipelineState(
+            this.observeOnlyPipeline.getState(),
+        );
         this.debugConsoleManager.updateSincroObserveOnlySummary(
             this.observeOnlyPipeline.getSummary(),
         );

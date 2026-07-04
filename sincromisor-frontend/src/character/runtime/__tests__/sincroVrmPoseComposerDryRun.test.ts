@@ -1,4 +1,11 @@
 import { describe, expect, it } from "vitest";
+import {
+    createHand,
+    createIntent,
+    createProfile,
+    emptyFingerChains,
+    PROFILE as FULL_PROFILE,
+} from "../../motionIntent/__tests__/fingerCurlPoseLayerTestFixtures";
 import { NEUTRAL_POSE_FRAME } from "../../retargeting/sincroPoseRetargetTypes";
 import {
     COMPLETE_PROFILE,
@@ -25,11 +32,16 @@ describe("SincroVrmPoseComposerDryRunService", () => {
         });
     });
 
-    it("composes only fallback and tracking layers for production dry-run", () => {
+    it("keeps semantic and finger layers out when the rollback flag is off", () => {
         const service = new SincroVrmPoseComposerDryRunService();
         const result = compose(service, {
             frame: createActiveFrame(),
-            profile: COMPLETE_PROFILE,
+            profile: FULL_PROFILE,
+            semanticFinger: {
+                mode: "off",
+                intent: createIntent("peace"),
+                hand: createHand({ index: 0.1, middle: 0.1, ring: 0.8, little: 0.8 }),
+            },
             deltaSeconds: 1 / 60,
         });
 
@@ -40,6 +52,114 @@ describe("SincroVrmPoseComposerDryRunService", () => {
             true,
         );
         expect(result.result?.suppressedLayers.every((layer) => layer.id !== "finger")).toBe(true);
+        expect(result.warnings).toContain("semantic_finger_application_off");
+    });
+
+    it("adds semantic and finger layers only from valid intent, hand, and full profile snapshots", () => {
+        const service = new SincroVrmPoseComposerDryRunService();
+        const intent = createIntent("peace");
+        intent.arms.left.confidence = 0.6;
+        const result = compose(service, {
+            frame: createActiveFrame(),
+            profile: FULL_PROFILE,
+            semanticFinger: {
+                mode: "composer",
+                intent,
+                hand: createHand({ index: 0.1, middle: 0.1, ring: 0.8, little: 0.8 }),
+            },
+            deltaSeconds: 1 / 60,
+        });
+
+        expect(result.status).toBe("available");
+        expect(result.result?.ownedBones).toContain("leftIndexProximal");
+        expect(result.result?.suppressedLayers).toContainEqual({
+            id: "semantic:left:peace_hold",
+            kind: "semantic",
+            bone: "leftUpperArm",
+            reason: "semantic_conflict",
+        });
+        expect(result.result?.warnings).not.toContain("owned_bone_conflict:leftIndexProximal");
+        expect(result.warnings).not.toContain("semantic_finger_application_intent_invalid");
+    });
+
+    it("rejects invalid intent and minimal profile before semantic finger layer creation", () => {
+        const service = new SincroVrmPoseComposerDryRunService();
+        const invalidIntentResult = service.compose({
+            frame: createActiveFrame(),
+            profile: FULL_PROFILE,
+            semanticFinger: {
+                mode: "composer",
+                intent: { schemaVersion: "sincro.motion-intent.v1", rawLandmarks: [] },
+                hand: createHand(),
+            },
+            deltaSeconds: 1 / 60,
+        });
+        const minimalProfileResult = service.compose({
+            frame: createActiveFrame(),
+            profile: COMPLETE_PROFILE,
+            semanticFinger: {
+                mode: "composer",
+                intent: createIntent("thumbsUp"),
+                hand: createHand(),
+            },
+            deltaSeconds: 1 / 60,
+        });
+
+        expect(invalidIntentResult.result?.ownedBones).not.toContain("leftIndexProximal");
+        expect(invalidIntentResult.warnings).toContain(
+            "semantic_finger_application_intent_invalid",
+        );
+        expect(minimalProfileResult.result?.ownedBones).not.toContain("leftIndexProximal");
+        expect(minimalProfileResult.warnings).toContain(
+            "semantic_finger_application_profile_not_full",
+        );
+    });
+
+    it("keeps semantic layers and explains missing finger input without reading raw landmarks", () => {
+        const service = new SincroVrmPoseComposerDryRunService();
+        const intent = createIntent("thumbsUp");
+        intent.arms.left.confidence = 0.6;
+        const result = service.compose({
+            frame: createActiveFrame(),
+            profile: FULL_PROFILE,
+            semanticFinger: {
+                mode: "composer",
+                intent,
+            },
+            deltaSeconds: 1 / 60,
+        });
+
+        expect(result.result?.suppressedLayers).toContainEqual({
+            id: "semantic:left:thumbs_up_hold",
+            kind: "semantic",
+            bone: "leftUpperArm",
+            reason: "semantic_conflict",
+        });
+        expect(result.result?.ownedBones).not.toContain("leftIndexProximal");
+        expect(result.warnings).toContain("semantic_finger_application_hand_missing");
+    });
+
+    it("does not create composer conflicts when the finger chain is reduced", () => {
+        const service = new SincroVrmPoseComposerDryRunService();
+        const profile = createProfile({ chains: emptyFingerChains() });
+        profile.capabilities.fingerChains.left.index.proximal = true;
+        const result = service.compose({
+            frame: createActiveFrame(),
+            profile,
+            semanticFinger: {
+                mode: "composer",
+                intent: createIntent("tracking"),
+                hand: createHand({ index: 0.1, middle: 0.8, ring: 0.8, little: 0.8 }),
+            },
+            deltaSeconds: 1 / 60,
+        });
+
+        expect(result.result?.ownedBones).toContain("leftIndexProximal");
+        expect(result.result?.ownedBones).not.toContain("leftIndexIntermediate");
+        expect(
+            result.result?.warnings.filter((warning) => warning.startsWith("owned_bone_conflict")),
+        ).toEqual([]);
+        expect(result.warnings).toContain("missing_finger_chain:left:thumb");
     });
 
     it("keeps missing optional bone fallback visible in the dry-run result", () => {

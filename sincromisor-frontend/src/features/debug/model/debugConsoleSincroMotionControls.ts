@@ -7,6 +7,7 @@ import type {
     SincroMotionComposerDryRunSummary,
     SincroMotionObserveOnlySummary,
 } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
+import type { SincroVrmPoseComposerDryRunResult } from "../../../character/runtime/sincroVrmPoseComposerDryRun";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../gaze/trackingRuntime/sincroTrackerWorkerTypes";
@@ -16,6 +17,7 @@ import {
 } from "./debugConsoleMotionSnapshot";
 import {
     cloneAvatarMotionProfile,
+    cloneComposerDryRun,
     cloneObserveOnlySummary,
     clonePoseRetargetRuntime,
     updatePoseRetargetConfig,
@@ -93,6 +95,19 @@ export class DebugConsoleSincroMotionControls {
         }));
     }
 
+    updateSincroComposerDryRunResult(result: SincroVrmPoseComposerDryRunResult): void {
+        this.params.updateSnapshot((currentSnapshot) => ({
+            ...currentSnapshot,
+            sincroMotion: {
+                ...currentSnapshot.sincroMotion,
+                poseRetargetRuntime: {
+                    ...currentSnapshot.sincroMotion.poseRetargetRuntime,
+                    composerDryRun: cloneComposerDryRun(result),
+                },
+            },
+        }));
+    }
+
     updateSincroPoseRetargetFrame(frame: SincroPoseRetargetFrame): void {
         this.params.updateSnapshot((currentSnapshot) => ({
             ...currentSnapshot,
@@ -101,6 +116,7 @@ export class DebugConsoleSincroMotionControls {
                 poseRetargetRuntime: clonePoseRetargetRuntime(
                     frame,
                     currentSnapshot.sincroMotion.poseRetargetRuntime.avatarMotionProfile,
+                    currentSnapshot.sincroMotion.poseRetargetRuntime.composerDryRun,
                 ),
             },
         }));
@@ -114,6 +130,7 @@ export class DebugConsoleSincroMotionControls {
                 poseRetargetRuntime: {
                     ...currentSnapshot.sincroMotion.poseRetargetRuntime,
                     avatarMotionProfile: cloneAvatarMotionProfile(profile),
+                    composerDryRun: currentSnapshot.sincroMotion.poseRetargetRuntime.composerDryRun,
                 },
             },
         }));

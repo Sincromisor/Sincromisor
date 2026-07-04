@@ -7,6 +7,7 @@ import type {
     SincroPoseRetargetFrame,
 } from "../../../character/retargeting/sincroPoseRetargeter";
 import type { SincroMotionObserveOnlySummary } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
+import type { SincroVrmPoseComposerDryRunResult } from "../../../character/runtime/sincroVrmPoseComposerDryRun";
 import type { DebugConsoleSnapshot } from "./debugConsoleSnapshot";
 
 type PoseRetargetConfigSnapshot = DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
@@ -50,6 +51,7 @@ export function cloneObserveOnlySummary(
 export function clonePoseRetargetRuntime(
     frame: SincroPoseRetargetFrame,
     avatarMotionProfile?: MinimalAvatarMotionProfile,
+    composerDryRun?: SincroVrmPoseComposerDryRunResult,
 ): PoseRetargetRuntimeSnapshot {
     return {
         active: frame.active,
@@ -75,7 +77,14 @@ export function clonePoseRetargetRuntime(
         avatarMotionProfile: avatarMotionProfile
             ? cloneMinimalAvatarMotionProfile(avatarMotionProfile)
             : undefined,
+        composerDryRun: cloneComposerDryRun(composerDryRun),
     };
+}
+
+export function cloneComposerDryRun(
+    result: SincroVrmPoseComposerDryRunResult | undefined,
+): SincroVrmPoseComposerDryRunResult | undefined {
+    return result === undefined ? undefined : structuredClone(result);
 }
 
 export function cloneAvatarMotionProfile(
@@ -125,6 +134,9 @@ export function updatePoseRetargetConfig(
         composerTorsoShoulderApplicationMode:
             config.composerTorsoShoulderApplicationMode ??
             current.composerTorsoShoulderApplicationMode,
+        composerSemanticFingerApplicationMode:
+            config.composerSemanticFingerApplicationMode ??
+            current.composerSemanticFingerApplicationMode,
     };
 }
 

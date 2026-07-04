@@ -1,6 +1,7 @@
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { ChatMessage, TelopChannelMessage } from "../../features/rtc/rtcMessage";
+import type { SincroMotionPipelineState } from "../runtime/sincroMotionPipelineState";
 
 export type CharacterInteractionState =
     | "idle"
@@ -92,6 +93,7 @@ export type CharacterBehaviorSnapshot = {
     gaze: CharacterBehaviorGazeSnapshot;
     faceMotion: SincroFaceMotionSnapshot;
     poseMotion: SincroPoseMotionSnapshot;
+    sincroMotionPipeline?: SincroMotionPipelineState;
     aiSpeech: CharacterBehaviorAiSpeechSnapshot;
     errorMessage?: string;
 };

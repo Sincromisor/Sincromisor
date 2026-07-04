@@ -17,7 +17,17 @@ export const PROFILE: AvatarMotionProfile = {
     schemaVersion: "sincro.avatar-motion-profile.v1",
     model: { vrmVersion: "1.0", modelName: "test" },
     capabilities: {
-        bones: {},
+        bones: {
+            upperChest: true,
+            leftShoulder: true,
+            rightShoulder: true,
+            leftHand: true,
+            rightHand: true,
+            leftThumbProximal: true,
+            rightThumbProximal: true,
+            leftIndexProximal: true,
+            rightIndexProximal: true,
+        },
         fingerChains: fullFingerChains(),
     },
     restLocalRotation: {},

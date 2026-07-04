@@ -17,6 +17,11 @@ import type {
     VrmPoseLayer,
     VrmPoseQuaternion,
 } from "../vrmPose/vrmPoseTypes";
+import {
+    createSemanticFingerComposerLayers,
+    type SincroVrmPoseComposerSemanticFingerInput,
+    type SincroVrmPoseComposerSemanticFingerState,
+} from "./sincroVrmPoseComposerSemanticFingerLayers";
 
 /**
  * production dry-run の可用状態。
@@ -42,6 +47,7 @@ export type SincroVrmPoseComposerDryRunStatus =
 export type SincroVrmPoseComposerDryRunInput = {
     frame?: SincroPoseRetargetFrame;
     profile?: AvatarMotionProfile | MinimalAvatarMotionProfile;
+    semanticFinger?: SincroVrmPoseComposerSemanticFingerInput;
     previousFinalPose?: VrmNormalizedLocalPose;
     deltaSeconds?: number;
 };
@@ -88,13 +94,15 @@ const TRACKING_BONES: VRMHumanBoneName[] = [
 /**
  * production `VRMCharacterManager.update()` から VrmPoseComposer を observe-only 実行する stateful service。
  *
- * `compose()` は fallback / tracking layer だけを生成し、semantic / finger layer は後続適用 task の責務として
- * 入力に混ぜない。前回 available result の final pose は angular velocity clamp 用にだけ保持し、
- * `reset()`、profile 未準備、invalid input では更新しない。VRM の `setNormalizedPose()`、normalized bone node、
- * expression、root position はこの service の入力にも副作用にも含まれない。
+ * `compose()` は fallback / tracking layer を常に作り、semantic / finger rollback flag が `"composer"` かつ
+ * 保存済み `MotionIntentState`、低次元 Hand snapshot、完成版 `AvatarMotionProfile` が valid な場合だけ
+ * semantic layer を追加する。前回 available result の final pose と finger debug は clamp / previous hold 用にだけ
+ * 保持し、`reset()`、profile 未準備、invalid input では更新しない。VRM の `setNormalizedPose()`、
+ * normalized bone node、expression、root position はこの service の入力にも副作用にも含まれない。
  */
 export class SincroVrmPoseComposerDryRunService {
     private previousFinalPose: VrmNormalizedLocalPose | undefined;
+    private previousFinger: SincroVrmPoseComposerSemanticFingerState["previousFinger"] = {};
 
     /**
      * previous final pose lifecycle を明示的に切る。
@@ -104,6 +112,7 @@ export class SincroVrmPoseComposerDryRunService {
      */
     reset(): void {
         this.previousFinalPose = undefined;
+        this.previousFinger = {};
     }
 
     /**
@@ -124,18 +133,22 @@ export class SincroVrmPoseComposerDryRunService {
         }
 
         const profile = normalizeProfile(input.profile);
+        const layerResult = createDryRunLayers(input.frame, input.profile, input.semanticFinger, {
+            previousFinger: this.previousFinger,
+        });
         const previousFinalPose = input.previousFinalPose ?? this.previousFinalPose;
         const result = composeVrmPose({
-            layers: createDryRunLayers(input.frame),
+            layers: layerResult.layers,
             profile,
             previousFinalPose,
             deltaSeconds: input.deltaSeconds,
         });
         this.previousFinalPose = structuredClone(result.finalPose);
+        this.previousFinger = layerResult.previousFinger;
         return {
             status: "available",
             result,
-            warnings: [...profile.warnings, ...result.warnings],
+            warnings: [...profile.warnings, ...layerResult.warnings, ...result.warnings],
         };
     }
 }
@@ -170,12 +183,21 @@ function normalizeProfile(
     return toMinimalAvatarMotionProfile(profile);
 }
 
-function createDryRunLayers(frame: SincroPoseRetargetFrame): VrmPoseLayer[] {
-    /*
-        production dry-run は旧 retarget と composer の基本合成を比較する段階に限定する。
-        semantic / finger layer をここで混ぜると、既存 controller との比較対象が変わり、
-        後続の適用 feature flag で ownership を切り分けにくくなる。
-    */
+function createDryRunLayers(
+    frame: SincroPoseRetargetFrame,
+    profile: AvatarMotionProfile | MinimalAvatarMotionProfile,
+    semanticFinger: SincroVrmPoseComposerDryRunInput["semanticFinger"],
+    state: SincroVrmPoseComposerSemanticFingerState,
+): { layers: VrmPoseLayer[]; warnings: string[]; previousFinger: typeof state.previousFinger } {
+    const semanticFingerResult = createSemanticFingerComposerLayers(profile, semanticFinger, state);
+    return {
+        layers: [...createBaseDryRunLayers(frame), ...semanticFingerResult.layers],
+        warnings: semanticFingerResult.warnings,
+        previousFinger: semanticFingerResult.previousFinger,
+    };
+}
+
+function createBaseDryRunLayers(frame: SincroPoseRetargetFrame): VrmPoseLayer[] {
     return [
         {
             id: "production:fallback",

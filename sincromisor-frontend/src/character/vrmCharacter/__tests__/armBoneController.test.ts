@@ -203,6 +203,7 @@ describe("VRMCharacterManager composer arm application lifecycle", () => {
         Object.assign(manager, {
             composerArmApplicationMode: "off",
             composerTorsoShoulderApplicationMode: "direct",
+            composerSemanticFingerApplicationMode: "composer",
             composerDryRun: { reset },
             sincroPoseRetargeter: { setConfig },
         });
@@ -223,6 +224,7 @@ describe("VRMCharacterManager composer arm application lifecycle", () => {
         Object.assign(manager, {
             composerArmApplicationMode: "left",
             composerTorsoShoulderApplicationMode: "direct",
+            composerSemanticFingerApplicationMode: "composer",
             composerDryRun: { reset },
             sincroPoseRetargeter: { setConfig },
         });
@@ -243,6 +245,7 @@ describe("VRMCharacterManager composer arm application lifecycle", () => {
         Object.assign(manager, {
             composerArmApplicationMode: "off",
             composerTorsoShoulderApplicationMode: "direct",
+            composerSemanticFingerApplicationMode: "composer",
             composerDryRun: { reset },
             sincroPoseRetargeter: { setConfig },
         });
@@ -264,6 +267,7 @@ describe("VRMCharacterManager composer arm application lifecycle", () => {
         Object.assign(manager, {
             composerArmApplicationMode: "left",
             composerTorsoShoulderApplicationMode: "direct",
+            composerSemanticFingerApplicationMode: "composer",
             composerDryRun: { reset },
             sincroPoseRetargeter: { setConfig },
         });
@@ -277,12 +281,36 @@ describe("VRMCharacterManager composer arm application lifecycle", () => {
             composerTorsoShoulderApplicationMode: "composer",
         });
     });
+
+    it("keeps semantic and finger composer mode independent from arm and torso modes", () => {
+        const reset = vi.fn();
+        const setConfig = vi.fn();
+        const manager = Object.create(
+            VRMCharacterManager.prototype,
+        ) as ComposerModeManagerTestDouble;
+        Object.assign(manager, {
+            composerArmApplicationMode: "left",
+            composerTorsoShoulderApplicationMode: "composer",
+            composerSemanticFingerApplicationMode: "composer",
+            composerDryRun: { reset },
+            sincroPoseRetargeter: { setConfig },
+        });
+
+        manager.setSincroPoseRetargetConfig({ composerSemanticFingerApplicationMode: "off" });
+
+        expect(reset).toHaveBeenCalledTimes(1);
+        expect(manager.composerArmApplicationMode).toBe("left");
+        expect(manager.composerTorsoShoulderApplicationMode).toBe("composer");
+        expect(manager.composerSemanticFingerApplicationMode).toBe("off");
+        expect(setConfig).toHaveBeenCalledWith({ composerSemanticFingerApplicationMode: "off" });
+    });
 });
 
 type ComposerModeManagerTestDouble = {
     setSincroPoseRetargetConfig: VRMCharacterManager["setSincroPoseRetargetConfig"];
     composerArmApplicationMode: "off" | "left" | "right" | "both";
     composerTorsoShoulderApplicationMode: "direct" | "composer";
+    composerSemanticFingerApplicationMode: "off" | "composer";
     composerDryRun: { reset: () => void };
     sincroPoseRetargeter: { setConfig: (config: unknown) => void };
 };
