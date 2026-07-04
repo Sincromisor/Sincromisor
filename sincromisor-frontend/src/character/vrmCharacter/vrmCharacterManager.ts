@@ -1,4 +1,11 @@
-import { type VRM, VRMLoaderPlugin, VRMMetaLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+import {
+    type VRM,
+    type VRMHumanBoneName,
+    VRMLoaderPlugin,
+    VRMMetaLoaderPlugin,
+    type VRMPose,
+    VRMUtils,
+} from "@pixiv/three-vrm";
 import { type GLTF, GLTFLoader, type GLTFParser } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Clock } from "three/src/core/Clock.js";
 import type { Object3D } from "three/src/core/Object3D.js";
@@ -21,6 +28,7 @@ import { HeadBoneController } from "../behavior/headBoneController";
 import { SincroFaceRetargeter } from "../retargeting/sincroFaceRetargeter";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
+    type FullNormalizedPoseApplicationMode,
     type SincroPoseRetargetConfig,
     SincroPoseRetargeter,
 } from "../retargeting/sincroPoseRetargeter";
@@ -35,11 +43,56 @@ import {
     SincroVrmPoseComposerDryRunService,
 } from "../runtime/sincroVrmPoseComposerDryRun";
 import type { VRMCamera } from "../scene/vrmCamera";
+import type { VrmNormalizedLocalPose, VrmPoseQuaternion } from "../vrmPose/vrmPoseTypes";
 import { ArmBoneController } from "./armBoneController";
 import type { CharacterMotionTuning } from "./characterMotionConfig";
 import { CharacterMotionOrchestrator } from "./characterMotionOrchestrator";
 import { LegBoneController } from "./legBoneController";
 import { applyInitialUpperBodyFraming } from "./vrmInitialUpperBodyFraming";
+
+const FULL_NORMALIZED_POSE_APPLICATION_BONES: readonly VRMHumanBoneName[] = [
+    "spine",
+    "chest",
+    "upperChest",
+    "leftShoulder",
+    "rightShoulder",
+    "leftUpperArm",
+    "leftLowerArm",
+    "leftHand",
+    "rightUpperArm",
+    "rightLowerArm",
+    "rightHand",
+    "leftThumbMetacarpal",
+    "leftThumbProximal",
+    "leftThumbDistal",
+    "leftIndexProximal",
+    "leftIndexIntermediate",
+    "leftIndexDistal",
+    "leftMiddleProximal",
+    "leftMiddleIntermediate",
+    "leftMiddleDistal",
+    "leftRingProximal",
+    "leftRingIntermediate",
+    "leftRingDistal",
+    "leftLittleProximal",
+    "leftLittleIntermediate",
+    "leftLittleDistal",
+    "rightThumbMetacarpal",
+    "rightThumbProximal",
+    "rightThumbDistal",
+    "rightIndexProximal",
+    "rightIndexIntermediate",
+    "rightIndexDistal",
+    "rightMiddleProximal",
+    "rightMiddleIntermediate",
+    "rightMiddleDistal",
+    "rightRingProximal",
+    "rightRingIntermediate",
+    "rightRingDistal",
+    "rightLittleProximal",
+    "rightLittleIntermediate",
+    "rightLittleDistal",
+];
 
 export type VRMCharacterManagerOptions = {
     scene: Scene;
@@ -56,8 +109,8 @@ export type VRMCharacterManagerOptions = {
  * 指定 URL の VRM 1.0 モデルを読み込み、骨 / 表情 controller 更新と scene 配置を担当する。
  *
  * caller は render loop から `update()` を呼ぶだけにし、VRM instance、normalized bone node、
- * expression manager、root position の副作用をこの境界へ閉じ込める。composer dry-run は観測と
- * arm application flag の入力に限定し、full `setNormalizedPose()` 適用はこの stage の非対象である。
+ * expression manager、root position の副作用をこの境界へ閉じ込める。full normalized pose application は
+ * dry-run が同一 frame の available result を返す場合だけここで 1 回実行し、失敗時は段階別 rollback path に戻す。
  */
 export class VRMCharacterManager {
     public vrm?: VRM;
@@ -84,6 +137,8 @@ export class VRMCharacterManager {
         DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerTorsoShoulderApplicationMode;
     private composerSemanticFingerApplicationMode =
         DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerSemanticFingerApplicationMode;
+    private fullNormalizedPoseApplicationMode =
+        DEFAULT_SINCRO_POSE_RETARGET_CONFIG.fullNormalizedPoseApplicationMode;
     private sincroMotionPipelineState: SincroMotionPipelineState =
         createDefaultSincroMotionPipelineState();
     private latestBehaviorSnapshot?: CharacterBehaviorSnapshot;
@@ -254,18 +309,32 @@ export class VRMCharacterManager {
         this.eyeBehaviorController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.mouthMorphController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.emotionMorphController?.update(this.latestBehaviorSnapshot);
-        const armUpdate = this.armBoneController?.update(
-            this.motionElapsedSeconds,
-            this.latestBehaviorSnapshot,
-            sincroPose,
-            {
-                mode: this.composerArmApplicationMode,
-                composerDryRun,
-            },
-        );
-        const observedComposerDryRun = appendComposerApplicationWarnings(
+        const fullApplicationWillApply = canApplyFullNormalizedPoseApplication(
+            this.fullNormalizedPoseApplicationMode,
             composerDryRun,
-            armUpdate?.composerArmApplicationWarnings ?? [],
+        );
+        const armUpdate = fullApplicationWillApply
+            ? undefined
+            : this.armBoneController?.update(
+                  this.motionElapsedSeconds,
+                  this.latestBehaviorSnapshot,
+                  sincroPose,
+                  {
+                      mode: this.composerArmApplicationMode,
+                      composerDryRun,
+                  },
+              );
+        const fullApplication = applyFullNormalizedPoseApplication(
+            this.vrm,
+            this.fullNormalizedPoseApplicationMode,
+            composerDryRun,
+        );
+        const observedComposerDryRun = annotateFullNormalizedPoseApplication(
+            appendComposerApplicationWarnings(composerDryRun, [
+                ...(armUpdate?.composerArmApplicationWarnings ?? []),
+                ...fullApplication.warnings,
+            ]),
+            fullApplication,
         );
         this.sincroMotionPipelineState = cloneSincroMotionPipelineState({
             ...this.sincroMotionPipelineState,
@@ -284,22 +353,27 @@ export class VRMCharacterManager {
             const hipsBasePosition = this.defaultPosition.clone().add(this.characterPosition);
             this.rootBone.position.copy(hipsBasePosition);
             const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
-            const motionOrchestratorUpdate = this.motionOrchestrator?.update(
-                this.motionElapsedSeconds,
-                this.latestBehaviorSnapshot,
-                hipsBasePosition,
-                sincroPose,
-                {
-                    mode: this.composerTorsoShoulderApplicationMode,
-                    profile: avatarMotionProfile
-                        ? toMinimalAvatarMotionProfile(avatarMotionProfile)
-                        : undefined,
-                },
-            );
+            const motionOrchestratorUpdate = fullApplication.applied
+                ? undefined
+                : this.motionOrchestrator?.update(
+                      this.motionElapsedSeconds,
+                      this.latestBehaviorSnapshot,
+                      hipsBasePosition,
+                      sincroPose,
+                      {
+                          mode: this.composerTorsoShoulderApplicationMode,
+                          profile: avatarMotionProfile
+                              ? toMinimalAvatarMotionProfile(avatarMotionProfile)
+                              : undefined,
+                      },
+                  );
             if (motionOrchestratorUpdate) {
-                const nextComposerDryRun = appendComposerApplicationWarnings(
-                    this.sincroMotionPipelineState.composerDryRun ?? observedComposerDryRun,
-                    motionOrchestratorUpdate.composerTorsoShoulderApplicationWarnings,
+                const nextComposerDryRun = annotateFullNormalizedPoseApplication(
+                    appendComposerApplicationWarnings(
+                        this.sincroMotionPipelineState.composerDryRun ?? observedComposerDryRun,
+                        motionOrchestratorUpdate.composerTorsoShoulderApplicationWarnings,
+                    ),
+                    fullApplication,
                 );
                 this.sincroMotionPipelineState = cloneSincroMotionPipelineState({
                     ...this.sincroMotionPipelineState,
@@ -343,8 +417,9 @@ export class VRMCharacterManager {
      *
      * composer application flag の切替時だけ production dry-run の previous final pose を reset し、
      * 前 mode の angular velocity clamp 基準や finger previous hold を次 frame に持ち越さない。arm、
-     * torso / shoulder、semantic / finger は別 flag として保持し、片方の mode 変更がもう片方の所有境界を
-     * 暗黙に変えない。retargeter config は常に転送するが、VRM normalized pose や expression はここでは書き込まない。
+     * torso / shoulder、semantic / finger、full normalized pose application は別 flag として保持し、
+     * 片方の mode 変更がもう片方の所有境界を暗黙に変えない。retargeter config は常に転送するが、
+     * VRM normalized pose や expression はここでは書き込まない。
      */
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
         const nextComposerArmApplicationMode =
@@ -355,22 +430,27 @@ export class VRMCharacterManager {
         const nextComposerSemanticFingerApplicationMode =
             config.composerSemanticFingerApplicationMode ??
             this.composerSemanticFingerApplicationMode;
+        const nextFullNormalizedPoseApplicationMode =
+            config.fullNormalizedPoseApplicationMode ?? this.fullNormalizedPoseApplicationMode;
         if (
             nextComposerArmApplicationMode !== this.composerArmApplicationMode ||
             nextComposerTorsoShoulderApplicationMode !==
                 this.composerTorsoShoulderApplicationMode ||
-            nextComposerSemanticFingerApplicationMode !== this.composerSemanticFingerApplicationMode
+            nextComposerSemanticFingerApplicationMode !==
+                this.composerSemanticFingerApplicationMode ||
+            nextFullNormalizedPoseApplicationMode !== this.fullNormalizedPoseApplicationMode
         ) {
             /*
                 feature flag の切替 frame では、前 mode で生成された composer final pose を
                 angular velocity clamp の previous として使わず、finger previous hold も破棄する。
-                適用自体は selected bone の上書きなので残留 state を持たないが、dry-run の
-                previousFinalPose は表示差分に影響する。
+                適用自体は selected bone / full normalized pose の上書きなので残留 state を持たないが、
+                dry-run の previousFinalPose は表示差分に影響する。
             */
             this.composerDryRun.reset();
             this.composerArmApplicationMode = nextComposerArmApplicationMode;
             this.composerTorsoShoulderApplicationMode = nextComposerTorsoShoulderApplicationMode;
             this.composerSemanticFingerApplicationMode = nextComposerSemanticFingerApplicationMode;
+            this.fullNormalizedPoseApplicationMode = nextFullNormalizedPoseApplicationMode;
         }
         this.sincroPoseRetargeter.setConfig(config);
     }
@@ -380,14 +460,127 @@ export class VRMCharacterManager {
     }
 }
 
+export type FullNormalizedPoseApplicationResult = {
+    mode: FullNormalizedPoseApplicationMode;
+    applied: boolean;
+    rollbackReason?: string;
+    warnings: string[];
+};
+
+/**
+ * upper body composer finalPose を VRM humanoid へ 1 frame 1 回だけ適用する。
+ *
+ * caller はこの関数が `applied=true` を返す frame では arm / torso / shoulder の direct write を呼ばない。
+ * `status !== "available"`、result 欠損、VRM 未ロードでは stale finalPose を再利用せず、rollback reason と
+ * warning だけを返す。head / neck / leg / expression は finalPose に含めない composer contract 側で非対象にする。
+ */
+export function applyFullNormalizedPoseApplication(
+    vrm: VRM | undefined,
+    mode: FullNormalizedPoseApplicationMode,
+    composerDryRun: SincroVrmPoseComposerDryRunResult,
+): FullNormalizedPoseApplicationResult {
+    if (mode === "off") {
+        return {
+            mode,
+            applied: false,
+            rollbackReason: "full_normalized_pose_application_off",
+            warnings: [],
+        };
+    }
+    const rollbackReason = fullNormalizedPoseApplicationRollbackReason(vrm, composerDryRun);
+    if (rollbackReason) {
+        return {
+            mode,
+            applied: false,
+            rollbackReason,
+            warnings: [rollbackReason],
+        };
+    }
+    const result = composerDryRun.result;
+    if (result === undefined) {
+        return {
+            mode,
+            applied: false,
+            rollbackReason: "full_normalized_pose_application_result_missing",
+            warnings: ["full_normalized_pose_application_result_missing"],
+        };
+    }
+    if (vrm === undefined) {
+        return {
+            mode,
+            applied: false,
+            rollbackReason: "full_normalized_pose_application_vrm_missing",
+            warnings: ["full_normalized_pose_application_vrm_missing"],
+        };
+    }
+    vrm.humanoid.setNormalizedPose(toVrmPose(result.finalPose));
+    return { mode, applied: true, warnings: [] };
+}
+
+function canApplyFullNormalizedPoseApplication(
+    mode: FullNormalizedPoseApplicationMode,
+    composerDryRun: SincroVrmPoseComposerDryRunResult,
+): boolean {
+    return (
+        mode === "upper_body" && composerDryRun.status === "available" && !!composerDryRun.result
+    );
+}
+
+function fullNormalizedPoseApplicationRollbackReason(
+    vrm: VRM | undefined,
+    composerDryRun: SincroVrmPoseComposerDryRunResult,
+): string | undefined {
+    if (!vrm) {
+        return "full_normalized_pose_application_vrm_missing";
+    }
+    if (composerDryRun.status !== "available") {
+        return `full_normalized_pose_application_unavailable:${composerDryRun.status}`;
+    }
+    if (composerDryRun.result === undefined) {
+        return "full_normalized_pose_application_result_missing";
+    }
+    return undefined;
+}
+
+function toVrmPose(finalPose: VrmNormalizedLocalPose): VRMPose {
+    const pose: VRMPose = {};
+    for (const bone of FULL_NORMALIZED_POSE_APPLICATION_BONES) {
+        const quaternion = finalPose[bone];
+        if (quaternion === undefined) {
+            continue;
+        }
+        pose[bone] = { rotation: toVrmPoseRotation(quaternion) };
+    }
+    return pose;
+}
+
+function toVrmPoseRotation(quaternion: VrmPoseQuaternion): [number, number, number, number] {
+    return [quaternion.x, quaternion.y, quaternion.z, quaternion.w];
+}
+
+function annotateFullNormalizedPoseApplication(
+    composerDryRun: SincroVrmPoseComposerDryRunResult,
+    application: FullNormalizedPoseApplicationResult,
+): SincroVrmPoseComposerDryRunResult {
+    return {
+        ...composerDryRun,
+        fullNormalizedPoseApplication: {
+            mode: application.mode,
+            applied: application.applied,
+            rollbackReason: application.rollbackReason,
+        },
+    };
+}
+
 function appendComposerApplicationWarnings(
     composerDryRun: SincroVrmPoseComposerDryRunResult,
     warnings: string[],
 ): SincroVrmPoseComposerDryRunResult {
     /*
         Debug Console は composer dry-run summary を単一の観測口にしている。
-        arm application fallback だけ別 channel に分けると rollback 判断が散るため、dry-run service 自体の
-        warning 配列に append して同じ summary へ流す。warning が無い frame は object identity を保つ。
+        arm / torso / full application fallback だけ別 channel に分けると rollback 判断が散るため、
+        dry-run service 自体の warning 配列に append して同じ summary へ流す。warning が無い frame は
+        object identity を保つ。
     */
     if (warnings.length === 0) {
         return composerDryRun;

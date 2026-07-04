@@ -2,6 +2,7 @@ import type {
     ComposerArmApplicationMode,
     ComposerSemanticFingerApplicationMode,
     ComposerTorsoShoulderApplicationMode,
+    FullNormalizedPoseApplicationMode,
 } from "../../../../character/retargeting/sincroPoseRetargeter";
 import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../model/debugConsoleManager";
 
@@ -28,6 +29,7 @@ export function SincroPoseRetargetComposerControls({
                 poseRetarget={poseRetarget}
                 manager={manager}
             />
+            <FullNormalizedPoseApplicationSelect poseRetarget={poseRetarget} manager={manager} />
         </>
     );
 }
@@ -119,6 +121,35 @@ function ComposerSemanticFingerApplicationSelect({
     );
 }
 
+function FullNormalizedPoseApplicationSelect({
+    poseRetarget,
+    manager,
+}: SincroPoseRetargetComposerControlsProps) {
+    return (
+        <div className="audioControlGroup">
+            <label className="audioControlLabel" htmlFor="sincroPoseFullNormalizedApplication">
+                Full Pose
+                <span>experimental</span>
+            </label>
+            <select
+                id="sincroPoseFullNormalizedApplication"
+                className="audioControlSelect"
+                value={poseRetarget.fullNormalizedPoseApplicationMode}
+                onChange={(event) =>
+                    applyPoseRetargetPatch(manager, poseRetarget, {
+                        fullNormalizedPoseApplicationMode: parseFullNormalizedPoseApplicationMode(
+                            event.currentTarget.value,
+                        ),
+                    })
+                }
+            >
+                <option value="off">off</option>
+                <option value="upper_body">upper body finalPose</option>
+            </select>
+        </div>
+    );
+}
+
 function applyPoseRetargetPatch(
     manager: DebugConsoleManager,
     poseRetarget: SincroPoseRetargetComposerControlsProps["poseRetarget"],
@@ -163,5 +194,15 @@ function parseComposerSemanticFingerApplicationMode(
             return value;
         default:
             return "composer";
+    }
+}
+
+function parseFullNormalizedPoseApplicationMode(value: string): FullNormalizedPoseApplicationMode {
+    switch (value) {
+        case "off":
+        case "upper_body":
+            return value;
+        default:
+            return "off";
     }
 }

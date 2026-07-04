@@ -530,6 +530,22 @@ motion-debug の `frame.finalPose` は production dry-run result が `available`
 証跡になる。dry-run result が無い旧 live snapshot / 旧 log だけ、従来の debug-only tracking finalPose bridge へ
 fallback する。
 
+`full setNormalizedPose(finalPose) application` の production 適用境界は `VRMCharacterManager.update()` の
+controller 更新順に置く。`fullNormalizedPoseApplicationMode` は `"off"` / `"upper_body"` の独立 developer flag
+で、既定 `"off"` は arm / torso / shoulder / semantic / finger の段階別 application path を維持し、前段 flag を
+暗黙に変更しない。`"upper_body"` では production dry-run が同一 frame で `available` かつ `result.finalPose`
+を持つ場合だけ `vrm.humanoid.setNormalizedPose(finalPose)` を 1 回呼び、その frame の `ArmBoneController` と
+`CharacterMotionOrchestrator` による upper body direct / selected-bone write は呼ばない。dry-run が
+`not_ready`、`invalid_input`、`missing_profile`、または `available` でも result 欠損の場合は stale finalPose を
+current result に昇格せず、段階別 path へ rollback する。
+
+full application の Debug Console summary は `full <mode> applied` または
+`full <mode> rollback <reason>` を composer dry-run summary と同じ行に表示する。rollback reason は
+`full_normalized_pose_application_off`、`full_normalized_pose_application_unavailable:<status>`、
+`full_normalized_pose_application_result_missing`、`full_normalized_pose_application_vrm_missing` を使う。
+head / neck / leg / expression は full upper body finalPose の所有対象に追加しない。Face / Eye / Mouth /
+Emotion controller と `LegBoneController` は従来どおり更新し、root position も normalized pose の対象外に残す。
+
 補助リンク: [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)、[torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)、[optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)。
 
 ## IK Solver Policy

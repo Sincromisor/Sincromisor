@@ -31,6 +31,11 @@ describe("DebugConsoleSincroMotionControls", () => {
             warnings: ["owned_bone_conflict:leftUpperArm"],
             suppressedLayers: ["production:fallback:fallback:upperChest:missing_optional_bone"],
             clampedBones: ["leftUpperArm:angular_velocity"],
+            fullNormalizedPoseApplication: {
+                mode: "upper_body",
+                applied: false,
+                rollbackReason: "full_normalized_pose_application_result_missing",
+            },
         });
 
         expect(snapshot.sincroMotion.observeOnly.reliability.status).toBe("available");
@@ -39,6 +44,11 @@ describe("DebugConsoleSincroMotionControls", () => {
             warnings: ["owned_bone_conflict:leftUpperArm"],
             suppressedLayers: ["production:fallback:fallback:upperChest:missing_optional_bone"],
             clampedBones: ["leftUpperArm:angular_velocity"],
+            fullNormalizedPoseApplication: {
+                mode: "upper_body",
+                applied: false,
+                rollbackReason: "full_normalized_pose_application_result_missing",
+            },
         });
     });
 
@@ -94,6 +104,31 @@ describe("DebugConsoleSincroMotionControls", () => {
         );
         expect(snapshot.sincroMotion.poseRetarget.composerSemanticFingerApplicationMode).toBe(
             "off",
+        );
+    });
+
+    it("applies full normalized pose mode separately from staged composer modes", () => {
+        let snapshot = createDefaultSnapshot();
+        const controls = new DebugConsoleSincroMotionControls({
+            readSnapshot: () => snapshot,
+            updateSnapshot: (updater: (current: DebugConsoleSnapshot) => DebugConsoleSnapshot) => {
+                snapshot = updater(snapshot);
+            },
+        });
+
+        controls.applySincroPoseRetargetConfig({
+            fullNormalizedPoseApplicationMode: "upper_body",
+        });
+
+        expect(snapshot.sincroMotion.poseRetarget.composerArmApplicationMode).toBe("off");
+        expect(snapshot.sincroMotion.poseRetarget.composerTorsoShoulderApplicationMode).toBe(
+            "direct",
+        );
+        expect(snapshot.sincroMotion.poseRetarget.composerSemanticFingerApplicationMode).toBe(
+            "composer",
+        );
+        expect(snapshot.sincroMotion.poseRetarget.fullNormalizedPoseApplicationMode).toBe(
+            "upper_body",
         );
     });
 });
