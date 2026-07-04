@@ -18,6 +18,9 @@ export const COMPLETE_PROFILE: MinimalAvatarMotionProfile = {
         rightIndexProximal: true,
     },
     measurements: {},
+    torso: {
+        distribution: { spine: 0.25, chest: 0.4, upperChest: 0.35 },
+    },
     solverDefaults: {
         defaultReachScale: 1,
         depthCompression: 0.55,

@@ -2,6 +2,13 @@ import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import type { Object3D } from "three/src/core/Object3D.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 
+/**
+ * production composer path が runtime で参照する optional humanoid bone capability。
+ *
+ * `spine` / `chest` / upper arm のような必須扱いの bone はここに置かない。欠損可能な upperChest /
+ * shoulder / hand / finger だけを表し、composer はこの値で missing optional bone suppression と
+ * same-side upperArm fallback の境界を決める。
+ */
 export type AvatarOptionalBoneCapabilities = {
     upperChest: boolean;
     leftShoulder: boolean;
@@ -14,6 +21,13 @@ export type AvatarOptionalBoneCapabilities = {
     rightIndexProximal: boolean;
 };
 
+/**
+ * runtime と Debug Console に渡す軽量 avatar motion profile。
+ *
+ * full `AvatarMotionProfile` から、composer dry-run / selected-bone application に必要な optional bone、
+ * torso distribution、arm solver defaults だけを抜き出す。VRM Object3D や THREE instance は含めず、
+ * 欠損 bone は throw ではなく `warnings` と capability false で caller に観測させる。
+ */
 export type MinimalAvatarMotionProfile = {
     schemaVersion: "sincro.minimal-avatar-motion-profile.v1";
     optionalBones: AvatarOptionalBoneCapabilities;
@@ -24,6 +38,9 @@ export type MinimalAvatarMotionProfile = {
         rightUpperArmLength?: number;
         rightLowerArmLength?: number;
         headSize?: number;
+    };
+    torso: {
+        distribution: { spine: number; chest: number; upperChest: number };
     };
     solverDefaults: {
         defaultReachScale: number;
@@ -99,6 +116,9 @@ export function createMinimalAvatarMotionProfile(
         schemaVersion: SCHEMA_VERSION,
         optionalBones,
         measurements,
+        torso: {
+            distribution: createTorsoDistribution(optionalBones),
+        },
         solverDefaults: { ...SOLVER_DEFAULTS },
         warnings: [...warnings],
     };
@@ -111,6 +131,9 @@ export function cloneMinimalAvatarMotionProfile(
         schemaVersion: profile.schemaVersion,
         optionalBones: { ...profile.optionalBones },
         measurements: { ...profile.measurements },
+        torso: {
+            distribution: { ...profile.torso.distribution },
+        },
         solverDefaults: { ...profile.solverDefaults },
         warnings: [...profile.warnings],
     };
@@ -139,6 +162,15 @@ function createOptionalBoneCapabilities(
         }
     }
     return capabilities;
+}
+
+function createTorsoDistribution(
+    optionalBones: AvatarOptionalBoneCapabilities,
+): MinimalAvatarMotionProfile["torso"]["distribution"] {
+    if (optionalBones.upperChest) {
+        return { spine: 0.25, chest: 0.4, upperChest: 0.35 };
+    }
+    return { spine: 0.35, chest: 0.65, upperChest: 0 };
 }
 
 function createMeasurements(

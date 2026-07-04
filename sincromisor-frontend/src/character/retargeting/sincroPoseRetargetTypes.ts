@@ -14,6 +14,16 @@ export type SincroPoseArmIkMode = "feature_only" | "screen_space_ik" | "world_3d
  */
 export type ComposerArmApplicationMode = "off" | "left" | "right" | "both";
 
+/**
+ * torso / shoulder の本番表示を direct controller と composer selected-bone overwrite で切り替える flag。
+ *
+ * `"direct"` は `CharacterMotionTorsoApplier` の spine / chest / upperChest / shoulder direct write を
+ * そのまま使う rollback 既定値である。`"composer"` は direct write を行わず、同じ motion input から作った
+ * composer layer の `finalPose` を torso / shoulder と missing shoulder fallback の upperArm だけへ適用する。
+ * arm application flag とは独立しており、head / neck / leg / expression / finger は対象外に固定する。
+ */
+export type ComposerTorsoShoulderApplicationMode = "direct" | "composer";
+
 export type SincroPoseRetargetedArm = {
     active: boolean;
     ikActive: boolean;
@@ -82,6 +92,15 @@ export type SincroPoseRetargetConfig = {
      * の quaternion で上書きする実験経路であり、torso / shoulder / finger / head / expression は対象外。
      */
     composerArmApplicationMode: ComposerArmApplicationMode;
+    /**
+     * torso / shoulder の composer 移行を切り替える developer flag。
+     *
+     * 既定の `"direct"` は `CharacterMotionTorsoApplier` direct write を必ず残す safe default。
+     * `"composer"` は `AvatarMotionProfile.torso.distribution` と optional bone capability を正本にして、
+     * selected torso / shoulder bone だけを composer `finalPose` から上書きする。arm flag の mode は
+     * この値を暗黙に変更しない。
+     */
+    composerTorsoShoulderApplicationMode: ComposerTorsoShoulderApplicationMode;
 };
 
 export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
@@ -104,6 +123,7 @@ export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
     armIkMode: "world_3d_ik",
     shoulderAnchorOffsetRad: MathUtils.degToRad(2.4),
     composerArmApplicationMode: "off",
+    composerTorsoShoulderApplicationMode: "direct",
 };
 
 export const NEUTRAL_ARM_IK_CONSTRAINT: SincroArmIkConstraintSnapshot = {

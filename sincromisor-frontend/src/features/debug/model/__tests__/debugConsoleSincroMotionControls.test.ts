@@ -55,4 +55,23 @@ describe("DebugConsoleSincroMotionControls", () => {
 
         expect(snapshot.sincroMotion.poseRetarget.composerArmApplicationMode).toBe("both");
     });
+
+    it("applies torso and shoulder composer mode separately from arm mode", () => {
+        let snapshot = createDefaultSnapshot();
+        const controls = new DebugConsoleSincroMotionControls({
+            readSnapshot: () => snapshot,
+            updateSnapshot: (updater: (current: DebugConsoleSnapshot) => DebugConsoleSnapshot) => {
+                snapshot = updater(snapshot);
+            },
+        });
+
+        controls.applySincroPoseRetargetConfig({
+            composerTorsoShoulderApplicationMode: "composer",
+        });
+
+        expect(snapshot.sincroMotion.poseRetarget.composerArmApplicationMode).toBe("off");
+        expect(snapshot.sincroMotion.poseRetarget.composerTorsoShoulderApplicationMode).toBe(
+            "composer",
+        );
+    });
 });

@@ -7,41 +7,41 @@ PASS
 ## 受け入れ条件チェックリスト
 
 - [✓] `composerArmApplicationMode` の `"off"` / `"left"` / `"right"` / `"both"` で対象腕の
-      `upperArm` / `lowerArm` / `hand` だけが direct write 後に composer `finalPose` で上書きされる —
-      `ArmBoneController.update()` が direct write 後に `applyComposerArmApplication()` を呼び、
-      `targetSides()` と `COMPOSER_ARM_BONES` で対象を限定している。
-      `armBoneController.test.ts` の off / left / right / both coverage で確認。
+  `upperArm` / `lowerArm` / `hand` だけが direct write 後に composer `finalPose` で上書きされる —
+  `ArmBoneController.update()` が direct write 後に `applyComposerArmApplication()` を呼び、
+  `targetSides()` と `COMPOSER_ARM_BONES` で対象を限定している。
+  `armBoneController.test.ts` の off / left / right / both coverage で確認。
 - [✓] mode `"off"` と対象外腕では direct write が再適用され、dry-run availability / fallback warning を
-      生成しない — `applyComposerArmApplication()` は mode `"off"` で即 return し、対象外 side を走査しない。
-      `keeps the direct write path when composer arm application is off` と
-      `applies right mode only to right arm bones without warning for left arm gaps` で確認。
+  生成しない — `applyComposerArmApplication()` は mode `"off"` で即 return し、対象外 side を走査しない。
+  `keeps the direct write path when composer arm application is off` と
+  `applies right mode only to right arm bones without warning for left arm gaps` で確認。
 - [✓] `composerDryRun.status !== "available"`、`result` 欠損、対象 bone 欠損、normalized bone node 欠損の
-      fallback reason が Debug Console の composer dry-run warning へ出る —
-      `composer_arm_application_unavailable:<status>`、
-      `composer_arm_application_result_missing`、
-      `composer_arm_application_final_pose_missing:<bone>`、
-      `composer_arm_application_normalized_node_missing:<bone>` を返し、
-      `appendComposerArmApplicationWarnings()` で dry-run summary warnings に連結している。
+  fallback reason が Debug Console の composer dry-run warning へ出る —
+  `composer_arm_application_unavailable:<status>`、
+  `composer_arm_application_result_missing`、
+  `composer_arm_application_final_pose_missing:<bone>`、
+  `composer_arm_application_normalized_node_missing:<bone>` を返し、
+  `appendComposerArmApplicationWarnings()` で dry-run summary warnings に連結している。
 - [✓] mode 切替 frame で production dry-run service の previous final pose が reset される —
-      `VRMCharacterManager.setSincroPoseRetargetConfig()` が `composerArmApplicationMode` の変化時だけ
-      `this.composerDryRun.reset()` を呼ぶ。unit test で mode 変更時 reset と無関係 config 変更時非 reset を確認。
+  `VRMCharacterManager.setSincroPoseRetargetConfig()` が `composerArmApplicationMode` の変化時だけ
+  `this.composerDryRun.reset()` を呼ぶ。unit test で mode 変更時 reset と無関係 config 変更時非 reset を確認。
 - [✓] shoulder / torso / finger / head / expression は対象外で、`vrm.humanoid.setNormalizedPose()` は呼ばない —
-      実装の対象 bone は `COMPOSER_ARM_BONES` の 6 bone のみ。both mode test が shoulder / torso / thumb / head
-      相当の `finalPose` を無視し、`setNormalizedPose` 非呼び出しを確認。静的検索でも変更差分に
-      production の `setNormalizedPose()` 呼び出し追加はない。
+  実装の対象 bone は `COMPOSER_ARM_BONES` の 6 bone のみ。both mode test が shoulder / torso / thumb / head
+  相当の `finalPose` を無視し、`setNormalizedPose` 非呼び出しを確認。静的検索でも変更差分に
+  production の `setNormalizedPose()` 呼び出し追加はない。
 - [✓] tracking 側の Hand ROI は腕 IK target の主入力にしていない —
-      今回差分は arm application 後段上書き、manager warning/reset、motion.md 同期、unit test に限定され、
-      tracking / retarget target 入力は変更なし。既存 `sincroPoseArmIkSolve.ts` は `targets.wrist` を使うまま。
+  今回差分は arm application 後段上書き、manager warning/reset、motion.md 同期、unit test に限定され、
+  tracking / retarget target 入力は変更なし。既存 `sincroPoseArmIkSolve.ts` は `targets.wrist` を使うまま。
 - [✓] arm flag verification artifact が
-      `tasks/character-sincro-motion/task-260705004400-arm-composer-application-hardening/artifacts/arm-composer-application-hardening.md`
-      にあり、各 mode、weak wrist / elbow、missing shoulder synthetic profile、rollback 条件、未実施の実機確認を記録している。
+  `tasks/character-sincro-motion/task-260705004400-arm-composer-application-hardening/artifacts/arm-composer-application-hardening.md`
+  にあり、各 mode、weak wrist / elbow、missing shoulder synthetic profile、rollback 条件、未実施の実機確認を記録している。
 - [✓] `documents/design/frontend/character/motion.md` に fallback reason、対象 bone、mode 切替 reset、
-      未所有 bone、Hand ROI 非主入力が同期されている。
+  未所有 bone、Hand ROI 非主入力が同期されている。
 - [✓] TypeScript production comment audit が `impl.md` に指定列で記録され、必須対象
-      `ComposerArmApplicationInput`、`ArmBoneController.update()`、`applyComposerArmApplication()`、
-      `VRMCharacterManager.setSincroPoseRetargetConfig()`、`composerArmApplicationMode` config、
-      Debug Console warning 連結判断、`setNormalizedPose()` 非使用判断を含む。差分上の JSDoc / block comment は
-      boundary、fallback、lifecycle、副作用境界に固有の保守情報を説明しており、名前・型だけの重複コメントではない。
+  `ComposerArmApplicationInput`、`ArmBoneController.update()`、`applyComposerArmApplication()`、
+  `VRMCharacterManager.setSincroPoseRetargetConfig()`、`composerArmApplicationMode` config、
+  Debug Console warning 連結判断、`setNormalizedPose()` 非使用判断を含む。差分上の JSDoc / block comment は
+  boundary、fallback、lifecycle、副作用境界に固有の保守情報を説明しており、名前・型だけの重複コメントではない。
 
 ## テスト結果
 

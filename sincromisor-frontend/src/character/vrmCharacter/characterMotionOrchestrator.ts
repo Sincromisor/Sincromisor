@@ -1,8 +1,12 @@
 import type { VRM } from "@pixiv/three-vrm";
 import { MathUtils } from "three/src/math/MathUtils.js";
+import { Quaternion } from "three/src/math/Quaternion.js";
 import type { Vector3 } from "three/src/math/Vector3.js";
+import type { MinimalAvatarMotionProfile } from "../avatarProfile/minimalAvatarMotionProfile";
 import type { CharacterBehaviorSnapshot } from "../behavior/characterBehaviorState";
 import type { SincroPoseRetargetFrame } from "../retargeting/sincroPoseRetargeter";
+import type { ComposerTorsoShoulderApplicationMode } from "../retargeting/sincroPoseRetargetTypes";
+import type { VrmPoseQuaternion } from "../vrmPose/vrmPoseTypes";
 import {
     type CharacterMotionBone,
     captureOptionalMotionBones,
@@ -20,9 +24,48 @@ import {
     applyShoulderMotion,
     applySpineMotion,
 } from "./characterMotionTorsoApplier";
+import {
+    type CharacterMotionTorsoShoulderMotionInput,
+    composeTorsoShoulderApplication,
+} from "./characterMotionTorsoComposerLayer";
 
-// 呼吸、上半身の重心感、肩周りの小さな idle motion をまとめて適用する。
-// hips はモデル全体の root として振る舞うVRMがあるため、位置揺れの対象にしない。
+/**
+ * `CharacterMotionOrchestrator.update()` の torso / shoulder composer selected-bone 適用入力。
+ *
+ * `"direct"` は `CharacterMotionTorsoApplier` direct write を維持する rollback path。
+ * `"composer"` では `profile` が必須で、欠損時は warning を返して direct write に戻る。
+ */
+export type ComposerTorsoShoulderApplicationInput = {
+    mode: ComposerTorsoShoulderApplicationMode;
+    profile?: MinimalAvatarMotionProfile;
+};
+
+/**
+ * orchestrator の毎 frame observable output。
+ *
+ * 現時点では Debug Console summary に合流する torso / shoulder composer rollback reason だけを返す。
+ * bone / expression / root position の実体は従来どおり VRM node への副作用として閉じる。
+ */
+export type CharacterMotionOrchestratorUpdateResult = {
+    composerTorsoShoulderApplicationWarnings: string[];
+};
+
+const COMPOSER_TORSO_SHOULDER_APPLICATION_BONES = [
+    "spine",
+    "chest",
+    "upperChest",
+    "leftShoulder",
+    "rightShoulder",
+] as const;
+
+/**
+ * 呼吸、上半身の重心感、肩周りの idle motion と hips stabilization を担当する runtime controller。
+ *
+ * flag off では `CharacterMotionTorsoApplier` direct write が rollback 正本である。flag on では同じ
+ * motion scalar から composer layer を生成し、torso / shoulder と missing shoulder fallback upperArm だけを
+ * selected-bone overwrite する。`vrm.humanoid.setNormalizedPose()`、head / neck / leg / expression / finger は
+ * この controller の composer 適用対象外に固定する。
+ */
 export class CharacterMotionOrchestrator {
     private readonly bones: Map<OptionalMotionBoneName, CharacterMotionBone>;
     private listeningBlend = 0;
@@ -48,12 +91,43 @@ export class CharacterMotionOrchestrator {
         snapshot: CharacterBehaviorSnapshot,
         hipsBasePosition: Vector3,
         pose?: SincroPoseRetargetFrame,
-    ): void {
+        composerTorsoShoulderApplication?: ComposerTorsoShoulderApplicationInput,
+    ): CharacterMotionOrchestratorUpdateResult {
         const motion = this.createMotionFrame(elapsedSeconds, snapshot);
         const expression = getAiSpeechExpressionMotionProfile(snapshot.aiSpeech.expressionCode);
         const motionScale = this.tuning.motionScale * snapshot.motionPolicy.idleMotionScale;
+        const motionInput: CharacterMotionTorsoShoulderMotionInput = {
+            breathWave: motion.breath,
+            secondaryWave: motion.breathSecondary,
+            sideWave: motion.balanceSide,
+            intensity: motion.intensity,
+            listening: motion.listening,
+            backchannelNod: motion.backchannelNod,
+            aiSpeaking: motion.aiSpeaking,
+            aiGesture: motion.aiGesture,
+            aiSpeechBeatDirection: this.aiSpeechBeatDirection,
+            expression,
+            motionScale,
+            pose,
+        };
 
         this.stabilizeHips(hipsBasePosition);
+        let composerTorsoShoulderApplicationWarnings: string[] = [];
+        if (composerTorsoShoulderApplication?.mode === "composer") {
+            composerTorsoShoulderApplicationWarnings = this.applyComposerTorsoShoulderApplication(
+                motionInput,
+                composerTorsoShoulderApplication.profile,
+            );
+            if (
+                !composerTorsoShoulderApplicationWarnings.includes(
+                    "composer_torso_shoulder_application_profile_missing",
+                )
+            ) {
+                return {
+                    composerTorsoShoulderApplicationWarnings,
+                };
+            }
+        }
         applySpineMotion(this.bones.get("spine"), {
             breathWave: motion.breath,
             sideWave: motion.balanceSide,
@@ -90,6 +164,7 @@ export class CharacterMotionOrchestrator {
             motionScale,
             pose,
         });
+        return { composerTorsoShoulderApplicationWarnings };
     }
 
     private createMotionFrame(
@@ -139,6 +214,46 @@ export class CharacterMotionOrchestrator {
         }
         bone.node.position.copy(basePosition);
         bone.node.rotation.copy(bone.baseRotation);
+    }
+
+    private applyComposerTorsoShoulderApplication(
+        motion: CharacterMotionTorsoShoulderMotionInput,
+        profile: MinimalAvatarMotionProfile | undefined,
+    ): string[] {
+        if (!profile) {
+            return ["composer_torso_shoulder_application_profile_missing"];
+        }
+        const application = composeTorsoShoulderApplication({
+            bones: this.bones,
+            motion,
+            profile,
+        });
+        const warnings = [...application.warnings];
+        for (const boneName of COMPOSER_TORSO_SHOULDER_APPLICATION_BONES) {
+            const quaternion = application.result.finalPose[boneName];
+            const bone = this.bones.get(boneName);
+            if (quaternion === undefined || !bone) {
+                continue;
+            }
+            copyComposerQuaternion(bone, quaternion);
+        }
+        if (!profile.optionalBones.leftShoulder) {
+            applyShoulderFallbackUpperArm(
+                this.bones.get("leftUpperArm"),
+                application.result.finalPose.leftUpperArm,
+                warnings,
+                "leftUpperArm",
+            );
+        }
+        if (!profile.optionalBones.rightShoulder) {
+            applyShoulderFallbackUpperArm(
+                this.bones.get("rightUpperArm"),
+                application.result.finalPose.rightUpperArm,
+                warnings,
+                "rightUpperArm",
+            );
+        }
+        return warnings;
     }
 
     private updateListeningBlend(
@@ -307,4 +422,26 @@ export class CharacterMotionOrchestrator {
         }
         return Math.sin(Math.PI * MathUtils.clamp(progress, 0, 1)) * this.aiSpeechBeatIntensity;
     }
+}
+
+function applyShoulderFallbackUpperArm(
+    bone: CharacterMotionBone | undefined,
+    quaternion: VrmPoseQuaternion | undefined,
+    warnings: string[],
+    boneName: "leftUpperArm" | "rightUpperArm",
+): void {
+    if (quaternion === undefined) {
+        warnings.push(`composer_torso_shoulder_application_final_pose_missing:${boneName}`);
+        return;
+    }
+    if (!bone) {
+        warnings.push(`composer_torso_shoulder_application_normalized_node_missing:${boneName}`);
+        return;
+    }
+    copyComposerQuaternion(bone, quaternion);
+    warnings.push(`composer_torso_shoulder_application_upper_arm_fallback:${boneName}`);
+}
+
+function copyComposerQuaternion(bone: CharacterMotionBone, value: VrmPoseQuaternion): void {
+    bone.node.quaternion.copy(new Quaternion(value.x, value.y, value.z, value.w).normalize());
 }

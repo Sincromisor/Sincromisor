@@ -80,6 +80,8 @@ export class VRMCharacterManager {
     private readonly composerDryRun = new SincroVrmPoseComposerDryRunService();
     private composerArmApplicationMode =
         DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerArmApplicationMode;
+    private composerTorsoShoulderApplicationMode =
+        DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerTorsoShoulderApplicationMode;
     private sincroMotionPipelineState: SincroMotionPipelineState =
         createDefaultSincroMotionPipelineState();
     private latestBehaviorSnapshot?: CharacterBehaviorSnapshot;
@@ -254,7 +256,7 @@ export class VRMCharacterManager {
                 composerDryRun,
             },
         );
-        const observedComposerDryRun = appendComposerArmApplicationWarnings(
+        const observedComposerDryRun = appendComposerApplicationWarnings(
             composerDryRun,
             armUpdate?.composerArmApplicationWarnings ?? [],
         );
@@ -273,12 +275,33 @@ export class VRMCharacterManager {
         if (this.rootBone) {
             const hipsBasePosition = this.defaultPosition.clone().add(this.characterPosition);
             this.rootBone.position.copy(hipsBasePosition);
-            this.motionOrchestrator?.update(
+            const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
+            const motionOrchestratorUpdate = this.motionOrchestrator?.update(
                 this.motionElapsedSeconds,
                 this.latestBehaviorSnapshot,
                 hipsBasePosition,
                 sincroPose,
+                {
+                    mode: this.composerTorsoShoulderApplicationMode,
+                    profile: avatarMotionProfile
+                        ? toMinimalAvatarMotionProfile(avatarMotionProfile)
+                        : undefined,
+                },
             );
+            if (motionOrchestratorUpdate) {
+                const nextComposerDryRun = appendComposerApplicationWarnings(
+                    this.sincroMotionPipelineState.composerDryRun ?? observedComposerDryRun,
+                    motionOrchestratorUpdate.composerTorsoShoulderApplicationWarnings,
+                );
+                this.sincroMotionPipelineState = cloneSincroMotionPipelineState({
+                    ...this.sincroMotionPipelineState,
+                    composerDryRun: nextComposerDryRun,
+                    updatedAtMs: nowMs,
+                });
+                DebugConsoleManager.getManager().updateSincroComposerDryRunSummary(
+                    summarizeComposerDryRun(this.sincroMotionPipelineState.composerDryRun),
+                );
+            }
         }
     }
 
@@ -307,21 +330,29 @@ export class VRMCharacterManager {
     /**
      * Debug Console などから pose retarget 設定を runtime へ反映する。
      *
-     * `composerArmApplicationMode` の切替時だけ production dry-run の previous final pose を reset し、
-     * 前 mode の angular velocity clamp 基準を次 frame に持ち越さない。retargeter config は常に転送するが、
+     * composer application flag の切替時だけ production dry-run の previous final pose を reset し、
+     * 前 mode の angular velocity clamp 基準を次 frame に持ち越さない。arm と torso / shoulder は別 flag として
+     * 保持し、片方の mode 変更がもう片方の所有境界を暗黙に変えない。retargeter config は常に転送するが、
      * VRM normalized pose や expression はここでは書き込まない。
      */
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
         const nextComposerArmApplicationMode =
             config.composerArmApplicationMode ?? this.composerArmApplicationMode;
-        if (nextComposerArmApplicationMode !== this.composerArmApplicationMode) {
+        const nextComposerTorsoShoulderApplicationMode =
+            config.composerTorsoShoulderApplicationMode ??
+            this.composerTorsoShoulderApplicationMode;
+        if (
+            nextComposerArmApplicationMode !== this.composerArmApplicationMode ||
+            nextComposerTorsoShoulderApplicationMode !== this.composerTorsoShoulderApplicationMode
+        ) {
             /*
                 feature flag の切替 frame では、前 mode で生成された composer final pose を
-                angular velocity clamp の previous として使わない。腕適用自体は毎 frame direct write 後の
-                上書きなので残留 state を持たないが、dry-run の previousFinalPose は表示差分に影響する。
+                angular velocity clamp の previous として使わない。適用自体は selected bone の上書きなので
+                残留 state を持たないが、dry-run の previousFinalPose は表示差分に影響する。
             */
             this.composerDryRun.reset();
             this.composerArmApplicationMode = nextComposerArmApplicationMode;
+            this.composerTorsoShoulderApplicationMode = nextComposerTorsoShoulderApplicationMode;
         }
         this.sincroPoseRetargeter.setConfig(config);
     }
@@ -331,7 +362,7 @@ export class VRMCharacterManager {
     }
 }
 
-function appendComposerArmApplicationWarnings(
+function appendComposerApplicationWarnings(
     composerDryRun: SincroVrmPoseComposerDryRunResult,
     warnings: string[],
 ): SincroVrmPoseComposerDryRunResult {

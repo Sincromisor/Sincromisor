@@ -487,6 +487,25 @@ previous final pose を reset し、前 mode の final pose を angular velocity
 ROI 観測の材料に限定し、腕 IK target は引き続き
 `SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` を正本にする。
 
+`torso / shoulder migration` の production 適用境界は `CharacterMotionOrchestrator.update()` 内の
+torso / shoulder direct write 位置であり、`VRMCharacterManager.update()` の
+HeadBoneController、ArmBoneController、LegBoneController、`vrm.update(deltaSeconds)`、
+CharacterMotionOrchestrator の順序は変えない。`composerTorsoShoulderApplicationMode` は
+`"direct"` / `"composer"` の独立 developer flag とし、既定の `"direct"` では
+`CharacterMotionTorsoApplier` direct write が必ず再適用される。`"composer"` では
+`AvatarMotionProfile.torso.distribution` から `MinimalAvatarMotionProfile.torso.distribution` へ渡した
+値を torso 分配の正本にし、`spine` / `chest` / `upperChest` / `leftShoulder` / `rightShoulder` だけを
+composer layer の selected bone overwrite として適用する。missing shoulder は同側
+`upperArm` への damped fallback だけに閉じ、head / neck / leg / expression / finger を所有しない。
+`composerArmApplicationMode` とは共有 enum / mode にせず、arm flag の切替は torso / shoulder owner を
+暗黙に変更しない。Debug Console の composer dry-run summary には
+`composer_torso_shoulder_application_profile_missing`、
+`composer_torso_shoulder_application_upper_arm_fallback:<bone>`、
+`composer_torso_shoulder_application_final_pose_missing:<bone>`、
+`composer_torso_shoulder_application_normalized_node_missing:<bone>`、および
+`invalid_torso_distribution_profile_defaulted` を warning として合流させ、rollback reason を同じ観測口で
+確認できる。
+
 補助リンク: [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)、[torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)、[optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)。
 
 ## IK Solver Policy

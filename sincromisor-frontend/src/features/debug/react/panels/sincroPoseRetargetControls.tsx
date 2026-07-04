@@ -1,5 +1,6 @@
 import type {
     ComposerArmApplicationMode,
+    ComposerTorsoShoulderApplicationMode,
     SincroPoseArmIkMode,
 } from "../../../../character/retargeting/sincroPoseRetargeter";
 import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../model/debugConsoleManager";
@@ -25,6 +26,7 @@ export function SincroPoseRetargetControls({
             <summary>Pose retarget 調整</summary>
             <ArmIkModeSelect poseRetarget={poseRetarget} manager={manager} />
             <ComposerArmApplicationSelect poseRetarget={poseRetarget} manager={manager} />
+            <ComposerTorsoShoulderApplicationSelect poseRetarget={poseRetarget} manager={manager} />
             <PoseRetargetBaseControls poseRetarget={poseRetarget} manager={manager} />
             <PoseRetargetArmIkControls poseRetarget={poseRetarget} manager={manager} />
         </details>
@@ -79,6 +81,34 @@ function ComposerArmApplicationSelect({ poseRetarget, manager }: SincroPoseRetar
                 <option value="left">left arm</option>
                 <option value="right">right arm</option>
                 <option value="both">both arms</option>
+            </select>
+        </div>
+    );
+}
+
+function ComposerTorsoShoulderApplicationSelect({
+    poseRetarget,
+    manager,
+}: SincroPoseRetargetControlsProps) {
+    return (
+        <div className="audioControlGroup">
+            <label className="audioControlLabel" htmlFor="sincroPoseComposerTorsoShoulder">
+                Composer Torso
+                <span>experimental</span>
+            </label>
+            <select
+                id="sincroPoseComposerTorsoShoulder"
+                className="audioControlSelect"
+                value={poseRetarget.composerTorsoShoulderApplicationMode}
+                onChange={(event) =>
+                    applyPoseRetargetPatch(manager, poseRetarget, {
+                        composerTorsoShoulderApplicationMode:
+                            parseComposerTorsoShoulderApplicationMode(event.currentTarget.value),
+                    })
+                }
+            >
+                <option value="direct">direct controller</option>
+                <option value="composer">composer torso/shoulder</option>
             </select>
         </div>
     );
@@ -252,5 +282,17 @@ function parseComposerArmApplicationMode(value: string): ComposerArmApplicationM
             return value;
         default:
             return "off";
+    }
+}
+
+function parseComposerTorsoShoulderApplicationMode(
+    value: string,
+): ComposerTorsoShoulderApplicationMode {
+    switch (value) {
+        case "direct":
+        case "composer":
+            return value;
+        default:
+            return "direct";
     }
 }
