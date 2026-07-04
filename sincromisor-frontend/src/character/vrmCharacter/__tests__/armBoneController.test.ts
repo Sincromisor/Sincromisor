@@ -599,6 +599,55 @@ describe("VRMCharacterManager full normalized pose application", () => {
             armUpdate.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
         );
     });
+
+    it("clears previous full application before staged writers when mode returns to off", () => {
+        const debugManager = createDebugManagerDouble();
+        const debugSpy = vi
+            .spyOn(DebugConsoleManager, "getManager")
+            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
+        const snapshot = createBehaviorSnapshot();
+        const currentFinalPose = {
+            leftIndexProximal: eulerQuaternion(0.7, 0.1, 0),
+            leftUpperArm: eulerQuaternion(0.8, 0.1, 0),
+        };
+        const armUpdate = vi.fn(() => ({ composerArmApplicationWarnings: [] }));
+        const motionUpdate = vi.fn(() => ({ composerTorsoShoulderApplicationWarnings: [] }));
+        const { manager, setNormalizedPose } = createUpdateManagerDouble({
+            snapshot,
+            dryRun: createAvailableDryRun(currentFinalPose),
+            armUpdate,
+            motionUpdate,
+            fullNormalizedPoseApplicationMode: "off",
+            previousFullApplied: true,
+        });
+
+        try {
+            manager.update(1000);
+        } finally {
+            debugSpy.mockRestore();
+        }
+
+        expect(setNormalizedPose).toHaveBeenCalledTimes(1);
+        expect(setNormalizedPose).toHaveBeenCalledWith(toVrmPose({}));
+        expect(setNormalizedPose).not.toHaveBeenCalledWith(toVrmPose(currentFinalPose));
+        expect(armUpdate).toHaveBeenCalledTimes(1);
+        expect(motionUpdate).toHaveBeenCalledTimes(1);
+        expect(setNormalizedPose.mock.invocationCallOrder[0]).toBeLessThan(
+            armUpdate.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
+        );
+        expect(setNormalizedPose.mock.invocationCallOrder[0]).toBeLessThan(
+            motionUpdate.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
+        );
+        expect(debugManager.updateSincroComposerDryRunSummary).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                fullNormalizedPoseApplication: {
+                    mode: "off",
+                    applied: false,
+                    rollbackReason: "full_normalized_pose_application_off",
+                },
+            }),
+        );
+    });
 });
 
 type ComposerModeManagerTestDouble = {
