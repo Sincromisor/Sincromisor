@@ -21,6 +21,50 @@ import type { VrmPoseQuaternion } from "../../vrmPose/vrmPoseTypes";
 import { ArmBoneController } from "../armBoneController";
 import { applyFullNormalizedPoseApplication, VRMCharacterManager } from "../vrmCharacterManager";
 
+const FULL_NORMALIZED_POSE_APPLICATION_TEST_BONES: readonly VRMHumanBoneName[] = [
+    "spine",
+    "chest",
+    "upperChest",
+    "leftShoulder",
+    "rightShoulder",
+    "leftUpperArm",
+    "leftLowerArm",
+    "leftHand",
+    "rightUpperArm",
+    "rightLowerArm",
+    "rightHand",
+    "leftThumbMetacarpal",
+    "leftThumbProximal",
+    "leftThumbDistal",
+    "leftIndexProximal",
+    "leftIndexIntermediate",
+    "leftIndexDistal",
+    "leftMiddleProximal",
+    "leftMiddleIntermediate",
+    "leftMiddleDistal",
+    "leftRingProximal",
+    "leftRingIntermediate",
+    "leftRingDistal",
+    "leftLittleProximal",
+    "leftLittleIntermediate",
+    "leftLittleDistal",
+    "rightThumbMetacarpal",
+    "rightThumbProximal",
+    "rightThumbDistal",
+    "rightIndexProximal",
+    "rightIndexIntermediate",
+    "rightIndexDistal",
+    "rightMiddleProximal",
+    "rightMiddleIntermediate",
+    "rightMiddleDistal",
+    "rightRingProximal",
+    "rightRingIntermediate",
+    "rightRingDistal",
+    "rightLittleProximal",
+    "rightLittleIntermediate",
+    "rightLittleDistal",
+];
+
 describe("ArmBoneController composer arm application", () => {
     it("keeps the direct write path when composer arm application is off", () => {
         const { controller, nodes, setNormalizedPose } = createController();
@@ -383,6 +427,66 @@ describe("VRMCharacterManager full normalized pose application", () => {
         expect(setNormalizedPose).not.toHaveBeenCalled();
     });
 
+    it("writes identity for missing full-owned finger bones on available frames", () => {
+        const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
+        const fingerCurl = eulerQuaternion(0.7, 0.1, 0);
+        const leftUpperArm = eulerQuaternion(0.8, 0.1, 0);
+
+        applyFullNormalizedPoseApplication(
+            vrm,
+            "upper_body",
+            createAvailableDryRun({ leftIndexProximal: fingerCurl }),
+        );
+        applyFullNormalizedPoseApplication(
+            vrm,
+            "upper_body",
+            createAvailableDryRun({ leftUpperArm }),
+        );
+
+        expect(setNormalizedPose).toHaveBeenCalledTimes(2);
+        expect(setNormalizedPose).toHaveBeenNthCalledWith(
+            1,
+            toVrmPose({ leftIndexProximal: fingerCurl }),
+        );
+        expect(setNormalizedPose).toHaveBeenNthCalledWith(2, toVrmPose({ leftUpperArm }));
+        expect(setNormalizedPose.mock.calls[1]?.[0]).toEqual(
+            expect.objectContaining({
+                leftIndexProximal: { rotation: [0, 0, 0, 1] },
+                leftIndexIntermediate: { rotation: [0, 0, 0, 1] },
+                leftIndexDistal: { rotation: [0, 0, 0, 1] },
+            }),
+        );
+    });
+
+    it("clears previous full-owned finger pose before unavailable rollback", () => {
+        const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
+        const fingerCurl = eulerQuaternion(0.7, 0.1, 0);
+
+        applyFullNormalizedPoseApplication(
+            vrm,
+            "upper_body",
+            createAvailableDryRun({ leftIndexProximal: fingerCurl }),
+        );
+        const rollbackResult = applyFullNormalizedPoseApplication(
+            vrm,
+            "upper_body",
+            {
+                status: "not_ready",
+                warnings: ["retarget_frame_not_ready"],
+            },
+            { clearPreviousApplication: true },
+        );
+
+        expect(rollbackResult).toEqual({
+            mode: "upper_body",
+            applied: false,
+            rollbackReason: "full_normalized_pose_application_unavailable:not_ready",
+            warnings: ["full_normalized_pose_application_unavailable:not_ready"],
+        });
+        expect(setNormalizedPose).toHaveBeenCalledTimes(2);
+        expect(setNormalizedPose).toHaveBeenNthCalledWith(2, toVrmPose({}));
+    });
+
     it("skips direct upper body controllers when full finalPose applies", () => {
         const debugManager = createDebugManagerDouble();
         const debugSpy = vi
@@ -461,6 +565,38 @@ describe("VRMCharacterManager full normalized pose application", () => {
                     rollbackReason: "full_normalized_pose_application_unavailable:invalid_input",
                 },
             }),
+        );
+    });
+
+    it("clears previous full application before staged rollback writers run", () => {
+        const debugManager = createDebugManagerDouble();
+        const debugSpy = vi
+            .spyOn(DebugConsoleManager, "getManager")
+            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
+        const snapshot = createBehaviorSnapshot();
+        const armUpdate = vi.fn(() => ({ composerArmApplicationWarnings: [] }));
+        const motionUpdate = vi.fn(() => ({ composerTorsoShoulderApplicationWarnings: [] }));
+        const { manager, setNormalizedPose } = createUpdateManagerDouble({
+            snapshot,
+            dryRun: { status: "not_ready", warnings: ["retarget_frame_not_ready"] },
+            armUpdate,
+            motionUpdate,
+            fullNormalizedPoseApplicationMode: "upper_body",
+            previousFullApplied: true,
+        });
+
+        try {
+            manager.update(1000);
+        } finally {
+            debugSpy.mockRestore();
+        }
+
+        expect(setNormalizedPose).toHaveBeenCalledTimes(1);
+        expect(setNormalizedPose).toHaveBeenCalledWith(toVrmPose({}));
+        expect(armUpdate).toHaveBeenCalledTimes(1);
+        expect(motionUpdate).toHaveBeenCalledTimes(1);
+        expect(setNormalizedPose.mock.invocationCallOrder[0]).toBeLessThan(
+            armUpdate.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
         );
     });
 });
@@ -600,6 +736,7 @@ function createUpdateManagerDouble(options: {
     armUpdate: ReturnType<typeof vi.fn>;
     motionUpdate: ReturnType<typeof vi.fn>;
     fullNormalizedPoseApplicationMode: "off" | "upper_body";
+    previousFullApplied?: boolean;
 }): { manager: UpdateManagerTestDouble; setNormalizedPose: ReturnType<typeof vi.fn> } {
     const setNormalizedPose = vi.fn();
     const manager = Object.create(VRMCharacterManager.prototype) as UpdateManagerTestDouble;
@@ -618,6 +755,7 @@ function createUpdateManagerDouble(options: {
         composerTorsoShoulderApplicationMode: "composer",
         composerSemanticFingerApplicationMode: "composer",
         fullNormalizedPoseApplicationMode: options.fullNormalizedPoseApplicationMode,
+        fullNormalizedPoseApplicationApplied: options.previousFullApplied ?? false,
         sincroMotionPipelineState: createDefaultSincroMotionPipelineState(),
         headBoneController: { update: vi.fn() },
         eyeBehaviorController: { update: vi.fn() },
@@ -658,12 +796,13 @@ function toVrmPose(
 ): Partial<Record<VRMHumanBoneName, { rotation: [number, number, number, number] }>> {
     const pose: Partial<Record<VRMHumanBoneName, { rotation: [number, number, number, number] }>> =
         {};
-    for (const bone of Object.keys(finalPose) as VRMHumanBoneName[]) {
+    for (const bone of FULL_NORMALIZED_POSE_APPLICATION_TEST_BONES) {
         const quaternion = finalPose[bone];
         if (quaternion === undefined) {
-            continue;
+            pose[bone] = { rotation: [0, 0, 0, 1] };
+        } else {
+            pose[bone] = { rotation: [quaternion.x, quaternion.y, quaternion.z, quaternion.w] };
         }
-        pose[bone] = { rotation: [quaternion.x, quaternion.y, quaternion.z, quaternion.w] };
     }
     return pose;
 }
