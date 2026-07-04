@@ -24,9 +24,9 @@ PASS
 ## テスト結果
 
 - `npm run gate`（評価 worktree cwd）: PASS。clean `8b9fb8d`、cache hit。
-  - `gate:lint`: PASS / CACHE HIT。Prettier Markdown check 含む。
-  - `gate:build`: PASS / CACHE HIT。frontend type check and build。
-  - `gate:test`: PASS / CACHE HIT。433 tests passed。
+    - `gate:lint`: PASS / CACHE HIT。Prettier Markdown check 含む。
+    - `gate:build`: PASS / CACHE HIT。frontend type check and build。
+    - `gate:test`: PASS / CACHE HIT。433 tests passed。
 - 追加 acceptance test は作成していない。既存追加テストが `"off"` 維持、対象腕限定、dry-run unavailable fallback、bone 欠損 fallback、Debug Console config path を直接確認しており、本タスクの受け入れ条件に対するカバレッジは十分。
 - 残リスク: 実 VRM 個体差を含む視覚確認は gate の範囲外。ただし本タスクは developer flag の限定実験経路であり、blocking ではない。
 

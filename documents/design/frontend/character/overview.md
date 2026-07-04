@@ -68,6 +68,22 @@
     - motion metrics は saved `frame.intent` から `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount` を計算する。invalid intent は `intentInvalidFrameCount` だけに数え、他の Phase 9 metrics では valid intent sample が無い場合 `not_available` にする。
     - 完成版 `AvatarMotionProfile` は `VRMScene.getAvatarMotionProfile()` / `VRMCharacterManager.getAvatarMotionProfile()` から debug 用 clone として公開する。Debug Console と Phase 6 snapshot の `avatarMotionProfile` は `MinimalAvatarMotionProfile` のまま維持する。
 
+## 本番組み込み段階
+
+roadmap で検証した motion pipeline は、現在設計では次の順に本番組み込みへ進める。各段階の entry / exit criteria、required artifacts、required metrics status、required manual verification、rollback condition は [motion.md](motion.md) を正本にし、Hand / Face ROI、degradation、camera quality が gate に与える条件は [tracking.md](tracking.md) を正本にする。
+
+```text
+roadmap / research
+  -> observe-only pipeline
+  -> production composer dry-run
+  -> arm application flag
+  -> torso / shoulder migration
+  -> semantic / finger application
+  -> full setNormalizedPose(finalPose) application
+```
+
+段階を飛ばして `VRMCharacterManager.update()` の書き込み順序を全面移行しない。metric が pass でも、複数 VRM の手動確認、degradation / ROI / camera quality の説明 artifact、rollback 条件が揃うまで次段の production flag は開けない。
+
 ## Talk Mode Boundary
 
 | 観点     | `chat`                             | `sincro`                                |
