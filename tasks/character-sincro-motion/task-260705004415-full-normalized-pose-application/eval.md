@@ -46,9 +46,9 @@ PASS
 - `git status --short`（評価 worktree）: clean。
 - `git rev-parse HEAD`: `769ecd60ceca3ae3c884f0064dc14a239ee0e47a`。
 - `npm run gate`（評価 worktree cwd）: PASS / cache hit。
-  - `gate:lint`: CACHE HIT / PASS。
-  - `gate:build`: CACHE HIT / PASS。既存 Vite chunk warning のみ。
-  - `gate:test`: CACHE HIT / PASS。frontend tests 462 passed。
+    - `gate:lint`: CACHE HIT / PASS。
+    - `gate:build`: CACHE HIT / PASS。既存 Vite chunk warning のみ。
+    - `gate:test`: CACHE HIT / PASS。frontend tests 462 passed。
 - 追加の検証テストは作成していない。前回 blocking は source inspection と実装者追加 unit test で確認した。
 - カバレッジ評価: mode off rollback clear、unavailable rollback clear、partial pose 排除、current finalPose
   非適用、staged writer 順序、Debug Console summary、comment audit の主要条件は unit test と source inspection で

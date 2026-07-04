@@ -17,6 +17,24 @@ production 表示へ入る。
 - `keep-controller-owned`: 現行 controller / retargeter 所有を維持する候補。
 - `needs-decision`: 所有境界を追加判断してから移行する候補。
 
+## Production Cleanup Status
+
+`task-260705004418-production-motion-rollback-and-cleanup` 時点では、full normalized pose application の
+PASS artifact を確認済みだが、段階 rollback hook は Debug Console 限定で残す。残す flag は
+`composerArmApplicationMode`、`composerTorsoShoulderApplicationMode`、`composerSemanticFingerApplicationMode`、
+`fullNormalizedPoseApplicationMode` であり、通常設定 UI、URL query、env、backend API、保存設定 contract へは
+広げない。
+
+削除対象として production code から消した writer / fallback path はない。理由は、P0 replay と実機 visual QA の
+captured artifact がこの cleanup worktree には無く、arm、torso / shoulder、semantic / finger、full finalPose の
+各段階へ戻す復旧 hook をまだ運用手順として保持する必要があるためである。stale finalPose の昇格は禁止のまま維持し、
+`full_normalized_pose_application_*` warning は Debug Console の rollback 判定入口として残す。
+
+次に削除する場合は、cleanup inventory の削除条件を満たしたうえで、この map の row 8 / 8.5 / 13、Debug Console
+controls、composer comparison / summary metadata、関連 unit test を同一変更で更新する。head / neck / leg /
+expression / root position は引き続き full upper body finalPose の所有対象外であり、public WebRTC / backend 契約は
+この map の対象外で変更しない。
+
 ## Runtime Order Map
 
 | 順序 | 書き手                                                                                                              | 対象 bone / expression / root position                                                                                                                                                                                                                                                                                                                                                    | 入力 snapshot                                                                                                                                                                                             | 既存 fallback                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `sincro` での有効条件                                                                                                                                                                                                                                                                                                                                                   | `chat` での有効条件                                                                                                                                                                                                                                                                                             | 分類                    |

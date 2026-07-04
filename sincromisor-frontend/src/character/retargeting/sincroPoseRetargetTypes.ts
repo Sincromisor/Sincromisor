@@ -11,6 +11,8 @@ export type SincroPoseArmIkMode = "feature_only" | "screen_space_ik" | "world_3d
  * `"off"` は既存 direct write と同じ表示経路を保つ安定既定値である。その他の mode は
  * Debug Console / motion-debug からの実験用で、対象腕の upperArm / lowerArm / hand だけを
  * dry-run `available` frame の `finalPose` から適用する。通常設定 UI や保存設定の contract ではない。
+ * 所有者は motion runtime であり、full application を唯一の production path にする後続 task で
+ * 段階 rollback が不要と判断できた時に削除対象へ移す。
  */
 export type ComposerArmApplicationMode = "off" | "left" | "right" | "both";
 
@@ -21,6 +23,8 @@ export type ComposerArmApplicationMode = "off" | "left" | "right" | "both";
  * そのまま使う rollback 既定値である。`"composer"` は direct write を行わず、同じ motion input から作った
  * composer layer の `finalPose` を torso / shoulder と missing shoulder fallback の upperArm だけへ適用する。
  * arm application flag とは独立しており、head / neck / leg / expression / finger は対象外に固定する。
+ * 所有者は motion runtime であり、torso / shoulder の direct controller rollback を廃止できる実機確認が
+ * 揃うまで Debug Console 限定の復旧 hook として残す。
  */
 export type ComposerTorsoShoulderApplicationMode = "direct" | "composer";
 
@@ -31,6 +35,8 @@ export type ComposerTorsoShoulderApplicationMode = "direct" | "composer";
  * valid な frame だけ semantic / finger layer を dry-run composer へ追加する。`"off"` は arm / torso
  * flag とは独立に semantic / finger layer だけを外し、既存 tracking / torso composer 検証を維持する。
  * 通常設定 UI や永続設定 contract には広げない。
+ * 所有者は motion runtime であり、semantic / finger regression の rollback 手順が不要になった時点で
+ * flag と `semantic_finger_application_off` warning を同時に削除する。
  */
 export type ComposerSemanticFingerApplicationMode = "off" | "composer";
 
@@ -40,6 +46,8 @@ export type ComposerSemanticFingerApplicationMode = "off" | "composer";
  * `"off"` は arm / torso / shoulder / semantic / finger の段階別適用を維持する既定値である。
  * `"upper_body"` は dry-run が同一 frame で `available` result を返す場合だけ、upper body finalPose を
  * `VRMCharacterManager.update()` から 1 回適用する。通常設定 UI や永続設定 contract には広げない。
+ * 所有者は motion runtime であり、full application を常時有効化しても P0 replay と複数 VRM 実機確認が
+ * 継続 PASS するまでは、段階別 path へ戻す rollback hook として残す。
  */
 export type FullNormalizedPoseApplicationMode = "off" | "upper_body";
 
@@ -109,6 +117,7 @@ export type SincroPoseRetargetConfig = {
      * availability 確認や fallback warning 生成も行わない。`"left"` / `"right"` / `"both"` は
      * dry-run が `available` の frame だけ対象腕の upperArm / lowerArm / hand を composer `finalPose`
      * の quaternion で上書きする実験経路であり、torso / shoulder / finger / head / expression は対象外。
+     * Debug Console 限定の rollback hook であり、runtime ownership map の arm cleanup が完了したら削除する。
      */
     composerArmApplicationMode: ComposerArmApplicationMode;
     /**
@@ -118,6 +127,7 @@ export type SincroPoseRetargetConfig = {
      * `"composer"` は `AvatarMotionProfile.torso.distribution` と optional bone capability を正本にして、
      * selected torso / shoulder bone だけを composer `finalPose` から上書きする。arm flag の mode は
      * この値を暗黙に変更しない。
+     * Debug Console 限定の rollback hook であり、direct torso controller の復旧手順を廃止できるまで残す。
      */
     composerTorsoShoulderApplicationMode: ComposerTorsoShoulderApplicationMode;
     /**
@@ -126,6 +136,7 @@ export type SincroPoseRetargetConfig = {
      * 既定の `"composer"` は production semantic/finger application stage を有効にし、valid snapshot が
      * 揃わない frame では warning 付きで layer を追加しない。`"off"` は MotionIntent / Hand 推定自体は
      * observe-only に残したまま composer input から semantic / finger layer だけを外す。
+     * Debug Console 限定の rollback hook であり、semantic / finger layer の rollback 不要化と同時に削除する。
      */
     composerSemanticFingerApplicationMode: ComposerSemanticFingerApplicationMode;
     /**
@@ -135,6 +146,7 @@ export type SincroPoseRetargetConfig = {
      * 暗黙に変更しない。`"upper_body"` は dry-run が current frame の available result を持つ場合だけ
      * `setNormalizedPose(finalPose)` を 1 回呼び、unavailable / invalid / missing profile では stale result を
      * 昇格せず段階別 path へ戻す。
+     * Debug Console 限定の rollback hook であり、full application の常時有効化 task までは削除しない。
      */
     fullNormalizedPoseApplicationMode: FullNormalizedPoseApplicationMode;
 };
