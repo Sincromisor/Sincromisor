@@ -1,0 +1,446 @@
+[
+  {
+    "schemaVersion": "sincro.composer-comparison-summary.v1",
+    "fixtureId": "neutral-10s",
+    "baselineSource": "not-captured",
+    "status": "comparison_unavailable",
+    "severity": "warn",
+    "metrics": {
+      "composerAngleDeltaDeg": {
+        "key": "composerAngleDeltaDeg",
+        "value": null,
+        "unit": "deg",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 12, "warn": 25, "fail": 45 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerAngularVelocitySpike": {
+        "key": "composerAngularVelocitySpike",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 2, "fail": 5 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerOwnedBoneConflictCount": {
+        "key": "composerOwnedBoneConflictCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 0, "fail": 0 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerSuppressionCount": {
+        "key": "composerSuppressionCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 30, "fail": 120 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerMissingPoseFrameCount": {
+        "key": "composerMissingPoseFrameCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 1, "fail": 3 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      }
+    },
+    "warnings": [
+      "Baseline source is not-captured; angle delta was not synthesized."
+    ],
+    "unavailableReason": "baseline_not_captured",
+    "generatedAtIso": "2026-07-04T00:00:00.000Z",
+    "inputs": {
+      "baselineManifestPath": "tasks/character-sincro-motion/task-260629225919-production-sincro-motion-replay-baselines/artifacts/production-sincro-baseline-manifest.md",
+      "replayLog": { "available": false },
+      "composerDryRunResult": { "available": false }
+    }
+  },
+  {
+    "schemaVersion": "sincro.composer-comparison-summary.v1",
+    "fixtureId": "single-arm-slow-raise",
+    "baselineSource": "not-captured",
+    "status": "comparison_unavailable",
+    "severity": "warn",
+    "metrics": {
+      "composerAngleDeltaDeg": {
+        "key": "composerAngleDeltaDeg",
+        "value": null,
+        "unit": "deg",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 12, "warn": 25, "fail": 45 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerAngularVelocitySpike": {
+        "key": "composerAngularVelocitySpike",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 2, "fail": 5 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerOwnedBoneConflictCount": {
+        "key": "composerOwnedBoneConflictCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 0, "fail": 0 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerSuppressionCount": {
+        "key": "composerSuppressionCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 30, "fail": 120 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerMissingPoseFrameCount": {
+        "key": "composerMissingPoseFrameCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 1, "fail": 3 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      }
+    },
+    "warnings": [
+      "Baseline source is not-captured; angle delta was not synthesized."
+    ],
+    "unavailableReason": "baseline_not_captured",
+    "generatedAtIso": "2026-07-04T00:00:00.000Z",
+    "inputs": {
+      "baselineManifestPath": "tasks/character-sincro-motion/task-260629225919-production-sincro-motion-replay-baselines/artifacts/production-sincro-baseline-manifest.md",
+      "replayLog": { "available": false },
+      "composerDryRunResult": { "available": false }
+    }
+  },
+  {
+    "schemaVersion": "sincro.composer-comparison-summary.v1",
+    "fixtureId": "both-arms-slow-raise",
+    "baselineSource": "not-captured",
+    "status": "comparison_unavailable",
+    "severity": "warn",
+    "metrics": {
+      "composerAngleDeltaDeg": {
+        "key": "composerAngleDeltaDeg",
+        "value": null,
+        "unit": "deg",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 12, "warn": 25, "fail": 45 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerAngularVelocitySpike": {
+        "key": "composerAngularVelocitySpike",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 2, "fail": 5 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerOwnedBoneConflictCount": {
+        "key": "composerOwnedBoneConflictCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 0, "fail": 0 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerSuppressionCount": {
+        "key": "composerSuppressionCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 30, "fail": 120 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerMissingPoseFrameCount": {
+        "key": "composerMissingPoseFrameCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 1, "fail": 3 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      }
+    },
+    "warnings": [
+      "Baseline source is not-captured; angle delta was not synthesized."
+    ],
+    "unavailableReason": "baseline_not_captured",
+    "generatedAtIso": "2026-07-04T00:00:00.000Z",
+    "inputs": {
+      "baselineManifestPath": "tasks/character-sincro-motion/task-260629225919-production-sincro-motion-replay-baselines/artifacts/production-sincro-baseline-manifest.md",
+      "replayLog": { "available": false },
+      "composerDryRunResult": { "available": false }
+    }
+  },
+  {
+    "schemaVersion": "sincro.composer-comparison-summary.v1",
+    "fixtureId": "hand-out-and-return",
+    "baselineSource": "not-captured",
+    "status": "comparison_unavailable",
+    "severity": "warn",
+    "metrics": {
+      "composerAngleDeltaDeg": {
+        "key": "composerAngleDeltaDeg",
+        "value": null,
+        "unit": "deg",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 12, "warn": 25, "fail": 45 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerAngularVelocitySpike": {
+        "key": "composerAngularVelocitySpike",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 2, "fail": 5 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerOwnedBoneConflictCount": {
+        "key": "composerOwnedBoneConflictCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 0, "fail": 0 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerSuppressionCount": {
+        "key": "composerSuppressionCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 30, "fail": 120 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerMissingPoseFrameCount": {
+        "key": "composerMissingPoseFrameCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 1, "fail": 3 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      }
+    },
+    "warnings": [
+      "Baseline source is not-captured; angle delta was not synthesized."
+    ],
+    "unavailableReason": "baseline_not_captured",
+    "generatedAtIso": "2026-07-04T00:00:00.000Z",
+    "inputs": {
+      "baselineManifestPath": "tasks/character-sincro-motion/task-260629225919-production-sincro-motion-replay-baselines/artifacts/production-sincro-baseline-manifest.md",
+      "replayLog": { "available": false },
+      "composerDryRunResult": { "available": false }
+    }
+  },
+  {
+    "schemaVersion": "sincro.composer-comparison-summary.v1",
+    "fixtureId": "arms-cross",
+    "baselineSource": "not-captured",
+    "status": "comparison_unavailable",
+    "severity": "warn",
+    "metrics": {
+      "composerAngleDeltaDeg": {
+        "key": "composerAngleDeltaDeg",
+        "value": null,
+        "unit": "deg",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 12, "warn": 25, "fail": 45 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerAngularVelocitySpike": {
+        "key": "composerAngularVelocitySpike",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 2, "fail": 5 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerOwnedBoneConflictCount": {
+        "key": "composerOwnedBoneConflictCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 0, "fail": 0 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerSuppressionCount": {
+        "key": "composerSuppressionCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 30, "fail": 120 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerMissingPoseFrameCount": {
+        "key": "composerMissingPoseFrameCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 1, "fail": 3 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      }
+    },
+    "warnings": [
+      "Baseline source is not-captured; angle delta was not synthesized."
+    ],
+    "unavailableReason": "baseline_not_captured",
+    "generatedAtIso": "2026-07-04T00:00:00.000Z",
+    "inputs": {
+      "baselineManifestPath": "tasks/character-sincro-motion/task-260629225919-production-sincro-motion-replay-baselines/artifacts/production-sincro-baseline-manifest.md",
+      "replayLog": { "available": false },
+      "composerDryRunResult": { "available": false }
+    }
+  },
+  {
+    "schemaVersion": "sincro.composer-comparison-summary.v1",
+    "fixtureId": "fast-wave",
+    "baselineSource": "not-captured",
+    "status": "comparison_unavailable",
+    "severity": "warn",
+    "metrics": {
+      "composerAngleDeltaDeg": {
+        "key": "composerAngleDeltaDeg",
+        "value": null,
+        "unit": "deg",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 12, "warn": 25, "fail": 45 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerAngularVelocitySpike": {
+        "key": "composerAngularVelocitySpike",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 2, "fail": 5 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerOwnedBoneConflictCount": {
+        "key": "composerOwnedBoneConflictCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 0, "fail": 0 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerSuppressionCount": {
+        "key": "composerSuppressionCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 30, "fail": 120 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      },
+      "composerMissingPoseFrameCount": {
+        "key": "composerMissingPoseFrameCount",
+        "value": null,
+        "unit": "count",
+        "status": "not_available",
+        "severity": "warn",
+        "direction": "lower_is_better",
+        "threshold": { "pass": 0, "warn": 1, "fail": 3 },
+        "sampleCount": 0,
+        "unavailableReason": "baseline_not_captured"
+      }
+    },
+    "warnings": [
+      "Baseline source is not-captured; angle delta was not synthesized."
+    ],
+    "unavailableReason": "baseline_not_captured",
+    "generatedAtIso": "2026-07-04T00:00:00.000Z",
+    "inputs": {
+      "baselineManifestPath": "tasks/character-sincro-motion/task-260629225919-production-sincro-motion-replay-baselines/artifacts/production-sincro-baseline-manifest.md",
+      "replayLog": { "available": false },
+      "composerDryRunResult": { "available": false }
+    }
+  }
+]

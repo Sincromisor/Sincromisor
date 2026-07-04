@@ -4,6 +4,26 @@
  */
 // motion metrics の facade。保存 contract は sincro.motion-metrics.v1 と既存 export 名を境界にする。
 // 実装は metric group module へ分割し、この facade では計算式・parser・threshold 判定を扱わない。
+
+export type {
+    ComposerComparisonMetricFrameInput,
+    ComposerComparisonMetricFrameResult,
+    ComposerComparisonMetricKey,
+    ComposerComparisonMetricResult,
+    ComposerComparisonSummary,
+    ComposerComparisonSummaryConfig,
+    ComposerComparisonSummaryInputs,
+    ComposerComparisonSummaryStatus,
+    ComposerComparisonUnavailableReason,
+} from "./motionComposerComparisonMetrics";
+export {
+    COMPOSER_COMPARISON_METRIC_KEYS,
+    COMPOSER_COMPARISON_SUMMARY_SCHEMA_VERSION,
+    calculateComposerComparisonMetrics,
+    calculateComposerComparisonSummary,
+    createComposerComparisonUnavailableSummary,
+    parseComposerComparisonFrameInput,
+} from "./motionComposerComparisonMetrics";
 export { compareMotionMetricSummaries } from "./motionMetricComparison";
 export { calculateMotionMetricSummary } from "./motionMetricSummary";
 export {
