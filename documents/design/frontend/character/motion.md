@@ -537,7 +537,10 @@ controller 更新順に置く。`fullNormalizedPoseApplicationMode` は `"off"` 
 を持つ場合だけ `vrm.humanoid.setNormalizedPose(finalPose)` を 1 回呼び、その frame の `ArmBoneController` と
 `CharacterMotionOrchestrator` による upper body direct / selected-bone write は呼ばない。dry-run が
 `not_ready`、`invalid_input`、`missing_profile`、または `available` でも result 欠損の場合は stale finalPose を
-current result に昇格せず、段階別 path へ rollback する。
+current result に昇格せず、段階別 path へ rollback する。full stage が所有する upper body / finger bone は
+three-vrm の部分 pose 残留を避けるため毎 frame identity quaternion で埋め、`finalPose` に無い所有 bone も
+neutral として明示する。前回 full application が適用済みの rollback frame では、この identity pose を
+段階別 writer の前に 1 回適用してから direct path へ戻り、finger curl / hand pose の残留を消す。
 
 full application の Debug Console summary は `full <mode> applied` または
 `full <mode> rollback <reason>` を composer dry-run summary と同じ行に表示する。rollback reason は

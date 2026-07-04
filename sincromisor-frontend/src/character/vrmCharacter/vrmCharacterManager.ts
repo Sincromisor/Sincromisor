@@ -139,6 +139,7 @@ export class VRMCharacterManager {
         DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerSemanticFingerApplicationMode;
     private fullNormalizedPoseApplicationMode =
         DEFAULT_SINCRO_POSE_RETARGET_CONFIG.fullNormalizedPoseApplicationMode;
+    private fullNormalizedPoseApplicationApplied = false;
     private sincroMotionPipelineState: SincroMotionPipelineState =
         createDefaultSincroMotionPipelineState();
     private latestBehaviorSnapshot?: CharacterBehaviorSnapshot;
@@ -219,6 +220,7 @@ export class VRMCharacterManager {
         this.armBoneController.update(this.motionElapsedSeconds);
         this.sincroPoseRetargeter.attachVrm(vrm);
         this.composerDryRun.reset();
+        this.fullNormalizedPoseApplicationApplied = false;
         const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
         DebugConsoleManager.getManager().updateAvatarMotionProfile(
             avatarMotionProfile ? toMinimalAvatarMotionProfile(avatarMotionProfile) : undefined,
@@ -309,11 +311,16 @@ export class VRMCharacterManager {
         this.eyeBehaviorController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.mouthMorphController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.emotionMorphController?.update(this.latestBehaviorSnapshot);
-        const fullApplicationWillApply = canApplyFullNormalizedPoseApplication(
+        const fullApplication = applyFullNormalizedPoseApplication(
+            this.vrm,
             this.fullNormalizedPoseApplicationMode,
             composerDryRun,
+            {
+                clearPreviousApplication: this.fullNormalizedPoseApplicationApplied,
+            },
         );
-        const armUpdate = fullApplicationWillApply
+        this.fullNormalizedPoseApplicationApplied = fullApplication.applied;
+        const armUpdate = fullApplication.applied
             ? undefined
             : this.armBoneController?.update(
                   this.motionElapsedSeconds,
@@ -324,11 +331,6 @@ export class VRMCharacterManager {
                       composerDryRun,
                   },
               );
-        const fullApplication = applyFullNormalizedPoseApplication(
-            this.vrm,
-            this.fullNormalizedPoseApplicationMode,
-            composerDryRun,
-        );
         const observedComposerDryRun = annotateFullNormalizedPoseApplication(
             appendComposerApplicationWarnings(composerDryRun, [
                 ...(armUpdate?.composerArmApplicationWarnings ?? []),
@@ -460,11 +462,42 @@ export class VRMCharacterManager {
     }
 }
 
+/**
+ * Outcome of one full normalized pose application attempt.
+ *
+ * The result is a frame-local caller contract: `applied=true` means the VRM already received the
+ * composer-owned upper-body pose and direct upper-body writers must be skipped; `applied=false`
+ * means callers should run the staged fallback path and use `rollbackReason` / `warnings` for
+ * Debug Console visibility. The failure conditions are explicit mode off, missing VRM, non-
+ * available dry-run status, and available dry-run frames that lack a result.
+ */
 export type FullNormalizedPoseApplicationResult = {
+    /**
+     * The currently selected runtime mode. Callers should surface this with rollback state so a
+     * disabled full application can be distinguished from an unavailable composer frame.
+     */
     mode: FullNormalizedPoseApplicationMode;
+    /**
+     * True only when the current frame's available composer result was applied to the VRM. When
+     * true, callers must skip upper-body direct writers in the same frame to avoid double
+     * application.
+     */
     applied: boolean;
+    /**
+     * Present when the helper deliberately did not apply the current composer result. Reasons cover
+     * mode off, missing VRM, non-available dry-run status, and available frames without a result.
+     */
     rollbackReason?: string;
+    /**
+     * Warning codes that should be appended to Debug Console composer summaries. Mode `off` is a
+     * rollback reason but not a warning; runtime failure conditions and unavailable frames are
+     * warnings.
+     */
     warnings: string[];
+};
+
+type FullNormalizedPoseApplicationOptions = {
+    clearPreviousApplication?: boolean;
 };
 
 /**
@@ -478,6 +511,7 @@ export function applyFullNormalizedPoseApplication(
     vrm: VRM | undefined,
     mode: FullNormalizedPoseApplicationMode,
     composerDryRun: SincroVrmPoseComposerDryRunResult,
+    options: FullNormalizedPoseApplicationOptions = {},
 ): FullNormalizedPoseApplicationResult {
     if (mode === "off") {
         return {
@@ -489,6 +523,9 @@ export function applyFullNormalizedPoseApplication(
     }
     const rollbackReason = fullNormalizedPoseApplicationRollbackReason(vrm, composerDryRun);
     if (rollbackReason) {
+        if (vrm && options.clearPreviousApplication) {
+            vrm.humanoid.setNormalizedPose(toIdentityVrmPose());
+        }
         return {
             mode,
             applied: false,
@@ -517,15 +554,6 @@ export function applyFullNormalizedPoseApplication(
     return { mode, applied: true, warnings: [] };
 }
 
-function canApplyFullNormalizedPoseApplication(
-    mode: FullNormalizedPoseApplicationMode,
-    composerDryRun: SincroVrmPoseComposerDryRunResult,
-): boolean {
-    return (
-        mode === "upper_body" && composerDryRun.status === "available" && !!composerDryRun.result
-    );
-}
-
 function fullNormalizedPoseApplicationRollbackReason(
     vrm: VRM | undefined,
     composerDryRun: SincroVrmPoseComposerDryRunResult,
@@ -545,16 +573,21 @@ function fullNormalizedPoseApplicationRollbackReason(
 function toVrmPose(finalPose: VrmNormalizedLocalPose): VRMPose {
     const pose: VRMPose = {};
     for (const bone of FULL_NORMALIZED_POSE_APPLICATION_BONES) {
-        const quaternion = finalPose[bone];
-        if (quaternion === undefined) {
-            continue;
-        }
-        pose[bone] = { rotation: toVrmPoseRotation(quaternion) };
+        pose[bone] = { rotation: toVrmPoseRotation(finalPose[bone]) };
     }
     return pose;
 }
 
-function toVrmPoseRotation(quaternion: VrmPoseQuaternion): [number, number, number, number] {
+function toIdentityVrmPose(): VRMPose {
+    return toVrmPose({});
+}
+
+function toVrmPoseRotation(
+    quaternion: VrmPoseQuaternion | undefined,
+): [number, number, number, number] {
+    if (!quaternion) {
+        return [0, 0, 0, 1];
+    }
     return [quaternion.x, quaternion.y, quaternion.z, quaternion.w];
 }
 
