@@ -445,8 +445,11 @@ export class VRMCharacterManager {
             /*
                 feature flag の切替 frame では、前 mode で生成された composer final pose を
                 angular velocity clamp の previous として使わず、finger previous hold も破棄する。
-                適用自体は selected bone / full normalized pose の上書きなので残留 state を持たないが、
-                dry-run の previousFinalPose は表示差分に影響する。
+                full normalized pose application だけは pose 値ではなく「前 frame に full stage が
+                upper body / finger を所有した」という lifecycle state を持つ。mode off や unavailable
+                rollback へ戻る次の update では、その state を見て staged writer の前に identity clear を
+                入れ、direct path が所有しない finger pose の残留を消す。そのためここでは
+                fullNormalizedPoseApplicationApplied を reset しない。
             */
             this.composerDryRun.reset();
             this.composerArmApplicationMode = nextComposerArmApplicationMode;
@@ -514,6 +517,9 @@ export function applyFullNormalizedPoseApplication(
     options: FullNormalizedPoseApplicationOptions = {},
 ): FullNormalizedPoseApplicationResult {
     if (mode === "off") {
+        if (vrm && options.clearPreviousApplication) {
+            vrm.humanoid.setNormalizedPose(toIdentityVrmPose());
+        }
         return {
             mode,
             applied: false,
