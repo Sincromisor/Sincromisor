@@ -320,6 +320,9 @@ export function toMinimalAvatarMotionProfile(
             rightLowerArmLength: profile.metrics.lowerArmLength.right,
             headSize: profile.metrics.headSize,
         },
+        torso: {
+            distribution: { ...profile.torso.distribution },
+        },
         solverDefaults: {
             defaultReachScale: profile.arm.reachScale,
             depthCompression: profile.arm.depthCompression,

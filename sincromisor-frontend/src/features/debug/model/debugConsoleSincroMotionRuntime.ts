@@ -122,6 +122,9 @@ export function updatePoseRetargetConfig(
         armIkMode: config.armIkMode ?? current.armIkMode,
         composerArmApplicationMode:
             config.composerArmApplicationMode ?? current.composerArmApplicationMode,
+        composerTorsoShoulderApplicationMode:
+            config.composerTorsoShoulderApplicationMode ??
+            current.composerTorsoShoulderApplicationMode,
     };
 }
 

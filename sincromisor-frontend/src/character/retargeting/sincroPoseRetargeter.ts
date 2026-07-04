@@ -29,6 +29,7 @@ import {
 
 export type {
     ComposerArmApplicationMode,
+    ComposerTorsoShoulderApplicationMode,
     SincroPoseArmIkMode,
     SincroPoseIkMode,
     SincroPoseRetargetConfig,
