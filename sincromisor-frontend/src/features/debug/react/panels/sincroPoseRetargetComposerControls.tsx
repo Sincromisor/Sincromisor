@@ -15,7 +15,9 @@ type SincroPoseRetargetComposerControlsProps = {
  * Pose retarget の composer application rollback flag 群を developer panel にだけ表示する。
  *
  * arm、torso / shoulder、semantic / finger は独立 flag として扱い、通常設定や保存設定 contract へは
- * 広げない。各 select は DebugConsoleManager の既存 pose retarget config path だけを通して runtime へ反映する。
+ * 広げない。full normalized pose application も同じ Debug Console 限定の復旧 hook であり、各 select は
+ * DebugConsoleManager の既存 pose retarget config path だけを通して runtime へ反映する。
+ * 所有者は motion runtime で、段階 rollback flag を削除する場合はこの panel と snapshot pick を同時に消す。
  */
 export function SincroPoseRetargetComposerControls({
     poseRetarget,

@@ -549,6 +549,15 @@ full application の Debug Console summary は `full <mode> applied` または
 head / neck / leg / expression は full upper body finalPose の所有対象に追加しない。Face / Eye / Mouth /
 Emotion controller と `LegBoneController` は従来どおり更新し、root position も normalized pose の対象外に残す。
 
+production cleanup 時点では、段階 rollback 用の `composerArmApplicationMode`、
+`composerTorsoShoulderApplicationMode`、`composerSemanticFingerApplicationMode`、
+`fullNormalizedPoseApplicationMode` は通常設定 UI / URL query / env / backend API / 保存設定 contract へ広げず、
+Debug Console 限定の復旧 hook として残す。所有者は motion runtime であり、削除条件は
+`production-motion-cleanup-inventory.md` を正本にする。削除時は runtime ownership map、Debug Console の
+snapshot / controls、composer summary の rollback reason、関連 unit test を同じ変更で外す。
+debug-only の composer comparison / dry-run summary は、P0 replay と実機 visual QA で rollback 不要化が確認
+できるまで残す。これらは public WebRTC / backend 契約や DataChannel payload ではない。
+
 補助リンク: [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)、[torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)、[optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)。
 
 ## IK Solver Policy
