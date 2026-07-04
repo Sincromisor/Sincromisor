@@ -10,16 +10,36 @@ import { createSemanticMotionPoseLayer } from "../motionIntent/semanticMotionPos
 import type { ComposerSemanticFingerApplicationMode } from "../retargeting/sincroPoseRetargetTypes";
 import type { VrmPoseLayer } from "../vrmPose/vrmPoseTypes";
 
+/**
+ * production composer に semantic / finger layer を追加するための snapshot-only 入力。
+ *
+ * `intent` は parser 境界で検証されるため `unknown` のまま受け、失敗時は warning 付きで layer を生成しない。
+ * `hand` は低次元 `SincroHandMotionSnapshot` に限定し、Gesture Recognizer raw result、MediaPipe raw landmark、
+ * VRM Object3D、raw bone node はこの境界へ入れない。
+ */
 export type SincroVrmPoseComposerSemanticFingerInput = {
     mode: ComposerSemanticFingerApplicationMode;
     intent?: unknown;
     hand?: SincroHandMotionSnapshot;
 };
 
+/**
+ * finger previous hold だけを composer dry-run service が frame 間で保持する state。
+ *
+ * profile / rollback flag / VRM lifecycle の切替時は `SincroVrmPoseComposerDryRunService.reset()` で破棄する。
+ * semantic preset は前回 state を参照せず、Hand 欠損時にも previous を layer として昇格しない。
+ */
 export type SincroVrmPoseComposerSemanticFingerState = {
     previousFinger: Partial<Record<"left" | "right", FingerCurlPoseDebugSnapshot>>;
 };
 
+/**
+ * semantic / finger layer 生成の observable result。
+ *
+ * `layers` は composer へ渡せる layer だけを含み、invalid intent、Minimal profile、Hand 欠損、missing
+ * finger chain などの抑制理由は `warnings` に短い診断文字列として残す。`previousFinger` は次 frame の
+ * short hold 用 state であり、result が空でも caller が lifecycle に応じて保持 / reset を判断する。
+ */
 export type SincroVrmPoseComposerSemanticFingerLayerResult = {
     layers: VrmPoseLayer[];
     warnings: string[];

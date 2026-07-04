@@ -18,6 +18,12 @@ import type { ArmMotionIntent, MotionIntentState } from "./motionIntentState";
 const FINGER_CURL_DEBUG_SCHEMA_VERSION = "sincro.phase9-finger-curl-pose.v1" as const;
 const PREVIOUS_HOLD_MS = 250;
 
+/**
+ * 片手分の finger curl layer 生成入力。
+ *
+ * Hand snapshot は低次元 features のみを読み、raw landmark は参照しない。`previous` は同じ side の
+ * debug snapshot だけを short hold に使い、timestamp が逆行または `PREVIOUS_HOLD_MS` 超過の場合は破棄する。
+ */
 export type FingerCurlPoseLayerInput = {
     side: FingerCurlSide;
     hand: SincroHandMotionSnapshot;
@@ -27,6 +33,12 @@ export type FingerCurlPoseLayerInput = {
     previous?: FingerCurlPoseDebugSnapshot;
 };
 
+/**
+ * finger group ごとの curl 推定結果。
+ *
+ * `source` は保守上重要な fallback chain で、hand curl feature、openness、intent override、
+ * previous hold、default の順に解決される。warning は mapping / profile capability 由来の診断だけを入れる。
+ */
 export type FingerCurlGroupState = {
     group: FingerCurlGroup;
     curl: number;
@@ -34,6 +46,12 @@ export type FingerCurlGroupState = {
     warnings: string[];
 };
 
+/**
+ * Phase 9 finger curl の replay 用 debug snapshot。
+ *
+ * `ownedBones` は profile capability と distribution で実際に layer が所有した bone だけを含む。
+ * reduced finger chain では missing-chain warning を残し、存在しない intermediate / distal bone を所有しない。
+ */
 export type FingerCurlPoseDebugSnapshot = {
     schemaVersion: typeof FINGER_CURL_DEBUG_SCHEMA_VERSION;
     side: FingerCurlSide;
@@ -43,11 +61,24 @@ export type FingerCurlPoseDebugSnapshot = {
     warnings: string[];
 };
 
+/**
+ * 片手分の optional finger curl layer と debug snapshot。
+ *
+ * capability / distribution の結果 owned bone が 0 の場合は `layer` を返さず、debug snapshot だけを返す。
+ * caller は missing chain warning と owned bone list から、composer conflict が起きていないことを確認できる。
+ */
 export type FingerCurlPoseLayerResult = {
     layer?: VrmPoseLayer;
     debug: FingerCurlPoseDebugSnapshot;
 };
 
+/**
+ * 片手分の finger curl を VrmPoseComposer layer に変換する。
+ *
+ * curl source は hand feature を優先し、欠損時だけ openness / previous hold / default に落とす。
+ * pointing、thumbs-up、peace などの intent override は curl 値の上限 / 下限だけを調整し、VRM runtime へ
+ * 直接書き込む副作用はない。
+ */
 export function createFingerCurlPoseLayer(
     input: FingerCurlPoseLayerInput,
 ): FingerCurlPoseLayerResult {
@@ -85,6 +116,12 @@ export function createFingerCurlPoseLayer(
     };
 }
 
+/**
+ * 左右の finger curl layer をまとめて生成する。
+ *
+ * `previous` は side ごとに分離して渡し、片手欠損や reduced chain の warning は各 debug snapshot に残す。
+ * 返す `layers` は実際に owned bone を持つ side だけで、空配列でも debug は左右分を必ず返す。
+ */
 export function createFingerCurlPoseLayers(
     input: Omit<FingerCurlPoseLayerInput, "side" | "previous"> & {
         previous?: Partial<Record<FingerCurlSide, FingerCurlPoseDebugSnapshot>>;
