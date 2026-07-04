@@ -91,7 +91,11 @@ function createRuntimeSnapshot(frame: typeof NEUTRAL_POSE_FRAME): unknown {
     };
 }
 
-function createFinalPoseSnapshot(dryRun: SincroVrmPoseComposerDryRunResult): unknown {
+function createDryRunResultSnapshot(dryRun: SincroVrmPoseComposerDryRunResult): unknown {
+    return structuredClone(dryRun);
+}
+
+function createLegacyFinalPoseSnapshot(dryRun: SincroVrmPoseComposerDryRunResult): unknown {
     if (dryRun.result === undefined) {
         throw new Error("Test dry-run result should be available.");
     }
@@ -190,7 +194,7 @@ describe("parseComposerComparisonFrameInput", () => {
                     poseRetarget: createRuntimeSnapshot(retarget),
                     poseRetargetRuntime: createRuntimeSnapshot(retarget),
                 },
-                finalPose: createFinalPoseSnapshot(createComposerDryRun()),
+                finalPose: createDryRunResultSnapshot(createComposerDryRun()),
                 mediaTimeMs: 250,
             }),
         );
@@ -205,10 +209,49 @@ describe("parseComposerComparisonFrameInput", () => {
         const oldSlotOnly = parseComposerComparisonFrameInput(
             createFrame({
                 solver: { poseRetarget: createRuntimeSnapshot(retarget) },
-                finalPose: createFinalPoseSnapshot(createComposerDryRun()),
+                finalPose: createDryRunResultSnapshot(createComposerDryRun()),
             }),
         );
         expect(oldSlotOnly.retarget).toBeUndefined();
+    });
+
+    it("treats status-bearing production dry-run snapshots as composer input", () => {
+        const retarget = createRetargetFrame();
+        const parsed = parseComposerComparisonFrameInput(
+            createFrame({
+                solver: { poseRetargetRuntime: createRuntimeSnapshot(retarget) },
+                finalPose: createDryRunResultSnapshot(createComposerDryRun()),
+            }),
+        );
+
+        expect(parsed.composerDryRun?.status).toBe("available");
+        expect(parsed.composerDryRun?.result?.finalPose.leftUpperArm).toEqual(zRotation(12));
+    });
+
+    it("does not treat legacy finalPose snapshots as production dry-run results", () => {
+        const retarget = createRetargetFrame();
+        const parsed = parseComposerComparisonFrameInput(
+            createFrame({
+                solver: { poseRetargetRuntime: createRuntimeSnapshot(retarget) },
+                finalPose: createLegacyFinalPoseSnapshot(createComposerDryRun()),
+            }),
+        );
+
+        expect(parsed.retarget).toBeDefined();
+        expect(parsed.composerDryRun).toBeUndefined();
+
+        const summary = calculateComposerComparisonSummary([parsed], createSummaryConfig());
+        expect(summary).toMatchObject({
+            status: "comparison_unavailable",
+            severity: "warn",
+            unavailableReason: "retarget_or_composer_not_recorded",
+        });
+        expect(summary.metrics.composerAngleDeltaDeg).toMatchObject({
+            value: null,
+            status: "not_available",
+            severity: "warn",
+            unavailableReason: "retarget_or_composer_not_recorded",
+        });
     });
 });
 
