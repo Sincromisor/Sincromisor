@@ -319,33 +319,6 @@ const dryRunResultSchema: z.ZodType<SincroVrmPoseComposerDryRunResult> = plainOb
     result: composerResultSchema.optional(),
     warnings: z.array(z.string()),
 });
-const finalPoseSnapshotSchema = plainObjectSchema({
-    schemaVersion: z.literal("sincro.vrm-pose-composer-result.v1"),
-    finalPose: z.record(vrmHumanBoneNameSchema, composerQuaternionSchema),
-    ownedBones: z.array(vrmHumanBoneNameSchema),
-    suppressedLayers: z.array(
-        plainObjectSchema({
-            id: z.string(),
-            kind: z.enum(["fallback", "tracking", "semantic", "idle", "style"]),
-            bone: vrmHumanBoneNameSchema,
-            reason: z.enum([
-                "tracking_owns_bone",
-                "missing_optional_bone",
-                "zero_weight",
-                "semantic_conflict",
-            ]),
-        }),
-    ),
-    clampedBones: z.array(
-        plainObjectSchema({
-            bone: vrmHumanBoneNameSchema,
-            reason: z.enum(["quaternion_normalized", "angular_velocity"]),
-            before: composerQuaternionSchema.optional(),
-            after: composerQuaternionSchema,
-        }),
-    ),
-    warnings: z.array(z.string()),
-});
 const solverRuntimeSchema = loosePlainObjectSchema({
     poseRetargetRuntime: z.unknown().optional(),
 });
@@ -506,26 +479,13 @@ function parsePoseRetargetRuntime(
 function parseComposerDryRunFromFrame(
     frame: SincroMotionDebugFrame,
 ): SincroVrmPoseComposerDryRunResult | undefined {
+    /*
+        `sincro.vrm-pose-composer-result.v1` の legacy finalPose layer は dry-run の status contract を持たない。
+        ここで available に昇格すると、dry-run 未記録の旧 log を比較済み pass と誤読するため、
+        status 付き production dry-run result snapshot だけを受理する。
+    */
     const dryRun = dryRunResultSchema.safeParse(frame.finalPose);
-    if (dryRun.success) {
-        return dryRun.data;
-    }
-
-    const finalPose = finalPoseSnapshotSchema.safeParse(frame.finalPose);
-    if (!finalPose.success) {
-        return undefined;
-    }
-    return {
-        status: "available",
-        result: {
-            finalPose: finalPose.data.finalPose,
-            ownedBones: finalPose.data.ownedBones,
-            suppressedLayers: finalPose.data.suppressedLayers,
-            clampedBones: finalPose.data.clampedBones,
-            warnings: finalPose.data.warnings,
-        },
-        warnings: [...finalPose.data.warnings],
-    };
+    return dryRun.success ? dryRun.data : undefined;
 }
 
 function createMissingFrameResult(
