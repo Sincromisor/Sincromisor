@@ -1,7 +1,7 @@
 id: task-260705004405-torso-shoulder-composer-migration
 title: Migrate torso and shoulder composer ownership
 category: character-sincro-motion
-status: open
+status: done
 depends_on:
   - task-260705004400-arm-composer-application-hardening
   - task-260629225951-torso-shoulder-composer-ownership-migration-plan
@@ -9,8 +9,8 @@ depends_on:
 superseded_by: null
 review: APPROVED
 reviewed_sha: edf9f7d63b8843663a44bfaa9fcdce43ed20aa7f
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 2
 created_at: 2026-07-05
-closed_at: null
+closed_at: 2026-07-05
 legacy_ids: []
