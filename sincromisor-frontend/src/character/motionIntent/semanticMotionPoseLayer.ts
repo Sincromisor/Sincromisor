@@ -25,6 +25,13 @@ const SEMANTIC_DEBUG_SCHEMA_VERSION = "sincro.phase9-semantic-motion.v1" as cons
 
 export type { SemanticMotionPosePresetId } from "./semanticMotionPosePresets";
 
+/**
+ * semantic pose layer の入力 contract。
+ *
+ * `MotionIntentState` と full `AvatarMotionProfile` だけを読み、Hand snapshot、raw gesture result、
+ * MediaPipe raw landmark は再解釈しない。`previous` / `deltaSeconds` は将来の smoothing 用に予約されているが、
+ * 現実装では副作用も frame 間 state 更新も行わない。
+ */
 export type SemanticMotionPoseLayerInput = {
     intent: MotionIntentState;
     profile: AvatarMotionProfile;
@@ -32,6 +39,13 @@ export type SemanticMotionPoseLayerInput = {
     deltaSeconds?: number;
 };
 
+/**
+ * Phase 9 semantic pose の debug snapshot。
+ *
+ * `presets` は side ごとの preset 選択、weight、owned / suppressed bone、warning を保存する。
+ * tracking owner と競合した bone は composer 側の suppression として説明されるため、この snapshot では
+ * preset が要求した owned bone と profile capability 上の missing optional bone を保持する。
+ */
 export type SemanticMotionPoseLayerDebugSnapshot = {
     schemaVersion: typeof SEMANTIC_DEBUG_SCHEMA_VERSION;
     timestamp: { mediaTimeMs: number };
@@ -48,6 +62,12 @@ export type SemanticMotionPoseLayerDebugSnapshot = {
     warnings: string[];
 };
 
+/**
+ * composer に渡す semantic layer と、その判断過程を replay できる debug snapshot。
+ *
+ * intent が `"tracking"` / `"lost"` / `"fallback"` など preset を持たない場合、`layers` は空になり得る。
+ * その場合も debug snapshot は返し、fallback 理由や clap-like の片手入力などを warning として残す。
+ */
 export type SemanticMotionPoseLayerResult = {
     layers: VrmPoseLayer[];
     debug: SemanticMotionPoseLayerDebugSnapshot;
@@ -67,6 +87,13 @@ type SemanticLayerCandidate = {
 
 type SemanticWeights = SemanticPresetEntry["weights"];
 
+/**
+ * MotionIntentState の semantic preset を VrmPoseComposer layer に変換する。
+ *
+ * soft clap-like は両手 intent が揃った場合だけ `"both"` layer として生成し、片手 clap-like や guarded /
+ * fallback は warning 付きの no-op preset にする。weight は intent confidence、expressiveness、profile の
+ * arm / wrist / finger scale から決まり、VRM runtime へ直接書き込む副作用はない。
+ */
 export function createSemanticMotionPoseLayer(
     input: SemanticMotionPoseLayerInput,
 ): SemanticMotionPoseLayerResult {
