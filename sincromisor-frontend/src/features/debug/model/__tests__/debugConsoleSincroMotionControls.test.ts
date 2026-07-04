@@ -41,4 +41,18 @@ describe("DebugConsoleSincroMotionControls", () => {
             clampedBones: ["leftUpperArm:angular_velocity"],
         });
     });
+
+    it("applies composer arm application mode through the pose retarget config path", () => {
+        let snapshot = createDefaultSnapshot();
+        const controls = new DebugConsoleSincroMotionControls({
+            readSnapshot: () => snapshot,
+            updateSnapshot: (updater: (current: DebugConsoleSnapshot) => DebugConsoleSnapshot) => {
+                snapshot = updater(snapshot);
+            },
+        });
+
+        controls.applySincroPoseRetargetConfig({ composerArmApplicationMode: "both" });
+
+        expect(snapshot.sincroMotion.poseRetarget.composerArmApplicationMode).toBe("both");
+    });
 });

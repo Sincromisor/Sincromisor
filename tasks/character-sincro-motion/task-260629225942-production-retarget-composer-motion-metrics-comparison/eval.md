@@ -1,6 +1,7 @@
 # Evaluation: task-260629225942-production-retarget-composer-motion-metrics-comparison
 
 ## 判定
+
 PASS
 
 attempt 2 で前回 FAIL 点は解消された。`parseComposerDryRunFromFrame()` は status 付き
@@ -10,6 +11,7 @@ attempt 2 で前回 FAIL 点は解消された。`parseComposerDryRunFromFrame()
 `retarget_or_composer_not_recorded` / `not_available` / warn 以上へ落ちる。
 
 ## 受け入れ条件チェックリスト
+
 - [✓] metric helper 追加と 5 metric key 固定 — `motionComposerComparisonMetrics.ts` に
   `calculateComposerComparisonMetrics(input)` と
   `composerAngleDeltaDeg`、`composerAngularVelocitySpike`、`composerOwnedBoneConflictCount`、
@@ -49,6 +51,7 @@ attempt 2 で前回 FAIL 点は解消された。`parseComposerDryRunFromFrame()
   fallback / design doc / regression test の変更理由と maintenance knowledge が記録されている。
 
 ## テスト結果
+
 - `git status --short`（評価 worktree）: clean。
 - `npm run gate`（評価 worktree
   `/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-871f85a3be73-yRSQHB`）: PASS。
@@ -62,9 +65,11 @@ attempt 2 で前回 FAIL 点は解消された。`parseComposerDryRunFromFrame()
   task の受け入れ条件に対して十分。
 
 ## ドキュメント整合性
+
 - 公開 API endpoint / WebRTC 契約 / compose / env の変更はなし。
 - Developer-visible artifact schema と metric contract は `documents/design/frontend/character/motion.md` に同期済み。
 - attempt 2 の legacy finalPose snapshot 非昇格方針も design doc と `impl.md` の audit に同期済み。
 
 ## 残課題（FAIL の場合）
+
 - なし。

@@ -76,6 +76,7 @@ type SincroMotionSnapshot = {
         | "armIkMaxOpenRad"
         | "armIkMaxForearmFlexRad"
         | "armIkMode"
+        | "composerArmApplicationMode"
     >;
     poseRetargetRuntime: Pick<
         SincroPoseRetargetFrame,
@@ -274,6 +275,7 @@ function createDefaultPoseRetargetConfigSnapshot(): SincroMotionSnapshot["poseRe
         armIkMaxOpenRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxOpenRad,
         armIkMaxForearmFlexRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxForearmFlexRad,
         armIkMode: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMode,
+        composerArmApplicationMode: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerArmApplicationMode,
     };
 }
 

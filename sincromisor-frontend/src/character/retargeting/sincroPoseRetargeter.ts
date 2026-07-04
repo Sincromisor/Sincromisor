@@ -28,6 +28,7 @@ import {
 } from "./sincroPoseRetargetUpperBody";
 
 export type {
+    ComposerArmApplicationMode,
     SincroPoseArmIkMode,
     SincroPoseIkMode,
     SincroPoseRetargetConfig,

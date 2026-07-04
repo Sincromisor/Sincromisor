@@ -19,15 +19,21 @@ import { FaceEmotionController } from "../behavior/faceEmotionController";
 import { FaceMorphController } from "../behavior/faceMorphController";
 import { HeadBoneController } from "../behavior/headBoneController";
 import { SincroFaceRetargeter } from "../retargeting/sincroFaceRetargeter";
-import type { SincroPoseRetargetConfig } from "../retargeting/sincroPoseRetargeter";
-import { SincroPoseRetargeter } from "../retargeting/sincroPoseRetargeter";
+import {
+    DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
+    type SincroPoseRetargetConfig,
+    SincroPoseRetargeter,
+} from "../retargeting/sincroPoseRetargeter";
 import { summarizeComposerDryRun } from "../runtime/sincroMotionObserveOnlyPipelineTypes";
 import {
     cloneSincroMotionPipelineState,
     createDefaultSincroMotionPipelineState,
     type SincroMotionPipelineState,
 } from "../runtime/sincroMotionPipelineState";
-import { SincroVrmPoseComposerDryRunService } from "../runtime/sincroVrmPoseComposerDryRun";
+import {
+    type SincroVrmPoseComposerDryRunResult,
+    SincroVrmPoseComposerDryRunService,
+} from "../runtime/sincroVrmPoseComposerDryRun";
 import type { VRMCamera } from "../scene/vrmCamera";
 import { ArmBoneController } from "./armBoneController";
 import type { CharacterMotionTuning } from "./characterMotionConfig";
@@ -67,6 +73,8 @@ export class VRMCharacterManager {
     private readonly sincroFaceRetargeter = new SincroFaceRetargeter();
     private readonly sincroPoseRetargeter = new SincroPoseRetargeter();
     private readonly composerDryRun = new SincroVrmPoseComposerDryRunService();
+    private composerArmApplicationMode =
+        DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerArmApplicationMode;
     private sincroMotionPipelineState: SincroMotionPipelineState =
         createDefaultSincroMotionPipelineState();
     private latestBehaviorSnapshot?: CharacterBehaviorSnapshot;
@@ -228,24 +236,32 @@ export class VRMCharacterManager {
             profile: this.sincroPoseRetargeter.getAvatarMotionProfile(),
             deltaSeconds,
         });
-        this.sincroMotionPipelineState = cloneSincroMotionPipelineState({
-            ...this.sincroMotionPipelineState,
-            face: this.latestBehaviorSnapshot.faceMotion,
-            pose: poseMotionForRetarget,
-            composerDryRun,
-            updatedAtMs: nowMs,
-        });
-        DebugConsoleManager.getManager().updateSincroComposerDryRunSummary(
-            summarizeComposerDryRun(this.sincroMotionPipelineState.composerDryRun),
-        );
         this.headBoneController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.eyeBehaviorController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.mouthMorphController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.emotionMorphController?.update(this.latestBehaviorSnapshot);
-        this.armBoneController?.update(
+        const armUpdate = this.armBoneController?.update(
             this.motionElapsedSeconds,
             this.latestBehaviorSnapshot,
             sincroPose,
+            {
+                mode: this.composerArmApplicationMode,
+                composerDryRun,
+            },
+        );
+        const observedComposerDryRun = appendComposerArmApplicationWarnings(
+            composerDryRun,
+            armUpdate?.composerArmApplicationWarnings ?? [],
+        );
+        this.sincroMotionPipelineState = cloneSincroMotionPipelineState({
+            ...this.sincroMotionPipelineState,
+            face: this.latestBehaviorSnapshot.faceMotion,
+            pose: poseMotionForRetarget,
+            composerDryRun: observedComposerDryRun,
+            updatedAtMs: nowMs,
+        });
+        DebugConsoleManager.getManager().updateSincroComposerDryRunSummary(
+            summarizeComposerDryRun(this.sincroMotionPipelineState.composerDryRun),
         );
         this.legBoneController?.update(this.motionElapsedSeconds);
         this.vrm?.update(deltaSeconds);
@@ -284,12 +300,36 @@ export class VRMCharacterManager {
     }
 
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
+        const nextComposerArmApplicationMode =
+            config.composerArmApplicationMode ?? this.composerArmApplicationMode;
+        if (nextComposerArmApplicationMode !== this.composerArmApplicationMode) {
+            /*
+                feature flag の切替 frame では、前 mode で生成された composer final pose を
+                angular velocity clamp の previous として使わない。腕適用自体は毎 frame direct write 後の
+                上書きなので残留 state を持たないが、dry-run の previousFinalPose は表示差分に影響する。
+            */
+            this.composerDryRun.reset();
+            this.composerArmApplicationMode = nextComposerArmApplicationMode;
+        }
         this.sincroPoseRetargeter.setConfig(config);
     }
 
     getAvatarMotionProfile(): AvatarMotionProfile | undefined {
         return this.sincroPoseRetargeter.getAvatarMotionProfile();
     }
+}
+
+function appendComposerArmApplicationWarnings(
+    composerDryRun: SincroVrmPoseComposerDryRunResult,
+    warnings: string[],
+): SincroVrmPoseComposerDryRunResult {
+    if (warnings.length === 0) {
+        return composerDryRun;
+    }
+    return {
+        ...composerDryRun,
+        warnings: [...composerDryRun.warnings, ...warnings],
+    };
 }
 
 function isLoadedVrm(value: unknown): value is VRM {
