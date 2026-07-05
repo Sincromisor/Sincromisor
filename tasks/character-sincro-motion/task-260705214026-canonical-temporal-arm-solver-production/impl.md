@@ -168,3 +168,47 @@ TODO は追加していない。stale comment の削除対象はなく、評価�
 ### 検証結果追記
 
 - `npm run gate`: PASS at clean SHA `e7caaa8`。`gate:lint` / `gate:build` / `gate:test` はすべて cache hit。frontend tests は 496 passed。
+
+## attempt 4
+
+### 判断
+
+- 前回 evaluator の FAIL は P0 replay fixture metrics comparison の一点であり、実装本体、Phase 6 `source`、fallback reason、旧 log 互換、comment audit / docs sync は PASS 済みと確認した。
+- 指定 worktree `/private/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-cc415b27024e-A9HaHw` の HEAD は `e7caaa8`、branch は `codex/task-260705214026-canonical-temporal-arm-solver-production`、作業開始時点の worktree は clean。
+- 既存の motion replay / raw result replay / metrics infrastructure を再調査したが、task.md の「P0 replay fixture で temporal primary と pose fallback の metrics comparison」を正当に満たす captured production P0 replay fixture は repository 内に存在しない。
+- 既存 synthetic artifact `artifacts/p0-temporal-vs-pose-fallback-metrics-comparison.synthetic.json` は `source.kind: "synthetic-replay-fixture"` / `realP0ReplayCapture: "not_available"` を明記しており、前回 evaluator の判定どおり、正規 P0 replay fixture comparison の根拠にはできない。
+- attempt 4 では worktree のコード・docs・fixture・artifact は変更していない。main checkout 側の本 `impl.md` だけに blocker と gate 結果を append-only で記録する。
+
+### 再調査結果
+
+- `MotionDebugMetricsRuntime.calculateReplayMetrics()` は loaded recording が無い場合 `no_recording_loaded` を返す。`runQaRegression()` も loaded recording と P0 `fixtureId` または manifest 内の P0 source が必要であり、repository 内の `not-captured` manifest だけでは metrics summary を生成できない。
+- `MotionReplayPlayer` / `MotionDebugReplayRuntime` の `mediapipe-raw-result` mode は `frame.mediapipe` slot 付きの `sincro.motion-debug-log.v1` NDJSON が前提。`frame.mediapipe` 欠損時は `missing_mediapipe_raw_result`、`applyRawResult` 欠損時は `unsupported_mode` で失敗し、`pose-snapshot` へ暗黙 fallback しない。
+- `motionDebugLogSchema.ts` の motion-debug log parser は manifest と frame envelope を受理するが、実データとして必要な `recordType: "manifest"` / `recordType: "frame"` の committed `.ndjson` / `.jsonl` / `.ndjson.gz` / `.jsonl.gz` は worktree 内に見つからなかった。
+- `tasks/character-sincro-motion/task-260629225919-production-sincro-motion-replay-baselines/artifacts/production-sincro-baseline-manifest.md` は P0 index として正規だが、6 件すべて `Source: not-captured`、replay log path / metrics summary path は未生成で、real-camera evidence と扱わないよう明記している。
+- `tasks/character-sincro-motion/task-260629225942-production-retarget-composer-motion-metrics-comparison/artifacts/composer-comparison/production-composer-comparison-summaries.not-captured.json` は P0 fixture ids を含むが、全 metric が `not_available` / `baseline_not_captured` / `replayLog.available: false` で、temporal primary vs pose fallback の comparison ではない。
+- `tasks/character-sincro-motion/task-260705004405-torso-shoulder-composer-migration/artifacts/torso-shoulder-composer-migration-replay.json` は torso / shoulder 用の synthetic replay audit であり、production motion-debug P0 frames、raw result slot、Phase 6 temporal-vs-pose comparison metrics を含まない。
+- `sincromisor-frontend/src/character/motionEvaluation/__tests__/motionQaRegressionTestFixtures.ts` と replay/player/recorder tests は synthetic unit-test fixtures であり、captured production P0 fixture ではない。
+- historical Playwright / camera summary artifacts は summary JSON であり、motion-debug replay frames、`frame.mediapipe`、temporal / solver / metrics slots を持たないため、`neutralJitter`、`elbowFlipCount`、`recoveryJumpAngleDeg`、`reachClampOccupancy` の temporal-primary vs pose-fallback comparison へ変換できない。
+
+### Blocker
+
+- P0 replay fixture metrics comparison の受け入れ条件は、現在の repository / worktree 内の実装だけでは充足不能。
+- 不足している artifact は、production-like browser client で取得した P0 6 種の motion-debug recording、またはそれと同等に task.md 上「P0 replay fixture」として扱える正規 fixture。
+- 必要な保存形は既存 manifest と同じく `artifacts/replay/<metrics-fixture-id>.ndjson` または `.ndjson.gz`、`artifacts/metrics/<metrics-fixture-id>.summary.json`、必要に応じて `.baseline.json`。各 replay は temporal primary と pose-snapshot fallback の両条件で `neutralJitter`、`elbowFlipCount`、`recoveryJumpAngleDeg`、`reachClampOccupancy` を算出できる production frame / temporal / solver / metrics slot を含む必要がある。
+- 次に必要な外部入力は、実機または production-like camera / video fixture session で `neutral-10s`、`single-arm-slow-raise`、`both-arms-slow-raise`、`hand-out-and-return`、`arms-cross`、`fast-wave` を recording し、同一入力を temporal primary と pose-snapshot fallback で評価した metrics summary。
+
+### TypeScript production comment audit
+
+- attempt 4 では TypeScript production code を変更していないため、新規 comment audit 対象はない。attempt 1 / 2 の audit 結果は維持。
+
+### ドキュメント同期
+
+- attempt 4 では公開 API、通信契約、公開挙動、design docs を変更していないため追加同期は不要。attempt 1 / 2 で同期済みの `motion.md` / `tracking.md` は維持。
+
+### 検証
+
+- `npm run gate`: PASS at clean SHA `e7caaa8`。`gate:lint` / `gate:build` / `gate:test` はすべて cache hit。frontend tests は 496 passed。
+
+### コミット
+
+- attempt 4 の worktree 変更はないため追加 commit は作成しない。現在の実装 commit は `e7caaa8`。
