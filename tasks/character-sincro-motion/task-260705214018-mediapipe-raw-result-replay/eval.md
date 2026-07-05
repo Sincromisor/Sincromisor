@@ -21,9 +21,9 @@ PASS
 ## テスト結果
 
 - `npm run gate`（cwd: `/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-9d239ac3c920-tzKqcK`）: PASS。対象 SHA `9d239ac` の clean tree で cache hit。
-  - `gate:lint`: PASS。frontend lint/format and Markdown check。
-  - `gate:build`: PASS。frontend type check and build。
-  - `gate:test`: PASS。491 tests passed。
+    - `gate:lint`: PASS。frontend lint/format and Markdown check。
+    - `gate:build`: PASS。frontend type check and build。
+    - `gate:test`: PASS。491 tests passed。
 - `git diff --check 09d8380..HEAD`: PASS。
 - カバレッジ評価: raw schema/parser、raw replay player error code、callback/context semantics、recording raw slot、manifest metadata は unit test と実コード照合で主要受け入れ条件をカバーしている。comment acceptance は gate では検出できないため、attempt 3 audit と serializer TSDoc / tracker 呼び出し実装を個別照合した。
 
