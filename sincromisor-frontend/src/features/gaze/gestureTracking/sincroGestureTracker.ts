@@ -1,5 +1,9 @@
 import { GestureRecognizer } from "@mediapipe/tasks-vision";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
+import {
+    serializeGestureRecognizerResult,
+    type TrackerRuntimeMediaPipeRawResult,
+} from "../trackingRuntime/mediaPipeRawResultSerializer";
 import { loadMediaPipeVisionFileset } from "../trackingRuntime/mediaPipeVisionFileset";
 import {
     cloneSincroGestureMotionSnapshot,
@@ -36,6 +40,7 @@ export class SincroGestureTracker {
     private gestureRecognizer?: SincroGestureRecognizerLike;
     private initPromise?: Promise<void>;
     private lastInferenceEndedAtMs?: number;
+    private lastRawResult?: TrackerRuntimeMediaPipeRawResult["gesture"];
     private snapshot: SincroGestureMotionSnapshot = createSincroGestureFallbackSnapshot({
         trackingEnabled: false,
     });
@@ -85,6 +90,7 @@ export class SincroGestureTracker {
                 nowMs: timestampMs,
                 warnings: ["no_hand_detected"],
             });
+            this.lastRawResult = undefined;
             return this.getSnapshot();
         }
         if (!this.gestureRecognizer) {
@@ -93,6 +99,7 @@ export class SincroGestureTracker {
                 nowMs: timestampMs,
                 warnings: ["model_not_loaded"],
             });
+            this.lastRawResult = undefined;
             return this.getSnapshot();
         }
         try {
@@ -101,6 +108,7 @@ export class SincroGestureTracker {
                 videoFrame,
                 timestampMs,
             });
+            this.lastRawResult = serializeGestureRecognizerResult(detection.result);
             const sides = normalizeSincroGestureRecognizerResult({
                 result: detection.result,
                 hand: handSnapshot,
@@ -131,12 +139,17 @@ export class SincroGestureTracker {
                 nowMs: timestampMs,
                 warnings: ["inference_failed"],
             });
+            this.lastRawResult = undefined;
             return this.getSnapshot();
         }
     }
 
     getSnapshot(): SincroGestureMotionSnapshot {
         return cloneSincroGestureMotionSnapshot(this.snapshot);
+    }
+
+    getLastRawResult(): TrackerRuntimeMediaPipeRawResult["gesture"] | undefined {
+        return this.lastRawResult;
     }
 
     stop(
@@ -149,6 +162,7 @@ export class SincroGestureTracker {
             trackingEnabled: false,
         });
         this.lastInferenceEndedAtMs = undefined;
+        this.lastRawResult = undefined;
         return this.getSnapshot();
     }
 

@@ -40,6 +40,7 @@ import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
+import type { TrackerRuntimeMediaPipeRawResult } from "../../features/gaze/trackingRuntime/mediaPipeRawResultSerializer";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
 import type { TrackerRuntimePerformanceProfile } from "../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
@@ -158,6 +159,7 @@ export class MotionDebugRecordingController {
         cameraQuality?: CameraQualityScore,
         reliability?: ReliabilityMap,
         temporal?: TemporalUpperBodyState,
+        mediapipe?: TrackerRuntimeMediaPipeRawResult,
     ): MotionDebugRecorderRecordFrameResult | undefined {
         const mediaTimeMs = timing?.mediaTimeMs ?? fallbackVideoMediaTimeMs(this.params.video);
         const canonical = createMotionDebugCanonicalState({
@@ -224,6 +226,7 @@ export class MotionDebugRecordingController {
                 width: this.params.video.videoWidth,
                 height: this.params.video.videoHeight,
             },
+            ...(mediapipe === undefined ? {} : { mediapipe }),
             poseSnapshot: snapshot,
             hand: this.params.getHandSnapshot(),
             reliability: frameReliability,
@@ -299,6 +302,12 @@ export class MotionDebugRecordingController {
             return undefined;
         }
         const performanceProfile = this.params.getActivePerformanceProfile();
+        const retargetConfig = this.params.getRetargetConfig();
+        const pipeline = {
+            poseTargetInferenceFps: performanceProfile.cadence.poseFps,
+            performanceProfile,
+            retargetConfig,
+        };
 
         return {
             schemaVersion: SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION,
@@ -314,9 +323,12 @@ export class MotionDebugRecordingController {
                 timeOriginMs: performance.timeOrigin,
             },
             build: {
-                appVersion: "0.0.0",
-                packageVersions: {},
-                configHash: "motion-debug-default",
+                appVersion: __SINCROMISOR_FRONTEND_VERSION__ ?? "unknown",
+                packageVersions: {
+                    "sincromisor-frontend": __SINCROMISOR_FRONTEND_VERSION__ ?? "unknown",
+                    "@mediapipe/tasks-vision": __MEDIAPIPE_TASKS_VISION_VERSION__ ?? "unknown",
+                },
+                configHash: createPipelineConfigHash(pipeline),
             },
             camera: {
                 requestedConstraints:
@@ -325,11 +337,7 @@ export class MotionDebugRecordingController {
                         : { fixtureUrl: this.params.getActiveFixtureUrl() },
                 actualSettings: scrubCameraSettings(track.getSettings()),
             },
-            pipeline: {
-                poseTargetInferenceFps: performanceProfile.cadence.poseFps,
-                performanceProfile,
-                retargetConfig: this.params.getRetargetConfig(),
-            },
+            pipeline,
             avatar: {
                 avatarProfileId: this.params.getVrmUrl(),
                 boneCapabilities: {},
@@ -425,4 +433,34 @@ function scrubCameraSettings(
         actualSettings.facingMode = settings.facingMode;
     }
     return actualSettings;
+}
+
+function createPipelineConfigHash(pipeline: SincroMotionDebugLogManifest["pipeline"]): string {
+    return `fnv1a32:${fnv1a32(stableJsonStringify(pipeline))}`;
+}
+
+function stableJsonStringify(value: unknown): string {
+    if (Array.isArray(value)) {
+        return `[${value.map(stableJsonStringify).join(",")}]`;
+    }
+    if (isPlainRecord(value)) {
+        return `{${Object.keys(value)
+            .sort()
+            .map((key) => `${JSON.stringify(key)}:${stableJsonStringify(value[key])}`)
+            .join(",")}}`;
+    }
+    return JSON.stringify(value);
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function fnv1a32(value: string): string {
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < value.length; index += 1) {
+        hash ^= value.charCodeAt(index);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(16).padStart(8, "0");
 }

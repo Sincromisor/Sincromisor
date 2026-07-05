@@ -15,6 +15,7 @@ import {
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
     type SincroPoseMotionSnapshot,
 } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import type { TrackerRuntimeMediaPipeRawResult } from "../../features/gaze/trackingRuntime/mediaPipeRawResultSerializer";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
 import { TrackerRuntime } from "../../features/gaze/trackingRuntime/trackerRuntime";
 import type { TrackerRuntimePerformanceProfile } from "../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
@@ -48,6 +49,7 @@ export class MotionDebugTrackerBridge {
     private latestHandSnapshot?: SincroHandMotionSnapshot;
     private latestPoseSnapshot: SincroPoseMotionSnapshot = DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT;
     private latestReliability?: MotionDebugSnapshot["reliability"];
+    private latestMediaPipeRaw?: TrackerRuntimeMediaPipeRawResult;
     private latestTrackerStats: SincroTrackerWorkerStats;
 
     constructor(private readonly params: MotionDebugTrackerBridgeParams) {
@@ -75,6 +77,9 @@ export class MotionDebugTrackerBridge {
                 },
                 onPoseFallback: (snapshot, timing) => {
                     this.handlePoseMotion(snapshot, timing, false);
+                },
+                onMediaPipeRawResult: (result, timing) => {
+                    this.handleMediaPipeRawResult(result, timing);
                 },
                 onTrackerStats: (snapshot) => {
                     this.latestTrackerStats = snapshot;
@@ -116,6 +121,14 @@ export class MotionDebugTrackerBridge {
         const previousPose = this.latestPoseSnapshot;
         this.latestPoseSnapshot = snapshot;
         return previousPose;
+    }
+
+    setFaceSnapshot(snapshot: SincroFaceMotionSnapshot): void {
+        this.latestFaceSnapshot = snapshot;
+    }
+
+    setHandSnapshot(snapshot: SincroHandMotionSnapshot | undefined): void {
+        this.latestHandSnapshot = snapshot;
     }
 
     updateLiveReliability(
@@ -247,11 +260,18 @@ export class MotionDebugTrackerBridge {
         snapshot: SincroPoseMotionSnapshot,
         timing?: TrackerVideoFrameTiming,
     ): void {
+        const mediaTimeMs = timing?.mediaTimeMs ?? snapshot.lastUpdatedAtMs;
+        const raw =
+            mediaTimeMs !== undefined && this.latestMediaPipeRaw?.timing.mediaTimeMs === mediaTimeMs
+                ? this.latestMediaPipeRaw
+                : undefined;
         const result = this.params.recording.recordPoseFrame(
             snapshot,
             timing,
             this.params.camera.getCameraQuality(),
             this.latestValidReliability(),
+            undefined,
+            raw,
         );
         if (result !== undefined && !result.ok) {
             frontendLogger.warn("Motion debug frame was not recorded.", {
@@ -259,5 +279,16 @@ export class MotionDebugTrackerBridge {
                 message: result.message,
             });
         }
+    }
+
+    private handleMediaPipeRawResult(
+        result: TrackerRuntimeMediaPipeRawResult,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
+        const mediaTimeMs = timing?.mediaTimeMs ?? result.timing.mediaTimeMs;
+        if (mediaTimeMs !== result.timing.mediaTimeMs) {
+            return;
+        }
+        this.latestMediaPipeRaw = result;
     }
 }

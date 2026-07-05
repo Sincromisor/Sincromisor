@@ -1,5 +1,9 @@
 import { FaceLandmarker } from "@mediapipe/tasks-vision";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
+import {
+    serializeFaceLandmarkerResult,
+    type TrackerRuntimeMediaPipeRawResult,
+} from "../trackingRuntime/mediaPipeRawResultSerializer";
 import { loadMediaPipeVisionFileset } from "../trackingRuntime/mediaPipeVisionFileset";
 import {
     calculateRoiConsistency,
@@ -44,6 +48,7 @@ export class SincroFaceTracker {
     private initPromise?: Promise<void>;
     private lastFullFrameInferenceEndedAtMs?: number;
     private lastRoiInferenceEndedAtMs?: number;
+    private lastRawResult?: TrackerRuntimeMediaPipeRawResult["face"];
     private snapshot: SincroFaceMotionSnapshot = {
         ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
         headPose: { ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT.headPose },
@@ -90,12 +95,14 @@ export class SincroFaceTracker {
                 "FaceLandmarker model is not loaded.",
                 timestampMs,
             );
+            this.lastRawResult = undefined;
             return this.snapshot;
         }
 
         const inferenceStartedAtMs = performance.now();
         const result = this.faceLandmarker.detectForVideo(videoFrame, timestampMs);
         const inferenceEndedAtMs = performance.now();
+        this.lastRawResult = serializeFaceLandmarkerResult(result);
         const inferenceTimeMs = inferenceEndedAtMs - inferenceStartedAtMs;
         const inferenceFps = calculateFaceInferenceFps({
             lastInferenceEndedAtMs: this.lastFullFrameInferenceEndedAtMs,
@@ -111,6 +118,10 @@ export class SincroFaceTracker {
             warnings: [],
         });
         return this.snapshot;
+    }
+
+    getLastRawResult(): TrackerRuntimeMediaPipeRawResult["face"] | undefined {
+        return this.lastRawResult;
     }
 
     detectWithRoi(
@@ -208,6 +219,7 @@ export class SincroFaceTracker {
         };
         this.lastFullFrameInferenceEndedAtMs = undefined;
         this.lastRoiInferenceEndedAtMs = undefined;
+        this.lastRawResult = undefined;
         return this.getSnapshot();
     }
 

@@ -17,13 +17,31 @@ import type {
 } from "../../character/motionEvaluation/motionDebugLogSchema";
 import type { MotionReplayApplyContext } from "../../character/motionEvaluation/motionReplayPlayer";
 import { MotionReplayPlayer } from "../../character/motionEvaluation/motionReplayPlayer";
+import type { SincroMotionReplayRawResultFrame } from "../../character/motionEvaluation/motionReplayRawResultSchema";
 import { MotionIntentEstimator } from "../../character/motionIntent/motionIntentEstimator";
 import type { MotionIntentState } from "../../character/motionIntent/motionIntentState";
 import { parseMotionPostProcessingResult } from "../../character/motionPostProcessing/motionPostProcessingState";
 import { TemporalStateEstimator } from "../../character/temporal/temporalStateEstimator";
 import { parseTemporalUpperBodyState } from "../../character/temporal/temporalUpperBodyState";
 import type { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
+import { normalizeSincroFaceLandmarkerResult } from "../../features/gaze/faceTracking/sincroFaceTrackerNormalizer";
+import {
+    createSincroGestureFallbackSnapshot,
+    type SincroGestureMotionSnapshot,
+    uniqueGestureWarnings,
+} from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
+import { normalizeSincroGestureRecognizerResult } from "../../features/gaze/gestureTracking/sincroGestureTrackerHelpers";
+import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
+import {
+    assignSincroHandObservationsToPose,
+    normalizeSincroHandLandmarkerResult,
+    type SincroHandPoseWrist,
+} from "../../features/gaze/handTracking/sincroHandTrackerHelpers";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import {
+    normalizeSincroPoseLandmarkerResult,
+    type SincroPoseLandmarkerResultInput,
+} from "../../features/gaze/poseTracking/sincroPoseTrackerNormalizer";
 import {
     createMotionDebugCanonicalReliabilityInput,
     createMotionDebugCanonicalState,
@@ -75,6 +93,7 @@ export class MotionDebugReplayRuntime {
         this.player = new MotionReplayPlayer<MotionDebugSnapshot>({
             applyPoseSnapshot: (snapshot, context) =>
                 this.applyReplayPoseSnapshot(snapshot, context),
+            applyRawResult: (raw, context) => this.applyReplayRawResult(raw, context),
             readSnapshot: () => this.params.getSnapshot(),
         });
         this.timer = new MotionDebugReplayTimer({
@@ -283,6 +302,132 @@ export class MotionDebugReplayRuntime {
         return this.params.getSnapshot();
     }
 
+    private applyReplayRawResult(
+        raw: SincroMotionReplayRawResultFrame,
+        context: MotionReplayApplyContext,
+    ): MotionDebugSnapshot {
+        const face = this.normalizeReplayFace(raw, context);
+        if (face !== undefined) {
+            this.params.tracker.setFaceSnapshot(face);
+        }
+        const pose = this.normalizeReplayPose(raw, context);
+        const hand =
+            pose === undefined || raw.hand === undefined
+                ? undefined
+                : this.normalizeReplayHand(raw, pose, context);
+        if (hand !== undefined) {
+            this.params.tracker.setHandSnapshot(hand);
+        }
+        const gesture =
+            hand === undefined || raw.gesture === undefined
+                ? undefined
+                : this.normalizeReplayGesture(raw, hand, context);
+        void gesture;
+        if (pose === undefined) {
+            return this.params.getSnapshot();
+        }
+        return this.applyReplayPoseSnapshot(pose, context);
+    }
+
+    private normalizeReplayPose(
+        raw: SincroMotionReplayRawResultFrame,
+        context: MotionReplayApplyContext,
+    ): SincroPoseMotionSnapshot | undefined {
+        if (raw.pose === undefined) {
+            return undefined;
+        }
+        const normalized = normalizeSincroPoseLandmarkerResult({
+            result: raw.pose satisfies SincroPoseLandmarkerResultInput,
+            inferenceTimeMs: 0,
+            inferenceFps: 0,
+            nowMs: context.mediaTimeMs,
+            consecutiveFailures: 0,
+        });
+        return normalized.snapshot;
+    }
+
+    private normalizeReplayFace(
+        raw: SincroMotionReplayRawResultFrame,
+        context: MotionReplayApplyContext,
+    ) {
+        if (raw.face === undefined) {
+            return undefined;
+        }
+        return normalizeSincroFaceLandmarkerResult({
+            result: raw.face,
+            inferenceTimeMs: 0,
+            inferenceFps: 0,
+            nowMs: context.mediaTimeMs,
+            source: "full-frame",
+            warnings: [],
+        });
+    }
+
+    private normalizeReplayHand(
+        raw: SincroMotionReplayRawResultFrame,
+        pose: SincroPoseMotionSnapshot,
+        context: MotionReplayApplyContext,
+    ): SincroHandMotionSnapshot | undefined {
+        if (raw.hand === undefined) {
+            return undefined;
+        }
+        const assignment = assignSincroHandObservationsToPose({
+            observations: normalizeSincroHandLandmarkerResult({ result: raw.hand }),
+            leftWrist: replayPoseWrist("left", pose),
+            rightWrist: replayPoseWrist("right", pose),
+            source: "full-frame-fallback",
+            previous: this.params.tracker.snapshotState().hand,
+        });
+        return {
+            trackingEnabled: true,
+            detected: assignment.leftHand.detected || assignment.rightHand.detected,
+            leftHand: assignment.leftHand,
+            rightHand: assignment.rightHand,
+            inferenceTimeMs: 0,
+            inferenceFps: 0,
+            lastUpdatedAtMs: context.mediaTimeMs,
+        };
+    }
+
+    private normalizeReplayGesture(
+        raw: SincroMotionReplayRawResultFrame,
+        hand: SincroHandMotionSnapshot,
+        context: MotionReplayApplyContext,
+    ): SincroGestureMotionSnapshot | undefined {
+        if (raw.gesture === undefined) {
+            return undefined;
+        }
+        const sides = normalizeSincroGestureRecognizerResult({
+            result: raw.gesture,
+            hand,
+        });
+        const warnings = uniqueGestureWarnings([
+            ...(sides.left?.warnings ?? []),
+            ...(sides.right?.warnings ?? []),
+        ]);
+        if (sides.left === undefined && sides.right === undefined) {
+            return createSincroGestureFallbackSnapshot({
+                reason: "raw_gesture_categories_missing",
+                nowMs: context.mediaTimeMs,
+                warnings: ["categories_missing"],
+            });
+        }
+        return {
+            trackingEnabled: true,
+            source:
+                sides.left?.source === "gesture-recognizer" ||
+                sides.right?.source === "gesture-recognizer"
+                    ? "gesture-recognizer"
+                    : "lost",
+            left: sides.left,
+            right: sides.right,
+            warnings,
+            inferenceTimeMs: 0,
+            inferenceFps: 0,
+            lastUpdatedAtMs: context.mediaTimeMs,
+        };
+    }
+
     private updateReplayCanonical(
         snapshot: SincroPoseMotionSnapshot,
         context: MotionReplayApplyContext,
@@ -361,4 +506,22 @@ export class MotionDebugReplayRuntime {
         }
         this.latestPostProcessing = undefined;
     }
+}
+
+function replayPoseWrist(
+    side: "left" | "right",
+    pose: SincroPoseMotionSnapshot,
+): SincroHandPoseWrist {
+    const wrist = side === "left" ? pose.leftArm.targets.wrist : pose.rightArm.targets.wrist;
+    if (wrist.quality === "lost" || !wrist.hasFiniteCoordinates) {
+        return {
+            side,
+            confidence: 0,
+        };
+    }
+    return {
+        side,
+        point: [wrist.cameraX, wrist.cameraY],
+        confidence: wrist.confidence,
+    };
 }

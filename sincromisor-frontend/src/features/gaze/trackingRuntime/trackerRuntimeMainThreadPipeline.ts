@@ -12,6 +12,7 @@ import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionS
 import type { SincroHandTracker } from "../handTracking/sincroHandTracker";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { SincroPoseTracker } from "../poseTracking/sincroPoseTracker";
+import { createTrackerRuntimeMediaPipeRawResult } from "./mediaPipeRawResultSerializer";
 import type { SincroTrackerRoiStats } from "./sincroTrackerWorkerTypes";
 import { formatTrackerRuntimeErrorDetail } from "./trackerRuntimeEngineInitializer";
 import type { TrackerRuntimePredictionPlan } from "./trackerRuntimePredictionPlan";
@@ -140,6 +141,17 @@ function runPoseInference(input: {
     try {
         const snapshot = input.poseTracker.detect(input.videoElement, nowMs);
         input.setLatestPoseSnapshot(snapshot);
+        const raw = createTrackerRuntimeMediaPipeRawResult({
+            pose: input.poseTracker.getLastRawResult(),
+            timing: {
+                mediaTimeMs: input.timing.mediaTimeMs,
+                videoWidth: input.videoElement.videoWidth,
+                videoHeight: input.videoElement.videoHeight,
+            },
+        });
+        if (raw !== undefined) {
+            input.callbacks.onMediaPipeRawResult?.(raw, input.timing);
+        }
         input.callbacks.onPoseMotion?.(snapshot, input.timing);
         input.applyPosePerformanceGate(snapshot, nowMs, input.timing);
         return { snapshot, inferenceTimeMs: snapshot.inferenceTimeMs };

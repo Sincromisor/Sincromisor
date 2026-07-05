@@ -6,6 +6,7 @@ import { defineConfig } from "vite";
 
 const contents_src = resolve(__dirname, "src");
 const require = createRequire(import.meta.url);
+const frontendPackageJson = JSON.parse(readFileSync(resolve(__dirname, "package.json"), "utf8"));
 const mediapipeTasksVisionPackageJson = JSON.parse(
     readFileSync(
         resolve(dirname(require.resolve("@mediapipe/tasks-vision")), "package.json"),
@@ -103,6 +104,7 @@ function buildInputMap() {
 export default defineConfig({
     appType: "mpa",
     define: {
+        __SINCROMISOR_FRONTEND_VERSION__: JSON.stringify(frontendPackageJson.version ?? "unknown"),
         __MEDIAPIPE_TASKS_VISION_VERSION__: JSON.stringify(mediapipeTasksVisionVersion),
     },
     server: {

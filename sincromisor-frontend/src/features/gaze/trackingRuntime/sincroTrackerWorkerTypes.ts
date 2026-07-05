@@ -6,6 +6,7 @@ import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionS
 import type { SincroGestureMotionSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
+import type { TrackerRuntimeMediaPipeRawResult } from "./mediaPipeRawResultSerializer";
 import type { TrackerRuntimeDegradationPolicySnapshot } from "./trackerRuntimeDegradationPolicy";
 import type { TrackerPerformanceBudgetReport } from "./trackerRuntimePerformanceBudget";
 
@@ -108,6 +109,7 @@ export type SincroTrackerWorkerResultMessage = {
     pose?: SincroPoseMotionSnapshot;
     hand?: SincroHandMotionSnapshot;
     gesture?: SincroGestureMotionSnapshot;
+    mediapipe?: TrackerRuntimeMediaPipeRawResult;
     workerTimeMs: number;
 };
 

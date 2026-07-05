@@ -105,6 +105,7 @@ function createPoseSnapshot(mediaTimeMs = 120): SincroPoseMotionSnapshot {
 function createFrameRecord(options: {
     frameIndex: number;
     mediaTimeMs: number;
+    mediapipe?: unknown;
     poseSnapshot?: unknown;
     finalPose?: unknown;
 }): string {
@@ -120,6 +121,9 @@ function createFrameRecord(options: {
     };
     if (options.poseSnapshot !== undefined) {
         frame.poseSnapshot = options.poseSnapshot;
+    }
+    if (options.mediapipe !== undefined) {
+        frame.mediapipe = options.mediapipe;
     }
     if (options.finalPose !== undefined) {
         frame.finalPose = options.finalPose;
@@ -148,6 +152,40 @@ function createHarnessPlayer(): MotionReplayPlayer<HarnessSnapshot> {
             poseRetarget: retargeter.retarget(createPoseSnapshot(0), 0),
         }),
     });
+}
+
+function createRawHarnessPlayer(): MotionReplayPlayer<{
+    rawMediaTimeMs: number;
+    frameIndex: number;
+}> {
+    return new MotionReplayPlayer({
+        applyPoseSnapshot: (_snapshot, context) => ({
+            rawMediaTimeMs: context.mediaTimeMs,
+            frameIndex: context.frameIndex,
+        }),
+        applyRawResult: (raw, context) => ({
+            rawMediaTimeMs: raw.timing.mediaTimeMs,
+            frameIndex: context.frameIndex,
+        }),
+        readSnapshot: () => ({
+            rawMediaTimeMs: 0,
+            frameIndex: -1,
+        }),
+    });
+}
+
+function createRawPoseFrame(mediaTimeMs = 120) {
+    return {
+        pose: {
+            landmarks: [],
+            worldLandmarks: [],
+        },
+        timing: {
+            mediaTimeMs,
+            videoWidth: 1280,
+            videoHeight: 720,
+        },
+    };
 }
 
 describe("MotionReplayPlayer", () => {
@@ -212,6 +250,71 @@ describe("MotionReplayPlayer", () => {
         expect(player.stepReplay(99)).toMatchObject({
             ok: false,
             code: "frame_index_out_of_range",
+        });
+    });
+
+    it("returns missing_mediapipe_raw_result without pose-snapshot fallback in raw mode", () => {
+        const logText = createLogText([
+            createFrameRecord({
+                frameIndex: 0,
+                mediaTimeMs: 120,
+                poseSnapshot: createPoseSnapshot(120),
+            }),
+        ]);
+        const player = createRawHarnessPlayer();
+
+        expect(player.loadRecordingText(logText).ok).toBe(true);
+        expect(player.startReplay({ mode: "mediapipe-raw-result" })).toMatchObject({
+            ok: false,
+            code: "missing_mediapipe_raw_result",
+        });
+    });
+
+    it("passes parsed raw frames with the same replay context semantics", () => {
+        const logText = createLogText([
+            createFrameRecord({
+                frameIndex: 0,
+                mediaTimeMs: 120,
+                mediapipe: createRawPoseFrame(120),
+            }),
+        ]);
+        const player = createRawHarnessPlayer();
+
+        expect(player.loadRecordingText(logText).ok).toBe(true);
+        const result = player.startReplay({ mode: "mediapipe-raw-result" });
+
+        expect(result).toMatchObject({
+            ok: true,
+            mode: "mediapipe-raw-result",
+            frameIndex: 0,
+            mediaTimeMs: 120,
+            snapshot: {
+                rawMediaTimeMs: 120,
+                frameIndex: 0,
+            },
+        });
+    });
+
+    it("reports the failing raw slot when frame.mediapipe schema parsing fails", () => {
+        const logText = createLogText([
+            createFrameRecord({
+                frameIndex: 0,
+                mediaTimeMs: 120,
+                mediapipe: {
+                    ...createRawPoseFrame(120),
+                    hand: {
+                        landmarks: "not-an-array",
+                    },
+                },
+            }),
+        ]);
+        const player = createRawHarnessPlayer();
+
+        expect(player.loadRecordingText(logText).ok).toBe(true);
+        expect(player.startReplay({ mode: "mediapipe-raw-result" })).toMatchObject({
+            ok: false,
+            code: "parse_error",
+            message: expect.stringContaining("hand"),
         });
     });
 

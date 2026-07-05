@@ -1,5 +1,9 @@
 import { HandLandmarker } from "@mediapipe/tasks-vision";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
+import {
+    serializeHandLandmarkerResult,
+    type TrackerRuntimeMediaPipeRawResult,
+} from "../trackingRuntime/mediaPipeRawResultSerializer";
 import { loadMediaPipeVisionFileset } from "../trackingRuntime/mediaPipeVisionFileset";
 import { createHandRoiFromPoseArm } from "../trackingRuntime/roiTracking/roiCoordinateMapping";
 import type { SincroRoiObservation } from "../trackingRuntime/roiTracking/roiTrackingTypes";
@@ -44,6 +48,7 @@ export class SincroHandTracker {
     private handLandmarker?: SincroHandLandmarkerLike;
     private initPromise?: Promise<void>;
     private lastInferenceEndedAtMs?: number;
+    private lastRawResult?: TrackerRuntimeMediaPipeRawResult["hand"];
     private snapshot: SincroHandMotionSnapshot = createSincroHandFallbackSnapshot({
         trackingEnabled: false,
     });
@@ -95,9 +100,11 @@ export class SincroHandTracker {
                 nowMs: timestampMs,
                 warnings: ["model_not_loaded"],
             });
+            this.lastRawResult = undefined;
             return this.getSnapshot();
         }
         try {
+            this.lastRawResult = undefined;
             this.snapshot = this.detectWithPoseRoi(videoFrame, poseSnapshot, timestampMs);
             return this.getSnapshot();
         } catch (error) {
@@ -105,12 +112,17 @@ export class SincroHandTracker {
                 reason: error instanceof Error ? error.message : String(error),
                 nowMs: timestampMs,
             });
+            this.lastRawResult = undefined;
             return this.getSnapshot();
         }
     }
 
     getSnapshot(): SincroHandMotionSnapshot {
         return cloneSincroHandMotionSnapshot(this.snapshot);
+    }
+
+    getLastRawResult(): TrackerRuntimeMediaPipeRawResult["hand"] | undefined {
+        return this.lastRawResult;
     }
 
     stop(
@@ -123,6 +135,7 @@ export class SincroHandTracker {
             trackingEnabled: false,
         });
         this.lastInferenceEndedAtMs = undefined;
+        this.lastRawResult = undefined;
         return this.getSnapshot();
     }
 
@@ -262,6 +275,7 @@ export class SincroHandTracker {
         warnings: SincroHandWarningCode[];
     }): SincroHandMotionSnapshot {
         const detection = this.runHandLandmarker(input.videoFrame, input.timestampMs);
+        this.lastRawResult = serializeHandLandmarkerResult(detection.result);
         const observations = normalizeSincroHandLandmarkerResult({ result: detection.result });
         const assignment = assignSincroHandObservationsToPose({
             observations,
