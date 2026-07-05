@@ -9,7 +9,7 @@ import { cloneSincroPoseMotionSnapshot } from "../../../features/gaze/poseTracki
 import { SincroMotionObserveOnlyPipeline } from "../sincroMotionObserveOnlyPipeline";
 
 describe("SincroMotionObserveOnlyPipeline gesture input", () => {
-    it("stores normalized gesture observation while keeping ReliabilityMap.gesture as placeholder", () => {
+    it("stores normalized gesture observation for the next pose reliability update", () => {
         const pipeline = new SincroMotionObserveOnlyPipeline();
         const gesture = createGestureSnapshot(120);
 
@@ -39,8 +39,9 @@ describe("SincroMotionObserveOnlyPipeline gesture input", () => {
         expect(poseResult.state.reliability?.gesture).toMatchObject({
             state: "lost",
             finalWeight: 0,
-            source: "neutral",
-            warnings: ["no_observation"],
+            source: "gesture",
+            label: "Open_Palm",
+            confidence: 0.91,
         });
     });
 });
