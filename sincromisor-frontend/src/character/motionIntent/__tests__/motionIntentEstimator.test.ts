@@ -129,12 +129,21 @@ function createReliability(input: {
     rightHand?: number;
     leftFinger?: number;
     rightFinger?: number;
+    gestureWeight?: number;
     torso?: number;
     warnings?: ReliabilityMap["warnings"];
 }): ReliabilityMap {
     const base = createDefaultReliabilityMap(input.mediaTimeMs);
     return {
         ...base,
+        gesture: {
+            ...base.gesture,
+            source: "gesture",
+            finalWeight: input.gestureWeight ?? 0.9,
+            confidence: input.gestureWeight ?? 0.9,
+            stableDurationMs: 250,
+            warnings: [],
+        },
         warnings: input.warnings ?? [],
         parts: {
             ...base.parts,
@@ -354,6 +363,23 @@ describe("MotionIntentEstimator", () => {
         expect(state.arms.left.warnings).toContain("low_hand_reliability");
     });
 
+    it("suppresses semantic intent on low gesture reliability finalWeight", () => {
+        const estimator = new MotionIntentEstimator();
+        const gesture = { left: { label: "Pointing_Up", confidence: 0.95 } };
+
+        updateEstimator(estimator, 0, {
+            reliability: createReliability({ mediaTimeMs: 0, gestureWeight: 0.4 }),
+            gesture,
+        });
+        const state = updateEstimator(estimator, 250, {
+            reliability: createReliability({ mediaTimeMs: 250, gestureWeight: 0.4 }),
+            gesture,
+        });
+
+        expect(state.arms.left.intent).toBe("tracking");
+        expect(state.arms.left.warnings).toContain("gesture_unstable");
+    });
+
     it("uses hand confidence when ReliabilityMap is missing", () => {
         const estimator = new MotionIntentEstimator();
         const gesture = { left: { label: "Pointing_Up", confidence: 0.95 } };
@@ -498,19 +524,30 @@ describe("MotionIntentEstimator", () => {
             thresholds: { gestureConfidence: Number.POSITIVE_INFINITY },
         });
         const lowConfidenceGesture = { left: { label: "Pointing_Up", confidence: 0.65 } };
-        updateEstimator(defaultThreshold, 0, { gesture: lowConfidenceGesture });
+        updateEstimator(defaultThreshold, 0, {
+            reliability: createReliability({ mediaTimeMs: 0, gestureWeight: 0.65 }),
+            gesture: lowConfidenceGesture,
+        });
         expect(
-            updateEstimator(defaultThreshold, 250, { gesture: lowConfidenceGesture }).arms.left
-                .intent,
+            updateEstimator(defaultThreshold, 250, {
+                reliability: createReliability({ mediaTimeMs: 250, gestureWeight: 0.65 }),
+                gesture: lowConfidenceGesture,
+            }).arms.left.intent,
         ).toBe("tracking");
 
         const overridden = new MotionIntentEstimator({
             thresholds: { gestureConfidence: 0.5 },
             timing: { pointing: { minimumDurationMs: -20 } },
         });
-        updateEstimator(overridden, 0, { gesture: lowConfidenceGesture });
+        updateEstimator(overridden, 0, {
+            reliability: createReliability({ mediaTimeMs: 0, gestureWeight: 0.65 }),
+            gesture: lowConfidenceGesture,
+        });
         expect(
-            updateEstimator(overridden, 1, { gesture: lowConfidenceGesture }).arms.left.intent,
+            updateEstimator(overridden, 1, {
+                reliability: createReliability({ mediaTimeMs: 1, gestureWeight: 0.65 }),
+                gesture: lowConfidenceGesture,
+            }).arms.left.intent,
         ).toBe("pointing");
     });
 

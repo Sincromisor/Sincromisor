@@ -13,6 +13,7 @@ import {
     CAMERA_QUALITY_SCHEMA_VERSION,
     type CameraQualityScore,
 } from "../../../features/gaze/trackingRuntime/cameraQualityScore";
+import type { GestureIntentObservation } from "../../motionIntent/motionIntentEstimator";
 import { createPoseReliabilityMap } from "../poseReliabilityEstimator";
 
 export function createCameraQuality(score: number): CameraQualityScore {
@@ -144,6 +145,7 @@ export function createMap(
         cameraQuality?: CameraQualityScore;
         hand?: SincroHandMotionSnapshot;
         face?: SincroFaceMotionSnapshot;
+        gesture?: GestureIntentObservation;
         previous?: { pose: SincroPoseMotionSnapshot; mediaTimeMs: number };
         mediaTimeMs?: number;
     } = {},
@@ -152,6 +154,7 @@ export function createMap(
         pose,
         ...(options.hand === undefined ? {} : { hand: options.hand }),
         ...(options.face === undefined ? {} : { face: options.face }),
+        ...(options.gesture === undefined ? {} : { gesture: options.gesture }),
         cameraQuality: options.cameraQuality ?? createCameraQuality(1),
         previous: options.previous,
         mediaTimeMs: options.mediaTimeMs ?? 1000,

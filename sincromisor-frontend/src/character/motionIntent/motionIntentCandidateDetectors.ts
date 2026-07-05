@@ -1,6 +1,10 @@
 /**
  * 片腕単位の gesture / near-face / wave / fallback candidate を検出する heuristic 群。
- * confidence gate、minimum duration、cooldown の意味を変える場合は motion design の MotionIntentState と focused estimator tests を確認する。
+ *
+ * Gesture gate は ReliabilityMap がある場合、raw confidence ではなく `gesture.finalWeight` と hand / finger
+ * reliability を使う。ReliabilityMap 欠損の legacy / unit-test 入力だけ Hand side confidence fallback を残す。
+ * threshold を変える場合は gesture flicker と semantic fallback が増減するため、focused estimator tests と
+ * motion-debug replay metrics を合わせて確認する。
  */
 import type { ReliabilityMap } from "../reliability/reliabilityMap";
 import type { TemporalArmState } from "../temporal/temporalUpperBodyState";
@@ -55,17 +59,21 @@ export function passesGestureGate(
     config: NormalizedEstimatorConfig,
 ): { ok: boolean; reliability: number; warnings: MotionIntentWarningCode[] } {
     const handConfidence = ctx.hand?.confidence ?? 0;
+    const gestureReliability =
+        ctx.reliability?.gesture.source === "gesture"
+            ? ctx.reliability.gesture.finalWeight
+            : undefined;
     const handReliability = getReliabilityPart(ctx.reliability, ctx.side, "Hand");
     const fingerReliability = getReliabilityPart(ctx.reliability, ctx.side, "Finger");
     const warnings: MotionIntentWarningCode[] = [];
     let ok = true;
 
-    // Gesture label だけでは瞬間誤認識が多いため、confidence と手・指の信頼度を同時に見る。
-    if ((ctx.gesture?.confidence ?? 0) < config.thresholds.gestureConfidence) {
+    const gestureGateValue = gestureReliability ?? ctx.gesture?.confidence ?? 0;
+    if (gestureGateValue < config.thresholds.gestureConfidence) {
         ok = false;
         warnings.push("gesture_unstable");
     }
-    if (handConfidence < config.thresholds.handConfidence) {
+    if (ctx.reliability === undefined && handConfidence < config.thresholds.handConfidence) {
         ok = false;
         warnings.push("low_hand_reliability");
     }
@@ -83,7 +91,10 @@ export function passesGestureGate(
 
     return {
         ok,
-        reliability: Math.min(handConfidence, handReliability ?? 1, fingerReliability ?? 1),
+        reliability:
+            ctx.reliability === undefined
+                ? Math.min(handConfidence, ctx.gesture?.confidence ?? 0)
+                : Math.min(gestureReliability ?? 0, handReliability ?? 1, fingerReliability ?? 1),
         warnings,
     };
 }
