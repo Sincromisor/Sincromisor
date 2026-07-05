@@ -14,10 +14,7 @@ import {
     createDefaultBehaviorVadSnapshot,
 } from "../../behavior/characterBehaviorSnapshots";
 import type { CharacterBehaviorSnapshot } from "../../behavior/characterBehaviorTypes";
-import {
-    DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
-    NEUTRAL_POSE_FRAME,
-} from "../../retargeting/sincroPoseRetargetTypes";
+import { NEUTRAL_POSE_FRAME } from "../../retargeting/sincroPoseRetargetTypes";
 import { createDefaultSincroMotionPipelineState } from "../../runtime/sincroMotionPipelineState";
 import type { SincroVrmPoseComposerDryRunResult } from "../../runtime/sincroVrmPoseComposerDryRun";
 import type { VrmPoseQuaternion } from "../../vrmPose/vrmPoseTypes";
@@ -68,289 +65,138 @@ const FULL_NORMALIZED_POSE_APPLICATION_TEST_BONES: readonly VRMHumanBoneName[] =
     "rightLittleDistal",
 ];
 
-describe("ArmBoneController composer arm application", () => {
-    it("keeps the direct write path when composer arm application is off", () => {
+describe("ArmBoneController direct writer", () => {
+    it("does not call setNormalizedPose from the legacy direct arm controller", () => {
         const { controller, nodes, setNormalizedPose } = createController();
-        const composerQuaternion = eulerQuaternion(0.9, 0.1, -0.2);
-
-        const result = controller.update(0, undefined, undefined, {
-            mode: "off",
-            composerDryRun: {
-                status: "not_ready",
-                warnings: ["retarget_frame_not_ready"],
-            },
-        });
-
-        expect(result.composerArmApplicationWarnings).toEqual([]);
-        expectQuaternionNotEqual(nodes.leftUpperArm.quaternion, composerQuaternion);
-        expect(setNormalizedPose).not.toHaveBeenCalled();
-    });
-
-    it("applies composer final pose only to the selected arm bones", () => {
-        const { controller, nodes } = createController();
-        const leftUpperArm = eulerQuaternion(0.8, 0.1, 0);
-        const leftLowerArm = eulerQuaternion(0.1, -0.5, 0);
-        const leftHand = eulerQuaternion(0, 0.2, 0.7);
-        const rightUpperArm = eulerQuaternion(-0.8, 0.1, 0);
-
-        const result = controller.update(0, undefined, undefined, {
-            mode: "left",
-            composerDryRun: createAvailableDryRun({
-                leftUpperArm,
-                leftLowerArm,
-                leftHand,
-                rightUpperArm,
-            }),
-        });
-
-        expect(result.composerArmApplicationWarnings).toEqual([]);
-        expectQuaternionEqual(nodes.leftUpperArm.quaternion, leftUpperArm);
-        expectQuaternionEqual(nodes.leftLowerArm.quaternion, leftLowerArm);
-        expectQuaternionEqual(nodes.leftHand.quaternion, leftHand);
-        expectQuaternionNotEqual(nodes.rightUpperArm.quaternion, rightUpperArm);
-    });
-
-    it("applies right mode only to right arm bones without warning for left arm gaps", () => {
-        const { controller, nodes } = createController({ missingBones: ["leftHand"] });
-        const leftUpperArm = eulerQuaternion(0.8, 0.1, 0);
-        const rightUpperArm = eulerQuaternion(-0.8, 0.1, 0);
-        const rightLowerArm = eulerQuaternion(0.2, 0.5, 0);
-        const rightHand = eulerQuaternion(0, -0.2, -0.7);
-
-        const result = controller.update(0, undefined, undefined, {
-            mode: "right",
-            composerDryRun: createAvailableDryRun({
-                leftUpperArm,
-                rightUpperArm,
-                rightLowerArm,
-                rightHand,
-            }),
-        });
-
-        expect(result.composerArmApplicationWarnings).toEqual([]);
-        expectQuaternionNotEqual(nodes.leftUpperArm.quaternion, leftUpperArm);
-        expectQuaternionEqual(nodes.rightUpperArm.quaternion, rightUpperArm);
-        expectQuaternionEqual(nodes.rightLowerArm.quaternion, rightLowerArm);
-        expectQuaternionEqual(nodes.rightHand.quaternion, rightHand);
-    });
-
-    it("applies both arm modes without taking ownership of shoulders, torso, fingers, head, or expression", () => {
-        const { controller, nodes, setNormalizedPose } = createController();
-        const leftUpperArm = eulerQuaternion(0.8, 0.1, 0);
-        const leftLowerArm = eulerQuaternion(0.1, -0.5, 0);
-        const leftHand = eulerQuaternion(0, 0.2, 0.7);
-        const rightUpperArm = eulerQuaternion(-0.8, 0.1, 0);
-        const rightLowerArm = eulerQuaternion(0.2, 0.5, 0);
-        const rightHand = eulerQuaternion(0, -0.2, -0.7);
-        const ignored = eulerQuaternion(0.4, 0.4, 0.4);
-
-        const result = controller.update(0, undefined, undefined, {
-            mode: "both",
-            composerDryRun: createAvailableDryRun({
-                chest: ignored,
-                head: ignored,
-                leftShoulder: ignored,
-                leftUpperArm,
-                leftLowerArm,
-                leftHand,
-                leftThumbProximal: ignored,
-                rightShoulder: ignored,
-                rightUpperArm,
-                rightLowerArm,
-                rightHand,
-                rightThumbProximal: ignored,
-            }),
-        });
-
-        expect(result.composerArmApplicationWarnings).toEqual([]);
-        expectQuaternionEqual(nodes.leftUpperArm.quaternion, leftUpperArm);
-        expectQuaternionEqual(nodes.leftLowerArm.quaternion, leftLowerArm);
-        expectQuaternionEqual(nodes.leftHand.quaternion, leftHand);
-        expectQuaternionEqual(nodes.rightUpperArm.quaternion, rightUpperArm);
-        expectQuaternionEqual(nodes.rightLowerArm.quaternion, rightLowerArm);
-        expectQuaternionEqual(nodes.rightHand.quaternion, rightHand);
-        expectQuaternionNotEqual(nodes.leftThumbProximal.quaternion, ignored);
-        expectQuaternionNotEqual(nodes.rightThumbProximal.quaternion, ignored);
-        expect(setNormalizedPose).not.toHaveBeenCalled();
-    });
-
-    it("falls back to direct writes when dry-run is not available", () => {
-        const { controller, nodes } = createController();
         const before = nodes.leftUpperArm.quaternion.clone();
 
-        const result = controller.update(0, undefined, undefined, {
-            mode: "left",
-            composerDryRun: {
-                status: "not_ready",
-                warnings: ["retarget_frame_not_ready"],
-            },
-        });
-
-        expect(result.composerArmApplicationWarnings).toEqual([
-            "composer_arm_application_unavailable:not_ready",
-        ]);
-        expect(nodes.leftUpperArm.quaternion.angleTo(before)).toBeGreaterThan(0);
-    });
-
-    it("warns without changing direct writes when an available dry-run has no result", () => {
-        const { controller, nodes } = createController();
-        const before = nodes.leftUpperArm.quaternion.clone();
-
-        const result = controller.update(0, undefined, undefined, {
-            mode: "left",
-            composerDryRun: {
-                status: "available",
-                warnings: [],
-            },
-        });
-
-        expect(result.composerArmApplicationWarnings).toEqual([
-            "composer_arm_application_result_missing",
-        ]);
-        expect(nodes.leftUpperArm.quaternion.angleTo(before)).toBeGreaterThan(0);
-    });
-
-    it("falls back per missing target bone and still applies available target bones", () => {
-        const { controller, nodes } = createController();
-        const leftUpperArm = eulerQuaternion(0.8, 0.1, 0);
-        const leftLowerBefore = nodes.leftLowerArm.quaternion.clone();
         controller.update(0);
 
-        const result = controller.update(0, undefined, undefined, {
-            mode: "left",
-            composerDryRun: createAvailableDryRun({
-                leftUpperArm,
-                leftHand: eulerQuaternion(0, 0, 0.6),
-            }),
-        });
-
-        expect(result.composerArmApplicationWarnings).toEqual([
-            "composer_arm_application_final_pose_missing:leftLowerArm",
-        ]);
-        expectQuaternionEqual(nodes.leftUpperArm.quaternion, leftUpperArm);
-        expect(nodes.leftLowerArm.quaternion.angleTo(leftLowerBefore)).toBeGreaterThan(0);
-    });
-
-    it("warns per missing normalized bone node while applying available nodes", () => {
-        const { controller, nodes } = createController({ missingBones: ["leftHand"] });
-        const leftUpperArm = eulerQuaternion(0.8, 0.1, 0);
-        const leftHand = eulerQuaternion(0, 0, 0.6);
-
-        const result = controller.update(0, undefined, undefined, {
-            mode: "left",
-            composerDryRun: createAvailableDryRun({
-                leftUpperArm,
-                leftLowerArm: eulerQuaternion(0.1, -0.5, 0),
-                leftHand,
-            }),
-        });
-
-        expect(result.composerArmApplicationWarnings).toEqual([
-            "composer_arm_application_normalized_node_missing:leftHand",
-        ]);
-        expectQuaternionEqual(nodes.leftUpperArm.quaternion, leftUpperArm);
-        expectQuaternionNotEqual(nodes.leftHand.quaternion, leftHand);
+        expect(nodes.leftUpperArm.quaternion.angleTo(before)).toBeGreaterThan(0);
+        expect(setNormalizedPose).not.toHaveBeenCalled();
     });
 });
 
-describe("VRMCharacterManager composer arm application lifecycle", () => {
-    it("resets production dry-run previous final pose when composer arm application mode changes", () => {
-        const reset = vi.fn();
-        const setConfig = vi.fn();
-        const manager = Object.create(
-            VRMCharacterManager.prototype,
-        ) as ComposerModeManagerTestDouble;
-        Object.assign(manager, {
-            composerArmApplicationMode: "off",
-            composerTorsoShoulderApplicationMode: "direct",
-            composerSemanticFingerApplicationMode: "composer",
-            composerDryRun: { reset },
-            sincroPoseRetargeter: { setConfig },
-        });
+describe("VRMCharacterManager full normalized pose application", () => {
+    it("applies the available upper-body finalPose once", () => {
+        const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
+        const finalPose = { leftUpperArm: eulerQuaternion(0.8, 0.1, 0) };
 
-        manager.setSincroPoseRetargetConfig({ composerArmApplicationMode: "left" });
+        const result = applyFullNormalizedPoseApplication(vrm, createAvailableDryRun(finalPose));
 
-        expect(reset).toHaveBeenCalledTimes(1);
-        expect(manager.composerArmApplicationMode).toBe("left");
-        expect(setConfig).toHaveBeenCalledWith({ composerArmApplicationMode: "left" });
+        expect(result).toEqual({ applied: true, warnings: [] });
+        expect(setNormalizedPose).toHaveBeenCalledTimes(1);
+        expect(setNormalizedPose).toHaveBeenCalledWith(toVrmPose(finalPose));
     });
 
-    it("keeps dry-run previous final pose when unrelated retarget config changes", () => {
-        const reset = vi.fn();
-        const setConfig = vi.fn();
-        const manager = Object.create(
-            VRMCharacterManager.prototype,
-        ) as ComposerModeManagerTestDouble;
-        Object.assign(manager, {
-            composerArmApplicationMode: "left",
-            composerTorsoShoulderApplicationMode: "direct",
-            composerSemanticFingerApplicationMode: "composer",
-            composerDryRun: { reset },
-            sincroPoseRetargeter: { setConfig },
+    it("does not promote stale finalPose when the current dry-run frame is unavailable", () => {
+        const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
+
+        const result = applyFullNormalizedPoseApplication(vrm, {
+            status: "missing_profile",
+            warnings: ["avatar_motion_profile_missing"],
         });
 
-        manager.setSincroPoseRetargetConfig({ intensityScale: 0.5 });
-
-        expect(reset).not.toHaveBeenCalled();
-        expect(manager.composerArmApplicationMode).toBe("left");
-        expect(setConfig).toHaveBeenCalledWith({ intensityScale: 0.5 });
+        expect(result).toEqual({
+            applied: false,
+            unavailableReason: "full_normalized_pose_application_unavailable:missing_profile",
+            warnings: ["full_normalized_pose_application_unavailable:missing_profile"],
+        });
+        expect(setNormalizedPose).not.toHaveBeenCalled();
     });
 
-    it("keeps torso and shoulder composer mode independent from arm mode changes", () => {
-        const reset = vi.fn();
-        const setConfig = vi.fn();
-        const manager = Object.create(
-            VRMCharacterManager.prototype,
-        ) as ComposerModeManagerTestDouble;
-        Object.assign(manager, {
-            composerArmApplicationMode: "off",
-            composerTorsoShoulderApplicationMode: "direct",
-            composerSemanticFingerApplicationMode: "composer",
-            composerDryRun: { reset },
-            sincroPoseRetargeter: { setConfig },
+    it("keeps full application as the only upper-body writer when finalPose is unavailable", () => {
+        const debugManager = createDebugManagerDouble();
+        const debugSpy = vi
+            .spyOn(DebugConsoleManager, "getManager")
+            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
+        const snapshot = createBehaviorSnapshot();
+        const armUpdate = vi.fn();
+        const motionUpdate = vi.fn();
+        const rootStabilization = vi.fn();
+        const { manager, setNormalizedPose } = createUpdateManagerDouble({
+            snapshot,
+            dryRun: { status: "invalid_input", warnings: ["delta_seconds_invalid"] },
+            armUpdate,
+            motionUpdate,
+            rootStabilization,
         });
 
-        manager.setSincroPoseRetargetConfig({ composerArmApplicationMode: "both" });
+        try {
+            manager.update(1000);
+        } finally {
+            debugSpy.mockRestore();
+        }
 
-        expect(reset).toHaveBeenCalledTimes(1);
-        expect(manager.composerArmApplicationMode).toBe("both");
-        expect(manager.composerTorsoShoulderApplicationMode).toBe("direct");
-        expect(setConfig).toHaveBeenCalledWith({ composerArmApplicationMode: "both" });
+        expect(setNormalizedPose).not.toHaveBeenCalled();
+        expect(armUpdate).not.toHaveBeenCalled();
+        expect(motionUpdate).not.toHaveBeenCalled();
+        expect(rootStabilization).toHaveBeenCalledTimes(1);
+        expect(manager.legBoneController.update).toHaveBeenCalledTimes(1);
+        expect(manager.vrm.update).toHaveBeenCalledTimes(1);
+        expect(debugManager.updateSincroComposerDryRunSummary).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                warnings: [
+                    "delta_seconds_invalid",
+                    "full_normalized_pose_application_unavailable:invalid_input",
+                ],
+                fullNormalizedPoseApplication: {
+                    applied: false,
+                    unavailableReason: "full_normalized_pose_application_unavailable:invalid_input",
+                },
+            }),
+        );
     });
 
-    it("keeps arm composer mode independent from torso and shoulder mode changes", () => {
-        const reset = vi.fn();
-        const setConfig = vi.fn();
-        const manager = Object.create(
-            VRMCharacterManager.prototype,
-        ) as ComposerModeManagerTestDouble;
-        Object.assign(manager, {
-            composerArmApplicationMode: "left",
-            composerTorsoShoulderApplicationMode: "direct",
-            composerSemanticFingerApplicationMode: "composer",
-            composerDryRun: { reset },
-            sincroPoseRetargeter: { setConfig },
+    it("keeps head, face, eye, mouth, emotion, leg, vrm update, and root updates on available frames", () => {
+        const debugManager = createDebugManagerDouble();
+        const debugSpy = vi
+            .spyOn(DebugConsoleManager, "getManager")
+            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
+        const snapshot = createBehaviorSnapshot();
+        const finalPose = { leftUpperArm: eulerQuaternion(0.8, 0.1, 0) };
+        const rootStabilization = vi.fn();
+        const { manager, setNormalizedPose } = createUpdateManagerDouble({
+            snapshot,
+            dryRun: createAvailableDryRun(finalPose),
+            armUpdate: vi.fn(),
+            motionUpdate: vi.fn(),
+            rootStabilization,
         });
 
-        manager.setSincroPoseRetargetConfig({ composerTorsoShoulderApplicationMode: "composer" });
+        try {
+            manager.update(1000);
+        } finally {
+            debugSpy.mockRestore();
+        }
 
-        expect(reset).toHaveBeenCalledTimes(1);
-        expect(manager.composerArmApplicationMode).toBe("left");
-        expect(manager.composerTorsoShoulderApplicationMode).toBe("composer");
-        expect(setConfig).toHaveBeenCalledWith({
-            composerTorsoShoulderApplicationMode: "composer",
-        });
+        expect(setNormalizedPose).toHaveBeenCalledWith(toVrmPose(finalPose));
+        expect(manager.headBoneController.update).toHaveBeenCalledTimes(1);
+        expect(manager.eyeBehaviorController.update).toHaveBeenCalledTimes(1);
+        expect(manager.mouthMorphController.update).toHaveBeenCalledTimes(1);
+        expect(manager.emotionMorphController.update).toHaveBeenCalledTimes(1);
+        expect(manager.legBoneController.update).toHaveBeenCalledTimes(1);
+        expect(manager.vrm.update).toHaveBeenCalledTimes(1);
+        expect(rootStabilization).toHaveBeenCalledTimes(1);
+        expect(debugManager.updateSincroComposerDryRunSummary).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                fullNormalizedPoseApplication: {
+                    applied: true,
+                    unavailableReason: undefined,
+                },
+            }),
+        );
     });
+});
 
-    it("keeps semantic and finger composer mode independent from arm and torso modes", () => {
+describe("VRMCharacterManager semantic/finger rollback lifecycle", () => {
+    it("resets production dry-run previous final pose when semantic finger mode changes", () => {
         const reset = vi.fn();
         const setConfig = vi.fn();
         const manager = Object.create(
             VRMCharacterManager.prototype,
-        ) as ComposerModeManagerTestDouble;
+        ) as SemanticFingerModeManagerTestDouble;
         Object.assign(manager, {
-            composerArmApplicationMode: "left",
-            composerTorsoShoulderApplicationMode: "composer",
             composerSemanticFingerApplicationMode: "composer",
             composerDryRun: { reset },
             sincroPoseRetargeter: { setConfig },
@@ -359,317 +205,42 @@ describe("VRMCharacterManager composer arm application lifecycle", () => {
         manager.setSincroPoseRetargetConfig({ composerSemanticFingerApplicationMode: "off" });
 
         expect(reset).toHaveBeenCalledTimes(1);
-        expect(manager.composerArmApplicationMode).toBe("left");
-        expect(manager.composerTorsoShoulderApplicationMode).toBe("composer");
         expect(manager.composerSemanticFingerApplicationMode).toBe("off");
         expect(setConfig).toHaveBeenCalledWith({ composerSemanticFingerApplicationMode: "off" });
     });
 
-    it("resets production dry-run previous final pose when full normalized pose mode changes", () => {
+    it("keeps dry-run previous final pose when unrelated retarget config changes", () => {
         const reset = vi.fn();
         const setConfig = vi.fn();
         const manager = Object.create(
             VRMCharacterManager.prototype,
-        ) as ComposerModeManagerTestDouble;
+        ) as SemanticFingerModeManagerTestDouble;
         Object.assign(manager, {
-            composerArmApplicationMode: "left",
-            composerTorsoShoulderApplicationMode: "composer",
             composerSemanticFingerApplicationMode: "composer",
-            fullNormalizedPoseApplicationMode: "off",
             composerDryRun: { reset },
             sincroPoseRetargeter: { setConfig },
         });
 
-        manager.setSincroPoseRetargetConfig({ fullNormalizedPoseApplicationMode: "upper_body" });
+        manager.setSincroPoseRetargetConfig({ intensityScale: 0.5 });
 
-        expect(reset).toHaveBeenCalledTimes(1);
-        expect(manager.composerArmApplicationMode).toBe("left");
-        expect(manager.composerTorsoShoulderApplicationMode).toBe("composer");
+        expect(reset).not.toHaveBeenCalled();
         expect(manager.composerSemanticFingerApplicationMode).toBe("composer");
-        expect(manager.fullNormalizedPoseApplicationMode).toBe("upper_body");
-        expect(setConfig).toHaveBeenCalledWith({
-            fullNormalizedPoseApplicationMode: "upper_body",
-        });
+        expect(setConfig).toHaveBeenCalledWith({ intensityScale: 0.5 });
     });
 });
 
-describe("VRMCharacterManager full normalized pose application", () => {
-    it("uses full upper-body application as the production default", () => {
-        expect(DEFAULT_SINCRO_POSE_RETARGET_CONFIG.fullNormalizedPoseApplicationMode).toBe(
-            "upper_body",
-        );
-    });
-
-    it("applies available finalPose once without using setNormalizedPose in off mode", () => {
-        const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
-        const finalPose = { leftUpperArm: eulerQuaternion(0.8, 0.1, 0) };
-        const dryRun = createAvailableDryRun(finalPose);
-
-        const offResult = applyFullNormalizedPoseApplication(vrm, "off", dryRun);
-        const fullResult = applyFullNormalizedPoseApplication(vrm, "upper_body", dryRun);
-
-        expect(offResult).toEqual({
-            mode: "off",
-            applied: false,
-            rollbackReason: "full_normalized_pose_application_off",
-            warnings: [],
-        });
-        expect(fullResult).toEqual({ mode: "upper_body", applied: true, warnings: [] });
-        expect(setNormalizedPose).toHaveBeenCalledTimes(1);
-        expect(setNormalizedPose).toHaveBeenCalledWith(toVrmPose(finalPose));
-    });
-
-    it("does not promote stale finalPose when the current dry-run frame is unavailable", () => {
-        const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
-
-        const result = applyFullNormalizedPoseApplication(vrm, "upper_body", {
-            status: "missing_profile",
-            warnings: ["avatar_motion_profile_missing"],
-        });
-
-        expect(result).toEqual({
-            mode: "upper_body",
-            applied: false,
-            rollbackReason: "full_normalized_pose_application_unavailable:missing_profile",
-            warnings: ["full_normalized_pose_application_unavailable:missing_profile"],
-        });
-        expect(setNormalizedPose).not.toHaveBeenCalled();
-    });
-
-    it("writes identity for missing full-owned finger bones on available frames", () => {
-        const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
-        const fingerCurl = eulerQuaternion(0.7, 0.1, 0);
-        const leftUpperArm = eulerQuaternion(0.8, 0.1, 0);
-
-        applyFullNormalizedPoseApplication(
-            vrm,
-            "upper_body",
-            createAvailableDryRun({ leftIndexProximal: fingerCurl }),
-        );
-        applyFullNormalizedPoseApplication(
-            vrm,
-            "upper_body",
-            createAvailableDryRun({ leftUpperArm }),
-        );
-
-        expect(setNormalizedPose).toHaveBeenCalledTimes(2);
-        expect(setNormalizedPose).toHaveBeenNthCalledWith(
-            1,
-            toVrmPose({ leftIndexProximal: fingerCurl }),
-        );
-        expect(setNormalizedPose).toHaveBeenNthCalledWith(2, toVrmPose({ leftUpperArm }));
-        expect(setNormalizedPose.mock.calls[1]?.[0]).toEqual(
-            expect.objectContaining({
-                leftIndexProximal: { rotation: [0, 0, 0, 1] },
-                leftIndexIntermediate: { rotation: [0, 0, 0, 1] },
-                leftIndexDistal: { rotation: [0, 0, 0, 1] },
-            }),
-        );
-    });
-
-    it("clears previous full-owned finger pose before unavailable rollback", () => {
-        const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
-        const fingerCurl = eulerQuaternion(0.7, 0.1, 0);
-
-        applyFullNormalizedPoseApplication(
-            vrm,
-            "upper_body",
-            createAvailableDryRun({ leftIndexProximal: fingerCurl }),
-        );
-        const rollbackResult = applyFullNormalizedPoseApplication(
-            vrm,
-            "upper_body",
-            {
-                status: "not_ready",
-                warnings: ["retarget_frame_not_ready"],
-            },
-            { clearPreviousApplication: true },
-        );
-
-        expect(rollbackResult).toEqual({
-            mode: "upper_body",
-            applied: false,
-            rollbackReason: "full_normalized_pose_application_unavailable:not_ready",
-            warnings: ["full_normalized_pose_application_unavailable:not_ready"],
-        });
-        expect(setNormalizedPose).toHaveBeenCalledTimes(2);
-        expect(setNormalizedPose).toHaveBeenNthCalledWith(2, toVrmPose({}));
-    });
-
-    it("skips direct upper body controllers when full finalPose applies", () => {
-        const debugManager = createDebugManagerDouble();
-        const debugSpy = vi
-            .spyOn(DebugConsoleManager, "getManager")
-            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
-        const snapshot = createBehaviorSnapshot();
-        const finalPose = { leftUpperArm: eulerQuaternion(0.8, 0.1, 0) };
-        const dryRun = createAvailableDryRun(finalPose);
-        const armUpdate = vi.fn();
-        const motionUpdate = vi.fn();
-        const { manager, setNormalizedPose } = createUpdateManagerDouble({
-            snapshot,
-            dryRun,
-            armUpdate,
-            motionUpdate,
-            fullNormalizedPoseApplicationMode: "upper_body",
-        });
-
-        try {
-            manager.update(1000);
-        } finally {
-            debugSpy.mockRestore();
-        }
-
-        expect(setNormalizedPose).toHaveBeenCalledTimes(1);
-        expect(setNormalizedPose).toHaveBeenCalledWith(toVrmPose(finalPose));
-        expect(armUpdate).not.toHaveBeenCalled();
-        expect(motionUpdate).not.toHaveBeenCalled();
-        expect(manager.legBoneController.update).toHaveBeenCalledTimes(1);
-        expect(manager.vrm.update).toHaveBeenCalledTimes(1);
-        expect(debugManager.updateSincroComposerDryRunSummary).toHaveBeenLastCalledWith(
-            expect.objectContaining({
-                fullNormalizedPoseApplication: {
-                    mode: "upper_body",
-                    applied: true,
-                    rollbackReason: undefined,
-                },
-            }),
-        );
-    });
-
-    it("rolls back to staged application when full finalPose is unavailable", () => {
-        const debugManager = createDebugManagerDouble();
-        const debugSpy = vi
-            .spyOn(DebugConsoleManager, "getManager")
-            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
-        const snapshot = createBehaviorSnapshot();
-        const armUpdate = vi.fn(() => ({ composerArmApplicationWarnings: [] }));
-        const motionUpdate = vi.fn(() => ({ composerTorsoShoulderApplicationWarnings: [] }));
-        const { manager, setNormalizedPose } = createUpdateManagerDouble({
-            snapshot,
-            dryRun: { status: "invalid_input", warnings: ["delta_seconds_invalid"] },
-            armUpdate,
-            motionUpdate,
-            fullNormalizedPoseApplicationMode: "upper_body",
-        });
-
-        try {
-            manager.update(1000);
-        } finally {
-            debugSpy.mockRestore();
-        }
-
-        expect(setNormalizedPose).not.toHaveBeenCalled();
-        expect(armUpdate).toHaveBeenCalledTimes(1);
-        expect(motionUpdate).toHaveBeenCalledTimes(1);
-        expect(debugManager.updateSincroComposerDryRunSummary).toHaveBeenLastCalledWith(
-            expect.objectContaining({
-                warnings: [
-                    "delta_seconds_invalid",
-                    "full_normalized_pose_application_unavailable:invalid_input",
-                ],
-                fullNormalizedPoseApplication: {
-                    mode: "upper_body",
-                    applied: false,
-                    rollbackReason: "full_normalized_pose_application_unavailable:invalid_input",
-                },
-            }),
-        );
-    });
-
-    it("clears previous full application before staged rollback writers run", () => {
-        const debugManager = createDebugManagerDouble();
-        const debugSpy = vi
-            .spyOn(DebugConsoleManager, "getManager")
-            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
-        const snapshot = createBehaviorSnapshot();
-        const armUpdate = vi.fn(() => ({ composerArmApplicationWarnings: [] }));
-        const motionUpdate = vi.fn(() => ({ composerTorsoShoulderApplicationWarnings: [] }));
-        const { manager, setNormalizedPose } = createUpdateManagerDouble({
-            snapshot,
-            dryRun: { status: "not_ready", warnings: ["retarget_frame_not_ready"] },
-            armUpdate,
-            motionUpdate,
-            fullNormalizedPoseApplicationMode: "upper_body",
-            previousFullApplied: true,
-        });
-
-        try {
-            manager.update(1000);
-        } finally {
-            debugSpy.mockRestore();
-        }
-
-        expect(setNormalizedPose).toHaveBeenCalledTimes(1);
-        expect(setNormalizedPose).toHaveBeenCalledWith(toVrmPose({}));
-        expect(armUpdate).toHaveBeenCalledTimes(1);
-        expect(motionUpdate).toHaveBeenCalledTimes(1);
-        expect(setNormalizedPose.mock.invocationCallOrder[0]).toBeLessThan(
-            armUpdate.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
-        );
-    });
-
-    it("clears previous full application before staged writers when mode returns to off", () => {
-        const debugManager = createDebugManagerDouble();
-        const debugSpy = vi
-            .spyOn(DebugConsoleManager, "getManager")
-            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
-        const snapshot = createBehaviorSnapshot();
-        const currentFinalPose = {
-            leftIndexProximal: eulerQuaternion(0.7, 0.1, 0),
-            leftUpperArm: eulerQuaternion(0.8, 0.1, 0),
-        };
-        const armUpdate = vi.fn(() => ({ composerArmApplicationWarnings: [] }));
-        const motionUpdate = vi.fn(() => ({ composerTorsoShoulderApplicationWarnings: [] }));
-        const { manager, setNormalizedPose } = createUpdateManagerDouble({
-            snapshot,
-            dryRun: createAvailableDryRun(currentFinalPose),
-            armUpdate,
-            motionUpdate,
-            fullNormalizedPoseApplicationMode: "off",
-            previousFullApplied: true,
-        });
-
-        try {
-            manager.update(1000);
-        } finally {
-            debugSpy.mockRestore();
-        }
-
-        expect(setNormalizedPose).toHaveBeenCalledTimes(1);
-        expect(setNormalizedPose).toHaveBeenCalledWith(toVrmPose({}));
-        expect(setNormalizedPose).not.toHaveBeenCalledWith(toVrmPose(currentFinalPose));
-        expect(armUpdate).toHaveBeenCalledTimes(1);
-        expect(motionUpdate).toHaveBeenCalledTimes(1);
-        expect(setNormalizedPose.mock.invocationCallOrder[0]).toBeLessThan(
-            armUpdate.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
-        );
-        expect(setNormalizedPose.mock.invocationCallOrder[0]).toBeLessThan(
-            motionUpdate.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
-        );
-        expect(debugManager.updateSincroComposerDryRunSummary).toHaveBeenLastCalledWith(
-            expect.objectContaining({
-                fullNormalizedPoseApplication: {
-                    mode: "off",
-                    applied: false,
-                    rollbackReason: "full_normalized_pose_application_off",
-                },
-            }),
-        );
-    });
-});
-
-type ComposerModeManagerTestDouble = {
+type SemanticFingerModeManagerTestDouble = {
     setSincroPoseRetargetConfig: VRMCharacterManager["setSincroPoseRetargetConfig"];
-    composerArmApplicationMode: "off" | "left" | "right" | "both";
-    composerTorsoShoulderApplicationMode: "direct" | "composer";
     composerSemanticFingerApplicationMode: "off" | "composer";
-    fullNormalizedPoseApplicationMode: "off" | "upper_body";
     composerDryRun: { reset: () => void };
     sincroPoseRetargeter: { setConfig: (config: unknown) => void };
 };
 
 type UpdateManagerTestDouble = VRMCharacterManager & {
+    headBoneController: { update: ReturnType<typeof vi.fn> };
+    eyeBehaviorController: { update: ReturnType<typeof vi.fn> };
+    mouthMorphController: { update: ReturnType<typeof vi.fn> };
+    emotionMorphController: { update: ReturnType<typeof vi.fn> };
     legBoneController: { update: ReturnType<typeof vi.fn> };
     vrm: {
         update: ReturnType<typeof vi.fn>;
@@ -677,49 +248,25 @@ type UpdateManagerTestDouble = VRMCharacterManager & {
     };
 };
 
-function createController(options?: { missingBones?: VRMHumanBoneName[] }): {
+function createController(): {
     controller: ArmBoneController;
-    nodes: Record<
-        | "leftUpperArm"
-        | "leftLowerArm"
-        | "leftHand"
-        | "leftThumbProximal"
-        | "rightUpperArm"
-        | "rightLowerArm"
-        | "rightHand"
-        | "rightThumbProximal",
-        Object3D
-    >;
+    nodes: Record<"leftUpperArm", Object3D>;
     setNormalizedPose: ReturnType<typeof vi.fn>;
 } {
-    const nodes: Record<
-        | "leftUpperArm"
-        | "leftLowerArm"
-        | "leftHand"
-        | "leftThumbProximal"
-        | "rightUpperArm"
-        | "rightLowerArm"
-        | "rightHand"
-        | "rightThumbProximal",
-        Object3D
-    > = {
+    const nodes = {
         leftUpperArm: new Object3D(),
+        rightUpperArm: new Object3D(),
         leftLowerArm: new Object3D(),
+        rightLowerArm: new Object3D(),
         leftHand: new Object3D(),
         leftThumbProximal: new Object3D(),
-        rightUpperArm: new Object3D(),
-        rightLowerArm: new Object3D(),
         rightHand: new Object3D(),
         rightThumbProximal: new Object3D(),
     };
-    const humanoidNodes: Partial<Record<VRMHumanBoneName, Object3D>> = { ...nodes };
-    for (const missingBone of options?.missingBones ?? []) {
-        delete humanoidNodes[missingBone];
-    }
     const setNormalizedPose = vi.fn();
     const vrm = {
         humanoid: {
-            getNormalizedBoneNode: (name: VRMHumanBoneName) => humanoidNodes[name],
+            getNormalizedBoneNode: (name: VRMHumanBoneName) => nodes[name as keyof typeof nodes],
             setNormalizedPose,
         },
     } as unknown as VRM;
@@ -793,8 +340,7 @@ function createUpdateManagerDouble(options: {
     dryRun: SincroVrmPoseComposerDryRunResult;
     armUpdate: ReturnType<typeof vi.fn>;
     motionUpdate: ReturnType<typeof vi.fn>;
-    fullNormalizedPoseApplicationMode: "off" | "upper_body";
-    previousFullApplied?: boolean;
+    rootStabilization: ReturnType<typeof vi.fn>;
 }): { manager: UpdateManagerTestDouble; setNormalizedPose: ReturnType<typeof vi.fn> } {
     const setNormalizedPose = vi.fn();
     const manager = Object.create(VRMCharacterManager.prototype) as UpdateManagerTestDouble;
@@ -809,11 +355,7 @@ function createUpdateManagerDouble(options: {
             getAvatarMotionProfile: vi.fn(() => undefined),
         },
         composerDryRun: { compose: vi.fn(() => options.dryRun) },
-        composerArmApplicationMode: "both",
-        composerTorsoShoulderApplicationMode: "composer",
         composerSemanticFingerApplicationMode: "composer",
-        fullNormalizedPoseApplicationMode: options.fullNormalizedPoseApplicationMode,
-        fullNormalizedPoseApplicationApplied: options.previousFullApplied ?? false,
         sincroMotionPipelineState: createDefaultSincroMotionPipelineState(),
         headBoneController: { update: vi.fn() },
         eyeBehaviorController: { update: vi.fn() },
@@ -821,7 +363,10 @@ function createUpdateManagerDouble(options: {
         emotionMorphController: { update: vi.fn() },
         armBoneController: { update: options.armUpdate },
         legBoneController: { update: vi.fn() },
-        motionOrchestrator: { update: options.motionUpdate },
+        motionOrchestrator: {
+            update: options.motionUpdate,
+            updateRootStabilization: options.rootStabilization,
+        },
         characterPosition: new Vector3(),
         defaultPosition: new Vector3(),
         rootBone: new Object3D(),
@@ -856,11 +401,10 @@ function toVrmPose(
         {};
     for (const bone of FULL_NORMALIZED_POSE_APPLICATION_TEST_BONES) {
         const quaternion = finalPose[bone];
-        if (quaternion === undefined) {
-            pose[bone] = { rotation: [0, 0, 0, 1] };
-        } else {
-            pose[bone] = { rotation: [quaternion.x, quaternion.y, quaternion.z, quaternion.w] };
-        }
+        pose[bone] =
+            quaternion === undefined
+                ? { rotation: [0, 0, 0, 1] }
+                : { rotation: [quaternion.x, quaternion.y, quaternion.z, quaternion.w] };
     }
     return pose;
 }
@@ -873,16 +417,4 @@ function eulerQuaternion(x: number, y: number, z: number): VrmPoseQuaternion {
         z: quaternion.z,
         w: quaternion.w,
     };
-}
-
-function expectQuaternionEqual(received: Quaternion, expected: VrmPoseQuaternion): void {
-    expect(received.angleTo(toQuaternion(expected))).toBeLessThan(0.000001);
-}
-
-function expectQuaternionNotEqual(received: Quaternion, expected: VrmPoseQuaternion): void {
-    expect(received.angleTo(toQuaternion(expected))).toBeGreaterThan(0.001);
-}
-
-function toQuaternion(value: VrmPoseQuaternion): Quaternion {
-    return new Quaternion(value.x, value.y, value.z, value.w).normalize();
 }

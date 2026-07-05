@@ -28,7 +28,6 @@ import { HeadBoneController } from "../behavior/headBoneController";
 import { SincroFaceRetargeter } from "../retargeting/sincroFaceRetargeter";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
-    type FullNormalizedPoseApplicationMode,
     type SincroPoseRetargetConfig,
     SincroPoseRetargeter,
 } from "../retargeting/sincroPoseRetargeter";
@@ -110,7 +109,8 @@ export type VRMCharacterManagerOptions = {
  *
  * caller は render loop から `update()` を呼ぶだけにし、VRM instance、normalized bone node、
  * expression manager、root position の副作用をこの境界へ閉じ込める。full normalized pose application は
- * dry-run が同一 frame の available result を返す場合だけここで 1 回実行し、失敗時は段階別 rollback path に戻す。
+ * dry-run が同一 frame の available result を返す場合だけここで 1 回実行する。失敗時は unavailable reason を
+ * Debug Console に残すだけで、旧 arm / torso staged writer は production fallback として呼ばない。
  */
 export class VRMCharacterManager {
     public vrm?: VRM;
@@ -131,15 +131,8 @@ export class VRMCharacterManager {
     private readonly sincroFaceRetargeter = new SincroFaceRetargeter();
     private readonly sincroPoseRetargeter = new SincroPoseRetargeter();
     private readonly composerDryRun = new SincroVrmPoseComposerDryRunService();
-    private composerArmApplicationMode =
-        DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerArmApplicationMode;
-    private composerTorsoShoulderApplicationMode =
-        DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerTorsoShoulderApplicationMode;
     private composerSemanticFingerApplicationMode =
         DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerSemanticFingerApplicationMode;
-    private fullNormalizedPoseApplicationMode =
-        DEFAULT_SINCRO_POSE_RETARGET_CONFIG.fullNormalizedPoseApplicationMode;
-    private fullNormalizedPoseApplicationApplied = false;
     private sincroMotionPipelineState: SincroMotionPipelineState =
         createDefaultSincroMotionPipelineState();
     private latestBehaviorSnapshot?: CharacterBehaviorSnapshot;
@@ -220,7 +213,6 @@ export class VRMCharacterManager {
         this.armBoneController.update(this.motionElapsedSeconds);
         this.sincroPoseRetargeter.attachVrm(vrm);
         this.composerDryRun.reset();
-        this.fullNormalizedPoseApplicationApplied = false;
         const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
         DebugConsoleManager.getManager().updateAvatarMotionProfile(
             avatarMotionProfile ? toMinimalAvatarMotionProfile(avatarMotionProfile) : undefined,
@@ -311,31 +303,9 @@ export class VRMCharacterManager {
         this.eyeBehaviorController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.mouthMorphController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.emotionMorphController?.update(this.latestBehaviorSnapshot);
-        const fullApplication = applyFullNormalizedPoseApplication(
-            this.vrm,
-            this.fullNormalizedPoseApplicationMode,
-            composerDryRun,
-            {
-                clearPreviousApplication: this.fullNormalizedPoseApplicationApplied,
-            },
-        );
-        this.fullNormalizedPoseApplicationApplied = fullApplication.applied;
-        const armUpdate = fullApplication.applied
-            ? undefined
-            : this.armBoneController?.update(
-                  this.motionElapsedSeconds,
-                  this.latestBehaviorSnapshot,
-                  sincroPose,
-                  {
-                      mode: this.composerArmApplicationMode,
-                      composerDryRun,
-                  },
-              );
+        const fullApplication = applyFullNormalizedPoseApplication(this.vrm, composerDryRun);
         const observedComposerDryRun = annotateFullNormalizedPoseApplication(
-            appendComposerApplicationWarnings(composerDryRun, [
-                ...(armUpdate?.composerArmApplicationWarnings ?? []),
-                ...fullApplication.warnings,
-            ]),
+            appendComposerApplicationWarnings(composerDryRun, fullApplication.warnings),
             fullApplication,
         );
         this.sincroMotionPipelineState = cloneSincroMotionPipelineState({
@@ -354,41 +324,7 @@ export class VRMCharacterManager {
         if (this.rootBone) {
             const hipsBasePosition = this.defaultPosition.clone().add(this.characterPosition);
             this.rootBone.position.copy(hipsBasePosition);
-            const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
-            const motionOrchestratorUpdate = fullApplication.applied
-                ? undefined
-                : this.motionOrchestrator?.update(
-                      this.motionElapsedSeconds,
-                      this.latestBehaviorSnapshot,
-                      hipsBasePosition,
-                      sincroPose,
-                      {
-                          mode: this.composerTorsoShoulderApplicationMode,
-                          profile: avatarMotionProfile
-                              ? toMinimalAvatarMotionProfile(avatarMotionProfile)
-                              : undefined,
-                      },
-                  );
-            if (motionOrchestratorUpdate) {
-                const nextComposerDryRun = annotateFullNormalizedPoseApplication(
-                    appendComposerApplicationWarnings(
-                        this.sincroMotionPipelineState.composerDryRun ?? observedComposerDryRun,
-                        motionOrchestratorUpdate.composerTorsoShoulderApplicationWarnings,
-                    ),
-                    fullApplication,
-                );
-                this.sincroMotionPipelineState = cloneSincroMotionPipelineState({
-                    ...this.sincroMotionPipelineState,
-                    composerDryRun: nextComposerDryRun,
-                    updatedAtMs: nowMs,
-                });
-                DebugConsoleManager.getManager().updateSincroComposerDryRunSummary(
-                    summarizeComposerDryRun(this.sincroMotionPipelineState.composerDryRun),
-                );
-                DebugConsoleManager.getManager().updateSincroComposerDryRunResult(
-                    nextComposerDryRun,
-                );
-            }
+            this.motionOrchestrator?.updateRootStabilization(hipsBasePosition);
         }
     }
 
@@ -417,45 +353,25 @@ export class VRMCharacterManager {
     /**
      * Debug Console などから pose retarget 設定を runtime へ反映する。
      *
-     * composer application flag の切替時だけ production dry-run の previous final pose を reset し、
+     * semantic / finger rollback flag の切替時だけ production dry-run の previous final pose を reset し、
      * 前 mode の angular velocity clamp 基準や finger previous hold を次 frame に持ち越さない。arm、
-     * torso / shoulder、semantic / finger、full normalized pose application は別 flag として保持し、
-     * 片方の mode 変更がもう片方の所有境界を暗黙に変えない。retargeter config は常に転送するが、
-     * VRM normalized pose や expression はここでは書き込まない。
+     * torso / shoulder、full normalized pose application の staged rollback flags は削除済みである。
+     * retargeter config は常に転送するが、VRM normalized pose や expression はここでは書き込まない。
      */
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
-        const nextComposerArmApplicationMode =
-            config.composerArmApplicationMode ?? this.composerArmApplicationMode;
-        const nextComposerTorsoShoulderApplicationMode =
-            config.composerTorsoShoulderApplicationMode ??
-            this.composerTorsoShoulderApplicationMode;
         const nextComposerSemanticFingerApplicationMode =
             config.composerSemanticFingerApplicationMode ??
             this.composerSemanticFingerApplicationMode;
-        const nextFullNormalizedPoseApplicationMode =
-            config.fullNormalizedPoseApplicationMode ?? this.fullNormalizedPoseApplicationMode;
         if (
-            nextComposerArmApplicationMode !== this.composerArmApplicationMode ||
-            nextComposerTorsoShoulderApplicationMode !==
-                this.composerTorsoShoulderApplicationMode ||
-            nextComposerSemanticFingerApplicationMode !==
-                this.composerSemanticFingerApplicationMode ||
-            nextFullNormalizedPoseApplicationMode !== this.fullNormalizedPoseApplicationMode
+            nextComposerSemanticFingerApplicationMode !== this.composerSemanticFingerApplicationMode
         ) {
             /*
-                feature flag の切替 frame では、前 mode で生成された composer final pose を
-                angular velocity clamp の previous として使わず、finger previous hold も破棄する。
-                full normalized pose application だけは pose 値ではなく「前 frame に full stage が
-                upper body / finger を所有した」という lifecycle state を持つ。mode off や unavailable
-                rollback へ戻る次の update では、その state を見て staged writer の前に identity clear を
-                入れ、direct path が所有しない finger pose の残留を消す。そのためここでは
-                fullNormalizedPoseApplicationApplied を reset しない。
+                semantic / finger layer の有効/無効を切り替える frame では、前 mode で生成された
+                composer final pose を angular velocity clamp の previous として使わず、finger previous hold も
+                破棄する。full application 自体は常時 production path のため、ここで別 mode state は持たない。
             */
             this.composerDryRun.reset();
-            this.composerArmApplicationMode = nextComposerArmApplicationMode;
-            this.composerTorsoShoulderApplicationMode = nextComposerTorsoShoulderApplicationMode;
             this.composerSemanticFingerApplicationMode = nextComposerSemanticFingerApplicationMode;
-            this.fullNormalizedPoseApplicationMode = nextFullNormalizedPoseApplicationMode;
         }
         this.sincroPoseRetargeter.setConfig(config);
     }
@@ -466,101 +382,65 @@ export class VRMCharacterManager {
 }
 
 /**
- * Outcome of one full normalized pose application attempt.
+ * full normalized pose application 1 frame 分の結果。
  *
- * The result is a frame-local caller contract: `applied=true` means the VRM already received the
- * composer-owned upper-body pose and direct upper-body writers must be skipped; `applied=false`
- * means callers should run the staged fallback path and use `rollbackReason` / `warnings` for
- * Debug Console visibility. The failure conditions are explicit mode off, missing VRM, non-
- * available dry-run status, and available dry-run frames that lack a result.
+ * `applied=true` は VRM が composer-owned upper-body pose を受け取ったことを表す。`applied=false` は
+ * current frame に適用可能な full finalPose が無かったことを表し、旧 arm / torso staged writer の起動条件には
+ * しない。失敗条件は VRM 未ロード、dry-run 非 available、available frame の result 欠損に限定する。
  */
 export type FullNormalizedPoseApplicationResult = {
-    /**
-     * The currently selected runtime mode. Callers should surface this with rollback state so a
-     * disabled full application can be distinguished from an unavailable composer frame.
-     */
-    mode: FullNormalizedPoseApplicationMode;
-    /**
-     * True only when the current frame's available composer result was applied to the VRM. When
-     * true, callers must skip upper-body direct writers in the same frame to avoid double
-     * application.
-     */
     applied: boolean;
     /**
-     * Present when the helper deliberately did not apply the current composer result. Reasons cover
-     * mode off, missing VRM, non-available dry-run status, and available frames without a result.
+     * current frame の full application が使えない理由。Debug Console summary / metrics 用の観測値であり、
+     * staged fallback path を起動する trigger として使わない。
      */
-    rollbackReason?: string;
+    unavailableReason?: string;
     /**
-     * Warning codes that should be appended to Debug Console composer summaries. Mode `off` is a
-     * rollback reason but not a warning; runtime failure conditions and unavailable frames are
-     * warnings.
+     * Debug Console composer summary に合流する warning code。full application が使えない理由だけを追加し、
+     * semantic / finger suppression warning は dry-run service 側のまま残す。
      */
     warnings: string[];
 };
 
-type FullNormalizedPoseApplicationOptions = {
-    clearPreviousApplication?: boolean;
-};
-
 /**
- * upper body composer finalPose を VRM humanoid へ 1 frame 1 回だけ適用する。
+ * upper body composer finalPose を VRM humanoid へ 1 frame 1 回だけ適用する production writer。
  *
- * caller はこの関数が `applied=true` を返す frame では arm / torso / shoulder の direct write を呼ばない。
- * `status !== "available"`、result 欠損、VRM 未ロードでは stale finalPose を再利用せず、rollback reason と
- * warning だけを返す。head / neck / leg / expression は finalPose に含めない composer contract 側で非対象にする。
+ * caller はこの helper の成否に関わらず arm / torso / shoulder の direct write を fallback として呼ばない。
+ * `status !== "available"`、result 欠損、VRM 未ロードでは stale finalPose を再利用せず、unavailable reason と
+ * warning だけを返す。head / neck / leg / expression / root position は composer contract 外として維持する。
  */
 export function applyFullNormalizedPoseApplication(
     vrm: VRM | undefined,
-    mode: FullNormalizedPoseApplicationMode,
     composerDryRun: SincroVrmPoseComposerDryRunResult,
-    options: FullNormalizedPoseApplicationOptions = {},
 ): FullNormalizedPoseApplicationResult {
-    if (mode === "off") {
-        if (vrm && options.clearPreviousApplication) {
-            vrm.humanoid.setNormalizedPose(toIdentityVrmPose());
-        }
+    const unavailableReason = fullNormalizedPoseApplicationUnavailableReason(vrm, composerDryRun);
+    if (unavailableReason) {
         return {
-            mode,
             applied: false,
-            rollbackReason: "full_normalized_pose_application_off",
-            warnings: [],
-        };
-    }
-    const rollbackReason = fullNormalizedPoseApplicationRollbackReason(vrm, composerDryRun);
-    if (rollbackReason) {
-        if (vrm && options.clearPreviousApplication) {
-            vrm.humanoid.setNormalizedPose(toIdentityVrmPose());
-        }
-        return {
-            mode,
-            applied: false,
-            rollbackReason,
-            warnings: [rollbackReason],
+            unavailableReason,
+            warnings: [unavailableReason],
         };
     }
     const result = composerDryRun.result;
     if (result === undefined) {
         return {
-            mode,
             applied: false,
-            rollbackReason: "full_normalized_pose_application_result_missing",
+            unavailableReason: "full_normalized_pose_application_result_missing",
             warnings: ["full_normalized_pose_application_result_missing"],
         };
     }
     if (vrm === undefined) {
         return {
-            mode,
             applied: false,
-            rollbackReason: "full_normalized_pose_application_vrm_missing",
+            unavailableReason: "full_normalized_pose_application_vrm_missing",
             warnings: ["full_normalized_pose_application_vrm_missing"],
         };
     }
     vrm.humanoid.setNormalizedPose(toVrmPose(result.finalPose));
-    return { mode, applied: true, warnings: [] };
+    return { applied: true, warnings: [] };
 }
 
-function fullNormalizedPoseApplicationRollbackReason(
+function fullNormalizedPoseApplicationUnavailableReason(
     vrm: VRM | undefined,
     composerDryRun: SincroVrmPoseComposerDryRunResult,
 ): string | undefined {
@@ -584,10 +464,6 @@ function toVrmPose(finalPose: VrmNormalizedLocalPose): VRMPose {
     return pose;
 }
 
-function toIdentityVrmPose(): VRMPose {
-    return toVrmPose({});
-}
-
 function toVrmPoseRotation(
     quaternion: VrmPoseQuaternion | undefined,
 ): [number, number, number, number] {
@@ -604,9 +480,8 @@ function annotateFullNormalizedPoseApplication(
     return {
         ...composerDryRun,
         fullNormalizedPoseApplication: {
-            mode: application.mode,
             applied: application.applied,
-            rollbackReason: application.rollbackReason,
+            unavailableReason: application.unavailableReason,
         },
     };
 }
@@ -617,7 +492,7 @@ function appendComposerApplicationWarnings(
 ): SincroVrmPoseComposerDryRunResult {
     /*
         Debug Console は composer dry-run summary を単一の観測口にしている。
-        arm / torso / full application fallback だけ別 channel に分けると rollback 判断が散るため、
+        full application unavailable reason だけ別 channel に分けると実行状態の判断が散るため、
         dry-run service 自体の warning 配列に append して同じ summary へ流す。warning が無い frame は
         object identity を保つ。
     */
