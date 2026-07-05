@@ -493,8 +493,8 @@ MediaPipe confidence をそのまま使わず、制御用の信頼度を部位�
 
 - 既存 2-bone IK、`MinimalAvatarMotionProfile`、`VrmPoseComposer` は実装済みである。
 - composer は fallback / tracking / semantic / idle / style layer、optional bone fallback、owned bone conflict、quaternion normalize、angular velocity clamp を扱う。
-- production runtime では `VrmPoseComposer` dry-run と arm、torso / shoulder、semantic / finger、full normalized pose application が実装済みである。`vrm.humanoid.setNormalizedPose(finalPose)` は upper body final pose を 1 回適用し、unavailable / invalid / missing profile では staged rollback path に戻る。
-- Debug Console 限定の rollback hook と staged fallback path は残っている。削除条件、手順、残リスクは task artifact の rollback runbook / cleanup inventory に記録されている。
+- production runtime では `VrmPoseComposer` dry-run、semantic / finger application、full normalized pose application が実装済みである。`vrm.humanoid.setNormalizedPose(finalPose)` は upper body final pose を 1 回適用し、unavailable / invalid / missing profile では stale finalPose を使わず、旧 arm / torso staged fallback path にも戻らない。
+- Debug Console 限定の rollback hook は semantic / finger suppression だけを残す。削除済み staged fallback path、手順、残リスクは task artifact の rollback runbook / cleanup inventory に記録されている。
 - IK target はまだ body-local canonical / temporal state だけから作る主経路には完全移行しておらず、Pose snapshot の arm targets を起点にする経路が残る。
 
 この Phase は `AvatarMotionProfile` の完成版を待つ必要はないが、IK target の scale / depth / reach を決めるため、Phase 6 開始時点で `MinimalAvatarMotionProfile` を先に用意する。`MinimalAvatarMotionProfile` は VRM load 時の optional bone、shoulder width、upper / lower arm length、head size、default reach scale、depth compression、shoulder damping、wrist roll influence を持つ。
