@@ -217,6 +217,7 @@
     - `SincroPoseMotionSnapshot` を置き換えず、tracking 観測、temporal、intent、IK、metrics が共有する中間表現として別 slot に保存する。
     - 保存形式は finite number、string enum、3 要素 tuple、plain object に限定し、MediaPipe landmark object、Three.js object、VRM bone keyed pose は入れない。
     - 左右は解剖学的な `left` / `right` に固定し、camera preview の mirror 表示や screen-space の左右反転とは分けて扱う。
+    - `head` は FaceLandmarker の `headPose.matrix` を主入力にして yaw / pitch / roll radian だけを保存する。matrix 欠損時は既存 snapshot の Euler 値へ低 confidence で fallback し、matrix invalid かつ Euler も非 finite の場合は `head` を省略する。Pose nose / ears / eyes fallback は現行 snapshot contract に存在しないため、この contract ではまだ扱わない。
     - `parseCanonicalUpperBodyState()` は log / replay 境界の検証 API であり、未知 schema version、値域外 scalar、非 finite number、runtime object 風 extra key を reject する。
 - `ReliabilityMap`
     - `sincro.reliability-map.v1` の schema version を持つ、tracking 観測品質の保存 contract。
@@ -263,7 +264,7 @@
     - `world.worldIkWeight`: weak target を許容する腕末端ほど低 confidence でも 0 より大きくなり得る。solver は最小 weight を腕全体の IK blend に使う。
 - motion evaluation log frame
     - `sincro.motion-debug-log.v1` の保存単位は NDJSON の frame record であり、tracker が出力する正規化 pose snapshot は `frame.poseSnapshot` に保存する。
-    - `frame.canonical` は motion-debug page 側で `SincroPoseMotionSnapshot` と latest face snapshot から生成した `CanonicalUpperBodyState` を保存する optional slot である。`parseMotionDebugLogLines()` は unknown optional slot として保持し、replay / viewer 境界で `parseCanonicalUpperBodyState()` により valid / invalid を判定する。
+    - `frame.canonical` は motion-debug page 側で `SincroPoseMotionSnapshot` と latest face snapshot から生成した `CanonicalUpperBodyState` を保存する optional slot である。Face matrix 欠損 / invalid の warning は canonical `head.warnings` と top-level `warnings` に保存される。`parseMotionDebugLogLines()` は unknown optional slot として保持し、replay / viewer 境界で `parseCanonicalUpperBodyState()` により valid / invalid を判定する。
     - `frame.reliability` は motion-debug page 側で生成する `ReliabilityMap` の optional slot である。`parseMotionDebugLogLines()` は unknown optional slot として保持し、replay / viewer 境界で `parseReliabilityMap()` により valid / invalid を判定する。
     - `frame.hand` は motion-debug page 側で保存する optional Hand snapshot slot である。保存対象は `SincroHandMotionSnapshot` の JSON 可能な低次元 field に限定し、raw landmarks、crop object、MediaPipe result は入れない。
     - `frame.temporal` は motion-debug page 側で `CanonicalUpperBodyState` と `ReliabilityMap` から生成した `TemporalUpperBodyState` を保存する optional slot である。`arms.left` / `arms.right` の `state`、`confidence`、`source`、`stateAgeMs`、`observedAgeMs`、`warnings`、`recoveringBlend`、`velocity`、`bodyLocalWrist` は replay viewer の JSON value で確認できる。

@@ -12,7 +12,10 @@ import type { MotionDebugCanonicalReliabilityInput } from "./types";
 
 export type MotionDebugCanonicalStateInput = {
     pose: SincroPoseMotionSnapshot;
-    face?: Pick<SincroFaceMotionSnapshot, "detected" | "confidence" | "headPose">;
+    face?: Pick<
+        SincroFaceMotionSnapshot,
+        "detected" | "confidence" | "headPose" | "source" | "warnings"
+    >;
     previous?: CanonicalUpperBodyState;
     mediaTimeMs: number;
     reliability?: ReliabilityMap;
@@ -29,6 +32,7 @@ export function createMotionDebugCanonicalState(
     });
     return createCanonicalUpperBodyState({
         pose: input.pose,
+        face: input.face,
         torso,
         previous: input.previous,
         mediaTimeMs: input.mediaTimeMs,

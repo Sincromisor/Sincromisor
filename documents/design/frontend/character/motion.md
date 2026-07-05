@@ -302,6 +302,9 @@
     - Phase 4 時点では optional `ReliabilityMap` を受け取った場合だけ、arm confidence を `poseConfidence * sqrt(partWeight * minJointWeight)` で downweight する。`partWeight` は該当 arm の `PartReliability.finalWeight`、`minJointWeight` は shoulder / elbow / wrist joint `finalWeight` の最小値とする。
     - arm reliability が `lost` の場合は canonical arm source を `neutral`、confidence を `0` にする。`suspect` は source `pose` の低 confidence 観測として保持し、TemporalStateEstimator / MotionSolver が後続 Phase 5 / 6 で扱う。
     - canonical warning 変換は `ReliabilityWarningCode` ではなく、該当 arm の part / joint `components.side.reasonCodes`、`components.boneLength.reasonCodes`、`components.bodyScale.reasonCodes` を読む。`side_inconsistent` は `left_right_swap_suspect`、`bone_length_inconsistent` / `body_scale_jump` は `out_of_range` へ写す。
+    - `head` は FaceLandmarker の `headPose.matrix` を主入力にし、16 要素の finite number 配列だけを通常観測として yaw / pitch / roll radian へ変換する。matrix 欠損時は `face_matrix_missing`、matrix invalid 時は `face_matrix_invalid` を `head.warnings` と top-level `warnings` に保存し、既存 snapshot の Euler 値へ低 confidence で fallback する。
+    - Face が未検出、`source: "lost"`、confidence `0`、または head reliability の `parts.head` / `joints.head` が lost か finalWeight `< 0.05` の場合、canonical `head` は省略する。neutral head や previous head は canonical layer では捏造せず、dropout / predicted / recovering は TemporalStateEstimator の責務に残す。
+    - optional `ReliabilityMap` がある場合、head confidence は `matrixOrEulerConfidence * sqrt(parts.head.finalWeight * joints.head.finalWeight)` で downweight する。Pose nose / ears / eyes fallback は現行 Face / Pose snapshot に head orientation 入力として保存されていないため、本 contract では扱わない。
     - `calibration` は default / initial / online / replay の snapshot とし、未実装時も `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` を保存して replay の決定性を保つ。
     - `SincroPoseRetargetFrame` の VRM additive rotation、IK solver の quaternion、AnimationMixer 出力は canonical arm feature の入力にも canonical state にも入れず、retarget / final pose の別 slot に分ける。
 - `TemporalUpperBodyState`
@@ -325,7 +328,7 @@
     - Tracker runtime の `comfortable-idle` stage は comfortable pose を直接生成しない。tracker は camera / Face tracking を継続したまま Pose fallback と Hand lost snapshot、`degradationPolicy` reason を出すだけにし、comfortable scalar への blend は TemporalStateEstimator、MotionSolver、VrmPoseComposer の責務に残す。
     - lost / predicted / comfortable / recovering 後に arm confidence が `>= 0.65` へ戻り、reliability が tracked になった arm は `state: "recovering"`、`source: "mixed"` として filtered observation へ復帰する。`recoveringBlend` は `from`、`progress`、`durationMs` を保存し、warning `recovery_blend` を付ける。`recoveringBlendMs` は config で上書きできるが `180..400` に clamp する。
     - recovering 中の 1 frame あたり scalar jump は `maxRecoveringAngleJumpRad: 15deg` 相当に clamp する。`elevationRad` / `elbowFlexionRad` は radian clamp、`reach` / `openness` / `forwardness` は各値域に同じ比率を掛けた clamp を使う。prediction / comfortable fallback / recovering は左右腕ごとに独立して処理する。
-    - canonical `head` が存在する frame だけ、yaw / pitch / roll に arm と同じ `tracked` / `predicted` / `lost` / `recovering` policy を optional に適用する。v1 では Face matrix 由来 head reliability は扱わず、Head / Face 専用 reliability 接続は Phase 8 以降に残す。
+    - canonical `head` が存在する frame だけ、yaw / pitch / roll に arm と同じ `tracked` / `predicted` / `lost` / `recovering` policy を optional に適用する。Face matrix と head reliability の反映は canonical layer で済ませ、TemporalStateEstimator は canonical head の有無、confidence、ReliabilityMap の head state から時系列 dropout を扱う。
     - VRM quaternion、IK pole、final pose smoothing は TemporalStateEstimator では扱わず、Phase 6 以降の MotionSolver / IK / VrmPoseComposer の責務に残す。
 - `MotionIntentState`
     - `sincro.motion-intent.v1` を schema version とする、canonical / temporal / reliability の後段、semantic pose / IK / finger bone 適用の前段で使う JSON 保存可能な motion intent contract。
