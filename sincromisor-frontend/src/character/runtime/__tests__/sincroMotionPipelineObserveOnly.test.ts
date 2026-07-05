@@ -69,6 +69,10 @@ function createHand(overrides: Partial<SincroHandMotionSnapshot> = {}): SincroHa
     };
 }
 
+function createFaceMatrixForYaw(yawRad: number): number[] {
+    return [1, 0, 0, 0, 0, 1, 0, 0, -Math.tan(yawRad), 0, 1, 0, 0, 0, 0, 1];
+}
+
 describe("SincroMotionObserveOnlyPipeline", () => {
     it("keeps face-only callbacks as not_computed until a pose frame exists", () => {
         const pipeline = new SincroMotionObserveOnlyPipeline();
@@ -145,6 +149,38 @@ describe("SincroMotionObserveOnlyPipeline", () => {
         expect(result.state.temporal?.timestamp.mediaTimeMs).toBe(250);
         expect(result.state.intent?.timestamp.mediaTimeMs).toBe(250);
         expect(result.state.updatedAtMs).toBe(9010);
+    });
+
+    it("passes latest face matrix into live canonical head and temporal head", () => {
+        const pipeline = new SincroMotionObserveOnlyPipeline();
+
+        updateFace(
+            pipeline,
+            createFace({
+                confidence: 0.9,
+                headPose: {
+                    yawDeg: 0,
+                    pitchDeg: 0,
+                    rollDeg: 0,
+                    matrix: createFaceMatrixForYaw(0.24),
+                },
+            }),
+            {
+                mediaTimeMs: 240,
+                receivedAtMs: 9000,
+                video: { width: 1280, height: 720 },
+            },
+        );
+        const result = updatePose(pipeline, createPose({ lastUpdatedAtMs: 241 }), {
+            mediaTimeMs: 250,
+            receivedAtMs: 9010,
+            video: { width: 1280, height: 720 },
+        });
+
+        expect(result.state.canonical?.head?.yawRad).toBeCloseTo(0.24);
+        expect(result.state.canonical?.head?.source).toBe("face");
+        expect(result.state.temporal?.head?.yawRad).toBeCloseTo(0.24);
+        expect(result.state.temporal?.head?.source).toBe("canonical");
     });
 
     it("returns invalid_input without advancing downstream estimators when timing is absent", () => {

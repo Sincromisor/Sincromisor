@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT } from "../../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
@@ -158,6 +159,21 @@ function createTrackedReliabilityMap(mediaTimeMs = 1234): ReliabilityMap {
         }
     }
     return reliability;
+}
+
+function createFaceWithMissingMatrix() {
+    return {
+        ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
+        detected: true,
+        confidence: 0.9,
+        source: "full-frame" as const,
+        headPose: {
+            yawDeg: 8,
+            pitchDeg: 2,
+            rollDeg: -1,
+        },
+        warnings: [],
+    };
 }
 
 describe("extractCanonicalArmState", () => {
@@ -367,6 +383,19 @@ describe("extractCanonicalArmState", () => {
         expect(state.warnings).toEqual(
             expect.arrayContaining(["left_right_swap_suspect", "out_of_range"]),
         );
+        expect(parseCanonicalUpperBodyState(state).ok).toBe(true);
+    });
+
+    it("includes canonical head warnings in the top-level canonical warning list", () => {
+        const state = createCanonicalUpperBodyState({
+            pose: DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
+            face: createFaceWithMissingMatrix(),
+            torso: createTorsoFrame(),
+            mediaTimeMs: 1234,
+        });
+
+        expect(state.head?.warnings).toContain("face_matrix_missing");
+        expect(state.warnings).toContain("face_matrix_missing");
         expect(parseCanonicalUpperBodyState(state).ok).toBe(true);
     });
 });

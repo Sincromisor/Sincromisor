@@ -202,6 +202,7 @@ export class SincroMotionObserveOnlyPipeline {
         });
         const canonical = createCanonicalUpperBodyState({
             pose: this.state.pose,
+            face: this.hasFace ? this.state.face : undefined,
             torso: estimateCanonicalTorsoFrame({
                 pose: this.state.pose,
                 face: this.hasFace ? this.state.face : undefined,

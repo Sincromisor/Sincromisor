@@ -1,3 +1,4 @@
+import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type {
     SincroPoseArmMotionSnapshot,
     SincroPoseMotionSnapshot,
@@ -17,6 +18,7 @@ import {
     readBodyPoint,
     toBodyLocal,
 } from "./canonicalArmFeatureMath";
+import { extractCanonicalHeadState } from "./canonicalHeadFeatureExtractor";
 import type { CanonicalTorsoFrameResult } from "./canonicalTorsoFrameEstimator";
 import { length, subtract, tuple3 } from "./canonicalTuple3Math";
 import {
@@ -27,8 +29,18 @@ import {
     type CanonicalWarningCode,
 } from "./canonicalUpperBodyState";
 
+/**
+ * Pose callback 起点で canonical upper body state を生成する入力境界。
+ *
+ * Face は head pose の正本として optional に読み、previous は torso / Temporal 向け履歴を渡すための値である。
+ * canonical layer 自体は missing head を previous で補わない。
+ */
 export type CanonicalArmFeatureInput = {
     pose: SincroPoseMotionSnapshot;
+    face?: Pick<
+        SincroFaceMotionSnapshot,
+        "detected" | "confidence" | "headPose" | "source" | "warnings"
+    >;
     torso: CanonicalTorsoFrameResult;
     previous?: CanonicalUpperBodyState;
     mediaTimeMs: number;
@@ -143,6 +155,13 @@ export function extractCanonicalArmState(input: CanonicalSingleArmFeatureInput):
     };
 }
 
+/**
+ * Pose / optional Face snapshot を後段共有の `CanonicalUpperBodyState` へ変換する。
+ *
+ * 戻り値は JSON 保存可能な finite scalar / tuple / enum だけを持ち、VRM pose、MediaPipe raw landmark、
+ * matrix 全体、quaternion は保存しない。Face head が lost または信頼度不足の frame では `head` を省略し、
+ * dropout / prediction は TemporalStateEstimator に委ねる。
+ */
 export function createCanonicalUpperBodyState(
     input: CanonicalArmFeatureInput,
 ): CanonicalUpperBodyState {
@@ -159,12 +178,22 @@ export function createCanonicalUpperBodyState(
         torso: input.torso,
         reliability: input.reliability,
     });
+    const head = extractCanonicalHeadState({
+        face: input.face,
+        reliability: input.reliability,
+        previous: input.previous?.head,
+    });
     const warnings: CanonicalWarningCode[] = [];
-    for (const warning of [...torsoFrame.warnings, ...left.warnings, ...right.warnings]) {
+    for (const warning of [
+        ...torsoFrame.warnings,
+        ...(head?.warnings ?? []),
+        ...left.warnings,
+        ...right.warnings,
+    ]) {
         pushWarning(warnings, warning);
     }
 
-    return {
+    const state: CanonicalUpperBodyState = {
         schemaVersion: CANONICAL_UPPER_BODY_SCHEMA_VERSION,
         timestamp: {
             mediaTimeMs: input.mediaTimeMs,
@@ -175,6 +204,10 @@ export function createCanonicalUpperBodyState(
         calibration,
         warnings,
     };
+    if (head !== undefined) {
+        state.head = head;
+    }
+    return state;
 }
 
 function collectInputWarnings(options: {

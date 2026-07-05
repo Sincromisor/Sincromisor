@@ -12,6 +12,12 @@ export const CANONICAL_SOURCE_VALUES = [
     "mixed",
 ] as const;
 
+/**
+ * `CanonicalUpperBodyState` の part / top-level warning として保存できる code 一覧。
+ *
+ * replay / motion-debug の保存 contract であり、旧 log 互換のため warning 自体は optional な part 欠損とは
+ * 独立して扱う。Face matrix 系 warning は canonical head の fallback 理由を Pose world 座標欠損と分けて残す。
+ */
 export const CANONICAL_WARNING_CODE_VALUES = [
     "torso_frame_unreliable",
     "front_flip_rejected",
@@ -21,6 +27,8 @@ export const CANONICAL_WARNING_CODE_VALUES = [
     "out_of_range",
     "low_confidence",
     "missing_world_coordinates",
+    "face_matrix_missing",
+    "face_matrix_invalid",
     "calibration_missing",
 ] as const;
 
