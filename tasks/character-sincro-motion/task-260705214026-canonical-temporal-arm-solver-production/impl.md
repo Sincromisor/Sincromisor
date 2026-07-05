@@ -212,3 +212,56 @@ TODO は追加していない。stale comment の削除対象はなく、評価�
 ### コミット
 
 - attempt 4 の worktree 変更はないため追加 commit は作成しない。現在の実装 commit は `e7caaa8`。
+
+## attempt 5
+
+### 判断
+
+- 前回 evaluator の FAIL は captured production P0 replay fixture metrics comparison の一点であり、実装本体、fallback reason、Phase 6 `source`、旧 log 互換、docs / comment audit は概ね PASS 済みと確認した。
+- 指定 worktree `/private/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-cc415b27024e-A9HaHw` の branch `codex/task-260705214026-canonical-temporal-arm-solver-production` を現在基点 `feature/character-animation-3.0` へ merge し、merge commit `56d0db4` を作成した。
+- merge conflict は `documents/design/frontend/character/motion.md` と `sincromisor-frontend/src/character/vrmCharacter/vrmCharacterManager.ts` の 2 件。最新 main 側の full normalized pose production default と Gesture reliability / viewer 分割の変更を尊重し、temporal arm primary の設計記述と `retarget(..., { temporal, profile })` だけを維持した。
+- review.md 申し送りどおり、削除済みの arm / torso / full application staged rollback flags は復活させていない。`VRMCharacterManager.update()` の root block は最新 main の `CharacterMotionOrchestrator.updateRootStabilization()` 経路を採用した。
+- 最新基点込みで P0 replay fixture / recording / metrics generator を再調査したが、task.md が要求する captured production P0 replay fixture metrics comparison を正当に満たす artifact は repository 内に存在しない。synthetic artifact や `not-captured` summary を正規 P0 として扱わない判断を維持する。
+
+### P0 replay fixture 再調査範囲
+
+- `find` で repository 内の `.ndjson` / `.ndjson.gz` / `.jsonl` / `.jsonl.gz`、`recording`、`replay`、`fixture` 名の committed artifact を確認した。production motion-debug replay log として扱える NDJSON / JSONL は見つからなかった。
+- `rg` で `P0`、`production replay`、`captured`、`not-captured`、`neutralJitter`、`elbowFlip`、`recoveryJump`、`reachClampOccupancy`、`calculateReplayMetrics`、`runQaRegression` を `tasks/`、`documents/`、`sincromisor-frontend/src/` から再検索した。
+- `task-260629225919-production-sincro-motion-replay-baselines/artifacts/production-sincro-baseline-manifest.md` は現在基点でも 6 fixture すべて `Source: not-captured`、replay log path / metrics summary path は未生成で、実 camera evidence と扱わないよう明記している。
+- `task-260629225942-production-retarget-composer-motion-metrics-comparison/artifacts/composer-comparison/production-composer-comparison-summaries.not-captured.json` は 6 P0 fixture id を含むが、全 metric が `not_available` / `baseline_not_captured` / `replayLog.available: false` で、temporal primary vs pose-snapshot fallback comparison ではない。
+- `task-260705004405-torso-shoulder-composer-migration/artifacts/torso-shoulder-composer-migration-replay.json` は torso / shoulder synthetic audit であり、production P0 replay frames、raw result slot、Phase 6 temporal-vs-pose comparison metrics を含まない。
+- 最新 main で追加された motion-debug viewer split / Gesture reliability 関連の tests と fixtures は viewer / unit-test 用であり、captured production P0 replay fixture ではない。
+
+### Blocker
+
+- P0 replay fixture metrics comparison の受け入れ条件は、現在の repository / worktree 内の実装だけでは充足不能。
+- 不足している artifact は、production-like browser client で取得した P0 6 種の motion-debug recording、または task.md 上「P0 replay fixture」として扱える正規 fixture。
+- 必要な保存形は既存 manifest と同じく `artifacts/replay/<metrics-fixture-id>.ndjson` または `.ndjson.gz`、`artifacts/metrics/<metrics-fixture-id>.summary.json`、必要に応じて `.baseline.json`。各 replay は temporal primary と pose-snapshot fallback の両条件で `neutralJitter`、`elbowFlipCount`、`recoveryJumpAngleDeg`、`reachClampOccupancy` を算出できる production frame / temporal / solver / metrics slot を含む必要がある。
+
+### TypeScript production comment audit
+
+| path                                                                                     | symbol or decision                           | kind                         | current comment                                                                                                                                              | decision | required maintenance knowledge                                                                                                                                | action                                                                                                      | reviewer note                                                                                               |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `sincromisor-frontend/src/character/vrmCharacter/vrmCharacterManager.ts`                 | `VRMCharacterManager.update()` merge boundary | lifecycle / runtime boundary | class / helper comments describe full normalized pose application as single production writer and unavailable reason as observation, not staged fallback hook | keep     | temporal/profile を retargeter 第 3 引数へ渡す一方、full application unavailable frame で旧 arm / torso staged writer を復活させないこと                     | conflict resolution で `retarget(..., { temporal, profile })` と `updateRootStabilization()` の両方を維持    | `motionOrchestrator.update()`、arm / torso staged mode fields、full application mode field が復活していないこと |
+| `sincromisor-frontend/src/character/vrmCharacter/vrmCharacterManager.ts`                 | `applyFullNormalizedPoseApplication()`        | public export / lifecycle    | production writer としての TSDoc があり、失敗条件と非対象を明記している                                                                                     | keep     | full application 失敗は Debug Console / metrics 用 unavailable reason に閉じ、fallback writer 起動条件にしないこと                                           | merge による既存 comment を維持。追加 JSDoc は不要                                                          | helper signature に旧 mode / rollback option が無いこと                                                     |
+| `documents/design/frontend/character/motion.md`                                          | temporal primary vs deleted staged flags      | design doc sync              | merge conflict で旧 arm / torso staged flag 説明と最新 deleted-staged-path 説明が衝突                                                                       | rewrite  | 腕 IK target は temporal bridge primary / pose-snapshot fallback。Hand wrist は主入力にせず、arm / torso / full staged rollback flags は削除済み              | 最新 deleted-staged-path 記述を残し、その直後に temporal arm primary / pose fallback 境界を追記              | design doc が reviewer 申し送りの `motion.md:50,79` と `tracking.md:122` 系の正本記述を崩していないこと     |
+
+TODO は追加していない。stale comment は、merge conflict resolution の範囲で旧 staged rollback path を復活させない形に整理した。
+
+### ドキュメント同期
+
+- merge conflict resolution として `documents/design/frontend/character/motion.md` を同期した。最新 main の full normalized pose production default / staged rollback flags 削除済みの説明を維持し、temporal bridge primary / pose-snapshot fallback / Hand wrist 非採用の境界を残した。
+- 公開 WebRTC / backend contract、DataChannel payload、server code は変更していないため追加同期は不要。
+
+### 検証
+
+- `npm run gate`: PASS at clean SHA `56d0db4`。`gate:lint` は Biome / Markdown check PASS、`gate:build` は TypeScript / Vite build PASS、`gate:test` は 70 files / 487 tests passed。
+
+### コミット
+
+- `56d0db4` `chore(character): merge current animation base`
+    - current base merge、conflict resolution、temporal arm primary と最新 full normalized pose production path の両立。
+
+### 未実行 / 残リスク
+
+- captured production P0 replay fixture metrics comparison は未実行。repository 内に正規 P0 replay fixture / recording / metrics summary が無いため。実機または production-like camera / video fixture session で P0 recording を取得するまで、現 task.md の受け入れ条件は満たせない。
