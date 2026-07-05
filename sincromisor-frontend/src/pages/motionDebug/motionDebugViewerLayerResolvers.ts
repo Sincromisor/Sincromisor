@@ -65,18 +65,16 @@ export function resolveCameraValue(context: MotionDebugViewerContext): unknown {
 /**
  * reliability layer の live / replay 値を解決する。
  *
- * 旧 log は reliability slot を持たないため、parse 可能な pose snapshot から再計算する。pose が無い、
- * または parse 不能な場合は replay 全体を失敗させず `undefined` を返して未記録扱いにする。
+ * replay frame がある場合は保存済み reliability slot を live snapshot より優先する。旧 log は
+ * reliability slot を持たないため、parse 可能な pose snapshot から再計算する。pose が無い、または
+ * parse 不能な場合は replay 全体を失敗させず `undefined` を返して未記録扱いにする。
  */
 export function resolveReliabilityValue(
     context: MotionDebugViewerContext,
 ): ReliabilityMap | ReliabilityLayerParseError | undefined {
-    if (context.liveSnapshot.reliability !== undefined) {
-        return context.liveSnapshot.reliability;
-    }
     const frame = context.replayFrame;
     if (frame === undefined) {
-        return undefined;
+        return context.liveSnapshot.reliability;
     }
     if (frame.reliability !== undefined) {
         return parseReliabilityLayerValue(frame.reliability);
