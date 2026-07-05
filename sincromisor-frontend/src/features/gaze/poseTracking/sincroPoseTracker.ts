@@ -1,4 +1,8 @@
 import { PoseLandmarker } from "@mediapipe/tasks-vision";
+import {
+    serializePoseLandmarkerResult,
+    type TrackerRuntimeMediaPipeRawResult,
+} from "../trackingRuntime/mediaPipeRawResultSerializer";
 import { loadMediaPipeVisionFileset } from "../trackingRuntime/mediaPipeVisionFileset";
 import {
     DEFAULT_SINCRO_POSE_ARM_MOTION_SNAPSHOT,
@@ -21,6 +25,7 @@ export class SincroPoseTracker {
     private poseLandmarker?: PoseLandmarker;
     private initPromise?: Promise<void>;
     private lastInferenceEndedAtMs?: number;
+    private lastRawResult?: TrackerRuntimeMediaPipeRawResult["pose"];
     private consecutiveFailures = 0;
     private snapshot: SincroPoseMotionSnapshot = {
         ...DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
@@ -60,12 +65,14 @@ export class SincroPoseTracker {
                 nowMs: timestampMs,
                 consecutiveFailures: this.consecutiveFailures,
             });
+            this.lastRawResult = undefined;
             return this.snapshot;
         }
 
         const inferenceStartedAtMs = performance.now();
         const result = this.poseLandmarker.detectForVideo(videoFrame, timestampMs);
         const inferenceEndedAtMs = performance.now();
+        this.lastRawResult = serializePoseLandmarkerResult(result);
         const inferenceTimeMs = inferenceEndedAtMs - inferenceStartedAtMs;
         const inferenceFps =
             this.lastInferenceEndedAtMs === undefined
@@ -82,6 +89,10 @@ export class SincroPoseTracker {
         this.consecutiveFailures = normalized.consecutiveFailures;
         this.snapshot = normalized.snapshot;
         return this.getSnapshot();
+    }
+
+    getLastRawResult(): TrackerRuntimeMediaPipeRawResult["pose"] | undefined {
+        return this.lastRawResult;
     }
 
     getSnapshot(): SincroPoseMotionSnapshot {
@@ -103,6 +114,7 @@ export class SincroPoseTracker {
             lastUpdatedAtMs: nowMs,
         };
         this.lastInferenceEndedAtMs = undefined;
+        this.lastRawResult = undefined;
         this.consecutiveFailures = 0;
         return this.getSnapshot();
     }

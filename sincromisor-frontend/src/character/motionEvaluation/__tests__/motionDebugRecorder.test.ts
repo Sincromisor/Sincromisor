@@ -503,6 +503,44 @@ describe("MotionDebugRecorder", () => {
         expect(parsed.frames[0]).not.toHaveProperty("cameraQuality");
     });
 
+    it("exports optional mediapipe raw result slot when caller provides a serialized raw frame", () => {
+        const recorder = new MotionDebugRecorder({ compression: "none" });
+        expect(recorder.start(createValidManifest()).ok).toBe(true);
+
+        expect(
+            recorder.recordFrame({
+                ...createValidFrameInput(),
+                mediapipe: {
+                    pose: {
+                        landmarks: [],
+                        worldLandmarks: [],
+                    },
+                    timing: {
+                        mediaTimeMs: 120,
+                        videoWidth: 1280,
+                        videoHeight: 720,
+                    },
+                },
+            }).ok,
+        ).toBe(true);
+        expect(recorder.stop().ok).toBe(true);
+        const exportResult = recorder.exportNdjson();
+        expect(exportResult.ok).toBe(true);
+        if (!exportResult.ok) {
+            return;
+        }
+        const parsed = parseMotionDebugLogLines(exportResult.ndjson.trimEnd().split("\n"));
+        expect(parsed.ok).toBe(true);
+        if (!parsed.ok) {
+            return;
+        }
+        expect(parsed.frames[0]?.mediapipe).toMatchObject({
+            timing: {
+                mediaTimeMs: 120,
+            },
+        });
+    });
+
     it("exports video frame clock timestamp fields without moving receivedAt into timestamp", () => {
         const recorder = new MotionDebugRecorder({ compression: "none" });
         expect(recorder.start(createValidManifest()).ok).toBe(true);

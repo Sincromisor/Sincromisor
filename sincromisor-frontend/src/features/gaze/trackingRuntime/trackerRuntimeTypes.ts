@@ -6,6 +6,7 @@ import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionS
 import type { SincroGestureMotionSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
+import type { TrackerRuntimeMediaPipeRawResult } from "./mediaPipeRawResultSerializer";
 import type { SincroTrackerWorkerStats } from "./sincroTrackerWorkerTypes";
 import type {
     TrackerPerformanceReasonCode,
@@ -47,6 +48,10 @@ export type TrackerRuntimeCallbacks = {
     onHandMotion?: (snapshot: SincroHandMotionSnapshot, timing?: TrackerVideoFrameTiming) => void;
     onPoseMotion?: (snapshot: SincroPoseMotionSnapshot, timing?: TrackerVideoFrameTiming) => void;
     onPoseFallback?: (snapshot: SincroPoseMotionSnapshot, timing?: TrackerVideoFrameTiming) => void;
+    onMediaPipeRawResult?: (
+        result: TrackerRuntimeMediaPipeRawResult,
+        timing?: TrackerVideoFrameTiming,
+    ) => void;
     onTrackerStats?: (snapshot: SincroTrackerWorkerStats) => void;
     onError?: (error: unknown) => void;
 };

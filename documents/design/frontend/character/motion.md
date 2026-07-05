@@ -177,7 +177,8 @@
     - `downloadRecording()` は stopped recorder から NDJSON / gzip NDJSON / Brotli request fallback の Blob を作り、DOM download link は `motion-debug` ページ側で生成する。
     - `pose-snapshot` replay は `frame.poseSnapshot` を `CharacterBehaviorState.applyPoseMotion()` 相当の入口へ流し、live camera と同じ `VRMCharacterManager.update()` 内で `SincroPoseRetargeter.retarget()` を呼ぶ。
     - `final-pose-playback` replay は solver 後の saved frame を再描画 / preview するための予約 mode であり、retarget / solver は再実行しない。v1 log で `frame.finalPose` が欠落する場合は `missing_final_pose` を返す。
-    - `mediapipe-raw-result` replay は raw serializer が揃うまで予約のみとし、Phase 1 では呼び出し可能だが常に `unsupported_mode` を返す。
+    - `mediapipe-raw-result` replay は v1 log の optional `frame.mediapipe` slot を読み、Pose / Hand / Face / Gesture の raw result plain object を既存 parser / normalizer 境界へ通して normalized snapshot を再生成する。`applyRawResult` callback が無い caller では `unsupported_mode`、raw slot 欠損では `missing_mediapipe_raw_result`、slot schema 違反では `parse_error` を返し、`pose-snapshot` へ暗黙 fallback しない。
+    - `frame.mediapipe` は `sincro.motion-debug-log.v1` の optional slot として後方互換に追加する。recording は serializer が対応した slot だけを保存し、MPMask、ImageBitmap、VideoFrame、crop object、MediaPipe class instance は log / replay result に保持しない。video re-inference replay は対象外で、保存済み raw result だけを replay 入力にする。
     - Debug Console と同じ retarget config / runtime snapshot を内部的に更新するが、RTC / chat / telop は起動しない。
 - `SincroArmIkSolver`
     - VRM normalized arm chain の neutral quaternion、腕長、肩幅、pole 方向をロード時に測定する。

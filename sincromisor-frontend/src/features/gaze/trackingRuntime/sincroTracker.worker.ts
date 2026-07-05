@@ -12,6 +12,7 @@ import { createSincroHandFallbackSnapshot } from "../handTracking/sincroHandMoti
 import type { SincroHandTracker } from "../handTracking/sincroHandTracker";
 import { DEFAULT_SINCRO_POSE_TARGET_POINT_SNAPSHOT } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { SincroPoseTracker } from "../poseTracking/sincroPoseTracker";
+import { createTrackerRuntimeMediaPipeRawResult } from "./mediaPipeRawResultSerializer";
 import type {
     SincroTrackerWorkerDetectMessage,
     SincroTrackerWorkerInputMessage,
@@ -205,6 +206,17 @@ async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> 
                 : undefined;
         const hand = detectHand(message, roiPose);
         const gesture = detectGesture(message, hand);
+        const mediapipe = createTrackerRuntimeMediaPipeRawResult({
+            pose: poseTracker.getLastRawResult(),
+            hand: handTracker.getLastRawResult(),
+            face: faceTracker.getLastRawResult(),
+            gesture: gestureTracker.getLastRawResult(),
+            timing: {
+                mediaTimeMs: message.timestampMs,
+                videoWidth: message.frame.width,
+                videoHeight: message.frame.height,
+            },
+        });
         post({
             type: "result",
             requestId: message.requestId,
@@ -213,6 +225,7 @@ async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> 
             pose,
             hand,
             gesture,
+            ...(mediapipe === undefined ? {} : { mediapipe }),
             workerTimeMs: performance.now() - startedAtMs,
         });
     } finally {

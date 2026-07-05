@@ -83,6 +83,9 @@ export async function runTrackerRuntimeWorkerPipeline(input: {
             input.markFrameLoopStopped();
             return;
         }
+        if (result.mediapipe !== undefined) {
+            input.callbacks.onMediaPipeRawResult?.(result.mediapipe, input.timing);
+        }
         input.callbacks.onFaceMotion(result.face, input.timing);
         if (result.pose) {
             input.setLatestPoseSnapshot(result.pose);

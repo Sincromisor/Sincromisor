@@ -6,6 +6,7 @@ import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionS
 import type { SincroGestureMotionSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
+import type { TrackerRuntimeMediaPipeRawResult } from "./mediaPipeRawResultSerializer";
 import type {
     SincroTrackerWorkerOutputMessage,
     SincroTrackerWorkerStats,
@@ -18,6 +19,7 @@ type DetectResult = {
     pose?: SincroPoseMotionSnapshot;
     hand?: SincroHandMotionSnapshot;
     gesture?: SincroGestureMotionSnapshot;
+    mediapipe?: TrackerRuntimeMediaPipeRawResult;
     stats: SincroTrackerWorkerStats;
 };
 
@@ -237,6 +239,7 @@ export class SincroTrackerWorkerClient {
                 pose: message.pose,
                 hand: message.hand,
                 gesture: message.gesture,
+                mediapipe: message.mediapipe,
                 stats: this.getStats(),
             });
             return;
