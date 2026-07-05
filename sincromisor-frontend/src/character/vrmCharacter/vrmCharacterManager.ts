@@ -292,14 +292,22 @@ export class VRMCharacterManager {
                   degradedToFaceOnly: true,
                   fallbackReason: "pose_retarget_disabled",
               };
+        const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
+        const minimalAvatarMotionProfile = avatarMotionProfile
+            ? toMinimalAvatarMotionProfile(avatarMotionProfile)
+            : undefined;
         const sincroPose = this.sincroPoseRetargeter.retarget(
             poseMotionForRetarget,
             this.latestBehaviorSnapshot.nowMs,
+            {
+                temporal: this.latestBehaviorSnapshot.sincroMotionPipeline?.temporal,
+                profile: minimalAvatarMotionProfile,
+            },
         );
         DebugConsoleManager.getManager().updateSincroPoseRetargetFrame(sincroPose);
         const composerDryRun = this.composerDryRun.compose({
             frame: sincroPose,
-            profile: this.sincroPoseRetargeter.getAvatarMotionProfile(),
+            profile: avatarMotionProfile,
             semanticFinger: {
                 mode: this.composerSemanticFingerApplicationMode,
                 intent: this.latestBehaviorSnapshot.sincroMotionPipeline?.intent,
@@ -354,7 +362,6 @@ export class VRMCharacterManager {
         if (this.rootBone) {
             const hipsBasePosition = this.defaultPosition.clone().add(this.characterPosition);
             this.rootBone.position.copy(hipsBasePosition);
-            const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
             const motionOrchestratorUpdate = fullApplication.applied
                 ? undefined
                 : this.motionOrchestrator?.update(
@@ -364,9 +371,7 @@ export class VRMCharacterManager {
                       sincroPose,
                       {
                           mode: this.composerTorsoShoulderApplicationMode,
-                          profile: avatarMotionProfile
-                              ? toMinimalAvatarMotionProfile(avatarMotionProfile)
-                              : undefined,
+                          profile: minimalAvatarMotionProfile,
                       },
                   );
             if (motionOrchestratorUpdate) {

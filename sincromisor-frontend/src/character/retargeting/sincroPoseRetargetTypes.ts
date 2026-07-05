@@ -2,6 +2,18 @@ import { MathUtils } from "three/src/math/MathUtils.js";
 import type { SincroArmIkConstraintSnapshot } from "../ik/sincroArmIkConstraint";
 import type { SincroArmIkQuaternion } from "../ik/sincroArmIkSolver";
 import type { SincroCcdIkProbeResult } from "../ik/sincroCcdIkProbe";
+import type { TemporalArmIkBridgeResult } from "../motionSolver/temporalArmSolverBridge";
+import type { TemporalPartState } from "../temporal/temporalUpperBodyState";
+
+export type SincroPoseArmSolverPrimarySource = "temporal" | "pose-snapshot-fallback";
+
+export type SincroPoseArmSolverSource = {
+    primarySource: SincroPoseArmSolverPrimarySource;
+    fallbackReason?: string;
+    bridgeReasonCodes: string[];
+    targetReachRatio?: number;
+    temporalState?: TemporalPartState;
+};
 
 export type SincroPoseArmIkMode = "feature_only" | "screen_space_ik" | "world_3d_ik";
 
@@ -57,6 +69,8 @@ export type SincroPoseRetargetedArm = {
     ikWeight: number;
     ikSolverMode: SincroPoseArmIkMode | "none";
     fallbackReason?: string;
+    solverSource?: SincroPoseArmSolverSource;
+    temporalBridge?: TemporalArmIkBridgeResult;
     constraint: SincroArmIkConstraintSnapshot;
     upperArm: { x: number; y: number; z: number };
     lowerArm: { x: number; y: number; z: number };

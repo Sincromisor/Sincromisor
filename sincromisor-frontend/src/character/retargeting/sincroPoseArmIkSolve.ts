@@ -38,6 +38,13 @@ type SolveArmIkOptions = {
     armIkSolvers?: ArmIkSolvers;
 };
 
+/**
+ * Pose snapshot の world wrist / elbow target から旧 production IK target を解く。
+ *
+ * @deprecated task-260705214026-canonical-temporal-arm-solver-production で production primary は
+ * Temporal bridge へ移行した。P0 replay の A/B comparison と pose-snapshot fallback 削除 task で
+ * 切り戻し不要と確認できたら、`retargetPoseArm()` の fallback 経路と合わせて削除する。
+ */
 export function solveWorldArmIk(options: SolveArmIkOptions): WorldArmIkSolveResult {
     const { targets, side, config, armIkSolvers } = options;
     const solver = armIkSolvers?.[side];

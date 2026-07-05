@@ -359,12 +359,13 @@
     - `createFingerCurlPoseLayer()` は Hand snapshot の `fingerCurl` を主値とし、`pointing` / `thumbsUp` / `peace` / `wave` / `explain` の MotionIntent override を group curl へ適用する。raw landmark から per-finger 3D rotation は作らず、curl / splay / thumb oppose の低次元値だけを quaternion へ写す。
     - Gesture Recognizer は production optional pass として初期化済みである。authored semantic clip asset、`VRMCharacterManager.update()` の適用順序変更、gesture reliability 実観測接続は後続 task に残す。AnimationMixer を使う場合も semantic clip 再生は staging に留め、最終的には pose delta を `VrmPoseComposer` の semantic layer として渡す。
 - `TemporalUpperBodyState` → arm IK bridge
-    - Phase 6 bridge は `src/character/motionSolver/temporalArmSolverBridge.ts` の `createTemporalArmIkInput()` を正本とし、既存 `solveWorldArmIk()` の Pose snapshot 入力経路は残す。bridge は本番切替ではなく、Temporal / profile 由来の solver input 候補を作る純粋 helper として扱う。
+    - Phase 6 production arm input は `src/character/retargeting/sincroPoseTemporalArmInput.ts` の `createSincroPoseTemporalArmInput()` を正本とし、`TemporalUpperBodyState`、`MinimalAvatarMotionProfile`、`SincroArmIkSolver` measurement から `createTemporalArmIkInput()` 経由で肩ローカル target を作る。`solveWorldArmIk()` の Pose snapshot 入力経路は deprecated fallback / A/B comparison 用に残すが、temporal primary が valid な frame では本番主入力にしない。
     - 入力は `TemporalUpperBodyState`、腕 side、`MinimalAvatarMotionProfile`、`SincroArmIkSolver` と同等の `shoulderWidth` / `upperArmLength` / `lowerArmLength` measurement である。scale snapshot は profile measurement を優先し、欠損時だけ solver measurement に fallback する。`maxReachRatio` は `0.985` に固定する。
     - `bodyLocalWrist` がある場合は主入力とし、body-local absolute tuple から `sideSign = left ? -1 : 1`、`shoulderLocal = [sideSign * shoulderWidth * 0.5, 0, 0]` を再構成し、`relative = bodyLocalWrist - shoulderLocal` を作る。wrist target は `x = relative.x * lateralScale * defaultReachScale`、`y = relative.y * verticalScale * defaultReachScale`、`z = relative.z * depthCompression * defaultReachScale` とする。`bodyLocalElbow` がある場合の `elbowPole` も同じ式で肩相対へ変換する。
     - `bodyLocalWrist` がない場合は scalar fallback を使う。`rawReach = reach * (upperArmLength + lowerArmLength)`、`x = openness * sideSign * rawReach * lateralScale * defaultReachScale`、`y = sin(elevationRad) * rawReach * verticalScale * defaultReachScale`、`z = forwardness * rawReach * depthCompression * defaultReachScale` とし、solver 前 target 長を arm length `* 0.985` 以下へ clamp する。
     - `weight` は temporal arm `confidence` と `state` だけから決める。`tracked` は `confidence`、`suspect` は `confidence * 0.55`、`recovering` は `confidence * recoveringBlend.progress`、`predicted` は `confidence * 0.35`、`lost` は `0` とする。`lost` または非 finite 入力では `target` を返さず、`reasonCodes` と zero weight debug を返す。
     - Phase 6 bridge は Pose wrist / Hand wrist の raw world z を再読解しない。depth は temporal `forwardness` と `profile.solverDefaults.depthCompression`、または保存済み `bodyLocalWrist` の body-local z から決定し、Hand wrist は palm / finger / gesture 補助の入力に留めて arm IK target の主入力にしない。
+    - production fallback は `temporal_input_missing`、`avatar_profile_missing`、`temporal_arm_lost`、`invalid_temporal_arm`、`ik_solver_missing` のいずれかを `frame.solver.phase6.arms.<side>.source.fallbackReason` と `bridgeReasonCodes` に保存して、既存 `SincroPoseMotionSnapshot.leftArm/rightArm.targets` 経路へ戻す。`source` 欠損の旧 `sincro.phase6-solver.v1` log は replay viewer で `primarySource: "pose-snapshot-fallback"` 相当として扱う。
 - `MinimalAvatarMotionProfile`
     - `src/character/avatarProfile/minimalAvatarMotionProfile.ts` を正本とする、VRM load 時に測れる最小 avatar-local profile contract。
     - schema version は `sincro.minimal-avatar-motion-profile.v1` に固定し、`optionalBones`、`measurements`、`solverDefaults`、`warnings` だけを持つ plain object として保存する。`THREE.Vector3`、`THREE.Quaternion`、`Object3D`、`VRM` instance は profile に保持しない。
@@ -493,8 +494,9 @@ previous final pose を reset し、前 mode の final pose を angular velocity
 この stage では shoulder / torso / finger / head / expression を composer 所有へ移さない。
 `vrm.humanoid.setNormalizedPose()` も呼ばず、full normalized pose 適用は後続の
 `full setNormalizedPose(finalPose) application` stage まで行わない。Hand ROI は palm / finger reliability と
-ROI 観測の材料に限定し、腕 IK target は引き続き
-`SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` を正本にする。
+ROI 観測の材料に限定する。腕 IK target の正本は `TemporalUpperBodyState` primary とし、
+Temporal input / avatar profile / bridge / solver が欠損または invalid な場合だけ
+`SincroPoseMotionSnapshot.leftArm/rightArm.targets` の pose-snapshot fallback を使う。
 
 `torso / shoulder migration` の production 適用境界は `CharacterMotionOrchestrator.update()` 内の
 torso / shoulder direct write 位置であり、`VRMCharacterManager.update()` の

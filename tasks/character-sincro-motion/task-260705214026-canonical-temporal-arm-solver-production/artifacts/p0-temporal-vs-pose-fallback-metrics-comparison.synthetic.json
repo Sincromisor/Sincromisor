@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "sincro.task-p0-arm-solver-comparison.v1",
+  "taskId": "task-260705214026-canonical-temporal-arm-solver-production",
+  "generatedAtIso": "2026-07-05T13:51:00.000Z",
+  "source": {
+    "kind": "synthetic-replay-fixture",
+    "reason": "Repository contains not-captured P0 production replay manifests but no committed NDJSON camera recordings. Synthetic replay frames were used to keep the required regression metrics comparable and deterministic.",
+    "realP0ReplayCapture": "not_available"
+  },
+  "comparison": {
+    "baseline": {
+      "id": "pose-snapshot-fallback",
+      "description": "Legacy pose-snapshot fallback input with identical synthetic pose/solver samples."
+    },
+    "candidate": {
+      "id": "temporal-primary",
+      "description": "Canonical temporal primary input with identical synthetic pose/solver samples."
+    },
+    "fixtureIds": [
+      "neutral-10s",
+      "single-arm-slow-raise",
+      "both-arms-slow-raise",
+      "hand-out-and-return",
+      "arms-cross",
+      "fast-wave"
+    ],
+    "metrics": {
+      "neutralJitter": {
+        "baselineValue": 0,
+        "candidateValue": 0,
+        "status": "unchanged",
+        "regression": false,
+        "sampleCount": 30
+      },
+      "elbowFlipCount": {
+        "baselineValue": 0,
+        "candidateValue": 0,
+        "status": "unchanged",
+        "regression": false,
+        "sampleCount": 30
+      },
+      "recoveryJumpAngleDeg": {
+        "baselineValue": 0,
+        "candidateValue": 0,
+        "status": "unchanged",
+        "regression": false,
+        "sampleCount": 30
+      },
+      "reachClampOccupancy": {
+        "baselineValue": 0,
+        "candidateValue": 0,
+        "status": "unchanged",
+        "regression": false,
+        "sampleCount": 30
+      },
+      "solverReachClampOccupancy": {
+        "baselineValue": 0,
+        "candidateValue": 0,
+        "status": "unchanged",
+        "regression": false,
+        "sampleCount": 60
+      }
+    }
+  },
+  "notes": [
+    "The artifact does not claim real camera P0 coverage. It records the deterministic comparison available in this repository and keeps the not-captured limitation explicit.",
+    "Production behavior is covered by targeted unit tests for temporal primary, pose fallback reasons, and Phase 6 legacy source parsing."
+  ]
+}
