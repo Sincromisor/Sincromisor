@@ -77,7 +77,17 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 101 件）
+## タスク一覧（自動生成 / 全 106 件）
+
+### open（未完） — 5 件
+
+| タスク                                                                                                                                 | タイトル                                                  | 判定 | 依存                                                                                                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [task-260705214018-mediapipe-raw-result-replay](./task-260705214018-mediapipe-raw-result-replay/task.md)                               | Implement MediaPipe raw result replay                     | —    | `task-260623221635-character-animation-3-mediapipe-raw-replay-player`                                                                                                         |
+| [task-260705214026-canonical-temporal-arm-solver-production](./task-260705214026-canonical-temporal-arm-solver-production/task.md)     | Promote canonical temporal arm solver to production input | —    | `task-260625231726-character-animation-3-phase-6-temporal-arm-solver-bridge`                                                                                                  |
+| [task-260705214026-gesture-reliability-observation-connection](./task-260705214026-gesture-reliability-observation-connection/task.md) | Connect gesture observations to reliability map           | —    | `task-260705181009-production-gesture-recognizer-optional-pass`                                                                                                               |
+| [task-260705214026-remove-motion-rollback-fallback-paths](./task-260705214026-remove-motion-rollback-fallback-paths/task.md)           | Remove production motion rollback fallback paths          | —    | `task-260705004415-full-normalized-pose-application`, `task-260705004418-production-motion-rollback-and-cleanup`, `task-260705214907-full-normalized-pose-production-default` |
+| [task-260705214907-full-normalized-pose-production-default](./task-260705214907-full-normalized-pose-production-default/task.md)       | Promote full normalized pose application default          | —    | `task-260705004415-full-normalized-pose-application`, `task-260705004418-production-motion-rollback-and-cleanup`                                                              |
 
 ### done（完了） — 101 件
 

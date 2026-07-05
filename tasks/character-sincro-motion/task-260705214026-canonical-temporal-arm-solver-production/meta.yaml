@@ -1,0 +1,14 @@
+id: task-260705214026-canonical-temporal-arm-solver-production
+title: Promote canonical temporal arm solver to production input
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260625231726-character-animation-3-phase-6-temporal-arm-solver-bridge
+superseded_by: null
+review: APPROVED
+reviewed_sha: 5299bb3fb6f7fa4675b700835e450d73cfb4e9d2
+verdict: null
+attempts: 0
+created_at: 2026-07-05
+closed_at: null
+legacy_ids: []
