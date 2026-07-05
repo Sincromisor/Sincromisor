@@ -21,7 +21,13 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 12 件）
+## タスク一覧（自動生成 / 全 13 件）
+
+### open（未完） — 1 件
+
+| タスク                                                                                                                     | タイトル                             | 判定 | 依存 |
+| -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ---- | ---- |
+| [task-260706031110-motion-debug-viewer-model-size-split](./task-260706031110-motion-debug-viewer-model-size-split/task.md) | motion-debug viewer model size split | —    | —    |
 
 ### done（完了） — 12 件
 
