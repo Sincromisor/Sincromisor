@@ -1,0 +1,15 @@
+id: task-260705181009-canonical-head-face-matrix
+title: Generate canonical head from face matrix
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260627141812-character-animation-3-phase-8-pose-seeded-face-roi-tracking
+  - task-260625194536-character-animation-3-phase-5-dropout-prediction-recovery
+superseded_by: null
+review: APPROVED
+reviewed_sha: 85b548caed2190d8514fd10092bf6767719b9333
+verdict: null
+attempts: 0
+created_at: 2026-07-05
+closed_at: null
+legacy_ids: []

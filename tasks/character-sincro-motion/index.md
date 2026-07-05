@@ -77,7 +77,15 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 98 件）
+## タスク一覧（自動生成 / 全 101 件）
+
+### open（未完） — 3 件
+
+| タスク                                                                                                                                   | タイトル                                                      | 判定 | 依存                                                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [task-260705181009-canonical-head-face-matrix](./task-260705181009-canonical-head-face-matrix/task.md)                                   | Generate canonical head from face matrix                      | —    | `task-260627141812-character-animation-3-phase-8-pose-seeded-face-roi-tracking`, `task-260625194536-character-animation-3-phase-5-dropout-prediction-recovery` |
+| [task-260705181009-production-camera-quality-reliability](./task-260705181009-production-camera-quality-reliability/task.md)             | Connect camera quality to production observe-only reliability | —    | `task-260624222300-character-animation-3-camera-quality-score`, `task-260625035438-character-animation-3-phase-4-pose-reliability-estimator`                   |
+| [task-260705181009-production-gesture-recognizer-optional-pass](./task-260705181009-production-gesture-recognizer-optional-pass/task.md) | Run Gesture Recognizer as production optional pass            | —    | `task-260627180718-character-animation-3-0-phase-9-gesture-intent-estimator-hys`, `task-260629225931-production-sincro-hand-face-roi-observations`             |
 
 ### done（完了） — 98 件
 
