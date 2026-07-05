@@ -6,6 +6,11 @@ import {
 } from "../../faceTracking/sincroFaceMotionSnapshot";
 import { SincroFaceTracker } from "../../faceTracking/sincroFaceTracker";
 import {
+    createSincroGestureFallbackSnapshot,
+    type SincroGestureMotionSnapshot,
+} from "../../gestureTracking/sincroGestureMotionSnapshot";
+import { SincroGestureTracker } from "../../gestureTracking/sincroGestureTracker";
+import {
     DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
     type SincroHandMotionSnapshot,
 } from "../../handTracking/sincroHandMotionSnapshot";
@@ -17,10 +22,12 @@ import {
 import { cloneSincroPoseMotionSnapshot } from "../../poseTracking/sincroPoseMotionSnapshotClone";
 import { SincroPoseTracker } from "../../poseTracking/sincroPoseTracker";
 import type { SincroRoiObservation } from "../roiTracking/roiTrackingTypes";
+import { SincroTrackerWorkerClient } from "../sincroTrackerWorkerClient";
 import type { SincroTrackerWorkerStats } from "../sincroTrackerWorkerTypes";
 import { TrackerRuntime } from "../trackerRuntime";
 import { resolveTrackerRuntimePerformanceProfile } from "../trackerRuntimePerformanceProfile";
 import type { TrackerRuntimeCallbacks } from "../trackerRuntimeTypes";
+import { runTrackerRuntimeWorkerPipeline } from "../trackerRuntimeWorkerPipeline";
 
 class RecordingFaceTracker extends SincroFaceTracker {
     readonly fullFrameTimestamps: number[] = [];
@@ -112,6 +119,30 @@ class RecordingHandTracker extends SincroHandTracker {
 class FailingInitHandTracker extends SincroHandTracker {
     override async initVision(): Promise<void> {
         throw new Error("hand init failed");
+    }
+}
+
+class FailingInitGestureTracker extends SincroGestureTracker {
+    override async initVision(): Promise<void> {
+        throw new Error("gesture init failed");
+    }
+}
+
+class ThrowingGestureTracker extends SincroGestureTracker {
+    override async initVision(): Promise<void> {}
+
+    override detect(
+        videoFrame: TexImageSource,
+        handSnapshot: SincroHandMotionSnapshot,
+        timestampMs: number,
+    ): SincroGestureMotionSnapshot {
+        void videoFrame;
+        void handSnapshot;
+        return createSincroGestureFallbackSnapshot({
+            reason: "gesture inference failed",
+            nowMs: timestampMs,
+            warnings: ["inference_failed"],
+        });
     }
 }
 
@@ -254,6 +285,195 @@ describe("TrackerRuntime", () => {
         expect(poseSnapshots.some((snapshot) => snapshot.detected)).toBe(true);
         runtime.stopFaceTracking("test_done");
     });
+
+    it("publishes a lost gesture snapshot when Gesture initialization fails without stopping Face, Pose, and Hand", async () => {
+        vi.stubGlobal("HTMLMediaElement", { HAVE_CURRENT_DATA: 2 });
+        vi.stubGlobal("MediaStream", FakeMediaStream);
+        const { video, getFrameCallback } = createFakeVideo();
+        const faceTracker = new RecordingFaceTracker();
+        const poseTracker = new FreshPoseTracker();
+        const handTracker = new RecordingHandTracker();
+        const gestureTracker = new FailingInitGestureTracker();
+        const runtime = new TrackerRuntime(
+            video,
+            faceTracker,
+            poseTracker,
+            handTracker,
+            gestureTracker,
+        );
+        const faceSnapshots: SincroFaceMotionSnapshot[] = [];
+        const poseSnapshots: SincroPoseMotionSnapshot[] = [];
+        const handSnapshots: SincroHandMotionSnapshot[] = [];
+        const gestureSnapshots: SincroGestureMotionSnapshot[] = [];
+
+        await runtime.startFaceTracking(
+            createFakeTrack(),
+            {
+                onFaceMotion: (snapshot) => {
+                    faceSnapshots.push(snapshot);
+                },
+                onPoseMotion: (snapshot) => {
+                    poseSnapshots.push(snapshot);
+                },
+                onHandMotion: (snapshot) => {
+                    handSnapshots.push(snapshot);
+                },
+                onGestureMotion: (snapshot) => {
+                    gestureSnapshots.push(snapshot);
+                },
+            },
+            15,
+            {
+                enabled: true,
+                targetInferenceFps: 12,
+                hand: { enabled: true, targetInferenceFps: 8 },
+                gesture: { enabled: true, targetInferenceFps: 6 },
+            },
+        );
+        getFrameCallback()?.(1000, createVideoFrameMetadata(1, 1));
+
+        expect(
+            gestureSnapshots.some(
+                (snapshot) =>
+                    snapshot.fallbackReason === "gesture init failed" &&
+                    snapshot.left?.warnings.includes("model_not_loaded"),
+            ),
+        ).toBe(true);
+        expect(faceSnapshots.some((snapshot) => snapshot.detected)).toBe(true);
+        expect(poseSnapshots.some((snapshot) => snapshot.detected)).toBe(true);
+        expect(handSnapshots.some((snapshot) => snapshot.detected)).toBe(true);
+        runtime.stopFaceTracking("test_done");
+    });
+
+    it("keeps main-thread tracking alive when Gesture inference returns a lost snapshot", async () => {
+        vi.stubGlobal("HTMLMediaElement", { HAVE_CURRENT_DATA: 2 });
+        vi.stubGlobal("MediaStream", FakeMediaStream);
+        const { video, getFrameCallback } = createFakeVideo();
+        const faceTracker = new RecordingFaceTracker();
+        const poseTracker = new FreshPoseTracker();
+        const handTracker = new RecordingHandTracker();
+        const gestureTracker = new ThrowingGestureTracker();
+        const runtime = new TrackerRuntime(
+            video,
+            faceTracker,
+            poseTracker,
+            handTracker,
+            gestureTracker,
+        );
+        const gestureSnapshots: SincroGestureMotionSnapshot[] = [];
+        const faceSnapshots: SincroFaceMotionSnapshot[] = [];
+
+        await runtime.startFaceTracking(
+            createFakeTrack(),
+            {
+                onFaceMotion: (snapshot) => {
+                    faceSnapshots.push(snapshot);
+                },
+                onGestureMotion: (snapshot) => {
+                    gestureSnapshots.push(snapshot);
+                },
+            },
+            15,
+            {
+                enabled: true,
+                targetInferenceFps: 12,
+                hand: { enabled: true, targetInferenceFps: 8 },
+                gesture: { enabled: true, targetInferenceFps: 6 },
+            },
+        );
+        getFrameCallback()?.(1000, createVideoFrameMetadata(1, 1));
+
+        expect(gestureSnapshots[0]).toMatchObject({
+            source: "lost",
+            fallbackReason: "gesture inference failed",
+            warnings: ["gesture_skipped", "inference_failed"],
+        });
+        expect(faceSnapshots.some((snapshot) => snapshot.detected)).toBe(true);
+        runtime.stopFaceTracking("test_done");
+    });
+
+    it("publishes worker lost gesture snapshots without switching to main-thread fallback", async () => {
+        const { video } = createFakeVideo();
+        const workerClient = new SincroTrackerWorkerClient();
+        const imageBitmap = createFakeImageBitmap();
+        const gestureSnapshots: SincroGestureMotionSnapshot[] = [];
+        let scheduled = false;
+        let fallbackCalled = false;
+        vi.stubGlobal("createImageBitmap", async () => imageBitmap);
+        vi.spyOn(workerClient, "detect").mockResolvedValue({
+            face: createFaceSnapshot({ timestampMs: 1000, source: "full-frame" }),
+            pose: createFreshPose(1000),
+            hand: createDetectedHandSnapshot(1000),
+            gesture: createSincroGestureFallbackSnapshot({
+                reason: "gesture init failed",
+                nowMs: 1000,
+                warnings: ["model_not_loaded"],
+            }),
+            stats: workerClient.getStats(),
+        });
+
+        await runTrackerRuntimeWorkerPipeline({
+            videoElement: video,
+            callbacks: {
+                onFaceMotion: () => {},
+                onGestureMotion: (snapshot) => {
+                    gestureSnapshots.push(snapshot);
+                },
+            },
+            workerClient,
+            timing: {
+                source: "request-video-frame-callback",
+                receivedAtPerformanceMs: 1000,
+                mediaTimeMs: 1000,
+                videoCurrentTimeMs: 1000,
+                droppedPresentedFrames: 0,
+            },
+            plan: {
+                runFace: true,
+                runPose: true,
+                hasFreshPoseForOptionalPass: true,
+                runHand: true,
+                runGesture: true,
+                runFaceRoi: false,
+            },
+            handTrackingEnabled: true,
+            gestureTrackingRequested: true,
+            gestureTrackingEnabled: true,
+            faceRoiTrackingEnabled: false,
+            handRoiPaused: false,
+            faceRoiPaused: false,
+            frameLoopIsEnabled: () => true,
+            markFrameLoopStopped: () => {},
+            scheduleFrame: () => {
+                scheduled = true;
+            },
+            markPoseInference: () => {},
+            markHandInference: () => {},
+            markGestureInference: () => {},
+            markFaceRoiInference: () => {},
+            setLatestPoseSnapshot: () => {},
+            applyPosePerformanceGate: () => {},
+            recordRoiFrame: () => ({
+                pauseState: "active",
+                fallbackCount: 0,
+                skippedFrames: 0,
+                consecutiveOverBudgetFrames: 0,
+                reasonCodes: [],
+            }),
+            withBudget: (input) => input.stats,
+            switchToMainThreadFallback: async () => {
+                fallbackCalled = true;
+            },
+        });
+
+        expect(gestureSnapshots[0]).toMatchObject({
+            source: "lost",
+            fallbackReason: "gesture init failed",
+            warnings: ["gesture_skipped", "model_not_loaded"],
+        });
+        expect(fallbackCalled).toBe(false);
+        expect(scheduled).toBe(true);
+    });
 });
 
 class FakeMediaStream {
@@ -378,6 +598,26 @@ function createFaceRoi(): SincroRoiObservation {
         referencePoint: [0.5, 0.22],
         warnings: [],
     };
+}
+
+function createDetectedHandSnapshot(timestampMs: number): SincroHandMotionSnapshot {
+    return {
+        ...DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
+        trackingEnabled: true,
+        detected: true,
+        inferenceTimeMs: 1,
+        inferenceFps: 4,
+        lastUpdatedAtMs: timestampMs,
+    };
+}
+
+function createFakeImageBitmap(): ImageBitmap {
+    const imageBitmap: ImageBitmap = Object.create(null);
+    Object.defineProperty(imageBitmap, "close", {
+        configurable: true,
+        value: () => {},
+    });
+    return imageBitmap;
 }
 
 function createFastRecoveryProfile(): ReturnType<

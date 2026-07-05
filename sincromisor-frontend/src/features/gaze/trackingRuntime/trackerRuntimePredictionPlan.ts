@@ -4,6 +4,7 @@
  */
 import {
     shouldRunTrackerFaceRoiInference,
+    shouldRunTrackerGestureInference,
     shouldRunTrackerHandInference,
     shouldRunTrackerInference,
     shouldRunTrackerPoseInference,
@@ -14,13 +15,17 @@ export type TrackerRuntimePredictionPlanInput = {
     lastInferenceAtMs: number;
     lastPoseInferenceAtMs: number;
     lastHandInferenceAtMs: number;
+    lastGestureInferenceAtMs: number;
     lastFaceRoiInferenceAtMs: number;
     targetInferenceFps: number;
     targetPoseInferenceFps: number;
     targetHandInferenceFps: number;
+    targetGestureInferenceFps: number;
     targetFaceRoiInferenceFps: number;
     poseTrackingEnabled: boolean;
     handTrackingEnabled: boolean;
+    gestureTrackingRequested: boolean;
+    gestureTrackingEnabled: boolean;
     faceRoiTrackingEnabled: boolean;
     poseDegradedToFaceOnly: boolean;
     poseRecoveryProbeActive: boolean;
@@ -34,7 +39,13 @@ export type TrackerRuntimePredictionPlan = {
     runPose: boolean;
     hasFreshPoseForOptionalPass: boolean;
     runHand: boolean;
+    runGesture: boolean;
     runFaceRoi: boolean;
+    gestureSkipReason?:
+        | "gesture_requires_pose_and_hand"
+        | "gesture_pose_unavailable"
+        | "gesture_hand_paused"
+        | "gesture_pose_stopped";
 };
 
 export function createTrackerRuntimePredictionPlan(
@@ -55,18 +66,37 @@ export function createTrackerRuntimePredictionPlan(
     });
     const hasFreshPoseForOptionalPass = runPose || input.latestPoseSnapshotIsFresh;
 
+    const runHand = shouldRunTrackerHandInference({
+        handTrackingEnabled: input.handTrackingEnabled,
+        poseDegradedToFaceOnly: input.poseDegradedToFaceOnly,
+        handRoiPaused: input.handRoiPaused,
+        lastHandInferenceAtMs: input.lastHandInferenceAtMs,
+        targetHandInferenceFps: input.targetHandInferenceFps,
+        hasFreshPoseSnapshot: hasFreshPoseForOptionalPass,
+        nowMs: input.nowMs,
+    });
     return {
         runFace,
         runPose,
         hasFreshPoseForOptionalPass,
-        runHand: shouldRunTrackerHandInference({
-            handTrackingEnabled: input.handTrackingEnabled,
+        runHand,
+        runGesture: shouldRunTrackerGestureInference({
+            gestureTrackingEnabled: input.gestureTrackingEnabled,
             poseDegradedToFaceOnly: input.poseDegradedToFaceOnly,
             handRoiPaused: input.handRoiPaused,
-            lastHandInferenceAtMs: input.lastHandInferenceAtMs,
-            targetHandInferenceFps: input.targetHandInferenceFps,
+            handRan: runHand,
+            lastGestureInferenceAtMs: input.lastGestureInferenceAtMs,
+            targetGestureInferenceFps: input.targetGestureInferenceFps,
             hasFreshPoseSnapshot: hasFreshPoseForOptionalPass,
             nowMs: input.nowMs,
+        }),
+        gestureSkipReason: resolveGestureSkipReason({
+            requested: input.gestureTrackingRequested,
+            enabled: input.gestureTrackingEnabled,
+            poseDegradedToFaceOnly: input.poseDegradedToFaceOnly,
+            handRoiPaused: input.handRoiPaused,
+            hasFreshPoseSnapshot: hasFreshPoseForOptionalPass,
+            runHand,
         }),
         runFaceRoi: shouldRunTrackerFaceRoiInference({
             faceRoiTrackingEnabled: input.faceRoiTrackingEnabled,
@@ -78,4 +108,30 @@ export function createTrackerRuntimePredictionPlan(
             nowMs: input.nowMs,
         }),
     };
+}
+
+function resolveGestureSkipReason(input: {
+    requested: boolean;
+    enabled: boolean;
+    poseDegradedToFaceOnly: boolean;
+    handRoiPaused: boolean;
+    hasFreshPoseSnapshot: boolean;
+    runHand: boolean;
+}): TrackerRuntimePredictionPlan["gestureSkipReason"] {
+    if (!input.requested) {
+        return undefined;
+    }
+    if (!input.enabled) {
+        return "gesture_requires_pose_and_hand";
+    }
+    if (input.poseDegradedToFaceOnly) {
+        return "gesture_pose_stopped";
+    }
+    if (input.handRoiPaused) {
+        return "gesture_hand_paused";
+    }
+    if (!input.hasFreshPoseSnapshot) {
+        return "gesture_pose_unavailable";
+    }
+    return undefined;
 }

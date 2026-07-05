@@ -284,6 +284,9 @@ export class SincroCharacterGazeController {
                 onHandMotion: (snapshot, timing) => {
                     this.motionEventSink.handleHandMotion(snapshot, timing);
                 },
+                onGestureMotion: (snapshot, timing) => {
+                    this.motionEventSink.handleGestureMotion(snapshot, timing);
+                },
                 onTrackerStats: (snapshot) => {
                     this.debugConsoleManager.updateSincroTrackerStats(snapshot);
                 },
@@ -296,8 +299,9 @@ export class SincroCharacterGazeController {
                 enabled: poseTrackingEnabled,
                 targetInferenceFps: SINCRO_POSE_TARGET_INFERENCE_FPS,
                 ignorePerformanceFallback: forcePoseTracking,
-                // Hand / Face ROI は production sincro の observe-only 入力であり、Pose が無効なら起動しない。
+                // Hand / Gesture / Face ROI は production sincro の observe-only 入力であり、Pose が無効なら起動しない。
                 hand: { enabled: observeOptionalPosePassEnabled },
+                gesture: { enabled: observeOptionalPosePassEnabled },
                 faceRoi: { enabled: observeOptionalPosePassEnabled },
             },
         );

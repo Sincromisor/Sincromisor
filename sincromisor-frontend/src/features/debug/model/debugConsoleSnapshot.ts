@@ -258,6 +258,13 @@ function createDefaultObserveOnlySummary(): SincroMotionObserveOnlySummary {
             },
             warnings: [],
         },
+        gesture: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            trackingEnabled: false,
+            inferenceFps: 0,
+            warnings: [],
+        },
         composerDryRun: {
             status: "not_ready",
             warnings: ["composer_dry_run_not_started"],

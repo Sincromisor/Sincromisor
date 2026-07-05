@@ -394,6 +394,7 @@ function resolveEffectiveCadence(
     if (stage === "face-only" || stage === "comfortable-idle") {
         cadence.poseFps = 0;
         cadence.handFps = 0;
+        cadence.gestureFps = 0;
         cadence.faceRoiFps = 0;
     }
     return cadence;
@@ -406,14 +407,15 @@ function clampCadenceForMainThreadFallback(
         targetInferenceFps: cadence.faceFps,
         targetPoseInferenceFps: Math.max(1, cadence.poseFps),
         targetHandInferenceFps: Math.max(1, cadence.handFps),
+        targetGestureInferenceFps: Math.max(1, cadence.gestureFps),
         targetFaceRoiInferenceFps: Math.max(1, cadence.faceRoiFps),
     });
     return {
         faceFps: clamped.targetInferenceFps,
         poseFps: cadence.poseFps === 0 ? 0 : clamped.targetPoseInferenceFps,
         handFps: cadence.handFps === 0 ? 0 : clamped.targetHandInferenceFps,
+        gestureFps: cadence.gestureFps === 0 ? 0 : clamped.targetGestureInferenceFps,
         faceRoiFps: cadence.faceRoiFps === 0 ? 0 : clamped.targetFaceRoiInferenceFps,
-        gestureFps: cadence.gestureFps,
     };
 }
 

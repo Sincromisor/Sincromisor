@@ -38,6 +38,16 @@ export function cloneObserveOnlySummary(
             right: { ...summary.hand.right },
             warnings: [...summary.hand.warnings],
         },
+        gesture: {
+            status: summary.gesture.status,
+            mediaTimeMs: summary.gesture.mediaTimeMs,
+            reason: summary.gesture.reason,
+            trackingEnabled: summary.gesture.trackingEnabled,
+            inferenceFps: summary.gesture.inferenceFps,
+            left: summary.gesture.left === undefined ? undefined : { ...summary.gesture.left },
+            right: summary.gesture.right === undefined ? undefined : { ...summary.gesture.right },
+            warnings: [...summary.gesture.warnings],
+        },
         composerDryRun: {
             status: summary.composerDryRun.status,
             warnings: [...summary.composerDryRun.warnings],

@@ -6,12 +6,14 @@ export type TrackerRuntimeFpsTargets = {
     targetInferenceFps: number;
     targetPoseInferenceFps: number;
     targetHandInferenceFps: number;
+    targetGestureInferenceFps: number;
     targetFaceRoiInferenceFps: number;
 };
 
 const MAIN_THREAD_FALLBACK_FACE_FPS_LIMIT = 8;
 const MAIN_THREAD_FALLBACK_POSE_FPS_LIMIT = 4;
 const MAIN_THREAD_FALLBACK_HAND_FPS_LIMIT = 2;
+const MAIN_THREAD_FALLBACK_GESTURE_FPS_LIMIT = 2;
 const MAIN_THREAD_FALLBACK_FACE_ROI_FPS_LIMIT = 3;
 
 export function clampTrackerRuntimeTargetsForMainThreadFallback(
@@ -29,6 +31,10 @@ export function clampTrackerRuntimeTargetsForMainThreadFallback(
         targetHandInferenceFps: Math.min(
             targets.targetHandInferenceFps,
             MAIN_THREAD_FALLBACK_HAND_FPS_LIMIT,
+        ),
+        targetGestureInferenceFps: Math.min(
+            targets.targetGestureInferenceFps,
+            MAIN_THREAD_FALLBACK_GESTURE_FPS_LIMIT,
         ),
         targetFaceRoiInferenceFps: Math.min(
             targets.targetFaceRoiInferenceFps,

@@ -5,6 +5,9 @@
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
+import type { SincroGestureMotionSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
+import { createSincroGestureFallbackSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
+import type { SincroGestureTracker } from "../gestureTracking/sincroGestureTracker";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroHandTracker } from "../handTracking/sincroHandTracker";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
@@ -29,10 +32,13 @@ export function runTrackerRuntimeMainThreadPipeline(input: {
     faceTracker: SincroFaceTracker;
     poseTracker: SincroPoseTracker;
     handTracker: SincroHandTracker;
+    gestureTracker: SincroGestureTracker;
     timing: TrackerVideoFrameTiming;
     plan: TrackerRuntimePredictionPlan;
     latestPoseSnapshot?: SincroPoseMotionSnapshot;
     handTrackingEnabled: boolean;
+    gestureTrackingRequested: boolean;
+    gestureTrackingEnabled: boolean;
     faceRoiTrackingEnabled: boolean;
     handRoiPaused: boolean;
     faceRoiPaused: boolean;
@@ -45,6 +51,7 @@ export function runTrackerRuntimeMainThreadPipeline(input: {
     degradePoseToFaceOnly: (reason: string, nowMs: number, timing: TrackerVideoFrameTiming) => void;
     markPoseInference: (nowMs: number) => void;
     markHandInference: (nowMs: number) => void;
+    markGestureInference: (nowMs: number) => void;
     markFaceRoiInference: (nowMs: number) => void;
     recordRoiFrame: (input: TrackerRuntimeRoiFrameInput) => SincroTrackerRoiStats;
     publishStats: (input: {
@@ -72,6 +79,9 @@ export function runTrackerRuntimeMainThreadPipeline(input: {
         const faceSnapshot = runFaceInference(input, roiPose, faceRoiSnapshot);
         input.callbacks.onFaceMotion(faceSnapshot, input.timing);
         const handResult = runHand && roiPose ? runHandInference(input, roiPose) : undefined;
+        if (input.plan.runGesture && handResult) {
+            runGestureInference(input, handResult.snapshot);
+        }
         if (!runHand) {
             publishTrackerSkippedHandSnapshot({
                 callbacks: input.callbacks,
@@ -79,6 +89,9 @@ export function runTrackerRuntimeMainThreadPipeline(input: {
                 timing: input.timing,
                 reason: resolveTrackerHandSkipReason(hasFreshPose, input.handRoiPaused),
             });
+        }
+        if (!input.plan.runGesture && input.plan.gestureSkipReason !== undefined) {
+            publishSkippedGestureSnapshot(input, input.plan.gestureSkipReason);
         }
         const roiStats = input.recordRoiFrame({
             handRan: runHand,
@@ -155,6 +168,45 @@ function runHandInference(
     const snapshot = input.handTracker.detect(input.videoElement, poseSnapshot, nowMs);
     input.callbacks.onHandMotion?.(snapshot, input.timing);
     return { snapshot, inferenceTimeMs: snapshot.inferenceTimeMs };
+}
+
+function runGestureInference(
+    input: {
+        videoElement: HTMLVideoElement;
+        callbacks: TrackerRuntimeCallbacks;
+        gestureTracker: SincroGestureTracker;
+        timing: TrackerVideoFrameTiming;
+        markGestureInference: (nowMs: number) => void;
+    },
+    handSnapshot: SincroHandMotionSnapshot,
+): { snapshot: SincroGestureMotionSnapshot; inferenceTimeMs: number } {
+    const nowMs = input.timing.mediaTimeMs;
+    input.markGestureInference(nowMs);
+    const snapshot = input.gestureTracker.detect(input.videoElement, handSnapshot, nowMs);
+    input.callbacks.onGestureMotion?.(snapshot, input.timing);
+    return { snapshot, inferenceTimeMs: snapshot.inferenceTimeMs };
+}
+
+function publishSkippedGestureSnapshot(
+    input: {
+        callbacks: TrackerRuntimeCallbacks;
+        gestureTrackingRequested: boolean;
+        gestureTrackingEnabled: boolean;
+        timing: TrackerVideoFrameTiming;
+    },
+    reason: NonNullable<TrackerRuntimePredictionPlan["gestureSkipReason"]>,
+): void {
+    if (!input.gestureTrackingRequested) {
+        return;
+    }
+    input.callbacks.onGestureMotion?.(
+        createSincroGestureFallbackSnapshot({
+            reason,
+            nowMs: input.timing.mediaTimeMs,
+            trackingEnabled: input.gestureTrackingEnabled,
+        }),
+        input.timing,
+    );
 }
 
 function runFaceInference(

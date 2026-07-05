@@ -80,6 +80,7 @@ function applyCadence(
         targetInferenceFps: Math.max(1, cadence.faceFps),
         targetPoseInferenceFps: Math.max(1, cadence.poseFps),
         targetHandInferenceFps: Math.max(1, cadence.handFps),
+        targetGestureInferenceFps: Math.max(1, cadence.gestureFps),
         targetFaceRoiInferenceFps: Math.max(1, cadence.faceRoiFps),
     };
 }
@@ -94,11 +95,14 @@ function capPolicyCadence(
             cadence.poseFps === 0 ? 0 : Math.min(state.baseTargetPoseInferenceFps, cadence.poseFps),
         handFps:
             cadence.handFps === 0 ? 0 : Math.min(state.baseTargetHandInferenceFps, cadence.handFps),
+        gestureFps:
+            cadence.gestureFps === 0
+                ? 0
+                : Math.min(state.baseTargetGestureInferenceFps, cadence.gestureFps),
         faceRoiFps:
             cadence.faceRoiFps === 0
                 ? 0
                 : Math.min(state.baseTargetFaceRoiInferenceFps, cadence.faceRoiFps),
-        gestureFps: cadence.gestureFps,
     };
 }
 

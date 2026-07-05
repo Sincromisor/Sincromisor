@@ -1,13 +1,14 @@
 /**
  * 本番 sincro runtime で motion pipeline の低次元 state だけを更新する observe-only service。
  *
- * tracker callback が渡す Face / Pose snapshot と明示された `mediaTimeMs` を入力境界にし、
- * optional `CameraQualityScore`、ReliabilityMap、CanonicalUpperBodyState、TemporalUpperBodyState、
+ * tracker callback が渡す Face / Pose / Hand / Gesture snapshot と明示された `mediaTimeMs` を入力境界にし、
+ * optional `CameraQualityScore` と Gesture observation、ReliabilityMap、CanonicalUpperBodyState、TemporalUpperBodyState、
  * MotionIntentState を `SincroMotionPipelineState` へ保存する。VRM bone、expression、root position、
  * controller 呼び出し順序、composer dry-run はこの service の非対象であり、失敗時も既存表示姿勢へ
  * fallback させない。
  */
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import type { SincroGestureMotionSnapshot } from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import { createCanonicalUpperBodyState } from "../canonical/canonicalArmFeatureExtractor";
@@ -23,6 +24,7 @@ import {
     type SincroMotionObserveOnlyPipelineUpdateResult,
     type SincroMotionObserveOnlySummary,
     summarizeComposerDryRun,
+    summarizeObserveOnlyGesture,
     summarizeObserveOnlyHand,
     summarizeObserveOnlyStage,
 } from "./sincroMotionObserveOnlyPipelineTypes";
@@ -32,11 +34,13 @@ import {
     type SincroMotionPipelineState,
 } from "./sincroMotionPipelineState";
 
-// reason: structure-threshold-exception 既存の observe-only pipeline facade が行数上限を超えているため。本タスクでは既存境界への cameraQuality 接続だけに留める。
+// reason: structure-threshold-exception 既存の observe-only pipeline facade が行数上限を超えているため。本タスクでは既存境界への Gesture optional pass 接続だけに留める。
 
 export type {
     SincroMotionComposerDryRunSummary,
     SincroMotionObserveOnlyAvailability,
+    SincroMotionObserveOnlyGestureSideSummary,
+    SincroMotionObserveOnlyGestureSummary,
     SincroMotionObserveOnlyHandSideSummary,
     SincroMotionObserveOnlyHandSummary,
     SincroMotionObserveOnlyPipelineInput,
@@ -50,13 +54,13 @@ type PoseReliabilityPrevious = NonNullable<
 >;
 
 /**
- * Face / Pose tracker callback から本番 observe-only state を更新する stateful service。
+ * Face / Pose / Hand / Gesture tracker callback から本番 observe-only state を更新する stateful service。
  *
  * stateful estimator は mode 切替、camera refresh、tracking stop で `reset()` される前提で保持する。
  * `updatePose()` は optional `cameraQuality` を同一 Pose frame の reliability へ反映して temporal / intent
- * まで進める。`updateFace()` / `updateHand()` は最新 snapshot を保存し、既存 Pose があれば caller が渡す
- * 最新 camera quality とともに reliability / canonical を観測用に再計算する。Face callback 単独では VRM も
- * stateful temporal memory も進めないため、Face/Pose callback 順が入れ替わっても controller の姿勢適用順序は変わらない。
+ * まで進める。`updateFace()` / `updateHand()` / `updateGesture()` は最新 snapshot を保存し、既存 Pose があれば
+ * caller が渡す最新 camera quality とともに reliability / canonical を観測用に再計算する。optional pass 単独では
+ * VRM も stateful temporal memory も進めないため、callback 順が入れ替わっても controller の姿勢適用順序は変わらない。
  */
 export class SincroMotionObserveOnlyPipeline {
     private state = createDefaultSincroMotionPipelineState();
@@ -65,6 +69,7 @@ export class SincroMotionObserveOnlyPipeline {
     private previousPose: PoseReliabilityPrevious | undefined;
     private hasFace = false;
     private hasPose = false;
+    private gestureSummarySource?: SincroGestureMotionSnapshot;
 
     /**
      * 保存済み pipeline state を clone して返す。
@@ -97,6 +102,7 @@ export class SincroMotionObserveOnlyPipeline {
         this.previousPose = undefined;
         this.hasFace = false;
         this.hasPose = false;
+        this.gestureSummarySource = undefined;
         this.temporalEstimator.reset();
         this.intentEstimator.reset();
     }
@@ -117,6 +123,7 @@ export class SincroMotionObserveOnlyPipeline {
             ...this.state,
             face: snapshot,
             hand: input.hand ?? this.state.hand,
+            gesture: input.gesture ?? this.state.gesture,
             updatedAtMs: timing.updatedAtMs,
         });
         if (timing.status === "invalid_input") {
@@ -149,6 +156,7 @@ export class SincroMotionObserveOnlyPipeline {
             ...this.state,
             pose: snapshot,
             hand: input.hand ?? this.state.hand,
+            gesture: input.gesture ?? this.state.gesture,
             updatedAtMs: timing.updatedAtMs,
         });
         if (timing.status === "invalid_input") {
@@ -178,6 +186,39 @@ export class SincroMotionObserveOnlyPipeline {
         this.state = cloneSincroMotionPipelineState({
             ...this.state,
             hand: snapshot,
+            gesture: input.gesture ?? this.state.gesture,
+            updatedAtMs: timing.updatedAtMs,
+        });
+        if (timing.status === "invalid_input") {
+            return this.createResult("invalid_input", timing.reason);
+        }
+        if (this.hasPose) {
+            this.updateDownstream({
+                mediaTimeMs: timing.mediaTimeMs,
+                video: normalizeObserveOnlyVideoSize(input.video),
+                cameraQuality: input.cameraQuality,
+                updateStatefulEstimators: false,
+            });
+        }
+        return this.createResult();
+    }
+
+    /**
+     * Gesture callback から latest Gesture observation と Debug Console summary だけを更新する。
+     *
+     * GestureRecognizer raw label は MotionIntent への補助入力に限定し、ReliabilityMap.gesture は本 task では
+     * placeholder のまま維持する。Gesture callback 単独では Temporal / Intent の stateful memory を進めず、
+     * 次の Pose callback で同じ observation を使う。
+     */
+    updateGesture(
+        snapshot: SincroGestureMotionSnapshot,
+        input: SincroMotionObserveOnlyPipelineInput,
+    ): SincroMotionObserveOnlyPipelineUpdateResult {
+        const timing = resolveObserveOnlyTiming(input);
+        this.gestureSummarySource = snapshot;
+        this.state = cloneSincroMotionPipelineState({
+            ...this.state,
+            gesture: input.gesture,
             updatedAtMs: timing.updatedAtMs,
         });
         if (timing.status === "invalid_input") {
@@ -241,6 +282,7 @@ export class SincroMotionObserveOnlyPipeline {
             temporal,
             reliability,
             hand: this.state.hand,
+            gesture: this.state.gesture,
             mediaTimeMs: input.mediaTimeMs,
         });
         this.previousPose = {
@@ -295,6 +337,11 @@ export class SincroMotionObserveOnlyPipeline {
                     state.hand,
                     overrideStatus,
                     reason ?? "hand_not_available",
+                ),
+                gesture: summarizeObserveOnlyGesture(
+                    this.gestureSummarySource,
+                    overrideStatus,
+                    reason ?? "gesture_not_available",
                 ),
                 composerDryRun: summarizeComposerDryRun(state.composerDryRun),
                 updatedAtMs: state.updatedAtMs,
@@ -353,4 +400,18 @@ export function updateHand(
     input: SincroMotionObserveOnlyPipelineInput,
 ): SincroMotionObserveOnlyPipelineUpdateResult {
     return pipeline.updateHand(snapshot, input);
+}
+
+/**
+ * Gesture callback 用の module-level export。
+ *
+ * Gesture snapshot は Debug Console 用 summary に圧縮し、MotionIntentEstimator へ渡す値は caller が
+ * 正規化済み `GestureIntentObservation` として `input.gesture` に入れたものだけを使う。
+ */
+export function updateGesture(
+    pipeline: SincroMotionObserveOnlyPipeline,
+    snapshot: SincroGestureMotionSnapshot,
+    input: SincroMotionObserveOnlyPipelineInput,
+): SincroMotionObserveOnlyPipelineUpdateResult {
+    return pipeline.updateGesture(snapshot, input);
 }
