@@ -8,7 +8,6 @@ import type {
 } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { GestureIntentObservation } from "../motionIntent/motionIntentEstimator";
-import type { FullNormalizedPoseApplicationMode } from "../retargeting/sincroPoseRetargeter";
 import type { SincroMotionPipelineState } from "./sincroMotionPipelineState";
 import type { SincroVrmPoseComposerDryRunStatus } from "./sincroVrmPoseComposerDryRun";
 
@@ -105,9 +104,8 @@ export type SincroMotionComposerDryRunSummary = {
     suppressedLayers: readonly string[];
     clampedBones: readonly string[];
     fullNormalizedPoseApplication?: {
-        mode: FullNormalizedPoseApplicationMode;
         applied: boolean;
-        rollbackReason?: string;
+        unavailableReason?: string;
     };
 };
 
@@ -350,9 +348,8 @@ export function summarizeComposerDryRun(
             result.fullNormalizedPoseApplication === undefined
                 ? undefined
                 : {
-                      mode: result.fullNormalizedPoseApplication.mode,
                       applied: result.fullNormalizedPoseApplication.applied,
-                      rollbackReason: result.fullNormalizedPoseApplication.rollbackReason,
+                      unavailableReason: result.fullNormalizedPoseApplication.unavailableReason,
                   },
     };
 }

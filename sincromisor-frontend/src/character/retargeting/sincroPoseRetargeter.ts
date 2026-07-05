@@ -28,10 +28,7 @@ import {
 } from "./sincroPoseRetargetUpperBody";
 
 export type {
-    ComposerArmApplicationMode,
     ComposerSemanticFingerApplicationMode,
-    ComposerTorsoShoulderApplicationMode,
-    FullNormalizedPoseApplicationMode,
     SincroPoseArmIkMode,
     SincroPoseIkMode,
     SincroPoseRetargetConfig,
