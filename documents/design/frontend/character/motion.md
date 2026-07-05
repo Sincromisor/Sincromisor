@@ -541,10 +541,11 @@ fallback する。
 
 `full setNormalizedPose(finalPose) application` の production 適用境界は `VRMCharacterManager.update()` の
 controller 更新順に置く。`fullNormalizedPoseApplicationMode` は `"off"` / `"upper_body"` の独立 developer flag
-で、既定 `"off"` は arm / torso / shoulder / semantic / finger の段階別 application path を維持し、前段 flag を
-暗黙に変更しない。`"upper_body"` では production dry-run が同一 frame で `available` かつ `result.finalPose`
-を持つ場合だけ `vrm.humanoid.setNormalizedPose(finalPose)` を 1 回呼び、その frame の `ArmBoneController` と
-`CharacterMotionOrchestrator` による upper body direct / selected-bone write は呼ばない。dry-run が
+で、既定 `"upper_body"` は production dry-run が同一 frame で `available` かつ `result.finalPose` を持つ場合だけ
+`vrm.humanoid.setNormalizedPose(finalPose)` を 1 回呼び、その frame の `ArmBoneController` と
+`CharacterMotionOrchestrator` による upper body direct / selected-bone write は呼ばない。`"off"` は
+arm / torso / shoulder / semantic / finger の段階別 application path へ戻す Debug Console 限定 rollback mode で、
+前段 flag を暗黙に変更しない。dry-run が
 `not_ready`、`invalid_input`、`missing_profile`、または `available` でも result 欠損の場合は stale finalPose を
 current result に昇格せず、段階別 path へ rollback する。full stage が所有する upper body / finger bone は
 three-vrm の部分 pose 残留を避けるため毎 frame identity quaternion で埋め、`finalPose` に無い所有 bone も
@@ -561,8 +562,10 @@ Emotion controller と `LegBoneController` は従来どおり更新し、root po
 production cleanup 時点では、段階 rollback 用の `composerArmApplicationMode`、
 `composerTorsoShoulderApplicationMode`、`composerSemanticFingerApplicationMode`、
 `fullNormalizedPoseApplicationMode` は通常設定 UI / URL query / env / backend API / 保存設定 contract へ広げず、
-Debug Console 限定の復旧 hook として残す。所有者は motion runtime であり、削除条件は
-`production-motion-cleanup-inventory.md` を正本にする。削除時は runtime ownership map、Debug Console の
+Debug Console 限定の復旧 hook として残す。full application は production default へ昇格済みだが、unavailable /
+invalid / missing profile / result 欠損時の staged rollback path と各 rollback flag は後続削除条件を満たすまで
+維持する。所有者は motion runtime であり、削除条件は `production-motion-cleanup-inventory.md` を正本にする。
+削除時は runtime ownership map、Debug Console の
 snapshot / controls、composer summary の rollback reason、関連 unit test を同じ変更で外す。
 debug-only の composer comparison / dry-run summary は、P0 replay と実機 visual QA で rollback 不要化が確認
 できるまで残す。これらは public WebRTC / backend 契約や DataChannel payload ではない。

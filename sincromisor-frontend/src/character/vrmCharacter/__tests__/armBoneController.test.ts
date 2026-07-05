@@ -14,7 +14,10 @@ import {
     createDefaultBehaviorVadSnapshot,
 } from "../../behavior/characterBehaviorSnapshots";
 import type { CharacterBehaviorSnapshot } from "../../behavior/characterBehaviorTypes";
-import { NEUTRAL_POSE_FRAME } from "../../retargeting/sincroPoseRetargetTypes";
+import {
+    DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
+    NEUTRAL_POSE_FRAME,
+} from "../../retargeting/sincroPoseRetargetTypes";
 import { createDefaultSincroMotionPipelineState } from "../../runtime/sincroMotionPipelineState";
 import type { SincroVrmPoseComposerDryRunResult } from "../../runtime/sincroVrmPoseComposerDryRun";
 import type { VrmPoseQuaternion } from "../../vrmPose/vrmPoseTypes";
@@ -391,6 +394,12 @@ describe("VRMCharacterManager composer arm application lifecycle", () => {
 });
 
 describe("VRMCharacterManager full normalized pose application", () => {
+    it("uses full upper-body application as the production default", () => {
+        expect(DEFAULT_SINCRO_POSE_RETARGET_CONFIG.fullNormalizedPoseApplicationMode).toBe(
+            "upper_body",
+        );
+    });
+
     it("applies available finalPose once without using setNormalizedPose in off mode", () => {
         const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
         const finalPose = { leftUpperArm: eulerQuaternion(0.8, 0.1, 0) };

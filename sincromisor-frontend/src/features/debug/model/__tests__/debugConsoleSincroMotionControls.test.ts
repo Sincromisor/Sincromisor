@@ -3,6 +3,14 @@ import { DebugConsoleSincroMotionControls } from "../debugConsoleSincroMotionCon
 import { createDefaultSnapshot, type DebugConsoleSnapshot } from "../debugConsoleSnapshot";
 
 describe("DebugConsoleSincroMotionControls", () => {
+    it("initializes full normalized pose mode with the production default", () => {
+        const snapshot = createDefaultSnapshot();
+
+        expect(snapshot.sincroMotion.poseRetarget.fullNormalizedPoseApplicationMode).toBe(
+            "upper_body",
+        );
+    });
+
     it("updates composer dry-run summary without replacing observe-only tracker stages", () => {
         let snapshot = createDefaultSnapshot();
         snapshot = {
