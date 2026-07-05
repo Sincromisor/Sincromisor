@@ -77,6 +77,10 @@
     - production `sincro` の observe-only motion pipeline へは Face / Pose callback の `TrackerVideoFrameTiming.mediaTimeMs`
       を渡す。stop など timing が無い callback では controller / sink 側が callback 受信時刻を明示的に渡し、
       estimator 内部の現在時刻参照には戻さない。
+    - production `sincro` の Pose callback は `SincroCameraQualityRuntime` で `CameraQualityScore` を生成し、
+      同一 frame の observe-only `ReliabilityMap` へ渡す。Face / Hand callback は score を生成せず、
+      source `none` 相当の stop snapshot では latest score と bounded history を破棄して
+      `camera_quality_missing` fallback に戻す。
     - Worker 経路と main-thread fallback。
     - Worker が使える環境では Worker 経路を標準にし、Worker unavailable / 初期化失敗 / Worker detect failure では main-thread fallback へ切り替える。
     - main-thread fallback では effective target を face `<= 8fps`、pose `<= 4fps`、Hand ROI `<= 2fps`、Face ROI `<= 3fps` に clamp し、`SincroTrackerWorkerStats.budget.degradation.state = "main-thread-low-fps"` として保存する。
@@ -152,8 +156,13 @@
     - `CameraQualityScore` は resolution、cadence、torso / hands in frame、border risk、hand small risk、motion blur risk の 7 component を持つ pure score である。guide message は reason code から固定文言へ変換し、自由文生成は行わない。
     - `CameraQualityScore.track` は scrub 済みの `width`、`height`、`frameRate`、`facingMode`、`readyState` だけを保存し、raw `deviceId`、`groupId`、`label` は保存しない。
     - v1 の `motionBlurRisk` は cadence、actual `frameRate`、低 pose confidence 継続だけを見る proxy であり、pixel blur / brightness 解析は行わない。
-    - CameraQualityScore は Phase 3 の debug / recording 表示用であり、ReliabilityMap、TemporalStateEstimator、IK weight にはまだ接続しない。
-    - live camera / video fixture の source 判定、camera setting scrub、manifest 生成、download link 生成は `src/pages/motionDebug/` 側の責務とする。
+    - CameraQualityScore は motion-debug の debug / recording 表示に加え、production observe-only `ReliabilityMap` の
+      `camera.cameraQualityStatus` と joint / part の `cameraQuality` component へ接続する。TemporalStateEstimator、
+      IK weight、VRM 適用へは直接接続しない。
+    - live camera / video fixture の source 判定、manifest 生成、download link 生成は `src/pages/motionDebug/` 側の責務とする。
+      production camera setting scrub は `src/app/controller/sincroCameraQualityRuntime.ts` と
+      `createCameraQualityScore()` の境界で行い、raw camera identifier を production state / Debug Console /
+      fixture に保存しない。
 
 ## Data / State
 

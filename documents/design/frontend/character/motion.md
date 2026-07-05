@@ -57,17 +57,21 @@
     - canonical / reliability の後段で共有する `TemporalUpperBodyState` v1 contract を置く。
     - 保存対象は時系列状態、canonical arm scalar、body-local wrist / elbow tuple、速度、recovering blend に限定し、VRM bone rotation、quaternion、IK solver 出力は含めない。
 - `src/character/runtime/sincroMotionObserveOnlyPipeline.ts`
-    - production `sincro` runtime の Face / Pose callback から `ReliabilityMap`、`CanonicalUpperBodyState`、
-      `TemporalUpperBodyState`、`MotionIntentState` を計算し、`SincroMotionPipelineState` へ保存する
-      observe-only service を置く。
+    - production `sincro` runtime の Face / Pose callback から optional `CameraQualityScore`、
+      `ReliabilityMap`、`CanonicalUpperBodyState`、`TemporalUpperBodyState`、`MotionIntentState` を計算し、
+      `SincroMotionPipelineState` へ保存する observe-only service を置く。
     - `mediaTimeMs` は TrackerRuntime の video frame timing を優先し、欠損時だけ controller / sink 側の
       callback 受信時刻を明示的に渡す。service / estimator 内部では `performance.now()` を読まない。
     - 本 service は VRM bone / expression / root position、`VRMCharacterManager.update()` の controller
       呼び出し順序、`CharacterBehaviorSnapshot` shape、`composerDryRun` を変更しない。dry-run composer と
       実適用は後続 task の責務に残す。
     - Face-only callback は Pose が無い間 `not_computed` summary に留め、旧 pose-only frame は Face / Hand
-      reliability を placeholder として扱う。ReliabilityMap 欠損や optional ROI 欠損を production callback
-      の例外にはしない。
+      reliability を placeholder として扱う。`CameraQualityScore` 欠損、ReliabilityMap 欠損、optional ROI 欠損を
+      production callback の例外にはしない。
+    - production `sincro` の `SincroCameraQualityRuntime` は Pose callback でだけ camera quality を生成し、
+      `updatePose()` / `updateFace()` / `updateHand()` の downstream 再計算時に latest score を
+      `createPoseReliabilityMap()` へ渡す。source `none` 相当の stop snapshot では score を作らず、
+      latest score と bounded timing / pose sample history を reset して `camera_quality_missing` fallback を使う。
     - Degradation 中の Face-only callback は stateful temporal / intent estimator を進めない。Pose callback が
       `mediaTimeMs` 付きで再到着した frame だけ downstream estimator を進め、recovery 時は
       `TemporalUpperBodyState` の `recovering` または comfortable fallback 状態を経由して snap を抑える。
@@ -389,7 +393,7 @@
     - live camera / video fixture の camera quality は optional `camera.quality` に `sincro.camera-quality.v1` として載せる。source が `none` の場合は score を生成せず、viewer camera layer は従来どおり未記録扱いになる。
     - live camera / video fixture の active runtime performance profile は `camera.performanceProfile` を正本にする。schema version は `sincro.tracker-performance-profile.v1` で、camera constraints、Face / Pose / Hand / Face ROI / Gesture cadence、debug log 粒度、degradation budget の説明値を持つ。`tracker.budget` や frame metrics へ profile を重複保存しない。
     - `window.__SINCRO_MOTION_DEBUG__.startCamera(options?)` は optional `performanceProfileId` / `performanceProfile` を受け付ける。未指定時は `debug` profile を使い、`performanceProfileId` 指定時は固定 `POSE_TARGET_INFERENCE_FPS` override ではなく profile cadence の Pose fps を `TrackerRuntime` default として使う。
-    - `CameraQualityScore` の guide message は reason code から `"少し下がってください"`、`"体を画面中央に入れてください"`、`"手が画面から出ないようにしてください"`、`"部屋を明るくしてください"`、`"カメラ解像度を上げてください"` の固定文言へ決定的に変換する。v1 は ReliabilityMap / retarget weight / IK weight へは接続しない。
+    - `CameraQualityScore` の guide message は reason code から `"少し下がってください"`、`"体を画面中央に入れてください"`、`"手が画面から出ないようにしてください"`、`"部屋を明るくしてください"`、`"カメラ解像度を上げてください"` の固定文言へ決定的に変換する。v1 は production observe-only `ReliabilityMap.camera.cameraQualityStatus` と joint / part の `cameraQuality` component へ接続するが、retarget weight / IK weight へは直接接続しない。
     - live camera / video fixture / replay pose-snapshot の最新 `CanonicalUpperBodyState` は optional `canonical` field に載せる。replay frame の `frame.canonical` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
     - live camera / video fixture / replay pose-snapshot の最新 `ReliabilityMap` は optional `reliability` field に載せる。replay frame の `frame.reliability` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
     - live camera / video fixture / replay pose-snapshot の最新 `TemporalUpperBodyState` は optional `temporal` field に載せる。replay frame の `frame.temporal` が invalid な場合は、同じ field に parse error summary を載せ、window API 利用者が replay failure と切り分けられるようにする。
@@ -442,7 +446,7 @@
     - `timestamp.receivedAtPerformanceMs` や top-level `tracker` は schema 外なので追加しない。`mediaTimeMs` と `metrics.receivedAtPerformanceMs` は時刻原点が異なるため、latency として差分を取らない。
     - recorder の duplicate 判定は rVFC の `presentedFrames` がある場合はそれを優先し、同じ `presentedFrames` の連続入力を保存しない。`presentedFrames` が 2 以上進んだ場合、clock は `droppedPresentedFrames = 差分 - 1` を保存する。
     - camera の `deviceId` / `groupId` は raw 値を保存しない。保存が必要になった場合も export 単位の salt で hash し、cross-export stable hash を残さない。
-    - `CameraQualityScore.track` も raw `deviceId` / `groupId` / `label` を保存せず、`width`、`height`、`frameRate`、`facingMode`、`readyState` だけを持つ。
+    - `CameraQualityScore.track` も raw `deviceId` / `groupId` / `label` を保存せず、`width`、`height`、`frameRate`、`facingMode`、`readyState` だけを持つ。production controller は `MediaStreamTrack` 本体を observe-only pipeline へ渡さず、現在 track から読んだ settings / readyState を score 生成境界で scrub する。
     - `MediaStreamTrack.getSettings()` 由来の camera settings は `MotionDebugApp` で scrub してから manifest へ渡し、recorder core は scrub 済み manifest を strict schema で検証する。
 - motion metrics
     - metrics の公開入口は `src/character/motionEvaluation/motionMetrics.ts` facade を正本とし、既存 import 名を維持する。実体は `motionMetricTypes.ts`、`motionMetricThresholds.ts`、`motionMetricFrameParsers.ts`、`motionMetricBaseCalculators.ts`、`motionMetricTrackerCalculators.ts`、`motionMetricTemporalCalculators.ts`、`motionMetricSolverCalculators.ts`、`motionMetricIntentCalculators.ts`、`motionMetricSummary.ts`、`motionMetricComparison.ts` に分け、各 calculator は `SincroMotionDebugFrame[]` と `MotionMetricConfig` 由来の値だけを読む pure function とする。`motionMetricRecoveryCalculators.ts` は temporal recovery jump の補助実装であり、外部公開は temporal module 経由に留める。

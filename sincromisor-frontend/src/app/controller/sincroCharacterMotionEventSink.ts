@@ -8,6 +8,7 @@ import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
+import { SincroCameraQualityRuntime } from "./sincroCameraQualityRuntime";
 import {
     formatErrorDetail,
     formatSincroFaceDebug,
@@ -20,6 +21,8 @@ type SincroCharacterMotionEventSinkOptions = {
     chatMessageService: ChatMessageService;
     characterBehaviorState: CharacterBehaviorState;
     readVideoSize: () => { width: number; height: number };
+    readTrackSettings: () => MediaTrackSettings | undefined;
+    readTrackReadyState: () => MediaStreamTrackState | undefined;
 };
 
 export class SincroCharacterMotionEventSink {
@@ -28,7 +31,10 @@ export class SincroCharacterMotionEventSink {
     private readonly chatMessageService: ChatMessageService;
     private readonly characterBehaviorState: CharacterBehaviorState;
     private readonly observeOnlyPipeline = new SincroMotionObserveOnlyPipeline();
+    private readonly cameraQualityRuntime = new SincroCameraQualityRuntime();
     private readonly readVideoSize: () => { width: number; height: number };
+    private readonly readTrackSettings: () => MediaTrackSettings | undefined;
+    private readonly readTrackReadyState: () => MediaStreamTrackState | undefined;
 
     constructor(options: SincroCharacterMotionEventSinkOptions) {
         this.dialogManager = options.dialogManager;
@@ -36,6 +42,8 @@ export class SincroCharacterMotionEventSink {
         this.chatMessageService = options.chatMessageService;
         this.characterBehaviorState = options.characterBehaviorState;
         this.readVideoSize = options.readVideoSize;
+        this.readTrackSettings = options.readTrackSettings;
+        this.readTrackReadyState = options.readTrackReadyState;
     }
 
     handleFaceMotion(snapshot: SincroFaceMotionSnapshot, timing?: TrackerVideoFrameTiming): void {
@@ -61,9 +69,17 @@ export class SincroCharacterMotionEventSink {
         if (!this.isSincroTrackingEnabled()) {
             return;
         }
+        const video = this.readVideoSize();
+        this.cameraQualityRuntime.updatePoseQuality({
+            pose: snapshot,
+            timing,
+            video,
+            trackSettings: this.readTrackSettings(),
+            trackReadyState: this.readTrackReadyState(),
+        });
         const observeOnly = this.observeOnlyPipeline.updatePose(
             snapshot,
-            this.createObserveOnlyInput(timing),
+            this.createObserveOnlyInput(timing, video),
         );
         this.characterBehaviorState.applySincroMotionPipelineState(observeOnly.state);
         this.characterBehaviorState.applyPoseMotion(snapshot);
@@ -77,9 +93,17 @@ export class SincroCharacterMotionEventSink {
     }
 
     handlePoseFallback(snapshot: SincroPoseMotionSnapshot, timing?: TrackerVideoFrameTiming): void {
+        const video = this.readVideoSize();
+        this.cameraQualityRuntime.updatePoseQuality({
+            pose: snapshot,
+            timing,
+            video,
+            trackSettings: this.readTrackSettings(),
+            trackReadyState: this.readTrackReadyState(),
+        });
         const observeOnly = this.observeOnlyPipeline.updatePose(
             snapshot,
-            this.createObserveOnlyInput(timing),
+            this.createObserveOnlyInput(timing, video),
         );
         this.characterBehaviorState.applySincroMotionPipelineState(observeOnly.state);
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
@@ -130,6 +154,7 @@ export class SincroCharacterMotionEventSink {
      */
     resetObserveOnlyPipeline(): void {
         this.observeOnlyPipeline.reset();
+        this.cameraQualityRuntime.reset();
         this.characterBehaviorState.applySincroMotionPipelineState(
             this.observeOnlyPipeline.getState(),
         );
@@ -140,11 +165,13 @@ export class SincroCharacterMotionEventSink {
 
     private createObserveOnlyInput(
         timing: TrackerVideoFrameTiming | undefined,
+        video: { width: number; height: number } = this.readVideoSize(),
     ): SincroMotionObserveOnlyPipelineInput {
         return {
             mediaTimeMs: timing?.mediaTimeMs,
             receivedAtMs: timing?.receivedAtPerformanceMs ?? performance.now(),
-            video: this.readVideoSize(),
+            video,
+            cameraQuality: this.cameraQualityRuntime.getCameraQuality(),
         };
     }
 }

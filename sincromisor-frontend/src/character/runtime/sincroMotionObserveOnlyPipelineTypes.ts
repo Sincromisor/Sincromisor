@@ -2,9 +2,12 @@ import type {
     SincroHandMotionSnapshot,
     SincroHandSideSnapshot,
 } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
+import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { FullNormalizedPoseApplicationMode } from "../retargeting/sincroPoseRetargeter";
 import type { SincroMotionPipelineState } from "./sincroMotionPipelineState";
 import type { SincroVrmPoseComposerDryRunStatus } from "./sincroVrmPoseComposerDryRun";
+
+// reason: structure-threshold-exception 既存の observe-only summary/types module が行数上限を超えているため。本タスクでは cameraQuality 入力契約の追加だけに留める。
 
 /**
  * Debug Console に出す observe-only stage の計算状態。
@@ -101,6 +104,10 @@ export type SincroMotionObserveOnlySummary = {
  * `mediaTimeMs` は video frame clock 由来を優先し、欠損時だけ wrapper が `receivedAtMs` に
  * callback 受信時刻を入れる。estimator 内部で現在時刻を読ませないため、両方が非 finite の入力は
  * `invalid_input` として保存済み snapshot だけ更新し、downstream estimator は進めない。
+ *
+ * `cameraQuality` は production controller が Pose callback で生成した最新 score だけを渡す optional
+ * 入力である。Face-only / Hand-only / source none 相当では `undefined` のままにし、ReliabilityMap の
+ * `camera_quality_missing` fallback を使う。MediaStreamTrack や raw device id / label はこの境界に入れない。
  */
 export type SincroMotionObserveOnlyPipelineInput = {
     mediaTimeMs?: number;
@@ -110,6 +117,7 @@ export type SincroMotionObserveOnlyPipelineInput = {
         height: number;
     };
     hand?: SincroHandMotionSnapshot;
+    cameraQuality?: CameraQualityScore;
 };
 
 /**
