@@ -13,6 +13,7 @@ export function publishTrackerRuntimeFallbackStats(
     targetInferenceFps: number,
     targetPoseInferenceFps: number,
     targetHandInferenceFps: number,
+    targetGestureInferenceFps: number,
     targetFaceRoiInferenceFps: number,
     roiStats: SincroTrackerRoiStats,
 ): void {
@@ -27,6 +28,7 @@ export function publishTrackerRuntimeFallbackStats(
         effectiveFaceFps: targetInferenceFps,
         effectivePoseFps: targetPoseInferenceFps,
         effectiveHandFps: targetHandInferenceFps,
+        effectiveGestureFps: targetGestureInferenceFps,
         effectiveFaceRoiFps: targetFaceRoiInferenceFps,
         roi: roiStats,
         budget: createTrackerPerformanceBudgetReport({

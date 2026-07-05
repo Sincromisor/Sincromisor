@@ -1,13 +1,18 @@
 import type {
+    SincroGestureMotionSnapshot,
+    SincroGestureSideSnapshot,
+} from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
+import type {
     SincroHandMotionSnapshot,
     SincroHandSideSnapshot,
 } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
+import type { GestureIntentObservation } from "../motionIntent/motionIntentEstimator";
 import type { FullNormalizedPoseApplicationMode } from "../retargeting/sincroPoseRetargeter";
 import type { SincroMotionPipelineState } from "./sincroMotionPipelineState";
 import type { SincroVrmPoseComposerDryRunStatus } from "./sincroVrmPoseComposerDryRun";
 
-// reason: structure-threshold-exception 既存の observe-only summary/types module が行数上限を超えているため。本タスクでは cameraQuality 入力契約の追加だけに留める。
+// reason: structure-threshold-exception 既存の observe-only summary/types module が行数上限を超えているため。本タスクでは Gesture 入力と summary 契約の追加だけに留める。
 
 /**
  * Debug Console に出す observe-only stage の計算状態。
@@ -62,6 +67,31 @@ export type SincroMotionObserveOnlyHandSummary = {
     warnings: readonly string[];
 };
 
+export type SincroMotionObserveOnlyGestureSideSummary = {
+    label: string;
+    confidence: number;
+    source: SincroGestureSideSnapshot["source"];
+    warnings: readonly string[];
+};
+
+/**
+ * production Debug Console に出す Gesture optional pass の低次元 summary。
+ *
+ * GestureRecognizer snapshot 本体や MediaPipe category list は常時表示へ流さず、availability と左右の
+ * top label / confidence / source / warning だけへ圧縮する。raw label は MotionIntent の説明入力であり、
+ * semantic intent 名や reliability component へはここで変換しない。
+ */
+export type SincroMotionObserveOnlyGestureSummary = {
+    status: SincroMotionObserveOnlyAvailability;
+    mediaTimeMs?: number;
+    reason?: string;
+    trackingEnabled: boolean;
+    inferenceFps: number;
+    left?: SincroMotionObserveOnlyGestureSideSummary;
+    right?: SincroMotionObserveOnlyGestureSideSummary;
+    warnings: readonly string[];
+};
+
 /**
  * production VrmPoseComposer dry-run の Debug Console summary。
  *
@@ -94,6 +124,7 @@ export type SincroMotionObserveOnlySummary = {
     temporal: SincroMotionObserveOnlyStageSummary;
     intent: SincroMotionObserveOnlyStageSummary;
     hand: SincroMotionObserveOnlyHandSummary;
+    gesture: SincroMotionObserveOnlyGestureSummary;
     composerDryRun: SincroMotionComposerDryRunSummary;
     updatedAtMs: number;
 };
@@ -108,6 +139,10 @@ export type SincroMotionObserveOnlySummary = {
  * `cameraQuality` は production controller が Pose callback で生成した最新 score だけを渡す optional
  * 入力である。Face-only / Hand-only / source none 相当では `undefined` のままにし、ReliabilityMap の
  * `camera_quality_missing` fallback を使う。MediaStreamTrack や raw device id / label はこの境界に入れない。
+ *
+ * `gesture` は Gesture snapshot を MotionIntentEstimator 用に正規化した optional observation だけを受ける。
+ * MediaPipe raw category list や handedness object はここへ渡さず、ReliabilityMap.gesture も本境界では
+ * placeholder のまま維持する。
  */
 export type SincroMotionObserveOnlyPipelineInput = {
     mediaTimeMs?: number;
@@ -117,6 +152,7 @@ export type SincroMotionObserveOnlyPipelineInput = {
         height: number;
     };
     hand?: SincroHandMotionSnapshot;
+    gesture?: GestureIntentObservation;
     cameraQuality?: CameraQualityScore;
 };
 
@@ -254,6 +290,29 @@ export function summarizeObserveOnlyHand(
     };
 }
 
+export function summarizeObserveOnlyGesture(
+    snapshot: SincroGestureMotionSnapshot | undefined,
+    overrideStatus: SincroMotionObserveOnlyAvailability | undefined,
+    reason: string,
+): SincroMotionObserveOnlyGestureSummary {
+    if (overrideStatus === "invalid_input") {
+        return createNotComputedGestureSummary("invalid_input", reason);
+    }
+    if (snapshot === undefined) {
+        return createNotComputedGestureSummary("not_computed", reason);
+    }
+    return {
+        status: "available",
+        mediaTimeMs: snapshot.lastUpdatedAtMs,
+        reason: snapshot.fallbackReason,
+        trackingEnabled: snapshot.trackingEnabled,
+        inferenceFps: snapshot.inferenceFps,
+        left: summarizeObserveOnlyGestureSide(snapshot.left),
+        right: summarizeObserveOnlyGestureSide(snapshot.right),
+        warnings: [...snapshot.warnings].slice(0, 6),
+    };
+}
+
 /**
  * dry-run result contract を Debug Console 常時表示用の小さい summary へ圧縮する。
  *
@@ -320,6 +379,33 @@ function createNotComputedHandSummary(
             confidence: 0,
         },
         warnings: [],
+    };
+}
+
+function createNotComputedGestureSummary(
+    status: SincroMotionObserveOnlyAvailability,
+    reason: string,
+): SincroMotionObserveOnlyGestureSummary {
+    return {
+        status,
+        reason,
+        trackingEnabled: false,
+        inferenceFps: 0,
+        warnings: [],
+    };
+}
+
+function summarizeObserveOnlyGestureSide(
+    side: SincroGestureSideSnapshot | undefined,
+): SincroMotionObserveOnlyGestureSideSummary | undefined {
+    if (side === undefined) {
+        return undefined;
+    }
+    return {
+        label: side.label,
+        confidence: side.confidence,
+        source: side.source,
+        warnings: [...side.warnings].slice(0, 4),
     };
 }
 

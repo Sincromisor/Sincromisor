@@ -95,12 +95,14 @@ describe("clampTrackerRuntimeTargetsForMainThreadFallback", () => {
                 targetInferenceFps: 15,
                 targetPoseInferenceFps: 12,
                 targetHandInferenceFps: 8,
+                targetGestureInferenceFps: 6,
                 targetFaceRoiInferenceFps: 6,
             }),
         ).toEqual({
             targetInferenceFps: 8,
             targetPoseInferenceFps: 4,
             targetHandInferenceFps: 2,
+            targetGestureInferenceFps: 2,
             targetFaceRoiInferenceFps: 3,
         });
     });

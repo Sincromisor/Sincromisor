@@ -4,6 +4,8 @@
  */
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
+import { createSincroGestureFallbackSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
+import { SincroGestureTracker } from "../gestureTracking/sincroGestureTracker";
 import { createSincroHandFallbackSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import { SincroHandTracker } from "../handTracking/sincroHandTracker";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
@@ -67,6 +69,7 @@ export class TrackerRuntime {
     private readonly faceTracker: SincroFaceTracker;
     private readonly poseTracker: SincroPoseTracker;
     private readonly handTracker: SincroHandTracker;
+    private readonly gestureTracker: SincroGestureTracker;
     private readonly workerClient: SincroTrackerWorkerClient;
     private readonly frameLoop = new TrackerRuntimeFrameLoop((timing) => this.predict(timing));
     private readonly posePerformanceGate = new TrackerRuntimePosePerformanceGate();
@@ -83,11 +86,13 @@ export class TrackerRuntime {
         faceTracker: SincroFaceTracker = new SincroFaceTracker(),
         poseTracker: SincroPoseTracker = new SincroPoseTracker(),
         handTracker: SincroHandTracker = new SincroHandTracker(),
+        gestureTracker: SincroGestureTracker = new SincroGestureTracker(),
     ) {
         this.videoElement = videoElement;
         this.faceTracker = faceTracker;
         this.poseTracker = poseTracker;
         this.handTracker = handTracker;
+        this.gestureTracker = gestureTracker;
         this.workerClient = new SincroTrackerWorkerClient((stats) => {
             this.callbacks?.onTrackerStats?.(stats);
         });
@@ -121,6 +126,7 @@ export class TrackerRuntime {
         this.callbacks?.onFaceMotion(this.faceTracker.stop(reason));
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop(reason));
         this.callbacks?.onHandMotion?.(this.handTracker.stop(reason));
+        this.callbacks?.onGestureMotion?.(this.gestureTracker.stop(reason));
         this.callbacks = undefined;
         this.state = createTrackerRuntimeMutableState();
         this.roiBudget.reset();
@@ -135,6 +141,7 @@ export class TrackerRuntime {
         this.faceTracker.dispose();
         this.poseTracker.dispose();
         this.handTracker.dispose();
+        this.gestureTracker.dispose();
         this.workerClient.dispose();
     }
 
@@ -153,6 +160,11 @@ export class TrackerRuntime {
         this.state.poseTrackingEnabled = !!poseOptions.enabled;
         this.state.handTrackingEnabled =
             this.state.poseTrackingEnabled && poseOptions.hand?.enabled === true;
+        this.state.gestureTrackingRequested = poseOptions.gesture?.enabled === true;
+        this.state.gestureTrackingEnabled =
+            this.state.poseTrackingEnabled &&
+            this.state.handTrackingEnabled &&
+            this.state.gestureTrackingRequested;
         this.state.faceRoiTrackingEnabled =
             this.state.poseTrackingEnabled && poseOptions.faceRoi?.enabled === true;
         this.state.ignorePosePerformanceFallback = !!poseOptions.ignorePerformanceFallback;
@@ -168,6 +180,13 @@ export class TrackerRuntime {
             1,
             Math.min(8, poseOptions.hand?.targetInferenceFps ?? performanceProfile.cadence.handFps),
         );
+        this.state.baseTargetGestureInferenceFps = Math.max(
+            1,
+            Math.min(
+                8,
+                poseOptions.gesture?.targetInferenceFps ?? performanceProfile.cadence.gestureFps,
+            ),
+        );
         this.state.baseTargetFaceRoiInferenceFps = Math.max(
             1,
             Math.min(
@@ -178,6 +197,7 @@ export class TrackerRuntime {
         this.state.targetInferenceFps = this.state.baseTargetInferenceFps;
         this.state.targetPoseInferenceFps = this.state.baseTargetPoseInferenceFps;
         this.state.targetHandInferenceFps = this.state.baseTargetHandInferenceFps;
+        this.state.targetGestureInferenceFps = this.state.baseTargetGestureInferenceFps;
         this.state.targetFaceRoiInferenceFps = this.state.baseTargetFaceRoiInferenceFps;
         this.configurePosePerformanceGate();
         this.roiBudget.reset();
@@ -189,9 +209,11 @@ export class TrackerRuntime {
             faceTracker: this.faceTracker,
             poseTracker: this.poseTracker,
             handTracker: this.handTracker,
+            gestureTracker: this.gestureTracker,
             workerClient: this.workerClient,
             poseTrackingEnabled: this.state.poseTrackingEnabled,
             handTrackingEnabled: this.state.handTrackingEnabled,
+            gestureTrackingEnabled: this.state.gestureTrackingEnabled,
             faceRoiTrackingEnabled: this.state.faceRoiTrackingEnabled,
             preferWorker,
             onWorkerFallback: (reason) => this.applyMainThreadFallback(reason),
@@ -200,6 +222,14 @@ export class TrackerRuntime {
             onHandInitializationFallback: (reason, nowMs) =>
                 this.callbacks?.onHandMotion?.(
                     createSincroHandFallbackSnapshot({
+                        reason,
+                        nowMs,
+                        warnings: ["model_not_loaded"],
+                    }),
+                ),
+            onGestureInitializationFallback: (reason, nowMs) =>
+                this.callbacks?.onGestureMotion?.(
+                    createSincroGestureFallbackSnapshot({
                         reason,
                         nowMs,
                         warnings: ["model_not_loaded"],
@@ -245,13 +275,17 @@ export class TrackerRuntime {
             lastInferenceAtMs: this.state.lastInferenceAtMs,
             lastPoseInferenceAtMs: this.state.lastPoseInferenceAtMs,
             lastHandInferenceAtMs: this.state.lastHandInferenceAtMs,
+            lastGestureInferenceAtMs: this.state.lastGestureInferenceAtMs,
             lastFaceRoiInferenceAtMs: this.state.lastFaceRoiInferenceAtMs,
             targetInferenceFps: this.state.targetInferenceFps,
             targetPoseInferenceFps: this.state.targetPoseInferenceFps,
             targetHandInferenceFps: this.state.targetHandInferenceFps,
+            targetGestureInferenceFps: this.state.targetGestureInferenceFps,
             targetFaceRoiInferenceFps: this.state.targetFaceRoiInferenceFps,
             poseTrackingEnabled: this.state.poseTrackingEnabled,
             handTrackingEnabled: this.state.handTrackingEnabled,
+            gestureTrackingRequested: this.state.gestureTrackingRequested,
+            gestureTrackingEnabled: this.state.gestureTrackingEnabled,
             faceRoiTrackingEnabled: this.state.faceRoiTrackingEnabled,
             poseDegradedToFaceOnly: this.state.poseDegradedToFaceOnly,
             poseRecoveryProbeActive: trackerRuntimePolicyStageStopsPose(
@@ -277,10 +311,13 @@ export class TrackerRuntime {
             faceTracker: this.faceTracker,
             poseTracker: this.poseTracker,
             handTracker: this.handTracker,
+            gestureTracker: this.gestureTracker,
             timing,
             plan,
             latestPoseSnapshot: this.state.latestPoseSnapshot,
             handTrackingEnabled: this.state.handTrackingEnabled,
+            gestureTrackingRequested: this.state.gestureTrackingRequested,
+            gestureTrackingEnabled: this.state.gestureTrackingEnabled,
             faceRoiTrackingEnabled: this.state.faceRoiTrackingEnabled,
             handRoiPaused: this.roiBudget.handIsPaused(),
             faceRoiPaused: this.roiBudget.faceRoiIsPaused(),
@@ -292,6 +329,7 @@ export class TrackerRuntime {
                 this.degradePoseToFaceOnly(reason, nowMs, frameTiming),
             markPoseInference: (nowMs) => (this.state.lastPoseInferenceAtMs = nowMs),
             markHandInference: (nowMs) => (this.state.lastHandInferenceAtMs = nowMs),
+            markGestureInference: (nowMs) => (this.state.lastGestureInferenceAtMs = nowMs),
             markFaceRoiInference: (nowMs) => (this.state.lastFaceRoiInferenceAtMs = nowMs),
             recordRoiFrame: (frame: TrackerRuntimeRoiFrameInput) => this.recordRoiFrame(frame),
             publishStats: (stats) => {
@@ -322,6 +360,8 @@ export class TrackerRuntime {
             timing,
             plan,
             handTrackingEnabled: this.state.handTrackingEnabled,
+            gestureTrackingRequested: this.state.gestureTrackingRequested,
+            gestureTrackingEnabled: this.state.gestureTrackingEnabled,
             faceRoiTrackingEnabled: this.state.faceRoiTrackingEnabled,
             handRoiPaused: this.roiBudget.handIsPaused(),
             faceRoiPaused: this.roiBudget.faceRoiIsPaused(),
@@ -330,6 +370,7 @@ export class TrackerRuntime {
             scheduleFrame: () => this.frameLoop.schedule(),
             markPoseInference: (nowMs) => (this.state.lastPoseInferenceAtMs = nowMs),
             markHandInference: (nowMs) => (this.state.lastHandInferenceAtMs = nowMs),
+            markGestureInference: (nowMs) => (this.state.lastGestureInferenceAtMs = nowMs),
             markFaceRoiInference: (nowMs) => (this.state.lastFaceRoiInferenceAtMs = nowMs),
             setLatestPoseSnapshot: (snapshot?: SincroPoseMotionSnapshot) =>
                 (this.state.latestPoseSnapshot = snapshot),
@@ -398,6 +439,7 @@ export class TrackerRuntime {
         this.callbacks?.onPoseMotion?.(snapshot, timing);
         this.callbacks?.onPoseFallback?.(snapshot, timing);
         this.callbacks?.onHandMotion?.(this.handTracker.stop(reason, nowMs), timing);
+        this.callbacks?.onGestureMotion?.(this.gestureTracker.stop(reason, nowMs), timing);
         this.state.latestPoseSnapshot = undefined;
     }
 
@@ -409,6 +451,10 @@ export class TrackerRuntime {
         this.callbacks?.onPoseMotion?.(poseSnapshot, timing);
         this.callbacks?.onPoseFallback?.(poseSnapshot, timing);
         this.callbacks?.onHandMotion?.(this.handTracker.stop(reason, timing.mediaTimeMs), timing);
+        this.callbacks?.onGestureMotion?.(
+            this.gestureTracker.stop(reason, timing.mediaTimeMs),
+            timing,
+        );
         this.state.latestPoseSnapshot = undefined;
     }
 
@@ -417,6 +463,7 @@ export class TrackerRuntime {
         this.callbacks?.onFaceMotion(this.faceTracker.stop(formatTrackerRuntimeErrorDetail(error)));
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop("face_tracking_runtime_error"));
         this.callbacks?.onHandMotion?.(this.handTracker.stop("face_tracking_runtime_error"));
+        this.callbacks?.onGestureMotion?.(this.gestureTracker.stop("face_tracking_runtime_error"));
         this.callbacks?.onError?.(error);
         this.frameLoop.stop();
     }
@@ -436,6 +483,7 @@ export class TrackerRuntime {
             this.state.targetInferenceFps,
             this.state.targetPoseInferenceFps,
             this.state.targetHandInferenceFps,
+            this.state.targetGestureInferenceFps,
             this.state.targetFaceRoiInferenceFps,
             this.roiBudget.getStats(),
         );

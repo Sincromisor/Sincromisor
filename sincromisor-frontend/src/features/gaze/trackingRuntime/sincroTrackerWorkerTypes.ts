@@ -3,6 +3,7 @@
  * ROI reason、degradation policy、budget report は debug / replay 観測用の plain object に限定し、MediaPipe raw result や transferable object を保存 contract に含めない。
  */
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
+import type { SincroGestureMotionSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { TrackerRuntimeDegradationPolicySnapshot } from "./trackerRuntimeDegradationPolicy";
@@ -47,6 +48,7 @@ export type SincroTrackerWorkerStats = {
     effectiveFaceFps?: number;
     effectivePoseFps?: number;
     effectiveHandFps?: number;
+    effectiveGestureFps?: number;
     effectiveFaceRoiFps?: number;
     loadTimeMs: number;
     droppedFrames: number;
@@ -60,6 +62,7 @@ export type SincroTrackerWorkerInitMessage = {
     type: "init";
     poseEnabled: boolean;
     handEnabled: boolean;
+    gestureEnabled: boolean;
     faceRoiEnabled: boolean;
 };
 
@@ -70,6 +73,7 @@ export type SincroTrackerWorkerDetectMessage = {
     timestampMs: number;
     poseEnabled: boolean;
     handEnabled: boolean;
+    gestureEnabled: boolean;
     faceRoiEnabled: boolean;
 };
 
@@ -103,6 +107,7 @@ export type SincroTrackerWorkerResultMessage = {
     faceRoi?: SincroFaceMotionSnapshot;
     pose?: SincroPoseMotionSnapshot;
     hand?: SincroHandMotionSnapshot;
+    gesture?: SincroGestureMotionSnapshot;
     workerTimeMs: number;
 };
 
@@ -111,6 +116,7 @@ export type SincroTrackerWorkerStoppedMessage = {
     face: SincroFaceMotionSnapshot;
     pose: SincroPoseMotionSnapshot;
     hand: SincroHandMotionSnapshot;
+    gesture: SincroGestureMotionSnapshot;
 };
 
 export type SincroTrackerWorkerErrorMessage = {

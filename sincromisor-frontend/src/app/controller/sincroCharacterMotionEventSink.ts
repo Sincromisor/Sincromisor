@@ -5,6 +5,8 @@ import type { ChatMessageService } from "../../features/conversation/chat/model/
 import type { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import type { DialogManager } from "../../features/dialog/model/dialogManager";
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import type { SincroGestureMotionSnapshot } from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
+import { toGestureIntentObservation } from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
@@ -125,6 +127,21 @@ export class SincroCharacterMotionEventSink {
         this.debugConsoleManager.updateSincroObserveOnlySummary(observeOnly.summary);
     }
 
+    handleGestureMotion(
+        snapshot: SincroGestureMotionSnapshot,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
+        if (!this.isSincroTrackingEnabled()) {
+            return;
+        }
+        const observeOnly = this.observeOnlyPipeline.updateGesture(
+            snapshot,
+            this.createObserveOnlyInput(timing, undefined, toGestureIntentObservation(snapshot)),
+        );
+        this.characterBehaviorState.applySincroMotionPipelineState(observeOnly.state);
+        this.debugConsoleManager.updateSincroObserveOnlySummary(observeOnly.summary);
+    }
+
     handleFaceRuntimeError(error: unknown): void {
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
@@ -165,12 +182,14 @@ export class SincroCharacterMotionEventSink {
 
     private createObserveOnlyInput(
         timing: TrackerVideoFrameTiming | undefined,
-        video: { width: number; height: number } = this.readVideoSize(),
+        video: { width: number; height: number } | undefined = this.readVideoSize(),
+        gesture?: SincroMotionObserveOnlyPipelineInput["gesture"],
     ): SincroMotionObserveOnlyPipelineInput {
         return {
             mediaTimeMs: timing?.mediaTimeMs,
             receivedAtMs: timing?.receivedAtPerformanceMs ?? performance.now(),
-            video,
+            video: video ?? this.readVideoSize(),
+            gesture,
             cameraQuality: this.cameraQualityRuntime.getCameraQuality(),
         };
     }

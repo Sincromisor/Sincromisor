@@ -1,5 +1,5 @@
 /**
- * Face / Pose / Hand / Face ROI の推論 cadence 判定を純粋関数として集約する。
+ * Face / Pose / Hand / Gesture / Face ROI の推論 cadence 判定を純粋関数として集約する。
  * 時刻基準は mediaTimeMs で、fps や last run の扱いを変える場合は tracking design の cadence と focused trackerRuntime tests を確認する。
  */
 type TrackerInferenceCadenceOptions = {
@@ -22,6 +22,17 @@ type TrackerHandInferenceCadenceOptions = {
     handRoiPaused?: boolean;
     lastHandInferenceAtMs: number;
     targetHandInferenceFps: number;
+    hasFreshPoseSnapshot?: boolean;
+    nowMs: number;
+};
+
+type TrackerGestureInferenceCadenceOptions = {
+    gestureTrackingEnabled: boolean;
+    poseDegradedToFaceOnly: boolean;
+    handRoiPaused?: boolean;
+    handRan: boolean;
+    lastGestureInferenceAtMs: number;
+    targetGestureInferenceFps: number;
     hasFreshPoseSnapshot?: boolean;
     nowMs: number;
 };
@@ -70,6 +81,26 @@ export function shouldRunTrackerHandInference(
         return true;
     }
     return options.nowMs - options.lastHandInferenceAtMs >= 1000 / options.targetHandInferenceFps;
+}
+
+export function shouldRunTrackerGestureInference(
+    options: TrackerGestureInferenceCadenceOptions,
+): boolean {
+    if (
+        options.gestureTrackingEnabled === false ||
+        options.poseDegradedToFaceOnly ||
+        options.handRoiPaused === true ||
+        options.hasFreshPoseSnapshot === false ||
+        options.handRan === false
+    ) {
+        return false;
+    }
+    if (options.lastGestureInferenceAtMs < 0) {
+        return true;
+    }
+    return (
+        options.nowMs - options.lastGestureInferenceAtMs >= 1000 / options.targetGestureInferenceFps
+    );
 }
 
 export function shouldRunTrackerFaceRoiInference(

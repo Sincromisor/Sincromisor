@@ -5,6 +5,8 @@
  * main-thread fallback へ切り替える。callback は tracker snapshot と stats の publish に限定し、VRM
  * 適用や motion-debug recording は caller 側の責務に残す。
  */
+
+import { createSincroGestureFallbackSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerClient } from "./sincroTrackerWorkerClient";
 import type { SincroTrackerRoiStats } from "./sincroTrackerWorkerTypes";
@@ -32,6 +34,8 @@ export async function runTrackerRuntimeWorkerPipeline(input: {
     timing: TrackerVideoFrameTiming;
     plan: TrackerRuntimePredictionPlan;
     handTrackingEnabled: boolean;
+    gestureTrackingRequested: boolean;
+    gestureTrackingEnabled: boolean;
     faceRoiTrackingEnabled: boolean;
     handRoiPaused: boolean;
     faceRoiPaused: boolean;
@@ -40,6 +44,7 @@ export async function runTrackerRuntimeWorkerPipeline(input: {
     scheduleFrame: () => void;
     markPoseInference: (nowMs: number) => void;
     markHandInference: (nowMs: number) => void;
+    markGestureInference: (nowMs: number) => void;
     markFaceRoiInference: (nowMs: number) => void;
     setLatestPoseSnapshot: (snapshot?: SincroPoseMotionSnapshot) => void;
     applyPosePerformanceGate: (
@@ -70,6 +75,7 @@ export async function runTrackerRuntimeWorkerPipeline(input: {
             input.timing.mediaTimeMs,
             input.plan.runPose,
             input.plan.runHand,
+            input.plan.runGesture,
             input.plan.runFaceRoi,
             transferTimeMs,
         );
@@ -95,6 +101,11 @@ export async function runTrackerRuntimeWorkerPipeline(input: {
                     input.handRoiPaused,
                 ),
             });
+        }
+        if (result.gesture) {
+            input.callbacks.onGestureMotion?.(result.gesture, input.timing);
+        } else if (!input.plan.runGesture && input.plan.gestureSkipReason !== undefined) {
+            publishSkippedGestureSnapshot(input, input.plan.gestureSkipReason);
         }
         const roiStats = input.recordRoiFrame({
             handRan: input.plan.runHand,
@@ -134,6 +145,7 @@ function markWorkerCadence(input: {
     plan: TrackerRuntimePredictionPlan;
     markPoseInference: (nowMs: number) => void;
     markHandInference: (nowMs: number) => void;
+    markGestureInference: (nowMs: number) => void;
     markFaceRoiInference: (nowMs: number) => void;
 }): void {
     if (input.plan.runPose) {
@@ -142,7 +154,32 @@ function markWorkerCadence(input: {
     if (input.plan.runHand) {
         input.markHandInference(input.timing.mediaTimeMs);
     }
+    if (input.plan.runGesture) {
+        input.markGestureInference(input.timing.mediaTimeMs);
+    }
     if (input.plan.runFaceRoi) {
         input.markFaceRoiInference(input.timing.mediaTimeMs);
     }
+}
+
+function publishSkippedGestureSnapshot(
+    input: {
+        callbacks?: TrackerRuntimeCallbacks;
+        gestureTrackingRequested: boolean;
+        gestureTrackingEnabled: boolean;
+        timing: TrackerVideoFrameTiming;
+    },
+    reason: NonNullable<TrackerRuntimePredictionPlan["gestureSkipReason"]>,
+): void {
+    if (!input.gestureTrackingRequested) {
+        return;
+    }
+    input.callbacks?.onGestureMotion?.(
+        createSincroGestureFallbackSnapshot({
+            reason,
+            nowMs: input.timing.mediaTimeMs,
+            trackingEnabled: input.gestureTrackingEnabled,
+        }),
+        input.timing,
+    );
 }

@@ -24,6 +24,7 @@ import {
     createDefaultBehaviorFaceMotionSnapshot,
 } from "../behavior/characterBehaviorSnapshots";
 import type { CanonicalUpperBodyState } from "../canonical/canonicalUpperBodyState";
+import type { GestureIntentObservation } from "../motionIntent/motionIntentEstimator";
 import type { MotionIntentState } from "../motionIntent/motionIntentState";
 import { cloneMotionIntentState } from "../motionIntent/motionIntentState";
 import type { ReliabilityMap } from "../reliability/reliabilityMap";
@@ -41,6 +42,7 @@ export type SincroMotionPipelineInputSnapshot = {
     face: SincroFaceMotionSnapshot;
     pose: SincroPoseMotionSnapshot;
     hand?: SincroHandMotionSnapshot;
+    gesture?: GestureIntentObservation;
 };
 
 /**
@@ -91,6 +93,7 @@ export function cloneSincroMotionPipelineState(
         face: clonePipelineFaceMotionSnapshot(state.face),
         pose: cloneSincroPoseMotionSnapshot(state.pose),
         hand: state.hand === undefined ? undefined : cloneSincroHandMotionSnapshot(state.hand),
+        gesture: state.gesture === undefined ? undefined : structuredClone(state.gesture),
         reliability:
             state.reliability === undefined ? undefined : structuredClone(state.reliability),
         canonical: state.canonical === undefined ? undefined : structuredClone(state.canonical),

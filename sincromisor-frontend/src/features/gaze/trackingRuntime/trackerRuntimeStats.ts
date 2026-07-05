@@ -73,6 +73,9 @@ export function createMainThreadTrackerRuntimeStats(input: {
             effectiveHandFps: input.state.handTrackingEnabled
                 ? input.state.targetHandInferenceFps
                 : undefined,
+            effectiveGestureFps: input.state.gestureTrackingEnabled
+                ? input.state.targetGestureInferenceFps
+                : undefined,
             effectiveFaceRoiFps: input.state.faceRoiTrackingEnabled
                 ? input.state.targetFaceRoiInferenceFps
                 : undefined,
@@ -148,6 +151,7 @@ export function applyTrackerRuntimeStatsBudget(input: {
         effectiveFaceFps: appliedCadence.faceFps,
         effectivePoseFps: appliedCadence.poseFps,
         effectiveHandFps: appliedCadence.handFps,
+        effectiveGestureFps: appliedCadence.gestureFps,
         effectiveFaceRoiFps: appliedCadence.faceRoiFps,
         roi: updatedRoiStats,
         degradationPolicy: {
