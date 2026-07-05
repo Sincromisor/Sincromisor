@@ -6,10 +6,16 @@ import {
     cloneAvatarMotionProfile,
     createAvatarMotionProfile,
 } from "../avatarProfile/avatarMotionProfile";
+import type { MinimalAvatarMotionProfile } from "../avatarProfile/minimalAvatarMotionProfile";
+import type { SincroArmIkSolveResult } from "../ik/sincroArmIkSolver";
 import { SincroArmIkSolver } from "../ik/sincroArmIkSolver";
+import type { SincroArmSide } from "../ik/sincroArmIkTypes";
 import { runSincroCcdIkProbe, type SincroCcdIkProbeResult } from "../ik/sincroCcdIkProbe";
+import type { TemporalUpperBodyState } from "../temporal/temporalUpperBodyState";
 import { retargetPoseArm } from "./sincroPoseArmRetargeter";
 import {
+    blendQuaternion,
+    cloneArmIkConstraint,
     cloneFrame,
     ikModeForArms,
     smoothFrame,
@@ -20,12 +26,19 @@ import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
     NEUTRAL_POSE_FRAME,
     type SincroPoseRetargetConfig,
+    type SincroPoseRetargetedArm,
     type SincroPoseRetargetFrame,
 } from "./sincroPoseRetargetTypes";
 import {
     createSincroPoseUpperBodyAnchor,
     createSincroPoseUpperBodyFrame,
 } from "./sincroPoseRetargetUpperBody";
+import { createSincroPoseTemporalArmInput } from "./sincroPoseTemporalArmInput";
+
+export type SincroPoseRetargetRuntimeInput = {
+    temporal?: TemporalUpperBodyState;
+    profile?: MinimalAvatarMotionProfile;
+};
 
 export type {
     ComposerArmApplicationMode,
@@ -33,6 +46,8 @@ export type {
     ComposerTorsoShoulderApplicationMode,
     FullNormalizedPoseApplicationMode,
     SincroPoseArmIkMode,
+    SincroPoseArmSolverPrimarySource,
+    SincroPoseArmSolverSource,
     SincroPoseIkMode,
     SincroPoseRetargetConfig,
     SincroPoseRetargetedArm,
@@ -96,7 +111,18 @@ export class SincroPoseRetargeter {
             : undefined;
     }
 
-    retarget(snapshot: SincroPoseMotionSnapshot, nowMs: number): SincroPoseRetargetFrame {
+    /**
+     * `sincro` の pose snapshot と optional runtime input から、その frame の retarget result を作る。
+     *
+     * 第 3 引数が欠損している場合は従来どおり Pose snapshot arm target を使う。`temporal` と `profile`
+     * が揃う frame では Temporal bridge 由来の肩ローカル target を primary IK target にし、欠損や
+     * invalid/lost は arm ごとの `solverSource` に理由を残して Pose snapshot fallback へ戻す。
+     */
+    retarget(
+        snapshot: SincroPoseMotionSnapshot,
+        nowMs: number,
+        runtime?: SincroPoseRetargetRuntimeInput,
+    ): SincroPoseRetargetFrame {
         const deltaMs =
             this.lastUpdateAtMs === undefined
                 ? 1000 / 60
@@ -117,18 +143,8 @@ export class SincroPoseRetargeter {
 
         const anchor = createSincroPoseUpperBodyAnchor(snapshot, this.config);
         const upperBodyWeight = anchor.weight * this.config.intensityScale;
-        const leftArm = retargetPoseArm({
-            arm: snapshot.leftArm,
-            side: "left",
-            config: this.config,
-            armIkSolvers: this.armIkSolvers,
-        });
-        const rightArm = retargetPoseArm({
-            arm: snapshot.rightArm,
-            side: "right",
-            config: this.config,
-            armIkSolvers: this.armIkSolvers,
-        });
+        const leftArm = this.retargetArm({ snapshot, side: "left", runtime });
+        const rightArm = this.retargetArm({ snapshot, side: "right", runtime });
         const frame: SincroPoseRetargetFrame = {
             active: true,
             confidence: snapshot.confidence,
@@ -177,6 +193,114 @@ export class SincroPoseRetargeter {
         const alpha = 1 - Math.exp(-deltaMs / Math.max(1, smoothingMs));
         this.smoothedFrame = smoothFrame(this.smoothedFrame, target, alpha);
         return cloneFrame(this.smoothedFrame);
+    }
+
+    private retargetArm(options: {
+        snapshot: SincroPoseMotionSnapshot;
+        side: SincroArmSide;
+        runtime?: SincroPoseRetargetRuntimeInput;
+    }): SincroPoseRetargetedArm {
+        const { snapshot, side, runtime } = options;
+        const arm = side === "left" ? snapshot.leftArm : snapshot.rightArm;
+        const temporalInput = createSincroPoseTemporalArmInput({
+            snapshot,
+            temporal: runtime?.temporal,
+            profile: runtime?.profile,
+            solver: this.armIkSolvers?.[side],
+            side,
+        });
+        const solver = this.armIkSolvers?.[side];
+        if (
+            temporalInput.target !== undefined &&
+            solver !== undefined &&
+            this.config.armIkMode === "world_3d_ik" &&
+            this.config.armIkStrength > 0
+        ) {
+            const solved = solver.solve(temporalInput.target);
+            if (solved !== undefined) {
+                return {
+                    ...this.createWorldIkArm({
+                        featureArm: this.createFeatureArm(snapshot, side),
+                        ikResult: solved,
+                    }),
+                    solverSource: temporalInput.source,
+                    temporalBridge: temporalInput.bridge,
+                };
+            }
+            return {
+                ...retargetPoseArm({
+                    arm,
+                    side,
+                    config: this.config,
+                    armIkSolvers: this.armIkSolvers,
+                }),
+                solverSource: {
+                    primarySource: "pose-snapshot-fallback",
+                    fallbackReason: "invalid_temporal_arm",
+                    bridgeReasonCodes: ["invalid_temporal_arm"],
+                    targetReachRatio: temporalInput.source.targetReachRatio,
+                    temporalState: temporalInput.source.temporalState,
+                },
+                temporalBridge: temporalInput.bridge,
+            };
+        }
+        return {
+            ...retargetPoseArm({
+                arm,
+                side,
+                config: this.config,
+                armIkSolvers: this.armIkSolvers,
+            }),
+            solverSource: temporalInput.source,
+            temporalBridge: temporalInput.bridge,
+        };
+    }
+
+    private createFeatureArm(
+        snapshot: SincroPoseMotionSnapshot,
+        side: SincroArmSide,
+    ): SincroPoseRetargetedArm {
+        const arm = side === "left" ? snapshot.leftArm : snapshot.rightArm;
+        return retargetPoseArm({
+            arm,
+            side,
+            config: {
+                ...this.config,
+                armIkMode: "feature_only",
+            },
+            armIkSolvers: this.armIkSolvers,
+        });
+    }
+
+    private createWorldIkArm(options: {
+        featureArm: SincroPoseRetargetedArm;
+        ikResult: SincroArmIkSolveResult;
+    }): SincroPoseRetargetedArm {
+        const { featureArm, ikResult } = options;
+        const ikBlendWeight = this.config.armIkStrength * ikResult.weight;
+        return {
+            active: true,
+            ikActive: true,
+            ikWeight: ikResult.weight,
+            ikSolverMode: "world_3d_ik",
+            fallbackReason:
+                ikResult.constraint.reasons[0] ??
+                (ikResult.targetClamped ? "ik_target_clamped" : undefined),
+            constraint: cloneArmIkConstraint(ikResult.constraint),
+            upperArm: { x: 0, y: 0, z: 0 },
+            lowerArm: { x: 0, y: 0, z: 0 },
+            wrist: { ...featureArm.wrist },
+            upperArmQuaternion: blendQuaternion(
+                ikResult.neutralUpperArmQuaternion,
+                ikResult.upperArmQuaternion,
+                ikBlendWeight,
+            ),
+            lowerArmQuaternion: blendQuaternion(
+                ikResult.neutralLowerArmQuaternion,
+                ikResult.lowerArmQuaternion,
+                ikBlendWeight,
+            ),
+        };
     }
 
     private solverProbeSnapshot(): SincroPoseRetargetFrame["solverProbe"] {

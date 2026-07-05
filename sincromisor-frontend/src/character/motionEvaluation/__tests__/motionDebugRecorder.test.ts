@@ -304,6 +304,25 @@ function createPhase6SolverSnapshot(): unknown {
     };
 }
 
+describe("Phase 6 solver source compatibility", () => {
+    it("parses legacy arm snapshots without source as pose snapshot fallback", () => {
+        const parsed = parseMotionDebugPhase6SolverSnapshot(createPhase6SolverSnapshot());
+
+        expect(parsed.ok).toBe(true);
+        if (!parsed.ok) {
+            return;
+        }
+        expect(parsed.snapshot.arms.left.source).toEqual({
+            primarySource: "pose-snapshot-fallback",
+            bridgeReasonCodes: [],
+        });
+        expect(parsed.snapshot.arms.right.source).toEqual({
+            primarySource: "pose-snapshot-fallback",
+            bridgeReasonCodes: [],
+        });
+    });
+});
+
 function createPhase7Snapshot(): unknown {
     return {
         schemaVersion: "sincro.phase7-profile-calibration.v1",
