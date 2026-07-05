@@ -1,7 +1,7 @@
 id: task-260705214026-remove-motion-rollback-fallback-paths
 title: Remove production motion rollback fallback paths
 category: character-sincro-motion
-status: open
+status: done
 depends_on:
   - task-260705004415-full-normalized-pose-application
   - task-260705004418-production-motion-rollback-and-cleanup
@@ -9,8 +9,8 @@ depends_on:
 superseded_by: null
 review: APPROVED
 reviewed_sha: 5299bb3fb6f7fa4675b700835e450d73cfb4e9d2
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 3
 created_at: 2026-07-05
-closed_at: null
+closed_at: 2026-07-06
 legacy_ids: []
