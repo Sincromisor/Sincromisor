@@ -147,10 +147,29 @@ export type GestureReliability = {
     state: ReliabilityPartState;
     finalWeight: number;
     source: GestureReliabilitySource;
+    /**
+     * Gesture observation を受けた normalized side。
+     *
+     * `GestureIntentObservation.left/right` の key 由来であり、MediaPipe raw handedness object
+     * や camera preview の見た目の左右ではない。旧 log の placeholder / pre-gesture-reliability
+     * frame では欠損できる。
+     */
     side?: GestureReliabilitySide;
+    /**
+     * Gesture Recognizer の top label を説明用に保存する。
+     *
+     * unknown label でも valid observation なら保持するが、MotionIntent の semantic intent enum
+     * ではない。raw category list は replay raw slot の責務であり、この field には保存しない。
+     */
     label?: string;
     confidence: number;
     stableDurationMs: number;
+    /**
+     * `stableDurationMs` を前回 frame から継続計算するための media time。
+     *
+     * caller 指定の `mediaTimeMs` を保存するだけで、runtime clock ではない。旧 log 互換のため
+     * optional とし、欠損時は次 frame で stability を reset する。
+     */
     lastUpdatedAtMs?: number;
     components: GestureReliabilityComponentSet;
     warnings: ReliabilityWarningCode[];
