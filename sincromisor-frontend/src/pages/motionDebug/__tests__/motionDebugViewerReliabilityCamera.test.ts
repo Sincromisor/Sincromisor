@@ -108,6 +108,64 @@ describe("motion-debug viewer reliability and camera layers", () => {
         });
     });
 
+    it("prefers saved replay reliability over live snapshot reliability", () => {
+        const liveReliability = createReliabilityMap(120);
+        liveReliability.joints.leftHand = {
+            ...liveReliability.joints.leftHand,
+            source: "hand",
+        };
+        const liveSnapshot = createLiveSnapshot({
+            reliability: liveReliability,
+        });
+        const replayReliability = createReliabilityMap(240);
+
+        const viewer = createMotionDebugViewerSnapshot({
+            mode: "replay",
+            selectedLayer: "reliability",
+            liveSnapshot,
+            replayState: {
+                status: "paused",
+                mode: "pose-snapshot",
+                frameCount: 1,
+                currentFrameIndex: 0,
+            },
+            replayFrame: {
+                frameIndex: 0,
+                timestamp: {
+                    mediaTimeMs: 240,
+                },
+                video: {
+                    width: 1280,
+                    height: 720,
+                },
+                poseSnapshot: createPoseSnapshot(240),
+                reliability: replayReliability,
+            },
+        });
+
+        expect(viewer.layers.reliability.status).toBe("available");
+        expect(viewer.layers.reliability.value).toMatchObject({
+            timestamp: {
+                mediaTimeMs: 240,
+            },
+            joints: {
+                leftHand: {
+                    source: "neutral",
+                },
+            },
+        });
+        expect(viewer.layers.reliability.value).not.toMatchObject({
+            timestamp: {
+                mediaTimeMs: 120,
+            },
+            joints: {
+                leftHand: {
+                    source: "hand",
+                },
+            },
+        });
+    });
+
     it("shows invalid replay reliability as an invalid parse error summary", () => {
         const liveSnapshot = createLiveSnapshot();
 
