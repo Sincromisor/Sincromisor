@@ -13,6 +13,10 @@ import {
 } from "../../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import { cloneSincroPoseMotionSnapshot } from "../../../features/gaze/poseTracking/sincroPoseMotionSnapshotClone";
 import {
+    CAMERA_QUALITY_SCHEMA_VERSION,
+    type CameraQualityScore,
+} from "../../../features/gaze/trackingRuntime/cameraQualityScore";
+import {
     reset,
     SincroMotionObserveOnlyPipeline,
     updateFace,
@@ -73,6 +77,31 @@ function createFaceMatrixForYaw(yawRad: number): number[] {
     return [1, 0, 0, 0, 0, 1, 0, 0, -Math.tan(yawRad), 0, 1, 0, 0, 0, 0, 1];
 }
 
+function createCameraQuality(score: number): CameraQualityScore {
+    return {
+        schemaVersion: CAMERA_QUALITY_SCHEMA_VERSION,
+        overall: { score, status: score >= 0.8 ? "good" : score >= 0.45 ? "warn" : "bad" },
+        components: {
+            resolution: { score: 1, status: "good", reasonCodes: [] },
+            cadence: { score: 1, status: "good", reasonCodes: [] },
+            torsoInFrame: { score: 1, status: "good", reasonCodes: [] },
+            handsInFrame: { score: 1, status: "good", reasonCodes: [] },
+            borderRisk: { score: 1, status: "good", reasonCodes: [] },
+            handSmallRisk: { score: 1, status: "good", reasonCodes: [] },
+            motionBlurRisk: { score: 1, status: "good", reasonCodes: [] },
+        },
+        reasons: [],
+        guideMessages: [],
+        track: { width: 1280, height: 720, frameRate: 30, readyState: "live" },
+        sample: {
+            videoWidth: 1280,
+            videoHeight: 720,
+            poseDetected: true,
+            poseConfidence: 0.9,
+        },
+    };
+}
+
 describe("SincroMotionObserveOnlyPipeline", () => {
     it("keeps face-only callbacks as not_computed until a pose frame exists", () => {
         const pipeline = new SincroMotionObserveOnlyPipeline();
@@ -107,6 +136,31 @@ describe("SincroMotionObserveOnlyPipeline", () => {
         expect(result.state.reliability?.joints.head.state).toBe("lost");
         expect(result.state.composerDryRun).toBeUndefined();
         expect(result.summary.composerDryRun.warnings).toEqual(["composer_dry_run_not_started"]);
+    });
+
+    it("passes bad camera quality into same-frame reliability components", () => {
+        const pipeline = new SincroMotionObserveOnlyPipeline();
+
+        const result = pipeline.updatePose(createPose(), {
+            mediaTimeMs: 100,
+            receivedAtMs: 112,
+            video: { width: 640, height: 480 },
+            cameraQuality: createCameraQuality(0),
+        });
+
+        expect(result.state.reliability?.camera).toMatchObject({
+            cameraQualityScore: 0,
+            cameraQualityStatus: "bad",
+            reasonCodes: ["camera_quality_bad"],
+        });
+        expect(result.state.reliability?.joints.leftWrist.components.cameraQuality).toEqual({
+            score: 0,
+            reasonCodes: ["camera_quality_bad"],
+        });
+        expect(result.state.reliability?.parts.leftArm.components.cameraQuality).toEqual({
+            score: 0,
+            reasonCodes: ["camera_quality_bad"],
+        });
     });
 
     it("stores latest hand snapshot as low-frequency summary without requiring pose", () => {

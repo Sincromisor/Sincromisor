@@ -40,6 +40,7 @@ export class SincroCharacterGazeController {
     private gazeSettingsSnapshot: DialogGazeSettingsSnapshot | undefined;
     private pendingCameraRefreshToken = 0;
     private cameraRefreshChain: Promise<void> = Promise.resolve();
+    private activeTrackingVideoTrack?: MediaStreamTrack;
 
     constructor(
         dialogManager: DialogManager,
@@ -57,6 +58,8 @@ export class SincroCharacterGazeController {
             chatMessageService,
             characterBehaviorState: this.characterBehaviorState,
             readVideoSize: () => this.readTrackingVideoSize(),
+            readTrackSettings: () => this.readTrackingTrackSettings(),
+            readTrackReadyState: () => this.readTrackingTrackReadyState(),
         });
         this.trackerRuntime = new TrackerRuntime(this.trackingVideoElement);
         const characterGaze = CharacterGaze.getManager();
@@ -128,6 +131,7 @@ export class SincroCharacterGazeController {
         this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
+        this.activeTrackingVideoTrack = undefined;
         this.videoInputManager.releaseVideoTrack();
         this.debugConsoleManager.setCharacterGazePaused(true);
         this.debugConsoleManager.updateCharacterGazeTargetDebug("停止中");
@@ -174,6 +178,7 @@ export class SincroCharacterGazeController {
                 nextVideoTrack.stop();
                 return;
             }
+            this.activeTrackingVideoTrack = nextVideoTrack;
             nextVideoTrack.addEventListener("ended", () => {
                 if (!this.dialogManager.enableCharacterGaze()) {
                     return;
@@ -334,5 +339,13 @@ export class SincroCharacterGazeController {
                 this.trackingVideoElement.clientHeight ||
                 1,
         };
+    }
+
+    private readTrackingTrackSettings(): MediaTrackSettings | undefined {
+        return this.activeTrackingVideoTrack?.getSettings();
+    }
+
+    private readTrackingTrackReadyState(): MediaStreamTrackState | undefined {
+        return this.activeTrackingVideoTrack?.readyState;
     }
 }

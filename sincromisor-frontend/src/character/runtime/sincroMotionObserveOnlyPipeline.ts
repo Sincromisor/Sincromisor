@@ -2,9 +2,10 @@
  * 本番 sincro runtime で motion pipeline の低次元 state だけを更新する observe-only service。
  *
  * tracker callback が渡す Face / Pose snapshot と明示された `mediaTimeMs` を入力境界にし、
- * ReliabilityMap、CanonicalUpperBodyState、TemporalUpperBodyState、MotionIntentState を
- * `SincroMotionPipelineState` へ保存する。VRM bone、expression、root position、controller 呼び出し順序、
- * composer dry-run はこの service の非対象であり、失敗時も既存表示姿勢へ fallback させない。
+ * optional `CameraQualityScore`、ReliabilityMap、CanonicalUpperBodyState、TemporalUpperBodyState、
+ * MotionIntentState を `SincroMotionPipelineState` へ保存する。VRM bone、expression、root position、
+ * controller 呼び出し順序、composer dry-run はこの service の非対象であり、失敗時も既存表示姿勢へ
+ * fallback させない。
  */
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
@@ -31,6 +32,8 @@ import {
     type SincroMotionPipelineState,
 } from "./sincroMotionPipelineState";
 
+// reason: structure-threshold-exception 既存の observe-only pipeline facade が行数上限を超えているため。本タスクでは既存境界への cameraQuality 接続だけに留める。
+
 export type {
     SincroMotionComposerDryRunSummary,
     SincroMotionObserveOnlyAvailability,
@@ -50,9 +53,10 @@ type PoseReliabilityPrevious = NonNullable<
  * Face / Pose tracker callback から本番 observe-only state を更新する stateful service。
  *
  * stateful estimator は mode 切替、camera refresh、tracking stop で `reset()` される前提で保持する。
- * `updatePose()` は temporal / intent まで進め、`updateFace()` は最新 Face を保存し、既存 Pose があれば
- * head reliability / canonical yaw を観測用に再計算する。Face callback 単独では VRM も stateful
- * temporal memory も進めないため、Face/Pose callback 順が入れ替わっても controller の姿勢適用順序は変わらない。
+ * `updatePose()` は optional `cameraQuality` を同一 Pose frame の reliability へ反映して temporal / intent
+ * まで進める。`updateFace()` / `updateHand()` は最新 snapshot を保存し、既存 Pose があれば caller が渡す
+ * 最新 camera quality とともに reliability / canonical を観測用に再計算する。Face callback 単独では VRM も
+ * stateful temporal memory も進めないため、Face/Pose callback 順が入れ替わっても controller の姿勢適用順序は変わらない。
  */
 export class SincroMotionObserveOnlyPipeline {
     private state = createDefaultSincroMotionPipelineState();
@@ -122,6 +126,7 @@ export class SincroMotionObserveOnlyPipeline {
             this.updateDownstream({
                 mediaTimeMs: timing.mediaTimeMs,
                 video: normalizeObserveOnlyVideoSize(input.video),
+                cameraQuality: input.cameraQuality,
                 updateStatefulEstimators: false,
             });
         }
@@ -152,6 +157,7 @@ export class SincroMotionObserveOnlyPipeline {
         this.updateDownstream({
             mediaTimeMs: timing.mediaTimeMs,
             video: normalizeObserveOnlyVideoSize(input.video),
+            cameraQuality: input.cameraQuality,
             updateStatefulEstimators: true,
         });
         return this.createResult();
@@ -181,6 +187,7 @@ export class SincroMotionObserveOnlyPipeline {
             this.updateDownstream({
                 mediaTimeMs: timing.mediaTimeMs,
                 video: normalizeObserveOnlyVideoSize(input.video),
+                cameraQuality: input.cameraQuality,
                 updateStatefulEstimators: false,
             });
         }
@@ -190,6 +197,7 @@ export class SincroMotionObserveOnlyPipeline {
     private updateDownstream(input: {
         mediaTimeMs: number;
         video: { width: number; height: number };
+        cameraQuality: SincroMotionObserveOnlyPipelineInput["cameraQuality"];
         updateStatefulEstimators: boolean;
     }): void {
         const reliability = createPoseReliabilityMap({
@@ -199,6 +207,7 @@ export class SincroMotionObserveOnlyPipeline {
             previous: this.previousPose,
             mediaTimeMs: input.mediaTimeMs,
             video: input.video,
+            cameraQuality: input.cameraQuality,
         });
         const canonical = createCanonicalUpperBodyState({
             pose: this.state.pose,
