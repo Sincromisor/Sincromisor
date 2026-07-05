@@ -47,7 +47,7 @@
     - Phase 8 の HandLandmarker 観測層を置く。
     - `SincroHandMotionSnapshot` は palm normal / direction、finger curl / splay、thumb oppose、openness、handedness summary、ROI observation、full-frame wrist だけを保存する低次元 contract であり、MediaPipe landmark object、crop object、raw landmarks は持たない。
     - Hand feature の scalar と confidence は `0..1` に clamp し、palm tuple は正規化済み 3 要素 tuple に固定する。landmark 欠損または confidence `< 0.2` の hand openness は `unknown` とする。
-    - Hand wrist は reliability / palm / finger feature の材料であり、腕 IK の主 target にはしない。腕 IK target は引き続き `SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` を正本にする。
+    - Hand wrist は reliability / palm / finger feature の材料であり、腕 IK の主 target にはしない。腕 IK target は `TemporalUpperBodyState` と `MinimalAvatarMotionProfile` から作る temporal bridge 出力を primary とし、temporal / profile / solver 測定値の欠損や bridge invalid/lost 時だけ `SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` へ pose-snapshot fallback する。
     - Gesture Recognizer / MotionIntent は Hand snapshot とは別の optional observe-only 入力として扱い、Hand snapshot 自体へ gesture label は流さない。Phase 9 の finger bone 適用は Hand snapshot の低次元 finger feature と MotionIntent から semantic layer を作る後段 helper に閉じる。
 - `src/features/gaze/trackingRuntime/roiTracking`
     - Phase 8 の Hand / Face tracker 入力境界として、Pose wrist / shoulder 由来の ROI rect と crop-local / full-frame 座標変換を置く。
@@ -76,7 +76,7 @@
       `mediaTimeMs` 付きで再到着した frame だけ downstream estimator を進め、recovery 時は
       `TemporalUpperBodyState` の `recovering` または comfortable fallback 状態を経由して snap を抑える。
     - production `sincro` では Hand snapshot を `onHandMotion` から `SincroMotionPipelineState.hand` へ保存し、Gesture snapshot は `onGestureMotion` から `GestureIntentObservation` と Debug Console summary へ正規化する。Debug Console へは Hand availability、source、ROI warning、openness、confidence と、Gesture availability、左右 top label、confidence、source、warning、inferenceFps の summary だけを出す。raw landmark、crop object、Hand wrist 座標、Gesture raw category list、handedness raw object は常時 UI snapshot に保存しない。
-    - Hand snapshot は ReliabilityMap / MotionIntent / finger feature の observe-only 入力に留める。腕 IK target は引き続き `SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` を正本にし、Hand wrist で上書きしない。
+    - Hand snapshot は ReliabilityMap / MotionIntent / finger feature の observe-only 入力に留める。腕 IK target は production retarget で temporal bridge 出力を primary にし、temporal / profile / solver 測定値の欠損や bridge invalid/lost 時だけ `SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` へ pose-snapshot fallback する。Hand wrist で primary target も fallback target も上書きしない。
 - `src/character/motionIntent`
     - canonical / temporal / reliability / hand / gesture の後段で共有する `MotionIntentState` v1 contract を置く。
     - 保存対象は左右腕と torso の motion intent、confidence / reliability / expressiveness、入力由来、警告、Gesture Recognizer raw label の説明用 field に限定し、VRM bone rotation、semantic clip、finger bone rotation は含めない。

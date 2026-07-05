@@ -9,6 +9,14 @@ import {
 import type { TemporalUpperBodyState } from "../temporal/temporalUpperBodyState";
 import type { SincroPoseArmSolverSource } from "./sincroPoseRetargetTypes";
 
+/**
+ * Pose retargeter から temporal arm solver bridge へ渡す腕単位の入力境界。
+ *
+ * `snapshot` は Pose snapshot fallback の戻り先を明示するための境界であり、temporal primary
+ * target の算出には Pose wrist / Hand wrist を使わない。`temporal`、`profile`、`solver` は
+ * 欠損を許容し、欠損時は source diagnostic に理由を残して fallback する。solver 測定値以外の
+ * VRM / Three.js runtime object や MediaPipe raw result はこの型に含めない。
+ */
 export type SincroPoseTemporalArmInput = {
     snapshot: SincroPoseMotionSnapshot;
     temporal?: TemporalUpperBodyState;
@@ -17,6 +25,13 @@ export type SincroPoseTemporalArmInput = {
     side: SincroArmSide;
 };
 
+/**
+ * temporal arm solver bridge の解決結果と、同じ frame の debug / replay 用 source snapshot。
+ *
+ * `target` は temporal bridge が有効な frame だけに入り、欠損または invalid/lost では例外にせず
+ * Pose snapshot fallback として `source` に理由を保存する。`bridge` は clamp や lost 判定の詳細を
+ * debug surface へ出す optional diagnostic で、保存境界は plain object に限定する。
+ */
 export type SincroPoseTemporalArmInputResult = {
     target?: SincroArmIkTarget;
     bridge?: TemporalArmIkBridgeResult;

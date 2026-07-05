@@ -35,6 +35,14 @@ import {
 } from "./sincroPoseRetargetUpperBody";
 import { createSincroPoseTemporalArmInput } from "./sincroPoseTemporalArmInput";
 
+/**
+ * production retarget が optional に受け取る temporal arm solver 用 runtime input。
+ *
+ * `temporal` または `profile` が欠損しても retarget は例外にせず、arm ごとの
+ * `solverSource` に `temporal_input_missing` / `avatar_profile_missing` を残して
+ * Pose snapshot fallback へ戻す。caller はこの境界に保存可能な plain snapshot だけを渡し、
+ * VRM bone、Three.js object、MediaPipe raw result は含めない。
+ */
 export type SincroPoseRetargetRuntimeInput = {
     temporal?: TemporalUpperBodyState;
     profile?: MinimalAvatarMotionProfile;
