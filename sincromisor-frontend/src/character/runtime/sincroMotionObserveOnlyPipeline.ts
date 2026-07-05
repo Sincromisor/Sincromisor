@@ -58,9 +58,11 @@ type PoseReliabilityPrevious = NonNullable<
  *
  * stateful estimator は mode 切替、camera refresh、tracking stop で `reset()` される前提で保持する。
  * `updatePose()` は optional `cameraQuality` を同一 Pose frame の reliability へ反映して temporal / intent
- * まで進める。`updateFace()` / `updateHand()` / `updateGesture()` は最新 snapshot を保存し、既存 Pose があれば
+ * まで進める。`updateFace()` / `updateHand()` は最新 snapshot を保存し、既存 Pose があれば
  * caller が渡す最新 camera quality とともに reliability / canonical を観測用に再計算する。optional pass 単独では
  * VRM も stateful temporal memory も進めないため、callback 順が入れ替わっても controller の姿勢適用順序は変わらない。
+ * `updateGesture()` は Gesture optional pass の cadence が Pose と異なるため latest observation だけを保持し、
+ * 次の Pose / reliability 更新で同じ `ReliabilityMap.gesture` を読ませる。
  */
 export class SincroMotionObserveOnlyPipeline {
     private state = createDefaultSincroMotionPipelineState();
@@ -206,9 +208,9 @@ export class SincroMotionObserveOnlyPipeline {
     /**
      * Gesture callback から latest Gesture observation と Debug Console summary だけを更新する。
      *
-     * GestureRecognizer raw label は MotionIntent への補助入力に限定し、ReliabilityMap.gesture は本 task では
-     * placeholder のまま維持する。Gesture callback 単独では Temporal / Intent の stateful memory を進めず、
-     * 次の Pose callback で同じ observation を使う。
+     * GestureRecognizer raw label は reliability の圧縮 label と MotionIntent の説明入力に限定し、raw category
+     * list や handedness object は state に保存しない。Gesture callback 単独では Pose / canonical / temporal を
+     * 再計算せず、次の Pose / reliability 更新で同じ observation を使う。
      */
     updateGesture(
         snapshot: SincroGestureMotionSnapshot,
@@ -221,18 +223,9 @@ export class SincroMotionObserveOnlyPipeline {
             gesture: input.gesture,
             updatedAtMs: timing.updatedAtMs,
         });
-        if (timing.status === "invalid_input") {
-            return this.createResult("invalid_input", timing.reason);
-        }
-        if (this.hasPose) {
-            this.updateDownstream({
-                mediaTimeMs: timing.mediaTimeMs,
-                video: normalizeObserveOnlyVideoSize(input.video),
-                cameraQuality: input.cameraQuality,
-                updateStatefulEstimators: false,
-            });
-        }
-        return this.createResult();
+        return timing.status === "invalid_input"
+            ? this.createResult("invalid_input", timing.reason)
+            : this.createResult();
     }
 
     private updateDownstream(input: {
@@ -245,6 +238,7 @@ export class SincroMotionObserveOnlyPipeline {
             pose: this.state.pose,
             hand: this.state.hand,
             face: this.hasFace ? this.state.face : undefined,
+            gesture: this.state.gesture,
             previous: this.previousPose,
             mediaTimeMs: input.mediaTimeMs,
             video: input.video,

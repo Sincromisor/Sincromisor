@@ -93,6 +93,7 @@ const RELIABILITY_PART_NAME_VALUES = [
 
 export type ReliabilitySource = (typeof RELIABILITY_SOURCE_VALUES)[number];
 type GestureReliabilitySource = (typeof GESTURE_RELIABILITY_SOURCE_VALUES)[number];
+type GestureReliabilitySide = "left" | "right";
 type ReliabilityJointName = (typeof RELIABILITY_JOINT_NAME_VALUES)[number];
 type ReliabilityPartName = (typeof RELIABILITY_PART_NAME_VALUES)[number];
 
@@ -146,9 +147,11 @@ export type GestureReliability = {
     state: ReliabilityPartState;
     finalWeight: number;
     source: GestureReliabilitySource;
+    side?: GestureReliabilitySide;
     label?: string;
     confidence: number;
     stableDurationMs: number;
+    lastUpdatedAtMs?: number;
     components: GestureReliabilityComponentSet;
     warnings: ReliabilityWarningCode[];
 };
@@ -196,6 +199,7 @@ const scoreSchema = finiteNumberSchema.min(0).max(1);
 const reliabilityPartStateSchema = z.enum(RELIABILITY_PART_STATE_VALUES);
 const reliabilitySourceSchema = z.enum(RELIABILITY_SOURCE_VALUES);
 const gestureReliabilitySourceSchema = z.enum(GESTURE_RELIABILITY_SOURCE_VALUES);
+const gestureReliabilitySideSchema = z.enum(["left", "right"]);
 const reliabilityReasonCodeSchema = z.enum(RELIABILITY_REASON_CODE_VALUES);
 const reliabilityWarningCodeSchema = z.enum(RELIABILITY_WARNING_CODE_VALUES);
 const reliabilityJointNameSchema = z.enum(RELIABILITY_JOINT_NAME_VALUES);
@@ -262,9 +266,11 @@ const gestureReliabilitySchema: z.ZodType<GestureReliability> = plainObjectSchem
     state: reliabilityPartStateSchema,
     finalWeight: scoreSchema,
     source: gestureReliabilitySourceSchema,
+    side: gestureReliabilitySideSchema.optional(),
     label: z.string().optional(),
     confidence: scoreSchema,
     stableDurationMs: nonNegativeFiniteNumberSchema,
+    lastUpdatedAtMs: finiteNumberSchema.optional(),
     components: gestureReliabilityComponentSetSchema,
     warnings: z.array(reliabilityWarningCodeSchema),
 });

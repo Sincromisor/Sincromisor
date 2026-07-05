@@ -265,6 +265,17 @@ function createReliabilityMap(mediaTimeMs: number): ReliabilityMap {
             videoWidth: 1280,
             videoHeight: 720,
         },
+        gesture: {
+            ...reliability.gesture,
+            source: "gesture",
+            side: "left",
+            label: "Open_Palm",
+            confidence: 0.88,
+            finalWeight: 0.72,
+            stableDurationMs: 220,
+            lastUpdatedAtMs: mediaTimeMs,
+            warnings: [],
+        },
     };
 }
 
@@ -1991,7 +2002,17 @@ describe("createMotionDebugViewerSnapshot", () => {
             timestamp: {
                 mediaTimeMs: 240,
             },
+            gesture: {
+                source: "gesture",
+                label: "Open_Palm",
+                confidence: 0.88,
+                finalWeight: 0.72,
+                stableDurationMs: 220,
+                warnings: [],
+            },
         });
+        expect(JSON.stringify(viewer.layers.reliability.value)).not.toContain("categories");
+        expect(JSON.stringify(viewer.layers.reliability.value)).not.toContain("handedness");
         expect(viewer.layers.reliability.value).toMatchObject({
             joints: {
                 leftHand: {

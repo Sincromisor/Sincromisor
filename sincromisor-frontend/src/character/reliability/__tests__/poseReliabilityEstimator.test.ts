@@ -124,6 +124,23 @@ describe("createPoseReliabilityMap", () => {
         });
     });
 
+    it("connects optional gesture observation to ReliabilityMap.gesture", () => {
+        const reliability = createMap(createPose(), {
+            hand: createHandSnapshot(),
+            gesture: { left: { label: "Open_Palm", confidence: 0.91 } },
+        });
+
+        expect(parseReliabilityMap(reliability).ok).toBe(true);
+        expect(reliability.gesture).toMatchObject({
+            source: "gesture",
+            side: "left",
+            label: "Open_Palm",
+            confidence: 0.91,
+            finalWeight: 0.5,
+            stableDurationMs: 0,
+        });
+    });
+
     it("marks a wrist near the image border as suspect with a fixed border score", () => {
         const reliability = createMap(
             createPose({

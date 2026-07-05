@@ -9,6 +9,7 @@ import type {
     SincroRoiObservation,
     SincroRoiWarningCode,
 } from "../../features/gaze/trackingRuntime/roiTracking/roiTrackingTypes";
+import { createGestureReliability } from "./gestureReliabilityEstimator";
 import {
     averageComponentSets,
     averageComponents,
@@ -75,7 +76,16 @@ export function createPoseReliabilityMap(input: PoseReliabilityEstimatorInput): 
         },
         joints,
         parts,
-        gesture: createUnavailableGesture(cameraQuality),
+        gesture:
+            input.gesture === undefined
+                ? createUnavailableGesture(cameraQuality)
+                : createGestureReliability({
+                      gesture: input.gesture,
+                      hand: input.hand,
+                      previous: input.previous?.reliability?.gesture,
+                      cameraQuality: input.cameraQuality,
+                      mediaTimeMs: input.mediaTimeMs,
+                  }),
         warnings: uniqueWarnings([
             ...Object.values(joints).flatMap((joint) => joint.warnings),
             ...Object.values(parts).flatMap((part) => part.warnings),
