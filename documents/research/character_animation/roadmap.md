@@ -55,9 +55,9 @@ MediaPipe の landmark は骨格姿勢の正解値ではなく、不確実な観
 
 ## 現在地
 
-2026-07-05 時点のソースコード調査と follow-up 実装後、本 roadmap の Phase 1 から Phase 10 の多くは、`motion-debug` と production runtime の observe-only / staged application として実装済みまたは部分実装済みである。
+2026-07-05 時点のソースコード調査と follow-up 実装後、本 roadmap の Phase 1 から Phase 10 の多くは、`motion-debug` と production runtime の observe-only / production application として実装済みまたは部分実装済みである。
 
-ただし、本書の目標アーキテクチャは「最終的にそうあるべき主経路」を示す。現行 production runtime は、低次元 motion pipeline を本番 callback で更新し、`VrmPoseComposer` の full normalized pose application まで実装済みである。一方で、Debug Console 限定の rollback hook、段階別 fallback path、実カメラ / captured replay による継続確認は残っている。
+ただし、本書の目標アーキテクチャは「最終的にそうあるべき主経路」を示す。現行 production runtime は、低次元 motion pipeline を本番 callback で更新し、`VrmPoseComposer` の full normalized pose application まで実装済みである。full application unavailable は Debug Console / metrics の observation reason として残すだけで、旧 arm / torso / full staged writer は起動しない。残る Debug Console rollback hook は semantic / finger suppression のみであり、実カメラ / captured replay による継続確認は別の運用残差である。
 
 ### 実装済みまたは実装済みに近いもの
 
@@ -71,32 +71,32 @@ MediaPipe の landmark は骨格姿勢の正解値ではなく、不確実な観
 - `MinimalAvatarMotionProfile`、完成版 `AvatarMotionProfile`、`VrmPoseComposer` は実装済みで、optional bone fallback、owned bone conflict、quaternion normalize、angular velocity clamp を扱う。
 - Pose 起点の Hand / Face ROI、Gesture Recognizer optional pass、Worker / main-thread fallback、ordered degradation policy、performance profile は実装済みである。
 - `MotionIntent` と semantic / finger curl composer layer は実装済みで、Gesture Recognizer の raw label は optional gesture observation として MotionIntent へ渡せる。指は低次元 `open / half / closed` と curl group から VRM finger pose へ変換できる。
-- `VrmPoseComposer` の arm、torso / shoulder、semantic / finger、full normalized pose application は段階適用と rollback hook を持ち、runtime ownership map と rollback runbook に整理されている。
+- `VrmPoseComposer` の full normalized pose application は production upper-body final pose の唯一の writer として常時試行される。旧 arm / torso / full application rollback hook と段階別 fallback path は削除済みで、runtime ownership map と rollback runbook では削除済み残差として整理している。semantic / finger suppression rollback hook だけは Debug Console に残る。
 
 ### 主な残差
 
 - `MotionReplayPlayer` の主経路は `pose-snapshot` replay であり、`mediapipe-raw-result` replay は unsupported mode として残っている。
 - production runtime の `SincroMotionObserveOnlyPipeline` は reliability / canonical / temporal / intent を更新するが、それ自体は VRM bone を書かない。
-- production 表示では `VrmPoseComposer` full normalized pose application まで実装済みだが、Debug Console 限定 rollback hook と段階別 fallback path は削除条件を満たすまで残す。
+- production 表示では `VrmPoseComposer` full normalized pose application まで実装済みである。旧 arm / torso / full の段階別 fallback path は削除済みで、full unavailable は observation reason として記録するだけで旧 writer を起動しない。Debug Console 限定で残す rollback hook は semantic / finger suppression だけであり、その不要化判断は継続対象である。
 - 腕 IK の表示主経路はまだ `SincroPoseMotionSnapshot` の arm targets を起点にする箇所があり、body-local canonical / temporal state から avatar shoulder-local target を作る構成への完全移行は継続対象である。
 - `ReliabilityMap.gesture` はまだ placeholder であり、Gesture Recognizer の実観測 label / confidence を reliability component として合成する接続は未実装である。
 - `NoopMotionPostProcessor` はあるが、Phase 11 の最適化 / learned post-processing は未着手である。
 
 ### 現在のフェーズ判定
 
-| フェーズ | 現在地                           | 残る主な差分                                                                |
-| -------- | -------------------------------- | --------------------------------------------------------------------------- |
-| Phase 1  | 部分達成                         | MediaPipe raw result replay、実 build / package version / config hash 保存  |
-| Phase 2  | 腕・体幹・頭部は達成             | IK 主経路の canonical / temporal 入力化                                     |
-| Phase 3  | 概ね達成                         | camera guide UI と実機 profile 確認                                         |
-| Phase 4  | 概ね達成                         | Gesture reliability の実観測接続                                            |
-| Phase 5  | 概ね達成                         | head temporal の実機 jitter / recovery 確認                                 |
-| Phase 6  | composer / full 適用は達成       | canonical -> avatar target の MotionSolver 主経路化、rollback hook 削除条件 |
-| Phase 7  | profile / calibration は部分達成 | 実機 UX と複数 VRM replay 比較の継続確認                                    |
-| Phase 8  | 概ね達成                         | Gesture optional pass の実機負荷確認                                        |
-| Phase 9  | 概ね達成                         | Gesture reliability 接続、production rollback hook の不要化                 |
-| Phase 10 | 概ね達成                         | profile 別の実機確認と regression 運用の継続                                |
-| Phase 11 | 未着手                           | rule-based pipeline の限界を metrics で確認した後に着手                     |
+| フェーズ | 現在地                           | 残る主な差分                                                                               |
+| -------- | -------------------------------- | ------------------------------------------------------------------------------------------ |
+| Phase 1  | 部分達成                         | MediaPipe raw result replay、実 build / package version / config hash 保存                 |
+| Phase 2  | 腕・体幹・頭部は達成             | IK 主経路の canonical / temporal 入力化                                                    |
+| Phase 3  | 概ね達成                         | camera guide UI と実機 profile 確認                                                        |
+| Phase 4  | 概ね達成                         | Gesture reliability の実観測接続                                                           |
+| Phase 5  | 概ね達成                         | head temporal の実機 jitter / recovery 確認                                                |
+| Phase 6  | composer / full 適用は達成       | canonical -> avatar target の MotionSolver 主経路化、semantic / finger rollback 不要化判断 |
+| Phase 7  | profile / calibration は部分達成 | 実機 UX と複数 VRM replay 比較の継続確認                                                   |
+| Phase 8  | 概ね達成                         | Gesture optional pass の実機負荷確認                                                       |
+| Phase 9  | 概ね達成                         | Gesture reliability 接続、semantic / finger suppression rollback の不要化                  |
+| Phase 10 | 概ね達成                         | profile 別の実機確認と regression 運用の継続                                               |
+| Phase 11 | 未着手                           | rule-based pipeline の限界を metrics で確認した後に着手                                    |
 
 ## 基本方針
 
@@ -186,7 +186,7 @@ three-vrm 層は、MediaPipe や IK の不確実性を解く場所ではない�
 
 長期設計では、これらを破棄して大きな `src/mocap` のような別構成へ移すより、既存の責務境界を保ちながら中間層を明示的に追加する。
 
-2026-07-05 時点では、次の中間層はすでに追加されている。ただし、いくつかは production 表示主経路ではなく observe-only、debug、developer rollback hook 付き application として接続されている。
+2026-07-05 時点では、次の中間層はすでに追加されている。ただし、いくつかは production 表示主経路ではなく observe-only、debug、または semantic / finger suppression 用の developer rollback hook 付き application として接続されている。
 
 - `VideoFrameClock` / `CameraQuality`
 - `MotionDebugRecorder` / `MotionReplayPlayer` / `MotionMetrics`
@@ -203,7 +203,7 @@ three-vrm 層は、MediaPipe や IK の不確実性を解く場所ではない�
 - MediaPipe raw result replay
 - canonical state から avatar target へ写す MotionSolver
 - Gesture reliability 実観測接続
-- `VrmPoseComposer` rollback hook / staged fallback path の削除条件確認
+- semantic / finger suppression rollback hook の不要化判断
 - learned / optimization post-processing
 
 ## 目標アーキテクチャ
