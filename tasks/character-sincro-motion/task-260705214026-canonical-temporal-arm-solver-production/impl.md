@@ -121,3 +121,50 @@ TODO は追加していない。stale comment の削除対象はなく、評価�
 
 - `e7caaa8` `fix(character): document temporal arm solver boundary`
     - attempt 2 の TSDoc 補強、motion.md 同期、P0 replay fixture 探索ログ artifact。
+
+## attempt 3
+
+### 判断
+
+- 前回 evaluator の FAIL は P0 replay fixture metrics comparison の一点であり、実装本体、fallback reason、debug snapshot、旧 log 互換、TSDoc / docs sync は PASS 済みと判断されている。
+- worktree HEAD は `e7caaa8`、branch は `codex/task-260705214026-canonical-temporal-arm-solver-production`、作業開始時点の worktree は clean。
+- repository 内に task.md が要求する captured production P0 replay fixture として扱える正規データ、fixture、生成スクリプト、既存 acceptance path が本当に無いか再確認した。
+- 結論として、実録 P0 replay fixture は repository 内に存在しない。synthetic fixture や not-captured summary を P0 実録 comparison として昇格すると、前回 evaluator が明示した FAIL 条件を迂回するだけになるため、コードや artifact を無理に歪めない。
+- attempt 3 では worktree 内のコード、docs、task artifact は変更していない。main checkout 側の本 `impl.md` だけに blocker と探索結果を append-only で記録する。
+
+### P0 replay fixture 再探索範囲
+
+- `git ls-files` / `find` / `rg --files` で `tasks/character-sincro-motion/**`、`documents/**`、`sincromisor-frontend/src/**` を確認し、`.ndjson`、`.ndjson.gz`、`.jsonl`、`.jsonl.gz`、recording、replay、fixture、baseline、metrics、comparison、motion-debug、raw-result を含む候補を検索した。
+- 実 replay 形式の候補は、前回と同じく `tasks/character-sincro-motion/task-260705004405-torso-shoulder-composer-migration/artifacts/torso-shoulder-composer-migration-replay.json` だけだった。この artifact は `schemaVersion: "sincro.torso-shoulder-composer-migration-replay.v1"`、`generatedBy: "attempt-2 synthetic replay audit"` の torso / shoulder synthetic audit であり、production motion-debug frames、P0 arm fixture ids、temporal-primary vs pose-snapshot-fallback metrics comparison に必要な arm metrics を含まない。
+- `tasks/character-sincro-motion/task-260629225919-production-sincro-motion-replay-baselines/artifacts/production-sincro-baseline-manifest.md` は P0 fixture index として正規だが、6 件すべて `Source: not-captured` で、replay log path / metrics summary path は未生成。本文も replay logs / metrics summaries を real-camera evidence と扱わないよう明記している。
+- `tasks/character-sincro-motion/task-260629225942-production-retarget-composer-motion-metrics-comparison/artifacts/composer-comparison/production-composer-comparison-summaries.not-captured.json` は P0 fixture ids を含むが、全 metric が `not_available`、`unavailableReason: "baseline_not_captured"`、`replayLog.available: false` であり、比較 artifact としては使えない。
+- `sincromisor-frontend/src/character/motionEvaluation/__tests__/motionQaRegressionTestFixtures.ts` は `source.kind: "synthetic"` の 3 frame log を生成する unit-test helper であり、captured production P0 replay fixture ではない。
+- `tasks/character-sincro-motion/task-260627234129-character-animation-3-0-phase-10-fixed-motion-qa-regression-/acceptance/motionQaRegression.edge.test.mjs` は evaluator 専用 acceptance test で、P0 実録 fixture は含まず、変更対象外。
+- `tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/artifacts/*.json` は historical Playwright / camera summary であり、motion-debug replay frames と temporal / pose fallback comparison 用の Phase 6 / metrics slot を持たない。
+- `find` では committed / worktree 上の `.ndjson`、`.ndjson.gz`、`.jsonl`、`.jsonl.gz` production replay artifact は見つからなかった。
+
+### Blocker
+
+- P0 replay fixture metrics comparison の受け入れ条件は、この環境だけでは満たせない。必要なのは、production-like browser client で `motion-debug` / `simple-vrm` / `sincro` を使って取得した P0 6 種の captured replay log と、それを temporal primary / pose-snapshot fallback の両条件で評価した metrics summary。
+- 必要 artifact 形式は既存 baseline manifest と同じく、`artifacts/replay/<metrics-fixture-id>.ndjson` または `.ndjson.gz`、`artifacts/metrics/<metrics-fixture-id>.summary.json`、必要に応じて `.baseline.json`。各 replay は `neutralJitter`、`elbowFlipCount`、`recoveryJumpAngleDeg`、`reachClampOccupancy` を計算できる production frame / solver / temporal slot を含む必要がある。
+- 受け入れ条件を満たすには、外部入力として実機または production-like camera session の P0 recording が必要。repository 内の synthetic / not-captured artifact だけでは evaluator の PASS 根拠にならない。
+
+### TypeScript production comment audit
+
+- attempt 3 では TypeScript production code を変更していないため、新規 comment audit 対象はない。attempt 1 / 2 の audit 結果は維持。
+
+### ドキュメント同期
+
+- attempt 3 では公開 API、通信契約、公開挙動、design docs を変更していないため追加同期は不要。attempt 1 / 2 で同期済みの `motion.md` / `tracking.md` は維持。
+
+### 検証
+
+- `npm run gate`: 実行予定。worktree HEAD が `e7caaa8` のままなら cache hit を期待する。
+
+### コミット
+
+- attempt 3 の worktree 変更はないため追加 commit は作成しない。
+
+### 検証結果追記
+
+- `npm run gate`: PASS at clean SHA `e7caaa8`。`gate:lint` / `gate:build` / `gate:test` はすべて cache hit。frontend tests は 496 passed。
