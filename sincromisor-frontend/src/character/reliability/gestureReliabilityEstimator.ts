@@ -8,11 +8,25 @@ import type { GestureReliability, ReliabilityMap, ReliabilityReasonCode } from "
 
 type GestureSide = "left" | "right";
 
+/**
+ * Gesture reliability estimator の入力境界。
+ *
+ * `gesture` は `SincroGestureMotionSnapshot` から抽出済みの normalized side key (`left` / `right`)、
+ * label、confidence だけを受ける。MediaPipe の raw category list、raw handedness object、landmark、
+ * crop / image object はここへ渡さない。`previous` は旧 log 互換で optional な
+ * `ReliabilityMap.gesture` を読み、`lastUpdatedAtMs` がある場合だけ stable duration の media time
+ * 差分に使う。副作用はなく、入力欠損は例外ではなく neutral reliability として返す。
+ */
 export type GestureReliabilityInput = {
+    /** Gesture optional pass が skip / lost の frame では省略し、placeholder 維持条件にする。 */
     gesture?: GestureIntentObservation;
+    /** normalized gesture side と Hand side assignment / ROI を照合するためだけに読む。 */
     hand?: SincroHandMotionSnapshot;
+    /** stable duration の前回 side / label / media time を読む。旧 log では欠損してよい。 */
     previous?: ReliabilityMap["gesture"];
+    /** 既存 camera component と同じ評価関数に渡す。raw camera setting は含めない。 */
     cameraQuality?: CameraQualityScore;
+    /** stable duration と `lastUpdatedAtMs` の時刻基準。estimator 内では現在時刻を読まない。 */
     mediaTimeMs: number;
 };
 
@@ -22,6 +36,19 @@ type GestureObservation = {
     confidence: number;
 };
 
+/*
+ * Gesture stability heuristic:
+ * - confidence < 0.70, label change, side missing/change, previous timestamp missing, or media time
+ *   regression resets `stableDurationMs` to 0.
+ * - positive dt is clamped to at most 1000ms so tab suspension / replay jumps do not synthesize long
+ *   stable gestures.
+ * - `stableDurationMs < 160` caps `finalWeight` at 0.5, preventing one-frame recognizer spikes from
+ *   passing MotionIntent's gesture gate.
+ *
+ * Lowering these thresholds tends to surface gesture flicker as semantic intent; raising them too far
+ * makes valid short gestures stay suppressed. This file intentionally reads only normalized label /
+ * confidence / side and never MediaPipe raw category arrays or handedness objects.
+ */
 const GESTURE_STABLE_CONFIDENCE_THRESHOLD = 0.7;
 const GESTURE_STABLE_CAP_MS = 160;
 const MAX_GESTURE_DT_MS = 1000;
@@ -34,6 +61,12 @@ const SIDE_INCONSISTENT_SCORE = 0.35;
  * caller 指定 `mediaTimeMs` に限定する。MediaPipe raw category list や handedness object は読まず、
  * unknown raw label でも observation が valid なら `source: "gesture"` として保存する。
  * semantic intent への昇格可否は MotionIntentEstimator の allow list が判断する。
+ *
+ * Gesture optional pass が skip / lost の frame では `gesture` を省略し、従来互換の
+ * `source: "neutral"` placeholder を返す。`stableDurationMs` は同じ normalized side + label が
+ * confidence `>= 0.70` で連続した時間だけを積み、dt は `0..1000ms` に clamp する。160ms 未満の
+ * observation は `finalWeight` を最大 0.5 に制限するため、MotionIntent gate は単発の誤認識を
+ * semantic intent へ昇格させにくい。
  */
 export function createGestureReliability(
     input: GestureReliabilityInput,
