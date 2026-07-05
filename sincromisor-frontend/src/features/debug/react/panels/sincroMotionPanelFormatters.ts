@@ -195,9 +195,9 @@ function formatFullNormalizedPoseApplication(
         return undefined;
     }
     if (application.applied) {
-        return `full ${application.mode} applied`;
+        return "full applied";
     }
-    return `full ${application.mode} rollback ${application.rollbackReason ?? "none"}`;
+    return `full unavailable ${application.unavailableReason ?? "none"}`;
 }
 
 export function formatHeadPose(snapshot: SincroFaceMotionSnapshot): string {

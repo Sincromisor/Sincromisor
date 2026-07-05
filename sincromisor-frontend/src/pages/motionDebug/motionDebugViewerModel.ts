@@ -1,123 +1,46 @@
 /**
- * motion-debug snapshot viewer の表示用 layer model を作る。
+ * motion-debug snapshot viewer の互換 facade。
  *
- * replay / live / metrics の入力を同じ layer status に正規化し、`invalid`、`not_recorded`、
- * `not_implemented`、`not_calculated` を区別する。layer parser の失敗は recording 全体の失敗ではなく、
- * 該当 layer の raw value と parse error として表示する。
+ * 既存 import 元 `./motionDebugViewerModel` を維持しながら、catalog、layer resolver、solver、
+ * metrics、status 変換の責務は専用 module に委譲する。
  */
-import {
-    type CanonicalUpperBodyState,
-    parseCanonicalUpperBodyState,
-} from "../../character/canonical/canonicalUpperBodyState";
 import type {
     SincroMotionDebugFrame,
     SincroMotionDebugLogManifest,
 } from "../../character/motionEvaluation/motionDebugLogSchema";
-import {
-    type MotionDebugFinalPoseSnapshot,
-    type MotionDebugPhase6SolverSnapshot,
-    parseMotionDebugFinalPoseSnapshot,
-    parseMotionDebugPhase6SolverSnapshot,
-} from "../../character/motionEvaluation/motionDebugPhase6Snapshot";
-import {
-    type MotionDebugPhase7Snapshot,
-    parseMotionDebugPhase7Snapshot,
-} from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
-import {
-    type MotionDebugPhase9SemanticSnapshot,
-    parseMotionDebugPhase9SemanticSnapshot,
-} from "../../character/motionEvaluation/motionDebugPhase9Snapshot";
 import type {
     MotionMetricComparison,
     MotionMetricKey,
     MotionMetricSummary,
 } from "../../character/motionEvaluation/motionMetrics";
-import { parseReplayPoseSnapshot } from "../../character/motionEvaluation/motionReplayPoseSnapshotSchema";
+import { MOTION_DEBUG_LAYER_KEYS, MOTION_DEBUG_VIEWER_MODES } from "./motionDebugViewerCatalog";
 import {
-    type MotionIntentState,
-    parseMotionIntentState,
-} from "../../character/motionIntent/motionIntentState";
+    resolveCameraValue,
+    resolveCanonicalValue,
+    resolveFinalPoseValue,
+    resolveIntentValue,
+    resolvePostProcessingValue,
+    resolveReliabilityValue,
+    resolveTemporalValue,
+} from "./motionDebugViewerLayerResolvers";
 import {
-    type MotionPostProcessingResult,
-    parseMotionPostProcessingResult,
-} from "../../character/motionPostProcessing/motionPostProcessingState";
-import { createPoseReliabilityMap } from "../../character/reliability/poseReliabilityEstimator";
-import {
-    parseReliabilityMap,
-    type ReliabilityMap,
-} from "../../character/reliability/reliabilityMap";
-import {
-    parseTemporalUpperBodyState,
-    type TemporalUpperBodyState,
-} from "../../character/temporal/temporalUpperBodyState";
-import { createMotionDebugLivePhase6SolverSnapshot } from "./motionDebugPhase6Snapshots";
+    createLayerSnapshot,
+    createParsedLayerSnapshot,
+    createSolverLayerSnapshot,
+    hasRecordedValue,
+} from "./motionDebugViewerLayerSnapshots";
+import { createMetricsLayerSnapshot } from "./motionDebugViewerMetricsLayer";
+import { resolveSolverValue } from "./motionDebugViewerSolverLayer";
 import type {
-    CanonicalLayerParseError,
-    FinalPoseLayerParseError,
     MotionDebugLayerKey,
     MotionDebugLayerSnapshot,
     MotionDebugReplayState,
     MotionDebugSnapshot,
     MotionDebugViewerMode,
     MotionDebugViewerSnapshot,
-    MotionIntentLayerParseError,
-    MotionPostProcessingLayerParseError,
-    ReliabilityLayerParseError,
-    SolverLayerParseError,
-    SolverLayerValue,
-    TemporalLayerParseError,
 } from "./types";
 
-/**
- * motion-debug viewer の固定 layer 順序。
- *
- * selector、snapshot JSON、tests がこの順序を前提にするため、追加・削除時は `LAYER_LABELS` と
- * `createLayerSnapshots()` を同時に更新する。
- */
-export const MOTION_DEBUG_LAYER_KEYS: MotionDebugLayerKey[] = [
-    "camera",
-    "mediapipe",
-    "poseSnapshot",
-    "reliability",
-    "canonical",
-    "temporal",
-    "intent",
-    "postProcessing",
-    "solver",
-    "finalPose",
-    "applied",
-    "metrics",
-];
-
-/**
- * viewer が持つ top-level mode。
- *
- * `metrics` は replay frame の保存済み metrics と計算済み summary を同じ UI に出すための表示 mode で、
- * tracker runtime の推論 mode ではない。
- */
-export const MOTION_DEBUG_VIEWER_MODES: MotionDebugViewerMode[] = [
-    "live",
-    "recording",
-    "replay",
-    "metrics",
-];
-
-const LAYER_LABELS: Record<MotionDebugLayerKey, string> = {
-    camera: "Camera",
-    mediapipe: "MediaPipe raw",
-    poseSnapshot: "Pose snapshot",
-    reliability: "Reliability",
-    canonical: "Canonical",
-    temporal: "Temporal",
-    intent: "Intent",
-    postProcessing: "Post-processing",
-    solver: "Solver",
-    finalPose: "Final pose",
-    applied: "Applied",
-    metrics: "Metrics",
-};
-
-const RESERVED_PHASE_1_LAYERS = new Set<MotionDebugLayerKey>(["mediapipe", "canonical", "applied"]);
+export { MOTION_DEBUG_LAYER_KEYS, MOTION_DEBUG_VIEWER_MODES };
 
 /**
  * viewer snapshot を作るための入力境界。
@@ -139,8 +62,8 @@ export type MotionDebugViewerContext = {
 /**
  * motion-debug panel が表示する viewer model を作る。
  *
- * 入力の parser 失敗は throw せず layer status `invalid` に変換する。camera settings は manifest /
- * frame metrics / live camera の順に解決し、raw device label を再導入しない。
+ * 入力の parser 失敗は throw せず layer status `invalid` に変換する。camera settings は frame metrics /
+ * manifest / live camera の順に解決し、raw device label を再導入しない。副作用はない。
  */
 export function createMotionDebugViewerSnapshot(
     context: MotionDebugViewerContext,
@@ -181,9 +104,9 @@ function createLayerSnapshots(
             context.replayFrame?.poseSnapshot ?? context.liveSnapshot.pose,
             false,
         ),
-        reliability: createLayerSnapshot("reliability", resolveReliabilityValue(context), false),
-        canonical: createLayerSnapshot("canonical", resolveCanonicalValue(context), true),
-        temporal: createLayerSnapshot("temporal", resolveTemporalValue(context), false),
+        reliability: createParsedLayerSnapshot("reliability", resolveReliabilityValue(context)),
+        canonical: createParsedLayerSnapshot("canonical", resolveCanonicalValue(context)),
+        temporal: createParsedLayerSnapshot("temporal", resolveTemporalValue(context)),
         intent: createParsedLayerSnapshot("intent", resolveIntentValue(context)),
         postProcessing: createParsedLayerSnapshot(
             "postProcessing",
@@ -194,428 +117,4 @@ function createLayerSnapshots(
         applied: createLayerSnapshot("applied", context.replayFrame?.applied, true),
         metrics: createMetricsLayerSnapshot(context),
     };
-}
-
-function resolveSolverValue(context: MotionDebugViewerContext): SolverLayerValue {
-    if (context.replayFrame !== undefined) {
-        return {
-            phase6: parsePhase6SolverSubLayer(resolveReplayPhase6SolverValue(context.replayFrame)),
-            phase7: parsePhase7SolverSubLayer(resolveReplayPhase7SolverValue(context.replayFrame)),
-            phase9: parsePhase9SolverSubLayer(resolveReplayPhase9SolverValue(context.replayFrame)),
-        };
-    }
-    return {
-        phase6: createAvailableSolverSubLayer(
-            createMotionDebugLivePhase6SolverSnapshot(context.liveSnapshot.poseRetargetRuntime),
-        ),
-        phase7: createAvailableSolverSubLayer(context.liveSnapshot.phase7),
-        phase9: createAvailableSolverSubLayer(undefined),
-    };
-}
-
-function resolveReplayPhase6SolverValue(frame: SincroMotionDebugFrame): unknown | undefined {
-    if (!isRecord(frame.solver)) {
-        return undefined;
-    }
-    return frame.solver.phase6;
-}
-
-function resolveReplayPhase7SolverValue(frame: SincroMotionDebugFrame): unknown | undefined {
-    if (!isRecord(frame.solver)) {
-        return undefined;
-    }
-    return frame.solver.phase7;
-}
-
-function resolveReplayPhase9SolverValue(frame: SincroMotionDebugFrame): unknown | undefined {
-    if (!isRecord(frame.solver)) {
-        return undefined;
-    }
-    return frame.solver.phase9;
-}
-
-function parsePhase6SolverSubLayer(value: unknown): SolverLayerValue["phase6"] {
-    if (value === undefined) {
-        return { status: "not_recorded" };
-    }
-    const parsed = parsePhase6SolverLayerValue(value);
-    if (isSolverLayerParseError(parsed)) {
-        return { status: "invalid", value: parsed };
-    }
-    return { status: "available", value: parsed };
-}
-
-function parsePhase7SolverSubLayer(value: unknown): SolverLayerValue["phase7"] {
-    if (value === undefined) {
-        return { status: "not_recorded" };
-    }
-    const parsed = parsePhase7SolverLayerValue(value);
-    if (isSolverLayerParseError(parsed)) {
-        return { status: "invalid", value: parsed };
-    }
-    return { status: "available", value: parsed };
-}
-
-function parsePhase9SolverSubLayer(value: unknown): SolverLayerValue["phase9"] {
-    if (value === undefined) {
-        return { status: "not_recorded" };
-    }
-    const parsed = parsePhase9SolverLayerValue(value);
-    if (isSolverLayerParseError(parsed)) {
-        return { status: "invalid", value: parsed };
-    }
-    return { status: "available", value: parsed };
-}
-
-function createAvailableSolverSubLayer(
-    value:
-        | MotionDebugPhase6SolverSnapshot
-        | MotionDebugPhase7Snapshot
-        | MotionDebugPhase9SemanticSnapshot
-        | undefined,
-): SolverLayerValue["phase6"] | SolverLayerValue["phase7"] | SolverLayerValue["phase9"] {
-    if (value === undefined) {
-        return { status: "not_recorded" };
-    }
-    return { status: "available", value };
-}
-
-function parsePhase6SolverLayerValue(
-    value: unknown,
-): MotionDebugPhase6SolverSnapshot | SolverLayerParseError {
-    const parsed = parseMotionDebugPhase6SolverSnapshot(value);
-    if (parsed.ok) {
-        return parsed.snapshot;
-    }
-    return {
-        parseStatus: "invalid",
-        errors: parsed.errors,
-        raw: value,
-    };
-}
-
-function parsePhase7SolverLayerValue(
-    value: unknown,
-): MotionDebugPhase7Snapshot | SolverLayerParseError {
-    const parsed = parseMotionDebugPhase7Snapshot(value);
-    if (parsed.ok) {
-        return parsed.snapshot;
-    }
-    return {
-        parseStatus: "invalid",
-        errors: parsed.errors,
-        raw: value,
-    };
-}
-
-function parsePhase9SolverLayerValue(
-    value: unknown,
-): MotionDebugPhase9SemanticSnapshot | SolverLayerParseError {
-    const parsed = parseMotionDebugPhase9SemanticSnapshot(value);
-    if (parsed.ok) {
-        return parsed.snapshot;
-    }
-    return {
-        parseStatus: "invalid",
-        errors: parsed.errors,
-        raw: value,
-    };
-}
-
-function resolveFinalPoseValue(
-    context: MotionDebugViewerContext,
-): MotionDebugFinalPoseSnapshot | FinalPoseLayerParseError | undefined {
-    if (context.replayFrame !== undefined) {
-        if (context.replayFrame.finalPose === undefined) {
-            return undefined;
-        }
-        return parseFinalPoseLayerValue(context.replayFrame.finalPose);
-    }
-    return context.liveSnapshot.finalPose;
-}
-
-function parseFinalPoseLayerValue(
-    value: unknown,
-): MotionDebugFinalPoseSnapshot | FinalPoseLayerParseError {
-    const parsed = parseMotionDebugFinalPoseSnapshot(value);
-    if (parsed.ok) {
-        return parsed.snapshot;
-    }
-    return {
-        parseStatus: "invalid",
-        errors: parsed.errors,
-        raw: value,
-    };
-}
-
-function resolveReliabilityValue(
-    context: MotionDebugViewerContext,
-): ReliabilityMap | ReliabilityLayerParseError | undefined {
-    if (context.liveSnapshot.reliability !== undefined) {
-        return context.liveSnapshot.reliability;
-    }
-    const frame = context.replayFrame;
-    if (frame === undefined) {
-        return undefined;
-    }
-    if (frame.reliability !== undefined) {
-        return parseReliabilityLayerValue(frame.reliability);
-    }
-    if (frame.poseSnapshot === undefined) {
-        return undefined;
-    }
-    // 旧 log は reliability slot を持たないため、pose snapshot から再計算して viewer 上の欠損を減らす。
-    // parse 不能な pose は recording 全体の失敗にせず、reliability layer を未記録扱いにする。
-    const pose = parseReplayPoseSnapshot(frame.poseSnapshot);
-    if (pose === undefined) {
-        return undefined;
-    }
-    return createPoseReliabilityMap({
-        pose,
-        mediaTimeMs: frame.timestamp.mediaTimeMs,
-        video: frame.video,
-    });
-}
-
-function parseReliabilityLayerValue(value: unknown): ReliabilityMap | ReliabilityLayerParseError {
-    const parsed = parseReliabilityMap(value);
-    if (parsed.ok) {
-        return parsed.map;
-    }
-    return {
-        parseStatus: "invalid",
-        errors: parsed.errors,
-        raw: value,
-    };
-}
-
-function resolveCanonicalValue(
-    context: MotionDebugViewerContext,
-): CanonicalUpperBodyState | CanonicalLayerParseError | undefined {
-    if (context.replayFrame?.canonical !== undefined) {
-        return parseCanonicalLayerValue(context.replayFrame.canonical);
-    }
-    return context.liveSnapshot.canonical;
-}
-
-function parseCanonicalLayerValue(
-    value: unknown,
-): CanonicalUpperBodyState | CanonicalLayerParseError {
-    const parsed = parseCanonicalUpperBodyState(value);
-    if (parsed.ok) {
-        return parsed.state;
-    }
-    return {
-        parseStatus: "invalid",
-        errors: parsed.errors,
-        raw: value,
-    };
-}
-
-function resolveTemporalValue(
-    context: MotionDebugViewerContext,
-): TemporalUpperBodyState | TemporalLayerParseError | undefined {
-    if (context.replayFrame !== undefined) {
-        if (context.replayFrame.temporal === undefined) {
-            return undefined;
-        }
-        return parseTemporalLayerValue(context.replayFrame.temporal);
-    }
-    return context.liveSnapshot.temporal;
-}
-
-function parseTemporalLayerValue(value: unknown): TemporalUpperBodyState | TemporalLayerParseError {
-    const parsed = parseTemporalUpperBodyState(value);
-    if (parsed.ok) {
-        return parsed.state;
-    }
-    return {
-        parseStatus: "invalid",
-        errors: parsed.errors,
-        raw: value,
-    };
-}
-
-function resolveIntentValue(
-    context: MotionDebugViewerContext,
-): MotionDebugSnapshot["intent"] | MotionIntentLayerParseError | undefined {
-    if (context.replayFrame !== undefined) {
-        if (context.replayFrame.intent === undefined) {
-            return undefined;
-        }
-        return parseIntentLayerValue(context.replayFrame.intent);
-    }
-    return context.liveSnapshot.intent;
-}
-
-function parseIntentLayerValue(value: unknown): MotionIntentState | MotionIntentLayerParseError {
-    const parsed = parseMotionIntentState(value);
-    if (parsed.ok) {
-        return parsed.state;
-    }
-    return {
-        parseStatus: "invalid",
-        errors: parsed.errors,
-        raw: value,
-    };
-}
-
-function resolvePostProcessingValue(
-    context: MotionDebugViewerContext,
-): MotionPostProcessingResult | MotionPostProcessingLayerParseError | undefined {
-    if (context.replayFrame !== undefined) {
-        if (context.replayFrame.postProcessing === undefined) {
-            return undefined;
-        }
-        return parsePostProcessingLayerValue(context.replayFrame.postProcessing);
-    }
-    return context.liveSnapshot.postProcessing;
-}
-
-function parsePostProcessingLayerValue(
-    value: unknown,
-): MotionPostProcessingResult | MotionPostProcessingLayerParseError {
-    const parsed = parseMotionPostProcessingResult(value);
-    if (parsed.ok) {
-        return parsed.result;
-    }
-    return {
-        parseStatus: "invalid",
-        errors: parsed.errors,
-        raw: value,
-    };
-}
-
-function resolveCameraValue(context: MotionDebugViewerContext): unknown {
-    const frameCameraQuality = resolveFrameCameraQuality(context.replayFrame);
-    if (frameCameraQuality !== undefined) {
-        return frameCameraQuality;
-    }
-    if (context.replayManifest !== undefined) {
-        return context.replayManifest.camera;
-    }
-    if (context.liveSnapshot.camera.source === "none") {
-        return undefined;
-    }
-    return context.liveSnapshot.camera;
-}
-
-function resolveFrameCameraQuality(frame: SincroMotionDebugFrame | undefined): unknown {
-    if (!isRecord(frame?.metrics)) {
-        return undefined;
-    }
-    return frame.metrics.cameraQuality;
-}
-
-function createLayerSnapshot(
-    key: MotionDebugLayerKey,
-    value: unknown,
-    phase1Reserved: boolean,
-): MotionDebugLayerSnapshot {
-    if (hasRecordedValue(value)) {
-        return {
-            status: "available",
-            label: LAYER_LABELS[key],
-            value,
-        };
-    }
-    return {
-        status:
-            phase1Reserved || RESERVED_PHASE_1_LAYERS.has(key) ? "not_implemented" : "not_recorded",
-        label: LAYER_LABELS[key],
-    };
-}
-
-function createParsedLayerSnapshot(
-    key: MotionDebugLayerKey,
-    value: unknown,
-): MotionDebugLayerSnapshot {
-    if (isInvalidLayerValue(value)) {
-        return {
-            status: "invalid",
-            label: LAYER_LABELS[key],
-            value,
-        };
-    }
-    return createLayerSnapshot(key, value, false);
-}
-
-function createSolverLayerSnapshot(value: SolverLayerValue): MotionDebugLayerSnapshot {
-    if (
-        value.phase6.status === "not_recorded" &&
-        value.phase7.status === "not_recorded" &&
-        value.phase9.status === "not_recorded"
-    ) {
-        return {
-            status: "not_recorded",
-            label: LAYER_LABELS.solver,
-        };
-    }
-    return {
-        status: "available",
-        label: LAYER_LABELS.solver,
-        value,
-    };
-}
-
-function createMetricsLayerSnapshot(context: MotionDebugViewerContext): MotionDebugLayerSnapshot {
-    const metrics = context.metrics;
-    if (metrics === undefined || !hasRecordedValue(metrics.metrics)) {
-        if (hasRecordedValue(context.replayFrame?.metrics)) {
-            // 保存済み metrics JSON は summary 未計算でも表示する。active profile は比較用の補助情報で、
-            // replay frame 自体の metrics contract へ書き戻さない。
-            return {
-                status: "available",
-                label: LAYER_LABELS.metrics,
-                value: createReplayMetricsLayerValue(context),
-            };
-        }
-        return {
-            status: "not_calculated",
-            label: LAYER_LABELS.metrics,
-        };
-    }
-    return {
-        status: "available",
-        label: LAYER_LABELS.metrics,
-        value: metrics,
-    };
-}
-
-function createReplayMetricsLayerValue(context: MotionDebugViewerContext): unknown {
-    if (!isRecord(context.replayFrame?.metrics)) {
-        return context.replayFrame?.metrics;
-    }
-    return {
-        ...context.replayFrame.metrics,
-        activePerformanceProfile: context.liveSnapshot.camera.performanceProfile,
-    };
-}
-
-function hasRecordedValue(value: unknown): boolean {
-    if (value === undefined) {
-        return false;
-    }
-    if (!isRecord(value)) {
-        return true;
-    }
-    return Object.keys(value).length > 0;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isInvalidLayerValue(value: unknown): boolean {
-    return isRecord(value) && value.parseStatus === "invalid";
-}
-
-function isSolverLayerParseError(
-    value:
-        | MotionDebugPhase6SolverSnapshot
-        | MotionDebugPhase7Snapshot
-        | MotionDebugPhase9SemanticSnapshot
-        | SolverLayerParseError,
-): value is SolverLayerParseError {
-    return isInvalidLayerValue(value);
 }

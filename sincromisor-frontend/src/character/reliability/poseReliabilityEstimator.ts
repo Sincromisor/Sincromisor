@@ -9,6 +9,7 @@ import type {
     SincroRoiObservation,
     SincroRoiWarningCode,
 } from "../../features/gaze/trackingRuntime/roiTracking/roiTrackingTypes";
+import { createGestureReliability } from "./gestureReliabilityEstimator";
 import {
     averageComponentSets,
     averageComponents,
@@ -53,6 +54,14 @@ const ROI_METADATA_FALLBACK_SCORE = 0.55;
 const SIDE_INCONSISTENT_SCORE = 0.35;
 const SIDE_INCONSISTENT_WEIGHT_CAP = 0.45;
 
+/**
+ * Pose / optional pass snapshot から `ReliabilityMap` v1 を作る。
+ *
+ * `input.gesture` が未指定の frame では `gesture` slot を従来の neutral placeholder に保つ。
+ * 指定された場合だけ normalized side / label / confidence を `gestureReliabilityEstimator` へ渡し、
+ * `previous.reliability?.gesture.lastUpdatedAtMs` と caller 指定 `mediaTimeMs` で stable duration を
+ * 更新する。MediaPipe raw Gesture result、raw category list、handedness object はこの境界で読まない。
+ */
 export function createPoseReliabilityMap(input: PoseReliabilityEstimatorInput): ReliabilityMap {
     const cameraQuality = evaluateCameraQuality(input.cameraQuality);
     const bodyScale = evaluateBodyScale(input.pose, input.previous?.pose);
@@ -75,7 +84,16 @@ export function createPoseReliabilityMap(input: PoseReliabilityEstimatorInput): 
         },
         joints,
         parts,
-        gesture: createUnavailableGesture(cameraQuality),
+        gesture:
+            input.gesture === undefined
+                ? createUnavailableGesture(cameraQuality)
+                : createGestureReliability({
+                      gesture: input.gesture,
+                      hand: input.hand,
+                      previous: input.previous?.reliability?.gesture,
+                      cameraQuality: input.cameraQuality,
+                      mediaTimeMs: input.mediaTimeMs,
+                  }),
         warnings: uniqueWarnings([
             ...Object.values(joints).flatMap((joint) => joint.warnings),
             ...Object.values(parts).flatMap((part) => part.warnings),

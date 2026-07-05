@@ -279,7 +279,6 @@ const poseRetargetRuntimeSchema = plainObjectSchema({
 });
 
 const dryRunStatusSchema = z.enum(["available", "not_ready", "invalid_input", "missing_profile"]);
-const fullNormalizedPoseApplicationModeSchema = z.enum(["off", "upper_body"]);
 const vrmHumanBoneNameSchema = z.custom<VRMHumanBoneName>((value) => typeof value === "string", {
     message: "Expected a VRM human bone name.",
 });
@@ -320,9 +319,8 @@ const dryRunResultSchema: z.ZodType<SincroVrmPoseComposerDryRunResult> = plainOb
     result: composerResultSchema.optional(),
     warnings: z.array(z.string()),
     fullNormalizedPoseApplication: plainObjectSchema({
-        mode: fullNormalizedPoseApplicationModeSchema,
         applied: z.boolean(),
-        rollbackReason: z.string().optional(),
+        unavailableReason: z.string().optional(),
     }).optional(),
 });
 const solverRuntimeSchema = loosePlainObjectSchema({

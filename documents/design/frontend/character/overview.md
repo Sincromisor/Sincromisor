@@ -66,7 +66,7 @@
     - authored clip や AnimationMixer を使う場合も staging に留め、composer へ渡す最終表現は `semantic` pose delta とする。
     - motion-debug は `frame.solver.phase6` に Phase 6 solver snapshot、`frame.solver.phase7` に Phase 7 の完成版 `AvatarMotionProfile` / calibration snapshot、`frame.solver.phase9` に Phase 9 semantic / finger debug snapshot、`frame.finalPose` に composer result を保存・表示する。本番の `VRMCharacterManager.update()` の bone 書き込み順序はまだ全面移行しない。
     - production dry-run は semantic / finger application stage で、保存済み `MotionIntentState`、低次元 Hand snapshot、完成版 `AvatarMotionProfile` が valid な frame だけ semantic pose / finger curl layer を composer input へ追加する。`composerSemanticFingerApplicationMode` は developer rollback flag であり、raw landmark、Gesture Recognizer raw result、VRM Object3D、raw bone node は layer 生成入力にしない。
-    - full normalized pose application stage では `fullNormalizedPoseApplicationMode="upper_body"` の時だけ、同一 frame の available dry-run `finalPose` を `VRMCharacterManager.update()` から `vrm.humanoid.setNormalizedPose(finalPose)` へ 1 回渡す。full stage が所有する upper body / finger bone は毎 frame identity quaternion で埋め、`finalPose` 欠損 bone に前 frame の finger pose を残さない。unavailable / invalid / missing profile / result 欠損では stale finalPose を使わず、前回 full 適用済みなら所有 bone を identity に戻してから arm / torso / shoulder / semantic / finger の段階別 path へ rollback する。head / neck / leg / expression は composer 所有に含めない。
+    - full normalized pose application stage は production の常時 path であり、同一 frame の available dry-run `finalPose` を `VRMCharacterManager.update()` から `vrm.humanoid.setNormalizedPose(finalPose)` へ 1 回渡す。full stage が所有する upper body / finger bone は毎 frame identity quaternion で埋め、`finalPose` 欠損 bone に前 frame の finger pose を残さない。unavailable / invalid / missing profile / result 欠損では stale finalPose を使わず、arm / torso / shoulder の旧 staged rollback writer も production fallback として実行しない。unavailable reason は Debug Console summary / metrics 用の観測情報として残す。head / neck / leg / expression は composer 所有に含めず、従来 controller で更新する。`composerSemanticFingerApplicationMode` は semantic / finger suppression を切り分ける developer rollback flag として残す。
     - motion metrics は saved `frame.intent` から `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount` を計算する。invalid intent は `intentInvalidFrameCount` だけに数え、他の Phase 9 metrics では valid intent sample が無い場合 `not_available` にする。
     - 完成版 `AvatarMotionProfile` は `VRMScene.getAvatarMotionProfile()` / `VRMCharacterManager.getAvatarMotionProfile()` から debug 用 clone として公開する。Debug Console と Phase 6 snapshot の `avatarMotionProfile` は `MinimalAvatarMotionProfile` のまま維持する。
 
@@ -78,13 +78,11 @@ roadmap で検証した motion pipeline は、現在設計では次の順に本�
 roadmap / research
   -> observe-only pipeline
   -> production composer dry-run
-  -> arm application flag
-  -> torso / shoulder migration
   -> semantic / finger application
   -> full setNormalizedPose(finalPose) application
 ```
 
-段階を飛ばして `VRMCharacterManager.update()` の書き込み順序を全面移行しない。metric が pass でも、複数 VRM の手動確認、degradation / ROI / camera quality の説明 artifact、rollback 条件が揃うまで次段の production flag は開けない。
+旧 arm application と torso / shoulder migration の staged rollback path は cleanup 済みであり、現行 production runtime では full `setNormalizedPose(finalPose)` application が唯一の upper-body final pose writer である。metric が pass でも、複数 VRM の手動確認、degradation / ROI / camera quality の説明 artifact、semantic / finger rollback 条件は継続して記録する。
 
 ## Talk Mode Boundary
 

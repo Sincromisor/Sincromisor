@@ -8,7 +8,6 @@ import type {
 } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { GestureIntentObservation } from "../motionIntent/motionIntentEstimator";
-import type { FullNormalizedPoseApplicationMode } from "../retargeting/sincroPoseRetargeter";
 import type { SincroMotionPipelineState } from "./sincroMotionPipelineState";
 import type { SincroVrmPoseComposerDryRunStatus } from "./sincroVrmPoseComposerDryRun";
 
@@ -105,9 +104,8 @@ export type SincroMotionComposerDryRunSummary = {
     suppressedLayers: readonly string[];
     clampedBones: readonly string[];
     fullNormalizedPoseApplication?: {
-        mode: FullNormalizedPoseApplicationMode;
         applied: boolean;
-        rollbackReason?: string;
+        unavailableReason?: string;
     };
 };
 
@@ -140,9 +138,9 @@ export type SincroMotionObserveOnlySummary = {
  * 入力である。Face-only / Hand-only / source none 相当では `undefined` のままにし、ReliabilityMap の
  * `camera_quality_missing` fallback を使う。MediaStreamTrack や raw device id / label はこの境界に入れない。
  *
- * `gesture` は Gesture snapshot を MotionIntentEstimator 用に正規化した optional observation だけを受ける。
- * MediaPipe raw category list や handedness object はここへ渡さず、ReliabilityMap.gesture も本境界では
- * placeholder のまま維持する。
+ * `gesture` は Gesture snapshot を ReliabilityMap / MotionIntentEstimator 用に正規化した optional observation だけを受ける。
+ * MediaPipe raw category list や handedness object はここへ渡さず、reliability layer には side / label /
+ * confidence / stableDurationMs だけを保存する。
  */
 export type SincroMotionObserveOnlyPipelineInput = {
     mediaTimeMs?: number;
@@ -350,9 +348,8 @@ export function summarizeComposerDryRun(
             result.fullNormalizedPoseApplication === undefined
                 ? undefined
                 : {
-                      mode: result.fullNormalizedPoseApplication.mode,
                       applied: result.fullNormalizedPoseApplication.applied,
-                      rollbackReason: result.fullNormalizedPoseApplication.rollbackReason,
+                      unavailableReason: result.fullNormalizedPoseApplication.unavailableReason,
                   },
     };
 }

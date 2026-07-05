@@ -21,9 +21,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 12 件）
+## タスク一覧（自動生成 / 全 13 件）
 
-### done（完了） — 12 件
+### done（完了） — 13 件
 
 | タスク                                                                                                                                                 | タイトル                                               | 判定    | 依存 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ------- | ---- |
@@ -39,5 +39,6 @@
 | [task-260519191621-frontend-type-assertion-and-suppression-cleanup](./task-260519191621-frontend-type-assertion-and-suppression-cleanup/task.md)       | frontend type assertion and suppression cleanup        | ✅ PASS | —    |
 | [task-260628231541-frontend-typescript-comment-policy-audit-checklist](./task-260628231541-frontend-typescript-comment-policy-audit-checklist/task.md) | frontend TypeScript comment policy and audit checklist | ✅ PASS | —    |
 | [task-260629022214-tighten-typescript-source-comment-quality-rules](./task-260629022214-tighten-typescript-source-comment-quality-rules/task.md)       | tighten TypeScript source comment quality rules        | ✅ PASS | —    |
+| [task-260706031110-motion-debug-viewer-model-size-split](./task-260706031110-motion-debug-viewer-model-size-split/task.md)                             | motion-debug viewer model size split                   | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->

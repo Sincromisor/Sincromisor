@@ -49,10 +49,7 @@ export type SincroPoseRetargetRuntimeInput = {
 };
 
 export type {
-    ComposerArmApplicationMode,
     ComposerSemanticFingerApplicationMode,
-    ComposerTorsoShoulderApplicationMode,
-    FullNormalizedPoseApplicationMode,
     SincroPoseArmIkMode,
     SincroPoseArmSolverPrimarySource,
     SincroPoseArmSolverSource,

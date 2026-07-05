@@ -143,16 +143,9 @@ export function updatePoseRetargetConfig(
             Math.PI / 2,
         ),
         armIkMode: config.armIkMode ?? current.armIkMode,
-        composerArmApplicationMode:
-            config.composerArmApplicationMode ?? current.composerArmApplicationMode,
-        composerTorsoShoulderApplicationMode:
-            config.composerTorsoShoulderApplicationMode ??
-            current.composerTorsoShoulderApplicationMode,
         composerSemanticFingerApplicationMode:
             config.composerSemanticFingerApplicationMode ??
             current.composerSemanticFingerApplicationMode,
-        fullNormalizedPoseApplicationMode:
-            config.fullNormalizedPoseApplicationMode ?? current.fullNormalizedPoseApplicationMode,
     };
 }
 
