@@ -6,7 +6,7 @@
 
 短期的な既存実装の延長ではなく、単眼 Web カメラ、MediaPipe、VRM 1.0、Three.js、three-vrm という前提で、キャラクターとして自然で破綻しにくい上半身モーションを目指すための方針とロードマップを定める。
 
-この版では、初期調査レポートに加えて `requests/` で依頼した分野別調査と `answers/` の回答を反映し、実装順序、層間 contract、debug / replay / metrics の扱いを具体化する。
+この版では、初期調査レポートに加えて `requests/` で依頼した分野別調査と `answers/` の回答、ならびに 2026-07-05 時点のソースコード調査を反映し、実装順序、層間 contract、debug / replay / metrics の扱いと現在の残差を具体化する。
 
 ## 調査資料
 
@@ -52,6 +52,50 @@ MediaPipe の landmark は骨格姿勢の正解値ではなく、不確実な観
 - 下半身の歩行、足接地、full-body IK
 - オフライン高品質モーション生成を主目的にした ML pipeline
 - motion debug log の同意、保存期間、匿名化、外部共有などの運用方針
+
+## 現在地
+
+2026-07-05 時点のソースコード調査では、本 roadmap の Phase 1 から Phase 10 の多くは、`motion-debug` と production runtime の observe-only / staged application として実装済みまたは部分実装済みである。
+
+ただし、本書の目標アーキテクチャは「最終的にそうあるべき主経路」を示す。現行 production runtime は、低次元 motion pipeline を本番 callback で更新しつつ、VRM への姿勢適用は既存 retarget / direct controller と `VrmPoseComposer` dry-run / developer flag を併用する段階にある。
+
+### 実装済みまたは実装済みに近いもの
+
+- `VideoFrameClock` は `requestVideoFrameCallback`、RAF、timer fallback を `TrackerVideoFrameTiming` へ正規化している。
+- `MotionDebugRecorder`、NDJSON + gzip/Brotli export、schema validation、layered viewer、replay、metrics summary、QA regression baseline / candidate comparison は実装済みである。
+- `CanonicalUpperBodyState`、`ReliabilityMap`、`TemporalUpperBodyState`、`MotionIntentState` は TypeScript 型、parser、debug / replay 保存 slot を持つ。
+- `ReliabilityMap` は Pose / Hand / Face / ROI / camera quality 由来の component を部位別に保持できる。
+- `TemporalStateEstimator` は腕の `tracked` / `suspect` / `predicted` / `lost` / `recovering`、One Euro Filter、dropout prediction、recovery blend、classification hold を持つ。
+- `MinimalAvatarMotionProfile`、完成版 `AvatarMotionProfile`、`VrmPoseComposer` は実装済みで、optional bone fallback、owned bone conflict、quaternion normalize、angular velocity clamp を扱う。
+- Pose 起点の Hand / Face ROI、Worker / main-thread fallback、ordered degradation policy、performance profile は実装済みである。
+- `MotionIntent` と semantic / finger curl composer layer は実装済みで、指は低次元 `open / half / closed` と curl group から VRM finger pose へ変換できる。
+
+### 主な残差
+
+- `MotionReplayPlayer` の主経路は `pose-snapshot` replay であり、`mediapipe-raw-result` replay は unsupported mode として残っている。
+- `CanonicalUpperBodyState` の型には `head` slot があるが、現行 canonical 生成は torso / arms が中心で、Face transformation matrix 主入力の canonical head は未接続である。
+- production runtime の `SincroMotionObserveOnlyPipeline` は reliability / canonical / temporal / intent を更新するが、それ自体は VRM bone を書かない。
+- production 表示では既存 `SincroPoseRetargeter` / `ArmBoneController` / `CharacterMotionOrchestrator` の direct path が残る。`VrmPoseComposer` は dry-run と developer rollback flag 付き selected-bone / full normalized pose application の段階である。
+- 腕 IK の表示主経路はまだ `SincroPoseMotionSnapshot` の arm targets を入力にしており、body-local canonical state から avatar shoulder-local target を作る構成には完全移行していない。
+- `MotionIntentEstimator` は optional gesture input を受け取れるが、MediaPipe `GestureRecognizer` の実行接続は未実装である。
+- `CameraQualityScore` は `motion-debug` recording / reliability には接続済みだが、production observe-only pipeline の reliability 入力にはまだ渡していない。
+- `NoopMotionPostProcessor` はあるが、Phase 11 の最適化 / learned post-processing は未着手である。
+
+### 現在のフェーズ判定
+
+| フェーズ | 現在地                           | 残る主な差分                                                                 |
+| -------- | -------------------------------- | ---------------------------------------------------------------------------- |
+| Phase 1  | 部分達成                         | MediaPipe raw result replay、実 build / package version / config hash 保存   |
+| Phase 2  | 腕・体幹は達成、頭部は残る       | canonical head、IK 主経路の canonical 入力化                                 |
+| Phase 3  | debug 側は達成                   | production reliability への CameraQuality 接続                               |
+| Phase 4  | 概ね達成                         | Gesture reliability の実観測接続、production 側 camera quality component     |
+| Phase 5  | 腕は概ね達成                     | canonical head 未接続に伴う head temporal の live 入力不足                   |
+| Phase 6  | composer は達成、適用は移行中    | canonical -> avatar target の MotionSolver 化、full application の常時有効化 |
+| Phase 7  | profile / calibration は部分達成 | 実機 UX と複数 VRM replay 比較の継続確認                                     |
+| Phase 8  | 概ね達成                         | Gesture optional pass との統合                                               |
+| Phase 9  | semantic / finger は部分達成     | Gesture Recognizer 実行接続、production rollback flag の不要化               |
+| Phase 10 | 概ね達成                         | profile 別の実機確認と regression 運用の継続                                 |
+| Phase 11 | 未着手                           | rule-based pipeline の限界を metrics で確認した後に着手                      |
 
 ## 基本方針
 
@@ -141,7 +185,7 @@ three-vrm 層は、MediaPipe や IK の不確実性を解く場所ではない�
 
 長期設計では、これらを破棄して大きな `src/mocap` のような別構成へ移すより、既存の責務境界を保ちながら中間層を明示的に追加する。
 
-追加する中間層:
+2026-07-05 時点では、次の中間層はすでに追加されている。ただし、いくつかは production 表示主経路ではなく observe-only、debug、dry-run、developer rollback flag 付き application として接続されている。
 
 - `VideoFrameClock` / `CameraQuality`
 - `MotionDebugRecorder` / `MotionReplayPlayer` / `MotionMetrics`
@@ -150,7 +194,16 @@ three-vrm 層は、MediaPipe や IK の不確実性を解く場所ではない�
 - `TemporalStateEstimator`
 - `MinimalAvatarMotionProfile` / `AvatarMotionProfile`
 - `MotionIntent`
-- `VrmPoseComposer` / `VrmPoseApplier`
+- `VrmPoseComposer`
+
+残る中間層または移行作業:
+
+- MediaPipe raw result replay
+- canonical head 生成
+- canonical state から avatar target へ写す MotionSolver
+- `VrmPoseComposer` full normalized pose application の常時主経路化
+- Gesture Recognizer optional pass
+- learned / optimization post-processing
 
 ## 目標アーキテクチャ
 
@@ -286,6 +339,12 @@ head / wrist / hand の入力優先順位:
 
 最初に作るべきものはアルゴリズム改善ではなく、再現可能な評価基盤である。
 
+現状:
+
+- `MotionDebugRecorder`、schema validation、NDJSON export、gzip/Brotli compression、layered viewer、metrics summary、QA regression は実装済みである。
+- replay の主経路は `pose-snapshot` である。`final-pose-playback` の枠はあるが、`mediapipe-raw-result` は unsupported mode として残る。
+- manifest は schema version、source、scrub 済み camera settings、pipeline config を保存するが、実 build / package versions / config hash は固定値または空値である。
+
 実装:
 
 - `motion-debug` に `MotionDebugRecorder` を追加する。
@@ -314,6 +373,13 @@ head / wrist / hand の入力優先順位:
 
 次に、後段が共有する座標系と語彙を固める。
 
+現状:
+
+- `CanonicalUpperBodyState` の保存 contract、parser、腕の `reach` / `elevationRad` / `openness` / `forwardness` / `elbowFlexionRad` / `classification` は実装済みである。
+- torso frame は Pose と optional Face / previous state を使って推定され、腕の canonical feature は replay / debug log に保存できる。
+- `head` slot は型と parser に存在するが、live canonical 生成ではまだ埋めていない。
+- Temporal / MotionIntent / metrics は canonical を読むが、既存表示用 IK はまだ canonical ではなく `SincroPoseMotionSnapshot` の arm targets を読む。
+
 実装:
 
 - `CanonicalUpperBodyState` の TypeScript 型を定義する。
@@ -340,6 +406,13 @@ head / wrist / hand の入力優先順位:
 
 `requestAnimationFrame` 基準の推論 loop から、動画フレーム基準の clock へ移行する。
 
+現状:
+
+- `VideoFrameClock` は `requestVideoFrameCallback`、RAF、timer fallback を持つ。
+- `TrackerVideoFrameTiming` は `mediaTimeMs`、`presentationTimeMs`、`expectedDisplayTimeMs`、`presentedFrames`、`droppedPresentedFrames` を保持できる。
+- `CameraQualityScore` は `motion-debug` の live snapshot / recording / replay viewer に接続されている。
+- production observe-only pipeline の `ReliabilityMap` 入力には、まだ `CameraQualityScore` を渡していない。
+
 実装:
 
 - `HTMLVideoElement.requestVideoFrameCallback()` を使う `VideoFrameClock` を追加する。
@@ -362,6 +435,13 @@ head / wrist / hand の入力優先順位:
 
 MediaPipe confidence をそのまま使わず、制御用の信頼度を部位別に再定義する。
 
+現状:
+
+- `ReliabilityMap` v1 は joint / part / gesture slot、component set、reason / warning code、parser を持つ。
+- Pose / Hand / Face / ROI / camera quality / previous pose 由来の component を合成できる。
+- `motion-debug` では camera quality を含めた reliability を保存できる。
+- production observe-only pipeline は reliability を生成するが、camera quality はまだ渡していない。Gesture reliability は実 Gesture Recognizer ではなく placeholder である。
+
 実装:
 
 - `ReliabilityMap` を導入し、joint / part ごとの weight と state を出す。
@@ -380,6 +460,12 @@ MediaPipe confidence をそのまま使わず、制御用の信頼度を部位�
 ### Phase 5: TemporalStateEstimator
 
 平滑化を単一の後処理ではなく、状態推定として設計する。
+
+現状:
+
+- 腕の `tracked` / `suspect` / `predicted` / `lost` / `recovering`、One Euro Filter、dropout prediction、comfortable fallback、recovery blend、classification hold は実装済みである。
+- `recoveringBlendMs` は 180-400ms に clamp され、既定値は 260ms である。
+- canonical head が live で埋まっていないため、head temporal は contract と実装を持つが通常入力では動かない。
 
 実装:
 
@@ -401,6 +487,14 @@ MediaPipe confidence をそのまま使わず、制御用の信頼度を部位�
 ### Phase 6: MotionSolver / IK / VrmPoseComposer
 
 既存 IK の数学を活かしつつ、target、pole、constraint、pose 合成の責務を明確化する。
+
+現状:
+
+- 既存 2-bone IK、`MinimalAvatarMotionProfile`、`VrmPoseComposer` は実装済みである。
+- composer は fallback / tracking / semantic / idle / style layer、optional bone fallback、owned bone conflict、quaternion normalize、angular velocity clamp を扱う。
+- production runtime では `VrmPoseComposer` dry-run が毎 frame 実行され、developer flag により腕、torso / shoulder、semantic / finger、full normalized pose application を段階適用できる。
+- 既定では full normalized pose application は `off` であり、既存 direct controller path が残る。
+- IK target はまだ body-local canonical state からではなく、Pose snapshot の arm targets から作る。
 
 この Phase は `AvatarMotionProfile` の完成版を待つ必要はないが、IK target の scale / depth / reach を決めるため、Phase 6 開始時点で `MinimalAvatarMotionProfile` を先に用意する。`MinimalAvatarMotionProfile` は VRM load 時の optional bone、shoulder width、upper / lower arm length、head size、default reach scale、depth compression、shoulder damping、wrist roll influence を持つ。
 
@@ -429,6 +523,12 @@ MediaPipe confidence をそのまま使わず、制御用の信頼度を部位�
 
 VRM モデル差分とユーザー体型差を品質問題として扱う。
 
+現状:
+
+- 完成版 `AvatarMotionProfile` は VRM load 時に capabilities、rest local rotation、bone length、hand / finger chain、torso distribution、arm / wrist / finger defaults、risk、warnings を生成する。
+- `MinimalAvatarMotionProfile` は Debug Console と composer dry-run / selected-bone application の軽量 profile として使われる。
+- initial / online calibration module と debug snapshot は存在するが、実機 UX、複数 VRM replay 比較、失敗 step retry の運用確認は継続対象である。
+
 実装:
 
 - VRM load 時に rest local rotation、bone length、shoulder width、head size、hand size、optional bones、constraint 影響を計測する。
@@ -455,6 +555,13 @@ VRM モデル差分とユーザー体型差を品質問題として扱う。
 
 Pose を全体検出、Hand / Face を ROI 検出として扱う。
 
+現状:
+
+- Worker / main-thread fallback ともに Pose 起点の Hand / Face ROI optional pass を持つ。
+- ROI 実行・skip・pause は tracker stats と reliability component に保存できる。
+- Hand / Face ROI が失敗または skip された frame でも lost / skipped snapshot を publish し、後段が未実行と未検出を区別できる。
+- Gesture optional pass はまだ実行接続されていない。
+
 実装:
 
 - Pose wrist から left / right hand crop を作る。
@@ -473,6 +580,13 @@ Pose を全体検出、Hand / Face を ROI 検出として扱う。
 ### Phase 9: MotionIntent / semantic motion / fingers
 
 完全追従ではなく、ユーザーの動作意図が伝わるキャラクター motion として扱う。
+
+現状:
+
+- `MotionIntentState` と `MotionIntentEstimator` は実装済みで、temporal / reliability / hand / optional gesture を入力にできる。
+- semantic pose layer と finger curl pose layer は composer input として実装済みである。
+- 指は Hand snapshot の低次元 feature と `AvatarMotionProfile.fingers` から grouped curl を生成する。
+- MediaPipe `GestureRecognizer` の runtime 実行接続は未実装であり、gesture はテスト用 optional input として扱われている。
 
 実装:
 
@@ -493,6 +607,13 @@ Pose を全体検出、Hand / Face を ROI 検出として扱う。
 ### Phase 10: Performance hardening / QA / degradation
 
 実装後の安定運用に向けて、端末差分と degrade 方針を固める。
+
+現状:
+
+- high-end desktop、standard laptop、mobile / Safari、debug mode 相当の performance profile と ordered degradation policy は実装済みである。
+- degradation stage は `full`、`gesture-reduced-fps`、`optional-pass-reduced-fps`、`roi-hand-paused`、`pose-reduced-fps`、`face-only`、`comfortable-idle` を持つ。
+- replay metrics は tracker budget、dropped frame、degradation frame、ROI pause を集計できる。
+- profile 別の実機確認と regression 運用は継続対象である。
 
 実装:
 
@@ -516,6 +637,11 @@ Pose を全体検出、Hand / Face を ROI 検出として扱う。
 ### Phase 11: Optional optimization / learned post-processing
 
 ログと metrics が揃った後にだけ検討する。
+
+現状:
+
+- `NoopMotionPostProcessor` と post-processing snapshot slot はある。
+- rule-based pipeline の限界を replay / metrics で確認した後に、ここで初めて最適化や learned post-processing を検討する。
 
 候補:
 
