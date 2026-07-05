@@ -86,19 +86,19 @@ MediaPipe の landmark は骨格姿勢の正解値ではなく、不確実な観
 
 ### 現在のフェーズ判定
 
-| フェーズ | 現在地                           | 残る主な差分                                                                               |
-| -------- | -------------------------------- | ------------------------------------------------------------------------------------------ |
-| Phase 1  | 概ね達成                         | raw slot 欠損 / ROI context 制限の運用確認、実 build gitCommit 保存                        |
-| Phase 2  | 腕・体幹・頭部は達成             | production IK 主経路の canonical / temporal 入力化                                         |
-| Phase 3  | 概ね達成                         | camera guide UI と実機 profile 確認                                                        |
-| Phase 4  | 概ね達成                         | Gesture reliability temporal component と実機 flicker 確認                                 |
-| Phase 5  | 概ね達成                         | head temporal の実機 jitter / recovery 確認                                                |
-| Phase 6  | composer / full 適用は達成       | `TemporalArmSolverBridge` の production 統合、semantic / finger rollback 不要化判断         |
-| Phase 7  | profile / calibration は部分達成 | 実機 UX と複数 VRM replay 比較の継続確認                                                   |
-| Phase 8  | 概ね達成                         | Gesture optional pass の実機負荷確認                                                       |
-| Phase 9  | 概ね達成                         | Gesture reliability 実機確認、semantic / finger suppression rollback の不要化              |
-| Phase 10 | 概ね達成                         | profile 別の実機確認と regression 運用の継続                                               |
-| Phase 11 | 候補抽出のみ達成                 | 実 post-processing / learned correction は metrics 確認後に着手                            |
+| フェーズ | 現在地                           | 残る主な差分                                                                        |
+| -------- | -------------------------------- | ----------------------------------------------------------------------------------- |
+| Phase 1  | 概ね達成                         | raw slot 欠損 / ROI context 制限の運用確認、実 build gitCommit 保存                 |
+| Phase 2  | 腕・体幹・頭部は達成             | production IK 主経路の canonical / temporal 入力化                                  |
+| Phase 3  | 概ね達成                         | camera guide UI と実機 profile 確認                                                 |
+| Phase 4  | 概ね達成                         | Gesture reliability temporal component と実機 flicker 確認                          |
+| Phase 5  | 概ね達成                         | head temporal の実機 jitter / recovery 確認                                         |
+| Phase 6  | composer / full 適用は達成       | `TemporalArmSolverBridge` の production 統合、semantic / finger rollback 不要化判断 |
+| Phase 7  | profile / calibration は部分達成 | 実機 UX と複数 VRM replay 比較の継続確認                                            |
+| Phase 8  | 概ね達成                         | Gesture optional pass の実機負荷確認                                                |
+| Phase 9  | 概ね達成                         | Gesture reliability 実機確認、semantic / finger suppression rollback の不要化       |
+| Phase 10 | 概ね達成                         | profile 別の実機確認と regression 運用の継続                                        |
+| Phase 11 | 候補抽出のみ達成                 | 実 post-processing / learned correction は metrics 確認後に着手                     |
 
 ## 基本方針
 

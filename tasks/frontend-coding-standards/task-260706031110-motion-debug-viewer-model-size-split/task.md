@@ -155,7 +155,7 @@ solver sublayer、metrics layer、test fixture を責務別ファイルへ分割
   fixture factory が 600 行超を占め、`:684` 以降に viewer / app API assertions が連続している。
   fixture factory は test helper module へ移し、assertions は behavior domain ごとの test file に分割する。
 - `documents/design/frontend/pages.md:45` から `:50` は `motion-debug` を developer viewer とし、
- 公開 window API 名・引数・戻り値は `types.ts` を正本として維持すると定義している。
+  公開 window API 名・引数・戻り値は `types.ts` を正本として維持すると定義している。
   本タスクでは `types.ts` の公開 API を変更しない。
 
 ## テスト
