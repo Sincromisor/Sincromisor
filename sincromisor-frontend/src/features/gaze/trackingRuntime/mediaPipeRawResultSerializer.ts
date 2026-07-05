@@ -2,7 +2,8 @@
  * MediaPipe result を motion-debug raw replay 用の plain JSON snapshot へ写す境界。
  *
  * serializer は landmark / category / matrix の数値 field だけをコピーし、MPMask、ImageBitmap、VideoFrame、
- * crop canvas、MediaPipe task instance は保存しない。未対応の slot は `undefined` を返し、recording 側は
+ * crop canvas、MediaPipe task instance は保存しない。slot が作られない状態は tracker 側の model 未ロード、
+ * inference 未実行、inference failure、gesture 前提 hand 不成立などで `undefined` として表現され、recording 側は
  * 空 object を「記録済み」として扱わない。
  */
 import type {
@@ -39,10 +40,11 @@ export type TrackerRuntimeMediaPipeRawResult = {
 /**
  * tracker runtime から届いた raw slot を 1 frame の replay payload にまとめる。
  *
- * 入力は serializer 済みの pose / hand / face / gesture slot と録画時の `timing`。全 slot が `undefined` の場合は
- * `undefined` を返し、recording 側が空 object を「raw 録画済み」と誤認しないようにする。返す payload は slot と
- * timing の shallow copy だけで、MediaPipe task instance、`MPMask`、`ImageBitmap`、`VideoFrame`、crop canvas などの
- * runtime / transferable object は保持しない。raw slot を省略した frame は replay 時に
+ * 入力は serializer 済みの pose / hand / face / gesture slot と録画時の `timing`。model 未ロード、inference 未実行、
+ * gesture の hand prerequisite 不成立、inference failure などで全 slot が `undefined` の場合は `undefined` を返し、
+ * recording 側が空 object を「raw 録画済み」と誤認しないようにする。返す payload は slot と timing の shallow copy
+ * だけで、MediaPipe task instance、`MPMask`、`ImageBitmap`、`VideoFrame`、crop canvas などの runtime / transferable
+ * object は保持しない。raw slot を省略した frame は replay 時に
  * `missing_mediapipe_raw_result` として見える。
  */
 export function createTrackerRuntimeMediaPipeRawResult(input: {
@@ -72,10 +74,11 @@ export function createTrackerRuntimeMediaPipeRawResult(input: {
 /**
  * PoseLandmarkerResult を raw pose replay が既存 pose normalizer に渡せる JSON subset へ変換する。
  *
- * live tracker の full-frame pose result を受け入れ、`landmarks` と `worldLandmarks` の数値 field だけを保存する。
- * segmentation mask や MediaPipe runtime object は保存しない。検出結果が無い場合は呼び出し側が slot を
- * `undefined` にする契約で、この関数自体は `undefined` を返さない。将来 normalizer が未保存 field に依存すると、
- * raw replay は runtime object で補完されず parse/normalize の欠落として表面化する。
+ * live tracker の full-frame pose inference が返した result を受け入れ、`landmarks` と `worldLandmarks` の数値 field
+ * だけを保存する。landmark が空配列でも result が返っている限り raw slot object を返し、この関数自体は
+ * `undefined` を返さない。slot が `undefined` になるのは model 未ロードや inference 未実行など、この関数が呼ばれない
+ * tracker 側の状態。segmentation mask や MediaPipe runtime object は保存しない。将来 normalizer が未保存 field に
+ * 依存すると、raw replay は runtime object で補完されず parse/normalize の欠落として表面化する。
  */
 export function serializePoseLandmarkerResult(
     result: PoseLandmarkerResult,
@@ -89,10 +92,12 @@ export function serializePoseLandmarkerResult(
 /**
  * HandLandmarkerResult を raw hand replay 用の JSON subset へ変換する。
  *
- * full-frame hand fallback result を受け入れ、hand/world landmarks と handedness category を保存する。ROI crop 由来の
- * crop-local context、MediaPipe task instance、transferable object は保持しない。検出結果が無い場合は呼び出し側が
- * slot を `undefined` にするため、この関数は `undefined` を返さない。crop context が必要な raw をここに流すと、
- * replay では手の side assignment や座標が欠落/不一致として見える。
+ * full-frame hand fallback inference が返した result を受け入れ、hand/world landmarks と handedness category を保存する。
+ * landmark/category が空配列でも result が返っている限り raw slot object を返し、この関数自体は `undefined` を返さない。
+ * slot が `undefined` になるのは model 未ロード、ROI tracking のみで full-frame fallback 未実行、inference failure など、
+ * この関数が呼ばれない tracker 側の状態。ROI crop 由来の crop-local context、MediaPipe task instance、transferable
+ * object は保持しない。crop context が必要な raw をここに流すと、replay では手の side assignment や座標が欠落/不一致
+ * として見える。
  */
 export function serializeHandLandmarkerResult(
     result: HandLandmarkerResult,
@@ -108,10 +113,12 @@ export function serializeHandLandmarkerResult(
 /**
  * FaceLandmarkerResult を raw face replay 用の JSON subset へ変換する。
  *
- * full-frame face result を受け入れ、face landmarks、blendshape category、facial transformation matrix の数値/文字列 field
- * だけを保存する。MediaPipe の mask/image/video/task instance は保持しない。検出結果が無い場合は呼び出し側が slot を
- * `undefined` にする契約で、この関数自体は `undefined` を返さない。保存しない runtime field に replay が依存した場合は、
- * raw replay の parse/normalize error または face snapshot 欠落として見える。
+ * full-frame face inference が返した result を受け入れ、face landmarks、blendshape category、facial transformation matrix
+ * の数値/文字列 field だけを保存する。各配列が空でも result が返っている限り raw slot object を返し、この関数自体は
+ * `undefined` を返さない。slot が `undefined` になるのは model 未ロード、ROI inference のみで full-frame inference
+ * 未実行、inference failure など、この関数が呼ばれない tracker 側の状態。MediaPipe の mask/image/video/task instance は
+ * 保持しない。保存しない runtime field に replay が依存した場合は、raw replay の parse/normalize error または face
+ * snapshot 欠落として見える。
  */
 export function serializeFaceLandmarkerResult(
     result: FaceLandmarkerResult,
@@ -130,10 +137,11 @@ export function serializeFaceLandmarkerResult(
 /**
  * GestureRecognizerResult を raw gesture replay の検証境界で読める JSON subset へ変換する。
  *
- * gesture tracker の result を受け入れ、hand/world landmarks、handedness、gesture category を保存する。MediaPipe task
- * instance、image/video、transferable object は保存しない。検出結果が無い場合は呼び出し側が slot を `undefined` にし、
- * この関数は `undefined` を返さない。現行 replay snapshot は gesture を保持しないため、失敗時は visual motion ではなく
- * raw parse/normalize 境界の欠落として表面化する。
+ * gesture tracker の inference が返した result を受け入れ、hand/world landmarks、handedness、gesture category を保存する。
+ * 各配列が空でも result が返っている限り raw slot object を返し、この関数自体は `undefined` を返さない。slot が
+ * `undefined` になるのは hand prerequisite 不成立、model 未ロード、inference failure など、この関数が呼ばれない
+ * tracker 側の状態。MediaPipe task instance、image/video、transferable object は保存しない。現行 replay snapshot は
+ * gesture を保持しないため、失敗時は visual motion ではなく raw parse/normalize 境界の欠落として表面化する。
  */
 export function serializeGestureRecognizerResult(
     result: GestureRecognizerResult,
