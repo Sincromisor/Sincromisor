@@ -48,6 +48,7 @@ type SimpleVrmPanelEventState = {
     lookingGlass: PanelLookingGlassState;
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
     cameraGuide: PanelCameraGuideState;
+    vrmStatusText: string;
 };
 
 type SimpleVrmPanelRuntimeEventState = {
@@ -61,6 +62,7 @@ type SimpleVrmPanelRuntimeEventState = {
     lookingGlass: PanelLookingGlassState;
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
     cameraGuide: PanelCameraGuideState;
+    vrmStatusText: string;
 };
 
 function useSimpleVrmPanelRuntimeEventState(): {
@@ -82,6 +84,7 @@ function useSimpleVrmPanelRuntimeEventState(): {
     const [cameraGuide, setCameraGuide] = useState<PanelCameraGuideState>(
         createPanelCameraGuideState,
     );
+    const [vrmStatusText, setVrmStatusText] = useState("");
     const setters = useMemo<SimpleVrmPanelRuntimeEventSetters>(
         () => ({
             setLogs,
@@ -94,6 +97,7 @@ function useSimpleVrmPanelRuntimeEventState(): {
             setLookingGlass,
             setLookingGlassConfigStatus,
             setCameraGuide,
+            setVrmStatusText,
         }),
         [],
     );
@@ -110,6 +114,7 @@ function useSimpleVrmPanelRuntimeEventState(): {
             lookingGlass,
             lookingGlassConfigStatus,
             cameraGuide,
+            vrmStatusText,
         },
         setters,
     };

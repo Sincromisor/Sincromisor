@@ -1,4 +1,5 @@
 import type { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
+import { InitialSincroCalibrationPoseBridge } from "../../character/calibration/initialSincroCalibrationPoseBridge";
 import type { SincroMotionObserveOnlyPipelineInput } from "../../character/runtime/sincroMotionObserveOnlyPipeline";
 import { SincroMotionObserveOnlyPipeline } from "../../character/runtime/sincroMotionObserveOnlyPipeline";
 import type { ChatMessageService } from "../../features/conversation/chat/model/chatMessageService";
@@ -42,6 +43,7 @@ export class SincroCharacterMotionEventSink {
     private readonly characterBehaviorState: CharacterBehaviorState;
     private readonly observeOnlyPipeline = new SincroMotionObserveOnlyPipeline();
     private readonly cameraQualityRuntime = new SincroCameraQualityRuntime();
+    private readonly calibrationPoseBridge = new InitialSincroCalibrationPoseBridge();
     private readonly readVideoSize: () => { width: number; height: number };
     private readonly readTrackSettings: () => MediaTrackSettings | undefined;
     private readonly readTrackReadyState: () => MediaStreamTrackState | undefined;
@@ -94,6 +96,7 @@ export class SincroCharacterMotionEventSink {
             snapshot,
             this.createObserveOnlyInput(timing, video),
         );
+        this.recordInitialCalibrationStep(observeOnly.state, quality, timing);
         this.characterBehaviorState.applySincroMotionPipelineState(observeOnly.state);
         this.characterBehaviorState.applyPoseMotion(snapshot);
         this.debugConsoleManager.updateSincroPoseMotion(snapshot);
@@ -119,6 +122,7 @@ export class SincroCharacterMotionEventSink {
             snapshot,
             this.createObserveOnlyInput(timing, video),
         );
+        this.recordInitialCalibrationStep(observeOnly.state, quality, timing);
         this.characterBehaviorState.applySincroMotionPipelineState(observeOnly.state);
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
         this.characterBehaviorState.clearErrorSource("poseMotion");
@@ -209,6 +213,26 @@ export class SincroCharacterMotionEventSink {
             type: "camera-quality-changed",
             quality,
             observedAtMs: timing?.receivedAtPerformanceMs ?? performance.now(),
+        });
+    }
+
+    private recordInitialCalibrationStep(
+        state: ReturnType<SincroMotionObserveOnlyPipeline["getState"]>,
+        cameraQuality: CameraQualityScore | undefined,
+        timing: TrackerVideoFrameTiming | undefined,
+    ): void {
+        if (state.reliability === undefined) {
+            return;
+        }
+        const mediaTimeMs = timing?.mediaTimeMs ?? timing?.receivedAtPerformanceMs;
+        if (mediaTimeMs === undefined || !Number.isFinite(mediaTimeMs)) {
+            return;
+        }
+        this.calibrationPoseBridge.record({
+            reliability: state.reliability,
+            cameraQuality,
+            canonical: state.canonical,
+            mediaTimeMs,
         });
     }
 

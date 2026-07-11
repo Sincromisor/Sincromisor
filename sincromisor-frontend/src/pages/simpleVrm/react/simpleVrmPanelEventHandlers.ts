@@ -32,6 +32,7 @@ export type SimpleVrmPanelRuntimeEventSetters = {
     setLookingGlass: Dispatch<SetStateAction<PanelLookingGlassState>>;
     setLookingGlassConfigStatus: Dispatch<SetStateAction<PanelLookingGlassConfigStatus>>;
     setCameraGuide: Dispatch<SetStateAction<PanelCameraGuideState>>;
+    setVrmStatusText: Dispatch<SetStateAction<string>>;
 };
 
 export function createSimpleVrmPanelRuntimeEventHandlers(
@@ -94,6 +95,7 @@ function createRuntimeStatusEventHandlers(
                 reducePanelCameraGuideState(state, event.quality, event.observedAtMs),
             ),
         "camera-quality-reset": () => setters.setCameraGuide(createPanelCameraGuideState()),
+        dialog_vrm_ui_state: (event) => setters.setVrmStatusText(event.uiState.vrmStatusText),
     };
 }
 

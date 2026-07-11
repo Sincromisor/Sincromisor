@@ -121,6 +121,7 @@ describe("panel camera guide state", () => {
             setTelopLogs: vi.fn(),
             setLookingGlass: vi.fn(),
             setLookingGlassConfigStatus: vi.fn(),
+            setVrmStatusText: vi.fn(),
             setCameraGuide: (update) => {
                 cameraGuide = typeof update === "function" ? update(cameraGuide) : update;
             },

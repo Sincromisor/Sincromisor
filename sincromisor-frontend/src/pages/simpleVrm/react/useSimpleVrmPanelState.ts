@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SincroAppController, SincroAppLifecycleState } from "../../../app/controller";
 import { useSincroMediaDeviceState } from "../../../app/react/useSincroMediaDeviceState";
 import type { InitialCalibrationStepId } from "../../../character/calibration/initialSincroCalibration";
@@ -49,6 +49,7 @@ type SimpleVrmPanelState = {
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
     cameraGuide: PanelCameraGuideState;
     calibrationState: InitialSincroCalibrationControllerState;
+    vrmStatusText: string;
 };
 
 // Control Panel から呼ぶ UI 操作。実処理は AppController に集約し、hook は委譲のみ行う。
@@ -65,9 +66,20 @@ type SimpleVrmPanelActions = {
 // simple-vrm / vrm360 / looking-glass-vrm で同じ購読ロジックを再利用する。
 export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelActions {
     const eventState = useSimpleVrmPanelEventState();
-    const calibrationController = useRef(new InitialSincroCalibrationController());
+    const calibrationController = useRef(InitialSincroCalibrationController.getManager());
     const [calibrationState, setCalibrationState] =
         useState<InitialSincroCalibrationControllerState>(calibrationController.current.getState());
+    const previousVrmStatusText = useRef(eventState.vrmStatusText);
+    useEffect(() => calibrationController.current.subscribe(setCalibrationState), []);
+    useEffect(() => {
+        if (
+            previousVrmStatusText.current !== "" &&
+            eventState.vrmStatusText !== previousVrmStatusText.current
+        ) {
+            cancelActiveCalibration(calibrationController.current, "vrm_source_changed");
+        }
+        previousVrmStatusText.current = eventState.vrmStatusText;
+    }, [eventState.vrmStatusText]);
     const {
         snapshot: mediaDeviceSnapshot,
         audioInputSelection,
@@ -120,16 +132,7 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
     };
 
     const cancelCalibration = (reason: string): void => {
-        const current = calibrationController.current.getState();
-        if (current.status !== "active") {
-            return;
-        }
-        calibrationController.current.dispatch({
-            type: "cancel",
-            sessionId: current.sessionId,
-            reason,
-        });
-        setCalibrationState(calibrationController.current.getState());
+        cancelActiveCalibration(calibrationController.current, reason);
     };
 
     const retryCalibration = (stepId: InitialCalibrationStepId): void => {
@@ -158,4 +161,16 @@ export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelAc
         calibrationState,
         retryCalibration,
     };
+}
+
+/** VRM / camera / talk lifecycle owner が active session id を明示して calibration を破棄する。 */
+export function cancelActiveCalibration(
+    controller: InitialSincroCalibrationController,
+    reason: string,
+): void {
+    const current = controller.getState();
+    if (current.status !== "active") {
+        return;
+    }
+    controller.dispatch({ type: "cancel", sessionId: current.sessionId, reason });
 }

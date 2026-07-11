@@ -50,7 +50,22 @@ export type InitialSincroCalibrationControllerResult =
  * session id を cancel action に渡し、再開時は別 id で start しなければならない。
  */
 export class InitialSincroCalibrationController {
+    private static manager: InitialSincroCalibrationController | undefined;
     private state: InitialSincroCalibrationControllerState = { status: "idle" };
+    private readonly listeners = new Set<
+        (state: InitialSincroCalibrationControllerState) => void
+    >();
+
+    static getManager(): InitialSincroCalibrationController {
+        InitialSincroCalibrationController.manager ??= new InitialSincroCalibrationController();
+        return InitialSincroCalibrationController.manager;
+    }
+
+    subscribe(listener: (state: InitialSincroCalibrationControllerState) => void): () => void {
+        this.listeners.add(listener);
+        listener(this.state);
+        return () => this.listeners.delete(listener);
+    }
 
     getState(): InitialSincroCalibrationControllerState {
         return this.state;
@@ -77,7 +92,7 @@ export class InitialSincroCalibrationController {
             reason: action.reason,
             previousSessionId: active.state.sessionId,
         };
-        return { ok: true, state: this.state };
+        return this.success();
     }
 
     private start(
@@ -99,7 +114,7 @@ export class InitialSincroCalibrationController {
                 debugReasons: [],
             },
         };
-        return { ok: true, state: this.state };
+        return this.success();
     }
 
     private activeFor(sessionId: string):
@@ -126,9 +141,15 @@ export class InitialSincroCalibrationController {
             steps: { ...active.session.steps, [result.id]: result },
         });
         const index = CALIBRATION_STEP_ORDER.indexOf(result.id);
-        const currentStep = CALIBRATION_STEP_ORDER[index + 1] ?? result.id;
+        const canAdvance =
+            result.status === "ready" ||
+            result.status === "degraded" ||
+            result.status === "skipped";
+        const currentStep = canAdvance
+            ? (CALIBRATION_STEP_ORDER[index + 1] ?? result.id)
+            : result.id;
         this.state = { ...active, currentStep, session };
-        return { ok: true, state: this.state };
+        return this.success();
     }
 
     /**
@@ -149,6 +170,13 @@ export class InitialSincroCalibrationController {
         }
         const session = summarizeInitialCalibrationSession({ ...active.session, steps });
         this.state = { ...active, currentStep: stepId, session };
+        return this.success();
+    }
+
+    private success(): InitialSincroCalibrationControllerResult {
+        for (const listener of this.listeners) {
+            listener(this.state);
+        }
         return { ok: true, state: this.state };
     }
 }
