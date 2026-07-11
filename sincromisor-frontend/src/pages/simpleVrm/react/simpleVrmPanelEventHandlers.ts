@@ -2,6 +2,11 @@ import type { Dispatch, SetStateAction } from "react";
 import type { SincroAppEvent } from "../../../app/controller";
 import { prependPanelMessageLog } from "../../../app/react/panelLogHelpers";
 import { UI_TUNING } from "../../../app/react/uiTuning";
+import {
+    createPanelCameraGuideState,
+    type PanelCameraGuideState,
+    reducePanelCameraGuideState,
+} from "./panelCameraGuideState";
 import type {
     PanelGazeState,
     PanelLearnedVadState,
@@ -26,6 +31,7 @@ export type SimpleVrmPanelRuntimeEventSetters = {
     setTelopLogs: Dispatch<SetStateAction<PanelTelopLog[]>>;
     setLookingGlass: Dispatch<SetStateAction<PanelLookingGlassState>>;
     setLookingGlassConfigStatus: Dispatch<SetStateAction<PanelLookingGlassConfigStatus>>;
+    setCameraGuide: Dispatch<SetStateAction<PanelCameraGuideState>>;
 };
 
 export function createSimpleVrmPanelRuntimeEventHandlers(
@@ -83,6 +89,11 @@ function createRuntimeStatusEventHandlers(
             })),
         learned_vad_state: (event) =>
             setters.setLearnedVad({ status: event.status, probability: event.probability }),
+        "camera-quality-changed": (event) =>
+            setters.setCameraGuide((state) =>
+                reducePanelCameraGuideState(state, event.quality, event.observedAtMs),
+            ),
+        "camera-quality-reset": () => setters.setCameraGuide(createPanelCameraGuideState()),
     };
 }
 

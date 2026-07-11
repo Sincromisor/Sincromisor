@@ -60,6 +60,7 @@ type UseSincroAppControllerSettingsStateOptions = {
     initialController?: SincroAppController | undefined;
     resetLifecycleOnControllerClear?: boolean;
     onControllerHydrated?: (controller: SincroAppController) => void;
+    onControllerCleared?: () => void;
     onEvent?: (event: SincroAppEvent, controller: SincroAppController) => void;
 };
 
@@ -120,6 +121,7 @@ export function useSincroAppControllerSettingsState(
                 syncSincroAppControllerSettingsState(controller, setters, {
                     resetLifecycleOnControllerClear: !!options.resetLifecycleOnControllerClear,
                     onControllerHydrated: options.onControllerHydrated,
+                    onControllerCleared: options.onControllerCleared,
                 });
             },
             onEvent: (event, controller) => {
@@ -132,6 +134,7 @@ export function useSincroAppControllerSettingsState(
         };
     }, [
         options.onControllerHydrated,
+        options.onControllerCleared,
         options.onEvent,
         options.resetLifecycleOnControllerClear,
         setters,
@@ -155,7 +158,7 @@ function syncSincroAppControllerSettingsState(
     setters: SincroAppControllerSettingsStateSetters,
     options: Pick<
         UseSincroAppControllerSettingsStateOptions,
-        "resetLifecycleOnControllerClear" | "onControllerHydrated"
+        "resetLifecycleOnControllerClear" | "onControllerHydrated" | "onControllerCleared"
     >,
 ): void {
     setters.setCurrentController(controller);
@@ -164,6 +167,7 @@ function syncSincroAppControllerSettingsState(
         if (options.resetLifecycleOnControllerClear) {
             setters.setLifecycleState("idle");
         }
+        options.onControllerCleared?.();
         return;
     }
     hydrateSettingsSnapshotsFromController(controller, setters);

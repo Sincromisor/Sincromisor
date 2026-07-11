@@ -297,6 +297,7 @@ export class SincroAppController {
     // constructor の見通しを維持するため、singleton取得 + bridge組み立て + bind をここへ集約する。
     private initializeRuntime(): SincroAppControllerRuntimeBundle {
         return createSincroAppRuntimeBundle({
+            emitEvent: (event) => this.emitEvent(event),
             stopRTC: () => this.stopRTC(),
             getSettingsSnapshot: () => this.getSettingsSnapshot(),
             getSettingsUiState: () => this.getSettingsUiState(),
@@ -351,6 +352,11 @@ export class SincroAppController {
 
     private static setCurrent(controller: SincroAppController | undefined): void {
         // active controller の static 購読は React mount 後の attach 判定に使われる。
+        if (controller === undefined) {
+            SincroAppController.activeRegistry.getCurrent()?.emitEvent({
+                type: "camera-quality-reset",
+            });
+        }
         SincroAppController.activeRegistry.setCurrent(controller);
     }
 

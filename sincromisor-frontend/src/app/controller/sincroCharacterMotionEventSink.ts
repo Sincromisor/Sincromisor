@@ -9,7 +9,9 @@ import type { SincroGestureMotionSnapshot } from "../../features/gaze/gestureTra
 import { toGestureIntentObservation } from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
+import type { SincroAppEvent } from "./sincroAppTypes";
 import { SincroCameraQualityRuntime } from "./sincroCameraQualityRuntime";
 import {
     formatErrorDetail,
@@ -25,6 +27,7 @@ type SincroCharacterMotionEventSinkOptions = {
     readVideoSize: () => { width: number; height: number };
     readTrackSettings: () => MediaTrackSettings | undefined;
     readTrackReadyState: () => MediaStreamTrackState | undefined;
+    emitEvent: (event: SincroAppEvent) => void;
 };
 
 export class SincroCharacterMotionEventSink {
@@ -37,6 +40,7 @@ export class SincroCharacterMotionEventSink {
     private readonly readVideoSize: () => { width: number; height: number };
     private readonly readTrackSettings: () => MediaTrackSettings | undefined;
     private readonly readTrackReadyState: () => MediaStreamTrackState | undefined;
+    private readonly emitEvent: (event: SincroAppEvent) => void;
 
     constructor(options: SincroCharacterMotionEventSinkOptions) {
         this.dialogManager = options.dialogManager;
@@ -46,6 +50,7 @@ export class SincroCharacterMotionEventSink {
         this.readVideoSize = options.readVideoSize;
         this.readTrackSettings = options.readTrackSettings;
         this.readTrackReadyState = options.readTrackReadyState;
+        this.emitEvent = options.emitEvent;
     }
 
     handleFaceMotion(snapshot: SincroFaceMotionSnapshot, timing?: TrackerVideoFrameTiming): void {
@@ -72,13 +77,14 @@ export class SincroCharacterMotionEventSink {
             return;
         }
         const video = this.readVideoSize();
-        this.cameraQualityRuntime.updatePoseQuality({
+        const quality = this.cameraQualityRuntime.updatePoseQuality({
             pose: snapshot,
             timing,
             video,
             trackSettings: this.readTrackSettings(),
             trackReadyState: this.readTrackReadyState(),
         });
+        this.emitCameraQuality(quality, timing);
         const observeOnly = this.observeOnlyPipeline.updatePose(
             snapshot,
             this.createObserveOnlyInput(timing, video),
@@ -96,13 +102,14 @@ export class SincroCharacterMotionEventSink {
 
     handlePoseFallback(snapshot: SincroPoseMotionSnapshot, timing?: TrackerVideoFrameTiming): void {
         const video = this.readVideoSize();
-        this.cameraQualityRuntime.updatePoseQuality({
+        const quality = this.cameraQualityRuntime.updatePoseQuality({
             pose: snapshot,
             timing,
             video,
             trackSettings: this.readTrackSettings(),
             trackReadyState: this.readTrackReadyState(),
         });
+        this.emitCameraQuality(quality, timing);
         const observeOnly = this.observeOnlyPipeline.updatePose(
             snapshot,
             this.createObserveOnlyInput(timing, video),
@@ -172,12 +179,32 @@ export class SincroCharacterMotionEventSink {
     resetObserveOnlyPipeline(): void {
         this.observeOnlyPipeline.reset();
         this.cameraQualityRuntime.reset();
+        this.emitEvent({ type: "camera-quality-reset" });
         this.characterBehaviorState.applySincroMotionPipelineState(
             this.observeOnlyPipeline.getState(),
         );
         this.debugConsoleManager.updateSincroObserveOnlySummary(
             this.observeOnlyPipeline.getSummary(),
         );
+    }
+
+    /**
+     * Pose frame と同じ受信時刻を UI event に載せる。
+     * reducer の clock を callback 到着後の render 時刻へ置き換えると hold 判定が端末負荷に左右されるため、
+     * timing がある frame は必ず `receivedAtPerformanceMs` を引き継ぐ。
+     */
+    private emitCameraQuality(
+        quality: CameraQualityScore | undefined,
+        timing: TrackerVideoFrameTiming | undefined,
+    ): void {
+        if (quality === undefined) {
+            return;
+        }
+        this.emitEvent({
+            type: "camera-quality-changed",
+            quality,
+            observedAtMs: timing?.receivedAtPerformanceMs ?? performance.now(),
+        });
     }
 
     private createObserveOnlyInput(

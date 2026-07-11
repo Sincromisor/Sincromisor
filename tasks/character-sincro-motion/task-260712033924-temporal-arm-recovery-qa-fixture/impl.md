@@ -12,9 +12,9 @@
 
 ### TypeScript production comment audit
 
-| path | symbol or decision | kind | current comment | decision | required maintenance knowledge | action | reviewer note |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `motionEvaluation/motionMetricTypes.ts` / `motionMetricThresholds.ts` | P0 ID propagation | fixed contract plumbing | ID追加時の同期先を既存TSDocが説明 | keep | manifest/baseline/viewerは共通ID列を正本にする | ID列だけを同期し定型コメントは追加しない | 未知ID validationを緩めていない |
+| path                                                                  | symbol or decision | kind                    | current comment                   | decision | required maintenance knowledge                 | action                                   | reviewer note                   |
+| --------------------------------------------------------------------- | ------------------ | ----------------------- | --------------------------------- | -------- | ---------------------------------------------- | ---------------------------------------- | ------------------------------- |
+| `motionEvaluation/motionMetricTypes.ts` / `motionMetricThresholds.ts` | P0 ID propagation  | fixed contract plumbing | ID追加時の同期先を既存TSDocが説明 | keep     | manifest/baseline/viewerは共通ID列を正本にする | ID列だけを同期し定型コメントは追加しない | 未知ID validationを緩めていない |
 
 fixture/test/docs が変更の中心で、production runtime の state transition、provider、parser/schema 実装は変更していない。`motionMetricTypes.ts` と `motionMetricThresholds.ts` は developer-visible ID contract の列挙追加だけであり、新しい heuristic、fallback、lifecycle、保存 schema version を導入しないため、追加 production comment audit は対象外とした。
 

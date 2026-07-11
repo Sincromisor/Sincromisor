@@ -72,6 +72,10 @@
     - VAD / audio meter
     - text / telop messages
     - gaze / tracking diagnostics
+    - `sincro` tracking 中の camera quality guide。`SincroAppEvent` の
+      `camera-quality-changed` / `camera-quality-reset` を panel-local `PanelCameraGuideState` へ還元し、
+      接続ページの diagnostics grid 直前に先頭 guide message 一件だけを表示する。`chat` mode、camera stop、
+      tracking reset、active controller clear では stale guide を残さない。
 - UI state:
     - startup dialog open state
     - active right tool panel
