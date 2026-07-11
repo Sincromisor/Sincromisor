@@ -28,6 +28,7 @@ import { normalizeSincroFaceLandmarkerResult } from "../../features/gaze/faceTra
 import {
     createSincroGestureFallbackSnapshot,
     type SincroGestureMotionSnapshot,
+    toGestureIntentObservation,
     uniqueGestureWarnings,
 } from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
 import { normalizeSincroGestureRecognizerResult } from "../../features/gaze/gestureTracking/sincroGestureTrackerHelpers";
@@ -148,6 +149,9 @@ export class MotionDebugReplayRuntime {
         autoplay?: boolean;
     }): MotionDebugReplayFrameResult {
         this.clearTimer();
+        if (this.player.getReplayState().currentFrameIndex !== undefined) {
+            this.resetTemporalState();
+        }
         this.params.stopActiveRuntime("motion_debug_replay_started");
         this.params.behaviorState.setTalkMode("sincro");
         const result = this.player.startReplay({
@@ -166,8 +170,18 @@ export class MotionDebugReplayRuntime {
         return result;
     }
 
+    /**
+     * 指定 frame を適用し、隣接 forward step だけ temporal / intent hysteresis を継続する。
+     *
+     * 同一 frame の再適用、frame skip、後方 seek は時間連続性を保証できないため、適用前に derived state を
+     * reset する。autoplay は timer が常に次 index を player へ渡すため連続 state を維持する。
+     */
     stepReplay(frameIndex: number): MotionDebugReplayFrameResult {
         this.clearTimer();
+        const currentFrameIndex = this.player.getReplayState().currentFrameIndex;
+        if (currentFrameIndex !== undefined && frameIndex !== currentFrameIndex + 1) {
+            this.resetTemporalState();
+        }
         const result = this.player.stepReplay(frameIndex);
         this.timer.updateReplayStatus(result, false);
         this.params.renderSnapshot();
@@ -283,6 +297,7 @@ export class MotionDebugReplayRuntime {
     private applyReplayPoseSnapshot(
         snapshot: SincroPoseMotionSnapshot,
         context: MotionReplayApplyContext,
+        gesture?: SincroGestureMotionSnapshot,
     ): MotionDebugSnapshot {
         const previousPose = this.params.tracker.setPoseSnapshot(snapshot);
         this.params.tracker.updateReplayReliability(
@@ -294,7 +309,7 @@ export class MotionDebugReplayRuntime {
         );
         this.updateReplayCanonical(snapshot, context);
         this.updateReplayTemporal(context);
-        this.updateReplayIntent(context);
+        this.updateReplayIntent(context, gesture);
         this.updateReplayPostProcessing(context);
         this.params.tracker.applyReplayPoseSnapshot(snapshot, context.mediaTimeMs, () => {
             this.params.scene.renderOnce(context.mediaTimeMs);
@@ -322,11 +337,10 @@ export class MotionDebugReplayRuntime {
             hand === undefined || raw.gesture === undefined
                 ? undefined
                 : this.normalizeReplayGesture(raw, hand, context);
-        void gesture;
         if (pose === undefined) {
             return this.params.getSnapshot();
         }
-        return this.applyReplayPoseSnapshot(pose, context);
+        return this.applyReplayPoseSnapshot(pose, context, gesture);
     }
 
     private normalizeReplayPose(
@@ -478,7 +492,15 @@ export class MotionDebugReplayRuntime {
                   });
     }
 
-    private updateReplayIntent(context: MotionReplayApplyContext): void {
+    /**
+     * replay-derived intent は同 frame で再構成した normalized Gesture snapshot だけを入力にする。
+     * raw category と saved `frame.intent` は補完に使わず、missing / lost Gesture は既存 adapter が
+     * `undefined` へ落とすため追加 warning を生成しない。
+     */
+    private updateReplayIntent(
+        context: MotionReplayApplyContext,
+        gesture: SincroGestureMotionSnapshot | undefined,
+    ): void {
         const temporal = this.latestTemporal;
         if (temporal === undefined || "parseStatus" in temporal) {
             this.latestIntent = undefined;
@@ -488,6 +510,7 @@ export class MotionDebugReplayRuntime {
             temporal,
             reliability: this.params.tracker.latestValidReliability(),
             hand: this.params.tracker.snapshotState().hand,
+            gesture: gesture === undefined ? undefined : toGestureIntentObservation(gesture),
             mediaTimeMs: context.mediaTimeMs,
         });
     }

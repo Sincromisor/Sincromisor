@@ -318,6 +318,37 @@ describe("MotionReplayPlayer", () => {
         });
     });
 
+    it("keeps an invalid raw gesture on the existing gesture parse-error path", () => {
+        const logText = createLogText([
+            createFrameRecord({
+                frameIndex: 0,
+                mediaTimeMs: 120,
+                mediapipe: {
+                    ...createRawPoseFrame(120),
+                    gesture: {
+                        landmarks: [],
+                        worldLandmarks: [],
+                        handedness: [],
+                        handednesses: [],
+                        gestures: [[{ score: "invalid" }]],
+                    },
+                },
+            }),
+        ]);
+        const player = createRawHarnessPlayer();
+
+        expect(player.loadRecordingText(logText).ok).toBe(true);
+        const result = player.startReplay({ mode: "mediapipe-raw-result" });
+        expect(result).toMatchObject({
+            ok: false,
+            code: "parse_error",
+            message: expect.stringContaining("gesture"),
+        });
+        expect(result.ok ? [] : result.parseErrors).toEqual(
+            expect.arrayContaining([expect.objectContaining({ slot: "gesture" })]),
+        );
+    });
+
     it("reports parse_error for invalid log text and invalid pose snapshots", () => {
         const invalidPoseLog = createLogText([
             createFrameRecord({
