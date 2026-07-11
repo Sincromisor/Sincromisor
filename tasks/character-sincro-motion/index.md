@@ -77,13 +77,15 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 106 件）
+## タスク一覧（自動生成 / 全 108 件）
 
-### open（未完） — 1 件
+### open（未完） — 3 件
 
 | タスク                                                                                                                             | タイトル                                                  | 判定    | 依存                                                                         |
 | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------- | ---------------------------------------------------------------------------- |
 | [task-260705214026-canonical-temporal-arm-solver-production](./task-260705214026-canonical-temporal-arm-solver-production/task.md) | Promote canonical temporal arm solver to production input | ❌ FAIL | `task-260625231726-character-animation-3-phase-6-temporal-arm-solver-bridge` |
+| [task-260712033923-temporal-arm-reach-clamp-semantics](./task-260712033923-temporal-arm-reach-clamp-semantics/task.md)             | Diagnose and correct temporal arm reach clamp semantics   | —       | `task-260705214026-canonical-temporal-arm-solver-production`                 |
+| [task-260712033924-temporal-arm-recovery-qa-fixture](./task-260712033924-temporal-arm-recovery-qa-fixture/task.md)                 | Add deterministic temporal arm recovery QA fixture        | —       | `task-260705214026-canonical-temporal-arm-solver-production`                 |
 
 ### done（完了） — 105 件
 
