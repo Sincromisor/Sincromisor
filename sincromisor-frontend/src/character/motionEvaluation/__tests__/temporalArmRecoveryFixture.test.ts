@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import leftFixtureText from "../fixtures/left-arm-occlusion-recovery.ndjson?raw";
+import rightFixtureText from "../fixtures/right-arm-occlusion-recovery.ndjson?raw";
 import {
     generateTemporalArmRecoveryFixture,
     type TemporalArmRecoveryFixtureId,
@@ -11,12 +13,18 @@ const FIXTURE_IDS: TemporalArmRecoveryFixtureId[] = [
     "left-arm-occlusion-recovery",
     "right-arm-occlusion-recovery",
 ];
+const STORED_FIXTURES: Record<TemporalArmRecoveryFixtureId, string> = {
+    "left-arm-occlusion-recovery": leftFixtureText,
+    "right-arm-occlusion-recovery": rightFixtureText,
+};
 
 describe("temporal arm recovery fixture", () => {
     it.each(FIXTURE_IDS)("generates deterministic production recovery for %s", (fixtureId) => {
-        const first = generateTemporalArmRecoveryFixture(fixtureId);
-        expect(generateTemporalArmRecoveryFixture(fixtureId)).toBe(first);
-        const parsed = parseMotionDebugLogLines(first.trimEnd().split("\n"));
+        const generated = generateTemporalArmRecoveryFixture(fixtureId);
+        const stored = STORED_FIXTURES[fixtureId];
+        expect(generated).toBe(stored);
+        expect(generateTemporalArmRecoveryFixture(fixtureId)).toBe(generated);
+        const parsed = parseMotionDebugLogLines(stored.trimEnd().split("\n"));
         expect(parsed.ok).toBe(true);
         if (!parsed.ok) throw new Error("Generated fixture must parse.");
 
@@ -67,5 +75,19 @@ describe("temporal arm recovery fixture", () => {
         expect(summary.metrics.solverElbowFlipRejectCount.value).toBeLessThanOrEqual(2);
         expect(summary.metrics.finalPoseAngularVelocityClampCount.value).toBeLessThanOrEqual(3);
         expect(summary.metrics.finalPoseOwnedBoneConflictCount.value).toBe(0);
+
+        const withoutRecovery = parsed.frames.filter((frame) => {
+            const temporal = parseTemporal(frame);
+            return temporal?.arms[targetSide].state !== "recovering";
+        });
+        const shortenedSummary = calculateMotionMetricSummary(withoutRecovery, {
+            fixtureId,
+            generatedAtIso: "2026-07-12T00:00:00.000Z",
+            thresholdVersion: "initial-v1",
+        });
+        expect(shortenedSummary.metrics.temporalRecoveringArmFrameCount.value).toBe(0);
+        expect(shortenedSummary.metrics.temporalMaxRecoveryJumpDegEquivalent.status).toBe(
+            "not_available",
+        );
     });
 });
