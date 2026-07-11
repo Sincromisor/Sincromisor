@@ -49,3 +49,18 @@ export function compareDialogGazeSettings(
             prev.forceSincroPoseTracking !== next.forceSincroPoseTracking,
     };
 }
+
+/**
+ * camera quality を含む motion state を破棄すべき settings lifecycle だけを reset owner へ渡す。
+ *
+ * talk mode 離脱と camera device / gaze enable 切替は、直前の camera guide を次の tracking session へ
+ * 持ち越せない境界である。Pose tuning だけの変更は camera source を切らないため対象外とする。
+ */
+export function resetSincroMotionForGazeSettingsChanges(
+    changes: DialogGazeSettingsChanges,
+    reset: () => void,
+): void {
+    if (changes.gazeEnabledChanged || changes.videoDeviceChanged || changes.talkModeChanged) {
+        reset();
+    }
+}

@@ -30,6 +30,11 @@ type SincroCharacterMotionEventSinkOptions = {
     emitEvent: (event: SincroAppEvent) => void;
 };
 
+/** Camera / mode / tracking lifecycle の終了を AppController UI state へ通知する。 */
+export function emitCameraQualityReset(emitEvent: (event: SincroAppEvent) => void): void {
+    emitEvent({ type: "camera-quality-reset" });
+}
+
 export class SincroCharacterMotionEventSink {
     private readonly dialogManager: DialogManager;
     private readonly debugConsoleManager: DebugConsoleManager;
@@ -179,7 +184,7 @@ export class SincroCharacterMotionEventSink {
     resetObserveOnlyPipeline(): void {
         this.observeOnlyPipeline.reset();
         this.cameraQualityRuntime.reset();
-        this.emitEvent({ type: "camera-quality-reset" });
+        emitCameraQualityReset(this.emitEvent);
         this.characterBehaviorState.applySincroMotionPipelineState(
             this.observeOnlyPipeline.getState(),
         );

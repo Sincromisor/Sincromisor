@@ -1,11 +1,18 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { SincroAppEvent } from "../../../../app/controller/sincroAppTypes";
+import {
+    compareDialogGazeSettings,
+    resetSincroMotionForGazeSettingsChanges,
+} from "../../../../app/controller/sincroCharacterGazeSettings";
+import { emitCameraQualityReset } from "../../../../app/controller/sincroCharacterMotionEventSink";
 import {
     CAMERA_QUALITY_SCHEMA_VERSION,
     type CameraQualityScore,
 } from "../../../../features/gaze/trackingRuntime/cameraQualityScore";
 import { CameraQualityGuideCard } from "../components/diagnosticsStatusCards";
 import { createPanelCameraGuideState, reducePanelCameraGuideState } from "../panelCameraGuideState";
+import { createSimpleVrmPanelRuntimeEventHandlers } from "../simpleVrmPanelEventHandlers";
 
 function createQuality(
     status: CameraQualityScore["overall"]["status"],
@@ -88,7 +95,7 @@ describe("panel camera guide state", () => {
         ).toBe("少し下がる");
     });
 
-    it("hides immediately for good, missing messages, reset, and chat-mode reset", () => {
+    it("hides immediately for good and missing messages", () => {
         const shown = reducePanelCameraGuideState(
             createPanelCameraGuideState(),
             createQuality("bad", "明るくする"),
@@ -100,9 +107,56 @@ describe("panel camera guide state", () => {
         expect(
             reducePanelCameraGuideState(shown, createQuality("warn"), 101).message,
         ).toBeUndefined();
-        expect(createPanelCameraGuideState().message).toBeUndefined();
-        // talk mode 離脱は production owner が camera-quality-reset を発火し、同じ初期 state に戻す。
-        expect(createPanelCameraGuideState()).toEqual(createPanelCameraGuideState());
+    });
+
+    it("clears a visible guide through the camera-quality-reset panel handler", () => {
+        let cameraGuide = createPanelCameraGuideState();
+        const handlers = createSimpleVrmPanelRuntimeEventHandlers({
+            setLogs: vi.fn(),
+            setVadState: vi.fn(),
+            setLearnedVad: vi.fn(),
+            setGaze: vi.fn(),
+            setRtcEvents: vi.fn(),
+            setRtcState: vi.fn(),
+            setTelopLogs: vi.fn(),
+            setLookingGlass: vi.fn(),
+            setLookingGlassConfigStatus: vi.fn(),
+            setCameraGuide: (update) => {
+                cameraGuide = typeof update === "function" ? update(cameraGuide) : update;
+            },
+        });
+
+        handlers["camera-quality-changed"]?.({
+            type: "camera-quality-changed",
+            quality: createQuality("bad", "明るくする"),
+            observedAtMs: 100,
+        });
+        expect(cameraGuide.message).toBe("明るくする");
+
+        handlers["camera-quality-reset"]?.({ type: "camera-quality-reset" });
+        expect(cameraGuide.message).toBeUndefined();
+    });
+
+    it("emits reset from the production settings owner on sincro to chat transition", () => {
+        const previous = {
+            enableCharacterGaze: true,
+            enableSincroPoseTracking: true,
+            forceSincroPoseTracking: false,
+            videoInputDeviceId: "camera-a",
+            talkMode: "sincro",
+        };
+        const changes = compareDialogGazeSettings(
+            previous,
+            { ...previous, talkMode: "chat" },
+            false,
+        );
+        const events: SincroAppEvent[] = [];
+
+        resetSincroMotionForGazeSettingsChanges(changes, () =>
+            emitCameraQualityReset((event) => events.push(event)),
+        );
+
+        expect(events).toEqual([{ type: "camera-quality-reset" }]);
     });
 
     it("discards a candidate on clock regression without hiding the visible guide", () => {
