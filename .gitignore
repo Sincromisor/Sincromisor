@@ -9,6 +9,8 @@ __pycache__
 node_modules
 node_modules/
 work/
+# 実写動画・screenshot・raw replay等の非公開検証原本。
+work/private-artifacts/
 .env
 .gate-cache
 .gate-cache/
@@ -41,5 +43,4 @@ sincromisor-frontend/public/characters/*.jpg
 sincromisor-frontend/public/characters/*.json
 sincromisor-frontend/public/characters/*.glb
 sincromisor-frontend/public/characters/*.png
-tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/artifacts/*.png
 SincromisorCLI

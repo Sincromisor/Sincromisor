@@ -1,7 +1,7 @@
 {
   "schemaVersion": "sincro.task.temporal-arm-reach-replay.v1",
   "input": {
-    "path": "tasks/character-sincro-motion/task-260705214026-canonical-temporal-arm-solver-production/artifacts/video/arms-cross.browser.mp4",
+    "path": "work/private-artifacts/task-260705214026-canonical-temporal-arm-solver-production/video/arms-cross.browser.mp4",
     "sha256": "21296ea0fbd2f8655d4c20bbffe67541457ed04ddef9468eacb7fa172cd1cf54"
   },
   "method": "The same captured canonical-video replay frames were evaluated three times with the corrected body-local direction plus temporal scalar reach semantics.",
