@@ -14,6 +14,7 @@ const mediapipeTasksVisionPackageJson = JSON.parse(
     ),
 );
 const mediapipeTasksVisionVersion = mediapipeTasksVisionPackageJson.version;
+const gitCommit = process.env.SINCROMISOR_GIT_COMMIT;
 const reactRuntimePackages = ["/react/", "/react-dom/", "/scheduler/"];
 const pageRouteAliases = [
     {
@@ -106,6 +107,8 @@ export default defineConfig({
     define: {
         __SINCROMISOR_FRONTEND_VERSION__: JSON.stringify(frontendPackageJson.version ?? "unknown"),
         __MEDIAPIPE_TASKS_VISION_VERSION__: JSON.stringify(mediapipeTasksVisionVersion),
+        __SINCROMISOR_GIT_COMMIT__:
+            gitCommit === undefined ? "undefined" : JSON.stringify(gitCommit),
     },
     server: {
         open: true,

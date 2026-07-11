@@ -421,6 +421,10 @@
 - motion evaluation log
     - developer 向け評価ログの schema は `src/character/motionEvaluation/motionDebugLogSchema.ts` を正本とする。
     - schema version は `sincro.motion-debug-log.v1` とし、NDJSON の 1 行目を manifest record、2 行目以降を frame record として保存する。
+    - `manifest.build.gitCommit` は build / CI caller が `SINCROMISOR_GIT_COMMIT` に設定した値だけを Vite
+      `define` 経由で受け取る。Vite config と browser runtime は Git command を実行しない。値は trim 後に
+      lowercase 化し、`^[0-9a-f]{7,40}$` に一致する場合だけ保存する。未設定、空白、`unknown`、形式不正は
+      field を省略し、developer build の recording を失敗させない。optional field のため schema version は v1 を維持する。
     - recording の active runtime performance profile は `manifest.pipeline.performanceProfile` を正本にする。`frame.metrics.tracker`、`frame.metrics.cameraQuality`、`tracker.budget` には profile を保存せず、frame ごとの重複を避ける。
     - `manifest.pipeline.performanceProfile.debugLog` は numeric ring buffer の既定 frame 数と dump / overlay capture の既定粒度を説明する。常時記録は numeric 値に限定し、PNG / overlay / full dump の連続保存は profile 既定では有効化しない。
     - `manifest.pipeline.performanceProfile.degradationBudget` は後続 ordered degradation policy が読む入力 contract であり、recording 時点の自動 degradation 履歴ではない。実際の over-budget / fallback 状態は従来どおり `frame.metrics.tracker.budget` と ROI stats に保存する。
