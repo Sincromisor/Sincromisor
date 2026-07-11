@@ -10,7 +10,9 @@ export type MotionP0FixtureId =
     | "both-arms-slow-raise"
     | "hand-out-and-return"
     | "arms-cross"
-    | "fast-wave";
+    | "fast-wave"
+    | "left-arm-occlusion-recovery"
+    | "right-arm-occlusion-recovery";
 
 export type MotionMetricKey =
     | "neutralJitter"

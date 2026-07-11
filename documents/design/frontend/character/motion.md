@@ -462,7 +462,7 @@
     - baseline parser は新しい fixed key が旧 baseline に無い場合、unknown key ではなく missing key として `not_available` metric を `severity: "warn"` で補完する。threshold は `MotionMetricThreshold` の finite `pass` / `warn` / `fail` 境界だけを保存し、表現上の `fail > N` は判定説明として扱う。
     - 入力 slot が不足する metric は `status: "not_available"`、`severity: "warn"`、`value: null` とし、summary 全体を pass 扱いにしない。
     - 初期閾値は `DEFAULT_MOTION_METRIC_THRESHOLDS` に固定し、比較は `compareMotionMetricSummaries()` が metric ごとに `improved` / `unchanged` / `regressed` / `not_comparable` を返す。
-    - P0 fixture ID は `neutral-10s`、`single-arm-slow-raise`、`both-arms-slow-raise`、`hand-out-and-return`、`arms-cross`、`fast-wave` に固定する。
+    - P0 fixture ID は `neutral-10s`、`single-arm-slow-raise`、`both-arms-slow-raise`、`hand-out-and-return`、`arms-cross`、`fast-wave`、`left-arm-occlusion-recovery`、`right-arm-occlusion-recovery` に固定する。recovery 2 fixture は 30fps、64 frame の決定的 canonical/reliability 系列から production temporal estimator と arm input provider を通して生成し、対象腕の tracked → lost → recovering → tracked、lost 中の `pose-snapshot-fallback`、recovering 後の `temporal` 復帰を保存する。
     - baseline JSON は `src/character/motionEvaluation/motionMetricBaselineSchema.ts` の `parseMotionMetricBaseline()` を正本にし、schema version は `sincro.motion-metric-baseline.v1` とする。
     - `motion-debug` window API は replay 読み込み済み log に対して `calculateReplayMetrics(config)` を公開し、API 内では時刻を生成せず `config.generatedAtIso` を summary へ渡す。
 
