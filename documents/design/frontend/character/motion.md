@@ -176,6 +176,13 @@
     - `pose-snapshot` replay は `frame.poseSnapshot` を `CharacterBehaviorState.applyPoseMotion()` 相当の入口へ流し、live camera と同じ `VRMCharacterManager.update()` 内で `SincroPoseRetargeter.retarget()` を呼ぶ。
     - `final-pose-playback` replay は solver 後の saved frame を再描画 / preview するための予約 mode であり、retarget / solver は再実行しない。v1 log で `frame.finalPose` が欠落する場合は `missing_final_pose` を返す。
     - `mediapipe-raw-result` replay は v1 log の optional `frame.mediapipe` slot を読み、Pose / Hand / Face / Gesture の raw result plain object を既存 parser / normalizer 境界へ通して normalized snapshot を再生成する。`applyRawResult` callback が無い caller では `unsupported_mode`、raw slot 欠損では `missing_mediapipe_raw_result`、slot schema 違反では `parse_error` を返し、`pose-snapshot` へ暗黙 fallback しない。
+    - raw replay の Gesture は既存 normalizer で `SincroGestureMotionSnapshot` にした後、live と同じ
+      `toGestureIntentObservation()` を直接通して replay-derived `MotionIntentEstimator` へ渡す。raw category object と
+      saved `frame.intent` は再計算の入力に使わない。Gesture slot missing / lost は observation なし、schema invalid は
+      既存 `parse_error` のままとし、この接続専用 warning は追加しない。
+    - replay-derived temporal / intent hysteresis は autoplay と隣接 forward step だけで維持する。同一 frame の再適用、
+      frame skip、後方 seek は step 適用前に reset し、stop と別 log load でも従来どおり reset する。viewer の saved
+      intent layer は引き続き `frame.intent` を正本とし、raw replay の再計算結果で保存値の欠損を補完しない。
     - `frame.mediapipe` は `sincro.motion-debug-log.v1` の optional slot として後方互換に追加する。recording は serializer が対応した slot だけを保存し、MPMask、ImageBitmap、VideoFrame、crop object、MediaPipe class instance は log / replay result に保持しない。video re-inference replay は対象外で、保存済み raw result だけを replay 入力にする。
     - Debug Console と同じ retarget config / runtime snapshot を内部的に更新するが、RTC / chat / telop は起動しない。
 - `SincroArmIkSolver`
