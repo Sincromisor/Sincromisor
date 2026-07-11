@@ -2,8 +2,8 @@
   "schemaVersion": "sincro.motion-metrics.v1",
   "fixtureId": "arms-cross",
   "generatedAtIso": "2026-07-12T00:00:00.000Z",
-  "frameCount": 139,
-  "durationMs": 13099.126,
+  "frameCount": 134,
+  "durationMs": 13031.928000000002,
   "severity": "fail",
   "metrics": {
     "neutralJitter": {
@@ -93,7 +93,7 @@
         "warn": 1000,
         "fail": 2500
       },
-      "sampleCount": 139
+      "sampleCount": 134
     },
     "sideSwapCount": {
       "key": "sideSwapCount",
@@ -107,11 +107,11 @@
         "warn": 1,
         "fail": 3
       },
-      "sampleCount": 139
+      "sampleCount": 134
     },
     "addedLatencyMs": {
       "key": "addedLatencyMs",
-      "value": 39,
+      "value": 61.69999998807907,
       "unit": "ms",
       "status": "pass",
       "severity": "pass",
@@ -121,7 +121,7 @@
         "warn": 160,
         "fail": 260
       },
-      "sampleCount": 139
+      "sampleCount": 134
     },
     "temporalPredictedArmFrameCount": {
       "key": "temporalPredictedArmFrameCount",
@@ -135,7 +135,7 @@
         "warn": 40,
         "fail": 120
       },
-      "sampleCount": 278
+      "sampleCount": 268
     },
     "temporalRecoveringArmFrameCount": {
       "key": "temporalRecoveringArmFrameCount",
@@ -149,7 +149,7 @@
         "warn": 30,
         "fail": 90
       },
-      "sampleCount": 278
+      "sampleCount": 268
     },
     "temporalLostArmDurationMs": {
       "key": "temporalLostArmDurationMs",
@@ -163,7 +163,7 @@
         "warn": 1000,
         "fail": 2500
       },
-      "sampleCount": 139
+      "sampleCount": 134
     },
     "temporalMaxRecoveryJumpDegEquivalent": {
       "key": "temporalMaxRecoveryJumpDegEquivalent",
@@ -197,21 +197,21 @@
     },
     "solverElbowFlipRejectCount": {
       "key": "solverElbowFlipRejectCount",
-      "value": 183,
+      "value": 1,
       "unit": "count",
-      "status": "fail",
-      "severity": "fail",
+      "status": "pass",
+      "severity": "pass",
       "direction": "lower_is_better",
       "threshold": {
         "pass": 1,
         "warn": 3,
         "fail": 3
       },
-      "sampleCount": 278
+      "sampleCount": 268
     },
     "solverReachClampOccupancy": {
       "key": "solverReachClampOccupancy",
-      "value": 0.8669064748201439,
+      "value": 0.8731343283582089,
       "unit": "ratio",
       "status": "fail",
       "severity": "fail",
@@ -221,11 +221,11 @@
         "warn": 0.4,
         "fail": 0.4
       },
-      "sampleCount": 278
+      "sampleCount": 268
     },
     "solverPoleUncertainFrameCount": {
       "key": "solverPoleUncertainFrameCount",
-      "value": 0,
+      "value": 1,
       "unit": "count",
       "status": "pass",
       "severity": "pass",
@@ -235,7 +235,7 @@
         "warn": 5,
         "fail": 5
       },
-      "sampleCount": 278
+      "sampleCount": 268
     },
     "finalPoseAngularVelocityClampCount": {
       "key": "finalPoseAngularVelocityClampCount",
@@ -249,7 +249,7 @@
         "warn": 2,
         "fail": 2
       },
-      "sampleCount": 1529
+      "sampleCount": 1474
     },
     "finalPoseOwnedBoneConflictCount": {
       "key": "finalPoseOwnedBoneConflictCount",
@@ -263,7 +263,7 @@
         "warn": 0,
         "fail": 0
       },
-      "sampleCount": 1529
+      "sampleCount": 1474
     },
     "gestureFlickerCount": {
       "key": "gestureFlickerCount",
@@ -277,7 +277,7 @@
         "warn": 2,
         "fail": 5
       },
-      "sampleCount": 278
+      "sampleCount": 268
     },
     "semanticFallbackFrameCount": {
       "key": "semanticFallbackFrameCount",
@@ -291,7 +291,7 @@
         "warn": 120,
         "fail": 240
       },
-      "sampleCount": 278
+      "sampleCount": 268
     },
     "intentCooldownSuppressionCount": {
       "key": "intentCooldownSuppressionCount",
@@ -305,7 +305,7 @@
         "warn": 20,
         "fail": 60
       },
-      "sampleCount": 278
+      "sampleCount": 268
     },
     "intentInvalidFrameCount": {
       "key": "intentInvalidFrameCount",
@@ -319,7 +319,7 @@
         "warn": 1,
         "fail": 3
       },
-      "sampleCount": 139
+      "sampleCount": 134
     },
     "trackerBudgetOverrunFrameCount": {
       "key": "trackerBudgetOverrunFrameCount",
@@ -338,7 +338,7 @@
     },
     "trackerDroppedFrameCount": {
       "key": "trackerDroppedFrameCount",
-      "value": 33,
+      "value": 138,
       "unit": "count",
       "status": "fail",
       "severity": "fail",
@@ -348,7 +348,7 @@
         "warn": 15,
         "fail": 60
       },
-      "sampleCount": 139
+      "sampleCount": 134
     },
     "degradationStageFrameCount": {
       "key": "degradationStageFrameCount",

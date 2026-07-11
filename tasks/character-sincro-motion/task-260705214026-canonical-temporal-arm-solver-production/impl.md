@@ -351,3 +351,26 @@ TODO は追加していない。今回 production TypeScript の変更はなく�
 - `arms-cross`の`solverReachClampOccupancy`が約`0.649`から`0.867`へregression。
 - recovering temporal sampleが無く、recovery jumpはnot comparable。
 - temporal input接続不備は解消したが、temporal elbow-pole安定性を調整しない限り本タスクの非regression条件は満たせない。
+
+## attempt 4 (2026-07-12 elbow-pole stabilization)
+
+### 実装
+
+- 初回の有効な temporal elbow pole を bind pole と比較して reject せず、その測定値を履歴の基準として bootstrap するよう修正した。Pose snapshot 経路の既存 refinement 判定は維持した。
+- 腕がほぼ伸び切り、elbow plane が幾何的に不定となる区間では hard flip reject と soft downweight を行わない。表示 state は従来どおり `extended` とする。
+- temporal primary と pose-snapshot fallback の切替時に solver の pole 履歴だけを reset し、異なる座標基準の pole を frame 間比較しないようにした。
+- commit: `3b5cfa81` (`fix(frontend): stabilize temporal elbow pole history`)。
+
+### 検証
+
+- `npm run gate`: lint/build/test PASS、71 files / 490 tests。
+- 確定commitで実写6 fixtureを再取得。左右合計1220 arm framesが`primarySource: temporal`、Pose fallback 0 frames。
+- neutral jitter: `0.024490` → `0.023117` で改善。
+- solver elbow flip reject: neutral `0 → 0`、single raise `0 → 0`、both raise `0 → 0`、hand return `0 → 0`、arms cross `0 → 1`、fast wave `2 → 0`。初回の117–196件という回帰は解消した。
+- reach clamp occupancy: arms crossのみ `0.648551 → 0.873134` で引き続き回帰。他5 fixtureはbaseline以下またはneutral同値。
+- recovering temporal sampleは今回も0件で、recovery jumpは比較不能。
+
+### 判定
+
+- real-video comparison verdictは引き続き`FAIL`。elbow-pole修正自体は有効だが、受け入れ条件の全metric非回帰には未達。
+- 残る blocker は arms-cross の elbow flip 1件、reach clamp occupancy回帰、およびrecovery sample不在。reach上限を0.97/0.94へ縮める試行は実写occupancyを安定して改善せず、腕長を短縮する副作用に根拠がないため採用しなかった。
