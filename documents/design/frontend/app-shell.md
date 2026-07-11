@@ -81,6 +81,7 @@
     - active right tool panel
     - settings category
     - debug tab
+    - sincro settings の initial calibration retry state。active 中は current step、session summary、先頭 guide message、記録済み current step の「再試行」を表示する。idle / cancelled は session field と action を表示しない。
 
 ## Interfaces
 

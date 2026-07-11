@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import type { InitialCalibrationStepId } from "../../../../character/calibration/initialSincroCalibration";
+import type { InitialSincroCalibrationControllerState } from "../../../../character/calibration/initialSincroCalibrationController";
 import type { SincroMediaDeviceSelectionState } from "../../../../features/media/devices/sincroMediaDeviceService";
 import {
     CharacterDisplayToggles,
@@ -8,10 +10,13 @@ import {
     SettingsHelpLabel,
     SettingsHint,
 } from "../../../../features/settings/react/primitives/settingsPrimitives";
+import { InitialCalibrationRetryCard } from "./initialCalibrationRetryCard";
 import type { DeviceSettingsProps } from "./settingsSectionTypes";
 
 type CharacterSettingsSectionProps = DeviceSettingsProps & {
     videoInputSelection: SincroMediaDeviceSelectionState;
+    calibrationState?: InitialSincroCalibrationControllerState;
+    onRetryCalibration?: (stepId: InitialCalibrationStepId) => void;
 };
 
 type CharacterSettingsSectionMode = "full" | "camera" | "display";
@@ -25,6 +30,8 @@ export function CharacterSettingsSection({
     onApplySettings,
     showSectionTitle = true,
     mode = "full",
+    calibrationState,
+    onRetryCalibration,
 }: CharacterSettingsSectionProps & { mode?: CharacterSettingsSectionMode }) {
     const showCameraSelection = mode !== "display";
     const showDisplayOptions = mode !== "camera";
@@ -48,6 +55,14 @@ export function CharacterSettingsSection({
                       showDisplayOptions,
                   })
                 : null}
+            {showCameraSelection &&
+            calibrationState !== undefined &&
+            onRetryCalibration !== undefined ? (
+                <InitialCalibrationRetryCard
+                    state={calibrationState}
+                    onRetry={onRetryCalibration}
+                />
+            ) : null}
             {showDisplayOptions ? (
                 <CharacterDisplayToggles
                     settings={settings}

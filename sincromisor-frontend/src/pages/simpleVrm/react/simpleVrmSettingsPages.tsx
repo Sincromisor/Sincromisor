@@ -62,6 +62,8 @@ function DeviceSettingsPage({ panelState }: SimpleVrmControlPanelPageProps) {
                 onRefreshDevices={panelState.refreshDevices}
                 showSectionTitle={false}
                 mode="camera"
+                calibrationState={panelState.calibrationState}
+                onRetryCalibration={panelState.retryCalibration}
             />
         </SettingsCategorySection>
     );
