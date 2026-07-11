@@ -39,3 +39,50 @@ FAIL
 
 - captured production P0 replay fixture、または task.md 上「P0 replay fixture」として扱える正規 fixture を用意し、temporal primary と pose-snapshot fallback の metrics comparison を保存すること。少なくとも neutral jitter、elbow flip count、recovery jump、reach clamp occupancy について regression なしを `impl.md` と artifact に記録する。
 - repository 内に対象 fixture が無いまま完了扱いにする場合は、実装ではなく task.md の受け入れ条件を変更する必要がある。attempt 5 の探索ログと synthetic comparison は blocker 説明としては有用だが、現 task.md の条件充足根拠にはならない。
+
+## attempt 1 (2026-07-12 rerun)
+
+### 判定
+
+FAIL
+
+### 独立評価結果
+
+- 評価対象は clean SHA `56d0db4ffba673bc54a8e4260809d064e4fedabf`。`npm run gate` は lint / build / test の全段が content-addressed cache hit で PASS し、frontend tests は 487 件すべて成功した。
+- `createSincroPoseTemporalArmInput()`、`SincroPoseRetargeter.retarget(..., runtime?)`、`VRMCharacterManager.update()`、Phase 6 v1 parser / serializer、viewer の solver layer、focused tests、`motion.md` / `tracking.md` を独立に照合した。temporal primary、Pose snapshot fallback、欠損 reason の個別保持、Hand wrist 非採用、legacy `source` 欠損互換、composer ownership、deprecated fallback lifecycle は受け入れ条件と整合する。
+- focused tests は temporal primary、runtime 欠損 fallback、legacy Phase 6 parse を直接確認している。bridge tests は lost / non-finite input を確認しており、コード上の fallback reason は指定された 5 種に収まる。
+- 追加 acceptance test は作成していない。production replay input が repository に存在しないため、テスト追加だけでは未充足条件を検証できない。
+
+### P0 replay fixture 判定
+
+- `artifacts/p0-temporal-vs-pose-fallback-metrics-comparison.synthetic.json` は `source.kind: "synthetic-replay-fixture"`、`realP0ReplayCapture: "not_available"` と明記する。全 metrics が 0 / unchanged でも、captured production P0 replay による temporal-primary 対 pose-fallback comparison の証拠ではない。
+- task.md は「P0 replay fixture で」の comparison 保存を明示し、正本側の既存 P0 baseline manifest も未 capture の source を production evidence と扱わない。したがって synthetic artifact を代替として認めると、実カメラ regression を検出するための受け入れ条件を実質的に削除することになる。
+- この一点が blocking failure であり、総合判定は FAIL。synthetic artifact は実装経路の deterministic smoke evidence としては有用だが、当該 AC の代替にはならない。
+
+### 残課題
+
+- production-like camera / video session で正規 P0 fixture を取得し、同一入力について temporal primary と pose-snapshot fallback の neutral jitter、elbow flip count、recovery jump、reach clamp occupancy を比較・保存する。
+- 外部 capture を要求しない方針へ変更する場合は、実装を完了扱いにする前に task.md の受け入れ条件と design docs の P0 evidence policy を明示的に改訂し、再レビューする。
+
+## attempt 2 (2026-07-12 rerun)
+
+### 判定
+
+FAIL
+
+### 独立評価結果
+
+- 最新 `impl.md` attempt 2 rerun、task / review、production code、focused tests、design docs、task artifacts を再確認した。実装 commit は前回と同じ `56d0db4ffba673bc54a8e4260809d064e4fedabf` で、production code / tests / docs の追加変更はない。
+- 評価 worktree は clean。`npm run gate` は lint / build / test の全段が content-addressed cache hit で PASS し、frontend tests は 487 件すべて成功した。
+- P0 comparison 以外の AC は attempt 1 の判定を維持する。temporal primary、指定 5 種の fallback reason、Hand wrist 非採用、Phase 6 v1 optional `source`、legacy log 表示、composer ownership、deprecated pose fallback、comment audit、docs sync に新たな不整合は見つからない。
+
+### P0 captured replay 再判定
+
+- 最新 attempt は正規 capture / replay の実施手順を具体化したが、repository に追加された成果物はない。task artifacts は引き続き search log、`.gitkeep`、synthetic comparison のみで、captured replay NDJSON と temporal/fallback 両条件の metrics summary は存在しない。
+- synthetic comparison は `realP0ReplayCapture: "not_available"` を明示し、正本 baseline manifest も P0 6 fixture を `not-captured` とする。よって neutral jitter、elbow flip count、recovery jump、reach clamp occupancy の production replay regression 判定は未実施である。
+- capture API や実行手順の存在は、capture 結果そのものを要求する AC の充足にはならない。外部入力が未提供のため、最終 evaluator attempt 2 も FAIL とする。
+
+### 残課題
+
+- production-like camera または承認済み実写 video fixture から P0 recording を取得し、同一入力の temporal primary / pose-snapshot fallback comparison と 4 metrics の非 regression を artifact と `impl.md` に保存する。
+- capture を完了条件から外す場合は task.md と design docs の evidence policy を改訂し、独立レビューをやり直す。
