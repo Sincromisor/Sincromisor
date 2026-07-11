@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "sincro.task.temporal-arm-reach-replay.v1",
+  "input": {
+    "path": "tasks/character-sincro-motion/task-260705214026-canonical-temporal-arm-solver-production/artifacts/video/arms-cross.browser.mp4",
+    "sha256": "21296ea0fbd2f8655d4c20bbffe67541457ed04ddef9468eacb7fa172cd1cf54"
+  },
+  "method": "The same captured canonical-video replay frames were evaluated three times with the corrected body-local direction plus temporal scalar reach semantics.",
+  "runs": [
+    {
+      "run": 1,
+      "inputSha256": "21296ea0fbd2f8655d4c20bbffe67541457ed04ddef9468eacb7fa172cd1cf54",
+      "diagnosticsRef": "#/deterministicResultForEachRun",
+      "diagnosticsIdentity": "arms-cross-corrected-semantics-v1"
+    },
+    {
+      "run": 2,
+      "inputSha256": "21296ea0fbd2f8655d4c20bbffe67541457ed04ddef9468eacb7fa172cd1cf54",
+      "diagnosticsRef": "#/deterministicResultForEachRun",
+      "diagnosticsIdentity": "arms-cross-corrected-semantics-v1"
+    },
+    {
+      "run": 3,
+      "inputSha256": "21296ea0fbd2f8655d4c20bbffe67541457ed04ddef9468eacb7fa172cd1cf54",
+      "diagnosticsRef": "#/deterministicResultForEachRun",
+      "diagnosticsIdentity": "arms-cross-corrected-semantics-v1"
+    }
+  ],
+  "deterministicResultForEachRun": {
+    "left": {
+      "armFrameCount": 134,
+      "requestedReachRatio": { "min": 0.7109824185456008, "p95": 1.001110591354975, "max": 1.0175520555669835 },
+      "appliedReachRatio": { "min": 0.7109824185456008, "max": 0.985 },
+      "excessReachRatioP95": 0.016110591354974946,
+      "clampedBy": { "bridge": 24, "solver": 0, "none": 110 },
+      "temporalSourceState": { "suspect": 134 }
+    },
+    "right": {
+      "armFrameCount": 134,
+      "requestedReachRatio": { "min": 0.5466923492018759, "p95": 0.9086512335763433, "max": 0.91305529405207 },
+      "appliedReachRatio": { "min": 0.5466923492018759, "max": 0.91305529405207 },
+      "excessReachRatioP95": 0,
+      "clampedBy": { "bridge": 0, "solver": 0, "none": 134 },
+      "temporalSourceState": { "suspect": 134 }
+    },
+    "solverExcessReachRatioP95": 0.008224083463538867,
+    "elbowFlipRejectCount": 1,
+    "nanCount": 0,
+    "sideSwapCount": 0,
+    "ownedBoneConflictCount": 0
+  }
+}
