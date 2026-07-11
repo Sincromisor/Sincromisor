@@ -81,7 +81,7 @@ MediaPipe の landmark は骨格姿勢の正解値ではなく、不確実な観
 - production runtime の `SincroMotionObserveOnlyPipeline` は reliability / canonical / temporal / intent を更新するが、それ自体は VRM bone を書かない。
 - production 表示では `VrmPoseComposer` full normalized pose application まで実装済みである。旧 arm / torso / full の段階別 fallback path は削除済みで、full unavailable は observation reason として記録するだけで旧 writer を起動しない。Debug Console 限定で残す rollback hook は semantic / finger suppression だけであり、その不要化判断は継続対象である。
 - 腕 IK の表示主経路はまだ `SincroPoseRetargetFrame` / `SincroPoseMotionSnapshot` の arm targets を起点にする。`TemporalArmSolverBridge` はあるが、body-local canonical / temporal state から avatar shoulder-local target を作る構成への production 統合は継続対象である。
-- Gesture reliability は実観測接続済みだが、temporal component は v1 では未入力で、stable duration を top-level field として扱う。実カメラでの flicker / false-positive 確認は継続対象である。
+- Gesture reliability は実観測接続済みで、temporal component も stable duration の 160ms ramp として入力済みである。実カメラでの flicker / false-positive 確認は継続対象である。
 - Phase 11 は候補抽出まで実装済みだが、constrained optimization、temporal learned correction、gesture sequence classifier、anomaly detector などの実 post-processing は未着手である。
 
 ### 現在のフェーズ判定
@@ -91,7 +91,7 @@ MediaPipe の landmark は骨格姿勢の正解値ではなく、不確実な観
 | Phase 1  | 概ね達成                         | raw slot 欠損 / ROI context 制限の運用確認、実 build gitCommit 保存                 |
 | Phase 2  | 腕・体幹・頭部は達成             | production IK 主経路の canonical / temporal 入力化                                  |
 | Phase 3  | 概ね達成                         | camera guide UI と実機 profile 確認                                                 |
-| Phase 4  | 概ね達成                         | Gesture reliability temporal component と実機 flicker 確認                          |
+| Phase 4  | 概ね達成                         | Gesture reliability の実機 flicker / false-positive 確認                            |
 | Phase 5  | 概ね達成                         | head temporal の実機 jitter / recovery 確認                                         |
 | Phase 6  | composer / full 適用は達成       | `TemporalArmSolverBridge` の production 統合、semantic / finger rollback 不要化判断 |
 | Phase 7  | profile / calibration は部分達成 | 実機 UX と複数 VRM replay 比較の継続確認                                            |
@@ -445,7 +445,7 @@ MediaPipe confidence をそのまま使わず、制御用の信頼度を部位�
 - `ReliabilityMap` v1 は joint / part / gesture slot、component set、reason / warning code、parser を持つ。
 - Pose / Hand / Face / ROI / camera quality / previous pose 由来の component を合成できる。production observe-only pipeline でも camera quality component は同一 Pose frame の score を読む。
 - `motion-debug` では camera quality を含めた reliability を保存できる。
-- Gesture reliability は実 Gesture Recognizer の normalized observation から合成できる。`ReliabilityMap.gesture` は top label confidence、Hand side assignment、Hand ROI、camera quality、stable duration を持ち、Gesture optional pass が skip / lost の場合だけ neutral placeholder になる。v1 の `components.temporal` は未入力で、安定性は top-level `stableDurationMs` として表す。
+- Gesture reliability は実 Gesture Recognizer の normalized observation から合成できる。`ReliabilityMap.gesture` は top label confidence、Hand side assignment、Hand ROI、camera quality、stable duration を持ち、Gesture optional pass が skip / lost の場合だけ neutral placeholder になる。`components.temporal` は `stableDurationMs / 160` の clamp 値で、valid reset frame は score 0 / `unstable_observation`、160ms 以上は reason なしとする。
 
 実装:
 

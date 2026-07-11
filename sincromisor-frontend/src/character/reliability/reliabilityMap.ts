@@ -45,6 +45,7 @@ const RELIABILITY_REASON_CODE_VALUES = [
     "body_scale_jump",
     "temporal_jump",
     "invalid_dt",
+    "unstable_observation",
     "side_inconsistent",
     "roi_missing",
     "roi_inconsistent",

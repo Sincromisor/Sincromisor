@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { SincroHandMotionSnapshot } from "../../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroRoiObservation } from "../../../features/gaze/trackingRuntime/roiTracking/roiTrackingTypes";
+import { MotionIntentEstimator } from "../../motionIntent/motionIntentEstimator";
+import { createDefaultTemporalUpperBodyState } from "../../temporal/temporalUpperBodyState";
 import { createGestureReliability } from "../gestureReliabilityEstimator";
 import { createDefaultReliabilityMap, parseReliabilityMap } from "../reliabilityMap";
 
@@ -73,7 +75,7 @@ describe("createGestureReliability", () => {
         });
     });
 
-    it("uses top side confidence and caps the first unstable frame", () => {
+    it("keeps a valid 0ms observation as unstable gesture reliability", () => {
         const reliability = createGestureReliability({
             gesture: {
                 left: { label: "Unknown_Label", confidence: 0.91 },
@@ -89,15 +91,51 @@ describe("createGestureReliability", () => {
             label: "Unknown_Label",
             confidence: 0.91,
             stableDurationMs: 0,
-            finalWeight: 0.5,
+            finalWeight: 0,
         });
         expect(reliability.components.tracking.score).toBe(0.91);
         expect(reliability.components.temporal).toEqual({
             score: 0,
-            reasonCodes: ["no_observation"],
+            reasonCodes: ["unstable_observation"],
         });
         expect(reliability.components.side.score).toBe(1);
         expect(reliability.components.roi.score).toBe(0.82);
+    });
+
+    it("maps stable duration boundaries 159ms and 160ms into temporal score", () => {
+        const initial = createGestureReliability({
+            gesture: { left: { label: "Pointing_Up", confidence: 0.9 } },
+            hand: createHand(),
+            mediaTimeMs: 100,
+        });
+        const at159 = createGestureReliability({
+            gesture: { left: { label: "Pointing_Up", confidence: 0.9 } },
+            hand: createHand(),
+            previous: initial,
+            mediaTimeMs: 259,
+        });
+        const at160 = createGestureReliability({
+            gesture: { left: { label: "Pointing_Up", confidence: 0.9 } },
+            hand: createHand(),
+            previous: initial,
+            mediaTimeMs: 260,
+        });
+
+        expect(at159.components.temporal).toEqual({
+            score: 159 / 160,
+            reasonCodes: ["unstable_observation"],
+        });
+        expect(at160.components.temporal).toEqual({ score: 1, reasonCodes: [] });
+        expect(at160.finalWeight).toBeCloseTo(
+            Math.min(
+                at160.components.tracking.score,
+                at160.components.temporal.score,
+                at160.components.side.score,
+                at160.components.roi.score,
+                at160.components.cameraQuality.score,
+            ),
+            6,
+        );
     });
 
     it("accumulates stable duration only for the same side and label", () => {
@@ -118,10 +156,24 @@ describe("createGestureReliability", () => {
             previous: stable,
             mediaTimeMs: 360,
         });
+        const changedLabel = createGestureReliability({
+            gesture: { left: { label: "Pointing_Up", confidence: 0.92 } },
+            hand: createHand(),
+            previous: stable,
+            mediaTimeMs: 360,
+        });
 
         expect(stable.stableDurationMs).toBe(200);
         expect(stable.finalWeight).toBeCloseTo(0.75, 6);
         expect(changedSide.stableDurationMs).toBe(0);
+        expect(changedLabel.stableDurationMs).toBe(0);
+        expect(changedLabel.source).toBe("gesture");
+        expect(changedSide).toMatchObject({
+            source: "gesture",
+            components: {
+                temporal: { score: 0, reasonCodes: ["unstable_observation"] },
+            },
+        });
     });
 
     it("resets stability on low confidence or media time regression", () => {
@@ -145,6 +197,60 @@ describe("createGestureReliability", () => {
 
         expect(lowConfidence.stableDurationMs).toBe(0);
         expect(regression.stableDurationMs).toBe(0);
+        expect(lowConfidence.source).toBe("gesture");
+        expect(regression.source).toBe("gesture");
+        expect(lowConfidence.components.temporal.reasonCodes).toEqual(["unstable_observation"]);
+        expect(regression.components.temporal.reasonCodes).toEqual(["unstable_observation"]);
+    });
+
+    it("keeps the MotionIntent gesture gate closed until temporal reliability is stable", () => {
+        const hand = createHand();
+        const estimator = new MotionIntentEstimator({
+            timing: { pointing: { minimumDurationMs: 0 } },
+        });
+        const temporal = createDefaultTemporalUpperBodyState(0);
+        temporal.arms.left.state = "tracked";
+        temporal.arms.left.source = "canonical";
+        temporal.arms.left.confidence = 0.9;
+        temporal.arms.left.warnings = [];
+        const initialGesture = createGestureReliability({
+            gesture: { left: { label: "Pointing_Up", confidence: 0.95 } },
+            hand,
+            mediaTimeMs: 0,
+        });
+        const initialMap = { ...createDefaultReliabilityMap(0), gesture: initialGesture };
+        initialMap.parts.leftHand.finalWeight = 0.9;
+        initialMap.parts.leftFinger.finalWeight = 0.9;
+        const initialIntent = estimator.update({
+            temporal,
+            reliability: initialMap,
+            hand,
+            gesture: { left: { label: "Pointing_Up", confidence: 0.95 } },
+            mediaTimeMs: 0,
+        });
+
+        expect(initialIntent.arms.left.intent).not.toBe("pointing");
+        expect(initialIntent.arms.left.warnings).toContain("gesture_unstable");
+
+        const stableGesture = createGestureReliability({
+            gesture: { left: { label: "Pointing_Up", confidence: 0.95 } },
+            hand,
+            previous: initialGesture,
+            mediaTimeMs: 160,
+        });
+        temporal.timestamp.mediaTimeMs = 160;
+        const stableMap = { ...createDefaultReliabilityMap(160), gesture: stableGesture };
+        stableMap.parts.leftHand.finalWeight = 0.9;
+        stableMap.parts.leftFinger.finalWeight = 0.9;
+        const stableIntent = estimator.update({
+            temporal,
+            reliability: stableMap,
+            hand,
+            gesture: { left: { label: "Pointing_Up", confidence: 0.95 } },
+            mediaTimeMs: 160,
+        });
+        expect(stableGesture.finalWeight).toBeGreaterThan(0.65);
+        expect(stableIntent.arms.left.intent).toBe("pointing");
     });
 
     it("stays parseable inside ReliabilityMap without raw category or handedness objects", () => {
@@ -159,5 +265,12 @@ describe("createGestureReliability", () => {
         expect(parsed.ok).toBe(true);
         expect(JSON.stringify(gesture)).not.toContain("categories");
         expect(JSON.stringify(gesture)).not.toContain("handedness");
+    });
+
+    it("parses legacy gesture temporal zero with no_observation under the v1 schema", () => {
+        const map = createDefaultReliabilityMap(100);
+        map.gesture.components.temporal = { score: 0, reasonCodes: ["no_observation"] };
+
+        expect(parseReliabilityMap(map).ok).toBe(true);
     });
 });
