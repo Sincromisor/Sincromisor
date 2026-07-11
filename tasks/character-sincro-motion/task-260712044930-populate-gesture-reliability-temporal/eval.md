@@ -46,4 +46,3 @@ PASS
 ## その他所見
 
 - 実カメラでの flicker / false-positive 確認は後続 baseline task の明示スコープであり、本タスクの PASS を妨げない。
-
