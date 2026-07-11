@@ -11,6 +11,7 @@ import type { SincroArmIkSolveResult } from "../ik/sincroArmIkSolver";
 import { SincroArmIkSolver } from "../ik/sincroArmIkSolver";
 import type { SincroArmSide } from "../ik/sincroArmIkTypes";
 import { runSincroCcdIkProbe, type SincroCcdIkProbeResult } from "../ik/sincroCcdIkProbe";
+import type { TemporalArmIkBridgeResult } from "../motionSolver/temporalArmSolverBridge";
 import type { TemporalUpperBodyState } from "../temporal/temporalUpperBodyState";
 import { retargetPoseArm } from "./sincroPoseArmRetargeter";
 import {
@@ -237,6 +238,7 @@ export class SincroPoseRetargeter {
                     }),
                     solverSource: temporalInput.source,
                     temporalBridge: temporalInput.bridge,
+                    reach: createArmReachSnapshot(temporalInput.bridge, solved),
                 };
             }
             this.prepareArmIkPrimarySource(side, "pose-snapshot-fallback", solver);
@@ -350,4 +352,29 @@ function measureArmIkSolvers(vrm: VRM): Record<"left" | "right", SincroArmIkSolv
         return undefined;
     }
     return { left, right };
+}
+
+/**
+ * bridge clamp 前の要求値と solver が最終適用した target を一つの診断値へ統合する。
+ * 両方が clamp した frame は二重計上せず solver ownership を優先する。
+ */
+export function createArmReachSnapshot(
+    bridge: TemporalArmIkBridgeResult | undefined,
+    solved: SincroArmIkSolveResult,
+): SincroPoseRetargetedArm["reach"] {
+    if (
+        bridge?.reach === undefined ||
+        solved.appliedTargetLength === undefined ||
+        !Number.isFinite(solved.appliedTargetLength)
+    ) {
+        return undefined;
+    }
+    const requestedReachRatio = bridge.reach.requestedReachRatio;
+    const appliedReachRatio = solved.appliedTargetLength / bridge.scale.armLength;
+    return {
+        requestedReachRatio,
+        appliedReachRatio,
+        excessReachRatio: Math.max(0, requestedReachRatio - appliedReachRatio),
+        clampedBy: solved.reachClamped ? "solver" : bridge.reach.bridgeClamped ? "bridge" : "none",
+    };
 }

@@ -123,6 +123,8 @@ function createPhase6Solver(options?: {
     leftTargetClamped?: boolean;
     rightTargetClamped?: boolean;
     leftPoleUncertain?: boolean;
+    reachExcesses?: [number, number];
+    omitRightReach?: boolean;
 }): unknown {
     return {
         phase6: {
@@ -148,6 +150,15 @@ function createPhase6Solver(options?: {
             },
             arms: {
                 left: {
+                    reach:
+                        options?.reachExcesses === undefined
+                            ? undefined
+                            : {
+                                  requestedReachRatio: 1 + options.reachExcesses[0],
+                                  appliedReachRatio: 1,
+                                  excessReachRatio: options.reachExcesses[0],
+                                  clampedBy: options.reachExcesses[0] > 0 ? "bridge" : "none",
+                              },
                     ik: {
                         active: true,
                         targetClamped: options?.leftTargetClamped ?? false,
@@ -157,6 +168,15 @@ function createPhase6Solver(options?: {
                     },
                 },
                 right: {
+                    reach:
+                        options?.reachExcesses === undefined || options.omitRightReach
+                            ? undefined
+                            : {
+                                  requestedReachRatio: 1 + options.reachExcesses[1],
+                                  appliedReachRatio: 1,
+                                  excessReachRatio: options.reachExcesses[1],
+                                  clampedBy: options.reachExcesses[1] > 0 ? "solver" : "none",
+                              },
                     ik: {
                         active: true,
                         targetClamped: options?.rightTargetClamped ?? false,
@@ -470,11 +490,15 @@ describe("calculateMotionMetricSummary", () => {
                         leftPoleFlip: true,
                         leftTargetClamped: true,
                         leftPoleUncertain: true,
+                        reachExcesses: [0.01, 0.02],
                     }),
                     finalPose: createFinalPose({ angularVelocityClamped: true }),
                 }),
                 createFrame(1, 100, {
-                    solver: createPhase6Solver({ rightTargetClamped: true }),
+                    solver: createPhase6Solver({
+                        rightTargetClamped: true,
+                        reachExcesses: [0.03, 0.2],
+                    }),
                     finalPose: createFinalPose({ ownedBoneConflict: true }),
                 }),
             ],
@@ -489,6 +513,10 @@ describe("calculateMotionMetricSummary", () => {
         expect(summary.metrics.solverReachClampOccupancy).toMatchObject({
             value: 0.5,
             status: "fail",
+            sampleCount: 4,
+        });
+        expect(summary.metrics.solverExcessReachRatioP95).toMatchObject({
+            value: 0.2,
             sampleCount: 4,
         });
         expect(summary.metrics.solverPoleUncertainFrameCount).toMatchObject({
@@ -1026,6 +1054,56 @@ describe("compareMotionMetricSummaries", () => {
             baselineValue: 0,
             candidateValue: 1,
             severityChanged: true,
+        });
+    });
+
+    it("does not calculate excess reach p95 from old or partially recorded logs", () => {
+        const oldLog = calculateMotionMetricSummary(
+            [createFrame(0, 0, { solver: createPhase6Solver() })],
+            CONFIG,
+        );
+        const partial = calculateMotionMetricSummary(
+            [
+                createFrame(0, 0, {
+                    solver: createPhase6Solver({
+                        reachExcesses: [0.01, 0.02],
+                        omitRightReach: true,
+                    }),
+                }),
+            ],
+            CONFIG,
+        );
+
+        for (const summary of [oldLog, partial]) {
+            expect(summary.metrics.solverExcessReachRatioP95).toMatchObject({
+                value: null,
+                status: "not_available",
+                sampleCount: 0,
+                unavailableReason: "reach_diagnostics_not_recorded",
+            });
+        }
+    });
+
+    it("returns unavailable for zero arm samples and uses nearest-rank p95", () => {
+        const empty = calculateMotionMetricSummary([], CONFIG);
+        expect(empty.metrics.solverExcessReachRatioP95).toMatchObject({
+            value: null,
+            status: "not_available",
+            sampleCount: 0,
+            unavailableReason: "reach_diagnostics_not_recorded",
+        });
+
+        const frames = Array.from({ length: 10 }, (_, index) =>
+            createFrame(index, index * 100, {
+                solver: createPhase6Solver({
+                    reachExcesses: [index / 100, (index + 10) / 100],
+                }),
+            }),
+        );
+        const summary = calculateMotionMetricSummary(frames, CONFIG);
+        expect(summary.metrics.solverExcessReachRatioP95).toMatchObject({
+            value: 0.18,
+            sampleCount: 20,
         });
     });
 });
