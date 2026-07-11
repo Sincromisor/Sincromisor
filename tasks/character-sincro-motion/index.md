@@ -77,7 +77,19 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 108 件）
+## タスク一覧（自動生成 / 全 115 件）
+
+### open（未完） — 7 件
+
+| タスク                                                                                                                                   | タイトル                                                         | 判定 | 依存                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---- | --------------------------------------------------------------- |
+| [task-260712044929-connect-camera-quality-guide-ui](./task-260712044929-connect-camera-quality-guide-ui/task.md)                         | Connect actionable camera quality guide to sincro UI             | —    | —                                                               |
+| [task-260712044929-record-motion-debug-build-commit](./task-260712044929-record-motion-debug-build-commit/task.md)                       | Record build commit in motion debug manifests                    | —    | —                                                               |
+| [task-260712044930-feed-raw-replay-gesture-intent](./task-260712044930-feed-raw-replay-gesture-intent/task.md)                           | Feed replayed raw gestures into replay motion intent             | —    | —                                                               |
+| [task-260712044930-populate-gesture-reliability-temporal](./task-260712044930-populate-gesture-reliability-temporal/task.md)             | Populate gesture reliability temporal component                  | —    | —                                                               |
+| [task-260712044931-expose-calibration-retry-ui](./task-260712044931-expose-calibration-retry-ui/task.md)                                 | Expose initial calibration retry flow in sincro UI               | —    | —                                                               |
+| [task-260712044932-capture-gesture-camera-performance-baseline](./task-260712044932-capture-gesture-camera-performance-baseline/task.md) | Capture real camera gesture reliability and performance baseline | —    | —                                                               |
+| [task-260712044933-remove-semantic-finger-rollback-hook](./task-260712044933-remove-semantic-finger-rollback-hook/task.md)               | Decide and remove semantic finger rollback hook                  | —    | `task-260712044932-capture-gesture-camera-performance-baseline` |
 
 ### done（完了） — 108 件
 
