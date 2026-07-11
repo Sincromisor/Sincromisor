@@ -67,6 +67,9 @@ export class SincroPoseRetargeter {
     private lastUpdateAtMs?: number;
     private smoothedFrame: SincroPoseRetargetFrame = cloneFrame(NEUTRAL_POSE_FRAME);
     private armIkSolvers?: Record<"left" | "right", SincroArmIkSolver>;
+    private armIkPrimarySources: Partial<
+        Record<SincroArmSide, "temporal" | "pose-snapshot-fallback">
+    > = {};
     private ccdIkProbeResult?: SincroCcdIkProbeResult;
     private avatarMotionProfile?: AvatarMotionProfile;
 
@@ -172,6 +175,9 @@ export class SincroPoseRetargeter {
     reset(): void {
         this.lastUpdateAtMs = undefined;
         this.smoothedFrame = cloneFrame(NEUTRAL_POSE_FRAME);
+        this.armIkPrimarySources = {};
+        this.armIkSolvers?.left.resetPoleHistory();
+        this.armIkSolvers?.right.resetPoleHistory();
     }
 
     private snapshotFallbackReason(snapshot: SincroPoseMotionSnapshot): string | undefined {
@@ -221,6 +227,7 @@ export class SincroPoseRetargeter {
             this.config.armIkMode === "world_3d_ik" &&
             this.config.armIkStrength > 0
         ) {
+            this.prepareArmIkPrimarySource(side, "temporal", solver);
             const solved = solver.solve(temporalInput.target);
             if (solved !== undefined) {
                 return {
@@ -232,6 +239,7 @@ export class SincroPoseRetargeter {
                     temporalBridge: temporalInput.bridge,
                 };
             }
+            this.prepareArmIkPrimarySource(side, "pose-snapshot-fallback", solver);
             return {
                 ...retargetPoseArm({
                     arm,
@@ -249,6 +257,9 @@ export class SincroPoseRetargeter {
                 temporalBridge: temporalInput.bridge,
             };
         }
+        if (solver !== undefined) {
+            this.prepareArmIkPrimarySource(side, "pose-snapshot-fallback", solver);
+        }
         return {
             ...retargetPoseArm({
                 arm,
@@ -259,6 +270,18 @@ export class SincroPoseRetargeter {
             solverSource: temporalInput.source,
             temporalBridge: temporalInput.bridge,
         };
+    }
+
+    private prepareArmIkPrimarySource(
+        side: SincroArmSide,
+        source: "temporal" | "pose-snapshot-fallback",
+        solver: SincroArmIkSolver,
+    ): void {
+        const previous = this.armIkPrimarySources[side];
+        if (previous !== undefined && previous !== source) {
+            solver.resetPoleHistory();
+        }
+        this.armIkPrimarySources[side] = source;
     }
 
     private createFeatureArm(
