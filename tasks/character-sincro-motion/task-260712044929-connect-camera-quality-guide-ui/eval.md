@@ -44,4 +44,3 @@ PASS
 ## その他所見
 
 - 実カメラでの目視確認は未実施だが、本タスクの deterministic な UI state / lifecycle 契約は unit / state test と build で検証されており、PASS を妨げない。
-

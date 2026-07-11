@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { parseMotionDebugLogLines } from "../../../character/motionEvaluation/motionDebugLogSchema";
 import type { MotionIntentState } from "../../../character/motionIntent/motionIntentState";
 import { createDefaultReliabilityMap } from "../../../character/reliability/reliabilityMap";
 import {
@@ -156,15 +157,16 @@ describe("MotionDebugRecordingController intent reset lifecycle", () => {
 });
 
 describe("MotionDebugRecordingController manifest", () => {
-    it("saves the active performance profile in manifest.pipeline", () => {
+    beforeEach(() => {
         vi.stubGlobal("window", {
             devicePixelRatio: 2,
             innerWidth: 1280,
             innerHeight: 720,
         });
-        vi.stubGlobal("navigator", {
-            userAgent: "vitest",
-        });
+        vi.stubGlobal("navigator", { userAgent: "vitest" });
+    });
+
+    it("saves the active performance profile in manifest.pipeline", () => {
         const performanceProfile = resolveTrackerRuntimePerformanceProfile({
             performanceProfileId: "mobile-safari",
         }).profile;
@@ -181,6 +183,41 @@ describe("MotionDebugRecordingController manifest", () => {
             id: "mobile-safari",
         });
         expect(manifest?.pipeline.poseTargetInferenceFps).toBe(4);
+    });
+
+    it("normalizes a valid build commit and keeps the v1 manifest parseable", () => {
+        const harness = createControllerHarness({ activeStream: createMediaStream() });
+
+        // biome-ignore lint/complexity/useLiteralKeys: manifest の保存契約を公開 API にせず直接検証する。
+        const manifest = harness.controller["createManifest"]("  ABCDEF1234567  ");
+
+        expect(manifest?.build.gitCommit).toBe("abcdef1234567");
+        const parsed = parseMotionDebugLogLines([
+            JSON.stringify({ recordType: "manifest", manifest }),
+        ]);
+        expect(parsed.ok).toBe(true);
+    });
+
+    it("omits the build commit when the build constant is absent", () => {
+        const harness = createControllerHarness({ activeStream: createMediaStream() });
+
+        // biome-ignore lint/complexity/useLiteralKeys: manifest の保存契約を公開 API にせず直接検証する。
+        const manifest = harness.controller["createManifest"](undefined);
+
+        expect(manifest?.build).not.toHaveProperty("gitCommit");
+    });
+
+    it.each([
+        "unknown",
+        "not-a-commit",
+        " abc123 ",
+    ])("omits an invalid build commit: %s", (gitCommit) => {
+        const harness = createControllerHarness({ activeStream: createMediaStream() });
+
+        // biome-ignore lint/complexity/useLiteralKeys: manifest の保存契約を公開 API にせず直接検証する。
+        const manifest = harness.controller["createManifest"](gitCommit);
+
+        expect(manifest?.build).not.toHaveProperty("gitCommit");
     });
 });
 

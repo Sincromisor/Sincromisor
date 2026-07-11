@@ -45,6 +45,7 @@ import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRunti
 import type { TrackerRuntimePerformanceProfile } from "../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 import { frontendLogger } from "../../shared/logging/appLogger";
+import { normalizeMotionDebugBuildGitCommit } from "./motionDebugBuildProvenance";
 import { createMotionDebugCameraConstraints } from "./motionDebugCameraStream";
 import {
     createMotionDebugCanonicalReliabilityInput,
@@ -295,7 +296,13 @@ export class MotionDebugRecordingController {
         return addTemporalWarning(options.temporal, "out_of_range");
     }
 
-    private createManifest(): SincroMotionDebugLogManifest | undefined {
+    /**
+     * active source の recording manifest を作り、build provenance は検証済み commit だけを保存する。
+     * commit が未注入または不正でも source が ready なら manifest を生成し、recording を継続する。
+     */
+    private createManifest(
+        buildGitCommit: string | undefined = __SINCROMISOR_GIT_COMMIT__,
+    ): SincroMotionDebugLogManifest | undefined {
         const source = this.source();
         const [track] = this.params.getActiveStream()?.getVideoTracks() ?? [];
         if (source === undefined || track === undefined) {
@@ -308,6 +315,7 @@ export class MotionDebugRecordingController {
             performanceProfile,
             retargetConfig,
         };
+        const gitCommit = normalizeMotionDebugBuildGitCommit(buildGitCommit);
 
         return {
             schemaVersion: SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION,
@@ -324,6 +332,7 @@ export class MotionDebugRecordingController {
             },
             build: {
                 appVersion: __SINCROMISOR_FRONTEND_VERSION__ ?? "unknown",
+                ...(gitCommit === undefined ? {} : { gitCommit }),
                 packageVersions: {
                     "sincromisor-frontend": __SINCROMISOR_FRONTEND_VERSION__ ?? "unknown",
                     "@mediapipe/tasks-vision": __MEDIAPIPE_TASKS_VISION_VERSION__ ?? "unknown",
