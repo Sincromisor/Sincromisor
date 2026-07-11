@@ -19,6 +19,7 @@ import {
     compareDialogGazeSettings,
     type DialogGazeSettingsSnapshot,
     readDialogGazeSettingsSnapshot,
+    resetSincroMotionForGazeSettingsChanges,
 } from "./sincroCharacterGazeSettings";
 import { SincroCharacterMotionEventSink } from "./sincroCharacterMotionEventSink";
 
@@ -101,9 +102,9 @@ export class SincroCharacterGazeController {
             this.videoInputManager.setVideoInputDeviceId(next.videoInputDeviceId);
         }
         this.gazeSettingsSnapshot = next;
-        if (changes.gazeEnabledChanged || changes.videoDeviceChanged || changes.talkModeChanged) {
-            this.motionEventSink.resetObserveOnlyPipeline();
-        }
+        resetSincroMotionForGazeSettingsChanges(changes, () =>
+            this.motionEventSink.resetObserveOnlyPipeline(),
+        );
 
         if (!this.hasStarted || this.onMuteChange === undefined) {
             return;
