@@ -110,7 +110,8 @@ describe("SincroPoseRetargeter temporal arm production input", () => {
         });
 
         expect(capturedTarget).toBeDefined();
-        expect(capturedTarget?.wrist.x).toBeCloseTo(0.4, 6);
+        expect(capturedTarget?.wrist.length()).toBeCloseTo(0.5, 6);
+        expect(capturedTarget?.wrist.x).toBeGreaterThan(0);
         expect(frame.rightArm.ikActive).toBe(true);
         expect(frame.rightArm.solverSource).toMatchObject({
             primarySource: "temporal",

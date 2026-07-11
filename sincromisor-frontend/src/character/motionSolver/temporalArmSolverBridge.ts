@@ -53,6 +53,11 @@ export type TemporalArmIkBridgeResult = {
     scale: TemporalArmIkScaleSnapshot;
     sourceState: TemporalPartState;
     debug: TemporalArmIkDebugSnapshot;
+    reach?: {
+        requestedReachRatio: number;
+        bridgeAppliedReachRatio: number;
+        bridgeClamped: boolean;
+    };
 };
 
 /**
@@ -89,7 +94,7 @@ export function createTemporalArmIkInput(
     }
 
     const wristBeforeClamp = arm.bodyLocalWrist
-        ? bodyLocalTargetToShoulderLocal(arm.bodyLocalWrist, shoulderLocal, scale)
+        ? bodyLocalWristToShoulderLocal(arm, shoulderLocal, scale)
         : scalarArmToShoulderLocal(arm, input.side, scale);
     const wristAfterClamp = clampToMaxReach(
         wristBeforeClamp,
@@ -100,7 +105,8 @@ export function createTemporalArmIkInput(
         : createFallbackElbowPole(arm, input.side, scale);
     const weightBeforeStateScale = arm.confidence;
     const weightAfterStateScale = weightForTemporalArmState(arm);
-    const targetReachRatio = scale.armLength > 0 ? wristAfterClamp.length() / scale.armLength : 0;
+    const requestedReachRatio = wristBeforeClamp.length() / scale.armLength;
+    const targetReachRatio = wristAfterClamp.length() / scale.armLength;
 
     return {
         target: {
@@ -116,6 +122,11 @@ export function createTemporalArmIkInput(
         reasonCodes: [],
         scale,
         sourceState,
+        reach: {
+            requestedReachRatio,
+            bridgeAppliedReachRatio: targetReachRatio,
+            bridgeClamped: requestedReachRatio > targetReachRatio,
+        },
         debug: {
             usedBodyLocalWrist: arm.bodyLocalWrist !== undefined,
             usedBodyLocalElbow: arm.bodyLocalElbow !== undefined,
@@ -185,6 +196,28 @@ function bodyLocalTargetToShoulderLocal(
         (bodyLocal[1] - shoulderLocal[1]) * scale.verticalScale * scale.defaultReachScale,
         (bodyLocal[2] - shoulderLocal[2]) * scale.depthCompression * scale.defaultReachScale,
     );
+}
+
+/**
+ * body-local tuple は tracker の torso-normalized 座標なので、avatar meter と直接減算した長さを
+ * reach として扱わない。tuple は方向だけに使い、長さは temporal scalar と avatar arm length を正本にする。
+ */
+function bodyLocalWristToShoulderLocal(
+    arm: TemporalArmState,
+    shoulderLocal: TemporalTuple3,
+    scale: TemporalArmIkScaleSnapshot,
+): Vector3 {
+    const direction = bodyLocalTargetToShoulderLocal(
+        arm.bodyLocalWrist as TemporalTuple3,
+        shoulderLocal,
+        { ...scale, defaultReachScale: 1 },
+    );
+    if (direction.length() < MIN_VECTOR_LENGTH) {
+        return direction;
+    }
+    return direction
+        .normalize()
+        .multiplyScalar(arm.reach * scale.armLength * scale.defaultReachScale);
 }
 
 function scalarArmToShoulderLocal(

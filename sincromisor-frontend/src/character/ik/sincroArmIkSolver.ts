@@ -321,6 +321,10 @@ export class SincroArmIkSolver {
                 neutralUpperArmQuaternion: serializeQuaternion(this.neutralUpperArmQuaternion),
                 neutralLowerArmQuaternion: serializeQuaternion(this.neutralLowerArmQuaternion),
                 targetClamped: prepared.targetClamp.clamped,
+                appliedReachRatio:
+                    prepared.targetClamp.target.length() /
+                    (this.upperArmLength + this.lowerArmLength),
+                reachClamped: prepared.targetClamp.clamped,
                 constraint: constraintResult.constraint,
                 weight: MathUtils.clamp(target.weight, 0, 1) * constraintResult.weightScale,
             },

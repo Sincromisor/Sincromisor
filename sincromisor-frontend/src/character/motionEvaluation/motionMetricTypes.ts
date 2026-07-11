@@ -28,6 +28,7 @@ export type MotionMetricKey =
     | "temporalNeutralWristJitter"
     | "solverElbowFlipRejectCount"
     | "solverReachClampOccupancy"
+    | "solverExcessReachRatioP95"
     | "solverPoleUncertainFrameCount"
     | "finalPoseAngularVelocityClampCount"
     | "finalPoseOwnedBoneConflictCount"
