@@ -67,6 +67,20 @@ describe("resolveArmIkPoleDirection", () => {
         expectVectorClose(pole.direction, normalizedBlend(previous, fallback, 0.3));
     });
 
+    it("bootstraps from the first valid temporal pole instead of rejecting it against bind pose", () => {
+        const measured = new Vector3(0, -1, 0);
+        const pole = resolvePole({
+            elbowPole: measured,
+            temporalState: "suspect",
+            targetReachRatio: 0.985,
+        });
+
+        expect(pole.state).toBe("extended");
+        expect(pole.reasonCodes).toEqual([]);
+        expect(pole.weightScale).toBe(1);
+        expectVectorClose(pole.direction, measured);
+    });
+
     it("treats extended arms as previous-to-fallback blend", () => {
         const previous = new Vector3(0, 0, 1);
         const pole = resolvePole({
@@ -90,6 +104,19 @@ describe("resolveArmIkPoleDirection", () => {
 
         expect(pole.state).toBe("extended");
         expectVectorClose(pole.direction, normalizedBlend(previous, BIND_POLE, 0.5));
+    });
+
+    it("does not report an elbow flip while full reach makes the pole underdetermined", () => {
+        const previous = new Vector3(0, 0, 1);
+        const pole = resolvePole({
+            elbowPole: new Vector3(0, 0, -1),
+            previousPoleDirection: previous,
+            targetReachRatio: 0.985,
+        });
+
+        expect(pole.state).toBe("extended");
+        expect(pole.reasonCodes).toEqual([]);
+        expect(pole.weightScale).toBe(1);
     });
 
     it("keeps lost temporal input on the previous pole", () => {

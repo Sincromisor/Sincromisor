@@ -91,11 +91,28 @@ function stabilizePoleDirection({
     recoveringBlendProgress,
     targetReachRatio,
 }: StabilizePoleDirectionOptions): SincroArmIkElbowPole {
+    const projectedPreviousPole = projectPoleDirection(previousPoleDirection, targetDirection);
+    // 最初の有効 temporal pole を bind pole と比較して reject すると、bind 側を previous として
+    // commitし続け、安定した測定値でも永久に flip 扱いになる。previous 未確定時だけ測定値を
+    // 初期基準にし、2 frame目以降の反転検出は従来どおり previous pole に対して行う。
     const previousPole =
-        projectPoleDirection(previousPoleDirection, targetDirection) ?? fallbackPole.clone();
+        projectedPreviousPole ??
+        (candidateUsable && temporalState !== undefined && temporalState !== "lost"
+            ? candidate.clone()
+            : fallbackPole.clone());
     const dot = candidate.dot(previousPole);
-    const hardRejected = candidateUsable && dot < poleFlipDotThreshold;
-    const softDownweighted = candidateUsable && !hardRejected && dot < SOFT_POLE_DOT_THRESHOLD;
+    const poleUnderdetermined = isExtendedPoleInput(elbowFlexionRad, targetReachRatio);
+    const hardRejected =
+        !poleUnderdetermined &&
+        (temporalState === undefined || projectedPreviousPole !== undefined) &&
+        candidateUsable &&
+        dot < poleFlipDotThreshold;
+    const softDownweighted =
+        !poleUnderdetermined &&
+        (temporalState === undefined || projectedPreviousPole !== undefined) &&
+        candidateUsable &&
+        !hardRejected &&
+        dot < SOFT_POLE_DOT_THRESHOLD;
     const state = stateFromTemporalAndReach({
         temporalState,
         elbowFlexionRad,
@@ -147,13 +164,20 @@ function stateFromTemporalAndReach({
     if (temporalState === "recovering") {
         return "recovering";
     }
-    if (
-        (isFiniteNumber(elbowFlexionRad) && elbowFlexionRad < EXTENDED_ELBOW_FLEXION_RAD) ||
-        (isFiniteNumber(targetReachRatio) && targetReachRatio > EXTENDED_TARGET_REACH_RATIO)
-    ) {
+    if (isExtendedPoleInput(elbowFlexionRad, targetReachRatio)) {
         return "extended";
     }
     return hardRejected ? "uncertain" : "stable";
+}
+
+function isExtendedPoleInput(
+    elbowFlexionRad: number | undefined,
+    targetReachRatio: number | undefined,
+): boolean {
+    return (
+        (isFiniteNumber(elbowFlexionRad) && elbowFlexionRad < EXTENDED_ELBOW_FLEXION_RAD) ||
+        (isFiniteNumber(targetReachRatio) && targetReachRatio > EXTENDED_TARGET_REACH_RATIO)
+    );
 }
 
 function blendWeightForState(
