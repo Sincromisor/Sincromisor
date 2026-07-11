@@ -1,0 +1,13 @@
+id: task-260712044930-feed-raw-replay-gesture-intent
+title: Feed replayed raw gestures into replay motion intent
+category: character-sincro-motion
+status: open
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: 87567c417c11e5dd896cddfb90297b656a95f429
+verdict: null
+attempts: 0
+created_at: 2026-07-12
+closed_at: null
+legacy_ids: []
