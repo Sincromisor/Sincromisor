@@ -29,7 +29,7 @@ export type SincroArmIkSolveResult = {
     neutralUpperArmQuaternion: SincroArmIkQuaternion;
     neutralLowerArmQuaternion: SincroArmIkQuaternion;
     targetClamped: boolean;
-    appliedReachRatio?: number;
+    appliedTargetLength?: number;
     reachClamped?: boolean;
     constraint: SincroArmIkConstraintSnapshot;
     weight: number;
