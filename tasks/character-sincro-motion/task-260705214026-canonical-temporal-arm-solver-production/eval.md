@@ -86,3 +86,29 @@ FAIL
 
 - production-like camera または承認済み実写 video fixture から P0 recording を取得し、同一入力の temporal primary / pose-snapshot fallback comparison と 4 metrics の非 regression を artifact と `impl.md` に保存する。
 - capture を完了条件から外す場合は task.md と design docs の evidence policy を改訂し、独立レビューをやり直す。
+
+## attempt 3 (2026-07-12 elbow-pole stabilization)
+
+### 判定
+
+FAIL
+
+### 独立評価結果
+
+- 評価対象は clean SHA `3b5cfa81c34e9a097bac997789d95c207ff38256`。`npm run gate` を評価 worktree で独立実行し、lint、build、test がすべて PASS、frontend tests は 71 files / 490 tests だった。
+- commit 差分は、最初の valid temporal pole の bootstrap、伸展時の elbow-plane 不定区間における flip reject / downweight の抑止、temporal primary と Pose fallback の source 切替時の pole 履歴 reset、および focused unit tests で構成される。実装コードへの変更は行っていない。
+- unit tests は初回 temporal pole と full-reach 反転候補を直接確認している。source 切替 reset 専用の integration test はないが、実写 replay の source 集計と全 gate により今回差分の基本経路は検証されている。
+- 最新 real-video artifact は 6 fixture、左右合計 1220 arm framesで temporal primary を記録し、Pose fallback は 0 frames。初回実写評価の 117–196 件だった elbow flip reject は 5 fixture で 0、`arms-cross` で 1 まで改善した。
+
+### P0 metrics 判定
+
+- neutral jitter は `neutral-10s` で `0.024490` から `0.023117` へ改善している。
+- elbow flip count は `arms-cross` で baseline `0` に対して candidate `1` であり、非 regression 条件を満たさない。
+- reach clamp occupancy は `arms-cross` で baseline `0.6485507246` に対して candidate `0.8731343284` へ増加し、明確な regression が残る。
+- recovery jump は全 fixture で recovering temporal sample がなく、baseline / candidate とも比較不能である。非 regression を実測で確認したとは扱えない。
+- 正本 `p0-temporal-vs-pose-fallback-metrics-comparison.real-video.json` の総合 verdict も `FAIL` で、blocking reasons は `arms-cross` の elbow flip / reach clamp 回帰と recovery sample 不在を挙げている。したがって「少なくとも neutral jitter、elbow flip count、recovery jump、reach clamp occupancy が regression していないこと」という受け入れ条件は未充足である。
+
+### 残課題
+
+- `arms-cross` の temporal target / reach policy を調整し、elbow flip count を baseline 以下、reach clamp occupancy を `0.6485507246` 以下にした実写比較を保存する。
+- lost → recovering を含む fixture または同等の実写入力を取得し、recovery jump の非 regression を比較可能な値で確認する。
