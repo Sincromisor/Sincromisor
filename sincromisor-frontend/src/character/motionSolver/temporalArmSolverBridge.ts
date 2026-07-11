@@ -55,6 +55,13 @@ export type TemporalArmIkBridgeResult = {
     debug: TemporalArmIkDebugSnapshot;
 };
 
+/**
+ * TemporalUpperBodyState の body-local / scalar arm state を IK solver が読む肩ローカル target へ変換する。
+ *
+ * Pose wrist / Hand wrist はここでは読まず、Temporal state と avatar profile / solver measurement だけを
+ * source of truth にする。lost や非 finite input は例外にせず `target` 欠損と reason code で返し、
+ * production caller が pose-snapshot fallback と debug snapshot を同一 frame で扱えるようにする。
+ */
 export function createTemporalArmIkInput(
     input: TemporalArmIkBridgeInput,
 ): TemporalArmIkBridgeResult {
