@@ -3,9 +3,14 @@ import { TalkManager } from "../../features/conversation/talk/talkManager";
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { DialogManager } from "../../features/dialog/model/dialogManager";
 import { SincroRTCConfigManager } from "../../features/rtc/sincroRtcConfigManager";
+import type { SincroAppEvent } from "./sincroAppTypes";
 import { SincroAudioInputController } from "./sincroAudioInputController";
 import { SincroCharacterGazeController } from "./sincroCharacterGazeController";
 import { SincroRtcSessionController } from "./sincroRtcSessionController";
+
+type SincroControllerOptions = {
+    emitEvent: (event: SincroAppEvent) => void;
+};
 
 // 旧来のアプリ本体 controller。
 // 以前は巨大 constructor に UI/RTC/Media/Gaze の配線を集中させていたが、
@@ -19,7 +24,7 @@ export class SincroController {
     private readonly rtcSessionController: SincroRtcSessionController;
     private readonly characterGazeController: SincroCharacterGazeController;
 
-    constructor() {
+    constructor(options: SincroControllerOptions) {
         this.dialogManager = DialogManager.getManager();
         this.debugConsoleManager = DebugConsoleManager.getManager();
         this.chatMessageService = ChatMessageService.getService();
@@ -38,6 +43,7 @@ export class SincroController {
             this.dialogManager,
             this.debugConsoleManager,
             this.chatMessageService,
+            options.emitEvent,
         );
         this.rtcSessionController = new SincroRtcSessionController(
             this.debugConsoleManager,

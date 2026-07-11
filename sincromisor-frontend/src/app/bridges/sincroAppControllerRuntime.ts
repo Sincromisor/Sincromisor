@@ -42,9 +42,11 @@ export type SincroAppControllerRuntimeBundle = SincroAppUiDependencyBundle &
     };
 
 // SincroAppController constructor から UI 依存の singleton / service 取得列挙を分離し、初期化ブロックの見通しを良くする。
-export function createSincroAppUiDependencyBundle(): SincroAppUiDependencyBundle {
+export function createSincroAppUiDependencyBundle(params: {
+    emitEvent: (event: import("../controller/sincroAppTypes").SincroAppEvent) => void;
+}): SincroAppUiDependencyBundle {
     return {
-        coreController: new SincroController(),
+        coreController: new SincroController({ emitEvent: params.emitEvent }),
         chatMessageService: ChatMessageService.getService(),
         debugConsoleManager: DebugConsoleManager.getManager(),
         talkManager: TalkManager.getManager(),
@@ -75,6 +77,7 @@ export function createSincroAppBridgeBundle(
 }
 
 export function createSincroAppRuntimeBundle(params: {
+    emitEvent: (event: import("../controller/sincroAppTypes").SincroAppEvent) => void;
     stopRTC: () => void;
     getSettingsSnapshot: () => import("../controller/sincroAppTypes").SincroAppSettingsSnapshot;
     getSettingsUiState: () => import("../controller/sincroAppTypes").SincroAppSettingsUiState;
@@ -86,7 +89,7 @@ export function createSincroAppRuntimeBundle(params: {
 }): SincroAppControllerRuntimeBundle {
     // UI 依存取得 -> bridge 生成 -> state bridge 生成を1か所にまとめる。
     // Controller 本体では field 代入と bind 順序だけを読めるようにする。
-    const uiDependencies = createSincroAppUiDependencyBundle();
+    const uiDependencies = createSincroAppUiDependencyBundle({ emitEvent: params.emitEvent });
     const bridges = createSincroAppBridgeBundle(uiDependencies, { stopRTC: params.stopRTC });
     const stateBridge = createSincroAppStateBridge({
         getSettingsSnapshot: params.getSettingsSnapshot,

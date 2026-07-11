@@ -1,5 +1,6 @@
 import type { SincroAppController, SincroAppLifecycleState } from "../../../app/controller";
 import { useSincroMediaDeviceState } from "../../../app/react/useSincroMediaDeviceState";
+import type { PanelCameraGuideState } from "./panelCameraGuideState";
 import type {
     ApplySettingsFn,
     PanelConnectionState,
@@ -40,6 +41,7 @@ type SimpleVrmPanelState = {
     telopLogs: PanelTelopLog[];
     lookingGlass: PanelLookingGlassState;
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
+    cameraGuide: PanelCameraGuideState;
 };
 
 // Control Panel から呼ぶ UI 操作。実処理は AppController に集約し、hook は委譲のみ行う。

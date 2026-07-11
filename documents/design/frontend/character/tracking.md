@@ -167,6 +167,13 @@
     - CameraQualityScore は motion-debug の debug / recording 表示に加え、production observe-only `ReliabilityMap` の
       `camera.cameraQualityStatus` と joint / part の `cameraQuality` component へ接続する。TemporalStateEstimator、
       IK weight、VRM 適用へは直接接続しない。
+    - production `sincro` の Pose callback は最新 `CameraQualityScore` と frame の `receivedAtPerformanceMs` を
+      `camera-quality-changed` event で control panel へ渡す。通常 UI は guide message の先頭一件だけを表示し、
+      score、component、reason code は表示しない。`good` または guide message なしは即時非表示とする。
+    - camera guide の reducer は event の `observedAtMs` だけを clock とする。初回 `bad` は即時表示、初回
+      `warn` は同一文言が 500 ms 継続してから表示し、表示中の差し替えは 1,000 ms hold と候補文言の
+      500 ms 継続をともに満たした時だけ行う。時刻逆行時は候補だけを破棄して現在表示を維持する。
+      mode 切替、camera refresh / stop、tracking stop、runtime error は `camera-quality-reset` により即時非表示にする。
     - live camera / video fixture の source 判定、manifest 生成、download link 生成は `src/pages/motionDebug/` 側の責務とする。
       production camera setting scrub は `src/app/controller/sincroCameraQualityRuntime.ts` と
       `createCameraQualityScore()` の境界で行い、raw camera identifier を production state / Debug Console /

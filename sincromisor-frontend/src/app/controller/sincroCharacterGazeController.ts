@@ -7,6 +7,7 @@ import { CharacterGaze } from "../../features/gaze/characterGaze/characterGaze";
 import { TrackerRuntime } from "../../features/gaze/trackingRuntime/trackerRuntime";
 import { VideoInputManager } from "../../features/media/userMedia/videoInputManager";
 import { frontendLogger } from "../../shared/logging/appLogger";
+import type { SincroAppEvent } from "./sincroAppTypes";
 import { bindCharacterGazeCallbacks } from "./sincroCharacterGazeCallbacks";
 import { formatErrorDetail } from "./sincroCharacterGazeDebugText";
 import {
@@ -46,6 +47,7 @@ export class SincroCharacterGazeController {
         dialogManager: DialogManager,
         debugConsoleManager: DebugConsoleManager,
         chatMessageService: ChatMessageService,
+        emitEvent: (event: SincroAppEvent) => void,
     ) {
         this.dialogManager = dialogManager;
         this.debugConsoleManager = debugConsoleManager;
@@ -60,6 +62,7 @@ export class SincroCharacterGazeController {
             readVideoSize: () => this.readTrackingVideoSize(),
             readTrackSettings: () => this.readTrackingTrackSettings(),
             readTrackReadyState: () => this.readTrackingTrackReadyState(),
+            emitEvent,
         });
         this.trackerRuntime = new TrackerRuntime(this.trackingVideoElement);
         const characterGaze = CharacterGaze.getManager();
