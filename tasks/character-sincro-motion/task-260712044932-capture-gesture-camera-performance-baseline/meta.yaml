@@ -1,8 +1,9 @@
 id: task-260712044932-capture-gesture-camera-performance-baseline
 title: Capture real camera gesture reliability and performance baseline
 category: character-sincro-motion
-status: open
-depends_on: []
+status: blocked
+depends_on:
+  - task-260712074348-record-per-frame-gesture-and-total-tracker-durations
 superseded_by: null
 review: APPROVED
 reviewed_sha: 87567c417c11e5dd896cddfb90297b656a95f429
