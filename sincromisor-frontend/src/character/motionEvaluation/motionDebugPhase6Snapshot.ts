@@ -11,7 +11,10 @@ import type {
     TemporalArmIkDebugSnapshot,
     TemporalArmIkScaleSnapshot,
 } from "../motionSolver/temporalArmSolverBridge";
-import type { SincroPoseRetargetedArm } from "../retargeting/sincroPoseRetargeter";
+import type {
+    SincroPoseArmSolverPrimarySource,
+    SincroPoseRetargetedArm,
+} from "../retargeting/sincroPoseRetargeter";
 import type { TemporalPartState, TemporalTuple3 } from "../temporal/temporalUpperBodyState";
 import type { VrmPoseComposerResult } from "../vrmPose/vrmPoseTypes";
 
@@ -40,6 +43,13 @@ export type MotionDebugTemporalArmIkBridgeSnapshot = {
 };
 
 export type MotionDebugPhase6ArmSolverSnapshot = {
+    source?: {
+        primarySource: SincroPoseArmSolverPrimarySource;
+        fallbackReason?: string;
+        bridgeReasonCodes: string[];
+        targetReachRatio?: number;
+        temporalState?: TemporalPartState;
+    };
     bridge?: MotionDebugTemporalArmIkBridgeSnapshot;
     ik?: {
         active: boolean;
@@ -102,6 +112,7 @@ const tuple3Schema: z.ZodType<TemporalTuple3> = z.tuple([
 ]);
 const temporalPartStateSchema = z.enum(TEMPORAL_PART_STATES);
 const armPoleStateSchema = z.enum(ARM_POLE_STATES);
+const armSolverPrimarySourceSchema = z.enum(["temporal", "pose-snapshot-fallback"]);
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
     if (typeof value !== "object" || value === null) {
@@ -164,6 +175,13 @@ const temporalArmIkBridgeSnapshotSchema: z.ZodType<MotionDebugTemporalArmIkBridg
 
 const phase6ArmSolverSnapshotSchema: z.ZodType<MotionDebugPhase6ArmSolverSnapshot> =
     plainObjectSchema({
+        source: plainObjectSchema({
+            primarySource: armSolverPrimarySourceSchema,
+            fallbackReason: z.string().optional(),
+            bridgeReasonCodes: stringArraySchema,
+            targetReachRatio: finiteNumberSchema.optional(),
+            temporalState: temporalPartStateSchema.optional(),
+        }).optional(),
         bridge: temporalArmIkBridgeSnapshotSchema.optional(),
         ik: plainObjectSchema({
             active: z.boolean(),
@@ -286,11 +304,15 @@ export function serializeTemporalArmIkBridgeSnapshot(input: {
 export function parseMotionDebugPhase6SolverSnapshot(
     value: unknown,
 ): MotionDebugPhase6SolverParseResult {
-    return parseSnapshot(
+    const parsed = parseSnapshot(
         value,
         phase6SolverSnapshotSchema,
         MOTION_DEBUG_PHASE6_SOLVER_SCHEMA_VERSION,
     );
+    if (!parsed.ok) {
+        return parsed;
+    }
+    return { ok: true, snapshot: normalizePhase6SolverSnapshot(parsed.snapshot) };
 }
 
 export function parseMotionDebugFinalPoseSnapshot(value: unknown): MotionDebugFinalPoseParseResult {
@@ -313,6 +335,10 @@ function serializeArmSolverSnapshot(
     arm: SincroPoseRetargetedArm,
 ): MotionDebugPhase6ArmSolverSnapshot {
     return {
+        source: serializeArmSolverSource(arm),
+        bridge: arm.temporalBridge
+            ? serializeTemporalArmIkBridgeSnapshot(arm.temporalBridge)
+            : undefined,
         ik: {
             active: arm.ikActive,
             targetClamped:
@@ -326,6 +352,25 @@ function serializeArmSolverSnapshot(
             ],
             fallbackReason: arm.fallbackReason,
         },
+    };
+}
+
+function serializeArmSolverSource(
+    arm: SincroPoseRetargetedArm,
+): MotionDebugPhase6ArmSolverSnapshot["source"] {
+    if (arm.solverSource === undefined) {
+        return {
+            primarySource: "pose-snapshot-fallback",
+            fallbackReason: arm.fallbackReason,
+            bridgeReasonCodes: arm.fallbackReason === undefined ? [] : [arm.fallbackReason],
+        };
+    }
+    return {
+        primarySource: arm.solverSource.primarySource,
+        fallbackReason: arm.solverSource.fallbackReason,
+        bridgeReasonCodes: [...arm.solverSource.bridgeReasonCodes],
+        targetReachRatio: arm.solverSource.targetReachRatio,
+        temporalState: arm.solverSource.temporalState,
     };
 }
 
@@ -411,4 +456,51 @@ function parseSnapshot<T>(
         };
     }
     return { ok: true, snapshot: parsed.data };
+}
+
+function normalizePhase6SolverSnapshot(
+    snapshot: MotionDebugPhase6SolverSnapshot,
+): MotionDebugPhase6SolverSnapshot {
+    return {
+        ...snapshot,
+        profile: {
+            ...snapshot.profile,
+            optionalBones: { ...snapshot.profile.optionalBones },
+            measurements: { ...snapshot.profile.measurements },
+            solverDefaults: { ...snapshot.profile.solverDefaults },
+            warnings: [...snapshot.profile.warnings],
+        },
+        arms: {
+            left: normalizePhase6ArmSolverSnapshot(snapshot.arms.left),
+            right: normalizePhase6ArmSolverSnapshot(snapshot.arms.right),
+        },
+        warnings: [...snapshot.warnings],
+    };
+}
+
+function normalizePhase6ArmSolverSnapshot(
+    arm: MotionDebugPhase6ArmSolverSnapshot,
+): MotionDebugPhase6ArmSolverSnapshot {
+    return {
+        source: arm.source
+            ? {
+                  primarySource: arm.source.primarySource,
+                  fallbackReason: arm.source.fallbackReason,
+                  bridgeReasonCodes: [...arm.source.bridgeReasonCodes],
+                  targetReachRatio: arm.source.targetReachRatio,
+                  temporalState: arm.source.temporalState,
+              }
+            : {
+                  primarySource: "pose-snapshot-fallback",
+                  fallbackReason: arm.ik?.fallbackReason,
+                  bridgeReasonCodes: arm.ik?.fallbackReason ? [arm.ik.fallbackReason] : [],
+              },
+        bridge: arm.bridge,
+        ik: arm.ik
+            ? {
+                  ...arm.ik,
+                  constraintReasonCodes: [...arm.ik.constraintReasonCodes],
+              }
+            : undefined,
+    };
 }

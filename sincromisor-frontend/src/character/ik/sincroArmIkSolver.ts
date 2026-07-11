@@ -125,6 +125,17 @@ export class SincroArmIkSolver {
     private readonly options: SincroArmIkOptions;
     private lastPoleDirection?: Vector3;
 
+    /**
+     * 異なるtarget sourceへ切り替える前に、前sourceのelbow-pole履歴を破棄する。
+     *
+     * Pose world targetとtemporal body-local bridgeはpoleの生成基準が異なるため、sourceを跨いで
+     * previous poleを比較すると、安定した新sourceを永続的なflipとしてrejectし得る。bone計測値や
+     * bind poseは不変なので、このresetはpole履歴だけを対象にする。
+     */
+    resetPoleHistory(): void {
+        this.lastPoleDirection = undefined;
+    }
+
     static fromVrm(vrm: SincroArmIkVrmSource, side: SincroArmSide): SincroArmIkSolver | undefined {
         const skeleton = captureSincroArmIkSkeleton(vrm, side);
         if (!skeleton) {

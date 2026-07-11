@@ -18,6 +18,7 @@ import {
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { formatError, requireElement } from "./dom";
+import { mergeMotionDebugBehaviorPipelineFrame } from "./motionDebugBehaviorPipeline";
 import { MotionDebugCameraRuntime } from "./motionDebugCameraRuntime";
 import { MotionDebugControls } from "./motionDebugControls";
 import { MotionDebugFrameCapture } from "./motionDebugFrameCapture";
@@ -374,6 +375,21 @@ export class MotionDebugApp implements MotionDebugApi {
             },
             onTemporalStateChange: (state) => {
                 this.replayRuntime.setTemporalState(state);
+                const trackerState = this.tracker.snapshotState();
+                const updatedAtMs = state?.timestamp.mediaTimeMs ?? performance.now();
+                this.behaviorState.applySincroMotionPipelineState(
+                    mergeMotionDebugBehaviorPipelineFrame(
+                        this.behaviorState.getSnapshot(updatedAtMs).sincroMotionPipeline,
+                        {
+                            face: trackerState.face,
+                            pose: trackerState.pose,
+                            hand: trackerState.hand,
+                            reliability: this.tracker.latestValidReliability(),
+                            temporal: state,
+                            updatedAtMs,
+                        },
+                    ),
+                );
             },
             onIntentStateChange: (state) => {
                 this.replayRuntime.setIntentState(state);
@@ -451,6 +467,7 @@ export class MotionDebugApp implements MotionDebugApi {
         this.recording.resetTemporalState();
         this.behaviorState.setFaceMotionTrackingEnabled(false);
         this.behaviorState.setPoseMotionTrackingEnabled(false);
+        this.behaviorState.applySincroMotionPipelineState(undefined);
         this.controls.setStatus(this.status, this.message);
     }
 
