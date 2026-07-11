@@ -374,3 +374,27 @@ TODO は追加していない。今回 production TypeScript の変更はなく�
 
 - real-video comparison verdictは引き続き`FAIL`。elbow-pole修正自体は有効だが、受け入れ条件の全metric非回帰には未達。
 - 残る blocker は arms-cross の elbow flip 1件、reach clamp occupancy回帰、およびrecovery sample不在。reach上限を0.97/0.94へ縮める試行は実写occupancyを安定して改善せず、腕長を短縮する副作用に根拠がないため採用しなかった。
+
+## attempt 3 (2026-07-12 evaluation handoff audit)
+
+### 判断
+
+- 最新 `eval.md` の FAIL と `task.md` の確定済みスコープ境界を symbol / acceptance wording 単位で再照合した。
+- production integration の evidence は実写 6 fixture、左右合計 1220 arm framesで取得済みで、temporal primary は左右各 610 frames、Pose fallback は 0 frames。入力 provenance、左右 source frame 数、neutral jitter、elbow flip count、recovery jump、reach clamp occupancy の比較可否と結果は `artifacts/p0-temporal-vs-pose-fallback-metrics-comparison.real-video.json` に保存済みである。
+- `arms-cross` の elbow flip 1件と reach clamp occupancy 回帰、および recovering sample 不在による recovery jump 比較不能は隠さず artifact に残っている。これは task.md の「比較不能または regression は隠さず blocking reason として artifact に残す」を満たす。
+- 一方、task.md の設計判断とスコープ境界は「全 metric 非回帰は本タスクの exit gate にしない」と明記し、reach / clamp 品質を `task-260712033923-temporal-arm-reach-clamp-semantics`、deterministic recovery 検証を `task-260712033924-temporal-arm-recovery-qa-fixture` へ引き渡している。最新 evaluator が要求した arms-cross の非回帰と recovery の比較可能化は、この本タスクの受け入れ条件ではなく後続タスクの完了条件である。
+- したがって追加の solver tuning や recovery fixture 生成は行わない。これらを本ブランチへ取り込むと、production input 経路切替と solver 品質仮説を分離する確定済み設計に反する。
+
+### 実装・コミット
+
+- production code / tests / design docs に追加変更なし。実装ブランチ HEAD `3b5cfa81` には、実写入力で発見した motion-debug temporal publish 不備の修正 `ff0edef9` と、elbow pole 安定化 `3b5cfa81` が既にコミット済みである。
+- task.md / meta.yaml は変更していない。追加の空コミットは作成しない。
+
+### 後続タスクへの引き渡し
+
+- `task-260712033923-temporal-arm-reach-clamp-semantics`: `arms-cross` の `solverReachClampOccupancy` が baseline `0.6485507246` に対し candidate `0.8731343284`、elbow flip が baseline `0` に対し candidate `1`。reach / clamp semantics と品質判定を扱う。
+- `task-260712033924-temporal-arm-recovery-qa-fixture`: 実写 6 fixture で recovering temporal sample が 0 のため recovery jump は比較不能。lost → recovering を決定的に発生させる fixture と判定を扱う。
+
+### TypeScript production comment audit
+
+- production TypeScript の追加変更はないため、新規 audit 対象なし。attempt 1 / 2 の provider、fallback reason policy、Hand wrist 非採用、deprecated Pose fallback、composer ownership の audit と実コード TSDoc を維持する。

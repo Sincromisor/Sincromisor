@@ -112,3 +112,46 @@ FAIL
 
 - `arms-cross` の temporal target / reach policy を調整し、elbow flip count を baseline 以下、reach clamp occupancy を `0.6485507246` 以下にした実写比較を保存する。
 - lost → recovering を含む fixture または同等の実写入力を取得し、recovery jump の非 regression を比較可能な値で確認する。
+
+## attempt 4 (2026-07-12 final scope evaluation)
+
+### 判定
+
+PASS
+
+### 判定根拠
+
+- 前回判定は全 metric 非回帰を exit gate と解釈していたが、task.md の確定済み設計判断とスコープ境界は明示的にこれを否定している。実写 comparison は production integration と残課題の観測 evidence であり、reach / clamp 品質は `task-260712033923-temporal-arm-reach-clamp-semantics`、deterministic recovery は `task-260712033924-temporal-arm-recovery-qa-fixture` へ分離済みである。
+- 実写 video fixture 6 件の comparison は `artifacts/p0-temporal-vs-pose-fallback-metrics-comparison.real-video.json` と `artifacts/replay/` / `artifacts/metrics/` に保存済み。実装 SHA は `3b5cfa81`、baseline SHA は `56834af9`。
+- candidate は左右各 610 frame、合計 1220 arm frame で `primarySource: temporal`、Pose fallback 0 frame。入力 provenance、左右 source frame 数、neutral jitter、elbow flip、recovery jump、reach clamp occupancy の比較可否と結果を機械可読 artifact で確認した。
+- `arms-cross` の elbow flip 1 件と reach clamp occupancy 回帰、recovering sample 0 による recovery jump 比較不能は artifact の `regressions` / `blockingReasons` に隠さず残されている。確定スコープに従い、これらは本タスクの FAIL 理由にしない。
+
+### 受け入れ条件チェックリスト
+
+- [x] optional runtime input 型と `retarget(snapshot, nowMs, options?)` を追加し、未指定時の Pose snapshot fallback 互換を維持。
+- [x] `createSincroPoseTemporalArmInput()` を production provider とし、valid temporal bridge target を arm primary に使用。
+- [x] `VRMCharacterManager.update()` が temporal/profile を個別に渡し、temporal/profile/solver 欠損と invalid/lost を規定 reason で Pose fallback に記録。
+- [x] Hand wrist 非採用、composer / full normalized pose の単一 writer ownership を維持。
+- [x] Phase 6 v1 に optional `source` を追加し、source 欠損旧 log の parse と legacy fallback 表示を維持。
+- [x] `solveWorldArmIk()` を deprecated fallback として維持し、削除条件を code/docs に記録。
+- [x] 実写 comparison、provenance、source frame 数、metrics の比較可否・回帰を保存し、後続タスクへの引き渡しを `impl.md` に記録。
+- [x] 固定列の TypeScript production comment audit、必要な TSDoc、`motion.md` / `tracking.md` 同期を確認。
+
+### テスト・カバレッジ
+
+- `npm run gate`（evaluation worktree、clean SHA `3b5cfa81`）: PASS。
+    - `gate:lint`: PASS（cache hit）。
+    - `gate:build`: PASS（cache hit）。
+    - `gate:test`: PASS（cache hit、71 files / 490 tests）。
+- temporal primary、欠損 fallback reason、invalid/lost、Phase 6 legacy source、初回 temporal pole bootstrap、extended arm の underdetermined pole は tests で covered。source 切替 reset の専用 integration unit test はないが、実写 source 集計と全 gate で production 経路を確認した。
+- 追加 acceptance test は作成していない。
+
+### ドキュメント整合性
+
+- `documents/design/frontend/character/motion.md` と `tracking.md` は temporal primary、Pose fallback reason、Hand wrist 非採用、Phase 6 source/legacy、deprecated fallback lifecycle に同期済み。
+- WebRTC / backend / DataChannel 契約変更はない。
+
+### 後続タスクへの引き渡し
+
+- `task-260712033923-temporal-arm-reach-clamp-semantics`: `arms-cross` の elbow flip `0 → 1` と reach clamp occupancy `0.6485507246 → 0.8731343284`。
+- `task-260712033924-temporal-arm-recovery-qa-fixture`: recovering sample 0 のため recovery jump が比較不能。lost → recovering を決定的に発生させる fixture が必要。
