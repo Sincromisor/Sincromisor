@@ -42,8 +42,8 @@ type GestureObservation = {
  *   regression resets `stableDurationMs` to 0.
  * - positive dt is clamped to at most 1000ms so tab suspension / replay jumps do not synthesize long
  *   stable gestures.
- * - `stableDurationMs < 160` caps `finalWeight` at 0.5, preventing one-frame recognizer spikes from
- *   passing MotionIntent's gesture gate.
+ * - `stableDurationMs / 160` is the temporal component. A valid reset frame remains a gesture
+ *   observation with score 0 / `unstable_observation`; only a missing gesture uses `no_observation`.
  *
  * Lowering these thresholds tends to surface gesture flicker as semantic intent; raising them too far
  * makes valid short gestures stay suppressed. This file intentionally reads only normalized label /
@@ -64,9 +64,9 @@ const SIDE_INCONSISTENT_SCORE = 0.35;
  *
  * Gesture optional pass が skip / lost の frame では `gesture` を省略し、従来互換の
  * `source: "neutral"` placeholder を返す。`stableDurationMs` は同じ normalized side + label が
- * confidence `>= 0.70` で連続した時間だけを積み、dt は `0..1000ms` に clamp する。160ms 未満の
- * observation は `finalWeight` を最大 0.5 に制限するため、MotionIntent gate は単発の誤認識を
- * semantic intent へ昇格させにくい。
+ * confidence `>= 0.70` で連続した時間だけを積み、dt は `0..1000ms` に clamp する。temporal score は
+ * `stableDurationMs / 160` を `0..1` に clamp し、0ms を含む 160ms 未満の valid observation は
+ * `unstable_observation` とする。欠損時だけ `no_observation` の neutral placeholder を返す。
  */
 export function createGestureReliability(
     input: GestureReliabilityInput,
@@ -77,23 +77,23 @@ export function createGestureReliability(
         return createNeutralGestureReliability(cameraQuality);
     }
 
+    const stableDurationMs = calculateStableDurationMs(input, observation);
     const components = {
         tracking: component(observation.confidence, []),
-        temporal: component(0, ["no_observation"]),
+        temporal: evaluateGestureTemporal(stableDurationMs),
         side: evaluateGestureSide(input.hand, observation.side),
         roi: evaluateGestureRoi(input.hand, observation.side),
         cameraQuality,
     };
-    const stableDurationMs = calculateStableDurationMs(input, observation);
-    const baseWeight = Math.min(
-        components.tracking.score,
-        components.side.score,
-        components.roi.score,
-        components.cameraQuality.score,
+    const finalWeight = clamp01(
+        Math.min(
+            components.tracking.score,
+            components.temporal.score,
+            components.side.score,
+            components.roi.score,
+            components.cameraQuality.score,
+        ),
     );
-    const cappedWeight =
-        stableDurationMs < GESTURE_STABLE_CAP_MS ? Math.min(baseWeight, 0.5) : baseWeight;
-    const finalWeight = clamp01(cappedWeight);
 
     return {
         state: stateFromWeight(finalWeight),
@@ -111,6 +111,11 @@ export function createGestureReliability(
             ),
         ),
     };
+}
+
+function evaluateGestureTemporal(stableDurationMs: number): ReliabilityScoreComponent {
+    const score = clamp01(stableDurationMs / GESTURE_STABLE_CAP_MS);
+    return component(score, score < 1 ? ["unstable_observation"] : []);
 }
 
 function createNeutralGestureReliability(

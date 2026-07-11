@@ -136,7 +136,7 @@ describe("createPoseReliabilityMap", () => {
             side: "left",
             label: "Open_Palm",
             confidence: 0.91,
-            finalWeight: 0.5,
+            finalWeight: 0,
             stableDurationMs: 0,
         });
     });
