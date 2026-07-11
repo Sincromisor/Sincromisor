@@ -25,6 +25,8 @@ export const MOTION_P0_FIXTURE_IDS = [
     "hand-out-and-return",
     "arms-cross",
     "fast-wave",
+    "left-arm-occlusion-recovery",
+    "right-arm-occlusion-recovery",
 ] as const;
 
 /**
