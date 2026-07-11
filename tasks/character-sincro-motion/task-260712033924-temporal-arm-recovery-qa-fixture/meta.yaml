@@ -1,14 +1,14 @@
 id: task-260712033924-temporal-arm-recovery-qa-fixture
 title: Add deterministic temporal arm recovery QA fixture
 category: character-sincro-motion
-status: open
+status: done
 depends_on:
   - task-260705214026-canonical-temporal-arm-solver-production
 superseded_by: null
 review: APPROVED
 reviewed_sha: 84cb9fe6d162d0cd9a2cfb4d9de3a1b123a7e917
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 2
 created_at: 2026-07-12
-closed_at: null
+closed_at: 2026-07-12
 legacy_ids: []
