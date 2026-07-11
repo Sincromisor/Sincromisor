@@ -79,13 +79,18 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 ## タスク一覧（自動生成 / 全 116 件）
 
-### open（未完） — 3 件
+### open（未完） — 2 件
 
-| タスク                                                                                                                                                     | タイトル                                                         | 判定 | 依存                                                            |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---- | --------------------------------------------------------------- |
-| [task-260712044932-capture-gesture-camera-performance-baseline](./task-260712044932-capture-gesture-camera-performance-baseline/task.md)                   | Capture real camera gesture reliability and performance baseline | —    | —                                                               |
-| [task-260712044933-remove-semantic-finger-rollback-hook](./task-260712044933-remove-semantic-finger-rollback-hook/task.md)                                 | Decide and remove semantic finger rollback hook                  | —    | `task-260712044932-capture-gesture-camera-performance-baseline` |
-| [task-260712074348-record-per-frame-gesture-and-total-tracker-durations](./task-260712074348-record-per-frame-gesture-and-total-tracker-durations/task.md) | Record per-frame gesture and total tracker durations             | —    | —                                                               |
+| タスク                                                                                                                                                     | タイトル                                             | 判定 | 依存                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ---- | --------------------------------------------------------------- |
+| [task-260712044933-remove-semantic-finger-rollback-hook](./task-260712044933-remove-semantic-finger-rollback-hook/task.md)                                 | Decide and remove semantic finger rollback hook      | —    | `task-260712044932-capture-gesture-camera-performance-baseline` |
+| [task-260712074348-record-per-frame-gesture-and-total-tracker-durations](./task-260712074348-record-per-frame-gesture-and-total-tracker-durations/task.md) | Record per-frame gesture and total tracker durations | —    | —                                                               |
+
+### blocked（停止中） — 1 件
+
+| タスク                                                                                                                                   | タイトル                                                         | 判定 | 依存                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---- | ------------------------------------------------------------------------ |
+| [task-260712044932-capture-gesture-camera-performance-baseline](./task-260712044932-capture-gesture-camera-performance-baseline/task.md) | Capture real camera gesture reliability and performance baseline | —    | `task-260712074348-record-per-frame-gesture-and-total-tracker-durations` |
 
 ### done（完了） — 113 件
 
