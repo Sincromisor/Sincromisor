@@ -6,12 +6,12 @@
     "kind": "real-video-fixture",
     "captureDevice": "MacBook Air M1 front camera",
     "transport": "trimmed QuickTime MOV converted to H.264 720p MP4-compatible input",
-    "implementationSha": "ff0edef9",
+    "implementationSha": "3b5cfa81",
     "baselineSha": "56834af9"
   },
   "sourceValidation": {
-    "temporalPrimaryLeftFrames": 595,
-    "temporalPrimaryRightFrames": 595,
+    "temporalPrimaryLeftFrames": 610,
+    "temporalPrimaryRightFrames": 610,
     "temporalFallbackFrames": 0
   },
   "metricMapping": {
@@ -31,12 +31,12 @@
         "reachClampOccupancy": 1
       },
       "candidate": {
-        "neutralJitter": 0.025319191985203385,
-        "elbowFlipCount": 194,
+        "neutralJitter": 0.023117123793147468,
+        "elbowFlipCount": 0,
         "recoveryJump": null,
         "reachClampOccupancy": 1
       },
-      "regressions": ["neutralJitter", "elbowFlipCount"]
+      "regressions": []
     },
     {
       "fixtureId": "single-arm-slow-raise",
@@ -48,11 +48,11 @@
       },
       "candidate": {
         "neutralJitter": null,
-        "elbowFlipCount": 170,
+        "elbowFlipCount": 0,
         "recoveryJump": null,
-        "reachClampOccupancy": 0.8125
+        "reachClampOccupancy": 0.7554347826086957
       },
-      "regressions": ["elbowFlipCount"]
+      "regressions": []
     },
     {
       "fixtureId": "both-arms-slow-raise",
@@ -64,11 +64,11 @@
       },
       "candidate": {
         "neutralJitter": null,
-        "elbowFlipCount": 196,
+        "elbowFlipCount": 0,
         "recoveryJump": null,
-        "reachClampOccupancy": 0.735
+        "reachClampOccupancy": 0.7326732673267327
       },
-      "regressions": ["elbowFlipCount"]
+      "regressions": []
     },
     {
       "fixtureId": "hand-out-and-return",
@@ -80,11 +80,11 @@
       },
       "candidate": {
         "neutralJitter": null,
-        "elbowFlipCount": 118,
+        "elbowFlipCount": 0,
         "recoveryJump": null,
-        "reachClampOccupancy": 0.9705882352941176
+        "reachClampOccupancy": 0.9719101123595506
       },
-      "regressions": ["elbowFlipCount"]
+      "regressions": []
     },
     {
       "fixtureId": "arms-cross",
@@ -96,9 +96,9 @@
       },
       "candidate": {
         "neutralJitter": null,
-        "elbowFlipCount": 183,
+        "elbowFlipCount": 1,
         "recoveryJump": null,
-        "reachClampOccupancy": 0.8669064748201439
+        "reachClampOccupancy": 0.8731343283582089
       },
       "regressions": ["elbowFlipCount", "reachClampOccupancy"]
     },
@@ -112,16 +112,16 @@
       },
       "candidate": {
         "neutralJitter": null,
-        "elbowFlipCount": 117,
+        "elbowFlipCount": 0,
         "recoveryJump": null,
-        "reachClampOccupancy": 0.8782051282051282
+        "reachClampOccupancy": 0.8214285714285714
       },
-      "regressions": ["elbowFlipCount"]
+      "regressions": []
     }
   ],
   "verdict": "FAIL",
   "blockingReasons": [
-    "solverElbowFlipRejectCount regressed on all six fixtures",
+    "solverElbowFlipRejectCount is baseline-or-better on five fixtures but remains 1 versus baseline 0 for arms-cross",
     "solverReachClampOccupancy regressed for arms-cross",
     "recovery jump is not comparable because no recovering temporal samples were captured"
   ]
