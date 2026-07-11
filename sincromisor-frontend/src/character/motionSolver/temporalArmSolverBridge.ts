@@ -308,6 +308,9 @@ function temporalArmInputIsFinite(
         ]) &&
         tupleIsFinite(arm.bodyLocalWrist) &&
         tupleIsFinite(arm.bodyLocalElbow) &&
+        scale.upperArmLength > 0 &&
+        scale.lowerArmLength > 0 &&
+        scale.armLength > 0 &&
         (arm.recoveringBlend === undefined || Number.isFinite(arm.recoveringBlend.progress))
     );
 }

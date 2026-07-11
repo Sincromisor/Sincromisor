@@ -358,19 +358,19 @@ function measureArmIkSolvers(vrm: VRM): Record<"left" | "right", SincroArmIkSolv
  * bridge clamp 前の要求値と solver が最終適用した target を一つの診断値へ統合する。
  * 両方が clamp した frame は二重計上せず solver ownership を優先する。
  */
-function createArmReachSnapshot(
+export function createArmReachSnapshot(
     bridge: TemporalArmIkBridgeResult | undefined,
     solved: SincroArmIkSolveResult,
 ): SincroPoseRetargetedArm["reach"] {
     if (
         bridge?.reach === undefined ||
-        solved.appliedReachRatio === undefined ||
-        !Number.isFinite(solved.appliedReachRatio)
+        solved.appliedTargetLength === undefined ||
+        !Number.isFinite(solved.appliedTargetLength)
     ) {
         return undefined;
     }
     const requestedReachRatio = bridge.reach.requestedReachRatio;
-    const appliedReachRatio = solved.appliedReachRatio;
+    const appliedReachRatio = solved.appliedTargetLength / bridge.scale.armLength;
     return {
         requestedReachRatio,
         appliedReachRatio,

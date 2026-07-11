@@ -9,7 +9,7 @@ import {
     createDefaultTemporalUpperBodyState,
     type TemporalUpperBodyState,
 } from "../../temporal/temporalUpperBodyState";
-import { SincroPoseRetargeter } from "../sincroPoseRetargeter";
+import { createArmReachSnapshot, SincroPoseRetargeter } from "../sincroPoseRetargeter";
 import { createSincroPoseTemporalArmInput } from "../sincroPoseTemporalArmInput";
 
 const PROFILE: MinimalAvatarMotionProfile = {
@@ -90,6 +90,60 @@ describe("createSincroPoseTemporalArmInput", () => {
 });
 
 describe("SincroPoseRetargeter temporal arm production input", () => {
+    it.each([
+        {
+            name: "bridge-only",
+            temporalReach: 1.1,
+            appliedTargetLength: 0.985,
+            reachClamped: false,
+            expected: "bridge",
+        },
+        {
+            name: "solver-only",
+            temporalReach: 0.8,
+            appliedTargetLength: 0.7,
+            reachClamped: true,
+            expected: "solver",
+        },
+        {
+            name: "no-clamp",
+            temporalReach: 0.8,
+            appliedTargetLength: 0.8,
+            reachClamped: false,
+            expected: "none",
+        },
+    ] as const)("unifies $name reach ownership with the bridge denominator", (testCase) => {
+        const temporal = createTemporalState();
+        temporal.arms.right.reach = testCase.temporalReach;
+        const profile = {
+            ...PROFILE,
+            measurements: {
+                ...PROFILE.measurements,
+                rightUpperArmLength: 0.6,
+                rightLowerArmLength: 0.4,
+            },
+        };
+        const bridge = createSincroPoseTemporalArmInput({
+            snapshot: createTrackedPoseSnapshot(),
+            temporal,
+            profile,
+            solver: { ...SOLVER_MEASUREMENTS, upperArmLength: 0.2, lowerArmLength: 0.3 },
+            side: "right",
+        }).bridge;
+        expect(bridge?.target).toBeDefined();
+        if (bridge?.target === undefined) {
+            throw new Error("Expected temporal bridge target.");
+        }
+        const reach = createArmReachSnapshot(bridge, {
+            ...createIkSolveResult(bridge.target),
+            appliedTargetLength: testCase.appliedTargetLength,
+            reachClamped: testCase.reachClamped,
+        });
+
+        expect(reach?.appliedReachRatio).toBeCloseTo(testCase.appliedTargetLength, 6);
+        expect(reach?.clampedBy).toBe(testCase.expected);
+    });
+
     it("uses temporal primary even when pose arm tracking is unavailable", () => {
         let capturedTarget: SincroArmIkTarget | undefined;
         const retargeter = new SincroPoseRetargeter();

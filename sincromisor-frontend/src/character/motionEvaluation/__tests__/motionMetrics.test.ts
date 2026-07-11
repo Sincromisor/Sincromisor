@@ -124,6 +124,7 @@ function createPhase6Solver(options?: {
     rightTargetClamped?: boolean;
     leftPoleUncertain?: boolean;
     reachExcesses?: [number, number];
+    omitRightReach?: boolean;
 }): unknown {
     return {
         phase6: {
@@ -168,7 +169,7 @@ function createPhase6Solver(options?: {
                 },
                 right: {
                     reach:
-                        options?.reachExcesses === undefined
+                        options?.reachExcesses === undefined || options.omitRightReach
                             ? undefined
                             : {
                                   requestedReachRatio: 1 + options.reachExcesses[1],
@@ -1053,6 +1054,56 @@ describe("compareMotionMetricSummaries", () => {
             baselineValue: 0,
             candidateValue: 1,
             severityChanged: true,
+        });
+    });
+
+    it("does not calculate excess reach p95 from old or partially recorded logs", () => {
+        const oldLog = calculateMotionMetricSummary(
+            [createFrame(0, 0, { solver: createPhase6Solver() })],
+            CONFIG,
+        );
+        const partial = calculateMotionMetricSummary(
+            [
+                createFrame(0, 0, {
+                    solver: createPhase6Solver({
+                        reachExcesses: [0.01, 0.02],
+                        omitRightReach: true,
+                    }),
+                }),
+            ],
+            CONFIG,
+        );
+
+        for (const summary of [oldLog, partial]) {
+            expect(summary.metrics.solverExcessReachRatioP95).toMatchObject({
+                value: null,
+                status: "not_available",
+                sampleCount: 0,
+                unavailableReason: "reach_diagnostics_not_recorded",
+            });
+        }
+    });
+
+    it("returns unavailable for zero arm samples and uses nearest-rank p95", () => {
+        const empty = calculateMotionMetricSummary([], CONFIG);
+        expect(empty.metrics.solverExcessReachRatioP95).toMatchObject({
+            value: null,
+            status: "not_available",
+            sampleCount: 0,
+            unavailableReason: "reach_diagnostics_not_recorded",
+        });
+
+        const frames = Array.from({ length: 10 }, (_, index) =>
+            createFrame(index, index * 100, {
+                solver: createPhase6Solver({
+                    reachExcesses: [index / 100, (index + 10) / 100],
+                }),
+            }),
+        );
+        const summary = calculateMotionMetricSummary(frames, CONFIG);
+        expect(summary.metrics.solverExcessReachRatioP95).toMatchObject({
+            value: 0.18,
+            sampleCount: 20,
         });
     });
 });

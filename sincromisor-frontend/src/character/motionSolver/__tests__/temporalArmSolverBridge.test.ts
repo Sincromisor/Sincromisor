@@ -268,6 +268,25 @@ describe("createTemporalArmIkInput", () => {
         expect(result.debug.weightAfterStateScale).toBe(0);
     });
 
+    it.each([
+        { upperArmLength: 0, lowerArmLength: 0 },
+        { upperArmLength: -0.1, lowerArmLength: 0.6 },
+    ])("rejects non-positive arm measurements without recording reach", (solver) => {
+        const result = createTemporalArmIkInput({
+            temporal: createTemporal("right", {}),
+            side: "right",
+            profile: {
+                ...PROFILE,
+                measurements: { shoulderWidth: 1 },
+            },
+            solver: { ...SOLVER, ...solver },
+        });
+
+        expect(result.target).toBeUndefined();
+        expect(result.reach).toBeUndefined();
+        expect(result.reasonCodes).toEqual(["invalid_temporal_arm"]);
+    });
+
     it("rejects unknown temporal arm states from runtime boundaries", () => {
         const temporal = createTemporal("right", {});
         Object.defineProperty(temporal.arms.right, "state", {
