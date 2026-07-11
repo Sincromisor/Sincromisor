@@ -18,7 +18,7 @@ roadmap は、腕 IK の表示主経路がまだ `SincroPoseMotionSnapshot` の 
 - [ ] 旧 log 互換として `source` 欠損の `sincro.phase6-solver.v1` は parse success とし、viewer では `primarySource: "pose-snapshot-fallback"` 相当の legacy 表示にする。schemaVersion は本タスクでは上げない。
 - [ ] `VrmPoseComposer` へ渡る final normalized pose の bone ownership は変えない。同一 frame の最終 pose 書き手は引き続き composer / full application に集約する。
 - [ ] 既存 `solveWorldArmIk()` は即削除しない。production fallback と A/B comparison が不要になったことを別 task で確認できるよう、deprecated fallback として残し、削除条件を comment audit と design docs に記録する。
-- [ ] P0 replay fixture で temporal primary と pose fallback の metrics comparison を保存し、少なくとも neutral jitter、elbow flip count、recovery jump、reach clamp occupancy が regression していないことを `impl.md` に記録する。
+- [ ] P0 実写 video fixture で temporal primary と pose fallback の metrics comparison を保存し、入力 provenance、左右の temporal / fallback frame 数、neutral jitter、elbow flip count、recovery jump、reach clamp occupancy の比較可否と結果を `impl.md` に記録する。比較不能または regression は隠さず blocking reason として artifact に残し、solver reach / clamp 品質は `task-260712033923-temporal-arm-reach-clamp-semantics`、recovery の deterministic 検証は `task-260712033924-temporal-arm-recovery-qa-fixture` へ引き渡す。本タスクでは両後続タスクの完了を要求しない。
 - [ ] TypeScript production comment audit を `impl.md` に記録する。列は `path`、`symbol or decision`、`kind`、`current comment`、`decision`、`required maintenance knowledge`、`action`、`reviewer note` に固定し、少なくとも production input provider、fallback reason policy、Hand wrist 非採用、deprecated pose-snapshot fallback、composer ownership を含める。
 - [ ] comment audit 記録だけでは完了扱いにしない。新規 public export、runtime boundary、coordinate / scale heuristic、fallback lifecycle に必要な JSDoc/TSDoc の追加・更新、弱い既存コメントの rewrite / delete、stale comment 更新・削除、TODO 必須情報の充足を実コードと `impl.md` で確認できること。
 
@@ -28,14 +28,16 @@ roadmap は、腕 IK の表示主経路がまだ `SincroPoseMotionSnapshot` の 
 - provider の所在は `character/retargeting/sincroPoseTemporalArmInput.ts` に固定する。`motionSolver/` に production policy を置く案は、`motionSolver/temporalArmSolverBridge.ts` が pure helper であり production fallback / debug source policy を持たないため採用しない。
 - Phase 6 solver snapshot は `sincro.phase6-solver.v1` の optional field 追加に留める。schemaVersion を上げる案は旧 log 互換 viewer と fixture 更新が大きく、既存 required field の意味を変えないため採用しない。
 - fallback としての Pose snapshot arm target は本タスクでは残す。完全削除まで同時に行うと実カメラ regression 時の切り戻しが難しくなるため、削除は後続 cleanup task に分ける。
+- production integration の完了判定と solver 品質改善を分離する。実写 comparison は本番経路が実際に temporal primary を使うことと残課題を観測する integration evidence とし、全 metric 非回帰は本タスクの exit gate にしない。単一タスク内で fixture 整備と solver tuning を反復すると、入力経路切替の責務と品質仮説の責務が混ざるためである。
 - `SincroPoseRetargetFrame` の外形は維持する。composer / Debug Console / metrics への影響を抑え、arm target source は solver debug snapshot に載せる。
 - Hand wrist は読まない。roadmap と設計文書の方針どおり、腕 target は Pose / canonical / temporal 起点、Hand は palm / finger / gesture 補助に分ける。
 - 公開 WebRTC / backend 契約、DataChannel payload、server code は変更しない。
 
 ## スコープ境界
 
-- 本タスクでやること: production arm solver input provider、temporal primary 切替、pose fallback reason、debug / replay solver snapshot、metrics comparison、tests、docs sync。
-- 本タスクでやらないこと: `solveWorldArmIk()` の完全削除、Gesture reliability、finger pose の新規挙動、full normalized pose application の ownership 変更、backend / WebRTC 契約変更。
+- 本タスクでやること: production arm solver input provider、temporal primary 切替、pose fallback reason、debug / replay solver snapshot、実写 metrics comparison による integration evidence、tests、docs sync。
+- 本タスクでやらないこと: `arms-cross` の reach / clamp semantics 改善、deterministic recovery fixture 整備、全 P0 metric の非回帰達成、`solveWorldArmIk()` の完全削除、Gesture reliability、finger pose の新規挙動、full normalized pose application の ownership 変更、backend / WebRTC 契約変更。
+- 後続タスクとの境界: `task-260712033923-temporal-arm-reach-clamp-semantics` は clamp の測定意味論と `arms-cross` 品質を扱い、`task-260712033924-temporal-arm-recovery-qa-fixture` は必ず lost → recovering を発生させる QA 入力と recovery jump 判定を扱う。本タスクは観測 artifact と production integration を提供する。
 - 依存タスクとの境界: `task-260625231726-character-animation-3-phase-6-temporal-arm-solver-bridge` が temporal bridge helper を提供済み。本タスクは production arm input をその helper へ切り替える。
 
 ## 実装方針（既存コード整合: file:line）
@@ -54,7 +56,7 @@ roadmap は、腕 IK の表示主経路がまだ `SincroPoseMotionSnapshot` の 
 - `cd sincromisor-frontend && npm run test -- sincroVrmPoseComposerDryRun motionComposerComparisonMetrics motionMetrics`
 - `cd sincromisor-frontend && npm run check`
 - `cd sincromisor-frontend && npm run build`
-- P0 replay fixture comparison を実行し、metrics summary を `impl.md` または `artifacts/` に保存する。
+- P0 実写 video fixture comparison を実行し、temporal primary frame が左右それぞれ 1 以上、fallback frame 数と各 metric の available / not-comparable reason が artifact から機械的に確認できることを検証する。regression の有無は記録対象だが、本タスク単独の PASS / FAIL 条件にはしない。
 - `npm run tasks:check`
 
 ## ドキュメント同期の要否
