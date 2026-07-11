@@ -36,3 +36,26 @@ APPROVED
 - p95 calculator は一部 frame だけを黙って採用せず、欠損を1件検出した時点で固定 reason の `not_available` にする contract を unit test で保持すること。
 - 実写 artifact には run ごとの入力 SHA-256 を残し、3件が完全一致することを評価時に照合すること。
 - comment audit と評価は task.md に追加された全 symbol/decision 条件をそのまま適用すること。
+
+## Freshness check (2026-07-12)
+
+### 判定
+
+FRESH
+
+### 基準
+
+- reviewed SHA: `84cb9fe6d162d0cd9a2cfb4d9de3a1b123a7e917`
+- checked HEAD: `dcfc5b8273b8070f4ca2c45c6d783329b889d349`
+
+### 確認結果
+
+- 基準以降の変更は、依存タスクが temporal bridge 出力を production primary に接続し、pose-snapshot fallback と source 診断を追加したもの。対象タスクが前提とする `createTemporalArmIkInput()`、solver の clamp、Phase 6 v1 optional 拡張という実装境界は残っている。
+- canonical input `artifacts/video/arms-cross.browser.mp4` は現行 HEAD に存在し、SHA-256 は `21296ea0fbd2f8655d4c20bbffe67541457ed04ddef9468eacb7fa172cd1cf54`。同一 bytes 3 run の前提を満たせる。
+- `motionDebugPhase6Snapshot.ts` には arm 単位の optional `source` と旧 log normalization が追加されたが、task の optional `reach` を同じ arm snapshot に追加し schema version `sincro.phase6-solver.v1` を維持する方針とは競合しない。
+
+### 実装者への追加申し送り
+
+- task.md の file:line は基準以降の変更でずれているため、行番号ではなく symbol 名を基準にすること。特に Phase 6 arm serializer/parser は `serializeArmSolverSnapshot()`、`phase6ArmSolverSnapshotSchema`、`normalizePhase6ArmSolverSnapshot()` の3箇所を同期すること。
+- production primary 接続後は `SincroPoseRetargetedArm.solverSource` / `temporalBridge` が診断値の受け渡し境界になっている。bridge clamp 前の requested ratio を失わず、solver 最終 target の applied ratio と clamp ownership をこの現行経路へ統合すること。
+- 新しい `source.targetReachRatio` と task の `reach.requestedReachRatio` / `appliedReachRatio` の意味が重複・矛盾しないよう整理し、docs と viewer も現行 source contract を前提に更新すること。
