@@ -1,5 +1,6 @@
 {
   "checkedAt": "2026-06-18",
+  "privateArtifactRoot": "work/private-artifacts/task-3116-sincro-pose-ik-observability-verification-and-design-sync/screenshots",
   "pageUrl": "http://127.0.0.1:5173/pages/motionDebug/?vrm=/characters/aoi-1.0.7.vrm",
   "vrmUrl": "/characters/aoi-1.0.7.vrm",
   "modelVisible": true,

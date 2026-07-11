@@ -21,7 +21,7 @@
 - [ ] temporal bridge は clamp 前後の肩local wrist長から requested / applied ratio を算出し、solverへ渡すtargetとdebug snapshotの値を一致させる。arm lengthが非finiteまたは0以下の場合は既存 `invalid_temporal_arm` fallbackを維持し、偽の0 ratioを保存しない。
 - [ ] solver側の再clampが発生した場合は `clampedBy: "solver"`、bridgeだけでclampされた場合は `"bridge"`、どちらも無ければ `"none"` として保存し、同一frameを二重件数として数えない。
 - [ ] `solverReachClampOccupancy` の既存keyと旧log計算を維持し、新規診断metricとして `solverExcessReachRatioP95` を追加する。全arm-frameにfinite `reach.excessReachRatio` がある場合だけ左右arm-frame全体のp95を返す。1件でも `reach` 欠損、non-finite、またはsample 0件なら部分sampleで計算せず、`not_available` / `unavailableReason: "reach_diagnostics_not_recorded"` を返す。
-- [ ] canonical input `tasks/character-sincro-motion/task-260705214026-canonical-temporal-arm-solver-production/artifacts/video/arms-cross.browser.mp4` の同一bytesを最低3回 replayし、各runについて入力SHA-256、左右別の requested/applied/excess ratio、`clampedBy`内訳、temporal source stateをartifactに保存する。修正後は3 runすべてで `solverExcessReachRatioP95 <= 0.05`、elbow flip reject `<= 2`、NaN / side swap / owned bone conflict `0`を満たす。
+- [ ] canonical input `work/private-artifacts/task-260705214026-canonical-temporal-arm-solver-production/video/arms-cross.browser.mp4` の同一bytesを最低3回 replayし、各runについて入力SHA-256、左右別の requested/applied/excess ratio、`clampedBy`内訳、temporal source stateをartifactに保存する。修正後は3 runすべてで `solverExcessReachRatioP95 <= 0.05`、elbow flip reject `<= 2`、NaN / side swap / owned bone conflict `0`を満たす。
 - [ ] `maxReachRatio` やavatar arm lengthを単に縮小してoccupancyだけを下げる変更は禁止する。target方向、hand-to-chest交差の視認性、左右armの最終poseを実写videoで確認し、修正前後の所見を `impl.md` に残す。
 - [ ] Phase 6 schema/parser、metrics facade/summary/comparison、viewer表示と `documents/design/frontend/character/motion.md`、`tracking.md` を同期する。
 - [ ] TypeScript production comment auditを指定列（`path`、`symbol or decision`、`kind`、`current comment`、`decision`、`required maintenance knowledge`、`action`、`reviewer note`）で `impl.md` に記録する。bridge/solver clamp ownership、ratioの座標・分母、旧log fallback、p95 sample policyを必須対象とし、実コードのTSDoc/JSDocも更新する。弱い既存コメントはrewrite/deleteし、stale commentは更新/削除する。コメント追加前に命名・関数分割・型・options objectで自明化できないか確認する。評価時は変更した全symbol/decisionを照合し、逐語説明、型から明らかな説明、失敗条件を欠くheuristic説明、定型audit理由が残ればFAILとする。
@@ -33,12 +33,12 @@
 - 新規snapshot fieldは `motionDebugPhase6Snapshot.ts` のarm単位optional `reach` に置き、schema versionは `sincro.phase6-solver.v1`を維持する。required field変更ではなく旧log互換を保てるため、v2へ上げない。
 - p95はfinite sampleを昇順にし `ceil(0.95 * n) - 1` indexで選ぶnearest-rank法に固定する。平均だけでは短時間の大きな超過を隠すため採用しない。
 - baseline比occupancyだけをexit gateにしない。既存baseline自体が絶対thresholdを超えるため、新しいexcess量の絶対条件と視認確認を併用する。
-- canonical実写入力は依存タスクの `artifacts/video/arms-cross.browser.mp4` に固定し、3 runの前にSHA-256を記録する。別container、再encode、元MOVへの差し替えは同一比較として扱わない。
+- canonical実写入力は非公開artifact領域の `video/arms-cross.browser.mp4` に固定し、3 runの前にSHA-256を記録する。別container、再encode、元MOVへの差し替えは同一比較として扱わない。
 
 ## スコープ境界
 
 - 本タスク: reach/clamp診断contract、metric、`arms-cross`原因修正、実写3 run、docs/comment同期。
-- 依存タスク: production temporal primary経路と canonical input `artifacts/video/arms-cross.browser.mp4` を提供する。
+- 依存タスク: production temporal primary経路を提供する。canonical inputは非公開artifact領域で開発者が管理する。
 - スコープ外: recovery fixture、Pose fallback削除、Hand wristの主入力化、arm length calibration全般、他P0 gestureの品質再調整、backend/WebRTC変更。
 
 ## 実装方針（既存コード整合: file:line）

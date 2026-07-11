@@ -22,7 +22,7 @@ APPROVED
     - 弱い既存コメントの rewrite/delete、stale comment の更新/削除、コメント前の命名・関数分割・型・options object による自明化確認、変更した全 symbol/decision の評価時照合と不良コメントの FAIL 条件が受け入れ条件に追加された。
 
 3. canonical fixture path / 同一 bytes: 解消済み。
-    - canonical input が依存タスク配下の `artifacts/video/arms-cross.browser.mp4` に固定され、3 run で同一 bytes を使用し各 run の SHA-256 を保存する条件になった。
+    - canonical input が非公開artifact領域の `video/arms-cross.browser.mp4` に固定され、3 run で同一 bytes を使用し各 run の SHA-256 を保存する条件になった。
     - 別 container、再 encode、元 MOV への差し替えを同一比較として扱わない判断と、依存タスクが当該 artifact を提供する責務境界も明記された。
 
 ## 改訂による新規破綻の確認
@@ -51,7 +51,7 @@ FRESH
 ### 確認結果
 
 - 基準以降の変更は、依存タスクが temporal bridge 出力を production primary に接続し、pose-snapshot fallback と source 診断を追加したもの。対象タスクが前提とする `createTemporalArmIkInput()`、solver の clamp、Phase 6 v1 optional 拡張という実装境界は残っている。
-- canonical input `artifacts/video/arms-cross.browser.mp4` は現行 HEAD に存在し、SHA-256 は `21296ea0fbd2f8655d4c20bbffe67541457ed04ddef9468eacb7fa172cd1cf54`。同一 bytes 3 run の前提を満たせる。
+- canonical inputはGit管理外のprivate artifactとして保存し、SHA-256 `21296ea0fbd2f8655d4c20bbffe67541457ed04ddef9468eacb7fa172cd1cf54` で同一 bytes 3 run の前提を確認する。
 - `motionDebugPhase6Snapshot.ts` には arm 単位の optional `source` と旧 log normalization が追加されたが、task の optional `reach` を同じ arm snapshot に追加し schema version `sincro.phase6-solver.v1` を維持する方針とは競合しない。
 
 ### 実装者への追加申し送り

@@ -160,6 +160,18 @@ tasks/<category>/
 | `acceptance/` | evaluator subagent    | 独立検証用の補助ファイル                                |
 | `artifacts/`  | 各 role               | タスク固有のログ、CSV、スクリーンショット、調査メモ     |
 
+### 公開artifactと非公開検証原本
+
+`tasks/**/artifacts/` は公開リポジトリへcommitされる領域である。集計JSON、CSV、再現手順、
+入力のSHA-256、privacy確認済みの小さなfixtureだけを置く。実写動画、検証screenshot、camera capture、frame単位の
+raw replay（NDJSON / JSONL）、trace、個人情報を含み得る原本は
+`work/private-artifacts/<task-id>/` にまとめる。この領域はGit管理外であり、開発者が保管・共有・
+削除を明示的に管理する。別環境で再現する場合は、task文書に記録したSHA-256で同一性を確認する。
+
+`tasks:close` はtask内の動画、画像、raw replay、`artifacts/private/`、5 MiBを超えるartifactを検出すると
+停止する。例外的に公開が必要なfixtureは、privacy・ライセンス・容量をレビューした上でtask外の
+正式なtest fixture領域へ置き、生成方法と採用理由を記録する。
+
 ## meta.yaml
 
 ```yaml
