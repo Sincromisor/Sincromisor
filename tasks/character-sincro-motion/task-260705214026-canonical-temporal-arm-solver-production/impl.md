@@ -327,3 +327,27 @@ TODO は追加していない。今回 production TypeScript の変更はなく�
 
 - production code / tests / docs の追加変更はなし。外部入力の不在はコード修正では解消できない。
 - implementation branch HEAD は `56d0db4` のまま。attempt 1 rerun の `npm run gate` は clean SHA で PASS（487 tests）しており、worktree は clean。
+
+## attempt 3 (2026-07-12 real-video follow-up)
+
+### 実装
+
+- 実写6 fixtureの初回実行で、実装buildの全frameが`temporal_input_missing`によりPose fallbackへ落ちることを確認した。
+- `motion-debug` recorder/viewerが計算したtemporal stateを`CharacterBehaviorState`へ同期し、production `VRMCharacterManager.update()`と同じretarget runtime inputへ渡すよう修正した。
+- source停止時はmotion pipelineをclearし、前fixtureのtemporal/Handを持ち越さない。
+- commit: `ff0edef9` (`fix(frontend): publish motion debug temporal state`)。
+
+### 検証
+
+- focused tests: 3 files / 19 tests PASS。
+- `npm run gate`: lint/build/test PASS、71 files / 488 tests。
+- 実写6 fixture再実行: candidate 595 framesの左右すべてが`primarySource: temporal`、Pose fallback 0 frames。
+- artifacts: `artifacts/replay/`、`artifacts/metrics/`、`artifacts/p0-real-video-capture-2026-07-12.md`、`artifacts/p0-temporal-vs-pose-fallback-metrics-comparison.real-video.json`。
+
+### 判定
+
+- real-video comparison verdictは`FAIL`。
+- `solverElbowFlipRejectCount`が全6 fixtureでregression（baseline 0–2、candidate 117–196）。
+- `arms-cross`の`solverReachClampOccupancy`が約`0.649`から`0.867`へregression。
+- recovering temporal sampleが無く、recovery jumpはnot comparable。
+- temporal input接続不備は解消したが、temporal elbow-pole安定性を調整しない限り本タスクの非regression条件は満たせない。
