@@ -81,7 +81,8 @@
     - active right tool panel
     - settings category
     - debug tab
-    - sincro settings の initial calibration retry state。active 中は current step、session summary、先頭 guide message、記録済み current step の「再試行」を表示する。idle / cancelled は session field と action を表示しない。
+    - sincro settings の initial calibration retry state。active 中は current step、session summary、先頭 guide message、記録済み current step の「再試行」を表示する。UI は production calibration controller を購読して Pose callback の評価結果を反映する。idle / cancelled は session field と action を表示しない。
+    - simple-vrm panel は `dialog_vrm_ui_state.vrmStatusText` の初期値確定後の変化を VRM source 変更として扱い、active initial calibration を現在の sessionId で cancel する。
 
 ## Interfaces
 
