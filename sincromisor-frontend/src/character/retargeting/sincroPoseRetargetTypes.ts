@@ -53,6 +53,12 @@ export type SincroPoseRetargetedArm = {
     fallbackReason?: string;
     solverSource?: SincroPoseArmSolverSource;
     temporalBridge?: TemporalArmIkBridgeResult;
+    reach?: {
+        requestedReachRatio: number;
+        appliedReachRatio: number;
+        excessReachRatio: number;
+        clampedBy: "bridge" | "solver" | "none";
+    };
     constraint: SincroArmIkConstraintSnapshot;
     upperArm: { x: number; y: number; z: number };
     lowerArm: { x: number; y: number; z: number };

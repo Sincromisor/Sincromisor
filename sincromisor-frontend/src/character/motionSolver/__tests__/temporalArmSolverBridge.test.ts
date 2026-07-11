@@ -127,12 +127,13 @@ describe("createTemporalArmIkInput", () => {
         expect(result.debug.usedBodyLocalWrist).toBe(true);
         expect(result.debug.usedBodyLocalElbow).toBe(true);
         expect(result.debug.shoulderLocal).toEqual([0.5, 0, 0]);
-        expectTupleClose(result.debug.wristBeforeClamp, [0.4, 0.184, 0.165]);
+        expect(result.reach?.requestedReachRatio).toBeCloseTo(0.5, 6);
         expect(result.debug.wristAfterClamp).toEqual(result.debug.wristBeforeClamp);
         expectTupleClose(result.debug.elbowPoleBeforeNormalize, [0.2, 0.092, 0.11]);
-        expect(result.target?.wrist.x).toBeCloseTo(0.4, 6);
-        expect(result.target?.wrist.y).toBeCloseTo(0.184, 6);
-        expect(result.target?.wrist.z).toBeCloseTo(0.165, 6);
+        expect(result.target?.wrist.length()).toBeCloseTo(0.5, 6);
+        expect(result.target?.wrist.x).toBeGreaterThan(0);
+        expect(result.target?.wrist.y).toBeGreaterThan(0);
+        expect(result.target?.wrist.z).toBeGreaterThan(0);
         expect(result.target?.elbowPole.x).toBeCloseTo(0.2, 6);
         expect(result.target?.weight).toBeCloseTo(0.8, 6);
         expect(result.target?.temporalState).toBe("tracked");
@@ -241,6 +242,11 @@ describe("createTemporalArmIkInput", () => {
         });
         expectTupleClose(result.debug.wristBeforeClamp, [6, 8, 1]);
         expect(result.target?.wrist.length()).toBeCloseTo(0.985, 6);
+        expect(result.reach?.requestedReachRatio).toBeGreaterThan(9);
+        expect(result.reach).toMatchObject({
+            bridgeAppliedReachRatio: 0.985,
+            bridgeClamped: true,
+        });
     });
 
     it("returns invalid_temporal_arm with zero debug weights for non-finite inputs", () => {
@@ -256,9 +262,29 @@ describe("createTemporalArmIkInput", () => {
         });
 
         expect(result.target).toBeUndefined();
+        expect(result.reach).toBeUndefined();
         expect(result.reasonCodes).toEqual(["invalid_temporal_arm"]);
         expect(result.debug.weightBeforeStateScale).toBe(0);
         expect(result.debug.weightAfterStateScale).toBe(0);
+    });
+
+    it.each([
+        { upperArmLength: 0, lowerArmLength: 0 },
+        { upperArmLength: -0.1, lowerArmLength: 0.6 },
+    ])("rejects non-positive arm measurements without recording reach", (solver) => {
+        const result = createTemporalArmIkInput({
+            temporal: createTemporal("right", {}),
+            side: "right",
+            profile: {
+                ...PROFILE,
+                measurements: { shoulderWidth: 1 },
+            },
+            solver: { ...SOLVER, ...solver },
+        });
+
+        expect(result.target).toBeUndefined();
+        expect(result.reach).toBeUndefined();
+        expect(result.reasonCodes).toEqual(["invalid_temporal_arm"]);
     });
 
     it("rejects unknown temporal arm states from runtime boundaries", () => {

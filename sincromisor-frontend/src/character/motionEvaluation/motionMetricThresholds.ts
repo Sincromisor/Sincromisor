@@ -57,6 +57,7 @@ export const MOTION_METRIC_KEYS: MotionMetricKey[] = [
     "temporalNeutralWristJitter",
     "solverElbowFlipRejectCount",
     "solverReachClampOccupancy",
+    "solverExcessReachRatioP95",
     "solverPoleUncertainFrameCount",
     "finalPoseAngularVelocityClampCount",
     "finalPoseOwnedBoneConflictCount",
@@ -95,6 +96,7 @@ export const DEFAULT_MOTION_METRIC_THRESHOLDS: Record<MotionMetricKey, MotionMet
     temporalNeutralWristJitter: { pass: 0.015, warn: 0.035, fail: 0.06 },
     solverElbowFlipRejectCount: { pass: 1, warn: 3, fail: 3 },
     solverReachClampOccupancy: { pass: 0.2, warn: 0.4, fail: 0.4 },
+    solverExcessReachRatioP95: { pass: 0.05, warn: 0.1, fail: 0.1 },
     solverPoleUncertainFrameCount: { pass: 2, warn: 5, fail: 5 },
     finalPoseAngularVelocityClampCount: { pass: 0, warn: 2, fail: 2 },
     finalPoseOwnedBoneConflictCount: { pass: 0, warn: 0, fail: 0 },
@@ -134,6 +136,7 @@ export const METRIC_DEFINITIONS: Record<
     temporalNeutralWristJitter: { unit: "ratio", direction: "lower_is_better" },
     solverElbowFlipRejectCount: { unit: "count", direction: "lower_is_better" },
     solverReachClampOccupancy: { unit: "ratio", direction: "lower_is_better" },
+    solverExcessReachRatioP95: { unit: "ratio", direction: "lower_is_better" },
     solverPoleUncertainFrameCount: { unit: "count", direction: "lower_is_better" },
     finalPoseAngularVelocityClampCount: { unit: "count", direction: "lower_is_better" },
     finalPoseOwnedBoneConflictCount: { unit: "count", direction: "lower_is_better" },
@@ -199,6 +202,9 @@ export function resolveThresholds(
         solverReachClampOccupancy:
             config.thresholds?.solverReachClampOccupancy ??
             DEFAULT_MOTION_METRIC_THRESHOLDS.solverReachClampOccupancy,
+        solverExcessReachRatioP95:
+            config.thresholds?.solverExcessReachRatioP95 ??
+            DEFAULT_MOTION_METRIC_THRESHOLDS.solverExcessReachRatioP95,
         solverPoleUncertainFrameCount:
             config.thresholds?.solverPoleUncertainFrameCount ??
             DEFAULT_MOTION_METRIC_THRESHOLDS.solverPoleUncertainFrameCount,

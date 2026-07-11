@@ -22,6 +22,7 @@ import {
     calculateFinalPoseAngularVelocityClampCount,
     calculateFinalPoseOwnedBoneConflictCount,
     calculateSolverElbowFlipRejectCount,
+    calculateSolverExcessReachRatioP95,
     calculateSolverPoleUncertainFrameCount,
     calculateSolverReachClampOccupancy,
 } from "./motionMetricSolverCalculators";
@@ -213,6 +214,11 @@ export function calculateMotionMetricSummary(
             "solverReachClampOccupancy",
             thresholds.solverReachClampOccupancy,
             calculateSolverReachClampOccupancy(frames),
+        ),
+        solverExcessReachRatioP95: createMetricResult(
+            "solverExcessReachRatioP95",
+            thresholds.solverExcessReachRatioP95,
+            calculateSolverExcessReachRatioP95(frames),
         ),
         solverPoleUncertainFrameCount: createMetricResult(
             "solverPoleUncertainFrameCount",
