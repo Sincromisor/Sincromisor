@@ -285,6 +285,7 @@ function metricDefinition(key: MotionMetricKey): Pick<MotionMetricResult, "unit"
         case "reachClampOccupancy":
         case "temporalNeutralWristJitter":
         case "solverReachClampOccupancy":
+        case "solverExcessReachRatioP95":
             return { unit: "ratio", direction: "lower_is_better" };
         case "elbowFlipCount":
         case "angularVelocitySpikeCount":

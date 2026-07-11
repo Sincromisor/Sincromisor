@@ -43,6 +43,12 @@ export type MotionDebugTemporalArmIkBridgeSnapshot = {
 };
 
 export type MotionDebugPhase6ArmSolverSnapshot = {
+    reach?: {
+        requestedReachRatio: number;
+        appliedReachRatio: number;
+        excessReachRatio: number;
+        clampedBy: "bridge" | "solver" | "none";
+    };
     source?: {
         primarySource: SincroPoseArmSolverPrimarySource;
         fallbackReason?: string;
@@ -175,6 +181,22 @@ const temporalArmIkBridgeSnapshotSchema: z.ZodType<MotionDebugTemporalArmIkBridg
 
 const phase6ArmSolverSnapshotSchema: z.ZodType<MotionDebugPhase6ArmSolverSnapshot> =
     plainObjectSchema({
+        reach: plainObjectSchema({
+            requestedReachRatio: finiteNumberSchema,
+            appliedReachRatio: finiteNumberSchema,
+            excessReachRatio: finiteNumberSchema,
+            clampedBy: z.enum(["bridge", "solver", "none"]),
+        })
+            .refine(
+                (reach) =>
+                    Math.abs(
+                        reach.excessReachRatio -
+                            Math.max(0, reach.requestedReachRatio - reach.appliedReachRatio),
+                    ) <=
+                    Number.EPSILON * 4,
+                { message: "excessReachRatio must equal max(0, requested - applied)." },
+            )
+            .optional(),
         source: plainObjectSchema({
             primarySource: armSolverPrimarySourceSchema,
             fallbackReason: z.string().optional(),
@@ -335,6 +357,7 @@ function serializeArmSolverSnapshot(
     arm: SincroPoseRetargetedArm,
 ): MotionDebugPhase6ArmSolverSnapshot {
     return {
+        reach: arm.reach ? { ...arm.reach } : undefined,
         source: serializeArmSolverSource(arm),
         bridge: arm.temporalBridge
             ? serializeTemporalArmIkBridgeSnapshot(arm.temporalBridge)
@@ -482,6 +505,7 @@ function normalizePhase6ArmSolverSnapshot(
     arm: MotionDebugPhase6ArmSolverSnapshot,
 ): MotionDebugPhase6ArmSolverSnapshot {
     return {
+        reach: arm.reach ? { ...arm.reach } : undefined,
         source: arm.source
             ? {
                   primarySource: arm.source.primarySource,

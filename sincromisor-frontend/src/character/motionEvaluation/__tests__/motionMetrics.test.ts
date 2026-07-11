@@ -123,6 +123,7 @@ function createPhase6Solver(options?: {
     leftTargetClamped?: boolean;
     rightTargetClamped?: boolean;
     leftPoleUncertain?: boolean;
+    reachExcesses?: [number, number];
 }): unknown {
     return {
         phase6: {
@@ -148,6 +149,15 @@ function createPhase6Solver(options?: {
             },
             arms: {
                 left: {
+                    reach:
+                        options?.reachExcesses === undefined
+                            ? undefined
+                            : {
+                                  requestedReachRatio: 1 + options.reachExcesses[0],
+                                  appliedReachRatio: 1,
+                                  excessReachRatio: options.reachExcesses[0],
+                                  clampedBy: options.reachExcesses[0] > 0 ? "bridge" : "none",
+                              },
                     ik: {
                         active: true,
                         targetClamped: options?.leftTargetClamped ?? false,
@@ -157,6 +167,15 @@ function createPhase6Solver(options?: {
                     },
                 },
                 right: {
+                    reach:
+                        options?.reachExcesses === undefined
+                            ? undefined
+                            : {
+                                  requestedReachRatio: 1 + options.reachExcesses[1],
+                                  appliedReachRatio: 1,
+                                  excessReachRatio: options.reachExcesses[1],
+                                  clampedBy: options.reachExcesses[1] > 0 ? "solver" : "none",
+                              },
                     ik: {
                         active: true,
                         targetClamped: options?.rightTargetClamped ?? false,
@@ -470,11 +489,15 @@ describe("calculateMotionMetricSummary", () => {
                         leftPoleFlip: true,
                         leftTargetClamped: true,
                         leftPoleUncertain: true,
+                        reachExcesses: [0.01, 0.02],
                     }),
                     finalPose: createFinalPose({ angularVelocityClamped: true }),
                 }),
                 createFrame(1, 100, {
-                    solver: createPhase6Solver({ rightTargetClamped: true }),
+                    solver: createPhase6Solver({
+                        rightTargetClamped: true,
+                        reachExcesses: [0.03, 0.2],
+                    }),
                     finalPose: createFinalPose({ ownedBoneConflict: true }),
                 }),
             ],
@@ -489,6 +512,10 @@ describe("calculateMotionMetricSummary", () => {
         expect(summary.metrics.solverReachClampOccupancy).toMatchObject({
             value: 0.5,
             status: "fail",
+            sampleCount: 4,
+        });
+        expect(summary.metrics.solverExcessReachRatioP95).toMatchObject({
+            value: 0.2,
             sampleCount: 4,
         });
         expect(summary.metrics.solverPoleUncertainFrameCount).toMatchObject({

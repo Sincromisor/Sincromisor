@@ -88,6 +88,7 @@ export function compareMotionMetricSummaries(
             candidate,
         ),
         solverReachClampOccupancy: compareMetric("solverReachClampOccupancy", baseline, candidate),
+        solverExcessReachRatioP95: compareMetric("solverExcessReachRatioP95", baseline, candidate),
         solverPoleUncertainFrameCount: compareMetric(
             "solverPoleUncertainFrameCount",
             baseline,

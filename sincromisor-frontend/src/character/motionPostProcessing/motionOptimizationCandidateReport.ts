@@ -96,6 +96,7 @@ function targetForMetric(metricKey: MotionMetricKey): MotionOptimizationCandidat
         case "solverElbowFlipRejectCount":
         case "solverPoleUncertainFrameCount":
         case "solverReachClampOccupancy":
+        case "solverExcessReachRatioP95":
         case "reachClampOccupancy":
             return "constrained_ik_refinement";
         case "neutralJitter":
