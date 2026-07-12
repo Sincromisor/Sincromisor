@@ -1,13 +1,13 @@
 id: task-260713030640-testclient-httpx2
 title: TestClientをhttpx2へ移行して非推奨警告を解消する
 category: sincro-rtc
-status: open
+status: done
 depends_on: []
 superseded_by: null
 review: APPROVED
 reviewed_sha: a7857c2179b7ca85ca0efe57a957a02132c0d53a
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 3
 created_at: 2026-07-13
-closed_at: null
+closed_at: 2026-07-13
 legacy_ids: []
