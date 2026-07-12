@@ -1,0 +1,16 @@
+id: task-260625194536-character-animation-3-phase-5-temporal-debug-replay-metrics
+title: character animation 3.0 phase 5 temporal debug replay metrics
+category: character-sincro-motion
+status: done
+depends_on:
+  - task-260625194536-character-animation-3-phase-5-dropout-prediction-recovery
+  - task-260623221639-character-animation-3-motion-metrics-baseline
+  - task-260623221644-character-animation-3-motion-debug-layered-viewer
+superseded_by: null
+review: APPROVED
+reviewed_sha: a5dbcd94732d8cd0cf2a61e56af4c1609b6aee6d
+verdict: PASS
+attempts: 2
+created_at: 2026-06-25
+closed_at: 2026-06-25
+legacy_ids: []

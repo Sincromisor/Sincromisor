@@ -1,0 +1,16 @@
+id: task-260705004415-full-normalized-pose-application
+title: Apply full normalized final pose in production
+category: character-sincro-motion
+status: done
+depends_on:
+  - task-260705004410-semantic-finger-production-application
+  - task-260629225907-sincro-runtime-motion-ownership-map
+  - task-260629225957-composer-optional-bone-fallback-vrm-verification
+superseded_by: null
+review: APPROVED
+reviewed_sha: edf9f7d63b8843663a44bfaa9fcdce43ed20aa7f
+verdict: PASS
+attempts: 3
+created_at: 2026-07-05
+closed_at: 2026-07-05
+legacy_ids: []

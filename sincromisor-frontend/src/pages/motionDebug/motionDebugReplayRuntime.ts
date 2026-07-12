@@ -1,0 +1,550 @@
+/**
+ * MotionReplayPlayer と tracker / scene / viewer state を接続する replay lifecycle owner。
+ *
+ * replay は実 camera runtime を止めて saved pose frame を再適用する developer-only 境界であり、camera
+ * track、recording download、DOM input の resource は所有しない。stop / load / source reset では
+ * timer と temporal / intent estimator state を破棄し、古い replay frame の hysteresis を次 source へ
+ * 持ち越さない。
+ */
+import type { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
+import {
+    type CanonicalUpperBodyState,
+    parseCanonicalUpperBodyState,
+} from "../../character/canonical/canonicalUpperBodyState";
+import type {
+    SincroMotionDebugFrame,
+    SincroMotionDebugLogManifest,
+} from "../../character/motionEvaluation/motionDebugLogSchema";
+import type { MotionReplayApplyContext } from "../../character/motionEvaluation/motionReplayPlayer";
+import { MotionReplayPlayer } from "../../character/motionEvaluation/motionReplayPlayer";
+import type { SincroMotionReplayRawResultFrame } from "../../character/motionEvaluation/motionReplayRawResultSchema";
+import { MotionIntentEstimator } from "../../character/motionIntent/motionIntentEstimator";
+import type { MotionIntentState } from "../../character/motionIntent/motionIntentState";
+import { parseMotionPostProcessingResult } from "../../character/motionPostProcessing/motionPostProcessingState";
+import { TemporalStateEstimator } from "../../character/temporal/temporalStateEstimator";
+import { parseTemporalUpperBodyState } from "../../character/temporal/temporalUpperBodyState";
+import type { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
+import { normalizeSincroFaceLandmarkerResult } from "../../features/gaze/faceTracking/sincroFaceTrackerNormalizer";
+import {
+    createSincroGestureFallbackSnapshot,
+    type SincroGestureMotionSnapshot,
+    toGestureIntentObservation,
+    uniqueGestureWarnings,
+} from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
+import { normalizeSincroGestureRecognizerResult } from "../../features/gaze/gestureTracking/sincroGestureTrackerHelpers";
+import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
+import {
+    assignSincroHandObservationsToPose,
+    normalizeSincroHandLandmarkerResult,
+    type SincroHandPoseWrist,
+} from "../../features/gaze/handTracking/sincroHandTrackerHelpers";
+import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import {
+    normalizeSincroPoseLandmarkerResult,
+    type SincroPoseLandmarkerResultInput,
+} from "../../features/gaze/poseTracking/sincroPoseTrackerNormalizer";
+import {
+    createMotionDebugCanonicalReliabilityInput,
+    createMotionDebugCanonicalState,
+} from "./motionDebugCanonicalState";
+import { readMotionDebugReplayText } from "./motionDebugReplayInput";
+import { MotionDebugReplayTimer } from "./motionDebugReplayTimer";
+import type { MotionDebugSceneRuntime } from "./motionDebugSceneRuntime";
+import type { MotionDebugTrackerBridge } from "./motionDebugTrackerBridge";
+import type {
+    MotionDebugReplayFrameResult,
+    MotionDebugReplayLoadResult,
+    MotionDebugReplayState,
+    MotionDebugSnapshot,
+    MotionDebugStatus,
+} from "./types";
+
+type MotionDebugReplayRuntimeParams = {
+    tracker: MotionDebugTrackerBridge;
+    behaviorState: CharacterBehaviorState;
+    debugConsole: DebugConsoleManager;
+    scene: MotionDebugSceneRuntime;
+    getSnapshot: () => MotionDebugSnapshot;
+    setStatus: (status: MotionDebugStatus, message: string) => void;
+    stopActiveRuntime: (reason: string) => void;
+    setAutoViewerMode: (mode: "replay") => void;
+    renderSnapshot: () => void;
+};
+
+/**
+ * motion-debug page の replay 操作と replay-derived snapshot state を管理する。
+ *
+ * saved canonical / temporal / postProcessing slot が invalid な場合は replay 全体を失敗させず、viewer に
+ * `parseStatus: "invalid"` と raw value を渡す。slot が無い旧 log では runtime 側で canonical /
+ * temporal / intent を再計算する。
+ */
+export class MotionDebugReplayRuntime {
+    // reason: structure-threshold-exception replay playback and replay-derived temporal/intent reset timing remain grouped to preserve behavior.
+    readonly player: MotionReplayPlayer<MotionDebugSnapshot>;
+    private readonly temporalEstimator = new TemporalStateEstimator();
+    private readonly intentEstimator = new MotionIntentEstimator();
+    private readonly timer: MotionDebugReplayTimer;
+    private latestCanonical?: MotionDebugSnapshot["canonical"];
+    private latestTemporal?: MotionDebugSnapshot["temporal"];
+    private latestIntent?: MotionIntentState;
+    private latestPostProcessing?: MotionDebugSnapshot["postProcessing"];
+    private latestCanonicalReliabilityInput?: MotionDebugSnapshot["canonicalReliabilityInput"];
+
+    constructor(private readonly params: MotionDebugReplayRuntimeParams) {
+        this.player = new MotionReplayPlayer<MotionDebugSnapshot>({
+            applyPoseSnapshot: (snapshot, context) =>
+                this.applyReplayPoseSnapshot(snapshot, context),
+            applyRawResult: (raw, context) => this.applyReplayRawResult(raw, context),
+            readSnapshot: () => this.params.getSnapshot(),
+        });
+        this.timer = new MotionDebugReplayTimer({
+            frameCount: () => this.player.frameCount(),
+            frameMediaTimeMs: (frameIndex) => this.player.frameMediaTimeMs(frameIndex),
+            stepReplay: (frameIndex) => this.player.stepReplay(frameIndex, { autoplay: true }),
+            stopReplay: () => this.stopReplay(),
+            setStatus: (status, message) => {
+                this.params.setStatus(status, message);
+            },
+            renderSnapshot: () => {
+                this.params.renderSnapshot();
+            },
+        });
+    }
+
+    /**
+     * File または plain text の recording を読み込み、replay player と derived state を reset する。
+     *
+     * 成功時は active camera / fixture runtime を止める。読み込み失敗時も timer は止め、既存 temporal /
+     * intent state を残さない。
+     */
+    async loadRecording(fileOrText: unknown): Promise<MotionDebugReplayLoadResult> {
+        this.clearTimer();
+        const textInput = await readMotionDebugReplayText(fileOrText);
+        if (!textInput.ok) {
+            return textInput;
+        }
+
+        const result = this.player.loadRecordingText(textInput.text);
+        this.resetCanonicalState();
+        this.params.tracker.resetReliabilityState();
+        this.resetTemporalState();
+        if (result.ok) {
+            this.params.stopActiveRuntime("motion_debug_replay_loaded");
+            this.params.setStatus("stopped", "replay 読み込み済み");
+        } else {
+            this.params.setStatus("error", result.message);
+        }
+        this.params.renderSnapshot();
+        return result;
+    }
+
+    /**
+     * 読み込み済み recording を指定 mode で開始する。
+     *
+     * mode の解釈と unsupported mode error は `MotionReplayPlayer` に委譲する。autoplay 時は
+     * `MotionDebugReplayTimer` が次 frame scheduling を所有し、この method は camera resource を再取得しない。
+     */
+    startReplay(options: {
+        mode: NonNullable<MotionDebugReplayState["mode"]>;
+        autoplay?: boolean;
+    }): MotionDebugReplayFrameResult {
+        this.clearTimer();
+        if (this.player.getReplayState().currentFrameIndex !== undefined) {
+            this.resetTemporalState();
+        }
+        this.params.stopActiveRuntime("motion_debug_replay_started");
+        this.params.behaviorState.setTalkMode("sincro");
+        const result = this.player.startReplay({
+            mode: options.mode,
+            autoplay: options.autoplay,
+        });
+        if (result.ok) {
+            // replay mode は実カメラを止め、保存済み frame を表示へ適用する開発者境界。
+            this.params.setAutoViewerMode("replay");
+        }
+        this.timer.updateReplayStatus(result, options.autoplay === true);
+        if (result.ok && options.autoplay === true) {
+            this.timer.scheduleNextFrame(result.frameIndex);
+        }
+        this.params.renderSnapshot();
+        return result;
+    }
+
+    /**
+     * 指定 frame を適用し、隣接 forward step だけ temporal / intent hysteresis を継続する。
+     *
+     * 同一 frame の再適用、frame skip、後方 seek は時間連続性を保証できないため、適用前に derived state を
+     * reset する。autoplay は timer が常に次 index を player へ渡すため連続 state を維持する。
+     */
+    stepReplay(frameIndex: number): MotionDebugReplayFrameResult {
+        this.clearTimer();
+        const currentFrameIndex = this.player.getReplayState().currentFrameIndex;
+        if (currentFrameIndex !== undefined && frameIndex !== currentFrameIndex + 1) {
+            this.resetTemporalState();
+        }
+        const result = this.player.stepReplay(frameIndex);
+        this.timer.updateReplayStatus(result, false);
+        this.params.renderSnapshot();
+        return result;
+    }
+
+    /**
+     * replay timer と replay-derived temporal / intent state を停止時に破棄する。
+     *
+     * camera / recording runtime は所有していないため触らない。二重 stop でも timer clear と state reset
+     * だけを行う。
+     */
+    stopReplay(): MotionDebugReplayState {
+        this.clearTimer();
+        const state = this.player.stopReplay();
+        this.resetTemporalState();
+        this.params.setStatus("stopped", "replay 停止中");
+        this.params.renderSnapshot();
+        return state;
+    }
+
+    getReplayState(): MotionDebugReplayState {
+        return this.player.getReplayState();
+    }
+
+    resetCanonicalState(): void {
+        this.latestCanonical = undefined;
+        this.latestCanonicalReliabilityInput = undefined;
+    }
+
+    resetTemporalState(): void {
+        this.latestTemporal = undefined;
+        this.latestIntent = undefined;
+        this.latestPostProcessing = undefined;
+        this.temporalEstimator.reset();
+        this.intentEstimator.reset();
+    }
+
+    setCanonicalState(state: MotionDebugSnapshot["canonical"]): void {
+        this.latestCanonical = state;
+    }
+
+    setCanonicalReliabilityInput(state: MotionDebugSnapshot["canonicalReliabilityInput"]): void {
+        this.latestCanonicalReliabilityInput = state;
+    }
+
+    setTemporalState(state: MotionDebugSnapshot["temporal"]): void {
+        this.latestTemporal = state;
+    }
+
+    setIntentState(state: MotionIntentState | undefined): void {
+        this.latestIntent = state;
+    }
+
+    setPostProcessingState(state: MotionDebugSnapshot["postProcessing"]): void {
+        this.latestPostProcessing = state;
+    }
+
+    /**
+     * live snapshot に合成する replay-derived layer state を返す。
+     *
+     * 戻り値は内部 state の参照を含むため、caller は表示用 snapshot へ読み込むだけにし、ここから mutation
+     * しない。
+     */
+    snapshotState(): Pick<
+        MotionDebugSnapshot,
+        "canonical" | "temporal" | "intent" | "postProcessing" | "canonicalReliabilityInput"
+    > {
+        return {
+            canonical: this.latestCanonical,
+            temporal: this.latestTemporal,
+            intent: this.latestIntent,
+            postProcessing: this.latestPostProcessing,
+            canonicalReliabilityInput: this.latestCanonicalReliabilityInput,
+        };
+    }
+
+    /**
+     * Temporal / intent 再計算に使える valid canonical だけを返す。
+     *
+     * saved canonical slot が invalid だった frame では undefined を返し、invalid raw value を後段 estimator
+     * に渡さない。
+     */
+    latestValidCanonical(): CanonicalUpperBodyState | undefined {
+        const canonical = this.latestCanonical;
+        if (canonical === undefined || "parseStatus" in canonical) {
+            return undefined;
+        }
+        return canonical;
+    }
+
+    replayFrames(): readonly SincroMotionDebugFrame[] {
+        return this.player.replayFrames();
+    }
+
+    replayManifest(): SincroMotionDebugLogManifest | undefined {
+        return this.player.replayManifest();
+    }
+
+    createReplayLogText(replayManifest: SincroMotionDebugLogManifest): string {
+        return [
+            JSON.stringify({ recordType: "manifest", manifest: replayManifest }),
+            ...this.player
+                .replayFrames()
+                .map((frame) => JSON.stringify({ recordType: "frame", frame })),
+        ].join("\n");
+    }
+
+    clearTimer(): void {
+        this.timer.clear();
+    }
+
+    private applyReplayPoseSnapshot(
+        snapshot: SincroPoseMotionSnapshot,
+        context: MotionReplayApplyContext,
+        gesture?: SincroGestureMotionSnapshot,
+    ): MotionDebugSnapshot {
+        const previousPose = this.params.tracker.setPoseSnapshot(snapshot);
+        this.params.tracker.updateReplayReliability(
+            snapshot,
+            previousPose,
+            context.frame.reliability,
+            context.mediaTimeMs,
+            context.frame.video,
+        );
+        this.updateReplayCanonical(snapshot, context);
+        this.updateReplayTemporal(context);
+        this.updateReplayIntent(context, gesture);
+        this.updateReplayPostProcessing(context);
+        this.params.tracker.applyReplayPoseSnapshot(snapshot, context.mediaTimeMs, () => {
+            this.params.scene.renderOnce(context.mediaTimeMs);
+        });
+        return this.params.getSnapshot();
+    }
+
+    private applyReplayRawResult(
+        raw: SincroMotionReplayRawResultFrame,
+        context: MotionReplayApplyContext,
+    ): MotionDebugSnapshot {
+        const face = this.normalizeReplayFace(raw, context);
+        if (face !== undefined) {
+            this.params.tracker.setFaceSnapshot(face);
+        }
+        const pose = this.normalizeReplayPose(raw, context);
+        const hand =
+            pose === undefined || raw.hand === undefined
+                ? undefined
+                : this.normalizeReplayHand(raw, pose, context);
+        if (hand !== undefined) {
+            this.params.tracker.setHandSnapshot(hand);
+        }
+        const gesture =
+            hand === undefined || raw.gesture === undefined
+                ? undefined
+                : this.normalizeReplayGesture(raw, hand, context);
+        if (pose === undefined) {
+            return this.params.getSnapshot();
+        }
+        return this.applyReplayPoseSnapshot(pose, context, gesture);
+    }
+
+    private normalizeReplayPose(
+        raw: SincroMotionReplayRawResultFrame,
+        context: MotionReplayApplyContext,
+    ): SincroPoseMotionSnapshot | undefined {
+        if (raw.pose === undefined) {
+            return undefined;
+        }
+        const normalized = normalizeSincroPoseLandmarkerResult({
+            result: raw.pose satisfies SincroPoseLandmarkerResultInput,
+            inferenceTimeMs: 0,
+            inferenceFps: 0,
+            nowMs: context.mediaTimeMs,
+            consecutiveFailures: 0,
+        });
+        return normalized.snapshot;
+    }
+
+    private normalizeReplayFace(
+        raw: SincroMotionReplayRawResultFrame,
+        context: MotionReplayApplyContext,
+    ) {
+        if (raw.face === undefined) {
+            return undefined;
+        }
+        return normalizeSincroFaceLandmarkerResult({
+            result: raw.face,
+            inferenceTimeMs: 0,
+            inferenceFps: 0,
+            nowMs: context.mediaTimeMs,
+            source: "full-frame",
+            warnings: [],
+        });
+    }
+
+    private normalizeReplayHand(
+        raw: SincroMotionReplayRawResultFrame,
+        pose: SincroPoseMotionSnapshot,
+        context: MotionReplayApplyContext,
+    ): SincroHandMotionSnapshot | undefined {
+        if (raw.hand === undefined) {
+            return undefined;
+        }
+        const assignment = assignSincroHandObservationsToPose({
+            observations: normalizeSincroHandLandmarkerResult({ result: raw.hand }),
+            leftWrist: replayPoseWrist("left", pose),
+            rightWrist: replayPoseWrist("right", pose),
+            source: "full-frame-fallback",
+            previous: this.params.tracker.snapshotState().hand,
+        });
+        return {
+            trackingEnabled: true,
+            detected: assignment.leftHand.detected || assignment.rightHand.detected,
+            leftHand: assignment.leftHand,
+            rightHand: assignment.rightHand,
+            inferenceTimeMs: 0,
+            inferenceFps: 0,
+            lastUpdatedAtMs: context.mediaTimeMs,
+        };
+    }
+
+    private normalizeReplayGesture(
+        raw: SincroMotionReplayRawResultFrame,
+        hand: SincroHandMotionSnapshot,
+        context: MotionReplayApplyContext,
+    ): SincroGestureMotionSnapshot | undefined {
+        if (raw.gesture === undefined) {
+            return undefined;
+        }
+        const sides = normalizeSincroGestureRecognizerResult({
+            result: raw.gesture,
+            hand,
+        });
+        const warnings = uniqueGestureWarnings([
+            ...(sides.left?.warnings ?? []),
+            ...(sides.right?.warnings ?? []),
+        ]);
+        if (sides.left === undefined && sides.right === undefined) {
+            return createSincroGestureFallbackSnapshot({
+                reason: "raw_gesture_categories_missing",
+                nowMs: context.mediaTimeMs,
+                warnings: ["categories_missing"],
+            });
+        }
+        return {
+            trackingEnabled: true,
+            source:
+                sides.left?.source === "gesture-recognizer" ||
+                sides.right?.source === "gesture-recognizer"
+                    ? "gesture-recognizer"
+                    : "lost",
+            left: sides.left,
+            right: sides.right,
+            warnings,
+            inferenceTimeMs: 0,
+            inferenceFps: 0,
+            lastUpdatedAtMs: context.mediaTimeMs,
+        };
+    }
+
+    private updateReplayCanonical(
+        snapshot: SincroPoseMotionSnapshot,
+        context: MotionReplayApplyContext,
+    ): void {
+        if (context.frame.canonical !== undefined) {
+            const parsed = parseCanonicalUpperBodyState(context.frame.canonical);
+            this.latestCanonical = parsed.ok
+                ? parsed.state
+                : {
+                      parseStatus: "invalid",
+                      errors: parsed.errors,
+                      raw: context.frame.canonical,
+                  };
+            this.latestCanonicalReliabilityInput = createMotionDebugCanonicalReliabilityInput(
+                this.params.tracker.latestValidReliability(),
+            );
+            return;
+        }
+
+        const reliability = this.params.tracker.latestValidReliability();
+        this.latestCanonical = createMotionDebugCanonicalState({
+            pose: snapshot,
+            face: this.params.tracker.snapshotState().face,
+            previous: this.latestValidCanonical(),
+            mediaTimeMs: context.mediaTimeMs,
+            reliability,
+        });
+        this.latestCanonicalReliabilityInput =
+            createMotionDebugCanonicalReliabilityInput(reliability);
+    }
+
+    private updateReplayTemporal(context: MotionReplayApplyContext): void {
+        if (context.frame.temporal !== undefined) {
+            const parsed = parseTemporalUpperBodyState(context.frame.temporal);
+            this.latestTemporal = parsed.ok
+                ? parsed.state
+                : { parseStatus: "invalid", errors: parsed.errors, raw: context.frame.temporal };
+            return;
+        }
+        const canonical = this.latestValidCanonical();
+        this.latestTemporal =
+            canonical === undefined
+                ? undefined
+                : this.temporalEstimator.update({
+                      canonical,
+                      reliability: this.params.tracker.latestValidReliability(),
+                      mediaTimeMs: context.mediaTimeMs,
+                  });
+    }
+
+    /**
+     * replay-derived intent は同 frame で再構成した normalized Gesture snapshot だけを入力にする。
+     * raw category と saved `frame.intent` は補完に使わず、missing / lost Gesture は既存 adapter が
+     * `undefined` へ落とすため追加 warning を生成しない。
+     */
+    private updateReplayIntent(
+        context: MotionReplayApplyContext,
+        gesture: SincroGestureMotionSnapshot | undefined,
+    ): void {
+        const temporal = this.latestTemporal;
+        if (temporal === undefined || "parseStatus" in temporal) {
+            this.latestIntent = undefined;
+            return;
+        }
+        this.latestIntent = this.intentEstimator.update({
+            temporal,
+            reliability: this.params.tracker.latestValidReliability(),
+            hand: this.params.tracker.snapshotState().hand,
+            gesture: gesture === undefined ? undefined : toGestureIntentObservation(gesture),
+            mediaTimeMs: context.mediaTimeMs,
+        });
+    }
+
+    private updateReplayPostProcessing(context: MotionReplayApplyContext): void {
+        if (context.frame.postProcessing !== undefined) {
+            const parsed = parseMotionPostProcessingResult(context.frame.postProcessing);
+            this.latestPostProcessing = parsed.ok
+                ? parsed.result
+                : {
+                      parseStatus: "invalid",
+                      errors: parsed.errors,
+                      raw: context.frame.postProcessing,
+                  };
+            return;
+        }
+        this.latestPostProcessing = undefined;
+    }
+}
+
+function replayPoseWrist(
+    side: "left" | "right",
+    pose: SincroPoseMotionSnapshot,
+): SincroHandPoseWrist {
+    const wrist = side === "left" ? pose.leftArm.targets.wrist : pose.rightArm.targets.wrist;
+    if (wrist.quality === "lost" || !wrist.hasFiniteCoordinates) {
+        return {
+            side,
+            confidence: 0,
+        };
+    }
+    return {
+        side,
+        point: [wrist.cameraX, wrist.cameraY],
+        confidence: wrist.confidence,
+    };
+}

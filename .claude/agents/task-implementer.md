@@ -19,6 +19,11 @@ model: opus
   `README.md` / `documents/design/` / `documents/rules/` / `tasks/README.md`）。
   使用フレームワーク特有の手順（例: 専用スキル/ドキュメントのロード、コード生成手順）が
   定められていればそれに従う。
+- TypeScript production code を変更する場合は、着手前に
+  `documents/rules/coding-ts.md` の「ソースコードコメント品質」を読み、public export /
+  public component / hook / module / boundary / heuristic / schema/parser / lifecycle に対する
+  JSDoc/TSDoc、symbol / decision 単位の comment audit、失敗条件、副作用、省略理由、
+  stale comment、TODO 必須情報の基準を確認する。
 - テスト・ビルド・実行コマンドはプロジェクトのものを使う（後述の「3 点ゲート」参照）。
 
 ## 手順
@@ -27,12 +32,18 @@ model: opus
    その旨を報告して停止する。
 2. APPROVED の場合、review.md の申し送りと Critical/High 指摘を必ず反映して実装する。
 3. 既存のコード規約・パターン（プロジェクト規約ドキュメント / 周辺コード）に従う。
-4. 開発中のテストを実行し、緑になるまで修正する（テスト方針を参照）。
-5. **ドキュメントを同期する**（ドキュメント同期方針を参照）。コードと同一コミット/同一
+4. TypeScript production code を変更した場合は、変更した public export / public component /
+   hook / module / boundary / heuristic / schema/parser / lifecycle の comment audit を行い、
+   既存コメントと不足している保守知識を `keep` / `rewrite` / `delete` / `add` に分類する。
+   必要な JSDoc/TSDoc の追加・更新、失敗条件・副作用の明記、省略理由、stale comment の更新・
+   削除、TODO 必須情報の充足を確認する。弱い既存コメントは追加で補うだけでなく削除または
+   rewrite を検討し、module TSDoc の一括追加を既定解にしない。
+5. 開発中のテストを実行し、緑になるまで修正する（テスト方針を参照）。
+6. **ドキュメントを同期する**（ドキュメント同期方針を参照）。コードと同一コミット/同一
    ブランチで反映し、後追いコミットにしない。
-6. 区切りごとにコミットする（コミット方針を参照）。
-7. 作業ログを `<task-dir>/impl.md` に記録する（作業ログ方針を参照）。
-8. **作業終了時、最終メッセージでオーケストレーターに通知する**: 変更ファイル一覧と、
+7. 区切りごとにコミットする（コミット方針を参照）。
+8. 作業ログを `<task-dir>/impl.md` に記録する（作業ログ方針を参照）。
+9. **作業終了時、最終メッセージでオーケストレーターに通知する**: 変更ファイル一覧と、
    各変更が満たす受け入れ条件の対応に加えて、特記事項（review.md 申し送りへの対応・
    仕様からの逸脱とその理由・ハマった点・残リスク・**ドキュメント同期の結果**）の要点を
    報告する（詳細は `impl.md` を参照、と示す）。サブエージェントは親の履歴を継承しないため、
@@ -47,6 +58,13 @@ model: opus
 - **append-only**。再実装で複数回呼ばれるため、過去の記述は消さず、
   attempt ごとに `## attempt <n>` セクションを追記する（既存セクションは編集しない）。
 - ファイルが無ければ新規作成、あれば末尾に追記する。
+- TypeScript production code を変更した場合は、変更した public export / public component /
+  hook / module / boundary / heuristic / schema/parser / lifecycle の comment audit 結果、
+  symbol / decision、`keep` / `rewrite` / `delete` / `add` の判断、required maintenance
+  knowledge、action、JSDoc/TSDoc の追加・更新または省略理由、失敗条件、副作用、
+  TODO 必須情報、stale comment 更新・削除の有無を記録する。module TSDoc に集約した場合は、
+  各 export の入力境界、observable output、失敗条件、副作用、非対象を具体的に覆う理由も
+  記録する。対象外の場合も、docs/test/fixture のみ等の理由を記録する。
 
 ## ドキュメント同期方針（lint / 型 / test で検出できない領域）
 

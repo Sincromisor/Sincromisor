@@ -5,6 +5,7 @@ import {
     DebugRangeControlList,
 } from "../components/debugRangeControls";
 import { radToDeg } from "./sincroMotionPanelFormatters";
+import { SincroPoseRetargetComposerControls } from "./sincroPoseRetargetComposerControls";
 
 type SincroPoseRetargetControlsProps = {
     poseRetarget: DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
@@ -21,6 +22,7 @@ export function SincroPoseRetargetControls({
         <details className="audioInlineDetails">
             <summary>Pose retarget 調整</summary>
             <ArmIkModeSelect poseRetarget={poseRetarget} manager={manager} />
+            <SincroPoseRetargetComposerControls poseRetarget={poseRetarget} manager={manager} />
             <PoseRetargetBaseControls poseRetarget={poseRetarget} manager={manager} />
             <PoseRetargetArmIkControls poseRetarget={poseRetarget} manager={manager} />
         </details>

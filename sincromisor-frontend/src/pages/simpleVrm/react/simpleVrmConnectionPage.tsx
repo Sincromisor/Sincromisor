@@ -3,6 +3,7 @@ import {
     createStartupOptionHint,
 } from "../../../features/settings/react/sections/settingsConnectionText";
 import { settingsPageCopy } from "../../../features/settings/react/shell/settingsPageCopy";
+import { DiagnosticsStatusCards } from "./components/diagnosticsStatusCards";
 import { SettingsCategorySection, StartupSettingsSection } from "./components/settingsSections";
 import { panelStyles } from "./panelStyles";
 import type { SimpleVrmControlPanelPageProps } from "./simpleVrmControlPanelTypes";
@@ -47,6 +48,14 @@ function ConnectionStatusCategory({ panelState }: SimpleVrmControlPanelPageProps
                     value={panelState.connectionState.value}
                     detail={detail}
                     startupOptionHint={startupOptionHint}
+                />
+                <DiagnosticsStatusCards
+                    vadState={panelState.vadState}
+                    gaze={panelState.gaze}
+                    rtcState={panelState.rtcState}
+                    learnedVad={panelState.learnedVad}
+                    lookingGlass={panelState.lookingGlass}
+                    cameraGuide={panelState.cameraGuide}
                 />
                 <ConnectionActionButtons panelState={panelState} />
             </div>

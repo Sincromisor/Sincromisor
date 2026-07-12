@@ -1,3 +1,7 @@
+/**
+ * video fixture URL から captureStream 用の HTMLVideoElement / MediaStream を作る境界。
+ * fixture load failure は caller に throw し、camera permission や tracker lifecycle とは分ける。
+ */
 export async function createFixtureVideoStream(url: string): Promise<{
     stream: MediaStream;
     video: HTMLVideoElement;

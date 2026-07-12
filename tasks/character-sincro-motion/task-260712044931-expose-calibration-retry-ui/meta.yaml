@@ -1,0 +1,13 @@
+id: task-260712044931-expose-calibration-retry-ui
+title: Expose initial calibration retry flow in sincro UI
+category: character-sincro-motion
+status: done
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: 87567c417c11e5dd896cddfb90297b656a95f429
+verdict: PASS
+attempts: 2
+created_at: 2026-07-12
+closed_at: 2026-07-12
+legacy_ids: []

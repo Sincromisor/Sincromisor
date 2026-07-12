@@ -72,11 +72,17 @@
     - VAD / audio meter
     - text / telop messages
     - gaze / tracking diagnostics
+    - `sincro` tracking 中の camera quality guide。`SincroAppEvent` の
+      `camera-quality-changed` / `camera-quality-reset` を panel-local `PanelCameraGuideState` へ還元し、
+      接続ページの diagnostics grid 直前に先頭 guide message 一件だけを表示する。`chat` mode、camera stop、
+      tracking reset、active controller clear では stale guide を残さない。
 - UI state:
     - startup dialog open state
     - active right tool panel
     - settings category
     - debug tab
+    - sincro settings の initial calibration retry state。active 中は current step、session summary、先頭 guide message、記録済み current step の「再試行」を表示する。UI は production calibration controller を購読して Pose callback の評価結果を反映する。idle / cancelled は session field と action を表示しない。
+    - simple-vrm panel は `dialog_vrm_ui_state.vrmStatusText` の初期値確定後の変化を VRM source 変更として扱い、active initial calibration を現在の sessionId で cancel する。
 
 ## Interfaces
 

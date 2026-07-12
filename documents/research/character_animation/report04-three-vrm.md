@@ -22,12 +22,7 @@ face landmarker(<https://ai.google.dev/edge/mediapipe/solutions/vision/face_land
 本プロジェクトは「不確実な観測値から「キャラクターとして破綻しない動作状態」を推定するモーションシステム」を目指しています。
 今回は、"three-vrmを用いてキャラクターモーションを実装する際の、2026年6月現在の「three-vrmによるキャラクターアニメーション実装のベストプラクティス」を確立し、レポートにまとめる"をお願いしたいです。
 
-基本的な条件は下記の通りです。
-    - キャラクターモーションの最適な「実装方法」を網羅的に調査し、開発に資するレポートにまとめる
-    - 既存実装との互換性などは考慮せず、「最大限最良の実装にするにはどうすればよいか」だけを考える
-    - 必ずしも人間に合わせたリアルな動きである必要はなく、かわいいキャラクターとしての自然な動きを実現することが目的
-    - 調査対象資料の言語はこだわらない
-    - 参考にした資料があれば出典を明記する
+基本的な条件は下記の通りです。- キャラクターモーションの最適な「実装方法」を網羅的に調査し、開発に資するレポートにまとめる - 既存実装との互換性などは考慮せず、「最大限最良の実装にするにはどうすればよいか」だけを考える - 必ずしも人間に合わせたリアルな動きである必要はなく、かわいいキャラクターとしての自然な動きを実現することが目的 - 調査対象資料の言語はこだわらない - 参考にした資料があれば出典を明記する
 
 - 今回はスコープ外とすること
     - 既存実装をベースとした改良案の提示
@@ -43,16 +38,16 @@ three-vrm v3.5.3は2026年5月18日にリリースされており、2026年6月�
 
 最重要の実装原則は次です。
 
-| 領域             | ベストプラクティス                                               |
-| -------------- | ------------------------------------------------------- |
-| VRM制御API       | `vrm.humanoid.setNormalizedPose()` を主経路にする              |
-| ボーン指定          | Three.js node名ではなく `VRMHumanBoneName` を基準にする            |
-| 座標・回転          | world rotationではなく、**rest/T-poseからのlocal rotation** を扱う |
-| 更新順            | すべての姿勢合成後に `vrm.update(delta)` を1回呼ぶ                    |
-| AnimationMixer | 直接同じボーンを奪い合わない。clipはpose layerとして合成する                   |
-| optional bone  | `chest`, `upperChest`, `shoulder`, 指ボーンの有無を前提に分配する      |
-| 表情・視線          | 今回は主制御から分離。ただし `vrm.update()` の更新順には含まれる                |
-| MediaPipe連携    | raw landmarkからthree-vrm boneを直接書かず、最終 `VRMPose` に変換する   |
+| 領域           | ベストプラクティス                                                    |
+| -------------- | --------------------------------------------------------------------- |
+| VRM制御API     | `vrm.humanoid.setNormalizedPose()` を主経路にする                     |
+| ボーン指定     | Three.js node名ではなく `VRMHumanBoneName` を基準にする               |
+| 座標・回転     | world rotationではなく、**rest/T-poseからのlocal rotation** を扱う    |
+| 更新順         | すべての姿勢合成後に `vrm.update(delta)` を1回呼ぶ                    |
+| AnimationMixer | 直接同じボーンを奪い合わない。clipはpose layerとして合成する          |
+| optional bone  | `chest`, `upperChest`, `shoulder`, 指ボーンの有無を前提に分配する     |
+| 表情・視線     | 今回は主制御から分離。ただし `vrm.update()` の更新順には含まれる      |
+| MediaPipe連携  | raw landmarkからthree-vrm boneを直接書かず、最終 `VRMPose` に変換する |
 
 既存のプロジェクト資料で整理されている「不確実な観測値を信頼度・時系列・canonical stateを経て最終姿勢へ落とす」という方針とは整合します。ただし今回は、主眼を **three-vrm runtimeを壊さず、モデル差分に強い形で姿勢を適用すること** に置きます。
 
@@ -101,12 +96,12 @@ import type { VRMPose } from "@pixiv/three-vrm";
 import { VRMHumanBoneName } from "@pixiv/three-vrm";
 
 const pose: VRMPose = {
-  [VRMHumanBoneName.Chest]: {
-    rotation: [0, 0, 0, 1], // [x, y, z, w]
-  },
-  [VRMHumanBoneName.LeftUpperArm]: {
-    rotation: [0, 0, 0, 1],
-  },
+    [VRMHumanBoneName.Chest]: {
+        rotation: [0, 0, 0, 1], // [x, y, z, w]
+    },
+    [VRMHumanBoneName.LeftUpperArm]: {
+        rotation: [0, 0, 0, 1],
+    },
 };
 ```
 
@@ -149,21 +144,21 @@ vrm.humanoid.setNormalizedPose(vrm.humanoid.normalizedRestPose);
 const IDENTITY: [number, number, number, number] = [0, 0, 0, 1];
 
 const neutralUpperBodyPose: VRMPose = {
-  [VRMHumanBoneName.Spine]: { rotation: IDENTITY },
-  [VRMHumanBoneName.Chest]: { rotation: IDENTITY },
-  [VRMHumanBoneName.UpperChest]: { rotation: IDENTITY },
-  [VRMHumanBoneName.Neck]: { rotation: IDENTITY },
-  [VRMHumanBoneName.Head]: { rotation: IDENTITY },
+    [VRMHumanBoneName.Spine]: { rotation: IDENTITY },
+    [VRMHumanBoneName.Chest]: { rotation: IDENTITY },
+    [VRMHumanBoneName.UpperChest]: { rotation: IDENTITY },
+    [VRMHumanBoneName.Neck]: { rotation: IDENTITY },
+    [VRMHumanBoneName.Head]: { rotation: IDENTITY },
 };
 ```
 
 部分poseだけを `setNormalizedPose()` し続けると、前フレームの値が残って「姿勢が戻らない」問題が出やすくなります。運用ルールは次のどちらかに統一します。
 
-| 方針                   | 内容                                   |       推奨度 |
-| -------------------- | ------------------------------------ | --------: |
-| full owned pose      | 自分が所有するboneは毎フレーム全て書く                |         高 |
-| reset + partial pose | `resetNormalizedPose()` 後に必要boneだけ書く | 開発・デバッグ向き |
-| partial overwrite継続  | 更新したboneだけ上書きし、残りは前回値                |       非推奨 |
+| 方針                  | 内容                                         |             推奨度 |
+| --------------------- | -------------------------------------------- | -----------------: |
+| full owned pose       | 自分が所有するboneは毎フレーム全て書く       |                 高 |
+| reset + partial pose  | `resetNormalizedPose()` 後に必要boneだけ書く | 開発・デバッグ向き |
+| partial overwrite継続 | 更新したboneだけ上書きし、残りは前回値       |             非推奨 |
 
 ---
 
@@ -188,27 +183,27 @@ VRM.update(delta)
 
 ```ts
 function updateFrame(delta: number) {
-  // 1. MediaPipeなどの最新観測値を取得
-  const observation = perception.readLatest();
+    // 1. MediaPipeなどの最新観測値を取得
+    const observation = perception.readLatest();
 
-  // 2. 信頼度・時系列・IK・スタイル補正を含めて最終poseを作る
-  const trackingPose = motionSolver.solve(observation, delta);
+    // 2. 信頼度・時系列・IK・スタイル補正を含めて最終poseを作る
+    const trackingPose = motionSolver.solve(observation, delta);
 
-  // 3. 短い意味動作clipや補正poseを合成する
-  const finalPose = poseComposer.compose({
-    trackingPose,
-    semanticPose: semanticClipLayer.getPose(delta),
-    style: avatarStyle,
-  });
+    // 3. 短い意味動作clipや補正poseを合成する
+    const finalPose = poseComposer.compose({
+        trackingPose,
+        semanticPose: semanticClipLayer.getPose(delta),
+        style: avatarStyle,
+    });
 
-  // 4. three-vrmへは最後に1回だけ適用
-  vrm.humanoid.setNormalizedPose(finalPose);
+    // 4. three-vrmへは最後に1回だけ適用
+    vrm.humanoid.setNormalizedPose(finalPose);
 
-  // 5. humanoid -> constraints -> spring -> material を更新
-  vrm.update(delta);
+    // 5. humanoid -> constraints -> spring -> material を更新
+    vrm.update(delta);
 
-  // 6. 描画
-  renderer.render(scene, camera);
+    // 6. 描画
+    renderer.render(scene, camera);
 }
 ```
 
@@ -244,33 +239,29 @@ three-vrmでは `GLTFLoader` に `VRMLoaderPlugin` を登録してVRMを読み�
 ```ts
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import {
-  VRM,
-  VRMLoaderPlugin,
-  VRMUtils,
-} from "@pixiv/three-vrm";
+import { VRM, VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 
 export async function loadVrm(url: string): Promise<VRM> {
-  const loader = new GLTFLoader();
+    const loader = new GLTFLoader();
 
-  loader.register((parser) => {
-    return new VRMLoaderPlugin(parser);
-  });
+    loader.register((parser) => {
+        return new VRMLoaderPlugin(parser);
+    });
 
-  const gltf = await loader.loadAsync(url);
-  const vrm = gltf.userData.vrm as VRM;
+    const gltf = await loader.loadAsync(url);
+    const vrm = gltf.userData.vrm as VRM;
 
-  // VRM-1.0のみを正式対象にする。
-  // VRM-0.x互換処理はここでは標準経路に入れない。
+    // VRM-1.0のみを正式対象にする。
+    // VRM-0.x互換処理はここでは標準経路に入れない。
 
-  // 描画・スキニング性能最適化
-  VRMUtils.combineSkeletons(vrm.scene);
-  VRMUtils.combineMorphs(vrm);
+    // 描画・スキニング性能最適化
+    VRMUtils.combineSkeletons(vrm.scene);
+    VRMUtils.combineMorphs(vrm);
 
-  // 必要に応じてgeometry最適化
-  VRMUtils.removeUnnecessaryVertices(vrm.scene);
+    // 必要に応じてgeometry最適化
+    VRMUtils.removeUnnecessaryVertices(vrm.scene);
 
-  return vrm;
+    return vrm;
 }
 ```
 
@@ -288,7 +279,7 @@ export async function loadVrm(url: string): Promise<VRM> {
 import { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
 
 function hasBone(vrm: VRM, name: VRMHumanBoneName): boolean {
-  return vrm.humanoid.getNormalizedBoneNode(name) != null;
+    return vrm.humanoid.getNormalizedBoneNode(name) != null;
 }
 ```
 
@@ -296,37 +287,37 @@ VRM-1.0では `chest`, `upperChest`, `neck`, `shoulder`, 指ボーンの多く�
 
 ### 上半身boneの適用ポリシー
 
-| 部位        | bone                            | 方針                                            |
-| --------- | ------------------------------- | --------------------------------------------- |
-| root      | `hips`                          | 上半身同期では原則固定。位置移動は慎重に扱う                        |
-| torso     | `spine`, `chest`, `upperChest`  | 存在するboneへ分配                                   |
-| neck/head | `neck`, `head`                  | `neck` があれば分配、なければ `head` に集約                 |
+| 部位      | bone                            | 方針                                                            |
+| --------- | ------------------------------- | --------------------------------------------------------------- |
+| root      | `hips`                          | 上半身同期では原則固定。位置移動は慎重に扱う                    |
+| torso     | `spine`, `chest`, `upperChest`  | 存在するboneへ分配                                              |
+| neck/head | `neck`, `head`                  | `neck` があれば分配、なければ `head` に集約                     |
 | shoulder  | `leftShoulder`, `rightShoulder` | あれば肩補正に使う。なければ `upperChest` / `upperArm` 側へ吸収 |
-| arm       | `upperArm`, `lowerArm`, `hand`  | 必須相当として主制御対象                                  |
-| fingers   | proximal/intermediate/distal    | 存在するboneだけにcurlを再分配                           |
+| arm       | `upperArm`, `lowerArm`, `hand`  | 必須相当として主制御対象                                        |
+| fingers   | proximal/intermediate/distal    | 存在するboneだけにcurlを再分配                                  |
 
 ### optional torso分配例
 
 ```ts
 type TorsoWeights = {
-  spine: number;
-  chest: number;
-  upperChest: number;
+    spine: number;
+    chest: number;
+    upperChest: number;
 };
 
 function getTorsoWeights(vrm: VRM): TorsoWeights {
-  const hasChest = hasBone(vrm, VRMHumanBoneName.Chest);
-  const hasUpperChest = hasBone(vrm, VRMHumanBoneName.UpperChest);
+    const hasChest = hasBone(vrm, VRMHumanBoneName.Chest);
+    const hasUpperChest = hasBone(vrm, VRMHumanBoneName.UpperChest);
 
-  if (hasChest && hasUpperChest) {
-    return { spine: 0.25, chest: 0.40, upperChest: 0.35 };
-  }
+    if (hasChest && hasUpperChest) {
+        return { spine: 0.25, chest: 0.4, upperChest: 0.35 };
+    }
 
-  if (hasChest) {
-    return { spine: 0.35, chest: 0.65, upperChest: 0.0 };
-  }
+    if (hasChest) {
+        return { spine: 0.35, chest: 0.65, upperChest: 0.0 };
+    }
 
-  return { spine: 1.0, chest: 0.0, upperChest: 0.0 };
+    return { spine: 1.0, chest: 0.0, upperChest: 0.0 };
 }
 ```
 
@@ -356,8 +347,8 @@ VRMPose rotation
 
 ```ts
 function qToArray(q: THREE.Quaternion): [number, number, number, number] {
-  q.normalize();
-  return [q.x, q.y, q.z, q.w];
+    q.normalize();
+    return [q.x, q.y, q.z, q.w];
 }
 ```
 
@@ -416,8 +407,8 @@ stagingMixer.update(delta)
 小規模なデモや、trackingとclipがboneを共有しない場合のみ許容します。
 
 ```ts
-mixer.update(delta);           // clipがboneを書き込む
-applyTrackingOverrides();      // trackingが必要boneだけ上書き
+mixer.update(delta); // clipがboneを書き込む
+applyTrackingOverrides(); // trackingが必要boneだけ上書き
 vrm.update(delta);
 ```
 
@@ -440,9 +431,9 @@ Three.jsには `QuaternionKeyframeTrack` があり、Quaternion keyframeを扱�
 ```ts
 // 上半身同期では通常 position を入れない
 const pose: VRMPose = {
-  [VRMHumanBoneName.Hips]: {
-    rotation: [0, 0, 0, 1],
-  },
+    [VRMHumanBoneName.Hips]: {
+        rotation: [0, 0, 0, 1],
+    },
 };
 ```
 
@@ -536,21 +527,21 @@ three-vrm層に渡す直前のデータ構造は、次のようにします。
 
 ```ts
 type FinalUpperBodyPose = {
-  pose: VRMPose;
+    pose: VRMPose;
 
-  confidence: {
-    torso: number;
-    head: number;
-    leftArm: number;
-    rightArm: number;
-    leftHand: number;
-    rightHand: number;
-  };
+    confidence: {
+        torso: number;
+        head: number;
+        leftArm: number;
+        rightArm: number;
+        leftHand: number;
+        rightHand: number;
+    };
 
-  debug: {
-    source: "tracking" | "semantic" | "fallback" | "mixed";
-    clampedBones: VRMHumanBoneName[];
-  };
+    debug: {
+        source: "tracking" | "semantic" | "fallback" | "mixed";
+        clampedBones: VRMHumanBoneName[];
+    };
 };
 ```
 
@@ -581,14 +572,12 @@ VRM本体、mixer、update順序を所有します。
 
 ```ts
 class VrmRuntime {
-  constructor(
-    readonly vrm: VRM,
-  ) {}
+    constructor(readonly vrm: VRM) {}
 
-  update(delta: number, finalPose: VRMPose): void {
-    this.vrm.humanoid.setNormalizedPose(finalPose);
-    this.vrm.update(delta);
-  }
+    update(delta: number, finalPose: VRMPose): void {
+        this.vrm.humanoid.setNormalizedPose(finalPose);
+        this.vrm.update(delta);
+    }
 }
 ```
 
@@ -598,25 +587,25 @@ bone存在確認、optional bone判定、profile計測を行います。
 
 ```ts
 class VrmHumanoidRig {
-  constructor(private readonly vrm: VRM) {}
+    constructor(private readonly vrm: VRM) {}
 
-  has(name: VRMHumanBoneName): boolean {
-    return this.vrm.humanoid.getNormalizedBoneNode(name) != null;
-  }
+    has(name: VRMHumanBoneName): boolean {
+        return this.vrm.humanoid.getNormalizedBoneNode(name) != null;
+    }
 
-  getNode(name: VRMHumanBoneName): THREE.Object3D | undefined {
-    return this.vrm.humanoid.getNormalizedBoneNode(name) ?? undefined;
-  }
+    getNode(name: VRMHumanBoneName): THREE.Object3D | undefined {
+        return this.vrm.humanoid.getNormalizedBoneNode(name) ?? undefined;
+    }
 
-  getUpperBodyCapabilities() {
-    return {
-      chest: this.has(VRMHumanBoneName.Chest),
-      upperChest: this.has(VRMHumanBoneName.UpperChest),
-      neck: this.has(VRMHumanBoneName.Neck),
-      leftShoulder: this.has(VRMHumanBoneName.LeftShoulder),
-      rightShoulder: this.has(VRMHumanBoneName.RightShoulder),
-    };
-  }
+    getUpperBodyCapabilities() {
+        return {
+            chest: this.has(VRMHumanBoneName.Chest),
+            upperChest: this.has(VRMHumanBoneName.UpperChest),
+            neck: this.has(VRMHumanBoneName.Neck),
+            leftShoulder: this.has(VRMHumanBoneName.LeftShoulder),
+            rightShoulder: this.has(VRMHumanBoneName.RightShoulder),
+        };
+    }
 }
 ```
 
@@ -626,22 +615,22 @@ class VrmHumanoidRig {
 
 ```ts
 class VrmPoseBuffer {
-  private pose: VRMPose = {};
+    private pose: VRMPose = {};
 
-  clear(): void {
-    this.pose = {};
-  }
+    clear(): void {
+        this.pose = {};
+    }
 
-  setRotation(name: VRMHumanBoneName, q: THREE.Quaternion): void {
-    q.normalize();
-    this.pose[name] = {
-      rotation: [q.x, q.y, q.z, q.w],
-    };
-  }
+    setRotation(name: VRMHumanBoneName, q: THREE.Quaternion): void {
+        q.normalize();
+        this.pose[name] = {
+            rotation: [q.x, q.y, q.z, q.w],
+        };
+    }
 
-  getPose(): VRMPose {
-    return this.pose;
-  }
+    getPose(): VRMPose {
+        return this.pose;
+    }
 }
 ```
 
@@ -651,20 +640,20 @@ tracking, semantic, fallback, styleを合成し、1つのfinal poseにします�
 
 ```ts
 type PoseLayer = {
-  pose: VRMPose;
-  weight: number;
-  mode: "override" | "additive";
+    pose: VRMPose;
+    weight: number;
+    mode: "override" | "additive";
 };
 
 class VrmPoseComposer {
-  compose(layers: PoseLayer[]): VRMPose {
-    // 実装方針:
-    // 1. base / tracking を先に置く
-    // 2. additive layerをlog-spaceまたはslerpで加える
-    // 3. bone limitを最後に適用する
-    // 4. 所有boneは毎フレーム必ず出力する
-    return {};
-  }
+    compose(layers: PoseLayer[]): VRMPose {
+        // 実装方針:
+        // 1. base / tracking を先に置く
+        // 2. additive layerをlog-spaceまたはslerpで加える
+        // 3. bone limitを最後に適用する
+        // 4. 所有boneは毎フレーム必ず出力する
+        return {};
+    }
 }
 ```
 
@@ -726,17 +715,17 @@ vrm.update(delta);
 
 three-vrm実装では、MediaPipeのlandmark可視化だけでは不十分です。少なくとも次を表示・記録します。
 
-| 項目                                  | 目的                                |
-| ----------------------------------- | --------------------------------- |
-| `VRMHumanBoneName`ごとのbone存在         | optional bone差分の確認                |
-| normalized pose                     | solver出力が意図通りか確認                  |
-| raw pose                            | normalizedからrawへ正しく転送されているか確認     |
-| final pose before limit             | 制約前の姿勢確認                          |
-| final pose after limit              | 制約後の姿勢確認                          |
-| applied quaternion angular velocity | 急回転・jitter検出                      |
-| missing bone fallback               | upperChestなし、shoulderなし等の分配確認     |
+| 項目                                | 目的                                          |
+| ----------------------------------- | --------------------------------------------- |
+| `VRMHumanBoneName`ごとのbone存在    | optional bone差分の確認                       |
+| normalized pose                     | solver出力が意図通りか確認                    |
+| raw pose                            | normalizedからrawへ正しく転送されているか確認 |
+| final pose before limit             | 制約前の姿勢確認                              |
+| final pose after limit              | 制約後の姿勢確認                              |
+| applied quaternion angular velocity | 急回転・jitter検出                            |
+| missing bone fallback               | upperChestなし、shoulderなし等の分配確認      |
 | AnimationMixer ownership            | どのboneをclipが書いているか確認              |
-| `vrm.update()` 呼び忘れ検出               | spring/constraint/material更新異常の検出 |
+| `vrm.update()` 呼び忘れ検出         | spring/constraint/material更新異常の検出      |
 
 既存資料でも、ライブカメラだけで品質調整せず、MediaPipe出力を記録して同一ログで再生・評価することが推奨されています。特にneutral jitter、elbow flip count、dropout recovery jump、latency、bone length varianceなどは、three-vrm適用後の最終bone回転でも見るべきです。
 
@@ -746,29 +735,29 @@ three-vrm実装では、MediaPipeのlandmark可視化だけでは不十分です
 
 ### Do
 
-| Do                                | 理由                                     |
-| --------------------------------- | -------------------------------------- |
-| `VRMHumanBoneName` を唯一のbone識別子にする | node名・階層差分に強くなる                        |
-| `setNormalizedPose()` を主経路にする     | VRM-1.0のrest rotation差分に強くなる           |
-| final poseを1箇所で合成する               | IK / clip / fallback競合を避けられる           |
+| Do                                          | 理由                                            |
+| ------------------------------------------- | ----------------------------------------------- |
+| `VRMHumanBoneName` を唯一のbone識別子にする | node名・階層差分に強くなる                      |
+| `setNormalizedPose()` を主経路にする        | VRM-1.0のrest rotation差分に強くなる            |
+| final poseを1箇所で合成する                 | IK / clip / fallback競合を避けられる            |
 | `vrm.update(delta)` を全姿勢適用後に呼ぶ    | humanoid, constraints, spring等の順序が安定する |
 | optional boneを毎モデルで判定する           | VRoid/一般VRM差分に強くなる                     |
-| ロード時に `combineSkeletons()` を使う    | skeleton更新負荷を減らせる                      |
-| 指はcurl中心から始める                     | 単眼手指推定のちらつきに強い                         |
-| 低confidence時は振幅を下げる               | 壊れずに控えめな動きへ退避できる                       |
+| ロード時に `combineSkeletons()` を使う      | skeleton更新負荷を減らせる                      |
+| 指はcurl中心から始める                      | 単眼手指推定のちらつきに強い                    |
+| 低confidence時は振幅を下げる                | 壊れずに控えめな動きへ退避できる                |
 
 ### Don’t
 
-| Don’t                                            | 問題                                    |
-| ------------------------------------------------ | ------------------------------------- |
-| glTF node名に依存してboneを探す                           | モデル差分で壊れる                             |
-| world rotationを直接boneへcopyする                     | rest rotation / parent transform差分に弱い |
-| `normalizedRestPose` を `setNormalizedPose()` へ渡す | 互換形式ではない                              |
-| `setRawPose()` を通常制御に使う                          | `autoUpdateHumanBones` と競合しやすい        |
-| AnimationMixerとIKが同じboneを書く                      | 実行順依存で破綻する                            |
-| partial poseだけを毎フレーム上書きし続ける                      | 前フレーム姿勢が残る                            |
-| `removeUnnecessaryJoints()` を新規採用する              | deprecated                            |
-| VRM rest rotation offsetをオンラインで変更する              | モデル全体が崩れる                             |
+| Don’t                                                | 問題                                       |
+| ---------------------------------------------------- | ------------------------------------------ |
+| glTF node名に依存してboneを探す                      | モデル差分で壊れる                         |
+| world rotationを直接boneへcopyする                   | rest rotation / parent transform差分に弱い |
+| `normalizedRestPose` を `setNormalizedPose()` へ渡す | 互換形式ではない                           |
+| `setRawPose()` を通常制御に使う                      | `autoUpdateHumanBones` と競合しやすい      |
+| AnimationMixerとIKが同じboneを書く                   | 実行順依存で破綻する                       |
+| partial poseだけを毎フレーム上書きし続ける           | 前フレーム姿勢が残る                       |
+| `removeUnnecessaryJoints()` を新規採用する           | deprecated                                 |
+| VRM rest rotation offsetをオンラインで変更する       | モデル全体が崩れる                         |
 
 ---
 

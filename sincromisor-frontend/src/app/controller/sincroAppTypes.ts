@@ -8,6 +8,7 @@ import type {
     DialogVrmUiState,
 } from "../../features/dialog/model/dialogManager";
 import type { DialogPopEvent } from "../../features/dialog/model/popMessageService";
+import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { ChatMessage, TelopChannelMessage } from "../../features/rtc/rtcMessage";
 
 // SincroAppController を境界にした UI 向けの共通型定義。
@@ -95,6 +96,7 @@ export type SincroAppLookingGlassConfigUpdatedEventDetail = {
 
 // AppController が UI 層へ配信する統一イベント。
 // singleton manager / service ごとの差分をこの union へ吸収し、React 側の購読先を一本化する。
+// camera quality の observedAtMs は UI hysteresis の唯一の clock であり、consumer 側で再採時しない。
 export type SincroAppEvent =
     | {
           type: "lifecycle";
@@ -129,6 +131,14 @@ export type SincroAppEvent =
           faceY?: number;
           facing?: number;
           watching?: boolean;
+      }
+    | {
+          type: "camera-quality-changed";
+          quality: CameraQualityScore;
+          observedAtMs: number;
+      }
+    | {
+          type: "camera-quality-reset";
       }
     | {
           type: "rtc_event_log";

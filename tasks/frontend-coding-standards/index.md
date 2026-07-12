@@ -21,21 +21,24 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 10 件）
+## タスク一覧（自動生成 / 全 13 件）
 
-### done（完了） — 10 件
+### done（完了） — 13 件
 
-| タスク                                                                                                                                             | タイトル                                         | 判定    | 依存 |
-| -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------- | ---- |
-| [task-260517134241-frontend-coding-standard-refactor-epic](./task-260517134241-frontend-coding-standard-refactor-epic/task.md)                     | frontend coding standard refactor epic           | ✅ PASS | —    |
-| [task-260517134242-frontend-biome-diagnostics-cleanup](./task-260517134242-frontend-biome-diagnostics-cleanup/task.md)                             | frontend biome diagnostics cleanup               | ✅ PASS | —    |
-| [task-260517134243-frontend-logger-and-console-replacement](./task-260517134243-frontend-logger-and-console-replacement/task.md)                   | frontend logger and console replacement          | ✅ PASS | —    |
-| [task-260517134244-frontend-runtime-boundary-schema-and-any-removal](./task-260517134244-frontend-runtime-boundary-schema-and-any-removal/task.md) | frontend runtime boundary schema and any removal | ✅ PASS | —    |
-| [task-260517134245-frontend-null-undefined-normalization](./task-260517134245-frontend-null-undefined-normalization/task.md)                       | frontend null undefined normalization            | ✅ PASS | —    |
-| [task-260517134246-frontend-file-function-size-split](./task-260517134246-frontend-file-function-size-split/task.md)                               | frontend file function size split                | ✅ PASS | —    |
-| [task-260517134247-frontend-camelcase-path-rename-plan](./task-260517134247-frontend-camelcase-path-rename-plan/task.md)                           | frontend camelcase path rename plan              | ✅ PASS | —    |
-| [task-260517134248-frontend-test-runner-foundation](./task-260517134248-frontend-test-runner-foundation/task.md)                                   | frontend test runner foundation                  | ✅ PASS | —    |
-| [task-260519191620-frontend-camelcase-path-full-migration](./task-260519191620-frontend-camelcase-path-full-migration/task.md)                     | frontend camelcase path full migration           | ✅ PASS | —    |
-| [task-260519191621-frontend-type-assertion-and-suppression-cleanup](./task-260519191621-frontend-type-assertion-and-suppression-cleanup/task.md)   | frontend type assertion and suppression cleanup  | ✅ PASS | —    |
+| タスク                                                                                                                                                 | タイトル                                               | 判定    | 依存 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ------- | ---- |
+| [task-260517134241-frontend-coding-standard-refactor-epic](./task-260517134241-frontend-coding-standard-refactor-epic/task.md)                         | frontend coding standard refactor epic                 | ✅ PASS | —    |
+| [task-260517134242-frontend-biome-diagnostics-cleanup](./task-260517134242-frontend-biome-diagnostics-cleanup/task.md)                                 | frontend biome diagnostics cleanup                     | ✅ PASS | —    |
+| [task-260517134243-frontend-logger-and-console-replacement](./task-260517134243-frontend-logger-and-console-replacement/task.md)                       | frontend logger and console replacement                | ✅ PASS | —    |
+| [task-260517134244-frontend-runtime-boundary-schema-and-any-removal](./task-260517134244-frontend-runtime-boundary-schema-and-any-removal/task.md)     | frontend runtime boundary schema and any removal       | ✅ PASS | —    |
+| [task-260517134245-frontend-null-undefined-normalization](./task-260517134245-frontend-null-undefined-normalization/task.md)                           | frontend null undefined normalization                  | ✅ PASS | —    |
+| [task-260517134246-frontend-file-function-size-split](./task-260517134246-frontend-file-function-size-split/task.md)                                   | frontend file function size split                      | ✅ PASS | —    |
+| [task-260517134247-frontend-camelcase-path-rename-plan](./task-260517134247-frontend-camelcase-path-rename-plan/task.md)                               | frontend camelcase path rename plan                    | ✅ PASS | —    |
+| [task-260517134248-frontend-test-runner-foundation](./task-260517134248-frontend-test-runner-foundation/task.md)                                       | frontend test runner foundation                        | ✅ PASS | —    |
+| [task-260519191620-frontend-camelcase-path-full-migration](./task-260519191620-frontend-camelcase-path-full-migration/task.md)                         | frontend camelcase path full migration                 | ✅ PASS | —    |
+| [task-260519191621-frontend-type-assertion-and-suppression-cleanup](./task-260519191621-frontend-type-assertion-and-suppression-cleanup/task.md)       | frontend type assertion and suppression cleanup        | ✅ PASS | —    |
+| [task-260628231541-frontend-typescript-comment-policy-audit-checklist](./task-260628231541-frontend-typescript-comment-policy-audit-checklist/task.md) | frontend TypeScript comment policy and audit checklist | ✅ PASS | —    |
+| [task-260629022214-tighten-typescript-source-comment-quality-rules](./task-260629022214-tighten-typescript-source-comment-quality-rules/task.md)       | tighten TypeScript source comment quality rules        | ✅ PASS | —    |
+| [task-260706031110-motion-debug-viewer-model-size-split](./task-260706031110-motion-debug-viewer-model-size-split/task.md)                             | motion-debug viewer model size split                   | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->

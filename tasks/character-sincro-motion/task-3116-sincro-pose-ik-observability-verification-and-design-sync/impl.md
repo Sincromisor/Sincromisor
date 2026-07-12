@@ -37,10 +37,8 @@ Note: screenshot PNG artifacts were used for local visual verification but are i
 
 保存 artifact:
 
-- `artifacts/simple-vrm-desktop-1280x720.png`
-- `artifacts/simple-vrm-mobile-390x844.png`
-- `artifacts/motion-debug-desktop-1280x720.png`
-- `artifacts/motion-debug-mobile-390x844.png`
+- private screenshots: `simple-vrm-desktop-1280x720.png`, `simple-vrm-mobile-390x844.png`
+- private screenshots: `motion-debug-desktop-1280x720.png`, `motion-debug-mobile-390x844.png`
 - `artifacts/playwright-verification-summary-2026-06-18.json`
 - `acceptance/verification-2026-06-18.md`
 
@@ -77,7 +75,7 @@ Note: screenshot PNG artifacts were used for local visual verification but are i
 
 保存 artifact:
 
-- `artifacts/motion-debug-camera-running-2026-06-18.png`
+- private screenshot: `motion-debug-camera-running-2026-06-18.png`
 - `artifacts/camera-retry-summary-2026-06-18.json`
 
 残り:
@@ -114,7 +112,7 @@ Note: screenshot PNG artifacts were used for local visual verification but are i
 
 保存 artifact:
 
-- `artifacts/motion-debug-pose-detected-2026-06-18.png`
+- private screenshot: `motion-debug-pose-detected-2026-06-18.png`
 - `artifacts/pose-detected-summary-2026-06-18.json`
 
 判断:
@@ -148,7 +146,7 @@ Note: screenshot PNG artifacts were used for local visual verification but are i
 
 保存 artifact:
 
-- `artifacts/motion-debug-both-hands-detected-2026-06-18.png`
+- private screenshot: `motion-debug-both-hands-detected-2026-06-18.png`
 - `artifacts/both-hands-detected-summary-2026-06-18.json`
 
 判断:
@@ -200,14 +198,10 @@ Note: screenshot PNG artifacts were used for local visual verification but are i
 
 保存 artifact:
 
-- `artifacts/pattern-baseline-both-hands-2026-06-18.png`
-- `artifacts/pattern-low-wrist-confidence-2026-06-18.png`
-- `artifacts/pattern-one-hand-raised-2026-06-18.png`
-- `artifacts/pattern-arms-spread-2026-06-18.png`
-- `artifacts/pattern-elbow-bend-2026-06-18.png`
-- `artifacts/pattern-one-arm-weak-target-2026-06-18.png`
-- `artifacts/pattern-both-arms-missing-2026-06-18.png`
-- `artifacts/pattern-close-upper-body-2026-06-18.png`
+- private screenshots: `pattern-baseline-both-hands-2026-06-18.png`, `pattern-low-wrist-confidence-2026-06-18.png`
+- private screenshots: `pattern-one-hand-raised-2026-06-18.png`, `pattern-arms-spread-2026-06-18.png`
+- private screenshots: `pattern-elbow-bend-2026-06-18.png`, `pattern-one-arm-weak-target-2026-06-18.png`
+- private screenshots: `pattern-both-arms-missing-2026-06-18.png`, `pattern-close-upper-body-2026-06-18.png`
 - `artifacts/pose-pattern-matrix-summary-2026-06-18.json`
 
 判断:
@@ -254,7 +248,7 @@ Note: screenshot PNG artifacts were used for local visual verification but are i
 
 保存 artifact:
 
-- `artifacts/motion-debug-aoi-detected-2026-06-18.png`
+- private screenshot: `motion-debug-aoi-detected-2026-06-18.png`
 - `artifacts/aoi-vrm-motion-debug-summary-2026-06-18.json`
 
 判断:
@@ -280,7 +274,7 @@ Note: screenshot PNG artifacts were used for local visual verification but are i
 
 保存 artifact:
 
-- `artifacts/motion-debug-aoi-public-route-detected-2026-06-18.png`
+- private screenshot: `motion-debug-aoi-public-route-detected-2026-06-18.png`
 - `artifacts/aoi-vrm-public-route-summary-2026-06-18.json`
 
 判断:

@@ -1,0 +1,14 @@
+id: task-260627141812-character-animation-3-phase-8-pose-seeded-hand-roi-tracking
+title: character animation 3.0 phase 8 pose seeded hand ROI tracking
+category: character-sincro-motion
+status: done
+depends_on:
+  - task-260627141812-character-animation-3-phase-8-roi-contract-coordinate-mappin
+superseded_by: null
+review: APPROVED
+reviewed_sha: caaa34bfa506a8e220267e9dcae7cebc6cd376df
+verdict: PASS
+attempts: 1
+created_at: 2026-06-27
+closed_at: 2026-06-27
+legacy_ids: []

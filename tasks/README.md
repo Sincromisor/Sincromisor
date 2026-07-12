@@ -160,6 +160,18 @@ tasks/<category>/
 | `acceptance/` | evaluator subagent    | 独立検証用の補助ファイル                                |
 | `artifacts/`  | 各 role               | タスク固有のログ、CSV、スクリーンショット、調査メモ     |
 
+### 公開artifactと非公開検証原本
+
+`tasks/**/artifacts/` は公開リポジトリへcommitされる領域である。集計JSON、CSV、再現手順、
+入力のSHA-256、privacy確認済みの小さなfixtureだけを置く。実写動画、検証screenshot、camera capture、frame単位の
+raw replay（NDJSON / JSONL）、trace、個人情報を含み得る原本は
+`work/private-artifacts/<task-id>/` にまとめる。この領域はGit管理外であり、開発者が保管・共有・
+削除を明示的に管理する。別環境で再現する場合は、task文書に記録したSHA-256で同一性を確認する。
+
+`tasks:close` はtask内の動画、画像、raw replay、`artifacts/private/`、5 MiBを超えるartifactを検出すると
+停止する。例外的に公開が必要なfixtureは、privacy・ライセンス・容量をレビューした上でtask外の
+正式なtest fixture領域へ置き、生成方法と採用理由を記録する。
+
 ## meta.yaml
 
 ```yaml
@@ -211,28 +223,29 @@ TODO は新規コードでは `TODO(task-260601153000-example): ...` を推奨�
 
 ルートで実行する。
 
-| コマンド                                                                    | 用途                                                               |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `npm run tasks:new -- <category> "<title>" [--slug=<slug>] [--depends=a,b]` | 新規タスクを作る                                                   |
-| `npm run tasks:set -- <task-dir> key=value ...`                             | `meta.yaml` を決定的に更新する                                     |
-| `npm run tasks:index`                                                       | カテゴリ別 `index.md` を生成する                                   |
-| `npm run tasks:index:check`                                                 | `index.md` が最新か検証する                                        |
-| `npm run tasks:check`                                                       | task directory と `meta.yaml` の整合性を検証する                   |
-| `npm run tasks:fixlinks`                                                    | 壊れた Markdown 相対リンクの修正候補を dry-run で表示する          |
-| `npm run tasks:fixlinks -- --apply`                                         | 修正候補を適用する                                                 |
-| `npm run tasks:migrate:legacy`                                              | 旧 `documents/tasks` レイアウトの移行計画を dry-run する           |
-| `npm run tasks:migrate:legacy -- --apply`                                   | 旧 `documents/tasks` レイアウトを `tasks/` へ移行する              |
-| `npm run tasks:migrate:reviewed-sha`                                        | 既存 `meta.yaml` へ `reviewed_sha` を dry-run で付与計画する       |
-| `npm run tasks:next`                                                        | 依存が解けて実行できる次タスクを表示する                           |
-| `npm run tasks:close -- <task-dir> verdict=PASS attempts=1`                 | meta 更新、自 task dir の close commit を行う                      |
-| `npm run tasks:reindex`                                                     | 全カテゴリ `index.md` を再生成し、変更があれば commit する         |
-| `npm run tasks:metrics`                                                     | task lead time と agent 実績を集計する                             |
-| `npm run gate`                                                              | `package.json` の `gateSteps` をキャッシュ付きで実行する           |
-| `npm run eval:worktree -- add <sha>`                                        | 評価用の隔離 worktree を作る                                       |
-| `npm run eval:worktree -- add <sha> --branch codex/<task-id>`               | 実装用の名前付き worktree を作る                                   |
-| `npm run eval:worktree -- remove <path> --discard`                          | 回収済みの評価 worktree を明示破棄する                             |
-| `npm run gen:codex`                                                         | `.claude/` から Codex 用 `.agents/skills/` と `.codex/` を生成する |
-| `npm run gen:codex:check`                                                   | Codex 生成物が `.claude/` と同期しているか検証する                 |
+| コマンド                                                                    | 用途                                                                                              |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `npm run tasks:new -- <category> "<title>" [--slug=<slug>] [--depends=a,b]` | 新規タスクを作る                                                                                  |
+| `npm run tasks:set -- <task-dir> key=value ...`                             | `meta.yaml` を決定的に更新する                                                                    |
+| `npm run tasks:index`                                                       | カテゴリ別 `index.md` を生成する                                                                  |
+| `npm run tasks:index:check`                                                 | `index.md` が最新か検証する                                                                       |
+| `npm run tasks:check`                                                       | task directory と `meta.yaml` の整合性を検証する                                                  |
+| `npm run tasks:check:frontend-structure`                                    | frontend TS/TSX の 300 行超ファイルを inventory 表示し、変更ファイルは strict gate として検証する |
+| `npm run tasks:fixlinks`                                                    | 壊れた Markdown 相対リンクの修正候補を dry-run で表示する                                         |
+| `npm run tasks:fixlinks -- --apply`                                         | 修正候補を適用する                                                                                |
+| `npm run tasks:migrate:legacy`                                              | 旧 `documents/tasks` レイアウトの移行計画を dry-run する                                          |
+| `npm run tasks:migrate:legacy -- --apply`                                   | 旧 `documents/tasks` レイアウトを `tasks/` へ移行する                                             |
+| `npm run tasks:migrate:reviewed-sha`                                        | 既存 `meta.yaml` へ `reviewed_sha` を dry-run で付与計画する                                      |
+| `npm run tasks:next`                                                        | 依存が解けて実行できる次タスクを表示する                                                          |
+| `npm run tasks:close -- <task-dir> verdict=PASS attempts=1`                 | meta 更新、自 task dir の close commit を行う                                                     |
+| `npm run tasks:reindex`                                                     | 全カテゴリ `index.md` を再生成し、変更があれば commit する                                        |
+| `npm run tasks:metrics`                                                     | task lead time と agent 実績を集計する                                                            |
+| `npm run gate`                                                              | `package.json` の `gateSteps` をキャッシュ付きで実行する                                          |
+| `npm run eval:worktree -- add <sha>`                                        | 評価用の隔離 worktree を作る                                                                      |
+| `npm run eval:worktree -- add <sha> --branch codex/<task-id>`               | 実装用の名前付き worktree を作る                                                                  |
+| `npm run eval:worktree -- remove <path> --discard`                          | 回収済みの評価 worktree を明示破棄する                                                            |
+| `npm run gen:codex`                                                         | `.claude/` から Codex 用 `.agents/skills/` と `.codex/` を生成する                                |
+| `npm run gen:codex:check`                                                   | Codex 生成物が `.claude/` と同期しているか検証する                                                |
 
 例:
 
@@ -243,6 +256,12 @@ npm run tasks:set -- tasks/task-management/task-260601153000-update-task-rules s
 npm run tasks:index
 npm run tasks:check
 ```
+
+`tasks:check:frontend-structure` は `sincromisor-frontend/src/**/*.ts` と `*.tsx` を対象に、
+既存の 300 行超ファイルを inventory として標準出力へ一覧化する。`git diff main --name-only --
+sincromisor-frontend/src` で取得した変更済み TS/TSX ファイルだけは strict gate として扱い、300 行を
+超える場合は失敗する。段階的な分割を阻害しないため、既存巨大ファイルの inventory は単独では
+失敗扱いにしない。
 
 ## ブランチライフサイクル
 

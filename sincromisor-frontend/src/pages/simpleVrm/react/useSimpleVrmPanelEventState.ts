@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { SincroAppEvent, SincroAppLifecycleState } from "../../../app/controller";
 import { SincroAppController } from "../../../app/controller";
 import { useSincroAppControllerSettingsState } from "../../../app/react/useSincroAppControllerSettingsState";
+import { createPanelCameraGuideState, type PanelCameraGuideState } from "./panelCameraGuideState";
 import type {
     PanelConnectionState,
     PanelGazeState,
@@ -46,6 +47,8 @@ type SimpleVrmPanelEventState = {
     telopLogs: PanelTelopLog[];
     lookingGlass: PanelLookingGlassState;
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
+    cameraGuide: PanelCameraGuideState;
+    vrmStatusText: string;
 };
 
 type SimpleVrmPanelRuntimeEventState = {
@@ -58,6 +61,8 @@ type SimpleVrmPanelRuntimeEventState = {
     telopLogs: PanelTelopLog[];
     lookingGlass: PanelLookingGlassState;
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
+    cameraGuide: PanelCameraGuideState;
+    vrmStatusText: string;
 };
 
 function useSimpleVrmPanelRuntimeEventState(): {
@@ -76,6 +81,10 @@ function useSimpleVrmPanelRuntimeEventState(): {
     );
     const [lookingGlassConfigStatus, setLookingGlassConfigStatus] =
         useState<PanelLookingGlassConfigStatus>(defaultSimpleVrmPanelLookingGlassConfigStatus);
+    const [cameraGuide, setCameraGuide] = useState<PanelCameraGuideState>(
+        createPanelCameraGuideState,
+    );
+    const [vrmStatusText, setVrmStatusText] = useState("");
     const setters = useMemo<SimpleVrmPanelRuntimeEventSetters>(
         () => ({
             setLogs,
@@ -87,6 +96,8 @@ function useSimpleVrmPanelRuntimeEventState(): {
             setTelopLogs,
             setLookingGlass,
             setLookingGlassConfigStatus,
+            setCameraGuide,
+            setVrmStatusText,
         }),
         [],
     );
@@ -102,6 +113,8 @@ function useSimpleVrmPanelRuntimeEventState(): {
             telopLogs,
             lookingGlass,
             lookingGlassConfigStatus,
+            cameraGuide,
+            vrmStatusText,
         },
         setters,
     };
@@ -128,6 +141,8 @@ export function useSimpleVrmPanelEventState(): SimpleVrmPanelEventState {
         initialController,
         resetLifecycleOnControllerClear: true,
         onEvent: applyRuntimeEvent,
+        onControllerCleared: () =>
+            runtimeEventState.setters.setCameraGuide(createPanelCameraGuideState()),
     });
 
     return {

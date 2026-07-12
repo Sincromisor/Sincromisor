@@ -1,55 +1,98 @@
+/**
+ * camera track、video element、frame loop、Worker / main-thread fallback を束ねる TrackerRuntime facade。
+ * UI 更新と VRM 適用は callback 先の責務に残し、start / stop / dispose が取得 resource の cleanup 境界になる。
+ */
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
+import { createSincroGestureFallbackSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
+import { SincroGestureTracker } from "../gestureTracking/sincroGestureTracker";
+import { createSincroHandFallbackSnapshot } from "../handTracking/sincroHandMotionSnapshot";
+import { SincroHandTracker } from "../handTracking/sincroHandTracker";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import { SincroPoseTracker } from "../poseTracking/sincroPoseTracker";
 import { SincroTrackerWorkerClient } from "./sincroTrackerWorkerClient";
-import { shouldRunTrackerInference, shouldRunTrackerPoseInference } from "./trackerRuntimeCadence";
+import type { SincroTrackerRoiStats, SincroTrackerWorkerStats } from "./sincroTrackerWorkerTypes";
+import {
+    applyTrackerRuntimeDegradationDecision,
+    trackerRuntimePolicyStageStopsPose,
+} from "./trackerRuntimeDegradationApplication";
+import type {
+    TrackerRuntimeDegradationPolicyCadence,
+    TrackerRuntimeDegradationPolicyDecision,
+} from "./trackerRuntimeDegradationPolicy";
+import { TrackerRuntimeDegradationPolicyController } from "./trackerRuntimeDegradationPolicy";
 import {
     formatTrackerRuntimeErrorDetail,
     initializeTrackerRuntimeEngine,
 } from "./trackerRuntimeEngineInitializer";
 import { publishTrackerRuntimeFallbackStats } from "./trackerRuntimeFallbackStats";
+import { clampTrackerRuntimeTargetsForMainThreadFallback } from "./trackerRuntimeFpsPolicy";
 import { TrackerRuntimeFrameLoop } from "./trackerRuntimeFrameLoop";
-import { TrackerRuntimePosePerformanceGate } from "./trackerRuntimePosePerformanceGate";
+import { runTrackerRuntimeMainThreadPipeline } from "./trackerRuntimeMainThreadPipeline";
+import type { TrackerPerformanceReasonCode } from "./trackerRuntimePerformanceBudget";
 import {
-    DEFAULT_TARGET_INFERENCE_FPS,
-    DEFAULT_TARGET_POSE_INFERENCE_FPS,
+    resolveTrackerRuntimePerformanceProfile,
+    type TrackerRuntimePerformanceProfile,
+} from "./trackerRuntimePerformanceProfile";
+import {
+    TrackerRuntimePosePerformanceGate,
+    type TrackerRuntimePosePerformanceGateResult,
+} from "./trackerRuntimePosePerformanceGate";
+import { createTrackerRuntimePredictionPlan } from "./trackerRuntimePredictionPlan";
+import { TrackerRuntimeRoiBudgetController } from "./trackerRuntimeRoiBudget";
+import { trackerPoseSnapshotIsFresh } from "./trackerRuntimeRoiSnapshot";
+import {
+    applyTrackerRuntimeStatsBudget,
+    createMainThreadTrackerRuntimeStats,
+    recordTrackerRuntimeRoiFrame,
+    type TrackerRuntimeBudgetInput,
+    type TrackerRuntimeRoiFrameInput,
+} from "./trackerRuntimeStats";
+import {
+    createTrackerRuntimeMutableState,
     type TrackerRuntimeCallbacks,
+    type TrackerRuntimeMutableState,
     type TrackerRuntimePoseOptions,
+    type TrackerVideoFrameTiming,
 } from "./trackerRuntimeTypes";
 import { attachTrackerVideoTrack, trackerVideoFrameIsReady } from "./trackerRuntimeVideoElement";
+import { runTrackerRuntimeWorkerPipeline } from "./trackerRuntimeWorkerPipeline";
 
-// Sincro 用 tracker の camera/video/loop 所有境界。
-// tracker core は DOM を知らず、runtime が video frame の readiness と fps 制限を担当する。
+type MainThreadPipelineInput = Parameters<typeof runTrackerRuntimeMainThreadPipeline>[0];
+type WorkerPipelineInput = Parameters<typeof runTrackerRuntimeWorkerPipeline>[0];
+
+// reason: structure-threshold-exception lifecycle facade と callback adapter を同一 class に残し public API の挙動を固定するため
+// TrackerRuntime は DOM の video element、camera track、Worker と推論 lifecycle を所有する。
+// UI 更新、VRM 適用、canonical 生成、ReliabilityMap 生成は後段の page / character 層の責務に残す。
 export class TrackerRuntime {
     private readonly videoElement: HTMLVideoElement;
     private readonly faceTracker: SincroFaceTracker;
     private readonly poseTracker: SincroPoseTracker;
+    private readonly handTracker: SincroHandTracker;
+    private readonly gestureTracker: SincroGestureTracker;
     private readonly workerClient: SincroTrackerWorkerClient;
-    private readonly frameLoop = new TrackerRuntimeFrameLoop(() => {
-        this.predict();
-    });
+    private readonly frameLoop = new TrackerRuntimeFrameLoop((timing) => this.predict(timing));
+    private readonly posePerformanceGate = new TrackerRuntimePosePerformanceGate();
+    private readonly roiBudget = new TrackerRuntimeRoiBudgetController();
+    private readonly degradationPolicy = new TrackerRuntimeDegradationPolicyController();
     private callbacks?: TrackerRuntimeCallbacks;
     private loadedDataHandlerBound?: () => void;
-    private lastVideoTime = -1;
-    private lastInferenceAtMs = -1;
-    private lastPoseInferenceAtMs = -1;
-    private targetInferenceFps = DEFAULT_TARGET_INFERENCE_FPS;
-    private targetPoseInferenceFps = DEFAULT_TARGET_POSE_INFERENCE_FPS;
-    private readonly posePerformanceGate = new TrackerRuntimePosePerformanceGate();
-    private poseTrackingEnabled = false;
-    private poseDegradedToFaceOnly = false;
-    private useWorkerTracking = false;
-    private switchingToMainThreadFallback = false;
+    private state: TrackerRuntimeMutableState = createTrackerRuntimeMutableState();
+    private performanceProfile: TrackerRuntimePerformanceProfile =
+        resolveTrackerRuntimePerformanceProfile().profile;
 
     constructor(
         videoElement: HTMLVideoElement,
         faceTracker: SincroFaceTracker = new SincroFaceTracker(),
         poseTracker: SincroPoseTracker = new SincroPoseTracker(),
+        handTracker: SincroHandTracker = new SincroHandTracker(),
+        gestureTracker: SincroGestureTracker = new SincroGestureTracker(),
     ) {
         this.videoElement = videoElement;
         this.faceTracker = faceTracker;
         this.poseTracker = poseTracker;
+        this.handTracker = handTracker;
+        this.gestureTracker = gestureTracker;
         this.workerClient = new SincroTrackerWorkerClient((stats) => {
             this.callbacks?.onTrackerStats?.(stats);
         });
@@ -58,35 +101,18 @@ export class TrackerRuntime {
     async startFaceTracking(
         videoTrack: MediaStreamTrack,
         callbacks: TrackerRuntimeCallbacks,
-        targetInferenceFps: number = DEFAULT_TARGET_INFERENCE_FPS,
+        targetInferenceFps?: number,
         poseOptions: TrackerRuntimePoseOptions = {},
     ): Promise<void> {
         if (this.frameLoop.enabled || this.callbacks) {
             this.stopFaceTracking("sincro_face_tracking_restarting");
         }
-
-        this.callbacks = callbacks;
-        this.poseTrackingEnabled = !!poseOptions.enabled;
-        this.poseDegradedToFaceOnly = false;
-        this.targetInferenceFps = Math.max(1, Math.min(30, targetInferenceFps));
-        this.targetPoseInferenceFps = Math.max(
-            1,
-            Math.min(15, poseOptions.targetInferenceFps ?? DEFAULT_TARGET_POSE_INFERENCE_FPS),
-        );
-        this.posePerformanceGate.configure({
-            targetPoseInferenceFps: this.targetPoseInferenceFps,
-            ignorePerformanceFallback: !!poseOptions.ignorePerformanceFallback,
-        });
-        this.useWorkerTracking = await this.initializeTrackerEngine(true);
+        this.resetStartState(callbacks, targetInferenceFps, poseOptions);
+        this.state.useWorkerTracking = await this.initializeTrackerEngine(true);
         attachTrackerVideoTrack(this.videoElement, videoTrack);
         this.frameLoop.enable();
-        this.lastVideoTime = -1;
-        this.lastInferenceAtMs = -1;
-        this.lastPoseInferenceAtMs = -1;
         if (!this.loadedDataHandlerBound) {
-            this.loadedDataHandlerBound = () => {
-                this.startLoopIfNeeded();
-            };
+            this.loadedDataHandlerBound = () => this.startLoopIfNeeded();
             this.videoElement.addEventListener("loadeddata", this.loadedDataHandlerBound);
         }
         this.startLoopIfNeeded();
@@ -94,19 +120,18 @@ export class TrackerRuntime {
 
     stopFaceTracking(reason: string | undefined = "sincro_face_tracking_stopped"): void {
         this.frameLoop.stop();
-        if (this.useWorkerTracking) {
-            // Restarting with Pose OFF must not keep a Worker that already loaded PoseLandmarker.
-            // Disposing here makes the next start honor the current tracking options from a clean Worker.
+        if (this.state.useWorkerTracking) {
             this.workerClient.dispose();
         }
         this.callbacks?.onFaceMotion(this.faceTracker.stop(reason));
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop(reason));
+        this.callbacks?.onHandMotion?.(this.handTracker.stop(reason));
+        this.callbacks?.onGestureMotion?.(this.gestureTracker.stop(reason));
         this.callbacks = undefined;
-        this.poseTrackingEnabled = false;
-        this.poseDegradedToFaceOnly = false;
+        this.state = createTrackerRuntimeMutableState();
+        this.roiBudget.reset();
+        this.degradationPolicy.reset();
         this.posePerformanceGate.reset();
-        this.useWorkerTracking = false;
-        this.switchingToMainThreadFallback = false;
         this.videoElement.pause();
         this.videoElement.srcObject = null;
     }
@@ -115,22 +140,101 @@ export class TrackerRuntime {
         this.stopFaceTracking("sincro_face_tracking_disposed");
         this.faceTracker.dispose();
         this.poseTracker.dispose();
+        this.handTracker.dispose();
+        this.gestureTracker.dispose();
         this.workerClient.dispose();
+    }
+
+    private resetStartState(
+        callbacks: TrackerRuntimeCallbacks,
+        targetInferenceFps: number | undefined,
+        poseOptions: TrackerRuntimePoseOptions,
+    ): void {
+        const performanceProfile = resolveTrackerRuntimePerformanceProfile({
+            performanceProfileId: poseOptions.performanceProfileId,
+            performanceProfile: poseOptions.performanceProfile,
+        }).profile;
+        this.state = createTrackerRuntimeMutableState();
+        this.performanceProfile = performanceProfile;
+        this.callbacks = callbacks;
+        this.state.poseTrackingEnabled = !!poseOptions.enabled;
+        this.state.handTrackingEnabled =
+            this.state.poseTrackingEnabled && poseOptions.hand?.enabled === true;
+        this.state.gestureTrackingRequested = poseOptions.gesture?.enabled === true;
+        this.state.gestureTrackingEnabled =
+            this.state.poseTrackingEnabled &&
+            this.state.handTrackingEnabled &&
+            this.state.gestureTrackingRequested;
+        this.state.faceRoiTrackingEnabled =
+            this.state.poseTrackingEnabled && poseOptions.faceRoi?.enabled === true;
+        this.state.ignorePosePerformanceFallback = !!poseOptions.ignorePerformanceFallback;
+        this.state.baseTargetInferenceFps = Math.max(
+            1,
+            Math.min(30, targetInferenceFps ?? performanceProfile.cadence.faceFps),
+        );
+        this.state.baseTargetPoseInferenceFps = Math.max(
+            1,
+            Math.min(15, poseOptions.targetInferenceFps ?? performanceProfile.cadence.poseFps),
+        );
+        this.state.baseTargetHandInferenceFps = Math.max(
+            1,
+            Math.min(8, poseOptions.hand?.targetInferenceFps ?? performanceProfile.cadence.handFps),
+        );
+        this.state.baseTargetGestureInferenceFps = Math.max(
+            1,
+            Math.min(
+                8,
+                poseOptions.gesture?.targetInferenceFps ?? performanceProfile.cadence.gestureFps,
+            ),
+        );
+        this.state.baseTargetFaceRoiInferenceFps = Math.max(
+            1,
+            Math.min(
+                12,
+                poseOptions.faceRoi?.targetInferenceFps ?? performanceProfile.cadence.faceRoiFps,
+            ),
+        );
+        this.state.targetInferenceFps = this.state.baseTargetInferenceFps;
+        this.state.targetPoseInferenceFps = this.state.baseTargetPoseInferenceFps;
+        this.state.targetHandInferenceFps = this.state.baseTargetHandInferenceFps;
+        this.state.targetGestureInferenceFps = this.state.baseTargetGestureInferenceFps;
+        this.state.targetFaceRoiInferenceFps = this.state.baseTargetFaceRoiInferenceFps;
+        this.configurePosePerformanceGate();
+        this.roiBudget.reset();
+        this.degradationPolicy.reset();
     }
 
     private async initializeTrackerEngine(preferWorker: boolean): Promise<boolean> {
         return initializeTrackerRuntimeEngine({
             faceTracker: this.faceTracker,
             poseTracker: this.poseTracker,
+            handTracker: this.handTracker,
+            gestureTracker: this.gestureTracker,
             workerClient: this.workerClient,
-            poseTrackingEnabled: this.poseTrackingEnabled,
+            poseTrackingEnabled: this.state.poseTrackingEnabled,
+            handTrackingEnabled: this.state.handTrackingEnabled,
+            gestureTrackingEnabled: this.state.gestureTrackingEnabled,
+            faceRoiTrackingEnabled: this.state.faceRoiTrackingEnabled,
             preferWorker,
-            onWorkerFallback: (reason) => {
-                this.publishMainThreadFallbackStats(reason);
-            },
-            onPoseInitializationFallback: (reason, nowMs) => {
-                this.degradePoseToFaceOnly(reason, nowMs);
-            },
+            onWorkerFallback: (reason) => this.applyMainThreadFallback(reason),
+            onPoseInitializationFallback: (reason, nowMs) =>
+                this.degradePoseToFaceOnly(reason, nowMs),
+            onHandInitializationFallback: (reason, nowMs) =>
+                this.callbacks?.onHandMotion?.(
+                    createSincroHandFallbackSnapshot({
+                        reason,
+                        nowMs,
+                        warnings: ["model_not_loaded"],
+                    }),
+                ),
+            onGestureInitializationFallback: (reason, nowMs) =>
+                this.callbacks?.onGestureMotion?.(
+                    createSincroGestureFallbackSnapshot({
+                        reason,
+                        nowMs,
+                        warnings: ["model_not_loaded"],
+                    }),
+                ),
         });
     }
 
@@ -138,153 +242,364 @@ export class TrackerRuntime {
         this.frameLoop.startIfNeeded(this.videoElement, this.callbacks);
     }
 
-    private predict(): void {
-        if (!this.frameLoop.enabled || !this.callbacks) {
+    private predict(timing: TrackerVideoFrameTiming): void {
+        const callbacks = this.callbacks;
+        if (!this.frameLoop.enabled || !callbacks) {
             this.frameLoop.markStopped();
             return;
         }
-
-        const nowMs = performance.now();
         if (!trackerVideoFrameIsReady(this.videoElement)) {
             this.frameLoop.schedule();
             return;
         }
-        if (
-            !shouldRunTrackerInference({
-                lastInferenceAtMs: this.lastInferenceAtMs,
-                targetInferenceFps: this.targetInferenceFps,
-                nowMs,
-            })
-        ) {
+        const plan = this.createPredictionPlan(timing.mediaTimeMs);
+        if (!plan.runFace) {
             this.frameLoop.schedule();
             return;
         }
-        if (this.videoElement.currentTime === this.lastVideoTime) {
-            void this.videoElement.play();
-            this.frameLoop.schedule();
+        this.state.lastInferenceAtMs = timing.mediaTimeMs;
+        if (this.state.useWorkerTracking) {
+            void runTrackerRuntimeWorkerPipeline(
+                this.createWorkerPipelineInput(timing, plan, callbacks),
+            );
             return;
         }
-
-        this.lastVideoTime = this.videoElement.currentTime;
-        this.lastInferenceAtMs = nowMs;
-        if (this.useWorkerTracking) {
-            void this.predictWithWorker(nowMs);
-            return;
-        }
-        try {
-            const snapshot = this.faceTracker.detect(this.videoElement, nowMs);
-            this.callbacks.onFaceMotion(snapshot);
-            if (this.shouldRunPoseInference(nowMs)) {
-                this.runPoseInference(nowMs);
-            }
-        } catch (error) {
-            this.handleRuntimeError(error);
-            return;
-        }
-        this.frameLoop.schedule();
+        runTrackerRuntimeMainThreadPipeline(
+            this.createMainThreadPipelineInput(timing, plan, callbacks),
+        );
     }
 
-    private async predictWithWorker(nowMs: number): Promise<void> {
-        if (!this.frameLoop.enabled || !this.callbacks) {
-            this.frameLoop.markStopped();
-            return;
-        }
-        const runPose = this.shouldRunPoseInference(nowMs);
-        if (runPose) {
-            this.lastPoseInferenceAtMs = nowMs;
-        }
-        try {
-            const transferStartedAtMs = performance.now();
-            const frame = await createImageBitmap(this.videoElement);
-            const transferTimeMs = performance.now() - transferStartedAtMs;
-            const result = await this.workerClient.detect(frame, nowMs, runPose, transferTimeMs);
-            this.callbacks.onTrackerStats?.(result.stats);
-            this.callbacks.onFaceMotion(result.face);
-            if (result.pose) {
-                this.callbacks.onPoseMotion?.(result.pose);
-                this.applyPosePerformanceGate(result.pose, nowMs);
-            }
-            this.frameLoop.schedule();
-        } catch (error) {
-            await this.switchToMainThreadFallback(error);
-        }
-    }
-
-    private shouldRunPoseInference(nowMs: number): boolean {
-        return shouldRunTrackerPoseInference({
-            poseTrackingEnabled: this.poseTrackingEnabled,
-            poseDegradedToFaceOnly: this.poseDegradedToFaceOnly,
-            lastPoseInferenceAtMs: this.lastPoseInferenceAtMs,
-            targetPoseInferenceFps: this.targetPoseInferenceFps,
+    private createPredictionPlan(nowMs: number) {
+        return createTrackerRuntimePredictionPlan({
             nowMs,
+            lastInferenceAtMs: this.state.lastInferenceAtMs,
+            lastPoseInferenceAtMs: this.state.lastPoseInferenceAtMs,
+            lastHandInferenceAtMs: this.state.lastHandInferenceAtMs,
+            lastGestureInferenceAtMs: this.state.lastGestureInferenceAtMs,
+            lastFaceRoiInferenceAtMs: this.state.lastFaceRoiInferenceAtMs,
+            targetInferenceFps: this.state.targetInferenceFps,
+            targetPoseInferenceFps: this.state.targetPoseInferenceFps,
+            targetHandInferenceFps: this.state.targetHandInferenceFps,
+            targetGestureInferenceFps: this.state.targetGestureInferenceFps,
+            targetFaceRoiInferenceFps: this.state.targetFaceRoiInferenceFps,
+            poseTrackingEnabled: this.state.poseTrackingEnabled,
+            handTrackingEnabled: this.state.handTrackingEnabled,
+            gestureTrackingRequested: this.state.gestureTrackingRequested,
+            gestureTrackingEnabled: this.state.gestureTrackingEnabled,
+            faceRoiTrackingEnabled: this.state.faceRoiTrackingEnabled,
+            poseDegradedToFaceOnly: this.state.poseDegradedToFaceOnly,
+            poseRecoveryProbeActive: trackerRuntimePolicyStageStopsPose(
+                this.degradationPolicy.getState().stage,
+            ),
+            handRoiPaused: this.roiBudget.handIsPaused(),
+            faceRoiPaused: this.roiBudget.faceRoiIsPaused(),
+            latestPoseSnapshotIsFresh: trackerPoseSnapshotIsFresh(
+                nowMs,
+                this.state.latestPoseSnapshot,
+            ),
         });
     }
 
-    private runPoseInference(nowMs: number): void {
-        if (!this.callbacks) {
-            return;
-        }
-        this.lastPoseInferenceAtMs = nowMs;
-        try {
-            const snapshot = this.poseTracker.detect(this.videoElement, nowMs);
-            this.callbacks.onPoseMotion?.(snapshot);
-            this.applyPosePerformanceGate(snapshot, nowMs);
-        } catch (error) {
-            frontendLogger.warn(
-                "Sincro PoseLandmarker failed during video inference. Falling back to face-only.",
-                { error },
-            );
-            this.degradePoseToFaceOnly(formatTrackerRuntimeErrorDetail(error), nowMs);
-        }
+    private createMainThreadPipelineInput(
+        timing: TrackerVideoFrameTiming,
+        plan: ReturnType<typeof createTrackerRuntimePredictionPlan>,
+        callbacks: TrackerRuntimeCallbacks,
+    ): MainThreadPipelineInput {
+        return {
+            videoElement: this.videoElement,
+            callbacks,
+            faceTracker: this.faceTracker,
+            poseTracker: this.poseTracker,
+            handTracker: this.handTracker,
+            gestureTracker: this.gestureTracker,
+            timing,
+            plan,
+            latestPoseSnapshot: this.state.latestPoseSnapshot,
+            handTrackingEnabled: this.state.handTrackingEnabled,
+            gestureTrackingRequested: this.state.gestureTrackingRequested,
+            gestureTrackingEnabled: this.state.gestureTrackingEnabled,
+            faceRoiTrackingEnabled: this.state.faceRoiTrackingEnabled,
+            handRoiPaused: this.roiBudget.handIsPaused(),
+            faceRoiPaused: this.roiBudget.faceRoiIsPaused(),
+            setLatestPoseSnapshot: (snapshot?: SincroPoseMotionSnapshot) =>
+                (this.state.latestPoseSnapshot = snapshot),
+            applyPosePerformanceGate: (snapshot, nowMs, frameTiming) =>
+                this.applyPosePerformanceGate(snapshot, nowMs, frameTiming),
+            degradePoseToFaceOnly: (reason, nowMs, frameTiming) =>
+                this.degradePoseToFaceOnly(reason, nowMs, frameTiming),
+            markPoseInference: (nowMs) => (this.state.lastPoseInferenceAtMs = nowMs),
+            markHandInference: (nowMs) => (this.state.lastHandInferenceAtMs = nowMs),
+            markGestureInference: (nowMs) => (this.state.lastGestureInferenceAtMs = nowMs),
+            markFaceRoiInference: (nowMs) => (this.state.lastFaceRoiInferenceAtMs = nowMs),
+            recordRoiFrame: (frame: TrackerRuntimeRoiFrameInput) => this.recordRoiFrame(frame),
+            publishStats: (stats) => {
+                callbacks.onTrackerStats?.(
+                    this.createMainThreadStats(
+                        timing,
+                        stats.mainThreadDetectTimeMs,
+                        stats.gestureInferenceTimeMs,
+                        stats.poseInferenceTimeMs,
+                        stats.poseDetected,
+                        stats.roiStats,
+                    ),
+                );
+            },
+            handleRuntimeError: (error) => this.handleRuntimeError(error),
+            scheduleFrame: () => this.frameLoop.schedule(),
+        };
+    }
+
+    private createWorkerPipelineInput(
+        timing: TrackerVideoFrameTiming,
+        plan: ReturnType<typeof createTrackerRuntimePredictionPlan>,
+        callbacks: TrackerRuntimeCallbacks,
+    ): WorkerPipelineInput {
+        return {
+            videoElement: this.videoElement,
+            callbacks,
+            workerClient: this.workerClient,
+            timing,
+            plan,
+            handTrackingEnabled: this.state.handTrackingEnabled,
+            gestureTrackingRequested: this.state.gestureTrackingRequested,
+            gestureTrackingEnabled: this.state.gestureTrackingEnabled,
+            faceRoiTrackingEnabled: this.state.faceRoiTrackingEnabled,
+            handRoiPaused: this.roiBudget.handIsPaused(),
+            faceRoiPaused: this.roiBudget.faceRoiIsPaused(),
+            frameLoopIsEnabled: () => this.frameLoop.enabled,
+            markFrameLoopStopped: () => this.frameLoop.markStopped(),
+            scheduleFrame: () => this.frameLoop.schedule(),
+            markPoseInference: (nowMs) => (this.state.lastPoseInferenceAtMs = nowMs),
+            markHandInference: (nowMs) => (this.state.lastHandInferenceAtMs = nowMs),
+            markGestureInference: (nowMs) => (this.state.lastGestureInferenceAtMs = nowMs),
+            markFaceRoiInference: (nowMs) => (this.state.lastFaceRoiInferenceAtMs = nowMs),
+            setLatestPoseSnapshot: (snapshot?: SincroPoseMotionSnapshot) =>
+                (this.state.latestPoseSnapshot = snapshot),
+            applyPosePerformanceGate: (snapshot, nowMs, frameTiming) =>
+                this.applyPosePerformanceGate(snapshot, nowMs, frameTiming),
+            recordRoiFrame: (frame: TrackerRuntimeRoiFrameInput) => this.recordRoiFrame(frame),
+            withBudget: (input) =>
+                this.withBudget(
+                    input.stats,
+                    timing,
+                    input.poseInferenceTimeMs,
+                    input.poseDetected,
+                    input.roiStats,
+                ),
+            switchToMainThreadFallback: (error) => this.switchToMainThreadFallback(error),
+        };
     }
 
     private async switchToMainThreadFallback(error: unknown): Promise<void> {
-        if (this.switchingToMainThreadFallback) {
+        if (this.state.switchingToMainThreadFallback) {
             return;
         }
-        this.switchingToMainThreadFallback = true;
-        this.publishMainThreadFallbackStats(formatTrackerRuntimeErrorDetail(error));
+        this.state.switchingToMainThreadFallback = true;
+        this.applyMainThreadFallback(formatTrackerRuntimeErrorDetail(error));
         this.workerClient.dispose();
-        this.useWorkerTracking = false;
+        this.state.useWorkerTracking = false;
         try {
             await this.initializeTrackerEngine(false);
-            this.switchingToMainThreadFallback = false;
+            this.state.switchingToMainThreadFallback = false;
             if (this.frameLoop.enabled) {
                 this.frameLoop.schedule();
             }
         } catch (fallbackError) {
-            this.switchingToMainThreadFallback = false;
+            this.state.switchingToMainThreadFallback = false;
             this.handleRuntimeError(fallbackError);
         }
     }
 
-    private applyPosePerformanceGate(snapshot: SincroPoseMotionSnapshot, nowMs: number): void {
-        const degradedReason = this.posePerformanceGate.evaluate(snapshot);
-        if (degradedReason) {
-            this.degradePoseToFaceOnly(degradedReason, nowMs);
+    private applyPosePerformanceGate(
+        snapshot: SincroPoseMotionSnapshot,
+        nowMs: number,
+        timing?: TrackerVideoFrameTiming,
+    ): void {
+        const result = this.posePerformanceGate.evaluate(snapshot);
+        this.applyPoseGateResult(result, nowMs);
+        if (result.shouldDegradeToFaceOnly && result.fallbackReason) {
+            this.degradePoseToFaceOnly(result.fallbackReason, nowMs, timing, result.reason);
         }
     }
 
-    private degradePoseToFaceOnly(reason: string, nowMs: number): void {
-        this.poseDegradedToFaceOnly = true;
+    private degradePoseToFaceOnly(
+        reason: string,
+        nowMs: number,
+        timing?: TrackerVideoFrameTiming,
+        reasonCode?: TrackerPerformanceReasonCode,
+    ): void {
+        this.state.poseDegradedToFaceOnly = true;
+        this.state.degradationState = "face-only";
+        this.state.degradationReason = reasonCode;
+        this.state.degradationSinceMediaTimeMs = nowMs;
         const snapshot = {
             ...this.poseTracker.stop(reason, nowMs),
             degradedToFaceOnly: true,
             fallbackReason: reason,
         };
-        this.callbacks?.onPoseMotion?.(snapshot);
-        this.callbacks?.onPoseFallback?.(snapshot);
+        this.callbacks?.onPoseMotion?.(snapshot, timing);
+        this.callbacks?.onPoseFallback?.(snapshot, timing);
+        this.callbacks?.onHandMotion?.(this.handTracker.stop(reason, nowMs), timing);
+        this.callbacks?.onGestureMotion?.(this.gestureTracker.stop(reason, nowMs), timing);
+        this.state.latestPoseSnapshot = undefined;
+    }
+
+    private enterComfortableIdle(timing: TrackerVideoFrameTiming): void {
+        this.state.comfortableIdleActive = true;
+        this.state.poseDegradedToFaceOnly = true;
+        const reason = "tracker_degradation_policy_comfortable_idle";
+        const poseSnapshot = this.poseTracker.stop(reason, timing.mediaTimeMs);
+        this.callbacks?.onPoseMotion?.(poseSnapshot, timing);
+        this.callbacks?.onPoseFallback?.(poseSnapshot, timing);
+        this.callbacks?.onHandMotion?.(this.handTracker.stop(reason, timing.mediaTimeMs), timing);
+        this.callbacks?.onGestureMotion?.(
+            this.gestureTracker.stop(reason, timing.mediaTimeMs),
+            timing,
+        );
+        this.state.latestPoseSnapshot = undefined;
     }
 
     private handleRuntimeError(error: unknown): void {
         frontendLogger.error("Sincro FaceLandmarker failed during video inference.", { error });
         this.callbacks?.onFaceMotion(this.faceTracker.stop(formatTrackerRuntimeErrorDetail(error)));
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop("face_tracking_runtime_error"));
+        this.callbacks?.onHandMotion?.(this.handTracker.stop("face_tracking_runtime_error"));
+        this.callbacks?.onGestureMotion?.(this.gestureTracker.stop("face_tracking_runtime_error"));
         this.callbacks?.onError?.(error);
         this.frameLoop.stop();
     }
 
-    private publishMainThreadFallbackStats(reason: string): void {
-        publishTrackerRuntimeFallbackStats(this.callbacks, this.workerClient.getStats(), reason);
+    private applyMainThreadFallback(reason: string): void {
+        const targets = clampTrackerRuntimeTargetsForMainThreadFallback(this.state);
+        this.state = { ...this.state, ...targets };
+        this.configurePosePerformanceGate();
+        this.state.degradationState = "main-thread-low-fps";
+        this.state.degradationReason = "main_thread_fallback";
+        this.state.degradationSinceMediaTimeMs = this.videoElement.currentTime * 1000;
+        this.state.mainThreadFallbackReason = reason;
+        publishTrackerRuntimeFallbackStats(
+            this.callbacks,
+            this.workerClient.getStats(),
+            reason,
+            this.state.targetInferenceFps,
+            this.state.targetPoseInferenceFps,
+            this.state.targetHandInferenceFps,
+            this.state.targetGestureInferenceFps,
+            this.state.targetFaceRoiInferenceFps,
+            this.roiBudget.getStats(),
+        );
+    }
+
+    private applyPoseGateResult(
+        result: TrackerRuntimePosePerformanceGateResult,
+        nowMs: number,
+    ): void {
+        if (result.state === "full") {
+            if (
+                !this.state.poseDegradedToFaceOnly &&
+                this.state.degradationState !== "main-thread-low-fps"
+            ) {
+                this.state.degradationState = "full";
+                this.state.degradationReason = undefined;
+                this.state.degradationSinceMediaTimeMs = undefined;
+            }
+            return;
+        }
+        this.state.degradationState = result.state;
+        this.state.degradationReason = result.reason;
+        this.state.degradationSinceMediaTimeMs = nowMs;
+    }
+
+    private createMainThreadStats(
+        timing: TrackerVideoFrameTiming,
+        mainThreadDetectTimeMs: number,
+        gestureInferenceTimeMs: number | undefined,
+        poseInferenceTimeMs: number | undefined,
+        poseDetected: boolean | undefined,
+        roiStats: SincroTrackerRoiStats,
+    ): SincroTrackerWorkerStats {
+        return createMainThreadTrackerRuntimeStats({
+            workerStats: this.workerClient.getStats(),
+            state: this.state,
+            timing,
+            mainThreadDetectTimeMs,
+            gestureInferenceTimeMs,
+            poseInferenceTimeMs,
+            poseDetected,
+            roiStats,
+            applyBudget: (input) => this.withBudgetFromInput(input),
+        });
+    }
+
+    private withBudgetFromInput(input: TrackerRuntimeBudgetInput): SincroTrackerWorkerStats {
+        return this.withBudget(
+            input.stats,
+            input.timing,
+            input.poseInferenceTimeMs,
+            input.poseDetected,
+            input.roiStats,
+        );
+    }
+
+    private withBudget(
+        stats: SincroTrackerWorkerStats,
+        timing: TrackerVideoFrameTiming,
+        poseInferenceTimeMs: number | undefined,
+        poseDetected: boolean | undefined,
+        roiStats: SincroTrackerRoiStats,
+    ): SincroTrackerWorkerStats {
+        return applyTrackerRuntimeStatsBudget({
+            budgetInput: { stats, timing, poseInferenceTimeMs, poseDetected, roiStats },
+            state: this.state,
+            performanceProfile: this.performanceProfile,
+            degradationPolicy: this.degradationPolicy,
+            applyDegradationDecision: (decision, frameTiming) =>
+                this.applyDegradationPolicyDecision(decision, frameTiming),
+            getState: () => this.state,
+            getRoiStats: () => this.roiBudget.getStats(),
+        });
+    }
+
+    private applyDegradationPolicyDecision(
+        decision: TrackerRuntimeDegradationPolicyDecision,
+        timing: TrackerVideoFrameTiming,
+    ): TrackerRuntimeDegradationPolicyCadence {
+        const result = applyTrackerRuntimeDegradationDecision({
+            decision,
+            state: this.state,
+            timing,
+        });
+        this.state = result.state;
+        this.roiBudget.setPolicyPauseState(result.roiPauseState);
+        this.configurePosePerformanceGate();
+        for (const action of result.actions) {
+            if (action === "degrade-to-face-only") {
+                this.degradePoseToFaceOnly(
+                    "tracker_degradation_policy_face_only",
+                    timing.mediaTimeMs,
+                    timing,
+                    "pose_detection_failed_repeatedly",
+                );
+            }
+            if (action === "enter-comfortable-idle") {
+                this.enterComfortableIdle(timing);
+            }
+        }
+        return result.appliedCadence;
+    }
+
+    private recordRoiFrame(input: TrackerRuntimeRoiFrameInput): SincroTrackerRoiStats {
+        return recordTrackerRuntimeRoiFrame({
+            roiBudget: this.roiBudget,
+            targetPoseInferenceFps: this.state.targetPoseInferenceFps,
+            frame: input,
+        });
+    }
+
+    private configurePosePerformanceGate(): void {
+        this.posePerformanceGate.configure({
+            targetPoseInferenceFps: this.state.targetPoseInferenceFps,
+            ignorePerformanceFallback: this.state.ignorePosePerformanceFallback,
+        });
     }
 }

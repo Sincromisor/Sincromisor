@@ -28,6 +28,11 @@
 - テスト都合だけで internal を export しない。必要になった時点で独立モジュール化する。
 - 「将来のために」分割しない。必要になってから変える。
 - コメントで段落分けしたくなったら関数抽出を検討する。
+- コメントは責務分割の代替ではなく、境界や非自明な判断の理由を伝える補助とする。TypeScript の
+  詳細基準は [coding-ts.md](coding-ts.md) の「ソースコードコメント品質」を正本とする。
+- コメント改善中に責務混在、命名不足、型不足、関数分割不足を見つけた場合は、コメントで覆わず構造を直す。
+  同タスクで直せない場合は follow-up として、対象 symbol、構造上の理由、推奨する分割単位を task artifact
+  または後続タスクに記録する。
 
 ## 3. 責務分割
 
@@ -56,3 +61,15 @@
 - Python: 同じ行または直前行に `# reason: <理由>`
 - TypeScript: 同じ行に `// reason: <理由>`
 - Markdown: 同じ箇条書きまたは直前行に `<!-- reason: <理由> -->`
+
+### frontend structure guard
+
+frontend の TypeScript / TSX では、`npm run tasks:check:frontend-structure` を使って
+`sincromisor-frontend/src/**/*.ts` と `*.tsx` の物理行数を確認する。この guard は既存の 300 行超
+ファイルを inventory として一覧化し、`git diff main --name-only -- sincromisor-frontend/src` で
+取得した変更ファイルだけを strict gate として扱う。`**/__tests__/**`、`*.test.ts`、`*.test.tsx`、
+`*.d.ts` は対象外とする。
+
+strict 対象のファイルが 300 行を超える場合は分割する。やむを得ない例外は同じファイル内に
+`// reason: structure-threshold-exception <理由>` を置く。このコメントは frontend structure guard
+専用の固定形式であり、理由なしの例外は認めない。

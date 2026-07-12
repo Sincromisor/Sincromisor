@@ -1,7 +1,11 @@
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
+import type { Vector3 } from "three/src/math/Vector3.js";
 import type { SincroArmIkConstraintSnapshot } from "../ik/sincroArmIkConstraint";
 import type { SincroArmIkQuaternion } from "../ik/sincroArmIkSolver";
+import type { SincroArmIkTarget } from "../ik/sincroArmIkTypes";
+import type { TemporalArmIkBridgeResult } from "../motionSolver/temporalArmSolverBridge";
+import type { TemporalTuple3 } from "../temporal/temporalUpperBodyState";
 import {
     NEUTRAL_ARM_IK_CONSTRAINT,
     type SincroPoseIkMode,
@@ -65,6 +69,9 @@ export function blendArm(
         ikWeight: ikArm.ikWeight,
         ikSolverMode: ikArm.ikSolverMode,
         fallbackReason: ikArm.fallbackReason ?? featureArm.fallbackReason,
+        solverSource: cloneArmSolverSource(ikArm.solverSource ?? featureArm.solverSource),
+        temporalBridge: cloneTemporalBridge(ikArm.temporalBridge ?? featureArm.temporalBridge),
+        reach: ikArm.reach ? { ...ikArm.reach } : undefined,
         constraint: cloneArmIkConstraint(ikArm.constraint),
         upperArm: smoothVector(featureArm.upperArm, ikArm.upperArm, alpha),
         lowerArm: smoothVector(featureArm.lowerArm, ikArm.lowerArm, alpha),
@@ -117,6 +124,9 @@ export function cloneArm(arm: SincroPoseRetargetedArm): SincroPoseRetargetedArm 
         ikWeight: arm.ikWeight,
         ikSolverMode: arm.ikSolverMode,
         fallbackReason: arm.fallbackReason,
+        solverSource: cloneArmSolverSource(arm.solverSource),
+        temporalBridge: cloneTemporalBridge(arm.temporalBridge),
+        reach: arm.reach ? { ...arm.reach } : undefined,
         constraint: cloneArmIkConstraint(arm.constraint),
         upperArm: { ...arm.upperArm },
         lowerArm: { ...arm.lowerArm },
@@ -188,6 +198,7 @@ export function cloneArmIkConstraint(
     return {
         ...constraint,
         reasons: [...constraint.reasons],
+        reasonCodes: constraint.reasonCodes ? [...constraint.reasonCodes] : undefined,
     };
 }
 
@@ -218,6 +229,9 @@ function smoothArm(
         ikWeight: MathUtils.lerp(current.ikWeight, target.ikWeight, alpha),
         ikSolverMode: target.ikSolverMode,
         fallbackReason: target.fallbackReason,
+        solverSource: cloneArmSolverSource(target.solverSource),
+        temporalBridge: cloneTemporalBridge(target.temporalBridge),
+        reach: target.reach ? { ...target.reach } : undefined,
         constraint: cloneArmIkConstraint(target.constraint),
         upperArm: smoothVector(current.upperArm, target.upperArm, alpha),
         lowerArm: smoothVector(current.lowerArm, target.lowerArm, alpha),
@@ -232,6 +246,64 @@ function smoothArm(
             target.lowerArmQuaternion,
             alpha,
         ),
+    };
+}
+
+function cloneTemporalBridge(
+    bridge: TemporalArmIkBridgeResult | undefined,
+): TemporalArmIkBridgeResult | undefined {
+    if (bridge === undefined) {
+        return undefined;
+    }
+    return {
+        target: cloneArmIkTarget(bridge.target),
+        reasonCodes: [...bridge.reasonCodes],
+        scale: { ...bridge.scale },
+        sourceState: bridge.sourceState,
+        debug: {
+            ...bridge.debug,
+            shoulderLocal: [...bridge.debug.shoulderLocal],
+            wristBeforeClamp: cloneTuple(bridge.debug.wristBeforeClamp),
+            wristAfterClamp: cloneTuple(bridge.debug.wristAfterClamp),
+            elbowPoleBeforeNormalize: cloneTuple(bridge.debug.elbowPoleBeforeNormalize),
+        },
+    };
+}
+
+function cloneArmIkTarget(target: SincroArmIkTarget | undefined): SincroArmIkTarget | undefined {
+    if (target === undefined) {
+        return undefined;
+    }
+    return {
+        ...target,
+        wrist: cloneVector(target.wrist),
+        elbowPole: cloneVector(target.elbowPole),
+    };
+}
+
+function cloneVector(vector: Vector3): Vector3 {
+    return vector.clone();
+}
+
+function cloneTuple(tuple: TemporalTuple3 | undefined): TemporalTuple3 | undefined {
+    if (tuple === undefined) {
+        return undefined;
+    }
+    return [tuple[0], tuple[1], tuple[2]];
+}
+
+function cloneArmSolverSource(
+    source: SincroPoseRetargetedArm["solverSource"],
+): SincroPoseRetargetedArm["solverSource"] {
+    if (source === undefined) {
+        return undefined;
+    }
+    return {
+        primarySource: source.primarySource,
+        fallbackReason: source.fallbackReason,
+        bridgeReasonCodes: [...source.bridgeReasonCodes],
+        targetReachRatio: source.targetReachRatio,
+        temporalState: source.temporalState,
     };
 }
 

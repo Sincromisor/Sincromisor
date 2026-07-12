@@ -1,7 +1,13 @@
+import type { MinimalAvatarMotionProfile } from "../../../character/avatarProfile/minimalAvatarMotionProfile";
 import type {
     SincroPoseRetargetConfig,
     SincroPoseRetargetFrame,
 } from "../../../character/retargeting/sincroPoseRetargeter";
+import type {
+    SincroMotionComposerDryRunSummary,
+    SincroMotionObserveOnlySummary,
+} from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
+import type { SincroVrmPoseComposerDryRunResult } from "../../../character/runtime/sincroVrmPoseComposerDryRun";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../gaze/trackingRuntime/sincroTrackerWorkerTypes";
@@ -10,6 +16,9 @@ import {
     cloneSincroPoseMotionSnapshot,
 } from "./debugConsoleMotionSnapshot";
 import {
+    cloneAvatarMotionProfile,
+    cloneComposerDryRun,
+    cloneObserveOnlySummary,
     clonePoseRetargetRuntime,
     updatePoseRetargetConfig,
 } from "./debugConsoleSincroMotionRuntime";
@@ -58,12 +67,75 @@ export class DebugConsoleSincroMotionControls {
         }));
     }
 
+    updateSincroObserveOnlySummary(summary: SincroMotionObserveOnlySummary): void {
+        this.params.updateSnapshot((currentSnapshot) => ({
+            ...currentSnapshot,
+            sincroMotion: {
+                ...currentSnapshot.sincroMotion,
+                observeOnly: cloneObserveOnlySummary(summary),
+            },
+        }));
+    }
+
+    updateSincroComposerDryRunSummary(summary: SincroMotionComposerDryRunSummary): void {
+        this.params.updateSnapshot((currentSnapshot) => ({
+            ...currentSnapshot,
+            sincroMotion: {
+                ...currentSnapshot.sincroMotion,
+                observeOnly: {
+                    ...currentSnapshot.sincroMotion.observeOnly,
+                    composerDryRun: {
+                        status: summary.status,
+                        warnings: [...summary.warnings],
+                        suppressedLayers: [...summary.suppressedLayers],
+                        clampedBones: [...summary.clampedBones],
+                        fullNormalizedPoseApplication:
+                            summary.fullNormalizedPoseApplication === undefined
+                                ? undefined
+                                : { ...summary.fullNormalizedPoseApplication },
+                    },
+                },
+            },
+        }));
+    }
+
+    updateSincroComposerDryRunResult(result: SincroVrmPoseComposerDryRunResult): void {
+        this.params.updateSnapshot((currentSnapshot) => ({
+            ...currentSnapshot,
+            sincroMotion: {
+                ...currentSnapshot.sincroMotion,
+                poseRetargetRuntime: {
+                    ...currentSnapshot.sincroMotion.poseRetargetRuntime,
+                    composerDryRun: cloneComposerDryRun(result),
+                },
+            },
+        }));
+    }
+
     updateSincroPoseRetargetFrame(frame: SincroPoseRetargetFrame): void {
         this.params.updateSnapshot((currentSnapshot) => ({
             ...currentSnapshot,
             sincroMotion: {
                 ...currentSnapshot.sincroMotion,
-                poseRetargetRuntime: clonePoseRetargetRuntime(frame),
+                poseRetargetRuntime: clonePoseRetargetRuntime(
+                    frame,
+                    currentSnapshot.sincroMotion.poseRetargetRuntime.avatarMotionProfile,
+                    currentSnapshot.sincroMotion.poseRetargetRuntime.composerDryRun,
+                ),
+            },
+        }));
+    }
+
+    updateAvatarMotionProfile(profile: MinimalAvatarMotionProfile | undefined): void {
+        this.params.updateSnapshot((currentSnapshot) => ({
+            ...currentSnapshot,
+            sincroMotion: {
+                ...currentSnapshot.sincroMotion,
+                poseRetargetRuntime: {
+                    ...currentSnapshot.sincroMotion.poseRetargetRuntime,
+                    avatarMotionProfile: cloneAvatarMotionProfile(profile),
+                    composerDryRun: currentSnapshot.sincroMotion.poseRetargetRuntime.composerDryRun,
+                },
             },
         }));
     }

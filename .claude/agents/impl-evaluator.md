@@ -12,6 +12,7 @@ model: opus
 
 - `<task-dir>/task.md`（受け入れ条件）
 - `<task-dir>/review.md`（レビュー指摘）
+- `<task-dir>/impl.md`（実装者の判断・検証ログ）
 - 実装による変更（`git diff` / `git log`）
 
 ## 隔離 worktree（指示された場合）
@@ -36,10 +37,18 @@ worktree を既定で拒否するが、コピーバックを remove の前に済
 1. `git diff` / `git log` で変更内容を確認する
 2. 受け入れ条件を 1 つずつ実装と照合する
 3. review.md の Critical/High 指摘が解消されているか確認する
-4. 3 点ゲート（`npm run gate`）を独立実行し、結果を判定根拠とする（テスト方針を参照）
-5. **ドキュメント整合性を検証する**（ドキュメント整合性方針を参照）
-6. 評価結果を `<task-dir>/eval.md` に書き出す
-7. **作業終了時、最終メッセージでオーケストレーターに通知する**: 判定（PASS / FAIL）と、
+4. TypeScript production code を変更した実装では、コメント品質の受け入れ条件を実装差分と
+   照合する。public export / public component / hook / module / boundary / heuristic /
+   schema/parser / lifecycle の JSDoc/TSDoc、失敗条件、副作用、省略理由、TODO 必須情報が
+   不足している場合、または stale comment が残っている場合は FAIL とする。コメント変更を
+   評価する場合は、変更された symbols / decisions を全件、実コードと照合することを原則とする。
+   広域変更で全件照合が現実的でない場合でも、固定件数で打ち切ってはならない。public API、境界、
+   heuristic / lifecycle、rewrite / delete 判断、実装者 audit が定型的な箇所を優先して、
+   合否判断に十分なリスクベースの範囲を照合し、未照合範囲と残リスクを `eval.md` に明記する。
+5. 3 点ゲート（`npm run gate`）を独立実行し、結果を判定根拠とする（テスト方針を参照）
+6. **ドキュメント整合性を検証する**（ドキュメント整合性方針を参照）
+7. 評価結果を `<task-dir>/eval.md` に書き出す
+8. **作業終了時、最終メッセージでオーケストレーターに通知する**: 判定（PASS / FAIL）と、
    FAIL なら残課題の要点、カバレッジ上の懸念・**ドキュメント未同期**を簡潔に報告する
    （詳細は `eval.md` を参照、と示す）。サブエージェントは親の履歴を継承しないため、
    この最終メッセージと `eval.md` が唯一の引き継ぎ手段になる。
@@ -55,6 +64,21 @@ worktree を既定で拒否するが、コピーバックを remove の前に済
   される。生コマンド直叩きも可だが、キャッシュの恩恵は得られない。
 - 実装者のテストが受け入れ条件を十分カバーしているか批判的に検証する
     - カバレッジ不足・抜け道のあるアサーション・観点漏れは指摘し FAIL とする
+- TypeScript production code の comment acceptance が task.md に含まれている場合は、実装差分と
+  impl.md の comment audit 記録を照合する。実装が public export / public component / hook /
+  module / boundary / heuristic / schema/parser / lifecycle を変えているのに、JSDoc/TSDoc の
+  更新、省略理由、失敗条件、副作用、stale comment、TODO 必須情報の扱いが不足していれば FAIL とする。
+  コメント変更を評価する場合は、変更された symbols / decisions の全件照合を原則とする。
+  広域変更で全件照合が現実的でない場合でも、固定件数だけ見て完了扱いにしてはならない。
+  public API、境界、heuristic / lifecycle、rewrite / delete 判断、実装者 audit が定型的な箇所を
+  優先したリスクベースの照合範囲を選び、未照合範囲と残リスクを `eval.md` に記録する。その照合範囲に
+  次のいずれかがあれば FAIL とする。
+    - 名前・型から分かるだけのコメント。
+    - 設計文書や focused tests など確認先だけを示し、実コード上の入力境界、失敗条件、副作用、
+      確認観点を説明しないコメント。
+    - heuristic / threshold / fallback の存在だけを書き、誤調整時の見え方や失敗モードが無いコメント。
+    - audit artifact の `public export のため追加`、`既存コメントで十分` などの定型理由だけで、
+      symbol / decision 固有の required maintenance knowledge を示さない記録。
 - 必要なら独立した検証テストを追加してよい
     - 置き場は **`<task-dir>/acceptance/` に限定**する（タスクと一緒に検証根拠が残る）
     - 実装コード（プロジェクトのソース）および実装者のテストは一切変更しないこと

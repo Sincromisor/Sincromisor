@@ -110,7 +110,8 @@ NG 条件:
 - 実施ログと採用判断: `tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/impl.md`
 - 評価判定: `tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/eval.md`
 - チェックリストや手順メモ: `tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/acceptance/`
-- スクリーンショット、snapshot JSON、console log、runtime metrics: `tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/artifacts/`
+- snapshot JSON、runtime metrics: `tasks/character-sincro-motion/task-3116-sincro-pose-ik-observability-verification-and-design-sync/artifacts/`
+- スクリーンショット原本: `work/private-artifacts/task-3116-sincro-pose-ik-observability-verification-and-design-sync/screenshots/`（Git管理外）
 
 ## 完了条件
 

@@ -1,5 +1,6 @@
 {
   "date": "2026-06-18",
+  "privateArtifactRoot": "work/private-artifacts/task-3116-sincro-pose-ik-observability-verification-and-design-sync/screenshots",
   "browser": "Playwright Chromium via playwright-cli",
   "devServer": "http://127.0.0.1:5173/",
   "build": {
