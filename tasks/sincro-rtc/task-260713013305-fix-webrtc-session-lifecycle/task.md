@@ -20,28 +20,28 @@
 ## 完了条件（受け入れ条件）
 
 - [ ] 初回 Offer と更新 Offer の子プロセス応答が15秒以内に届かない場合、親は待機を終了し、対象子プロセスを
-  終了・join・closeして管理辞書から除去する。初回 Offer は既存契約どおり HTTP 503、更新 Offer は既存の
-  fallback 方針どおり新規作成を試み、他の `/statuses`、`/candidate`、`/cleanup`、shutdown はその後も処理できる。
+      終了・join・closeして管理辞書から除去する。初回 Offer は既存契約どおり HTTP 503、更新 Offer は既存の
+      fallback 方針どおり新規作成を試み、他の `/statuses`、`/candidate`、`/cleanup`、shutdown はその後も処理できる。
 - [ ] `/offer` のブロッキングなプロセス生成・Pipe通信は FastAPI イベントループ上で直接実行せず、同期
-  endpoint として thread pool で実行する。`/candidate` 等の別リクエストがイベントループへ受理されることを
-  テストまたは FastAPI の endpoint 定義検査で確認する。Manager のロックにより同一プロセスのシグナリングを
-  直列化する既存制約は維持する。
+      endpoint として thread pool で実行する。`/candidate` 等の別リクエストがイベントループへ受理されることを
+      テストまたは FastAPI の endpoint 定義検査で確認する。Manager のロックにより同一プロセスのシグナリングを
+      直列化する既存制約は維持する。
 - [ ] 既存セッションの更新は上限到達時にも許可する一方、新規作成は現在数が `max_sessions` 以上なら原子的に
-  拒否し、HTTP 429 と `{"error":"Too many requests."}` を返す。上限 `0`、上限ちょうど、上限未満、更新 Offer、
-  更新失敗後の新規 fallback の各分岐をテストする。
+      拒否し、HTTP 429 と `{"error":"Too many requests."}` を返す。上限 `0`、上限ちょうど、上限未満、更新 Offer、
+      更新失敗後の新規 fallback の各分岐をテストする。
 - [ ] RTC セッションの正常終了・failed・初期化途中の失敗の各経路で、生成済み `VoiceTransformTrack.stop()` が
-  `AudioBroker.close()` をちょうど1回実行し、WebSocket/通信 thread の終了処理を通る。複数回 stop/close しても
-  例外や二重 close を起こさない。
+      `AudioBroker.close()` をちょうど1回実行し、WebSocket/通信 thread の終了処理を通る。複数回 stop/close しても
+      例外や二重 close を起こさない。
 - [ ] 管理スレッドは `Process.join(timeout)` の戻り値ではなく `Process.is_alive()` でタイムアウトを判定し、
-  時間内に終了したプロセスを kill せず、時間超過したプロセスだけを kill・join・closeする。
+      時間内に終了したプロセスを kill せず、時間超過したプロセスだけを kill・join・closeする。
 - [ ] AudioBroker が利用不能な縮退経路で生成する無音フレームは、入力 `AudioFrame` の format、layout、samples、
-  sample_rate、pts、time_base を維持する。少なくとも mono/stereo と 16 kHz/48 kHz の組合せを単体テストし、
-  無音であることと RTC finalize event が立たないことを確認する。
+      sample_rate、pts、time_base を維持する。少なくとも mono/stereo と 16 kHz/48 kHz の組合せを単体テストし、
+      無音であることと RTC finalize event が立たないことを確認する。
 - [ ] 追加・変更する public class / method、および timeout・cleanup・frame変換という非自明な lifecycle 判断の
-  コメントを `documents/rules/coding-py.md` と `AGENTS.md` のコメント品質基準で監査する。名前・型から明らかな
-  説明は削除し、所有権、失敗条件、不変条件だけを日本語 docstring/comment として残し、stale comment を残さない。
+      コメントを `documents/rules/coding-py.md` と `AGENTS.md` のコメント品質基準で監査する。名前・型から明らかな
+      説明は削除し、所有権、失敗条件、不変条件だけを日本語 docstring/comment として残し、stale comment を残さない。
 - [ ] `uv run ruff check .`、`uv run ruff format --check .`、
-  `uv run --group dev --group full ty check .`、対象 pytest、`npm run gate` が成功する。
+      `uv run --group dev --group full ty check .`、対象 pytest、`npm run gate` が成功する。
 
 ## 設計判断（着手前に確定済み）
 
