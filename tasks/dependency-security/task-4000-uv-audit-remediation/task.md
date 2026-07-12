@@ -29,3 +29,11 @@
 - `uv audit --locked`: `transformers 4.53.3` / `GHSA-69w3-r845-3855` の 1 件のみ残存。
 - `uv audit --locked --ignore GHSA-69w3-r845-3855`: 既知脆弱性なし。
 - `uv run ruff check .`: 既存の `UP042` と `I001` 指摘で失敗。依存更新とは別の既存コード整形指摘として扱う。
+
+## 2026-07-13 再監査
+
+- `aiohttp 3.14.1`, `cryptography 49.0.0`, `idna 3.18`, `msgpack 1.2.1`, `onnx 1.22.0`, `pyarrow 25.0.0`, `starlette 1.3.1` へ更新し、関連して `fastapi 0.139.0`, `pyopenssl 26.3.0` へ更新した。
+- `reazonspeech-nemo-asr 3.0.0` の Git revision `5a120830a2240f0237a153c081c995c767fc6d02` と `nemo-toolkit 2.6.2` は維持した。
+- `uv audit --locked`: 40 件から 13 件へ減少。残件は `torch 2.9.1` の 3 件と `transformers 4.53.3` の 10 件。
+- 残件のうち 10 件は修正版が公開されていない。修正版がある指摘も `torch 2.10.0` または `transformers 5.3.0` を必要とし、ReazonSpeech / NeMo の中核依存を更新するため、実音声・GPU 環境での互換性評価なしには更新しない。
+- ReazonSpeech / NeMo ASR の import smoke test、speech-recognizer-nemo の unit test 17 件、対象範囲の Ruff check は PASS。
