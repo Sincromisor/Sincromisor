@@ -53,6 +53,7 @@ export function createMainThreadTrackerRuntimeStats(input: {
     state: TrackerRuntimeMutableState;
     timing: TrackerVideoFrameTiming;
     mainThreadDetectTimeMs: number;
+    gestureInferenceTimeMs?: number;
     poseInferenceTimeMs?: number;
     poseDetected?: boolean;
     roiStats: SincroTrackerRoiStats;
@@ -65,6 +66,7 @@ export function createMainThreadTrackerRuntimeStats(input: {
             transferTimeMs: 0,
             workerRoundTripMs: 0,
             mainThreadDetectTimeMs: input.mainThreadDetectTimeMs,
+            gestureInferenceTimeMs: input.gestureInferenceTimeMs,
             loadTimeMs: input.workerStats.loadTimeMs,
             droppedFrames: input.workerStats.droppedFrames,
             fallbackReason: input.state.mainThreadFallbackReason,

@@ -46,6 +46,7 @@ export type SincroTrackerWorkerStats = {
     workerRoundTripMs: number;
     workerTimeMs?: number;
     mainThreadDetectTimeMs?: number;
+    gestureInferenceTimeMs?: number;
     effectiveFaceFps?: number;
     effectivePoseFps?: number;
     effectiveHandFps?: number;
@@ -111,6 +112,8 @@ export type SincroTrackerWorkerResultMessage = {
     gesture?: SincroGestureMotionSnapshot;
     mediapipe?: TrackerRuntimeMediaPipeRawResult;
     workerTimeMs: number;
+    /** Gesture pass が実行された frame だけに、Worker と同じ performance clock の実測値を載せる。 */
+    gestureInferenceTimeMs?: number;
 };
 
 export type SincroTrackerWorkerStoppedMessage = {

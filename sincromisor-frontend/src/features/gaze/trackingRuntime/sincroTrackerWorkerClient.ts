@@ -230,6 +230,7 @@ export class SincroTrackerWorkerClient {
                 status: "running",
                 workerRoundTripMs: performance.now() - pending.sentAtMs,
                 workerTimeMs: message.workerTimeMs,
+                gestureInferenceTimeMs: message.gestureInferenceTimeMs,
                 fallbackReason: undefined,
             };
             this.publishStats();
