@@ -18,7 +18,7 @@ from sincro_rtc.models import (
     RTCSessionOffer,
     RTCSignalingServerArgument,
 )
-from sincro_rtc.RTCSession import RTCSessionManager
+from sincro_rtc.RTCSession import RTCSessionCapacityError, RTCSessionManager
 
 if os.environ.get("SINCROMISOR_MODE") == "development":
     import tracemalloc
@@ -87,14 +87,9 @@ class RTCSignalingServer:
             )
 
         @app.post("/api/v1/RTCSignalingServer/offer")
-        async def app_offer(request: Request, offer_params: RTCSessionOffer):
+        def app_offer(request: Request, offer_params: RTCSessionOffer):
             # /offer 時点で寿命切れセッションを回収し、session_id更新可否の判定精度を上げる。
             rtcSM.cleanup_sessions()
-            if rtcSM.session_count() > self.__args.max_sessions:
-                res = JSONResponse({"error": "Too many requests."})
-                res.status_code = status.HTTP_429_TOO_MANY_REQUESTS
-                return res
-
             self.__logger.info(
                 (
                     "Offer received: "
@@ -104,7 +99,15 @@ class RTCSignalingServer:
                 ),
             )
             try:
-                session_info = rtcSM.create_or_update_session(offer=offer_params)
+                session_info = rtcSM.create_or_update_session(
+                    offer=offer_params,
+                    max_sessions=self.__args.max_sessions,
+                )
+            except RTCSessionCapacityError:
+                return JSONResponse(
+                    {"error": "Too many requests."},
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
             except Exception as e:
                 self.__logger.error(
                     (
