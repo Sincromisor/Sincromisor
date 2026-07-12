@@ -210,14 +210,7 @@ class RTCSessionProcess(Process):
 
         @vcs.peer.on("connectionstatechange")
         async def on_connectionstatechange():
-            self.__logger.info(
-                f"on_connectionstatechange - {vcs.peer.connectionState}",
-            )
-            if vcs.peer.connectionState == "failed":
-                self.__rtc_finalize_event.set()
-                await vcs.close()
-            elif vcs.peer.connectionState == "closed":
-                self.__rtc_finalize_event.set()
+            await self.__handle_connection_state_change(vcs)
 
         @vcs.peer.on("track")
         def on_track(track):
@@ -249,6 +242,18 @@ class RTCSessionProcess(Process):
             @track.on("ended")
             async def on_ended():
                 self.__logger.info(f"Track {track.kind} ended.")
+
+    async def __handle_connection_state_change(self, vcs: RTCVoiceChatSession) -> None:
+        """failed peer の所有資源を即時解放し、process loop の終了を通知する。"""
+
+        self.__logger.info(
+            f"on_connectionstatechange - {vcs.peer.connectionState}",
+        )
+        if vcs.peer.connectionState == "failed":
+            self.__rtc_finalize_event.set()
+            await vcs.close()
+        elif vcs.peer.connectionState == "closed":
+            self.__rtc_finalize_event.set()
 
     async def __apply_offer(
         self,

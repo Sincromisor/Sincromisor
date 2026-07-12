@@ -1,5 +1,6 @@
+import asyncio
 from fractions import Fraction
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import numpy as np
 import pytest
@@ -65,3 +66,29 @@ def test_stop_still_stops_track_when_broker_close_fails() -> None:
 
     assert value.readyState == "ended"
     broker.close.assert_called_once_with()
+
+
+def test_unavailable_broker_uses_silence_without_finalizing_rtc() -> None:
+    broker = Mock()
+    broker.is_running.return_value = False
+    input_track = Mock()
+    frame = AudioFrame.from_ndarray(
+        np.ones((1, 160), dtype=np.int16), format="s16p", layout="mono"
+    )
+    frame.sample_rate = 16000
+    frame.pts = 10
+    frame.time_base = Fraction(1, 16000)
+    input_track.recv = AsyncMock(return_value=frame)
+    finalize_event = Mock()
+    value = track_with_broker(broker)
+    setattr(value, "_VoiceTransformTrack__track", input_track)
+    setattr(value, "_VoiceTransformTrack__rtc_finalize_event", finalize_event)
+    setattr(value, "_VoiceTransformTrack__vcs", Mock(text_ch=None))
+
+    result = asyncio.run(value.recv())
+
+    assert np.count_nonzero(result.to_ndarray()) == 0
+    assert result.format.name == frame.format.name
+    assert result.layout.name == frame.layout.name
+    broker.connect.assert_called_once_with()
+    finalize_event.set.assert_not_called()
