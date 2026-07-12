@@ -1,13 +1,13 @@
 id: task-260713013305-fix-webrtc-session-lifecycle
 title: WebRTCセッション管理の停止耐性と音声フレーム処理を修正する
 category: sincro-rtc
-status: open
+status: done
 depends_on: []
 superseded_by: null
 review: APPROVED
 reviewed_sha: 0a155393fef34c92c6896ca8e3b35195cc229b8e
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 2
 created_at: 2026-07-13
-closed_at: null
+closed_at: 2026-07-13
 legacy_ids: []
