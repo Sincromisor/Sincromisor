@@ -57,6 +57,7 @@ export function runTrackerRuntimeMainThreadPipeline(input: {
     recordRoiFrame: (input: TrackerRuntimeRoiFrameInput) => SincroTrackerRoiStats;
     publishStats: (input: {
         mainThreadDetectTimeMs: number;
+        gestureInferenceTimeMs?: number;
         poseInferenceTimeMs?: number;
         poseDetected?: boolean;
         roiStats: SincroTrackerRoiStats;
@@ -80,9 +81,10 @@ export function runTrackerRuntimeMainThreadPipeline(input: {
         const faceSnapshot = runFaceInference(input, roiPose, faceRoiSnapshot);
         input.callbacks.onFaceMotion(faceSnapshot, input.timing);
         const handResult = runHand && roiPose ? runHandInference(input, roiPose) : undefined;
-        if (input.plan.runGesture && handResult) {
-            runGestureInference(input, handResult.snapshot);
-        }
+        const gestureResult =
+            input.plan.runGesture && handResult
+                ? runGestureInference(input, handResult.snapshot)
+                : undefined;
         if (!runHand) {
             publishTrackerSkippedHandSnapshot({
                 callbacks: input.callbacks,
@@ -111,6 +113,7 @@ export function runTrackerRuntimeMainThreadPipeline(input: {
         });
         input.publishStats({
             mainThreadDetectTimeMs: performance.now() - detectStartedAtMs,
+            gestureInferenceTimeMs: gestureResult?.inferenceTimeMs,
             poseInferenceTimeMs: poseResult?.inferenceTimeMs,
             poseDetected: poseResult?.snapshot.detected,
             roiStats,

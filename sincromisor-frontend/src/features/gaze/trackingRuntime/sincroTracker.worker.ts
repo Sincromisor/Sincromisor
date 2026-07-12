@@ -226,6 +226,7 @@ async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> 
             hand,
             gesture,
             ...(mediapipe === undefined ? {} : { mediapipe }),
+            ...(gesture === undefined ? {} : { gestureInferenceTimeMs: gesture.inferenceTimeMs }),
             workerTimeMs: performance.now() - startedAtMs,
         });
     } finally {

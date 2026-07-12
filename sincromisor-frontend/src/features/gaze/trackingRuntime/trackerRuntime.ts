@@ -337,6 +337,7 @@ export class TrackerRuntime {
                     this.createMainThreadStats(
                         timing,
                         stats.mainThreadDetectTimeMs,
+                        stats.gestureInferenceTimeMs,
                         stats.poseInferenceTimeMs,
                         stats.poseDetected,
                         stats.roiStats,
@@ -512,6 +513,7 @@ export class TrackerRuntime {
     private createMainThreadStats(
         timing: TrackerVideoFrameTiming,
         mainThreadDetectTimeMs: number,
+        gestureInferenceTimeMs: number | undefined,
         poseInferenceTimeMs: number | undefined,
         poseDetected: boolean | undefined,
         roiStats: SincroTrackerRoiStats,
@@ -521,6 +523,7 @@ export class TrackerRuntime {
             state: this.state,
             timing,
             mainThreadDetectTimeMs,
+            gestureInferenceTimeMs,
             poseInferenceTimeMs,
             poseDetected,
             roiStats,
