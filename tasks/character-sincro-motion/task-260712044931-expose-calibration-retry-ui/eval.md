@@ -52,4 +52,3 @@ PASS
 ## その他所見
 
 - 実カメラでのUX確認は未実施だが、production callback wiringとdeterministic state lifecycleはintegration/state testで固定されており、本タスクのPASSを妨げない。
-
