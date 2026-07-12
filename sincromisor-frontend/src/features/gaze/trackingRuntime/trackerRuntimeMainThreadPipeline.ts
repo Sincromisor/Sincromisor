@@ -14,6 +14,7 @@ import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionS
 import type { SincroPoseTracker } from "../poseTracking/sincroPoseTracker";
 import { createTrackerRuntimeMediaPipeRawResult } from "./mediaPipeRawResultSerializer";
 import type { SincroTrackerRoiStats } from "./sincroTrackerWorkerTypes";
+import { createMainThreadTrackerFrameMeasurement } from "./trackerRuntimeDurationMeasurement";
 import { formatTrackerRuntimeErrorDetail } from "./trackerRuntimeEngineInitializer";
 import type { TrackerRuntimePredictionPlan } from "./trackerRuntimePredictionPlan";
 import {
@@ -65,7 +66,7 @@ export function runTrackerRuntimeMainThreadPipeline(input: {
     handleRuntimeError: (error: unknown) => void;
     scheduleFrame: () => void;
 }): void {
-    const detectStartedAtMs = performance.now();
+    const durationMeasurement = createMainThreadTrackerFrameMeasurement();
     try {
         const poseResult = input.plan.runPose ? runPoseInference(input) : undefined;
         const roiPose = resolveFreshTrackerPoseSnapshot({
@@ -112,8 +113,7 @@ export function runTrackerRuntimeMainThreadPipeline(input: {
             }),
         });
         input.publishStats({
-            mainThreadDetectTimeMs: performance.now() - detectStartedAtMs,
-            gestureInferenceTimeMs: gestureResult?.inferenceTimeMs,
+            ...durationMeasurement.finish(gestureResult?.inferenceTimeMs),
             poseInferenceTimeMs: poseResult?.inferenceTimeMs,
             poseDetected: poseResult?.snapshot.detected,
             roiStats,

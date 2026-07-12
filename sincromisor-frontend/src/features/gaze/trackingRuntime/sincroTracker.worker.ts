@@ -19,6 +19,10 @@ import type {
     SincroTrackerWorkerOutputMessage,
     SincroTrackerWorkerStatus,
 } from "./sincroTrackerWorkerTypes";
+import {
+    createWorkerGestureDurationFields,
+    measureWorkerTrackerFrame,
+} from "./trackerRuntimeDurationMeasurement";
 
 type MediaPipeWorkerGlobal = typeof self & {
     import?: (path: string) => Promise<unknown>;
@@ -179,44 +183,18 @@ async function ensureTrackers(): Promise<void> {
 }
 
 async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> {
-    const startedAtMs = performance.now();
     try {
-        await initialize(
-            message.poseEnabled,
-            message.handEnabled,
-            message.gestureEnabled,
-            message.faceRoiEnabled,
-        );
-        if (!faceTracker || !poseTracker || !handTracker || !gestureTracker) {
-            throw new Error("Sincro tracker worker is not initialized.");
-        }
-        postStatus("running");
-        const pose =
-            message.poseEnabled && poseInitialized
-                ? poseTracker.detect(message.frame, message.timestampMs)
-                : undefined;
-        if (pose !== undefined) {
-            latestPose = pose;
-        }
-        const roiPose = pose ?? latestPose;
-        const face = faceTracker.detect(message.frame, message.timestampMs);
-        const faceRoi =
-            message.faceRoiEnabled && roiPose !== undefined && !roiPose.degradedToFaceOnly
-                ? faceTracker.detectWithRoi(message.frame, roiPose, message.timestampMs)
-                : undefined;
-        const hand = detectHand(message, roiPose);
-        const gesture = detectGesture(message, hand);
-        const mediapipe = createTrackerRuntimeMediaPipeRawResult({
-            pose: poseTracker.getLastRawResult(),
-            hand: handTracker.getLastRawResult(),
-            face: faceTracker.getLastRawResult(),
-            gesture: gestureTracker.getLastRawResult(),
-            timing: {
-                mediaTimeMs: message.timestampMs,
-                videoWidth: message.frame.width,
-                videoHeight: message.frame.height,
-            },
+        const measured = await measureWorkerTrackerFrame({
+            initialize: () =>
+                initialize(
+                    message.poseEnabled,
+                    message.handEnabled,
+                    message.gestureEnabled,
+                    message.faceRoiEnabled,
+                ),
+            detect: () => detectInitializedFrame(message),
         });
+        const { face, faceRoi, pose, hand, gesture, mediapipe } = measured.result;
         post({
             type: "result",
             requestId: message.requestId,
@@ -226,14 +204,46 @@ async function detect(message: SincroTrackerWorkerDetectMessage): Promise<void> 
             hand,
             gesture,
             ...(mediapipe === undefined ? {} : { mediapipe }),
-            ...(gesture === undefined ? {} : { gestureInferenceTimeMs: gesture.inferenceTimeMs }),
-            workerTimeMs: performance.now() - startedAtMs,
+            ...createWorkerGestureDurationFields(gesture),
+            workerTimeMs: measured.workerTimeMs,
         });
     } finally {
         // ImageBitmap ownership is transferred to the Worker. Closing it here keeps camera frame
         // transfer from accumulating GPU-backed resources during long sincro sessions.
         message.frame.close();
     }
+}
+
+function detectInitializedFrame(message: SincroTrackerWorkerDetectMessage) {
+    if (!faceTracker || !poseTracker || !handTracker || !gestureTracker) {
+        throw new Error("Sincro tracker worker is not initialized.");
+    }
+    postStatus("running");
+    const pose =
+        message.poseEnabled && poseInitialized
+            ? poseTracker.detect(message.frame, message.timestampMs)
+            : undefined;
+    if (pose !== undefined) latestPose = pose;
+    const roiPose = pose ?? latestPose;
+    const face = faceTracker.detect(message.frame, message.timestampMs);
+    const faceRoi =
+        message.faceRoiEnabled && roiPose !== undefined && !roiPose.degradedToFaceOnly
+            ? faceTracker.detectWithRoi(message.frame, roiPose, message.timestampMs)
+            : undefined;
+    const hand = detectHand(message, roiPose);
+    const gesture = detectGesture(message, hand);
+    const mediapipe = createTrackerRuntimeMediaPipeRawResult({
+        pose: poseTracker.getLastRawResult(),
+        hand: handTracker.getLastRawResult(),
+        face: faceTracker.getLastRawResult(),
+        gesture: gestureTracker.getLastRawResult(),
+        timing: {
+            mediaTimeMs: message.timestampMs,
+            videoWidth: message.frame.width,
+            videoHeight: message.frame.height,
+        },
+    });
+    return { face, faceRoi, pose, hand, gesture, mediapipe };
 }
 
 self.onmessage = (event: MessageEvent<SincroTrackerWorkerInputMessage>) => {
