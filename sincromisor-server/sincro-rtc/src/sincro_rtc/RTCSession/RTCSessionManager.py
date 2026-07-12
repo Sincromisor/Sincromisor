@@ -10,12 +10,21 @@ from threading import Lock
 from ulid import ULID
 
 from ..models import RTCSessionCandidate, RTCSessionOffer
+from .Exceptions import (
+    RTCSessionCapacityError,
+    RTCSessionError,
+    RTCSessionResponseTimeoutError,
+)
 from .RTCSessionProcess import RTCSessionProcess
 from .RTCSessionProcessDescription import RTCSessionProcessDescription
 from .RTCSessionProcessManagementThread import RTCSessionProcessManagementThread
 
 
 class RTCSessionManager:
+    """1 session = 1 process の生成、signaling、終了回収を直列化する。"""
+
+    SIGNAL_RESPONSE_TIMEOUT_SECONDS = 15.0
+
     def __init__(
         self,
         consul_agent_host: str | None,
@@ -33,13 +42,20 @@ class RTCSessionManager:
         # FastAPIハンドラの並行実行時に、session辞書操作とPipe送受信を直列化する。
         self.__lock = Lock()
 
-    # WebRTCのセッションを持つプロセスを新たに生成し、
-    # そのプロセスが持つセッションのSDPをdictとして返す。
-    def create_session(self, offer: RTCSessionOffer) -> dict:
+    def create_session(
+        self, offer: RTCSessionOffer, *, max_sessions: int
+    ) -> dict[str, object]:
+        """上限判定と生成を同じ lock 内で行い、新規 session の Answer を返す。"""
+
         with self.__lock:
+            self.__ensure_capacity_locked(max_sessions)
             return self.__create_session_locked(offer)
 
-    def create_or_update_session(self, offer: RTCSessionOffer) -> dict:
+    def create_or_update_session(
+        self, offer: RTCSessionOffer, *, max_sessions: int
+    ) -> dict[str, object]:
+        """active session の更新を優先し、必要な場合だけ新規作成へ fallback する。"""
+
         with self.__lock:
             requested_session_id = offer.session_id
             if requested_session_id:
@@ -72,9 +88,14 @@ class RTCSessionManager:
                             f"Fallback to create new session (session_id={requested_session_id})."
                         ),
                     )
+            self.__ensure_capacity_locked(max_sessions)
             return self.__create_session_locked(offer)
 
-    def __create_session_locked(self, offer: RTCSessionOffer) -> dict:
+    def __ensure_capacity_locked(self, max_sessions: int) -> None:
+        if len(self.__processes) >= max_sessions:
+            raise RTCSessionCapacityError("RTC session capacity reached")
+
+    def __create_session_locked(self, offer: RTCSessionOffer) -> dict[str, object]:
         # session_idはここで生成し、
         # RTCVoiceChatSessionを持つRTCSessionProcessと共有する。
         session_id: str = str(ULID())
@@ -104,28 +125,36 @@ class RTCSessionManager:
         )
         mgmt_t.start()
 
-        self.__processes[session_id] = RTCSessionProcessDescription(
+        session_desc = RTCSessionProcessDescription(
             session_id=session_id,
             mgmt_t=mgmt_t,
             rtc_finalize_event=rtc_finalize_event,
             sv_pipe=sv_pipe,
         )
+        self.__processes[session_id] = session_desc
         self.__logger.info(
             (
                 "Create new RTC session process "
                 f"(session_id={session_id}, talk_mode={offer.talk_mode})"
             ),
         )
-        response = sv_pipe.recv()
-        if isinstance(response, dict) and response.get("message_type") == "offer_error":
-            raise RuntimeError(response.get("error", "failed_to_create_initial_answer"))
-        return response
+        response = self.__receive_response_locked(session_desc, "initial_offer")
+        response_payload = self.__parse_response_payload(response)
+        if response_payload is None:
+            self.__remove_session_locked(session_desc)
+            raise RTCSessionError("Invalid initial offer response")
+        if response_payload.get("message_type") == "offer_error":
+            self.__remove_session_locked(session_desc)
+            raise RTCSessionError(
+                str(response_payload.get("error", "failed_to_create_initial_answer"))
+            )
+        return response_payload
 
     def __update_session_locked(
         self,
         session_desc: RTCSessionProcessDescription,
         offer: RTCSessionOffer,
-    ) -> dict | None:
+    ) -> dict[str, object] | None:
         try:
             self.__logger.info(
                 f"Forward update_offer to session process (session_id={session_desc.session_id})",
@@ -138,8 +167,8 @@ class RTCSessionManager:
                     "talk_mode": offer.talk_mode,
                 }
             )
-            response = session_desc.sv_pipe.recv()
-        except Exception:
+            response = self.__receive_response_locked(session_desc, "update_offer")
+        except RTCSessionError:
             self.__logger.error(
                 (
                     f"[{session_desc.session_id}] Failed to update session offer."
@@ -147,22 +176,30 @@ class RTCSessionManager:
                 ),
             )
             return None
+        except (EOFError, BrokenPipeError, OSError) as error:
+            self.__logger.error(
+                f"[{session_desc.session_id}] Failed to send update offer "
+                f"(error={type(error).__name__})"
+            )
+            self.__remove_session_locked(session_desc)
+            return None
 
-        if not isinstance(response, dict):
+        response_payload = self.__parse_response_payload(response)
+        if response_payload is None:
             self.__logger.error(
                 f"[{session_desc.session_id}] Invalid update response type: {type(response)}"
             )
             return None
 
-        message_type = response.get("message_type")
+        message_type = response_payload.get("message_type")
         if message_type == "update_offer_result":
-            response.pop("message_type", None)
-            return response
+            response_payload.pop("message_type", None)
+            return response_payload
         if message_type == "update_offer_error":
             self.__logger.warning(
                 (
                     f"[{session_desc.session_id}] Update offer rejected by session process: "
-                    f"{response.get('error', 'unknown error')}"
+                    f"{response_payload.get('error', 'unknown error')}"
                 ),
             )
             return None
@@ -173,6 +210,56 @@ class RTCSessionManager:
             ),
         )
         return None
+
+    @staticmethod
+    def __parse_response_payload(response: object) -> dict[str, object] | None:
+        if not isinstance(response, dict):
+            return None
+        payload: dict[str, object] = {}
+        for key, value in response.items():
+            if not isinstance(key, str):
+                return None
+            payload[key] = value
+        return payload
+
+    def __receive_response_locked(
+        self,
+        session_desc: RTCSessionProcessDescription,
+        operation: str,
+    ) -> object:
+        """応答期限・pipe 切断・子 process 障害を同じ回収契約へ集約する。"""
+
+        try:
+            if not session_desc.sv_pipe.poll(self.SIGNAL_RESPONSE_TIMEOUT_SECONDS):
+                raise RTCSessionResponseTimeoutError(f"{operation} response timed out")
+            return session_desc.sv_pipe.recv()
+        except RTCSessionResponseTimeoutError:
+            self.__logger.error(
+                f"[{session_desc.session_id}] Signaling response timed out "
+                f"(operation={operation})"
+            )
+            self.__remove_session_locked(session_desc)
+            raise
+        except (EOFError, BrokenPipeError, OSError) as error:
+            self.__logger.error(
+                f"[{session_desc.session_id}] Signaling child process failed "
+                f"(operation={operation}, error={type(error).__name__})"
+            )
+            self.__remove_session_locked(session_desc)
+            raise RTCSessionError("Signaling child process failed") from error
+
+    def __remove_session_locked(
+        self, session_desc: RTCSessionProcessDescription
+    ) -> None:
+        # 辞書から先に外し、close 中に例外が起きても壊れた session を再利用させない。
+        self.__processes.pop(session_desc.session_id, None)
+        try:
+            session_desc.close(timeout=self.__join_timeout)
+        except Exception:
+            self.__logger.error(
+                f"[{session_desc.session_id}] Failed to close session process."
+                f"\n{traceback.format_exc()}"
+            )
 
     def session_count(self) -> int:
         with self.__lock:

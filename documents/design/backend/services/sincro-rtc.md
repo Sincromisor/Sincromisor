@@ -58,11 +58,14 @@
 - Offer update と fallback、新規 session 作成のログを確認する。
 - invalid / late candidate は無害化ログを出す。
 - `connectionState=failed` は session close と reconnect の切り分け対象にする。
+- Offer の子プロセス応答が 15 秒以内に届かない場合は、その session process と pipe を回収して 503 を返す。
+- session 上限到達時は active session の更新だけを許可し、新規作成は 429 で拒否する。
 
 ## Change Checklist
 
 - Offer / candidate payload を変える時は `contracts/frontend-rtc.md`、frontend、model を同時更新する。
 - session lifecycle を変える時は cleanup と process kill path を確認する。
+- track の停止経路では、所有する AudioBroker の WebSocket と通信 thread が一度だけ解放されることを確認する。
 - AudioBroker 接続を変える時は `backend/services/audio-broker.md` と WebSocket contract を確認する。
 
 ## References

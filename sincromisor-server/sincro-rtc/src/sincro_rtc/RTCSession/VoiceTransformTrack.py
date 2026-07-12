@@ -19,6 +19,8 @@ from ..models import RTCVoiceChatSession
 
 
 class VoiceTransformTrack(MediaStreamTrack):
+    """入力音声を変換し、所有する AudioBroker の lifecycle を管理する。"""
+
     kind = "audio"
 
     def __init__(
@@ -58,6 +60,7 @@ class VoiceTransformTrack(MediaStreamTrack):
             fallback_port=self.__fallback_port,
         )
         self.__audio_broker.connect()
+        self.__stopped = False
 
     # デコード済みのオーディオフレームを受け取って、何らかの処理を行った上で
     # フレームを返す。
@@ -159,15 +162,16 @@ class VoiceTransformTrack(MediaStreamTrack):
         return None
 
     def __convert_dummy_frame(self, frame: AudioFrame) -> AudioFrame:
-        # opus/48000Hz/2chで1920フレームらしい
-        zero_frame: np.ndarray = np.zeros((frame.to_ndarray().shape), dtype=np.int16)
-        newframe: AudioFrame = frame.from_ndarray(
+        # WebRTC が negotiated format の変更と誤認しないよう、入力属性をすべて保つ。
+        zero_frame: np.ndarray = np.zeros_like(frame.to_ndarray())
+        newframe: AudioFrame = AudioFrame.from_ndarray(
             zero_frame,
-            format="s16",
-            layout="stereo",
+            format=frame.format.name,
+            layout=frame.layout.name,
         )
         newframe.pts = frame.pts
-        newframe.rate = 48000
+        newframe.sample_rate = frame.sample_rate
+        newframe.time_base = frame.time_base
         return newframe
 
     def __generate_dummy_frame(self) -> AudioFrame:
@@ -186,15 +190,9 @@ class VoiceTransformTrack(MediaStreamTrack):
         return frame
 
     def close(self) -> None:
-        self.__logger.info("Closing VoiceTransformTrack.")
+        """互換入口として track の標準 stop 契約へ委譲する。"""
 
-        try:
-            self.__audio_broker.close()
-        except Exception as e:
-            self.__logger.error(
-                f"close - UnknownError: {repr(e)}\n{traceback.format_exc()}",
-            )
-            traceback.print_exc()
+        self.__logger.info("Closing VoiceTransformTrack.")
         try:
             self.stop()
         except Exception as e:
@@ -203,3 +201,19 @@ class VoiceTransformTrack(MediaStreamTrack):
             )
             traceback.print_exc()
         self.__logger.info("Closed VoiceTransformTrack.")
+
+    def stop(self) -> None:
+        """所有する AudioBroker を一度だけ閉じてから track を停止する。"""
+
+        if self.__stopped:
+            return
+        # close が失敗しても再実行で二重 close しないよう、解放開始前に確定する。
+        self.__stopped = True
+        try:
+            self.__audio_broker.close()
+        except Exception as e:
+            self.__logger.error(
+                f"stop - UnknownError: {repr(e)}\n{traceback.format_exc()}",
+            )
+        finally:
+            super().stop()
