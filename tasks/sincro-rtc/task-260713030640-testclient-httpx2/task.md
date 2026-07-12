@@ -23,7 +23,7 @@ endpoint の挙動や production runtime の依存面は変更しない。
 - [ ] root `pyproject.toml` の `dependency-groups.dev` に `httpx2` を直接依存として追加し、`uv.lock` を同期する。
       `sincro-rtc` の production dependencies には追加しない。
 - [ ] `uv run --group dev --group full pytest sincromisor-server/sincro-rtc/tests/test_rtc_signaling_server.py
-  -W error::starlette.exceptions.StarletteDeprecationWarning` が成功し、FastAPI `TestClient` の import・生成・HTTP
+-W error::starlette.exceptions.StarletteDeprecationWarning` が成功し、FastAPI `TestClient` の import・生成・HTTP
       request 実行時に `StarletteDeprecationWarning` が発生しない。
 - [ ] warning filter、`pytest.ini`、`filterwarnings`、`warnings.catch_warnings()` などで警告を抑制しない。既存の
       `from fastapi.testclient import TestClient` と endpoint テストの assertion は維持し、`httpx2` backend 上でも
