@@ -20,7 +20,8 @@
         "eval:worktree": "node scripts/eval/setupWorktree.mjs",
         "tasks:next": "node scripts/tasks/nextTasks.mjs",
         "gen:codex": "node scripts/gen/genCodex.mjs",
-        "gen:codex:check": "node scripts/gen/genCodex.mjs --check"
+        "gen:codex:check": "node scripts/gen/genCodex.mjs --check",
+        "commit:check": "node scripts/git/checkCommitMessage.mjs"
     },
     "codexGen": {
         "modelMap": {},
