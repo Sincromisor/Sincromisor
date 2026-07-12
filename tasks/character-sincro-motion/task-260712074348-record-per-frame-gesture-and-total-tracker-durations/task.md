@@ -10,41 +10,41 @@ baseline 収録を分離し、収録 artifact だけから性能 gate を再現�
 ## 完了条件（受け入れ条件）
 
 - [ ] `SincroTrackerWorkerStats` に optional finite non-negative の
-  `gestureInferenceTimeMs` を追加する。total は新fieldを増やさず、Worker modeでは既存 `workerTimeMs`、
-  main-thread modeでは既存 `mainThreadDetectTimeMs` を使う。gesture pass を実行しなかった frame は
-  `gestureInferenceTimeMs` を省略し、実行して結果が lost の frame も実測値を保持する。
+      `gestureInferenceTimeMs` を追加する。total は新fieldを増やさず、Worker modeでは既存 `workerTimeMs`、
+      main-thread modeでは既存 `mainThreadDetectTimeMs` を使う。gesture pass を実行しなかった frame は
+      `gestureInferenceTimeMs` を省略し、実行して結果が lost の frame も実測値を保持する。
 - [ ] main-thread runtime は gesture inference result の `inferenceTimeMs` を同じ frame の stats へ渡す。
-  `mainThreadDetectTimeMs` は frame callback 内の tracker detect 開始から全 optional pass と stats 合成直前までの
-  elapsed time とし、`performance.now()` の同一 clock で一度だけ計算する。
+      `mainThreadDetectTimeMs` は frame callback 内の tracker detect 開始から全 optional pass と stats 合成直前までの
+      elapsed time とし、`performance.now()` の同一 clock で一度だけ計算する。
 - [ ] Worker runtime は result message に gesture 個別推論時間を optional plain number として含め、既存
-  `workerTimeMs` を total tracker time として再利用する。計測開始は現行どおり `detect()` entry（`initialize()`前）、
-  終了は result組み立て直前とし、初回initialize時間も含める。main thread の transfer/round-trip時間は加算しない。
-  initialize済み/未済みの両経路でこの開始点を focused test に固定する。main-thread fallback と worker
-  の値が同じ「tracker 内で当該 frame を処理した時間」契約になること。
+      `workerTimeMs` を total tracker time として再利用する。計測開始は現行どおり `detect()` entry（`initialize()`前）、
+      終了は result組み立て直前とし、初回initialize時間も含める。main thread の transfer/round-trip時間は加算しない。
+      initialize済み/未済みの両経路でこの開始点を focused test に固定する。main-thread fallback と worker
+      の値が同じ「tracker 内で当該 frame を処理した時間」契約になること。
 - [ ] motion-debug recording の `frame.metrics.tracker` に `gestureInferenceTimeMs` と既存total fieldを保存し、
-  v1 schemaVersionを維持する。旧logのfield欠損はparse可能にする。新規
-  `motionTrackerPerformanceSamples.ts` の公開parserは `{samples,warnings}` を返し、warningは
-  `{code:"invalid_tracker_duration";frameIndex:number;fieldPath:"metrics.tracker.gestureInferenceTimeMs"|"metrics.tracker.workerTimeMs"|"metrics.tracker.mainThreadDetectTimeMs"}`
-  とする。不正な非有限値・負値は該当fieldだけ除外し、warningをcallerへ返してlog全体をrejectしない。
+      v1 schemaVersionを維持する。旧logのfield欠損はparse可能にする。新規
+      `motionTrackerPerformanceSamples.ts` の公開parserは `{samples,warnings}` を返し、warningは
+      `{code:"invalid_tracker_duration";frameIndex:number;fieldPath:"metrics.tracker.gestureInferenceTimeMs"|"metrics.tracker.workerTimeMs"|"metrics.tracker.mainThreadDetectTimeMs"}`
+      とする。不正な非有限値・負値は該当fieldだけ除外し、warningをcallerへ返してlog全体をrejectしない。
 - [ ] baseline専用 `calculateTrackerPerformanceDurationSummary()` を同moduleに追加し、既存
-  `MotionMetricSummary` / `MotionMetricKey` / threshold / comparison / baseline schemaは変更しない。有限値だけを
-  母集団とするnearest-rank p95として `gestureInferenceDurationMsP95` / `totalTrackerDurationMsP95` を返す。
-  total sampleは `tracker.mode` により worker=`workerTimeMs`、main-thread=`mainThreadDetectTimeMs` を選ぶ。
-  サンプル0件は `null`、1件はその値、
-  複数件は昇順の `ceil(0.95*n)-1` index とする。gesture skipped frame は gesture 側の分母に含めない。
+      `MotionMetricSummary` / `MotionMetricKey` / threshold / comparison / baseline schemaは変更しない。有限値だけを
+      母集団とするnearest-rank p95として `gestureInferenceDurationMsP95` / `totalTrackerDurationMsP95` を返す。
+      total sampleは `tracker.mode` により worker=`workerTimeMs`、main-thread=`mainThreadDetectTimeMs` を選ぶ。
+      サンプル0件は `null`、1件はその値、
+      複数件は昇順の `ceil(0.95*n)-1` index とする。gesture skipped frame は gesture 側の分母に含めない。
 - [ ] main-thread の gesture executed/skipped/lost、Worker result、旧log欠損、invalid field、p95 の0/1/複数sampleを
-  focused tests で固定する。`npm run gate` を通す。
+      focused tests で固定する。`npm run gate` を通す。
 - [ ] `documents/design/frontend/character/tracking.md` と `motion.md` に field の clock、包含範囲、欠損条件、
-  p95 の母集団と旧log互換を同期する。
+      p95 の母集団と旧log互換を同期する。
 - [ ] TypeScript production comment audit を `impl.md` に記録し、Worker message boundary、main-thread duration owner、
-  recording schema/parser、p95集計を対象にする。
+      recording schema/parser、p95集計を対象にする。
 
 ## 設計判断（着手前に確定済み）
 
 - field は新しい telemetry stream を作らず、既存 `SincroTrackerWorkerStats` と
   `frame.metrics.tracker` に載せる。totalは既存 `workerTimeMs` / `mainThreadDetectTimeMs` を再利用し、新しい
   `totalTrackerTimeMs` は追加しない。既存fieldと同じ意味の二重化を避けるため。motion-debug recording がbaselineの唯一の証拠であり、
- 別streamではframe対応とscrub契約が分裂するため。
+  別streamではframe対応とscrub契約が分裂するため。
 - total は wall-clock の callback間隔や render時間ではなく、tracker 内の当該frame処理区間だけを測る。
   Workerは既存 `workerTimeMs` の開始点（initialize前）を互換維持し、main-threadはdetect callback内時間とする。
   transport latencyを混ぜない。Worker初回だけinitialize costを含む現行契約は変えず、集計側で除外もしない。
