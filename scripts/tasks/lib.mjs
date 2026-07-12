@@ -184,6 +184,53 @@ export function buildCloseCommitPaths(taskDir) {
     return [taskDir.replace(/\/+$/, "")];
 }
 
+/** close commit に含めてはならない非公開・raw artifact の拡張子。 */
+const PRIVATE_ARTIFACT_EXTENSIONS = new Set([
+    ".avi",
+    ".m4v",
+    ".mkv",
+    ".mov",
+    ".mp4",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".webm",
+    ".ndjson",
+    ".jsonl",
+]);
+
+/** 公開タスク成果物としてレビューなしに扱える最大サイズ（5 MiB）。 */
+export const MAX_PUBLIC_TASK_ARTIFACT_BYTES = 5 * 1024 * 1024;
+
+/**
+ * task close 前に、公開リポジトリへ入れてはならない検証原本を判定する。
+ *
+ * 動画、検証screenshot、frame 単位の raw replay は、集計値や再現手順とは異なり、容量・privacy・再配布条件を
+ * 個別に管理する必要がある。これらは `work/private-artifacts/<task-id>/` に保存し、task 側には
+ * SHA-256、集計結果、取得手順だけを残す。拡張子を偽装した巨大成果物も取り込まないよう、
+ * 公開artifactにはサイズ上限も適用する。
+ *
+ * @param {string} path リポジトリ相対パス
+ * @param {number} sizeBytes ファイルサイズ
+ * @returns {string|null} 拒否理由。公開可能なら null
+ */
+export function getPrivateTaskArtifactReason(path, sizeBytes) {
+    const normalized = path.replaceAll("\\", "/").toLowerCase();
+    if (!normalized.includes("/artifacts/")) return null;
+    if (normalized.includes("/artifacts/private/")) return "private artifact directory";
+
+    const compressedBase = normalized.replace(/\.(gz|bz2|xz|zst)$/, "");
+    const extension = compressedBase.slice(compressedBase.lastIndexOf("."));
+    if (PRIVATE_ARTIFACT_EXTENSIONS.has(extension)) {
+        return `private/raw artifact extension: ${extension}`;
+    }
+    if (sizeBytes > MAX_PUBLIC_TASK_ARTIFACT_BYTES) {
+        return `public artifact exceeds ${MAX_PUBLIC_TASK_ARTIFACT_BYTES} bytes`;
+    }
+    return null;
+}
+
 /**
  * @typedef {Object} CloseCommitFacts
  * @property {string} id        タスク ID（`Refs:` と既定 `{id}` 展開に使う）

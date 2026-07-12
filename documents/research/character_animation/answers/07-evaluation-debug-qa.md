@@ -64,127 +64,127 @@ MediaPipe の Web Landmarker は video mode で timestamp 付きの `detectForVi
 
 ```ts
 type SincroMotionDebugLogManifest = {
-  schemaVersion: "sincro.motion-debug-log.v1";
-  createdAtIso: string;
+    schemaVersion: "sincro.motion-debug-log.v1";
+    createdAtIso: string;
 
-  source: {
-    kind: "live-camera" | "video-fixture" | "synthetic";
-    fixtureId?: string;
-    videoHash?: string;
-  };
-
-  environment: {
-    userAgent: string;
-    devicePixelRatio: number;
-    viewport: { width: number; height: number };
-    timeOriginMs?: number;
-  };
-
-  build: {
-    appVersion?: string;
-    gitCommit?: string;
-    packageVersions: {
-      three?: string;
-      threeVrm?: string;
-      mediapipeTasksVision?: string;
+    source: {
+        kind: "live-camera" | "video-fixture" | "synthetic";
+        fixtureId?: string;
+        videoHash?: string;
     };
-    configHash: string;
-  };
 
-  camera: {
-    requestedConstraints?: MediaTrackConstraints;
-    actualSettings?: MediaTrackSettings;
-    facingMode?: string;
-    frameWidth?: number;
-    frameHeight?: number;
-  };
+    environment: {
+        userAgent: string;
+        devicePixelRatio: number;
+        viewport: { width: number; height: number };
+        timeOriginMs?: number;
+    };
 
-  pipeline: {
-    trackerConfig: unknown;
-    reliabilityConfig: unknown;
-    canonicalConfig: unknown;
-    temporalConfig: unknown;
-    retargetConfig: unknown;
-    featureFlags: Record<string, boolean>;
-  };
+    build: {
+        appVersion?: string;
+        gitCommit?: string;
+        packageVersions: {
+            three?: string;
+            threeVrm?: string;
+            mediapipeTasksVision?: string;
+        };
+        configHash: string;
+    };
 
-  avatar: {
-    avatarProfileId: string;
-    vrmMetaHash?: string;
-    boneCapabilities: Record<string, boolean>;
-    restMetrics: AvatarRestMetrics;
-    motionProfile: AvatarMotionProfile;
-  };
+    camera: {
+        requestedConstraints?: MediaTrackConstraints;
+        actualSettings?: MediaTrackSettings;
+        facingMode?: string;
+        frameWidth?: number;
+        frameHeight?: number;
+    };
 
-  metricSummary?: MotionMetricSummary;
+    pipeline: {
+        trackerConfig: unknown;
+        reliabilityConfig: unknown;
+        canonicalConfig: unknown;
+        temporalConfig: unknown;
+        retargetConfig: unknown;
+        featureFlags: Record<string, boolean>;
+    };
+
+    avatar: {
+        avatarProfileId: string;
+        vrmMetaHash?: string;
+        boneCapabilities: Record<string, boolean>;
+        restMetrics: AvatarRestMetrics;
+        motionProfile: AvatarMotionProfile;
+    };
+
+    metricSummary?: MotionMetricSummary;
 };
 
 type SincroMotionDebugFrame = {
-  frameIndex: number;
+    frameIndex: number;
 
-  timestamp: {
-    mediaTimeMs: number;
-    presentationTimeMs?: number;
-    expectedDisplayTimeMs?: number;
-    receivedAtPerformanceMs?: number;
-    presentedFrames?: number;
-    deltaMediaMs?: number;
-  };
+    timestamp: {
+        mediaTimeMs: number;
+        presentationTimeMs?: number;
+        expectedDisplayTimeMs?: number;
+        receivedAtPerformanceMs?: number;
+        presentedFrames?: number;
+        deltaMediaMs?: number;
+    };
 
-  video: {
-    width: number;
-    height: number;
-    readyState?: number;
-    sourceFrameId?: number;
-  };
+    video: {
+        width: number;
+        height: number;
+        readyState?: number;
+        sourceFrameId?: number;
+    };
 
-  mediapipe?: {
-    pose?: SerializedPoseLandmarkerResult;
-    hands?: SerializedHandLandmarkerResult[];
-    face?: SerializedFaceLandmarkerResult;
-    gesture?: SerializedGestureRecognizerResult[];
-  };
+    mediapipe?: {
+        pose?: SerializedPoseLandmarkerResult;
+        hands?: SerializedHandLandmarkerResult[];
+        face?: SerializedFaceLandmarkerResult;
+        gesture?: SerializedGestureRecognizerResult[];
+    };
 
-  reliability?: ReliabilityMap;
-  canonical?: CanonicalUpperBodyState;
-  temporal?: TemporalStateSnapshot;
-  intent?: MotionIntent;
+    reliability?: ReliabilityMap;
+    canonical?: CanonicalUpperBodyState;
+    temporal?: TemporalStateSnapshot;
+    intent?: MotionIntent;
 
-  solver?: {
-    ik?: IkDebugSnapshot;
-    targets?: RetargetTargetSnapshot;
-    constraints?: ConstraintDebugSnapshot;
-    clampedBones?: string[];
-  };
+    solver?: {
+        ik?: IkDebugSnapshot;
+        targets?: RetargetTargetSnapshot;
+        constraints?: ConstraintDebugSnapshot;
+        clampedBones?: string[];
+    };
 
-  finalPose?: SerializedVrmPose;
+    finalPose?: SerializedVrmPose;
 
-  applied?: {
-    normalizedPose?: SerializedVrmPose;
-    rawPose?: SerializedVrmPose;
-    angularVelocityDegPerSec?: Record<string, number>;
-  };
+    applied?: {
+        normalizedPose?: SerializedVrmPose;
+        rawPose?: SerializedVrmPose;
+        angularVelocityDegPerSec?: Record<string, number>;
+    };
 
-  metrics?: MotionFrameMetrics;
+    metrics?: MotionFrameMetrics;
 };
 ```
 
 ### 3.2 必ず保存すべきデータ
 
-| 層                                    |      必須度 | 保存理由                                                |
-| ------------------------------------ | -------: | --------------------------------------------------- |
-| schema / build / package versions    |       必須 | 旧ログとの互換性、再現性、config 差分比較                            |
-| camera constraints / actual settings |       必須 | 解像度・fps・facingMode が品質に直結する                         |
-| video timestamp                      |       必須 | replay determinism、latency、drop frame 検出            |
-| MediaPipe raw result                 |       必須 | solver / reliability / canonical 改修を同一入力で比較するため     |
-| ReliabilityMap                       |       推奨 | 悪い観測値をどの時点で弱めたかを検証するため                              |
-| CanonicalUpperBodyState              |       推奨 | body-local 意味量の差分を見て、MediaPipe 依存と solver 依存を分離するため |
-| TemporalState                        |       推奨 | Lost / Recovering / Predicted の状態遷移を検証するため          |
-| MotionIntent                         |       推奨 | wave / pointing / nearFace / lost などの意味づけの安定性を見るため  |
-| IK / constraint snapshot             |       必須 | elbow flip、reach clamp、limit occupancy を説明するため      |
-| final VRMPose                        |       必須 | アルゴリズム出力差分を比較するため                                   |
-| applied normalized pose              |       必須 | three-vrm 適用後の最終状態を metrics に使うため                   |
-| raw pose                             | debug時のみ | normalized→raw 転送の検証用。常時保存は重い                       |
+| 層                                   |      必須度 | 保存理由                                                                  |
+| ------------------------------------ | ----------: | ------------------------------------------------------------------------- |
+| schema / build / package versions    |        必須 | 旧ログとの互換性、再現性、config 差分比較                                 |
+| camera constraints / actual settings |        必須 | 解像度・fps・facingMode が品質に直結する                                  |
+| video timestamp                      |        必須 | replay determinism、latency、drop frame 検出                              |
+| MediaPipe raw result                 |        必須 | solver / reliability / canonical 改修を同一入力で比較するため             |
+| ReliabilityMap                       |        推奨 | 悪い観測値をどの時点で弱めたかを検証するため                              |
+| CanonicalUpperBodyState              |        推奨 | body-local 意味量の差分を見て、MediaPipe 依存と solver 依存を分離するため |
+| TemporalState                        |        推奨 | Lost / Recovering / Predicted の状態遷移を検証するため                    |
+| MotionIntent                         |        推奨 | wave / pointing / nearFace / lost などの意味づけの安定性を見るため        |
+| IK / constraint snapshot             |        必須 | elbow flip、reach clamp、limit occupancy を説明するため                   |
+| final VRMPose                        |        必須 | アルゴリズム出力差分を比較するため                                        |
+| applied normalized pose              |        必須 | three-vrm 適用後の最終状態を metrics に使うため                           |
+| raw pose                             | debug時のみ | normalized→raw 転送の検証用。常時保存は重い                               |
 
 既存 report01 でも、動画そのものより MediaPipe の出力を保存して motion solver を調整しやすくする方針が示されており、`timestampMs`、pose landmarks、hand landmarks、handedness、face transform matrix などを記録する案が挙げられています。
 
@@ -192,13 +192,13 @@ type SincroMotionDebugFrame = {
 
 常時保存しなくてよいものは、主に「決定的に再計算できる派生値」です。
 
-| データ                  | 方針                                                              |
-| -------------------- | --------------------------------------------------------------- |
-| per-frame metrics    | summary 用には保存。詳細は raw / final pose から再計算可能                      |
-| camera quality score | raw frame metadata と landmark から再計算可能。ただし UI 表示と一致させるなら保存       |
-| segmentation mask    | 原則保存しない。保存するなら低解像度 mask summary、bbox 内平均値、hash 程度               |
-| overlay PNG          | triage 用に任意保存。評価 log の主データにはしない                                 |
-| video frame image    | raw result replay では不要。video re-inference mode の fixture として別管理 |
+| データ               | 方針                                                                              |
+| -------------------- | --------------------------------------------------------------------------------- |
+| per-frame metrics    | summary 用には保存。詳細は raw / final pose から再計算可能                        |
+| camera quality score | raw frame metadata と landmark から再計算可能。ただし UI 表示と一致させるなら保存 |
+| segmentation mask    | 原則保存しない。保存するなら低解像度 mask summary、bbox 内平均値、hash 程度       |
+| overlay PNG          | triage 用に任意保存。評価 log の主データにはしない                                |
+| video frame image    | raw result replay では不要。video re-inference mode の fixture として別管理       |
 
 ログサイズ削減では、float を 4〜5 桁程度に丸める、全 avatar profile を毎フレーム保存しない、segmentation mask を保存しない、hand/finger の欠落時は sparse にする、full snapshot を N フレームごとに置いて中間は delta encode する、という方針が有効です。
 
@@ -210,15 +210,15 @@ replay の基準時刻は `performance.now()` や `Date.now()` ではなく、**
 
 記録すべき timestamp は次です。
 
-| 項目                                    | 用途                                      |
-| ------------------------------------- | --------------------------------------- |
-| `mediaTimeMs`                         | replay の正本時刻                            |
-| `presentationTimeMs`                  | video frame が compositor に提出された時刻       |
-| `expectedDisplayTimeMs`               | 表示予定時刻。遅延解析用                            |
-| `presentedFrames`                     | drop / duplicate frame 検出               |
-| `receivedAtPerformanceMs`             | pipeline 内処理時間の測定                       |
-| `inferenceStartMs` / `inferenceEndMs` | MediaPipe 推論コスト測定                       |
-| `deltaMediaMs`                        | filter / velocity / angular velocity 計算 |
+| 項目                                  | 用途                                       |
+| ------------------------------------- | ------------------------------------------ |
+| `mediaTimeMs`                         | replay の正本時刻                          |
+| `presentationTimeMs`                  | video frame が compositor に提出された時刻 |
+| `expectedDisplayTimeMs`               | 表示予定時刻。遅延解析用                   |
+| `presentedFrames`                     | drop / duplicate frame 検出                |
+| `receivedAtPerformanceMs`             | pipeline 内処理時間の測定                  |
+| `inferenceStartMs` / `inferenceEndMs` | MediaPipe 推論コスト測定                   |
+| `deltaMediaMs`                        | filter / velocity / angular velocity 計算  |
 
 また、MediaStream の要求 constraints だけでなく、実際の設定値は `MediaStreamTrack.getSettings()` で取得して保存します。MDN でも `getSettings()` は constrainable properties の現在値、つまり実際の構成を返す API とされています。([MDNウェブドキュメント][10])
 
@@ -294,13 +294,17 @@ three-vrm では normalized pose を `setNormalizedPose()` で適用し、`VRM.u
 
 ```ts
 function quatAngleDeg(a: QuaternionArray, b: QuaternionArray): number {
-  const dot = Math.abs(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]);
-  const clamped = Math.min(1, Math.max(-1, dot));
-  return (2 * Math.acos(clamped) * 180) / Math.PI;
+    const dot = Math.abs(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]);
+    const clamped = Math.min(1, Math.max(-1, dot));
+    return (2 * Math.acos(clamped) * 180) / Math.PI;
 }
 
-function angularVelocityDegPerSec(prev: QuaternionArray, next: QuaternionArray, dtSec: number): number {
-  return quatAngleDeg(prev, next) / Math.max(dtSec, 1e-6);
+function angularVelocityDegPerSec(
+    prev: QuaternionArray,
+    next: QuaternionArray,
+    dtSec: number,
+): number {
+    return quatAngleDeg(prev, next) / Math.max(dtSec, 1e-6);
 }
 ```
 
@@ -308,18 +312,18 @@ three-vrm 側でも、最終 pose は `VRMHumanBoneName` ごとの normalized lo
 
 ### 6.2 最初に見るべき metrics と合格ライン
 
-| Metric                     | 計算方法                                           |            合格 |        警告 |      失敗 |
-| -------------------------- | ---------------------------------------------- | ------------: | --------: | ------: |
-| neutral jitter: torso/head | neutral 区間で基準 quaternion からの RMS               |        ≤ 1.0° |  1.0–2.0° |  > 2.0° |
-| neutral jitter: wrist      | neutral 区間で wrist / hand の RMS                 |        ≤ 3.0° |  3.0–5.0° |  > 5.0° |
-| elbow flip count           | elbow pole が急反転した回数                            |             0 |         - |     ≥ 1 |
+| Metric                     | 計算方法                                                  |          合格 |      警告 |    失敗 |
+| -------------------------- | --------------------------------------------------------- | ------------: | --------: | ------: |
+| neutral jitter: torso/head | neutral 区間で基準 quaternion からの RMS                  |        ≤ 1.0° |  1.0–2.0° |  > 2.0° |
+| neutral jitter: wrist      | neutral 区間で wrist / hand の RMS                        |        ≤ 3.0° |  3.0–5.0° |  > 5.0° |
+| elbow flip count           | elbow pole が急反転した回数                               |             0 |         - |     ≥ 1 |
 | dropout recovery jump      | Lost/Predicted から Recovering/Tracked 復帰時の最大角度差 |         ≤ 15° |    15–25° |   > 25° |
-| added latency: hand/head   | raw feature と final pose feature の相互相関遅れ       |       ≤ 100ms | 100–150ms | > 150ms |
-| added latency: torso       | 同上                                             |       ≤ 150ms | 150–220ms | > 220ms |
-| bone length variance       | 高信頼度時の上腕/前腕推定長 CV                              |          ≤ 8% |     8–12% |   > 12% |
-| reach clamp occupancy      | reach clamp 発生 frame / valid frame             |         ≤ 10% |    10–20% |   > 20% |
-| left-right swap count      | side assignment が時系列整合を破った回数                   |             0 |         - |     ≥ 1 |
-| semantic label flicker     | min duration 未満の gesture label 変化数             | 0–1 / segment |       2–3 |     > 3 |
+| added latency: hand/head   | raw feature と final pose feature の相互相関遅れ          |       ≤ 100ms | 100–150ms | > 150ms |
+| added latency: torso       | 同上                                                      |       ≤ 150ms | 150–220ms | > 220ms |
+| bone length variance       | 高信頼度時の上腕/前腕推定長 CV                            |          ≤ 8% |     8–12% |   > 12% |
+| reach clamp occupancy      | reach clamp 発生 frame / valid frame                      |         ≤ 10% |    10–20% |   > 20% |
+| left-right swap count      | side assignment が時系列整合を破った回数                  |             0 |         - |     ≥ 1 |
+| semantic label flicker     | min duration 未満の gesture label 変化数                  | 0–1 / segment |       2–3 |     > 3 |
 
 既存 report03 でも、最初に見るべき指標として neutral jitter、elbow flip count、dropout recovery jump、added latency、bone length variance が挙げられ、neutral jitter は torso/head RMS 0.5〜1.0°以下、wrist 2〜3°以下、elbow flip は固定テスト中 0 回、recovery jump は 10〜15°以下、reach clamp occupancy は 10〜20% を超えると問題の可能性が高い、とされています。
 
@@ -394,20 +398,20 @@ Gesture Recognizer は `Closed_Fist`、`Open_Palm`、`Pointing_Up`、`Thumb_Up`�
 
 既存 report03 の固定テストセットを正本として、P0 / P1 に分けます。
 
-| 優先度 | テスト                                     | 長さ目安 | 見るべき項目                                      |
-| --- | --------------------------------------- | ---: | ------------------------------------------- |
-| P0  | neutral 10秒                             |  10s | torso/head/wrist jitter、camera quality      |
-| P0  | 片手をゆっくり上げる 左右                           |  各8s | shoulder 補正、elbow pole、腕の伸び切り               |
-| P0  | 両手をゆっくり上げる                              |   8s | chest / upperChest 分配、肩崩れ                   |
-| P0  | 片手を画面外へ出して戻す                            |  各8s | Lost / Predicted / Recovering、recovery jump |
-| P0  | 腕を交差する                                  |   8s | left-right swap、pole flip                   |
-| P0  | 速い手振り                                   |   8s | latency、semantic wave、dropout               |
-| P1  | 手を前に出す                                  |   8s | forwardness、depth compression               |
-| P1  | 手を顔の前に置く                                |   8s | face/hand occlusion、wrist roll、指安定          |
-| P1  | 指差し・開き手・握り手                             |  10s | finger curl、gesture state、semantic flicker  |
-| P1  | 顔を左右に向ける                                |   8s | Face/Pose fallback、head jitter              |
-| P1  | 手を横に広げる                                 |   8s | openness、arm length correction              |
-| P1  | 小柄 VRoid / upperChest なし VRM で同一 replay |    - | avatar profile、optional bone fallback       |
+| 優先度 | テスト                                         | 長さ目安 | 見るべき項目                                 |
+| ------ | ---------------------------------------------- | -------: | -------------------------------------------- |
+| P0     | neutral 10秒                                   |      10s | torso/head/wrist jitter、camera quality      |
+| P0     | 片手をゆっくり上げる 左右                      |     各8s | shoulder 補正、elbow pole、腕の伸び切り      |
+| P0     | 両手をゆっくり上げる                           |       8s | chest / upperChest 分配、肩崩れ              |
+| P0     | 片手を画面外へ出して戻す                       |     各8s | Lost / Predicted / Recovering、recovery jump |
+| P0     | 腕を交差する                                   |       8s | left-right swap、pole flip                   |
+| P0     | 速い手振り                                     |       8s | latency、semantic wave、dropout              |
+| P1     | 手を前に出す                                   |       8s | forwardness、depth compression               |
+| P1     | 手を顔の前に置く                               |       8s | face/hand occlusion、wrist roll、指安定      |
+| P1     | 指差し・開き手・握り手                         |      10s | finger curl、gesture state、semantic flicker |
+| P1     | 顔を左右に向ける                               |       8s | Face/Pose fallback、head jitter              |
+| P1     | 手を横に広げる                                 |       8s | openness、arm length correction              |
+| P1     | 小柄 VRoid / upperChest なし VRM で同一 replay |        - | avatar profile、optional bone fallback       |
 
 report01 でも、正面 neutral、ゆっくり手を上げる、高速手振り、手を顔の前に出す、片手を画面外に出す、腕を交差する、横を向く、手をカメラ方向に突き出す、小柄 VRoid、upperChest なしモデルがテストケースとして挙げられています。
 
@@ -415,15 +419,15 @@ report01 でも、正面 neutral、ゆっくり手を上げる、高速手振り
 
 固定テストログは、次の条件を manifest に記録します。
 
-| 条件       | 記録内容                                                               |
-| -------- | ------------------------------------------------------------------ |
-| camera   | requested constraints、actual settings、resolution、fps、facingMode    |
-| framing  | torso in frame、hands in frame、border risk                          |
-| lighting | 明るい / 暗い / 逆光などのラベル                                                |
-| actor    | 身長・体型そのものではなく、肩幅 calibration 値などの匿名化された計測値                         |
-| avatar   | default VRoid、小柄 VRoid、頭大きめ、upperChest なし                          |
-| pipeline | MediaPipe config、filter config、retarget config、avatar profile hash |
-| fixture  | raw-result fixture / video fixture / canonical fixture の種別         |
+| 条件     | 記録内容                                                                |
+| -------- | ----------------------------------------------------------------------- |
+| camera   | requested constraints、actual settings、resolution、fps、facingMode     |
+| framing  | torso in frame、hands in frame、border risk                             |
+| lighting | 明るい / 暗い / 逆光などのラベル                                        |
+| actor    | 身長・体型そのものではなく、肩幅 calibration 値などの匿名化された計測値 |
+| avatar   | default VRoid、小柄 VRoid、頭大きめ、upperChest なし                    |
+| pipeline | MediaPipe config、filter config、retarget config、avatar profile hash   |
+| fixture  | raw-result fixture / video fixture / canonical fixture の種別           |
 
 `requestVideoFrameCallback()` と `getSettings()` をログに取り込む Phase 2 は、ロードマップでも明示されています。
 
@@ -437,26 +441,26 @@ report01 でも、正面 neutral、ゆっくり手を上げる、高速手振り
 
 推奨フォームは 5 段階評価 + 破綻タグです。
 
-| 項目             | 評価                 |
-| -------------- | ------------------ |
-| 全体の安定感         | 1–5                |
-| キャラクターとして自然か   | 1–5                |
-| かわいさ / 親しみやすさ  | 1–5                |
+| 項目                         | 評価               |
+| ---------------------------- | ------------------ |
+| 全体の安定感                 | 1–5                |
+| キャラクターとして自然か     | 1–5                |
+| かわいさ / 親しみやすさ      | 1–5                |
 | ユーザーの動作意図が伝わるか | 1–5                |
-| 胴体・頭の落ち着き      | 1–5                |
-| 腕・肩の破綻の少なさ     | 1–5                |
-| 手首・指の違和感の少なさ   | 1–5                |
-| 遅延の許容感         | 1–5                |
-| 総合採用可否         | pass / warn / fail |
+| 胴体・頭の落ち着き           | 1–5                |
+| 腕・肩の破綻の少なさ         | 1–5                |
+| 手首・指の違和感の少なさ     | 1–5                |
+| 遅延の許容感                 | 1–5                |
+| 総合採用可否                 | pass / warn / fail |
 
 ### 8.2 破綻分類
 
-| Severity | 分類  | 例                                              |
-| -------- | --- | ---------------------------------------------- |
-| S0       | 即修正 | 肘反転、左右入れ替え、肩が胴体へめり込む、頭が震える                     |
-| S1       | 高優先 | 手首 roll 暴れ、recovery jump、腕の伸び切り、顔前の手で破綻        |
-| S2       | 中優先 | 指のちらつき、gesture label flicker、semantic clip 誤発火 |
-| S3       | 低優先 | 小さな jitter、表現不足、動きが控えめすぎる                      |
+| Severity | 分類   | 例                                                          |
+| -------- | ------ | ----------------------------------------------------------- |
+| S0       | 即修正 | 肘反転、左右入れ替え、肩が胴体へめり込む、頭が震える        |
+| S1       | 高優先 | 手首 roll 暴れ、recovery jump、腕の伸び切り、顔前の手で破綻 |
+| S2       | 中優先 | 指のちらつき、gesture label flicker、semantic clip 誤発火   |
+| S3       | 低優先 | 小さな jitter、表現不足、動きが控えめすぎる                 |
 
 report03 でも、かわいい / 自然に見せる上で避けるべき破綻は、胴体・頭部 jitter、肘反転、肩崩れ、手首 roll 暴れ、腕の伸び切り、指のちらつきの順に整理されています。
 
@@ -464,27 +468,27 @@ report03 でも、かわいい / 自然に見せる上で避けるべき破綻�
 
 同じ replay log を複数 avatar に適用します。
 
-| Avatar                        | 見るべき差分                               |
-| ----------------------------- | ------------------------------------ |
-| 標準 VRoid                      | baseline                             |
-| 小柄 VRoid                      | reach scale、depth compression、腕の伸び切り |
-| 頭大きめ VRoid                    | 手が顔に近い時のめり込み、head influence          |
-| upperChest なし                 | chest / spine / shoulder 分配          |
-| shoulder bone なし / 指 bone 不完全 | optional bone fallback               |
+| Avatar                              | 見るべき差分                                 |
+| ----------------------------------- | -------------------------------------------- |
+| 標準 VRoid                          | baseline                                     |
+| 小柄 VRoid                          | reach scale、depth compression、腕の伸び切り |
+| 頭大きめ VRoid                      | 手が顔に近い時のめり込み、head influence     |
+| upperChest なし                     | chest / spine / shoulder 分配                |
+| shoulder bone なし / 指 bone 不完全 | optional bone fallback                       |
 
 ロードマップでも、VRM load 時に rest local rotation、bone length、shoulder width、head size、optional bones を計測し、小柄 VRoid、頭が大きいモデル、upperChest なしモデルで同じ replay log を比較できることが完了条件になっています。
 
 ### 8.4 camera quality 差分 QA
 
-| Camera condition    | 見るべき問題                                |
-| ------------------- | ------------------------------------- |
-| 1280x720 / 30fps 相当 | baseline                              |
-| 実 fps 低下            | added latency、dropout、temporal spike  |
-| 暗所                  | hand dropout、motion blur risk         |
-| 顔アップ                | 肩・肘が入らず torso frame が不安定              |
-| 遠距離                 | hand bbox 小、Hand dropout、gesture miss |
-| 手が画面端               | border risk、recovery jump             |
-| 腕交差 / 顔前            | left-right swap、occlusion             |
+| Camera condition      | 見るべき問題                             |
+| --------------------- | ---------------------------------------- |
+| 1280x720 / 30fps 相当 | baseline                                 |
+| 実 fps 低下           | added latency、dropout、temporal spike   |
+| 暗所                  | hand dropout、motion blur risk           |
+| 顔アップ              | 肩・肘が入らず torso frame が不安定      |
+| 遠距離                | hand bbox 小、Hand dropout、gesture miss |
+| 手が画面端            | border risk、recovery jump               |
+| 腕交差 / 顔前         | left-right swap、occlusion               |
 
 UX に出す場合は、内部 metrics ではなく「もう少し離れて両肩が入るようにしてください」「手が画面端に近いです」など、ユーザーが修正できる表現に変換します。report03 でも camera quality score を UX に反映する具体例が整理されています。
 
@@ -494,14 +498,14 @@ UX に出す場合は、内部 metrics ではなく「もう少し離れて両�
 
 評価基盤では、metrics の単純最小化を避ける必要があります。
 
-| 数値上の改善                    | 起きうる見た目の悪化                        |
-| ------------------------- | --------------------------------- |
-| jitter 低下                 | 動きが鈍い、生命感がない                      |
-| angular velocity spike 減少 | 手振りや指差しの意図が弱い                     |
-| reach clamp occupancy 低下  | target scale を下げすぎて腕が届かない         |
-| semantic flicker 減少       | gesture が発火しにくく、表現が乏しい            |
-| latency 低下                | フィルタ不足で jitter / snap が増える        |
-| dropout を短く見せる            | 不確かな観測値に早く戻りすぎて recovery jump が出る |
+| 数値上の改善                | 起きうる見た目の悪化                                |
+| --------------------------- | --------------------------------------------------- |
+| jitter 低下                 | 動きが鈍い、生命感がない                            |
+| angular velocity spike 減少 | 手振りや指差しの意図が弱い                          |
+| reach clamp occupancy 低下  | target scale を下げすぎて腕が届かない               |
+| semantic flicker 減少       | gesture が発火しにくく、表現が乏しい                |
+| latency 低下                | フィルタ不足で jitter / snap が増える               |
+| dropout を短く見せる        | 不確かな観測値に早く戻りすぎて recovery jump が出る |
 
 したがって、CI / regression gate で見る metrics と、人間 QA で見る「自然さ」「かわいさ」「意図の伝達」は分けます。
 
@@ -561,14 +565,14 @@ report02 でも、`src/mocap/evaluation/MotionDebugRecorder.ts`、`MotionReplayP
 
 表示項目:
 
-* recording duration
-* frame count
-* dropped / duplicate frame count
-* current camera settings
-* current pipeline config hash
-* avatar profile hash
-* estimated log size
-* current reliability summary
+- recording duration
+- frame count
+- dropped / duplicate frame count
+- current camera settings
+- current pipeline config hash
+- avatar profile hash
+- estimated log size
+- current reliability summary
 
 ### 11.2 Replay panel
 
@@ -584,11 +588,11 @@ report02 でも、`src/mocap/evaluation/MotionDebugRecorder.ts`、`MotionReplayP
 
 比較 UI は次を表示します。
 
-| UI               | 内容                                                          |
-| ---------------- | ----------------------------------------------------------- |
-| timeline         | dropout、flip、spike、swap、semantic flicker の event marker     |
-| side-by-side VRM | baseline / candidate の同時再生                                  |
-| skeleton overlay | raw landmarks、canonical target、final bone                   |
+| UI               | 内容                                                           |
+| ---------------- | -------------------------------------------------------------- |
+| timeline         | dropout、flip、spike、swap、semantic flicker の event marker   |
+| side-by-side VRM | baseline / candidate の同時再生                                |
+| skeleton overlay | raw landmarks、canonical target、final bone                    |
 | metrics diff     | pass / warn / fail と差分                                      |
 | config diff      | filter / reliability / avatar profile / retarget config の差分 |
 | frame inspector  | 特定 frame の MediaPipe / Reliability / IK / finalPose         |
@@ -645,16 +649,16 @@ QA tag は、`elbow_flip`、`shoulder_collapse`、`wrist_roll_noise`、`left_rig
 
 最短で価値が出る順序は次です。
 
-| Phase | 実装                                 | 完了条件                                                           |
-| ----: | ---------------------------------- | -------------------------------------------------------------- |
-|     1 | log manifest + frame NDJSON export | MediaPipe raw result と finalPose を保存できる                        |
-|     2 | replay from raw result             | ライブカメラなしで同じ finalPose を再生成できる                                  |
+| Phase | 実装                               | 完了条件                                                           |
+| ----: | ---------------------------------- | ------------------------------------------------------------------ |
+|     1 | log manifest + frame NDJSON export | MediaPipe raw result と finalPose を保存できる                     |
+|     2 | replay from raw result             | ライブカメラなしで同じ finalPose を再生成できる                    |
 |     3 | metrics summary                    | neutral jitter / elbow flip / recovery jump / reach clamp を出せる |
-|     4 | fixed test fixtures                | P0 テストを同じ UI から再生・比較できる                                        |
-|     5 | side-by-side comparison UI         | baseline / candidate を同時比較できる                                  |
-|     6 | avatar profile matrix              | 小柄 VRoid / upperChest なしで同一ログ比較できる                             |
-|     7 | QA form and tags                   | 主観評価を metrics と同じ report に保存できる                                |
-|     8 | CI / regression integration        | fixture replay の summary が閾値を超えたら検出できる                         |
+|     4 | fixed test fixtures                | P0 テストを同じ UI から再生・比較できる                            |
+|     5 | side-by-side comparison UI         | baseline / candidate を同時比較できる                              |
+|     6 | avatar profile matrix              | 小柄 VRoid / upperChest なしで同一ログ比較できる                   |
+|     7 | QA form and tags                   | 主観評価を metrics と同じ report に保存できる                      |
+|     8 | CI / regression integration        | fixture replay の summary が閾値を超えたら検出できる               |
 
 この順序は、report03 の「記録・再生・デバッグ表示が最優先で、その後にキャリブレーション、信頼度、時系列、IK / retarget、avatar profile、semantic motion へ進む」という実装順と整合します。
 

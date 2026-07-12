@@ -1,5 +1,12 @@
+/**
+ * main thread から Tracker Worker の初期化、detect、stop、dispose を直列化する client lifecycle 境界。
+ * Worker failure は caller が main-thread fallback へ落とせるよう status / error message に変換し、DOM や tracker instance は保持しない。
+ */
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
+import type { SincroGestureMotionSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
+import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
+import type { TrackerRuntimeMediaPipeRawResult } from "./mediaPipeRawResultSerializer";
 import type {
     SincroTrackerWorkerOutputMessage,
     SincroTrackerWorkerStats,
@@ -8,7 +15,11 @@ import type {
 
 type DetectResult = {
     face: SincroFaceMotionSnapshot;
+    faceRoi?: SincroFaceMotionSnapshot;
     pose?: SincroPoseMotionSnapshot;
+    hand?: SincroHandMotionSnapshot;
+    gesture?: SincroGestureMotionSnapshot;
+    mediapipe?: TrackerRuntimeMediaPipeRawResult;
     stats: SincroTrackerWorkerStats;
 };
 
@@ -48,7 +59,12 @@ export class SincroTrackerWorkerClient {
         return typeof Worker !== "undefined" && typeof createImageBitmap === "function";
     }
 
-    async init(poseEnabled: boolean): Promise<void> {
+    async init(
+        poseEnabled: boolean,
+        handEnabled: boolean,
+        gestureEnabled: boolean,
+        faceRoiEnabled: boolean,
+    ): Promise<void> {
         if (!SincroTrackerWorkerClient.isSupported()) {
             throw new Error("Sincro tracker worker is not supported in this browser.");
         }
@@ -64,9 +80,21 @@ export class SincroTrackerWorkerClient {
                 this.pendingInitResolve = resolve;
                 this.pendingInitReject = reject;
             });
-            this.worker?.postMessage({ type: "init", poseEnabled });
-        } else if (poseEnabled) {
-            this.worker?.postMessage({ type: "init", poseEnabled });
+            this.worker?.postMessage({
+                type: "init",
+                poseEnabled,
+                handEnabled,
+                gestureEnabled,
+                faceRoiEnabled,
+            });
+        } else if (poseEnabled || handEnabled || gestureEnabled || faceRoiEnabled) {
+            this.worker?.postMessage({
+                type: "init",
+                poseEnabled,
+                handEnabled,
+                gestureEnabled,
+                faceRoiEnabled,
+            });
         }
         await this.initPromise;
     }
@@ -75,6 +103,9 @@ export class SincroTrackerWorkerClient {
         frame: ImageBitmap,
         timestampMs: number,
         poseEnabled: boolean,
+        handEnabled: boolean,
+        gestureEnabled: boolean,
+        faceRoiEnabled: boolean,
         transferTimeMs: number,
     ): Promise<DetectResult> {
         if (!this.worker) {
@@ -113,6 +144,9 @@ export class SincroTrackerWorkerClient {
                     frame,
                     timestampMs,
                     poseEnabled,
+                    handEnabled,
+                    gestureEnabled,
+                    faceRoiEnabled,
                 },
                 [frame],
             );
@@ -195,12 +229,18 @@ export class SincroTrackerWorkerClient {
                 ...this.stats,
                 status: "running",
                 workerRoundTripMs: performance.now() - pending.sentAtMs,
+                workerTimeMs: message.workerTimeMs,
+                gestureInferenceTimeMs: message.gestureInferenceTimeMs,
                 fallbackReason: undefined,
             };
             this.publishStats();
             pending.resolve({
                 face: message.face,
+                faceRoi: message.faceRoi,
                 pose: message.pose,
+                hand: message.hand,
+                gesture: message.gesture,
+                mediapipe: message.mediapipe,
                 stats: this.getStats(),
             });
             return;

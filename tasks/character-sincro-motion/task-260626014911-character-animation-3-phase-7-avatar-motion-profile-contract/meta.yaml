@@ -1,0 +1,14 @@
+id: task-260626014911-character-animation-3-phase-7-avatar-motion-profile-contract
+title: character animation 3.0 phase 7 avatar motion profile contract
+category: character-sincro-motion
+status: done
+depends_on:
+  - task-260625231715-character-animation-3-phase-6-minimal-avatar-motion-profile
+superseded_by: null
+review: APPROVED
+reviewed_sha: 92ad60a351c29b72bc5b002ead505015ed4f39c0
+verdict: PASS
+attempts: 3
+created_at: 2026-06-26
+closed_at: 2026-06-26
+legacy_ids: []

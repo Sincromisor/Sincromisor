@@ -1,0 +1,16 @@
+id: task-260625035438-character-animation-3-phase-4-downstream-weights
+title: Character animation 3 Phase 4 reliability downstream weights
+category: character-sincro-motion
+status: done
+depends_on:
+  - task-260625035438-character-animation-3-phase-4-reliability-contract
+  - task-260625035438-character-animation-3-phase-4-pose-reliability-estimator
+  - task-260625035438-character-animation-3-phase-4-reliability-debug-replay
+superseded_by: null
+review: APPROVED
+reviewed_sha: 401bc48d7bfa420ea19b6190ae71c0487284920e
+verdict: PASS
+attempts: 1
+created_at: 2026-06-25
+closed_at: 2026-06-25
+legacy_ids: []

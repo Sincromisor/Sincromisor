@@ -10,6 +10,7 @@
         "tasks:index:check": "node scripts/tasks/genIndex.mjs --check",
         "tasks:reindex": "node scripts/tasks/reindex.mjs",
         "tasks:check": "node scripts/tasks/checkTasks.mjs",
+        "tasks:check:frontend-structure": "node scripts/tasks/checkFrontendStructure.mjs",
         "tasks:fixlinks": "node scripts/tasks/fixLinks.mjs",
         "tasks:migrate:legacy": "node scripts/tasks/migrateLegacyTasks.mjs",
         "tasks:migrate:reviewed-sha": "node scripts/tasks/migrateReviewedSha.mjs",
@@ -47,6 +48,7 @@
     ],
     "evalWorktree": {
         "symlinks": [
+            "node_modules",
             ".gate-cache",
             "sincromisor-frontend/node_modules"
         ],

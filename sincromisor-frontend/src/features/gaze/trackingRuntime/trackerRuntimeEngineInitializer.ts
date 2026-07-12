@@ -1,16 +1,29 @@
+/**
+ * Face / Pose / Hand / Gesture tracker の MediaPipe 初期化を TrackerRuntime から分離する lifecycle 境界。
+ * 初期化例外は user-facing fallback 判断に使える短い detail へ変換し、callback publish や DOM cleanup は caller に残す。
+ */
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import type { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
+import type { SincroGestureTracker } from "../gestureTracking/sincroGestureTracker";
+import type { SincroHandTracker } from "../handTracking/sincroHandTracker";
 import type { SincroPoseTracker } from "../poseTracking/sincroPoseTracker";
 import { SincroTrackerWorkerClient } from "./sincroTrackerWorkerClient";
 
 type TrackerRuntimeEngineInitializerOptions = {
     faceTracker: SincroFaceTracker;
     poseTracker: SincroPoseTracker;
+    handTracker: SincroHandTracker;
+    gestureTracker: SincroGestureTracker;
     workerClient: SincroTrackerWorkerClient;
     poseTrackingEnabled: boolean;
+    handTrackingEnabled: boolean;
+    gestureTrackingEnabled: boolean;
+    faceRoiTrackingEnabled: boolean;
     preferWorker: boolean;
     onWorkerFallback: (reason: string) => void;
     onPoseInitializationFallback: (reason: string, nowMs: number) => void;
+    onHandInitializationFallback: (reason: string, nowMs: number) => void;
+    onGestureInitializationFallback: (reason: string, nowMs: number) => void;
 };
 
 export async function initializeTrackerRuntimeEngine(
@@ -18,7 +31,12 @@ export async function initializeTrackerRuntimeEngine(
 ): Promise<boolean> {
     if (options.preferWorker && SincroTrackerWorkerClient.isSupported()) {
         try {
-            await options.workerClient.init(options.poseTrackingEnabled);
+            await options.workerClient.init(
+                options.poseTrackingEnabled,
+                options.handTrackingEnabled,
+                options.gestureTrackingEnabled,
+                options.faceRoiTrackingEnabled,
+            );
             return true;
         } catch (error) {
             frontendLogger.warn(
@@ -49,6 +67,36 @@ async function initializeMainThreadTrackers(
             { error },
         );
         options.onPoseInitializationFallback(
+            formatTrackerRuntimeErrorDetail(error),
+            performance.now(),
+        );
+    }
+    if (!options.handTrackingEnabled) {
+        return;
+    }
+    try {
+        await options.handTracker.initVision();
+    } catch (error) {
+        frontendLogger.warn(
+            "Sincro HandLandmarker initialization failed. Continuing without hand tracking.",
+            { error },
+        );
+        options.onHandInitializationFallback(
+            formatTrackerRuntimeErrorDetail(error),
+            performance.now(),
+        );
+    }
+    if (!options.gestureTrackingEnabled) {
+        return;
+    }
+    try {
+        await options.gestureTracker.initVision();
+    } catch (error) {
+        frontendLogger.warn(
+            "Sincro GestureRecognizer initialization failed. Continuing without gesture tracking.",
+            { error },
+        );
+        options.onGestureInitializationFallback(
             formatTrackerRuntimeErrorDetail(error),
             performance.now(),
         );

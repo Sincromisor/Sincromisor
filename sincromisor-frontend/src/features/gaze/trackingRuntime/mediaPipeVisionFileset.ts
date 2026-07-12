@@ -1,3 +1,7 @@
+/**
+ * MediaPipe Tasks Vision の fileset resolver を frontend の public asset path へ接続する境界。
+ * WASM 配置失敗は caller の初期化失敗として扱い、この module は tracker や DOM lifecycle を所有しない。
+ */
 import { FilesetResolver } from "@mediapipe/tasks-vision";
 
 declare const __MEDIAPIPE_TASKS_VISION_VERSION__: string;

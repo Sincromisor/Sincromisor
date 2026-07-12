@@ -1,0 +1,13 @@
+id: task-260712074348-record-per-frame-gesture-and-total-tracker-durations
+title: Record per-frame gesture and total tracker durations
+category: character-sincro-motion
+status: done
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: b8fc98f112b988175d25e1ff0ef7dd7671fdf6f5
+verdict: PASS
+attempts: 2
+created_at: 2026-07-12
+closed_at: 2026-07-12
+legacy_ids: []

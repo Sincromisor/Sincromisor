@@ -44,6 +44,7 @@
 - `DebugConsole`
     - diagnostics snapshot を表示する。
     - WebRTC / MediaPipe / Audio の生制御を直接所有しない。
+    - Sincro Hand は availability、source、ROI warning、openness、confidence の summary だけを表示し、raw landmarks や crop object は持たない。
 
 ## Information Architecture
 
@@ -71,6 +72,7 @@
 - `Ctrl+Alt+D` は Debug Console の導線として扱う。
 - 技術用語が必要な診断情報は Debug Console に置き、通常設定には混ぜない。
 - `forceSincroPoseTracking` は低性能端末での姿勢同期デバッグ用設定として扱い、通常利用では `pose_inference_too_slow` の自動降格を優先する。
+- Pose retarget 調整内に残る composer application control は `composerSemanticFingerApplicationMode` だけである。semantic / finger layer の suppression を切り分ける developer rollback flag として Debug Console に出し、通常設定 UI には出さない。arm、torso / shoulder、full normalized pose application の段階別 rollback controls は削除済みであり、unavailable frame でも Debug Console から旧 direct writer を production fallback として起動しない。
 
 ## Change Checklist
 

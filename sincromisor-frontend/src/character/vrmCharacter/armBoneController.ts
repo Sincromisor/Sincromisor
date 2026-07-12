@@ -11,8 +11,14 @@ import { CHARACTER_IDLE_MOTION_CONFIG, sineWave } from "./characterMotionConfig"
     Humanoid bones: https://docs.unity3d.com/ja/2019.4/ScriptReference/HumanBodyBones.html
  */
 
-// 腕・手・親指の既定ポーズを作る controller。
-// 現状は待機姿勢の固定値 + 微小な揺れで、自然に見える静止ポーズを構成している。
+/**
+ * 腕・手・親指の既定ポーズを作る controller。
+ *
+ * この class は direct bone write の旧 controller として残るが、production `VRMCharacterManager.update()`
+ * から full composer application の fallback としては呼ばない。ロード直後の初期姿勢や isolated test では
+ * 待機姿勢、speech gesture、pose retarget の direct write を行う。`vrm.humanoid.setNormalizedPose()` は呼ばず、
+ * torso / shoulder / finger / head / expression も所有しない。
+ */
 export class ArmBoneController {
     private vrm: VRM;
     private speechGestureState = new ArmSpeechGestureState();
@@ -21,7 +27,12 @@ export class ArmBoneController {
         this.vrm = vrm;
     }
 
-    // 毎フレーム、腕の基準待機ポーズへ低振幅の idle offset を足して適用する。
+    /**
+     * 毎フレーム、腕の基準待機ポーズへ低振幅の idle offset を足して適用する。
+     *
+     * この method は production full composer application の unavailable fallback としては呼ばれない。
+     * direct write は isolated controller usage とロード直後の初期姿勢に限定し、composer dry-run result は読まない。
+     */
     update(
         elapsedSeconds: number,
         snapshot?: CharacterBehaviorSnapshot,
@@ -45,12 +56,25 @@ export class ArmBoneController {
         const leftIdleScale = poseControlsLeftArm ? 0.22 : 1;
         const rightIdleScale = poseControlsRightArm ? 0.22 : 1;
 
+        const armRotationNodes = {
+            leftUpperArm: this.getNode("leftUpperArm"),
+            rightUpperArm: this.getNode("rightUpperArm"),
+            leftLowerArm: this.getNode("leftLowerArm"),
+            rightLowerArm: this.getNode("rightLowerArm"),
+        };
+        const armHandNodes = {
+            leftHand: this.getNode("leftHand"),
+            leftThumbProximal: this.getNode("leftThumbProximal"),
+            rightHand: this.getNode("rightHand"),
+            rightThumbProximal: this.getNode("rightThumbProximal"),
+        };
+
         applyArmBoneRotations({
             nodes: {
-                leftUpperArm: this.getNode("leftUpperArm"),
-                rightUpperArm: this.getNode("rightUpperArm"),
-                leftLowerArm: this.getNode("leftLowerArm"),
-                rightLowerArm: this.getNode("rightLowerArm"),
+                leftUpperArm: armRotationNodes.leftUpperArm,
+                rightUpperArm: armRotationNodes.rightUpperArm,
+                leftLowerArm: armRotationNodes.leftLowerArm,
+                rightLowerArm: armRotationNodes.rightLowerArm,
             },
             pose,
             armSway: idleMotion.armSway,
@@ -64,10 +88,10 @@ export class ArmBoneController {
 
         applyArmHandPose({
             nodes: {
-                leftHand: this.getNode("leftHand"),
-                leftThumbProximal: this.getNode("leftThumbProximal"),
-                rightHand: this.getNode("rightHand"),
-                rightThumbProximal: this.getNode("rightThumbProximal"),
+                leftHand: armHandNodes.leftHand,
+                leftThumbProximal: armHandNodes.leftThumbProximal,
+                rightHand: armHandNodes.rightHand,
+                rightThumbProximal: armHandNodes.rightThumbProximal,
             },
             pose,
             wristSway: idleMotion.wristSway,

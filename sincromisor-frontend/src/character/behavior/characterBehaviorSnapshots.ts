@@ -1,10 +1,17 @@
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
-import { DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import {
+    cloneSincroRoiObservation,
+    DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
+} from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type {
     SincroPoseArmMotionSnapshot,
     SincroPoseMotionSnapshot,
 } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import { DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import {
+    cloneSincroMotionPipelineState,
+    type SincroMotionPipelineState,
+} from "../runtime/sincroMotionPipelineState";
 import type {
     CharacterBehaviorAiSpeechSnapshot,
     CharacterBehaviorGazeSnapshot,
@@ -26,6 +33,7 @@ type BuildCharacterBehaviorSnapshotOptions = {
     gaze: CharacterBehaviorGazeSnapshot;
     faceMotion: SincroFaceMotionSnapshot;
     poseMotion: SincroPoseMotionSnapshot;
+    sincroMotionPipeline?: SincroMotionPipelineState;
     aiSpeech: CharacterBehaviorAiSpeechSnapshot;
     errorMessage?: string;
 };
@@ -85,6 +93,10 @@ export function buildCharacterBehaviorSnapshot(
         gaze: { ...options.gaze },
         faceMotion: cloneFaceMotionSnapshot(options.faceMotion),
         poseMotion: clonePoseMotionSnapshot(options.poseMotion),
+        sincroMotionPipeline:
+            options.sincroMotionPipeline === undefined
+                ? undefined
+                : cloneSincroMotionPipelineState(options.sincroMotionPipeline),
         aiSpeech: { ...options.aiSpeech },
         errorMessage: options.errorMessage,
     };
@@ -98,6 +110,8 @@ export function cloneFaceMotionSnapshot(
         ...snapshot,
         headPose: { ...snapshot.headPose },
         blendshapes: { ...snapshot.blendshapes },
+        roi: cloneSincroRoiObservation(snapshot.roi),
+        warnings: [...snapshot.warnings],
         lastUpdatedAtMs: snapshot.lastUpdatedAtMs ?? nowMs,
     };
 }

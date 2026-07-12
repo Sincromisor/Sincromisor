@@ -67,58 +67,61 @@ RenderClock:
 
 Sincromisor では、用途を明確に分けます。
 
-| metadata                       | 用途                                                                                               |
-| ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| metadata                       | 用途                                                                                                            |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | `metadata.mediaTime * 1000`    | MediaPipe `detectForVideo()` に渡す統一 timestamp。Pose / Hand / Face / Gesture の同一 video frame 紐付けに使う |
-| `metadata.presentationTime`    | browser 側の表示提出時刻。end-to-end latency / render alignment / debug 表示に使う                             |
-| `metadata.expectedDisplayTime` | callback が v-sync に間に合っているか、処理開始が遅れているかの判定に使う                                                    |
-| `metadata.presentedFrames`     | `delta > 1` なら callback missed / frame drop として記録                                                |
-| `metadata.processingDuration`  | decoder 側遅延の参考値。カメラ入力では常に有用とは限らないため optional として記録                                               |
+| `metadata.presentationTime`    | browser 側の表示提出時刻。end-to-end latency / render alignment / debug 表示に使う                              |
+| `metadata.expectedDisplayTime` | callback が v-sync に間に合っているか、処理開始が遅れているかの判定に使う                                       |
+| `metadata.presentedFrames`     | `delta > 1` なら callback missed / frame drop として記録                                                        |
+| `metadata.processingDuration`  | decoder 側遅延の参考値。カメラ入力では常に有用とは限らないため optional として記録                              |
 
 ### 2.3 推奨 `FrameClock` 型
 
 ```ts
 type VideoFrameTick = {
-  frameSeq: number;
-  mediaTimeMs: number;
-  nowMs: DOMHighResTimeStamp;
-  presentationTimeMs?: DOMHighResTimeStamp;
-  expectedDisplayTimeMs?: DOMHighResTimeStamp;
-  presentedFrames?: number;
-  droppedPresentedFrames: number;
-  videoWidth: number;
-  videoHeight: number;
+    frameSeq: number;
+    mediaTimeMs: number;
+    nowMs: DOMHighResTimeStamp;
+    presentationTimeMs?: DOMHighResTimeStamp;
+    expectedDisplayTimeMs?: DOMHighResTimeStamp;
+    presentedFrames?: number;
+    droppedPresentedFrames: number;
+    videoWidth: number;
+    videoHeight: number;
 };
 
-type FrameClockMode = "requestVideoFrameCallback" | "raf-currentTime" | "timer-fallback";
+type FrameClockMode =
+    | "requestVideoFrameCallback"
+    | "raf-currentTime"
+    | "timer-fallback";
 ```
 
 ```ts
 function onVideoFrame(
-  now: DOMHighResTimeStamp,
-  metadata: VideoFrameCallbackMetadata,
+    now: DOMHighResTimeStamp,
+    metadata: VideoFrameCallbackMetadata,
 ) {
-  const mediaTimeMs = metadata.mediaTime * 1000;
-  const dropped =
-    lastPresentedFrames == null
-      ? 0
-      : Math.max(0, metadata.presentedFrames - lastPresentedFrames - 1);
+    const mediaTimeMs = metadata.mediaTime * 1000;
+    const dropped =
+        lastPresentedFrames == null
+            ? 0
+            : Math.max(0, metadata.presentedFrames - lastPresentedFrames - 1);
 
-  const tick: VideoFrameTick = {
-    frameSeq: ++frameSeq,
-    mediaTimeMs,
-    nowMs: now,
-    presentationTimeMs: metadata.presentationTime,
-    expectedDisplayTimeMs: metadata.expectedDisplayTime,
-    presentedFrames: metadata.presentedFrames,
-    droppedPresentedFrames: dropped,
-    videoWidth: metadata.width,
-    videoHeight: metadata.height,
-  };
+    const tick: VideoFrameTick = {
+        frameSeq: ++frameSeq,
+        mediaTimeMs,
+        nowMs: now,
+        presentationTimeMs: metadata.presentationTime,
+        expectedDisplayTimeMs: metadata.expectedDisplayTime,
+        presentedFrames: metadata.presentedFrames,
+        droppedPresentedFrames: dropped,
+        videoWidth: metadata.width,
+        videoHeight: metadata.height,
+    };
 
-  perceptionScheduler.enqueueLatest(tick);
-  lastPresentedFrames = metadata.presentedFrames;
-  video.requestVideoFrameCallback(onVideoFrame);
+    perceptionScheduler.enqueueLatest(tick);
+    lastPresentedFrames = metadata.presentedFrames;
+    video.requestVideoFrameCallback(onVideoFrame);
 }
 ```
 
@@ -144,13 +147,13 @@ fallback では `mediaTimeMs = video.currentTime * 1000` とし、同一 `curren
 
 ```ts
 const constraints: MediaStreamConstraints = {
-  video: {
-    width: { ideal: 1280 },
-    height: { ideal: 720 },
-    frameRate: { ideal: 30, max: 30 },
-    facingMode: { ideal: "user" },
-  },
-  audio: false,
+    video: {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30, max: 30 },
+        facingMode: { ideal: "user" },
+    },
+    audio: false,
 };
 ```
 
@@ -164,27 +167,27 @@ const constraints: MediaStreamConstraints = {
 
 ```ts
 type CameraSettingsSnapshot = {
-  requested: MediaStreamConstraints;
-  settings: {
-    width?: number;
-    height?: number;
-    frameRate?: number;
-    aspectRatio?: number;
-    facingMode?: string;
-    resizeMode?: string;
-    deviceIdHash?: string;
-    groupIdHash?: string;
-  };
-  videoElement: {
-    videoWidth: number;
-    videoHeight: number;
-    readyState: number;
-  };
-  track: {
-    enabled: boolean;
-    muted: boolean;
-    readyState: MediaStreamTrackState;
-  };
+    requested: MediaStreamConstraints;
+    settings: {
+        width?: number;
+        height?: number;
+        frameRate?: number;
+        aspectRatio?: number;
+        facingMode?: string;
+        resizeMode?: string;
+        deviceIdHash?: string;
+        groupIdHash?: string;
+    };
+    videoElement: {
+        videoWidth: number;
+        videoHeight: number;
+        readyState: number;
+    };
+    track: {
+        enabled: boolean;
+        muted: boolean;
+        readyState: MediaStreamTrackState;
+    };
 };
 ```
 
@@ -198,32 +201,32 @@ MediaPipe confidence だけでは、撮影条件の失敗を十分に説明で�
 
 ```ts
 type CameraQualityScore = {
-  resolutionScore: number;
-  cadenceScore: number;
-  torsoInFrame: number;
-  leftHandInFrame: number;
-  rightHandInFrame: number;
-  borderRisk: number;
-  handSmallRisk: number;
-  underExposureRisk: number;
-  motionBlurRisk: number;
-  overall: number;
-  reasons: CameraQualityReason[];
+    resolutionScore: number;
+    cadenceScore: number;
+    torsoInFrame: number;
+    leftHandInFrame: number;
+    rightHandInFrame: number;
+    borderRisk: number;
+    handSmallRisk: number;
+    underExposureRisk: number;
+    motionBlurRisk: number;
+    overall: number;
+    reasons: CameraQualityReason[];
 };
 ```
 
 判定目安は以下です。
 
-| 項目              | 判定方法                                                          |
-| --------------- | ------------------------------------------------------------- |
-| 実解像度            | `getSettings().width/height` と `video.videoWidth/videoHeight` |
-| 実 fps           | `mediaTime` 差分、`presentedFrames` 差分、推論実行間隔                    |
-| dropped frame   | `presentedFrames` 差分が 1 を超える                                  |
-| border risk     | shoulder / elbow / wrist / hand bbox が画面端 5〜10% に近い           |
-| hand small risk | hand bbox が 80px 未満、または指 landmark spread が小さい                 |
-| torso in frame  | 両肩・顔・腰上が画面内に入っているか                                            |
-| under exposure  | 小さな downsample canvas / worker thumbnail の平均輝度                |
-| motion blur     | landmark 速度、edge contrast 低下、confidence 低下の組み合わせ              |
+| 項目            | 判定方法                                                       |
+| --------------- | -------------------------------------------------------------- |
+| 実解像度        | `getSettings().width/height` と `video.videoWidth/videoHeight` |
+| 実 fps          | `mediaTime` 差分、`presentedFrames` 差分、推論実行間隔         |
+| dropped frame   | `presentedFrames` 差分が 1 を超える                            |
+| border risk     | shoulder / elbow / wrist / hand bbox が画面端 5〜10% に近い    |
+| hand small risk | hand bbox が 80px 未満、または指 landmark spread が小さい      |
+| torso in frame  | 両肩・顔・腰上が画面内に入っているか                           |
+| under exposure  | 小さな downsample canvas / worker thumbnail の平均輝度         |
+| motion blur     | landmark 速度、edge contrast 低下、confidence 低下の組み合わせ |
 
 UX では内部指標をそのまま出さず、ユーザーが修正可能な行動に変換します。既存 report03 でも、「肩が入っていない」「手が画面端」「手が小さい」「顔だけ大きい」「露出不足」「motion blur」などを、ユーザー向けガイド文に分離する方針が示されています。
 
@@ -261,17 +264,17 @@ Hand Landmarker と Gesture Recognizer は Video mode で tracking 状態を持�
 
 ```ts
 type ObservationFrame = {
-  frameSeq: number;
-  mediaTimeMs: number;
-  source: {
-    clockMode: FrameClockMode;
-    presentedFrames?: number;
-  };
-  pose?: PoseObservation;
-  face?: FaceObservation;
-  hands?: HandObservation[];
-  gesture?: GestureObservation[];
-  timings: PerceptionTimings;
+    frameSeq: number;
+    mediaTimeMs: number;
+    source: {
+        clockMode: FrameClockMode;
+        presentedFrames?: number;
+    };
+    pose?: PoseObservation;
+    face?: FaceObservation;
+    hands?: HandObservation[];
+    gesture?: GestureObservation[];
+    timings: PerceptionTimings;
 };
 ```
 
@@ -287,13 +290,13 @@ MediaPipe の Pose / Hand / Face / Gesture は同期実行で UI thread をブ�
 
 判断基準は次です。
 
-| 条件                                        | 推奨                                     |
-| ----------------------------------------- | -------------------------------------- |
-| main thread の long task / UI 入力遅延が見える     | Worker 必須                              |
-| `detectForVideo()` 合計が 8〜10ms を超える        | Worker 推奨                              |
-| Face + Pose + Hand を同時利用                  | Worker 標準                              |
-| debug overlay / UI / audio / WebRTC と同時実行 | Worker 標準                              |
-| Safari / 古い端末で Worker 初期化に失敗              | main-thread fallback + fps 低下          |
+| 条件                                           | 推奨                                            |
+| ---------------------------------------------- | ----------------------------------------------- |
+| main thread の long task / UI 入力遅延が見える | Worker 必須                                     |
+| `detectForVideo()` 合計が 8〜10ms を超える     | Worker 推奨                                     |
+| Face + Pose + Hand を同時利用                  | Worker 標準                                     |
+| debug overlay / UI / audio / WebRTC と同時実行 | Worker 標準                                     |
+| Safari / 古い端末で Worker 初期化に失敗        | main-thread fallback + fps 低下                 |
 | Worker round-trip / transfer が重すぎる        | Pose のみ Worker、Hand/Gesture 停止または低 fps |
 
 ### 5.2 推奨構成図
@@ -330,22 +333,22 @@ PerceptionWorker
 
 ```ts
 type TransferTiming = {
-  createImageBitmapMs: number;
-  postMessageMs: number;
-  workerReceiveDelayMs: number;
-  workerRoundTripMs: number;
+    createImageBitmapMs: number;
+    postMessageMs: number;
+    workerReceiveDelayMs: number;
+    workerRoundTripMs: number;
 };
 ```
 
 方針は次です。
 
-| データ           | 転送方針                                                                             |
-| ------------- | -------------------------------------------------------------------------------- |
-| camera frame  | `ImageBitmap` を transferable として送る。queue は最大1                                    |
+| データ        | 転送方針                                                                                        |
+| ------------- | ----------------------------------------------------------------------------------------------- |
+| camera frame  | `ImageBitmap` を transferable として送る。queue は最大1                                         |
 | ROI crop      | Worker 内 `OffscreenCanvas` が使えるなら Worker で crop。使えなければ full frame + ROI metadata |
-| landmarks     | `Float32Array` または number array。画像は返さない                                          |
+| landmarks     | `Float32Array` または number array。画像は返さない                                              |
 | debug overlay | main thread で描画。Worker は座標・スコアだけ返す                                               |
-| screenshot    | 通常フレームでは保存しない。明示 capture または低頻度 sampling                                         |
+| screenshot    | 通常フレームでは保存しない。明示 capture または低頻度 sampling                                  |
 
 ---
 
@@ -357,26 +360,26 @@ type TransferTiming = {
 
 初期 budget は次を採用します。
 
-| 領域                              |     標準目標 |  p95 上限目安 |
-| ------------------------------- | -------: | --------: |
-| main thread render loop         |   8〜12ms | 16.7ms 未満 |
-| VRM pose apply + `vrm.update()` |    1〜3ms |       5ms |
-| Three.js render                 |    4〜8ms |      12ms |
-| UI / debug overlay              |    1〜3ms |       5ms |
-| Worker frame transfer           |    1〜4ms |       8ms |
-| Worker total perception         |  15〜28ms |      50ms |
-| end-to-end motion age           | 50〜120ms |     150ms |
+| 領域                            |  標準目標 | p95 上限目安 |
+| ------------------------------- | --------: | -----------: |
+| main thread render loop         |   8〜12ms |  16.7ms 未満 |
+| VRM pose apply + `vrm.update()` |    1〜3ms |          5ms |
+| Three.js render                 |    4〜8ms |         12ms |
+| UI / debug overlay              |    1〜3ms |          5ms |
+| Worker frame transfer           |    1〜4ms |          8ms |
+| Worker total perception         |  15〜28ms |         50ms |
+| end-to-end motion age           | 50〜120ms |        150ms |
 
 既存 report03 では、実用的な追加遅延目標として、手先 50〜90ms、頭 50〜100ms、胴体・肩 80〜150ms が示されています。 Sincromisor は会話キャラクター用途なので、手指の完全同期より、頭・胴体・肩の jitter と UI 応答性を優先します。
 
 ### 6.2 端末クラス別推奨設定
 
-| 端末クラス                        |                Camera |            Render |     Pose |               Face |          Hand |         Gesture | 備考                                 |
-| ---------------------------- | --------------------: | ----------------: | -------: | -----------------: | ------------: | --------------: | ---------------------------------- |
-| A: 高性能 desktop Chrome / Edge |           1280x720@30 |             60fps |    30fps |           15〜30fps |  15〜30fps ROI | 5〜10fps / event | Worker 標準。debug metrics 常時可        |
-| B: 一般 laptop                 |   960x540〜1280x720@30 |          60fps 目標 | 24〜30fps |           10〜15fps |  10〜15fps ROI |          3〜5fps | single Worker。parallel worker は避ける |
-| C: tablet / mobile high-end  | 640x480〜960x540@24〜30 | 30〜60fps adaptive | 15〜24fps |     8〜12fps or off |       8〜12fps |          基本 off | 熱・電力・background throttling を強く考慮   |
-| D: low-end / fallback        |         640x480@15〜24 |             30fps | 10〜15fps | Pose head fallback | 5〜8fps or off |             off | semantic idle / fallback pose 中心   |
+| 端末クラス                      |                  Camera |             Render |      Pose |               Face |           Hand |          Gesture | 備考                                       |
+| ------------------------------- | ----------------------: | -----------------: | --------: | -----------------: | -------------: | ---------------: | ------------------------------------------ |
+| A: 高性能 desktop Chrome / Edge |             1280x720@30 |              60fps |     30fps |          15〜30fps |  15〜30fps ROI | 5〜10fps / event | Worker 標準。debug metrics 常時可          |
+| B: 一般 laptop                  |    960x540〜1280x720@30 |         60fps 目標 | 24〜30fps |          10〜15fps |  10〜15fps ROI |          3〜5fps | single Worker。parallel worker は避ける    |
+| C: tablet / mobile high-end     | 640x480〜960x540@24〜30 | 30〜60fps adaptive | 15〜24fps |    8〜12fps or off |       8〜12fps |         基本 off | 熱・電力・background throttling を強く考慮 |
+| D: low-end / fallback           |          640x480@15〜24 |              30fps | 10〜15fps | Pose head fallback | 5〜8fps or off |              off | semantic idle / fallback pose 中心         |
 
 30fps 入力、60fps 描画、30fps 推論は、高性能 desktop では現実的ですが、Pose + Hand + Face + Gesture をすべて 30fps で常時動かす設計は標準にしない方が安全です。特に Gesture は Hand の安定結果を補助入力として扱い、常時 30fps ではなく、低 fps または状態変化時に実行します。
 
@@ -386,13 +389,13 @@ debug は品質改善に必須ですが、PNG capture、full landmark dump、con
 
 推奨は次です。
 
-| debug 項目          |                     通常時 |                詳細計測時 |
-| ----------------- | ----------------------: | -------------------: |
-| numeric metrics   |       毎フレーム ring buffer |                毎フレーム |
-| landmark snapshot |        5〜15fps sampling |                30fps |
-| PNG / frame image | 手動 capture または 0.2〜1fps |                短時間のみ |
-| console log       |  warn / state change のみ | bounded debug logger |
-| replay log        | compact JSONL / msgpack |         短時間 raw dump |
+| debug 項目        |                        通常時 |           詳細計測時 |
+| ----------------- | ----------------------------: | -------------------: |
+| numeric metrics   |        毎フレーム ring buffer |           毎フレーム |
+| landmark snapshot |             5〜15fps sampling |                30fps |
+| PNG / frame image | 手動 capture または 0.2〜1fps |           短時間のみ |
+| console log       |      warn / state change のみ | bounded debug logger |
+| replay log        |       compact JSONL / msgpack |      短時間 raw dump |
 
 ---
 
@@ -402,27 +405,27 @@ debug は品質改善に必須ですが、PNG capture、full landmark dump、con
 
 推奨 degradation order は次です。
 
-| Level | 条件例                         | 処理                                                                |
-| ----: | --------------------------- | ----------------------------------------------------------------- |
-|     0 | 正常                          | Pose / Face / Hand / Gesture を端末 budget 内で実行                      |
-|     1 | Worker p95 > budget、drop 増加 | Gesture 停止、debug screenshot 停止                                    |
-|     2 | Hand が重い / dropout 多い       | Hand fps を半減、片手のみ、ROI 拡大、指は semantic fallback                     |
+| Level | 条件例                         | 処理                                                                      |
+| ----: | ------------------------------ | ------------------------------------------------------------------------- |
+|     0 | 正常                           | Pose / Face / Hand / Gesture を端末 budget 内で実行                       |
+|     1 | Worker p95 > budget、drop 増加 | Gesture 停止、debug screenshot 停止                                       |
+|     2 | Hand が重い / dropout 多い     | Hand fps を半減、片手のみ、ROI 拡大、指は semantic fallback               |
 |     3 | Face が重い                    | Face fps を低下、Face matrix は保持、Pose head fallback                   |
-|     4 | Pose が重い                    | camera を 960x540 / 640x480 へ下げる、Pose fps 15〜24                    |
-|     5 | Worker 不安定                  | main-thread fallback + Pose only + render 30fps                   |
-|     6 | tracking 継続困難               | idle / breathing / conversation pose に退避し、CameraQuality guide を出す |
+|     4 | Pose が重い                    | camera を 960x540 / 640x480 へ下げる、Pose fps 15〜24                     |
+|     5 | Worker 不安定                  | main-thread fallback + Pose only + render 30fps                           |
+|     6 | tracking 継続困難              | idle / breathing / conversation pose に退避し、CameraQuality guide を出す |
 
 判定は単一指標ではなく、次の合成で行います。
 
 ```ts
 type DegradationSignal = {
-  workerRoundTripP95Ms: number;
-  inferenceP95Ms: number;
-  droppedFrameRate: number;
-  mainThreadLongTaskRate: number;
-  renderFps: number;
-  motionAgeMs: number;
-  cameraQualityOverall: number;
+    workerRoundTripP95Ms: number;
+    inferenceP95Ms: number;
+    droppedFrameRate: number;
+    mainThreadLongTaskRate: number;
+    renderFps: number;
+    motionAgeMs: number;
+    cameraQualityOverall: number;
 };
 ```
 
@@ -458,88 +461,91 @@ WebGPU は将来候補ですが、MDN では 2026年5月時点でも “Limited 
 
 ```ts
 type MotionRealtimeDebugFrame = {
-  version: 1;
-  sessionId: string;
+    version: 1;
+    sessionId: string;
 
-  clock: {
-    mode: "requestVideoFrameCallback" | "raf-currentTime" | "timer-fallback";
-    frameSeq: number;
-    mediaTimeMs: number;
-    nowMs: number;
-    presentationTimeMs?: number;
-    expectedDisplayTimeMs?: number;
-    presentedFrames?: number;
-    droppedPresentedFrames: number;
-    renderFrameSeq: number;
-  };
-
-  camera: {
-    requestedConstraints: MediaStreamConstraints;
-    settings: MediaTrackSettings;
-    videoWidth: number;
-    videoHeight: number;
-    trackReadyState: MediaStreamTrackState;
-    trackMuted: boolean;
-  };
-
-  performance: {
-    rafDeltaMs: number;
-    renderMs: number;
-    vrmUpdateMs: number;
-    uiMs: number;
-    createImageBitmapMs?: number;
-    workerRoundTripMs?: number;
-    workerQueueDroppedFrames: number;
-    poseMs?: number;
-    faceMs?: number;
-    handMs?: number;
-    gestureMs?: number;
-    postprocessMs?: number;
-  };
-
-  perception: {
-    poseTimestampMs?: number;
-    faceTimestampMs?: number;
-    handTimestampMs?: number;
-    gestureTimestampMs?: number;
-    poseAgeMs?: number;
-    faceAgeMs?: number;
-    handAgeMs?: number;
-    gestureAgeMs?: number;
-    options: {
-      poseEnabled: boolean;
-      faceEnabled: boolean;
-      handEnabled: boolean;
-      gestureEnabled: boolean;
-      segmentationEnabled: boolean;
+    clock: {
+        mode:
+            | "requestVideoFrameCallback"
+            | "raf-currentTime"
+            | "timer-fallback";
+        frameSeq: number;
+        mediaTimeMs: number;
+        nowMs: number;
+        presentationTimeMs?: number;
+        expectedDisplayTimeMs?: number;
+        presentedFrames?: number;
+        droppedPresentedFrames: number;
+        renderFrameSeq: number;
     };
-  };
 
-  cameraQuality: CameraQualityScore;
-
-  degradation: {
-    level: number;
-    reasons: string[];
-    activePolicy: string;
-  };
-
-  output: {
-    reliabilitySummary: Record<string, number>;
-    canonicalStateSummary: unknown;
-    finalPoseConfidence: Record<string, number>;
-    clampedBones: string[];
-  };
-
-  environment: {
-    userAgent: string;
-    hardwareConcurrency?: number;
-    deviceMemory?: number;
-    visibilityState: DocumentVisibilityState;
-    rendererInfo?: {
-      webglRenderer?: string;
-      webglVendor?: string;
+    camera: {
+        requestedConstraints: MediaStreamConstraints;
+        settings: MediaTrackSettings;
+        videoWidth: number;
+        videoHeight: number;
+        trackReadyState: MediaStreamTrackState;
+        trackMuted: boolean;
     };
-  };
+
+    performance: {
+        rafDeltaMs: number;
+        renderMs: number;
+        vrmUpdateMs: number;
+        uiMs: number;
+        createImageBitmapMs?: number;
+        workerRoundTripMs?: number;
+        workerQueueDroppedFrames: number;
+        poseMs?: number;
+        faceMs?: number;
+        handMs?: number;
+        gestureMs?: number;
+        postprocessMs?: number;
+    };
+
+    perception: {
+        poseTimestampMs?: number;
+        faceTimestampMs?: number;
+        handTimestampMs?: number;
+        gestureTimestampMs?: number;
+        poseAgeMs?: number;
+        faceAgeMs?: number;
+        handAgeMs?: number;
+        gestureAgeMs?: number;
+        options: {
+            poseEnabled: boolean;
+            faceEnabled: boolean;
+            handEnabled: boolean;
+            gestureEnabled: boolean;
+            segmentationEnabled: boolean;
+        };
+    };
+
+    cameraQuality: CameraQualityScore;
+
+    degradation: {
+        level: number;
+        reasons: string[];
+        activePolicy: string;
+    };
+
+    output: {
+        reliabilitySummary: Record<string, number>;
+        canonicalStateSummary: unknown;
+        finalPoseConfidence: Record<string, number>;
+        clampedBones: string[];
+    };
+
+    environment: {
+        userAgent: string;
+        hardwareConcurrency?: number;
+        deviceMemory?: number;
+        visibilityState: DocumentVisibilityState;
+        rendererInfo?: {
+            webglRenderer?: string;
+            webglVendor?: string;
+        };
+    };
 };
 ```
 
@@ -555,9 +561,12 @@ type MotionRealtimeDebugFrame = {
 
 ```ts
 interface FrameClock {
-  readonly mode: FrameClockMode;
-  start(video: HTMLVideoElement, onTick: (tick: VideoFrameTick) => void): void;
-  stop(): void;
+    readonly mode: FrameClockMode;
+    start(
+        video: HTMLVideoElement,
+        onTick: (tick: VideoFrameTick) => void,
+    ): void;
+    stop(): void;
 }
 ```
 
@@ -569,11 +578,11 @@ interface FrameClock {
 
 ```ts
 type DetectMessage = {
-  type: "detect";
-  requestId: number;
-  frame: ImageBitmap;
-  tick: VideoFrameTick;
-  options: PerceptionPassOptions;
+    type: "detect";
+    requestId: number;
+    frame: ImageBitmap;
+    tick: VideoFrameTick;
+    options: PerceptionPassOptions;
 };
 ```
 

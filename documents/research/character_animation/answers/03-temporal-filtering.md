@@ -68,13 +68,13 @@ MediaPipe Pose Landmarker は body pose landmarks と3D world landmarks を返�
 
 03番の依頼では、EMA、One Euro Filter、Kalman filter、quaternion log-space smoothing、hysteresis の使い分けが論点になっています。結論として、この分類は妥当です。ただし、「全 landmark に同じフィルタをかける」設計ではなく、**信頼度つき canonical control に対する部位別 state estimator** として実装するべきです。添付 report02 でも、時系列処理は raw landmark 座標への単純平滑化ではなく、複数段の状態推定として扱うべきとされています。
 
-| 手法                             | 主用途                                                                     | 採用判断                             |
-| ------------------------------ | ----------------------------------------------------------------------- | -------------------------------- |
-| EMA                            | camera quality、reliability score、online calibration、UI表示、低速な neutral 補正 | 採用。ただし手先・頭の主平滑化には使いすぎない          |
-| One Euro Filter                | wrist target、head rotation、canonical scalar、finger curl の低遅延 jitter 抑制  | 主採用                              |
-| Kalman filter                  | dropout 中の予測、再検出時の復帰、velocity damping                                   | 手・肘・頭に限定して採用                     |
-| quaternion log-space smoothing | 最終ボーン回転、head / chest / wrist roll の短い仕上げ smoothing                      | 採用。既存 slerp smoothing の上位互換として導入 |
-| hysteresis / debounce          | gesture label、open / close、forwardness / openness、状態遷移                  | 必須                               |
+| 手法                           | 主用途                                                                             | 採用判断                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------- | ----------------------------------------------- |
+| EMA                            | camera quality、reliability score、online calibration、UI表示、低速な neutral 補正 | 採用。ただし手先・頭の主平滑化には使いすぎない  |
+| One Euro Filter                | wrist target、head rotation、canonical scalar、finger curl の低遅延 jitter 抑制    | 主採用                                          |
+| Kalman filter                  | dropout 中の予測、再検出時の復帰、velocity damping                                 | 手・肘・頭に限定して採用                        |
+| quaternion log-space smoothing | 最終ボーン回転、head / chest / wrist roll の短い仕上げ smoothing                   | 採用。既存 slerp smoothing の上位互換として導入 |
+| hysteresis / debounce          | gesture label、open / close、forwardness / openness、状態遷移                      | 必須                                            |
 
 One Euro Filter は、低速時には cutoff を下げて jitter を抑え、高速時には cutoff を上げて lag を減らす速度適応型 low-pass filter です。原論文では、最小 cutoff と速度係数 beta の2つの主要パラメータで jitter と lag のトレードオフを調整する方法が示されています。
 
@@ -90,16 +90,16 @@ Kalman filter は、常時すべての値を滑らかにするためではなく
 
 前提として、`minCutoff` は Hz、`beta` は入力スケール依存です。wrist target は肩幅または体幹長で正規化した body-local 座標、角度系は radians で内部表現する想定です。
 
-| 部位                 |                               主フィルタ | One Euro `minCutoff` |    `beta` | 欠落予測                        |  復帰 blend |    追加遅延目標 | 備考                             |
-| ------------------ | ----------------------------------: | -------------------: | --------: | --------------------------- | --------: | --------: | ------------------------------ |
-| torso rotation     | One Euro + quaternion log smoothing |            0.45〜0.75 | 0.03〜0.12 | 基本 hold + neutral decay     | 500〜900ms | 100〜150ms | 胴体 jitter は最優先で抑える             |
-| chest / upperChest |             One Euro +分配後 smoothing |              0.7〜1.1 | 0.05〜0.18 | hold + slow decay           | 400〜700ms |  80〜130ms | shoulder / arm の補正と連動          |
-| head rotation      | One Euro + quaternion log smoothing |              1.2〜1.8 | 0.12〜0.35 | Kalman / hold               | 200〜400ms |   50〜95ms | Face matrix がある場合は主入力にする       |
-| wrist target       |                One Euro + Kalman CV |              1.8〜2.8 | 0.25〜0.70 | constant velocity + damping | 180〜320ms |   45〜85ms | 手先は反応性重視                       |
-| elbow pole         |        One Euro + outlier rejection |              0.7〜1.3 | 0.02〜0.15 | previous pole + fallback    | 250〜450ms |  80〜140ms | flip 防止を最優先                    |
-| wrist roll         |        強め One Euro + quaternion log |             0.45〜1.0 | 0.02〜0.12 | hold + neutral roll decay   | 250〜500ms |  90〜160ms | palm basis の信頼度が低い時は抑制         |
-| finger curl        |               One Euro + hysteresis |              3.0〜6.5 | 0.30〜1.20 | label / curl hold           | 100〜200ms |   25〜55ms | 3D指回転ではなく curl / splay を主表現にする |
-| gesture state      |               hysteresis / debounce |                  不使用 |       不使用 | label hold                  | 120〜300ms |  50〜150ms | 最短2〜3フレーム継続で確定                 |
+| 部位               |                          主フィルタ | One Euro `minCutoff` |     `beta` | 欠落予測                    | 復帰 blend | 追加遅延目標 | 備考                                         |
+| ------------------ | ----------------------------------: | -------------------: | ---------: | --------------------------- | ---------: | -----------: | -------------------------------------------- |
+| torso rotation     | One Euro + quaternion log smoothing |           0.45〜0.75 | 0.03〜0.12 | 基本 hold + neutral decay   | 500〜900ms |   100〜150ms | 胴体 jitter は最優先で抑える                 |
+| chest / upperChest |          One Euro +分配後 smoothing |             0.7〜1.1 | 0.05〜0.18 | hold + slow decay           | 400〜700ms |    80〜130ms | shoulder / arm の補正と連動                  |
+| head rotation      | One Euro + quaternion log smoothing |             1.2〜1.8 | 0.12〜0.35 | Kalman / hold               | 200〜400ms |     50〜95ms | Face matrix がある場合は主入力にする         |
+| wrist target       |                One Euro + Kalman CV |             1.8〜2.8 | 0.25〜0.70 | constant velocity + damping | 180〜320ms |     45〜85ms | 手先は反応性重視                             |
+| elbow pole         |        One Euro + outlier rejection |             0.7〜1.3 | 0.02〜0.15 | previous pole + fallback    | 250〜450ms |    80〜140ms | flip 防止を最優先                            |
+| wrist roll         |      強め One Euro + quaternion log |            0.45〜1.0 | 0.02〜0.12 | hold + neutral roll decay   | 250〜500ms |    90〜160ms | palm basis の信頼度が低い時は抑制            |
+| finger curl        |               One Euro + hysteresis |             3.0〜6.5 | 0.30〜1.20 | label / curl hold           | 100〜200ms |     25〜55ms | 3D指回転ではなく curl / splay を主表現にする |
+| gesture state      |               hysteresis / debounce |               不使用 |     不使用 | label hold                  | 120〜300ms |    50〜150ms | 最短2〜3フレーム継続で確定                   |
 
 指については、Hand Landmarker の21点を各指ボーンの3D回転へ直接変換するのではなく、`curl`、`spread`、`oppose` のような低次元表現へ落とす方が安定します。添付 report01 でも、指は「各関節の3D回転」ではなく `curl / splay` として扱う方針が示されています。
 
@@ -120,24 +120,24 @@ Tracked
 
 ### 4.1 推奨閾値
 
-| 状態         | 遷移条件の初期値                                                | 処理                                  |
-| ---------- | ------------------------------------------------------- | ----------------------------------- |
+| 状態       | 遷移条件の初期値                                                          | 処理                                    |
+| ---------- | ------------------------------------------------------------------------- | --------------------------------------- |
 | Tracked    | reliability が enter 閾値以上、innovation が正常、2フレーム以上安定       | 通常追従                                |
-| Suspect    | reliability が exit 閾値未満、または innovation spike が2フレーム程度継続 | 観測重みを下げ、filter を強める                 |
-| Predicted  | reliability が predict 閾値未満で 66〜100ms 継続、または観測欠落         | Kalman / previous velocity で短期予測    |
-| Lost       | dropout が部位別 lost 時間を超える                                | comfortable pose / neutral pose へ退避 |
-| Recovering | reliability が recover 閾値以上で2〜3フレーム継続                    | raw observation へ snap せず blend 復帰  |
+| Suspect    | reliability が exit 閾値未満、または innovation spike が2フレーム程度継続 | 観測重みを下げ、filter を強める         |
+| Predicted  | reliability が predict 閾値未満で 66〜100ms 継続、または観測欠落          | Kalman / previous velocity で短期予測   |
+| Lost       | dropout が部位別 lost 時間を超える                                        | comfortable pose / neutral pose へ退避  |
+| Recovering | reliability が recover 閾値以上で2〜3フレーム継続                         | raw observation へ snap せず blend 復帰 |
 
 部位別の初期閾値は次を推奨します。
 
-| 部位            |     Tracked enter | Tracked exit | Predict below |        Lost 時間 |
-| ------------- | ----------------: | -----------: | ------------: | -------------: |
-| torso         |              0.60 |         0.45 |          0.35 |     800〜1200ms |
-| head          |              0.65 |         0.50 |          0.40 |      500〜900ms |
-| wrist / arm   |              0.70 |         0.55 |          0.45 |      450〜700ms |
-| elbow pole    |              0.70 |         0.55 |          0.45 |      350〜600ms |
-| finger        |              0.70 |         0.55 |          0.45 |      250〜400ms |
-| gesture label | 0.65 + 2〜3 frames |         0.45 |            なし | 300〜700ms hold |
+| 部位          |      Tracked enter | Tracked exit | Predict below |       Lost 時間 |
+| ------------- | -----------------: | -----------: | ------------: | --------------: |
+| torso         |               0.60 |         0.45 |          0.35 |     800〜1200ms |
+| head          |               0.65 |         0.50 |          0.40 |      500〜900ms |
+| wrist / arm   |               0.70 |         0.55 |          0.45 |      450〜700ms |
+| elbow pole    |               0.70 |         0.55 |          0.45 |      350〜600ms |
+| finger        |               0.70 |         0.55 |          0.45 |      250〜400ms |
+| gesture label | 0.65 + 2〜3 frames |         0.45 |          なし | 300〜700ms hold |
 
 `enter` と `exit` を分けることで、state flapping を抑えます。特に forwardness / openness / gesture label は hysteresis を必ず入れるべきです。
 
@@ -150,15 +150,15 @@ innovation = observed - predicted;
 innovationNorm = length(innovation);
 
 if (innovationNorm > thresholdByPart[part]) {
-  reliability.temporalConsistency *= 0.1;
-  state = "Suspect";
+    reliability.temporalConsistency *= 0.1;
+    state = "Suspect";
 }
 ```
 
 角度系では、1フレームで大きく跳ぶ回転を reject / damp します。
 
-| 対象            |           warning | reject / heavy damp |
-| ------------- | ----------------: | ------------------: |
+| 対象          |            warning | reject / heavy damp |
+| ------------- | -----------------: | ------------------: |
 | head          |   12〜18 deg/frame |        30 deg/frame |
 | torso / chest |    5〜10 deg/frame |        18 deg/frame |
 | elbow pole    |   25〜40 deg/frame |        60 deg/frame |
@@ -173,14 +173,14 @@ if (innovationNorm > thresholdByPart[part]) {
 
 この区間では、欠落を「まだ失踪ではない」と扱います。
 
-| 部位           | 挙動                                                |
-| ------------ | ------------------------------------------------- |
-| wrist target | 前フレーム速度で短期予測し、速度を指数減衰                             |
-| elbow pole   | previous pole を優先し、fallback pole を少量混ぜる           |
-| wrist roll   | hold。新しい palm basis が不安定なら更新しない                   |
-| finger curl  | 最後の安定 curl / gesture label を保持                    |
+| 部位         | 挙動                                                           |
+| ------------ | -------------------------------------------------------------- |
+| wrist target | 前フレーム速度で短期予測し、速度を指数減衰                     |
+| elbow pole   | previous pole を優先し、fallback pole を少量混ぜる             |
+| wrist roll   | hold。新しい palm basis が不安定なら更新しない                 |
+| finger curl  | 最後の安定 curl / gesture label を保持                         |
 | head         | Face が欠落した場合は Pose nose / ears fallback、なければ hold |
-| torso        | hold。急に neutral へ戻さない                             |
+| torso        | hold。急に neutral へ戻さない                                  |
 
 速度減衰は次のような形で十分です。
 
@@ -194,27 +194,27 @@ velocity *= Math.exp(-dtMs / dampingTauMs);
 
 この区間では、予測の信頼性が下がるため、comfortable pose へ徐々に退避します。
 
-| 部位            | 挙動                                       |
-| ------------- | ---------------------------------------- |
+| 部位          | 挙動                                                           |
+| ------------- | -------------------------------------------------------------- |
 | wrist target  | IK weight を徐々に 0.2〜0.5 へ下げ、体の前の安全な位置へ寄せる |
-| elbow pole    | fallback pole の比率を上げる                    |
-| wrist roll    | neutral roll へ戻す                         |
-| finger curl   | neutral または軽い open hand へ戻す              |
-| gesture label | 300〜500ms 程度保持し、その後 unknown / neutral    |
-| head          | 顔が再検出されなければ chest forward に寄せる           |
-| torso         | 低速で neutral へ戻す。大きな補正はしない                |
+| elbow pole    | fallback pole の比率を上げる                                   |
+| wrist roll    | neutral roll へ戻す                                            |
+| finger curl   | neutral または軽い open hand へ戻す                            |
+| gesture label | 300〜500ms 程度保持し、その後 unknown / neutral                |
+| head          | 顔が再検出されなければ chest forward に寄せる                  |
+| torso         | 低速で neutral へ戻す。大きな補正はしない                      |
 
 ### 5.3 700ms以降
 
 この区間では `Lost` として扱います。
 
-| 部位           | 挙動                                       |
-| ------------ | ---------------------------------------- |
-| arms / wrist | IK weight を0または低値にし、comfortable pose     |
-| fingers      | neutral curl                             |
+| 部位         | 挙動                                          |
+| ------------ | --------------------------------------------- |
+| arms / wrist | IK weight を0または低値にし、comfortable pose |
+| fingers      | neutral curl                                  |
 | head         | Face / Pose fallback がなければ chest forward |
-| torso        | stable neutral                           |
-| gesture      | expired                                  |
+| torso        | stable neutral                                |
+| gesture      | expired                                       |
 
 復帰時は `Recovering` を必ず挟みます。観測値に直接 snap すると、03番で問題視されている再検出ジャンプが発生します。
 
@@ -223,8 +223,8 @@ velocity *= Math.exp(-dtMs / dampingTauMs);
 再検出時は、raw observation を採用せず、次の制約を通します。
 
 ```ts
-recoveryWeight = smoothstep(0, recoveryBlendMs, recoveryElapsedMs)
-               * clamp01(reliability);
+recoveryWeight =
+    smoothstep(0, recoveryBlendMs, recoveryElapsedMs) * clamp01(reliability);
 
 target = blend(predictedOrComfortable, observed, recoveryWeight);
 target = clampAngularDelta(previousApplied, target, maxDegPerFrame);
@@ -243,19 +243,19 @@ target = clampAngularDelta(previousApplied, target, maxDegPerFrame);
 ```ts
 // conceptual
 const delta = qPrev.inverse() * qObserved;
-const v = quatLog(delta);              // Vector3: axis * angle
+const v = quatLog(delta); // Vector3: axis * angle
 const vf = oneEuroOrLowPass.update(v); // filter in tangent space
 const qNext = qPrev * quatExp(vf);
 ```
 
 この方式にすると、以下が実装しやすくなります。
 
-| 効果                       | 内容                                      |
-| ------------------------ | --------------------------------------- |
-| angular velocity clamp   | 1フレームの角度差を明示的に制限できる                     |
-| reliability-aware update | reliability が低い時だけ観測差分を弱められる            |
+| 効果                     | 内容                                             |
+| ------------------------ | ------------------------------------------------ |
+| angular velocity clamp   | 1フレームの角度差を明示的に制限できる            |
+| reliability-aware update | reliability が低い時だけ観測差分を弱められる     |
 | Recovering blend         | predicted pose から observed pose へ自然に戻せる |
-| 部位別 tuning               | head、chest、wrist roll で異なる cutoff を使える  |
+| 部位別 tuning            | head、chest、wrist roll で異なる cutoff を使える |
 
 実装初期段階では、既存の slerp smoothing を残しつつ、head / chest / wrist roll だけ log-space smoothing へ置き換えるのが安全です。
 
@@ -282,14 +282,14 @@ perceived latency
 
 推奨 budget は次です。
 
-| 対象            |     目標総遅延 | フィルタ追加分の目安 | 方針                           |
-| ------------- | --------: | ---------: | ---------------------------- |
-| finger        |  60〜100ms |    25〜55ms | gesture hysteresis は短く       |
-| wrist target  |  70〜110ms |    45〜85ms | One Euro 高 beta + prediction |
-| head          |  70〜120ms |    50〜95ms | Face matrix 優先、fallback は穏やか |
-| torso / chest | 120〜200ms |   80〜150ms | 安定重視でよい                      |
-| elbow pole    | 100〜180ms |   80〜140ms | flip 防止優先                    |
-| wrist roll    | 120〜220ms |   90〜160ms | 強く抑える                        |
+| 対象          | 目標総遅延 | フィルタ追加分の目安 | 方針                                |
+| ------------- | ---------: | -------------------: | ----------------------------------- |
+| finger        |  60〜100ms |             25〜55ms | gesture hysteresis は短く           |
+| wrist target  |  70〜110ms |             45〜85ms | One Euro 高 beta + prediction       |
+| head          |  70〜120ms |             50〜95ms | Face matrix 優先、fallback は穏やか |
+| torso / chest | 120〜200ms |            80〜150ms | 安定重視でよい                      |
+| elbow pole    | 100〜180ms |            80〜140ms | flip 防止優先                       |
+| wrist roll    | 120〜220ms |            90〜160ms | 強く抑える                          |
 
 実装上は、pose inference fps を12のまま固定する場合、手先の反応性には限界があります。高反応モードでは pose / hand / face の cadence を分け、head / hand 系を20〜30fpsに近づけるか、少なくとも欠落中の短期予測で体感遅延を補う必要があります。
 
@@ -311,16 +311,16 @@ Face Landmarker は3D face landmarks、blendshape scores、facial transformation
 
 添付ロードマップでは、最初に記録・再生・metrics を作ることが重視されています。これは今回の時系列処理でも必須です。
 
-| 指標                      | 測定方法                                                             |                                 初期目標 |
-| ----------------------- | ---------------------------------------------------------------- | -----------------------------------: |
+| 指標                    | 測定方法                                                                      |                                初期目標 |
+| ----------------------- | ----------------------------------------------------------------------------- | --------------------------------------: |
 | neutral jitter          | 5〜10秒 neutral 姿勢で final bone rotation / canonical value の標準偏差を測る | torso < 0.5〜1.0deg、head < 1.0〜1.5deg |
-| wrist target RMS jitter | neutral 中の wrist target body-local 座標のRMS                        |               < 0.01〜0.02 body units |
-| recovery jump           | `Predicted/Lost -> Recovering` 後500msの最大 frame delta             |                major bone < 10〜15deg |
-| angular velocity spike  | 部位別の角速度閾値超過回数                                                    |                              調整前比で減少 |
-| added latency           | raw canonical scalar と filtered output の相互相関 / gesture onset 差   |                  hand/head < 100ms前後 |
-| dropout dwell time      | 部位別に Suspect / Predicted / Lost 滞在時間を集計                          |                              シーン別に比較 |
-| clamp occupancy         | IK reach clamp / pole rejection の発生率                             |             高すぎる場合は target scale 見直し |
-| state flapping          | 1秒あたりの状態遷移回数                                                     |                        hysteresisで抑制 |
+| wrist target RMS jitter | neutral 中の wrist target body-local 座標のRMS                                |                 < 0.01〜0.02 body units |
+| recovery jump           | `Predicted/Lost -> Recovering` 後500msの最大 frame delta                      |                  major bone < 10〜15deg |
+| angular velocity spike  | 部位別の角速度閾値超過回数                                                    |                          調整前比で減少 |
+| added latency           | raw canonical scalar と filtered output の相互相関 / gesture onset 差         |                   hand/head < 100ms前後 |
+| dropout dwell time      | 部位別に Suspect / Predicted / Lost 滞在時間を集計                            |                          シーン別に比較 |
+| clamp occupancy         | IK reach clamp / pole rejection の発生率                                      |      高すぎる場合は target scale 見直し |
+| state flapping          | 1秒あたりの状態遷移回数                                                       |                        hysteresisで抑制 |
 
 ---
 
@@ -328,17 +328,17 @@ Face Landmarker は3D face landmarks、blendshape scores、facial transformation
 
 現行 `motionDebug` の snapshot / capture / fixture 機能を拡張し、次の JSONL 形式ログを保存できるようにするのがよいです。
 
-| 分類              | 項目                                                                                                             |
+| 分類            | 項目                                                                                                           |
 | --------------- | -------------------------------------------------------------------------------------------------------------- |
 | frame clock     | `frameId`, `mediaTimeMs`, `presentationTimeMs`, `expectedDisplayTimeMs`, `presentedFrames`, `dtMs`, `rvfcLate` |
 | camera          | `width`, `height`, `trackSettings`, `actualFps`, `borderRisk`, `torsoInFrame`, `handsInFrame`                  |
-| inference       | task種別、start/end、duration、skipped reason、worker/main-thread                                                    |
-| raw observation | landmark x/y/z、presence、visibility、tracking confidence                                                         |
-| reliability     | border weight、bone length consistency、temporal innovation、side consistency、final weight                        |
-| canonical       | torso frame、head quaternion、wrist target、elbow pole、wrist roll、finger curl                                     |
-| temporal        | part state、filter params、raw value、filtered value、velocity、covariance、dropoutAge、recoveryProgress              |
-| retarget / IK   | IK target、IK weight、clamp reason、pole rejection、fallback reason、final bone quaternion                          |
-| metrics         | neutral jitter、recovery jump、added latency、angular velocity spike、state transition count                       |
+| inference       | task種別、start/end、duration、skipped reason、worker/main-thread                                              |
+| raw observation | landmark x/y/z、presence、visibility、tracking confidence                                                      |
+| reliability     | border weight、bone length consistency、temporal innovation、side consistency、final weight                    |
+| canonical       | torso frame、head quaternion、wrist target、elbow pole、wrist roll、finger curl                                |
+| temporal        | part state、filter params、raw value、filtered value、velocity、covariance、dropoutAge、recoveryProgress       |
+| retarget / IK   | IK target、IK weight、clamp reason、pole rejection、fallback reason、final bone quaternion                     |
+| metrics         | neutral jitter、recovery jump、added latency、angular velocity spike、state transition count                   |
 
 このログがあると、ライブカメラなしで同一入力を replay し、パラメータ差分を定量比較できます。
 
@@ -368,14 +368,14 @@ TrackerRuntime
 
 ```ts
 type PartReliability = {
-  model: number;
-  visibility: number;
-  presence: number;
-  border: number;
-  boneLength: number;
-  temporal: number;
-  side: number;
-  final: number;
+    model: number;
+    visibility: number;
+    presence: number;
+    border: number;
+    boneLength: number;
+    temporal: number;
+    side: number;
+    final: number;
 };
 ```
 
@@ -401,13 +401,13 @@ temporal/
 
 推奨初期値は次です。
 
-| 項目                   |       現行 |                        推奨 |
-| -------------------- | -------: | ------------------------: |
-| global `smoothingMs` |    155ms |                40〜80msへ縮小 |
-| torso smoothing      | global依存 |     Temporal側で100〜150ms相当 |
-| wrist smoothing      | global依存 | One Euro + Kalmanで45〜85ms |
-| returnToNeutralMs    |    520ms |             部位別 200〜900ms |
-| minConfidence        |     0.45 |     部位別 reliability 閾値へ移行 |
+| 項目                 |       現行 |                          推奨 |
+| -------------------- | ---------: | ----------------------------: |
+| global `smoothingMs` |      155ms |                40〜80msへ縮小 |
+| torso smoothing      | global依存 |    Temporal側で100〜150ms相当 |
+| wrist smoothing      | global依存 |   One Euro + Kalmanで45〜85ms |
+| returnToNeutralMs    |      520ms |             部位別 200〜900ms |
+| minConfidence        |       0.45 | 部位別 reliability 閾値へ移行 |
 
 ### Phase 5: motionDebug replay / metrics
 

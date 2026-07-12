@@ -49,7 +49,7 @@ After `aoi-1.0.7.vrm` was added, `motion-debug` camera startup was retried with 
 - Tracker state: `mode=worker`, `status=running`
 - `waitForPoseDetected(5000)`: FAIL, `Pose was not detected within 5000ms.`
 - Runtime fallback: `pose_lost`
-- Screenshot: `artifacts/motion-debug-camera-running-2026-06-18.png`
+- Screenshot: `work/private-artifacts/task-3116-sincro-pose-ik-observability-verification-and-design-sync/screenshots/motion-debug-camera-running-2026-06-18.png`
 
 At this point in the run, the previous camera timeout blocker was resolved. Pose-detection framing and the required pose-pattern / multi-VRM visual checks were still pending.
 
@@ -65,7 +65,7 @@ After the operator adjusted the camera framing, `motion-debug` pose detection wa
 - Anchor: `hips_fallback_to_shoulders`
 - Left arm: `arm_not_tracked` because left elbow / wrist targets were not usable.
 - Right arm: `ikActive=true`, `ikSolverMode=world_3d_ik`, `ikWeight=0.2481`, `fallbackReason=joint_limited`
-- Screenshot: `artifacts/motion-debug-pose-detected-2026-06-18.png`
+- Screenshot: `work/private-artifacts/task-3116-sincro-pose-ik-observability-verification-and-design-sync/screenshots/motion-debug-pose-detected-2026-06-18.png`
 - Summary: `artifacts/pose-detected-summary-2026-06-18.json`
 
 This satisfies the camera startup and basic pose-observability path. The full task still needs the required posture matrix and visual checks across both `default.vrm` and `aoi-1.0.7.vrm`.
@@ -81,7 +81,7 @@ After the operator adjusted the framing so arms and hands were visible, `motion-
 - Runtime: `poseRetargetRuntime.active=true`, `ikMode=world_3d_ik`
 - Left arm: `ikActive=true`, `ikWeight=0.9`, `ikSolverMode=world_3d_ik`, `fallbackReason=joint_limited`
 - Right arm: `ikActive=true`, `ikWeight=0.9`, `ikSolverMode=world_3d_ik`, `fallbackReason=joint_limited`
-- Screenshot: `artifacts/motion-debug-both-hands-detected-2026-06-18.png`
+- Screenshot: `work/private-artifacts/task-3116-sincro-pose-ik-observability-verification-and-design-sync/screenshots/motion-debug-both-hands-detected-2026-06-18.png`
 - Summary: `artifacts/both-hands-detected-summary-2026-06-18.json`
 
 This covers the “both arms visible” baseline and confirms both wrist targets can drive `world_3d_ik`. The full task still needs the remaining posture matrix, jitter / flip observation over time, and `aoi-1.0.7.vrm` visual confirmation.
@@ -90,16 +90,16 @@ This covers the “both arms visible” baseline and confirms both wrist targets
 
 The operator performed the required pose patterns in sequence while `motion-debug` captured runtime snapshots and screenshots.
 
-| Pattern                     | Result   | Runtime Observation                                                                                                                                                                                                          | Artifact                                                |
-| --------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Baseline both hands visible | PASS     | Both wrists `strong`; both arms `world_3d_ik`; `ikWeight=0.9`; `joint_limited`                                                                                                                                               | `artifacts/pattern-baseline-both-hands-2026-06-18.png`  |
-| Low wrist confidence        | PASS     | Left wrist `weak / low_confidence`; `usableForIk=true`; left `ikWeight=0.6597`                                                                                                                                               | `artifacts/pattern-low-wrist-confidence-2026-06-18.png` |
-| One hand raised             | PASS     | Raised hand clamped with `ik_target_clamped`; opposite arm `joint_limited`                                                                                                                                                   | `artifacts/pattern-one-hand-raised-2026-06-18.png`      |
-| Arms spread                 | PASS     | Both wrists `strong`; both arms `world_3d_ik`; `joint_limited`                                                                                                                                                               | `artifacts/pattern-arms-spread-2026-06-18.png`          |
-| Elbow bend                  | PASS     | Both wrists `strong`; `forearm_twist_limited` and `chest_no_go_zone` observed                                                                                                                                                | `artifacts/pattern-elbow-bend-2026-06-18.png`           |
-| One arm missing             | ACCEPTED | Full single-arm loss was not reproduced; MediaPipe retained inferred targets. Later external Chrome evidence captured wrist `lost / out_of_frame`, and the operator accepted this as MediaPipe off-frame inference behavior. | `artifacts/pattern-one-arm-weak-target-2026-06-18.png`  |
-| Both arms missing           | PASS     | Elbow / wrist targets became `lost / out_of_frame`; low-weight IK remained active from remaining world targets                                                                                                               | `artifacts/pattern-both-arms-missing-2026-06-18.png`    |
-| Close upper body            | PASS     | Shoulders remained `strong`; elbow / wrist targets `lost / out_of_frame`; runtime fell back to `feature_only`                                                                                                                | `artifacts/pattern-close-upper-body-2026-06-18.png`     |
+| Pattern                     | Result   | Runtime Observation                                                                                                                                                                                                          | Artifact                                              |
+| --------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Baseline both hands visible | PASS     | Both wrists `strong`; both arms `world_3d_ik`; `ikWeight=0.9`; `joint_limited`                                                                                                                                               | private `pattern-baseline-both-hands-2026-06-18.png`  |
+| Low wrist confidence        | PASS     | Left wrist `weak / low_confidence`; `usableForIk=true`; left `ikWeight=0.6597`                                                                                                                                               | private `pattern-low-wrist-confidence-2026-06-18.png` |
+| One hand raised             | PASS     | Raised hand clamped with `ik_target_clamped`; opposite arm `joint_limited`                                                                                                                                                   | private `pattern-one-hand-raised-2026-06-18.png`      |
+| Arms spread                 | PASS     | Both wrists `strong`; both arms `world_3d_ik`; `joint_limited`                                                                                                                                                               | private `pattern-arms-spread-2026-06-18.png`          |
+| Elbow bend                  | PASS     | Both wrists `strong`; `forearm_twist_limited` and `chest_no_go_zone` observed                                                                                                                                                | private `pattern-elbow-bend-2026-06-18.png`           |
+| One arm missing             | ACCEPTED | Full single-arm loss was not reproduced; MediaPipe retained inferred targets. Later external Chrome evidence captured wrist `lost / out_of_frame`, and the operator accepted this as MediaPipe off-frame inference behavior. | private `pattern-one-arm-weak-target-2026-06-18.png`  |
+| Both arms missing           | PASS     | Elbow / wrist targets became `lost / out_of_frame`; low-weight IK remained active from remaining world targets                                                                                                               | private `pattern-both-arms-missing-2026-06-18.png`    |
+| Close upper body            | PASS     | Shoulders remained `strong`; elbow / wrist targets `lost / out_of_frame`; runtime fell back to `feature_only`                                                                                                                | private `pattern-close-upper-body-2026-06-18.png`     |
 
 Summary: `artifacts/pose-pattern-matrix-summary-2026-06-18.json`
 
@@ -119,7 +119,7 @@ The pose matrix covers the required pattern set. The single-arm missing case is 
     - 24 / 24 samples left / right IK active
     - left / right wrist quality stayed `strong`
     - render FPS stayed around 60
-- Screenshot: `artifacts/motion-debug-aoi-detected-2026-06-18.png`
+- Screenshot: private `motion-debug-aoi-detected-2026-06-18.png`
 - Summary: `artifacts/aoi-vrm-motion-debug-summary-2026-06-18.json`
 
 This resolves the multi-VRM blocker for `default.vrm` + `aoi-1.0.7.vrm`. The later external Chrome retry and operator decision resolved the single-arm missing caveat.
@@ -136,7 +136,7 @@ The same `aoi-1.0.7.vrm` check was repeated through the public route alias `/mot
 - Left / right wrist quality: `strong`
 - Runtime: `active=true`, `ikMode=world_3d_ik`
 - Left / right arm IK: active
-- Screenshot: `artifacts/motion-debug-aoi-public-route-detected-2026-06-18.png`
+- Screenshot: private `motion-debug-aoi-public-route-detected-2026-06-18.png`
 - Summary: `artifacts/aoi-vrm-public-route-summary-2026-06-18.json`
 
 ## External Chrome Single Arm Decision

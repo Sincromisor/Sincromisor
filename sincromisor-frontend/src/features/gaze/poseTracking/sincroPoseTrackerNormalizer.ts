@@ -1,4 +1,4 @@
-import type { PoseLandmarkerResult } from "@mediapipe/tasks-vision";
+import type { Landmark, NormalizedLandmark } from "@mediapipe/tasks-vision";
 import {
     averagePoseLandmarkVisibility,
     clampSigned,
@@ -17,8 +17,20 @@ import {
     createSincroPoseLowerBodyTargets,
 } from "./sincroPoseTrackerTargets";
 
+/**
+ * Pose snapshot normalizer が読む MediaPipe Pose result の構造境界。
+ *
+ * replay では `PoseLandmarkerResult` class instance ではなく、recording serializer が保存した plain object
+ * をこの構造型として受ける。normalizer は segmentation mask や `close()` lifecycle を読まないため、ここへ
+ * 入力境界を狭めて raw replay と live 推論の正規化経路を共有する。
+ */
+export type SincroPoseLandmarkerResultInput = {
+    landmarks: NormalizedLandmark[][];
+    worldLandmarks: Landmark[][];
+};
+
 type NormalizeSincroPoseResultOptions = {
-    result: PoseLandmarkerResult;
+    result: SincroPoseLandmarkerResultInput;
     inferenceTimeMs: number;
     inferenceFps: number;
     nowMs: number;
@@ -92,8 +104,8 @@ export function normalizeSincroPoseLandmarkerResult({
 }
 
 function createTrackedPoseResult(options: {
-    landmarks: PoseLandmarkerResult["landmarks"][number];
-    worldLandmarks: PoseLandmarkerResult["worldLandmarks"][number] | undefined;
+    landmarks: SincroPoseLandmarkerResultInput["landmarks"][number];
+    worldLandmarks: SincroPoseLandmarkerResultInput["worldLandmarks"][number] | undefined;
     shoulderConfidence: number;
     inferenceTimeMs: number;
     inferenceFps: number;
@@ -141,10 +153,10 @@ function createTrackedPoseResult(options: {
 }
 
 type DetectedPoseResultOptions = {
-    landmarks: PoseLandmarkerResult["landmarks"][number];
-    worldLandmarks: PoseLandmarkerResult["worldLandmarks"][number] | undefined;
-    leftShoulder: PoseLandmarkerResult["landmarks"][number][number];
-    rightShoulder: PoseLandmarkerResult["landmarks"][number][number];
+    landmarks: SincroPoseLandmarkerResultInput["landmarks"][number];
+    worldLandmarks: SincroPoseLandmarkerResultInput["worldLandmarks"][number] | undefined;
+    leftShoulder: SincroPoseLandmarkerResultInput["landmarks"][number][number];
+    rightShoulder: SincroPoseLandmarkerResultInput["landmarks"][number][number];
     shoulderConfidence: number;
     leftArm: SincroPoseMotionSnapshot["leftArm"];
     rightArm: SincroPoseMotionSnapshot["rightArm"];
@@ -213,11 +225,11 @@ function createUpperBodySnapshot({
 }
 
 type PoseLandmarkOriginsOptions = {
-    leftShoulder: PoseLandmarkerResult["landmarks"][number][number];
-    rightShoulder: PoseLandmarkerResult["landmarks"][number][number];
-    leftHip: PoseLandmarkerResult["landmarks"][number][number];
-    rightHip: PoseLandmarkerResult["landmarks"][number][number];
-    worldLandmarks: PoseLandmarkerResult["worldLandmarks"][number] | undefined;
+    leftShoulder: SincroPoseLandmarkerResultInput["landmarks"][number][number];
+    rightShoulder: SincroPoseLandmarkerResultInput["landmarks"][number][number];
+    leftHip: SincroPoseLandmarkerResultInput["landmarks"][number][number];
+    rightHip: SincroPoseLandmarkerResultInput["landmarks"][number][number];
+    worldLandmarks: SincroPoseLandmarkerResultInput["worldLandmarks"][number] | undefined;
 };
 
 function createPoseLandmarkOrigins({

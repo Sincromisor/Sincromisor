@@ -9,6 +9,8 @@ const OPTIONAL_MOTION_BONE_NAMES = {
     upperChest: VRMHumanBoneName.UpperChest,
     leftShoulder: VRMHumanBoneName.LeftShoulder,
     rightShoulder: VRMHumanBoneName.RightShoulder,
+    leftUpperArm: VRMHumanBoneName.LeftUpperArm,
+    rightUpperArm: VRMHumanBoneName.RightUpperArm,
 } as const;
 
 export type OptionalMotionBoneName = keyof typeof OPTIONAL_MOTION_BONE_NAMES;
@@ -20,6 +22,8 @@ const OPTIONAL_MOTION_BONE_NAME_LIST: OptionalMotionBoneName[] = [
     "upperChest",
     "leftShoulder",
     "rightShoulder",
+    "leftUpperArm",
+    "rightUpperArm",
 ];
 
 export type CharacterMotionBone = {

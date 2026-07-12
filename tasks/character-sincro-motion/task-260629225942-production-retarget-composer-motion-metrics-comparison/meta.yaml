@@ -1,0 +1,15 @@
+id: task-260629225942-production-retarget-composer-motion-metrics-comparison
+title: Compare production retarget and composer motion metrics
+category: character-sincro-motion
+status: done
+depends_on:
+  - task-260629225936-production-sincro-vrm-pose-composer-dry-run
+  - task-260629225919-production-sincro-motion-replay-baselines
+superseded_by: null
+review: APPROVED
+reviewed_sha: 95f46b48bfb387be7205b8a68db3139c2a4123a0
+verdict: PASS
+attempts: 2
+created_at: 2026-06-29
+closed_at: 2026-07-04
+legacy_ids: []

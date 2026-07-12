@@ -53,14 +53,14 @@ Gesture Recognizer はリアルタイムの手 gesture と hand landmarks を返
 
 `CanonicalUpperBodyState` の最大の役割は、MediaPipe の座標値と VRM の bone local rotation を混同しないことです。添付 09 でも、image / MediaPipe world / camera / body-local / avatar-local / VRM normalized local pose の責務分離が主要論点として挙げられています。
 
-| 空間                       | 原点                        | 軸                        | 単位             | 主な用途                         | 注意                     |
-| ------------------------ | ------------------------- | ------------------------ | -------------- | ---------------------------- | ---------------------- |
-| `ImageSpace2D`           | 左上                        | x 右、y 下                  | 0〜1 正規化        | 画面内位置、border risk、2D gesture | preview mirror と混同しない  |
-| `MediaPipeWorldSpace`    | Pose は hips midpoint      | MediaPipe 定義             | Pose は m       | 相対方向、骨長整合性、z 補助              | 絶対 3D として過信しない         |
-| `CameraObservationSpace` | カメラ入力基準                   | 実装内部で統一                  | 任意 / 正規化前      | Pose / Hand / Face 統合        | 外部には漏らさない              |
-| `BodyLocalSpace`         | torso origin              | `R`,`U`,`F`              | body scale 正規化 | CanonicalUpperBodyState      | 後段 contract の中心        |
-| `AvatarControlSpace`     | avatar torso / shoulder   | avatar profile 基準        | avatar 比率      | IK target、style 補正           | VRM bone rotation ではない |
-| `VRMNormalizedLocalPose` | 各 humanoid bone rest pose | three-vrm normalized rig | quaternion     | `setNormalizedPose()`        | Canonical の後段          |
+| 空間                     | 原点                       | 軸                       | 単位              | 主な用途                            | 注意                        |
+| ------------------------ | -------------------------- | ------------------------ | ----------------- | ----------------------------------- | --------------------------- |
+| `ImageSpace2D`           | 左上                       | x 右、y 下               | 0〜1 正規化       | 画面内位置、border risk、2D gesture | preview mirror と混同しない |
+| `MediaPipeWorldSpace`    | Pose は hips midpoint      | MediaPipe 定義           | Pose は m         | 相対方向、骨長整合性、z 補助        | 絶対 3D として過信しない    |
+| `CameraObservationSpace` | カメラ入力基準             | 実装内部で統一           | 任意 / 正規化前   | Pose / Hand / Face 統合             | 外部には漏らさない          |
+| `BodyLocalSpace`         | torso origin               | `R`,`U`,`F`              | body scale 正規化 | CanonicalUpperBodyState             | 後段 contract の中心        |
+| `AvatarControlSpace`     | avatar torso / shoulder    | avatar profile 基準      | avatar 比率       | IK target、style 補正               | VRM bone rotation ではない  |
+| `VRMNormalizedLocalPose` | 各 humanoid bone rest pose | three-vrm normalized rig | quaternion        | `setNormalizedPose()`               | Canonical の後段            |
 
 three-vrm の `VRMHumanoid.getNormalizedPose()` / `setNormalizedPose()` は、normalized human bones の現在姿勢を `VRMPose` として扱い、各 transform は rest pose / T-pose からの local transform です。`normalizedRestPose` は `setNormalizedPose()` / `getNormalizedPose()` と互換ではないと明記されているため、Canonical state から最終 `VRMPose` を作る段階でも、毎フレーム「所有 bone の local delta」を明示的に構築する必要があります。([Pixiv][10])
 
@@ -108,37 +108,37 @@ F0 = normalize(cross(R0, U0))                     // body front candidate
 
 ```ts
 type TorsoFrameSource =
-  | "poseShoulderHip"
-  | "poseShoulderFace"
-  | "facePrevious"
-  | "previousDecay"
-  | "calibratedNeutral";
+    | "poseShoulderHip"
+    | "poseShoulderFace"
+    | "facePrevious"
+    | "previousDecay"
+    | "calibratedNeutral";
 
 function estimateTorsoFrame(input: {
-  pose: PoseObservation;
-  face?: FaceObservation;
-  previous?: CanonicalTorsoFrame;
-  calibration: CalibrationState;
-  reliability: ReliabilityMap;
+    pose: PoseObservation;
+    face?: FaceObservation;
+    previous?: CanonicalTorsoFrame;
+    calibration: CalibrationState;
+    reliability: ReliabilityMap;
 }): CanonicalTorsoFrame {
-  // 実装メモ:
-  // 1. shoulders + hips が高信頼なら U/R を計算
-  // 2. F candidate は cross(R, U)
-  // 3. Face forward が高信頼なら F の符号と yaw を補助
-  // 4. previous と dot < 0 なら反転候補を拒否または符号反転
-  // 5. low confidence 時は previous -> neutral へ低速減衰
+    // 実装メモ:
+    // 1. shoulders + hips が高信頼なら U/R を計算
+    // 2. F candidate は cross(R, U)
+    // 3. Face forward が高信頼なら F の符号と yaw を補助
+    // 4. previous と dot < 0 なら反転候補を拒否または符号反転
+    // 5. low confidence 時は previous -> neutral へ低速減衰
 }
 ```
 
 推奨する fallback 順は次です。
 
-| 優先 | 条件                            | 推定                                          |
-| -: | ----------------------------- | ------------------------------------------- |
-|  1 | shoulder / hip / face が高信頼    | `U`,`R`,`F` を Pose + Face + previous で推定    |
-|  2 | hip が弱いが shoulder / face が高信頼 | `R` は shoulder、`U/F` は previous + Face      |
-|  3 | shoulder が片側欠落                | 前フレーム `R` を保持し、Face yaw と torso center だけ更新 |
-|  4 | Face のみ                       | head yaw を torso yaw へ弱く混ぜる                 |
-|  5 | 全体低信頼                         | previous から calibrated neutral へ減衰          |
+| 優先 | 条件                                  | 推定                                                       |
+| ---: | ------------------------------------- | ---------------------------------------------------------- |
+|    1 | shoulder / hip / face が高信頼        | `U`,`R`,`F` を Pose + Face + previous で推定               |
+|    2 | hip が弱いが shoulder / face が高信頼 | `R` は shoulder、`U/F` は previous + Face                  |
+|    3 | shoulder が片側欠落                   | 前フレーム `R` を保持し、Face yaw と torso center だけ更新 |
+|    4 | Face のみ                             | head yaw を torso yaw へ弱く混ぜる                         |
+|    5 | 全体低信頼                            | previous から calibrated neutral へ減衰                    |
 
 `bodyFront` は毎フレーム単純な `cross(R,U)` で決めないでください。次の制約を入れます。
 
@@ -192,15 +192,15 @@ L_lower = calibrated lower arm length
 L_arm   = L_upper + L_lower
 ```
 
-| 値                 | 型 / 値域        | 定義                                        | 用途                          |                 |
+| 値                | 型 / 値域     | 定義                                      | 用途                        |                 |
 | ----------------- | ------------- | ----------------------------------------- | --------------------------- | --------------- |
 | `side`            | `"left"       | "right"`                                  | anatomical side             | IK / handedness |
 | `reach`           | `0..1.15`     | `length(sw) / L_arm`                      | reach clamp / overextension |                 |
 | `elevationRad`    | `[-π/2, π/2]` | `asin(dot(normalize(mix(sw, upper)), U))` | arm raise                   |                 |
-| `openness`        | `[-1, 1]`     | `dot(normalize(sw), sideOut)`             | 横開き / 交差                    |                 |
-| `forwardness`     | `0..1`        | 複合スコア                                     | 前出し                         |                 |
-| `elbowFlexionRad` | `[0, π]`      | `π - angle(s-e, w-e)`                     | pole / extension 判定         |                 |
-| `armConfidence`   | `0..1`        | joint reliability 合成                      | IK weight / filter          |                 |
+| `openness`        | `[-1, 1]`     | `dot(normalize(sw), sideOut)`             | 横開き / 交差               |                 |
+| `forwardness`     | `0..1`        | 複合スコア                                | 前出し                      |                 |
+| `elbowFlexionRad` | `[0, π]`      | `π - angle(s-e, w-e)`                     | pole / extension 判定       |                 |
+| `armConfidence`   | `0..1`        | joint reliability 合成                    | IK weight / filter          |                 |
 | `classification`  | enum          | side / front / diagonal / unknown         | MotionIntent                |                 |
 
 `sideOut` は、`R` が被写体右方向の場合、右腕は `+R`、左腕は `-R` です。
@@ -266,14 +266,14 @@ boneLengthWeight = exp(-abs(currentLength - calibratedLength) / sigma)
 
 添付 09 の要求どおり、部位ごとに主入力と fallback を固定します。
 
-| 部位                | 主入力                        | 補助入力                              | fallback            | Canonical に保存するもの                            |
-| ----------------- | -------------------------- | --------------------------------- | ------------------- | -------------------------------------------- |
-| torso             | Pose shoulder / hip        | Face yaw、previous                 | calibrated neutral  | `frame`, `yaw/pitch/roll`, `confidence`      |
-| head              | Face transformation matrix | Pose nose / eyes / ears           | previous + torso    | `headLocal`, `yaw/pitch/roll`, `source`      |
-| wrist position    | Pose wrist                 | Pose elbow、Hand wrist crop center | previous predicted  | `wristBody`, `reach`, `velocityHint`         |
-| wrist orientation | Hand palm basis            | forearm direction                 | previous roll decay | `palmNormal`, `palmForward`, `rollInfluence` |
-| fingers           | Hand 21 landmarks          | Gesture Recognizer                | neutral / previous  | `curl[5]`, `splay`, `thumbOppose`            |
-| gesture           | Gesture Recognizer / 自前分類  | finger state                      | hysteresis hold     | `semanticHint`                               |
+| 部位              | 主入力                        | 補助入力                           | fallback            | Canonical に保存するもの                     |
+| ----------------- | ----------------------------- | ---------------------------------- | ------------------- | -------------------------------------------- |
+| torso             | Pose shoulder / hip           | Face yaw、previous                 | calibrated neutral  | `frame`, `yaw/pitch/roll`, `confidence`      |
+| head              | Face transformation matrix    | Pose nose / eyes / ears            | previous + torso    | `headLocal`, `yaw/pitch/roll`, `source`      |
+| wrist position    | Pose wrist                    | Pose elbow、Hand wrist crop center | previous predicted  | `wristBody`, `reach`, `velocityHint`         |
+| wrist orientation | Hand palm basis               | forearm direction                  | previous roll decay | `palmNormal`, `palmForward`, `rollInfluence` |
+| fingers           | Hand 21 landmarks             | Gesture Recognizer                 | neutral / previous  | `curl[5]`, `splay`, `thumbOppose`            |
+| gesture           | Gesture Recognizer / 自前分類 | finger state                       | hysteresis hold     | `semanticHint`                               |
 
 腕の位置は Pose wrist を主入力にし、Hand landmarks は手首向き・手指・hand presence の補助入力に限定します。これは、Hand Landmarker の crop 内推定が全身座標と必ずしも整合しないためです。一方で Hand の 21 landmarks は palm basis と finger curl / splay / oppose の推定には有効です。
 
@@ -289,204 +289,204 @@ boneLengthWeight = exp(-abs(currentLength - calibratedLength) / sigma)
 export type CanonicalSide = "left" | "right";
 
 export type CanonicalSource =
-  | "pose"
-  | "hand"
-  | "face"
-  | "gesture"
-  | "previous"
-  | "predicted"
-  | "neutral"
-  | "mixed";
+    | "pose"
+    | "hand"
+    | "face"
+    | "gesture"
+    | "previous"
+    | "predicted"
+    | "neutral"
+    | "mixed";
 
 export type Vec3Like = readonly [number, number, number];
 export type QuatLike = readonly [number, number, number, number];
 
 export type CanonicalFrameInfo = {
-  frameId: number;
-  timestampMs: number;
-  mediaTimeMs?: number;
-  dtMs: number;
-  source: "live" | "replay";
+    frameId: number;
+    timestampMs: number;
+    mediaTimeMs?: number;
+    dtMs: number;
+    source: "live" | "replay";
 };
 
 export type CanonicalCoordinateMeta = {
-  schemaVersion: 1;
-  handedness: "anatomical";
-  units: "body-normalized";
-  previewMirrored: boolean;
+    schemaVersion: 1;
+    handedness: "anatomical";
+    units: "body-normalized";
+    previewMirrored: boolean;
 };
 
 export type CanonicalTorsoFrame = {
-  origin: Vec3Like;        // body-local origin in observation space
-  right: Vec3Like;         // R: subject right
-  up: Vec3Like;            // U: torso up
-  front: Vec3Like;         // F: torso front
-  rotation: QuatLike;      // camera/observation -> body frame
-  confidence: number;      // 0..1
-  source: CanonicalSource;
-  scale: {
-    shoulderWidth: number;
-    hipWidth?: number;
-    torsoHeight: number;
-  };
-  angles: {
-    yawRad: number;
-    pitchRad: number;
-    rollRad: number;
-  };
+    origin: Vec3Like; // body-local origin in observation space
+    right: Vec3Like; // R: subject right
+    up: Vec3Like; // U: torso up
+    front: Vec3Like; // F: torso front
+    rotation: QuatLike; // camera/observation -> body frame
+    confidence: number; // 0..1
+    source: CanonicalSource;
+    scale: {
+        shoulderWidth: number;
+        hipWidth?: number;
+        torsoHeight: number;
+    };
+    angles: {
+        yawRad: number;
+        pitchRad: number;
+        rollRad: number;
+    };
 };
 
 export type CanonicalHeadState = {
-  rotationLocal: QuatLike;  // torso frame relative
-  yawRad: number;
-  pitchRad: number;
-  rollRad: number;
-  confidence: number;
-  source: CanonicalSource;
+    rotationLocal: QuatLike; // torso frame relative
+    yawRad: number;
+    pitchRad: number;
+    rollRad: number;
+    confidence: number;
+    source: CanonicalSource;
 };
 
 export type CanonicalArmState = {
-  side: CanonicalSide;
+    side: CanonicalSide;
 
-  shoulderBody: Vec3Like;
-  elbowBody?: Vec3Like;
-  wristBody: Vec3Like;
+    shoulderBody: Vec3Like;
+    elbowBody?: Vec3Like;
+    wristBody: Vec3Like;
 
-  reach: number;           // 0..1.15
-  elevationRad: number;    // -pi/2..pi/2
-  openness: number;        // -1..1
-  forwardness: number;     // 0..1
-  elbowFlexionRad?: number;// 0..pi
+    reach: number; // 0..1.15
+    elevationRad: number; // -pi/2..pi/2
+    openness: number; // -1..1
+    forwardness: number; // 0..1
+    elbowFlexionRad?: number; // 0..pi
 
-  poleHintBody?: Vec3Like;
-  velocityBody?: Vec3Like;
+    poleHintBody?: Vec3Like;
+    velocityBody?: Vec3Like;
 
-  classification:
-    | "rest"
-    | "side"
-    | "front"
-    | "diagonalFront"
-    | "crossBody"
-    | "unknown";
+    classification:
+        | "rest"
+        | "side"
+        | "front"
+        | "diagonalFront"
+        | "crossBody"
+        | "unknown";
 
-  confidence: number;
-  source: CanonicalSource;
+    confidence: number;
+    source: CanonicalSource;
 
-  debug: {
-    sideScore: number;
-    forwardScore: number;
-    borderRisk: number;
-    boneLengthWeight: number;
-    extensionPenalty: number;
-    temporalInnovation?: number;
-  };
+    debug: {
+        sideScore: number;
+        forwardScore: number;
+        borderRisk: number;
+        boneLengthWeight: number;
+        extensionPenalty: number;
+        temporalInnovation?: number;
+    };
 };
 
 export type CanonicalHandState = {
-  side: CanonicalSide;
+    side: CanonicalSide;
 
-  wristOrientation?: {
-    palmRightBody: Vec3Like;
-    palmUpBody: Vec3Like;
-    palmNormalBody: Vec3Like;
-    rollRad?: number;
-    rollInfluence: number; // 0..1, 初期値は 0.25..0.60 程度
+    wristOrientation?: {
+        palmRightBody: Vec3Like;
+        palmUpBody: Vec3Like;
+        palmNormalBody: Vec3Like;
+        rollRad?: number;
+        rollInfluence: number; // 0..1, 初期値は 0.25..0.60 程度
+        confidence: number;
+    };
+
+    fingers: {
+        thumb: FingerCanonicalState;
+        index: FingerCanonicalState;
+        middle: FingerCanonicalState;
+        ring: FingerCanonicalState;
+        little: FingerCanonicalState;
+    };
+
+    gestureHint?: {
+        label:
+            | "Open_Palm"
+            | "Closed_Fist"
+            | "Pointing_Up"
+            | "Thumb_Up"
+            | "Victory"
+            | "Unknown";
+        confidence: number;
+        stableMs: number;
+    };
+
     confidence: number;
-  };
-
-  fingers: {
-    thumb: FingerCanonicalState;
-    index: FingerCanonicalState;
-    middle: FingerCanonicalState;
-    ring: FingerCanonicalState;
-    little: FingerCanonicalState;
-  };
-
-  gestureHint?: {
-    label:
-      | "Open_Palm"
-      | "Closed_Fist"
-      | "Pointing_Up"
-      | "Thumb_Up"
-      | "Victory"
-      | "Unknown";
-    confidence: number;
-    stableMs: number;
-  };
-
-  confidence: number;
-  source: CanonicalSource;
+    source: CanonicalSource;
 };
 
 export type FingerCanonicalState = {
-  curl: number;       // 0 open, 1 closed
-  splay?: number;     // -1..1, 必要最小限
-  oppose?: number;    // thumb 用
-  confidence: number;
+    curl: number; // 0 open, 1 closed
+    splay?: number; // -1..1, 必要最小限
+    oppose?: number; // thumb 用
+    confidence: number;
 };
 
 export type CanonicalReliability = {
-  torso: number;
-  head: number;
-  leftArm: number;
-  rightArm: number;
-  leftHand: number;
-  rightHand: number;
-  joints: Partial<Record<string, number>>;
+    torso: number;
+    head: number;
+    leftArm: number;
+    rightArm: number;
+    leftHand: number;
+    rightHand: number;
+    joints: Partial<Record<string, number>>;
 };
 
 export type CalibrationSnapshot = {
-  calibrationId: string;
-  ageMs: number;
-  neutralYawRad: number;
-  shoulderWidth: number;
-  torsoHeight: number;
-  armLength: {
-    left: { upper: number; lower: number };
-    right: { upper: number; lower: number };
-  };
-  handScale?: {
-    left: number;
-    right: number;
-  };
+    calibrationId: string;
+    ageMs: number;
+    neutralYawRad: number;
+    shoulderWidth: number;
+    torsoHeight: number;
+    armLength: {
+        left: { upper: number; lower: number };
+        right: { upper: number; lower: number };
+    };
+    handScale?: {
+        left: number;
+        right: number;
+    };
 };
 
 export type CanonicalUpperBodyState = {
-  frame: CanonicalFrameInfo;
-  meta: CanonicalCoordinateMeta;
+    frame: CanonicalFrameInfo;
+    meta: CanonicalCoordinateMeta;
 
-  torso: CanonicalTorsoFrame;
-  head: CanonicalHeadState;
+    torso: CanonicalTorsoFrame;
+    head: CanonicalHeadState;
 
-  arms: {
-    left: CanonicalArmState;
-    right: CanonicalArmState;
-  };
+    arms: {
+        left: CanonicalArmState;
+        right: CanonicalArmState;
+    };
 
-  hands: {
-    left?: CanonicalHandState;
-    right?: CanonicalHandState;
-  };
+    hands: {
+        left?: CanonicalHandState;
+        right?: CanonicalHandState;
+    };
 
-  reliability: CanonicalReliability;
-  calibration: CalibrationSnapshot;
+    reliability: CanonicalReliability;
+    calibration: CalibrationSnapshot;
 
-  debug: {
-    warnings: CanonicalWarning[];
-    sourceSummary: Record<CanonicalSource, number>;
-    outOfRangeFields: string[];
-  };
+    debug: {
+        warnings: CanonicalWarning[];
+        sourceSummary: Record<CanonicalSource, number>;
+        outOfRangeFields: string[];
+    };
 };
 
 export type CanonicalWarning =
-  | "LOW_TORSO_CONFIDENCE"
-  | "BODY_FRONT_FLIP_REJECTED"
-  | "LEFT_RIGHT_SWAP_SUSPECTED"
-  | "ARM_EXTENDED_POLE_UNRELIABLE"
-  | "WRIST_NEAR_BORDER"
-  | "HAND_DROPOUT"
-  | "FACE_DROPOUT"
-  | "RECOVERY_BLEND_ACTIVE";
+    | "LOW_TORSO_CONFIDENCE"
+    | "BODY_FRONT_FLIP_REJECTED"
+    | "LEFT_RIGHT_SWAP_SUSPECTED"
+    | "ARM_EXTENDED_POLE_UNRELIABLE"
+    | "WRIST_NEAR_BORDER"
+    | "HAND_DROPOUT"
+    | "FACE_DROPOUT"
+    | "RECOVERY_BLEND_ACTIVE";
 ```
 
 この型のポイントは、`THREE.Vector3` や `THREE.Quaternion` を直接保存形式にしないことです。replay log や debug snapshot では JSON 化しやすい tuple を保存し、実行時 adapter で `THREE` 型へ戻します。
@@ -503,14 +503,14 @@ export type CanonicalWarning =
 
 ```ts
 type CanonicalDebugFrameClock = {
-  frameId: number;
-  mediaTimeMs: number;
-  presentationTimeMs?: number;
-  presentedFrames?: number;
-  droppedFrameEstimate?: number;
-  videoWidth: number;
-  videoHeight: number;
-  trackSettings?: MediaTrackSettings;
+    frameId: number;
+    mediaTimeMs: number;
+    presentationTimeMs?: number;
+    presentedFrames?: number;
+    droppedFrameEstimate?: number;
+    videoWidth: number;
+    videoHeight: number;
+    trackSettings?: MediaTrackSettings;
 };
 ```
 
@@ -524,51 +524,51 @@ type CanonicalDebugFrameClock = {
 
 最低限、次を表示します。
 
-| 表示                     | 内容                                                        |
-| ---------------------- | --------------------------------------------------------- |
-| body frame axes        | `R/U/F` を 3D overlay または debug panel に表示                  |
-| torso values           | yaw / pitch / roll / confidence / source                  |
-| arm canonical          | elevation / openness / forwardness / reach / elbowFlexion |
-| hand state             | palm normal / curl / splay / gestureHint                  |
-| reliability            | joint / part heatmap                                      |
-| warnings               | front flip reject、swap suspected、dropout、recovery         |
-| source                 | pose / hand / face / previous / predicted / neutral の比率   |
-| avatar mapping preview | canonical wrist target と avatar target の差分                |
+| 表示                   | 内容                                                       |
+| ---------------------- | ---------------------------------------------------------- |
+| body frame axes        | `R/U/F` を 3D overlay または debug panel に表示            |
+| torso values           | yaw / pitch / roll / confidence / source                   |
+| arm canonical          | elevation / openness / forwardness / reach / elbowFlexion  |
+| hand state             | palm normal / curl / splay / gestureHint                   |
+| reliability            | joint / part heatmap                                       |
+| warnings               | front flip reject、swap suspected、dropout、recovery       |
+| source                 | pose / hand / face / previous / predicted / neutral の比率 |
+| avatar mapping preview | canonical wrist target と avatar target の差分             |
 
 ### 8.2 metrics へ渡す値
 
-| metric                      | 入力                              |
-| --------------------------- | ------------------------------- |
-| `torsoJitterRms`            | torso yaw/pitch/roll の高周波成分     |
-| `headJitterRms`             | head local rotation の高周波成分      |
-| `armAngularVelocitySpike`   | arm semantic / IK output の急変    |
-| `elbowFlipCount`            | pole hint dot previous < 0 の回数  |
-| `reachClampOccupancy`       | reach が clamp に張り付いた割合          |
-| `wristRollSpike`            | wrist roll の frame 間差分          |
-| `leftRightSwapSuspectCount` | handedness と Pose wrist の不整合    |
+| metric                      | 入力                                   |
+| --------------------------- | -------------------------------------- |
+| `torsoJitterRms`            | torso yaw/pitch/roll の高周波成分      |
+| `headJitterRms`             | head local rotation の高周波成分       |
+| `armAngularVelocitySpike`   | arm semantic / IK output の急変        |
+| `elbowFlipCount`            | pole hint dot previous < 0 の回数      |
+| `reachClampOccupancy`       | reach が clamp に張り付いた割合        |
+| `wristRollSpike`            | wrist roll の frame 間差分             |
+| `leftRightSwapSuspectCount` | handedness と Pose wrist の不整合      |
 | `dropoutDurationMs`         | hand / face / pose part ごとの欠落時間 |
-| `recoveryJumpMagnitude`     | Recovering 開始時の位置・角度ジャンプ        |
-| `outOfRangeCount`           | canonical 値域違反                  |
+| `recoveryJumpMagnitude`     | Recovering 開始時の位置・角度ジャンプ  |
+| `outOfRangeCount`           | canonical 値域違反                     |
 
 ### 8.3 replay log に保存するもの
 
 保存すべきものと再計算でよいものを分けます。
 
-| 保存する                             | 理由                 |
-| -------------------------------- | ------------------ |
-| video metadata                   | frame 同期・欠落検証に必要   |
-| raw MediaPipe outputs            | 後処理差分比較に必要         |
-| ReliabilityMap                   | 調整前後比較に必要          |
+| 保存する                         | 理由                       |
+| -------------------------------- | -------------------------- |
+| video metadata                   | frame 同期・欠落検証に必要 |
+| raw MediaPipe outputs            | 後処理差分比較に必要       |
+| ReliabilityMap                   | 調整前後比較に必要         |
 | CanonicalUpperBodyState          | contract 回帰テストに必要  |
-| calibration snapshot id / values | 再現性に必要             |
-| final VRMPose summary            | downstream 差分比較に必要 |
+| calibration snapshot id / values | 再現性に必要               |
+| final VRMPose summary            | downstream 差分比較に必要  |
 
-| 再計算でよい                         | 理由                   |
-| ------------------------------ | -------------------- |
-| UI 用 CSS mirror                | 表示都合                 |
-| Three.js runtime object        | JSON 化不要             |
+| 再計算でよい                           | 理由                       |
+| -------------------------------------- | -------------------------- |
+| UI 用 CSS mirror                       | 表示都合                   |
+| Three.js runtime object                | JSON 化不要                |
 | 一時 Vector3 / Quaternion インスタンス | deterministic に再生成可能 |
-| derived chart values           | canonical から再計算可能    |
+| derived chart values                   | canonical から再計算可能   |
 
 ---
 
@@ -582,8 +582,8 @@ TemporalStateEstimator は landmark 座標ではなく、canonical scalar / vect
 
 ```ts
 type TemporalInput = {
-  canonical: CanonicalUpperBodyState;
-  reliability: CanonicalReliability;
+    canonical: CanonicalUpperBodyState;
+    reliability: CanonicalReliability;
 };
 ```
 
@@ -591,13 +591,13 @@ type TemporalInput = {
 
 ```ts
 type TemporalCanonicalState = CanonicalUpperBodyState & {
-  temporal: {
-    torsoState: "Tracked" | "Suspect" | "Predicted" | "Lost" | "Recovering";
-    leftArmState: TrackingState;
-    rightArmState: TrackingState;
-    leftHandState?: TrackingState;
-    rightHandState?: TrackingState;
-  };
+    temporal: {
+        torsoState: "Tracked" | "Suspect" | "Predicted" | "Lost" | "Recovering";
+        leftArmState: TrackingState;
+        rightArmState: TrackingState;
+        leftHandState?: TrackingState;
+        rightHandState?: TrackingState;
+    };
 };
 ```
 
@@ -607,16 +607,16 @@ IK は `CanonicalArmState` を直接読み、avatar profile で scale / compress
 
 ```ts
 type ArmIkCanonicalInput = {
-  side: CanonicalSide;
-  shoulderBody: Vec3Like;
-  wristBody: Vec3Like;
-  reach: number;
-  elevationRad: number;
-  openness: number;
-  forwardness: number;
-  elbowFlexionRad?: number;
-  poleHintBody?: Vec3Like;
-  confidence: number;
+    side: CanonicalSide;
+    shoulderBody: Vec3Like;
+    wristBody: Vec3Like;
+    reach: number;
+    elevationRad: number;
+    openness: number;
+    forwardness: number;
+    elbowFlexionRad?: number;
+    poleHintBody?: Vec3Like;
+    confidence: number;
 };
 ```
 
@@ -628,9 +628,9 @@ MotionIntent は canonical scalar と gestureHint を読むだけにします。
 
 ```ts
 type MotionIntentInput = {
-  arms: CanonicalUpperBodyState["arms"];
-  hands: CanonicalUpperBodyState["hands"];
-  reliability: CanonicalReliability;
+    arms: CanonicalUpperBodyState["arms"];
+    hands: CanonicalUpperBodyState["hands"];
+    reliability: CanonicalReliability;
 };
 ```
 
@@ -642,13 +642,13 @@ AvatarMotionProfile は canonical body units を avatar-local target へ変換�
 
 ```ts
 type AvatarMotionProfile = {
-  shoulderWidthScale: number;
-  torsoHeightScale: number;
-  armReachScale: number;
-  armDepthCompression: number;
-  elbowOutwardBias: number;
-  shoulderDamping: number;
-  wristRollInfluence: number;
+    shoulderWidthScale: number;
+    torsoHeightScale: number;
+    armReachScale: number;
+    armDepthCompression: number;
+    elbowOutwardBias: number;
+    shoulderDamping: number;
+    wristRollInfluence: number;
 };
 ```
 

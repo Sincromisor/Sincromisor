@@ -29,11 +29,13 @@
 
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
     buildCloseCommitBody,
     buildCloseCommitPaths,
+    getPrivateTaskArtifactReason,
     readCommitTemplate,
     readMeta,
 } from "./lib.mjs";
@@ -53,6 +55,26 @@ function run(argv) {
 /** @param {string[]} argv @returns {string} */
 function capture(argv) {
     return execFileSync(argv[0], argv.slice(1), { encoding: "utf8" });
+}
+
+/**
+ * task 配下を再帰検査し、非公開検証原本がclose commitへ混入する前に停止する。
+ * @param {string} dir
+ * @returns {Promise<string[]>}
+ */
+async function findPrivateArtifacts(dir) {
+    const violations = [];
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) {
+            violations.push(...(await findPrivateArtifacts(path)));
+        } else if (entry.isFile()) {
+            const { size } = await stat(path);
+            const reason = getPrivateTaskArtifactReason(path, size);
+            if (reason) violations.push(`${path} (${reason})`);
+        }
+    }
+    return violations;
 }
 
 async function main() {
@@ -89,6 +111,16 @@ async function main() {
     if (attempts === null) fail("attempts=<n> を指定してください");
 
     const meta = await readMeta(metaPath);
+    const privateArtifacts = await findPrivateArtifacts(taskDir);
+    if (privateArtifacts.length > 0) {
+        fail(
+            [
+                "非公開またはrawの検証artifactがtask配下にあります。",
+                `work/private-artifacts/${meta.id}/ へ移し、taskには集計結果・SHA-256・再現手順だけを残してください:`,
+                ...privateArtifacts.map((path) => `  - ${path}`),
+            ].join("\n"),
+        );
+    }
     // FAIL は open のまま（再実装候補として残す）
     const setArgs =
         verdict === "PASS"

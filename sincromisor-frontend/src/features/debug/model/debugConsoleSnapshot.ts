@@ -1,8 +1,11 @@
+import type { MinimalAvatarMotionProfile } from "../../../character/avatarProfile/minimalAvatarMotionProfile";
 import {
     DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
     type SincroPoseRetargetConfig,
     type SincroPoseRetargetFrame,
 } from "../../../character/retargeting/sincroPoseRetargeter";
+import type { SincroMotionObserveOnlySummary } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
+import type { SincroVrmPoseComposerDryRunResult } from "../../../character/runtime/sincroVrmPoseComposerDryRun";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../gaze/trackingRuntime/sincroTrackerWorkerTypes";
@@ -61,6 +64,7 @@ type SincroMotionSnapshot = {
     face: SincroFaceMotionSnapshot;
     pose: SincroPoseMotionSnapshot;
     tracker: SincroTrackerWorkerStats;
+    observeOnly: SincroMotionObserveOnlySummary;
     poseRetarget: Pick<
         SincroPoseRetargetConfig,
         | "intensityScale"
@@ -73,6 +77,7 @@ type SincroMotionSnapshot = {
         | "armIkMaxOpenRad"
         | "armIkMaxForearmFlexRad"
         | "armIkMode"
+        | "composerSemanticFingerApplicationMode"
     >;
     poseRetargetRuntime: Pick<
         SincroPoseRetargetFrame,
@@ -84,7 +89,10 @@ type SincroMotionSnapshot = {
         | "anchor"
         | "leftArm"
         | "rightArm"
-    >;
+    > & {
+        avatarMotionProfile?: MinimalAvatarMotionProfile;
+        composerDryRun?: SincroVrmPoseComposerDryRunResult;
+    };
 };
 
 type RtcSnapshot = {
@@ -200,8 +208,68 @@ function createDefaultSincroMotionSnapshot(): SincroMotionSnapshot {
             loadTimeMs: 0,
             droppedFrames: 0,
         },
+        observeOnly: createDefaultObserveOnlySummary(),
         poseRetarget: createDefaultPoseRetargetConfigSnapshot(),
         poseRetargetRuntime: createDefaultPoseRetargetRuntimeSnapshot(),
+    };
+}
+
+function createDefaultObserveOnlySummary(): SincroMotionObserveOnlySummary {
+    return {
+        reliability: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            warnings: [],
+        },
+        canonical: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            warnings: [],
+        },
+        temporal: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            warnings: [],
+        },
+        intent: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            warnings: [],
+        },
+        hand: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            trackingEnabled: false,
+            detected: false,
+            left: {
+                detected: false,
+                source: "lost",
+                openness: "unknown",
+                confidence: 0,
+            },
+            right: {
+                detected: false,
+                source: "lost",
+                openness: "unknown",
+                confidence: 0,
+            },
+            warnings: [],
+        },
+        gesture: {
+            status: "not_computed",
+            reason: "pipeline_not_started",
+            trackingEnabled: false,
+            inferenceFps: 0,
+            warnings: [],
+        },
+        composerDryRun: {
+            status: "not_ready",
+            warnings: ["composer_dry_run_not_started"],
+            suppressedLayers: [],
+            clampedBones: [],
+            fullNormalizedPoseApplication: undefined,
+        },
+        updatedAtMs: 0,
     };
 }
 
@@ -217,6 +285,8 @@ function createDefaultPoseRetargetConfigSnapshot(): SincroMotionSnapshot["poseRe
         armIkMaxOpenRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxOpenRad,
         armIkMaxForearmFlexRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxForearmFlexRad,
         armIkMode: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMode,
+        composerSemanticFingerApplicationMode:
+            DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerSemanticFingerApplicationMode,
     };
 }
 
@@ -235,6 +305,7 @@ function createDefaultPoseRetargetRuntimeSnapshot(): SincroMotionSnapshot["poseR
         },
         leftArm: createDefaultPoseRetargetArmRuntimeSnapshot(),
         rightArm: createDefaultPoseRetargetArmRuntimeSnapshot(),
+        avatarMotionProfile: undefined,
     };
 }
 

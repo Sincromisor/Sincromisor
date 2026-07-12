@@ -12,6 +12,7 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
     const face = snapshot.sincroMotion.face;
     const pose = snapshot.sincroMotion.pose;
     const tracker = snapshot.sincroMotion.tracker;
+    const observeOnly = snapshot.sincroMotion.observeOnly;
     const poseRetarget = snapshot.sincroMotion.poseRetarget;
     const poseRetargetRuntime = snapshot.sincroMotion.poseRetargetRuntime;
 
@@ -29,6 +30,7 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
                 <SincroMotionFaceSection face={face} tracker={tracker} />
                 <SincroMotionPoseSection
                     pose={pose}
+                    observeOnly={observeOnly}
                     poseRetarget={poseRetarget}
                     poseRetargetRuntime={poseRetargetRuntime}
                     manager={manager}

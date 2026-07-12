@@ -1,0 +1,399 @@
+{
+  "schemaVersion": "sincro.motion-metrics.v1",
+  "fixtureId": "both-arms-slow-raise",
+  "generatedAtIso": "2026-07-12T00:00:00.000Z",
+  "frameCount": 108,
+  "durationMs": 13300.440999999999,
+  "severity": "fail",
+  "metrics": {
+    "neutralJitter": {
+      "key": "neutralJitter",
+      "value": null,
+      "unit": "ratio",
+      "status": "not_available",
+      "severity": "warn",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0.015,
+        "warn": 0.035,
+        "fail": 0.06
+      },
+      "sampleCount": 0,
+      "unavailableReason": "neutralJitter requires fixtureId neutral-10s."
+    },
+    "elbowFlipCount": {
+      "key": "elbowFlipCount",
+      "value": null,
+      "unit": "count",
+      "status": "not_available",
+      "severity": "warn",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 2,
+        "fail": 5
+      },
+      "sampleCount": 0,
+      "unavailableReason": "elbowFlipCount requires frame.solver.poseRetarget."
+    },
+    "recoveryJumpAngleDeg": {
+      "key": "recoveryJumpAngleDeg",
+      "value": null,
+      "unit": "deg",
+      "status": "not_available",
+      "severity": "warn",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 8,
+        "warn": 18,
+        "fail": 35
+      },
+      "sampleCount": 0,
+      "unavailableReason": "recoveryJumpAngleDeg requires at least one recovery event."
+    },
+    "angularVelocitySpikeCount": {
+      "key": "angularVelocitySpikeCount",
+      "value": null,
+      "unit": "count",
+      "status": "not_available",
+      "severity": "warn",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 3,
+        "fail": 8
+      },
+      "sampleCount": 0,
+      "unavailableReason": "angularVelocitySpikeCount requires frame.applied.angularVelocityDegPerSec."
+    },
+    "reachClampOccupancy": {
+      "key": "reachClampOccupancy",
+      "value": null,
+      "unit": "ratio",
+      "status": "not_available",
+      "severity": "warn",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0.05,
+        "warn": 0.18,
+        "fail": 0.35
+      },
+      "sampleCount": 0,
+      "unavailableReason": "reachClampOccupancy requires frame.solver.poseRetarget."
+    },
+    "trackingLossDurationMs": {
+      "key": "trackingLossDurationMs",
+      "value": 0,
+      "unit": "ms",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 250,
+        "warn": 1000,
+        "fail": 2500
+      },
+      "sampleCount": 108
+    },
+    "sideSwapCount": {
+      "key": "sideSwapCount",
+      "value": 0,
+      "unit": "count",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 1,
+        "fail": 3
+      },
+      "sampleCount": 108
+    },
+    "addedLatencyMs": {
+      "key": "addedLatencyMs",
+      "value": 37.19999998807907,
+      "unit": "ms",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 80,
+        "warn": 160,
+        "fail": 260
+      },
+      "sampleCount": 108
+    },
+    "temporalPredictedArmFrameCount": {
+      "key": "temporalPredictedArmFrameCount",
+      "value": 0,
+      "unit": "count",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 40,
+        "fail": 120
+      },
+      "sampleCount": 216
+    },
+    "temporalRecoveringArmFrameCount": {
+      "key": "temporalRecoveringArmFrameCount",
+      "value": 0,
+      "unit": "count",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 30,
+        "fail": 90
+      },
+      "sampleCount": 216
+    },
+    "temporalLostArmDurationMs": {
+      "key": "temporalLostArmDurationMs",
+      "value": 0,
+      "unit": "ms",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 250,
+        "warn": 1000,
+        "fail": 2500
+      },
+      "sampleCount": 108
+    },
+    "temporalMaxRecoveryJumpDegEquivalent": {
+      "key": "temporalMaxRecoveryJumpDegEquivalent",
+      "value": null,
+      "unit": "deg",
+      "status": "not_available",
+      "severity": "warn",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 15,
+        "warn": 25,
+        "fail": 45
+      },
+      "sampleCount": 0,
+      "unavailableReason": "temporalMaxRecoveryJumpDegEquivalent requires consecutive recovering temporal arm samples."
+    },
+    "temporalNeutralWristJitter": {
+      "key": "temporalNeutralWristJitter",
+      "value": null,
+      "unit": "ratio",
+      "status": "not_available",
+      "severity": "warn",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0.015,
+        "warn": 0.035,
+        "fail": 0.06
+      },
+      "sampleCount": 0,
+      "unavailableReason": "temporalNeutralWristJitter requires fixtureId neutral-10s."
+    },
+    "solverElbowFlipRejectCount": {
+      "key": "solverElbowFlipRejectCount",
+      "value": 0,
+      "unit": "count",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 1,
+        "warn": 3,
+        "fail": 3
+      },
+      "sampleCount": 216
+    },
+    "solverReachClampOccupancy": {
+      "key": "solverReachClampOccupancy",
+      "value": 1,
+      "unit": "ratio",
+      "status": "fail",
+      "severity": "fail",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0.2,
+        "warn": 0.4,
+        "fail": 0.4
+      },
+      "sampleCount": 216
+    },
+    "solverPoleUncertainFrameCount": {
+      "key": "solverPoleUncertainFrameCount",
+      "value": 0,
+      "unit": "count",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 2,
+        "warn": 5,
+        "fail": 5
+      },
+      "sampleCount": 216
+    },
+    "finalPoseAngularVelocityClampCount": {
+      "key": "finalPoseAngularVelocityClampCount",
+      "value": 4,
+      "unit": "count",
+      "status": "fail",
+      "severity": "fail",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 2,
+        "fail": 2
+      },
+      "sampleCount": 1188
+    },
+    "finalPoseOwnedBoneConflictCount": {
+      "key": "finalPoseOwnedBoneConflictCount",
+      "value": 0,
+      "unit": "count",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 0,
+        "fail": 0
+      },
+      "sampleCount": 1188
+    },
+    "gestureFlickerCount": {
+      "key": "gestureFlickerCount",
+      "value": 0,
+      "unit": "count",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 2,
+        "fail": 5
+      },
+      "sampleCount": 216
+    },
+    "semanticFallbackFrameCount": {
+      "key": "semanticFallbackFrameCount",
+      "value": 0,
+      "unit": "count",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 30,
+        "warn": 120,
+        "fail": 240
+      },
+      "sampleCount": 216
+    },
+    "intentCooldownSuppressionCount": {
+      "key": "intentCooldownSuppressionCount",
+      "value": 0,
+      "unit": "count",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 20,
+        "fail": 60
+      },
+      "sampleCount": 216
+    },
+    "intentInvalidFrameCount": {
+      "key": "intentInvalidFrameCount",
+      "value": 0,
+      "unit": "count",
+      "status": "pass",
+      "severity": "pass",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 1,
+        "fail": 3
+      },
+      "sampleCount": 108
+    },
+    "trackerBudgetOverrunFrameCount": {
+      "key": "trackerBudgetOverrunFrameCount",
+      "value": null,
+      "unit": "count",
+      "status": "not_available",
+      "severity": "warn",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 30,
+        "fail": 90
+      },
+      "sampleCount": 0,
+      "unavailableReason": "trackerBudgetOverrunFrameCount requires frame.metrics.tracker.budget.budgetStatus."
+    },
+    "trackerDroppedFrameCount": {
+      "key": "trackerDroppedFrameCount",
+      "value": 28,
+      "unit": "count",
+      "status": "fail",
+      "severity": "fail",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 15,
+        "fail": 60
+      },
+      "sampleCount": 108
+    },
+    "degradationStageFrameCount": {
+      "key": "degradationStageFrameCount",
+      "value": null,
+      "unit": "count",
+      "status": "not_available",
+      "severity": "warn",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 45,
+        "fail": 150
+      },
+      "sampleCount": 0,
+      "unavailableReason": "degradationStageFrameCount requires frame.metrics.tracker.degradationPolicy.stage or frame.metrics.tracker.budget.degradation.state."
+    },
+    "degradationRecoveryFrameCount": {
+      "key": "degradationRecoveryFrameCount",
+      "value": null,
+      "unit": "count",
+      "status": "not_available",
+      "severity": "warn",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 60,
+        "fail": 180
+      },
+      "sampleCount": 0,
+      "unavailableReason": "degradationRecoveryFrameCount requires frame.metrics.tracker.degradationPolicy.recovering."
+    },
+    "roiPausedFrameCount": {
+      "key": "roiPausedFrameCount",
+      "value": null,
+      "unit": "count",
+      "status": "not_available",
+      "severity": "warn",
+      "direction": "lower_is_better",
+      "threshold": {
+        "pass": 0,
+        "warn": 60,
+        "fail": 180
+      },
+      "sampleCount": 0,
+      "unavailableReason": "roiPausedFrameCount requires frame.metrics.tracker.roi.pauseState."
+    }
+  }
+}

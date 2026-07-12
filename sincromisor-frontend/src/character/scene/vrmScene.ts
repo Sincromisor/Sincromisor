@@ -4,6 +4,7 @@ import { Vector3 } from "three/src/math/Vector3.js";
 import { WebGLRenderer } from "three/src/renderers/WebGLRenderer.js";
 import { Scene } from "three/src/scenes/Scene.js";
 import { frontendLogger } from "../../shared/logging/appLogger";
+import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
 import type { SincroPoseRetargetConfig } from "../retargeting/sincroPoseRetargeter";
 import type { CharacterMotionTuning } from "../vrmCharacter/characterMotionConfig";
 import { VRMCharacterManager } from "../vrmCharacter/vrmCharacterManager";
@@ -171,6 +172,16 @@ export class VRMScene {
 
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
         this.vrmCharacterManager.setSincroPoseRetargetConfig(config);
+    }
+
+    getAvatarMotionProfile(): AvatarMotionProfile | undefined {
+        return this.vrmCharacterManager.getAvatarMotionProfile();
+    }
+
+    renderOnce(nowMs: number = performance.now()): void {
+        this.updateScene();
+        this.vrmCharacterManager.update(nowMs);
+        this.renderer.render(this.scene, this.vrmCamera.camera);
     }
 
     /* WebXR対応チェック */

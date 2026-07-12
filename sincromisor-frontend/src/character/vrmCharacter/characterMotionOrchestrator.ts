@@ -21,8 +21,14 @@ import {
     applySpineMotion,
 } from "./characterMotionTorsoApplier";
 
-// 呼吸、上半身の重心感、肩周りの小さな idle motion をまとめて適用する。
-// hips はモデル全体の root として振る舞うVRMがあるため、位置揺れの対象にしない。
+/**
+ * 呼吸、上半身の重心感、肩周りの idle motion と hips stabilization を担当する runtime controller。
+ *
+ * production `VRMCharacterManager.update()` では full composer application が唯一の upper-body final pose writer
+ * であるため、この controller の torso / shoulder direct write は full unavailable frame の fallback として
+ * 自動実行しない。root stabilization だけは `updateRootStabilization()` から維持し、hips position / rotation の
+ * controller-owned 境界を upper-body finalPose から分離する。
+ */
 export class CharacterMotionOrchestrator {
     private readonly bones: Map<OptionalMotionBoneName, CharacterMotionBone>;
     private listeningBlend = 0;
@@ -130,6 +136,16 @@ export class CharacterMotionOrchestrator {
             ...this.tuning,
             ...partial,
         };
+    }
+
+    /**
+     * full composer application path でも維持する hips/root stabilization だけを適用する。
+     *
+     * `update()` は torso / shoulder direct writer も実行するため、production manager は upper-body fallback を
+     * 復活させない目的でこの method を使う。副作用は optional hips node の position / rotation に限定される。
+     */
+    updateRootStabilization(basePosition: Vector3): void {
+        this.stabilizeHips(basePosition);
     }
 
     private stabilizeHips(basePosition: Vector3): void {

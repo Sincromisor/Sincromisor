@@ -33,6 +33,8 @@ const BASE_SNAPSHOT: SincroFaceMotionSnapshot = {
         rollDeg: 0,
     },
     blendshapes: {},
+    source: "full-frame",
+    warnings: [],
     inferenceTimeMs: 0,
     inferenceFps: 15,
     lastUpdatedAtMs: 0,

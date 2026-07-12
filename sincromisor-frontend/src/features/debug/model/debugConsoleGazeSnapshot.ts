@@ -77,6 +77,7 @@ export function updateGazePaused(
                 ...snapshot.sincroMotion.tracker,
                 status: "idle",
             },
+            observeOnly: snapshot.sincroMotion.observeOnly,
             poseRetarget: snapshot.sincroMotion.poseRetarget,
             poseRetargetRuntime: {
                 ...snapshot.sincroMotion.poseRetargetRuntime,

@@ -1,7 +1,13 @@
+import type { MinimalAvatarMotionProfile } from "../../../character/avatarProfile/minimalAvatarMotionProfile";
 import type {
     SincroPoseRetargetConfig,
     SincroPoseRetargetFrame,
 } from "../../../character/retargeting/sincroPoseRetargeter";
+import type {
+    SincroMotionComposerDryRunSummary,
+    SincroMotionObserveOnlySummary,
+} from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
+import type { SincroVrmPoseComposerDryRunResult } from "../../../character/runtime/sincroVrmPoseComposerDryRun";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../gaze/trackingRuntime/sincroTrackerWorkerTypes";
@@ -279,8 +285,24 @@ export class DebugConsoleManager {
         this.sincroMotionControls.updateSincroTrackerStats(snapshot);
     }
 
+    updateSincroObserveOnlySummary(summary: SincroMotionObserveOnlySummary): void {
+        this.sincroMotionControls.updateSincroObserveOnlySummary(summary);
+    }
+
+    updateSincroComposerDryRunSummary(summary: SincroMotionComposerDryRunSummary): void {
+        this.sincroMotionControls.updateSincroComposerDryRunSummary(summary);
+    }
+
+    updateSincroComposerDryRunResult(result: SincroVrmPoseComposerDryRunResult): void {
+        this.sincroMotionControls.updateSincroComposerDryRunResult(result);
+    }
+
     updateSincroPoseRetargetFrame(frame: SincroPoseRetargetFrame): void {
         this.sincroMotionControls.updateSincroPoseRetargetFrame(frame);
+    }
+
+    updateAvatarMotionProfile(profile: MinimalAvatarMotionProfile | undefined): void {
+        this.sincroMotionControls.updateAvatarMotionProfile(profile);
     }
 
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {

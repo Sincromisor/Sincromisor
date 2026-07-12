@@ -1,0 +1,14 @@
+id: task-260623221629-character-animation-3-motion-debug-recorder-export
+title: character animation 3.0 motion debug recorder export
+category: character-sincro-motion
+status: done
+depends_on:
+  - task-260623221623-character-animation-3-motion-debug-log-schema
+superseded_by: null
+review: APPROVED
+reviewed_sha: 628afda905f77a795d1fc47b425eb382c9308594
+verdict: PASS
+attempts: 1
+created_at: 2026-06-23
+closed_at: 2026-06-23
+legacy_ids: []

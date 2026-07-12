@@ -1,0 +1,14 @@
+id: task-260705004418-production-motion-rollback-and-cleanup
+title: Add production motion rollback and cleanup
+category: character-sincro-motion
+status: done
+depends_on:
+  - task-260705004415-full-normalized-pose-application
+superseded_by: null
+review: APPROVED
+reviewed_sha: edf9f7d63b8843663a44bfaa9fcdce43ed20aa7f
+verdict: PASS
+attempts: 2
+created_at: 2026-07-05
+closed_at: 2026-07-05
+legacy_ids: []

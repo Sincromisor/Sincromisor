@@ -1,4 +1,5 @@
 import type { SincroPoseRetargetedArm } from "../../../../character/retargeting/sincroPoseRetargeter";
+import type { SincroMotionObserveOnlySummary } from "../../../../character/runtime/sincroMotionObserveOnlyPipeline";
 import type { SincroFaceMotionSnapshot } from "../../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type {
     SincroPoseArmMotionSnapshot,
@@ -97,6 +98,106 @@ export function formatAnchorRuntime(
 ): string {
     const offset = runtime.anchor.shoulderOffset;
     return `${runtime.anchor.active ? "active" : "fallback"} ${formatRatio(runtime.anchor.weight)} / ${runtime.anchor.reason} / offset ${offset.x.toFixed(2)}, ${offset.y.toFixed(2)}`;
+}
+
+export function formatAvatarMotionProfile(
+    runtime: DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"],
+): string {
+    const profile = runtime.avatarMotionProfile;
+    if (!profile) {
+        return "not measured";
+    }
+    const measurements = profile.measurements;
+    const optionalBones = Object.entries(profile.optionalBones)
+        .filter((entry) => !entry[1])
+        .map((entry) => entry[0]);
+    const missingBones =
+        optionalBones.length === 0 ? "optional ok" : `missing ${optionalBones.join(",")}`;
+    return [
+        profile.schemaVersion,
+        `shoulder ${formatOptionalNumber(measurements.shoulderWidth)}`,
+        `L ${formatOptionalNumber(measurements.leftUpperArmLength)}+${formatOptionalNumber(measurements.leftLowerArmLength)}`,
+        `R ${formatOptionalNumber(measurements.rightUpperArmLength)}+${formatOptionalNumber(measurements.rightLowerArmLength)}`,
+        `head ${formatOptionalNumber(measurements.headSize)}`,
+        missingBones,
+        `warnings ${profile.warnings.length}`,
+    ].join(" / ");
+}
+
+/**
+ * production observe-only pipeline の常時表示を stage summary に圧縮する。
+ *
+ * ReliabilityMap / Canonical / Temporal / Intent の詳細値は大きく変化頻度も高いため、
+ * Debug Console では availability、時刻、警告数だけを表示して再描画負荷と読みづらさを抑える。
+ */
+export function formatObserveOnlySummary(summary: SincroMotionObserveOnlySummary): string {
+    return [
+        `rel ${formatObserveOnlyStage(summary.reliability)}`,
+        `canon ${formatObserveOnlyStage(summary.canonical)}`,
+        `temp ${formatObserveOnlyStage(summary.temporal)}`,
+        `intent ${formatObserveOnlyStage(summary.intent)}`,
+        `updated ${formatUpdatedAt(summary.updatedAtMs)}`,
+    ].join(" / ");
+}
+
+export function formatObserveOnlyHandSummary(summary: SincroMotionObserveOnlySummary): string {
+    if (summary.hand.status !== "available") {
+        const reason = summary.hand.reason ? `(${summary.hand.reason})` : "";
+        return `${summary.hand.status}${reason}`;
+    }
+    const warningText =
+        summary.hand.warnings.length > 0 ? ` / warn ${summary.hand.warnings.join(",")}` : "";
+    return (
+        [
+            summary.hand.trackingEnabled ? "on" : "off",
+            summary.hand.detected ? "detected" : "lost",
+            `L ${formatObserveOnlyHandSide(summary.hand.left)}`,
+            `R ${formatObserveOnlyHandSide(summary.hand.right)}`,
+            `updated ${formatUpdatedAt(summary.hand.mediaTimeMs)}`,
+        ].join(" / ") + warningText
+    );
+}
+
+/**
+ * composer dry-run の status と診断入口を 1 行表示へ整形する。
+ *
+ * finalPose 全体は常時表示せず、warning / suppressed layer / clamped bone だけを出す。これにより
+ * observe-only の不変条件を保ったまま、missing optional bone や angular velocity clamp の有無を確認できる。
+ */
+export function formatComposerDryRunSummary(summary: SincroMotionObserveOnlySummary): string {
+    const dryRun = summary.composerDryRun;
+    const fullApplication = formatFullNormalizedPoseApplication(dryRun);
+    if (dryRun.status !== "available") {
+        const warningText = dryRun.warnings.length > 0 ? ` (${dryRun.warnings.join(",")})` : "";
+        return [fullApplication, `${dryRun.status}${warningText}`].filter(Boolean).join(" / ");
+    }
+    const parts = ["available"];
+    if (fullApplication) {
+        parts.push(fullApplication);
+    }
+    if (dryRun.warnings.length > 0) {
+        parts.push(`warn ${dryRun.warnings.join(",")}`);
+    }
+    if (dryRun.suppressedLayers.length > 0) {
+        parts.push(`suppressed ${dryRun.suppressedLayers.join(",")}`);
+    }
+    if (dryRun.clampedBones.length > 0) {
+        parts.push(`clamped ${dryRun.clampedBones.join(",")}`);
+    }
+    return parts.join(" / ");
+}
+
+function formatFullNormalizedPoseApplication(
+    dryRun: SincroMotionObserveOnlySummary["composerDryRun"],
+): string | undefined {
+    const application = dryRun.fullNormalizedPoseApplication;
+    if (!application) {
+        return undefined;
+    }
+    if (application.applied) {
+        return "full applied";
+    }
+    return `full unavailable ${application.unavailableReason ?? "none"}`;
 }
 
 export function formatHeadPose(snapshot: SincroFaceMotionSnapshot): string {
@@ -223,4 +324,22 @@ function formatVector(value: { x: number; y: number; z: number }): string {
 
 function formatQuaternion(value: { x: number; y: number; z: number; w: number }): string {
     return `${value.x.toFixed(2)}, ${value.y.toFixed(2)}, ${value.z.toFixed(2)}, ${value.w.toFixed(2)}`;
+}
+
+function formatOptionalNumber(value: number | undefined): string {
+    return value === undefined ? "-" : value.toFixed(3);
+}
+
+function formatObserveOnlyStage(stage: SincroMotionObserveOnlySummary["reliability"]): string {
+    if (stage.status !== "available") {
+        return stage.reason ? `${stage.status}(${stage.reason})` : stage.status;
+    }
+    const warningText = stage.warnings.length > 0 ? ` warn ${stage.warnings.length}` : "";
+    return `${stage.status}@${formatUpdatedAt(stage.mediaTimeMs)}${warningText}`;
+}
+
+function formatObserveOnlyHandSide(side: SincroMotionObserveOnlySummary["hand"]["left"]): string {
+    const roiWarning = side.roiWarning ? ` roi ${side.roiWarning}` : "";
+    const state = side.detected ? "detected" : "lost";
+    return `${state} ${side.source} open ${side.openness} conf ${formatRatio(side.confidence)}${roiWarning}`;
 }

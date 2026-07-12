@@ -24,6 +24,13 @@
                     </button>
                     <button id="motionDebugStop" type="button" disabled>Stop</button>
                     <button id="motionDebugCapture" type="button">Capture</button>
+                    <button id="motionDebugRecordStart" type="button">Record</button>
+                    <button id="motionDebugRecordStop" type="button" disabled>
+                        Stop Log
+                    </button>
+                    <button id="motionDebugRecordDownload" type="button" disabled>
+                        Download Log
+                    </button>
                 </div>
             </header>
 
@@ -52,6 +59,10 @@
 
             <section class="motionDebugWorkbench" aria-label="Sincro motion debug controls">
                 <form class="controlPanel" id="motionDebugControls">
+                    <section class="recordingPanel" aria-label="Structured motion log recording">
+                        <span>Motion log</span>
+                        <output id="motionDebugRecordStatus">idle / 0 frames / 0ms</output>
+                    </section>
                     <label>
                         <span>IK mode</span>
                         <select
@@ -136,10 +147,68 @@
                     </figure>
                 </form>
                 <aside class="snapshotPanel" aria-label="Sincro motion runtime snapshot">
-                    <pre
-                        id="motionDebugSnapshot"
-                        data-testid="motion-debug-snapshot"
-                    >--</pre>
+                    <div class="viewerToolbar">
+                        <label>
+                            <span>Mode</span>
+                            <select
+                                id="motionDebugViewerMode"
+                                data-testid="motion-debug-viewer-mode"
+                            ></select>
+                        </label>
+                        <label>
+                            <span>Layer</span>
+                            <select
+                                id="motionDebugLayer"
+                                data-testid="motion-debug-layer"
+                            ></select>
+                        </label>
+                    </div>
+                    <section class="viewerPanel" aria-label="Motion debug layered viewer">
+                        <div
+                            id="motionDebugViewerSummary"
+                            class="viewerSummary"
+                            data-testid="motion-debug-viewer-summary"
+                        ></div>
+                        <div
+                            id="motionDebugLayerStatus"
+                            class="layerStatus"
+                            data-testid="motion-debug-layer-status"
+                        >
+                            --
+                        </div>
+                        <pre
+                            id="motionDebugLayerValue"
+                            class="layerValue"
+                            data-testid="motion-debug-layer-value"
+                        >--</pre>
+                    </section>
+                    <section
+                        id="motionDebugMetricsPanel"
+                        class="metricsPanel"
+                        data-testid="motion-debug-metrics-panel"
+                        hidden
+                    >
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                    <th>Status</th>
+                                    <th>Severity</th>
+                                    <th>Threshold</th>
+                                    <th>Baseline</th>
+                                </tr>
+                            </thead>
+                            <tbody id="motionDebugMetricsTableBody"></tbody>
+                        </table>
+                    </section>
+                    <details class="rawSnapshotDetails">
+                        <summary>Raw JSON</summary>
+                        <pre
+                            id="motionDebugSnapshotRaw"
+                            data-testid="motion-debug-snapshot"
+                        >--</pre>
+                    </details>
                 </aside>
             </section>
         </main>
