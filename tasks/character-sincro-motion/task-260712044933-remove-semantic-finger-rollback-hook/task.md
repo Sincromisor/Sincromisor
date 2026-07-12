@@ -6,11 +6,11 @@ full normalized pose は唯一のproduction writerになったが、semantic/fin
 
 ## 依存
 
-`task-260712044932-capture-gesture-camera-performance-baseline` がPASS evidenceを持つこと。
+`task-260712171317-capture-m1-macbook-air-motion-validation-suite` がPASS evidenceを持つこと。
 
 ## 完了条件（受け入れ条件）
 
-- [ ] `/run-task` は依存taskが`status=done, verdict=PASS`のときだけ開始する。`artifacts/gesture-camera-baseline/metrics.json`の全gate boolean=trueと`verdict.md`のPASSを再確認し、不一致なら本taskは未着手/blockedとして停止してコードを変更しない。
+- [ ] `/run-task` は依存taskが`status=done, verdict=PASS`のときだけ開始する。依存taskの`artifacts/metrics.json`の全gate boolean=trueと`artifacts/verdict.md`のPASSを再確認し、不一致なら本taskは未着手/blockedとして停止してコードを変更しない。
 - [ ] pass時は `ComposerSemanticFingerApplicationMode`、`SincroPoseRetargetConfig.composerSemanticFingerApplicationMode`とdefault、VRMCharacterManager field/config update、Debug Console snapshot/runtime/control、`off`分岐、`semantic_finger_application_off` warningと対応testsを削除し、valid inputではsemantic/finger composer layerを常時試行する。
 - [ ] invalid intent、minimal profile、hand missingの既存suppression/warningは維持する。rollback削除をfallback削除と混同しない。
 - [ ] settings/replay/recordingに旧flag保存contractがないことを確認し、存在する場合は旧値を無視する互換testを追加する。

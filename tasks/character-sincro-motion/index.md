@@ -77,19 +77,14 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 116 件）
+## タスク一覧（自動生成 / 全 117 件）
 
-### open（未完） — 1 件
+### open（未完） — 2 件
 
-| タスク                                                                                                                     | タイトル                                        | 判定 | 依存                                                            |
-| -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ---- | --------------------------------------------------------------- |
-| [task-260712044933-remove-semantic-finger-rollback-hook](./task-260712044933-remove-semantic-finger-rollback-hook/task.md) | Decide and remove semantic finger rollback hook | —    | `task-260712044932-capture-gesture-camera-performance-baseline` |
-
-### blocked（停止中） — 1 件
-
-| タスク                                                                                                                                   | タイトル                                                         | 判定 | 依存                                                                     |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---- | ------------------------------------------------------------------------ |
-| [task-260712044932-capture-gesture-camera-performance-baseline](./task-260712044932-capture-gesture-camera-performance-baseline/task.md) | Capture real camera gesture reliability and performance baseline | —    | `task-260712074348-record-per-frame-gesture-and-total-tracker-durations` |
+| タスク                                                                                                                                         | タイトル                                        | 判定 | 依存                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ---- | ------------------------------------------------------------------------ |
+| [task-260712044933-remove-semantic-finger-rollback-hook](./task-260712044933-remove-semantic-finger-rollback-hook/task.md)                     | Decide and remove semantic finger rollback hook | —    | `task-260712171317-capture-m1-macbook-air-motion-validation-suite`       |
+| [task-260712171317-capture-m1-macbook-air-motion-validation-suite](./task-260712171317-capture-m1-macbook-air-motion-validation-suite/task.md) | Capture M1 MacBook Air motion validation suite  | —    | `task-260712074348-record-per-frame-gesture-and-total-tracker-durations` |
 
 ### done（完了） — 114 件
 
@@ -209,5 +204,11 @@ Pose Landmarker は face-only の本流と分けて進める。
 | [task-3114-sincro-lightweight-two-bone-arm-ik](./task-3114-sincro-lightweight-two-bone-arm-ik/task.md)                                                                     | sincro lightweight two bone arm ik                                       | ✅ PASS | `task-3113-sincro-pose-camera-space-arm-targets`                                                                                                                                                                                                                                                                                                                                                            |
 | [task-3115-sincro-pose-upper-body-anchor-and-ik-fallback](./task-3115-sincro-pose-upper-body-anchor-and-ik-fallback/task.md)                                               | sincro pose upper body anchor and ik fallback                            | ✅ PASS | `task-3114-sincro-lightweight-two-bone-arm-ik`                                                                                                                                                                                                                                                                                                                                                              |
 | [task-3116-sincro-pose-ik-observability-verification-and-design-sync](./task-3116-sincro-pose-ik-observability-verification-and-design-sync/task.md)                       | sincro pose ik observability verification and design sync                | ✅ PASS | `task-3115-sincro-pose-upper-body-anchor-and-ik-fallback`, `task-260517014025-sincro-pose-ik-wrist-confidence-gate`, `task-260517042345-sincro-motion-debug-page-for-ik-playwright`, `task-260517053106-sincro-arm-ik-joint-constraints-and-collision`                                                                                                                                                      |
+
+### superseded（廃止） — 1 件
+
+| タスク                                                                                                                                   | タイトル                                                         | 判定 | 依存                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---- | ------------------------------------------------------------------------ |
+| [task-260712044932-capture-gesture-camera-performance-baseline](./task-260712044932-capture-gesture-camera-performance-baseline/task.md) | Capture real camera gesture reliability and performance baseline | —    | `task-260712074348-record-per-frame-gesture-and-total-tracker-durations` |
 
 <!-- AUTOGEN:tasks END -->

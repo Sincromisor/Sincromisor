@@ -3,7 +3,7 @@ title: Decide and remove semantic finger rollback hook
 category: character-sincro-motion
 status: open
 depends_on:
-  - task-260712044932-capture-gesture-camera-performance-baseline
+  - task-260712171317-capture-m1-macbook-air-motion-validation-suite
 superseded_by: null
 review: APPROVED
 reviewed_sha: 87567c417c11e5dd896cddfb90297b656a95f429
