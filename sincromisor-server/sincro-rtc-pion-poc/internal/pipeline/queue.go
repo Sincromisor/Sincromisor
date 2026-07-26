@@ -19,15 +19,15 @@ func newFrameQueue() *frameQueue {
 	return &frameQueue{values: make(chan []byte, inputQueueCapacity)}
 }
 
-func (q *frameQueue) push(frame []byte) {
+func (q *frameQueue) push(frame []byte) (bool, uint64) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	if q.closed {
-		return
+		return false, q.drops
 	}
 	select {
 	case q.values <- frame:
-		return
+		return false, q.drops
 	default:
 	}
 	// Browser audio is latency-sensitive: retain the newest 500 ms instead of
@@ -38,6 +38,7 @@ func (q *frameQueue) push(frame []byte) {
 	default:
 	}
 	q.values <- frame
+	return true, q.drops
 }
 
 func (q *frameQueue) close() {

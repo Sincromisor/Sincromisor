@@ -66,7 +66,8 @@ Sender/Receiver threadが引き続きdownstream接続と再接続を担当する
 - 各 thread の start / stop / exception を session id 付きで追う。
 - どの downstream 接続が先に失敗したかを確認する。
 - 1 系統でも不健全な場合は AudioBroker 全体の再接続対象にする。
-- Go Coordinatorはservice名とdrop/reset理由だけを構造化logへ出し、認識文、音声、chat本文を記録しない。
+- Go Coordinatorはstale result/eventとPCM overflowをservice別に計数し、service名と累積drop countだけを
+  構造化logへ出す。認識文、音声、chat本文、stale eventの原因errorは記録しない。
 - reset / closeは旧generation goroutineと4 WebSocketのjoin完了を境界とし、再送や旧queue再利用を行わない。
 
 ## Change Checklist

@@ -194,7 +194,7 @@ func TestCoordinatorLifecycleQueueAndBackoff(t *testing.T) {
 				caps = append(caps, cap)
 				return 0, nil
 			},
-			func(context.Context, time.Duration) error { return nil },
+			immediateWait,
 		)
 		if err != nil {
 			t.Fatalf("newCoordinatorWithHooks() error = %v", err)
@@ -243,24 +243,248 @@ func TestConversationRejectsProcessorIntermediateFinalMixups(t *testing.T) {
 	}
 }
 
+func TestConversationRejectsSpeechIDRegression(t *testing.T) {
+	conv := newConversation("session")
+	first := protocol.ExtractorResult{SessionID: "session", SpeechID: 10, SequenceID: 1, Confirmed: true}
+	if _, err := conv.acceptExtraction(first); err != nil {
+		t.Fatalf("first confirmed extraction error = %v", err)
+	}
+	regressed := protocol.ExtractorResult{SessionID: "session", SpeechID: 9, SequenceID: 2, Confirmed: true}
+	if _, err := conv.acceptExtraction(regressed); err == nil {
+		t.Fatal("acceptExtraction() accepted a regressed speech ID")
+	}
+}
+
+func TestCapturedGenerationDropsLateClientEvent(t *testing.T) {
+	factory := &fakeFactory{t: t}
+	coordinator := newTestCoordinator(t, factory)
+	if err := coordinator.Start(context.Background(), "session-generation", "sincro"); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	first := factory.setAt(t, 0)
+	first.emit(pclient.Event{Service: pclient.ServiceRecognizer, Kind: pclient.EventRemoteClose, Err: errors.New("reset")})
+	waitFor(t, func() bool {
+		coordinator.mu.Lock()
+		defer coordinator.mu.Unlock()
+		return coordinator.state == StateRunning && coordinator.generation == 2
+	})
+	first.emit(pclient.Event{Service: pclient.ServiceProcessor, Kind: pclient.EventReadFailed, Err: errors.New("late")})
+	waitFor(t, func() bool {
+		coordinator.mu.Lock()
+		defer coordinator.mu.Unlock()
+		return coordinator.staleDrops[pclient.ServiceProcessor] == 1
+	})
+	coordinator.mu.Lock()
+	generation := coordinator.generation
+	coordinator.mu.Unlock()
+	if generation != 2 {
+		t.Fatalf("late generation-1 callback advanced generation to %d", generation)
+	}
+	if err := coordinator.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+}
+
+func TestOutputBackpressureUsesGenerationBarrierAndCloseOwnership(t *testing.T) {
+	factory := &fakeFactory{t: t}
+	waiter := newControlledWaiter()
+	coordinator, err := newCoordinatorWithHooks(
+		factory,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+		func(time.Duration) (time.Duration, error) { return 0, nil },
+		waiter.wait,
+	)
+	if err != nil {
+		t.Fatalf("newCoordinatorWithHooks() error = %v", err)
+	}
+	if err := coordinator.Start(context.Background(), "session-output", "sincro"); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	message := protocol.ChatMessage{SpeechID: 1, MessageID: "output", MessageType: "assistant"}
+	if err := coordinator.publishText(1, pclient.ServiceProcessor, message); err != nil {
+		t.Fatalf("publish handed output error = %v", err)
+	}
+	handed := receive(t, coordinator.TextResults())
+	for range outputQueueCapacity {
+		if err := coordinator.publishText(1, pclient.ServiceProcessor, message); err != nil {
+			t.Fatalf("fill output error = %v", err)
+		}
+	}
+	waiter.discardOutputRequests(t, outputQueueCapacity+1)
+
+	publishDone := make(chan error, 1)
+	go func() {
+		err := coordinator.publishText(1, pclient.ServiceProcessor, message)
+		if err != nil {
+			coordinator.requestReset(1, pclient.ServiceProcessor, err)
+		}
+		publishDone <- err
+	}()
+	waiter.expireNextOutput(t)
+	if err := receive(t, publishDone); err == nil {
+		t.Fatal("full output channel did not time out")
+	}
+	waitFor(t, func() bool {
+		coordinator.mu.Lock()
+		defer coordinator.mu.Unlock()
+		return coordinator.state == StateRunning && coordinator.generation == 2
+	})
+	if len(coordinator.textOut) != 0 {
+		t.Fatalf("reset left %d old buffered text outputs", len(coordinator.textOut))
+	}
+	if handed.Generation != 1 {
+		t.Fatalf("already handed output generation = %d, want 1", handed.Generation)
+	}
+	if err := coordinator.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	assertClosedOutputs(t, coordinator)
+}
+
+func TestClientEventPublicationWindows(t *testing.T) {
+	for _, window := range []eventWindow{
+		windowBeforeConnectReturn,
+		windowReturnBeforeActivate,
+		windowActivateBeforeRunning,
+	} {
+		t.Run(string(window), func(t *testing.T) {
+			factory := &windowFactory{t: t, window: window}
+			coordinator := newTestCoordinator(t, factory)
+			if err := coordinator.Start(context.Background(), "session-window", "sincro"); err != nil {
+				t.Fatalf("Start() error = %v", err)
+			}
+			wantGeneration := uint64(1)
+			if window == windowActivateBeforeRunning {
+				wantGeneration = 2
+				waitForGeneration(t, coordinator, wantGeneration)
+			}
+			coordinator.mu.Lock()
+			generation := coordinator.generation
+			coordinator.mu.Unlock()
+			if generation != wantGeneration {
+				t.Fatalf("generation = %d, want %d", generation, wantGeneration)
+			}
+			if factory.count() != 2 {
+				t.Fatalf("client set attempts = %d, want 2", factory.count())
+			}
+			if factory.firstCloseCount() != 1 {
+				t.Fatalf("failed/published first set Close count = %d, want 1", factory.firstCloseCount())
+			}
+			if err := coordinator.Close(); err != nil {
+				t.Fatalf("Close() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestCloseConvergesDuringResetAndBackpressure(t *testing.T) {
+	t.Run("reset reconnect", func(t *testing.T) {
+		factory := &closeRaceFactory{t: t, reconnectEntered: make(chan struct{})}
+		coordinator := newTestCoordinator(t, factory)
+		if err := coordinator.Start(context.Background(), "session-reset-close", "sincro"); err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+		factory.first().emit(pclient.Event{
+			Service: pclient.ServiceExtractor,
+			Kind:    pclient.EventRemoteClose,
+			Err:     errors.New("reset"),
+		})
+		select {
+		case <-factory.reconnectEntered:
+		case <-time.After(time.Second):
+			t.Fatal("reset did not enter reconnect")
+		}
+		closeDone := make(chan error, 2)
+		go func() { closeDone <- coordinator.Close() }()
+		go func() { closeDone <- coordinator.Close() }()
+		for range 2 {
+			if err := receive(t, closeDone); err != nil {
+				t.Fatalf("Close() error = %v", err)
+			}
+		}
+		if factory.first().closeCount() != 1 {
+			t.Fatalf("old set Close count = %d, want 1", factory.first().closeCount())
+		}
+		assertClosedOutputs(t, coordinator)
+	})
+
+	t.Run("output timeout", func(t *testing.T) {
+		factory := &fakeFactory{t: t}
+		waiter := newControlledWaiter()
+		coordinator, err := newCoordinatorWithHooks(
+			factory,
+			slog.New(slog.NewTextHandler(io.Discard, nil)),
+			func(time.Duration) (time.Duration, error) { return 0, nil },
+			waiter.wait,
+		)
+		if err != nil {
+			t.Fatalf("newCoordinatorWithHooks() error = %v", err)
+		}
+		if err := coordinator.Start(context.Background(), "session-timeout-close", "sincro"); err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+		message := protocol.ChatMessage{SpeechID: 1, MessageID: "full"}
+		for range outputQueueCapacity {
+			if err := coordinator.publishText(1, pclient.ServiceProcessor, message); err != nil {
+				t.Fatalf("fill output error = %v", err)
+			}
+		}
+		waiter.discardOutputRequests(t, outputQueueCapacity)
+		publishDone := make(chan error, 1)
+		go func() {
+			err := coordinator.publishText(1, pclient.ServiceProcessor, message)
+			if err != nil {
+				coordinator.requestReset(1, pclient.ServiceProcessor, err)
+			}
+			publishDone <- err
+		}()
+		waiter.expireNextOutput(t)
+		closeDone := make(chan error, 1)
+		go func() { closeDone <- coordinator.Close() }()
+		if err := receive(t, publishDone); err == nil {
+			t.Fatal("backpressure publish succeeded")
+		}
+		if err := receive(t, closeDone); err != nil {
+			t.Fatalf("Close() error = %v", err)
+		}
+		assertClosedOutputs(t, coordinator)
+	})
+}
+
 func newTestCoordinator(t *testing.T, factory ClientSetFactory) *Coordinator {
 	t.Helper()
 	coordinator, err := newCoordinatorWithHooks(
 		factory, slog.New(slog.NewTextHandler(io.Discard, nil)),
 		func(time.Duration) (time.Duration, error) { return 0, nil },
-		func(ctx context.Context, _ time.Duration) error {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
-				return nil
-			}
-		},
+		nonExpiringOutputWait,
 	)
 	if err != nil {
 		t.Fatalf("newCoordinatorWithHooks() error = %v", err)
 	}
 	return coordinator
+}
+
+func immediateWait(ctx context.Context, _ time.Duration) <-chan error {
+	result := make(chan error, 1)
+	select {
+	case <-ctx.Done():
+		result <- ctx.Err()
+	default:
+		result <- nil
+	}
+	return result
+}
+
+func nonExpiringOutputWait(ctx context.Context, delay time.Duration) <-chan error {
+	if delay != outputBackpressure {
+		return immediateWait(ctx, delay)
+	}
+	result := make(chan error, 1)
+	go func() {
+		<-ctx.Done()
+		result <- ctx.Err()
+	}()
+	return result
 }
 
 func receive[T any](t *testing.T, values <-chan T) T {
@@ -295,11 +519,23 @@ func waitFor(t *testing.T, condition func() bool) {
 
 func assertClosedOutputs(t *testing.T, coordinator *Coordinator) {
 	t.Helper()
-	if _, ok := <-coordinator.TextResults(); ok {
-		t.Fatal("text output remained open after Close")
-	}
-	if _, ok := <-coordinator.SynthResults(); ok {
-		t.Fatal("synth output remained open after Close")
+	assertChannelEventuallyClosed(t, coordinator.TextResults(), "text")
+	assertChannelEventuallyClosed(t, coordinator.SynthResults(), "synth")
+}
+
+func assertChannelEventuallyClosed[T any](t *testing.T, values <-chan T, name string) {
+	t.Helper()
+	deadline := time.NewTimer(time.Second)
+	defer deadline.Stop()
+	for {
+		select {
+		case _, ok := <-values:
+			if !ok {
+				return
+			}
+		case <-deadline.C:
+			t.Fatalf("%s output remained open after Close", name)
+		}
 	}
 }
 
@@ -336,6 +572,142 @@ func (f *fakeFactory) count() int {
 type blockingFactory struct {
 	entered chan struct{}
 	once    sync.Once
+}
+
+type eventWindow string
+
+const (
+	windowBeforeConnectReturn   eventWindow = "connect-return-before"
+	windowReturnBeforeActivate  eventWindow = "return-activate"
+	windowActivateBeforeRunning eventWindow = "activate-running"
+)
+
+type windowFactory struct {
+	t      *testing.T
+	window eventWindow
+	mu     sync.Mutex
+	sets   []*windowSet
+}
+
+func (f *windowFactory) Connect(_ context.Context, sessionID, _ string) (ClientSet, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	base := newFakeSet(f.t, sessionID, len(f.sets)+1)
+	set := &windowSet{fakeSet: base}
+	if len(f.sets) == 0 {
+		set.window = f.window
+		if f.window == windowBeforeConnectReturn {
+			set.pending = true
+		}
+	}
+	f.sets = append(f.sets, set)
+	return set, nil
+}
+
+func (f *windowFactory) count() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.sets)
+}
+
+func (f *windowFactory) firstCloseCount() int {
+	f.mu.Lock()
+	first := f.sets[0]
+	f.mu.Unlock()
+	return first.closeCount()
+}
+
+type windowSet struct {
+	*fakeSet
+	window  eventWindow
+	pending bool
+}
+
+func (s *windowSet) Activate(handler func(pclient.Event)) error {
+	if s.pending || s.window == windowReturnBeforeActivate {
+		return errors.New("client failed before publication")
+	}
+	if err := s.fakeSet.Activate(handler); err != nil {
+		return err
+	}
+	if s.window == windowActivateBeforeRunning {
+		go handler(pclient.Event{
+			Service: pclient.ServiceRecognizer,
+			Kind:    pclient.EventRemoteClose,
+			Err:     errors.New("event after activation"),
+		})
+	}
+	return nil
+}
+
+type closeRaceFactory struct {
+	t                *testing.T
+	mu               sync.Mutex
+	firstSet         *fakeSet
+	attempts         int
+	reconnectEntered chan struct{}
+}
+
+func (f *closeRaceFactory) Connect(ctx context.Context, sessionID, _ string) (ClientSet, error) {
+	f.mu.Lock()
+	f.attempts++
+	attempt := f.attempts
+	if attempt == 1 {
+		f.firstSet = newFakeSet(f.t, sessionID, 1)
+		set := f.firstSet
+		f.mu.Unlock()
+		return set, nil
+	}
+	if attempt == 2 {
+		close(f.reconnectEntered)
+	}
+	f.mu.Unlock()
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+func (f *closeRaceFactory) first() *fakeSet {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.firstSet
+}
+
+type controlledWaiter struct {
+	requests chan chan error
+}
+
+func newControlledWaiter() *controlledWaiter {
+	return &controlledWaiter{requests: make(chan chan error, 64)}
+}
+
+func (w *controlledWaiter) wait(ctx context.Context, delay time.Duration) <-chan error {
+	if delay != outputBackpressure {
+		return immediateWait(ctx, delay)
+	}
+	result := make(chan error, 1)
+	w.requests <- result
+	return result
+}
+
+func (w *controlledWaiter) discardOutputRequests(t *testing.T, count int) {
+	t.Helper()
+	for range count {
+		select {
+		case <-w.requests:
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for output waiter registration")
+		}
+	}
+}
+
+func (w *controlledWaiter) expireNextOutput(t *testing.T) {
+	t.Helper()
+	select {
+	case result := <-w.requests:
+		result <- nil
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for blocked output waiter")
+	}
 }
 
 func (f *blockingFactory) Connect(ctx context.Context, _, _ string) (ClientSet, error) {

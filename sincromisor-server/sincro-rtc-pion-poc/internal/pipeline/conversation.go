@@ -27,6 +27,12 @@ type conversation struct {
 	currentUser *protocol.ChatMessage
 }
 
+// conversationは1 generation内のprotocol state machineである。
+//
+// accumulatedは同じspeechの音声をRecognizerへ送る形へ結合し、outstandingは送信済みsequenceと
+// RecognizerResultを1対1に照合する。currentUser、requests、finalizedはpartial user messageから
+// Processor finalまでだけ生存し、reset時はconversation objectごと破棄される。confirmed historyは
+// Coordinator側にのみあり、この型がgenerationを跨ぐmutable stateを所有することはない。
 func newConversation(sessionID string) *conversation {
 	return &conversation{
 		sessionID: sessionID, speechID: -1, sequence: -1,
@@ -49,9 +55,17 @@ func (c *conversation) acceptExtraction(value protocol.ExtractorResult) (protoco
 		return protocol.ExtractorResult{}, errors.New("extractor changed speech before confirmation")
 	}
 	if !c.open {
+		// speech_id identifies completed utterances independently of sequence_id.
+		// Keeping the last confirmed ID prevents a delayed old speech from being
+		// accepted as a new utterance merely because its sequence is newer.
+		if value.SpeechID <= c.speechID {
+			return protocol.ExtractorResult{}, errors.New("extractor speech ID did not increase")
+		}
 		c.open, c.speechID = true, value.SpeechID
 	}
 	c.sequence = value.SequenceID
+	// Extractorは同じspeechをpartialごとの差分音声として返す。Recognizerへは現在までの
+	// sequence順結合を送り、各送信値をsequence ID単位のoutstandingとして保持する。
 	if previous, found := c.accumulated[value.SpeechID]; found {
 		voice := make([]byte, 0, len(previous.Voice)+len(value.Voice))
 		voice = append(voice, previous.Voice...)
@@ -80,6 +94,8 @@ func (c *conversation) acceptRecognition(value protocol.RecognizerResult) (proto
 	return extraction, nil
 }
 
+// recognitionMessageはpartial間でChatMessage identityを維持し、confirmedでだけcurrent userを閉じる。
+// これによりFrontendは同じmessageを更新でき、reset時は未確定messageがhistoryへ残らない。
 func (c *conversation) recognitionMessage(value protocol.RecognizerResult) protocol.ChatMessage {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -126,11 +142,15 @@ func (c *conversation) validateProcessor(value protocol.ProcessorResult) (protoc
 		return protocol.ProcessorRequest{}, false, errors.New("processor result arrived after final")
 	}
 	if !value.EndOfResponse {
+		// Intermediate resultは表示/TTS増分だけを運び、processorがrequest前historyを
+		// 先行変更することを許さない。history commitは下のfinal branchだけが行う。
 		if !reflect.DeepEqual(value.History, request.History) {
 			return protocol.ProcessorRequest{}, false, errors.New("intermediate processor history differs")
 		}
 		return request, false, nil
 	}
+	// Final resultはrequest historyをprefixとしてresponseを1件だけ追加した完全形である。
+	// この検証後だけCoordinatorがconfirmed historyとして採用できる。
 	if len(value.History.Messages) != len(request.History.Messages)+1 ||
 		!reflect.DeepEqual(value.History.Messages[:len(request.History.Messages)], request.History.Messages) ||
 		!reflect.DeepEqual(value.History.Messages[len(value.History.Messages)-1], value.ResponseMessage) ||

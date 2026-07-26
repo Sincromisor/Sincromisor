@@ -129,12 +129,15 @@ close handshakeは2秒で打ち切ってunderlying socketを強制closeする。
 全接続の`Activate`が成功した場合だけ同じgenerationとして公開する。途中失敗と公開前eventは部分setを逆順closeし、
 generationを変えずに新しいclient setでretryする。running中のterminal eventはsingle-flight resetへ集約し、
 lock下でgenerationを先に進めてから旧context、4 client、transient queue / in-flight stateを破棄する。
-callbackとexternal outputは捕捉したgenerationを再確認し、旧generationを次段へ渡さない。
+`Activate`へ渡すcallback closureはclient set公開時のgenerationを捕捉する。resultとevent callback、
+external output enqueueは捕捉値と現在値を再確認し、旧generationを次段へ渡さない。stale dropのlogは
+service名とservice別の累積drop countだけを持ち、認識文、音声、chat本文、原因errorを含めない。
 
 browser入力は20 ms、16 kHz、mono、s16leの640-byte frameだけを受ける。running以外では保存せず拒否し、
 running中は25 frame（500 ms）のbounded queueで最古の未送信frameだけをdropする。text / synthesized outputは
 各16件で順序を維持し、5秒のbackpressureをsilent dropせずreset理由にする。external channelはsession lifetimeで
-交換せずgeneration envelopeを返し、reset barrierでbuffer済み旧要素をdrainする。
+交換せずgeneration envelopeを返し、reset barrierでbuffer済み旧要素をdrainする。PCM overflowも
+Extractorのservice名と累積drop countだけを記録する。
 
 confirmed chat historyだけをsession stateに保持する。partial recognition、current user message、
 未完了processor response、未送信TTSはgeneration stateでありreset時に破棄する。Processorの中間resultは

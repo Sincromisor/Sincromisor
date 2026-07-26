@@ -6,10 +6,7 @@ import (
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 )
 
-func (c *Coordinator) onClientEvent(event pclient.Event) {
-	c.mu.Lock()
-	generation := c.generation
-	c.mu.Unlock()
+func (c *Coordinator) onClientEvent(generation uint64, event pclient.Event) {
 	c.requestReset(generation, event.Service, event.Err)
 }
 
@@ -20,7 +17,7 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 	c.mu.Lock()
 	if c.state != StateRunning || c.generation != generation || c.resetting {
 		c.mu.Unlock()
-		c.logger.Info("dropped stale pipeline event", "service", service)
+		c.recordStaleDrop(service)
 		return
 	}
 	c.resetting = true
@@ -38,6 +35,16 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 	// and removes buffered old envelopes atomically for consumers.
 	c.outputMu.Lock()
 	c.mu.Lock()
+	// Close can win after resetting becomes visible but before this output
+	// barrier is acquired. Recheck ownership before dereferencing generation
+	// work so the close path remains the sole join owner in that ordering.
+	if c.state == StateClosed || c.generation != generation || c.work == nil || c.set == nil {
+		c.resetting = false
+		c.mu.Unlock()
+		c.outputMu.Unlock()
+		c.wg.Done()
+		return
+	}
 	next, err := nextGeneration(c.generation)
 	if err != nil {
 		_ = c.transitionLocked(StateClosed)
@@ -80,6 +87,27 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 			c.logger.Error("pipeline reconnect stopped", "error", err, "reason", reason)
 		}
 	}()
+}
+
+func (c *Coordinator) isCurrentGeneration(generation uint64, service pclient.Service) bool {
+	c.mu.Lock()
+	current := c.state == StateRunning && c.generation == generation
+	c.mu.Unlock()
+	if !current {
+		c.recordStaleDrop(service)
+	}
+	return current
+}
+
+// recordStaleDrop deliberately logs only the event source and monotonic count.
+// Result payloads and causal errors can contain speech or conversation data and
+// must not cross this observability boundary.
+func (c *Coordinator) recordStaleDrop(service pclient.Service) {
+	c.mu.Lock()
+	c.staleDrops[service]++
+	count := c.staleDrops[service]
+	c.mu.Unlock()
+	c.logger.Info("dropped stale pipeline value", "service", service, "drop_count", count)
 }
 
 func drain[T any](values chan T) {
