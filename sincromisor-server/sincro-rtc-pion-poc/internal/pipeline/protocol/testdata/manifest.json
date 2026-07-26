@@ -1,0 +1,75 @@
+{
+  "extractor_initialize.msgpack": {
+    "byte_length": 105,
+    "consumer": "SpeechExtractor",
+    "major_fields": [
+      "session_id",
+      "start_at",
+      "voice_sampling_rate"
+    ],
+    "producer": "Go RTC pipeline",
+    "sha256": "2e9408003333d8cc7bcfc2c97d22b1c2def3acaf537bbf52ed676a57dae5a57c",
+    "wire_direction": "Go -> Python"
+  },
+  "extractor_result.msgpack": {
+    "byte_length": 176,
+    "consumer": "Go RTC pipeline",
+    "major_fields": [
+      "speech_id",
+      "confirmed",
+      "voice"
+    ],
+    "producer": "SpeechExtractor",
+    "sha256": "8628ea174aa3fcc03465a0d258c224566f94c19f650e51c343973101d9418700",
+    "wire_direction": "Python -> Go"
+  },
+  "recognizer_result.msgpack": {
+    "byte_length": 120,
+    "consumer": "Go RTC pipeline",
+    "major_fields": [
+      "speech_id",
+      "confirmed",
+      "result"
+    ],
+    "producer": "SpeechRecognizer",
+    "sha256": "cca0e0144a9dd6e763962701cdfa6435cbb5f01b7445afbd50bfb5e38a773e0c",
+    "wire_direction": "Python -> Go"
+  },
+  "text_processor_request.msgpack": {
+    "byte_length": 457,
+    "consumer": "TextProcessor",
+    "major_fields": [
+      "history",
+      "request_message",
+      "confirmed"
+    ],
+    "producer": "Go RTC pipeline",
+    "sha256": "6bd19059549311d580e08cc1582d53734803d9a68b0d9206439a495ff81b0e04",
+    "wire_direction": "Go -> Python"
+  },
+  "text_processor_result.msgpack": {
+    "byte_length": 698,
+    "consumer": "Go RTC pipeline / VoiceSynthesizer",
+    "major_fields": [
+      "response_message",
+      "end_of_response",
+      "voice_text"
+    ],
+    "producer": "TextProcessor",
+    "sha256": "29719b251058bbd11e4303632997befcc1b78180376075ef3f92bdf0efa52835",
+    "wire_direction": "Python -> Go -> Python unchanged"
+  },
+  "voice_synthesizer_result.msgpack": {
+    "byte_length": 453,
+    "consumer": "Go RTC pipeline",
+    "major_fields": [
+      "mora_queue",
+      "speaking_time",
+      "voice",
+      "audio_format"
+    ],
+    "producer": "VoiceSynthesizer",
+    "sha256": "4f2f3a3d1c8ce0bafdc6b70df8e69dce0ab3d758dfa234a87234edb1cd2f0af8",
+    "wire_direction": "Python -> Go"
+  }
+}
