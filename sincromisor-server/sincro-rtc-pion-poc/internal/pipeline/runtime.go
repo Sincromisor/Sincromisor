@@ -38,10 +38,10 @@ func (c *Coordinator) extractorLoop(work *generationWork, extractor ExtractorCli
 			if !ok {
 				return
 			}
-			if !c.isCurrentGeneration(work.number, pclient.ServiceExtractor) {
+			combined, current, err := c.acceptExtraction(work.number, work.conv, value)
+			if !current {
 				continue
 			}
-			combined, err := work.conv.acceptExtraction(value)
 			if err == nil {
 				err = recognizer.SendExtraction(work.ctx, combined)
 			}

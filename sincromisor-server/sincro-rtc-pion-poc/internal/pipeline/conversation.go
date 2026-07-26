@@ -9,6 +9,7 @@ import (
 
 	"github.com/oklog/ulid/v2"
 
+	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol"
 )
 
@@ -27,12 +28,20 @@ type conversation struct {
 	currentUser *protocol.ChatMessage
 }
 
+type extractionIdentity struct {
+	seen       bool
+	generation uint64
+	speechID   int64
+	sequenceID int64
+}
+
 // conversationは1 generation内のprotocol state machineである。
 //
 // accumulatedは同じspeechの音声をRecognizerへ送る形へ結合し、outstandingは送信済みsequenceと
 // RecognizerResultを1対1に照合する。currentUser、requests、finalizedはpartial user messageから
 // Processor finalまでだけ生存し、reset時はconversation objectごと破棄される。confirmed historyは
-// Coordinator側にのみあり、この型がgenerationを跨ぐmutable stateを所有することはない。
+// Coordinator側にのみある。最後に受理したExtractor identityもCoordinatorがsession lifetimeで保持し、
+// 新generationのconversationへ同じspeech/sequenceを再受理させない。
 func newConversation(sessionID string) *conversation {
 	return &conversation{
 		sessionID: sessionID, speechID: -1, sequence: -1,
@@ -40,6 +49,39 @@ func newConversation(sessionID string) *conversation {
 		outstanding: make(map[int64]protocol.ExtractorResult), requests: make(map[int64]protocol.ProcessorRequest),
 		finalized: make(map[int64]struct{}),
 	}
+}
+
+// acceptExtractionはgeneration-localな発話状態とsession-wide identityを同じCoordinator lock下で更新する。
+//
+// sequenceはsession全体でstrictly increasingである。generationが変わった最初のresultは、
+// 旧generationのin-flight speechを新規発話として再送しないようspeech IDもstrictly largerを要求する。
+func (c *Coordinator) acceptExtraction(
+	generation uint64,
+	conv *conversation,
+	value protocol.ExtractorResult,
+) (protocol.ExtractorResult, bool, error) {
+	c.mu.Lock()
+	if c.state != StateRunning || c.generation != generation {
+		c.mu.Unlock()
+		c.recordStaleDrop(pclient.ServiceExtractor)
+		return protocol.ExtractorResult{}, false, nil
+	}
+	last := c.extraction
+	if last.seen && (value.SequenceID <= last.sequenceID ||
+		value.SpeechID < last.speechID ||
+		(generation != last.generation && value.SpeechID <= last.speechID)) {
+		c.mu.Unlock()
+		return protocol.ExtractorResult{}, true, errors.New("extractor session identity did not increase")
+	}
+	combined, err := conv.acceptExtraction(value)
+	if err == nil {
+		c.extraction = extractionIdentity{
+			seen: true, generation: generation,
+			speechID: value.SpeechID, sequenceID: value.SequenceID,
+		}
+	}
+	c.mu.Unlock()
+	return combined, true, err
 }
 
 func (c *conversation) acceptExtraction(value protocol.ExtractorResult) (protocol.ExtractorResult, error) {

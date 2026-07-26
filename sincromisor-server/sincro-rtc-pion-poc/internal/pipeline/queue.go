@@ -12,33 +12,31 @@ type frameQueue struct {
 	mu     sync.Mutex
 	values chan []byte
 	closed bool
-	drops  uint64
 }
 
 func newFrameQueue() *frameQueue {
 	return &frameQueue{values: make(chan []byte, inputQueueCapacity)}
 }
 
-func (q *frameQueue) push(frame []byte) (bool, uint64) {
+func (q *frameQueue) push(frame []byte) bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	if q.closed {
-		return false, q.drops
+		return false
 	}
 	select {
 	case q.values <- frame:
-		return false, q.drops
+		return false
 	default:
 	}
 	// Browser audio is latency-sensitive: retain the newest 500 ms instead of
 	// allowing an old backlog to shift the conversation in time.
 	select {
 	case <-q.values:
-		q.drops++
 	default:
 	}
 	q.values <- frame
-	return true, q.drops
+	return true
 }
 
 func (q *frameQueue) close() {

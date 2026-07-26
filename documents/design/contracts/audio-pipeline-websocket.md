@@ -137,12 +137,15 @@ browser入力は20 ms、16 kHz、mono、s16leの640-byte frameだけを受ける
 running中は25 frame（500 ms）のbounded queueで最古の未送信frameだけをdropする。text / synthesized outputは
 各16件で順序を維持し、5秒のbackpressureをsilent dropせずreset理由にする。external channelはsession lifetimeで
 交換せずgeneration envelopeを返し、reset barrierでbuffer済み旧要素をdrainする。PCM overflowも
-Extractorのservice名と累積drop countだけを記録する。
+Coordinatorがqueue交換とは独立したsession累積値として所有し、Extractorのservice名と累積drop countだけを記録する。
 
 confirmed chat historyだけをsession stateに保持する。partial recognition、current user message、
 未完了processor response、未送信TTSはgeneration stateでありreset時に破棄する。Processorの中間resultは
 request historyとの完全一致、final resultはrequest historyをprefixとするresponse追加済みhistoryとの完全一致を
 検証した場合だけ受理し、finalだけをconfirmed historyへcommitする。
+最後に受理したExtractorのspeech IDとsequence IDもsession stateとして保持する。sequence IDはgenerationを跨いで
+strictly increasingとし、新generationの最初のspeech IDは直前generationより大きい値だけを受理する。
+重複または逆行はprotocol failureとして、そのresultが届いた現在generationをresetする。
 
 retryは1秒capから始まるfull jitterで、attempt 5以降は30秒capへ飽和する。`Close`またはStart context cancellationは
 retry waiter、generation goroutine、clientをcancel / joinし、全producer終了後にexternal channelをcloseする。

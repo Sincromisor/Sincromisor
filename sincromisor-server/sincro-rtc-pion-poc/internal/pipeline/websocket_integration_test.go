@@ -121,6 +121,7 @@ func TestFixtureWebSocketResetMatrix(t *testing.T) {
 				}
 
 				runWebSocketTurn(t, coordinator, 2)
+				harness.assertStrictExtractorIdentities(t)
 				if harness.processorHistoryLength() != 3 {
 					t.Fatalf("post-reset processor history length = %d, want 3", harness.processorHistoryLength())
 				}
@@ -247,6 +248,7 @@ type fixtureWebSocketHarness struct {
 	mu                 sync.Mutex
 	processorHistories []int
 	processorPayload   []byte
+	extractorIDs       []testExtractionIdentity
 	synthRequests      int
 	errs               []error
 }
@@ -350,7 +352,28 @@ func (h *fixtureWebSocketHarness) serveExtractor(ctx context.Context, conn *webs
 		if err != nil {
 			return
 		}
-		if err = conn.Write(ctx, websocket.MessageBinary, h.fixtures["extractor_result.msgpack"]); err != nil {
+		fixture, decodeErr := protocol.DecodeExtractorResult(h.fixtures["extractor_result.msgpack"])
+		if decodeErr != nil {
+			h.recordError(decodeErr)
+			return
+		}
+		h.mu.Lock()
+		turn := int64(len(h.extractorIDs))
+		identity := testExtractionIdentity{
+			speechID: fixture.SpeechID + turn, sequenceID: fixture.SequenceID + turn,
+		}
+		h.extractorIDs = append(h.extractorIDs, identity)
+		h.mu.Unlock()
+		payload, patchErr := patchFixtureIdentity(
+			h.fixtures["extractor_result.msgpack"],
+			identity.speechID,
+			identity.sequenceID,
+		)
+		if patchErr != nil {
+			h.recordError(patchErr)
+			return
+		}
+		if err = conn.Write(ctx, websocket.MessageBinary, payload); err != nil {
 			return
 		}
 	}
@@ -368,14 +391,38 @@ func (h *fixtureWebSocketHarness) serveRecognizer(ctx context.Context, conn *web
 			return
 		}
 		value, decodeErr := protocol.DecodeExtractorResult(payload)
+		if decodeErr == nil {
+			fixture.SpeechID, fixture.SequenceID = value.SpeechID, value.SequenceID
+		}
 		if decodeErr != nil || !reflect.DeepEqual(value, fixture) {
 			h.recordError(errors.New("recognizer input differs from Python extractor fixture"))
 			return
 		}
-		if err = conn.Write(ctx, websocket.MessageBinary, h.fixtures["recognizer_result.msgpack"]); err != nil {
+		response, patchErr := patchFixtureIdentity(
+			h.fixtures["recognizer_result.msgpack"],
+			value.SpeechID,
+			value.SequenceID,
+		)
+		if patchErr != nil {
+			h.recordError(patchErr)
+			return
+		}
+		if err = conn.Write(ctx, websocket.MessageBinary, response); err != nil {
 			return
 		}
 	}
+}
+
+// patchFixtureIdentity preserves Python-generated field values and schema while
+// varying only the session-owned IDs required to model later utterances.
+func patchFixtureIdentity(payload []byte, speechID, sequenceID int64) ([]byte, error) {
+	var value map[string]any
+	if err := msgpack.Unmarshal(payload, &value); err != nil {
+		return nil, err
+	}
+	value["speech_id"] = speechID
+	value["sequence_id"] = sequenceID
+	return msgpack.Marshal(value)
 }
 
 func (h *fixtureWebSocketHarness) serveProcessor(ctx context.Context, conn *websocket.Conn) {
@@ -546,6 +593,21 @@ func (h *fixtureWebSocketHarness) synthRequestCount() int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.synthRequests
+}
+
+func (h *fixtureWebSocketHarness) assertStrictExtractorIdentities(t *testing.T) {
+	t.Helper()
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if len(h.extractorIDs) < 2 {
+		t.Fatalf("extractor identity count = %d, want at least 2", len(h.extractorIDs))
+	}
+	for index := 1; index < len(h.extractorIDs); index++ {
+		previous, current := h.extractorIDs[index-1], h.extractorIDs[index]
+		if current.speechID <= previous.speechID || current.sequenceID <= previous.sequenceID {
+			t.Fatalf("extractor identities did not increase: previous=%+v current=%+v", previous, current)
+		}
+	}
 }
 
 func (h *fixtureWebSocketHarness) recordError(err error) {
