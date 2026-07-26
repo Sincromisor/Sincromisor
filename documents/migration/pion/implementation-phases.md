@@ -2,7 +2,8 @@
 
 ## Summary
 
-- 移行はbaseline、Pion / codec PoC、Go pipeline client、統合、切替リハーサル、運用切り替え、旧実装削除の順で進める。
+- 移行はPion / codec最小PoC、Go pipeline client、統合、切替リハーサル、運用切り替え、旧実装削除の順で進める。
+- 詳細aiortc baselineは最小PoCの前提から外し、production候補完成後のPhase 4比較へ移す。
 - 下流Protocol Buffers移行とOpenAPI生成は別initiativeとし、Pion移行の完了条件へ含めない。
 - Python adapterはPoCで必要な場合だけ一時利用し、本番統合前に除去する。
 - 各phaseにexit gateを設け、後続phaseへ自動的に進まない。
@@ -11,8 +12,7 @@
 
 ```mermaid
 flowchart LR
-    P0["Phase 0\nBaseline"] --> G0{"Gate 0"}
-    G0 --> P1["Phase 1\nPion / codec PoC"]
+    P1["Phase 1\nPion / codec最小PoC"]
     P1 --> G1{"Gate 1"}
     G1 --> P2["Phase 2\nGo pipeline clients"]
     P2 --> G2{"Gate 2"}
@@ -24,7 +24,6 @@ flowchart LR
     P5 --> G5{"Gate 5"}
     G5 --> P6["Phase 6\nRemove Python RTC stack"]
 
-    G0 -. "baseline不足" .-> P0
     G1 -. "不合格" .-> P1
     G2 -. "互換不合格" .-> P2
     G3 -. "不合格" .-> P3
@@ -32,72 +31,49 @@ flowchart LR
     G5 -. "rollback" .-> P5
 ```
 
-## Phase 0: 現行baseline
+## Phase 0: 詳細baseline（前提外）
 
 ### 作業
 
-- aiortc `1.14.0` の依存を固定して測定条件を記録する。
-- idle、通話中、再接続中、終了後のCPU、RSS、thread、process、file descriptorを測る。
-- 10、50、100回の接続・切断loopを実行する。
-- 30分以上の連続通話を実行する。
-- Chrome、Firefox、host candidate、STUNの結果を分ける。
-- 入力からpipeline、合成結果からbrowserまでのlatencyを測る。
-- AudioBrokerのWebSocket数、queue depth、reconnect、close時間を測る。
+- 先行baseline taskの成果は参考にするが、validation harnessのmerge、修正、実行をPhase 1の前提にしない。
+- 詳細resource、latency、Firefox、impairment、soakの比較条件はPhase 3のproduction候補に合わせてPhase 4で確定する。
 
 ### Gate 0
 
-- Pion版と同じscenarioで再実行可能な手順がtaskへ記録されている。
-- memory、resource、latencyの基準値が取得できている。
-- 既知の現行不具合と移行で直す問題が区別されている。
+Gate 0は設定しない。Phase 1は独立して着手できる。
 
 ## Phase 1: Pion / codec PoC
 
 ### 作業
 
-- PoCは `SetICEAddressRewriteRules` を利用できるPion `v4.2.17` を `go.mod` へ固定して開始し、version変更はcompatibility testを通す明示的な依存更新として扱う。
+- Pion `v4.2.17`、pure Go decoder `github.com/pion/opus v0.1.0`、
+  mediadevices encoder `v0.10.0` を独立Go moduleへ固定する。
 - 現行Offerを受理し、PionでAnswerを生成する。Frontend→PionはTrickle、Pion→Frontendは `GatheringCompletePromise` を有限timeoutまで待つhalf-trickleとする。
-- Trickle ICEとend-of-candidatesを処理し、candidate収集完了後のAnswerだけを冪等retry用に保存する。
-- initial Offerへ `offer_request_id` を追加し、同一SDPのresponse消失retryでsessionを重複作成しない。
-- 1つの固定UDP mux portと `SetICEAddressRewriteRules` のhost置換で明示public IPv4を生成し、container / private host candidateをadvertiseしない。
-- UDP4、interface filter、STUN、public IPv4 rewriteを組み合わせ、`turn:` / `turns:` 設定と不正なbind / IP / port設定をstartup時に拒否する。
-- Docker 1:1 UDP mappingで直接接続する。
-- single-port ICE-TCPはChrome / Firefoxと展示相当networkでUDP失敗時の改善が確認できるか任意評価し、必須Gateにはしない。
+- Trickle ICEとend-of-candidatesを処理し、local host candidateの収集完了後にAnswerを返す。
+- 現行schemaを変更せず、initial Offerだけを扱う。update Offerは501とする。
 - browserからOpus RTPを受信する。
-- Opusをdecodeし、16 kHz mono PCMへ変換する。
+- Opusをpure Goで48 kHz monoまたはstereo PCMへdecodeする。
 - test PCMをOpusへencodeしてbrowserへ返す。
-- bounded reorder window、RTP sequence / timestamp wraparound、late / duplicate packet破棄、SSRC変更を処理する。
-- browser入力とは独立した20 ms outbound clockでPCMを送信し、ticker遅延後もburst送信しない。
-- Sender / Receiver Reportを明示設定し、outgoing senderのRTCPを継続してdrainする。
-- NACK有無とOpus PLCをloss / latency条件で比較し、採用値とpacket history上限を固定する。
-- RTP timestampとtimestamp付きmora eventの同期を確認する。
+- browser入力とは独立した20 ms outbound clockで1秒のtest PCMを送信する。
+- outgoing senderのRTCPをsession contextでdrainする。
 - `text_ch` と `telop_ch` にtest JSONを送信する。
-- `offer_revision` 付きICE restart / update Offerを同じsession IDへ適用する。
-- session close後のgoroutine、socket、codec stateを観測する。
-- Answer生成、ICE / DTLS確立、track / DataChannel readinessのdeadline超過で同じclose-once経路へ収束することを確認する。
-- HTTP body、SDP、candidate文字列、revision当たりcandidate件数、Frontend pending candidate queueの上限を実測から固定する。
-- libopus bindingとGStreamerのcodec経路を比較する。
-- browser入力のRTP Opus codecとVoiceSynthesizer返却音声のcontainer demux / decodeを分離して検証する。
-- VoiceSynthesizerの全許容 `audio_format` について、対応可否、最大byte数、最大再生時間、malformed input、decoder timeoutを比較する。
+- 通常closeを10回行い、codec、ticker、goroutine、PeerConnectionをclose-onceへ収束させる。
+- malformed JSON / SDP / candidate、candidate収集timeout、codec error、SIGTERMをunit / integration testする。
 
 Python adapterを使う場合はtest PCMまたは既存AudioBrokerへの一時bridgeに限定する。Phase 2のGo pipeline clientが成立した時点で削除する。
 
 ### Gate 1
 
-- ChromeとFirefoxで双方向音声が成立する。
-- 固定UDP mux portの直接接続が成立する。
+- Chromeとlocal host candidateで双方向音声が成立する。
 - candidateを含む完成済みAnswerが返り、PionからFrontendへの追加signaling経路なしで接続できる。
-- initial Offer response消失時に同じ `offer_request_id` で同じsession / Answerを取得し、異なるSDPでのrequest ID再利用を409で拒否する。
-- 音声速度、channel、sample rate、timestampが正しい。
-- RTP / RTCP loop、wraparound、reorder、pacingがloss / jitter / scheduler遅延下で継続する。
-- NACKの採否とbounded historyが決定されている。
-- 100回接続・切断後にresourceが許容範囲へ戻る。
-- 接続未成立、track欠落、DataChannel欠落、browser abrupt closeでもdeadline後にresourceが回収される。
-- ICE restart後も同じsession IDでDataChannelとaudioが復旧する。
-- 旧 `offer_revision` のcandidateと未知session IDを別の新規sessionへfallbackさせず拒否する。
-- codec実装と配布方式を選択できる測定結果がある。
-- VoiceSynthesizer返却形式ごとのdecode可否とresource上限が確定している。
+- 100 packet以上を48 kHz non-silent PCMへdecodeし、1秒toneをChromeで再生できる。
+- 2 DataChannelで固定JSONをFrontend parserへ渡せる。
+- 10回の通常close後にregistryが0、goroutineが開始前+5以下へ戻る。
+- unknown / closed candidateを新規sessionへfallbackせず200 + `status:false` で拒否する。
+- race test、SIGTERM、codec errorでclose-onceが成立する。
 
-Gate 1を満たせない場合、GStreamer `webrtcbin` または現行aiortc継続を再評価する。
+Gate 1を満たせない場合、失敗したcodec adapterまたはsignaling方式だけを後続taskで再評価する。
+Firefox、NAT、ICE restart、impairment、soak、性能比較、VoiceSynthesizer形式はPhase 3 / 4へ送る。
 
 ## Phase 2: Go pipeline clients
 

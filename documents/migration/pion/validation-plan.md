@@ -3,22 +3,44 @@
 ## Summary
 
 - 機能互換、音声品質、network互換、資源回収、障害復旧を別の観点として検証する。
-- aiortc baselineとPion版を同一scenario、同一負荷、同一観測方法で比較する。
-- 合否閾値はPoC taskでbaseline取得後に確定し、本書には測定対象とgateを定義する。
+- Phase 1はlocal Chromeの最小縦切りで採用可否を判断し、production品質の検証と分離する。
+- aiortc baseline比較、browser / network matrix、soak、性能・資源閾値はproduction候補完成後のPhase 4で確定する。
 
 ## Test matrix
 
-| 分類          | 主な確認                                        | 必須phase    |
-| ------------- | ----------------------------------------------- | ------------ |
-| signaling     | half-trickle、冪等offer、revision、HTTP error   | PoC以降      |
-| media         | Opus受信、PCM変換、合成音声返却                 | PoC以降      |
-| DataChannel   | label、信頼性属性、open前queue、buffer pressure | 統合以降     |
-| network       | UDP mux、public IPv4、STUN、packet loss         | PoC / 切替前 |
-| lifecycle     | normal close、failed、timeout、下流切断         | 統合以降     |
-| resource      | heap、RSS、goroutine、thread、fd、socket        | 全phase      |
-| compatibility | Chrome、Firefox                                 | PoC / 切替前 |
+| 分類          | 主な確認                                | 必須phase     |
+| ------------- | --------------------------------------- | ------------- |
+| signaling     | half-trickle、initial Offer、HTTP error | PoC           |
+| signaling     | 冪等offer、revision、ICE restart        | 統合以降      |
+| media         | Opus受信、48 kHz PCM、1秒test tone      | PoC           |
+| media         | resample、合成音声全形式、loss品質      | 統合以降      |
+| DataChannel   | label、信頼性属性、固定JSON             | PoC           |
+| DataChannel   | open前queue、buffer pressure            | 統合以降      |
+| network       | local host candidate                    | PoC           |
+| network       | UDP mux、public IPv4、STUN、packet loss | 切替前        |
+| lifecycle     | normal close、failed、timeout、下流切断 | 統合以降      |
+| resource      | 10 closeのregistry / goroutine          | PoC           |
+| resource      | heap、RSS、thread、fd、socket、soak     | 統合 / 切替前 |
+| compatibility | Chrome                                  | PoC           |
+| compatibility | Chrome、Firefox                         | 切替前        |
+
+## Phase 1 minimal PoC
+
+- 現行fieldのconfig、initial Offer、candidate、end-of-candidatesを扱う。
+- Pion側candidateを収集済みAnswerへ含め、server candidate通知APIを追加しない。
+- session ID付きupdate Offerは501とし、unknown / closed candidateは200 + `status:false` とする。
+- Chromeとlocal host candidateでICEが `connected` または `completed` になる。
+- browserから連続100 packet以上のOpus RTPを受信し、48 kHz monoまたはstereoのnon-silent PCMへdecodeする。
+- 48 kHz mono、1秒のtest PCMを20 ms frameでencodeし、ChromeのAudioContext analyzerで非無音を確認する。
+- `text_ch` と `telop_ch` の属性を検証し、固定test JSONをFrontend parserへ片方向送信する。
+- 通常close 10回、codec error、SIGTERM、二重close、race testでregistryとgoroutineが収束する。
+
+Firefox、NAT、fixed UDP mux、ICE restart、impairment、NACK / PLC、VoiceSynthesizer形式、30分soak、
+CPU / memory / latency比較はPhase 1の合否へ含めない。
 
 ## Functional test
+
+以下は特記がない限りPhase 3のproduction候補で実行する。Phase 1の対象は直前節を正本とする。
 
 - `config.json` が現行fieldを返す。
 - initial Offerにcandidate収集完了済みのAnswer、`session_id`、`offer_revision` を返す。
@@ -108,6 +130,8 @@ end-to-end値だけでなく、L1からL5を分けて退行箇所を特定でき
 telop同期の判定はserver送信時刻ではなく、browserで観測したDataChannel callback時刻と実再生時刻のskewを使う。初期移行では現行同等の「対応音声より遅れない」を保証対象とし、RTP / playout clockに合わせたfrontend schedulingは対象外とする。
 
 ## Network test
+
+Phase 1はlocal host candidateだけを対象とする。以下のproduction network matrixはPhase 4で実行する。
 
 - local host candidateのみ
 - 固定UDP mux portのDocker 1:1 mapping

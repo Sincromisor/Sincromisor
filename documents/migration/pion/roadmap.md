@@ -2,8 +2,8 @@
 
 ## Summary
 
-- aiortcからPionへの移行を、baseline取得から旧Python RTC stack削除までの時系列で示す。
-- 各phaseは直前phaseのexit gateを満たした場合だけ開始し、日付ではなく検証結果を基準に進行する。
+- aiortcからPionへの移行を、最小codec PoCから旧Python RTC stack削除までの時系列で示す。
+- 詳細なaiortc baselineはPion着手の前提にせず、production候補完成後の比較検証へ移す。
 - PoCでPion採用可否とcodec方式を判断した後、既存Python下流serviceとの互換を保ったままGo RTC serverへ統合する。
 - 運用切り替えはaiortcとPionを同時稼働させず、メンテナンス時間の停止切替とする。
 - 詳細な作業とgateは[実装フェーズ](implementation-phases.md)、評価項目は[検証計画](validation-plan.md)を正本とする。
@@ -19,8 +19,7 @@
 
 ```mermaid
 flowchart LR
-    P0["Phase 0<br/>現行baseline"] --> P1["Phase 1<br/>Pion / codec PoC"]
-    P1 --> D1{"Pion採用可能"}
+    P1["Phase 1<br/>Pion / codec最小PoC"] --> D1{"基本経路が成立"}
     D1 -->|"Yes"| P2["Phase 2<br/>Go pipeline clients"]
     D1 -->|"No"| ALT["代替案の再評価"]
     P2 --> P3["Phase 3<br/>Go RTC統合"]
@@ -37,51 +36,50 @@ flowchart LR
 
 | 時系列 | Phase                   | このphaseで確定すること                  | 主な出口                                 |
 | ------ | ----------------------- | ---------------------------------------- | ---------------------------------------- |
-| 1      | 0: 現行baseline         | 比較方法と現行性能・資源使用量           | 再現可能なbaselineと合否判定の根拠       |
-| 2      | 1: Pion / codec PoC     | Pion採用可否、codec、media / ICE成立性   | 採用判断とGo統合に使える技術方式         |
-| 3      | 2: Go pipeline clients  | 既存MessagePack契約と再接続semantics     | Python下流serviceと互換なGo client群     |
-| 4      | 3: Go RTC統合           | session全体の責務、Frontendとの統合      | 本番候補となるGo RTC server              |
-| 5      | 4: 切替リハーサル       | production相当環境での切替・rollback可否 | 検証済みrunbookと切替判断                |
-| 6      | 5: メンテナンス切り替え | stable endpointのPion移行と安定性        | Pion運用、またはaiortcへのrollback       |
-| 7      | 6: 旧RTC stack削除      | rollback期間終了と移行完了               | Pionのみの構成、更新済みの現在設計と契約 |
+| 1      | 1: Pion / codec最小PoC  | Pion採用可否、local media / ICE成立性    | 採用判断とGo統合に使えるcodec方式        |
+| 2      | 2: Go pipeline clients  | 既存MessagePack契約と再接続semantics     | Python下流serviceと互換なGo client群     |
+| 3      | 3: Go RTC統合           | session全体の責務、Frontendとの統合      | 本番候補となるGo RTC server              |
+| 4      | 4: 切替リハーサル       | production相当環境での切替・rollback可否 | baseline比較済みrunbookと切替判断        |
+| 5      | 5: メンテナンス切り替え | stable endpointのPion移行と安定性        | Pion運用、またはaiortcへのrollback       |
+| 6      | 6: 旧RTC stack削除      | rollback期間終了と移行完了               | Pionのみの構成、更新済みの現在設計と契約 |
 
-## Phase 0: 現行baseline
+## Phase 0: 詳細baselineの扱い
 
 ### 目的
 
-Pion版を同じ条件で比較できるよう、aiortc版の機能、性能、資源使用量、既知不具合を記録する。
+詳細baseline harnessはPhase 1の前提にしない。先行taskの成果は参考資料として残すが、
+Linux network namespace、Docker、Firefox、network impairment、30分soak、詳細resource / latency計測を
+最小PoCへ戻さない。
 
 ### 主な成果
 
-- Chrome / Firefox、host candidate / STUNを含む再現可能なtest scenario
-- 接続・切断loop、長時間通話、再接続、異常終了の測定結果
-- CPU、RSS、thread、process、file descriptor、socket、queue、latencyの基準値
-- 現行不具合と、Pion移行で解決すべき問題の区別
+- Phase 3のproduction候補完成後に、比較対象と観測点を実装へ合わせて確定する。
+- Firefox、NAT、impairment、soak、performance / resource比較はPhase 4の切替判定で実行する。
 
 ### 次phaseへの条件
 
-同じscenarioをPion版へ適用でき、性能退行とresource leakを比較できる状態になったらPhase 1へ進む。
+Phase 1は本節の測定完了を待たず着手できる。
 
 ## Phase 1: Pion / codec PoC
 
 ### 目的
 
-移行の主要リスクを実装規模が小さい段階で検証し、Pionを本採用できるか判断する。
+現行Frontendを無変更で使う最小の縦切りをローカルChromeで検証し、Pionを後続実装の出発点にできるか判断する。
 
 ### 主な成果
 
 - 現行signaling endpointと互換なhalf-trickle Answer
-- 固定UDP mux port、public IPv4 rewrite、UDP4 / Full ICEによる直接接続
-- Chrome / Firefoxで成立する双方向音声とDataChannel
-- Opus decode / encode、resample、独立outbound clock、RTP / RTCP処理
-- 冪等なinitial Offerと同一session IDでのICE restart
-- codec候補の比較結果と配布・運用方式
-- session close後のgoroutine、socket、queue、codec stateの回収結果
+- local host candidate とChromeで成立する双方向音声とDataChannel
+- pure Go Opus decodeとmediadevices同梱static libopus encode
+- 48 kHz PCM、独立20 ms outbound clock、1秒test tone
+- initial Offer、Trickle ICE、end-of-candidates、candidate収集済みAnswer
+- 通常close 10回、codec error、SIGTERM、race testでのregistry / goroutine回収
 
 ### 判断
 
 Gate 1を満たす場合は、Pionと選定したcodec方式をADR化してPhase 2へ進む。
-満たせない場合は、本番実装へ進まずGStreamer `webrtcbin` またはaiortc継続を再評価する。
+満たせない場合は失敗したcodec adapterまたはsignaling境界だけを小さな後続taskで再評価する。
+NAT、Firefox、ICE restart、impairment、soak、性能比較はPhase 3 / 4で判定する。
 
 ## Phase 2: Go pipeline clients
 
@@ -186,7 +184,7 @@ Pionの安定化を確認した後にrollback期間を終了し、二重保守�
 
 - 各phaseの実測値、コマンド、環境、失敗内容は対応taskの `eval.md` に記録する。
 - gateを満たさない場合は未解決事項を次phaseへ持ち越さず、同じphaseで再評価する。
-- 合否閾値はPhase 0とPhase 1の実測を基にtaskで確定する。
+- Phase 1は基本経路の成立だけを判定し、production品質の閾値はPhase 3 / 4で確定する。
 
 ### 文書更新
 

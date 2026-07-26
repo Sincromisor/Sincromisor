@@ -5,37 +5,40 @@
 - 最大の技術リスクはOpus codec、timing、Go版pipeline orchestration、cross-language contractである。
 - Python adapterを常設しないため追加hopは避けられるが、現行AudioBrokerの全体系再接続、queue、close semanticsをGoで再構成する必要がある。
 - Protocol BuffersとOpenAPI生成は別initiativeへ分離し、Pion移行では既存MessagePackと手書きsignaling schemaの互換を優先する。
-- 採用判断はPoCの実測後にADRへ記録し、本書では判断条件を定義する。
+- Phase 1はlocal Chromeの基本経路だけで採用判断し、production運用リスクはPhase 3 / 4で段階的に解消する。
 
 ## リスク一覧
 
-| リスク                          | 影響                       | 対策                                                       |
-| ------------------------------- | -------------------------- | ---------------------------------------------------------- |
-| PionがPCM codecを内包しない     | 音声経路を追加実装         | libopus / GStreamerをPoC比較                               |
-| cgo / native codecの資源解放    | leak、process crash        | codec interface、close test、native profile、sanitizer検査 |
-| 1 processへのsession集約        | process停止で全session切断 | supervisor restart、readiness、close timeout、session上限  |
-| RTP timestamp / pacing不整合    | 音切れ、速度異常           | golden audio、timestamp test                               |
-| 入力track依存clockの喪失        | 合成音声停止、同期ずれ     | Goが独立outbound clockを所有                               |
-| AudioBroker semanticsの移植漏れ | 重複処理、古い応答の後送   | pipeline一括reset、generation gate、queue破棄              |
-| MessagePackの型不一致           | runtime decode error       | 双方向golden fixture                                       |
-| Go / Python contract同時刷新    | 原因切り分け不能           | MessagePack維持、protocol刷新は別initiative                |
-| sessionごとのWebSocket増加      | memory、fd増加             | connection budgetを測定                                    |
-| queue増大                       | latency、memory増加        | bounded queueと用途別drop policy                           |
-| session close競合               | goroutine / socket残存     | context、close-once、timeout                               |
-| ICE restart / candidate世代差異 | stale candidate混入        | `offer_revision` をOffer / candidateへ付与                 |
-| server candidate通知経路の欠落  | ICE接続不能                | Pion側だけnon-trickleにするhalf-trickle Answer             |
-| initial Offer response消失      | session重複                | `offer_request_id`、SDP hash、AnswerのTTL cache            |
-| 接続未成立session               | PeerConnection / WS残存    | pre-connect deadline、pipeline client遅延作成              |
-| RTCP未処理                      | feedback滞留、品質低下     | report interceptor、RTCP drain loop、NACK / PLC試験        |
-| 境界入力の暴走                  | memory増加、panic          | body / SDP / candidate / queue上限、goroutine recovery     |
-| browser実装差                   | Chromeのみ成功             | Chrome / Firefoxを必須gate化                               |
-| DataChannel backpressure        | memory増加、message欠落    | buffered amount監視と上限                                  |
+| リスク                          | 影響                       | 対策                                                      |
+| ------------------------------- | -------------------------- | --------------------------------------------------------- |
+| PionがPCM codecを内包しない     | 音声経路を追加実装         | pure Go decode + mediadevices static Opus encodeを最小PoC |
+| cgo / native codecの資源解放    | leak、process crash        | 10 close / raceをPoC、profile / sanitizerを切替前に実施   |
+| 1 processへのsession集約        | process停止で全session切断 | supervisor restart、readiness、close timeout、session上限 |
+| RTP timestamp / pacing不整合    | 音切れ、速度異常           | golden audio、timestamp test                              |
+| 入力track依存clockの喪失        | 合成音声停止、同期ずれ     | Goが独立outbound clockを所有                              |
+| AudioBroker semanticsの移植漏れ | 重複処理、古い応答の後送   | pipeline一括reset、generation gate、queue破棄             |
+| MessagePackの型不一致           | runtime decode error       | 双方向golden fixture                                      |
+| Go / Python contract同時刷新    | 原因切り分け不能           | MessagePack維持、protocol刷新は別initiative               |
+| sessionごとのWebSocket増加      | memory、fd増加             | connection budgetを測定                                   |
+| queue増大                       | latency、memory増加        | bounded queueと用途別drop policy                          |
+| session close競合               | goroutine / socket残存     | context、close-once、timeout                              |
+| ICE restart / candidate世代差異 | stale candidate混入        | `offer_revision` をOffer / candidateへ付与                |
+| server candidate通知経路の欠落  | ICE接続不能                | Pion側だけnon-trickleにするhalf-trickle Answer            |
+| initial Offer response消失      | session重複                | `offer_request_id`、SDP hash、AnswerのTTL cache           |
+| 接続未成立session               | PeerConnection / WS残存    | pre-connect deadline、pipeline client遅延作成             |
+| RTCP未処理                      | feedback滞留、品質低下     | report interceptor、RTCP drain loop、NACK / PLC試験       |
+| 境界入力の暴走                  | memory増加、panic          | body / SDP / candidate / queue上限、goroutine recovery    |
+| browser実装差                   | Chromeのみ成功             | ChromeをPoC、Chrome / Firefoxを切替前gateにする           |
+| DataChannel backpressure        | memory増加、message欠落    | buffered amount監視と上限                                 |
 
 ## 主要判断事項
 
 ### WebRTC media network
 
-固定UDP mux port、`SetICEAddressRewriteRules` によるhost candidateのpublic IPv4置換、UDP4 / Full ICE、1 Pion instanceを採用する。STUNは併用し、container / private candidateはadvertiseしない。TURNは現行aiortc版と同様に初期対象外とし、設定された場合はstartup errorにする。詳細なport / NAT / firewall契約は[運用移行とロールバック](rollout-and-operations.md)を正本とする。
+Phase 1はlocal host candidateだけを使い、fixed UDP mux、public IPv4 rewrite、Docker / NAT / firewallを
+採用判断の前提にしない。production候補では1 Pion instance、固定UDP mux、
+`SetICEAddressRewriteRules` によるhost candidateのpublic IPv4置換、UDP4 / Full ICEを実装し、
+Phase 4で検証する。TURNは初期対象外とする。
 
 メリット:
 
@@ -55,7 +58,10 @@ single-port ICE-TCPはPoCでUDP失敗時の接続改善がChrome / Firefoxと展
 
 現行HTTP endpointを維持し、FrontendからPionへはTrickle ICE、PionからFrontendへはcandidate収集完了後のAnswerを返すhalf-trickleを採用する。Server→Frontendのcandidate通知endpointは追加しない。
 
-initial OfferはFrontend生成の `offer_request_id` で識別する。Pionはrequest ID、SDP hash、session ID、完成済みAnswerを有限TTLで保持し、response消失時の同一payload retryへ同じ結果を返す。異なるSDPでのrequest ID再利用は409、終了済みsessionの再送はtombstoneから410を返す。
+Phase 1は現行Frontendを変更せずinitial Offerだけを扱い、session ID付きupdate Offerを501とする。
+unknown / closed sessionのcandidateは200 + `status:false` で拒否する。
+
+`offer_request_id`、SDP hash、Answer TTL cache、`offer_revision` はPhase 3でFrontendと同時に導入する。
 
 メリット:
 
@@ -85,7 +91,9 @@ initial OfferはFrontend生成の `offer_request_id` で識別する。Pionはre
 
 ### ICE restartとcandidate generation
 
-ICE restart / update OfferをPion初期移行に含め、同じPeerConnection、pipeline、session IDを維持する。Offer、Answer、candidateへ単調増加する `offer_revision` を追加し、Pionは現在revisionと一致しないcandidateを拒否する。Frontendは `disconnected` のgrace period中は自然復旧を待ち、`failed` またはgrace超過時だけsingle-flightでrestartする。
+ICE restart / update Offerは最小PoCへ含めずPhase 3で実装する。同じPeerConnection、pipeline、
+session IDを維持し、Offer、Answer、candidateへ単調増加する `offer_revision` を追加する。
+Frontendは `disconnected` のgrace period中は自然復旧を待ち、`failed` またはgrace超過時だけsingle-flightでrestartする。
 
 メリット:
 
@@ -127,14 +135,14 @@ RTP reader / writerとoutgoing RTCP drain loopをsession contextで管理する�
 
 ### Pionを採用するか
 
-採用条件:
+Phase 1の採用条件:
 
-- 双方向音声とDataChannelがChrome / Firefoxで成立する。
-- 固定UDP mux portの直接接続が成立する。
-- ICE restart後も同じsession IDで復旧する。
-- resource testで回収不能な増加がない。
-- aiortc baselineと比較して重大なlatency / CPU / memory退行がない。
-- Go pipeline clientsが既存Python serviceと互換動作する。
+- local host candidateでChromeの双方向音声とDataChannelが成立する。
+- pure Go Opus decodeとmediadevices/static libopus encodeが成立する。
+- 10回close、codec error、SIGTERM、race testでsession resourceが収束する。
+
+Firefox、fixed UDP mux、ICE restart、aiortc性能比較、Go pipeline互換はPhase 3 / 4の切替条件であり、
+Pionを後続実装の出発点にする判断とは分離する。
 
 不採用条件:
 
@@ -163,12 +171,11 @@ aiortcの `recv()` pull modelを模倣しない。browser入力と合成音声�
 
 ### codec実装
 
-候補:
+Phase 1は inbound に `github.com/pion/opus` のpure Go decoder、outbound に
+`github.com/pion/mediadevices/pkg/codec/opus` の同梱static libopus encoderを使う。
+`dynamic` build tagとsystem libopusは使わず、cgo範囲をencoderへ限定する。
 
-1. libopus binding
-2. GStreamer
-
-libopus bindingは構成が小さくなりやすいが、cgoとnative handle管理が必要になる。GStreamerはdecode、resample、encodeをpipelineとして扱える一方、runtime dependencyとpipeline lifecycleが増える。
+この経路が成立しない場合だけ、失敗したcodec adapterについてGStreamerを小さな後続taskで比較する。
 
 判断軸:
 

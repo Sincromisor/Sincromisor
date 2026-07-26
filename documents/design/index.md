@@ -97,6 +97,7 @@
 
 ## Decisions
 
+- [ADR-260726 Pion Codec PoC](decisions/ADR-260726-pion-codec-poc.md)
 - [ADR-260222 React Migration](decisions/ADR-260222-react-migration.md)
 - [ADR-260430 Overlay Frame Ownership](decisions/ADR-260430-overlay-frame.md)
 - [ADR-260412 Proper Noun Biasing Strategy](decisions/ADR-260412-proper-noun-biasing.md)
