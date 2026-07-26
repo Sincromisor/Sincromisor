@@ -58,38 +58,45 @@ reviewer の High 指摘になりやすい）。
 - [ ] 同期が **不要**なら、その理由（内部クローズドな変更等）を 1 行書いた。
 - [ ] 公開バレル / 生成物（型定義・ビルド成果物など）を変える場合、その再生成とコミットを方針に含めた。
 
-## 7. ソースコードコメント品質（TypeScript production code）
+## 7. ソースコードコメント品質（production code）
 
-TypeScript production code を変更するタスクは、[documents/rules/coding-ts.md](../documents/rules/coding-ts.md)
-の「ソースコードコメント品質」に照らした comment audit / comment acceptance を `task.md` の受け入れ条件へ
-含める。対象変更なのにコメント観点が無い場合、task-reviewer は受け入れ条件不足として指摘する。
-コメント改善タスクでは file 単位の module TSDoc 集約や定型理由だけで完了できないよう、
-symbol / decision 単位で対象と期待値を定義する。
+production code を変更するタスクは、[documents/rules/source-comments.md](../documents/rules/source-comments.md) と
+対象言語の `documents/rules/coding-*.md` に照らした comment audit / comment acceptance を `task.md` の
+受け入れ条件へ含める。対象変更なのにコメント観点が無い場合、task-reviewer は受け入れ条件不足として指摘する。
+public API と非自明な制約は必須の下限であり、調査時の理解支援を含めて対象と期待値を定義する。
 
-- [ ] TypeScript production code 変更の有無を判定した（test / fixture / docs のみなら対象外理由を書いた）。
-- [ ] public export / public component / hook / module、schemaVersion を持つ保存 contract、Worker /
-      DOM / MediaStream / MediaPipe / WebRTC などの boundary、coordinate / threshold / fallback /
-      cleanup などの heuristic / lifecycle、schema/parser を追加または変更するか確認した。
-- [ ] 対象がある場合、`path`、`symbol or decision`、`kind`、`current comment`、`decision`
-      （`keep` / `rewrite` / `delete` / `add`）、`required maintenance knowledge`、`action`、
-      `reviewer note` を含む symbol / decision 単位の comment audit schema を受け入れ条件に含めた。
-- [ ] 対象がある場合、JSDoc/TSDoc を含むコメント追加・更新だけでなく、弱い既存コメントの
-      delete / rewrite 条件を受け入れ条件に含めた。
-- [ ] public export の目的、契約、入力境界、返す値または observable output、失敗条件、副作用、
-      非対象のうち、変更対象に必要な情報を task acceptance に定義した。
-- [ ] module TSDoc へ集約できる条件（file 内の public export が単一責務を共有し、各 export の
-      入力境界、observable output、失敗条件、副作用、非対象を具体的に覆う場合のみ）を定義し、
-      file 単位の責務要約だけで完了できないことを明記した。
-- [ ] コメントを省略する対象がある場合、省略理由を受け入れ条件または実装ログ記録条件に含めた。
+- [ ] production code 変更の有無を判定した（test / fixture / generated code / docs のみなら対象外理由を書いた）。
+- [ ] public API、boundary、schema / parser、heuristic / lifecycle に加え、orchestration / pipeline、
+      state transition、event source、data transformation、非局所的な接続関係を追加または変更するか確認した。
+- [ ] 変更した symbol / block / decision / flow と、その変更を理解するために読む直接の helper、state、
+      event、lifecycle、data transformation を change comprehension surface として受け入れ条件に含めた。
+- [ ] 対象がある場合、`path`、`symbol / block / decision`、`kind`、`current comment`、`reader question`、
+      `required reader knowledge`、`decision`（`keep` / `rewrite` / `delete` / `add`）、
+      `action / omission reason`、`reviewer note` を含む audit schema を受け入れ条件に含めた。
+- [ ] 対象がある場合、docstring / JSDoc / TSDoc / Go doc comment と実装コメントの追加・更新だけでなく、
+      弱い既存コメントの delete / rewrite 条件を受け入れ条件に含めた。
+- [ ] public API の目的、契約、入力境界、戻り値、失敗条件、副作用、非対象のうち、
+      変更対象に必要な情報を task acceptance に定義した。
+- [ ] 内部 flow の処理段階、state change、data representation、前後関係、後段へ委ねる責務のうち、
+      読者が局所的に理解するために必要な情報を task acceptance に定義した。
+- [ ] file / module comment へ集約する場合、対象 symbol と flow の入力、出力、失敗条件、副作用、
+      前後関係を具体的に覆い、責務要約だけで完了できない条件を定義した。
+- [ ] コメントを省略する対象がある場合、横断規約の省略条件を満たす具体的な理由を
+      受け入れ条件または実装ログ記録条件に含めた。
+- [ ] `private`、`短い`、`型がある`、`testを読めば分かる`、`既存コードにもコメントがない` を
+      単独の省略理由として認めないことを明記した。
+- [ ] 新規 file / symbol は現行規約を完全に満たし、既存コードのコメント不足を前例にしない条件を含めた。
 - [ ] 対象がある場合、実装と矛盾する stale comment の削除・更新を受け入れ条件に含めた。
 - [ ] TODO を追加または変更する場合、TODO 必須情報（理由、削除条件、canonical task/issue ID、
       期限または判断基準）を受け入れ条件に含めた。
-- [ ] コメントで補う前に、命名、関数分割、型定義、options object で明確化できないかを確認する条件を含めた。
+- [ ] コメントで補う前に、命名、関数分割、型定義、options object、module / package 境界で
+      明確化できないかを確認し、構造改善だけを理由に reader-oriented comment を省略しない条件を含めた。
 - [ ] コメント改善タスクが 10 file を超える広域一括作業を要求する場合、slice 分割または
-      symbol-level sampling 方針を task.md に明記した。
-- [ ] 評価時は変更された symbols / decisions の全件照合を原則とし、広域変更で全件照合が現実的でない
-      場合でも固定件数だけで打ち切らず、public API、境界、heuristic / lifecycle、rewrite / delete 判断、
-      定型 audit 理由の疑いがある箇所を優先したリスクベースの照合範囲、未照合範囲、残リスクを
-      `eval.md` に記録する条件を含めた。
-- [ ] 評価時の照合範囲で、名前・型から分かるだけのコメント、確認先だけのコメント、
-      失敗モードのない heuristic コメント、定型 audit 理由があれば FAIL にする条件を含めた。
+      symbol / flow-level sampling 方針を task.md に明記した。
+- [ ] 評価時は変更した対象と change comprehension surface の全件照合を原則とし、広域変更では
+      public API、boundary、orchestration、state / data flow、rewrite / delete 判断、定型 audit 理由の
+      疑いがある箇所を優先したリスクベースの照合範囲、未照合範囲、残リスクを `eval.md` に
+      記録する条件を含めた。
+- [ ] 評価時の照合範囲で、逐語説明、確認先だけのコメント、失敗モードのない heuristic コメント、
+      内部 flow の理解困難、既存の無コメントを根拠にした省略、定型 audit 理由があれば
+      FAIL にする条件を含めた。

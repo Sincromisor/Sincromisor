@@ -40,7 +40,7 @@ Markdown は「次に読む人と LLM エージェントが短時間で判断で
 | Prettier ignore         | [.prettierignore](../../.prettierignore)                                     |
 | 実行 scripts            | [sincromisor-frontend/package.json](../../sincromisor-frontend/package.json) |
 
-- Prettier は Markdown 専用として扱う。TypeScript / JavaScript / JSON は Biome、Python は Ruff に任せる。
+- Prettier は Markdown 専用として扱う。TypeScript / JavaScript / JSON は Biome、Python は Ruff、Go は `gofmt` に任せる。
 - `.prettierrc.json` の `proseWrap: "preserve"` を前提に、本文の改行位置は書き手が意味単位で決める。
 - 箇条書きやネストのインデントは Prettier の出力に従う。手で揃えるためのスペース調整をしない。
 - コミット前の確認項目:

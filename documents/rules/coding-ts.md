@@ -1,7 +1,7 @@
 # コーディング規約(TypeScript)
 
 > **Scope**: TypeScriptコードベース横断のコーディング規約(型運用 / エラー / ログ / テスト / import / null / 日付 / TODO / env / 言語)
-> **AGENTS.md との関係**: [AGENTS.md](../../AGENTS.md) は初動ガイドと正本リンクを保持する。サイズ閾値 / 分割判断 / 主要アンチパターンは [code-structure.md](code-structure.md) を正本とし、本書は TypeScript 固有の横断ルールを保持する。
+> **AGENTS.md との関係**: [AGENTS.md](../../AGENTS.md) は初動ガイドと正本リンクを保持する。サイズ閾値 / 分割判断 / 主要アンチパターンは [code-structure.md](code-structure.md)、コメント品質の横断基準は [source-comments.md](source-comments.md) を正本とし、本書は TypeScript 固有の横断ルールを保持する。
 
 ## 0. 設計思想
 
@@ -171,18 +171,22 @@ PoC では下記 2 軸を最優先する。
 
 ## 13. ソースコードコメント品質
 
-コメントは「読めば分かる処理説明」ではなく、公開 API、境界、非自明な判断、制約理由、保存
-contract を後続の開発者が安全に変更するための文脈を残すために書く。コメント作業は「コメントを追加する」
-作業ではない。既存コメントと不足している保守知識を `keep` / `rewrite` / `delete` / `add` に分類し、
-コードだけでは安全に判断できない情報だけを残す audit として扱う。
+コメント品質の目的、既存コードへの適用、省略条件、audit schema は [source-comments.md](source-comments.md) を
+正本とする。TypeScript でも、公開 API や非自明な制約は必須の下限であり、それだけで十分とは判断しない。
+処理の全体像、pipeline の段階、state transition、data transformation、離れた component / hook / Worker 間の
+関係を、一般的な開発者が短時間で調査できるようにする。
+
+コメント作業はコメント数を増やす作業ではない。変更した symbol / block / decision / flow と
+change comprehension surface を `keep` / `rewrite` / `delete` / `add` に分類し、安全な変更と理解支援の両方に
+必要な reader knowledge を残す audit として扱う。
 
 コメントで責務分割を代替しない。[code-structure.md](code-structure.md) の「コメントで段落分けしたくなったら
 関数抽出を検討する」方針に従い、まず命名、関数分割、型定義、options object で明確化できないか確認する。
 
 ### 13.1 コメントが必須の対象と audit 単位
 
-comment audit の最小単位は file ではなく、対象 symbol または decision である。次の対象は、名前や型だけでは
-変更時の安全条件が読めないためコメントを必須とし、個別に audit する。
+comment audit の最小単位は file ではなく、対象 symbol / block / decision / flow である。次の対象は個別に
+audit する。
 
 - `export` される、または public な class / function / type / interface / component / hook / module /
   domain-significant `const`
@@ -192,26 +196,20 @@ comment audit の最小単位は file ではなく、対象 symbol または dec
 - threshold、fallback、degradation、recovery、cooldown、hysteresis、clamp、side assignment、ROI 判定などの
   heuristic
 - cleanup 所有者、resource lifecycle、例外を fallback に落とす理由
+- app controller、conversation、tracking、animation など複数段階を調停する orchestration
+- state / mode transition、event / callback の発生元と、後続処理を開始する条件
+- raw browser / MediaPipe / WebRTC data から内部表現への変換と、後段へ委ねる処理
+- 名前と型だけでは上位 flow における役割が分からない private function / block
 
-audit artifact を作る場合は、少なくとも次の列を持たせる。file 単位で「module comment に集約」とだけ書いた
-ものは完了扱いにしない。
-
-| 列                               | 内容                                                                 |
-| -------------------------------- | -------------------------------------------------------------------- |
-| `path`                           | 対象ファイル                                                         |
-| `symbol or decision`             | public export 名、境界 module 名、heuristic / lifecycle などの判断名 |
-| `kind`                           | public export / parser / lifecycle / heuristic / boundary など       |
-| `current comment`                | 既存コメントの有無と、残す場合に依拠する内容                         |
-| `decision`                       | `keep` / `rewrite` / `delete` / `add`                                |
-| `required maintenance knowledge` | 後続保守者が安全に変更するために必要な、コードだけでは読めない知識   |
-| `action`                         | 実施した編集、または省略理由                                         |
-| `reviewer note`                  | reviewer / evaluator が照合すべき実コード上の観点                    |
+audit artifact の列と省略理由は [source-comments.md](source-comments.md) の「Comment audit」を使う。
+file 単位の「module comment に集約」だけでは完了扱いにしない。
 
 ### 13.2 記法の使い分け
 
 - export / public API のコメントは原則 JSDoc / TSDoc とする。生成ドキュメントが無い場合でも、
   editor hover とレビューで契約を読める形にする。
-- 実装内部の補足は通常の block comment または line comment でよい。ただし対象は §13.5 に限定する。
+- 実装内部の flow / navigation / state / data の補足は通常の block comment または line comment を使う。
+  複数行を一段高い抽象度で要約し、現在の処理段階や前後関係を示すコメントを許容する。
 - ソースコード内コメントの言語は §11 に従い日本語とする。Error message やログの英語方針は変えない。
 
 例:
@@ -247,24 +245,30 @@ export function parseGazeReplaySample(input: unknown): GazeReplaySample {
 
 ### 13.4 省略と module TSDoc への集約
 
-コメントを省略できるのは、private helper で名前、型、周辺 public コメントから責務が明らかであり、かつ境界 /
-heuristic / lifecycle / schema を持たない場合に限る。迷う場合は、コメントを書く前に関数名、型名、引数名、
-戻り値型、呼び出し側の責務分割を見直す。
+コメントの省略条件は [source-comments.md](source-comments.md) の「コメントの省略条件」を正本とする。
+private であること、短いこと、型があること、既存コードにコメントがないことは単独の省略理由にならない。
+目的、上位 flow での位置、入出力、state change、前後関係が局所的に読める場合だけ省略できる。
 
 module TSDoc へ個別 export の保守知識を集約できるのは、file 内の public export が単一責務を共有し、module
 comment が各 export の入力境界、observable output、失敗条件、副作用、非対象を具体的に覆う場合に限る。
 単なる file の責務要約、設計文書への誘導、または「各 export は module comment を参照」といった宣言だけでは
 集約条件を満たさない。
 
-### 13.5 許容する実装コメント
+### 13.5 必要な実装コメント
 
-実装コメントは、次のどれかに該当する場合に限る。
+TypeScript の実装内部では、次の対象に block / line comment を置く。コードと同じ粒度の逐語説明ではなく、
+複数行・複数 symbol の関係を一段高い抽象度で説明する。
 
 - 複雑な分岐やアルゴリズムの不変条件
 - workaround と、その外部要因または削除条件
 - 性能上の理由
 - ブラウザ、MediaPipe、WebRTC、VRM など外部仕様由来の制約
 - cleanup / lifecycle / fallback の安全条件
+- orchestration / pipeline の現在段階と、この段階で完了させる責務
+- state / mode transition と event / callback の発生元
+- 座標、frame、payload、browser API value などの変換前後
+- component、hook、Worker、controller、service 間の非局所的な接続関係
+- 意図的な早期 return、no-op、処理の延期、後段へ委ねる責務
 
 `catch` で fallback へ落とす場合は §3 に従い、ログ + 再 throw か、明示的なハンドル理由をコメントで残す。
 TODO は §9 の形式に従い、canonical task ID と削除条件を持たせる。
@@ -272,13 +276,15 @@ TODO は §9 の形式に従い、canonical task ID と削除条件を持たせ�
 ### 13.6 禁止するコメント
 
 - `// 値を返す`、`// ループする` のような処理説明だけのコメント
+- public API と非自明な制約だけを機械的に埋め、内部 flow の理解困難を放置すること
 - 古い実装経緯だけを残し、現在の判断や契約を説明しないコメント
 - 「design doc / focused tests を確認する」とだけ書き、実コード上の入力境界、失敗条件、副作用、確認観点を
   説明しないコメント
 - 名前や型から分かる責務要約だけのコメント
 - heuristic / threshold の存在だけを書き、誤調整時の見え方や失敗モード、値の由来を説明しないコメント
 - audit artifact で `public export のため追加`、`既存コメントで十分` のような定型文だけを書き、
-  symbol / decision 固有の保守知識を示さない理由
+  symbol / decision 固有の reader question と required reader knowledge を示さない理由
+- `private`、`短い`、`型がある`、`既存コードにもない` だけを省略理由にすること
 - 根拠のない `temporary`、`workaround`、`magic`
 - 理由、削除条件、canonical task / issue ID、期限または判断基準がない TODO
 - 実装と同期しない設計メモ、更新されず stale になったコメント

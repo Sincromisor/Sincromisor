@@ -42,7 +42,9 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 - コード構造ルール: `documents/rules/code-structure.md`
 - Python 規約: `documents/rules/coding-py.md`
 - TypeScript 規約: `documents/rules/coding-ts.md`
+- Go 規約: `documents/rules/coding-go.md`
 - Markdown 規約: `documents/rules/coding-md.md`
+- ソースコードコメント品質: `documents/rules/source-comments.md`
 
 ## ディレクトリマップ
 
@@ -71,16 +73,18 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 - 既存の通信契約（endpoint / JSON / DataChannel / msgpack）を変更する場合は、破壊的変更として明示し、フロントとサーバーを同時に確認する。
 - compose、設定、実装、設計文書を片側だけ更新しない。
 - 再現手順と確認結果はタスク文書に残す。
-- ソースコード内のコメントは、**未来の保守者に対して「コードを安全に変更するために必要だが、コードだけでは分からない情報」を残す**ものである。
-    - 非自明な判断、制約理由を中心に、**積極的に記述する**。
-    - exported / public な関数・class・type・component・hook・module には原則として JSDoc/TSDoc コメントを書く。
-    - 「コードが何をしているか」の逐語説明ではなく、目的・契約・制約・失敗条件・副作用・非自明な理由を書く。
-    - 型・関数名・引数名から明らかな内容は書かない。
-    - 実装コメントは、複雑な分岐、アルゴリズム、回避策、性能上の理由、外部仕様由来の制約、不変条件に限定する。
+- ソースコード内のコメントには、**安全な変更を可能にすること**と、**調査時の理解時間を短縮すること**の 2 つの独立した目的がある。
+    - public API、境界、非自明な制約へのコメントは必須の下限であり、それだけ満たせば十分という意味ではない。
+    - exported / public な関数・class・type・component・hook・module には、原則として各言語の標準 doc comment（TypeScript の JSDoc/TSDoc、Go の doc comment など）を書く。
+    - 契約、制約、失敗条件、副作用、非自明な判断理由を、未来の保守者が安全に変更できる形で残す。
+    - 処理の全体像、段階、状態遷移、データ表現、離れたコード間の関係を、一般的な開発者が短時間で把握できる形で残す。
+    - 禁止するのは、コードを同じ粒度で一行ずつ読み上げる逐語説明である。複数行の処理を一段高い抽象度で要約するコメントや、pipeline 内の位置を示すコメントは積極的に書く。
+    - 既存コードにコメントがないことは、新規・変更コードでコメントを省略する理由にならない。既存実装より現行規約を優先する。
+    - 既存コードを変更する場合は、変更箇所と、その変更を理解するために読む直接の helper、state、event、lifecycle、データ変換まで確認する。
     - stale comment を作らない。コード変更時は関連コメントを更新または削除する。
     - TODO は単に「あとで直す」と書かず、理由、削除条件、issue番号、期限または判断基準を含める。
-    - コメントで補う前に、命名・関数分割・型定義・引数オブジェクト化で自明にできないかを優先する。
-    - 各言語ごとの詳細基準は `documents/rules/coding-*.md` の「ソースコードコメント品質」を参照する。
+    - コメント追加前に命名・関数分割・型定義・引数オブジェクト化を検討するが、構造改善だけを理由に reader-oriented な説明を省略しない。
+    - 横断的な詳細基準は `documents/rules/source-comments.md`、記法と言語固有の対象は `documents/rules/coding-*.md` を参照する。
 - 設計変更を伴う実装変更では、`documents/design/` の該当文書と `documents/design/index.md` の導線を確認する。
 
 ### 良いコメントの例
@@ -114,6 +118,15 @@ export async function fetchVisibleUsers(session: Session): Promise<User[]> {
 if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
   ...
 }
+```
+
+複数の処理段階における現在位置と、後段へ委ねる責務を説明している。
+
+```ts
+/*
+    MediaPipe座標をVRMのlocal座標へ正規化する。
+    smoothingとIK補正は後段で行うため、ここでは座標系の変換だけを完了させる。
+*/
 ```
 
 ## 変更時の確認先
@@ -157,7 +170,7 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 
 ## ローカル確認
 
-変更内容に応じてフロント、Python、Compose、Markdown、task tooling の確認範囲を選ぶ。具体的なコマンドと task close 前の必須確認は `tasks/README.md` を正本とする。実行できなかった確認は、理由をタスク文書と最終報告に残す。
+変更内容に応じてフロント、Python、Go、Compose、Markdown、task tooling の確認範囲を選ぶ。具体的なコマンドと task close 前の必須確認は `tasks/README.md` を正本とする。実行できなかった確認は、理由をタスク文書と最終報告に残す。
 
 ## よくある落とし穴
 
