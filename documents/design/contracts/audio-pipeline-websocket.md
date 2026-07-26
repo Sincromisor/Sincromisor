@@ -123,8 +123,28 @@ close handshakeは2秒で打ち切ってunderlying socketを強制closeする。
 `DefaultConfig`をコード正本とし、test用configでは正数の範囲で短縮できる。
 
 個別clientは再接続、backoff、generation、4接続の一括resetを行わない。`Connect`へ渡したcontextまたは明示
-`Close`がreader/pingを停止し、goroutine joinとresult/event channel closeまで完了させる。Python
-`AudioBroker`が現在持つ全体系reconnectをGoへ移すのは後続段階であり、この責務境界を個別clientへ戻さない。
+`Close`がreader/pingを停止し、goroutine joinとresult/event channel closeまで完了させる。
+
+`internal/pipeline` のCoordinatorは4 clientをExtractor、Recognizer、Processor、Synthesizerの順で接続し、
+全接続の`Activate`が成功した場合だけ同じgenerationとして公開する。途中失敗と公開前eventは部分setを逆順closeし、
+generationを変えずに新しいclient setでretryする。running中のterminal eventはsingle-flight resetへ集約し、
+lock下でgenerationを先に進めてから旧context、4 client、transient queue / in-flight stateを破棄する。
+callbackとexternal outputは捕捉したgenerationを再確認し、旧generationを次段へ渡さない。
+
+browser入力は20 ms、16 kHz、mono、s16leの640-byte frameだけを受ける。running以外では保存せず拒否し、
+running中は25 frame（500 ms）のbounded queueで最古の未送信frameだけをdropする。text / synthesized outputは
+各16件で順序を維持し、5秒のbackpressureをsilent dropせずreset理由にする。external channelはsession lifetimeで
+交換せずgeneration envelopeを返し、reset barrierでbuffer済み旧要素をdrainする。
+
+confirmed chat historyだけをsession stateに保持する。partial recognition、current user message、
+未完了processor response、未送信TTSはgeneration stateでありreset時に破棄する。Processorの中間resultは
+request historyとの完全一致、final resultはrequest historyをprefixとするresponse追加済みhistoryとの完全一致を
+検証した場合だけ受理し、finalだけをconfirmed historyへcommitする。
+
+retryは1秒capから始まるfull jitterで、attempt 5以降は30秒capへ飽和する。`Close`またはStart context cancellationは
+retry waiter、generation goroutine、clientをcancel / joinし、全producer終了後にexternal channelをcloseする。
+Python `AudioBroker`がproduction正本である状態はPhase 3でPion sessionへ統合するまで維持し、この責務境界を
+個別clientへ戻さない。
 
 ## Timeout / Retry
 
@@ -147,7 +167,7 @@ close handshakeは2秒で打ち切ってunderlying socketを強制closeする。
 | Recognizer    | speech segment から confirmed / partial result が返る |
 | TextProcessor | `talk_mode` 別 path で応答が返る                      |
 | Synthesizer   | 応答 text から voice frame が返る                     |
-| reconnect     | 1 系統切断後に AudioBroker が復帰する                 |
+| reconnect     | 1 系統切断後に4接続を新generationで一括再作成する     |
 
 ## References
 
