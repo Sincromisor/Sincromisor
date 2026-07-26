@@ -58,7 +58,7 @@ type Output[T any] struct {
 }
 
 type jitterSource func(time.Duration) (time.Duration, error)
-type retryWaiter func(context.Context, time.Duration) error
+type retryWaiter func(context.Context, time.Duration) <-chan error
 
 // Coordinator は1 sessionの4 client、generation、transient work、confirmed historyを所有する。
 //
@@ -82,6 +82,7 @@ type Coordinator struct {
 	set        ClientSet
 	work       *generationWork
 	history    []protocol.ChatMessage
+	staleDrops map[pclient.Service]uint64
 	resetting  bool
 	closeDone  chan struct{}
 	closeOnce  sync.Once
@@ -113,9 +114,10 @@ func newCoordinatorWithHooks(factory ClientSetFactory, logger *slog.Logger, jitt
 	}
 	return &Coordinator{
 		factory: factory, logger: logger, jitter: jitter, wait: waiter, state: StateIdle,
-		textOut:   make(chan Output[protocol.ChatMessage], outputQueueCapacity),
-		synthOut:  make(chan Output[protocol.SynthesizerResult], outputQueueCapacity),
-		closeDone: make(chan struct{}),
+		textOut:    make(chan Output[protocol.ChatMessage], outputQueueCapacity),
+		synthOut:   make(chan Output[protocol.SynthesizerResult], outputQueueCapacity),
+		staleDrops: make(map[pclient.Service]uint64),
+		closeDone:  make(chan struct{}),
 	}, nil
 }
 
@@ -181,8 +183,11 @@ func (c *Coordinator) SubmitPCM(frame []byte) error {
 	}
 	queue := c.work.input
 	owned := append([]byte(nil), frame...)
-	queue.push(owned)
+	dropped, dropCount := queue.push(owned)
 	c.mu.Unlock()
+	if dropped {
+		c.logger.Warn("dropped pipeline input", "service", pclient.ServiceExtractor, "drop_count", dropCount)
+	}
 	return nil
 }
 

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math/big"
 	"time"
+
+	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 )
 
 // connectUntilRunning owns one generation's attempt counter. A failed initial
@@ -46,7 +48,10 @@ func (c *Coordinator) connectUntilRunning(initial bool) error {
 				// Activate and running publication are performed while holding the
 				// same state lock. Event handlers wait for unlock and therefore
 				// classify the event as either building failure or runtime reset.
-				err = set.Activate(c.onClientEvent)
+				generation := c.generation
+				err = set.Activate(func(event pclient.Event) {
+					c.onClientEvent(generation, event)
+				})
 			}
 			if err == nil {
 				workCtx, cancel := context.WithCancel(ctx)
@@ -72,7 +77,7 @@ func (c *Coordinator) connectUntilRunning(initial bool) error {
 			_ = c.Close()
 			return delayErr
 		}
-		if waitErr := c.wait(ctx, delay); waitErr != nil {
+		if waitErr := <-c.wait(ctx, delay); waitErr != nil {
 			if initial && ctx.Err() != nil {
 				return ctx.Err()
 			}
@@ -124,13 +129,17 @@ func cryptoJitter(cap time.Duration) (time.Duration, error) {
 	return time.Duration(value.Int64()), nil
 }
 
-func realWait(ctx context.Context, delay time.Duration) error {
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-	select {
-	case <-timer.C:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+func realWait(ctx context.Context, delay time.Duration) <-chan error {
+	result := make(chan error, 1)
+	go func() {
+		timer := time.NewTimer(delay)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+			result <- nil
+		case <-ctx.Done():
+			result <- ctx.Err()
+		}
+	}()
+	return result
 }
