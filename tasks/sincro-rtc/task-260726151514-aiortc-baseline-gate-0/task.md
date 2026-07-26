@@ -50,7 +50,7 @@ Gate 0を判定する。
   採らない。
 - manifestの最小schemaは
   `{schemaVersion, sourceCommit, environment, browsers[], scenarios[], sampleIntervalMs,
-  convergenceDeadlineMs, privateInputs[]}` とする。scenarioは
+convergenceDeadlineMs, privateInputs[]}` とする。scenarioは
   `{id, browser, candidateMode, closeMode, repetitions, durationSeconds, network}` を持ち、
   networkは `{rttMs, jitterMs, lossPercent, seed}` とする。
 - latencyはmonotonic clockの区間差、CPUはprocess CPU time / wall time、memoryはRSSとheapを分離し、
@@ -108,7 +108,7 @@ Gate 0を判定する。
   すべて満たした最後の時点とする。60秒以内に`t2`へ到達したsessionだけ接続成功とする。
 - failure stageは最初に失敗した
   `config | offer_http | answer_parse | remote_description | candidate_http | ice | datachannel | audio |
-  reconnect | close | timeout` のfixed enumとし、複数errorは最初をprimary、残りをsecondary配列へ入れる。
+reconnect | close | timeout` のfixed enumとし、複数errorは最初をprimary、残りをsecondary配列へ入れる。
 - `signalingLatencyMs=t1-t0`、`mediaReadyLatencyMs=t2-t0` はbrowser monotonic domainで測り、成功sessionごとに
   1 sampleとする。p50 / p95はbrowser / candidateMode / closeMode別の成功sampleだけをnearest-rank集計し、
   成功0件はvalue `null` / availability `not_available(no_successful_session)` とする。
@@ -128,8 +128,8 @@ Gate 0を判定する。
   sample rate / channelはtrack settingsとworklet bufferから検証する。
 - raw result最小schemaは
   `{schemaVersion,runId,scenarioId,repetition,browser,candidateMode,closeMode,environment,
-  connection:{result,primaryStage,secondaryStages,t0,t1,t2},latencySamples[],audioSamples[],
-  resources[],errors[]}` とする。各numeric observationは
+connection:{result,primaryStage,secondaryStages,t0,t1,t2},latencySamples[],audioSamples[],
+resources[],errors[]}` とする。各numeric observationは
   `{value:number|null,unit,availability:"available"|"not_available",reason?:string}` とし、欠測fieldを省略しない。
 - aggregate最小schemaは
   `{schemaVersion,sourceRuns[],scenarioSummaries[],resourceCheckpoints[],knownIssues[],gate0}` とし、
