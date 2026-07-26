@@ -1,13 +1,13 @@
 id: task-260726150803-pion-codec-poc-gate-1
 title: Pion最小PoCでRTC移行経路を確定する
 category: sincro-rtc
-status: open
+status: done
 depends_on: []
 superseded_by: null
 review: APPROVED
 reviewed_sha: 611b2d00e1b5c9e5920deadac4d22ea2f7e49955
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 2
 created_at: 2026-07-26
-closed_at: null
+closed_at: 2026-07-26
 legacy_ids: []
