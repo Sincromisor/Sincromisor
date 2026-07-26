@@ -60,7 +60,8 @@ type Output[T any] struct {
 type jitterSource func(time.Duration) (time.Duration, error)
 type retryWaiter func(context.Context, time.Duration) <-chan error
 
-// Coordinator は1 sessionの4 client、generation、transient work、confirmed historyを所有する。
+// Coordinator は1 sessionの4 client、generation、transient work、confirmed history、
+// Extractor identity、およびqueue交換を跨ぐdrop telemetryを所有する。
 //
 // Start contextがlifetimeを所有し、Closeはstable result channelを閉じる前に全producerをjoinする。
 // 別sessionを開始するcallerは新しいCoordinatorを作る。
@@ -82,6 +83,8 @@ type Coordinator struct {
 	set        ClientSet
 	work       *generationWork
 	history    []protocol.ChatMessage
+	extraction extractionIdentity
+	pcmDrops   uint64
 	staleDrops map[pclient.Service]uint64
 	resetting  bool
 	closeDone  chan struct{}
@@ -171,7 +174,8 @@ func (c *Coordinator) closeOnContext() {
 // SubmitPCM は20 ms / 16 kHz / mono / s16leの640-byte PCMを防御的copyして受理する。
 //
 // running以外はErrPipelineUnavailableで保存しない。満杯時は最古の未送信frameを捨てて最新を保持し、
-// reset時はqueue objectを交換してcaller sliceと旧producerを切り離す。
+// reset時はqueue objectを交換してcaller sliceと旧producerを切り離す。overflow countはqueueではなく
+// Coordinatorがsession累積値として所有し、payloadを含めずExtractor名とcountだけをlogへ出す。
 func (c *Coordinator) SubmitPCM(frame []byte) error {
 	if len(frame) != pcmFrameBytes {
 		return errors.New("pipeline PCM frame must be exactly 640 bytes")
@@ -183,7 +187,11 @@ func (c *Coordinator) SubmitPCM(frame []byte) error {
 	}
 	queue := c.work.input
 	owned := append([]byte(nil), frame...)
-	dropped, dropCount := queue.push(owned)
+	dropped := queue.push(owned)
+	if dropped {
+		c.pcmDrops++
+	}
+	dropCount := c.pcmDrops
 	c.mu.Unlock()
 	if dropped {
 		c.logger.Warn("dropped pipeline input", "service", pclient.ServiceExtractor, "drop_count", dropCount)

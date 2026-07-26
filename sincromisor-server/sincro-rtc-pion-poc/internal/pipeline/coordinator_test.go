@@ -184,9 +184,6 @@ func TestCoordinatorLifecycleQueueAndBackoff(t *testing.T) {
 		if got := (<-queue.values)[0]; got != 1 {
 			t.Fatalf("oldest retained frame = %d, want 1", got)
 		}
-		if queue.drops != 1 {
-			t.Fatalf("drop count = %d, want 1", queue.drops)
-		}
 		var caps []time.Duration
 		coordinator, err := newCoordinatorWithHooks(
 			&fakeFactory{t: t}, slog.New(slog.NewTextHandler(io.Discard, nil)),
@@ -209,6 +206,96 @@ func TestCoordinatorLifecycleQueueAndBackoff(t *testing.T) {
 			t.Fatalf("retry caps = %v, want %v", caps, want)
 		}
 	})
+}
+
+func TestCoordinatorKeepsExtractorIdentityAcrossReset(t *testing.T) {
+	tests := []struct {
+		name       string
+		identities []testExtractionIdentity
+	}{
+		{
+			name: "speech ID reuse",
+			identities: []testExtractionIdentity{
+				{speechID: 10, sequenceID: 100},
+				{speechID: 10, sequenceID: 101},
+				{speechID: 11, sequenceID: 102},
+			},
+		},
+		{
+			name: "sequence ID reuse",
+			identities: []testExtractionIdentity{
+				{speechID: 10, sequenceID: 100},
+				{speechID: 11, sequenceID: 100},
+				{speechID: 12, sequenceID: 101},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			factory := &fakeFactory{t: t, identities: test.identities}
+			coordinator := newTestCoordinator(t, factory)
+			if err := coordinator.Start(context.Background(), "session-identity", "sincro"); err != nil {
+				t.Fatalf("Start() error = %v", err)
+			}
+			if err := coordinator.SubmitPCM(make([]byte, pcmFrameBytes)); err != nil {
+				t.Fatalf("first SubmitPCM() error = %v", err)
+			}
+			_ = receive(t, coordinator.TextResults())
+			_ = receive(t, coordinator.TextResults())
+			_ = receive(t, coordinator.SynthResults())
+			factory.setAt(t, 0).emit(pclient.Event{
+				Service: pclient.ServiceRecognizer,
+				Kind:    pclient.EventRemoteClose,
+				Err:     errors.New("advance generation"),
+			})
+			waitForGeneration(t, coordinator, 2)
+			if err := coordinator.SubmitPCM(make([]byte, pcmFrameBytes)); err != nil {
+				t.Fatalf("reused identity SubmitPCM() error = %v", err)
+			}
+			// The protocol failure belongs to generation 2 and must reset that
+			// generation rather than being treated as a stale generation-1 result.
+			waitForGeneration(t, coordinator, 3)
+			if factory.count() != 3 {
+				t.Fatalf("client set count = %d, want 3", factory.count())
+			}
+			if err := coordinator.SubmitPCM(make([]byte, pcmFrameBytes)); err != nil {
+				t.Fatalf("strict identity SubmitPCM() error = %v", err)
+			}
+			if output := receive(t, coordinator.TextResults()); output.Generation != 3 {
+				t.Fatalf("strict identity output generation = %d, want 3", output.Generation)
+			}
+			if err := coordinator.Close(); err != nil {
+				t.Fatalf("Close() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestCoordinatorCountsPCMDropsAcrossQueueReplacement(t *testing.T) {
+	coordinator := newTestCoordinator(t, &fakeFactory{t: t})
+	coordinator.mu.Lock()
+	coordinator.state = StateRunning
+	coordinator.work = &generationWork{input: newFrameQueue()}
+	coordinator.mu.Unlock()
+
+	fill := func() {
+		for range inputQueueCapacity + 1 {
+			if err := coordinator.SubmitPCM(make([]byte, pcmFrameBytes)); err != nil {
+				t.Fatalf("SubmitPCM() error = %v", err)
+			}
+		}
+	}
+	fill()
+	coordinator.mu.Lock()
+	coordinator.work.input = newFrameQueue()
+	coordinator.mu.Unlock()
+	fill()
+	coordinator.mu.Lock()
+	drops := coordinator.pcmDrops
+	coordinator.mu.Unlock()
+	if drops != 2 {
+		t.Fatalf("session PCM drop count = %d, want 2", drops)
+	}
 }
 
 func TestConversationRejectsProcessorIntermediateFinalMixups(t *testing.T) {
@@ -540,15 +627,27 @@ func assertChannelEventuallyClosed[T any](t *testing.T, values <-chan T, name st
 }
 
 type fakeFactory struct {
-	t    *testing.T
-	mu   sync.Mutex
-	sets []*fakeSet
+	t          *testing.T
+	mu         sync.Mutex
+	sets       []*fakeSet
+	identities []testExtractionIdentity
+}
+
+type testExtractionIdentity struct {
+	speechID   int64
+	sequenceID int64
 }
 
 func (f *fakeFactory) Connect(_ context.Context, sessionID, _ string) (ClientSet, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	set := newFakeSet(f.t, sessionID, len(f.sets)+1)
+	identity := testExtractionIdentity{
+		speechID: int64(len(f.sets) + 1), sequenceID: int64(len(f.sets) + 1),
+	}
+	if len(f.sets) < len(f.identities) {
+		identity = f.identities[len(f.sets)]
+	}
+	set := newFakeSet(f.t, sessionID, identity.speechID, identity.sequenceID)
 	f.sets = append(f.sets, set)
 	return set, nil
 }
@@ -592,7 +691,8 @@ type windowFactory struct {
 func (f *windowFactory) Connect(_ context.Context, sessionID, _ string) (ClientSet, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	base := newFakeSet(f.t, sessionID, len(f.sets)+1)
+	identity := int64(len(f.sets) + 1)
+	base := newFakeSet(f.t, sessionID, identity, identity)
 	set := &windowSet{fakeSet: base}
 	if len(f.sets) == 0 {
 		set.window = f.window
@@ -653,7 +753,7 @@ func (f *closeRaceFactory) Connect(ctx context.Context, sessionID, _ string) (Cl
 	f.attempts++
 	attempt := f.attempts
 	if attempt == 1 {
-		f.firstSet = newFakeSet(f.t, sessionID, 1)
+		f.firstSet = newFakeSet(f.t, sessionID, 1, 1)
 		set := f.firstSet
 		f.mu.Unlock()
 		return set, nil
@@ -726,7 +826,7 @@ type fakeSet struct {
 	closes     int
 }
 
-func newFakeSet(t *testing.T, sessionID string, speechID int) *fakeSet {
+func newFakeSet(t *testing.T, sessionID string, speechID, sequenceID int64) *fakeSet {
 	t.Helper()
 	payload, err := os.ReadFile("protocol/testdata/extractor_result.msgpack")
 	if err != nil {
@@ -741,7 +841,7 @@ func newFakeSet(t *testing.T, sessionID string, speechID int) *fakeSet {
 	processor := &fakeProcessor{results: make(chan protocol.ProcessorResult, 1), events: make(chan pclient.Event, 1)}
 	synth := &fakeSynth{results: make(chan protocol.SynthesizerResult, 1), events: make(chan pclient.Event, 1)}
 	extractor.onPCM = func(frame []byte) {
-		fixture.SessionID, fixture.SpeechID, fixture.SequenceID = sessionID, int64(speechID), int64(speechID)
+		fixture.SessionID, fixture.SpeechID, fixture.SequenceID = sessionID, speechID, sequenceID
 		fixture.Confirmed = true
 		fixture.Voice = append([]byte(nil), frame...)
 		fixture.VoiceDType, fixture.VoiceSamplingRate = "int16", 16_000
