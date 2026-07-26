@@ -1,0 +1,179 @@
+# 運用移行とロールバック
+
+## Summary
+
+- aiortc版とPion版は開発・評価環境で個別に起動し、運用環境では同時稼働させない。
+- Pion版は下流Python serviceへ直接接続し、Python RTC adapterを運用componentとして追加しない。
+- 運用切替とrollbackはメンテナンス時間にserviceを停止して行い、active sessionの継続を保証しない。
+- Pionは1 instance、固定UDP mux port、明示的なpublic IPv4、UDP4 / Full ICEから開始する。TURNは設定時点で拒否する。
+
+## 排他的なbackend配置
+
+```mermaid
+flowchart LR
+    Browser["Browser"] --> Endpoint["Stable signaling endpoint"]
+    Endpoint --> Active["Exactly one active RTC backend"]
+    Active --> Pipeline["Python pipeline services"]
+```
+
+運用環境ではstable endpointとport mappingの接続先を1つだけ起動する。aiortcとPionを同時に公開するrouter、割合routing、backend間session registryは実装しない。評価時はcompose profile、別project名、または別hostで一方ずつ起動し、同じtest suiteを逐次実行する。
+
+Pion版の経路には追加adapterを挟まない。aiortcのimageと設定はrollback可能な期間だけ保存するが、Pion稼働中はserviceを停止する。
+
+### 判断のメリット・デメリット
+
+| 判断                        | メリット                                                             | デメリット                                           |
+| --------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
+| 運用環境は1 backendだけ起動 | stickiness router、共有registry、backend固有session ID routingが不要 | 切替とrollbackで停止時間が発生する                   |
+| active sessionを移送しない  | session state移送と二重処理を排除できる                              | 切替時の通話は切断され、利用者が再接続する必要がある |
+| 評価は逐次実行              | composeと自動testを共用できる                                        | 同時canaryによる実traffic比較はできない              |
+
+## WebRTC media network
+
+初期運用のmedia networkは次へ固定する。
+
+- Pionは1 instanceだけ起動する。
+- session別UDP port rangeではなく、全PeerConnectionで1つの固定UDP mux portを共有する。
+- Dockerはhost側とcontainer側で同じUDP portを1:1 mappingする。割り当てるport番号はcompose / env / firewallで1つの値を正本化する。
+- signalingは現行どおりTCP endpointを公開し、media用UDP portを別に公開する。
+- SDPへ載せるpublic IPv4を設定で明示し、`SetICEAddressRewriteRules` のhost candidate置換を使ってcontainer / private IPをadvertiseしない。NAT配下ではpublic IPv4とUDP portをPion hostへ静的forwardする。
+- network typeはUDP4へ限定し、interface filterはcontainer内の実通信interfaceをallow-listし、loopbackや意図しないhost virtual interfaceを除外する。STUNはpublic IP rewriteと併用し、実際のserver-reflexive経路を診断できるようにする。
+- ICE agentはFull ICEとする。ICE LiteとIPv6は初期移行の対象外とする。
+- TURN relayはaiortc版と同様に初期移行の対応対象外とする。`turn:` / `turns:` URLは黙って無視せず、設定errorとしてstartupを失敗させる。
+- 直接接続ではPion hostのmedia UDP portへのinboundとreturn trafficを許可する。
+- single-port ICE-TCPはPoCで接続改善が実測できた場合だけ追加する。採用しない場合は初期運用へTCP media portを公開しない。
+- 複数Pion instanceは初期運用で禁止する。将来追加する場合はinstanceごとに異なるUDP mux portとadvertised mappingを割り当て、L4で同一portを負荷分散しない。
+
+### 判断のメリット・デメリット
+
+| 判断             | メリット                                                            | デメリット                                               |
+| ---------------- | ------------------------------------------------------------------- | -------------------------------------------------------- |
+| 固定UDP mux port | firewallとDocker mappingが1 portで済み、session増加でportを開けない | 1 instance内でportを共有し、instance追加時は別portが必要 |
+| 明示public IPv4  | container / NAT配下でも到達可能なcandidateを一意に生成できる        | public IP変更時に設定更新が必要                          |
+| Full ICE         | browserとSTUNを含む通常のICE negotiationを維持できる                | ICE Liteより状態と通信量が増える                         |
+| IPv4のみ         | 検証matrixと運用設定を小さくできる                                  | IPv6-only環境をサポートしない                            |
+| TURN非対応       | TURN service、credential、relay試験を移行scopeから外せる            | restrictive NAT / firewall環境では接続できない場合がある |
+
+## 設定
+
+新規設定が必要になる想定領域は次のとおり。
+
+- Pion service bind host / port
+- Pion `v4.2.17` のdependency pin
+- media UDP mux port
+- advertised public IPv4
+- STUN URL、UDP4 network type、interface filter
+- session上限
+- 下流serviceのConsul名とfallback
+- input / output / DataChannel / candidate queue上限
+- HTTP body / SDP / candidate byte上限とrevision当たりcandidate件数
+- candidate収集、pre-connect、ICE / DTLS、media readiness、HTTP、pipeline client、close timeout
+- reconnect backoff
+- codec実装とcodec固有設定
+
+確定時は `examples/compose.env`、`compose/`、`compose.yml`、設定実装、[Compose設計](../../design/infrastructure/compose.md)を同時に更新する。具体的なenv名は実装taskで決め、本計画では正本化しない。
+
+設定の形式と組み合わせはnetwork socketやHTTP listenerを公開する前に検証する。public IPv4のparse失敗、UDP mux bind失敗、port不一致、空のinterface選択、TURN URL、上限やtimeoutの0 / 負値はreadiness falseのまま待機せずprocessをfail-fastさせる。外部NAT / firewallの到達性はstartupだけでは保証できないため、production相当リハーサルのsmoke testで検証する。
+
+## Service discovery
+
+- Go RTC serverはfrontend-facing endpointとしてConsulへ登録する。
+- Go pipeline clientsが下流4サービスをConsulから解決する。
+- 現行AudioBrokerと同じfallback semanticsを初期統合で維持する。
+- Pion経路のためだけのadapter service名を追加しない。
+
+## Connection budget
+
+初期統合では現行と同様、active sessionごとに下流serviceへのWebSocketを所有する。接続未成立sessionでは作成せず、ICE / DTLSとmedia readiness完了後に遅延作成する。次をmetric化する。
+
+- session当たりWebSocket数
+- reconnect中connection数
+- serviceごとの接続時間
+- idle connection memory
+- close完了時間
+
+同時session数でconnection数が問題になった場合に限り、multiplexまたはconnection poolを別設計として検討する。最初から複数sessionを1接続へ混在させない。
+
+## Shutdown
+
+```mermaid
+sequenceDiagram
+    participant O as Orchestrator
+    participant G as Go RTC Server
+    participant S as Python Services
+    participant F as Frontend
+
+    O->>G: SIGTERM
+    G->>G: reject new sessions
+    G->>G: cancel active session contexts
+    G->>S: close pipeline WebSockets
+    G->>G: close codec / channels / PeerConnections
+    G-->>O: process exit
+```
+
+切替時は利用停止を告知してから新規sessionを拒否し、短いclose timeout後にactive sessionを終了する。長時間drainして無停止を目指さない。各pipeline client、codec、DataChannel、PeerConnectionはsessionのclose-once guardに従い、shutdown経路から重複closeされないようにする。
+
+## Rollout段階
+
+### 開発環境
+
+- Pion backendを明示選択した開発者だけが利用する。
+- 接続、音質、pipeline互換、resource profileを収集する。
+
+### integration評価
+
+- 同じ環境でaiortcとPionを一方ずつ起動する。
+- automated browser testを両backendへ逐次実行する。
+- 同じPython下流serviceへ接続して結果を比較する。
+
+### production相当リハーサル
+
+- 運用と同じNAT、firewall、public IP設定でPionだけを起動する。
+- stop、Pion起動、smoke test、Pion停止、aiortc復旧を一連の手順として測る。
+- error rate、ICE成功率、latency、pipeline client、resourceを比較する。
+
+### 運用切り替え
+
+- メンテナンス時間にaiortcを停止し、Pionを同じstable endpointで起動する。
+- aiortcのimageと設定は期限付きrollback成果物として残すが、serviceは起動しない。
+- 観測期間後にPython RTC stackを削除する。
+- Pipeline契約のIDL化は自動的に開始せず、必要なら別initiativeで判断する。
+
+## Rollback条件
+
+具体的な閾値はbaseline後にtaskで確定する。少なくとも次をrollback判定対象とする。
+
+- signalingまたはICE接続成功率の重大な低下
+- 音声欠落、速度異常、無音などのcritical media failure
+- session終了後も増え続けるgoroutine、socket、codec state
+- pipeline clientの再接続loop
+- MessagePack互換error
+- queue overflowの継続
+- ChromeまたはFirefoxの一方で会話不能
+
+## Rollback手順
+
+1. Pion版への新規Offerを停止する。
+2. active Pion sessionをclose timeout後に終了し、Pion serviceを停止する。
+3. RTC server、pipeline client、codec、network metricsとlogを保存する。
+4. aiortc serviceをstable endpointで起動する。
+5. smoke testでaiortcの接続、音声、DataChannelを確認する。
+6. 原因と再開条件を対応taskへ記録する。
+
+rollbackでfrontend buildや下流Python serviceのdeployを必要としない構成を維持する。ただし、切替中の接続とsession stateは失われる。
+
+## 運用文書への反映
+
+全面切り替え時に次を更新する。
+
+- [Architecture Overview](../../design/architecture/overview.md)
+- [Runtime Flow](../../design/architecture/runtime-flow.md)
+- [Frontend RTC契約](../../design/contracts/frontend-rtc.md)
+- [Audio Pipeline WebSocket契約](../../design/contracts/audio-pipeline-websocket.md)
+- [sincro-rtcサービス設計](../../design/backend/services/sincro-rtc.md)
+- [AudioBrokerサービス設計](../../design/backend/services/audio-broker.md)
+- [Compose設計](../../design/infrastructure/compose.md)
+- [Consul設計](../../design/infrastructure/consul.md)
+- [設計文書index](../../design/index.md)
+
+Python AudioBroker削除後はサービス設計をGo pipeline coordinatorの現在仕様へ置き換え、旧Python実装の説明を通常導線へ残さない。
