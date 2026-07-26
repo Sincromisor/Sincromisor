@@ -9,6 +9,7 @@ require (
 	github.com/pion/opus v0.1.0
 	github.com/pion/rtp v1.10.4
 	github.com/pion/webrtc/v4 v4.2.17
+	github.com/vmihailenco/msgpack/v5 v5.4.1
 )
 
 require (
@@ -26,6 +27,7 @@ require (
 	github.com/pion/stun/v3 v3.1.6 // indirect
 	github.com/pion/transport/v4 v4.0.2 // indirect
 	github.com/pion/turn/v5 v5.0.12 // indirect
+	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/image v0.23.0 // indirect

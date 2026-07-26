@@ -12,6 +12,14 @@ dependencies = [
     "python-ulid>=3.1.0",
 ]
 
+[dependency-groups]
+# `uv run --package sincro-models --group dev` は選択した workspace member の
+# group を解決するため、既存 root virtualenv に依存しない検証 tool をここでも明示する。
+dev = [
+    "pytest>=8.4.2",
+    "ruff>=0.12.5",
+]
+
 [tool.uv.sources]
 sincro-config = { workspace = true }
 
