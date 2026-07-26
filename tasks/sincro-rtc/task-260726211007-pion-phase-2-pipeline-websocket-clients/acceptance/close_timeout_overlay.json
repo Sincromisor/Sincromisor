@@ -1,0 +1,5 @@
+{
+  "Replace": {
+    "/private/var/folders/q8/cy80kj2j59d2qq634pd9jzbc0000gn/T/eval-1c13798028b0-i5H1ic/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client/close_timeout_acceptance_test.go": "/Users/aki/projects/Sincromisor/tasks/sincro-rtc/task-260726211007-pion-phase-2-pipeline-websocket-clients/acceptance/close_timeout_acceptance_test.go"
+  }
+}
