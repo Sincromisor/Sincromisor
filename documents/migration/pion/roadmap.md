@@ -94,10 +94,19 @@ RTC統合より先に、Goから既存Python下流serviceを利用できるこ�
 - Consul lookup、timeout、fallbackを備えたGo WebSocket client
 - 4 clientの一括reset、generation更新、旧callback拒否
 - synthesized voiceとmora timingの互換decode
+- `sincromisor-server/sincro-rtc-pion-poc/internal/pipeline` のsession coordinator、bounded queue、
+  confirmed historyとgeneration単位のtransient state
+
+互換fixtureは
+`sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol/testdata/`、
+Gate 2の環境と結果は
+`tasks/sincro-rtc/task-260726211012-pion-phase-2-pipeline-reset-gate-2/artifacts/gate-2-result.md`
+を参照する。
 
 ### 次phaseへの条件
 
 Python下流serviceを変更せず会話pipelineを実行でき、resetやclose後に古い結果、WebSocket、goroutineが残らなければPhase 3へ進む。
+実4-service環境でGate 2がPASSするまでは、この条件を満たしたとは扱わない。
 
 ## Phase 3: Go RTC統合
 
