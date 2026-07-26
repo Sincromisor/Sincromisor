@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/coder/websocket"
@@ -36,7 +38,7 @@ func (c *baseClient) connect(ctx context.Context, initialize func() ([]byte, err
 	c.mu.Unlock()
 	defer close(connectDone)
 
-	conn, err := c.establish(lifetimeCtx, initialize)
+	conn, rawConn, err := c.establish(lifetimeCtx, initialize)
 	if err != nil {
 		if c.failConnect(cancel) {
 			return ErrClosed
@@ -52,6 +54,7 @@ func (c *baseClient) connect(ctx context.Context, initialize func() ([]byte, err
 		return ErrClosed
 	}
 	c.conn = conn
+	c.rawConn = rawConn
 	c.state = stateOpen
 	c.wg.Add(2)
 	go c.readLoop()
@@ -66,18 +69,18 @@ func (c *baseClient) connect(ctx context.Context, initialize func() ([]byte, err
 func (c *baseClient) establish(
 	lifetimeCtx context.Context,
 	initialize func() ([]byte, error),
-) (*websocket.Conn, error) {
+) (*websocket.Conn, net.Conn, error) {
 	var initialPayload []byte
 	if initialize != nil {
 		var err error
 		initialPayload, err = initialize()
 		if err != nil {
-			return nil, fmt.Errorf("encode %s initialization: %w", c.service, err)
+			return nil, nil, fmt.Errorf("encode %s initialization: %w", c.service, err)
 		}
 	}
 	endpoint, err := c.resolver.Resolve(lifetimeCtx, c.discovery)
 	if err != nil {
-		return nil, fmt.Errorf("resolve %s endpoint: %w", c.service, err)
+		return nil, nil, fmt.Errorf("resolve %s endpoint: %w", c.service, err)
 	}
 	if endpoint.Source == discovery.EndpointSourceFallback {
 		c.logger.Warn("pipeline service discovery fell back",
@@ -91,27 +94,66 @@ func (c *baseClient) establish(
 		RawQuery: c.query.Encode(),
 	}
 	dialCtx, dialCancel := context.WithTimeout(lifetimeCtx, c.cfg.DialTimeout)
-	conn, _, err := websocket.Dial(dialCtx, dialURL.String(), nil)
+	conn, rawConn, err := dialWebSocket(dialCtx, dialURL.String())
 	dialCancel()
 	if err != nil {
-		return nil, fmt.Errorf("dial %s websocket: %w", c.service, err)
+		return nil, nil, fmt.Errorf("dial %s websocket: %w", c.service, err)
 	}
 	conn.SetReadLimit(c.readLimit)
 
 	if len(initialPayload) > 0 {
 		if int64(len(initialPayload)) > c.readLimit {
 			_ = conn.CloseNow()
-			return nil, fmt.Errorf("initialize %s websocket: payload exceeds service limit", c.service)
+			return nil, nil, fmt.Errorf("initialize %s websocket: payload exceeds service limit", c.service)
 		}
 		writeCtx, writeCancel := context.WithTimeout(lifetimeCtx, c.cfg.WriteTimeout)
 		err = conn.Write(writeCtx, websocket.MessageBinary, initialPayload)
 		writeCancel()
 		if err != nil {
 			_ = conn.CloseNow()
-			return nil, fmt.Errorf("initialize %s websocket: %w", c.service, err)
+			return nil, nil, fmt.Errorf("initialize %s websocket: %w", c.service, err)
 		}
 	}
-	return conn, nil
+	return conn, rawConn, nil
+}
+
+// dialWebSocket はHTTP upgradeに使われるunderlying socketをWebSocketと対で返す。
+// configured close timeout時はlibraryの同時Close semanticsを経由せず、このsocketを直接中断する。
+func dialWebSocket(ctx context.Context, target string) (*websocket.Conn, net.Conn, error) {
+	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, nil, errors.New("pipeline websocket default HTTP transport is unsupported")
+	}
+	transport := defaultTransport.Clone()
+	dialer := &net.Dialer{}
+	var captureMu sync.Mutex
+	var rawConn net.Conn
+	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+		conn, err := dialer.DialContext(ctx, network, address)
+		if err == nil {
+			captureMu.Lock()
+			rawConn = conn
+			captureMu.Unlock()
+		}
+		return conn, err
+	}
+	httpClient := &http.Client{
+		Transport: transport,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return errors.New("pipeline websocket redirect rejected")
+		},
+	}
+	conn, _, err := websocket.Dial(ctx, target, &websocket.DialOptions{HTTPClient: httpClient})
+	if err != nil {
+		return nil, nil, err
+	}
+	captureMu.Lock()
+	defer captureMu.Unlock()
+	if rawConn == nil {
+		_ = conn.CloseNow()
+		return nil, nil, errors.New("pipeline websocket underlying connection was not captured")
+	}
+	return conn, rawConn, nil
 }
 
 func (c *baseClient) failConnect(cancel context.CancelFunc) bool {
@@ -216,104 +258,4 @@ func (c *baseClient) pingLoop() {
 			}
 		}
 	}
-}
-
-func (c *baseClient) terminal(kind EventKind, err error) {
-	c.mu.Lock()
-	if c.state == stateClosed || c.intentional {
-		c.mu.Unlock()
-		return
-	}
-	c.state = stateClosed
-	cancel := c.cancel
-	c.eventOnce.Do(func() {
-		c.events <- Event{Service: c.service, Kind: kind, Err: err}
-	})
-	c.mu.Unlock()
-	cancel()
-}
-
-// close は明示 shutdown を terminal event なしで実行する。
-// close handshake は設定時間を越えたら CloseNow へ切り替え、helper 自体の終了も待ってから goroutine を join する。
-func (c *baseClient) close() error {
-	c.mu.Lock()
-	switch c.state {
-	case stateClosed:
-		done := c.done
-		connectDone := c.connectDone
-		c.mu.Unlock()
-		if connectDone != nil {
-			<-connectDone
-		}
-		<-done
-		return nil
-	case stateNew:
-		c.state = stateClosed
-		c.intentional = true
-		c.mu.Unlock()
-		c.finalize()
-		return nil
-	case stateConnecting:
-		c.state = stateClosed
-		c.intentional = true
-		cancel := c.cancel
-		connectDone := c.connectDone
-		c.mu.Unlock()
-		cancel()
-		<-connectDone
-		<-c.done
-		return nil
-	case stateOpen:
-		c.state = stateClosed
-		c.intentional = true
-		conn := c.conn
-		cancel := c.cancel
-		c.mu.Unlock()
-		err := closeHandshake(conn, c.cfg.CloseTimeout)
-		cancel()
-		<-c.done
-		return err
-	default:
-		c.mu.Unlock()
-		return nil
-	}
-}
-
-func closeHandshake(conn *websocket.Conn, timeout time.Duration) error {
-	result := make(chan error, 1)
-	go func() {
-		result <- conn.Close(websocket.StatusNormalClosure, "")
-	}()
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-	select {
-	case err := <-result:
-		return err
-	case <-timer.C:
-		closeNowErr := conn.CloseNow()
-		// CloseNowで中断されたhandshake errorはfallbackの想定結果である。
-		// resultを必ず受けることでhelperをjoinし、force close自体のerrorだけをcallerへ返す。
-		<-result
-		return closeNowErr
-	}
-}
-
-func (c *baseClient) finalizeWhenCanceled() {
-	<-c.lifetimeCtx.Done()
-	c.mu.Lock()
-	c.state = stateClosed
-	c.mu.Unlock()
-	_ = c.conn.CloseNow()
-	c.wg.Wait()
-	c.finalize()
-}
-
-// finalize は result、event の順に owner channel を1回だけ閉じる。
-// reader が unbuffered result delivery で停止していても lifetime cancellation が select を解除する。
-func (c *baseClient) finalize() {
-	c.finalOnce.Do(func() {
-		c.closeResult()
-		close(c.events)
-		close(c.done)
-	})
 }

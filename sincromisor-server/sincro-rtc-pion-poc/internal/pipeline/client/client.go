@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/url"
 	"sync"
 	"time"
@@ -20,6 +21,7 @@ import (
 // Service は health event の発生元を識別する。
 type Service string
 
+// production既定値はDefaultConfigだけが組み立て、各constructorはtest overrideを含め正数か検証する。
 const (
 	// ServiceExtractor は discovery.ServiceExtractor と同じ wire service 名である。
 	ServiceExtractor Service = Service(discovery.ServiceExtractor)
@@ -73,6 +75,30 @@ type Config struct {
 	CloseTimeout time.Duration
 }
 
+const (
+	defaultDialTimeout  = 5 * time.Second
+	defaultWriteTimeout = 5 * time.Second
+	defaultPingInterval = 10 * time.Second
+	defaultPingTimeout  = 5 * time.Second
+	defaultCloseTimeout = 2 * time.Second
+)
+
+// DefaultConfig はproduction接続用のtimeout正本を設定したConfigを返す。
+//
+// session IDとtalk modeのdomain validationは各service constructorが行う。testは返却値の正数durationを
+// 明示overrideできるが、zero/負数はconstructorで拒否される。
+func DefaultConfig(sessionID, talkMode string) Config {
+	return Config{
+		SessionID:    sessionID,
+		TalkMode:     talkMode,
+		DialTimeout:  defaultDialTimeout,
+		WriteTimeout: defaultWriteTimeout,
+		PingInterval: defaultPingInterval,
+		PingTimeout:  defaultPingTimeout,
+		CloseTimeout: defaultCloseTimeout,
+	}
+}
+
 // ErrAlreadyConnected は Connect が new 以外の接続済み lifecycle で呼ばれたことを表す。
 var ErrAlreadyConnected = errors.New("pipeline client already connected")
 
@@ -105,6 +131,10 @@ type baseClient struct {
 	state       lifecycleState
 	intentional bool
 	conn        *websocket.Conn
+	// rawConn はclose handshake timeout時にlibraryの固定waitを中断するtransport socketである。
+	// baseClientだけが参照し、通常closeはwebsocket.Conn、timeout時だけshutdown flowが直接closeする。
+	rawConn net.Conn
+	// reason: Connectのparent cancellationをreader/ping/finalizerへ同じconnection lifetimeとして伝播するため。 / 解消条件: library APIが接続scope contextを各operationへ保存なしで提供した場合。
 	lifetimeCtx context.Context
 	cancel      context.CancelFunc
 	connectDone chan struct{}
