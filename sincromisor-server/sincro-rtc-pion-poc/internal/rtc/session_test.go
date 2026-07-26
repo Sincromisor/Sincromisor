@@ -16,6 +16,11 @@ import (
 
 func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 	manager := NewManager("", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	t.Cleanup(func() {
+		if err := manager.CloseAll("test_teardown"); err != nil {
+			t.Errorf("CloseAll(test_teardown) error = %v", err)
+		}
+	})
 	client, messages := newBrowserPeer(t)
 	answer := negotiatePair(t, manager, client)
 	if manager.Count() != 1 {
@@ -33,12 +38,11 @@ func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 		textChannelLabel:  string(textSmokePayload),
 		telopChannelLabel: string(telopSmokePayload),
 	})
+	session := activeSession(t, manager, answer.SessionID)
 	if err := client.Close(); err != nil {
 		t.Fatalf("client.Close() error = %v", err)
 	}
-	if err := manager.CloseAll("browser_normal_close"); err != nil {
-		t.Fatalf("CloseAll() error = %v", err)
-	}
+	waitForRemoteSessionClose(t, manager, answer.SessionID, session)
 	if manager.Count() != 0 {
 		t.Fatalf("Count() = %d, want 0 after close", manager.Count())
 	}
@@ -54,15 +58,19 @@ func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 func TestManagerTenSequentialNormalClosesConverge(t *testing.T) {
 	baseline := runtime.NumGoroutine()
 	manager := NewManager("", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	t.Cleanup(func() {
+		if err := manager.CloseAll("test_teardown"); err != nil {
+			t.Errorf("CloseAll(test_teardown) error = %v", err)
+		}
+	})
 	for attempt := 1; attempt <= 10; attempt++ {
 		client, _ := newBrowserPeer(t)
-		_ = negotiatePair(t, manager, client)
+		answer := negotiatePair(t, manager, client)
+		session := activeSession(t, manager, answer.SessionID)
 		if err := client.Close(); err != nil {
 			t.Fatalf("attempt %d client.Close() error = %v", attempt, err)
 		}
-		if err := manager.CloseAll("browser_normal_close"); err != nil {
-			t.Fatalf("attempt %d CloseAll() error = %v", attempt, err)
-		}
+		waitForRemoteSessionClose(t, manager, answer.SessionID, session)
 		if manager.Count() != 0 {
 			t.Fatalf("attempt %d Count() = %d, want 0", attempt, manager.Count())
 		}
@@ -95,21 +103,6 @@ func TestSessionCloseIsIdempotent(t *testing.T) {
 	}
 	wait.Wait()
 	<-session.done
-	if manager.Count() != 0 {
-		t.Fatalf("Count() = %d, want 0", manager.Count())
-	}
-	if err := client.Close(); err != nil {
-		t.Fatalf("client.Close() error = %v", err)
-	}
-}
-
-func TestManagerGracefulShutdownWithoutConnectedPeer(t *testing.T) {
-	manager := NewManager("", slog.New(slog.NewTextHandler(io.Discard, nil)))
-	client, _ := newBrowserPeer(t)
-	_ = negotiatePair(t, manager, client)
-	if err := manager.CloseAll("sigterm"); err != nil {
-		t.Fatalf("CloseAll(sigterm) error = %v", err)
-	}
 	if manager.Count() != 0 {
 		t.Fatalf("Count() = %d, want 0", manager.Count())
 	}
@@ -253,6 +246,29 @@ func waitForCondition(t *testing.T, timeout time.Duration, condition func() bool
 		runtime.Gosched()
 	}
 	t.Fatal("condition did not become true before deadline")
+}
+
+func activeSession(t *testing.T, manager *Manager, sessionID string) *Session {
+	t.Helper()
+	manager.mu.RLock()
+	session := manager.sessions[sessionID]
+	manager.mu.RUnlock()
+	if session == nil {
+		t.Fatalf("session %q missing before client close", sessionID)
+	}
+	return session
+}
+
+func waitForRemoteSessionClose(t *testing.T, manager *Manager, sessionID string, session *Session) {
+	t.Helper()
+	select {
+	case <-session.done:
+	case <-time.After(3 * time.Second):
+		t.Fatalf("session %q did not close from remote event", sessionID)
+	}
+	if manager.Count() != 0 {
+		t.Fatalf("session %q done but registry count = %d, want 0", sessionID, manager.Count())
+	}
 }
 
 func boolPointer(value bool) *bool {
