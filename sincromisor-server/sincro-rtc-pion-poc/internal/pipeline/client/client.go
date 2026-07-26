@@ -21,7 +21,6 @@ import (
 // Service は health event の発生元を識別する。
 type Service string
 
-// production既定値はDefaultConfigだけが組み立て、各constructorはtest overrideを含め正数か検証する。
 const (
 	// ServiceExtractor は discovery.ServiceExtractor と同じ wire service 名である。
 	ServiceExtractor Service = Service(discovery.ServiceExtractor)
@@ -75,6 +74,7 @@ type Config struct {
 	CloseTimeout time.Duration
 }
 
+// production既定値はDefaultConfigだけが組み立て、各constructorはtest overrideを含め正数か検証する。
 const (
 	defaultDialTimeout  = 5 * time.Second
 	defaultWriteTimeout = 5 * time.Second
