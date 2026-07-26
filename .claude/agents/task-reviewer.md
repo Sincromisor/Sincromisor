@@ -25,12 +25,12 @@ model: opus
 6. ドキュメント影響（公開 API / 通信契約 / 公開挙動を変えるタスクで、対応ドキュメントの同期が
    **受け入れ条件として task.md に明記されているか**。lint / 型 / test では検出できない領域であり、
    漏れていれば High 指摘とする）
-7. コメント品質（TypeScript production code を変更するタスクで、
-   `documents/rules/coding-ts.md` の「ソースコードコメント品質」に基づく comment audit /
-   comment acceptance が **受け入れ条件として task.md に明記されているか**。audit は file
-   単位ではなく symbol / decision 単位で、対象、`keep` / `rewrite` / `delete` / `add` の判断、
-   required maintenance knowledge、action、reviewer note を追える schema を求める。漏れていれば
-   High 指摘とする）
+7. コメント品質（production code を変更するタスクで、
+   `documents/rules/source-comments.md` と対象言語規約に基づく comment audit /
+   comment acceptance が **受け入れ条件として task.md に明記されているか**。安全な変更だけでなく、
+   調査時の理解支援と change comprehension surface を対象にし、symbol / block / decision / flow 単位で
+   reader question、required reader knowledge、`keep` / `rewrite` / `delete` / `add`、
+   action / omission reason、reviewer note を追える schema を求める。漏れていれば High 指摘とする）
 
 ## 判定基準（NEEDS_REVISION か APPROVED + 申し送りか）
 
@@ -41,15 +41,21 @@ model: opus
     - 実現不能、またはスコープが過大・過小で 1 タスクとして成立しない。
     - 既存コードとの前提矛盾（存在しない API / 陳腐化した前提に依拠）。
     - 公開 API / 通信契約 / 公開挙動を変えるのにドキュメント同期が受け入れ条件に無い。
-    - TypeScript production code の public export / public component / hook / module / boundary /
-      heuristic / schema/parser / lifecycle を変更するのに、JSDoc/TSDoc を含むコメント追加・更新・
-      省略理由の受け入れ条件が無い。
-    - TypeScript production code のコメント改善タスクなのに、symbol / decision 単位の comment
+    - production code の public API / boundary / heuristic / schema/parser / lifecycle、または
+      orchestration / state / event / data flow を変更するのに、doc comment / 実装コメントの
+      追加・更新・省略理由の受け入れ条件が無い。
+    - production code のコメント改善タスクなのに、symbol / block / decision / flow 単位の comment
       audit schema が task.md に無い。
     - public export の目的、契約、入力境界、返す値または observable output、失敗条件、副作用、
       非対象のうち、変更対象に必要な情報が task acceptance に定義されていない。
     - comment acceptance が file 単位の「module comment に集約」、または「必要情報のいずれか」
-      だけで完了でき、個別 export / boundary / heuristic / lifecycle の保守知識を検証できない。
+      だけで完了でき、個別 API / boundary / heuristic / lifecycle / internal flow の reader knowledge を
+      検証できない。
+    - public API と非自明な制約だけを対象にし、orchestration、state transition、data transformation、
+      非局所的な接続関係の理解支援が受け入れ条件から欠落している。
+    - `private`、`短い`、`型がある`、`testを読めば分かる`、`既存コードにもコメントがない` を
+      単独の省略理由として認めている。
+    - 新規・変更コードが既存のコメント不足を踏襲でき、現行規約を満たさなくても完了できる。
     - 「コメントを追加する」とだけ書かれ、対象・期待内容・検証方法が一意でない。
     - コメント改善タスクが 10 file を超える広域一括作業を要求するのに、slice 分割または
       symbol-level sampling 方針が task.md に明記されていない。

@@ -1,6 +1,6 @@
 # コード構造ルール
 
-> **Scope**: Python / TypeScript / Markdown をまたぐ物理構造、分割判断、主要アンチパターン。
+> **Scope**: Python / TypeScript / Go / Markdown をまたぐ物理構造、分割判断、主要アンチパターン。
 > **AGENTS.md との関係**: AGENTS.md は初動ガイドと正本リンクだけを保持する。本書はファイルサイズ、関数サイズ、責務分割の正本である。
 
 ## 0. 設計思想
@@ -21,15 +21,17 @@
 
 ## 2. 基本原則
 
-- **1 ファイル = 1 主要 export** を基本とする。
-    - controller / service / manager / component / schema 群のいずれかを主役にする。
+- **1 ファイル = 1 主要責務**を基本とする。
+    - TypeScript / Python は controller / service / manager / component / schema 群のいずれかを主役にする。
+    - Go は同じ責務を構成する関連 exported declaration を同一 file に置いてよい。package 全体の cohesion を優先する。
 - `index.ts` は **barrel 専用** とし、実装ロジックを書かない。
 - 補助関数 / 内部型はファイル内 private に留め、2 箇所目で利用された時点で別ファイルへ抽出する。
 - テスト都合だけで internal を export しない。必要になった時点で独立モジュール化する。
 - 「将来のために」分割しない。必要になってから変える。
-- コメントで段落分けしたくなったら関数抽出を検討する。
-- コメントは責務分割の代替ではなく、境界や非自明な判断の理由を伝える補助とする。TypeScript の
-  詳細基準は [coding-ts.md](coding-ts.md) の「ソースコードコメント品質」を正本とする。
+- コメントで段落分けしたくなったら関数抽出を検討する。ただし抽出後も、複数段階の関係や処理全体での
+  位置づけが局所コードから読めない場合は、reader-oriented comment を残す。
+- コメントは責務分割の代替ではないが、構造改善も処理の全体像、状態遷移、データ表現、非局所的な関係を
+  説明するコメントの代替ではない。詳細基準は [source-comments.md](source-comments.md) を正本とする。
 - コメント改善中に責務混在、命名不足、型不足、関数分割不足を見つけた場合は、コメントで覆わず構造を直す。
   同タスクで直せない場合は follow-up として、対象 symbol、構造上の理由、推奨する分割単位を task artifact
   または後続タスクに記録する。
@@ -39,14 +41,14 @@
 - UI 更新、外部 I/O、純粋計算、状態管理、schema validation は混ぜない。
 - WebRTC / WebSocket / file handle / thread / worker などの所有者を明確にし、生成した層が cleanup の責務を持つ。
 - env / config は境界で parse し、実装本体では型付き設定として扱う。
-- payload / schema / Pydantic model / Zod schema は境界ごとに正本を 1 箇所にする。
+- payload / schema / Pydantic model / Zod schema / Go の境界 struct は境界ごとに正本を 1 箇所にする。
 - controller / service / manager の引数が増え始めたら、状態や設定の所有境界を見直す。
 
 ## 4. アンチパターン
 
 | パターン                                             | 代わりに                                  |
 | ---------------------------------------------------- | ----------------------------------------- |
-| `utils.ts` / `helpers.ts` / `common.ts`              | 責務名で命名する (`ids.ts` / `errors.ts`) |
+| `utils.*` / `helpers.*` / `common.*`                 | 責務名で命名する (`ids.ts` / `errors.go`) |
 | `index.ts` に実装を書く                              | barrel 専用、実装は別ファイル + re-export |
 | 1 ファイルに複数 controller / service / manager 定義 | 1 ファイル 1 主役                         |
 | 100 行超の単一関数                                   | 段階的に private 関数へ抽出               |
@@ -60,6 +62,7 @@
 
 - Python: 同じ行または直前行に `# reason: <理由>`
 - TypeScript: 同じ行に `// reason: <理由>`
+- Go: 同じ行または直前行に `// reason: <理由> / 解消条件: <条件>`
 - Markdown: 同じ箇条書きまたは直前行に `<!-- reason: <理由> -->`
 
 ### frontend structure guard

@@ -25,11 +25,10 @@ developer_instructions = '''
   `README.md` / `documents/design/` / `documents/rules/` / `tasks/README.md`）。
   使用フレームワーク特有の手順（例: 専用スキル/ドキュメントのロード、コード生成手順）が
   定められていればそれに従う。
-- TypeScript production code を変更する場合は、着手前に
-  `documents/rules/coding-ts.md` の「ソースコードコメント品質」を読み、public export /
-  public component / hook / module / boundary / heuristic / schema/parser / lifecycle に対する
-  JSDoc/TSDoc、symbol / decision 単位の comment audit、失敗条件、副作用、省略理由、
-  stale comment、TODO 必須情報の基準を確認する。
+- production code を変更する場合は、着手前に `documents/rules/source-comments.md` と
+  対象言語の `documents/rules/coding-*.md` を読む。安全な変更と調査時の理解支援、
+  change comprehension surface、symbol / block / decision / flow 単位の comment audit、
+  省略条件、stale comment、TODO 必須情報の基準を確認する。
 - テスト・ビルド・実行コマンドはプロジェクトのものを使う（後述の「3 点ゲート」参照）。
 
 ## 手順
@@ -37,13 +36,16 @@ developer_instructions = '''
 1. タスクとレビュー結果を読む。NEEDS_REVISION の場合は実装に着手せず、
    その旨を報告して停止する。
 2. APPROVED の場合、review.md の申し送りと Critical/High 指摘を必ず反映して実装する。
-3. 既存のコード規約・パターン（プロジェクト規約ドキュメント / 周辺コード）に従う。
-4. TypeScript production code を変更した場合は、変更した public export / public component /
-   hook / module / boundary / heuristic / schema/parser / lifecycle の comment audit を行い、
-   既存コメントと不足している保守知識を `keep` / `rewrite` / `delete` / `add` に分類する。
-   必要な JSDoc/TSDoc の追加・更新、失敗条件・副作用の明記、省略理由、stale comment の更新・
-   削除、TODO 必須情報の充足を確認する。弱い既存コメントは追加で補うだけでなく削除または
-   rewrite を検討し、module TSDoc の一括追加を既定解にしない。
+3. プロジェクト規約ドキュメントを正本とし、周辺コードは命名、契約、依存関係の参考にする。
+   既存コードのコメント不足や古いコメント品質は模倣せず、新規・変更コードへ現行規約を適用する。
+4. production code を変更した場合は、変更した public API / boundary / heuristic / lifecycle に加え、
+   orchestration / pipeline、state transition、event source、data transformation、private flow と
+   change comprehension surface の comment audit を行う。既存コメントと不足している reader knowledge を
+   `keep` / `rewrite` / `delete` / `add` に分類し、docstring / JSDoc / TSDoc / Go doc comment と
+   実装コメントを追加・更新する。省略する場合は横断規約を満たす具体的な理由を記録する。
+   `private`、`短い`、`型がある`、`testを読めば分かる`、`既存コードにもコメントがない` を単独の
+   省略理由にしない。弱い既存コメントは delete / rewrite を検討し、file / module comment の
+   一括追加を既定解にしない。
 5. 開発中のテストを実行し、緑になるまで修正する（テスト方針を参照）。
 6. **ドキュメントを同期する**（ドキュメント同期方針を参照）。コードと同一コミット/同一
    ブランチで反映し、後追いコミットにしない。
@@ -64,13 +66,13 @@ developer_instructions = '''
 - **append-only**。再実装で複数回呼ばれるため、過去の記述は消さず、
   attempt ごとに `## attempt <n>` セクションを追記する（既存セクションは編集しない）。
 - ファイルが無ければ新規作成、あれば末尾に追記する。
-- TypeScript production code を変更した場合は、変更した public export / public component /
-  hook / module / boundary / heuristic / schema/parser / lifecycle の comment audit 結果、
-  symbol / decision、`keep` / `rewrite` / `delete` / `add` の判断、required maintenance
-  knowledge、action、JSDoc/TSDoc の追加・更新または省略理由、失敗条件、副作用、
-  TODO 必須情報、stale comment 更新・削除の有無を記録する。module TSDoc に集約した場合は、
-  各 export の入力境界、observable output、失敗条件、副作用、非対象を具体的に覆う理由も
-  記録する。対象外の場合も、docs/test/fixture のみ等の理由を記録する。
+- production code を変更した場合は、変更した symbol / block / decision / flow と
+  change comprehension surface の comment audit 結果、kind、reader question、
+  required reader knowledge、`keep` / `rewrite` / `delete` / `add` の判断、
+  action / omission reason、docstring / JSDoc / TSDoc / Go doc comment と実装コメントの
+  追加・更新、stale comment、TODO 必須情報を記録する。file / module comment に集約した場合は、
+  各対象の入力、出力、失敗条件、副作用、処理全体での位置、前後関係を具体的に覆う理由も記録する。
+  対象外の場合も、docs / test / fixture / generated code のみ等の理由を記録する。
 
 ## ドキュメント同期方針（lint / 型 / test で検出できない領域）
 

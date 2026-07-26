@@ -81,8 +81,11 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 - Future refresh check: run `npm run gen:codex` and `npm run gen:codex:check` after editing
   `.claude/`.
 - Sincromisor-specific gate: keep the agent comment quality checks aligned with
-  `documents/rules/coding-ts.md` and `tasks/AUTHORING-CHECKLIST.md`. Upstream refreshes must
-  preserve task-reviewer High checks for symbol / decision audit schemas and overbroad
-  comment-remediation tasks, task-implementer `impl.md` audit logging with `keep` / `rewrite` /
-  `delete` / `add` decisions, and impl-evaluator risk-based code reconciliation that treats full
-  symbol / decision coverage as the default instead of a fixed-size spot-check quota.
+  `documents/rules/source-comments.md`, the language-specific `documents/rules/coding-*.md`, and
+  `tasks/AUTHORING-CHECKLIST.md`. Upstream refreshes must preserve the two independent purposes of
+  change safety and reader comprehension, the rule that missing legacy comments are not precedent,
+  change comprehension surface checks, task-reviewer High checks for symbol / block / decision /
+  flow audit schemas and overbroad comment-remediation tasks, task-implementer `impl.md` audit
+  logging with `keep` / `rewrite` / `delete` / `add` decisions, and impl-evaluator risk-based code
+  reconciliation that treats full changed-target coverage as the default instead of a fixed-size
+  spot-check quota.

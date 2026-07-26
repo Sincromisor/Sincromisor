@@ -1,7 +1,7 @@
 # コーディング規約(Python)
 
 > **Scope**: Pythonコードベース横断のコーディング規約(型運用 / エラー / ログ / テスト / import / None / 日付 / TODO / env / 言語)
-> **AGENTS.md との関係**: [AGENTS.md](../../AGENTS.md) は初動ガイドと正本リンクを保持する。サイズ閾値 / 分割判断 / 主要アンチパターンは [code-structure.md](code-structure.md) を正本とし、本書は Python 固有の横断ルールを保持する。
+> **AGENTS.md との関係**: [AGENTS.md](../../AGENTS.md) は初動ガイドと正本リンクを保持する。サイズ閾値 / 分割判断 / 主要アンチパターンは [code-structure.md](code-structure.md)、コメント品質の横断基準は [source-comments.md](source-comments.md) を正本とし、本書は Python 固有の横断ルールを保持する。
 
 ## 0. 設計思想
 
@@ -192,3 +192,44 @@ PoC では下記 2 軸を最優先する。
 - **スレッド / WebSocket / file handle は所有者を明確にする**。生成した層が close / join / cleanup の責務を持つ
 - **共有 mutable state は lock / queue / Event など同期原語を明示する**。複数 thread から直接 list / dict を触らない
 - **「将来の差し替えのため」の抽象を作らない** — 必要になった時点で抽出する(Rule of Three 手前で動く / AGENTS.md と整合)
+
+## 13. ソースコードコメント品質
+
+コメント品質の目的、既存コードへの適用、省略条件、audit schema は [source-comments.md](source-comments.md) を
+正本とする。Python でも public API、境界、非自明な制約は必須の下限であり、それだけで十分とは判断しない。
+service / worker / thread 間の flow、外部 I/O から model への変換、例外と fallback の伝播を、一般的な開発者が
+短時間で調査できる状態にする。
+
+### 13.1 Docstring と必須対象
+
+- public な module / class / function / method / domain-significant constant は原則 docstring を持つ
+- docstring は責務要約だけで終わらせず、入力境界、戻り値、例外、observable side effect、非対象のうち
+  対象に必要な情報を書く
+- Pydantic model / parser / serializer は raw input、validation、alias、互換性、reject 条件を書く
+- WebSocket / WebRTC / filesystem / process / GPU / external API の境界は、resource owner、timeout、
+  retry、cleanup、caller に返す例外を書く
+- thread / task / queue / Event を開始する処理は、開始・終了条件、cancel / join、error の観測先を書く
+- module docstring は service / pipeline 内での位置、主要な入力と出力、隣接 module との責務境界を示す
+
+### 13.2 実装コメント
+
+public / private を問わず、次の対象は通常の block / line comment で一段高い抽象度の説明を置く。
+
+- VAD / ASR / TTS / WebRTC など複数段階を接続する orchestration
+- raw JSON / msgpack / audio frame / external response から内部 model への変換
+- state transition、retry / fallback、queue / worker 間の接続
+- 複数の helper を順番に呼ぶ理由と、この段階で完了させる責務
+- 意図的な早期 return、no-op、処理の延期、後段へ委ねる責務
+- 名前と型だけでは上位 flow における役割が分からない private function / block
+
+禁止するのは `# listをloopする` のようにコードを同じ粒度で読み上げるコメントである。複数行の処理を
+domain 上の段階として要約するコメントや、次に読むべき処理を示すコメントは禁止しない。
+
+### 13.3 既存コードと audit
+
+- 既存 Python code に docstring / comment がないことは、新規・変更コードで省略する理由にならない
+- 変更した symbol / block / decision / flow と change comprehension surface を
+  `keep` / `rewrite` / `delete` / `add` に分類する
+- audit では reader question、required reader knowledge、action / omission reason を記録する
+- private、短い、型 annotation がある、test を読めば分かることは単独の省略理由にならない
+- stale docstring / comment、実装と矛盾する `Raises` / lifecycle 説明は同じ変更で更新または削除する
