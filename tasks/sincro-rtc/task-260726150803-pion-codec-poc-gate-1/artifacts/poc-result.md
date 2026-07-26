@@ -60,7 +60,9 @@ server logの `state=closed`、`session registry updated active_sessions=0` へ�
 - candidate gathering timeoutの504
 - 48 kHz mono / 1秒 / non-silent PCM生成
 - 20 ms x 50 frameのOpus encodeとpure Go decode
-- Pion local pairで両DataChannel固定payload、close-once、10回close、SIGTERM相当CloseAll
+- Pion local pairで両DataChannel固定payload、remote close event起点の10回close、close-once
+- 実 `pion-poc` processへのSIGTERM、HTTP accept停止、active session join、exit 0
+- 実 signaling server + session managerでmalformed SDP / candidateの400、gather timeoutの504とregistry回収
 - `gofmt`、`go vet`、通常test、race test、repository gate / task check
 
 最終command結果は `impl.md` に記録する。
