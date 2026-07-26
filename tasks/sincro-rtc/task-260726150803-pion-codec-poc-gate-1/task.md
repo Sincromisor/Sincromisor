@@ -154,14 +154,14 @@ task artifact、ADR、comment audit、自動test / lintの作成・成功はGate
 - production用pipeline client、Conversation Coordinator、Consul登録、stable compose切替はこのmoduleへ
   先行実装しない。Python adapterを使う場合はtest PCMまたは既存AudioBrokerへの一時bridgeに限定し、
   `// TODO(task-260726150803-pion-codec-poc-gate-1): Phase 1のcodec検証だけに使うbridgeを削除する /
-  削除条件: Phase 2のGo pipeline clientで同じ入出力を再現できた時点 / 判断期限: Phase 3開始前`
+削除条件: Phase 2のGo pipeline clientで同じ入出力を再現できた時点 / 判断期限: Phase 3開始前`
   と所有境界を明記する。
 
 ### 最小schemaと状態
 
 - Go / TypeScriptのinitial Offer requestは
   `{sdp:string,type:"offer",talk_mode:"chat"|"sincro",offer_request_id:UUID,offer_revision:1,
-  previous_session_id?:ULID}`、update Offerは同fieldに
+previous_session_id?:ULID}`、update Offerは同fieldに
   `{session_id:ULID,offer_revision:uint64>=2}` を加える。
 - Answerは既存 `{sdp,type:"answer",session_id}` に `offer_revision:uint64` を加える。
   candidate requestは既存 `{session_id,candidate}` に `offer_revision:uint64` を加える。
