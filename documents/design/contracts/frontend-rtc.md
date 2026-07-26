@@ -35,6 +35,17 @@
 | DataChannel | `telop_ch`                               | テロップ、mora、口形同期                       |
 | MediaTrack  | audio                                    | ユーザー音声送信、合成音声返却                 |
 
+## DataChannel negotiation
+
+- Frontendが `RTCPeerConnection.createDataChannel()` を呼び出すinitiatorであり、backendはin-band negotiationで作成されたchannelを受理する。
+- `protocol` は空文字列とする。
+- payloadはUTF-8 JSONのtext messageとする。binary messageは契約対象外とする。
+- `text_ch` は `ordered: true` かつ再送回数・生存時間を制限しないreliable channelとする。
+- `telop_ch` は `ordered: false, maxRetransmits: 0` のunordered / unreliable channelとする。欠落と順序逆転は正常系として扱い、受信順序を保証しない。
+- ICE restart付きupdate Offerは既存の `RTCPeerConnection` に適用し、既存DataChannelを再利用する。新しいchannelは作成しない。
+
+現行frontendはpayloadのschema validationを行うが、`telop_ch` の重複排除やstale判定は行わない。message sizeのapplication上限も未定義である。これらを追加する場合はfrontend / backend間の契約変更として同時に実装する。
+
 ## Payloads
 
 ### Config Response
@@ -120,7 +131,7 @@ end-of-candidates は `candidate: null` で送る。
 | config      | `config.json` が offer / candidate URL と ICE 設定を返す |
 | offer       | Answer と `session_id` を受け取れる                      |
 | candidate   | 通常 candidate と end-of-candidates を送れる             |
-| DataChannel | `text_ch` / `telop_ch` が open し payload を受信する     |
+| DataChannel | 両channelがopenし、各channelの信頼性属性どおり受信する   |
 | reconnect   | ICE failed 後に ICE restart 付き Offer を送れる          |
 
 ## References
