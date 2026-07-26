@@ -1,13 +1,13 @@
 id: task-260726151514-aiortc-baseline-gate-0
 title: aiortc現行baselineを取得してGate 0を判定する
 category: sincro-rtc
-status: open
+status: superseded
 depends_on: []
-superseded_by: null
+superseded_by: task-260726150803-pion-codec-poc-gate-1
 review: APPROVED
 reviewed_sha: 5d680a9a318ac31056814c5d16f9a668d21e88b6
 verdict: FAIL
 attempts: 3
 created_at: 2026-07-26
-closed_at: null
+closed_at: 2026-07-26
 legacy_ids: []
