@@ -119,7 +119,8 @@ VoiceSynthesizerへ変更せず転送する。
 各clientは1接続につきreaderを1つ、同期writerをcaller側に1つだけ持つ。read/write payloadにはservice別の
 有限上限を適用し、application text message、decode failure、ping failure、remote closeをterminal failureとする。
 通常無送信であることだけでは切断せず、10秒間隔のpingを5秒timeoutで確認する。dial/writeのproduction既定は5秒、
-close handshakeは2秒で打ち切って強制closeする。
+close handshakeは2秒で打ち切ってunderlying socketを強制closeする。これらのproduction値はGo packageの
+`DefaultConfig`をコード正本とし、test用configでは正数の範囲で短縮できる。
 
 個別clientは再接続、backoff、generation、4接続の一括resetを行わない。`Connect`へ渡したcontextまたは明示
 `Close`がreader/pingを停止し、goroutine joinとresult/event channel closeまで完了させる。Python
