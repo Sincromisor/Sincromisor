@@ -3,6 +3,7 @@ module github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc
 go 1.26.5
 
 require (
+	github.com/coder/websocket v1.8.15
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/pion/interceptor v0.1.45
 	github.com/pion/mediadevices v0.10.0

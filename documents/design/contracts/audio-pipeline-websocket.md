@@ -108,11 +108,30 @@ manifest の byte 差分を検出する。fixture を手編集しない。
 - AudioBroker は通信系の不健全を検知し、再接続を試みる。
 - ユーザーへ見せる必要があるエラーは `text_channel_queue` 経由で `text_ch` へ中継できる。
 
+### Go pipeline client（移行中）
+
+`sincro-rtc-pion-poc/internal/pipeline/client` は、上表と同じ4 endpointへ
+`github.com/coder/websocket` の binary messageだけで接続する。Extractorは接続直後に初期化MessagePackを
+1件送り、その後は20 ms単位の16 kHz mono s16le raw PCMだけを送る。他の3 clientは
+`internal/pipeline/protocol` の限定DTOを使い、TextProcessor responseはdecode時に保持した元bytesを
+VoiceSynthesizerへ変更せず転送する。
+
+各clientは1接続につきreaderを1つ、同期writerをcaller側に1つだけ持つ。read/write payloadにはservice別の
+有限上限を適用し、application text message、decode failure、ping failure、remote closeをterminal failureとする。
+通常無送信であることだけでは切断せず、10秒間隔のpingを5秒timeoutで確認する。dial/writeのproduction既定は5秒、
+close handshakeは2秒で打ち切って強制closeする。
+
+個別clientは再接続、backoff、generation、4接続の一括resetを行わない。`Connect`へ渡したcontextまたは明示
+`Close`がreader/pingを停止し、goroutine joinとresult/event channel closeまで完了させる。Python
+`AudioBroker`が現在持つ全体系reconnectをGoへ移すのは後続段階であり、この責務境界を個別clientへ戻さない。
+
 ## Timeout / Retry
 
 - Receiver は timeout 付き recv で監視を継続する。
 - AudioBroker は 1 秒起点、最大 30 秒程度の backoff で再接続する。
 - 過負荷時は低遅延を優先し、古い frame の破棄を許容する。
+- 移行中のGo個別clientは自動retryしない。上位coordinatorがterminal eventを受け、4接続を同じgenerationで
+  作り直す責務を持つ。
 
 ## Versioning
 

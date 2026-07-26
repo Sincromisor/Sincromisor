@@ -27,6 +27,17 @@
 - `SynthesizerReceiverThread`:
     - 合成音声を `VoiceSynthesizerResultFrame` へ分割する。
 
+### Go移行境界
+
+`sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery` と
+`internal/pipeline/client` に、Consul/fallback解決と4つのtyped WebSocket clientを置く。これらは
+1接続のbinary I/O、protocol encode/decode、ping、terminal event、close/joinだけを担当し、AudioBroker相当の
+queue、chat history、全接続reset、generation、retry backoffは持たない。
+
+このpackageはまだproductionのRTC sessionへ配線されていない。現行productionではPython `AudioBroker` と
+Sender/Receiver threadが引き続きdownstream接続と再接続を担当するため、Go clientの存在をproduction置換済みとは
+扱わない。4 clientを束ねるcoordinatorとPion sessionへの配線は後続phaseで行う。
+
 ## Data / State
 
 - input:
