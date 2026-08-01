@@ -55,6 +55,19 @@ type ManagerConfig struct {
 	MaxSessions     int
 }
 
+// sessionBuildRequest はadmission後にSession resource境界へ渡す検証済みの作成入力をまとめる。
+// builderの呼び出しがPeerConnection、codec、Coordinator所有権をSessionへ移す境界となる。
+type sessionBuildRequest struct {
+	id            string
+	talkMode      string
+	gatherTimeout time.Duration
+	coordinator   *pipeline.Coordinator
+	onClosed      func(string)
+}
+
+// sessionBuilder はadmission reservation後にだけ到達するPeerConnection/codec作成境界である。
+type sessionBuilder func(sessionBuildRequest) (*Session, error)
+
 // Manager は active PeerConnection の registry と process-wide shutdown を所有する。
 //
 // registry lock は map の参照だけを保護し、PeerConnection I/O や Close 待機中は保持しない。
@@ -69,6 +82,7 @@ type Manager struct {
 	config        ManagerConfig
 	reservations  int
 	maxSessions   int
+	buildSession  sessionBuilder
 }
 
 // NewManager は optional STUN URL をPion configurationへ反映し、必須dependencyを検証する。
@@ -88,13 +102,27 @@ func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 	if stunURL != "" {
 		configuration.ICEServers = []webrtc.ICEServer{{URLs: []string{stunURL}}}
 	}
-	return &Manager{
+	manager := &Manager{
 		sessions:      make(map[string]*Session),
 		closed:        make(map[string]struct{}),
 		configuration: configuration,
 		config:        config,
 		maxSessions:   config.MaxSessions,
-	}, nil
+	}
+	manager.buildSession = func(request sessionBuildRequest) (*Session, error) {
+		return newSession(
+			request.id,
+			request.talkMode,
+			manager.configuration,
+			request.gatherTimeout,
+			request.coordinator,
+			manager.config.InputObserver,
+			manager.config.Clock,
+			manager.config.Logger,
+			request.onClosed,
+		)
+	}
+	return manager, nil
 }
 
 // Create は initial Offer から session を作り、half-trickle Answer を返す。
@@ -123,12 +151,7 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 			m.releaseReservation()
 		}
 	}()
-	sessionDependencies := SessionDependencies{
-		PipelineFactory: m.config.PipelineFactory,
-		InputObserver:   m.config.InputObserver,
-		Clock:           m.config.Clock,
-	}
-	coordinator, err := pipeline.NewCoordinator(sessionDependencies.PipelineFactory, m.config.Logger)
+	coordinator, err := pipeline.NewCoordinator(m.config.PipelineFactory, m.config.Logger)
 	if err != nil {
 		return Answer{}, err
 	}
@@ -141,22 +164,18 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 			return Answer{}, ctx.Err()
 		}
 	}
-	session, err := newSession(
-		sessionID,
-		offer.TalkMode,
-		m.configuration,
-		gatherTimeout,
-		coordinator,
-		sessionDependencies.InputObserver,
-		sessionDependencies.Clock,
-		m.config.Logger,
-		func(closedID string) {
+	session, err := m.buildSession(sessionBuildRequest{
+		id:            sessionID,
+		talkMode:      offer.TalkMode,
+		gatherTimeout: gatherTimeout,
+		coordinator:   coordinator,
+		onClosed: func(closedID string) {
 			m.remove(closedID)
 			if offer.OnClosed != nil {
 				offer.OnClosed(closedID)
 			}
 		},
-	)
+	})
 	if err != nil {
 		_ = coordinator.Close()
 		return Answer{}, err
@@ -190,6 +209,7 @@ func (m *Manager) reserve() error {
 	return nil
 }
 
+// releaseReservation はSession公開前のsetup failureをadmission合計から除き、次のCreateを許可する。
 func (m *Manager) releaseReservation() {
 	m.mu.Lock()
 	m.reservations--

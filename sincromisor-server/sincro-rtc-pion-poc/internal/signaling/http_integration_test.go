@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"runtime"
 	"testing"
 	"time"
 
@@ -70,10 +71,12 @@ func TestRealManagerRejectsMalformedNonNullCandidate(t *testing.T) {
 }
 
 func TestRealManagerGatherTimeoutReturns504AndRemovesSession(t *testing.T) {
+	baseline := runtime.NumGoroutine()
 	manager := newRealTestManager(t, "stun:127.0.0.1:9")
+	offers := newTestOfferRegistry(t, manager, 5*time.Millisecond)
 	server := New(
 		manager,
-		newTestOfferRegistry(t, manager, 5*time.Millisecond),
+		offers,
 		t.TempDir(),
 		"stun:127.0.0.1:9",
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
@@ -89,6 +92,10 @@ func TestRealManagerGatherTimeoutReturns504AndRemovesSession(t *testing.T) {
 		t.Fatalf("status = %d, want 504; body=%s", response.Code, response.Body.String())
 	}
 	waitForRegistryCount(t, manager, 0)
+	waitRegistryEntries(t, offers, 0)
+	waitForSignalingCondition(t, 3*time.Second, func() bool {
+		return runtime.NumGoroutine() <= baseline+3
+	})
 }
 
 func newRealTestManager(t *testing.T, stunURL string) *rtc.Manager {
@@ -147,11 +154,6 @@ func newRealBrowserOffer(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("NewPeerConnection() error = %v", err)
 	}
-	t.Cleanup(func() {
-		if err := client.Close(); err != nil {
-			t.Errorf("client.Close() error = %v", err)
-		}
-	})
 	if _, err := client.AddTransceiverFromKind(
 		webrtc.RTPCodecTypeAudio,
 		webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
@@ -169,9 +171,14 @@ func newRealBrowserOffer(t *testing.T) string {
 	<-gatherComplete
 	local := client.LocalDescription()
 	if local == nil {
+		_ = client.Close()
 		t.Fatal("client local description is nil")
 	}
-	return local.SDP
+	sdp := local.SDP
+	if err := client.Close(); err != nil {
+		t.Fatalf("client.Close() error = %v", err)
+	}
+	return sdp
 }
 
 func quoteJSON(t *testing.T, value string) string {

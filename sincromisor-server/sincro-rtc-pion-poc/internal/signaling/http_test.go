@@ -30,7 +30,11 @@ func TestInitialOfferContractFixtures(t *testing.T) {
 	if !validUUID(request.OfferRequestID) || request.OfferRevision != 1 {
 		t.Fatalf("request fixture identity = %q/%d", request.OfferRequestID, request.OfferRevision)
 	}
-	if _, err := ulid.ParseStrict(request.PreviousSessionID); err != nil {
+	var previousSessionID string
+	if err := json.Unmarshal(request.PreviousSessionID, &previousSessionID); err != nil {
+		t.Fatalf("request fixture previous_session_id type: %v", err)
+	}
+	if _, err := ulid.ParseStrict(previousSessionID); err != nil {
 		t.Fatalf("request fixture previous_session_id: %v", err)
 	}
 
@@ -134,6 +138,12 @@ func TestOfferGatheringTimeoutReturns504(t *testing.T) {
 	if !fake.createCanceled {
 		t.Fatal("Create did not observe gathering context cancellation")
 	}
+	server.offers.mu.Lock()
+	entryCount := len(server.offers.entries)
+	server.offers.mu.Unlock()
+	if entryCount != 0 {
+		t.Fatalf("timeout retained %d registry entries, want 0", entryCount)
+	}
 }
 
 func TestInitialOfferSchemaAndByteBoundaries(t *testing.T) {
@@ -147,7 +157,15 @@ func TestInitialOfferSchemaAndByteBoundaries(t *testing.T) {
 		{name: "malformed uuid", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"not-uuid","offer_revision":1}`, wantStatus: http.StatusBadRequest},
 		{name: "wrong revision", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":2}`, wantStatus: http.StatusBadRequest},
 		{name: "revision type", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":"1"}`, wantStatus: http.StatusBadRequest},
+		{name: "null session id is present", body: validPrefix + `,"session_id":null}`, wantStatus: http.StatusBadRequest},
+		{name: "empty session id is present", body: validPrefix + `,"session_id":""}`, wantStatus: http.StatusBadRequest},
+		{name: "numeric session id is present", body: validPrefix + `,"session_id":1}`, wantStatus: http.StatusBadRequest},
+		{name: "object session id is present", body: validPrefix + `,"session_id":{}}`, wantStatus: http.StatusBadRequest},
 		{name: "malformed previous ulid", body: validPrefix + `,"previous_session_id":"old"}`, wantStatus: http.StatusBadRequest},
+		{name: "null previous ulid", body: validPrefix + `,"previous_session_id":null}`, wantStatus: http.StatusBadRequest},
+		{name: "empty previous ulid", body: validPrefix + `,"previous_session_id":""}`, wantStatus: http.StatusBadRequest},
+		{name: "numeric previous ulid", body: validPrefix + `,"previous_session_id":1}`, wantStatus: http.StatusBadRequest},
+		{name: "object previous ulid", body: validPrefix + `,"previous_session_id":{}}`, wantStatus: http.StatusBadRequest},
 		{name: "valid previous ulid", body: validPrefix + `,"previous_session_id":"01K1AF2Y0H0000000000000000"}`, wantStatus: http.StatusOK},
 		{name: "sdp exact limit", body: validOfferBody(strings.Repeat("s", maxSDPBytes)), wantStatus: http.StatusOK},
 		{name: "sdp over limit", body: validOfferBody(strings.Repeat("s", maxSDPBytes+1)), wantStatus: http.StatusRequestEntityTooLarge},
@@ -242,14 +260,21 @@ func TestInitialOfferRegistryStatusMapping(t *testing.T) {
 
 func TestSessionCapacityMapsTo429(t *testing.T) {
 	fake := &fakeSessions{createErr: rtc.ErrSessionCapacity}
+	server := newTestServer(t, fake, "")
 	response := performRequest(
-		newTestServer(t, fake, "").Handler(),
+		server.Handler(),
 		http.MethodPost,
 		offerPath,
 		validOfferBody("v=0\r\n"),
 	)
 	if response.Code != http.StatusTooManyRequests {
 		t.Fatalf("status = %d, want 429", response.Code)
+	}
+	server.offers.mu.Lock()
+	entryCount := len(server.offers.entries)
+	server.offers.mu.Unlock()
+	if entryCount != 0 {
+		t.Fatalf("session 429 retained %d registry entries, want 0", entryCount)
 	}
 }
 

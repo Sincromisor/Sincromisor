@@ -62,8 +62,8 @@ type OfferRegistryConfig struct {
 
 // offerEntry は1 request IDのraw SDP hashと、in-flightからcompleted/tombstoneへの状態遷移を保持する。
 //
-// doneはownerが成功または失敗を確定したときだけ閉じる。expiresAtはcompleted/tombstoneだけで意味を持ち、
-// sessionIDとanswerは成功後、errは失敗時にwaiterが観測する。
+// doneはownerが成功または失敗を確定したときだけ閉じる。waitersはrequest cancelで個別に減るが、
+// owner lifecycleを変更しない。expiresAtはcompleted/tombstoneだけで意味を持つ。
 type offerEntry struct {
 	requestID string
 	sdpHash   [sha256.Size]byte
@@ -74,6 +74,7 @@ type offerEntry struct {
 	state     offerState
 	expiresAt time.Time
 	done      chan struct{}
+	waiters   int
 }
 
 // OfferRegistry はinitial Offerをsingle-flight化し、成功したAnswerだけをcacheする。
@@ -127,6 +128,7 @@ func (r *OfferRegistry) Resolve(
 			r.mu.Unlock()
 			return rtc.Answer{}, ErrOfferConflict
 		}
+		entry.waiters++
 		r.mu.Unlock()
 		return r.wait(ctx, entry)
 	}
@@ -140,6 +142,7 @@ func (r *OfferRegistry) Resolve(
 		revision:  1,
 		state:     offerInFlight,
 		done:      make(chan struct{}),
+		waiters:   1,
 	}
 	r.entries[requestID] = entry
 	r.owners.Add(1)
@@ -168,11 +171,15 @@ func (r *OfferRegistry) Wait(ctx context.Context) error {
 func (r *OfferRegistry) wait(ctx context.Context, entry *offerEntry) (rtc.Answer, error) {
 	select {
 	case <-ctx.Done():
+		r.mu.Lock()
+		entry.waiters--
+		r.mu.Unlock()
 		return rtc.Answer{}, ctx.Err()
 	case <-entry.done:
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	entry.waiters--
 	switch entry.state {
 	case offerCompleted:
 		return entry.answer, nil

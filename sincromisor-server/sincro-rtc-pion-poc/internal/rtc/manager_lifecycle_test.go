@@ -3,6 +3,7 @@ package rtc
 import (
 	"context"
 	"errors"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -11,50 +12,91 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
-func TestManagerReservationNeverExceedsCapacity(t *testing.T) {
-	manager := &Manager{sessions: make(map[string]*Session), maxSessions: 100}
+func TestManagerCreateAdmissionNeverExceedsCapacity(t *testing.T) {
+	baseline := runtime.NumGoroutine()
+	manager, err := NewManager("", ManagerConfig{
+		PipelineFactory: blockingPipelineFactory{},
+		InputObserver:   testInputObserver(),
+		Clock:           SystemClock{},
+		Logger:          testLogger(),
+		MaxSessions:     100,
+	})
+	if err != nil {
+		t.Fatalf("NewManager() error = %v", err)
+	}
+	started := make(chan struct{}, 100)
 	release := make(chan struct{})
-	var admitted atomic.Int32
-	var peak atomic.Int32
+	setupErr := errors.New("injected session setup failure")
+	var buildCalls atomic.Int32
+	manager.buildSession = func(sessionBuildRequest) (*Session, error) {
+		buildCalls.Add(1)
+		started <- struct{}{}
+		<-release
+		return nil, setupErr
+	}
 	var wg sync.WaitGroup
-	for range 101 {
+	for range 100 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := manager.reserve(); err != nil {
-				if !errors.Is(err, ErrSessionCapacity) {
-					t.Errorf("reserve error = %v", err)
-				}
-				return
+			if _, createErr := manager.Create(context.Background(), Offer{
+				Type: "offer", SDP: "v=0\r\n", TalkMode: "chat",
+			}); !errors.Is(createErr, setupErr) {
+				t.Errorf("Create() error = %v, want setup failure", createErr)
 			}
-			current := admitted.Add(1)
-			for {
-				old := peak.Load()
-				if current <= old || peak.CompareAndSwap(old, current) {
-					break
-				}
-			}
-			<-release
-			admitted.Add(-1)
-			manager.releaseReservation()
 		}()
 	}
-	deadline := time.NewTimer(time.Second)
-	defer deadline.Stop()
-	for admitted.Load() < 100 {
+	for range 100 {
 		select {
-		case <-deadline.C:
-			t.Fatalf("admitted = %d, want 100", admitted.Load())
-		default:
+		case <-started:
+		case <-time.After(time.Second):
+			t.Fatalf("buildSession calls = %d, want 100", buildCalls.Load())
 		}
+	}
+	manager.mu.RLock()
+	activeAtPeak := len(manager.sessions)
+	reservationsAtPeak := manager.reservations
+	manager.mu.RUnlock()
+	if activeAtPeak != 0 || reservationsAtPeak != 100 {
+		t.Fatalf("admission peak active/reservations = %d/%d, want 0/100",
+			activeAtPeak, reservationsAtPeak)
+	}
+	if _, err := manager.Create(context.Background(), Offer{
+		Type: "offer", SDP: "v=0\r\n", TalkMode: "chat",
+	}); !errors.Is(err, ErrSessionCapacity) {
+		t.Fatalf("101st Create() error = %v, want ErrSessionCapacity", err)
+	}
+	if got := buildCalls.Load(); got != 100 {
+		t.Fatalf("buildSession calls = %d, want 100; capacity rejection crossed PC/codec boundary", got)
 	}
 	close(release)
 	wg.Wait()
-	if got := peak.Load(); got != 100 {
-		t.Fatalf("peak reservations = %d, want 100", got)
-	}
 	if manager.reservations != 0 {
 		t.Fatalf("reservations = %d, want 0", manager.reservations)
+	}
+	if manager.Count() != 0 {
+		t.Fatalf("active sessions = %d, want 0 after setup failures", manager.Count())
+	}
+	waitForCondition(t, time.Second, func() bool {
+		return runtime.NumGoroutine() <= baseline+2
+	})
+}
+
+func TestManagerCreateFailureReleasesPublishedSessionAndReservation(t *testing.T) {
+	manager := newTestManager(t)
+	if _, err := manager.Create(context.Background(), Offer{
+		Type: "offer", SDP: "not-an-sdp", TalkMode: "chat",
+	}); err == nil {
+		t.Fatal("Create() error = nil, want malformed SDP failure")
+	}
+	waitForCondition(t, time.Second, func() bool {
+		return manager.Count() == 0
+	})
+	manager.mu.RLock()
+	reservations := manager.reservations
+	manager.mu.RUnlock()
+	if reservations != 0 {
+		t.Fatalf("reservations = %d, want 0 after negotiation failure", reservations)
 	}
 }
 
