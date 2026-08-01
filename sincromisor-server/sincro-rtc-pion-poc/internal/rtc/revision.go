@@ -97,7 +97,7 @@ func (s *Session) update(
 
 	s.revision.operationMu.Lock()
 	defer s.revision.operationMu.Unlock()
-	description, remoteApplied, err := s.negotiateDescription(ctx, offerSDP)
+	description, remoteApplied, err := s.negotiateUpdate(ctx, offerSDP)
 	if err != nil {
 		if remoteApplied {
 			_ = s.Close("update_offer_partial_apply")
@@ -125,7 +125,7 @@ func (s *Session) addRevisionCandidate(
 		return false, ErrSessionClosed
 	}
 	return s.revision.addCandidate(revision, candidate, func() error {
-		return s.addCandidate(init)
+		return s.candidateApplier(init)
 	})
 }
 

@@ -49,6 +49,11 @@ type Session struct {
 	done           chan struct{}
 	closers        sessionResourceClosers
 	revision       *revisionState
+	// productionではnegotiateDescriptionへ固定する。test差し替えもremote適用済みboolを正しく返し、
+	// partial apply後だけcloseするtransaction契約を維持しなければならない。
+	negotiateUpdate func(context.Context, string) (webrtc.SessionDescription, bool, error)
+	// productionではaddCandidateへ固定し、revision/dedupe/limit通過後だけ呼ぶPion適用境界である。
+	candidateApplier func(webrtc.ICECandidateInit) error
 }
 
 // sessionResourceClosers はSession cleanupが並行開始して完了を待つ3つの所有resource境界である。
@@ -110,6 +115,8 @@ func newSession(
 			pipeline: coordinator.Close,
 		},
 	}
+	session.negotiateUpdate = session.negotiateDescription
+	session.candidateApplier = session.addCandidate
 	if err := session.installOutboundTrack(); err != nil {
 		_ = pc.Close()
 		_ = encoder.Close()
