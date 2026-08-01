@@ -266,3 +266,167 @@ stale commentとTODOを変更対象全体で検索し、新規TODOはない。pr
   Go moduleのfocused/full/race/vet/format/tidyも同じsource stateでPASSした。
 - Remaining Gate: 実Python 4-service Gate 2はoriginとbackend不足のためFAILを維持する。
   詳細と非代替検証の境界は`artifacts/gate-2-result.md`を参照。
+
+## attempt 4
+
+### 判断とeval申し送りへの対応
+
+- `Close`によるexternal output channel closeを、publish/resetと共有する`outputMu` barrier内へ移した。
+  generation workerのjoin対象外でpackage-private `publishText`へ入ったcallerも、barrier退出前に
+  channelをcloseされない。Close開始後のcallerはclosed stateを再確認してsendしないため、
+  send/close raceを両方向で直列化する。
+- Gate 2 testのfixture pathは、module rootではなく`go test`が設定するpackage working directoryを
+  基準に解決するよう修正した。途中FAILでもCoordinatorをdeferred `Close`し、接続とgoroutineの
+  cleanup/joinを必ず開始する。
+- 仕様からの逸脱はない。評価者専用`acceptance/`、production Python service、compose、
+  container dataは変更していない。
+
+### 検証
+
+- focused
+  `go test -race ./internal/pipeline -run '^TestCloseConvergesDuringResetAndBackpressure/output_timeout$' -count=100`:
+  PASS
+- focused Close/backpressure 2 test `-count=25`: PASS
+- `gofmt -l .`: PASS（出力なし）
+- `go vet ./...`: PASS
+- `go test ./...`: PASS
+- `go mod tidy -diff`: PASS（差分なし）
+- `go test -race ./...`: FAIL
+    - 修正対象を含む`internal/pipeline`と他packageはPASSした。
+    - 既存`internal/rtc`の3 testがPion peer接続の5秒deadlineに到達した。
+      該当package単独、CPU数明示、deadlineを一時的に15秒へ延長した診断でも接続しなかった。
+      本タスクと無関係なtest変更は残していない。
+- commit `c7741e21ed7cb23703852abb2bbcd62f7365dac1`上の`npm run gate`: PASS
+  （lint / build / test）
+- `npm run tasks:check`: PASS
+- `npm run commit:check`: PASS
+- worktree: clean
+
+### 実Python 4-service Gate 2
+
+- 4 originを`ws://127.0.0.1:8002`から`:8005`として固定commandを実行した。
+- 4 service自体はrunning / healthyで、各WebSocket接続開始まで観測した。
+- 必要backendの`sincro-consul-server`がrestart loop中だった。server logは保存済みcluster stateが
+  `server_rejoin_age_max`の168時間を超えたため再参加を拒否し、data directory消去を求めていた。
+  破壊的かつscope外なので消去していない。
+- RecognizerとSynthesizerは初期化中にConsulから`500 No known Consul servers`を受けて切断した。
+  Coordinatorはresetへ入り、最初のPCMは`ErrPipelineUnavailable`となった。
+- したがって実serviceの1 turn、reset後2 turn目、Close後active connection 0は未観測でGate 2はFAIL。
+  詳細なorigin、image digest、stage別結果は`artifacts/gate-2-result.md`のattempt 4を参照する。
+
+### ドキュメント同期
+
+- state artifactの`artifacts/gate-2-result.md`へattempt 4の実行環境、固定command、4 service image digest、
+  Consul restart原因、stage/reset/close観測結果を追記した。
+- public API、wire schema、endpoint、compose、env sample、設計上のlifecycleは変更していない。
+  `Close`の既存契約である「全producer終了後にexternal channelをclose」をrace-freeに実現する
+  synchronization修正であり、設計文書の意味変更は不要と判断した。
+- Gate testとartifact以外の生成物は影響を受けないため再生成不要。
+
+### Comment audit
+
+| path                                              | symbol / block / decision / flow         | kind                          | current comment                                     | reader question                                         | required reader knowledge                                        | decision | action / omission reason                                                                     | reviewer note                                      |
+| ------------------------------------------------- | ---------------------------------------- | ----------------------------- | --------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `internal/pipeline/coordinator.go`                | `Coordinator.Close`                      | exported lifecycle API        | tracked producer join後のchannel closeのみ説明      | join対象外のpackage内publishとcloseはどう直列化されるか | `outputMu`はpublish/reset/close共通barrier、closed state再確認   | rewrite  | doc commentへ最終barrierとsend/close race防止を追加                                          | channel ownerとclose順序は維持                     |
+| 同上                                              | `Close`のexternal channel close block    | lock decision・shutdown flow  | block commentなし                                   | なぜgeneration worker join後にもmutexが必要か           | test hook等の直接publicationはgeneration `WaitGroup`外になり得る | add      | joinの通常保証とbarrierが補う範囲をblock commentで説明                                       | `outputMu -> mu`の既存順序と競合しない             |
+| `internal/pipeline/runtime.go`                    | generic `publish`                        | output generation barrier     | publish/reset共有barrierを説明済み                  | Close追加後も説明はstaleでないか                        | Closeも同じbarrierを利用                                         | keep     | producer側のstate再確認とreset drainの説明は現在も正しく、Close docが追加関係を補完する      | rewrite不要                                        |
+| `internal/pipeline/reset.go`                      | reset output barrier                     | state transition・lock order  | output publicationとのlock順序を説明済み            | Close barrier追加でlock順序が変わるか                   | Closeはstate lock解放・join後にoutputMuを単独取得                | keep     | resetの`outputMu -> mu`順序とownership再確認は変わらずstaleでない                            | deadlock cycleなし                                 |
+| `internal/pipeline/coordinator_test.go`           | output timeout / Close race test         | test-only concurrency proof   | test名が競合経路を表現                              | 未追跡publishとCloseのraceを再現しているか              | direct `publishText` goroutine、controlled waiter                | keep     | 既存testが評価者指摘のraceを`-count=100`で再現し、修正後のbarrierをそのまま検証する          | tracked producerへ変更せずproduction barrierを強化 |
+| `internal/pipeline/gate2_python_services_test.go` | `gate2PCM` fixture path decision         | test-only filesystem boundary | path基準の説明なし                                  | fixed commandのcaller cwdに依存しない理由は何か         | `go test`はpackage directoryをprocess cwdにする                  | add      | package cwdからreview済みfixtureへ辿る理由と再現性をblock comment化                          | fixture/hashは不変                                 |
+| 同上                                              | `TestGate2PythonServices` deferred Close | test-only lifecycle cleanup   | exported test commentにmissing config条件を説明済み | success前の`Fatal`でも誰がCoordinatorをjoinするか       | Go testのdefer実行、Close idempotency                            | keep     | 単純なdeferで副作用と失敗条件が局所的に明らか。上位test commentとCoordinator docで契約を覆う | explicit Close成功経路も維持                       |
+
+変更対象とchange comprehension surfaceのcomment/TODOを監査し、stale commentと新規TODOはない。
+コメントを省略したprivate部分は、`filepath.Join`の各path segmentとdeferred error assertionのみで、
+上表のfilesystem boundary・lifecycle判断を追加commentが覆い、入力、失敗、cleanup上の位置が局所的に
+完結しているためである。
+
+### attempt 4 status summary
+
+- Completion Summary: commit `c7741e21ed7cb23703852abb2bbcd62f7365dac1`で
+  output publication/Close raceとGate 2固定commandのfixture/cleanup不備を修正した。
+- Verification: focused race、format、vet、unit、tidy、repository gate、tasks/commit checkはPASS。
+  module full raceは既存RTC接続deadline、実Python Gate 2はConsul restart loopによりFAIL。
+- Remaining Gate: Consul/S3/Redis/VoiceVoxを含む依存先がhealthyに収束した環境で固定Gate 2を再実行し、
+  1 turn、reset後2 turn目、Close後active connection 0を観測する必要がある。
+
+## attempt 5
+
+### 判断とeval申し送りへの対応
+
+- Gate 2の`Start`をgoroutineで開始し、30秒のgate固有timerで監視する。成功時は同じcontextを
+  session lifetimeとして維持し、timeout時だけcancelしてretry waiter / partial client setを止める。
+  `Start`の終了を受け取った後に`Close`をjoinし、全proxy active connection 0を確認してからFAILする。
+- 4 stageは後段成功で前段未観測を代替せず、Extractor confirmed 15秒、Recognizer non-empty 30秒、
+  Processor final/history 15秒、Synthesizer identity/voice/mora/speaking time 60秒の独立deadlineで検証する。
+- resetではgeneration 2と4接続再作成を同時に待ち、output barrier後の旧text / synth 0、
+  confirmed historyの完全一致を明示assertする。2 turn目は1 turn目historyの完全prefix、
+  Closeは全proxy active connection 0を確認する。
+- `go test -race ./...`のRTC failureをPion log付きで診断した。Docker bridge、Tailscale、vethを含む
+  多数のhost candidate pairを同一host testが交換し、到達不能IPv6への`network is unreachable`を
+  大量に処理した後でIPv4 pairへ収束するため、interface数とrace instrumentationで5秒deadlineを
+  超えていた。単なるtimeout延長は残さず、test SDPだけを両peerに存在する先頭IPv4 host candidateへ
+  限定した。productionのcandidate収集、Manager、wire contractは変更していない。
+- 評価者専用`acceptance/`、production code、Python service、compose、container dataは変更していない。
+
+### 検証
+
+- Gate 2 test compile / missing origin validation: PASS（missing originはskipせず即時FAIL）
+- RTC focused race 3 test `-count=5`: PASS
+- `gofmt -l .`: PASS（出力なし）
+- `go vet ./...`: PASS
+- `go test ./...`: PASS
+- `go test -race ./...`: PASS
+- `go mod tidy -diff`: PASS（差分なし）
+- commit `ff55877b3843279af641f23d4e1a8acbb5ecc86c`上の`npm run gate`: PASS
+  （lint / build / frontend 534 passed・2 skipped）
+- `npm run tasks:check`: PASS
+- `npm run commit:check`: PASS
+- worktree: clean
+
+### 実Python 4-service Gate 2
+
+- attempt 4と同じ4 originを指定して固定commandを実行した。
+- Consulは古いcluster stateによりrestart loop中で、production環境は変更していない。
+- testは30.011秒で
+  `initial four-service connection exceeded 30s: start=context canceled close=<nil>`としてFAILした。
+- global 10分timeoutには到達せず、session cancel、Start終了、Coordinator Close join、
+  全proxy active connection 0まで確認した。
+- 初回4接続が揃わないため、Extractor / Recognizer / Processor / Synthesizerのfield値、
+  reset後2 turn目は未観測である。詳細は`artifacts/gate-2-result.md` attempt 5を参照する。
+
+### ドキュメント同期
+
+- state artifactの`artifacts/gate-2-result.md`へattempt 5の有限FAIL時間、cleanup結果、
+  stage別deadline / field expectation、未観測範囲を追記した。
+- production API、wire schema、endpoint、compose、env sample、公開挙動は変更していない。
+  Gate testとRTC local peer testだけの変更なので`documents/design/`、migration文書、生成物の同期は不要。
+- RTC testのcandidate限定はproduction ICE contractを変えず、test harnessの同一host接続だけを
+  決定的にする。したがってfrontend RTC契約の同期対象外である。
+
+### Comment audit
+
+attempt 5はtest codeのみでproduction comment audit対象外である。変更したtest lifecycle、
+filesystem/network boundary、state observationを同じschemaで監査した。
+
+| path                                              | symbol / block / decision / flow         | kind                               | current comment                 | reader question                                                  | required reader knowledge                                             | decision | action / omission reason                                                               | reviewer note                            |
+| ------------------------------------------------- | ---------------------------------------- | ---------------------------------- | ------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `internal/pipeline/gate2_python_services_test.go` | Start context / timer / deferred cleanup | test lifecycle・context ownership  | Start成功後deferだけ            | 初回retryが収束しないとき誰がcancel / joinするか                 | Start contextはsession lifetime、retry waiterはcancel可能             | rewrite  | session contextを成功後も維持し、別timer timeout時だけcancel / Start wait / Close join | global test timeoutへ委ねない            |
+| 同上                                              | `startGate2Coordinator` timeout branch   | goroutine join・failure flow       | 新規                            | Start goroutineとpartial setをFAIL前に残さない保証は何か         | buffered result、context cancel、idempotent Close                     | add      | cancel→Start結果受領→Close joinの順序と理由をblock comment化                           | proxy active 0もcallerが確認             |
+| 同上                                              | `runGate2Turn`                           | orchestration・stage deadlines     | assistant / synthだけを一括待機 | 各stageを独立に観測し、後段成功で代替しない保証は何か            | generation-local state、confirmed history commit、external output     | rewrite  | stage別deadlineとProcessor final / Synth identityの関係をflow comment化                | 15/30/15/60秒をpackage const化           |
+| 同上                                              | `gate2ConfirmedExtraction`               | private state observation          | 新規                            | external outputがないExtractor confirmedをどう観測するか         | Coordinator/work lock、conversation closed speech                     | add      | same-package exit testがcurrent generationとclosed speechを両方確認                    | production stateを変更しない             |
+| 同上                                              | `waitGate2ProcessorFinal`                | data transformation・commit proof  | 新規                            | intermediateとfinalをどう区別しhistory継承を証明するか           | finalだけがCoordinator historyへcommit、published message identity    | add      | previous prefix、confirmed user、published final assistantの完全一致を検証             | outputだけの推測にしない                 |
+| 同上                                              | reset / second turn / Close assertions   | state transition・resource cleanup | generation / accept countのみ   | old output、history、2 turn目、active connectionを何で証明するか | output barrier、session history、proxy counters                       | rewrite  | old queue 0、history完全一致/prefix、4接続+1、active 0を明示assert                     | success環境で必ず通るexit条件            |
+| `internal/rtc/session_test.go`                    | `negotiatePair` candidate restriction    | test-only network boundary         | 全host candidateを使用          | virtual interface数でrace deadlineが変わる理由と非対象は何か     | same-host test、unreachable IPv6 pairs、production candidate contract | add      | 両peer共通の単一IPv4 host candidateへ絞る理由とproduction非影響をblock comment化       | timeout延長ではない                      |
+| 同上                                              | `singleHostCandidateSDP`                 | test-only SDP transformation       | 新規                            | 選択条件、失敗条件、candidate以外のSDP保持はどうなるか           | candidate field layout、IPv4 parsing、line filtering                  | add      | helper名、validation error、上位flow commentで入力/出力/失敗/位置を覆う                | parser production化は不要な限定test seam |
+
+stale commentと新規TODOはない。`waitGate2Text`、`waitGate2Synthesizer`、`gate2History`、
+`waitGate2`の個別commentは省略した。これらは上位`runGate2Turn` flow commentがstage上の位置とdeadlineを
+覆い、関数名・型・局所的なfatal messageから入力、出力、失敗条件、副作用が完結するためである。
+
+### attempt 5 status summary
+
+- Completion Summary: commit `ff55877b3843279af641f23d4e1a8acbb5ecc86c`でGate 2の有限lifecycle、
+  field-level exit assertion、RTC local peer race determinismを実装した。
+- Verification: module format / vet / unit / full race / tidy、repository gate、tasks / commit checkはPASS。
+- Remaining Gate: 実Python Gate 2は外部Consul restart loopによりFAIL。backendがhealthyな環境で
+  4 stage、reset後2 turn目、Close active 0のfield-level exitを完走する必要がある。

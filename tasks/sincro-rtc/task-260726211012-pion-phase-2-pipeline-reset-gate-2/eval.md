@@ -281,3 +281,232 @@ FAIL
 - conversation/state/data flowのreader-oriented commentを補い、定型的なcomment auditを更新する。
 - 必要backendと4 originを用意し、固定Gate 2 commandを実行して4 stage、reset後2 turn目、
   Close後active connection 0をartifactへ記録する。実サービスGateがPASSするまでGate 2をcloseしない。
+
+## attempt 4
+
+### 判定
+
+FAIL
+
+実装品質とGate 2 exitを分離して判定した。
+
+- 実装品質: **FAIL**。`outputMu`をCloseの最終barrierにした修正自体は、
+  focused race 100回とpipeline packageのfull raceでsend/close raceを解消しており、
+  lock order cycleも認めなかった。一方、固定Gate 2 testは初回`Start`をdeadlineなしの
+  `context.Background`で呼び、`Close` deferも`Start`成功後にしか登録しない。
+  独立実行では初回接続retryから復帰せず10分のtest timeoutとなり、失敗時cleanupを有限時間で
+  検証できなかった。さらにstage別deadline/identity、old output 0、confirmed history維持の
+  assertionが不足しており、受け入れ条件を証明するexit testになっていない。
+- Gate 2 exit: **FAIL**。4 originを指定した固定commandは10分でtimeoutし、
+  ExtractorからSynthesizerまでの1 turn、reset後2 turn目、Close後active connection 0を観測できなかった。
+- 必須検証: **FAIL**。`go test -race ./...`は変更対象の`internal/pipeline`を含む各packageではPASSしたが、
+  `internal/rtc`の既存Pion接続2 testが5秒deadlineで失敗し、module全体の必須race gateは成功していない。
+
+### 受け入れ条件チェックリスト
+
+- [✓] `internal/pipeline`の指定4ファイル、production client set、Coordinator ownership、
+  固定state machine、typed transition errorを実装している — commits `7e446e7f`〜`c7741e21`。
+- [✓] generation capture、single-flight reset、initial/runtime retryのgeneration semantics、
+  partial setの逆順close、full-jitter cap、cancel可能waiterを実装し、publication window testで検証している。
+- [✓] 640-byte PCM、25-frame drop-oldest、generationごとのqueue交換、session累積drop count、
+  output各16件/5秒backpressureを実装している。
+- [✓] Extractor/Recognizer/Processorのidentity・partial/final validation、confirmed history commit、
+  non-empty voiceだけのraw ProcessorResult転送、typed synth outputを実装している。
+- [✓] external outputのgeneration envelope、reset drain、stable channel、close ownershipを実装している。
+  attempt 4の`Close`はproducer join後に`outputMu`を取得してsend/closeを直列化し、
+  `TestCloseConvergesDuringResetAndBackpressure/output_timeout -count=100`がrace detector込みでPASSした。
+- [✓] fake WebSocket 4-stage、4 service × 3 failure matrix、simultaneous/repeated reset、
+  publication window、backpressure、normal/reset/connect中Close、active connection/goroutine leakの
+  自動testを維持している。
+- [✗] 固定Gate 2 testのlifecycle — `TestGate2PythonServices`は`Start`にdeadlineなしのcontextを渡し、
+  deferred `Close`を成功後に登録する。独立実行では`connectUntilRunning`のretry待機に留まり、
+  10分のtesting timeoutまでcleanupを開始できなかった。途中stage failure後のdeferは改善されたが、
+  初回connect失敗/停止には不十分である。
+- [✗] 固定Gate 2 testのfield-level coverage — `runGate2Turn`はassistant textを45秒以内に待つだけで、
+  Extractor confirmedを15秒、Recognizer non-empty textを30秒、Processor finalを15秒という
+  stage別deadlineで観測しない。Synthesizer outputもspeech IDを直前Processor requestと比較しない。
+  reset後はgenerationとaccept countだけを確認し、old output 0とconfirmed history維持を明示assertしない。
+- [✗] 実Python 4-service Gate 2 — 固定commandはtimeoutし、1 turn、reset後2 turn目、
+  Close後active connection 0が未観測である。main側artifactのattempt 4も、
+  Consul restart loopにより同じexit条件を未達として正しくFAIL記録している。
+- [✓] production comment変更 — attempt 4で変更した`Coordinator.Close`のdoc/block commentを
+  実コードと全件照合した。join対象外publicationを補うbarrier、close順序、idempotenceの説明は正確で、
+  `runtime.go`/`reset.go`の既存lock-order commentにもstale化はない。
+- [✓] test comment/audit — fixture path commentはGo testのpackage cwdと実際の
+  `../../../speech-recognizer-nemo/.../sample02.wav`を正しく対応付ける。
+  main側`impl.md` attempt 4のauditはreader question、required knowledge、判断、actionを対象別に記録し、
+  stale comment/TODOも認めなかった。
+- [✓] ドキュメント同期 — 公開API、wire schema、endpoint、compose、env、設計上のlifecycle変更はない。
+  attempt 4は既存Close契約の同期実装とGate test修正であり、既存4設計文書は累積実装と一致する。
+  `artifacts/gate-2-result.md`は実環境、image digest、Consul failure、未観測stageを同期している。
+- [✗] 全必須検証 — format/vet/unit/tidy、repository gate、tasks checkはPASSしたが、
+  module full raceと固定Gate 2がFAILした。
+
+### テスト結果
+
+- `npm run gate`: PASS。clean SHA `c7741e21`の記録を独立参照した。
+    - lint: cache hit PASS（583 files、fixなし）
+    - build: cache hit PASS（876 modules transformed）
+    - frontend test: cache hit PASS
+- `npm run tasks:check`: PASS（263 task、open 3 / done 258 / superseded 2）。
+- module root `/tmp/go1.26.5-toolchain/bin/go`:
+    - `gofmt -l .`: PASS（出力なし）
+    - `go vet ./...`: PASS
+    - `go test ./...`: PASS（9 package）
+    - `go mod tidy -diff`: PASS（差分なし）
+    - `go test -race ./...`: FAIL
+        - `internal/pipeline`、client、discovery、protocolを含む8 packageはPASS。
+        - `internal/rtc/TestManagerConnectionDataChannelsAndClose`と
+          `TestManagerTenSequentialNormalClosesConverge`が5秒deadlineでFAIL。
+- focused
+  `go test -race ./internal/pipeline -run '^TestCloseConvergesDuringResetAndBackpressure/output_timeout$' -count=100`:
+  PASS（1.135s）。attempt 3のsend/close raceは再現しなかった。
+- 固定Gate 2（Extractor `:8002`、Recognizer `:8003`、Processor `:8004`、
+  Synthesizer `:8005`の4 originを環境変数へ設定）:
+  `go test -tags=gate2 -count=1 ./internal/pipeline -run '^TestGate2PythonServices$' -v`:
+  **FAIL**（600.017s、test timeout）。
+  goroutine dumpは`Coordinator.Start` → `connectUntilRunning` → retry waiterを示し、
+  4-stage result、reset完了、Close完了には到達しなかった。
+- 最初のsandbox内`go test`/raceはloopback/netlink/VCS metadata制約で失敗したため判定に使わず、
+  同一clean SHAを制約外で再実行した。指定worktreeは検証後もcleanである。
+- カバレッジ評価: fake integration/reset/race/leak matrixとClose barrier修正のfocused coverageは十分。
+  ただし固定Gate entrypointの初回connect収束性とfield-level期待値に上記の抜け道があり、
+  実service exitも未達なので全体として不十分である。
+
+### ドキュメント整合性
+
+- attempt 4のproduction差分は既存のClose契約をrace-freeにする内部同期であり、
+  公開API、通信契約、公開挙動は変更していない。追加設計文書の同期は対象外である。
+- 累積変更に対応する
+  `documents/design/contracts/audio-pipeline-websocket.md`、
+  `documents/design/backend/services/audio-broker.md`、
+  `documents/migration/pion/{roadmap,implementation-phases}.md`は、
+  generation reset、queue/history、retry/close、Python AudioBrokerがPhase 3までproduction正本である境界、
+  Gate artifact導線と一致する。
+- main側`artifacts/gate-2-result.md` attempt 4は4 service image digest、Consul restart原因、
+  stage/reset/closeの未観測を記録し、実service Gateを代替PASS扱いしていない。
+
+### 残課題
+
+- Gate 2 entrypointの初回`Start`へ有限deadlineを持つcontextを渡し、`Start`成功前の失敗でも
+  Coordinator cleanupを開始・joinできる構造にする。接続不能時もtestingの10分global timeoutではなく、
+  gate固有deadlineと診断でFAILさせる。
+- Gate 2 testでExtractor confirmed、Recognizer non-empty text、Processor final/history、
+  Synthesizer speech identityをstage別deadlineで観測する。resetではold output 0、
+  confirmed history維持、4接続再作成、Close後active 0を明示assertする。
+- module全体の`go test -race ./...`を成功させる。今回のtask差分由来のraceは解消しているが、
+  必須gateとしては`internal/rtc`のPion接続deadline失敗を残せない。
+- Consulと必要backendがhealthyに収束した4-origin環境で固定Gate 2を再実行し、
+  1 turn、reset後2 turn目、Close後active connection 0をartifactへ記録する。
+
+## attempt 5
+
+### 判定
+
+FAIL
+
+コード品質とGate 2 exitを分離して判定した。
+
+- コード品質: **PASS**。attempt 4で残ったGate entrypointの無期限Start、初回失敗時cleanup、
+  stage別field assertion、module full raceの問題は解消された。test-only差分にproduction API、
+  ICE収集、wire contractへの影響はない。
+- Gate 2 exit: **FAIL**。固定4 origin commandはglobal timeoutへ至らず30.016秒で有限FAILし、
+  cancel → `Start` join → `Close` join → proxy active connection 0まで確認できた。
+  ただし外部Consul restart loop環境では初回4接続が揃わず、実4-stage turn、reset、
+  2 turn目、success pathのClose active 0は未観測である。
+- 全体判定: **FAIL**。task.mdは必要backendが起動できない場合もGate 2 FAILと定めており、
+  コード品質PASSだけで代替できない。
+
+### 受け入れ条件チェックリスト
+
+- [✓] 累積production実装 — Coordinator ownership、固定state/generation、single-flight reset、
+  bounded queue、conversation validation、confirmed history、output barrier、retry/close semanticsを
+  commits `7e446e7f`〜`c7741e21`で実装し、attempt 4までのコード指摘を解消している。
+- [✓] Close send/close race — `outputMu`の最終barrierを維持し、
+  focused race 100回とmodule full raceの両方でPASSした。
+- [✓] 初回Startの有限性 — `startGate2Coordinator`は30秒timerでsession contextをcancelし、
+  `Start` goroutineの結果受領後に`Close`をjoinする。独立実行は30.016秒で
+  `start=context canceled close=<nil>`となり、10分global timeoutへ到達しなかった。
+- [✓] 初回失敗cleanup — `Close` deferはStart前に登録され、timeout branchも
+  cancel → Start result → Closeの順でjoinする。callerは全proxyのactive connection 0を
+  最大15秒で確認してからFatalを報告する。独立実行はcleanup assertionを通過した。
+- [✓] Extractor Gate assertion — PCM fixture/hash/formatを固定し、confirmed extractionを
+  generation、session-wide speech/sequence identity、conversation closed stateと共に15秒以内で観測する。
+  Coordinatorのproduction validationによりsession、strict sequence、confirmed contractも通過条件になる。
+- [✓] Recognizer Gate assertion — non-empty user textを30秒以内で観測し、
+  confirmed Extractor speech IDと照合する。production outstanding validationが
+  session/speech/sequence/confirmedの完全一致を強制する。
+- [✓] Processor Gate assertion — final responseとhistory commitを15秒以内で観測し、
+  previous history prefix、confirmed user identity、published assistantのtype/text/speech identityを
+  完全照合する。intermediate outputだけでは成功しない。
+- [✓] Synthesizer Gate assertion — 60秒以内にProcessor finalと同じspeech ID、
+  non-empty message/voice/mora、positive speaking time、許可audio formatを検証する。
+- [✓] reset/2 turn/Close Gate assertion — generation +1と4 proxy各+1、旧text/synth 0、
+  confirmed history不変、2 turn目history prefix、Close後15秒以内の全proxy active 0を明示検証する。
+- [✓] RTC test determinism — `session_test.go`だけでoffer/answerを両peer共通の単一IPv4 host addressへ絞る。
+  production `Manager`、Pion configuration、candidate収集/通信契約は変更していない。
+  focused race 3 test ×5回とmodule full raceがPASSし、単なるdeadline延長を残していない。
+- [✓] test comment/audit — Start context ownership、timeout時join順序、stage pipeline、
+  same-host candidate限定の理由とproduction非影響をreader-oriented commentで説明する。
+  main側`impl.md` attempt 5 auditは変更したflow/boundary/state observationを全件扱い、
+  stale commentと新規TODOはない。
+- [✓] fake integration/reset/race/leak coverage — 既存のfixture-backed 4-WebSocket test、
+  4 service × 3 failure matrix、simultaneous/repeated reset、publication windows、
+  backpressure/Close、active connection/goroutine leak testを維持し、全unit/raceでPASSした。
+- [✗] 実Python 4-service Gate 2 — 現環境は初回4接続deadlineでFAILし、
+  stage field値、runtime reset、2 turn目を実観測できなかった。
+- [✓] required code checks — gofmt、vet、unit、full race、tidy、repository 3点gate、
+  tasks checkが同一clean SHAで全てPASSした。
+- [✓] ドキュメント/成果物 — attempt 5はtest-only変更で公開契約変更なし。
+  main側Gate artifactは有限FAIL、cleanup、stage期待値、未観測範囲を正確に同期し、
+  fake/有限失敗を実service PASSとして扱っていない。
+
+### テスト結果
+
+- clean worktree HEAD: `ff55877b3843279af641f23d4e1a8acbb5ecc86c`、検証後もclean。
+- `npm run gate`: PASS（clean SHAのcache recordを独立参照）。
+    - lint: PASS
+    - build: PASS
+    - frontend test: 534 passed / 2 skipped
+- `npm run tasks:check`: PASS（263 task、open 3 / done 258 / superseded 2）。
+- module root `/tmp/go1.26.5-toolchain/bin/go`:
+    - `gofmt -l .`: PASS（出力なし）
+    - `go vet ./...`: PASS
+    - `go test ./...`: PASS（9 package）
+    - `go mod tidy -diff`: PASS（差分なし）
+    - `go test -race ./...`: PASS（9 package）
+- RTC focused:
+  `go test -race ./internal/rtc -run
+'^(TestManagerConnectionDataChannelsAndClose|TestManagerTenSequentialNormalClosesConverge|TestSessionCloseIsIdempotent)$'
+-count=5`: PASS（9.237s）。
+- Close focused:
+  `go test -race ./internal/pipeline -run
+'^TestCloseConvergesDuringResetAndBackpressure/output_timeout$' -count=100`:
+  PASS（1.136s）。
+- 固定Gate 2（Extractor `:8002`、Recognizer `:8003`、Processor `:8004`、
+  Synthesizer `:8005`）:
+  `go test -tags=gate2 -count=1 ./internal/pipeline -run '^TestGate2PythonServices$' -v`:
+  **FAIL**（30.016s）。
+  `initial four-service connection exceeded 30s: start=context canceled close=<nil>`。
+  global test timeoutではなくGate固有deadlineで終了し、proxy cleanup assertion後にFAILした。
+- 最初のvet/tidyは新規empty module cacheへのdownloadがsandbox networkで拒否されたため判定に使わず、
+  同一clean SHAで依存を解決して再実行した成功結果を判定根拠とした。
+- カバレッジ評価: code-level acceptance、fake service matrix、race/leak、Gate success/failure pathの
+  assertionsは十分である。残る未観測範囲は外部backendが必要な実Gate 2 exitだけである。
+
+### ドキュメント整合性
+
+- attempt 5は`gate2_python_services_test.go`と`rtc/session_test.go`だけを変更し、
+  production API、wire schema、endpoint、compose/env、公開RTC/ICE挙動を変更していない。
+  追加の設計文書・生成物同期は対象外である。
+- 累積production契約に対応する4設計/migration文書は実装と一致し、
+  Python AudioBrokerがPhase 3までproduction正本である境界も維持されている。
+- main側`artifacts/gate-2-result.md` attempt 5は、固定commandの30.011秒有限FAIL、
+  cancel/Start/Close/proxy cleanup、stage別期待値、外部Consulによる未観測範囲を同期済みである。
+
+### 残課題
+
+- 外部Consulと必要backendをhealthyに収束させた4-origin環境で固定Gate 2を再実行し、
+  Extractor/Recognizer/Processor/Synthesizerの1 turn、Recognizer切断後のgeneration reset、
+  historyを維持した2 turn目、success pathのClose後active connection 0をartifactへ記録する。
+- Consul data directoryの消去等は本評価の権限・スコープ外であり実施していない。
