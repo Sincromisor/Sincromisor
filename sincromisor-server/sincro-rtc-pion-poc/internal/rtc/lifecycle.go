@@ -14,6 +14,10 @@ const (
 	preConnectTimeout = 15 * time.Second
 	// mediaReadinessTimeout はconnected transportが3 media条件を保持できる上限であり、下流接続前に10秒で破棄する。
 	mediaReadinessTimeout = 10 * time.Second
+	// disconnectGraceTimeout は一時的なnetwork断で不要なICE restartを要求しない猶予である。
+	disconnectGraceTimeout = 10 * time.Second
+	// restartDeadlineTimeout はfailedまたはgrace超過後に同じPeerConnectionを復旧できる上限である。
+	restartDeadlineTimeout = 15 * time.Second
 )
 
 // Timer は session deadline を停止する最小契約である。
@@ -52,6 +56,14 @@ const (
 	stateClosed         sessionState = "closed"
 )
 
+type recoveryPhase string
+
+const (
+	recoveryNone         recoveryPhase = ""
+	recoveryGrace        recoveryPhase = "disconnect_grace"
+	recoveryNeedsRestart recoveryPhase = "restart_required"
+)
+
 // TransitionError は event source が許可されていない session state 遷移を要求したことを表す。
 //
 // callback の重複と closing 後の通知は caller が no-op として除外するため、この error は
@@ -70,7 +82,8 @@ func (e *TransitionError) Error() string {
 // validSessionTransition はreadinessの直列chainと、全非terminal stateからのclosingだけを許可する。
 //
 // callback到着順はlatchが吸収するため、track/channel eventがtransport stateを飛び越す遷移は持たない。
-// closedからの復帰も禁止し、restartは新しいSessionの責務とする。
+// closedからの復帰も禁止する。ICE restartはstateを巻き戻さずrunning resourceを維持したまま
+// recoveryPhaseだけを遷移させる。
 func validSessionTransition(from, to sessionState) bool {
 	switch from {
 	case stateCreated:
@@ -125,22 +138,26 @@ func (d *deadlineController) stop() {
 	}
 }
 
-// sessionLifecycle は callback latch、state machine、deadline を単一 mutex で直列化する。
+// sessionLifecycle はcallback latch、state machine、recovery phase、deadlineを単一mutexで直列化する。
 //
 // track と channel は connected 前でも記録するが、media_ready は transport_ready 後かつ
 // audio、text_ch、telop_ch の全条件成立時だけ公開する。別 object の同種 media は
-// duplicate_media として session 全体を閉じるため、ここでは object identity も保持する。
+// duplicate_mediaとしてsession全体を閉じるため、ここではobject identityも保持する。recoveryは
+// running stateを巻き戻さず、disconnect graceからrestart-requiredへのtransport補助状態だけを表す。
 type sessionLifecycle struct {
 	mu          sync.Mutex
 	state       sessionState
 	closeReason string
 	deadlines   *deadlineController
+	// recoveryDeadlinesはinitial/media readinessの安全期限を置換せず、接続復旧期限を並行所有する。
+	recoveryDeadlines *deadlineController
 
 	audio        *webrtc.TrackRemote
 	textChannel  *webrtc.DataChannel
 	telopChannel *webrtc.DataChannel
 	textOpen     bool
 	telopOpen    bool
+	recovery     recoveryPhase
 }
 
 func newSessionLifecycle(clock Clock) (*sessionLifecycle, error) {
@@ -148,7 +165,13 @@ func newSessionLifecycle(clock Clock) (*sessionLifecycle, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &sessionLifecycle{state: stateCreated, deadlines: deadlines}, nil
+	recoveryDeadlines, err := newDeadlineController(clock)
+	if err != nil {
+		return nil, err
+	}
+	return &sessionLifecycle{
+		state: stateCreated, deadlines: deadlines, recoveryDeadlines: recoveryDeadlines,
+	}, nil
 }
 
 // transitionLocked はcallerが保持するlifecycle mutex内でevent source付きのstate変更を確定する。

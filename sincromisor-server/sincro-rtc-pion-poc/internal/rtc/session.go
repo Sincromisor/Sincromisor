@@ -26,7 +26,7 @@ type SessionDependencies struct {
 	Clock           Clock
 }
 
-// Session は1 PeerConnection、InputProcessor、pipeline Coordinator、codec、timer、session goroutineを所有する。
+// Session は1 PeerConnection、revision transaction、pipeline、codec、timer、session goroutineを所有する。
 //
 // Close は closing を同期的に一度だけ確定して直ちに返す。resource close と join は cleanup goroutine が
 // 継続し、全 resource 終了後だけ closed、registry remove、Done channel closeへ進む。
@@ -48,6 +48,7 @@ type Session struct {
 	outboundSender *webrtc.RTPSender
 	done           chan struct{}
 	closers        sessionResourceClosers
+	revision       *revisionState
 }
 
 // sessionResourceClosers はSession cleanupが並行開始して完了を待つ3つの所有resource境界である。
@@ -137,61 +138,6 @@ func newPeerConnection(
 	return api.NewPeerConnection(configuration)
 }
 
-// negotiate はremote Offerからcandidate収集済みlocal Answerを作り、answer_readyを公開する。
-//
-// caller contextはcandidate収集待機だけを制限する。成功後のtransport deadlineはsession clockへ移し、
-// HTTP request終了後もPeerConnection lifecycleとして継続する。
-func (s *Session) negotiate(ctx context.Context, offerSDP string) (webrtc.SessionDescription, error) {
-	if err := s.pc.SetRemoteDescription(webrtc.SessionDescription{
-		Type: webrtc.SDPTypeOffer,
-		SDP:  offerSDP,
-	}); err != nil {
-		return webrtc.SessionDescription{}, fmt.Errorf("set remote offer: %w", err)
-	}
-	answer, err := s.pc.CreateAnswer(nil)
-	if err != nil {
-		return webrtc.SessionDescription{}, fmt.Errorf("create answer: %w", err)
-	}
-	gatherComplete := webrtc.GatheringCompletePromise(s.pc)
-	if err := s.pc.SetLocalDescription(answer); err != nil {
-		return webrtc.SessionDescription{}, fmt.Errorf("set local answer: %w", err)
-	}
-	// Frontend に server-candidate endpoint を追加しないため、local candidates を SDP に集約して返す。
-	select {
-	case <-ctx.Done():
-		return webrtc.SessionDescription{}, ctx.Err()
-	case <-gatherComplete:
-	}
-	local := s.pc.LocalDescription()
-	if local == nil {
-		return webrtc.SessionDescription{}, errors.New("local answer is unavailable")
-	}
-	if err := s.answerReady(); err != nil {
-		return webrtc.SessionDescription{}, err
-	}
-	return *local, nil
-}
-
-// answerReady は candidate 収集済み Answer を lifecycle へ公開し、15秒の transport deadline を開始する。
-//
-// timer callback は同じ Close 経路だけを通知する。Clock.Stop と同時発火しても lifecycle mutex を
-// 先に得た event が state を確定し、closing 以後の callback は resource を変更しない。
-func (s *Session) answerReady() error {
-	s.lifecycle.mu.Lock()
-	defer s.lifecycle.mu.Unlock()
-	if err := s.lifecycle.transitionLocked(stateAnswerReady, "answer_generated"); err != nil {
-		s.logTransitionError(err)
-		return err
-	}
-	if err := s.lifecycle.deadlines.replace(preConnectTimeout, func() {
-		s.closeIfState(stateAnswerReady, "pre_connect_timeout")
-	}); err != nil {
-		s.logTransitionError(err)
-		return err
-	}
-	return nil
-}
-
 // addCandidate はactive sessionだけをPion candidate境界へ通し、closing後のlate candidateを拒否する。
 func (s *Session) addCandidate(candidate webrtc.ICECandidateInit) error {
 	if err := s.ctx.Err(); err != nil {
@@ -231,6 +177,7 @@ func (s *Session) beginCloseLocked(reason string) bool {
 		return false
 	}
 	s.lifecycle.deadlines.stop()
+	s.lifecycle.recoveryDeadlines.stop()
 	s.lifecycle.closeReason = reason
 	s.cancel()
 	return true
