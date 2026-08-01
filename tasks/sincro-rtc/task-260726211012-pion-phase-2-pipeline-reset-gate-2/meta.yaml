@@ -5,8 +5,8 @@ status: open
 depends_on:
   - task-260726211007-pion-phase-2-pipeline-websocket-clients
 superseded_by: null
-review: NEEDS_REVISION
-reviewed_sha: null
+review: APPROVED
+reviewed_sha: 172902c1ca07124ee254f44c86670535ecfa7704
 verdict: FAIL
 attempts: 5
 created_at: 2026-07-26
