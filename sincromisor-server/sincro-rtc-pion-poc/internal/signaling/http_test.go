@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -259,8 +261,22 @@ func TestInitialOfferRegistryStatusMapping(t *testing.T) {
 }
 
 func TestSessionCapacityMapsTo429(t *testing.T) {
+	baseline := runtime.NumGoroutine()
 	fake := &fakeSessions{createErr: rtc.ErrSessionCapacity}
-	server := newTestServer(t, fake, "")
+	processCtx, cancelProcess := context.WithCancel(context.Background())
+	offers, err := NewOfferRegistry(fake, OfferRegistryConfig{
+		ProcessContext: processCtx,
+		GatherTimeout:  time.Second,
+		Capacity:       1,
+		TTL:            2 * time.Minute,
+		Clock:          SystemOfferRegistryClock(),
+		Logger:         slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err != nil {
+		cancelProcess()
+		t.Fatalf("NewOfferRegistry() error = %v", err)
+	}
+	server := New(fake, offers, t.TempDir(), "", slog.New(slog.NewTextHandler(io.Discard, nil)))
 	response := performRequest(
 		server.Handler(),
 		http.MethodPost,
@@ -270,12 +286,35 @@ func TestSessionCapacityMapsTo429(t *testing.T) {
 	if response.Code != http.StatusTooManyRequests {
 		t.Fatalf("status = %d, want 429", response.Code)
 	}
-	server.offers.mu.Lock()
-	entryCount := len(server.offers.entries)
-	server.offers.mu.Unlock()
+	cancelProcess()
+	waitCtx, cancelWait := context.WithTimeout(context.Background(), time.Second)
+	defer cancelWait()
+	if err := offers.Wait(waitCtx); err != nil {
+		t.Fatalf("OfferRegistry.Wait() error = %v", err)
+	}
+	offers.mu.Lock()
+	entryCount := len(offers.entries)
+	offers.mu.Unlock()
 	if entryCount != 0 {
 		t.Fatalf("session 429 retained %d registry entries, want 0", entryCount)
 	}
+	if active := fake.activeSessions.Load(); active != 0 {
+		t.Fatalf("session 429 retained %d active sessions, want 0", active)
+	}
+	if reservations := fake.reservations.Load(); reservations != 0 {
+		t.Fatalf("session 429 retained %d reservations, want 0", reservations)
+	}
+	if builds := fake.resourceBuildCalls.Load(); builds != 0 {
+		t.Fatalf("session 429 crossed resource builder %d times, want 0", builds)
+	}
+	select {
+	case <-offers.sweeperDone:
+	default:
+		t.Fatal("session 429 left OfferRegistry sweeper running after Wait")
+	}
+	waitForSignalingCondition(t, time.Second, func() bool {
+		return runtime.NumGoroutine() <= baseline+1
+	})
 }
 
 func validOfferBody(sdp string) string {
@@ -364,18 +403,25 @@ func TestStaticAndAPIPrecedence(t *testing.T) {
 }
 
 type fakeSessions struct {
-	answer           rtc.Answer
-	createErr        error
-	waitForContext   bool
-	createCanceled   bool
-	onClosed         func(string)
-	candidateApplied bool
-	candidateReason  string
-	candidateErr     error
+	answer             rtc.Answer
+	createErr          error
+	waitForContext     bool
+	createCanceled     bool
+	onClosed           func(string)
+	candidateApplied   bool
+	candidateReason    string
+	candidateErr       error
+	activeSessions     atomic.Int32
+	reservations       atomic.Int32
+	resourceBuildCalls atomic.Int32
 }
 
 func (f *fakeSessions) Create(ctx context.Context, offer rtc.Offer) (rtc.Answer, error) {
 	f.onClosed = offer.OnClosed
+	if errors.Is(f.createErr, rtc.ErrSessionCapacity) {
+		return rtc.Answer{}, f.createErr
+	}
+	f.resourceBuildCalls.Add(1)
 	if f.waitForContext {
 		<-ctx.Done()
 		f.createCanceled = true
@@ -421,7 +467,6 @@ func newTestOfferRegistry(
 ) *OfferRegistry {
 	t.Helper()
 	processCtx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
 	offers, err := NewOfferRegistry(sessions, OfferRegistryConfig{
 		ProcessContext: processCtx,
 		GatherTimeout:  gatherTimeout,
@@ -431,8 +476,17 @@ func newTestOfferRegistry(
 		Logger:         slog.New(slog.NewTextHandler(io.Discard, nil)),
 	})
 	if err != nil {
+		cancel()
 		t.Fatalf("NewOfferRegistry() error = %v", err)
 	}
+	t.Cleanup(func() {
+		cancel()
+		waitCtx, cancelWait := context.WithTimeout(context.Background(), time.Second)
+		defer cancelWait()
+		if waitErr := offers.Wait(waitCtx); waitErr != nil {
+			t.Errorf("OfferRegistry.Wait(test cleanup) error = %v", waitErr)
+		}
+	})
 	return offers
 }
 
