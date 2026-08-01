@@ -99,15 +99,19 @@ RTC media / DataChannelとの接続はPhase 3に残し、Phase 2ではpipeline�
 - [ ] fake 4-service serverで会話1往復を通すautomatic integration testを追加する。
       PCM送信、confirmed extraction / recognition、chat history付きprocessor request、
       assistant text、processor raw bytesのsynthesizer転送、encoded voice / mora outputを順に検証する。
-      fake serverは依存タスクのPython生成fixtureを使用し、Go独自schemaで成功を偽装しない。
+      fake serverは依存タスクのPython生成fixtureを使用する。Processor responseだけは既存fixtureの
+      top-level keyと各fieldの型を維持したまま、下記Gate 2で固定するfieldをpatchする。
+      Go独自schemaで成功responseを新規生成してはならない。
 - [ ] reset integration testは各serviceを1つずつ切断し、4 client全close、generation +1、全transient queue空、
       old result drop、backoff、4 client再接続、新しい発話の完了を検証する。
       confirmed historyは維持し、partial user / assistant stateとin-flight voiceは再送されない。
-      4 service x normal / decode error / remote closeと、reset中の同時failureをtable-driven testする。
+      4 service x normal-closure frame / decode error / going-away close frameと、
+      reset中の同時failureをtable-driven testする。
 - [ ] Gate 2はin-processのcontrollableな4 WebSocket serverへproduction
       `ClientSetFactory` / 4 client / MessagePack codecを接続し、`Coordinator.SubmitPCM` から
       text / synthesized outputまでを通す。server responseは依存タスクのPython生成MessagePack fixtureを
-      原本とし、動的なsession / speech / sequence / historyだけをrequest値でpatchする。
+      原本とする。Extractor / Recognizerは動的なsession / speech / sequenceだけをpatchする。
+      Processorはrequestとの整合とfinal / TTS分岐を作るため、下記で列挙したfieldだけをpatchする。
       Go structから成功responseを新規encodeしてfixture互換を迂回してはならない。
       実行command、対象commit、test case、reset前後generation、connection / goroutine回収結果を
       `tasks/sincro-rtc/task-260726211012-pion-phase-2-pipeline-reset-gate-2/artifacts/gate-2-result.md`
@@ -154,42 +158,12 @@ RTC media / DataChannelとの接続はPhase 3に残し、Phase 2ではpipeline�
 ```go
 type Coordinator struct { /* private state */ }
 
-type ExtractorClient interface {
-    SendPCM(ctx context.Context, frame []byte) error
-    Results() <-chan protocol.ExtractorResult
-    Events() <-chan client.Event
-}
-
-type RecognizerClient interface {
-    SendExtraction(ctx context.Context, value protocol.ExtractorResult) error
-    Results() <-chan protocol.RecognizerResult
-    Events() <-chan client.Event
-}
-
-type ProcessorClient interface {
-    SendRequest(ctx context.Context, value protocol.ProcessorRequest) error
-    Results() <-chan protocol.ProcessorResult
-    Events() <-chan client.Event
-}
-
-type SynthesizerClient interface {
-    SendResult(ctx context.Context, value protocol.ProcessorResult) error
-    Results() <-chan protocol.SynthesizerResult
-    Events() <-chan client.Event
-}
-
-type ClientSet interface {
-    Extractor() ExtractorClient
-    Recognizer() RecognizerClient
-    Processor() ProcessorClient
-    Synthesizer() SynthesizerClient
-    Activate(onEvent func(client.Event)) error
-    Close() error
-}
-
-type ClientSetFactory interface {
-    Connect(ctx context.Context, sessionID, talkMode string) (ClientSet, error)
-}
+type ExtractorClient = client.ExtractorConnection
+type RecognizerClient = client.RecognizerConnection
+type ProcessorClient = client.ProcessorConnection
+type SynthesizerClient = client.SynthesizerConnection
+type ClientSet = client.Set
+type ClientSetFactory = client.SetFactory
 
 type Output[T any] struct {
     Generation uint64
@@ -204,10 +178,14 @@ func (c *Coordinator) SynthResults() <-chan Output[protocol.SynthesizerResult]
 func (c *Coordinator) Close() error
 ```
 
-`ClientSet` の4 accessor結果、event handler、factory、loggerはnilをconstructor / connect結果で拒否する。
-本タスクで `internal/pipeline/client/set.go` にproduction `ClientSetFactory` を実装し、依存タスクの
-4 concrete clientをExtractor -> Recognizer -> Processor -> Synthesizer順にConnectする。途中失敗は逆順closeし、
-部分setを返さない。test fakeは上記interfaceだけを実装する。
+canonicalなconnection / set / factory interfaceと `Event` は
+`internal/pipeline/client/set.go` / `event.go` の子package内に置く。親 `pipeline` は上記type aliasだけを
+公開し、子packageから親をimportしないことでimport cycleを作らない。
+`client.NewSetFactory(resolver discovery.Resolver, logger *slog.Logger, now func() time.Time)
+(client.SetFactory, error)` をproduction constructorに固定し、resolver / logger / nowのnilを拒否する。
+production factoryは依存タスクの4 concrete clientをExtractor -> Recognizer -> Processor ->
+Synthesizer順にConnectする。途中失敗は逆順closeし、部分setを返さない。test fakeはcanonicalな
+`client.SetFactory` / `client.Set` interfaceだけを実装する。
 
 factoryは接続開始時から各client eventを監視し、`Activate` 前のeventをconnect attempt failureとして記録して
 全setをcloseする。Coordinatorはstate lock保持中に `Activate(handler)` を呼び、pending failureがあれば
@@ -285,7 +263,13 @@ go test -race -count=1 ./internal/pipeline \
 testはin-process WebSocket serverとproduction resolver / `ClientSetFactory` / 4 client /
 MessagePack codec / `Coordinator`を使用する。各serverの成功responseは
 `internal/pipeline/protocol/testdata/*.msgpack` のPython生成fixtureから開始し、
-requestに依存するidentity / historyだけをpatchする。PCMは640-byteの固定frameを
+Extractor / Recognizerではrequestに依存するidentityだけをpatchする。Processorでは既存
+`text_processor_result.msgpack` のtop-level keyとfield型を維持し、`session_id`、`sequence_id`、
+`confirmed`、`request_message`、`history`、`response_message.speech_id`をrequestと一致させ、
+`end_of_response=true`、`voice_text="固定された応答文"` にpatchする。これにより既存の
+intermediate / no-voice fixtureをfinal / TTS分岐へ進めるが、keyの追加・削除やGo DTOからの
+response新規生成は行わない。patch後のProcessor response raw bytesがそのままSynthesizer requestとなり、
+1 turnにつきrequestが1件であることをbyte equalityで検証する。PCMは640-byteの固定frameを
 `Coordinator.SubmitPCM` へ渡す。serverがYAMNet等で内容を推論することはなく、testがCoordinator内部の
 stage result channelへ直接値を注入することもない。
 
@@ -295,8 +279,12 @@ field-level期待値を次に固定する。
   speech / sequence / generationで通り、user text、assistant text、processor raw bytes由来の
   encoded voice / moraがfixture値と一致する。Processor requestのconfirmed historyと
   Synthesizer request回数も一致する。
-- reset matrix: Extractor、Recognizer、Processor、Synthesizerそれぞれについてnormal terminal event、
-  malformed MessagePackによるdecode error、remote closeを発生させる。各caseでgenerationは1だけ増え、
+- reset matrix: Extractor、Recognizer、Processor、SynthesizerそれぞれについてWebSocket
+  normal-closure frame（status 1000、期待 `EventRemoteClose`）、malformed MessagePack
+  `0xc1`（期待 `EventDecode`）、going-away close frame（status 1001、期待 `EventRemoteClose`）を
+  serverから発生させる。close statusが異なる2 caseはどちらもproduction clientのremote-close経路を通し、
+  explicit local `Close()` / parent cancellationをterminal eventとして数えない。
+  各caseでgenerationは1だけ増え、
   4 connectionは各1回だけ再接続し、旧generationのqueue / partial state / outputを残さない。
   confirmed historyは維持し、in-flight TTSを再送せず、新generationで次の1往復を完了する。
 - race / leak: 異なるserviceの同時failureを含むresetを8回反復してsingle-flightを検証する。
