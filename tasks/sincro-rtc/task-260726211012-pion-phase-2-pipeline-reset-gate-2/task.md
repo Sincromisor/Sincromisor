@@ -1,4 +1,4 @@
-# Pion Phase 2のpipeline resetを実装してGate 2を成立させる
+# Pion Phase 2のpipeline resetを実装してRTC pipeline Gate 2を成立させる
 
 ## 背景 / 目的
 
@@ -11,7 +11,9 @@ session close後にWebSocketとgoroutineを残さない必要がある。一方�
 維持しなければならない。
 
 本タスクでは4 clientを束ねるpipeline coordinator、bounded queue、generation / reset state machine、
-backoffを実装し、Python下流serviceを変更せず会話pipelineを通すGate 2 integrationを完了する。
+backoffを実装し、production WebSocket clientとMessagePack codecを通る決定的なRTC pipeline
+integrationをGate 2として完了する。Gate 2が検証するのはRTC pipelineのtransport、protocol、
+orchestration、reset / close semanticsであり、YAMNet、音声認識、応答生成、音声合成の推論品質ではない。
 RTC media / DataChannelとの接続はPhase 3に残し、Phase 2ではpipeline固有の障害を独立して評価する。
 
 ## 完了条件（受け入れ条件）
@@ -102,12 +104,17 @@ RTC media / DataChannelとの接続はPhase 3に残し、Phase 2ではpipeline�
       old result drop、backoff、4 client再接続、新しい発話の完了を検証する。
       confirmed historyは維持し、partial user / assistant stateとin-flight voiceは再送されない。
       4 service x normal / decode error / remote closeと、reset中の同時failureをtable-driven testする。
-- [ ] current Python下流serviceのproduction codeを変更せず、同じ4 endpointとMessagePack modelを使う
-      opt-in Gate 2 integrationを実行する。実推論backendを直接test dependencyにせず、
-      既存service processを外部起動してURLをenvironmentから渡す。実行環境、service image / commit、
-      talk mode、入力fixture、4 stageの観測結果、reset / close結果を
+- [ ] Gate 2はin-processのcontrollableな4 WebSocket serverへproduction
+      `ClientSetFactory` / 4 client / MessagePack codecを接続し、`Coordinator.SubmitPCM` から
+      text / synthesized outputまでを通す。server responseは依存タスクのPython生成MessagePack fixtureを
+      原本とし、動的なsession / speech / sequence / historyだけをrequest値でpatchする。
+      Go structから成功responseを新規encodeしてfixture互換を迂回してはならない。
+      実行command、対象commit、test case、reset前後generation、connection / goroutine回収結果を
       `tasks/sincro-rtc/task-260726211012-pion-phase-2-pipeline-reset-gate-2/artifacts/gate-2-result.md`
-      に記録する。下記の固定Gate command / stage期待値を満たせなければGate 2はPASSにしない。
+      に記録する。下記の固定Gate commandと期待値を満たせなければGate 2はPASSにしない。
+- [ ] `internal/pipeline/gate2_python_services_test.go` と `gate2` build tag、実service URL用environment変数、
+      WAV変換helperをGate 2から削除する。実Python serviceの起動可否、YAMNet speech score / threshold、
+      認識文字列、応答本文、合成音声品質はGate 2の判定材料にしない。
 - [ ] leak / race testは通常close 10回と各service failure後のresetを反復し、最終active connection 0、
       coordinator goroutineが開始前+5以下、旧generation output 0であることを有限deadlineで検証する。
       `time.Sleep` だけで完了判定せず、join / hook / fake waiterで同期する。
@@ -265,57 +272,40 @@ reset通知をChatMessageとしてFrontendへ出すかはPhase 3のDataChannel U
 audio inputとtext / synthesized outputへ同じdrop policyを使わない。低遅延PCMだけdrop-oldestを許可し、
 会話結果と音声は黙って欠落させずresetする。
 
-### Gate 2実Python service
+### Gate 2 RTC pipeline
 
-opt-in test entrypointは
-`internal/pipeline/gate2_python_services_test.go` の `TestGate2PythonServices` に固定する。
-module rootから次のcommandで実行する。
+Gate 2の固定entrypointは `internal/pipeline/websocket_integration_test.go` の次の3 testとし、
+module rootからenvironment依存なしで実行する。
 
 ```sh
-SINCRO_GATE2_EXTRACTOR_ORIGIN=ws://127.0.0.1:8002 \
-SINCRO_GATE2_RECOGNIZER_ORIGIN=ws://127.0.0.1:8003 \
-SINCRO_GATE2_PROCESSOR_ORIGIN=ws://127.0.0.1:8004 \
-SINCRO_GATE2_SYNTHESIZER_ORIGIN=ws://127.0.0.1:8005 \
-go test -tags=gate2 -count=1 ./internal/pipeline -run '^TestGate2PythonServices$'
+go test -race -count=1 ./internal/pipeline \
+  -run '^(TestFixtureWebSocketPipeline|TestFixtureWebSocketResetMatrix|TestFixtureWebSocketSimultaneousFailureAndRepeatedResetDoNotLeak)$'
 ```
 
-4変数は全て必須で、未設定時はskipでなくtest failureとする。値は `ws` / `wss`、non-empty authority、
-pathは空または `/` だけを許可し、userinfo、query、fragmentを拒否する。testは各originへの
-controllable reverse proxyをlocalhostに起動し、production clientにはproxy endpointをresolverから渡す。
-talk modeは外部Difyを必要としない `sincro` に固定する。
+testはin-process WebSocket serverとproduction resolver / `ClientSetFactory` / 4 client /
+MessagePack codec / `Coordinator`を使用する。各serverの成功responseは
+`internal/pipeline/protocol/testdata/python/*.msgpack` のPython生成fixtureから開始し、
+requestに依存するidentity / historyだけをpatchする。PCMは640-byteの固定frameを
+`Coordinator.SubmitPCM` へ渡す。serverがYAMNet等で内容を推論することはなく、testがCoordinator内部の
+stage result channelへ直接値を注入することもない。
 
-入力原本は既に公開repositoryでrecognizer検証に使っているtest fixture
-`sincromisor-server/speech-recognizer-nemo/src/speech_recognizer_nemo/SpeechRecognizerNemo/sample02.wav`
-（24 kHz / mono / s16 PCM、SHA-256
-`3f9169ec597de0f8fc17b4b6e4f89ea05e8792f42bfb48bfa7c33277318d3759`）に固定する。
-test-only helperがWAV data chunkを読み、出力sample `j` に入力sample
-`floor(j * 24000 / 16000)` を選ぶdeterministic nearest-neighborで16 kHzへ変換する。
-変換後は171,008 byte、SHA-256
-`a0375e761e7a483117a7535a5da7ed0ef0036611916a0b0e534403e551789933` でなければtestを開始しない。
-640 byteに分割し、最終frameはzero pad、続けて1秒のzero PCMを送る。test helperだけの変換であり、
-production resamplerとして再利用しない。
-新しい録音やuser音声は追加しない。既存fixtureの由来、公開可否、個人情報を含まないことの確認結果を
-`artifacts/gate-2-result.md` に記録し、確認できない場合はGate 2を実行せずPASSにしない。
+field-level期待値を次に固定する。
 
-実serviceの非決定的な推論本文をgolden値にしない。field-level期待値を次に固定する。
+- 1往復: Extractor -> Recognizer -> Processor -> Synthesizerのproduction wire経路を同じsession /
+  speech / sequence / generationで通り、user text、assistant text、processor raw bytes由来の
+  encoded voice / moraがfixture値と一致する。Processor requestのconfirmed historyと
+  Synthesizer request回数も一致する。
+- reset matrix: Extractor、Recognizer、Processor、Synthesizerそれぞれについてnormal terminal event、
+  malformed MessagePackによるdecode error、remote closeを発生させる。各caseでgenerationは1だけ増え、
+  4 connectionは各1回だけ再接続し、旧generationのqueue / partial state / outputを残さない。
+  confirmed historyは維持し、in-flight TTSを再送せず、新generationで次の1往復を完了する。
+- race / leak: 異なるserviceの同時failureを含むresetを8回反復してsingle-flightを検証する。
+  `Close()` 後はactive WebSocket 0、旧generation output 0、goroutineは開始時baseline +5以下となる。
+  有限deadlineと明示的な観測条件を使い、`time.Sleep` だけで成功判定しない。
 
-- 同じCoordinatorへ上記PCMだけを `SubmitPCM` し、testがstage resultを個別注入してはならない。
-  Extractor -> Recognizer -> Processor -> Synthesizerを同じsession / speech / sequence / generationで連続して通す。
-- Extractor: 同じsession、16 kHz / int16 / mono、strictly increasing sequenceで
-  最終 `confirmed=true` を15秒以内に1件以上返す。既存speech fixtureを使うためtone判定へ依存しない。
-- Recognizer: 実ExtractorResultをそのまま受け、同じsession / speech / sequence / confirmed、
-  non-empty result textを30秒以内に返す。
-- Processor: 実RecognizerResultから作ったrequestを `sincro` endpointへ送り、同じrequest identity、
-  non-empty response、`end_of_response=true`、整合したhistoryを15秒以内に返す。
-- Synthesizer: 実pipelineの直前ProcessorResult rawを送り、同じspeech ID、non-empty voice / mora、
-  positive speaking time、`audio/wav` / `audio/aac` / `audio/ogg;codecs=opus` のいずれかを60秒以内に返す。
-- reset: proxyでRecognizer connectionを切断し、generationが1回だけ増加、4 proxyのaccept countが全て+1、
-  old output 0、confirmed history維持を確認する。再接続後に同じPCMを再投入して4 stageをもう1回完了し、
-  Close後にproxy上のactive connectionが全て0となる。
-
-推論serviceが上記deadlineで結果を返さない、required model / backendが起動できない、4 URLを用意できない場合は
-未実行扱いではなくGate 2 FAILである。fixture hash、service commit / image digest、command、各deadlineの
-観測値、reset前後generation、connection countを `artifacts/gate-2-result.md` に記録する。
+`artifacts/gate-2-result.md` には固定command、commit SHA、3 testのcase数と結果、
+reset前後generation、接続回収、goroutine差分、未検証事項を記録する。過去に実施した実service試行は
+履歴として区別して残してよいが、現行Gate 2のPASS / FAIL根拠には使用しない。
 
 ## スコープ境界
 
@@ -324,7 +314,7 @@ production resamplerとして再利用しない。
 - 4 clientのpipeline orchestration
 - generation、single-flight reset、full-jitter reconnect
 - bounded queue、partial / confirmed会話状態
-- encoded synthesized voice / moraまでのGate 2 integration
+- production client / codec経由でencoded synthesized voice / moraまで通す決定的なGate 2 integration
 - Phase 2結果artifactと関連migration / contract文書同期
 
 本タスクに含めないもの:
@@ -335,6 +325,8 @@ production resamplerとして再利用しない。
 - session registry、signaling revision、ICE restart、HTTP retry
 - production compose、Consul registration、env sample、stable endpoint切替
 - Python AudioBroker削除、下流service変更
+- YAMNet threshold / VAD精度、音声認識精度、応答品質、音声合成品質の測定・調整
+- 実Python service、model、Redis、S3、VoiceVox等のavailability / end-to-end smoke test
 - Firefox、NAT、impairment、soak、aiortc performance比較
 
 上記はPhase 3または4の責務である。依存タスクはwire contract、discovery、個別connectionを所有し、
@@ -382,9 +374,11 @@ production resamplerとして再利用しない。
     - normal close 10回、reset中close、callback中close、二重closeを `go test -race` で反復する。
     - active WebSocket 0、goroutine baseline +5以下、retry 0を有限deadlineでassertする。
 - Gate 2:
-    - fixture-backed fake serverでautomatic 4-stage pipeline test。
-    - environment URLを使う既存Python service opt-in integrationで実1往復。
-    - result、環境、未検証事項を `artifacts/gate-2-result.md` に記録する。
+    - fixture-backed in-process WebSocket serverへproduction client / codecを接続するautomatic
+      4-stage pipeline test。
+    - 4 service x 3 failure種別のreset matrixと、8回の同時failure / repeated reset race・leak test。
+    - 固定command、case数、generation / connection / goroutine結果、未検証事項を
+      `artifacts/gate-2-result.md` に記録する。
 - gates:
     - `gofmt -l .`、`go vet ./...`、`go test ./...`、`go test -race ./...`、
       `go mod tidy -diff`

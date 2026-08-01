@@ -1,5 +1,5 @@
 id: task-260726211012-pion-phase-2-pipeline-reset-gate-2
-title: Pion Phase 2のpipeline resetを実装してGate 2を成立させる
+title: Pion Phase 2のpipeline resetを実装してRTC pipeline Gate 2を成立させる
 category: sincro-rtc
 status: open
 depends_on:
