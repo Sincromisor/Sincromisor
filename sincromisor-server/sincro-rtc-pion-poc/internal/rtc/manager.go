@@ -56,7 +56,7 @@ type ManagerConfig struct {
 }
 
 // sessionBuildRequest はadmission後にSession resource境界へ渡す検証済みの作成入力をまとめる。
-// builderの呼び出しがPeerConnection、codec、Coordinator所有権をSessionへ移す境界となる。
+// Coordinatorはcallerが生成して渡し、builderはPeerConnectionとcodecを内部で生成する。
 type sessionBuildRequest struct {
 	id            string
 	talkMode      string
@@ -66,6 +66,9 @@ type sessionBuildRequest struct {
 }
 
 // sessionBuilder はadmission reservation後にだけ到達するPeerConnection/codec作成境界である。
+//
+// 成功return時だけCoordinator、PeerConnection、codecの全所有権をSessionへ移す。error時はbuilderが
+// 内部生成済みPeerConnection/codecを片付け、callerのManager.CreateがCoordinatorをcloseする。
 type sessionBuilder func(sessionBuildRequest) (*Session, error)
 
 // Manager は active PeerConnection の registry と process-wide shutdown を所有する。
