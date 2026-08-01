@@ -1,14 +1,14 @@
 id: task-260802032916-pion-phase-3-backend-ice-restart
 title: Pion Phase 3のoffer revisionとICE restartを実装する
 category: sincro-rtc
-status: open
+status: done
 depends_on:
   - task-260802032912-pion-phase-3-initial-signaling-idempotency
 superseded_by: null
 review: APPROVED
 reviewed_sha: 7842fae61f8b86c710b4fcfca15bcedb0d98f1ad
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 2
 created_at: 2026-08-02
-closed_at: null
+closed_at: 2026-08-02
 legacy_ids: []
