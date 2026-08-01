@@ -152,6 +152,48 @@ RTC media / DataChannelとの接続はPhase 3に残し、Phase 2ではpipeline�
 
 ### Coordinator APIと所有権
 
+canonicalなconnection / set / factory interfaceは `internal/pipeline/client/set.go` に次のmethod setで
+固定する。
+
+```go
+type ExtractorConnection interface {
+    SendPCM(context.Context, []byte) error
+    Results() <-chan protocol.ExtractorResult
+    Events() <-chan Event
+}
+
+type RecognizerConnection interface {
+    SendExtraction(context.Context, protocol.ExtractorResult) error
+    Results() <-chan protocol.RecognizerResult
+    Events() <-chan Event
+}
+
+type ProcessorConnection interface {
+    SendRequest(context.Context, protocol.ProcessorRequest) error
+    Results() <-chan protocol.ProcessorResult
+    Events() <-chan Event
+}
+
+type SynthesizerConnection interface {
+    SendResult(context.Context, protocol.ProcessorResult) error
+    Results() <-chan protocol.SynthesizerResult
+    Events() <-chan Event
+}
+
+type Set interface {
+    Extractor() ExtractorConnection
+    Recognizer() RecognizerConnection
+    Processor() ProcessorConnection
+    Synthesizer() SynthesizerConnection
+    Activate(func(Event)) error
+    Close() error
+}
+
+type SetFactory interface {
+    Connect(context.Context, string, string) (Set, error)
+}
+```
+
 `internal/pipeline` packageの最小APIを次に固定する。Phase 3のRTC packageだけがconsumerになる想定だが、
 同一module内のinternal APIとしてexportする。
 
@@ -265,7 +307,10 @@ MessagePack codec / `Coordinator`を使用する。各serverの成功responseは
 `internal/pipeline/protocol/testdata/*.msgpack` のPython生成fixtureから開始し、
 Extractor / Recognizerではrequestに依存するidentityだけをpatchする。Processorでは既存
 `text_processor_result.msgpack` のtop-level keyとfield型を維持し、`session_id`、`sequence_id`、
-`confirmed`、`request_message`、`history`、`response_message.speech_id`をrequestと一致させ、
+`confirmed`、`request_message`、`response_message.speech_id`をrequestと一致させる。
+`history.messages` はrequest historyの防御的copyの末尾へpatch後の `response_message` を1件追加し、
+長さがrequest history +1、prefixがrequest historyと完全一致、最終要素がresponse messageと
+完全一致する値にする。
 `end_of_response=true`、`voice_text="固定された応答文"` にpatchする。これにより既存の
 intermediate / no-voice fixtureをfinal / TTS分岐へ進めるが、keyの追加・削除やGo DTOからの
 response新規生成は行わない。patch後のProcessor response raw bytesがそのままSynthesizer requestとなり、
@@ -281,7 +326,7 @@ field-level期待値を次に固定する。
   Synthesizer request回数も一致する。
 - reset matrix: Extractor、Recognizer、Processor、SynthesizerそれぞれについてWebSocket
   normal-closure frame（status 1000、期待 `EventRemoteClose`）、malformed MessagePack
-  `0xc1`（期待 `EventDecode`）、going-away close frame（status 1001、期待 `EventRemoteClose`）を
+  `0xc1`（期待 `EventDecodeFailed`）、going-away close frame（status 1001、期待 `EventRemoteClose`）を
   serverから発生させる。close statusが異なる2 caseはどちらもproduction clientのremote-close経路を通し、
   explicit local `Close()` / parent cancellationをterminal eventとして数えない。
   各caseでgenerationは1だけ増え、
