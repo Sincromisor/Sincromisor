@@ -5,6 +5,7 @@ import (
 
 	"github.com/pion/webrtc/v4"
 
+	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
@@ -16,6 +17,7 @@ func newManagedLifecycleSession(
 	t.Helper()
 	manager, err := NewManager("", ManagerDependencies{
 		PipelineFactory: factory,
+		InputObserver:   testInputObserver(),
 		Clock:           clock,
 		Logger:          testLogger(),
 	})
@@ -32,6 +34,7 @@ func newManagedLifecycleSession(
 		webrtc.Configuration{},
 		0,
 		coordinator,
+		testInputObserver(),
 		clock,
 		testLogger(),
 		manager.remove,
@@ -45,6 +48,10 @@ func newManagedLifecycleSession(
 		<-session.done
 	})
 	return manager, session
+}
+
+func testInputObserver() audiomedia.InputObserver {
+	return audiomedia.NewInputCounterObserver()
 }
 
 func newSessionDataChannel(t *testing.T, session *Session, label string) *webrtc.DataChannel {

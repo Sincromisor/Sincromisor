@@ -109,6 +109,7 @@ func newCleanupProbeSession(
 	t.Helper()
 	manager, err := NewManager("", ManagerDependencies{
 		PipelineFactory: blockingPipelineFactory{},
+		InputObserver:   testInputObserver(),
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 	})

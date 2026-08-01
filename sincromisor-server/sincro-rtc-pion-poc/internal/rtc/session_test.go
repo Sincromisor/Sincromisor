@@ -15,6 +15,7 @@ import (
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 
+	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
@@ -129,6 +130,7 @@ func TestCodecErrorClosesSession(t *testing.T) {
 		webrtc.Configuration{},
 		0,
 		coordinator,
+		testInputObserver(),
 		SystemClock{},
 		testLogger(),
 		func(sessionID string) { closed <- sessionID },
@@ -148,6 +150,41 @@ func TestCodecErrorClosesSession(t *testing.T) {
 	}
 }
 
+func TestInputObserverPanicClosesAndJoinsSession(t *testing.T) {
+	closed := make(chan string, 1)
+	coordinator, err := pipeline.NewCoordinator(blockingPipelineFactory{}, testLogger())
+	if err != nil {
+		t.Fatalf("NewCoordinator() error = %v", err)
+	}
+	session, err := newSession(
+		"observer-panic-session",
+		"chat",
+		webrtc.Configuration{},
+		0,
+		coordinator,
+		panicRTCInputObserver{},
+		SystemClock{},
+		testLogger(),
+		func(sessionID string) { closed <- sessionID },
+	)
+	if err != nil {
+		t.Fatalf("newSession() error = %v", err)
+	}
+	session.wg.Add(1)
+	session.startInbound(&singlePacketReader{packet: &rtp.Packet{
+		Header: rtp.Header{SSRC: 1},
+	}})
+	select {
+	case sessionID := <-closed:
+		if sessionID != "observer-panic-session" {
+			t.Fatalf("closed session = %q, want observer-panic-session", sessionID)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("observer panic did not close and join session")
+	}
+	<-session.done
+}
+
 func newTestManager(t *testing.T) *Manager {
 	t.Helper()
 	return newTestManagerWithFactory(t, blockingPipelineFactory{})
@@ -157,6 +194,7 @@ func newTestManagerWithFactory(t *testing.T, factory pipeline.ClientSetFactory) 
 	t.Helper()
 	manager, err := NewManager("", ManagerDependencies{
 		PipelineFactory: factory,
+		InputObserver:   testInputObserver(),
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 	})
@@ -178,6 +216,12 @@ func testCloseContext(t *testing.T) context.Context {
 }
 
 type blockingPipelineFactory struct{}
+
+type panicRTCInputObserver struct{}
+
+func (panicRTCInputObserver) ObserveInputEvent(audiomedia.InputEvent) {
+	panic("observer failed")
+}
 
 func (blockingPipelineFactory) Connect(
 	ctx context.Context,

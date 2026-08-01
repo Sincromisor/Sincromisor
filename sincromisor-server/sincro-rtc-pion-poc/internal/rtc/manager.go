@@ -11,6 +11,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/pion/webrtc/v4"
 
+	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
@@ -38,12 +39,14 @@ type Candidate struct {
 	UsernameFragment *string `json:"usernameFragment,omitempty"`
 }
 
-// ManagerDependencies は全 session で共有する factory、clock、logger の起動時境界である。
+// ManagerDependencies は全 session で共有する factory、入力observer、clock、logger の起動時境界である。
 //
 // NewManager は nil を拒否する。sessionごとに同じ factoryから専用Coordinatorを1つ作り、
-// Clockは各session固有timerだけを生成するため、dependency自体は並行利用可能でなければならない。
+// observerはprocess集計を行うため全sessionから同期的に呼ばれる。Clockは各session固有timerだけを
+// 生成するため、共有dependencyはすべて並行利用可能でなければならない。
 type ManagerDependencies struct {
 	PipelineFactory pipeline.ClientSetFactory
+	InputObserver   audiomedia.InputObserver
 	Clock           Clock
 	Logger          *slog.Logger
 }
@@ -68,7 +71,8 @@ type Manager struct {
 // PeerConnection、CoordinatorはCreateまで開始しない。Manager はprocess shutdown時に5秒上限の
 // contextを渡してCloseAllを呼ぶ必要がある。TURN、固定UDP mux、NAT rewriteは対象外である。
 func NewManager(stunURL string, dependencies ManagerDependencies) (*Manager, error) {
-	if dependencies.PipelineFactory == nil || dependencies.Clock == nil || dependencies.Logger == nil {
+	if dependencies.PipelineFactory == nil || dependencies.InputObserver == nil ||
+		dependencies.Clock == nil || dependencies.Logger == nil {
 		return nil, errors.New("rtc manager dependencies must not be nil")
 	}
 	configuration := webrtc.Configuration{}
@@ -100,6 +104,7 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 	}
 	sessionDependencies := SessionDependencies{
 		PipelineFactory: m.dependencies.PipelineFactory,
+		InputObserver:   m.dependencies.InputObserver,
 		Clock:           m.dependencies.Clock,
 	}
 	coordinator, err := pipeline.NewCoordinator(sessionDependencies.PipelineFactory, m.dependencies.Logger)
@@ -121,6 +126,7 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 		m.configuration,
 		gatherTimeout,
 		coordinator,
+		sessionDependencies.InputObserver,
 		sessionDependencies.Clock,
 		m.dependencies.Logger,
 		m.remove,

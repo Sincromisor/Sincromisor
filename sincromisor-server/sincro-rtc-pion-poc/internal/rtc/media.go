@@ -88,30 +88,18 @@ func (s *Session) startTone(track *webrtc.TrackLocalStaticSample) {
 	}()
 }
 
-// startInbound は受理済みの唯一のaudio trackをsession context配下のdecoderへ接続する。
+// startInbound は受理済みの唯一のaudio trackをsession context配下のInputProcessorへ接続する。
 //
-// statsはlog/close summary用のsession累積値へ変換する。cancelと正常EOFは終了通知として扱い、
-// decode failureだけをcodec_errorとして同じclose-onceへ戻す。
+// acceptAudioTrackがWaitGroupを予約済みなので、ここでは追加しない。readerはreadiness前から開始し、
+// Coordinator running前のframeはInputProcessorがunavailableとしてdropする。cancelと正常EOFは
+// 終了通知、それ以外のdecode/submit/observer failureはmedia_errorとして同じclose-onceへ戻す。
 func (s *Session) startInbound(reader audiomedia.RTPReader) {
 	go func() {
 		defer s.wg.Done()
-		err := audiomedia.DecodeRemote(s.ctx, reader, func(stats audiomedia.DecodeStats) {
-			s.statsMu.Lock()
-			s.stats = stats
-			s.statsMu.Unlock()
-			if stats.Packets == 100 {
-				s.logger.Info("inbound opus smoke threshold reached",
-					"session_id", s.id,
-					"packets", stats.Packets,
-					"sample_rate", stats.SampleRate,
-					"channels", stats.Channels,
-					"non_zero_samples", stats.NonZeroSample,
-				)
-			}
-		})
+		err := s.input.Run(s.ctx, reader, s.pipeline.SubmitPCM)
 		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) {
-			s.logger.Error("inbound opus decode stopped", "session_id", s.id, "error", err)
-			_ = s.Close("codec_error")
+			s.logger.Error("inbound audio processing stopped", "session_id", s.id, "error", err)
+			_ = s.Close("media_error")
 		}
 	}()
 }
