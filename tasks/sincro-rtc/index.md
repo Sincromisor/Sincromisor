@@ -2,7 +2,21 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 7 件）
+## タスク一覧（自動生成 / 全 16 件）
+
+### open（未完） — 9 件
+
+| タスク                                                                                                                                 | タイトル                                                     | 判定 | 依存                                                                                                               |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------ |
+| [task-260802032857-pion-phase-3-session-lifecycle-readiness](./task-260802032857-pion-phase-3-session-lifecycle-readiness/task.md)     | Pion Phase 3のRTC session lifecycleとreadinessを統合する     | —    | `task-260726211012-pion-phase-2-pipeline-reset-gate-2`                                                             |
+| [task-260802032903-pion-phase-3-inbound-audio-pipeline](./task-260802032903-pion-phase-3-inbound-audio-pipeline/task.md)               | Pion Phase 3の受信音声をGo pipelineへ接続する                | —    | `task-260802032857-pion-phase-3-session-lifecycle-readiness`                                                       |
+| [task-260802032908-pion-phase-3-outbound-audio-datachannel](./task-260802032908-pion-phase-3-outbound-audio-datachannel/task.md)       | Pion Phase 3の合成音声とDataChannel出力を統合する            | —    | `task-260802033116-pion-phase-3-synthesized-audio-decode`                                                          |
+| [task-260802032912-pion-phase-3-initial-signaling-idempotency](./task-260802032912-pion-phase-3-initial-signaling-idempotency/task.md) | Pion Phase 3のinitial signalingを冪等化し境界を強化する      | —    | `task-260802032857-pion-phase-3-session-lifecycle-readiness`                                                       |
+| [task-260802032916-pion-phase-3-backend-ice-restart](./task-260802032916-pion-phase-3-backend-ice-restart/task.md)                     | Pion Phase 3のoffer revisionとICE restartを実装する          | —    | `task-260802032912-pion-phase-3-initial-signaling-idempotency`                                                     |
+| [task-260802032918-pion-phase-3-frontend-ice-restart](./task-260802032918-pion-phase-3-frontend-ice-restart/task.md)                   | Pion Phase 3のFrontend ICE restart状態機械を実装する         | —    | `task-260802032916-pion-phase-3-backend-ice-restart`                                                               |
+| [task-260802032922-pion-phase-3-observability-gate-3](./task-260802032922-pion-phase-3-observability-gate-3/task.md)                   | Pion Phase 3の可観測性とprocess hardeningを実装する          | —    | `task-260802032908-pion-phase-3-outbound-audio-datachannel`, `task-260802032918-pion-phase-3-frontend-ice-restart` |
+| [task-260802033044-pion-phase-3-production-candidate-gate-3](./task-260802033044-pion-phase-3-production-candidate-gate-3/task.md)     | Pion Phase 3のproduction candidateを検証してGate 3を判定する | —    | `task-260802032922-pion-phase-3-observability-gate-3`                                                              |
+| [task-260802033116-pion-phase-3-synthesized-audio-decode](./task-260802033116-pion-phase-3-synthesized-audio-decode/task.md)           | Pion Phase 3の合成音声container decodeを実装する             | —    | `task-260802032903-pion-phase-3-inbound-audio-pipeline`                                                            |
 
 ### done（完了） — 6 件
 

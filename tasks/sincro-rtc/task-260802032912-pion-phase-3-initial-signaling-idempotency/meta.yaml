@@ -1,0 +1,14 @@
+id: task-260802032912-pion-phase-3-initial-signaling-idempotency
+title: Pion Phase 3のinitial signalingを冪等化し境界を強化する
+category: sincro-rtc
+status: open
+depends_on:
+  - task-260802032857-pion-phase-3-session-lifecycle-readiness
+superseded_by: null
+review: APPROVED
+reviewed_sha: 7842fae61f8b86c710b4fcfca15bcedb0d98f1ad
+verdict: null
+attempts: 0
+created_at: 2026-08-02
+closed_at: null
+legacy_ids: []
