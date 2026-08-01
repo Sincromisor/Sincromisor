@@ -1,0 +1,13 @@
+id: task-260801224216-fix-service-initializer-uv-tool
+title: service-initializer の uv 初期化依存を解消する
+category: infrastructure
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-08-01
+closed_at: 2026-08-01
+legacy_ids: []

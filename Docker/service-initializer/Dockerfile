@@ -30,10 +30,8 @@ RUN \
 
 USER ${SINCRO_USER_ID}
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-RUN \
-    uv init --no-readme && \
-    uv add 'huggingface-hub[cli]' && \
-    rm main.py
+# hf は初期化処理で使う独立した CLI であり、アプリケーション用 Python project は作成しない。
+RUN uv tool install huggingface-hub
 
 USER root
 COPY ./Docker/service-initializer/initialize.sh ${SINCRO_USER_DIR}
