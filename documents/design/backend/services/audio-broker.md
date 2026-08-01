@@ -34,9 +34,15 @@
 1接続のbinary I/O、protocol encode/decode、ping、terminal event、close/joinだけを担当し、AudioBroker相当の
 queue、chat history、全接続reset、generation、retry backoffは持たない。
 
-このpackageはまだproductionのRTC sessionへ配線されていない。現行productionではPython `AudioBroker` と
-Sender/Receiver threadが引き続きdownstream接続と再接続を担当するため、Go clientの存在をproduction置換済みとは
-扱わない。4 clientを束ねるcoordinatorとPion sessionへの配線は後続phaseで行う。
+`internal/pipeline` のCoordinatorがsessionごとに4 client set、generation、25-frame PCM queue、
+各16件のexternal output、confirmed historyを所有する。1系統のterminal eventで全接続をclose / joinし、
+generation更新後にtransient queue、partial user / assistant state、未送信TTSを破棄して全4接続を新規作成する。
+初回接続失敗はgeneration 1のまま、runtime failureだけがgenerationを1回進める。確定済みhistoryは防御的copyで
+次generationへ継承する。
+
+このCoordinatorはまだproductionのRTC sessionへ配線されていない。現行productionではPython `AudioBroker` と
+Sender/Receiver threadが引き続きdownstream接続と再接続を担当するため、Go pipelineの存在をproduction置換済みとは
+扱わない。Python AudioBrokerをproduction正本とする状態はPhase 3統合まで維持する。
 
 ## Data / State
 
@@ -60,6 +66,12 @@ Sender/Receiver threadが引き続きdownstream接続と再接続を担当する
 - 各 thread の start / stop / exception を session id 付きで追う。
 - どの downstream 接続が先に失敗したかを確認する。
 - 1 系統でも不健全な場合は AudioBroker 全体の再接続対象にする。
+- Go Coordinatorはstale result/eventをservice別、PCM overflowをqueue交換から独立したsession累積値として
+  計数し、service名と累積drop countだけを構造化logへ出す。認識文、音声、chat本文、stale eventの原因errorは
+  記録しない。
+- Extractorの最後に受理したspeech / sequence IDはCoordinatorのsession stateであり、reset後も維持する。
+  sequenceの重複・逆行、または新generation最初のspeech ID再利用・逆行は現在generationのprotocol failureとする。
+- reset / closeは旧generation goroutineと4 WebSocketのjoin完了を境界とし、再送や旧queue再利用を行わない。
 
 ## Change Checklist
 

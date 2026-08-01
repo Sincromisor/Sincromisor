@@ -89,6 +89,11 @@ Firefox、NAT、ICE restart、impairment、soak、性能比較、VoiceSynthesize
 - session contextによるcloseと再接続停止を実装する。
 - synthesized voiceとmora timingのdecodeを実装する。
 
+実装packageは `sincromisor-server/sincro-rtc-pion-poc/internal/pipeline`、Python生成の互換fixtureは
+同packageの `protocol/testdata/` を正本とする。固定Gate command、実行環境、stage観測、reset / close結果は
+`tasks/sincro-rtc/task-260726211012-pion-phase-2-pipeline-reset-gate-2/artifacts/gate-2-result.md`
+に記録する。
+
 ### Gate 2
 
 - 既存Python下流serviceを変更せずGo clientから各処理を実行できる。
@@ -98,6 +103,9 @@ Firefox、NAT、ICE restart、impairment、soak、性能比較、VoiceSynthesize
 - 1秒開始、最大30秒の指数backoff + full jitterで4 clientが全て復旧するまで再試行し、復旧後の新しい発話処理を再開する。
 - 確定済みchat historyはreset後も維持し、partial recognitionと処理中発話は破棄する。
 - close後にWebSocketとgoroutineが残らない。
+
+fake 4-stage integrationの成功だけではGate 2を完了しない。4つの既存Python serviceと必要backendを起動できず、
+固定commandを完走できない環境はFAILとして上記artifactに記録する。
 
 ## Phase 3: Go RTC統合
 

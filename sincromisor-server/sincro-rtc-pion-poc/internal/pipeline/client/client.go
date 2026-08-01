@@ -142,6 +142,7 @@ type baseClient struct {
 	eventOnce   sync.Once
 	finalOnce   sync.Once
 	sendMu      sync.Mutex
+	writeDone   chan struct{}
 	wg          sync.WaitGroup
 	events      chan Event
 	closeResult func()

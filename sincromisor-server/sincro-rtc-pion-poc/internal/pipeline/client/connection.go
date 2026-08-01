@@ -192,18 +192,30 @@ func (c *baseClient) send(ctx context.Context, payload []byte) error {
 		c.mu.Unlock()
 		return ErrClosed
 	}
+	writeDone := make(chan struct{})
+	c.writeDone = writeDone
 	c.mu.Unlock()
 	writeCtx, cancel := context.WithTimeout(ctx, c.cfg.WriteTimeout)
-	defer cancel()
 	err := conn.Write(writeCtx, websocket.MessageBinary, payload)
+	cancel()
 	if err != nil {
 		if lifetimeCtx.Err() != nil {
+			c.finishWrite(writeDone)
 			return ErrClosed
 		}
 		c.terminal(EventWriteFailed, fmt.Errorf("write binary message: %w", err))
+		c.finishWrite(writeDone)
 		return err
 	}
+	c.finishWrite(writeDone)
 	return nil
+}
+
+func (c *baseClient) finishWrite(done chan struct{}) {
+	c.mu.Lock()
+	c.writeDone = nil
+	close(done)
+	c.mu.Unlock()
 }
 
 func (c *baseClient) readLoop() {
@@ -211,6 +223,15 @@ func (c *baseClient) readLoop() {
 	for {
 		messageType, payload, err := c.conn.Read(c.lifetimeCtx)
 		if err != nil {
+			c.mu.Lock()
+			writeDone := c.writeDone
+			c.mu.Unlock()
+			// coder/websocket may close the transport as a timed-out Write returns.
+			// Let the synchronous writer classify that causal failure first; an
+			// unrelated read failure still proceeds when the successful write ends.
+			if writeDone != nil {
+				<-writeDone
+			}
 			if c.lifetimeCtx.Err() != nil {
 				return
 			}
