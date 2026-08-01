@@ -3,7 +3,10 @@
 ## Summary
 
 - 現行 Frontend signaling schema を変更せず、Pion v4 の local host candidate 経路を確認する。
-- browser Opus RTP を pure Go の `github.com/pion/opus` で 48 kHz PCM に decode する。
+- browser Opus RTP を64 packetのwindow内で並べ替え、pure Go の `github.com/pion/opus` で48 kHz PCMにdecodeする。
+- stereoを左右平均でmono化し、63-tap windowed-sinc FIRで16 kHzへresampleして、20 ms /
+  640-byte s16le frameをConversation Coordinatorへ同期投入する。
+- duplicate、late、missing、buffered drop、DTX、pipeline unavailableをprocess共有atomic counterへ分けて記録する。
 - 48 kHz mono、1 秒の test tone を `github.com/pion/mediadevices/pkg/codec/opus` で encode し、20 ms ごとに返す。
 - `text_ch` / `telop_ch` へ固定 smoke JSON を送信し、session close の resource 回収を確認する。
 - media readiness 成立後だけ local Consul 経由で下流 Python service へ接続し、session close で join する。
@@ -47,8 +50,11 @@ Google Chrome stable で
 
 1. Debug Console の ICE state が `connected` または `completed` になる。
 2. server log の `offer answered` で `active_sessions=1` になる。
-3. server log の `inbound opus smoke threshold reached` が `packets=100`、`sample_rate=48000`、
-   `non_zero_samples>0` を示す。
+3. local Consulと下流Python serviceを起動した構成では、SpeechExtractor側で20 ms /
+   640-byteの16 kHz mono s16le frameを継続受信できることを確認する。server logに
+   `inbound audio processing stopped` が出た場合はRTP read、Opus decode、またはpipeline submitの
+   errorなので正常なsmokeとは扱わない。入力drop種別の正確な件数はpayloadをlogへ出さない
+   `InputCounterObserver` が所有し、`go test ./internal/media` のfocused testで確認する。
 4. Chrome DevTools で remote audio track を AudioContext `AnalyserNode` へ接続し、1 秒 tone の
    time-domain data が無音値だけでないことを確認する。
 5. Debug Console の `text_ch` と `telop_ch` に `DataChannel smoke` の固定 JSON が表示され、
@@ -81,8 +87,7 @@ unknown / closed session の candidate は HTTP 200 と `status:false` を返す
 
 次は後続 phase の責務である。
 
-- 16 kHz mono resampleと、decode済みPCMの下流pipeline投入
 - ICE restart、`offer_request_id`、`offer_revision`
 - fixed UDP mux、NAT / firewall、TURN、Firefox
-- RTP reorder、NACK / PLC、RTCP metrics
+- NACK / PLC、RTCP metrics
 - impairment、soak、performance comparison、production compose

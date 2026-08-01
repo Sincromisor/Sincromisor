@@ -34,7 +34,8 @@ const (
 
 // RTPReader は Pion remote track から順次 RTP packet を読む境界である。
 //
-// PoC は packet reorder、NACK、PLC を行わず、reader が返した順序を decode 順序とする。
+// readerはnetwork到着順だけを提供する。production inboundはInputProcessorがbounded reorder後に
+// decodeし、低水準diagnosticのDecodeRemoteだけが到着順のままdecodeする。NACK / PLCはreaderの責務外である。
 type RTPReader interface {
 	ReadRTP() (*rtp.Packet, interceptor.Attributes, error)
 }

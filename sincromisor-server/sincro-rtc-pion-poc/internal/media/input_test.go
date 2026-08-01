@@ -48,7 +48,12 @@ func TestInputProcessorOrderingAndTelemetry(t *testing.T) {
 			want:    []InputEvent{InputEventDTX, InputEventLate},
 		},
 		{
-			name:    "window edge confirms missing",
+			name:    "next plus 63 remains buffered without missing",
+			packets: []*rtp.Packet{dtxPacket(1, 0, 0), dtxPacket(1, 64, 64*960)},
+			want:    []InputEvent{InputEventDTX, InputEventBufferedDrop},
+		},
+		{
+			name:    "next plus 64 confirms missing",
 			packets: []*rtp.Packet{dtxPacket(1, 0, 0), dtxPacket(1, 65, 65*960)},
 			want:    []InputEvent{InputEventDTX, InputEventMissing, InputEventBufferedDrop},
 		},
