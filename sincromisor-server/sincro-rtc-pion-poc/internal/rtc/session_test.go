@@ -19,7 +19,8 @@ import (
 )
 
 func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
-	manager := newTestManager(t)
+	factory := &recordingBlockingFactory{calls: make(chan pipelineStart, 1)}
+	manager := newTestManagerWithFactory(t, factory)
 	t.Cleanup(func() {
 		if err := manager.CloseAll(testCloseContext(t), "test_teardown"); err != nil {
 			t.Errorf("CloseAll(test_teardown) error = %v", err)
@@ -50,6 +51,7 @@ func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 	if manager.Count() != 0 {
 		t.Fatalf("Count() = %d, want 0 after close", manager.Count())
 	}
+	assertNoPipelineCall(t, factory)
 	applied, reason, err = manager.AddCandidate(answer.SessionID, nil)
 	if err != nil {
 		t.Fatalf("AddCandidate(closed) error = %v", err)
@@ -125,6 +127,7 @@ func TestCodecErrorClosesSession(t *testing.T) {
 		"codec-error-session",
 		"chat",
 		webrtc.Configuration{},
+		0,
 		coordinator,
 		SystemClock{},
 		testLogger(),
@@ -147,8 +150,13 @@ func TestCodecErrorClosesSession(t *testing.T) {
 
 func newTestManager(t *testing.T) *Manager {
 	t.Helper()
+	return newTestManagerWithFactory(t, blockingPipelineFactory{})
+}
+
+func newTestManagerWithFactory(t *testing.T, factory pipeline.ClientSetFactory) *Manager {
+	t.Helper()
 	manager, err := NewManager("", ManagerDependencies{
-		PipelineFactory: blockingPipelineFactory{},
+		PipelineFactory: factory,
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 	})

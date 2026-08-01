@@ -62,8 +62,12 @@ func (s *Session) transportReady() {
 			_ = s.Close("deadline_error")
 			return
 		}
-		startTone = true
-		s.wg.Add(1)
+		startTone = s.pc != nil && s.pc.ConnectionState() == webrtc.PeerConnectionStateConnected
+		if startTone {
+			// connected後にだけRTCP Readを開始する。transport未始動のgather timeoutでは
+			// PionがReadを解除しない経路があるため、toneとdrainを同じeventで予約する。
+			s.wg.Add(2)
+		}
 		startPipeline = s.promoteMediaReadyLocked("peer_connected")
 	case stateTransportReady, stateMediaReady, stateRunning, stateClosing, stateClosed:
 		// Pion may repeat the same connected state; it must not restart timers or pipeline.
@@ -76,6 +80,7 @@ func (s *Session) transportReady() {
 	}
 	s.lifecycle.mu.Unlock()
 	if startTone {
+		s.startRTCPDrain(s.outboundSender)
 		s.startTone(s.outboundTrack)
 	}
 	if startPipeline {

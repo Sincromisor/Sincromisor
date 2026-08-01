@@ -21,39 +21,85 @@ func TestMediaReadinessAllSixOrdersPromoteExactlyOnce(t *testing.T) {
 	}
 	for _, order := range permutations {
 		t.Run(order[0]+"_"+order[1]+"_"+order[2], func(t *testing.T) {
-			session := &Session{
-				lifecycle: &sessionLifecycle{
-					state:     stateTransportReady,
-					deadlines: &deadlineController{clock: &fakeClock{}},
-				},
+			clock := &fakeClock{}
+			factory := &recordingBlockingFactory{calls: make(chan pipelineStart, 2)}
+			_, session := newManagedLifecycleSession(t, clock, factory)
+			if err := session.answerReady(); err != nil {
+				t.Fatalf("answerReady() error = %v", err)
 			}
-			promotions := 0
+			session.transportReady()
+			track := &webrtc.TrackRemote{}
+			text := newSessionDataChannel(t, session, textChannelLabel)
+			telop := newSessionDataChannel(t, session, telopChannelLabel)
 			for index, event := range order {
 				switch event {
 				case "audio":
-					session.lifecycle.audio = &webrtc.TrackRemote{}
-				case "text":
-					session.lifecycle.textChannel = &webrtc.DataChannel{}
-					session.lifecycle.textOpen = true
-				case "telop":
-					session.lifecycle.telopChannel = &webrtc.DataChannel{}
-					session.lifecycle.telopOpen = true
-				}
-				if session.promoteMediaReadyLocked(event) {
-					promotions++
+					if !session.acceptAudioTrack(track) {
+						t.Fatal("first audio track was not accepted")
+					}
+					// OnTrack starts the reserved decoder goroutine; this helper test
+					// completes that reservation without reading a synthetic TrackRemote.
 					session.wg.Done()
-					if index != len(order)-1 {
-						t.Fatalf("media_ready promoted before final event at index %d", index)
+				case "text":
+					if !session.registerDataChannel(text) || !session.dataChannelOpened(text) {
+						t.Fatal("first text channel/open was not accepted")
+					}
+				case "telop":
+					if !session.registerDataChannel(telop) || !session.dataChannelOpened(telop) {
+						t.Fatal("first telop channel/open was not accepted")
+					}
+				}
+				if index != len(order)-1 {
+					select {
+					case call := <-factory.calls:
+						t.Fatalf("pipeline started before final readiness: %+v", call)
+					default:
 					}
 				}
 			}
-			if promotions != 1 || session.lifecycle.state != stateMediaReady {
-				t.Fatalf("promotions/state = %d/%s, want 1/media_ready", promotions, session.lifecycle.state)
+			select {
+			case call := <-factory.calls:
+				if call.sessionID != session.id {
+					t.Fatalf("pipeline session = %s, want %s", call.sessionID, session.id)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("pipeline did not start after final readiness")
 			}
-			if session.promoteMediaReadyLocked("duplicate") {
-				t.Fatal("duplicate readiness promoted a second pipeline start")
+			_ = session.Close("test_complete")
+			waitSessionDone(t, session)
+			select {
+			case call := <-factory.calls:
+				t.Fatalf("pipeline started more than once: %+v", call)
+			default:
 			}
 		})
+	}
+}
+
+func TestMediaLatchesBeforeConnectedStartPipelineAfterTransport(t *testing.T) {
+	clock := &fakeClock{}
+	factory := &recordingBlockingFactory{calls: make(chan pipelineStart, 2)}
+	_, session := newManagedLifecycleSession(t, clock, factory)
+	if err := session.answerReady(); err != nil {
+		t.Fatalf("answerReady() error = %v", err)
+	}
+	track := &webrtc.TrackRemote{}
+	if !session.acceptAudioTrack(track) {
+		t.Fatal("audio before connected was not accepted")
+	}
+	session.wg.Done()
+	text := newSessionDataChannel(t, session, textChannelLabel)
+	telop := newSessionDataChannel(t, session, telopChannelLabel)
+	if !session.registerDataChannel(text) || !session.dataChannelOpened(text) ||
+		!session.registerDataChannel(telop) || !session.dataChannelOpened(telop) {
+		t.Fatal("data channel before connected was not accepted")
+	}
+	assertNoPipelineCall(t, factory)
+	session.transportReady()
+	select {
+	case <-factory.calls:
+	case <-time.After(time.Second):
+		t.Fatal("connected did not promote pre-recorded media readiness")
 	}
 }
 

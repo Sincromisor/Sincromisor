@@ -131,9 +131,10 @@ func (d *deadlineController) stop() {
 // audio、text_ch、telop_ch の全条件成立時だけ公開する。別 object の同種 media は
 // duplicate_media として session 全体を閉じるため、ここでは object identity も保持する。
 type sessionLifecycle struct {
-	mu        sync.Mutex
-	state     sessionState
-	deadlines *deadlineController
+	mu          sync.Mutex
+	state       sessionState
+	closeReason string
+	deadlines   *deadlineController
 
 	audio        *webrtc.TrackRemote
 	textChannel  *webrtc.DataChannel
