@@ -15,10 +15,10 @@ import (
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 )
 
-// installOutboundTrack はAnswer生成前にtest-tone trackとRTCP drain goroutineをsessionへ登録する。
+// installOutboundTrack はAnswer生成前にtest-tone trackとRTCP senderをsessionへ登録する。
 //
-// drainはPeerConnection.CloseでReadが解除され、SessionのWaitGroupへjoinされる。tone pacing自体は
-// transport connectedまで開始せず、pipeline readinessとは独立したPoC出力として扱う。
+// transport未始動のsender.ReadはPeerConnection.Closeで解除されない場合があるため、RTCP drainと
+// tone pacingはconnected callback後にだけ開始する。これによりgather timeout sessionはgoroutineを持たない。
 func (s *Session) installOutboundTrack() error {
 	track, err := webrtc.NewTrackLocalStaticSample(
 		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: audiomedia.SampleRate, Channels: 2},
@@ -33,8 +33,15 @@ func (s *Session) installOutboundTrack() error {
 		return fmt.Errorf("add outbound audio track: %w", err)
 	}
 	s.outboundTrack = track
-	// RTCP feedback を drain しないと sender 側 interceptor が詰まるため、session context で reader を所有する。
-	s.wg.Add(1)
+	s.outboundSender = sender
+	return nil
+}
+
+// startRTCPDrain はconnected senderのfeedbackを読み、interceptor backpressureを解消する。
+//
+// connected後はPeerConnection.CloseがReadを解除する。goroutineはtransportReadyがlifecycle mutex内で
+// WaitGroup予約した後に開始し、cleanupは解除とjoinを同じSession ownershipで完了する。
+func (s *Session) startRTCPDrain(sender *webrtc.RTPSender) {
 	go func() {
 		defer s.wg.Done()
 		buffer := make([]byte, 1500)
@@ -44,7 +51,6 @@ func (s *Session) installOutboundTrack() error {
 			}
 		}
 	}()
-	return nil
 }
 
 // startTone はbrowser inputから独立した20ms clockで有限test toneを送信する。

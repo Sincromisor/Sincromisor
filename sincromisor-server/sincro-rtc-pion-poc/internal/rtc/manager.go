@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/oklog/ulid/v2"
 	"github.com/pion/webrtc/v4"
@@ -50,8 +51,9 @@ type ManagerDependencies struct {
 // Manager は active PeerConnection の registry と process-wide shutdown を所有する。
 //
 // registry lock は map の参照だけを保護し、PeerConnection I/O や Close 待機中は保持しない。
+// dependenciesはsessionごとのCoordinator生成とdeadlineへ再利用し、resource自体はManagerへ共有しない。
 // unknown と closed session は candidate endpoint で区別できるprocess-lifetime tombstoneとして保持する。
-// TTL / 上限付きtombstoneはretry契約とともにPhase 3で設計する。
+// tombstoneはprocess再起動まで保持し、現在のPoCではTTLや上限による削除を行わない。
 type Manager struct {
 	mu            sync.RWMutex
 	sessions      map[string]*Session
@@ -60,10 +62,11 @@ type Manager struct {
 	dependencies  ManagerDependencies
 }
 
-// NewManager は optional STUN URL と必須 dependency を検証し、空の session registry を作成する。
+// NewManager は optional STUN URL をPion configurationへ反映し、必須dependencyを検証する。
 //
-// network I/O、PeerConnection、CoordinatorはCreateまで開始しない。Manager は process shutdown 時に
-// 5秒上限のcontextを渡してCloseAllを呼ぶ必要がある。TURN、固定UDP mux、NAT rewriteは対象外である。
+// STUN URLの構文検証は起動時config loaderの責務であり、ここでは再検証しない。network I/O、
+// PeerConnection、CoordinatorはCreateまで開始しない。Manager はprocess shutdown時に5秒上限の
+// contextを渡してCloseAllを呼ぶ必要がある。TURN、固定UDP mux、NAT rewriteは対象外である。
 func NewManager(stunURL string, dependencies ManagerDependencies) (*Manager, error) {
 	if dependencies.PipelineFactory == nil || dependencies.Clock == nil || dependencies.Logger == nil {
 		return nil, errors.New("rtc manager dependencies must not be nil")
@@ -82,9 +85,9 @@ func NewManager(stunURL string, dependencies ManagerDependencies) (*Manager, err
 
 // Create は initial Offer から session を作り、half-trickle Answer を返す。
 //
-// type、SDP、talk_modeをresource作成前に検証する。session専用Coordinatorを作った後、remote description、
-// outbound track、local Answer、candidate収集を行う。失敗時は同じ非同期close経路へ通知し、
-// registryからの除去はresource join完了後にだけ行う。
+// type、SDP、talk_modeをresource作成前に検証する。session専用Coordinatorを作った後、request deadlineを
+// PionのSTUN gather上限へ伝播してremote description、outbound track、local Answer、candidate収集を行う。
+// 失敗時は同じ非同期close経路へ通知し、registryからの除去はresource join完了後にだけ行う。
 func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 	if offer.Type != "offer" {
 		return Answer{}, errors.New("offer type must be offer")
@@ -104,10 +107,19 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 		return Answer{}, err
 	}
 	sessionID := ulid.Make().String()
+	gatherTimeout := time.Duration(0)
+	if deadline, ok := ctx.Deadline(); ok {
+		gatherTimeout = time.Until(deadline)
+		if gatherTimeout <= 0 {
+			_ = coordinator.Close()
+			return Answer{}, ctx.Err()
+		}
+	}
 	session, err := newSession(
 		sessionID,
 		offer.TalkMode,
 		m.configuration,
+		gatherTimeout,
 		coordinator,
 		sessionDependencies.Clock,
 		m.dependencies.Logger,

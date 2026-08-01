@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/pion/webrtc/v4"
 
@@ -36,15 +37,27 @@ type Session struct {
 	onClosed  func(string)
 	lifecycle *sessionLifecycle
 
-	ctx           context.Context
-	cancel        context.CancelFunc
-	wg            sync.WaitGroup
-	encoder       *audiomedia.ToneEncoder
-	outboundTrack *webrtc.TrackLocalStaticSample
-	done          chan struct{}
+	ctx            context.Context
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
+	encoder        *audiomedia.ToneEncoder
+	outboundTrack  *webrtc.TrackLocalStaticSample
+	outboundSender *webrtc.RTPSender
+	done           chan struct{}
+	closers        sessionResourceClosers
 
 	statsMu sync.Mutex
 	stats   audiomedia.DecodeStats
+}
+
+// sessionResourceClosers はSession cleanupが並行開始して完了を待つ3つの所有resource境界である。
+//
+// productionではPeerConnection、codec、Coordinatorへ固定し、testではblocking closeを注入して
+// Closeの非blocking返却、close-once、全join後公開を実時間sleepなしで観測する。
+type sessionResourceClosers struct {
+	peer     func() error
+	codec    func() error
+	pipeline func() error
 }
 
 // newSession は検証済みdependencyからPeerConnection、codec、lifecycle ownerを組み立てる。
@@ -55,6 +68,7 @@ func newSession(
 	id string,
 	talkMode string,
 	configuration webrtc.Configuration,
+	gatherTimeout time.Duration,
 	coordinator *pipeline.Coordinator,
 	clock Clock,
 	logger *slog.Logger,
@@ -70,7 +84,7 @@ func newSession(
 	if err != nil {
 		return nil, err
 	}
-	pc, err := webrtc.NewPeerConnection(configuration)
+	pc, err := newPeerConnection(configuration, gatherTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w", err)
 	}
@@ -84,6 +98,11 @@ func newSession(
 		id: id, talkMode: talkMode, pc: pc, pipeline: coordinator, logger: logger,
 		onClosed: onClosed, lifecycle: lifecycle, ctx: ctx, cancel: cancel,
 		encoder: encoder, done: make(chan struct{}),
+		closers: sessionResourceClosers{
+			peer:     pc.Close,
+			codec:    encoder.Close,
+			pipeline: coordinator.Close,
+		},
 	}
 	if err := session.installOutboundTrack(); err != nil {
 		_ = pc.Close()
@@ -94,6 +113,23 @@ func newSession(
 	session.installCallbacks()
 	logger.Info("rtc session created", "session_id", id, "talk_mode", talkMode)
 	return session, nil
+}
+
+// newPeerConnection はHTTP Answer生成deadlineをPion内部のSTUN transaction上限へ伝播する。
+//
+// request contextだけを先に返すと、Pionの既定STUN gatherが背後で継続し、Closeとregistry removeが
+// 最大数秒遅れる。正数durationだけSettingEngineへ設定し、deadlineなしcallerはPion既定値を使う。
+func newPeerConnection(
+	configuration webrtc.Configuration,
+	gatherTimeout time.Duration,
+) (*webrtc.PeerConnection, error) {
+	if gatherTimeout <= 0 {
+		return webrtc.NewPeerConnection(configuration)
+	}
+	settings := webrtc.SettingEngine{}
+	settings.SetSTUNGatherTimeout(gatherTimeout)
+	api := webrtc.NewAPI(webrtc.WithSettingEngine(settings))
+	return api.NewPeerConnection(configuration)
 }
 
 // negotiate はremote Offerからcandidate収集済みlocal Answerを作り、answer_readyを公開する。
@@ -190,6 +226,7 @@ func (s *Session) beginCloseLocked(reason string) bool {
 		return false
 	}
 	s.lifecycle.deadlines.stop()
+	s.lifecycle.closeReason = reason
 	s.cancel()
 	return true
 }
@@ -200,9 +237,9 @@ func (s *Session) beginCloseLocked(reason string) bool {
 // すべてをjoinするまでclosedとdoneを公開しないため、Manager deadlineは未完了を識別できる。
 func (s *Session) cleanup(reason string) {
 	closeResults := make(chan error, 3)
-	go func() { closeResults <- s.pc.Close() }()
-	go func() { closeResults <- s.encoder.Close() }()
-	go func() { closeResults <- s.pipeline.Close() }()
+	go func() { closeResults <- s.closers.peer() }()
+	go func() { closeResults <- s.closers.codec() }()
+	go func() { closeResults <- s.closers.pipeline() }()
 	var closeErr error
 	for range 3 {
 		closeErr = errors.Join(closeErr, <-closeResults)
