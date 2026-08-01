@@ -1,15 +1,18 @@
 # Review: task-260802032916-pion-phase-3-backend-ice-restart
 
 ## 判定
+
 APPROVED
 
 前回のupdate Offer `talk_mode`、candidate canonicalization、comment acceptanceの指摘はすべて解消された。
 改訂箇所に新たなblocking矛盾はなく、実装に進めてよい。
 
 ## 指摘事項
+
 - なし。
 
 ## 実装者への申し送り
+
 - update `talk_mode` はmissing/enum外を400、保存済み有効値との不一致を409とし、pipelineのmodeは変更しない。
 - candidate fieldのmissingは400、explicit nullは有効なend-of-candidatesである。optional fieldの
   missing/nullはdedupe上同一、文字列はtrim/case変換しないというcanonicalizationを共有fixtureで固定すること。

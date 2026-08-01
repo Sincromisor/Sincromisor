@@ -1,15 +1,18 @@
 # Review: task-260802032908-pion-phase-3-outbound-audio-datachannel
 
 ## 判定
+
 APPROVED
 
 前回のqueue overflow、Frontend JSON変換、comment acceptanceのHigh指摘はすべて解消された。
 改訂箇所に新たなblocking矛盾はなく、実装に進めてよい。
 
 ## 指摘事項
+
 - なし。
 
 ## 実装者への申し送り
+
 - synthesized speechは既存発話をevictせずincomingを `ErrSpeechQueueFull` で拒否しsession close、
   textもincoming拒否とsession close、telopだけ最古1件dropとsession継続である。上限ちょうどまでは
   queueの許容範囲（8発話、合計120秒、text 64件、telop 128件）として境界testを固定すること。
