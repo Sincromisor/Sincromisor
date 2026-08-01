@@ -74,6 +74,8 @@
 initial Offerでは`session_id`を送らず、`talk_mode`は`chat`または`sincro`、
 `offer_request_id`はFrontend発行UUID、`offer_revision`は`1`を必須とする。
 `previous_session_id`は任意のULIDで、旧sessionとの相関ログだけに使う。
+`session_id`の省略と`null`/空文字は同一視せず、initial Offerに後者があればHTTP 400とする。
+`previous_session_id`も省略またはstrict ULID文字列だけを許可し、`null`や文字列以外はHTTP 400とする。
 同じrequest IDをretryするときは同じSDP bytesを送り、SDPを再生成した場合は新しいUUIDを発行する。
 `session_id`付きupdate Offerは現段階ではHTTP 501を返す。
 

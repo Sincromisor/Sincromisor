@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -156,6 +157,162 @@ func TestOfferRegistryFailureIsNotCached(t *testing.T) {
 	}
 }
 
+func TestOfferRegistryAllWaitersCancelBeforeOwnerFailure(t *testing.T) {
+	service := &registrySessionService{
+		started:   make(chan struct{}),
+		release:   make(chan struct{}),
+		createErr: errors.New("owner failed"),
+	}
+	registry, cancel := newRegistryForTest(t, service, 1, newRegistryFakeClock())
+	defer cancel()
+	const waiterCount = 32
+	results := make(chan error, waiterCount)
+	cancels := make([]context.CancelFunc, 0, waiterCount)
+	for range waiterCount {
+		waiterCtx, cancelWaiter := context.WithCancel(context.Background())
+		cancels = append(cancels, cancelWaiter)
+		go func() {
+			_, err := registry.Resolve(waiterCtx, testOfferRequestID, []byte("same"), validRTCOffer())
+			results <- err
+		}()
+	}
+	<-service.started
+	waitForSignalingCondition(t, time.Second, func() bool {
+		registry.mu.Lock()
+		defer registry.mu.Unlock()
+		return registry.entries[testOfferRequestID].waiters == waiterCount
+	})
+	for _, cancelWaiter := range cancels {
+		cancelWaiter()
+	}
+	for range waiterCount {
+		if err := <-results; !errors.Is(err, context.Canceled) {
+			t.Fatalf("waiter error = %v, want context canceled", err)
+		}
+	}
+	close(service.release)
+	waitRegistryEntries(t, registry, 0)
+	if _, err := registry.Resolve(
+		context.Background(),
+		testOfferRequestID,
+		[]byte("same"),
+		validRTCOffer(),
+	); !errors.Is(err, service.createErr) {
+		t.Fatalf("retry error = %v, want fresh owner failure", err)
+	}
+	if got := service.calls.Load(); got != 2 {
+		t.Fatalf("Create calls = %d, want retry to start second owner", got)
+	}
+}
+
+func TestOfferRegistryInFlightCountsTowardCapacity(t *testing.T) {
+	service := &registrySessionService{
+		started: make(chan struct{}),
+		release: make(chan struct{}),
+		answer: rtc.Answer{
+			SDP: "answer", Type: "answer", SessionID: "01K1AF2Y0H0000000000000008", Revision: 1,
+		},
+	}
+	registry, cancel := newRegistryForTest(t, service, 1, newRegistryFakeClock())
+	defer cancel()
+	first := make(chan error, 1)
+	go func() {
+		_, err := registry.Resolve(context.Background(), testOfferRequestID, []byte("same"), validRTCOffer())
+		first <- err
+	}()
+	<-service.started
+	if _, err := registry.Resolve(
+		context.Background(),
+		"95ff8fd1-2bcb-4dc6-bf9b-990b357f12cc",
+		[]byte("other"),
+		validRTCOffer(),
+	); !errors.Is(err, ErrOfferCapacity) {
+		t.Fatalf("in-flight capacity error = %v, want ErrOfferCapacity", err)
+	}
+	registry.mu.Lock()
+	entryCount := len(registry.entries)
+	registry.mu.Unlock()
+	if entryCount != 1 || service.calls.Load() != 1 {
+		t.Fatalf("failed admission left entries/calls = %d/%d, want 1/1", entryCount, service.calls.Load())
+	}
+	close(service.release)
+	if err := <-first; err != nil {
+		t.Fatalf("first Resolve() error = %v", err)
+	}
+}
+
+func TestOfferRegistryDoesNotEvictLiveEntryImmediatelyBeforeTTL(t *testing.T) {
+	clock := newRegistryFakeClock()
+	service := &registrySessionService{answer: rtc.Answer{
+		SDP: "answer", Type: "answer", SessionID: "01K1AF2Y0H0000000000000009", Revision: 1,
+	}}
+	registry, cancel := newRegistryForTest(t, service, 1, clock)
+	defer cancel()
+	if _, err := registry.Resolve(
+		context.Background(),
+		testOfferRequestID,
+		[]byte("same"),
+		validRTCOffer(),
+	); err != nil {
+		t.Fatalf("first Resolve() error = %v", err)
+	}
+	clock.Advance(2*time.Minute - time.Nanosecond)
+	if _, err := registry.Resolve(
+		context.Background(),
+		"95ff8fd1-2bcb-4dc6-bf9b-990b357f12cc",
+		[]byte("other"),
+		validRTCOffer(),
+	); !errors.Is(err, ErrOfferCapacity) {
+		t.Fatalf("pre-expiry admission error = %v, want ErrOfferCapacity", err)
+	}
+	if _, err := registry.Resolve(
+		context.Background(),
+		testOfferRequestID,
+		[]byte("same"),
+		validRTCOffer(),
+	); err != nil {
+		t.Fatalf("pre-expiry cached Resolve() error = %v", err)
+	}
+	clock.Advance(time.Nanosecond)
+	if _, err := registry.Resolve(
+		context.Background(),
+		"95ff8fd1-2bcb-4dc6-bf9b-990b357f12cc",
+		[]byte("other"),
+		validRTCOffer(),
+	); err != nil {
+		t.Fatalf("at-expiry admission error = %v", err)
+	}
+}
+
+func TestOfferRegistryTimeoutLeavesNoEntryOrGoroutine(t *testing.T) {
+	baseline := runtime.NumGoroutine()
+	service := &registrySessionService{
+		started: make(chan struct{}),
+		release: make(chan struct{}),
+	}
+	registry, cancel := newRegistryForTestWithTimeout(
+		t, service, 1, newRegistryFakeClock(), 5*time.Millisecond,
+	)
+	if _, err := registry.Resolve(
+		context.Background(),
+		testOfferRequestID,
+		[]byte("same"),
+		validRTCOffer(),
+	); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("Resolve() error = %v, want deadline exceeded", err)
+	}
+	waitRegistryEntries(t, registry, 0)
+	cancel()
+	waitCtx, cancelWait := context.WithTimeout(context.Background(), time.Second)
+	defer cancelWait()
+	if err := registry.Wait(waitCtx); err != nil {
+		t.Fatalf("Wait() error = %v", err)
+	}
+	waitForSignalingCondition(t, time.Second, func() bool {
+		return runtime.NumGoroutine() <= baseline+1
+	})
+}
+
 func TestOfferRegistryThousandEntryBoundary(t *testing.T) {
 	service := &registrySessionService{answer: rtc.Answer{
 		SDP: "answer", Type: "answer", SessionID: "01K1AF2Y0H0000000000000005", Revision: 1,
@@ -220,6 +377,14 @@ func TestOfferRegistryPeriodicSweepRemovesExpiredEntries(t *testing.T) {
 		validRTCOffer(),
 	); err != nil {
 		t.Fatalf("Resolve() error = %v", err)
+	}
+	select {
+	case interval := <-clock.intervals:
+		if interval != 30*time.Second {
+			t.Fatalf("sweep interval = %s, want 30s", interval)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("sweeper did not request its first interval")
 	}
 	clock.Advance(2 * time.Minute)
 	clock.Tick()
@@ -304,11 +469,21 @@ func newRegistryForTest(
 	capacity int,
 	clock OfferRegistryClock,
 ) (*OfferRegistry, context.CancelFunc) {
+	return newRegistryForTestWithTimeout(t, service, capacity, clock, time.Second)
+}
+
+func newRegistryForTestWithTimeout(
+	t *testing.T,
+	service SessionService,
+	capacity int,
+	clock OfferRegistryClock,
+	gatherTimeout time.Duration,
+) (*OfferRegistry, context.CancelFunc) {
 	t.Helper()
 	processCtx, cancel := context.WithCancel(context.Background())
 	registry, err := NewOfferRegistry(service, OfferRegistryConfig{
 		ProcessContext: processCtx,
-		GatherTimeout:  time.Second,
+		GatherTimeout:  gatherTimeout,
 		Capacity:       capacity,
 		TTL:            2 * time.Minute,
 		Clock:          clock,
@@ -322,15 +497,17 @@ func newRegistryForTest(
 }
 
 type registryFakeClock struct {
-	mu    sync.Mutex
-	now   time.Time
-	ticks chan time.Time
+	mu        sync.Mutex
+	now       time.Time
+	ticks     chan time.Time
+	intervals chan time.Duration
 }
 
 func newRegistryFakeClock() *registryFakeClock {
 	return &registryFakeClock{
-		now:   time.Unix(1_700_000_000, 0),
-		ticks: make(chan time.Time, 1),
+		now:       time.Unix(1_700_000_000, 0),
+		ticks:     make(chan time.Time, 1),
+		intervals: make(chan time.Duration, 4),
 	}
 }
 
@@ -340,8 +517,39 @@ func (c *registryFakeClock) Now() time.Time {
 	return c.now
 }
 
-func (c *registryFakeClock) After(time.Duration) <-chan time.Time {
+func (c *registryFakeClock) After(duration time.Duration) <-chan time.Time {
+	select {
+	case c.intervals <- duration:
+	default:
+	}
 	return c.ticks
+}
+
+func waitRegistryEntries(t *testing.T, registry *OfferRegistry, want int) {
+	t.Helper()
+	waitForSignalingCondition(t, time.Second, func() bool {
+		registry.mu.Lock()
+		defer registry.mu.Unlock()
+		return len(registry.entries) == want
+	})
+}
+
+func waitForSignalingCondition(t *testing.T, timeout time.Duration, condition func() bool) {
+	t.Helper()
+	deadline := time.NewTimer(timeout)
+	defer deadline.Stop()
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if condition() {
+			return
+		}
+		select {
+		case <-deadline.C:
+			t.Fatal("condition did not converge before timeout")
+		case <-ticker.C:
+		}
+	}
 }
 
 func (c *registryFakeClock) Tick() {

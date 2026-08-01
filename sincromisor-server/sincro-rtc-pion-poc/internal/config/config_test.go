@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -33,6 +34,54 @@ func TestLoad(t *testing.T) {
 	}
 	if !filepath.IsAbs(cfg.FrontendDir) {
 		t.Errorf("FrontendDir = %q, want absolute path", cfg.FrontendDir)
+	}
+}
+
+func TestLoadUsesProductionLimitDefaults(t *testing.T) {
+	cfg, err := Load([]string{"--frontend-dir", t.TempDir()})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.MaxSessions != 100 ||
+		cfg.OfferCacheCapacity != 1000 ||
+		cfg.OfferCacheTTL != 120*time.Second {
+		t.Fatalf("defaults = %d/%d/%s, want 100/1000/2m",
+			cfg.MaxSessions, cfg.OfferCacheCapacity, cfg.OfferCacheTTL)
+	}
+}
+
+func TestLoadAcceptsLimitBoundaries(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		args []string
+		want int64
+	}{
+		{name: "sessions 99", args: []string{"--max-sessions", "99"}, want: 99},
+		{name: "sessions 100", args: []string{"--max-sessions", "100"}, want: 100},
+		{name: "capacity 999", args: []string{"--offer-cache-capacity", "999"}, want: 999},
+		{name: "capacity 1000", args: []string{"--offer-cache-capacity", "1000"}, want: 1000},
+		{name: "ttl 30", args: []string{"--offer-cache-ttl", "30s"}, want: 30},
+		{name: "ttl 120", args: []string{"--offer-cache-ttl", "120s"}, want: 120},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			args := append([]string{"--frontend-dir", t.TempDir()}, test.args...)
+			cfg, err := Load(args)
+			if err != nil {
+				t.Fatalf("Load() error = %v", err)
+			}
+			var got int64
+			switch {
+			case strings.HasPrefix(test.name, "sessions"):
+				got = int64(cfg.MaxSessions)
+			case strings.HasPrefix(test.name, "capacity"):
+				got = int64(cfg.OfferCacheCapacity)
+			default:
+				got = int64(cfg.OfferCacheTTL / time.Second)
+			}
+			if got != test.want {
+				t.Fatalf("boundary = %d, want %d", got, test.want)
+			}
+		})
 	}
 }
 

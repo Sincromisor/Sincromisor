@@ -98,14 +98,16 @@ type configResponse struct {
 	ICEServers   []iceServerResponse `json:"iceServers"`
 }
 
+// offerRequest はinitial/updateの識別fieldについてJSON presenceとtypeをdecode後まで保持する。
+// RawMessageにより、omitemptyのGo zero valueへ潰れるnull/空文字とfield省略を境界で区別する。
 type offerRequest struct {
-	SDP               string `json:"sdp"`
-	Type              string `json:"type"`
-	TalkMode          string `json:"talk_mode"`
-	SessionID         string `json:"session_id,omitempty"`
-	OfferRequestID    string `json:"offer_request_id"`
-	OfferRevision     int    `json:"offer_revision"`
-	PreviousSessionID string `json:"previous_session_id,omitempty"`
+	SDP               string          `json:"sdp"`
+	Type              string          `json:"type"`
+	TalkMode          string          `json:"talk_mode"`
+	SessionID         json.RawMessage `json:"session_id,omitempty"`
+	OfferRequestID    string          `json:"offer_request_id"`
+	OfferRevision     int             `json:"offer_revision"`
+	PreviousSessionID json.RawMessage `json:"previous_session_id,omitempty"`
 }
 
 type candidateRequest struct {
@@ -144,8 +146,12 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		writeError(writer, http.StatusBadRequest, "Malformed offer JSON.")
 		return
 	}
-	if payload.SessionID != "" {
-		writeError(writer, http.StatusNotImplemented, "Session update offers are not implemented by this PoC.")
+	if payload.SessionID != nil {
+		if isNonEmptyJSONString(payload.SessionID) {
+			writeError(writer, http.StatusNotImplemented, "Session update offers are not implemented by this PoC.")
+			return
+		}
+		writeError(writer, http.StatusBadRequest, "session_id must be omitted from an initial offer.")
 		return
 	}
 	if len(payload.SDP) > maxSDPBytes {
@@ -161,8 +167,14 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		writeError(writer, http.StatusBadRequest, "Invalid initial offer identity.")
 		return
 	}
-	if payload.PreviousSessionID != "" {
-		if _, err := ulid.ParseStrict(payload.PreviousSessionID); err != nil {
+	previousSessionID := ""
+	if payload.PreviousSessionID != nil {
+		if err := json.Unmarshal(payload.PreviousSessionID, &previousSessionID); err != nil ||
+			previousSessionID == "" {
+			writeError(writer, http.StatusBadRequest, "Invalid previous_session_id.")
+			return
+		}
+		if _, err := ulid.ParseStrict(previousSessionID); err != nil {
 			writeError(writer, http.StatusBadRequest, "Invalid previous_session_id.")
 			return
 		}
@@ -195,13 +207,20 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		"session_id", answer.SessionID,
 		"active_sessions", s.sessions.Count(),
 	)
-	if payload.PreviousSessionID != "" {
+	if previousSessionID != "" {
 		s.logger.Info("initial offer replaced session",
-			"previous_session_id", payload.PreviousSessionID,
+			"previous_session_id", previousSessionID,
 			"session_id", answer.SessionID,
 		)
 	}
 	writeJSON(writer, http.StatusOK, answer)
+}
+
+// isNonEmptyJSONString はupdate Offerとして501を維持する非空session IDだけを識別する。
+// null、空文字、string以外はinitial schema違反としてcallerが400へ変換する。
+func isNonEmptyJSONString(raw json.RawMessage) bool {
+	var value string
+	return json.Unmarshal(raw, &value) == nil && value != ""
 }
 
 func (s *Server) handleCandidate(writer http.ResponseWriter, request *http.Request) {

@@ -25,7 +25,7 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 		t.Fatalf("resolve module root: %v", err)
 	}
 	binaryPath := filepath.Join(t.TempDir(), "pion-poc")
-	build := exec.Command("go", "build", "-o", binaryPath, "./cmd/pion-poc")
+	build := exec.Command("go", "build", "-buildvcs=false", "-o", binaryPath, "./cmd/pion-poc")
 	build.Dir = moduleRoot
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build pion-poc: %v\n%s", err, output)

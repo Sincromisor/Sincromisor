@@ -32,6 +32,9 @@ func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 	if manager.Count() != 1 {
 		t.Fatalf("Count() = %d, want 1 after offer", manager.Count())
 	}
+	if manager.reservations != 0 {
+		t.Fatalf("reservations = %d, want 0 after Session publication", manager.reservations)
+	}
 	if answer.SessionID == "" {
 		t.Fatal("Create() returned empty session ID")
 	}
