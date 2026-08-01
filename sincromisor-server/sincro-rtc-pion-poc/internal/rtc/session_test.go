@@ -4,7 +4,9 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -192,15 +194,20 @@ func negotiatePair(t *testing.T, manager *Manager, client *webrtc.PeerConnection
 	if local == nil {
 		t.Fatal("client local description is nil")
 	}
+	// 同一host内のtestでは、Docker/Tailscaleを含む全interfaceのcandidate pairを評価する必要がない。
+	// 両peerに存在する先頭IPv4 host candidateへ絞り、到達不能IPv6 pairの探索量がrace detectorの
+	// 5秒deadlineを左右しないようにする。productionのcandidate収集契約は変更しない。
+	offerSDP, hostIP := singleHostCandidateSDP(t, local.SDP, "")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	answer, err := manager.Create(ctx, Offer{SDP: local.SDP, Type: "offer", TalkMode: "chat"})
+	answer, err := manager.Create(ctx, Offer{SDP: offerSDP, Type: "offer", TalkMode: "chat"})
 	if err != nil {
 		t.Fatalf("Manager.Create() error = %v", err)
 	}
+	answerSDP, _ := singleHostCandidateSDP(t, answer.SDP, hostIP)
 	if err := client.SetRemoteDescription(webrtc.SessionDescription{
 		Type: webrtc.SDPTypeAnswer,
-		SDP:  answer.SDP,
+		SDP:  answerSDP,
 	}); err != nil {
 		t.Fatalf("SetRemoteDescription() error = %v", err)
 	}
@@ -208,6 +215,42 @@ func negotiatePair(t *testing.T, manager *Manager, client *webrtc.PeerConnection
 		return client.ConnectionState() == webrtc.PeerConnectionStateConnected
 	})
 	return answer
+}
+
+func singleHostCandidateSDP(t *testing.T, description, hostIP string) (string, string) {
+	t.Helper()
+	lines := strings.Split(description, "\n")
+	if hostIP == "" {
+		for _, line := range lines {
+			fields := strings.Fields(line)
+			if len(fields) >= 8 &&
+				strings.HasPrefix(fields[0], "a=candidate:") &&
+				fields[7] == "host" &&
+				net.ParseIP(fields[4]).To4() != nil {
+				hostIP = fields[4]
+				break
+			}
+		}
+	}
+	if hostIP == "" {
+		t.Fatal("SDP has no IPv4 host candidate for local peer test")
+	}
+	filtered := make([]string, 0, len(lines))
+	kept := 0
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) >= 5 && strings.HasPrefix(fields[0], "a=candidate:") {
+			if fields[4] != hostIP {
+				continue
+			}
+			kept++
+		}
+		filtered = append(filtered, line)
+	}
+	if kept == 0 {
+		t.Fatalf("SDP has no host candidate for selected local address %s", hostIP)
+	}
+	return strings.Join(filtered, "\n"), hostIP
 }
 
 type channelMessage struct {
