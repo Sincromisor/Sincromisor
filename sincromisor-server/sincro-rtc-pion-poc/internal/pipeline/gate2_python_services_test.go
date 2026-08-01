@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -55,6 +56,11 @@ func TestGate2PythonServices(t *testing.T) {
 	if err := coordinator.Start(ctx, "gate2-python-services", "sincro"); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
+	defer func() {
+		if err := coordinator.Close(); err != nil {
+			t.Errorf("deferred Close() error = %v", err)
+		}
+	}()
 
 	pcm := gate2PCM(t)
 	runGate2Turn(t, coordinator, pcm, 1)
@@ -154,7 +160,13 @@ func runGate2Turn(t *testing.T, coordinator *Coordinator, pcm []byte, generation
 
 func gate2PCM(t *testing.T) []byte {
 	t.Helper()
-	wav, err := os.ReadFile("../speech-recognizer-nemo/src/speech_recognizer_nemo/SpeechRecognizerNemo/sample02.wav")
+	// go testは対象packageをworking directoryにする。module rootからの見かけの相対pathではなく、
+	// pipeline packageからserver内のreview済みfixtureへ辿り、固定commandを任意のcaller cwdで再現可能にする。
+	fixturePath := filepath.Join(
+		"..", "..", "..",
+		"speech-recognizer-nemo", "src", "speech_recognizer_nemo", "SpeechRecognizerNemo", "sample02.wav",
+	)
+	wav, err := os.ReadFile(fixturePath)
 	if err != nil {
 		t.Fatalf("read sample02.wav: %v", err)
 	}

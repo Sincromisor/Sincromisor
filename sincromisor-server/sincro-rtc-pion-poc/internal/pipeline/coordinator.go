@@ -211,7 +211,9 @@ func (c *Coordinator) SynthResults() <-chan Output[protocol.SynthesizerResult] {
 
 // Close はclosedを先に確定し、retry、generation、4 clientをcancel / joinして再接続を禁止する。
 //
-// 全producer終了後にtext、synthの順でchannelをcloseする。全stateからidempotentに呼べる。
+// 全producer終了後、publication/resetと共有するoutput barrier内でtext、synthの順にchannelをcloseする。
+// Close開始前にpublishへ入ったpackage内callerもbarrierから退出するまで待つため、全stateから
+// idempotentかつsend/close raceなしで呼べる。
 func (c *Coordinator) Close() error {
 	c.closeOnce.Do(func() {
 		c.mu.Lock()
@@ -235,8 +237,13 @@ func (c *Coordinator) Close() error {
 			work.wg.Wait()
 		}
 		c.wg.Wait()
+		// generation workerのjoinは通常producerを全て覆う。それに加えてoutputMuを
+		// channel closeの最終barrierにすることで、test hookを含むpackage内の直接
+		// publicationがClose開始時点で進行中でもsend/closeを直列化する。
+		c.outputMu.Lock()
 		close(c.textOut)
 		close(c.synthOut)
+		c.outputMu.Unlock()
 		close(c.closeDone)
 	})
 	<-c.closeDone
