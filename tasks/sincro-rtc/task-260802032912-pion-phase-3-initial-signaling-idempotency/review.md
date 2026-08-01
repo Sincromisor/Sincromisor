@@ -1,15 +1,18 @@
 # Review: task-260802032912-pion-phase-3-initial-signaling-idempotency
 
 ## 判定
+
 APPROVED
 
 前回のconfig schema、single-flight owner lifecycle、comment acceptanceのHigh指摘はすべて解消された。
 改訂箇所に新たなblocking矛盾はなく、実装に進めてよい。
 
 ## 指摘事項
+
 - なし。
 
 ## 実装者への申し送り
+
 - 3 flagはdefaultをproduction上限とし、小さい値だけを許可する。値の正本をtyped configへ集約し、
   CLI、constructor、READMEでdefault/rangeを重複して食い違わせないこと。
 - ownerはrequest contextから切り離す一方、process contextとgather timeoutには従う。全waiter cancel、

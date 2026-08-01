@@ -70,7 +70,7 @@ ICE restartとFrontend retryに先行して、initial Offerをrequest ID単位�
 - 変更production codeと、その理解に必要な直接のhelper/state/event/lifecycle/data transformationを
   change comprehension surfaceとして全件auditする。`impl.md` は `path`、`symbol/block/decision/flow`、
   `kind`、`current comment`、`reader question`、`required reader knowledge`、`decision
-  (keep/rewrite/delete/add)`、`action/omission reason`、`reviewer note` の列を持つ。
+(keep/rewrite/delete/add)`、`action/omission reason`、`reviewer note` の列を持つ。
 - exported/public APIとboundaryは目的、入力境界、戻り値/observable output、失敗条件、副作用、非対象を
   必要に応じて説明する。内部orchestration/pipeline/state transition/event source/data transformationは、
   処理段階、data表現、state change、前後関係、後段へ委ねる責務を局所的に理解できる説明にする。
