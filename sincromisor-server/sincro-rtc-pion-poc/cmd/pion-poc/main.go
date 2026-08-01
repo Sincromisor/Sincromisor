@@ -14,11 +14,19 @@ import (
 	"time"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/config"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
+	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/rtc"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/signaling"
 )
 
-const shutdownTimeout = 5 * time.Second
+const (
+	shutdownTimeout = 5 * time.Second
+	// discoveryRequestTimeout は local Consul 障害が readiness 後のsession cleanupを長時間妨げない上限である。
+	discoveryRequestTimeout = 2 * time.Second
+	localConsulURL          = "http://127.0.0.1:8500"
+)
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
@@ -37,7 +45,45 @@ func run(args []string) error {
 		return err
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	sessions := rtc.NewManager(cfg.STUNURL, logger)
+	pipelineFactory, err := newPipelineFactory(logger)
+	if err != nil {
+		return err
+	}
+	sessions, err := rtc.NewManager(cfg.STUNURL, rtc.ManagerDependencies{
+		PipelineFactory: pipelineFactory,
+		Clock:           rtc.SystemClock{},
+		Logger:          logger,
+	})
+	if err != nil {
+		return fmt.Errorf("create rtc manager: %w", err)
+	}
+	return serve(cfg, sessions, logger)
+}
+
+// newPipelineFactory はPoC local Consulから4 serviceを遅延解決するfactoryを構築する。
+//
+// serviceごとにportが異なるため共通fallbackは意図的に未設定とし、Consul障害時に誤ったserviceへ
+// 接続しない。resolver/factory構築はnetwork I/Oを行わず、media readiness後のStartまで接続を遅延する。
+func newPipelineFactory(logger *slog.Logger) (pipeline.ClientSetFactory, error) {
+	resolver, err := discovery.NewResolver(discovery.ResolverConfig{
+		ConsulBaseURL:  localConsulURL,
+		RequestTimeout: discoveryRequestTimeout,
+	}, nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create pipeline resolver: %w", err)
+	}
+	pipelineFactory, err := pclient.NewSetFactory(resolver, logger, time.Now)
+	if err != nil {
+		return nil, fmt.Errorf("create pipeline factory: %w", err)
+	}
+	return pipelineFactory, nil
+}
+
+// serve はHTTP受理、signal待機、5秒上限のHTTP/session shutdownを順に調停する。
+//
+// CloseAllがdeadlineを返しても各Sessionのcleanupは継続するが、process境界では未join resourceを
+// 正常終了として偽装せずerrorをmainへ返す。
+func serve(cfg config.Config, sessions *rtc.Manager, logger *slog.Logger) error {
 	handler := signaling.New(
 		sessions,
 		cfg.FrontendDir,
@@ -75,7 +121,7 @@ func run(args []string) error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	httpErr := server.Shutdown(shutdownCtx)
-	sessionErr := sessions.CloseAll("process_shutdown")
+	sessionErr := sessions.CloseAll(shutdownCtx, "process_shutdown")
 	if err := errors.Join(httpErr, sessionErr); err != nil {
 		return fmt.Errorf("shutdown: %w", err)
 	}

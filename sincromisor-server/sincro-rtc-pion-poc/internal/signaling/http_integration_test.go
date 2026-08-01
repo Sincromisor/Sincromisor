@@ -1,6 +1,7 @@
 package signaling
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -10,11 +11,12 @@ import (
 
 	"github.com/pion/webrtc/v4"
 
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/rtc"
 )
 
 func TestRealManagerRejectsMalformedSDPAndRemovesSession(t *testing.T) {
-	manager := rtc.NewManager("", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	manager := newRealTestManager(t, "")
 	server := New(
 		manager,
 		t.TempDir(),
@@ -35,9 +37,9 @@ func TestRealManagerRejectsMalformedSDPAndRemovesSession(t *testing.T) {
 }
 
 func TestRealManagerRejectsMalformedNonNullCandidate(t *testing.T) {
-	manager := rtc.NewManager("", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	manager := newRealTestManager(t, "")
 	t.Cleanup(func() {
-		if err := manager.CloseAll("test_teardown"); err != nil {
+		if err := manager.CloseAll(closeContext(t), "test_teardown"); err != nil {
 			t.Errorf("CloseAll(test_teardown) error = %v", err)
 		}
 	})
@@ -58,7 +60,7 @@ func TestRealManagerRejectsMalformedNonNullCandidate(t *testing.T) {
 	if manager.Count() != 1 {
 		t.Fatalf("malformed candidate changed active registry count = %d, want 1", manager.Count())
 	}
-	if err := manager.CloseAll("test_teardown"); err != nil {
+	if err := manager.CloseAll(closeContext(t), "test_teardown"); err != nil {
 		t.Fatalf("CloseAll(test_teardown) error = %v", err)
 	}
 	if manager.Count() != 0 {
@@ -67,10 +69,7 @@ func TestRealManagerRejectsMalformedNonNullCandidate(t *testing.T) {
 }
 
 func TestRealManagerGatherTimeoutReturns504AndRemovesSession(t *testing.T) {
-	manager := rtc.NewManager(
-		"stun:127.0.0.1:9",
-		slog.New(slog.NewTextHandler(io.Discard, nil)),
-	)
+	manager := newRealTestManager(t, "stun:127.0.0.1:9")
 	server := New(
 		manager,
 		t.TempDir(),
@@ -89,6 +88,37 @@ func TestRealManagerGatherTimeoutReturns504AndRemovesSession(t *testing.T) {
 		t.Fatalf("status = %d, want 504; body=%s", response.Code, response.Body.String())
 	}
 	waitForRegistryCount(t, manager, 0)
+}
+
+func newRealTestManager(t *testing.T, stunURL string) *rtc.Manager {
+	t.Helper()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	manager, err := rtc.NewManager(stunURL, rtc.ManagerDependencies{
+		PipelineFactory: signalingBlockingFactory{},
+		Clock:           rtc.SystemClock{},
+		Logger:          logger,
+	})
+	if err != nil {
+		t.Fatalf("rtc.NewManager() error = %v", err)
+	}
+	return manager
+}
+
+func closeContext(t *testing.T) context.Context {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+	return ctx
+}
+
+type signalingBlockingFactory struct{}
+
+func (signalingBlockingFactory) Connect(
+	ctx context.Context,
+	_, _ string,
+) (pipeline.ClientSet, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
 }
 
 func createRealManagerSession(t *testing.T, server *Server) string {
