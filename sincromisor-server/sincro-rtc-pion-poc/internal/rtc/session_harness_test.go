@@ -15,11 +15,12 @@ func newManagedLifecycleSession(
 	factory pipeline.ClientSetFactory,
 ) (*Manager, *Session) {
 	t.Helper()
-	manager, err := NewManager("", ManagerDependencies{
+	manager, err := NewManager("", ManagerConfig{
 		PipelineFactory: factory,
 		InputObserver:   testInputObserver(),
 		Clock:           clock,
 		Logger:          testLogger(),
+		MaxSessions:     100,
 	})
 	if err != nil {
 		t.Fatalf("NewManager() error = %v", err)

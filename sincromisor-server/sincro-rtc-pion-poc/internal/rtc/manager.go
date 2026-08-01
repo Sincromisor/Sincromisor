@@ -20,6 +20,8 @@ type Offer struct {
 	SDP      string
 	Type     string
 	TalkMode string
+	// OnClosedはSessionの全resource join後にserver発行IDを通知し、cached Answerを有限tombstoneへ変換する。
+	OnClosed func(string)
 }
 
 // Answer は candidate 収集済み SDP と server が払い出した ULID session ID を返す。
@@ -27,6 +29,7 @@ type Answer struct {
 	SDP       string `json:"sdp"`
 	Type      string `json:"type"`
 	SessionID string `json:"session_id"`
+	Revision  int    `json:"offer_revision"`
 }
 
 // Candidate は Frontend の Trickle ICE candidate または end-of-candidates を表す。
@@ -39,16 +42,17 @@ type Candidate struct {
 	UsernameFragment *string `json:"usernameFragment,omitempty"`
 }
 
-// ManagerDependencies は全 session で共有する factory、入力observer、clock、logger の起動時境界である。
+// ManagerConfig は全sessionで共有するdependencyとactive session上限の起動時境界である。
 //
-// NewManager は nil を拒否する。sessionごとに同じ factoryから専用Coordinatorを1つ作り、
+// NewManager はnil dependencyと非正数MaxSessionsを拒否する。sessionごとに同じfactoryから専用Coordinatorを1つ作り、
 // observerはprocess集計を行うため全sessionから同期的に呼ばれる。Clockは各session固有timerだけを
 // 生成するため、共有dependencyはすべて並行利用可能でなければならない。
-type ManagerDependencies struct {
+type ManagerConfig struct {
 	PipelineFactory pipeline.ClientSetFactory
 	InputObserver   audiomedia.InputObserver
 	Clock           Clock
 	Logger          *slog.Logger
+	MaxSessions     int
 }
 
 // Manager は active PeerConnection の registry と process-wide shutdown を所有する。
@@ -56,13 +60,15 @@ type ManagerDependencies struct {
 // registry lock は map の参照だけを保護し、PeerConnection I/O や Close 待機中は保持しない。
 // dependenciesはsessionごとのCoordinator生成とdeadlineへ再利用し、resource自体はManagerへ共有しない。
 // unknown と closed session は candidate endpoint で区別できるprocess-lifetime tombstoneとして保持する。
-// tombstoneはprocess再起動まで保持し、現在のPoCではTTLや上限による削除を行わない。
+// initial Offer の有限TTL tombstoneはsignaling registryが別に所有し、このmapはcandidate契約専用である。
 type Manager struct {
 	mu            sync.RWMutex
 	sessions      map[string]*Session
 	closed        map[string]struct{}
 	configuration webrtc.Configuration
-	dependencies  ManagerDependencies
+	config        ManagerConfig
+	reservations  int
+	maxSessions   int
 }
 
 // NewManager は optional STUN URL をPion configurationへ反映し、必須dependencyを検証する。
@@ -70,10 +76,13 @@ type Manager struct {
 // STUN URLの構文検証は起動時config loaderの責務であり、ここでは再検証しない。network I/O、
 // PeerConnection、CoordinatorはCreateまで開始しない。Manager はprocess shutdown時に5秒上限の
 // contextを渡してCloseAllを呼ぶ必要がある。TURN、固定UDP mux、NAT rewriteは対象外である。
-func NewManager(stunURL string, dependencies ManagerDependencies) (*Manager, error) {
-	if dependencies.PipelineFactory == nil || dependencies.InputObserver == nil ||
-		dependencies.Clock == nil || dependencies.Logger == nil {
+func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
+	if config.PipelineFactory == nil || config.InputObserver == nil ||
+		config.Clock == nil || config.Logger == nil {
 		return nil, errors.New("rtc manager dependencies must not be nil")
+	}
+	if config.MaxSessions <= 0 {
+		return nil, errors.New("rtc manager max sessions must be positive")
 	}
 	configuration := webrtc.Configuration{}
 	if stunURL != "" {
@@ -83,7 +92,8 @@ func NewManager(stunURL string, dependencies ManagerDependencies) (*Manager, err
 		sessions:      make(map[string]*Session),
 		closed:        make(map[string]struct{}),
 		configuration: configuration,
-		dependencies:  dependencies,
+		config:        config,
+		maxSessions:   config.MaxSessions,
 	}, nil
 }
 
@@ -102,12 +112,23 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 	if offer.TalkMode != "chat" && offer.TalkMode != "sincro" {
 		return Answer{}, errors.New("talk mode must be chat or sincro")
 	}
-	sessionDependencies := SessionDependencies{
-		PipelineFactory: m.dependencies.PipelineFactory,
-		InputObserver:   m.dependencies.InputObserver,
-		Clock:           m.dependencies.Clock,
+	// Coordinator、PeerConnection、codec作成前にadmissionを予約する。Session公開またはsetup失敗まで
+	// registry lock配下のactive+reservation合計へ含め、並行作成でもMaxSessionsを超えない。
+	if err := m.reserve(); err != nil {
+		return Answer{}, err
 	}
-	coordinator, err := pipeline.NewCoordinator(sessionDependencies.PipelineFactory, m.dependencies.Logger)
+	reserved := true
+	defer func() {
+		if reserved {
+			m.releaseReservation()
+		}
+	}()
+	sessionDependencies := SessionDependencies{
+		PipelineFactory: m.config.PipelineFactory,
+		InputObserver:   m.config.InputObserver,
+		Clock:           m.config.Clock,
+	}
+	coordinator, err := pipeline.NewCoordinator(sessionDependencies.PipelineFactory, m.config.Logger)
 	if err != nil {
 		return Answer{}, err
 	}
@@ -128,14 +149,21 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 		coordinator,
 		sessionDependencies.InputObserver,
 		sessionDependencies.Clock,
-		m.dependencies.Logger,
-		m.remove,
+		m.config.Logger,
+		func(closedID string) {
+			m.remove(closedID)
+			if offer.OnClosed != nil {
+				offer.OnClosed(closedID)
+			}
+		},
 	)
 	if err != nil {
 		_ = coordinator.Close()
 		return Answer{}, err
 	}
 	m.mu.Lock()
+	m.reservations--
+	reserved = false
 	m.sessions[sessionID] = session
 	m.mu.Unlock()
 
@@ -144,7 +172,28 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 		_ = session.Close("offer_failed")
 		return Answer{}, err
 	}
-	return Answer{SDP: answer.SDP, Type: answer.Type.String(), SessionID: sessionID}, nil
+	return Answer{SDP: answer.SDP, Type: answer.Type.String(), SessionID: sessionID, Revision: 1}, nil
+}
+
+// ErrSessionCapacity はactive Sessionと作成予約の合計がMaxSessionsへ到達したことを表す。
+// 別Sessionのcleanup完了後は再試行できる。
+var ErrSessionCapacity = errors.New("rtc session capacity reached")
+
+// reserve はactive Sessionとresource作成前の他reservationを合算し、作成可否をatomicに確定する。
+func (m *Manager) reserve() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if len(m.sessions)+m.reservations >= m.maxSessions {
+		return ErrSessionCapacity
+	}
+	m.reservations++
+	return nil
+}
+
+func (m *Manager) releaseReservation() {
+	m.mu.Lock()
+	m.reservations--
+	m.mu.Unlock()
 }
 
 // AddCandidate は active session へ Trickle ICE candidate を適用する。
@@ -228,5 +277,5 @@ func (m *Manager) remove(sessionID string) {
 	m.closed[sessionID] = struct{}{}
 	activeSessions := len(m.sessions)
 	m.mu.Unlock()
-	m.dependencies.Logger.Info("session registry updated", "session_id", sessionID, "active_sessions", activeSessions)
+	m.config.Logger.Info("session registry updated", "session_id", sessionID, "active_sessions", activeSessions)
 }

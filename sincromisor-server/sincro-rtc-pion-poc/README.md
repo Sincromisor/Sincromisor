@@ -40,8 +40,16 @@ npm --prefix ./sincromisor-frontend run build
 cd sincromisor-server/sincro-rtc-pion-poc
 go run ./cmd/pion-poc \
   --http 127.0.0.1:8080 \
-  --frontend-dir ../../sincromisor-frontend/dist
+  --frontend-dir ../../sincromisor-frontend/dist \
+  --max-sessions 100 \
+  --offer-cache-capacity 1000 \
+  --offer-cache-ttl 2m
 ```
+
+initial signalingのproduction上限はtyped configを正本とする。`--max-sessions`は1〜100
+（default 100）、`--offer-cache-capacity`は1〜1000（default 1000）、
+`--offer-cache-ttl`は30秒〜2分（default 2分）の範囲で、小さい値だけを指定できる。
+範囲外の値はlistenerを開く前にstartup errorとなる。
 
 Google Chrome stable で
 `http://127.0.0.1:8080/simple-vrm/index.html` を開き、マイク権限を許可して会話接続を開始する。
@@ -82,12 +90,12 @@ Pion の local integration test は loopback UDP socket を使用する。sandbo
 
 ## PoC boundaries
 
-PoC は initial Offer と local host candidate だけを対象とする。session ID 付き update Offer は 501、
+PoC は冪等なinitial Offerとlocal host candidateだけを対象とする。session ID付きupdate Offerは501、
 unknown / closed session の candidate は HTTP 200 と `status:false` を返す。
 
 次は後続 phase の責務である。
 
-- ICE restart、`offer_request_id`、`offer_revision`
+- ICE restartとrevision 2以降のupdate Offer
 - fixed UDP mux、NAT / firewall、TURN、Firefox
 - NACK / PLC、RTCP metrics
 - impairment、soak、performance comparison、production compose

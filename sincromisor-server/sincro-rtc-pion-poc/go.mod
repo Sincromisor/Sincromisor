@@ -4,6 +4,7 @@ go 1.26.5
 
 require (
 	github.com/coder/websocket v1.8.15
+	github.com/google/uuid v1.6.0
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/pion/interceptor v0.1.45
 	github.com/pion/mediadevices v0.10.0
@@ -14,7 +15,6 @@ require (
 )
 
 require (
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/pion/datachannel v1.6.2 // indirect
 	github.com/pion/dtls/v3 v3.1.5 // indirect
 	github.com/pion/ice/v4 v4.3.0 // indirect

@@ -12,17 +12,29 @@ import (
 	"time"
 )
 
-const defaultGatherTimeout = 5 * time.Second
+const (
+	defaultGatherTimeout = 5 * time.Second
+	// DefaultMaxSessions はproductionで許可するactive session数の既定値かつ上限である。
+	DefaultMaxSessions = 100
+	// DefaultOfferCacheCapacity はin-flightを含むinitial Offer registryの既定値かつ上限である。
+	DefaultOfferCacheCapacity = 1000
+	// DefaultOfferCacheTTL はcompleted Answerとtombstoneの既定TTLかつ上限である。
+	DefaultOfferCacheTTL = 2 * time.Minute
+	minOfferCacheTTL     = 30 * time.Second
+)
 
-// Config は HTTP、static 配信、ICE に必要な起動時設定を保持する。
+// Config はHTTP、static配信、ICE、session/cache admissionに必要な起動時設定を保持する。
 //
 // Load が path と URL を検証するため、下流 package は filesystem や URL の再検証を行わない。
 // production compose、Consul、TURN の設定はこの PoC の対象外である。
 type Config struct {
-	HTTPAddress   string
-	FrontendDir   string
-	STUNURL       string
-	GatherTimeout time.Duration
+	HTTPAddress        string
+	FrontendDir        string
+	STUNURL            string
+	GatherTimeout      time.Duration
+	MaxSessions        int
+	OfferCacheCapacity int
+	OfferCacheTTL      time.Duration
 }
 
 // Load は command line flag を解析し、起動前に有限 timeout とローカル実行境界を検証する。
@@ -36,6 +48,9 @@ func Load(args []string) (Config, error) {
 	flags.StringVar(&cfg.FrontendDir, "frontend-dir", "", "built frontend directory")
 	flags.StringVar(&cfg.STUNURL, "stun", "", "optional STUN URL")
 	flags.DurationVar(&cfg.GatherTimeout, "gather-timeout", defaultGatherTimeout, "ICE gathering timeout")
+	flags.IntVar(&cfg.MaxSessions, "max-sessions", DefaultMaxSessions, "active session limit")
+	flags.IntVar(&cfg.OfferCacheCapacity, "offer-cache-capacity", DefaultOfferCacheCapacity, "initial Offer registry limit")
+	flags.DurationVar(&cfg.OfferCacheTTL, "offer-cache-ttl", DefaultOfferCacheTTL, "completed initial Offer lifetime")
 	if err := flags.Parse(args); err != nil {
 		return Config{}, fmt.Errorf("parse flags: %w", err)
 	}
@@ -47,6 +62,15 @@ func Load(args []string) (Config, error) {
 	}
 	if cfg.GatherTimeout <= 0 {
 		return Config{}, errors.New("gather-timeout must be positive")
+	}
+	if cfg.MaxSessions < 1 || cfg.MaxSessions > DefaultMaxSessions {
+		return Config{}, fmt.Errorf("max-sessions must be between 1 and %d", DefaultMaxSessions)
+	}
+	if cfg.OfferCacheCapacity < 1 || cfg.OfferCacheCapacity > DefaultOfferCacheCapacity {
+		return Config{}, fmt.Errorf("offer-cache-capacity must be between 1 and %d", DefaultOfferCacheCapacity)
+	}
+	if cfg.OfferCacheTTL < minOfferCacheTTL || cfg.OfferCacheTTL > DefaultOfferCacheTTL {
+		return Config{}, fmt.Errorf("offer-cache-ttl must be between %s and %s", minOfferCacheTTL, DefaultOfferCacheTTL)
 	}
 	if cfg.FrontendDir == "" {
 		return Config{}, errors.New("frontend-dir is required")

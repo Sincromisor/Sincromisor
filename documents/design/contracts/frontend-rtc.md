@@ -65,11 +65,17 @@
     "sdp": "...",
     "type": "offer",
     "talk_mode": "chat",
-    "session_id": "optional-existing-session-id"
+    "offer_request_id": "8e0e18a9-243b-4c72-8e97-a1b103854e42",
+    "offer_revision": 1,
+    "previous_session_id": "01K1AF2Y0H0000000000000000"
 }
 ```
 
-`talk_mode` は `chat` または `sincro` を想定する。
+initial Offerでは`session_id`を送らず、`talk_mode`は`chat`または`sincro`、
+`offer_request_id`はFrontend発行UUID、`offer_revision`は`1`を必須とする。
+`previous_session_id`は任意のULIDで、旧sessionとの相関ログだけに使う。
+同じrequest IDをretryするときは同じSDP bytesを送り、SDPを再生成した場合は新しいUUIDを発行する。
+`session_id`付きupdate Offerは現段階ではHTTP 501を返す。
 
 ### Offer Response
 
@@ -77,9 +83,15 @@
 {
     "sdp": "...",
     "type": "answer",
-    "session_id": "..."
+    "session_id": "01K1AF2Y0H0000000000000001",
+    "offer_revision": 1
 }
 ```
+
+同じrequest IDと同じSDP bytesの直列・並行retryは、candidate収集済みの同じAnswerとsession IDを返す。
+request IDは受信したSDP bytesのSHA-256へ結び付け、異なるSDPへの再利用を受理しない。
+completed Answerと終了sessionのtombstoneは2分保持し、両者とin-flightを合計1000件まで保持する。
+期限内entryをcapacity都合でevictしない。active sessionは作成予約を含めprocess当たり100件までとする。
 
 ### Candidate Request
 
@@ -108,14 +120,20 @@ end-of-candidates は `candidate: null` で送る。
 
 ## Error Semantics
 
-- セッション上限超過は HTTP 429 と `{"error":"Too many requests."}` を返す。
+- JSON syntax/type、UUID/ULID format、SDP不正はHTTP 400を返す。
+- 同じrequest IDを異なるSDPへ再利用した場合はHTTP 409を返す。
+- 終了sessionの有効なinitial Offer tombstoneはHTTP 410を返す。
+- HTTP bodyの1 MiB超過またはSDPの256 KiB超過はHTTP 413を返す。
+- session上限またはinitial Offer registry上限超過はHTTP 429と`{"error":"Too many requests."}`を返す。
+- candidate収集が起動時設定の期限を超えた場合はHTTP 504を返し、失敗結果をcacheしない。
 - 不正 DataChannel または想定外 track は session process 側で終了対象とする。
 - candidate format 異常はログに残し、可能な範囲で接続継続を優先する。
 - `expression_code` の未知値や欠落はフロント側で neutral として扱う。
 
 ## Timeout / Retry
 
-- Trickle ICE 方式で Offer を先に送信し、candidate は逐次 `/candidate` へ送る。
+- FrontendからPionへはTrickle ICEを使う。PionからのcandidateはAnswer SDPへ収集して返すhalf-trickleとする。
+- initial OfferのHTTP responseを失った場合は、同じrequest IDと同じSDPで再送する。
 - フロントは ICE restart 付き Offer により再接続する。
 - 再接続は単一タイマーで管理し、指数 backoff と jitter を使う。
 

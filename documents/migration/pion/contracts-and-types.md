@@ -41,6 +41,7 @@ endpointと既存fieldは[Frontend RTC契約](../../design/contracts/frontend-rt
 - initial Offerは `session_id` なし、Frontendが生成したUUIDの `offer_request_id`、`offer_revision: 1` を送る。HTTP timeout後に同じOfferを再送する場合は同じrequest IDを使い、SDPを再生成する場合は新しいrequest IDを発行する。
 - backendはsession作成前に `offer_request_id` とOffer SDP hashをin-flight registryへ登録する。同じrequest ID / SDPの並行requestは同じ処理結果を待ち、異なるSDPの並行requestはHTTP 409で拒否する。
 - backendは `offer_request_id`、Offer SDP hash、発行したsession ID、完成済みAnswerを、Frontendの最大retry期間より長い有限TTLで保持する。同じrequest IDと同じSDPの再送には同じAnswerを返し、同じrequest IDを異なるSDPへ再利用した場合はHTTP 409で拒否する。session終了後もTTL中はtombstoneを保持し、再送を新規sessionとして扱わずHTTP 410を返す。cacheはsession admissionと独立した件数上限を持ち、expired entry以外を黙ってevictせず、上限時は新規initial OfferをHTTP 429で拒否する。
+- Pion Phase 3ではcompleted AnswerとtombstoneのTTLを2分、in-flightを含むregistry上限を1000件、active sessionと作成予約の合計を100件とする。HTTP bodyは1 MiB、decoded SDPは256 KiBを上限とし、registryのexpired entryはrequest受付時と30秒周期で回収する。
 - backendはULIDのsession IDを発行し、Answerへ同じrevisionを返す。
 - ICE restart付きupdate Offerは同じsession IDと、直前より1大きいrevisionで送る。
 - candidate requestはsession IDとrevisionを持つ。通常candidateとend-of-candidatesの両方を同じgenerationへ関連付ける。

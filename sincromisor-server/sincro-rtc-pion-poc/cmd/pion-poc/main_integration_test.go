@@ -174,7 +174,7 @@ func createProcessSession(t *testing.T, client *webrtc.PeerConnection, baseURL s
 		t.Fatal("client local description is nil")
 	}
 	body := fmt.Sprintf(
-		`{"sdp":%q,"type":"offer","talk_mode":"chat"}`,
+		`{"sdp":%q,"type":"offer","talk_mode":"chat","offer_request_id":"ca55c1dc-6b83-4f7d-a4e2-2e9fb65a0eae","offer_revision":1}`,
 		local.SDP,
 	)
 	response, err := http.Post(
