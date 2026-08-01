@@ -4,11 +4,10 @@
 
 ## タスク一覧（自動生成 / 全 16 件）
 
-### open（未完） — 9 件
+### open（未完） — 8 件
 
 | タスク                                                                                                                                 | タイトル                                                     | 判定 | 依存                                                                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------ |
-| [task-260802032857-pion-phase-3-session-lifecycle-readiness](./task-260802032857-pion-phase-3-session-lifecycle-readiness/task.md)     | Pion Phase 3のRTC session lifecycleとreadinessを統合する     | —    | `task-260726211012-pion-phase-2-pipeline-reset-gate-2`                                                             |
 | [task-260802032903-pion-phase-3-inbound-audio-pipeline](./task-260802032903-pion-phase-3-inbound-audio-pipeline/task.md)               | Pion Phase 3の受信音声をGo pipelineへ接続する                | —    | `task-260802032857-pion-phase-3-session-lifecycle-readiness`                                                       |
 | [task-260802032908-pion-phase-3-outbound-audio-datachannel](./task-260802032908-pion-phase-3-outbound-audio-datachannel/task.md)       | Pion Phase 3の合成音声とDataChannel出力を統合する            | —    | `task-260802033116-pion-phase-3-synthesized-audio-decode`                                                          |
 | [task-260802032912-pion-phase-3-initial-signaling-idempotency](./task-260802032912-pion-phase-3-initial-signaling-idempotency/task.md) | Pion Phase 3のinitial signalingを冪等化し境界を強化する      | —    | `task-260802032857-pion-phase-3-session-lifecycle-readiness`                                                       |
@@ -18,16 +17,17 @@
 | [task-260802033044-pion-phase-3-production-candidate-gate-3](./task-260802033044-pion-phase-3-production-candidate-gate-3/task.md)     | Pion Phase 3のproduction candidateを検証してGate 3を判定する | —    | `task-260802032922-pion-phase-3-observability-gate-3`                                                              |
 | [task-260802033116-pion-phase-3-synthesized-audio-decode](./task-260802033116-pion-phase-3-synthesized-audio-decode/task.md)           | Pion Phase 3の合成音声container decodeを実装する             | —    | `task-260802032903-pion-phase-3-inbound-audio-pipeline`                                                            |
 
-### done（完了） — 6 件
+### done（完了） — 7 件
 
-| タスク                                                                                                                           | タイトル                                                              | 判定    | 依存                                                        |
-| -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------- | ----------------------------------------------------------- |
-| [task-260713013305-fix-webrtc-session-lifecycle](./task-260713013305-fix-webrtc-session-lifecycle/task.md)                       | WebRTCセッション管理の停止耐性と音声フレーム処理を修正する            | ✅ PASS | —                                                           |
-| [task-260713030640-testclient-httpx2](./task-260713030640-testclient-httpx2/task.md)                                             | TestClientをhttpx2へ移行して非推奨警告を解消する                      | ✅ PASS | —                                                           |
-| [task-260726150803-pion-codec-poc-gate-1](./task-260726150803-pion-codec-poc-gate-1/task.md)                                     | Pion最小PoCでRTC移行経路を確定する                                    | ✅ PASS | —                                                           |
-| [task-260726211002-pion-phase-2-messagepack-contract](./task-260726211002-pion-phase-2-messagepack-contract/task.md)             | Pion Phase 2のMessagePack互換層を固定する                             | ✅ PASS | `task-260726150803-pion-codec-poc-gate-1`                   |
-| [task-260726211007-pion-phase-2-pipeline-websocket-clients](./task-260726211007-pion-phase-2-pipeline-websocket-clients/task.md) | Pion Phase 2のGo pipeline WebSocket clientを実装する                  | ✅ PASS | `task-260726211002-pion-phase-2-messagepack-contract`       |
-| [task-260726211012-pion-phase-2-pipeline-reset-gate-2](./task-260726211012-pion-phase-2-pipeline-reset-gate-2/task.md)           | Pion Phase 2のpipeline resetを実装してRTC pipeline Gate 2を成立させる | ✅ PASS | `task-260726211007-pion-phase-2-pipeline-websocket-clients` |
+| タスク                                                                                                                             | タイトル                                                              | 判定    | 依存                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------- | ----------------------------------------------------------- |
+| [task-260713013305-fix-webrtc-session-lifecycle](./task-260713013305-fix-webrtc-session-lifecycle/task.md)                         | WebRTCセッション管理の停止耐性と音声フレーム処理を修正する            | ✅ PASS | —                                                           |
+| [task-260713030640-testclient-httpx2](./task-260713030640-testclient-httpx2/task.md)                                               | TestClientをhttpx2へ移行して非推奨警告を解消する                      | ✅ PASS | —                                                           |
+| [task-260726150803-pion-codec-poc-gate-1](./task-260726150803-pion-codec-poc-gate-1/task.md)                                       | Pion最小PoCでRTC移行経路を確定する                                    | ✅ PASS | —                                                           |
+| [task-260726211002-pion-phase-2-messagepack-contract](./task-260726211002-pion-phase-2-messagepack-contract/task.md)               | Pion Phase 2のMessagePack互換層を固定する                             | ✅ PASS | `task-260726150803-pion-codec-poc-gate-1`                   |
+| [task-260726211007-pion-phase-2-pipeline-websocket-clients](./task-260726211007-pion-phase-2-pipeline-websocket-clients/task.md)   | Pion Phase 2のGo pipeline WebSocket clientを実装する                  | ✅ PASS | `task-260726211002-pion-phase-2-messagepack-contract`       |
+| [task-260726211012-pion-phase-2-pipeline-reset-gate-2](./task-260726211012-pion-phase-2-pipeline-reset-gate-2/task.md)             | Pion Phase 2のpipeline resetを実装してRTC pipeline Gate 2を成立させる | ✅ PASS | `task-260726211007-pion-phase-2-pipeline-websocket-clients` |
+| [task-260802032857-pion-phase-3-session-lifecycle-readiness](./task-260802032857-pion-phase-3-session-lifecycle-readiness/task.md) | Pion Phase 3のRTC session lifecycleとreadinessを統合する              | ✅ PASS | `task-260726211012-pion-phase-2-pipeline-reset-gate-2`      |
 
 ### superseded（廃止） — 1 件
 
