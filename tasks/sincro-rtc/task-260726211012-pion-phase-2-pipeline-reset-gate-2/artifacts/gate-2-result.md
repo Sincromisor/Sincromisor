@@ -232,3 +232,67 @@ Gate entrypointは成功環境で次を独立deadlineとfield-level assertionに
 今回の実環境は初回接続deadlineでFAILしたため、4 stage、reset、2 turn目のfield値は未観測である。
 Consul data directory消去は破壊的かつscope外なので実施していない。Gate 2とPhase 3開始条件は
 引き続きFAILとする。
+
+## attempt 6
+
+### 判定
+
+FAIL
+
+2026-08-02、外部でConsulの保存状態が修復され、Redis / S3 / VoiceVox、4 Python service、
+各Consul agentがhealthyとなった環境で固定commandを再実行した。Consul catalogは現行
+`172.23.*`の`SincroRedis` / `SincroS3` / `SincroVoiceVox` / Extractor / Recognizer /
+Processor / Synthesizer各1件へ整理済みである。実装担当はproduction service、compose、
+container dataを変更していない。
+
+初回実行では、proxyのdownstream handshake完了とupstream dial完了のpublication raceにより、
+`Start`成功直後の即時accept assertionがRecognizerを未接続と誤判定した。既存の30秒
+start deadline内で4 upstream acceptを待つ未commit差分により、4接続到達を観測した。
+
+### 固定fixtureの実行結果
+
+attempt 5と同じ固定command、talk mode `sincro`、`sample02.wav`を使った。WAV SHA-256は
+`3f9169ec597de0f8fc17b4b6e4f89ea05e8792f42bfb48bfa7c33277318d3759`、
+決定的に16 kHz mono s16leへ変換したPCM SHA-256は
+`a0375e761e7a483117a7535a5da7ed0ef0036611916a0b0e534403e551789933`である。
+
+4 upstream connection成立後、音声と末尾silenceを送信したが、15秒以内にExtractor confirmed resultを
+観測できず、約21秒で次のFAILとなった。
+
+```text
+confirmed Extractor result was not observed within 15s
+```
+
+Extractor logはWebSocket接続、worker初期化、`Start Extractor.extract.`を記録し、例外やresult送信を
+記録しないままtest cleanupで切断した。同じimage内のproduction YAMNetとworkerと同じ3520 sample chunkで
+fixtureを分類すると、`sample02.wav`のSpeech最高scoreは`0.5859`だった。production判定は
+`category_name == "Speech" && score > 0.6`であるため、固定fixtureは発話開始条件を満たさない。
+比較診断した`sample01.wav`もSpeech最高scoreは`0.5859`だった。
+
+### 代替fixture診断
+
+`utils/test-nue/sample.wav`をcommit対象にせず一時診断した。
+
+- Git tracked、mode `100644`、WAV SHA-256
+  `810d6cabbfcf7963d1a3e4342af57e6046258cfbca65f8e2bc61a8cd84bdf0d4`
+- 16 kHz / mono / s16le、4.714688秒、WAV 150948 byte、PCM 150870 byte
+- commit `26f2bc3c4b244e881e8723e5967e9bdf76386225`でnue-asr動作確認用に追加
+- 隣接scriptの期待文字列は「おはようございます。今日もいい天気ですね。」
+
+このfixtureではExtractor partialとRecognizer partial「おはよう。」まで観測したが、confirmed前に
+pipelineがresetし、継続PCMが`pipeline is unavailable`となったためconfirmedは証明できていない。
+また、元音声の作成者、取得元、license、本人同意、privacy metadataがrepository内にない。
+固定fixtureの無断差替えやcommitは行わず、Gate sourceは`sample02.wav`へ戻した。
+
+### stage / reset / close観測
+
+- 初回4 upstream WebSocket接続: 観測
+- Extractor confirmed result: 固定fixtureのVAD閾値不適合により未観測
+- Recognizer non-empty text: 固定fixtureでは未観測
+- Processor final response / history: 未観測
+- Synthesizer encoded voice / mora / speaking time: 未観測
+- generation reset後の4接続再作成と2 turn目: 未観測
+- Gate成功経路のClose後active connection 0: 未観測
+
+固定fixtureで4 stage、reset後2 turn目、Closeを完走していないため、Gate 2とPhase 3開始条件はFAILの
+ままとする。

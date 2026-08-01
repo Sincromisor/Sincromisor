@@ -430,3 +430,49 @@ stale commentと新規TODOはない。`waitGate2Text`、`waitGate2Synthesizer`�
 - Verification: module format / vet / unit / full race / tidy、repository gate、tasks / commit checkはPASS。
 - Remaining Gate: 実Python Gate 2は外部Consul restart loopによりFAIL。backendがhealthyな環境で
   4 stage、reset後2 turn目、Close active 0のfield-level exitを完走する必要がある。
+
+## attempt 6
+
+### 判断と環境修復後の結果
+
+- 外部でConsul保存状態、stale registration、Redis / Consul agentが修復され、現行7 serviceが
+  passingとなった環境で固定Gate 2を再実行した。実装担当はservice restart、compose、
+  container data変更を行っていない。
+- 初回実行でGate proxyのdownstream handshake完了後、upstream dial完了前に`Start`が返るraceを検出した。
+  即時accept assertionを既存30秒start deadline内の4 upstream待機へ変更した。期限の延長や
+  production code変更ではない。
+- 修正後は4 upstream接続まで到達したが、固定`sample02.wav`はproduction YAMNetのSpeech最高scoreが
+  `0.5859`で、workerのstrict threshold `> 0.6`を満たさない。Extractor logは開始後result / errorなしで、
+  confirmed resultを15秒以内に観測できずFAILした。
+- `sample01.wav`も同じ最高score `0.5859`だった。`utils/test-nue/sample.wav`は診断時に
+  Extractor partialとRecognizer partialまで進んだが、confirmed前にpipeline resetとなった。
+  同fixtureにはsource / license / consent / privacy metadataがないため採用せず、固定fixtureへ戻した。
+- 4 stage、reset後2 turn目、Close成功経路を完走しておらず、Gate 2はFAILのままである。
+  詳細なhash、format、ログ境界、stage別結果は`artifacts/gate-2-result.md` attempt 6を参照。
+
+### 検証と作業停止時点
+
+- publication wait差分を含む`go test ./internal/pipeline`: PASS
+- 固定Gate 2: FAIL（`confirmed Extractor result was not observed within 15s`）
+- full format / vet / unit / race / tidy、repository gate、tasks checkは、追加変更・commit停止指示により
+  attempt 6では未実行
+- worktreeには`internal/pipeline/gate2_python_services_test.go`のpublication wait差分だけを保持し、
+  commitしていない
+
+### ドキュメント同期
+
+- state artifactへattempt 6の環境修復、4接続到達、固定fixtureのVAD不適合、代替fixture診断、
+  未観測stageを追記した。
+- production API、wire schema、endpoint、compose、公開挙動は変更していないため、
+  `documents/design/`、migration文書、生成物の同期は不要。
+
+### Comment audit
+
+attempt 6のworktree差分はtest codeのみでproduction comment audit対象外である。
+
+| path                                              | symbol / block / decision / flow  | kind                          | current comment                | reader question                                      | required reader knowledge                                  | decision | action / omission reason                                                                         | reviewer note              |
+| ------------------------------------------------- | --------------------------------- | ----------------------------- | ------------------------------ | ---------------------------------------------------- | ---------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------ | -------------------------- |
+| `internal/pipeline/gate2_python_services_test.go` | initial upstream accept assertion | test-only publication barrier | initial connectionを即時assert | Start成功時に実service接続も完了している保証はあるか | proxy downstream handshakeとupstream dialは別publication点 | rewrite  | 既存start deadlineを用いる`waitGate2`へ変更。上位test lifecycle commentとstage名で境界を明示する | 未commit差分、期限変更なし |
+
+stale commentと新規TODOはない。追加block commentは、既存`waitGate2`の命名、stage文字列、
+`gate2StartTimeout`から入力、失敗条件、副作用、pipeline上の位置が局所的に完結するため省略した。
