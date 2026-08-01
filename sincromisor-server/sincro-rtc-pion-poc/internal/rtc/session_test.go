@@ -97,7 +97,17 @@ func TestManagerTenSequentialNormalClosesConverge(t *testing.T) {
 
 func TestManagerICERestartKeepsSessionPeerChannelsAndPipeline(t *testing.T) {
 	factory := &recordingBlockingFactory{calls: make(chan pipelineStart, 2)}
-	manager := newTestManagerWithFactory(t, factory)
+	inputObserver := audiomedia.NewInputCounterObserver()
+	manager, err := NewManager("", ManagerConfig{
+		PipelineFactory: factory,
+		InputObserver:   inputObserver,
+		Clock:           SystemClock{},
+		Logger:          testLogger(),
+		MaxSessions:     100,
+	})
+	if err != nil {
+		t.Fatalf("NewManager() error = %v", err)
+	}
 	t.Cleanup(func() {
 		if err := manager.CloseAll(testCloseContext(t), "test_teardown"); err != nil {
 			t.Errorf("CloseAll(test_teardown) error = %v", err)
@@ -124,6 +134,10 @@ func TestManagerICERestartKeepsSessionPeerChannelsAndPipeline(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("WriteSample(initial) error = %v", err)
 	}
+	waitForCondition(t, 3*time.Second, func() bool {
+		return inputObserver.Snapshot().PipelineUnavailable > 0
+	})
+	beforeRestartAudio := inputObserver.Snapshot().PipelineUnavailable
 	select {
 	case call := <-factory.calls:
 		if call.sessionID != answer.SessionID {
@@ -206,10 +220,77 @@ func TestManagerICERestartKeepsSessionPeerChannelsAndPipeline(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("WriteSample(after restart) error = %v", err)
 	}
+	waitForCondition(t, 3*time.Second, func() bool {
+		return inputObserver.Snapshot().PipelineUnavailable > beforeRestartAudio
+	})
 	select {
 	case call := <-factory.calls:
 		t.Fatalf("ICE restart created a second pipeline: %+v", call)
 	case <-time.After(50 * time.Millisecond):
+	}
+}
+
+func TestUpdateFailureAfterRemoteApplyClosesWithoutCachingAnswer(t *testing.T) {
+	manager := newTestManager(t)
+	client, _ := newBrowserPeer(t)
+	t.Cleanup(func() {
+		_ = client.Close()
+		_ = manager.CloseAll(testCloseContext(t), "test_teardown")
+	})
+	initial := negotiatePair(t, manager, client)
+	session := activeSession(t, manager, initial.SessionID)
+
+	restartOffer, err := client.CreateOffer(&webrtc.OfferOptions{ICERestart: true})
+	if err != nil {
+		t.Fatalf("CreateOffer(ICERestart) error = %v", err)
+	}
+	gatherComplete := webrtc.GatheringCompletePromise(client)
+	if err := client.SetLocalDescription(restartOffer); err != nil {
+		t.Fatalf("SetLocalDescription(restart) error = %v", err)
+	}
+	<-gatherComplete
+	restartSDP, _ := singleHostCandidateSDP(t, client.LocalDescription().SDP, "")
+	injectedFailure := errors.New("injected answer failure after remote apply")
+	session.negotiateUpdate = func(
+		_ context.Context,
+		offerSDP string,
+	) (webrtc.SessionDescription, bool, error) {
+		if err := session.pc.SetRemoteDescription(webrtc.SessionDescription{
+			Type: webrtc.SDPTypeOffer,
+			SDP:  offerSDP,
+		}); err != nil {
+			return webrtc.SessionDescription{}, false, err
+		}
+		return webrtc.SessionDescription{}, true, injectedFailure
+	}
+
+	if _, err := manager.Update(context.Background(), UpdateOffer{
+		SDP: restartSDP, Type: "offer", TalkMode: "chat",
+		SessionID: initial.SessionID, OfferRequestID: rtcTestOfferRequestID, Revision: 2,
+	}); !errors.Is(err, injectedFailure) {
+		t.Fatalf("Manager.Update() error = %v, want injected post-apply failure", err)
+	}
+	waitSessionDone(t, session)
+	session.lifecycle.mu.Lock()
+	closeReason := session.lifecycle.closeReason
+	session.lifecycle.mu.Unlock()
+	if closeReason != "update_offer_partial_apply" {
+		t.Fatalf("close reason = %q, want update_offer_partial_apply", closeReason)
+	}
+	session.revision.mu.Lock()
+	current := session.revision.current
+	cached := session.revision.answer
+	inFlight := session.revision.updateInFlight
+	session.revision.mu.Unlock()
+	if current != 1 || cached != initial || inFlight {
+		t.Fatalf("failed update state = revision:%d answer:%+v in_flight:%v, want initial uncached state",
+			current, cached, inFlight)
+	}
+	if _, err := manager.Update(context.Background(), UpdateOffer{
+		SDP: restartSDP, Type: "offer", TalkMode: "chat",
+		SessionID: initial.SessionID, OfferRequestID: rtcTestOfferRequestID, Revision: 2,
+	}); !errors.Is(err, ErrSessionClosed) {
+		t.Fatalf("retry after partial apply error = %v, want ErrSessionClosed without cached Answer", err)
 	}
 }
 
