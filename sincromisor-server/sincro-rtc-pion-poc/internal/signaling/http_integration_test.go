@@ -11,6 +11,7 @@ import (
 
 	"github.com/pion/webrtc/v4"
 
+	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/rtc"
 )
@@ -95,6 +96,7 @@ func newRealTestManager(t *testing.T, stunURL string) *rtc.Manager {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	manager, err := rtc.NewManager(stunURL, rtc.ManagerDependencies{
 		PipelineFactory: signalingBlockingFactory{},
+		InputObserver:   audiomedia.NewInputCounterObserver(),
 		Clock:           rtc.SystemClock{},
 		Logger:          logger,
 	})

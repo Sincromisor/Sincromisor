@@ -15,16 +15,18 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
-// SessionDependencies は session 作成前に検証する遅延 pipeline と deadline の依存境界である。
+// SessionDependencies は session 作成前に検証する遅延 pipeline、入力観測、deadline の依存境界である。
 //
 // PipelineFactory は media readiness 成立後の Coordinator.Start まで network I/O を開始してはならない。
+// InputObserver は process 内の全 Session が共有し、payload を保持せず drop decision を集計する。
 // Clock は Answer 後と transport 後の有限 deadline を生成し、nil dependency は無効である。
 type SessionDependencies struct {
 	PipelineFactory pipeline.ClientSetFactory
+	InputObserver   audiomedia.InputObserver
 	Clock           Clock
 }
 
-// Session は 1 PeerConnection、pipeline Coordinator、codec、timer、session goroutine を所有する。
+// Session は1 PeerConnection、InputProcessor、pipeline Coordinator、codec、timer、session goroutineを所有する。
 //
 // Close は closing を同期的に一度だけ確定して直ちに返す。resource close と join は cleanup goroutine が
 // 継続し、全 resource 終了後だけ closed、registry remove、Done channel closeへ進む。
@@ -33,6 +35,7 @@ type Session struct {
 	talkMode  string
 	pc        *webrtc.PeerConnection
 	pipeline  *pipeline.Coordinator
+	input     *audiomedia.InputProcessor
 	logger    *slog.Logger
 	onClosed  func(string)
 	lifecycle *sessionLifecycle
@@ -45,9 +48,6 @@ type Session struct {
 	outboundSender *webrtc.RTPSender
 	done           chan struct{}
 	closers        sessionResourceClosers
-
-	statsMu sync.Mutex
-	stats   audiomedia.DecodeStats
 }
 
 // sessionResourceClosers はSession cleanupが並行開始して完了を待つ3つの所有resource境界である。
@@ -60,7 +60,7 @@ type sessionResourceClosers struct {
 	pipeline func() error
 }
 
-// newSession は検証済みdependencyからPeerConnection、codec、lifecycle ownerを組み立てる。
+// newSession は検証済みdependencyからPeerConnection、InputProcessor、codec、lifecycle ownerを組み立てる。
 //
 // talk modeとdependencyをresource作成前に拒否する。成功後の全resourceはSession.Closeだけが破棄し、
 // setup途中の失敗は作成済みresourceを同期的に巻き戻してregistryへ公開しない。
@@ -70,6 +70,7 @@ func newSession(
 	configuration webrtc.Configuration,
 	gatherTimeout time.Duration,
 	coordinator *pipeline.Coordinator,
+	inputObserver audiomedia.InputObserver,
 	clock Clock,
 	logger *slog.Logger,
 	onClosed func(string),
@@ -77,8 +78,12 @@ func newSession(
 	if id == "" || (talkMode != "chat" && talkMode != "sincro") {
 		return nil, errors.New("rtc session identity or talk mode is invalid")
 	}
-	if coordinator == nil || clock == nil || logger == nil || onClosed == nil {
+	if coordinator == nil || inputObserver == nil || clock == nil || logger == nil || onClosed == nil {
 		return nil, errors.New("rtc session dependencies must not be nil")
+	}
+	input, err := audiomedia.NewInputProcessor(inputObserver)
+	if err != nil {
+		return nil, err
 	}
 	lifecycle, err := newSessionLifecycle(clock)
 	if err != nil {
@@ -95,7 +100,7 @@ func newSession(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	session := &Session{
-		id: id, talkMode: talkMode, pc: pc, pipeline: coordinator, logger: logger,
+		id: id, talkMode: talkMode, pc: pc, pipeline: coordinator, input: input, logger: logger,
 		onClosed: onClosed, lifecycle: lifecycle, ctx: ctx, cancel: cancel,
 		encoder: encoder, done: make(chan struct{}),
 		closers: sessionResourceClosers{
@@ -250,16 +255,11 @@ func (s *Session) cleanup(reason string) {
 		s.logTransitionError(err)
 	}
 	s.lifecycle.mu.Unlock()
-	s.statsMu.Lock()
-	stats := s.stats
-	s.statsMu.Unlock()
 	s.onClosed(s.id)
 	close(s.done)
 	s.logger.Info("rtc session closed",
 		"session_id", s.id,
 		"reason", reason,
-		"inbound_packets", stats.Packets,
-		"non_zero_samples", stats.NonZeroSample,
 		"cleanup_error", closeErr,
 	)
 }

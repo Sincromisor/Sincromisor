@@ -1,4 +1,4 @@
-// Package media は PoC の browser Opus decode と 1 秒 test tone の Opus encode を担当する。
+// Package media はbrowser RTP/Opusのordering・PCM変換と1秒test toneのOpus encodeを担当する。
 package media
 
 import (
@@ -127,7 +127,8 @@ func (e *ToneEncoder) Close() error {
 // DecodeRemote は RTP payload を pure Go Opus decoder で 48 kHz PCM に変換する。
 //
 // ctx cancellation、RTP read error、decode error のいずれかで終了する。packet は到着順に処理し、
-// resample、reorder、loss concealment は後続 phase に委ねる。onProgress は累積 stats の snapshot を受ける。
+// resample、reorder、loss concealmentを行わない低水準diagnostic契約である。production inboundは
+// InputProcessorを使い、onProgressはこの関数内の累積stats snapshotだけを受ける。
 func DecodeRemote(
 	ctx context.Context,
 	reader RTPReader,

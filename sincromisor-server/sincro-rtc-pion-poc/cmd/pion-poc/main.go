@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/config"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery"
@@ -51,6 +52,7 @@ func run(args []string) error {
 	}
 	sessions, err := rtc.NewManager(cfg.STUNURL, rtc.ManagerDependencies{
 		PipelineFactory: pipelineFactory,
+		InputObserver:   media.NewInputCounterObserver(),
 		Clock:           rtc.SystemClock{},
 		Logger:          logger,
 	})

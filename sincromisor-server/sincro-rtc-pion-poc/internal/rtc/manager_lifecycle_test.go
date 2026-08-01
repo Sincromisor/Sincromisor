@@ -12,6 +12,7 @@ import (
 func TestNewManagerRejectsNilDependencies(t *testing.T) {
 	valid := ManagerDependencies{
 		PipelineFactory: blockingPipelineFactory{},
+		InputObserver:   testInputObserver(),
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 	}
@@ -19,9 +20,18 @@ func TestNewManagerRejectsNilDependencies(t *testing.T) {
 		name string
 		deps ManagerDependencies
 	}{
-		{name: "pipeline factory", deps: ManagerDependencies{Clock: valid.Clock, Logger: valid.Logger}},
-		{name: "clock", deps: ManagerDependencies{PipelineFactory: valid.PipelineFactory, Logger: valid.Logger}},
-		{name: "logger", deps: ManagerDependencies{PipelineFactory: valid.PipelineFactory, Clock: valid.Clock}},
+		{name: "pipeline factory", deps: ManagerDependencies{
+			InputObserver: valid.InputObserver, Clock: valid.Clock, Logger: valid.Logger,
+		}},
+		{name: "input observer", deps: ManagerDependencies{
+			PipelineFactory: valid.PipelineFactory, Clock: valid.Clock, Logger: valid.Logger,
+		}},
+		{name: "clock", deps: ManagerDependencies{
+			PipelineFactory: valid.PipelineFactory, InputObserver: valid.InputObserver, Logger: valid.Logger,
+		}},
+		{name: "logger", deps: ManagerDependencies{
+			PipelineFactory: valid.PipelineFactory, InputObserver: valid.InputObserver, Clock: valid.Clock,
+		}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -36,6 +46,7 @@ func TestCreateRejectsTalkModeBeforePeerConnectionAndPipeline(t *testing.T) {
 	factory := &countingPipelineFactory{}
 	manager, err := NewManager("", ManagerDependencies{
 		PipelineFactory: factory,
+		InputObserver:   testInputObserver(),
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 	})
@@ -58,6 +69,7 @@ func TestCreateRejectsTalkModeBeforePeerConnectionAndPipeline(t *testing.T) {
 func TestCloseAllDeadlineDoesNotForgeDoneOrRegistryRemoval(t *testing.T) {
 	manager, err := NewManager("", ManagerDependencies{
 		PipelineFactory: blockingPipelineFactory{},
+		InputObserver:   testInputObserver(),
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 	})
