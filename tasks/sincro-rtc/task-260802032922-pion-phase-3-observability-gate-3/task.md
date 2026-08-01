@@ -34,39 +34,40 @@ startup/shutdownを実装し、Gate testが機械判定できる状態を作る�
   `github.com/prometheus/client_golang` を固定依存として使う。default global registryは使わない。
 - metric schemaを次に固定する。全counterは `_total`、duration/lag/RTTはseconds、queueはitemsである。
 
-  | name | type | labels / buckets |
-  | --- | --- | --- |
-  | `sincro_rtc_sessions_created_total` | counter | なし |
-  | `sincro_rtc_sessions_active` | gauge | なし |
-  | `sincro_rtc_sessions_closed_total` | counter | `outcome=closed|failed`, `reason`は定義済みclose reason enum |
-  | `sincro_rtc_signaling_requests_total` | counter | `endpoint=config|offer|candidate|statuses`, `status_class=2xx|4xx|5xx` |
-  | `sincro_rtc_signaling_duration_seconds` | histogram | `endpoint`; `.005,.01,.025,.05,.1,.25,.5,1,2.5,5` |
-  | `sincro_rtc_ice_transitions_total` | counter | `from`,`to`はPion enum |
-  | `sincro_rtc_deadlines_total` | counter | `stage=gather|pre_connect|media_readiness|restart|close` |
-  | `sincro_rtc_audio_frames_total` | counter | `direction=in|out`, `outcome=accepted|sent|dropped` |
-  | `sincro_rtc_rtp_drops_total` | counter | `reason=duplicate|late|missing|reorder_flush` |
-  | `sincro_rtc_rtcp_feedback_total` | counter | `type=sr|rr|nack|other` |
-  | `sincro_rtc_rtcp_loss_ratio` | histogram | なし; `0,.001,.01,.05,.1,.25,.5,1` |
-  | `sincro_rtc_rtcp_rtt_seconds` | histogram | なし; `.001,.005,.01,.025,.05,.1,.25,.5,1,2.5,5` |
-  | `sincro_rtc_pacing_lag_seconds` | histogram | なし; `.001,.005,.01,.02,.05,.1,.25,.5,1` |
-  | `sincro_rtc_pacing_aborts_total` | counter | `reason=lag|generation|codec` |
-  | `sincro_rtc_codec_errors_total` | counter | `direction=decode_in|decode_synth|encode_out` |
-  | `sincro_rtc_pipeline_reconnects_total` | counter | `service=extractor|recognizer|processor|synthesizer`, `result=start|success|failure` |
-  | `sincro_rtc_queue_depth` | gauge | `queue=input|speech|text|telop` |
-  | `sincro_rtc_queue_overflows_total` | counter | `queue`, `action=drop_oldest|reject_close` |
-  | `sincro_rtc_datachannel_send_errors_total` | counter | `channel=text|telop` |
-  | `sincro_rtc_session_close_duration_seconds` | histogram | `outcome=success|timeout`; `.005,.01,.025,.05,.1,.25,.5,1,2.5,5` |
+    | name                                        | type      | labels / buckets                                  |
+    | ------------------------------------------- | --------- | ------------------------------------------------- | ----------------------------------------------- | --------------- | ---------------------------- | ------- | -------- |
+    | `sincro_rtc_sessions_created_total`         | counter   | なし                                              |
+    | `sincro_rtc_sessions_active`                | gauge     | なし                                              |
+    | `sincro_rtc_sessions_closed_total`          | counter   | `outcome=closed                                   | failed`, `reason`は定義済みclose reason enum    |
+    | `sincro_rtc_signaling_requests_total`       | counter   | `endpoint=config                                  | offer                                           | candidate       | statuses`, `status_class=2xx | 4xx     | 5xx`     |
+    | `sincro_rtc_signaling_duration_seconds`     | histogram | `endpoint`; `.005,.01,.025,.05,.1,.25,.5,1,2.5,5` |
+    | `sincro_rtc_ice_transitions_total`          | counter   | `from`,`to`はPion enum                            |
+    | `sincro_rtc_deadlines_total`                | counter   | `stage=gather                                     | pre_connect                                     | media_readiness | restart                      | close`  |
+    | `sincro_rtc_audio_frames_total`             | counter   | `direction=in                                     | out`, `outcome=accepted                         | sent            | dropped`                     |
+    | `sincro_rtc_rtp_drops_total`                | counter   | `reason=duplicate                                 | late                                            | missing         | reorder_flush`               |
+    | `sincro_rtc_rtcp_feedback_total`            | counter   | `type=sr                                          | rr                                              | nack            | other`                       |
+    | `sincro_rtc_rtcp_loss_ratio`                | histogram | なし; `0,.001,.01,.05,.1,.25,.5,1`                |
+    | `sincro_rtc_rtcp_rtt_seconds`               | histogram | なし; `.001,.005,.01,.025,.05,.1,.25,.5,1,2.5,5`  |
+    | `sincro_rtc_pacing_lag_seconds`             | histogram | なし; `.001,.005,.01,.02,.05,.1,.25,.5,1`         |
+    | `sincro_rtc_pacing_aborts_total`            | counter   | `reason=lag                                       | generation                                      | codec`          |
+    | `sincro_rtc_codec_errors_total`             | counter   | `direction=decode_in                              | decode_synth                                    | encode_out`     |
+    | `sincro_rtc_pipeline_reconnects_total`      | counter   | `service=extractor                                | recognizer                                      | processor       | synthesizer`, `result=start  | success | failure` |
+    | `sincro_rtc_queue_depth`                    | gauge     | `queue=input                                      | speech                                          | text            | telop`                       |
+    | `sincro_rtc_queue_overflows_total`          | counter   | `queue`, `action=drop_oldest                      | reject_close`                                   |
+    | `sincro_rtc_datachannel_send_errors_total`  | counter   | `channel=text                                     | telop`                                          |
+    | `sincro_rtc_session_close_duration_seconds` | histogram | `outcome=success                                  | timeout`; `.005,.01,.025,.05,.1,.25,.5,1,2.5,5` |
 
-  Recorderは上記eventを表す型付きmethodだけを公開し、arbitrary metric/label APIを公開しない。
-  counterは該当eventで+1、active/queue gaugeはownership取得/解放とenqueue/dequeueで増減し、close後0へ戻す。
-  最小interfaceは `SessionCreated`、`SessionClosed`、`SignalingRequest`、`ICETransition`、`Deadline`、
-  `AudioFrame`、`RTPDrop`、`RTCPFeedback`、`RTCPQuality`、`PacingLag`、`PacingAbort`、`CodecError`、
-  `PipelineReconnect`、`QueueDepthDelta`、`QueueOverflow`、`DataChannelError`、`CloseDuration` とする。
-  close reason labelは
-  `normal|process_shutdown|offer_failed|pre_connect_timeout|media_readiness_timeout|duplicate_media|`
-  `pipeline_start_error|codec_error|media_read_error|media_write_error|invalid_data_channel|`
-  `data_channel_error|output_backpressure|ice_failed|ice_disconnected_timeout|restart_timeout|panic|unknown`
-  だけへ正規化する。
+    Recorderは上記eventを表す型付きmethodだけを公開し、arbitrary metric/label APIを公開しない。
+    counterは該当eventで+1、active/queue gaugeはownership取得/解放とenqueue/dequeueで増減し、close後0へ戻す。
+    最小interfaceは `SessionCreated`、`SessionClosed`、`SignalingRequest`、`ICETransition`、`Deadline`、
+    `AudioFrame`、`RTPDrop`、`RTCPFeedback`、`RTCPQuality`、`PacingLag`、`PacingAbort`、`CodecError`、
+    `PipelineReconnect`、`QueueDepthDelta`、`QueueOverflow`、`DataChannelError`、`CloseDuration` とする。
+    close reason labelは
+    `normal|process_shutdown|offer_failed|pre_connect_timeout|media_readiness_timeout|duplicate_media|`
+    `pipeline_start_error|codec_error|media_read_error|media_write_error|invalid_data_channel|`
+    `data_channel_error|output_backpressure|ice_failed|ice_disconnected_timeout|restart_timeout|panic|unknown`
+    だけへ正規化する。
+
 - statusesは運用互換の簡易JSON、metricsは集計時系列として分離する。cleanup GET endpointは
   state-changing GETを温存するためPion版へ実装しない。
 - readinessはprocessが新規sessionを安全に作れるかを表す。個別Python serviceの可用性はsession pipelineが
@@ -108,7 +109,7 @@ startup/shutdownを実装し、Gate testが機械判定できる状態を作る�
 - 変更production codeと、その理解に必要な直接のhelper/state/event/lifecycle/data transformationを
   change comprehension surfaceとして全件auditする。`impl.md` は `path`、`symbol/block/decision/flow`、
   `kind`、`current comment`、`reader question`、`required reader knowledge`、`decision
-  (keep/rewrite/delete/add)`、`action/omission reason`、`reviewer note` の列を持つ。
+(keep/rewrite/delete/add)`、`action/omission reason`、`reviewer note` の列を持つ。
 - exported/public APIとboundaryは目的、入力境界、戻り値/observable output、失敗条件、副作用、非対象を
   必要に応じて説明する。内部orchestration/pipeline/state transition/event source/data transformationは、
   処理段階、data表現、state change、前後関係、後段へ委ねる責務を局所的に理解できる説明にする。
