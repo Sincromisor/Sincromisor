@@ -38,28 +38,42 @@ func main() {
 
 // run は config load、HTTP serve、signal shutdown を 1 つの process lifecycle として調停する。
 //
-// SIGINT / SIGTERM では新規 HTTP request を停止してから全 session を close する。listener 起動失敗、
-// HTTP shutdown timeout、session cleanup failure は main へ返し、下位 package では process を終了しない。
+// SIGINT / SIGTERMでは新規HTTP requestを停止し、process context cancel、Offer owner/sweeper join、
+// 全session closeを順に行う。listener起動失敗を含むshutdown failureはmainへ返し、下位packageでは終了しない。
 func run(args []string) error {
 	cfg, err := config.Load(args)
 	if err != nil {
 		return err
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	processCtx, cancelProcess := context.WithCancel(context.Background())
+	defer cancelProcess()
 	pipelineFactory, err := newPipelineFactory(logger)
 	if err != nil {
 		return err
 	}
-	sessions, err := rtc.NewManager(cfg.STUNURL, rtc.ManagerDependencies{
+	sessions, err := rtc.NewManager(cfg.STUNURL, rtc.ManagerConfig{
 		PipelineFactory: pipelineFactory,
 		InputObserver:   media.NewInputCounterObserver(),
 		Clock:           rtc.SystemClock{},
 		Logger:          logger,
+		MaxSessions:     cfg.MaxSessions,
 	})
 	if err != nil {
 		return fmt.Errorf("create rtc manager: %w", err)
 	}
-	return serve(cfg, sessions, logger)
+	offers, err := signaling.NewOfferRegistry(sessions, signaling.OfferRegistryConfig{
+		ProcessContext: processCtx,
+		GatherTimeout:  cfg.GatherTimeout,
+		Capacity:       cfg.OfferCacheCapacity,
+		TTL:            cfg.OfferCacheTTL,
+		Clock:          signaling.SystemOfferRegistryClock(),
+		Logger:         logger,
+	})
+	if err != nil {
+		return fmt.Errorf("create offer registry: %w", err)
+	}
+	return serve(cfg, sessions, offers, cancelProcess, logger)
 }
 
 // newPipelineFactory はPoC local Consulから4 serviceを遅延解決するfactoryを構築する。
@@ -81,16 +95,22 @@ func newPipelineFactory(logger *slog.Logger) (pipeline.ClientSetFactory, error) 
 	return pipelineFactory, nil
 }
 
-// serve はHTTP受理、signal待機、5秒上限のHTTP/session shutdownを順に調停する。
+// serve はHTTP受理、signal待機、5秒上限のHTTP/Offer owner/session shutdownを順に調停する。
 //
-// CloseAllがdeadlineを返しても各Sessionのcleanupは継続するが、process境界では未join resourceを
-// 正常終了として偽装せずerrorをmainへ返す。
-func serve(cfg config.Config, sessions *rtc.Manager, logger *slog.Logger) error {
+// process contextを先にcancelしてin-flight ownerを収束させ、HTTP drain、registry join、Session cleanupを
+// 同じdeadline内で完了する。CloseAllがdeadlineを返しても、未join resourceを正常終了として偽装しない。
+func serve(
+	cfg config.Config,
+	sessions *rtc.Manager,
+	offers *signaling.OfferRegistry,
+	cancelProcess context.CancelFunc,
+	logger *slog.Logger,
+) error {
 	handler := signaling.New(
 		sessions,
+		offers,
 		cfg.FrontendDir,
 		cfg.STUNURL,
-		cfg.GatherTimeout,
 		logger,
 	).Handler()
 	server := &http.Server{
@@ -111,10 +131,11 @@ func serve(cfg config.Config, sessions *rtc.Manager, logger *slog.Logger) error 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(signals)
+	var serveErr error
 	select {
 	case err := <-serverErrors:
 		if !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("serve http: %w", err)
+			serveErr = fmt.Errorf("serve http: %w", err)
 		}
 	case signalValue := <-signals:
 		logger.Info("shutdown signal received", "signal", signalValue.String())
@@ -122,9 +143,11 @@ func serve(cfg config.Config, sessions *rtc.Manager, logger *slog.Logger) error 
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
+	cancelProcess()
 	httpErr := server.Shutdown(shutdownCtx)
+	offerErr := offers.Wait(shutdownCtx)
 	sessionErr := sessions.CloseAll(shutdownCtx, "process_shutdown")
-	if err := errors.Join(httpErr, sessionErr); err != nil {
+	if err := errors.Join(serveErr, httpErr, offerErr, sessionErr); err != nil {
 		return fmt.Errorf("shutdown: %w", err)
 	}
 	logger.Info("pion poc stopped",

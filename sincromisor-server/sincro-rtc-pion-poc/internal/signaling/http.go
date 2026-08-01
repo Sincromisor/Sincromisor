@@ -9,7 +9,10 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"time"
+	"strings"
+
+	"github.com/google/uuid"
+	"github.com/oklog/ulid/v2"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/rtc"
 )
@@ -20,7 +23,10 @@ const (
 	offerPath       = apiPrefix + "offer"
 	candidatePath   = apiPrefix + "candidate"
 	maxRequestBytes = 1 << 20
+	maxSDPBytes     = 256 << 10
 )
+
+var errRequestBodyTooLarge = errors.New("request body too large")
 
 // SessionService は HTTP boundary が必要とする session 操作だけを表す。
 //
@@ -37,22 +43,23 @@ type SessionService interface {
 // API prefix は static file より先に routing し、未知 API を Frontend asset として返さない。
 // Request body は有限長に制限し、JSON / SDP / candidate error を request 単位の 4xx に変換する。
 type Server struct {
-	sessions      SessionService
-	frontendDir   string
-	iceServers    []iceServerResponse
-	gatherTimeout time.Duration
-	logger        *slog.Logger
+	sessions    SessionService
+	offers      *OfferRegistry
+	frontendDir string
+	iceServers  []iceServerResponse
+	logger      *slog.Logger
 }
 
-// New は signaling handler の dependency と有限 candidate gathering timeout を固定する。
+// New は signaling handler、initial Offer registry、session dependencyを固定する。
 //
 // frontendDir の存在確認は config.Load の起動時境界で完了済みである。New は listener を開かず、
-// caller が Handler を http.Server へ渡すまで外部副作用を持たない。
+// caller が Handler を http.Server へ渡すまで外部副作用を持たない。candidate gatheringのownerと
+// timeoutはOfferRegistryがprocess lifecycle内で所有する。
 func New(
 	sessions SessionService,
+	offers *OfferRegistry,
 	frontendDir string,
 	stunURL string,
-	gatherTimeout time.Duration,
 	logger *slog.Logger,
 ) *Server {
 	iceServers := make([]iceServerResponse, 0)
@@ -60,11 +67,11 @@ func New(
 		iceServers = []iceServerResponse{{URLs: stunURL}}
 	}
 	return &Server{
-		sessions:      sessions,
-		frontendDir:   frontendDir,
-		iceServers:    iceServers,
-		gatherTimeout: gatherTimeout,
-		logger:        logger,
+		sessions:    sessions,
+		offers:      offers,
+		frontendDir: frontendDir,
+		iceServers:  iceServers,
+		logger:      logger,
 	}
 }
 
@@ -92,10 +99,13 @@ type configResponse struct {
 }
 
 type offerRequest struct {
-	SDP       string `json:"sdp"`
-	Type      string `json:"type"`
-	TalkMode  string `json:"talk_mode"`
-	SessionID string `json:"session_id,omitempty"`
+	SDP               string `json:"sdp"`
+	Type              string `json:"type"`
+	TalkMode          string `json:"talk_mode"`
+	SessionID         string `json:"session_id,omitempty"`
+	OfferRequestID    string `json:"offer_request_id"`
+	OfferRevision     int    `json:"offer_revision"`
+	PreviousSessionID string `json:"previous_session_id,omitempty"`
 }
 
 type candidateRequest struct {
@@ -127,6 +137,10 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 	}
 	var payload offerRequest
 	if err := decodeJSON(writer, request, &payload); err != nil {
+		if errors.Is(err, errRequestBodyTooLarge) {
+			writeError(writer, http.StatusRequestEntityTooLarge, "Offer body is too large.")
+			return
+		}
 		writeError(writer, http.StatusBadRequest, "Malformed offer JSON.")
 		return
 	}
@@ -134,23 +148,46 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		writeError(writer, http.StatusNotImplemented, "Session update offers are not implemented by this PoC.")
 		return
 	}
+	if len(payload.SDP) > maxSDPBytes {
+		writeError(writer, http.StatusRequestEntityTooLarge, "Offer SDP is too large.")
+		return
+	}
 	if payload.SDP == "" || payload.Type != "offer" ||
 		(payload.TalkMode != "chat" && payload.TalkMode != "sincro") {
 		writeError(writer, http.StatusBadRequest, "Invalid offer fields.")
 		return
 	}
-	// Half-trickle Answer は local candidate 収集完了を待つが、HTTP request lifetime を超えて残さない。
-	ctx, cancel := context.WithTimeout(request.Context(), s.gatherTimeout)
-	defer cancel()
-	answer, err := s.sessions.Create(ctx, rtc.Offer{
+	if !validUUID(payload.OfferRequestID) || payload.OfferRevision != 1 {
+		writeError(writer, http.StatusBadRequest, "Invalid initial offer identity.")
+		return
+	}
+	if payload.PreviousSessionID != "" {
+		if _, err := ulid.ParseStrict(payload.PreviousSessionID); err != nil {
+			writeError(writer, http.StatusBadRequest, "Invalid previous_session_id.")
+			return
+		}
+	}
+	// Session admissionより先にregistryへ登録し、decoded SDP bytesをUUIDへSHA-256で結び付ける。
+	answer, err := s.offers.Resolve(request.Context(), payload.OfferRequestID, []byte(payload.SDP), rtc.Offer{
 		SDP: payload.SDP, Type: payload.Type, TalkMode: payload.TalkMode,
 	})
 	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
+		// ownerのtyped failureをretry可否が異なるHTTP statusへ一度だけ変換し、失敗結果はcacheしない。
+		switch {
+		case errors.Is(err, context.DeadlineExceeded):
 			writeError(writer, http.StatusGatewayTimeout, "ICE candidate gathering timed out.")
 			return
+		case errors.Is(err, ErrOfferConflict):
+			writeError(writer, http.StatusConflict, "Offer request ID conflicts with another SDP.")
+			return
+		case errors.Is(err, ErrOfferGone):
+			writeError(writer, http.StatusGone, "Offer session is closed.")
+			return
+		case errors.Is(err, ErrOfferCapacity), errors.Is(err, rtc.ErrSessionCapacity):
+			writeError(writer, http.StatusTooManyRequests, "Too many requests.")
+			return
 		}
-		s.logger.Warn("offer rejected", "error", err)
+		s.logger.Warn("offer rejected", "error_type", fmt.Sprintf("%T", err))
 		writeError(writer, http.StatusBadRequest, "Invalid offer SDP.")
 		return
 	}
@@ -158,6 +195,12 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		"session_id", answer.SessionID,
 		"active_sessions", s.sessions.Count(),
 	)
+	if payload.PreviousSessionID != "" {
+		s.logger.Info("initial offer replaced session",
+			"previous_session_id", payload.PreviousSessionID,
+			"session_id", answer.SessionID,
+		)
+	}
 	writeJSON(writer, http.StatusOK, answer)
 }
 
@@ -168,6 +211,10 @@ func (s *Server) handleCandidate(writer http.ResponseWriter, request *http.Reque
 	}
 	var payload candidateRequest
 	if err := decodeJSON(writer, request, &payload); err != nil {
+		if errors.Is(err, errRequestBodyTooLarge) {
+			writeError(writer, http.StatusRequestEntityTooLarge, "Candidate body is too large.")
+			return
+		}
 		writeError(writer, http.StatusBadRequest, "Malformed candidate JSON.")
 		return
 	}
@@ -185,17 +232,36 @@ func (s *Server) handleCandidate(writer http.ResponseWriter, request *http.Reque
 	writeJSON(writer, http.StatusOK, candidateResponse{Status: applied, Reason: reason})
 }
 
+// decodeJSON は1 MiBを超えるbody、未知field、複数JSON valueをdomain処理より先に拒否する。
+// MaxBytesErrorはcallerが413へ分離できるsentinelを保ち、その他のsyntax/type errorは400へ委ねる。
 func decodeJSON(writer http.ResponseWriter, request *http.Request, target any) error {
 	request.Body = http.MaxBytesReader(writer, request.Body, maxRequestBytes)
 	decoder := json.NewDecoder(request.Body)
+	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			return fmt.Errorf("%w: %v", errRequestBodyTooLarge, err)
+		}
 		return fmt.Errorf("decode json: %w", err)
 	}
 	var trailing any
-	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+	if err := decoder.Decode(&trailing); isMaxBytesError(err) {
+		return fmt.Errorf("%w: %v", errRequestBodyTooLarge, err)
+	} else if !errors.Is(err, io.EOF) {
 		return errors.New("json body must contain one value")
 	}
 	return nil
+}
+
+func isMaxBytesError(err error) bool {
+	var maxBytesErr *http.MaxBytesError
+	return errors.As(err, &maxBytesErr)
+}
+
+func validUUID(value string) bool {
+	parsed, err := uuid.Parse(value)
+	return err == nil && strings.EqualFold(parsed.String(), value)
 }
 
 func writeJSON(writer http.ResponseWriter, status int, payload any) {

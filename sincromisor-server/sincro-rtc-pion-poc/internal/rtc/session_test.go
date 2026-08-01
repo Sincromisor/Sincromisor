@@ -192,11 +192,12 @@ func newTestManager(t *testing.T) *Manager {
 
 func newTestManagerWithFactory(t *testing.T, factory pipeline.ClientSetFactory) *Manager {
 	t.Helper()
-	manager, err := NewManager("", ManagerDependencies{
+	manager, err := NewManager("", ManagerConfig{
 		PipelineFactory: factory,
 		InputObserver:   testInputObserver(),
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
+		MaxSessions:     100,
 	})
 	if err != nil {
 		t.Fatalf("NewManager() error = %v", err)

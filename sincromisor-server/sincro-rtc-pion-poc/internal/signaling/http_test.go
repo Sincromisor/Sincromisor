@@ -8,12 +8,47 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/oklog/ulid/v2"
+
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/rtc"
 )
+
+func TestInitialOfferContractFixtures(t *testing.T) {
+	requestBytes, err := os.ReadFile("testdata/initial_offer_request.json")
+	if err != nil {
+		t.Fatalf("read request fixture: %v", err)
+	}
+	var request offerRequest
+	if err := json.Unmarshal(requestBytes, &request); err != nil {
+		t.Fatalf("decode request fixture: %v", err)
+	}
+	if !validUUID(request.OfferRequestID) || request.OfferRevision != 1 {
+		t.Fatalf("request fixture identity = %q/%d", request.OfferRequestID, request.OfferRevision)
+	}
+	if _, err := ulid.ParseStrict(request.PreviousSessionID); err != nil {
+		t.Fatalf("request fixture previous_session_id: %v", err)
+	}
+
+	answerBytes, err := os.ReadFile("testdata/initial_offer_answer.json")
+	if err != nil {
+		t.Fatalf("read answer fixture: %v", err)
+	}
+	var answer rtc.Answer
+	if err := json.Unmarshal(answerBytes, &answer); err != nil {
+		t.Fatalf("decode answer fixture: %v", err)
+	}
+	if answer.Revision != 1 {
+		t.Fatalf("answer fixture revision = %d, want 1", answer.Revision)
+	}
+	if _, err := ulid.ParseStrict(answer.SessionID); err != nil {
+		t.Fatalf("answer fixture session_id: %v", err)
+	}
+}
 
 func TestConfigResponse(t *testing.T) {
 	server := newTestServer(t, &fakeSessions{}, "stun:stun.example.test")
@@ -48,7 +83,7 @@ func TestOfferBoundary(t *testing.T) {
 	}{
 		{
 			name: "valid initial offer",
-			body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat"}`,
+			body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":1}`,
 			fake: &fakeSessions{answer: rtc.Answer{
 				SDP: "v=0\r\n", Type: "answer", SessionID: "01TEST",
 			}},
@@ -62,13 +97,13 @@ func TestOfferBoundary(t *testing.T) {
 		},
 		{
 			name:       "malformed sdp",
-			body:       `{"sdp":"invalid","type":"offer","talk_mode":"chat"}`,
+			body:       `{"sdp":"invalid","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":1}`,
 			fake:       &fakeSessions{createErr: errors.New("set remote offer")},
 			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:       "update offer",
-			body:       `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","session_id":"old"}`,
+			body:       `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","session_id":"old","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":1}`,
 			fake:       &fakeSessions{},
 			wantStatus: http.StatusNotImplemented,
 		},
@@ -86,12 +121,12 @@ func TestOfferBoundary(t *testing.T) {
 
 func TestOfferGatheringTimeoutReturns504(t *testing.T) {
 	fake := &fakeSessions{waitForContext: true}
-	server := New(fake, t.TempDir(), "", time.Millisecond, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server := newTestServerWithTimeout(t, fake, "", time.Millisecond)
 	response := performRequest(
 		server.Handler(),
 		http.MethodPost,
 		offerPath,
-		`{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat"}`,
+		`{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":1}`,
 	)
 	if response.Code != http.StatusGatewayTimeout {
 		t.Fatalf("status = %d, want 504; body=%s", response.Code, response.Body.String())
@@ -99,6 +134,132 @@ func TestOfferGatheringTimeoutReturns504(t *testing.T) {
 	if !fake.createCanceled {
 		t.Fatal("Create did not observe gathering context cancellation")
 	}
+}
+
+func TestInitialOfferSchemaAndByteBoundaries(t *testing.T) {
+	validPrefix := `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":1`
+	tests := []struct {
+		name       string
+		body       string
+		wantStatus int
+	}{
+		{name: "missing request id", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_revision":1}`, wantStatus: http.StatusBadRequest},
+		{name: "malformed uuid", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"not-uuid","offer_revision":1}`, wantStatus: http.StatusBadRequest},
+		{name: "wrong revision", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":2}`, wantStatus: http.StatusBadRequest},
+		{name: "revision type", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":"1"}`, wantStatus: http.StatusBadRequest},
+		{name: "malformed previous ulid", body: validPrefix + `,"previous_session_id":"old"}`, wantStatus: http.StatusBadRequest},
+		{name: "valid previous ulid", body: validPrefix + `,"previous_session_id":"01K1AF2Y0H0000000000000000"}`, wantStatus: http.StatusOK},
+		{name: "sdp exact limit", body: validOfferBody(strings.Repeat("s", maxSDPBytes)), wantStatus: http.StatusOK},
+		{name: "sdp over limit", body: validOfferBody(strings.Repeat("s", maxSDPBytes+1)), wantStatus: http.StatusRequestEntityTooLarge},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fake := &fakeSessions{answer: rtc.Answer{
+				SDP: "answer", Type: "answer", SessionID: "01K1AF2Y0H0000000000000003", Revision: 1,
+			}}
+			response := performRequest(newTestServer(t, fake, "").Handler(), http.MethodPost, offerPath, test.body)
+			if response.Code != test.wantStatus {
+				t.Fatalf("status = %d, want %d; body=%s", response.Code, test.wantStatus, response.Body.String())
+			}
+		})
+	}
+}
+
+func TestRequestBodyBoundary(t *testing.T) {
+	base := validOfferBody("v=0\r\n")
+	exact := base + strings.Repeat(" ", maxRequestBytes-len(base))
+	over := exact + " "
+	for _, test := range []struct {
+		name       string
+		body       string
+		wantStatus int
+	}{
+		{name: "exact", body: exact, wantStatus: http.StatusOK},
+		{name: "over", body: over, wantStatus: http.StatusRequestEntityTooLarge},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			fake := &fakeSessions{answer: rtc.Answer{
+				SDP: "answer", Type: "answer", SessionID: "01K1AF2Y0H0000000000000004", Revision: 1,
+			}}
+			response := performRequest(newTestServer(t, fake, "").Handler(), http.MethodPost, offerPath, test.body)
+			if response.Code != test.wantStatus {
+				t.Fatalf("status = %d, want %d", response.Code, test.wantStatus)
+			}
+		})
+	}
+}
+
+func TestInitialOfferRegistryStatusMapping(t *testing.T) {
+	fake := &fakeSessions{answer: rtc.Answer{
+		SDP: "answer", Type: "answer", SessionID: "01K1AF2Y0H0000000000000006", Revision: 1,
+	}}
+	processCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	offers, err := NewOfferRegistry(fake, OfferRegistryConfig{
+		ProcessContext: processCtx,
+		GatherTimeout:  time.Second,
+		Capacity:       1,
+		TTL:            2 * time.Minute,
+		Clock:          SystemOfferRegistryClock(),
+		Logger:         slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err != nil {
+		t.Fatalf("NewOfferRegistry() error = %v", err)
+	}
+	server := New(fake, offers, t.TempDir(), "", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	handler := server.Handler()
+	if response := performRequest(
+		handler,
+		http.MethodPost,
+		offerPath,
+		validOfferBody("first"),
+	); response.Code != http.StatusOK {
+		t.Fatalf("first status = %d", response.Code)
+	}
+	conflict := strings.Replace(validOfferBody("different"), "different", "changed", 1)
+	if response := performRequest(handler, http.MethodPost, offerPath, conflict); response.Code != http.StatusConflict {
+		t.Fatalf("conflict status = %d, want 409", response.Code)
+	}
+	capacityBody := strings.Replace(
+		validOfferBody("second"),
+		"8e0e18a9-243b-4c72-8e97-a1b103854e42",
+		"95ff8fd1-2bcb-4dc6-bf9b-990b357f12cc",
+		1,
+	)
+	if response := performRequest(handler, http.MethodPost, offerPath, capacityBody); response.Code != http.StatusTooManyRequests {
+		t.Fatalf("capacity status = %d, want 429", response.Code)
+	}
+	fake.onClosed(fake.answer.SessionID)
+	if response := performRequest(
+		handler,
+		http.MethodPost,
+		offerPath,
+		validOfferBody("first"),
+	); response.Code != http.StatusGone {
+		t.Fatalf("tombstone status = %d, want 410", response.Code)
+	}
+}
+
+func TestSessionCapacityMapsTo429(t *testing.T) {
+	fake := &fakeSessions{createErr: rtc.ErrSessionCapacity}
+	response := performRequest(
+		newTestServer(t, fake, "").Handler(),
+		http.MethodPost,
+		offerPath,
+		validOfferBody("v=0\r\n"),
+	)
+	if response.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429", response.Code)
+	}
+}
+
+func validOfferBody(sdp string) string {
+	encoded, _ := json.Marshal(map[string]any{
+		"sdp": sdp, "type": "offer", "talk_mode": "chat",
+		"offer_request_id": "8e0e18a9-243b-4c72-8e97-a1b103854e42",
+		"offer_revision":   1,
+	})
+	return string(encoded)
 }
 
 func TestCandidateBoundary(t *testing.T) {
@@ -168,7 +329,9 @@ func TestCandidateBoundary(t *testing.T) {
 
 func TestStaticAndAPIPrecedence(t *testing.T) {
 	frontendDir := t.TempDir()
-	server := New(&fakeSessions{}, frontendDir, "", time.Second, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	fake := &fakeSessions{}
+	offers := newTestOfferRegistry(t, fake, time.Second)
+	server := New(fake, offers, frontendDir, "", slog.New(slog.NewTextHandler(io.Discard, nil)))
 	response := performRequest(server.Handler(), http.MethodGet, apiPrefix+"missing", "")
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("unknown API status = %d, want 404", response.Code)
@@ -180,12 +343,14 @@ type fakeSessions struct {
 	createErr        error
 	waitForContext   bool
 	createCanceled   bool
+	onClosed         func(string)
 	candidateApplied bool
 	candidateReason  string
 	candidateErr     error
 }
 
-func (f *fakeSessions) Create(ctx context.Context, _ rtc.Offer) (rtc.Answer, error) {
+func (f *fakeSessions) Create(ctx context.Context, offer rtc.Offer) (rtc.Answer, error) {
+	f.onClosed = offer.OnClosed
 	if f.waitForContext {
 		<-ctx.Done()
 		f.createCanceled = true
@@ -204,13 +369,46 @@ func (f *fakeSessions) Count() int {
 
 func newTestServer(t *testing.T, sessions SessionService, stunURL string) *Server {
 	t.Helper()
+	return newTestServerWithTimeout(t, sessions, stunURL, time.Second)
+}
+
+func newTestServerWithTimeout(
+	t *testing.T,
+	sessions SessionService,
+	stunURL string,
+	gatherTimeout time.Duration,
+) *Server {
+	t.Helper()
+	offers := newTestOfferRegistry(t, sessions, gatherTimeout)
 	return New(
 		sessions,
+		offers,
 		t.TempDir(),
 		stunURL,
-		time.Second,
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
+}
+
+func newTestOfferRegistry(
+	t *testing.T,
+	sessions SessionService,
+	gatherTimeout time.Duration,
+) *OfferRegistry {
+	t.Helper()
+	processCtx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	offers, err := NewOfferRegistry(sessions, OfferRegistryConfig{
+		ProcessContext: processCtx,
+		GatherTimeout:  gatherTimeout,
+		Capacity:       1000,
+		TTL:            2 * time.Minute,
+		Clock:          SystemOfferRegistryClock(),
+		Logger:         slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err != nil {
+		t.Fatalf("NewOfferRegistry() error = %v", err)
+	}
+	return offers
 }
 
 func performRequest(handler http.Handler, method, path, body string) *httptest.ResponseRecorder {

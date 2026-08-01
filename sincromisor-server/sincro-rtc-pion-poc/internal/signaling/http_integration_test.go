@@ -20,16 +20,16 @@ func TestRealManagerRejectsMalformedSDPAndRemovesSession(t *testing.T) {
 	manager := newRealTestManager(t, "")
 	server := New(
 		manager,
+		newTestOfferRegistry(t, manager, time.Second),
 		t.TempDir(),
 		"",
-		time.Second,
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
 	response := performRequest(
 		server.Handler(),
 		http.MethodPost,
 		offerPath,
-		`{"sdp":"not-an-sdp","type":"offer","talk_mode":"chat"}`,
+		`{"sdp":"not-an-sdp","type":"offer","talk_mode":"chat","offer_request_id":"89d1558a-d077-4620-9037-ca5bc608d42a","offer_revision":1}`,
 	)
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400; body=%s", response.Code, response.Body.String())
@@ -46,9 +46,9 @@ func TestRealManagerRejectsMalformedNonNullCandidate(t *testing.T) {
 	})
 	server := New(
 		manager,
+		newTestOfferRegistry(t, manager, time.Second),
 		t.TempDir(),
 		"",
-		time.Second,
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
 	sessionID := createRealManagerSession(t, server)
@@ -73,9 +73,9 @@ func TestRealManagerGatherTimeoutReturns504AndRemovesSession(t *testing.T) {
 	manager := newRealTestManager(t, "stun:127.0.0.1:9")
 	server := New(
 		manager,
+		newTestOfferRegistry(t, manager, 5*time.Millisecond),
 		t.TempDir(),
 		"stun:127.0.0.1:9",
-		5*time.Millisecond,
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
 	offer := newRealBrowserOffer(t)
@@ -83,7 +83,7 @@ func TestRealManagerGatherTimeoutReturns504AndRemovesSession(t *testing.T) {
 		server.Handler(),
 		http.MethodPost,
 		offerPath,
-		`{"sdp":`+quoteJSON(t, offer)+`,"type":"offer","talk_mode":"chat"}`,
+		`{"sdp":`+quoteJSON(t, offer)+`,"type":"offer","talk_mode":"chat","offer_request_id":"3b346d93-c8f1-4368-b788-735f64c18b8a","offer_revision":1}`,
 	)
 	if response.Code != http.StatusGatewayTimeout {
 		t.Fatalf("status = %d, want 504; body=%s", response.Code, response.Body.String())
@@ -94,11 +94,12 @@ func TestRealManagerGatherTimeoutReturns504AndRemovesSession(t *testing.T) {
 func newRealTestManager(t *testing.T, stunURL string) *rtc.Manager {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	manager, err := rtc.NewManager(stunURL, rtc.ManagerDependencies{
+	manager, err := rtc.NewManager(stunURL, rtc.ManagerConfig{
 		PipelineFactory: signalingBlockingFactory{},
 		InputObserver:   audiomedia.NewInputCounterObserver(),
 		Clock:           rtc.SystemClock{},
 		Logger:          logger,
+		MaxSessions:     100,
 	})
 	if err != nil {
 		t.Fatalf("rtc.NewManager() error = %v", err)
@@ -130,7 +131,7 @@ func createRealManagerSession(t *testing.T, server *Server) string {
 		server.Handler(),
 		http.MethodPost,
 		offerPath,
-		`{"sdp":`+quoteJSON(t, offer)+`,"type":"offer","talk_mode":"chat"}`,
+		`{"sdp":`+quoteJSON(t, offer)+`,"type":"offer","talk_mode":"chat","offer_request_id":"6445fb00-a22a-471d-ae4e-89d4509cf0e3","offer_revision":1}`,
 	)
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", response.Code, response.Body.String())
