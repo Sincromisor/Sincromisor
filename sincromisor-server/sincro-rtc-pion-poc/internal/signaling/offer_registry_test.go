@@ -408,7 +408,10 @@ func TestOfferRegistryPeriodicSweepRemovesExpiredEntries(t *testing.T) {
 const testOfferRequestID = "8e0e18a9-243b-4c72-8e97-a1b103854e42"
 
 func validRTCOffer() rtc.Offer {
-	return rtc.Offer{SDP: "v=0\r\n", Type: "offer", TalkMode: "chat"}
+	return rtc.Offer{
+		SDP: "v=0\r\n", Type: "offer", TalkMode: "chat",
+		OfferRequestID: testOfferRequestID,
+	}
 }
 
 func uuidForIndex(index int) string {
@@ -450,8 +453,12 @@ func (s *registrySessionService) Create(ctx context.Context, offer rtc.Offer) (r
 	return s.answer, s.createErr
 }
 
-func (s *registrySessionService) AddCandidate(string, *rtc.Candidate) (bool, string, error) {
-	return false, "", nil
+func (s *registrySessionService) Update(context.Context, rtc.UpdateOffer) (rtc.Answer, error) {
+	return rtc.Answer{}, nil
+}
+
+func (s *registrySessionService) AddCandidate(string, uint64, *rtc.Candidate) (bool, error) {
+	return false, nil
 }
 
 func (s *registrySessionService) Count() int { return 0 }

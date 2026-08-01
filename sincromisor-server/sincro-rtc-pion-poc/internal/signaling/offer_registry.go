@@ -68,7 +68,7 @@ type offerEntry struct {
 	requestID string
 	sdpHash   [sha256.Size]byte
 	sessionID string
-	revision  int
+	revision  uint64
 	answer    rtc.Answer
 	err       error
 	state     offerState

@@ -24,17 +24,20 @@ const (
 	candidatePath   = apiPrefix + "candidate"
 	maxRequestBytes = 1 << 20
 	maxSDPBytes     = 256 << 10
+	// maxCandidateBytesは通常browser candidateに余裕を持たせつつ単一fieldのmemory abuseを拒否する。
+	maxCandidateBytes = 8 << 10
 )
 
 var errRequestBodyTooLarge = errors.New("request body too large")
 
-// SessionService は HTTP boundary が必要とする session 操作だけを表す。
+// SessionService はHTTP boundaryが必要とするinitial/update/candidate/session count操作を表す。
 //
-// production では rtc.Manager が実装し、test では WebRTC transport を起動せず status / timeout 変換を
-// 検証する。schema や retry policy を隠す汎用 abstraction にはしない。
+// productionではrtc.Managerが実装し、typed unknown/closed/conflict/capacity errorを返す。testでは
+// WebRTC transportを起動せずHTTP status/timeout変換を検証し、schemaやretry policyはHTTP側に残す。
 type SessionService interface {
 	Create(context.Context, rtc.Offer) (rtc.Answer, error)
-	AddCandidate(string, *rtc.Candidate) (bool, string, error)
+	Update(context.Context, rtc.UpdateOffer) (rtc.Answer, error)
+	AddCandidate(string, uint64, *rtc.Candidate) (bool, error)
 	Count() int
 }
 
@@ -106,18 +109,8 @@ type offerRequest struct {
 	TalkMode          string          `json:"talk_mode"`
 	SessionID         json.RawMessage `json:"session_id,omitempty"`
 	OfferRequestID    string          `json:"offer_request_id"`
-	OfferRevision     int             `json:"offer_revision"`
+	OfferRevision     uint64          `json:"offer_revision"`
 	PreviousSessionID json.RawMessage `json:"previous_session_id,omitempty"`
-}
-
-type candidateRequest struct {
-	SessionID string         `json:"session_id"`
-	Candidate *rtc.Candidate `json:"candidate"`
-}
-
-type candidateResponse struct {
-	Status bool   `json:"status"`
-	Reason string `json:"reason,omitempty"`
 }
 
 func (s *Server) handleConfig(writer http.ResponseWriter, request *http.Request) {
@@ -132,6 +125,10 @@ func (s *Server) handleConfig(writer http.ResponseWriter, request *http.Request)
 	})
 }
 
+// handleOffer はsession_id presenceでinitial registryとupdate transactionを排他的にroutingする。
+//
+// initialだけがPreviousSessionIDとrevision 1を許可し、updateはstrict ULIDを検証して専用handlerへ渡す。
+// update失敗をinitial Session作成へfallbackせず、両経路のsize/schema validationをresource作成前に行う。
 func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		writeError(writer, http.StatusMethodNotAllowed, "Method not allowed.")
@@ -147,11 +144,16 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		return
 	}
 	if payload.SessionID != nil {
-		if isNonEmptyJSONString(payload.SessionID) {
-			writeError(writer, http.StatusNotImplemented, "Session update offers are not implemented by this PoC.")
+		var sessionID string
+		if json.Unmarshal(payload.SessionID, &sessionID) != nil || sessionID == "" {
+			writeError(writer, http.StatusBadRequest, "Invalid session_id.")
 			return
 		}
-		writeError(writer, http.StatusBadRequest, "session_id must be omitted from an initial offer.")
+		if _, err := ulid.ParseStrict(sessionID); err != nil {
+			writeError(writer, http.StatusBadRequest, "Invalid session_id.")
+			return
+		}
+		s.handleUpdateOffer(writer, request, payload, sessionID)
 		return
 	}
 	if len(payload.SDP) > maxSDPBytes {
@@ -182,6 +184,7 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 	// Session admissionより先にregistryへ登録し、decoded SDP bytesをUUIDへSHA-256で結び付ける。
 	answer, err := s.offers.Resolve(request.Context(), payload.OfferRequestID, []byte(payload.SDP), rtc.Offer{
 		SDP: payload.SDP, Type: payload.Type, TalkMode: payload.TalkMode,
+		OfferRequestID: payload.OfferRequestID,
 	})
 	if err != nil {
 		// ownerのtyped failureをretry可否が異なるHTTP statusへ一度だけ変換し、失敗結果はcacheしない。
@@ -214,41 +217,6 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		)
 	}
 	writeJSON(writer, http.StatusOK, answer)
-}
-
-// isNonEmptyJSONString はupdate Offerとして501を維持する非空session IDだけを識別する。
-// null、空文字、string以外はinitial schema違反としてcallerが400へ変換する。
-func isNonEmptyJSONString(raw json.RawMessage) bool {
-	var value string
-	return json.Unmarshal(raw, &value) == nil && value != ""
-}
-
-func (s *Server) handleCandidate(writer http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodPost {
-		writeError(writer, http.StatusMethodNotAllowed, "Method not allowed.")
-		return
-	}
-	var payload candidateRequest
-	if err := decodeJSON(writer, request, &payload); err != nil {
-		if errors.Is(err, errRequestBodyTooLarge) {
-			writeError(writer, http.StatusRequestEntityTooLarge, "Candidate body is too large.")
-			return
-		}
-		writeError(writer, http.StatusBadRequest, "Malformed candidate JSON.")
-		return
-	}
-	if payload.SessionID == "" {
-		writeError(writer, http.StatusBadRequest, "session_id is required.")
-		return
-	}
-	applied, reason, err := s.sessions.AddCandidate(payload.SessionID, payload.Candidate)
-	if err != nil {
-		s.logger.Warn("candidate rejected", "session_id", payload.SessionID, "error", err)
-		writeError(writer, http.StatusBadRequest, "Invalid ICE candidate.")
-		return
-	}
-	// late candidate は transport error ではなく契約上の安全な拒否として 200 を返す。
-	writeJSON(writer, http.StatusOK, candidateResponse{Status: applied, Reason: reason})
 }
 
 // decodeJSON は1 MiBを超えるbody、未知field、複数JSON valueをdomain処理より先に拒否する。

@@ -2,6 +2,7 @@ package rtc
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -14,10 +15,13 @@ import (
 	"github.com/pion/interceptor"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
+	"github.com/pion/webrtc/v4/pkg/media"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
+
+const rtcTestOfferRequestID = "8e0e18a9-243b-4c72-8e97-a1b103854e42"
 
 func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 	factory := &recordingBlockingFactory{calls: make(chan pipelineStart, 1)}
@@ -38,9 +42,13 @@ func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 	if answer.SessionID == "" {
 		t.Fatal("Create() returned empty session ID")
 	}
-	applied, reason, err := manager.AddCandidate(answer.SessionID, nil)
-	if err != nil || !applied || reason != "" {
-		t.Fatalf("AddCandidate(end-of-candidates) = (%v, %q, %v), want true", applied, reason, err)
+	duplicate, err := manager.AddCandidate(answer.SessionID, answer.Revision, nil)
+	if err != nil || duplicate {
+		t.Fatalf("AddCandidate(end-of-candidates) = (%v, %v), want applied", duplicate, err)
+	}
+	duplicate, err = manager.AddCandidate(answer.SessionID, answer.Revision, nil)
+	if err != nil || !duplicate {
+		t.Fatalf("AddCandidate(duplicate end-of-candidates) = (%v, %v), want duplicate", duplicate, err)
 	}
 
 	waitForMessages(t, messages, map[string]string{
@@ -56,12 +64,9 @@ func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 		t.Fatalf("Count() = %d, want 0 after close", manager.Count())
 	}
 	assertNoPipelineCall(t, factory)
-	applied, reason, err = manager.AddCandidate(answer.SessionID, nil)
-	if err != nil {
-		t.Fatalf("AddCandidate(closed) error = %v", err)
-	}
-	if applied || reason != "session_closed" {
-		t.Fatalf("closed candidate = (%v, %q), want false, session_closed", applied, reason)
+	duplicate, err = manager.AddCandidate(answer.SessionID, answer.Revision, nil)
+	if duplicate || !errors.Is(err, ErrSessionClosed) {
+		t.Fatalf("closed candidate = (%v, %v), want ErrSessionClosed", duplicate, err)
 	}
 }
 
@@ -88,6 +93,124 @@ func TestManagerTenSequentialNormalClosesConverge(t *testing.T) {
 	waitForCondition(t, 3*time.Second, func() bool {
 		return runtime.NumGoroutine() <= baseline+5
 	})
+}
+
+func TestManagerICERestartKeepsSessionPeerChannelsAndPipeline(t *testing.T) {
+	factory := &recordingBlockingFactory{calls: make(chan pipelineStart, 2)}
+	manager := newTestManagerWithFactory(t, factory)
+	t.Cleanup(func() {
+		if err := manager.CloseAll(testCloseContext(t), "test_teardown"); err != nil {
+			t.Errorf("CloseAll(test_teardown) error = %v", err)
+		}
+	})
+	client, messages := newBrowserPeer(t)
+	inputTrack, err := webrtc.NewTrackLocalStaticSample(
+		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: 48000, Channels: 2},
+		"browser-audio",
+		"browser",
+	)
+	if err != nil {
+		t.Fatalf("NewTrackLocalStaticSample() error = %v", err)
+	}
+	if _, err := client.AddTrack(inputTrack); err != nil {
+		t.Fatalf("AddTrack(input) error = %v", err)
+	}
+	answer := negotiatePair(t, manager, client)
+	waitForMessages(t, messages, map[string]string{
+		textChannelLabel: string(textSmokePayload), telopChannelLabel: string(telopSmokePayload),
+	})
+	if err := inputTrack.WriteSample(media.Sample{
+		Data: []byte{0xf8, 0xff, 0xfe}, Duration: 20 * time.Millisecond,
+	}); err != nil {
+		t.Fatalf("WriteSample(initial) error = %v", err)
+	}
+	select {
+	case call := <-factory.calls:
+		if call.sessionID != answer.SessionID {
+			t.Fatalf("pipeline session = %s, want %s", call.sessionID, answer.SessionID)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("pipeline did not start before ICE restart")
+	}
+	session := activeSession(t, manager, answer.SessionID)
+	peerBefore := session.pc
+	textBefore := session.lifecycle.textChannel
+	telopBefore := session.lifecycle.telopChannel
+	if _, err := manager.Update(context.Background(), UpdateOffer{
+		SDP: "not-an-sdp", Type: "offer", TalkMode: "chat",
+		SessionID: answer.SessionID, OfferRequestID: rtcTestOfferRequestID, Revision: 2,
+	}); err == nil {
+		t.Fatal("Manager.Update() accepted malformed pre-apply SDP")
+	}
+	if session.revision.current != 1 || manager.Count() != 1 {
+		t.Fatalf("pre-apply failure changed revision/session = %d/%d, want 1/1",
+			session.revision.current, manager.Count())
+	}
+
+	restartOffer, err := client.CreateOffer(&webrtc.OfferOptions{ICERestart: true})
+	if err != nil {
+		t.Fatalf("CreateOffer(ICERestart) error = %v", err)
+	}
+	gatherComplete := webrtc.GatheringCompletePromise(client)
+	if err := client.SetLocalDescription(restartOffer); err != nil {
+		t.Fatalf("SetLocalDescription(restart) error = %v", err)
+	}
+	<-gatherComplete
+	restartSDP, hostIP := singleHostCandidateSDP(t, client.LocalDescription().SDP, "")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	restartAnswer, err := manager.Update(ctx, UpdateOffer{
+		SDP: restartSDP, Type: "offer", TalkMode: "chat",
+		SessionID: answer.SessionID, OfferRequestID: rtcTestOfferRequestID, Revision: 2,
+	})
+	if err != nil {
+		t.Fatalf("Manager.Update() error = %v", err)
+	}
+	answerSDP, _ := singleHostCandidateSDP(t, restartAnswer.SDP, hostIP)
+	if err := client.SetRemoteDescription(webrtc.SessionDescription{
+		Type: webrtc.SDPTypeAnswer, SDP: answerSDP,
+	}); err != nil {
+		t.Fatalf("SetRemoteDescription(restart) error = %v", err)
+	}
+	waitForCondition(t, 5*time.Second, func() bool {
+		return client.ConnectionState() == webrtc.PeerConnectionStateConnected
+	})
+	if restartAnswer.SessionID != answer.SessionID || restartAnswer.Revision != 2 {
+		t.Fatalf("restart identity = %s/%d, want %s/2",
+			restartAnswer.SessionID, restartAnswer.Revision, answer.SessionID)
+	}
+	retry, err := manager.Update(ctx, UpdateOffer{
+		SDP: restartSDP, Type: "offer", TalkMode: "chat",
+		SessionID: answer.SessionID, OfferRequestID: rtcTestOfferRequestID, Revision: 2,
+	})
+	if err != nil || retry != restartAnswer {
+		t.Fatalf("completed update retry = (%+v, %v), want cached %+v", retry, err, restartAnswer)
+	}
+	for _, conflict := range []UpdateOffer{
+		{SDP: restartSDP + " ", Type: "offer", TalkMode: "chat", SessionID: answer.SessionID, OfferRequestID: rtcTestOfferRequestID, Revision: 2},
+		{SDP: restartSDP, Type: "offer", TalkMode: "chat", SessionID: answer.SessionID, OfferRequestID: rtcTestOfferRequestID, Revision: 1},
+		{SDP: restartSDP, Type: "offer", TalkMode: "chat", SessionID: answer.SessionID, OfferRequestID: rtcTestOfferRequestID, Revision: 4},
+		{SDP: restartSDP, Type: "offer", TalkMode: "sincro", SessionID: answer.SessionID, OfferRequestID: rtcTestOfferRequestID, Revision: 3},
+	} {
+		if _, err := manager.Update(ctx, conflict); !errors.Is(err, ErrOfferConflict) {
+			t.Fatalf("Update(conflict revision=%d mode=%s) error = %v", conflict.Revision, conflict.TalkMode, err)
+		}
+	}
+	if manager.Count() != 1 || activeSession(t, manager, answer.SessionID) != session ||
+		session.pc != peerBefore || session.lifecycle.textChannel != textBefore ||
+		session.lifecycle.telopChannel != telopBefore {
+		t.Fatal("ICE restart replaced session, PeerConnection, or DataChannels")
+	}
+	if err := inputTrack.WriteSample(media.Sample{
+		Data: []byte{0xf8, 0xff, 0xfe}, Duration: 20 * time.Millisecond,
+	}); err != nil {
+		t.Fatalf("WriteSample(after restart) error = %v", err)
+	}
+	select {
+	case call := <-factory.calls:
+		t.Fatalf("ICE restart created a second pipeline: %+v", call)
+	case <-time.After(50 * time.Millisecond):
+	}
 }
 
 func TestSessionCloseIsIdempotent(t *testing.T) {
@@ -300,7 +423,10 @@ func negotiatePair(t *testing.T, manager *Manager, client *webrtc.PeerConnection
 	offerSDP, hostIP := singleHostCandidateSDP(t, local.SDP, "")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	answer, err := manager.Create(ctx, Offer{SDP: offerSDP, Type: "offer", TalkMode: "chat"})
+	answer, err := manager.Create(ctx, Offer{
+		SDP: offerSDP, Type: "offer", TalkMode: "chat",
+		OfferRequestID: rtcTestOfferRequestID,
+	})
 	if err != nil {
 		t.Fatalf("Manager.Create() error = %v", err)
 	}

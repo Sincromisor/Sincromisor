@@ -8,39 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 	"github.com/pion/webrtc/v4"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
-
-// Offer は Frontend の initial Offer を Pion session 作成境界へ渡す。
-type Offer struct {
-	SDP      string
-	Type     string
-	TalkMode string
-	// OnClosedはSessionの全resource join後にserver発行IDを通知し、cached Answerを有限tombstoneへ変換する。
-	OnClosed func(string)
-}
-
-// Answer は candidate 収集済み SDP と server が払い出した ULID session ID を返す。
-type Answer struct {
-	SDP       string `json:"sdp"`
-	Type      string `json:"type"`
-	SessionID string `json:"session_id"`
-	Revision  int    `json:"offer_revision"`
-}
-
-// Candidate は Frontend の Trickle ICE candidate または end-of-candidates を表す。
-//
-// nil は `candidate: null` であり、AddCandidate は空 candidate として Pion へ渡す。
-type Candidate struct {
-	Candidate        string  `json:"candidate"`
-	SDPMid           *string `json:"sdpMid,omitempty"`
-	SDPMLineIndex    *uint16 `json:"sdpMLineIndex,omitempty"`
-	UsernameFragment *string `json:"usernameFragment,omitempty"`
-}
 
 // ManagerConfig は全sessionで共有するdependencyとactive session上限の起動時境界である。
 //
@@ -130,9 +104,9 @@ func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 
 // Create は initial Offer から session を作り、half-trickle Answer を返す。
 //
-// type、SDP、talk_modeをresource作成前に検証する。session専用Coordinatorを作った後、request deadlineを
-// PionのSTUN gather上限へ伝播してremote description、outbound track、local Answer、candidate収集を行う。
-// 失敗時は同じ非同期close経路へ通知し、registryからの除去はresource join完了後にだけ行う。
+// type、SDP、talk_mode、initial request UUIDをresource作成前に検証する。session専用Coordinatorを
+// 作った後、request deadlineをPionのSTUN gather上限へ伝播してcandidate収集済みAnswerを作る。
+// 成功Answerをrevision 1のretry基点として保存し、失敗時は同じ非同期close経路へ通知する。
 func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 	if offer.Type != "offer" {
 		return Answer{}, errors.New("offer type must be offer")
@@ -142,6 +116,10 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 	}
 	if offer.TalkMode != "chat" && offer.TalkMode != "sincro" {
 		return Answer{}, errors.New("talk mode must be chat or sincro")
+	}
+	requestID, err := uuid.Parse(offer.OfferRequestID)
+	if err != nil {
+		return Answer{}, errors.New("offer request id must be a UUID")
 	}
 	// Coordinator、PeerConnection、codec作成前にadmissionを予約する。Session公開またはsetup失敗まで
 	// registry lock配下のactive+reservation合計へ含め、並行作成でもMaxSessionsを超えない。
@@ -194,7 +172,9 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 		_ = session.Close("offer_failed")
 		return Answer{}, err
 	}
-	return Answer{SDP: answer.SDP, Type: answer.Type.String(), SessionID: sessionID, Revision: 1}, nil
+	result := Answer{SDP: answer.SDP, Type: answer.Type.String(), SessionID: sessionID, Revision: 1}
+	session.revision = newRevisionState(requestID, offer.SDP, result)
+	return result, nil
 }
 
 // ErrSessionCapacity はactive Sessionと作成予約の合計がMaxSessionsへ到達したことを表す。
@@ -217,39 +197,6 @@ func (m *Manager) releaseReservation() {
 	m.mu.Lock()
 	m.reservations--
 	m.mu.Unlock()
-}
-
-// AddCandidate は active session へ Trickle ICE candidate を適用する。
-//
-// active session なら applied=true を返す。不明または終了済み session は HTTP handler が
-// 200 + status:false へ変換できる reason を返し、新規 session へ fallback しない。
-func (m *Manager) AddCandidate(sessionID string, candidate *Candidate) (applied bool, reason string, err error) {
-	m.mu.RLock()
-	session := m.sessions[sessionID]
-	_, wasClosed := m.closed[sessionID]
-	m.mu.RUnlock()
-	if session == nil {
-		if wasClosed {
-			return false, "session_closed", nil
-		}
-		return false, "unknown_session", nil
-	}
-	init := webrtc.ICECandidateInit{}
-	if candidate != nil {
-		if strings.TrimSpace(candidate.Candidate) == "" {
-			return false, "", errors.New("candidate string is required")
-		}
-		init = webrtc.ICECandidateInit{
-			Candidate:        candidate.Candidate,
-			SDPMid:           candidate.SDPMid,
-			SDPMLineIndex:    candidate.SDPMLineIndex,
-			UsernameFragment: candidate.UsernameFragment,
-		}
-	}
-	if err := session.addCandidate(init); err != nil {
-		return false, "", err
-	}
-	return true, "", nil
 }
 
 // Count は現在 registry にある active session 数を返す。

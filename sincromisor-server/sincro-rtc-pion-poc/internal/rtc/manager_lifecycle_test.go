@@ -40,7 +40,7 @@ func TestManagerCreateAdmissionNeverExceedsCapacity(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			if _, createErr := manager.Create(context.Background(), Offer{
-				Type: "offer", SDP: "v=0\r\n", TalkMode: "chat",
+				Type: "offer", SDP: "v=0\r\n", TalkMode: "chat", OfferRequestID: rtcTestOfferRequestID,
 			}); !errors.Is(createErr, setupErr) {
 				t.Errorf("Create() error = %v, want setup failure", createErr)
 			}
@@ -62,7 +62,7 @@ func TestManagerCreateAdmissionNeverExceedsCapacity(t *testing.T) {
 			activeAtPeak, reservationsAtPeak)
 	}
 	if _, err := manager.Create(context.Background(), Offer{
-		Type: "offer", SDP: "v=0\r\n", TalkMode: "chat",
+		Type: "offer", SDP: "v=0\r\n", TalkMode: "chat", OfferRequestID: rtcTestOfferRequestID,
 	}); !errors.Is(err, ErrSessionCapacity) {
 		t.Fatalf("101st Create() error = %v, want ErrSessionCapacity", err)
 	}
@@ -85,7 +85,7 @@ func TestManagerCreateAdmissionNeverExceedsCapacity(t *testing.T) {
 func TestManagerCreateFailureReleasesPublishedSessionAndReservation(t *testing.T) {
 	manager := newTestManager(t)
 	if _, err := manager.Create(context.Background(), Offer{
-		Type: "offer", SDP: "not-an-sdp", TalkMode: "chat",
+		Type: "offer", SDP: "not-an-sdp", TalkMode: "chat", OfferRequestID: rtcTestOfferRequestID,
 	}); err == nil {
 		t.Fatal("Create() error = nil, want malformed SDP failure")
 	}
@@ -147,7 +147,7 @@ func TestCreateRejectsTalkModeBeforePeerConnectionAndPipeline(t *testing.T) {
 		t.Fatalf("NewManager() error = %v", err)
 	}
 	if _, err := manager.Create(context.Background(), Offer{
-		Type: "offer", SDP: "invalid but non-empty", TalkMode: "other",
+		Type: "offer", SDP: "invalid but non-empty", TalkMode: "other", OfferRequestID: rtcTestOfferRequestID,
 	}); err == nil {
 		t.Fatal("Create() accepted invalid talk mode")
 	}

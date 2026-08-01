@@ -8,8 +8,9 @@ import (
 
 // installCallbacks はPionのtransport/media eventをsession lifecycleのevent sourceへ接続する。
 //
-// callbackはresource cleanupを直接組み立てず、全異常をCloseへ集約する。track/channelはconnected前でも
-// latchへ記録し、最後のreadinessとtimeout/CloseはsessionLifecycle.muの取得順で直列化する。
+// callbackはresource cleanupを直接組み立てず、ICE異常はrecovery flow、media異常はCloseへ渡す。
+// track/channelはconnected前でもlatchへ記録し、最後のreadinessとtimeout/Closeは
+// sessionLifecycle.muの取得順で直列化する。
 func (s *Session) installCallbacks() {
 	s.pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
 		if state == webrtc.PeerConnectionStateConnected {
@@ -18,12 +19,7 @@ func (s *Session) installCallbacks() {
 	})
 	s.pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
 		s.logger.Info("ice state changed", "session_id", s.id, "state", state.String())
-		switch state {
-		case webrtc.ICEConnectionStateClosed, webrtc.ICEConnectionStateFailed,
-			webrtc.ICEConnectionStateDisconnected:
-			_ = s.Close("ice_" + state.String())
-		default:
-		}
+		s.handleICEConnectionState(state)
 	})
 	s.pc.OnTrack(func(track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
 		if track.Kind() != webrtc.RTPCodecTypeAudio ||

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -53,6 +54,81 @@ func TestInitialOfferContractFixtures(t *testing.T) {
 	}
 	if _, err := ulid.ParseStrict(answer.SessionID); err != nil {
 		t.Fatalf("answer fixture session_id: %v", err)
+	}
+}
+
+func TestRevisionContractFixtures(t *testing.T) {
+	requestBytes, err := os.ReadFile("testdata/update_offer_request.json")
+	if err != nil {
+		t.Fatalf("read update request fixture: %v", err)
+	}
+	var request offerRequest
+	if err := json.Unmarshal(requestBytes, &request); err != nil {
+		t.Fatalf("decode update request fixture: %v", err)
+	}
+	var sessionID string
+	if err := json.Unmarshal(request.SessionID, &sessionID); err != nil {
+		t.Fatalf("decode update session fixture: %v", err)
+	}
+	if _, err := ulid.ParseStrict(sessionID); err != nil || request.OfferRevision != 2 ||
+		!validUUID(request.OfferRequestID) {
+		t.Fatalf("update request identity = %q/%d/%q", sessionID, request.OfferRevision, request.OfferRequestID)
+	}
+
+	answerBytes, err := os.ReadFile("testdata/update_offer_answer.json")
+	if err != nil {
+		t.Fatalf("read update answer fixture: %v", err)
+	}
+	var answer rtc.Answer
+	if err := json.Unmarshal(answerBytes, &answer); err != nil {
+		t.Fatalf("decode update answer fixture: %v", err)
+	}
+	if answer.SessionID != sessionID || answer.Revision != request.OfferRevision {
+		t.Fatalf("answer identity = %s/%d, want %s/%d",
+			answer.SessionID, answer.Revision, sessionID, request.OfferRevision)
+	}
+}
+
+func TestCandidateContractFixturesPreservePresence(t *testing.T) {
+	fixtureBytes, err := os.ReadFile("testdata/candidate_requests.json")
+	if err != nil {
+		t.Fatalf("read candidate fixture: %v", err)
+	}
+	var fixtures []struct {
+		Name    string          `json:"name"`
+		Request json.RawMessage `json:"request"`
+	}
+	if err := json.Unmarshal(fixtureBytes, &fixtures); err != nil {
+		t.Fatalf("decode candidate fixtures: %v", err)
+	}
+	if len(fixtures) != 3 {
+		t.Fatalf("candidate fixture count = %d, want 3", len(fixtures))
+	}
+	hashes := make([]string, 0, 2)
+	for _, fixture := range fixtures {
+		fake := &fakeSessions{candidateApplied: true}
+		response := performRequest(
+			newTestServer(t, fake, "").Handler(),
+			http.MethodPost,
+			candidatePath,
+			string(fixture.Request),
+		)
+		if response.Code != http.StatusOK {
+			t.Fatalf("%s status = %d; body=%s", fixture.Name, response.Code, response.Body.String())
+		}
+		if fixture.Name == "end of candidates" {
+			if fake.lastCandidate != nil {
+				t.Fatal("explicit null candidate did not remain end-of-candidates")
+			}
+			continue
+		}
+		if fake.lastCandidate == nil {
+			t.Fatalf("%s decoded as end-of-candidates", fixture.Name)
+		}
+		hashes = append(hashes, fmt.Sprintf("%v", fake.lastCandidate))
+	}
+	if hashes[0] != hashes[1] {
+		t.Fatalf("optional missing/null decoded differently: %q != %q", hashes[0], hashes[1])
 	}
 }
 
@@ -109,9 +185,9 @@ func TestOfferBoundary(t *testing.T) {
 		},
 		{
 			name:       "update offer",
-			body:       `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","session_id":"old","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":1}`,
-			fake:       &fakeSessions{},
-			wantStatus: http.StatusNotImplemented,
+			body:       `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","session_id":"01K1AF2Y0H0000000000000000","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":2}`,
+			fake:       &fakeSessions{updateAnswer: rtc.Answer{SDP: "v=0\r\n", Type: "answer", SessionID: "01K1AF2Y0H0000000000000000", Revision: 2}},
+			wantStatus: http.StatusOK,
 		},
 	}
 	for _, test := range tests {
@@ -145,6 +221,37 @@ func TestOfferGatheringTimeoutReturns504(t *testing.T) {
 	server.offers.mu.Unlock()
 	if entryCount != 0 {
 		t.Fatalf("timeout retained %d registry entries, want 0", entryCount)
+	}
+}
+
+func TestUpdateOfferSchemaAndStatusBoundaries(t *testing.T) {
+	valid := `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","session_id":"01K1AF2Y0H0000000000000000","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":2}`
+	tests := []struct {
+		name       string
+		body       string
+		fake       *fakeSessions
+		wantStatus int
+	}{
+		{name: "valid", body: valid, fake: &fakeSessions{updateAnswer: rtc.Answer{Revision: 2}}, wantStatus: http.StatusOK},
+		{name: "missing talk mode", body: strings.Replace(valid, `"talk_mode":"chat",`, "", 1), fake: &fakeSessions{}, wantStatus: http.StatusBadRequest},
+		{name: "invalid talk mode", body: strings.Replace(valid, `"chat"`, `"other"`, 1), fake: &fakeSessions{}, wantStatus: http.StatusBadRequest},
+		{name: "saved talk mode mismatch", body: strings.Replace(valid, `"chat"`, `"sincro"`, 1), fake: &fakeSessions{updateErr: rtc.ErrOfferConflict}, wantStatus: http.StatusConflict},
+		{name: "missing request id", body: strings.Replace(valid, `,"offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42"`, "", 1), fake: &fakeSessions{}, wantStatus: http.StatusBadRequest},
+		{name: "different request id", body: valid, fake: &fakeSessions{updateErr: rtc.ErrOfferConflict}, wantStatus: http.StatusConflict},
+		{name: "revision zero", body: strings.Replace(valid, `"offer_revision":2`, `"offer_revision":0`, 1), fake: &fakeSessions{}, wantStatus: http.StatusBadRequest},
+		{name: "revision conflict", body: valid, fake: &fakeSessions{updateErr: rtc.ErrOfferConflict}, wantStatus: http.StatusConflict},
+		{name: "unknown session", body: valid, fake: &fakeSessions{updateErr: rtc.ErrSessionUnknown}, wantStatus: http.StatusNotFound},
+		{name: "closed session", body: valid, fake: &fakeSessions{updateErr: rtc.ErrSessionClosed}, wantStatus: http.StatusGone},
+		{name: "gather timeout", body: valid, fake: &fakeSessions{updateErr: context.DeadlineExceeded}, wantStatus: http.StatusGatewayTimeout},
+		{name: "previous session forbidden", body: strings.TrimSuffix(valid, "}") + `,"previous_session_id":"01K1AF2Y0H0000000000000001"}`, fake: &fakeSessions{}, wantStatus: http.StatusBadRequest},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response := performRequest(newTestServer(t, test.fake, "").Handler(), http.MethodPost, offerPath, test.body)
+			if response.Code != test.wantStatus {
+				t.Fatalf("status = %d, want %d; body=%s", response.Code, test.wantStatus, response.Body.String())
+			}
+		})
 	}
 }
 
@@ -336,29 +443,29 @@ func TestCandidateBoundary(t *testing.T) {
 	}{
 		{
 			name:       "valid candidate",
-			body:       `{"session_id":"active","candidate":{"candidate":"candidate:1 1 udp 1 127.0.0.1 5000 typ host","sdpMid":"0","sdpMLineIndex":0}}`,
+			body:       `{"session_id":"01K1AF2Y0H0000000000000000","offer_revision":1,"candidate":{"candidate":"candidate:1 1 udp 1 127.0.0.1 5000 typ host","sdpMid":"0","sdpMLineIndex":0}}`,
 			fake:       &fakeSessions{candidateApplied: true},
 			wantStatus: http.StatusOK,
 			wantApply:  true,
 		},
 		{
 			name:       "end of candidates",
-			body:       `{"session_id":"active","candidate":null}`,
+			body:       `{"session_id":"01K1AF2Y0H0000000000000000","offer_revision":1,"candidate":null}`,
 			fake:       &fakeSessions{candidateApplied: true},
 			wantStatus: http.StatusOK,
 			wantApply:  true,
 		},
 		{
 			name:       "unknown session",
-			body:       `{"session_id":"unknown","candidate":null}`,
-			fake:       &fakeSessions{candidateReason: "unknown_session"},
-			wantStatus: http.StatusOK,
+			body:       `{"session_id":"01K1AF2Y0H0000000000000001","offer_revision":1,"candidate":null}`,
+			fake:       &fakeSessions{candidateErr: rtc.ErrSessionUnknown},
+			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:       "closed session",
-			body:       `{"session_id":"closed","candidate":null}`,
-			fake:       &fakeSessions{candidateReason: "session_closed"},
-			wantStatus: http.StatusOK,
+			body:       `{"session_id":"01K1AF2Y0H0000000000000002","offer_revision":1,"candidate":null}`,
+			fake:       &fakeSessions{candidateErr: rtc.ErrSessionClosed},
+			wantStatus: http.StatusGone,
 		},
 		{
 			name:       "malformed json",
@@ -368,7 +475,7 @@ func TestCandidateBoundary(t *testing.T) {
 		},
 		{
 			name:       "malformed candidate",
-			body:       `{"session_id":"active","candidate":{"candidate":""}}`,
+			body:       `{"session_id":"01K1AF2Y0H0000000000000000","offer_revision":1,"candidate":{"candidate":""}}`,
 			fake:       &fakeSessions{candidateErr: errors.New("candidate string is required")},
 			wantStatus: http.StatusBadRequest,
 		},
@@ -386,6 +493,32 @@ func TestCandidateBoundary(t *testing.T) {
 				if got.Status != test.wantApply {
 					t.Fatalf("status field = %v, want %v", got.Status, test.wantApply)
 				}
+			}
+		})
+	}
+}
+
+func TestCandidatePresenceSizeAndRevisionBoundaries(t *testing.T) {
+	validPrefix := `{"session_id":"01K1AF2Y0H0000000000000000","offer_revision":1`
+	tests := []struct {
+		name       string
+		body       string
+		fake       *fakeSessions
+		wantStatus int
+	}{
+		{name: "candidate missing", body: validPrefix + `}`, fake: &fakeSessions{}, wantStatus: http.StatusBadRequest},
+		{name: "revision missing", body: `{"session_id":"01K1AF2Y0H0000000000000000","candidate":null}`, fake: &fakeSessions{}, wantStatus: http.StatusBadRequest},
+		{name: "revision zero", body: `{"session_id":"01K1AF2Y0H0000000000000000","offer_revision":0,"candidate":null}`, fake: &fakeSessions{}, wantStatus: http.StatusBadRequest},
+		{name: "revision old", body: validPrefix + `,"candidate":null}`, fake: &fakeSessions{candidateErr: rtc.ErrOfferConflict}, wantStatus: http.StatusConflict},
+		{name: "candidate exact limit", body: validPrefix + `,"candidate":{"candidate":"` + strings.Repeat("c", maxCandidateBytes) + `"}}`, fake: &fakeSessions{candidateApplied: true}, wantStatus: http.StatusOK},
+		{name: "candidate over limit", body: validPrefix + `,"candidate":{"candidate":"` + strings.Repeat("c", maxCandidateBytes+1) + `"}}`, fake: &fakeSessions{}, wantStatus: http.StatusRequestEntityTooLarge},
+		{name: "candidate capacity", body: validPrefix + `,"candidate":null}`, fake: &fakeSessions{candidateErr: rtc.ErrCandidateLimit}, wantStatus: http.StatusTooManyRequests},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response := performRequest(newTestServer(t, test.fake, "").Handler(), http.MethodPost, candidatePath, test.body)
+			if response.Code != test.wantStatus {
+				t.Fatalf("status = %d, want %d; body=%s", response.Code, test.wantStatus, response.Body.String())
 			}
 		})
 	}
@@ -411,9 +544,17 @@ type fakeSessions struct {
 	candidateApplied   bool
 	candidateReason    string
 	candidateErr       error
+	lastCandidate      *rtc.Candidate
+	lastRevision       uint64
+	updateAnswer       rtc.Answer
+	updateErr          error
 	activeSessions     atomic.Int32
 	reservations       atomic.Int32
 	resourceBuildCalls atomic.Int32
+}
+
+func (f *fakeSessions) Update(_ context.Context, _ rtc.UpdateOffer) (rtc.Answer, error) {
+	return f.updateAnswer, f.updateErr
 }
 
 func (f *fakeSessions) Create(ctx context.Context, offer rtc.Offer) (rtc.Answer, error) {
@@ -430,8 +571,10 @@ func (f *fakeSessions) Create(ctx context.Context, offer rtc.Offer) (rtc.Answer,
 	return f.answer, f.createErr
 }
 
-func (f *fakeSessions) AddCandidate(_ string, _ *rtc.Candidate) (bool, string, error) {
-	return f.candidateApplied, f.candidateReason, f.candidateErr
+func (f *fakeSessions) AddCandidate(_ string, revision uint64, candidate *rtc.Candidate) (bool, error) {
+	f.lastRevision = revision
+	f.lastCandidate = candidate
+	return !f.candidateApplied, f.candidateErr
 }
 
 func (f *fakeSessions) Count() int {
