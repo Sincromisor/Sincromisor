@@ -284,7 +284,7 @@ go test -race -count=1 ./internal/pipeline \
 
 testはin-process WebSocket serverとproduction resolver / `ClientSetFactory` / 4 client /
 MessagePack codec / `Coordinator`を使用する。各serverの成功responseは
-`internal/pipeline/protocol/testdata/python/*.msgpack` のPython生成fixtureから開始し、
+`internal/pipeline/protocol/testdata/*.msgpack` のPython生成fixtureから開始し、
 requestに依存するidentity / historyだけをpatchする。PCMは640-byteの固定frameを
 `Coordinator.SubmitPCM` へ渡す。serverがYAMNet等で内容を推論することはなく、testがCoordinator内部の
 stage result channelへ直接値を注入することもない。
