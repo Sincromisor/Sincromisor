@@ -9,6 +9,8 @@ import (
 
 	"github.com/oklog/ulid/v2"
 	"github.com/pion/webrtc/v4"
+
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
 // Offer は Frontend の initial Offer を Pion session 作成境界へ渡す。
@@ -35,6 +37,16 @@ type Candidate struct {
 	UsernameFragment *string `json:"usernameFragment,omitempty"`
 }
 
+// ManagerDependencies は全 session で共有する factory、clock、logger の起動時境界である。
+//
+// NewManager は nil を拒否する。sessionごとに同じ factoryから専用Coordinatorを1つ作り、
+// Clockは各session固有timerだけを生成するため、dependency自体は並行利用可能でなければならない。
+type ManagerDependencies struct {
+	PipelineFactory pipeline.ClientSetFactory
+	Clock           Clock
+	Logger          *slog.Logger
+}
+
 // Manager は active PeerConnection の registry と process-wide shutdown を所有する。
 //
 // registry lock は map の参照だけを保護し、PeerConnection I/O や Close 待機中は保持しない。
@@ -45,14 +57,17 @@ type Manager struct {
 	sessions      map[string]*Session
 	closed        map[string]struct{}
 	configuration webrtc.Configuration
-	logger        *slog.Logger
+	dependencies  ManagerDependencies
 }
 
-// NewManager は optional STUN URL を反映した空の session registry を作成する。
+// NewManager は optional STUN URL と必須 dependency を検証し、空の session registry を作成する。
 //
-// Manager は process shutdown 時に CloseAll を呼ぶ必要がある。TURN、固定 UDP mux、NAT rewrite は
-// ローカル host candidate の PoC に含めない。
-func NewManager(stunURL string, logger *slog.Logger) *Manager {
+// network I/O、PeerConnection、CoordinatorはCreateまで開始しない。Manager は process shutdown 時に
+// 5秒上限のcontextを渡してCloseAllを呼ぶ必要がある。TURN、固定UDP mux、NAT rewriteは対象外である。
+func NewManager(stunURL string, dependencies ManagerDependencies) (*Manager, error) {
+	if dependencies.PipelineFactory == nil || dependencies.Clock == nil || dependencies.Logger == nil {
+		return nil, errors.New("rtc manager dependencies must not be nil")
+	}
 	configuration := webrtc.Configuration{}
 	if stunURL != "" {
 		configuration.ICEServers = []webrtc.ICEServer{{URLs: []string{stunURL}}}
@@ -61,14 +76,15 @@ func NewManager(stunURL string, logger *slog.Logger) *Manager {
 		sessions:      make(map[string]*Session),
 		closed:        make(map[string]struct{}),
 		configuration: configuration,
-		logger:        logger,
-	}
+		dependencies:  dependencies,
+	}, nil
 }
 
 // Create は initial Offer から session を作り、half-trickle Answer を返す。
 //
-// remote description 検証、outbound track 登録、local Answer 作成後に candidate 収集完了を待つ。
-// ctx timeout/cancellation または Pion error 時は session を close し registry に resource を残さない。
+// type、SDP、talk_modeをresource作成前に検証する。session専用Coordinatorを作った後、remote description、
+// outbound track、local Answer、candidate収集を行う。失敗時は同じ非同期close経路へ通知し、
+// registryからの除去はresource join完了後にだけ行う。
 func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 	if offer.Type != "offer" {
 		return Answer{}, errors.New("offer type must be offer")
@@ -76,9 +92,29 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 	if strings.TrimSpace(offer.SDP) == "" {
 		return Answer{}, errors.New("offer sdp is required")
 	}
-	sessionID := ulid.Make().String()
-	session, err := newSession(sessionID, m.configuration, m.logger, m.remove)
+	if offer.TalkMode != "chat" && offer.TalkMode != "sincro" {
+		return Answer{}, errors.New("talk mode must be chat or sincro")
+	}
+	sessionDependencies := SessionDependencies{
+		PipelineFactory: m.dependencies.PipelineFactory,
+		Clock:           m.dependencies.Clock,
+	}
+	coordinator, err := pipeline.NewCoordinator(sessionDependencies.PipelineFactory, m.dependencies.Logger)
 	if err != nil {
+		return Answer{}, err
+	}
+	sessionID := ulid.Make().String()
+	session, err := newSession(
+		sessionID,
+		offer.TalkMode,
+		m.configuration,
+		coordinator,
+		sessionDependencies.Clock,
+		m.dependencies.Logger,
+		m.remove,
+	)
+	if err != nil {
+		_ = coordinator.Close()
 		return Answer{}, err
 	}
 	m.mu.Lock()
@@ -133,31 +169,46 @@ func (m *Manager) Count() int {
 	return len(m.sessions)
 }
 
-// CloseAll は process shutdown 時に active session を snapshot して並行 callback と競合せず終了する。
+// CloseAll は process shutdown 時のactive sessionをsnapshotし、全cleanup完了まで待つ。
 //
-// 各 Session の close-once が codec、ticker、PeerConnection、goroutine を統合して停止する。
-func (m *Manager) CloseAll(reason string) error {
+// reason省略時はprocess_shutdownを使う。ctx deadlineを超えた場合はctx.Errを返すが、done closeや
+// registry removeを偽装せず、各Sessionのcleanup goroutineは完了まで継続する。registry lockは
+// Close通知にも待機にも保持しないため、並行callbackを妨げない。
+func (m *Manager) CloseAll(ctx context.Context, reasons ...string) error {
+	if ctx == nil {
+		return errors.New("rtc manager close context must not be nil")
+	}
+	reason := "process_shutdown"
+	if len(reasons) > 0 && reasons[0] != "" {
+		reason = reasons[0]
+	}
 	m.mu.RLock()
 	sessions := make([]*Session, 0, len(m.sessions))
 	for _, session := range m.sessions {
 		sessions = append(sessions, session)
 	}
 	m.mu.RUnlock()
-	var joined error
 	for _, session := range sessions {
-		joined = errors.Join(joined, session.Close(reason))
+		_ = session.Close(reason)
 	}
 	for _, session := range sessions {
-		<-session.done
+		select {
+		case <-session.done:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
-	return joined
+	return nil
 }
 
+// remove はSession cleanup完了通知をactive registryからprocess-lifetime tombstoneへ変換する。
+//
+// Sessionだけが呼び、unknown/closed candidateの区別を維持する。resource join前の早期removeは行わない。
 func (m *Manager) remove(sessionID string) {
 	m.mu.Lock()
 	delete(m.sessions, sessionID)
 	m.closed[sessionID] = struct{}{}
 	activeSessions := len(m.sessions)
 	m.mu.Unlock()
-	m.logger.Info("session registry updated", "session_id", sessionID, "active_sessions", activeSessions)
+	m.dependencies.Logger.Info("session registry updated", "session_id", sessionID, "active_sessions", activeSessions)
 }

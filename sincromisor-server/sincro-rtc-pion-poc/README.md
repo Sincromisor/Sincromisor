@@ -6,7 +6,8 @@
 - browser Opus RTP を pure Go の `github.com/pion/opus` で 48 kHz PCM に decode する。
 - 48 kHz mono、1 秒の test tone を `github.com/pion/mediadevices/pkg/codec/opus` で encode し、20 ms ごとに返す。
 - `text_ch` / `telop_ch` へ固定 smoke JSON を送信し、session close の resource 回収を確認する。
-- production compose、Consul、Caddy、下流 Python service への接続は行わない。
+- media readiness 成立後だけ local Consul 経由で下流 Python service へ接続し、session close で join する。
+- production compose、Caddy への組み込みは行わない。
 
 ## Build requirements
 
@@ -80,7 +81,7 @@ unknown / closed session の candidate は HTTP 200 と `status:false` を返す
 
 次は後続 phase の責務である。
 
-- 16 kHz mono resampleと下流 Python service接続
+- 16 kHz mono resampleと、decode済みPCMの下流pipeline投入
 - ICE restart、`offer_request_id`、`offer_revision`
 - fixed UDP mux、NAT / firewall、TURN、Firefox
 - RTP reorder、NACK / PLC、RTCP metrics

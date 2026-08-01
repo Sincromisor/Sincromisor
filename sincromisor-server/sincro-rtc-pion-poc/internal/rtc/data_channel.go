@@ -12,10 +12,11 @@ var (
 	telopSmokePayload = []byte(`{"speech_id":1,"timestamp":0,"message":"DataChannel smoke","vowel":"a","text":"DataChannel smoke","length":1,"new_text":true}`)
 )
 
-// handleDataChannel は Frontend initiatorが作った既存2 channelの属性を検証し、固定JSONを1回送る。
+// handleDataChannel は Frontend initiatorが作った既存2 channelを検証し、open latchへ接続する。
 //
 // text_chはordered/reliable、telop_chはunordered/maxRetransmits=0だけを受理する。未知labelや属性違反、
-// send errorはapplication契約を継続できないためsessionのclose-onceへ合流する。
+// 別objectの同label、send errorはapplication契約を継続できないためsessionのclose-onceへ合流する。
+// pipeline readinessはchannel到着時ではなくOnOpen時に成立し、両channelとaudioが揃うまで遅延される。
 func (s *Session) handleDataChannel(channel *webrtc.DataChannel) {
 	label := channel.Label()
 	var payload []byte
@@ -40,8 +41,14 @@ func (s *Session) handleDataChannel(channel *webrtc.DataChannel) {
 		_ = s.Close("invalid_data_channel")
 		return
 	}
+	if !s.registerDataChannel(channel) {
+		return
+	}
 	// Frontend parser を無変更で通す固定 JSON を channel open 後に 1 回だけ送る。返信は要求しない。
 	channel.OnOpen(func() {
+		if !s.dataChannelOpened(channel) {
+			return
+		}
 		if err := channel.SendText(string(payload)); err != nil {
 			s.logger.Error("data channel smoke send failed", "session_id", s.id, "label", label, "error", err)
 			_ = s.Close("data_channel_error")

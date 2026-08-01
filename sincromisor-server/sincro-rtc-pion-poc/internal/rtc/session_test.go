@@ -14,12 +14,14 @@ import (
 	"github.com/pion/interceptor"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
+
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
 func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
-	manager := NewManager("", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	manager := newTestManager(t)
 	t.Cleanup(func() {
-		if err := manager.CloseAll("test_teardown"); err != nil {
+		if err := manager.CloseAll(testCloseContext(t), "test_teardown"); err != nil {
 			t.Errorf("CloseAll(test_teardown) error = %v", err)
 		}
 	})
@@ -59,9 +61,9 @@ func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 
 func TestManagerTenSequentialNormalClosesConverge(t *testing.T) {
 	baseline := runtime.NumGoroutine()
-	manager := NewManager("", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	manager := newTestManager(t)
 	t.Cleanup(func() {
-		if err := manager.CloseAll("test_teardown"); err != nil {
+		if err := manager.CloseAll(testCloseContext(t), "test_teardown"); err != nil {
 			t.Errorf("CloseAll(test_teardown) error = %v", err)
 		}
 	})
@@ -83,7 +85,7 @@ func TestManagerTenSequentialNormalClosesConverge(t *testing.T) {
 }
 
 func TestSessionCloseIsIdempotent(t *testing.T) {
-	manager := NewManager("", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	manager := newTestManager(t)
 	client, _ := newBrowserPeer(t)
 	answer := negotiatePair(t, manager, client)
 
@@ -94,7 +96,7 @@ func TestSessionCloseIsIdempotent(t *testing.T) {
 		t.Fatal("session missing after negotiation")
 	}
 	var wait sync.WaitGroup
-	for range 8 {
+	for range 100 {
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
@@ -115,15 +117,23 @@ func TestSessionCloseIsIdempotent(t *testing.T) {
 
 func TestCodecErrorClosesSession(t *testing.T) {
 	closed := make(chan string, 1)
+	coordinator, err := pipeline.NewCoordinator(blockingPipelineFactory{}, testLogger())
+	if err != nil {
+		t.Fatalf("NewCoordinator() error = %v", err)
+	}
 	session, err := newSession(
 		"codec-error-session",
+		"chat",
 		webrtc.Configuration{},
-		slog.New(slog.NewTextHandler(io.Discard, nil)),
+		coordinator,
+		SystemClock{},
+		testLogger(),
 		func(sessionID string) { closed <- sessionID },
 	)
 	if err != nil {
 		t.Fatalf("newSession() error = %v", err)
 	}
+	session.wg.Add(1)
 	session.startInbound(&singlePacketReader{packet: &rtp.Packet{Payload: []byte{0xff}}})
 	select {
 	case sessionID := <-closed:
@@ -133,6 +143,40 @@ func TestCodecErrorClosesSession(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("codec error did not close session")
 	}
+}
+
+func newTestManager(t *testing.T) *Manager {
+	t.Helper()
+	manager, err := NewManager("", ManagerDependencies{
+		PipelineFactory: blockingPipelineFactory{},
+		Clock:           SystemClock{},
+		Logger:          testLogger(),
+	})
+	if err != nil {
+		t.Fatalf("NewManager() error = %v", err)
+	}
+	return manager
+}
+
+func testLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
+func testCloseContext(t *testing.T) context.Context {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+	return ctx
+}
+
+type blockingPipelineFactory struct{}
+
+func (blockingPipelineFactory) Connect(
+	ctx context.Context,
+	_, _ string,
+) (pipeline.ClientSet, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
 }
 
 func newBrowserPeer(t *testing.T) (*webrtc.PeerConnection, <-chan channelMessage) {
