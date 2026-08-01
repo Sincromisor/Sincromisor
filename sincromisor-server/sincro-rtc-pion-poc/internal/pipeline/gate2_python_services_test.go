@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -25,11 +26,19 @@ import (
 
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol"
 )
 
 const (
-	gate2WAVHash = "3f9169ec597de0f8fc17b4b6e4f89ea05e8792f42bfb48bfa7c33277318d3759"
-	gate2PCMHash = "a0375e761e7a483117a7535a5da7ed0ef0036611916a0b0e534403e551789933"
+	gate2WAVHash             = "3f9169ec597de0f8fc17b4b6e4f89ea05e8792f42bfb48bfa7c33277318d3759"
+	gate2PCMHash             = "a0375e761e7a483117a7535a5da7ed0ef0036611916a0b0e534403e551789933"
+	gate2StartTimeout        = 30 * time.Second
+	gate2ExtractorTimeout    = 15 * time.Second
+	gate2RecognizerTimeout   = 30 * time.Second
+	gate2ProcessorTimeout    = 15 * time.Second
+	gate2SynthesizerTimeout  = 60 * time.Second
+	gate2ResetTimeout        = 45 * time.Second
+	gate2ConnectionCloseWait = 15 * time.Second
 )
 
 // TestGate2PythonServices is the fixed opt-in exit gate for the current four
@@ -52,34 +61,78 @@ func TestGate2PythonServices(t *testing.T) {
 		t.Fatalf("NewCoordinator() error = %v", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if err := coordinator.Start(ctx, "gate2-python-services", "sincro"); err != nil {
-		t.Fatalf("Start() error = %v", err)
-	}
+	// Startへ渡すctxは成功後もsession lifetimeを所有する。初回接続だけは別timerで監視し、
+	// deadline時に同じctxをcancelしてretryを止めてからCloseで全resourceをjoinする。
 	defer func() {
+		cancel()
 		if err := coordinator.Close(); err != nil {
 			t.Errorf("deferred Close() error = %v", err)
 		}
 	}()
+	if err := startGate2Coordinator(ctx, cancel, coordinator); err != nil {
+		waitGate2(t, gate2ConnectionCloseWait, "failed Start proxy cleanup", func() bool {
+			for _, proxy := range proxies {
+				if proxy.active.Load() != 0 {
+					return false
+				}
+			}
+			return true
+		})
+		t.Fatalf("Start() error = %v", err)
+	}
+	for service, proxy := range proxies {
+		if proxy.accepted.Load() == 0 {
+			t.Fatalf("%s initial connection was not accepted", service)
+		}
+	}
 
 	pcm := gate2PCM(t)
-	runGate2Turn(t, coordinator, pcm, 1)
+	first := runGate2Turn(t, coordinator, pcm, 1, nil)
 	before := gate2AcceptCounts(proxies)
 	proxies[discovery.ServiceRecognizer].DropConnections()
-	waitGate2(t, 45*time.Second, func() bool {
+	waitGate2(t, gate2ResetTimeout, "generation 2 and four replacement connections", func() bool {
 		coordinator.mu.Lock()
-		defer coordinator.mu.Unlock()
-		return coordinator.state == StateRunning && coordinator.generation == 2
+		running := coordinator.state == StateRunning && coordinator.generation == 2
+		coordinator.mu.Unlock()
+		if !running {
+			return false
+		}
+		for service, proxy := range proxies {
+			if proxy.accepted.Load() != before[service]+1 {
+				return false
+			}
+		}
+		return true
 	})
 	for service, proxy := range proxies {
 		if proxy.accepted.Load() != before[service]+1 {
 			t.Fatalf("%s accept count after reset = %d, want %d", service, proxy.accepted.Load(), before[service]+1)
 		}
 	}
-	runGate2Turn(t, coordinator, pcm, 2)
+	coordinator.outputMu.Lock()
+	oldText, oldSynth := len(coordinator.textOut), len(coordinator.synthOut)
+	coordinator.outputMu.Unlock()
+	if oldText != 0 || oldSynth != 0 {
+		t.Fatalf("reset retained old output: text=%d synth=%d", oldText, oldSynth)
+	}
+	if history := gate2History(coordinator); !reflect.DeepEqual(history, first.history) {
+		t.Fatalf("reset changed confirmed history: got=%+v want=%+v", history, first.history)
+	}
+	second := runGate2Turn(t, coordinator, pcm, 2, first.history)
+	if !reflect.DeepEqual(second.history[:len(first.history)], first.history) {
+		t.Fatal("second turn did not preserve the first turn confirmed history")
+	}
 	if err := coordinator.Close(); err != nil {
 		t.Fatalf("Close() error = %v", err)
 	}
+	waitGate2(t, gate2ConnectionCloseWait, "all proxy connections to close", func() bool {
+		for _, proxy := range proxies {
+			if proxy.active.Load() != 0 {
+				return false
+			}
+		}
+		return true
+	})
 	for service, proxy := range proxies {
 		if proxy.active.Load() != 0 {
 			t.Fatalf("%s active connections after Close = %d, want 0", service, proxy.active.Load())
@@ -110,7 +163,57 @@ func gate2Origins(t *testing.T) map[discovery.Service]*url.URL {
 	return result
 }
 
-func runGate2Turn(t *testing.T, coordinator *Coordinator, pcm []byte, generation uint64) {
+func startGate2Coordinator(
+	ctx context.Context,
+	cancel context.CancelFunc,
+	coordinator *Coordinator,
+) error {
+	started := make(chan error, 1)
+	go func() {
+		started <- coordinator.Start(ctx, "gate2-python-services", "sincro")
+	}()
+	timer := time.NewTimer(gate2StartTimeout)
+	defer timer.Stop()
+	select {
+	case err := <-started:
+		if err != nil {
+			_ = coordinator.Close()
+		}
+		return err
+	case <-timer.C:
+		// Start contextはsession lifetimeそのものなので、timeout時はcancelしてretry waiterと
+		// partial client setを停止する。Startの終了を受け取ってからCloseをjoinし、test goroutineを残さない。
+		cancel()
+		startErr := <-started
+		closeErr := coordinator.Close()
+		return fmt.Errorf(
+			"initial four-service connection exceeded %s: start=%v close=%v",
+			gate2StartTimeout,
+			startErr,
+			closeErr,
+		)
+	}
+}
+
+type gate2TurnResult struct {
+	extraction extractionIdentity
+	user       protocol.ChatMessage
+	assistant  protocol.ChatMessage
+	history    []protocol.ChatMessage
+	synth      protocol.SynthesizerResult
+}
+
+// runGate2Turnはbrowser PCMから各stageのobservable stateを順に検証する。
+//
+// stageごとに独立したdeadlineを開始し、後段の成功で前段の未観測を代替しない。Processor finalだけが
+// confirmed historyをcommitし、Synthesizer identityはそのfinal responseと照合する。
+func runGate2Turn(
+	t *testing.T,
+	coordinator *Coordinator,
+	pcm []byte,
+	generation uint64,
+	previousHistory []protocol.ChatMessage,
+) gate2TurnResult {
 	t.Helper()
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
@@ -128,34 +231,182 @@ func runGate2Turn(t *testing.T, coordinator *Coordinator, pcm []byte, generation
 		}
 		<-ticker.C
 	}
-	textDeadline := time.NewTimer(45 * time.Second)
-	defer textDeadline.Stop()
-	var confirmedText bool
-	for !confirmedText {
+
+	var extraction extractionIdentity
+	waitGate2(t, gate2ExtractorTimeout, "confirmed Extractor result", func() bool {
+		var confirmed bool
+		extraction, confirmed = gate2ConfirmedExtraction(coordinator, generation)
+		return confirmed
+	})
+	user := waitGate2Text(
+		t,
+		coordinator,
+		generation,
+		gate2RecognizerTimeout,
+		"non-empty Recognizer text",
+		func(message protocol.ChatMessage) bool {
+			return message.MessageType == "user" && message.Message != ""
+		},
+	)
+	if user.SpeechID != extraction.speechID {
+		t.Fatalf("Recognizer speech ID = %d, want confirmed Extractor speech ID %d", user.SpeechID, extraction.speechID)
+	}
+	assistant, history := waitGate2ProcessorFinal(
+		t,
+		coordinator,
+		generation,
+		previousHistory,
+		user,
+	)
+	synth := waitGate2Synthesizer(t, coordinator, generation, assistant)
+	return gate2TurnResult{
+		extraction: extraction,
+		user:       user,
+		assistant:  assistant,
+		history:    history,
+		synth:      synth,
+	}
+}
+
+func gate2ConfirmedExtraction(coordinator *Coordinator, generation uint64) (extractionIdentity, bool) {
+	coordinator.mu.Lock()
+	identity := coordinator.extraction
+	work := coordinator.work
+	running := coordinator.state == StateRunning && coordinator.generation == generation
+	coordinator.mu.Unlock()
+	if !running || work == nil || !identity.seen || identity.generation != generation {
+		return extractionIdentity{}, false
+	}
+	work.conv.mu.Lock()
+	_, confirmed := work.conv.closed[identity.speechID]
+	work.conv.mu.Unlock()
+	return identity, confirmed
+}
+
+func waitGate2Text(
+	t *testing.T,
+	coordinator *Coordinator,
+	generation uint64,
+	timeout time.Duration,
+	stage string,
+	accept func(protocol.ChatMessage) bool,
+) protocol.ChatMessage {
+	t.Helper()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	for {
 		select {
-		case output := <-coordinator.TextResults():
-			if output.Generation != generation {
-				t.Fatalf("text generation = %d, want %d", output.Generation, generation)
+		case output, ok := <-coordinator.TextResults():
+			if !ok {
+				t.Fatalf("%s output channel closed", stage)
 			}
-			confirmedText = output.Value.MessageType == "assistant" && output.Value.Message != ""
-		case <-textDeadline.C:
-			t.Fatal("processor did not publish a non-empty assistant response within 45s")
+			if output.Generation != generation {
+				t.Fatalf("%s generation = %d, want %d", stage, output.Generation, generation)
+			}
+			if accept(output.Value) {
+				return output.Value
+			}
+		case <-timer.C:
+			t.Fatalf("%s was not observed within %s", stage, timeout)
 		}
 	}
-	select {
-	case output := <-coordinator.SynthResults():
-		if output.Generation != generation || len(output.Value.Voice) == 0 ||
-			len(output.Value.MoraQueue) == 0 || output.Value.SpeakingTime <= 0 {
-			t.Fatalf("invalid synthesizer output: %+v", output)
+}
+
+func waitGate2ProcessorFinal(
+	t *testing.T,
+	coordinator *Coordinator,
+	generation uint64,
+	previousHistory []protocol.ChatMessage,
+	recognized protocol.ChatMessage,
+) (protocol.ChatMessage, []protocol.ChatMessage) {
+	t.Helper()
+	timer := time.NewTimer(gate2ProcessorTimeout)
+	defer timer.Stop()
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	observed := make(map[string]protocol.ChatMessage)
+	for {
+		history := gate2History(coordinator)
+		if len(history) == len(previousHistory)+2 &&
+			reflect.DeepEqual(history[:len(previousHistory)], previousHistory) {
+			confirmedUser := history[len(previousHistory)]
+			assistant := history[len(history)-1]
+			published, found := observed[assistant.MessageID]
+			if found && reflect.DeepEqual(published, assistant) {
+				if confirmedUser.MessageID != recognized.MessageID ||
+					confirmedUser.SpeechID != recognized.SpeechID ||
+					confirmedUser.MessageType != "user" ||
+					confirmedUser.Message == "" {
+					t.Fatalf("invalid confirmed Recognizer history entry: %+v", confirmedUser)
+				}
+				if assistant.MessageType != "assistant" ||
+					assistant.Message == "" ||
+					assistant.SpeechID != confirmedUser.SpeechID {
+					t.Fatalf("invalid final Processor history entry: %+v", assistant)
+				}
+				return assistant, history
+			}
 		}
-		switch output.Value.AudioFormat {
-		case "audio/wav", "audio/aac", "audio/ogg;codecs=opus":
-		default:
-			t.Fatalf("unsupported synthesized audio format %q", output.Value.AudioFormat)
+		select {
+		case output, ok := <-coordinator.TextResults():
+			if !ok {
+				t.Fatal("Processor text output channel closed")
+			}
+			if output.Generation != generation {
+				t.Fatalf("Processor text generation = %d, want %d", output.Generation, generation)
+			}
+			if output.Value.MessageType == "assistant" && output.Value.Message != "" {
+				observed[output.Value.MessageID] = output.Value
+			}
+		case <-ticker.C:
+		case <-timer.C:
+			t.Fatalf("Processor final response and confirmed history were not observed within %s", gate2ProcessorTimeout)
 		}
-	case <-time.After(60 * time.Second):
-		t.Fatal("synthesizer did not publish encoded voice within 60s")
 	}
+}
+
+func waitGate2Synthesizer(
+	t *testing.T,
+	coordinator *Coordinator,
+	generation uint64,
+	assistant protocol.ChatMessage,
+) protocol.SynthesizerResult {
+	t.Helper()
+	timer := time.NewTimer(gate2SynthesizerTimeout)
+	defer timer.Stop()
+	for {
+		select {
+		case output, ok := <-coordinator.SynthResults():
+			if !ok {
+				t.Fatal("Synthesizer output channel closed")
+			}
+			if output.Generation != generation {
+				t.Fatalf("Synthesizer generation = %d, want %d", output.Generation, generation)
+			}
+			value := output.Value
+			if value.SpeechID != assistant.SpeechID ||
+				value.Message == "" ||
+				len(value.Voice) == 0 ||
+				len(value.MoraQueue) == 0 ||
+				value.SpeakingTime <= 0 {
+				t.Fatalf("invalid Synthesizer identity/voice/timing output: %+v", value)
+			}
+			switch value.AudioFormat {
+			case "audio/wav", "audio/aac", "audio/ogg;codecs=opus":
+			default:
+				t.Fatalf("unsupported synthesized audio format %q", value.AudioFormat)
+			}
+			return value
+		case <-timer.C:
+			t.Fatalf("Synthesizer identity/voice/mora/speaking time was not observed within %s", gate2SynthesizerTimeout)
+		}
+	}
+}
+
+func gate2History(coordinator *Coordinator) []protocol.ChatMessage {
+	coordinator.mu.Lock()
+	defer coordinator.mu.Unlock()
+	return cloneMessages(coordinator.history)
 }
 
 func gate2PCM(t *testing.T) []byte {
@@ -314,7 +565,7 @@ func gate2AcceptCounts(proxies map[discovery.Service]*gate2Proxy) map[discovery.
 	return result
 }
 
-func waitGate2(t *testing.T, timeout time.Duration, condition func() bool) {
+func waitGate2(t *testing.T, timeout time.Duration, stage string, condition func() bool) {
 	t.Helper()
 	deadline := time.NewTimer(timeout)
 	defer deadline.Stop()
@@ -327,7 +578,7 @@ func waitGate2(t *testing.T, timeout time.Duration, condition func() bool) {
 		select {
 		case <-ticker.C:
 		case <-deadline.C:
-			t.Fatal("timed out waiting for Gate 2 reset")
+			t.Fatalf("%s was not observed within %s", stage, timeout)
 		}
 	}
 }
