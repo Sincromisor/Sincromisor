@@ -476,3 +476,54 @@ attempt 6のworktree差分はtest codeのみでproduction comment audit対象外
 
 stale commentと新規TODOはない。追加block commentは、既存`waitGate2`の命名、stage文字列、
 `gate2StartTimeout`から入力、失敗条件、副作用、pipeline上の位置が局所的に完結するため省略した。
+
+### 現行task.mdへの追従と最終判定
+
+- APPROVED済みの現行`task.md`では、Gate 2正本がenvironment非依存のin-process WebSocket 3 testへ
+  改訂されている。旧attempt 4〜6が残課題として扱った実Python service、YAMNet / ASR / TTS推論品質、
+  Consul等のavailabilityは明示的にスコープ外であり、現行ACの未達項目ではない。
+- review.mdの申し送りどおり、production resolver / `ClientSetFactory` / 4 client /
+  MessagePack codec / Coordinatorを通る既存3 testを固定entrypointとして採用した。
+  旧前提の`gate2` build tag、実service URL環境変数、WAV fixture / 変換helperを保持していた
+  `internal/pipeline/gate2_python_services_test.go`は、未コミットのupstream publication wait差分ごと
+  commit `b4ff165b49ce917bb3f80bf1ab499028092d8891`で削除した。
+- 固定Gateはrace detector下でPASSした。1往復、4 service × 3 faultの12 reset subtest、
+  異なるserviceの同時failureを含む8回resetを完走し、generation 1→2 / 1→9、
+  各resetで4接続各+1、Close後active WebSocket 0、goroutine baseline +5以下を確認した。
+- 仕様からの逸脱はない。実service smoke testを再実行しなかったのは、現行task.mdが明示的に
+  Gate 2判定材料から除外し、当該test自体の削除を要求しているためである。
+
+### 最終検証
+
+- 固定Gate 2:
+  `go test -race -count=1 ./internal/pipeline -run
+'^(TestFixtureWebSocketPipeline|TestFixtureWebSocketResetMatrix|TestFixtureWebSocketSimultaneousFailureAndRepeatedResetDoNotLeak)$' -v`:
+  PASS（package 1.410秒）。
+- module root:
+  `gofmt -l .`（出力なし）、`go vet ./...`、`go test ./...`、
+  `go test -race ./...`、`go mod tidy -diff`（差分なし）: すべてPASS。
+- repository root、clean commit `b4ff165b49ce917bb3f80bf1ab499028092d8891`:
+  `npm run gate`: PASS（lint / build / frontend 534 passed・2 skipped）。
+- `npm run tasks:index:check`、`npm run tasks:check`、`npm run commit:check`: PASS。
+- worktree: clean。
+
+### ドキュメント同期
+
+- main checkout側state artifactの`artifacts/gate-2-result.md`へ、現行Gate 2のPASS判定、固定command、
+  commit SHA、3 test / 12 matrix case、generation、connection / goroutine回収、未検証事項を同期した。
+- production API、wire schema、endpoint、compose / env、公開lifecycleは変更していない。
+  既存のcontract / migration文書は累積production実装と一致しており、今回のobsolete test削除による
+  `documents/design/`、migration文書、生成物の追加同期は不要と判断した。
+
+### Comment audit（現行task追従差分）
+
+現行差分はtest fileの削除だけで、production codeのcomment audit対象外である。
+
+| path                                              | symbol / block / decision / flow                     | kind                   | current comment                                     | reader question                                                 | required reader knowledge                                      | decision | action / omission reason                                                                                | reviewer note                                 |
+| ------------------------------------------------- | ---------------------------------------------------- | ---------------------- | --------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `internal/pipeline/gate2_python_services_test.go` | file全体、実service Gate lifecycle / WAV conversion  | obsolete test boundary | 実Python serviceを固定exit Gateとして説明           | 現行Gate 2で実service / model availabilityを要求するのか        | 現行taskはin-process 3 testを正本とし、実serviceを判定対象外化 | delete   | build tag、env boundary、proxy lifecycle、WAV helperをfileごと削除し、矛盾する旧commentも同時に除去     | 未commit publication waitもobsoleteとして削除 |
+| `internal/pipeline/websocket_integration_test.go` | 固定3 testのproduction client / fixture / reset flow | test orchestration     | Python fixture原本、patch境界、generation検証を説明 | 削除後のGateがproduction wire経路とreset / leakをどう証明するか | resolver / client / codec / Coordinator、12 matrix、8 reset    | keep     | 現行taskが指定するentrypointと実装が一致し、責務・境界・failure flowの説明にstale化がないため変更しない | production codeや公開commentへの波及なし      |
+
+stale commentと新規TODOはない。削除file以外へcommentを追加しなかったのは、現行Gateを担う既存3 testの
+上位commentとhelper名がfixture境界、orchestration、generation / connection回収をすでに覆い、
+今回の変更がそのflow自体を変更せず正本を一本化する削除に限定されるためである。

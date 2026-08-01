@@ -296,3 +296,52 @@ pipelineがresetし、継続PCMが`pipeline is unavailable`となったためcon
 
 固定fixtureで4 stage、reset後2 turn目、Closeを完走していないため、Gate 2とPhase 3開始条件はFAILの
 ままとする。
+
+## attempt 6（現行Gate 2正本）
+
+### 判定
+
+PASS
+
+2026-08-02、APPROVED済みの現行`task.md`に従い、Gate 2をenvironment非依存のin-process
+WebSocket integrationへ一本化した。旧attemptの実Python service、YAMNet / ASR / TTS推論品質、
+Consul等のavailabilityは現行Gate 2の判定材料ではない。実service URL環境変数、`gate2` build tag、
+WAV変換helperを含む`internal/pipeline/gate2_python_services_test.go`は
+commit `b4ff165b49ce917bb3f80bf1ab499028092d8891`で削除した。
+
+### 固定commandと結果
+
+対象commit:
+
+```text
+b4ff165b49ce917bb3f80bf1ab499028092d8891
+```
+
+module rootで次を実行した。
+
+```sh
+go test -race -count=1 ./internal/pipeline \
+  -run '^(TestFixtureWebSocketPipeline|TestFixtureWebSocketResetMatrix|TestFixtureWebSocketSimultaneousFailureAndRepeatedResetDoNotLeak)$' -v
+```
+
+結果はPASS（package 1.410秒）だった。
+
+- `TestFixtureWebSocketPipeline`: 1 test PASS。generation 1でPCMからuser / assistant text、
+  Python生成fixture由来のencoded voiceまでproduction resolver / client set / codec /
+  Coordinator経路を通し、Processor history 1件、Synthesizer request 1件を確認した。
+- `TestFixtureWebSocketResetMatrix`: 12 subtest PASS。4 serviceそれぞれについてnormal closure
+  （1000）、malformed MessagePack、going-away closure（1001）を検証した。各caseでgeneration
+  1から2へ1回だけ進み、4 serviceのaccept countが各+1、active connectionがreset後4、
+  Close後0へ収束した。旧queue / partial state / outputの破棄、confirmed history維持、
+  stale generation drop、in-flight TTS非再送、generation 2の次turn完了も確認した。
+- `TestFixtureWebSocketSimultaneousFailureAndRepeatedResetDoNotLeak`: 1 test PASS。
+  Extractor / Processorの同時failureを8回反復し、generation 1から9、各resetで4 serviceの
+  accept count各+1、旧generation output 0を確認した。Close後active WebSocketは0、
+  coordinator goroutineは開始時baseline +5以下へ有限deadline内に収束した。
+
+### 未検証事項
+
+実Python service、model、Redis、S3、VoiceVox、Consulのavailability、YAMNet threshold、
+認識文字列、応答本文、合成音声品質は現行taskのスコープ外であり、Gate 2の未達項目ではない。
+browser Opus RTPからPCMへの接続、合成音声decode / resample / RTP pacing、DataChannel統合は
+Phase 3以降の検証対象として残る。

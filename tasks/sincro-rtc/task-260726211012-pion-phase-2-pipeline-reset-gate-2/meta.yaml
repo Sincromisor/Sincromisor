@@ -1,14 +1,14 @@
 id: task-260726211012-pion-phase-2-pipeline-reset-gate-2
 title: Pion Phase 2のpipeline resetを実装してRTC pipeline Gate 2を成立させる
 category: sincro-rtc
-status: open
+status: done
 depends_on:
   - task-260726211007-pion-phase-2-pipeline-websocket-clients
 superseded_by: null
 review: APPROVED
 reviewed_sha: 172902c1ca07124ee254f44c86670535ecfa7704
-verdict: FAIL
-attempts: 5
+verdict: PASS
+attempts: 6
 created_at: 2026-07-26
-closed_at: null
+closed_at: 2026-08-02
 legacy_ids: []

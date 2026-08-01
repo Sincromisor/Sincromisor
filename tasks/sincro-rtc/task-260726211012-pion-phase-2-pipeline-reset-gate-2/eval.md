@@ -510,3 +510,113 @@ FAIL
   Extractor/Recognizer/Processor/Synthesizerの1 turn、Recognizer切断後のgeneration reset、
   historyを維持した2 turn目、success pathのClose後active connection 0をartifactへ記録する。
 - Consul data directoryの消去等は本評価の権限・スコープ外であり実施していない。
+
+## attempt 6
+
+### 判定
+
+PASS
+
+現行`task.md`を正本としてcommit
+`b4ff165b49ce917bb3f80bf1ab499028092d8891`をcleanな隔離worktreeで再評価した。
+attempt 5以前の実Python service / YAMNet / Consulに関するFAILは現行Gate 2の判定根拠ではない。
+
+### 受け入れ条件チェックリスト
+
+- [✓] `coordinator.go`、`generation.go`、`conversation.go`、`queue.go`とsession単位の所有構造 —
+  累積実装commit `7e446e7f`〜`c7741e2`、module unit/race test。
+- [✓] 固定5 state、許可edge、typed `TransitionError`、構造化log —
+  `generation.go`とstate transition test。
+- [✓] generation 1開始、reset先行increment、callbackのcaptured generation照合、
+  service別stale drop count、0/wraparound terminal invariant —
+  `connect.go`、`reset.go`、`generation.go`とgeneration/reset test。
+- [✓] 初回・runtime・partial set failureのgeneration/attempt semantics —
+  publication window、retry、reset test。
+- [✓] Extractor→Recognizer→Processor→Synthesizer順のconnect、partial set逆順close、
+  全接続後だけのpublish — production `client/set.go`とclient set test。
+- [✓] single-flight reset、入力拒否、旧work cancel/join、transient破棄、再接続順序 —
+  reset matrix 12 subtestと同時failure反復。
+- [✓] 1秒〜30秒full-jitter、`crypto/rand`、cancel可能waiter、test-only hook —
+  retry unit test。公開runtime optionは追加されていない。
+- [✓] 640-byte PCM、防御的copy、25-frame drop-oldest、reset時queue交換、
+  session累積drop telemetry — queue/coordinator test。
+- [✓] Extractor/Recognizerのsession・speech・sequence・confirmed整合、session-wide単調性、
+  protocol error reset — conversation testとreset後fixture identity assertion。
+- [✓] recognition partial/final、Processor intermediate/final、confirmed history、
+  reset時transient破棄/defensive copy — conversation/coordinator testとreset matrix。
+- [✓] non-empty raw `voice_text`だけのSynthesizer転送、typed encoded voice/mora出力 —
+  unit testとfixture raw-byte integration。
+- [✓] text/synth各16件、5秒backpressure reset、固定定数、retry飽和 —
+  deterministic waiter/backpressure test。
+- [✓] session lifetime output channel、generation envelope、reset barrier/drain —
+  output barrier/race testとreset matrixのold/stale output assertion。
+- [✓] 全stateからのclose-once、retry/work/client/producer join、再接続禁止 —
+  close matrix、full race、leak test。
+- [✓] `Start` context lifetime、同期初回接続、二重Start/Close競合、channel close owner —
+  lifecycle testとfull race。
+- [✓] fake 4-serviceの1往復 — 固定
+  `TestFixtureWebSocketPipeline`がproduction resolver/client/codec/Coordinatorを通し、
+  user/assistant text、history、raw Processor bytes由来のvoiceを検証。
+- [✓] 4 service × normal/decode/going-away reset matrix —
+  `TestFixtureWebSocketResetMatrix`の12 subtestがgeneration 1→2、各4接続+1、
+  transient破棄、history維持、TTS非再送、次turnを検証。
+- [✓] 現行Gate 2固定entrypoint — 指定3 testをrace detector下で独立実行してPASS。
+  Python生成fixtureを原本とし、許可fieldだけのpatchとSynthesizer request byte equalityを確認した。
+- [✓] 旧`gate2_python_services_test.go`、`gate2` build tag、実service URL env、
+  WAV変換helperの削除 — commit `b4ff165`。実装treeの全文検索でも残存なし。
+- [✓] normal close反復、同時failureを含む8 reset、active connection 0、
+  old output 0、goroutine baseline +5以下 — unit/race testと固定leak test。
+- [✓] migration 2文書、pipeline contract、AudioBroker設計、Gate result artifactの同期 —
+  累積実装とmain task artifactを照合。Python AudioBrokerのPhase 3までのproduction境界も維持。
+- [✓] production comment acceptance / audit — 累積production変更のpackage/public API、
+  state/generation、event source、queue/output ownership、history確定、reset/close/joinを
+  実コードとaudit表に照合した。今回差分はobsolete test fileの削除だけで、
+  stale comment/TODOを残さず、現行3 testのorchestration commentも実装と一致する。
+- [✓] module/repository必須検証 — format、vet、unit、full race、tidy、固定Gate 2、
+  `npm run gate`、tasks index/checkがすべて成功。
+
+### テスト結果
+
+- repository root `npm run gate`: PASS。
+    - lint: PASS
+    - build: PASS
+    - frontend test: PASS
+- module root:
+    - `gofmt -l .`: PASS（出力なし）
+    - `go vet ./...`: PASS
+    - `go test ./...`: PASS（全package）
+    - `go test -race ./...`: PASS（全package）
+    - `go mod tidy -diff`: PASS（差分なし）
+- 固定Gate 2:
+  `go test -race -count=1 ./internal/pipeline -run
+'^(TestFixtureWebSocketPipeline|TestFixtureWebSocketResetMatrix|TestFixtureWebSocketSimultaneousFailureAndRepeatedResetDoNotLeak)$' -v`:
+  PASS（1.332秒）。
+  3 top-level testとreset matrix 12 subtestがPASSし、generation 1→2 / 1→9、
+  各resetの4接続再作成、Close後active 0、goroutine baseline +5以下を確認した。
+- `npm run tasks:index:check`: PASS（12 category / 263 task）。
+- `npm run tasks:check`: PASS（263 task、open 3 / done 258 / superseded 2）。
+- 最初のGo実行はsandboxがlocalhost listener、netlink route、VCS statusを拒否したため
+  判定に使用していない。同一clean SHA・同一Go commandを許可境界で再実行した上記PASSを
+  判定根拠とした。
+- `npm run gate`の初回は共有frontend依存に`biome`がなくcommand起動前に停止した。
+  lockfileどおり`npm ci`で隔離worktreeの依存を復元後、同一clean SHAで3段すべてを実行した。
+- カバレッジ評価: fixed happy path、全12 fault matrix、同時failure/8 reset、
+  backpressure、publication window、close/race/leakにより現行受け入れ条件を十分に覆う。
+  実Python serviceと推論品質は現行taskが明示したスコープ外であり、未達扱いにしない。
+
+### ドキュメント整合性
+
+- 今回のcommitはobsolete testの削除だけで、production API、wire schema、endpoint、
+  compose/env、公開lifecycleを変更しない。追加のAPI schema・利用例・生成物同期は対象外。
+- 累積production変更に対応する
+  `documents/migration/pion/{roadmap,implementation-phases}.md`、
+  `documents/design/contracts/audio-pipeline-websocket.md`、
+  `documents/design/backend/services/audio-broker.md`は実装と一致する。
+- main側`artifacts/gate-2-result.md`の`attempt 6（現行Gate 2正本）`は、
+  対象SHA、固定command、3 test/12 matrix、generation、connection/goroutine回収、
+  Phase 3へ残す未検証事項を同期済み。旧実service試行は履歴として明確に区別され、
+  現行PASS根拠に混入していない。
+
+### 残課題
+
+なし。
