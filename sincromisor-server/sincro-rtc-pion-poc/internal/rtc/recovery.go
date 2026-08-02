@@ -50,7 +50,7 @@ func (s *Session) startDisconnectGrace() {
 	}
 }
 
-// disconnectGraceExpired は猶予をrestart-requiredへ進め、追加15秒だけ同じSessionを保持する。
+// disconnectGraceExpired は猶予期限を1回記録してrestart-requiredへ進め、追加15秒だけ同じSessionを保持する。
 func (s *Session) disconnectGraceExpired() {
 	s.lifecycle.mu.Lock()
 	if s.lifecycle.terminalLocked() || s.lifecycle.recovery != recoveryGrace {
@@ -58,7 +58,7 @@ func (s *Session) disconnectGraceExpired() {
 		return
 	}
 	s.lifecycle.recovery = recoveryNeedsRestart
-	s.metrics().Deadline("restart")
+	s.metrics().Deadline("disconnect_grace")
 	err := s.lifecycle.recoveryDeadlines.replace(
 		restartDeadlineTimeout,
 		s.SafeCallback("deadline_restart", s.restartDeadlineExpired),

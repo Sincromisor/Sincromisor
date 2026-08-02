@@ -6,6 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
+
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/observability"
 )
 
 func TestDisconnectedNaturalRecoveryCancelsGrace(t *testing.T) {
@@ -58,6 +60,27 @@ func TestDisconnectedGraceThenRestartDeadlineCloses(t *testing.T) {
 	clock.timer(1).fire()
 	waitSessionDone(t, session)
 	assertClosedSession(t, manager, session, "ice_restart_timeout")
+}
+
+func TestDisconnectGraceExpiryRecordsDedicatedDeadlineExactlyOnce(t *testing.T) {
+	clock := &fakeClock{}
+	_, session := newManagedLifecycleSession(t, clock, blockingPipelineFactory{})
+	recorder := &recordingRTCRecorder{Recorder: observability.Discard()}
+	session.recorder = recorder
+	session.lifecycle.state = stateRunning
+
+	session.handleICEConnectionState(webrtc.ICEConnectionStateDisconnected)
+	clock.timer(0).fire()
+	clock.timer(0).fire()
+
+	recorder.mu.Lock()
+	defer recorder.mu.Unlock()
+	if recorder.deadlines["disconnect_grace"] != 1 || recorder.deadlines["restart"] != 0 {
+		t.Fatalf(
+			"deadline metrics = %v, want disconnect_grace=1 and restart=0 before restart expiry",
+			recorder.deadlines,
+		)
+	}
 }
 
 func TestFailedDeadlineRequiresSuccessfulUpdateCancellation(t *testing.T) {

@@ -299,7 +299,7 @@ var (
 	endpoints        = set("config", "offer", "candidate", "statuses")
 	statusClasses    = set("2xx", "4xx", "5xx")
 	iceStates        = set("New", "Checking", "Connected", "Completed", "Failed", "Disconnected", "Closed", "Unknown")
-	deadlineStages   = set("gather", "pre_connect", "media_readiness", "restart", "close")
+	deadlineStages   = set("gather", "pre_connect", "media_readiness", "disconnect_grace", "restart", "close")
 	directions       = set("in", "out")
 	audioOutcomes    = set("accepted", "sent", "dropped")
 	rtpReasons       = set("duplicate", "late", "missing", "reorder_flush")

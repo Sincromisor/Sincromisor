@@ -2,7 +2,10 @@ package observability
 
 import (
 	"io"
+	"maps"
 	"net/http/httptest"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -78,5 +81,39 @@ func TestRegistryExposesFixedSchemaWithoutPayloadLabels(t *testing.T) {
 	if !strings.Contains(text, "sincro_rtc_sessions_active 0") ||
 		!strings.Contains(text, `outcome="failed"`) {
 		t.Errorf("session ownership/outcome normalization missing:\n%s", text)
+	}
+}
+
+func TestRegistryDeadlineStagesMatchFixedSchema(t *testing.T) {
+	want := []string{
+		"close",
+		"disconnect_grace",
+		"gather",
+		"media_readiness",
+		"pre_connect",
+		"restart",
+	}
+	if !maps.Equal(deadlineStages, set(want...)) {
+		t.Fatalf("deadlineStages = %v, want exact set %v", deadlineStages, want)
+	}
+
+	registry := NewRegistry()
+	for _, stage := range want {
+		registry.Deadline(stage)
+	}
+	request := httptest.NewRequest("GET", "/metrics", nil)
+	response := httptest.NewRecorder()
+	registry.Handler().ServeHTTP(response, request)
+	matches := regexp.MustCompile(`sincro_rtc_deadlines_total\{stage="([^"]+)"\} 1`).FindAllStringSubmatch(
+		response.Body.String(),
+		-1,
+	)
+	got := make([]string, 0, len(matches))
+	for _, match := range matches {
+		got = append(got, match[1])
+	}
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		t.Fatalf("deadline metric stages = %v, want exact set %v", got, want)
 	}
 }
