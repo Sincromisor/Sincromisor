@@ -1,9 +1,9 @@
 ---
-description: task-reviewer サブエージェントを単体で呼び出し、タスク記述ファイルをレビューさせる（実装・close は行わない）
+description: task-reviewer サブエージェントを単体で呼び出し、タスク記述ファイルをレビューさせる（実装・完了処理は行わない）
 argument-hint: <task-dir>（例: tasks/feature/task-260601153000-foo）
 ---
 
-`$1` のタスク記述を task-reviewer サブエージェントにレビューさせる。実装・評価・close は
+`$1` のタスク記述を task-reviewer サブエージェントにレビューさせる。実装・評価・完了処理は
 行わず、レビュー単体で完結する。判定は `meta.yaml` に転記する（`review` / `reviewed_sha` のみ。
 `status` / `verdict` は触らない）。
 
@@ -19,8 +19,8 @@ argument-hint: <task-dir>（例: tasks/feature/task-260601153000-foo）
    `$1/review.md` に出力させる。
     - 呼び出しプロンプトに対象パス `$1` を明記すること（サブエージェントは親の履歴を
       継承しないため）。
-3. サブエージェントの**最終メッセージ（判定と特記事項の要点）を確認し、かつ
-   `$1/review.md` を必ず Read** してから報告する。
+3. サブエージェントの\*\*最終メッセージ（判定と特記事項の要点）を確認し、かつ
+   `$1/review.md` を必ず読んでから報告する。
 4. 判定を `meta.yaml` に転記する:
     - APPROVED → `tasks:set $1 review=APPROVED reviewed_sha=$(git rev-parse HEAD)`
       （`reviewed_sha` は `/run-task` レビュー段のスキップ判定の基準になる）
@@ -28,8 +28,8 @@ argument-hint: <task-dir>（例: tasks/feature/task-260601153000-foo）
 
 ## 報告
 
-レビュー判定（APPROVED / NEEDS_REVISION）と、Critical/High 指摘・実装者への申し送りの
+レビュー判定（APPROVED / NEEDS_REVISION）と、致命的・重大な指摘・実装者への申し送りの
 要点をユーザーに提示する（詳細は `$1/review.md` を参照、と示す）。
 
-パイプライン継続（実装/評価）は行わない。続けて実装まで回す場合は
+後続手順（実装・評価）は行わない。続けて実装まで回す場合は
 `/run-task $1` を使うようユーザーに案内する。
