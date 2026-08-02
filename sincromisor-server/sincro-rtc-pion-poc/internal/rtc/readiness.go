@@ -1,6 +1,7 @@
 package rtc
 
 import (
+	"context"
 	"strings"
 
 	"github.com/pion/webrtc/v4"
@@ -13,26 +14,34 @@ import (
 // sessionLifecycle.muの取得順で直列化する。
 func (s *Session) installCallbacks() {
 	s.pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
-		if state == webrtc.PeerConnectionStateConnected {
-			s.transportReady()
-		}
+		s.SafeCallback("connection_state", func() {
+			if state == webrtc.PeerConnectionStateConnected {
+				s.transportReady()
+			}
+		})()
 	})
 	s.pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
-		s.logger.Info("ice state changed", "session_id", s.id, "state", state.String())
-		s.handleICEConnectionState(state)
+		s.SafeCallback("ice_state", func() {
+			s.logger.Info("ice state changed", "session_id", s.id, "stage", state.String())
+			s.handleICEConnectionState(state)
+		})()
 	})
 	s.pc.OnTrack(func(track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
-		if track.Kind() != webrtc.RTPCodecTypeAudio ||
-			!strings.EqualFold(track.Codec().MimeType, webrtc.MimeTypeOpus) {
-			s.logger.Error("unexpected remote track", "session_id", s.id, "mime_type", track.Codec().MimeType)
-			_ = s.Close("unexpected_track")
-			return
-		}
-		if s.acceptAudioTrack(track) {
-			s.startInbound(rtpReader{track})
-		}
+		s.SafeCallback("track", func() {
+			if track.Kind() != webrtc.RTPCodecTypeAudio ||
+				!strings.EqualFold(track.Codec().MimeType, webrtc.MimeTypeOpus) {
+				s.logger.Error("unexpected remote track", "session_id", s.id, "stage", "track", "reason", "media_read_error")
+				_ = s.Close("unexpected_track")
+				return
+			}
+			if s.acceptAudioTrack(track) {
+				s.startInbound(rtpReader{track})
+			}
+		})()
 	})
-	s.pc.OnDataChannel(s.handleDataChannel)
+	s.pc.OnDataChannel(func(channel *webrtc.DataChannel) {
+		s.SafeCallback("data_channel", func() { s.handleDataChannel(channel) })()
+	})
 }
 
 // transportReady は Pion connected callback を answer_ready 後の transport_ready へ変換する。
@@ -51,6 +60,7 @@ func (s *Session) transportReady() {
 			return
 		}
 		if err := s.lifecycle.deadlines.replace(mediaReadinessTimeout, func() {
+			s.metrics().Deadline("media_readiness")
 			s.closeIfState(stateTransportReady, "media_readiness_timeout")
 		}); err != nil {
 			s.logTransitionError(err)
@@ -210,15 +220,14 @@ func (s *Session) promoteMediaReadyLocked(event string) bool {
 // Close は session context と Coordinator.Close の両方で接続中処理を中断する。Start failure が
 // closing より先なら同じ close-onceへ通知し、成功時だけ running を公開する。
 func (s *Session) launchPipeline() {
-	go func() {
-		defer s.wg.Done()
+	s.goReserved("pipeline_start", func(context.Context) {
 		err := s.pipeline.Start(s.ctx, s.id, s.talkMode)
 		if err != nil {
 			s.lifecycle.mu.Lock()
 			closing := s.lifecycle.terminalLocked()
 			s.lifecycle.mu.Unlock()
 			if !closing {
-				s.logger.Error("pipeline start failed", "session_id", s.id, "error", err)
+				s.logger.Error("pipeline start failed", "session_id", s.id, "reason", "pipeline_start_error")
 				_ = s.Close("pipeline_start_error")
 			}
 			return
@@ -230,5 +239,5 @@ func (s *Session) launchPipeline() {
 			}
 		}
 		s.lifecycle.mu.Unlock()
-	}()
+	})
 }

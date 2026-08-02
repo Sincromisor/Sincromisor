@@ -14,6 +14,7 @@ import (
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
@@ -31,6 +32,9 @@ type ManagerConfig struct {
 	MaxSessions     int
 	// SynthDecoderは全Sessionが同一pointerを非所有参照するimmutable dependencyである。
 	SynthDecoder *synthdecode.Decoder
+	// Recorder receives finite-cardinality lifecycle events. Nil selects a no-op
+	// recorder so lower-level tests do not need a Prometheus registry.
+	Recorder observability.Recorder
 }
 
 // sessionBuildRequest はadmission後にSession resource境界へ渡す検証済みの作成入力をまとめる。
@@ -43,6 +47,7 @@ type sessionBuildRequest struct {
 	coordinator   *pipeline.Coordinator
 	synthDecoder  *synthdecode.Decoder
 	onClosed      func(string)
+	recorder      observability.Recorder
 }
 
 // sessionBuilder はadmission reservation後にだけ到達するPeerConnection/codec作成境界である。
@@ -82,6 +87,9 @@ func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 	if config.MaxSessions <= 0 {
 		return nil, errors.New("rtc manager max sessions must be positive")
 	}
+	if config.Recorder == nil {
+		config.Recorder = observability.NopRecorder{}
+	}
 	configuration := webrtc.Configuration{}
 	if stunURL != "" {
 		configuration.ICEServers = []webrtc.ICEServer{{URLs: []string{stunURL}}}
@@ -105,6 +113,7 @@ func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 			manager.config.Clock,
 			manager.config.Logger,
 			request.onClosed,
+			request.recorder,
 		)
 	}
 	return manager, nil
@@ -165,6 +174,7 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 				offer.OnClosed(closedID)
 			}
 		},
+		recorder: m.config.Recorder,
 	})
 	if err != nil {
 		_ = coordinator.Close()
@@ -175,6 +185,7 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 	reserved = false
 	m.sessions[sessionID] = session
 	m.mu.Unlock()
+	m.config.Recorder.SessionCreated()
 
 	answer, err := session.negotiate(ctx, offer.SDP)
 	if err != nil {
@@ -185,6 +196,12 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 	session.revision = newRevisionState(requestID, offer.SDP, result)
 	return result, nil
 }
+
+// Limit returns the configured process-wide active session admission limit.
+func (m *Manager) Limit() int { return m.maxSessions }
+
+// Recorder returns the process recorder configured before listener startup.
+func (m *Manager) Recorder() observability.Recorder { return m.config.Recorder }
 
 // ErrSessionCapacity はactive Sessionと作成予約の合計がMaxSessionsへ到達したことを表す。
 // 別Sessionのcleanup完了後は再試行できる。
@@ -213,6 +230,17 @@ func (m *Manager) Count() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return len(m.sessions)
+}
+
+// CloseSession routes a known HTTP mutation panic to that session's close-once
+// lifecycle. Unknown or already-removed sessions are intentionally ignored.
+func (m *Manager) CloseSession(sessionID, reason string) {
+	m.mu.RLock()
+	session := m.sessions[sessionID]
+	m.mu.RUnlock()
+	if session != nil {
+		_ = session.Close(reason)
+	}
 }
 
 // CloseAll は process shutdown 時のactive sessionをsnapshotし、全cleanup完了まで待つ。
@@ -256,5 +284,5 @@ func (m *Manager) remove(sessionID string) {
 	m.closed[sessionID] = struct{}{}
 	activeSessions := len(m.sessions)
 	m.mu.Unlock()
-	m.config.Logger.Info("session registry updated", "session_id", sessionID, "active_sessions", activeSessions)
+	m.config.Logger.Info("session registry updated", "session_id", sessionID, "count", activeSessions)
 }

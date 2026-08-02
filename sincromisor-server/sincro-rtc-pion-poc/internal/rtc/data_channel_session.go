@@ -23,7 +23,7 @@ func (s *Session) handleDataChannel(channel *webrtc.DataChannel) {
 			return
 		}
 	default:
-		s.logger.Error("unexpected data channel", "session_id", s.id, "label", label)
+		s.logger.Error("unexpected data channel", "session_id", s.id, "stage", "data_channel", "reason", "invalid_data_channel")
 		_ = s.Close("invalid_data_channel")
 		return
 	}
@@ -31,20 +31,22 @@ func (s *Session) handleDataChannel(channel *webrtc.DataChannel) {
 		return
 	}
 	channel.OnOpen(func() {
-		if !s.dataChannelOpened(channel) {
-			return
-		}
-		var err error
-		if label == textChannelLabel {
-			err = s.dispatcher.AttachText(channel)
-		} else {
-			err = s.dispatcher.AttachTelop(channel)
-		}
-		if err != nil {
-			s.logger.Error("data channel dispatcher attach failed",
-				"session_id", s.id, "label", label, "error", err,
-			)
-			_ = s.Close("data_channel_error")
-		}
+		s.SafeCallback("data_channel_open", func() {
+			if !s.dataChannelOpened(channel) {
+				return
+			}
+			var err error
+			if label == textChannelLabel {
+				err = s.dispatcher.AttachText(channel)
+			} else {
+				err = s.dispatcher.AttachTelop(channel)
+			}
+			if err != nil {
+				s.logger.Error("data channel dispatcher attach failed",
+					"session_id", s.id, "stage", label, "reason", "data_channel_error",
+				)
+				_ = s.Close("data_channel_error")
+			}
+		})()
 	})
 }
