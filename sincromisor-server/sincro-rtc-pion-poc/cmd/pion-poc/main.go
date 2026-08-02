@@ -15,6 +15,7 @@ import (
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/config"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery"
@@ -48,6 +49,10 @@ func run(args []string) error {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	processCtx, cancelProcess := context.WithCancel(context.Background())
 	defer cancelProcess()
+	synthDecoder, err := newSynthDecoder(processCtx, cfg.FFmpegPath, synthdecode.ExecRunner{})
+	if err != nil {
+		return err
+	}
 	pipelineFactory, err := newPipelineFactory(logger)
 	if err != nil {
 		return err
@@ -58,6 +63,7 @@ func run(args []string) error {
 		Clock:           rtc.SystemClock{},
 		Logger:          logger,
 		MaxSessions:     cfg.MaxSessions,
+		SynthDecoder:    synthDecoder,
 	})
 	if err != nil {
 		return fmt.Errorf("create rtc manager: %w", err)
@@ -74,6 +80,25 @@ func run(args []string) error {
 		return fmt.Errorf("create offer registry: %w", err)
 	}
 	return serve(cfg, sessions, offers, cancelProcess, logger)
+}
+
+// newSynthDecoderは解決済みpathからprocess-wide Decoderを作り、listener作成前にversionをprobeする。
+//
+// ここで失敗を確定することで、HTTPだけが利用可能で最初の音声decode時に失敗する部分起動を防ぐ。
+// runner注入はstartup testでもproductionと同じpath/version契約を検証するためのprocess seamである。
+func newSynthDecoder(
+	ctx context.Context,
+	ffmpegPath string,
+	runner synthdecode.CommandRunner,
+) (*synthdecode.Decoder, error) {
+	decoder, err := synthdecode.NewDecoder(ffmpegPath, runner)
+	if err != nil {
+		return nil, fmt.Errorf("create synthesized audio decoder: %w", err)
+	}
+	if err := decoder.ProbeVersion(ctx); err != nil {
+		return nil, fmt.Errorf("probe ffmpeg: %w", err)
+	}
+	return decoder, nil
 }
 
 // newPipelineFactory はPoC local Consulから4 serviceを遅延解決するfactoryを構築する。

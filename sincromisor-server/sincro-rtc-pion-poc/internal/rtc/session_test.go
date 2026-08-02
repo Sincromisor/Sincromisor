@@ -104,6 +104,7 @@ func TestManagerICERestartKeepsSessionPeerChannelsAndPipeline(t *testing.T) {
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 		MaxSessions:     100,
+		SynthDecoder:    testSynthDecoder(t),
 	})
 	if err != nil {
 		t.Fatalf("NewManager() error = %v", err)
@@ -337,6 +338,7 @@ func TestCodecErrorClosesSession(t *testing.T) {
 		webrtc.Configuration{},
 		0,
 		coordinator,
+		testSynthDecoder(t),
 		testInputObserver(),
 		SystemClock{},
 		testLogger(),
@@ -357,6 +359,73 @@ func TestCodecErrorClosesSession(t *testing.T) {
 	}
 }
 
+func TestSessionsShareNonOwnedSynthDecoder(t *testing.T) {
+	decoder := testSynthDecoder(t)
+	create := func(id string) *Session {
+		t.Helper()
+		coordinator, err := pipeline.NewCoordinator(blockingPipelineFactory{}, testLogger())
+		if err != nil {
+			t.Fatalf("NewCoordinator() error = %v", err)
+		}
+		session, err := newSession(
+			id,
+			"chat",
+			webrtc.Configuration{},
+			0,
+			coordinator,
+			decoder,
+			testInputObserver(),
+			SystemClock{},
+			testLogger(),
+			func(string) {},
+		)
+		if err != nil {
+			t.Fatalf("newSession(%s) error = %v", id, err)
+		}
+		return session
+	}
+	first := create("shared-decoder-first")
+	second := create("shared-decoder-second")
+	if first.synthDecoder != decoder || second.synthDecoder != decoder ||
+		first.synthDecoder != second.synthDecoder {
+		t.Fatal("newSession did not preserve the process-wide Decoder pointer")
+	}
+	if err := first.Close("test"); err != nil {
+		t.Fatalf("first.Close() error = %v", err)
+	}
+	<-first.done
+	if second.synthDecoder != decoder {
+		t.Fatal("closing one Session changed another Session Decoder reference")
+	}
+	if err := second.Close("test"); err != nil {
+		t.Fatalf("second.Close() error = %v", err)
+	}
+	<-second.done
+}
+
+func TestNewSessionRejectsNilSynthDecoderBeforeResourceCreation(t *testing.T) {
+	coordinator, err := pipeline.NewCoordinator(blockingPipelineFactory{}, testLogger())
+	if err != nil {
+		t.Fatalf("NewCoordinator() error = %v", err)
+	}
+	defer func() { _ = coordinator.Close() }()
+	session, err := newSession(
+		"nil-decoder",
+		"chat",
+		webrtc.Configuration{},
+		0,
+		coordinator,
+		nil,
+		panicRTCInputObserver{},
+		SystemClock{},
+		testLogger(),
+		func(string) {},
+	)
+	if err == nil || session != nil {
+		t.Fatalf("newSession(nil Decoder) = %#v, %v; want pre-resource validation error", session, err)
+	}
+}
+
 func TestInputObserverPanicClosesAndJoinsSession(t *testing.T) {
 	closed := make(chan string, 1)
 	coordinator, err := pipeline.NewCoordinator(blockingPipelineFactory{}, testLogger())
@@ -369,6 +438,7 @@ func TestInputObserverPanicClosesAndJoinsSession(t *testing.T) {
 		webrtc.Configuration{},
 		0,
 		coordinator,
+		testSynthDecoder(t),
 		panicRTCInputObserver{},
 		SystemClock{},
 		testLogger(),
@@ -405,6 +475,7 @@ func newTestManagerWithFactory(t *testing.T, factory pipeline.ClientSetFactory) 
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 		MaxSessions:     100,
+		SynthDecoder:    testSynthDecoder(t),
 	})
 	if err != nil {
 		t.Fatalf("NewManager() error = %v", err)

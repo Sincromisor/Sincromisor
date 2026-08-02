@@ -113,6 +113,7 @@ func newCleanupProbeSession(
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 		MaxSessions:     100,
+		SynthDecoder:    testSynthDecoder(t),
 	})
 	if err != nil {
 		t.Fatalf("NewManager() error = %v", err)

@@ -13,6 +13,7 @@ import (
 	"github.com/pion/webrtc/v4"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/rtc"
 )
@@ -107,11 +108,34 @@ func newRealTestManager(t *testing.T, stunURL string) *rtc.Manager {
 		Clock:           rtc.SystemClock{},
 		Logger:          logger,
 		MaxSessions:     100,
+		SynthDecoder:    signalingTestDecoder(t),
 	})
 	if err != nil {
 		t.Fatalf("rtc.NewManager() error = %v", err)
 	}
 	return manager
+}
+
+func signalingTestDecoder(t *testing.T) *synthdecode.Decoder {
+	t.Helper()
+	decoder, err := synthdecode.NewDecoder("/test/ffmpeg", signalingNoopRunner{})
+	if err != nil {
+		t.Fatalf("synthdecode.NewDecoder() error = %v", err)
+	}
+	return decoder
+}
+
+type signalingNoopRunner struct{}
+
+func (signalingNoopRunner) Run(
+	context.Context,
+	string,
+	[]byte,
+	int64,
+	int64,
+	...string,
+) ([]byte, []byte, int, error) {
+	return nil, nil, 0, nil
 }
 
 func closeContext(t *testing.T) context.Context {

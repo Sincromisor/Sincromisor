@@ -35,6 +35,9 @@ func TestLoad(t *testing.T) {
 	if !filepath.IsAbs(cfg.FrontendDir) {
 		t.Errorf("FrontendDir = %q, want absolute path", cfg.FrontendDir)
 	}
+	if !filepath.IsAbs(cfg.FFmpegPath) {
+		t.Errorf("FFmpegPath = %q, want absolute path", cfg.FFmpegPath)
+	}
 }
 
 func TestLoadUsesProductionLimitDefaults(t *testing.T) {
@@ -98,6 +101,7 @@ func TestLoadRejectsInvalidBoundaryValues(t *testing.T) {
 		args []string
 	}{
 		{name: "missing frontend", args: nil},
+		{name: "missing ffmpeg", args: []string{"--frontend-dir", t.TempDir(), "--ffmpeg", "missing-ffmpeg-for-test"}},
 		{name: "frontend is file", args: []string{"--frontend-dir", file.Name()}},
 		{name: "non-positive timeout", args: []string{"--frontend-dir", t.TempDir(), "--gather-timeout", "0s"}},
 		{name: "turn is out of scope", args: []string{"--frontend-dir", t.TempDir(), "--stun", "turn:turn.example.test"}},

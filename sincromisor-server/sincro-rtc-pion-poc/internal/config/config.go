@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 )
@@ -23,9 +24,9 @@ const (
 	minOfferCacheTTL     = 30 * time.Second
 )
 
-// Config はHTTP、static配信、ICE、session/cache admissionに必要な起動時設定を保持する。
+// Config はHTTP、static配信、ICE、session/cache admission、FFmpegに必要な起動時設定を保持する。
 //
-// Load が path と URL を検証するため、下流 package は filesystem や URL の再検証を行わない。
+// Load が directory、executable path、URL を検証するため、下流 package はfilesystem探索を行わない。
 // production compose、Consul、TURN の設定はこの PoC の対象外である。
 type Config struct {
 	HTTPAddress        string
@@ -35,12 +36,15 @@ type Config struct {
 	MaxSessions        int
 	OfferCacheCapacity int
 	OfferCacheTTL      time.Duration
+	// FFmpegPathはexec.LookPathで解決済みのabsolute executable pathである。
+	FFmpegPath string
 }
 
 // Load は command line flag を解析し、起動前に有限 timeout とローカル実行境界を検証する。
 //
-// args に未知 flag、不正な listen address、存在しない static directory、STUN 以外の URL がある場合は
-// error を返す。process の終了判断と user-facing error の出力は main に委ねる。
+// args に未知flag、不正なlisten address、存在しないstatic directory/FFmpeg、STUN以外のURLが
+// ある場合はerrorを返す。FFmpegはexec.LookPathでabsolute pathへ確定するが、version probeと
+// processの終了判断はmainに委ねる。
 func Load(args []string) (Config, error) {
 	flags := flag.NewFlagSet("pion-poc", flag.ContinueOnError)
 	var cfg Config
@@ -51,6 +55,7 @@ func Load(args []string) (Config, error) {
 	flags.IntVar(&cfg.MaxSessions, "max-sessions", DefaultMaxSessions, "active session limit")
 	flags.IntVar(&cfg.OfferCacheCapacity, "offer-cache-capacity", DefaultOfferCacheCapacity, "initial Offer registry limit")
 	flags.DurationVar(&cfg.OfferCacheTTL, "offer-cache-ttl", DefaultOfferCacheTTL, "completed initial Offer lifetime")
+	flags.StringVar(&cfg.FFmpegPath, "ffmpeg", "ffmpeg", "FFmpeg executable path")
 	if err := flags.Parse(args); err != nil {
 		return Config{}, fmt.Errorf("parse flags: %w", err)
 	}
@@ -92,6 +97,14 @@ func Load(args []string) (Config, error) {
 		if parseErr != nil || parsed.Scheme != "stun" || (parsed.Host == "" && parsed.Opaque == "") {
 			return Config{}, errors.New("stun must be a valid stun: URL")
 		}
+	}
+	ffmpegPath, err := exec.LookPath(cfg.FFmpegPath)
+	if err != nil {
+		return Config{}, fmt.Errorf("resolve ffmpeg executable: %w", err)
+	}
+	cfg.FFmpegPath, err = filepath.Abs(ffmpegPath)
+	if err != nil {
+		return Config{}, fmt.Errorf("resolve ffmpeg absolute path: %w", err)
 	}
 	return cfg, nil
 }
