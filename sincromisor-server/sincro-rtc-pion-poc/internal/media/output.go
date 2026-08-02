@@ -26,6 +26,8 @@ const (
 var (
 	// ErrSpeechQueueFull はincoming発話を加えると件数またはsample上限を超えることを表す。
 	ErrSpeechQueueFull = errors.New("speech queue is full")
+	// ErrOutputClosed はclose開始後のenqueueまたはframe送信を拒否したことを表す。
+	ErrOutputClosed = errors.New("output processor is closed")
 )
 
 type queuedSpeech struct {
@@ -42,6 +44,9 @@ type OutputStats struct {
 	SilenceDropped   uint64
 	SpeechAborted    uint64
 	GenerationPurged uint64
+	QueuedSpeeches   int
+	QueuedSamples    int
+	Closed           bool
 }
 
 // OutputProcessor は合成発話queue、Opus encoder、20 ms絶対deadline clockを所有する。
@@ -50,14 +55,17 @@ type OutputStats struct {
 // 戻る。queueが空でもsilenceを送る。Purgeは未送信audioと、そのaudioから将来生成されるmora eventを
 // 同時に破棄するが、既にtrackへ書いたaudioは巻き戻さない。
 type OutputProcessor struct {
-	mu            sync.Mutex
-	sendMu        sync.Mutex
-	queue         []*queuedSpeech
-	queuedSamples int
-	encoder       *FrameEncoder
-	track         SampleWriter
-	telop         TelopSink
-	logger        *slog.Logger
+	mu             sync.Mutex
+	sendMu         sync.Mutex
+	queue          []*queuedSpeech
+	queuedSamples  int
+	encoder        outputEncoder
+	track          SampleWriter
+	telop          TelopSink
+	logger         *slog.Logger
+	clock          outputClock
+	samplePosition uint64
+	closed         bool
 
 	queueRejected    atomic.Uint64
 	silenceDropped   atomic.Uint64
@@ -74,10 +82,25 @@ func NewOutputProcessor(
 	telop TelopSink,
 	logger *slog.Logger,
 ) (*OutputProcessor, error) {
-	if encoder == nil || track == nil || logger == nil {
+	return newOutputProcessorWithHooks(encoder, track, telop, logger, systemOutputClock{}, 0)
+}
+
+// newOutputProcessorWithHooksはproductionと決定的clock testで共有する依存組み立て境界である。
+func newOutputProcessorWithHooks(
+	encoder outputEncoder,
+	track SampleWriter,
+	telop TelopSink,
+	logger *slog.Logger,
+	clock outputClock,
+	samplePosition uint64,
+) (*OutputProcessor, error) {
+	if encoder == nil || track == nil || logger == nil || clock == nil {
 		return nil, errors.New("output processor dependencies must not be nil")
 	}
-	return &OutputProcessor{encoder: encoder, track: track, telop: telop, logger: logger}, nil
+	return &OutputProcessor{
+		encoder: encoder, track: track, telop: telop, logger: logger,
+		clock: clock, samplePosition: samplePosition,
+	}, nil
 }
 
 // Enqueue はdecode済み発話とdecode前resultのMessageをimmutable queue itemへまとめる。
@@ -98,6 +121,10 @@ func (p *OutputProcessor) Enqueue(message string, speech synthdecode.DecodedSpee
 		},
 	}
 	p.mu.Lock()
+	if p.closed {
+		p.mu.Unlock()
+		return ErrOutputClosed
+	}
 	if len(p.queue)+1 > SpeechQueueCapacity ||
 		p.queuedSamples+len(item.speech.PCM) > SpeechQueueSampleCapacity {
 		p.mu.Unlock()
@@ -132,17 +159,29 @@ func (p *OutputProcessor) Purge() {
 
 // Stats はoutbound processorのpayload非保持counter snapshotを返す。
 func (p *OutputProcessor) Stats() OutputStats {
+	p.mu.Lock()
+	queuedSpeeches, queuedSamples, closed := len(p.queue), p.queuedSamples, p.closed
+	p.mu.Unlock()
 	return OutputStats{
 		QueueRejected:    p.queueRejected.Load(),
 		SilenceDropped:   p.silenceDropped.Load(),
 		SpeechAborted:    p.speechAborted.Load(),
 		GenerationPurged: p.generationPurged.Load(),
+		QueuedSpeeches:   queuedSpeeches,
+		QueuedSamples:    queuedSamples,
+		Closed:           closed,
 	}
 }
 
 // Close は未送信audio/moraを破棄する。Runの停止はsession context、encoder解放はFrameEncoder ownerが担う。
 func (p *OutputProcessor) Close() error {
-	p.Purge()
+	p.sendMu.Lock()
+	defer p.sendMu.Unlock()
+	p.mu.Lock()
+	p.closed = true
+	p.queue = nil
+	p.queuedSamples = 0
+	p.mu.Unlock()
 	return nil
 }
 
@@ -154,23 +193,32 @@ func (p *OutputProcessor) Run(ctx context.Context) error {
 	if ctx == nil {
 		return errors.New("output processor context must not be nil")
 	}
-	nextDeadline := time.Now().Add(FrameDuration)
-	timer := time.NewTimer(time.Until(nextDeadline))
+	nextDeadline := p.clock.Now().Add(FrameDuration)
+	timer := p.clock.NewTimer(FrameDuration)
 	defer timer.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case now := <-timer.C:
+		case now := <-timer.C():
 			lag := now.Sub(nextDeadline)
 			if p.hasActiveSpeech() && lag > SpeechLagAbortThreshold {
+				// 遅れた発話をburst送信せずitem単位で捨てる。期限切れsample位置だけ進め、
+				// 次itemはnowから20 ms後に開始して受信側の実時間再生へ復帰させる。
 				p.abortCurrentSpeech(lag)
+				p.advanceSamplePosition(uint64(max(0, int(lag/FrameDuration))))
 				nextDeadline = now.Add(FrameDuration)
-				timer.Reset(time.Until(nextDeadline))
+				timer.Reset(nextDeadline.Sub(p.clock.Now()))
 				continue
 			}
-			if !p.hasActiveSpeech() && lag >= FrameDuration {
+			if p.hasActiveSpeech() && lag >= FrameDuration {
+				// abort閾値内のscheduler遅延も送信済みpacketで埋め戻さない。
+				// RTP clock上の期限切れ位置を飛ばし、この1 packetだけをnowへ再同期する。
+				p.advanceSamplePosition(uint64(lag / FrameDuration))
+				nextDeadline = now
+			} else if !p.hasActiveSpeech() && lag >= FrameDuration {
 				dropped := uint64(lag / FrameDuration)
+				p.advanceSamplePosition(dropped)
 				total := p.silenceDropped.Add(dropped)
 				p.logger.Warn("dropped expired outbound silence",
 					"queue", "audio", "action", "drop_expired_silence", "count", total,
@@ -181,7 +229,7 @@ func (p *OutputProcessor) Run(ctx context.Context) error {
 				return err
 			}
 			nextDeadline = nextDeadline.Add(FrameDuration)
-			delay := time.Until(nextDeadline)
+			delay := nextDeadline.Sub(p.clock.Now())
 			if delay < 0 {
 				delay = 0
 			}
@@ -194,6 +242,12 @@ func (p *OutputProcessor) hasActiveSpeech() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return len(p.queue) > 0
+}
+
+func (p *OutputProcessor) advanceSamplePosition(frames uint64) {
+	p.mu.Lock()
+	p.samplePosition += frames * frameSamples
+	p.mu.Unlock()
 }
 
 func (p *OutputProcessor) abortCurrentSpeech(lag time.Duration) {
@@ -215,6 +269,13 @@ func (p *OutputProcessor) abortCurrentSpeech(lag time.Duration) {
 func (p *OutputProcessor) writeFrame() error {
 	p.sendMu.Lock()
 	defer p.sendMu.Unlock()
+	p.mu.Lock()
+	if p.closed {
+		p.mu.Unlock()
+		return ErrOutputClosed
+	}
+	samplePosition := p.samplePosition
+	p.mu.Unlock()
 	frame, telop := p.nextFrame()
 	packet, err := p.encoder.Encode(frame)
 	if err != nil {
@@ -225,11 +286,29 @@ func (p *OutputProcessor) writeFrame() error {
 			return fmt.Errorf("enqueue outbound telop: %w", err)
 		}
 	}
-	if err := p.track.WriteSample(pionmedia.Sample{Data: packet, Duration: FrameDuration}); err != nil {
+	if err := p.track.WriteSample(OutputSample{
+		MediaSample:    pionmedia.Sample{Data: packet, Duration: FrameDuration},
+		SamplePosition: samplePosition,
+		RTPTimestamp:   uint32(samplePosition),
+	}); err != nil {
 		return fmt.Errorf("write outbound audio: %w", err)
 	}
+	p.advanceSamplePosition(1)
 	return nil
 }
+
+type systemOutputClock struct{}
+
+func (systemOutputClock) Now() time.Time { return time.Now() }
+func (systemOutputClock) NewTimer(delay time.Duration) outputTimer {
+	return systemOutputTimer{Timer: time.NewTimer(delay)}
+}
+
+type systemOutputTimer struct {
+	*time.Timer
+}
+
+func (t systemOutputTimer) C() <-chan time.Time { return t.Timer.C }
 
 // nextFrameはqueue itemの48 kHz sample位置をaudio frameとtelopの共通tickとして進める。
 //

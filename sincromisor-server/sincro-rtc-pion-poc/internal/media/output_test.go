@@ -9,10 +9,8 @@ import (
 	"testing"
 	"time"
 
-	pionopus "github.com/pion/opus"
-	pionmedia "github.com/pion/webrtc/v4/pkg/media"
-
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
+	pionopus "github.com/pion/opus"
 )
 
 func TestOutputSpeechQueueBoundaries(t *testing.T) {
@@ -226,7 +224,7 @@ func newOutputProcessorForTest(t *testing.T) *OutputProcessor {
 
 type discardSampleWriter struct{}
 
-func (discardSampleWriter) WriteSample(pionmedia.Sample) error { return nil }
+func (discardSampleWriter) WriteSample(OutputSample) error { return nil }
 
 type timingSampleWriter struct {
 	mu      sync.Mutex
@@ -236,7 +234,7 @@ type timingSampleWriter struct {
 	cancel  context.CancelFunc
 }
 
-func (w *timingSampleWriter) WriteSample(pionmedia.Sample) error {
+func (w *timingSampleWriter) WriteSample(OutputSample) error {
 	w.mu.Lock()
 	w.times = append(w.times, time.Now())
 	reached := len(w.times) == w.target

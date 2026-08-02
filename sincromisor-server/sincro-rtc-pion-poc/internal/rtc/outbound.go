@@ -3,6 +3,10 @@ package rtc
 import (
 	"context"
 	"errors"
+
+	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol"
 )
 
 // startOutbound はtransport connectedで予約済みのclockと3つのpipeline consumerを開始する。
@@ -83,20 +87,7 @@ func (s *Session) synthOutputLoop() {
 				}
 				return
 			}
-			if !s.applyGeneration(output.Generation, nil) {
-				continue
-			}
-			decoded, err := s.synthDecoder.Decode(s.ctx, output.Value)
-			if err != nil {
-				if s.isCurrentGeneration(output.Generation) && s.ctx.Err() == nil {
-					s.logger.Error("synthesized audio decode failed", "session_id", s.id, "error", err)
-					_ = s.Close("codec_error")
-				}
-				continue
-			}
-			_, err = s.applyGenerationError(output.Generation, func() error {
-				return s.output.Enqueue(output.Value.Message, decoded)
-			})
+			err := s.handleSynthOutput(output)
 			if err != nil {
 				s.logger.Error("outbound speech enqueue failed", "session_id", s.id, "error", err)
 				_ = s.Close("output_backpressure")
@@ -104,6 +95,31 @@ func (s *Session) synthOutputLoop() {
 			}
 		}
 	}
+}
+
+// handleSynthOutput はenvelope generationをdecode前後で確認し、current resultだけをspeech queueへ渡す。
+//
+// Closeまたはresetがdecode中に勝った場合、closed-aware Enqueueまたはgeneration再検査が結果を拒否し、
+// consumer終了後に未所有queueを復活させない。
+func (s *Session) handleSynthOutput(output pipeline.Output[protocol.SynthesizerResult]) error {
+	if !s.applyGeneration(output.Generation, nil) {
+		return nil
+	}
+	decoded, err := s.synthDecoder.Decode(s.ctx, output.Value)
+	if err != nil {
+		if s.isCurrentGeneration(output.Generation) && s.ctx.Err() == nil {
+			s.logger.Error("synthesized audio decode failed", "session_id", s.id, "error", err)
+			_ = s.Close("codec_error")
+		}
+		return nil
+	}
+	_, err = s.applyGenerationError(output.Generation, func() error {
+		return s.output.Enqueue(output.Value.Message, decoded)
+	})
+	if errors.Is(err, audiomedia.ErrOutputClosed) {
+		return nil
+	}
+	return err
 }
 
 // applyGeneration はgeneration通知とtext/synth envelopeの単調増加する単一適用点である。
