@@ -1,0 +1,14 @@
+id: task-260802182106-pion-gate-3-production-validation-harness
+title: Pion Gate 3 本番候補検証ハーネスを実装する
+category: sincro-rtc
+status: superseded
+depends_on:
+  - task-260802032922-pion-phase-3-observability-gate-3
+superseded_by: task-260802212239-pion-gate3-production-validation-entrypoint
+review: NEEDS_REVISION
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-08-02
+closed_at: 2026-08-02
+legacy_ids: []
