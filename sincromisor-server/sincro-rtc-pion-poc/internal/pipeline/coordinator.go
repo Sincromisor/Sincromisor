@@ -213,8 +213,9 @@ func (c *Coordinator) closeOnContext() {
 // SubmitPCM は20 ms / 16 kHz / mono / s16leの640-byte PCMを防御的copyして受理する。
 //
 // running以外はErrPipelineUnavailableで保存しない。満杯時は最古の未送信frameを捨てて最新を保持し、
-// reset時はqueue objectを交換してcaller sliceと旧producerを切り離す。overflow countはqueueではなく
-// Coordinatorがsession累積値として所有し、payloadを含めずExtractor名とcountだけをlogへ出す。
+// reset時はqueue objectを交換してcaller sliceと旧producerを切り離す。frameQueueがenqueue、
+// dequeue、closeとinput gaugeを同じmutexで所有し、Coordinatorはoverflowのsession累積log countだけを
+// 所有する。payloadはtelemetry/log境界へ渡さない。
 func (c *Coordinator) SubmitPCM(frame []byte) error {
 	if len(frame) != pcmFrameBytes {
 		return errors.New("pipeline PCM frame must be exactly 640 bytes")
@@ -231,11 +232,6 @@ func (c *Coordinator) SubmitPCM(frame []byte) error {
 		c.pcmDrops++
 	}
 	dropCount := c.pcmDrops
-	if dropped {
-		c.observer.QueueOverflow("input", "drop_oldest")
-	} else {
-		c.observer.QueueDepthDelta("input", 1)
-	}
 	c.mu.Unlock()
 	if dropped {
 		c.logger.Warn("dropped pipeline input", "stage", pclient.ServiceExtractor, "reason", "queue_overflow", "count", dropCount)
@@ -322,9 +318,7 @@ func (c *Coordinator) Close() error {
 		}
 		if work != nil {
 			work.cancel()
-			if remaining := work.input.close(); remaining > 0 {
-				c.observer.QueueDepthDelta("input", -float64(remaining))
-			}
+			work.input.close()
 		}
 		if set != nil {
 			_ = set.Close()
@@ -350,7 +344,7 @@ func (c *Coordinator) Close() error {
 func (c *Coordinator) transitionLocked(to State) error {
 	if !validTransition(c.state, to) {
 		err := &TransitionError{From: c.state, To: to}
-		c.logger.Error("rejected pipeline state transition", "from", c.state, "to", to)
+		c.logger.Error("rejected pipeline state transition", "stage", "pipeline_state", "reason", "invalid_transition")
 		return err
 	}
 	c.state = to

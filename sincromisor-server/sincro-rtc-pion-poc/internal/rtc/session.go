@@ -299,8 +299,9 @@ func (s *Session) cleanup(reason string) {
 		s.logTransitionError(err)
 	}
 	s.lifecycle.mu.Unlock()
-	s.onClosed(s.id)
-	close(s.done)
+	if s.notifyClosed() {
+		reason = "panic"
+	}
 	outcome := "closed"
 	if reason != "normal" && reason != "process_shutdown" {
 		outcome = "failed"
@@ -312,6 +313,21 @@ func (s *Session) cleanup(reason string) {
 		"reason", normalizeCloseReason(reason),
 		"count", closeCount,
 	)
+	close(s.done)
+}
+
+// notifyClosed crosses from Session cleanup into Manager/OfferRegistry
+// lifecycle callbacks. A callback panic is classified locally so cleanup still
+// releases active-session telemetry, records close duration, and closes done.
+func (s *Session) notifyClosed() (panicked bool) {
+	defer func() {
+		if recover() != nil {
+			panicked = true
+			s.logger.Error("session close callback panic", "session_id", s.id, "stage", "session_on_closed", "reason", "panic")
+		}
+	}()
+	s.onClosed(s.id)
+	return false
 }
 
 func (s *Session) recordCloseDuration(outcome string) {

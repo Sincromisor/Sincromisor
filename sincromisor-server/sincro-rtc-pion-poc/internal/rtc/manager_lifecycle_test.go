@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
@@ -184,6 +185,10 @@ func TestCreateRejectsTalkModeBeforePeerConnectionAndPipeline(t *testing.T) {
 }
 
 func TestCloseAllDeadlineDoesNotForgeDoneOrRegistryRemoval(t *testing.T) {
+	recorder := &recordingRTCRecorder{
+		Recorder:       observability.Discard(),
+		closeDurations: make(map[string]int),
+	}
 	manager, err := NewManager("", ManagerConfig{
 		PipelineFactory: blockingPipelineFactory{},
 		InputObserver:   testInputObserver(),
@@ -191,14 +196,17 @@ func TestCloseAllDeadlineDoesNotForgeDoneOrRegistryRemoval(t *testing.T) {
 		Logger:          testLogger(),
 		MaxSessions:     100,
 		SynthDecoder:    testSynthDecoder(t),
+		Recorder:        recorder,
 	})
 	if err != nil {
 		t.Fatalf("NewManager() error = %v", err)
 	}
 	done := make(chan struct{})
 	manager.sessions["joining"] = &Session{
-		lifecycle: &sessionLifecycle{state: stateClosing},
-		done:      done,
+		lifecycle:    &sessionLifecycle{state: stateClosing},
+		done:         done,
+		recorder:     recorder,
+		closeStarted: time.Now(),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
@@ -212,6 +220,15 @@ func TestCloseAllDeadlineDoesNotForgeDoneOrRegistryRemoval(t *testing.T) {
 	}
 	if manager.Count() != 1 {
 		t.Fatalf("Count() = %d, want joining session retained", manager.Count())
+	}
+	recorder.mu.Lock()
+	defer recorder.mu.Unlock()
+	if recorder.deadlines["close"] != 1 || recorder.closeDurations["timeout"] != 1 {
+		t.Fatalf(
+			"close deadline/duration metrics = %v/%v, want close=1/timeout=1",
+			recorder.deadlines,
+			recorder.closeDurations,
+		)
 	}
 }
 

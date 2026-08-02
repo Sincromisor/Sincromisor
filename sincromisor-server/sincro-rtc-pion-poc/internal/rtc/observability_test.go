@@ -88,23 +88,76 @@ func TestDataChannelWorkerMetricsAndPanicBoundary(t *testing.T) {
 }
 
 func TestSessionRecoverWrappersConvergeOnCloseOnce(t *testing.T) {
-	for _, test := range []struct {
+	for _, kind := range []struct {
 		name   string
-		inject func(*Session)
+		stages []string
+		inject func(*Session, string)
 	}{
-		{name: "goroutine", inject: func(session *Session) {
-			session.Go("panic_test_goroutine", func(_ context.Context) { panic("payload-audio-marker") })
-		}},
-		{name: "callback", inject: func(session *Session) {
-			session.SafeCallback("panic_test_callback", func() { panic("payload-chat-marker") })()
-		}},
+		{
+			name: "goroutine",
+			stages: []string{
+				"rtcp_reader", "inbound_processor", "outbound_clock", "pipeline_generation",
+				"pipeline_text", "pipeline_synth", "pipeline_start",
+			},
+			inject: func(session *Session, stage string) {
+				session.Go(stage, func(_ context.Context) { panic("payload-audio-marker") })
+			},
+		},
+		{
+			name: "callback",
+			stages: []string{
+				"connection_state", "ice_state", "track", "data_channel", "data_channel_open",
+				"deadline_pre_connect", "deadline_media_readiness",
+				"deadline_disconnect_grace", "deadline_restart",
+			},
+			inject: func(session *Session, stage string) {
+				session.SafeCallback(stage, func() { panic("payload-chat-marker") })()
+			},
+		},
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			manager, session := newManagedLifecycleSession(t, &fakeClock{}, blockingPipelineFactory{})
-			test.inject(session)
-			waitSessionDone(t, session)
-			assertClosedSession(t, manager, session, "panic")
-		})
+		for _, stage := range kind.stages {
+			t.Run(kind.name+"/"+stage, func(t *testing.T) {
+				manager, session := newManagedLifecycleSession(t, &fakeClock{}, blockingPipelineFactory{})
+				kind.inject(session, stage)
+				waitSessionDone(t, session)
+				assertClosedSession(t, manager, session, "panic")
+			})
+		}
+	}
+}
+
+func TestSessionOnClosedPanicStillReleasesLifecycleAndMetrics(t *testing.T) {
+	manager, session := newManagedLifecycleSession(t, &fakeClock{}, blockingPipelineFactory{})
+	recorder := &recordingRTCRecorder{
+		Recorder:       observability.Discard(),
+		closeDurations: make(map[string]int),
+	}
+	session.recorder = recorder
+	recorder.SessionCreated()
+	session.onClosed = func(sessionID string) {
+		manager.remove(sessionID)
+		panic("payload-sdp-marker")
+	}
+	if err := session.Close("normal"); err != nil {
+		t.Fatal(err)
+	}
+	waitSessionDone(t, session)
+	recorder.mu.Lock()
+	defer recorder.mu.Unlock()
+	if recorder.active != 0 || recorder.closed != 1 ||
+		recorder.closedOutcome != "failed" || recorder.closedReason != "panic" ||
+		recorder.closeDurations["success"] != 1 {
+		t.Fatalf(
+			"callback panic metrics active/closed/outcome/reason/duration = %d/%d/%q/%q/%v",
+			recorder.active,
+			recorder.closed,
+			recorder.closedOutcome,
+			recorder.closedReason,
+			recorder.closeDurations,
+		)
+	}
+	if manager.Count() != 0 {
+		t.Fatalf("manager retained callback-panic session: %d", manager.Count())
 	}
 }
 
@@ -116,6 +169,45 @@ type recordingRTCRecorder struct {
 	rtt               float64
 	queueDepth        map[string]float64
 	dataChannelErrors int
+	active            int
+	closed            int
+	closedOutcome     string
+	closedReason      string
+	deadlines         map[string]int
+	closeDurations    map[string]int
+}
+
+func (r *recordingRTCRecorder) SessionCreated() {
+	r.mu.Lock()
+	r.active++
+	r.mu.Unlock()
+}
+
+func (r *recordingRTCRecorder) SessionClosed(outcome, reason string) {
+	r.mu.Lock()
+	r.active--
+	r.closed++
+	r.closedOutcome = outcome
+	r.closedReason = reason
+	r.mu.Unlock()
+}
+
+func (r *recordingRTCRecorder) Deadline(stage string) {
+	r.mu.Lock()
+	if r.deadlines == nil {
+		r.deadlines = make(map[string]int)
+	}
+	r.deadlines[stage]++
+	r.mu.Unlock()
+}
+
+func (r *recordingRTCRecorder) CloseDuration(outcome string, _ time.Duration) {
+	r.mu.Lock()
+	if r.closeDurations == nil {
+		r.closeDurations = make(map[string]int)
+	}
+	r.closeDurations[outcome]++
+	r.mu.Unlock()
 }
 
 func (r *recordingRTCRecorder) QueueDepthDelta(queue string, delta float64) {

@@ -59,7 +59,7 @@ func (c *Coordinator) connectUntilRunning(initial bool) error {
 				workCtx, cancel := context.WithCancel(ctx)
 				work := &generationWork{
 					number: c.generation, ctx: workCtx, cancel: cancel,
-					input: newFrameQueue(), conv: newConversation(sessionID),
+					input: newFrameQueue(c.observer), conv: newConversation(sessionID),
 				}
 				c.set, c.work = set, work
 				err = c.transitionLocked(StateRunning)
