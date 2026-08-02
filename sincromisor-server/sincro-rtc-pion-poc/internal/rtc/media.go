@@ -5,24 +5,22 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/pion/interceptor"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
-	"github.com/pion/webrtc/v4/pkg/media"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 )
 
-// installOutboundTrack はAnswer生成前にtest-tone trackとRTCP senderをsessionへ登録する。
+// installOutboundTrack はAnswer生成前に継続outbound audio trackとRTCP senderをsessionへ登録する。
 //
 // transport未始動のsender.ReadはPeerConnection.Closeで解除されない場合があるため、RTCP drainと
-// tone pacingはconnected callback後にだけ開始する。これによりgather timeout sessionはgoroutineを持たない。
+// output pacingはconnected callback後にだけ開始する。これによりgather timeout sessionはgoroutineを持たない。
 func (s *Session) installOutboundTrack() error {
 	track, err := webrtc.NewTrackLocalStaticSample(
 		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: audiomedia.SampleRate, Channels: 2},
-		"pion-poc-tone",
+		"sincromisor-voice",
 		"pion-poc",
 	)
 	if err != nil {
@@ -48,41 +46,6 @@ func (s *Session) startRTCPDrain(sender *webrtc.RTPSender) {
 		for {
 			if _, _, readErr := sender.Read(buffer); readErr != nil {
 				return
-			}
-		}
-	}()
-}
-
-// startTone はbrowser inputから独立した20ms clockで有限test toneを送信する。
-//
-// session context、codec error、track write errorのいずれでも終了し、異常はSession.Closeへ集約する。
-// tickerとgoroutineはSessionが所有し、cleanupのWaitGroupより後へ残さない。
-func (s *Session) startTone(track *webrtc.TrackLocalStaticSample) {
-	// Pacing は browser input 到着から独立させ、session context が ticker と encoder の終了を所有する。
-	go func() {
-		defer s.wg.Done()
-		ticker := time.NewTicker(audiomedia.FrameDuration)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-s.ctx.Done():
-				return
-			case <-ticker.C:
-				packet, err := s.encoder.EncodeNext()
-				if errors.Is(err, io.EOF) {
-					s.logger.Info("outbound test tone completed", "session_id", s.id, "duration_ms", 1000)
-					return
-				}
-				if err != nil {
-					s.logger.Error("outbound opus encode failed", "session_id", s.id, "error", err)
-					_ = s.Close("codec_error")
-					return
-				}
-				if err := track.WriteSample(media.Sample{Data: packet, Duration: audiomedia.FrameDuration}); err != nil {
-					s.logger.Error("outbound audio write failed", "session_id", s.id, "error", err)
-					_ = s.Close("media_write_error")
-					return
-				}
 			}
 		}
 	}()

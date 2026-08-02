@@ -65,6 +65,7 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 	c.generation = next
 	drain(c.textOut)
 	drain(c.synthOut)
+	c.notifyGeneration(next)
 	c.mu.Unlock()
 	c.outputMu.Unlock()
 
@@ -87,6 +88,23 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 			c.logger.Error("pipeline reconnect stopped", "error", err, "reason", reason)
 		}
 	}()
+}
+
+// notifyGenerationはoutputMuを保持するcallerからcapacity 1の最新generation通知を確定する。
+//
+// channelが満杯なら古い値を1件だけ除いて置換する。reset/publishと同じbarrier内で呼ぶため、
+// drain後の通知より古いenvelopeがCoordinator queueへ再混入しない。
+func (c *Coordinator) notifyGeneration(generation uint64) {
+	select {
+	case c.generationChanges <- generation:
+		return
+	default:
+	}
+	select {
+	case <-c.generationChanges:
+	default:
+	}
+	c.generationChanges <- generation
 }
 
 func (c *Coordinator) isCurrentGeneration(generation uint64, service pclient.Service) bool {

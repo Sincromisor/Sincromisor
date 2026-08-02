@@ -33,7 +33,7 @@ func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 			t.Errorf("CloseAll(test_teardown) error = %v", err)
 		}
 	})
-	client, messages := newBrowserPeer(t)
+	client, _ := newBrowserPeer(t)
 	answer := negotiatePair(t, manager, client)
 	if manager.Count() != 1 {
 		t.Fatalf("Count() = %d, want 1 after offer", manager.Count())
@@ -53,10 +53,6 @@ func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 		t.Fatalf("AddCandidate(duplicate end-of-candidates) = (%v, %v), want duplicate", duplicate, err)
 	}
 
-	waitForMessages(t, messages, map[string]string{
-		textChannelLabel:  string(textSmokePayload),
-		telopChannelLabel: string(telopSmokePayload),
-	})
 	session := activeSession(t, manager, answer.SessionID)
 	if err := client.Close(); err != nil {
 		t.Fatalf("client.Close() error = %v", err)
@@ -116,7 +112,7 @@ func TestManagerICERestartKeepsSessionPeerChannelsAndPipeline(t *testing.T) {
 			t.Errorf("CloseAll(test_teardown) error = %v", err)
 		}
 	})
-	client, messages := newBrowserPeer(t)
+	client, _ := newBrowserPeer(t)
 	inputTrack, err := webrtc.NewTrackLocalStaticSample(
 		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: 48000, Channels: 2},
 		"browser-audio",
@@ -129,9 +125,6 @@ func TestManagerICERestartKeepsSessionPeerChannelsAndPipeline(t *testing.T) {
 		t.Fatalf("AddTrack(input) error = %v", err)
 	}
 	answer := negotiatePair(t, manager, client)
-	waitForMessages(t, messages, map[string]string{
-		textChannelLabel: string(textSmokePayload), telopChannelLabel: string(telopSmokePayload),
-	})
 	if err := inputTrack.WriteSample(media.Sample{
 		Data: []byte{0xf8, 0xff, 0xfe}, Duration: 20 * time.Millisecond,
 	}); err != nil {

@@ -62,6 +62,29 @@ func TestCoordinatorRunsFixtureBackedFourStageConversation(t *testing.T) {
 	assertClosedOutputs(t, coordinator)
 }
 
+func TestCoordinatorPublishesInitialAndResetGenerationChanges(t *testing.T) {
+	factory := &fakeFactory{t: t}
+	coordinator := newTestCoordinator(t, factory)
+	if err := coordinator.Start(context.Background(), "session-generation", "sincro"); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	if generation := receive(t, coordinator.GenerationChanges()); generation != 1 {
+		t.Fatalf("initial generation = %d, want 1", generation)
+	}
+	factory.setAt(t, 0).emit(pclient.Event{
+		Service: pclient.ServiceRecognizer,
+		Kind:    pclient.EventRemoteClose,
+		Err:     errors.New("advance"),
+	})
+	if generation := receive(t, coordinator.GenerationChanges()); generation != 2 {
+		t.Fatalf("reset generation = %d, want 2", generation)
+	}
+	if err := coordinator.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	assertChannelEventuallyClosed(t, coordinator.GenerationChanges(), "generation")
+}
+
 func TestCoordinatorResetIsSingleFlightAndPreservesConfirmedHistory(t *testing.T) {
 	factory := &fakeFactory{t: t}
 	coordinator := newTestCoordinator(t, factory)
