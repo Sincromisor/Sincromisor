@@ -1,14 +1,14 @@
 id: task-260802032918-pion-phase-3-frontend-ice-restart
 title: Pion Phase 3のFrontend ICE restart状態機械を実装する
 category: sincro-rtc
-status: open
+status: done
 depends_on:
   - task-260802032916-pion-phase-3-backend-ice-restart
 superseded_by: null
 review: APPROVED
 reviewed_sha: 2bff16fc414b0d5f7c3bbce0f46ad61ba5a3935d
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 2
 created_at: 2026-08-02
-closed_at: null
+closed_at: 2026-08-02
 legacy_ids: []
