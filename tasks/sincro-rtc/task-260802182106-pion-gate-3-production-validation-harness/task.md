@@ -147,28 +147,28 @@ stdinはcloseし、stdout / stderrは診断logとして保存するが制御prot
 台帳の各行を成果物の1 rowへ対応させ、matrixは`<scenario-id>/<case-id>`へ展開する。
 未実行、skip、証拠の対象commit不一致、期待値不一致は`NOT_OBSERVED`または`FAIL`であり、PASSへ集約しない。
 
-| シナリオID        | 検証層                 | 対象と一意な期待値                                                                                                    | 成果物の主な観測点                                         |
-| ----------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `G3-FUNC-001`     | ライブ（Frontend）     | config、初回Offer、candidate、音声、`text_ch` / `telop_ch`、1往復、同一sessionでICE restart、2往復を完走              | HTTP台帳、browser event、2 turn transcript、session ID     |
-| `G3-SIG-001`      | ライブ（境界 client）  | candidate gathering timeoutは504、未完成Answerをcacheせずsession close                                                | status、close reason、cache / session metric               |
-| `G3-SIG-002`      | 既存試験証拠 | initial request IDの同一再送・並行single-flightは同一Answer、異なるSDP再利用は409、tombstoneは410                     | test名、request identity、status、session作成数            |
-| `G3-SIG-003`      | 既存試験証拠 | candidate / end-of-candidatesを受理し、不明session、late、旧・未来revisionを新sessionへfallbackせず拒否               | revision、status、session作成数                            |
-| `G3-SIG-004`      | 既存試験証拠 | update Offerとcandidateをsession単位で直列化し、並行updateは409、失敗revisionを進めずpending candidateを適用しない    | revision遷移、status、pending件数                          |
-| `G3-SIG-005`      | ライブ（Frontend）     | response drop、404、409、410、429、5xx、delayを下記有限応答列どおりretry・replacement・terminalへ分岐                 | proxy消費列、body hash、request ID、revision、試行数       |
-| `G3-LIMIT-001`    | 既存試験証拠 | HTTP body、decoded SDP、candidate文字列・件数・pending queueをexact limitで受理し、`limit+1`を所定statusで拒否        | limit名、入力値、status、close有無                         |
-| `G3-LIMIT-002`    | 既存試験証拠 | speech / text / telop queueとDataChannel payloadをexact limitで受理し、`limit+1`をdropまたはclose契約どおり処理       | queue名、gauge、drop metric、close reason                  |
-| `G3-READY-001`    | ライブ（境界 client）  | pre-connect、ICE / DTLS、audio track、必須DataChannel、media readiness、restartの各deadlineでsession closeし下流接続0 | deadline名、status、close reason、resource terminal sample |
-| `G3-PIPE-001`     | ライブ（Frontend）     | 4実サービスで2 turnを完走し、下記MessagePack操作台帳と一致                                                            | proxy transcript、identity、history、voice format          |
-| `G3-PIPE-002`     | ライブ（Frontend）     | 4サービス×`close`・`malformed`・`delay`で同session再接続、旧generation出力なし、backoff中入力非buffer、復旧後new turn | reconnect metric、generation、proxy count、browser event   |
-| `G3-CODEC-001`    | ライブ（Frontend）     | 壊れたvoice containerでdecode metric増加、`codec_error` close、全queue・接続収束                                      | codec metric、close reason、resource sample                |
-| `G3-CLOSE-001`    | ライブ（Frontend）     | normal closeを10回行い、各回10秒以内に収束                                                                            | iteration別sample、close count                             |
-| `G3-CLOSE-002`    | ライブ（Frontend）     | browser abrupt closeを含むabnormal closeを10回行い、全client・codec・PeerConnectionを各1回closeして収束               | close-once証拠、iteration別sample                          |
-| `G3-MEDIA-001`    | 既存試験証拠 | RTP / RTCP loop終了、loss、duplicate / late / reorder drop、NACK、loss / RTT、pacing lag / abortを固定試験で観測      | test名、metric delta、loop join                            |
-| `G3-OPS-001`      | ライブ（境界 client）  | draining後の新規initialは503、共通5秒期限でactive sessionを終了                                                       | status、drain時刻、close duration                          |
-| `G3-OPS-002`      | ライブ（Frontend）     | 本番実行ファイルを強制終了し、`Wait`後5秒以内に再起動、readiness復旧、新session受付                                   | old/new PID、exit、ready時刻、new session                  |
-| `G3-OPS-003`      | ライブ（境界 client）  | 1 instance上限100で101件目だけ429、最大喪失数100を記録                                                                | active最大値、101件目status、喪失数                        |
-| `G3-PANIC-001`    | 既存試験証拠 | 管理対象HTTP handler、Pion callback、media / pipeline goroutineのpanicを各境界で回収し、所定closeまたはprocess継続    | inventory、test名、close reason、process状態               |
-| `G3-ROLLBACK-001` | 既存試験証拠 | revisionなしaiortc Answerのinitial rollback modeと、切断後new bundle initialが成立                                    | mode、revision有無、旧・新session ID                       |
+| シナリオID        | 検証層                | 対象と一意な期待値                                                                                                    | 成果物の主な観測点                                         |
+| ----------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `G3-FUNC-001`     | ライブ（Frontend）    | config、初回Offer、candidate、音声、`text_ch` / `telop_ch`、1往復、同一sessionでICE restart、2往復を完走              | HTTP台帳、browser event、2 turn transcript、session ID     |
+| `G3-SIG-001`      | ライブ（境界 client） | candidate gathering timeoutは504、未完成Answerをcacheせずsession close                                                | status、close reason、cache / session metric               |
+| `G3-SIG-002`      | 既存試験証拠          | initial request IDの同一再送・並行single-flightは同一Answer、異なるSDP再利用は409、tombstoneは410                     | test名、request identity、status、session作成数            |
+| `G3-SIG-003`      | 既存試験証拠          | candidate / end-of-candidatesを受理し、不明session、late、旧・未来revisionを新sessionへfallbackせず拒否               | revision、status、session作成数                            |
+| `G3-SIG-004`      | 既存試験証拠          | update Offerとcandidateをsession単位で直列化し、並行updateは409、失敗revisionを進めずpending candidateを適用しない    | revision遷移、status、pending件数                          |
+| `G3-SIG-005`      | ライブ（Frontend）    | response drop、404、409、410、429、5xx、delayを下記有限応答列どおりretry・replacement・terminalへ分岐                 | proxy消費列、body hash、request ID、revision、試行数       |
+| `G3-LIMIT-001`    | 既存試験証拠          | HTTP body、decoded SDP、candidate文字列・件数・pending queueをexact limitで受理し、`limit+1`を所定statusで拒否        | limit名、入力値、status、close有無                         |
+| `G3-LIMIT-002`    | 既存試験証拠          | speech / text / telop queueとDataChannel payloadをexact limitで受理し、`limit+1`をdropまたはclose契約どおり処理       | queue名、gauge、drop metric、close reason                  |
+| `G3-READY-001`    | ライブ（境界 client） | pre-connect、ICE / DTLS、audio track、必須DataChannel、media readiness、restartの各deadlineでsession closeし下流接続0 | deadline名、status、close reason、resource terminal sample |
+| `G3-PIPE-001`     | ライブ（Frontend）    | 4実サービスで2 turnを完走し、下記MessagePack操作台帳と一致                                                            | proxy transcript、identity、history、voice format          |
+| `G3-PIPE-002`     | ライブ（Frontend）    | 4サービス×`close`・`malformed`・`delay`で同session再接続、旧generation出力なし、backoff中入力非buffer、復旧後new turn | reconnect metric、generation、proxy count、browser event   |
+| `G3-CODEC-001`    | ライブ（Frontend）    | 壊れたvoice containerでdecode metric増加、`codec_error` close、全queue・接続収束                                      | codec metric、close reason、resource sample                |
+| `G3-CLOSE-001`    | ライブ（Frontend）    | normal closeを10回行い、各回10秒以内に収束                                                                            | iteration別sample、close count                             |
+| `G3-CLOSE-002`    | ライブ（Frontend）    | browser abrupt closeを含むabnormal closeを10回行い、全client・codec・PeerConnectionを各1回closeして収束               | close-once証拠、iteration別sample                          |
+| `G3-MEDIA-001`    | 既存試験証拠          | RTP / RTCP loop終了、loss、duplicate / late / reorder drop、NACK、loss / RTT、pacing lag / abortを固定試験で観測      | test名、metric delta、loop join                            |
+| `G3-OPS-001`      | ライブ（境界 client） | draining後の新規initialは503、共通5秒期限でactive sessionを終了                                                       | status、drain時刻、close duration                          |
+| `G3-OPS-002`      | ライブ（Frontend）    | 本番実行ファイルを強制終了し、`Wait`後5秒以内に再起動、readiness復旧、新session受付                                   | old/new PID、exit、ready時刻、new session                  |
+| `G3-OPS-003`      | ライブ（境界 client） | 1 instance上限100で101件目だけ429、最大喪失数100を記録                                                                | active最大値、101件目status、喪失数                        |
+| `G3-PANIC-001`    | 既存試験証拠          | 管理対象HTTP handler、Pion callback、media / pipeline goroutineのpanicを各境界で回収し、所定closeまたはprocess継続    | inventory、test名、close reason、process状態               |
+| `G3-ROLLBACK-001` | 既存試験証拠          | revisionなしaiortc Answerのinitial rollback modeと、切断後new bundle initialが成立                                    | mode、revision有無、旧・新session ID                       |
 
 既存試験証拠は本番実測エントリーポイント自身が次の子コマンドを対象commitのclean treeで実行する。
 Go commandは`SINCRO_GATE3_GO_BINARY`を使い、`-json` eventから指定testの`pass`を全件確認する。
@@ -288,17 +288,17 @@ FAILがなく`NOT_OBSERVED`が1件でもあればNOT_OBSERVED、全標準rowがP
 本番constructorへテスト用接続点を追加せず、通常の Frontend シナリオとテスト専用 WebRTC 境界 clientを
 次のとおり使い分ける。注入操作自体が成立しなかった場合は期待するtimeoutやcloseを推測せず、そのcaseをFAILにする。
 
-| case ID                          | 実行主体           | 注入方法                                                                                              | 期待する観測                                          |
-| -------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `candidate-gathering`            | WebRTC 境界 client | Pionをcase専用の到達不能UDP STUN listenerへ向け、listenerでrequest受信後も応答しない                  | gather timeout、HTTP 504、session / cache収束         |
-| `pre-connect-close`              | WebRTC 境界 client | Offer送信直後にPeerConnectionをcloseする                                                              | pre-connect deadline、pipeline接続0                   |
-| `answer-held`                    | WebRTC 境界 client | OfferのHTTP応答を受け取るがAnswerをremote descriptionへ適用せず保持する                               | ICE / DTLS deadline、pipeline接続0                    |
-| `audio-no-rtp`                   | WebRTC 境界 client | 音声transceiverを持つOfferを送り、接続後もRTP packetを送らない                                       | audio readiness timeout、pipeline接続0                |
-| `missing-text-ch`                | WebRTC 境界 client | `telop_ch`だけを作り`text_ch`を作らない                                                               | `text_ch`を伴うDataChannel readiness timeout          |
-| `missing-telop-ch`               | WebRTC 境界 client | `text_ch`だけを作り`telop_ch`を作らない                                                               | `telop_ch`を伴うDataChannel readiness timeout         |
-| `restart-deadline`               | 現行 Frontend      | 接続済みsessionでupdate Offerのresponseを期限超過までproxy保留し、ICE restartを完了させない           | 同じsession IDのrestart deadline close                |
-| `browser-abrupt-close`           | 現行 Frontend      | browser processを強制終了し、page / contextの通常close callbackを通さない                             | abnormal close、close-once、resource収束              |
-| `draining-new-initial`           | WebRTC 境界 client | Pion子プロセスへSIGTERMを送り、draining観測後にproxy経由で新規initialを送る                           | 新規initial 503、既存sessionは共通5秒期限内にclose    |
+| case ID                | 実行主体           | 注入方法                                                                                    | 期待する観測                                       |
+| ---------------------- | ------------------ | ------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `candidate-gathering`  | WebRTC 境界 client | Pionをcase専用の到達不能UDP STUN listenerへ向け、listenerでrequest受信後も応答しない        | gather timeout、HTTP 504、session / cache収束      |
+| `pre-connect-close`    | WebRTC 境界 client | Offer送信直後にPeerConnectionをcloseする                                                    | pre-connect deadline、pipeline接続0                |
+| `answer-held`          | WebRTC 境界 client | OfferのHTTP応答を受け取るがAnswerをremote descriptionへ適用せず保持する                     | ICE / DTLS deadline、pipeline接続0                 |
+| `audio-no-rtp`         | WebRTC 境界 client | 音声transceiverを持つOfferを送り、接続後もRTP packetを送らない                              | audio readiness timeout、pipeline接続0             |
+| `missing-text-ch`      | WebRTC 境界 client | `telop_ch`だけを作り`text_ch`を作らない                                                     | `text_ch`を伴うDataChannel readiness timeout       |
+| `missing-telop-ch`     | WebRTC 境界 client | `text_ch`だけを作り`telop_ch`を作らない                                                     | `telop_ch`を伴うDataChannel readiness timeout      |
+| `restart-deadline`     | 現行 Frontend      | 接続済みsessionでupdate Offerのresponseを期限超過までproxy保留し、ICE restartを完了させない | 同じsession IDのrestart deadline close             |
+| `browser-abrupt-close` | 現行 Frontend      | browser processを強制終了し、page / contextの通常close callbackを通さない                   | abnormal close、close-once、resource収束           |
+| `draining-new-initial` | WebRTC 境界 client | Pion子プロセスへSIGTERMを送り、draining観測後にproxy経由で新規initialを送る                 | 新規initial 503、既存sessionは共通5秒期限内にclose |
 
 ### パイプライン障害と期待する観測
 
