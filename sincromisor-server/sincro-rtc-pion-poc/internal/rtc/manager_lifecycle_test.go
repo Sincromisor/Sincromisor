@@ -20,6 +20,7 @@ func TestManagerCreateAdmissionNeverExceedsCapacity(t *testing.T) {
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 		MaxSessions:     100,
+		SynthDecoder:    testSynthDecoder(t),
 	})
 	if err != nil {
 		t.Fatalf("NewManager() error = %v", err)
@@ -107,22 +108,26 @@ func TestNewManagerRejectsNilDependencies(t *testing.T) {
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 		MaxSessions:     100,
+		SynthDecoder:    testSynthDecoder(t),
 	}
 	tests := []struct {
 		name string
 		deps ManagerConfig
 	}{
 		{name: "pipeline factory", deps: ManagerConfig{
-			InputObserver: valid.InputObserver, Clock: valid.Clock, Logger: valid.Logger, MaxSessions: 100,
+			InputObserver: valid.InputObserver, Clock: valid.Clock, Logger: valid.Logger, MaxSessions: 100, SynthDecoder: valid.SynthDecoder,
 		}},
 		{name: "input observer", deps: ManagerConfig{
-			PipelineFactory: valid.PipelineFactory, Clock: valid.Clock, Logger: valid.Logger, MaxSessions: 100,
+			PipelineFactory: valid.PipelineFactory, Clock: valid.Clock, Logger: valid.Logger, MaxSessions: 100, SynthDecoder: valid.SynthDecoder,
 		}},
 		{name: "clock", deps: ManagerConfig{
-			PipelineFactory: valid.PipelineFactory, InputObserver: valid.InputObserver, Logger: valid.Logger, MaxSessions: 100,
+			PipelineFactory: valid.PipelineFactory, InputObserver: valid.InputObserver, Logger: valid.Logger, MaxSessions: 100, SynthDecoder: valid.SynthDecoder,
 		}},
 		{name: "logger", deps: ManagerConfig{
-			PipelineFactory: valid.PipelineFactory, InputObserver: valid.InputObserver, Clock: valid.Clock, MaxSessions: 100,
+			PipelineFactory: valid.PipelineFactory, InputObserver: valid.InputObserver, Clock: valid.Clock, MaxSessions: 100, SynthDecoder: valid.SynthDecoder,
+		}},
+		{name: "synth decoder", deps: ManagerConfig{
+			PipelineFactory: valid.PipelineFactory, InputObserver: valid.InputObserver, Clock: valid.Clock, Logger: valid.Logger, MaxSessions: 100,
 		}},
 	}
 	for _, test := range tests {
@@ -142,6 +147,7 @@ func TestCreateRejectsTalkModeBeforePeerConnectionAndPipeline(t *testing.T) {
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 		MaxSessions:     100,
+		SynthDecoder:    testSynthDecoder(t),
 	})
 	if err != nil {
 		t.Fatalf("NewManager() error = %v", err)
@@ -166,6 +172,7 @@ func TestCloseAllDeadlineDoesNotForgeDoneOrRegistryRemoval(t *testing.T) {
 		Clock:           SystemClock{},
 		Logger:          testLogger(),
 		MaxSessions:     100,
+		SynthDecoder:    testSynthDecoder(t),
 	})
 	if err != nil {
 		t.Fatalf("NewManager() error = %v", err)

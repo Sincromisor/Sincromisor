@@ -12,6 +12,7 @@ import (
 	"github.com/pion/webrtc/v4"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
@@ -31,14 +32,17 @@ type SessionDependencies struct {
 // Close は closing を同期的に一度だけ確定して直ちに返す。resource close と join は cleanup goroutine が
 // 継続し、全 resource 終了後だけ closed、registry remove、Done channel closeへ進む。
 type Session struct {
-	id        string
-	talkMode  string
-	pc        *webrtc.PeerConnection
-	pipeline  *pipeline.Coordinator
-	input     *audiomedia.InputProcessor
-	logger    *slog.Logger
-	onClosed  func(string)
-	lifecycle *sessionLifecycle
+	id       string
+	talkMode string
+	pc       *webrtc.PeerConnection
+	pipeline *pipeline.Coordinator
+	// synthDecoderはprocess-wide immutable dependencyへの非所有参照である。Session cleanupは
+	// processを保持しないDecoderをcloseせず、別Sessionの同一参照を継続利用可能に保つ。
+	synthDecoder *synthdecode.Decoder
+	input        *audiomedia.InputProcessor
+	logger       *slog.Logger
+	onClosed     func(string)
+	lifecycle    *sessionLifecycle
 
 	ctx            context.Context
 	cancel         context.CancelFunc
@@ -68,14 +72,16 @@ type sessionResourceClosers struct {
 
 // newSession は検証済みdependencyからPeerConnection、InputProcessor、codec、lifecycle ownerを組み立てる。
 //
-// talk modeとdependencyをresource作成前に拒否する。成功後の全resourceはSession.Closeだけが破棄し、
-// setup途中の失敗は作成済みresourceを同期的に巻き戻してregistryへ公開しない。
+// talk modeとdependencyをresource作成前に拒否する。成功後の所有resourceはSession.Closeだけが破棄し、
+// setup途中の失敗は作成済みresourceを同期的に巻き戻してregistryへ公開しない。SynthDecoderは
+// process-wide非所有参照なのでcloserへ加えず、Session終了後も他Sessionが同じpointerを利用できる。
 func newSession(
 	id string,
 	talkMode string,
 	configuration webrtc.Configuration,
 	gatherTimeout time.Duration,
 	coordinator *pipeline.Coordinator,
+	synthDecoder *synthdecode.Decoder,
 	inputObserver audiomedia.InputObserver,
 	clock Clock,
 	logger *slog.Logger,
@@ -84,7 +90,7 @@ func newSession(
 	if id == "" || (talkMode != "chat" && talkMode != "sincro") {
 		return nil, errors.New("rtc session identity or talk mode is invalid")
 	}
-	if coordinator == nil || inputObserver == nil || clock == nil || logger == nil || onClosed == nil {
+	if coordinator == nil || synthDecoder == nil || inputObserver == nil || clock == nil || logger == nil || onClosed == nil {
 		return nil, errors.New("rtc session dependencies must not be nil")
 	}
 	input, err := audiomedia.NewInputProcessor(inputObserver)
@@ -106,7 +112,7 @@ func newSession(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	session := &Session{
-		id: id, talkMode: talkMode, pc: pc, pipeline: coordinator, input: input, logger: logger,
+		id: id, talkMode: talkMode, pc: pc, pipeline: coordinator, synthDecoder: synthDecoder, input: input, logger: logger,
 		onClosed: onClosed, lifecycle: lifecycle, ctx: ctx, cancel: cancel,
 		encoder: encoder, done: make(chan struct{}),
 		closers: sessionResourceClosers{

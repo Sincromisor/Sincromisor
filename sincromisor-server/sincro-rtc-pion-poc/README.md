@@ -24,6 +24,22 @@ cd sincromisor-server/sincro-rtc-pion-poc
 CGO_ENABLED=1 go build ./cmd/pion-poc
 ```
 
+合成音声のcontainer decodeにはFFmpeg 6.1以上8.x以下を使う。PATH上の`ffmpeg`を既定とし、
+別のexecutableは`--ffmpeg`で指定できる。設定値は起動時にabsolute pathへ解決され、
+`ffmpeg -version`の起動失敗、version解析失敗、対応範囲外はHTTP listenerを開く前の
+startup errorになる。fallback executableは探索しない。
+
+Ubuntuでは、次のように導入とversionを確認する。
+
+```sh
+sudo apt-get install ffmpeg
+ffmpeg -version
+```
+
+VoiceSynthesizerから受け取る`audio/wav`、`audio/aac`、parameterなしの`audio/ogg`、
+唯一のparameterとして`codecs=opus`を持つ`audio/ogg`を、48 kHz mono PCMへ変換する。
+MIME parameterの追加や未知codecは起動後のdecode errorとして発話単位で拒否する。
+
 ## Local Chrome smoke
 
 既存 aiortc 版や compose を停止し、`127.0.0.1:8080` の競合を避ける。Frontend build は repository root から
@@ -41,6 +57,7 @@ cd sincromisor-server/sincro-rtc-pion-poc
 go run ./cmd/pion-poc \
   --http 127.0.0.1:8080 \
   --frontend-dir ../../sincromisor-frontend/dist \
+  --ffmpeg /usr/bin/ffmpeg \
   --max-sessions 100 \
   --offer-cache-capacity 1000 \
   --offer-cache-ttl 2m
@@ -99,3 +116,4 @@ unknown / closed session の candidate は HTTP 200 と `status:false` を返す
 - fixed UDP mux、NAT / firewall、TURN、Firefox
 - NACK / PLC、RTCP metrics
 - impairment、soak、performance comparison、production compose
+- container imageとproduction composeへのFFmpeg導入（Phase 4）

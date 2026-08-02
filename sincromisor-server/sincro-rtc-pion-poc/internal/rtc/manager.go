@@ -13,6 +13,7 @@ import (
 	"github.com/pion/webrtc/v4"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
@@ -20,22 +21,27 @@ import (
 //
 // NewManager はnil dependencyと非正数MaxSessionsを拒否する。sessionごとに同じfactoryから専用Coordinatorを1つ作り、
 // observerはprocess集計を行うため全sessionから同期的に呼ばれる。Clockは各session固有timerだけを
-// 生成するため、共有dependencyはすべて並行利用可能でなければならない。
+// 生成する。SynthDecoderはimmutableな非所有参照として全sessionへ同じpointerを渡すため、
+// 共有dependencyはすべて並行利用可能でなければならない。
 type ManagerConfig struct {
 	PipelineFactory pipeline.ClientSetFactory
 	InputObserver   audiomedia.InputObserver
 	Clock           Clock
 	Logger          *slog.Logger
 	MaxSessions     int
+	// SynthDecoderは全Sessionが同一pointerを非所有参照するimmutable dependencyである。
+	SynthDecoder *synthdecode.Decoder
 }
 
 // sessionBuildRequest はadmission後にSession resource境界へ渡す検証済みの作成入力をまとめる。
 // Coordinatorはcallerが生成して渡し、builderはPeerConnectionとcodecを内部で生成する。
+// synthDecoderはManagerのprocess-wide参照をコピーせずそのままSessionへ渡す。
 type sessionBuildRequest struct {
 	id            string
 	talkMode      string
 	gatherTimeout time.Duration
 	coordinator   *pipeline.Coordinator
+	synthDecoder  *synthdecode.Decoder
 	onClosed      func(string)
 }
 
@@ -48,7 +54,8 @@ type sessionBuilder func(sessionBuildRequest) (*Session, error)
 // Manager は active PeerConnection の registry と process-wide shutdown を所有する。
 //
 // registry lock は map の参照だけを保護し、PeerConnection I/O や Close 待機中は保持しない。
-// dependenciesはsessionごとのCoordinator生成とdeadlineへ再利用し、resource自体はManagerへ共有しない。
+// SynthDecoderだけはimmutableなprocess-wide非所有参照として共有し、Manager/Session cleanup対象にしない。
+// その他のdependenciesはsessionごとのCoordinator生成とdeadlineへ再利用し、resource自体は共有しない。
 // unknown と closed session は candidate endpoint で区別できるprocess-lifetime tombstoneとして保持する。
 // initial Offer の有限TTL tombstoneはsignaling registryが別に所有し、このmapはcandidate契約専用である。
 type Manager struct {
@@ -69,7 +76,7 @@ type Manager struct {
 // contextを渡してCloseAllを呼ぶ必要がある。TURN、固定UDP mux、NAT rewriteは対象外である。
 func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 	if config.PipelineFactory == nil || config.InputObserver == nil ||
-		config.Clock == nil || config.Logger == nil {
+		config.Clock == nil || config.Logger == nil || config.SynthDecoder == nil {
 		return nil, errors.New("rtc manager dependencies must not be nil")
 	}
 	if config.MaxSessions <= 0 {
@@ -93,6 +100,7 @@ func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 			manager.configuration,
 			request.gatherTimeout,
 			request.coordinator,
+			request.synthDecoder,
 			manager.config.InputObserver,
 			manager.config.Clock,
 			manager.config.Logger,
@@ -150,6 +158,7 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 		talkMode:      offer.TalkMode,
 		gatherTimeout: gatherTimeout,
 		coordinator:   coordinator,
+		synthDecoder:  m.config.SynthDecoder,
 		onClosed: func(closedID string) {
 			m.remove(closedID)
 			if offer.OnClosed != nil {
