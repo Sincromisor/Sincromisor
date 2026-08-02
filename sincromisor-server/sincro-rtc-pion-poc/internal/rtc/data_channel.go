@@ -29,7 +29,9 @@ var (
 	ErrTextQueueFull = errors.New("text data channel queue is full")
 	// ErrDataChannelPayloadTooLarge はUTF-8 JSON payloadが64 KiBを超えたことを表す。
 	ErrDataChannelPayloadTooLarge = errors.New("data channel payload exceeds 64 KiB")
-	errStaleDataChannelEvent      = errors.New("data channel event belongs to an old generation")
+	// ErrDataChannelDispatcherClosed はclose開始後のattach/enqueueを拒否したことを表す。
+	ErrDataChannelDispatcherClosed = errors.New("data channel dispatcher is closed")
+	errStaleDataChannelEvent       = errors.New("data channel event belongs to an old generation")
 )
 
 type dataChannelWriter interface {
@@ -47,6 +49,10 @@ type DataChannelStats struct {
 	TelopDropped     uint64
 	TelopSendDropped uint64
 	GenerationPurged uint64
+	ActiveWorkers    int64
+	TextQueued       int
+	TelopQueued      int
+	Closed           bool
 }
 
 // DataChannelDispatcher はtext/telop queue、Pion bufferedAmount backpressure、送信workerを所有する。
@@ -65,6 +71,7 @@ type DataChannelDispatcher struct {
 	sendMu            sync.Mutex
 	generationEpoch   uint64
 	generationChanged chan struct{}
+	closed            bool
 	textQueue         [][]byte
 	telopQueue        [][]byte
 	textWake          chan struct{}
@@ -78,6 +85,7 @@ type DataChannelDispatcher struct {
 	telopDropped     atomic.Uint64
 	telopSendDropped atomic.Uint64
 	generationPurged atomic.Uint64
+	activeWorkers    atomic.Int64
 }
 
 // NewDataChannelDispatcher はidle dispatcherを作り、session context cancellationをworkerへ伝播する。
@@ -116,6 +124,10 @@ func (d *DataChannelDispatcher) attach(channel dataChannelWriter, text bool) err
 		return errors.New("data channel is not open")
 	}
 	d.mu.Lock()
+	if d.closed {
+		d.mu.Unlock()
+		return ErrDataChannelDispatcherClosed
+	}
 	target := &d.telopChannel
 	wake := d.telopWake
 	if text {
@@ -148,13 +160,21 @@ func (d *DataChannelDispatcher) Purge() {
 	d.sendMu.Lock()
 	defer d.sendMu.Unlock()
 	d.mu.Lock()
+	if d.closed {
+		d.mu.Unlock()
+		return
+	}
+	d.purgeLocked()
+	d.mu.Unlock()
+}
+
+func (d *DataChannelDispatcher) purgeLocked() {
 	count := len(d.textQueue) + len(d.telopQueue)
 	d.generationEpoch++
 	close(d.generationChanged)
 	d.generationChanged = make(chan struct{})
 	d.textQueue = nil
 	d.telopQueue = nil
-	d.mu.Unlock()
 	if count > 0 {
 		total := d.generationPurged.Add(uint64(count))
 		d.logger.Info("purged data channel events",
@@ -165,31 +185,49 @@ func (d *DataChannelDispatcher) Purge() {
 
 // Stats はdispatcherのpayload非保持counter snapshotを返す。
 func (d *DataChannelDispatcher) Stats() DataChannelStats {
+	d.mu.Lock()
+	textQueued, telopQueued, closed := len(d.textQueue), len(d.telopQueue), d.closed
+	d.mu.Unlock()
 	return DataChannelStats{
 		TextRejected:     d.textRejected.Load(),
 		TelopDropped:     d.telopDropped.Load(),
 		TelopSendDropped: d.telopSendDropped.Load(),
 		GenerationPurged: d.generationPurged.Load(),
+		ActiveWorkers:    d.activeWorkers.Load(),
+		TextQueued:       textQueued,
+		TelopQueued:      telopQueued,
+		Closed:           closed,
 	}
 }
 
 // Close はdispatcher workerをcancelし、進行中のbackpressure waitを含めて一度だけjoinする。
 func (d *DataChannelDispatcher) Close() error {
 	d.closeOnce.Do(func() {
+		// attachの開始権とWaitGroup予約は同じmutexで直列化する。closed確定後は
+		// 新しいAdd/worker開始がないため、このunlock後のWaitはAddと競合しない。
+		d.mu.Lock()
+		d.closed = true
 		d.cancel()
+		d.mu.Unlock()
 		signal(d.textWake)
 		signal(d.telopWake)
 		d.wg.Wait()
+		d.sendMu.Lock()
 		d.mu.Lock()
 		d.textQueue = nil
 		d.telopQueue = nil
 		d.mu.Unlock()
+		d.sendMu.Unlock()
 	})
 	return nil
 }
 
 func (d *DataChannelDispatcher) run(channel dataChannelWriter, text bool, wake <-chan struct{}) {
-	defer d.wg.Done()
+	d.activeWorkers.Add(1)
+	defer func() {
+		d.activeWorkers.Add(-1)
+		d.wg.Done()
+	}()
 	for {
 		payload, epoch, generationChanged, ok := d.pop(text)
 		if !ok {

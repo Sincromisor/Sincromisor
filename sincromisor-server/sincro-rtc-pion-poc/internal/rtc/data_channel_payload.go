@@ -37,6 +37,10 @@ func (d *DataChannelDispatcher) EnqueueText(message protocol.ChatMessage) error 
 		return err
 	}
 	d.mu.Lock()
+	if d.closed {
+		d.mu.Unlock()
+		return ErrDataChannelDispatcherClosed
+	}
 	if len(d.textQueue) == textQueueCapacity {
 		d.mu.Unlock()
 		count := d.textRejected.Add(1)
@@ -60,6 +64,10 @@ func (d *DataChannelDispatcher) EnqueueTelop(event audiomedia.TelopPayload) erro
 		return err
 	}
 	d.mu.Lock()
+	if d.closed {
+		d.mu.Unlock()
+		return ErrDataChannelDispatcherClosed
+	}
 	if len(d.telopQueue) == telopQueueCapacity {
 		copy(d.telopQueue, d.telopQueue[1:])
 		d.telopQueue = d.telopQueue[:len(d.telopQueue)-1]

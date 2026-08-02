@@ -227,6 +227,101 @@ func TestDataChannelGenerationPurgeInterruptsBackpressureWait(t *testing.T) {
 	}
 }
 
+func TestDataChannelAttachAndCloseShareWorkerReservation(t *testing.T) {
+	t.Run("attach wins reservation and close joins worker", func(t *testing.T) {
+		dispatcher := newDispatcherForTest(t, func(error) {})
+		channel := newFakeDataChannel(0)
+		channel.thresholdEntered = make(chan struct{})
+		channel.thresholdRelease = make(chan struct{})
+		attachDone := make(chan error, 1)
+		go func() { attachDone <- dispatcher.AttachText(channel) }()
+		<-channel.thresholdEntered
+
+		closeDone := make(chan error, 1)
+		go func() { closeDone <- dispatcher.Close() }()
+		select {
+		case err := <-closeDone:
+			t.Fatalf("Close returned before attach reservation completed: %v", err)
+		default:
+		}
+		close(channel.thresholdRelease)
+		if err := <-attachDone; err != nil {
+			t.Fatalf("AttachText() error = %v", err)
+		}
+		if err := <-closeDone; err != nil {
+			t.Fatalf("Close() error = %v", err)
+		}
+		if got := dispatcher.Stats().ActiveWorkers; got != 0 {
+			t.Fatalf("active workers after Close = %d, want 0", got)
+		}
+	})
+
+	t.Run("close wins and later attach is rejected", func(t *testing.T) {
+		dispatcher := newDispatcherForTest(t, func(error) {})
+		if err := dispatcher.Close(); err != nil {
+			t.Fatalf("Close() error = %v", err)
+		}
+		err := dispatcher.AttachText(newFakeDataChannel(0))
+		if !errors.Is(err, ErrDataChannelDispatcherClosed) {
+			t.Fatalf("AttachText() error = %v, want dispatcher closed", err)
+		}
+		if got := dispatcher.Stats().ActiveWorkers; got != 0 {
+			t.Fatalf("active workers = %d, want 0", got)
+		}
+	})
+}
+
+func TestSessionPublishesClosedOnlyAfterDispatcherWorkerJoin(t *testing.T) {
+	dispatcher := newDispatcherForTest(t, func(error) {})
+	channel := newFakeDataChannel(0)
+	channel.sendEntered = make(chan struct{})
+	channel.sendRelease = make(chan struct{})
+	if err := dispatcher.AttachText(channel); err != nil {
+		t.Fatalf("AttachText() error = %v", err)
+	}
+	if err := dispatcher.EnqueueText(protocol.ChatMessage{MessageID: "blocking"}); err != nil {
+		t.Fatalf("EnqueueText() error = %v", err)
+	}
+	<-channel.sendEntered
+
+	manager, err := NewManager("", ManagerConfig{
+		PipelineFactory: blockingPipelineFactory{},
+		InputObserver:   testInputObserver(),
+		Clock:           SystemClock{},
+		Logger:          testLogger(),
+		MaxSessions:     100,
+		SynthDecoder:    testSynthDecoder(t),
+	})
+	if err != nil {
+		t.Fatalf("NewManager() error = %v", err)
+	}
+	lifecycle, err := newSessionLifecycle(SystemClock{})
+	if err != nil {
+		t.Fatalf("newSessionLifecycle() error = %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	session := &Session{
+		id: "dispatcher-join", lifecycle: lifecycle, ctx: ctx, cancel: cancel,
+		done: make(chan struct{}), logger: testLogger(), onClosed: manager.remove,
+		closers: sessionResourceClosers{
+			peer: func() error { return nil }, codec: func() error { return nil },
+			output: func() error { return nil }, dispatcher: dispatcher.Close,
+			pipeline: func() error { return nil },
+		},
+	}
+	manager.sessions[session.id] = session
+	if err := session.Close("dispatcher_join_test"); err != nil {
+		t.Fatalf("Session.Close() error = %v", err)
+	}
+	assertCleanupPending(t, manager, session)
+	close(channel.sendRelease)
+	waitSessionDone(t, session)
+	assertClosedSession(t, manager, session, "dispatcher_join_test")
+	if got := dispatcher.Stats().ActiveWorkers; got != 0 {
+		t.Fatalf("active workers at Session closed = %d, want 0", got)
+	}
+}
+
 func newDispatcherForTest(t *testing.T, onError func(error)) *DataChannelDispatcher {
 	t.Helper()
 	dispatcher, err := NewDataChannelDispatcher(context.Background(), testLogger(), onError)
@@ -242,14 +337,18 @@ func newDispatcherForTest(t *testing.T, onError func(error)) *DataChannelDispatc
 }
 
 type fakeDataChannel struct {
-	mu            sync.Mutex
-	buffered      uint64
-	low           func()
-	close         func()
-	state         webrtc.DataChannelState
-	sent          chan string
-	sendErr       error
-	bufferChecked chan struct{}
+	mu               sync.Mutex
+	buffered         uint64
+	low              func()
+	close            func()
+	state            webrtc.DataChannelState
+	sent             chan string
+	sendErr          error
+	bufferChecked    chan struct{}
+	thresholdEntered chan struct{}
+	thresholdRelease chan struct{}
+	sendEntered      chan struct{}
+	sendRelease      chan struct{}
 }
 
 func newFakeDataChannel(buffered uint64) *fakeDataChannel {
@@ -260,6 +359,16 @@ func newFakeDataChannel(buffered uint64) *fakeDataChannel {
 }
 
 func (c *fakeDataChannel) SendText(value string) error {
+	if c.sendEntered != nil {
+		select {
+		case <-c.sendEntered:
+		default:
+			close(c.sendEntered)
+		}
+	}
+	if c.sendRelease != nil {
+		<-c.sendRelease
+	}
 	c.mu.Lock()
 	err := c.sendErr
 	c.mu.Unlock()
@@ -278,7 +387,14 @@ func (c *fakeDataChannel) BufferedAmount() uint64 {
 	}
 	return c.buffered
 }
-func (c *fakeDataChannel) SetBufferedAmountLowThreshold(uint64) {}
+func (c *fakeDataChannel) SetBufferedAmountLowThreshold(uint64) {
+	if c.thresholdEntered != nil {
+		close(c.thresholdEntered)
+	}
+	if c.thresholdRelease != nil {
+		<-c.thresholdRelease
+	}
+}
 func (c *fakeDataChannel) OnBufferedAmountLow(callback func()) {
 	c.mu.Lock()
 	c.low = callback

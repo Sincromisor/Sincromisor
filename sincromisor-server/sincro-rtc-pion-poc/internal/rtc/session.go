@@ -14,6 +14,7 @@ import (
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol"
 )
 
 // SessionDependencies は session 作成前に検証する遅延 pipeline、入力観測、deadline の依存境界である。
@@ -38,7 +39,7 @@ type Session struct {
 	pipeline *pipeline.Coordinator
 	// synthDecoderはprocess-wide immutable dependencyへの非所有参照である。Session cleanupは
 	// processを保持しないDecoderをcloseせず、別Sessionの同一参照を継続利用可能に保つ。
-	synthDecoder *synthdecode.Decoder
+	synthDecoder synthSpeechDecoder
 	input        *audiomedia.InputProcessor
 	logger       *slog.Logger
 	onClosed     func(string)
@@ -62,6 +63,11 @@ type Session struct {
 	negotiateUpdate func(context.Context, string) (webrtc.SessionDescription, bool, error)
 	// productionではaddCandidateへ固定し、revision/dedupe/limit通過後だけ呼ぶPion適用境界である。
 	candidateApplier func(webrtc.ICECandidateInit) error
+}
+
+// synthSpeechDecoderはprocess-wide decoderとdecode完了競合testを共有する非所有境界である。
+type synthSpeechDecoder interface {
+	Decode(context.Context, protocol.SynthesizerResult) (synthdecode.DecodedSpeech, error)
 }
 
 // sessionResourceClosers はSession cleanupが並行開始して完了を待つ所有resource境界である。
@@ -142,7 +148,12 @@ func newSession(
 		cancel()
 		return nil, err
 	}
-	output, err := audiomedia.NewOutputProcessor(encoder, session.outboundTrack, dispatcher.EnqueueTelop, logger)
+	output, err := audiomedia.NewOutputProcessor(
+		encoder,
+		pionSampleWriter{track: session.outboundTrack},
+		dispatcher.EnqueueTelop,
+		logger,
+	)
 	if err != nil {
 		_ = pc.Close()
 		_ = encoder.Close()
