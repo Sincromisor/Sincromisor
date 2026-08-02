@@ -53,7 +53,18 @@ func (s *Server) handleCandidate(writer http.ResponseWriter, request *http.Reque
 		writeError(writer, status, message)
 		return
 	}
-	_, err := s.sessions.AddCandidate(payload.SessionID, payload.OfferRevision, candidate)
+	s.withSessionMutation(payload.SessionID, func() {
+		s.applyCandidate(writer, payload, candidate)
+	})
+}
+
+func (s *Server) applyCandidate(
+	writer http.ResponseWriter,
+	payload candidateRequest,
+	candidate *rtc.Candidate,
+) {
+	var err error
+	_, err = s.sessions.AddCandidate(payload.SessionID, payload.OfferRevision, candidate)
 	switch {
 	case err == nil:
 		writeJSON(writer, http.StatusOK, candidateResponse{Status: true})
@@ -66,9 +77,10 @@ func (s *Server) handleCandidate(writer http.ResponseWriter, request *http.Reque
 	case errors.Is(err, rtc.ErrCandidateLimit):
 		writeError(writer, http.StatusTooManyRequests, "Too many candidates.")
 	default:
-		s.logger.Warn("candidate rejected", "session_id", payload.SessionID, "error", err)
+		s.logger.Warn("candidate rejected", "session_id", payload.SessionID, "reason", "invalid_candidate")
 		writeError(writer, http.StatusBadRequest, "Invalid ICE candidate.")
 	}
+	s.afterMutation()
 }
 
 // decodeCandidate はraw JSON presenceをdomain candidateへ変換し、文字列bytesを変形せず上限判定する。

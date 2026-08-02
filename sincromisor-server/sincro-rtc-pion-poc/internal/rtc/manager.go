@@ -14,6 +14,7 @@ import (
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
@@ -31,6 +32,9 @@ type ManagerConfig struct {
 	MaxSessions     int
 	// SynthDecoderは全Sessionが同一pointerを非所有参照するimmutable dependencyである。
 	SynthDecoder *synthdecode.Decoder
+	// Recorder receives finite-cardinality lifecycle events. Nil selects a no-op
+	// recorder so lower-level tests do not need a Prometheus registry.
+	Recorder observability.Recorder
 }
 
 // sessionBuildRequest はadmission後にSession resource境界へ渡す検証済みの作成入力をまとめる。
@@ -43,6 +47,7 @@ type sessionBuildRequest struct {
 	coordinator   *pipeline.Coordinator
 	synthDecoder  *synthdecode.Decoder
 	onClosed      func(string)
+	recorder      observability.Recorder
 }
 
 // sessionBuilder はadmission reservation後にだけ到達するPeerConnection/codec作成境界である。
@@ -82,6 +87,9 @@ func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 	if config.MaxSessions <= 0 {
 		return nil, errors.New("rtc manager max sessions must be positive")
 	}
+	if config.Recorder == nil {
+		config.Recorder = observability.Discard()
+	}
 	configuration := webrtc.Configuration{}
 	if stunURL != "" {
 		configuration.ICEServers = []webrtc.ICEServer{{URLs: []string{stunURL}}}
@@ -105,6 +113,7 @@ func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 			manager.config.Clock,
 			manager.config.Logger,
 			request.onClosed,
+			request.recorder,
 		)
 	}
 	return manager, nil
@@ -115,7 +124,7 @@ func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 // type、SDP、talk_mode、initial request UUIDをresource作成前に検証する。session専用Coordinatorを
 // 作った後、request deadlineをPionのSTUN gather上限へ伝播してcandidate収集済みAnswerを作る。
 // 成功Answerをrevision 1のretry基点として保存し、失敗時は同じ非同期close経路へ通知する。
-func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
+func (m *Manager) Create(ctx context.Context, offer Offer) (result Answer, returnErr error) {
 	if offer.Type != "offer" {
 		return Answer{}, errors.New("offer type must be offer")
 	}
@@ -135,12 +144,24 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 		return Answer{}, err
 	}
 	reserved := true
+	var coordinator *pipeline.Coordinator
+	var session *Session
 	defer func() {
+		if recover() != nil {
+			switch {
+			case session != nil:
+				_ = session.Close("panic")
+			case coordinator != nil:
+				_ = coordinator.Close()
+			}
+			result = Answer{}
+			returnErr = ErrSessionPanic
+		}
 		if reserved {
 			m.releaseReservation()
 		}
 	}()
-	coordinator, err := pipeline.NewCoordinator(m.config.PipelineFactory, m.config.Logger)
+	coordinator, err = pipeline.NewCoordinator(m.config.PipelineFactory, m.config.Logger)
 	if err != nil {
 		return Answer{}, err
 	}
@@ -153,7 +174,7 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 			return Answer{}, ctx.Err()
 		}
 	}
-	session, err := m.buildSession(sessionBuildRequest{
+	session, err = m.buildSession(sessionBuildRequest{
 		id:            sessionID,
 		talkMode:      offer.TalkMode,
 		gatherTimeout: gatherTimeout,
@@ -165,6 +186,7 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 				offer.OnClosed(closedID)
 			}
 		},
+		recorder: m.config.Recorder,
 	})
 	if err != nil {
 		_ = coordinator.Close()
@@ -175,16 +197,30 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (Answer, error) {
 	reserved = false
 	m.sessions[sessionID] = session
 	m.mu.Unlock()
+	m.config.Recorder.SessionCreated()
 
 	answer, err := session.negotiate(ctx, offer.SDP)
 	if err != nil {
 		_ = session.Close("offer_failed")
 		return Answer{}, err
 	}
-	result := Answer{SDP: answer.SDP, Type: answer.Type.String(), SessionID: sessionID, Revision: 1}
+	result = Answer{SDP: answer.SDP, Type: answer.Type.String(), SessionID: sessionID, Revision: 1}
 	session.revision = newRevisionState(requestID, offer.SDP, result)
 	return result, nil
 }
+
+// ErrSessionPanic reports a recovered panic during initial Session construction
+// or negotiation. Manager has already released admission and closed any
+// partially-owned resources when this error reaches signaling.
+var ErrSessionPanic = errors.New("rtc session creation panic")
+
+// Limit returns the immutable process admission ceiling used by initial Offer
+// reservation and the statuses endpoint. It performs no resource lookup.
+func (m *Manager) Limit() int { return m.maxSessions }
+
+// Recorder returns the concurrency-safe process recorder shared by every
+// Session and operational endpoint; callers must not replace it after startup.
+func (m *Manager) Recorder() observability.Recorder { return m.config.Recorder }
 
 // ErrSessionCapacity はactive Sessionと作成予約の合計がMaxSessionsへ到達したことを表す。
 // 別Sessionのcleanup完了後は再試行できる。
@@ -215,6 +251,17 @@ func (m *Manager) Count() int {
 	return len(m.sessions)
 }
 
+// CloseSession routes a known HTTP mutation panic to that session's close-once
+// lifecycle. Unknown or already-removed sessions are intentionally ignored.
+func (m *Manager) CloseSession(sessionID, reason string) {
+	m.mu.RLock()
+	session := m.sessions[sessionID]
+	m.mu.RUnlock()
+	if session != nil {
+		_ = session.Close(reason)
+	}
+}
+
 // CloseAll は process shutdown 時のactive sessionをsnapshotし、全cleanup完了まで待つ。
 //
 // reason省略時はprocess_shutdownを使う。ctx deadlineを超えた場合はctx.Errを返すが、done closeや
@@ -241,6 +288,14 @@ func (m *Manager) CloseAll(ctx context.Context, reasons ...string) error {
 		select {
 		case <-session.done:
 		case <-ctx.Done():
+			m.config.Recorder.Deadline("close")
+			for _, pending := range sessions {
+				select {
+				case <-pending.done:
+				default:
+					pending.recordCloseDuration("timeout")
+				}
+			}
 			return ctx.Err()
 		}
 	}
@@ -256,5 +311,5 @@ func (m *Manager) remove(sessionID string) {
 	m.closed[sessionID] = struct{}{}
 	activeSessions := len(m.sessions)
 	m.mu.Unlock()
-	m.config.Logger.Info("session registry updated", "session_id", sessionID, "active_sessions", activeSessions)
+	m.config.Logger.Info("session registry updated", "session_id", sessionID, "count", activeSessions)
 }

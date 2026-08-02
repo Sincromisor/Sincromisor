@@ -204,8 +204,9 @@ func TestCoordinatorLifecycleQueueAndBackoff(t *testing.T) {
 		for value := byte(0); value < inputQueueCapacity+1; value++ {
 			queue.push([]byte{value})
 		}
-		if got := (<-queue.values)[0]; got != 1 {
-			t.Fatalf("oldest retained frame = %d, want 1", got)
+		frame, ok := queue.pop(context.Background())
+		if !ok || frame[0] != 1 {
+			t.Fatalf("oldest retained frame = %v/%t, want [1]/true", frame, ok)
 		}
 		var caps []time.Duration
 		coordinator, err := newCoordinatorWithHooks(

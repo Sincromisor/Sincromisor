@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"errors"
+	"sync"
 
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 )
@@ -28,7 +29,20 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 	// Register the reset owner before releasing stateMu. Close takes the same
 	// lock before Wait, so WaitGroup.Add can never race with Wait.
 	c.wg.Add(1)
+	c.observer.PipelineReconnect(string(service), "start")
 	c.mu.Unlock()
+	var terminalOnce sync.Once
+	finish := func(result string) {
+		terminalOnce.Do(func() {
+			c.observer.PipelineReconnect(string(service), result)
+		})
+	}
+	handedOff := false
+	defer func() {
+		if !handedOff {
+			finish("failure")
+		}
+	}()
 
 	// Output publication and reset take locks in the same order. Once resetting
 	// is visible no new producer is accepted; this barrier advances generation
@@ -57,7 +71,7 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 		}
 		// A stage loop may be the reset caller. It must return before Close joins
 		// generationWork, so terminal invariant cleanup is completed asynchronously.
-		go func() { _ = c.Close() }()
+		c.goDetached("pipeline_terminal_close", func() { _ = c.Close() })
 		return
 	}
 	oldWork, oldSet := c.work, c.set
@@ -69,8 +83,14 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 	c.mu.Unlock()
 	c.outputMu.Unlock()
 
-	go func() {
-		defer c.wg.Done()
+	handedOff = true
+	c.goCoordinator("pipeline_reconnect", func() {
+		result := "failure"
+		defer func() {
+			// Every accepted reset has exactly one terminal result, including
+			// shutdown, callback panic, and reconnect cancellation exits.
+			finish(result)
+		}()
 		oldWork.cancel()
 		oldWork.input.close()
 		_ = oldSet.Close()
@@ -84,10 +104,14 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 		_ = c.transitionLocked(StateConnecting)
 		c.resetting = false
 		c.mu.Unlock()
-		if err := c.connectUntilRunning(false); err != nil && !errors.Is(err, ErrClosed) {
-			c.logger.Error("pipeline reconnect stopped", "error", err, "reason", reason)
+		if err := c.connectUntilRunning(false); err != nil {
+			if !errors.Is(err, ErrClosed) {
+				c.logger.Error("pipeline reconnect stopped", "stage", string(service), "reason", "reconnect_failure")
+			}
+			return
 		}
-	}()
+		result = "success"
+	})
 }
 
 // notifyGenerationはoutputMuを保持するcallerからcapacity 1の最新generation通知を確定する。
@@ -125,7 +149,7 @@ func (c *Coordinator) recordStaleDrop(service pclient.Service) {
 	c.staleDrops[service]++
 	count := c.staleDrops[service]
 	c.mu.Unlock()
-	c.logger.Info("dropped stale pipeline value", "service", service, "drop_count", count)
+	c.logger.Info("dropped stale pipeline value", "stage", service, "reason", "stale_generation", "count", count)
 }
 
 func drain[T any](values chan T) {

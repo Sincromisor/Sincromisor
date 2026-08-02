@@ -10,10 +10,13 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/rtc"
 )
 
@@ -22,6 +25,10 @@ const (
 	configPath      = apiPrefix + "config.json"
 	offerPath       = apiPrefix + "offer"
 	candidatePath   = apiPrefix + "candidate"
+	statusesPath    = apiPrefix + "statuses"
+	livenessPath    = "/health/live"
+	readinessPath   = "/health/ready"
+	metricsPath     = "/metrics"
 	maxRequestBytes = 1 << 20
 	maxSDPBytes     = 256 << 10
 	// maxCandidateBytesは通常browser candidateに余裕を持たせつつ単一fieldのmemory abuseを拒否する。
@@ -46,11 +53,52 @@ type SessionService interface {
 // API prefix は static file より先に routing し、未知 API を Frontend asset として返さない。
 // Request body は有限長に制限し、JSON / SDP / candidate error を request 単位の 4xx に変換する。
 type Server struct {
-	sessions    SessionService
-	offers      *OfferRegistry
-	frontendDir string
-	iceServers  []iceServerResponse
-	logger      *slog.Logger
+	sessions     SessionService
+	offers       *OfferRegistry
+	frontendDir  string
+	iceServers   []iceServerResponse
+	logger       *slog.Logger
+	state        *ProcessState
+	recorder     observability.Recorder
+	metrics      http.Handler
+	mutationHook func()
+}
+
+func (s *Server) afterMutation() {
+	if s.mutationHook != nil {
+		s.mutationHook()
+	}
+}
+
+// ProcessState is the process admission state shared by health handlers and
+// graceful shutdown. Startup marks ready only after every local dependency has
+// been validated; draining is monotonic for the lifetime of a process.
+type ProcessState struct {
+	ready    atomic.Bool
+	draining atomic.Bool
+}
+
+// NewProcessState returns a non-ready, non-draining startup state.
+func NewProcessState() *ProcessState { return &ProcessState{} }
+
+// MarkReady publishes successful startup validation.
+func (s *ProcessState) MarkReady() { s.ready.Store(true) }
+
+// BeginDrain atomically rejects new initial sessions before HTTP accept stops.
+func (s *ProcessState) BeginDrain() { s.draining.Store(true); s.ready.Store(false) }
+
+// Ready reports whether the process can safely admit a new session.
+func (s *ProcessState) Ready() bool { return s.ready.Load() && !s.draining.Load() }
+
+// Draining reports whether shutdown admission control has begun.
+func (s *ProcessState) Draining() bool { return s.draining.Load() }
+
+// Options adds process health and telemetry without changing the established
+// signaling constructor call shape used by transport-focused tests.
+type Options struct {
+	State    *ProcessState
+	Recorder observability.Recorder
+	Metrics  http.Handler
 }
 
 // New は signaling handler、initial Offer registry、session dependencyを固定する。
@@ -64,10 +112,22 @@ func New(
 	frontendDir string,
 	stunURL string,
 	logger *slog.Logger,
+	options ...Options,
 ) *Server {
 	iceServers := make([]iceServerResponse, 0)
 	if stunURL != "" {
 		iceServers = []iceServerResponse{{URLs: stunURL}}
+	}
+	state := NewProcessState()
+	state.MarkReady()
+	var recorder observability.Recorder
+	var metrics http.Handler
+	if len(options) > 0 {
+		if options[0].State != nil {
+			state = options[0].State
+		}
+		recorder = options[0].Recorder
+		metrics = options[0].Metrics
 	}
 	return &Server{
 		sessions:    sessions,
@@ -75,6 +135,9 @@ func New(
 		frontendDir: frontendDir,
 		iceServers:  iceServers,
 		logger:      logger,
+		state:       state,
+		recorder:    recorder,
+		metrics:     metrics,
 	}
 }
 
@@ -84,11 +147,20 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc(configPath, s.handleConfig)
 	mux.HandleFunc(offerPath, s.handleOffer)
 	mux.HandleFunc(candidatePath, s.handleCandidate)
+	mux.HandleFunc(statusesPath, s.handleStatuses)
+	mux.HandleFunc(livenessPath, s.handleLive)
+	mux.HandleFunc(readinessPath, s.handleReady)
+	if s.metrics != nil {
+		mux.Handle(metricsPath, s.metrics)
+	}
 	mux.HandleFunc(apiPrefix, func(writer http.ResponseWriter, _ *http.Request) {
 		writeError(writer, http.StatusNotFound, "API endpoint not found.")
 	})
 	mux.Handle("/", http.FileServer(http.Dir(s.frontendDir)))
-	return mux
+	// Observation is the outer commit owner: recoverHTTP always returns after
+	// committing either the buffered success response or a fresh panic 500, so
+	// every signaling request contributes exactly one final status and latency.
+	return s.observeHTTP(s.recoverHTTP(mux))
 }
 
 type iceServerResponse struct {
@@ -153,7 +225,13 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 			writeError(writer, http.StatusBadRequest, "Invalid session_id.")
 			return
 		}
-		s.handleUpdateOffer(writer, request, payload, sessionID)
+		s.withSessionMutation(sessionID, func() {
+			s.handleUpdateOffer(writer, request, payload, sessionID)
+		})
+		return
+	}
+	if s.state.Draining() {
+		writeError(writer, http.StatusServiceUnavailable, "Server is draining.")
 		return
 	}
 	if len(payload.SDP) > maxSDPBytes {
@@ -201,22 +279,197 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		case errors.Is(err, ErrOfferCapacity), errors.Is(err, rtc.ErrSessionCapacity):
 			writeError(writer, http.StatusTooManyRequests, "Too many requests.")
 			return
+		case errors.Is(err, rtc.ErrSessionPanic):
+			writeError(writer, http.StatusInternalServerError, "Internal server error.")
+			return
 		}
-		s.logger.Warn("offer rejected", "error_type", fmt.Sprintf("%T", err))
+		s.logger.Warn("offer rejected", "reason", "offer_error")
 		writeError(writer, http.StatusBadRequest, "Invalid offer SDP.")
 		return
 	}
 	s.logger.Info("offer answered",
 		"session_id", answer.SessionID,
-		"active_sessions", s.sessions.Count(),
+		"count", s.sessions.Count(),
 	)
 	if previousSessionID != "" {
 		s.logger.Info("initial offer replaced session",
-			"previous_session_id", previousSessionID,
 			"session_id", answer.SessionID,
+			"stage", "session_replacement",
 		)
 	}
 	writeJSON(writer, http.StatusOK, answer)
+}
+
+type statusResponse struct {
+	Sessions     int  `json:"sessions"`
+	SessionLimit int  `json:"session_limit"`
+	Ready        bool `json:"ready"`
+	Draining     bool `json:"draining"`
+}
+
+func (s *Server) handleStatuses(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodGet {
+		writeError(writer, http.StatusMethodNotAllowed, "Method not allowed.")
+		return
+	}
+	limit := 0
+	if provider, ok := s.sessions.(interface{ Limit() int }); ok {
+		limit = provider.Limit()
+	}
+	writeJSON(writer, http.StatusOK, statusResponse{
+		Sessions: s.sessions.Count(), SessionLimit: limit, Ready: s.state.Ready(), Draining: s.state.Draining(),
+	})
+}
+
+func (s *Server) handleLive(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodGet {
+		writer.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	writer.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleReady(writer http.ResponseWriter, request *http.Request) {
+	if request.Method != http.MethodGet {
+		writer.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.state.Ready() {
+		writer.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	writer.WriteHeader(http.StatusOK)
+}
+
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+// responseBuffer holds the complete handler response until the request panic
+// boundary decides whether it is safe to commit. It implements only the
+// non-streaming ResponseWriter contract used by these finite JSON/static
+// endpoints; handlers requiring Flusher or Hijacker must use another boundary.
+type responseBuffer struct {
+	header http.Header
+	status int
+	body   strings.Builder
+}
+
+func newResponseBuffer() *responseBuffer {
+	return &responseBuffer{header: make(http.Header)}
+}
+
+func (b *responseBuffer) Header() http.Header { return b.header }
+func (b *responseBuffer) WriteHeader(status int) {
+	if b.status == 0 {
+		b.status = status
+	}
+}
+func (b *responseBuffer) Write(body []byte) (int, error) {
+	if b.status == 0 {
+		b.status = http.StatusOK
+	}
+	return b.body.Write(body)
+}
+
+// flush transfers headers, final status, and body to the network writer once.
+// recoverHTTP deliberately never calls it after a panic, discarding all
+// partially constructed success state before writing the replacement 500.
+func (b *responseBuffer) flush(writer http.ResponseWriter) {
+	for key, values := range b.header {
+		for _, value := range values {
+			writer.Header().Add(key, value)
+		}
+	}
+	status := b.status
+	if status == 0 {
+		status = http.StatusOK
+	}
+	writer.WriteHeader(status)
+	_, _ = io.WriteString(writer, b.body.String())
+}
+
+func (w *statusWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+func (w *statusWriter) Write(body []byte) (int, error) {
+	if w.status == 0 {
+		w.WriteHeader(http.StatusOK)
+	}
+	return w.ResponseWriter.Write(body)
+}
+
+func (s *Server) observeHTTP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if s.recorder == nil {
+			next.ServeHTTP(writer, request)
+			return
+		}
+		endpoint := signalingEndpoint(request.URL.Path)
+		if endpoint == "" {
+			next.ServeHTTP(writer, request)
+			return
+		}
+		started := time.Now()
+		captured := &statusWriter{ResponseWriter: writer}
+		next.ServeHTTP(captured, request)
+		status := captured.status
+		if status == 0 {
+			status = http.StatusOK
+		}
+		s.recorder.SignalingRequest(endpoint, fmt.Sprintf("%dxx", status/100), time.Since(started))
+	})
+}
+
+func signalingEndpoint(path string) string {
+	switch path {
+	case configPath:
+		return "config"
+	case offerPath:
+		return "offer"
+	case candidatePath:
+		return "candidate"
+	case statusesPath:
+		return "statuses"
+	default:
+		return ""
+	}
+}
+
+// recoverHTTP keeps the entire non-streaming response uncommitted until the
+// handler returns. Ordinary panics discard buffered headers/body and commit a
+// fresh 500; successful responses flush once. The outer observeHTTP boundary
+// records that committed result. Runtime fatal errors, cgo crashes, streaming,
+// and failures outside this request goroutine remain unsupported.
+func (s *Server) recoverHTTP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		buffered := newResponseBuffer()
+		defer func() {
+			if recover() != nil {
+				s.logger.Error("http handler panic", "reason", "panic")
+				writeError(writer, http.StatusInternalServerError, "Internal server error.")
+				return
+			}
+			buffered.flush(writer)
+		}()
+		next.ServeHTTP(buffered, request)
+	})
+}
+
+// withSessionMutation associates a panic after session lookup with the known
+// owner before the outer HTTP boundary converts it to 500.
+func (s *Server) withSessionMutation(sessionID string, mutate func()) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			if closer, ok := s.sessions.(interface{ CloseSession(string, string) }); ok {
+				closer.CloseSession(sessionID, "panic")
+			}
+			panic(recovered)
+		}
+	}()
+	mutate()
 }
 
 // decodeJSON は1 MiBを超えるbody、未知field、複数JSON valueをdomain処理より先に拒否する。
@@ -255,7 +508,7 @@ func writeJSON(writer http.ResponseWriter, status int, payload any) {
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(status)
 	if err := json.NewEncoder(writer).Encode(payload); err != nil {
-		slog.Error("write json response failed", "error", err)
+		slog.Error("write json response failed", "reason", "response_write_error")
 	}
 }
 

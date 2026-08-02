@@ -13,6 +13,7 @@ import (
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol"
 )
@@ -44,6 +45,7 @@ type Session struct {
 	logger       *slog.Logger
 	onClosed     func(string)
 	lifecycle    *sessionLifecycle
+	recorder     observability.Recorder
 
 	ctx                context.Context
 	cancel             context.CancelFunc
@@ -56,6 +58,8 @@ type Session struct {
 	outboundTrack      *webrtc.TrackLocalStaticSample
 	outboundSender     *webrtc.RTPSender
 	done               chan struct{}
+	closeStarted       time.Time
+	closeMetricOnce    sync.Once
 	closers            sessionResourceClosers
 	revision           *revisionState
 	// productionではnegotiateDescriptionへ固定する。test差し替えもremote適用済みboolを正しく返し、
@@ -98,12 +102,17 @@ func newSession(
 	clock Clock,
 	logger *slog.Logger,
 	onClosed func(string),
+	recorders ...observability.Recorder,
 ) (*Session, error) {
 	if id == "" || (talkMode != "chat" && talkMode != "sincro") {
 		return nil, errors.New("rtc session identity or talk mode is invalid")
 	}
 	if coordinator == nil || synthDecoder == nil || inputObserver == nil || clock == nil || logger == nil || onClosed == nil {
 		return nil, errors.New("rtc session dependencies must not be nil")
+	}
+	recorder := observability.Discard()
+	if len(recorders) > 0 && recorders[0] != nil {
+		recorder = recorders[0]
 	}
 	input, err := audiomedia.NewInputProcessor(inputObserver)
 	if err != nil {
@@ -126,11 +135,26 @@ func newSession(
 	session := &Session{
 		id: id, talkMode: talkMode, pc: pc, pipeline: coordinator, synthDecoder: synthDecoder, input: input, logger: logger,
 		onClosed: onClosed, lifecycle: lifecycle, ctx: ctx, cancel: cancel,
-		encoder: encoder, done: make(chan struct{}),
+		encoder: encoder, done: make(chan struct{}), recorder: recorder,
 	}
-	dispatcher, err := NewDataChannelDispatcher(ctx, logger, func(dispatchErr error) {
-		logger.Error("data channel dispatcher stopped", "session_id", id, "error", dispatchErr)
+	if err := coordinator.ConfigureRuntime(recorder, func(stage string) {
+		logger.Error("pipeline worker panic", "session_id", id, "stage", stage, "reason", "panic")
+		_ = session.Close("panic")
+	}); err != nil {
+		_ = pc.Close()
+		_ = encoder.Close()
+		cancel()
+		return nil, err
+	}
+	dispatcher, err := NewDataChannelDispatcher(ctx, logger, func(error) {
+		logger.Error("data channel dispatcher stopped", "session_id", id, "reason", "data_channel_error")
 		_ = session.Close("data_channel_error")
+	}, DataChannelDispatcherOptions{
+		Recorder: recorder,
+		RecoverPanic: func(stage string) {
+			logger.Error("data channel callback panic", "session_id", id, "stage", stage, "reason", "panic")
+			_ = session.Close("panic")
+		},
 	})
 	if err != nil {
 		_ = pc.Close()
@@ -153,6 +177,7 @@ func newSession(
 		pionSampleWriter{track: session.outboundTrack},
 		dispatcher.EnqueueTelop,
 		logger,
+		recorder,
 	)
 	if err != nil {
 		_ = pc.Close()
@@ -170,7 +195,7 @@ func newSession(
 		pipeline:   coordinator.Close,
 	}
 	session.installCallbacks()
-	logger.Info("rtc session created", "session_id", id, "talk_mode", talkMode)
+	logger.Info("rtc session created", "session_id", id)
 	return session, nil
 }
 
@@ -212,7 +237,7 @@ func (s *Session) Close(reason string) error {
 	started := s.beginCloseLocked(reason)
 	s.lifecycle.mu.Unlock()
 	if started {
-		go s.cleanup(reason)
+		s.startCleanup(reason)
 	}
 	return nil
 }
@@ -232,6 +257,7 @@ func (s *Session) beginCloseLocked(reason string) bool {
 	s.lifecycle.deadlines.stop()
 	s.lifecycle.recoveryDeadlines.stop()
 	s.lifecycle.closeReason = reason
+	s.closeStarted = time.Now()
 	s.cancel()
 	return true
 }
@@ -255,11 +281,17 @@ func (s *Session) cleanup(reason string) {
 			continue
 		}
 		closeCount++
-		go func(closeResource func() error) { closeResults <- closeResource() }(closeResource)
+		go func(closeResource func() error) {
+			defer func() {
+				if recover() != nil {
+					closeResults <- errors.New("resource closer panic")
+				}
+			}()
+			closeResults <- closeResource()
+		}(closeResource)
 	}
-	var closeErr error
 	for range closeCount {
-		closeErr = errors.Join(closeErr, <-closeResults)
+		<-closeResults
 	}
 	s.wg.Wait()
 	s.lifecycle.mu.Lock()
@@ -267,13 +299,70 @@ func (s *Session) cleanup(reason string) {
 		s.logTransitionError(err)
 	}
 	s.lifecycle.mu.Unlock()
-	s.onClosed(s.id)
-	close(s.done)
+	if s.notifyClosed() {
+		reason = "panic"
+	}
+	outcome := "closed"
+	if reason != "normal" && reason != "process_shutdown" {
+		outcome = "failed"
+	}
+	s.metrics().SessionClosed(outcome, normalizeCloseReason(reason))
+	s.recordCloseDuration("success")
 	s.logger.Info("rtc session closed",
 		"session_id", s.id,
-		"reason", reason,
-		"cleanup_error", closeErr,
+		"reason", normalizeCloseReason(reason),
+		"count", closeCount,
 	)
+	close(s.done)
+}
+
+// notifyClosed crosses from Session cleanup into Manager/OfferRegistry
+// lifecycle callbacks. A callback panic is classified locally so cleanup still
+// releases active-session telemetry, records close duration, and closes done.
+func (s *Session) notifyClosed() (panicked bool) {
+	defer func() {
+		if recover() != nil {
+			panicked = true
+			s.logger.Error("session close callback panic", "session_id", s.id, "stage", "session_on_closed", "reason", "panic")
+		}
+	}()
+	s.onClosed(s.id)
+	return false
+}
+
+func (s *Session) recordCloseDuration(outcome string) {
+	s.closeMetricOnce.Do(func() {
+		started := s.closeStarted
+		if started.IsZero() {
+			started = time.Now()
+		}
+		s.metrics().CloseDuration(outcome, time.Since(started))
+	})
+}
+
+func (s *Session) metrics() observability.Recorder {
+	if s.recorder == nil {
+		return observability.Discard()
+	}
+	return s.recorder
+}
+
+func normalizeCloseReason(reason string) string {
+	switch reason {
+	case "normal", "process_shutdown", "offer_failed", "pre_connect_timeout", "media_readiness_timeout",
+		"duplicate_media", "pipeline_start_error", "codec_error", "media_read_error", "media_write_error",
+		"invalid_data_channel", "data_channel_error", "output_backpressure", "ice_failed",
+		"ice_disconnected_timeout", "restart_timeout", "panic":
+		return reason
+	case "media_error", "unexpected_track":
+		return "media_read_error"
+	case "outbound_error":
+		return "media_write_error"
+	case "ice_restart_timeout":
+		return "restart_timeout"
+	default:
+		return "unknown"
+	}
 }
 
 // closeIfState はtimer eventと現在stateの照合、closing遷移を同じmutex acquisitionで確定する。
@@ -289,7 +378,7 @@ func (s *Session) closeIfState(expected sessionState, reason string) {
 	started := s.beginCloseLocked(reason)
 	s.lifecycle.mu.Unlock()
 	if started {
-		go s.cleanup(reason)
+		s.startCleanup(reason)
 	}
 }
 
@@ -299,9 +388,8 @@ func (s *Session) logTransitionError(err error) {
 	if errors.As(err, &transitionErr) {
 		s.logger.Error("rejected rtc session state transition",
 			"session_id", s.id,
-			"from", transitionErr.From,
-			"to", transitionErr.To,
-			"event", transitionErr.Event,
+			"stage", "lifecycle_transition",
+			"reason", "invalid_transition",
 		)
 	}
 }

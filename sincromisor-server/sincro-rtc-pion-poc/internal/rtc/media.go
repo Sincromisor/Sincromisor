@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/pion/interceptor"
+	"github.com/pion/rtcp"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 
@@ -40,15 +42,60 @@ func (s *Session) installOutboundTrack() error {
 // connected後はPeerConnection.CloseがReadを解除する。goroutineはtransportReadyがlifecycle mutex内で
 // WaitGroup予約した後に開始し、cleanupは解除とjoinを同じSession ownershipで完了する。
 func (s *Session) startRTCPDrain(sender *webrtc.RTPSender) {
-	go func() {
-		defer s.wg.Done()
+	s.goReserved("rtcp_reader", func(context.Context) {
 		buffer := make([]byte, 1500)
 		for {
-			if _, _, readErr := sender.Read(buffer); readErr != nil {
+			n, _, readErr := sender.Read(buffer)
+			if readErr != nil {
+				if s.ctx.Err() == nil {
+					s.logger.Error("rtcp reader stopped", "session_id", s.id, "reason", "media_read_error")
+					_ = s.Close("media_read_error")
+				}
 				return
 			}
+			packets, err := rtcp.Unmarshal(buffer[:n])
+			if err != nil {
+				s.metrics().RTCPFeedback("other")
+				continue
+			}
+			s.recordRTCPPackets(packets, time.Now())
 		}
-	}()
+	})
+}
+
+// recordRTCPPackets converts feedback into finite packet classes and Receiver
+// Report quality samples. RTT uses RFC 3550 middle-32-bit NTP arithmetic; reports
+// without an LSR still contribute loss but deliberately omit RTT.
+func (s *Session) recordRTCPPackets(packets []rtcp.Packet, now time.Time) {
+	for _, packet := range packets {
+		switch typed := packet.(type) {
+		case *rtcp.SenderReport:
+			s.metrics().RTCPFeedback("sr")
+		case *rtcp.ReceiverReport:
+			s.metrics().RTCPFeedback("rr")
+			for _, report := range typed.Reports {
+				rtt := -1.0
+				if report.LastSenderReport != 0 {
+					// RFC 3550 compact NTP values wrap at 32 bits. Unsigned
+					// subtraction preserves the elapsed interval across that wrap.
+					elapsed := ntpMiddle32(now) - report.LastSenderReport - report.Delay
+					rtt = float64(elapsed) / 65536
+				}
+				s.metrics().RTCPQuality(float64(report.FractionLost)/256, rtt)
+			}
+		case *rtcp.TransportLayerNack:
+			s.metrics().RTCPFeedback("nack")
+		default:
+			s.metrics().RTCPFeedback("other")
+		}
+	}
+}
+
+func ntpMiddle32(value time.Time) uint32 {
+	const ntpEpochOffset = uint64(2208988800)
+	seconds := uint64(value.Unix()) + ntpEpochOffset
+	fraction := uint64(value.Nanosecond()) * (uint64(1) << 32) / uint64(time.Second)
+	return uint32((seconds<<16 | fraction>>16) & 0xffffffff)
 }
 
 // startInbound は受理済みの唯一のaudio trackをsession context配下のInputProcessorへ接続する。
@@ -57,14 +104,13 @@ func (s *Session) startRTCPDrain(sender *webrtc.RTPSender) {
 // Coordinator running前のframeはInputProcessorがunavailableとしてdropする。cancelと正常EOFは
 // 終了通知、それ以外のdecode/submit/observer failureはmedia_errorとして同じclose-onceへ戻す。
 func (s *Session) startInbound(reader audiomedia.RTPReader) {
-	go func() {
-		defer s.wg.Done()
+	s.goReserved("inbound_processor", func(context.Context) {
 		err := s.input.Run(s.ctx, reader, s.pipeline.SubmitPCM)
 		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) {
-			s.logger.Error("inbound audio processing stopped", "session_id", s.id, "error", err)
+			s.logger.Error("inbound audio processing stopped", "session_id", s.id, "reason", "media_read_error")
 			_ = s.Close("media_error")
 		}
-	}()
+	})
 }
 
 // rtpReader はPion TrackRemoteをmedia packageの最小RTPReader境界へ適合させる。

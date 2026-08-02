@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/config"
-	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery"
@@ -77,17 +77,19 @@ func runWithBoundaries(
 	if err != nil {
 		return err
 	}
+	metrics := observability.NewRegistry()
 	pipelineFactory, err := newPipelineFactory(logger)
 	if err != nil {
 		return err
 	}
 	sessions, err := rtc.NewManager(cfg.STUNURL, rtc.ManagerConfig{
 		PipelineFactory: pipelineFactory,
-		InputObserver:   media.NewInputCounterObserver(),
+		InputObserver:   metrics,
 		Clock:           rtc.SystemClock{},
 		Logger:          logger,
 		MaxSessions:     cfg.MaxSessions,
 		SynthDecoder:    synthDecoder,
+		Recorder:        metrics,
 	})
 	if err != nil {
 		return fmt.Errorf("create rtc manager: %w", err)
@@ -99,6 +101,7 @@ func runWithBoundaries(
 		TTL:            cfg.OfferCacheTTL,
 		Clock:          signaling.SystemOfferRegistryClock(),
 		Logger:         logger,
+		Recorder:       metrics,
 	})
 	if err != nil {
 		return fmt.Errorf("create offer registry: %w", err)
@@ -155,12 +158,20 @@ func serve(
 	cancelProcess context.CancelFunc,
 	logger *slog.Logger,
 ) error {
+	processState := signaling.NewProcessState()
+	processState.MarkReady()
+	recorder := sessions.Recorder()
+	var metricsHandler http.Handler
+	if registry, ok := recorder.(*observability.Registry); ok {
+		metricsHandler = registry.Handler()
+	}
 	handler := signaling.New(
 		sessions,
 		offers,
 		cfg.FrontendDir,
 		cfg.STUNURL,
 		logger,
+		signaling.Options{State: processState, Recorder: recorder, Metrics: metricsHandler},
 	).Handler()
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,
@@ -169,11 +180,7 @@ func serve(
 	}
 	serverErrors := make(chan error, 1)
 	go func() {
-		logger.Info("pion poc listening",
-			"http", cfg.HTTPAddress,
-			"frontend_dir", cfg.FrontendDir,
-			"initial_goroutines", runtime.NumGoroutine(),
-		)
+		logListenerReady(logger, runtime.NumGoroutine())
 		serverErrors <- server.ListenAndServe()
 	}()
 
@@ -186,12 +193,15 @@ func serve(
 		if !errors.Is(err, http.ErrServerClosed) {
 			serveErr = fmt.Errorf("serve http: %w", err)
 		}
-	case signalValue := <-signals:
-		logger.Info("shutdown signal received", "signal", signalValue.String())
+	case <-signals:
+		logShutdownRequested(logger)
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
+	// Admission changes are published before accept shutdown so requests already
+	// dispatched to the handler cannot create a fresh initial session.
+	processState.BeginDrain()
 	cancelProcess()
 	httpErr := server.Shutdown(shutdownCtx)
 	offerErr := offers.Wait(shutdownCtx)
@@ -199,9 +209,22 @@ func serve(
 	if err := errors.Join(serveErr, httpErr, offerErr, sessionErr); err != nil {
 		return fmt.Errorf("shutdown: %w", err)
 	}
-	logger.Info("pion poc stopped",
-		"active_sessions", sessions.Count(),
-		"final_goroutines", runtime.NumGoroutine(),
-	)
+	logShutdownComplete(logger, sessions.Count())
 	return nil
+}
+
+// 以下の3つのprocess lifecycle log helperは、運用上の段階と有限な集計値だけを公開するprivacy境界である。
+//
+// listener address、Frontend path、signal名、終了時goroutine数は環境情報を漏らすため記録しない。
+// fieldを追加する場合はstructured log allow-listとprivacy契約を先に改訂する。
+func logListenerReady(logger *slog.Logger, goroutineCount int) {
+	logger.Info("pion poc listening", "stage", "listener_ready", "count", goroutineCount)
+}
+
+func logShutdownRequested(logger *slog.Logger) {
+	logger.Info("shutdown signal received", "reason", "process_shutdown")
+}
+
+func logShutdownComplete(logger *slog.Logger, activeSessionCount int) {
+	logger.Info("pion poc stopped", "stage", "shutdown_complete", "count", activeSessionCount)
 }

@@ -90,14 +90,28 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 	}
 	output := processOutput.String()
 	for _, expected := range []string{
+		`stage=listener_ready`,
 		`shutdown signal received`,
-		`signal=terminated`,
+		`reason=process_shutdown`,
 		`session registry updated`,
-		`active_sessions=0`,
+		`stage=shutdown_complete`,
+		`count=0`,
 		`pion poc stopped`,
 	} {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("process output missing %q:\n%s", expected, output)
+		}
+	}
+	for _, forbidden := range []string{
+		`http=`,
+		`frontend_dir=`,
+		`initial_goroutines=`,
+		`signal=`,
+		`active_sessions=`,
+		`final_goroutines=`,
+	} {
+		if strings.Contains(output, forbidden) {
+			t.Fatalf("process output contains forbidden lifecycle field %q:\n%s", forbidden, output)
 		}
 	}
 }
