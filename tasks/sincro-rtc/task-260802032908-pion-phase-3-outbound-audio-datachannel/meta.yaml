@@ -6,7 +6,7 @@ depends_on:
   - task-260802033116-pion-phase-3-synthesized-audio-decode
 superseded_by: null
 review: APPROVED
-reviewed_sha: 7842fae61f8b86c710b4fcfca15bcedb0d98f1ad
+reviewed_sha: 59adc66931d102ec0f19c7f758f4a1daa127bd7c
 verdict: null
 attempts: 0
 created_at: 2026-08-02
