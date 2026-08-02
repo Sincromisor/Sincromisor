@@ -37,15 +37,23 @@ func (s *Set) processorResponse(request map[string]any) ([]byte, int, error) {
 	return payload, len(messages) + 1, marshalErr
 }
 
-// expectIdentity は1 extractor sequence の次の service 位置と identity を照合する。
+// validateIdentity は1 extractor sequence の次の service 位置と identity を照合する。
 // proxy 障害 attempt も service が生成済みの prefix を台帳へ残し、後続 generation は
 // 新しい sequence で Extractor から再開する。
-func (s *Set) expectIdentity(sessionID string, speechID, sequenceID int64, expected int) bool {
+func (s *Set) validateIdentity(sessionID string, speechID, sequenceID int64, expected int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	identity, found := s.identityBySequence[sequenceID]
-	return found && identity.sessionID == sessionID && identity.speechID == speechID &&
-		s.stageBySequence[sequenceID] == expected
+	if !found || identity.sessionID != sessionID || identity.speechID != speechID {
+		return fmt.Errorf("%w: sequence %d does not match extractor identity", ErrIdentity, sequenceID)
+	}
+	if s.stageBySequence[sequenceID] != expected {
+		return fmt.Errorf(
+			"%w: sequence %d reached stage %d, want %d",
+			ErrProtocol, sequenceID, s.stageBySequence[sequenceID], expected,
+		)
+	}
+	return nil
 }
 
 func (s *Set) appendStage(

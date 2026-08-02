@@ -24,6 +24,22 @@ const (
 	probeInterval   = 50 * time.Millisecond
 )
 
+type startOptions struct {
+	address         string
+	readinessWindow time.Duration
+	probeInterval   time.Duration
+	clientTimeout   time.Duration
+}
+
+func defaultStartOptions() startOptions {
+	return startOptions{
+		address:         consulAddress,
+		readinessWindow: readinessWindow,
+		probeInterval:   probeInterval,
+		clientTimeout:   500 * time.Millisecond,
+	}
+}
+
 var registrationOrder = []struct {
 	service discovery.Service
 	id      string
@@ -40,6 +56,8 @@ var registrationOrder = []struct {
 type Agent struct {
 	owner      *process.Owner
 	client     *http.Client
+	baseURL    string
+	options    startOptions
 	registered []string
 	closeOnce  sync.Once
 	closeErr   error
@@ -48,12 +66,25 @@ type Agent struct {
 // Start は8500番 port の排他的所有を確認し、Consul を1回起動して空でない leader を待ち、
 // pipeline 接続順で4 service を登録する。
 func Start(cfg Config) (*Agent, error) {
+	options := defaultStartOptions()
+	if cfg.testOptions != nil {
+		options = *cfg.testOptions
+	}
+	return start(cfg, options)
+}
+
+// start は production の固定値と試験用の時間・listen先を分離して所有処理を組み立てる。
+// 公開 Start は常に 127.0.0.1:8500 / 5秒を渡し、試験だけが既存 Consul を変更せず短い別portを使う。
+func start(cfg Config, options startOptions) (*Agent, error) {
 	if err := validateConfig(cfg); err != nil {
 		return nil, err
 	}
-	listener, err := net.Listen("tcp", consulAddress)
+	if err := validateStartOptions(options); err != nil {
+		return nil, err
+	}
+	listener, err := net.Listen("tcp", options.address)
 	if err != nil {
-		return nil, fmt.Errorf("%w: bind %s: %v", ErrPortInUse, consulAddress, err)
+		return nil, fmt.Errorf("%w: bind %s: %v", ErrPortInUse, options.address, err)
 	}
 	if err := listener.Close(); err != nil {
 		return nil, fmt.Errorf("%w: release bind probe: %v", ErrPortInUse, err)
@@ -68,7 +99,10 @@ func Start(cfg Config) (*Agent, error) {
 	if err := owner.Start(); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrProcess, err)
 	}
-	agent := &Agent{owner: owner, client: &http.Client{Timeout: 500 * time.Millisecond}}
+	agent := &Agent{
+		owner: owner, client: &http.Client{Timeout: options.clientTimeout},
+		baseURL: "http://" + options.address, options: options,
+	}
 	if err := agent.waitReady(); err != nil {
 		return nil, errors.Join(err, agent.cleanup(context.Background()))
 	}
@@ -80,6 +114,15 @@ func Start(cfg Config) (*Agent, error) {
 		agent.registered = append(agent.registered, registration.id)
 	}
 	return agent, nil
+}
+
+func validateStartOptions(options startOptions) error {
+	host, port, err := net.SplitHostPort(options.address)
+	if err != nil || host != "127.0.0.1" || port == "" ||
+		options.readinessWindow <= 0 || options.probeInterval <= 0 || options.clientTimeout <= 0 {
+		return fmt.Errorf("%w: invalid internal start options", ErrProtocol)
+	}
+	return nil
 }
 
 func validateConfig(cfg Config) error {
@@ -101,13 +144,13 @@ func validateConfig(cfg Config) error {
 // waitReady は process 終了を readiness failure より優先して分類しながら leader を probe する。
 // 一時的な接続拒否は agent 起動中の正常な中間状態なので5秒の所有期限まで再試行する。
 func (a *Agent) waitReady() error {
-	deadline := time.Now().Add(readinessWindow)
+	deadline := time.Now().Add(a.options.readinessWindow)
 	var lastErr error
 	for time.Now().Before(deadline) {
 		if a.owner.State() == process.StateExited {
 			return fmt.Errorf("%w: child exited before leader readiness", ErrProcess)
 		}
-		response, err := a.client.Get("http://" + consulAddress + "/v1/status/leader")
+		response, err := a.client.Get(a.baseURL + "/v1/status/leader")
 		if err == nil {
 			payload, readErr := io.ReadAll(io.LimitReader(response.Body, 1025))
 			closeErr := response.Body.Close()
@@ -122,9 +165,9 @@ func (a *Agent) waitReady() error {
 		} else {
 			lastErr = err
 		}
-		time.Sleep(probeInterval)
+		time.Sleep(a.options.probeInterval)
 	}
-	return fmt.Errorf("%w: leader not ready within %s: %v", ErrReadiness, readinessWindow, lastErr)
+	return fmt.Errorf("%w: leader not ready within %s: %v", ErrReadiness, a.options.readinessWindow, lastErr)
 }
 
 // register は Consul の公開 DTO を ID/Name/Address/Port に限定し、
@@ -139,7 +182,7 @@ func (a *Agent) register(id string, service discovery.Service, endpoint discover
 	if err != nil {
 		return fmt.Errorf("%w: marshal %s: %v", ErrRegistration, service, err)
 	}
-	request, err := http.NewRequest(http.MethodPut, "http://"+consulAddress+"/v1/agent/service/register", bytes.NewReader(body))
+	request, err := http.NewRequest(http.MethodPut, a.baseURL+"/v1/agent/service/register", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("%w: create request for %s: %v", ErrRegistration, service, err)
 	}
@@ -184,7 +227,7 @@ func (a *Agent) cleanup(ctx context.Context) error {
 }
 
 func (a *Agent) deregister(ctx context.Context, id string) error {
-	endpoint := "http://" + consulAddress + "/v1/agent/service/deregister/" + url.PathEscape(id)
+	endpoint := a.baseURL + "/v1/agent/service/deregister/" + url.PathEscape(id)
 	request, err := http.NewRequestWithContext(ctx, http.MethodPut, endpoint, nil)
 	if err != nil {
 		return fmt.Errorf("create deregister request for %s: %w", id, err)
