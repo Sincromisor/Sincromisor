@@ -302,19 +302,19 @@ attempt 1から3の未変更surfaceは過去表を維持する。
 ### 検証
 
 - targeted:
-  - `go test ./cmd/pion-poc -run '^TestProcessLifecycleLogsUseCanonicalPrivacyFields$' -count=1` PASS
-  - `go test ./cmd/pion-poc -run '^TestProcessSIGTERMStopsHTTPAndJoinsActiveSession$' -count=1 -v` PASS
-    （sandbox内ではloopback socket禁止だけで失敗し、同一差分を許可済み境界で再実行してPASS）
+    - `go test ./cmd/pion-poc -run '^TestProcessLifecycleLogsUseCanonicalPrivacyFields$' -count=1` PASS
+    - `go test ./cmd/pion-poc -run '^TestProcessSIGTERMStopsHTTPAndJoinsActiveSession$' -count=1 -v` PASS
+      （sandbox内ではloopback socket禁止だけで失敗し、同一差分を許可済み境界で再実行してPASS）
 - full:
-  - `/tmp/go1.26.5-toolchain/bin/go test -race ./internal/... ./cmd/pion-poc -count=1` PASS
-  - `/tmp/go1.26.5-toolchain/bin/go vet ./...` PASS
-  - `/tmp/go1.26.5-toolchain/bin/go mod tidy -diff` PASS（差分なし）
-  - `/tmp/go1.26.5-toolchain/bin/gofmt -l <変更Go files>` PASS（出力なし）
-  - `git diff --check` PASS
-  - `npm run tasks:check` PASS
-  - `npm run commit:check` PASS
-  - `npm run gate` PASS（clean tree、commit `36f847638a6ebd071ebc82c845ccc1f7b4c98d16`で
-    lint/build/testを記録。frontend testは85 file PASS、1 file skip、577 test PASS、2 test skip）
+    - `/tmp/go1.26.5-toolchain/bin/go test -race ./internal/... ./cmd/pion-poc -count=1` PASS
+    - `/tmp/go1.26.5-toolchain/bin/go vet ./...` PASS
+    - `/tmp/go1.26.5-toolchain/bin/go mod tidy -diff` PASS（差分なし）
+    - `/tmp/go1.26.5-toolchain/bin/gofmt -l <変更Go files>` PASS（出力なし）
+    - `git diff --check` PASS
+    - `npm run tasks:check` PASS
+    - `npm run commit:check` PASS
+    - `npm run gate` PASS（clean tree、commit `36f847638a6ebd071ebc82c845ccc1f7b4c98d16`で
+      lint/build/testを記録。frontend testは85 file PASS、1 file skip、577 test PASS、2 test skip）
 
 ### ドキュメント同期
 
@@ -369,18 +369,18 @@ attempt 1から4の未変更surfaceは過去表を維持する。
 ### 検証
 
 - targeted:
-  - `go test ./internal/observability ./internal/rtc -run 'TestRegistryDeadlineStagesMatchFixedSchema|TestDisconnectGraceExpiryRecordsDedicatedDeadlineExactlyOnce|TestDisconnectedGraceThenRestartDeadlineCloses' -count=1` PASS
-  - `/tmp/go1.26.5-toolchain/bin/go test -race ./internal/observability ./internal/rtc -count=1` PASS
+    - `go test ./internal/observability ./internal/rtc -run 'TestRegistryDeadlineStagesMatchFixedSchema|TestDisconnectGraceExpiryRecordsDedicatedDeadlineExactlyOnce|TestDisconnectedGraceThenRestartDeadlineCloses' -count=1` PASS
+    - `/tmp/go1.26.5-toolchain/bin/go test -race ./internal/observability ./internal/rtc -count=1` PASS
 - full:
-  - `/tmp/go1.26.5-toolchain/bin/go test ./internal/... ./cmd/pion-poc -count=1` PASS
-  - `/tmp/go1.26.5-toolchain/bin/go vet ./...` PASS
-  - `/tmp/go1.26.5-toolchain/bin/go mod tidy -diff` PASS（差分なし）
-  - `/tmp/go1.26.5-toolchain/bin/gofmt -l <変更Go files>` PASS（出力なし）
-  - `npm run tasks:check` PASS
-  - `npm run commit:check` PASS
-  - `npm run gate` PASS（clean final HEAD
-    `1d09102a0a976d208874e5ce3a42b82aaeac9601`でlint/build/testを記録。
-    frontend testは85 file PASS、1 file skip、577 test PASS、2 test skip）
+    - `/tmp/go1.26.5-toolchain/bin/go test ./internal/... ./cmd/pion-poc -count=1` PASS
+    - `/tmp/go1.26.5-toolchain/bin/go vet ./...` PASS
+    - `/tmp/go1.26.5-toolchain/bin/go mod tidy -diff` PASS（差分なし）
+    - `/tmp/go1.26.5-toolchain/bin/gofmt -l <変更Go files>` PASS（出力なし）
+    - `npm run tasks:check` PASS
+    - `npm run commit:check` PASS
+    - `npm run gate` PASS（clean final HEAD
+      `1d09102a0a976d208874e5ce3a42b82aaeac9601`でlint/build/testを記録。
+      frontend testは85 file PASS、1 file skip、577 test PASS、2 test skip）
 - `npm run commit:check`の最初のsandbox内実行は`git` subprocessの`EPERM`だけで失敗し、
   同一HEADを許可済み境界で再実行してPASSした。
 

@@ -47,14 +47,14 @@
 
 ## 高リスク統合タスクの追加設計
 
-| case | 操作主体 | 本番境界での一意な期待値 |
-| --- | --- | --- |
-| `answer-held` | 境界client | ICE / DTLS期限close、下流0 |
-| `audio-no-rtp` | 境界client | audio readiness期限close、下流0 |
-| DataChannel欠落 | 境界client | 対応channel期限close、下流0 |
-| draining | process監督 + 境界client | `draining=true`後のinitial 503、5秒内終了 |
-| capacity | 境界client 101個 | 100 active、101件目429 |
-| restart | process監督 | old `Wait`後5秒内ready、新session |
+| case            | 操作主体                 | 本番境界での一意な期待値                  |
+| --------------- | ------------------------ | ----------------------------------------- |
+| `answer-held`   | 境界client               | ICE / DTLS期限close、下流0                |
+| `audio-no-rtp`  | 境界client               | audio readiness期限close、下流0           |
+| DataChannel欠落 | 境界client               | 対応channel期限close、下流0               |
+| draining        | process監督 + 境界client | `draining=true`後のinitial 503、5秒内終了 |
+| capacity        | 境界client 101個         | 100 active、101件目429                    |
+| restart         | process監督              | old `Wait`後5秒内ready、新session         |
 
 各caseはHTTP台帳、statuses、metrics、資源終端sampleを必須とし、client内部状態だけで合格にしない。
 
