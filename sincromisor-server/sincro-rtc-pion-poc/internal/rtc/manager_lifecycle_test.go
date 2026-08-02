@@ -101,6 +101,24 @@ func TestManagerCreateFailureReleasesPublishedSessionAndReservation(t *testing.T
 	}
 }
 
+func TestManagerCreatePanicReleasesReservation(t *testing.T) {
+	manager := newTestManager(t)
+	manager.buildSession = func(sessionBuildRequest) (*Session, error) {
+		panic("payload-sdp-marker")
+	}
+	if _, err := manager.Create(context.Background(), Offer{
+		Type: "offer", SDP: "v=0\r\n", TalkMode: "chat", OfferRequestID: rtcTestOfferRequestID,
+	}); !errors.Is(err, ErrSessionPanic) {
+		t.Fatalf("Create() error = %v, want ErrSessionPanic", err)
+	}
+	manager.mu.RLock()
+	reservations := manager.reservations
+	manager.mu.RUnlock()
+	if reservations != 0 || manager.Count() != 0 {
+		t.Fatalf("panic cleanup active/reservations = %d/%d, want 0/0", manager.Count(), reservations)
+	}
+}
+
 func TestNewManagerRejectsNilDependencies(t *testing.T) {
 	valid := ManagerConfig{
 		PipelineFactory: blockingPipelineFactory{},

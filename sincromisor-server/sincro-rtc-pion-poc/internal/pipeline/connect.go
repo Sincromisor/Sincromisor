@@ -50,7 +50,9 @@ func (c *Coordinator) connectUntilRunning(initial bool) error {
 				// classify the event as either building failure or runtime reset.
 				generation := c.generation
 				err = set.Activate(func(event pclient.Event) {
-					c.onClientEvent(generation, event)
+					c.safeCallback("pipeline_client_event", func() {
+						c.onClientEvent(generation, event)
+					})
 				})
 			}
 			if err == nil {
@@ -105,11 +107,11 @@ func (c *Coordinator) validateSet(set ClientSet) error {
 
 func (c *Coordinator) startGenerationLocked(work *generationWork, set ClientSet) {
 	work.wg.Add(5)
-	go c.pcmLoop(work, set.Extractor())
-	go c.extractorLoop(work, set.Extractor(), set.Recognizer())
-	go c.recognizerLoop(work, set.Recognizer(), set.Processor())
-	go c.processorLoop(work, set.Processor(), set.Synthesizer())
-	go c.synthLoop(work, set.Synthesizer())
+	c.goWork(work, "pipeline_pcm", func() { c.pcmLoop(work, set.Extractor()) })
+	c.goWork(work, "pipeline_extractor", func() { c.extractorLoop(work, set.Extractor(), set.Recognizer()) })
+	c.goWork(work, "pipeline_recognizer", func() { c.recognizerLoop(work, set.Recognizer(), set.Processor()) })
+	c.goWork(work, "pipeline_processor", func() { c.processorLoop(work, set.Processor(), set.Synthesizer()) })
+	c.goWork(work, "pipeline_synthesizer", func() { c.synthLoop(work, set.Synthesizer()) })
 }
 
 func (c *Coordinator) retryDelay(attempt uint) (time.Duration, error) {
@@ -141,6 +143,11 @@ func cryptoJitter(cap time.Duration) (time.Duration, error) {
 func realWait(ctx context.Context, delay time.Duration) <-chan error {
 	result := make(chan error, 1)
 	go func() {
+		defer func() {
+			if recover() != nil {
+				result <- errors.New("pipeline retry waiter panic")
+			}
+		}()
 		timer := time.NewTimer(delay)
 		defer timer.Stop()
 		select {

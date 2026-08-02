@@ -57,11 +57,25 @@ func (c *baseClient) connect(ctx context.Context, initialize func() ([]byte, err
 	c.rawConn = rawConn
 	c.state = stateOpen
 	c.wg.Add(2)
-	go c.readLoop()
-	go c.pingLoop()
-	go c.finalizeWhenCanceled()
+	c.goWorker("read", true, c.readLoop)
+	c.goWorker("ping", true, c.pingLoop)
+	c.goWorker("finalize", false, c.finalizeWhenCanceled)
 	c.mu.Unlock()
 	return nil
+}
+
+func (c *baseClient) goWorker(stage string, counted bool, run func()) {
+	go func() {
+		if counted {
+			defer c.wg.Done()
+		}
+		defer func() {
+			if recover() != nil {
+				c.terminal(EventPanic, fmt.Errorf("%s worker panic", stage))
+			}
+		}()
+		run()
+	}()
 }
 
 // establish は lifecycle state lock を保持せず、resolve→dial→read limit→初期化writeを完了する。
@@ -84,7 +98,7 @@ func (c *baseClient) establish(
 	}
 	if endpoint.Source == discovery.EndpointSourceFallback {
 		c.logger.Warn("pipeline service discovery fell back",
-			"service", c.service, "reason", endpoint.FallbackReason)
+			"stage", c.service, "reason", endpoint.FallbackReason)
 	}
 
 	dialURL := url.URL{
@@ -219,7 +233,6 @@ func (c *baseClient) finishWrite(done chan struct{}) {
 }
 
 func (c *baseClient) readLoop() {
-	defer c.wg.Done()
 	for {
 		messageType, payload, err := c.conn.Read(c.lifetimeCtx)
 		if err != nil {
@@ -260,7 +273,6 @@ func (c *baseClient) readLoop() {
 }
 
 func (c *baseClient) pingLoop() {
-	defer c.wg.Done()
 	ticker := time.NewTicker(c.cfg.PingInterval)
 	defer ticker.Stop()
 	for {

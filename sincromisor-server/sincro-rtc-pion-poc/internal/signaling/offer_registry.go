@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/rtc"
 )
 
@@ -58,6 +59,8 @@ type OfferRegistryConfig struct {
 	TTL            time.Duration
 	Clock          OfferRegistryClock
 	Logger         *slog.Logger
+	// Recorder receives gather-deadline events without offer or session payloads.
+	Recorder observability.Recorder
 }
 
 // offerEntry は1 request IDのraw SDP hashと、in-flightからcompleted/tombstoneへの状態遷移を保持する。
@@ -97,6 +100,9 @@ func NewOfferRegistry(sessions SessionService, config OfferRegistryConfig) (*Off
 	}
 	if config.GatherTimeout <= 0 || config.Capacity <= 0 || config.TTL <= 0 {
 		return nil, errors.New("offer registry limits must be positive")
+	}
+	if config.Recorder == nil {
+		config.Recorder = observability.Discard()
 	}
 	registry := &OfferRegistry{
 		entries:     make(map[string]*offerEntry),
@@ -194,12 +200,26 @@ func (r *OfferRegistry) wait(ctx context.Context, entry *offerEntry) (rtc.Answer
 // 成功だけをcompleted cacheへ遷移させ、失敗entryは削除して同じrequest IDの再試行を許可する。
 func (r *OfferRegistry) create(entry *offerEntry, offer rtc.Offer) {
 	defer r.owners.Done()
+	defer func() {
+		if recover() != nil {
+			r.mu.Lock()
+			if current := r.entries[entry.requestID]; current == entry {
+				entry.err = errors.New("initial offer owner panic")
+				delete(r.entries, entry.requestID)
+				close(entry.done)
+			}
+			r.mu.Unlock()
+		}
+	}()
 	ownerCtx, cancel := context.WithTimeout(r.config.ProcessContext, r.config.GatherTimeout)
 	defer cancel()
 	offer.OnClosed = func(sessionID string) {
 		r.sessionClosed(entry, sessionID)
 	}
 	answer, err := r.sessions.Create(ownerCtx, offer)
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(ownerCtx.Err(), context.DeadlineExceeded) {
+		r.config.Recorder.Deadline("gather")
+	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()

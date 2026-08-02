@@ -59,10 +59,10 @@ func (s *Session) transportReady() {
 			s.lifecycle.mu.Unlock()
 			return
 		}
-		if err := s.lifecycle.deadlines.replace(mediaReadinessTimeout, func() {
+		if err := s.lifecycle.deadlines.replace(mediaReadinessTimeout, s.SafeCallback("deadline_media_readiness", func() {
 			s.metrics().Deadline("media_readiness")
 			s.closeIfState(stateTransportReady, "media_readiness_timeout")
-		}); err != nil {
+		})); err != nil {
 			s.logTransitionError(err)
 			s.lifecycle.mu.Unlock()
 			_ = s.Close("deadline_error")

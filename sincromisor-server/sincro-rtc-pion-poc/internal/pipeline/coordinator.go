@@ -60,16 +60,35 @@ type Output[T any] struct {
 type jitterSource func(time.Duration) (time.Duration, error)
 type retryWaiter func(context.Context, time.Duration) <-chan error
 
+// Observer receives payload-free reconnect and input-queue ownership events.
+// Implementations must normalize service/result/queue/action labels.
+type Observer interface {
+	// PipelineReconnect records a lifecycle result for one fixed service.
+	PipelineReconnect(service, result string)
+	// QueueDepthDelta transfers ownership on input enqueue, dequeue, purge, or close.
+	QueueDepthDelta(queue string, delta float64)
+	// QueueOverflow records the fixed policy chosen when the input queue is full.
+	QueueOverflow(queue, action string)
+}
+
+type discardObserver struct{}
+
+func (discardObserver) PipelineReconnect(string, string) {}
+func (discardObserver) QueueDepthDelta(string, float64)  {}
+func (discardObserver) QueueOverflow(string, string)     {}
+
 // Coordinator は1 sessionの4 client、generation、transient work、confirmed history、
 // Extractor identity、およびqueue交換を跨ぐdrop telemetryを所有する。
 //
 // Start contextがlifetimeを所有し、Closeはstable result channelを閉じる前に全producerをjoinする。
 // 別sessionを開始するcallerは新しいCoordinatorを作る。
 type Coordinator struct {
-	factory ClientSetFactory
-	logger  *slog.Logger
-	jitter  jitterSource
-	wait    retryWaiter
+	factory      ClientSetFactory
+	logger       *slog.Logger
+	jitter       jitterSource
+	wait         retryWaiter
+	observer     Observer
+	panicHandler func(stage string)
 
 	mu         sync.Mutex
 	outputMu   sync.Mutex
@@ -123,7 +142,26 @@ func newCoordinatorWithHooks(factory ClientSetFactory, logger *slog.Logger, jitt
 		generationChanges: make(chan uint64, 1),
 		staleDrops:        make(map[pclient.Service]uint64),
 		closeDone:         make(chan struct{}),
+		observer:          discardObserver{},
+		panicHandler:      func(string) {},
 	}, nil
+}
+
+// ConfigureRuntime installs the process recorder and owning Session panic
+// callback before Start. Reconfiguration after Start is rejected so all
+// first-party workers share one immutable failure boundary.
+func (c *Coordinator) ConfigureRuntime(observer Observer, panicHandler func(stage string)) error {
+	if observer == nil || panicHandler == nil {
+		return errors.New("pipeline runtime hooks must not be nil")
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.started {
+		return errors.New("pipeline runtime hooks cannot change after start")
+	}
+	c.observer = observer
+	c.panicHandler = panicHandler
+	return nil
 }
 
 // Start は4 serviceが同じgenerationで揃うまで同期的に接続し、成功後にnilを返す。
@@ -151,7 +189,7 @@ func (c *Coordinator) Start(ctx context.Context, sessionID, talkMode string) err
 		return err
 	}
 	c.wg.Add(1)
-	go c.closeOnContext()
+	c.goCoordinator("pipeline_context", c.closeOnContext)
 	c.mu.Unlock()
 
 	err := c.connectUntilRunning(true)
@@ -166,11 +204,10 @@ func (c *Coordinator) Start(ctx context.Context, sessionID, talkMode string) err
 }
 
 func (c *Coordinator) closeOnContext() {
-	defer c.wg.Done()
 	<-c.sessionCtx.Done()
 	// Close waits for every session goroutine, so a separate caller performs the
 	// join after this context watcher has left the wait group.
-	go func() { _ = c.Close() }()
+	c.goDetached("pipeline_close", func() { _ = c.Close() })
 }
 
 // SubmitPCM は20 ms / 16 kHz / mono / s16leの640-byte PCMを防御的copyして受理する。
@@ -194,11 +231,60 @@ func (c *Coordinator) SubmitPCM(frame []byte) error {
 		c.pcmDrops++
 	}
 	dropCount := c.pcmDrops
+	if dropped {
+		c.observer.QueueOverflow("input", "drop_oldest")
+	} else {
+		c.observer.QueueDepthDelta("input", 1)
+	}
 	c.mu.Unlock()
 	if dropped {
-		c.logger.Warn("dropped pipeline input", "service", pclient.ServiceExtractor, "drop_count", dropCount)
+		c.logger.Warn("dropped pipeline input", "stage", pclient.ServiceExtractor, "reason", "queue_overflow", "count", dropCount)
 	}
 	return nil
+}
+
+func (c *Coordinator) goCoordinator(stage string, run func()) {
+	go func() {
+		defer c.wg.Done()
+		defer func() {
+			if recover() != nil {
+				c.panicHandler(stage)
+			}
+		}()
+		run()
+	}()
+}
+
+func (c *Coordinator) goWork(work *generationWork, stage string, run func()) {
+	go func() {
+		defer work.wg.Done()
+		defer func() {
+			if recover() != nil {
+				c.panicHandler(stage)
+			}
+		}()
+		run()
+	}()
+}
+
+func (c *Coordinator) goDetached(stage string, run func()) {
+	go func() {
+		defer func() {
+			if recover() != nil {
+				c.panicHandler(stage)
+			}
+		}()
+		run()
+	}()
+}
+
+func (c *Coordinator) safeCallback(stage string, run func()) {
+	defer func() {
+		if recover() != nil {
+			c.panicHandler(stage)
+		}
+	}()
+	run()
 }
 
 // TextResults はuser/processor textを順序どおり返すsession lifetime channelである。
@@ -236,7 +322,9 @@ func (c *Coordinator) Close() error {
 		}
 		if work != nil {
 			work.cancel()
-			work.input.close()
+			if remaining := work.input.close(); remaining > 0 {
+				c.observer.QueueDepthDelta("input", -float64(remaining))
+			}
 		}
 		if set != nil {
 			_ = set.Close()

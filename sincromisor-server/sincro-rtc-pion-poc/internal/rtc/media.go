@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/pion/interceptor"
 	"github.com/pion/rtcp"
@@ -57,20 +58,44 @@ func (s *Session) startRTCPDrain(sender *webrtc.RTPSender) {
 				s.metrics().RTCPFeedback("other")
 				continue
 			}
-			for _, packet := range packets {
-				switch packet.(type) {
-				case *rtcp.SenderReport:
-					s.metrics().RTCPFeedback("sr")
-				case *rtcp.ReceiverReport:
-					s.metrics().RTCPFeedback("rr")
-				case *rtcp.TransportLayerNack:
-					s.metrics().RTCPFeedback("nack")
-				default:
-					s.metrics().RTCPFeedback("other")
-				}
-			}
+			s.recordRTCPPackets(packets, time.Now())
 		}
 	})
+}
+
+// recordRTCPPackets converts feedback into finite packet classes and Receiver
+// Report quality samples. RTT uses RFC 3550 middle-32-bit NTP arithmetic; reports
+// without an LSR still contribute loss but deliberately omit RTT.
+func (s *Session) recordRTCPPackets(packets []rtcp.Packet, now time.Time) {
+	for _, packet := range packets {
+		switch typed := packet.(type) {
+		case *rtcp.SenderReport:
+			s.metrics().RTCPFeedback("sr")
+		case *rtcp.ReceiverReport:
+			s.metrics().RTCPFeedback("rr")
+			for _, report := range typed.Reports {
+				rtt := -1.0
+				if report.LastSenderReport != 0 {
+					// RFC 3550 compact NTP values wrap at 32 bits. Unsigned
+					// subtraction preserves the elapsed interval across that wrap.
+					elapsed := ntpMiddle32(now) - report.LastSenderReport - report.Delay
+					rtt = float64(elapsed) / 65536
+				}
+				s.metrics().RTCPQuality(float64(report.FractionLost)/256, rtt)
+			}
+		case *rtcp.TransportLayerNack:
+			s.metrics().RTCPFeedback("nack")
+		default:
+			s.metrics().RTCPFeedback("other")
+		}
+	}
+}
+
+func ntpMiddle32(value time.Time) uint32 {
+	const ntpEpochOffset = uint64(2208988800)
+	seconds := uint64(value.Unix()) + ntpEpochOffset
+	fraction := uint64(value.Nanosecond()) * (uint64(1) << 32) / uint64(time.Second)
+	return uint32((seconds<<16 | fraction>>16) & 0xffffffff)
 }
 
 // startInbound は受理済みの唯一のaudio trackをsession context配下のInputProcessorへ接続する。

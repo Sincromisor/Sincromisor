@@ -58,6 +58,8 @@ type Session struct {
 	outboundTrack      *webrtc.TrackLocalStaticSample
 	outboundSender     *webrtc.RTPSender
 	done               chan struct{}
+	closeStarted       time.Time
+	closeMetricOnce    sync.Once
 	closers            sessionResourceClosers
 	revision           *revisionState
 	// productionではnegotiateDescriptionへ固定する。test差し替えもremote適用済みboolを正しく返し、
@@ -108,7 +110,7 @@ func newSession(
 	if coordinator == nil || synthDecoder == nil || inputObserver == nil || clock == nil || logger == nil || onClosed == nil {
 		return nil, errors.New("rtc session dependencies must not be nil")
 	}
-	var recorder observability.Recorder = observability.NopRecorder{}
+	recorder := observability.Discard()
 	if len(recorders) > 0 && recorders[0] != nil {
 		recorder = recorders[0]
 	}
@@ -135,9 +137,24 @@ func newSession(
 		onClosed: onClosed, lifecycle: lifecycle, ctx: ctx, cancel: cancel,
 		encoder: encoder, done: make(chan struct{}), recorder: recorder,
 	}
+	if err := coordinator.ConfigureRuntime(recorder, func(stage string) {
+		logger.Error("pipeline worker panic", "session_id", id, "stage", stage, "reason", "panic")
+		_ = session.Close("panic")
+	}); err != nil {
+		_ = pc.Close()
+		_ = encoder.Close()
+		cancel()
+		return nil, err
+	}
 	dispatcher, err := NewDataChannelDispatcher(ctx, logger, func(error) {
 		logger.Error("data channel dispatcher stopped", "session_id", id, "reason", "data_channel_error")
 		_ = session.Close("data_channel_error")
+	}, DataChannelDispatcherOptions{
+		Recorder: recorder,
+		RecoverPanic: func(stage string) {
+			logger.Error("data channel callback panic", "session_id", id, "stage", stage, "reason", "panic")
+			_ = session.Close("panic")
+		},
 	})
 	if err != nil {
 		_ = pc.Close()
@@ -160,6 +177,7 @@ func newSession(
 		pionSampleWriter{track: session.outboundTrack},
 		dispatcher.EnqueueTelop,
 		logger,
+		recorder,
 	)
 	if err != nil {
 		_ = pc.Close()
@@ -219,7 +237,7 @@ func (s *Session) Close(reason string) error {
 	started := s.beginCloseLocked(reason)
 	s.lifecycle.mu.Unlock()
 	if started {
-		go s.cleanup(reason)
+		s.startCleanup(reason)
 	}
 	return nil
 }
@@ -239,6 +257,7 @@ func (s *Session) beginCloseLocked(reason string) bool {
 	s.lifecycle.deadlines.stop()
 	s.lifecycle.recoveryDeadlines.stop()
 	s.lifecycle.closeReason = reason
+	s.closeStarted = time.Now()
 	s.cancel()
 	return true
 }
@@ -248,7 +267,6 @@ func (s *Session) beginCloseLocked(reason string) bool {
 // Coordinator/dispatcher/output Closeはqueueとworkerを回収し、PeerConnection.CloseはRTP/RTCP blocking readを解除する。
 // すべてをjoinするまでclosedとdoneを公開しないため、Manager deadlineは未完了を識別できる。
 func (s *Session) cleanup(reason string) {
-	startedAt := time.Now()
 	closers := []func() error{
 		s.closers.peer,
 		s.closers.codec,
@@ -263,11 +281,17 @@ func (s *Session) cleanup(reason string) {
 			continue
 		}
 		closeCount++
-		go func(closeResource func() error) { closeResults <- closeResource() }(closeResource)
+		go func(closeResource func() error) {
+			defer func() {
+				if recover() != nil {
+					closeResults <- errors.New("resource closer panic")
+				}
+			}()
+			closeResults <- closeResource()
+		}(closeResource)
 	}
-	var closeErr error
 	for range closeCount {
-		closeErr = errors.Join(closeErr, <-closeResults)
+		<-closeResults
 	}
 	s.wg.Wait()
 	s.lifecycle.mu.Lock()
@@ -282,21 +306,27 @@ func (s *Session) cleanup(reason string) {
 		outcome = "failed"
 	}
 	s.metrics().SessionClosed(outcome, normalizeCloseReason(reason))
-	closeOutcome := "success"
-	if closeErr != nil {
-		closeOutcome = "timeout"
-	}
-	s.metrics().CloseDuration(closeOutcome, time.Since(startedAt))
+	s.recordCloseDuration("success")
 	s.logger.Info("rtc session closed",
 		"session_id", s.id,
-		"reason", reason,
+		"reason", normalizeCloseReason(reason),
 		"count", closeCount,
 	)
 }
 
+func (s *Session) recordCloseDuration(outcome string) {
+	s.closeMetricOnce.Do(func() {
+		started := s.closeStarted
+		if started.IsZero() {
+			started = time.Now()
+		}
+		s.metrics().CloseDuration(outcome, time.Since(started))
+	})
+}
+
 func (s *Session) metrics() observability.Recorder {
 	if s.recorder == nil {
-		return observability.NopRecorder{}
+		return observability.Discard()
 	}
 	return s.recorder
 }
@@ -332,7 +362,7 @@ func (s *Session) closeIfState(expected sessionState, reason string) {
 	started := s.beginCloseLocked(reason)
 	s.lifecycle.mu.Unlock()
 	if started {
-		go s.cleanup(reason)
+		s.startCleanup(reason)
 	}
 }
 

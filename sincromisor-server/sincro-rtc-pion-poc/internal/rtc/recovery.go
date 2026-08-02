@@ -42,8 +42,11 @@ func (s *Session) startDisconnectGrace() {
 		return
 	}
 	s.lifecycle.recovery = recoveryGrace
-	if err := s.lifecycle.recoveryDeadlines.replace(disconnectGraceTimeout, s.disconnectGraceExpired); err != nil {
-		go func() { _ = s.Close("deadline_error") }()
+	if err := s.lifecycle.recoveryDeadlines.replace(
+		disconnectGraceTimeout,
+		s.SafeCallback("deadline_disconnect_grace", s.disconnectGraceExpired),
+	); err != nil {
+		_ = s.Close("deadline_error")
 	}
 }
 
@@ -56,7 +59,10 @@ func (s *Session) disconnectGraceExpired() {
 	}
 	s.lifecycle.recovery = recoveryNeedsRestart
 	s.metrics().Deadline("restart")
-	err := s.lifecycle.recoveryDeadlines.replace(restartDeadlineTimeout, s.restartDeadlineExpired)
+	err := s.lifecycle.recoveryDeadlines.replace(
+		restartDeadlineTimeout,
+		s.SafeCallback("deadline_restart", s.restartDeadlineExpired),
+	)
 	s.lifecycle.mu.Unlock()
 	if err != nil {
 		_ = s.Close("deadline_error")
@@ -71,7 +77,10 @@ func (s *Session) requireRestart() {
 		return
 	}
 	s.lifecycle.recovery = recoveryNeedsRestart
-	err := s.lifecycle.recoveryDeadlines.replace(restartDeadlineTimeout, s.restartDeadlineExpired)
+	err := s.lifecycle.recoveryDeadlines.replace(
+		restartDeadlineTimeout,
+		s.SafeCallback("deadline_restart", s.restartDeadlineExpired),
+	)
 	s.lifecycle.mu.Unlock()
 	if err != nil {
 		_ = s.Close("deadline_error")
@@ -89,7 +98,7 @@ func (s *Session) restartDeadlineExpired() {
 	s.metrics().Deadline("restart")
 	s.lifecycle.mu.Unlock()
 	if started {
-		go s.cleanup("ice_restart_timeout")
+		s.startCleanup("ice_restart_timeout")
 	}
 }
 

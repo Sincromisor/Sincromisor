@@ -36,11 +36,9 @@ func (s *Server) handleUpdateOffer(
 	defer cancel()
 	var answer rtc.Answer
 	var err error
-	s.withSessionMutation(sessionID, func() {
-		answer, err = s.sessions.Update(ctx, rtc.UpdateOffer{
-			SDP: payload.SDP, Type: payload.Type, TalkMode: payload.TalkMode,
-			SessionID: sessionID, OfferRequestID: payload.OfferRequestID, Revision: payload.OfferRevision,
-		})
+	answer, err = s.sessions.Update(ctx, rtc.UpdateOffer{
+		SDP: payload.SDP, Type: payload.Type, TalkMode: payload.TalkMode,
+		SessionID: sessionID, OfferRequestID: payload.OfferRequestID, Revision: payload.OfferRevision,
 	})
 	switch {
 	case err == nil:
@@ -57,4 +55,5 @@ func (s *Server) handleUpdateOffer(
 		s.logger.Warn("update offer rejected", "session_id", sessionID, "reason", "offer_error")
 		writeError(writer, http.StatusBadRequest, "Invalid update offer SDP.")
 	}
+	s.afterMutation()
 }

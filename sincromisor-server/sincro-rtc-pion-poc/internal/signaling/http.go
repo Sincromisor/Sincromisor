@@ -53,14 +53,21 @@ type SessionService interface {
 // API prefix は static file より先に routing し、未知 API を Frontend asset として返さない。
 // Request body は有限長に制限し、JSON / SDP / candidate error を request 単位の 4xx に変換する。
 type Server struct {
-	sessions    SessionService
-	offers      *OfferRegistry
-	frontendDir string
-	iceServers  []iceServerResponse
-	logger      *slog.Logger
-	state       *ProcessState
-	recorder    observability.Recorder
-	metrics     http.Handler
+	sessions     SessionService
+	offers       *OfferRegistry
+	frontendDir  string
+	iceServers   []iceServerResponse
+	logger       *slog.Logger
+	state        *ProcessState
+	recorder     observability.Recorder
+	metrics      http.Handler
+	mutationHook func()
+}
+
+func (s *Server) afterMutation() {
+	if s.mutationHook != nil {
+		s.mutationHook()
+	}
 }
 
 // ProcessState is the process admission state shared by health handlers and
@@ -215,7 +222,9 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 			writeError(writer, http.StatusBadRequest, "Invalid session_id.")
 			return
 		}
-		s.handleUpdateOffer(writer, request, payload, sessionID)
+		s.withSessionMutation(sessionID, func() {
+			s.handleUpdateOffer(writer, request, payload, sessionID)
+		})
 		return
 	}
 	if s.state.Draining() {
@@ -266,6 +275,9 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 			return
 		case errors.Is(err, ErrOfferCapacity), errors.Is(err, rtc.ErrSessionCapacity):
 			writeError(writer, http.StatusTooManyRequests, "Too many requests.")
+			return
+		case errors.Is(err, rtc.ErrSessionPanic):
+			writeError(writer, http.StatusInternalServerError, "Internal server error.")
 			return
 		}
 		s.logger.Warn("offer rejected", "reason", "offer_error")
@@ -331,6 +343,43 @@ type statusWriter struct {
 	status int
 }
 
+type responseBuffer struct {
+	header http.Header
+	status int
+	body   strings.Builder
+}
+
+func newResponseBuffer() *responseBuffer {
+	return &responseBuffer{header: make(http.Header)}
+}
+
+func (b *responseBuffer) Header() http.Header { return b.header }
+func (b *responseBuffer) WriteHeader(status int) {
+	if b.status == 0 {
+		b.status = status
+	}
+}
+func (b *responseBuffer) Write(body []byte) (int, error) {
+	if b.status == 0 {
+		b.status = http.StatusOK
+	}
+	return b.body.Write(body)
+}
+
+func (b *responseBuffer) flush(writer http.ResponseWriter) {
+	for key, values := range b.header {
+		for _, value := range values {
+			writer.Header().Add(key, value)
+		}
+	}
+	status := b.status
+	if status == 0 {
+		status = http.StatusOK
+	}
+	writer.WriteHeader(status)
+	_, _ = io.WriteString(writer, b.body.String())
+}
+
 func (w *statusWriter) WriteHeader(status int) {
 	w.status = status
 	w.ResponseWriter.WriteHeader(status)
@@ -383,13 +432,16 @@ func signalingEndpoint(path string) string {
 // errors and failures outside this goroutine cannot be recovered.
 func (s *Server) recoverHTTP(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		buffered := newResponseBuffer()
 		defer func() {
 			if recover() != nil {
 				s.logger.Error("http handler panic", "reason", "panic")
 				writeError(writer, http.StatusInternalServerError, "Internal server error.")
+				return
 			}
+			buffered.flush(writer)
 		}()
-		next.ServeHTTP(writer, request)
+		next.ServeHTTP(buffered, request)
 	})
 }
 
