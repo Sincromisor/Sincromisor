@@ -14,6 +14,7 @@ import (
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol"
 )
 
 // SessionDependencies は session 作成前に検証する遅延 pipeline、入力観測、deadline の依存境界である。
@@ -38,21 +39,25 @@ type Session struct {
 	pipeline *pipeline.Coordinator
 	// synthDecoderはprocess-wide immutable dependencyへの非所有参照である。Session cleanupは
 	// processを保持しないDecoderをcloseせず、別Sessionの同一参照を継続利用可能に保つ。
-	synthDecoder *synthdecode.Decoder
+	synthDecoder synthSpeechDecoder
 	input        *audiomedia.InputProcessor
 	logger       *slog.Logger
 	onClosed     func(string)
 	lifecycle    *sessionLifecycle
 
-	ctx            context.Context
-	cancel         context.CancelFunc
-	wg             sync.WaitGroup
-	encoder        *audiomedia.ToneEncoder
-	outboundTrack  *webrtc.TrackLocalStaticSample
-	outboundSender *webrtc.RTPSender
-	done           chan struct{}
-	closers        sessionResourceClosers
-	revision       *revisionState
+	ctx                context.Context
+	cancel             context.CancelFunc
+	wg                 sync.WaitGroup
+	encoder            *audiomedia.FrameEncoder
+	output             *audiomedia.OutputProcessor
+	dispatcher         *DataChannelDispatcher
+	outboundMu         sync.Mutex
+	outboundGeneration uint64
+	outboundTrack      *webrtc.TrackLocalStaticSample
+	outboundSender     *webrtc.RTPSender
+	done               chan struct{}
+	closers            sessionResourceClosers
+	revision           *revisionState
 	// productionではnegotiateDescriptionへ固定する。test差し替えもremote適用済みboolを正しく返し、
 	// partial apply後だけcloseするtransaction契約を維持しなければならない。
 	negotiateUpdate func(context.Context, string) (webrtc.SessionDescription, bool, error)
@@ -60,14 +65,21 @@ type Session struct {
 	candidateApplier func(webrtc.ICECandidateInit) error
 }
 
-// sessionResourceClosers はSession cleanupが並行開始して完了を待つ3つの所有resource境界である。
+// synthSpeechDecoderはprocess-wide decoderとdecode完了競合testを共有する非所有境界である。
+type synthSpeechDecoder interface {
+	Decode(context.Context, protocol.SynthesizerResult) (synthdecode.DecodedSpeech, error)
+}
+
+// sessionResourceClosers はSession cleanupが並行開始して完了を待つ所有resource境界である。
 //
-// productionではPeerConnection、codec、Coordinatorへ固定し、testではblocking closeを注入して
-// Closeの非blocking返却、close-once、全join後公開を実時間sleepなしで観測する。
+// productionではPeerConnection、codec、OutputProcessor、DataChannelDispatcher、Coordinatorへ固定し、
+// testではblocking closeを注入してCloseの非blocking返却、close-once、全join後公開を観測する。
 type sessionResourceClosers struct {
-	peer     func() error
-	codec    func() error
-	pipeline func() error
+	peer       func() error
+	codec      func() error
+	output     func() error
+	dispatcher func() error
+	pipeline   func() error
 }
 
 // newSession は検証済みdependencyからPeerConnection、InputProcessor、codec、lifecycle ownerを組み立てる。
@@ -105,7 +117,7 @@ func newSession(
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w", err)
 	}
-	encoder, err := audiomedia.NewToneEncoder()
+	encoder, err := audiomedia.NewFrameEncoder()
 	if err != nil {
 		_ = pc.Close()
 		return nil, err
@@ -115,19 +127,47 @@ func newSession(
 		id: id, talkMode: talkMode, pc: pc, pipeline: coordinator, synthDecoder: synthDecoder, input: input, logger: logger,
 		onClosed: onClosed, lifecycle: lifecycle, ctx: ctx, cancel: cancel,
 		encoder: encoder, done: make(chan struct{}),
-		closers: sessionResourceClosers{
-			peer:     pc.Close,
-			codec:    encoder.Close,
-			pipeline: coordinator.Close,
-		},
 	}
+	dispatcher, err := NewDataChannelDispatcher(ctx, logger, func(dispatchErr error) {
+		logger.Error("data channel dispatcher stopped", "session_id", id, "error", dispatchErr)
+		_ = session.Close("data_channel_error")
+	})
+	if err != nil {
+		_ = pc.Close()
+		_ = encoder.Close()
+		cancel()
+		return nil, err
+	}
+	session.dispatcher = dispatcher
 	session.negotiateUpdate = session.negotiateDescription
 	session.candidateApplier = session.addCandidate
 	if err := session.installOutboundTrack(); err != nil {
 		_ = pc.Close()
 		_ = encoder.Close()
+		_ = dispatcher.Close()
 		cancel()
 		return nil, err
+	}
+	output, err := audiomedia.NewOutputProcessor(
+		encoder,
+		pionSampleWriter{track: session.outboundTrack},
+		dispatcher.EnqueueTelop,
+		logger,
+	)
+	if err != nil {
+		_ = pc.Close()
+		_ = encoder.Close()
+		_ = dispatcher.Close()
+		cancel()
+		return nil, err
+	}
+	session.output = output
+	session.closers = sessionResourceClosers{
+		peer:       pc.Close,
+		codec:      encoder.Close,
+		output:     output.Close,
+		dispatcher: dispatcher.Close,
+		pipeline:   coordinator.Close,
 	}
 	session.installCallbacks()
 	logger.Info("rtc session created", "session_id", id, "talk_mode", talkMode)
@@ -164,9 +204,9 @@ func (s *Session) addCandidate(candidate webrtc.ICECandidateInit) error {
 
 // Close は closing を一度だけ確定し、全 resource の非同期 cleanup を開始する。
 //
-// timer停止とcontext cancelは返却前に完了する。PeerConnection、codec、pipelineを閉じて session
-// goroutineをjoinした後だけ registry remove と done closeを行い、deadlineで待機を諦めたManagerからも
-// cleanupは独立して継続する。
+// timer停止とcontext cancelは返却前に完了する。PeerConnection、codec、output、dispatcher、pipelineを
+// 閉じてsession goroutineをjoinした後だけregistry removeとdone closeを行い、deadlineで待機を
+// 諦めたManagerからもcleanupは独立して継続する。
 func (s *Session) Close(reason string) error {
 	s.lifecycle.mu.Lock()
 	started := s.beginCloseLocked(reason)
@@ -198,15 +238,27 @@ func (s *Session) beginCloseLocked(reason string) bool {
 
 // cleanup はclosing確定後のresource close、全goroutine join、registry removeを順に完了する。
 //
-// Coordinator.Closeは接続開始中もcancel/joinし、PeerConnection.CloseはRTP/RTCP blocking readを解除する。
+// Coordinator/dispatcher/output Closeはqueueとworkerを回収し、PeerConnection.CloseはRTP/RTCP blocking readを解除する。
 // すべてをjoinするまでclosedとdoneを公開しないため、Manager deadlineは未完了を識別できる。
 func (s *Session) cleanup(reason string) {
-	closeResults := make(chan error, 3)
-	go func() { closeResults <- s.closers.peer() }()
-	go func() { closeResults <- s.closers.codec() }()
-	go func() { closeResults <- s.closers.pipeline() }()
+	closers := []func() error{
+		s.closers.peer,
+		s.closers.codec,
+		s.closers.output,
+		s.closers.dispatcher,
+		s.closers.pipeline,
+	}
+	closeResults := make(chan error, len(closers))
+	closeCount := 0
+	for _, closeResource := range closers {
+		if closeResource == nil {
+			continue
+		}
+		closeCount++
+		go func(closeResource func() error) { closeResults <- closeResource() }(closeResource)
+	}
 	var closeErr error
-	for range 3 {
+	for range closeCount {
 		closeErr = errors.Join(closeErr, <-closeResults)
 	}
 	s.wg.Wait()
