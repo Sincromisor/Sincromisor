@@ -6,10 +6,10 @@
 
 ### open（未完） — 2 件
 
-| タスク                                                                                                                             | タイトル                                                     | 判定 | 依存                                                                                                               |
-| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------ |
-| [task-260802032922-pion-phase-3-observability-gate-3](./task-260802032922-pion-phase-3-observability-gate-3/task.md)               | Pion Phase 3の可観測性とprocess hardeningを実装する          | —    | `task-260802032908-pion-phase-3-outbound-audio-datachannel`, `task-260802032918-pion-phase-3-frontend-ice-restart` |
-| [task-260802033044-pion-phase-3-production-candidate-gate-3](./task-260802033044-pion-phase-3-production-candidate-gate-3/task.md) | Pion Phase 3のproduction candidateを検証してGate 3を判定する | —    | `task-260802032922-pion-phase-3-observability-gate-3`                                                              |
+| タスク                                                                                                                             | タイトル                                                     | 判定    | 依存                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------ |
+| [task-260802032922-pion-phase-3-observability-gate-3](./task-260802032922-pion-phase-3-observability-gate-3/task.md)               | Pion Phase 3の可観測性とprocess hardeningを実装する          | ❌ FAIL | `task-260802032908-pion-phase-3-outbound-audio-datachannel`, `task-260802032918-pion-phase-3-frontend-ice-restart` |
+| [task-260802033044-pion-phase-3-production-candidate-gate-3](./task-260802033044-pion-phase-3-production-candidate-gate-3/task.md) | Pion Phase 3のproduction candidateを検証してGate 3を判定する | —       | `task-260802032922-pion-phase-3-observability-gate-3`                                                              |
 
 ### done（完了） — 13 件
 

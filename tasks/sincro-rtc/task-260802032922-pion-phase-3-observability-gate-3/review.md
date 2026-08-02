@@ -4,23 +4,29 @@
 
 APPROVED
 
-前回のHigh指摘だったmetric schema、panic inventory/comment acceptanceは具体化され、依存更新の検証も追加された。
-改訂箇所に実装を止める新たな矛盾はない。
+前回の blocking High はすべて解消され、現行コード参照、process phase / drain、panic cleanup、
+startup 対象、structured-log allow-list、RTCP 算定が一意な設計と検証条件へ更新された。
+改訂で新たに実装を破綻させる矛盾もないため、再実装へ進めてよい。
 
 ## 指摘事項
 
-- [Low] 構造化logの許容fieldを「session IDとreason/stage/countだけ」とする受け入れ条件に対し、
-  panic設計は「stage/error log」と記す。実装時はraw error本文を無条件で追加せず、privacy条件を満たす
-  正規化済みerror分類またはreasonとして扱い、payload marker testで漏えいがないことを確認すること。
+なし。
 
 ## 実装者への申し送り
 
-- 全metricの名前、型、単位、label/bucket、増減規則、close reason enum、型付きrecorder interfaceが確定した。
-  label値は列挙集合へ正規化し、session IDやpayload由来の非有限値を導入しないこと。
-- recover対象はRTCP/inbound/outbound/pipeline/deadlineとPion callbackのinventory、
-  `Session.Go` / `Session.SafeCallback`、HTTP mutation境界まで確定した。各対象のpanic injectionと
-  close-once/process継続を1対1で照合すること。
-- comment auditは所定9列、change comprehension surface、rewrite/delete、省略条件、TODO、
-  evaluatorの全件照合とFAIL条件まで受け入れ条件化された。
-- `go mod tidy -diff` と `go.mod` / `go.sum` 同一commit条件が追加され、
-  `github.com/prometheus/client_golang` 導入時のGo規約要件を満たしている。
+- 専用ブランチの attempt 3 実装を再利用し、`eval.md` が残課題として特定した
+  `cmd/pion-poc/main.go` の process lifecycle log と、その privacy / change-comprehension
+  surface の9列 audit、captured-log field allow-list testを必ず同時に直すこと。
+- main checkout では `internal/signaling/http.go:37-42,81-92` の `SessionService` / `Handler`、
+  `internal/rtc/manager.go:113-202` の reservation、`cmd/pion-poc/main.go:147-205` の shutdown、
+  `internal/rtc/media.go:38-52` の RTCP drain が task.md の参照どおりである。既存の
+  startup/shutdown hardeningを保持し、task.md が固定した residual scopeだけを接続すること。
+- process phaseは単一 `State`、initial admissionの最終保証はManager `reserve`、shutdownは
+  `BeginDrain`先行かつ共通5秒deadline、mutation panicは明示的`CloseSession`経由という
+  ownership境界を崩さないこと。
+- structured logのapplication keyは `session_id`、`reason`、`stage`、`count` の部分集合に限定し、
+  process lifecycleを含むproduction logger surface全体で検査すること。payload markerはlog valueと
+  Prometheus expositionの双方で非露出を確認すること。
+- 公開挙動は `documents/design/contracts/frontend-rtc.md` と
+  `documents/migration/pion/rollout-and-operations.md` へ同じ変更で同期し、固定20 metric、
+  health phase、panic非対象、drain順序を実装と一致させること。
