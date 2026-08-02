@@ -1,293 +1,338 @@
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { ChatMessageService } from "../conversation/chat/model/chatMessageService";
 import { DebugConsoleManager } from "../debug/model/debugConsoleManager";
-import { captureIceFailureDiagnostics } from "./diagnostics/rtcIceDiagnostics";
-import { RtcStatsReporter } from "./diagnostics/rtcStatsReporter";
 import { replaceRtcAudioTrack, setRtcAudioMute } from "./rtcAudioTrackSender";
+import { RtcBundleDiagnostics } from "./rtcBundleDiagnostics";
 import { handleRtcIceConnectionState } from "./rtcConnectionStateHandler";
+import { RtcDisconnectedGraceTimer } from "./rtcDisconnectedGraceTimer";
 import { sendRtcIceCandidate } from "./rtcIceCandidateSender";
 import type { ChatMessage, TelopChannelMessage } from "./rtcMessage";
 import { negotiateRtcSession } from "./rtcNegotiation";
-import { createRtcPeerConnectionBundle } from "./rtcPeerConnectionFactory";
+import { RtcNegotiationStateMachine, type RtcOfferIdentity } from "./rtcNegotiationStateMachine";
+import {
+    createRtcPeerConnectionBundle,
+    type RtcPeerConnectionBundle,
+} from "./rtcPeerConnectionFactory";
 import { closeRtcPeerConnection } from "./rtcPeerConnectionShutdown";
+import { RtcSignalingHttpError } from "./rtcSignalingHttp";
 import type { SincroRTCConfig } from "./sincroRtcConfigManager";
 
-// 1接続分の WebRTC セッションを管理するクライアント。
-// DataChannel(text/telop)・ICE/SDP診断表示・再接続制御までをまとめて担当する。
+// reason: structure-threshold-exception bundle generationとsignaling flightを別ownerへ分けると、session/revision/candidateのatomicなfailure境界が複数classへ分散するため。
+/**
+ * 1つの論理RTC接続についてPeerConnection bundleとsignaling stateを所有する。
+ *
+ * Pion sessionでは同一bundle上のICE restartをsingle-flightで行う。session消失または
+ * legacy切断だけは旧bundleをcloseして新bundleのinitial Offerへ移る。terminal failure後の
+ * 自動再接続は行わず、上位AppControllerによる新しいclient/startを復旧境界とする。
+ */
 export class RTCTalkClient {
-    private readonly logger: DebugConsoleManager;
-    private readonly statsReporter: RtcStatsReporter;
-    private readonly peerConnection: RTCPeerConnection;
-    private readonly telopChannel: RTCDataChannel;
-    private readonly textChannel: RTCDataChannel;
-    private readonly chatMessageService: ChatMessageService;
-    private readonly talkMode: string;
-    private sincroConfig: SincroRTCConfig;
-    // /offer 応答で払い出されるサーバー側セッションID。
-    // Trickle ICEの candidate 送信先セッションの特定に使う。
-    private sessionId?: string;
-    // /offer 応答より先に onicecandidate が発火するため、
-    // セッションID取得前のcandidateを一時保管する。
-    private pendingIceCandidates: Array<RTCIceCandidateInit | null> = [];
-    private statsIntervalId?: number;
-    private iceFailureDiagnosticCaptured = false;
-    private reconnectTimerId?: number;
-    private isNegotiating = false;
-    private reconnectAttempt = 0;
+    private audioTrack: MediaStreamTrack;
+    private bundle: RtcPeerConnectionBundle;
+    private bundleGeneration = 0;
+    private candidateSendFlight: Promise<void> = Promise.resolve();
+    private readonly chatMessageService = ChatMessageService.getService();
+    private readonly diagnostics: RtcBundleDiagnostics;
+    private readonly disconnectedGrace: RtcDisconnectedGraceTimer;
+    private generationAbortController = new AbortController();
     private isMuted = false;
-    // 直近で接続確立に成功したsession_id。
-    // ICE切断後の再接続で「同一セッション更新」を試すために保持する。
-    private lastStableSessionId?: string;
+    private readonly logger = DebugConsoleManager.getManager();
+    private negotiationFlight?: Promise<void>;
+    private negotiationState = new RtcNegotiationStateMachine();
+    private pendingIdentity?: RtcOfferIdentity;
+    private readonly sincroConfig: SincroRTCConfig;
+    private readonly talkMode: string;
 
     telopChannelCallback: (msg: TelopChannelMessage) => void = () => {};
     textChannelCallback: (msg: ChatMessage) => void = () => {};
     rtcHealthCallback: (message?: string) => void = () => {};
 
-    /* talk_mode: chat, sincro */
+    /**
+     * 初期audio trackとsignaling設定からbundleを作る。network I/Oはstartまで行わない。
+     */
     constructor(sincroConfig: SincroRTCConfig, audioTrack: MediaStreamTrack, talkMode: string) {
-        this.logger = DebugConsoleManager.getManager();
-        this.statsReporter = new RtcStatsReporter(this.logger);
-        this.chatMessageService = ChatMessageService.getService();
-        this.talkMode = talkMode;
+        this.audioTrack = audioTrack;
         this.sincroConfig = sincroConfig;
-        const connectionBundle = createRtcPeerConnectionBundle({
-            audioTrack,
+        this.talkMode = talkMode;
+        this.bundle = this.createBundle();
+        this.diagnostics = new RtcBundleDiagnostics({
+            getPeerConnection: () => this.bundle.peerConnection,
+            getSessionId: () => this.negotiationState.identity?.sessionId,
             logger: this.logger,
-            onIceConnectionStateChange: (state) => this.handleIceConnectionStateChange(state),
-            onTelopMessage: (msg) => this.telopChannelCallback(msg),
-            onTextMessage: (msg) => this.textChannelCallback(msg),
-            sendIceCandidate: (candidate) => {
-                void this.sendIceCandidate(candidate);
-            },
-            sincroConfig,
         });
-        this.peerConnection = connectionBundle.peerConnection;
-        this.textChannel = connectionBundle.textChannel;
-        this.telopChannel = connectionBundle.telopChannel;
+        this.disconnectedGrace = new RtcDisconnectedGraceTimer({
+            onGraceExpired: () => void this.recoverFromIceFailure(),
+        });
     }
 
-    // 接続開始（または再接続開始）。
-    // start() は RTCTalkClient の再利用前提で内部状態をリセットしてから negotiate を実行する。
-    start(forceIceRestart: boolean = false, preferredSessionId?: string): Promise<void> {
-        if (this.isNegotiating) {
-            this.logger.addRtcEventLog("start skipped: negotiation already in progress");
-            return Promise.resolve();
+    /**
+     * initial Offerを開始する。同一clientで進行中なら既存flightを返し、並行SDP生成を防ぐ。
+     */
+    start(): Promise<void> {
+        if (this.negotiationFlight !== undefined) {
+            return this.negotiationFlight;
         }
-        if (this.reconnectTimerId !== undefined) {
-            clearTimeout(this.reconnectTimerId);
-            this.reconnectTimerId = undefined;
-        }
-        this.sessionId = undefined;
-        this.pendingIceCandidates = [];
-        this.statsReporter.reset();
-        this.iceFailureDiagnosticCaptured = false;
-        this.startStatsCollector();
-        this.logger.addRtcEventLog(
-            `start negotiation: forceIceRestart=${forceIceRestart}, preferredSessionId=${preferredSessionId ?? "-"}`,
-        );
+        this.diagnostics.start();
         this.chatMessageService.writeSystemMessage("音声認識・合成システムに接続します。");
-        return this.negotiate(this.peerConnection, forceIceRestart, preferredSessionId);
+        return this.runInitialNegotiation();
     }
 
+    /**
+     * timer、candidate、DataChannel、PeerConnectionをcloseし、遅延callbackをgenerationで無効化する。
+     */
     stop(): void {
-        if (this.reconnectTimerId !== undefined) {
-            clearTimeout(this.reconnectTimerId);
-            this.reconnectTimerId = undefined;
-        }
-        this.sessionId = undefined;
-        this.pendingIceCandidates = [];
-        this.statsReporter.reset();
-        this.iceFailureDiagnosticCaptured = false;
-        this.reconnectAttempt = 0;
-        this.lastStableSessionId = undefined;
-        this.stopStatsCollector();
+        this.disconnectedGrace.cancel();
+        this.diagnostics.stop();
+        this.negotiationState.close();
+        this.generationAbortController.abort();
+        this.pendingIdentity = undefined;
+        this.bundleGeneration += 1;
+        closeRtcPeerConnection(this.bundle);
         this.logger.resetRealtimeStats();
-
-        closeRtcPeerConnection({
-            peerConnection: this.peerConnection,
-            telopChannel: this.telopChannel,
-            textChannel: this.textChannel,
-        });
     }
 
-    // ICE切断等の後にバックオフ付きで再接続を予約する。
-    // 直接 start() せずタイマーを挟むことで、連続失敗時の過負荷を避ける。
-    reConnect(): void {
-        const preferredSessionId = this.sessionId ?? this.lastStableSessionId;
-        // 切断後に遅れて発火する onicecandidate を旧sessionへ送らないよう、
-        // 再接続スケジュール時点で session_id を無効化する。
-        this.sessionId = undefined;
-        this.pendingIceCandidates = [];
-
-        if (this.reconnectTimerId !== undefined) {
-            this.logger.addRtcEventLog("reconnect already scheduled");
-            return;
-        }
-        const waitMs = this.nextReconnectDelayMs();
-        this.logger.addRtcEventLog(
-            `schedule reconnect in ${Math.round(waitMs)}ms (attempt=${this.reconnectAttempt}, preferredSessionId=${preferredSessionId ?? "-"})`,
-        );
-        this.reconnectTimerId = window.setTimeout(() => {
-            this.reconnectTimerId = undefined;
-            void this.start(true, preferredSessionId);
-        }, waitMs);
-    }
-
+    /** 現bundleのaudio senderをmute/unmuteする。 */
     setMute(mute: boolean): void {
         this.isMuted = mute;
         setRtcAudioMute({
-            isMuted: this.isMuted,
+            isMuted: mute,
             logger: this.logger,
-            peerConnection: this.peerConnection,
+            peerConnection: this.bundle.peerConnection,
         });
     }
 
-    // 実行中セッションの送信用 audio sender を新しいトラックへ差し替える。
+    /**
+     * 現在および将来のreplacement bundleで使うaudio trackを差し替える。
+     * replacementと競合した場合も保存したtrackが新bundleへ渡る。
+     */
     async replaceAudioTrack(audioTrack: MediaStreamTrack): Promise<void> {
+        this.audioTrack = audioTrack;
         await replaceRtcAudioTrack({
             audioTrack,
             isMuted: this.isMuted,
             logger: this.logger,
-            peerConnection: this.peerConnection,
+            peerConnection: this.bundle.peerConnection,
         });
     }
 
-    private async negotiate(
-        peerConnection: RTCPeerConnection,
+    private runInitialNegotiation(previousSessionId?: string): Promise<void> {
+        const identity = this.negotiationState.beginInitial(crypto.randomUUID());
+        return this.runNegotiation(identity, false, previousSessionId);
+    }
+
+    private runRestartNegotiation(): Promise<void> {
+        if (this.negotiationFlight !== undefined) {
+            return this.negotiationFlight;
+        }
+        const identity = this.negotiationState.beginRestart();
+        return this.runNegotiation(identity, true);
+    }
+
+    private runNegotiation(
+        identity: RtcOfferIdentity,
         forceIceRestart: boolean,
-        preferredSessionId: string | undefined,
+        previousSessionId?: string,
     ): Promise<void> {
-        // glare/中途半端な状態で再度 offer を投げると失敗しやすいため、stable 以外は再接続へ回す。
-        if (peerConnection.signalingState !== "stable") {
-            this.logger.addRtcEventLog(
-                `negotiate skipped: signaling state is not stable (${peerConnection.signalingState})`,
-            );
-            this.reConnect();
-            return Promise.resolve();
-        }
-
-        this.isNegotiating = true;
-        return negotiateRtcSession({
-            flushPendingIceCandidates: () => this.flushPendingIceCandidates(),
+        this.pendingIdentity = identity;
+        const generation = this.bundleGeneration;
+        const flight = this.performNegotiation(
+            generation,
+            identity,
             forceIceRestart,
-            logger: this.logger,
-            onSessionAssigned: (sessionId) => {
-                this.sessionId = sessionId;
-                this.lastStableSessionId = sessionId;
-            },
-            peerConnection,
-            preferredSessionId,
-            sincroConfig: this.sincroConfig,
-            talkMode: this.talkMode,
-        })
-            .then(() => {
-                this.reconnectAttempt = 0;
-            })
-            .catch((error) => {
-                // 失敗時は診断ログ・UI通知を残したうえで再接続へ移行する。
-                this.sessionId = undefined;
-                this.pendingIceCandidates = [];
-                this.chatMessageService.writeErrorMessage(
-                    `RTCサーバーへの接続に失敗しました...。\n${error}`,
-                    true,
-                );
-                this.rtcHealthCallback(`RTCサーバーへの接続に失敗しました。${error}`);
-                frontendLogger.error("RTC negotiation failed.", { error });
-                this.logger.addRtcEventLog(`negotiate failed: ${error}`);
-                this.reConnect();
-            })
-            .finally(() => {
-                this.isNegotiating = false;
+            previousSessionId,
+        ).finally(() => {
+            if (this.negotiationFlight === flight) {
+                this.negotiationFlight = undefined;
+            }
+        });
+        this.negotiationFlight = flight;
+        return flight;
+    }
+
+    private async performNegotiation(
+        generation: number,
+        identity: RtcOfferIdentity,
+        forceIceRestart: boolean,
+        previousSessionId?: string,
+    ): Promise<void> {
+        try {
+            const answer = await negotiateRtcSession({
+                forceIceRestart,
+                identity,
+                logger: this.logger,
+                peerConnection: this.bundle.peerConnection,
+                previousSessionId,
+                signal: this.generationAbortController.signal,
+                sincroConfig: this.sincroConfig,
+                talkMode: this.talkMode,
             });
-    }
-
-    private nextReconnectDelayMs(): number {
-        // 段階的バックオフ。連続失敗時は待機時間を伸ばし、群発再接続を避けるためジッターを加える。
-        this.reconnectAttempt += 1;
-        const baseMs = 5000;
-        const maxMs = 60000;
-        const step = Math.min(this.reconnectAttempt - 1, 5);
-        const backoffMs = Math.min(baseMs * 2 ** step, maxMs);
-        const jitterRatio = 0.8 + Math.random() * 0.4; // 0.8x - 1.2x
-        return Math.min(Math.round(backoffMs * jitterRatio), maxMs);
-    }
-
-    private flushPendingIceCandidates(): Promise<void> {
-        const pendingCandidates = this.pendingIceCandidates.splice(
-            0,
-            this.pendingIceCandidates.length,
-        );
-        // 大量candidateでも送信順序を保つため逐次Promiseで流す。
-        return pendingCandidates.reduce((p, candidate) => {
-            return p.then(() => this.sendIceCandidate(candidate));
-        }, Promise.resolve());
-    }
-
-    // Trickle ICE の candidate をサーバーへ送る。
-    // session_id 未確定時は一時キューに積み、Offer応答後に flush される。
-    private sendIceCandidate(candidate: RTCIceCandidateInit | null): Promise<void> {
-        // Firefox等で candidateオブジェクト自体は存在するが candidate文字列が空のケースがある。
-        // これは実質 end-of-candidates なので null として統一する。
-        if (candidate !== null && (!candidate.candidate || candidate.candidate.trim() === "")) {
-            candidate = null;
+            if (!this.isCurrentGeneration(generation)) {
+                return;
+            }
+            this.negotiationState.commitAnswer(identity, answer);
+            this.pendingIdentity = undefined;
+            await this.flushCandidates(identity.revision);
+            this.diagnostics.resetFailureCapture();
+            this.rtcHealthCallback();
+        } catch (error) {
+            if (this.isCurrentGeneration(generation)) {
+                await this.handleGenerationFailure(error, identity);
+            }
         }
+    }
 
-        if (!this.sessionId) {
-            // session_id未確定時は送信できないためキューへ退避。
-            this.pendingIceCandidates.push(candidate);
-            return Promise.resolve();
+    private async flushCandidates(revision: number): Promise<void> {
+        const identity = this.negotiationState.identity;
+        if (identity?.sessionId === undefined) {
+            throw new Error("RTC candidate flush requires an assigned session.");
         }
-        return sendRtcIceCandidate({
+        for (const queued of this.negotiationState.drainCandidates(revision)) {
+            await this.sendCandidate(
+                queued.candidate,
+                identity.sessionId,
+                revision,
+                this.bundleGeneration,
+            );
+        }
+    }
+
+    private onIceCandidate(generation: number, candidate: RTCIceCandidateInit | null): void {
+        if (!this.isCurrentGeneration(generation)) {
+            return;
+        }
+        const normalized =
+            candidate !== null && (candidate.candidate ?? "").trim() === "" ? null : candidate;
+        const revision = this.pendingIdentity?.revision ?? this.negotiationState.identity?.revision;
+        const sessionId = this.negotiationState.identity?.sessionId;
+        if (
+            revision === undefined ||
+            sessionId === undefined ||
+            this.pendingIdentity !== undefined
+        ) {
+            try {
+                this.negotiationState.enqueueCandidate(normalized, revision ?? 1);
+            } catch (error) {
+                void this.handleGenerationFailure(error, this.pendingIdentity);
+            }
+            return;
+        }
+        this.candidateSendFlight = this.candidateSendFlight
+            .then(() => this.sendCandidate(normalized, sessionId, revision, generation))
+            .catch((error) => this.handleGenerationFailure(error));
+    }
+
+    private async sendCandidate(
+        candidate: RTCIceCandidateInit | null,
+        sessionId: string,
+        revision: number,
+        generation: number,
+    ): Promise<void> {
+        if (!this.isCurrentGeneration(generation)) {
+            return;
+        }
+        await sendRtcIceCandidate({
             candidate,
             logger: this.logger,
-            sessionId: this.sessionId,
+            offerRevision: revision,
+            sessionId,
+            signal: this.generationAbortController.signal,
             sincroConfig: this.sincroConfig,
         });
     }
 
-    private handleIceConnectionStateChange(state: RTCIceConnectionState): void {
+    private onIceConnectionState(generation: number, state: RTCIceConnectionState): void {
+        if (!this.isCurrentGeneration(generation)) {
+            return;
+        }
         handleRtcIceConnectionState({
-            captureIceFailureDiagnostics: (reason) => {
-                void this.captureIceFailureDiagnostics(reason);
-            },
+            captureIceFailureDiagnostics: (reason) => void this.diagnostics.captureFailure(reason),
             chatMessageService: this.chatMessageService,
-            onIceFailureDiagnosticsReset: () => {
-                this.iceFailureDiagnosticCaptured = false;
+            onDisconnected: () => this.scheduleDisconnectedRestart(),
+            onFailed: () => void this.recoverFromIceFailure(),
+            onRecovered: () => {
+                this.disconnectedGrace.cancel();
+                this.negotiationState.restoreConnected();
+                this.diagnostics.resetFailureCapture();
             },
-            reconnect: () => this.reConnect(),
             rtcHealthCallback: this.rtcHealthCallback,
             state,
         });
     }
 
-    private async captureIceFailureDiagnostics(reason: string): Promise<void> {
-        if (this.iceFailureDiagnosticCaptured) {
+    private scheduleDisconnectedRestart(): void {
+        if (!this.negotiationState.markRestartPending()) {
             return;
         }
-        this.iceFailureDiagnosticCaptured = true;
-        await captureIceFailureDiagnostics({
+        this.disconnectedGrace.schedule();
+    }
+
+    private async recoverFromIceFailure(): Promise<void> {
+        this.disconnectedGrace.cancel();
+        if (this.negotiationFlight !== undefined) {
+            return this.negotiationFlight;
+        }
+        if (this.negotiationState.mode === "legacy") {
+            return this.replaceBundle();
+        }
+        return this.runRestartNegotiation();
+    }
+
+    private async handleGenerationFailure(
+        error: unknown,
+        identity?: RtcOfferIdentity,
+    ): Promise<void> {
+        this.negotiationState.failGeneration();
+        if (
+            error instanceof RtcSignalingHttpError &&
+            (error.status === 404 || error.status === 410) &&
+            (error.operation === "update-offer" || error.operation === "candidate")
+        ) {
+            await this.replaceBundle(
+                identity?.sessionId ?? this.negotiationState.identity?.sessionId,
+            );
+            return;
+        }
+        this.terminalFailure(error);
+    }
+
+    private async replaceBundle(previousSessionId?: string): Promise<void> {
+        if (this.negotiationState.state === "replacing") {
+            return;
+        }
+        this.negotiationState.markReplacing();
+        this.generationAbortController.abort();
+        this.generationAbortController = new AbortController();
+        this.bundleGeneration += 1;
+        closeRtcPeerConnection(this.bundle);
+        this.bundle = this.createBundle();
+        await this.runInitialNegotiation(previousSessionId);
+    }
+
+    private terminalFailure(error: unknown): void {
+        this.pendingIdentity = undefined;
+        this.negotiationState.close();
+        this.generationAbortController.abort();
+        this.bundleGeneration += 1;
+        closeRtcPeerConnection(this.bundle);
+        const message = `RTCサーバーへの接続に失敗しました。${String(error)}`;
+        this.chatMessageService.writeErrorMessage(message, true);
+        this.rtcHealthCallback(message);
+        frontendLogger.error("RTC generation failed terminally.", { error });
+    }
+
+    private createBundle(): RtcPeerConnectionBundle {
+        const generation = this.bundleGeneration;
+        return createRtcPeerConnectionBundle({
+            audioTrack: this.audioTrack,
             logger: this.logger,
-            peerConnection: this.peerConnection,
-            reason,
-            sessionId: this.sessionId,
+            onIceConnectionStateChange: (state) => this.onIceConnectionState(generation, state),
+            onTelopMessage: (msg) => this.telopChannelCallback(msg),
+            onTextMessage: (msg) => this.textChannelCallback(msg),
+            sendIceCandidate: (candidate) => this.onIceCandidate(generation, candidate),
+            sincroConfig: this.sincroConfig,
         });
     }
 
-    private startStatsCollector(): void {
-        this.stopStatsCollector();
-        this.statsReporter.reset();
-        this.statsIntervalId = window.setInterval(() => {
-            this.statsReporter.collectAndRender(this.peerConnection).catch((error) => {
-                frontendLogger.error("RTC stats collection failed.", { error });
-            });
-        }, 1000);
-    }
-
-    private stopStatsCollector(): void {
-        if (this.statsIntervalId !== undefined) {
-            clearInterval(this.statsIntervalId);
-            this.statsIntervalId = undefined;
-        }
-        this.statsReporter.reset();
+    private isCurrentGeneration(generation: number): boolean {
+        return generation === this.bundleGeneration && this.negotiationState.state !== "closed";
     }
 }

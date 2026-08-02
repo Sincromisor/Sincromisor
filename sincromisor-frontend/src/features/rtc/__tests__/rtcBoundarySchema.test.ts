@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import initialAnswerFixture from "../../../../../sincromisor-server/sincro-rtc-pion-poc/internal/signaling/testdata/initial_offer_answer.json?raw";
+import updateAnswerFixture from "../../../../../sincromisor-server/sincro-rtc-pion-poc/internal/signaling/testdata/update_offer_answer.json?raw";
 import {
     parseChatMessagePayload,
     parseIceCandidateResponse,
@@ -41,17 +43,38 @@ describe("parseSincroRTCConfig", () => {
 });
 
 describe("parseOfferResponse", () => {
+    it("parses the shared Go signaling Answer fixtures", () => {
+        expect(parseOfferResponse(JSON.parse(initialAnswerFixture)).offer_revision).toBe(1);
+        expect(parseOfferResponse(JSON.parse(updateAnswerFixture)).offer_revision).toBe(2);
+    });
+
     it("accepts WebRTC answer payloads", () => {
         expect(
             parseOfferResponse({
                 sdp: "v=0",
                 type: "answer",
                 session_id: "session-1",
+                offer_revision: 1,
             }),
         ).toEqual({
             sdp: "v=0",
             type: "answer",
             session_id: "session-1",
+            offer_revision: 1,
+        });
+    });
+
+    it("accepts a revision-less initial legacy Answer", () => {
+        expect(
+            parseOfferResponse({
+                sdp: "v=0",
+                type: "answer",
+                session_id: "legacy-session",
+            }),
+        ).toEqual({
+            sdp: "v=0",
+            type: "answer",
+            session_id: "legacy-session",
         });
     });
 

@@ -166,17 +166,38 @@ candidateの冪等keyはcandidate文字列の受信bytes、`sdpMid`、`sdpMLineI
 - candidate format 異常はログに残し、可能な範囲で接続継続を優先する。
 - `expression_code` の未知値や欠落はフロント側で neutral として扱う。
 
+Frontendは400、409、413、response parse/identity不一致、retry exhaustionを当該PeerConnection
+generationのterminal failureとして扱う。candidate queueを破棄してPeerConnectionをcloseし、
+AppControllerの明示的な再startまたはpage reloadまで新sessionを自動作成しない。candidate送信失敗も
+単体dropせず、同じgenerationを失敗させる。
+
+update Offerまたはcandidateの404/410だけはserver session消失として扱う。既知の旧`session_id`を
+`previous_session_id`に設定し、新しいPeerConnection、DataChannel、request IDによるinitial Offerへ
+置き換える。initial Offerの410はresponseから旧sessionを復元できないためterminal failureとする。
+409はrevision/request identity競合でありblind retryしない。
+
 ## Timeout / Retry
 
 - FrontendからPionへはTrickle ICEを使う。PionからのcandidateはAnswer SDPへ収集して返すhalf-trickleとする。
 - initial OfferのHTTP responseを失った場合は、同じrequest IDと同じSDPで再送する。
 - update OfferのHTTP responseを失った場合は、同じsession ID、request ID、revision、SDPで再送する。
 - Frontendはupdate Answerを受け取るまで同revisionのcandidateをqueueし、成功後に順序を保って送る。
+- candidate queueはPeerConnection generationごとに最大64件のFIFOとする。overflow、Offer失敗、
+  candidate送信失敗ではqueueを全破棄し、generationをterminal failureまたはsession消失時の
+  bundle replacementへ遷移させる。
 - `disconnected`から10秒以内に自然復旧した場合はsessionを維持し、updateを要求しない。
-- `failed`または10秒のgrace超過後は15秒のrestart deadlineを開始する。完成したupdate Answerで
-  deadlineをcancelし、超過時は既存close-once経路でsessionを終了する。
+- `failed`は即時、`disconnected`の10秒grace超過は1回だけICE restartを開始する。Offer生成・送信・
+  candidate flushはPeerConnection単位のsingle-flightとし、連続eventで並行Offerを作らない。
 - ICE restart成功後は同じPeerConnection、DataChannel、pipeline generationでaudioを再開する。
-- 再接続は単一タイマーで管理し、指数 backoff と jitter を使う。
+- Offer HTTPは1実行10秒、candidate HTTPは1実行5秒のAbort timeoutを持つ。HTTP実行は最大4回
+  （初回1回とretry 3回）、全体deadlineは30秒とする。429、5xx、network errorだけをretryし、
+  失敗した実行1/2/3の後は500ms、1秒、2秒をcapとするfull jitter `[0, cap]` で待つ。
+  `Retry-After`があればjitterより優先する。
+- 各HTTP実行のtimeoutはoperation固有timeoutと全体deadline残時間の小さい方へclipする。
+  残時間が0以下、またはsleep時間が残時間以上なら次のHTTP実行を開始しない。同じHTTP retryでは
+  serialized body、SDP、request ID、revisionを変更しない。
+- revisionなしinitial Answerはaiortc互換のlegacy modeとして受理する。legacy modeの切断では
+  update Offerを送らず、新しいPeerConnection/DataChannelでrevisionなしinitial接続を作り直す。
 
 ## Versioning
 

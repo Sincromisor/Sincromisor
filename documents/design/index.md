@@ -48,7 +48,7 @@
 互換性に関わる endpoint / channel / payload / format の正本。
 
 - [Frontend RTC](contracts/frontend-rtc.md)
-    - フロントエンドと `sincro-rtc` の WebRTC signaling / DataChannel 契約
+    - フロントエンドと `sincro-rtc` の WebRTC signaling、ICE restart/retry、DataChannel 契約
 - [Audio Pipeline WebSocket](contracts/audio-pipeline-websocket.md)
     - AudioBroker と下流音声処理サービス間の WebSocket / msgpack 契約
 - [Proper Noun Dictionary](contracts/proper-noun-dictionary.md)
