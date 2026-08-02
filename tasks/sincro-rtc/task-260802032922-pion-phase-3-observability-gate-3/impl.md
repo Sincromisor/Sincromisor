@@ -260,3 +260,138 @@ attempt 2表のうち評価で不一致とされたsurface、およびattempt 3�
 ### コミット
 
 - `1a9c9771863eba62145f554f2d024bead56933bd` `fix(rtc): close Gate 3 concurrency gaps`
+
+## attempt 4
+
+### Completion Summary
+
+- 判定: 実装完了。attempt 3評価で残ったprocess lifecycle logのfield allow-list違反とcomment audit漏れを解消した。
+- commit: `36f847638a6ebd071ebc82c845ccc1f7b4c98d16`
+- listener開始は`stage=listener_ready,count=<goroutine count>`、signal受信は
+  `reason=process_shutdown`、shutdown完了は`stage=shutdown_complete,count=<active session count>`へ固定した。
+- captured `slog.Handler` testでproduction helperの全application keyが
+  `session_id|reason|stage|count`の部分集合であることと、3 eventのexact field/valueを検査した。
+  実processのSIGTERM integrationでも旧6 fieldが出力されないことを確認した。
+- 既存のprocess phase、admission、panic containment、共通5秒drain、可観測性実装は変更していない。
+- 仕様逸脱、未実行確認、残課題なし。詳細は以下を参照。
+
+### 判断・評価申し送り対応
+
+- `http`、`frontend_dir`、`initial_goroutines`、`signal`、`active_sessions`、
+  `final_goroutines`は通常logから削除した。signalの具体値と終了時goroutine数は保持せず、
+  task.mdの正規形だけを出力する。
+- 3つのlifecycle eventをprivate helperへ集約し、field追加時にstructured-log allow-listと
+  privacy契約の先行改訂が必要であることを近接コメントへ残した。
+- captured handler testはhelperを複製せず、`serve`が呼ぶproduction helper自体を発火する。
+  SIGTERM integrationは正規fieldの存在と旧fieldの非存在をprocess outputで追加確認する。
+- attempt 3でPASS済みのmetric ownership、panic response、Offer/Session callback収束、
+  RTCP、drain順序には変更を加えていない。
+
+### Comment audit
+
+attempt 4のproduction差分と、その理解に必要なprocess lifecycle/privacy surfaceを次の9列で再監査した。
+attempt 1から3の未変更surfaceは過去表を維持する。
+
+| path                   | symbol/block/decision/flow                                                   | kind                               | current comment                                                                   | reader question                                                              | required reader knowledge                                                                                  | decision (keep/rewrite/delete/add) | action/omission reason                                                                                                                 | reviewer note                                                                   |
+| ---------------------- | ---------------------------------------------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `cmd/pion-poc/main.go` | `serve`のlistener開始、signal受信、shutdown完了log                           | process lifecycle / privacy flow   | attempt 3ではprocess composition/drain順序だけを説明し、log field制約の説明がない | 各eventで何を記録でき、address/path/signal名/goroutine数をなぜ記録しないのか | application keyは4種だけで、各eventはtask固定のstage/reason/countへ写像し、環境情報を通常logへ出さない     | rewrite/add                        | 3 eventを正規形helperへ置換し、旧6 fieldを削除。3 helper共通の近接コメントでprivacy境界、除外情報、変更条件を説明した                  | captured handlerのexact attrsとallow-list、実processの旧field非露出を照合する   |
+| `cmd/pion-poc/main.go` | `logListenerReady` / `logShutdownRequested` / `logShutdownComplete`          | data transformation / constraint   | 新規helper。共通コメントを先頭helper直前へ配置                                    | runtime/process stateをどの有限なstructured attributeへ変換するのか          | listenerだけは開始時goroutine count、signalは固定reason、完了はactive session countを`count`として記録する | add                                | 隣接する3 helperを一つのprivacy flowとして説明。各helperの逐語docは、共通制約と型付き引数から追加情報がなく重複するため省略した        | helperごとのmessageとfield集合が正規形にexact一致することを照合する             |
+| `cmd/pion-poc/main.go` | `processState.BeginDrain`→cancel→HTTP shutdown→Offer wait→`CloseAll`→完了log | shutdown orchestration / lifecycle | 共通5秒deadline、admission先行、未join非正常化を既存`serve` commentが説明         | lifecycle log正規化でcleanup順序や完了判定が変わっていないか                 | 完了logは全段のjoinがerrorなしで終わった後だけ出て、`sessions.Count()`をterminal countとして読む           | keep                               | 既存commentは入力、順序、deadline、失敗条件を正確に説明するため保持。log callだけをhelper化し、cleanup順序とerror joinは変更していない | shutdown error時に完了logを出さない既存flowと、active session countの位置を照合 |
+| production以外の変更   | `process_log_test.go` / `main_integration_test.go`                           | test-only                          | test名とfailure messageで契約を表現                                               | production comment audit対象か                                               | production API/flowではなくprivacy契約の回帰assertionである                                                | keep                               | source-comments規約のproduction audit対象外。production helper捕捉、allow-list、正規field、旧field非露出をtest名とtableで明示した      | `<task-dir>/acceptance`は未変更                                                 |
+
+### 検証
+
+- targeted:
+  - `go test ./cmd/pion-poc -run '^TestProcessLifecycleLogsUseCanonicalPrivacyFields$' -count=1` PASS
+  - `go test ./cmd/pion-poc -run '^TestProcessSIGTERMStopsHTTPAndJoinsActiveSession$' -count=1 -v` PASS
+    （sandbox内ではloopback socket禁止だけで失敗し、同一差分を許可済み境界で再実行してPASS）
+- full:
+  - `/tmp/go1.26.5-toolchain/bin/go test -race ./internal/... ./cmd/pion-poc -count=1` PASS
+  - `/tmp/go1.26.5-toolchain/bin/go vet ./...` PASS
+  - `/tmp/go1.26.5-toolchain/bin/go mod tidy -diff` PASS（差分なし）
+  - `/tmp/go1.26.5-toolchain/bin/gofmt -l <変更Go files>` PASS（出力なし）
+  - `git diff --check` PASS
+  - `npm run tasks:check` PASS
+  - `npm run commit:check` PASS
+  - `npm run gate` PASS（clean tree、commit `36f847638a6ebd071ebc82c845ccc1f7b4c98d16`で
+    lint/build/testを記録。frontend testは85 file PASS、1 file skip、577 test PASS、2 test skip）
+
+### ドキュメント同期
+
+- 公開HTTP endpoint、JSON、metric schema、panic/drain挙動は変更していない。
+- attempt 1で同期済みの`documents/migration/pion/rollout-and-operations.md`は通常logへ
+  session ID、SDP、candidate、chat、音声payloadを出さないprivacy契約を保持しており、
+  attempt 4はtask.mdで既に確定したprocess lifecycle正規形へ実装を合わせる残差修正のため追加差分は不要。
+- `documents/design/contracts/frontend-rtc.md`のstatuses/health契約にも変更なし。
+  公開barrel・生成物・設定への影響はなく、再生成対象なし。
+
+### コミット
+
+- `36f847638a6ebd071ebc82c845ccc1f7b4c98d16` `fix(rtc): normalize process lifecycle logs`
+
+## attempt 5
+
+### Completion Summary
+
+- 判定: 実装完了。attempt 4評価で残った`disconnect_grace` deadline schema、
+  event ownership、focused coverage、運用文書同期をすべて解消した。
+- final HEAD: `1d09102a0a976d208874e5ce3a42b82aaeac9601`
+- `sincro_rtc_deadlines_total`の有限stageは
+  `gather|pre_connect|media_readiness|disconnect_grace|restart|close`のexact 6値となった。
+- disconnect grace expiryは`disconnect_grace`をexactly once記録し、後続restart expiryだけが
+  `restart`を記録する。process log、panic、drain、他metric ownershipは変更していない。
+- 仕様逸脱、未実行確認、残課題なし。
+
+### 判断・評価申し送り対応
+
+- `deadlineStages`へ`disconnect_grace`を追加し、未知stageの`close` fallbackを含む既存の
+  finite-cardinality境界を維持した。
+- grace timer callbackは`recoveryGrace`からのtransitionを確定するlifecycle lock内で
+  `Deadline("disconnect_grace")`を記録する。最初の発火でphaseが`recoveryNeedsRestart`へ変わるため、
+  同じtimer callbackが重複発火しても再記録しない。
+- fixed schema testはinternal setだけでなくPrometheus expositionのstage集合もexact比較する。
+  focused expiry testは同じfake timerを2回発火し、`disconnect_grace=1`かつrestart期限前の
+  `restart=0`を検査する。
+- review/evalの指定どおり、運用文書の20 family表も同じ6 stageへ同期した。
+
+### Comment audit
+
+attempt 5のproduction差分と直接のchange comprehension surfaceを次の9列で監査した。
+attempt 1から4の未変更surfaceは過去表を維持する。
+
+| path                                 | symbol/block/decision/flow                                  | kind                                 | current comment                                                                | reader question                                              | required reader knowledge                                                                     | decision (keep/rewrite/delete/add) | action/omission reason                                                                                                                  | reviewer note                                                        |
+| ------------------------------------ | ----------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `internal/observability/registry.go` | `deadlineStages` / `Registry.Deadline`                      | metric schema / cardinality boundary | `Recorder.Deadline`と実装methodが有限lifecycle stageへ正規化することを説明済み | `disconnect_grace`を追加してもlabel集合はtask固定値だけか    | exact 6 stage、未知値は`close`、payload由来labelは禁止                                        | keep                               | 既存doc commentが入力、有限性、normalization責務を覆い、set literalがexact値を局所表示する。個別var commentは値の逐語反復になるため省略 | setのexact比較とPrometheus expositionのexact label集合を照合         |
+| `internal/rtc/recovery.go`           | `disconnectGraceExpired`のgrace→restart-required transition | lifecycle / metric event ownership   | grace後にrestart deadlineへ進む説明だけで、2つのdeadline metric ownerが不明    | grace expiryとrestart expiryを誰が何回記録するか             | guardとphase transitionがgrace eventをexactly onceにし、後続callbackだけがrestart eventを所有 | rewrite                            | 近接commentへ`disconnect_grace`、1回、後続`restartDeadlineExpired`の責務を明記し、実callを`restart`から`disconnect_grace`へ修正         | timer重複発火でgrace=1/restart=0、後続既存testでrestart closeを照合  |
+| `internal/rtc/recovery.go`           | `restartDeadlineExpired`                                    | lifecycle / terminal event owner     | phase再確認とclose開始を同じlockで確定すると説明済み                           | grace metric修正でrestart expiry ownershipが曖昧にならないか | `recoveryNeedsRestart` guardを通った実restart expiryだけが`restart`を記録する                 | keep                               | 既存commentと隣接grace commentで前後関係、state guard、event ownerを局所的に追えるため実装変更・重複commentは不要                       | grace expiry時点ではrestart counterが0であることをfocused testで確認 |
+| production以外の変更                 | `registry_test.go` / `recovery_test.go` / rollout運用文書   | test / documentation                 | fixed family存在testと5 stage文書だけでgrace欠落を検出できなかった             | production comment audit対象か                               | testはschema/ownership assertion、文書は公開運用schemaの同期先                                | keep/rewrite                       | production source comment audit対象外。exact schema test、expiry test、運用表の6 stage化を同じcommitへ含めた                            | `<task-dir>/acceptance`は未変更                                      |
+
+### 検証
+
+- targeted:
+  - `go test ./internal/observability ./internal/rtc -run 'TestRegistryDeadlineStagesMatchFixedSchema|TestDisconnectGraceExpiryRecordsDedicatedDeadlineExactlyOnce|TestDisconnectedGraceThenRestartDeadlineCloses' -count=1` PASS
+  - `/tmp/go1.26.5-toolchain/bin/go test -race ./internal/observability ./internal/rtc -count=1` PASS
+- full:
+  - `/tmp/go1.26.5-toolchain/bin/go test ./internal/... ./cmd/pion-poc -count=1` PASS
+  - `/tmp/go1.26.5-toolchain/bin/go vet ./...` PASS
+  - `/tmp/go1.26.5-toolchain/bin/go mod tidy -diff` PASS（差分なし）
+  - `/tmp/go1.26.5-toolchain/bin/gofmt -l <変更Go files>` PASS（出力なし）
+  - `npm run tasks:check` PASS
+  - `npm run commit:check` PASS
+  - `npm run gate` PASS（clean final HEAD
+    `1d09102a0a976d208874e5ce3a42b82aaeac9601`でlint/build/testを記録。
+    frontend testは85 file PASS、1 file skip、577 test PASS、2 test skip）
+- `npm run commit:check`の最初のsandbox内実行は`git` subprocessの`EPERM`だけで失敗し、
+  同一HEADを許可済み境界で再実行してPASSした。
+
+### ドキュメント同期
+
+- `documents/migration/pion/rollout-and-operations.md`の
+  `sincro_rtc_deadlines_total`をexact 6 stageへ同期した。
+- endpoint、JSON、他19 metric family、privacy、panic、drain契約は変更していない。
+- 公開barrel、生成物、設定schemaへの影響はなく、再生成対象なし。
+
+### コミット
+
+- `33f1e210574503c0126803e9fcf031eb6098ceff` `fix(rtc): record disconnect grace deadlines`
+- `1d09102a0a976d208874e5ce3a42b82aaeac9601` `docs(rtc): clarify deadline metric ownership`
