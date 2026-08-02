@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/pion/webrtc/v4/pkg/media"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 )
 
@@ -401,6 +403,77 @@ func TestSessionsShareNonOwnedSynthDecoder(t *testing.T) {
 		t.Fatalf("second.Close() error = %v", err)
 	}
 	<-second.done
+}
+
+func TestManagerPropagatesSharedSynthDecoderAndCleanupKeepsItNonOwned(t *testing.T) {
+	manager := newTestManager(t)
+	decoder := manager.config.SynthDecoder
+	originalBuilder := manager.buildSession
+	var requests []*synthdecode.Decoder
+	manager.buildSession = func(request sessionBuildRequest) (*Session, error) {
+		requests = append(requests, request.synthDecoder)
+		session, err := originalBuilder(request)
+		if err == nil && session.synthDecoder != request.synthDecoder {
+			t.Fatalf("newSession Decoder = %p, request Decoder %p", session.synthDecoder, request.synthDecoder)
+		}
+		return session, err
+	}
+	firstClient, _ := newBrowserPeer(t)
+	secondClient, _ := newBrowserPeer(t)
+	firstAnswer := negotiatePair(t, manager, firstClient)
+	secondAnswer := negotiatePair(t, manager, secondClient)
+	first := activeSession(t, manager, firstAnswer.SessionID)
+	second := activeSession(t, manager, secondAnswer.SessionID)
+	if len(requests) != 2 {
+		t.Fatalf("sessionBuildRequest count = %d, want 2", len(requests))
+	}
+	for index, requestDecoder := range requests {
+		if requestDecoder != decoder {
+			t.Fatalf("sessionBuildRequest[%d] Decoder = %p, ManagerConfig Decoder %p",
+				index, requestDecoder, decoder)
+		}
+	}
+	if first.synthDecoder != decoder || second.synthDecoder != decoder {
+		t.Fatal("ManagerConfig -> sessionBuildRequest -> newSession -> Session changed Decoder pointer")
+	}
+
+	// 所有する3 resourceだけをwrapperで数え、Decoderがcleanup集合へ紛れ込まないことを固定する。
+	originalClosers := first.closers
+	var closerCalls atomic.Int32
+	first.closers = sessionResourceClosers{
+		peer: func() error {
+			closerCalls.Add(1)
+			return originalClosers.peer()
+		},
+		codec: func() error {
+			closerCalls.Add(1)
+			return originalClosers.codec()
+		},
+		pipeline: func() error {
+			closerCalls.Add(1)
+			return originalClosers.pipeline()
+		},
+	}
+	if err := first.Close("decoder_ownership_test"); err != nil {
+		t.Fatalf("first.Close() error = %v", err)
+	}
+	<-first.done
+	if closerCalls.Load() != 3 {
+		t.Fatalf("Session cleanup closer calls = %d, want exactly peer/codec/pipeline", closerCalls.Load())
+	}
+	if second.synthDecoder != decoder {
+		t.Fatal("closing first Session changed second Session Decoder reference")
+	}
+	if err := second.Close("test_teardown"); err != nil {
+		t.Fatalf("second.Close() error = %v", err)
+	}
+	<-second.done
+	if err := firstClient.Close(); err != nil {
+		t.Errorf("first client.Close() error = %v", err)
+	}
+	if err := secondClient.Close(); err != nil {
+		t.Errorf("second client.Close() error = %v", err)
+	}
 }
 
 func TestNewSessionRejectsNilSynthDecoderBeforeResourceCreation(t *testing.T) {

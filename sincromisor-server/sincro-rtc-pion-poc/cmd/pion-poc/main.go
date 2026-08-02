@@ -42,14 +42,38 @@ func main() {
 // SIGINT / SIGTERMでは新規HTTP requestを停止し、process context cancel、Offer owner/sweeper join、
 // 全session closeを順に行う。listener起動失敗を含むshutdown failureはmainへ返し、下位packageでは終了しない。
 func run(args []string) error {
+	return runWithBoundaries(args, synthdecode.ExecRunner{}, serve)
+}
+
+// serveBoundaryは検証済みstartup resourceからHTTP listener lifecycleへ移る最後の境界である。
+type serveBoundary func(
+	config.Config,
+	*rtc.Manager,
+	*signaling.OfferRegistry,
+	context.CancelFunc,
+	*slog.Logger,
+) error
+
+// runWithBoundariesはstartup依存の検証完了後だけHTTP listener境界へ到達する。
+//
+// FFmpeg probeをpipeline/Manager/Offer registryより先に完了させ、失敗時はserveBoundaryを呼ばない。
+// runnerとserveBoundaryの注入は、この順序を実listenerなしで固定するstartup test seamである。
+func runWithBoundaries(
+	args []string,
+	runner synthdecode.CommandRunner,
+	serveProcess serveBoundary,
+) error {
 	cfg, err := config.Load(args)
 	if err != nil {
 		return err
 	}
+	if serveProcess == nil {
+		return errors.New("serve boundary must not be nil")
+	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	processCtx, cancelProcess := context.WithCancel(context.Background())
 	defer cancelProcess()
-	synthDecoder, err := newSynthDecoder(processCtx, cfg.FFmpegPath, synthdecode.ExecRunner{})
+	synthDecoder, err := newSynthDecoder(processCtx, cfg.FFmpegPath, runner)
 	if err != nil {
 		return err
 	}
@@ -79,7 +103,7 @@ func run(args []string) error {
 	if err != nil {
 		return fmt.Errorf("create offer registry: %w", err)
 	}
-	return serve(cfg, sessions, offers, cancelProcess, logger)
+	return serveProcess(cfg, sessions, offers, cancelProcess, logger)
 }
 
 // newSynthDecoderは解決済みpathからprocess-wide Decoderを作り、listener作成前にversionをprobeする。
