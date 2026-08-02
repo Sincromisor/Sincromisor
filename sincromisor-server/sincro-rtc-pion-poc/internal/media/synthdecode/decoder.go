@@ -55,6 +55,7 @@ type DecodeError struct {
 	Cause error
 }
 
+// Error はpayloadを含めず、分類と原因だけを診断文字列へ変換する。
 func (e *DecodeError) Error() string {
 	if e == nil {
 		return "<nil>"
@@ -364,6 +365,8 @@ func mapMora(input []protocol.SynthesizerMora, samples int) ([]TimedMora, error)
 	return output, nil
 }
 
+// decodePCMはFFmpegのlittle-endian s16le byte列をGoの符号付きsample列へ変換する。
+// channel数とsample rateは前段のFFmpeg引数で確定済みなので、ここでは表現変換だけを行う。
 func decodePCM(raw []byte) []int16 {
 	pcm := make([]int16, len(raw)/2)
 	for index := range pcm {
