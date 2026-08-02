@@ -54,12 +54,12 @@
 
 ## 高リスク統合タスクの追加設計
 
-| 層 | 使用する部品 | 合否の正本 |
-| --- | --- | --- |
-| Frontend | browser harness | browser、HTTP、下流の3台帳 |
-| pipeline | contract harness | 4 service台帳、generation、metric |
-| lifecycle | boundary harness | statuses、metric、資源sample |
-| 既存証拠 | repository試験 | commit、絶対command、test結果 |
+| 層        | 使用する部品     | 合否の正本                        |
+| --------- | ---------------- | --------------------------------- |
+| Frontend  | browser harness  | browser、HTTP、下流の3台帳        |
+| pipeline  | contract harness | 4 service台帳、generation、metric |
+| lifecycle | boundary harness | statuses、metric、資源sample      |
+| 既存証拠  | repository試験   | commit、絶対command、test結果     |
 
 各scenarioは依存部品を1つだけ所有者として指し、entrypointは順序、期限、cleanup、集約だけを所有する。
 scenario失敗後も残りを安全に実行できる場合は継続し、cleanup失敗時は以後を停止する。

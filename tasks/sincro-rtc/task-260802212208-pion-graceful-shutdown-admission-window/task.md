@@ -48,11 +48,11 @@ Gate 3ハーネスへ競合回避を持ち込まず、本番プロセスの終�
 
 ## 高リスク統合タスクの追加設計
 
-| 段階 | listener | initial Offer | 既存session操作 | 終了所有者 |
-| --- | --- | --- | --- | --- |
-| ready | 受付中 | 受理 | 受理 | process |
-| draining観測窓 | 受付中 | 503 | 終了処理中のため合否対象外 | process context、Offer registry、Manager |
-| HTTP停止後 | 停止 | 接続不能 | 接続不能 | `http.Server` |
+| 段階           | listener | initial Offer | 既存session操作            | 終了所有者                               |
+| -------------- | -------- | ------------- | -------------------------- | ---------------------------------------- |
+| ready          | 受付中   | 受理          | 受理                       | process                                  |
+| draining観測窓 | 受付中   | 503           | 終了処理中のため合否対象外 | process context、Offer registry、Manager |
+| HTTP停止後     | 停止     | 接続不能      | 接続不能                   | `http.Server`                            |
 
 `BeginDrain`より前に受理済みのinitial OfferはOffer registryの所有物として共通期限内に完了または失敗させる。
 観測窓内の新規initial Offerだけが503であり、接続拒否は合格値にしない。update Offerとcandidateは

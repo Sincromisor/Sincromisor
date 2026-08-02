@@ -37,14 +37,14 @@
   server→client結果を不正なMessagePackへ置換する。`held-close`は有効なresponseをproxy内へ保持した後、
   接続を閉じて保持bytesを破棄する。いずれも次のWebSocket upgradeを1回503で拒否し、その後は透過へ戻る。
 - 新規APIは次の最小契約に固定する。
-  - `pipelinecontract.New(Config{FixturesDir, ListenHost}) (*Set, error)`、
-    `Set.Addresses()`、`Set.Transcript()`、`Set.Verify()`、`Set.Close(context.Context)`。
-  - `wsproxy.NewSet(Config{Upstreams, Rules}) (*Set, error)`、`Set.Addresses()`、
-    `Set.Ledger()`、`Set.VerifyConsumed()`、`Set.Close(context.Context)`。
-  - `Rule`は`Service`、`Action=close|malformed|held-close`、`MatchOrdinal=1`、
-    `RejectReconnects=1`を持つ。方向はserver→clientに固定し、任意predicateは受理しない。
-  - `consuldev.Start(Config{Binary, Services}) (*Agent, error)`、
-    `Agent.Close(context.Context)`。Agentは内部の`process.Owner`を単独所有する。
+    - `pipelinecontract.New(Config{FixturesDir, ListenHost}) (*Set, error)`、
+      `Set.Addresses()`、`Set.Transcript()`、`Set.Verify()`、`Set.Close(context.Context)`。
+    - `wsproxy.NewSet(Config{Upstreams, Rules}) (*Set, error)`、`Set.Addresses()`、
+      `Set.Ledger()`、`Set.VerifyConsumed()`、`Set.Close(context.Context)`。
+    - `Rule`は`Service`、`Action=close|malformed|held-close`、`MatchOrdinal=1`、
+      `RejectReconnects=1`を持つ。方向はserver→clientに固定し、任意predicateは受理しない。
+    - `consuldev.Start(Config{Binary, Services}) (*Agent, error)`、
+      `Agent.Close(context.Context)`。Agentは内部の`process.Owner`を単独所有する。
 - 判定用errorは`ErrRuleUnconsumed`、`ErrProtocol`、`ErrIdentity`、`ErrPortInUse`、
   `ErrCleanup`とし、詳細をwrapして`errors.Is`可能にする。`Close`は冪等で、複数cleanup errorを
   `errors.Join`して返す。
@@ -59,12 +59,12 @@
 
 ## 高リスク統合タスクの追加設計
 
-| 所有物 | 作成 | 正常終了順 |
-| --- | --- | --- |
-| 契約サービス | `pipelinecontract.Set` | 接続close、listener close、worker join |
-| proxy | `wsproxy.Set` | 上流・下流接続close、listener close、worker join |
-| Consul登録 | `consuldev.Agent` | 4登録解除 |
-| Consul process | `consuldev.Agent` | terminate、`Wait` |
+| 所有物         | 作成                   | 正常終了順                                       |
+| -------------- | ---------------------- | ------------------------------------------------ |
+| 契約サービス   | `pipelinecontract.Set` | 接続close、listener close、worker join           |
+| proxy          | `wsproxy.Set`          | 上流・下流接続close、listener close、worker join |
+| Consul登録     | `consuldev.Agent`      | 4登録解除                                        |
+| Consul process | `consuldev.Agent`      | terminate、`Wait`                                |
 
 `held-close`は旧接続で生成済みの有効responseを配信せず破棄し、generation切替後に対応出力が
 観測されないことを全4サービスで確認する。契約サービス内部状態だけで合格にせず、
