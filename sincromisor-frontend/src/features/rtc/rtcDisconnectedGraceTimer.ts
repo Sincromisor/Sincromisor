@@ -18,6 +18,7 @@ export class RtcDisconnectedGraceTimer {
         this.onGraceExpired = params.onGraceExpired;
     }
 
+    /** 初回disconnectedでtimerを開始し、既に待機中ならfalseを返す。 */
     schedule(): boolean {
         if (this.timerId !== undefined) {
             return false;
@@ -29,6 +30,7 @@ export class RtcDisconnectedGraceTimer {
         return true;
     }
 
+    /** connected/completed復帰またはowner close時に待機中timerを解除する。 */
     cancel(): void {
         if (this.timerId !== undefined) {
             clearTimeout(this.timerId);

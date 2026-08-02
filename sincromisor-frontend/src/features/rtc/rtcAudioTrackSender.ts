@@ -6,6 +6,10 @@ type RtcAudioTrackSenderParams = {
     peerConnection: RTCPeerConnection;
 };
 
+/**
+ * 現PeerConnectionのsender trackを一括mute/unmuteする。
+ * track ownershipやstop状態は変更せず、enabledだけを更新する。
+ */
 export function setRtcAudioMute(params: RtcAudioTrackSenderParams): void {
     params.peerConnection.getSenders().forEach((sender: RTCRtpSender) => {
         if (sender.track) {
@@ -14,6 +18,12 @@ export function setRtcAudioMute(params: RtcAudioTrackSenderParams): void {
     });
 }
 
+/**
+ * logical clientが保持するlive audio trackを現bundleのaudio senderへ移す。
+ *
+ * sender欠落時はaddTrackへfallbackする。旧trackのstopはmedia device ownerへ委ね、
+ * bundle replacement用trackのlivenessをこのhelperでは変更しない。
+ */
 export async function replaceRtcAudioTrack(
     params: RtcAudioTrackSenderParams & { audioTrack: MediaStreamTrack },
 ): Promise<void> {

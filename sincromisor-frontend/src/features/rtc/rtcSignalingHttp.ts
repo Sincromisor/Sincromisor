@@ -1,7 +1,9 @@
 import { frontendLogger } from "../../shared/logging/appLogger";
 
+/** typed failureの復旧判断に使うsignaling operation区分。 */
 export type RtcSignalingOperation = "initial-offer" | "update-offer" | "candidate";
 
+/** retryのdeadline、sleep、full jitterを同じ時刻系で制御する注入clock。 */
 export type RtcRetryClock = {
     clearTimeout: (timerId: ReturnType<typeof setTimeout>) => void;
     now: () => number;
@@ -9,6 +11,10 @@ export type RtcRetryClock = {
     setTimeout: (callback: () => void, delayMs: number) => ReturnType<typeof setTimeout>;
 };
 
+/**
+ * 1つのimmutable JSON requestをretry transportへ渡す入力。
+ * fetch/clockはtest注入用で、signalはPeerConnection generationのcloseを伝える。
+ */
 export type RtcSignalingRequest = {
     body: string;
     fetch?: typeof fetch;
@@ -64,6 +70,12 @@ export class RtcSignalingHttpError extends Error {
  * 場合は次のHTTP実行を開始しない。
  */
 export async function postRtcSignalingJson(request: RtcSignalingRequest): Promise<unknown> {
+    const response = await executeRtcSignalingWithRetry(request);
+    // HTTP retryはresponse受信までを対象とする。200 body parse failureはidentity不明のterminal errorであり再送しない。
+    return response.json();
+}
+
+async function executeRtcSignalingWithRetry(request: RtcSignalingRequest): Promise<Response> {
     const clock = request.retryClock ?? defaultClock;
     const fetchImplementation = request.fetch ?? fetch;
     const deadline = clock.now() + TOTAL_DEADLINE_MS;
@@ -88,7 +100,7 @@ export async function postRtcSignalingJson(request: RtcSignalingRequest): Promis
                 url: request.url,
             });
             if (response.ok) {
-                return response.json();
+                return response;
             }
             if (!isRetryableStatus(response.status) || execution === MAX_HTTP_EXECUTIONS) {
                 throw new RtcSignalingHttpError(

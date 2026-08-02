@@ -16,6 +16,10 @@ type RtcPeerConnectionEventParams = {
     sendIceCandidate: (candidate: RTCIceCandidateInit | null) => void;
 };
 
+/**
+ * browser ICE/signaling eventを1 generation分のowner callbackとdiagnostic logへ接続する。
+ * listener解除はPeerConnection closeに委ね、ownerはgeneration guardで旧callbackを無効化する。
+ */
 export function setupRtcPeerConnectionEvents(params: RtcPeerConnectionEventParams): void {
     params.peerConnection.addEventListener("icecandidate", (event) => {
         // event.candidate === null は end-of-candidates。サーバー側にも明示する。

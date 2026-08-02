@@ -26,6 +26,7 @@ export class RtcBundleDiagnostics {
         this.statsReporter = new RtcStatsReporter(params.logger);
     }
 
+    /** 現bundleを毎秒観測するstats collectorを開始し、既存timerは置き換える。 */
     start(): void {
         this.stop();
         this.intervalId = window.setInterval(() => {
@@ -35,6 +36,7 @@ export class RtcBundleDiagnostics {
         }, 1_000);
     }
 
+    /** stats timerを解放し、表示用集計stateをresetする。 */
     stop(): void {
         if (this.intervalId !== undefined) {
             clearInterval(this.intervalId);
@@ -43,10 +45,12 @@ export class RtcBundleDiagnostics {
         this.statsReporter.reset();
     }
 
+    /** 接続復帰後、次のfailure generationでsnapshotを再取得できるようにする。 */
     resetFailureCapture(): void {
         this.failureCaptured = false;
     }
 
+    /** 現generationの最初のICE failureだけをsession付きで採取する。 */
     async captureFailure(reason: string): Promise<void> {
         if (this.failureCaptured) {
             return;
