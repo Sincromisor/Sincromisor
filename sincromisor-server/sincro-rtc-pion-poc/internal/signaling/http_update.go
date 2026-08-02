@@ -3,7 +3,6 @@ package signaling
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/rtc"
@@ -35,7 +34,9 @@ func (s *Server) handleUpdateOffer(
 	}
 	ctx, cancel := context.WithTimeout(request.Context(), s.offers.config.GatherTimeout)
 	defer cancel()
-	answer, err := s.sessions.Update(ctx, rtc.UpdateOffer{
+	var answer rtc.Answer
+	var err error
+	answer, err = s.sessions.Update(ctx, rtc.UpdateOffer{
 		SDP: payload.SDP, Type: payload.Type, TalkMode: payload.TalkMode,
 		SessionID: sessionID, OfferRequestID: payload.OfferRequestID, Revision: payload.OfferRevision,
 	})
@@ -51,7 +52,8 @@ func (s *Server) handleUpdateOffer(
 	case errors.Is(err, context.DeadlineExceeded):
 		writeError(writer, http.StatusGatewayTimeout, "ICE candidate gathering timed out.")
 	default:
-		s.logger.Warn("update offer rejected", "session_id", sessionID, "error_type", fmt.Sprintf("%T", err))
+		s.logger.Warn("update offer rejected", "session_id", sessionID, "reason", "offer_error")
 		writeError(writer, http.StatusBadRequest, "Invalid update offer SDP.")
 	}
+	s.afterMutation()
 }

@@ -70,9 +70,10 @@ func (s *Session) answerReady() error {
 		s.logTransitionError(err)
 		return err
 	}
-	if err := s.lifecycle.deadlines.replace(preConnectTimeout, func() {
+	if err := s.lifecycle.deadlines.replace(preConnectTimeout, s.SafeCallback("deadline_pre_connect", func() {
+		s.metrics().Deadline("pre_connect")
 		s.closeIfState(stateAnswerReady, "pre_connect_timeout")
-	}); err != nil {
+	})); err != nil {
 		s.logTransitionError(err)
 		return err
 	}

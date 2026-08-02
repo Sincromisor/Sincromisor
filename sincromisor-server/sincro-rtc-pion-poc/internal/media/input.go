@@ -215,6 +215,7 @@ func (s *inputStream) decode(payload []byte, observer InputObserver, submit Subm
 	pcm := make([]int16, maxOpusFrameSamples*maxChannels)
 	samplesPerChannel, err := s.decoder.DecodeToInt16(payload, pcm)
 	if err != nil {
+		observeInputCodecError(observer)
 		return fmt.Errorf("decode opus packet: %w", err)
 	}
 	mono := downmixStereo(pcm[:samplesPerChannel*maxChannels])
@@ -232,6 +233,7 @@ func (s *inputStream) decode(payload []byte, observer InputObserver, submit Subm
 			}
 			return fmt.Errorf("submit pipeline PCM: %w", err)
 		}
+		observeAcceptedInput(observer)
 	}
 	return nil
 }

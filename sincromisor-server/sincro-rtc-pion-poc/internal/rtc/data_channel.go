@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/pion/webrtc/v4"
+
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/observability"
 )
 
 const (
@@ -86,6 +88,17 @@ type DataChannelDispatcher struct {
 	telopSendDropped atomic.Uint64
 	generationPurged atomic.Uint64
 	activeWorkers    atomic.Int64
+	recorder         observability.Recorder
+	recoverPanic     func(stage string)
+}
+
+// DataChannelDispatcherOptions connects payload-free metrics and the owning
+// Session panic boundary. RecoverPanic must be safe after Session closing.
+type DataChannelDispatcherOptions struct {
+	// Recorder receives payload-free queue and send-error events.
+	Recorder observability.Recorder
+	// RecoverPanic transfers worker/callback panic ownership to the Session.
+	RecoverPanic func(stage string)
 }
 
 // NewDataChannelDispatcher はidle dispatcherを作り、session context cancellationをworkerへ伝播する。
@@ -95,17 +108,30 @@ func NewDataChannelDispatcher(
 	parent context.Context,
 	logger *slog.Logger,
 	onError func(error),
+	options ...DataChannelDispatcherOptions,
 ) (*DataChannelDispatcher, error) {
 	if parent == nil || logger == nil || onError == nil {
 		return nil, errors.New("data channel dispatcher dependencies must not be nil")
 	}
 	ctx, cancel := context.WithCancel(parent)
+	recorder := observability.Discard()
+	recoverPanic := func(string) {}
+	if len(options) > 0 {
+		if options[0].Recorder != nil {
+			recorder = options[0].Recorder
+		}
+		if options[0].RecoverPanic != nil {
+			recoverPanic = options[0].RecoverPanic
+		}
+	}
 	return &DataChannelDispatcher{
 		ctx: ctx, cancel: cancel, logger: logger, onError: onError,
 		backpressureTimeout: bufferedAmountTimeout,
 		textWake:            make(chan struct{}, 1),
 		telopWake:           make(chan struct{}, 1),
 		generationChanged:   make(chan struct{}),
+		recorder:            recorder,
+		recoverPanic:        recoverPanic,
 	}, nil
 }
 
@@ -140,14 +166,14 @@ func (d *DataChannelDispatcher) attach(channel dataChannelWriter, text bool) err
 	}
 	*target = channel
 	channel.SetBufferedAmountLowThreshold(bufferedAmountLow)
-	channel.OnBufferedAmountLow(func() { signal(wake) })
-	channel.OnClose(func() {
+	channel.OnBufferedAmountLow(d.safeCallback("data_channel_buffered_low", func() { signal(wake) }))
+	channel.OnClose(d.safeCallback("data_channel_close", func() {
 		select {
 		case <-d.ctx.Done():
 		default:
 			d.onError(errors.New("data channel closed"))
 		}
-	})
+	}))
 	d.wg.Add(1)
 	d.mu.Unlock()
 	go d.run(channel, text, wake)
@@ -170,15 +196,22 @@ func (d *DataChannelDispatcher) Purge() {
 
 func (d *DataChannelDispatcher) purgeLocked() {
 	count := len(d.textQueue) + len(d.telopQueue)
+	textCount, telopCount := len(d.textQueue), len(d.telopQueue)
 	d.generationEpoch++
 	close(d.generationChanged)
 	d.generationChanged = make(chan struct{})
 	d.textQueue = nil
 	d.telopQueue = nil
+	if textCount > 0 {
+		d.recorder.QueueDepthDelta("text", -float64(textCount))
+	}
+	if telopCount > 0 {
+		d.recorder.QueueDepthDelta("telop", -float64(telopCount))
+	}
 	if count > 0 {
 		total := d.generationPurged.Add(uint64(count))
 		d.logger.Info("purged data channel events",
-			"queue", "text_telop", "action", "generation_purge", "count", total,
+			"stage", "data_channel_queue", "reason", "generation", "count", total,
 		)
 	}
 }
@@ -214,10 +247,17 @@ func (d *DataChannelDispatcher) Close() error {
 		d.wg.Wait()
 		d.sendMu.Lock()
 		d.mu.Lock()
+		textCount, telopCount := len(d.textQueue), len(d.telopQueue)
 		d.textQueue = nil
 		d.telopQueue = nil
 		d.mu.Unlock()
 		d.sendMu.Unlock()
+		if textCount > 0 {
+			d.recorder.QueueDepthDelta("text", -float64(textCount))
+		}
+		if telopCount > 0 {
+			d.recorder.QueueDepthDelta("telop", -float64(telopCount))
+		}
 	})
 	return nil
 }
@@ -225,6 +265,9 @@ func (d *DataChannelDispatcher) Close() error {
 func (d *DataChannelDispatcher) run(channel dataChannelWriter, text bool, wake <-chan struct{}) {
 	d.activeWorkers.Add(1)
 	defer func() {
+		if recover() != nil {
+			d.recoverPanic("data_channel_worker")
+		}
 		d.activeWorkers.Add(-1)
 		d.wg.Done()
 	}()
@@ -245,26 +288,32 @@ func (d *DataChannelDispatcher) run(channel dataChannelWriter, text bool, wake <
 			d.onError(err)
 			return
 		}
-		d.sendMu.Lock()
-		d.mu.Lock()
-		stale := epoch != d.generationEpoch
-		d.mu.Unlock()
+		sendErr, stale := func() (error, bool) {
+			d.sendMu.Lock()
+			defer d.sendMu.Unlock()
+			d.mu.Lock()
+			stale := epoch != d.generationEpoch
+			d.mu.Unlock()
+			if stale {
+				return nil, true
+			}
+			return channel.SendText(string(payload)), false
+		}()
 		if stale {
-			d.sendMu.Unlock()
 			continue
 		}
-		if err := channel.SendText(string(payload)); err != nil {
+		if sendErr != nil {
 			if text {
-				d.sendMu.Unlock()
-				d.onError(fmt.Errorf("send reliable text data channel payload: %w", err))
+				d.recorder.DataChannelError("text")
+				d.onError(fmt.Errorf("send reliable text data channel payload: %w", sendErr))
 				return
 			}
+			d.recorder.DataChannelError("telop")
 			count := d.telopSendDropped.Add(1)
 			d.logger.Warn("dropped data channel event",
-				"queue", "telop", "action", "drop_send_failure", "count", count,
+				"stage", "telop", "reason", "data_channel_error", "count", count,
 			)
 		}
-		d.sendMu.Unlock()
 	}
 }
 
@@ -281,6 +330,11 @@ func (d *DataChannelDispatcher) pop(text bool) ([]byte, uint64, <-chan struct{},
 	payload := (*queue)[0]
 	copy(*queue, (*queue)[1:])
 	*queue = (*queue)[:len(*queue)-1]
+	queueName := "telop"
+	if text {
+		queueName = "text"
+	}
+	d.recorder.QueueDepthDelta(queueName, -1)
 	return payload, d.generationEpoch, d.generationChanged, true
 }
 
@@ -300,7 +354,7 @@ func (d *DataChannelDispatcher) waitWritable(
 	timer := time.NewTimer(d.backpressureTimeout)
 	defer timer.Stop()
 	low := make(chan struct{}, 1)
-	channel.OnBufferedAmountLow(func() { signal(low) })
+	channel.OnBufferedAmountLow(d.safeCallback("data_channel_backpressure", func() { signal(low) }))
 	for {
 		if channel.ReadyState() != webrtc.DataChannelStateOpen {
 			return errors.New("data channel closed during backpressure")
@@ -317,6 +371,17 @@ func (d *DataChannelDispatcher) waitWritable(
 			return errors.New("data channel backpressure timeout")
 		case <-low:
 		}
+	}
+}
+
+func (d *DataChannelDispatcher) safeCallback(stage string, callback func()) func() {
+	return func() {
+		defer func() {
+			if recover() != nil {
+				d.recoverPanic(stage)
+			}
+		}()
+		callback()
 	}
 }
 

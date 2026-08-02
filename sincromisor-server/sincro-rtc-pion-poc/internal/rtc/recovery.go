@@ -8,6 +8,14 @@ import "github.com/pion/webrtc/v4"
 // grace超過は15秒のrestart deadlineへ進み、connected通知だけではcancelせず成功updateを要求する。
 // closedとdeadline発火は既存close-onceへ収束し、重複callbackは期限を延長しない。
 func (s *Session) handleICEConnectionState(state webrtc.ICEConnectionState) {
+	s.lifecycle.mu.Lock()
+	from := s.lifecycle.iceState
+	if from == "" {
+		from = webrtc.ICEConnectionStateNew.String()
+	}
+	s.lifecycle.iceState = state.String()
+	s.lifecycle.mu.Unlock()
+	s.metrics().ICETransition(from, state.String())
 	switch state {
 	case webrtc.ICEConnectionStateClosed:
 		_ = s.Close("ice_closed")
@@ -34,12 +42,16 @@ func (s *Session) startDisconnectGrace() {
 		return
 	}
 	s.lifecycle.recovery = recoveryGrace
-	if err := s.lifecycle.recoveryDeadlines.replace(disconnectGraceTimeout, s.disconnectGraceExpired); err != nil {
-		go func() { _ = s.Close("deadline_error") }()
+	if err := s.lifecycle.recoveryDeadlines.replace(
+		disconnectGraceTimeout,
+		s.SafeCallback("deadline_disconnect_grace", s.disconnectGraceExpired),
+	); err != nil {
+		_ = s.Close("deadline_error")
 	}
 }
 
-// disconnectGraceExpired は猶予をrestart-requiredへ進め、追加15秒だけ同じSessionを保持する。
+// disconnectGraceExpired は猶予期限をdisconnect_graceとして1回記録してrestart-requiredへ進め、
+// 追加15秒だけ同じSessionを保持する。後続restart期限の記録はrestartDeadlineExpiredが所有する。
 func (s *Session) disconnectGraceExpired() {
 	s.lifecycle.mu.Lock()
 	if s.lifecycle.terminalLocked() || s.lifecycle.recovery != recoveryGrace {
@@ -47,7 +59,11 @@ func (s *Session) disconnectGraceExpired() {
 		return
 	}
 	s.lifecycle.recovery = recoveryNeedsRestart
-	err := s.lifecycle.recoveryDeadlines.replace(restartDeadlineTimeout, s.restartDeadlineExpired)
+	s.metrics().Deadline("disconnect_grace")
+	err := s.lifecycle.recoveryDeadlines.replace(
+		restartDeadlineTimeout,
+		s.SafeCallback("deadline_restart", s.restartDeadlineExpired),
+	)
 	s.lifecycle.mu.Unlock()
 	if err != nil {
 		_ = s.Close("deadline_error")
@@ -62,7 +78,10 @@ func (s *Session) requireRestart() {
 		return
 	}
 	s.lifecycle.recovery = recoveryNeedsRestart
-	err := s.lifecycle.recoveryDeadlines.replace(restartDeadlineTimeout, s.restartDeadlineExpired)
+	err := s.lifecycle.recoveryDeadlines.replace(
+		restartDeadlineTimeout,
+		s.SafeCallback("deadline_restart", s.restartDeadlineExpired),
+	)
 	s.lifecycle.mu.Unlock()
 	if err != nil {
 		_ = s.Close("deadline_error")
@@ -77,9 +96,10 @@ func (s *Session) restartDeadlineExpired() {
 		return
 	}
 	started := s.beginCloseLocked("ice_restart_timeout")
+	s.metrics().Deadline("restart")
 	s.lifecycle.mu.Unlock()
 	if started {
-		go s.cleanup("ice_restart_timeout")
+		s.startCleanup("ice_restart_timeout")
 	}
 }
 

@@ -48,6 +48,8 @@ const (
 	EventDecodeFailed EventKind = "decode_failed"
 	// EventMessageTooLarge は固定 read/write limit を超えたことを表す。
 	EventMessageTooLarge EventKind = "message_too_large"
+	// EventPanic はfirst-party connection workerのpanicをpayloadなしで分類する。
+	EventPanic EventKind = "panic"
 )
 
 // Event は最初の予期しない terminal failure を caller へ通知する。

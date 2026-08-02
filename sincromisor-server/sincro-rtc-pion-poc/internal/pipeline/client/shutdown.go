@@ -79,6 +79,11 @@ func (c *baseClient) close() error {
 func closeHandshake(conn *websocket.Conn, rawConn net.Conn, timeout time.Duration) error {
 	result := make(chan error, 1)
 	go func() {
+		defer func() {
+			if recover() != nil {
+				result <- errors.New("websocket close helper panic")
+			}
+		}()
 		result <- conn.Close(websocket.StatusNormalClosure, "")
 	}()
 	timer := time.NewTimer(timeout)

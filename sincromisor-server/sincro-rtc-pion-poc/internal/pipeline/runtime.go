@@ -11,25 +11,19 @@ import (
 // browser PCM → extraction → recognition → processor → synthesized output.
 // Each loop is tied to one generation context; no stage retries an in-flight item.
 func (c *Coordinator) pcmLoop(work *generationWork, extractor ExtractorClient) {
-	defer work.wg.Done()
 	for {
-		select {
-		case <-work.ctx.Done():
+		frame, ok := work.input.pop(work.ctx)
+		if !ok {
 			return
-		case frame, ok := <-work.input.values:
-			if !ok {
-				return
-			}
-			if err := extractor.SendPCM(work.ctx, frame); err != nil {
-				c.requestReset(work.number, pclient.ServiceExtractor, err)
-				return
-			}
+		}
+		if err := extractor.SendPCM(work.ctx, frame); err != nil {
+			c.requestReset(work.number, pclient.ServiceExtractor, err)
+			return
 		}
 	}
 }
 
 func (c *Coordinator) extractorLoop(work *generationWork, extractor ExtractorClient, recognizer RecognizerClient) {
-	defer work.wg.Done()
 	for {
 		select {
 		case <-work.ctx.Done():
@@ -54,7 +48,6 @@ func (c *Coordinator) extractorLoop(work *generationWork, extractor ExtractorCli
 }
 
 func (c *Coordinator) recognizerLoop(work *generationWork, recognizer RecognizerClient, processor ProcessorClient) {
-	defer work.wg.Done()
 	for {
 		select {
 		case <-work.ctx.Done():
@@ -99,7 +92,6 @@ func (c *Coordinator) recognizerLoop(work *generationWork, recognizer Recognizer
 }
 
 func (c *Coordinator) processorLoop(work *generationWork, processor ProcessorClient, synth SynthesizerClient) {
-	defer work.wg.Done()
 	for {
 		select {
 		case <-work.ctx.Done():
@@ -136,7 +128,6 @@ func (c *Coordinator) processorLoop(work *generationWork, processor ProcessorCli
 }
 
 func (c *Coordinator) synthLoop(work *generationWork, synth SynthesizerClient) {
-	defer work.wg.Done()
 	for {
 		select {
 		case <-work.ctx.Done():
