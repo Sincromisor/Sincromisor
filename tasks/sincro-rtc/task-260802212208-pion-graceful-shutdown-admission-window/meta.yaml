@@ -1,14 +1,14 @@
 id: task-260802212208-pion-graceful-shutdown-admission-window
 title: Pion graceful shutdown中の新規受付拒否を観測可能にする
 category: sincro-rtc
-status: open
+status: done
 depends_on:
   - task-260802032922-pion-phase-3-observability-gate-3
 superseded_by: null
 review: APPROVED
 reviewed_sha: 1c5368700d8502680bb41ca9590f430105138497
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 2
 created_at: 2026-08-02
-closed_at: null
+closed_at: 2026-08-03
 legacy_ids: []
