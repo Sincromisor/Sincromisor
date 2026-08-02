@@ -108,6 +108,73 @@ func TestDecodeRejectsInputBoundariesBeforeProcess(t *testing.T) {
 	}
 }
 
+func TestDecodeFormatErrorMatrixReturnsKindAndZeroResult(t *testing.T) {
+	formats := []string{"audio/wav", "audio/aac", "audio/ogg", "audio/ogg;codecs=opus"}
+	overEncoded := make([]byte, maxEncodedBytes+1)
+	overDecoded := make([]byte, maxPCMBytes+1)
+	for _, audioFormat := range formats {
+		audioFormat := audioFormat
+		t.Run(audioFormat, func(t *testing.T) {
+			t.Parallel()
+			tests := []struct {
+				name   string
+				kind   ErrorKind
+				input  protocol.SynthesizerResult
+				runner *fakeRunner
+				cancel bool
+			}{
+				{
+					name: "empty", kind: ErrorInvalid,
+					input: func() protocol.SynthesizerResult {
+						value := validResult(audioFormat)
+						value.Voice = nil
+						return value
+					}(),
+					runner: &fakeRunner{},
+				},
+				{
+					name: "8 MiB plus 1", kind: ErrorLimit,
+					input: func() protocol.SynthesizerResult {
+						value := validResult(audioFormat)
+						value.Voice = overEncoded
+						return value
+					}(),
+					runner: &fakeRunner{},
+				},
+				{
+					name: "over 120 seconds", kind: ErrorLimit,
+					input:  validResult(audioFormat),
+					runner: &fakeRunner{stdout: overDecoded},
+				},
+				{
+					name: "five second timeout", kind: ErrorTimeout,
+					input:  validResult(audioFormat),
+					runner: &fakeRunner{waitForContext: true},
+				},
+				{
+					name: "caller cancel", kind: ErrorProcess,
+					input:  validResult(audioFormat),
+					runner: &fakeRunner{waitForContext: true},
+					cancel: true,
+				},
+			}
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					ctx := context.Background()
+					if test.cancel {
+						cancelCtx, cancel := context.WithCancel(ctx)
+						cancel()
+						ctx = cancelCtx
+					}
+					result, err := newFakeDecoder(t, test.runner).Decode(ctx, test.input)
+					assertDecodeKind(t, err, test.kind)
+					assertZeroDecodedSpeech(t, result)
+				})
+			}
+		})
+	}
+}
+
 func TestDecodeRejectsProcessAndOutputFailuresWithoutPartialResult(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -264,6 +331,13 @@ func assertDecodeKind(t *testing.T, err error, want ErrorKind) {
 	}
 	if decodeErr.Kind != want {
 		t.Fatalf("DecodeError.Kind = %q, want %q; error=%v", decodeErr.Kind, want, err)
+	}
+}
+
+func assertZeroDecodedSpeech(t *testing.T, result DecodedSpeech) {
+	t.Helper()
+	if result.SpeechID != 0 || result.PCM != nil || result.Mora != nil {
+		t.Fatalf("DecodedSpeech = %#v, want zero value on error", result)
 	}
 }
 
