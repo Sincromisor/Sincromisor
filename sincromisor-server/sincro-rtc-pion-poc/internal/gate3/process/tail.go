@@ -3,7 +3,8 @@ package process
 import "sync"
 
 // tailBuffer は出力 producer ごとに独立した有限 buffer を所有する。
-// 上限超過時は古い byte だけを捨て、終了診断に有用な末尾を残す。
+// 上限超過時は古い byte だけを捨て、終了診断に有用な末尾を残す。上限の変更リスクと
+// 確認境界は、公開結果の契約を持つ Output のコメントに集約する。
 type tailBuffer struct {
 	mu        sync.Mutex
 	limit     int

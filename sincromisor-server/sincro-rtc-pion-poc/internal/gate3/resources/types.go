@@ -6,9 +6,26 @@ import (
 )
 
 const (
-	sampleInterval     = 250 * time.Millisecond
+	// sampleInterval と baselineSampleCount は短い fd / socket leakを観測できる時間分解能と、
+	// 正常cleanup中の一時的な揺れを基準値へ混ぜすぎない採取量を固定する。間隔を長くすると
+	// sample間で解消する短時間leakを見逃し、短くするかsample数を減らすとschedulerの揺れで
+	// 基準値が不安定になる。変更時はCaptureBaselineの実採取列と実Registry/procfs境界を確認する。
+	sampleInterval      = 250 * time.Millisecond
+	baselineSampleCount = 3
+
+	// convergenceTimeout と requiredStableRuns は cleanup の一過性ゼロを収束と誤認せず、
+	// 壊れたprocessでharnessを10秒より長く停滞させない。値を緩めると再増加するleakを見逃し、
+	// 厳しくすると正常cleanupを誤失敗にする。変更時は非連続列、3連続列、閾値超過、期限の
+	// WaitForConvergence orchestrationを一組で確認する。
 	convergenceTimeout = 10 * time.Second
 	requiredStableRuns = 3
+
+	// resourceHeadroom と goroutineHeadroom は runtime / HTTP観測自身の小さな揺れだけを許容する。
+	// 拡大するとsession由来resource leakを正常と誤判定し、縮小すると採取用fdやruntime workerで
+	// 正常系を誤失敗にする。変更時は実procfs、子processのnil goroutine、同一processの
+	// runtime.NumGoroutine、および閾値を1超える収束列を確認する。
+	resourceHeadroom  = 2
+	goroutineHeadroom = 5
 )
 
 var (
