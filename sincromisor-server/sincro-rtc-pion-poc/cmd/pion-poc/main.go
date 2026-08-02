@@ -180,11 +180,7 @@ func serve(
 	}
 	serverErrors := make(chan error, 1)
 	go func() {
-		logger.Info("pion poc listening",
-			"http", cfg.HTTPAddress,
-			"frontend_dir", cfg.FrontendDir,
-			"initial_goroutines", runtime.NumGoroutine(),
-		)
+		logListenerReady(logger, runtime.NumGoroutine())
 		serverErrors <- server.ListenAndServe()
 	}()
 
@@ -197,8 +193,8 @@ func serve(
 		if !errors.Is(err, http.ErrServerClosed) {
 			serveErr = fmt.Errorf("serve http: %w", err)
 		}
-	case signalValue := <-signals:
-		logger.Info("shutdown signal received", "signal", signalValue.String())
+	case <-signals:
+		logShutdownRequested(logger)
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
@@ -213,9 +209,22 @@ func serve(
 	if err := errors.Join(serveErr, httpErr, offerErr, sessionErr); err != nil {
 		return fmt.Errorf("shutdown: %w", err)
 	}
-	logger.Info("pion poc stopped",
-		"active_sessions", sessions.Count(),
-		"final_goroutines", runtime.NumGoroutine(),
-	)
+	logShutdownComplete(logger, sessions.Count())
 	return nil
+}
+
+// 以下の3つのprocess lifecycle log helperは、運用上の段階と有限な集計値だけを公開するprivacy境界である。
+//
+// listener address、Frontend path、signal名、終了時goroutine数は環境情報を漏らすため記録しない。
+// fieldを追加する場合はstructured log allow-listとprivacy契約を先に改訂する。
+func logListenerReady(logger *slog.Logger, goroutineCount int) {
+	logger.Info("pion poc listening", "stage", "listener_ready", "count", goroutineCount)
+}
+
+func logShutdownRequested(logger *slog.Logger) {
+	logger.Info("shutdown signal received", "reason", "process_shutdown")
+}
+
+func logShutdownComplete(logger *slog.Logger, activeSessionCount int) {
+	logger.Info("pion poc stopped", "stage", "shutdown_complete", "count", activeSessionCount)
 }
