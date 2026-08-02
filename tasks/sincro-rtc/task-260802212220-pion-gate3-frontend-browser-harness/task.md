@@ -52,11 +52,11 @@ Playwrightの初期化scriptで実`RTCPeerConnection`の状態イベントを決
 
 ## 高リスク統合タスクの追加設計
 
-| イベント | 発生元 | 合否の外部観測 |
-| --- | --- | --- |
-| `failed`の模擬 | Playwright初期化script | 現行Frontendがupdate Offerを送る |
-| ICE restart | 実`RTCPeerConnection` | revision 2、同一session ID、実接続状態復旧 |
-| 2 turn目 | 現行Frontend | HTTP台帳、下流台帳、既存DataChannel受信 |
+| イベント       | 発生元                 | 合否の外部観測                             |
+| -------------- | ---------------------- | ------------------------------------------ |
+| `failed`の模擬 | Playwright初期化script | 現行Frontendがupdate Offerを送る           |
+| ICE restart    | 実`RTCPeerConnection`  | revision 2、同一session ID、実接続状態復旧 |
+| 2 turn目       | 現行Frontend           | HTTP台帳、下流台帳、既存DataChannel受信    |
 
 test scriptはrestartの開始条件だけを作る。Offer生成、HTTP送信、Answer適用、candidate、DataChannel、
 会話はproduction経路を差し替えない。初期化scriptのcleanupはpage/context終了前に行う。

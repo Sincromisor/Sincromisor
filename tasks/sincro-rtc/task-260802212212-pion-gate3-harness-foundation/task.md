@@ -71,10 +71,11 @@ scenarios[]: {
 }
 ```
 
-  時刻はUTCのRFC 3339で`started_at <= ended_at`、durationとcountは整数、scenario IDは
-  `^[A-Z0-9]+(?:-[A-Z0-9]+)+$`とする。同一document内のID重複、必須field欠落、enum矛盾を拒否する。
-  writerは同directoryの0600一時fileをfsync後、hard linkで既存targetを上書きせず公開し、
-  directoryもfsyncする。scenario失敗でもcleanupを確定してからdocumentを渡す。
+時刻はUTCのRFC 3339で`started_at <= ended_at`、durationとcountは整数、scenario IDは
+`^[A-Z0-9]+(?:-[A-Z0-9]+)+$`とする。同一document内のID重複、必須field欠落、enum矛盾を拒否する。
+writerは同directoryの0600一時fileをfsync後、hard linkで既存targetを上書きせず公開し、
+directoryもfsyncする。scenario失敗でもcleanupを確定してからdocumentを渡す。
+
 - enumの組合せは、`PASS`なら`failure_class=NONE`、`FAIL`または`NOT_OBSERVED`なら
   `failure_class=HARNESS|PRODUCT|ENVIRONMENT`とする。cleanupは`PASS`なら`error=null`、
   `FAIL`なら空でないerrorを必須にし、scenario判定とは独立して記録する。
@@ -88,11 +89,11 @@ scenarios[]: {
 
 ## 高リスク統合タスクの追加設計
 
-| 資源 | 作成者 | 正常終了 | 期限超過 |
-| --- | --- | --- | --- |
-| 子プロセス | `process.Owner` | SIGTERM後`Wait` | 1秒後SIGKILLして`Wait` |
-| 採取worker | `resources.Sampler` | context cancel後join | errorとして終了 |
-| 成果物一時file | `report.Writer` | hard link公開後にunlink | link失敗時にunlink |
+| 資源           | 作成者              | 正常終了                | 期限超過               |
+| -------------- | ------------------- | ----------------------- | ---------------------- |
+| 子プロセス     | `process.Owner`     | SIGTERM後`Wait`         | 1秒後SIGKILLして`Wait` |
+| 採取worker     | `resources.Sampler` | context cancel後join    | errorとして終了        |
+| 成果物一時file | `report.Writer`     | hard link公開後にunlink | link失敗時にunlink     |
 
 上位scenarioが失敗してもcleanup結果を成果物へ残す。cleanup失敗は元の失敗を上書きせず、複合errorとする。
 hard link失敗時はtargetを作らず一時fileを削除する。link成功後の一時file削除またはdirectory fsyncが

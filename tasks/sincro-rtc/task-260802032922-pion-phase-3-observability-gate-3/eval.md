@@ -65,8 +65,8 @@ RTCP、共通5秒drain、structured-log privacyにも回帰はない。
   `1d09102a0a976d208874e5ce3a42b82aaeac9601`でlint/build/testの3 stepすべてcache hit。
   frontend testは577 passed、2 skipped。
 - `go test ./internal/observability ./internal/rtc -run
-  'TestRegistryDeadlineStagesMatchFixedSchema|TestDisconnectGraceExpiryRecordsDedicatedDeadlineExactlyOnce|TestDisconnectedGraceThenRestartDeadlineCloses'
-  -count=1` — PASS（2 package）。
+'TestRegistryDeadlineStagesMatchFixedSchema|TestDisconnectGraceExpiryRecordsDedicatedDeadlineExactlyOnce|TestDisconnectedGraceThenRestartDeadlineCloses'
+-count=1` — PASS（2 package）。
 - `/tmp/go1.26.5-toolchain/bin/go test -race ./internal/... ./cmd/pion-poc -count=1`
   — PASS（11 package）。loopback/netlinkを使うため許可済み境界で実行した。
 - `git diff --check 36f8476..1d09102` — PASS。
