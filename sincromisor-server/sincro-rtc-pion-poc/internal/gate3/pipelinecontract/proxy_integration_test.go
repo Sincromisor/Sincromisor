@@ -102,6 +102,9 @@ func runProxyScenario(t *testing.T, faultService discovery.Service, action wspro
 	if err := coordinator.Close(); err != nil {
 		t.Fatalf("coordinator Close() error = %v", err)
 	}
+	if action == wsproxy.ActionHeldClose {
+		assertHeldCloseEmitsNoOldGenerationOutputThroughScenarioEnd(t, coordinator)
+	}
 	waitActiveZero(t, proxies)
 }
 
@@ -240,6 +243,27 @@ func waitActiveZero(t *testing.T, proxies *wsproxy.Set) {
 		time.Sleep(5 * time.Millisecond)
 	}
 	t.Fatal("proxy active connections did not reach zero")
+}
+
+// assertHeldCloseEmitsNoOldGenerationOutputThroughScenarioEnd は Close が全 producer を
+// joinして結果channelを閉じた後まで検査し、保持・破棄した旧responseが遅延公開されないことを証明する。
+func assertHeldCloseEmitsNoOldGenerationOutputThroughScenarioEnd(
+	t *testing.T,
+	coordinator *pipeline.Coordinator,
+) {
+	t.Helper()
+	if remaining := len(coordinator.TextResults()); remaining != 0 {
+		t.Fatalf("held-close left %d text outputs after scenario close", remaining)
+	}
+	if remaining := len(coordinator.SynthResults()); remaining != 0 {
+		t.Fatalf("held-close left %d synthesizer outputs after scenario close", remaining)
+	}
+	if _, open := <-coordinator.TextResults(); open {
+		t.Fatal("text output channel remained open after held-close scenario")
+	}
+	if _, open := <-coordinator.SynthResults(); open {
+		t.Fatal("synthesizer output channel remained open after held-close scenario")
+	}
 }
 
 func closeProxySet(t *testing.T, proxies *wsproxy.Set) {

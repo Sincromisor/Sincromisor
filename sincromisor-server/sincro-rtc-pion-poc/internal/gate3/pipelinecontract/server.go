@@ -96,8 +96,12 @@ func (s *Set) serveRecognizer(ctx context.Context, conn *websocket.Conn) {
 		sessionID, _ := value["session_id"].(string)
 		speechID, speechOK := int64Field(value, "speech_id")
 		sequenceID, sequenceOK := int64Field(value, "sequence_id")
-		if !speechOK || !sequenceOK || !s.expectIdentity(sessionID, speechID, sequenceID, 1) {
+		if !speechOK || !sequenceOK {
 			s.record(fmt.Errorf("%w: recognizer request identity", ErrIdentity))
+			return
+		}
+		if err := s.validateIdentity(sessionID, speechID, sequenceID, 1); err != nil {
+			s.record(err)
 			return
 		}
 		response, patchErr := s.patchedIdentity(
@@ -133,9 +137,16 @@ func (s *Set) serveProcessor(ctx context.Context, conn *websocket.Conn) {
 		speechID, speechOK := int64Field(requestMessage, "speech_id")
 		history, _ := request["history"].(map[string]any)
 		messages, historyOK := history["messages"].([]any)
-		if !sequenceOK || !speechOK || !historyOK ||
-			!s.expectIdentity(sessionID, speechID, sequenceID, 2) {
-			s.record(fmt.Errorf("%w: processor request identity or history", ErrIdentity))
+		if !sequenceOK || !speechOK {
+			s.record(fmt.Errorf("%w: processor request identity", ErrIdentity))
+			return
+		}
+		if !historyOK {
+			s.record(fmt.Errorf("%w: processor request history", ErrProtocol))
+			return
+		}
+		if err := s.validateIdentity(sessionID, speechID, sequenceID, 2); err != nil {
+			s.record(err)
 			return
 		}
 		response, finalSize, patchErr := s.processorResponse(request)
@@ -180,9 +191,12 @@ func (s *Set) serveSynthesizer(ctx context.Context, conn *websocket.Conn) {
 		expectedSession := s.processorSession[sequenceID]
 		s.mu.Unlock()
 		identical := bytes.Equal(payload, expected)
-		if !sequenceOK || !speechOK || expectedSession != sessionID || !identical ||
-			!s.expectIdentity(sessionID, speechID, sequenceID, 3) {
+		if !sequenceOK || !speechOK || expectedSession != sessionID || !identical {
 			s.record(fmt.Errorf("%w: synthesizer request identity or processor bytes", ErrIdentity))
+			return
+		}
+		if err := s.validateIdentity(sessionID, speechID, sequenceID, 3); err != nil {
+			s.record(err)
 			return
 		}
 		response, patchErr := patchSpeech(s.fixtures["voice_synthesizer_result.msgpack"], speechID)

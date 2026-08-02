@@ -40,4 +40,8 @@ type Config struct {
 	WorkDir string
 	// Services は固定名4件に対応する 127.0.0.1 proxy endpoint である。
 	Services map[discovery.Service]discovery.Endpoint
+
+	// testOptions は package内試験だけが既存8500番Consulを避けるために使う。
+	// 外部 package から設定不能なので公開 Start の固定 address / timeout 契約へ影響しない。
+	testOptions *startOptions
 }
