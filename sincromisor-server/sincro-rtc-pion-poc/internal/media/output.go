@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -51,9 +52,9 @@ type OutputStats struct {
 
 // OutputProcessor は合成発話queue、Opus encoder、20 ms絶対deadline clockを所有する。
 //
-// Runはsession transport connected後に1回だけ開始し、context cancellation、codec/telop/track errorで
-// 戻る。queueが空でもsilenceを送る。Purgeは未送信audioと、そのaudioから将来生成されるmora eventを
-// 同時に破棄するが、既にtrackへ書いたaudioは巻き戻さない。
+// Runはsession transport connected後に1回だけ開始し、context cancellation、codec/telop/track error、
+// またはPionのuint16で表現不能な連続drop数で戻る。queueが空でもsilenceを送る。Purgeは未送信audioと、
+// そのaudioから将来生成されるmora eventを同時に破棄するが、既にtrackへ書いたaudioは巻き戻さない。
 type OutputProcessor struct {
 	mu             sync.Mutex
 	sendMu         sync.Mutex
@@ -63,8 +64,9 @@ type OutputProcessor struct {
 	track          SampleWriter
 	telop          TelopSink
 	logger         *slog.Logger
-	clock          outputClock
+	clock          OutputClock
 	samplePosition uint64
+	pendingDrops   uint64
 	closed         bool
 
 	queueRejected    atomic.Uint64
@@ -85,13 +87,26 @@ func NewOutputProcessor(
 	return newOutputProcessorWithHooks(encoder, track, telop, logger, systemOutputClock{}, 0)
 }
 
+// NewOutputProcessorWithClockはproduction trackを決定的clockで検証するintegration境界である。
+//
+// runtimeはNewOutputProcessorを使う。clockはRun開始後に交換してはならない。
+func NewOutputProcessorWithClock(
+	encoder *FrameEncoder,
+	track SampleWriter,
+	telop TelopSink,
+	logger *slog.Logger,
+	clock OutputClock,
+) (*OutputProcessor, error) {
+	return newOutputProcessorWithHooks(encoder, track, telop, logger, clock, 0)
+}
+
 // newOutputProcessorWithHooksはproductionと決定的clock testで共有する依存組み立て境界である。
 func newOutputProcessorWithHooks(
 	encoder outputEncoder,
 	track SampleWriter,
 	telop TelopSink,
 	logger *slog.Logger,
-	clock outputClock,
+	clock OutputClock,
 	samplePosition uint64,
 ) (*OutputProcessor, error) {
 	if encoder == nil || track == nil || logger == nil || clock == nil {
@@ -206,7 +221,7 @@ func (p *OutputProcessor) Run(ctx context.Context) error {
 				// 遅れた発話をburst送信せずitem単位で捨てる。期限切れsample位置だけ進め、
 				// 次itemはnowから20 ms後に開始して受信側の実時間再生へ復帰させる。
 				p.abortCurrentSpeech(lag)
-				p.advanceSamplePosition(uint64(max(0, int(lag/FrameDuration))))
+				p.skipSamplePositions(uint64(max(0, int(lag/FrameDuration))))
 				nextDeadline = now.Add(FrameDuration)
 				timer.Reset(nextDeadline.Sub(p.clock.Now()))
 				continue
@@ -214,11 +229,11 @@ func (p *OutputProcessor) Run(ctx context.Context) error {
 			if p.hasActiveSpeech() && lag >= FrameDuration {
 				// abort閾値内のscheduler遅延も送信済みpacketで埋め戻さない。
 				// RTP clock上の期限切れ位置を飛ばし、この1 packetだけをnowへ再同期する。
-				p.advanceSamplePosition(uint64(lag / FrameDuration))
+				p.skipSamplePositions(uint64(lag / FrameDuration))
 				nextDeadline = now
 			} else if !p.hasActiveSpeech() && lag >= FrameDuration {
 				dropped := uint64(lag / FrameDuration)
-				p.advanceSamplePosition(dropped)
+				p.skipSamplePositions(dropped)
 				total := p.silenceDropped.Add(dropped)
 				p.logger.Warn("dropped expired outbound silence",
 					"queue", "audio", "action", "drop_expired_silence", "count", total,
@@ -244,9 +259,13 @@ func (p *OutputProcessor) hasActiveSpeech() bool {
 	return len(p.queue) > 0
 }
 
-func (p *OutputProcessor) advanceSamplePosition(frames uint64) {
+// skipSamplePositionsは送らない20 ms slotをlogical clockと次Pion sampleのdrop metadataへ累積する。
+//
+// 連続するskipは最初の成功writeまで保持し、timestamp/sequence gapを複数packetへ分割しない。
+func (p *OutputProcessor) skipSamplePositions(frames uint64) {
 	p.mu.Lock()
 	p.samplePosition += frames * frameSamples
+	p.pendingDrops += frames
 	p.mu.Unlock()
 }
 
@@ -275,7 +294,11 @@ func (p *OutputProcessor) writeFrame() error {
 		return ErrOutputClosed
 	}
 	samplePosition := p.samplePosition
+	pendingDrops := p.pendingDrops
 	p.mu.Unlock()
+	if pendingDrops > math.MaxUint16 {
+		return fmt.Errorf("outbound dropped slot count %d exceeds Pion packetizer limit", pendingDrops)
+	}
 	frame, telop := p.nextFrame()
 	packet, err := p.encoder.Encode(frame)
 	if err != nil {
@@ -287,20 +310,27 @@ func (p *OutputProcessor) writeFrame() error {
 		}
 	}
 	if err := p.track.WriteSample(OutputSample{
-		MediaSample:    pionmedia.Sample{Data: packet, Duration: FrameDuration},
+		MediaSample: pionmedia.Sample{
+			Data: packet, Duration: FrameDuration, PrevDroppedPackets: uint16(pendingDrops),
+		},
 		SamplePosition: samplePosition,
 		RTPTimestamp:   uint32(samplePosition),
 	}); err != nil {
 		return fmt.Errorf("write outbound audio: %w", err)
 	}
-	p.advanceSamplePosition(1)
+	// Pionがdrop metadataを受理した成功点だけでpending countを消費する。
+	// track error時はRunが終了するため、不完全なclock stateで次packetを送らない。
+	p.mu.Lock()
+	p.pendingDrops = 0
+	p.samplePosition += frameSamples
+	p.mu.Unlock()
 	return nil
 }
 
 type systemOutputClock struct{}
 
 func (systemOutputClock) Now() time.Time { return time.Now() }
-func (systemOutputClock) NewTimer(delay time.Duration) outputTimer {
+func (systemOutputClock) NewTimer(delay time.Duration) OutputTimer {
 	return systemOutputTimer{Timer: time.NewTimer(delay)}
 }
 

@@ -60,6 +60,8 @@ timeout、reliableな`text_ch`の送信失敗、channel closeはsession errorと
 backendのsession所有clockはbrowser音声入力の有無に依存せず動作し、合成発話がない期間もsilence frameを送る。
 scheduler遅延で期限切れになったsilenceはburst送信せずdropする。activeな合成発話の遅延が250 msを超えた場合は、
 その発話の残audioと未送信telopを中止し、次発話を20 ms間隔で再開する。
+dropした20 ms slotは次のRTP packetのtimestampとsequence numberのgapへ反映し、その後の送信packetは
+再び960 timestamp tick / 1 sequence numberずつ進む。
 
 `telop_ch` payloadは次のschemaを使う。
 
