@@ -24,9 +24,19 @@ import (
 )
 
 const (
-	shutdownCleanupTimeout  = 5 * time.Second
+	// shutdownCleanupTimeout はOffer ownerと全sessionが共有するcleanup contextの期限である。
+	// 短くすると正常なresource解放までdeadline errorになり、長くするとHTTP停止と合わせたprocess終了上限が延びる。
+	// 変更時はPion README、rollout運用文書、shutdownProcess期限試験、実process SIGTERM試験を同期する。
+	shutdownCleanupTimeout = 5 * time.Second
+	// shutdownAdmissionWindow はdrainingとinitial Offer 503を観測させるためlistenerを維持する時間である。
+	// 短くすると外部監督が503を見逃し、長くするとcleanupが早い場合のHTTP停止を遅らせる。
+	// cleanup期限を超える値は観測窓自体をdeadline errorにする。変更時はPion README、rollout運用文書、
+	// shutdownProcess期限試験、実process SIGTERM試験を同期する。
 	shutdownAdmissionWindow = 1 * time.Second
-	shutdownHTTPTimeout     = 1 * time.Second
+	// shutdownHTTPTimeout はcleanupと観測窓の完了後にhttp.Serverだけを停止する独立期限である。
+	// 短くすると接続終了がdeadline errorになり、長くするとprocess終了上限がcleanup期限との合計6秒を超える。
+	// 変更時はPion README、rollout運用文書、shutdownProcess期限試験、実process SIGTERM試験を同期する。
+	shutdownHTTPTimeout = 1 * time.Second
 	// discoveryRequestTimeout は local Consul 障害が readiness 後のsession cleanupを長時間妨げない上限である。
 	discoveryRequestTimeout = 2 * time.Second
 	localConsulURL          = "http://127.0.0.1:8500"

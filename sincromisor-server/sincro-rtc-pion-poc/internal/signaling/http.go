@@ -84,10 +84,9 @@ func NewProcessState() *ProcessState { return &ProcessState{} }
 // MarkReady publishes successful startup validation.
 func (s *ProcessState) MarkReady() { s.ready.Store(true) }
 
-// BeginDrain publishes ready=false and the monotonic draining state before any
-// process owner is cancelled. The process coordinator keeps HTTP accepting for
-// its admission window, during which new initial offers observe a 503 response
-// instead of an ambiguous connection refusal.
+// BeginDrain はprocess ownerをcancelする前にready=falseと単調なdraining状態を公開する。
+// process coordinatorは受付拒否観測窓の間HTTP listenerを維持し、新規initial Offerへ
+// 接続拒否ではなく503を返せる状態にする。
 func (s *ProcessState) BeginDrain() { s.draining.Store(true); s.ready.Store(false) }
 
 // Ready reports whether the process can safely admit a new session.
