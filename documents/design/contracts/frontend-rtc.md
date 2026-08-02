@@ -44,9 +44,44 @@
 - `telop_ch` は `ordered: false, maxRetransmits: 0` のunordered / unreliable channelとする。欠落と順序逆転は正常系として扱い、受信順序を保証しない。
 - ICE restart付きupdate Offerは既存の `RTCPeerConnection` に適用し、既存DataChannelを再利用する。新しいchannelは作成しない。
 
-現行frontendはpayloadのschema validationを行うが、`telop_ch` の重複排除やstale判定は行わない。message sizeのapplication上限も未定義である。これらを追加する場合はfrontend / backend間の契約変更として同時に実装する。
+各payloadはUTF-8 JSON textかつ64 KiB以下とする。`text_ch`は64件FIFOで、満杯時はincomingを拒否して
+sessionを終了する。`telop_ch`は128件FIFOで、満杯時は最古の未送信eventをdropしてsessionを継続する。
+Frontendは`telop_ch`の欠落、順序逆転を正常系として扱う。
+
+backendはDataChannelの`bufferedAmount`が1 MiB以上なら送信を抑制し、256 KiB以下への復帰を最大5秒待つ。
+timeout、reliableな`text_ch`の送信失敗、channel closeはsession errorとする。unreliableな`telop_ch`の
+単発送信失敗は該当eventだけをdropする。
 
 ## Payloads
+
+### Outbound audio / telop synchronization
+
+返却audioは48 kHz mono PCMを20 ms / 960 sample単位でOpus encodeした連続trackである。
+backendのsession所有clockはbrowser音声入力の有無に依存せず動作し、合成発話がない期間もsilence frameを送る。
+scheduler遅延で期限切れになったsilenceはburst送信せずdropする。activeな合成発話の遅延が250 msを超えた場合は、
+その発話の残audioと未送信telopを中止し、次発話を20 ms間隔で再開する。
+
+`telop_ch` payloadは次のschemaを使う。
+
+```json
+{
+    "speech_id": 1,
+    "timestamp": 0.02,
+    "message": "こんにちは",
+    "vowel": "o",
+    "text": "ん",
+    "length": 0.08,
+    "new_text": true
+}
+```
+
+- 各20 ms audio frameの開始sampleを含むactive moraがある場合だけ、そのframeのtrack書き込み直前に1件生成する。
+- `timestamp`は発話開始からのframe開始sampleを48000で割った秒、`length`はmoraのsample幅を48000で割った秒とする。
+- `message`はdecode前の同じ合成結果に含まれる元messageを保持する。
+- producer上の`vowel` / `text`がnilの場合はempty stringへ変換し、非nilのempty stringもemptyのまま送る。
+- `new_text`は同じmoraを送る最初のframeだけ`true`、後続frameは`false`とする。
+- mora境界がframe内にある場合は次frameの開始から新しいmoraへ切り替える。active moraがないframeはaudioだけを送る。
+- pipeline generation変更時は、旧generationの未送信audio、`text_ch`、`telop_ch` eventを一括破棄する。
 
 ### Config Response
 

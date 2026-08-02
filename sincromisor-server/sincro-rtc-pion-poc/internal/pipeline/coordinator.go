@@ -90,9 +90,10 @@ type Coordinator struct {
 	closeDone  chan struct{}
 	closeOnce  sync.Once
 
-	textOut  chan Output[protocol.ChatMessage]
-	synthOut chan Output[protocol.SynthesizerResult]
-	wg       sync.WaitGroup
+	textOut           chan Output[protocol.ChatMessage]
+	synthOut          chan Output[protocol.SynthesizerResult]
+	generationChanges chan uint64
+	wg                sync.WaitGroup
 }
 
 type generationWork struct {
@@ -117,10 +118,11 @@ func newCoordinatorWithHooks(factory ClientSetFactory, logger *slog.Logger, jitt
 	}
 	return &Coordinator{
 		factory: factory, logger: logger, jitter: jitter, wait: waiter, state: StateIdle,
-		textOut:    make(chan Output[protocol.ChatMessage], outputQueueCapacity),
-		synthOut:   make(chan Output[protocol.SynthesizerResult], outputQueueCapacity),
-		staleDrops: make(map[pclient.Service]uint64),
-		closeDone:  make(chan struct{}),
+		textOut:           make(chan Output[protocol.ChatMessage], outputQueueCapacity),
+		synthOut:          make(chan Output[protocol.SynthesizerResult], outputQueueCapacity),
+		generationChanges: make(chan uint64, 1),
+		staleDrops:        make(map[pclient.Service]uint64),
+		closeDone:         make(chan struct{}),
 	}, nil
 }
 
@@ -209,9 +211,15 @@ func (c *Coordinator) TextResults() <-chan Output[protocol.ChatMessage] { return
 // session lifetime channelはresetしても交換せず、Coordinatorだけがcloseする。
 func (c *Coordinator) SynthResults() <-chan Output[protocol.SynthesizerResult] { return c.synthOut }
 
+// GenerationChanges は初回running generationとreset advanceを単調増加で通知する。
+//
+// capacity 1の通知は未読の旧値を最新値へcoalesceするためbroadcastではなく、sessionは単一consumerで
+// 受けてaudio/text/telopへ一括適用する。Coordinatorだけが全producer join後にcloseする。
+func (c *Coordinator) GenerationChanges() <-chan uint64 { return c.generationChanges }
+
 // Close はclosedを先に確定し、retry、generation、4 clientをcancel / joinして再接続を禁止する。
 //
-// 全producer終了後、publication/resetと共有するoutput barrier内でtext、synthの順にchannelをcloseする。
+// 全producer終了後、publication/resetと共有するoutput barrier内でtext、synth、generationの順にchannelをcloseする。
 // Close開始前にpublishへ入ったpackage内callerもbarrierから退出するまで待つため、全stateから
 // idempotentかつsend/close raceなしで呼べる。
 func (c *Coordinator) Close() error {
@@ -243,6 +251,7 @@ func (c *Coordinator) Close() error {
 		c.outputMu.Lock()
 		close(c.textOut)
 		close(c.synthOut)
+		close(c.generationChanges)
 		c.outputMu.Unlock()
 		close(c.closeDone)
 	})
