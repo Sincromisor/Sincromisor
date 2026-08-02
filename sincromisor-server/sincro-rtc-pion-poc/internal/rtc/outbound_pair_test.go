@@ -160,6 +160,84 @@ func TestOutboundSchedulerDropCreatesProductionRTPClockGap(t *testing.T) {
 	}
 }
 
+func TestOutboundSpeechAbortCreatesProductionRTPClockGap(t *testing.T) {
+	server, client, track, remoteTracks := newDirectOutboundPair(t)
+	defer func() {
+		_ = server.Close()
+		_ = client.Close()
+	}()
+	encoder, err := audiomedia.NewFrameEncoder()
+	if err != nil {
+		t.Fatalf("NewFrameEncoder() error = %v", err)
+	}
+	defer func() { _ = encoder.Close() }()
+	clock := newPairOutputClock()
+	output, err := audiomedia.NewOutputProcessorWithClock(
+		encoder,
+		pionSampleWriter{track: track},
+		nil,
+		testLogger(),
+		clock,
+	)
+	if err != nil {
+		t.Fatalf("NewOutputProcessorWithClock() error = %v", err)
+	}
+	if err := output.Enqueue("aborted", synthdecode.DecodedSpeech{
+		SpeechID: 1, PCM: make([]int16, 2*audiomedia.SampleRate/50),
+	}); err != nil {
+		t.Fatalf("OutputProcessor.Enqueue(aborted) error = %v", err)
+	}
+	if err := output.Enqueue("next", synthdecode.DecodedSpeech{
+		SpeechID: 2, PCM: make([]int16, audiomedia.SampleRate/50),
+	}); err != nil {
+		t.Fatalf("OutputProcessor.Enqueue(next) error = %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	runDone := make(chan error, 1)
+	go func() { runDone <- output.Run(ctx) }()
+	clock.waitTimer(t)
+
+	clock.advance(audiomedia.FrameDuration)
+	var remoteTrack *webrtc.TrackRemote
+	select {
+	case remoteTrack = <-remoteTracks:
+	case <-time.After(3 * time.Second):
+		t.Fatal("browser did not receive direct outbound track")
+	}
+	first := readRemoteRTP(t, remoteTrack)
+
+	// The current 40 ms deadline is not written when lag exceeds the abort
+	// threshold. Its slot joins the twelve fully expired slots in the gap.
+	clock.advance(audiomedia.FrameDuration + audiomedia.SpeechLagAbortThreshold + time.Nanosecond)
+	waitForCondition(t, time.Second, func() bool {
+		return output.Stats().SpeechAborted == 1
+	})
+	clock.advance(audiomedia.FrameDuration)
+	afterAbort := readRemoteRTP(t, remoteTrack)
+	if delta := afterAbort.Timestamp - first.Timestamp; delta != 14*audiomedia.SampleRate/50 {
+		t.Fatalf("RTP timestamp delta after speech abort = %d, want %d",
+			delta, 14*audiomedia.SampleRate/50)
+	}
+	if delta := afterAbort.SequenceNumber - first.SequenceNumber; delta != 14 {
+		t.Fatalf("RTP sequence delta after speech abort = %d, want 14", delta)
+	}
+
+	clock.advance(audiomedia.FrameDuration)
+	recovered := readRemoteRTP(t, remoteTrack)
+	if delta := recovered.Timestamp - afterAbort.Timestamp; delta != audiomedia.SampleRate/50 {
+		t.Fatalf("recovered RTP timestamp delta = %d, want %d",
+			delta, audiomedia.SampleRate/50)
+	}
+	if delta := recovered.SequenceNumber - afterAbort.SequenceNumber; delta != 1 {
+		t.Fatalf("recovered RTP sequence delta = %d, want 1", delta)
+	}
+
+	cancel()
+	if err := <-runDone; !errors.Is(err, context.Canceled) {
+		t.Fatalf("OutputProcessor.Run() error = %v, want context.Canceled", err)
+	}
+}
+
 func newDirectOutboundPair(
 	t *testing.T,
 ) (*webrtc.PeerConnection, *webrtc.PeerConnection, *webrtc.TrackLocalStaticSample, <-chan *webrtc.TrackRemote) {

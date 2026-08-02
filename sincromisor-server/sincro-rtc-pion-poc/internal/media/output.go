@@ -218,10 +218,11 @@ func (p *OutputProcessor) Run(ctx context.Context) error {
 		case now := <-timer.C():
 			lag := now.Sub(nextDeadline)
 			if p.hasActiveSpeech() && lag > SpeechLagAbortThreshold {
-				// 遅れた発話をburst送信せずitem単位で捨てる。期限切れsample位置だけ進め、
-				// 次itemはnowから20 ms後に開始して受信側の実時間再生へ復帰させる。
+				// 遅れた発話をburst送信せずitem単位で捨てる。lag内の期限切れslotに加え、
+				// abort分岐で書かない現在deadlineの1 slotも進める。次itemはnowから
+				// 20 ms後に開始し、次packetのRTP gapを実際のno-write数と一致させる。
 				p.abortCurrentSpeech(lag)
-				p.skipSamplePositions(uint64(max(0, int(lag/FrameDuration))))
+				p.skipSamplePositions(uint64(lag/FrameDuration) + 1)
 				nextDeadline = now.Add(FrameDuration)
 				timer.Reset(nextDeadline.Sub(p.clock.Now()))
 				continue
