@@ -45,11 +45,13 @@ func (d *DataChannelDispatcher) EnqueueText(message protocol.ChatMessage) error 
 		d.mu.Unlock()
 		count := d.textRejected.Add(1)
 		d.logger.Warn("rejected data channel event",
-			"queue", "text", "action", "reject_incoming", "count", count,
+			"stage", "text", "reason", "output_backpressure", "count", count,
 		)
+		d.recorder.QueueOverflow("text", "reject_close")
 		return ErrTextQueueFull
 	}
 	d.textQueue = append(d.textQueue, payload)
+	d.recorder.QueueDepthDelta("text", 1)
 	d.mu.Unlock()
 	signal(d.textWake)
 	return nil
@@ -68,15 +70,20 @@ func (d *DataChannelDispatcher) EnqueueTelop(event audiomedia.TelopPayload) erro
 		d.mu.Unlock()
 		return ErrDataChannelDispatcherClosed
 	}
-	if len(d.telopQueue) == telopQueueCapacity {
+	overflow := len(d.telopQueue) == telopQueueCapacity
+	if overflow {
 		copy(d.telopQueue, d.telopQueue[1:])
 		d.telopQueue = d.telopQueue[:len(d.telopQueue)-1]
 		count := d.telopDropped.Add(1)
 		d.logger.Warn("dropped data channel event",
-			"queue", "telop", "action", "drop_oldest", "count", count,
+			"stage", "telop", "reason", "queue_overflow", "count", count,
 		)
+		d.recorder.QueueOverflow("telop", "drop_oldest")
 	}
 	d.telopQueue = append(d.telopQueue, payload)
+	if !overflow {
+		d.recorder.QueueDepthDelta("telop", 1)
+	}
 	d.mu.Unlock()
 	signal(d.telopWake)
 	return nil

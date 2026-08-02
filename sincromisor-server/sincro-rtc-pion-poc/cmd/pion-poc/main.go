@@ -101,6 +101,7 @@ func runWithBoundaries(
 		TTL:            cfg.OfferCacheTTL,
 		Clock:          signaling.SystemOfferRegistryClock(),
 		Logger:         logger,
+		Recorder:       metrics,
 	})
 	if err != nil {
 		return fmt.Errorf("create offer registry: %w", err)

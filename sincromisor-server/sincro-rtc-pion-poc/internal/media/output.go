@@ -68,6 +68,7 @@ type OutputProcessor struct {
 	samplePosition uint64
 	pendingDrops   uint64
 	closed         bool
+	observer       OutputObserver
 
 	queueRejected    atomic.Uint64
 	silenceDropped   atomic.Uint64
@@ -83,8 +84,9 @@ func NewOutputProcessor(
 	track SampleWriter,
 	telop TelopSink,
 	logger *slog.Logger,
+	observers ...OutputObserver,
 ) (*OutputProcessor, error) {
-	return newOutputProcessorWithHooks(encoder, track, telop, logger, systemOutputClock{}, 0)
+	return newOutputProcessorWithHooks(encoder, track, telop, logger, systemOutputClock{}, 0, observers...)
 }
 
 // NewOutputProcessorWithClockはproduction trackを決定的clockで検証するintegration境界である。
@@ -96,8 +98,9 @@ func NewOutputProcessorWithClock(
 	telop TelopSink,
 	logger *slog.Logger,
 	clock OutputClock,
+	observers ...OutputObserver,
 ) (*OutputProcessor, error) {
-	return newOutputProcessorWithHooks(encoder, track, telop, logger, clock, 0)
+	return newOutputProcessorWithHooks(encoder, track, telop, logger, clock, 0, observers...)
 }
 
 // newOutputProcessorWithHooksはproductionと決定的clock testで共有する依存組み立て境界である。
@@ -108,13 +111,18 @@ func newOutputProcessorWithHooks(
 	logger *slog.Logger,
 	clock OutputClock,
 	samplePosition uint64,
+	observers ...OutputObserver,
 ) (*OutputProcessor, error) {
 	if encoder == nil || track == nil || logger == nil || clock == nil {
 		return nil, errors.New("output processor dependencies must not be nil")
 	}
+	var observer OutputObserver = discardOutputObserver{}
+	if len(observers) > 0 && observers[0] != nil {
+		observer = observers[0]
+	}
 	return &OutputProcessor{
 		encoder: encoder, track: track, telop: telop, logger: logger,
-		clock: clock, samplePosition: samplePosition,
+		clock: clock, samplePosition: samplePosition, observer: observer,
 	}, nil
 }
 
@@ -145,12 +153,14 @@ func (p *OutputProcessor) Enqueue(message string, speech synthdecode.DecodedSpee
 		p.mu.Unlock()
 		count := p.queueRejected.Add(1)
 		p.logger.Warn("rejected outbound speech",
-			"queue", "speech", "action", "reject_incoming", "count", count,
+			"stage", "speech_queue", "reason", "output_backpressure", "count", count,
 		)
+		p.observer.QueueOverflow("speech", "reject_close")
 		return ErrSpeechQueueFull
 	}
 	p.queue = append(p.queue, item)
 	p.queuedSamples += len(item.speech.PCM)
+	p.observer.QueueDepthDelta("speech", 1)
 	p.mu.Unlock()
 	return nil
 }
@@ -165,9 +175,11 @@ func (p *OutputProcessor) Purge() {
 	p.queuedSamples = 0
 	p.mu.Unlock()
 	if count > 0 {
+		p.observer.QueueDepthDelta("speech", -float64(count))
+		p.observer.PacingAbort("generation")
 		total := p.generationPurged.Add(uint64(count))
 		p.logger.Info("purged outbound speech",
-			"queue", "speech", "action", "generation_purge", "count", total,
+			"stage", "speech_queue", "reason", "generation", "count", total,
 		)
 	}
 }
@@ -193,10 +205,14 @@ func (p *OutputProcessor) Close() error {
 	p.sendMu.Lock()
 	defer p.sendMu.Unlock()
 	p.mu.Lock()
+	count := len(p.queue)
 	p.closed = true
 	p.queue = nil
 	p.queuedSamples = 0
 	p.mu.Unlock()
+	if count > 0 {
+		p.observer.QueueDepthDelta("speech", -float64(count))
+	}
 	return nil
 }
 
@@ -217,6 +233,9 @@ func (p *OutputProcessor) Run(ctx context.Context) error {
 			return ctx.Err()
 		case now := <-timer.C():
 			lag := now.Sub(nextDeadline)
+			if lag > 0 {
+				p.observer.PacingLag(lag.Seconds())
+			}
 			if p.hasActiveSpeech() && lag > SpeechLagAbortThreshold {
 				// 遅れた発話をburst送信せずitem単位で捨てる。lag内の期限切れslotに加え、
 				// abort分岐で書かない現在deadlineの1 slotも進める。次itemはnowから
@@ -235,9 +254,12 @@ func (p *OutputProcessor) Run(ctx context.Context) error {
 			} else if !p.hasActiveSpeech() && lag >= FrameDuration {
 				dropped := uint64(lag / FrameDuration)
 				p.skipSamplePositions(dropped)
+				for range dropped {
+					p.observer.AudioFrame("out", "dropped")
+				}
 				total := p.silenceDropped.Add(dropped)
 				p.logger.Warn("dropped expired outbound silence",
-					"queue", "audio", "action", "drop_expired_silence", "count", total,
+					"stage", "outbound_audio", "reason", "pacing_lag", "count", total,
 				)
 				nextDeadline = nextDeadline.Add(time.Duration(dropped) * FrameDuration)
 			}
@@ -280,9 +302,11 @@ func (p *OutputProcessor) abortCurrentSpeech(lag time.Duration) {
 	p.queuedSamples -= len(item.speech.PCM) - item.offset
 	p.queue = p.queue[1:]
 	p.mu.Unlock()
+	p.observer.QueueDepthDelta("speech", -1)
+	p.observer.PacingAbort("lag")
 	count := p.speechAborted.Add(1)
 	p.logger.Warn("aborted lagged outbound speech",
-		"queue", "speech", "action", "abort_lagged", "count", count, "lag_ms", lag.Milliseconds(),
+		"stage", "speech_queue", "reason", "pacing_lag", "count", count,
 	)
 }
 
@@ -303,6 +327,8 @@ func (p *OutputProcessor) writeFrame() error {
 	frame, telop := p.nextFrame()
 	packet, err := p.encoder.Encode(frame)
 	if err != nil {
+		p.observer.CodecError("encode_out")
+		p.observer.PacingAbort("codec")
 		return err
 	}
 	if telop != nil && p.telop != nil {
@@ -319,6 +345,7 @@ func (p *OutputProcessor) writeFrame() error {
 	}); err != nil {
 		return fmt.Errorf("write outbound audio: %w", err)
 	}
+	p.observer.AudioFrame("out", "sent")
 	// Pionがdrop metadataを受理した成功点だけでpending countを消費する。
 	// track error時はRunが終了するため、不完全なclock stateで次packetを送らない。
 	p.mu.Lock()
@@ -347,9 +374,9 @@ func (t systemOutputTimer) C() <-chan time.Time { return t.Timer.C }
 // 最終audio frameはsilence paddingするが、itemのsample accountingは実PCM分だけを消費する。
 func (p *OutputProcessor) nextFrame() ([]int16, *TelopPayload) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	frame := make([]int16, frameSamples)
 	if len(p.queue) == 0 {
+		p.mu.Unlock()
 		return frame, nil
 	}
 	item := p.queue[0]
@@ -384,7 +411,11 @@ func (p *OutputProcessor) nextFrame() ([]int16, *TelopPayload) {
 	p.queuedSamples -= consumed
 	if item.offset == len(item.speech.PCM) {
 		p.queue = p.queue[1:]
+		p.mu.Unlock()
+		p.observer.QueueDepthDelta("speech", -1)
+		return frame, payload
 	}
+	p.mu.Unlock()
 	return frame, payload
 }
 

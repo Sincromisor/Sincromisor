@@ -39,11 +39,13 @@ func (q *frameQueue) push(frame []byte) bool {
 	return true
 }
 
-func (q *frameQueue) close() {
+func (q *frameQueue) close() int {
 	q.mu.Lock()
+	remaining := len(q.values)
 	if !q.closed {
 		q.closed = true
 		close(q.values)
 	}
 	q.mu.Unlock()
+	return remaining
 }

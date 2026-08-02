@@ -28,6 +28,7 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 	// Register the reset owner before releasing stateMu. Close takes the same
 	// lock before Wait, so WaitGroup.Add can never race with Wait.
 	c.wg.Add(1)
+	c.observer.PipelineReconnect(string(service), "start")
 	c.mu.Unlock()
 
 	// Output publication and reset take locks in the same order. Once resetting
@@ -57,7 +58,7 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 		}
 		// A stage loop may be the reset caller. It must return before Close joins
 		// generationWork, so terminal invariant cleanup is completed asynchronously.
-		go func() { _ = c.Close() }()
+		c.goDetached("pipeline_terminal_close", func() { _ = c.Close() })
 		return
 	}
 	oldWork, oldSet := c.work, c.set
@@ -69,10 +70,11 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 	c.mu.Unlock()
 	c.outputMu.Unlock()
 
-	go func() {
-		defer c.wg.Done()
+	c.goCoordinator("pipeline_reconnect", func() {
 		oldWork.cancel()
-		oldWork.input.close()
+		if remaining := oldWork.input.close(); remaining > 0 {
+			c.observer.QueueDepthDelta("input", -float64(remaining))
+		}
 		_ = oldSet.Close()
 		oldWork.wg.Wait()
 		c.mu.Lock()
@@ -84,10 +86,15 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 		_ = c.transitionLocked(StateConnecting)
 		c.resetting = false
 		c.mu.Unlock()
-		if err := c.connectUntilRunning(false); err != nil && !errors.Is(err, ErrClosed) {
-			c.logger.Error("pipeline reconnect stopped", "error", err, "reason", reason)
+		if err := c.connectUntilRunning(false); err != nil {
+			c.observer.PipelineReconnect(string(service), "failure")
+			if !errors.Is(err, ErrClosed) {
+				c.logger.Error("pipeline reconnect stopped", "stage", string(service), "reason", "reconnect_failure")
+			}
+			return
 		}
-	}()
+		c.observer.PipelineReconnect(string(service), "success")
+	})
 }
 
 // notifyGenerationはoutputMuを保持するcallerからcapacity 1の最新generation通知を確定する。
@@ -125,7 +132,7 @@ func (c *Coordinator) recordStaleDrop(service pclient.Service) {
 	c.staleDrops[service]++
 	count := c.staleDrops[service]
 	c.mu.Unlock()
-	c.logger.Info("dropped stale pipeline value", "service", service, "drop_count", count)
+	c.logger.Info("dropped stale pipeline value", "stage", service, "reason", "stale_generation", "count", count)
 }
 
 func drain[T any](values chan T) {

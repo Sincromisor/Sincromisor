@@ -138,6 +138,16 @@ func (s *connectionSet) watch(events <-chan Event) {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
+		defer func() {
+			if recover() != nil {
+				s.mu.Lock()
+				handler, published, closed := s.handler, s.published, s.closed
+				s.mu.Unlock()
+				if published && !closed && handler != nil {
+					handler(Event{Kind: EventPanic})
+				}
+			}
+		}()
 		event, ok := <-events
 		if !ok {
 			return

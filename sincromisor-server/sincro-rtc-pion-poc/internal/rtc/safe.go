@@ -42,3 +42,17 @@ func (s *Session) SafeCallback(stage string, callback func()) func() {
 		callback()
 	}
 }
+
+// startCleanup launches the terminal resource join outside the Session
+// WaitGroup it must wait on. Panic containment prevents a cleanup helper from
+// crashing the process; close-once has already made the Session unavailable.
+func (s *Session) startCleanup(reason string) {
+	go func() {
+		defer func() {
+			if recover() != nil {
+				s.logger.Error("session cleanup panic", "session_id", s.id, "stage", "cleanup", "reason", "panic")
+			}
+		}()
+		s.cleanup(reason)
+	}()
+}

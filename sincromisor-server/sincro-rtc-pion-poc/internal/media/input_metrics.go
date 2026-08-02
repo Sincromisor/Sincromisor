@@ -33,6 +33,23 @@ type InputObserver interface {
 	ObserveInputEvent(InputEvent)
 }
 
+type inputTelemetry interface {
+	AudioFrame(direction, outcome string)
+	CodecError(direction string)
+}
+
+func observeAcceptedInput(observer InputObserver) {
+	if telemetry, ok := observer.(inputTelemetry); ok {
+		telemetry.AudioFrame("in", "accepted")
+	}
+}
+
+func observeInputCodecError(observer InputObserver) {
+	if telemetry, ok := observer.(inputTelemetry); ok {
+		telemetry.CodecError("decode_in")
+	}
+}
+
 // InputEventCounts はprocess共有counterのある時点のsnapshotである。
 type InputEventCounts struct {
 	Duplicate           uint64
