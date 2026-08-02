@@ -1,14 +1,14 @@
 id: task-260802212216-pion-gate3-pipeline-contract-harness
 title: Pion Gate 3下流サービス契約ハーネスを実装する
 category: sincro-rtc
-status: open
+status: done
 depends_on:
   - task-260802212212-pion-gate3-harness-foundation
 superseded_by: null
-review: NEEDS_REVISION
-reviewed_sha: null
-verdict: null
-attempts: 0
+review: APPROVED
+reviewed_sha: bb02c57f0962e744b200669c453bb3be83bfb36e
+verdict: PASS
+attempts: 2
 created_at: 2026-08-02
-closed_at: null
+closed_at: 2026-08-03
 legacy_ids: []
