@@ -50,7 +50,8 @@ func (s *Session) startDisconnectGrace() {
 	}
 }
 
-// disconnectGraceExpired は猶予期限を1回記録してrestart-requiredへ進め、追加15秒だけ同じSessionを保持する。
+// disconnectGraceExpired は猶予期限をdisconnect_graceとして1回記録してrestart-requiredへ進め、
+// 追加15秒だけ同じSessionを保持する。後続restart期限の記録はrestartDeadlineExpiredが所有する。
 func (s *Session) disconnectGraceExpired() {
 	s.lifecycle.mu.Lock()
 	if s.lifecycle.terminalLocked() || s.lifecycle.recovery != recoveryGrace {
