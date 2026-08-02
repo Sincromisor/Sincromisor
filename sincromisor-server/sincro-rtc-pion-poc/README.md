@@ -89,8 +89,10 @@ Google Chrome stable で
    process を停止した最後の `pion poc stopped` で `final_goroutines` が起動時の
    `initial_goroutines + 5` 以下であることを確認する。
 
-`Ctrl-C` または `SIGTERM` で停止する。HTTP shutdown 後に session registry、PeerConnection、codec、
-ticker、media goroutine を close-once 経路で終了する。
+`Ctrl-C` または `SIGTERM` で停止する。終了順序は
+`BeginDrain → cleanup並行開始 → 1秒の受付拒否観測窓とcleanupの完了待ち → 独立1秒のHTTP停止`
+である。cleanupは共通5秒期限でOffer owner、session registry、PeerConnection、codec、ticker、
+media goroutineをclose-once経路から収束させ、signal受信からprocess終了までの上限は6秒とする。
 
 ## Automated checks
 
