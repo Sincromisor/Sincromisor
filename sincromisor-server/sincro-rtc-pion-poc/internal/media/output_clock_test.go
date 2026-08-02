@@ -115,8 +115,11 @@ func TestOutputSpeechLagBoundaryAbortOrderAndNextCadence(t *testing.T) {
 	if got := encoder.frameAt(t, 2)[0]; got != 22 {
 		t.Fatalf("next speech sample = %d, want 22", got)
 	}
-	if got := afterAbort.MediaSample.PrevDroppedPackets; got != 12 {
-		t.Fatalf("post-abort previous dropped packets = %d, want 12", got)
+	if got := afterAbort.MediaSample.PrevDroppedPackets; got != 13 {
+		t.Fatalf("post-abort previous dropped packets = %d, want 13", got)
+	}
+	if want := uint64(27 * frameSamples); afterAbort.SamplePosition != want {
+		t.Fatalf("post-abort sample position = %d, want %d", afterAbort.SamplePosition, want)
 	}
 
 	cancel()
