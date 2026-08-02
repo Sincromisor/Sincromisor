@@ -20,6 +20,11 @@ const (
 	stateStopped  samplerState = "stopped"
 )
 
+type samplerTiming struct {
+	interval time.Duration
+	timeout  time.Duration
+}
+
 // Sampler は一つの採取 worker と、その取消・join・結果列を所有する。
 //
 // zero value は使用できない。NewSampler で作り、Start 後は Stop で worker を join する。
@@ -33,6 +38,7 @@ type Sampler struct {
 	result    Result
 	runErr    error
 	interval  time.Duration
+	timeout   time.Duration
 }
 
 // NewSampler は Linux procfs と絶対 HTTP endpoint を検査して idle Sampler を返す。
@@ -41,11 +47,32 @@ func NewSampler(config Config) (*Sampler, error) {
 }
 
 func newSampler(config Config, client *http.Client, interval time.Duration) (*Sampler, error) {
+	return newSamplerWithTiming(config, client, samplerTiming{
+		interval: interval,
+		timeout:  convergenceTimeout,
+	})
+}
+
+// newSamplerWithTiming は production の250ms/10秒契約を短時間で通す orchestration test seamである。
+// callerへ公開せず、NewSamplerは常に承認済み値を使う。
+func newSamplerWithTiming(
+	config Config,
+	client *http.Client,
+	timing samplerTiming,
+) (*Sampler, error) {
 	collector, err := newCollector(config, client)
 	if err != nil {
 		return nil, err
 	}
-	return &Sampler{collector: collector, state: stateIdle, interval: interval}, nil
+	if timing.interval <= 0 || timing.timeout <= 0 {
+		return nil, errors.New("resource sampler timing must be positive")
+	}
+	return &Sampler{
+		collector: collector,
+		state:     stateIdle,
+		interval:  timing.interval,
+		timeout:   timing.timeout,
+	}, nil
 }
 
 // Start は250ms間隔の採取 worker を一度だけ起動する。

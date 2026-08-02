@@ -13,8 +13,15 @@ import (
 )
 
 const (
+	// outputLimit は終了診断を保ちながら scenario 数に比例する成果物肥大を抑える上限である。
+	// 短縮すると失敗原因が先頭側へ押し出され、拡大するとstdout/stderrの保存量が過大になる。
+	// 変更時は両streamのexact boundary、超過時の末尾、Truncated flagを確認する。
 	outputLimit = 1 << 20
-	closeGrace  = time.Second
+	// closeGrace は正常な Pion cleanup に与える猶予と、壊れた子 process で harness が
+	// 停滞する時間の上限を両立する。短縮すると正常な session / socket cleanup を SIGKILL で
+	// 中断し、延長すると失敗 scenario の回収が遅れる。変更時は TERM を処理する実 Pion 終了と、
+	// TERM を無視する helper が KILL 後に join される両境界を確認する。
+	closeGrace = time.Second
 )
 
 var (
@@ -53,6 +60,7 @@ type Command struct {
 // Output は stdout または stderr の末尾最大1 MiBである。
 //
 // Truncated は先頭の byte が破棄されたことを示し、Data は常に時系列上の末尾を保持する。
+// 1 MiB上限の根拠と変更時の確認境界はoutputLimitの近接コメントを正本とする。
 type Output struct {
 	Data      []byte `json:"data"`
 	Truncated bool   `json:"truncated"`

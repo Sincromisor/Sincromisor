@@ -29,6 +29,15 @@ func TestValidateAcceptsAllValidEnums(t *testing.T) {
 	}
 }
 
+func TestValidateAcceptsCleanupFailureIndependentOfScenarioPass(t *testing.T) {
+	document := validDocument()
+	message := "SIGKILL failed after product scenario passed"
+	document.Scenarios[0].Cleanup = Cleanup{Status: CleanupFail, Error: &message}
+	if err := Validate(document); err != nil {
+		t.Fatalf("Validate(valid CleanupFail) error = %v", err)
+	}
+}
+
 func TestValidateRejectsSchemaAndEnumInvariants(t *testing.T) {
 	nonEmpty := "cleanup failed"
 	tests := []struct {
@@ -131,6 +140,27 @@ func TestWriterLinkFailureRemovesTemporaryAndDoesNotCreateTarget(t *testing.T) {
 	}
 }
 
+func TestWriterTemporaryFileSyncFailureCleansUpWithoutTarget(t *testing.T) {
+	directory := t.TempDir()
+	target := filepath.Join(directory, "report.json")
+	syncErr := errors.New("temporary fsync failure")
+	writer := &Writer{ops: &failingOps{fileOps: osFileOps{}, temporarySyncErr: syncErr}}
+	err := writer.Write(target, validDocument())
+	if !errors.Is(err, syncErr) {
+		t.Fatalf("Write() error = %v, want temporary fsync cause", err)
+	}
+	if _, err := os.Stat(target); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("target after temporary fsync failure: %v", err)
+	}
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("temporary remains after fsync failure: %v", entries)
+	}
+}
+
 func TestWriterPostLinkFailuresKeepTargetAndReturnTemporaryPath(t *testing.T) {
 	tests := []struct {
 		name string
@@ -198,8 +228,17 @@ type failingOps struct {
 	fileOps
 	linkErr            error
 	removeAfterLinkErr error
+	temporarySyncErr   error
 	directorySyncErr   error
 	linked             bool
+}
+
+func (o *failingOps) CreateTemp(directory, pattern string) (file, error) {
+	temporary, err := o.fileOps.CreateTemp(directory, pattern)
+	if err != nil || o.temporarySyncErr == nil {
+		return temporary, err
+	}
+	return &syncFailFile{file: temporary, err: o.temporarySyncErr}, nil
 }
 
 func (o *failingOps) Link(oldPath, newPath string) error {
