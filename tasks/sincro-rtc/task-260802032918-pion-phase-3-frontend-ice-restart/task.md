@@ -14,20 +14,25 @@ rollback期間のrevisionなしaiortc Answerもinitial接続に限って許容�
       Answerのsession/revision不一致はprotocol errorとしてnegotiationを中止する。
 - [ ] Offer生成・送信・candidate flushはPeerConnection単位でsingle-flightであり、update Answerまでは
       そのrevisionのcandidateを最大64件FIFOへqueueする。overflow/Offer失敗はqueueを破棄してgenerationを失敗させる。
-- [ ] `disconnected` は5秒grace中のconnected/completed復帰ならrestartしない。`failed` は即時、
+- [ ] `disconnected` は10秒grace中のconnected/completed復帰ならrestartしない。`failed` は即時、
       grace超過は1回だけICE restartを開始し、連続eventでも並行Offerを作らない。
-- [ ] Offerは10秒、candidateは5秒のAbortController timeoutを持つ。同一payloadを最大3 attempt・総30秒で、
-      429/5xx/network errorだけ指数backoff+jitter再送し、`Retry-After` を尊重する。
-      capはattempt 1から500 ms、1秒、2秒、full jitter `[0, cap]` とする。Retry-Afterが残り総期限を
-      超える場合はsleepせずterminal failureにする。
-- [ ] 404/410はserver session消失としてcandidateを破棄し、新しいPeerConnection/DataChannel/sessionを作る。
-      新initial Offerへ `previous_session_id` を付ける。409はblind retryせず現negotiationを中止する。
+- [ ] Offerは10秒、candidateは5秒のAbortController timeoutを持つ。HTTP実行は最大4回
+      （initial 1回 + retry 3回）、総30秒とする。429/5xx/network errorだけ再送し、失敗したHTTP実行
+      1/2/3の後はそれぞれ500 ms/1秒/2秒をcapとするfull jitter `[0, cap]` で待つ。
+      `Retry-After` があればjitterより優先する。各HTTP実行のtimeoutはOffer 10秒/candidate 5秒と
+      総期限までの残時間の小さい方へclipする。残時間が0以下、またはsleep時間が残時間以上なら
+      新しいHTTP実行を開始せずterminal failureにする。同じserialized bodyを全4回で再利用する。
+- [ ] update Offer/candidateの404/410はserver session消失としてcandidateを破棄し、既知の旧session IDを
+      `previous_session_id`に付けた新initial Offerを、新しいPeerConnection/DataChannelと新request IDで送る。
+      initial Offer自体の410はresponseからsession IDを復元できないため自動再作成せずterminal failureとする。
+      409はblind retryせず現negotiationを中止する。
 - [ ] revisionなしAnswerはinitial接続をlegacy modeとして受理する。legacy modeの切断はupdate Offerを送らず、
       新しいPeerConnectionでinitial接続し、Pion用状態機械をaiortcへ要求しない。
 - [ ] 400/409/413、response parse/identity不一致、またはretry exhaustionは当該negotiation/generationの
       candidate queueを全破棄し、PeerConnectionをcloseしてhealth/UIへterminal errorを通知する。
-      404/410以外では新sessionを自動作成せず、再試行は明示的なAppController start/page reloadを待つ。
-      candidate 3 attempt失敗もcandidate単体dropではなく同じterminal generation failureにする。
+      update/candidateの404/410によるbundle replacement以外では新sessionを自動作成せず、再試行は明示的な
+      AppController start/page reloadを待つ。candidateが最大4回のHTTP実行後も失敗した場合も、
+      candidate単体dropではなく同じterminal generation failureにする。
 - [ ] stop/track replacement/reconnect timerとの競合でclosed PeerConnectionへcandidate/Offerを送らない。
 - [ ] change comprehension surfaceのcomment auditを所定schemaで記録し、state、request identity、
       revision commit、candidate ownership、retry/status分岐、legacy modeを説明する。
@@ -43,6 +48,11 @@ rollback期間のrevisionなしaiortc Answerもinitial接続に限って許容�
   session消失時だけfactoryから新bundleを作る。既存PC上に新sessionをfallback作成しない。
 - HTTP helperはstatusをtyped errorへ変換し、candidate senderでcatchして握り潰さない。
 - jitterはtest注入可能なrandom/clockを使う。retryは同じserialized bodyを再利用する。
+- retry controllerはHTTP実行回数、総期限、per-attempt deadlineを同じ注入clockで所有する。
+  3 retryを「最大3 attempt」と数える案は2秒capを使えず期待call数が曖昧になるため採らない。
+- typed HTTP errorはinitial Offer、update Offer、candidateのoperation種別を保持する。
+  initial Offerの410だけは旧session IDを復元できないためterminalとし、update/candidateの404/410だけを
+  bundle replacementへ遷移させる。
 
 ## スコープ境界
 
@@ -52,8 +62,10 @@ rollback期間のrevisionなしaiortc Answerもinitial接続に限って許容�
 
 ## 実装方針（既存コード整合: file:line）
 
-- `rtcTalkClient.ts:15` は1 PeerConnectionをreadonly所有し、`:71` で再交渉ごとにsession IDを消す。
-- `rtcNegotiation.ts:6` のpayloadはrequest ID/revisionを持たず、`:79` は429以外を一括errorにする。
+- `rtcTalkClient.ts:20` から`:22` は1 PeerConnection bundleをreadonly所有し、`:80` で
+  再交渉ごとにsession IDを消す。
+- `rtcNegotiation.ts:6` のpayloadはrequest ID/revisionを持たず、`:79` から`:94` は429以外を
+  一括errorにする。
 - `rtcIceCandidateSender.ts:13` はerrorを内部catchし、callerへfailureを返さない。
 - `rtcConnectionStateHandler.ts:35` はdisconnectedで待たず、failedごとにreconnectを呼ぶ。
 - `rtcBoundarySchema.ts:17` のAnswer parserはrevisionなしだけを受理する現行shapeである。
@@ -61,8 +73,12 @@ rollback期間のrevisionなしaiortc Answerもinitial接続に限って許容�
 ## テスト
 
 - fake fetch/clock/PeerConnectionでinitial retry、restart single-flight、candidate順序/64/65、
-  disconnected復帰/超過、failed連打、stop競合をunit testする。
+  disconnectedの10秒内復帰/10秒超過、failed連打、stop競合をunit testする。
 - 200/400/404/409/410/413/429/5xx/timeout/network errorの分岐とRetry-Afterをtable testする。
+- retry tableは最大4 HTTP実行、500 ms/1秒/2秒cap、総30秒直前のper-attempt timeout clip、
+  sleep時間が残時間以上のterminalを、call数とfake clock時刻まで固定する。
+- initial Offerの410はterminal、update/candidateの404/410は旧session ID付きreplacementとなることを
+  operation別table testで固定する。
 - Go側共有JSON fixtureをTypeScript parser/serializer testでも読み、field/statusの乖離を検出する。
 - legacy Answer初回成功、legacy切断時の新PC initial、Pion revision不一致拒否をtestする。
 - `npm --prefix sincromisor-frontend run lint`、`typecheck`、`test`、`build`、

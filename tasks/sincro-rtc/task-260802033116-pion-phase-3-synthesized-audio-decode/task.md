@@ -24,6 +24,10 @@ container/codec異常をoutbound pacingから分離し、有限の入力とdeadl
       decode後sample数との差が960 sample以内を要求し、mora総長は音声以下なら短くても許容する。
 - [ ] decoder processのresourceはsuccess/error/cancelの全経路でcloseされ、100回の異常decode後に
       goroutine/fdが増加し続けない。
+- [ ] process-wideに1つだけ生成したimmutableな`*synthdecode.Decoder`を
+      `rtc.ManagerConfig -> sessionBuildRequest -> newSession -> Session`で同一参照のまま渡す。
+      `NewManager`と`newSession`はnilをresource作成前に拒否する。SessionはDecoderを非所有参照として保持し、
+      `sessionResourceClosers`へ追加せず、Session cleanup/Closeでcloseまたは破棄しない。
 - [ ] production code comment auditを
       `path/symbol/kind/current comment/reader question/required knowledge/decision/action/reviewer note`
       schemaで記録し、MIME dispatch、上限、container→PCM変換、sample位置の正本と失敗条件を説明する。
@@ -37,7 +41,8 @@ container/codec異常をoutbound pacingから分離し、有限の入力とdeadl
   `codecs=opus` を持つ `audio/ogg` だけを受理する。quoted `opus` はparser正規化後に受理し、
   unknown/duplicate/additional parameterは拒否する。
 - `internal/media/synthdecode/decoder.go` に
-  `CommandRunner.Run(ctx, executable, stdin, stdoutLimit, stderrLimit, args...) (stdout, stderr []byte, exitCode int, err error)`
+  `CommandRunner.Run(ctx context.Context, executable string, stdin []byte, stdoutLimit int64,
+stderrLimit int64, args ...string) (stdout, stderr []byte, exitCode int, err error)`
   と `NewDecoder(ffmpegPath string, runner CommandRunner) (*Decoder, error)` を置く。
   nil runner/空pathは拒否し、Decoderはimmutableで並行利用可能とする。unit testはfake、
   integration testは実runnerを使う。ffmpeg不在はserver startup errorとしfallbackしない。
@@ -45,8 +50,10 @@ container/codec異常をoutbound pacingから分離し、有限の入力とdeadl
   `config.Load` が `exec.LookPath` でabsolute pathへ解決し、`cmd/pion-poc.run` がlistener前にversion probeして
   FFmpeg 6.1以上8.x以下を受理する。
   `cmd/pion-poc.run` が実runnerと解決済みpathからDecoderを1つ作り、
-  `ManagerDependencies.SynthDecoder *synthdecode.Decoder` へ渡す。Sessionが所有参照を保持し、
-  後続outbound taskはそのDecoderを使うだけでconstructor判断を追加しない。
+  `rtc.ManagerConfig.SynthDecoder *synthdecode.Decoder` へ渡す。Managerは同じ参照を
+  `sessionBuildRequest.synthDecoder`、`newSession`へ渡し、Sessionのprivate fieldへ保持する。
+  Decoderはimmutableなprocess-wide共有参照であり、Manager/Sessionのresource ownershipや
+  `sessionResourceClosers`には含めない。後続outbound taskはそのDecoderを使うだけでconstructor判断を追加しない。
 - subprocessにはstdinからencoded voiceを渡し、temporary fileを作らない。shell/子processを起動しないため
   `exec.CommandContext` で直接ffmpegをkillし、Waitを必ずjoinする。
 - mora sample offsetはdecode完了時に整数へ確定する。browser decode案はserverがRTP clockを所有できないため採らない。
@@ -62,8 +69,13 @@ container/codec異常をoutbound pacingから分離し、有限の入力とdeadl
 
 ## 実装方針（既存コード整合: file:line）
 
-- `internal/pipeline/protocol/dto.go:142` のSynthesizerResultがencoded voice、MIME、mora、speaking timeを保持する。
-- `internal/pipeline/coordinator.go:207` のSynthResultsはgeneration付きencoded resultを公開する。
+- `internal/pipeline/protocol/dto.go:142` から`:156` のSynthesizerResultがencoded voice、MIME、mora、
+  speaking timeを保持する。
+- `internal/pipeline/coordinator.go:207` から`:210` のSynthResultsはgeneration付きencoded resultを公開する。
+- `internal/rtc/manager.go:24` のManagerConfig、`:34`のsessionBuildRequest、`:89`のsessionBuilderが
+  process共有dependencyからSession作成境界への現行経路である。
+- `internal/rtc/session.go:33`のSession、`:59`のsessionResourceClosers、`:73`のnewSessionが
+  Decoder参照保持と非所有cleanup境界の同期先である。
 - `documents/migration/pion/validation-plan.md:89` から `:105` がformat matrixと異常系を定義する。
 - `documents/migration/pion/contracts-and-types.md:150` から `:154` はsample positionを同期の正本とする。
 
@@ -73,6 +85,8 @@ container/codec異常をoutbound pacingから分離し、有限の入力とdeadl
 - 各形式の空/truncated/malformed/8 MiB+1/120秒超過/5秒timeout/cancelをtestする。
 - mora境界0、empty、末尾一致/960差、負値、NaN/Inf、末尾超過と累積丸めをtestする。
 - ffmpeg path不在/version probe失敗がHTTP listener前のstartup errorとなり、fake runnerへabsolute pathが渡ることをtestする。
+- 同一Decoder参照が2 Sessionへ渡ること、nil DecoderがManager/Sessionのresource作成前に拒否されること、
+  一方のSession Close後も他方が同じDecoderを参照し、closerがDecoderへ追加されないことをtestする。
 - `go test -race ./internal/media/...`、`go vet ./...`、`npm run gate`、`npm run tasks:check`を通す。
 
 ## ソースコードコメント受け入れ条件
