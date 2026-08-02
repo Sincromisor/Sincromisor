@@ -64,8 +64,9 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 			t.Errorf("client.Close() error = %v", err)
 		}
 	}()
-	createProcessSession(t, client, baseURL)
+	activeSessionSDP := createProcessSession(t, client, baseURL)
 
+	signalAt := time.Now()
 	if err := command.Process.Signal(syscall.SIGTERM); err != nil {
 		t.Fatalf("send SIGTERM: %v", err)
 	}
@@ -73,20 +74,40 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 	go func() {
 		waitResult <- command.Wait()
 	}()
+
+	httpClient := &http.Client{Timeout: 200 * time.Millisecond}
+	status := waitForDrainingStatus(t, httpClient, baseURL, signalAt.Add(shutdownAdmissionWindow))
+	if status.Ready || !status.Draining {
+		t.Fatalf("draining status = %+v, want ready=false draining=true", status)
+	}
+	assertHTTPStatus(t, httpClient, http.MethodGet, baseURL+"/health/ready", "", http.StatusServiceUnavailable)
+	drainingObservedAt := time.Now()
+	assertHTTPStatus(
+		t,
+		httpClient,
+		http.MethodPost,
+		baseURL+"/api/v1/RTCSignalingServer/offer",
+		processOfferBody(activeSessionSDP, "2a9910cd-8547-4a40-8863-fe51c7cfbba4"),
+		http.StatusServiceUnavailable,
+	)
+	if elapsed := time.Since(drainingObservedAt); elapsed >= shutdownAdmissionWindow {
+		t.Fatalf("initial Offer 503 took %s after draining observation, want less than %s", elapsed, shutdownAdmissionWindow)
+	}
+	waitForSessionCount(t, httpClient, baseURL, 0, signalAt.Add(shutdownAdmissionWindow))
+	waitForHTTPStopped(t, httpClient, baseURL, signalAt.Add(3*time.Second))
+
+	waitTimeout := time.Until(signalAt.Add(shutdownCleanupTimeout + shutdownHTTPTimeout))
+	if waitTimeout <= 0 {
+		t.Fatalf("pion-poc exceeded 6s shutdown limit before Wait observation\n%s", processOutput.String())
+	}
 	select {
 	case err := <-waitResult:
 		processExited = true
 		if err != nil {
 			t.Fatalf("pion-poc exit after SIGTERM = %v\n%s", err, processOutput.String())
 		}
-	case <-time.After(5 * time.Second):
-		t.Fatalf("pion-poc did not exit after SIGTERM\n%s", processOutput.String())
-	}
-
-	httpClient := &http.Client{Timeout: 200 * time.Millisecond}
-	if response, err := httpClient.Get(baseURL + "/api/v1/RTCSignalingServer/config.json"); err == nil {
-		_ = response.Body.Close()
-		t.Fatalf("HTTP still accepted after process exit: status=%d", response.StatusCode)
+	case <-time.After(waitTimeout):
+		t.Fatalf("pion-poc did not exit within 6s after SIGTERM\n%s", processOutput.String())
 	}
 	output := processOutput.String()
 	for _, expected := range []string{
@@ -114,6 +135,12 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 			t.Fatalf("process output contains forbidden lifecycle field %q:\n%s", forbidden, output)
 		}
 	}
+}
+
+type processStatus struct {
+	Sessions int  `json:"sessions"`
+	Ready    bool `json:"ready"`
+	Draining bool `json:"draining"`
 }
 
 func reserveTCPAddress(t *testing.T) string {
@@ -172,7 +199,7 @@ func newProcessTestPeer(t *testing.T) *webrtc.PeerConnection {
 	return client
 }
 
-func createProcessSession(t *testing.T, client *webrtc.PeerConnection, baseURL string) {
+func createProcessSession(t *testing.T, client *webrtc.PeerConnection, baseURL string) string {
 	t.Helper()
 	offer, err := client.CreateOffer(nil)
 	if err != nil {
@@ -187,10 +214,7 @@ func createProcessSession(t *testing.T, client *webrtc.PeerConnection, baseURL s
 	if local == nil {
 		t.Fatal("client local description is nil")
 	}
-	body := fmt.Sprintf(
-		`{"sdp":%q,"type":"offer","talk_mode":"chat","offer_request_id":"ca55c1dc-6b83-4f7d-a4e2-2e9fb65a0eae","offer_revision":1}`,
-		local.SDP,
-	)
+	body := processOfferBody(local.SDP, "ca55c1dc-6b83-4f7d-a4e2-2e9fb65a0eae")
 	response, err := http.Post(
 		baseURL+"/api/v1/RTCSignalingServer/offer",
 		"application/json",
@@ -217,4 +241,105 @@ func createProcessSession(t *testing.T, client *webrtc.PeerConnection, baseURL s
 	}); err != nil {
 		t.Fatalf("SetRemoteDescription() error = %v", err)
 	}
+	return local.SDP
+}
+
+func processOfferBody(sdp, requestID string) string {
+	return fmt.Sprintf(
+		`{"sdp":%q,"type":"offer","talk_mode":"chat","offer_request_id":%q,"offer_revision":1}`,
+		sdp,
+		requestID,
+	)
+}
+
+func waitForDrainingStatus(
+	t *testing.T,
+	client *http.Client,
+	baseURL string,
+	deadline time.Time,
+) processStatus {
+	t.Helper()
+	for time.Now().Before(deadline) {
+		status, err := fetchProcessStatus(client, baseURL)
+		if err == nil && status.Draining {
+			return status
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("draining status was not observable before admission window closed")
+	return processStatus{}
+}
+
+func waitForSessionCount(
+	t *testing.T,
+	client *http.Client,
+	baseURL string,
+	want int,
+	deadline time.Time,
+) {
+	t.Helper()
+	for time.Now().Before(deadline) {
+		status, err := fetchProcessStatus(client, baseURL)
+		if err == nil && status.Sessions == want {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("session count did not become %d before admission window closed", want)
+}
+
+func fetchProcessStatus(client *http.Client, baseURL string) (processStatus, error) {
+	response, err := client.Get(baseURL + "/api/v1/RTCSignalingServer/statuses")
+	if err != nil {
+		return processStatus{}, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return processStatus{}, fmt.Errorf("statuses response: %s", response.Status)
+	}
+	var status processStatus
+	if err := json.NewDecoder(response.Body).Decode(&status); err != nil {
+		return processStatus{}, fmt.Errorf("decode statuses: %w", err)
+	}
+	return status, nil
+}
+
+func assertHTTPStatus(
+	t *testing.T,
+	client *http.Client,
+	method string,
+	url string,
+	body string,
+	want int,
+) {
+	t.Helper()
+	request, err := http.NewRequest(method, url, strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("create %s request: %v", method, err)
+	}
+	if body != "" {
+		request.Header.Set("Content-Type", "application/json")
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		t.Fatalf("%s %s returned connection error, want HTTP %d: %v", method, url, want, err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != want {
+		payload, _ := io.ReadAll(response.Body)
+		t.Fatalf("%s %s status = %d, want %d; body=%s", method, url, response.StatusCode, want, payload)
+	}
+}
+
+func waitForHTTPStopped(t *testing.T, client *http.Client, baseURL string, deadline time.Time) {
+	t.Helper()
+	for time.Now().Before(deadline) {
+		response, err := client.Get(baseURL + "/health/live")
+		if err != nil {
+			return
+		}
+		_ = response.Body.Close()
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("HTTP listener still accepted connections after shutdown")
 }

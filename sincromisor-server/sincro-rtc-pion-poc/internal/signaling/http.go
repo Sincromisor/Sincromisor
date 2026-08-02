@@ -84,7 +84,10 @@ func NewProcessState() *ProcessState { return &ProcessState{} }
 // MarkReady publishes successful startup validation.
 func (s *ProcessState) MarkReady() { s.ready.Store(true) }
 
-// BeginDrain atomically rejects new initial sessions before HTTP accept stops.
+// BeginDrain publishes ready=false and the monotonic draining state before any
+// process owner is cancelled. The process coordinator keeps HTTP accepting for
+// its admission window, during which new initial offers observe a 503 response
+// instead of an ambiguous connection refusal.
 func (s *ProcessState) BeginDrain() { s.draining.Store(true); s.ready.Store(false) }
 
 // Ready reports whether the process can safely admit a new session.
@@ -201,6 +204,7 @@ func (s *Server) handleConfig(writer http.ResponseWriter, request *http.Request)
 //
 // initialだけがPreviousSessionIDとrevision 1を許可し、updateはstrict ULIDを検証して専用handlerへ渡す。
 // update失敗をinitial Session作成へfallbackせず、両経路のsize/schema validationをresource作成前に行う。
+// draining中もupdateは既存session操作へroutingするが、新規initial Offerはregistry ownerを作る前に503で拒否する。
 func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		writeError(writer, http.StatusMethodNotAllowed, "Method not allowed.")
@@ -307,6 +311,9 @@ type statusResponse struct {
 	Draining     bool `json:"draining"`
 }
 
+// handleStatusesはlistenerが維持されるdraining観測窓でも200を返し、admission状態とcleanup後のsession数を公開する。
+//
+// shutdown coordinatorはこのendpointでsessions=0を観測可能にしてからlistenerを停止する。
 func (s *Server) handleStatuses(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodGet {
 		writeError(writer, http.StatusMethodNotAllowed, "Method not allowed.")
@@ -329,6 +336,9 @@ func (s *Server) handleLive(writer http.ResponseWriter, request *http.Request) {
 	writer.WriteHeader(http.StatusOK)
 }
 
+// handleReadyはlistenerの生存とは分離したadmission readinessを返す。
+//
+// BeginDrain後の観測窓ではlistenerがrequestを処理できても503となり、新規sessionへtrafficを送らせない。
 func (s *Server) handleReady(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodGet {
 		writer.WriteHeader(http.StatusMethodNotAllowed)

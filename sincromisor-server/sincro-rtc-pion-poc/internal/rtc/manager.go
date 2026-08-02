@@ -266,7 +266,8 @@ func (m *Manager) CloseSession(sessionID, reason string) {
 //
 // reason省略時はprocess_shutdownを使う。ctx deadlineを超えた場合はctx.Errを返すが、done closeや
 // registry removeを偽装せず、各Sessionのcleanup goroutineは完了まで継続する。registry lockは
-// Close通知にも待機にも保持しないため、並行callbackを妨げない。
+// Close通知にも待機にも保持しないため、並行callbackを妨げない。CloseAll自身は期限を延長せず、
+// process coordinatorがOffer ownerと共有するcontextの範囲で終了を待つ。
 func (m *Manager) CloseAll(ctx context.Context, reasons ...string) error {
 	if ctx == nil {
 		return errors.New("rtc manager close context must not be nil")
