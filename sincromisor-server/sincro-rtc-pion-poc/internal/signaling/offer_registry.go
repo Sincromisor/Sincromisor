@@ -110,7 +110,7 @@ func NewOfferRegistry(sessions SessionService, config OfferRegistryConfig) (*Off
 		config:      config,
 		sweeperDone: make(chan struct{}),
 	}
-	go registry.sweep()
+	registry.startSweeper()
 	return registry, nil
 }
 
@@ -160,18 +160,34 @@ func (r *OfferRegistry) Resolve(
 
 // Wait は全initial Offer ownerとTTL sweeperをjoinし、shutdown deadline超過時はctx.Errを返す。
 func (r *OfferRegistry) Wait(ctx context.Context) error {
-	done := make(chan struct{})
-	go func() {
+	result := r.startJoin(func() {
 		r.owners.Wait()
 		<-r.sweeperDone
-		close(done)
-	}()
+	})
 	select {
-	case <-done:
-		return nil
+	case err := <-result:
+		return err
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+// startJoin contains the first-party shutdown helper that waits on both owner
+// groups. A helper panic becomes a bounded error result instead of stranding
+// Wait or crashing the process; the channel always receives exactly once.
+func (r *OfferRegistry) startJoin(join func()) <-chan error {
+	result := make(chan error, 1)
+	go func() {
+		defer func() {
+			if recover() != nil {
+				r.config.Logger.Error("offer registry worker panic", "stage", "offer_wait", "reason", "panic")
+				result <- errors.New("offer registry wait helper panic")
+			}
+		}()
+		join()
+		result <- nil
+	}()
+	return result
 }
 
 func (r *OfferRegistry) wait(ctx context.Context, entry *offerEntry) (rtc.Answer, error) {
@@ -197,11 +213,14 @@ func (r *OfferRegistry) wait(ctx context.Context, entry *offerEntry) (rtc.Answer
 }
 
 // create はHTTP waiterから独立してcandidate収集を所有し、process cancelとgather timeoutには従う。
-// 成功だけをcompleted cacheへ遷移させ、失敗entryは削除して同じrequest IDの再試行を許可する。
+// 成功だけをcompleted cacheへ遷移させ、失敗/panic entryは削除してdoneを閉じ、同じrequest IDの
+// 再試行と全waiterの解放を可能にする。OnClosedはSessionのcallback panic境界から呼ばれるため、
+// tombstone処理がpanicしてもSession側のdone/active metric解放は継続する。
 func (r *OfferRegistry) create(entry *offerEntry, offer rtc.Offer) {
 	defer r.owners.Done()
 	defer func() {
 		if recover() != nil {
+			r.config.Logger.Error("offer registry worker panic", "stage", "offer_owner", "reason", "panic")
 			r.mu.Lock()
 			if current := r.entries[entry.requestID]; current == entry {
 				entry.err = errors.New("initial offer owner panic")
@@ -254,15 +273,29 @@ func (r *OfferRegistry) sessionClosed(entry *offerEntry, sessionID string) {
 	entry.state = offerTombstone
 	entry.expiresAt = r.config.Clock.Now().Add(r.config.TTL)
 	r.config.Logger.Info("initial offer tombstoned",
-		"offer_request_id", entry.requestID,
 		"session_id", sessionID,
+		"reason", "session_closed",
 	)
 }
 
+// startSweeper owns the process-lifetime TTL worker and closes sweeperDone on
+// every exit, including panic. This guarantees Wait can join after a Clock or
+// sweep implementation failure without exposing recovered values.
+func (r *OfferRegistry) startSweeper() {
+	go func() {
+		defer close(r.sweeperDone)
+		defer func() {
+			if recover() != nil {
+				r.config.Logger.Error("offer registry worker panic", "stage", "offer_sweeper", "reason", "panic")
+			}
+		}()
+		r.sweep()
+	}()
+}
+
 // sweep はprocess contextをownerとし、30秒ごとにrequest非依存の期限回収を行う。
-// process cancelで終了してsweeperDoneを閉じ、shutdownのWaitへjoin完了を通知する。
+// process cancelまたはstartSweeperのpanic境界で終了し、shutdownのWaitへjoin可能になる。
 func (r *OfferRegistry) sweep() {
-	defer close(r.sweeperDone)
 	for {
 		select {
 		case <-r.config.ProcessContext.Done():

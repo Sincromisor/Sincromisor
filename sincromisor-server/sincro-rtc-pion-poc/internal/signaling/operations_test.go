@@ -64,13 +64,33 @@ func TestOperationalEndpointsAndDrainAdmission(t *testing.T) {
 
 func TestMutationPanicClosesKnownSessionAndReturns500(t *testing.T) {
 	sessions := &panicSessions{panicUpdate: true}
-	server := New(sessions, nil, t.TempDir(), "", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	metrics := observability.NewRegistry()
+	server := New(
+		sessions,
+		nil,
+		t.TempDir(),
+		"",
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Options{Recorder: metrics},
+	)
 	server.offers = &OfferRegistry{config: OfferRegistryConfig{GatherTimeout: time.Second}}
 	body := `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","session_id":"01K1AF2Y0H0000000000000000","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":2}`
 	response := httptest.NewRecorder()
 	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodPost, offerPath, strings.NewReader(body)))
 	if response.Code != http.StatusInternalServerError || sessions.closedReason != "panic" {
 		t.Fatalf("panic response = %d, close reason = %q", response.Code, sessions.closedReason)
+	}
+	metricsResponse := httptest.NewRecorder()
+	metrics.Handler().ServeHTTP(metricsResponse, httptest.NewRequest(http.MethodGet, metricsPath, nil))
+	metricsBody := metricsResponse.Body.String()
+	if !strings.Contains(
+		metricsBody,
+		`sincro_rtc_signaling_requests_total{endpoint="offer",status_class="5xx"} 1`,
+	) || !strings.Contains(
+		metricsBody,
+		`sincro_rtc_signaling_duration_seconds_count{endpoint="offer"} 1`,
+	) {
+		t.Fatalf("panic signaling metrics missing:\n%s", metricsBody)
 	}
 }
 

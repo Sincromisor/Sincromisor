@@ -157,7 +157,10 @@ func (s *Server) Handler() http.Handler {
 		writeError(writer, http.StatusNotFound, "API endpoint not found.")
 	})
 	mux.Handle("/", http.FileServer(http.Dir(s.frontendDir)))
-	return s.recoverHTTP(s.observeHTTP(mux))
+	// Observation is the outer commit owner: recoverHTTP always returns after
+	// committing either the buffered success response or a fresh panic 500, so
+	// every signaling request contributes exactly one final status and latency.
+	return s.observeHTTP(s.recoverHTTP(mux))
 }
 
 type iceServerResponse struct {
@@ -343,6 +346,10 @@ type statusWriter struct {
 	status int
 }
 
+// responseBuffer holds the complete handler response until the request panic
+// boundary decides whether it is safe to commit. It implements only the
+// non-streaming ResponseWriter contract used by these finite JSON/static
+// endpoints; handlers requiring Flusher or Hijacker must use another boundary.
 type responseBuffer struct {
 	header http.Header
 	status int
@@ -366,6 +373,9 @@ func (b *responseBuffer) Write(body []byte) (int, error) {
 	return b.body.Write(body)
 }
 
+// flush transfers headers, final status, and body to the network writer once.
+// recoverHTTP deliberately never calls it after a panic, discarding all
+// partially constructed success state before writing the replacement 500.
 func (b *responseBuffer) flush(writer http.ResponseWriter) {
 	for key, values := range b.header {
 		for _, value := range values {
@@ -428,8 +438,11 @@ func signalingEndpoint(path string) string {
 	}
 }
 
-// recoverHTTP confines ordinary handler panics to one request. Go runtime fatal
-// errors and failures outside this goroutine cannot be recovered.
+// recoverHTTP keeps the entire non-streaming response uncommitted until the
+// handler returns. Ordinary panics discard buffered headers/body and commit a
+// fresh 500; successful responses flush once. The outer observeHTTP boundary
+// records that committed result. Runtime fatal errors, cgo crashes, streaming,
+// and failures outside this request goroutine remain unsupported.
 func (s *Server) recoverHTTP(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		buffered := newResponseBuffer()

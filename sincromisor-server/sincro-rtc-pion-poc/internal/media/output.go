@@ -79,6 +79,8 @@ type OutputProcessor struct {
 // NewOutputProcessor はcodec、track、telop境界を検証してidle processorを返す。
 //
 // goroutineやtickerはRunまで開始しない。telopはnilでもよく、その場合audioだけを送る。
+// observerは任意で、未指定または先頭がnilならeventを破棄する。複数指定時は既存callerとの
+// optional互換境界として先頭だけを使用し、processorはpayload-free eventを同期通知する。
 func NewOutputProcessor(
 	encoder *FrameEncoder,
 	track SampleWriter,
@@ -92,6 +94,7 @@ func NewOutputProcessor(
 // NewOutputProcessorWithClockはproduction trackを決定的clockで検証するintegration境界である。
 //
 // runtimeはNewOutputProcessorを使う。clockはRun開始後に交換してはならない。
+// observerの未指定/nil/複数指定semanticsと同期通知の副作用はNewOutputProcessorと同じである。
 func NewOutputProcessorWithClock(
 	encoder *FrameEncoder,
 	track SampleWriter,
@@ -104,6 +107,8 @@ func NewOutputProcessorWithClock(
 }
 
 // newOutputProcessorWithHooksはproductionと決定的clock testで共有する依存組み立て境界である。
+// observersを単一のimmutable observerへ正規化し、Run中のqueue/pacing/codec/audio eventが
+// constructor後に別ownerへ切り替わらないようにする。
 func newOutputProcessorWithHooks(
 	encoder outputEncoder,
 	track SampleWriter,

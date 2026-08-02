@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"errors"
+	"sync"
 
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 )
@@ -30,6 +31,18 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 	c.wg.Add(1)
 	c.observer.PipelineReconnect(string(service), "start")
 	c.mu.Unlock()
+	var terminalOnce sync.Once
+	finish := func(result string) {
+		terminalOnce.Do(func() {
+			c.observer.PipelineReconnect(string(service), result)
+		})
+	}
+	handedOff := false
+	defer func() {
+		if !handedOff {
+			finish("failure")
+		}
+	}()
 
 	// Output publication and reset take locks in the same order. Once resetting
 	// is visible no new producer is accepted; this barrier advances generation
@@ -70,11 +83,16 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 	c.mu.Unlock()
 	c.outputMu.Unlock()
 
+	handedOff = true
 	c.goCoordinator("pipeline_reconnect", func() {
+		result := "failure"
+		defer func() {
+			// Every accepted reset has exactly one terminal result, including
+			// shutdown, callback panic, and reconnect cancellation exits.
+			finish(result)
+		}()
 		oldWork.cancel()
-		if remaining := oldWork.input.close(); remaining > 0 {
-			c.observer.QueueDepthDelta("input", -float64(remaining))
-		}
+		oldWork.input.close()
 		_ = oldSet.Close()
 		oldWork.wg.Wait()
 		c.mu.Lock()
@@ -87,13 +105,12 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 		c.resetting = false
 		c.mu.Unlock()
 		if err := c.connectUntilRunning(false); err != nil {
-			c.observer.PipelineReconnect(string(service), "failure")
 			if !errors.Is(err, ErrClosed) {
 				c.logger.Error("pipeline reconnect stopped", "stage", string(service), "reason", "reconnect_failure")
 			}
 			return
 		}
-		c.observer.PipelineReconnect(string(service), "success")
+		result = "success"
 	})
 }
 

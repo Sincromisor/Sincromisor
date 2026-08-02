@@ -12,18 +12,13 @@ import (
 // Each loop is tied to one generation context; no stage retries an in-flight item.
 func (c *Coordinator) pcmLoop(work *generationWork, extractor ExtractorClient) {
 	for {
-		select {
-		case <-work.ctx.Done():
+		frame, ok := work.input.pop(work.ctx)
+		if !ok {
 			return
-		case frame, ok := <-work.input.values:
-			if !ok {
-				return
-			}
-			c.observer.QueueDepthDelta("input", -1)
-			if err := extractor.SendPCM(work.ctx, frame); err != nil {
-				c.requestReset(work.number, pclient.ServiceExtractor, err)
-				return
-			}
+		}
+		if err := extractor.SendPCM(work.ctx, frame); err != nil {
+			c.requestReset(work.number, pclient.ServiceExtractor, err)
+			return
 		}
 	}
 }
