@@ -158,6 +158,7 @@ type sessionLifecycle struct {
 	textOpen     bool
 	telopOpen    bool
 	recovery     recoveryPhase
+	iceState     string
 }
 
 func newSessionLifecycle(clock Clock) (*sessionLifecycle, error) {

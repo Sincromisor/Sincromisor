@@ -15,24 +15,22 @@ import (
 // より新しいgenerationを最初に観測したgoroutineがaudio/text/telopを一括purgeする。これにより
 // channel間のselect順序や複数receiverへの誤ったbroadcast期待へ正しさを依存させない。
 func (s *Session) startOutbound() {
-	go s.outputLoop()
-	go s.generationLoop()
-	go s.textOutputLoop()
-	go s.synthOutputLoop()
+	s.goReserved("outbound_clock", func(context.Context) { s.outputLoop() })
+	s.goReserved("pipeline_generation", func(context.Context) { s.generationLoop() })
+	s.goReserved("pipeline_text", func(context.Context) { s.textOutputLoop() })
+	s.goReserved("pipeline_synth", func(context.Context) { s.synthOutputLoop() })
 }
 
 func (s *Session) outputLoop() {
-	defer s.wg.Done()
 	err := s.output.Run(s.ctx)
 	if err == nil || errors.Is(err, context.Canceled) {
 		return
 	}
-	s.logger.Error("outbound audio processing stopped", "session_id", s.id, "error", err)
+	s.logger.Error("outbound audio processing stopped", "session_id", s.id, "reason", "media_write_error")
 	_ = s.Close("outbound_error")
 }
 
 func (s *Session) generationLoop() {
-	defer s.wg.Done()
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -50,7 +48,6 @@ func (s *Session) generationLoop() {
 }
 
 func (s *Session) textOutputLoop() {
-	defer s.wg.Done()
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -66,7 +63,7 @@ func (s *Session) textOutputLoop() {
 				return s.dispatcher.EnqueueText(output.Value)
 			})
 			if err != nil {
-				s.logger.Error("outbound text enqueue failed", "session_id", s.id, "error", err)
+				s.logger.Error("outbound text enqueue failed", "session_id", s.id, "reason", "output_backpressure")
 				_ = s.Close("output_backpressure")
 				return
 			}
@@ -75,7 +72,6 @@ func (s *Session) textOutputLoop() {
 }
 
 func (s *Session) synthOutputLoop() {
-	defer s.wg.Done()
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -89,7 +85,7 @@ func (s *Session) synthOutputLoop() {
 			}
 			err := s.handleSynthOutput(output)
 			if err != nil {
-				s.logger.Error("outbound speech enqueue failed", "session_id", s.id, "error", err)
+				s.logger.Error("outbound speech enqueue failed", "session_id", s.id, "reason", "output_backpressure")
 				_ = s.Close("output_backpressure")
 				return
 			}
@@ -108,7 +104,8 @@ func (s *Session) handleSynthOutput(output pipeline.Output[protocol.SynthesizerR
 	decoded, err := s.synthDecoder.Decode(s.ctx, output.Value)
 	if err != nil {
 		if s.isCurrentGeneration(output.Generation) && s.ctx.Err() == nil {
-			s.logger.Error("synthesized audio decode failed", "session_id", s.id, "error", err)
+			s.logger.Error("synthesized audio decode failed", "session_id", s.id, "reason", "codec_error")
+			s.metrics().CodecError("decode_synth")
 			_ = s.Close("codec_error")
 		}
 		return nil

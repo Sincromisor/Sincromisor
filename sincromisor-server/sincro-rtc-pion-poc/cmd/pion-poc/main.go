@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/config"
-	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery"
@@ -77,17 +77,19 @@ func runWithBoundaries(
 	if err != nil {
 		return err
 	}
+	metrics := observability.NewRegistry()
 	pipelineFactory, err := newPipelineFactory(logger)
 	if err != nil {
 		return err
 	}
 	sessions, err := rtc.NewManager(cfg.STUNURL, rtc.ManagerConfig{
 		PipelineFactory: pipelineFactory,
-		InputObserver:   media.NewInputCounterObserver(),
+		InputObserver:   metrics,
 		Clock:           rtc.SystemClock{},
 		Logger:          logger,
 		MaxSessions:     cfg.MaxSessions,
 		SynthDecoder:    synthDecoder,
+		Recorder:        metrics,
 	})
 	if err != nil {
 		return fmt.Errorf("create rtc manager: %w", err)
@@ -155,12 +157,20 @@ func serve(
 	cancelProcess context.CancelFunc,
 	logger *slog.Logger,
 ) error {
+	processState := signaling.NewProcessState()
+	processState.MarkReady()
+	recorder := sessions.Recorder()
+	var metricsHandler http.Handler
+	if registry, ok := recorder.(*observability.Registry); ok {
+		metricsHandler = registry.Handler()
+	}
 	handler := signaling.New(
 		sessions,
 		offers,
 		cfg.FrontendDir,
 		cfg.STUNURL,
 		logger,
+		signaling.Options{State: processState, Recorder: recorder, Metrics: metricsHandler},
 	).Handler()
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,
@@ -192,6 +202,9 @@ func serve(
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
+	// Admission changes are published before accept shutdown so requests already
+	// dispatched to the handler cannot create a fresh initial session.
+	processState.BeginDrain()
 	cancelProcess()
 	httpErr := server.Shutdown(shutdownCtx)
 	offerErr := offers.Wait(shutdownCtx)

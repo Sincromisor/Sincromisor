@@ -8,6 +8,14 @@ import "github.com/pion/webrtc/v4"
 // grace超過は15秒のrestart deadlineへ進み、connected通知だけではcancelせず成功updateを要求する。
 // closedとdeadline発火は既存close-onceへ収束し、重複callbackは期限を延長しない。
 func (s *Session) handleICEConnectionState(state webrtc.ICEConnectionState) {
+	s.lifecycle.mu.Lock()
+	from := s.lifecycle.iceState
+	if from == "" {
+		from = webrtc.ICEConnectionStateNew.String()
+	}
+	s.lifecycle.iceState = state.String()
+	s.lifecycle.mu.Unlock()
+	s.metrics().ICETransition(from, state.String())
 	switch state {
 	case webrtc.ICEConnectionStateClosed:
 		_ = s.Close("ice_closed")
@@ -47,6 +55,7 @@ func (s *Session) disconnectGraceExpired() {
 		return
 	}
 	s.lifecycle.recovery = recoveryNeedsRestart
+	s.metrics().Deadline("restart")
 	err := s.lifecycle.recoveryDeadlines.replace(restartDeadlineTimeout, s.restartDeadlineExpired)
 	s.lifecycle.mu.Unlock()
 	if err != nil {
@@ -77,6 +86,7 @@ func (s *Session) restartDeadlineExpired() {
 		return
 	}
 	started := s.beginCloseLocked("ice_restart_timeout")
+	s.metrics().Deadline("restart")
 	s.lifecycle.mu.Unlock()
 	if started {
 		go s.cleanup("ice_restart_timeout")

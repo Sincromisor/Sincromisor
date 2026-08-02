@@ -75,6 +75,18 @@ Pion版の経路には追加adapterを挟まない。aiortcのimageと設定はr
 
 設定の形式と組み合わせはnetwork socketやHTTP listenerを公開する前に検証する。public IPv4のparse失敗、UDP mux bind失敗、port不一致、空のinterface選択、TURN URL、上限やtimeoutの0 / 負値はreadiness falseのまま待機せずprocessをfail-fastさせる。外部NAT / firewallの到達性はstartupだけでは保証できないため、production相当リハーサルのsmoke testで検証する。
 
+## Healthとmetrics
+
+- `/health/live`はHTTP event loopがrequestを処理できる間200を返す。
+- `/health/ready`はstartup dependency検証完了後かつ非drainingの間だけ200を返す。
+  下流Python serviceの一時障害はsession pipelineがreset/reconnectするためprocess readinessへ混ぜない。
+- `/metrics`はprocess専用Prometheus registryを公開し、default global registryを使わない。
+- metric prefixは`sincro_rtc_`とし、sessions、signaling、ICE/deadline、audio/RTP/RTCP、
+  pacing/codec、pipeline reconnect、queue/DataChannel、close durationを集計する。
+  duration、lag、RTTはseconds、queue depthはitemsである。
+- labelはendpoint、status class、有限enumのreason/stage/outcomeだけを使う。session ID、SDP、
+  candidate、chat、音声payloadはmetric labelまたは通常logへ記録しない。
+
 ## Service discovery
 
 - Go RTC serverはfrontend-facing endpointとしてConsulへ登録する。
@@ -111,7 +123,11 @@ sequenceDiagram
     G-->>O: process exit
 ```
 
-切替時は利用停止を告知してから新規sessionを拒否し、短いclose timeout後にactive sessionを終了する。長時間drainして無停止を目指さない。各pipeline client、codec、DataChannel、PeerConnectionはsessionのclose-once guardに従い、shutdown経路から重複closeされないようにする。
+切替時は利用停止を告知してから`ready=false`と`draining=true`を先に公開し、新規initial
+Offerを503で拒否する。続いてHTTP acceptを停止し、process contextとOffer ownerを収束させ、
+active sessionのpipeline client、codec、DataChannel、PeerConnectionをclose-once guard経由で
+終了して最大5秒でjoinする。長時間drainして無停止を目指さない。deadline超過時は未join resourceを
+正常終了として扱わない。
 
 ## Rollout段階
 
