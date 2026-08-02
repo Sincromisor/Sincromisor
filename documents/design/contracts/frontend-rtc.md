@@ -173,7 +173,8 @@ AppControllerの明示的な再startまたはpage reloadまで新sessionを自�
 
 update Offerまたはcandidateの404/410だけはserver session消失として扱う。既知の旧`session_id`を
 `previous_session_id`に設定し、新しいPeerConnection、DataChannel、request IDによるinitial Offerへ
-置き換える。initial Offerの410はresponseから旧sessionを復元できないためterminal failureとする。
+置き換える。送信用audio trackは停止せず新PeerConnectionへ引き継ぐ。initial Offerの410は
+responseから旧sessionを復元できないためterminal failureとする。
 409はrevision/request identity競合でありblind retryしない。
 
 ## Timeout / Retry

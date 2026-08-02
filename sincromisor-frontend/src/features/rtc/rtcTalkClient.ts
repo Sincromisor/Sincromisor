@@ -42,8 +42,11 @@ export class RTCTalkClient {
     private readonly sincroConfig: SincroRTCConfig;
     private readonly talkMode: string;
 
+    /** telop_ch受信を上位conversation/character層へ通知する差し替え可能callback。 */
     telopChannelCallback: (msg: TelopChannelMessage) => void = () => {};
+    /** text_ch受信を上位conversation層へ通知する差し替え可能callback。 */
     textChannelCallback: (msg: ChatMessage) => void = () => {};
+    /** 接続復帰時は引数なし、terminal/degraded時は表示message付きでhealth UIへ通知する。 */
     rtcHealthCallback: (message?: string) => void = () => {};
 
     /**
@@ -169,8 +172,9 @@ export class RTCTalkClient {
                 return;
             }
             this.negotiationState.commitAnswer(identity, answer);
+            const candidateFlush = this.flushCandidates(identity.revision);
             this.pendingIdentity = undefined;
-            await this.flushCandidates(identity.revision);
+            await candidateFlush;
             this.diagnostics.resetFailureCapture();
             this.rtcHealthCallback();
         } catch (error) {
@@ -185,14 +189,16 @@ export class RTCTalkClient {
         if (identity?.sessionId === undefined) {
             throw new Error("RTC candidate flush requires an assigned session.");
         }
-        for (const queued of this.negotiationState.drainCandidates(revision)) {
-            await this.sendCandidate(
-                queued.candidate,
-                identity.sessionId,
-                revision,
-                this.bundleGeneration,
-            );
-        }
+        const sessionId = identity.sessionId;
+        const generation = this.bundleGeneration;
+        const queuedCandidates = this.negotiationState.drainCandidates(revision);
+        // Answer前queueとAnswer後candidateを同じPromise chainへ載せ、revision内のFIFOを維持する。
+        this.candidateSendFlight = this.candidateSendFlight.then(async () => {
+            for (const queued of queuedCandidates) {
+                await this.sendCandidate(queued.candidate, sessionId, revision, generation);
+            }
+        });
+        await this.candidateSendFlight;
     }
 
     private onIceCandidate(generation: number, candidate: RTCIceCandidateInit | null): void {
@@ -271,7 +277,7 @@ export class RTCTalkClient {
             return this.negotiationFlight;
         }
         if (this.negotiationState.mode === "legacy") {
-            return this.replaceBundle();
+            return this.replaceBundle(this.negotiationState.identity?.sessionId);
         }
         return this.runRestartNegotiation();
     }
@@ -301,8 +307,13 @@ export class RTCTalkClient {
         this.negotiationState.markReplacing();
         this.generationAbortController.abort();
         this.generationAbortController = new AbortController();
+        // 旧generationのrejected candidate chainを新bundleへ継承しない。
+        this.candidateSendFlight = Promise.resolve();
         this.bundleGeneration += 1;
-        closeRtcPeerConnection(this.bundle);
+        closeRtcPeerConnection({
+            ...this.bundle,
+            stopSenderTracks: false,
+        });
         this.bundle = this.createBundle();
         await this.runInitialNegotiation(previousSessionId);
     }

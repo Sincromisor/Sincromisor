@@ -135,4 +135,79 @@ describe("postRtcSignalingJson", () => {
         await expect(request).rejects.toThrow("generation was closed");
         expect(fetchMock).toHaveBeenCalledTimes(1);
     });
+
+    it("treats a 200 JSON parse failure as terminal after one HTTP execution", async () => {
+        const responseWithInvalidJson = new Response("not-json", { status: 200 });
+        const json = vi
+            .spyOn(responseWithInvalidJson, "json")
+            .mockRejectedValue(new SyntaxError("invalid JSON"));
+        const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(responseWithInvalidJson);
+
+        await expect(
+            postRtcSignalingJson({
+                body: "{}",
+                fetch: fetchMock,
+                operation: "initial-offer",
+                url: "/offer",
+            }),
+        ).rejects.toThrow("invalid JSON");
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(json).toHaveBeenCalledTimes(1);
+    });
+
+    it("retries immediate network failures at the expected fake-clock call times", async () => {
+        vi.useFakeTimers({ now: 0 });
+        const callTimes: number[] = [];
+        const fetchMock = vi.fn<typeof fetch>(async () => {
+            callTimes.push(Date.now());
+            throw new TypeError("network unavailable");
+        });
+        const request = postRtcSignalingJson({
+            body: "{}",
+            fetch: fetchMock,
+            operation: "candidate",
+            retryClock: fakeClock(),
+            url: "/candidate",
+        });
+        const rejection = expect(request).rejects.toThrow("retry exhausted");
+
+        await vi.runAllTimersAsync();
+        await rejection;
+
+        expect(callTimes).toEqual([0, 250, 750, 1_750]);
+    });
+
+    it.each([
+        ["initial-offer", [0, 10_250, 20_750], [10_000, 10_000, 9_250]],
+        ["candidate", [0, 5_250, 10_750, 16_750], [5_000, 5_000, 5_000, 5_000]],
+    ] as const)("applies per-attempt timeout and total-deadline clipping for %s", async (operation, expectedCalls, expectedTimeouts) => {
+        vi.useFakeTimers({ now: 0 });
+        const callTimes: number[] = [];
+        const timeoutDurations: number[] = [];
+        const fetchMock = vi.fn<typeof fetch>((_url, init) => {
+            const startedAt = Date.now();
+            callTimes.push(startedAt);
+            return new Promise((_resolve, reject) => {
+                init?.signal?.addEventListener("abort", () => {
+                    timeoutDurations.push(Date.now() - startedAt);
+                    reject(new Error("attempt timeout"));
+                });
+            });
+        });
+        const request = postRtcSignalingJson({
+            body: "{}",
+            fetch: fetchMock,
+            operation,
+            retryClock: fakeClock(),
+            url: "/signaling",
+        });
+        const rejection = expect(request).rejects.toBeInstanceOf(Error);
+
+        await vi.runAllTimersAsync();
+        await rejection;
+
+        expect(callTimes).toEqual(expectedCalls);
+        expect(timeoutDurations).toEqual(expectedTimeouts);
+    });
 });

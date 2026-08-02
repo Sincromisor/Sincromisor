@@ -16,10 +16,15 @@ type RtcPeerConnectionFactoryParams = {
     sincroConfig: SincroRTCConfig;
 };
 
+/** PeerConnectionと、このconnectionが所有する2つのDataChannelをまとめたresource bundle。 */
 export type RtcPeerConnectionBundle = RtcDataChannels & {
     peerConnection: RTCPeerConnection;
 };
 
+/**
+ * live audio trackから1 generation分のPeerConnection/DataChannel bundleを生成する。
+ * cleanup ownershipは呼び出し元へ移り、replacement時のtrack stop可否もownerが決定する。
+ */
 export function createRtcPeerConnectionBundle(
     params: RtcPeerConnectionFactoryParams,
 ): RtcPeerConnectionBundle {

@@ -30,4 +30,26 @@ describe("sendRtcIceCandidate", () => {
 
         expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual(fixture);
     });
+
+    it("treats a 200 response schema failure as terminal without retry", async () => {
+        const fetchMock = vi
+            .fn<typeof fetch>()
+            .mockResolvedValue(new Response('{"status":"invalid"}', { status: 200 }));
+        vi.stubGlobal("fetch", fetchMock);
+
+        await expect(
+            sendRtcIceCandidate({
+                candidate: null,
+                logger: {
+                    addRtcEventLog: vi.fn(),
+                    addTextChannelLog: vi.fn(),
+                },
+                offerRevision: 1,
+                sessionId: "session-1",
+                sincroConfig: { candidateURL: "/candidate" },
+            }),
+        ).rejects.toThrow();
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
 });

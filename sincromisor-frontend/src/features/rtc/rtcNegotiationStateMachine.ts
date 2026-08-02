@@ -1,3 +1,4 @@
+/** logical RTC connectionのsignaling/lifecycle phase。 */
 export type RtcNegotiationPhase =
     | "idle"
     | "initializing"
@@ -7,14 +8,17 @@ export type RtcNegotiationPhase =
     | "replacing"
     | "closed";
 
+/** revision契約を持つPionとrevisionなしinitial Answerを返すlegacy backendのmode。 */
 export type RtcNegotiationMode = "pion" | "legacy";
 
+/** SDP生成からAnswer commitまで不変に保つOffer request identity。 */
 export type RtcOfferIdentity = {
     requestId: string;
     revision: number;
     sessionId?: string;
 };
 
+/** PeerConnection generationとOffer revisionに帰属する未送信candidate。 */
 export type QueuedRtcCandidate = {
     candidate: RTCIceCandidateInit | null;
     generation: number;
@@ -37,14 +41,17 @@ export class RtcNegotiationStateMachine {
     private negotiationMode?: RtcNegotiationMode;
     private phase: RtcNegotiationPhase = "idle";
 
+    /** 現在のlifecycle phase。外部からの書き換えは許可しない。 */
     get state(): RtcNegotiationPhase {
         return this.phase;
     }
 
+    /** initial Answer確定後のbackend mode。negotiation中は未確定。 */
     get mode(): RtcNegotiationMode | undefined {
         return this.negotiationMode;
     }
 
+    /** 最後に検証・commit済みのsession/request/revision identity。 */
     get identity(): RtcOfferIdentity | undefined {
         return this.currentIdentity;
     }
@@ -80,6 +87,7 @@ export class RtcNegotiationStateMachine {
         };
     }
 
+    /** connectedからrestart graceへ一度だけ遷移し、重複eventではfalseを返す。 */
     markRestartPending(): boolean {
         if (this.phase !== "connected") {
             return false;
@@ -88,12 +96,14 @@ export class RtcNegotiationStateMachine {
         return true;
     }
 
+    /** grace中の自然復帰だけをconnectedへ戻し、それ以外のphaseは変更しない。 */
     restoreConnected(): void {
         if (this.phase === "restartPending") {
             this.phase = "connected";
         }
     }
 
+    /** session-loss recovery開始を記録し、旧generationのcandidateを破棄する。 */
     markReplacing(): void {
         this.requireOpen();
         this.phase = "replacing";
@@ -130,6 +140,7 @@ export class RtcNegotiationStateMachine {
         this.phase = "connected";
     }
 
+    /** candidateを現generation/revisionのFIFOへ追加し、65件目はgenerationを失敗させる。 */
     enqueueCandidate(candidate: RTCIceCandidateInit | null, revision: number): void {
         this.requireOpen();
         if (this.candidates.length >= MAX_CANDIDATES_PER_GENERATION) {
@@ -143,6 +154,7 @@ export class RtcNegotiationStateMachine {
         });
     }
 
+    /** 指定revisionの現generation candidateをFIFOで取り出し、内部queueを空にする。 */
     drainCandidates(revision: number): QueuedRtcCandidate[] {
         const candidates = this.candidates.filter(
             (candidate) =>
@@ -153,10 +165,12 @@ export class RtcNegotiationStateMachine {
         return candidates;
     }
 
+    /** negotiation/candidate failure時に未送信candidateを全破棄する。 */
     failGeneration(): void {
         this.candidates = [];
     }
 
+    /** state machineを再利用不能にし、identityとcandidate ownershipを解放する。 */
     close(): void {
         this.phase = "closed";
         this.candidates = [];
