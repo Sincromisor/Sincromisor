@@ -228,10 +228,12 @@ func (r *Registry) CodecError(direction string) {
 	r.codecErrors.WithLabelValues(normalize(direction, codecDirections, "encode_out")).Inc()
 }
 
-// PipelineReconnect records start/success/failure for one of four fixed
-// downstream services.
+// PipelineReconnect は production client の service 名を公開 metric の固定 label 語彙へ変換し、
+// 1回の再接続 lifecycle 結果を記録する。
+//
+// 未知値は従来どおり extractor へ縮退し、payload 由来の label cardinality を増やさない。
 func (r *Registry) PipelineReconnect(service, result string) {
-	r.reconnects.WithLabelValues(normalize(service, services, "extractor"), normalize(result, reconnectResults, "failure")).Inc()
+	r.reconnects.WithLabelValues(normalizePipelineService(service), normalize(result, reconnectResults, "failure")).Inc()
 }
 
 // QueueDepthDelta transfers ownership of delta items to or from a fixed queue.
@@ -283,6 +285,23 @@ func normalize(value string, allowed map[string]struct{}, fallback string) strin
 		return value
 	}
 	return fallback
+}
+
+// normalizePipelineService は内部 WebSocket service 名と rollout 文書の短い公開 label を対応付ける。
+// 短い label 自体も受理するため、既存の recorder caller と固定 label 集合は変更しない。
+func normalizePipelineService(service string) string {
+	switch service {
+	case "SpeechExtractor", "extractor":
+		return "extractor"
+	case "SpeechRecognizer", "recognizer":
+		return "recognizer"
+	case "TextProcessor", "processor":
+		return "processor"
+	case "VoiceSynthesizer", "synthesizer":
+		return "synthesizer"
+	default:
+		return "extractor"
+	}
 }
 
 func set(values ...string) map[string]struct{} {

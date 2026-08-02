@@ -33,6 +33,25 @@ repository 外へ解決される場合は開始しない。
 `Close` は SIGTERM の1秒後も running なら SIGKILL を送り、background waiter を join するため、
 終了時に子 process を残さない。
 
+## 下流 pipeline 契約と障害注入
+
+`pipelinecontract` は、repository の MessagePack 固定データを schema の正本として
+SpeechExtractor、SpeechRecognizer、TextProcessor、VoiceSynthesizer の4契約 service を起動する。
+各 PCM attempt の `speech_id` / `sequence_id`、session、確定済み履歴を service 間で照合し、
+TextProcessor の response bytes が VoiceSynthesizer まで変更されていないことを台帳へ記録する。
+
+`wsproxy` は通常は4接続を透過し、正常 turn の完了後に `close`、`malformed`、`held-close` の
+有限規則列を arm する。規則は指定 service の最初の request / response 交換だけで先頭から消費され、
+次の WebSocket upgrade を1回だけ503で拒否する。request 処理中、未消費規則がある状態、空の規則列では
+arm できず、scenario 終了時の未消費状態も error になる。
+
+`consuldev` は `127.0.0.1:8500` が未使用であることを先に確認し、専用 `consul agent -dev` を所有する。
+proxy だけを4つの固定 service IDで登録し、終了時は逆順の登録解除後に child process と waiter を join する。
+既存 Consul がある場合は変更せず開始を拒否する。
+
+これらの契約 service は、障害語彙、generation reset、台帳、metric 観測を決定的に自己検証するための
+通信互換 double である。実 Python service を通した観測ではないため、これだけを Gate 3 合格証拠にはしない。
+
 ## 資源採取と収束
 
 `resources.Sampler` は250ms間隔で対象 PID の fd 数と重複なし socket inode、
