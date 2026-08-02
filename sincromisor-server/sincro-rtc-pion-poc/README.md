@@ -7,8 +7,9 @@
 - stereoを左右平均でmono化し、63-tap windowed-sinc FIRで16 kHzへresampleして、20 ms /
   640-byte s16le frameをConversation Coordinatorへ同期投入する。
 - duplicate、late、missing、buffered drop、DTX、pipeline unavailableをprocess共有atomic counterへ分けて記録する。
-- 48 kHz mono、1 秒の test tone を `github.com/pion/mediadevices/pkg/codec/opus` で encode し、20 ms ごとに返す。
-- `text_ch` / `telop_ch` へ固定 smoke JSON を送信し、session close の resource 回収を確認する。
+- Gate 2の合成音声を48 kHz monoへdecodeし、browser入力と独立した20 ms clockでOpus encodeして返す。
+- Gate 2のchat messageを`text_ch`へ、audio sample位置に同期したmora/telopを`telop_ch`へ送る。
+- generation変更、queue overflow、DataChannel buffered amountをboundedなdrop/close policyで処理する。
 - media readiness 成立後だけ local Consul 経由で下流 Python service へ接続し、session close で join する。
 - production compose、Caddy への組み込みは行わない。
 
@@ -80,10 +81,10 @@ Google Chrome stable で
    `inbound audio processing stopped` が出た場合はRTP read、Opus decode、またはpipeline submitの
    errorなので正常なsmokeとは扱わない。入力drop種別の正確な件数はpayloadをlogへ出さない
    `InputCounterObserver` が所有し、`go test ./internal/media` のfocused testで確認する。
-4. Chrome DevTools で remote audio track を AudioContext `AnalyserNode` へ接続し、1 秒 tone の
-   time-domain data が無音値だけでないことを確認する。
-5. Debug Console の `text_ch` と `telop_ch` に `DataChannel smoke` の固定 JSON が表示され、
-   invalid payload log が出ない。
+4. Chrome DevTools で remote audio track を AudioContext `AnalyserNode` へ接続し、入力停止中も
+   remote trackが継続することと、合成結果が20 ms cadenceで再生されることを確認する。
+5. 会話後、Debug Consoleの`text_ch`に実chat message、`telop_ch`に再生audioと同期したmoraが表示され、
+   invalid payload logが出ないことを確認する。
 6. 通常 close を連続 10 回行い、各回の `session registry updated` が `active_sessions=0` を示す。
    process を停止した最後の `pion poc stopped` で `final_goroutines` が起動時の
    `initial_goroutines + 5` 以下であることを確認する。

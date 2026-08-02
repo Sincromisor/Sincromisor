@@ -41,7 +41,7 @@ func (s *Session) installCallbacks() {
 // connected 前に3 latchが成立済みなら同じ lock acquisition 内で media_ready も確定する。
 func (s *Session) transportReady() {
 	startPipeline := false
-	startTone := false
+	startOutbound := false
 	s.lifecycle.mu.Lock()
 	switch s.lifecycle.state {
 	case stateAnswerReady:
@@ -58,11 +58,12 @@ func (s *Session) transportReady() {
 			_ = s.Close("deadline_error")
 			return
 		}
-		startTone = s.pc != nil && s.pc.ConnectionState() == webrtc.PeerConnectionStateConnected
-		if startTone {
+		startOutbound = s.pc != nil && s.pc.ConnectionState() == webrtc.PeerConnectionStateConnected
+		if startOutbound {
 			// connected後にだけRTCP Readを開始する。transport未始動のgather timeoutでは
-			// PionがReadを解除しない経路があるため、toneとdrainを同じeventで予約する。
-			s.wg.Add(2)
+			// PionがReadを解除しない経路があるため、output clock、単一generation consumer、
+			// text/synth consumer、RTCP drainを同じeventで予約する。
+			s.wg.Add(5)
 		}
 		startPipeline = s.promoteMediaReadyLocked("peer_connected")
 	case stateTransportReady, stateMediaReady, stateRunning, stateClosing, stateClosed:
@@ -75,9 +76,9 @@ func (s *Session) transportReady() {
 		return
 	}
 	s.lifecycle.mu.Unlock()
-	if startTone {
+	if startOutbound {
 		s.startRTCPDrain(s.outboundSender)
-		s.startTone(s.outboundTrack)
+		s.startOutbound()
 	}
 	if startPipeline {
 		s.launchPipeline()

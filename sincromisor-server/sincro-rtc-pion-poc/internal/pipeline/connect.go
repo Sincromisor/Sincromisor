@@ -62,7 +62,16 @@ func (c *Coordinator) connectUntilRunning(initial bool) error {
 				c.set, c.work = set, work
 				err = c.transitionLocked(StateRunning)
 				if err == nil {
-					c.startGenerationLocked(work, set)
+					if initial {
+						// 初回producerを開始する前にgeneration streamを確定する。ここではまだ
+						// generation goroutineが存在せず、outputMuを待つproducer/resetはない。
+						c.outputMu.Lock()
+						c.notifyGeneration(c.generation)
+						c.startGenerationLocked(work, set)
+						c.outputMu.Unlock()
+					} else {
+						c.startGenerationLocked(work, set)
+					}
 				}
 			}
 			c.mu.Unlock()
