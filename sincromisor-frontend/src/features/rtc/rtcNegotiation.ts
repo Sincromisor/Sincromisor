@@ -1,42 +1,51 @@
-import { frontendLogger } from "../../shared/logging/appLogger";
 import type { DebugConsoleManager } from "../debug/model/debugConsoleManager";
-import { parseOfferResponse } from "./rtcBoundarySchema";
+import { type OfferResponse, parseOfferResponse } from "./rtcBoundarySchema";
+import type { RtcOfferIdentity } from "./rtcNegotiationStateMachine";
+import { postRtcSignalingJson } from "./rtcSignalingHttp";
 import type { SincroRTCConfig } from "./sincroRtcConfigManager";
 
 type RtcOfferPayload = {
+    offer_request_id: string;
+    offer_revision: number;
+    previous_session_id?: string;
     sdp: string;
-    type: RTCSdpType;
-    talk_mode: string;
     session_id?: string;
+    talk_mode: string;
+    type: RTCSdpType;
 };
 
 type RtcNegotiationParams = {
-    flushPendingIceCandidates: () => Promise<void>;
     forceIceRestart: boolean;
+    identity: RtcOfferIdentity;
     logger: Pick<DebugConsoleManager, "addRtcEventLog" | "answerSDP" | "offerSDP">;
-    onSessionAssigned: (sessionId: string) => void;
     peerConnection: RTCPeerConnection;
-    preferredSessionId?: string;
+    previousSessionId?: string;
+    signal?: AbortSignal;
     sincroConfig: Pick<SincroRTCConfig, "offerURL">;
     talkMode: string;
 };
 
-export async function negotiateRtcSession(params: RtcNegotiationParams): Promise<void> {
+/**
+ * 1つのPeerConnection上でSDP生成、immutable payload送信、Answer適用を直列化する。
+ *
+ * identityは呼び出し元state machineが所有する。HTTP retryではserialized bodyを再利用し、
+ * 新しいSDP/request IDを作らない。session/revision commitとcandidate flushはAnswer適用後の
+ * 呼び出し元へ委ねるため、この関数はOfferResponseだけを返す。
+ */
+export async function negotiateRtcSession(params: RtcNegotiationParams): Promise<OfferResponse> {
     const offer = await createLocalOffer(params.peerConnection, params.forceIceRestart);
     params.logger.offerSDP(offer.sdp);
 
     const answer = parseOfferResponse(await postOffer(params, offer));
     params.logger.answerSDP(answer.sdp);
-    params.onSessionAssigned(answer.session_id);
-    logAssignedSession(params, answer.session_id);
-
-    // Offer 応答前に貯まった candidate は、session_id 確定後に送信する。
-    await params.flushPendingIceCandidates();
     await params.peerConnection.setRemoteDescription({
         sdp: answer.sdp,
         type: answer.type,
     });
-    params.logger.addRtcEventLog("negotiate succeeded: reconnect attempt reset");
+    params.logger.addRtcEventLog(
+        `negotiate answer applied: sessionId=${answer.session_id}, revision=${answer.offer_revision ?? "legacy"}`,
+    );
+    return answer;
 }
 
 async function createLocalOffer(
@@ -58,53 +67,26 @@ async function postOffer(
     offer: RTCSessionDescription,
 ): Promise<unknown> {
     const offerPayload: RtcOfferPayload = {
+        offer_request_id: params.identity.requestId,
+        offer_revision: params.identity.revision,
         sdp: offer.sdp,
-        type: offer.type,
         talk_mode: params.talkMode,
+        type: offer.type,
     };
-    if (params.preferredSessionId) {
-        offerPayload.session_id = params.preferredSessionId;
+    if (params.identity.sessionId !== undefined) {
+        offerPayload.session_id = params.identity.sessionId;
+    } else if (params.previousSessionId !== undefined) {
+        offerPayload.previous_session_id = params.previousSessionId;
     }
     params.logger.addRtcEventLog(
-        `send offer: mode=${params.preferredSessionId ? "session-update" : "new-session"}, targetSessionId=${params.preferredSessionId ?? "-"}`,
+        `send offer: operation=${params.identity.sessionId ? "update" : "initial"}, revision=${params.identity.revision}`,
     );
 
-    const response = await fetch(params.sincroConfig.offerURL, {
+    // JSON serializationはretry loopの外で1回だけ行い、request identityとSDP bytesを固定する。
+    return postRtcSignalingJson({
         body: JSON.stringify(offerPayload),
-        headers: {
-            "Content-Type": "application/json",
-        },
-        method: "POST",
+        operation: params.identity.sessionId ? "update-offer" : "initial-offer",
+        signal: params.signal,
+        url: params.sincroConfig.offerURL,
     });
-    switch (response.status) {
-        case 200:
-            return response.json();
-        case 429:
-            frontendLogger.warn("RTC offer rejected by rate limit.", {
-                status: response.status,
-                statusText: response.statusText,
-            });
-            throw new Error(`Too many requests - ${response.status} ${response.statusText}`);
-        default:
-            frontendLogger.error("RTC offer failed with invalid response.", {
-                status: response.status,
-                statusText: response.statusText,
-            });
-            throw new Error(`Invalid response - ${response.status} ${response.statusText}`);
-    }
-}
-
-function logAssignedSession(params: RtcNegotiationParams, sessionId: string): void {
-    if (params.preferredSessionId && params.preferredSessionId !== sessionId) {
-        // サーバー側で既存更新に失敗した場合は、新規セッションへのフォールバックが返る。
-        params.logger.addRtcEventLog(
-            `offer fallback detected: preferredSessionId=${params.preferredSessionId}, assignedSessionId=${sessionId}`,
-        );
-        return;
-    }
-    if (params.preferredSessionId) {
-        params.logger.addRtcEventLog(`offer update succeeded: sessionId=${sessionId}`);
-        return;
-    }
-    params.logger.addRtcEventLog(`offer created new session: sessionId=${sessionId}`);
 }
