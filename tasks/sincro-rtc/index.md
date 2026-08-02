@@ -4,17 +4,16 @@
 
 ## タスク一覧（自動生成 / 全 23 件）
 
-### open（未完） — 5 件
+### open（未完） — 4 件
 
-| タスク                                                                                                                                   | タイトル                                                     | 判定 | 依存                                                                                                               |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------ |
-| [task-260802033044-pion-phase-3-production-candidate-gate-3](./task-260802033044-pion-phase-3-production-candidate-gate-3/task.md)       | Pion Phase 3のproduction candidateを実測してGate 3を判定する | —    | `task-260802212239-pion-gate3-production-validation-entrypoint`                                                    |
-| [task-260802212216-pion-gate3-pipeline-contract-harness](./task-260802212216-pion-gate3-pipeline-contract-harness/task.md)               | Pion Gate 3下流サービス契約ハーネスを実装する                | —    | `task-260802212212-pion-gate3-harness-foundation`                                                                  |
-| [task-260802212220-pion-gate3-frontend-browser-harness](./task-260802212220-pion-gate3-frontend-browser-harness/task.md)                 | Pion Gate 3現行Frontendブラウザーハーネスを実装する          | —    | `task-260802212216-pion-gate3-pipeline-contract-harness`                                                           |
-| [task-260802212234-pion-gate3-boundary-lifecycle-harness](./task-260802212234-pion-gate3-boundary-lifecycle-harness/task.md)             | Pion Gate 3境界クライアントと終了系ハーネスを実装する        | —    | `task-260802212212-pion-gate3-harness-foundation`, `task-260802212208-pion-graceful-shutdown-admission-window`     |
-| [task-260802212239-pion-gate3-production-validation-entrypoint](./task-260802212239-pion-gate3-production-validation-entrypoint/task.md) | Pion Gate 3本番検証エントリーポイントを統合する              | —    | `task-260802212220-pion-gate3-frontend-browser-harness`, `task-260802212234-pion-gate3-boundary-lifecycle-harness` |
+| タスク                                                                                                                                   | タイトル                                                     | 判定 | 依存                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [task-260802033044-pion-phase-3-production-candidate-gate-3](./task-260802033044-pion-phase-3-production-candidate-gate-3/task.md)       | Pion Phase 3のproduction candidateを実測してGate 3を判定する | —    | `task-260802212239-pion-gate3-production-validation-entrypoint`                                                                                                          |
+| [task-260802212220-pion-gate3-frontend-browser-harness](./task-260802212220-pion-gate3-frontend-browser-harness/task.md)                 | Pion Gate 3現行Frontendブラウザーハーネスを実装する          | —    | `task-260802212216-pion-gate3-pipeline-contract-harness`                                                                                                                 |
+| [task-260802212234-pion-gate3-boundary-lifecycle-harness](./task-260802212234-pion-gate3-boundary-lifecycle-harness/task.md)             | Pion Gate 3境界クライアントと終了系ハーネスを実装する        | —    | `task-260802212212-pion-gate3-harness-foundation`, `task-260802212208-pion-graceful-shutdown-admission-window`, `task-260802212216-pion-gate3-pipeline-contract-harness` |
+| [task-260802212239-pion-gate3-production-validation-entrypoint](./task-260802212239-pion-gate3-production-validation-entrypoint/task.md) | Pion Gate 3本番検証エントリーポイントを統合する              | —    | `task-260802212220-pion-gate3-frontend-browser-harness`, `task-260802212234-pion-gate3-boundary-lifecycle-harness`                                                       |
 
-### done（完了） — 16 件
+### done（完了） — 17 件
 
 | タスク                                                                                                                                 | タイトル                                                              | 判定    | 依存                                                                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -34,6 +33,7 @@
 | [task-260802033116-pion-phase-3-synthesized-audio-decode](./task-260802033116-pion-phase-3-synthesized-audio-decode/task.md)           | Pion Phase 3の合成音声container decodeを実装する                      | ✅ PASS | `task-260802032903-pion-phase-3-inbound-audio-pipeline`                                                            |
 | [task-260802212208-pion-graceful-shutdown-admission-window](./task-260802212208-pion-graceful-shutdown-admission-window/task.md)       | Pion graceful shutdown中の新規受付拒否を観測可能にする                | ✅ PASS | `task-260802032922-pion-phase-3-observability-gate-3`                                                              |
 | [task-260802212212-pion-gate3-harness-foundation](./task-260802212212-pion-gate3-harness-foundation/task.md)                           | Pion Gate 3検証ハーネスの共通基盤を実装する                           | ✅ PASS | `task-260802032922-pion-phase-3-observability-gate-3`                                                              |
+| [task-260802212216-pion-gate3-pipeline-contract-harness](./task-260802212216-pion-gate3-pipeline-contract-harness/task.md)             | Pion Gate 3下流サービス契約ハーネスを実装する                         | ✅ PASS | `task-260802212212-pion-gate3-harness-foundation`                                                                  |
 
 ### superseded（廃止） — 2 件
 
