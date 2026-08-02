@@ -48,6 +48,9 @@ func TestOutputAbsoluteClockSilenceCadenceAndExpiredDrop(t *testing.T) {
 	if want := uint64(frameSamples * 7); afterDrop.SamplePosition != want {
 		t.Fatalf("post-drop position = %d, want %d", afterDrop.SamplePosition, want)
 	}
+	if got := afterDrop.MediaSample.PrevDroppedPackets; got != 5 {
+		t.Fatalf("post-drop previous dropped packets = %d, want 5", got)
+	}
 	assertNoOutputSample(t, track)
 
 	cancel()
@@ -87,7 +90,10 @@ func TestOutputSpeechLagBoundaryAbortOrderAndNextCadence(t *testing.T) {
 	// Exactly 250 ms is still accepted. The absolute deadline is re-anchored
 	// instead of burst-sending the delayed speech frames.
 	clock.advance(FrameDuration + SpeechLagAbortThreshold)
-	_ = receiveOutputSample(t, track)
+	acceptedAtBoundary := receiveOutputSample(t, track)
+	if got := acceptedAtBoundary.MediaSample.PrevDroppedPackets; got != 12 {
+		t.Fatalf("threshold frame previous dropped packets = %d, want 12", got)
+	}
 	if got := processor.Stats().SpeechAborted; got != 0 {
 		t.Fatalf("speech aborted at threshold = %d, want 0", got)
 	}
@@ -105,9 +111,12 @@ func TestOutputSpeechLagBoundaryAbortOrderAndNextCadence(t *testing.T) {
 	clock.advance(FrameDuration - time.Nanosecond)
 	assertNoOutputSample(t, track)
 	clock.advance(time.Nanosecond)
-	_ = receiveOutputSample(t, track)
+	afterAbort := receiveOutputSample(t, track)
 	if got := encoder.frameAt(t, 2)[0]; got != 22 {
 		t.Fatalf("next speech sample = %d, want 22", got)
+	}
+	if got := afterAbort.MediaSample.PrevDroppedPackets; got != 12 {
+		t.Fatalf("post-abort previous dropped packets = %d, want 12", got)
 	}
 
 	cancel()
@@ -127,20 +136,55 @@ func TestOutputTimestampWraparound(t *testing.T) {
 
 	clock.advance(FrameDuration)
 	first := receiveOutputSample(t, track)
-	clock.advance(FrameDuration)
+	clock.advance(3 * FrameDuration)
 	second := receiveOutputSample(t, track)
 	if first.RTPTimestamp != uint32(start) {
 		t.Fatalf("first RTP timestamp = %d, want %d", first.RTPTimestamp, uint32(start))
 	}
-	if want := uint32(start + frameSamples); second.RTPTimestamp != want {
+	if want := uint32(start + 3*frameSamples); second.RTPTimestamp != want {
 		t.Fatalf("wrapped RTP timestamp = %d, want %d", second.RTPTimestamp, want)
 	}
-	if second.SamplePosition != start+frameSamples {
-		t.Fatalf("absolute sample position = %d, want %d", second.SamplePosition, start+frameSamples)
+	if second.SamplePosition != start+3*frameSamples {
+		t.Fatalf("absolute sample position = %d, want %d", second.SamplePosition, start+3*frameSamples)
+	}
+	if got := second.MediaSample.PrevDroppedPackets; got != 2 {
+		t.Fatalf("wrapped sample previous dropped packets = %d, want 2", got)
 	}
 
 	cancel()
 	<-done
+}
+
+func TestOutputConsecutiveDropsAccumulateUntilSuccessfulWrite(t *testing.T) {
+	track := newFakeOutputTrack()
+	processor := newOutputWithFakes(
+		t,
+		&fakeOutputEncoder{},
+		track,
+		newFakeOutputClock(),
+		0,
+	)
+	processor.skipSamplePositions(2)
+	processor.skipSamplePositions(3)
+	if err := processor.writeFrame(); err != nil {
+		t.Fatalf("writeFrame() error = %v", err)
+	}
+	first := receiveOutputSample(t, track)
+	if got := first.MediaSample.PrevDroppedPackets; got != 5 {
+		t.Fatalf("accumulated previous dropped packets = %d, want 5", got)
+	}
+	if err := processor.writeFrame(); err != nil {
+		t.Fatalf("second writeFrame() error = %v", err)
+	}
+	second := receiveOutputSample(t, track)
+	if got := second.MediaSample.PrevDroppedPackets; got != 0 {
+		t.Fatalf("previous dropped packets after successful write = %d, want 0", got)
+	}
+
+	processor.skipSamplePositions(math.MaxUint16 + 1)
+	if err := processor.writeFrame(); err == nil {
+		t.Fatal("writeFrame() accepted a drop count beyond Pion's uint16 boundary")
+	}
 }
 
 func TestOutputCodecAndTrackErrorsStopClockAndRejectPostCloseEnqueue(t *testing.T) {
@@ -185,7 +229,7 @@ func newOutputWithFakes(
 	t *testing.T,
 	encoder outputEncoder,
 	track SampleWriter,
-	clock outputClock,
+	clock OutputClock,
 	start uint64,
 ) *OutputProcessor {
 	t.Helper()
@@ -323,7 +367,7 @@ func (c *fakeOutputClock) Now() time.Time {
 	return c.now
 }
 
-func (c *fakeOutputClock) NewTimer(delay time.Duration) outputTimer {
+func (c *fakeOutputClock) NewTimer(delay time.Duration) OutputTimer {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	timer := &fakeOutputTimer{

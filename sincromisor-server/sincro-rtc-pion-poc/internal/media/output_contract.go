@@ -28,7 +28,8 @@ type SampleWriter interface {
 // OutputSample はencoded packetとsession clock上のsample位置をtrack境界へ渡す。
 //
 // SamplePositionはsession開始からの絶対48 kHz sample数、RTPTimestampはその下位32 bitである。
-// Pion adapterはDurationから実RTP timestampを進め、test trackはwraparoundを含む論理clockを検証する。
+// MediaSample.PrevDroppedPacketsは直前の実packetから飛ばした20 ms slot数で、Pion adapterは
+// timestampとsequence numberの両方へ同じgapを反映する。
 type OutputSample struct {
 	MediaSample    pionmedia.Sample
 	SamplePosition uint64
@@ -43,15 +44,15 @@ type outputEncoder interface {
 	Encode([]int16) ([]byte, error)
 }
 
-// outputTimerはRunが所有する単発deadline timerの最小操作面である。
-type outputTimer interface {
+// OutputTimerはRunが所有する単発deadline timerの最小操作面である。
+type OutputTimer interface {
 	C() <-chan time.Time
 	Reset(time.Duration) bool
 	Stop() bool
 }
 
-// outputClockはabsolute deadline計算をwall clockと決定的test clockで共有する内部境界である。
-type outputClock interface {
+// OutputClockはabsolute deadline計算をwall clockと決定的integration clockで共有する。
+type OutputClock interface {
 	Now() time.Time
-	NewTimer(time.Duration) outputTimer
+	NewTimer(time.Duration) OutputTimer
 }

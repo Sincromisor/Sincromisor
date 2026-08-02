@@ -9,7 +9,6 @@ import (
 	"github.com/pion/interceptor"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
-	"github.com/pion/webrtc/v4/pkg/media"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
 )
@@ -79,12 +78,11 @@ type pionSampleWriter struct {
 
 // WriteSampleは論理clock付きsampleをPionのduration駆動packetizerへ渡す。
 //
-// SamplePosition/RTPTimestampはprocessor側のclock検証用であり、production trackはPionが
-// Durationから同じ48 kHz RTP増分を生成する。
+// 通常frameはDurationから960 timestamp tick進む。期限切れslotがあるframeは
+// MediaSample.PrevDroppedPacketsを保持したまま渡し、Pionにtimestampとsequence numberをskipさせる。
+// SamplePosition/RTPTimestampはprocessor側の64/32 bit clock検証用である。
 func (w pionSampleWriter) WriteSample(sample audiomedia.OutputSample) error {
-	return w.track.WriteSample(media.Sample{
-		Data: sample.MediaSample.Data, Duration: sample.MediaSample.Duration,
-	})
+	return w.track.WriteSample(sample.MediaSample)
 }
 
 func (r rtpReader) ReadRTP() (*rtp.Packet, interceptor.Attributes, error) {
