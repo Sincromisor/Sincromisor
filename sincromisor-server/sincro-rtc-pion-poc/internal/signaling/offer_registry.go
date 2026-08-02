@@ -159,6 +159,9 @@ func (r *OfferRegistry) Resolve(
 }
 
 // Wait は全initial Offer ownerとTTL sweeperをjoinし、shutdown deadline超過時はctx.Errを返す。
+//
+// Wait自身は期限を延長しない。process coordinatorがsession ownerと共有するcontextを渡すことで、
+// 先に受理済みのinitial Offerとsession cleanupを同じshutdown budget内で並行して収束できる。
 func (r *OfferRegistry) Wait(ctx context.Context) error {
 	result := r.startJoin(func() {
 		r.owners.Wait()

@@ -150,11 +150,12 @@ sequenceDiagram
     G-->>O: process exit
 ```
 
-切替時は利用停止を告知してから`ready=false`と`draining=true`を先に公開し、新規initial
-Offerを503で拒否する。続いてHTTP acceptを停止し、process contextとOffer ownerを収束させ、
-active sessionのpipeline client、codec、DataChannel、PeerConnectionをclose-once guard経由で
-終了して最大5秒でjoinする。長時間drainして無停止を目指さない。deadline超過時は未join resourceを
-正常終了として扱わない。
+切替時は利用停止を告知してからsignalを送り、`ready=false`と`draining=true`を先に公開する。
+signal受信後もHTTP listenerを1秒間維持し、この受付拒否観測窓では新規initial Offerを503で拒否する。
+同時にprocess contextをcancelし、Offer ownerとactive sessionのpipeline client、codec、DataChannel、
+PeerConnectionをclose-once guard経由で共通5秒の期限内に並行して収束させる。観測窓とcleanupの
+両方が終わってからHTTP listenerを独立した1秒の期限で停止するため、signal受信からprocess終了までの
+上限は6秒である。deadline超過時または各終了処理のerrorは結合して返し、未join resourceを正常終了として扱わない。
 
 ## Rollout段階
 

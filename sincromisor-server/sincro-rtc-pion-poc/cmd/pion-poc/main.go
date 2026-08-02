@@ -24,7 +24,9 @@ import (
 )
 
 const (
-	shutdownTimeout = 5 * time.Second
+	shutdownCleanupTimeout  = 5 * time.Second
+	shutdownAdmissionWindow = 1 * time.Second
+	shutdownHTTPTimeout     = 1 * time.Second
 	// discoveryRequestTimeout は local Consul 障害が readiness 後のsession cleanupを長時間妨げない上限である。
 	discoveryRequestTimeout = 2 * time.Second
 	localConsulURL          = "http://127.0.0.1:8500"
@@ -39,8 +41,9 @@ func main() {
 
 // run は config load、HTTP serve、signal shutdown を 1 つの process lifecycle として調停する。
 //
-// SIGINT / SIGTERMでは新規HTTP requestを停止し、process context cancel、Offer owner/sweeper join、
-// 全session closeを順に行う。listener起動失敗を含むshutdown failureはmainへ返し、下位packageでは終了しない。
+// SIGINT / SIGTERMではdrainingを先に公開し、1秒間initial Offerを503で拒否できるlistenerを維持する。
+// その間にprocess context、Offer owner、全sessionを共通期限で収束させ、最後にHTTPを停止する。
+// listener起動失敗を含むshutdown failureはmainへ返し、下位packageでは終了しない。
 func run(args []string) error {
 	return runWithBoundaries(args, synthdecode.ExecRunner{}, serve)
 }
@@ -147,10 +150,81 @@ func newPipelineFactory(logger *slog.Logger) (pipeline.ClientSetFactory, error) 
 	return pipelineFactory, nil
 }
 
-// serve はHTTP受理、signal待機、5秒上限のHTTP/Offer owner/session shutdownを順に調停する。
+// shutdownOperationsはsignal後に終了させるprocess ownerとlistener ownerを関数境界へ束ねる。
 //
-// process contextを先にcancelしてin-flight ownerを収束させ、HTTP drain、registry join、Session cleanupを
-// 同じdeadline内で完了する。CloseAllがdeadlineを返しても、未join resourceを正常終了として偽装しない。
+// productionと単体テストは同じ調停ロジックを使い、観測窓だけを実timerと手動channelで差し替える。
+// 各errorを返す操作は失敗しても後続ownerの終了を妨げず、shutdownProcessが全結果を集約する。
+type shutdownOperations struct {
+	BeginDrain          func()
+	CancelProcess       func()
+	WaitOffers          func(context.Context) error
+	CloseSessions       func(context.Context, string) error
+	ShutdownHTTP        func(context.Context) error
+	WaitAdmissionWindow func(context.Context) error
+}
+
+// shutdownProcessはdraining観測窓とprocess cleanupを完了してからHTTP listenerを停止する。
+//
+// BeginDrainは最初に実行し、CancelProcess、Offer owner join、session closeはsignal後の共通5秒期限で
+// 収束させる。cleanupが早く終わっても1秒の受付拒否観測窓は短縮せず、両方の完了後に独立した
+// 1秒期限でHTTPを停止する。各段階の失敗はerrors.Joinで保持し、未join resourceを正常終了にしない。
+func shutdownProcess(operations shutdownOperations) error {
+	operations.BeginDrain()
+	cleanupCtx, cancelCleanup := context.WithTimeout(context.Background(), shutdownCleanupTimeout)
+	operations.CancelProcess()
+
+	cleanupErrors := make(chan error, 2)
+	go func() {
+		err := operations.WaitOffers(cleanupCtx)
+		if err != nil {
+			err = fmt.Errorf("wait offers: %w", err)
+		}
+		cleanupErrors <- err
+	}()
+	go func() {
+		err := operations.CloseSessions(cleanupCtx, "process_shutdown")
+		if err != nil {
+			err = fmt.Errorf("close sessions: %w", err)
+		}
+		cleanupErrors <- err
+	}()
+
+	admissionErr := operations.WaitAdmissionWindow(cleanupCtx)
+	if admissionErr != nil {
+		admissionErr = fmt.Errorf("wait admission window: %w", admissionErr)
+	}
+	firstCleanupErr := <-cleanupErrors
+	secondCleanupErr := <-cleanupErrors
+	cancelCleanup()
+
+	httpCtx, cancelHTTP := context.WithTimeout(context.Background(), shutdownHTTPTimeout)
+	httpErr := operations.ShutdownHTTP(httpCtx)
+	cancelHTTP()
+	if httpErr != nil {
+		httpErr = fmt.Errorf("shutdown http: %w", httpErr)
+	}
+
+	return errors.Join(admissionErr, firstCleanupErr, secondCleanupErr, httpErr)
+}
+
+// waitShutdownAdmissionWindowはdraining responseを外部監督が観測できる1秒をlistener停止前に確保する。
+//
+// cleanup共通期限が先に失効した場合はそのerrorを返し、HTTP停止へ進んでも時間契約違反を隠さない。
+func waitShutdownAdmissionWindow(ctx context.Context) error {
+	timer := time.NewTimer(shutdownAdmissionWindow)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// serve はHTTP受理、signal待機、process cleanup、HTTP停止の所有順序を調停する。
+//
+// signal時だけlistenerを1秒維持してdrainingを公開する。listener失敗時は観測対象がないため待機せず、
+// 同じcleanup経路でprocess ownerを収束させる。全errorはshutdownProcessと結合してrunへ返す。
 func serve(
 	cfg config.Config,
 	sessions *rtc.Manager,
@@ -188,6 +262,7 @@ func serve(
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(signals)
 	var serveErr error
+	waitAdmissionWindow := func(context.Context) error { return nil }
 	select {
 	case err := <-serverErrors:
 		if !errors.Is(err, http.ErrServerClosed) {
@@ -195,18 +270,20 @@ func serve(
 		}
 	case <-signals:
 		logShutdownRequested(logger)
+		waitAdmissionWindow = waitShutdownAdmissionWindow
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer cancel()
-	// Admission changes are published before accept shutdown so requests already
-	// dispatched to the handler cannot create a fresh initial session.
-	processState.BeginDrain()
-	cancelProcess()
-	httpErr := server.Shutdown(shutdownCtx)
-	offerErr := offers.Wait(shutdownCtx)
-	sessionErr := sessions.CloseAll(shutdownCtx, "process_shutdown")
-	if err := errors.Join(serveErr, httpErr, offerErr, sessionErr); err != nil {
+	shutdownErr := shutdownProcess(shutdownOperations{
+		BeginDrain:    processState.BeginDrain,
+		CancelProcess: cancelProcess,
+		WaitOffers:    offers.Wait,
+		CloseSessions: func(ctx context.Context, reason string) error {
+			return sessions.CloseAll(ctx, reason)
+		},
+		ShutdownHTTP:        server.Shutdown,
+		WaitAdmissionWindow: waitAdmissionWindow,
+	})
+	if err := errors.Join(serveErr, shutdownErr); err != nil {
 		return fmt.Errorf("shutdown: %w", err)
 	}
 	logShutdownComplete(logger, sessions.Count())
