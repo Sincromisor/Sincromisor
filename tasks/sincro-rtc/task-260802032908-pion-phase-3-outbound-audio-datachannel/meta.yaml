@@ -1,14 +1,14 @@
 id: task-260802032908-pion-phase-3-outbound-audio-datachannel
 title: Pion Phase 3の合成音声とDataChannel出力を統合する
 category: sincro-rtc
-status: open
+status: done
 depends_on:
   - task-260802033116-pion-phase-3-synthesized-audio-decode
 superseded_by: null
 review: APPROVED
 reviewed_sha: 59adc66931d102ec0f19c7f758f4a1daa127bd7c
-verdict: FAIL
-attempts: 3
+verdict: PASS
+attempts: 4
 created_at: 2026-08-02
-closed_at: null
+closed_at: 2026-08-02
 legacy_ids: []

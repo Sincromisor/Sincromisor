@@ -2,83 +2,101 @@
 
 ## 判定
 
-FAIL
+PASS
 
-attempt 3の評価対象は`20fe9cca6db242893fd45ebe367574dadf91c78d`。前回指摘した
-production Pion境界へのdrop metadata伝播は解消したが、speech abort分岐でpacketを書かなかった
-現在のdeadline 1 slotを`pendingDrops`へ数えておらず、実RTP clockが1 frame短くなる。
+評価対象は `0d8c11aeeab0f6bd5901206b0830c0b330a1fcc5`。指定された隔離 worktree の
+clean treeで独立評価した。review.md に Critical / High の未解消指摘はない。前回評価で残った
+speech abort時のcurrent deadline 1 slotの不足は、logical sample positionと
+`media.Sample.PrevDroppedPackets`の双方へ加算され、fake clockとproduction Pion pairで修正を確認した。
 
 ## 受け入れ条件チェックリスト
 
-- [✓] 48 kHz mono / 960 sample Opusとabsolute clock —
-  `pendingDrops`は`media.Sample.PrevDroppedPackets`へ渡され、production
-  `pionSampleWriter`もmetadataを保持する。silence drop後のPion timestamp / sequence gapと通常cadence復帰を
-  local pairで確認した。ただしspeech abort時の1 slot不足は下記lag条件を不合格にする。
-- [✓] speech bounded queue — 8発話、120秒ちょうどまで受理し、超過incomingだけを拒否する。
-- [✓] generation stream / barrier — 単一consumer、単調適用、resetのadvance→drain→notify、
-  coalesce、close ownership、decode後再検査を維持する。
-- [✗] scheduler lag / speech abort —
-  silenceおよび250 ms以下のspeech lagは同じtimer tick内で現在packetを1件書くため、
-  `floor(lag/20ms)`をdrop数とする実装で正しい。一方250 ms超過branchはcurrent speechをabortし、
-  そのtickではpacketを書かず`continue`して次発話を`now+20ms`から開始する。この経路でも
-  `skipSamplePositions(floor(lag/20ms))`しか呼ばないため、現在処理中のdeadline packet 1件が
-  drop metadataに含まれない。
-  例としてlag=`250ms+1ns`なら期限切れ12 slotに加えてabortしたcurrent deadlineの1 slotも未送信であり、
-  次の成功packetは`PrevDroppedPackets=13`、直前成功packetからtimestamp delta=`14*960`、
-  sequence delta=14であるべきだが、実装/testは12、`13*960`、13相当を期待する。
-- [✓] DataChannel queue、JSON、hysteresis、channel別error policy — attempt 2の実装を維持する。
-- [✓] mora/telop per-frame変換とaudio/event purge — 元message、nil/empty、sample timing、
-  `new_text`、frame境界規則を維持する。
-- [✓] lifecycle / close ownership — attach開始権とWaitGroup予約の同一mutex化、closed-aware
-  output/dispatcher、decode完了競合、worker join後のclosed公開に回帰なし。
-- [✗] change comprehension surface comment audit —
-  `OutputSample` / `pionSampleWriter`の前回stale commentは修正され、通常dropのproduction seamを正しく
-  説明する。しかし`skipSamplePositions`は「送らない20 ms slot」を累積すると説明しながら、
-  speech abortで送らなかったcurrent slotをcallerが渡していない。attempt 3 auditもabort後drop数12を
-  正しいものとしており、実際のno-write state transitionを説明・検証できていない。
-
-## 前回残課題の再照合
-
-- `PrevDroppedPackets` production伝播: 解消済み。
-- 成功write後の`pendingDrops=0`: 解消済み。
-- 連続drop累積、32 bit wrap、uint16超過error: 解消済み。
-- local Pionで4 drop後のtimestamp delta=`5*960`、sequence delta=5、その後960 / 1復帰: 解消済み。
-- speech abort: current no-write slotのoff-by-oneが残る。
-- attempt 2 lifecycle修正: 回帰なし。
+- [✓] 48 kHz mono PCM / 20 ms / 960 sample Opusとsession absolute clock —
+  `OutputProcessor.Run`、`FrameEncoder`、`pionSampleWriter`を照合した。queue空時のsilence、
+  browser入力非依存の50 frame cadence、64 bit logical position、32 bit RTP wrap、production
+  packetizerまでのdrop metadataをテストが固定している。
+- [✓] bounded speech queueとoverflow policy —
+  8発話および5,760,000 sample（120秒）ちょうどを受理し、追加後に超えるincomingだけを
+  `ErrSpeechQueueFull`で拒否する。既存itemをevictせず、拒否resultからtelopを生成しない。
+  queue/action/countのlogとpayload非保持statsもある。
+- [✓] stable generation stream / reset barrier —
+  初回generationをproducer開始前に通知し、resetは`outputMu`内でadvance、text/synth drain、
+  capacity 1の最新generation通知を順に確定する。Coordinatorだけが全producer join後に3 channelを
+  closeする。
+- [✓] consumer側generation barrier —
+  `generationLoop`だけが`GenerationChanges`を受信し、text/synth envelopeも単調な
+  `outboundGeneration`適用点へ集約する。newer観測時はaudio/text/telopを同じcritical sectionでpurgeし、
+  older envelopeを拒否する。次generation outputがない通知単独purgeとdecode完了競合をテストしている。
+- [✓] scheduler lag policy —
+  期限切れsilenceと250 ms以下のspeech lagはburst送信せずslotをdropする。250 ms超過では現発話の
+  audio/moraを中止し、完全に期限切れの12 slotにcurrent no-write deadline 1 slotを加えた13 dropを
+  次sampleへ渡す。production pairで直前packetからtimestamp/sequenceが14 frame進み、その次から
+  960 / 1 cadenceへ戻る。
+- [✓] DataChannel dispatcher / queue / JSON boundary —
+  `text_ch`は64件FIFOでincoming reject、`telop_ch`は128件でoldest drop。payloadはUTF-8 JSON textかつ
+  64 KiB以下で、chat schemaのsnake_case、`expression_code`のnil欠落/zero保持をfixtureで確認している。
+- [✓] DataChannel backpressure / failure policy —
+  1 MiB以上で抑制し、256 KiB以下まで最大5秒待つ。timeout、channel close、reliable text failureは
+  session error、unreliable telopの単発送信失敗はevent dropで継続する。generation purgeは待機中の
+  stale eventを中断する。
+- [✓] audio / mora / telop同期 —
+  decode前messageをqueue itemへ保持し、各frame開始sampleでactive moraを選ぶ。timestamp、length、
+  nil/empty、`new_text`、frame内境界の次frame切替、active moraなしのaudio-onlyを共有fixtureで固定し、
+  telop sinkをtrack write直前に呼ぶ。abort/purge時は未送信eventも残らない。
+- [✓] resource lifecycle —
+  text/synth channel close、codec/track error、session closeでcontext、timer、encoder、queue、dispatcher
+  worker、pipeline producerを回収する。attach開始権とWaitGroup予約は同じmutexで直列化され、
+  post-close enqueueも拒否する。
+- [✓] Session lifecycle契約 —
+  outbound trackはAnswer前に登録し、RTCP drainと4 outbound goroutineはconnected時にlifecycle mutex内で
+  一度だけ予約する。DataChannelの属性、同label object identity、OnOpen identity、audioを含むreadiness
+  AND latchを維持し、全resource/goroutine join後だけclosed/registry removeを公開する。
+- [✓] change comprehension surface comment audit —
+  attempt 1の所定9列表が累積production差分のclock、queue/drop、generation、audio/event同期、
+  DataChannel backpressure、orchestration、state、boundary、lifecycleを網羅し、attempt 4の所定9列表が
+  最終off-by-one修正と直接surfaceを再監査する。attempt 2/3の補足表は簡略列だが、初回全件表と最終9列表を
+  置換するものではない。実コードと照合した範囲に逐語説明、確認先だけの説明、失敗mode欠落heuristic、
+  stale comment、定型的省略理由、不完全TODOは認めなかった。
 
 ## テスト結果
 
-- `go test ./internal/media ./internal/rtc ./internal/pipeline` — PASS。
-- `go test -race ./internal/media/... ./internal/rtc ./internal/pipeline` —
-  変更中心の`internal/media`と`internal/rtc`はPASSを確認。十分なFAIL根拠確定後に長時間実行を中止したため
-  全指定package完走は未確認。
-- `go vet ./...` — PASS。
-- `git diff --check aa40551..20fe9cc` — PASS。
-- 変更production Go fileの`gofmt -l` — 出力なし。
-- `npm run gate` — 指定worktreeにdependency symlinkがなく`biome: not found`で環境失敗。
-  実装者はclean SHAで3点PASSを記録している。
-- task tooling — `tasks:check` PASS（273 task）、`tasks:index:check`変更なし、
-  `npm run commit:check` PASS。
+- `npm run gate` — PASS（clean SHA `0d8c11a`）。
+    - `gate:lint`: PASS（593 files checked、fixなし）
+    - `gate:build`: PASS（880 modules transformed）
+    - `gate:test`: PASS
+- `GOCACHE=/tmp/eval-phase3-go-build GOMODCACHE=/tmp/eval-phase3-go-mod go test -race ./internal/media/... ./internal/rtc ./internal/pipeline`
+  — PASS（`internal/media`、`internal/media/synthdecode`、`internal/rtc`、`internal/pipeline`）。
+- `GOCACHE=/tmp/eval-phase3-go-build GOMODCACHE=/tmp/eval-phase3-go-mod go vet ./...` — PASS。
+- `git diff --check f19de61..0d8c11a` — PASS。
+- 変更production Go fileへの`gofmt -l` — 出力なし。
+- 最初のrace test試行はsandboxの既定Go cacheがread-onlyで失敗し、`/tmp`の専用cacheへ切り替えた。
+  依存取得時のnetwork制限後、許可された同一コマンドを再実行して上記PASSを得たため、実装失敗ではない。
 
-追加された`TestOutputConsecutiveDropsAccumulateUntilSuccessfulWrite`とproduction local pair testは
-silence/手動skipを十分に固定する。一方
-`TestOutputSpeechLagBoundaryAbortOrderAndNextCadence`はabort後の
-`PrevDroppedPackets=12`を期待しており、現在tickでwriteしなかった1 slotを誤って仕様化している。
-speech abortをlocal Pion gapまで接続するtestもない。
+カバレッジは受け入れ条件に対して十分である。特にqueueの件数/sample境界、generation通知単独purge、
+DataChannel overflow/64 KiB/high-low-timeout/error policy、telop sample fixture、Close競合、
+browser入力非依存50 frame、mono encode/stereo SDP decode、silence dropとspeech abortのproduction RTP gapを
+focused testで固定している。実browser jitter buffer後の聴感品質は未検証だが、タスクのスコープ外であり、
+local Pion pairがpacketizerまでの公開clock挙動を検証している。
 
 ## ドキュメント整合性
 
-`documents/design/contracts/frontend-rtc.md`へ、drop slotを次RTP packetのtimestamp/sequence gapへ反映し、
-その後960 / 1へ復帰する公開挙動を同期済み。wire schema、endpoint、設定、生成物の追加変更なし。
-文書の期待は正しいが、speech abort経路の実装がその期待より1 slot短い。
+公開挙動の変更あり。`documents/design/contracts/frontend-rtc.md`へ次を同期済みである。
 
-## 残課題
+- text/telopのqueue容量、overflow policy、UTF-8 JSON / 64 KiB
+- 1 MiB / 256 KiB / 5秒のbufferedAmount policyとchannel別failure policy
+- 48 kHz / 960 sample / 20 ms、silence、250 ms speech abort、RTP timestamp/sequence gapとcadence復帰
+- telopのmessage、timestamp、length、nil/empty、per-frame cadence、`new_text`、mora境界、generation purge
 
-- speech abort branchで、`floor(lag/FrameDuration)`に加えて現在のno-write deadline 1 slotを
-  `pendingDrops` / `samplePosition`へ加える。概念上は
-  `skipSamplePositions(uint64(lag/FrameDuration) + 1)`となる。
-- fake clock testのlag=`250ms+1ns`ではabort後の次成功sampleに
-  `PrevDroppedPackets=13`、logical sample positionも現状より960先を期待する。
-- production local Pion pairでもspeech abortを発生させ、直前成功packetから次発話packetまでの
-  timestamp delta=`14*960`、sequence delta=14、その次が960 / 1へ復帰することを固定する。
-- `skipSamplePositions`近接commentとattempt 3 comment auditへ、abort tick自身をdropに含める理由を同期する。
+PoC READMEの実payload、outbound動作、smoke確認も同期済み。endpoint、既存field/path、設定、公開barrel、
+生成物の変更はなく、`documents/design/index.md`の新規導線やschema再生成は対象外である。
+
+## コメント照合範囲と残リスク
+
+変更されたproduction 13 fileと、それらの直接surfaceであるclock/timer/encoder、queue/send barrier、
+generation publication/application、DataChannel worker/backpressure、Session readiness/cleanupを照合した。
+未照合のproduction変更範囲はない。テストhelper内の説明はproduction comment acceptance対象外だが、
+最終production pair testの13-drop / 14-frame deltaとrecovery assertionは実装コメントと照合した。
+
+残リスクは実browser jitter buffer後の聴感品質と250 ms閾値の運用妥当性で、いずれもtask.mdの
+スコープ外である。約21.8分を超える単一連続dropはPionの`uint16`表現上限によりsession errorとなるが、
+誤ったRTP clockで継続しない安全側の明示的failureである。

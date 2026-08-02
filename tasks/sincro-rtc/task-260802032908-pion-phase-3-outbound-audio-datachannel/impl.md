@@ -204,3 +204,53 @@
 - clean commit SHAに対する`npm run gate`: PASS
 - `npm run commit:check`: PASS
 - 実装worktree: clean
+
+## attempt 4
+
+### 評価残課題への対応と設計判断
+
+- attempt 3の独立評価で残ったspeech abort時のRTP clock off-by-oneだけを修正した。`lag / 20 ms`で数える完全に期限切れの12 slotに加え、abort分岐が`continue`してpacketを書かない現在deadlineの1 slotもlogical sample位置と`pendingDrops`へ加える。
+- `250 ms + 1 ns`のlagでは次の成功sampleへ`PrevDroppedPackets=13`を渡す。Pion packetizerが現在packet分も進めるため、直前の成功packetからremote RTP timestamp/sequenceは14 frame分進み、その次のpacketから960 tick / sequence 1へ復帰する。
+- queue、generation単一consumer、telop per-frame規則、DataChannel backpressure、Session lifecycle、process-wide decoder ownershipには変更を加えていない。
+- 仕様からの逸脱はない。
+
+### Verification
+
+- 赤確認: `TestOutputSpeechLagBoundaryAbortOrderAndNextCadence`は修正前に`PrevDroppedPackets=12, want 13`でFAILした。
+- `go test ./internal/media -run '^TestOutputSpeechLagBoundaryAbortOrderAndNextCadence$' -count=1`: PASS。
+- `go test ./internal/rtc -run '^TestOutboundSpeechAbortCreatesProductionRTPClockGap$' -count=1`: PASS。sandbox内ではnetlink route取得が`operation not permitted`となるため、同じcommandをsandbox外で実行した。
+- `go test -race ./internal/media/... ./internal/rtc ./internal/pipeline`: PASS。
+- `go vet ./...`: PASS。
+- `git diff --check`: PASS。
+- `npm run tasks:check`: PASS（273 tasks）。
+- `npm run tasks:index:check`: PASS（変更なし）。
+- clean commit `0d8c11aeeab0f6bd5901206b0830c0b330a1fcc5`に対する`npm run gate`: PASS（lint / build / test）。
+- `npm run commit:check`: PASS。
+
+### ドキュメント同期
+
+- `documents/design/contracts/frontend-rtc.md`はattempt 3で「送らなかった20 ms slotを次のRTP timestamp/sequence gapへ反映し、その後960 / 1 cadenceへ復帰する」と同期済みである。attempt 4は公開契約を変えず、speech abort経路をその正本へ適合させる修正なので追加差分は不要と判断した。
+- wire schema、endpoint、設定、公開barrel、生成物に変更はなく、再生成対象もない。
+
+### Change comprehension surface comment audit
+
+| path                                                                        | symbol / block / decision / flow                      | kind                          | current comment                                                                | reader question                                                                    | required reader knowledge                                                                                              | decision | action / omission reason                                                                                             | reviewer note                                                                              |
+| --------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `internal/media/output.go`                                                  | `Run`のspeech lag abort分岐                           | clock / fallback / flow       | 期限切れsample位置だけ進めると説明し、現在deadlineのno-writeを数えていなかった | abort時に実際に送らないslot数と次のRTP gapはなぜ一致するか                         | `floor(lag/20 ms)`は完全に期限切れのslotだけで、`continue`により現在deadlineもpacket化されず追加の1 slotになる         | rewrite  | staleな近接commentを、期限切れslot、abort tick自身、次item再開、RTP gapの関係を局所的に説明する内容へ置換した        | `+1`を削るとfake clockの13 dropとproduction pairの14 frame deltaがともにFAILすることを照合 |
+| `internal/media/output.go`                                                  | `skipSamplePositions` / `pendingDrops` / `writeFrame` | state / data / boundary       | 連続するno-write slotを成功writeまで累積しPion metadataへ渡す説明がある        | abort分岐から渡された13 slotはいつ消費され、次packetへ残らないか                   | helperはlogical sampleとpending countを同時に進め、`writeFrame`成功後だけpending countを0にする                        | keep     | 既存commentはattempt 4のcaller修正後も正確で、13 slot累積と次packetでの0復帰を説明するため変更不要                   | abort testとproduction pairのrecovery assertionを照合                                      |
+| `internal/media/output_contract.go`                                         | `OutputSample.MediaSample.PrevDroppedPackets`         | API / unit / boundary         | drop数がtimestamp/sequence両方へ同じgapを反映すると説明済み                    | logical no-write countはPion境界でどの単位として観測されるか                       | 20 ms slot数をuint16 metadataで渡し、packetizerが現在packetに先立つgapとしてRTP clockへ反映する                        | keep     | 単位、observable output、adapter責務が既存doc commentで局所的に読め、今回public contract変更もないため維持           | speech abort後のremote RTP delta 14を照合                                                  |
+| `internal/rtc/media.go`                                                     | `pionSampleWriter.WriteSample`                        | adapter / production boundary | metadataを保持してPionへ渡しtimestamp/sequenceをskipさせる説明済み             | processorの13 dropがproduction RTP packetまで失われず届くか                        | adapterは`MediaSample`を再構築せずそのまま渡し、packetizationはPionへ委ねる                                            | keep     | attempt 3で修正済みのcommentと実装は今回も正確で、production pairが実adapter経由のgapを固定するため変更不要          | `Timestamp delta=14*960`, `Sequence delta=14`, 次packet `960/1`を照合                      |
+| `internal/media/output_clock_test.go`, `internal/rtc/outbound_pair_test.go` | abort boundaryとproduction pair fixture               | test / fixture                | test内にdeadlineと13 dropの関係を示す限定的なcommentがある                     | production codeのcomment audit対象か                                               | test/fixtureのみでありproduction API、lifecycle、boundaryのchange comprehension surfaceではない                        | keep     | production audit対象外。ただし誤った12 drop期待を13へ直し、絶対sample位置と実RTP gap/recoveryの回帰検証を追加した    | acceptanceが要求するfake/production両seamの数値を照合                                      |
+| production変更全体                                                          | stale comment / TODO                                  | audit                         | attempt 3までのclock/lifecycle comment群がある                                 | off-by-one修正により他のclock、queue、generation、telop、lifecycle説明が古くなるか | 修正はspeech abort branchのno-write accountingだけで、他の所有権、queue境界、generation適用点、telop cadenceを変えない | keep     | abort近接commentだけrewriteし、直接surfaceの他commentは成立を再確認した。新規TODO、削除対象、未解消stale commentなし | evaluatorは変更3 fileと上記直接surfaceを照合                                               |
+
+### 残リスク
+
+- local Pion pairはRTP packetizerまでのtimestamp/sequence gapとrecoveryを固定するが、実browser jitter buffer後の聴感品質は自動評価していない。
+- 250 ms abort閾値の運用妥当性は元タスクどおりスコープ外である。
+
+### Finalization
+
+- attempt 4 commit: `0d8c11aeeab0f6bd5901206b0830c0b330a1fcc5`
+- clean commit SHAに対する`npm run gate`: PASS
+- `npm run commit:check`: PASS
+- 実装worktree: clean
