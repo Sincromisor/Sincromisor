@@ -1,119 +1,105 @@
-# Pion Phase 3のproduction candidateを検証してGate 3を判定する
+# Pion Phase 3のproduction candidateを実測してGate 3を判定する
 
 ## 背景 / 目的
 
-Phase 3の各変更束を実4 Python service、現行Frontend、Pion serverの縦切りで統合し、
-`documents/migration/pion/validation-plan.md` の必須functional/failure/resource条件を満たすか判定する。
-fake serviceやunit testだけをGate 3 PASSの代替にしない。
+先行するGate 3 harnessタスクで固定・自己検証したentrypointを使い、実4 Python service、
+現行Frontend、Pion serverのproduction経路を縦切りで実測する。
+本タスクはharnessやproduction機能を実装せず、固定条件を実行して証拠をartifactへ残し、
+`documents/migration/pion/validation-plan.md`に基づいてGate 3をPASSまたはFAILと判定する。
 
 ## 完了条件（受け入れ条件）
 
-- [ ] `gate3` build tagの固定entrypointを追加し、明示した4 service originが1つでも欠けた場合はskipせずFAILする。
-      production client、MessagePack codec、media processor、signaling handlerを差し替えず使う。
-- [ ] current FrontendをPlaywright管理のChromiumで接続し、initial Offer、candidate、audio input、
-      confirmed user text、processor response、合成音声、`text_ch`、`telop_ch` を1往復完走する。
-- [ ] 同じbrowser sessionでICE restartし、session ID/DataChannel/pipelineを維持して2往復目を完走する。
-      response消失を模擬したinitial/update Offer再送、旧revision candidate、404/409/410/429/5xx/timeout分岐も確認する。
-- [ ] candidate gathering、pre-connect、media readiness、restart、下流1 service停止、codec error、
-      malformed/oversized HTTP、DataChannel未open、browser abrupt close、managed panicを注入し、
-      expected status/reconnect/close reasonと資源回収を確認する。
+- [ ] harness taskがAPPROVED仕様どおりPASS済みで、対象commitに未取り込み差分がない。
+      固定command、fixture SHA-256、Playwright/Chromium、4 service originを事前確認し、
+      欠落時はskipやfake代替をせずGate 3 FAILとする。
+- [ ] current Frontendからinitial Offer、candidate、audio input、confirmed user text、
+      processor response、合成音声、`text_ch`、`telop_ch`を1往復完走する。
+- [ ] 同じbrowser sessionでICE restartし、session ID、DataChannel、pipelineを維持して2往復目を完走する。
+      response消失時のinitial/update Offer再送、旧revision candidate、
+      404/409/410/429/5xx/timeout分岐も固定harnessで確認する。
+- [ ] candidate gathering、pre-connect、media readiness、restart、下流service停止、codec error、
+      malformed/oversized HTTP、DataChannel未open、browser abrupt close、managed panicについて、
+      expected status/reconnect/close reasonとresource回収を確認する。
 - [ ] normal/abnormal closeを各10回行い、active session/WebSocket/codec/queueが0へ戻り、
       各iteration終了後10秒以内にgoroutineがidle baseline+5、fd/socketがbaseline+2以下へ戻る。
-      baselineと各iterationのraw countを記録し、1回でも超過すればFAILとする。RSS単独でleak判定しない。
-- [ ] process強制終了後にtest supervisorが5秒以内に再起動し、readiness復旧後に新規sessionを受理する。
-      1 instanceのsession上限100とprocess停止時最大100 session喪失をartifactへ明記する。
-- [ ] production経路にPoC test tone、fixed smoke payload、Python RTC adapterがないことをsource/runtime双方で確認する。
-- [ ] 固定command、commit、OS/Go/browser、service image digest、fixture SHA-256、各stage時刻、
-      failure/resource/metric結果を `artifacts/gate-3-result.md` に記録する。全必須条件がそろわなければPASSにしない。
-- [ ] taskが追加/変更するtest harness/commentについて所定schemaのcomment auditを行い、
-      production codeを変更した場合は通常の全change comprehension surface条件も適用する。
+      baselineと全iterationのraw countを保存し、1回でも超過すればFAILとする。
+- [ ] process強制終了後5秒以内にsupervisorが再起動し、readiness復旧後に新規sessionを受理する。
+      1 instanceのsession上限100とprocess停止時の最大session喪失数100をartifactへ明記する。
+- [ ] production経路にtest tone、fixed smoke payload、Python RTC adapterがないことをsource/runtime双方で確認する。
+- [ ] canonical Gate 3 inventoryについて、依存harnessのscenario ID、production観測点、一意な期待値、
+      artifact rowを1対1で記録する。少なくとも次を含み、未観測をPASSにしない。
+    - initial Offer single-flight、request ID同一/衝突/tombstone、old/future revision、
+      update partial apply/並行candidate、operation別404/409/410/429/5xx/timeout。
+    - body/decoded SDP/candidate/candidate queue、speech/text/telop queue、DataChannel payload/属性の
+      exact / +1境界。
+    - pipeline reset/reconnect、旧generationのrecognition/text/synth/audio/telop非観測、
+      backoff中入力非buffer、復旧後new turn。
+    - abnormal close時の全pipeline client、codec、PeerConnectionのclose-once、
+      pre-connect/media-readiness/restart/close deadline。
+    - RTP/RTCP loop終了、packet loss、duplicate/late/reorder drop、NACK、loss/RTT、pacing lag/abort。
+    - draining後の新規initial 503、共通5秒close timeout、process restart、session上限。
+    - revisionなしaiortc Answerを使うinitial rollback modeと、切断後のnew bundle initial。
+- [ ] `artifacts/gate-3-result.md`へ対象commit、環境、service digest、fixture hash、固定command、
+      functional stage、signaling/restart、failure injection、resource iteration、supervisor restart、
+      managed panicの依存評価証拠、未観測/残リスクを記録する。必須条件が1件でも未観測ならPASSにしない。
 
 ## 設計判断（着手前に確定済み）
 
-- fixed entrypointはLinux環境のmodule rootで
-  `go test -tags=gate3 -count=1 ./internal/gate3 -run '^TestGate3ProductionCandidate$' -v` とする。
-- 4 originはGate 2と同じ `SINCRO_GATE2_*_ORIGIN` を再利用せず、誤実行を避けるため
-  `SINCRO_GATE3_{EXTRACTOR,RECOGNIZER,PROCESSOR,SYNTHESIZER}_ORIGIN` を必須にする。
-- root `package.json` / lockfileへ `@playwright/test` 1.54.2をdevDependencyとして固定し、
-  `playwright.gate3.config.ts` と `sincromisor-frontend/tests/gate3/pionRtcGate3.spec.ts` を追加する。
-  setupは `npx playwright install chromium` で管理browserを取得し、Gate本体は取得済みbinaryがなければskipせずFAILする。
-  Go Gate testが `npm exec playwright test -- --config=playwright.gate3.config.ts` をsubprocess起動してjoin/cleanupする。
-  Firefox/NAT/impairment/30分soakはPhase 4へ残す。
-- `internal/gate3/signaling_proxy.go` にtest-only rule
-  `{endpoint, responses: [{action=drop_response|status|delay, status, delay}]}` を置く。
-  matching requestごとにresponses先頭をconsumeし、空になった後だけtransparentに戻す。
-  response dropは1件後の成功、404/409/410は1件、429/5xx/delay terminal caseは3件を設定する。
-  `pipeline_proxy.go` に `{service, action=close|malformed|delay}` を置く。
-  success pathはbyte-transparent proxyである。codec/deadlineはmalformed inbound RTP、
-  malformed synthesizer response、timeout設定、readiness欠損peerでproduction component自体を失敗へ遷移させる。
-  production buildへfault endpoint/flag/global hookを追加しない。
-- browserは `/simple-vrm/index.html` を開き、role `button` / name `会話を開始` と `接続を停止` を操作する。
-  Chromiumへ `--use-fake-device-for-media-stream` と
-  `--use-file-for-fake-audio-capture=<gate3/testdata/gate3-ja.wav>` を渡す。
-  fixtureはVoiceVoxで固定文「おはようございます。今日もいい天気ですね。」から生成してcommitし、
-  `testdata/README.md` にengine/version/speaker/license/privacy、生成command、SHA-256を記録する。
-  exact認識文は要求せずconfirmed non-empty user text、non-empty processor/synth outputを要求する。
-- page/UI ready 15秒、initial connected 15秒、pipeline 1往復60秒、ICE restart30秒、close収束10秒を
-  独立deadlineにする。CDP offlineを6秒適用してgrace超過後onlineへ戻し、revision 2・同じsession IDでの
-  restartをtriggerする。
-- supervisorはGate専用subprocess harnessとし、production composeの排他切替はPhase 4で実装する。
-- Gate失敗時もartifactへ観測済み/未観測とcleanup結果を残し、期待値を緩めてPASSにしない。
-- injection期待値は、response drop=同一request/revision再送、404/410=新PC+previous session、
-  409=terminalで新sessionなし、429/5xx/delay=3 attempt/30秒内のretry後terminal、
-  gather/pre-connect/media/restart deadline=対応close reason、pipeline close=同session内全client reset/reconnect、
-  codec error=当該session close、DataChannel未open=media readiness timeoutとする。
-- managed panicはobservability依存タスクが追加したinventory別panic testの実行結果をGate artifactへ取り込み、
-  Gate packageからfake codec/processorをproduction constructorへ追加注入しない。
+- harnessのrule、deadline、期待値、artifact schemaは依存タスクの
+  `artifacts/harness-contract.md`を正本とし、本タスク中に緩和・変更しない。
+- managed panicはobservabilityタスクのinventory別試験について、対象commit、command、test名、
+  close reason、process継続結果をartifactへ取り込む。Gate実行時にproduction constructorへfakeを追加しない。
+- Gate失敗時も観測済み/未観測とcleanup結果をartifactへ残す。production bug、harness bug、
+  environment欠落をFailure classificationで区別するが、いずれも必須条件未達ならGate判定はFAILである。
+- harnessまたはproduction変更が必要になった場合、本タスク内で修正しない。
+  `task_revision_required`または別の修正タスクとして戻し、変更後の固定commitでGateを最初から再実行する。
+- artifactは`gate_3_result: PASS|FAIL`をtask evaluatorのverdictと分離して持つ。
+  全固定scenarioを実行し、証拠と集約規則が正しい場合、Gate結果がFAILでも本「測定タスク」の
+  evaluator verdictはPASSとしてcloseできる。その場合Phase 4はblockedとし、failure ownerに応じた
+  production / harness修正taskを起票する。未実行、証拠欠落、集約誤りはtask evaluator FAILである。
 
 ## スコープ境界
 
-- 本タスク: Gate 3 harness、実4-service/browser縦切り、failure/resource/restart判定、結果artifact。
-- 依存タスク: production codeの機能追加は原則行わず、不具合は該当先行タスクへ戻して是正する。
-- スコープ外: aiortc baseline比較、Firefox、NAT/firewall、fixed UDP mux、impairment、30分soak、
-  compose切替runbook（Phase 4）、運用切替（Phase 5）。
+- 本タスク: 固定Gate実行、証拠収集、resource/failure判定、Gate 3 artifact、設計文書への判定反映。
+- 依存タスク: harness実装と自己検証、Phase 3 production機能。
+- スコープ外: harness/production code修正、aiortc baseline、Firefox、NAT/firewall、fixed UDP mux、
+  impairment、30分soak、compose切替runbook、運用切替。
+
+## 高リスク統合タスクの追加設計（該当時のみ）
+
+本タスクは高リスクな実測だが、ownership / injection / observation契約はharness taskの
+`artifacts/harness-contract.md`をconsumeし、新たな実装判断を持たない。
+受け入れ条件とartifact sectionを1対1で対応付け、未観測を空欄や推測で補わない。
+`gate_3_result`は全必須rowがPASSの場合だけPASSとし、FAILまたは未観測rowが1件でもあればFAILとする。
 
 ## 実装方針（既存コード整合: file:line）
 
-- `documents/migration/pion/implementation-phases.md:132` から `:143` がGate 3条件である。
-- `documents/migration/pion/validation-plan.md:45` から `:84` がfunctional/pipeline、
-  `:199` から `:218` がfailure injection正本である。
-- Gate 2の実service entrypointと記録方式は
-  `tasks/sincro-rtc/task-260726211012-pion-phase-2-pipeline-reset-gate-2/artifacts/gate-2-result.md`
-  を踏襲するが、Gate 2 PASSをGate 3の代替にしない。
-- `cmd/pion-poc/main.go:30` の実process lifecycleと、Frontend `rtcTalkClient.ts:69` の接続入口を使う。
-
-`artifacts/gate-3-result.md` は `判定`、`対象commit`、`環境`（OS/Go/Node/Playwright/Chromium）、
-`service origins/image digests`、`fixture provenance/hash`、`固定command`、`functional stage/deadline表`、
-`signaling/restart表`、`failure injection表`、`normal/abnormal 20 iteration resource表`、
-`supervisor restart`、`未観測/残リスク` を必須sectionとする。未観測は空欄でなく `未観測（理由）` と書く。
+- `documents/migration/pion/implementation-phases.md:132-144`がGate 3条件である。
+- `documents/migration/pion/validation-plan.md:45-84`がfunctional/pipeline、
+  `:199-239`がfailure/resource/observabilityの正本である。
+- harness taskの固定entrypoint、README、`artifacts/harness-contract.md`を変更せず使用する。
+- Playwright trace、browser capture、音声/本文を含むraw logは
+  `work/private-artifacts/task-260802033044-pion-phase-3-production-candidate-gate-3/`へ置く。
+  tracked artifactには集計値、sanitized log、SHA-256、再現command、private保管場所だけを記録する。
 
 ## テスト
 
-- 上記固定Gate commandを実4-service origin付きでPASSさせ、Playwright Chromium scenarioも完走させる。
-- `go test -race ./...`、`go vet ./...`、Frontend lint/typecheck/test/build、root `npm run gate`、
-  `npm run tasks:check`を通す。
-- evaluatorはartifactのcommand/log/metricと実行結果を照合し、未実行、skip、fake代替、資源未収束をFAILにする。
+- harnessが定義する固定Gate commandを実4 service origin付きで実行する。
+- production candidate commitに対し`go test -race ./...`、`go vet ./...`、
+  Frontend lint/typecheck/test/build、root `npm run gate`、`npm run tasks:check`を通す。
+- evaluatorはartifactのcommand/log/metricと実出力を照合し、未実行、skip、fake代替、
+  resource未収束、harness契約の実行中変更をFAILにする。
 
 ## ソースコードコメント受け入れ条件
 
-- test harnessと、例外的に変更するproduction code、その理解に必要な直接の
-  helper/state/event/lifecycle/data transformationをchange comprehension surfaceとして全件auditする。
-  `impl.md` は `path`、`symbol/block/decision/flow`、`kind`、`current comment`、`reader question`、
-  `required reader knowledge`、`decision (keep/rewrite/delete/add)`、`action/omission reason`、
-  `reviewer note` の列を持つ。
-- public API/boundaryは目的、入力境界、戻り値/observable output、失敗条件、副作用、非対象を説明する。
-  internal Gate orchestration/fault injection/state/event/data flowは、処理段階、data表現、前後関係、
-  production経路へ混入しない境界、cleanup責務を局所的に理解できる説明にする。
-- 弱い/stale commentはrewrite/deleteし、新規file/symbolは現行規約を満たす。省略は規約の具体的条件を
-  auditへ書き、private、短い、型、test、既存無commentを単独理由にしない。TODOは理由、削除条件、
-  canonical task ID、期限/判断基準を必須とし、構造改善をreader-oriented説明の省略理由にしない。
-- evaluatorは変更対象とsurfaceを全件照合し、未照合範囲と残リスクを `eval.md` に書く。
-  逐語説明、確認先だけ、失敗mode/cleanupのない説明、production混入境界の不明、stale comment、
-  定型的な省略理由が1件でもあればFAILとする。
+本タスクはproduction/test harnessを変更しない。実測artifactと設計文書だけを変更するため、
+source comment auditは対象外である。実行中にcode/comment変更が必要になった場合は、
+本タスクのスコープを逸脱して修正せず、別タスクへ戻す。
 
 ## ドキュメント同期の要否
 
-要。PASS時は `documents/design/backend/services/sincro-rtc.md` にPion production candidateの責務と
-Python現行backendがrollback対象であることを追記し、`documents/design/architecture/overview.md` と
-`documents/design/index.md` の導線を同期する。`documents/migration/pion/roadmap.md` にはPhase 3の
-Gate 3 artifact/taskへの参照だけを追加し、Phase 4以降を完了扱いにしない。FAIL時はcurrent designを更新しない。
+要。`documents/migration/pion/roadmap.md`へGate 3 artifact、`gate_3_result`、Phase 4へ進めるかを記録する。
+Gate 3はproduction candidate判定でありstable endpointの切替ではないため、
+`documents/design/backend/services/sincro-rtc.md`、`documents/design/architecture/overview.md`、
+`documents/design/index.md`のcurrent Python正本はPASS時も変更しない。Pionをcurrent designへ反映するのは
+compose/stable endpointを切り替えるPhase 5以降とする。

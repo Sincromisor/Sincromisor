@@ -1,12 +1,12 @@
 id: task-260802033044-pion-phase-3-production-candidate-gate-3
-title: Pion Phase 3のproduction candidateを検証してGate 3を判定する
+title: Pion Phase 3のproduction candidateを実測してGate 3を判定する
 category: sincro-rtc
 status: open
 depends_on:
-  - task-260802032922-pion-phase-3-observability-gate-3
+  - task-260802212239-pion-gate3-production-validation-entrypoint
 superseded_by: null
-review: APPROVED
-reviewed_sha: 7842fae61f8b86c710b4fcfca15bcedb0d98f1ad
+review: NEEDS_REVISION
+reviewed_sha: null
 verdict: null
 attempts: 0
 created_at: 2026-08-02

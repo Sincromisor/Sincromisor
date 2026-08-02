@@ -1,0 +1,14 @@
+id: task-260802212220-pion-gate3-frontend-browser-harness
+title: Pion Gate 3現行Frontendブラウザーハーネスを実装する
+category: sincro-rtc
+status: open
+depends_on:
+  - task-260802212216-pion-gate3-pipeline-contract-harness
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-08-02
+closed_at: null
+legacy_ids: []
