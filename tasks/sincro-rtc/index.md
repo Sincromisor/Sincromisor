@@ -4,13 +4,7 @@
 
 ## タスク一覧（自動生成 / 全 26 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                   | タイトル                                    | 判定 | 依存 |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------- | ---- | ---- |
-| [task-260809032447-pion-consul-runtime](./task-260809032447-pion-consul-runtime/task.md) | Pion RTCのConsul設定とservice登録を実装する | —    | —    |
-
-### done（完了） — 21 件
+### done（完了） — 22 件
 
 | タスク                                                                                                                                 | タイトル                                                              | 判定    | 依存                                                                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -35,6 +29,7 @@
 | [task-260802212220-pion-gate3-frontend-browser-harness](./task-260802212220-pion-gate3-frontend-browser-harness/task.md)               | Pion Gate 3現行Frontendブラウザーハーネスを実装する                   | ✅ PASS | `task-260802212216-pion-gate3-pipeline-contract-harness`                                                           |
 | [task-260809020144-pion-phase-4-container-image](./task-260809020144-pion-phase-4-container-image/task.md)                             | Pion RTC serverのproduction container imageを作成する                 | ✅ PASS | `task-260802033044-pion-phase-3-production-candidate-gate-3`                                                       |
 | [task-260809020144-pion-phase-4-production-network](./task-260809020144-pion-phase-4-production-network/task.md)                       | Pionの固定UDP muxとpublic IPv4設定を実装する                          | ✅ PASS | `task-260802033044-pion-phase-3-production-candidate-gate-3`                                                       |
+| [task-260809032447-pion-consul-runtime](./task-260809032447-pion-consul-runtime/task.md)                                               | Pion RTCのConsul設定とservice登録を実装する                           | ✅ PASS | —                                                                                                                  |
 
 ### cancelled（取りやめ） — 2 件
 
