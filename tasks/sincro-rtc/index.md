@@ -4,13 +4,7 @@
 
 ## タスク一覧（自動生成 / 全 23 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                                                             | タイトル                                                     | 判定 | 依存                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---- | ------------------------------------------------------- |
-| [task-260802033044-pion-phase-3-production-candidate-gate-3](./task-260802033044-pion-phase-3-production-candidate-gate-3/task.md) | Pion Phase 3のproduction candidateを実測してGate 3を判定する | —    | `task-260802212220-pion-gate3-frontend-browser-harness` |
-
-### done（完了） — 18 件
+### done（完了） — 19 件
 
 | タスク                                                                                                                                 | タイトル                                                              | 判定    | 依存                                                                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -27,6 +21,7 @@
 | [task-260802032916-pion-phase-3-backend-ice-restart](./task-260802032916-pion-phase-3-backend-ice-restart/task.md)                     | Pion Phase 3のoffer revisionとICE restartを実装する                   | ✅ PASS | `task-260802032912-pion-phase-3-initial-signaling-idempotency`                                                     |
 | [task-260802032918-pion-phase-3-frontend-ice-restart](./task-260802032918-pion-phase-3-frontend-ice-restart/task.md)                   | Pion Phase 3のFrontend ICE restart状態機械を実装する                  | ✅ PASS | `task-260802032916-pion-phase-3-backend-ice-restart`                                                               |
 | [task-260802032922-pion-phase-3-observability-gate-3](./task-260802032922-pion-phase-3-observability-gate-3/task.md)                   | Pion Phase 3の可観測性とprocess hardeningを実装する                   | ✅ PASS | `task-260802032908-pion-phase-3-outbound-audio-datachannel`, `task-260802032918-pion-phase-3-frontend-ice-restart` |
+| [task-260802033044-pion-phase-3-production-candidate-gate-3](./task-260802033044-pion-phase-3-production-candidate-gate-3/task.md)     | Pion Phase 3のproduction candidateを実測してGate 3を判定する          | ✅ PASS | `task-260802212220-pion-gate3-frontend-browser-harness`                                                            |
 | [task-260802033116-pion-phase-3-synthesized-audio-decode](./task-260802033116-pion-phase-3-synthesized-audio-decode/task.md)           | Pion Phase 3の合成音声container decodeを実装する                      | ✅ PASS | `task-260802032903-pion-phase-3-inbound-audio-pipeline`                                                            |
 | [task-260802212208-pion-graceful-shutdown-admission-window](./task-260802212208-pion-graceful-shutdown-admission-window/task.md)       | Pion graceful shutdown中の新規受付拒否を観測可能にする                | ✅ PASS | `task-260802032922-pion-phase-3-observability-gate-3`                                                              |
 | [task-260802212212-pion-gate3-harness-foundation](./task-260802212212-pion-gate3-harness-foundation/task.md)                           | Pion Gate 3検証ハーネスの共通基盤を実装する                           | ✅ PASS | `task-260802032922-pion-phase-3-observability-gate-3`                                                              |
