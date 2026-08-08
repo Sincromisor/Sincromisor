@@ -2,15 +2,16 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 28 件）
+## タスク一覧（自動生成 / 全 29 件）
 
-### open（未完） — 3 件
+### open（未完） — 4 件
 
-| タスク                                                                                                         | タイトル                                            | 判定 | 依存                                                                                                  |
-| -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------- |
-| [task-260809020144-pion-phase-4-exclusive-compose](./task-260809020144-pion-phase-4-exclusive-compose/task.md) | aiortcとPionを排他的に選択するcompose構成を追加する | —    | `task-260809020144-pion-phase-4-production-network`, `task-260809020144-pion-phase-4-container-image` |
-| [task-260809020145-pion-phase-4-cutover-rehearsal](./task-260809020145-pion-phase-4-cutover-rehearsal/task.md) | production相当環境でPion切替リハーサルを実行する    | —    | `task-260809020145-pion-phase-4-cutover-runbook`                                                      |
-| [task-260809020145-pion-phase-4-cutover-runbook](./task-260809020145-pion-phase-4-cutover-runbook/task.md)     | Pion停止切替とrollbackのrunbookを確定する           | —    | `task-260809020144-pion-phase-4-exclusive-compose`                                                    |
+| タスク                                                                                                         | タイトル                                            | 判定 | 依存                                                                                                                                           |
+| -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [task-260809020144-pion-phase-4-exclusive-compose](./task-260809020144-pion-phase-4-exclusive-compose/task.md) | aiortcとPionを排他的に選択するcompose構成を追加する | —    | `task-260809020144-pion-phase-4-production-network`, `task-260809020144-pion-phase-4-container-image`, `task-260809032447-pion-consul-runtime` |
+| [task-260809020145-pion-phase-4-cutover-rehearsal](./task-260809020145-pion-phase-4-cutover-rehearsal/task.md) | production相当環境でPion切替リハーサルを実行する    | —    | `task-260809020145-pion-phase-4-cutover-runbook`                                                                                               |
+| [task-260809020145-pion-phase-4-cutover-runbook](./task-260809020145-pion-phase-4-cutover-runbook/task.md)     | Pion停止切替とrollbackのrunbookを確定する           | —    | `task-260809020144-pion-phase-4-exclusive-compose`                                                                                             |
+| [task-260809032447-pion-consul-runtime](./task-260809032447-pion-consul-runtime/task.md)                       | Pion RTCのConsul設定とservice登録を実装する         | —    | —                                                                                                                                              |
 
 ### done（完了） — 21 件
 
