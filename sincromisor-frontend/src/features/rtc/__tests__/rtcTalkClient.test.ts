@@ -189,6 +189,29 @@ describe("RTCTalkClient owner state machine", () => {
         });
     });
 
+    it("keeps one failed restart intent while post-Answer candidates finish", async () => {
+        const initial = deferred<OfferResponse>();
+        const candidate = deferred<void>();
+        mocks.negotiation
+            .mockReturnValueOnce(initial.promise)
+            .mockResolvedValueOnce(answer("session-1", 2));
+        mocks.candidateSend.mockReturnValueOnce(candidate.promise);
+        const client = createClient();
+        const start = client.start();
+        mocks.callbacks[0]?.sendIceCandidate({ candidate: "candidate-1" });
+
+        initial.resolve(answer("session-1", 1));
+        await vi.waitFor(() => expect(mocks.candidateSend).toHaveBeenCalledTimes(1));
+        mocks.callbacks[0]?.onIceConnectionStateChange("failed");
+        mocks.callbacks[0]?.onIceConnectionStateChange("failed");
+        expect(mocks.negotiation).toHaveBeenCalledTimes(1);
+
+        candidate.resolve();
+        await start;
+        await vi.waitFor(() => expect(mocks.negotiation).toHaveBeenCalledTimes(2));
+        expect(mocks.negotiation.mock.calls[1]?.[0].forceIceRestart).toBe(true);
+    });
+
     it("cancels disconnected restart on recovery and starts once after 10 second grace", async () => {
         vi.useFakeTimers();
         mocks.negotiation.mockResolvedValue(answer("session-1", 1));

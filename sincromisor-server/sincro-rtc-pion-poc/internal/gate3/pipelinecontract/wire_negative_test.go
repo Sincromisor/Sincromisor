@@ -24,8 +24,12 @@ func TestPublicWebSocketRejectsExtraPCMFrame(t *testing.T) {
 	conn := dialContract(t, set, discovery.ServiceExtractor, "/api/v1/SpeechExtractor/extract")
 	defer conn.CloseNow()
 	writeFixture(t, conn, fixturePath(t, "extractor_initialize.msgpack"), nil)
+	speech := []byte{0, 4}
 	for range 2 {
-		writeBinary(t, conn, []byte{0, 0})
+		writeBinary(t, conn, speech)
+		for range speechQuietFrames {
+			writeBinary(t, conn, []byte{0, 0})
+		}
 		readBinary(t, conn)
 	}
 	if err := waitVerifyError(t, set, ErrProtocol); !errors.Is(err, ErrProtocol) {
@@ -74,7 +78,10 @@ func produceExtraction(t *testing.T, set *Set) (string, int64, int64) {
 	writeFixture(t, conn, fixturePath(t, "extractor_initialize.msgpack"), func(value map[string]any) {
 		value["session_id"] = sessionID
 	})
-	writeBinary(t, conn, []byte{0, 0})
+	writeBinary(t, conn, []byte{0, 4})
+	for range speechQuietFrames {
+		writeBinary(t, conn, []byte{0, 0})
+	}
 	payload := readBinary(t, conn)
 	value, err := decodeMap(payload)
 	if err != nil {

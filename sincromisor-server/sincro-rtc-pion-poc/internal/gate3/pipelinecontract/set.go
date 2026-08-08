@@ -24,6 +24,15 @@ type serviceServer struct {
 	server   *http.Server
 }
 
+// PCMStats はpayloadを保持しないExtractor入力の有限診断snapshotである。
+type PCMStats struct {
+	Frames             int
+	MinPeak            int
+	MaxPeak            int
+	AboveThreshold     int
+	LongestQuietFrames int
+}
+
 // Set は4 listener、WebSocket worker、共有操作台帳を所有する。
 //
 // Verify が契約 error を返しても Close を呼ぶ必要がある。再起動はできないため、
@@ -49,11 +58,42 @@ type Set struct {
 	processorSession   map[int64]string
 	processorHistory   map[int64]int
 	processorFinalSize map[int64]int
+	maxSpeechResults   int
+	pcmStats           PCMStats
+	pcmQuietFrames     int
 	closing            bool
 	handlerWG          sync.WaitGroup
 	wg                 sync.WaitGroup
 	closeOnce          sync.Once
 	closeErr           error
+}
+
+// PCMStats は固定入力がfixture境界へ到達しない場合の振幅診断を返す。
+func (s *Set) PCMStats() PCMStats {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.pcmStats
+}
+
+func (s *Set) recordPCM(peak int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.pcmStats.Frames == 0 || peak < s.pcmStats.MinPeak {
+		s.pcmStats.MinPeak = peak
+	}
+	s.pcmStats.Frames++
+	if peak > s.pcmStats.MaxPeak {
+		s.pcmStats.MaxPeak = peak
+	}
+	if peak > speechPeakThreshold {
+		s.pcmStats.AboveThreshold++
+		s.pcmQuietFrames = 0
+		return
+	}
+	s.pcmQuietFrames++
+	if s.pcmQuietFrames > s.pcmStats.LongestQuietFrames {
+		s.pcmStats.LongestQuietFrames = s.pcmQuietFrames
+	}
 }
 
 // New は全 fixture を検証してから4つの loopback WebSocket service を開く。
@@ -67,6 +107,9 @@ func New(cfg Config) (*Set, error) {
 	if err := validateHost(cfg.ListenHost); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrProtocol, err)
 	}
+	if cfg.MaxSpeechResults < 0 {
+		return nil, fmt.Errorf("%w: MaxSpeechResults must not be negative", ErrProtocol)
+	}
 	fixtures, schemas, err := loadFixtures(cfg.FixturesDir)
 	if err != nil {
 		return nil, err
@@ -79,7 +122,7 @@ func New(cfg Config) (*Set, error) {
 		stageBySequence: make(map[int64]int), processorPayload: make(map[int64][]byte),
 		identityBySequence: make(map[int64]identity),
 		processorSession:   make(map[int64]string), processorHistory: make(map[int64]int),
-		processorFinalSize: make(map[int64]int),
+		processorFinalSize: make(map[int64]int), maxSpeechResults: cfg.MaxSpeechResults,
 	}
 	extractorFixture, _ := schemas["extractor_result.msgpack"].(map[string]any)
 	set.baseSpeechID, _ = int64Field(extractorFixture, "speech_id")
@@ -91,6 +134,17 @@ func New(cfg Config) (*Set, error) {
 		}
 	}
 	return set, nil
+}
+
+func (s *Set) reserveSpeechResult() (int64, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.maxSpeechResults > 0 && s.nextAttempt >= int64(s.maxSpeechResults) {
+		return 0, false
+	}
+	attempt := s.nextAttempt
+	s.nextAttempt++
+	return attempt, true
 }
 
 func (s *Set) start(service discovery.Service, host string) error {
@@ -139,7 +193,7 @@ func (s *Set) Transcript() Transcript {
 
 // Verify は観測済みの wire、identity、操作順違反をすべて返す。
 //
-// 直接正常 turn または3 attempt の障害 scenario が静止してから呼ぶ。
+// 1または2つの正常 turn、もしくは3 attempt の障害 scenario が静止してから呼ぶ。
 // 不完全または余分な操作列は protocol error になる。
 func (s *Set) Verify() error {
 	s.mu.Lock()
@@ -149,6 +203,11 @@ func (s *Set) Verify() error {
 	case 1:
 		if s.stageBySequence[s.baseSequenceID] != len(serviceOrder) {
 			result = errors.Join(result, fmt.Errorf("%w: normal turn is incomplete", ErrProtocol))
+		}
+	case 2:
+		if s.stageBySequence[s.baseSequenceID] != len(serviceOrder) ||
+			s.stageBySequence[s.baseSequenceID+1] != len(serviceOrder) {
+			result = errors.Join(result, fmt.Errorf("%w: two-turn scenario is incomplete", ErrProtocol))
 		}
 	case 3:
 		stages := []int{
@@ -162,7 +221,7 @@ func (s *Set) Verify() error {
 		}
 	default:
 		result = errors.Join(result, fmt.Errorf(
-			"%w: observed %d PCM attempts, want one normal turn or a three-attempt scenario",
+			"%w: observed %d PCM attempts, want one or two normal turns or a three-attempt scenario",
 			ErrProtocol, s.nextAttempt,
 		))
 	}

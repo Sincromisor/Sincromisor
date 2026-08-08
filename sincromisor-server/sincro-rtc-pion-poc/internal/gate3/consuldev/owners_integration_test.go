@@ -125,8 +125,16 @@ func assertExactlyFourRegistrations(t *testing.T, baseURL string) {
 
 func runOwnerTurn(t *testing.T, coordinator *pipeline.Coordinator) {
 	t.Helper()
-	if err := coordinator.SubmitPCM(make([]byte, 640)); err != nil {
-		t.Fatal(err)
+	speech := make([]byte, 640)
+	speech[0], speech[1] = 0, 4
+	frames := [][]byte{speech}
+	for range 5 {
+		frames = append(frames, make([]byte, 640))
+	}
+	for _, frame := range frames {
+		if err := coordinator.SubmitPCM(frame); err != nil {
+			t.Fatal(err)
+		}
 	}
 	receiveOwnerValue(t, coordinator.TextResults())
 	receiveOwnerValue(t, coordinator.TextResults())

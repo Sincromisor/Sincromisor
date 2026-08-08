@@ -70,8 +70,10 @@ func runProxyScenario(t *testing.T, faultService discovery.Service, action wspro
 	}}); err != nil {
 		t.Fatalf("Arm() error = %v", err)
 	}
-	if err := coordinator.SubmitPCM(make([]byte, 640)); err != nil {
-		t.Fatalf("fault SubmitPCM() error = %v", err)
+	for _, frame := range turnPCMFrames() {
+		if err := coordinator.SubmitPCM(frame); err != nil {
+			t.Fatalf("fault SubmitPCM() error = %v", err)
+		}
 	}
 	waitForUnavailable(t, coordinator)
 	runRecoveryTurn(t, coordinator)
@@ -122,7 +124,7 @@ func runRecoveryTurn(t *testing.T, coordinator *pipeline.Coordinator) {
 	t.Helper()
 	deadline := time.Now().Add(8 * time.Second)
 	for {
-		err := coordinator.SubmitPCM(make([]byte, 640))
+		err := coordinator.SubmitPCM(turnPCMFrames()[0])
 		if err == nil {
 			break
 		}
@@ -130,6 +132,11 @@ func runRecoveryTurn(t *testing.T, coordinator *pipeline.Coordinator) {
 			t.Fatalf("recovery SubmitPCM() error = %v", err)
 		}
 		time.Sleep(5 * time.Millisecond)
+	}
+	for range speechQuietFrames {
+		if err := coordinator.SubmitPCM(make([]byte, 640)); err != nil {
+			t.Fatalf("recovery silence SubmitPCM() error = %v", err)
+		}
 	}
 	user := receive(t, coordinator.TextResults())
 	assistant := receive(t, coordinator.TextResults())

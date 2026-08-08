@@ -25,6 +25,23 @@ afterEach(() => {
 });
 
 describe("postRtcSignalingJson", () => {
+    it("calls a fetch implementation without binding the request params as this", async () => {
+        let receivedThis: unknown = "not-called";
+        const fetchImplementation = function (this: unknown) {
+            receivedThis = this;
+            return Promise.resolve(response(200));
+        } as typeof fetch;
+
+        await postRtcSignalingJson({
+            body: "{}",
+            fetch: fetchImplementation,
+            operation: "initial-offer",
+            url: "/offer",
+        });
+
+        expect(receivedThis).toBeUndefined();
+    });
+
     it("reuses one serialized body for 4 executions with 500/1000/2000 full-jitter caps", async () => {
         vi.useFakeTimers({ now: 0 });
         const fetchMock = vi

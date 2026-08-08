@@ -161,7 +161,9 @@ def event(value):
         output.write(value + "\n")
 
 def terminate(_signal, _frame):
-    os._exit(3 if "owner-close-fail=true" in mode else 0)
+    if "owner-close-fail=true" in mode:
+        os._exit(3)
+    os._exit(1 if "owner-close-one=true" in mode else 0)
 
 signal.signal(signal.SIGTERM, terminate)
 

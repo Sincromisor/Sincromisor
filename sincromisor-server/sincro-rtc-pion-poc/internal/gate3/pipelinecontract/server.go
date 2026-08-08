@@ -3,6 +3,7 @@ package pipelinecontract
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"net/http"
 
@@ -11,6 +12,51 @@ import (
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery"
 )
+
+const (
+	speechPeakThreshold = 512
+	speechQuietFrames   = 5
+)
+
+type speechBoundary struct {
+	inSpeech    bool
+	quietFrames int
+}
+
+// Observe は固定入力の s16le PCM を振幅で区分し、5 frame連続でquietになった境界だけを返す。
+// 512/5はOpus経路の微小値と一時quietを除き、固定WAVの約19 frameの中間無音を分けるfixture値である。
+func (b *speechBoundary) Observe(frame []byte) bool {
+	hasSpeech := framePeak(frame) > speechPeakThreshold
+	if hasSpeech {
+		b.inSpeech = true
+		b.quietFrames = 0
+		return false
+	}
+	if !b.inSpeech {
+		return false
+	}
+	b.quietFrames++
+	if b.quietFrames < speechQuietFrames {
+		return false
+	}
+	b.inSpeech = false
+	b.quietFrames = 0
+	return true
+}
+
+func framePeak(frame []byte) int {
+	peak := 0
+	for offset := 0; offset+1 < len(frame); offset += 2 {
+		sample := int(int16(binary.LittleEndian.Uint16(frame[offset : offset+2])))
+		if sample < 0 {
+			sample = -sample
+		}
+		if sample > peak {
+			peak = sample
+		}
+	}
+	return peak
+}
 
 func (s *Set) serve(service discovery.Service, response http.ResponseWriter, request *http.Request) {
 	conn, err := websocket.Accept(response, request, nil)
@@ -33,7 +79,7 @@ func (s *Set) serve(service discovery.Service, response http.ResponseWriter, req
 	}
 }
 
-// Extractor は接続 preface を先に固定 schema で検査し、以後の PCM attempt ごとに
+// Extractor は接続 preface を先に固定 schema で検査し、以後の確定発話ごとに
 // fixture の基準 ID を単調増加させる。台帳確定後に response を送るため、proxy が破棄した
 // held response も障害 prefix として観測できる。
 func (s *Set) serveExtractor(ctx context.Context, conn *websocket.Conn) {
@@ -51,8 +97,9 @@ func (s *Set) serveExtractor(ctx context.Context, conn *websocket.Conn) {
 		s.record(fmt.Errorf("%w: extractor session ID", ErrIdentity))
 		return
 	}
+	boundary := speechBoundary{}
 	for {
-		messageType, _, readErr := conn.Read(ctx)
+		messageType, frame, readErr := conn.Read(ctx)
 		if readErr != nil {
 			return
 		}
@@ -60,9 +107,15 @@ func (s *Set) serveExtractor(ctx context.Context, conn *websocket.Conn) {
 			s.record(fmt.Errorf("%w: extractor PCM must be binary", ErrProtocol))
 			return
 		}
+		s.recordPCM(framePeak(frame))
+		if !boundary.Observe(frame) {
+			continue
+		}
+		attempt, accepted := s.reserveSpeechResult()
+		if !accepted {
+			continue
+		}
 		s.mu.Lock()
-		attempt := s.nextAttempt
-		s.nextAttempt++
 		speechID := s.baseSpeechID + attempt
 		sequenceID := s.baseSequenceID + attempt
 		s.mu.Unlock()
@@ -199,7 +252,9 @@ func (s *Set) serveSynthesizer(ctx context.Context, conn *websocket.Conn) {
 			s.record(err)
 			return
 		}
-		response, patchErr := patchSpeech(s.fixtures["voice_synthesizer_result.msgpack"], speechID)
+		response, patchErr := patchSynthesizerResult(
+			s.fixtures["voice_synthesizer_result.msgpack"], speechID,
+		)
 		if patchErr != nil {
 			s.record(patchErr)
 			return
@@ -220,11 +275,15 @@ func (s *Set) patchedIdentity(name, sessionID string, speechID, sequenceID int64
 	return msgpack.Marshal(value)
 }
 
-func patchSpeech(payload []byte, speechID int64) ([]byte, error) {
+func patchSynthesizerResult(payload []byte, speechID int64) ([]byte, error) {
 	value, err := decodeMap(payload)
 	if err != nil {
 		return nil, err
 	}
 	value["speech_id"] = speechID
+	// protocol fixtureのvoiceはschema確認用の不正Oggなので、ブラウザーまで通す契約serviceは
+	// FFmpegでdecodeできる有限の非無音WAVへ差し替える。schema自体はcommit済みfixtureで検査済みである。
+	value["voice"] = synthesizedWAV()
+	value["audio_format"] = "audio/wav"
 	return msgpack.Marshal(value)
 }
