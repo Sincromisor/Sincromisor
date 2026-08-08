@@ -193,6 +193,9 @@ PeerConnectionをclose-once guard経由で共通5秒の期限内に並行して�
 
 ## Rollout段階
 
+Phase 4の停止切替とrollbackは、[切替リハーサルrunbook](phase-4-cutover-runbook.md)を正本とする。
+実測結果は同runbookからリンクするGate 4 artifactへ記録する。
+
 ### 開発環境
 
 - Pion backendを明示選択した開発者だけが利用する。
