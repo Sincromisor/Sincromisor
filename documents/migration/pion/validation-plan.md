@@ -60,6 +60,9 @@ ICE restartのbrowser試験が既に存在する場合は実行するが、Gate 
 ### Gate 3判定
 
 - repository testとend-to-end smoke testがPASSする。
+- Playwright欠落、固定port競合などproduction candidateの実行開始前に判明した環境不備はGate FAILへ
+  数えず、環境を直して同じ不備につき1回だけ再実行する。同じ不備で再び停止した場合は
+  `NOT_MEASURED`として打ち切り、production candidateの不合格と混同しない。
 - 未観測項目がある場合は、その項目が切替に必要な理由を示せなければGateへ追加しない。
 - production codeまたは既存testの修正が必要ならGateをFAILとし、原因箇所を直してから再実行する。
 
