@@ -91,6 +91,13 @@ compose配線時はこの3引数を環境変数へ対応付け、`examples/compo
 - `/health/live`はHTTP event loopがrequestを処理できる間200を返す。
 - `/health/ready`はstartup dependency検証完了後かつ非drainingの間だけ200を返す。
   下流Python serviceの一時障害はsession pipelineがreset/reconnectするためprocess readinessへ混ぜない。
+- 後続のPion compose serviceはruntime imageが提供する`curl`で、次をhealthcheck commandとして使う。
+  `/health/ready`がHTTP 200のときだけ`--fail`が成功する。
+
+    ```sh
+    CMD curl --fail --silent --show-error http://127.0.0.1:8001/health/ready
+    ```
+
 - `/metrics`はprocess専用Prometheus registryを公開し、default global registryを使わない。
 - metric prefixは`sincro_rtc_`とし、sessions、signaling、ICE/deadline、audio/RTP/RTCP、
   pacing/codec、pipeline reconnect、queue/DataChannel、close durationを集計する。

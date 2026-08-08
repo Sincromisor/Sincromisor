@@ -62,7 +62,7 @@ ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
     apt-get update && \
-    apt-get install --no-install-recommends -y ffmpeg libopus0 && \
+    apt-get install --no-install-recommends -y curl ffmpeg libopus0 && \
     rm -rf /var/lib/apt/lists/* && \
     useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
     mkdir ${SINCRO_USER_DIR} && \
