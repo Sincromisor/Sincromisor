@@ -48,10 +48,70 @@ services:
             timeout: 5s
             retries: 15
 
+    sincro-rtc-pion:
+        profiles:
+            - pion
+        build:
+            context: ..
+            dockerfile: ./Docker/sincro-rtc-pion-poc/Dockerfile
+        image: ${SINCRO_REGISTRY_NAME}/sincro-rtc-pion-poc:latest
+        command:
+            [
+                "--http",
+                "0.0.0.0:8001",
+                "--frontend-dir",
+                "/opt/sincromisor/frontend",
+                "--ffmpeg",
+                "${SINCRO_PION_FFMPEG_PATH}",
+                "--stun",
+                "${SINCRO_PION_STUN}",
+                "--media-udp",
+                "${SINCRO_PION_CONTAINER_IPV4}:${SINCRO_PION_MEDIA_UDP_PORT}",
+                "--public-ipv4",
+                "${SINCRO_PION_PUBLIC_IPV4}",
+                "--interface",
+                "${SINCRO_PION_INTERFACE}",
+                "--max-sessions",
+                "${SINCRO_RTC_MAX_SESSIONS}",
+                "--consul-agent-host",
+                "consul-agent-rtc",
+                "--consul-agent-port",
+                "8500",
+                "--service-bind-host",
+                "sincro-rtc-pion",
+            ]
+        ports:
+            - 8001:8001/tcp
+            - ${SINCRO_PION_MEDIA_UDP_PORT}:${SINCRO_PION_MEDIA_UDP_PORT}/udp
+        networks:
+            sincromisor-net:
+                ipv4_address: ${SINCRO_PION_CONTAINER_IPV4}
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        depends_on:
+            consul-agent-rtc:
+                condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "curl",
+                    "--fail",
+                    "--silent",
+                    "--show-error",
+                    "http://127.0.0.1:8001/health/ready",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 15
+
     consul-agent-rtc:
         profiles:
             - full
             - rtc
+            - pion
         image: hashicorp/consul:latest
         command:
             [

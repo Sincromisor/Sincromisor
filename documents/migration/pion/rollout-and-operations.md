@@ -94,6 +94,12 @@ compose配線時はこの3引数を環境変数へ対応付け、`examples/compo
 Consul service addressとして登録する。container IPv4とConsul service addressは、
 SDPへ広告するpublic IPv4とは別値である。
 
+composeではaiortc版を`full` / `rtc` profile、Pion版を`pion` profileで選択する。Pionは
+aiortcと同じstable TCP 8001を、`SINCRO_PION_MEDIA_UDP_PORT` をhost/container同値の
+UDP portとして公開する。`SINCRO_PION_PUBLIC_IPV4`、`SINCRO_PION_STUN`、
+`SINCRO_RTC_MAX_SESSIONS`、`SINCRO_PION_FFMPEG_PATH`はPion commandへ渡す。`pion` とaiortc profileを同じprojectで併用すると
+stable TCP port競合で後から起動したbackendが失敗する。
+
 設定の形式と組み合わせはnetwork socketやHTTP listenerを公開する前に検証する。public IPv4のparse失敗、UDP mux bind失敗、port不一致、空のinterface選択、TURN URL、上限やtimeoutの0 / 負値はreadiness falseのまま待機せずprocessをfail-fastさせる。外部NAT / firewallの到達性はstartupだけでは保証できないため、production相当リハーサルのsmoke testで検証する。
 
 ## Healthとmetrics
