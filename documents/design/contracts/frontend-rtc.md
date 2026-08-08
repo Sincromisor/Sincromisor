@@ -114,6 +114,9 @@ dropした20 ms slotは次のRTP packetのtimestampとsequence numberのgapへ�
 
 initial Offerでは`session_id`を送らず、`talk_mode`は`chat`または`sincro`、
 `offer_request_id`はFrontend発行UUID、`offer_revision`は`1`を必須とする。
+ただしPionは互換性のため、`session_id`、`offer_request_id`、`offer_revision`をすべて省略した
+legacy initial Offerだけを受理し、server側でUUIDとrevision `1`を生成する。legacy形式はrequest IDを
+持たないため、HTTP retryで同じAnswerを返す保証はない。identityの一部だけの省略、空値、形式不正はHTTP 400とする。
 `previous_session_id`は任意のULIDで、旧sessionとの相関ログだけに使う。
 `session_id`の省略と`null`/空文字は同一視せず、initial Offerに後者があればHTTP 400とする。
 `previous_session_id`も省略またはstrict ULID文字列だけを許可し、`null`や文字列以外はHTTP 400とする。
@@ -221,7 +224,7 @@ responseから旧sessionを復元できないためterminal failureとする。
 ## Timeout / Retry
 
 - FrontendからPionへはTrickle ICEを使う。PionからのcandidateはAnswer SDPへ収集して返すhalf-trickleとする。
-- initial OfferのHTTP responseを失った場合は、同じrequest IDと同じSDPで再送する。
+- identity付きinitial OfferのHTTP responseを失った場合は、同じrequest IDと同じSDPで再送する。legacy initial Offerは同一Answer retryを保証しない。
 - update OfferのHTTP responseを失った場合は、同じsession ID、request ID、revision、SDPで再送する。
 - Frontendはupdate Answerを受け取るまで同revisionのcandidateをqueueし、成功後に順序を保って送る。
 - candidate queueはPeerConnection generationごとに最大64件のFIFOとする。overflow、Offer失敗、
