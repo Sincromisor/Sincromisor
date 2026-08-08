@@ -14,3 +14,6 @@ include:
 
 networks:
     sincromisor-net:
+        ipam:
+            config:
+                - subnet: ${SINCRO_COMPOSE_NETWORK_SUBNET}
