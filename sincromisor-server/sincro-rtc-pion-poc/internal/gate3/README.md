@@ -3,8 +3,8 @@
 ## 目的
 
 このディレクトリは、Pion production candidate の Gate 3 検証で共有する事前入力検査、
-子 process 管理、資源観測、成果物 schema を提供する。本段階ではブラウザー、WebRTC 境界 client、
-下流 service の障害注入、Gate 3 の最終判定を実行しない。
+子 process 管理、資源観測、成果物 schema と現行Frontendのブラウザー試験を提供する。
+下流 service の障害注入と Gate 3 の最終判定は実行しない。
 
 ## 必要環境
 
@@ -26,6 +26,29 @@ repository root は module root から `../..`、Frontend は
 `<module>/internal/gate3/testdata/gate3-input.wav` に固定する。repository 所有入力の symlink が
 repository 外へ解決される場合は開始しない。
 
+## Frontend ブラウザー試験
+
+repository root で `npm run gate` を実行して Frontend を build した後、module root で次を実行する。
+
+```sh
+go test -tags=gate3 ./internal/gate3/browser -run '^TestFrontendBrowserHarness$' -count=1 -v
+```
+
+上記の5環境変数に加え、rootの `@playwright/test` 1.54.2、build済み
+`sincromisor-frontend/dist`、固定音声 `internal/gate3/testdata/gate3-input.wav` が必要である。
+
+Go 試験が4契約service、Consul、Pion、Playwrightの順に起動し、逆順に停止・joinする。
+Pion の same-origin static/API 配信を使うため、別のproxyは起動しない。Chromiumは
+`--use-file-for-fake-audio-capture` で固定音声をmicrophone入力に使う。
+
+Playwrightの初期化scriptは最初の実 `RTCPeerConnection` だけをclosureに捕捉し、一時的な
+`iceConnectionState=failed` eventを発火する。`restartIce()`、`createOffer()`、signaling `fetch()` を
+試験から呼ばず、productionのrestart経路を使う。
+
+合否はPlaywrightが観測するinitial/update Offerとcandidateの実HTTP request、実DataChannelの
+message event、native ICE復帰状態、Web Audioの非無音sampleと、Go側の
+`pipelinecontract.Transcript()` が示す2正常turnの両方で判定する。
+
 ## 子 process
 
 `process.Owner` は `new → running → exited` の単調状態を持ち、stdout と stderr の末尾を
@@ -37,7 +60,7 @@ repository 外へ解決される場合は開始しない。
 
 `pipelinecontract` は、repository の MessagePack 固定データを schema の正本として
 SpeechExtractor、SpeechRecognizer、TextProcessor、VoiceSynthesizer の4契約 service を起動する。
-各 PCM attempt の `speech_id` / `sequence_id`、session、確定済み履歴を service 間で照合し、
+固定入力PCMの発話境界ごとの `speech_id` / `sequence_id`、session、確定済み履歴を service 間で照合し、
 TextProcessor の response bytes が VoiceSynthesizer まで変更されていないことを台帳へ記録する。
 
 `wsproxy` は通常は4接続を透過し、正常 turn の完了後に `close`、`malformed`、`held-close` の

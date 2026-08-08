@@ -217,7 +217,11 @@ func (a *Agent) cleanup(ctx context.Context) error {
 		}
 	}
 	a.registered = nil
-	if _, err := a.owner.Close(); err != nil {
+	wasRunning := a.owner.State() == process.StateRunning
+	result, err := a.owner.Close()
+	// Consul 2.xはSIGTERMの正常shutdownをexit 1で返す。Agentが実際にrunning childを
+	// 停止した場合だけこのcodeを受理し、先に異常終了したchildのexit 1は隠さない。
+	if err != nil && !(wasRunning && result.ExitCode == 1) {
 		cleanupErr = errors.Join(cleanupErr, fmt.Errorf("close Consul owner: %v", err))
 	}
 	if cleanupErr != nil {

@@ -146,8 +146,8 @@ func newSession(
 		cancel()
 		return nil, err
 	}
-	dispatcher, err := NewDataChannelDispatcher(ctx, logger, func(error) {
-		logger.Error("data channel dispatcher stopped", "session_id", id, "reason", "data_channel_error")
+	dispatcher, err := NewDataChannelDispatcher(ctx, logger, func(err error) {
+		logger.Error("data channel dispatcher stopped", "session_id", id, "reason", "data_channel_error", "error", err)
 		_ = session.Close("data_channel_error")
 	}, DataChannelDispatcherOptions{
 		Recorder: recorder,

@@ -159,8 +159,11 @@ async function executeRequest(params: ExecuteRequestParams): Promise<Response> {
     const abortFromParent = () => controller.abort();
     params.parentSignal?.addEventListener("abort", abortFromParent, { once: true });
     const timeoutId = params.clock.setTimeout(() => controller.abort(), params.timeoutMs);
+    // native window.fetchはWeb IDLのbrand checkを持つため、paramsのmethodとして呼ばずdetachする。
+    // test注入とnativeの両方を同じundefined thisで呼び、browserのIllegal invocationを防ぐ。
+    const fetchImplementation = params.fetchImplementation;
     try {
-        return await params.fetchImplementation(params.url, {
+        return await fetchImplementation(params.url, {
             body: params.body,
             headers: { "Content-Type": "application/json" },
             method: "POST",

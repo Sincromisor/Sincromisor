@@ -273,8 +273,22 @@ export class RTCTalkClient {
 
     private async recoverFromIceFailure(): Promise<void> {
         this.disconnectedGrace.cancel();
-        if (this.negotiationFlight !== undefined) {
-            return this.negotiationFlight;
+        const flight = this.negotiationFlight;
+        if (flight !== undefined) {
+            if (this.negotiationState.state !== "connected") {
+                return flight;
+            }
+            const generation = this.bundleGeneration;
+            // Answer commit後のcandidate flush中もflightは残る。failed intentを捨てず、同じgenerationが
+            // connectedのまま完了した場合だけ再評価して、initializing/restartingとの重複を避ける。
+            await flight;
+            if (
+                !this.isCurrentGeneration(generation) ||
+                this.negotiationState.state !== "connected"
+            ) {
+                return;
+            }
+            return this.recoverFromIceFailure();
         }
         if (this.negotiationState.mode === "legacy") {
             return this.replaceBundle(this.negotiationState.identity?.sessionId);

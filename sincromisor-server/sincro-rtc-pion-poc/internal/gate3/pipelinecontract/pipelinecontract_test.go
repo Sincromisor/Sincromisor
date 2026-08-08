@@ -3,6 +3,7 @@
 package pipelinecontract
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -15,6 +16,61 @@ import (
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery"
 )
+
+func TestSynthesizedWAVIsFiniteAndNonSilent(t *testing.T) {
+	payload := synthesizedWAV()
+	if len(payload) != 44+synthesizedSamples*2 || !bytes.Equal(payload[:4], []byte("RIFF")) ||
+		!bytes.Equal(payload[8:12], []byte("WAVE")) {
+		t.Fatalf("WAV header or size is invalid: %d bytes", len(payload))
+	}
+	if bytes.Count(payload[44:], []byte{0}) == len(payload)-44 {
+		t.Fatal("WAV PCM is silent")
+	}
+}
+
+func TestSpeechBoundaryEmitsOncePerSpeechRegion(t *testing.T) {
+	boundary := speechBoundary{}
+	set := &Set{}
+	silence := make([]byte, 640)
+	speech := make([]byte, 640)
+	speech[0], speech[1] = 0, 4
+	frames := [][]byte{
+		silence, speech, silence, speech,
+		silence, silence, silence, silence, silence,
+		silence, speech,
+		silence, silence, silence, silence, silence,
+	}
+	want := []bool{
+		false, false, false, false,
+		false, false, false, false, true,
+		false, false,
+		false, false, false, false, true,
+	}
+	for index, frame := range frames {
+		set.recordPCM(framePeak(frame))
+		if got := boundary.Observe(frame); got != want[index] {
+			t.Fatalf("Observe(frame %d) = %v, want %v", index, got, want[index])
+		}
+	}
+	stats := set.PCMStats()
+	if stats.Frames != len(frames) || stats.MinPeak != 0 || stats.MaxPeak != 1024 ||
+		stats.AboveThreshold != 3 || stats.LongestQuietFrames != 6 {
+		t.Fatalf("PCMStats() = %+v", stats)
+	}
+}
+
+func TestMaxSpeechResultsStopsResponsesWithoutAdvancingIdentity(t *testing.T) {
+	set := &Set{maxSpeechResults: 2}
+	for attempt, want := range []bool{true, true, false} {
+		gotAttempt, got := set.reserveSpeechResult()
+		if got != want || (got && gotAttempt != int64(attempt)) {
+			t.Fatalf("reserveSpeechResult(%d) = %d, %v, want %v", attempt, gotAttempt, got, want)
+		}
+	}
+	if set.nextAttempt != 2 {
+		t.Fatalf("nextAttempt = %d, want 2", set.nextAttempt)
+	}
+}
 
 type staticResolver map[discovery.Service]discovery.Endpoint
 
@@ -59,6 +115,28 @@ func TestContractServicesDriveProductionPipeline(t *testing.T) {
 	}
 }
 
+func TestContractServicesAcceptTwoNormalTurns(t *testing.T) {
+	set := newContractSet(t)
+	defer closeContractSet(t, set)
+	coordinator := newCoordinator(t, set.Addresses())
+	if err := coordinator.Start(context.Background(), "gate3-two-turn-session", "sincro"); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	runTurn(t, coordinator)
+	runTurn(t, coordinator)
+	if err := coordinator.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	if err := set.Verify(); err != nil {
+		t.Fatalf("Verify() error = %v", err)
+	}
+	entries := set.Transcript().Entries
+	if len(entries) != 8 || entries[0].SessionID != entries[4].SessionID ||
+		entries[4].SequenceID != entries[0].SequenceID+1 || !entries[7].ByteIdentical {
+		t.Fatalf("two-turn transcript = %+v", entries)
+	}
+}
+
 func newContractSet(t *testing.T) *Set {
 	t.Helper()
 	fixtures, err := filepath.Abs(filepath.Join("..", "..", "pipeline", "protocol", "testdata"))
@@ -88,12 +166,24 @@ func newCoordinator(t *testing.T, endpoints map[discovery.Service]discovery.Endp
 
 func runTurn(t *testing.T, coordinator *pipeline.Coordinator) {
 	t.Helper()
-	if err := coordinator.SubmitPCM(make([]byte, 640)); err != nil {
-		t.Fatalf("SubmitPCM() error = %v", err)
+	for _, frame := range turnPCMFrames() {
+		if err := coordinator.SubmitPCM(frame); err != nil {
+			t.Fatalf("SubmitPCM() error = %v", err)
+		}
 	}
 	receive(t, coordinator.TextResults())
 	receive(t, coordinator.TextResults())
 	receive(t, coordinator.SynthResults())
+}
+
+func turnPCMFrames() [][]byte {
+	speech := make([]byte, 640)
+	speech[0], speech[1] = 0, 4
+	frames := [][]byte{speech}
+	for range speechQuietFrames {
+		frames = append(frames, make([]byte, 640))
+	}
+	return frames
 }
 
 func receive[T any](t *testing.T, values <-chan T) T {

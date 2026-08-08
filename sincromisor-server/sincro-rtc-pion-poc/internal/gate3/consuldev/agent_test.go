@@ -38,6 +38,17 @@ func TestAgentRegistersHealthAndCleansUpInReverse(t *testing.T) {
 	}
 }
 
+func TestAgentAcceptsConsulTwoSIGTERMExitCode(t *testing.T) {
+	options := isolatedOptions(t, 500*time.Millisecond)
+	agent, err := startUsingOptions(t, fakeConfig(t, options, "owner-close-one=true\n"), options)
+	if err != nil {
+		t.Fatalf("start() error = %v", err)
+	}
+	if err := agent.Close(context.Background()); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+}
+
 func TestAgentRejectsOccupiedProductionPortWithoutStartingProcess(t *testing.T) {
 	listener, err := net.Listen("tcp", consulAddress)
 	if err != nil {

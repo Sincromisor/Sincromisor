@@ -15,6 +15,9 @@ HTTP status別の分岐は既存Frontend単体試験を正本とし、本タス�
 - [ ] `page.addInitScript`からページが生成した実`RTCPeerConnection`へ`failed`イベントを一度だけ発火し、
       productionのrestart処理がupdate Offerを送ることを確認する。test側から`restartIce()`は呼ばない。
 - [ ] restart後にrevision 2、同一session ID、既存DataChannel、実ICE状態の復旧、2 turn目の完走を確認する。
+- [ ] 実ブラウザーで判明した`fetch`の誤った`this`束縛を`rtcSignalingHttp`の共有HTTP境界で修正し、
+      native `fetch`をparams objectのmethodとして呼ばない単体回帰を追加する。
+- [ ] initial Answer後のcandidate flush中に受けた`failed` intentを維持し、flush完了後にICE restartを1回だけ開始する。
 - [ ] test用接続点をFrontend本番sourceや公開global objectへ追加しない。
 
 ## 設計判断
@@ -27,6 +30,8 @@ HTTP status別の分岐は既存Frontend単体試験を正本とし、本タス�
 - ChromiumはPlaywrightだけが起動・終了し、`SINCRO_GATE3_CHROMIUM_BINARY`を`executablePath`へ渡す。
   偽microphoneは`--use-fake-device-for-media-stream`、`--use-fake-ui-for-media-stream`、
   `--use-file-for-fake-audio-capture=<固定WAV>`で構成する。
+- Chromiumが固定WAVを反復するため、browser contractだけ`MaxSpeechResults=2`で応答を止める。
+  `0`と既存callerのdefaultは無制限のままとし、3-attempt障害scenarioを維持する。
 - GoからPlaywrightへ渡す値は既存`SINCRO_GATE3_*`と、test専用のbase URLだけに限定する。
   Playwrightのreporterと終了codeをそのまま合否に使い、JSON制御protocol、応答file、汎用byte台帳は作らない。
 - 404、409、410、429、5xx、timeoutの分岐は既存の`rtcSignalingHttp.test.ts`と
@@ -66,8 +71,9 @@ HTTP status別の分岐は既存Frontend単体試験を正本とし、本タス�
 ## スコープ境界
 
 - 本タスク: Playwright設定、最小のGo統合owner、通常1 turn、ICE restart、復旧後1 turn、
-  2正常turnを受理する契約台帳検証。
-- スコープ外: HTTP status matrix、Firefox、NAT、OS network impairment、Frontend本番API変更。
+  browser限定の2発話応答上限、2正常turnを受理する契約台帳検証、signaling `fetch`呼出時の誤った`this`束縛修正、
+  post-Answer candidate flush中の`failed` intent維持。
+- スコープ外: HTTP status matrix、Firefox、NAT、OS network impairment、Frontend公開API変更。
 
 ## テスト
 
@@ -79,9 +85,10 @@ HTTP status別の分岐は既存Frontend単体試験を正本とし、本タス�
 
 ## ソースコードコメント受け入れ条件
 
-本番sourceは変更しないため、ソースコードコメント点検は対象外とする。
 初期化scriptにはproduction経路を差し替えない理由、捕捉範囲、propertyとlistenerの復元条件を記録する。
-新しいtest ownerと境界helperのコメントは`documents/rules/source-comments.md`を正本として確認する。
+`rtcSignalingHttp`にはnative Web APIをoptions objectのmethodとして呼ばない理由を近接記録する。
+変更する共有HTTP境界、新しいtest owner、browser API境界、復元処理のコメントは
+`documents/rules/source-comments.md`を正本として確認する。
 
 ## ドキュメント同期の要否
 

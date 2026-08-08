@@ -60,5 +60,8 @@
     },
     "dependencies": {
         "yaml": "^2.5.0"
+    },
+    "devDependencies": {
+        "@playwright/test": "1.54.2"
     }
 }
