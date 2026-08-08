@@ -2,98 +2,93 @@
 
 ## 背景 / 目的
 
-現行Frontendを管理対象Chromiumで操作し、初回接続、会話、同一sessionのICE restart、
-シグナリングHTTP障害を再現可能にする。ICE restart開始条件はHTTP応答の保持では作れないため、
-Playwrightの初期化scriptで実`RTCPeerConnection`の状態イベントを決定的に発火させる。
+現行Frontendを管理対象Chromiumで操作し、通常会話と同一session内のICE restartをproduction経路で確認する。
+HTTP status別の分岐は既存Frontend単体試験を正本とし、本タスクではブラウザーでしか確認できない縦切りに限定する。
 
 ## 完了条件（受け入れ条件）
 
-- [ ] rootへ`@playwright/test` 1.54.2を固定し、`playwright.gate3.config.ts`と
-      `sincromisor-frontend/tests/gate3/pionRtcGate3.spec.ts`を追加する。
-- [ ] 現行`/simple-vrm/index.html`を、偽microphoneと固定WAVを使う管理対象Chromiumで操作し、
-      initial Offer、candidate、`text_ch`、`telop_ch`、確定利用者text、応答text、合成音声の1 turnを観測する。
-- [ ] `page.addInitScript`でnative `RTCPeerConnection` constructorを包み、ページが作った実instanceを
-      test側だけで捕捉する。捕捉したinstanceの`iceConnectionState`を一度だけ`failed`として返し、
-      `iceconnectionstatechange`をdispatchして現行Frontendのrestart処理を開始する。
-- [ ] restart開始後は状態偽装を解除し、実instanceが作る`createOffer({iceRestart:true})`、
-      update Offer、revision 2、同一session ID、既存DataChannel、復旧後の2 turn目を
-      HTTP台帳・Pion statuses・browser観測の3者で確認する。
-- [ ] 状態イベントのdispatchだけ、またはbrowser内部の自己申告だけでは合格にしない。
-      update Offerが発生しない、session IDが変わる、DataChannelを再作成する、実ICE状態が復旧しない場合はerrorにする。
-- [ ] `internal/gate3/signalingproxy`は`offer`と`candidate`のrequest / responseをbyte台帳へ保存し、
-      response drop、404、409、410、429、5xx、delayの有限応答列を操作単位に適用する。
-      scenario終了時の未消費規則はerrorにする。
-- [ ] GoとPlaywrightは権限`0600`の入力・出力JSONだけで調停し、標準出力を制御protocolに使わない。
-      schema不一致、scenario ID不一致、複数出力、非0終了、期限超過はerrorにする。
-- [ ] 本番Frontend source、production constructor、公開global objectへtest接続点を追加しない。
-- [ ] 変更対象と変更理解範囲のコメント点検を`impl.md`へ全件記録する。
+- [ ] rootへ`@playwright/test` 1.54.2を固定し、Gate 3用configと1つのspecを追加する。
+- [ ] `-tags=gate3`のGo統合試験を1つ追加し、既存`harnessenv`、`pipelinecontract`、`consuldev`、
+      `process.Owner`だけでFrontend build済み入力、4契約service、Consul、Pion、Playwrightを調停する。
+- [ ] 現行`/simple-vrm/index.html`を偽microphoneと固定WAVで操作し、initial Offer、candidate、
+      `text_ch`、`telop_ch`、利用者text、応答text、合成音声の1 turnを観測する。
+- [ ] `page.addInitScript`からページが生成した実`RTCPeerConnection`へ`failed`イベントを一度だけ発火し、
+      productionのrestart処理がupdate Offerを送ることを確認する。test側から`restartIce()`は呼ばない。
+- [ ] restart後にrevision 2、同一session ID、既存DataChannel、実ICE状態の復旧、2 turn目の完走を確認する。
+- [ ] test用接続点をFrontend本番sourceや公開global objectへ追加しない。
 
-## 設計判断（着手前に確定済み）
+## 設計判断
 
-- 初期化scriptはnative constructorと`iceConnectionState` getterを保存し、捕捉対象の1 instanceだけに
-  一時的なgetterを設定する。`failed` eventを1回dispatch後、own propertyを削除してnative getterへ戻す。
-- constructorの捕捉数が1でない、property descriptorが`configurable`でない、instanceが既にclosedなら
-  testをerrorにする。別方式へ暗黙にfallbackしない。
-- `RTCPeerConnection.restartIce()`をtest側から直接呼ばない。現行Frontendの
-  `handleRtcIceConnectionState → recoverFromIceFailure → runRestartNegotiation`を通す。
-- Chromiumが接続する唯一のHTTP originはGoのreverse proxyとする。Frontend static、
-  `config.json`、`offer`、`candidate`、statuses、metricsをsame-originで透過する。
-- browser入力JSONは`schema_version`、`scenario_id`、`base_url`、`chromium_executable`、
-  `audio_fixture`、`deadline_ms`、`operations`を必須にする。出力はsession ID列、接続状態列、
-  DataChannel、turn、restart、停止の観測時刻を必須にする。
-- page ready 15秒、initial接続15秒、1 turn 60秒、restart 30秒、2 turn 60秒、停止10秒に固定する。
+- Go統合試験を最上位ownerとする。Frontendは事前にbuild済みとし、統合試験が4契約service、Consul、
+  Pion、Playwrightをこの順に起動する。Playwright終了後はPlaywright、Pion、Consul、契約serviceの逆順で
+  cleanupし、途中失敗時も起動済みownerを同じ順序で必ずjoinする。
+- Pion processは既存`cmd/pion-poc`を検査済みGo binaryで一時directoryへbuildして起動する。
+  Pion自身のFrontend static/API same-origin配信を使い、local proxyは追加しない。
+- ChromiumはPlaywrightだけが起動・終了し、`SINCRO_GATE3_CHROMIUM_BINARY`を`executablePath`へ渡す。
+  偽microphoneは`--use-fake-device-for-media-stream`、`--use-fake-ui-for-media-stream`、
+  `--use-file-for-fake-audio-capture=<固定WAV>`で構成する。
+- GoからPlaywrightへ渡す値は既存`SINCRO_GATE3_*`と、test専用のbase URLだけに限定する。
+  Playwrightのreporterと終了codeをそのまま合否に使い、JSON制御protocol、応答file、汎用byte台帳は作らない。
+- 404、409、410、429、5xx、timeoutの分岐は既存の`rtcSignalingHttp.test.ts`と
+  `rtcTalkClient.test.ts`で確認し、ブラウザー試験へ重複させない。
+- `page.addInitScript`はnative constructorを保存し、最初の`RTCPeerConnection`生成直後にconstructorを復元する。
+  捕捉した1 instanceとその`text_ch`/`telop_ch`だけをclosureに保持し、公開global propertyは作らない。
+  Playwrightとのtest内連携には一意な`CustomEvent`を使い、page/context終了時にlistenerを削除する。
+- `failed`発火時だけ対象instanceへ`iceConnectionState`のown getterを設定し、
+  `iceconnectionstatechange`を1回dispatchした`finally`でown propertyを削除する。test側から
+  `restartIce()`、`createOffer()`、signaling `fetch()`は呼ばない。
+
+## 合否の正本観測
+
+- initial/update OfferとcandidateはPlaywrightのrequest eventで実HTTP bodyを採取する。initialはrevision 1、
+  updateはrevision 2・同一`offer_request_id`・initial responseと同じ`session_id`、candidateは各accepted revisionを
+  確認する。DOM表示やtest内の自己申告だけをsignaling成功の根拠にしない。
+- DataChannelは初期化scriptが`createDataChannel()`の実戻り値を参照同一性で保持する。restart前後を通じて
+  `text_ch`と`telop_ch`が各1 instanceだけで、追加生成されず、両方の実`message` eventを受信したことを確認する。
+- 各turnはbrowser側で確定利用者text`固定文`、応答text`固定された応答文`、`telop_ch`受信を確認する。
+  合成音声はremote audio trackのWeb Audio sampleに非silenceが現れたことをbrowser側で確認する。
+- Go側はPlaywright成功後に`pipelinecontract.Transcript()`を確認し、2 attemptそれぞれが
+  Extractor→Recognizer→Processor→Synthesizerの4段を完了し、同一pipeline session、連続sequence、
+  Processor→Synthesizerのbyte同一性を満たすことを正本とする。`Verify`はこの2正常turnを受理するよう最小拡張する。
+- restart復旧はgetter削除後のnative `RTCPeerConnection.prototype.iceConnectionState`が
+  `connected`または`completed`へ戻ったこと、revision 2 update Offer、既存DataChannel、2 turn目の全観測が
+  同時に成立した場合だけPASSとする。
+
+## 所有時間と失敗条件
+
+- frontend/Pion readiness 15秒、initial接続15秒、各turn 60秒、restart 30秒、Playwright終了10秒、
+  cleanup 10秒を段階別上限とする。Playwright全体timeoutはこれらを包含する180秒とする。
+- Pionは`/api/v1/RTCSignalingServer/statuses`の`ready=true`、pageは`開始する`button表示をreadinessとする。
+- 期限超過、`RTCPeerConnection`捕捉数が1以外、捕捉instanceの`signalingState=closed`、
+  getter変更不能、failed dispatch複数回、constructor/getter/listener復元失敗、update Offer欠落、
+  子process非0終了、契約台帳不一致、cleanup/join失敗をtest failureにする。
 
 ## スコープ境界
 
-- 本タスク: Playwright調停、browser JSON契約、HTTP reverse proxy、シグナリング応答注入、2 turn。
-- 依存タスク: 契約下流サービスと共通process・成果物基盤。
-- 後続タスク: 実4サービス、本番Gate集約、境界クライアント、process restart。
-- スコープ外: Firefox、NAT、OS network impairment、Frontend本番API変更、Pythonサービス変更。
-
-## 高リスク統合タスクの追加設計
-
-| イベント       | 発生元                 | 合否の外部観測                             |
-| -------------- | ---------------------- | ------------------------------------------ |
-| `failed`の模擬 | Playwright初期化script | 現行Frontendがupdate Offerを送る           |
-| ICE restart    | 実`RTCPeerConnection`  | revision 2、同一session ID、実接続状態復旧 |
-| 2 turn目       | 現行Frontend           | HTTP台帳、下流台帳、既存DataChannel受信    |
-
-test scriptはrestartの開始条件だけを作る。Offer生成、HTTP送信、Answer適用、candidate、DataChannel、
-会話はproduction経路を差し替えない。初期化scriptのcleanupはpage/context終了前に行う。
-
-## 実装方針（既存コード整合: file:line）
-
-- `sincromisor-frontend/src/features/rtc/rtcTalkClient.ts:248-282`が`failed`からrestartを開始する。
-- `sincromisor-frontend/src/features/rtc/rtcConnectionStateHandler.ts:14-56`が状態イベントを
-  recovery intentへ変換するため、初期化scriptはこの既存経路を通す。
-- `sincromisor-frontend/src/features/rtc/rtcPeerConnectionEvents.ts:64-75`がnative propertyを読み、
-  owner callbackへ渡す。
-- `sincromisor-frontend/src/features/rtc/rtcNegotiation.ts:56`が
-  `createOffer({iceRestart: true})`を実行する。Playwright側でOfferを生成しない。
-- `sincromisor-frontend/src/features/rtc/rtcSignalingHttp.ts:65-115`の最大実行回数と
-  operation別分岐を有限応答列の期待値に使う。
+- 本タスク: Playwright設定、最小のGo統合owner、通常1 turn、ICE restart、復旧後1 turn、
+  2正常turnを受理する契約台帳検証。
+- スコープ外: HTTP status matrix、Firefox、NAT、OS network impairment、Frontend本番API変更。
 
 ## テスト
 
+- `npm run gate`でFrontend buildを含むroot gateを通した後、module rootで
+  `go test -tags=gate3 ./internal/gate3/browser -run '^TestFrontendBrowserHarness$' -count=1 -v`を実行する。
+- 上記Go統合試験が管理対象ChromiumのPlaywright spec、2 turn、ICE restart、全owner cleanupを実行する。
 - Frontendのlint、typecheck、test、buildを通す。
-- module rootで`go test -race -tags=gate3 ./internal/gate3/signalingproxy`と、
-  契約サービスを使うbrowser結合試験を管理対象Chromiumで実行する。
-- 初期化scriptのconstructor捕捉、getter復元、単発dispatch、update Offer非発生時errorを
-  Playwright試験で固定する。
-- `go vet -tags=gate3 ./...`、tagなしの`go test ./...`、root `npm run gate`、
-  `npm run tasks:check`を通す。
+- module rootのtagなし`go test ./...`、root `npm run gate`、`npm run tasks:check`を通す。
 
 ## ソースコードコメント受け入れ条件
 
-Playwright初期化script、browser JSON境界、reverse proxy、有限応答列、cleanup所有者を全件点検する。
-native APIを一時変更する理由、変更範囲、復元条件、外部観測が必要な理由を説明し、
-規約所定の9列を`impl.md`へ記録する。
+本番sourceは変更しないため、ソースコードコメント点検は対象外とする。
+初期化scriptにはproduction経路を差し替えない理由、捕捉範囲、propertyとlistenerの復元条件を記録する。
+新しいtest ownerと境界helperのコメントは`documents/rules/source-comments.md`を正本として確認する。
 
 ## ドキュメント同期の要否
 
-要。`internal/gate3/README.md`へChromium準備、固定WAV、browser JSON、決定的なrestart発火方法、
-production経路を差し替えない合否境界を追記する。公開Frontend APIは変更しない。
+要。`internal/gate3/README.md`へ必要環境、Chromium、固定WAV、実行command、owner順序、
+restart発火方法、合否の正本観測を追記する。
+公開Frontend APIとRTC契約は変更しない。
 
 ## 文書の言語
 
-説明文と表見出しは一般的な日本語を用い、Web API名、JSON field、HTTP statusだけ原表記を残す。
+説明文は日本語を用い、Web API名、識別子、HTTP statusだけ原表記を残す。
