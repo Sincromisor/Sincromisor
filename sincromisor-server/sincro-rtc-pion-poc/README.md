@@ -40,10 +40,17 @@ ffmpeg -version
 ## Container image
 
 repository rootからPion binaryとFrontend静的成果物を同時にbuildする。実行imageはnon-root userで
-`/opt/sincromisor/frontend`と`/usr/bin/ffmpeg`を既定値として起動する。
+`/opt/sincromisor/frontend`と`/usr/bin/ffmpeg`を既定値として起動する。後続のcompose serviceは
+次のhealthcheck commandで`/health/ready`を監視する。startup dependency検証完了かつ非draining時の
+HTTP 200だけを成功とする。
+
+```sh
+CMD curl --fail --silent --show-error http://127.0.0.1:8001/health/ready
+```
 
 ```sh
 docker build -f Docker/sincro-rtc-pion-poc/Dockerfile -t sincro-rtc-pion-poc:local .
+docker run --rm --entrypoint curl sincro-rtc-pion-poc:local --version
 docker run --rm -p 8080:8080 sincro-rtc-pion-poc:local
 ```
 
