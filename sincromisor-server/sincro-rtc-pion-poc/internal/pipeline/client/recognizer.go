@@ -50,7 +50,7 @@ func NewRecognizer(cfg Config, resolver discovery.Resolver, logger *slog.Logger)
 	return recognizer, nil
 }
 
-// Connect はnew状態から1回だけresolve/dialし、readerとpingをconnection lifetimeへ結び付ける。
+// Connect はnew状態から1回だけresolve/dialし、readerをconnection lifetimeへ結び付ける。
 //
 // 二重呼出しはErrAlreadyConnected、Closeとの競合はErrClosedで、失敗後に自動再接続しない。
 func (c *Recognizer) Connect(ctx context.Context) error {

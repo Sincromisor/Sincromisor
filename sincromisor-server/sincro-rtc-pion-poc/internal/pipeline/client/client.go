@@ -1,6 +1,6 @@
 // Package client は、既存 Python audio pipeline service への1接続単位のWebSocket I/Oを提供する。
 //
-// 各 client は同期送信、1 reader、ping、typed result/event channel、決定的な shutdown だけを所有する。
+// 各 client は同期送信、1 reader、typed result/event channel、決定的な shutdown だけを所有する。
 // reconnect、backoff、generation、4接続の一括 health 判定は上位 coordinator の責務である。
 package client
 
@@ -38,8 +38,6 @@ type EventKind string
 const (
 	// EventRemoteClose は peer が close frame を送ったことを表す。
 	EventRemoteClose EventKind = "remote_close"
-	// EventPingFailed は keepalive ping が timeout または失敗したことを表す。
-	EventPingFailed EventKind = "ping_failed"
 	// EventReadFailed は binary 以外または一般 read failure を表す。
 	EventReadFailed EventKind = "read_failed"
 	// EventWriteFailed は同期 send の write failure を表す。
@@ -65,14 +63,12 @@ type Event struct {
 // Config は1つの session connection に共通する validation 済み設定である。
 //
 // duration は test で短縮できるよう正数を受ける。production 既定値は dial=5s、write=5s、
-// ping interval=10s、ping timeout=5s、close=2sであり、read/write limit は service 固定で公開しない。
+// close=2sであり、read/write limit は service 固定で公開しない。
 type Config struct {
 	SessionID    string
 	TalkMode     string
 	DialTimeout  time.Duration
 	WriteTimeout time.Duration
-	PingInterval time.Duration
-	PingTimeout  time.Duration
 	CloseTimeout time.Duration
 }
 
@@ -80,8 +76,6 @@ type Config struct {
 const (
 	defaultDialTimeout  = 5 * time.Second
 	defaultWriteTimeout = 5 * time.Second
-	defaultPingInterval = 10 * time.Second
-	defaultPingTimeout  = 5 * time.Second
 	defaultCloseTimeout = 2 * time.Second
 )
 
@@ -95,8 +89,6 @@ func DefaultConfig(sessionID, talkMode string) Config {
 		TalkMode:     talkMode,
 		DialTimeout:  defaultDialTimeout,
 		WriteTimeout: defaultWriteTimeout,
-		PingInterval: defaultPingInterval,
-		PingTimeout:  defaultPingTimeout,
 		CloseTimeout: defaultCloseTimeout,
 	}
 }
@@ -136,7 +128,7 @@ type baseClient struct {
 	// rawConn はclose handshake timeout時にlibraryの固定waitを中断するtransport socketである。
 	// baseClientだけが参照し、通常closeはwebsocket.Conn、timeout時だけshutdown flowが直接closeする。
 	rawConn net.Conn
-	// reason: Connectのparent cancellationをreader/ping/finalizerへ同じconnection lifetimeとして伝播するため。 / 解消条件: library APIが接続scope contextを各operationへ保存なしで提供した場合。
+	// reason: Connectのparent cancellationをreader/finalizerへ同じconnection lifetimeとして伝播するため。 / 解消条件: library APIが接続scope contextを各operationへ保存なしで提供した場合。
 	lifetimeCtx context.Context
 	cancel      context.CancelFunc
 	connectDone chan struct{}
@@ -172,9 +164,8 @@ func newBase(
 	if cfg.SessionID == "" {
 		return nil, errors.New("pipeline client session ID must not be empty")
 	}
-	if cfg.DialTimeout <= 0 || cfg.WriteTimeout <= 0 || cfg.PingInterval <= 0 ||
-		cfg.PingTimeout <= 0 || cfg.CloseTimeout <= 0 {
-		return nil, errors.New("pipeline client timeouts and ping interval must be positive")
+	if cfg.DialTimeout <= 0 || cfg.WriteTimeout <= 0 || cfg.CloseTimeout <= 0 {
+		return nil, errors.New("pipeline client timeouts must be positive")
 	}
 	return &baseClient{
 		cfg:         cfg,
