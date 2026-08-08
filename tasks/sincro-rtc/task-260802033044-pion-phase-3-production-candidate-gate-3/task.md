@@ -19,8 +19,8 @@
       `gate_3_result`を記録する。
 - [ ] production candidateの実行開始後に必須commandがFAILすれば`gate_3_result: FAIL`、全件PASSの場合だけ
       `gate_3_result: PASS`とする。Playwright欠落やConsul port競合など、開始前の環境条件で停止した実行は
-      Gate判定へ数えず、条件を直して同じ環境条件につき1回だけ再実行する。その再実行も同じ条件で
-      停止した場合は`gate_3_result: NOT_MEASURED`として打ち切る。
+      Gate判定へ数えない。固定commandと同じnetwork namespaceで事前条件を確認し、条件を直した後の
+      1回を有効な測定とする。条件を解消できない場合だけ`gate_3_result: NOT_MEASURED`として停止する。
 - [ ] Playwright CLI欠落が外部process起動前の入力検査で失敗することを、既存`harnessenv`のunit testで固定する。
 - [ ] 判定とPhase 4へ進めるかを`documents/migration/pion/roadmap.md`へ反映する。
 
@@ -32,7 +32,7 @@
 - Gate結果とtask evaluatorの判定を分ける。固定条件を正しく実行して記録できた場合、
   `gate_3_result: FAIL`でも本測定タスク自体は完了できる。
 - production candidateの品質を観測していない環境起因の起動前失敗を、製品のGate FAILへ変換しない。
-  同じ条件の修正再実行は1回に制限し、失敗が続く場合は環境blockedとして明示する。
+  sandboxとhostで異なるnetwork namespaceを事前検査に使わず、有効な環境を確認してから1回だけ測定する。
 - raw browser trace、音声、本文は
   `work/private-artifacts/task-260802033044-pion-phase-3-production-candidate-gate-3/`へ置く。
 
