@@ -151,9 +151,9 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 
 - タスクは `tasks/<category>/task-<id>-<slug>/` に作る。
 - 状態は物理ディレクトリではなく `meta.yaml` の `status` を正本にする。
-- review / implementation log / evaluation は `review.md`, `impl.md`, `eval.md` に分離する。
-- 標準入口は `.claude/commands/` の `new-task`, `review-task`, `next-task`, `run-task` とする。Codex 用の `.agents/skills/` と `.codex/agents/` は `npm run gen:codex` で生成する。
-- `/run-task` は review freshness check、implementation worktree、independent evaluation worktree、`tasks:close`、`tasks:reindex` を調停する。実装ブランチは `package.json` の `taskBranchPrefix` を正本にし、既定は `codex/<task-id>` とする。
+- `review.md` と `eval.md` は独立レビュー・評価を実行した場合だけ記録する。`impl.md` は設計判断、逸脱、未実行確認、残リスクがある場合だけ簡潔に使う。
+- 標準入口は `.claude/commands/` の `new-task`, `run-task` とする。次タスクの抽出は `npm run tasks:next` を直接使う。Codex 用の `.agents/skills/` と `.codex/agents/` は `npm run gen:codex` で生成する。
+- `/run-task` は実装 worktree、`tasks:close`、`tasks:reindex` を調停する。独立レビュー・評価は明示要求または高リスク変更だけで行い、評価時も実装 worktree を再利用する。実装ブランチは `package.json` の `taskBranchPrefix` を正本にし、既定は `codex/<task-id>` とする。
 - upstream workflow との差分は `.agents/CUSTOMIZATIONS.md` に記録する。
 - 最低限、タスク単位でコミットする。コミットメッセージは Conventional Commits ベースで書き、body には変更理由、主な変更、確認結果、残リスクを、footer には関連 task ID または legacy `TASK-...` ID の `Refs:` を含める。
 - 詳細は `tasks/README.md` を正本とする。

@@ -93,12 +93,7 @@ async function main() {
 
     const taskMd = `# ${title}
 
-<!--
-  起票の入口は /new-task（起票 + 独立レビューを一括）。既存 task.md を後から再レビューする
-  場合は /review-task <task-dir> を使う。いずれも APPROVED を得てから /run-task に渡す。
-  各節は ${TASKS_ROOT}/AUTHORING-CHECKLIST.md（task-reviewer 評価観点の正本）に対応する。
-  初回 NEEDS_REVISION の最頻出根拠は「設計判断の未確定」と「ドキュメント同期要否の未記載」。
--->
+<!-- ${TASKS_ROOT}/AUTHORING-CHECKLIST.md を目安に、変更のリスクに必要な項目だけ具体化する。 -->
 
 ## 背景 / 目的
 
@@ -111,29 +106,17 @@ async function main() {
 - [ ] <検証可能な条件1>
 - [ ] <検証可能な条件2>
 
-## 設計判断（着手前に確定済み）
+## 設計判断
 
-<!-- 実装者に「どちらでもよい」を残さない。チェックリスト観点2。
-  - 新規型・モジュール・データ構造の所在（ファイルパス）と最小スキーマ
-  - 解釈余地のある箇所（フォーマット/識別方式/経路）をどれに決めたか + 不採用案を退ける理由
-  - 外部境界（ネットワーク/外部 API/LLM/DB 等）の入力検証・失敗時挙動の方針
-  確定すべき判断が無ければ「なし」と明記する。 -->
+<!-- 実装結果を左右する判断だけを書く。通常の実装判断や不採用案の網羅は不要。 -->
 
 ## スコープ境界
 
 <!-- 本タスクの作業 / 依存タスクの責務の分界。スコープ外（やらないこと）。チェックリスト観点4。 -->
 
-## 高リスク統合タスクの追加設計（該当時のみ）
+## 実装方針
 
-<!-- 通常の局所変更では「対象外」と理由を1行書けばよい。
-  複数の所有者・状態・外部境界、再試行・時刻・終了処理、全称条件を含む場合だけ、
-  該当する所有権・生存期間・エラー・時刻・観測者の不変条件、対象一覧、
-  受け入れ条件ごとの検証層と本番環境での観測点を記載する。独立検証できる変更束は分割する。 -->
-
-## 実装方針（既存コード整合: file:line）
-
-<!-- 触るファイルを file:line で参照し、前提（行番号/シグネチャ/契約）が現状と一致することを確認。
-  採用するライブラリや機能・既存パターンへの整合。チェックリスト観点3。 -->
+<!-- 変更する主なファイル、再利用する既存パターン、高リスク時だけ必要な不変条件・観測点。 -->
 
 ## テスト
 
@@ -147,66 +130,14 @@ async function main() {
   要なら同期先（API スキーマ / 利用例 / README / 設計資料など）を具体名で受け入れ条件に書く。
   不要ならその理由を 1 行。公開バレル/生成物を変えるなら再生成とコミットを方針に含める。 -->
 
-## 文書の言語
-
-<!-- 説明文は原則として一般的な日本語で書く。
-  コマンド名、ファイル名、設定キー、識別子、規格名、固有の状態値など、
-  正確さや検索性のために必要な語だけを英語で残す。 -->
 `;
 
     await writeFileEnsured(join(dir, "meta.yaml"), stringifyMeta(meta));
     await writeFileEnsured(join(dir, "task.md"), taskMd);
-    await writeFileEnsured(
-        join(dir, "review.md"),
-        `# レビュー: ${id}
-
-## 判定
-
--
-
-## 親への要約
-
--
-`,
-    );
-    await writeFileEnsured(
-        join(dir, "impl.md"),
-        `# 実装記録: ${id}
-
-## 完了時の要約
-
--
-
-## 不合格分類
-
-none
-
-## 検証結果
-
--
-
-## 未実行の確認
-
--
-`,
-    );
-    await writeFileEnsured(
-        join(dir, "eval.md"),
-        `# 評価: ${id}
-
-## 判定
-
--
-
-## 完了時の要約
-
--
-
-## 検証結果
-
--
-`,
-    );
+    // 互換レイアウトだけ維持し、実際に使う成果物だけ担当エージェントが記入する。
+    await writeFileEnsured(join(dir, "review.md"), "");
+    await writeFileEnsured(join(dir, "impl.md"), "");
+    await writeFileEnsured(join(dir, "eval.md"), "");
     await writeFileEnsured(join(dir, "acceptance", ".gitkeep"), "");
     await writeFileEnsured(join(dir, "artifacts", ".gitkeep"), "");
     console.log(`作成: ${dir}/`);

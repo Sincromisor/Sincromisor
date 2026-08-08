@@ -6,7 +6,7 @@
  * Node / Bun 両対応・依存は yaml のみ。
  *
  *   node scripts/tasks/nextTasks.mjs                # READY / WAITING / BLOCKED を表示し、先頭に推奨1件
- *   node scripts/tasks/nextTasks.mjs --ready-only   # 即実行可（READY かつ review=APPROVED）のみ表示
+ *   node scripts/tasks/nextTasks.mjs --ready-only   # 即実行可（READY）のみ表示
  *   node scripts/tasks/nextTasks.mjs --json         # 機械可読（エージェント連携・/run-task への自動チェーン用）
  *
  * 状態（実装コード・meta.yaml）は一切変更しない。データモデルは scripts/tasks/lib.mjs を再利用する。
@@ -18,17 +18,15 @@ import { discoverTasks } from "./lib.mjs";
 //   ready   … open かつ依存がすべて done
 //   waiting … open だが未充足の依存がある
 //   blocked … status=blocked（依存以外の外部要因待ち）
-// READY 内のサブ状態（review/verdict 由来の「次の一手」）:
-//   run          … review=APPROVED → /run-task に即投入可
-//   rerun        … verdict=FAIL かつ open → 再実装候補（APPROVED 前提）
-//   needs-review … review が null / NEEDS_REVISION → 先に /review-task が必要
+// READY 内のサブ状態（verdict 由来の「次の一手」）:
+//   run   … /run-task に投入可
+//   rerun … verdict=FAIL かつ open → 再実装候補
 
-const READY_KIND_RANK = { run: 0, rerun: 1, "needs-review": 2 };
+const READY_KIND_RANK = { run: 0, rerun: 1 };
 
 const READY_KIND_LABEL = {
-    run: "即実行可（APPROVED）",
+    run: "即実行可",
     rerun: "再実装候補（前回 FAIL）",
-    "needs-review": "要レビュー（未 APPROVED）",
 };
 
 /** 依存先の done 充足状況を調べる（done 以外＝cancelled/superseded/blocked/open/missing は未充足扱い） */
@@ -43,11 +41,7 @@ function assessDeps(meta, byId) {
 }
 
 function classifyReadyKind(meta) {
-    if (meta.review === "APPROVED") {
-        // APPROVED 済みで前回 FAIL のものは「再実装候補」として区別する
-        return meta.verdict === "FAIL" ? "rerun" : "run";
-    }
-    return "needs-review";
+    return meta.verdict === "FAIL" ? "rerun" : "run";
 }
 
 function assess(tasks) {
@@ -75,7 +69,7 @@ function assess(tasks) {
     return out;
 }
 
-/** READY の推奨順: APPROVED(run) → rerun → needs-review、次に created_at 昇順、最後に id */
+/** READY の推奨順: 新規実装 → 再実装、次に created_at 昇順、最後に id */
 function sortReady(a, b) {
     const k = READY_KIND_RANK[a.readyKind] - READY_KIND_RANK[b.readyKind];
     if (k !== 0) return k;
@@ -94,14 +88,9 @@ function renderText(assessments, readyOnly) {
     const ready = assessments.filter((a) => a.readiness === "ready").sort(sortReady);
     const lines = [];
 
-    const runnable = ready.filter((a) => a.readyKind !== "needs-review");
-    const top = runnable[0] ?? ready[0];
+    const top = ready[0];
     if (top) {
-        const hint =
-            top.readyKind === "needs-review"
-                ? `（先に /review-task ${top.task.dir}）`
-                : `→ /run-task ${top.task.dir}`;
-        lines.push(`▶ 次に実行すべき: ${top.task.meta.id}  ${hint}`);
+        lines.push(`▶ 次に実行すべき: ${top.task.meta.id}  → /run-task ${top.task.dir}`);
     } else {
         lines.push("▶ 即着手できる open タスクはありません（下の WAITING/BLOCKED を参照）");
     }
@@ -119,7 +108,6 @@ function renderText(assessments, readyOnly) {
     };
     renderReady("run");
     renderReady("rerun");
-    if (!readyOnly) renderReady("needs-review");
 
     if (readyOnly) return lines.join("\n").trimEnd();
 
@@ -167,7 +155,7 @@ function toJson(assessments) {
         .sort(sortReady)
         .map(pick);
     return {
-        recommended: ready.find((r) => r.readyKind !== "needs-review") ?? ready[0] ?? null,
+        recommended: ready[0] ?? null,
         ready,
         waiting: assessments
             .filter((a) => a.readiness === "waiting")
@@ -189,10 +177,7 @@ async function main() {
     if (json) {
         const result = toJson(assessments);
         const filtered = readyOnly
-            ? {
-                  recommended: result.recommended,
-                  ready: result.ready.filter((r) => r.readyKind !== "needs-review"),
-              }
+            ? { recommended: result.recommended, ready: result.ready }
             : result;
         console.log(JSON.stringify(filtered, null, 2));
         return;

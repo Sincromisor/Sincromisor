@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * impl-evaluator 用の隔離 worktree を 1 コマンドで構築・破棄する。Node / Bun 両対応・依存ゼロ。
+ * タスク実装用の隔離 worktree を 1 コマンドで構築・破棄する。Node / Bun 両対応・依存ゼロ。
  * 従来エージェントが毎回手組みしていた手順（worktree add → 依存ディレクトリの symlink →
  * gitignore された設定ファイルのコピー）を決定論化し、漏れによる失敗・リトライを無くす。
  *

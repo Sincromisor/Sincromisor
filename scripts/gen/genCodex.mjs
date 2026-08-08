@@ -106,16 +106,10 @@ function deepenLinks(body) {
 }
 
 const CODEX_AGENT_PREAMBLE = (sandbox) =>
-    `> 実行環境: Codex サブエージェント（sandbox_mode = "${sandbox}"）。Claude 版の \`tools:\` に当たる\n` +
-    `> ツール単位の制限は Codex に無いため、**下記の本文の禁止事項を厳守すること**で同等の境界を保つ\n` +
-    `> （「Edit / Bash を持たない」等のツール表現は Claude 固有の説明。Codex では該当操作を行わない\n` +
-    `> という規範として読むこと）。\n`;
+    `> Codex では sandbox_mode=${sandbox} に加え、本文の変更範囲を守ること。\n`;
 
 const CODEX_SKILL_PREAMBLE =
-    `> このスキルは Codex CLI 用に \`.claude/commands/\` から生成されたもの。本文中の \`$1\` /\n` +
-    `> \`$ARGUMENTS\` は、ユーザーがこのスキルを起動した際に指定したタスクディレクトリ等の引数を指す。\n` +
-    `> サブエージェント（task-reviewer 等）は Codex では自動起動しないため、本文の手順どおり明示的に\n` +
-    `> 順に起動すること。\n`;
+    `> \`$1\` / \`$ARGUMENTS\` は起動時の引数。本文で必要なサブエージェントは明示的に起動する。\n`;
 
 async function readDefs(subdir) {
     const dir = join(ROOT, ".claude", subdir);
