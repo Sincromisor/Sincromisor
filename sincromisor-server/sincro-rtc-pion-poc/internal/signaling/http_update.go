@@ -24,7 +24,8 @@ func (s *Server) handleUpdateOffer(
 	}
 	if payload.SDP == "" || payload.Type != "offer" ||
 		(payload.TalkMode != "chat" && payload.TalkMode != "sincro") ||
-		!validUUID(payload.OfferRequestID) || payload.OfferRevision == 0 {
+		payload.OfferRequestID == nil || payload.OfferRevision == nil ||
+		!validUUID(*payload.OfferRequestID) || *payload.OfferRevision == 0 {
 		writeError(writer, http.StatusBadRequest, "Invalid update offer fields.")
 		return
 	}
@@ -38,7 +39,7 @@ func (s *Server) handleUpdateOffer(
 	var err error
 	answer, err = s.sessions.Update(ctx, rtc.UpdateOffer{
 		SDP: payload.SDP, Type: payload.Type, TalkMode: payload.TalkMode,
-		SessionID: sessionID, OfferRequestID: payload.OfferRequestID, Revision: payload.OfferRevision,
+		SessionID: sessionID, OfferRequestID: *payload.OfferRequestID, Revision: *payload.OfferRevision,
 	})
 	switch {
 	case err == nil:

@@ -182,8 +182,8 @@ type offerRequest struct {
 	Type              string          `json:"type"`
 	TalkMode          string          `json:"talk_mode"`
 	SessionID         json.RawMessage `json:"session_id,omitempty"`
-	OfferRequestID    string          `json:"offer_request_id"`
-	OfferRevision     uint64          `json:"offer_revision"`
+	OfferRequestID    *string         `json:"offer_request_id"`
+	OfferRevision     *uint64         `json:"offer_revision"`
 	PreviousSessionID json.RawMessage `json:"previous_session_id,omitempty"`
 }
 
@@ -246,7 +246,17 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		writeError(writer, http.StatusBadRequest, "Invalid offer fields.")
 		return
 	}
-	if !validUUID(payload.OfferRequestID) || payload.OfferRevision != 1 {
+	// 配信済みfrontendのlegacy initial Offerだけはidentityを完全に省略する。
+	// request IDがないためretryを同一registry entryへ結び付けられず、部分欠損や明示的な
+	// 空/0は通常形式の不正identityとして拒否する。
+	if payload.OfferRequestID == nil && payload.OfferRevision == nil {
+		requestID := uuid.NewString()
+		revision := uint64(1)
+		payload.OfferRequestID = &requestID
+		payload.OfferRevision = &revision
+	}
+	if payload.OfferRequestID == nil || payload.OfferRevision == nil ||
+		!validUUID(*payload.OfferRequestID) || *payload.OfferRevision != 1 {
 		writeError(writer, http.StatusBadRequest, "Invalid initial offer identity.")
 		return
 	}
@@ -263,9 +273,9 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		}
 	}
 	// Session admissionより先にregistryへ登録し、decoded SDP bytesをUUIDへSHA-256で結び付ける。
-	answer, err := s.offers.Resolve(request.Context(), payload.OfferRequestID, []byte(payload.SDP), rtc.Offer{
+	answer, err := s.offers.Resolve(request.Context(), *payload.OfferRequestID, []byte(payload.SDP), rtc.Offer{
 		SDP: payload.SDP, Type: payload.Type, TalkMode: payload.TalkMode,
-		OfferRequestID: payload.OfferRequestID,
+		OfferRequestID: *payload.OfferRequestID,
 	})
 	if err != nil {
 		// ownerのtyped failureをretry可否が異なるHTTP statusへ一度だけ変換し、失敗結果はcacheしない。
