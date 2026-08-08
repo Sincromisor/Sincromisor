@@ -18,7 +18,9 @@ aiortc操作は`service-initializer`も選択する`full` profileを使う。
 ```sh
 : "${SINCRO_PION_CONTAINER_IPV4:?}" "${SINCRO_PION_MEDIA_UDP_PORT:?}" \
   "${SINCRO_PION_INTERFACE:?}" "${SINCRO_PION_PUBLIC_IPV4:?}" \
-  "${SINCRO_PION_STUN:?}" "${SINCRO_PION_FFMPEG_PATH:?}"
+  "${SINCRO_PION_STUN:?}" "${SINCRO_PION_FFMPEG_PATH:?}" \
+  "${SINCRO_PION_CONSUL_HTTP_HOST:?}" "${SINCRO_PION_CONSUL_HTTP_PORT:?}" \
+  "${SINCRO_PION_SERVICE_BIND_HOST:?}"
 docker compose --profile pion config
 HOST_INTERFACE=<Pion hostの外向きinterface>
 ip -4 addr show dev "${HOST_INTERFACE}"
@@ -28,9 +30,15 @@ ss -lun "sport = :${SINCRO_PION_MEDIA_UDP_PORT}"
 `docker compose --profile pion config`で`pion` profileの`sincro-rtc-pion`、TCP `8001`、
 `${SINCRO_PION_MEDIA_UDP_PORT}/udp`のhost/container同値mapping、`--media-udp`
 `${SINCRO_PION_CONTAINER_IPV4}:${SINCRO_PION_MEDIA_UDP_PORT}`、`--public-ipv4`、
-`--interface`、`--stun`、`--max-sessions`、`consul-agent-rtc`を確認する。host側の`ip`で外向きinterfaceと
+`--interface`、`--stun`、`--max-sessions`、Consul HTTP endpoint、service bind hostを確認する。host側の`ip`で外向きinterfaceと
 public IPv4を確認し、NAT配下ではpublic IPv4とforward先をcontrol-plane設定で照合する。container固定IPv4と
 `SINCRO_PION_INTERFACE`はPion起動後にcontainer内で確認する。`ss`に同UDP portの競合listenerがないことを確認する。
+
+VPS PionをVPN経由で既存Consulと下流4 serviceへ接続する場合は、`SINCRO_PION_CONSUL_HTTP_HOST=10.39.2.8`、
+`SINCRO_PION_CONSUL_HTTP_PORT=8500`、`SINCRO_PION_SERVICE_BIND_HOST=10.39.2.1`を指定する。local側の下流serviceは
+Consulへ登録する`*_PUBLIC_BIND_HOST`をDocker bridge addressではなく`10.39.2.8`へ切り替える。Pionはlocal gossip agentを
+起動せず、Consul HTTP endpointへ直接登録・lookupする。切替前にVPS containerからTCP 8500、8002-8005へ、local Consulから
+`10.39.2.1:8001/health/ready`へ到達できることを確認する。
 
 NAT装置では`SINCRO_PION_PUBLIC_IPV4:${SINCRO_PION_MEDIA_UDP_PORT}/udp`をPion hostへ静的forwardし、
 firewallでは同UDP portのinboundとreturn trafficを許可する。これらのcontrol-plane設定と対象interfaceを

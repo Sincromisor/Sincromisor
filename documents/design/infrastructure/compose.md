@@ -17,8 +17,9 @@ root `compose.yml` の `sincromisor-net` は
 `SINCRO_PION_CONTAINER_IPV4` はsubnet内でPion専用に予約する固定IPv4であり、
 `--media-udp ${SINCRO_PION_CONTAINER_IPV4}:${SINCRO_PION_MEDIA_UDP_PORT}`、
 `--interface ${SINCRO_PION_INTERFACE}`、
-`--service-bind-host sincro-rtc-pion` を配線する。service bind hostは同じ固定IPv4へ解決され、
-Consul service addressとして登録する。browserへ広告するpublic IPv4は別値とする。
+`--service-bind-host ${SINCRO_PION_SERVICE_BIND_HOST}` を配線する。local composeの既定値は
+`sincro-rtc-pion`で、同じ固定IPv4へ解決される。別host Consulを使う場合はConsulからhealth check可能な
+Pion hostのVPN addressを指定する。browserへ広告するpublic IPv4は別値とする。
 
 Pionはaiortc版と同じstable TCP 8001を公開し、
 `${SINCRO_PION_MEDIA_UDP_PORT}` をhost/container同値のUDP portとして公開する。
@@ -27,7 +28,10 @@ Pionはaiortc版と同じstable TCP 8001を公開し、
 TCP port競合により2つ目のRTC backendは起動しない。
 
 Pionへ切り替えるときはaiortcを停止した状態で `--profile pion` を指定する。Pion serviceは
-`consul-agent-rtc` のhealthcheck完了を待ち、自身は `/health/ready` を10秒間隔・5秒timeoutで監視する。
+`SINCRO_PION_CONSUL_HTTP_HOST` / `SINCRO_PION_CONSUL_HTTP_PORT` のHTTP endpointを直接使い、
+`SINCRO_PION_SERVICE_BIND_HOST`をConsul service addressとして登録する。Pion専用のlocal gossip agentは起動しない。
+local composeでは既存の`sincro-consul-server`を指定し、別host ConsulではVPS containerから到達可能なHTTP addressと、
+Consul serverがPionへhealth checkできるVPN addressをそれぞれ指定する。Pion自身は `/health/ready` を10秒間隔・5秒timeoutで監視する。
 
 既存Docker networkとsubnetが重複する環境では、
 `SINCRO_COMPOSE_NETWORK_SUBNET` と `SINCRO_PION_CONTAINER_IPV4` を同一subnet内の未使用値へ対で変更する。

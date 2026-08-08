@@ -10,7 +10,7 @@
 - Gate 2の合成音声を48 kHz monoへdecodeし、browser入力と独立した20 ms clockでOpus encodeして返す。
 - Gate 2のchat messageを`text_ch`へ、audio sample位置に同期したmora/telopを`telop_ch`へ送る。
 - generation変更、queue overflow、DataChannel buffered amountをboundedなdrop/close policyで処理する。
-- Consul agent を指定した場合は Pion 自身を `RTCSignalingServer` として登録し、下流 Python service を同じ agent から解決する。
+- Consul HTTP endpoint を指定した場合は Pion 自身を `RTCSignalingServer` として登録し、下流 Python service を同じ endpoint から解決する。
 - production compose、Caddy への組み込みは行わない。
 
 ## Build requirements
@@ -110,7 +110,8 @@ host candidate に広告する到達可能な IPv4、`--interface` は candidate
 IPv6、port 0、downまたは存在しない interface は HTTP listener を開く前に拒否する。
 `turn:` / `turns:` は `--stun` に指定しても拒否し、ICE-TCP と IPv6 は有効化しない。
 
-Consulを使う場合は `--consul-agent-host` と `--consul-agent-port`、`--service-bind-host` を指定する。
+Consulを使う場合は `--consul-agent-host` と `--consul-agent-port`、`--service-bind-host` を指定する。HTTP endpointは
+localまたはremote Consulのagent APIを直接指定でき、cross-host gossip agentを必要としない。
 後者は起動時に単一IPv4へ解決し、listener bind後、`/health/ready` がまだ非readyの状態で
 `RTCSignalingServer_<service-bind-host>_<resolved-ip>:<http-port>` として登録する。登録成功後に
 readyを公開するため、Consul checkは `http://<resolved-ip>:<http-port>/health/ready` を10秒間隔、

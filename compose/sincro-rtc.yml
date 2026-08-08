@@ -74,11 +74,11 @@ services:
                 "--max-sessions",
                 "${SINCRO_RTC_MAX_SESSIONS}",
                 "--consul-agent-host",
-                "consul-agent-rtc",
+                "${SINCRO_PION_CONSUL_HTTP_HOST}",
                 "--consul-agent-port",
-                "8500",
+                "${SINCRO_PION_CONSUL_HTTP_PORT}",
                 "--service-bind-host",
-                "sincro-rtc-pion",
+                "${SINCRO_PION_SERVICE_BIND_HOST}",
             ]
         ports:
             - 8001:8001/tcp
@@ -90,9 +90,6 @@ services:
             restart_policy:
                 condition: any
                 delay: 10s
-        depends_on:
-            consul-agent-rtc:
-                condition: service_healthy
         healthcheck:
             test:
                 [
@@ -111,7 +108,6 @@ services:
         profiles:
             - full
             - rtc
-            - pion
         image: hashicorp/consul:latest
         command:
             [
