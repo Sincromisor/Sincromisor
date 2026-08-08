@@ -1,14 +1,14 @@
 id: task-260809043418-pion-container-readiness-probe
 title: Pion container readiness probeを追加する
 category: sincro-rtc
-status: open
+status: done
 depends_on:
   - task-260809020144-pion-phase-4-container-image
 superseded_by: null
 review: APPROVED
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-08-09
-closed_at: null
+closed_at: 2026-08-09
 legacy_ids: []
