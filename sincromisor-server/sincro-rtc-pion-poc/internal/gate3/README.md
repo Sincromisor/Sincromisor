@@ -18,6 +18,8 @@ Linux と procfs を必須とする。Gate 3 の entrypoint は開始前に次�
 
 `harnessenv.Load` は実行権限と version を全件検査する。Go は `go.mod` の major/minor、
 Node.js は18以上、Chromium、Consul、FFmpeg は成功した version probe の空でない先頭行を要求する。
+rootの `node_modules/@playwright/test/cli.js` は通常fileであることをversion probeより先に検査し、
+共有package cacheへのsymlink解決を許可する。ブラウザー試験は検査済みの解決先pathをNode.jsへ渡す。
 検証途中で暗黙の `PATH` 探索は行わず、Pion の build と Go test 再実行には
 `SINCRO_GATE3_GO_BINARY` から検査した同じ path を使う。
 
@@ -48,6 +50,10 @@ Playwrightの初期化scriptは最初の実 `RTCPeerConnection` だけをclosure
 合否はPlaywrightが観測するinitial/update Offerとcandidateの実HTTP request、実DataChannelの
 message event、native ICE復帰状態、Web Audioの非無音sampleと、Go側の
 `pipelinecontract.Transcript()` が示す2正常turnの両方で判定する。
+
+Pion readiness後かつPlaywright起動前に`resources.Sampler`が3 sampleのbaselineを取得する。
+Playwright終了後もPionを生存させ、active sessionと4 queueが0、fdとsocketがbaseline+2以下の
+sampleが3回連続するまで最大10秒待ってから、Pion以下を逆順に停止する。
 
 ## 子 process
 

@@ -21,6 +21,7 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/gate3/harnessenv"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/gate3/pipelinecontract"
 	gateprocess "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/gate3/process"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/gate3/resources"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery"
 )
 
@@ -48,7 +49,34 @@ func TestFrontendBrowserHarness(t *testing.T) {
 	contracts := startContracts(t, environment)
 	startConsul(t, environment, contracts.Addresses())
 	baseURL, pion := startPion(t, environment)
+	pionPID, err := pion.PID()
+	if err != nil {
+		t.Fatalf("read Pion PID: %v", err)
+	}
+	sampler, err := resources.NewSampler(resources.Config{
+		PID:        pionPID,
+		ProcRoot:   "/proc",
+		MetricsURL: baseURL + "/metrics",
+		StatusURL:  baseURL + "/api/v1/RTCSignalingServer/statuses",
+	})
+	if err != nil {
+		t.Fatalf("create resource sampler: %v", err)
+	}
+	// readiness後かつbrowser session開始前の3 sampleだけをbaselineにし、
+	// Playwright終了後もPionを生存させたまま同じ境界で収束を判定する。
+	baselineCtx, cancelBaseline := context.WithTimeout(context.Background(), readinessTimeout)
+	baseline, baselineSamples, err := sampler.CaptureBaseline(baselineCtx)
+	cancelBaseline()
+	if err != nil {
+		t.Fatalf("capture resource baseline: %v", err)
+	}
+	t.Logf("resource baseline: %+v; samples=%+v", baseline, baselineSamples)
 	runPlaywright(t, environment, baseURL, pion, contracts)
+	convergenceSamples, err := sampler.WaitForConvergence(context.Background(), baseline)
+	if err != nil {
+		t.Fatalf("wait for resource convergence: %v; samples=%+v", err, convergenceSamples)
+	}
+	t.Logf("resource convergence samples: %+v", convergenceSamples)
 	if err := contracts.Verify(); err != nil {
 		t.Fatalf("pipeline contract: %v; transcript=%+v", err, contracts.Transcript())
 	}
@@ -116,7 +144,7 @@ func runPlaywright(
 	t.Helper()
 	playwright := gateprocess.New(gateprocess.Command{
 		Path: environment.Node.Path,
-		Args: []string{filepath.Join(environment.RepositoryRoot, "node_modules", "@playwright", "test", "cli.js"), "test", "--config", filepath.Join(environment.RepositoryRoot, "playwright.gate3.config.ts")},
+		Args: []string{environment.PlaywrightCLI, "test", "--config", filepath.Join(environment.RepositoryRoot, "playwright.gate3.config.ts")},
 		Env: append(os.Environ(),
 			"SINCRO_GATE3_BASE_URL="+baseURL,
 			"SINCRO_GATE3_CHROMIUM_BINARY="+environment.Chromium.Path,
