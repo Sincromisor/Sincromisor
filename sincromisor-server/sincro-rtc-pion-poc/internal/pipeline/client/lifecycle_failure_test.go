@@ -71,7 +71,7 @@ func TestReaderTerminalFailuresAreTypedAndEmittedOnce(t *testing.T) {
 	}
 }
 
-func TestPingFailureIsTerminalWhenPeerDoesNotRead(t *testing.T) {
+func TestNonReadingPeerDoesNotEmitTerminalEventAndCanClose(t *testing.T) {
 	release := make(chan struct{})
 	server, endpoint := websocketServer(t, func(
 		context.Context,
@@ -82,8 +82,7 @@ func TestPingFailureIsTerminalWhenPeerDoesNotRead(t *testing.T) {
 	})
 	defer server.Close()
 	cfg := testConfig("chat")
-	cfg.PingInterval = 10 * time.Millisecond
-	cfg.PingTimeout = 20 * time.Millisecond
+	cfg.CloseTimeout = 20 * time.Millisecond
 	client, err := NewRecognizer(cfg, fakeResolver{endpoint: endpoint}, testLogger())
 	if err != nil {
 		t.Fatalf("NewRecognizer() error = %v", err)
@@ -91,11 +90,18 @@ func TestPingFailureIsTerminalWhenPeerDoesNotRead(t *testing.T) {
 	if err := client.Connect(context.Background()); err != nil {
 		t.Fatalf("Connect() error = %v", err)
 	}
-	assertSingleTerminalEvent(t, client.Events(), EventPingFailed)
-	close(release)
+	select {
+	case event, ok := <-client.Events():
+		if ok {
+			t.Fatalf("unexpected terminal event = %+v", event)
+		}
+		t.Fatal("Events channel closed before explicit Close")
+	case <-time.After(50 * time.Millisecond):
+	}
 	if err := client.Close(); err != nil {
 		t.Fatalf("Close() error = %v", err)
 	}
+	close(release)
 }
 
 func TestWriteTimeoutIsTerminalAndDoesNotLeaveHelper(t *testing.T) {
@@ -133,8 +139,6 @@ func TestDefaultConfigIsProductionTimeoutSource(t *testing.T) {
 	cfg := DefaultConfig("session", "chat")
 	if cfg.DialTimeout != 5*time.Second ||
 		cfg.WriteTimeout != 5*time.Second ||
-		cfg.PingInterval != 10*time.Second ||
-		cfg.PingTimeout != 5*time.Second ||
 		cfg.CloseTimeout != 2*time.Second {
 		t.Fatalf("DefaultConfig() timeouts = %+v", cfg)
 	}
@@ -162,7 +166,7 @@ func TestTerminalEventIsOnceUnderConcurrentSources(t *testing.T) {
 	}
 
 	kinds := []EventKind{
-		EventRemoteClose, EventPingFailed, EventReadFailed,
+		EventRemoteClose, EventReadFailed,
 		EventWriteFailed, EventDecodeFailed, EventMessageTooLarge,
 	}
 	var senders sync.WaitGroup

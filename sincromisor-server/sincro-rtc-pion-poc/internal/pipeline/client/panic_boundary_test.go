@@ -12,7 +12,6 @@ func TestConnectionWorkerStagesRecoverAsTerminalPanic(t *testing.T) {
 		counted bool
 	}{
 		{stage: "read", counted: true},
-		{stage: "ping", counted: true},
 		{stage: "finalize", counted: false},
 	} {
 		t.Run(test.stage, func(t *testing.T) {
