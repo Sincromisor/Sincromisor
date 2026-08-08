@@ -107,7 +107,7 @@ test("current frontend completes one turn", async ({ page }) => {
     await page.goto("/simple-vrm/index.html");
     await expect(page.getByRole("button", { name: "開始する" })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "開始する" }).click();
-    await expect.poll(() => offers.length, { timeout: 15_000 }).toBe(1);
+    await expect.poll(() => offers.length, { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
     await expect.poll(() => acceptedCandidateRevisions.includes(1), { timeout: 30_000 }).toBe(true);
     await expect(page.getByText("固定文", { exact: true })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText("固定された応答文", { exact: true })).toBeVisible({

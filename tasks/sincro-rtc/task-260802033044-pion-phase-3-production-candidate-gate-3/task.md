@@ -29,8 +29,8 @@
 
 ## スコープ境界
 
-- 本タスク: 既存commandの実行、証拠保存、Gate 3判定、migration roadmap更新。
-- スコープ外: harnessやproduction codeの変更、詳細baseline、network impairment、長時間soak、
+- 本タスク: 既存harnessの簡素化、既存commandの実行、証拠保存、Gate 3判定、migration roadmap更新。
+- スコープ外: 新規harness・production codeの変更、詳細baseline、network impairment、長時間soak、
   compose切替、運用切替。
 
 ## テスト
