@@ -7,11 +7,12 @@
 
 ## 完了条件（受け入れ条件）
 
-- [ ] 対象commit、Frontend `dist`、Pion実行file、管理対象Chromium、固定WAVを事前確認する。
+- [ ] 対象commit、Frontend `dist`、固定WAV、管理対象のGo、Node.js、Chromium、Consul、FFmpeg実行fileを事前確認する。
 - [ ] 完了済みbrowser harnessを1回実行し、接続、1 turnの会話、利用者text、応答text、
-      `telop_ch`、非無音の合成音声、session終了後のresource収束を確認する。
+      `telop_ch`、非無音の合成音声、session終了後のresource収束を確認し、対象commitのPion sourceを
+      harnessが一時directoryへbuildした事実を記録する。
 - [ ] module rootでtagなし`go test ./...`と`go vet ./...`を実行する。
-- [ ] 既存のlifecycle testから、代表的なreadiness timeout、SIGTERM、process restartがPASSすることを確認する。
+- [ ] 既存のlifecycle testから、代表的なreadiness timeoutとSIGTERMがPASSすることを確認する。
 - [ ] Frontend check、root gate、task checkを実行する。
 - [ ] `artifacts/gate-3-result.md`へ対象commit、環境、実行command、結果、未観測、残リスク、
       `gate_3_result`を記録する。

@@ -15,7 +15,7 @@
 | media         | Opus受信、test tone      | 実運用形式の合成音声を1回再生              | 会話音声の聴取                      |
 | DataChannel   | 2 channelへ固定JSON送信  | 現行Frontendで会話を1 turn                 | text / telop受信                    |
 | pipeline      | 対象外                   | Gate 2の互換試験とproduction候補の結合試験 | 実4サービスで会話                   |
-| lifecycle     | 通常closeとcodec error   | 正常終了と代表的な異常終了                 | 停止切替とrollback                  |
+| lifecycle     | 通常closeとcodec error   | 正常終了と代表的な異常終了                 | 停止切替、process再起動、rollback   |
 | network       | local host candidate     | local統合環境                              | 実運用のNAT、firewall、固定UDP port |
 | compatibility | Chrome                   | 管理対象Chromium                           | 実運用で対応するbrowserを各1回      |
 
@@ -41,7 +41,7 @@ Phase 1完了後に詳細baselineを作り直さない。PoCで採用した機�
 - `offer_request_id`、`offer_revision`、ICE restart、late candidate拒否が既存testを通る。
 - MessagePack fixtureと4 pipeline clientのreset / generation試験が通る。
 - 合成音声decoderは実装が対応する形式のunit / integration testを通る。
-- 正常close、代表的なreadiness timeout、SIGTERM、process restartで所有resourceが収束する。
+- 正常close、代表的なreadiness timeout、SIGTERMで所有resourceが収束する。
 - session上限、HTTP入力上限、panic recovery、metricsは既存testを通る。
 
 同じ条件を別packageのGate専用clientやreport schemaで再実装しない。
@@ -70,6 +70,7 @@ production相当環境で、実際に採用する構成だけを検証する。
 - 固定UDP mux port、public IPv4、NAT、firewallを本番と同じ値で構成する。
 - Pion版で対応browserから接続し、1 turnの会話、音声、DataChannelを確認する。
 - session終了後にactive session、goroutine、WebSocket、socketが収束することを確認する。
+- production相当のsupervisorでPion processを再起動し、readiness復旧後に新規sessionを受理できることを確認する。
 - aiortc停止、Pion起動、smoke test、Pion停止、aiortc復旧を一連の手順として実行する。
 - FrontendとPython下流serviceを再buildせずrollbackできることを確認する。
 

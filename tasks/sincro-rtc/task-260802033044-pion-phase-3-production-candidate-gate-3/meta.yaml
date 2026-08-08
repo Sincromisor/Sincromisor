@@ -5,7 +5,7 @@ status: open
 depends_on:
   - task-260802212220-pion-gate3-frontend-browser-harness
 superseded_by: null
-review: null
+review: APPROVED
 reviewed_sha: null
 verdict: null
 attempts: 0

@@ -136,7 +136,6 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 - abnormal closeで全pipeline client、codec、PeerConnectionが一度だけcloseされる。
 - pre-connect deadlineまたはmedia readiness deadlineの代表的な失敗経路で、下流WebSocketを残さずsessionがcloseされる。
 - session数、goroutine、queue、WebSocket、codec errorを観測できる。
-- process crash後にsupervisorが再起動し、readiness復旧後に新規sessionを受理できる。
 - 1 instance当たりのsession上限と、process停止時に失われる最大session数が明記されている。
 - 切替時に新規sessionを停止し、close timeout後にactive sessionを終了できる。
 - 本番経路にPython RTC adapterが存在しない。
@@ -157,6 +156,7 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 - Pion版で接続、会話、音声、DataChannelが成立する。
 - smoke testで知覚できるlatencyと音質の重大な退行がない。
 - session終了後にactive resourceが収束する。
+- production相当のsupervisorがprocess crash後にPionを再起動し、readiness復旧後に新規sessionを受理できる。
 - 直接接続が成立し、TURNを合否判定へ含めていない。
 - rollbackがfrontend / pipeline serviceのbuild変更なしで実行できる。
 - 運用環境でaiortcとPionが同時起動しないことをcompose設定で確認できる。
