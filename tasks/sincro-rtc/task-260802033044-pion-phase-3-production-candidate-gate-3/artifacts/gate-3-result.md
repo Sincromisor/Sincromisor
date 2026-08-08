@@ -8,7 +8,7 @@
 
 ## 実行環境
 
-- 対象: この実装commit
+- 対象commit: `1e6032d70f1430288e17eb8dff0bf0e0c063da58`
 - Go 1.26.5、Node.js v24.18.1、Google Chrome 151.0.7922.108
 - Consul v2.0.2、FFmpeg 6.1.1-3ubuntu5
 - 固定入力: `internal/gate3/testdata/gate3-input.wav`
