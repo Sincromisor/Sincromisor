@@ -2,7 +2,7 @@
 
 ## Summary
 
-- 現行 Frontend signaling schema を変更せず、Pion v4 の local host candidate 経路を確認する。
+- 現行 Frontend signaling schema を変更せず、Pion v4 の固定 UDP4 host candidate 経路を確認する。
 - browser Opus RTP を64 packetのwindow内で並べ替え、pure Go の `github.com/pion/opus` で48 kHz PCMにdecodeする。
 - stereoを左右平均でmono化し、63-tap windowed-sinc FIRで16 kHzへresampleして、20 ms /
   640-byte s16le frameをConversation Coordinatorへ同期投入する。
@@ -83,8 +83,11 @@ cd sincromisor-server/sincro-rtc-pion-poc
 go run ./cmd/pion-poc \
   --http 127.0.0.1:8080 \
   --frontend-dir ../../sincromisor-frontend/dist \
-  --ffmpeg /usr/bin/ffmpeg \
-  --max-sessions 100 \
+	--ffmpeg /usr/bin/ffmpeg \
+	--media-udp 192.0.2.10:3478 \
+	--public-ipv4 203.0.113.10 \
+	--interface eth0 \
+	--max-sessions 100 \
   --offer-cache-capacity 1000 \
   --offer-cache-ttl 2m
 ```
@@ -93,6 +96,12 @@ initial signalingのproduction上限はtyped configを正本とする。`--max-s
 （default 100）、`--offer-cache-capacity`は1〜1000（default 1000）、
 `--offer-cache-ttl`は30秒〜2分（default 2分）の範囲で、小さい値だけを指定できる。
 範囲外の値はlistenerを開く前にstartup errorとなる。
+
+`--media-udp` は process が全 session で共有する UDP4 socket の bind address、`--public-ipv4` は SDP の
+host candidate に広告する到達可能な IPv4、`--interface` は candidate 収集を許可する interface である。
+3つは必須であり、`--media-udp` は wildcardでないIPv4かつ指定interfaceへ割当済みでなければならない。
+IPv6、port 0、downまたは存在しない interface は HTTP listener を開く前に拒否する。
+`turn:` / `turns:` は `--stun` に指定しても拒否し、ICE-TCP と IPv6 は有効化しない。
 
 Google Chrome stable で
 `http://127.0.0.1:8080/simple-vrm/index.html` を開き、マイク権限を許可して会話接続を開始する。
@@ -130,7 +139,8 @@ go test ./...
 go test -race ./...
 ```
 
-Pion の local integration test は loopback UDP socket を使用する。sandbox 内で socket bind が禁止される環境では、
+Pion の production network integration test は loopback UDP socket を使用し、2 session が同じ固定 portを
+広告・接続した後にsocketが解放されることを確認する。sandbox 内で socket bind が禁止される環境では、
 同じ command を network namespace の制限がない実行環境で行う。
 
 ## PoC boundaries
@@ -141,7 +151,7 @@ unknown / closed session の candidate は HTTP 200 と `status:false` を返す
 次は後続 phase の責務である。
 
 - ICE restartとrevision 2以降のupdate Offer
-- fixed UDP mux、NAT / firewall、TURN、Firefox
+- NAT / firewall、TURN、Firefox
 - NACK / PLC、RTCP metrics
 - impairment、soak、performance comparison、production compose
 - container imageとproduction composeへのFFmpeg導入（Phase 4）

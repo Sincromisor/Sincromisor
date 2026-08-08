@@ -30,6 +30,9 @@ type ManagerConfig struct {
 	Clock           Clock
 	Logger          *slog.Logger
 	MaxSessions     int
+	// APIは全Sessionで共有するprocess-wide Pion APIである。nilの場合だけfocused unit test用の
+	// local API生成経路を使う。
+	API *webrtc.API
 	// SynthDecoderは全Sessionが同一pointerを非所有参照するimmutable dependencyである。
 	SynthDecoder *synthdecode.Decoder
 	// Recorder receives finite-cardinality lifecycle events. Nil selects a no-op
@@ -74,11 +77,11 @@ type Manager struct {
 	buildSession  sessionBuilder
 }
 
-// NewManager は optional STUN URL をPion configurationへ反映し、必須dependencyを検証する。
+// NewManager は optional STUN URL とprocess共有Pion APIをconfigurationへ反映し、必須dependencyを検証する。
 //
 // STUN URLの構文検証は起動時config loaderの責務であり、ここでは再検証しない。network I/O、
 // PeerConnection、CoordinatorはCreateまで開始しない。Manager はprocess shutdown時に5秒上限の
-// contextを渡してCloseAllを呼ぶ必要がある。TURN、固定UDP mux、NAT rewriteは対象外である。
+// contextを渡してCloseAllを呼ぶ必要がある。APIがnilの場合だけlocal test用のPeerConnection生成を使う。
 func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 	if config.PipelineFactory == nil || config.InputObserver == nil ||
 		config.Clock == nil || config.Logger == nil || config.SynthDecoder == nil {
@@ -113,6 +116,7 @@ func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 			manager.config.Clock,
 			manager.config.Logger,
 			request.onClosed,
+			config.API,
 			request.recorder,
 		)
 	}

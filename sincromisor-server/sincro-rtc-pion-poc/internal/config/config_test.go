@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,9 @@ func TestLoad(t *testing.T) {
 		"--http", "127.0.0.1:9090",
 		"--frontend-dir", frontendDir,
 		"--stun", "stun:stun.example.test:3478",
+		"--media-udp", loopbackIPv4(t) + ":3478",
+		"--public-ipv4", loopbackIPv4(t),
+		"--interface", loopbackInterfaceName(t),
 		"--gather-timeout", "2s",
 		"--max-sessions", "99",
 		"--offer-cache-capacity", "999",
@@ -41,7 +45,7 @@ func TestLoad(t *testing.T) {
 }
 
 func TestLoadUsesProductionLimitDefaults(t *testing.T) {
-	cfg, err := Load([]string{"--frontend-dir", t.TempDir()})
+	cfg, err := Load(append([]string{"--frontend-dir", t.TempDir()}, networkArgs(t)...))
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
@@ -67,7 +71,8 @@ func TestLoadAcceptsLimitBoundaries(t *testing.T) {
 		{name: "ttl 120", args: []string{"--offer-cache-ttl", "120s"}, want: 120},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			args := append([]string{"--frontend-dir", t.TempDir()}, test.args...)
+			args := append([]string{"--frontend-dir", t.TempDir()}, networkArgs(t)...)
+			args = append(args, test.args...)
 			cfg, err := Load(args)
 			if err != nil {
 				t.Fatalf("Load() error = %v", err)
@@ -111,12 +116,61 @@ func TestLoadRejectsInvalidBoundaryValues(t *testing.T) {
 		{name: "offer capacity above production maximum", args: []string{"--frontend-dir", t.TempDir(), "--offer-cache-capacity", "1001"}},
 		{name: "offer ttl below minimum", args: []string{"--frontend-dir", t.TempDir(), "--offer-cache-ttl", "29s"}},
 		{name: "offer ttl above production maximum", args: []string{"--frontend-dir", t.TempDir(), "--offer-cache-ttl", "121s"}},
+		{name: "invalid public IPv4", args: []string{"--frontend-dir", t.TempDir(), "--public-ipv4", "::1"}},
+		{name: "invalid media port", args: []string{"--frontend-dir", t.TempDir(), "--media-udp", "127.0.0.1:0"}},
+		{name: "wildcard media address", args: []string{"--frontend-dir", t.TempDir(), "--media-udp", "0.0.0.0:3478"}},
+		{name: "media address is not assigned to interface", args: []string{"--frontend-dir", t.TempDir(), "--media-udp", "192.0.2.1:3478"}},
+		{name: "missing interface", args: []string{"--frontend-dir", t.TempDir(), "--interface", "missing-test-interface"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if _, err := Load(test.args); err == nil {
+			args := append(networkArgs(t), test.args...)
+			if _, err := Load(args); err == nil {
 				t.Fatal("Load() error = nil, want boundary validation error")
 			}
 		})
 	}
+}
+
+func networkArgs(t *testing.T) []string {
+	t.Helper()
+	return []string{
+		"--media-udp", loopbackIPv4(t) + ":3478",
+		"--public-ipv4", loopbackIPv4(t),
+		"--interface", loopbackInterfaceName(t),
+	}
+}
+
+func loopbackInterfaceName(t *testing.T) string {
+	t.Helper()
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		t.Fatalf("list interfaces: %v", err)
+	}
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagLoopback != 0 {
+			return iface.Name
+		}
+	}
+	t.Fatal("loopback interface not found")
+	return ""
+}
+
+func loopbackIPv4(t *testing.T) string {
+	t.Helper()
+	iface, err := net.InterfaceByName(loopbackInterfaceName(t))
+	if err != nil {
+		t.Fatalf("find loopback interface: %v", err)
+	}
+	addresses, err := iface.Addrs()
+	if err != nil {
+		t.Fatalf("list loopback addresses: %v", err)
+	}
+	for _, address := range addresses {
+		if network, ok := address.(*net.IPNet); ok && network.IP.To4() != nil {
+			return network.IP.String()
+		}
+	}
+	t.Fatal("loopback IPv4 address not found")
+	return ""
 }

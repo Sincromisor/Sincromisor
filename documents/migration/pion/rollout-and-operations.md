@@ -36,7 +36,7 @@ Pion版の経路には追加adapterを挟まない。aiortcのimageと設定はr
 - session別UDP port rangeではなく、全PeerConnectionで1つの固定UDP mux portを共有する。
 - Dockerはhost側とcontainer側で同じUDP portを1:1 mappingする。割り当てるport番号はcompose / env / firewallで1つの値を正本化する。
 - signalingは現行どおりTCP endpointを公開し、media用UDP portを別に公開する。
-- SDPへ載せるpublic IPv4を設定で明示し、`SetICEAddressRewriteRules` のhost candidate置換を使ってcontainer / private IPをadvertiseしない。NAT配下ではpublic IPv4とUDP portをPion hostへ静的forwardする。
+- SDPへ載せるpublic IPv4を `--public-ipv4` で明示し、Pionの`SetNAT1To1IPs`によるhost candidate置換でcontainer / private IPをadvertiseしない。NAT配下ではpublic IPv4と`--media-udp`のUDP portをPion hostへ静的forwardする。
 - network typeはUDP4へ限定し、interface filterはcontainer内の実通信interfaceをallow-listし、loopbackや意図しないhost virtual interfaceを除外する。STUNはpublic IP rewriteと併用し、実際のserver-reflexive経路を診断できるようにする。
 - ICE agentはFull ICEとする。ICE LiteとIPv6は初期移行の対象外とする。
 - TURN relayはaiortc版と同様に初期移行の対応対象外とする。`turn:` / `turns:` URLは黙って無視せず、設定errorとしてstartupを失敗させる。
@@ -56,13 +56,17 @@ Pion版の経路には追加adapterを挟まない。aiortcのimageと設定はr
 
 ## 設定
 
-新規設定が必要になる想定領域は次のとおり。
+Pion PoCのnetwork設定は次の起動引数を正本とする。
+
+- `--media-udp`: 指定interfaceへ割当済みの非wildcard IPv4による固定 UDP4 mux bind address（port 1〜65535）
+- `--public-ipv4`: SDP host candidateへ広告する非unspecified IPv4
+- `--interface`: UPかつcandidate収集を許可するnetwork interface
+
+次は後続の設定対象である。
 
 - Pion service bind host / port
 - Pion `v4.2.17` のdependency pin
-- media UDP mux port
-- advertised public IPv4
-- STUN URL、UDP4 network type、interface filter
+- STUN URL
 - session上限
 - 下流serviceのConsul名とfallback
 - input / output / DataChannel / candidate queue上限
@@ -71,7 +75,7 @@ Pion版の経路には追加adapterを挟まない。aiortcのimageと設定はr
 - reconnect backoff
 - codec実装とcodec固有設定
 
-確定時は `examples/compose.env`、`compose/`、`compose.yml`、設定実装、[Compose設計](../../design/infrastructure/compose.md)を同時に更新する。具体的なenv名は実装taskで決め、本計画では正本化しない。
+compose配線時はこの3引数を環境変数へ対応付け、`examples/compose.env`、`compose/`、`compose.yml`、設定実装、[Compose設計](../../design/infrastructure/compose.md)を同時に更新する。
 
 設定の形式と組み合わせはnetwork socketやHTTP listenerを公開する前に検証する。public IPv4のparse失敗、UDP mux bind失敗、port不一致、空のinterface選択、TURN URL、上限やtimeoutの0 / 負値はreadiness falseのまま待機せずprocessをfail-fastさせる。外部NAT / firewallの到達性はstartupだけでは保証できないため、production相当リハーサルのsmoke testで検証する。
 

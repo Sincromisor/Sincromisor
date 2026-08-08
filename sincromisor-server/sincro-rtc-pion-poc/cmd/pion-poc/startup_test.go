@@ -52,7 +52,7 @@ func TestRunProbeFailureDoesNotReachHTTPListenerBoundary(t *testing.T) {
 		return nil
 	}
 	err = runWithBoundaries(
-		[]string{"--frontend-dir", t.TempDir(), "--ffmpeg", executable},
+		[]string{"--frontend-dir", t.TempDir(), "--ffmpeg", executable, "--media-udp", "127.0.0.1:3478", "--public-ipv4", "127.0.0.1", "--interface", "lo"},
 		&startupRunner{exitCode: 1, err: errors.New("probe failed")},
 		serveProbe,
 	)

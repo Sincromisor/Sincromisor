@@ -338,6 +338,7 @@ func TestCodecErrorClosesSession(t *testing.T) {
 		SystemClock{},
 		testLogger(),
 		func(sessionID string) { closed <- sessionID },
+		nil,
 	)
 	if err != nil {
 		t.Fatalf("newSession() error = %v", err)
@@ -373,6 +374,7 @@ func TestSessionsShareNonOwnedSynthDecoder(t *testing.T) {
 			SystemClock{},
 			testLogger(),
 			func(string) {},
+			nil,
 		)
 		if err != nil {
 			t.Fatalf("newSession(%s) error = %v", id, err)
@@ -486,6 +488,7 @@ func TestNewSessionRejectsNilSynthDecoderBeforeResourceCreation(t *testing.T) {
 		SystemClock{},
 		testLogger(),
 		func(string) {},
+		nil,
 	)
 	if err == nil || session != nil {
 		t.Fatalf("newSession(nil Decoder) = %#v, %v; want pre-resource validation error", session, err)
@@ -509,6 +512,7 @@ func TestInputObserverPanicClosesAndJoinsSession(t *testing.T) {
 		SystemClock{},
 		testLogger(),
 		func(sessionID string) { closed <- sessionID },
+		nil,
 	)
 	if err != nil {
 		t.Fatalf("newSession() error = %v", err)

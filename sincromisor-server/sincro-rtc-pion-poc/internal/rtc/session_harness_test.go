@@ -43,6 +43,7 @@ func newManagedLifecycleSession(
 		clock,
 		testLogger(),
 		manager.remove,
+		nil,
 	)
 	if err != nil {
 		t.Fatalf("newSession() error = %v", err)

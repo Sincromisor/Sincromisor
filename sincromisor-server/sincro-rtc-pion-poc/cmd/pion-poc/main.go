@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -75,7 +76,7 @@ func runWithBoundaries(
 	args []string,
 	runner synthdecode.CommandRunner,
 	serveProcess serveBoundary,
-) error {
+) (returnErr error) {
 	cfg, err := config.Load(args)
 	if err != nil {
 		return err
@@ -90,6 +91,20 @@ func runWithBoundaries(
 	if err != nil {
 		return err
 	}
+	mediaEndpoint, err := net.ResolveUDPAddr("udp4", cfg.MediaUDPAddress)
+	if err != nil {
+		return fmt.Errorf("resolve media udp address: %w", err)
+	}
+	mediaSocket, err := net.ListenUDP("udp4", mediaEndpoint)
+	if err != nil {
+		return fmt.Errorf("bind media udp socket: %w", err)
+	}
+	processNetwork, err := rtc.NewProcessNetwork(mediaSocket, cfg.PublicIPv4, cfg.Interface, cfg.GatherTimeout)
+	if err != nil {
+		_ = mediaSocket.Close()
+		return fmt.Errorf("create production rtc API: %w", err)
+	}
+	defer func() { returnErr = errors.Join(returnErr, processNetwork.Close()) }()
 	metrics := observability.NewRegistry()
 	pipelineFactory, err := newPipelineFactory(logger)
 	if err != nil {
@@ -101,6 +116,7 @@ func runWithBoundaries(
 		Clock:           rtc.SystemClock{},
 		Logger:          logger,
 		MaxSessions:     cfg.MaxSessions,
+		API:             processNetwork.API,
 		SynthDecoder:    synthDecoder,
 		Recorder:        metrics,
 	})
