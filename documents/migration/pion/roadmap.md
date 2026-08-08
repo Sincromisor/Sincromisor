@@ -142,6 +142,7 @@ production相当環境で、Pion版の品質だけでなく停止切替とaiortc
 - production相当のNAT、firewall、public IPv4、固定UDP mux portの検証結果
 - aiortc版とPion版で各1回実行するbrowser smoke test
 - Pion版の接続、会話、音声、DataChannelと、停止後の資源回収結果
+- production相当のsupervisorによるPion再起動とreadiness復旧
 - 切替、smoke test、rollbackの所要時間を含むrunbook
 
 ### 次phaseへの条件
