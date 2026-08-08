@@ -84,6 +84,16 @@ checkは `/health/ready` の10秒間隔・5秒timeout・critical後10分deregist
 
 compose配線時はこの3引数を環境変数へ対応付け、`examples/compose.env`、`compose/`、`compose.yml`、設定実装、[Compose設計](../../design/infrastructure/compose.md)を同時に更新する。
 
+`sincro-rtc-pion` はshared `sincromisor-net` 上で
+`ipv4_address: ${SINCRO_PION_CONTAINER_IPV4}` を使う。root `compose.yml` のIPAM subnetは
+`${SINCRO_COMPOSE_NETWORK_SUBNET}`（既定 `172.28.0.0/16`）であり、
+`SINCRO_PION_CONTAINER_IPV4` はそのsubnet内のPion専用固定IPv4とする。後続serviceの起動時は
+`--media-udp ${SINCRO_PION_CONTAINER_IPV4}:${SINCRO_PION_MEDIA_UDP_PORT}`、
+`--interface ${SINCRO_PION_INTERFACE}`、
+`--service-bind-host sincro-rtc-pion` を配線する。service bind hostはこの固定IPv4へ解決され、
+Consul service addressとして登録する。container IPv4とConsul service addressは、
+SDPへ広告するpublic IPv4とは別値である。
+
 設定の形式と組み合わせはnetwork socketやHTTP listenerを公開する前に検証する。public IPv4のparse失敗、UDP mux bind失敗、port不一致、空のinterface選択、TURN URL、上限やtimeoutの0 / 負値はreadiness falseのまま待機せずprocessをfail-fastさせる。外部NAT / firewallの到達性はstartupだけでは保証できないため、production相当リハーサルのsmoke testで検証する。
 
 ## Healthとmetrics

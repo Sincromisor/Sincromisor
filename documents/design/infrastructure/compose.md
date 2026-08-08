@@ -6,6 +6,23 @@
 - `.env`、compose service、Python / frontend 設定の 3 点を常に整合させる。
 - profile により full / rtc などの起動対象を切り替える。
 
+## 共有 bridge network
+
+root `compose.yml` の `sincromisor-net` は
+`${SINCRO_COMPOSE_NETWORK_SUBNET}` をIPAM subnetとして使う。既定値は
+`examples/compose.env` の `172.28.0.0/16` である。
+
+後続のPion serviceは `sincro-rtc-pion` とし、このnetworkへ
+`ipv4_address: ${SINCRO_PION_CONTAINER_IPV4}` を割り当てる。
+`SINCRO_PION_CONTAINER_IPV4` はsubnet内でPion専用に予約する固定IPv4であり、
+`--media-udp ${SINCRO_PION_CONTAINER_IPV4}:${SINCRO_PION_MEDIA_UDP_PORT}`、
+`--interface ${SINCRO_PION_INTERFACE}`、
+`--service-bind-host sincro-rtc-pion` を配線する。service bind hostは同じ固定IPv4へ解決され、
+Consul service addressとして登録する。browserへ広告するpublic IPv4は別値とする。
+
+既存Docker networkとsubnetが重複する環境では、
+`SINCRO_COMPOSE_NETWORK_SUBNET` と `SINCRO_PION_CONTAINER_IPV4` を同一subnet内の未使用値へ対で変更する。
+
 ## Scope
 
 - 対象:
@@ -27,6 +44,7 @@
 ## Change Checklist
 
 - 新しい env を追加したら `examples/compose.env`、compose environment、設定クラスを同時更新する。
+- Pion serviceを追加する場合は、`sincro-rtc-pion` だけへ上記の固定IPv4を割り当て、既存serviceへstatic addressを追加しない。
 - service 名や port を変える場合は Consul、fallback 設定、contracts を確認する。
 - downstream service を追加/削除する場合は AudioBroker と WebSocket contract を確認する。
 - frontend / backend の片側だけで完結する変更にしない。
