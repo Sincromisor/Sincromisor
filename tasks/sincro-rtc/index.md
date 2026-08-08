@@ -4,16 +4,15 @@
 
 ## タスク一覧（自動生成 / 全 28 件）
 
-### open（未完） — 4 件
+### open（未完） — 3 件
 
-| タスク                                                                                                           | タイトル                                            | 判定 | 依存                                                                                                  |
-| ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------- |
-| [task-260809020144-pion-phase-4-exclusive-compose](./task-260809020144-pion-phase-4-exclusive-compose/task.md)   | aiortcとPionを排他的に選択するcompose構成を追加する | —    | `task-260809020144-pion-phase-4-production-network`, `task-260809020144-pion-phase-4-container-image` |
-| [task-260809020144-pion-phase-4-production-network](./task-260809020144-pion-phase-4-production-network/task.md) | Pionの固定UDP muxとpublic IPv4設定を実装する        | —    | `task-260802033044-pion-phase-3-production-candidate-gate-3`                                          |
-| [task-260809020145-pion-phase-4-cutover-rehearsal](./task-260809020145-pion-phase-4-cutover-rehearsal/task.md)   | production相当環境でPion切替リハーサルを実行する    | —    | `task-260809020145-pion-phase-4-cutover-runbook`                                                      |
-| [task-260809020145-pion-phase-4-cutover-runbook](./task-260809020145-pion-phase-4-cutover-runbook/task.md)       | Pion停止切替とrollbackのrunbookを確定する           | —    | `task-260809020144-pion-phase-4-exclusive-compose`                                                    |
+| タスク                                                                                                         | タイトル                                            | 判定 | 依存                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------- |
+| [task-260809020144-pion-phase-4-exclusive-compose](./task-260809020144-pion-phase-4-exclusive-compose/task.md) | aiortcとPionを排他的に選択するcompose構成を追加する | —    | `task-260809020144-pion-phase-4-production-network`, `task-260809020144-pion-phase-4-container-image` |
+| [task-260809020145-pion-phase-4-cutover-rehearsal](./task-260809020145-pion-phase-4-cutover-rehearsal/task.md) | production相当環境でPion切替リハーサルを実行する    | —    | `task-260809020145-pion-phase-4-cutover-runbook`                                                      |
+| [task-260809020145-pion-phase-4-cutover-runbook](./task-260809020145-pion-phase-4-cutover-runbook/task.md)     | Pion停止切替とrollbackのrunbookを確定する           | —    | `task-260809020144-pion-phase-4-exclusive-compose`                                                    |
 
-### done（完了） — 20 件
+### done（完了） — 21 件
 
 | タスク                                                                                                                                 | タイトル                                                              | 判定    | 依存                                                                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -37,6 +36,7 @@
 | [task-260802212216-pion-gate3-pipeline-contract-harness](./task-260802212216-pion-gate3-pipeline-contract-harness/task.md)             | Pion Gate 3下流サービス契約ハーネスを実装する                         | ✅ PASS | `task-260802212212-pion-gate3-harness-foundation`                                                                  |
 | [task-260802212220-pion-gate3-frontend-browser-harness](./task-260802212220-pion-gate3-frontend-browser-harness/task.md)               | Pion Gate 3現行Frontendブラウザーハーネスを実装する                   | ✅ PASS | `task-260802212216-pion-gate3-pipeline-contract-harness`                                                           |
 | [task-260809020144-pion-phase-4-container-image](./task-260809020144-pion-phase-4-container-image/task.md)                             | Pion RTC serverのproduction container imageを作成する                 | ✅ PASS | `task-260802033044-pion-phase-3-production-candidate-gate-3`                                                       |
+| [task-260809020144-pion-phase-4-production-network](./task-260809020144-pion-phase-4-production-network/task.md)                       | Pionの固定UDP muxとpublic IPv4設定を実装する                          | ✅ PASS | `task-260802033044-pion-phase-3-production-candidate-gate-3`                                                       |
 
 ### cancelled（取りやめ） — 2 件
 
