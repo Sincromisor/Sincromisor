@@ -463,7 +463,7 @@ func testConfig(talkMode string) Config {
 	return Config{
 		SessionID: "fixture-session", TalkMode: talkMode,
 		DialTimeout: time.Second, WriteTimeout: time.Second,
-		PingInterval: time.Hour, PingTimeout: time.Second, CloseTimeout: time.Second,
+		CloseTimeout: time.Second,
 	}
 }
 

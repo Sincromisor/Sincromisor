@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/coder/websocket"
 
@@ -56,9 +55,8 @@ func (c *baseClient) connect(ctx context.Context, initialize func() ([]byte, err
 	c.conn = conn
 	c.rawConn = rawConn
 	c.state = stateOpen
-	c.wg.Add(2)
+	c.wg.Add(1)
 	c.goWorker("read", true, c.readLoop)
-	c.goWorker("ping", true, c.pingLoop)
 	c.goWorker("finalize", false, c.finalizeWhenCanceled)
 	c.mu.Unlock()
 	return nil
@@ -268,27 +266,6 @@ func (c *baseClient) readLoop() {
 			}
 			c.terminal(EventDecodeFailed, fmt.Errorf("decode service response: %w", err))
 			return
-		}
-	}
-}
-
-func (c *baseClient) pingLoop() {
-	ticker := time.NewTicker(c.cfg.PingInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-c.lifetimeCtx.Done():
-			return
-		case <-ticker.C:
-			pingCtx, cancel := context.WithTimeout(c.lifetimeCtx, c.cfg.PingTimeout)
-			err := c.conn.Ping(pingCtx)
-			cancel()
-			if err != nil {
-				if c.lifetimeCtx.Err() == nil {
-					c.terminal(EventPingFailed, fmt.Errorf("ping service: %w", err))
-				}
-				return
-			}
 		}
 	}
 }

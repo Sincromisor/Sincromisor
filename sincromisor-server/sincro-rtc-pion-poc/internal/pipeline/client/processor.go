@@ -53,7 +53,7 @@ func NewProcessor(cfg Config, resolver discovery.Resolver, logger *slog.Logger) 
 	return processor, nil
 }
 
-// Connect はnew状態から1回だけresolve/dialし、readerとpingをconnection lifetimeへ結び付ける。
+// Connect はnew状態から1回だけresolve/dialし、readerをconnection lifetimeへ結び付ける。
 func (c *Processor) Connect(ctx context.Context) error {
 	return c.base.connect(ctx, nil)
 }

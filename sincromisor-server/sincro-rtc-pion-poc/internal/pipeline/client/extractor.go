@@ -76,7 +76,7 @@ func NewExtractor(
 	return extractor, nil
 }
 
-// Connect は discovery、dial、初期化binary送信を行い、reader/ping goroutineを開始する。
+// Connect は discovery、dial、初期化binary送信を行い、reader goroutineを開始する。
 //
 // 初期化は最初のapplication messageとして1件だけ送られ、StartAt は encode 直前の now の Unix秒である。
 // new以外は ErrAlreadyConnected、Closeと競合してclosedになった場合は ErrClosedを返す。
