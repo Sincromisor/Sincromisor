@@ -36,11 +36,15 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 		t.Fatalf("write frontend fixture: %v", err)
 	}
 	address := reserveTCPAddress(t)
+	mediaAddress := reserveUDPAddress(t)
 	command := exec.Command(
 		binaryPath,
 		"--http", address,
 		"--frontend-dir", frontendDir,
 		"--gather-timeout", "2s",
+		"--media-udp", mediaAddress,
+		"--public-ipv4", "127.0.0.1",
+		"--interface", "lo",
 	)
 	var processOutput bytes.Buffer
 	command.Stdout = &processOutput
@@ -152,6 +156,19 @@ func reserveTCPAddress(t *testing.T) string {
 	address := listener.Addr().String()
 	if err := listener.Close(); err != nil {
 		t.Fatalf("release TCP address: %v", err)
+	}
+	return address
+}
+
+func reserveUDPAddress(t *testing.T) string {
+	t.Helper()
+	socket, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
+	if err != nil {
+		t.Fatalf("reserve UDP address: %v", err)
+	}
+	address := socket.LocalAddr().String()
+	if err := socket.Close(); err != nil {
+		t.Fatalf("release UDP address: %v", err)
 	}
 	return address
 }

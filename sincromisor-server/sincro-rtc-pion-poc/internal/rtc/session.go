@@ -102,6 +102,7 @@ func newSession(
 	clock Clock,
 	logger *slog.Logger,
 	onClosed func(string),
+	api *webrtc.API,
 	recorders ...observability.Recorder,
 ) (*Session, error) {
 	if id == "" || (talkMode != "chat" && talkMode != "sincro") {
@@ -122,7 +123,7 @@ func newSession(
 	if err != nil {
 		return nil, err
 	}
-	pc, err := newPeerConnection(configuration, gatherTimeout)
+	pc, err := newPeerConnection(configuration, gatherTimeout, api)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w", err)
 	}
@@ -202,18 +203,23 @@ func newSession(
 // newPeerConnection はHTTP Answer生成deadlineをPion内部のSTUN transaction上限へ伝播する。
 //
 // request contextだけを先に返すと、Pionの既定STUN gatherが背後で継続し、Closeとregistry removeが
-// 最大数秒遅れる。正数durationだけSettingEngineへ設定し、deadlineなしcallerはPion既定値を使う。
+// 最大数秒遅れる。process共有APIがある場合はstartup済みのUDP mux設定を必ず再利用し、local test用
+// APIがない場合だけ正数durationを新しいSettingEngineへ設定する。
 func newPeerConnection(
 	configuration webrtc.Configuration,
 	gatherTimeout time.Duration,
+	api *webrtc.API,
 ) (*webrtc.PeerConnection, error) {
+	if api != nil {
+		return api.NewPeerConnection(configuration)
+	}
 	if gatherTimeout <= 0 {
 		return webrtc.NewPeerConnection(configuration)
 	}
 	settings := webrtc.SettingEngine{}
 	settings.SetSTUNGatherTimeout(gatherTimeout)
-	api := webrtc.NewAPI(webrtc.WithSettingEngine(settings))
-	return api.NewPeerConnection(configuration)
+	localAPI := webrtc.NewAPI(webrtc.WithSettingEngine(settings))
+	return localAPI.NewPeerConnection(configuration)
 }
 
 // addCandidate はactive sessionだけをPion candidate境界へ通し、closing後のlate candidateを拒否する。

@@ -32,6 +32,9 @@ type Config struct {
 	HTTPAddress        string
 	FrontendDir        string
 	STUNURL            string
+	MediaUDPAddress    string
+	PublicIPv4         string
+	Interface          string
 	GatherTimeout      time.Duration
 	MaxSessions        int
 	OfferCacheCapacity int
@@ -51,6 +54,9 @@ func Load(args []string) (Config, error) {
 	flags.StringVar(&cfg.HTTPAddress, "http", "127.0.0.1:8080", "HTTP listen address")
 	flags.StringVar(&cfg.FrontendDir, "frontend-dir", "", "built frontend directory")
 	flags.StringVar(&cfg.STUNURL, "stun", "", "optional STUN URL")
+	flags.StringVar(&cfg.MediaUDPAddress, "media-udp", "", "UDP4 bind address for shared ICE mux")
+	flags.StringVar(&cfg.PublicIPv4, "public-ipv4", "", "advertised IPv4 host candidate")
+	flags.StringVar(&cfg.Interface, "interface", "", "network interface used for ICE candidates")
 	flags.DurationVar(&cfg.GatherTimeout, "gather-timeout", defaultGatherTimeout, "ICE gathering timeout")
 	flags.IntVar(&cfg.MaxSessions, "max-sessions", DefaultMaxSessions, "active session limit")
 	flags.IntVar(&cfg.OfferCacheCapacity, "offer-cache-capacity", DefaultOfferCacheCapacity, "initial Offer registry limit")
@@ -64,6 +70,19 @@ func Load(args []string) (Config, error) {
 	}
 	if _, err := net.ResolveTCPAddr("tcp", cfg.HTTPAddress); err != nil {
 		return Config{}, fmt.Errorf("invalid http address: %w", err)
+	}
+	mediaIPv4, err := validateMediaAddress(cfg.MediaUDPAddress)
+	if err != nil {
+		return Config{}, err
+	}
+	if ip := net.ParseIP(cfg.PublicIPv4); ip == nil || ip.To4() == nil || ip.IsUnspecified() {
+		return Config{}, errors.New("public-ipv4 must be a non-unspecified IPv4 address")
+	}
+	if cfg.Interface == "" {
+		return Config{}, errors.New("interface is required")
+	}
+	if err := validateMediaInterface(cfg.Interface, mediaIPv4); err != nil {
+		return Config{}, err
 	}
 	if cfg.GatherTimeout <= 0 {
 		return Config{}, errors.New("gather-timeout must be positive")
@@ -107,4 +126,55 @@ func Load(args []string) (Config, error) {
 		return Config{}, fmt.Errorf("resolve ffmpeg absolute path: %w", err)
 	}
 	return cfg, nil
+}
+
+// validateMediaAddress はshared ICE muxがbindするliteral UDP4 endpointを起動前に限定する。
+// interface filterとpublic IPv4 rewriteは後段のPion設定へ渡すため、ここではport 0やIPv6、
+// hostnameを拒否してsocket作成時の曖昧なnetwork選択を残さない。
+func validateMediaAddress(address string) (net.IP, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, fmt.Errorf("invalid media-udp address: %w", err)
+	}
+	ip := net.ParseIP(host)
+	if ip == nil || ip.To4() == nil || ip.IsUnspecified() {
+		return nil, errors.New("media-udp host must be a non-unspecified IPv4 address")
+	}
+	if port == "0" {
+		return nil, errors.New("media-udp port must be between 1 and 65535")
+	}
+	if _, err := net.LookupPort("udp4", port); err != nil {
+		return nil, fmt.Errorf("invalid media-udp port: %w", err)
+	}
+	return ip.To4(), nil
+}
+
+// validateMediaInterface は指定interfaceが稼働中で、media UDPのIPv4を実際に所有することを確認する。
+// wildcard bindではcontainerやhostの別addressがcandidate収集へ混ざるため、socket作成前に明示addressと
+// interfaceの対応を確定して、Pionのinterface filterとbind対象がずれないようにする。
+func validateMediaInterface(interfaceName string, mediaIPv4 net.IP) error {
+	iface, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return fmt.Errorf("inspect interface: %w", err)
+	}
+	if iface.Flags&net.FlagUp == 0 {
+		return fmt.Errorf("interface %q is not up", interfaceName)
+	}
+	addresses, err := iface.Addrs()
+	if err != nil {
+		return fmt.Errorf("list interface addresses: %w", err)
+	}
+	for _, address := range addresses {
+		var ip net.IP
+		switch typed := address.(type) {
+		case *net.IPNet:
+			ip = typed.IP
+		case *net.IPAddr:
+			ip = typed.IP
+		}
+		if ip != nil && ip.Equal(mediaIPv4) {
+			return nil
+		}
+	}
+	return fmt.Errorf("media-udp IPv4 %s is not assigned to interface %q", mediaIPv4, interfaceName)
 }
