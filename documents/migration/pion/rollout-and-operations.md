@@ -61,12 +61,12 @@ Pion PoCのnetwork設定は次の起動引数を正本とする。
 - `--media-udp`: 指定interfaceへ割当済みの非wildcard IPv4による固定 UDP4 mux bind address（port 1〜65535）
 - `--public-ipv4`: SDP host candidateへ広告する非unspecified IPv4
 - `--interface`: UPかつcandidate収集を許可するnetwork interface
-- `--consul-agent-host` / `--consul-agent-port`: pipeline discovery と Pion service registration に使う Consul agent（両方指定または両方未指定）
-- `--service-bind-host`: Consul登録用のcontainer IPv4へ単一解決できる host。Pion の public IPv4とは別に扱う
+- `--consul-agent-host` / `--consul-agent-port`: pipeline discovery と Pion service registration に使う Consul HTTP endpoint（両方指定または両方未指定）
+- `--service-bind-host`: Consul registration checkから到達可能なIPv4へ単一解決できる host。Pion の public IPv4とは別に扱う
 - `--fallback-host` / `--fallback-port`: Consul未指定またはlookup失敗時に4下流service共通で使う既存 Caddy endpoint（両方指定または両方未指定）
 
 Pionはlistener bind後、readyを公開する前に `RTCSignalingServer` としてConsulへ登録する。service IDは
-`RTCSignalingServer_<service-bind-host>_<resolved-ip>:<http-port>`、addressは解決済みcontainer IPv4、
+`RTCSignalingServer_<service-bind-host>_<resolved-ip>:<http-port>`、addressは解決済みregistration IPv4、
 checkは `/health/ready` の10秒間隔・5秒timeout・critical後10分deregisterである。SIGTERMではdraining開始直後に
 2秒上限でderegisterを並行開始する。
 
@@ -90,8 +90,8 @@ compose配線時はこの3引数を環境変数へ対応付け、`examples/compo
 `SINCRO_PION_CONTAINER_IPV4` はそのsubnet内のPion専用固定IPv4とする。後続serviceの起動時は
 `--media-udp ${SINCRO_PION_CONTAINER_IPV4}:${SINCRO_PION_MEDIA_UDP_PORT}`、
 `--interface ${SINCRO_PION_INTERFACE}`、
-`--service-bind-host sincro-rtc-pion` を配線する。service bind hostはこの固定IPv4へ解決され、
-Consul service addressとして登録する。container IPv4とConsul service addressは、
+`--service-bind-host ${SINCRO_PION_SERVICE_BIND_HOST}` を配線する。local composeではservice bind hostは
+この固定IPv4へ解決され、別host ConsulではPion hostのVPN addressを登録する。container IPv4とConsul service addressは、
 SDPへ広告するpublic IPv4とは別値である。
 
 composeではaiortc版を`full` / `rtc` profile、Pion版を`pion` profileで選択する。Pionは

@@ -75,6 +75,21 @@ func TestLoadConfiguresConsulDiscovery(t *testing.T) {
 	}
 }
 
+func TestLoadConfiguresRemoteConsulOverVPN(t *testing.T) {
+	cfg, err := Load(append([]string{
+		"--frontend-dir", t.TempDir(),
+		"--consul-agent-host", "192.0.2.2",
+		"--consul-agent-port", "8500",
+		"--service-bind-host", "192.0.2.1",
+	}, networkArgs(t)...))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.ConsulAgentHost != "192.0.2.2" || cfg.ConsulAgentPort != 8500 || cfg.ServiceBindIPv4 != "192.0.2.1" {
+		t.Fatalf("remote Consul config = %+v", cfg)
+	}
+}
+
 func TestLoadAcceptsLimitBoundaries(t *testing.T) {
 	for _, test := range []struct {
 		name string

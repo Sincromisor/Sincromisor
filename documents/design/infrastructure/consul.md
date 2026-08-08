@@ -20,7 +20,9 @@
 ## Responsibilities
 
 - 各 service は起動時に Consul へ登録する。
-- Pion RTC は `RTCSignalingServer` として、container内 address と `/health/ready` check（10秒間隔、5秒timeout、critical後10分deregister）を登録する。draining開始直後に解除する。
+- Pion RTC は `RTCSignalingServer` として、`SINCRO_PION_CONSUL_HTTP_HOST` / `SINCRO_PION_CONSUL_HTTP_PORT`のHTTP endpointへ、
+  `SINCRO_PION_SERVICE_BIND_HOST`で解決したaddressと`/health/ready` check（10秒間隔、5秒timeout、critical後10分deregister）を登録する。draining開始直後に解除する。
+  Pionはcross-host gossip agentを必要としない。
 - AudioBroker は SpeechExtractor / SpeechRecognizer / TextProcessor / VoiceSynthesizer の到達先を解決する。
 - Consul が使えない場合でも fallback host / port で開発継続できるようにする。
 
