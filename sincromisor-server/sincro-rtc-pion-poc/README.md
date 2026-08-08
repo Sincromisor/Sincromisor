@@ -10,7 +10,7 @@
 - Gate 2の合成音声を48 kHz monoへdecodeし、browser入力と独立した20 ms clockでOpus encodeして返す。
 - Gate 2のchat messageを`text_ch`へ、audio sample位置に同期したmora/telopを`telop_ch`へ送る。
 - generation変更、queue overflow、DataChannel buffered amountをboundedなdrop/close policyで処理する。
-- media readiness 成立後だけ local Consul 経由で下流 Python service へ接続し、session close で join する。
+- Consul agent を指定した場合は Pion 自身を `RTCSignalingServer` として登録し、下流 Python service を同じ agent から解決する。
 - production compose、Caddy への組み込みは行わない。
 
 ## Build requirements
@@ -103,6 +103,13 @@ host candidate に広告する到達可能な IPv4、`--interface` は candidate
 IPv6、port 0、downまたは存在しない interface は HTTP listener を開く前に拒否する。
 `turn:` / `turns:` は `--stun` に指定しても拒否し、ICE-TCP と IPv6 は有効化しない。
 
+Consulを使う場合は `--consul-agent-host` と `--consul-agent-port`、`--service-bind-host` を指定する。
+後者は起動時に単一IPv4へ解決し、listener bind後、`/health/ready` がまだ非readyの状態で
+`RTCSignalingServer_<service-bind-host>_<resolved-ip>:<http-port>` として登録する。登録成功後に
+readyを公開するため、Consul checkは `http://<resolved-ip>:<http-port>/health/ready` を10秒間隔、
+5秒timeout、critical後10分でderegisterする。`--fallback-host` と `--fallback-port` は組で指定し、
+Consul未指定時またはlookup失敗時に4下流service共通の既存 Caddy endpointとして使う。
+
 Google Chrome stable で
 `http://127.0.0.1:8080/simple-vrm/index.html` を開き、マイク権限を許可して会話接続を開始する。
 
@@ -123,7 +130,7 @@ Google Chrome stable で
    process を停止した最後の `pion poc stopped` で `final_goroutines` が起動時の
    `initial_goroutines + 5` 以下であることを確認する。
 
-`Ctrl-C` または `SIGTERM` で停止する。終了順序は
+`Ctrl-C` または `SIGTERM` で停止する。Consul登録済みならdraining開始直後に2秒上限でderegisterを並行開始する。終了順序は
 `BeginDrain → cleanup並行開始 → 1秒の受付拒否観測窓とcleanupの完了待ち → 独立1秒のHTTP停止`
 である。cleanupは共通5秒期限でOffer owner、session registry、PeerConnection、codec、ticker、
 media goroutineをclose-once経路から収束させ、signal受信からprocess終了までの上限は6秒とする。

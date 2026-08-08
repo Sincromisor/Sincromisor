@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -39,6 +40,15 @@ type Config struct {
 	MaxSessions        int
 	OfferCacheCapacity int
 	OfferCacheTTL      time.Duration
+	// ConsulAgentHost と ConsulAgentPort は discovery と service registration を有効にする組である。
+	ConsulAgentHost string
+	ConsulAgentPort uint
+	// FallbackHost と FallbackPort は Consul 不可時に4 serviceへ共通で使う Caddy endpoint である。
+	FallbackHost string
+	FallbackPort uint
+	// ServiceBindHost は service ID 用の設定値、ServiceBindIPv4 は起動時に解決した登録 address である。
+	ServiceBindHost string
+	ServiceBindIPv4 string
 	// FFmpegPathはexec.LookPathで解決済みのabsolute executable pathである。
 	FFmpegPath string
 }
@@ -61,6 +71,11 @@ func Load(args []string) (Config, error) {
 	flags.IntVar(&cfg.MaxSessions, "max-sessions", DefaultMaxSessions, "active session limit")
 	flags.IntVar(&cfg.OfferCacheCapacity, "offer-cache-capacity", DefaultOfferCacheCapacity, "initial Offer registry limit")
 	flags.DurationVar(&cfg.OfferCacheTTL, "offer-cache-ttl", DefaultOfferCacheTTL, "completed initial Offer lifetime")
+	flags.StringVar(&cfg.ConsulAgentHost, "consul-agent-host", "", "Consul agent host")
+	flags.UintVar(&cfg.ConsulAgentPort, "consul-agent-port", 0, "Consul agent port")
+	flags.StringVar(&cfg.FallbackHost, "fallback-host", "", "Caddy fallback host for pipeline services")
+	flags.UintVar(&cfg.FallbackPort, "fallback-port", 0, "Caddy fallback port for pipeline services")
+	flags.StringVar(&cfg.ServiceBindHost, "service-bind-host", "", "container IPv4 registered for the HTTP service")
 	flags.StringVar(&cfg.FFmpegPath, "ffmpeg", "ffmpeg", "FFmpeg executable path")
 	if err := flags.Parse(args); err != nil {
 		return Config{}, fmt.Errorf("parse flags: %w", err)
@@ -68,8 +83,12 @@ func Load(args []string) (Config, error) {
 	if flags.NArg() != 0 {
 		return Config{}, fmt.Errorf("unexpected positional arguments: %v", flags.Args())
 	}
-	if _, err := net.ResolveTCPAddr("tcp", cfg.HTTPAddress); err != nil {
+	httpAddress, err := net.ResolveTCPAddr("tcp", cfg.HTTPAddress)
+	if err != nil {
 		return Config{}, fmt.Errorf("invalid http address: %w", err)
+	}
+	if err := validateDiscoveryConfig(&cfg, httpAddress.Port); err != nil {
+		return Config{}, err
 	}
 	mediaIPv4, err := validateMediaAddress(cfg.MediaUDPAddress)
 	if err != nil {
@@ -126,6 +145,89 @@ func Load(args []string) (Config, error) {
 		return Config{}, fmt.Errorf("resolve ffmpeg absolute path: %w", err)
 	}
 	return cfg, nil
+}
+
+func validateDiscoveryConfig(cfg *Config, httpPort int) error {
+	consulConfigured := cfg.ConsulAgentHost != "" || cfg.ConsulAgentPort != 0
+	if consulConfigured && (cfg.ConsulAgentHost == "" || cfg.ConsulAgentPort == 0) {
+		return errors.New("consul-agent-host and consul-agent-port must be set together")
+	}
+	if cfg.ConsulAgentPort > 65535 {
+		return errors.New("consul-agent-port must be between 1 and 65535")
+	}
+	fallbackConfigured := cfg.FallbackHost != "" || cfg.FallbackPort != 0
+	if fallbackConfigured && (cfg.FallbackHost == "" || cfg.FallbackPort == 0) {
+		return errors.New("fallback-host and fallback-port must be set together")
+	}
+	if cfg.FallbackPort > 65535 {
+		return errors.New("fallback-port must be between 1 and 65535")
+	}
+	if consulConfigured {
+		if err := validateHost(cfg.ConsulAgentHost); err != nil {
+			return fmt.Errorf("invalid consul-agent-host: %w", err)
+		}
+		if httpPort < 1 || httpPort > 65535 {
+			return errors.New("http port must be between 1 and 65535 when Consul is configured")
+		}
+		resolved, err := resolveSingleIPv4(cfg.ServiceBindHost)
+		if err != nil {
+			return fmt.Errorf("invalid service-bind-host: %w", err)
+		}
+		cfg.ServiceBindIPv4 = resolved
+	}
+	if fallbackConfigured {
+		if err := validateHost(cfg.FallbackHost); err != nil {
+			return fmt.Errorf("invalid fallback-host: %w", err)
+		}
+	}
+	return nil
+}
+
+func resolveSingleIPv4(host string) (string, error) {
+	if host == "" {
+		return "", errors.New("must be set when Consul is configured")
+	}
+	addresses, err := net.LookupIP(host)
+	if err != nil {
+		return "", fmt.Errorf("resolve host: %w", err)
+	}
+	var ipv4 net.IP
+	for _, address := range addresses {
+		if candidate := address.To4(); candidate != nil {
+			if ipv4 != nil && !ipv4.Equal(candidate) {
+				return "", errors.New("must resolve to a single IPv4 address")
+			}
+			ipv4 = candidate
+		}
+	}
+	if ipv4 == nil {
+		return "", errors.New("must resolve to an IPv4 address")
+	}
+	return ipv4.String(), nil
+}
+
+func validateHost(host string) error {
+	if host == "" || strings.TrimSpace(host) != host || strings.ContainsAny(host, "/?#@") {
+		return errors.New("host must not be empty or contain URL components")
+	}
+	if net.ParseIP(strings.Trim(host, "[]")) != nil {
+		return nil
+	}
+	if strings.Contains(host, ":") {
+		return errors.New("host must not contain a port or scheme")
+	}
+	for _, label := range strings.Split(host, ".") {
+		if label == "" || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+			return errors.New("host has an invalid DNS label")
+		}
+		for _, character := range label {
+			if (character < 'a' || character > 'z') && (character < 'A' || character > 'Z') &&
+				(character < '0' || character > '9') && character != '-' {
+				return errors.New("host has an invalid DNS character")
+			}
+		}
+	}
+	return nil
 }
 
 // validateMediaAddress はshared ICE muxがbindするliteral UDP4 endpointを起動前に限定する。

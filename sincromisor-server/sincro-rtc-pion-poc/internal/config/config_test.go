@@ -57,6 +57,24 @@ func TestLoadUsesProductionLimitDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadConfiguresConsulDiscovery(t *testing.T) {
+	bindHost := loopbackIPv4(t)
+	cfg, err := Load(append([]string{
+		"--frontend-dir", t.TempDir(),
+		"--consul-agent-host", "consul.local",
+		"--consul-agent-port", "8500",
+		"--fallback-host", "caddy.local",
+		"--fallback-port", "8000",
+		"--service-bind-host", bindHost,
+	}, networkArgs(t)...))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.ServiceBindIPv4 != bindHost || cfg.ConsulAgentPort != 8500 || cfg.FallbackPort != 8000 {
+		t.Fatalf("discovery config = %+v", cfg)
+	}
+}
+
 func TestLoadAcceptsLimitBoundaries(t *testing.T) {
 	for _, test := range []struct {
 		name string
@@ -121,6 +139,10 @@ func TestLoadRejectsInvalidBoundaryValues(t *testing.T) {
 		{name: "wildcard media address", args: []string{"--frontend-dir", t.TempDir(), "--media-udp", "0.0.0.0:3478"}},
 		{name: "media address is not assigned to interface", args: []string{"--frontend-dir", t.TempDir(), "--media-udp", "192.0.2.1:3478"}},
 		{name: "missing interface", args: []string{"--frontend-dir", t.TempDir(), "--interface", "missing-test-interface"}},
+		{name: "partial Consul config", args: []string{"--frontend-dir", t.TempDir(), "--consul-agent-host", "consul.local"}},
+		{name: "partial fallback config", args: []string{"--frontend-dir", t.TempDir(), "--fallback-port", "8000"}},
+		{name: "Consul without service bind host", args: []string{"--frontend-dir", t.TempDir(), "--consul-agent-host", "consul.local", "--consul-agent-port", "8500"}},
+		{name: "Consul agent port out of range", args: []string{"--frontend-dir", t.TempDir(), "--consul-agent-host", "consul.local", "--consul-agent-port", "65536", "--service-bind-host", loopbackIPv4(t)}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

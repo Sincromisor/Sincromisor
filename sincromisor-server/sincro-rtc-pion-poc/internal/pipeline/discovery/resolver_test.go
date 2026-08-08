@@ -46,6 +46,26 @@ func TestResolverSelectsPassingInstanceAndBuildsFixedRequest(t *testing.T) {
 	}
 }
 
+func TestResolverLooksUpAllPipelineServices(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		service := strings.TrimPrefix(request.URL.Path, "/v1/health/service/")
+		if request.URL.Query().Get("passing") != "true" {
+			t.Errorf("passing query = %q", request.URL.Query().Get("passing"))
+		}
+		fmt.Fprintf(writer, `[{"Service":{"Address":"%s.local","Port":8001}}]`, strings.ToLower(service))
+	}))
+	defer server.Close()
+	resolver := newTestResolver(t, ResolverConfig{
+		ConsulBaseURL: server.URL, FallbackHost: "caddy.local", FallbackPort: 8000, RequestTimeout: time.Second,
+	}, server.Client(), func(int) (int, error) { return 0, nil })
+	for _, service := range []Service{ServiceExtractor, ServiceRecognizer, ServiceProcessor, ServiceSynthesizer} {
+		endpoint, err := resolver.Resolve(context.Background(), service)
+		if err != nil || endpoint.Source != EndpointSourceConsul {
+			t.Fatalf("Resolve(%s) = %+v, %v", service, endpoint, err)
+		}
+	}
+}
+
 func TestResolverFallbackReasonsRemainTyped(t *testing.T) {
 	tests := []struct {
 		name      string

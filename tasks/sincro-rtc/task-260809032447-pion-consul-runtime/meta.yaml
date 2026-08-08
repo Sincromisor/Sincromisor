@@ -1,0 +1,13 @@
+id: task-260809032447-pion-consul-runtime
+title: Pion RTCのConsul設定とservice登録を実装する
+category: sincro-rtc
+status: open
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: ae82f4bbb162ae28fc0e3794f0f6259872a86f1c
+verdict: null
+attempts: 0
+created_at: 2026-08-09
+closed_at: null
+legacy_ids: []
