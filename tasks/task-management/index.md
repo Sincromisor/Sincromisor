@@ -11,13 +11,7 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 
 ## タスク一覧（自動生成 / 全 16 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                                     | タイトル                           | 判定 | 依存 |
-| ---------------------------------------------------------------------------------------------------------- | ---------------------------------- | ---- | ---- |
-| [task-260808171737-simplify-task-agent-workflow](./task-260808171737-simplify-task-agent-workflow/task.md) | タスク管理エージェント手順を簡素化 | —    | —    |
-
-### done（完了） — 15 件
+### done（完了） — 16 件
 
 | タスク                                                                                                                                               | タイトル                                          | 判定    | 依存                                                                                                                                                                                                                                                                                |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -36,5 +30,6 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 | [task-260618213712-refresh-run-task-agents-v13](./task-260618213712-refresh-run-task-agents-v13/task.md)                                             | Refresh run-task-agents v1.3 workflow             | ✅ PASS | —                                                                                                                                                                                                                                                                                   |
 | [task-260628231541-task-agents-comment-quality-gates](./task-260628231541-task-agents-comment-quality-gates/task.md)                                 | task agents comment quality gates                 | ✅ PASS | `task-260628231541-frontend-typescript-comment-policy-audit-checklist`                                                                                                                                                                                                              |
 | [task-260629022219-tighten-task-agent-source-comment-quality-prompts](./task-260629022219-tighten-task-agent-source-comment-quality-prompts/task.md) | tighten task agent source comment quality prompts | ✅ PASS | `task-260629022214-tighten-typescript-source-comment-quality-rules`                                                                                                                                                                                                                 |
+| [task-260808171737-simplify-task-agent-workflow](./task-260808171737-simplify-task-agent-workflow/task.md)                                           | タスク管理エージェント手順を簡素化                | ✅ PASS | —                                                                                                                                                                                                                                                                                   |
 
 <!-- AUTOGEN:tasks END -->
