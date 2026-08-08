@@ -49,7 +49,7 @@
 - FrontendからPionへはTrickle ICE、PionからFrontendへはcandidate収集完了後のAnswerを返すhalf-trickleとし、Server→Frontend signaling endpointは追加しない。
 - DataChannel payloadはGoで原則解釈せず、Pythonから受け取ったJSONをopaque payloadとして転送する。
 - PionのOpus対応はnegotiation、RTP、packetizationを中心とするため、PCMとのencode / decodeにはlibopus bindingまたはGStreamerを組み合わせる。
-- codec実装、資源回収、直接接続、同一sessionのICE restartのPoCが合格するまで、本番移行を確定しない。
+- codec実装、資源回収、直接接続のPoCとproduction相当環境のsmoke testが合格するまで、本番移行を確定しない。
 
 ## 外部参照
 

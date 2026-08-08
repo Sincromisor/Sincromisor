@@ -141,7 +141,7 @@ Phase 1の採用条件:
 - pure Go Opus decodeとmediadevices/static libopus encodeが成立する。
 - 10回close、codec error、SIGTERM、race testでsession resourceが収束する。
 
-Firefox、fixed UDP mux、ICE restart、aiortc性能比較、Go pipeline互換はPhase 3 / 4の切替条件であり、
+対応browser、fixed UDP mux、Go pipeline互換はPhase 3 / 4の切替条件であり、
 Pionを後続実装の出発点にする判断とは分離する。
 
 不採用条件:
