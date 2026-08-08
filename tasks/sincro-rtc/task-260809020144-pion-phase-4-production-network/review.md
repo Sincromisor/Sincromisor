@@ -2,15 +2,12 @@
 
 ## 判定
 
-NEEDS_REVISION
-
-この判定後、task.mdでgather timeout、UDP mux/socketの所有権と終了順序、bind/interface検証、失敗時の
-再検証手順を明文化した。改訂後の実装着手前に、必要なら改訂内容を再レビューする。
+APPROVED
 
 ## 理由・申し送り
 
-- process共有 `webrtc.API` は、現行 `internal/rtc/session.go` の `newPeerConnection` が Offer ごとの gather deadline を `SettingEngine.SetSTUNGatherTimeout` へ渡す契約と両立しない。`--gather-timeout` を process 固定値として共有APIへ移すのか、HTTP owner deadline をどこまで Pion gather に反映するのか、timeout時の session/mux の状態を受け入れ条件とテストで一意に定める必要がある。
-- `ice.UDPMuxDefault.Close()` は渡された `net.PacketConn` も close する。socketを直接closeする経路との二重closeを避けるため、mux と socket の唯一の close owner、通常shutdown・HTTP listener起動前失敗・session close timeout時の順序（session収束待ち、mux close、HTTP停止）を定め、close回数を観測するテスト境界を明記する必要がある。
-- bind address と interface の組合せが未定義である。wildcard bindを許可するか、bind IPv4が指定interfaceに割り当て済みであることを必須にするかを決めないと、存在するinterfaceを指定してもcandidateが0件になる設定を受理できる。IPv4のみ、固定port（0不可）、interfaceの状態・所属IPv4、public IPv4との検証関係を起動前拒否条件として定める必要がある。
-- 必須commandまたは結合試験が失敗した場合に、証拠採取、原因特定、修正・再検証、または原因を特定した後続taskへの明示的な移管を完了条件へ追加する必要がある。失敗を `impl.md` 等へ記録するだけでは完了にしないことも明記する。
-- 実装時のコメント点検は規約を複製せず、`documents/rules/source-comments.md` を直接参照すること。特に process owner、mux/socket所有権、timeout後の処理継続をコード近傍で説明する。
+- 依存する Phase 3 Gate は `status: done`・`verdict: PASS` であり、roadmap の Phase 4 着手条件とも一致する。
+- 現行の `internal/rtc/session.go` は session ごとに `SettingEngine` / `webrtc.API` を生成し、Offer context の deadline を gather timeout へ渡している。本タスクはこれを process 共有 API の固定 `--gather-timeout` と HTTP request deadline に分離すると明示しており、共有 UDP mux への移行範囲と timeout 後の所有権が一意である。
+- bind IPv4・interface・port・advertised IPv4・STUN URL の起動前検証、UDP4 / interface allow-list、TURN・IPv6・ICE-TCP 非有効化が明示されている。public 到達性を検査対象外とし、loopback を local 結合試験で許可する境界も明確である。
+- mux/socket の唯一の close owner、起動途中失敗、通常 shutdown、session close timeout の扱いと、2 session の candidate・接続・socket close を確認する結合試験が指定されている。必須確認失敗時も、証拠採取から原因特定・修正・再検証または明示的移管まで定義され、記録だけで完了できない。
+- README と rollout-and-operations の同期先、対象を絞った Go test・vet・root gate が示され、HTTP / DataChannel 公開契約は変更しない。実装時のコメント規約は `documents/rules/source-comments.md` を直接参照し、API・mux/socket所有権・shutdown順序・timeout境界を確認すること。
