@@ -99,3 +99,15 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
   before completion or explicitly transferred with reproduction evidence and user approval.
 - Future refresh check: confirm generated agents reject PASS when a required failure has no
   identified cause and rerun evidence.
+
+## Task Feasibility and Autonomous Clarification
+
+- Target files: `.claude/commands/new-task.md`, `.claude/commands/run-task.md`,
+  `.claude/agents/task-reviewer.md`, `.claude/agents/task-implementer.md`,
+  `tasks/AUTHORING-CHECKLIST.md`, `tasks/README.md`, `scripts/tasks/newTask.mjs`
+- Upstream difference: task creation traces external inputs to their producers and consumers.
+  Existing canonical sources may resolve an `AUTO_FIX`; only choices affecting a public contract,
+  responsibility, acceptance criterion, or external-input supply route require `NEEDS_REVISION`.
+- Reason: prevent routine implementation clarification from blocking execution while retaining a
+  hard stop for genuinely undecided architecture.
+- Future refresh check: run `npm run gen:codex`, `npm run gen:codex:check`, and `npm run tasks:check`.
