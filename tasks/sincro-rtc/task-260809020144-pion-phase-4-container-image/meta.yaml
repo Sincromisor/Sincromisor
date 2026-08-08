@@ -1,14 +1,14 @@
 id: task-260809020144-pion-phase-4-container-image
 title: Pion RTC serverのproduction container imageを作成する
 category: sincro-rtc
-status: open
+status: done
 depends_on:
   - task-260802033044-pion-phase-3-production-candidate-gate-3
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-08-09
-closed_at: null
+closed_at: 2026-08-09
 legacy_ids: []
