@@ -114,18 +114,6 @@ func (o *Owner) State() State {
 	return o.state
 }
 
-// PID はrunning processの識別子を返す。
-//
-// Start前または終了後はErrNotRunningを返し、終了済みPIDの再利用による誤観測を防ぐ。
-func (o *Owner) PID() (int, error) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	if o.state != StateRunning {
-		return 0, ErrNotRunning
-	}
-	return o.cmd.Process.Pid, nil
-}
-
 // Start は検査済み Command から process と background waiter を一度だけ起動する。
 //
 // 起動失敗も一回の試行として消費され、後続 Start は ErrAlreadyStarted になる。

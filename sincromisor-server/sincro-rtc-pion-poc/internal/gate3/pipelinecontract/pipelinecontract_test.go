@@ -28,47 +28,13 @@ func TestSynthesizedWAVIsFiniteAndNonSilent(t *testing.T) {
 	}
 }
 
-func TestSpeechBoundaryEmitsOncePerSpeechRegion(t *testing.T) {
-	boundary := speechBoundary{}
+func TestExtractorReservesFirstNonSilentFrameOnly(t *testing.T) {
 	set := &Set{}
-	silence := make([]byte, 640)
-	speech := make([]byte, 640)
-	speech[0], speech[1] = 0, 4
-	frames := [][]byte{
-		silence, speech, silence, speech,
-		silence, silence, silence, silence, silence,
-		silence, speech,
-		silence, silence, silence, silence, silence,
+	if hasNonSilentPCM(make([]byte, 640)) {
+		t.Fatal("silent PCM was accepted")
 	}
-	want := []bool{
-		false, false, false, false,
-		false, false, false, false, true,
-		false, false,
-		false, false, false, false, true,
-	}
-	for index, frame := range frames {
-		set.recordPCM(framePeak(frame))
-		if got := boundary.Observe(frame); got != want[index] {
-			t.Fatalf("Observe(frame %d) = %v, want %v", index, got, want[index])
-		}
-	}
-	stats := set.PCMStats()
-	if stats.Frames != len(frames) || stats.MinPeak != 0 || stats.MaxPeak != 1024 ||
-		stats.AboveThreshold != 3 || stats.LongestQuietFrames != 6 {
-		t.Fatalf("PCMStats() = %+v", stats)
-	}
-}
-
-func TestMaxSpeechResultsStopsResponsesWithoutAdvancingIdentity(t *testing.T) {
-	set := &Set{maxSpeechResults: 2}
-	for attempt, want := range []bool{true, true, false} {
-		gotAttempt, got := set.reserveSpeechResult()
-		if got != want || (got && gotAttempt != int64(attempt)) {
-			t.Fatalf("reserveSpeechResult(%d) = %d, %v, want %v", attempt, gotAttempt, got, want)
-		}
-	}
-	if set.nextAttempt != 2 {
-		t.Fatalf("nextAttempt = %d, want 2", set.nextAttempt)
+	if !hasNonSilentPCM([]byte{1, 0}) || !set.reserveSpeechResult() || set.reserveSpeechResult() {
+		t.Fatal("extractor did not reserve exactly the first non-silent PCM frame")
 	}
 }
 
@@ -115,28 +81,6 @@ func TestContractServicesDriveProductionPipeline(t *testing.T) {
 	}
 }
 
-func TestContractServicesAcceptTwoNormalTurns(t *testing.T) {
-	set := newContractSet(t)
-	defer closeContractSet(t, set)
-	coordinator := newCoordinator(t, set.Addresses())
-	if err := coordinator.Start(context.Background(), "gate3-two-turn-session", "sincro"); err != nil {
-		t.Fatalf("Start() error = %v", err)
-	}
-	runTurn(t, coordinator)
-	runTurn(t, coordinator)
-	if err := coordinator.Close(); err != nil {
-		t.Fatalf("Close() error = %v", err)
-	}
-	if err := set.Verify(); err != nil {
-		t.Fatalf("Verify() error = %v", err)
-	}
-	entries := set.Transcript().Entries
-	if len(entries) != 8 || entries[0].SessionID != entries[4].SessionID ||
-		entries[4].SequenceID != entries[0].SequenceID+1 || !entries[7].ByteIdentical {
-		t.Fatalf("two-turn transcript = %+v", entries)
-	}
-}
-
 func newContractSet(t *testing.T) *Set {
 	t.Helper()
 	fixtures, err := filepath.Abs(filepath.Join("..", "..", "pipeline", "protocol", "testdata"))
@@ -179,11 +123,7 @@ func runTurn(t *testing.T, coordinator *pipeline.Coordinator) {
 func turnPCMFrames() [][]byte {
 	speech := make([]byte, 640)
 	speech[0], speech[1] = 0, 4
-	frames := [][]byte{speech}
-	for range speechQuietFrames {
-		frames = append(frames, make([]byte, 640))
-	}
-	return frames
+	return [][]byte{speech}
 }
 
 func receive[T any](t *testing.T, values <-chan T) T {

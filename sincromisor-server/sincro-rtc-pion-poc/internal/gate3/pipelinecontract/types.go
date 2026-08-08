@@ -16,14 +16,12 @@ var (
 // Config は commit 済み fixture directory と listener interface を指定する。
 //
 // FixturesDir は6つの pipeline protocol fixture を含む。ListenHost は port なしの host で、
-// Gate 3 では外部公開を避けるため 127.0.0.1 を使う。MaxSpeechResultsの0は無制限である。
+// Gate 3 では外部公開を避けるため 127.0.0.1 を使う。
 type Config struct {
 	// FixturesDir は protocol/testdata の絶対 path である。
 	FixturesDir string
 	// ListenHost は外部公開しない loopback IP address である。
 	ListenHost string
-	// MaxSpeechResults は固定入力が反復しても返すExtractor結果数を有限にする。
-	MaxSpeechResults int
 }
 
 // Entry は完了した service 操作1件を wire 順で表す。

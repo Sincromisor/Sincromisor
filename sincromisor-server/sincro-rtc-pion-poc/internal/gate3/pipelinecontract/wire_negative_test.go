@@ -18,25 +18,6 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery"
 )
 
-func TestPublicWebSocketRejectsExtraPCMFrame(t *testing.T) {
-	set := newContractSet(t)
-	defer closeContractSet(t, set)
-	conn := dialContract(t, set, discovery.ServiceExtractor, "/api/v1/SpeechExtractor/extract")
-	defer conn.CloseNow()
-	writeFixture(t, conn, fixturePath(t, "extractor_initialize.msgpack"), nil)
-	speech := []byte{0, 4}
-	for range 2 {
-		writeBinary(t, conn, speech)
-		for range speechQuietFrames {
-			writeBinary(t, conn, []byte{0, 0})
-		}
-		readBinary(t, conn)
-	}
-	if err := waitVerifyError(t, set, ErrProtocol); !errors.Is(err, ErrProtocol) {
-		t.Fatalf("Verify() error = %v, want ErrProtocol", err)
-	}
-}
-
 func TestPublicWebSocketRejectsServiceOrderViolation(t *testing.T) {
 	set := newContractSet(t)
 	defer closeContractSet(t, set)
@@ -79,9 +60,6 @@ func produceExtraction(t *testing.T, set *Set) (string, int64, int64) {
 		value["session_id"] = sessionID
 	})
 	writeBinary(t, conn, []byte{0, 4})
-	for range speechQuietFrames {
-		writeBinary(t, conn, []byte{0, 0})
-	}
 	payload := readBinary(t, conn)
 	value, err := decodeMap(payload)
 	if err != nil {

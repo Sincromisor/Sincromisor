@@ -32,13 +32,13 @@ const (
 	SynthesizerServiceID = "gate3-voice-synthesizer"
 )
 
-// Config は1つの Consul executable、working directory、登録する4 proxy endpoint を指定する。
+// Config は1つの Consul executable、working directory、登録する4 service endpoint を指定する。
 type Config struct {
 	// Binary は検査済み Consul executable の絶対 path である。
 	Binary string
 	// WorkDir は child の絶対 working directory である。
 	WorkDir string
-	// Services は固定名4件に対応する 127.0.0.1 proxy endpoint である。
+	// Services は固定名4件に対応する 127.0.0.1 service endpoint である。
 	Services map[discovery.Service]discovery.Endpoint
 
 	// testOptions は package内試験だけが既存8500番Consulを避けるために使う。

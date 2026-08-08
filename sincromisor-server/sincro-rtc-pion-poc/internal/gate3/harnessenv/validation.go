@@ -53,26 +53,6 @@ func validateAbsoluteDirectory(name, path string) (string, error) {
 	return resolved, nil
 }
 
-// Playwright CLIは共有package cacheへのsymlink配置を許可するため、repository所有権ではなく
-// 解決先が通常fileであることだけを外部process起動前に確定する。
-func validateRegularFile(name, path string) (string, error) {
-	if !filepath.IsAbs(path) {
-		return "", fmt.Errorf("%s must be an absolute path", name)
-	}
-	resolved, err := filepath.EvalSymlinks(path)
-	if err != nil {
-		return "", fmt.Errorf("resolve %s: %w", name, err)
-	}
-	info, err := os.Stat(resolved)
-	if err != nil {
-		return "", fmt.Errorf("stat %s: %w", name, err)
-	}
-	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("%s must resolve to a regular file", name)
-	}
-	return resolved, nil
-}
-
 func validateOwnedPath(name, path, repositoryRoot string, directory bool) (string, error) {
 	if !filepath.IsAbs(path) {
 		return "", fmt.Errorf("%s must be an absolute path", name)
