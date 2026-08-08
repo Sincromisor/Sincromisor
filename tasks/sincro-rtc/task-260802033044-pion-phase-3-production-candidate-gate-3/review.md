@@ -6,8 +6,9 @@ APPROVED
 
 ## 理由・申し送り
 
-- 完了条件は、対象 commit と管理対象入力の事前確認、固定 browser harness、tag なし Go test / vet、Frontend / root / task check、成果物、Gate 判定、roadmap 同期まで一意かつ検証可能である。必須 command のいずれかが FAIL なら `gate_3_result: FAIL` とするため、合否の集約にも曖昧さがない。
-- 直接依存 `task-260802212220-pion-gate3-frontend-browser-harness` とその依存は `done`、`APPROVED`、`PASS` である。固定 command、Go / Node.js / Chromium / Consul / FFmpeg、Frontend `dist`、固定 WAV、Pion source の一時 build、子 process の所有・停止、段階別期限、2 turn / ICE restart / DataChannel / 非無音音声 / resource 収束の観測点は現行 `internal/gate3/README.md` と実装に存在する。
-- 代表的な readiness timeout は `TestSessionMediaReadinessDeadlineClosesWithoutPipeline`、SIGTERM は `TestProcessSIGTERMStopsHTTPAndJoinsActiveSession` で確認できる。process restart は `documents/migration/pion/validation-plan.md`、`implementation-phases.md`、`roadmap.md` の現行改訂で production 相当 supervisor を扱う Phase 4 へ移され、Gate 3 の実行範囲と一致している。
-- Gate 3 の測定結果と task evaluator の判定、公開集約 artifact と `work/private-artifacts/` の raw data、Gate 3 と stable endpoint 切替後の current design 更新が分離されており、スコープと非対象、文書同期先は明確である。Gate 専用 schema や追加 harness を作らない判断も既存資産の再利用として妥当である。
-- production code と test harness を変更しないため source comment audit は対象外である。実装時にコード変更が必要になった場合は本タスクの範囲を超えるため停止し、コメント規約を task.md へ複製せず `documents/rules/source-comments.md` を直接参照すること。
+- Gate判定は一意かつ検証可能になった。開始前の同一環境不備はGateへ数えず、修正後の再実行を1回だけ許可し、その再実行も同じ条件で停止した場合は`NOT_MEASURED`、production candidate開始後の必須command失敗は`FAIL`、全件PASS時だけ`PASS`となる。
+- Playwright CLI欠落の事前検査は、現行`internal/gate3/harnessenv.Load`がrepository所有入力を子process起動前に一括検査し、`browser_test.go`がrootの`node_modules/@playwright/test/cli.js`を固定pathで起動する契約に一致する。欠落時に外部process起動前に失敗するunit testも受け入れ条件へ追加され、既知の失敗を回帰検証できる。
+- Consulの`127.0.0.1:8500`固定と既存processを変更せず競合を拒否する挙動は、現行`consuldev.Start`のproduction契約と一致する。port可変化や新しいpreflight層は不要であり、既存harnessの最小変更として実装できる。
+- 対象はPlaywright CLI事前検査、既存commandの再実行、証拠、Gate判定、roadmap同期に限定され、production code、新規harness、詳細baseline、network impairment、soak、compose・運用切替は非対象として明確である。
+- 必要なrepository test、browser harness、lifecycle test、Frontend / root / task checkと、公開成果物`artifacts/gate-3-result.md`、検証計画`documents/migration/pion/validation-plan.md`、Phase可否`documents/migration/pion/roadmap.md`の同期先が示されている。公開通信契約は変更しない。
+- 実装時のコメント確認はtask本文へ規約を複製せず、`documents/rules/source-comments.md`を直接参照すること。
