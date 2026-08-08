@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oklog/ulid/v2"
 	"github.com/pion/webrtc/v4"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
@@ -37,6 +38,36 @@ func TestRealManagerRejectsMalformedSDPAndRemovesSession(t *testing.T) {
 		t.Fatalf("status = %d, want 400; body=%s", response.Code, response.Body.String())
 	}
 	waitForRegistryCount(t, manager, 0)
+}
+
+func TestRealManagerAcceptsLegacyInitialOffer(t *testing.T) {
+	manager := newRealTestManager(t, "")
+	t.Cleanup(func() {
+		if err := manager.CloseAll(closeContext(t), "test_teardown"); err != nil {
+			t.Errorf("CloseAll(test_teardown) error = %v", err)
+		}
+	})
+	server := New(
+		manager,
+		newTestOfferRegistry(t, manager, time.Second),
+		t.TempDir(),
+		"",
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+	response := performRequest(
+		server.Handler(),
+		http.MethodPost,
+		offerPath,
+		`{"sdp":`+quoteJSON(t, newRealBrowserOffer(t))+`,"type":"offer","talk_mode":"chat"}`,
+	)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", response.Code, response.Body.String())
+	}
+	var answer rtc.Answer
+	decodeResponse(t, response, &answer)
+	if _, err := ulid.ParseStrict(answer.SessionID); err != nil || answer.Revision != 1 {
+		t.Fatalf("legacy answer identity = %q/%d", answer.SessionID, answer.Revision)
+	}
 }
 
 func TestRealManagerRejectsMalformedNonNullCandidate(t *testing.T) {
