@@ -3,7 +3,7 @@
 ## Summary
 
 - 移行はPion / codec最小PoC、Go pipeline client、統合、切替リハーサル、運用切り替え、旧実装削除の順で進める。
-- 詳細aiortc baselineは最小PoCの前提から外し、production候補完成後のPhase 4比較へ移す。
+- 詳細aiortc baselineは移行の前提から外し、Phase 4はproduction相当環境のsmoke testとrollback確認に絞る。
 - 下流Protocol Buffers移行とOpenAPI生成は別initiativeとし、Pion移行の完了条件へ含めない。
 - Python adapterはPoCで必要な場合だけ一時利用し、本番統合前に除去する。
 - 各phaseにexit gateを設け、後続phaseへ自動的に進まない。
@@ -36,7 +36,7 @@ flowchart LR
 ### 作業
 
 - 先行baseline taskの成果は参考にするが、validation harnessのmerge、修正、実行をPhase 1の前提にしない。
-- 詳細resource、latency、Firefox、impairment、soakの比較条件はPhase 3のproduction候補に合わせてPhase 4で確定する。
+- 詳細resource、latency、impairment、soak比較は、移行後に実害が確認された場合だけ独立taskで扱う。
 
 ### Gate 0
 
@@ -73,7 +73,8 @@ Python adapterを使う場合はtest PCMまたは既存AudioBrokerへの一時br
 - race test、SIGTERM、codec errorでclose-onceが成立する。
 
 Gate 1を満たせない場合、失敗したcodec adapterまたはsignaling方式だけを後続taskで再評価する。
-Firefox、NAT、ICE restart、impairment、soak、性能比較、VoiceSynthesizer形式はPhase 3 / 4へ送る。
+NATと対応browserはPhase 4へ送る。ICE restartとVoiceSynthesizer形式は既存repository testで確認し、
+impairment、soak、性能比較は必須Gateに含めない。
 
 ## Phase 2: Go pipeline clients
 
@@ -130,17 +131,16 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 
 ### Gate 3
 
-- [検証計画](validation-plan.md)の必須functional testが通る。
+- [検証計画](validation-plan.md)の既存repository testが通る。
 - 下流4サービスの実装変更なしに会話が成立する。
 - abnormal closeで全pipeline client、codec、PeerConnectionが一度だけcloseされる。
-- pre-connect deadlineとmedia readiness deadlineの全失敗経路で、下流WebSocketを残さずsessionがcloseされる。
+- pre-connect deadlineまたはmedia readiness deadlineの代表的な失敗経路で、下流WebSocketを残さずsessionがcloseされる。
 - session数、goroutine、queue、WebSocket、codec errorを観測できる。
-- RTP / RTCP loop終了、packet loss、reorder drop、NACK / PLC、pacing lagを観測できる。
 - process crash後にsupervisorが再起動し、readiness復旧後に新規sessionを受理できる。
 - 1 instance当たりのsession上限と、process停止時に失われる最大session数が明記されている。
 - 切替時に新規sessionを停止し、close timeout後にactive sessionを終了できる。
 - 本番経路にPython RTC adapterが存在しない。
-- Pionで旧revision / 未知session IDのOffer / candidateが新規sessionへfallbackしない。
+- Pionで旧revision / 未知session IDのOffer / candidateが新規sessionへfallbackしないことを既存試験で確認できる。
 - rollback時のaiortcはページreload後の新規sessionが成立し、Pion固有revisionを解釈しなくても動作する。
 
 ## Phase 4: 切替リハーサル
@@ -149,15 +149,14 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 
 - compose profileまたは別projectでaiortc版とPion版を排他的に起動できるようにする。
 - 運用環境と同じ固定UDP mux port、public IPv4、NAT、firewall設定を検証する。
-- browser / network test matrixを両backendへ逐次実行する。
-- 長時間soak testと障害注入を行う。
+- aiortc版とPion版で対応browserのsmoke testを各1回実行する。
 - aiortc停止、Pion起動、smoke test、Pion停止、aiortc復旧の手順と所要時間を検証する。
 
 ### Gate 4
 
-- Pion版がbaselineと同等以上の接続成功率を持つ。
-- latencyと音質に重大な退行がない。
-- resource増加が定義したbudget内である。
+- Pion版で接続、会話、音声、DataChannelが成立する。
+- smoke testで知覚できるlatencyと音質の重大な退行がない。
+- session終了後にactive resourceが収束する。
 - 直接接続が成立し、TURNを合否判定へ含めていない。
 - rollbackがfrontend / pipeline serviceのbuild変更なしで実行できる。
 - 運用環境でaiortcとPionが同時起動しないことをcompose設定で確認できる。

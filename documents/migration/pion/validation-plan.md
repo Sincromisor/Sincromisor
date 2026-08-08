@@ -2,242 +2,101 @@
 
 ## Summary
 
-- 機能互換、音声品質、network互換、資源回収、障害復旧を別の観点として検証する。
-- Phase 1はlocal Chromeの最小縦切りで採用可否を判断し、production品質の検証と分離する。
-- aiortc baseline比較、browser / network matrix、soak、性能・資源閾値はproduction候補完成後のPhase 4で確定する。
+- Phase 1はlocal Chromeの最小縦切りでPionとcodecの採用可否を判断する。
+- Phase 3は既存repository testと、現行Frontendによる1回のend-to-end smoke testでproduction候補を判定する。
+- Phase 4は実際のcomposeとnetwork構成で接続、会話、停止切替、rollbackを確認する。
+- 詳細baseline、network impairment、長時間soak、網羅的な性能比較は、実害が確認された場合だけ独立taskで行う。
 
-## Test matrix
+## 必須検証
 
-| 分類          | 主な確認                                | 必須phase     |
-| ------------- | --------------------------------------- | ------------- |
-| signaling     | half-trickle、initial Offer、HTTP error | PoC           |
-| signaling     | 冪等offer、revision、ICE restart        | 統合以降      |
-| media         | Opus受信、48 kHz PCM、1秒test tone      | PoC           |
-| media         | resample、合成音声全形式、loss品質      | 統合以降      |
-| DataChannel   | label、信頼性属性、固定JSON             | PoC           |
-| DataChannel   | open前queue、buffer pressure            | 統合以降      |
-| network       | local host candidate                    | PoC           |
-| network       | UDP mux、public IPv4、STUN、packet loss | 切替前        |
-| lifecycle     | normal close、failed、timeout、下流切断 | 統合以降      |
-| resource      | 10 closeのregistry / goroutine          | PoC           |
-| resource      | heap、RSS、thread、fd、socket、soak     | 統合 / 切替前 |
-| compatibility | Chrome                                  | PoC           |
-| compatibility | Chrome、Firefox                         | 切替前        |
+| 分類          | Phase 1                  | Phase 3                                    | Phase 4                             |
+| ------------- | ------------------------ | ------------------------------------------ | ----------------------------------- |
+| signaling     | initial Offer、candidate | 現行endpointのrepository test              | stable endpointのsmoke test         |
+| media         | Opus受信、test tone      | 実運用形式の合成音声を1回再生              | 会話音声の聴取                      |
+| DataChannel   | 2 channelへ固定JSON送信  | 現行Frontendで会話を1 turn                 | text / telop受信                    |
+| pipeline      | 対象外                   | Gate 2の互換試験とproduction候補の結合試験 | 実4サービスで会話                   |
+| lifecycle     | 通常closeとcodec error   | 正常終了と代表的な異常終了                 | 停止切替とrollback                  |
+| network       | local host candidate     | local統合環境                              | 実運用のNAT、firewall、固定UDP port |
+| compatibility | Chrome                   | 管理対象Chromium                           | 実運用で対応するbrowserを各1回      |
 
 ## Phase 1 minimal PoC
 
 - 現行fieldのconfig、initial Offer、candidate、end-of-candidatesを扱う。
 - Pion側candidateを収集済みAnswerへ含め、server candidate通知APIを追加しない。
-- session ID付きupdate Offerは501とし、unknown / closed candidateは200 + `status:false` とする。
-- Chromeとlocal host candidateでICEが `connected` または `completed` になる。
-- browserから連続100 packet以上のOpus RTPを受信し、48 kHz monoまたはstereoのnon-silent PCMへdecodeする。
-- 48 kHz mono、1秒のtest PCMを20 ms frameでencodeし、ChromeのAudioContext analyzerで非無音を確認する。
-- `text_ch` と `telop_ch` の属性を検証し、固定test JSONをFrontend parserへ片方向送信する。
-- 通常close 10回、codec error、SIGTERM、二重close、race testでregistryとgoroutineが収束する。
+- Chromeとlocal host candidateでICEが`connected`または`completed`になる。
+- browserから連続100 packet以上のOpus RTPを受信し、48 kHzの非無音PCMへdecodeする。
+- 1秒のtest PCMを20 ms frameでencodeし、Chromeで非無音を確認する。
+- `text_ch`と`telop_ch`へ固定test JSONを送信する。
+- 通常close 10回、codec error、SIGTERM、race testでregistryとgoroutineが収束する。
 
-Firefox、NAT、fixed UDP mux、ICE restart、impairment、NACK / PLC、VoiceSynthesizer形式、30分soak、
-CPU / memory / latency比較はPhase 1の合否へ含めない。
+Phase 1完了後に詳細baselineを作り直さない。PoCで採用した機能の回帰はrepository testへ残す。
 
-## Functional test
+## Phase 3 production candidate
 
-以下は特記がない限りPhase 3のproduction候補で実行する。Phase 1の対象は直前節を正本とする。
+### Repository test
 
-- `config.json` が現行fieldを返す。
-- initial Offerにcandidate収集完了済みのAnswer、`session_id`、`offer_revision` を返す。
-- PionからFrontendへのcandidate通知APIなしでChrome / Firefoxが接続できる。
-- candidate収集timeout時はsessionをcloseして504を返し、未完成Answerを冪等cacheへ保存しない。
-- initial Offer response消失後に同じ `offer_request_id` / SDPを再送し、同じsession ID / Answerを返す。
-- 同じ `offer_request_id` / SDPのinitial Offerを並行送信してもsession作成処理がsingle-flightになり、両requestへ同じ結果を返す。
-- 同じ `offer_request_id` を異なるSDPへ再利用した場合は409、終了済みsessionのtombstone再送は410を返し、重複sessionを作らない。
-- session IDがULIDであり、ICE restart後も同じ値を維持する。
-- candidateとend-of-candidatesを処理する。
-- 不明sessionとlate candidateを安全に拒否する。
-- session上限で新規接続だけを429にする。
-- active sessionへの単調増加する `offer_revision` 付きupdate Offerを受け付ける。
-- 旧revision、未来revision、不明session IDのOffer / candidateを新規sessionへfallbackさせず拒否する。
-- 同じrevision / SDPのOffer再送へ同じAnswerを返し、同じrevisionの異なるSDPをHTTP 409で拒否する。
-- Offer適用とcandidate追加がsession単位で直列化され、並行update Offerを409で拒否する。
-- update Offer失敗時にrevisionを進めず、そのrevisionのpending candidateを適用しない。
-- request body、SDP、candidate文字列、candidate件数、pending queueの各上限を境界値と上限超過で確認する。
-- malformed SDP / candidateをrequest単体で400にし、状態を一部適用済みで安全に継続できない場合だけsessionをcloseする。
-- audio track以外を受けた場合の方針が現行契約と一致する。
-- Frontendが `text_ch` / `telop_ch` を作成し、Pion側がin-band negotiationで受理する。
-- `text_ch` がordered / reliableでJSONを送受信する。
-- `telop_ch` がunordered / unreliableでJSONを送受信し、欠落や順序逆転があってもsessionを失敗させない。
-- ICE restart付きupdate Offer後も同じsession IDと既存DataChannelを維持し、audioが復旧する。
-- Frontendが `disconnected` のgrace中に自然復旧した場合はrestartせず、`failed` またはgrace超過時だけsingle-flightでrestartする。
-- Offer / candidateのHTTP timeout、404、409、410、429、5xx、network errorが契約どおりretryまたはsession再作成へ分岐する。
-- 下流service障害後に接続復旧または明示的session終了へ遷移する。
+実装時に追加済みのtestを正本とし、Gate専用の同等harnessを作らない。最低限、次を確認する。
 
-## Pipeline compatibility test
+- initial Offer、candidate、DataChannel、audio input / outputが現行契約どおり動く。
+- `offer_request_id`、`offer_revision`、ICE restart、late candidate拒否が既存testを通る。
+- MessagePack fixtureと4 pipeline clientのreset / generation試験が通る。
+- 合成音声decoderは実装が対応する形式のunit / integration testを通る。
+- 正常close、代表的なreadiness timeout、SIGTERM、process restartで所有resourceが収束する。
+- session上限、HTTP入力上限、panic recovery、metricsは既存testを通る。
 
-- Goが送るExtractor初期化requestを既存Python serviceがdecodeできる。
-- 20 ms入力frameの連続送信とspeech segment返却が成立する。
-- SpeechExtractor結果をRecognizer requestへ正しく変換する。
-- partial / confirmed recognition resultの順序を維持する。
-- `talk_mode` ごとのTextProcessor endpointとrequestを維持する。
-- synthesizer responseの `audio_format`、voice、mora queueをGoでdecodeできる。
-- 1 service切断時に4 clientを一括resetし、全queueとin-flight stateを破棄する。
-- reset前のgenerationから遅延resultを注入しても、重複TTS、古い音声、DataChannel eventが出力されない。
-- reset中の音声をbuffer / 再送せず、4 client復旧後の新しい発話だけを処理する。
-- 確定済みchat historyを維持し、partial recognition stateと処理中発話を復元しないことを確認する。
-- pipeline全体の再接続が1秒開始、最大30秒の指数backoff + full jitterで継続し、下流復旧後に試行回数に関係なく同じRTC sessionで処理を再開する。
-- MessagePack fixtureで同じscenarioを双方向に実行する。
+同じ条件を別packageのGate専用clientやreport schemaで再実装しない。
 
-## Audio test
+### End-to-end smoke test
 
-### format
+現行Frontend、Pion production candidate、既存pipeline contract serviceを起動し、管理対象Chromiumで次を1回確認する。
 
-- 48 kHz Opusから16 kHz mono PCMへの変換をgolden waveformで確認する。
-- browser入力のRTP Opus decodeと、VoiceSynthesizer返却音声のcontainer demux / decodeを別のtest suiteで確認する。
-- VoiceSynthesizer requestが許容する `audio/wav`、`audio/aac`、`audio/ogg`、`audio/ogg;codecs=opus` を入力matrixに含め、実際のresponse `audio_format` とdecode結果を確認する。
-- synthesized voiceからbrowser再生までのsample rateとchannelを確認する。
-- 各encoded voice形式について、正常入力、空入力、truncated / malformed入力、上限超過、decoder timeoutを確認する。
-- encoded voiceの最大byte数、最大再生時間、decoder timeoutをPhase 1の測定結果から確定し、上限超過時にsession queueが滞留しないことを確認する。
-- frame durationとRTP timestamp増分を確認する。
-- sequence numberとRTP timestampのwraparound前後で音声が継続する。
-- reorder window内の並べ替え、duplicate、window外のlate packet、SSRC変更を確認する。
-- browser入力が停止してもqueued synthesized audioが正しいpacingで再生されることを確認する。
-- ticker遅延とGC pause相当のscheduler停止後にpacketをburst送信せず、silence dropまたは実時間隔の音声再開になることを確認する。
-- Sender / Receiver Reportが生成され、outgoing senderのRTCP loopがfeedbackを継続してdrainすることを確認する。
-- NACK有無とOpus PLCをloss / RTT別に比較し、採用設定のpacket historyが上限内に収まることを確認する。
-- mora / telop eventがbrowserの対応音声再生より遅れて表示されないことを確認する。
-- silence frame、短い発話、長い発話、連続発話を確認する。
+1. initial Offerから接続する。
+2. 固定音声で1 turnの会話を完了する。
+3. 利用者text、応答text、`telop_ch`、非無音の合成音声を確認する。
+4. sessionを終了し、active session、下流接続、goroutineが収束することを確認する。
 
-### 品質
+ICE restartのbrowser試験が既に存在する場合は実行するが、Gate 3判定用に新しい注入機構を追加しない。
 
-- reference audioとdecode後audioのduration差を測定する。
-- clipping、DC offset、channel反転、周期的欠落がないことを確認する。
-- packet loss時のPLC挙動を確認する。
-- jitter発生時にqueueが無制限増加しないことを確認する。
-- audio frameを破棄した場合に対応する古いmora eventだけが後送されないことを確認する。
+### Gate 3判定
 
-### latency
+- repository testとend-to-end smoke testがPASSする。
+- 未観測項目がある場合は、その項目が切替に必要な理由を示せなければGateへ追加しない。
+- production codeまたは既存testの修正が必要ならGateをFAILとし、原因箇所を直してから再実行する。
 
-次の区間を別々に計測する。
+## Phase 4 cutover rehearsal
 
-```mermaid
-flowchart LR
-    A["Browser capture"] -->|"L1"| B["Go decoded PCM"]
-    B -->|"L2"| C["Python service input"]
-    C -->|"L3"| D["Synthesized PCM"]
-    D -->|"L4"| E["Go Opus RTP"]
-    E -->|"L5"| F["Browser playback"]
-```
+production相当環境で、実際に採用する構成だけを検証する。
 
-end-to-end値だけでなく、L1からL5を分けて退行箇所を特定できるようにする。
+- 固定UDP mux port、public IPv4、NAT、firewallを本番と同じ値で構成する。
+- Pion版で対応browserから接続し、1 turnの会話、音声、DataChannelを確認する。
+- session終了後にactive session、goroutine、WebSocket、socketが収束することを確認する。
+- aiortc停止、Pion起動、smoke test、Pion停止、aiortc復旧を一連の手順として実行する。
+- FrontendとPython下流serviceを再buildせずrollbackできることを確認する。
 
-telop同期の判定はserver送信時刻ではなく、browserで観測したDataChannel callback時刻と実再生時刻のskewを使う。初期移行では現行同等の「対応音声より遅れない」を保証対象とし、RTP / playout clockに合わせたfrontend schedulingは対象外とする。
+次は必須Gateに含めない。
 
-## Network test
+- 1%、5%、10%など複数条件のnetwork impairment matrix
+- packet sequence wraparound、連続ICE restart、candidate順序の網羅試験
+- 50回、100回の接続反復や長時間soak
+- aiortcとPionの詳細なCPU、memory、区間別latency比較
+- 全音声形式を使ったend-to-end matrix
 
-Phase 1はlocal host candidateだけを対象とする。以下のproduction network matrixはPhase 4で実行する。
-
-- local host candidateのみ
-- 固定UDP mux portのDocker 1:1 mapping
-- NAT配下のpublic IPv4 advertiseと静的port forward
-- `SetICEAddressRewriteRules` のhost置換とcontainer / private candidate非広告
-- public STUNとの併用
-- UDP4 / interface filter
-- invalid public IP、UDP mux bind失敗、TURN URL、0 / 負の上限とtimeoutのstartup拒否
-- single-port ICE-TCPはPoCで採用候補になった場合だけUDP失敗条件で比較
-- IPv4
-- 1%、5%、10% packet loss
-- latencyとjitter付与
-- 一時的なnetwork断
-- `disconnected` grace中の自然復旧
-- ICE failedから同じsession IDのICE restart
-- candidate順序の入れ替わり
-- 連続ICE restartと旧revision candidateの意図的な遅延
-- 終了済みsessionのcandidate遅延到着と安全な拒否
-- empty candidateとend-of-candidates
-- Answer返却後にbrowserを停止し、pre-connect deadlineでhalf-open sessionが回収されること
-
-network impairmentは再現可能なscriptまたはcontainer設定としてtaskに保存する。
-
-## Resource test
-
-### 観測対象
-
-#### Go RTC server
-
-- process RSS
-- Go heap in-use / allocated
-- goroutine数
-- file descriptor数
-- UDP / TCP socket数
-- active PeerConnection数
-- codec instance数
-- input / output queue depth
-- DataChannel buffered amount
-- GC pause
-
-#### Python下流service
-
-- process RSS
-- Python heap
-- thread数
-- active WebSocket数
-- request / response queue depth
-- disconnect後に残るsession関連state
-
-### Scenario
-
-1. process起動後のidleを測る。
-2. 1 sessionを接続して通話中を測る。
-3. sessionを正常終了して収束を待つ。
-4. 10、50、100回繰り返す。
-5. abnormal closeとICE failedでも繰り返す。
-6. ICE / DTLS、audio track、必須DataChannelをそれぞれ未成立にしてdeadline後の収束を確認する。
-7. 複数同時sessionで同じ観測を行う。
-8. 長時間soak testを行う。
-
-### 判定
-
-RSSはallocatorがOSへ即座に返却しない場合があるため、RSS単独でleak判定しない。active object、heap profile、goroutine、socket、queueがsession終了後に収束することを合わせて確認する。
-
-## Failure injection
-
-- Python下流service process停止
-- 下流4サービスのうち1サービスだけを停止
-- pipeline reset直後に旧generationの認識結果と合成結果を遅延注入
-- codec error
-- malformed MessagePack
-- malformed / oversized HTTP JSON、SDP、candidateとcandidate flood
-- oversized DataChannel payload
-- DataChannel未open
-- signaling response timeout
-- candidate収集timeout、ICE / DTLS timeout、audio track / DataChannel readiness timeout
-- browser abrupt close
-- Go RTC server graceful shutdown中のactive session
-- Go RTC server processの強制終了とsupervisorによる再起動
-- session goroutine外の未回収panicを模擬したprocess crash
-- 管理対象HTTP handler、Pion callback、media / pipeline goroutine内のpanic
-- cgo / native codecを採用する場合のnative crashとsanitizer検査
-
-各failureで、検知、ログ、client結果、resource解放、再接続可否を記録する。
+接続失敗、音声品質問題、resource増加が実運用で観測された場合だけ、該当項目を再現する独立taskを起票する。
 
 ## Observability
 
-最低限、次のmetricを持つ。
+既に実装済みのmetricsから、切替判断に必要な値だけを記録する。
 
-- session created / active / closed / failed
-- signaling request countとlatency
-- ICE state transition
-- candidate gathering / pre-connect / media readiness timeout
-- received / sent audio frames
-- dropped audio frames
-- RTP reorder / duplicate / late drop
-- RTCP Sender / Receiver Report、NACK、loss、RTT
-- outbound pacing lag / generation abort
+- active / closed session
+- signaling error
 - codec error
-- pipeline client reconnect
-- queue depth / overflow
-- DataChannel send error
+- pipeline reconnect
+- queue overflow
 - session close duration
 
-session IDはlog correlationに使用するが、音声内容やchat本文を通常ログへ出さない。
+新しいmetric familyやGate専用collectorは追加しない。session IDはlog correlationに使用できるが、音声内容やchat本文を通常logへ出さない。
 
 ## 検証成果物
 
-各phaseの実測値、環境、コマンド、失敗内容は対応taskの `eval.md` に残す。本書には日付付き測定結果を追記しない。
+実行したcommit、環境、command、smoke test結果、未観測、残リスクを対応taskの`eval.md`または小さな集約artifactへ記録する。
+raw browser trace、音声、本文はGit管理外の`work/private-artifacts/`へ置く。

@@ -167,14 +167,14 @@ PeerConnectionをclose-once guard経由で共通5秒の期限内に並行して�
 ### integration評価
 
 - 同じ環境でaiortcとPionを一方ずつ起動する。
-- automated browser testを両backendへ逐次実行する。
+- 対応browserで1 turnのsmoke testを両backendへ逐次実行する。
 - 同じPython下流serviceへ接続して結果を比較する。
 
 ### production相当リハーサル
 
 - 運用と同じNAT、firewall、public IP設定でPionだけを起動する。
 - stop、Pion起動、smoke test、Pion停止、aiortc復旧を一連の手順として測る。
-- error rate、ICE成功率、latency、pipeline client、resourceを比較する。
+- 接続、会話、音声、DataChannel、session終了後のresource収束を確認する。
 
 ### 運用切り替え
 
@@ -185,7 +185,7 @@ PeerConnectionをclose-once guard経由で共通5秒の期限内に並行して�
 
 ## Rollback条件
 
-具体的な閾値はbaseline後にtaskで確定する。少なくとも次をrollback判定対象とする。
+smoke testまたは運用中に次を観測した場合はrollbackする。
 
 - signalingまたはICE接続成功率の重大な低下
 - 音声欠落、速度異常、無音などのcritical media failure
@@ -193,7 +193,7 @@ PeerConnectionをclose-once guard経由で共通5秒の期限内に並行して�
 - pipeline clientの再接続loop
 - MessagePack互換error
 - queue overflowの継続
-- ChromeまたはFirefoxの一方で会話不能
+- 運用対象browserで会話不能
 
 ## Rollback手順
 

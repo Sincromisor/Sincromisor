@@ -3,7 +3,7 @@
 ## Summary
 
 - aiortcからPionへの移行を、最小codec PoCから旧Python RTC stack削除までの時系列で示す。
-- 詳細なaiortc baselineはPion着手の前提にせず、production候補完成後の比較検証へ移す。
+- 詳細なaiortc baselineは移行の前提にせず、production相当環境でのsmoke testとrollback確認を切替判定に使う。
 - PoCでPion採用可否とcodec方式を判断した後、既存Python下流serviceとの互換を保ったままGo RTC serverへ統合する。
 - 運用切り替えはaiortcとPionを同時稼働させず、メンテナンス時間の停止切替とする。
 - 詳細な作業とgateは[実装フェーズ](implementation-phases.md)、評価項目は[検証計画](validation-plan.md)を正本とする。
@@ -39,7 +39,7 @@ flowchart LR
 | 1      | 1: Pion / codec最小PoC  | Pion採用可否、local media / ICE成立性    | 採用判断とGo統合に使えるcodec方式        |
 | 2      | 2: Go pipeline clients  | 既存MessagePack契約と再接続semantics     | Python下流serviceと互換なGo client群     |
 | 3      | 3: Go RTC統合           | session全体の責務、Frontendとの統合      | 本番候補となるGo RTC server              |
-| 4      | 4: 切替リハーサル       | production相当環境での切替・rollback可否 | baseline比較済みrunbookと切替判断        |
+| 4      | 4: 切替リハーサル       | production相当環境での切替・rollback可否 | smoke test済みrunbookと切替判断          |
 | 5      | 5: メンテナンス切り替え | stable endpointのPion移行と安定性        | Pion運用、またはaiortcへのrollback       |
 | 6      | 6: 旧RTC stack削除      | rollback期間終了と移行完了               | Pionのみの構成、更新済みの現在設計と契約 |
 
@@ -47,14 +47,14 @@ flowchart LR
 
 ### 目的
 
-詳細baseline harnessはPhase 1の前提にしない。先行taskの成果は参考資料として残すが、
-Linux network namespace、Docker、Firefox、network impairment、30分soak、詳細resource / latency計測を
-最小PoCへ戻さない。
+詳細baseline harnessは移行の前提にしない。先行taskの成果は参考資料として残すが、
+Linux network namespace、network impairment、長時間soak、詳細resource / latency比較は、
+実運用で問題が観測された場合だけ独立taskで行う。
 
 ### 主な成果
 
-- Phase 3のproduction候補完成後に、比較対象と観測点を実装へ合わせて確定する。
-- Firefox、NAT、impairment、soak、performance / resource比較はPhase 4の切替判定で実行する。
+- Phase 4では実際のcompose、NAT、firewallで接続とrollbackを確認する。
+- 対応browserは各1回のsmoke testに留め、網羅的な比較harnessを作らない。
 
 ### 次phaseへの条件
 
@@ -79,7 +79,8 @@ Phase 1は本節の測定完了を待たず着手できる。
 
 Gate 1を満たす場合は、Pionと選定したcodec方式をADR化してPhase 2へ進む。
 満たせない場合は失敗したcodec adapterまたはsignaling境界だけを小さな後続taskで再評価する。
-NAT、Firefox、ICE restart、impairment、soak、性能比較はPhase 3 / 4で判定する。
+NATと対応browserはPhase 4で確認する。ICE restartはPhase 3の既存試験を再利用し、
+impairment、soak、性能比較は移行後に実害が確認された場合だけ扱う。
 
 ## Phase 2: Go pipeline clients
 
@@ -126,7 +127,8 @@ Phase 1のRTC / codec経路とPhase 2のpipeline clientを統合し、本番候�
 
 ### 次phaseへの条件
 
-[検証計画](validation-plan.md)の必須functional testとfailure injectionを通過し、異常終了を含めて資源が回収される状態になったらPhase 4へ進む。
+[検証計画](validation-plan.md)の既存repository testと、現行Frontendから会話する1回のend-to-end smoke testを通過し、
+正常終了と代表的な異常終了で資源が回収される状態になったらPhase 4へ進む。
 
 ## Phase 4: 切替リハーサル
 
@@ -138,13 +140,14 @@ production相当環境で、Pion版の品質だけでなく停止切替とaiortc
 
 - aiortc版とPion版を排他的に起動するcompose構成
 - production相当のNAT、firewall、public IPv4、固定UDP mux portの検証結果
-- 両backendへ逐次適用したbrowser / network test matrix
-- soak test、障害注入、接続成功率、latency、音質、resource比較
+- aiortc版とPion版で各1回実行するbrowser smoke test
+- Pion版の接続、会話、音声、DataChannelと、停止後の資源回収結果
 - 切替、smoke test、rollbackの所要時間を含むrunbook
 
 ### 次phaseへの条件
 
-Pion版がbaselineと同等以上の接続成功率を持ち、重大な品質退行がなく、FrontendやPython下流serviceの再deployなしでrollbackできる場合だけPhase 5へ進む。
+production相当環境でPion版の接続と会話が成立し、重大な品質退行がなく、
+FrontendやPython下流serviceの再deployなしでrollbackできる場合だけPhase 5へ進む。
 
 ## Phase 5: メンテナンス切り替え
 
@@ -193,7 +196,7 @@ Pionの安定化を確認した後にrollback期間を終了し、二重保守�
 
 - 各phaseの実測値、コマンド、環境、失敗内容は対応taskの `eval.md` に記録する。
 - gateを満たさない場合は未解決事項を次phaseへ持ち越さず、同じphaseで再評価する。
-- Phase 1は基本経路の成立だけを判定し、production品質の閾値はPhase 3 / 4で確定する。
+- Phase 1は基本経路の成立だけを判定し、Phase 3 / 4は実運用経路のsmoke testで切替可否を判断する。
 
 ### 文書更新
 

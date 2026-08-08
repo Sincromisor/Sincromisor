@@ -1,15 +1,13 @@
 id: task-260802212234-pion-gate3-boundary-lifecycle-harness
 title: Pion Gate 3境界クライアントと終了系ハーネスを実装する
 category: sincro-rtc
-status: open
-depends_on:
-  - task-260802212212-pion-gate3-harness-foundation
-  - task-260802212208-pion-graceful-shutdown-admission-window
+status: cancelled
+depends_on: []
 superseded_by: null
 review: null
 reviewed_sha: null
 verdict: null
 attempts: 0
 created_at: 2026-08-02
-closed_at: null
+closed_at: 2026-08-08
 legacy_ids: []
