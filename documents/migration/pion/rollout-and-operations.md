@@ -61,10 +61,17 @@ Pion PoCのnetwork設定は次の起動引数を正本とする。
 - `--media-udp`: 指定interfaceへ割当済みの非wildcard IPv4による固定 UDP4 mux bind address（port 1〜65535）
 - `--public-ipv4`: SDP host candidateへ広告する非unspecified IPv4
 - `--interface`: UPかつcandidate収集を許可するnetwork interface
+- `--consul-agent-host` / `--consul-agent-port`: pipeline discovery と Pion service registration に使う Consul agent（両方指定または両方未指定）
+- `--service-bind-host`: Consul登録用のcontainer IPv4へ単一解決できる host。Pion の public IPv4とは別に扱う
+- `--fallback-host` / `--fallback-port`: Consul未指定またはlookup失敗時に4下流service共通で使う既存 Caddy endpoint（両方指定または両方未指定）
+
+Pionはlistener bind後、readyを公開する前に `RTCSignalingServer` としてConsulへ登録する。service IDは
+`RTCSignalingServer_<service-bind-host>_<resolved-ip>:<http-port>`、addressは解決済みcontainer IPv4、
+checkは `/health/ready` の10秒間隔・5秒timeout・critical後10分deregisterである。SIGTERMではdraining開始直後に
+2秒上限でderegisterを並行開始する。
 
 次は後続の設定対象である。
 
-- Pion service bind host / port
 - Pion `v4.2.17` のdependency pin
 - STUN URL
 - session上限

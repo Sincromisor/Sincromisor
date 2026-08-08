@@ -40,7 +40,6 @@ const (
 	shutdownHTTPTimeout = 1 * time.Second
 	// discoveryRequestTimeout は local Consul 障害が readiness 後のsession cleanupを長時間妨げない上限である。
 	discoveryRequestTimeout = 2 * time.Second
-	localConsulURL          = "http://127.0.0.1:8500"
 )
 
 func main() {
@@ -106,7 +105,7 @@ func runWithBoundaries(
 	}
 	defer func() { returnErr = errors.Join(returnErr, processNetwork.Close()) }()
 	metrics := observability.NewRegistry()
-	pipelineFactory, err := newPipelineFactory(logger)
+	pipelineFactory, err := newPipelineFactory(cfg, logger)
 	if err != nil {
 		return err
 	}
@@ -157,13 +156,19 @@ func newSynthDecoder(
 	return decoder, nil
 }
 
-// newPipelineFactory はPoC local Consulから4 serviceを遅延解決するfactoryを構築する。
+// newPipelineFactory は設定済み Consul agent から4 serviceを遅延解決するfactoryを構築する。
 //
-// serviceごとにportが異なるため共通fallbackは意図的に未設定とし、Consul障害時に誤ったserviceへ
-// 接続しない。resolver/factory構築はnetwork I/Oを行わず、media readiness後のStartまで接続を遅延する。
-func newPipelineFactory(logger *slog.Logger) (pipeline.ClientSetFactory, error) {
+// Consul未設定時とlookup失敗時は、設定済みの共通 Caddy fallback を使う。resolver/factory構築はnetwork I/Oを
+// 行わず、media readiness後のStartまで接続を遅延する。
+func newPipelineFactory(cfg config.Config, logger *slog.Logger) (pipeline.ClientSetFactory, error) {
+	consulURL := ""
+	if cfg.ConsulAgentHost != "" {
+		consulURL = "http://" + net.JoinHostPort(cfg.ConsulAgentHost, fmt.Sprint(cfg.ConsulAgentPort))
+	}
 	resolver, err := discovery.NewResolver(discovery.ResolverConfig{
-		ConsulBaseURL:  localConsulURL,
+		ConsulBaseURL:  consulURL,
+		FallbackHost:   cfg.FallbackHost,
+		FallbackPort:   uint16(cfg.FallbackPort),
 		RequestTimeout: discoveryRequestTimeout,
 	}, nil, nil)
 	if err != nil {
@@ -182,6 +187,7 @@ func newPipelineFactory(logger *slog.Logger) (pipeline.ClientSetFactory, error) 
 // 各errorを返す操作は失敗しても後続ownerの終了を妨げず、shutdownProcessが全結果を集約する。
 type shutdownOperations struct {
 	BeginDrain          func()
+	Deregister          func(context.Context) error
 	CancelProcess       func()
 	WaitOffers          func(context.Context) error
 	CloseSessions       func(context.Context, string) error
@@ -198,8 +204,21 @@ func shutdownProcess(operations shutdownOperations) error {
 	operations.BeginDrain()
 	cleanupCtx, cancelCleanup := context.WithTimeout(context.Background(), shutdownCleanupTimeout)
 	operations.CancelProcess()
+	deregister := operations.Deregister
+	if deregister == nil {
+		deregister = func(context.Context) error { return nil }
+	}
 
-	cleanupErrors := make(chan error, 2)
+	cleanupErrors := make(chan error, 3)
+	go func() {
+		deregisterCtx, cancelDeregister := context.WithTimeout(context.Background(), 2*time.Second)
+		err := deregister(deregisterCtx)
+		cancelDeregister()
+		if err != nil {
+			err = fmt.Errorf("deregister Consul service: %w", err)
+		}
+		cleanupErrors <- err
+	}()
 	go func() {
 		err := operations.WaitOffers(cleanupCtx)
 		if err != nil {
@@ -221,6 +240,7 @@ func shutdownProcess(operations shutdownOperations) error {
 	}
 	firstCleanupErr := <-cleanupErrors
 	secondCleanupErr := <-cleanupErrors
+	thirdCleanupErr := <-cleanupErrors
 	cancelCleanup()
 
 	httpCtx, cancelHTTP := context.WithTimeout(context.Background(), shutdownHTTPTimeout)
@@ -230,7 +250,7 @@ func shutdownProcess(operations shutdownOperations) error {
 		httpErr = fmt.Errorf("shutdown http: %w", httpErr)
 	}
 
-	return errors.Join(admissionErr, firstCleanupErr, secondCleanupErr, httpErr)
+	return errors.Join(admissionErr, firstCleanupErr, secondCleanupErr, thirdCleanupErr, httpErr)
 }
 
 // waitShutdownAdmissionWindowはdraining responseを外部監督が観測できる1秒をlistener停止前に確保する。
@@ -259,7 +279,6 @@ func serve(
 	logger *slog.Logger,
 ) error {
 	processState := signaling.NewProcessState()
-	processState.MarkReady()
 	recorder := sessions.Recorder()
 	var metricsHandler http.Handler
 	if registry, ok := recorder.(*observability.Registry); ok {
@@ -278,11 +297,36 @@ func serve(
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
+	listener, err := net.Listen("tcp", cfg.HTTPAddress)
+	if err != nil {
+		return fmt.Errorf("bind http listener: %w", err)
+	}
 	serverErrors := make(chan error, 1)
 	go func() {
 		logListenerReady(logger, runtime.NumGoroutine())
-		serverErrors <- server.ListenAndServe()
+		serverErrors <- server.Serve(listener)
 	}()
+	var deregister func(context.Context) error
+	if cfg.ConsulAgentHost != "" {
+		registration, registrationErr := discovery.NewRegistration(discovery.Registration{
+			AgentHost: cfg.ConsulAgentHost,
+			AgentPort: uint16(cfg.ConsulAgentPort),
+			Host:      cfg.ServiceBindHost,
+			Address:   cfg.ServiceBindIPv4,
+			Port:      uint16(listener.Addr().(*net.TCPAddr).Port),
+		})
+		if registrationErr == nil {
+			registrationErr = registration.Register(context.Background())
+		}
+		if registrationErr != nil {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownHTTPTimeout)
+			shutdownErr := server.Shutdown(shutdownCtx)
+			cancel()
+			return errors.Join(fmt.Errorf("register Consul service: %w", registrationErr), shutdownErr)
+		}
+		deregister = registration.Deregister
+	}
+	processState.MarkReady()
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
@@ -300,7 +344,13 @@ func serve(
 	}
 
 	shutdownErr := shutdownProcess(shutdownOperations{
-		BeginDrain:    processState.BeginDrain,
+		BeginDrain: processState.BeginDrain,
+		Deregister: func(ctx context.Context) error {
+			if deregister == nil {
+				return nil
+			}
+			return deregister(ctx)
+		},
 		CancelProcess: cancelProcess,
 		WaitOffers:    offers.Wait,
 		CloseSessions: func(ctx context.Context, reason string) error {

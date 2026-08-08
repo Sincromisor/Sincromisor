@@ -14,6 +14,7 @@ func TestShutdownProcessKeepsHTTPUntilAdmissionWindowAndCleanupComplete(t *testi
 	var processCancelled atomic.Bool
 	admissionStarted := make(chan struct{})
 	releaseAdmission := make(chan struct{})
+	deregisterStarted := make(chan struct{})
 	offerContext := make(chan context.Context, 1)
 	sessionContext := make(chan context.Context, 1)
 	httpContext := make(chan context.Context, 1)
@@ -29,6 +30,14 @@ func TestShutdownProcessKeepsHTTPUntilAdmissionWindowAndCleanupComplete(t *testi
 					t.Error("CancelProcess ran before BeginDrain")
 				}
 				processCancelled.Store(true)
+			},
+			Deregister: func(ctx context.Context) error {
+				if !drainStarted.Load() || !processCancelled.Load() {
+					t.Error("Deregister ran before draining and process cancellation")
+				}
+				close(deregisterStarted)
+				<-ctx.Done()
+				return ctx.Err()
 			},
 			WaitOffers: func(ctx context.Context) error {
 				if !drainStarted.Load() || !processCancelled.Load() {
@@ -64,6 +73,7 @@ func TestShutdownProcessKeepsHTTPUntilAdmissionWindowAndCleanupComplete(t *testi
 	}()
 
 	<-admissionStarted
+	<-deregisterStarted
 	offerCtx := <-offerContext
 	sessionCtx := <-sessionContext
 	if offerCtx != sessionCtx {
@@ -79,8 +89,8 @@ func TestShutdownProcessKeepsHTTPUntilAdmissionWindowAndCleanupComplete(t *testi
 	close(releaseAdmission)
 	httpCtx := <-httpContext
 	assertContextTimeout(t, httpCtx, time.Now(), shutdownHTTPTimeout)
-	if err := <-result; err != nil {
-		t.Fatalf("shutdownProcess() error = %v", err)
+	if err := <-result; !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("shutdownProcess() error = %v, want deregistration timeout while cleanup continues", err)
 	}
 }
 

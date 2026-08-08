@@ -8,10 +8,13 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -139,6 +142,149 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 			t.Fatalf("process output contains forbidden lifecycle field %q:\n%s", forbidden, output)
 		}
 	}
+}
+
+func TestProcessRegistersReadyServiceAndDeregistersOnSIGTERM(t *testing.T) {
+	consul := newFakeConsul(t)
+	moduleRoot, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatalf("resolve module root: %v", err)
+	}
+	binaryPath := filepath.Join(t.TempDir(), "pion-poc")
+	build := exec.Command("go", "build", "-buildvcs=false", "-o", binaryPath, "./cmd/pion-poc")
+	build.Dir = moduleRoot
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build pion-poc: %v\n%s", err, output)
+	}
+	frontendDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(frontendDir, "index.html"), []byte("pion poc"), 0o600); err != nil {
+		t.Fatalf("write frontend fixture: %v", err)
+	}
+	address := reserveTCPAddress(t)
+	mediaAddress := reserveUDPAddress(t)
+	command := exec.Command(binaryPath,
+		"--http", address, "--frontend-dir", frontendDir, "--media-udp", mediaAddress,
+		"--public-ipv4", "127.0.0.1", "--interface", "lo", "--consul-agent-host", consul.host,
+		"--consul-agent-port", strconv.Itoa(consul.port), "--service-bind-host", "127.0.0.1",
+		"--fallback-host", "caddy.local", "--fallback-port", "8000",
+	)
+	if err := command.Start(); err != nil {
+		t.Fatalf("start pion-poc: %v", err)
+	}
+	processExited := false
+	t.Cleanup(func() {
+		if !processExited && command.Process != nil {
+			_ = command.Process.Kill()
+			_ = command.Wait()
+		}
+	})
+	registration := <-consul.registered
+	port, err := strconv.Atoi(strings.Split(address, ":")[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantID := "RTCSignalingServer_127.0.0.1_127.0.0.1:" + strconv.Itoa(port)
+	if registration.ID != wantID || registration.Name != "RTCSignalingServer" || registration.Address != "127.0.0.1" ||
+		registration.Port != port || registration.Check.HTTP != "http://"+address+"/health/ready" ||
+		registration.Check.Interval != "10s" || registration.Check.Timeout != "5s" || registration.Check.DeregisterCriticalServiceAfter != "10m" {
+		t.Fatalf("registration = %+v", registration)
+	}
+	waitForHTTPReady(t, "http://"+address+"/health/ready")
+	response, err := http.Get(consul.server.URL + "/v1/health/service/RTCSignalingServer?passing=true")
+	if err != nil {
+		t.Fatalf("query passing service: %v", err)
+	}
+	var passing []fakeConsulRegistration
+	if err := json.NewDecoder(response.Body).Decode(&passing); err != nil {
+		t.Fatal(err)
+	}
+	_ = response.Body.Close()
+	if len(passing) != 1 || passing[0].ID != wantID {
+		t.Fatalf("passing services = %+v", passing)
+	}
+	if err := command.Process.Signal(syscall.SIGTERM); err != nil {
+		t.Fatalf("send SIGTERM: %v", err)
+	}
+	if got := <-consul.deregistered; got != wantID {
+		t.Fatalf("deregistered = %q, want %q", got, wantID)
+	}
+	if err := command.Wait(); err != nil {
+		t.Fatalf("pion-poc exit after SIGTERM = %v", err)
+	}
+	processExited = true
+}
+
+type fakeConsulRegistration struct {
+	ID      string
+	Name    string
+	Address string
+	Port    int
+	Check   struct {
+		HTTP                           string
+		Interval                       string
+		Timeout                        string
+		DeregisterCriticalServiceAfter string
+	}
+}
+
+type fakeConsul struct {
+	server       *httptest.Server
+	host         string
+	port         int
+	registered   chan fakeConsulRegistration
+	deregistered chan string
+	mu           sync.Mutex
+	service      fakeConsulRegistration
+}
+
+func newFakeConsul(t *testing.T) *fakeConsul {
+	t.Helper()
+	consul := &fakeConsul{registered: make(chan fakeConsulRegistration, 1), deregistered: make(chan string, 1)}
+	consul.server = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch {
+		case request.Method == http.MethodPut && request.URL.Path == "/v1/agent/service/register":
+			var service fakeConsulRegistration
+			if err := json.NewDecoder(request.Body).Decode(&service); err != nil {
+				http.Error(writer, err.Error(), http.StatusBadRequest)
+				return
+			}
+			consul.mu.Lock()
+			consul.service = service
+			consul.mu.Unlock()
+			consul.registered <- service
+		case request.Method == http.MethodPut && strings.HasPrefix(request.URL.Path, "/v1/agent/service/deregister/"):
+			consul.deregistered <- strings.TrimPrefix(request.URL.Path, "/v1/agent/service/deregister/")
+		case request.Method == http.MethodGet && strings.HasPrefix(request.URL.Path, "/v1/health/service/"):
+			consul.mu.Lock()
+			service := consul.service
+			consul.mu.Unlock()
+			if service.ID != "" {
+				response, err := http.Get(service.Check.HTTP)
+				if err == nil && response.StatusCode == http.StatusOK {
+					_ = json.NewEncoder(writer).Encode([]fakeConsulRegistration{service})
+					_ = response.Body.Close()
+					return
+				}
+				if response != nil {
+					_ = response.Body.Close()
+				}
+			}
+			_ = json.NewEncoder(writer).Encode([]fakeConsulRegistration{})
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	host, rawPort, err := net.SplitHostPort(strings.TrimPrefix(consul.server.URL, "http://"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consul.host = host
+	consul.port, err = strconv.Atoi(rawPort)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(consul.server.Close)
+	return consul
 }
 
 type processStatus struct {

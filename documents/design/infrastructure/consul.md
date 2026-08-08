@@ -3,7 +3,7 @@
 ## Summary
 
 - Consul は backend microservices の service discovery に使う。
-- AudioBroker は worker service を Consul から解決し、未解決時は fallback 設定を使う。
+- AudioBroker と Pion RTC は worker service を Consul から解決し、未解決時は fallback 設定を使う。
 - service 名や public bind を変える場合は compose と設定クラスを同時確認する。
 
 ## Scope
@@ -20,6 +20,7 @@
 ## Responsibilities
 
 - 各 service は起動時に Consul へ登録する。
+- Pion RTC は `RTCSignalingServer` として、container内 address と `/health/ready` check（10秒間隔、5秒timeout、critical後10分deregister）を登録する。draining開始直後に解除する。
 - AudioBroker は SpeechExtractor / SpeechRecognizer / TextProcessor / VoiceSynthesizer の到達先を解決する。
 - Consul が使えない場合でも fallback host / port で開発継続できるようにする。
 
