@@ -140,6 +140,21 @@ Phase 4へ進める。
 
 production相当環境で、Pion版の品質だけでなく停止切替とaiortc復旧を一連の運用として検証する。
 
+ここで判定するのは移行可能性であり、Pionの網羅的な品質評価ではない。既存のrepository testを前提に、
+実際のimage、compose、network、runbookを使った1回のリハーサルだけをGate 4の追加評価とする。
+
+### 次のタスク群
+
+| 順序 | タスク                                                                                                    | 責務                                             |
+| ---- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| 1a   | [production network](../../../tasks/sincro-rtc/task-260809020144-pion-phase-4-production-network/task.md) | 固定UDP mux、public IPv4、UDP4のprocess境界      |
+| 1b   | [container image](../../../tasks/sincro-rtc/task-260809020144-pion-phase-4-container-image/task.md)       | Go binary、Frontend、Opus、FFmpegを含む実行image |
+| 2    | [排他的compose](../../../tasks/sincro-rtc/task-260809020144-pion-phase-4-exclusive-compose/task.md)       | aiortc / Pionの明示選択とproduction設定の配線    |
+| 3    | [cutover runbook](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-runbook/task.md)       | 停止切替、再起動、rollbackの実行手順             |
+| 4    | [cutover rehearsal](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-rehearsal/task.md)   | production相当環境での1回の実行とGate 4判定      |
+
+`1a`と`1b`は並行可能である。Phase 5以降のtaskはGate 4の実測結果で内容が変わるため、現時点では起票しない。
+
 ### 主な成果
 
 - aiortc版とPion版を排他的に起動するcompose構成
@@ -153,6 +168,9 @@ production相当環境で、Pion版の品質だけでなく停止切替とaiortc
 
 production相当環境でPion版の接続と会話が成立し、重大な品質退行がなく、
 FrontendやPython下流serviceの再deployなしでrollbackできる場合だけPhase 5へ進む。
+
+詳細な性能比較、反復接続、長時間soak、network impairment、Gate専用harnessは行わない。
+接続不能、明確な音声異常、resource増加が観測された場合だけ、原因を再現する小さな是正taskを追加する。
 
 ## Phase 5: メンテナンス切り替え
 
