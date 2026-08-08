@@ -30,8 +30,9 @@ func TestInitialOfferContractFixtures(t *testing.T) {
 	if err := json.Unmarshal(requestBytes, &request); err != nil {
 		t.Fatalf("decode request fixture: %v", err)
 	}
-	if !validUUID(request.OfferRequestID) || request.OfferRevision != 1 {
-		t.Fatalf("request fixture identity = %q/%d", request.OfferRequestID, request.OfferRevision)
+	if request.OfferRequestID == nil || request.OfferRevision == nil ||
+		!validUUID(*request.OfferRequestID) || *request.OfferRevision != 1 {
+		t.Fatalf("request fixture identity = %v/%v", request.OfferRequestID, request.OfferRevision)
 	}
 	var previousSessionID string
 	if err := json.Unmarshal(request.PreviousSessionID, &previousSessionID); err != nil {
@@ -70,9 +71,12 @@ func TestRevisionContractFixtures(t *testing.T) {
 	if err := json.Unmarshal(request.SessionID, &sessionID); err != nil {
 		t.Fatalf("decode update session fixture: %v", err)
 	}
-	if _, err := ulid.ParseStrict(sessionID); err != nil || request.OfferRevision != 2 ||
-		!validUUID(request.OfferRequestID) {
-		t.Fatalf("update request identity = %q/%d/%q", sessionID, request.OfferRevision, request.OfferRequestID)
+	if request.OfferRequestID == nil || request.OfferRevision == nil {
+		t.Fatalf("update request identity is missing")
+	}
+	if _, err := ulid.ParseStrict(sessionID); err != nil ||
+		*request.OfferRevision != 2 || !validUUID(*request.OfferRequestID) {
+		t.Fatalf("update request identity = %q/%v/%v", sessionID, request.OfferRevision, request.OfferRequestID)
 	}
 
 	answerBytes, err := os.ReadFile("testdata/update_offer_answer.json")
@@ -83,9 +87,9 @@ func TestRevisionContractFixtures(t *testing.T) {
 	if err := json.Unmarshal(answerBytes, &answer); err != nil {
 		t.Fatalf("decode update answer fixture: %v", err)
 	}
-	if answer.SessionID != sessionID || answer.Revision != request.OfferRevision {
+	if answer.SessionID != sessionID || answer.Revision != *request.OfferRevision {
 		t.Fatalf("answer identity = %s/%d, want %s/%d",
-			answer.SessionID, answer.Revision, sessionID, request.OfferRevision)
+			answer.SessionID, answer.Revision, sessionID, *request.OfferRevision)
 	}
 }
 
@@ -172,6 +176,14 @@ func TestOfferBoundary(t *testing.T) {
 			wantStatus: http.StatusOK,
 		},
 		{
+			name: "legacy initial offer generates identity",
+			body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat"}`,
+			fake: &fakeSessions{answer: rtc.Answer{
+				SDP: "v=0\r\n", Type: "answer", SessionID: "01TEST", Revision: 1,
+			}},
+			wantStatus: http.StatusOK,
+		},
+		{
 			name:       "malformed json",
 			body:       `{"sdp":`,
 			fake:       &fakeSessions{},
@@ -196,6 +208,16 @@ func TestOfferBoundary(t *testing.T) {
 			response := performRequest(server.Handler(), http.MethodPost, offerPath, test.body)
 			if response.Code != test.wantStatus {
 				t.Fatalf("status = %d, want %d; body=%s", response.Code, test.wantStatus, response.Body.String())
+			}
+			if test.name == "legacy initial offer generates identity" && !validUUID(test.fake.lastOffer.OfferRequestID) {
+				t.Fatalf("legacy offer request ID = %q, want UUID", test.fake.lastOffer.OfferRequestID)
+			}
+			if test.name == "legacy initial offer generates identity" {
+				var answer rtc.Answer
+				decodeResponse(t, response, &answer)
+				if answer.SessionID != "01TEST" || answer.Revision != 1 {
+					t.Fatalf("legacy answer identity = %q/%d, want 01TEST/1", answer.SessionID, answer.Revision)
+				}
 			}
 		})
 	}
@@ -263,6 +285,9 @@ func TestInitialOfferSchemaAndByteBoundaries(t *testing.T) {
 		wantStatus int
 	}{
 		{name: "missing request id", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_revision":1}`, wantStatus: http.StatusBadRequest},
+		{name: "missing revision", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42"}`, wantStatus: http.StatusBadRequest},
+		{name: "empty request id", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"","offer_revision":1}`, wantStatus: http.StatusBadRequest},
+		{name: "zero revision", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":0}`, wantStatus: http.StatusBadRequest},
 		{name: "malformed uuid", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"not-uuid","offer_revision":1}`, wantStatus: http.StatusBadRequest},
 		{name: "wrong revision", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":2}`, wantStatus: http.StatusBadRequest},
 		{name: "revision type", body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":"1"}`, wantStatus: http.StatusBadRequest},
@@ -551,6 +576,7 @@ type fakeSessions struct {
 	activeSessions     atomic.Int32
 	reservations       atomic.Int32
 	resourceBuildCalls atomic.Int32
+	lastOffer          rtc.Offer
 }
 
 func (f *fakeSessions) Update(_ context.Context, _ rtc.UpdateOffer) (rtc.Answer, error) {
@@ -558,6 +584,7 @@ func (f *fakeSessions) Update(_ context.Context, _ rtc.UpdateOffer) (rtc.Answer,
 }
 
 func (f *fakeSessions) Create(ctx context.Context, offer rtc.Offer) (rtc.Answer, error) {
+	f.lastOffer = offer
 	f.onClosed = offer.OnClosed
 	if errors.Is(f.createErr, rtc.ErrSessionCapacity) {
 		return rtc.Answer{}, f.createErr
