@@ -1,12 +1,11 @@
 id: task-260712044933-remove-semantic-finger-rollback-hook
-title: Decide and remove semantic finger rollback hook
+title: Remove semantic finger rollback hook
 category: character-sincro-motion
 status: open
-depends_on:
-  - task-260712171317-capture-m1-macbook-air-motion-validation-suite
+depends_on: []
 superseded_by: null
-review: APPROVED
-reviewed_sha: 87567c417c11e5dd896cddfb90297b656a95f429
+review: null
+reviewed_sha: null
 verdict: null
 attempts: 0
 created_at: 2026-07-12

@@ -1,12 +1,12 @@
 id: task-260712171317-capture-m1-macbook-air-motion-validation-suite
-title: Capture M1 MacBook Air motion validation suite
+title: Capture M1 MacBook Air gesture baseline
 category: character-sincro-motion
 status: open
 depends_on:
   - task-260712074348-record-per-frame-gesture-and-total-tracker-durations
 superseded_by: null
-review: APPROVED
-reviewed_sha: 866120df9afb287ccd2d1bd379a9cf1accff2135
+review: null
+reviewed_sha: null
 verdict: null
 attempts: 0
 created_at: 2026-07-12

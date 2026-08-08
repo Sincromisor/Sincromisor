@@ -6,7 +6,7 @@
 
 短期的な既存実装の延長ではなく、単眼 Web カメラ、MediaPipe、VRM 1.0、Three.js、three-vrm という前提で、キャラクターとして自然で破綻しにくい上半身モーションを目指すための方針とロードマップを定める。
 
-この版では、初期調査レポートに加えて `requests/` で依頼した分野別調査と `answers/` の回答、ならびに 2026-07-06 時点のソースコード調査を反映し、実装順序、層間 contract、debug / replay / metrics の扱いと現在の残差を具体化する。
+この版では、初期調査レポートに加えて `requests/` で依頼した分野別調査と `answers/` の回答、ならびに 2026-07-06 時点のソースコード調査を反映し、層間 contract と現在の残差を整理する。詳細フェーズは設計判断の背景であり、達成済み項目を再検証するための実行チェックリストではない。
 
 ## 調査資料
 
@@ -57,7 +57,7 @@ MediaPipe の landmark は骨格姿勢の正解値ではなく、不確実な観
 
 2026-07-06 時点のソースコード調査では、本 roadmap の Phase 1 から Phase 10 の多くは、`motion-debug` と production runtime の observe-only / production application として実装済みまたは部分実装済みである。
 
-ただし、本書の目標アーキテクチャは「最終的にそうあるべき主経路」を示す。現行 production runtime は、低次元 motion pipeline を本番 callback で更新し、`VrmPoseComposer` の full normalized pose application まで実装済みである。full application unavailable は Debug Console / metrics の observation reason として残すだけで、旧 arm / torso / full staged writer は起動しない。残る Debug Console rollback hook は semantic / finger suppression のみであり、実カメラ / captured replay による継続確認は別の運用残差である。一方、腕の本番 tracking layer はまだ `SincroPoseRetargetFrame` 起点であり、canonical / temporal から生成した IK target を production 表示の主入力へ置き換える作業は未完了である。
+ただし、本書の目標アーキテクチャは「最終的にそうあるべき主経路」を示す。現行 production runtime は、低次元 motion pipeline を本番 callback で更新し、`VrmPoseComposer` の full normalized pose application まで実装済みである。full application unavailable は Debug Console / metrics の observation reason として残すだけで、旧 arm / torso / full staged writer は起動しない。残る Debug Console rollback hook は semantic / finger suppression のみであり、既定の `"composer"` 経路から developer control を削除するタスクは実機 baseline と切り離して進める。一方、腕の本番 tracking layer はまだ `SincroPoseRetargetFrame` 起点であり、canonical / temporal から生成した IK target を production 表示の主入力へ置き換える作業は未完了である。
 
 ### 実装済みまたは実装済みに近いもの
 
@@ -86,19 +86,28 @@ MediaPipe の landmark は骨格姿勢の正解値ではなく、不確実な観
 
 ### 現在のフェーズ判定
 
-| フェーズ | 現在地                           | 残る主な差分                                                                        |
-| -------- | -------------------------------- | ----------------------------------------------------------------------------------- |
-| Phase 1  | 概ね達成                         | raw slot 欠損 / ROI context 制限の運用確認、実 build gitCommit 保存                 |
-| Phase 2  | 腕・体幹・頭部は達成             | production IK 主経路の canonical / temporal 入力化                                  |
-| Phase 3  | 概ね達成                         | camera guide UI と実機 profile 確認                                                 |
-| Phase 4  | 概ね達成                         | Gesture reliability の実機 flicker / false-positive 確認                            |
-| Phase 5  | 概ね達成                         | head temporal の実機 jitter / recovery 確認                                         |
-| Phase 6  | composer / full 適用は達成       | `TemporalArmSolverBridge` の production 統合、semantic / finger rollback 不要化判断 |
-| Phase 7  | profile / calibration は部分達成 | 実機 UX と複数 VRM replay 比較の継続確認                                            |
-| Phase 8  | 概ね達成                         | Gesture optional pass の実機負荷確認                                                |
-| Phase 9  | 概ね達成                         | Gesture reliability 実機確認、semantic / finger suppression rollback の不要化       |
-| Phase 10 | 概ね達成                         | profile 別の実機確認と regression 運用の継続                                        |
-| Phase 11 | 候補抽出のみ達成                 | 実 post-processing / learned correction は metrics 確認後に着手                     |
+| フェーズ | 現在地                           | 残る主な差分                                                                  |
+| -------- | -------------------------------- | ----------------------------------------------------------------------------- |
+| Phase 1  | 概ね達成                         | raw slot 欠損 / ROI context 制限の運用確認、実 build gitCommit 保存           |
+| Phase 2  | 腕・体幹・頭部は達成             | production IK 主経路の canonical / temporal 入力化                            |
+| Phase 3  | 概ね達成                         | camera guide UI と実機 profile 確認                                           |
+| Phase 4  | 概ね達成                         | Gesture reliability の短時間実機 baseline                                     |
+| Phase 5  | 概ね達成                         | head temporal の実機 jitter / recovery 確認                                   |
+| Phase 6  | composer / full 適用は達成       | `TemporalArmSolverBridge` の production 統合、semantic / finger rollback 削除 |
+| Phase 7  | profile / calibration は部分達成 | 実機 UX と複数 VRM replay 比較の継続確認                                      |
+| Phase 8  | 概ね達成                         | Gesture optional pass の短時間実機 baseline                                   |
+| Phase 9  | 概ね達成                         | Gesture reliability baseline、semantic / finger suppression rollback の削除   |
+| Phase 10 | 概ね達成                         | profile 別の実機確認と regression 運用の継続                                  |
+| Phase 11 | 候補抽出のみ達成                 | 実 post-processing / learned correction は metrics 確認後に着手               |
+
+### 現行タスクと検証方針
+
+- [task-260712044933-remove-semantic-finger-rollback-hook](../../../tasks/character-sincro-motion/task-260712044933-remove-semantic-finger-rollback-hook/task.md)
+  は既定の production 挙動を変えない cleanup として、focused test、frontend check、参照 0 件の確認で進める。実機 baseline は blocker にしない。
+- [task-260712171317-capture-m1-macbook-air-motion-validation-suite](../../../tasks/character-sincro-motion/task-260712171317-capture-m1-macbook-air-motion-validation-suite/task.md)
+  は Gesture optional pass の独立した運用 baseline とし、on / off 合計120秒だけを収録する。将来用途の映像や IK / ROI / calibration 素材は先取りしない。
+- solver、時系列推定、座標変換、保存 schema を変える場合は focused test と replay を使う。developer control の削除や文書同期では、影響箇所の test と静的確認を使う。
+- 複数端末、複数 VRM、長時間収録は、具体的な regression または tuning の再現条件になった時点で個別タスク化する。
 
 ## 基本方針
 
@@ -325,7 +334,7 @@ head / wrist / hand の入力優先順位:
 | Phase E: 意図表現・性能劣化・QA           | `Phase 9`、`Phase 10`                 | 完全追従ではなく意図が伝わる motion として磨き、端末負荷が上がっても段階的に品質を落とす。                        | `MotionIntent`、gesture hysteresis、finger 低次元制御、degradation profile、固定テストモーション、metrics regression が `motion-debug` と接続される。 |
 | Phase F: 任意最適化                       | `Phase 11`                            | rule-based pipeline の限界が replay / metrics で見えた後にだけ、軽量最適化や learned post-processing を検討する。 | 学習・最適化の入力と出力が canonical control に閉じ、VRM bone rotation や avatar profile の責務を ML に背負わせない判断ができている。                 |
 
-タスクへ落とすときは、まず大フェーズを親タスクとして作り、詳細 `Phase 1` から `Phase 11` の実装項目を子タスク候補に分ける。各大フェーズは「実装」「debug / replay / metrics」「設計文書同期」「確認結果の記録」を同じ完了条件に含める。
+新規タスクは大フェーズを再分解せず、現在残っている1つの変更または1つの検証目的だけを扱う。検証は変更リスクに合わせ、debug / replay / metrics / 手動確認を一律の完了条件にしない。
 
 順序を入れ替える場合でも、次の依存は守る。
 
@@ -643,26 +652,9 @@ Pose を全体検出、Hand / Face を ROI 検出として扱う。
 
 ### Phase 11: Optional optimization / learned post-processing
 
-ログと metrics が揃った後にだけ検討する。
+active roadmap には含めない。既存の rule-based pipeline で同じ regression が継続して再現され、focused tuning では解消できない場合だけ、失敗 metric と replay log を入力に個別タスクを起票する。
 
-現状:
-
-- `NoopMotionPostProcessor` と post-processing snapshot slot はある。
-- QA regression の warn / fail metrics から `constrained_ik_refinement`、`temporal_correction`、`gesture_sequence_classifier`、`anomaly_detector`、`performance_policy`、`do_not_optimize` へ候補分類する optimization candidate report はある。
-- 実際に姿勢を補正する constrained optimization、learned temporal correction、gesture sequence classifier、anomaly detector はまだ導入していない。rule-based pipeline の限界を replay / metrics で確認した後に、ここで初めて最適化や learned post-processing を検討する。
-
-候補:
-
-- IK 初期解に対する数回の軽量 constrained optimization
-- canonical state を補正する temporal MLP / TCN
-- gesture sequence classifier
-- anomaly detector
-
-方針:
-
-- 学習モデルの出力は VRM bone rotation ではなく canonical control にする。
-- モデル差分や avatar profile を ML に背負わせない。
-- まず rule-based pipeline の限界を replay log で確認する。
+採用する場合も、出力は canonical control に閉じ、VRM bone rotation や avatar profile の責務を learned model に移さない。
 
 ## 破綻回避の優先順位
 
@@ -720,7 +712,7 @@ metrics は debug 画面に表示するだけでなく、replay 実行時の比�
 
 - 生 landmark を controller / VRM 適用層へ漏らさない。
 - debug で観測値、信頼度、canonical state、temporal state、retarget / solver、applied pose を分けて見えるようにする。
-- replay できない改善は、品質改善として採用しない。
+- solver、時系列推定、座標変換の品質改善は replay で比較する。配線整理、developer control の削除、文書同期は focused test と静的確認で検証する。
 - 信頼度が低いときは突然止めず、振幅と blend weight を落とす。
 - 大きい部位ほど安定、小さい部位ほど表現を許す。
 - 手先の似ている感を優先し、奥行き、手首 roll、肘 pole は丸めてよい。
