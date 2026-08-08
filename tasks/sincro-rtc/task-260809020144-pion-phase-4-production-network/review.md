@@ -4,6 +4,9 @@
 
 NEEDS_REVISION
 
+この判定後、task.mdでgather timeout、UDP mux/socketの所有権と終了順序、bind/interface検証、失敗時の
+再検証手順を明文化した。改訂後の実装着手前に、必要なら改訂内容を再レビューする。
+
 ## 理由・申し送り
 
 - process共有 `webrtc.API` は、現行 `internal/rtc/session.go` の `newPeerConnection` が Offer ごとの gather deadline を `SettingEngine.SetSTUNGatherTimeout` へ渡す契約と両立しない。`--gather-timeout` を process 固定値として共有APIへ移すのか、HTTP owner deadline をどこまで Pion gather に反映するのか、timeout時の session/mux の状態を受け入れ条件とテストで一意に定める必要がある。

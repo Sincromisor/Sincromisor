@@ -5,7 +5,7 @@ status: open
 depends_on:
   - task-260802033044-pion-phase-3-production-candidate-gate-3
 superseded_by: null
-review: NEEDS_REVISION
+review: null
 reviewed_sha: null
 verdict: null
 attempts: 0

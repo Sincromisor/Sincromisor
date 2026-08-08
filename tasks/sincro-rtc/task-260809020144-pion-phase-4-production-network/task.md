@@ -8,18 +8,28 @@ advertised public IPv4を設定できない。Phase 4の実地確認へ進める
 
 ## 完了条件（受け入れ条件）
 
-- [ ] media UDP bind address、advertised public IPv4、利用interfaceを起動引数で受け取り、不正なIP、port、
-      存在しないinterface、`turn:` / `turns:` URLはHTTP listenerを開く前に拒否する。
+- [ ] media UDP bind address、advertised public IPv4、利用interfaceを起動引数で受け取る。bind addressは
+      指定interfaceに割り当て済みかつwildcardでないIPv4、portは1〜65535、interfaceはUPでなければならない。
+      advertised IPはunspecifiedでないIPv4とし、実際のpublic到達性は検査しない（local結合試験ではloopbackを許可する）。
+      これらの不正値、存在しないinterface、`turn:` / `turns:` URLはHTTP listenerを開く前に拒否する。
 - [ ] process起動時にUDP4 socketを1つだけ開き、Pionの全PeerConnectionが同じICE UDP muxを共有する。
       SDPのhost candidateには指定したpublic IPv4と固定portが載り、container/private addressは載らない。
 - [ ] network typeをUDP4に限定し、指定interface以外をcandidate収集対象にしない。IPv6、TURN、ICE-TCPは
       暗黙に有効化しない。
-- [ ] UDP socketはprocess所有とし、startup失敗と通常終了のどちらでも一度だけcloseされる。
+- [ ] `--gather-timeout`はprocess共有APIの固定ICE gather timeoutとする。HTTP requestのdeadlineはOffer処理だけを
+      中断し、共有APIやUDP muxをcloseしない。
+- [ ] UDP muxは起動成功後のUDP socket唯一のclose ownerとする。起動途中でmuxへ渡す前の失敗だけは
+      `cmd/pion-poc`がsocketをcloseし、通常終了では全sessionとOffer ownerの収束後にmuxを一度だけcloseする。
+      session close timeoutでもmuxはprocess shutdownまで開いたままとする。
 - [ ] local UDPで2 sessionを作る結合テストにより、同じportのcandidate、接続成立、終了後のsocket closeを確認する。
 
 ## 設計判断
 
 - process単位の`webrtc.API`とICE UDP muxを既存Managerへ注入し、sessionごとにlistenerを作らない。
+- bind addressとinterfaceの組合せは曖昧にしない。wildcard bindは許可せず、指定interface自身がbind IPv4を
+  保有する場合だけ起動する。advertised IPはNAT外側の到達性をローカルで判定できないため、IPv4構文だけを検証する。
+- UDP socketの所有権はmuxへ移し、socketとmuxを別経路でcloseしない。起動中の所有権移転前だけmainがcloseし、
+  実行中はshutdown処理がmuxをcloseする。
 - 設定可能にするのは実機差があるbind address、public IPv4、port、interfaceだけとする。
   TURN、IPv6、複数instance、ICE-TCPは追加しない。
 
@@ -30,8 +40,9 @@ advertised public IPv4を設定できない。Phase 4の実地確認へ進める
 
 ## 実装方針
 
-`internal/config`で設定を検証し、`cmd/pion-poc`でUDP socketとPion APIを所有する。現在
-`internal/rtc/session.go`でsessionごとに生成している`SettingEngine`はprocess共有設定を再利用する。
+`internal/config`で設定を検証し、`cmd/pion-poc`でUDP socket、mux、Pion APIを所有する。現在
+`internal/rtc/session.go`でsessionごとに生成している`SettingEngine`は、`--gather-timeout`を固定値として持つ
+process共有設定へ置き換える。HTTPのOffer deadlineと共有ICE gather timeoutは独立させる。
 
 ## テスト
 
@@ -40,6 +51,9 @@ advertised public IPv4を設定できない。Phase 4の実地確認へ進める
 - rootの`npm run gate`
 
 実NAT、Chrome / Firefox、firewallはPhase 4リハーサルtaskだけで確認し、このタスク用のnetwork harnessは作らない。
+必須確認が失敗した場合は、失われうるlog・socket状態・対象commitを先に採取し、直接原因を特定して最小再現、
+修正、失敗した確認、全体gateの順で再検証する。原因を別taskへ移す場合は、原因・証拠・移管理由・後続task IDを
+記録し、ユーザーの了承を得るまで本タスクを完了にしない。
 
 ## ドキュメント同期の要否
 
