@@ -4,7 +4,8 @@
 
 既存repository testと現行Frontendのbrowser smoke testを対象commitで実行し、Gate 3を判定する。
 新しいharness、test client、report schema、production codeは追加しない。
-既存harnessには、子process起動前にPlaywright CLIの欠落を検出する最小の事前検査だけを追加する。
+既存harnessには、子process起動前のPlaywright CLI検査と、実装済み`resources.Sampler`による
+session終了後の数値的なresource収束確認だけを追加する。
 
 ## 完了条件（受け入れ条件）
 
@@ -22,6 +23,8 @@
       Gate判定へ数えない。固定commandと同じnetwork namespaceで事前条件を確認し、条件を直した後の
       1回を有効な測定とする。条件を解消できない場合だけ`gate_3_result: NOT_MEASURED`として停止する。
 - [ ] Playwright CLI欠落が外部process起動前の入力検査で失敗することを、既存`harnessenv`のunit testで固定する。
+- [ ] browser終了後かつPion停止前に、既存`resources.Sampler`でactive sessionと4 queueが0、
+      FDとsocketが開始前baselineの許容範囲へ3回連続で戻ることを確認する。
 - [ ] 判定とPhase 4へ進めるかを`documents/migration/pion/roadmap.md`へ反映する。
 
 ## 設計判断
@@ -38,7 +41,8 @@
 
 ## スコープ境界
 
-- 本タスク: 既存commandの実行、Playwright CLIの事前検査、証拠保存、Gate 3判定、migration roadmap更新。
+- 本タスク: 既存commandの実行、Playwright CLIの事前検査、既存resource samplerのbrowser ownerへの接続、
+  証拠保存、Gate 3判定、migration roadmap更新。
 - スコープ外: 上記以外のharnessやproduction codeの変更、詳細baseline、network impairment、長時間soak、
   compose切替、運用切替。
 
@@ -54,8 +58,8 @@
 
 ## ソースコードコメント受け入れ条件
 
-production codeは変更しない。既存harnessの事前検査変更には、入力境界と失敗条件を説明する
-Go doc commentを現行規約どおり同期する。
+production codeは変更しない。既存harnessの事前検査とresource収束変更には、入力境界、所有順序、
+失敗条件を説明するGo doc commentを現行規約どおり同期する。
 
 ## ドキュメント同期の要否
 
