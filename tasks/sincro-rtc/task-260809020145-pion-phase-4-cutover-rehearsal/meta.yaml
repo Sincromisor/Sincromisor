@@ -1,0 +1,14 @@
+id: task-260809020145-pion-phase-4-cutover-rehearsal
+title: production相当環境でPion切替リハーサルを実行する
+category: sincro-rtc
+status: open
+depends_on:
+  - task-260809020145-pion-phase-4-cutover-runbook
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-08-09
+closed_at: null
+legacy_ids: []
