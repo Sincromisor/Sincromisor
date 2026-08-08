@@ -4,17 +4,16 @@
 
 ## タスク一覧（自動生成 / 全 31 件）
 
-### open（未完） — 5 件
+### open（未完） — 4 件
 
 | タスク                                                                                                         | タイトル                                            | 判定 | 依存                                                                                                                                                                                                                                                  |
 | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [task-260809020144-pion-phase-4-exclusive-compose](./task-260809020144-pion-phase-4-exclusive-compose/task.md) | aiortcとPionを排他的に選択するcompose構成を追加する | —    | `task-260809020144-pion-phase-4-production-network`, `task-260809020144-pion-phase-4-container-image`, `task-260809032447-pion-consul-runtime`, `task-260809043418-pion-container-readiness-probe`, `task-260809043422-pion-compose-network-contract` |
 | [task-260809020145-pion-phase-4-cutover-rehearsal](./task-260809020145-pion-phase-4-cutover-rehearsal/task.md) | production相当環境でPion切替リハーサルを実行する    | —    | `task-260809020145-pion-phase-4-cutover-runbook`                                                                                                                                                                                                      |
 | [task-260809020145-pion-phase-4-cutover-runbook](./task-260809020145-pion-phase-4-cutover-runbook/task.md)     | Pion停止切替とrollbackのrunbookを確定する           | —    | `task-260809020144-pion-phase-4-exclusive-compose`                                                                                                                                                                                                    |
-| [task-260809043418-pion-container-readiness-probe](./task-260809043418-pion-container-readiness-probe/task.md) | Pion container readiness probeを追加する            | —    | `task-260809020144-pion-phase-4-container-image`                                                                                                                                                                                                      |
 | [task-260809043422-pion-compose-network-contract](./task-260809043422-pion-compose-network-contract/task.md)   | Pion compose network contractを確定する             | —    | `task-260809020144-pion-phase-4-production-network`, `task-260809020144-pion-phase-4-container-image`, `task-260809032447-pion-consul-runtime`                                                                                                        |
 
-### done（完了） — 22 件
+### done（完了） — 23 件
 
 | タスク                                                                                                                                 | タイトル                                                              | 判定    | 依存                                                                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -40,6 +39,7 @@
 | [task-260809020144-pion-phase-4-container-image](./task-260809020144-pion-phase-4-container-image/task.md)                             | Pion RTC serverのproduction container imageを作成する                 | ✅ PASS | `task-260802033044-pion-phase-3-production-candidate-gate-3`                                                       |
 | [task-260809020144-pion-phase-4-production-network](./task-260809020144-pion-phase-4-production-network/task.md)                       | Pionの固定UDP muxとpublic IPv4設定を実装する                          | ✅ PASS | `task-260802033044-pion-phase-3-production-candidate-gate-3`                                                       |
 | [task-260809032447-pion-consul-runtime](./task-260809032447-pion-consul-runtime/task.md)                                               | Pion RTCのConsul設定とservice登録を実装する                           | ✅ PASS | —                                                                                                                  |
+| [task-260809043418-pion-container-readiness-probe](./task-260809043418-pion-container-readiness-probe/task.md)                         | Pion container readiness probeを追加する                              | ✅ PASS | `task-260809020144-pion-phase-4-container-image`                                                                   |
 
 ### cancelled（取りやめ） — 2 件
 
