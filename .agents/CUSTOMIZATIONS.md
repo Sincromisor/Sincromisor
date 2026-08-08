@@ -86,3 +86,16 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 - Independent review and evaluation are reserved for explicit requests and high-risk integration
   changes. Evaluation reuses the implementation worktree; `task-freshness-checker`, dedicated
   evaluation worktrees, and mandatory review/evaluation artifacts are intentionally omitted.
+
+## Failure Investigation Before Completion
+
+- Target files: `.claude/commands/run-task.md`, `.claude/agents/*.md`, `tasks/README.md`,
+  `tasks/AUTHORING-CHECKLIST.md`
+- Upstream difference: a required verification failure starts investigation; it cannot become a
+  successful task merely because the failure was recorded. Volatile evidence is captured before
+  cleanup, in-place triage precedes environment restoration, and unknown causes keep the
+  task/worktree open.
+- Reason: Sincromisor is a development project; unexplained integration failures must be diagnosed
+  before completion or explicitly transferred with reproduction evidence and user approval.
+- Future refresh check: confirm generated agents reject PASS when a required failure has no
+  identified cause and rerun evidence.

@@ -24,7 +24,9 @@
         "commit:check": "node scripts/git/checkCommitMessage.mjs"
     },
     "codexGen": {
-        "modelMap": {},
+        "modelMap": {
+            "opus": "gpt-5.6-terra"
+        },
         "hookCommand": "node scripts/metrics/logAgentRun.mjs"
     },
     "taskClose": {
