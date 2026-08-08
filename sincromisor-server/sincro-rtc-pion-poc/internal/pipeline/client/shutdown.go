@@ -9,7 +9,7 @@ import (
 	"github.com/coder/websocket"
 )
 
-// terminal はreader/ping/sync writerの競合をclosedへの1回のstate transitionへ集約する。
+// terminal はreader/sync writerの競合をclosedへの1回のstate transitionへ集約する。
 // 最初のeventをbufferへ置いてからlifetimeをcancelするため、finalizeによるchannel closeが通知を追い越さない。
 func (c *baseClient) terminal(kind EventKind, err error) {
 	c.mu.Lock()
@@ -28,7 +28,7 @@ func (c *baseClient) terminal(kind EventKind, err error) {
 
 // close は明示 shutdown を terminal event なしで実行する。
 // close handshakeが設定時間を越えた場合はcaptured transport socketを直接中断し、
-// library Close helperの終了を待ってからreader/ping、result/event channelの順でjoinする。
+// library Close helperの終了を待ってからreader、result/event channelの順でjoinする。
 func (c *baseClient) close() error {
 	c.mu.Lock()
 	switch c.state {
