@@ -131,8 +131,8 @@ Phase 1のRTC / codec経路とPhase 2のpipeline clientを統合し、本番候�
 正常終了と代表的な異常終了で資源が回収される状態になったらPhase 4へ進む。
 
 [Gate 3実行結果](../../../tasks/sincro-rtc/task-260802033044-pion-phase-3-production-candidate-gate-3/artifacts/gate-3-result.md)は
-`gate_3_result: FAIL`である。固定browser commandがConsul portの一時競合で失敗し、end-to-end経路と
-資源収束を観測できていないため、Phase 4には進まない。
+`gate_3_result: FAIL`である。resource収束を接続した最終有効測定でinitial candidate受理がtimeoutし、
+会話と数値的resource収束を観測できていないため、Phase 4には進まない。
 
 ## Phase 4: 切替リハーサル
 

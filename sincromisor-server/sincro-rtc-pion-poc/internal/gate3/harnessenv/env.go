@@ -36,13 +36,14 @@ type Tool struct {
 
 // Environment は Gate 3 全体で共有する検査済み入力である。
 //
-// 値は immutable として扱う。後続処理は各 Tool.Path を exec の Path に直接指定し、
-// PATH による再解決を行わない。
+// 値は immutable として扱う。後続処理は各 Tool.Path と PlaywrightCLI をprocessへ直接指定し、
+// PATHや固定相対pathによる再解決を行わない。
 type Environment struct {
 	RepositoryRoot string
 	ModuleRoot     string
 	FrontendDist   string
 	AudioFixture   string
+	PlaywrightCLI  string
 	Go             Tool
 	Node           Tool
 	Chromium       Tool
@@ -93,6 +94,13 @@ func load(
 	if err != nil {
 		return Environment{}, err
 	}
+	playwrightCLI, err := validateRegularFile(
+		"Playwright CLI",
+		filepath.Join(repositoryRoot, "node_modules", "@playwright", "test", "cli.js"),
+	)
+	if err != nil {
+		return Environment{}, err
+	}
 	audioFixture, err := validateOwnedPath(
 		"audio fixture",
 		filepath.Join(moduleRoot, "internal", "gate3", "testdata", "gate3-input.wav"),
@@ -138,6 +146,7 @@ func load(
 		{Name: "repository_root", Path: repositoryRoot, Version: "repository"},
 		{Name: "frontend_dist", Path: frontendDist, Version: "vite-dist"},
 		{Name: "audio_fixture", Path: audioFixture, Version: "wav", SHA256: &audioSHA},
+		{Name: "playwright_cli", Path: playwrightCLI, Version: "playwright-cli"},
 		{Name: "go", Path: goTool.Path, Version: goTool.Version},
 		{Name: "node", Path: nodeTool.Path, Version: nodeTool.Version},
 		{Name: "chromium", Path: chromiumTool.Path, Version: chromiumTool.Version},
@@ -149,6 +158,7 @@ func load(
 		ModuleRoot:     moduleRoot,
 		FrontendDist:   frontendDist,
 		AudioFixture:   audioFixture,
+		PlaywrightCLI:  playwrightCLI,
 		Go:             goTool,
 		Node:           nodeTool,
 		Chromium:       chromiumTool,
