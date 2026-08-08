@@ -25,6 +25,17 @@ Pion process が既存 Python RTC と同じ Consul 契約を使えるように�
 - 後続の排他的 compose task: Consul agent host、service address、container media bind IPv4、public IPv4、UDP/TCP portを `examples/compose.env` と compose へ具体的に配線し、実際の切替・復旧を確認する。
 - スコープ外: compose編集、Caddy設定変更、Python下流service変更、Consul ACL/TLS、Consul watch / retry loop、NAT / firewall実測。
 
+## 実装方針
+
+`internal/config/config.go` で起動値を検証し、`cmd/pion-poc/main.go` の固定 localhost URLを設定値に置換する。
+Consul agent API は `internal/pipeline/discovery` と同じ HTTP boundaryで扱う。`http.Server.ListenAndServe`を
+使う代わりにlistenerを先にbindし、handlerはnon-readyのままConsulへ登録する。登録成功後に
+`ProcessState.MarkReady` を呼ぶ。shutdownは既存のdraining → session close → HTTP shutdown の順序を保ち、
+draining直後にregistrationのderegisterを並行追加する。
+
+HTTP service address と media UDP bind address は独立して扱う。後続composeが固定container IPv4を供給するまで、
+Pion runtimeはそれらを推測しない。
+
 ## テスト
 
 - `go test -race ./internal/config ./internal/pipeline/discovery ./cmd/pion-poc`
