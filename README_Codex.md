@@ -1,7 +1,7 @@
 # run-task-agents — Codex CLI 対応
 
-run-task-agents キットは Claude Code と Codex CLI のどちらでも、同じパイプライン
-（レビュー→実装→評価）を対話セッション上で回せる。Claude / Codex の両方が skill・
+run-task-agents キットは Claude Code と Codex CLI のどちらでも、同じタスク実装手順を
+対話セッション上で回せる。Claude / Codex の両方が skill・
 サブエージェント・hook をネイティブ実装しているためで、`.claude/` を**単一ソース**とし、
 Codex CLI 用の成果物を `gen:codex`（`scripts/gen/genCodex.mjs`）で派生生成する。
 
@@ -9,10 +9,8 @@ Codex CLI 用の成果物を `gen:codex`（`scripts/gen/genCodex.mjs`）で派�
 Sincromisor での運用ルール、入口、検証手順は [tasks/README.md](tasks/README.md) を参照。
 upstream kit との差分は [.agents/CUSTOMIZATIONS.md](.agents/CUSTOMIZATIONS.md) に記録する。
 
-> **実機検証済み（Codex CLI 0.139.0）**: 生成した `.codex/agents/*.toml`（4 体）と
-> `.agents/skills/*/SKILL.md`（4 本）は実機の Codex に**正しく認識され**、`task-freshness-checker`
-> への委譲（サブエージェント起動）も成功することを確認した。hook の発火だけは下記「既知の差分・制約」
-> 参照（対話 TUI 前提）。
+生成する `.codex/agents/*.toml` は3体、`.agents/skills/*/SKILL.md` は2本。レビュー担当と評価担当は、
+ユーザーの明示要求または高リスク変更の場合だけ起動する。
 
 ## 前提
 
@@ -81,10 +79,10 @@ Claude のモデル名（`opus` / `sonnet`）→ Codex のモデルは、展開�
   ツール単位の制限は Codex に無く、`sandbox_mode`（`read-only` / `workspace-write`）でしか
   表現できない。`Write` か `Edit` を含むエージェントは `workspace-write` になり、「ソースは
   変えないが review.md は書く」のような境界は**本文の禁止事項（規範）で担保**する
-  （生成時に各 TOML へその旨の preamble を付与）。なお impl-evaluator は隔離 worktree で
-  動くため、万一ソースに触れても本流ツリーは汚れない。
+  （生成時に各 TOML へ短い preamble を付与）。impl-evaluator は実装 worktree のコミット済み差分を
+  変更せず評価する。
 - **サブエージェントの自動起動なし**: Codex はサブエージェントを自動起動しない（親の明示指示で
-  起動）。`run-task` skill 本文が各サブエージェントを順に明示起動するので実害は無いが、skill が
+  起動）。`run-task` skill 本文が必要な場合だけ明示起動する。skill が
   description マッチで暗黙起動され得る点は Claude のスラッシュコマンドと異なる。Codex は
   サブエージェントを multi_agent ツール（`spawn_agent` / `wait_agent` / `close_agent`）として
   実行する。
@@ -94,5 +92,5 @@ Claude のモデル名（`opus` / `sonnet`）→ Codex のモデルは、展開�
       （`close_agent`）を `PostToolUse` で捕捉する（Claude の `Task|Agent` PostToolUse と同じ設計）。
       `close_agent` ペイロードの実フィールド名（usage / duration）は対話セッションで 1 度確認し、
       必要なら `logAgentRun.mjs` の `buildCodexLine` の候補を増やす。`logAgentRun.mjs` は複数候補から
-      防御的に拾い、取れなくても「行が出ないだけ」で安全に劣化（常に exit 0）。メトリクスはあくまで
-      観測用の付加機能で、パイプライン本体（レビュー→実装→評価）の動作には影響しない。
+      防御的に拾い、取れなくても「行が出ないだけ」で安全に劣化（常に exit 0）。メトリクスは要求時に
+      使う観測用の付加機能で、通常の実装手順には影響しない。

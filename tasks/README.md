@@ -147,18 +147,16 @@ tasks/<category>/
 
 ## ファイルの役割
 
-通常タスクでは、作業を担当する Codex が `task.md` に沿って実装し、確認結果を `impl.md` に記録する。`review.md` と `eval.md` はサブエージェント作業手順を明示して実行する場合、またはユーザーが独立レビュー・独立評価を求める場合に必須とする。小変更では `review.md` / `eval.md` が未記入でもよいが、完了処理する前に担当 Codex が実行した確認、未実行理由、残リスクを `impl.md` に残す。
+通常タスクは、担当 Codex が `task.md` に沿って実装し、差分とテスト結果を確認すればよい。`review.md` と `eval.md` はユーザーが独立確認を求めた場合、または高リスク統合タスクで独立確認を行った場合だけ記録する。`impl.md` は設計判断、仕様からの逸脱、未実行の確認、残リスクがある場合だけ簡潔に使い、コミット内容を複製しない。
 
-担当 Codex は作業完了時に、`impl.md` の完了時の要約を元にユーザーへ短く報告する。
-報告には、作業概要、変更ファイル、確認結果、実行できなかった確認と理由、残リスク、
-次アクションを含める。該当がない項目は「なし」と明示してよい。
+担当 Codex は作業概要、確認結果、未実行事項、残リスクを短く報告する。
 
 | ファイル      | 書き手                       | 役割                                                     |
 | ------------- | ---------------------------- | -------------------------------------------------------- |
 | `task.md`     | 起票者 / 親 Codex            | タスク仕様、変更範囲、受け入れ条件。レビュー後は原則固定 |
 | `meta.yaml`   | 親 Codex                     | 状態メタデータの正本。`tasks:set` で更新                 |
 | `review.md`   | レビュー担当サブエージェント | 実装前レビュー、承認可否、リスク、確認観点               |
-| `impl.md`     | 担当 Codex                   | 実装ログ、変更内容、確認結果、実行できなかった検証       |
+| `impl.md`     | 担当 Codex                   | 必要な判断、逸脱、未実行の確認、残リスク                 |
 | `eval.md`     | 評価担当サブエージェント     | 独立評価、品質ゲート結果、PASS / FAIL                    |
 | `acceptance/` | 評価担当サブエージェント     | 独立検証用の補助ファイル                                 |
 | `artifacts/`  | 各担当                       | タスク固有のログ、CSV、スクリーンショット、調査メモ      |
@@ -208,7 +206,7 @@ closed_at: null
 - 終端状態は `done`, `cancelled`, `superseded` とする。
 - 終端状態に変更すると、`closed_at` が未指定なら当日で自動設定される。
 - `review` は `APPROVED` または `NEEDS_REVISION`、`verdict` は `PASS` または `FAIL` とする。
-- `reviewed_sha` は `review=APPROVED` を記録した時点の HEAD SHA とする。`/run-task` はこの SHA からの差分でレビュー段の機械スキップまたは 鮮度確認 を判断する。
+- `reviewed_sha` は過去タスクと外部ツール向けの互換フィールドである。通常の `/run-task` は現在のコードを直接確認し、この値をゲートに使わない。
 - `review` と `verdict` は `status` と分け、二重管理を避ける。
 - `superseded` では `superseded_by` に後継タスク ID を入れる。
 
@@ -244,9 +242,9 @@ TODO は新規コードでは `TODO(task-260601153000-example): ...` を推奨�
 | `npm run tasks:reindex`                                                     | 全カテゴリ `index.md` を再生成し、変更があればコミットする                              |
 | `npm run tasks:metrics`                                                     | タスクの所要時間とエージェント実績を集計する                                            |
 | `npm run gate`                                                              | `package.json` の `gateSteps` をキャッシュ付きで実行する                                |
-| `npm run eval:worktree -- add <sha>`                                        | 評価用の隔離作業ツリーを作る                                                            |
+| `npm run eval:worktree -- add <sha>`                                        | 指定コミットの一時作業ツリーを作る                                                      |
 | `npm run eval:worktree -- add <sha> --branch codex/<task-id>`               | 実装用の名前付き作業ツリーを作る                                                        |
-| `npm run eval:worktree -- remove <path> --discard`                          | 回収済みの評価作業ツリーを明示破棄する                                                  |
+| `npm run eval:worktree -- remove <path> --discard`                          | 不要になった一時作業ツリーを明示破棄する                                                |
 | `npm run gen:codex`                                                         | `.claude/` から Codex 用 `.agents/skills/` と `.codex/` を生成する                      |
 | `npm run gen:codex:check`                                                   | Codex 生成物が `.claude/` と同期しているか検証する                                      |
 
@@ -268,15 +266,13 @@ sincromisor-frontend/src` で取得した変更済み TS/TSX ファイルだけ�
 
 ## ブランチライフサイクル
 
-Sincromisor の実行基盤は v1.3 の作業手順に合わせ、実装段階も評価段階も隔離した `git worktree` で進める。
-メインチェックアウトは作業の調停とタスク成果物の集約に使い、実装中のファイル編集やコミットは専用作業ツリーに閉じ込める。
+実装は専用の `git worktree` で進める。独立評価を行う場合も同じ worktree のコミット済み差分を使い、評価専用 worktree は作らない。
 
 - レビュー担当は実装を変更しないため、専用ブランチや物理作業ツリーを作らない。
 - 実装担当用作業ツリーは `npm run eval:worktree -- add <base-sha> --branch codex/<task-id>` で作る。`codex/` 接頭辞は `package.json` の `taskBranchPrefix` を正本にする。
 - 実装担当は渡された作業ツリーの絶対パスを作業ディレクトリとし、実装差分、テスト、実装コミットを `codex/<task-id>` ブランチへ載せる。`impl.md` はメインチェックアウト側のタスクディレクトリに追記する。
 - `npm run gate` は `.gate-cache/` を作業ツリー間で共有し、同一内容・コミットの PASS をキャッシュする。
-- 評価担当は実装者 HEAD から分離作業ツリーを作り、変更のない状態で独立検証する。評価用の追加ファイルは `acceptance/` に限定し、実装コードや実装者のテストは変更しない。
-- 評価担当が作業ツリー側へ書いた `eval.md`, `acceptance/`, `artifacts/` は、作業ツリー削除前にメインチェックアウト側のタスクディレクトリへ戻し込む。
+- 評価担当は実装 worktree のコミット済み差分を変更せずに検証し、`eval.md` はメインチェックアウト側へ書く。
 - PASS 後、親 Codex は基点ブランチで `git merge codex/<task-id>` を行い、`npm run tasks:close -- <task-dir> verdict=PASS attempts=<n>` で自タスクディレクトリの完了処理コミットを作る。
 - 全体の `index.md` 更新は完了処理から分離し、基点ブランチ上の直列段階として `npm run tasks:reindex` で 1 コミットにまとめる。
 - `git worktree remove` はブランチを削除しない。実装ブランチは履歴確認や再開のため残し、不要になった場合だけ別途整理する。
@@ -288,35 +284,25 @@ Sincromisor の実行基盤は v1.3 の作業手順に合わせ、実装段階�
 
 主な入口:
 
-- `/new-task`: 対話文脈からタスクを起票し、独立レビューを通して `review=APPROVED` と `reviewed_sha` を記録する。
-- `/review-task`: 既存 `task.md` を単体で独立レビューし、`review` と `reviewed_sha` だけを更新する。
-- `/next-task`: `tasks:next` で READY / WAITING / BLOCKED を読み取り、次に実行できるタスクを提示する。
-- `/run-task`: レビューの鮮度確認 → 実装 → 独立評価 → 完了処理を調停する。
+- `/new-task`: 対話文脈から実装可能な `task.md` を起票する。
+- `/run-task`: 現在のコードで着手可否を確認し、実装、検証、完了処理を調停する。
+- 次タスクの抽出は `npm run tasks:next` を直接使う。
 
 役割の定義:
 
-- `.claude/agents/task-reviewer.md`: タスク仕様のレビュー。`review.md` だけを書く。
-- `.claude/agents/task-freshness-checker.md`: `reviewed_sha` 以降のコード変更で APPROVED の前提が古くなっていないかだけを見る。ファイルは書かない。
+- `.claude/agents/task-reviewer.md`: 明示要求または高リスク時のタスク仕様レビュー。
 - `.claude/agents/task-implementer.md`: 実装、確認、`impl.md`、実装コミットを担当する。
-- `.claude/agents/impl-evaluator.md`: 独立評価、`eval.md`、必要な `acceptance/` を担当する。
+- `.claude/agents/impl-evaluator.md`: 明示要求または高リスク時の独立評価。
 
 `/run-task` の流れ:
 
-1. `meta.yaml` の `review` / `reviewed_sha` を読む。
-2. `review=APPROVED` かつ `reviewed_sha` から現在 HEAD までのタスク外差分がなければレビュー段階を機械スキップする。
-3. APPROVED 後にコード差分がある場合は `task-freshness-checker` で前提の鮮度を確認する。
-   直接依存が基準SHA後に完了・再実装・改訂された場合は、コンストラクター、所有権、通信契約、
-   状態機械、時間切れ / 時刻、本番環境向けテスト接続点の変更も照合する。
-4. 未 APPROVED または STALE の場合は `task-reviewer` を実行し、APPROVED なら `tasks:set review=APPROVED reviewed_sha=<sha>` を記録する。NEEDS_REVISION なら停止する。
-5. 親 Codex が `npm run eval:worktree -- add <sha> --branch codex/<task-id>` で実装作業ツリーを作り、実装担当がその作業ツリー上で実装、`npm run gate`、実装コミットを行う。`impl.md` はメインチェックアウト側に追記する。
-6. 評価担当がコミット済み差分を独立検証する。`npm run eval:worktree -- add <sha>` で隔離作業ツリーを作り、評価後は `eval.md` / `acceptance/` / `artifacts/` をメインチェックアウトに戻してから `npm run eval:worktree -- remove <path> --discard` で片付ける。
-7. FAIL の場合は `eval.md` の不合格分類を確認する。通常の不具合・網羅不足は
-   実装担当に戻して原則 2 回まで再実装する。`task_revision_required` / `stale_task` は
-   暗黙に仕様拡張せず、`review=NEEDS_REVISION` へ戻して全体レビューする。
-8. PASS の場合は実装ブランチを基点ブランチへマージし、`npm run tasks:close -- <task-dir> verdict=PASS attempts=<n>` で完了処理する。その後 `npm run tasks:reindex` で `index.md` を直列更新する。
+1. `task.md`、依存、関連コードを現在の HEAD で確認し、前提が古ければタスク改訂へ戻す。
+2. 明示要求または高リスク時だけ task-reviewer を呼ぶ。
+3. 実装 worktree を1つ作り、実装担当が変更、対象テスト、`npm run gate`、コミットを行う。
+4. 親が受け入れ条件と差分を確認する。明示要求または高リスク時だけ、同じ worktree で impl-evaluator を呼ぶ。
+5. PASS ならマージ、`tasks:close`、`tasks:reindex`、worktree削除の順で完了する。
 
-実装コミットには実装差分、テスト、`impl.md` を含める。完了処理コミットには `review.md`,
-`eval.md`, `acceptance/`, `meta.yaml` を含める。`index.md` は `tasks:reindex` コミットに含める。`tasks:close` が作る完了処理コミットの
+実装コミットには実装差分、テスト、必要な文書を含める。タスク成果物は `tasks:close` がまとめる。`index.md` は `tasks:reindex` コミットに含める。`tasks:close` が作る完了処理コミットの
 メッセージも `Why:` / `What:` / `Verify:` / `Risk:` / `Refs:` を含む。上流の作業手順との差分は
 `.agents/CUSTOMIZATIONS.md` に記録する。
 
@@ -324,24 +310,16 @@ Sincromisor の実行基盤は v1.3 の作業手順に合わせ、実装段階�
 
 通常の局所変更には、3 点ゲート、コメント点検、ドキュメント同期など既存の基本規約を適用する。
 複数のリソース所有者・状態機械・外部境界、再試行・時間切れ・時刻・終了処理、全称条件を含む
-高リスク統合タスクだけは、`tasks/AUTHORING-CHECKLIST.md` 4.1 の追加設計を行う。
+高リスク統合タスクだけは、`tasks/AUTHORING-CHECKLIST.md` の追加確認を行う。
 RTC 第 3 段階で使った個別の所有権表や指標表を、無関係なタスクへ一律に要求しない。
 
-コメント品質はリスク特性にかかわらず緩和しない。変更した本番コードと変更理解範囲の
-全件点検が原則であり、固定件数の抽出確認だけで未確認対象を完了扱いにしない。
-リスクに応じた照合は確認順序と深さを決めるもので、対象一覧や重要箇所を省略する仕組みではない。
+コメント品質は `documents/rules/source-comments.md` と対象言語規約を直接適用する。task.md、impl.md、eval.md に別のコメント監査台帳を作らない。
 
 ### 完了報告
 
-各担当の成果物には、親 Codex がそのまま報告に使える要約を置く。
+親 Codex は差分と確認結果から簡潔に報告する。成果物ごとの重複した要約は要求しない。
 
-- `review.md`: `## 親への要約`
-- `impl.md`: `## 完了時の要約`
-- `eval.md`: `## 完了時の要約`
-
-親 Codex はサブエージェントの完了通知を受けたら該当ファイルを読み、ユーザーへ短く報告する。
-報告を後回しにして作業手順全体の最後にまとめない。報告には合否・状態、主要な変更や
-指摘、確認結果、未実行確認、残リスク、次アクションを含める。
+サブエージェントを使った場合も、重複した中間報告はせず最終報告へ必要な結果だけ反映する。
 
 完了処理前のタスク管理ツール確認は必須とする。
 

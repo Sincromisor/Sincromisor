@@ -43,7 +43,7 @@ const STATUS_RANK = { open: 0, blocked: 1, done: 2, cancelled: 3, superseded: 4 
  * @property {string[]} depends_on  依存タスクの id 配列
  * @property {string|null} superseded_by
  * @property {string|null} review   APPROVED | NEEDS_REVISION | null
- * @property {string|null} reviewed_sha  review=APPROVED 判定時点の HEAD SHA（7〜40 桁 hex）| null。/run-task レビュー段のスキップ判定の基準
+ * @property {string|null} reviewed_sha  過去の独立レビュー記録と外部ツール向け互換フィールド
  * @property {string|null} verdict  PASS | FAIL | null
  * @property {number} attempts      再実装ループ回数
  * @property {string|null} created_at

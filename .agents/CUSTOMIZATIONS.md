@@ -80,12 +80,9 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 - Reason: Codex sessions need local skills and agent definitions without a separate generation step.
 - Future refresh check: run `npm run gen:codex` and `npm run gen:codex:check` after editing
   `.claude/`.
-- Sincromisor-specific gate: keep the agent comment quality checks aligned with
-  `documents/rules/source-comments.md`, the language-specific `documents/rules/coding-*.md`, and
-  `tasks/AUTHORING-CHECKLIST.md`. Upstream refreshes must preserve the two independent purposes of
-  change safety and reader comprehension, the rule that missing legacy comments are not precedent,
-  change comprehension surface checks, task-reviewer High checks for symbol / block / decision /
-  flow audit schemas and overbroad comment-remediation tasks, task-implementer `impl.md` audit
-  logging with `keep` / `rewrite` / `delete` / `add` decisions, and impl-evaluator risk-based code
-  reconciliation that treats full changed-target coverage as the default instead of a fixed-size
-  spot-check quota.
+- Sincromisor applies `documents/rules/source-comments.md` and the language-specific coding rules
+  directly during implementation. Do not duplicate them as task acceptance criteria or
+  `impl.md` / `eval.md` audit ledgers.
+- Independent review and evaluation are reserved for explicit requests and high-risk integration
+  changes. Evaluation reuses the implementation worktree; `task-freshness-checker`, dedicated
+  evaluation worktrees, and mandatory review/evaluation artifacts are intentionally omitted.
