@@ -35,7 +35,7 @@ func TestLoadValidatesAllInputsAndVersions(t *testing.T) {
 		t.Fatalf("load() error = %v", err)
 	}
 	if !filepath.IsAbs(got.RepositoryRoot) || !filepath.IsAbs(got.FrontendDist) ||
-		!filepath.IsAbs(got.AudioFixture) || !filepath.IsAbs(got.PlaywrightCLI) || len(got.Inputs) != 9 {
+		!filepath.IsAbs(got.AudioFixture) || len(got.Inputs) != 8 {
 		t.Fatalf("environment paths/inputs = %+v", got)
 	}
 	if got.Inputs[2].SHA256 == nil || len(*got.Inputs[2].SHA256) != 64 {
@@ -46,21 +46,6 @@ func TestLoadValidatesAllInputsAndVersions(t *testing.T) {
 	}
 	if !slices.Equal(probes, wantProbes) {
 		t.Fatalf("probes = %v, want %v", probes, wantProbes)
-	}
-}
-
-func TestLoadRejectsMissingPlaywrightCLIBeforeVersionProbes(t *testing.T) {
-	moduleRoot, environment := makeEnvironmentFixture(t)
-	playwrightCLI := filepath.Join(filepath.Dir(filepath.Dir(moduleRoot)), "node_modules", "@playwright", "test", "cli.js")
-	if err := os.Remove(playwrightCLI); err != nil {
-		t.Fatal(err)
-	}
-	_, err := load(context.Background(), moduleRoot, mapLookup(environment), func(_ context.Context, _ string, _ ...string) ([]byte, error) {
-		t.Fatal("version probe ran before Playwright CLI validation")
-		return nil, nil
-	})
-	if err == nil || !strings.Contains(err.Error(), "resolve Playwright CLI") {
-		t.Fatalf("load() error = %v, want missing Playwright CLI", err)
 	}
 }
 
@@ -199,7 +184,6 @@ func makeEnvironmentFixture(t *testing.T) (string, map[string]string) {
 	for _, directory := range []string{
 		filepath.Join(repository, "sincromisor-frontend", "dist"),
 		filepath.Join(moduleRoot, "internal", "gate3", "testdata"),
-		filepath.Join(repository, "node_modules", "@playwright", "test"),
 		filepath.Join(repository, "bin"),
 	} {
 		if err := os.MkdirAll(directory, 0o700); err != nil {
@@ -212,13 +196,6 @@ func makeEnvironmentFixture(t *testing.T) (string, map[string]string) {
 	if err := os.WriteFile(
 		filepath.Join(moduleRoot, "internal", "gate3", "testdata", "gate3-input.wav"),
 		[]byte("audio"),
-		0o600,
-	); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(
-		filepath.Join(repository, "node_modules", "@playwright", "test", "cli.js"),
-		[]byte("playwright CLI"),
 		0o600,
 	); err != nil {
 		t.Fatal(err)

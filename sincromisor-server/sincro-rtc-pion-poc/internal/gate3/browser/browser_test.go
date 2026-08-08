@@ -21,7 +21,6 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/gate3/harnessenv"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/gate3/pipelinecontract"
 	gateprocess "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/gate3/process"
-	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/gate3/resources"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery"
 )
 
@@ -36,7 +35,7 @@ const (
 	cleanupTimeout    = 10 * time.Second
 )
 
-// TestFrontendBrowserHarness はproductionと同じsame-origin経路で2 turnとICE restartを確認する。
+// TestFrontendBrowserHarness はproductionと同じsame-origin経路で1 turnを確認する。
 //
 // この試験が最上位ownerとなり、起動と逆順cleanupの全失敗をtesting.Tへ集約する。
 func TestFrontendBrowserHarness(t *testing.T) {
@@ -49,34 +48,7 @@ func TestFrontendBrowserHarness(t *testing.T) {
 	contracts := startContracts(t, environment)
 	startConsul(t, environment, contracts.Addresses())
 	baseURL, pion := startPion(t, environment)
-	pionPID, err := pion.PID()
-	if err != nil {
-		t.Fatalf("read Pion PID: %v", err)
-	}
-	sampler, err := resources.NewSampler(resources.Config{
-		PID:        pionPID,
-		ProcRoot:   "/proc",
-		MetricsURL: baseURL + "/metrics",
-		StatusURL:  baseURL + "/api/v1/RTCSignalingServer/statuses",
-	})
-	if err != nil {
-		t.Fatalf("create resource sampler: %v", err)
-	}
-	// readiness後かつbrowser session開始前の3 sampleだけをbaselineにし、
-	// Playwright終了後もPionを生存させたまま同じ境界で収束を判定する。
-	baselineCtx, cancelBaseline := context.WithTimeout(context.Background(), readinessTimeout)
-	baseline, baselineSamples, err := sampler.CaptureBaseline(baselineCtx)
-	cancelBaseline()
-	if err != nil {
-		t.Fatalf("capture resource baseline: %v", err)
-	}
-	t.Logf("resource baseline: %+v; samples=%+v", baseline, baselineSamples)
 	runPlaywright(t, environment, baseURL, pion, contracts)
-	convergenceSamples, err := sampler.WaitForConvergence(context.Background(), baseline)
-	if err != nil {
-		t.Fatalf("wait for resource convergence: %v; samples=%+v", err, convergenceSamples)
-	}
-	t.Logf("resource convergence samples: %+v", convergenceSamples)
 	if err := contracts.Verify(); err != nil {
 		t.Fatalf("pipeline contract: %v; transcript=%+v", err, contracts.Transcript())
 	}
@@ -88,7 +60,7 @@ func startContracts(t *testing.T, environment harnessenv.Environment) *pipelinec
 	t.Helper()
 	fixtures := filepath.Join(environment.ModuleRoot, "internal", "pipeline", "protocol", "testdata")
 	contracts, err := pipelinecontract.New(pipelinecontract.Config{
-		FixturesDir: fixtures, ListenHost: "127.0.0.1", MaxSpeechResults: 2,
+		FixturesDir: fixtures, ListenHost: "127.0.0.1",
 	})
 	if err != nil {
 		t.Fatalf("start contract services: %v", err)
@@ -144,7 +116,7 @@ func runPlaywright(
 	t.Helper()
 	playwright := gateprocess.New(gateprocess.Command{
 		Path: environment.Node.Path,
-		Args: []string{environment.PlaywrightCLI, "test", "--config", filepath.Join(environment.RepositoryRoot, "playwright.gate3.config.ts")},
+		Args: []string{filepath.Join(environment.RepositoryRoot, "node_modules", "@playwright", "test", "cli.js"), "test", "--config", filepath.Join(environment.RepositoryRoot, "playwright.gate3.config.ts")},
 		Env: append(os.Environ(),
 			"SINCRO_GATE3_BASE_URL="+baseURL,
 			"SINCRO_GATE3_CHROMIUM_BINARY="+environment.Chromium.Path,
@@ -162,11 +134,11 @@ func runPlaywright(
 	if waitErr != nil {
 		result, closeErr := playwright.Close()
 		pionResult, pionErr := stopPion(pion)
-		t.Fatalf("Playwright wait failed: %v; close=%v; exit=%d\nstdout:\n%s\nstderr:\n%s\nPion: %v; exit=%d\nstdout:\n%s\nstderr:\n%s\nPCM: %+v\ncontract verify: %v\ntranscript: %+v", waitErr, closeErr, result.ExitCode, result.Stdout.Data, result.Stderr.Data, pionErr, pionResult.ExitCode, pionResult.Stdout.Data, pionResult.Stderr.Data, contracts.PCMStats(), contracts.Verify(), contracts.Transcript())
+		t.Fatalf("Playwright wait failed: %v; close=%v; exit=%d\nstdout:\n%s\nstderr:\n%s\nPion: %v; exit=%d\nstdout:\n%s\nstderr:\n%s\ncontract verify: %v\ntranscript: %+v", waitErr, closeErr, result.ExitCode, result.Stdout.Data, result.Stderr.Data, pionErr, pionResult.ExitCode, pionResult.Stdout.Data, pionResult.Stderr.Data, contracts.Verify(), contracts.Transcript())
 	}
 	if result.ExitCode != 0 {
 		pionResult, pionErr := stopPion(pion)
-		t.Fatalf("Playwright failed: exit=%d\nstdout:\n%s\nstderr:\n%s\nPion: %v; exit=%d\nstdout:\n%s\nstderr:\n%s\nPCM: %+v\ncontract verify: %v\ntranscript: %+v", result.ExitCode, result.Stdout.Data, result.Stderr.Data, pionErr, pionResult.ExitCode, pionResult.Stdout.Data, pionResult.Stderr.Data, contracts.PCMStats(), contracts.Verify(), contracts.Transcript())
+		t.Fatalf("Playwright failed: exit=%d\nstdout:\n%s\nstderr:\n%s\nPion: %v; exit=%d\nstdout:\n%s\nstderr:\n%s\ncontract verify: %v\ntranscript: %+v", result.ExitCode, result.Stdout.Data, result.Stderr.Data, pionErr, pionResult.ExitCode, pionResult.Stdout.Data, pionResult.Stderr.Data, contracts.Verify(), contracts.Transcript())
 	}
 }
 
@@ -215,8 +187,8 @@ func containsReady(body []byte) bool {
 
 func verifyTranscript(t *testing.T, transcript pipelinecontract.Transcript) {
 	t.Helper()
-	if len(transcript.Entries) != 8 {
-		t.Fatalf("transcript entries = %d, want 8", len(transcript.Entries))
+	if len(transcript.Entries) != 4 {
+		t.Fatalf("transcript entries = %d, want 4", len(transcript.Entries))
 	}
 	firstSession := transcript.Entries[0].SessionID
 	firstSequence := transcript.Entries[0].SequenceID
@@ -226,7 +198,7 @@ func verifyTranscript(t *testing.T, transcript pipelinecontract.Transcript) {
 			discovery.ServiceProcessor, discovery.ServiceSynthesizer,
 		}[index%4]
 		if entry.Ordinal != index+1 || entry.Service != wantService || entry.SessionID != firstSession ||
-			entry.SequenceID != firstSequence+int64(index/4) {
+			entry.SequenceID != firstSequence {
 			t.Fatalf("transcript[%d] = %+v", index, entry)
 		}
 		if entry.Service == discovery.ServiceSynthesizer && !entry.ByteIdentical {

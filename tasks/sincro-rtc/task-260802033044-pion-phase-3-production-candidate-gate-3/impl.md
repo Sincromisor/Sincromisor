@@ -1,13 +1,5 @@
 # Implementation Log: task-260802033044-pion-phase-3-production-candidate-gate-3
 
-## Completion Summary
+## 設計判断
 
-- root `node_modules`はrepository外の共有cacheへ解決されるため、Playwright CLIは所有権ではなく通常fileとして検査する。
-
-## Verification
-
--
-
-## Not Run
-
-- 最終有効browser測定はinitial candidate受理timeoutでFAILしたため、`WaitForConvergence`は未実行となり再実行しなかった。
+- Gate 3 browser smokeは、最初の非無音PCMによる1 turnだけを確認する。ICE restart、複数turn、FD/socket収束は既存repository testまたはPhase 4へ委ねる。

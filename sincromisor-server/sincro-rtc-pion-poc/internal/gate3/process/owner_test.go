@@ -67,25 +67,6 @@ func TestOwnerNormalExitAndStableWaitResult(t *testing.T) {
 	}
 }
 
-func TestOwnerPIDIsAvailableOnlyWhileRunning(t *testing.T) {
-	owner := newHelperOwner(t, "wait")
-	if _, err := owner.PID(); !errors.Is(err, ErrNotRunning) {
-		t.Fatalf("PID before Start error = %v", err)
-	}
-	if err := owner.Start(); err != nil {
-		t.Fatal(err)
-	}
-	if pid, err := owner.PID(); err != nil || pid <= 0 {
-		t.Fatalf("running PID = (%d, %v)", pid, err)
-	}
-	if _, err := owner.Close(); err == nil {
-		t.Fatal("Close() error = nil, want signal exit error")
-	}
-	if _, err := owner.PID(); !errors.Is(err, ErrNotRunning) {
-		t.Fatalf("PID after Close error = %v", err)
-	}
-}
-
 func TestWaitTimeoutDoesNotStopProcessAndCloseJoins(t *testing.T) {
 	owner := newHelperOwner(t, "wait")
 	if err := owner.Start(); err != nil {
