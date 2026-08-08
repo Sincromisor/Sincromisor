@@ -16,14 +16,21 @@ argument-hint: <task-dir>
 2. `task-implementer` に `$1` と `<wt>` を渡し、実装、対象を絞ったテスト、必要な文書同期、コミット、`npm run gate` を行わせる。
 3. `impl.md` にはコミットの説明を複製せず、設計判断、仕様からの逸脱、未実行の確認、残リスクがある場合だけ簡潔に残す。
 
+必須確認が失敗した場合は`tasks/README.md`の「失敗時の調査と継続」に従う。cleanupや環境復旧で失われる証拠を
+先に採取してその場の初期切り分けを行い、直接原因を特定して修正・再検証する。共有serviceは初期切り分け後、
+長いoffline調査より先に復旧する。
+原因不明のまま評価や完了処理へ進まない。
+
 ## 3. 検証
 
 - 親が受け入れ条件、差分、`npm run gate` の結果を確認する。
 - ユーザーが独立評価を求めた場合、または高リスク変更の場合だけ `impl-evaluator` に同じ `<wt>` を読み取り中心で評価させる。評価専用 worktreeは作らない。
-- 不合格なら具体的な不足だけを実装担当へ戻す。仕様変更が必要なら実装を続けずタスク改訂へ戻す。
+- 不合格なら、原因と具体的な不足を実装担当へ戻して同じworktreeで修正・再検証する。仕様変更が必要なら実装を続けずタスク改訂へ戻す。
+- commandやGateのFAILを記録しただけではevaluator PASSにしない。原因修正を別taskへ移す場合は、再現手順、証拠、特定済み原因、移管理由、後続task IDを揃え、ユーザーの了承を得る。
 
 ## 4. 完了
 
-PASS の場合だけ実装ブランチを基点ブランチへマージし、`tasks:close $1 verdict=PASS attempts=<n>`、`tasks:reindex`、`eval:worktree remove <wt>` の順に実行する。FAIL の場合は `tasks:close $1 verdict=FAIL attempts=<n>` で記録し、worktreeを再開用に残す。
+原因不明の必須失敗がなくPASSの場合だけ実装ブランチを基点ブランチへマージし、`tasks:close $1 verdict=PASS attempts=<n>`、`tasks:reindex`、`eval:worktree remove <wt>` の順に実行する。
+調査済みのattemptをFAILとして区切る場合だけ`tasks:close $1 verdict=FAIL attempts=<n>`で記録し、taskを`open`、worktreeを再開用に残す。外部要因待ちは`tasks:set`で`blocked`にする。
 
-最終報告は変更概要、確認結果、未実行事項、残リスクだけを簡潔に示す。メトリクス集計と次タスク提案はユーザーが求めた場合だけ行う。
+最終報告は変更概要、確認結果、失敗原因、未実行事項、残リスクだけを簡潔に示す。メトリクス集計と次タスク提案はユーザーが求めた場合だけ行う。

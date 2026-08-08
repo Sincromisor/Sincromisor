@@ -210,6 +210,22 @@ closed_at: null
 - `review` と `verdict` は `status` と分け、二重管理を避ける。
 - `superseded` では `superseded_by` に後継タスク ID を入れる。
 
+### 失敗時の調査と継続
+
+必須のtest、gate、実測scenarioの失敗は調査の開始条件であり、それだけではtaskの完了条件にならない。
+
+- 失敗直後は、command、対象commit、入力、時刻、exit code、関連log、process・network・resource状態など、
+  cleanupや環境復旧で失われる証拠と、その状態でしかできない初期切り分けを先に完了する。共有serviceなどを
+  停止した場合は、これらの完了後、長いoffline調査より先に復旧して他作業への影響を止める。
+- 直接原因と修正対象を特定し、最小の再現確認、修正、失敗した確認、必要な全体gateの順で再検証する。
+  taskの前提や受け入れ条件が誤っていた場合は、実装を続けずtask改訂へ戻す。
+- 原因が未特定の必須失敗が残る間はevaluatorを`PASS`にせず、taskを`done`へせず、実装worktreeを削除しない。
+  継続可能なら`open`、外部要因や権限待ちなら原因と解除条件を記録して`blocked`にする。
+- `tasks:close verdict=FAIL`は、原因と証拠を記録した現在attemptを`open`のまま区切るためにだけ使う。
+  原因調査を省略してFAILを記録する手段ではない。
+- 原因修正を別taskへ移す場合は、再現手順、証拠、特定済み原因、移管理由、後続task IDを残し、
+  ユーザーが移管を了承した場合に限る。原因不明のまま後続taskへ送って元taskを完了しない。
+
 ## 旧形式の ID
 
 旧 `documents/tasks` 由来の `TASK-...` ID は `legacy_ids` に保持する。コミットメッセージ、設計履歴、古い TODO では `TASK-...` 表記を許容するが、新規のタスク本文と相互参照では正規 ID を優先する。
@@ -299,8 +315,9 @@ sincromisor-frontend/src` で取得した変更済み TS/TSX ファイルだけ�
 1. `task.md`、依存、関連コードを現在の HEAD で確認し、前提が古ければタスク改訂へ戻す。
 2. 明示要求または高リスク時だけ task-reviewer を呼ぶ。
 3. 実装 worktree を1つ作り、実装担当が変更、対象テスト、`npm run gate`、コミットを行う。
-4. 親が受け入れ条件と差分を確認する。明示要求または高リスク時だけ、同じ worktree で impl-evaluator を呼ぶ。
-5. PASS ならマージ、`tasks:close`、`tasks:reindex`、worktree削除の順で完了する。
+4. 必須確認が失敗した場合は、上記「失敗時の調査と継続」に従って証拠採取、原因特定、修正、再検証を行う。
+5. 親が受け入れ条件と差分を確認する。明示要求または高リスク時だけ、同じ worktree で impl-evaluator を呼ぶ。
+6. 原因不明の必須失敗がなくPASSなら、マージ、`tasks:close`、`tasks:reindex`、worktree削除の順で完了する。
 
 実装コミットには実装差分、テスト、必要な文書を含める。タスク成果物は `tasks:close` がまとめる。`index.md` は `tasks:reindex` コミットに含める。`tasks:close` が作る完了処理コミットの
 メッセージも `Why:` / `What:` / `Verify:` / `Risk:` / `Refs:` を含む。上流の作業手順との差分は

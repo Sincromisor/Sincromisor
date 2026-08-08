@@ -32,8 +32,9 @@ session終了後の数値的なresource収束確認だけを追加する。
 - Gate専用の境界client、scenario inventory、resource collector、report schemaは作らない。
 - `offer_revision`、ICE restart、HTTP上限、codec形式、panic recoveryは既存repository testを証拠とし、
   browser smoke testへ重複させない。
-- Gate結果とtask evaluatorの判定を分ける。固定条件を正しく実行して記録できた場合、
-  `gate_3_result: FAIL`でも本測定タスク自体は完了できる。
+- Gate結果とtask evaluatorの判定を分ける。ただし`gate_3_result: FAIL`の記録だけでは本測定タスクを
+  完了できない。揮発する証拠を環境復旧前に採取し、直接原因を特定して修正・再検証する。
+  別taskへ移管する場合は再現手順、証拠、特定済み原因、移管理由、後続task ID、ユーザー了承を必須とする。
 - production candidateの品質を観測していない環境起因の起動前失敗を、製品のGate FAILへ変換しない。
   sandboxとhostで異なるnetwork namespaceを事前検査に使わず、有効な環境を確認してから1回だけ測定する。
 - raw browser trace、音声、本文は
