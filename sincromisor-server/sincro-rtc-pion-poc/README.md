@@ -37,6 +37,31 @@ sudo apt-get install ffmpeg
 ffmpeg -version
 ```
 
+## Container image
+
+repository rootからPion binaryとFrontend静的成果物を同時にbuildする。実行imageはnon-root userで
+`/opt/sincromisor/frontend`と`/usr/bin/ffmpeg`を既定値として起動する。
+
+```sh
+docker build -f Docker/sincro-rtc-pion-poc/Dockerfile -t sincro-rtc-pion-poc:local .
+docker run --rm -p 8080:8080 sincro-rtc-pion-poc:local
+```
+
+別terminalから起動を確認する。
+
+```sh
+curl --fail http://127.0.0.1:8080/health/live
+curl --fail http://127.0.0.1:8080/health/ready
+```
+
+FFmpegを利用できない構成はlistenerを開かず非0で終了する。imageのstartup契約は、例えば次で確認できる。
+
+```sh
+docker run --rm --entrypoint /opt/sincromisor/pion-poc sincro-rtc-pion-poc:local \
+  --frontend-dir /opt/sincromisor/frontend \
+  --ffmpeg /missing/ffmpeg
+```
+
 VoiceSynthesizerから受け取る`audio/wav`、`audio/aac`、parameterなしの`audio/ogg`、
 唯一のparameterとして`codecs=opus`を持つ`audio/ogg`を、48 kHz mono PCMへ変換する。
 MIME parameterの追加や未知codecは起動後のdecode errorとして発話単位で拒否する。
