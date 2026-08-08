@@ -5,7 +5,7 @@ status: open
 depends_on:
   - task-260802212216-pion-gate3-pipeline-contract-harness
 superseded_by: null
-review: null
+review: NEEDS_REVISION
 reviewed_sha: null
 verdict: null
 attempts: 0
