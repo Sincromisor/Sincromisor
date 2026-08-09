@@ -101,12 +101,16 @@ func ntpMiddle32(value time.Time) uint32 {
 // startInbound は受理済みの唯一のaudio trackをsession context配下のInputProcessorへ接続する。
 //
 // acceptAudioTrackがWaitGroupを予約済みなので、ここでは追加しない。readerはreadiness前から開始し、
-// Coordinator running前のframeはInputProcessorがunavailableとしてdropする。cancelと正常EOFは
-// 終了通知、それ以外のdecode/submit/observer failureはmedia_errorとして同じclose-onceへ戻す。
+// Coordinator running前のframeはInputProcessorがunavailableとしてdropする。cancelは終了通知だけとし、
+// 正常EOFはbrowser側入力の終了としてnormal closeへ集約する。decode/submit/observer failureは
+// media_errorとして同じclose-onceへ戻す。
 func (s *Session) startInbound(reader audiomedia.RTPReader) {
 	s.goReserved("inbound_processor", func(context.Context) {
 		err := s.input.Run(s.ctx, reader, s.pipeline.SubmitPCM)
-		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) {
+		switch {
+		case errors.Is(err, io.EOF):
+			_ = s.Close("normal")
+		case err != nil && !errors.Is(err, context.Canceled):
 			s.logger.Error("inbound audio processing stopped", "session_id", s.id, "reason", "media_read_error")
 			_ = s.Close("media_error")
 		}

@@ -68,6 +68,58 @@ func TestManagerConnectionDataChannelsAndClose(t *testing.T) {
 	}
 }
 
+func TestManagerInboundEOFClosesSessionAndRemovesRegistryEntry(t *testing.T) {
+	manager := newTestManager(t)
+	t.Cleanup(func() {
+		if err := manager.CloseAll(testCloseContext(t), "test_teardown"); err != nil {
+			t.Errorf("CloseAll(test_teardown) error = %v", err)
+		}
+	})
+	client, _ := newBrowserPeer(t)
+	t.Cleanup(func() { _ = client.Close() })
+	inputTrack, err := webrtc.NewTrackLocalStaticSample(
+		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: 48000, Channels: 2},
+		"browser-audio",
+		"browser",
+	)
+	if err != nil {
+		t.Fatalf("NewTrackLocalStaticSample() error = %v", err)
+	}
+	if _, err := client.AddTrack(inputTrack); err != nil {
+		t.Fatalf("AddTrack(input) error = %v", err)
+	}
+
+	answer := negotiatePair(t, manager, client)
+	session := activeSession(t, manager, answer.SessionID)
+	if err := inputTrack.WriteSample(media.Sample{
+		Data: []byte{0xf8, 0xff, 0xfe}, Duration: 20 * time.Millisecond,
+	}); err != nil {
+		t.Fatalf("WriteSample(input) error = %v", err)
+	}
+	waitForCondition(t, 3*time.Second, func() bool {
+		session.lifecycle.mu.Lock()
+		defer session.lifecycle.mu.Unlock()
+		return session.lifecycle.audio != nil
+	})
+	if err := client.Close(); err != nil {
+		t.Fatalf("client.Close() error = %v", err)
+	}
+	waitForRemoteSessionClose(t, manager, answer.SessionID, session)
+}
+
+func TestInboundEOFClosesSessionNormally(t *testing.T) {
+	manager, session := newManagedLifecycleSession(t, SystemClock{}, blockingPipelineFactory{})
+	session.wg.Add(1)
+	session.startInbound(&singlePacketReader{})
+	waitSessionDone(t, session)
+	if session.lifecycle.closeReason != "normal" {
+		t.Fatalf("close reason = %q, want normal", session.lifecycle.closeReason)
+	}
+	if manager.Count() != 0 {
+		t.Fatalf("registry Count() = %d, want 0", manager.Count())
+	}
+}
+
 func TestManagerTenSequentialNormalClosesConverge(t *testing.T) {
 	baseline := runtime.NumGoroutine()
 	manager := newTestManager(t)
