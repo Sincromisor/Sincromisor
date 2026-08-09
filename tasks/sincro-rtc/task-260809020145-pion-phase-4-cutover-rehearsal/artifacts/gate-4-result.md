@@ -3,34 +3,35 @@
 ## 実行情報
 
 - commit: `9408dd6e`（`ccc4691` を含む `origin/migration/aiortc-to-pion`）
-- 実行日時: 2026-08-09T13:26:21+09:00 から 13:32+09:00
+- 実行日時: 2026-08-09T23:58+09:00 から 2026-08-10T00:05+09:00
 - 実行者: Codex
-- 環境: `gloria@malvales.hachune.net` の `/tmp/sincromisor-gate4-rehearsal` を `origin/migration/aiortc-to-pion` から detached checkout し、既存 checkout の `.env` だけを複写した。既存 checkout は分岐しているため変更しなかった。
+- 環境: `gloria@malvales.hachune.net` の `/tmp/sincromisor-gate4-rehearsal`。public IPv4、TCP 8001、固定 UDP 3479、VPS VPN 経由の既存下流 4 service を使用した。
 - 判定: FAIL
 
 ## 段階結果
 
-### Pion image と切替前の収束
+### Pion 切替、Chrome smoke、収束
 
-- `docker compose --project-name sincromisor --profile pion build sincro-rtc-pion` 後、Pion service だけを `--no-deps --no-build --force-recreate` した。Frontend と下流 service は rebuild しなかった。
-- readiness は再作成後 5 秒で HTTP 200、`/statuses` は `sessions: 0`、metrics は `sincro_rtc_sessions_active 0` だった。
+- Pion は `running/healthy`、readiness HTTP 200、`/statuses` は `sessions: 0` で開始した。public HTTPS origin の Chrome fake microphone smoke では offer/candidate と ICE `connected` まで到達した。
+- 実下流 service は利用者発話を受理したが、text processor の応答は空で、合成対象も生成されなかった。このため、利用者/応答 text、telop、非無音の合成音声を含む 1 turn は不成立だった。
+- Chrome session 終了後は Pion の `/statuses` と `sincro_rtc_sessions_active` がともに 0 へ収束した。resource 増加は既存 observability からは観測されなかった。
+- Firefox は、Chrome の必須 1 turn が不成立となった時点で追加実行しなかった。
 
-### Pion browser smoke
+### Pion process restart
 
-- Chrome: 既存 `playwright.gate3.config.ts` と `gate3-input.wav` を使い、SSH localhost tunnel 経由で実行した。offer/answer までは到達したが、3 session 全てが ICE `checking` から 15 秒で `pre_connect_timeout` となった。text、telop、非無音音声は未観測。
-- session 終了後: `/statuses` は `sessions: 0`、metrics は `sessions_created_total 3`、`sessions_closed_total{reason="pre_connect_timeout"} 3`、`sessions_active 0` へ収束した。
-- Firefox: 既存 Gate 3 config は `browserName: "chromium"` と Chrome executable 固定であり、host の `firefox` binary も未導入だった。新規 harness は task scope 外のため実行しなかった。
-- 直接原因: SSH tunnel は signaling HTTP だけを転送する一方、browser の ICE は Pion が広告する public IPv4 の UDP 3479 へ直接送る。外部 HTTP 8001 も timeout し、Pion log に candidate pair の `connected` はない。public UDP/NAT/firewall 到達性がこの実行元から成立していない。
+- `docker kill sincromisor-sincro-rtc-pion-1` を実行した。container の restart policy は `always` だが、exit 137 のまま `RestartCount: 0` で自動復帰せず、readiness と新規 session 受理は確認できなかった。
+- 復旧優先で `docker compose --project-name sincromisor --profile pion up -d --no-build --no-deps sincro-rtc-pion` を実行し、Pion を healthy、`sessions: 0` に戻した。
 
-### 停止と rollback
+### aiortc rollback
 
-- `docker compose --project-name sincromisor --profile pion stop -t 6 sincro-rtc-pion` は 1,474 ms で完了し、6 秒以内だった。
-- aiortc の `full` profile は `service-initializer` が未初期化で Hugging Face model download を開始し、`sincro-rtc` は `Created` のままになった。下流 service を再初期化しない rollback 条件を満たさないため、initializer を停止した。
-- Pion を `--no-deps --no-build` で復旧し、最終状態は healthy、`/health/ready` は HTTP 200、`/statuses` は `sessions: 0`。aiortc は再起動していない。
-- Pion SIGKILL restart/readiness、新規 session、aiortc の Chrome/Firefox smoke は、Pion smoke の critical failure と rollback failure により未実行とした。
+- Pion 停止後、`docker compose --project-name sincromisor --profile full up -d --no-build --no-deps sincro-rtc` で aiortc を起動した。rollback readiness まで 5,473 ms で、`SINCRO_CONSUL_AGENT_HOST` は VPS VPN の既存 Consul endpoint を参照していた。Frontend と下流 service は rebuild していない。
+- Chrome fake microphone smoke は signaling、利用者発話、下流 4 service 接続まで到達したが、実 text processor の応答が空のため、応答 text、telop、非無音の合成音声を確認できなかった。Firefox は同じ必須条件が Chrome で不成立のため未実行とした。
+- aiortc 停止後に Pion を再起動し、最終状態は Pion `running/healthy`、readiness HTTP 200、`/statuses` は `sessions: 0` である。
 
-## 証拠と残リスク
+## 証拠、直接原因、復旧
 
-- private evidence: VPS の `work/private-artifacts/task-260809020145-pion-phase-4-cutover-rehearsal/` に Pion log、metrics、statuses、停止時間、aiortc rollback の `ps` と log を保存した。session ID、SDP、candidate、会話、音声 payload は転載していない。
-- failure原因: public UDP 3479 の到達性未成立と、aiortc rollback に必要な初期化済み service state の欠如。
-- 解除条件: 外部 browser から public UDP 3479 の ICE 到達性を実証できる stable HTTPS origin と、下流 service を再初期化せず aiortc を起動できる rollback image/state を準備してから、本 runbook を最初から再実行する。
+- private evidence: VPS の `work/private-artifacts/task-260809020145-pion-phase-4-cutover-rehearsal/` に command、時刻、container state、metrics、statuses、Pion/aiortc log を保存する。session ID、SDP、candidate、会話、音声 payload は転載しない。
+- 直接原因 1: 実環境の text processor が空の応答を返し、voice text もないため、両 backend の 1 turn 出力条件が不成立だった。
+- 直接原因 2: `restart: always` が設定された Pion container は SIGKILL 後に Docker の restart attempt を開始せず、exit 137 のまま停止した。
+- 復旧: shared service 影響を止めるため aiortc rollback 確認後、Pion を `--no-build --no-deps` で再起動して healthy・active session 0 へ戻した。
+- 解除条件: text processor が非空の応答を返す production 相当下流状態と、SIGKILL 後に restart policy が実際に Pion を自動復帰する Docker/compose 状態を用意してから、本 runbook を最初から再実行する。
