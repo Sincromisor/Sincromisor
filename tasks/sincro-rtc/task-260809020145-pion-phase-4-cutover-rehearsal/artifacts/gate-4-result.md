@@ -2,61 +2,35 @@
 
 ## 実行情報
 
-- commit: `a44d3080454eac18d07a3a6f1f24e29e666de88b`
-- 実行日時: 2026-08-09T05:24:42+09:00
+- commit: `9408dd6e`（`ccc4691` を含む `origin/migration/aiortc-to-pion`）
+- 実行日時: 2026-08-09T13:26:21+09:00 から 13:32+09:00
 - 実行者: Codex
-- 環境: host外向き経路は`eth0`の`172.20.134.175`から`172.20.128.1`経由。外部観測IPは`130.62.3.81`だが、NAT forwardとfirewall control-planeは確認権限がない。
-- 判定: FAIL（production相当環境の必須前提未充足）
+- 環境: `gloria@malvales.hachune.net` の `/tmp/sincromisor-gate4-rehearsal` を `origin/migration/aiortc-to-pion` から detached checkout し、既存 checkout の `.env` だけを複写した。既存 checkout は分岐しているため変更しなかった。
+- 判定: FAIL
 
 ## 段階結果
 
-### 切替前確認
+### Pion image と切替前の収束
 
-- 開始: 2026-08-09T05:24:42+09:00
-- 終了: 2026-08-09T05:24:42+09:00
-- command: `ip -4 route get 1.1.1.1`; `ip -4 -o addr show scope global`; `curl https://api.ipify.org`; `curl https://ifconfig.me/ip`; `ss -lun`; `docker compose --project-name task260809020145-rehearsal --profile pion config`
-- 結果: 外部IPは2つの照会で`130.62.3.81`に一致した。一方、`SINCRO_COMPOSE_NETWORK_SUBNET`、`SINCRO_PION_FFMPEG_PATH`、`SINCRO_PION_STUN`、`SINCRO_PION_CONTAINER_IPV4`、`SINCRO_PION_MEDIA_UDP_PORT`、`SINCRO_PION_PUBLIC_IPV4`、`SINCRO_PION_INTERFACE`が未設定で、compose configは`no port specified: :/udp`（exit 1）となった。nftablesとiptablesの規則参照も権限不足で失敗した。
-- 未観測事項: 固定UDP port、container固定IPv4、host公開interface、NAT静的forward、inbound/return firewall許可。`127.0.0.1:8001`のstatusesも接続不可（curl exit 7）で、既存aiortc sessionは観測できない。
+- `docker compose --project-name sincromisor --profile pion build sincro-rtc-pion` 後、Pion service だけを `--no-deps --no-build --force-recreate` した。Frontend と下流 service は rebuild しなかった。
+- readiness は再作成後 5 秒で HTTP 200、`/statuses` は `sessions: 0`、metrics は `sincro_rtc_sessions_active 0` だった。
 
-### aiortc停止とPion readiness
+### Pion browser smoke
 
-- 開始: 未実行
-- 終了: 未実行
-- aiortc既存session: 未観測（stable endpoint未起動）
-- Pion readiness: 未実行
-- 結果: 切替前のproduction networkとcompose設定が未検証のため、既存コンテナを停止しなかった。
-- 未観測事項: aiortc停止、Pion起動、Consul登録、readiness。
+- Chrome: 既存 `playwright.gate3.config.ts` と `gate3-input.wav` を使い、SSH localhost tunnel 経由で実行した。offer/answer までは到達したが、3 session 全てが ICE `checking` から 15 秒で `pre_connect_timeout` となった。text、telop、非無音音声は未観測。
+- session 終了後: `/statuses` は `sessions: 0`、metrics は `sessions_created_total 3`、`sessions_closed_total{reason="pre_connect_timeout"} 3`、`sessions_active 0` へ収束した。
+- Firefox: 既存 Gate 3 config は `browserName: "chromium"` と Chrome executable 固定であり、host の `firefox` binary も未導入だった。新規 harness は task scope 外のため実行しなかった。
+- 直接原因: SSH tunnel は signaling HTTP だけを転送する一方、browser の ICE は Pion が広告する public IPv4 の UDP 3479 へ直接送る。外部 HTTP 8001 も timeout し、Pion log に candidate pair の `connected` はない。public UDP/NAT/firewall 到達性がこの実行元から成立していない。
 
-### Pion smoke test
+### 停止と rollback
 
-- 開始: 未実行
-- 終了: 未実行
-- Chrome: 未実行（`google-chrome`は存在するがstable endpointと媒体・認証条件がない）
-- Firefox: 未実行（binary未導入）
-- session終了後の収束: 未観測
-- 結果: 前段未達のため未実行。
-- 未観測事項: 接続、1 turn、text、telop、非無音音声、statuses/metrics収束。
-
-### Pion crash復旧
-
-- 開始: 未実行
-- 終了: 未実行
-- restart/readiness: 未観測
-- 新規session: 未観測
-- 結果: Pion未起動のため未実行。
-- 未観測事項: restart policyによる復旧と新規session受理。
-
-### Pion停止とaiortc復旧
-
-- 開始: 未実行
-- 終了: 未実行
-- Pion停止所要時間: 未観測
-- aiortc smoke test: Chrome / Firefoxとも未実行
-- 結果: Pion未起動のため未実行。
-- 未観測事項: 6秒以内の停止、aiortc rollback、browser smoke。
+- `docker compose --project-name sincromisor --profile pion stop -t 6 sincro-rtc-pion` は 1,474 ms で完了し、6 秒以内だった。
+- aiortc の `full` profile は `service-initializer` が未初期化で Hugging Face model download を開始し、`sincro-rtc` は `Created` のままになった。下流 service を再初期化しない rollback 条件を満たさないため、initializer を停止した。
+- Pion を `--no-deps --no-build` で復旧し、最終状態は healthy、`/health/ready` は HTTP 200、`/statuses` は `sessions: 0`。aiortc は再起動していない。
+- Pion SIGKILL restart/readiness、新規 session、aiortc の Chrome/Firefox smoke は、Pion smoke の critical failure と rollback failure により未実行とした。
 
 ## 証拠と残リスク
 
-- private evidence: なし（containerを作成・停止していない）。
-- failure原因: production compose環境変数とNAT/firewall control-planeへのアクセスが提供されていない。hostのprivate送信元と外部観測IPの差からNAT配下であることは確認できるが、指定UDP portのforward先と許可規則は検証不能。
-- 残リスク: 実環境のPion接続、media、crash restart、rollbackはすべて未検証。解除条件は、実環境の必須Pion環境変数、NAT静的forwardとfirewall許可の確認権限、Chrome/Firefoxと媒体・認証を備えたstable endpointを提供すること。
+- private evidence: VPS の `work/private-artifacts/task-260809020145-pion-phase-4-cutover-rehearsal/` に Pion log、metrics、statuses、停止時間、aiortc rollback の `ps` と log を保存した。session ID、SDP、candidate、会話、音声 payload は転載していない。
+- failure原因: public UDP 3479 の到達性未成立と、aiortc rollback に必要な初期化済み service state の欠如。
+- 解除条件: 外部 browser から public UDP 3479 の ICE 到達性を実証できる stable HTTPS origin と、下流 service を再初期化せず aiortc を起動できる rollback image/state を準備してから、本 runbook を最初から再実行する。
