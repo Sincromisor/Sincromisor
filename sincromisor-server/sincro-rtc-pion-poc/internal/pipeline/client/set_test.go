@@ -15,7 +15,7 @@ func TestConnectionSetActivationGateClassifiesEvents(t *testing.T) {
 		set := &connectionSet{
 			cancel: func() { cancelOnce.Do(func() { close(cancelled) }) }, closeDone: make(chan struct{}),
 		}
-		set.watch(events)
+		set.watch(ServiceExtractor, events)
 		events <- Event{Service: ServiceExtractor, Kind: EventRemoteClose, Err: errors.New("closed")}
 		select {
 		case <-cancelled:
@@ -37,7 +37,7 @@ func TestConnectionSetActivationGateClassifiesEvents(t *testing.T) {
 		set := &connectionSet{
 			cancel: func() {}, closeDone: make(chan struct{}),
 		}
-		set.watch(events)
+		set.watch(ServiceRecognizer, events)
 		if err := set.Activate(func(event Event) { delivered <- event }); err != nil {
 			t.Fatalf("Activate() error = %v", err)
 		}
@@ -61,10 +61,38 @@ func TestConnectionSetActivationGateClassifiesEvents(t *testing.T) {
 		set := &connectionSet{
 			cancel: func() {}, closeDone: make(chan struct{}),
 		}
-		set.watch(events)
+		set.watch(ServiceExtractor, events)
 		close(events)
 		if err := set.Activate(func(Event) {}); err != nil {
 			t.Fatalf("Activate() treated event channel close as failure: %v", err)
+		}
+		if err := set.Close(); err != nil {
+			t.Fatalf("Close() error = %v", err)
+		}
+	})
+
+	t.Run("watcher panic identifies watched service", func(t *testing.T) {
+		events := make(chan Event, 1)
+		delivered := make(chan Event, 1)
+		set := &connectionSet{cancel: func() {}, closeDone: make(chan struct{})}
+		set.watch(ServiceProcessor, events)
+		if err := set.Activate(func(event Event) {
+			if event.Kind == EventPanic {
+				delivered <- event
+				return
+			}
+			panic("handler panic")
+		}); err != nil {
+			t.Fatalf("Activate() error = %v", err)
+		}
+		events <- Event{Service: ServiceProcessor, Kind: EventRemoteClose}
+		select {
+		case event := <-delivered:
+			if event.Service != ServiceProcessor || event.Kind != EventPanic {
+				t.Fatalf("panic event = %+v", event)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("watcher panic was not delivered")
 		}
 		if err := set.Close(); err != nil {
 			t.Fatalf("Close() error = %v", err)
