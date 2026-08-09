@@ -134,6 +134,9 @@ Google Chrome stable で
    remote trackが継続することと、合成結果が20 ms cadenceで再生されることを確認する。
 5. 会話後、Debug Consoleの`text_ch`に実chat message、`telop_ch`に再生audioと同期したmoraが表示され、
    invalid payload logが出ないことを確認する。
+   `session_id`でPion logを絞り、`recognizer_result_received`、`processor_request_sent`、
+   `processor_result_received`、`synthesizer_result_received`の最後の到達stageを確認する。これらのlogと
+   Git artifactには認識・chat・VoiceText・音声・Raw payloadを転載しない。
 6. 通常 close を連続 10 回行い、各回の `session registry updated` が `active_sessions=0` を示す。
    process を停止した最後の `pion poc stopped` で `final_goroutines` が起動時の
    `initial_goroutines + 5` 以下であることを確認する。
