@@ -119,7 +119,13 @@ stable TCP port競合で後から起動したbackendが失敗する。
   pacing/codec、pipeline reconnect、queue/DataChannel、close durationを集計する。
   duration、lag、RTTはseconds、queue depthはitemsである。
 - labelはendpoint、status class、有限enumのreason/stage/outcomeだけを使う。session ID、SDP、
-  candidate、chat、音声payloadはmetric labelまたは通常logへ記録しない。
+  candidate、chat、音声payloadはmetric labelまたは通常logへ記録しない（下記pipeline stage logの
+  session ID相関は例外）。
+
+Pion pipelineの正常系は、対象`session_id`で`recognizer_result_received`、`processor_request_sent`、
+`processor_result_received`、`synthesizer_result_received`を順に確認する。各Info logはstage、session ID、
+speech IDまたはsequence ID、confirmedだけを相関情報として持つ（Processor resultのみend_of_responseと
+voice_text_presentを追加する）。認識・chat・VoiceText・音声・Raw payloadはlogまたはGit artifactへ転載しない。
 
 Gate 3で固定する20 metric familyは次のとおり。counterは該当eventで1増加し、active sessionは
 admissionからterminal closeまで、queue depthはaccepted enqueueからdequeue/purge/closeまでの

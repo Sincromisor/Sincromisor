@@ -63,6 +63,11 @@ func (c *Coordinator) recognizerLoop(work *generationWork, recognizer Recognizer
 				c.requestReset(work.number, pclient.ServiceRecognizer, err)
 				return
 			}
+			// Stage logs deliberately keep only correlation IDs and completion state.
+			// Recognition/chat/voice payloads must not enter operational logs.
+			c.logger.Info("pipeline stage reached",
+				"stage", "recognizer_result_received", "session_id", value.SessionID,
+				"speech_id", value.SpeechID, "confirmed", value.Confirmed)
 			message := work.conv.recognitionMessage(value)
 			if message.MessageID == "" {
 				c.requestReset(work.number, pclient.ServiceRecognizer, errors.New("recognizer changed current speech"))
@@ -87,6 +92,9 @@ func (c *Coordinator) recognizerLoop(work *generationWork, recognizer Recognizer
 				c.requestReset(work.number, pclient.ServiceProcessor, err)
 				return
 			}
+			c.logger.Info("pipeline stage reached",
+				"stage", "processor_request_sent", "session_id", request.SessionID,
+				"sequence_id", request.SequenceID, "confirmed", request.Confirmed)
 		}
 	}
 }
@@ -108,6 +116,11 @@ func (c *Coordinator) processorLoop(work *generationWork, processor ProcessorCli
 				c.requestReset(work.number, pclient.ServiceProcessor, err)
 				return
 			}
+			c.logger.Info("pipeline stage reached",
+				"stage", "processor_result_received", "session_id", value.SessionID,
+				"sequence_id", value.SequenceID, "confirmed", value.Confirmed,
+				"end_of_response", value.EndOfResponse,
+				"voice_text_present", value.VoiceText != nil && *value.VoiceText != "")
 			if err = c.publishText(work.number, pclient.ServiceProcessor, value.ResponseMessage); err != nil {
 				c.requestReset(work.number, pclient.ServiceProcessor, err)
 				return
@@ -139,6 +152,9 @@ func (c *Coordinator) synthLoop(work *generationWork, synth SynthesizerClient) {
 			if !c.isCurrentGeneration(work.number, pclient.ServiceSynthesizer) {
 				continue
 			}
+			c.logger.Info("pipeline stage reached",
+				"stage", "synthesizer_result_received", "session_id", c.sessionID,
+				"speech_id", value.SpeechID, "confirmed", true)
 			if err := c.publishSynth(work.number, value); err != nil {
 				c.requestReset(work.number, pclient.ServiceSynthesizer, err)
 				return

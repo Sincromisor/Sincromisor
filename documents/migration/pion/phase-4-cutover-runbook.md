@@ -39,6 +39,10 @@ stable endpointを使い、Gate 3で成立済みのChromeで1回、Pionへの接
 非無音の合成音声を確認する。実下流の応答本文は固定文と比較しない。session終了後に`/statuses`でactive sessionが
 収束することを確認する。
 
+対象sessionのPion logで`recognizer_result_received`、`processor_request_sent`、`processor_result_received`、
+`synthesizer_result_received`の最後の到達stageを確認する。stage logには本文・VoiceText・音声・Raw payloadを
+出力しないため、compose logやGit artifactへそれらを転載しない。
+
 metricsとcompose logは原因調査に必要な最小範囲だけを、Git管理外の
 `work/private-artifacts/task-260809020145-pion-phase-4-cutover-rehearsal/`へ保存する。session ID、SDP、
 candidate、会話、音声payloadをresult artifactへ転載しない。
