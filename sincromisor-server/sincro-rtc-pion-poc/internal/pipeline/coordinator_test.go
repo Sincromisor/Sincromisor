@@ -62,6 +62,45 @@ func TestCoordinatorRunsFixtureBackedFourStageConversation(t *testing.T) {
 	assertClosedOutputs(t, coordinator)
 }
 
+func TestCoordinatorSendsInitialPartialProcessorRequestWithEmptyHistory(t *testing.T) {
+	factory := &fakeFactory{t: t}
+	coordinator := newTestCoordinator(t, factory)
+	if err := coordinator.Start(context.Background(), "session-initial-partial", "sincro"); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	set := factory.setAt(t, 0)
+	set.extractor.onPCM = func([]byte) {
+		set.extractor.results <- protocol.ExtractorResult{
+			SessionID: "session-initial-partial", SpeechID: 1, SequenceID: 1, Confirmed: false,
+		}
+	}
+	if err := coordinator.SubmitPCM(make([]byte, pcmFrameBytes)); err != nil {
+		t.Fatalf("SubmitPCM() error = %v", err)
+	}
+	_ = receive(t, coordinator.TextResults())
+	_ = receive(t, coordinator.TextResults())
+	_ = receive(t, coordinator.SynthResults())
+	request := set.processor.lastRequest
+	if request.Confirmed || request.History.Messages == nil || len(request.History.Messages) != 0 {
+		t.Fatalf("initial partial processor request = %+v", request)
+	}
+	if err := coordinator.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+}
+
+func TestCloneMessagesNormalizesNilAndCopiesValues(t *testing.T) {
+	if cloned := cloneMessages(nil); cloned == nil || len(cloned) != 0 {
+		t.Fatalf("cloneMessages(nil) = %#v, want non-nil empty slice", cloned)
+	}
+	values := []protocol.ChatMessage{{Message: "before"}}
+	cloned := cloneMessages(values)
+	values[0].Message = "after"
+	if cloned[0].Message != "before" {
+		t.Fatalf("cloneMessages() retained input backing array: got %q", cloned[0].Message)
+	}
+}
+
 func TestCoordinatorPublishesInitialAndResetGenerationChanges(t *testing.T) {
 	factory := &fakeFactory{t: t}
 	coordinator := newTestCoordinator(t, factory)

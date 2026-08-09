@@ -205,5 +205,6 @@ func (c *conversation) validateProcessor(value protocol.ProcessorResult) (protoc
 }
 
 func cloneMessages(values []protocol.ChatMessage) []protocol.ChatMessage {
-	return append([]protocol.ChatMessage(nil), values...)
+	// Processor wire contractは履歴なしをnon-nilの空listで表すため、nil入力もここで正規化する。
+	return append(make([]protocol.ChatMessage, 0, len(values)), values...)
 }
