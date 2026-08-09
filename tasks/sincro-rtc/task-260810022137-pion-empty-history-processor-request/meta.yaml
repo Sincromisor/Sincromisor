@@ -1,0 +1,13 @@
+id: task-260810022137-pion-empty-history-processor-request
+title: Pion初回Processor requestの空historyを正規化する
+category: sincro-rtc
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-08-10
+closed_at: null
+legacy_ids: []
