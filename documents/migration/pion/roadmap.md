@@ -143,8 +143,9 @@ production相当環境で、Pion版の品質だけでなく停止切替とaiortc
 ここで判定するのは移行可能性であり、Pionの網羅的な品質評価ではない。既存のrepository testを前提に、
 実際のimage、compose、network、runbookを使った1回のリハーサルだけをGate 4の追加評価とする。
 
-Gate 4は2026-08-09にFAILとなった。Pion browser smoke は public UDP 3479 の ICE 到達性不足で会話を開始できず、
-aiortc rollback も下流 service を再初期化せずに起動できなかった。詳細と解除条件は[Gate 4結果](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-rehearsal/artifacts/gate-4-result.md)を正本とする。
+Gate 4は2026-08-09に再実行してもFAILとなった。public UDP 3479 と aiortc の offline rollback 起動は確認できたが、
+実 text processor の空応答により両backendで 1 turn 出力条件を満たせず、Pion は SIGKILL 後に restart policy で自動復帰しなかった。
+詳細と解除条件は[Gate 4結果](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-rehearsal/artifacts/gate-4-result.md)を正本とする。
 
 ### 次のタスク群
 
