@@ -21,7 +21,6 @@ type conversation struct {
 	open      bool
 	closed    map[int64]struct{}
 
-	accumulated map[int64]protocol.ExtractorResult
 	outstanding map[int64]protocol.ExtractorResult
 	requests    map[int64]protocol.ProcessorRequest
 	finalized   map[int64]struct{}
@@ -37,15 +36,14 @@ type extractionIdentity struct {
 
 // conversationは1 generation内のprotocol state machineである。
 //
-// accumulatedは同じspeechの音声をRecognizerへ送る形へ結合し、outstandingは送信済みsequenceと
-// RecognizerResultを1対1に照合する。currentUser、requests、finalizedはpartial user messageから
+// outstandingは送信済みsequenceとRecognizerResultを1対1に照合する。currentUser、requests、finalizedはpartial user messageから
 // Processor finalまでだけ生存し、reset時はconversation objectごと破棄される。confirmed historyは
 // Coordinator側にのみある。最後に受理したExtractor identityもCoordinatorがsession lifetimeで保持し、
 // 新generationのconversationへ同じspeech/sequenceを再受理させない。
 func newConversation(sessionID string) *conversation {
 	return &conversation{
 		sessionID: sessionID, speechID: -1, sequence: -1,
-		closed: make(map[int64]struct{}), accumulated: make(map[int64]protocol.ExtractorResult),
+		closed:      make(map[int64]struct{}),
 		outstanding: make(map[int64]protocol.ExtractorResult), requests: make(map[int64]protocol.ProcessorRequest),
 		finalized: make(map[int64]struct{}),
 	}
@@ -106,20 +104,12 @@ func (c *conversation) acceptExtraction(value protocol.ExtractorResult) (protoco
 		c.open, c.speechID = true, value.SpeechID
 	}
 	c.sequence = value.SequenceID
-	// Extractorは同じspeechをpartialごとの差分音声として返す。Recognizerへは現在までの
-	// sequence順結合を送り、各送信値をsequence ID単位のoutstandingとして保持する。
-	if previous, found := c.accumulated[value.SpeechID]; found {
-		voice := make([]byte, 0, len(previous.Voice)+len(value.Voice))
-		voice = append(voice, previous.Voice...)
-		voice = append(voice, value.Voice...)
-		value.Voice = voice
-	}
-	c.accumulated[value.SpeechID] = value
+	// Extractorの各partialは未送信の差分音声である。Recognizerも同じ単位で処理するため、
+	// ここで過去のpartialを結合すると同じframeを複数回認識へ渡してしまう。
 	c.outstanding[value.SequenceID] = value
 	if value.Confirmed {
 		c.open = false
 		c.closed[value.SpeechID] = struct{}{}
-		delete(c.accumulated, value.SpeechID)
 	}
 	return value, nil
 }

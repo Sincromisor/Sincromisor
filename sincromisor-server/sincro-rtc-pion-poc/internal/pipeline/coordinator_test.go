@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -83,6 +84,45 @@ func TestCoordinatorSendsInitialPartialProcessorRequestWithEmptyHistory(t *testi
 	request := set.processor.lastRequest
 	if request.Confirmed || request.History.Messages == nil || len(request.History.Messages) != 0 {
 		t.Fatalf("initial partial processor request = %+v", request)
+	}
+	if err := coordinator.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+}
+
+func TestCoordinatorForwardsEachExtractorPartialWithoutAccumulation(t *testing.T) {
+	factory := &fakeFactory{t: t}
+	coordinator := newTestCoordinator(t, factory)
+	if err := coordinator.Start(context.Background(), "session-partials", "sincro"); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	set := factory.setAt(t, 0)
+	forwarded := make(chan protocol.ExtractorResult, 3)
+	set.extractor.onPCM = func(frame []byte) {
+		sequence := int64(frame[0])
+		set.extractor.results <- protocol.ExtractorResult{
+			SessionID: "session-partials", SpeechID: 1, SequenceID: sequence,
+			Confirmed: sequence == 3, Voice: append([]byte(nil), frame...),
+			VoiceDType: "int16", VoiceSamplingRate: 16_000, VoiceSampleBytes: 2, VoiceChannels: 1,
+		}
+	}
+	set.recognizer.onExtraction = func(value protocol.ExtractorResult) { forwarded <- value }
+	frames := make([][]byte, 3)
+	for index := range frames {
+		frames[index] = make([]byte, pcmFrameBytes)
+		frames[index][0] = byte(index + 1)
+		if err := coordinator.SubmitPCM(frames[index]); err != nil {
+			t.Fatalf("SubmitPCM(%d) error = %v", index, err)
+		}
+	}
+	for index, want := range frames {
+		got := receive(t, forwarded)
+		if !bytes.Equal(got.Voice, want) {
+			t.Fatalf("partial %d voice = %d bytes, want only its %d-byte frame", index, len(got.Voice), len(want))
+		}
+		if got.Confirmed != (index == len(frames)-1) {
+			t.Fatalf("partial %d confirmed = %t", index, got.Confirmed)
+		}
 	}
 	if err := coordinator.Close(); err != nil {
 		t.Fatalf("Close() error = %v", err)

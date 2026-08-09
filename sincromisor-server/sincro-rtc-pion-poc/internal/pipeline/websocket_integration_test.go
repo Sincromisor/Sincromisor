@@ -225,7 +225,7 @@ func assertTransientReset(t *testing.T, coordinator *Coordinator, oldWork *gener
 	newWork.conv.mu.Lock()
 	defer newWork.conv.mu.Unlock()
 	if newWork.conv.currentUser != nil || len(newWork.conv.requests) != 0 ||
-		len(newWork.conv.outstanding) != 0 || len(newWork.conv.accumulated) != 0 {
+		len(newWork.conv.outstanding) != 0 {
 		t.Fatal("new generation inherited transient conversation state")
 	}
 }
