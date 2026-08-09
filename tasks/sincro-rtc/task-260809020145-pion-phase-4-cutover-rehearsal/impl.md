@@ -5,3 +5,7 @@ production環境のPion設定値とNAT/firewall control-planeがworktreeに提�
 ## 試行 2（2026-08-09）
 
 先行compose reviewの`NEEDS_REVISION`（Pionの固定media IPv4供給とreadiness probe）は既存実装で解消済みである。今回選択したVPS/VPN topologyでは、Pion専用local gossip agentを使わず、Consul HTTP endpointとPion登録用VPN addressをPion専用envで明示する。
+
+## 試行 3（2026-08-09）
+
+Pion browser smoke は public UDP 3479 の ICE 到達性不足で失敗し、aiortc rollback は未初期化の service-initializer が model download を要求したため成立しなかった。Pion は healthy・active session 0 に復旧した。直接の証拠、未実行項目、解除条件は[Gate 4結果](artifacts/gate-4-result.md)を正本とする。
