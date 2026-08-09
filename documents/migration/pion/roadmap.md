@@ -54,7 +54,7 @@ Linux network namespace、network impairment、長時間soak、詳細resource / 
 ### 主な成果
 
 - Phase 4では実際のcompose、NAT、firewallで接続とrollbackを確認する。
-- 対応browserは各1回のsmoke testに留め、網羅的な比較harnessを作らない。
+- Gate 3で成立済みのChromeを1回smoke testし、browser範囲を拡張する比較harnessは作らない。
 
 ### 次phaseへの条件
 
@@ -143,8 +143,8 @@ production相当環境で、Pion版の品質だけでなく停止切替とaiortc
 ここで判定するのは移行可能性であり、Pionの網羅的な品質評価ではない。既存のrepository testを前提に、
 実際のimage、compose、network、runbookを使った1回のリハーサルだけをGate 4の追加評価とする。
 
-Gate 4は2026-08-09に再実行してもFAILとなった。public UDP 3479 と aiortc の offline rollback 起動は確認できたが、
-production相当下流を判定できるbrowser smokeがなく1 turn出力を確認できず、Pion は SIGKILL 後に restart policy で自動復帰しなかった。
+Gate 4は2026-08-10時点でblockedである。限定後の実下流browser UI smoke手順を特定できず、Pion開始前に停止した。
+Pion process crash自動復帰は移行Gateの対象外である。
 詳細と解除条件は[Gate 4結果](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-rehearsal/artifacts/gate-4-result.md)を正本とする。
 
 ### 次のタスク群
@@ -163,9 +163,8 @@ production相当下流を判定できるbrowser smokeがなく1 turn出力を確
 
 - aiortc版とPion版を排他的に起動するcompose構成
 - production相当のNAT、firewall、public IPv4、固定UDP mux portの検証結果
-- aiortc版とPion版で各1回実行するbrowser smoke test
+- Gate 3で成立済みのChromeでaiortc版とPion版を各1回実行するbrowser smoke test
 - Pion版の接続、会話、音声、DataChannelと、停止後の資源回収結果
-- production相当のsupervisorによるPion再起動とreadiness復旧
 - 切替、smoke test、rollbackの所要時間を含むrunbook
 
 ### 次phaseへの条件
