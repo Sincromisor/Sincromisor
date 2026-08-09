@@ -2,13 +2,15 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 35 件）
+## タスク一覧（自動生成 / 全 37 件）
 
-### open（未完） — 1 件
+### open（未完） — 3 件
 
-| タスク                                                                                                         | タイトル                                         | 判定    | 依存                                                                                                 |
-| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------- |
-| [task-260809020145-pion-phase-4-cutover-rehearsal](./task-260809020145-pion-phase-4-cutover-rehearsal/task.md) | production相当環境でPion切替リハーサルを実行する | ❌ FAIL | `task-260809020145-pion-phase-4-cutover-runbook`, `task-260809124736-pion-inbound-eof-session-close` |
+| タスク                                                                                                                         | タイトル                                         | 判定    | 依存                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------- |
+| [task-260809020145-pion-phase-4-cutover-rehearsal](./task-260809020145-pion-phase-4-cutover-rehearsal/task.md)                 | production相当環境でPion切替リハーサルを実行する | ❌ FAIL | `task-260809020145-pion-phase-4-cutover-runbook`, `task-260809124736-pion-inbound-eof-session-close` |
+| [task-260809234428-pion-compose-restart-policy](./task-260809234428-pion-compose-restart-policy/task.md)                       | Pion container crash復旧の原因を特定して解消する | ❌ FAIL | —                                                                                                    |
+| [task-260809234428-pion-phase-4-smoke-prerequisites-audit](./task-260809234428-pion-phase-4-smoke-prerequisites-audit/task.md) | Phase 4実環境smokeの前提を監査する               | —       | —                                                                                                    |
 
 ### done（完了） — 30 件
 
