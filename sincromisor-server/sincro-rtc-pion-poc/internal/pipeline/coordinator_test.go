@@ -427,7 +427,7 @@ func TestOutputBackpressureUsesGenerationBarrierAndCloseOwnership(t *testing.T) 
 	go func() {
 		err := coordinator.publishText(1, pclient.ServiceProcessor, message)
 		if err != nil {
-			coordinator.requestReset(1, pclient.ServiceProcessor, err)
+			coordinator.requestReset(1, pclient.ServiceProcessor, resetCauseRuntimeError)
 		}
 		publishDone <- err
 	}()
@@ -545,7 +545,7 @@ func TestCloseConvergesDuringResetAndBackpressure(t *testing.T) {
 		go func() {
 			err := coordinator.publishText(1, pclient.ServiceProcessor, message)
 			if err != nil {
-				coordinator.requestReset(1, pclient.ServiceProcessor, err)
+				coordinator.requestReset(1, pclient.ServiceProcessor, resetCauseRuntimeError)
 			}
 			publishDone <- err
 		}()

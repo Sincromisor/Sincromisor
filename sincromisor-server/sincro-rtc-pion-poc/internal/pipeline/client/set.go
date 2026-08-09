@@ -103,7 +103,7 @@ func (f *setFactory) Connect(ctx context.Context, sessionID, talkMode string) (S
 		_ = set.Close()
 		return nil, err
 	}
-	set.watch(set.extractor.Events())
+	set.watch(ServiceExtractor, set.extractor.Events())
 	if set.recognizer, err = NewRecognizer(cfg, f.resolver, f.logger); err != nil {
 		_ = set.Close()
 		return nil, err
@@ -112,7 +112,7 @@ func (f *setFactory) Connect(ctx context.Context, sessionID, talkMode string) (S
 		_ = set.Close()
 		return nil, err
 	}
-	set.watch(set.recognizer.Events())
+	set.watch(ServiceRecognizer, set.recognizer.Events())
 	if set.processor, err = NewProcessor(cfg, f.resolver, f.logger); err != nil {
 		_ = set.Close()
 		return nil, err
@@ -121,7 +121,7 @@ func (f *setFactory) Connect(ctx context.Context, sessionID, talkMode string) (S
 		_ = set.Close()
 		return nil, err
 	}
-	set.watch(set.processor.Events())
+	set.watch(ServiceProcessor, set.processor.Events())
 	if set.synth, err = NewSynthesizer(cfg, f.resolver, f.logger); err != nil {
 		_ = set.Close()
 		return nil, err
@@ -130,11 +130,11 @@ func (f *setFactory) Connect(ctx context.Context, sessionID, talkMode string) (S
 		_ = set.Close()
 		return nil, err
 	}
-	set.watch(set.synth.Events())
+	set.watch(ServiceSynthesizer, set.synth.Events())
 	return set, nil
 }
 
-func (s *connectionSet) watch(events <-chan Event) {
+func (s *connectionSet) watch(service Service, events <-chan Event) {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
@@ -144,7 +144,7 @@ func (s *connectionSet) watch(events <-chan Event) {
 				handler, published, closed := s.handler, s.published, s.closed
 				s.mu.Unlock()
 				if published && !closed && handler != nil {
-					handler(Event{Kind: EventPanic})
+					handler(Event{Service: service, Kind: EventPanic})
 				}
 			}
 		}()
