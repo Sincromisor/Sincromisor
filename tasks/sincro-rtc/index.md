@@ -4,19 +4,13 @@
 
 ## タスク一覧（自動生成 / 全 34 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                                         | タイトル                         | 判定 | 依存 |
-| -------------------------------------------------------------------------------------------------------------- | -------------------------------- | ---- | ---- |
-| [task-260809124736-pion-inbound-eof-session-close](./task-260809124736-pion-inbound-eof-session-close/task.md) | Pionの入力EOFでsessionを終了する | —    | —    |
-
 ### blocked（停止中） — 1 件
 
 | タスク                                                                                                         | タイトル                                         | 判定    | 依存                                                                                                 |
 | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------- |
 | [task-260809020145-pion-phase-4-cutover-rehearsal](./task-260809020145-pion-phase-4-cutover-rehearsal/task.md) | production相当環境でPion切替リハーサルを実行する | ❌ FAIL | `task-260809020145-pion-phase-4-cutover-runbook`, `task-260809124736-pion-inbound-eof-session-close` |
 
-### done（完了） — 28 件
+### done（完了） — 29 件
 
 | タスク                                                                                                                                 | タイトル                                                              | 判定    | 依存                                                                                                                                                                                                                                                  |
 | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -48,6 +42,7 @@
 | [task-260809043422-pion-compose-network-contract](./task-260809043422-pion-compose-network-contract/task.md)                           | Pion compose network contractを確定する                               | ✅ PASS | `task-260809020144-pion-phase-4-production-network`, `task-260809020144-pion-phase-4-container-image`, `task-260809032447-pion-consul-runtime`                                                                                                        |
 | [task-260809063839-pion-phase-4-legacy-initial-offer-compat](./task-260809063839-pion-phase-4-legacy-initial-offer-compat/task.md)     | Pionでlegacy initial Offerを互換受理する                              | ✅ PASS | —                                                                                                                                                                                                                                                     |
 | [task-260809071315-pion-phase-4-pipeline-ping-timeout](./task-260809071315-pion-phase-4-pipeline-ping-timeout/task.md)                 | Pion下流WebSocketのfalse ping timeoutを解消する                       | ✅ PASS | —                                                                                                                                                                                                                                                     |
+| [task-260809124736-pion-inbound-eof-session-close](./task-260809124736-pion-inbound-eof-session-close/task.md)                         | Pionの入力EOFでsessionを終了する                                      | ✅ PASS | —                                                                                                                                                                                                                                                     |
 
 ### cancelled（取りやめ） — 2 件
 
