@@ -5,7 +5,7 @@
 - Phase 1はlocal Chromeの最小縦切りでPionとcodecの採用可否を判断する。
 - Phase 3は既存repository testと、現行Frontendによる1回のend-to-end smoke testでproduction候補を判定する。
 - Phase 4は実際のcomposeとnetwork構成で接続、会話、停止切替、rollbackを確認する。
-- 詳細baseline、network impairment、長時間soak、網羅的な性能比較は、実害が確認された場合だけ独立taskで行う。
+- 詳細baseline、network impairment、長時間soak、網羅的な性能比較、Pion process crash自動復帰は、実害が確認された場合だけ独立taskで行う。
 
 ## 必須検証
 
@@ -15,7 +15,7 @@
 | media         | Opus受信、test tone      | 実運用形式の合成音声を1回再生              | 会話音声の聴取                      |
 | DataChannel   | 2 channelへ固定JSON送信  | 現行Frontendで会話を1 turn                 | text / telop受信                    |
 | pipeline      | 対象外                   | Gate 2の互換試験とproduction候補の結合試験 | 実4サービスで会話                   |
-| lifecycle     | 通常closeとcodec error   | 正常終了と代表的な異常終了                 | 停止切替、process再起動、rollback   |
+| lifecycle     | 通常closeとcodec error   | 正常終了と代表的な異常終了                 | 停止切替、session収束、rollback     |
 | network       | local host candidate     | local統合環境                              | 実運用のNAT、firewall、固定UDP port |
 | compatibility | Chrome                   | 管理対象Chromium                           | 実運用で対応するbrowserを各1回      |
 
@@ -57,11 +57,21 @@ Phase 1完了後に詳細baselineを作り直さない。PoCで採用した機�
 
 ICE restartのbrowser試験が既に存在する場合は実行するが、Gate 3判定用に新しい注入機構を追加しない。
 
+### Gate判定規則
+
+Gate条件へ追加できるのは、移行固有の不変条件であり、既存確認で代替できない理由、既存の観測方法、未達時に切替を止める理由を
+すべて記録できるものだけとする。条件は「移行必須」「既存testの証拠」「独立した運用強化」に分類し、GateのFAILは移行必須条件の
+未達だけで決める。
+
+新しいharness、設定、運用要件が必要になった場合はGateへ追加しない。根本原因、移行との関係、最小受け入れ条件を持つ独立taskへ
+切り出す。観測点が不足するときも、それが移行必須条件を観測できない原因なら必要な観測点と解除条件を記録してGate taskを`blocked`にする。
+未検証の追加要件はFAIL原因にせず、設計判断またはtest整備taskとして扱う。
+
 ### Gate 3判定
 
-- repository testとend-to-end smoke testがPASSする。
-- 未観測項目がある場合は、その項目が切替に必要な理由を示せなければGateへ追加しない。
-- production codeまたは既存testの修正が必要ならGateをFAILとし、原因箇所を直してから再実行する。
+- 移行必須: repository testとend-to-end smoke testがPASSする。
+- 既存testの証拠: initial Offer、candidate、DataChannel、audio、ICE restart、late candidate、pipeline reset、代表的なcloseは既存testで確認する。
+- 独立した運用強化: Gate専用harness、注入機構、性能比較は追加しない。
 
 ## Phase 4 cutover rehearsal
 
@@ -70,9 +80,23 @@ production相当環境で、実際に採用する構成だけを検証する。
 - 固定UDP mux port、public IPv4、NAT、firewallを本番と同じ値で構成する。
 - Pion版で対応browserから接続し、1 turnの会話、音声、DataChannelを確認する。
 - session終了後にactive session、goroutine、WebSocket、socketが収束することを確認する。
-- production相当のsupervisorでPion processを再起動し、readiness復旧後に新規sessionを受理できることを確認する。
 - aiortc停止、Pion起動、smoke test、Pion停止、aiortc復旧を一連の手順として実行する。
 - FrontendとPython下流serviceを再buildせずrollbackできることを確認する。
+
+Gate 4では、public UDP / NAT / firewallはPion接続成立を観測する環境前提として扱う。Pion process crash自動復帰は
+Pion固有の運用強化であり、Gate 4の受け入れ条件、検証計画、runbookには含めない。
+
+### Gate 4判定
+
+- 移行必須: Pionで現行Frontendが接続し、1 turnの会話、利用者/応答text、telop、非無音音声が成立する。session終了後に
+  active sessionと下流接続が収束し、aiortcへのrollback後にもFrontendから新規接続と1 turnが成立する。切替とrollbackで
+  Frontendと下流serviceをrebuildしない。
+- 既存testの証拠: 既存repository testはPhase 3で確認済みの契約・異常系の証拠として再利用する。
+- 独立した運用強化: Pion process crash自動復帰、soak、性能比較、障害注入、browser matrixの拡張は含めない。
+
+現行Gate 4 taskへの適用は、この規則を反映した次回のリハーサルだけとする。過去artifactとPASS / FAIL / blockedの判定履歴は
+書き換えない。次回は、Pionとrollback後のaiortcで移行必須条件を観測できるproduction相当smoke手順が利用可能になった時点で、
+runbookを最初から再実行する。
 
 次は必須Gateに含めない。
 
