@@ -32,12 +32,12 @@ func (c *Coordinator) extractorLoop(work *generationWork, extractor ExtractorCli
 			if !ok {
 				return
 			}
-			combined, current, err := c.acceptExtraction(work.number, work.conv, value)
+			value, current, err := c.acceptExtraction(work.number, work.conv, value)
 			if !current {
 				continue
 			}
 			if err == nil {
-				err = recognizer.SendExtraction(work.ctx, combined)
+				err = recognizer.SendExtraction(work.ctx, value)
 			}
 			if err != nil {
 				c.requestReset(work.number, pclient.ServiceExtractor, resetCauseRuntimeError)
