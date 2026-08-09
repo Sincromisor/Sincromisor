@@ -1,7 +1,7 @@
 id: task-260809020145-pion-phase-4-cutover-rehearsal
 title: production相当環境でPion切替リハーサルを実行する
 category: sincro-rtc
-status: blocked
+status: open
 depends_on:
   - task-260809020145-pion-phase-4-cutover-runbook
   - task-260809124736-pion-inbound-eof-session-close
