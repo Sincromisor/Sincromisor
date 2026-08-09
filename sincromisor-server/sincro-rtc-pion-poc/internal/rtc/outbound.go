@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol"
 )
@@ -104,7 +105,12 @@ func (s *Session) handleSynthOutput(output pipeline.Output[protocol.SynthesizerR
 	decoded, err := s.synthDecoder.Decode(s.ctx, output.Value)
 	if err != nil {
 		if s.isCurrentGeneration(output.Generation) && s.ctx.Err() == nil {
-			s.logger.Error("synthesized audio decode failed", "session_id", s.id, "reason", "codec_error")
+			codecErrorKind := "unknown"
+			var decodeErr *synthdecode.DecodeError
+			if errors.As(err, &decodeErr) {
+				codecErrorKind = string(decodeErr.Kind)
+			}
+			s.logger.Error("synthesized audio decode failed", "session_id", s.id, "reason", "codec_error", "codec_error_kind", codecErrorKind)
 			s.metrics().CodecError("decode_synth")
 			_ = s.Close("codec_error")
 		}
