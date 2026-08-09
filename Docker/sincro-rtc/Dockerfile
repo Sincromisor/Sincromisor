@@ -119,4 +119,5 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
-CMD ["uv", "run", "sincro-rtc/RTCSignalingServer.py"]
+# image build時に同期済みの仮想環境を使い、切戻し時に依存解決を再実行しない。
+CMD ["uv", "run", "--no-sync", "sincro-rtc/RTCSignalingServer.py"]
