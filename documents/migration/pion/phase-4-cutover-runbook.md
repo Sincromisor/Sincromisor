@@ -2,7 +2,7 @@
 
 ## 目的
 
-production相当環境でaiortcからPionへ停止切替し、Pion crash後の復旧とaiortcへのrollbackを一度だけ確認する。
+production相当環境でaiortcからPionへ停止切替し、Pionとaiortc rollback後の1 turnを一度だけ確認する。
 実測値と未観測事項は[Gate 4結果](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-rehearsal/artifacts/gate-4-result.md)へ記録する。
 
 この手順は[運用移行とロールバック](rollout-and-operations.md)のprofile、network、shutdown契約に従う。
@@ -63,22 +63,11 @@ curl --fail --silent --show-error http://127.0.0.1:8001/api/v1/RTCSignalingServe
 PionはConsul登録とstartup dependency検証後、非draining時だけreadyになる。readiness失敗、port競合、または
 Consul登録失敗ではsmoke testへ進まず、rollbackへ進む。
 
-## Pion smoke testとcrash復旧
+## Pion smoke test
 
 stable endpointを使い、ChromeとFirefoxで各1回、Pionへの接続、1 turnの会話、利用者/応答text、telop、
 非無音の合成音声を確認する。session終了後に`/statuses`と`/metrics`でactive sessionと下流接続が収束し、
 継続増加がないことを確認する。
-
-```sh
-curl --fail --silent --show-error http://127.0.0.1:8001/metrics
-docker compose --profile pion kill -s SIGKILL sincro-rtc-pion
-docker compose --profile pion ps sincro-rtc-pion
-curl --fail --silent --show-error http://127.0.0.1:8001/health/ready
-```
-
-crash後はrestart policyによってPion containerが再起動し、`/health/ready`が再びHTTP 200となってから、
-新規sessionを1回接続できれば成功とする。再起動しない、またはreadiness復旧後に新規sessionを受理できない場合は
-rollbackする。
 
 metricsとcompose logは原因調査に必要な最小範囲だけを、Git管理外の
 `work/private-artifacts/task-260809020145-pion-phase-4-cutover-rehearsal/`へ保存する。session ID、SDP、
@@ -107,3 +96,16 @@ Pion停止はSIGTERMから最大6秒で完了し、logに`shutdown signal receiv
 6秒を超えた、または正常shutdown logがない場合は失敗として記録する。aiortcの`/statuses`がHTTP 200となった後、
 ChromeとFirefoxで各1回、接続、1 turnの会話、text、telop、非無音の合成音声を確認する。
 Frontendと下流Python serviceはrebuildしない。切替中の接続とsession stateは回復しない。
+
+## Gate判定と再実行
+
+Gate 4の移行必須条件は、Pionとrollback後のaiortcで現行Frontendから接続し、1 turnの会話、text、telop、非無音音声が
+成立すること、Pion session終了後にactive sessionと下流接続が収束すること、切替とrollbackでFrontendと下流serviceを
+rebuildしないことだけとする。public UDP / NAT / firewallとaiortc / Pionの排他起動は、これらを観測する環境前提である。
+
+Pion process crash自動復帰、soak、性能比較、障害注入、browser matrixの拡張はGate 4に含めない。必要になった場合は、
+根本原因、移行との関係、最小受け入れ条件を持つ独立taskで扱う。移行必須条件の未達だけをFAILとし、未検証の追加要件を
+FAIL原因にしない。移行必須条件を観測できない場合はPASSにせず、必要な観測点と解除条件を記録してGate taskを`blocked`にする。
+
+この規則は次回の現行Gate 4 task実行から適用する。過去artifactと判定履歴は書き換えない。Pionとrollback後のaiortcの
+移行必須条件を観測できるproduction相当smoke手順が利用可能になった時点で、このrunbookを最初から再実行する。

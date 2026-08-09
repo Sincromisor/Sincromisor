@@ -7,6 +7,8 @@
 - 下流Protocol Buffers移行とOpenAPI生成は別initiativeとし、Pion移行の完了条件へ含めない。
 - Python adapterはPoCで必要な場合だけ一時利用し、本番統合前に除去する。
 - 各phaseにexit gateを設け、後続phaseへ自動的に進まない。
+- Gate条件は[検証計画](validation-plan.md)の判定規則に従う。移行必須条件の未達だけをFAILとし、観測不能なら
+  必要な観測点と解除条件を記録してGate taskを`blocked`にする。
 
 ## 全体フロー
 
@@ -131,16 +133,10 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 
 ### Gate 3
 
-- [検証計画](validation-plan.md)の既存repository testが通る。
-- 下流4サービスの実装変更なしに会話が成立する。
-- abnormal closeで全pipeline client、codec、PeerConnectionが一度だけcloseされる。
-- pre-connect deadlineまたはmedia readiness deadlineの代表的な失敗経路で、下流WebSocketを残さずsessionがcloseされる。
-- session数、goroutine、queue、WebSocket、codec errorを観測できる。
-- 1 instance当たりのsession上限と、process停止時に失われる最大session数が明記されている。
-- 切替時に新規sessionを停止し、close timeout後にactive sessionを終了できる。
-- 本番経路にPython RTC adapterが存在しない。
-- Pionで旧revision / 未知session IDのOffer / candidateが新規sessionへfallbackしないことを既存試験で確認できる。
-- rollback時のaiortcはページreload後の新規sessionが成立し、Pion固有revisionを解釈しなくても動作する。
+- 移行必須: 下流4サービスの実装変更なしに会話が成立し、本番経路にPython RTC adapterが存在しない。
+- 既存testの証拠: repository test、abnormal close、readiness failure、session上限、停止時のsession損失、切替時の
+  session終了、revision互換、aiortc rollbackを既存確認で満たす。
+- 独立した運用強化: 追加のharness、metric、障害注入、性能比較は別taskで扱う。
 
 ## Phase 4: 切替リハーサル
 
@@ -153,13 +149,14 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 
 ### Gate 4
 
-- Pion版で接続、会話、音声、DataChannelが成立する。
-- smoke testで知覚できるlatencyと音質の重大な退行がない。
-- session終了後にactive resourceが収束する。
-- production相当のsupervisorがprocess crash後にPionを再起動し、readiness復旧後に新規sessionを受理できる。
-- 直接接続が成立し、TURNを合否判定へ含めていない。
-- rollbackがfrontend / pipeline serviceのbuild変更なしで実行できる。
-- 運用環境でaiortcとPionが同時起動しないことをcompose設定で確認できる。
+- 移行必須: Pion版で現行Frontendから接続し、1 turnの会話、text、telop、非無音音声が成立する。session終了後に
+  active sessionと下流接続が収束し、aiortcへrollback後にも新規接続と1 turnがFrontendと下流serviceのrebuildなしで成立する。
+- 既存testの証拠: 既存repository testはPhase 3で確認済みの契約・異常系の証拠として再利用する。
+- 独立した運用強化: Pion process crash自動復帰、soak、性能比較、障害注入、browser matrixの拡張はGate 4へ含めない。
+- public UDP / NAT / firewallとaiortc / Pionの排他起動は、上記の移行必須条件を観測するための環境前提として確認する。
+
+この条件は現行Gate 4 taskの次回実行から適用する。過去artifactと判定履歴は保持し、Pionとrollback後のaiortcの
+移行必須条件を観測できるproduction相当smoke手順が利用可能になった時点でrunbookを最初から再実行する。
 
 ## Phase 5: メンテナンス切り替え
 
