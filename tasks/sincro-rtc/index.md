@@ -2,17 +2,16 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 37 件）
+## タスク一覧（自動生成 / 全 38 件）
 
-### open（未完） — 3 件
+### open（未完） — 2 件
 
 | タスク                                                                                                                         | タイトル                                         | 判定    | 依存                                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------- |
 | [task-260809020145-pion-phase-4-cutover-rehearsal](./task-260809020145-pion-phase-4-cutover-rehearsal/task.md)                 | production相当環境でPion切替リハーサルを実行する | ❌ FAIL | `task-260809020145-pion-phase-4-cutover-runbook`, `task-260809124736-pion-inbound-eof-session-close` |
-| [task-260809234428-pion-compose-restart-policy](./task-260809234428-pion-compose-restart-policy/task.md)                       | Pion container crash復旧の原因を特定して解消する | ❌ FAIL | —                                                                                                    |
-| [task-260809234428-pion-phase-4-smoke-prerequisites-audit](./task-260809234428-pion-phase-4-smoke-prerequisites-audit/task.md) | Phase 4実環境smokeの前提を監査する               | —       | —                                                                                                    |
+| [task-260809234428-pion-phase-4-smoke-prerequisites-audit](./task-260809234428-pion-phase-4-smoke-prerequisites-audit/task.md) | Phase 4実環境smokeの前提を監査する               | —       | `task-260810001020-pion-migration-gate-scope`                                                        |
 
-### done（完了） — 30 件
+### done（完了） — 31 件
 
 | タスク                                                                                                                                 | タイトル                                                              | 判定    | 依存                                                                                                                                                                                                                                                  |
 | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -46,13 +45,15 @@
 | [task-260809071315-pion-phase-4-pipeline-ping-timeout](./task-260809071315-pion-phase-4-pipeline-ping-timeout/task.md)                 | Pion下流WebSocketのfalse ping timeoutを解消する                       | ✅ PASS | —                                                                                                                                                                                                                                                     |
 | [task-260809124736-pion-inbound-eof-session-close](./task-260809124736-pion-inbound-eof-session-close/task.md)                         | Pionの入力EOFでsessionを終了する                                      | ✅ PASS | —                                                                                                                                                                                                                                                     |
 | [task-260809190756-aiortc-rollback-offline-start](./task-260809190756-aiortc-rollback-offline-start/task.md)                           | aiortc rollback時の依存解決を不要にする                               | ✅ PASS | —                                                                                                                                                                                                                                                     |
+| [task-260810001020-pion-migration-gate-scope](./task-260810001020-pion-migration-gate-scope/task.md)                                   | Pion移行Gateの受け入れ条件を移行目的へ限定する                        | ✅ PASS | —                                                                                                                                                                                                                                                     |
 
-### cancelled（取りやめ） — 2 件
+### cancelled（取りやめ） — 3 件
 
-| タスク                                                                                                                                   | タイトル                                              | 判定 | 依存 |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ---- | ---- |
-| [task-260802212234-pion-gate3-boundary-lifecycle-harness](./task-260802212234-pion-gate3-boundary-lifecycle-harness/task.md)             | Pion Gate 3境界クライアントと終了系ハーネスを実装する | —    | —    |
-| [task-260802212239-pion-gate3-production-validation-entrypoint](./task-260802212239-pion-gate3-production-validation-entrypoint/task.md) | Pion Gate 3本番検証エントリーポイントを統合する       | —    | —    |
+| タスク                                                                                                                                   | タイトル                                              | 判定    | 依存 |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------- | ---- |
+| [task-260802212234-pion-gate3-boundary-lifecycle-harness](./task-260802212234-pion-gate3-boundary-lifecycle-harness/task.md)             | Pion Gate 3境界クライアントと終了系ハーネスを実装する | —       | —    |
+| [task-260802212239-pion-gate3-production-validation-entrypoint](./task-260802212239-pion-gate3-production-validation-entrypoint/task.md) | Pion Gate 3本番検証エントリーポイントを統合する       | —       | —    |
+| [task-260809234428-pion-compose-restart-policy](./task-260809234428-pion-compose-restart-policy/task.md)                                 | Pion container crash復旧の原因を特定して解消する      | ❌ FAIL | —    |
 
 ### superseded（廃止） — 2 件
 
