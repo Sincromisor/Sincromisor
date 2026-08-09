@@ -35,3 +35,14 @@
 - 直接原因 2: Pion containerのDocker restart policyはSIGKILL後のrestart attemptを開始せず、restart条件を満たさなかった。
 - 復旧: shared service影響を止めるため、Pionを `--no-build --no-deps` で再起動してhealthy・active session 0へ戻した。
 - 解除条件: production相当下流をそのまま観測できる既存runbookのsmoke手順と、SIGKILL後にrestart policyが実際にPionを自動復帰するDocker/compose状態を用意してから、本runbookを最初から再実行する。
+
+## 試行 3（2026-08-10）
+
+- 判定: blocked
+- 実行前に既存browser手順を確認したが、production相当のbrowser UIで利用者/応答text、telop、非無音音声を観測する
+  既存手順はリポジトリと指定runbookに存在しなかった。確認できた過去browser testはmock固定文を前提としており、
+  限定後のGate 4では使用禁止である。
+- Pion開始、Chrome smoke、aiortc rollback、Docker/network調査、Firefox、SIGKILL、反復試験は実行していない。
+  したがって共有環境はこの試行による変更を受けていない。
+- 解除条件: 実下流を使い、固定本文に依存せずbrowser UIで必要な3出力を観測する既存の最小手順を参照可能にする。
+  その後、限定runbookを最初から1回だけ実行する。
