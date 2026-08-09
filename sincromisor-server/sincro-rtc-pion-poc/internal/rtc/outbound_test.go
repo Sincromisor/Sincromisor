@@ -3,6 +3,7 @@ package rtc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"sync"
@@ -181,6 +182,101 @@ func TestSynthDecodeCompletionAfterOutputCloseCannotRestoreQueuedAudio(t *testin
 	if stats := output.Stats(); !stats.Closed || stats.QueuedSpeeches != 0 || stats.QueuedSamples != 0 {
 		t.Fatalf("output after decode completion = %+v", stats)
 	}
+}
+
+func TestHandleSynthOutputLogsDecodeErrorKindAndClosesSession(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		kind string
+	}{
+		{
+			name: "classified",
+			err:  fmt.Errorf("decode result: %w", &synthdecode.DecodeError{Kind: synthdecode.ErrorProcess, Cause: errors.New("ffmpeg stderr: secret")}),
+			kind: "process",
+		},
+		{name: "unknown", err: errors.New("voice bytes and response text must not be logged"), kind: "unknown"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			logs := &outboundCaptureHandler{}
+			ctx, cancel := context.WithCancel(context.Background())
+			lifecycle, err := newSessionLifecycle(SystemClock{})
+			if err != nil {
+				t.Fatalf("newSessionLifecycle() error = %v", err)
+			}
+			session := &Session{
+				id: "decode-session", ctx: ctx, cancel: cancel, lifecycle: lifecycle,
+				done: make(chan struct{}), logger: slog.New(logs),
+				synthDecoder: outboundErrorSynthDecoder{err: test.err}, onClosed: func(string) {}, outboundGeneration: 1,
+			}
+			if err := session.handleSynthOutput(pipeline.Output[protocol.SynthesizerResult]{
+				Generation: 1,
+				Value: protocol.SynthesizerResult{
+					Message: "private response text",
+					Voice:   []byte("private voice payload"),
+				},
+			}); err != nil {
+				t.Fatalf("handleSynthOutput() error = %v", err)
+			}
+			waitSessionDone(t, session)
+
+			record := logs.records[0]
+			if record.message != "synthesized audio decode failed" {
+				t.Fatalf("log message = %q", record.message)
+			}
+			want := map[string]any{"session_id": "decode-session", "reason": "codec_error", "codec_error_kind": test.kind}
+			if !equalOutboundAttrs(record.attrs, want) {
+				t.Fatalf("log attrs = %#v, want %#v", record.attrs, want)
+			}
+			for _, value := range record.attrs {
+				if value == test.err.Error() {
+					t.Fatal("decoder error was logged")
+				}
+			}
+		})
+	}
+}
+
+type outboundErrorSynthDecoder struct{ err error }
+
+func (d outboundErrorSynthDecoder) Decode(context.Context, protocol.SynthesizerResult) (synthdecode.DecodedSpeech, error) {
+	return synthdecode.DecodedSpeech{}, d.err
+}
+
+type outboundCapturedRecord struct {
+	message string
+	attrs   map[string]any
+}
+
+type outboundCaptureHandler struct{ records []outboundCapturedRecord }
+
+func (h *outboundCaptureHandler) Enabled(context.Context, slog.Level) bool { return true }
+
+func (h *outboundCaptureHandler) Handle(_ context.Context, record slog.Record) error {
+	attrs := make(map[string]any, record.NumAttrs())
+	record.Attrs(func(attr slog.Attr) bool {
+		attrs[attr.Key] = attr.Value.Any()
+		return true
+	})
+	h.records = append(h.records, outboundCapturedRecord{message: record.Message, attrs: attrs})
+	return nil
+}
+
+func (h *outboundCaptureHandler) WithAttrs([]slog.Attr) slog.Handler { return h }
+
+func (h *outboundCaptureHandler) WithGroup(string) slog.Handler { return h }
+
+func equalOutboundAttrs(got, want map[string]any) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for key, wantValue := range want {
+		if got[key] != wantValue {
+			return false
+		}
+	}
+	return true
 }
 
 type blockingSynthDecoder struct {

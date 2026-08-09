@@ -48,6 +48,11 @@ metricsとcompose logは原因調査に必要な最小範囲だけを、Git管�
 `work/private-artifacts/task-260809020145-pion-phase-4-cutover-rehearsal/`へ保存する。session ID、SDP、
 candidate、会話、音声payloadをGit artifactやresult artifactへ転載しない。
 
+`reason=codec_error` を確認した場合は、同じログの `codec_error_kind` を記録して後続taskを判断する。
+`unsupported` はSynthesizer出力codec、`invalid` は入力形式・timing、`limit` は入力・発話長上限、`timeout` は
+decode時間、`process` はFFmpeg image・codecを調査対象にする。`unknown` はpayloadを転載せずprivate artifactで
+再現条件を確認してからtask化する。session IDと音声payloadは、種別を記録する場合もGit artifactへ転載しない。
+
 ```sh
 EVIDENCE_DIR=work/private-artifacts/task-260809020145-pion-phase-4-cutover-rehearsal
 mkdir -p "${EVIDENCE_DIR}"
