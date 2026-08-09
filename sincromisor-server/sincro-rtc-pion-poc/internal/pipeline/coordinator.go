@@ -32,7 +32,7 @@ var (
 // ExtractorClient はPCM送信とExtractor result/event streamのgeneration側境界である。
 type ExtractorClient = pclient.ExtractorConnection
 
-// RecognizerClient は結合済みExtractorResultと認識result/event streamのgeneration側境界である。
+// RecognizerClient はExtractorResultと認識result/event streamのgeneration側境界である。
 type RecognizerClient = pclient.RecognizerConnection
 
 // ProcessorClient はhistory付きrequestとstreaming result/eventのgeneration側境界である。
