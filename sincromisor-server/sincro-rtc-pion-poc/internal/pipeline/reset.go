@@ -7,14 +7,22 @@ import (
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/client"
 )
 
+// resetCauseRuntimeError separates loop failures from finite client EventKind values.
+const resetCauseRuntimeError = "runtime_error"
+
 func (c *Coordinator) onClientEvent(generation uint64, event pclient.Event) {
-	c.requestReset(generation, event.Service, event.Err)
+	c.requestReset(generation, event.Service, string(event.Kind))
 }
 
 // requestReset is the single-flight boundary for every protocol, I/O, and
-// backpressure failure. Generation advances before old clients are closed so
-// concurrently delivered callbacks become stale immediately.
-func (c *Coordinator) requestReset(generation uint64, service pclient.Service, reason error) {
+// backpressure failure. Cause is an operational category rather than an error
+// so this boundary cannot expose pipeline payloads through logs. Generation
+// advances before old clients are closed so concurrently delivered callbacks
+// become stale immediately.
+func (c *Coordinator) requestReset(generation uint64, service pclient.Service, cause string) {
+	if service == "" {
+		return
+	}
 	c.mu.Lock()
 	if c.state != StateRunning || c.generation != generation || c.resetting {
 		c.mu.Unlock()
@@ -22,6 +30,9 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, r
 		return
 	}
 	c.resetting = true
+	c.logger.Warn("pipeline_reset_requested",
+		"stage", "pipeline_reset_requested", "session_id", c.sessionID,
+		"service", string(service), "cause", cause, "generation", generation)
 	if err := c.transitionLocked(StateResetting); err != nil {
 		c.mu.Unlock()
 		return

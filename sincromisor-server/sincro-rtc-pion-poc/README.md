@@ -146,6 +146,12 @@ Google Chrome stable で
 である。cleanupは共通5秒期限でOffer owner、session registry、PeerConnection、codec、ticker、
 media goroutineをclose-once経路から収束させ、signal受信からprocess終了までの上限は6秒とする。
 
+## Pipeline reset logs
+
+対象`session_id`でログを絞り、正常stageの直前に最初に出た`pipeline_reset_requested`から、resetで閉じた
+下流connectionの`service`と有限の`cause`を確認する。認識本文、chat本文、VoiceText、音声、Raw payloadは
+ログにもGit artifactにも転載しない。
+
 ## Automated checks
 
 module root で実行する。

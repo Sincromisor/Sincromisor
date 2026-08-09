@@ -17,7 +17,7 @@ func (c *Coordinator) pcmLoop(work *generationWork, extractor ExtractorClient) {
 			return
 		}
 		if err := extractor.SendPCM(work.ctx, frame); err != nil {
-			c.requestReset(work.number, pclient.ServiceExtractor, err)
+			c.requestReset(work.number, pclient.ServiceExtractor, resetCauseRuntimeError)
 			return
 		}
 	}
@@ -40,7 +40,7 @@ func (c *Coordinator) extractorLoop(work *generationWork, extractor ExtractorCli
 				err = recognizer.SendExtraction(work.ctx, combined)
 			}
 			if err != nil {
-				c.requestReset(work.number, pclient.ServiceExtractor, err)
+				c.requestReset(work.number, pclient.ServiceExtractor, resetCauseRuntimeError)
 				return
 			}
 		}
@@ -60,7 +60,7 @@ func (c *Coordinator) recognizerLoop(work *generationWork, recognizer Recognizer
 				continue
 			}
 			if _, err := work.conv.acceptRecognition(value); err != nil {
-				c.requestReset(work.number, pclient.ServiceRecognizer, err)
+				c.requestReset(work.number, pclient.ServiceRecognizer, resetCauseRuntimeError)
 				return
 			}
 			// Stage logs deliberately keep only correlation IDs and completion state.
@@ -70,11 +70,11 @@ func (c *Coordinator) recognizerLoop(work *generationWork, recognizer Recognizer
 				"speech_id", value.SpeechID, "confirmed", value.Confirmed)
 			message := work.conv.recognitionMessage(value)
 			if message.MessageID == "" {
-				c.requestReset(work.number, pclient.ServiceRecognizer, errors.New("recognizer changed current speech"))
+				c.requestReset(work.number, pclient.ServiceRecognizer, resetCauseRuntimeError)
 				return
 			}
 			if err := c.publishText(work.number, pclient.ServiceRecognizer, message); err != nil {
-				c.requestReset(work.number, pclient.ServiceRecognizer, err)
+				c.requestReset(work.number, pclient.ServiceRecognizer, resetCauseRuntimeError)
 				return
 			}
 			c.mu.Lock()
@@ -89,7 +89,7 @@ func (c *Coordinator) recognizerLoop(work *generationWork, recognizer Recognizer
 			}
 			work.conv.rememberRequest(request)
 			if err := processor.SendRequest(work.ctx, request); err != nil {
-				c.requestReset(work.number, pclient.ServiceProcessor, err)
+				c.requestReset(work.number, pclient.ServiceProcessor, resetCauseRuntimeError)
 				return
 			}
 			c.logger.Info("pipeline stage reached",
@@ -113,7 +113,7 @@ func (c *Coordinator) processorLoop(work *generationWork, processor ProcessorCli
 			}
 			_, final, err := work.conv.validateProcessor(value)
 			if err != nil {
-				c.requestReset(work.number, pclient.ServiceProcessor, err)
+				c.requestReset(work.number, pclient.ServiceProcessor, resetCauseRuntimeError)
 				return
 			}
 			c.logger.Info("pipeline stage reached",
@@ -122,7 +122,7 @@ func (c *Coordinator) processorLoop(work *generationWork, processor ProcessorCli
 				"end_of_response", value.EndOfResponse,
 				"voice_text_present", value.VoiceText != nil && *value.VoiceText != "")
 			if err = c.publishText(work.number, pclient.ServiceProcessor, value.ResponseMessage); err != nil {
-				c.requestReset(work.number, pclient.ServiceProcessor, err)
+				c.requestReset(work.number, pclient.ServiceProcessor, resetCauseRuntimeError)
 				return
 			}
 			if final {
@@ -132,7 +132,7 @@ func (c *Coordinator) processorLoop(work *generationWork, processor ProcessorCli
 			}
 			if value.VoiceText != nil && *value.VoiceText != "" {
 				if err = synth.SendResult(work.ctx, value); err != nil {
-					c.requestReset(work.number, pclient.ServiceSynthesizer, err)
+					c.requestReset(work.number, pclient.ServiceSynthesizer, resetCauseRuntimeError)
 					return
 				}
 			}
@@ -156,7 +156,7 @@ func (c *Coordinator) synthLoop(work *generationWork, synth SynthesizerClient) {
 				"stage", "synthesizer_result_received", "session_id", c.sessionID,
 				"speech_id", value.SpeechID, "confirmed", true)
 			if err := c.publishSynth(work.number, value); err != nil {
-				c.requestReset(work.number, pclient.ServiceSynthesizer, err)
+				c.requestReset(work.number, pclient.ServiceSynthesizer, resetCauseRuntimeError)
 				return
 			}
 		}
