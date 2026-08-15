@@ -1,0 +1,13 @@
+id: task-260815173046-pion-gate4-browser-ui-smoke
+title: Pion Gate 4の実下流ブラウザUI smoke手順を整備する
+category: sincro-rtc
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-08-15
+closed_at: 2026-08-15
+legacy_ids: []
