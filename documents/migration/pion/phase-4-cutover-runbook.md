@@ -33,11 +33,24 @@ curl --fail --silent --show-error http://127.0.0.1:8001/api/v1/RTCSignalingServe
 PionはConsul登録とstartup dependency検証後、非draining時だけreadyになる。readiness失敗、port競合、または
 Consul登録失敗ではsmoke testへ進まず、rollbackへ進む。
 
+## 共通browser UI smoke
+
+Pionとrollback後のaiortcで、stable endpointとGate 3で成立済みのChromeを使い、次の手順を各1回行う。
+Frontendと下流Python serviceは、切替前から起動しているimageをそのまま使い、rebuildしない。
+
+1. `simple-vrm`ページを開き、マイク権限を許可してUIから会話接続を開始する。Debug ConsoleのICE stateが
+   `connected`または`completed`になることを確認する。
+2. 通常の短い発話を1回行い、会話の完了を待つ。実下流の利用者・応答本文は可変であるため、固定文と比較しない。
+3. browser UIで利用者text、応答text、telopが表示され、合成音声が非無音で再生されることを確認する。
+4. UIから通常終了し、`/statuses`でactive sessionが収束することを確認する。
+
+既存Gate 3 Playwright testはmock serviceの固定文を検査するため、production相当Gate 4の判定には使わない。
+新しいbrowser harness、入力注入、browser matrixは追加しない。会話本文、音声、session ID、SDP、candidateは
+Git artifactへ保存しない。
+
 ## Pion smoke test
 
-stable endpointを使い、Gate 3で成立済みのChromeで1回、Pionへの接続、1 turnの会話、利用者/応答text、telop、
-非無音の合成音声を確認する。実下流の応答本文は固定文と比較しない。session終了後に`/statuses`でactive sessionが
-収束することを確認する。
+Pion起動後に[共通browser UI smoke](#共通browser-ui-smoke)を1回実行する。
 
 対象`session_id`でPion logを絞り、`recognizer_result_received`、`processor_request_sent`、
 `processor_result_received`、`synthesizer_result_received`の最後の到達stageを確認する。正常stageの直前に
@@ -73,8 +86,7 @@ curl --fail --silent --show-error http://127.0.0.1:8001/api/v1/RTCSignalingServe
 ```
 
 Pion停止の所要時間とlogは記録してよいが、Gateの合否条件にしない。aiortcの`/statuses`がHTTP 200となった後、
-同じChromeで1回、接続、1 turnの会話、text、telop、非無音の合成音声を確認する。
-Frontendと下流Python serviceはrebuildしない。切替中の接続とsession stateは回復しない。
+[共通browser UI smoke](#共通browser-ui-smoke)を1回実行する。切替中の接続とsession stateは回復しない。
 
 ## Gate判定と再実行
 
