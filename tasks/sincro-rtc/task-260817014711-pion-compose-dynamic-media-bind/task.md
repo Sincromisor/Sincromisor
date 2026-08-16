@@ -15,21 +15,21 @@ SDP に広告する `SINCRO_PION_PUBLIC_IPV4`、host/container 1:1 UDP port mapp
 ## 完了条件
 
 - [ ] root `compose.yml` と `compose/sincro-rtc.yml` に Pion 専用 `ipv4_address` がなく、
-  `.env` と `examples/compose.env` に `SINCRO_PION_CONTAINER_IPV4` がない。`docker compose config` が
-  `sincro-rtc-pion` の shared network に動的 endpoint だけを定義することを確認する。
+      `.env` と `examples/compose.env` に `SINCRO_PION_CONTAINER_IPV4` がない。`docker compose config` が
+      `sincro-rtc-pion` の shared network に動的 endpoint だけを定義することを確認する。
 - [ ] Pion の起動設定は `--media-udp-port` と `--interface` から、指定 interface に割り当てられた
-  単一の非-unspecified IPv4 を選び、同 port の UDP4 socket を bind する。0 / 範囲外 port、存在しない・
-  down interface、IPv4 が0個または複数の interface は listener を開く前に fail-fast する。従来の
-  `--media-udp` は削除し、Compose、README、設計・運用文書を新しい引数へ同期する。
+      単一の非-unspecified IPv4 を選び、同 port の UDP4 socket を bind する。0 / 範囲外 port、存在しない・
+      down interface、IPv4 が0個または複数の interface は listener を開く前に fail-fast する。従来の
+      `--media-udp` は削除し、Compose、README、設計・運用文書を新しい引数へ同期する。
 - [ ] `SINCRO_PION_PUBLIC_IPV4` は SDP の public candidate、`SINCRO_PION_MEDIA_UDP_PORT` は host/container
-  UDP port mapping、`SINCRO_PION_INTERFACE` は container 内 bind address の選択にだけ使う。container IPv4を
-  `.env` で公開・指定しない。
+      UDP port mapping、`SINCRO_PION_INTERFACE` は container 内 bind address の選択にだけ使う。container IPv4を
+      `.env` で公開・指定しない。
 - [ ] `sincro-rtc-pion` は直接使う `sincro-consul-server` が healthy になってから起動する依存を持つ。
-  新規 Docker network で `docker compose --profile pion up -d sincro-rtc-pion` を実行し、Consul の DNS
-  lookup failure や address collision を出さず `/health/ready` が成功することを private evidence で確認する。
+      新規 Docker network で `docker compose --profile pion up -d sincro-rtc-pion` を実行し、Consul の DNS
+      lookup failure や address collision を出さず `/health/ready` が成功することを private evidence で確認する。
 - [ ] コンテナを一度削除・再作成しても Pion が同じ compose command で ready になり、固定 container IP を
-  前提としないことを確認する。失敗時は command、exit code、Pion / Consul log、network endpoint を private
-  evidence に採取し、原因を修正してから再実行する。
+      前提としないことを確認する。失敗時は command、exit code、Pion / Consul log、network endpoint を private
+      evidence に採取し、原因を修正してから再実行する。
 
 ## 設計判断
 
