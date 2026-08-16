@@ -9,9 +9,9 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 16 件）
+## タスク一覧（自動生成 / 全 17 件）
 
-### done（完了） — 16 件
+### done（完了） — 17 件
 
 | タスク                                                                                                                                               | タイトル                                          | 判定    | 依存                                                                                                                                                                                                                                                                                |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -31,5 +31,6 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 | [task-260628231541-task-agents-comment-quality-gates](./task-260628231541-task-agents-comment-quality-gates/task.md)                                 | task agents comment quality gates                 | ✅ PASS | `task-260628231541-frontend-typescript-comment-policy-audit-checklist`                                                                                                                                                                                                              |
 | [task-260629022219-tighten-task-agent-source-comment-quality-prompts](./task-260629022219-tighten-task-agent-source-comment-quality-prompts/task.md) | tighten task agent source comment quality prompts | ✅ PASS | `task-260629022214-tighten-typescript-source-comment-quality-rules`                                                                                                                                                                                                                 |
 | [task-260808171737-simplify-task-agent-workflow](./task-260808171737-simplify-task-agent-workflow/task.md)                                           | タスク管理エージェント手順を簡素化                | ✅ PASS | —                                                                                                                                                                                                                                                                                   |
+| [task-260817033900-hobby-scale-task-workflow](./task-260817033900-hobby-scale-task-workflow/task.md)                                                 | 個人開発向けにタスク運用を簡素化                  | ✅ PASS | —                                                                                                                                                                                                                                                                                   |
 
 <!-- AUTOGEN:tasks END -->

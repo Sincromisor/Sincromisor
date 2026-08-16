@@ -31,8 +31,9 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 - Target file: `package.json`
 - Upstream difference: `gateSteps` run frontend `check`, `build`, and `test` from
   `sincromisor-frontend`; Python-wide checks are not part of the cached default gate.
-- Reason: frontend and Markdown checks are deterministic and cover the current agent workflow
-  surface. Python full checks are heavier and should be selected per task when server code changes.
+- Reason: this is a repository-wide health gate for high-risk or cross-cutting changes. Normal
+  changes use focused checks because the Markdown step also scans unrelated repository files.
+  Python checks are selected per task when server code changes.
 - Future refresh check: if server task volume increases, consider adding narrower Python gate steps
   or a separate server gate.
 
@@ -91,12 +92,12 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 
 - Target files: `.claude/commands/run-task.md`, `.claude/agents/*.md`, `tasks/README.md`,
   `tasks/AUTHORING-CHECKLIST.md`
-- Upstream difference: a required verification failure starts investigation; it cannot become a
-  successful task merely because the failure was recorded. Volatile evidence is captured before
-  cleanup, in-place triage precedes environment restoration, and unknown causes keep the
-  task/worktree open.
-- Reason: Sincromisor is a development project; unexplained integration failures must be diagnosed
-  before completion or explicitly transferred with reproduction evidence and user approval.
+- Upstream difference: only failures caused by the current diff and directly tied to acceptance,
+  security, data loss, public contracts, or production cutover block completion. Pre-existing or
+  out-of-scope failures are reported without blocking. Volatile evidence capture is reserved for
+  high-risk runtime failures.
+- Reason: unrelated formatting and baseline failures must not stop autonomous progress on a hobby
+  project.
 - Future refresh check: confirm generated agents reject PASS when a required failure has no
   identified cause and rerun evidence.
 
@@ -111,3 +112,17 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 - Reason: prevent routine implementation clarification from blocking execution while retaining a
   hard stop for genuinely undecided architecture.
 - Future refresh check: run `npm run gen:codex`, `npm run gen:codex:check`, and `npm run tasks:check`.
+
+## Hobby-scale Workflow
+
+- Target files: `AGENTS.md`, `tasks/README.md`, `tasks/AUTHORING-CHECKLIST.md`,
+  `documents/rules/source-comments.md`, `.claude/commands/*.md`, `.claude/agents/*.md`,
+  `scripts/tasks/newTask.mjs`
+- Upstream difference: normal changes run directly in the current worktree with focused checks and
+  one commit. Dedicated worktrees, subagents, independent evaluation, and the repository-wide gate
+  are reserved for integration work that needs isolation or high-risk changes.
+- Reason: Sincromisor is a personal hobby project; delivery speed is the default objective, while
+  security, data loss prevention, public contracts, and explicitly requested evaluation remain hard
+  boundaries.
+- Future refresh check: confirm generated instructions do not require worktrees, `npm run gate`, or
+  independent evaluation for normal changes.
