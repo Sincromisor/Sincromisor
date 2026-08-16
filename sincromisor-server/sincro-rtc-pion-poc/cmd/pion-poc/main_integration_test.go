@@ -39,13 +39,13 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 		t.Fatalf("write frontend fixture: %v", err)
 	}
 	address := reserveTCPAddress(t)
-	mediaAddress := reserveUDPAddress(t)
+	mediaPort := reserveUDPPort(t)
 	command := exec.Command(
 		binaryPath,
 		"--http", address,
 		"--frontend-dir", frontendDir,
 		"--gather-timeout", "2s",
-		"--media-udp", mediaAddress,
+		"--media-udp-port", mediaPort,
 		"--public-ipv4", "127.0.0.1",
 		"--interface", "lo",
 	)
@@ -161,9 +161,9 @@ func TestProcessRegistersReadyServiceAndDeregistersOnSIGTERM(t *testing.T) {
 		t.Fatalf("write frontend fixture: %v", err)
 	}
 	address := reserveTCPAddress(t)
-	mediaAddress := reserveUDPAddress(t)
+	mediaPort := reserveUDPPort(t)
 	command := exec.Command(binaryPath,
-		"--http", address, "--frontend-dir", frontendDir, "--media-udp", mediaAddress,
+		"--http", address, "--frontend-dir", frontendDir, "--media-udp-port", mediaPort,
 		"--public-ipv4", "127.0.0.1", "--interface", "lo", "--consul-agent-host", consul.host,
 		"--consul-agent-port", strconv.Itoa(consul.port), "--service-bind-host", "127.0.0.1",
 		"--fallback-host", "caddy.local", "--fallback-port", "8000",
@@ -306,17 +306,17 @@ func reserveTCPAddress(t *testing.T) string {
 	return address
 }
 
-func reserveUDPAddress(t *testing.T) string {
+func reserveUDPPort(t *testing.T) string {
 	t.Helper()
 	socket, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
 	if err != nil {
 		t.Fatalf("reserve UDP address: %v", err)
 	}
-	address := socket.LocalAddr().String()
+	port := strconv.Itoa(socket.LocalAddr().(*net.UDPAddr).Port)
 	if err := socket.Close(); err != nil {
 		t.Fatalf("release UDP address: %v", err)
 	}
-	return address
+	return port
 }
 
 func waitForHTTPReady(t *testing.T, url string) {

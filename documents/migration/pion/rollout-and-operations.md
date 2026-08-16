@@ -36,7 +36,7 @@ Pion版の経路には追加adapterを挟まない。aiortcのimageと設定はr
 - session別UDP port rangeではなく、全PeerConnectionで1つの固定UDP mux portを共有する。
 - Dockerはhost側とcontainer側で同じUDP portを1:1 mappingする。割り当てるport番号はcompose / env / firewallで1つの値を正本化する。
 - signalingは現行どおりTCP endpointを公開し、media用UDP portを別に公開する。
-- SDPへ載せるpublic IPv4を `--public-ipv4` で明示し、Pionの`SetNAT1To1IPs`によるhost candidate置換でcontainer / private IPをadvertiseしない。NAT配下ではpublic IPv4と`--media-udp`のUDP portをPion hostへ静的forwardする。
+- SDPへ載せるpublic IPv4を `--public-ipv4` で明示し、Pionの`SetNAT1To1IPs`によるhost candidate置換でcontainer / private IPをadvertiseしない。NAT配下ではpublic IPv4と`--media-udp-port`のUDP portをPion hostへ静的forwardする。
 - network typeはUDP4へ限定し、interface filterはcontainer内の実通信interfaceをallow-listし、loopbackや意図しないhost virtual interfaceを除外する。STUNはpublic IP rewriteと併用し、実際のserver-reflexive経路を診断できるようにする。
 - ICE agentはFull ICEとする。ICE LiteとIPv6は初期移行の対象外とする。
 - TURN relayはaiortc版と同様に初期移行の対応対象外とする。`turn:` / `turns:` URLは黙って無視せず、設定errorとしてstartupを失敗させる。
@@ -58,7 +58,7 @@ Pion版の経路には追加adapterを挟まない。aiortcのimageと設定はr
 
 Pion PoCのnetwork設定は次の起動引数を正本とする。
 
-- `--media-udp`: 指定interfaceへ割当済みの非wildcard IPv4による固定 UDP4 mux bind address（port 1〜65535）
+- `--media-udp-port`: 指定interfaceの唯一の非-unspecified IPv4へbindする固定 UDP4 mux port（1〜65535）
 - `--public-ipv4`: SDP host candidateへ広告する非unspecified IPv4
 - `--interface`: UPかつcandidate収集を許可するnetwork interface
 - `--consul-agent-host` / `--consul-agent-port`: pipeline discovery と Pion service registration に使う Consul HTTP endpoint（両方指定または両方未指定）
@@ -84,20 +84,16 @@ checkは `/health/ready` の10秒間隔・5秒timeout・critical後10分deregist
 
 compose配線時はこの3引数を環境変数へ対応付け、`examples/compose.env`、`compose/`、`compose.yml`、設定実装、[Compose設計](../../design/infrastructure/compose.md)を同時に更新する。
 
-`sincro-rtc-pion` はshared `sincromisor-net` 上で
-`ipv4_address: ${SINCRO_PION_CONTAINER_IPV4}` を使う。root `compose.yml` のIPAM subnetは
-`${SINCRO_COMPOSE_NETWORK_SUBNET}`（既定 `172.28.0.0/16`）であり、
-`SINCRO_PION_CONTAINER_IPV4` はそのsubnet内のPion専用固定IPv4とする。後続serviceの起動時は
-`--media-udp ${SINCRO_PION_CONTAINER_IPV4}:${SINCRO_PION_MEDIA_UDP_PORT}`、
-`--interface ${SINCRO_PION_INTERFACE}`、
+`sincro-rtc-pion` はshared `sincromisor-net` 上でcontainer IPv4をDockerへ動的割当させる。後続serviceの起動時は
+`--media-udp-port ${SINCRO_PION_MEDIA_UDP_PORT}`、`--interface ${SINCRO_PION_INTERFACE}`、
 `--service-bind-host ${SINCRO_PION_SERVICE_BIND_HOST}` を配線する。local composeではservice bind hostは
-この固定IPv4へ解決され、別host ConsulではPion hostのVPN addressを登録する。container IPv4とConsul service addressは、
+service名へ解決され、別host ConsulではPion hostのVPN addressを登録する。container IPv4とConsul service addressは、
 SDPへ広告するpublic IPv4とは別値である。
 
 composeではaiortc版を`full` / `rtc` profile、Pion版を`pion` profileで選択する。Pionは
 aiortcと同じstable TCP 8001を、`SINCRO_PION_MEDIA_UDP_PORT` をhost/container同値の
 UDP portとして公開する。`SINCRO_PION_PUBLIC_IPV4`、`SINCRO_PION_STUN`、
-`SINCRO_RTC_MAX_SESSIONS`、`SINCRO_PION_FFMPEG_PATH`はPion commandへ渡す。`pion` とaiortc profileを同じprojectで併用すると
+`SINCRO_RTC_MAX_SESSIONS`、`SINCRO_PION_FFMPEG_PATH`はPion commandへ渡す。Pionは直接使う`sincro-consul-server`がhealthyになってから起動する。`pion` とaiortc profileを同じprojectで併用すると
 stable TCP port競合で後から起動したbackendが失敗する。
 
 設定の形式と組み合わせはnetwork socketやHTTP listenerを公開する前に検証する。public IPv4のparse失敗、UDP mux bind失敗、port不一致、空のinterface選択、TURN URL、上限やtimeoutの0 / 負値はreadiness falseのまま待機せずprocessをfail-fastさせる。外部NAT / firewallの到達性はstartupだけでは保証できないため、production相当リハーサルのsmoke testで検証する。

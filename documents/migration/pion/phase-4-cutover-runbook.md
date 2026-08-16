@@ -12,7 +12,7 @@ Frontendと下流Python serviceはすでに起動済みのimageを使い、切�
 ## 切替前確認
 
 メンテナンス開始を告知し、通常の実環境compose用環境変数を読み込む。ネットワーク設定を再監査しない。
-PionがreadyになりChromeで接続できることを、固定UDP、NAT、firewallを含む環境前提の確認とする。
+PionがreadyになりChromeで接続できることを、固定UDP port、NAT、firewallを含む環境前提の確認とする。
 
 ## aiortc停止とPion起動
 
@@ -23,13 +23,13 @@ curl --fail --silent --show-error http://127.0.0.1:8001/api/v1/RTCSignalingServe
 docker compose --profile full stop sincro-rtc
 docker compose --profile full ps sincro-rtc
 docker compose --profile pion up -d --no-build sincro-rtc-pion
-docker compose --profile pion exec sincro-rtc-pion ip -4 addr show dev "${SINCRO_PION_INTERFACE}"
+docker compose --profile pion exec sincro-rtc-pion sh -c 'test "$(ip -4 -o addr show dev "${SINCRO_PION_INTERFACE}" scope global | wc -l)" -eq 1'
 curl --fail --silent --show-error http://127.0.0.1:8001/health/ready
 curl --fail --silent --show-error http://127.0.0.1:8001/api/v1/RTCSignalingServer/statuses
 ```
 
 成功判定はaiortcが`stopped`でTCP 8001を解放し、Pion container内の
-`SINCRO_PION_INTERFACE`に`SINCRO_PION_CONTAINER_IPV4`があり、`/health/ready`と`/statuses`がHTTP 200を返すこととする。
+`SINCRO_PION_INTERFACE`に非-unspecified IPv4がちょうど1つあり、`/health/ready`と`/statuses`がHTTP 200を返すこととする。
 PionはConsul登録とstartup dependency検証後、非draining時だけreadyになる。readiness失敗、port競合、または
 Consul登録失敗ではsmoke testへ進まず、rollbackへ進む。
 
