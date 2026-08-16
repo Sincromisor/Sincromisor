@@ -14,20 +14,20 @@ VOICEVOX は `audio_query` と `synthesis` を HTTP 200 で完了し、Pion は 
 <!-- 検証可能・期待値が一意な形で書く（「改善する」ではなく「〜のとき〜を返す」）。異常系/境界も。 -->
 
 - [ ] VoiceSynthesizer の `VoiceSynthesizerResult.to_msgpack()` が作る実形式の fixture を、既存の
-  `tone-opus.ogg` を `voice` に使って生成する。Pion の `DecodeSynthesizerResult` と
-  `synthdecode.Decode` がその fixture を通し、48 kHz mono の非空 PCM、宣言どおりの
-  `speaking_time`、PCM 範囲内の mora を得ることを結合テストで検証する。
+      `tone-opus.ogg` を `voice` に使って生成する。Pion の `DecodeSynthesizerResult` と
+      `synthdecode.Decode` がその fixture を通し、48 kHz mono の非空 PCM、宣言どおりの
+      `speaking_time`、PCM 範囲内の mora を得ることを結合テストで検証する。
 - [ ] fixture は MessagePack の外側を `voice` に入れず、Ogg/Opus byte列、`audio/ogg;codecs=opus`、
-  finite な timing を境界ごとに検証する。sampling rate / channel の入力値は FFmpeg の既存の
-  48 kHz mono 正規化へ渡し、独自の再サンプリングや channel 変換を追加しないこと。
+      finite な timing を境界ごとに検証する。sampling rate / channel の入力値は FFmpeg の既存の
+      48 kHz mono 正規化へ渡し、独自の再サンプリングや channel 変換を追加しないこと。
 - [ ] 実機で得た `invalid` の原因を、payload・転写本文・FFmpeg stderr を出さない有限の
-  `codec_error_reason` としてログへ記録する。少なくとも `empty_voice`、`decoded_pcm_invalid`、
-  `speaking_time_mismatch`、`mora_timing_invalid`、`input_timing_invalid` を区別し、
-  `DecodeError` 以外は `unknown` とする。
+      `codec_error_reason` としてログへ記録する。少なくとも `empty_voice`、`decoded_pcm_invalid`、
+      `speaking_time_mismatch`、`mora_timing_invalid`、`input_timing_invalid` を区別し、
+      `DecodeError` 以外は `unknown` とする。
 - [ ] 原因箇所を修正後、VOICEVOX を含む既存 compose の Pion 1ターンで
-  `synthesizer_result_received` 後に `codec_error` を出さず、session が接続を維持して音声を
-  再生することを private evidence で確認する。失敗時は reason と対象境界を task 記録へ残し、
-  PASS にしないこと。
+      `synthesizer_result_received` 後に `codec_error` を出さず、session が接続を維持して音声を
+      再生することを private evidence で確認する。失敗時は reason と対象境界を task 記録へ残し、
+      PASS にしないこと。
 
 ## 設計判断
 

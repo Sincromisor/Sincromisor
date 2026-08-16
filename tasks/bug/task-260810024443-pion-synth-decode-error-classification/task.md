@@ -13,16 +13,16 @@ session を閉じるが、既存の `synthdecode.DecodeError` が持つ失敗分
 <!-- 検証可能・期待値が一意な形で書く（「改善する」ではなく「〜のとき〜を返す」）。異常系/境界も。 -->
 
 - [ ] `Session.handleSynthOutput` が `*synthdecode.DecodeError` を受けたとき、既存の
-  `session_id` と `reason=codec_error` を保ったまま `codec_error_kind` に
-  `unsupported`、`invalid`、`limit`、`timeout`、`process` のいずれかを記録すること。
+      `session_id` と `reason=codec_error` を保ったまま `codec_error_kind` に
+      `unsupported`、`invalid`、`limit`、`timeout`、`process` のいずれかを記録すること。
 - [ ] `DecodeError` 以外の decoder error でも session を `codec_error` で閉じ、
-  `codec_error_kind=unknown` を記録して panic しないこと。
+      `codec_error_kind=unknown` を記録して panic しないこと。
 - [ ] capture logger を使う RTC のテストで、分類済み error と未分類 error の両方について、
-  session close と上記の固定属性を検証すること。音声 byte、テキスト、FFmpeg stderr をログへ
-  出さないこと。
+      session close と上記の固定属性を検証すること。音声 byte、テキスト、FFmpeg stderr をログへ
+      出さないこと。
 - [ ] `documents/migration/pion/phase-4-cutover-runbook.md` に、`codec_error_kind` を記録して
-  種別ごとに後続の修正タスクを判断する手順、および session ID と payload を Git artifact へ
-  転載しない規則を追記すること。
+      種別ごとに後続の修正タスクを判断する手順、および session ID と payload を Git artifact へ
+      転載しない規則を追記すること。
 
 ## 設計判断
 

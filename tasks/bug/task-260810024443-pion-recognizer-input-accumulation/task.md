@@ -17,14 +17,14 @@ SpeechRecognizer へ送る。Browser PCM、Extractor 結果、Pion 累積のど�
 <!-- 検証可能・期待値が一意な形で書く（「改善する」ではなく「〜のとき〜を返す」）。異常系/境界も。 -->
 
 - [ ] Browser PCM の連続する一意な synthetic frame を Extractor→Recognizer の実際の経路へ通し、
-  Recognizer に送る各 partial / confirmed 音声が、入力順に各 frame を高々一度だけ含むことを
-  回帰テストで検証する。失敗時は実データを記録せず、対象の境界と重複経路をテスト名・task 記録へ残す。
+      Recognizer に送る各 partial / confirmed 音声が、入力順に各 frame を高々一度だけ含むことを
+      回帰テストで検証する。失敗時は実データを記録せず、対象の境界と重複経路をテスト名・task 記録へ残す。
 - [ ] 原因箇所を修正し、同じ synthetic frame が partial 累積または confirmed 音声へ二重に入らない
-  ことを上記テストで確認する。異なる frame と正当な同一内容の発話を推測で除外しないこと。
+      ことを上記テストで確認する。異なる frame と正当な同一内容の発話を推測で除外しないこと。
 - [ ] 既存の sequence / speech ID の単調性、partial と confirmed の送信、session reset の挙動を
-  維持する既存 pipeline テストを通すこと。
+      維持する既存 pipeline テストを通すこと。
 - [ ] 実機再確認は private evidence だけで行い、音声、転写本文、session ID を Git artifact に
-  転載しないこと。重複が残る場合は PASS にせず、原因箇所と再現条件を記録して修正を続けること。
+      転載しないこと。重複が残る場合は PASS にせず、原因箇所と再現条件を記録して修正を続けること。
 
 ## 設計判断
 
