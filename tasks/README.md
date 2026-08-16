@@ -355,7 +355,7 @@ sincromisor-frontend/src` で取得した変更済み TS/TSX ファイルだけ�
 高リスク変更だけは、`tasks/AUTHORING-CHECKLIST.md` の追加確認、独立レビュー・評価、全体gateを検討する。
 RTC 第 3 段階で使った個別の所有権表や指標表を、無関係なタスクへ一律に要求しない。
 
-コメント品質は `documents/rules/source-comments.md` と対象言語規約を直接適用する。task.md、impl.md、eval.md に別のコメント監査台帳を作らない。
+コメント品質は `documents/rules/source-comments.md` と対象言語規約を直接適用する。本番コードを変更した場合は、変更したシンボル・処理群・判断と直接の変更理解範囲を全件点検し、必須コメントの欠落・説明不足・stale comment を解消するまで完了しない。既存コード由来でも変更理解範囲内なら今回の対象とする。task.md、impl.md、eval.md に別のコメント監査台帳は作らず、最終報告に `コメント点検: PASS` と記す。
 
 ### 完了報告
 
