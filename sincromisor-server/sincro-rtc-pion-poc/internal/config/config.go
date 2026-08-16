@@ -33,7 +33,8 @@ type Config struct {
 	HTTPAddress        string
 	FrontendDir        string
 	STUNURL            string
-	MediaUDPAddress    string
+	MediaUDPPort       uint
+	MediaIPv4          string
 	PublicIPv4         string
 	Interface          string
 	GatherTimeout      time.Duration
@@ -64,7 +65,7 @@ func Load(args []string) (Config, error) {
 	flags.StringVar(&cfg.HTTPAddress, "http", "127.0.0.1:8080", "HTTP listen address")
 	flags.StringVar(&cfg.FrontendDir, "frontend-dir", "", "built frontend directory")
 	flags.StringVar(&cfg.STUNURL, "stun", "", "optional STUN URL")
-	flags.StringVar(&cfg.MediaUDPAddress, "media-udp", "", "UDP4 bind address for shared ICE mux")
+	flags.UintVar(&cfg.MediaUDPPort, "media-udp-port", 0, "UDP4 port for the shared ICE mux")
 	flags.StringVar(&cfg.PublicIPv4, "public-ipv4", "", "advertised IPv4 host candidate")
 	flags.StringVar(&cfg.Interface, "interface", "", "network interface used for ICE candidates")
 	flags.DurationVar(&cfg.GatherTimeout, "gather-timeout", defaultGatherTimeout, "ICE gathering timeout")
@@ -90,18 +91,16 @@ func Load(args []string) (Config, error) {
 	if err := validateDiscoveryConfig(&cfg, httpAddress.Port); err != nil {
 		return Config{}, err
 	}
-	mediaIPv4, err := validateMediaAddress(cfg.MediaUDPAddress)
+	if cfg.MediaUDPPort < 1 || cfg.MediaUDPPort > 65535 {
+		return Config{}, errors.New("media-udp-port must be between 1 and 65535")
+	}
+	mediaIPv4, err := selectMediaIPv4(cfg.Interface)
 	if err != nil {
 		return Config{}, err
 	}
+	cfg.MediaIPv4 = mediaIPv4.String()
 	if ip := net.ParseIP(cfg.PublicIPv4); ip == nil || ip.To4() == nil || ip.IsUnspecified() {
 		return Config{}, errors.New("public-ipv4 must be a non-unspecified IPv4 address")
-	}
-	if cfg.Interface == "" {
-		return Config{}, errors.New("interface is required")
-	}
-	if err := validateMediaInterface(cfg.Interface, mediaIPv4); err != nil {
-		return Config{}, err
 	}
 	if cfg.GatherTimeout <= 0 {
 		return Config{}, errors.New("gather-timeout must be positive")
@@ -230,42 +229,29 @@ func validateHost(host string) error {
 	return nil
 }
 
-// validateMediaAddress はshared ICE muxがbindするliteral UDP4 endpointを起動前に限定する。
-// interface filterとpublic IPv4 rewriteは後段のPion設定へ渡すため、ここではport 0やIPv6、
-// hostnameを拒否してsocket作成時の曖昧なnetwork選択を残さない。
-func validateMediaAddress(address string) (net.IP, error) {
-	host, port, err := net.SplitHostPort(address)
-	if err != nil {
-		return nil, fmt.Errorf("invalid media-udp address: %w", err)
-	}
-	ip := net.ParseIP(host)
-	if ip == nil || ip.To4() == nil || ip.IsUnspecified() {
-		return nil, errors.New("media-udp host must be a non-unspecified IPv4 address")
-	}
-	if port == "0" {
-		return nil, errors.New("media-udp port must be between 1 and 65535")
-	}
-	if _, err := net.LookupPort("udp4", port); err != nil {
-		return nil, fmt.Errorf("invalid media-udp port: %w", err)
-	}
-	return ip.To4(), nil
-}
+var (
+	interfaceByName = net.InterfaceByName
+	interfaceAddrs  = func(iface *net.Interface) ([]net.Addr, error) { return iface.Addrs() }
+)
 
-// validateMediaInterface は指定interfaceが稼働中で、media UDPのIPv4を実際に所有することを確認する。
-// wildcard bindではcontainerやhostの別addressがcandidate収集へ混ざるため、socket作成前に明示addressと
-// interfaceの対応を確定して、Pionのinterface filterとbind対象がずれないようにする。
-func validateMediaInterface(interfaceName string, mediaIPv4 net.IP) error {
-	iface, err := net.InterfaceByName(interfaceName)
+// selectMediaIPv4 は指定interfaceの唯一の非-unspecified IPv4をshared ICE muxのbind先として返す。
+// interfaceの複数addressを推測して選ぶとcandidate filterとsocket bindがずれるため、listenerを開く前に拒否する。
+func selectMediaIPv4(interfaceName string) (net.IP, error) {
+	if interfaceName == "" {
+		return nil, errors.New("interface is required")
+	}
+	iface, err := interfaceByName(interfaceName)
 	if err != nil {
-		return fmt.Errorf("inspect interface: %w", err)
+		return nil, fmt.Errorf("inspect interface: %w", err)
 	}
 	if iface.Flags&net.FlagUp == 0 {
-		return fmt.Errorf("interface %q is not up", interfaceName)
+		return nil, fmt.Errorf("interface %q is not up", interfaceName)
 	}
-	addresses, err := iface.Addrs()
+	addresses, err := interfaceAddrs(iface)
 	if err != nil {
-		return fmt.Errorf("list interface addresses: %w", err)
+		return nil, fmt.Errorf("list interface addresses: %w", err)
 	}
+	var mediaIPv4 net.IP
 	for _, address := range addresses {
 		var ip net.IP
 		switch typed := address.(type) {
@@ -274,9 +260,15 @@ func validateMediaInterface(interfaceName string, mediaIPv4 net.IP) error {
 		case *net.IPAddr:
 			ip = typed.IP
 		}
-		if ip != nil && ip.Equal(mediaIPv4) {
-			return nil
+		if ipv4 := ip.To4(); ipv4 != nil && !ipv4.IsUnspecified() {
+			if mediaIPv4 != nil {
+				return nil, fmt.Errorf("interface %q must have exactly one non-unspecified IPv4 address", interfaceName)
+			}
+			mediaIPv4 = ipv4
 		}
 	}
-	return fmt.Errorf("media-udp IPv4 %s is not assigned to interface %q", mediaIPv4, interfaceName)
+	if mediaIPv4 == nil {
+		return nil, fmt.Errorf("interface %q must have exactly one non-unspecified IPv4 address", interfaceName)
+	}
+	return mediaIPv4, nil
 }

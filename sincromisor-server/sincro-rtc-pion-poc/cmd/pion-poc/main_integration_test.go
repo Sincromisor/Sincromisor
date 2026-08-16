@@ -39,15 +39,16 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 		t.Fatalf("write frontend fixture: %v", err)
 	}
 	address := reserveTCPAddress(t)
-	mediaAddress := reserveUDPAddress(t)
+	mediaPort := reserveUDPPort(t)
+	interfaceName, publicIPv4 := singleIPv4Interface(t)
 	command := exec.Command(
 		binaryPath,
 		"--http", address,
 		"--frontend-dir", frontendDir,
 		"--gather-timeout", "2s",
-		"--media-udp", mediaAddress,
-		"--public-ipv4", "127.0.0.1",
-		"--interface", "lo",
+		"--media-udp-port", mediaPort,
+		"--public-ipv4", publicIPv4,
+		"--interface", interfaceName,
 	)
 	var processOutput bytes.Buffer
 	command.Stdout = &processOutput
@@ -161,10 +162,11 @@ func TestProcessRegistersReadyServiceAndDeregistersOnSIGTERM(t *testing.T) {
 		t.Fatalf("write frontend fixture: %v", err)
 	}
 	address := reserveTCPAddress(t)
-	mediaAddress := reserveUDPAddress(t)
+	mediaPort := reserveUDPPort(t)
+	interfaceName, publicIPv4 := singleIPv4Interface(t)
 	command := exec.Command(binaryPath,
-		"--http", address, "--frontend-dir", frontendDir, "--media-udp", mediaAddress,
-		"--public-ipv4", "127.0.0.1", "--interface", "lo", "--consul-agent-host", consul.host,
+		"--http", address, "--frontend-dir", frontendDir, "--media-udp-port", mediaPort,
+		"--public-ipv4", publicIPv4, "--interface", interfaceName, "--consul-agent-host", consul.host,
 		"--consul-agent-port", strconv.Itoa(consul.port), "--service-bind-host", "127.0.0.1",
 		"--fallback-host", "caddy.local", "--fallback-port", "8000",
 	)
@@ -306,17 +308,58 @@ func reserveTCPAddress(t *testing.T) string {
 	return address
 }
 
-func reserveUDPAddress(t *testing.T) string {
+func reserveUDPPort(t *testing.T) string {
 	t.Helper()
 	socket, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
 	if err != nil {
 		t.Fatalf("reserve UDP address: %v", err)
 	}
-	address := socket.LocalAddr().String()
+	port := strconv.Itoa(socket.LocalAddr().(*net.UDPAddr).Port)
 	if err := socket.Close(); err != nil {
 		t.Fatalf("release UDP address: %v", err)
 	}
-	return address
+	return port
+}
+
+// singleIPv4Interface はproduction設定と同じ唯一IPv4のinterfaceを統合試験へ渡す。
+// loはVPN addressを併設するhostがあるため、固定名を渡すとstartup validationより前にHTTP検証へ進めない。
+func singleIPv4Interface(t *testing.T) (string, string) {
+	t.Helper()
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		t.Fatalf("list interfaces: %v", err)
+	}
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		addresses, err := iface.Addrs()
+		if err != nil {
+			t.Fatalf("list interface addresses for %q: %v", iface.Name, err)
+		}
+		var ipv4 net.IP
+		for _, address := range addresses {
+			var ip net.IP
+			switch typed := address.(type) {
+			case *net.IPNet:
+				ip = typed.IP
+			case *net.IPAddr:
+				ip = typed.IP
+			}
+			if candidate := ip.To4(); candidate != nil && !candidate.IsUnspecified() {
+				if ipv4 != nil {
+					ipv4 = nil
+					break
+				}
+				ipv4 = candidate
+			}
+		}
+		if ipv4 != nil {
+			return iface.Name, ipv4.String()
+		}
+	}
+	t.Fatal("no up non-loopback interface has exactly one non-unspecified IPv4 address")
+	return "", ""
 }
 
 func waitForHTTPReady(t *testing.T, url string) {

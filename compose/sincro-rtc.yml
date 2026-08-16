@@ -65,8 +65,8 @@ services:
                 "${SINCRO_PION_FFMPEG_PATH}",
                 "--stun",
                 "${SINCRO_PION_STUN}",
-                "--media-udp",
-                "${SINCRO_PION_CONTAINER_IPV4}:${SINCRO_PION_MEDIA_UDP_PORT}",
+                "--media-udp-port",
+                "${SINCRO_PION_MEDIA_UDP_PORT}",
                 "--public-ipv4",
                 "${SINCRO_PION_PUBLIC_IPV4}",
                 "--interface",
@@ -84,8 +84,10 @@ services:
             - 8001:8001/tcp
             - ${SINCRO_PION_MEDIA_UDP_PORT}:${SINCRO_PION_MEDIA_UDP_PORT}/udp
         networks:
-            sincromisor-net:
-                ipv4_address: ${SINCRO_PION_CONTAINER_IPV4}
+            - sincromisor-net
+        depends_on:
+            sincro-consul-server:
+                condition: service_healthy
         deploy:
             restart_policy:
                 condition: any

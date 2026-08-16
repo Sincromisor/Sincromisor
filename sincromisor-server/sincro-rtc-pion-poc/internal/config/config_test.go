@@ -10,14 +10,15 @@ import (
 )
 
 func TestLoad(t *testing.T) {
+	configureTestInterface(t)
 	frontendDir := t.TempDir()
 	cfg, err := Load([]string{
 		"--http", "127.0.0.1:9090",
 		"--frontend-dir", frontendDir,
 		"--stun", "stun:stun.example.test:3478",
-		"--media-udp", loopbackIPv4(t) + ":3478",
-		"--public-ipv4", loopbackIPv4(t),
-		"--interface", loopbackInterfaceName(t),
+		"--media-udp-port", "3478",
+		"--public-ipv4", testInterfaceIPv4,
+		"--interface", testInterfaceName,
 		"--gather-timeout", "2s",
 		"--max-sessions", "99",
 		"--offer-cache-capacity", "999",
@@ -28,6 +29,9 @@ func TestLoad(t *testing.T) {
 	}
 	if cfg.HTTPAddress != "127.0.0.1:9090" {
 		t.Errorf("HTTPAddress = %q, want 127.0.0.1:9090", cfg.HTTPAddress)
+	}
+	if cfg.MediaIPv4 != testInterfaceIPv4 || cfg.MediaUDPPort != 3478 {
+		t.Errorf("media bind = %s:%d, want %s:3478", cfg.MediaIPv4, cfg.MediaUDPPort, testInterfaceIPv4)
 	}
 	if cfg.GatherTimeout != 2*time.Second {
 		t.Errorf("GatherTimeout = %s, want 2s", cfg.GatherTimeout)
@@ -58,7 +62,7 @@ func TestLoadUsesProductionLimitDefaults(t *testing.T) {
 }
 
 func TestLoadConfiguresConsulDiscovery(t *testing.T) {
-	bindHost := loopbackIPv4(t)
+	bindHost := testInterfaceIPv4
 	cfg, err := Load(append([]string{
 		"--frontend-dir", t.TempDir(),
 		"--consul-agent-host", "consul.local",
@@ -150,14 +154,13 @@ func TestLoadRejectsInvalidBoundaryValues(t *testing.T) {
 		{name: "offer ttl below minimum", args: []string{"--frontend-dir", t.TempDir(), "--offer-cache-ttl", "29s"}},
 		{name: "offer ttl above production maximum", args: []string{"--frontend-dir", t.TempDir(), "--offer-cache-ttl", "121s"}},
 		{name: "invalid public IPv4", args: []string{"--frontend-dir", t.TempDir(), "--public-ipv4", "::1"}},
-		{name: "invalid media port", args: []string{"--frontend-dir", t.TempDir(), "--media-udp", "127.0.0.1:0"}},
-		{name: "wildcard media address", args: []string{"--frontend-dir", t.TempDir(), "--media-udp", "0.0.0.0:3478"}},
-		{name: "media address is not assigned to interface", args: []string{"--frontend-dir", t.TempDir(), "--media-udp", "192.0.2.1:3478"}},
+		{name: "zero media port", args: []string{"--frontend-dir", t.TempDir(), "--media-udp-port", "0"}},
+		{name: "out of range media port", args: []string{"--frontend-dir", t.TempDir(), "--media-udp-port", "65536"}},
 		{name: "missing interface", args: []string{"--frontend-dir", t.TempDir(), "--interface", "missing-test-interface"}},
 		{name: "partial Consul config", args: []string{"--frontend-dir", t.TempDir(), "--consul-agent-host", "consul.local"}},
 		{name: "partial fallback config", args: []string{"--frontend-dir", t.TempDir(), "--fallback-port", "8000"}},
 		{name: "Consul without service bind host", args: []string{"--frontend-dir", t.TempDir(), "--consul-agent-host", "consul.local", "--consul-agent-port", "8500"}},
-		{name: "Consul agent port out of range", args: []string{"--frontend-dir", t.TempDir(), "--consul-agent-host", "consul.local", "--consul-agent-port", "65536", "--service-bind-host", loopbackIPv4(t)}},
+		{name: "Consul agent port out of range", args: []string{"--frontend-dir", t.TempDir(), "--consul-agent-host", "consul.local", "--consul-agent-port", "65536", "--service-bind-host", testInterfaceIPv4}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -171,43 +174,76 @@ func TestLoadRejectsInvalidBoundaryValues(t *testing.T) {
 
 func networkArgs(t *testing.T) []string {
 	t.Helper()
+	configureTestInterface(t)
 	return []string{
-		"--media-udp", loopbackIPv4(t) + ":3478",
-		"--public-ipv4", loopbackIPv4(t),
-		"--interface", loopbackInterfaceName(t),
+		"--media-udp-port", "3478",
+		"--public-ipv4", testInterfaceIPv4,
+		"--interface", testInterfaceName,
 	}
 }
 
-func loopbackInterfaceName(t *testing.T) string {
-	t.Helper()
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		t.Fatalf("list interfaces: %v", err)
-	}
-	for _, iface := range interfaces {
-		if iface.Flags&net.FlagLoopback != 0 {
-			return iface.Name
+func TestSelectMediaIPv4(t *testing.T) {
+	originalByName, originalAddrs := interfaceByName, interfaceAddrs
+	t.Cleanup(func() {
+		interfaceByName, interfaceAddrs = originalByName, originalAddrs
+	})
+	iface := &net.Interface{Name: "test0", Flags: net.FlagUp}
+	interfaceByName = func(name string) (*net.Interface, error) {
+		if name != iface.Name {
+			return nil, &net.OpError{Op: "route", Net: "ip", Err: os.ErrNotExist}
 		}
+		return iface, nil
 	}
-	t.Fatal("loopback interface not found")
-	return ""
+	for _, test := range []struct {
+		name    string
+		flags   net.Flags
+		addrs   []net.Addr
+		want    string
+		wantErr bool
+	}{
+		{name: "single IPv4", flags: net.FlagUp, addrs: []net.Addr{&net.IPNet{IP: net.ParseIP("192.0.2.10")}}, want: "192.0.2.10"},
+		{name: "no IPv4", flags: net.FlagUp, addrs: []net.Addr{&net.IPNet{IP: net.ParseIP("2001:db8::1")}}, wantErr: true},
+		{name: "multiple IPv4", flags: net.FlagUp, addrs: []net.Addr{&net.IPNet{IP: net.ParseIP("192.0.2.10")}, &net.IPAddr{IP: net.ParseIP("192.0.2.11")}}, wantErr: true},
+		{name: "unspecified IPv4", flags: net.FlagUp, addrs: []net.Addr{&net.IPNet{IP: net.IPv4zero}}, wantErr: true},
+		{name: "down interface", flags: 0, addrs: []net.Addr{&net.IPNet{IP: net.ParseIP("192.0.2.10")}}, wantErr: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			iface.Flags = test.flags
+			interfaceAddrs = func(*net.Interface) ([]net.Addr, error) { return test.addrs, nil }
+			got, err := selectMediaIPv4("test0")
+			if test.wantErr {
+				if err == nil {
+					t.Fatal("selectMediaIPv4() error = nil")
+				}
+				return
+			}
+			if err != nil || got.String() != test.want {
+				t.Fatalf("selectMediaIPv4() = %v, %v; want %s, nil", got, err, test.want)
+			}
+		})
+	}
+	if _, err := selectMediaIPv4("missing"); err == nil {
+		t.Fatal("selectMediaIPv4(missing) error = nil")
+	}
 }
 
-func loopbackIPv4(t *testing.T) string {
+const (
+	testInterfaceName = "test0"
+	testInterfaceIPv4 = "192.0.2.10"
+)
+
+func configureTestInterface(t *testing.T) {
 	t.Helper()
-	iface, err := net.InterfaceByName(loopbackInterfaceName(t))
-	if err != nil {
-		t.Fatalf("find loopback interface: %v", err)
-	}
-	addresses, err := iface.Addrs()
-	if err != nil {
-		t.Fatalf("list loopback addresses: %v", err)
-	}
-	for _, address := range addresses {
-		if network, ok := address.(*net.IPNet); ok && network.IP.To4() != nil {
-			return network.IP.String()
+	originalByName, originalAddrs := interfaceByName, interfaceAddrs
+	iface := &net.Interface{Name: testInterfaceName, Flags: net.FlagUp}
+	interfaceByName = func(name string) (*net.Interface, error) {
+		if name != testInterfaceName {
+			return nil, os.ErrNotExist
 		}
+		return iface, nil
 	}
-	t.Fatal("loopback IPv4 address not found")
-	return ""
+	interfaceAddrs = func(*net.Interface) ([]net.Addr, error) {
+		return []net.Addr{&net.IPNet{IP: net.ParseIP(testInterfaceIPv4)}}, nil
+	}
+	t.Cleanup(func() { interfaceByName, interfaceAddrs = originalByName, originalAddrs })
 }

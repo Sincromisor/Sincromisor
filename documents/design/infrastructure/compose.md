@@ -12,13 +12,10 @@ root `compose.yml` の `sincromisor-net` は
 `${SINCRO_COMPOSE_NETWORK_SUBNET}` をIPAM subnetとして使う。既定値は
 `examples/compose.env` の `172.28.0.0/16` である。
 
-後続のPion serviceは `sincro-rtc-pion` とし、このnetworkへ
-`ipv4_address: ${SINCRO_PION_CONTAINER_IPV4}` を割り当てる。
-`SINCRO_PION_CONTAINER_IPV4` はsubnet内でPion専用に予約する固定IPv4であり、
-`--media-udp ${SINCRO_PION_CONTAINER_IPV4}:${SINCRO_PION_MEDIA_UDP_PORT}`、
-`--interface ${SINCRO_PION_INTERFACE}`、
-`--service-bind-host ${SINCRO_PION_SERVICE_BIND_HOST}` を配線する。local composeの既定値は
-`sincro-rtc-pion`で、同じ固定IPv4へ解決される。別host Consulを使う場合はConsulからhealth check可能な
+後続のPion serviceは `sincro-rtc-pion` とし、container IPv4はDockerが動的に割り当てる。
+`--media-udp-port ${SINCRO_PION_MEDIA_UDP_PORT}` と `--interface ${SINCRO_PION_INTERFACE}` はcontainer内の
+shared UDP mux bind先を選び、`--service-bind-host ${SINCRO_PION_SERVICE_BIND_HOST}` はConsul登録addressを決める。
+local composeの既定service bind hostは`sincro-rtc-pion`である。別host Consulを使う場合はConsulからhealth check可能な
 Pion hostのVPN addressを指定する。browserへ広告するpublic IPv4は別値とする。
 
 Pionはaiortc版と同じstable TCP 8001を公開し、
@@ -31,10 +28,10 @@ Pionへ切り替えるときはaiortcを停止した状態で `--profile pion` �
 `SINCRO_PION_CONSUL_HTTP_HOST` / `SINCRO_PION_CONSUL_HTTP_PORT` のHTTP endpointを直接使い、
 `SINCRO_PION_SERVICE_BIND_HOST`をConsul service addressとして登録する。Pion専用のlocal gossip agentは起動しない。
 local composeでは既存の`sincro-consul-server`を指定し、別host ConsulではVPS containerから到達可能なHTTP addressと、
-Consul serverがPionへhealth checkできるVPN addressをそれぞれ指定する。Pion自身は `/health/ready` を10秒間隔・5秒timeoutで監視する。
+Consul serverがPionへhealth checkできるVPN addressをそれぞれ指定する。Pionは`depends_on`で`sincro-consul-server`の
+healthcheck成功後に起動し、`/health/ready` を10秒間隔・5秒timeoutで監視する。
 
-既存Docker networkとsubnetが重複する環境では、
-`SINCRO_COMPOSE_NETWORK_SUBNET` と `SINCRO_PION_CONTAINER_IPV4` を同一subnet内の未使用値へ対で変更する。
+既存Docker networkとsubnetが重複する環境では、`SINCRO_COMPOSE_NETWORK_SUBNET`だけを未使用subnetへ変更する。
 
 ## Scope
 
@@ -57,7 +54,7 @@ Consul serverがPionへhealth checkできるVPN addressをそれぞれ指定す�
 ## Change Checklist
 
 - 新しい env を追加したら `examples/compose.env`、compose environment、設定クラスを同時更新する。
-- Pion serviceを追加する場合は、`sincro-rtc-pion` だけへ上記の固定IPv4を割り当て、既存serviceへstatic addressを追加しない。
+- Pion serviceはcontainer IPv4を設定せず、Dockerの動的割当とinterface選択を使う。
 - service 名や port を変える場合は Consul、fallback 設定、contracts を確認する。
 - downstream service を追加/削除する場合は AudioBroker と WebSocket contract を確認する。
 - frontend / backend の片側だけで完結する変更にしない。
