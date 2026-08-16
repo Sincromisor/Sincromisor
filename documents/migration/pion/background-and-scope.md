@@ -82,7 +82,8 @@ aiortcとPionは開発・評価環境で個別に検証するが、運用環境�
 
 ## 成功条件
 
-- ChromeとFirefoxから現行endpoint / payloadで接続できる。
+- 現在対応するbrowserから現行endpoint / payloadで接続できる。Gate 4はGate 3で成立済みのChrome経路だけを確認し、
+  他browserはbrowser固有の実害があり、aiortcで同じ実環境smokeが成立している場合だけ独立して確認する。
 - 固定UDP mux portによる直接接続、Trickle ICE、同一session IDのICE restartがtest matrixを満たす。
 - 入力音声が既存pipelineの16 kHz mono PCM契約を満たす。
 - 合成音声と `text_ch` の順序・内容、およびunordered / unreliableな `telop_ch` の内容が現行動作と一致する。

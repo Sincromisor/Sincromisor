@@ -95,7 +95,7 @@ Gate 4の移行必須条件は、Pionとrollback後のaiortcで現行Frontendか
 rebuildしないことだけとする。public UDP / NAT / firewallとaiortc / Pionの排他起動は、これらを観測する環境前提である。
 
 Pion process crash自動復帰、soak、性能比較、障害注入、browser matrixの拡張、Docker挙動調査、環境の網羅監査、
-新しいbrowser oracleはGate 4に含めない。aiortcで同じ経路が必要だと示す実害が出た場合だけ、根本原因、移行との関係、
+新しいbrowser oracleはGate 4に含めない。browser固有の実害があり、aiortcで同じ経路が成立している場合だけ、根本原因、移行との関係、
 最小受け入れ条件を持つ独立taskで扱う。移行必須条件の未達だけをFAILとし、未検証の追加要件をFAIL原因にしない。
 移行必須条件を観測できない場合はPASSにせず、必要な観測点と解除条件を記録してGate taskを`blocked`にする。
 

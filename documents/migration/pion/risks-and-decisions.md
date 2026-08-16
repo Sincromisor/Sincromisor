@@ -28,7 +28,7 @@
 | 接続未成立session               | PeerConnection / WS残存    | pre-connect deadline、pipeline client遅延作成             |
 | RTCP未処理                      | feedback滞留、品質低下     | report interceptor、RTCP drain loop、NACK / PLC試験       |
 | 境界入力の暴走                  | memory増加、panic          | body / SDP / candidate / queue上限、goroutine recovery    |
-| browser実装差                   | Chromeのみ成功             | ChromeをPoC、Chrome / Firefoxを切替前gateにする           |
+| browser実装差                   | Chromeのみ成功             | ChromeをPoCと切替前gateで確認し、他browserは実害時に確認  |
 | DataChannel backpressure        | memory増加、message欠落    | buffered amount監視と上限                                 |
 
 ## 主要判断事項
@@ -141,7 +141,7 @@ Phase 1の採用条件:
 - pure Go Opus decodeとmediadevices/static libopus encodeが成立する。
 - 10回close、codec error、SIGTERM、race testでsession resourceが収束する。
 
-対応browser、fixed UDP mux、Go pipeline互換はPhase 3 / 4の切替条件であり、
+管理対象Chrome、fixed UDP mux、Go pipeline互換はPhase 3 / 4の切替条件であり、
 Pionを後続実装の出発点にする判断とは分離する。
 
 不採用条件:

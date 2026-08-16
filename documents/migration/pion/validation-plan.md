@@ -17,7 +17,7 @@
 | pipeline      | 対象外                   | Gate 2の互換試験とproduction候補の結合試験 | 実4サービスで会話                   |
 | lifecycle     | 通常closeとcodec error   | 正常終了と代表的な異常終了                 | 停止切替、session収束、rollback     |
 | network       | local host candidate     | local統合環境                              | 実運用のNAT、firewall、固定UDP port |
-| compatibility | Chrome                   | 管理対象Chromium                           | 実運用で対応するbrowserを各1回      |
+| compatibility | Chrome                   | 管理対象Chromium                           | Gate 3で成立済みのChromeを1回       |
 
 ## Phase 1 minimal PoC
 
@@ -78,7 +78,7 @@ Gate条件へ追加できるのは、移行固有の不変条件であり、既�
 production相当環境で、実際に採用する構成だけを検証する。
 
 - 固定UDP mux port、public IPv4、NAT、firewallを本番と同じ値で構成する。
-- Pion版で対応browserから接続し、1 turnの会話、音声、DataChannelを確認する。
+- Pion版でGate 3と同じChromeから接続し、1 turnの会話、音声、DataChannelを確認する。
 - session終了後にactive session、goroutine、WebSocket、socketが収束することを確認する。
 - aiortc停止、Pion起動、smoke test、Pion停止、aiortc復旧を一連の手順として実行する。
 - FrontendとPython下流serviceを再buildせずrollbackできることを確認する。
@@ -107,6 +107,12 @@ runbookを最初から再実行する。
 - 全音声形式を使ったend-to-end matrix
 
 接続失敗、音声品質問題、resource増加が実運用で観測された場合だけ、該当項目を再現する独立taskを起票する。
+
+### Gate 4の過剰化防止
+
+Gate 4は、Pionとrollback後のaiortcで各1回の既存Chrome経路を確認した時点で判定する。実下流の応答本文は固定文と比較せず、
+利用者/応答text、telop、非無音音声の表示・再生をbrowser UIで確認する。Firefox、Docker crash、環境の網羅監査、
+新しいbrowser oracleは、browser固有の実害があり、aiortcで同じ経路が成立している場合だけ独立して扱う。
 
 ## Observability
 
