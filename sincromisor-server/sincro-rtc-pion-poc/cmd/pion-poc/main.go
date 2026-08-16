@@ -90,11 +90,7 @@ func runWithBoundaries(
 	if err != nil {
 		return err
 	}
-	mediaEndpoint, err := net.ResolveUDPAddr("udp4", cfg.MediaUDPAddress)
-	if err != nil {
-		return fmt.Errorf("resolve media udp address: %w", err)
-	}
-	mediaSocket, err := net.ListenUDP("udp4", mediaEndpoint)
+	mediaSocket, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.ParseIP(cfg.MediaIPv4), Port: int(cfg.MediaUDPPort)})
 	if err != nil {
 		return fmt.Errorf("bind media udp socket: %w", err)
 	}
