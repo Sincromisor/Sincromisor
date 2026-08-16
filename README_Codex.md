@@ -10,7 +10,8 @@ Sincromisor での運用ルール、入口、検証手順は [tasks/README.md](t
 upstream kit との差分は [.agents/CUSTOMIZATIONS.md](.agents/CUSTOMIZATIONS.md) に記録する。
 
 生成する `.codex/agents/*.toml` は3体、`.agents/skills/*/SKILL.md` は2本。レビュー担当と評価担当は、
-ユーザーの明示要求または高リスク変更の場合だけ起動する。
+ユーザーの明示要求または高リスク変更の場合だけ起動する。通常変更は親Codexが現在のworktreeで直接実装し、
+変更範囲に対応する確認と1コミットで完了する。
 
 ## 前提
 
