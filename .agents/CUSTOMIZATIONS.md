@@ -124,5 +124,8 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 - Reason: Sincromisor is a personal hobby project; delivery speed is the default objective, while
   security, data loss prevention, public contracts, and explicitly requested evaluation remain hard
   boundaries.
+- Source comments remain a hard gate for every production-code change: all changed symbols and the
+  direct comprehension scope are inspected, and missing or stale required comments block completion.
+  The simplification removes audit ledgers, not the comment obligation.
 - Future refresh check: confirm generated instructions do not require worktrees, `npm run gate`, or
   independent evaluation for normal changes.
