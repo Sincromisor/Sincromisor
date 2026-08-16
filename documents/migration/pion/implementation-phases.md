@@ -144,7 +144,7 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 
 - compose profileまたは別projectでaiortc版とPion版を排他的に起動できるようにする。
 - 運用環境と同じ固定UDP mux port、public IPv4、NAT、firewall設定を検証する。
-- aiortc版とPion版で対応browserのsmoke testを各1回実行する。
+- aiortc版とPion版でGate 3と同じChromeのsmoke testを各1回実行する。
 - aiortc停止、Pion起動、smoke test、Pion停止、aiortc復旧の手順と所要時間を検証する。
 
 ### Gate 4
@@ -154,6 +154,9 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 - 既存testの証拠: 既存repository testはPhase 3で確認済みの契約・異常系の証拠として再利用する。
 - 独立した運用強化: Pion process crash自動復帰、soak、性能比較、障害注入、browser matrixの拡張はGate 4へ含めない。
 - public UDP / NAT / firewallとaiortc / Pionの排他起動は、上記の移行必須条件を観測するための環境前提として確認する。
+
+実下流の可変応答は固定文字列と比較せず、browser UIでtext、telop、音声を確認する。Firefox、Docker crash、環境の網羅監査、
+新しいharnessは、browser固有の実害があり、aiortcで同じ経路が成立している場合だけ独立して扱う。
 
 この条件は現行Gate 4 taskの次回実行から適用する。過去artifactと判定履歴は保持し、Pionとrollback後のaiortcの
 移行必須条件を観測できるproduction相当smoke手順が利用可能になった時点でrunbookを最初から再実行する。
