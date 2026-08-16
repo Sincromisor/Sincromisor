@@ -1,0 +1,13 @@
+id: task-260817014711-pion-compose-dynamic-media-bind
+title: Pion Composeの固定コンテナIPを廃止する
+category: sincro-rtc
+status: done
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: PASS
+attempts: 2
+created_at: 2026-08-17
+closed_at: 2026-08-17
+legacy_ids: []
