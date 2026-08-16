@@ -91,7 +91,7 @@ go run ./cmd/pion-poc \
   --http 127.0.0.1:8080 \
   --frontend-dir ../../sincromisor-frontend/dist \
 	--ffmpeg /usr/bin/ffmpeg \
-	--media-udp 192.0.2.10:3478 \
+	--media-udp-port 3478 \
 	--public-ipv4 203.0.113.10 \
 	--interface eth0 \
 	--max-sessions 100 \
@@ -104,10 +104,10 @@ initial signalingのproduction上限はtyped configを正本とする。`--max-s
 `--offer-cache-ttl`は30秒〜2分（default 2分）の範囲で、小さい値だけを指定できる。
 範囲外の値はlistenerを開く前にstartup errorとなる。
 
-`--media-udp` は process が全 session で共有する UDP4 socket の bind address、`--public-ipv4` は SDP の
-host candidate に広告する到達可能な IPv4、`--interface` は candidate 収集を許可する interface である。
-3つは必須であり、`--media-udp` は wildcardでないIPv4かつ指定interfaceへ割当済みでなければならない。
-IPv6、port 0、downまたは存在しない interface は HTTP listener を開く前に拒否する。
+`--media-udp-port` は process が全 session で共有する UDP4 socket の port、`--public-ipv4` は SDP の
+host candidate に広告する到達可能な IPv4、`--interface` は candidate 収集とbind address選択を許可する interfaceである。
+3つは必須であり、`--interface` には非-unspecified IPv4がちょうど1つ割り当てられていなければならない。
+IPv6だけのinterface、port 0・範囲外、downまたは存在しない interface は HTTP listener を開く前に拒否する。
 `turn:` / `turns:` は `--stun` に指定しても拒否し、ICE-TCP と IPv6 は有効化しない。
 
 Consulを使う場合は `--consul-agent-host` と `--consul-agent-port`、`--service-bind-host` を指定する。HTTP endpointは
