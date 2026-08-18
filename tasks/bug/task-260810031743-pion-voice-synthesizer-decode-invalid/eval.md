@@ -14,3 +14,21 @@ FAIL
 ## 残課題
 
 - `task.md` の受け入れ条件4どおり、既存 compose で VOICEVOX を含む Pion 1ターンを実行し、対象 session について `synthesizer_result_received` 後の codec error 不在、接続維持、非無音音声再生を private evidence で確認する。失敗時は reason と対象境界を task 記録へ残し、修正後に同じ実機確認と `npm run gate` を再検証する。
+
+---
+
+## 再評価
+
+### 判定
+
+PASS
+
+### 根拠
+
+- 初回 FAIL の受け入れ条件4は、private evidence `work/private-artifacts/task-260810031743-pion-voice-synthesizer-decode-invalid/result.md` と `impl.md` で解消を確認した。外部 Dify の接続拒否時は compose 内部 network の一時 SSE で TTS 入力だけを供給し、実 VoiceSynthesizer・VOICEVOX・Pion の1ターンで `synthesizer_result_received`、ICE connected、text/telop、audio peak 16、`codec_error` なし、終了後 active session 0を確認している。payload、本文、session ID は artifact に残しておらず、一時 container と設定も復元済みである。
+- `codecErrorDetails` は `ErrorInvalid` 以外を必ず `codec_error_reason=unknown` にし、5つの有限 reason だけを `ErrorInvalid` から出す。`ErrorProcess` に `empty_voice` を混入した capture test も `unknown` を確認しており、初回指摘を解消した。変更シンボルと直接の decoder / outbound flow のコメントは、固定値域、payload非出力、境界の責務を説明しており、コメント点検は PASS。
+- fixture `--check` は PASS。focused Go test、対象 package test、`go vet ./...`、`gofmt -l .`、`npm run gate` は PASS。`go test ./...` は変更外の一過性 ICE timeout 後、signaling package の再試験と全体再試験で PASS した。
+
+### 残課題
+
+- なし
