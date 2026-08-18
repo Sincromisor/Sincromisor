@@ -1,13 +1,13 @@
 id: task-260810031743-pion-voice-synthesizer-decode-invalid
 title: PionのVoiceSynthesizer音声契約違反を特定・修正する
 category: bug
-status: open
+status: done
 depends_on: []
 superseded_by: null
 review: APPROVED
 reviewed_sha: null
-verdict: FAIL
-attempts: 1
+verdict: PASS
+attempts: 2
 created_at: 2026-08-10
-closed_at: null
+closed_at: 2026-08-19
 legacy_ids: []
