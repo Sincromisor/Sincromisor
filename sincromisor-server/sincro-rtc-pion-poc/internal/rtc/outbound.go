@@ -105,12 +105,8 @@ func (s *Session) handleSynthOutput(output pipeline.Output[protocol.SynthesizerR
 	decoded, err := s.synthDecoder.Decode(s.ctx, output.Value)
 	if err != nil {
 		if s.isCurrentGeneration(output.Generation) && s.ctx.Err() == nil {
-			codecErrorKind := "unknown"
-			var decodeErr *synthdecode.DecodeError
-			if errors.As(err, &decodeErr) {
-				codecErrorKind = string(decodeErr.Kind)
-			}
-			s.logger.Error("synthesized audio decode failed", "session_id", s.id, "reason", "codec_error", "codec_error_kind", codecErrorKind)
+			codecErrorKind, codecErrorReason := codecErrorDetails(err)
+			s.logger.Error("synthesized audio decode failed", "session_id", s.id, "reason", "codec_error", "codec_error_kind", codecErrorKind, "codec_error_reason", codecErrorReason)
 			s.metrics().CodecError("decode_synth")
 			_ = s.Close("codec_error")
 		}
@@ -123,6 +119,24 @@ func (s *Session) handleSynthOutput(output pipeline.Output[protocol.SynthesizerR
 		return nil
 	}
 	return err
+}
+
+// codecErrorDetails はdecoder原因をログ用の固定値域へ閉じ、Causeの自由文を観測境界へ出さない。
+func codecErrorDetails(err error) (string, string) {
+	var decodeErr *synthdecode.DecodeError
+	if !errors.As(err, &decodeErr) {
+		return "unknown", "unknown"
+	}
+	codecErrorKind := string(decodeErr.Kind)
+	if decodeErr.Kind != synthdecode.ErrorInvalid {
+		return codecErrorKind, "unknown"
+	}
+	switch decodeErr.Reason {
+	case "empty_voice", "decoded_pcm_invalid", "speaking_time_mismatch", "mora_timing_invalid", "input_timing_invalid":
+		return codecErrorKind, decodeErr.Reason
+	default:
+		return codecErrorKind, "unknown"
+	}
 }
 
 // applyGeneration はgeneration通知とtext/synth envelopeの単調増加する単一適用点である。

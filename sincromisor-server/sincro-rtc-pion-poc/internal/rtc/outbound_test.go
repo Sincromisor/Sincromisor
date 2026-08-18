@@ -186,16 +186,23 @@ func TestSynthDecodeCompletionAfterOutputCloseCannotRestoreQueuedAudio(t *testin
 
 func TestHandleSynthOutputLogsDecodeErrorKindAndClosesSession(t *testing.T) {
 	tests := []struct {
-		name string
-		err  error
-		kind string
+		name   string
+		err    error
+		kind   string
+		reason string
 	}{
 		{
-			name: "classified",
-			err:  fmt.Errorf("decode result: %w", &synthdecode.DecodeError{Kind: synthdecode.ErrorProcess, Cause: errors.New("ffmpeg stderr: secret")}),
-			kind: "process",
+			name:   "classified",
+			err:    fmt.Errorf("decode result: %w", &synthdecode.DecodeError{Kind: synthdecode.ErrorProcess, Reason: "empty_voice", Cause: errors.New("ffmpeg stderr: secret")}),
+			kind:   "process",
+			reason: "unknown",
 		},
-		{name: "unknown", err: errors.New("voice bytes and response text must not be logged"), kind: "unknown"},
+		{name: "empty voice", err: &synthdecode.DecodeError{Kind: synthdecode.ErrorInvalid, Reason: "empty_voice"}, kind: "invalid", reason: "empty_voice"},
+		{name: "decoded PCM", err: &synthdecode.DecodeError{Kind: synthdecode.ErrorInvalid, Reason: "decoded_pcm_invalid"}, kind: "invalid", reason: "decoded_pcm_invalid"},
+		{name: "speaking time", err: &synthdecode.DecodeError{Kind: synthdecode.ErrorInvalid, Reason: "speaking_time_mismatch"}, kind: "invalid", reason: "speaking_time_mismatch"},
+		{name: "mora timing", err: &synthdecode.DecodeError{Kind: synthdecode.ErrorInvalid, Reason: "mora_timing_invalid"}, kind: "invalid", reason: "mora_timing_invalid"},
+		{name: "input timing", err: &synthdecode.DecodeError{Kind: synthdecode.ErrorInvalid, Reason: "input_timing_invalid"}, kind: "invalid", reason: "input_timing_invalid"},
+		{name: "unknown", err: errors.New("voice bytes and response text must not be logged"), kind: "unknown", reason: "unknown"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -225,7 +232,7 @@ func TestHandleSynthOutputLogsDecodeErrorKindAndClosesSession(t *testing.T) {
 			if record.message != "synthesized audio decode failed" {
 				t.Fatalf("log message = %q", record.message)
 			}
-			want := map[string]any{"session_id": "decode-session", "reason": "codec_error", "codec_error_kind": test.kind}
+			want := map[string]any{"session_id": "decode-session", "reason": "codec_error", "codec_error_kind": test.kind, "codec_error_reason": test.reason}
 			if !equalOutboundAttrs(record.attrs, want) {
 				t.Fatalf("log attrs = %#v, want %#v", record.attrs, want)
 			}

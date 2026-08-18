@@ -51,6 +51,8 @@ const (
 type DecodeError struct {
 	// Kind はcallerがpayload破棄と観測を決める安定分類である。
 	Kind ErrorKind
+	// Reason はinvalid入力の有限な診断分類であり、未分類の失敗は空文字列である。
+	Reason string
 	// Cause はcontext cancellationやprocess/validation診断を保持し、payload byteは含めない。
 	Cause error
 }
@@ -167,7 +169,7 @@ func (d *Decoder) Decode(ctx context.Context, input protocol.SynthesizerResult) 
 		return DecodedSpeech{}, decodeError(ErrorInvalid, errors.New("decode context must not be nil"))
 	}
 	if len(input.Voice) == 0 {
-		return DecodedSpeech{}, decodeError(ErrorInvalid, errors.New("encoded voice must not be empty"))
+		return DecodedSpeech{}, decodeInvalid("empty_voice", errors.New("encoded voice must not be empty"))
 	}
 	if len(input.Voice) > maxEncodedBytes {
 		return DecodedSpeech{}, decodeError(ErrorLimit, errors.New("encoded voice exceeds 8 MiB"))
@@ -215,7 +217,7 @@ func (d *Decoder) Decode(ctx context.Context, input protocol.SynthesizerResult) 
 		)
 	}
 	if len(stdout) == 0 || len(stdout)%2 != 0 {
-		return DecodedSpeech{}, decodeError(ErrorInvalid, errors.New("decoded PCM must contain complete samples"))
+		return DecodedSpeech{}, decodeInvalid("decoded_pcm_invalid", errors.New("decoded PCM must contain complete samples"))
 	}
 	pcm := decodePCM(stdout)
 	if err := validateSpeakingTime(input.SpeakingTime, len(pcm)); err != nil {
@@ -228,8 +230,14 @@ func (d *Decoder) Decode(ctx context.Context, input protocol.SynthesizerResult) 
 	return DecodedSpeech{SpeechID: input.SpeechID, PCM: pcm, Mora: mora}, nil
 }
 
+// decodeError は有限な粗分類とpayloadを含まない原因をDecodeErrorへまとめる。
 func decodeError(kind ErrorKind, cause error) error {
 	return &DecodeError{Kind: kind, Cause: cause}
+}
+
+// decodeInvalid は入力契約違反だけに有限な診断理由を付け、他分類の Reason を空に保つ。
+func decodeInvalid(reason string, cause error) error {
+	return &DecodeError{Kind: ErrorInvalid, Reason: reason, Cause: cause}
 }
 
 // parseAudioFormat はMIME表記揺れを正規化し、FFmpeg demuxer名へ閉じたmatrixで写像する。
@@ -308,14 +316,14 @@ func hasDuplicateParameter(raw string) bool {
 // validateInputTimingはprocessより先に全float timingを検証し、不正入力による不要なprocess起動を防ぐ。
 func validateInputTiming(input protocol.SynthesizerResult) error {
 	if !isFiniteNonNegative(input.SpeakingTime) {
-		return decodeError(ErrorInvalid, errors.New("speaking time must be finite and non-negative"))
+		return decodeInvalid("input_timing_invalid", errors.New("speaking time must be finite and non-negative"))
 	}
 	if input.SpeakingTime > maxDecodedSeconds {
 		return decodeError(ErrorLimit, errors.New("speaking time exceeds 120 seconds"))
 	}
 	for index, mora := range input.MoraQueue {
 		if !isFiniteNonNegative(mora.Length) {
-			return decodeError(ErrorInvalid, fmt.Errorf("mora %d length must be finite and non-negative", index))
+			return decodeInvalid("input_timing_invalid", fmt.Errorf("mora %d length must be finite and non-negative", index))
 		}
 	}
 	return nil
@@ -331,8 +339,8 @@ func isFiniteNonNegative(value float64) bool {
 func validateSpeakingTime(seconds float64, samples int) error {
 	declared := math.Round(seconds * outputSampleRate)
 	if math.Abs(declared-float64(samples)) > speakingTolerance {
-		return decodeError(
-			ErrorInvalid,
+		return decodeInvalid(
+			"speaking_time_mismatch",
 			fmt.Errorf("speaking time differs from decoded audio by more than %d samples", speakingTolerance),
 		)
 	}
@@ -350,11 +358,11 @@ func mapMora(input []protocol.SynthesizerMora, samples int) ([]TimedMora, error)
 	for index, mora := range input {
 		cumulativeSeconds += mora.Length
 		if math.IsInf(cumulativeSeconds, 0) || math.IsNaN(cumulativeSeconds) {
-			return nil, decodeError(ErrorInvalid, fmt.Errorf("mora %d cumulative length is not finite", index))
+			return nil, decodeInvalid("mora_timing_invalid", fmt.Errorf("mora %d cumulative length is not finite", index))
 		}
 		endFloat := math.Round(cumulativeSeconds * outputSampleRate)
 		if endFloat > float64(samples) {
-			return nil, decodeError(ErrorInvalid, fmt.Errorf("mora %d ends after decoded audio", index))
+			return nil, decodeInvalid("mora_timing_invalid", fmt.Errorf("mora %d ends after decoded audio", index))
 		}
 		end := uint64(endFloat)
 		output = append(output, TimedMora{

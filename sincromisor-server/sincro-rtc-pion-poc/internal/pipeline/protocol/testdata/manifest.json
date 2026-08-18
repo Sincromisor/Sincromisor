@@ -60,7 +60,7 @@
     "wire_direction": "Python -> Go -> Python unchanged"
   },
   "voice_synthesizer_result.msgpack": {
-    "byte_length": 453,
+    "byte_length": 2632,
     "consumer": "Go RTC pipeline",
     "major_fields": [
       "mora_queue",
@@ -69,7 +69,7 @@
       "audio_format"
     ],
     "producer": "VoiceSynthesizer",
-    "sha256": "4f2f3a3d1c8ce0bafdc6b70df8e69dce0ab3d758dfa234a87234edb1cd2f0af8",
+    "sha256": "338717755da98d738fe115a4bec6ebae4591bb04d01c76760ab49d1ac88d370a",
     "wire_direction": "Python -> Go"
   }
 }

@@ -78,14 +78,18 @@ func TestPythonGoldenFixturesDecodeWithProductionCodecs(t *testing.T) {
 			t.Fatalf("DecodeSynthesizerResult() error = %v", err)
 		}
 		if result.SpeechID != 42 || result.Message != "固定された応答文" ||
-			result.SpeakingTime != 0.375 || result.AudioFormat != "audio/ogg;codecs=opus" {
+			result.SpeakingTime != 0.1 || result.AudioFormat != "audio/ogg;codecs=opus" {
 			t.Fatalf("unexpected synthesizer fields: %+v", result)
 		}
-		if !bytes.Equal(result.Voice, []byte("\x00\xffOggS\x00fixture")) {
-			t.Fatalf("Voice = %x", result.Voice)
+		wantVoice, err := os.ReadFile("../../media/synthdecode/testdata/tone-opus.ogg")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(result.Voice, wantVoice) || !bytes.HasPrefix(result.Voice, []byte("OggS")) {
+			t.Fatalf("Voice is not the Ogg/Opus fixture")
 		}
 		if len(result.MoraQueue) != 2 || result.MoraQueue[0].Vowel == nil ||
-			*result.MoraQueue[0].Vowel != "o" || result.MoraQueue[1].Vowel != nil ||
+			*result.MoraQueue[0].Vowel != "o" || result.MoraQueue[0].Length != 0.05 || result.MoraQueue[1].Length != 0.05 || result.MoraQueue[1].Vowel != nil ||
 			result.MoraQueue[1].Text != nil {
 			t.Fatalf("unexpected mora queue: %+v", result.MoraQueue)
 		}

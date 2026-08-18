@@ -61,6 +61,14 @@ FIXTURE_METADATA = {
     },
 }
 
+SYNTHESIZER_VOICE_FIXTURE = (
+    Path(__file__).resolve().parents[3]
+    / "media"
+    / "synthdecode"
+    / "testdata"
+    / "tone-opus.ogg"
+)
+
 
 def _messages() -> tuple[ChatMessage, ChatMessage]:
     """固定 ID と時刻を使い、nullable と UTF-8 を含む request/response を作る。"""
@@ -157,11 +165,11 @@ def build_payloads() -> dict[str, bytes]:
             message="固定された応答文",
             query=query,
             mora_queue=[
-                VoiceSynthesizerMora(vowel="o", length=0.125, text="コ"),
-                VoiceSynthesizerMora(vowel=None, length=0.25, text=None),
+                VoiceSynthesizerMora(vowel="o", length=0.05, text="コ"),
+                VoiceSynthesizerMora(vowel=None, length=0.05, text=None),
             ],
-            speaking_time=0.375,
-            voice=b"\x00\xffOggS\x00fixture",
+            speaking_time=0.1,
+            voice=SYNTHESIZER_VOICE_FIXTURE.read_bytes(),
             audio_format="audio/ogg;codecs=opus",
         ).to_msgpack(),
     }
