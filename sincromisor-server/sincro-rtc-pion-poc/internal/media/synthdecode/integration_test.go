@@ -111,6 +111,35 @@ func TestFFmpegDecodesSupportedFixtures(t *testing.T) {
 	}
 }
 
+func TestFFmpegDecodesPythonSynthesizerFixture(t *testing.T) {
+	ffmpegPath, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Skip("system ffmpeg is unavailable")
+	}
+	payload, err := os.ReadFile(filepath.Join("..", "..", "pipeline", "protocol", "testdata", "voice_synthesizer_result.msgpack"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	input, err := protocol.DecodeSynthesizerResult(payload)
+	if err != nil {
+		t.Fatalf("DecodeSynthesizerResult() error = %v", err)
+	}
+	decoder, err := NewDecoder(ffmpegPath, ExecRunner{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := decoder.Decode(context.Background(), input)
+	if err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+	if len(decoded.PCM) != 4_800 || len(decoded.Mora) != 2 {
+		t.Fatalf("decoded speech = PCM %d, mora %d", len(decoded.PCM), len(decoded.Mora))
+	}
+	if decoded.Mora[0].StartSample != 0 || decoded.Mora[0].EndSample != 2_400 || decoded.Mora[1].EndSample != uint64(len(decoded.PCM)) {
+		t.Fatalf("mora bounds = %+v", decoded.Mora)
+	}
+}
+
 func TestFFmpegRejectsTruncatedAndMalformedFixturesByFormat(t *testing.T) {
 	ffmpegPath, err := exec.LookPath("ffmpeg")
 	if err != nil {

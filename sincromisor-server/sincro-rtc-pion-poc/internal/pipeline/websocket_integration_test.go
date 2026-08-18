@@ -186,8 +186,8 @@ func runWebSocketTurn(t *testing.T, coordinator *Coordinator, generation uint64)
 	if user.Value.Message != "固定文" || assistant.Value.Message != "固定された応答文" {
 		t.Fatalf("fixture text outputs = %q / %q", user.Value.Message, assistant.Value.Message)
 	}
-	if !bytes.Equal(voice.Value.Voice, []byte("\x00\xffOggS\x00fixture")) {
-		t.Fatalf("fixture synthesized voice = %x", voice.Value.Voice)
+	if len(voice.Value.Voice) == 0 || !bytes.HasPrefix(voice.Value.Voice, []byte("OggS")) {
+		t.Fatal("fixture synthesized voice is not Ogg")
 	}
 }
 

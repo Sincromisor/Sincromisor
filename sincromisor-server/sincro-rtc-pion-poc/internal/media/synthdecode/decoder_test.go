@@ -108,6 +108,32 @@ func TestDecodeRejectsInputBoundariesBeforeProcess(t *testing.T) {
 	}
 }
 
+func TestDecodeInvalidReasons(t *testing.T) {
+	tests := []struct {
+		name   string
+		runner *fakeRunner
+		edit   func(*protocol.SynthesizerResult)
+		want   string
+	}{
+		{name: "empty voice", runner: &fakeRunner{}, edit: func(input *protocol.SynthesizerResult) { input.Voice = nil }, want: "empty_voice"},
+		{name: "input timing", runner: &fakeRunner{}, edit: func(input *protocol.SynthesizerResult) { input.SpeakingTime = math.NaN() }, want: "input_timing_invalid"},
+		{name: "decoded PCM", runner: &fakeRunner{}, edit: func(*protocol.SynthesizerResult) {}, want: "decoded_pcm_invalid"},
+		{name: "speaking time", runner: &fakeRunner{stdout: pcmBytes(1)}, edit: func(*protocol.SynthesizerResult) {}, want: "speaking_time_mismatch"},
+		{name: "mora timing", runner: &fakeRunner{stdout: pcmBytes(4_800)}, edit: func(input *protocol.SynthesizerResult) { input.MoraQueue = []protocol.SynthesizerMora{{Length: 0.11}} }, want: "mora_timing_invalid"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			input := validResult("audio/wav")
+			test.edit(&input)
+			_, err := newFakeDecoder(t, test.runner).Decode(context.Background(), input)
+			var decodeErr *DecodeError
+			if !errors.As(err, &decodeErr) || decodeErr.Reason != test.want {
+				t.Fatalf("DecodeError = %#v, want reason %q", decodeErr, test.want)
+			}
+		})
+	}
+}
+
 func TestDecodeFormatErrorMatrixReturnsKindAndZeroResult(t *testing.T) {
 	formats := []string{"audio/wav", "audio/aac", "audio/ogg", "audio/ogg;codecs=opus"}
 	overEncoded := make([]byte, maxEncodedBytes+1)
