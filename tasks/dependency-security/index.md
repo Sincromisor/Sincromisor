@@ -4,18 +4,13 @@
 
 ## タスク一覧（自動生成 / 全 4 件）
 
-### open（未完） — 1 件
+### done（完了） — 4 件
 
-| タスク                                                                                                                             | タイトル                                 | 判定 | 依存 |
-| ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ---- | ---- |
-| [task-260819030329-dependabot-server-dependency-remediation](./task-260819030329-dependabot-server-dependency-remediation/task.md) | Dependabot server dependency remediation | —    | —    |
-
-### done（完了） — 3 件
-
-| タスク                                                                                               | タイトル                  | 判定    | 依存 |
-| ---------------------------------------------------------------------------------------------------- | ------------------------- | ------- | ---- |
-| [task-260518024804-npm-audit-remediation](./task-260518024804-npm-audit-remediation/task.md)         | npm audit remediation     | ✅ PASS | —    |
-| [task-260518025152-urllib3-audit-remediation](./task-260518025152-urllib3-audit-remediation/task.md) | urllib3 audit remediation | ✅ PASS | —    |
-| [task-4000-uv-audit-remediation](./task-4000-uv-audit-remediation/task.md)                           | uv audit remediation      | ✅ PASS | —    |
+| タスク                                                                                                                             | タイトル                                 | 判定    | 依存 |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ------- | ---- |
+| [task-260518024804-npm-audit-remediation](./task-260518024804-npm-audit-remediation/task.md)                                       | npm audit remediation                    | ✅ PASS | —    |
+| [task-260518025152-urllib3-audit-remediation](./task-260518025152-urllib3-audit-remediation/task.md)                               | urllib3 audit remediation                | ✅ PASS | —    |
+| [task-260819030329-dependabot-server-dependency-remediation](./task-260819030329-dependabot-server-dependency-remediation/task.md) | Dependabot server dependency remediation | ✅ PASS | —    |
+| [task-4000-uv-audit-remediation](./task-4000-uv-audit-remediation/task.md)                                                         | uv audit remediation                     | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->
