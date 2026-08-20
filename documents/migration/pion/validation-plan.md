@@ -4,7 +4,7 @@
 
 - Phase 1はlocal Chromeの最小縦切りでPionとcodecの採用可否を判断する。
 - Phase 3は既存repository testと、現行Frontendによる1回のend-to-end smoke testでproduction候補を判定する。
-- Phase 4は実際のcomposeとnetwork構成で接続、会話、停止切替、rollbackを確認する。
+- Phase 4は実際のcomposeとnetwork構成でPionの接続、会話、停止切替を確認する。
 - 詳細baseline、network impairment、長時間soak、網羅的な性能比較、Pion process crash自動復帰は、実害が確認された場合だけ独立taskで行う。
 
 ## 必須検証
@@ -15,7 +15,7 @@
 | media         | Opus受信、test tone      | 実運用形式の合成音声を1回再生              | 会話音声の聴取                      |
 | DataChannel   | 2 channelへ固定JSON送信  | 現行Frontendで会話を1 turn                 | text / telop受信                    |
 | pipeline      | 対象外                   | Gate 2の互換試験とproduction候補の結合試験 | 実4サービスで会話                   |
-| lifecycle     | 通常closeとcodec error   | 正常終了と代表的な異常終了                 | 停止切替、session収束、rollback     |
+| lifecycle     | 通常closeとcodec error   | 正常終了と代表的な異常終了                 | Pion切替、session収束               |
 | network       | local host candidate     | local統合環境                              | 実運用のNAT、firewall、固定UDP port |
 | compatibility | Chrome                   | 管理対象Chromium                           | Gate 3で成立済みのChromeを1回       |
 
@@ -80,8 +80,8 @@ production相当環境で、実際に採用する構成だけを検証する。
 - 固定UDP mux port、public IPv4、NAT、firewallを本番と同じ値で構成する。
 - Pion版でGate 3と同じChromeから接続し、1 turnの会話、音声、DataChannelを確認する。
 - session終了後にactive session、goroutine、WebSocket、socketが収束することを確認する。
-- aiortc停止、Pion起動、smoke test、Pion停止、aiortc復旧を一連の手順として実行する。
-- FrontendとPython下流serviceを再buildせずrollbackできることを確認する。
+- aiortc停止、Pion起動、smoke testを一連の手順として実行する。
+- FrontendとPython下流serviceを再buildせずPionへ切り替えることを確認する。
 
 Gate 4では、public UDP / NAT / firewallはPion接続成立を観測する環境前提として扱う。Pion process crash自動復帰は
 Pion固有の運用強化であり、Gate 4の受け入れ条件、検証計画、runbookには含めない。
@@ -89,14 +89,12 @@ Pion固有の運用強化であり、Gate 4の受け入れ条件、検証計画�
 ### Gate 4判定
 
 - 移行必須: Pionで現行Frontendが接続し、1 turnの会話、利用者/応答text、telop、非無音音声が成立する。session終了後に
-  active sessionと下流接続が収束し、aiortcへのrollback後にもFrontendから新規接続と1 turnが成立する。切替とrollbackで
-  Frontendと下流serviceをrebuildしない。
+  active sessionと下流接続が収束し、切替でFrontendと下流serviceをrebuildしない。
 - 既存testの証拠: 既存repository testはPhase 3で確認済みの契約・異常系の証拠として再利用する。
 - 独立した運用強化: Pion process crash自動復帰、soak、性能比較、障害注入、browser matrixの拡張は含めない。
 
-現行Gate 4 taskへの適用は、この規則を反映した次回のリハーサルだけとする。過去artifactとPASS / FAIL / blockedの判定履歴は
-書き換えない。次回は、Pionとrollback後のaiortcで移行必須条件を観測できるproduction相当smoke手順が利用可能になった時点で、
-runbookを最初から再実行する。
+現行Gate 4 taskへの適用は、この規則を反映した試行4からとする。過去artifactとPASS / FAIL / blockedの判定履歴は
+書き換えない。Pionの移行必須条件を観測できるproduction相当smoke手順で、runbookを最初から実行する。
 
 次は必須Gateに含めない。
 
@@ -110,7 +108,7 @@ runbookを最初から再実行する。
 
 ### Gate 4の過剰化防止
 
-Gate 4は、Pionとrollback後のaiortcで各1回の既存Chrome経路を確認した時点で判定する。実下流の応答本文は固定文と比較せず、
+Gate 4は、Pionで1回の既存Chrome経路を確認した時点で判定する。aiortcの起動確認は診断情報に留め、会話成立を要求しない。実下流の応答本文は固定文と比較せず、
 利用者/応答text、telop、非無音音声の表示・再生をbrowser UIで確認する。Firefox、Docker crash、環境の網羅監査、
 新しいbrowser oracleは、browser固有の実害があり、aiortcで同じ経路が成立している場合だけ独立して扱う。
 

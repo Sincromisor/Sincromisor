@@ -46,3 +46,32 @@
   したがって共有環境はこの試行による変更を受けていない。
 - 解除条件: 実下流を使い、固定本文に依存せずbrowser UIで必要な3出力を観測する既存の最小手順を参照可能にする。
   その後、限定runbookを最初から1回だけ実行する。
+
+## 試行 4（2026-08-21）
+
+- commit: `7f4324673d1b025353a98681130c3d94f6f0735f`
+- 実行日時: 2026-08-21 JST。UTC logの開始は16:13:05、Pion smokeは16:15:26、aiortc診断開始は16:15:49、
+  aiortc readyは16:16:03、接続失敗の確認は16:19:16である。
+- 環境: VPSのproduction相当環境。Frontendと下流serviceはrebuildしていない。
+- 判定: PASS
+
+### Pion browser UI smoke、収束
+
+- Pion smoke前後にcontainerは`healthy`、readinessはHTTP 200、`/statuses`は`sessions: 0`であり、Chrome UIではICE `connected`、
+  利用者text、応答text、telop、非無音の合成音声、通常終了を確認した。
+- 通常終了後のstage countはrecognizer 2、processor request 2、processor result 2、synthesizer 1、reset 0、close 1である。
+  Pion停止は1.75秒で完了し、sessionと下流接続は収束した。
+
+### aiortc起動診断と最終復旧
+
+- aiortcは起動して`healthy`、`/statuses`は`sessions: 0`となった。しかしpublic経路のbrowser接続は
+  `disconnected`となり、確認後の`/statuses`は`sessions: 3`だった。これは既知のmedia UDP未公開制約と整合する。
+- ユーザー承認により、aiortcの会話成立はGate 4の合否条件から外し、Pion切替後の障害はforward-fixする方針へ変更した。
+  aiortc起動確認は診断情報に留める。
+- aiortc停止後にPionを起動し、最終状態はPion `healthy`、readiness HTTP 200、`/statuses`は`sessions: 0`である。
+
+### 証拠と残リスク
+
+- private evidence: VPSの`work/private-artifacts/task-260809020145-pion-phase-4-cutover-rehearsal/attempt-4-20260821/`に保存した。
+  session ID、会話本文、音声payload、SDP、candidateはGit artifactへ転載していない。
+- 残リスク: aiortcはpublic media UDP未公開のため会話接続できない。この経路はPion切替後の運用rollback先ではない。

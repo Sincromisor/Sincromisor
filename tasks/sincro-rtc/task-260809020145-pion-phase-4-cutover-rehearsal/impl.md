@@ -9,3 +9,7 @@ VPSのproduction相当環境で実行した。Pion/aiortcの対象commit、各�
 ## 試行 3（2026-08-10）
 
 限定後のGate 4で許可された既存browser UI観測手順をリポジトリと指定runbookから特定できなかったため、外部環境を変更せずblockedとした。固定文mock test、新規oracle、追加調査は実行していない。解除条件は[Gate 4結果](artifacts/gate-4-result.md)を正本とする。
+
+## 試行 4（2026-08-21）
+
+Pionの実環境1 turnと通常終了後の収束を確認した。aiortcは起動できたが、既知のpublic media UDP未公開制約によりbrowser接続が`disconnected`となった。ユーザー承認により、aiortc rollback後の会話成立をGate 4の必須条件から外し、Pion切替後はforward-fixする方針へ変更した。詳細な証拠と残リスクは[Gate 4結果](artifacts/gate-4-result.md)を正本とする。

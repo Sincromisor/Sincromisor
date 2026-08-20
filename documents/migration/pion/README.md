@@ -27,7 +27,7 @@
 4. [通信契約と型共有](contracts-and-types.md)
 5. [実装フェーズ](implementation-phases.md)
 6. [検証計画](validation-plan.md)
-7. [運用移行とロールバック](rollout-and-operations.md)
+7. [運用移行とforward-fix](rollout-and-operations.md)
 8. [リスクと判断事項](risks-and-decisions.md)
 
 ## 文書の正本境界
