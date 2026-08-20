@@ -184,6 +184,51 @@ func TestSynthDecodeCompletionAfterOutputCloseCannotRestoreQueuedAudio(t *testin
 	}
 }
 
+func TestHandleSynthOutputQueuesClampedTerminalSilentMora(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	encoder, err := audiomedia.NewFrameEncoder()
+	if err != nil {
+		t.Fatalf("NewFrameEncoder() error = %v", err)
+	}
+	t.Cleanup(func() { _ = encoder.Close() })
+	output, err := audiomedia.NewOutputProcessor(encoder, rtcDiscardTrack{}, nil, logger)
+	if err != nil {
+		t.Fatalf("NewOutputProcessor() error = %v", err)
+	}
+	t.Cleanup(func() { _ = output.Close() })
+	decoder, err := synthdecode.NewDecoder("/test/ffmpeg", outboundPCMRunner{samples: 65_024})
+	if err != nil {
+		t.Fatalf("NewDecoder() error = %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	lifecycle, err := newSessionLifecycle(SystemClock{})
+	if err != nil {
+		t.Fatalf("newSessionLifecycle() error = %v", err)
+	}
+	session := &Session{
+		id: "clamped-mora", ctx: ctx, cancel: cancel, lifecycle: lifecycle, done: make(chan struct{}),
+		output: output, synthDecoder: decoder, logger: logger, onClosed: func(string) {}, outboundGeneration: 1,
+	}
+	input := protocol.SynthesizerResult{
+		SpeechID: 1, Message: "clamped", Voice: []byte("encoded"), AudioFormat: "audio/wav",
+		SpeakingTime: 65_024.0 / audiomedia.SampleRate,
+		MoraQueue: []protocol.SynthesizerMora{
+			{Length: 64_000.0 / audiomedia.SampleRate},
+			{Length: 2_071.0 / audiomedia.SampleRate},
+		},
+	}
+	if err := session.handleSynthOutput(pipeline.Output[protocol.SynthesizerResult]{Generation: 1, Value: input}); err != nil {
+		t.Fatalf("handleSynthOutput() error = %v", err)
+	}
+	if ctx.Err() != nil {
+		t.Fatal("session closed with codec_error")
+	}
+	if stats := output.Stats(); stats.QueuedSpeeches != 1 || stats.QueuedSamples != 65_024 {
+		t.Fatalf("output stats = %+v, want one 65024-sample speech", stats)
+	}
+}
+
 func TestHandleSynthOutputLogsDecodeErrorKindAndClosesSession(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -249,6 +294,19 @@ type outboundErrorSynthDecoder struct{ err error }
 
 func (d outboundErrorSynthDecoder) Decode(context.Context, protocol.SynthesizerResult) (synthdecode.DecodedSpeech, error) {
 	return synthdecode.DecodedSpeech{}, d.err
+}
+
+type outboundPCMRunner struct{ samples int }
+
+func (r outboundPCMRunner) Run(
+	context.Context,
+	string,
+	[]byte,
+	int64,
+	int64,
+	...string,
+) ([]byte, []byte, int, error) {
+	return make([]byte, r.samples*2), nil, 0, nil
 }
 
 type outboundCapturedRecord struct {

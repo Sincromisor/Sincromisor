@@ -109,6 +109,7 @@ func TestDecodeRejectsInputBoundariesBeforeProcess(t *testing.T) {
 }
 
 func TestDecodeInvalidReasons(t *testing.T) {
+	text := "あ"
 	tests := []struct {
 		name   string
 		runner *fakeRunner
@@ -119,7 +120,9 @@ func TestDecodeInvalidReasons(t *testing.T) {
 		{name: "input timing", runner: &fakeRunner{}, edit: func(input *protocol.SynthesizerResult) { input.SpeakingTime = math.NaN() }, want: "input_timing_invalid"},
 		{name: "decoded PCM", runner: &fakeRunner{}, edit: func(*protocol.SynthesizerResult) {}, want: "decoded_pcm_invalid"},
 		{name: "speaking time", runner: &fakeRunner{stdout: pcmBytes(1)}, edit: func(*protocol.SynthesizerResult) {}, want: "speaking_time_mismatch"},
-		{name: "mora timing", runner: &fakeRunner{stdout: pcmBytes(4_800)}, edit: func(input *protocol.SynthesizerResult) { input.MoraQueue = []protocol.SynthesizerMora{{Length: 0.11}} }, want: "mora_timing_invalid"},
+		{name: "mora timing", runner: &fakeRunner{stdout: pcmBytes(4_800)}, edit: func(input *protocol.SynthesizerResult) {
+			input.MoraQueue = []protocol.SynthesizerMora{{Text: &text, Length: 0.11}}
+		}, want: "mora_timing_invalid"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -282,13 +285,43 @@ func TestDecodeAcceptsEmptyAndShortMoraQueue(t *testing.T) {
 	}
 }
 
+func TestDecodeClampsTerminalSilentMoraToPCM(t *testing.T) {
+	input := validResult("audio/wav")
+	input.SpeakingTime = 65_024.0 / outputSampleRate
+	input.MoraQueue = []protocol.SynthesizerMora{
+		{Length: 64_000.0 / outputSampleRate},
+		{Length: 2_071.0 / outputSampleRate},
+	}
+	result, err := newFakeDecoder(t, &fakeRunner{stdout: pcmBytes(65_024)}).Decode(context.Background(), input)
+	if err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+	for index, mora := range result.Mora {
+		if mora.StartSample > mora.EndSample || mora.EndSample > uint64(len(result.PCM)) {
+			t.Fatalf("Mora[%d] bounds = %d..%d, PCM samples = %d", index, mora.StartSample, mora.EndSample, len(result.PCM))
+		}
+	}
+	if got := result.Mora[len(result.Mora)-1].EndSample; got != 65_024 {
+		t.Fatalf("terminal silent mora end = %d, want 65024", got)
+	}
+}
+
 func TestDecodeRejectsMoraPastAudioAndSpeakingMismatch(t *testing.T) {
-	t.Run("mora past audio", func(t *testing.T) {
-		input := validResult("audio/wav")
-		input.MoraQueue = []protocol.SynthesizerMora{{Length: 0.10002}}
-		_, err := newFakeDecoder(t, &fakeRunner{stdout: pcmBytes(4_800)}).Decode(context.Background(), input)
-		assertDecodeKind(t, err, ErrorInvalid)
-	})
+	text := "あ"
+	for _, test := range []struct {
+		name string
+		mora []protocol.SynthesizerMora
+	}{
+		{name: "non-terminal mora past audio", mora: []protocol.SynthesizerMora{{Length: 0.10002}, {Length: 0}}},
+		{name: "voiced terminal mora past audio", mora: []protocol.SynthesizerMora{{Text: &text, Length: 0.10002}}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			input := validResult("audio/wav")
+			input.MoraQueue = test.mora
+			_, err := newFakeDecoder(t, &fakeRunner{stdout: pcmBytes(4_800)}).Decode(context.Background(), input)
+			assertDecodeKind(t, err, ErrorInvalid)
+		})
+	}
 	for _, test := range []struct {
 		name    string
 		samples int
