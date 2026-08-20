@@ -350,7 +350,8 @@ func validateSpeakingTime(seconds float64, samples int) error {
 // mapMoraは各lengthを先に足したfloat64秒を境界ごとに丸め、丸め誤差の累積を防ぐ。
 //
 // 前境界をStart、現在境界をEndとするため0開始かつ非減少になる。mora総長は音声より短くても
-// 有効だが、1 sampleでも末尾を越えれば同期契約違反として全発話を拒否する。
+// 有効である。producerの末尾無音だけは実PCM末尾へ収めるが、途中または表示値を持つmoraの
+// 超過はcontainer取り違えや欠損を隠し得るため拒否する。
 func mapMora(input []protocol.SynthesizerMora, samples int) ([]TimedMora, error) {
 	output := make([]TimedMora, 0, len(input))
 	var cumulativeSeconds float64
@@ -362,7 +363,10 @@ func mapMora(input []protocol.SynthesizerMora, samples int) ([]TimedMora, error)
 		}
 		endFloat := math.Round(cumulativeSeconds * outputSampleRate)
 		if endFloat > float64(samples) {
-			return nil, decodeInvalid("mora_timing_invalid", fmt.Errorf("mora %d ends after decoded audio", index))
+			if index != len(input)-1 || mora.Text != nil || mora.Vowel != nil {
+				return nil, decodeInvalid("mora_timing_invalid", fmt.Errorf("mora %d ends after decoded audio", index))
+			}
+			endFloat = float64(samples)
 		}
 		end := uint64(endFloat)
 		output = append(output, TimedMora{
