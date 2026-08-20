@@ -14,3 +14,15 @@ NEEDS_REVISION
 
 - `ccc4691`を含むPion imageをstagingへdeployしてから、新規browser sessionを正常終了させ、`/statuses`と`/metrics`のactive session・下流接続が0へ収束することを確認する。この条件を満たせない限りGate 4をPASSにしない。
 - deploy後に、固定container IPv4、public IPv4 `163.44.97.57`、UDP 3479、外向きinterface、NAT forward/firewallを再照合し、ChromeとFirefoxのPion/aiortc双方のsmoke、SIGKILL後のrestart/readiness、新規session、6秒shutdownを実施する。
+
+## 試行4再レビュー（2026-08-21）
+
+### 判定
+
+APPROVED
+
+### 理由・申し送り
+
+- ユーザー承認により、Gate 4はPionへの停止切替、Pionの1 turn、通常終了後の収束、Frontendと下流serviceをrebuildしないことだけを必須とし、aiortcは運用rollback先にしない。`task.md`、runbook、検証計画、実装フェーズ、roadmap、運用文書、リスク判断はこのforward-fix方針で同期している。
+- 試行4 artifactは、PionのICE `connected`、利用者/応答text、telop、非無音音声、通常終了、`sessions: 0`、stage reset 0、最終ready/healthyを記録しており、改訂後の必須条件を満たす。過去のFAIL / blocked記録は保持され、aiortc public media UDP未公開はGate外の残リスクとして明示されている。
+- `npm run tasks:index:check` と `npm run tasks:check` はPASSした。前節のNEEDS_REVISIONは、改訂前のaiortc rollback要件と未同期だった索引を対象とする過去判断である。
