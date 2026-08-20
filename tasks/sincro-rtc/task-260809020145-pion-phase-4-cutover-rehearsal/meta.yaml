@@ -6,8 +6,8 @@ depends_on:
   - task-260809020145-pion-phase-4-cutover-runbook
   - task-260809124736-pion-inbound-eof-session-close
 superseded_by: null
-review: NEEDS_REVISION
-reviewed_sha: null
+review: APPROVED
+reviewed_sha: 385e7ec
 verdict: PASS
 attempts: 4
 created_at: 2026-08-09
