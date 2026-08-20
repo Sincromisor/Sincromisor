@@ -3,7 +3,7 @@
 ## Summary
 
 - 移行はPion / codec最小PoC、Go pipeline client、統合、切替リハーサル、運用切り替え、旧実装削除の順で進める。
-- 詳細aiortc baselineは移行の前提から外し、Phase 4はproduction相当環境のsmoke testとrollback確認に絞る。
+- 詳細aiortc baselineは移行の前提から外し、Phase 4はproduction相当環境のPion smoke testに絞る。
 - 下流Protocol Buffers移行とOpenAPI生成は別initiativeとし、Pion移行の完了条件へ含めない。
 - Python adapterはPoCで必要な場合だけ一時利用し、本番統合前に除去する。
 - 各phaseにexit gateを設け、後続phaseへ自動的に進まない。
@@ -29,8 +29,8 @@ flowchart LR
     G1 -. "不合格" .-> P1
     G2 -. "互換不合格" .-> P2
     G3 -. "不合格" .-> P3
-    G4 -. "rollback" .-> P4
-    G5 -. "rollback" .-> P5
+    G4 -. "forward-fix" .-> P4
+    G5 -. "forward-fix" .-> P5
 ```
 
 ## Phase 0: 詳細baseline（前提外）
@@ -126,7 +126,7 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 - 現行endpointのintegration testをPion版へ適用する。
 - FrontendとPionへ `offer_request_id` / `offer_revision` を追加し、同一session IDのICE restart、stale candidate拒否、HTTP timeout / retry / error分岐を実装する。
 - Frontendの `disconnected` grace period、`failed` 後のsingle-flight restart、bounded candidate queueを実装する。
-- aiortcは新fieldを未知fieldとして無視し、Frontendはrollback期間だけrevisionなしAnswerを許容する。aiortcへrevision状態機械は実装しない。
+- aiortcは移行中の診断用backendとして新fieldを未知fieldとして無視し、FrontendはrevisionなしAnswerを許容する。aiortcへrevision状態機械は実装しない。
 - HTTP / SDP / candidate上限と、session goroutine / callbackのpanic recovery境界を実装する。
 - RTC serverからsessionが消失した場合だけFrontendが新規sessionを作り、`previous_session_id` で旧・新IDをログ上関連付ける。
 - PoC専用Python adapterを削除する。
@@ -135,7 +135,7 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 
 - 移行必須: 下流4サービスの実装変更なしに会話が成立し、本番経路にPython RTC adapterが存在しない。
 - 既存testの証拠: repository test、abnormal close、readiness failure、session上限、停止時のsession損失、切替時の
-  session終了、revision互換、aiortc rollbackを既存確認で満たす。
+  session終了、revision互換、aiortc診断用の互換を既存確認で満たす。
 - 独立した運用強化: 追加のharness、metric、障害注入、性能比較は別taskで扱う。
 
 ## Phase 4: 切替リハーサル
@@ -144,13 +144,13 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 
 - compose profileまたは別projectでaiortc版とPion版を排他的に起動できるようにする。
 - 運用環境と同じ固定UDP mux port、public IPv4、NAT、firewall設定を検証する。
-- aiortc版とPion版でGate 3と同じChromeのsmoke testを各1回実行する。
-- aiortc停止、Pion起動、smoke test、Pion停止、aiortc復旧の手順と所要時間を検証する。
+- Pion版でGate 3と同じChromeのsmoke testを1回実行する。
+- aiortc停止、Pion起動、smoke testの手順と所要時間を検証する。aiortc起動は必要時の診断に留める。
 
 ### Gate 4
 
 - 移行必須: Pion版で現行Frontendから接続し、1 turnの会話、text、telop、非無音音声が成立する。session終了後に
-  active sessionと下流接続が収束し、aiortcへrollback後にも新規接続と1 turnがFrontendと下流serviceのrebuildなしで成立する。
+  active sessionと下流接続が収束し、切替でFrontendと下流serviceをrebuildしない。
 - 既存testの証拠: 既存repository testはPhase 3で確認済みの契約・異常系の証拠として再利用する。
 - 独立した運用強化: Pion process crash自動復帰、soak、性能比較、障害注入、browser matrixの拡張はGate 4へ含めない。
 - public UDP / NAT / firewallとaiortc / Pionの排他起動は、上記の移行必須条件を観測するための環境前提として確認する。
@@ -158,8 +158,8 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 実下流の可変応答は固定文字列と比較せず、browser UIでtext、telop、音声を確認する。Firefox、Docker crash、環境の網羅監査、
 新しいharnessは、browser固有の実害があり、aiortcで同じ経路が成立している場合だけ独立して扱う。
 
-この条件は現行Gate 4 taskの次回実行から適用する。過去artifactと判定履歴は保持し、Pionとrollback後のaiortcの
-移行必須条件を観測できるproduction相当smoke手順が利用可能になった時点でrunbookを最初から再実行する。
+この条件は試行4から適用する。過去artifactと判定履歴は保持し、Pionの移行必須条件を観測できるproduction相当smoke手順で
+runbookを最初から実行する。
 
 ## Phase 5: メンテナンス切り替え
 
@@ -167,14 +167,14 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 
 - 利用停止を告知し、aiortc版を停止する。
 - Pion版をstable endpointで起動し、smoke test後に利用を再開する。
-- aiortc版のimageと設定をrollback専用として期限付きで残すが、serviceは起動しない。
+- aiortc版のimageと設定は移行中の診断用に残しても、serviceは起動しない。
 - 運用文書、compose、env sample、current designを更新する。
 - 移行後の実測値を評価taskへ残す。
 - Python AudioBrokerへの新規機能追加を停止する。
 
 ### Gate 5
 
-- 切替後の観測期間中にrollback条件へ該当しない。
+- 切替後の観測期間中にPion問題時の対応条件へ該当しない。
 - 未解決のPion固有critical issueがない。
 - 現在設計と実装が一致している。
 
@@ -186,7 +186,7 @@ Pion安定化後もpipeline Protocol Buffers移行は自動的に開始しない
 
 - aiortc service、dependency、test fixtureを削除する。
 - Python `RTCSessionProcess`、`VoiceTransformTrack`、`AudioBroker` を削除する。
-- rollback期限付き設定を削除する。
+- aiortc診断用設定を削除する。
 - Pionが使用するMessagePack互換層とgolden fixtureは維持する。
 - 本ディレクトリの確定事項をcurrent design、contract、ADRへ反映する。
 - 移行計画を縮退またはarchiveする。

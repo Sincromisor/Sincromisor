@@ -3,7 +3,7 @@
 ## Summary
 
 - aiortcからPionへの移行を、最小codec PoCから旧Python RTC stack削除までの時系列で示す。
-- 詳細なaiortc baselineは移行の前提にせず、production相当環境でのsmoke testとrollback確認を切替判定に使う。
+- 詳細なaiortc baselineは移行の前提にせず、production相当環境でのPion smoke testを切替判定に使う。
 - PoCでPion採用可否とcodec方式を判断した後、既存Python下流serviceとの互換を保ったままGo RTC serverへ統合する。
 - 運用切り替えはaiortcとPionを同時稼働させず、メンテナンス時間の停止切替とする。
 - 詳細な作業とgateは[実装フェーズ](implementation-phases.md)、評価項目は[検証計画](validation-plan.md)を正本とする。
@@ -30,18 +30,17 @@ flowchart LR
     FIX --> P4
     P5 --> OBS["安定化観測"]
     OBS -->|"合格"| P6["Phase 6<br/>Python RTC stack削除"]
-    OBS -->|"rollback条件成立"| RB["aiortcへ停止切替"]
-    RB --> FIX
+    OBS -->|"問題を観測"| FIX
 ```
 
-| 時系列 | Phase                   | このphaseで確定すること                  | 主な出口                                 |
-| ------ | ----------------------- | ---------------------------------------- | ---------------------------------------- |
-| 1      | 1: Pion / codec最小PoC  | Pion採用可否、local media / ICE成立性    | 採用判断とGo統合に使えるcodec方式        |
-| 2      | 2: Go pipeline clients  | 既存MessagePack契約と再接続semantics     | Python下流serviceと互換なGo client群     |
-| 3      | 3: Go RTC統合           | session全体の責務、Frontendとの統合      | 本番候補となるGo RTC server              |
-| 4      | 4: 切替リハーサル       | production相当環境での切替・rollback可否 | smoke test済みrunbookと切替判断          |
-| 5      | 5: メンテナンス切り替え | stable endpointのPion移行と安定性        | Pion運用、またはaiortcへのrollback       |
-| 6      | 6: 旧RTC stack削除      | rollback期間終了と移行完了               | Pionのみの構成、更新済みの現在設計と契約 |
+| 時系列 | Phase                   | このphaseで確定すること               | 主な出口                                 |
+| ------ | ----------------------- | ------------------------------------- | ---------------------------------------- |
+| 1      | 1: Pion / codec最小PoC  | Pion採用可否、local media / ICE成立性 | 採用判断とGo統合に使えるcodec方式        |
+| 2      | 2: Go pipeline clients  | 既存MessagePack契約と再接続semantics  | Python下流serviceと互換なGo client群     |
+| 3      | 3: Go RTC統合           | session全体の責務、Frontendとの統合   | 本番候補となるGo RTC server              |
+| 4      | 4: 切替リハーサル       | production相当環境でのPion切替可否    | smoke test済みrunbookと切替判断          |
+| 5      | 5: メンテナンス切り替え | stable endpointのPion移行と安定性     | Pion運用とforward-fix                    |
+| 6      | 6: 旧RTC stack削除      | aiortc経路の撤去と移行完了            | Pionのみの構成、更新済みの現在設計と契約 |
 
 ## Phase 0: 詳細baselineの扱い
 
@@ -53,7 +52,7 @@ Linux network namespace、network impairment、長時間soak、詳細resource / 
 
 ### 主な成果
 
-- Phase 4では実際のcompose、NAT、firewallで接続とrollbackを確認する。
+- Phase 4では実際のcompose、NAT、firewallでPion接続を確認する。
 - Gate 3で成立済みのChromeを1回smoke testし、browser範囲を拡張する比較harnessは作らない。
 
 ### 次phaseへの条件
@@ -122,7 +121,7 @@ Phase 1のRTC / codec経路とPhase 2のpipeline clientを統合し、本番候�
 - bounded queue、backpressure、deadline、panic recovery、observability
 - FrontendとPionの `offer_request_id` / `offer_revision` 対応
 - 同一session IDでのICE restartとstale candidate拒否
-- aiortc rollback期間中のFrontend互換
+- aiortc診断期間中のFrontend互換
 - PoC専用Python adapterを含まないend-to-end経路
 
 ### 次phaseへの条件
@@ -138,13 +137,13 @@ Phase 4へ進める。
 
 ### 目的
 
-production相当環境で、Pion版の品質だけでなく停止切替とaiortc復旧を一連の運用として検証する。
+production相当環境で、Pion版への停止切替とPion経路の成立を検証する。
 
 ここで判定するのは移行可能性であり、Pionの網羅的な品質評価ではない。既存のrepository testを前提に、
 実際のimage、compose、network、runbookを使った1回のリハーサルだけをGate 4の追加評価とする。
 
-Gate 4は2026-08-10時点でblockedである。限定後の実下流browser UI smoke手順を特定できず、Pion開始前に停止した。
-Pion process crash自動復帰は移行Gateの対象外である。
+Gate 4は2026-08-21にPASSした。Pionの1 turn、通常終了後の収束、Frontendと下流serviceをrebuildしない停止切替を確認した。
+aiortcの起動確認は診断情報に留め、rollback後の会話成立はGateの対象外とする。Pion process crash自動復帰も移行Gateの対象外である。
 詳細と解除条件は[Gate 4結果](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-rehearsal/artifacts/gate-4-result.md)を正本とする。
 
 ### 次のタスク群
@@ -154,7 +153,7 @@ Pion process crash自動復帰は移行Gateの対象外である。
 | 1a   | [production network](../../../tasks/sincro-rtc/task-260809020144-pion-phase-4-production-network/task.md) | 固定UDP mux、public IPv4、UDP4のprocess境界      |
 | 1b   | [container image](../../../tasks/sincro-rtc/task-260809020144-pion-phase-4-container-image/task.md)       | Go binary、Frontend、Opus、FFmpegを含む実行image |
 | 2    | [排他的compose](../../../tasks/sincro-rtc/task-260809020144-pion-phase-4-exclusive-compose/task.md)       | aiortc / Pionの明示選択とproduction設定の配線    |
-| 3    | [cutover runbook](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-runbook/task.md)       | 停止切替、再起動、rollbackの実行手順             |
+| 3    | [cutover runbook](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-runbook/task.md)       | 停止切替、Pion smoke、forward-fixの実行手順      |
 | 4    | [cutover rehearsal](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-rehearsal/task.md)   | production相当環境での1回の実行とGate 4判定      |
 
 `1a`と`1b`は並行可能である。Phase 5以降のtaskはGate 4の実測結果で内容が変わるため、現時点では起票しない。
@@ -163,14 +162,14 @@ Pion process crash自動復帰は移行Gateの対象外である。
 
 - aiortc版とPion版を排他的に起動するcompose構成
 - production相当のNAT、firewall、public IPv4、固定UDP mux portの検証結果
-- Gate 3で成立済みのChromeでaiortc版とPion版を各1回実行するbrowser smoke test
+- Gate 3で成立済みのChromeでPion版を1回実行するbrowser smoke test
 - Pion版の接続、会話、音声、DataChannelと、停止後の資源回収結果
-- 切替、smoke test、rollbackの所要時間を含むrunbook
+- 切替とsmoke testの所要時間を含むrunbook
 
 ### 次phaseへの条件
 
 production相当環境でPion版の接続と会話が成立し、重大な品質退行がなく、
-FrontendやPython下流serviceの再deployなしでrollbackできる場合だけPhase 5へ進む。
+FrontendやPython下流serviceの再deployなしでPionへ切り替えられる場合だけPhase 5へ進む。
 
 詳細な性能比較、反復接続、長時間soak、network impairment、Gate専用harnessは行わない。
 接続不能、明確な音声異常、resource増加が観測された場合だけ、原因を再現する小さな是正taskを追加する。
@@ -187,25 +186,25 @@ FrontendやPython下流serviceの再deployなしでrollbackできる場合だけ
 2. close timeout後にactive aiortc sessionを終了し、aiortc serviceを停止する。
 3. Pion serviceを同じstable endpointで起動する。
 4. signaling、音声、DataChannel、下流pipelineのsmoke testを実行する。
-5. 利用を再開し、定義済みの観測期間とrollback条件で監視する。
-6. 問題がなければPhase 6へ進み、問題があればPionを停止してaiortcへ戻す。
+5. 利用を再開し、定義済みの観測期間とPion問題時の対応条件で監視する。
+6. 問題がなければPhase 6へ進み、問題があれば証拠を保存してPionをforward-fixする。
 
 ### 観測期間中の扱い
 
-aiortcのimageと設定はrollback専用として保持するが、Pionと同時稼働させない。
-rollback条件と具体的な手順は[運用移行とロールバック](rollout-and-operations.md)を正本とする。
+aiortcはPion切替後の運用rollback先にせず、Pionと同時稼働させない。
+Pionの問題時の証拠保存とforward-fix手順は[運用移行とforward-fix](rollout-and-operations.md)を正本とする。
 
 ## Phase 6: Python RTC stackの削除
 
 ### 目的
 
-Pionの安定化を確認した後にrollback期間を終了し、二重保守を解消して移行を完了する。
+Pionの安定化を確認した後にaiortc経路を削除し、二重保守を解消して移行を完了する。
 
 ### 主な成果
 
 - aiortc service、dependency、RTC固有test fixtureの削除
 - `RTCSessionProcess`、`VoiceTransformTrack`、Python `AudioBroker` の削除
-- rollback専用image、設定、compose経路の削除
+- aiortc image、設定、compose経路の削除
 - Go RTC serverを正本とする現在設計、契約、ADRへの更新
 - 移行文書の縮退またはarchive
 

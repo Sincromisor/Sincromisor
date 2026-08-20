@@ -75,7 +75,7 @@ unknown / closed sessionのcandidateは200 + `status:false` で拒否する。
 
 ### aiortc / Pion切り替え
 
-運用環境で両backendを共存させず、メンテナンス時間に停止切替する。Pion稼働中もaiortcのrollback imageは保存するがserviceは起動しない。
+運用環境で両backendを共存させず、メンテナンス時間にPionへ停止切替する。Pion稼働中の障害はaiortcへ戻さずforward-fixする。
 
 メリット:
 
@@ -85,9 +85,9 @@ unknown / closed sessionのcandidateは200 + `status:false` で拒否する。
 
 デメリット:
 
-- 切替とrollbackに停止時間が発生し、active sessionは失われる。
+- 切替とPion修正deployに停止時間が発生し、active sessionは失われる。
 - 同一時刻のreal trafficでaiortcとPionを比較するcanaryはできない。
-- rollback後に利用者は新しいsessionへ接続し直す必要がある。
+- Pion修正deploy後に利用者は新しいsessionへ接続し直す必要がある。
 
 ### ICE restartとcandidate generation
 
@@ -107,7 +107,7 @@ Frontendは `disconnected` のgrace period中は自然復旧を待ち、`failed`
 - update Offer中のsignaling stateとcandidate queueをtestする必要がある。
 - RTC serverからsession state自体が失われた場合は新規sessionが必要であり、その場合だけsession IDが変わる。
 
-aiortcはrollback専用backendとして新fieldを無視し、FrontendはaiortcのrevisionなしAnswerを期限付きで許容する。aiortcへ同じ状態機械を実装せず、rollback時はページreload後の新規session成立だけを保証する。
+aiortcは移行中の互換確認用backendとして新fieldを無視し、FrontendはaiortcのrevisionなしAnswerを期限付きで許容する。aiortcへ同じ状態機械を実装せず、Pion切替後の運用rollback先にはしない。
 
 ### 接続未成立sessionとmedia lifecycle
 
@@ -248,6 +248,6 @@ room、participant、SFU、水平scaleが必要になった場合の別initiativ
 - half-trickle signalingとinitial Offer冪等性
 - `VoiceTransformTrack` / AudioBrokerのGo再構成
 - 初期MessagePack互換方針
-- aiortc rollback期間と削除条件
+- aiortc診断期間と削除条件
 
 ADRには実測値の転載ではなく、対応taskへの参照、採用理由、棄却理由、見直し条件を残す。

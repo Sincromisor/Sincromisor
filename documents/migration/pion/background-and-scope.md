@@ -48,7 +48,7 @@ Goがroutingや音声同期に必要な `speech_id`、timestamp、audio format�
 
 ### 段階的に置き換える
 
-aiortcとPionは開発・評価環境で個別に検証するが、運用環境では同時稼働させない。PoCと統合評価の完了後、メンテナンス時間にaiortcを停止してPionへ切り替える。rollbackもPion停止後にaiortcを再起動する停止切替とし、active sessionの継続は保証しない。
+aiortcとPionは開発・評価環境で個別に検証するが、運用環境では同時稼働させない。PoCと統合評価の完了後、メンテナンス時間にaiortcを停止してPionへ切り替える。Pion切替後の障害はforward-fixし、active sessionの継続は保証しない。
 
 ### 計測できない改善を完了扱いにしない
 
@@ -67,7 +67,7 @@ aiortcとPionは開発・評価環境で個別に検証するが、運用環境�
 - Goから下流Python serviceへ接続するpipeline client
 - 既存MessagePack契約のGo互換実装と双方向golden fixture
 - compose、Consul、metrics、health check
-- 旧経路との切り替えとrollback
+- 旧経路からの切り替えとPion問題時のforward-fix
 
 ### 非対象
 

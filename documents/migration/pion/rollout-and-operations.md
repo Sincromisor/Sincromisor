@@ -1,10 +1,10 @@
-# 運用移行とロールバック
+# 運用移行とforward-fix
 
 ## Summary
 
 - aiortc版とPion版は開発・評価環境で個別に起動し、運用環境では同時稼働させない。
 - Pion版は下流Python serviceへ直接接続し、Python RTC adapterを運用componentとして追加しない。
-- 運用切替とrollbackはメンテナンス時間にserviceを停止して行い、active sessionの継続を保証しない。
+- 運用切替はメンテナンス時間にserviceを停止して行い、active sessionの継続を保証しない。Pion切替後の障害はforward-fixする。
 - Pionは1 instance、固定UDP mux port、明示的なpublic IPv4、UDP4 / Full ICEから開始する。TURNは設定時点で拒否する。
 
 ## 排他的なbackend配置
@@ -18,13 +18,13 @@ flowchart LR
 
 運用環境ではstable endpointとport mappingの接続先を1つだけ起動する。aiortcとPionを同時に公開するrouter、割合routing、backend間session registryは実装しない。評価時はcompose profile、別project名、または別hostで一方ずつ起動し、同じtest suiteを逐次実行する。
 
-Pion版の経路には追加adapterを挟まない。aiortcのimageと設定はrollback可能な期間だけ保存するが、Pion稼働中はserviceを停止する。
+Pion版の経路には追加adapterを挟まない。aiortcのimageと設定は移行中の診断用に保存しても、Pion稼働中はserviceを停止する。
 
 ### 判断のメリット・デメリット
 
 | 判断                        | メリット                                                             | デメリット                                           |
 | --------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
-| 運用環境は1 backendだけ起動 | stickiness router、共有registry、backend固有session ID routingが不要 | 切替とrollbackで停止時間が発生する                   |
+| 運用環境は1 backendだけ起動 | stickiness router、共有registry、backend固有session ID routingが不要 | 切替とPion修正deployで停止時間が発生する             |
 | active sessionを移送しない  | session state移送と二重処理を排除できる                              | 切替時の通話は切断され、利用者が再接続する必要がある |
 | 評価は逐次実行              | composeと自動testを共用できる                                        | 同時canaryによる実traffic比較はできない              |
 
@@ -195,7 +195,7 @@ PeerConnectionをclose-once guard経由で共通5秒の期限内に並行して�
 
 ## Rollout段階
 
-Phase 4の停止切替とrollbackは、[切替リハーサルrunbook](phase-4-cutover-runbook.md)を正本とする。
+Phase 4の停止切替とPion問題時の対応は、[切替リハーサルrunbook](phase-4-cutover-runbook.md)を正本とする。
 実測結果は同runbookからリンクするGate 4 artifactへ記録する。
 
 ### 開発環境
@@ -212,19 +212,19 @@ Phase 4の停止切替とrollbackは、[切替リハーサルrunbook](phase-4-cu
 ### production相当リハーサル
 
 - 運用と同じNAT、firewall、public IP設定でPionだけを起動する。
-- stop、Pion起動、smoke test、Pion停止、aiortc復旧を一連の手順として測る。
+- stop、Pion起動、smoke testを一連の手順として測る。aiortc起動は必要時の診断に留める。
 - 接続、会話、音声、DataChannel、session終了後のresource収束を確認する。
 
 ### 運用切り替え
 
 - メンテナンス時間にaiortcを停止し、Pionを同じstable endpointで起動する。
-- aiortcのimageと設定は期限付きrollback成果物として残すが、serviceは起動しない。
+- aiortcのimageと設定は移行中の診断用に残しても、serviceは起動しない。
 - 観測期間後にPython RTC stackを削除する。
 - Pipeline契約のIDL化は自動的に開始せず、必要なら別initiativeで判断する。
 
-## Rollback条件
+## Pion問題時の対応
 
-smoke testまたは運用中に次を観測した場合はrollbackする。
+smoke testまたは運用中に次を観測した場合は、証拠を保存してPionをforward-fixする。
 
 - signalingまたはICE接続成功率の重大な低下
 - 音声欠落、速度異常、無音などのcritical media failure
@@ -234,16 +234,14 @@ smoke testまたは運用中に次を観測した場合はrollbackする。
 - queue overflowの継続
 - 運用対象browserで会話不能
 
-## Rollback手順
+## Forward-fix手順
 
-1. Pion版への新規Offerを停止する。
-2. active Pion sessionをclose timeout後に終了し、Pion serviceを停止する。
-3. RTC server、pipeline client、codec、network metricsとlogを保存する。
-4. aiortc serviceをstable endpointで起動する。
-5. smoke testでaiortcの接続、音声、DataChannelを確認する。
-6. 原因と再開条件を対応taskへ記録する。
+1. 必要ならPion版への新規Offerを停止し、active sessionをclose timeout後に終了する。
+2. RTC server、pipeline client、codec、network metricsとlogを保存する。
+3. Pionの原因と再開条件を対応taskへ記録し、Pionを修正・再deployする。
+4. Pionのsmoke testで接続、音声、DataChannelを確認する。
 
-rollbackでfrontend buildや下流Python serviceのdeployを必要としない構成を維持する。ただし、切替中の接続とsession stateは失われる。
+forward-fixでfrontend buildや下流Python serviceのdeployを必要としない構成を維持する。ただし、切替中の接続とsession stateは失われる。
 
 ## 運用文書への反映
 

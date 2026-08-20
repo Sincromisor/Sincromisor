@@ -54,7 +54,7 @@ endpointと既存fieldは[Frontend RTC契約](../../design/contracts/frontend-rt
 - `usernameFragment` は診断fieldとして透過するが、end-of-candidatesを含めて一貫して判定するため、generationの正本にはしない。
 - Offer適用とcandidate追加はsession単位のlockまたはevent loopで直列化する。1 sessionのupdate Offerはsingle-flightとし、適用中の別OfferをHTTP 409で拒否する。
 
-新fieldはaiortcのPydantic modelが未知fieldとして無視できるoptional fieldとして先にFrontendへ追加する。FrontendはaiortcのAnswerに `offer_revision` がないことをrollback期間だけ許容し、aiortcで同一sessionのICE restartとrevision競合解決は行わない。rollback時はページreload後の新規session成立を互換性要件とし、旧backendへPion用状態機械を移植しない。
+新fieldはaiortcのPydantic modelが未知fieldとして無視できるoptional fieldとして先にFrontendへ追加する。Frontendは移行中の診断用aiortc Answerに `offer_revision` がないことを許容し、aiortcで同一sessionのICE restartとrevision競合解決は行わない。Pion切替後にaiortcの新規session成立を運用要件とせず、旧backendへPion用状態機械を移植しない。
 
 OpenAPI生成はPion移行の完了条件にしない。初期実装はFrontend / Goの手書きschemaと共有JSON fixtureによるcontract testを使い、型乖離が実害になった場合に別taskで導入する。
 
@@ -108,14 +108,14 @@ Go側には通信に必要なDTOとserializerを実装する。ただし、Pytho
 
 ## 型所有
 
-| Model                            | TypeScript | Go                       | Python                  |
-| -------------------------------- | ---------- | ------------------------ | ----------------------- |
-| signaling request / response     | 手書き型   | 手書き型                 | rollback期間は既存model |
-| extractor / recognizer contract  | 不要       | 限定DTO                  | 既存Pydantic model      |
-| processor / synthesizer contract | 不要       | 限定DTO                  | 既存Pydantic model      |
-| ChatMessage JSON                 | consumer型 | opaqueまたは最小envelope | producer型              |
-| telop / mora JSON                | consumer型 | timing用最小field        | producer型              |
-| internal RTC state               | 不要       | Go固有                   | 不要                    |
+| Model                            | TypeScript | Go                       | Python              |
+| -------------------------------- | ---------- | ------------------------ | ------------------- |
+| signaling request / response     | 手書き型   | 手書き型                 | 診断期間は既存model |
+| extractor / recognizer contract  | 不要       | 限定DTO                  | 既存Pydantic model  |
+| processor / synthesizer contract | 不要       | 限定DTO                  | 既存Pydantic model  |
+| ChatMessage JSON                 | consumer型 | opaqueまたは最小envelope | producer型          |
+| telop / mora JSON                | consumer型 | timing用最小field        | producer型          |
+| internal RTC state               | 不要       | Go固有                   | 不要                |
 
 Goが音声同期に必要な `speech_id`、sample position、audio formatは型付けする。chat本文や表情など、routingに不要なfieldは `json.RawMessage` または `bytes` として転送できる契約にする。
 
