@@ -15,3 +15,20 @@ PASS
 ## 残課題
 
 - なし
+
+## 試行4（2026-08-21）
+
+### 判定
+
+PASS
+
+### 根拠
+
+- コミット `6ff42d9` はtask記録と移行文書だけを変更しており、公開API、通信契約、本番コードの変更はない。したがってソースコメント点検は対象外である。
+- `artifacts/gate-4-result.md` は、PionでのICE `connected`、1 turnの利用者/応答text、telop、非無音音声、通常終了、終了後の`/statuses` `sessions: 0`、stage countと`reset: 0`、Frontend・下流serviceをrebuildしない切替、最終Pion healthy/readiness/statusを記録する。改訂後のtask受け入れ条件と一致し、aiortcの`disconnected`は診断情報・残リスクとして限定されている。
+- `documents/migration/pion/`はGate 4、runbook、検証計画、運用手順、roadmapをforward-fix方針へ同じ変更で同期している。`rg`で確認した残存`rollback`は、aiortcを運用rollback先にしない旨または会話成立をGate対象外とする旨の否定記述だけである。browser matrixをaiortc baselineがある場合だけ別task化するスコープ制限は、Gate 4必須条件ではない。
+- `git diff --check 6ff42d9^ 6ff42d9`、`npm run tasks:check`、`npm run tasks:index:check`はPASSした。frontendの`check`、`build`、`test`はこの専用worktreeと元worktreeに必要な実行ファイルがなく再実行できなかったが、評価対象は文書変更のみであり、コミット記録の既存確認を否定する根拠はない。
+
+### 残課題
+
+- なし
