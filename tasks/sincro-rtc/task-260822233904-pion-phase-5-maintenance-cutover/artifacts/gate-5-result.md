@@ -2,7 +2,7 @@
 
 ## 実行情報
 
-- `gate_5_result`: `OBSERVING`
+- `gate_5_result`: `PASS`
 - 対象commit: `70af22ea5b4375189dffc46e943459acab45512e`
 - VPS merge commit: `89533d3101173821819e754bd583194fbbee3bdc`
 - 実行日時: 2026-08-23 04:44:36 JSTから04:56:11 JST
@@ -42,4 +42,5 @@ curl --fail --silent http://127.0.0.1:8001/api/v1/RTCSignalingServer/statuses
 - `chat` talk modeは開発hostで停止中の外部Dify `10.39.2.8:80`へ接続できず空応答になった。Pion固有問題ではなく、Gate 5はDify不要の既存`sincro` modeで確認した。
 - Chromeでは既存Frontend由来のReact snapshot更新errorとMediaPipe timestamp errorを観測したが、RTC会話経路は成立した。Pion固有critical issueは観測していない。
 - Chrome UI停止はPion metricsで`reason="data_channel_error"`に3回計上された。各試行でactive sessionと下流接続は0へ収束し、利用者影響や増加し続けるresourceはないため、Gate 5を止めるcritical issueとは判定しない。
-- 利用再開後の観測は2026-08-23 04:56 JSTから継続中である。利用者がPhase 6着手を判断するまで、問題条件の有無を観測し、本taskをopenに保つ。
+- 利用再開後の観測は2026-08-23 04:56:11 JSTから06:16:09 JSTまでの79分58秒だった。利用者がPhase 6着手を判断した時点でもPionはhealthy、active session 0で、pipeline reset、codec error、queue overflow、MessagePack errorは0だった。UI停止時の`data_channel_error`計上も3件から増えていない。
+- 観測期間中にPion問題時の対応条件や未解決のPion固有critical issueへ該当しなかったため、Gate 5をPASSとする。
