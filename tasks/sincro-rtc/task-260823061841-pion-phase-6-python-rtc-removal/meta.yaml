@@ -1,0 +1,14 @@
+id: task-260823061841-pion-phase-6-python-rtc-removal
+title: Pion Phase 6でPython RTC stackを削除する
+category: sincro-rtc
+status: open
+depends_on:
+  - task-260822233904-pion-phase-5-maintenance-cutover
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-08-23
+closed_at: null
+legacy_ids: []
