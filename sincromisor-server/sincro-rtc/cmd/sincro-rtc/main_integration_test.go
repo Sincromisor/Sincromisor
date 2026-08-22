@@ -35,7 +35,7 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 	}
 
 	frontendDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(frontendDir, "index.html"), []byte("pion poc"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(frontendDir, "index.html"), []byte("sincro-rtc"), 0o600); err != nil {
 		t.Fatalf("write frontend fixture: %v", err)
 	}
 	address := reserveTCPAddress(t)
@@ -125,7 +125,7 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 		`session registry updated`,
 		`stage=shutdown_complete`,
 		`count=0`,
-		`pion poc stopped`,
+		`sincro-rtc stopped`,
 	} {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("process output missing %q:\n%s", expected, output)
@@ -158,7 +158,7 @@ func TestProcessRegistersReadyServiceAndDeregistersOnSIGTERM(t *testing.T) {
 		t.Fatalf("build sincro-rtc: %v\n%s", err, output)
 	}
 	frontendDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(frontendDir, "index.html"), []byte("pion poc"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(frontendDir, "index.html"), []byte("sincro-rtc"), 0o600); err != nil {
 		t.Fatalf("write frontend fixture: %v", err)
 	}
 	address := reserveTCPAddress(t)

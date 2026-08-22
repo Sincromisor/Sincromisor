@@ -137,7 +137,7 @@ Google Chrome stable で
    `processor_result_received`、`synthesizer_result_received`の最後の到達stageを確認する。これらのlogと
    Git artifactには認識・chat・VoiceText・音声・Raw payloadを転載しない。
 6. 通常 close を連続 10 回行い、各回の `session registry updated` が `active_sessions=0` を示す。
-   process を停止した最後の `pion poc stopped` で `final_goroutines` が起動時の
+   process を停止した最後の `sincro-rtc stopped` で `final_goroutines` が起動時の
    `initial_goroutines + 5` 以下であることを確認する。
 
 `Ctrl-C` または `SIGTERM` で停止する。Consul登録済みならdraining開始直後に2秒上限でderegisterを並行開始する。終了順序は
@@ -166,15 +166,14 @@ Pion の production network integration test は loopback UDP socket を使用�
 広告・接続した後にsocketが解放されることを確認する。sandbox 内で socket bind が禁止される環境では、
 同じ command を network namespace の制限がない実行環境で行う。
 
-## PoC boundaries
+## Current scope
 
-PoC は冪等なinitial Offerとlocal host candidateだけを対象とする。session ID付きupdate Offerは501、
-unknown / closed session の candidate は HTTP 200 と `status:false` を返す。
+通常serviceはinitial Offer、session ID付きupdate Offer、candidateを
+`documents/design/contracts/frontend-rtc.md`の契約に従って処理する。unknown / closed session のcandidateは
+HTTP 200と`status:false`を返す。
 
-次は後続 phase の責務である。
+次は現在の運用範囲外である。
 
-- ICE restartとrevision 2以降のupdate Offer
-- NAT / firewall、TURN、Firefox
+- TURN、IPv6、Firefox
 - NACK / PLC、RTCP metrics
-- impairment、soak、performance comparison、production compose
-- container imageとproduction composeへのFFmpeg導入（Phase 4）
+- impairment、soak、performance comparison

@@ -16,7 +16,7 @@ func TestProcessLifecycleLogsUseCanonicalPrivacyFields(t *testing.T) {
 
 	want := []capturedRecord{
 		{
-			message: "pion poc listening",
+			message: "sincro-rtc listening",
 			attrs:   map[string]any{"stage": "listener_ready", "count": int64(17)},
 		},
 		{
@@ -24,7 +24,7 @@ func TestProcessLifecycleLogsUseCanonicalPrivacyFields(t *testing.T) {
 			attrs:   map[string]any{"reason": "process_shutdown"},
 		},
 		{
-			message: "pion poc stopped",
+			message: "sincro-rtc stopped",
 			attrs:   map[string]any{"stage": "shutdown_complete", "count": int64(0)},
 		},
 	}
