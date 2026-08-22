@@ -1,123 +1,84 @@
-FROM ubuntu:24.04
+# syntax=docker/dockerfile:1
+FROM node:22 AS frontend-builder
+
+ARG SINCRO_USER_ID=sincromisor
+ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
+ARG SINCRO_NODE_OPTIONS="--max-old-space-size=2048"
+ENV NODE_OPTIONS=${SINCRO_NODE_OPTIONS}
+
+WORKDIR ${SINCRO_USER_DIR}
+
+RUN useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
+    mkdir ${SINCRO_USER_DIR}/sincromisor-frontend && \
+    chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-frontend/package.json ./sincromisor-frontend/package-lock.json \
+    ${SINCRO_USER_DIR}/sincromisor-frontend/
+
+WORKDIR ${SINCRO_USER_DIR}/sincromisor-frontend
+USER ${SINCRO_USER_ID}
+RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm,uid=1001,gid=1001 \
+    npm ci
+
+RUN mkdir -p public/mediapipe-wasm && \
+    cp -r node_modules/@mediapipe/tasks-vision/wasm/* public/mediapipe-wasm
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-frontend/tsconfig.json \
+    ./sincromisor-frontend/tsconfig.modern.json \
+    ./sincromisor-frontend/vite.config.js \
+    ./sincromisor-frontend/postcss.config.js \
+    ${SINCRO_USER_DIR}/sincromisor-frontend/
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-frontend/src \
+    ${SINCRO_USER_DIR}/sincromisor-frontend/src
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-frontend/public \
+    ${SINCRO_USER_DIR}/sincromisor-frontend/public
+
+RUN npm run build
+
+FROM golang:1.26.5-bookworm AS pion-builder
+
+WORKDIR /src/sincromisor-server/sincro-rtc
+
+COPY ./sincromisor-server/sincro-rtc/go.mod ./sincromisor-server/sincro-rtc/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+COPY ./sincromisor-server/sincro-rtc ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=1 go build -o /out/sincro-rtc ./cmd/sincro-rtc
+
+FROM ubuntu:24.04 AS runner
 
 LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
 
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
-ENV PATH=${SINCRO_USER_DIR}/.local/bin:${PATH}
+RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
+    apt-get update && \
+    apt-get install --no-install-recommends -y curl ffmpeg libopus0 && \
+    rm -rf /var/lib/apt/lists/* && \
+    useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
+    mkdir ${SINCRO_USER_DIR} && \
+    chown ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
-ENV SINCRO_RTC_HOST=0.0.0.0
-ENV SINCRO_RTC_PORT=8001
-ENV SINCRO_RTC_PUBLIC_BIND_HOST=sincro-rtc
-ENV SINCRO_RTC_PUBLIC_BIND_PORT=8001
-ENV SINCRO_CONSUL_AGENT_HOST=sincro-consul-agent
-ENV SINCRO_CONSUL_AGENT_PORT=8500
-ENV SINCRO_RTC_FORWARDED_ALLOW_IPS=127.0.0.0/8,192.168.0.0/16,172.16.0.0/12,10.0.0.0/8
-ENV SINCRO_RTC_MAX_SESSIONS=10
-ENV SINCRO_RTC_FALLBACK_HOST=
-ENV SINCRO_RTC_FALLBACK_PORT=80
+COPY --from=pion-builder --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    /out/sincro-rtc \
+    ${SINCRO_USER_DIR}/sincro-rtc
+COPY --from=frontend-builder --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    /opt/sincromisor/sincromisor-frontend/dist \
+    ${SINCRO_USER_DIR}/frontend
 
 WORKDIR ${SINCRO_USER_DIR}
-
-RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
-    useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
-    mkdir ${SINCRO_USER_DIR}/sincromisor-server && \
-    mkdir ${SINCRO_USER_DIR}/configs && \
-    chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
-
-# curl: uvのインストール
-# git: nue-asrのインストール。nue-asrが不要なコンテナでも無いとsyncでコケる
-RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
-    apt-get update \
-    && apt-get install -y curl git
-
 USER ${SINCRO_USER_ID}
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-USER root
-RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
-    apt-get install -y fdkaac opus-tools
+EXPOSE 8080/tcp
 
-USER ${SINCRO_USER_ID}
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./pyproject.toml \
-    ./uv.lock \
-    ./.python-version \
-    ./README.md \
-    ${SINCRO_USER_DIR}/
-
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server/sincro-config/pyproject.toml \
-    ./sincromisor-server/sincro-config/README.md \
-    ./sincromisor-server/sincro-config/.python-version \
-    ${SINCRO_USER_DIR}/sincromisor-server/sincro-config/
-
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server/sincro-models/pyproject.toml \
-    ./sincromisor-server/sincro-models/README.md \
-    ./sincromisor-server/sincro-models/.python-version \
-    ${SINCRO_USER_DIR}/sincromisor-server/sincro-models/
-
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server/sincro-rtc/pyproject.toml \
-    ./sincromisor-server/sincro-rtc/README.md \
-    ./sincromisor-server/sincro-rtc/.python-version \
-    ${SINCRO_USER_DIR}/sincromisor-server/sincro-rtc/
-
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server/speech-extractor/pyproject.toml \
-    ./sincromisor-server/speech-extractor/README.md \
-    ./sincromisor-server/speech-extractor/.python-version \
-    ${SINCRO_USER_DIR}/sincromisor-server/speech-extractor/
-
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server/speech-recognizer/pyproject.toml \
-    ./sincromisor-server/speech-recognizer/README.md \
-    ./sincromisor-server/speech-recognizer/.python-version \
-    ${SINCRO_USER_DIR}/sincromisor-server/speech-recognizer/
-
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server/speech-recognizer-nemo/pyproject.toml \
-    ./sincromisor-server/speech-recognizer-nemo/README.md \
-    ./sincromisor-server/speech-recognizer-nemo/.python-version \
-    ${SINCRO_USER_DIR}/sincromisor-server/speech-recognizer-nemo/
-
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server/text-processor/pyproject.toml \
-    ./sincromisor-server/text-processor/README.md \
-    ./sincromisor-server/text-processor/.python-version \
-    ${SINCRO_USER_DIR}/sincromisor-server/text-processor/
-
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server/voice-synthesizer/pyproject.toml \
-    ./sincromisor-server/voice-synthesizer/README.md \
-    ./sincromisor-server/voice-synthesizer/.python-version \
-    ${SINCRO_USER_DIR}/sincromisor-server/voice-synthesizer/
-
-# 一旦依存ライブラリをsyncする
-# sincromisor-serverのモジュールは、空のまま依存関係だけ解決される
-RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
-    uv sync --group sincro-rtc
-
-# sincromisor-serverのソースコード一式をここでコピー
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server \
-    ${SINCRO_USER_DIR}/sincromisor-server
-
-# sincromisor-serverのモジュールをビルドし直す
-RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
-    uv sync --group sincro-rtc
-
-# RTCSignalingServer用のRTC設定ファイルを
-# /opt/sincromisor/configs/config.ymlにコピーする。
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./examples/config.yml \
-    ${SINCRO_USER_DIR}/configs/config.yml
-
-WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
-
-# image build時に同期済みの仮想環境を使い、切戻し時に依存解決を再実行しない。
-CMD ["uv", "run", "--no-sync", "sincro-rtc/RTCSignalingServer.py"]
+ENTRYPOINT ["/opt/sincromisor/sincro-rtc"]
+CMD ["--http", "0.0.0.0:8080", "--frontend-dir", "/opt/sincromisor/frontend", "--ffmpeg", "/usr/bin/ffmpeg"]

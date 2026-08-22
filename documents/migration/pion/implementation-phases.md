@@ -92,7 +92,7 @@ impairment、soak、性能比較は必須Gateに含めない。
 - session contextによるcloseと再接続停止を実装する。
 - synthesized voiceとmora timingのdecodeを実装する。
 
-実装packageは `sincromisor-server/sincro-rtc-pion-poc/internal/pipeline`、Python生成の互換fixtureは
+実装packageは `sincromisor-server/sincro-rtc/internal/pipeline`、Python生成の互換fixtureは
 同packageの `protocol/testdata/` を正本とする。固定Gate command、実行環境、stage観測、reset / close結果は
 `tasks/sincro-rtc/task-260726211012-pion-phase-2-pipeline-reset-gate-2/artifacts/gate-2-result.md`
 に記録する。
@@ -112,7 +112,7 @@ fake 4-stage integrationの成功だけではGate 2を完了しない。4つの�
 
 ## Phase 3: Go RTC統合
 
-### 作業
+### 結果
 
 - Go RTC serverのsession registryを実装する。
 - Audio Input Processorを実装する。
@@ -183,16 +183,16 @@ Pion安定化後もpipeline Protocol Buffers移行は自動的に開始しない
 
 ### 作業
 
-- aiortc service、dependency、test fixtureを削除する。
-- Python `RTCSessionProcess`、`VoiceTransformTrack`、`AudioBroker` を削除する。
-- aiortc診断用設定を削除する。
+- aiortc service、dependency、testを削除した。
+- Python `RTCSessionProcess`、`VoiceTransformTrack`、`AudioBroker` を削除した。
+- aiortc診断用設定を削除した。
 - Pionが使用するMessagePack互換層とgolden fixtureは維持する。
 - 本ディレクトリの確定事項をcurrent design、contract、ADRへ反映する。
 - 移行計画を縮退またはarchiveする。
 
-### 完了条件
+### 完了結果
 
-- production相当composeにaiortc dependencyとPython RTC adapterがない。
+- production相当composeにaiortc dependencyとPython RTC adapterはない。
 - Go RTC serverがpipeline orchestrationを直接所有する。
 - Pythonには推論・音声生成を行う下流serviceだけが残る。
 - frontendとPython下流serviceがPion経路だけで動作する。

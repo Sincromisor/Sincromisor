@@ -4,7 +4,7 @@
 
 - Docker Compose は Sincromisor のローカル/単一ホスト実行の正本である。
 - `.env`、compose service、Pion / frontend 設定の 3 点を常に整合させる。
-- `full` / `rtc` profile はPion版 `sincro-rtc` を起動する。aiortc版は診断専用の `aiortc` profileにだけ残す。
+- `full` / `rtc` profile はPion版 `sincro-rtc` を起動する。
 
 ## 共有 bridge network
 
@@ -18,13 +18,12 @@ shared UDP mux bind先を選び、`--service-bind-host ${SINCRO_PION_SERVICE_BIN
 local composeの既定service bind hostは`sincro-rtc`である。別host Consulを使う場合はConsulからhealth check可能な
 Pion hostのVPN addressを指定する。browserへ広告するpublic IPv4は別値とする。
 
-Pionはaiortc版と同じstable TCP 8001を公開し、
+Pionはstable TCP 8001を公開し、
 `${SINCRO_PION_MEDIA_UDP_PORT}` をhost/container同値のUDP portとして公開する。
 `SINCRO_PION_PUBLIC_IPV4`、`SINCRO_PION_STUN`、`SINCRO_RTC_MAX_SESSIONS`、
-`SINCRO_PION_FFMPEG_PATH`はPion commandへ直接渡す。`aiortc` と `full` / `rtc` を同じprojectで同時に起動しない。
+`SINCRO_PION_FFMPEG_PATH`はPion commandへ直接渡す。
 
-通常運用は `--profile full` または `--profile rtc` でPionを起動する。aiortcを診断するときはPionを停止して
-`--profile aiortc` を指定する。Pion serviceは
+通常運用は `--profile full` または `--profile rtc` でPionを起動する。Pion serviceは
 `SINCRO_PION_CONSUL_HTTP_HOST` / `SINCRO_PION_CONSUL_HTTP_PORT` のHTTP endpointを直接使い、
 `SINCRO_PION_SERVICE_BIND_HOST`をConsul service addressとして登録する。Pion専用のlocal gossip agentは起動しない。
 local composeでは既存の`sincro-consul-server`を指定し、別host ConsulではVPS containerから到達可能なHTTP addressと、
@@ -56,7 +55,7 @@ healthcheck成功後に起動し、`/health/ready` を10秒間隔・5秒timeout�
 - 新しい env を追加したら `examples/compose.env`、compose environment、設定クラスを同時更新する。
 - Pion serviceはcontainer IPv4を設定せず、Dockerの動的割当とinterface選択を使う。
 - service 名や port を変える場合は Consul、fallback 設定、contracts を確認する。
-- downstream service を追加/削除する場合は AudioBroker と WebSocket contract を確認する。
+- downstream service を追加/削除する場合は WebSocket contract を確認する。
 - frontend / backend の片側だけで完結する変更にしない。
 
 ## References

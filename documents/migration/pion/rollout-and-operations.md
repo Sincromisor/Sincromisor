@@ -2,8 +2,7 @@
 
 ## Summary
 
-- aiortc版とPion版は開発・評価環境で個別に起動し、運用環境では同時稼働させない。
-- Pion版は下流Python serviceへ直接接続し、Python RTC adapterを運用componentとして追加しない。
+- Pion版だけを起動し、Python RTC adapterを運用componentとして置かない。
 - 運用切替はメンテナンス時間にserviceを停止して行い、active sessionの継続を保証しない。Pion切替後の障害はforward-fixする。
 - Pionは1 instance、固定UDP mux port、明示的なpublic IPv4、UDP4 / Full ICEから開始する。TURNは設定時点で拒否する。
 
@@ -16,9 +15,9 @@ flowchart LR
     Active --> Pipeline["Python pipeline services"]
 ```
 
-運用環境ではstable endpointとport mappingの接続先を1つだけ起動する。aiortcとPionを同時に公開するrouter、割合routing、backend間session registryは実装しない。評価時はcompose profile、別project名、または別hostで一方ずつ起動し、同じtest suiteを逐次実行する。
+運用環境ではstable endpointとport mappingの接続先をPionだけ起動する。割合routingやbackend間session registryは実装しない。
 
-Pion版の経路には追加adapterを挟まない。aiortcのimageと設定は移行中の診断用に保存しても、Pion稼働中はserviceを停止する。
+Pion版の経路には追加adapterを挟まない。
 
 ### 判断のメリット・デメリット
 
@@ -90,10 +89,9 @@ compose配線時はこの3引数を環境変数へ対応付け、`examples/compo
 service名へ解決され、別host ConsulではPion hostのVPN addressを登録する。container IPv4とConsul service addressは、
 SDPへ広告するpublic IPv4とは別値である。
 
-composeではPion版 `sincro-rtc` を`full` / `rtc` profileで通常起動する。aiortc版は `aiortc` 診断profileに
-構成だけを残す。Pionはstable TCP 8001と`SINCRO_PION_MEDIA_UDP_PORT`をhost/container同値のUDP portとして公開する。
+composeではPion版 `sincro-rtc` を`full` / `rtc` profileで通常起動する。Pionはstable TCP 8001と`SINCRO_PION_MEDIA_UDP_PORT`をhost/container同値のUDP portとして公開する。
 `SINCRO_PION_PUBLIC_IPV4`、`SINCRO_PION_STUN`、`SINCRO_RTC_MAX_SESSIONS`、`SINCRO_PION_FFMPEG_PATH`はPion commandへ渡す。
-Pionは直接使う`sincro-consul-server`がhealthyになってから起動する。`aiortc` と `full` / `rtc` を同じprojectで併用しない。
+Pionは直接使う`sincro-consul-server`がhealthyになってから起動する。
 
 設定の形式と組み合わせはnetwork socketやHTTP listenerを公開する前に検証する。public IPv4のparse失敗、UDP mux bind失敗、port不一致、空のinterface選択、TURN URL、上限やtimeoutの0 / 負値はreadiness falseのまま待機せずprocessをfail-fastさせる。外部NAT / firewallの到達性はstartupだけでは保証できないため、production相当リハーサルのsmoke testで検証する。
 
@@ -153,7 +151,7 @@ ownershipを表す。gaugeは所有権解放後に0へ戻す。
 
 - Go RTC serverはfrontend-facing endpointとしてConsulへ登録する。
 - Go pipeline clientsが下流4サービスをConsulから解決する。
-- 現行AudioBrokerと同じfallback semanticsを初期統合で維持する。
+- Go pipeline coordinatorが下流serviceのfallback semanticsを維持する。
 - Pion経路のためだけのadapter service名を追加しない。
 
 ## Connection budget
@@ -209,14 +207,13 @@ Phase 5の通常構成とPion問題時の対応は、[メンテナンス切替ru
 ### production相当リハーサル
 
 - 運用と同じNAT、firewall、public IP設定でPionだけを起動する。
-- stop、Pion起動、smoke testを一連の手順として測る。aiortc起動は必要時の診断に留める。
+- stop、Pion起動、smoke testを一連の手順として測る。
 - 接続、会話、音声、DataChannel、session終了後のresource収束を確認する。
 
 ### 運用切り替え
 
 - `full` / `rtc` profileでPionを同じstable endpointの通常serviceとして起動する。
-- aiortcのimageと設定は `aiortc` 診断profileに残しても、動作確認も運用rollbackも行わない。
-- 観測期間後にPython RTC stackを削除する。
+- Python RTC stackは削除済みであり、運用rollbackには含めない。
 - Pipeline契約のIDL化は自動的に開始せず、必要なら別initiativeで判断する。
 
 ## Pion問題時の対応
@@ -249,9 +246,8 @@ forward-fixでfrontend buildや下流Python serviceのdeployを必要としな�
 - [Frontend RTC契約](../../design/contracts/frontend-rtc.md)
 - [Audio Pipeline WebSocket契約](../../design/contracts/audio-pipeline-websocket.md)
 - [sincro-rtcサービス設計](../../design/backend/services/sincro-rtc.md)
-- [AudioBrokerサービス設計](../../design/backend/services/audio-broker.md)
 - [Compose設計](../../design/infrastructure/compose.md)
 - [Consul設計](../../design/infrastructure/consul.md)
 - [設計文書index](../../design/index.md)
 
-Python AudioBroker削除後はサービス設計をGo pipeline coordinatorの現在仕様へ置き換え、旧Python実装の説明を通常導線へ残さない。
+Go pipeline coordinatorの現在仕様をサービス設計とWebSocket契約の通常導線とする。

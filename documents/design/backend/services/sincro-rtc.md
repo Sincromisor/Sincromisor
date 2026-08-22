@@ -3,16 +3,15 @@
 ## Summary
 
 - `sincro-rtc` はPionによる WebRTC signaling API と RTC session を提供する通常入口サービスである。
-- 1 sessionの音声処理はGo pipeline coordinatorへ委譲する。Python実装はaiortc診断profileにだけ残る。
+- 1 sessionの音声処理はGo pipeline coordinatorが所有する。
 - フロントとの通信契約は `contracts/frontend-rtc.md` を正本とする。
 
 ## Scope
 
 - 対象:
-    - `sincromisor-server/sincro-rtc-pion-poc/cmd/pion-poc`
+    - `sincromisor-server/sincro-rtc/cmd/sincro-rtc`
     - Pion session / signaling / pipeline coordinator
 - 非対象:
-    - AudioBroker 内部
     - downstream service の推論処理
     - payload 詳細
 
@@ -56,7 +55,7 @@
 
 - Offer / candidate payload を変える時は `contracts/frontend-rtc.md`、frontend、model を同時更新する。
 - session lifecycleを変える時はdraining、close deadline、pipeline coordinatorのclose pathを確認する。
-- pipeline接続を変える時は `backend/services/audio-broker.md` と WebSocket contractを確認する。
+- pipeline接続を変える時は WebSocket contractを確認する。
 
 ## References
 

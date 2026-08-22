@@ -50,7 +50,7 @@
 - [Frontend RTC](contracts/frontend-rtc.md)
     - フロントエンドと `sincro-rtc` の WebRTC signaling、ICE restart/retry、DataChannel 契約
 - [Audio Pipeline WebSocket](contracts/audio-pipeline-websocket.md)
-    - AudioBroker と下流音声処理サービス間の WebSocket / msgpack 契約
+    - Go pipeline coordinator と下流音声処理サービス間の WebSocket / msgpack 契約
 - [Proper Noun Dictionary](contracts/proper-noun-dictionary.md)
     - SpeechRecognizer 固有名詞補強で使う CSV 辞書仕様
 
@@ -74,9 +74,7 @@
 ## Backend Services
 
 - [sincro-rtc](backend/services/sincro-rtc.md)
-    - WebRTC signaling、RTC session process、VoiceTransformTrack
-- [AudioBroker](backend/services/audio-broker.md)
-    - downstream services への WebSocket 中継と queue 管理
+    - WebRTC signaling、RTC session、pipeline coordinator
 - [SpeechExtractor](backend/services/speech-extractor.md)
     - 音声区間抽出
 - [SpeechRecognizer](backend/services/speech-recognizer.md)

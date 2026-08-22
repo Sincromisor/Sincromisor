@@ -1,2 +1,0 @@
-class AudioBrokerError(Exception):
-    pass

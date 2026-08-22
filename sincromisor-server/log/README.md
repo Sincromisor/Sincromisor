@@ -9,7 +9,7 @@
 ## Sincromisor.log
 
 アプリサーバーや、サーバー側のWebRTCプロセス、
-WebRTCプロセスと各ワーカーとの間を取り持つAudioBrokerのログなどがここに出力されます。
+WebRTCプロセスと各ワーカーを接続するGo pipeline coordinatorのログなどがここに出力されます。
 
 ## SpeechExtractorWorker.log
 

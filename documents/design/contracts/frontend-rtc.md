@@ -239,7 +239,7 @@ responseから旧sessionを復元できないためterminal failureとする。
 - 各HTTP実行のtimeoutはoperation固有timeoutと全体deadline残時間の小さい方へclipする。
   残時間が0以下、またはsleep時間が残時間以上なら次のHTTP実行を開始しない。同じHTTP retryでは
   serialized body、SDP、request ID、revisionを変更しない。
-- revisionなしinitial Answerはaiortc互換のlegacy modeとして受理する。legacy modeの切断では
+- revisionなしinitial Answerは配信済みFrontendとの互換のため受理する。legacy modeの切断では
   update Offerを送らず、新しいPeerConnection/DataChannelでrevisionなしinitial接続を作り直す。
 
 ## Versioning

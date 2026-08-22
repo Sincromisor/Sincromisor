@@ -25,15 +25,10 @@ dev = [
 ]
 
 full = [
-    "sincro-rtc",
     "speech-extractor",
     "speech-recognizer-nemo",
     "text-processor",
     "voice-synthesizer",
-]
-
-sincro-rtc = [
-    "sincro-rtc",
 ]
 
 speech-extractor = [
@@ -81,7 +76,6 @@ constraint-dependencies = [
 members = [
     "sincromisor-server/sincro-config",
     "sincromisor-server/sincro-models",
-    "sincromisor-server/sincro-rtc",
     "sincromisor-server/speech-recognizer-nemo",
     "sincromisor-server/speech-extractor",
     "sincromisor-server/voice-synthesizer",
@@ -92,7 +86,6 @@ members = [
 [tool.uv.sources]
 sincro-config = { workspace = true }
 sincro-models = { workspace = true }
-sincro-rtc = { workspace = true }
 speech-extractor = { workspace = true }
 speech-recognizer-nemo = { workspace = true }
 voice-synthesizer = { workspace = true }
@@ -106,7 +99,6 @@ include = [
 exclude = [
     "sincromisor-server/speech-recognizer/**",
     "sincromisor-server/**/tests/**",
-    "sincromisor-server/sincro-rtc/AudioBrokerTest.py",
     "utils/test-nue/**",
 ]
 

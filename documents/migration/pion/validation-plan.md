@@ -116,7 +116,7 @@ Gate 4は、Pionで1回の既存Chrome経路を確認した時点で判定する
 
 `full` / `rtc` profileでPion `sincro-rtc` だけがstable TCP 8001と固定media UDP portを公開することを確認する。
 既存Chromeで1 turnの会話、text、telop、非無音音声、session終了後の収束を1回確認して利用を再開する。
-aiortcは `aiortc` profileに構成だけを残し、Gate 5の動作確認・rollback経路には含めない。
+aiortcはGate 6で削除済みであり、Gate 5の動作確認・rollback経路には含めなかった。
 
 ### Gate 5判定
 

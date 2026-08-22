@@ -77,12 +77,12 @@ binary の empty は codec 層で許可し、domain 上の範囲や format の�
 
 ### Compatibility fixture
 
-- fixture: `sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol/testdata/*.msgpack`
-- manifest: `sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol/testdata/manifest.json`
+- fixture: `sincromisor-server/sincro-rtc/internal/pipeline/protocol/testdata/*.msgpack`
+- manifest: `sincromisor-server/sincro-rtc/internal/pipeline/protocol/testdata/manifest.json`
 - Python generator:
-  `sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol/testdata/generate_fixtures.py`
+  `sincromisor-server/sincro-rtc/internal/pipeline/protocol/testdata/generate_fixtures.py`
 - Go producer helper:
-  `sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol/testdata/generate_go_payloads.go`
+  `sincromisor-server/sincro-rtc/internal/pipeline/protocol/testdata/generate_go_payloads.go`
 
 fixture は現在の `sincro_models` class と `to_msgpack()` から固定 ID、時刻、人工音声 byte
 だけを使って生成する。generator の `--check` は一時 directory へ再生成し、fixture と
@@ -110,7 +110,7 @@ manifest の byte 差分を検出する。fixture を手編集しない。
 
 ### Go pipeline coordinator
 
-`sincro-rtc-pion-poc/internal/pipeline/client` は、上表と同じ4 endpointへ
+`sincro-rtc/internal/pipeline/client` は、上表と同じ4 endpointへ
 `github.com/coder/websocket` の binary messageだけで接続する。Extractorは接続直後に初期化MessagePackを
 1件送り、その後は20 ms単位の16 kHz mono s16le raw PCMだけを送る。他の3 clientは
 `internal/pipeline/protocol` の限定DTOを使い、TextProcessor responseはdecode時に保持した元bytesを
@@ -149,7 +149,7 @@ strictly increasingとし、新generationの最初のspeech IDは直前generatio
 
 retryは1秒capから始まるfull jitterで、attempt 5以降は30秒capへ飽和する。`Close`またはStart context cancellationは
 retry waiter、generation goroutine、clientをcancel / joinし、全producer終了後にexternal channelをcloseする。
-通常経路ではこのCoordinatorがPion sessionに統合される。Python `AudioBroker` はaiortc診断用に残るが、新機能を追加しない。
+通常経路ではこのCoordinatorがPion sessionに統合される。
 
 ## Timeout / Retry
 
@@ -176,6 +176,5 @@ retry waiter、generation goroutine、clientをcancel / joinし、全producer終
 
 ## References
 
-- `documents/design/backend/services/audio-broker.md`
 - `documents/design/contracts/frontend-rtc.md`
 - `documents/design/archive/legacy-flat/networking_websocket.md`

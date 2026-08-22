@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import candidateFixtures from "../../../../../sincromisor-server/sincro-rtc-pion-poc/internal/signaling/testdata/candidate_requests.json?raw";
+import candidateFixtures from "../../../../../sincromisor-server/sincro-rtc/internal/signaling/testdata/candidate_requests.json?raw";
 import { sendRtcIceCandidate } from "../rtcIceCandidateSender";
 
 afterEach(() => {
