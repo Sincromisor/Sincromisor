@@ -156,7 +156,8 @@ aiortcの起動確認は診断情報に留め、rollback後の会話成立はGat
 | 3    | [cutover runbook](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-runbook/task.md)       | 停止切替、Pion smoke、forward-fixの実行手順      |
 | 4    | [cutover rehearsal](../../../tasks/sincro-rtc/task-260809020145-pion-phase-4-cutover-rehearsal/task.md)   | production相当環境での1回の実行とGate 4判定      |
 
-`1a`と`1b`は並行可能である。Phase 5以降のtaskはGate 4の実測結果で内容が変わるため、現時点では起票しない。
+`1a`と`1b`は並行可能である。Gate 4はPASSしたため、Phase 5は
+[メンテナンス切替と安定化観測](../../../tasks/sincro-rtc/task-260822233904-pion-phase-5-maintenance-cutover/task.md)で扱う。
 
 ### 主な成果
 
@@ -193,6 +194,8 @@ FrontendやPython下流serviceの再deployなしでPionへ切り替えられる�
 
 aiortcはPion切替後の運用rollback先にせず、Pionと同時稼働させない。
 Pionの問題時の証拠保存とforward-fix手順は[運用移行とforward-fix](rollout-and-operations.md)を正本とする。
+Phase 5の実行とGate 5判定は
+[メンテナンス切替と安定化観測task](../../../tasks/sincro-rtc/task-260822233904-pion-phase-5-maintenance-cutover/task.md)で記録する。
 
 ## Phase 6: Python RTC stackの削除
 
