@@ -1,4 +1,4 @@
-// Command sincro-rtc は build 済み Frontend と Pion signaling/media PoC を同一 origin で起動する。
+// Command sincro-rtc は build 済みFrontendとPion signaling/media serviceを同一originで起動する。
 package main
 
 import (
@@ -367,7 +367,7 @@ func serve(
 // listener address、Frontend path、signal名、終了時goroutine数は環境情報を漏らすため記録しない。
 // fieldを追加する場合はstructured log allow-listとprivacy契約を先に改訂する。
 func logListenerReady(logger *slog.Logger, goroutineCount int) {
-	logger.Info("pion poc listening", "stage", "listener_ready", "count", goroutineCount)
+	logger.Info("sincro-rtc listening", "stage", "listener_ready", "count", goroutineCount)
 }
 
 func logShutdownRequested(logger *slog.Logger) {
@@ -375,5 +375,5 @@ func logShutdownRequested(logger *slog.Logger) {
 }
 
 func logShutdownComplete(logger *slog.Logger, activeSessionCount int) {
-	logger.Info("pion poc stopped", "stage", "shutdown_complete", "count", activeSessionCount)
+	logger.Info("sincro-rtc stopped", "stage", "shutdown_complete", "count", activeSessionCount)
 }

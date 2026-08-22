@@ -1,4 +1,4 @@
-// Package config は Pion PoC の起動時設定を flag から検証済みの値へ変換する。
+// Package config はPion RTC serviceの起動時設定をflagから検証済みの値へ変換する。
 package config
 
 import (
@@ -25,10 +25,10 @@ const (
 	minOfferCacheTTL     = 30 * time.Second
 )
 
-// Config はHTTP、static配信、ICE、session/cache admission、FFmpegに必要な起動時設定を保持する。
+// Config はHTTP、static配信、ICE、session/cache admission、Consul、FFmpegに必要な起動時設定を保持する。
 //
-// Load が directory、executable path、URL を検証するため、下流 package はfilesystem探索を行わない。
-// production compose、Consul、TURN の設定はこの PoC の対象外である。
+// Load がdirectory、executable path、URLを検証するため、下流packageはfilesystem探索を行わない。
+// TURN URLは初期運用の対象外として起動前に拒否する。
 type Config struct {
 	HTTPAddress        string
 	FrontendDir        string
