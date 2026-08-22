@@ -200,6 +200,8 @@ Phase 5の実行とGate 5判定は
 ### 目的
 
 Pionの安定化を確認した後にaiortc経路を削除し、二重保守を解消して移行を完了する。
+実装と完了確認は
+[Python RTC stack削除task](../../../tasks/sincro-rtc/task-260823061841-pion-phase-6-python-rtc-removal/task.md)で扱う。
 
 ### 主な成果
 
