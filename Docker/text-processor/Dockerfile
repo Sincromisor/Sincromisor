@@ -60,12 +60,6 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ${SINCRO_USER_DIR}/sincromisor-server/sincro-models/
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server/sincro-rtc/pyproject.toml \
-    ./sincromisor-server/sincro-rtc/README.md \
-    ./sincromisor-server/sincro-rtc/.python-version \
-    ${SINCRO_USER_DIR}/sincromisor-server/sincro-rtc/
-
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-server/speech-extractor/pyproject.toml \
     ./sincromisor-server/speech-extractor/README.md \
     ./sincromisor-server/speech-extractor/.python-version \

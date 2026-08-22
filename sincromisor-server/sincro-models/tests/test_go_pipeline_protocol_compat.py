@@ -17,7 +17,7 @@ from sincro_models import (
 )
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-GO_MODULE = REPOSITORY_ROOT / "sincromisor-server" / "sincro-rtc-pion-poc"
+GO_MODULE = REPOSITORY_ROOT / "sincromisor-server" / "sincro-rtc"
 GO_HELPER = "./internal/pipeline/protocol/testdata/generate_go_payloads.go"
 
 

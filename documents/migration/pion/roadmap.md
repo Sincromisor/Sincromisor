@@ -94,11 +94,11 @@ RTC統合より先に、Goから既存Python下流serviceを利用できるこ�
 - Consul lookup、timeout、fallbackを備えたGo WebSocket client
 - 4 clientの一括reset、generation更新、旧callback拒否
 - synthesized voiceとmora timingの互換decode
-- `sincromisor-server/sincro-rtc-pion-poc/internal/pipeline` のsession coordinator、bounded queue、
+- `sincromisor-server/sincro-rtc/internal/pipeline` のsession coordinator、bounded queue、
   confirmed historyとgeneration単位のtransient state
 
 互換fixtureは
-`sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/protocol/testdata/`、
+`sincromisor-server/sincro-rtc/internal/pipeline/protocol/testdata/`、
 Gate 2の環境と結果は
 `tasks/sincro-rtc/task-260726211012-pion-phase-2-pipeline-reset-gate-2/artifacts/gate-2-result.md`
 を参照する。
@@ -110,7 +110,7 @@ Python下流serviceを変更せず会話pipelineを実行でき、resetやclose�
 
 ## Phase 3: Go RTC統合
 
-### 目的
+### 結果
 
 Phase 1のRTC / codec経路とPhase 2のpipeline clientを統合し、本番候補となるGo RTC serverを完成させる。
 
@@ -199,17 +199,17 @@ Phase 5の実行とGate 5判定は
 
 ### 目的
 
-Pionの安定化を確認した後にaiortc経路を削除し、二重保守を解消して移行を完了する。
+Pionの安定化確認後、aiortc経路を削除して二重保守を解消し、移行を完了した。
 実装と完了確認は
-[Python RTC stack削除task](../../../tasks/sincro-rtc/task-260823061841-pion-phase-6-python-rtc-removal/task.md)で扱う。
+[Python RTC stack削除task](../../../tasks/sincro-rtc/task-260823061841-pion-phase-6-python-rtc-removal/task.md)に記録する。
 
 ### 主な成果
 
-- aiortc service、dependency、RTC固有test fixtureの削除
+- aiortc service、dependency、RTC固有testの削除
 - `RTCSessionProcess`、`VoiceTransformTrack`、Python `AudioBroker` の削除
 - aiortc image、設定、compose経路の削除
 - Go RTC serverを正本とする現在設計、契約、ADRへの更新
-- 移行文書の縮退またはarchive
+- 移行文書を完了記録として維持
 
 ### 完了状態
 

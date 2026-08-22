@@ -2,9 +2,9 @@
 
 ## Summary
 
-- Python / aiortc が担う WebRTC 終端を Go / Pion WebRTC へ段階的に移行する計画をまとめる。
+- Python / aiortc が担った WebRTC 終端を Go / Pion WebRTC へ移行した記録をまとめる。
 - フロントエンドと既存音声処理サービスを一度に置き換えず、RTC transport と codec 処理を先に分離する。
-- 最初に PoC で Opus codec、再接続、資源解放を検証し、合格後に本番経路を実装する。
+- PoCで Opus codec、再接続、資源解放を検証した後、本番経路を実装して旧RTC stackを削除した。
 - 本ディレクトリは移行中の計画を扱う。確定した現在仕様、契約、判断記録、検証ログの正本は既存の配置規則に従う。
 
 ## ゴール
@@ -43,8 +43,8 @@
 
 ## 現時点の提案
 
-- 第一候補は Go / Pion WebRTC とする。
-- 目標構成ではGo RTC serverが現行 `VoiceTransformTrack` と `AudioBroker` の責務を再構成して所有し、Pythonには下流の音声・言語処理serviceだけを残す。
+- Go / Pion WebRTC を採用した。
+- Go RTC serverが旧 `VoiceTransformTrack` と `AudioBroker` の責務を再構成して所有し、Pythonには下流の音声・言語処理serviceだけを残す。
 - 初期統合では既存WebSocket + MessagePack契約をGoから直接利用し、双方向golden fixtureで互換性を固定する。
 - FrontendからPionへはTrickle ICE、PionからFrontendへはcandidate収集完了後のAnswerを返すhalf-trickleとし、Server→Frontend signaling endpointは追加しない。
 - DataChannel payloadはGoで原則解釈せず、Pythonから受け取ったJSONをopaque payloadとして転送する。
@@ -57,4 +57,3 @@
 
 - [Pion WebRTC](https://github.com/pion/webrtc)
 - [Pion WebRTC Go package](https://pkg.go.dev/github.com/pion/webrtc/v4)
-- [aiortc](https://github.com/aiortc/aiortc)

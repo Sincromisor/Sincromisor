@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import initialAnswerFixture from "../../../../../sincromisor-server/sincro-rtc-pion-poc/internal/signaling/testdata/initial_offer_answer.json?raw";
-import updateAnswerFixture from "../../../../../sincromisor-server/sincro-rtc-pion-poc/internal/signaling/testdata/update_offer_answer.json?raw";
+import initialAnswerFixture from "../../../../../sincromisor-server/sincro-rtc/internal/signaling/testdata/initial_offer_answer.json?raw";
+import updateAnswerFixture from "../../../../../sincromisor-server/sincro-rtc/internal/signaling/testdata/update_offer_answer.json?raw";
 import {
     parseChatMessagePayload,
     parseIceCandidateResponse,

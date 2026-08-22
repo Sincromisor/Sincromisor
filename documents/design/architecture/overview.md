@@ -18,13 +18,13 @@
 
 ## Responsibilities
 
-| 領域           | 責務                                                      | 正本文書                           |
-| -------------- | --------------------------------------------------------- | ---------------------------------- |
-| Frontend       | UI shell、WebRTC 接続、3D キャラクター描画、設定・診断 UI | `frontend/`                        |
-| RTC Server     | Pion WebRTC signaling、session、pipeline coordinator 接続 | `backend/services/sincro-rtc.md`   |
-| Audio Pipeline | audio frame から text / telop / voice frame への変換      | `backend/services/audio-broker.md` |
-| Contracts      | WebRTC、DataChannel、WebSocket、辞書仕様                  | `contracts/`                       |
-| Infrastructure | compose、Consul、Redis、SeaweedFS                         | `infrastructure/`                  |
+| 領域           | 責務                                                      | 正本文書                         |
+| -------------- | --------------------------------------------------------- | -------------------------------- |
+| Frontend       | UI shell、WebRTC 接続、3D キャラクター描画、設定・診断 UI | `frontend/`                      |
+| RTC Server     | Pion WebRTC signaling、session、pipeline coordinator 接続 | `backend/services/sincro-rtc.md` |
+| Audio Pipeline | audio frame から text / telop / voice frame への変換      | `backend/services/sincro-rtc.md` |
+| Contracts      | WebRTC、DataChannel、WebSocket、辞書仕様                  | `contracts/`                     |
+| Infrastructure | compose、Consul、Redis、SeaweedFS                         | `infrastructure/`                |
 
 ## System Flow
 

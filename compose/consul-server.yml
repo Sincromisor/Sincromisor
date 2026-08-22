@@ -8,7 +8,6 @@ services:
             - backend
             - external
             - rtc
-            - aiortc
         image: hashicorp/consul:latest
         command:
             [

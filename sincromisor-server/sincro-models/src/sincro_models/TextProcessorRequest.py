@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from .ChatHistory import ChatHistory, ChatMessage
 
 
-# AudioBrokerで生成され、
+# Go pipeline coordinatorで生成され、
 # TextProcessorProcessに送られる。
 # 発話と音声認識が未完了であっても処理が行われることを前提とする。
 class TextProcessorRequest(BaseModel):
