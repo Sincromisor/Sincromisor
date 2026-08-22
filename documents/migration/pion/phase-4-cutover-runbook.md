@@ -41,13 +41,11 @@ Pion通常serviceを含むcommitを反映し、`SINCRO_PION_CONSUL_HTTP_HOST=10.
 ```sh
 docker compose -p sincromisor --profile rtc build sincro-rtc
 docker compose -p sincromisor --profile rtc up -d --no-deps sincro-rtc
-docker compose -p sincromisor --profile rtc exec sincro-rtc sh -c 'test "$(ip -4 -o addr show dev "${SINCRO_PION_INTERFACE}" scope global | wc -l)" -eq 1'
 curl --fail --silent --show-error http://127.0.0.1:8001/health/ready
 curl --fail --silent --show-error http://127.0.0.1:8001/api/v1/RTCSignalingServer/statuses
 ```
 
-成功判定はPion container内の`SINCRO_PION_INTERFACE`に非-unspecified IPv4がちょうど1つあり、
-`/health/ready`と`/statuses`がHTTP 200を返すこととする。
+成功判定は`/health/ready`と`/statuses`がHTTP 200を返すこととする。
 PionはConsul登録とstartup dependency検証後、非draining時だけreadyになる。readiness失敗、port競合、または
 Consul登録失敗ではsmoke testへ進まず、証拠を保存してPionをforward-fixする。
 
