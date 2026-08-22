@@ -55,7 +55,7 @@ Pion版の経路には追加adapterを挟まない。
 
 ## 設定
 
-Pion PoCのnetwork設定は次の起動引数を正本とする。
+通常service `sincro-rtc` のnetwork設定は次の起動引数を正本とする。
 
 - `--media-udp-port`: 指定interfaceの唯一の非-unspecified IPv4へbindする固定 UDP4 mux port（1〜65535）
 - `--public-ipv4`: SDP host candidateへ広告する非unspecified IPv4
