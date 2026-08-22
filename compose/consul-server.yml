@@ -7,7 +7,8 @@ services:
             - full
             - backend
             - external
-            - pion
+            - rtc
+            - aiortc
         image: hashicorp/consul:latest
         command:
             [

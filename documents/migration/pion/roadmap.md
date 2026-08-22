@@ -179,20 +179,18 @@ FrontendやPython下流serviceの再deployなしでPionへ切り替えられる�
 
 ### 目的
 
-メンテナンス時間にstable endpointのbackendをaiortcからPionへ切り替え、実運用で安定性を確認する。
+メンテナンス切替により、stable endpointのbackendはPionへ移行済みである。Phase 5では利用再開後の安定性を観測する。
 
 ### 時系列
 
-1. 利用停止を告知し、新規sessionを停止する。
-2. close timeout後にactive aiortc sessionを終了し、aiortc serviceを停止する。
-3. Pion serviceを同じstable endpointで起動する。
-4. signaling、音声、DataChannel、下流pipelineのsmoke testを実行する。
-5. 利用を再開し、定義済みの観測期間とPion問題時の対応条件で監視する。
-6. 問題がなければPhase 6へ進み、問題があれば証拠を保存してPionをforward-fixする。
+1. `full` / `rtc` profileでPion `sincro-rtc` を通常起動する。
+2. signaling、音声、DataChannel、下流pipelineのsmoke testを実行する。
+3. 利用を再開し、定義済みの観測期間とPion問題時の対応条件で監視する。
+4. 問題がなければPhase 6へ進み、問題があれば証拠を保存してPionをforward-fixする。
 
 ### 観測期間中の扱い
 
-aiortcはPion切替後の運用rollback先にせず、Pionと同時稼働させない。
+aiortcはPion切替後の運用rollback先にせず、Pionと同時稼働させない。構成だけを `aiortc` profileへ残し、動作確認はしない。
 Pionの問題時の証拠保存とforward-fix手順は[運用移行とforward-fix](rollout-and-operations.md)を正本とする。
 Phase 5の実行とGate 5判定は
 [メンテナンス切替と安定化観測task](../../../tasks/sincro-rtc/task-260822233904-pion-phase-5-maintenance-cutover/task.md)で記録する。

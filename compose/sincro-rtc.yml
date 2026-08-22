@@ -2,10 +2,9 @@ include:
     - initializer.yml
 
 services:
-    sincro-rtc:
+    sincro-rtc-aiortc:
         profiles:
-            - full
-            - rtc
+            - aiortc
         build:
             context: ..
             dockerfile: ./Docker/sincro-rtc/Dockerfile
@@ -22,7 +21,7 @@ services:
             - SINCRO_RTC_PORT=${SINCRO_RTC_PORT}
             - SINCRO_RTC_PUBLIC_BIND_HOST=${SINCRO_RTC_PUBLIC_BIND_HOST}
             - SINCRO_RTC_PUBLIC_BIND_PORT=${SINCRO_RTC_PUBLIC_BIND_PORT}
-            - SINCRO_CONSUL_AGENT_HOST=${SINCRO_CONSUL_AGENT_HOST:-consul-agent-rtc}
+            - SINCRO_CONSUL_AGENT_HOST=${SINCRO_CONSUL_AGENT_HOST:-consul-agent-rtc-aiortc}
             - SINCRO_CONSUL_AGENT_PORT=8500
             - SINCRO_RTC_FORWARDED_ALLOW_IPS=${SINCRO_RTC_FORWARDED_ALLOW_IPS}
             - SINCRO_RTC_MAX_SESSIONS=${SINCRO_RTC_MAX_SESSIONS}
@@ -33,9 +32,7 @@ services:
                 condition: any
                 delay: 10s
         depends_on:
-            service-initializer:
-                condition: service_completed_successfully
-            consul-agent-rtc:
+            consul-agent-rtc-aiortc:
                 condition: service_healthy
         healthcheck:
             test:
@@ -48,9 +45,10 @@ services:
             timeout: 5s
             retries: 15
 
-    sincro-rtc-pion:
+    sincro-rtc:
         profiles:
-            - pion
+            - full
+            - rtc
         build:
             context: ..
             dockerfile: ./Docker/sincro-rtc-pion-poc/Dockerfile
@@ -106,10 +104,9 @@ services:
             timeout: 5s
             retries: 15
 
-    consul-agent-rtc:
+    consul-agent-rtc-aiortc:
         profiles:
-            - full
-            - rtc
+            - aiortc
         image: hashicorp/consul:latest
         command:
             [

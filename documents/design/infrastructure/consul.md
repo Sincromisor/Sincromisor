@@ -3,7 +3,7 @@
 ## Summary
 
 - Consul は backend microservices の service discovery に使う。
-- AudioBroker と Pion RTC は worker service を Consul から解決し、未解決時は fallback 設定を使う。
+- Go pipeline coordinator と Pion RTC は worker service を Consul から解決し、未解決時は fallback 設定を使う。
 - service 名や public bind を変える場合は compose と設定クラスを同時確認する。
 
 ## Scope
@@ -23,7 +23,7 @@
 - Pion RTC は `RTCSignalingServer` として、`SINCRO_PION_CONSUL_HTTP_HOST` / `SINCRO_PION_CONSUL_HTTP_PORT`のHTTP endpointへ、
   `SINCRO_PION_SERVICE_BIND_HOST`で解決したaddressと`/health/ready` check（10秒間隔、5秒timeout、critical後10分deregister）を登録する。draining開始直後に解除する。
   Pionはcross-host gossip agentを必要としない。
-- AudioBroker は SpeechExtractor / SpeechRecognizer / TextProcessor / VoiceSynthesizer の到達先を解決する。
+- Go pipeline coordinator は SpeechExtractor / SpeechRecognizer / TextProcessor / VoiceSynthesizer の到達先を解決する。
 - Consul が使えない場合でも fallback host / port で開発継続できるようにする。
 
 ## Change Checklist

@@ -30,14 +30,12 @@
 | HTTP POST   | `/api/v1/RTCSignalingServer/offer`       | Offer を受け取り Answer と `session_id` を返す |
 | HTTP POST   | `/api/v1/RTCSignalingServer/candidate`   | Trickle ICE candidate を受け取る               |
 | HTTP GET    | `/api/v1/RTCSignalingServer/statuses`    | セッション数とprocess受入状態の簡易確認        |
-| HTTP GET    | `/api/v1/RTCSignalingServer/cleanup`     | aiortc版だけで終了済みセッションを掃除する     |
 | DataChannel | `text_ch`                                | チャットメッセージ                             |
 | DataChannel | `telop_ch`                               | テロップ、mora、口形同期                       |
 | MediaTrack  | audio                                    | ユーザー音声送信、合成音声返却                 |
 
-Pion版の`statuses`は`{sessions, session_limit, ready, draining}`を返し、GET以外を
-405とする。Pion版はsession close時にregistryから自動除去するため、状態変更を行う
-`cleanup` GETを実装しない。`cleanup`は全面切替までのaiortc互換面に限る。
+通常のPion `sincro-rtc` の`statuses`は`{sessions, session_limit, ready, draining}`を返し、GET以外を
+405とする。session close時にregistryから自動除去するため、状態変更を行う`cleanup` GETは通常契約に含めない。
 
 ## DataChannel negotiation
 

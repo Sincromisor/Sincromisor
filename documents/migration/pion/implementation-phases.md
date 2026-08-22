@@ -165,16 +165,15 @@ runbookを最初から実行する。
 
 ### 作業
 
-- 利用停止を告知し、aiortc版を停止する。
-- Pion版をstable endpointで起動し、smoke test後に利用を再開する。
-- aiortc版のimageと設定は移行中の診断用に残しても、serviceは起動しない。
+- `full` / `rtc` profileでPion版をstable endpointの通常serviceとして起動し、smoke test後に利用を再開する。
+- aiortc版のimageと設定は `aiortc` 診断profileに残すが、動作確認も運用rollbackも行わない。
 - 運用文書、compose、env sample、current designを更新する。
 - 移行後の実測値を評価taskへ残す。
 - Python AudioBrokerへの新規機能追加を停止する。
 
 ### Gate 5
 
-- 切替後の観測期間中にPion問題時の対応条件へ該当しない。
+- Pion通常構成への切替後、観測期間中にPion問題時の対応条件へ該当しない。
 - 未解決のPion固有critical issueがない。
 - 現在設計と実装が一致している。
 

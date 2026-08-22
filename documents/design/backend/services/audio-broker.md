@@ -2,8 +2,8 @@
 
 ## Summary
 
-- AudioBroker は RTC session 内で音声処理 downstream services を束ねる中継層である。
-- Extractor、Recognizer、TextProcessor、VoiceSynthesizer へ WebSocket 接続し、キューで結果を中継する。
+- Python `AudioBroker` はaiortc診断profileにだけ残る旧RTC経路の中継層である。
+- 通常のPion `sincro-rtc` はGo pipeline coordinatorでExtractor、Recognizer、TextProcessor、VoiceSynthesizerへ接続する。
 - WebSocket / msgpack 契約は `contracts/audio-pipeline-websocket.md` を正本とする。
 
 ## Scope
@@ -27,7 +27,7 @@
 - `SynthesizerReceiverThread`:
     - 合成音声を `VoiceSynthesizerResultFrame` へ分割する。
 
-### Go移行境界
+### 通常運用のGo pipeline coordinator
 
 `sincromisor-server/sincro-rtc-pion-poc/internal/pipeline/discovery` と
 `internal/pipeline/client` に、Consul/fallback解決と4つのtyped WebSocket clientを置く。これらは
@@ -40,9 +40,8 @@ generation更新後にtransient queue、partial user / assistant state、未送�
 初回接続失敗はgeneration 1のまま、runtime failureだけがgenerationを1回進める。確定済みhistoryは防御的copyで
 次generationへ継承する。
 
-このCoordinatorはまだproductionのRTC sessionへ配線されていない。現行productionではPython `AudioBroker` と
-Sender/Receiver threadが引き続きdownstream接続と再接続を担当するため、Go pipelineの存在をproduction置換済みとは
-扱わない。Python AudioBrokerをproduction正本とする状態はPhase 3統合まで維持する。
+このCoordinatorは通常のPion RTC sessionへ配線される。Python `AudioBroker` とSender/Receiver threadはaiortc診断profileの
+構成だけに残し、新機能を追加しない。Phase 6で旧Python RTC stackとともに削除する。
 
 ## Data / State
 
