@@ -84,17 +84,16 @@ checkは `/health/ready` の10秒間隔・5秒timeout・critical後10分deregist
 
 compose配線時はこの3引数を環境変数へ対応付け、`examples/compose.env`、`compose/`、`compose.yml`、設定実装、[Compose設計](../../design/infrastructure/compose.md)を同時に更新する。
 
-`sincro-rtc-pion` はshared `sincromisor-net` 上でcontainer IPv4をDockerへ動的割当させる。後続serviceの起動時は
+通常serviceの `sincro-rtc` はshared `sincromisor-net` 上でcontainer IPv4をDockerへ動的割当させる。後続serviceの起動時は
 `--media-udp-port ${SINCRO_PION_MEDIA_UDP_PORT}`、`--interface ${SINCRO_PION_INTERFACE}`、
 `--service-bind-host ${SINCRO_PION_SERVICE_BIND_HOST}` を配線する。local composeではservice bind hostは
 service名へ解決され、別host ConsulではPion hostのVPN addressを登録する。container IPv4とConsul service addressは、
 SDPへ広告するpublic IPv4とは別値である。
 
-composeではaiortc版を`full` / `rtc` profile、Pion版を`pion` profileで選択する。Pionは
-aiortcと同じstable TCP 8001を、`SINCRO_PION_MEDIA_UDP_PORT` をhost/container同値の
-UDP portとして公開する。`SINCRO_PION_PUBLIC_IPV4`、`SINCRO_PION_STUN`、
-`SINCRO_RTC_MAX_SESSIONS`、`SINCRO_PION_FFMPEG_PATH`はPion commandへ渡す。Pionは直接使う`sincro-consul-server`がhealthyになってから起動する。`pion` とaiortc profileを同じprojectで併用すると
-stable TCP port競合で後から起動したbackendが失敗する。
+composeではPion版 `sincro-rtc` を`full` / `rtc` profileで通常起動する。aiortc版は `aiortc` 診断profileに
+構成だけを残す。Pionはstable TCP 8001と`SINCRO_PION_MEDIA_UDP_PORT`をhost/container同値のUDP portとして公開する。
+`SINCRO_PION_PUBLIC_IPV4`、`SINCRO_PION_STUN`、`SINCRO_RTC_MAX_SESSIONS`、`SINCRO_PION_FFMPEG_PATH`はPion commandへ渡す。
+Pionは直接使う`sincro-consul-server`がhealthyになってから起動する。`aiortc` と `full` / `rtc` を同じprojectで併用しない。
 
 設定の形式と組み合わせはnetwork socketやHTTP listenerを公開する前に検証する。public IPv4のparse失敗、UDP mux bind失敗、port不一致、空のinterface選択、TURN URL、上限やtimeoutの0 / 負値はreadiness falseのまま待機せずprocessをfail-fastさせる。外部NAT / firewallの到達性はstartupだけでは保証できないため、production相当リハーサルのsmoke testで検証する。
 
@@ -195,19 +194,17 @@ PeerConnectionをclose-once guard経由で共通5秒の期限内に並行して�
 
 ## Rollout段階
 
-Phase 4の停止切替とPion問題時の対応は、[切替リハーサルrunbook](phase-4-cutover-runbook.md)を正本とする。
-実測結果は同runbookからリンクするGate 4 artifactへ記録する。
+Phase 5の通常構成とPion問題時の対応は、[メンテナンス切替runbook](phase-4-cutover-runbook.md)を正本とする。
+実測結果は同runbookからリンクするGate 5 artifactへ記録する。
 
 ### 開発環境
 
-- Pion backendを明示選択した開発者だけが利用する。
+- `full` / `rtc` profileでPionを利用する。
 - 接続、音質、pipeline互換、resource profileを収集する。
 
 ### integration評価
 
-- 同じ環境でaiortcとPionを一方ずつ起動する。
-- Gate 3で成立済みのChromeで1 turnのsmoke testを両backendへ逐次実行する。
-- 同じPython下流serviceへ接続して結果を比較する。
+- Pionだけを起動し、Gate 3で成立済みのChromeで1 turnのsmoke testを実行する。
 
 ### production相当リハーサル
 
@@ -217,8 +214,8 @@ Phase 4の停止切替とPion問題時の対応は、[切替リハーサルrunbo
 
 ### 運用切り替え
 
-- メンテナンス時間にaiortcを停止し、Pionを同じstable endpointで起動する。
-- aiortcのimageと設定は移行中の診断用に残しても、serviceは起動しない。
+- `full` / `rtc` profileでPionを同じstable endpointの通常serviceとして起動する。
+- aiortcのimageと設定は `aiortc` 診断profileに残しても、動作確認も運用rollbackも行わない。
 - 観測期間後にPython RTC stackを削除する。
 - Pipeline契約のIDL化は自動的に開始せず、必要なら別initiativeで判断する。
 

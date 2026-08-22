@@ -9,15 +9,15 @@
 
 ## 必須検証
 
-| 分類          | Phase 1                  | Phase 3                                    | Phase 4                             |
-| ------------- | ------------------------ | ------------------------------------------ | ----------------------------------- |
-| signaling     | initial Offer、candidate | 現行endpointのrepository test              | stable endpointのsmoke test         |
-| media         | Opus受信、test tone      | 実運用形式の合成音声を1回再生              | 会話音声の聴取                      |
-| DataChannel   | 2 channelへ固定JSON送信  | 現行Frontendで会話を1 turn                 | text / telop受信                    |
-| pipeline      | 対象外                   | Gate 2の互換試験とproduction候補の結合試験 | 実4サービスで会話                   |
-| lifecycle     | 通常closeとcodec error   | 正常終了と代表的な異常終了                 | Pion切替、session収束               |
-| network       | local host candidate     | local統合環境                              | 実運用のNAT、firewall、固定UDP port |
-| compatibility | Chrome                   | 管理対象Chromium                           | Gate 3で成立済みのChromeを1回       |
+| 分類          | Phase 1                  | Phase 3                                    | Phase 4                             | Phase 5                            |
+| ------------- | ------------------------ | ------------------------------------------ | ----------------------------------- | ---------------------------------- |
+| signaling     | initial Offer、candidate | 現行endpointのrepository test              | stable endpointのsmoke test         | 通常profileのstable endpoint smoke |
+| media         | Opus受信、test tone      | 実運用形式の合成音声を1回再生              | 会話音声の聴取                      | 非無音の合成音声                   |
+| DataChannel   | 2 channelへ固定JSON送信  | 現行Frontendで会話を1 turn                 | text / telop受信                    | text / telop受信                   |
+| pipeline      | 対象外                   | Gate 2の互換試験とproduction候補の結合試験 | 実4サービスで会話                   | session終了後の収束                |
+| lifecycle     | 通常closeとcodec error   | 正常終了と代表的な異常終了                 | Pion切替、session収束               | Pion問題の安定化観測               |
+| network       | local host candidate     | local統合環境                              | 実運用のNAT、firewall、固定UDP port | Phase 4構成を再利用                |
+| compatibility | Chrome                   | 管理対象Chromium                           | Gate 3で成立済みのChromeを1回       | aiortc診断は対象外                 |
 
 ## Phase 1 minimal PoC
 
@@ -111,6 +111,18 @@ Pion固有の運用強化であり、Gate 4の受け入れ条件、検証計画�
 Gate 4は、Pionで1回の既存Chrome経路を確認した時点で判定する。aiortcの起動確認は診断情報に留め、会話成立を要求しない。実下流の応答本文は固定文と比較せず、
 利用者/応答text、telop、非無音音声の表示・再生をbrowser UIで確認する。Firefox、Docker crash、環境の網羅監査、
 新しいbrowser oracleは、browser固有の実害があり、aiortcで同じ経路が成立している場合だけ独立して扱う。
+
+## Phase 5 maintenance cutover
+
+`full` / `rtc` profileでPion `sincro-rtc` だけがstable TCP 8001と固定media UDP portを公開することを確認する。
+既存Chromeで1 turnの会話、text、telop、非無音音声、session終了後の収束を1回確認して利用を再開する。
+aiortcは `aiortc` profileに構成だけを残し、Gate 5の動作確認・rollback経路には含めない。
+
+### Gate 5判定
+
+- 移行必須: 通常profileのPion stable endpointでsmokeが成立し、利用者がPhase 6着手を判断するまでPion問題時の対応条件に該当しない。
+- 観測不能: 移行必須条件を観測できない場合はPASSにせず、必要な観測点と解除条件を記録してtaskを`blocked`にする。
+- 独立した運用強化: 日数、traffic量、成功率、soak、aiortc動作確認は追加しない。
 
 ## Observability
 

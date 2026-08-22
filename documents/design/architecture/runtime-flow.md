@@ -3,7 +3,7 @@
 ## Summary
 
 - 起動時、フロントエンドは RTC 設定を取得し、WebRTC Offer を送信する。
-- WebRTC 確立後、ユーザー音声は audio track で `sincro-rtc` に入り、AudioBroker が下流サービスへ中継する。
+- WebRTC 確立後、ユーザー音声は audio track でPion実装の `sincro-rtc` に入り、Go pipeline coordinator が下流サービスへ中継する。
 - 応答テキストは `text_ch`、テロップ・口形同期情報は `telop_ch`、合成音声は返却 audio track でフロントへ戻る。
 
 ## Scope
@@ -22,7 +22,7 @@
 3. `SincroController` / `SincroAppController` が UserMedia と WebRTC 接続を開始する。
 4. `RTCTalkClient` が audio track と `text_ch` / `telop_ch` を持つ PeerConnection を作る。
 5. フロントエンドが `/offer` へ SDP と `talk_mode` を送信する。
-6. `sincro-rtc` が session process を生成または更新し、Answer と `session_id` を返す。
+6. `sincro-rtc` がPion sessionを生成または更新し、Answer と `session_id` を返す。
 7. ICE candidate は `/candidate` へ後送される。
 
 ## Conversation Flow
@@ -31,7 +31,7 @@
 sequenceDiagram
     participant F as Frontend
     participant R as sincro-rtc
-    participant B as AudioBroker
+    participant B as Go pipeline coordinator
     participant E as SpeechExtractor
     participant A as SpeechRecognizer
     participant T as TextProcessor
@@ -58,7 +58,7 @@ sequenceDiagram
 - ICE failed:
     - フロントの再接続ログ、候補送信、公開 host / port を確認する。
 - 下流サービス接続失敗:
-    - AudioBroker の worker 解決、Consul、fallback host / port を確認する。
+    - pipeline coordinator の worker 解決、Consul、fallback host / port を確認する。
 - `text_ch` / `telop_ch` 未受信:
     - DataChannel 名、open 状態、TextProcessor / Synthesizer の出力キューを確認する。
 

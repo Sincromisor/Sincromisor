@@ -2,22 +2,22 @@
 
 ## Summary
 
-- AudioBroker と SpeechExtractor / SpeechRecognizer / TextProcessor / VoiceSynthesizer 間の WebSocket 契約を定義する。
-- 4 系統の WebSocket は msgpack binary を使い、AudioBroker がキューで中継する。
+- Go pipeline coordinator と SpeechExtractor / SpeechRecognizer / TextProcessor / VoiceSynthesizer 間の WebSocket 契約を定義する。
+- 4 系統の WebSocket は msgpack binary を使い、coordinator がキューで中継する。
 - model 互換が壊れる変更は、`sincro-models` と各 sender / receiver / worker を同時更新する。
 
 ## Producers / Consumers
 
 - Producer:
-    - AudioBroker: audio frame、認識結果、応答テキスト
+    - Go pipeline coordinator: audio frame、認識結果、応答テキスト
     - Downstream services: extraction / recognition / text / voice synthesis result
 - Consumer:
-    - SpeechExtractor、SpeechRecognizer、TextProcessor、VoiceSynthesizer、AudioBroker
+    - SpeechExtractor、SpeechRecognizer、TextProcessor、VoiceSynthesizer、Go pipeline coordinator
 
 ## Compatibility Policy
 
 - WebSocket path、msgpack model、必須 field の変更は破壊的変更として扱う。
-- `sincro-models` の変更は各サービスと AudioBroker を同時に確認する。
+- `sincro-models` の変更は各サービスとGo pipeline coordinatorを同時に確認する。
 - TextProcessor の chat / telop 契約変更は frontend RTC 契約にも影響する。
 
 ## Endpoints / Channels
@@ -105,10 +105,10 @@ manifest の byte 差分を検出する。fixture を手編集しない。
 ## Error Semantics
 
 - 接続断、decode error、worker 例外は該当 thread の終了として扱う。
-- AudioBroker は通信系の不健全を検知し、再接続を試みる。
+- Go pipeline coordinator は通信系の不健全を検知し、4接続を再作成する。
 - ユーザーへ見せる必要があるエラーは `text_channel_queue` 経由で `text_ch` へ中継できる。
 
-### Go pipeline client（移行中）
+### Go pipeline coordinator
 
 `sincro-rtc-pion-poc/internal/pipeline/client` は、上表と同じ4 endpointへ
 `github.com/coder/websocket` の binary messageだけで接続する。Extractorは接続直後に初期化MessagePackを
@@ -149,20 +149,19 @@ strictly increasingとし、新generationの最初のspeech IDは直前generatio
 
 retryは1秒capから始まるfull jitterで、attempt 5以降は30秒capへ飽和する。`Close`またはStart context cancellationは
 retry waiter、generation goroutine、clientをcancel / joinし、全producer終了後にexternal channelをcloseする。
-Python `AudioBroker`がproduction正本である状態はPhase 3でPion sessionへ統合するまで維持し、この責務境界を
-個別clientへ戻さない。
+通常経路ではこのCoordinatorがPion sessionに統合される。Python `AudioBroker` はaiortc診断用に残るが、新機能を追加しない。
 
 ## Timeout / Retry
 
 - Receiver は timeout 付き recv で監視を継続する。
-- AudioBroker は 1 秒起点、最大 30 秒程度の backoff で再接続する。
+- coordinator は 1 秒起点、最大 30 秒程度の backoff で4接続を再作成する。
 - 過負荷時は低遅延を優先し、古い frame の破棄を許容する。
 - 移行中のGo個別clientは自動retryしない。上位coordinatorがterminal eventを受け、4接続を同じgenerationで
   作り直す責務を持つ。
 
 ## Versioning
 
-- msgpack model に破壊的変更を入れる場合は、全 downstream service と AudioBroker を同一タスクで更新する。
+- msgpack model に破壊的変更を入れる場合は、全 downstream service とGo pipeline coordinatorを同一タスクで更新する。
 - WebSocket path 変更は compose、Consul service 名、fallback 設定も同時確認する。
 
 ## Test Matrix

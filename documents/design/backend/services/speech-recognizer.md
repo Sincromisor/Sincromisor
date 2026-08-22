@@ -19,7 +19,7 @@
 
 ## Responsibilities
 
-- AudioBroker から speech segment を受け取る。
+- Go pipeline coordinator から speech segment を受け取る。
 - speech segment を partial / confirmed result へ変換する。
 - 必要に応じて confirmed result に後処理を適用する。
 - 結果を TextProcessor へ渡せる msgpack model として返す。

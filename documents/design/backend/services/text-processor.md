@@ -34,7 +34,7 @@
 
 - `ChatMessage` の field を変える場合は frontend RTC contract と `RTCMessage.ts` を確認する。
 - `expression_code` の値域や意味を変える場合は Character motion と UI 表示を確認する。
-- `talk_mode` を追加する場合は frontend settings、AudioBroker path、TextProcessor route を同時更新する。
+- `talk_mode` を追加する場合は frontend settings、Go pipeline coordinatorのpath、TextProcessor routeを同時更新する。
 
 ## References
 
