@@ -8,22 +8,22 @@
 Markdown は「次に読む人と LLM エージェントが短時間で判断できる状態」を最優先する。
 
 1. **現在有効な情報を読みやすく保つ** — 作業ログ、古い判断、未確定メモを現在仕様の本文へ混ぜない
-2. **リンクで正本へ誘導する** — endpoint、payload、環境変数、運用手順などの正本を重複記載しない
+2. **リンクで正本へ誘導する** — エンドポイント、ペイロード、環境変数、運用手順などの正本を重複記載しない
 3. **フォーマット差分を作らない** — 手整形に頼らず Prettier の出力を受け入れる
 
-ルールは原則 hard。**破る場合は同じ箇条書きまたは直前行に `<!-- reason: <理由> -->` を付ける**(レビューでの差し戻し基準は理由の有無)。
+ルールは原則強制。**破る場合は同じ箇条書きまたは直前行に `<!-- reason: <理由> -->` を付ける**(レビューでの差し戻し基準は理由の有無)。
 
 ## 1. ファイル配置 / 命名
 
-| 対象                  | ルール                               |
-| --------------------- | ------------------------------------ |
-| Markdown ファイル名   | kebab-case                           |
-| README                | `README.md` のみ例外                 |
-| タスクディレクトリ    | `tasks/<category>/task-<id>-<slug>/` |
-| タスク本文            | `task.md`                            |
-| ADR                   | `ADR-<YYMMDD>-<topic>.md`            |
-| 一時メモ / 作業中メモ | 対応 task directory の `artifacts/`  |
-| 現在有効な設計 / 契約 | `documents/design/` に置く           |
+| 対象                  | ルール                                     |
+| --------------------- | ------------------------------------------ |
+| Markdown ファイル名   | kebab-case                                 |
+| README                | `README.md` のみ例外                       |
+| タスクディレクトリ    | `tasks/<category>/task-<id>-<slug>/`       |
+| タスク本文            | `task.md`                                  |
+| ADR                   | `ADR-<YYMMDD>-<topic>.md`                  |
+| 一時メモ / 作業中メモ | 対応するタスクディレクトリの `artifacts/`  |
+| 現在有効な設計 / 契約 | `documents/design/` に置く                 |
 
 - snake_case / camelCase の `.md` ファイル名を新規追加しない。
 - 設計文書の作成・更新・分割は [documents/design/documentation-guide.md](../design/documentation-guide.md) を正本とする。
@@ -38,7 +38,7 @@ Markdown は「次に読む人と LLM エージェントが短時間で判断で
 | フォーマッタ (Markdown) | **Prettier**(`*.md` のみスコープ)                                            |
 | Prettier 設定           | [.prettierrc.json](../../.prettierrc.json)                                   |
 | Prettier ignore         | [.prettierignore](../../.prettierignore)                                     |
-| 実行 scripts            | [sincromisor-frontend/package.json](../../sincromisor-frontend/package.json) |
+| 実行スクリプト          | [sincromisor-frontend/package.json](../../sincromisor-frontend/package.json) |
 
 - Prettier は Markdown 専用として扱う。TypeScript / JavaScript / JSON は Biome、Python は Ruff、Go は `gofmt` に任せる。
 - `.prettierrc.json` の `proseWrap: "preserve"` を前提に、本文の改行位置は書き手が意味単位で決める。
@@ -47,7 +47,7 @@ Markdown は「次に読む人と LLM エージェントが短時間で判断で
     1. `cd sincromisor-frontend && npm run check:md`
     2. TypeScript 変更を含む場合は `cd sincromisor-frontend && npm run check`
 
-**Why**: Markdown は手整形の癖が差分に出やすい。Prettier の責務を Markdown に限定し、他言語の formatter と衝突させない。
+**Why**: Markdown は手整形の癖が差分に出やすい。Prettier の責務を Markdown に限定し、他言語のフォーマッタと衝突させない。
 
 ## 3. 文書構成
 
@@ -62,13 +62,13 @@ Markdown は「次に読む人と LLM エージェントが短時間で判断で
 
 ## 4. 文章 / 言語
 
-| 対象                          | 言語                           |
-| ----------------------------- | ------------------------------ |
-| `documents/**` の本文         | 日本語                         |
-| 見出し                        | 日本語または既存文書に合わせる |
-| コマンド / path / env var     | 原文のまま                     |
-| endpoint / JSON key / channel | 契約名のまま                   |
-| 外部ツール名 / ライブラリ名   | 公式表記                       |
+| 対象                                   | 言語                           |
+| -------------------------------------- | ------------------------------ |
+| 本文                                   | 日本語                         |
+| 見出し                                 | 日本語または既存文書に合わせる |
+| コマンド / パス / env var              | 原文のまま                     |
+| エンドポイント / JSON key / チャンネル | 契約名のまま                   |
+| 外部ツール名 / ライブラリ名            | 公式表記                       |
 
 - 文体は「です・ます」ではなく、既存文書に合わせて簡潔な常体を基本にする。
 - 断定できない仕様を断定しない。未確認事項はタスク化するか、確認条件を明記する。
@@ -79,7 +79,7 @@ Markdown は「次に読む人と LLM エージェントが短時間で判断で
 
 - リポジトリ内リンクは相対リンクを使う。
 - 同じ情報を複数文書にコピーしない。正本へのリンクと、読む理由を 1 行で書く。
-- endpoint / payload / env var / compose 設定の詳細は、該当する `documents/design/contracts/` または `documents/design/infrastructure/` を参照する。
+- エンドポイント / ペイロード / env var / compose 設定の詳細は、該当する `documents/design/contracts/` または `documents/design/infrastructure/` を参照する。
 - 画像や大きな生成物へリンクする場合は、生成手順または更新条件を近くに書く。
 - リンク切れを作らない。ファイル移動時は参照元を `rg` で確認する。
 
@@ -87,11 +87,11 @@ Markdown は「次に読む人と LLM エージェントが短時間で判断で
 
 ## 6. コードブロック / コマンド
 
-- fenced code block を使い、可能な限り info string を付ける。
-- shell コマンドは `sh` を使う。
+- フェンスコードブロックを使い、可能な限り info string を付ける。
+- シェルコマンドは `sh` を使う。
 - JSON / YAML / TOML / Python / TypeScript は該当する info string を付ける。
 - コマンド例は、どのディレクトリで実行するか分かる形にする。
-- secret、実トークン、個人情報、実ユーザー音声認識結果を例に書かない。
+- シークレット、実トークン、個人情報、実ユーザー音声認識結果を例に書かない。
 - 長いコードを Markdown に埋め込まない。実装ファイルを正本にし、文書からリンクする。
 
 例:
@@ -121,12 +121,12 @@ npm run check:md
 ## 9. TODO / コメントアウト
 
 - TODO 形式: `TODO(task-<id>-<slug>): <内容>`
-- 旧 `TODO(TASK-yymmddhhmmss): <内容>` は移行互換として許容する。新規 TODO は canonical task ID を使う。
+- 旧 `TODO(TASK-yymmddhhmmss): <内容>` は移行互換として許容する。新規 TODO は正規のタスクID を使う。
 - ID なし TODO は禁止。必要なら先にタスクを作る。
-- Markdown comment で本文を隠して残さない。不要な記述は削除し、必要なら task done または ADR に残す。
-- 未確定の検討メモを設計本文に置かない。対応 task directory の `artifacts/` または `impl.md` に置く。
+- Markdown コメントで本文を隠して残さない。不要な記述は削除し、必要なら task done または ADR に残す。
+- 未確定の検討メモを設計本文に置かない。対応するタスクディレクトリの `artifacts/` または `impl.md` に置く。
 
-**Why**: Markdown の TODO は grep されにくく、放置されやすい。タスク ID と結び付けて追跡可能にする。
+**Why**: Markdown の TODO は grep されにくく、放置されやすい。タスクID と結び付けて追跡可能にする。
 
 ## 10. その他の負債抑制ルール
 
