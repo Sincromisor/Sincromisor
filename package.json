@@ -30,7 +30,7 @@
         "hookCommand": "node scripts/metrics/logAgentRun.mjs"
     },
     "taskClose": {
-        "commitTemplate": "Why: The task reached a final evaluation state.\nWhat: Record {verdict}, attempts={attempts}, and task artifacts.\nVerify: npm run tasks:check\nRisk: See {taskDir}/eval.md and impl.md.\nRefs: {id}"
+        "commitTemplate": "Why: タスクが最終評価に到達したため。\nWhat: 判定 {verdict}、試行回数 {attempts}、タスク成果物を記録。\nVerify: npm run tasks:check\nRisk: {taskDir}/eval.md と impl.md を参照。\nRefs: {id}"
     },
     "gateSteps": [
         {

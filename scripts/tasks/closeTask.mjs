@@ -19,10 +19,10 @@
  * - 基点ブランチへのマージ後に実行すること（tasks/README.md「ブランチライフサイクル」）。
  *
  * コミットメッセージ:
- * - subject は現行どおり（`chore(tasks): close <id> (PASS, attempts=N)` / FAIL 版）。
- * - body は LLM 散文を含まない機械的事実のみ（`Verdict` / `Attempts` / `Refs: <id>` /
- *   成果物ポインタ）。Why/What は task.md / impl.md / eval.md（同コミット内）が正本。
- * - body フォーマットは展開先 `package.json`（cwd）の `taskClose.commitTemplate` で上書き
+ * - 件名は日本語の定型文とし、タスク ID、判定、試行回数を含める。
+ * - 本文は LLM 散文を含まない機械的事実のみ（`Verdict` / `Attempts` / `Refs: <id>` /
+ *   成果物への参照）。`Why` / `What` は `task.md` / `impl.md` / `eval.md`（同コミット内）が正本。
+ * - 本文形式は展開先 `package.json`（作業ディレクトリ）の `taskClose.commitTemplate` で上書き
  *   できる。プレースホルダ: `{id}` / `{verdict}` / `{attempts}` / `{taskDir}`。未設定 /
  *   不在 / パース失敗時は既定 body にフォールバックする（close を止めない）。
  */
@@ -128,8 +128,8 @@ async function main() {
             : ["verdict=FAIL", `attempts=${attempts}`];
     const subject =
         verdict === "PASS"
-            ? `chore(tasks): close ${meta.id} (PASS, attempts=${attempts})`
-            : `chore(tasks): record verdict=FAIL attempts=${attempts} (${meta.id})`;
+            ? `chore(tasks): ${meta.id} を完了 (PASS, attempts=${attempts})`
+            : `chore(tasks): ${meta.id} の失敗を記録 (FAIL, attempts=${attempts})`;
     const template = await readCommitTemplate();
     const body = buildCloseCommitBody({ id: meta.id, verdict, attempts, taskDir }, template);
 
@@ -145,7 +145,7 @@ async function main() {
     if (dryRun) {
         console.log("[dry-run] 実行予定:");
         for (const s of steps) console.log(`  ${s.join(" ")}`);
-        console.log("\n[dry-run] commit message:");
+        console.log("\n[dry-run] コミットメッセージ:");
         console.log(subject);
         console.log("");
         console.log(body);
@@ -157,7 +157,7 @@ async function main() {
     const staged = capture(["git", "diff", "--cached", "--name-only"]).trim();
     if (!staged) fail("コミット対象の差分がありません（meta は既に同じ値の可能性）");
     run(steps[2]);
-    console.log(`\nclose 完了: ${meta.id}（verdict=${verdict} attempts=${attempts}）`);
+    console.log(`\n完了処理: ${meta.id}（verdict=${verdict} attempts=${attempts}）`);
 }
 
 await main();

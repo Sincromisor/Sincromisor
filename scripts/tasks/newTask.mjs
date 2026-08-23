@@ -16,7 +16,7 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { stringifyMeta, TASKS_ROOT, today, writeFileEnsured } from "./lib.mjs";
+import { hasJapaneseText, stringifyMeta, TASKS_ROOT, today, writeFileEnsured } from "./lib.mjs";
 
 function fail(msg) {
     console.error(`エラー: ${msg}`);
@@ -59,6 +59,9 @@ async function main() {
             '使い方: node scripts/tasks/newTask.mjs <category> "<タイトル>" [--slug=..] [--depends=a,b]',
         );
     }
+    if (!hasJapaneseText(title)) {
+        fail("タイトルは、固有名詞だけでなく内容を説明する日本語を含めてください。");
+    }
 
     const slug = flags.get("slug") ? slugify(flags.get("slug")) : slugify(title);
     if (!slug) fail("slug を生成できません。--slug=<英数とハイフン> を指定してください。");
@@ -93,7 +96,7 @@ async function main() {
 
     const taskMd = `# ${title}
 
-<!-- ${TASKS_ROOT}/AUTHORING-CHECKLIST.md を目安に、変更のリスクに必要な項目だけ具体化する。 -->
+<!-- ${TASKS_ROOT}/AUTHORING-CHECKLIST.md と documents/rules/coding-md.md に従い、変更のリスクに必要な項目だけを日本語で具体化する。 -->
 
 ## 背景 / 目的
 
@@ -101,14 +104,14 @@ async function main() {
 
 ## 完了条件（受け入れ条件）
 
-<!-- 利用者が求める最小の結果と、その確認方法。根拠のない性能値、網羅試験、環境matrixを追加しない。 -->
+<!-- 利用者が求める最小の結果と、その確認方法。根拠のない性能値、網羅試験、複数環境対応を追加しない。 -->
 
 - [ ] <検証可能な条件1>
 - [ ] <検証可能な条件2>
 
 ## 設計判断
 
-<!-- 実装結果を左右する判断だけを書く。外部境界がある場合は、設定値・port・address・probe の
+<!-- 実装結果を左右する判断だけを書く。外部境界がある場合は、設定値・ポート・アドレス・死活確認の
   供給元、消費先、正本もここか実装方針に明記する。通常の実装判断や不採用案の網羅は不要。 -->
 
 ## スコープ境界
@@ -121,15 +124,15 @@ async function main() {
 
 ## テスト
 
-<!-- 変更範囲に対応する最小の確認。全体3点gateは高リスクまたは横断変更だけ。
+<!-- 変更範囲に対応する最小の確認。全体3点検査は高リスクまたは横断変更だけ。
   高リスク統合タスクだけは必要に応じて
-  単体テスト、所有者間の結合テスト、本番用アダプターまたは契約用固定データの観測点を分ける。 -->
+  単体テスト、所有者間の結合テスト、本番用接続処理または契約用固定データの観測点を分ける。 -->
 
 ## ドキュメント同期の要否
 
-<!-- 公開 API / 通信契約 / 公開挙動への影響を判定。チェックリスト観点6。
-  要なら同期先（API スキーマ / 利用例 / README / 設計資料など）を具体名で受け入れ条件に書く。
-  不要ならその理由を 1 行。公開バレル/生成物を変えるなら再生成とコミットを方針に含める。 -->
+<!-- 公開API / 通信契約 / 公開挙動への影響を判定。
+  要なら同期先（APIスキーマ / 利用例 / README / 設計資料など）を具体名で受け入れ条件に書く。
+  不要ならその理由を 1 行。公開エクスポート / 生成物を変えるなら再生成とコミットを方針に含める。 -->
 
 `;
 

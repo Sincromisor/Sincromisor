@@ -17,8 +17,8 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
     - 入口: `documents/design/index.md`
     - 運用ガイド: `documents/design/documentation-guide.md`
 - 使用言語
-    - 開発者は日本語ネイティブであるため、原則として日本語を用いる。
-    - 技術用語など、日本語では表現が不自然になるものについてのみ、英語を用いても構わない。
+    - 説明文、見出し、表の列名、ソースコード内のコメントは、一般的な日本語で書く。
+    - 英語は識別子、設定キー、原文引用、公式の固有名詞など正確な原表記が必要な箇所に限る。一般的な日本語がある語を、技術用語や検索性を理由に英語へ置き換えない。Markdownの詳細は `documents/rules/coding-md.md` を正本とする。
 
 ## 最初に読む
 
@@ -56,13 +56,13 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
     - `voice-synthesizer/`: 音声合成。
     - `sincro-config/`, `sincro-models/`: 設定ロード、サービス発見、サービス間モデル。
 - `sincromisor-frontend/src/`
-    - `app/`: app controller、shell、settings、event / bridge。
-    - `features/`: RTC、media、conversation、dialog、debug、settings、gaze などの機能単位。
-    - `character/`: VRM scene、behavior、retargeting、IK、Looking Glass / VRM360ランタイム。
-    - `pages/`: Vite MPA の HTML / entry / page-specific Reactパネル。
-    - `shared/`: logging と横断型。
+    - `app/`: アプリ制御、シェル、設定、イベント / 橋渡し。
+    - `features/`: RTC、メディア、会話、ダイアログ、デバッグ、設定、視線などの機能単位。
+    - `character/`: VRMシーン、振る舞い、リターゲティング、IK、Looking Glass / VRM360ランタイム。
+    - `pages/`: Vite MPA の HTML / エントリーポイント / ページ固有のReactパネル。
+    - `shared/`: ログと横断型。
     - `ts/`, `react/`: 旧構成。新規実装は原則置かない。
-- `documents/design/`: 現在有効な設計、契約、ADR、initiative。
+- `documents/design/`: 現在有効な設計、契約、ADR、取り組み計画。
 - `documents/rules/`: コーディング、構造、文書運用の横断ルール。
 - `tasks/`: 作業タスク、検証ログ、サブエージェント成果物。
 - `documents/tasks/`: 旧タスク管理からの移行案内。
@@ -85,7 +85,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
     - 禁止するのは、コードを同じ粒度で一行ずつ読み上げる逐語説明である。複数行の処理を一段高い抽象度で要約するコメントや、パイプライン内の位置を示すコメントは積極的に書く。
     - 既存コードにコメントがないことは、新規・変更コードでコメントを省略する理由にならない。既存実装より現行規約を優先する。
     - 既存コードを変更する場合は、変更箇所と、その変更を理解するために読む直接のヘルパー、ステート、イベント、ライフサイクル、データ変換まで確認する。
-    - 本番コードを変更した場合は、変更したシンボル・処理群・判断と上記の直接範囲を全件点検する。必須コメントの欠落・説明不足・stale comment は完了を妨げる不適合とし、監査台帳を作らなくても解消してから完了する。
+    - 本番コードを変更した場合は、変更したシンボル・処理群・判断と上記の直接範囲を全件点検する。必須コメントの欠落・説明不足・陳腐化したコメントは完了を妨げる不適合とし、監査台帳を作らなくても解消してから完了する。
     - 「趣味開発」「既存コードにない」「短い」「内部用」「型や命名で分かる」は、必須対象のコメントを省略する理由として認めない。
     - 陳腐化したコメントを残さない。コード変更時は関連コメントを更新または削除する。
     - TODO は単に「あとで直す」と書かず、理由、削除条件、issue番号、期限または判断基準を含める。
@@ -176,7 +176,7 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 
 ## ローカル確認
 
-変更内容に応じてフロント、Python、Go、Compose、Markdown、task tooling の確認範囲を選ぶ。具体的なコマンドとタスクのクローズ前の必須確認は `tasks/README.md` を正本とする。実行できなかった確認は、理由をタスク文書と最終報告に残す。
+変更内容に応じてフロント、Python、Go、Compose、Markdown、タスク管理ツールの確認範囲を選ぶ。具体的なコマンドとタスクのクローズ前の必須確認は `tasks/README.md` を正本とする。実行できなかった確認は、理由をタスク文書と最終報告に残す。
 
 ## よくある落とし穴
 

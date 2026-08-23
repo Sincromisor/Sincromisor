@@ -148,14 +148,14 @@ Go では、言語と標準ツールが用意する単純な流儀を優先す�
 
 ## 12. 言語ポリシー
 
-| 対象                      | 言語                                                                                            |
-| ------------------------- | ----------------------------------------------------------------------------------------------- |
-| identifier                | 英語                                                                                            |
-| log / error message       | 英語（運用時に検索しやすくするため）                                                            |
-| source code 内の comment  | 日本語。外部利用を前提とする public module は英語も可                                           |
-| document (`documents/**`) | 日本語                                                                                          |
-| user-facing message       | 日本語                                                                                          |
-| commit message            | 日本語。[tasks/README.md](../../tasks/README.md) の Conventional Commits ベース規約を正本とする |
+| 対象                     | 言語                                                                                            |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| identifier               | 英語                                                                                            |
+| log / error message      | 英語（運用時に検索しやすくするため）                                                            |
+| source code 内の comment | 日本語。外部利用を前提とする public module は英語も可                                           |
+| Markdown 文書            | 日本語。[coding-md.md](coding-md.md) を正本とする                                               |
+| user-facing message      | 日本語                                                                                          |
+| commit message           | 日本語。[tasks/README.md](../../tasks/README.md) の Conventional Commits ベース規約を正本とする |
 
 Go の doc comment は日本語で書く場合も、exported symbol 名または `Package <name>` から始め、
 `go doc` で単独表示されても contract が分かる完全な文にする。
