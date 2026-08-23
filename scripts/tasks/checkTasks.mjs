@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse as yamlParse } from "yaml";
 import {
+    hasJapaneseText,
     isStatus,
     listDirs,
     readMeta,
@@ -17,6 +18,8 @@ const REQUIRED_FILES = ["task.md", "review.md", "impl.md", "eval.md"];
 const REQUIRED_DIRS = ["acceptance", "artifacts"];
 const REVIEWS = ["APPROVED", "NEEDS_REVISION"];
 const VERDICTS = ["PASS", "FAIL"];
+/** 既存の英語タイトルを履歴として残し、新規タスクだけを厳格化する境界日。 */
+const JAPANESE_TITLE_REQUIRED_FROM = "2026-08-24";
 const META_KEYS = [
     "id",
     "title",
@@ -102,7 +105,15 @@ for (const task of taskDirs) {
 
     if (raw.id !== taskId) addIssue(issues, taskId, `meta.id must match directory name (${taskId})`);
     if (raw.category !== task.category) addIssue(issues, taskId, `meta.category must match category directory (${task.category})`);
-    if (typeof raw.title !== "string" || raw.title.trim() === "") addIssue(issues, taskId, "title must be a non-empty string");
+    if (typeof raw.title !== "string" || raw.title.trim() === "") {
+        addIssue(issues, taskId, "title must be a non-empty string");
+    } else if (
+        isDateString(raw.created_at) &&
+        raw.created_at >= JAPANESE_TITLE_REQUIRED_FROM &&
+        !hasJapaneseText(raw.title)
+    ) {
+        addIssue(issues, taskId, "title には内容を説明する日本語が必要です");
+    }
     if (!isStatus(raw.status)) addIssue(issues, taskId, `status must be one of ${formatAllowed(STATUSES)}`);
     if (!Array.isArray(raw.depends_on)) addIssue(issues, taskId, "depends_on must be an array");
     if (!isStringOrNull(raw.superseded_by)) addIssue(issues, taskId, "superseded_by must be a string or null");

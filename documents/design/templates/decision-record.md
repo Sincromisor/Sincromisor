@@ -1,31 +1,31 @@
 # ADR-<YYMMDD>-<タイトル>
 
-## Status
+## 状態
 
-- Proposed / Accepted / Deprecated
+- 提案 / 採用 / 廃止
 
-## Context
+## 背景
 
 - <背景と制約>
 
-## Decision
+## 決定
 
 - <決定内容>
 
-## Options Considered
+## 検討した選択肢
 
 | 選択肢 | 利点 | 欠点 |
 | ------ | ---- | ---- |
 |        |      |      |
 
-## Consequences
+## 影響
 
 - <影響、トレードオフ、移行が必要な箇所>
 
-## Review Conditions
+## 見直し条件
 
 - <この判断を見直す条件>
 
-## References
+## 参照
 
 - <関連タスク・設計・実装>

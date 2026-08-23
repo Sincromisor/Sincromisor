@@ -31,6 +31,11 @@ export const STATUSES = ["open", "blocked", "done", "cancelled", "superseded"];
 /** 終端ステータス（到達すると `closed_at` を持つ）。`open`/`blocked` は非終端。 */
 export const TERMINAL_STATUSES = ["done", "cancelled", "superseded"];
 
+/** タスク名に日本語の文字が少なくとも1文字含まれるか判定する。 */
+export function hasJapaneseText(value) {
+    return /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u.test(value);
+}
+
 // 一覧表示の並び順: 対応が必要なもの（open→blocked）を先頭、終端をその後ろ。
 const STATUS_RANK = { open: 0, blocked: 1, done: 2, cancelled: 3, superseded: 4 };
 

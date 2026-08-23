@@ -1,45 +1,45 @@
 # <タイトル>
 
-## Summary
+## 要約
 
 - <LLM向け要約を3-5行で書く>
 
-## Scope
+## 対象範囲
 
 - 対象:
 - 非対象:
 
-## Responsibilities
+## 責務
 
 - <主要コンポーネントと責務>
 
-## Data / State
+## データ / 状態
 
 - <主要データ構造、状態、永続化対象>
 
-## Interfaces
+## インターフェース
 
 - <内部APIやイベント>
 - 外部契約の正本: <contracts配下へのリンク>
 
-## Config / Deployment
+## 設定 / 配備
 
 - 環境変数:
 - compose:
 - ローカル起動:
 
-## Observability / Failure Modes
+## 可観測性 / 失敗時の挙動
 
 - ログ:
 - メトリクス:
 - よくある失敗:
 
-## Change Checklist
+## 変更時チェックリスト
 
 - 同時確認ファイル:
 - 確認コマンド:
 - 設計更新が必要な関連文書:
 
-## References
+## 参照
 
 - <関連文書・参照実装>

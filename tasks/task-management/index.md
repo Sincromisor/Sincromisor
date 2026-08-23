@@ -1,17 +1,17 @@
-# task_management タスク一覧
+# タスク管理 タスク一覧
 
-Codex での作業効率化、タスク管理刷新、subagent ベースの作業パイプライン整備に関するタスクを管理します。
+Codex での作業効率化、タスク管理刷新、サブエージェントを使う作業パイプライン整備に関するタスクを管理します。
 
-現在のタスクは `tasks/<category>/task-<id>-<slug>/` で管理し、状態は各 `meta.yaml` の `status` を正本にします。新規タスクの作成、状態更新、index 再生成の詳細は `../README.md` を参照してください。
+現在のタスクは `tasks/<category>/task-<id>-<slug>/` で管理し、状態は各 `meta.yaml` の `status` を正本にします。新規タスクの作成、状態更新、索引再生成の詳細は `../README.md` を参照してください。
 
-> Migrated from `documents/tasks/task_management/README.md`.
-> Legacy task count in this category: 7.
+> 移行元: `documents/tasks/task_management/README.md`
+> この分類の移行済みタスク: 7件
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 17 件）
+## タスク一覧（自動生成 / 全 18 件）
 
-### done（完了） — 17 件
+### done（完了） — 18 件
 
 | タスク                                                                                                                                               | タイトル                                          | 判定    | 依存                                                                                                                                                                                                                                                                                |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -32,5 +32,6 @@ Codex での作業効率化、タスク管理刷新、subagent ベースの作�
 | [task-260629022219-tighten-task-agent-source-comment-quality-prompts](./task-260629022219-tighten-task-agent-source-comment-quality-prompts/task.md) | tighten task agent source comment quality prompts | ✅ PASS | `task-260629022214-tighten-typescript-source-comment-quality-rules`                                                                                                                                                                                                                 |
 | [task-260808171737-simplify-task-agent-workflow](./task-260808171737-simplify-task-agent-workflow/task.md)                                           | タスク管理エージェント手順を簡素化                | ✅ PASS | —                                                                                                                                                                                                                                                                                   |
 | [task-260817033900-hobby-scale-task-workflow](./task-260817033900-hobby-scale-task-workflow/task.md)                                                 | 個人開発向けにタスク運用を簡素化                  | ✅ PASS | —                                                                                                                                                                                                                                                                                   |
+| [task-260824041441-strengthen-japanese-document-rules](./task-260824041441-strengthen-japanese-document-rules/task.md)                               | 日本語文書規約とタスクフローを簡潔に強化          | ✅ PASS | —                                                                                                                                                                                                                                                                                   |
 
 <!-- AUTOGEN:tasks END -->

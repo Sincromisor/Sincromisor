@@ -1,51 +1,51 @@
 # <契約名>
 
-## Summary
+## 要約
 
 - <契約の要点を3-5行で書く>
 
-## Producers / Consumers
+## 提供側 / 利用側
 
-- Producer:
-- Consumer:
+- 提供側:
+- 利用側:
 
-## Compatibility Policy
+## 互換性方針
 
 - 互換性方針:
 - 破壊的変更時に同時更新する対象:
 
-## Endpoints / Channels
+## エンドポイント / チャンネル
 
 | 種別 | 名前 | 用途 |
 | ---- | ---- | ---- |
 |      |      |      |
 
-## Payloads
+## ペイロード
 
-### <payload名>
+### <ペイロード名>
 
 ```json
 {}
 ```
 
-## Error Semantics
+## エラー時の挙動
 
-- <エラー応答、切断、無視する入力、fallback>
+- <エラー応答、切断、無視する入力、代替動作>
 
-## Timeout / Retry
+## 時間切れ / 再試行
 
-- <timeout、retry、backoff、再接続>
+- <時間切れ、再試行、待機時間、再接続>
 
-## Versioning
+## バージョン管理
 
 - <スキーマ変更、後方互換、移行方針>
 
-## Test Matrix
+## 確認項目
 
 | 観点 | 確認内容 |
 | ---- | -------- |
 |      |          |
 
-## References
+## 参照
 
 - <関連設計・実装>

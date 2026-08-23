@@ -10,10 +10,10 @@
         "generate:temporal-recovery-fixtures": "SINCRO_WRITE_RECOVERY_FIXTURES=1 vitest run src/character/motionEvaluation/fixtures/temporalArmRecoveryFixture.generate.test.ts",
         "check": "npm run check:biome && npm run check:md",
         "check:biome": "biome check .",
-        "check:md": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --check \"../*.md\" \"../documents/**/*.md\" \"../tasks/**/*.md\" \"**/*.md\"",
+        "check:md": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --check \"../*.md\" \"../.agents/CUSTOMIZATIONS.md\" \"../.agents/skills/new-task/SKILL.md\" \"../.agents/skills/run-task/SKILL.md\" \"../.claude/agents/*.md\" \"../.claude/commands/*.md\" \"../documents/**/*.md\" \"../sincromisor-server/**/*.md\" \"../tasks/**/*.md\" \"**/*.md\"",
         "format": "npm run format:biome && npm run format:md",
         "format:biome": "biome check --write .",
-        "format:md": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --write \"../*.md\" \"../documents/**/*.md\" \"../tasks/**/*.md\" \"**/*.md\"",
+        "format:md": "prettier --config ../.prettierrc.json --ignore-path ../.prettierignore --write \"../*.md\" \"../.agents/CUSTOMIZATIONS.md\" \"../.agents/skills/new-task/SKILL.md\" \"../.agents/skills/run-task/SKILL.md\" \"../.claude/agents/*.md\" \"../.claude/commands/*.md\" \"../documents/**/*.md\" \"../sincromisor-server/**/*.md\" \"../tasks/**/*.md\" \"**/*.md\"",
         "preview": "vite preview"
     },
     "devDependencies": {

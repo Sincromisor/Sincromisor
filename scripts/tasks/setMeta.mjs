@@ -27,6 +27,7 @@ import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+    hasJapaneseText,
     isStatus,
     readCustomFields,
     readMeta,
@@ -122,6 +123,9 @@ async function main() {
                 meta.created_at = nullish ? null : rawValue;
                 break;
             case "title":
+                if (!hasJapaneseText(rawValue)) {
+                    fail("title は、固有名詞だけでなく内容を説明する日本語を含めてください");
+                }
                 meta.title = rawValue;
                 break;
             case "id":
