@@ -4,13 +4,7 @@
 
 ## タスク一覧（自動生成 / 全 45 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                                           | タイトル                                 | 判定 | 依存                                                 |
-| ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ---- | ---------------------------------------------------- |
-| [task-260823061841-pion-phase-6-python-rtc-removal](./task-260823061841-pion-phase-6-python-rtc-removal/task.md) | Pion Phase 6でPython RTC stackを削除する | —    | `task-260822233904-pion-phase-5-maintenance-cutover` |
-
-### done（完了） — 38 件
+### done（完了） — 39 件
 
 | タスク                                                                                                                                 | タイトル                                                              | 判定    | 依存                                                                                                                                                                                                                                                  |
 | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -52,6 +46,7 @@
 | [task-260815173046-pion-gate4-browser-ui-smoke](./task-260815173046-pion-gate4-browser-ui-smoke/task.md)                               | Pion Gate 4の実下流ブラウザUI smoke手順を整備する                     | ✅ PASS | —                                                                                                                                                                                                                                                     |
 | [task-260817014711-pion-compose-dynamic-media-bind](./task-260817014711-pion-compose-dynamic-media-bind/task.md)                       | Pion Composeの固定コンテナIPを廃止する                                | ✅ PASS | —                                                                                                                                                                                                                                                     |
 | [task-260822233904-pion-phase-5-maintenance-cutover](./task-260822233904-pion-phase-5-maintenance-cutover/task.md)                     | Pion Phase 5のメンテナンス切替と安定化観測を実行する                  | ✅ PASS | `task-260809020145-pion-phase-4-cutover-rehearsal`                                                                                                                                                                                                    |
+| [task-260823061841-pion-phase-6-python-rtc-removal](./task-260823061841-pion-phase-6-python-rtc-removal/task.md)                       | Pion Phase 6でPython RTC stackを削除する                              | ✅ PASS | `task-260822233904-pion-phase-5-maintenance-cutover`                                                                                                                                                                                                  |
 
 ### cancelled（取りやめ） — 4 件
 
