@@ -58,38 +58,38 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 - `sincromisor-frontend/src/`
     - `app/`: app controller、shell、settings、event / bridge。
     - `features/`: RTC、media、conversation、dialog、debug、settings、gaze などの機能単位。
-    - `character/`: VRM scene、behavior、retargeting、IK、Looking Glass / VRM360 runtime。
-    - `pages/`: Vite MPA の HTML / entry / page-specific React panel。
+    - `character/`: VRM scene、behavior、retargeting、IK、Looking Glass / VRM360ランタイム。
+    - `pages/`: Vite MPA の HTML / entry / page-specific Reactパネル。
     - `shared/`: logging と横断型。
     - `ts/`, `react/`: 旧構成。新規実装は原則置かない。
 - `documents/design/`: 現在有効な設計、契約、ADR、initiative。
 - `documents/rules/`: コーディング、構造、文書運用の横断ルール。
-- `tasks/`: 作業タスク、検証ログ、subagent 成果物。
+- `tasks/`: 作業タスク、検証ログ、サブエージェント成果物。
 - `documents/tasks/`: 旧タスク管理からの移行案内。
 
 ## 作業原則
 
 - 「個人開発の趣味プロダクト」として、その時点で最良の構成で作る。後方互換性より負債を残さないことを優先する。
     - 個人の限定されたリソースでの開発であるため、「どの環境でも完璧に動作すること」、「高度な機能を提供すること」、「高い性能を出すこと」、「適切な評価をすること」は求めず、「まずは動作すること」を優先する。
-- 通常変更は、最小の実装、変更範囲に対応する確認、1コミットで完了させる。専用worktree、独立レビュー・評価、全体gateは、明示要求または失敗コストが高い変更に限定する。
+- 通常変更は、最小の実装、変更範囲に対応する確認、1コミットで完了させる。専用ワークツリー、独立レビュー・評価、全体ゲートは、明示要求または失敗コストが高い変更に限定する。
 - 必須要件は、ユーザー要求、既存の公開契約、再現済み不具合、セキュリティ・データ損失防止、実行に不可欠な制約のいずれかを根拠とする。根拠のない性能値、網羅試験、複数環境対応を完了条件にしない。
 - 変更前からある不整合や変更範囲外の検査失敗は、今回の変更が悪化させない限り警告として報告し、作業を止めない。変更した文書の整形など安全に一意に直せるものは自動修正する。
-- 既存の通信契約（endpoint / JSON / DataChannel / msgpack）を変更する場合は、破壊的変更として明示し、フロントとサーバーを同時に確認する。
+- 既存の通信契約（エンドポイント / JSON / DataChannel / msgpack）を変更する場合は、破壊的変更として明示し、フロントとサーバーを同時に確認する。
 - compose、設定、実装、設計文書を片側だけ更新しない。
 - 再現手順と確認結果はタスク文書に残す。
 - ソースコード内のコメントには、**安全な変更を可能にすること**と、**調査時の理解時間を短縮すること**の 2 つの独立した目的がある。
     - public API、境界、非自明な制約へのコメントは必須の下限であり、それだけ満たせば十分という意味ではない。
-    - exported / public な関数・class・type・component・hook・module には、原則として各言語の標準 doc comment（TypeScript の JSDoc/TSDoc、Go の doc comment など）を書く。
+    - 公開済み / パブリックな関数・クラス・型・コンポーネント・フック・モジュールには、原則として各言語の標準ドキュメントコメント（TypeScript の JSDoc/TSDoc、Go の doc comment など）を書く。
     - 契約、制約、失敗条件、副作用、非自明な判断理由を、未来の保守者が安全に変更できる形で残す。
     - 処理の全体像、段階、状態遷移、データ表現、離れたコード間の関係を、一般的な開発者が短時間で把握できる形で残す。
-    - 禁止するのは、コードを同じ粒度で一行ずつ読み上げる逐語説明である。複数行の処理を一段高い抽象度で要約するコメントや、pipeline 内の位置を示すコメントは積極的に書く。
+    - 禁止するのは、コードを同じ粒度で一行ずつ読み上げる逐語説明である。複数行の処理を一段高い抽象度で要約するコメントや、パイプライン内の位置を示すコメントは積極的に書く。
     - 既存コードにコメントがないことは、新規・変更コードでコメントを省略する理由にならない。既存実装より現行規約を優先する。
-    - 既存コードを変更する場合は、変更箇所と、その変更を理解するために読む直接の helper、state、event、lifecycle、データ変換まで確認する。
+    - 既存コードを変更する場合は、変更箇所と、その変更を理解するために読む直接のヘルパー、ステート、イベント、ライフサイクル、データ変換まで確認する。
     - 本番コードを変更した場合は、変更したシンボル・処理群・判断と上記の直接範囲を全件点検する。必須コメントの欠落・説明不足・stale comment は完了を妨げる不適合とし、監査台帳を作らなくても解消してから完了する。
     - 「趣味開発」「既存コードにない」「短い」「内部用」「型や命名で分かる」は、必須対象のコメントを省略する理由として認めない。
-    - stale comment を作らない。コード変更時は関連コメントを更新または削除する。
+    - 陳腐化したコメントを残さない。コード変更時は関連コメントを更新または削除する。
     - TODO は単に「あとで直す」と書かず、理由、削除条件、issue番号、期限または判断基準を含める。
-    - コメント追加前に命名・関数分割・型定義・引数オブジェクト化を検討するが、構造改善だけを理由に reader-oriented な説明を省略しない。
+    - コメント追加前に命名・関数分割・型定義・引数オブジェクト化を検討するが、構造改善だけを理由に読者志向な説明を省略しない。
     - 横断的な詳細基準は `documents/rules/source-comments.md`、記法と言語固有の対象は `documents/rules/coding-*.md` を参照する。
 - 設計変更を伴う実装変更では、`documents/design/` の該当文書と `documents/design/index.md` の導線を確認する。
 
@@ -130,8 +130,8 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 
 ```ts
 /*
-    MediaPipe座標をVRMのlocal座標へ正規化する。
-    smoothingとIK補正は後段で行うため、ここでは座標系の変換だけを完了させる。
+    MediaPipe座標をVRMのローカル座標へ正規化する。
+    スムーシングとIK補正は後段で行うため、ここでは座標系の変換だけを完了させる。
 */
 ```
 
@@ -159,15 +159,15 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 - 状態は物理ディレクトリではなく `meta.yaml` の `status` を正本にする。
 - `review.md` と `eval.md` は独立レビュー・評価を実行した場合だけ記録する。`impl.md` は設計判断、逸脱、未実行確認、残リスクがある場合だけ簡潔に使う。
 - 標準入口は `.claude/commands/` の `new-task`, `run-task` とする。次タスクの抽出は `npm run tasks:next` を直接使う。Codex 用の `.agents/skills/` と `.codex/agents/` は `npm run gen:codex` で生成する。
-- `/run-task` は変更リスクに応じて通常・統合・高リスクの経路を選ぶ。通常変更は現在のworktreeで親Codexが直接実装し、対象確認とタスク状態・索引を同じコミットに含める。専用worktree、実装担当、独立レビュー・評価、`tasks:close` は統合変更で必要な場合または高リスク変更だけに使う。
-- upstream workflow との差分は `.agents/CUSTOMIZATIONS.md` に記録する。
-- 最低限、タスク単位でコミットする。コミットメッセージは Conventional Commits ベースで書き、body には変更理由、主な変更、確認結果、残リスクを、footer には関連 task ID または legacy `TASK-...` ID の `Refs:` を含める。
+- `/run-task` は変更リスクに応じて通常・統合・高リスクの経路を選ぶ。通常変更は現在のワークツリーで親Codexが直接実装し、対象確認とタスク状態・索引を同じコミットに含める。専用ワークツリー、実装担当、独立レビュー・評価、`tasks:close` は統合変更で必要な場合または高リスク変更だけに使う。
+- 上流ワークフローとの差分は `.agents/CUSTOMIZATIONS.md` に記録する。
+- 最低限、タスク単位でコミットする。コミットメッセージは `Conventional Commits` ベースで書き、ボディには変更理由、主な変更、確認結果、残リスクを、フッターには関連タスクIDの `Refs:` を含める。
 - 詳細は `tasks/README.md` を正本とする。
 
 ## 通信フロー概要
 
 1. フロントが `GET /api/v1/RTCSignalingServer/config.json` で接続設定を取得する。
-2. フロントが `POST /api/v1/RTCSignalingServer/offer` で Offer を送る。
+2. フロントが `POST /api/v1/RTCSignalingServer/offer` でオファーを送る。
 3. フロントが `POST /api/v1/RTCSignalingServer/candidate` で ICE candidate を送る。
 4. サーバーが Answer を返し、PeerConnection を確立する。
 5. DataChannel の `text_ch` と `telop_ch` でチャット、テロップ、口形同期情報を受ける。
@@ -176,11 +176,11 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 
 ## ローカル確認
 
-変更内容に応じてフロント、Python、Go、Compose、Markdown、task tooling の確認範囲を選ぶ。具体的なコマンドと task close 前の必須確認は `tasks/README.md` を正本とする。実行できなかった確認は、理由をタスク文書と最終報告に残す。
+変更内容に応じてフロント、Python、Go、Compose、Markdown、task tooling の確認範囲を選ぶ。具体的なコマンドとタスクのクローズ前の必須確認は `tasks/README.md` を正本とする。実行できなかった確認は、理由をタスク文書と最終報告に残す。
 
 ## よくある落とし穴
 
 - フロントのマイク / カメラ権限がないと接続処理や CharacterGaze が途中で止まる。
-- `offerURL`、`candidateURL`、ICE server 設定の不一致で WebRTC ネゴシエーションに失敗する。
-- 新しい環境変数を compose、設定クラス、サンプル env の片側だけに追加してしまう。
-- `@mediapipe/tasks-vision` の wasm 配置漏れで tracking 系機能が動作しない。
+- `offerURL`、`candidateURL`、ICE サーバー設定の不一致で WebRTC ネゴシエーションに失敗する。
+- 新しい環境変数を compose、設定クラス、サンプル envファイルの片側だけに追加してしまう。
+- `@mediapipe/tasks-vision` の wasm 配置漏れでトラッキング系機能が動作しない。
