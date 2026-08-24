@@ -62,7 +62,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
     - `pages/`: Vite MPA の HTML / エントリーポイント / ページ固有のReactパネル。
     - `shared/`: ログと横断型。
     - `ts/`, `react/`: 旧構成。新規実装は原則置かない。
-- `documents/design/`: 現在有効な設計、契約、ADR、取り組み計画。
+- `documents/design/`: 現在有効な設計、契約、設計上の重要な意思決定とその背景(ADR)、取り組み計画。
 - `documents/rules/`: コーディング、構造、文書運用の横断ルール。
 - `tasks/`: 作業タスク、検証ログ、サブエージェント成果物。
 - `documents/tasks/`: 旧タスク管理からの移行案内。
