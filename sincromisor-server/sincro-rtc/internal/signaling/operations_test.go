@@ -11,10 +11,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/signaling/offer"
 )
 
 func TestOperationalEndpointsAndDrainAdmission(t *testing.T) {
@@ -73,7 +73,7 @@ func TestMutationPanicClosesKnownSessionAndReturns500(t *testing.T) {
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 		Options{Recorder: metrics},
 	)
-	server.offers = &OfferRegistry{config: OfferRegistryConfig{GatherTimeout: time.Second}}
+	server.offers = &offer.Registry{}
 	body := `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat","session_id":"01K1AF2Y0H0000000000000000","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":2}`
 	response := httptest.NewRecorder()
 	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodPost, offerPath, strings.NewReader(body)))
@@ -97,7 +97,7 @@ func TestMutationPanicClosesKnownSessionAndReturns500(t *testing.T) {
 func TestMutationPanicAfterPartialResponseDiscardsBodyAndClosesSession(t *testing.T) {
 	sessions := &panicSessions{}
 	server := New(sessions, nil, t.TempDir(), "", slog.New(slog.NewTextHandler(io.Discard, nil)))
-	server.offers = &OfferRegistry{config: OfferRegistryConfig{GatherTimeout: time.Second}}
+	server.offers = &offer.Registry{}
 	server.mutationHook = func() { panic("payload-candidate-marker") }
 	body := `{"session_id":"01K1AF2Y0H0000000000000000","offer_revision":2,"candidate":null}`
 	response := httptest.NewRecorder()
@@ -172,7 +172,7 @@ func TestOperationalLogsDoNotContainPayloadMarkers(t *testing.T) {
 	)
 
 	updateServer := New(&panicSessions{panicUpdate: true}, nil, t.TempDir(), "", logger)
-	updateServer.offers = &OfferRegistry{config: OfferRegistryConfig{GatherTimeout: time.Second}}
+	updateServer.offers = &offer.Registry{}
 	body = `{"sdp":"payload-chat-marker","type":"offer","talk_mode":"chat","session_id":"01K1AF2Y0H0000000000000000","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":2}`
 	updateServer.Handler().ServeHTTP(
 		httptest.NewRecorder(),

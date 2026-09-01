@@ -10,7 +10,7 @@ import (
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/config"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc"
-	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/signaling"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/signaling/offer"
 )
 
 func TestNewSynthDecoderProbesAbsoluteConfiguredPath(t *testing.T) {
@@ -44,7 +44,7 @@ func TestRunProbeFailureDoesNotReachHTTPListenerBoundary(t *testing.T) {
 	serveProbe := func(
 		config.Config,
 		*rtc.Manager,
-		*signaling.OfferRegistry,
+		*offer.Registry,
 		context.CancelFunc,
 		*slog.Logger,
 	) error {

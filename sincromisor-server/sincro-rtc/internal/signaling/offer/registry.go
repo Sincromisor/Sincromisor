@@ -1,4 +1,5 @@
-package signaling
+// Package offer は初回Offerの同時処理、成功応答、終了済み記録、期限回収を所有する。
+package offer
 
 import (
 	"context"
@@ -31,36 +32,52 @@ const (
 	offerTombstone
 )
 
-// OfferRegistryClock はTTL回収で使うwall-clockと周期wake-upを提供する。
+// Clock はTTL回収で使うwall-clockと周期wake-upを提供する。
 // 実装はowner、close callback、sweeperからの並行呼び出しに対応しなければならない。
-type OfferRegistryClock interface {
+type Clock interface {
+	// Now は現在の期限判定時刻を返す。
 	Now() time.Time
+	// After は指定時間後に一度通知するチャネルを返す。
 	After(time.Duration) <-chan time.Time
 }
 
-type systemOfferRegistryClock struct{}
+type systemClock struct{}
 
-func (systemOfferRegistryClock) Now() time.Time                         { return time.Now() }
-func (systemOfferRegistryClock) After(d time.Duration) <-chan time.Time { return time.After(d) }
+func (systemClock) Now() time.Time                         { return time.Now() }
+func (systemClock) After(d time.Duration) <-chan time.Time { return time.After(d) }
 
-// SystemOfferRegistryClock はcache expiryと周期回収に使うproduction wall clockを返す。
-func SystemOfferRegistryClock() OfferRegistryClock {
-	return systemOfferRegistryClock{}
+// SystemClock はキャッシュ期限と周期回収に使う本番のwall clockを返す。
+func SystemClock() Clock {
+	return systemClock{}
 }
 
-// OfferRegistryConfig はprocess owner、有限gather deadline、TTL、hard admission上限を固定する。
+// Config はプロセス所有者、候補収集期限、TTL、受付上限を固定する。
 //
 // ProcessContextのcancelはowner workとsweeperを止め、Waitは両者をjoinする。
 // request cancelはそのwaiterだけを離脱させる。ClockとLoggerは必須である。
-type OfferRegistryConfig struct {
+type Config struct {
+	// ProcessContext は作成処理と期限回収処理の生存期間を所有する。
 	ProcessContext context.Context
-	GatherTimeout  time.Duration
-	Capacity       int
-	TTL            time.Duration
-	Clock          OfferRegistryClock
-	Logger         *slog.Logger
-	// Recorder receives gather-deadline events without offer or session payloads.
+	// GatherTimeout は候補収集を含むセッション作成の上限時間である。
+	GatherTimeout time.Duration
+	// Capacity は処理中、完了、終了済み項目が共有する最大件数である。
+	Capacity int
+	// TTL は完了応答と終了済み記録を保持する時間である。
+	TTL time.Duration
+	// Clock は期限判定と周期回収の時刻供給元である。
+	Clock Clock
+	// Logger はペイロードを含めず生存期間異常を記録する。
+	Logger *slog.Logger
+	// Recorder はOfferやセッションのペイロードを含めず候補収集期限を記録する。
 	Recorder observability.Recorder
+}
+
+// Creator は初回Offerレジストリが必要とするセッション作成境界である。
+//
+// 実装はOnClosedをセッション終了時に一度呼び、候補収集が完了したAnswerを返す。
+type Creator interface {
+	// Create は初回Offerから候補収集済みのAnswerと終了通知を持つセッションを作る。
+	Create(context.Context, rtc.Offer) (rtc.Answer, error)
 }
 
 // offerEntry は1 request IDのraw SDP hashと、in-flightからcompleted/tombstoneへの状態遷移を保持する。
@@ -80,21 +97,22 @@ type offerEntry struct {
 	waiters   int
 }
 
-// OfferRegistry はinitial Offerをsingle-flight化し、成功したAnswerだけをcacheする。
+// Registry は初回Offerを同時処理し、成功したAnswerだけをキャッシュする。
 //
 // Frontend UUIDをkeyとしてdecoded SDP bytesそのもののSHA-256を結び付ける。in-flight、
 // completed、tombstoneは1つのcapacityを共有し、有効entryを新規requestのためにevictしない。
-type OfferRegistry struct {
+// ゼロ値は使用できず、Newで生成した値だけが期限回収処理と終了待機を所有する。
+type Registry struct {
 	mu          sync.Mutex
 	entries     map[string]*offerEntry
-	sessions    SessionService
-	config      OfferRegistryConfig
+	sessions    Creator
+	config      Config
 	owners      sync.WaitGroup
 	sweeperDone chan struct{}
 }
 
-// NewOfferRegistry はdependencyと正数limitを検証し、process所有のTTL collectorを開始する。
-func NewOfferRegistry(sessions SessionService, config OfferRegistryConfig) (*OfferRegistry, error) {
+// New は依存と正数の上限を検証し、プロセス所有のTTL回収処理を開始する。
+func New(sessions Creator, config Config) (*Registry, error) {
 	if sessions == nil || config.ProcessContext == nil || config.Clock == nil || config.Logger == nil {
 		return nil, errors.New("offer registry dependencies must not be nil")
 	}
@@ -104,7 +122,7 @@ func NewOfferRegistry(sessions SessionService, config OfferRegistryConfig) (*Off
 	if config.Recorder == nil {
 		config.Recorder = observability.Discard()
 	}
-	registry := &OfferRegistry{
+	registry := &Registry{
 		entries:     make(map[string]*offerEntry),
 		sessions:    sessions,
 		config:      config,
@@ -119,7 +137,7 @@ func NewOfferRegistry(sessions SessionService, config OfferRegistryConfig) (*Off
 // 最初のcallerがresource作成前にin-flight entryを登録し、process所有のworkを開始する。
 // 一致するcallerは同じ結果を待ち、各contextは自身の待機だけを制限する。conflict、tombstone、
 // capacity、owner timeout、Session admission失敗は境界で判定可能なerrorとして返す。
-func (r *OfferRegistry) Resolve(
+func (r *Registry) Resolve(
 	ctx context.Context,
 	requestID string,
 	sdp []byte,
@@ -162,7 +180,7 @@ func (r *OfferRegistry) Resolve(
 //
 // Wait自身は期限を延長しない。process coordinatorがsession ownerと共有するcontextを渡すことで、
 // 先に受理済みのinitial Offerとsession cleanupを同じshutdown budget内で並行して収束できる。
-func (r *OfferRegistry) Wait(ctx context.Context) error {
+func (r *Registry) Wait(ctx context.Context) error {
 	result := r.startJoin(func() {
 		r.owners.Wait()
 		<-r.sweeperDone
@@ -175,10 +193,17 @@ func (r *OfferRegistry) Wait(ctx context.Context) error {
 	}
 }
 
-// startJoin contains the first-party shutdown helper that waits on both owner
-// groups. A helper panic becomes a bounded error result instead of stranding
-// Wait or crashing the process; the channel always receives exactly once.
-func (r *OfferRegistry) startJoin(join func()) <-chan error {
+// GatherTimeout は更新Offerにも適用する候補収集上限を返す。
+func (r *Registry) GatherTimeout() time.Duration {
+	if r == nil {
+		return 0
+	}
+	return r.config.GatherTimeout
+}
+
+// startJoin は作成所有者と期限回収処理の待ち合わせを1つの結果へまとめる。
+// 補助処理のpanicは有限のエラーへ変換し、Waitを取り残さず結果を一度だけ送る。
+func (r *Registry) startJoin(join func()) <-chan error {
 	result := make(chan error, 1)
 	go func() {
 		defer func() {
@@ -193,7 +218,7 @@ func (r *OfferRegistry) startJoin(join func()) <-chan error {
 	return result
 }
 
-func (r *OfferRegistry) wait(ctx context.Context, entry *offerEntry) (rtc.Answer, error) {
+func (r *Registry) wait(ctx context.Context, entry *offerEntry) (rtc.Answer, error) {
 	select {
 	case <-ctx.Done():
 		r.mu.Lock()
@@ -219,7 +244,7 @@ func (r *OfferRegistry) wait(ctx context.Context, entry *offerEntry) (rtc.Answer
 // 成功だけをcompleted cacheへ遷移させ、失敗/panic entryは削除してdoneを閉じ、同じrequest IDの
 // 再試行と全waiterの解放を可能にする。OnClosedはSessionのcallback panic境界から呼ばれるため、
 // tombstone処理がpanicしてもSession側のdone/active metric解放は継続する。
-func (r *OfferRegistry) create(entry *offerEntry, offer rtc.Offer) {
+func (r *Registry) create(entry *offerEntry, rtcOffer rtc.Offer) {
 	defer r.owners.Done()
 	defer func() {
 		if recover() != nil {
@@ -235,10 +260,10 @@ func (r *OfferRegistry) create(entry *offerEntry, offer rtc.Offer) {
 	}()
 	ownerCtx, cancel := context.WithTimeout(r.config.ProcessContext, r.config.GatherTimeout)
 	defer cancel()
-	offer.OnClosed = func(sessionID string) {
+	rtcOffer.OnClosed = func(sessionID string) {
 		r.sessionClosed(entry, sessionID)
 	}
-	answer, err := r.sessions.Create(ownerCtx, offer)
+	answer, err := r.sessions.Create(ownerCtx, rtcOffer)
 	if errors.Is(err, context.DeadlineExceeded) || errors.Is(ownerCtx.Err(), context.DeadlineExceeded) {
 		r.config.Recorder.Deadline("gather")
 	}
@@ -265,7 +290,7 @@ func (r *OfferRegistry) create(entry *offerEntry, offer rtc.Offer) {
 
 // sessionClosed はSession cleanup eventで有効なin-flight/completed entryをtombstoneへ変換する。
 // resource消失後から完全なretry抑止期間を確保するため、このevent時点からTTLを取り直す。
-func (r *OfferRegistry) sessionClosed(entry *offerEntry, sessionID string) {
+func (r *Registry) sessionClosed(entry *offerEntry, sessionID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.entries[entry.requestID] != entry {
@@ -281,10 +306,9 @@ func (r *OfferRegistry) sessionClosed(entry *offerEntry, sessionID string) {
 	)
 }
 
-// startSweeper owns the process-lifetime TTL worker and closes sweeperDone on
-// every exit, including panic. This guarantees Wait can join after a Clock or
-// sweep implementation failure without exposing recovered values.
-func (r *OfferRegistry) startSweeper() {
+// startSweeper はプロセス生存期間のTTL回収処理を所有し、panicを含む全終了経路でsweeperDoneを閉じる。
+// Clockまたは回収処理が失敗しても、復旧値を公開せずWaitが待ち合わせできる状態を保つ。
+func (r *Registry) startSweeper() {
 	go func() {
 		defer close(r.sweeperDone)
 		defer func() {
@@ -298,7 +322,7 @@ func (r *OfferRegistry) startSweeper() {
 
 // sweep はprocess contextをownerとし、30秒ごとにrequest非依存の期限回収を行う。
 // process cancelまたはstartSweeperのpanic境界で終了し、shutdownのWaitへjoin可能になる。
-func (r *OfferRegistry) sweep() {
+func (r *Registry) sweep() {
 	for {
 		select {
 		case <-r.config.ProcessContext.Done():
@@ -313,7 +337,7 @@ func (r *OfferRegistry) sweep() {
 
 // removeExpiredLocked はrequest受付時と周期sweepでcompleted/tombstoneだけを期限回収する。
 // in-flightはownerが成功または失敗を確定するまで保持し、capacity都合の回収は行わない。
-func (r *OfferRegistry) removeExpiredLocked(now time.Time) {
+func (r *Registry) removeExpiredLocked(now time.Time) {
 	for requestID, entry := range r.entries {
 		if entry.state != offerInFlight && !entry.expiresAt.After(now) {
 			delete(r.entries, requestID)
