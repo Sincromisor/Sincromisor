@@ -1,4 +1,4 @@
-package rtc
+package datachannel
 
 import (
 	"encoding/json"
@@ -22,7 +22,7 @@ type chatMessagePayload struct {
 // EnqueueText はpipeline ChatMessageを明示的なFrontend JSON schemaへ変換してFIFOへ加える。
 //
 // ExpressionCodeのnilはfield欠落、zeroは保持する。payloadはUTF-8 JSON textとして64 KiB以下に制限する。
-func (d *DataChannelDispatcher) EnqueueText(message protocol.ChatMessage) error {
+func (d *Dispatcher) EnqueueText(message protocol.ChatMessage) error {
 	payload, err := marshalDataChannelPayload(chatMessagePayload{
 		SpeechID:       message.SpeechID,
 		MessageID:      message.MessageID,
@@ -60,7 +60,7 @@ func (d *DataChannelDispatcher) EnqueueText(message protocol.ChatMessage) error 
 // EnqueueTelop はaudio tickと同期済みtelopをunordered queueへ加える。
 //
 // queue満杯時は最古の未送信eventだけをdropし、incomingを保持してsessionを継続する。
-func (d *DataChannelDispatcher) EnqueueTelop(event audiomedia.TelopPayload) error {
+func (d *Dispatcher) EnqueueTelop(event audiomedia.TelopPayload) error {
 	payload, err := marshalDataChannelPayload(event)
 	if err != nil {
 		return err

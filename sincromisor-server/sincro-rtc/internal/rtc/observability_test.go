@@ -11,6 +11,7 @@ import (
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc/datachannel"
 )
 
 func TestRTCPClassificationQualityAndUnknownFeedback(t *testing.T) {
@@ -38,9 +39,9 @@ func TestRTCPClassificationQualityAndUnknownFeedback(t *testing.T) {
 func TestDataChannelWorkerMetricsAndPanicBoundary(t *testing.T) {
 	recorder := &recordingRTCRecorder{Recorder: observability.Discard()}
 	recovered := make(chan string, 1)
-	dispatcher, err := NewDataChannelDispatcher(
+	dispatcher, err := datachannel.New(
 		context.Background(), testLogger(), func(error) {},
-		DataChannelDispatcherOptions{
+		datachannel.Options{
 			Recorder:     recorder,
 			RecoverPanic: func(stage string) { recovered <- stage },
 		},
@@ -70,9 +71,9 @@ func TestDataChannelWorkerMetricsAndPanicBoundary(t *testing.T) {
 
 	errorChannel := newFakeDataChannel(0)
 	errorChannel.sendErr = errors.New("payload-candidate-marker")
-	dispatcher2, err := NewDataChannelDispatcher(
+	dispatcher2, err := datachannel.New(
 		context.Background(), testLogger(), func(error) {},
-		DataChannelDispatcherOptions{Recorder: recorder},
+		datachannel.Options{Recorder: recorder},
 	)
 	if err != nil {
 		t.Fatal(err)
