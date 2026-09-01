@@ -1,13 +1,13 @@
 id: task-260901231347-media-input-package
 title: 受信音声処理をmedia入力パッケージへ分離
 category: sincro-rtc
-status: open
+status: done
 depends_on: []
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-09-01
-closed_at: null
+closed_at: 2026-09-02
 legacy_ids: []

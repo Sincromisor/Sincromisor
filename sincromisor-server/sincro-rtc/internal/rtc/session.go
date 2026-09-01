@@ -12,6 +12,7 @@ import (
 	"github.com/pion/webrtc/v4"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
+	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
@@ -26,7 +27,7 @@ import (
 // Clock は Answer 後と transport 後の有限 deadline を生成し、nil dependency は無効である。
 type SessionDependencies struct {
 	PipelineFactory pipeline.ClientSetFactory
-	InputObserver   audiomedia.InputObserver
+	InputObserver   inputmedia.Observer
 	Clock           Clock
 }
 
@@ -42,7 +43,7 @@ type Session struct {
 	// synthDecoderはprocess-wide immutable dependencyへの非所有参照である。Session cleanupは
 	// processを保持しないDecoderをcloseせず、別Sessionの同一参照を継続利用可能に保つ。
 	synthDecoder synthSpeechDecoder
-	input        *audiomedia.InputProcessor
+	input        *inputmedia.Processor
 	logger       *slog.Logger
 	onClosed     func(string)
 	lifecycle    *sessionLifecycle
@@ -87,7 +88,7 @@ type sessionResourceClosers struct {
 	pipeline   func() error
 }
 
-// newSession は検証済みdependencyからPeerConnection、InputProcessor、codec、lifecycle ownerを組み立てる。
+// newSession は検証済みdependencyからPeerConnection、input.Processor、codec、lifecycle ownerを組み立てる。
 //
 // talk modeとdependencyをresource作成前に拒否する。成功後の所有resourceはSession.Closeだけが破棄し、
 // setup途中の失敗は作成済みresourceを同期的に巻き戻してregistryへ公開しない。SynthDecoderは
@@ -99,7 +100,7 @@ func newSession(
 	gatherTimeout time.Duration,
 	coordinator *pipeline.Coordinator,
 	synthDecoder *synthdecode.Decoder,
-	inputObserver audiomedia.InputObserver,
+	inputObserver inputmedia.Observer,
 	clock Clock,
 	logger *slog.Logger,
 	onClosed func(string),
@@ -116,7 +117,7 @@ func newSession(
 	if len(recorders) > 0 && recorders[0] != nil {
 		recorder = recorders[0]
 	}
-	input, err := audiomedia.NewInputProcessor(inputObserver)
+	input, err := inputmedia.New(inputObserver)
 	if err != nil {
 		return nil, err
 	}

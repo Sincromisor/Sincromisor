@@ -1,5 +1,4 @@
-// Package media はbrowser RTP/Opusのordering・PCM変換と1秒test toneのOpus encodeを担当する。
-package media
+package input
 
 import (
 	"context"
@@ -10,35 +9,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pion/interceptor"
 	"github.com/pion/mediadevices/pkg/codec"
 	mediaopus "github.com/pion/mediadevices/pkg/codec/opus"
 	"github.com/pion/mediadevices/pkg/io/audio"
 	"github.com/pion/mediadevices/pkg/prop"
 	"github.com/pion/mediadevices/pkg/wave"
 	pionopus "github.com/pion/opus"
-	"github.com/pion/rtp"
 )
 
 const (
-	// SampleRate は WebRTC Opus の RTP clock と test PCM の sample rate を Hz で表す。
-	SampleRate = 48000
-	// FrameDuration は outbound encoder と RTP pacing が共有する Opus frame duration である。
-	FrameDuration = 20 * time.Millisecond
-	frameSamples  = SampleRate / 50
-	toneSamples   = SampleRate
-	toneFrequency = 440.0
-	toneAmplitude = 0.25
-	maxChannels   = 2
+	testFrameDuration = 20 * time.Millisecond
+	frameSamples      = SampleRate / 50
+	toneSamples       = SampleRate
+	toneFrequency     = 440.0
+	toneAmplitude     = 0.25
 )
-
-// RTPReader は Pion remote track から順次 RTP packet を読む境界である。
-//
-// readerはnetwork到着順だけを提供する。production inboundはInputProcessorがbounded reorder後に
-// decodeし、低水準diagnosticのDecodeRemoteだけが到着順のままdecodeする。NACK / PLCはreaderの責務外である。
-type RTPReader interface {
-	ReadRTP() (*rtp.Packet, interceptor.Attributes, error)
-}
 
 // DecodeStats は browser 音声の decode 観測値を session log と smoke 判定へ渡す。
 type DecodeStats struct {
@@ -129,7 +114,7 @@ func (e *ToneEncoder) Close() error {
 //
 // ctx cancellation、RTP read error、decode error のいずれかで終了する。packet は到着順に処理し、
 // resample、reorder、loss concealmentを行わない低水準diagnostic契約である。production inboundは
-// InputProcessorを使い、onProgressはこの関数内の累積stats snapshotだけを受ける。
+// Processorを使い、onProgressはこの関数内の累積stats snapshotだけを受ける。
 func DecodeRemote(
 	ctx context.Context,
 	reader RTPReader,

@@ -1,4 +1,4 @@
-package media
+package input
 
 import (
 	"sync/atomic"
@@ -7,7 +7,7 @@ import (
 // InputEvent は音声payloadを含めず、入力側の破棄または不連続を1件ずつ識別する。
 //
 // eventは破棄を決定した位置で同期通知する。Coordinator queue overflowはSubmitPCM自身が集計し、
-// InputProcessorから見れば受理済みframeなので、このeventには含めない。
+// Processorから見れば受理済みframeなので、このeventには含めない。
 type InputEvent string
 
 const (
@@ -25,11 +25,11 @@ const (
 	InputEventPipelineUnavailable InputEvent = "pipeline_unavailable"
 )
 
-// InputObserver は入力event 1件につき1回のcallbackを受ける。
+// Observer は入力event 1件につき1回のcallbackを受ける。
 //
 // ObserveInputEventは複数sessionからの並行呼び出しに耐える必要がある。通知failureという別経路を
-// 作らないため戻り値を持たず、panicはInputProcessor.Runがmedia errorへ変換してSession.Closeへ戻す。
-type InputObserver interface {
+// 作らないため戻り値を持たず、panicはProcessor.Runがmedia errorへ変換してSession.Closeへ戻す。
+type Observer interface {
 	ObserveInputEvent(InputEvent)
 }
 
@@ -38,30 +38,36 @@ type inputTelemetry interface {
 	CodecError(direction string)
 }
 
-func observeAcceptedInput(observer InputObserver) {
+func observeAcceptedInput(observer Observer) {
 	if telemetry, ok := observer.(inputTelemetry); ok {
 		telemetry.AudioFrame("in", "accepted")
 	}
 }
 
-func observeInputCodecError(observer InputObserver) {
+func observeInputCodecError(observer Observer) {
 	if telemetry, ok := observer.(inputTelemetry); ok {
 		telemetry.CodecError("decode_in")
 	}
 }
 
-// InputEventCounts はprocess共有counterのある時点のsnapshotである。
-type InputEventCounts struct {
-	Duplicate           uint64
-	Late                uint64
-	Missing             uint64
-	BufferedDrop        uint64
-	DTX                 uint64
+// EventCounts はprocess共有counterのある時点のsnapshotである。
+type EventCounts struct {
+	// Duplicate は同じ連番を再受信した累積件数である。
+	Duplicate uint64
+	// Late は欠損確定後に遅れて到着した累積件数である。
+	Late uint64
+	// Missing は並べ替え窓を超えて欠損確定した累積件数である。
+	Missing uint64
+	// BufferedDrop はSSRC変更または終了時に連続しないため破棄した累積件数である。
+	BufferedDrop uint64
+	// DTX は空のOpusペイロードとして復号を省略した累積件数である。
+	DTX uint64
+	// PipelineUnavailable は下流停止中に再送せず破棄したPCMフレームの累積件数である。
 	PipelineUnavailable uint64
 }
 
-// InputCounterObserver は全event種別のprocess-lifetime atomic counterを所有する。
-type InputCounterObserver struct {
+// CounterObserver は全event種別のprocess-lifetime atomic counterを所有する。
+type CounterObserver struct {
 	duplicate           atomic.Uint64
 	late                atomic.Uint64
 	missing             atomic.Uint64
@@ -70,16 +76,16 @@ type InputCounterObserver struct {
 	pipelineUnavailable atomic.Uint64
 }
 
-// NewInputCounterObserver は全counterが0のprocess共有observerを作る。
-func NewInputCounterObserver() *InputCounterObserver {
-	return &InputCounterObserver{}
+// NewCounterObserver は全counterが0のprocess共有observerを作る。
+func NewCounterObserver() *CounterObserver {
+	return &CounterObserver{}
 }
 
 // ObserveInputEvent は対応するcounterだけを1増加させ、未知eventではpanicする。
 //
-// 未知値は外部入力ではなく配線不備なので黙って集計を壊さない。InputProcessorはpanicを通常の
+// 未知値は外部入力ではなく配線不備なので黙って集計を壊さない。Processorはpanicを通常の
 // error/cleanup経路へ変換する。
-func (o *InputCounterObserver) ObserveInputEvent(event InputEvent) {
+func (o *CounterObserver) ObserveInputEvent(event InputEvent) {
 	switch event {
 	case InputEventDuplicate:
 		o.duplicate.Add(1)
@@ -99,8 +105,8 @@ func (o *InputCounterObserver) ObserveInputEvent(event InputEvent) {
 }
 
 // Snapshot はactive sessionを停止せず、各atomic counterを独立に読み取って返す。
-func (o *InputCounterObserver) Snapshot() InputEventCounts {
-	return InputEventCounts{
+func (o *CounterObserver) Snapshot() EventCounts {
+	return EventCounts{
 		Duplicate:           o.duplicate.Load(),
 		Late:                o.late.Load(),
 		Missing:             o.missing.Load(),

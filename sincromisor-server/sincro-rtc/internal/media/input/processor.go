@@ -1,4 +1,5 @@
-package media
+// Package input はブラウザーのRTP/Opusを並べ替え、16 kHz mono PCMへ変換する。
+package input
 
 import (
 	"context"
@@ -14,6 +15,9 @@ import (
 )
 
 const (
+	// SampleRate はWebRTC OpusのRTP clockと復号出力の周波数をHzで表す。
+	SampleRate           = 48000
+	maxChannels          = 2
 	reorderWindowPackets = uint64(64)
 	pcmFrameSamples      = 320
 	pcmFrameBytes        = pcmFrameSamples * 2
@@ -23,20 +27,20 @@ const (
 // SubmitFuncは20 ms / 16 kHz / mono / s16leの1 frameをCoordinator境界へ渡す。
 type SubmitFunc func([]byte) error
 
-// InputProcessorはRTPを並べ替え、browser OpusをCoordinatorのPCM契約へ変換する。
+// ProcessorはRTPを並べ替え、browser OpusをCoordinatorのPCM契約へ変換する。
 //
 // 中間queueを持たず、bounded ordering後にdecode、downsample、frame化、SubmitFuncを同期実行する。
 // observerはprocess共有だがPCMやpacket payloadを受け取らない。
-type InputProcessor struct {
-	observer InputObserver
+type Processor struct {
+	observer Observer
 }
 
-// NewInputProcessorは全破棄判断で使うobserverを検証して保持し、nilならerrorを返す。
-func NewInputProcessor(observer InputObserver) (*InputProcessor, error) {
+// Newは全破棄判断で使うobserverを検証して保持し、nilならerrorを返す。
+func New(observer Observer) (*Processor, error) {
 	if observer == nil {
 		return nil, errors.New("input observer must not be nil")
 	}
-	return &InputProcessor{observer: observer}, nil
+	return &Processor{observer: observer}, nil
 }
 
 // Runは1本のremote RTP readerをcancel、EOF、read/decode/submit failureのいずれかまで処理する。
@@ -45,7 +49,7 @@ func NewInputProcessor(observer InputObserver) (*InputProcessor, error) {
 // 連続prefixだけを送出し、最初のgap以後を破棄してdecoder/FIR/frame stateをresetする。
 // 空DTXは観測だけしてdecodeせず、ErrPipelineUnavailableは再送せずframeを破棄する。
 // その他のsubmit errorとmalformed non-empty Opusはcallerへ返す。
-func (p *InputProcessor) Run(ctx context.Context, reader RTPReader, submit SubmitFunc) (runErr error) {
+func (p *Processor) Run(ctx context.Context, reader RTPReader, submit SubmitFunc) (runErr error) {
 	if ctx == nil || reader == nil || submit == nil {
 		return errors.New("input processor arguments must not be nil")
 	}
@@ -138,7 +142,7 @@ func newInputStream(ssrc uint32, sequence uint16, timestamp uint32) (*inputStrea
 func (s *inputStream) accept(
 	ctx context.Context,
 	packet *rtp.Packet,
-	observer InputObserver,
+	observer Observer,
 	submit SubmitFunc,
 ) error {
 	sequence := unwrap16(packet.SequenceNumber, s.next)
@@ -170,7 +174,7 @@ func (s *inputStream) accept(
 }
 
 // flushPrefixはnextからの連続packetだけを取り出し、decoder、FIR、output framing stateを変更する唯一の経路である。
-func (s *inputStream) flushPrefix(ctx context.Context, observer InputObserver, submit SubmitFunc) error {
+func (s *inputStream) flushPrefix(ctx context.Context, observer Observer, submit SubmitFunc) error {
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -198,7 +202,7 @@ func (s *inputStream) remember(sequence uint64) {
 }
 
 // dropBufferedはgap以後の各packetを1件ずつ観測して破棄し、未完成PCMもstream終了とともに解放する。
-func (s *inputStream) dropBuffered(observer InputObserver) {
+func (s *inputStream) dropBuffered(observer Observer) {
 	for range s.buffered {
 		observer.ObserveInputEvent(InputEventBufferedDrop)
 	}
@@ -207,7 +211,7 @@ func (s *inputStream) dropBuffered(observer InputObserver) {
 }
 
 // decodeはordered Opusを48 kHz stereo decode、mono downmix、FIR、20 ms framingの順に変換する。
-func (s *inputStream) decode(payload []byte, observer InputObserver, submit SubmitFunc) error {
+func (s *inputStream) decode(payload []byte, observer Observer, submit SubmitFunc) error {
 	if len(payload) == 0 {
 		observer.ObserveInputEvent(InputEventDTX)
 		return nil

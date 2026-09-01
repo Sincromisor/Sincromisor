@@ -13,7 +13,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/pion/webrtc/v4"
 
-	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
+	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc"
@@ -134,7 +134,7 @@ func newRealTestManager(t *testing.T, stunURL string) *rtc.Manager {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	manager, err := rtc.NewManager(stunURL, rtc.ManagerConfig{
 		PipelineFactory: signalingBlockingFactory{},
-		InputObserver:   audiomedia.NewInputCounterObserver(),
+		InputObserver:   inputmedia.NewCounterObserver(),
 		Clock:           rtc.SystemClock{},
 		Logger:          logger,
 		MaxSessions:     100,

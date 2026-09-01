@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
+	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
 )
 
 // Recorder is the typed telemetry boundary shared by signaling and RTC
@@ -257,23 +257,22 @@ func (r *Registry) CloseDuration(outcome string, duration time.Duration) {
 	r.closeDuration.WithLabelValues(normalize(outcome, closeOutcomes, "timeout")).Observe(duration.Seconds())
 }
 
-// ObserveInputEvent adapts media ordering/drop events into the fixed RTP/audio
-// schema without receiving packet or PCM payloads.
-func (r *Registry) ObserveInputEvent(event media.InputEvent) {
+// ObserveInputEvent は入力の並べ替え・破棄イベントを、パケットやPCMを受け取らず固定のRTP・音声指標へ変換する。
+func (r *Registry) ObserveInputEvent(event inputmedia.InputEvent) {
 	switch event {
-	case media.InputEventDuplicate:
+	case inputmedia.InputEventDuplicate:
 		r.RTPDrop("duplicate")
 		r.AudioFrame("in", "dropped")
-	case media.InputEventLate:
+	case inputmedia.InputEventLate:
 		r.RTPDrop("late")
 		r.AudioFrame("in", "dropped")
-	case media.InputEventMissing:
+	case inputmedia.InputEventMissing:
 		r.RTPDrop("missing")
 		r.AudioFrame("in", "dropped")
-	case media.InputEventBufferedDrop:
+	case inputmedia.InputEventBufferedDrop:
 		r.RTPDrop("reorder_flush")
 		r.AudioFrame("in", "dropped")
-	case media.InputEventDTX, media.InputEventPipelineUnavailable:
+	case inputmedia.InputEventDTX, inputmedia.InputEventPipelineUnavailable:
 		r.AudioFrame("in", "dropped")
 	default:
 		r.AudioFrame("in", "dropped")

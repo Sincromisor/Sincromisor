@@ -1,4 +1,4 @@
-package media
+package input
 
 import (
 	"context"
@@ -51,7 +51,7 @@ func TestToneEncoderProducesTwentyMillisecondFrames(t *testing.T) {
 		}
 		packets = append(packets, packet)
 	}
-	if len(packets) != int((1e9)/(FrameDuration.Nanoseconds())) {
+	if len(packets) != int((1e9)/(testFrameDuration.Nanoseconds())) {
 		t.Fatalf("packet count = %d, want 50", len(packets))
 	}
 }

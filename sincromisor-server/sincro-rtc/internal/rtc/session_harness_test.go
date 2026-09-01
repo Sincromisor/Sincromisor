@@ -6,7 +6,7 @@ import (
 
 	"github.com/pion/webrtc/v4"
 
-	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
+	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
 )
@@ -78,8 +78,8 @@ func (rtcNoopRunner) Run(
 	return nil, nil, 0, nil
 }
 
-func testInputObserver() audiomedia.InputObserver {
-	return audiomedia.NewInputCounterObserver()
+func testInputObserver() inputmedia.Observer {
+	return inputmedia.NewCounterObserver()
 }
 
 func newSessionDataChannel(t *testing.T, session *Session, label string) *webrtc.DataChannel {

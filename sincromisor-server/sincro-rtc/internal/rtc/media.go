@@ -13,6 +13,7 @@ import (
 	"github.com/pion/webrtc/v4"
 
 	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
+	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
 )
 
 // installOutboundTrack はAnswer生成前に継続outbound audio trackとRTCP senderをsessionへ登録する。
@@ -98,13 +99,13 @@ func ntpMiddle32(value time.Time) uint32 {
 	return uint32((seconds<<16 | fraction>>16) & 0xffffffff)
 }
 
-// startInbound は受理済みの唯一のaudio trackをsession context配下のInputProcessorへ接続する。
+// startInbound は受理済みの唯一のaudio trackをsession context配下のinput.Processorへ接続する。
 //
 // acceptAudioTrackがWaitGroupを予約済みなので、ここでは追加しない。readerはreadiness前から開始し、
-// Coordinator running前のframeはInputProcessorがunavailableとしてdropする。cancelは終了通知だけとし、
+// Coordinator running前のframeはinput.Processorがunavailableとしてdropする。cancelは終了通知だけとし、
 // 正常EOFはbrowser側入力の終了としてnormal closeへ集約する。decode/submit/observer failureは
 // media_errorとして同じclose-onceへ戻す。
-func (s *Session) startInbound(reader audiomedia.RTPReader) {
+func (s *Session) startInbound(reader inputmedia.RTPReader) {
 	s.goReserved("inbound_processor", func(context.Context) {
 		err := s.input.Run(s.ctx, reader, s.pipeline.SubmitPCM)
 		switch {
@@ -117,7 +118,7 @@ func (s *Session) startInbound(reader audiomedia.RTPReader) {
 	})
 }
 
-// rtpReader はPion TrackRemoteをmedia packageの最小RTPReader境界へ適合させる。
+// rtpReader はPion TrackRemoteをinput.RTPReader境界へ適合させる。
 type rtpReader struct {
 	track *webrtc.TrackRemote
 }

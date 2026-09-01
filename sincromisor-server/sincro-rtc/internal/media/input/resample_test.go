@@ -1,4 +1,4 @@
-package media
+package input
 
 import (
 	"crypto/sha256"

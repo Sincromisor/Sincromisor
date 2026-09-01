@@ -1,4 +1,4 @@
-package media
+package input
 
 import (
 	"context"
@@ -42,7 +42,7 @@ func TestInputProcessorSubmitPolicies(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			observer := &recordingInputObserver{}
-			processor, err := NewInputProcessor(observer)
+			processor, err := New(observer)
 			if err != nil {
 				t.Fatalf("NewInputProcessor() error = %v", err)
 			}
@@ -96,7 +96,7 @@ func TestInputProcessorDoesNotObserveCoordinatorQueueOverflow(t *testing.T) {
 		}
 	}
 	observer := &recordingInputObserver{}
-	processor, err := NewInputProcessor(observer)
+	processor, err := New(observer)
 	if err != nil {
 		t.Fatalf("NewInputProcessor() error = %v", err)
 	}
@@ -119,7 +119,7 @@ func TestInputProcessorDoesNotObserveCoordinatorQueueOverflow(t *testing.T) {
 
 func TestInputProcessorMalformedOpusAndObserverPanic(t *testing.T) {
 	t.Run("malformed opus", func(t *testing.T) {
-		processor, err := NewInputProcessor(&recordingInputObserver{})
+		processor, err := New(&recordingInputObserver{})
 		if err != nil {
 			t.Fatalf("NewInputProcessor() error = %v", err)
 		}
@@ -132,7 +132,7 @@ func TestInputProcessorMalformedOpusAndObserverPanic(t *testing.T) {
 		}
 	})
 	t.Run("observer panic", func(t *testing.T) {
-		processor, err := NewInputProcessor(panicInputObserver{})
+		processor, err := New(panicInputObserver{})
 		if err != nil {
 			t.Fatalf("NewInputProcessor() error = %v", err)
 		}

@@ -18,7 +18,7 @@ import (
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media"
 
-	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
+	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
 )
@@ -147,7 +147,7 @@ func TestManagerTenSequentialNormalClosesConverge(t *testing.T) {
 
 func TestManagerICERestartKeepsSessionPeerChannelsAndPipeline(t *testing.T) {
 	factory := &recordingBlockingFactory{calls: make(chan pipelineStart, 2)}
-	inputObserver := audiomedia.NewInputCounterObserver()
+	inputObserver := inputmedia.NewCounterObserver()
 	manager, err := NewManager("", ManagerConfig{
 		PipelineFactory: factory,
 		InputObserver:   inputObserver,
@@ -620,7 +620,7 @@ type blockingPipelineFactory struct{}
 
 type panicRTCInputObserver struct{}
 
-func (panicRTCInputObserver) ObserveInputEvent(audiomedia.InputEvent) {
+func (panicRTCInputObserver) ObserveInputEvent(inputmedia.InputEvent) {
 	panic("observer failed")
 }
 
