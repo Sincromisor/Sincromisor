@@ -1,5 +1,5 @@
-// Command generate_go_payloads writes deterministic Go-produced MessagePack payloads
-// for the Python compatibility test. It is test infrastructure, not a production codec surface.
+// Command generate_go_payloads はPython互換試験で使う決定的なGo生成MessagePackを出力する。
+// 試験基盤専用であり、本番codecの公開境界ではない。
 package main
 
 import (

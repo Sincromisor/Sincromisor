@@ -1,15 +1,15 @@
 id: task-260901231352-runtime-gate3-layout
 title: RTC起動処理とGate 3補助コードを責務別に整理
 category: sincro-rtc
-status: open
+status: done
 depends_on:
   - task-260901231343-rtc-process-network-package
   - task-260901231345-signaling-offer-registry-package
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-09-01
-closed_at: null
+closed_at: 2026-09-02
 legacy_ids: []
