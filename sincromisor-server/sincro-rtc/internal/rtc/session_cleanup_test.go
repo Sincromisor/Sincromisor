@@ -185,3 +185,33 @@ func (p *closeProbe) unblock() {
 		close(p.release)
 	}
 }
+func TestSessionCloseIsIdempotent(t *testing.T) {
+	manager := newTestManager(t)
+	client := newBrowserPeer(t)
+	answer := negotiatePair(t, manager, client)
+
+	manager.mu.RLock()
+	session := manager.sessions[answer.SessionID]
+	manager.mu.RUnlock()
+	if session == nil {
+		t.Fatal("session missing after negotiation")
+	}
+	var wait sync.WaitGroup
+	for range 100 {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			if err := session.Close("concurrent_close"); err != nil {
+				t.Errorf("Close() error = %v", err)
+			}
+		}()
+	}
+	wait.Wait()
+	<-session.done
+	if manager.Count() != 0 {
+		t.Fatalf("Count() = %d, want 0", manager.Count())
+	}
+	if err := client.Close(); err != nil {
+		t.Fatalf("client.Close() error = %v", err)
+	}
+}
