@@ -79,3 +79,14 @@ func (s *Session) answerReady() error {
 	}
 	return nil
 }
+
+// addCandidate はactive sessionだけをPion candidate境界へ通し、closing後のlate candidateを拒否する。
+func (s *Session) addCandidate(candidate webrtc.ICECandidateInit) error {
+	if err := s.ctx.Err(); err != nil {
+		return err
+	}
+	if err := s.pc.AddICECandidate(candidate); err != nil {
+		return fmt.Errorf("add ice candidate: %w", err)
+	}
+	return nil
+}

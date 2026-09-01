@@ -3,12 +3,22 @@ package rtc
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 
+	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
 )
+
+type panicRTCInputObserver struct{}
+
+func (panicRTCInputObserver) ObserveInputEvent(inputmedia.InputEvent) {
+	panic("observer failed")
+}
 
 func TestDisconnectedNaturalRecoveryCancelsGrace(t *testing.T) {
 	clock := &fakeClock{}
@@ -130,4 +140,40 @@ func TestRestartDeadlineAndCloseRaceConverges(t *testing.T) {
 			t.Fatalf("race state = %s, want closed", session.lifecycle.state)
 		}
 	}
+}
+func TestInputObserverPanicClosesAndJoinsSession(t *testing.T) {
+	closed := make(chan string, 1)
+	coordinator, err := pipeline.NewCoordinator(blockingPipelineFactory{}, testLogger())
+	if err != nil {
+		t.Fatalf("NewCoordinator() error = %v", err)
+	}
+	session, err := newSession(
+		"observer-panic-session",
+		"chat",
+		webrtc.Configuration{},
+		0,
+		coordinator,
+		testSynthDecoder(t),
+		panicRTCInputObserver{},
+		SystemClock{},
+		testLogger(),
+		func(sessionID string) { closed <- sessionID },
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("newSession() error = %v", err)
+	}
+	session.wg.Add(1)
+	session.startInbound(&singlePacketReader{packet: &rtp.Packet{
+		Header: rtp.Header{SSRC: 1},
+	}})
+	select {
+	case sessionID := <-closed:
+		if sessionID != "observer-panic-session" {
+			t.Fatalf("closed session = %q, want observer-panic-session", sessionID)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("observer panic did not close and join session")
+	}
+	<-session.done
 }
