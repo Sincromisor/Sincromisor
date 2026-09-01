@@ -1,6 +1,6 @@
-# Pion RTC service
+# Pion RTCサービス
 
-## Summary
+## 概要
 
 - 現行 Frontend signaling schema を変更せず、Pion v4 の固定 UDP4 host candidate 経路を確認する。
 - browser Opus RTP を64 packetのwindow内で並べ替え、pure Go の `github.com/pion/opus` で48 kHz PCMにdecodeする。
@@ -13,7 +13,29 @@
 - Consul HTTP endpoint を指定した場合は Pion 自身を `RTCSignalingServer` として登録し、下流 Python service を同じ endpoint から解決する。
 - production composeはrepository rootの`compose/sincro-rtc.yml`を正本とする。
 
-## Build requirements
+## パッケージ責務図
+
+| 入口・パッケージ                                                                 | 責務                                                                                                                                                      |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`cmd/sincro-rtc`](cmd/sincro-rtc)                                               | 実行入口、起動依存の構築、HTTP提供、シグナル後の終了順序                                                                                                  |
+| [`internal/config`](internal/config)                                             | コマンドライン設定の解析と、リスナーを開く前の値・パス検証                                                                                                |
+| [`internal/signaling`](internal/signaling) / [`offer`](internal/signaling/offer) | HTTPシグナリングと稼働状態の公開 / Offerの重複排除、候補収集、再利用期限                                                                                  |
+| [`internal/rtc`](internal/rtc) / [`datachannel`](internal/rtc/datachannel)       | セッションとPeerConnectionの生存期間 / `text_ch`・`telop_ch`のキューと送信                                                                                |
+| [`internal/rtc/network`](internal/rtc/network)                                   | 全セッションで共有するPion API、UDP4ソケット、候補方針                                                                                                    |
+| [`internal/media`](internal/media)                                               | [`input`](internal/media/input)の受信音声変換、[`output`](internal/media/output)の送信音声制御、[`synthdecode`](internal/media/synthdecode)の合成音声復号 |
+| [`internal/pipeline`](internal/pipeline)                                         | 4つの下流サービスを世代単位で接続し、再初期化、履歴、キューを調停                                                                                         |
+| [`internal/observability`](internal/observability)                               | process固有のPrometheus registryと、種類数を固定したlabel語彙                                                                                             |
+| [`internal/gate3`](internal/gate3)                                               | 公開境界から実process、Consul、下流固定サービス、ブラウザーを検証するGate 3試験基盤                                                                       |
+
+代表的な処理は次の順に読む。
+
+1. 起動と終了は[`cmd/sincro-rtc`](cmd/sincro-rtc)から[`internal/config`](internal/config)へ進む。
+2. HTTP契約は[`internal/signaling`](internal/signaling)から[Frontend RTC契約](../../documents/design/contracts/frontend-rtc.md)を参照する。
+3. PeerConnectionの所有権は[`internal/rtc`](internal/rtc)から`datachannel`、`network`、`media`の順に追う。
+4. 会話処理は[`internal/pipeline`](internal/pipeline)から`client`、`discovery`、`protocol`へ進み、wire形式は[音声パイプラインWebSocket契約](../../documents/design/contracts/audio-pipeline-websocket.md)を正本とする。
+5. 全体の責務境界と試験配置は[sincro-rtcサービス設計](../../documents/design/backend/services/sincro-rtc.md)を参照する。
+
+## ビルド要件
 
 通常 build は `CGO_ENABLED=1` と C compiler を必要とする。`mediadevices` v0.10.0 に同梱された
 static libopus archive を使うため、`dynamic` build tagやsystem libopusは使わない。
@@ -37,7 +59,7 @@ sudo apt-get install ffmpeg
 ffmpeg -version
 ```
 
-## Container image
+## コンテナイメージ
 
 repository rootからPion binaryとFrontend静的成果物を同時にbuildする。実行imageはnon-root userで
 `/opt/sincromisor/frontend`と`/usr/bin/ffmpeg`を既定値として起動する。後続のcompose serviceは
@@ -73,7 +95,7 @@ VoiceSynthesizerから受け取る`audio/wav`、`audio/aac`、parameterなしの
 唯一のparameterとして`codecs=opus`を持つ`audio/ogg`を、48 kHz mono PCMへ変換する。
 MIME parameterの追加や未知codecは起動後のdecode errorとして発話単位で拒否する。
 
-## Local Chrome smoke
+## ローカルChrome動作確認
 
 `127.0.0.1:8080` の競合を避ける。Frontend build は repository root から実行する。
 
@@ -123,7 +145,7 @@ Google Chrome stable で
 確認点:
 
 1. Debug Console の ICE state が `connected` または `completed` になる。
-2. server log の `offer answered` で `active_sessions=1` になる。
+2. server log の `offer answered` で `count=1` になる。
 3. local Consulと下流Python serviceを起動した構成では、SpeechExtractor側で20 ms /
    640-byteの16 kHz mono s16le frameを継続受信できることを確認する。server logに
    `inbound audio processing stopped` が出た場合はRTP read、Opus decode、またはpipeline submitの
@@ -136,22 +158,21 @@ Google Chrome stable で
    `session_id`でPion logを絞り、`recognizer_result_received`、`processor_request_sent`、
    `processor_result_received`、`synthesizer_result_received`の最後の到達stageを確認する。これらのlogと
    Git artifactには認識・chat・VoiceText・音声・Raw payloadを転載しない。
-6. 通常 close を連続 10 回行い、各回の `session registry updated` が `active_sessions=0` を示す。
-   process を停止した最後の `sincro-rtc stopped` で `final_goroutines` が起動時の
-   `initial_goroutines + 5` 以下であることを確認する。
+6. 通常closeを連続10回行い、各回の`session registry updated`が`count=0`を示す。
+   process停止時は`sincro-rtc stopped`に`stage=shutdown_complete`と`count=0`が記録されることを確認する。
 
 `Ctrl-C` または `SIGTERM` で停止する。Consul登録済みならdraining開始直後に2秒上限でderegisterを並行開始する。終了順序は
 `BeginDrain → cleanup並行開始 → 1秒の受付拒否観測窓とcleanupの完了待ち → 独立1秒のHTTP停止`
 である。cleanupは共通5秒期限でOffer owner、session registry、PeerConnection、codec、ticker、
 media goroutineをclose-once経路から収束させ、signal受信からprocess終了までの上限は6秒とする。
 
-## Pipeline reset logs
+## パイプライン再初期化ログ
 
 対象`session_id`でログを絞り、正常stageの直前に最初に出た`pipeline_reset_requested`から、resetで閉じた
 下流connectionの`service`と有限の`cause`を確認する。認識本文、chat本文、VoiceText、音声、Raw payloadは
 ログにもGit artifactにも転載しない。
 
-## Automated checks
+## 自動検査
 
 module root で実行する。
 
@@ -166,7 +187,7 @@ Pion の production network integration test は loopback UDP socket を使用�
 広告・接続した後にsocketが解放されることを確認する。sandbox 内で socket bind が禁止される環境では、
 同じ command を network namespace の制限がない実行環境で行う。
 
-## Current scope
+## 現在の対象範囲
 
 通常serviceはinitial Offer、session ID付きupdate Offer、candidateを
 `documents/design/contracts/frontend-rtc.md`の契約に従って処理する。unknown / closed session のcandidateは
@@ -175,5 +196,5 @@ HTTP 200と`status:false`を返す。
 次は現在の運用範囲外である。
 
 - TURN、IPv6、Firefox
-- NACK / PLC、RTCP metrics
-- impairment、soak、performance comparison
+- NACK再送 / PLC
+- 通信障害注入、長時間稼働、性能比較
