@@ -1,4 +1,4 @@
-package rtc
+package datachannel
 
 import (
 	"context"
@@ -36,7 +36,7 @@ var (
 	errStaleDataChannelEvent       = errors.New("data channel event belongs to an old generation")
 )
 
-type dataChannelWriter interface {
+type channelWriter interface {
 	SendText(string) error
 	BufferedAmount() uint64
 	SetBufferedAmountLowThreshold(uint64)
@@ -45,24 +45,32 @@ type dataChannelWriter interface {
 	ReadyState() webrtc.DataChannelState
 }
 
-// DataChannelStats はpayloadを保持しないdispatcherのsession累積観測値である。
-type DataChannelStats struct {
-	TextRejected     uint64
-	TelopDropped     uint64
+// Stats はペイロードを保持しない送信処理担当のセッション累積観測値である。
+type Stats struct {
+	// TextRejected はtextキュー満杯で拒否した累積件数である。
+	TextRejected uint64
+	// TelopDropped はtelopキュー満杯で破棄した最古イベントの累積件数である。
+	TelopDropped uint64
+	// TelopSendDropped は信頼性なしチャネルの送信失敗で破棄した累積件数である。
 	TelopSendDropped uint64
+	// GenerationPurged は世代更新によって送信前に破棄した累積件数である。
 	GenerationPurged uint64
-	ActiveWorkers    int64
-	TextQueued       int
-	TelopQueued      int
-	Closed           bool
+	// ActiveWorkers は現在動作中の送信処理担当数である。
+	ActiveWorkers int64
+	// TextQueued は現在のtextキュー件数である。
+	TextQueued int
+	// TelopQueued は現在のtelopキュー件数である。
+	TelopQueued int
+	// Closed はClose開始後で新しい接続と追加を拒否することを表す。
+	Closed bool
 }
 
-// DataChannelDispatcher はtext/telop queue、Pion bufferedAmount backpressure、送信workerを所有する。
+// Dispatcher はtext/telopキュー、PionのbufferedAmountによる送信抑制、送信処理担当を所有する。
 //
 // textは64件FIFOでoverflow/send failureをsession errorへ返す。telopは128件FIFOでoverflow時に
 // 最古だけをdropし、単発送信失敗でもsessionを継続する。Closeはworkerをcancelしてjoinするが、
 // DataChannel object自体はPeerConnection所有なのでcloseしない。
-type DataChannelDispatcher struct {
+type Dispatcher struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	logger              *slog.Logger
@@ -78,8 +86,8 @@ type DataChannelDispatcher struct {
 	telopQueue        [][]byte
 	textWake          chan struct{}
 	telopWake         chan struct{}
-	textChannel       dataChannelWriter
-	telopChannel      dataChannelWriter
+	textChannel       channelWriter
+	telopChannel      channelWriter
 	wg                sync.WaitGroup
 	closeOnce         sync.Once
 
@@ -92,24 +100,23 @@ type DataChannelDispatcher struct {
 	recoverPanic     func(stage string)
 }
 
-// DataChannelDispatcherOptions connects payload-free metrics and the owning
-// Session panic boundary. RecoverPanic must be safe after Session closing.
-type DataChannelDispatcherOptions struct {
-	// Recorder receives payload-free queue and send-error events.
+// Options はペイロードを保持しない観測と、所有セッションのpanic境界を接続する。
+type Options struct {
+	// Recorder はキューと送信失敗だけを受け取り、ペイロードを保持しない。
 	Recorder observability.Recorder
-	// RecoverPanic transfers worker/callback panic ownership to the Session.
+	// RecoverPanic は処理担当とコールバックのpanicを所有セッションへ渡す。
 	RecoverPanic func(stage string)
 }
 
-// NewDataChannelDispatcher はidle dispatcherを作り、session context cancellationをworkerへ伝播する。
+// New は待機状態のDispatcherを作り、セッションのcontext取消を送信処理担当へ伝播する。
 //
-// onErrorはreliable text failure、backpressure timeout、channel closeをSession.Closeへ集約する。
-func NewDataChannelDispatcher(
+// onErrorはreliable textの失敗、送信抑制の時間切れ、チャネル切断をSession.Closeへ集約する。
+func New(
 	parent context.Context,
 	logger *slog.Logger,
 	onError func(error),
-	options ...DataChannelDispatcherOptions,
-) (*DataChannelDispatcher, error) {
+	options ...Options,
+) (*Dispatcher, error) {
 	if parent == nil || logger == nil || onError == nil {
 		return nil, errors.New("data channel dispatcher dependencies must not be nil")
 	}
@@ -124,7 +131,7 @@ func NewDataChannelDispatcher(
 			recoverPanic = options[0].RecoverPanic
 		}
 	}
-	return &DataChannelDispatcher{
+	return &Dispatcher{
 		ctx: ctx, cancel: cancel, logger: logger, onError: onError,
 		backpressureTimeout: bufferedAmountTimeout,
 		textWake:            make(chan struct{}, 1),
@@ -136,16 +143,16 @@ func NewDataChannelDispatcher(
 }
 
 // AttachText はidentity検証済みでopenしたreliable text_chを1回だけworkerへ接続する。
-func (d *DataChannelDispatcher) AttachText(channel dataChannelWriter) error {
+func (d *Dispatcher) AttachText(channel channelWriter) error {
 	return d.attach(channel, true)
 }
 
 // AttachTelop はidentity検証済みでopenしたunreliable telop_chを1回だけworkerへ接続する。
-func (d *DataChannelDispatcher) AttachTelop(channel dataChannelWriter) error {
+func (d *Dispatcher) AttachTelop(channel channelWriter) error {
 	return d.attach(channel, false)
 }
 
-func (d *DataChannelDispatcher) attach(channel dataChannelWriter, text bool) error {
+func (d *Dispatcher) attach(channel channelWriter, text bool) error {
 	if channel == nil || channel.ReadyState() != webrtc.DataChannelStateOpen {
 		return errors.New("data channel is not open")
 	}
@@ -182,7 +189,7 @@ func (d *DataChannelDispatcher) attach(channel dataChannelWriter, text bool) err
 }
 
 // Purge はgeneration barrierより前に取り込んだtext/telop eventを一括破棄する。
-func (d *DataChannelDispatcher) Purge() {
+func (d *Dispatcher) Purge() {
 	d.sendMu.Lock()
 	defer d.sendMu.Unlock()
 	d.mu.Lock()
@@ -194,7 +201,7 @@ func (d *DataChannelDispatcher) Purge() {
 	d.mu.Unlock()
 }
 
-func (d *DataChannelDispatcher) purgeLocked() {
+func (d *Dispatcher) purgeLocked() {
 	count := len(d.textQueue) + len(d.telopQueue)
 	textCount, telopCount := len(d.textQueue), len(d.telopQueue)
 	d.generationEpoch++
@@ -216,12 +223,12 @@ func (d *DataChannelDispatcher) purgeLocked() {
 	}
 }
 
-// Stats はdispatcherのpayload非保持counter snapshotを返す。
-func (d *DataChannelDispatcher) Stats() DataChannelStats {
+// Stats は送信処理担当のペイロードを保持しない累積値と現在値を返す。
+func (d *Dispatcher) Stats() Stats {
 	d.mu.Lock()
 	textQueued, telopQueued, closed := len(d.textQueue), len(d.telopQueue), d.closed
 	d.mu.Unlock()
-	return DataChannelStats{
+	return Stats{
 		TextRejected:     d.textRejected.Load(),
 		TelopDropped:     d.telopDropped.Load(),
 		TelopSendDropped: d.telopSendDropped.Load(),
@@ -233,8 +240,8 @@ func (d *DataChannelDispatcher) Stats() DataChannelStats {
 	}
 }
 
-// Close はdispatcher workerをcancelし、進行中のbackpressure waitを含めて一度だけjoinする。
-func (d *DataChannelDispatcher) Close() error {
+// Close は送信処理担当を取り消し、進行中の送信抑制待ちを含めて一度だけ待ち合わせる。
+func (d *Dispatcher) Close() error {
 	d.closeOnce.Do(func() {
 		// attachの開始権とWaitGroup予約は同じmutexで直列化する。closed確定後は
 		// 新しいAdd/worker開始がないため、このunlock後のWaitはAddと競合しない。
@@ -262,7 +269,7 @@ func (d *DataChannelDispatcher) Close() error {
 	return nil
 }
 
-func (d *DataChannelDispatcher) run(channel dataChannelWriter, text bool, wake <-chan struct{}) {
+func (d *Dispatcher) run(channel channelWriter, text bool, wake <-chan struct{}) {
 	d.activeWorkers.Add(1)
 	defer func() {
 		if recover() != nil {
@@ -317,7 +324,7 @@ func (d *DataChannelDispatcher) run(channel dataChannelWriter, text bool, wake <
 	}
 }
 
-func (d *DataChannelDispatcher) pop(text bool) ([]byte, uint64, <-chan struct{}, bool) {
+func (d *Dispatcher) pop(text bool) ([]byte, uint64, <-chan struct{}, bool) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	queue := &d.telopQueue
@@ -341,8 +348,8 @@ func (d *DataChannelDispatcher) pop(text bool) ([]byte, uint64, <-chan struct{},
 // waitWritableは1 MiB high-waterで送信を止め、256 KiB low-water eventまで最大5秒待つ。
 //
 // callbackは通知をcoalesceするだけで、復帰判定はBufferedAmountを再読してspurious/古いeventを拒否する。
-func (d *DataChannelDispatcher) waitWritable(
-	channel dataChannelWriter,
+func (d *Dispatcher) waitWritable(
+	channel channelWriter,
 	generationChanged <-chan struct{},
 ) error {
 	if channel.ReadyState() != webrtc.DataChannelStateOpen {
@@ -374,7 +381,7 @@ func (d *DataChannelDispatcher) waitWritable(
 	}
 }
 
-func (d *DataChannelDispatcher) safeCallback(stage string, callback func()) func() {
+func (d *Dispatcher) safeCallback(stage string, callback func()) func() {
 	return func() {
 		defer func() {
 			if recover() != nil {

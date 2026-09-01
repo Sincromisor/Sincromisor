@@ -13,6 +13,7 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc/datachannel"
 )
 
 func TestGenerationNotificationAlonePurgesAudioTextAndTelop(t *testing.T) {
@@ -22,9 +23,9 @@ func TestGenerationNotificationAlonePurgesAudioTextAndTelop(t *testing.T) {
 		t.Fatalf("NewFrameEncoder() error = %v", err)
 	}
 	t.Cleanup(func() { _ = encoder.Close() })
-	dispatcher, err := NewDataChannelDispatcher(context.Background(), logger, func(error) {})
+	dispatcher, err := datachannel.New(context.Background(), logger, func(error) {})
 	if err != nil {
-		t.Fatalf("NewDataChannelDispatcher() error = %v", err)
+		t.Fatalf("datachannel.New() error = %v", err)
 	}
 	t.Cleanup(func() { _ = dispatcher.Close() })
 	output, err := audiomedia.NewOutputProcessor(encoder, rtcDiscardTrack{}, dispatcher.EnqueueTelop, logger)
@@ -48,23 +49,23 @@ func TestGenerationNotificationAlonePurgesAudioTextAndTelop(t *testing.T) {
 		t.Fatalf("generation 1 enqueue = %v, %v", accepted, err)
 	}
 
-	// No generation-2 text or synth envelope follows this notification. The notification
-	// itself must therefore be sufficient to remove all generation-1 output.
+	// generation 2の後続出力がなくても、通知だけでgeneration 1の全出力を破棄する。
 	if !session.applyGeneration(2, nil) {
 		t.Fatal("generation 2 notification was not applied")
 	}
 	if got := output.Stats().GenerationPurged; got != 1 {
 		t.Fatalf("purged audio count = %d, want 1", got)
 	}
-	if len(dispatcher.textQueue) != 0 || len(dispatcher.telopQueue) != 0 {
+	dispatchStats := dispatcher.Stats()
+	if dispatchStats.TextQueued != 0 || dispatchStats.TelopQueued != 0 {
 		t.Fatalf("old data events remained = text %d telop %d",
-			len(dispatcher.textQueue), len(dispatcher.telopQueue))
+			dispatchStats.TextQueued, dispatchStats.TelopQueued)
 	}
 	accepted, err = session.applyGenerationError(1, func() error {
 		return dispatcher.EnqueueText(protocol.ChatMessage{MessageID: "stale"})
 	})
-	if accepted || err != nil || len(dispatcher.textQueue) != 0 {
-		t.Fatalf("stale envelope result = %v, %v, queue %d", accepted, err, len(dispatcher.textQueue))
+	if accepted || err != nil || dispatcher.Stats().TextQueued != 0 {
+		t.Fatalf("stale envelope result = %v, %v, queue %d", accepted, err, dispatcher.Stats().TextQueued)
 	}
 }
 
@@ -75,9 +76,9 @@ func TestSessionOutputCloseRejectsConcurrentTextSynthAndGenerationActions(t *tes
 		t.Fatalf("NewFrameEncoder() error = %v", err)
 	}
 	defer func() { _ = encoder.Close() }()
-	dispatcher, err := NewDataChannelDispatcher(context.Background(), logger, func(error) {})
+	dispatcher, err := datachannel.New(context.Background(), logger, func(error) {})
 	if err != nil {
-		t.Fatalf("NewDataChannelDispatcher() error = %v", err)
+		t.Fatalf("datachannel.New() error = %v", err)
 	}
 	output, err := audiomedia.NewOutputProcessor(encoder, rtcDiscardTrack{}, dispatcher.EnqueueTelop, logger)
 	if err != nil {
@@ -117,7 +118,7 @@ func TestSessionOutputCloseRejectsConcurrentTextSynthAndGenerationActions(t *tes
 		t.Fatalf("OutputProcessor.Close() error = %v", err)
 	}
 	if err := dispatcher.Close(); err != nil {
-		t.Fatalf("DataChannelDispatcher.Close() error = %v", err)
+		t.Fatalf("Dispatcher.Close() error = %v", err)
 	}
 	workers.Wait()
 
@@ -135,7 +136,7 @@ func TestSessionOutputCloseRejectsConcurrentTextSynthAndGenerationActions(t *tes
 	}); !errors.Is(err, audiomedia.ErrOutputClosed) {
 		t.Fatalf("post-close synth error = %v", err)
 	}
-	if err := dispatcher.EnqueueText(protocol.ChatMessage{MessageID: "post-close"}); !errors.Is(err, ErrDataChannelDispatcherClosed) {
+	if err := dispatcher.EnqueueText(protocol.ChatMessage{MessageID: "post-close"}); !errors.Is(err, datachannel.ErrDataChannelDispatcherClosed) {
 		t.Fatalf("post-close text error = %v", err)
 	}
 }
@@ -147,9 +148,9 @@ func TestSynthDecodeCompletionAfterOutputCloseCannotRestoreQueuedAudio(t *testin
 		t.Fatalf("NewFrameEncoder() error = %v", err)
 	}
 	defer func() { _ = encoder.Close() }()
-	dispatcher, err := NewDataChannelDispatcher(context.Background(), logger, func(error) {})
+	dispatcher, err := datachannel.New(context.Background(), logger, func(error) {})
 	if err != nil {
-		t.Fatalf("NewDataChannelDispatcher() error = %v", err)
+		t.Fatalf("datachannel.New() error = %v", err)
 	}
 	defer func() { _ = dispatcher.Close() }()
 	output, err := audiomedia.NewOutputProcessor(encoder, rtcDiscardTrack{}, dispatcher.EnqueueTelop, logger)

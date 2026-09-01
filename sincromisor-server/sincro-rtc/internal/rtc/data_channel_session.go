@@ -2,6 +2,11 @@ package rtc
 
 import "github.com/pion/webrtc/v4"
 
+const (
+	textChannelLabel  = "text_ch"
+	telopChannelLabel = "telop_ch"
+)
+
 // handleDataChannel はFrontend initiatorが作った既存2 channelを検証し、open latchへ接続する。
 //
 // 属性検証、同label object identity、OnOpen identity確認を通過した同じobjectだけをdispatcherへ渡す。

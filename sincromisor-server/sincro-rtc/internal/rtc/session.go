@@ -16,6 +16,7 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc/datachannel"
 )
 
 // SessionDependencies は session 作成前に検証する遅延 pipeline、入力観測、deadline の依存境界である。
@@ -52,7 +53,7 @@ type Session struct {
 	wg                 sync.WaitGroup
 	encoder            *audiomedia.FrameEncoder
 	output             *audiomedia.OutputProcessor
-	dispatcher         *DataChannelDispatcher
+	dispatcher         *datachannel.Dispatcher
 	outboundMu         sync.Mutex
 	outboundGeneration uint64
 	outboundTrack      *webrtc.TrackLocalStaticSample
@@ -76,7 +77,7 @@ type synthSpeechDecoder interface {
 
 // sessionResourceClosers はSession cleanupが並行開始して完了を待つ所有resource境界である。
 //
-// productionではPeerConnection、codec、OutputProcessor、DataChannelDispatcher、Coordinatorへ固定し、
+// productionではPeerConnection、codec、OutputProcessor、datachannel.Dispatcher、Coordinatorへ固定し、
 // testではblocking closeを注入してCloseの非blocking返却、close-once、全join後公開を観測する。
 type sessionResourceClosers struct {
 	peer       func() error
@@ -147,10 +148,10 @@ func newSession(
 		cancel()
 		return nil, err
 	}
-	dispatcher, err := NewDataChannelDispatcher(ctx, logger, func(err error) {
+	dispatcher, err := datachannel.New(ctx, logger, func(err error) {
 		logger.Error("data channel dispatcher stopped", "session_id", id, "reason", "data_channel_error", "error", err)
 		_ = session.Close("data_channel_error")
-	}, DataChannelDispatcherOptions{
+	}, datachannel.Options{
 		Recorder: recorder,
 		RecoverPanic: func(stage string) {
 			logger.Error("data channel callback panic", "session_id", id, "stage", stage, "reason", "panic")
@@ -322,9 +323,9 @@ func (s *Session) cleanup(reason string) {
 	close(s.done)
 }
 
-// notifyClosed crosses from Session cleanup into Manager/OfferRegistry
-// lifecycle callbacks. A callback panic is classified locally so cleanup still
-// releases active-session telemetry, records close duration, and closes done.
+// notifyClosed はSessionの後始末完了をManagerとOfferレジストリの生存期間コールバックへ通知する。
+//
+// コールバックのpanicはここで分類し、稼働セッション観測、終了時間、Doneの公開を必ず完了させる。
 func (s *Session) notifyClosed() (panicked bool) {
 	defer func() {
 		if recover() != nil {

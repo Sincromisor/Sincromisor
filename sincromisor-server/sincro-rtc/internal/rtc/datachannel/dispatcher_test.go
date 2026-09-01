@@ -1,9 +1,12 @@
-package rtc
+package datachannel
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"log/slog"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -271,62 +274,11 @@ func TestDataChannelAttachAndCloseShareWorkerReservation(t *testing.T) {
 	})
 }
 
-func TestSessionPublishesClosedOnlyAfterDispatcherWorkerJoin(t *testing.T) {
-	dispatcher := newDispatcherForTest(t, func(error) {})
-	channel := newFakeDataChannel(0)
-	channel.sendEntered = make(chan struct{})
-	channel.sendRelease = make(chan struct{})
-	if err := dispatcher.AttachText(channel); err != nil {
-		t.Fatalf("AttachText() error = %v", err)
-	}
-	if err := dispatcher.EnqueueText(protocol.ChatMessage{MessageID: "blocking"}); err != nil {
-		t.Fatalf("EnqueueText() error = %v", err)
-	}
-	<-channel.sendEntered
-
-	manager, err := NewManager("", ManagerConfig{
-		PipelineFactory: blockingPipelineFactory{},
-		InputObserver:   testInputObserver(),
-		Clock:           SystemClock{},
-		Logger:          testLogger(),
-		MaxSessions:     100,
-		SynthDecoder:    testSynthDecoder(t),
-	})
-	if err != nil {
-		t.Fatalf("NewManager() error = %v", err)
-	}
-	lifecycle, err := newSessionLifecycle(SystemClock{})
-	if err != nil {
-		t.Fatalf("newSessionLifecycle() error = %v", err)
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	session := &Session{
-		id: "dispatcher-join", lifecycle: lifecycle, ctx: ctx, cancel: cancel,
-		done: make(chan struct{}), logger: testLogger(), onClosed: manager.remove,
-		closers: sessionResourceClosers{
-			peer: func() error { return nil }, codec: func() error { return nil },
-			output: func() error { return nil }, dispatcher: dispatcher.Close,
-			pipeline: func() error { return nil },
-		},
-	}
-	manager.sessions[session.id] = session
-	if err := session.Close("dispatcher_join_test"); err != nil {
-		t.Fatalf("Session.Close() error = %v", err)
-	}
-	assertCleanupPending(t, manager, session)
-	close(channel.sendRelease)
-	waitSessionDone(t, session)
-	assertClosedSession(t, manager, session, "dispatcher_join_test")
-	if got := dispatcher.Stats().ActiveWorkers; got != 0 {
-		t.Fatalf("active workers at Session closed = %d, want 0", got)
-	}
-}
-
-func newDispatcherForTest(t *testing.T, onError func(error)) *DataChannelDispatcher {
+func newDispatcherForTest(t *testing.T, onError func(error)) *Dispatcher {
 	t.Helper()
-	dispatcher, err := NewDataChannelDispatcher(context.Background(), testLogger(), onError)
+	dispatcher, err := New(context.Background(), slog.New(slog.NewTextHandler(io.Discard, nil)), onError)
 	if err != nil {
-		t.Fatalf("NewDataChannelDispatcher() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	t.Cleanup(func() {
 		if err := dispatcher.Close(); err != nil {
@@ -334,6 +286,18 @@ func newDispatcherForTest(t *testing.T, onError func(error)) *DataChannelDispatc
 		}
 	})
 	return dispatcher
+}
+
+func waitForCondition(t *testing.T, timeout time.Duration, condition func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if condition() {
+			return
+		}
+		runtime.Gosched()
+	}
+	t.Fatal("condition did not become true before deadline")
 }
 
 type fakeDataChannel struct {
