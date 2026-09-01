@@ -128,7 +128,7 @@ Google Chrome stable で
    640-byteの16 kHz mono s16le frameを継続受信できることを確認する。server logに
    `inbound audio processing stopped` が出た場合はRTP read、Opus decode、またはpipeline submitの
    errorなので正常なsmokeとは扱わない。入力drop種別の正確な件数はpayloadをlogへ出さない
-   `InputCounterObserver` が所有し、`go test ./internal/media` のfocused testで確認する。
+   `input.CounterObserver` が所有し、`go test ./internal/media/input` の対象試験で確認する。
 4. Chrome DevTools で remote audio track を AudioContext `AnalyserNode` へ接続し、入力停止中も
    remote trackが継続することと、合成結果が20 ms cadenceで再生されることを確認する。
 5. 会話後、Debug Consoleの`text_ch`に実chat message、`telop_ch`に再生audioと同期したmoraが表示され、

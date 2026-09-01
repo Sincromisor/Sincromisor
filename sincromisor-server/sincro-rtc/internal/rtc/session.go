@@ -11,8 +11,8 @@ import (
 
 	"github.com/pion/webrtc/v4"
 
-	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
 	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
+	outputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/output"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
@@ -52,8 +52,8 @@ type Session struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
 	wg                 sync.WaitGroup
-	encoder            *audiomedia.FrameEncoder
-	output             *audiomedia.OutputProcessor
+	encoder            *outputmedia.Encoder
+	output             *outputmedia.Processor
 	dispatcher         *datachannel.Dispatcher
 	outboundMu         sync.Mutex
 	outboundGeneration uint64
@@ -129,7 +129,7 @@ func newSession(
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w", err)
 	}
-	encoder, err := audiomedia.NewFrameEncoder()
+	encoder, err := outputmedia.NewEncoder()
 	if err != nil {
 		_ = pc.Close()
 		return nil, err
@@ -175,7 +175,7 @@ func newSession(
 		cancel()
 		return nil, err
 	}
-	output, err := audiomedia.NewOutputProcessor(
+	output, err := outputmedia.New(
 		encoder,
 		pionSampleWriter{track: session.outboundTrack},
 		dispatcher.EnqueueTelop,

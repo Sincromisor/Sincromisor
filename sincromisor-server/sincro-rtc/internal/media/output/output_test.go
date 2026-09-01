@@ -1,4 +1,4 @@
-package media
+package output
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 
 func TestOutputSpeechQueueBoundaries(t *testing.T) {
 	t.Run("speech count", func(t *testing.T) {
-		processor := newOutputProcessorForTest(t)
+		processor := newProcessorForTest(t)
 		speech := synthdecode.DecodedSpeech{SpeechID: 1, PCM: []int16{1}}
 		for index := 0; index < SpeechQueueCapacity; index++ {
 			if err := processor.Enqueue("message", speech); err != nil {
@@ -40,7 +40,7 @@ func TestOutputSpeechQueueBoundaries(t *testing.T) {
 		{name: "limit plus one", samples: SpeechQueueSampleCapacity + 1, wantErr: ErrSpeechQueueFull},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			processor := newOutputProcessorForTest(t)
+			processor := newProcessorForTest(t)
 			err := processor.Enqueue("message", synthdecode.DecodedSpeech{
 				SpeechID: 1, PCM: make([]int16, test.samples),
 			})
@@ -52,7 +52,7 @@ func TestOutputSpeechQueueBoundaries(t *testing.T) {
 }
 
 func TestOutputTelopUsesAudioFrameSampleTick(t *testing.T) {
-	processor := newOutputProcessorForTest(t)
+	processor := newProcessorForTest(t)
 	empty := ""
 	secondText := "ka"
 	if err := processor.Enqueue("decode-before-message", synthdecode.DecodedSpeech{
@@ -92,7 +92,7 @@ func TestOutputTelopUsesAudioFrameSampleTick(t *testing.T) {
 }
 
 func TestOutputFrameWithoutActiveMoraSendsAudioOnly(t *testing.T) {
-	processor := newOutputProcessorForTest(t)
+	processor := newProcessorForTest(t)
 	if err := processor.Enqueue("message", synthdecode.DecodedSpeech{
 		SpeechID: 1,
 		PCM:      make([]int16, frameSamples),
@@ -109,7 +109,7 @@ func TestOutputFrameWithoutActiveMoraSendsAudioOnly(t *testing.T) {
 }
 
 func TestOutputPurgeDropsCurrentAndQueuedSpeech(t *testing.T) {
-	processor := newOutputProcessorForTest(t)
+	processor := newProcessorForTest(t)
 	for id := int64(1); id <= 2; id++ {
 		if err := processor.Enqueue("message", synthdecode.DecodedSpeech{
 			SpeechID: id, PCM: make([]int16, frameSamples*2),
@@ -134,18 +134,18 @@ func TestOutputPurgeDropsCurrentAndQueuedSpeech(t *testing.T) {
 }
 
 func TestOutputClockSendsQueuedFiftyFramesWithoutInboundCadence(t *testing.T) {
-	encoder, err := NewFrameEncoder()
+	encoder, err := NewEncoder()
 	if err != nil {
-		t.Fatalf("NewFrameEncoder() error = %v", err)
+		t.Fatalf("NewEncoder() error = %v", err)
 	}
 	t.Cleanup(func() { _ = encoder.Close() })
 	ctx, cancel := context.WithCancel(context.Background())
 	track := &timingSampleWriter{target: 50, reached: make(chan struct{}), cancel: cancel}
-	processor, err := NewOutputProcessor(
+	processor, err := New(
 		encoder, track, nil, slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
 	if err != nil {
-		t.Fatalf("NewOutputProcessor() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	if err := processor.Enqueue("message", synthdecode.DecodedSpeech{
 		SpeechID: 1, PCM: make([]int16, frameSamples*50),
@@ -172,9 +172,9 @@ func TestOutputClockSendsQueuedFiftyFramesWithoutInboundCadence(t *testing.T) {
 }
 
 func TestFrameEncoderMonoPCMDecodesThroughStereoCapabilityCodec(t *testing.T) {
-	encoder, err := NewFrameEncoder()
+	encoder, err := NewEncoder()
 	if err != nil {
-		t.Fatalf("NewFrameEncoder() error = %v", err)
+		t.Fatalf("NewEncoder() error = %v", err)
 	}
 	defer func() { _ = encoder.Close() }()
 	frame := make([]int16, frameSamples)
@@ -199,32 +199,32 @@ func TestFrameEncoderMonoPCMDecodesThroughStereoCapabilityCodec(t *testing.T) {
 	}
 }
 
-func newOutputProcessorForTest(t *testing.T) *OutputProcessor {
+func newProcessorForTest(t *testing.T) *Processor {
 	t.Helper()
-	encoder, err := NewFrameEncoder()
+	encoder, err := NewEncoder()
 	if err != nil {
-		t.Fatalf("NewFrameEncoder() error = %v", err)
+		t.Fatalf("NewEncoder() error = %v", err)
 	}
 	t.Cleanup(func() {
 		if err := encoder.Close(); err != nil {
 			t.Errorf("FrameEncoder.Close() error = %v", err)
 		}
 	})
-	processor, err := NewOutputProcessor(
+	processor, err := New(
 		encoder,
 		discardSampleWriter{},
 		nil,
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
 	if err != nil {
-		t.Fatalf("NewOutputProcessor() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	return processor
 }
 
 type discardSampleWriter struct{}
 
-func (discardSampleWriter) WriteSample(OutputSample) error { return nil }
+func (discardSampleWriter) WriteSample(Sample) error { return nil }
 
 type timingSampleWriter struct {
 	mu      sync.Mutex
@@ -234,7 +234,7 @@ type timingSampleWriter struct {
 	cancel  context.CancelFunc
 }
 
-func (w *timingSampleWriter) WriteSample(OutputSample) error {
+func (w *timingSampleWriter) WriteSample(Sample) error {
 	w.mu.Lock()
 	w.times = append(w.times, time.Now())
 	reached := len(w.times) == w.target

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
+	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/output"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
@@ -18,9 +18,9 @@ import (
 
 func TestGenerationNotificationAlonePurgesAudioTextAndTelop(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	encoder, err := audiomedia.NewFrameEncoder()
+	encoder, err := audiomedia.NewEncoder()
 	if err != nil {
-		t.Fatalf("NewFrameEncoder() error = %v", err)
+		t.Fatalf("NewEncoder() error = %v", err)
 	}
 	t.Cleanup(func() { _ = encoder.Close() })
 	dispatcher, err := datachannel.New(context.Background(), logger, func(error) {})
@@ -28,9 +28,9 @@ func TestGenerationNotificationAlonePurgesAudioTextAndTelop(t *testing.T) {
 		t.Fatalf("datachannel.New() error = %v", err)
 	}
 	t.Cleanup(func() { _ = dispatcher.Close() })
-	output, err := audiomedia.NewOutputProcessor(encoder, rtcDiscardTrack{}, dispatcher.EnqueueTelop, logger)
+	output, err := audiomedia.New(encoder, rtcDiscardTrack{}, dispatcher.EnqueueTelop, logger)
 	if err != nil {
-		t.Fatalf("NewOutputProcessor() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	session := &Session{output: output, dispatcher: dispatcher}
 
@@ -71,18 +71,18 @@ func TestGenerationNotificationAlonePurgesAudioTextAndTelop(t *testing.T) {
 
 func TestSessionOutputCloseRejectsConcurrentTextSynthAndGenerationActions(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	encoder, err := audiomedia.NewFrameEncoder()
+	encoder, err := audiomedia.NewEncoder()
 	if err != nil {
-		t.Fatalf("NewFrameEncoder() error = %v", err)
+		t.Fatalf("NewEncoder() error = %v", err)
 	}
 	defer func() { _ = encoder.Close() }()
 	dispatcher, err := datachannel.New(context.Background(), logger, func(error) {})
 	if err != nil {
 		t.Fatalf("datachannel.New() error = %v", err)
 	}
-	output, err := audiomedia.NewOutputProcessor(encoder, rtcDiscardTrack{}, dispatcher.EnqueueTelop, logger)
+	output, err := audiomedia.New(encoder, rtcDiscardTrack{}, dispatcher.EnqueueTelop, logger)
 	if err != nil {
-		t.Fatalf("NewOutputProcessor() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	session := &Session{output: output, dispatcher: dispatcher}
 	session.applyGeneration(1, nil)
@@ -143,9 +143,9 @@ func TestSessionOutputCloseRejectsConcurrentTextSynthAndGenerationActions(t *tes
 
 func TestSynthDecodeCompletionAfterOutputCloseCannotRestoreQueuedAudio(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	encoder, err := audiomedia.NewFrameEncoder()
+	encoder, err := audiomedia.NewEncoder()
 	if err != nil {
-		t.Fatalf("NewFrameEncoder() error = %v", err)
+		t.Fatalf("NewEncoder() error = %v", err)
 	}
 	defer func() { _ = encoder.Close() }()
 	dispatcher, err := datachannel.New(context.Background(), logger, func(error) {})
@@ -153,9 +153,9 @@ func TestSynthDecodeCompletionAfterOutputCloseCannotRestoreQueuedAudio(t *testin
 		t.Fatalf("datachannel.New() error = %v", err)
 	}
 	defer func() { _ = dispatcher.Close() }()
-	output, err := audiomedia.NewOutputProcessor(encoder, rtcDiscardTrack{}, dispatcher.EnqueueTelop, logger)
+	output, err := audiomedia.New(encoder, rtcDiscardTrack{}, dispatcher.EnqueueTelop, logger)
 	if err != nil {
-		t.Fatalf("NewOutputProcessor() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	decoder := newBlockingSynthDecoder()
 	session := &Session{
@@ -187,14 +187,14 @@ func TestSynthDecodeCompletionAfterOutputCloseCannotRestoreQueuedAudio(t *testin
 
 func TestHandleSynthOutputQueuesClampedTerminalSilentMora(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	encoder, err := audiomedia.NewFrameEncoder()
+	encoder, err := audiomedia.NewEncoder()
 	if err != nil {
-		t.Fatalf("NewFrameEncoder() error = %v", err)
+		t.Fatalf("NewEncoder() error = %v", err)
 	}
 	t.Cleanup(func() { _ = encoder.Close() })
-	output, err := audiomedia.NewOutputProcessor(encoder, rtcDiscardTrack{}, nil, logger)
+	output, err := audiomedia.New(encoder, rtcDiscardTrack{}, nil, logger)
 	if err != nil {
-		t.Fatalf("NewOutputProcessor() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	t.Cleanup(func() { _ = output.Close() })
 	decoder, err := synthdecode.NewDecoder("/test/ffmpeg", outboundPCMRunner{samples: 65_024})
@@ -368,4 +368,4 @@ func (d *blockingSynthDecoder) Decode(
 
 type rtcDiscardTrack struct{}
 
-func (rtcDiscardTrack) WriteSample(audiomedia.OutputSample) error { return nil }
+func (rtcDiscardTrack) WriteSample(audiomedia.Sample) error { return nil }

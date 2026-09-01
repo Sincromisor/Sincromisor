@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
+	outputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/output"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
@@ -115,7 +115,7 @@ func (s *Session) handleSynthOutput(output pipeline.Output[protocol.SynthesizerR
 	_, err = s.applyGenerationError(output.Generation, func() error {
 		return s.output.Enqueue(output.Value.Message, decoded)
 	})
-	if errors.Is(err, audiomedia.ErrOutputClosed) {
+	if errors.Is(err, outputmedia.ErrOutputClosed) {
 		return nil
 	}
 	return err

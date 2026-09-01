@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
+	outputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/output"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
 )
 
@@ -60,7 +60,7 @@ func (d *Dispatcher) EnqueueText(message protocol.ChatMessage) error {
 // EnqueueTelop はaudio tickと同期済みtelopをunordered queueへ加える。
 //
 // queue満杯時は最古の未送信eventだけをdropし、incomingを保持してsessionを継続する。
-func (d *Dispatcher) EnqueueTelop(event audiomedia.TelopPayload) error {
+func (d *Dispatcher) EnqueueTelop(event outputmedia.TelopPayload) error {
 	payload, err := marshalDataChannelPayload(event)
 	if err != nil {
 		return err
