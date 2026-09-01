@@ -1,0 +1,13 @@
+id: task-260901231348-synthdecode-layout
+title: 合成音声デコーダーを変換段階別に整理
+category: sincro-rtc
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-01
+closed_at: null
+legacy_ids: []
