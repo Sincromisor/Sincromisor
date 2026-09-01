@@ -1,4 +1,4 @@
-package media
+package input
 
 import (
 	"context"
@@ -108,7 +108,7 @@ func TestInputProcessorDoesNotSubmitIncompletePCMAtEOFOrCancel(t *testing.T) {
 	t.Run("cancel after partial decode", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		reader := &cancelAfterPacketReader{packet: opusRTPPackets(1, 0, [][]byte{payload})[0], cancel: cancel}
-		processor, err := NewInputProcessor(&recordingInputObserver{})
+		processor, err := New(&recordingInputObserver{})
 		if err != nil {
 			t.Fatalf("NewInputProcessor() error = %v", err)
 		}
@@ -128,7 +128,7 @@ func TestInputProcessorDoesNotSubmitIncompletePCMAtEOFOrCancel(t *testing.T) {
 
 func runInputFrames(t *testing.T, ctx context.Context, reader *countingPacketReader) [][]byte {
 	t.Helper()
-	processor, err := NewInputProcessor(&recordingInputObserver{})
+	processor, err := New(&recordingInputObserver{})
 	if err != nil {
 		t.Fatalf("NewInputProcessor() error = %v", err)
 	}

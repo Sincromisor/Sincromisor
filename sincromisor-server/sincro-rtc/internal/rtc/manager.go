@@ -12,7 +12,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/pion/webrtc/v4"
 
-	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
+	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
@@ -26,7 +26,7 @@ import (
 // 共有dependencyはすべて並行利用可能でなければならない。
 type ManagerConfig struct {
 	PipelineFactory pipeline.ClientSetFactory
-	InputObserver   audiomedia.InputObserver
+	InputObserver   inputmedia.Observer
 	Clock           Clock
 	Logger          *slog.Logger
 	MaxSessions     int

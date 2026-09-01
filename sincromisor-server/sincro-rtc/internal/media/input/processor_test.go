@@ -1,4 +1,4 @@
-package media
+package input
 
 import (
 	"context"
@@ -11,9 +11,9 @@ import (
 	"github.com/pion/rtp"
 )
 
-func TestNewInputProcessorRejectsNilObserver(t *testing.T) {
-	if _, err := NewInputProcessor(nil); err == nil {
-		t.Fatal("NewInputProcessor(nil) error = nil")
+func TestNewRejectsNilObserver(t *testing.T) {
+	if _, err := New(nil); err == nil {
+		t.Fatal("New(nil) error = nil")
 	}
 }
 
@@ -84,7 +84,7 @@ func TestInputProcessorOrderingAndTelemetry(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			observer := &recordingInputObserver{}
-			processor, err := NewInputProcessor(observer)
+			processor, err := New(observer)
 			if err != nil {
 				t.Fatalf("NewInputProcessor() error = %v", err)
 			}
@@ -103,7 +103,7 @@ func TestInputProcessorOrderingAndTelemetry(t *testing.T) {
 func TestInputProcessorCancellationDropsBufferedWithoutDecode(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	observer := &recordingInputObserver{}
-	processor, err := NewInputProcessor(observer)
+	processor, err := New(observer)
 	if err != nil {
 		t.Fatalf("NewInputProcessor() error = %v", err)
 	}
@@ -138,14 +138,14 @@ func TestRTPUnwrapContinuesAcrossSequenceAndTimestampWrap(t *testing.T) {
 }
 
 func TestInputCounterObserverSnapshot(t *testing.T) {
-	observer := NewInputCounterObserver()
+	observer := NewCounterObserver()
 	for _, event := range []InputEvent{
 		InputEventDuplicate, InputEventLate, InputEventMissing, InputEventBufferedDrop,
 		InputEventDTX, InputEventPipelineUnavailable,
 	} {
 		observer.ObserveInputEvent(event)
 	}
-	if got := observer.Snapshot(); got != (InputEventCounts{
+	if got := observer.Snapshot(); got != (EventCounts{
 		Duplicate: 1, Late: 1, Missing: 1, BufferedDrop: 1, DTX: 1, PipelineUnavailable: 1,
 	}) {
 		t.Fatalf("Snapshot() = %+v", got)
