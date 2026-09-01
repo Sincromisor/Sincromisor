@@ -1,0 +1,24 @@
+id: task-260901231353-package-map-docs
+title: sincro-rtcのパッケージ責務図と試験配置方針を同期
+category: sincro-rtc
+status: open
+depends_on:
+  - task-260901231342-rtc-datachannel-package
+  - task-260901231343-rtc-process-network-package
+  - task-260901231344-rtc-session-core-layout
+  - task-260901231345-signaling-offer-registry-package
+  - task-260901231346-signaling-http-layout
+  - task-260901231347-media-input-package
+  - task-260901231347-media-output-package
+  - task-260901231348-synthdecode-layout
+  - task-260901231349-pipeline-layout
+  - task-260901231351-observability-registry-layout
+  - task-260901231352-runtime-gate3-layout
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-01
+closed_at: null
+legacy_ids: []

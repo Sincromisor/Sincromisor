@@ -1,0 +1,17 @@
+id: task-260901231344-rtc-session-core-layout
+title: RTCセッション中核のファイルと試験を責務別に整理
+category: sincro-rtc
+status: open
+depends_on:
+  - task-260901231342-rtc-datachannel-package
+  - task-260901231343-rtc-process-network-package
+  - task-260901231347-media-input-package
+  - task-260901231347-media-output-package
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-01
+closed_at: null
+legacy_ids: []

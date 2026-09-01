@@ -1,0 +1,13 @@
+id: task-260901231351-observability-registry-layout
+title: 観測レジストリを構築と語彙正規化へ分割
+category: sincro-rtc
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-01
+closed_at: null
+legacy_ids: []
