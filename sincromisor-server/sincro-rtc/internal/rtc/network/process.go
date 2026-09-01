@@ -1,4 +1,5 @@
-package rtc
+// Package network は全RTCセッションで共有するPion APIとUDP muxのプロセス所有権を管理する。
+package network
 
 import (
 	"errors"
@@ -10,23 +11,24 @@ import (
 	"github.com/pion/webrtc/v4"
 )
 
-// ProcessNetwork は全Sessionで共有するPion APIとUDP muxを所有する。
+// Process は全Sessionで共有するPion APIとUDP muxを所有する。
 // muxへ渡ったconnはCloseだけが破棄し、mainやSessionが直接closeしてはならない。
-type ProcessNetwork struct {
+type Process struct {
+	// APIは共有UDP muxを使うPeerConnectionを生成する非所有参照である。
 	API       *webrtc.API
 	mux       io.Closer
 	closeOnce sync.Once
 	closeErr  error
 }
 
-// NewProcessNetwork は全SessionのPeerConnectionに1つのprocess所有UDP muxを設定する。
+// New は全SessionのPeerConnectionに1つのプロセス所有UDP muxを設定する。
 // 成功return後はmuxがconnの唯一のclose ownerとなる。このAPIは別socketを開かず、TCPとIPv6も有効化しない。
-func NewProcessNetwork(
+func New(
 	conn net.PacketConn,
 	publicIPv4 string,
 	interfaceName string,
 	gatherTimeout time.Duration,
-) (*ProcessNetwork, error) {
+) (*Process, error) {
 	if conn == nil {
 		return nil, errors.New("ice udp connection must not be nil")
 	}
@@ -46,11 +48,11 @@ func NewProcessNetwork(
 	if gatherTimeout > 0 {
 		settings.SetSTUNGatherTimeout(gatherTimeout)
 	}
-	return &ProcessNetwork{API: webrtc.NewAPI(webrtc.WithSettingEngine(settings)), mux: mux}, nil
+	return &Process{API: webrtc.NewAPI(webrtc.WithSettingEngine(settings)), mux: mux}, nil
 }
 
 // Close はmuxとsocketを一度だけ閉じる。全SessionとOffer ownerの収束後にprocess ownerが呼ぶ。
-func (n *ProcessNetwork) Close() error {
+func (n *Process) Close() error {
 	if n == nil {
 		return nil
 	}

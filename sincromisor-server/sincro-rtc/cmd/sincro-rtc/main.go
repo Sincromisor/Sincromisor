@@ -21,6 +21,7 @@ import (
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/client"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/discovery"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc/network"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/signaling"
 )
 
@@ -94,7 +95,7 @@ func runWithBoundaries(
 	if err != nil {
 		return fmt.Errorf("bind media udp socket: %w", err)
 	}
-	processNetwork, err := rtc.NewProcessNetwork(mediaSocket, cfg.PublicIPv4, cfg.Interface, cfg.GatherTimeout)
+	processNetwork, err := network.New(mediaSocket, cfg.PublicIPv4, cfg.Interface, cfg.GatherTimeout)
 	if err != nil {
 		_ = mediaSocket.Close()
 		return fmt.Errorf("create production rtc API: %w", err)
