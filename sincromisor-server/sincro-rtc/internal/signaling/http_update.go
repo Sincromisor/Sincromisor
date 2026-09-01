@@ -33,7 +33,7 @@ func (s *Server) handleUpdateOffer(
 		writeError(writer, http.StatusBadRequest, "previous_session_id is not valid for an update offer.")
 		return
 	}
-	ctx, cancel := context.WithTimeout(request.Context(), s.offers.config.GatherTimeout)
+	ctx, cancel := context.WithTimeout(request.Context(), s.offers.GatherTimeout())
 	defer cancel()
 	var answer rtc.Answer
 	var err error

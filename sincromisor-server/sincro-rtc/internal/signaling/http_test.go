@@ -19,6 +19,7 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/signaling/offer"
 )
 
 func TestInitialOfferContractFixtures(t *testing.T) {
@@ -238,12 +239,6 @@ func TestOfferGatheringTimeoutReturns504(t *testing.T) {
 	if !fake.createCanceled {
 		t.Fatal("Create did not observe gathering context cancellation")
 	}
-	server.offers.mu.Lock()
-	entryCount := len(server.offers.entries)
-	server.offers.mu.Unlock()
-	if entryCount != 0 {
-		t.Fatalf("timeout retained %d registry entries, want 0", entryCount)
-	}
 }
 
 func TestUpdateOfferSchemaAndStatusBoundaries(t *testing.T) {
@@ -347,16 +342,16 @@ func TestInitialOfferRegistryStatusMapping(t *testing.T) {
 	}}
 	processCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	offers, err := NewOfferRegistry(fake, OfferRegistryConfig{
+	offers, err := offer.New(fake, offer.Config{
 		ProcessContext: processCtx,
 		GatherTimeout:  time.Second,
 		Capacity:       1,
 		TTL:            2 * time.Minute,
-		Clock:          SystemOfferRegistryClock(),
+		Clock:          offer.SystemClock(),
 		Logger:         slog.New(slog.NewTextHandler(io.Discard, nil)),
 	})
 	if err != nil {
-		t.Fatalf("NewOfferRegistry() error = %v", err)
+		t.Fatalf("offer.New() error = %v", err)
 	}
 	server := New(fake, offers, t.TempDir(), "", slog.New(slog.NewTextHandler(io.Discard, nil)))
 	handler := server.Handler()
@@ -396,17 +391,17 @@ func TestSessionCapacityMapsTo429(t *testing.T) {
 	baseline := runtime.NumGoroutine()
 	fake := &fakeSessions{createErr: rtc.ErrSessionCapacity}
 	processCtx, cancelProcess := context.WithCancel(context.Background())
-	offers, err := NewOfferRegistry(fake, OfferRegistryConfig{
+	offers, err := offer.New(fake, offer.Config{
 		ProcessContext: processCtx,
 		GatherTimeout:  time.Second,
 		Capacity:       1,
 		TTL:            2 * time.Minute,
-		Clock:          SystemOfferRegistryClock(),
+		Clock:          offer.SystemClock(),
 		Logger:         slog.New(slog.NewTextHandler(io.Discard, nil)),
 	})
 	if err != nil {
 		cancelProcess()
-		t.Fatalf("NewOfferRegistry() error = %v", err)
+		t.Fatalf("offer.New() error = %v", err)
 	}
 	server := New(fake, offers, t.TempDir(), "", slog.New(slog.NewTextHandler(io.Discard, nil)))
 	response := performRequest(
@@ -422,13 +417,7 @@ func TestSessionCapacityMapsTo429(t *testing.T) {
 	waitCtx, cancelWait := context.WithTimeout(context.Background(), time.Second)
 	defer cancelWait()
 	if err := offers.Wait(waitCtx); err != nil {
-		t.Fatalf("OfferRegistry.Wait() error = %v", err)
-	}
-	offers.mu.Lock()
-	entryCount := len(offers.entries)
-	offers.mu.Unlock()
-	if entryCount != 0 {
-		t.Fatalf("session 429 retained %d registry entries, want 0", entryCount)
+		t.Fatalf("Registry.Wait() error = %v", err)
 	}
 	if active := fake.activeSessions.Load(); active != 0 {
 		t.Fatalf("session 429 retained %d active sessions, want 0", active)
@@ -438,11 +427,6 @@ func TestSessionCapacityMapsTo429(t *testing.T) {
 	}
 	if builds := fake.resourceBuildCalls.Load(); builds != 0 {
 		t.Fatalf("session 429 crossed resource builder %d times, want 0", builds)
-	}
-	select {
-	case <-offers.sweeperDone:
-	default:
-		t.Fatal("session 429 left OfferRegistry sweeper running after Wait")
 	}
 	waitForSignalingCondition(t, time.Second, func() bool {
 		return runtime.NumGoroutine() <= baseline+1
@@ -634,27 +618,27 @@ func newTestOfferRegistry(
 	t *testing.T,
 	sessions SessionService,
 	gatherTimeout time.Duration,
-) *OfferRegistry {
+) *offer.Registry {
 	t.Helper()
 	processCtx, cancel := context.WithCancel(context.Background())
-	offers, err := NewOfferRegistry(sessions, OfferRegistryConfig{
+	offers, err := offer.New(sessions, offer.Config{
 		ProcessContext: processCtx,
 		GatherTimeout:  gatherTimeout,
 		Capacity:       1000,
 		TTL:            2 * time.Minute,
-		Clock:          SystemOfferRegistryClock(),
+		Clock:          offer.SystemClock(),
 		Logger:         slog.New(slog.NewTextHandler(io.Discard, nil)),
 	})
 	if err != nil {
 		cancel()
-		t.Fatalf("NewOfferRegistry() error = %v", err)
+		t.Fatalf("offer.New() error = %v", err)
 	}
 	t.Cleanup(func() {
 		cancel()
 		waitCtx, cancelWait := context.WithTimeout(context.Background(), time.Second)
 		defer cancelWait()
 		if waitErr := offers.Wait(waitCtx); waitErr != nil {
-			t.Errorf("OfferRegistry.Wait(test cleanup) error = %v", waitErr)
+			t.Errorf("Registry.Wait(test cleanup) error = %v", waitErr)
 		}
 	})
 	return offers
@@ -666,6 +650,24 @@ func performRequest(handler http.Handler, method, path, body string) *httptest.R
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 	return response
+}
+
+func waitForSignalingCondition(t *testing.T, timeout time.Duration, condition func() bool) {
+	t.Helper()
+	deadline := time.NewTimer(timeout)
+	defer deadline.Stop()
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if condition() {
+			return
+		}
+		select {
+		case <-deadline.C:
+			t.Fatal("condition did not converge before timeout")
+		case <-ticker.C:
+		}
+	}
 }
 
 func decodeResponse(t *testing.T, response *httptest.ResponseRecorder, target any) {

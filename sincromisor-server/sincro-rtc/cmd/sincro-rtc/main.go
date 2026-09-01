@@ -23,6 +23,7 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc/network"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/signaling"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/signaling/offer"
 )
 
 const (
@@ -63,7 +64,7 @@ func run(args []string) error {
 type serveBoundary func(
 	config.Config,
 	*rtc.Manager,
-	*signaling.OfferRegistry,
+	*offer.Registry,
 	context.CancelFunc,
 	*slog.Logger,
 ) error
@@ -119,12 +120,12 @@ func runWithBoundaries(
 	if err != nil {
 		return fmt.Errorf("create rtc manager: %w", err)
 	}
-	offers, err := signaling.NewOfferRegistry(sessions, signaling.OfferRegistryConfig{
+	offers, err := offer.New(sessions, offer.Config{
 		ProcessContext: processCtx,
 		GatherTimeout:  cfg.GatherTimeout,
 		Capacity:       cfg.OfferCacheCapacity,
 		TTL:            cfg.OfferCacheTTL,
-		Clock:          signaling.SystemOfferRegistryClock(),
+		Clock:          offer.SystemClock(),
 		Logger:         logger,
 		Recorder:       metrics,
 	})
@@ -271,7 +272,7 @@ func waitShutdownAdmissionWindow(ctx context.Context) error {
 func serve(
 	cfg config.Config,
 	sessions *rtc.Manager,
-	offers *signaling.OfferRegistry,
+	offers *offer.Registry,
 	cancelProcess context.CancelFunc,
 	logger *slog.Logger,
 ) error {

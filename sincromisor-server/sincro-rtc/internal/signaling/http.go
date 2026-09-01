@@ -18,6 +18,7 @@ import (
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/signaling/offer"
 )
 
 const (
@@ -54,7 +55,7 @@ type SessionService interface {
 // Request body は有限長に制限し、JSON / SDP / candidate error を request 単位の 4xx に変換する。
 type Server struct {
 	sessions     SessionService
-	offers       *OfferRegistry
+	offers       *offer.Registry
 	frontendDir  string
 	iceServers   []iceServerResponse
 	logger       *slog.Logger
@@ -107,10 +108,10 @@ type Options struct {
 //
 // frontendDir の存在確認は config.Load の起動時境界で完了済みである。New は listener を開かず、
 // caller が Handler を http.Server へ渡すまで外部副作用を持たない。candidate gatheringのownerと
-// timeoutはOfferRegistryがprocess lifecycle内で所有する。
+// timeoutはoffer.Registryがプロセス生存期間内で所有する。
 func New(
 	sessions SessionService,
-	offers *OfferRegistry,
+	offers *offer.Registry,
 	frontendDir string,
 	stunURL string,
 	logger *slog.Logger,
@@ -283,13 +284,13 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		case errors.Is(err, context.DeadlineExceeded):
 			writeError(writer, http.StatusGatewayTimeout, "ICE candidate gathering timed out.")
 			return
-		case errors.Is(err, ErrOfferConflict):
+		case errors.Is(err, offer.ErrOfferConflict):
 			writeError(writer, http.StatusConflict, "Offer request ID conflicts with another SDP.")
 			return
-		case errors.Is(err, ErrOfferGone):
+		case errors.Is(err, offer.ErrOfferGone):
 			writeError(writer, http.StatusGone, "Offer session is closed.")
 			return
-		case errors.Is(err, ErrOfferCapacity), errors.Is(err, rtc.ErrSessionCapacity):
+		case errors.Is(err, offer.ErrOfferCapacity), errors.Is(err, rtc.ErrSessionCapacity):
 			writeError(writer, http.StatusTooManyRequests, "Too many requests.")
 			return
 		case errors.Is(err, rtc.ErrSessionPanic):

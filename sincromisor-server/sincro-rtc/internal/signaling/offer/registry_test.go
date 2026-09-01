@@ -1,4 +1,4 @@
-package signaling
+package offer
 
 import (
 	"bytes"
@@ -178,12 +178,12 @@ func TestOfferRegistrySweeperAndWaitHelperRecoverPanics(t *testing.T) {
 	t.Run("sweeper", func(t *testing.T) {
 		processCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		registry, err := NewOfferRegistry(&registrySessionService{}, OfferRegistryConfig{
+		registry, err := New(&registrySessionService{}, Config{
 			ProcessContext: processCtx,
 			GatherTimeout:  time.Second,
 			Capacity:       1,
 			TTL:            time.Minute,
-			Clock:          panicOfferRegistryClock{},
+			Clock:          panicRegistryClock{},
 			Logger:         slog.New(slog.NewTextHandler(io.Discard, nil)),
 		})
 		if err != nil {
@@ -214,7 +214,7 @@ func TestOfferRegistryLifecycleLogOmitsRequestAndPayload(t *testing.T) {
 		SDP:  "payload-sdp-marker",
 		Type: "answer", SessionID: "01K1AF2Y0H0000000000000002", Revision: 1,
 	}}
-	registry, err := NewOfferRegistry(service, OfferRegistryConfig{
+	registry, err := New(service, Config{
 		ProcessContext: processCtx,
 		GatherTimeout:  time.Second,
 		Capacity:       1,
@@ -554,22 +554,12 @@ func (s *registrySessionService) Create(ctx context.Context, offer rtc.Offer) (r
 	return s.answer, s.createErr
 }
 
-type panicOfferRegistryClock struct{}
+type panicRegistryClock struct{}
 
-func (panicOfferRegistryClock) Now() time.Time { return time.Now() }
-func (panicOfferRegistryClock) After(time.Duration) <-chan time.Time {
+func (panicRegistryClock) Now() time.Time { return time.Now() }
+func (panicRegistryClock) After(time.Duration) <-chan time.Time {
 	panic("payload-candidate-marker")
 }
-
-func (s *registrySessionService) Update(context.Context, rtc.UpdateOffer) (rtc.Answer, error) {
-	return rtc.Answer{}, nil
-}
-
-func (s *registrySessionService) AddCandidate(string, uint64, *rtc.Candidate) (bool, error) {
-	return false, nil
-}
-
-func (s *registrySessionService) Count() int { return 0 }
 
 func (s *registrySessionService) closeSession() {
 	s.mu.Lock()
@@ -580,23 +570,23 @@ func (s *registrySessionService) closeSession() {
 
 func newRegistryForTest(
 	t *testing.T,
-	service SessionService,
+	service Creator,
 	capacity int,
-	clock OfferRegistryClock,
-) (*OfferRegistry, context.CancelFunc) {
+	clock Clock,
+) (*Registry, context.CancelFunc) {
 	return newRegistryForTestWithTimeout(t, service, capacity, clock, time.Second)
 }
 
 func newRegistryForTestWithTimeout(
 	t *testing.T,
-	service SessionService,
+	service Creator,
 	capacity int,
-	clock OfferRegistryClock,
+	clock Clock,
 	gatherTimeout time.Duration,
-) (*OfferRegistry, context.CancelFunc) {
+) (*Registry, context.CancelFunc) {
 	t.Helper()
 	processCtx, cancel := context.WithCancel(context.Background())
-	registry, err := NewOfferRegistry(service, OfferRegistryConfig{
+	registry, err := New(service, Config{
 		ProcessContext: processCtx,
 		GatherTimeout:  gatherTimeout,
 		Capacity:       capacity,
@@ -606,7 +596,7 @@ func newRegistryForTestWithTimeout(
 	})
 	if err != nil {
 		cancel()
-		t.Fatalf("NewOfferRegistry() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 	return registry, cancel
 }
@@ -640,7 +630,7 @@ func (c *registryFakeClock) After(duration time.Duration) <-chan time.Time {
 	return c.ticks
 }
 
-func waitRegistryEntries(t *testing.T, registry *OfferRegistry, want int) {
+func waitRegistryEntries(t *testing.T, registry *Registry, want int) {
 	t.Helper()
 	waitForSignalingCondition(t, time.Second, func() bool {
 		registry.mu.Lock()

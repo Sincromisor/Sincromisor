@@ -124,7 +124,6 @@ func TestRealManagerGatherTimeoutReturns504AndRemovesSession(t *testing.T) {
 		t.Fatalf("status = %d, want 504; body=%s", response.Code, response.Body.String())
 	}
 	waitForRegistryCount(t, manager, 0)
-	waitRegistryEntries(t, offers, 0)
 	waitForSignalingCondition(t, 3*time.Second, func() bool {
 		return runtime.NumGoroutine() <= baseline+3
 	})
