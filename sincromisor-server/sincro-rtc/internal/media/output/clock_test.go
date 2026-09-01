@@ -1,4 +1,4 @@
-package media
+package output
 
 import (
 	"context"
@@ -24,24 +24,24 @@ func TestOutputAbsoluteClockSilenceCadenceAndExpiredDrop(t *testing.T) {
 	clock.waitTimer(t)
 
 	clock.advance(19 * time.Millisecond)
-	assertNoOutputSample(t, track)
+	assertNoSample(t, track)
 	clock.advance(time.Millisecond)
-	first := receiveOutputSample(t, track)
+	first := receiveSample(t, track)
 	if first.SamplePosition != 0 || first.RTPTimestamp != 0 {
 		t.Fatalf("first clock sample = %d/%d, want 0/0", first.SamplePosition, first.RTPTimestamp)
 	}
 	assertSilenceFrame(t, encoder.frameAt(t, 0))
 
 	clock.advance(FrameDuration)
-	second := receiveOutputSample(t, track)
+	second := receiveSample(t, track)
 	if second.SamplePosition != frameSamples {
 		t.Fatalf("second sample position = %d, want %d", second.SamplePosition, frameSamples)
 	}
 
-	// The next absolute deadline is 60 ms. Arriving at 160 ms expires five
-	// silence slots, which advance the timestamp but produce only one packet.
+	// 次の絶対期限は60 msである。160 msに到達すると無音枠5つを期限切れにし、
+	// タイムスタンプだけを進めてパケットは1つだけ生成する。
 	clock.advance(120 * time.Millisecond)
-	afterDrop := receiveOutputSample(t, track)
+	afterDrop := receiveSample(t, track)
 	if got := processor.Stats().SilenceDropped; got != 5 {
 		t.Fatalf("silence dropped = %d, want 5", got)
 	}
@@ -51,7 +51,7 @@ func TestOutputAbsoluteClockSilenceCadenceAndExpiredDrop(t *testing.T) {
 	if got := afterDrop.MediaSample.PrevDroppedPackets; got != 5 {
 		t.Fatalf("post-drop previous dropped packets = %d, want 5", got)
 	}
-	assertNoOutputSample(t, track)
+	assertNoSample(t, track)
 
 	cancel()
 	if err := <-done; !errors.Is(err, context.Canceled) {
@@ -82,15 +82,14 @@ func TestOutputSpeechLagBoundaryAbortOrderAndNextCadence(t *testing.T) {
 	clock.waitTimer(t)
 
 	clock.advance(FrameDuration)
-	_ = receiveOutputSample(t, track)
+	_ = receiveSample(t, track)
 	if got := encoder.frameAt(t, 0)[0]; got != 11 {
 		t.Fatalf("first speech sample = %d, want 11", got)
 	}
 
-	// Exactly 250 ms is still accepted. The absolute deadline is re-anchored
-	// instead of burst-sending the delayed speech frames.
+	// 250 msちょうどの遅延は受理する。遅れた発話枠を一括送信せず、絶対期限を引き直す。
 	clock.advance(FrameDuration + SpeechLagAbortThreshold)
-	acceptedAtBoundary := receiveOutputSample(t, track)
+	acceptedAtBoundary := receiveSample(t, track)
 	if got := acceptedAtBoundary.MediaSample.PrevDroppedPackets; got != 12 {
 		t.Fatalf("threshold frame previous dropped packets = %d, want 12", got)
 	}
@@ -100,18 +99,18 @@ func TestOutputSpeechLagBoundaryAbortOrderAndNextCadence(t *testing.T) {
 	if got := encoder.frameAt(t, 1)[0]; got != 11 {
 		t.Fatalf("second speech frame sample = %d, want 11", got)
 	}
-	assertNoOutputSample(t, track)
+	assertNoSample(t, track)
 
-	// The new deadline is 20 ms after the accepted delayed frame. Exceeding it
-	// by one nanosecond aborts only the remaining first speech.
+	// 新しい期限は受理した遅延枠の20 ms後である。1 nsでも超過すると、
+	// 最初の発話の残りだけを中断する。
 	clock.advance(FrameDuration + SpeechLagAbortThreshold + time.Nanosecond)
-	assertNoOutputSample(t, track)
-	waitForOutputStat(t, processor, func(stats OutputStats) bool { return stats.SpeechAborted == 1 })
+	assertNoSample(t, track)
+	waitForOutputStat(t, processor, func(stats Stats) bool { return stats.SpeechAborted == 1 })
 
 	clock.advance(FrameDuration - time.Nanosecond)
-	assertNoOutputSample(t, track)
+	assertNoSample(t, track)
 	clock.advance(time.Nanosecond)
-	afterAbort := receiveOutputSample(t, track)
+	afterAbort := receiveSample(t, track)
 	if got := encoder.frameAt(t, 2)[0]; got != 22 {
 		t.Fatalf("next speech sample = %d, want 22", got)
 	}
@@ -138,9 +137,9 @@ func TestOutputTimestampWraparound(t *testing.T) {
 	clock.waitTimer(t)
 
 	clock.advance(FrameDuration)
-	first := receiveOutputSample(t, track)
+	first := receiveSample(t, track)
 	clock.advance(3 * FrameDuration)
-	second := receiveOutputSample(t, track)
+	second := receiveSample(t, track)
 	if first.RTPTimestamp != uint32(start) {
 		t.Fatalf("first RTP timestamp = %d, want %d", first.RTPTimestamp, uint32(start))
 	}
@@ -172,14 +171,14 @@ func TestOutputConsecutiveDropsAccumulateUntilSuccessfulWrite(t *testing.T) {
 	if err := processor.writeFrame(); err != nil {
 		t.Fatalf("writeFrame() error = %v", err)
 	}
-	first := receiveOutputSample(t, track)
+	first := receiveSample(t, track)
 	if got := first.MediaSample.PrevDroppedPackets; got != 5 {
 		t.Fatalf("accumulated previous dropped packets = %d, want 5", got)
 	}
 	if err := processor.writeFrame(); err != nil {
 		t.Fatalf("second writeFrame() error = %v", err)
 	}
-	second := receiveOutputSample(t, track)
+	second := receiveSample(t, track)
 	if got := second.MediaSample.PrevDroppedPackets; got != 0 {
 		t.Fatalf("previous dropped packets after successful write = %d, want 0", got)
 	}
@@ -232,11 +231,11 @@ func newOutputWithFakes(
 	t *testing.T,
 	encoder outputEncoder,
 	track SampleWriter,
-	clock OutputClock,
+	clock clock,
 	start uint64,
-) *OutputProcessor {
+) *Processor {
 	t.Helper()
-	processor, err := newOutputProcessorWithHooks(
+	processor, err := newProcessorWithHooks(
 		encoder,
 		track,
 		nil,
@@ -245,12 +244,12 @@ func newOutputWithFakes(
 		start,
 	)
 	if err != nil {
-		t.Fatalf("newOutputProcessorWithHooks() error = %v", err)
+		t.Fatalf("newProcessorWithHooks() error = %v", err)
 	}
 	return processor
 }
 
-func runOutput(t *testing.T, processor *OutputProcessor, ctx context.Context) <-chan error {
+func runOutput(t *testing.T, processor *Processor, ctx context.Context) <-chan error {
 	t.Helper()
 	done := make(chan error, 1)
 	go func() { done <- processor.Run(ctx) }()
@@ -302,16 +301,16 @@ func (e *fakeOutputEncoder) frameAt(t *testing.T, index int) []int16 {
 
 type fakeOutputTrack struct {
 	mu      sync.Mutex
-	samples []OutputSample
-	writes  chan OutputSample
+	samples []Sample
+	writes  chan Sample
 	err     error
 }
 
 func newFakeOutputTrack() *fakeOutputTrack {
-	return &fakeOutputTrack{writes: make(chan OutputSample, 16)}
+	return &fakeOutputTrack{writes: make(chan Sample, 16)}
 }
 
-func (t *fakeOutputTrack) WriteSample(sample OutputSample) error {
+func (t *fakeOutputTrack) WriteSample(sample Sample) error {
 	t.mu.Lock()
 	t.samples = append(t.samples, sample)
 	err := t.err
@@ -322,18 +321,18 @@ func (t *fakeOutputTrack) WriteSample(sample OutputSample) error {
 	return err
 }
 
-func receiveOutputSample(t *testing.T, track *fakeOutputTrack) OutputSample {
+func receiveSample(t *testing.T, track *fakeOutputTrack) Sample {
 	t.Helper()
 	select {
 	case sample := <-track.writes:
 		return sample
 	case <-time.After(time.Second):
 		t.Fatal("output sample was not written")
-		return OutputSample{}
+		return Sample{}
 	}
 }
 
-func assertNoOutputSample(t *testing.T, track *fakeOutputTrack) {
+func assertNoSample(t *testing.T, track *fakeOutputTrack) {
 	t.Helper()
 	select {
 	case sample := <-track.writes:
@@ -342,7 +341,7 @@ func assertNoOutputSample(t *testing.T, track *fakeOutputTrack) {
 	}
 }
 
-func waitForOutputStat(t *testing.T, processor *OutputProcessor, predicate func(OutputStats) bool) {
+func waitForOutputStat(t *testing.T, processor *Processor, predicate func(Stats) bool) {
 	t.Helper()
 	deadline := time.Now().Add(time.Second)
 	for !predicate(processor.Stats()) {
@@ -356,7 +355,7 @@ func waitForOutputStat(t *testing.T, processor *OutputProcessor, predicate func(
 type fakeOutputClock struct {
 	mu    sync.Mutex
 	now   time.Time
-	timer *fakeOutputTimer
+	timer *fakeTimer
 	ready chan struct{}
 }
 
@@ -370,10 +369,10 @@ func (c *fakeOutputClock) Now() time.Time {
 	return c.now
 }
 
-func (c *fakeOutputClock) NewTimer(delay time.Duration) OutputTimer {
+func (c *fakeOutputClock) NewTimer(delay time.Duration) timer {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	timer := &fakeOutputTimer{
+	timer := &fakeTimer{
 		clock: c, deadline: c.now.Add(delay), ticks: make(chan time.Time, 1),
 	}
 	c.timer = timer
@@ -424,7 +423,7 @@ func (c *fakeOutputClock) timerStopped() bool {
 	return timer.stopped
 }
 
-type fakeOutputTimer struct {
+type fakeTimer struct {
 	mu       sync.Mutex
 	clock    *fakeOutputClock
 	deadline time.Time
@@ -432,9 +431,9 @@ type fakeOutputTimer struct {
 	stopped  bool
 }
 
-func (t *fakeOutputTimer) C() <-chan time.Time { return t.ticks }
+func (t *fakeTimer) C() <-chan time.Time { return t.ticks }
 
-func (t *fakeOutputTimer) Reset(delay time.Duration) bool {
+func (t *fakeTimer) Reset(delay time.Duration) bool {
 	t.clock.mu.Lock()
 	now := t.clock.now
 	t.clock.mu.Unlock()
@@ -446,7 +445,7 @@ func (t *fakeOutputTimer) Reset(delay time.Duration) bool {
 	return wasActive
 }
 
-func (t *fakeOutputTimer) Stop() bool {
+func (t *fakeTimer) Stop() bool {
 	t.mu.Lock()
 	wasActive := !t.stopped
 	t.stopped = true
@@ -454,7 +453,7 @@ func (t *fakeOutputTimer) Stop() bool {
 	return wasActive
 }
 
-func (t *fakeOutputTimer) fire(now time.Time) {
+func (t *fakeTimer) fire(now time.Time) {
 	t.mu.Lock()
 	if t.stopped || now.Before(t.deadline) {
 		t.mu.Unlock()

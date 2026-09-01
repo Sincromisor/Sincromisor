@@ -12,8 +12,8 @@ import (
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 
-	audiomedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
 	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
+	outputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/output"
 )
 
 // installOutboundTrack はAnswer生成前に継続outbound audio trackとRTCP senderをsessionへ登録する。
@@ -22,7 +22,7 @@ import (
 // output pacingはconnected callback後にだけ開始する。これによりgather timeout sessionはgoroutineを持たない。
 func (s *Session) installOutboundTrack() error {
 	track, err := webrtc.NewTrackLocalStaticSample(
-		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: audiomedia.SampleRate, Channels: 2},
+		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: outputmedia.SampleRate, Channels: 2},
 		"sincromisor-voice",
 		"sincro-rtc",
 	)
@@ -132,7 +132,7 @@ type pionSampleWriter struct {
 // 通常frameはDurationから960 timestamp tick進む。期限切れslotがあるframeは
 // MediaSample.PrevDroppedPacketsを保持したまま渡し、Pionにtimestampとsequence numberをskipさせる。
 // SamplePosition/RTPTimestampはprocessor側の64/32 bit clock検証用である。
-func (w pionSampleWriter) WriteSample(sample audiomedia.OutputSample) error {
+func (w pionSampleWriter) WriteSample(sample outputmedia.Sample) error {
 	return w.track.WriteSample(sample.MediaSample)
 }
 

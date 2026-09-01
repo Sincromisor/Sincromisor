@@ -1,5 +1,5 @@
-// Package media は送信音声の符号化、時刻管理、テロップ生成を担当する。
-package media
+// Package output は送信音声のキュー、符号化、時刻管理、テロップ生成を担当する。
+package output
 
 import "time"
 

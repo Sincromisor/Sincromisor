@@ -1,4 +1,4 @@
-package media
+package output
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 
 func TestOutputMetricsBalanceQueueAndRecordFrameCodecPacing(t *testing.T) {
 	observer := &recordingOutputObserver{depth: make(map[string]float64)}
-	processor, err := newOutputProcessorWithHooks(
+	processor, err := newProcessorWithHooks(
 		&metricEncoder{}, discardSampleWriter{}, nil,
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 		systemOutputClock{}, 0, observer,

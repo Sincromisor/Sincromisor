@@ -1,4 +1,4 @@
-package media
+package output
 
 import (
 	"errors"
@@ -13,18 +13,18 @@ import (
 	"github.com/pion/mediadevices/pkg/wave"
 )
 
-// FrameEncoder は連続する48 kHz mono PCM frameを同一Opus codec stateでencodeする。
+// Encoder は連続する48 kHz mono PCM frameを同一Opus codec stateでencodeする。
 //
 // Encodeは必ず960 sampleを要求する。Closeはnative encoderを一度だけ解放し、Encodeとの競合を
 // mutexで直列化する。zero valueは使用できない。
-type FrameEncoder struct {
+type Encoder struct {
 	mu      sync.Mutex
 	reader  *singleFrameReader
 	encoder codec.ReadCloser
 }
 
-// NewFrameEncoder は20 ms latencyの48 kHz mono Opus encoderを作る。
-func NewFrameEncoder() (*FrameEncoder, error) {
+// NewEncoder は20 ms latencyの48 kHz mono Opus encoderを作る。
+func NewEncoder() (*Encoder, error) {
 	reader := &singleFrameReader{}
 	params, err := mediaopus.NewParams()
 	if err != nil {
@@ -37,11 +37,11 @@ func NewFrameEncoder() (*FrameEncoder, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build outbound opus encoder: %w", err)
 	}
-	return &FrameEncoder{reader: reader, encoder: encoder}, nil
+	return &Encoder{reader: reader, encoder: encoder}, nil
 }
 
 // Encode は1つの20 ms PCM frameをOpus packetへ変換する。
-func (e *FrameEncoder) Encode(frame []int16) ([]byte, error) {
+func (e *Encoder) Encode(frame []int16) ([]byte, error) {
 	if len(frame) != frameSamples {
 		return nil, fmt.Errorf("outbound PCM frame must contain %d samples", frameSamples)
 	}
@@ -60,7 +60,7 @@ func (e *FrameEncoder) Encode(frame []int16) ([]byte, error) {
 }
 
 // Close はnative Opus resourceをidempotentに解放する。
-func (e *FrameEncoder) Close() error {
+func (e *Encoder) Close() error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.encoder == nil {
