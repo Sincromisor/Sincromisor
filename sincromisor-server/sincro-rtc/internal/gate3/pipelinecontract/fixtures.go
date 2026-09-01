@@ -43,8 +43,8 @@ func loadFixtures(dir string) (map[string][]byte, map[string]any, error) {
 // commit 済み producer fixture と一致しなければならない。
 func validateShape(actual, expected any) bool {
 	if expected == nil {
-		// Python optional scalar fields are represented by nil in some fixture
-		// messages and by their declared scalar type in later history entries.
+		// Pythonの任意scalar fieldは一部のfixture messageではnil、
+		// 後続history entryでは宣言されたscalar型で表現される。
 		return actual == nil || isInteger(actual) || isString(actual)
 	}
 	switch want := expected.(type) {

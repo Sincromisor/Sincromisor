@@ -52,7 +52,7 @@ func TestAgentAcceptsConsulTwoSIGTERMExitCode(t *testing.T) {
 func TestAgentRejectsOccupiedProductionPortWithoutStartingProcess(t *testing.T) {
 	listener, err := net.Listen("tcp", consulAddress)
 	if err != nil {
-		// An existing Consul is the production conflict this boundary must preserve.
+		// 既存Consulは、この境界が変更せずに保護すべき本番競合である。
 		cfg := fakeConfig(t, defaultStartOptions(), "")
 		_, startErr := Start(cfg)
 		if !errors.Is(startErr, ErrPortInUse) {
