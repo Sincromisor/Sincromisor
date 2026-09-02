@@ -45,15 +45,12 @@ When refreshing the workflow kit, re-check each item before regenerating Codex a
 - Reason: the Codex desktop environment uses the `codex/` prefix for assistant-owned branches.
 - Future refresh check: keep the prefix aligned with repository and app-level Git guidance.
 
-## Close Commit Template
+## 完了処理コミットの雛形
 
-- Target file: `package.json`
-- Upstream difference: Sincromisor defines `taskClose.commitTemplate` with `Why`, `What`,
-  `Verify`, `Risk`, and `Refs` fields.
-- Reason: repository commit rules require Conventional Commits bodies to preserve reason,
-  verification, and residual-risk context.
-- Future refresh check: dry-run `npm run tasks:close -- <task-dir> verdict=PASS attempts=1 --dry-run`
-  and confirm the generated body still satisfies `tasks/README.md` commit guidance.
+- 対象ファイル: `package.json`
+- 上流との差分: Sincromisorは`taskClose.commitTemplate`に、一段落の日本語散文と`Refs:`フッターを定義する。
+- 理由: コミット本文に変更理由、確認、残リスクを残しつつ、英語の項目ラベルと不要な改行を生成しないため。
+- 更新時の確認: `npm run tasks:close -- <task-dir> verdict=PASS attempts=1 --dry-run`を実行し、生成される本文が`tasks/README.md`の規約を満たすことを確認する。
 
 ## Task Scaffold Completeness
 

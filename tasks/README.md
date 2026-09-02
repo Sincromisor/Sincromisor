@@ -35,27 +35,11 @@ Refs: task-260601153000-example
 - 関連タスクはフッターの `Refs:` に正規タスク ID を書く。旧形式のタスクの場合は `Refs: TASK-...` も許容する。
 - 件名は変更内容を表す。タスク ID だけ、または `Implement ...` だけの件名は避ける。
 - タスクに紐づくコミットの本文には、実装、文書、完了処理、生成索引更新を問わず、変更理由、主な変更、実行した確認、残リスク・未確認事項が後から追えるだけの情報を書く。
-- `Why:` / `What:` / `Verify:` / `Risk:` は推奨テンプレートとする。小さな変更では自然文や短い箇条書きでもよいが、上記 4 点の情報を欠落させない。
-- 該当事項がない場合も、`Verify: 未実行 (理由)`、`Risk: なし`、または同等の自然文で明示する。
-- `Verify:` ラベルを使う場合は 1 コミット本文内で 1 回だけ使う。複数コマンドは `; ` 区切りの 1 行にまとめる。
-- `Verify:` が長くなりすぎる場合は、`Verify:` の直後に箇条書きを連続して置く。コマンドごとに空行を挟んだ `Verify:` 行を繰り返さない。
-- コマンドラインから複数行メッセージを渡す場合は、件名と各段落を別々の `-m` 引数にするか、実改行を含むメッセージファイルを `-F` で渡す。`git commit -m "subject\\n\\nbody"` のように `\\n` を埋め込んでも Git は改行へ展開しないため禁止する。コミット後は `npm run commit:check` で表示を確認する。
-
-複数コマンドの記録例:
-
-```text
-Verify: npm run tasks:index; npm run tasks:index:check; npm run tasks:check
-```
-
-コマンド数が多い場合:
-
-```text
-Verify:
-- npm run tasks:index
-- npm run tasks:index:check
-- npm run tasks:check
-Risk: なし
-```
+- 本文は変更理由、主な変更、実行した確認、残リスク・未確認事項を、この順に一段落の日本語散文で書く。`Why:` / `What:` / `Verify:` / `Risk:` などの項目ラベル、箇条書き、手動の行折り返しは使わない。
+- 該当事項がない場合も「確認は未実行である」「既知の残リスクはない」など、本文の文として明示する。
+- 空行は件名、本文、フッターの境界にだけ1行入れる。本文中には空行を入れず、`Refs:` と `BREAKING CHANGE:` 以外のフッターを新設しない。
+- コマンドラインから渡す場合は、件名と、フッターまで含む本文全体をそれぞれ1個の `-m` 引数にするか、実改行を含むメッセージファイルを `-F` で渡す。`git commit -m "subject\\n\\nbody"` のように文字列 `\\n` を埋め込むことは禁止する。
+- 過去のコミットは形式の前例にせず、この節の規則と例だけを正本とする。初回は `npm run git:hooks:install` で検査用フックを有効にし、コミット後も `npm run commit:check` が成功することを確認する。
 
 推奨 type:
 
@@ -92,10 +76,7 @@ Risk: なし
 ```text
 feat(rtc)!: offer 応答のスキーマを変更
 
-Why: 新しいセッション交渉方式へ RTC 契約を合わせるため。
-What: フロントエンドと RTC シグナリングサーバーを新しい応答形式へ更新。
-Verify: npm run check; npm run test
-Risk: 既存クライアントも新しい応答解析へ更新する必要がある。
+新しいセッション交渉方式へRTC契約を合わせるため、フロントエンドとRTCシグナリングサーバーを新しい応答形式へ更新した。`npm run check`と`npm run test`で確認し、既存クライアントも新しい応答解析へ更新する必要がある。
 
 BREAKING CHANGE: RTCSignalingServer offer response no longer includes ...
 Refs: task-260601153000-example
@@ -106,10 +87,8 @@ Refs: task-260601153000-example
 ```text
 feat(settings): カメラ端末の選択を保存
 
-Why: 利用者が選んだカメラをセッション間で維持するため。
-What: 選択したカメラ端末をアプリ設定へ保存し、メディア初期化時に適用。
-Verify: npm run check
-Risk: なし
+利用者が選んだカメラをセッション間で維持するため、選択したカメラ端末をアプリ設定へ保存し、メディア初期化時に適用した。`npm run check`で確認し、既知の残リスクはない。
+
 Refs: task-260601153000-example
 ```
 
@@ -118,10 +97,8 @@ Refs: task-260601153000-example
 ```text
 chore(tasks): カメラ端末設定タスクを完了
 
-Why: タスクが評価に合格し、完了状態へ移せるため。
-What: PASS 判定を記録し、生成されるタスク索引を更新。
-Verify: npm run tasks:index; npm run tasks:index:check; npm run tasks:check
-Risk: なし
+タスクが評価に合格したため、PASS判定を記録して生成されるタスク索引を更新した。`npm run tasks:index`、`npm run tasks:index:check`、`npm run tasks:check`で確認し、既知の残リスクはない。
+
 Refs: task-260601153000-example
 ```
 
@@ -271,6 +248,7 @@ TODO は新規コードでは `TODO(task-260601153000-example): ...` を推奨�
 | `npm run tasks:next`                                                        | 依存が解けて実行できる次タスクを表示する                                                |
 | `npm run tasks:close -- <task-dir> verdict=PASS attempts=1`                 | メタデータを更新し、自タスクディレクトリの完了処理コミットを行う                        |
 | `npm run tasks:reindex`                                                     | 全カテゴリ `index.md` を再生成し、変更があればコミットする                              |
+| `npm run git:hooks:install`                                                 | コミットメッセージ検査用のGitフックを有効にする                                         |
 | `npm run tasks:metrics`                                                     | タスクの所要時間とエージェント実績を集計する                                            |
 | `npm run gate`                                                              | `package.json` の `gateSteps` をキャッシュ付きで実行する                                |
 | `npm run eval:worktree -- add <sha>`                                        | 指定コミットの一時作業ツリーを作る                                                      |
@@ -346,9 +324,7 @@ sincromisor-frontend/src` で取得した変更済み TS/TSX ファイルだけ�
 
 着手確認で見つかった不足も同じ基準で扱う。既存の正本から一意に決まり、公開契約・責務・利用者が求める結果を変えない `AUTO_FIX` は実装を継続する。通常変更では最終報告へ記し、別記録が必要な場合だけ `impl.md` を使う。
 
-通常変更のコミットには実装差分、テスト、必要な文書、タスク状態、`index.md` を含める。ワークツリーを使う経路では、タスク成果物は `tasks:close`、`index.md` は `tasks:reindex` コミットに含める。`tasks:close` が作る完了処理コミットの
-メッセージも `Why:` / `What:` / `Verify:` / `Risk:` / `Refs:` を含む。上流の作業手順との差分は
-`.agents/CUSTOMIZATIONS.md` に記録する。
+通常変更のコミットには実装差分、テスト、必要な文書、タスク状態、`index.md` を含める。ワークツリーを使う経路では、タスク成果物は `tasks:close`、`index.md` は `tasks:reindex` コミットに含める。これらの自動生成コミットも、日本語の件名と一段落の日本語散文を使う。上流の作業手順との差分は `.agents/CUSTOMIZATIONS.md` に記録する。
 
 ### リスクに応じた作業手順
 

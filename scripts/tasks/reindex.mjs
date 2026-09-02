@@ -4,7 +4,7 @@
  * （`tasks:index` = 再生成のみ・no-commit に対し、`tasks:reindex` = 再生成 + コミット）。
  * Node / Bun 両対応・依存は yaml のみ。
  *
- *   node scripts/tasks/reindex.mjs            # 全 index 再生成 → 変更があれば chore(tasks): reindex で 1 コミット
+ *   node scripts/tasks/reindex.mjs            # 全 index 再生成 → 変更があれば日本語の定型文で1コミット
  *   node scripts/tasks/reindex.mjs --dry-run  # 実行内容の表示のみ（再生成・コミットしない）
  *
  * 設計意図:
@@ -48,12 +48,17 @@ async function listIndexPaths() {
 async function main() {
     const dryRun = process.argv.includes("--dry-run");
     const node = process.execPath; // 呼び出し元と同じランタイム（node / bun）で子スクリプトを回す
+    const subject = "chore(tasks): タスク索引を更新";
+    const body =
+        "完了したタスクを一覧へ反映するため、全カテゴリの生成索引を更新した。索引生成が正常に完了したことを確認し、既知の残リスクはない。";
 
     if (dryRun) {
         console.log("[dry-run] 実行予定:");
         console.log(`  ${node} ${join(SCRIPTS_DIR, "genIndex.mjs")}`);
         console.log(`  git add <変更のあった ${TASKS_ROOT}/*/index.md>`);
-        console.log('  git commit -m "chore(tasks): reindex"  （変更がある場合のみ）');
+        console.log("  git commit  （変更がある場合のみ）");
+        console.log("\n[dry-run] コミットメッセージ:");
+        console.log(`${subject}\n\n${body}`);
         return;
     }
 
@@ -69,7 +74,7 @@ async function main() {
         return;
     }
 
-    run(["git", "commit", "-m", "chore(tasks): reindex"]);
+    run(["git", "commit", "-m", subject, "-m", body]);
     console.log(`\nreindex 完了: 以下の index.md をコミットしました\n${staged}`);
 }
 

@@ -245,10 +245,10 @@ export function getPrivateTaskArtifactReason(path, sizeBytes) {
  */
 
 /**
- * `package.json` の `taskClose.commitTemplate`（プレースホルダ付き文字列）を読む。
+ * `package.json` の `taskClose.commitTemplate`（プレースホルダー付き文字列）を読む。
  * gateSteps / taskMeta.customFields と同じく cwd の package.json を設定の正本とする
- * （依存追加なし・JSON.parse のみで読む）。ファイル不在 / 未設定 / パース失敗の
- * いずれも `null` を返し、呼び出し側は既定 body にフォールバックする（close を落とさない）。
+ * （依存追加なし・JSON.parse のみで読む）。ファイル不在 / 未設定 / 解析失敗の
+ * いずれも `null` を返し、呼び出し側は既定本文へ戻す（完了処理を止めない）。
  * @param {string} [pkgPath]
  * @returns {Promise<string|null>}
  */
@@ -263,14 +263,14 @@ export async function readCommitTemplate(pkgPath = "package.json") {
 }
 
 /**
- * close コミットの **body**（subject の後段。subject は呼び出し側が現行どおり組む）を返す。
- * body は LLM 散文を含まない機械的事実のみ: `Verdict` / `Attempts` / `Refs: <id>` と
- * 成果物への 1 行ポインタ。Why/What/Risk は task.md / impl.md / eval.md（同コミット内）が
- * 正本であり、ここでは生成しない（drift 源にしない）。
+ * 完了処理コミットの本文を返す。
  *
- * `template` を渡すと既定 body の代わりにプレースホルダ展開した文字列を返す。
- * 利用可能なプレースホルダ: `{id}` / `{verdict}` / `{attempts}` / `{taskDir}`。
- * 未知のプレースホルダ（例: `{unknown}`）はそのまま温存する（壊さない）。
+ * 自動生成する本文も手書きと同じ規約に従い、判定、試行回数、確認、残る判断事項を
+ * 一段落の日本語散文にまとめる。`Refs:`だけは履歴検索用のフッターとして分離する。
+ *
+ * `template` を渡すと既定本文の代わりにプレースホルダーを展開した文字列を返す。
+ * 利用可能なプレースホルダー: `{id}` / `{verdict}` / `{attempts}` / `{taskDir}`。
+ * 未知のプレースホルダー（例: `{unknown}`）はそのまま温存する（壊さない）。
  * @param {CloseCommitFacts} facts
  * @param {string|null} [template]
  * @returns {string}
@@ -284,12 +284,11 @@ export function buildCloseCommitBody(facts, template) {
             .replaceAll("{attempts}", String(facts.attempts))
             .replaceAll("{taskDir}", taskDir);
     }
-    return [
-        `Verdict: ${facts.verdict}`,
-        `Attempts: ${facts.attempts}`,
-        `Refs: ${facts.id}`,
-        `See ${taskDir}/eval.md, impl.md`,
-    ].join("\n");
+    return (
+        `タスクの最終判定を${facts.verdict}（試行${facts.attempts}回）として記録し、成果物を同期した。` +
+        `確認結果と残る判断事項は\`${taskDir}/eval.md\`と\`${taskDir}/impl.md\`を参照する。` +
+        `\n\nRefs: ${facts.id}`
+    );
 }
 
 /** 全カテゴリ配下の `task-*` ディレクトリを走査して DiscoveredTask[] を返す。 */
