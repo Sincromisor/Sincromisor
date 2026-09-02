@@ -22,31 +22,31 @@ const PASS = {
 };
 const FAIL = { ...PASS, verdict: "FAIL", attempts: 2 };
 
-describe("buildCloseCommitBody 既定 body（機械的事実のみ）", () => {
-    test("PASS: Verdict / Attempts / Refs / 成果物ポインタを含む", () => {
+describe("buildCloseCommitBodyの既定本文", () => {
+    test("PASS判定を一段落の日本語散文で生成する", () => {
         const body = buildCloseCommitBody(PASS);
-        expect(body).toContain("Verdict: PASS");
-        expect(body).toContain("Attempts: 1");
+        expect(body).toContain("最終判定をPASS（試行1回）として記録");
         expect(body).toContain("Refs: task-260101000000-fixture");
-        expect(body).toContain("See tasks/chore/task-260101000000-fixture/eval.md, impl.md");
+        expect(body).toContain(
+            "`tasks/chore/task-260101000000-fixture/eval.md`と`tasks/chore/task-260101000000-fixture/impl.md`を参照",
+        );
+        expect(body.split("\n")).toHaveLength(3);
     });
 
-    test("FAIL: Verdict / Attempts / Refs / 成果物ポインタを含む", () => {
+    test("FAIL判定を一段落の日本語散文で生成する", () => {
         const body = buildCloseCommitBody(FAIL);
-        expect(body).toContain("Verdict: FAIL");
-        expect(body).toContain("Attempts: 2");
+        expect(body).toContain("最終判定をFAIL（試行2回）として記録");
         expect(body).toContain("Refs: task-260101000000-fixture");
-        expect(body).toContain("See tasks/chore/task-260101000000-fixture/eval.md, impl.md");
     });
 
-    test("LLM 散文（Why/What/Risk）は含まない", () => {
+    test("英語の項目ラベルを含まない", () => {
         const body = buildCloseCommitBody(PASS);
-        expect(body).not.toMatch(/Why|What|Risk/i);
+        expect(body).not.toMatch(/^(Why|What|Verify|Risk|Verdict|Attempts):/m);
     });
 
     test("taskDir の末尾スラッシュは正規化される", () => {
         const body = buildCloseCommitBody({ ...PASS, taskDir: "tasks/chore/fixture/" });
-        expect(body).toContain("See tasks/chore/fixture/eval.md, impl.md");
+        expect(body).toContain("`tasks/chore/fixture/eval.md`と`tasks/chore/fixture/impl.md`を参照");
         expect(body).not.toContain("fixture//eval.md");
     });
 });

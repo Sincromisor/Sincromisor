@@ -21,6 +21,7 @@
         "tasks:next": "node scripts/tasks/nextTasks.mjs",
         "gen:codex": "node scripts/gen/genCodex.mjs",
         "gen:codex:check": "node scripts/gen/genCodex.mjs --check",
+        "git:hooks:install": "git config core.hooksPath .githooks",
         "commit:check": "node scripts/git/checkCommitMessage.mjs"
     },
     "codexGen": {
@@ -30,7 +31,7 @@
         "hookCommand": "node scripts/metrics/logAgentRun.mjs"
     },
     "taskClose": {
-        "commitTemplate": "Why: タスクが最終評価に到達したため。\nWhat: 判定 {verdict}、試行回数 {attempts}、タスク成果物を記録。\nVerify: npm run tasks:check\nRisk: {taskDir}/eval.md と impl.md を参照。\nRefs: {id}"
+        "commitTemplate": "タスクの最終判定を{verdict}（試行{attempts}回）として記録し、成果物を同期した。`npm run tasks:check`で確認し、残る判断事項は`{taskDir}/eval.md`と`{taskDir}/impl.md`を参照する。\n\nRefs: {id}"
     },
     "gateSteps": [
         {

@@ -19,12 +19,12 @@
  * - 基点ブランチへのマージ後に実行すること（tasks/README.md「ブランチライフサイクル」）。
  *
  * コミットメッセージ:
- * - 件名は日本語の定型文とし、タスク ID、判定、試行回数を含める。
- * - 本文は LLM 散文を含まない機械的事実のみ（`Verdict` / `Attempts` / `Refs: <id>` /
- *   成果物への参照）。`Why` / `What` は `task.md` / `impl.md` / `eval.md`（同コミット内）が正本。
+ * - 件名は日本語の定型文とし、タスクIDと判定を含める。
+ * - 本文は判定、試行回数、確認、残る判断事項を一段落の日本語散文にまとめ、`Refs:`だけを
+ *   履歴検索用のフッターとして分離する。
  * - 本文形式は展開先 `package.json`（作業ディレクトリ）の `taskClose.commitTemplate` で上書き
- *   できる。プレースホルダ: `{id}` / `{verdict}` / `{attempts}` / `{taskDir}`。未設定 /
- *   不在 / パース失敗時は既定 body にフォールバックする（close を止めない）。
+ *   できる。プレースホルダー: `{id}` / `{verdict}` / `{attempts}` / `{taskDir}`。未設定 /
+ *   不在 / 解析失敗時は既定本文へ戻す（完了処理を止めない）。
  */
 
 import { execFileSync } from "node:child_process";
@@ -128,8 +128,8 @@ async function main() {
             : ["verdict=FAIL", `attempts=${attempts}`];
     const subject =
         verdict === "PASS"
-            ? `chore(tasks): ${meta.id} を完了 (PASS, attempts=${attempts})`
-            : `chore(tasks): ${meta.id} の失敗を記録 (FAIL, attempts=${attempts})`;
+            ? `chore(tasks): ${meta.id}をPASSとして完了`
+            : `chore(tasks): ${meta.id}のFAIL判定を記録`;
     const template = await readCommitTemplate();
     const body = buildCloseCommitBody({ id: meta.id, verdict, attempts, taskDir }, template);
 
@@ -139,7 +139,7 @@ async function main() {
     const steps = [
         [node, join(SCRIPTS_DIR, "setMeta.mjs"), taskDir, ...setArgs],
         ["git", "add", ...commitPaths],
-        // body は改行・記号を含むため引数配列でそのまま渡す（シェル補間を経由しない）
+        // `body`は改行・記号を含むため引数配列でそのまま渡す（シェル補間を経由しない）。
         ["git", "commit", "-m", subject, "-m", body],
     ];
     if (dryRun) {

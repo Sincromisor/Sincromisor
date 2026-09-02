@@ -161,7 +161,7 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 - 標準入口は `.claude/commands/` の `new-task`, `run-task` とする。次タスクの抽出は `npm run tasks:next` を直接使う。Codex 用の `.agents/skills/` と `.codex/agents/` は `npm run gen:codex` で生成する。
 - `/run-task` は変更リスクに応じて通常・統合・高リスクの経路を選ぶ。通常変更は現在のワークツリーで親Codexが直接実装し、対象確認とタスク状態・索引を同じコミットに含める。専用ワークツリー、実装担当、独立レビュー・評価、`tasks:close` は統合変更で必要な場合または高リスク変更だけに使う。
 - 上流ワークフローとの差分は `.agents/CUSTOMIZATIONS.md` に記録する。
-- 最低限、タスク単位でコミットする。コミットメッセージは `Conventional Commits` ベースで書き、ボディには変更理由、主な変更、確認結果、残リスクを、フッターには関連タスクIDの `Refs:` を含める。
+- 最低限、タスク単位でコミットする。コミットメッセージは `Conventional Commits` ベースとし、件名と本文を日本語で書く。本文は変更理由、主な変更、確認結果、残リスクを項目ラベルや不要な改行なしの一段落にまとめ、フッターには関連タスクIDの `Refs:` を含める。過去のコミットは形式の前例にしない。初回は `npm run git:hooks:install` で検査用フックを有効にする。
 - 詳細は `tasks/README.md` を正本とする。
 
 ## 通信フロー概要
