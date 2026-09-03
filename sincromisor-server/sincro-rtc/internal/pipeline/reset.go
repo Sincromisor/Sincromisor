@@ -7,18 +7,16 @@ import (
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/client"
 )
 
-// resetCauseRuntimeError separates loop failures from finite client EventKind values.
+// resetCauseRuntimeError は処理ループの失敗を有限なclient EventKind値と区別する。
 const resetCauseRuntimeError = "runtime_error"
 
 func (c *Coordinator) onClientEvent(generation uint64, event pclient.Event) {
 	c.requestReset(generation, event.Service, string(event.Kind))
 }
 
-// requestReset is the single-flight boundary for every protocol, I/O, and
-// backpressure failure. Cause is an operational category rather than an error
-// so this boundary cannot expose pipeline payloads through logs. Generation
-// advances before old clients are closed so concurrently delivered callbacks
-// become stale immediately.
+// requestResetはprotocol、I/O、送信抑制の全失敗を一本化する境界である。causeにはerrorではなく
+// 運用上の分類だけを受け取り、ログへpipelineの内容を漏らさない。旧clientを閉じる前に世代を進め、
+// 並行して届いたcallbackを直ちに期限切れとして扱う。
 func (c *Coordinator) requestReset(generation uint64, service pclient.Service, cause string) {
 	if service == "" {
 		return
@@ -37,8 +35,8 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, c
 		c.mu.Unlock()
 		return
 	}
-	// Register the reset owner before releasing stateMu. Close takes the same
-	// lock before Wait, so WaitGroup.Add can never race with Wait.
+	// 状態ロックを解放する前に再初期化の所有者を登録する。CloseもWait前に同じロックを取るため、
+	// WaitGroup.AddとWaitは競合しない。
 	c.wg.Add(1)
 	c.observer.PipelineReconnect(string(service), "start")
 	c.mu.Unlock()
@@ -55,14 +53,12 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, c
 		}
 	}()
 
-	// Output publication and reset take locks in the same order. Once resetting
-	// is visible no new producer is accepted; this barrier advances generation
-	// and removes buffered old envelopes atomically for consumers.
+	// 出力公開と再初期化は同じ順序でロックを取る。resettingが見えた後は新しい生成側を受理せず、
+	// この境界内で世代更新と旧envelopeの除去を消費側へ一括公開する。
 	c.outputMu.Lock()
 	c.mu.Lock()
-	// Close can win after resetting becomes visible but before this output
-	// barrier is acquired. Recheck ownership before dereferencing generation
-	// work so the close path remains the sole join owner in that ordering.
+	// resettingの公開後、この出力境界を得る前にCloseが先行できる。世代の作業を参照する前に
+	// 所有権を再確認し、その順序でもCloseだけが待ち合わせを所有する。
 	if c.state == StateClosed || c.generation != generation || c.work == nil || c.set == nil {
 		c.resetting = false
 		c.mu.Unlock()
@@ -80,8 +76,8 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, c
 		if cancel != nil {
 			cancel()
 		}
-		// A stage loop may be the reset caller. It must return before Close joins
-		// generationWork, so terminal invariant cleanup is completed asynchronously.
+		// 段階ループ自身が再初期化を要求する場合がある。そのループが戻ってからCloseが
+		// generationWorkを待てるよう、終端不変条件の後始末は別goroutineで完了させる。
 		c.goDetached("pipeline_terminal_close", func() { _ = c.Close() })
 		return
 	}
@@ -98,8 +94,8 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, c
 	c.goCoordinator("pipeline_reconnect", func() {
 		result := "failure"
 		defer func() {
-			// Every accepted reset has exactly one terminal result, including
-			// shutdown, callback panic, and reconnect cancellation exits.
+			// 受理した各再初期化は、終了、callbackのpanic、再接続取消を含めて
+			// 終端結果を必ず1回だけ記録する。
 			finish(result)
 		}()
 		oldWork.cancel()
@@ -152,9 +148,8 @@ func (c *Coordinator) isCurrentGeneration(generation uint64, service pclient.Ser
 	return current
 }
 
-// recordStaleDrop deliberately logs only the event source and monotonic count.
-// Result payloads and causal errors can contain speech or conversation data and
-// must not cross this observability boundary.
+// recordStaleDropはイベント発生元と単調増加する件数だけを意図的に記録する。
+// 結果payloadと原因errorは音声や会話内容を含み得るため、この観測境界を越えさせない。
 func (c *Coordinator) recordStaleDrop(service pclient.Service) {
 	c.mu.Lock()
 	c.staleDrops[service]++

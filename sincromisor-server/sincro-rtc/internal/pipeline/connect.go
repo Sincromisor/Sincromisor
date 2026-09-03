@@ -11,9 +11,8 @@ import (
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/client"
 )
 
-// connectUntilRunning owns one generation's attempt counter. A failed initial
-// or partial set stays in the same generation; only a fully activated set resets
-// the counter by returning from this loop.
+// connectUntilRunningは1世代の接続試行回数を所有する。初期接続または一部の接続に失敗しても
+// 同じ世代を維持し、全接続を有効化できた場合だけループを抜けて試行回数を破棄する。
 func (c *Coordinator) connectUntilRunning(initial bool) error {
 	attempt := uint(0)
 	for {
@@ -45,9 +44,8 @@ func (c *Coordinator) connectUntilRunning(initial bool) error {
 			}
 			err = c.validateSet(set)
 			if err == nil {
-				// Activate and running publication are performed while holding the
-				// same state lock. Event handlers wait for unlock and therefore
-				// classify the event as either building failure or runtime reset.
+				// 有効化と稼働状態の公開を同じ状態ロック内で行う。イベント処理は解放まで待つため、
+				// 接続構築中の失敗と稼働後の再初期化を取り違えない。
 				generation := c.generation
 				err = set.Activate(func(event pclient.Event) {
 					c.safeCallback("pipeline_client_event", func() {

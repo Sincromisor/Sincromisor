@@ -7,9 +7,8 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
 )
 
-// generation pipeline position:
-// browser PCM → extraction → recognition → processor → synthesized output.
-// Each loop is tied to one generation context; no stage retries an in-flight item.
+// 世代内pipelineの処理順は、ブラウザーPCM、抽出、認識、文章処理、合成音声出力である。
+// 各ループは1世代のcontextに属し、処理中の項目を同じ段階では再試行しない。
 func (c *Coordinator) pcmLoop(work *generationWork, extractor ExtractorClient) {
 	for {
 		frame, ok := work.input.pop(work.ctx)
@@ -63,8 +62,8 @@ func (c *Coordinator) recognizerLoop(work *generationWork, recognizer Recognizer
 				c.requestReset(work.number, pclient.ServiceRecognizer, resetCauseRuntimeError)
 				return
 			}
-			// Stage logs deliberately keep only correlation IDs and completion state.
-			// Recognition/chat/voice payloads must not enter operational logs.
+			// 段階ログは照合用IDと完了状態だけを保持する。認識、会話、音声の内容を
+			// 運用ログへ入れてはならない。
 			c.logger.Info("pipeline stage reached",
 				"stage", "recognizer_result_received", "session_id", value.SessionID,
 				"speech_id", value.SpeechID, "confirmed", value.Confirmed)
@@ -176,9 +175,8 @@ func (c *Coordinator) publishSynth(generation uint64, value protocol.Synthesizer
 		Output[protocol.SynthesizerResult]{Generation: generation, Value: value})
 }
 
-// publish and reset share outputMu as the external generation barrier. A producer
-// rechecks state after entering it, while reset advances generation and drains old
-// envelopes before releasing it.
+// publishと再初期化はoutputMuを外部向けの世代境界として共有する。生成側は境界内で状態を再確認し、
+// 再初期化側は境界を解放する前に世代を進めて旧envelopeを除去する。
 func publish[T any](
 	c *Coordinator,
 	generation uint64,
