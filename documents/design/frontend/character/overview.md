@@ -86,13 +86,13 @@ roadmap / research
 
 ## Talk Mode Boundary
 
-| 観点     | `chat`                             | `sincro`                                |
-| -------- | ---------------------------------- | --------------------------------------- |
-| 目的     | 対話相手を見る                     | ユーザーの顔・姿勢をまねる              |
-| 主入力   | `CharacterGaze`                    | `faceMotion`, optional `poseMotion`     |
-| 口形     | `telop_ch` の mora / vowel         | ユーザー口形 retarget 優先              |
-| motion   | idle、聞き姿勢、AI speech gesture  | retarget 優先、gesture は抑制           |
-| fallback | 顔未検出時は neutral / camera 方向 | confidence 低下時は neutral / face-only |
+| 観点     | `chat`                             | `sincro`                                                 |
+| -------- | ---------------------------------- | -------------------------------------------------------- |
+| 目的     | 対話相手を見る                     | ユーザーの顔・姿勢をまねる                               |
+| 主入力   | `CharacterGaze`                    | `faceMotion`, optional `poseMotion`                      |
+| 口形     | `telop_ch` の mora / vowel         | AI発話中は mora / vowel、それ以外はユーザー口形 retarget |
+| motion   | idle、聞き姿勢、AI speech gesture  | retarget 優先、gesture は抑制                            |
+| fallback | 顔未検出時は neutral / camera 方向 | confidence 低下時は neutral / face-only                  |
 
 ## Change Checklist
 
