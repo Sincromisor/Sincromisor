@@ -28,14 +28,20 @@ const TEST_CROP_FRAME: ImageData = {
 
 class FakeFaceLandmarker implements SincroFaceLandmarkerLike {
     readonly frames: TexImageSource[] = [];
+    readonly timestamps: number[] = [];
     private readonly results: FaceLandmarkerResult[];
 
     constructor(results: FaceLandmarkerResult[]) {
         this.results = results;
     }
 
-    detectForVideo(videoFrame: TexImageSource, _timestampMs: number): FaceLandmarkerResult {
+    detectForVideo(videoFrame: TexImageSource, timestampMs: number): FaceLandmarkerResult {
+        const previousTimestampMs = this.timestamps[this.timestamps.length - 1];
+        if (previousTimestampMs !== undefined && timestampMs <= previousTimestampMs) {
+            throw new Error("FaceLandmarker timestamps must be strictly increasing.");
+        }
         this.frames.push(videoFrame);
+        this.timestamps.push(timestampMs);
         return this.results[this.frames.length - 1] ?? createNoFaceResult();
     }
 
@@ -189,6 +195,7 @@ describe("SincroFaceTracker ROI snapshots", () => {
         expect(snapshot.source).toBe("full-frame-fallback");
         expect(snapshot.warnings).toEqual(["roi_missing"]);
         expect(landmarker.frames).toEqual([TEST_CROP_FRAME, TEST_VIDEO_FRAME]);
+        expect(landmarker.timestamps).toEqual([1000, 1001]);
     });
 
     it("marks lost when ROI and full-frame fallback both find no face", () => {
@@ -216,6 +223,21 @@ describe("SincroFaceTracker ROI snapshots", () => {
         expect(snapshot.source).toBe("full-frame-fallback");
         expect(snapshot.warnings).toEqual(["roi_inconsistent"]);
         expect(landmarker.frames).toEqual([TEST_CROP_FRAME, TEST_VIDEO_FRAME]);
+    });
+
+    it("keeps MediaPipe timestamps increasing across passes and video clock resets", () => {
+        const { tracker, landmarker } = createTracker({
+            results: [createDetectedResult(), createDetectedResult(), createDetectedResult()],
+        });
+
+        tracker.detect(TEST_VIDEO_FRAME, 2000);
+        const roiSnapshot = tracker.detectWithRoi(TEST_VIDEO_FRAME, createPose(), 2000);
+        tracker.stop("camera_restart", 2001);
+        const restartedSnapshot = tracker.detect(TEST_VIDEO_FRAME, 100);
+
+        expect(landmarker.timestamps).toEqual([2000, 2001, 2002]);
+        expect(roiSnapshot.lastUpdatedAtMs).toBe(2000);
+        expect(restartedSnapshot.lastUpdatedAtMs).toBe(100);
     });
 
     it("deep clones ROI and warnings from getSnapshot and resets stop metadata", () => {
