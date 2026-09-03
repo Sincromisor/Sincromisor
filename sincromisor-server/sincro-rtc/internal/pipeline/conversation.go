@@ -95,9 +95,8 @@ func (c *conversation) acceptExtraction(value protocol.ExtractorResult) (protoco
 		return protocol.ExtractorResult{}, errors.New("extractor changed speech before confirmation")
 	}
 	if !c.open {
-		// speech_id identifies completed utterances independently of sequence_id.
-		// Keeping the last confirmed ID prevents a delayed old speech from being
-		// accepted as a new utterance merely because its sequence is newer.
+		// speech_idはsequence_idと独立して完了済み発話を識別する。最後に確定したIDを保持し、
+		// 遅延した旧発話が新しいsequenceだけを理由に新規発話として受理されることを防ぐ。
 		if value.SpeechID <= c.speechID {
 			return protocol.ExtractorResult{}, errors.New("extractor speech ID did not increase")
 		}

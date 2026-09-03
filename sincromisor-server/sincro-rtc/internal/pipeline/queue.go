@@ -11,10 +11,9 @@ const (
 	outputQueueCapacity = 16
 )
 
-// frameQueue is the sole telemetry owner for queued input frames. push, pop,
-// and close change the in-memory slice and Prometheus gauge under one mutex;
-// Coordinator reset/close therefore cannot release an item already transferred
-// to pcmLoop, and every closed generation converges to zero.
+// frameQueueは待機中の入力フレームと観測値を一意に所有する。push、pop、closeは同じmutex内で
+// スライスとPrometheus gaugeを変更するため、Coordinatorの再初期化や終了がpcmLoopへ移譲済みの
+// フレームを重ねて解放せず、終了した各世代の観測値は0へ収束する。
 type frameQueue struct {
 	mu       sync.Mutex
 	values   [][]byte
@@ -57,9 +56,8 @@ func (q *frameQueue) push(frame []byte) bool {
 	return dropped
 }
 
-// pop transfers exactly one queued frame from telemetry ownership to the
-// extractor. The queue lock covers both slice removal and the -1 observation,
-// so reset/close cannot release the same frame concurrently.
+// popは待機中の1フレームだけを観測上の所有対象から抽出器へ移譲する。キューロックが
+// スライスからの除去と観測値の減算を覆うため、再初期化や終了は同じフレームを並行して解放しない。
 func (q *frameQueue) pop(ctx context.Context) ([]byte, bool) {
 	for {
 		q.mu.Lock()
@@ -86,9 +84,8 @@ func (q *frameQueue) pop(ctx context.Context) ([]byte, bool) {
 	}
 }
 
-// close atomically releases every still-owned frame and wakes blocked
-// consumers. Because pop uses the same lock, the gauge decrement describes
-// only frames that no consumer has already acquired.
+// closeは所有中の全フレームを一括解放し、待機中の消費側を起こす。popと同じロックを使うため、
+// 観測値から減らすのは消費側へまだ移譲されていないフレームだけである。
 func (q *frameQueue) close() {
 	q.mu.Lock()
 	remaining := len(q.values)

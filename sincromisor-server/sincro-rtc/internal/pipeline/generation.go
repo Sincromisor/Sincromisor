@@ -22,7 +22,7 @@ const (
 	StateClosed State = "closed"
 )
 
-// TransitionError reports a rejected lifecycle edge without crashing the session.
+// TransitionError はセッションを停止させず、拒否した生存期間の状態遷移を表す。
 type TransitionError struct {
 	From State
 	To   State
