@@ -66,6 +66,7 @@ export function deriveCharacterInteractionState(
     return "idle";
 }
 
+/** 対話モードと現在の追従状態から、競合する動作入力の適用可否を決定する。 */
 export function buildCharacterMotionPolicy(
     options: BuildCharacterMotionPolicyOptions,
 ): CharacterMotionPolicySnapshot {
@@ -81,7 +82,7 @@ export function buildCharacterMotionPolicy(
             allowPoseRetarget:
                 options.poseMotion.trackingEnabled && !options.poseMotion.degradedToFaceOnly,
             allowAiSpeechGesture: false,
-            allowAiLipSync: false,
+            allowAiLipSync: true,
             allowAiEmotion: false,
             allowThinkingAversion: false,
             idleMotionScale: neutralTransition ? 0.25 : 0.42,

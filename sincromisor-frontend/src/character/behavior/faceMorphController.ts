@@ -7,8 +7,12 @@ type MouseVowel = "A" | "I" | "U" | "E" | "O" | "N";
 
 const MOUTH_PRESETS: VRMExpressionPresetName[] = ["aa", "ih", "ou", "oh", "ee"];
 
-// CharacterBehaviorSnapshot のテロップ/音素情報をもとに口形状を制御する controller。
-// 音声波形解析ではなく telop_ch の vowel 情報を使うため、RTC同期に追従しやすい。
+/**
+ * カメラの顔追従と `telop_ch` の母音情報から、VRM の口形を制御する。
+ *
+ * キャラクターの発話中は合成音声と同期する母音口形を優先し、母音未着時もカメラ口形へ戻さない。
+ * 発話していない間だけカメラ口形を適用する。
+ */
 export class FaceMorphController {
     private readonly expressionManager: VRMExpressionManager;
     private readonly availableMouthPresets = new Set<VRMExpressionPresetName>();
@@ -21,6 +25,7 @@ export class FaceMorphController {
           }
         | undefined;
 
+    /** 利用可能な標準母音表情を検出し、モデル差で欠けた口形を安全に無視できるようにする。 */
     constructor(expressionManager: VRMExpressionManager) {
         this.expressionManager = expressionManager;
         for (const preset of MOUTH_PRESETS) {
@@ -29,11 +34,33 @@ export class FaceMorphController {
                 this.availableMouthPresets.add(preset);
             }
         }
-        //this.expressionManager.setValue("aa", 0.8);
     }
 
-    // 口形もキャラクター全体と同じ render loop で進め、発話時刻の正本を snapshot に揃える。
+    /** キャラクター全体と同じ描画ループで、現在の優先入力に応じた口形を適用する。 */
     update(snapshot: CharacterBehaviorSnapshot, sincroFace?: SincroFaceRetargetFrame): void {
+        const moraId = snapshot.aiSpeech.currentMoraId;
+        if (snapshot.motionPolicy.allowAiLipSync && snapshot.aiSpeech.isSpeaking) {
+            if (moraId === undefined) {
+                this.currentMoraID = -1;
+                this.activeMouth = undefined;
+                this.resetMouthPresets();
+                return;
+            }
+            if (moraId !== this.currentMoraID) {
+                this.currentMoraID = moraId;
+                const currentVowel = parseMouseVowel(snapshot.aiSpeech.currentVowel);
+                if (currentVowel) {
+                    this.setMouseVowel(
+                        currentVowel,
+                        snapshot.aiSpeech.currentLengthSeconds * 1000,
+                        snapshot.nowMs,
+                    );
+                }
+            }
+            this.updateActiveMouth(snapshot.nowMs);
+            return;
+        }
+
         if (
             snapshot.motionPolicy.allowFaceRetarget &&
             snapshot.faceMotion.trackingEnabled &&
@@ -45,30 +72,9 @@ export class FaceMorphController {
             return;
         }
 
-        const moraId = snapshot.aiSpeech.currentMoraId;
-        if (
-            !snapshot.motionPolicy.allowAiLipSync ||
-            !snapshot.aiSpeech.isSpeaking ||
-            moraId === undefined
-        ) {
-            this.currentMoraID = -1;
-            this.activeMouth = undefined;
-            this.resetMouthPresets();
-            return;
-        }
-
-        if (moraId !== this.currentMoraID) {
-            this.currentMoraID = moraId;
-            const currentVowel = parseMouseVowel(snapshot.aiSpeech.currentVowel);
-            if (currentVowel) {
-                this.setMouseVowel(
-                    currentVowel,
-                    snapshot.aiSpeech.currentLengthSeconds * 1000,
-                    snapshot.nowMs,
-                );
-            }
-        }
-        this.updateActiveMouth(snapshot.nowMs);
+        this.currentMoraID = -1;
+        this.activeMouth = undefined;
+        this.resetMouthPresets();
     }
 
     private applySincroMouth(sincroFace: SincroFaceRetargetFrame): void {
@@ -84,8 +90,7 @@ export class FaceMorphController {
         }
     }
 
-    /* 母音とその長さに合わせた口の動きを設定する */
-    // 母音切替前に口形状を一旦リセットして、前の口形状の残りを避ける。
+    // 母音切替時に前の口形を消し、複数の母音表情が重ならないようにする。
     private setMouseVowel(vowel: MouseVowel, msec: number, nowMs: number) {
         this.resetMouthPresets();
         switch (vowel) {

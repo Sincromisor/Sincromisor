@@ -112,7 +112,8 @@
     - arm / leg / torso / motion orchestrator と `VRMCharacterManager` を置く。
 - `FaceMorphController`
     - `telop_ch` 由来の mora / vowel で口形を駆動する。
-    - `sincro` ではユーザー口形 retarget を優先する。
+    - `sincro` ではAI発話中だけ mora / vowel の口形を優先し、それ以外はユーザー口形 retarget を適用する。
+    - AI発話中に mora / vowel が未着の場合は口形をニュートラルにし、ユーザー口形へ戻さない。
 - `FaceEmotionController`
     - `expression_code` を VRM expression にマップする。
 - `EyeBehaviorController`
