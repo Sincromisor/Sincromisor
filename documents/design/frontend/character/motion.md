@@ -537,6 +537,11 @@ controller 更新順に置く。production dry-run が同一 frame で `availabl
 `full_normalized_pose_application_vrm_missing` を Debug Console summary / metrics 用の unavailable reason として
 残す。これらの reason は旧 staged writer を起動する trigger ではない。
 
+Pose tracking 無効、カメラ停止、Pose 未検出、face-only など最新 retarget frame の `active` が `false` の場合も、
+production dry-run は現在 frame の fallback layer を `available` result として返す。fallback layer は torso /
+shoulder を単位回転に戻し、左右の upperArm / lowerArm / hand には `CHARACTER_ARM_REST_POSE` の腕を下ろした
+待機姿勢を適用する。前回の tracking pose や旧 `ArmBoneController` writer へ戻さない。
+
 head / neck / leg / expression / root position は full upper body finalPose の所有対象に追加しない。Face / Eye /
 Mouth / Emotion controller、`LegBoneController`、`vrm.update(deltaSeconds)`、root position block、
 `CharacterMotionOrchestrator.updateRootStabilization()` は従来どおり更新する。debug-only の composer comparison /

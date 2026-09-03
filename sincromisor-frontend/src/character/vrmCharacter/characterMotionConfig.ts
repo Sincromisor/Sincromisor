@@ -10,6 +10,25 @@ export const DEFAULT_CHARACTER_MOTION_TUNING: CharacterMotionTuning = {
     eyeTrackingScale: 0.68,
 };
 
+/**
+ * 追跡入力がない場合に使う腕の正規化ローカル Euler 姿勢（XYZ、radian）。
+ *
+ * 旧来の直接書き込み処理と full composer の代替処理が同じ待機姿勢を使うための正本である。
+ * 上腕を下ろさない値へ変えると、カメラ停止中のキャラクターが VRM の T ポーズへ戻る。
+ */
+export const CHARACTER_ARM_REST_POSE = {
+    left: {
+        upperArm: { x: MathUtils.degToRad(5), y: 0, z: MathUtils.degToRad(-75) },
+        lowerArm: { x: 0, y: MathUtils.degToRad(-15), z: MathUtils.degToRad(5) },
+        hand: { x: 0, y: 0, z: -0.2 },
+    },
+    right: {
+        upperArm: { x: MathUtils.degToRad(5), y: 0, z: MathUtils.degToRad(75) },
+        lowerArm: { x: 0, y: MathUtils.degToRad(15), z: MathUtils.degToRad(-5) },
+        hand: { x: 0, y: 0, z: 0.2 },
+    },
+} as const;
+
 // キャラクターの常時 idle motion 調整値。
 // 各 controller が performance.now() を直接参照すると周期調整が散らばるため、時間係数と振幅をここに集約する。
 export const CHARACTER_IDLE_MOTION_CONFIG = {
