@@ -37,8 +37,8 @@ func TestMediaReadinessAllSixOrdersPromoteExactlyOnce(t *testing.T) {
 					if !session.acceptAudioTrack(track) {
 						t.Fatal("first audio track was not accepted")
 					}
-					// OnTrack starts the reserved decoder goroutine; this helper test
-					// completes that reservation without reading a synthetic TrackRemote.
+					// OnTrackは予約済みの復号goroutineを開始する。この補助試験では人工の
+					// TrackRemoteを読まず、予約したWaitGroupだけを完了させる。
 					session.wg.Done()
 				case "text":
 					if !session.registerDataChannel(text) || !session.dataChannelOpened(text) {
