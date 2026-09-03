@@ -64,9 +64,8 @@ func (s *Session) startRTCPDrain(sender *webrtc.RTPSender) {
 	})
 }
 
-// recordRTCPPackets converts feedback into finite packet classes and Receiver
-// Report quality samples. RTT uses RFC 3550 middle-32-bit NTP arithmetic; reports
-// without an LSR still contribute loss but deliberately omit RTT.
+// recordRTCPPacketsはfeedbackを有限なpacket分類とReceiver Reportの品質値へ変換する。
+// RTTはRFC 3550のNTP中間32 bit演算を使い、LSRのないreportは損失だけを記録してRTTを省く。
 func (s *Session) recordRTCPPackets(packets []rtcp.Packet, now time.Time) {
 	for _, packet := range packets {
 		switch typed := packet.(type) {
@@ -77,8 +76,8 @@ func (s *Session) recordRTCPPackets(packets []rtcp.Packet, now time.Time) {
 			for _, report := range typed.Reports {
 				rtt := -1.0
 				if report.LastSenderReport != 0 {
-					// RFC 3550 compact NTP values wrap at 32 bits. Unsigned
-					// subtraction preserves the elapsed interval across that wrap.
+					// RFC 3550のcompact NTP値は32 bitで折り返す。符号なし減算により、
+					// 折返しをまたいだ経過時間を保つ。
 					elapsed := ntpMiddle32(now) - report.LastSenderReport - report.Delay
 					rtt = float64(elapsed) / 65536
 				}

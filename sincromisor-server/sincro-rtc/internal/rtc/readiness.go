@@ -77,7 +77,7 @@ func (s *Session) transportReady() {
 		}
 		startPipeline = s.promoteMediaReadyLocked("peer_connected")
 	case stateTransportReady, stateMediaReady, stateRunning, stateClosing, stateClosed:
-		// Pion may repeat the same connected state; it must not restart timers or pipeline.
+		// Pionは同じconnected状態を再通知し得るが、timerやpipelineを再始動させない。
 	default:
 		err := s.lifecycle.transitionLocked(stateTransportReady, "peer_connected")
 		s.logTransitionError(err)

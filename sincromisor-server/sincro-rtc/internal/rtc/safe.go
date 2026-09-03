@@ -2,9 +2,8 @@ package rtc
 
 import "context"
 
-// Go starts a session-owned goroutine and joins it during cleanup. A panic is
-// classified without logging the recovered value, then converges on the same
-// close-once lifecycle as ordinary failures.
+// Go はセッション所有のgoroutineを開始し、後始末で待ち合わせる。panicは回収した値を
+// ログへ出さずに分類し、通常の失敗と同じ一度限りの終了処理へ収束させる。
 func (s *Session) Go(stage string, run func(context.Context)) {
 	if run == nil {
 		return
@@ -13,8 +12,8 @@ func (s *Session) Go(stage string, run func(context.Context)) {
 	s.goReserved(stage, run)
 }
 
-// goReserved is used after lifecycle code has reserved a WaitGroup slot under
-// its state lock. This preserves the no-Add-during-Wait invariant.
+// goReservedは生存期間処理が状態ロック内でWaitGroupを予約した後に使う。
+// これによりWait中にはAddしない不変条件を保つ。
 func (s *Session) goReserved(stage string, run func(context.Context)) {
 	go func() {
 		defer s.wg.Done()
@@ -28,9 +27,8 @@ func (s *Session) goReserved(stage string, run func(context.Context)) {
 	}()
 }
 
-// SafeCallback wraps a Pion or timer callback with the same session panic
-// boundary. Runtime fatal errors, cgo crashes, and panics in unwrapped
-// third-party goroutines remain outside this boundary.
+// SafeCallback はPionまたはtimerのcallbackをセッション共通のpanic境界で包む。
+// runtimeの致命的error、cgoの異常終了、包んでいない外部goroutineのpanicは対象外である。
 func (s *Session) SafeCallback(stage string, callback func()) func() {
 	return func() {
 		defer func() {
@@ -43,9 +41,8 @@ func (s *Session) SafeCallback(stage string, callback func()) func() {
 	}
 }
 
-// startCleanup launches the terminal resource join outside the Session
-// WaitGroup it must wait on. Panic containment prevents a cleanup helper from
-// crashing the process; close-once has already made the Session unavailable.
+// startCleanupは待機対象のSession WaitGroupには加わらず、終端資源の待ち合わせを開始する。
+// 後始末補助のpanicはprocessへ伝播させず、Sessionは一度限りの終了処理ですでに利用不能である。
 func (s *Session) startCleanup(reason string) {
 	go func() {
 		defer func() {
