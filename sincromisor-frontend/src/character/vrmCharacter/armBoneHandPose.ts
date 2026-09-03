@@ -1,8 +1,9 @@
 import type { Object3D } from "three/src/core/Object3D.js";
 import type { SincroPoseRetargetFrame } from "../retargeting/sincroPoseRetargetTypes";
 import type { ArmSpeechExpressionProfile } from "./armBoneSpeechGesture";
-import { CHARACTER_IDLE_MOTION_CONFIG } from "./characterMotionConfig";
+import { CHARACTER_ARM_REST_POSE, CHARACTER_IDLE_MOTION_CONFIG } from "./characterMotionConfig";
 
+/** 待機姿勢、発話動作、追跡姿勢を直接反映する正規化手・親指ボーン。 */
 export type ArmHandPoseNodes = {
     leftHand?: Object3D;
     leftThumbProximal?: Object3D;
@@ -10,6 +11,11 @@ export type ArmHandPoseNodes = {
     rightThumbProximal?: Object3D;
 };
 
+/**
+ * 手の直接書き込み入力。
+ *
+ * 左右の揺れと発話動作は呼び出し元が同じ経過時間から計算し、`pose` の手首 roll は追加差分として扱う。
+ */
 export type ArmHandPoseInput = {
     nodes: ArmHandPoseNodes;
     pose?: SincroPoseRetargetFrame;
@@ -21,6 +27,11 @@ export type ArmHandPoseInput = {
     expression: ArmSpeechExpressionProfile;
 };
 
+/**
+ * 左右の手首と子指ボーンへ待機姿勢、発話動作、追跡差分を直接適用する。
+ *
+ * 手首以下を再帰的に変更するが、`setNormalizedPose()` や上腕・前腕は更新しない。
+ */
 export function applyArmHandPose(input: ArmHandPoseInput): void {
     const { nodes, pose, wristSway, leftGesture, rightGesture, expression } = input;
     updateLeftHand(
@@ -52,7 +63,7 @@ function updateLeftHand(
     baseBone.rotation.set(
         0,
         0,
-        -0.2 -
+        CHARACTER_ARM_REST_POSE.left.hand.z -
             wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.wristSwayRad -
             speechGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechWristRollRad +
             poseWristRoll,
@@ -84,7 +95,7 @@ function updateRightHand(
     baseBone.rotation.set(
         0,
         0,
-        0.2 +
+        CHARACTER_ARM_REST_POSE.right.hand.z +
             wristSway * CHARACTER_IDLE_MOTION_CONFIG.arms.wristSwayRad +
             speechGesture * CHARACTER_IDLE_MOTION_CONFIG.arms.speechWristRollRad +
             poseWristRoll,

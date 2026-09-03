@@ -1,3 +1,4 @@
+import { MathUtils } from "three/src/math/MathUtils.js";
 import { describe, expect, it } from "vitest";
 import {
     createHand,
@@ -10,6 +11,7 @@ import { NEUTRAL_POSE_FRAME } from "../../retargeting/sincroPoseRetargetTypes";
 import {
     COMPLETE_PROFILE,
     eulerQuaternion,
+    expectNormalizedQuaternion,
 } from "../../vrmPose/__tests__/vrmPoseComposerTestHelpers";
 import { compose, SincroVrmPoseComposerDryRunService } from "../sincroVrmPoseComposerDryRun";
 
@@ -30,6 +32,32 @@ describe("SincroVrmPoseComposerDryRunService", () => {
             status: "invalid_input",
             warnings: ["delta_seconds_invalid"],
         });
+    });
+
+    it("uses the lowered arm rest pose when tracking is inactive", () => {
+        const result = new SincroVrmPoseComposerDryRunService().compose({
+            frame: NEUTRAL_POSE_FRAME,
+            profile: COMPLETE_PROFILE,
+            deltaSeconds: 1 / 60,
+        });
+
+        expect(result.status).toBe("available");
+        expectNormalizedQuaternion(
+            result.result?.finalPose.leftUpperArm,
+            eulerQuaternion(MathUtils.degToRad(5), 0, MathUtils.degToRad(-75)),
+        );
+        expectNormalizedQuaternion(
+            result.result?.finalPose.leftLowerArm,
+            eulerQuaternion(0, MathUtils.degToRad(-15), MathUtils.degToRad(5)),
+        );
+        expectNormalizedQuaternion(
+            result.result?.finalPose.rightUpperArm,
+            eulerQuaternion(MathUtils.degToRad(5), 0, MathUtils.degToRad(75)),
+        );
+        expectNormalizedQuaternion(
+            result.result?.finalPose.rightLowerArm,
+            eulerQuaternion(0, MathUtils.degToRad(15), MathUtils.degToRad(-5)),
+        );
     });
 
     it("keeps semantic and finger layers out when the rollback flag is off", () => {

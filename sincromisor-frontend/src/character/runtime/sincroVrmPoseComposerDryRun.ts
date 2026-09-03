@@ -10,6 +10,7 @@ import type {
     SincroPoseRetargetedArm,
     SincroPoseRetargetFrame,
 } from "../retargeting/sincroPoseRetargeter";
+import { CHARACTER_ARM_REST_POSE } from "../vrmCharacter/characterMotionConfig";
 import { composeVrmPose } from "../vrmPose/vrmPoseComposer";
 import type {
     VrmNormalizedLocalPose,
@@ -228,11 +229,21 @@ function createBaseDryRunLayers(frame: SincroPoseRetargetFrame): VrmPoseLayer[] 
     ];
 }
 
+/*
+    追跡 frame が無効でも現在 frame の結果を生成し、前回の追跡姿勢を残さない。
+    torso / shoulder は正規化基準へ戻す一方、腕は T ポーズを避けるため既定の待機姿勢へ戻す。
+*/
 function createFallbackPose(): VrmNormalizedLocalPose {
     const pose: VrmNormalizedLocalPose = {};
     for (const bone of FALLBACK_BONES) {
         pose[bone] = identityQuaternion();
     }
+    pose.leftUpperArm = eulerQuaternion(CHARACTER_ARM_REST_POSE.left.upperArm);
+    pose.leftLowerArm = eulerQuaternion(CHARACTER_ARM_REST_POSE.left.lowerArm);
+    pose.leftHand = eulerQuaternion(CHARACTER_ARM_REST_POSE.left.hand);
+    pose.rightUpperArm = eulerQuaternion(CHARACTER_ARM_REST_POSE.right.upperArm);
+    pose.rightLowerArm = eulerQuaternion(CHARACTER_ARM_REST_POSE.right.lowerArm);
+    pose.rightHand = eulerQuaternion(CHARACTER_ARM_REST_POSE.right.hand);
     return pose;
 }
 
