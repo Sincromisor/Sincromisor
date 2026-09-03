@@ -3,7 +3,6 @@ package datachannel
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"sync"
 	"sync/atomic"
@@ -188,58 +187,6 @@ func (d *Dispatcher) attach(channel channelWriter, text bool) error {
 	return nil
 }
 
-// Purge はgeneration barrierより前に取り込んだtext/telop eventを一括破棄する。
-func (d *Dispatcher) Purge() {
-	d.sendMu.Lock()
-	defer d.sendMu.Unlock()
-	d.mu.Lock()
-	if d.closed {
-		d.mu.Unlock()
-		return
-	}
-	d.purgeLocked()
-	d.mu.Unlock()
-}
-
-func (d *Dispatcher) purgeLocked() {
-	count := len(d.textQueue) + len(d.telopQueue)
-	textCount, telopCount := len(d.textQueue), len(d.telopQueue)
-	d.generationEpoch++
-	close(d.generationChanged)
-	d.generationChanged = make(chan struct{})
-	d.textQueue = nil
-	d.telopQueue = nil
-	if textCount > 0 {
-		d.recorder.QueueDepthDelta("text", -float64(textCount))
-	}
-	if telopCount > 0 {
-		d.recorder.QueueDepthDelta("telop", -float64(telopCount))
-	}
-	if count > 0 {
-		total := d.generationPurged.Add(uint64(count))
-		d.logger.Info("purged data channel events",
-			"stage", "data_channel_queue", "reason", "generation", "count", total,
-		)
-	}
-}
-
-// Stats は送信処理担当のペイロードを保持しない累積値と現在値を返す。
-func (d *Dispatcher) Stats() Stats {
-	d.mu.Lock()
-	textQueued, telopQueued, closed := len(d.textQueue), len(d.telopQueue), d.closed
-	d.mu.Unlock()
-	return Stats{
-		TextRejected:     d.textRejected.Load(),
-		TelopDropped:     d.telopDropped.Load(),
-		TelopSendDropped: d.telopSendDropped.Load(),
-		GenerationPurged: d.generationPurged.Load(),
-		ActiveWorkers:    d.activeWorkers.Load(),
-		TextQueued:       textQueued,
-		TelopQueued:      telopQueued,
-		Closed:           closed,
-	}
-}
-
 // Close は送信処理担当を取り消し、進行中の送信抑制待ちを含めて一度だけ待ち合わせる。
 func (d *Dispatcher) Close() error {
 	d.closeOnce.Do(func() {
@@ -267,118 +214,6 @@ func (d *Dispatcher) Close() error {
 		}
 	})
 	return nil
-}
-
-func (d *Dispatcher) run(channel channelWriter, text bool, wake <-chan struct{}) {
-	d.activeWorkers.Add(1)
-	defer func() {
-		if recover() != nil {
-			d.recoverPanic("data_channel_worker")
-		}
-		d.activeWorkers.Add(-1)
-		d.wg.Done()
-	}()
-	for {
-		payload, epoch, generationChanged, ok := d.pop(text)
-		if !ok {
-			select {
-			case <-d.ctx.Done():
-				return
-			case <-wake:
-				continue
-			}
-		}
-		if err := d.waitWritable(channel, generationChanged); err != nil {
-			if errors.Is(err, errStaleDataChannelEvent) {
-				continue
-			}
-			d.onError(err)
-			return
-		}
-		sendErr, stale := func() (error, bool) {
-			d.sendMu.Lock()
-			defer d.sendMu.Unlock()
-			d.mu.Lock()
-			stale := epoch != d.generationEpoch
-			d.mu.Unlock()
-			if stale {
-				return nil, true
-			}
-			return channel.SendText(string(payload)), false
-		}()
-		if stale {
-			continue
-		}
-		if sendErr != nil {
-			if text {
-				d.recorder.DataChannelError("text")
-				d.onError(fmt.Errorf("send reliable text data channel payload: %w", sendErr))
-				return
-			}
-			d.recorder.DataChannelError("telop")
-			count := d.telopSendDropped.Add(1)
-			d.logger.Warn("dropped data channel event",
-				"stage", "telop", "reason", "data_channel_error", "count", count,
-			)
-		}
-	}
-}
-
-func (d *Dispatcher) pop(text bool) ([]byte, uint64, <-chan struct{}, bool) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	queue := &d.telopQueue
-	if text {
-		queue = &d.textQueue
-	}
-	if len(*queue) == 0 {
-		return nil, 0, nil, false
-	}
-	payload := (*queue)[0]
-	copy(*queue, (*queue)[1:])
-	*queue = (*queue)[:len(*queue)-1]
-	queueName := "telop"
-	if text {
-		queueName = "text"
-	}
-	d.recorder.QueueDepthDelta(queueName, -1)
-	return payload, d.generationEpoch, d.generationChanged, true
-}
-
-// waitWritableは1 MiB high-waterで送信を止め、256 KiB low-water eventまで最大5秒待つ。
-//
-// callbackは通知をcoalesceするだけで、復帰判定はBufferedAmountを再読してspurious/古いeventを拒否する。
-func (d *Dispatcher) waitWritable(
-	channel channelWriter,
-	generationChanged <-chan struct{},
-) error {
-	if channel.ReadyState() != webrtc.DataChannelStateOpen {
-		return errors.New("data channel is closed")
-	}
-	if channel.BufferedAmount() < bufferedAmountHigh {
-		return nil
-	}
-	timer := time.NewTimer(d.backpressureTimeout)
-	defer timer.Stop()
-	low := make(chan struct{}, 1)
-	channel.OnBufferedAmountLow(d.safeCallback("data_channel_backpressure", func() { signal(low) }))
-	for {
-		if channel.ReadyState() != webrtc.DataChannelStateOpen {
-			return errors.New("data channel closed during backpressure")
-		}
-		if channel.BufferedAmount() <= bufferedAmountLow {
-			return nil
-		}
-		select {
-		case <-d.ctx.Done():
-			return d.ctx.Err()
-		case <-generationChanged:
-			return errStaleDataChannelEvent
-		case <-timer.C:
-			return errors.New("data channel backpressure timeout")
-		case <-low:
-		}
-	}
 }
 
 func (d *Dispatcher) safeCallback(stage string, callback func()) func() {
