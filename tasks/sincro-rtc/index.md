@@ -2,7 +2,19 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 57 件）
+## タスク一覧（自動生成 / 全 64 件）
+
+### open（未完） — 7 件
+
+| タスク                                                                                                                     | タイトル                                       | 判定 | 依存 |
+| -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ---- | ---- |
+| [task-260903012605-datachannel-dispatcher-size](./task-260903012605-datachannel-dispatcher-size/task.md)                   | DataChannel送信処理と試験を規約サイズへ分割    | —    | —    |
+| [task-260903012606-media-output-clock-test-size](./task-260903012606-media-output-clock-test-size/task.md)                 | 送信音声時計試験を責務別に分割                 | —    | —    |
+| [task-260903012606-offer-registry-test-size](./task-260903012606-offer-registry-test-size/task.md)                         | Offerレジストリ試験の分割と残存コメントの是正  | —    | —    |
+| [task-260903012606-pipeline-comments-observability-test](./task-260903012606-pipeline-comments-observability-test/task.md) | 会話パイプラインの残存コメントと観測試験を整理 | —    | —    |
+| [task-260903012606-rtc-outbound-comments](./task-260903012606-rtc-outbound-comments/task.md)                               | RTC出力試験の分割と残存コメントの是正          | —    | —    |
+| [task-260903012607-pipeline-msgpack-test-size](./task-260903012607-pipeline-msgpack-test-size/task.md)                     | MessagePack試験を変換責務別に分割              | —    | —    |
+| [task-260903012607-rtc-process-harness-test-size](./task-260903012607-rtc-process-harness-test-size/task.md)               | RTCプロセス試験補助を外部境界別に分割          | —    | —    |
 
 ### done（完了） — 51 件
 

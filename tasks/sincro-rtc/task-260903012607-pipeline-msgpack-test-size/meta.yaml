@@ -1,0 +1,13 @@
+id: task-260903012607-pipeline-msgpack-test-size
+title: MessagePack試験を変換責務別に分割
+category: sincro-rtc
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-03
+closed_at: null
+legacy_ids: []
