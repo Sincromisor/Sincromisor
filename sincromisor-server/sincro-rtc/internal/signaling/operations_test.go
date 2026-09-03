@@ -148,8 +148,8 @@ func TestOperationalLogsDoNotContainPayloadMarkers(t *testing.T) {
 	var logs bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&logs, nil))
 
-	// Exercise rejection and panic paths because those are the paths most likely
-	// to accidentally attach a request body or recovered panic value to a log.
+	// 拒否とpanicの経路は要求本文や回収した値をログへ誤って添付しやすいため、
+	// 正常系だけでなく両方の秘匿境界を確認する。
 	state := NewProcessState()
 	state.BeginDrain()
 	server := New(&fakeSessions{}, nil, t.TempDir(), "", logger,
