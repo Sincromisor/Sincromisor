@@ -1,0 +1,13 @@
+id: task-260906040102-repair-startup-code-guidance
+title: RTC起動処理の説明を実装の配置へ合わせる
+category: rtc-maintenance
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-06
+closed_at: null
+legacy_ids: []
