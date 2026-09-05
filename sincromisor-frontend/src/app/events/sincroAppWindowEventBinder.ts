@@ -3,6 +3,7 @@ import type {
     SincroAppLookingGlassEventDetail,
 } from "../controller/sincroAppTypes";
 
+/** アプリが受け取るウィンドウ通知。登録時と解除時に同じ関数参照を使う。 */
 export type SincroAppWindowEventHandlers = {
     onLookingGlassState: (event: CustomEvent<SincroAppLookingGlassEventDetail>) => void;
     onLookingGlassConfigUpdated: (
@@ -23,9 +24,8 @@ declare global {
     }
 }
 
-// AppController constructor の window event 登録列挙を分離する helper。
-// 今後 unbind が必要になった場合も、ここに対称処理を追加しやすくする。
-export function bindSincroAppWindowEvents(handlers: SincroAppWindowEventHandlers): void {
+/** ウィンドウ通知を登録し、同じ登録だけを繰り返し安全に解除できる関数を返す。 */
+export function bindSincroAppWindowEvents(handlers: SincroAppWindowEventHandlers): () => void {
     window.addEventListener("sincro:looking-glass-state", handlers.onLookingGlassState);
     window.addEventListener(
         "sincro:looking-glass-config-updated",
@@ -36,4 +36,19 @@ export function bindSincroAppWindowEvents(handlers: SincroAppWindowEventHandlers
         handlers.onLookingGlassPolyfillReinitReady,
     );
     window.addEventListener("sincro:open-configuration-dialog", handlers.onOpenConfigurationDialog);
+    return () => {
+        window.removeEventListener("sincro:looking-glass-state", handlers.onLookingGlassState);
+        window.removeEventListener(
+            "sincro:looking-glass-config-updated",
+            handlers.onLookingGlassConfigUpdated,
+        );
+        window.removeEventListener(
+            "sincro:looking-glass-polyfill-reinit-ready",
+            handlers.onLookingGlassPolyfillReinitReady,
+        );
+        window.removeEventListener(
+            "sincro:open-configuration-dialog",
+            handlers.onOpenConfigurationDialog,
+        );
+    };
 }

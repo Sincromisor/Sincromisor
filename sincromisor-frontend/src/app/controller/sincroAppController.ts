@@ -69,6 +69,8 @@ export class SincroAppController {
 
     private readonly runtime: SincroAppControllerRuntimeBundle;
     private readonly eventHub = new SincroAppEventHub();
+    /** このインスタンスが登録した外部通知だけを所有し、差し替え時に解除する。 */
+    private readonly eventUnsubscribers: (() => void)[] = [];
     private lifecycleState: SincroAppLifecycleState = "idle";
     private iceConnectionState: string = "";
     private signalingState: string = "";
@@ -127,26 +129,35 @@ export class SincroAppController {
             settingsUiState: initialSettings.settingsUiState,
             settingsUiHints: initialSettings.settingsUiHints,
         });
+        // 旧制御の外部購読を解除してReactを切り替え、登録時の即時通知を新購読へ届ける。
         SincroAppController.setCurrent(this);
-        this.bindUiSubscriptions();
-        bindSincroAppControllerWindowEvents({
-            lookingGlassTracker: this.lookingGlassTracker,
-            emitEvent: (event) => this.emitEvent(event),
-            openDialog: () => this.dialog.open(),
-        });
+        this.eventUnsubscribers.push(this.bindUiSubscriptions());
+        this.eventUnsubscribers.push(
+            bindSincroAppControllerWindowEvents({
+                lookingGlassTracker: this.lookingGlassTracker,
+                emitEvent: (event) => this.emitEvent(event),
+                openDialog: () => this.dialog.open(),
+            }),
+        );
     }
 
-    // Static active controller registry API
-    // React側が「今アクティブなページの AppController」を購読するための入口。
+    /** 現在有効な制御処理をReactやページ初期化処理へ公開する。 */
     static getCurrent(): SincroAppController | undefined {
         return SincroAppController.activeRegistry.getCurrent();
     }
 
-    // MPAページ切り替えや initializer 差し替えを考慮し、active controller の変化も購読可能にする。
+    /** 有効な制御処理を即時通知し、以後の差し替えも購読する。戻り値で購読を解除する。 */
     static subscribeCurrent(
         listener: (controller: SincroAppController | undefined) => void,
     ): () => void {
         return SincroAppController.activeRegistry.subscribe(listener);
+    }
+
+    /** 外部イベント購読だけを解除する。再実行は無処理とし、RTCや共有サービスは停止しない。 */
+    releaseEventSubscriptions(): void {
+        for (const unsubscribe of this.eventUnsubscribers.splice(0)) {
+            unsubscribe();
+        }
     }
 
     /** アプリイベントを購読し、起動・接続・シーン設定などの初期状態も直ちに通知する。 */
@@ -199,7 +210,7 @@ export class SincroAppController {
         this.emitDerivedConnectionState();
     }
 
-    /** 起動中のRTCを停止し、停止前後の状態を順に通知する。未起動・停止済みなら何もしない。 */
+    /** RTCだけを停止して状態を通知する。設定などの外部購読は維持し、未起動・停止済みなら何もしない。 */
     stopRTC(): void {
         if (
             this.lifecycleState === "stopping" ||
@@ -305,9 +316,9 @@ export class SincroAppController {
         this.eventHub.emit(event);
     }
 
-    private bindUiSubscriptions(): void {
-        // singleton manager / service 群を機能別に購読し、AppController 統一イベントへ正規化する。
-        bindSincroAppControllerSubscriptions({
+    /** 共有サービスの通知をこのアプリへ接続し、差し替え時の解除処理を返す。 */
+    private bindUiSubscriptions(): () => void {
+        return bindSincroAppControllerSubscriptions({
             chatMessageService: this.runtime.chatMessageService,
             debugConsoleManager: this.runtime.debugConsoleManager,
             talkManager: this.runtime.talkManager,
