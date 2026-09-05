@@ -33,7 +33,14 @@ func TestGenerationNotificationAlonePurgesAudioTextAndTelop(t *testing.T) {
 	}
 	session := &Session{output: output, dispatcher: dispatcher}
 
-	accepted, err := session.applyGenerationError(1, func() error {
+	if accepted, err := session.applyGeneration(0, func() error {
+		t.Fatal("zero generation ran its action")
+		return nil
+	}); accepted || err != nil {
+		t.Fatalf("zero generation = %v, %v", accepted, err)
+	}
+
+	accepted, err := session.applyGeneration(1, func() error {
 		if err := output.Enqueue("old", synthdecode.DecodedSpeech{
 			SpeechID: 1, PCM: make([]int16, audiomedia.SampleRate/50),
 		}); err != nil {
@@ -47,9 +54,16 @@ func TestGenerationNotificationAlonePurgesAudioTextAndTelop(t *testing.T) {
 	if !accepted || err != nil {
 		t.Fatalf("generation 1 enqueue = %v, %v", accepted, err)
 	}
+	if accepted, err := session.applyGeneration(1, nil); !accepted || err != nil || output.Stats().GenerationPurged != 0 {
+		t.Fatalf("same generation notification = %v, %v, stats=%+v", accepted, err, output.Stats())
+	}
+	actionErr := errors.New("enqueue failed")
+	if accepted, err := session.applyGeneration(1, func() error { return actionErr }); !accepted || !errors.Is(err, actionErr) {
+		t.Fatalf("action failure = %v, %v", accepted, err)
+	}
 
 	// generation 2の後続出力がなくても、通知だけでgeneration 1の全出力を破棄する。
-	if !session.applyGeneration(2, nil) {
+	if accepted, err := session.applyGeneration(2, nil); !accepted || err != nil {
 		t.Fatal("generation 2 notification was not applied")
 	}
 	if got := output.Stats().GenerationPurged; got != 1 {
@@ -60,7 +74,7 @@ func TestGenerationNotificationAlonePurgesAudioTextAndTelop(t *testing.T) {
 		t.Fatalf("old data events remained = text %d telop %d",
 			dispatchStats.TextQueued, dispatchStats.TelopQueued)
 	}
-	accepted, err = session.applyGenerationError(1, func() error {
+	accepted, err = session.applyGeneration(1, func() error {
 		return dispatcher.EnqueueText(protocol.ChatMessage{MessageID: "stale"})
 	})
 	if accepted || err != nil || dispatcher.Stats().TextQueued != 0 {
@@ -93,14 +107,14 @@ func TestSessionOutputCloseRejectsConcurrentTextSynthAndGenerationActions(t *tes
 		go func(id int) {
 			defer workers.Done()
 			<-start
-			_, _ = session.applyGenerationError(1, func() error {
+			_, _ = session.applyGeneration(1, func() error {
 				return dispatcher.EnqueueText(protocol.ChatMessage{MessageID: "late-text"})
 			})
 		}(index)
 		go func(id int) {
 			defer workers.Done()
 			<-start
-			_, _ = session.applyGenerationError(1, func() error {
+			_, _ = session.applyGeneration(1, func() error {
 				return output.Enqueue("late-synth", synthdecode.DecodedSpeech{
 					SpeechID: int64(id), PCM: make([]int16, audiomedia.SampleRate/50),
 				})

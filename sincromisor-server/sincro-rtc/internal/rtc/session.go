@@ -52,7 +52,7 @@ type Session struct {
 	encoder            *outputmedia.Encoder
 	output             *outputmedia.Processor
 	dispatcher         *datachannel.Dispatcher
-	outboundMu         sync.Mutex
+	outboundMu         sync.Mutex // 世代比較、旧出力の破棄、新出力の追加を一つの操作として保護する。
 	outboundGeneration uint64
 	outboundTrack      *webrtc.TrackLocalStaticSample
 	outboundSender     *webrtc.RTPSender
