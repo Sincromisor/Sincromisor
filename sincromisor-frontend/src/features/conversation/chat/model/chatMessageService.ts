@@ -69,13 +69,7 @@ export class ChatMessageService {
         this.renderDomSnapshot();
     }
 
-    // React 側の初期描画用に、現時点のチャット履歴（新しい順）を返す。
-    // renderModeを使わない利用箇所向けの互換APIとして残している。
-    getMessagesSnapshot(): ChatMessage[] {
-        return this.messages.map((record) => record.message);
-    }
-
-    // React描画では HTMLフラグを参照して表示方針を切り替えるため、描画メタデータを返す。
+    /** React初期描画用に、描画方式を含む件数制限付き履歴を新しい順で返す。 */
     getMessageViewSnapshot(): ChatMessageViewRecord[] {
         return [...this.messages];
     }
