@@ -162,6 +162,12 @@ func TestConversationRejectsProcessorIntermediateFinalMixups(t *testing.T) {
 	if _, _, err := conv.validateProcessor(final); err == nil {
 		t.Fatal("duplicate final result was accepted")
 	}
+	if _, _, err := conv.validateProcessor(intermediate); err == nil {
+		t.Fatal("intermediate result after final was accepted")
+	}
+	if len(conv.requests) != 0 {
+		t.Fatal("completed request was retained")
+	}
 }
 
 func TestConversationRejectsSpeechIDRegression(t *testing.T) {
@@ -173,5 +179,21 @@ func TestConversationRejectsSpeechIDRegression(t *testing.T) {
 	regressed := protocol.ExtractorResult{SessionID: "session", SpeechID: 9, SequenceID: 2, Confirmed: true}
 	if _, err := conv.acceptExtraction(regressed); err == nil {
 		t.Fatal("acceptExtraction() accepted a regressed speech ID")
+	}
+	regressed.SpeechID = first.SpeechID
+	if _, err := conv.acceptExtraction(regressed); err == nil {
+		t.Fatal("acceptExtraction() reused a completed speech ID")
+	}
+	next := protocol.ExtractorResult{SessionID: "session", SpeechID: 11, SequenceID: 2}
+	if _, err := conv.acceptExtraction(next); err != nil {
+		t.Fatalf("next partial extraction error = %v", err)
+	}
+	regressed.SequenceID = 3
+	if _, err := conv.acceptExtraction(regressed); err == nil {
+		t.Fatal("acceptExtraction() accepted a completed speech during another speech")
+	}
+	next.SequenceID, next.Confirmed = 3, true
+	if _, err := conv.acceptExtraction(next); err != nil {
+		t.Fatalf("next confirmed extraction error = %v", err)
 	}
 }

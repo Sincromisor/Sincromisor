@@ -13,20 +13,22 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
 )
 
+// conversation は1世代で処理中の発話と要求を所有する。
+// 完了済み発話は最後のspeechIDとの比較、完了済み要求はrequestsからの削除で再受理を防ぐ。
+// 確定した会話履歴と世代をまたぐ抽出IDはCoordinatorが保持する。
 type conversation struct {
 	mu        sync.Mutex
 	sessionID string
 	speechID  int64
 	sequence  int64
 	open      bool
-	closed    map[int64]struct{}
 
 	outstanding map[int64]protocol.ExtractorResult
 	requests    map[int64]protocol.ProcessorRequest
-	finalized   map[int64]struct{}
 	currentUser *protocol.ChatMessage
 }
 
+// extractionIdentity は再接続後も同じ発話を再送しないための、セッション共通の最終受理IDである。
 type extractionIdentity struct {
 	seen       bool
 	generation uint64
@@ -34,18 +36,11 @@ type extractionIdentity struct {
 	sequenceID int64
 }
 
-// conversationは1 generation内のprotocol state machineである。
-//
-// outstandingは送信済みsequenceとRecognizerResultを1対1に照合する。currentUser、requests、finalizedはpartial user messageから
-// Processor finalまでだけ生存し、reset時はconversation objectごと破棄される。confirmed historyは
-// Coordinator側にのみある。最後に受理したExtractor identityもCoordinatorがsession lifetimeで保持し、
-// 新generationのconversationへ同じspeech/sequenceを再受理させない。
+// newConversation は世代内の照合状態を初期化する。再初期化時はこの値全体を交換する。
 func newConversation(sessionID string) *conversation {
 	return &conversation{
 		sessionID: sessionID, speechID: -1, sequence: -1,
-		closed:      make(map[int64]struct{}),
 		outstanding: make(map[int64]protocol.ExtractorResult), requests: make(map[int64]protocol.ProcessorRequest),
-		finalized: make(map[int64]struct{}),
 	}
 }
 
@@ -82,14 +77,13 @@ func (c *Coordinator) acceptExtraction(
 	return combined, true, err
 }
 
+// acceptExtraction は発話IDと通番を検証し、認識結果との照合が済むまで入力を保持する。
+// 発話途中では同じ発話だけを受け、確定後はより大きい発話IDだけを受ける。
 func (c *conversation) acceptExtraction(value protocol.ExtractorResult) (protocol.ExtractorResult, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if value.SessionID != c.sessionID || value.SpeechID < 0 || value.SequenceID <= c.sequence {
 		return protocol.ExtractorResult{}, errors.New("extractor result identity or sequence is invalid")
-	}
-	if _, found := c.closed[value.SpeechID]; found {
-		return protocol.ExtractorResult{}, errors.New("extractor result targets a confirmed speech")
 	}
 	if c.open && value.SpeechID != c.speechID {
 		return protocol.ExtractorResult{}, errors.New("extractor changed speech before confirmation")
@@ -108,11 +102,11 @@ func (c *conversation) acceptExtraction(value protocol.ExtractorResult) (protoco
 	c.outstanding[value.SequenceID] = value
 	if value.Confirmed {
 		c.open = false
-		c.closed[value.SpeechID] = struct{}{}
 	}
 	return value, nil
 }
 
+// acceptRecognition は送信済み入力と一致する結果だけを一度受理し、照合用の入力を解放する。
 func (c *conversation) acceptRecognition(value protocol.RecognizerResult) (protocol.ExtractorResult, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -152,12 +146,15 @@ func (c *conversation) recognitionMessage(value protocol.RecognizerResult) proto
 	return result
 }
 
+// rememberRequest は単調増加する認識通番で要求を保持し、文章処理の応答との照合に備える。
 func (c *conversation) rememberRequest(request protocol.ProcessorRequest) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.requests[request.SequenceID] = request
 }
 
+// validateProcessor は要求の同一性と履歴の更新を検証し、最終応答でだけ要求を解放する。
+// 解放後の同じ通番への応答は、途中応答も最終応答も要求不在として拒否する。
 func (c *conversation) validateProcessor(value protocol.ProcessorResult) (protocol.ProcessorRequest, bool, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -168,9 +165,6 @@ func (c *conversation) validateProcessor(value protocol.ProcessorResult) (protoc
 	if value.SessionID != request.SessionID || value.Confirmed != request.Confirmed ||
 		!reflect.DeepEqual(value.RequestMessage, request.RequestMessage) {
 		return protocol.ProcessorRequest{}, false, errors.New("processor result request identity differs")
-	}
-	if _, done := c.finalized[value.SequenceID]; done {
-		return protocol.ProcessorRequest{}, false, errors.New("processor result arrived after final")
 	}
 	if !value.EndOfResponse {
 		// Intermediate resultは表示/TTS増分だけを運び、processorがrequest前historyを
@@ -188,7 +182,6 @@ func (c *conversation) validateProcessor(value protocol.ProcessorResult) (protoc
 		value.ResponseMessage.SpeechID != request.RequestMessage.SpeechID {
 		return protocol.ProcessorRequest{}, false, errors.New("final processor history is inconsistent")
 	}
-	c.finalized[value.SequenceID] = struct{}{}
 	delete(c.requests, value.SequenceID)
 	return request, true, nil
 }

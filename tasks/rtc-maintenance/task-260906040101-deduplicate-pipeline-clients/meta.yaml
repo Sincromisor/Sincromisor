@@ -1,0 +1,13 @@
+id: task-260906040101-deduplicate-pipeline-clients
+title: 下流クライアントの共通処理の重複を削減する
+category: rtc-maintenance
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-06
+closed_at: null
+legacy_ids: []
