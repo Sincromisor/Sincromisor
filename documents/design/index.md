@@ -23,7 +23,7 @@
 新規文書は、内容に合わせて下記テンプレートを使う。
 
 - [現在設計](templates/current-design.md)
-    - 現在の実装構造を説明する正本
+    - 現在の実装構造を説明する文書
 - [契約仕様](templates/contract-spec.md)
     - エンドポイント / チャネル / 送受信データ / 環境変数など、互換性に関わる契約仕様
 - [設計判断記録](templates/decision-record.md)
@@ -45,7 +45,7 @@
 
 ## 契約
 
-互換性に関わるエンドポイント / チャネル / 送受信データ / 形式の正本。
+互換性に関わるエンドポイント / チャネル / 送受信データ / 形式の仕様。
 
 - [フロントエンドのRTC](contracts/frontend-rtc.md)
     - フロントエンドと `sincro-rtc` の WebRTC シグナリング、ICE 再起動・再試行、DataChannel 契約
