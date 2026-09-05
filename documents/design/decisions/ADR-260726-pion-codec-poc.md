@@ -1,57 +1,57 @@
-# ADR-260726 Pion codec PoC
+# ADR-260726 Pion コーデック PoC
 
-## Status
+## 状態
 
-- Accepted
+- 採用済み
 
-## Context
+## 背景
 
-aiortc backendはWebRTC transport、codec、session lifecycle、会話pipelineの調停を同じPython側へ集約している。
-Go / Pionへの移行に先立ち、production品質のnetwork / performance harnessを構築する前に、
-現行Frontend契約を保った基本経路が成立するかを確認する必要があった。
+aiortc バックエンドはWebRTC 転送、コーデック、セッションの生存期間、会話処理工程の調停を同じPython側へ集約している。
+Go / Pionへの移行に先立ち、本番品質のネットワーク / 性能検証基盤を構築する前に、
+現行フロントエンド契約を保った基本経路が成立するかを確認する必要があった。
 
-詳細なaiortc baseline、Firefox、NAT、ICE restart、network impairment、soak、性能比較は検証基盤自体が大きく、
+詳細なaiortc 基準、Firefox、NAT、ICE 再接続、ネットワーク障害、長時間連続稼働、性能比較は検証基盤自体が大きく、
 趣味プロダクトの技術選択を止める前提から外した。
 
-## Decision
+## 決定
 
-Pion v4 + Pion Opus decoder + mediadevices/libopus encoderを後続実装の出発点とする。
+Pion v4 + Pion Opus 復号器 + mediadevices/libopus 符号化器を後続実装の出発点とする。
 
-- WebRTC transportは `github.com/pion/webrtc/v4 v4.2.17` を使う。
-- inbound Opusは `github.com/pion/opus v0.1.0` のpure Go decoderで48 kHz PCMへ変換する。
-- outbound Opusは `github.com/pion/mediadevices v0.10.0` に同梱されたstatic libopus encoderを使う。
-- outbound encoderだけをcgo範囲とし、`dynamic` build tagとsystem libopusは使わない。
-- signalingは現行HTTP schemaを維持し、Phase 1ではinitial Offerとlocal host candidateだけを扱う。
-- production network、ICE restart、下流Python service接続、resample、品質・性能検証は後続phaseで実装する。
+- WebRTC 転送は `github.com/pion/webrtc/v4 v4.2.17` を使う。
+- 受信 Opusは `github.com/pion/opus v0.1.0` のGoだけで実装された復号器で48 kHz PCMへ変換する。
+- 送信 Opusは `github.com/pion/mediadevices v0.10.0` に同梱された静的な libopus 符号化器を使う。
+- 送信符号化器だけをcgo範囲とし、`dynamic` ビルドタグとシステムのlibopusは使わない。
+- シグナリングは現行HTTP スキーマを維持し、段階 1では初回Offerとローカルホスト候補だけを扱う。
+- 本番ネットワーク、ICE 再接続、下流Python サービス接続、再サンプリング、品質・性能検証は後続段階で実装する。
 
-Google Chrome 150のlocal smokeでhalf-trickle接続、100 packet以上のinbound decode、1秒test tone再生、
-2 DataChannel、10回closeが成立した。詳細な実測値と手順は対応task artifactを参照する。
+Google Chrome 150のローカル動作確認でhalf-trickle接続、100 パケット以上の受信復号、1秒テスト音再生、
+2 DataChannel、10回終了が成立した。詳細な実測値と手順は対応タスク成果物を参照する。
 
-## Options Considered
+## 検討した選択肢
 
-| 選択肢                              | 利点                                         | 欠点                                           |
-| ----------------------------------- | -------------------------------------------- | ---------------------------------------------- |
-| Pion + pure Go decode + static Opus | decodeのcgo不要、encoderの配布物がmodule同梱 | encoderにはCGO toolchainとC compilerが必要     |
-| Pion + system libopus               | OS packageのcodecを利用できる                | runtime/build環境のsystem dependencyが増える   |
-| GStreamer                           | decode / resample / encodeをpipeline化できる | runtime dependencyとpipeline lifecycleが増える |
-| aiortc継続                          | 現行実装を維持できる                         | transportと会話orchestrationのPython集中が残る |
+| 選択肢                                      | 利点                                             | 欠点                                              |
+| ------------------------------------------- | ------------------------------------------------ | ------------------------------------------------- |
+| Pion + Goだけで実装された復号 + 静的な Opus | 復号のcgo不要、符号化器の配布物がモジュール同梱  | 符号化器にはCGO ツールチェーンとCコンパイラが必要 |
+| Pion + システムのlibopus                    | OS パッケージのコーデックを利用できる            | 実行時・ビルド時環境のシステム依存関係が増える    |
+| GStreamer                                   | 復号 / 再サンプリング / 符号化を処理工程化できる | 実行時依存関係と処理工程生存期間が増える          |
+| aiortc継続                                  | 現行実装を維持できる                             | 転送と会話処理の組み立てのPython集中が残る        |
 
-## Consequences
+## 影響
 
-- Phase 2は既存Python下流serviceと互換なGo pipeline clientを独立して実装できる。
-- Phase 3はPoCのpackage構造をproduction frameworkとして流用せず、session ownershipと境界を設計し直す。
-- Phase 4でChrome / Firefox、fixed UDP mux、NAT / firewall、impairment、soak、aiortc性能比較を実行する。
-- codec adapterが対象platformでbuildできない場合は、Pion全体を棄却せずencoder境界だけを再評価する。
+- 段階 2は既存Python下流サービスと互換なGo 処理工程クライアントを独立して実装できる。
+- 段階 3はPoCのパッケージ構造を本番枠組みとして流用せず、セッション所有権と境界を設計し直す。
+- 段階 4でChrome / Firefox、固定UDP多重化処理、NAT / ファイアウォール、障害注入、長時間連続稼働、aiortc性能比較を実行する。
+- コーデックアダプターが対象実行環境でビルドできない場合は、Pion全体を棄却せず符号化器境界だけを再評価する。
 
-## Review Conditions
+## 見直し条件
 
-- pure Go decoderが実運用のOpus mode / packet loss条件を満たさない。
-- mediadevices同梱static archiveが対象platformまたは配布方式を満たさない。
-- Phase 3 / 4でbrowser interoperability、resource回収、session lifecycleに解消不能な問題が見つかる。
-- 下流pipeline統合後にPion経路だけで重大なlatencyまたは音質退行が再現する。
+- Goだけで実装された復号器が実運用のOpus モード / パケット損失条件を満たさない。
+- mediadevices同梱静的アーカイブが対象実行環境または配布方式を満たさない。
+- 段階 3 / 4でブラウザ間の相互運用性、リソース回収、セッションの生存期間に解消不能な問題が見つかる。
+- 下流処理工程統合後にPion経路だけで重大な遅延または音質退行が再現する。
 
-## References
+## 参照
 
-- [Frontend RTC契約](../contracts/frontend-rtc.md)
+- [フロントエンドのRTC契約](../contracts/frontend-rtc.md)
 - [Pion移行ロードマップ](../../migration/pion/roadmap.md)
 - `tasks/sincro-rtc/task-260726150803-pion-codec-poc-gate-1/`

@@ -7,12 +7,13 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 ## プロジェクト構成
 
 - **sincromisor-server**: サーバーサイドのコード（Python + uv + ruff）
-- **sincromisor-frontend**: クライアントサイドのコード（TypeScript + Vite + React app shell）
+- **sincromisor-frontend**: クライアントサイドのコード（TypeScript + Vite + Reactによるアプリの共通枠組み）
 - **Docker**: Docker Compose 関連のコード
 
 ## 技術スタック
 
 ### サーバーサイド
+
 - Python
 - uv (依存関係管理)
 - ruff (リンター/フォーマッター)
@@ -20,16 +21,19 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 - pydantic (型定義)
 
 ### クライアントサイド
+
 - Vite
-- TypeScript + React app shell
-  - Three.js (キャラクター・背景の描画)
-    - pixiv/three-vrm (キャラクターモデル: VRM-1.0)
-  - mediapipe/tasks-vision (顔認識)
+- TypeScript + Reactによるアプリの共通枠組み
+    - Three.js (キャラクター・背景の描画)
+        - pixiv/three-vrm (キャラクターモデル: VRM-1.0)
+    - mediapipe/tasks-vision (顔認識)
 
 ### デプロイメント
+
 - Docker Compose
 
 ### サーバー - クライアント間の通信
+
 - WebRTC (ブラウザ - RTCサーバー間)
 - WebSocket (RTCサーバー - サービスサーバー間)
 - HTTP (ブラウザ - コンテンツサーバー、RTCサーバー間)
@@ -37,6 +41,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 ## コーディングガイドライン
 
 ### Python (サーバー)
+
 - PEP 8準拠のコードを書く
 - ruffを使用してコードをフォーマット
 - 型ヒントを積極的に使用する
@@ -44,12 +49,14 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 - ログ記録には標準的なPythonの`logging`モジュールを使用する
 
 ### TypeScript (クライアント)
+
 - フレームワークを使用せず、プレーンなTypeScriptで実装
 - 型安全なコードを書く
 - モジュール化されたコードを書く
 - ES2020の機能を活用する
 
 ### Docker
+
 - コンテナは軽量に保つ
 - マルチステージビルドを使用する
 - 適切な環境変数を使用する

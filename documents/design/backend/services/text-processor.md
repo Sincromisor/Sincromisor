@@ -1,42 +1,42 @@
-# Backend Service: TextProcessor
+# バックエンドサービス: TextProcessor
 
-## Summary
+## 要約
 
-- TextProcessor は認識 text から応答 text、chat message、telop 情報を生成する downstream service である。
-- `talk_mode` により path と応答方針が変わる。
-- text / telop の出力は frontend RTC contract にも影響する。
+- TextProcessor は認識テキストから応答テキスト、チャットメッセージ、テロップ情報を生成する下流サービスである。
+- `talk_mode` によりパスと応答方針が変わる。
+- テキスト / テロップの出力はフロントエンド RTC 契約にも影響する。
 
-## Scope
+## 対象範囲
 
 - 対象:
-    - TextProcessor service boundary
-    - `chat` / `sincro` mode
-    - ChatMessage / telop 生成との接続点
+    - TextProcessor サービス境界
+    - `chat` / `sincro` モード
+    - ChatMessage / テロップ生成との接続点
 - 非対象:
-    - LLM provider の詳細設定
+    - LLM 提供元の詳細設定
     - 音声合成処理
 
-## Responsibilities
+## 責務
 
-- SpeechRecognizer result を受け取る。
-- `talk_mode` に応じて応答 text を生成する。
-- `ChatMessage` と telop / voice synthesizer input を組み立てる。
+- SpeechRecognizer 結果を受け取る。
+- `talk_mode` に応じて応答テキストを生成する。
+- `ChatMessage` とテロップ / 音声合成への入力を組み立てる。
 - 必要に応じて `expression_code` を抽出し、本文から制御記号を除去する。
 
-## Interfaces
+## インターフェース
 
-- Downstream contract:
+- 下流との契約:
     - `documents/design/contracts/audio-pipeline-websocket.md`
-- Frontend-visible contract:
+- フロントエンドから見える契約:
     - `documents/design/contracts/frontend-rtc.md`
 
-## Change Checklist
+## 変更時の確認
 
-- `ChatMessage` の field を変える場合は frontend RTC contract と `RTCMessage.ts` を確認する。
-- `expression_code` の値域や意味を変える場合は Character motion と UI 表示を確認する。
-- `talk_mode` を追加する場合は frontend settings、Go pipeline coordinatorのpath、TextProcessor routeを同時更新する。
+- `ChatMessage` のフィールドを変える場合はフロントエンド RTC 契約と `RTCMessage.ts` を確認する。
+- `expression_code` の値域や意味を変える場合はキャラクター動作と UI 表示を確認する。
+- `talk_mode` を追加する場合はフロントエンド設定、Goパイプライン調停器のパス、TextProcessor 経路を同時更新する。
 
-## References
+## 参照
 
 - `documents/design/contracts/audio-pipeline-websocket.md`
 - `documents/design/contracts/frontend-rtc.md`

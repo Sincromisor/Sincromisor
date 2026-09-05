@@ -1,5 +1,5 @@
 id: task-260712171317-capture-m1-macbook-air-motion-validation-suite
-title: Capture M1 MacBook Air gesture baseline
+title: M1 MacBook Airでジェスチャーの基準値を取得
 category: character-sincro-motion
 status: open
 depends_on:

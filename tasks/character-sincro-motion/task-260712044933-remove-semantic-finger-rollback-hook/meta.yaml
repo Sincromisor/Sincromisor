@@ -1,5 +1,5 @@
 id: task-260712044933-remove-semantic-finger-rollback-hook
-title: Remove semantic finger rollback hook
+title: 意味に基づく動作と指の切り戻しフックを削除
 category: character-sincro-motion
 status: open
 depends_on: []

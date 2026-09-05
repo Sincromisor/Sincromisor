@@ -11,7 +11,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
     - WebRTC シグナリング、音声抽出、音声認識、テキスト処理、音声合成を分離した構成。
     - サービス発見には Consul を使う。
 - クライアント: `sincromisor-frontend`（TypeScript + Vite）
-    - Vite MPA + React app shell + Three.js / VRM 1.0 で画面とキャラクターを描画する。
+    - Vite MPA + Reactによるアプリの共通枠組み + Three.js / VRM 1.0 で画面とキャラクターを描画する。
     - `simple-vrm`、`vrm360`、`looking-glass-vrm` などのページを持つ。
 - 設計文書: `documents/design/`
     - 入口: `documents/design/index.md`
@@ -34,10 +34,10 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 対象別の正本は次を優先する。
 
 - WebRTC 契約: `documents/design/contracts/frontend-rtc.md`
-- フロント UI / app shell: `documents/design/frontend/app-shell.md`
+- フロント UI / アプリの共通枠組み: `documents/design/frontend/app-shell.md`
 - フロントページ構成: `documents/design/frontend/pages.md`
 - バックエンドサービス: `documents/design/backend/services/`
-- compose / Consul / storage: `documents/design/infrastructure/`
+- Docker Compose / Consul / 保存領域: `documents/design/infrastructure/`
 - タスク管理: `tasks/README.md`
 - コード構造ルール: `documents/rules/code-structure.md`
 - Python 規約: `documents/rules/coding-py.md`
@@ -75,11 +75,11 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 - 必須要件は、ユーザー要求、既存の公開契約、再現済み不具合、セキュリティ・データ損失防止、実行に不可欠な制約のいずれかを根拠とする。根拠のない性能値、網羅試験、複数環境対応を完了条件にしない。
 - 変更前からある不整合や変更範囲外の検査失敗は、今回の変更が悪化させない限り警告として報告し、作業を止めない。変更した文書の整形など安全に一意に直せるものは自動修正する。
 - 既存の通信契約（エンドポイント / JSON / DataChannel / msgpack）を変更する場合は、破壊的変更として明示し、フロントとサーバーを同時に確認する。
-- compose、設定、実装、設計文書を片側だけ更新しない。
+- Docker Compose、設定、実装、設計文書を片側だけ更新しない。
 - 再現手順と確認結果はタスク文書に残す。
 - ソースコード内のコメントには、**安全な変更を可能にすること**と、**調査時の理解時間を短縮すること**の 2 つの独立した目的がある。
     - 公開API、境界、非自明な制約へのコメントは必須の下限であり、それだけ満たせば十分という意味ではない。
-    - 公開済み / パブリックな関数・クラス・型・コンポーネント・フック・モジュールには、原則として各言語の標準ドキュメントコメント（TypeScript の JSDoc/TSDoc、Go の doc comment など）を書く。
+    - 公開済み / パブリックな関数・クラス・型・コンポーネント・フック・モジュールには、原則として各言語の標準ドキュメントコメント（TypeScript の JSDoc/TSDoc、Go の文書コメントなど）を書く。
     - 契約、制約、失敗条件、副作用、非自明な判断理由を、未来の保守者が安全に変更できる形で残す。
     - 処理の全体像、段階、状態遷移、データ表現、離れたコード間の関係を、一般的な開発者が短時間で把握できる形で残す。
     - 禁止するのは、コードを同じ粒度で一行ずつ読み上げる逐語説明である。複数行の処理を一段高い抽象度で要約するコメントや、パイプライン内の位置を示すコメントは積極的に書く。
@@ -88,7 +88,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
     - 本番コードを変更した場合は、変更したシンボル・処理群・判断と上記の直接範囲を全件点検する。必須コメントの欠落・説明不足・陳腐化したコメントは完了を妨げる不適合とし、監査台帳を作らなくても解消してから完了する。
     - 「趣味開発」「既存コードにない」「短い」「内部用」「型や命名で分かる」は、必須対象のコメントを省略する理由として認めない。
     - 陳腐化したコメントを残さない。コード変更時は関連コメントを更新または削除する。
-    - TODO は単に「あとで直す」と書かず、理由、削除条件、issue番号、期限または判断基準を含める。
+    - TODO は単に「あとで直す」と書かず、理由、削除条件、課題番号、期限または判断基準を含める。
     - コメント追加前に命名・関数分割・型定義・引数オブジェクト化を検討するが、構造改善だけを理由に読者志向な説明を省略しない。
     - 横断的な詳細基準は `documents/rules/source-comments.md`、記法と言語固有の対象は `documents/rules/coding-*.md` を参照する。
 - 設計変更を伴う実装変更では、`documents/design/` の該当文書と `documents/design/index.md` の導線を確認する。
@@ -149,7 +149,7 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
     - 設計正本: `documents/design/frontend/`
 - 設定を追加する場合
     - `.env` サンプル: `examples/compose.env`
-    - compose environment: `compose/` と `compose.yml`
+    - Docker Composeの環境変数設定: `compose/` と `compose.yml`
     - Python 側の引数・設定クラス: `sincro-config` など
     - インフラ正本: `documents/design/infrastructure/compose.md`
 
@@ -168,7 +168,7 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 
 1. フロントが `GET /api/v1/RTCSignalingServer/config.json` で接続設定を取得する。
 2. フロントが `POST /api/v1/RTCSignalingServer/offer` でオファーを送る。
-3. フロントが `POST /api/v1/RTCSignalingServer/candidate` で ICE candidate を送る。
+3. フロントが `POST /api/v1/RTCSignalingServer/candidate` で ICE 候補を送る。
 4. サーバーが Answer を返し、PeerConnection を確立する。
 5. DataChannel の `text_ch` と `telop_ch` でチャット、テロップ、口形同期情報を受ける。
 
@@ -182,5 +182,5 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 
 - フロントのマイク / カメラ権限がないと接続処理や CharacterGaze が途中で止まる。
 - `offerURL`、`candidateURL`、ICE サーバー設定の不一致で WebRTC ネゴシエーションに失敗する。
-- 新しい環境変数を compose、設定クラス、サンプル envファイルの片側だけに追加してしまう。
+- 新しい環境変数を Docker Compose、設定クラス、サンプル環境変数ファイルの片側だけに追加してしまう。
 - `@mediapipe/tasks-vision` の wasm 配置漏れでトラッキング系機能が動作しない。

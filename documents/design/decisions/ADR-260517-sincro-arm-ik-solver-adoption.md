@@ -1,50 +1,50 @@
 # ADR-260517-sincro-arm-ik-solver-adoption
 
-## Status
+## 状態
 
-- Accepted
+- 採用済み
 
-## Context
+## 背景
 
-- Sincromisor の pose retarget は `@pixiv/three-vrm` の normalized bones を主な適用先にしている。
-- `SincroArmIkSolver` は normalized arm chain の neutral quaternion、腕長、肩幅をロード時に測定し、MediaPipe world target を肩相対の two-bone IK として解く。
-- Three.js 公式 addon の `CCDIKSolver` は `SkinnedMesh.skeleton.bones` の index ベースで、target / effector / links を raw skeleton 上の bone index として渡す。
-- 将来の full-body IK や複数 effector では、CCD / FABRIK / damped least squares 系 solver の再評価余地がある。
+- Sincromisor の姿勢の変換は `@pixiv/three-vrm` の正規化済みボーンを主な適用先にしている。
+- `SincroArmIkSolver` は正規化済み腕ボーン列の中立姿勢のクォータニオン、腕長、肩幅をロード時に測定し、MediaPipe ワールド座標目標を肩相対の 2本のボーンによる IK として解く。
+- Three.js 公式アドオンの `CCDIKSolver` は `SkinnedMesh.skeleton.bones` の索引ベースで、目標 / 末端 / リンクを元のスケルトン上のボーン索引として渡す。
+- 将来の全身 IK や複数末端では、CCD / FABRIK / 減衰最小二乗法系ソルバーの再評価余地がある。
 
-## Decision
+## 決定
 
-- 本流の腕 IK は、自前 3D two-bone IK + `@pixiv/three-vrm` normalized bone 適用を維持する。
-- 肩・肘・前腕の joint constraint と head / chest no-go zone は、既存 `SincroArmIkSolver` の軽量 safety として追加する。
-- `CCDIKSolver` は production path へ入れず、左腕 raw skeleton chain の互換性を確認する PoC 診断として残す。
-- Debug Console では `CCDIK PoC` として、raw chain 検出、normalized bone と skeleton の分離、one-iteration smoke test の状態を表示する。
-- `closed-chain-ik-js` は現時点では導入しない。full-body / multi-effector / 接地拘束が必要になった時に、worker 化と pose bridge の設計を先に切る。
-- Kalidokit は deprecated リスクがあるため、中核 dependency ではなく retarget の入出力設計の参考に留める。
+- 本流の腕 IK は、自前 3D 2本のボーンによる IK + `@pixiv/three-vrm` 正規化済みボーン適用を維持する。
+- 肩・肘・前腕の関節制約と頭部 / chest 侵入禁止領域は、既存 `SincroArmIkSolver` の軽量安全性として追加する。
+- `CCDIKSolver` は本番パスへ入れず、左腕元のスケルトンボーン列の互換性を確認する PoC 診断として残す。
+- 診断 Console では `CCDIK PoC` として、未加工ボーン列検出、正規化済みボーンとスケルトンの分離、1回の反復による動作確認の状態を表示する。
+- `closed-chain-ik-js` は現時点では導入しない。全身 / 複数のエフェクタ / 接地拘束が必要になった時に、処理担当化と姿勢橋渡しの設計を先に切る。
+- Kalidokit は廃止予定リスクがあるため、中核依存関係ではなく動作の変換の入出力設計の参考に留める。
 
-## Options Considered
+## 検討した選択肢
 
-| 選択肢                 | 利点                                                                                                                                                   | 欠点                                                                                                                                                                     |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 自前 3D two-bone IK    | normalized bones へ直接適用できる。肩相対 target、pole、clamp、Debug Console 表示を Sincromisor の語彙で説明しやすい。bundle / dependency 追加が不要。 | full-body や複数 effector へ広げる場合は solver を増やす必要がある。                                                                                                     |
-| Three.js `CCDIKSolver` | Three.js 公式 addon で、raw `SkinnedMesh` chain には smoke test 可能。CCD の挙動を既存 dependency だけで試せる。                                       | normalized bone を直接扱えない。target も skeleton bone index が必要で、一時 target bone または専用 bridge が必要。raw で解いた結果を normalized pose へ戻す設計が重い。 |
-| `closed-chain-ik-js`   | damped least squares により full-body、複数 effector、閉ループ拘束を扱いやすい可能性がある。                                                           | dependency 追加、bundle size、worker 化、VRM normalized/raw bridge の設計コストが高い。片腕 IK には過剰。                                                                |
-| Kalidokit              | VRM 向け retarget の軸や出力形式を読む参考になる。                                                                                                     | deprecated であり、中核採用すると保守リスクが高い。                                                                                                                      |
+| 選択肢                       | 利点                                                                                                                                                  | 欠点                                                                                                                                                           |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 自前 3D 2本のボーンによる IK | 正規化済みボーンへ直接適用できる。肩相対目標、曲がる方向、値の制限、診断 Console 表示を Sincromisor の語彙で説明しやすい。一式 / 依存関係追加が不要。 | 全身や複数末端へ広げる場合はソルバーを増やす必要がある。                                                                                                       |
+| Three.js `CCDIKSolver`       | Three.js 公式アドオンで、未加工 `SkinnedMesh` ボーン列には動作確認可能。CCD の挙動を既存依存関係だけで試せる。                                        | 正規化済みボーンを直接扱えない。目標もスケルトンボーン索引が必要で、一時目標ボーンまたは専用橋渡しが必要。未加工で解いた結果を正規化済み姿勢へ戻す設計が重い。 |
+| `closed-chain-ik-js`         | 減衰最小二乗法により全身、複数末端、閉ループ拘束を扱いやすい可能性がある。                                                                            | 依存関係追加、配信ファイルの容量、処理担当化、VRM 正規化済み・未加工橋渡しの設計コストが高い。片腕 IK には過剰。                                               |
+| Kalidokit                    | VRM 向け動作の変換の軸や出力形式を読む参考になる。                                                                                                    | 廃止予定であり、中核採用すると保守リスクが高い。                                                                                                               |
 
-## Consequences
+## 影響
 
-- 現行の `SincroPoseRetargeter` は confidence gate、mode selection、target scale、smoothing に集中し、IK の数学は `SincroArmIkSolver` に閉じ込める。
-- `SincroArmIkSolver` は腕単体の人体的 constraint と簡易 no-go zone までを担当する。MediaPipe target の時系列 stabilizer、mesh 精密 collision、full-body IK は別判断とする。
+- 現行の `SincroPoseRetargeter` は信頼度検査、モード選択、目標倍率、平滑化に集中し、IK の数学は `SincroArmIkSolver` に閉じ込める。
+- `SincroArmIkSolver` は腕単体の人体的制約と簡易侵入禁止領域までを担当する。MediaPipe 目標の時系列安定化処理、メッシュの精密な衝突判定、全身 IK は別判断とする。
 - `CCDIKSolver` PoC はロード時診断に限定するため、通常フレーム更新の姿勢結果を変更しない。
-- 外部 solver を本番導入する場合は、raw skeleton で解くか、normalized pose へ橋渡しするかを先に ADR 化する。
-- dependency 追加は発生しない。`CCDIKSolver` は既存 `three` package の examples addon を利用する。
+- 外部ソルバーを本番導入する場合は、元のスケルトンで解くか、正規化済み姿勢へ橋渡しするかを先に ADR 化する。
+- 依存関係追加は発生しない。`CCDIKSolver` は既存 `three` パッケージの例アドオンを利用する。
 
-## Review Conditions
+## 見直し条件
 
-- 腕以外の IK、足接地、両手同時拘束、手と視線の複数 effector など、two-bone solver だけでは制御が破綻する。
-- raw skeleton で解いた pose を normalized bones へ安定して戻す bridge が実装できた。
-- `closed-chain-ik-js` または別 solver を worker 上で小さく運用でき、bundle / latency / Debug Console の説明可能性が許容できる。
-- MediaPipe world target の安定性が上がり、Z 方向や全身 target を強く使えるようになった。
+- 腕以外の IK、足接地、両手同時拘束、手と視線の複数末端など、2本のボーンによるソルバーだけでは制御が破綻する。
+- 元のスケルトンで解いた姿勢を正規化済みボーンへ安定して戻す橋渡しが実装できた。
+- `closed-chain-ik-js` または別ソルバーを処理担当上で小さく運用でき、一式 / 遅延 / 診断 Console の説明可能性が許容できる。
+- MediaPipe ワールド座標目標の安定性が上がり、Z 方向や全身目標を強く使えるようになった。
 
-## References
+## 参照
 
 - `../../../tasks/character-sincro-motion/task-260517024506-sincro-ik-solver-comparison-and-adoption/task.md`
 - `../../../tasks/character-sincro-motion/task-260517024505-sincro-vrm-3d-two-bone-ik-solver/task.md`

@@ -1,9 +1,9 @@
-# 合成音声 decode fixture
+# 合成音声復号固定データ
 
-このディレクトリの fixture は、個人情報を含まない FFmpeg の合成 sine source から生成した。
-対応する MIME ごとに container decode、48 kHz mono化、sample数、非無音を検証する。
+このディレクトリの固定データは、個人情報を含まない FFmpeg の合成正弦波の音源から生成した。
+対応する MIME ごとにコンテナ復号、48 kHz モノラル化、サンプル数、非無音を検証する。
 
-module root での生成 command:
+モジュールのルートでの生成コマンド:
 
 ```sh
 ffmpeg -hide_banner -loglevel error -f lavfi -i 'sine=frequency=440:sample_rate=44100:duration=0.1' -ac 2 -c:a pcm_s16le -y internal/media/synthdecode/testdata/tone.wav

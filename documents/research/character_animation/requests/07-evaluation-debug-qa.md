@@ -2,13 +2,13 @@
 
 ## 目的
 
-Sincromisor の `sincro` モードで、上半身キャラクターモーションの品質改善を再現可能に行うための記録、再生、metrics、固定テストモーション、QA 観点を設計する。
+Sincromisor の `sincro` モードで、上半身キャラクターモーションの品質改善を再現可能に行うための記録、再生、評価指標、固定テストモーション、QA 観点を設計する。
 
-調査では、ライブカメラを見ながらの主観調整に頼らず、同じ入力ログで同じ pipeline を再実行し、変更前後の改善・悪化を比較できる基盤を重視してほしい。
+調査では、ライブカメラを見ながらの主観調整に頼らず、同じ入力ログで同じ処理工程を再実行し、変更前後の改善・悪化を比較できる基盤を重視してほしい。
 
 ## 背景
 
-Sincromisor は、ブラウザ上で 3D キャラクターと音声対話するサービスである。`sincro` モードでは、単眼 Web カメラから MediaPipe Pose / Hand / Face / Gesture を実行し、VRM 1.0 キャラクターへ上半身 motion を反映する。
+Sincromisor は、ブラウザ上で 3D キャラクターと音声対話するサービスである。`sincro` モードでは、単眼 Web カメラから MediaPipe Pose / Hand / Face / Gesture を実行し、VRM 1.0 キャラクターへ上半身動作を反映する。
 
 既存資料では、最初に作るべきものはアルゴリズム改善ではなく、記録・再生・指標化の基盤であるとしている。理由は、MediaPipe の出力がカメラ環境やタイミングで揺れるため、ライブ入力だけでは品質改善の再現性が低いからである。
 
@@ -16,75 +16,75 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 
 ## 前提技術
 
-- 入力: MediaPipe Pose / Hand / Face / Gesture result
+- 入力: MediaPipe Pose / Hand / Face / Gesture 結果
 - 中間: ReliabilityMap、CanonicalUpperBodyState、TemporalStateEstimator、MotionIntent
-- 出力: final VRM pose、IK snapshot、applied bone rotation
-- debug page: `motion-debug`
-- 目標: ライブカメラなしで同一入力を replay し、同一 retarget 結果を比較できること
+- 出力: 最終 VRM 姿勢、IK スナップショット、適用済みボーンの回転
+- デバッグページ: `motion-debug`
+- 目標: ライブカメラなしで同一入力を再生し、同一動作の変換結果を比較できること
 
 ## 調査してほしいこと
 
-### debug log schema
+### デバッグログスキーマ
 
 既存資料では、次のような情報を保存する案がある。
 
-- video metadata
-- camera settings
-- MediaPipe raw result
-- reliability
-- canonical state
-- temporal state
-- final pose
-- applied VRM pose
-- metrics
+- 映像メタデータ
+- カメラ設定
+- MediaPipe 未加工の結果
+- 信頼性
+- 標準状態
+- 時系列状態
+- 最終姿勢
+- 適用済み VRM 姿勢
+- 評価指標
 
 調査してほしい論点は次である。
 
 - どの層のデータを必ず保存すべきか。
 - 保存しなくても再計算できるデータ。
-- replay の determinism を保つために必要な timestamp。
-- バージョン情報、設定値、avatar profile の保存方法。
+- 再生の同じ入力から同じ結果を得る性質を保つために必要な時刻。
+- バージョン情報、設定値、アバターの調整情報の保存方法。
 - ログサイズを抑えるための工夫。
 
-### replay player
+### 再生再生処理
 
-同じ入力ログから pipeline を再実行できる replay mode を作る想定である。
+同じ入力ログから処理工程を再実行できる再生モードを作る想定である。
 
 調査してほしい論点は次である。
 
-- MediaPipe raw result から再生する場合の利点と制約。
-- video frame から再推論する場合の利点と制約。
-- canonical state から後段だけ再生する mode の価値。
+- MediaPipe 未加工の結果から再生する場合の利点と制約。
+- 映像フレームから再推論する場合の利点と制約。
+- 標準状態から後段だけ再生するモードの価値。
 - パラメータ差分比較の UI。
-- replay と live の差分を検出する方法。
+- 再生と実時間処理との差分を検出する方法。
 
-### metrics
+### 評価指標
 
 既存資料で挙げている指標は次である。
 
-- neutral jitter
-- elbow flip count
-- recovery jump
-- angular velocity spike
-- reach clamp occupancy
-- dropout duration
-- left-right swap count
-- bone length variance
-- semantic label flicker
+- 中立姿勢での細かな揺れ
+- 肘の反転回数
+- 復帰時の急変
+- 角速度の急増
+- 到達距離制限の発生率
+- 一時欠損継続時間
+- 左右の入れ替わり回数
+- 骨の長さばらつき
+- 意味分類のちらつき
 
 調査してほしい論点は次である。
 
-- 最初に見るべき metrics。
+- 最初に見るべき評価指標。
 - 指標ごとの計算方法。
 - 許容ライン。
 - 自動判定できるものと、人間評価に残すべきもの。
-- metrics が改善しても見た目が悪化するケース。
+- 評価指標が改善しても見た目が悪化するケース。
 
 ### 固定テストモーション
 
 既存資料では、次のような固定テストを候補にしている。
 
-- neutral 10 秒
+- 中立姿勢 10 秒
 - 片手をゆっくり上げる
 - 両手をゆっくり上げる
 - 手を横に広げる
@@ -101,30 +101,30 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 
 ### QA 観点
 
-技術 metrics だけでなく、見た目の QA も必要である。
+技術評価指標だけでなく、見た目の QA も必要である。
 
 調査してほしい論点は次である。
 
 - 主観評価フォーム。
 - 破綻の分類。
-- avatar ごとの差分 QA。
-- camera quality ごとの差分 QA。
-- regression test と exploratory test の分担。
+- アバターごとの差分 QA。
+- カメラ品質ごとの差分 QA。
+- 回帰テストと探索的なテストの分担。
 
 ## 期待成果物
 
-- motion debug log schema。
-- replay mode の設計案。
-- metrics 定義と計算式。
+- 動作デバッグログスキーマ。
+- 再生モードの設計案。
+- 評価指標定義と計算式。
 - 最小固定テストモーションセット。
 - 合格ラインと警告ライン。
 - QA チェックリスト。
-- live 調整に頼らない改善サイクル案。
+- 実時間の調整に頼らない改善サイクル案。
 
 ## 読んでほしい資料
 
-- [roadmap.md](roadmap.md)
-- [report01.md](report01.md)
-- [report02.md](report02.md)
-- [report03.md](report03.md)
-- [report04-three-vrm.md](report04-three-vrm.md)
+- [roadmap.md](../roadmap.md)
+- [report01.md](../report01.md)
+- [report02.md](../report02.md)
+- [report03.md](../report03.md)
+- [report04-three-vrm.md](../report04-three-vrm.md)

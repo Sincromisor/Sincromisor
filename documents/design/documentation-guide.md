@@ -151,7 +151,7 @@
 
 - [ ] 変更内容は現在設計 / 契約仕様 / 設計判断記録 / 取り組み計画のどれか。
 - [ ] 契約変更がある場合、フロントとサーバーの両側が同時に確認されている。
-- [ ] compose、環境変数、設定クラス、実装が矛盾していない。
+- [ ] Docker Compose、環境変数、設定クラス、実装が矛盾していない。
 - [ ] 長い作業ログを設計本文へ追加していない。
 - [ ] `documents/design/index.md` から辿れる。
 - [ ] 関連タスクに確認結果を残した。
@@ -162,16 +162,16 @@
 
 通常更新する場所は次の通り。
 
-| 種別                          | 置き場所                                |
-| ----------------------------- | --------------------------------------- |
-| 全体構造                      | `documents/design/architecture/`        |
-| フロントエンド現在設計        | `documents/design/frontend/`            |
-| バックエンドサービス現在設計  | `documents/design/backend/services/`    |
-| 通信・ファイル仕様            | `documents/design/contracts/`           |
-| compose / Consul / ストレージ | `documents/design/infrastructure/`      |
-| 採用理由・棄却理由            | `documents/design/decisions/`           |
-| 進行中の大きな変更            | `documents/design/initiatives/`         |
-| 再編前の履歴参照              | `documents/design/archive/legacy-flat/` |
+| 種別                                 | 置き場所                                |
+| ------------------------------------ | --------------------------------------- |
+| 全体構造                             | `documents/design/architecture/`        |
+| フロントエンド現在設計               | `documents/design/frontend/`            |
+| バックエンドサービス現在設計         | `documents/design/backend/services/`    |
+| 通信・ファイル仕様                   | `documents/design/contracts/`           |
+| Docker Compose / Consul / ストレージ | `documents/design/infrastructure/`      |
+| 採用理由・棄却理由                   | `documents/design/decisions/`           |
+| 進行中の大きな変更                   | `documents/design/initiatives/`         |
+| 再編前の履歴参照                     | `documents/design/archive/legacy-flat/` |
 
 今後の改善候補:
 

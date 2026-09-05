@@ -81,10 +81,10 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 ### open（未完） — 2 件
 
-| タスク                                                                                                                                         | タイトル                                | 判定 | 依存                                                                     |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ---- | ------------------------------------------------------------------------ |
-| [task-260712044933-remove-semantic-finger-rollback-hook](./task-260712044933-remove-semantic-finger-rollback-hook/task.md)                     | Remove semantic finger rollback hook    | —    | —                                                                        |
-| [task-260712171317-capture-m1-macbook-air-motion-validation-suite](./task-260712171317-capture-m1-macbook-air-motion-validation-suite/task.md) | Capture M1 MacBook Air gesture baseline | —    | `task-260712074348-record-per-frame-gesture-and-total-tracker-durations` |
+| タスク                                                                                                                                         | タイトル                                   | 判定 | 依存                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ---- | ------------------------------------------------------------------------ |
+| [task-260712044933-remove-semantic-finger-rollback-hook](./task-260712044933-remove-semantic-finger-rollback-hook/task.md)                     | 意味に基づく動作と指の切り戻しフックを削除 | —    | —                                                                        |
+| [task-260712171317-capture-m1-macbook-air-motion-validation-suite](./task-260712171317-capture-m1-macbook-air-motion-validation-suite/task.md) | M1 MacBook Airでジェスチャーの基準値を取得 | —    | `task-260712074348-record-per-frame-gesture-and-total-tracker-durations` |
 
 ### done（完了） — 117 件
 

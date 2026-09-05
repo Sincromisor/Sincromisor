@@ -1,0 +1,13 @@
+id: task-260905105729-japanese-document-readability
+title: 実装エージェントの参照文書に残る不要な英語表記を日本語へ修正
+category: documentation
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-09-05
+closed_at: 2026-09-05
+legacy_ids: []

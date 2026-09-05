@@ -1,40 +1,40 @@
 # コーディング規約(Python)
 
-> **Scope**: Pythonコードベース横断のコーディング規約(型運用 / エラー / ログ / テスト / import / None / 日付 / TODO / env / 言語)
+> **対象範囲**: Pythonコードベース横断のコーディング規約(型運用 / エラー / ログ / テスト / import / None / 日付 / TODO / 環境変数 / 言語)
 > **AGENTS.md との関係**: [AGENTS.md](../../AGENTS.md) は初動ガイドと正本リンクを保持する。サイズ閾値 / 分割判断 / 主要アンチパターンは [code-structure.md](code-structure.md)、コメント品質の横断基準は [source-comments.md](source-comments.md) を正本とし、本書は Python 固有の横断ルールを保持する。
 
 ## 0. 設計思想
 
 PoC では下記 2 軸を最優先する。
 
-1. **負債が残りにくい方向を選ぶ** — 後から剥がす工数が大きいもの(型を緩める / dict をサービス境界の内側へ流す / env 直参照を許す)は最初から禁止する
-2. **debug と更新がしやすい状態を維持する** — 「沈黙する失敗」「観測できない状態」「変更影響が読みにくい依存」を作らない
+1. **負債が残りにくい方向を選ぶ** — 後から剥がす工数が大きいもの(型を緩める / dict をサービス境界の内側へ流す / 環境変数直参照を許す)は最初から禁止する
+2. **デバッグと更新がしやすい状態を維持する** — 「沈黙する失敗」「観測できない状態」「変更影響が読みにくい依存」を作らない
 
-ルールは原則 hard。**破る場合は同じ行または直前行に `# reason: <理由>` を付ける**(レビューでの差し戻し基準は理由の有無)。
+ルールは原則必須。**破る場合は同じ行または直前行に `# reason: <理由>` を付ける**(レビューでの差し戻し基準は理由の有無)。
 
 ## 1. Python 型運用
 
-| ルール                                                   | 強制度 | 補足                                                           |
-| -------------------------------------------------------- | ------ | -------------------------------------------------------------- |
-| 公開関数 / メソッドの引数・戻り値型を明示                | hard   | `__init__` は `-> None` を明示                                 |
-| `Any` 禁止。外部 I/O は `object` で受けて Pydantic parse | hard   | ライブラリ都合で必要な場合は `# reason:` 必須                  |
-| `cast()` 禁止                                            | hard   | ガード節 / `isinstance` / Pydantic model で潰す                |
-| `# type: ignore` / `# ty: ignore` 禁止                   | hard   | 使う場合は rule 指定 + `# reason: ... / 解消条件: ...` 必須    |
-| `Optional[T]` ではなく `T \| None` を使う                | hard   | Python 3.12 前提                                               |
-| `list` / `dict` / `tuple` は要素型まで書く               | soft   | 例: `list[ChatMessage]` / `dict[str, object]`                  |
-| `Callable` / `Protocol` は境界が読みにくい場合だけ使う   | soft   | 抽象化のための抽象化を避ける                                   |
-| `assert` を外部 I/O validation に使わない                | hard   | `if not ...: raise ValueError(...)` または Pydantic validation |
+| ルール                                                  | 強制度 | 補足                                                      |
+| ------------------------------------------------------- | ------ | --------------------------------------------------------- |
+| 公開関数 / メソッドの引数・戻り値型を明示               | 必須   | `__init__` は `-> None` を明示                            |
+| `Any` 禁止。外部 I/O は `object` で受けて Pydantic 解析 | 必須   | ライブラリ都合で必要な場合は `# reason:` 必須             |
+| `cast()` 禁止                                           | 必須   | ガード節 / `isinstance` / Pydantic モデルで潰す           |
+| `# type: ignore` / `# ty: ignore` 禁止                  | 必須   | 使う場合は規則指定 + `# reason: ... / 解消条件: ...` 必須 |
+| `Optional[T]` ではなく `T \| None` を使う               | 必須   | Python 3.12 前提                                          |
+| `list` / `dict` / `tuple` は要素型まで書く              | 推奨   | 例: `list[ChatMessage]` / `dict[str, object]`             |
+| `Callable` / `Protocol` は境界が読みにくい場合だけ使う  | 推奨   | 抽象化のための抽象化を避ける                              |
+| `assert` を外部 I/O 検証に使わない                      | 必須   | `if not ...: raise ValueError(...)` または Pydantic 検証  |
 
-**Why**: `Any` / `cast()` / 雑な `dict` は「型は通っているが実体が違う」状態を作り、debug を最も困難にする。Python は実行時に壊れるまで検出できないため、境界で Pydantic による検証を行い、内側は型が読める状態を維持する。
+**理由**: `Any` / `cast()` / 雑な `dict` は「型は通っているが実体が違う」状態を作り、デバッグを最も困難にする。Python は実行時に壊れるまで検出できないため、境界で Pydantic による検証を行い、内側は型が読める状態を維持する。
 
-**How to apply**: 既存コードに残っていたら、触った箇所から順に潰す。WebSocket / msgpack / JSON / env / 外部 API のレスポンスは、境界専用の Pydantic model や変換関数を一枚挟み、生の `dict` / `object` をそこで吸収する。
+**適用方法**: 既存コードに残っていたら、触った箇所から順に潰す。WebSocket / msgpack / JSON / 環境変数 / 外部 API のレスポンスは、境界専用の Pydantic モデルや変換関数を一枚挟み、生の `dict` / `object` をそこで吸収する。
 
-## 2. Lint / フォーマッタ / コミット前チェック
+## 2. 静的検査 / フォーマッタ / コミット前チェック
 
 | 項目                         | ツール                            |
 | ---------------------------- | --------------------------------- |
-| Lint                         | **Ruff**                          |
-| フォーマッタ (Python)        | **Ruff format**                   |
+| 静的検査                     | **Ruff**                          |
+| フォーマッタ (Python)        | **Ruff 整形**                     |
 | フォーマッタ (Markdown)      | **Prettier**(`*.md` のみスコープ) |
 | 型チェック                   | **ty**                            |
 | テスト                       | **pytest**                        |
@@ -46,55 +46,55 @@ PoC では下記 2 軸を最優先する。
     2. `uv run ruff format --check .`
     3. `uv run --group dev --group full ty check .`
     4. `uv run pytest`(変更レイヤ。重い統合テストは対象を絞る)
-- lint 警告を局所的に抑制する場合は `# noqa: <rule>  # reason: <理由>` を付ける(本書 §0 の `# reason:` ルールに準ずる)
+- 静的検査警告を局所的に抑制する場合は `# noqa: <rule>  # reason: <理由>` を付ける(本書 §0 の `# reason:` ルールに準ずる)
 - ty の警告を局所的に抑制する場合は `# ty: ignore[rule]  # reason: <理由> / 解消条件: <条件>` を付ける
-- formatter の出力と衝突する手整形をしない。import の並び順も Ruff/isort に任せる
-- pre-commit hook は現時点で未導入。コミット漏れによる手戻りが見えた時点で導入を検討する
+- フォーマッタの出力と衝突する手整形をしない。import の並び順も Ruff/isort に任せる
+- コミット前フックは現時点で未導入。コミット漏れによる手戻りが見えた時点で導入を検討する
 
-**Why**: lint と format の取りこぼしは手動チェックでは必ず発生し、後で大量修正の負債になる。Ruff は Python の lint + format + import 整列を単一ツールで扱えるため、設定の分散を避けられる。
+**理由**: 静的検査と整形の取りこぼしは手動チェックでは必ず発生し、後で大量修正の負債になる。Ruff は Python の静的検査 + 整形 + import 整列を単一ツールで扱えるため、設定の分散を避けられる。
 
-**How to apply**: 既存コードに警告が残る場合は、変更した package から警告ゼロに寄せる。CI 整備フェーズで `uv run ruff check .` / `uv run ruff format --check .` / `uv run --group dev --group full ty check .` / `uv run pytest` を自動化する。
+**適用方法**: 既存コードに警告が残る場合は、変更したパッケージから警告ゼロに寄せる。CI 整備フェーズで `uv run ruff check .` / `uv run ruff format --check .` / `uv run --group dev --group full ty check .` / `uv run pytest` を自動化する。
 
 ## 3. エラーハンドリング
 
-- 例外は **raise 基本**。`Result` 風の戻り値は使わない(言語標準の流儀に揃える)
-- bare `except:` / `except Exception: pass` 禁止。最低でも `logger.exception` してから再 raise、または明示的にハンドリング理由をコメント
-- 再 raise は必ず原因チェーンを残す: `raise MyError("message") from e`
+- 例外は **持ち上げ基本**。`Result` 風の戻り値は使わない(言語標準の流儀に揃える)
+- 例外型を指定しない `except:` / `except Exception: pass` 禁止。最低でも `logger.exception` してから再持ち上げ、または明示的にハンドリング理由をコメント
+- 再持ち上げは必ず原因チェーンを残す: `raise MyError("message") from e`
 - ライブラリ境界では例外型を包み直して、呼び出し元が扱うべき失敗を明示する
-- `finally` で例外を握り潰さない。close / cleanup の失敗も `warning` 以上で観測可能にする
-- 例外 message は英語、secret / PII / ユーザーの音声認識結果全文を不用意に含めない
+- `finally` で例外を握り潰さない。終了 / 後始末の失敗も `warning` 以上で観測可能にする
+- 例外メッセージは英語、機密情報 / 個人情報 / ユーザーの音声認識結果全文を不用意に含めない
 
-**Why**: `try: ... except: pass` が一箇所でもあると debug の時間が指数的に増える。原因チェーン欠落も同様。マイクロサービス間通信は失敗点が多いため、失敗の種類と発生場所をログと例外型で追える状態にする。
+**理由**: `try: ... except: pass` が一箇所でもあるとデバッグの時間が指数的に増える。原因チェーン欠落も同様。マイクロサービス間通信は失敗点が多いため、失敗の種類と発生場所をログと例外型で追える状態にする。
 
-**How to apply**: `except` 節を書いたら必ずログ + 再 raise か、ハンドル理由のコメントを残す。接続断・タイムアウト・validation error は、上位層で retry / fallback / user-visible error のどれにするかを明示する。
+**適用方法**: `except` 節を書いたら必ずログ + 再持ち上げか、ハンドル理由のコメントを残す。接続断・タイムアウト・検証エラーは、上位層で再試行 / 代替処理 / 利用者に表示するエラーのどれにするかを明示する。
 
 ## 4. ログ / `print`
 
-- `print()` 直書き禁止。`logging.getLogger(...)` で取得した logger を経由する
+- `print()` 直書き禁止。`logging.getLogger(...)` で取得したロガーを経由する
 - 例外ログは `logger.exception("message")` を基本とし、traceback を文字列化して手で詰め込まない
-- ログ文字列は英語。検索しやすい固定メッセージにし、可変値は logging の遅延補間か `extra` で渡す
+- ログ文字列は英語。検索しやすい固定メッセージにし、可変値はログ出力の遅延補間か `extra` で渡す
 - f-string で大量の状態を詰め込まない。必要な診断値だけを選ぶ
 
 ログレベル指針:
 
-| level     | 用途                                                                                 |
-| --------- | ------------------------------------------------------------------------------------ |
-| `error`   | 復旧不能 / セッション継続に影響するもの                                              |
-| `warning` | 自動復旧した異常、fallback、retry 後 success、外部サービス差分による機能縮退         |
-| `info`    | service 起動 / WebSocket 接続 / WebRTC セッション / worker 初期化開始・終了          |
-| `debug`   | msgpack payload の schema 検証結果、VAD / ASR / TTS / service discovery の中間データ |
+| レベル    | 用途                                                                               |
+| --------- | ---------------------------------------------------------------------------------- |
+| `error`   | 復旧不能 / セッション継続に影響するもの                                            |
+| `warning` | 自動復旧した異常、代替処理、再試行後成功、外部サービス差分による機能縮退           |
+| `info`    | サービス起動 / WebSocket 接続 / WebRTC セッション / 処理担当初期化開始・終了       |
+| `debug`   | msgpack 送受信データのスキーマ検証結果、VAD / ASR / TTS / サービス発見の中間データ |
 
-### 4.1 debug ダンプ方針
+### 4.1 デバッグダンプ方針
 
-音声処理 / WebRTC / service discovery は、環境依存の失敗が多い。開発時は再現に必要な診断情報を `debug` で出してよいが、常時出すとログがノイズ化し、実ユーザー環境では privacy risk も上がる。
+音声処理 / WebRTC / サービス発見は、環境依存の失敗が多い。開発時は再現に必要な診断情報を `debug` で出してよいが、常時出すとログがノイズ化し、実ユーザー環境ではプライバシー上のリスクも上がる。
 
-- `debug` レベルでは、接続先 service 名、retry 回数、queue 長、payload validation の成否、音声フレーム数などを出してよい
-- 音声認識結果、チャット本文、Dify token、TURN credential、S3 path など、個人情報や secret になり得る値は必要最小限にする
-- ログファイル / trace 出力(`*.log` 等)は `.gitignore` で除外。リポジトリに raw diagnostic data を commit しない
+- `debug` レベルでは、接続先サービス名、再試行回数、キュー長、送受信データ検証の成否、音声フレーム数などを出してよい
+- 音声認識結果、チャット本文、Dify トークン、TURN 認証情報、S3 パスなど、個人情報や機密情報になり得る値は必要最小限にする
+- ログファイル / 追跡記録出力(`*.log` 等)は `.gitignore` で除外。リポジトリに未加工の診断データをコミットしない
 
 ### 4.2 PoC でも常時禁止
 
-- **secret(API key / Dify token / TURN credential / S3 credential など)は生のままログに出さない**
+- **機密情報(APIキー / Dify トークン / TURN 認証情報 / S3 認証情報など)は生のままログに出さない**
 
 ### 4.3 ログ形式
 
@@ -102,134 +102,134 @@ PoC では下記 2 軸を最優先する。
 - 例: `logger.info("worker connection established: service=%s session=%s", service_name, short_session_id)`
 - 同じイベントは同じメッセージに揃える。検索語が揺れるログを増やさない
 
-**Why**: サーバー側の debug は、非同期処理・スレッド・外部 service の状態を後から追えることが生命線。一方、secret と PII は開発中でも解禁し得ないため、診断ログとは別軸の絶対禁止として分離する。
+**理由**: サーバー側のデバッグは、非同期処理・スレッド・外部サービスの状態を後から追えることが生命線。一方、機密情報と個人情報は開発中でも解禁し得ないため、診断ログとは別軸の絶対禁止として分離する。
 
 ## 5. テスト
 
 - ランナーは `uv run pytest` から呼び出す
-- 配置は package 直下の `tests/` を基本とする(例: `sincromisor-server/speech-recognizer-nemo/tests/`)
+- 配置はパッケージ直下の `tests/` を基本とする(例: `sincromisor-server/speech-recognizer-nemo/tests/`)
 - ファイル名: `test_<対象>.py`
 - フィクスチャは `tests/fixtures/` に置く。プロダクションコードから import しない
-- テストのためだけに internal を公開しない — 必要な時点で純粋関数や境界処理を別ファイル化する
-- 外部 service / GPU / 音声デバイス / ネットワークに依存するテストは marker を付け、通常の単体テストから分離する
-- msgpack / JSON / Pydantic model の契約を変えた場合は、round-trip test を追加または更新する
+- テストのためだけに内部要素を公開しない — 必要な時点で純粋関数や境界処理を別ファイル化する
+- 外部サービス / GPU / 音声デバイス / ネットワークに依存するテストは印を付け、通常の単体テストから分離する
+- msgpack / JSON / Pydantic モデルの契約を変えた場合は、相互変換の往復テストを追加または更新する
 
-**Why**: PoC ではテスト網羅率より、「壊れたら気付ける場所」を堅く守るほうが debug コストを下げる。特にサービス間 payload と音声処理の境界は、失敗時の原因切り分けが難しいため、薄くても契約テストを置く価値が高い。
+**理由**: PoC ではテスト網羅率より、「壊れたら気付ける場所」を堅く守るほうがデバッグコストを下げる。特にサービス間送受信データと音声処理の境界は、失敗時の原因切り分けが難しいため、薄くても契約テストを置く価値が高い。
 
 ## 6. import パス
 
-- package 内 import は絶対 import を基本とする(例: `from sincro_models import ChatMessage`)
-- 同一 package 内の近接モジュールでは相対 import を許可する(例: `from .Exceptions import AudioBrokerError`)
-- `sys.path` の実行時変更は禁止。必要なら package 構造や `pyproject.toml` の package 設定を直す
-- wildcard import 禁止。`from module import *` は使わない
+- パッケージ内 import は絶対 import を基本とする(例: `from sincro_models import ChatMessage`)
+- 同一パッケージ内の近接モジュールでは相対 import を許可する(例: `from .Exceptions import AudioBrokerError`)
+- `sys.path` の実行時変更は禁止。必要ならパッケージ構造や `pyproject.toml` のパッケージ設定を直す
+- ワイルドカードによるインポート禁止。`from module import *` は使わない
 - import の並び順は Ruff/isort に従う。手で並び替える必要はない
 - 循環 import が起きたら、遅延 import で逃げる前に責務分割を見直す
 
-**Why**: import が実行時状態に依存すると、開発環境では動くが compose / CI / container では壊れる状態を作りやすい。package 構造を正しく保つほうが長期的に debug しやすい。
+**理由**: import が実行時状態に依存すると、開発環境では動くが Docker Compose / CI / コンテナでは壊れる状態を作りやすい。パッケージ構造を正しく保つほうが長期的にデバッグしやすい。
 
-## 7. `None` / Pydantic / serialization
+## 7. `None` / Pydantic / 直列化
 
 - 欠損は `None` で統一する。空文字 `""` / `0` / `False` を欠損扱いしない
-- 外部 I/O から来た `null` は Pydantic model の境界で `None` として受ける
-- Pydantic model はサービス間 payload / env / config / 外部 API response の境界正本として使う
-- 生の `dict` を service 内部へ流さない。parse 後は Pydantic model または明示型の dataclass / class に変換する
+- 外部 I/O から来た `null` は Pydantic モデルの境界で `None` として受ける
+- Pydantic モデルはサービス間送受信データ / 環境変数 / 設定 / 外部 API 応答の境界正本として使う
+- 生の `dict` をサービス内部へ流さない。解析後は Pydantic モデルまたは明示型の dataclass / クラスに変換する
 - `model_dump()` / `model_validate()` を使い、Pydantic v1 系 API (`dict()` / `parse_obj()` 等)を新規コードに増やさない
-- msgpack / JSON の pack/unpack は model ごとに round-trip 可能な関数へ閉じ込める
-- field 名は Python 内部では snake_case を基本とする。既存契約が PascalCase / camelCase の場合は Pydantic alias で吸収し、契約変更が必要なら明示して相談する
+- msgpack / JSON の梱包・展開はモデルごとに往復可能な関数へ閉じ込める
+- フィールド名は Python 内部では snake_case を基本とする。既存契約が PascalCase / camelCase の場合は Pydantic 別名で吸収し、契約変更が必要なら明示して相談する
 
-**Why**: `dict` と model が混在すると「どのキーが存在するか」「欠損が何で表されるか」を毎回局所判断することになり、debug 時に分岐網羅が困難になる。境界で model に固定するのが最も負債を作らない。
+**理由**: `dict` とモデルが混在すると「どのキーが存在するか」「欠損が何で表されるか」を毎回局所判断することになり、デバッグ時に分岐網羅が困難になる。境界でモデルに固定するのが最も負債を作らない。
 
 ## 8. 日付 / タイムゾーン
 
 - **保存・契約 (Pydantic / DB / ログ) は UTC ISO8601 文字列** で扱う
-- Python の内部計算で `datetime` を使う場合は timezone-aware にする
+- Python の内部計算で `datetime` を使う場合はタイムゾーン情報付きにする
 - `datetime.now()` / `datetime.utcnow()` の新規利用禁止。`datetime.now(UTC)` を使う
 - **表示用(画面 / レポート / CLI 出力)のみ JST に変換**
-- naive datetime を service 間 payload に入れない
+- タイムゾーン情報のない日時をサービス間送受信データに入れない
 - 日付ライブラリは当面追加しない(`datetime` + ISO 文字列で十分)。差分計算等が増えたら標準ライブラリで足りるか先に確認する
 
-**Why**: 「TZ 違いで再現しない bug」は debug が最も困難な種類のひとつ。境界で UTC ISO8601 文字列に固定するのが最も負債を作らない。
+**理由**: 「TZ 違いで再現しない不具合」はデバッグが最も困難な種類のひとつ。境界で UTC ISO8601 文字列に固定するのが最も負債を作らない。
 
 ## 9. TODO / FIXME / `@deprecated`
 
-- 形式: `# TODO(task-<id>-<slug>): <内容>` — canonical task ID 紐付け必須。旧 `TODO(TASK-yymmddhhmmss): ...` は移行互換として許容する。ID 無しの TODO はレビューで差し戻し
+- 形式: `# TODO(task-<id>-<slug>): <内容>` — 標準化したタスク ID 紐付け必須。旧 `TODO(TASK-yymmddhhmmss): ...` は移行互換として許容する。ID 無しの TODO はレビューで差し戻し
 - `FIXME` は使わない(`TODO` に統一)
-- deprecation コメントを付けたら **同タスク or 次タスクで削除**。残置禁止
+- 廃止予定コメントを付けたら **同タスクまたは次タスクで削除**。残置禁止
 - コメントに「あとで」「いずれ」だけ書くのは禁止 — 必ずタスク化する
 
-**Why**: 紐付かない TODO は数ヶ月で誰も追えなくなる。deprecated の残置は「使われていない死んだコード」を増殖させる。
+**理由**: 紐付かない TODO は数ヶ月で誰も追えなくなる。廃止予定の残置は「使われていない死んだコード」を増殖させる。
 
 ## 10. 環境変数 / 設定
 
-- env var は設定専用 module / Pydantic model / process argument model に集約する
-- service 本体で `os.environ["X"]` / `os.getenv("X")` を直参照することは**禁止**
-- `.env` の読み込みは entrypoint 近傍に限定し、読み込んだ値は型付き設定として下流へ渡す
-- 新規 env var を追加したら同コミットで [examples/compose.env](../../examples/compose.env) と compose の environment を同期(値はダミー or プレースホルダ)
-- 設定追加時は Python 側の引数・設定クラス、compose、設計文書の 3 点が整合しているか確認する
-- secret 系(API key 等)はログに出さない。`.env` 本体は絶対に commit しない(AGENTS.md と整合)
+- 環境変数は設定専用モジュール / Pydantic モデル / プロセス引数モデルに集約する
+- サービス本体で `os.environ["X"]` / `os.getenv("X")` を直参照することは**禁止**
+- `.env` の読み込みは起動処理近傍に限定し、読み込んだ値は型付き設定として下流へ渡す
+- 新規環境変数を追加したら同コミットで [examples/compose.env](../../examples/compose.env) と Docker Composeの環境変数設定を同期(値はダミーまたはプレースホルダ)
+- 設定追加時は Python 側の引数・設定クラス、Docker Compose、設計文書の 3 点が整合しているか確認する
+- 機密情報系(APIキー等)はログに出さない。`.env` 本体は絶対にコミットしない(AGENTS.md と整合)
 
-**Why**: env 直書きは「どこで何を読んでいるか」が grep でしか分からず、deploy 時の差し替え漏れ温床になる。Sincromisor は compose + service discovery 前提のため、設定の正本が散ると起動時の失敗が読みにくくなる。
+**理由**: 環境変数直書きは「どこで何を読んでいるか」が grep でしか分からず、配備時の差し替え漏れ温床になる。Sincromisor は Docker Compose + サービス発見前提のため、設定の正本が散ると起動時の失敗が読みにくくなる。
 
 ## 11. 言語ポリシー
 
-| 対象                         | 言語                                                                                                   |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------ |
-| identifier(変数 / 関数 / 型) | 英語                                                                                                   |
-| ログ / Error message         | 英語(運用 / 検索しやすさ)                                                                              |
-| ソースコード内コメント       | 日本語(AGENTS.md と整合)                                                                               |
-| docstring                    | 日本語。公開 API / 外部利用を想定する package は英語も可                                               |
-| Markdown 文書                | 日本語。[coding-md.md](coding-md.md) を正本とする                                                      |
-| ユーザー向け文言             | 日本語                                                                                                 |
-| Pydantic field description   | 日本語または英語。ユーザー表示用は日本語、開発者向け診断は英語でも可                                   |
-| コミットメッセージ           | 日本語。形式は [tasks/README.md](../../tasks/README.md) の Conventional Commits ベース規約を正本とする |
+| 対象                     | 言語                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ |
+| 識別子(変数 / 関数 / 型) | 英語                                                                                                   |
+| ログ / エラーメッセージ  | 英語(運用 / 検索しやすさ)                                                                              |
+| ソースコード内コメント   | 日本語(AGENTS.md と整合)                                                                               |
+| docstring                | 日本語。公開 API / 外部利用を想定するパッケージは英語も可                                              |
+| Markdown 文書            | 日本語。[coding-md.md](coding-md.md) を正本とする                                                      |
+| ユーザー向け文言         | 日本語                                                                                                 |
+| Pydantic フィールド説明  | 日本語または英語。ユーザー表示用は日本語、開発者向け診断は英語でも可                                   |
+| コミットメッセージ       | 日本語。形式は [tasks/README.md](../../tasks/README.md) の Conventional Commits ベース規約を正本とする |
 
 ## 12. その他の負債抑制ルール
 
-- **マジックリテラルの定数化** — モデル名 / タイムアウト / queue サイズ / retry 間隔 / しきい値は `UPPER_SNAKE` 定数に集約
-- **一時的なフラグを controller / service / worker の引数に増やさない** — 設定 model / request model / 明示的な state object 経由で渡す(引数増殖は責務境界の崩れの起点)
-- **コメントアウトでの「とりあえず無効化」禁止** — 不要コードは削除する(git history が正本)
-- **型 / Pydantic model は境界ごとに正本を 1 箇所**。同型を別ファイルで再定義しない
-- **スレッド / WebSocket / file handle は所有者を明確にする**。生成した層が close / join / cleanup の責務を持つ
-- **共有 mutable state は lock / queue / Event など同期原語を明示する**。複数 thread から直接 list / dict を触らない
+- **マジックリテラルの定数化** — モデル名 / タイムアウト / キューサイズ / 再試行間隔 / しきい値は `UPPER_SNAKE` 定数に集約
+- **一時的なフラグを制御処理 / サービス / 処理担当の引数に増やさない** — 設定モデル / 要求モデル / 明示的な状態オブジェクト経由で渡す(引数増殖は責務境界の崩れの起点)
+- **コメントアウトでの「とりあえず無効化」禁止** — 不要コードは削除する(Gitの履歴が正本)
+- **型 / Pydantic モデルは境界ごとに正本を 1 箇所**。同型を別ファイルで再定義しない
+- **スレッド / WebSocket / ファイルハンドルは所有者を明確にする**。生成した層が終了 / 終了待機 / 後始末の責務を持つ
+- **共有変更可能な状態はロック / キュー / Event など同期原語を明示する**。複数スレッドから直接リスト / dict を触らない
 - **「将来の差し替えのため」の抽象を作らない** — 必要になった時点で抽出する(Rule of Three 手前で動く / AGENTS.md と整合)
 
 ## 13. ソースコードコメント品質
 
-コメント品質の目的、既存コードへの適用、省略条件、audit schema は [source-comments.md](source-comments.md) を
-正本とする。Python でも public API、境界、非自明な制約は必須の下限であり、それだけで十分とは判断しない。
-service / worker / thread 間の flow、外部 I/O から model への変換、例外と fallback の伝播を、一般的な開発者が
+コメント品質の目的、既存コードへの適用、省略条件、点検の記録形式は [source-comments.md](source-comments.md) を
+正本とする。Python でも公開API、境界、非自明な制約は必須の下限であり、それだけで十分とは判断しない。
+サービス / 処理担当 / スレッド間の処理の流れ、外部 I/O からモデルへの変換、例外と代替処理の伝播を、一般的な開発者が
 短時間で調査できる状態にする。
 
 ### 13.1 Docstring と必須対象
 
-- public な module / class / function / method / domain-significant constant は原則 docstring を持つ
-- docstring は責務要約だけで終わらせず、入力境界、戻り値、例外、observable side effect、非対象のうち
+- 公開なモジュール / クラス / 関数 / メソッド / 業務上重要な定数は原則 docstring を持つ
+- docstring は責務要約だけで終わらせず、入力境界、戻り値、例外、観測可能な副作用、非対象のうち
   対象に必要な情報を書く
-- Pydantic model / parser / serializer は raw input、validation、alias、互換性、reject 条件を書く
-- WebSocket / WebRTC / filesystem / process / GPU / external API の境界は、resource owner、timeout、
-  retry、cleanup、caller に返す例外を書く
-- thread / task / queue / Event を開始する処理は、開始・終了条件、cancel / join、error の観測先を書く
-- module docstring は service / pipeline 内での位置、主要な入力と出力、隣接 module との責務境界を示す
+- Pydantic モデル / 解析処理 / 直列化処理は生の入力、検証、別名、互換性、拒否条件を書く
+- WebSocket / WebRTC / ファイルシステム / プロセス / GPU / 外部API の境界は、リソース所有者、時間切れ、
+  再試行、後始末、呼び出し元に返す例外を書く
+- スレッド / タスク / キュー / Event を開始する処理は、開始・終了条件、中断 / 終了待機、エラーの観測先を書く
+- モジュール docstring はサービス / 処理工程内での位置、主要な入力と出力、隣接モジュールとの責務境界を示す
 
 ### 13.2 実装コメント
 
-public / private を問わず、次の対象は通常の block / line comment で一段高い抽象度の説明を置く。
+公開 / 非公開を問わず、次の対象は通常のブロックコメントまたは行コメントで一段高い抽象度の説明を置く。
 
-- VAD / ASR / TTS / WebRTC など複数段階を接続する orchestration
-- raw JSON / msgpack / audio frame / external response から内部 model への変換
-- state transition、retry / fallback、queue / worker 間の接続
-- 複数の helper を順番に呼ぶ理由と、この段階で完了させる責務
-- 意図的な早期 return、no-op、処理の延期、後段へ委ねる責務
-- 名前と型だけでは上位 flow における役割が分からない private function / block
+- VAD / ASR / TTS / WebRTC など複数段階を接続する処理の組み立て
+- 未加工 JSON / msgpack / 音声フレーム / 外部応答から内部モデルへの変換
+- 状態遷移、再試行 / 代替処理、キュー / 処理担当間の接続
+- 複数の補助処理を順番に呼ぶ理由と、この段階で完了させる責務
+- 意図的な早期返却、無処理、処理の延期、後段へ委ねる責務
+- 名前と型だけでは上位処理の流れにおける役割が分からない非公開関数 / 処理群
 
 禁止するのは `# listをloopする` のようにコードを同じ粒度で読み上げるコメントである。複数行の処理を
-domain 上の段階として要約するコメントや、次に読むべき処理を示すコメントは禁止しない。
+業務領域上の段階として要約するコメントや、次に読むべき処理を示すコメントは禁止しない。
 
-### 13.3 既存コードと audit
+### 13.3 既存コードと点検
 
-- 既存 Python code に docstring / comment がないことは、新規・変更コードで省略する理由にならない
-- 変更した symbol / block / decision / flow と change comprehension surface を
+- 既存 Python コードに docstring / コメントがないことは、新規・変更コードで省略する理由にならない
+- 変更したシンボル / 処理群 / 判断 / 処理の流れと変更理解範囲を
   `keep` / `rewrite` / `delete` / `add` に分類する
-- audit では reader question、required reader knowledge、action / omission reason を記録する
-- private、短い、型 annotation がある、test を読めば分かることは単独の省略理由にならない
-- stale docstring / comment、実装と矛盾する `Raises` / lifecycle 説明は同じ変更で更新または削除する
+- 点検では読者の疑問、読者に必要な知識、対応または省略理由を記録する
+- 非公開、短い、型型注釈がある、テストを読めば分かることは単独の省略理由にならない
+- 古くなった docstring / コメント、実装と矛盾する `Raises` / 生存期間説明は同じ変更で更新または削除する
