@@ -56,6 +56,7 @@ export function createSincroAppDialogBridge(params: {
     };
 }
 
+/** 初期化処理とReactへ、チャット履歴・通知に対応する操作を公開する。 */
 export function createSincroAppChatBridge(
     chatMessageService: ChatMessageService,
     talkManager: TalkManager,
@@ -70,9 +71,6 @@ export function createSincroAppChatBridge(
         },
         setSystemIcon: (iconUrl) => {
             chatMessageService.setSystemIcon(iconUrl);
-        },
-        setDomRenderingEnabled: (enabled) => {
-            chatMessageService.setDomRenderingEnabled(enabled);
         },
         setTelopDomRenderingEnabled: (enabled) => {
             talkManager.setTelopDomRenderingEnabled(enabled);

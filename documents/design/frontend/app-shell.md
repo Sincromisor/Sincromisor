@@ -33,6 +33,9 @@
     - UserMedia 取得、RTC 開始、CharacterGaze 開始、TalkManager 連携の実行時制御を担う。
 - `RTCTalkClient`
     - PeerConnection、Offer/Answer、ICE 候補、DataChannel イベントを扱う。
+- `ChatMessageService` / `SincroChatView`
+    - サービスは最新30件の履歴と変更通知を保持し、Reactがチャットを描画する。取り付け前の履歴、同一IDの更新、VRM読込後のアイコン変更もこの経路で反映する。
+    - 通常本文は文字列として表示し、明示的な `trusted_html` はシステム・リセットメッセージだけに許可する。
 - React 設定 / デバッグ構成要素
     - 表示と操作に専念し、WebRTC や MediaPipe の生制御を直接持たない。
 

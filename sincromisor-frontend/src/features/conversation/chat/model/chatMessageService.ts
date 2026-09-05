@@ -1,13 +1,16 @@
 import { frontendLogger } from "../../../../shared/logging/appLogger";
 import { type ChatMessage, ChatMessageBuilder } from "../../../rtc/rtcMessage";
 
+/** 本文と明示的なHTML許可を組にして、履歴と通知で共有する。 */
 export type ChatMessageViewRecord = {
     message: ChatMessage;
     renderMode: ChatMessageRenderMode;
 };
 
+/** 通常文字列と、既存の信頼済みHTMLを区別する。 */
 export type ChatMessageRenderMode = "text" | "trusted_html";
 
+/** 履歴更新またはVRM読込後のアイコン変更を画面へ通知する。 */
 export type ChatMessageServiceEvent = {
     type: "message" | "system_icon_changed";
     message?: ChatMessage;
@@ -15,11 +18,9 @@ export type ChatMessageServiceEvent = {
     systemIconUrl?: string;
 };
 
-// チャット欄の既存 DOM 描画を維持しつつ、React 側へ同じ内容をイベント配信する移行期の service。
-// 既存コードは write* API を変更せず利用でき、React UI は subscribe + snapshot API で同期する。
+/** チャット履歴と通知を保持する。DOM描画はSincroChatViewが担う。 */
 export class ChatMessageService {
     private static instance: ChatMessageService;
-    private chatBox: HTMLDivElement | undefined;
     private readonly systemUserID: string = "GloriousAI";
     private readonly systemUserName: string = "Glorious AI";
     // systemメッセージだけは、VRMのthumbnailImageに動的に差し替え可能にする。
@@ -28,26 +29,22 @@ export class ChatMessageService {
     /* 画面上に表示される最大メッセージ数 */
     private readonly maxMessageCount: number = 30;
     private readonly listeners = new Set<(event: ChatMessageServiceEvent) => void>();
-    private domRenderingEnabled: boolean = true;
     private messages: ChatMessageViewRecord[] = [];
 
     /* 同じエラーメッセージが何度も表示されないようにするために使用 */
     lastErrorMessage: string = "";
 
+    /** ページ内で共有する履歴を、React取り付け前から利用できるようにする。 */
     static getService(): ChatMessageService {
         if (!ChatMessageService.instance) {
-            const chatBox =
-                document.querySelector<HTMLDivElement>("div#sincroChatBox") ?? undefined;
-            ChatMessageService.instance = new ChatMessageService(chatBox);
+            ChatMessageService.instance = new ChatMessageService();
         }
         return ChatMessageService.instance;
     }
 
-    private constructor(chatBox: HTMLDivElement | undefined) {
-        this.chatBox = chatBox;
-    }
+    private constructor() {}
 
-    // React移行で追加した購読口。DOM描画の有無に関係なくイベントを受け取れる。
+    /** 以後の変更を購読する。画面の取り外し時に返された関数で解除する。 */
     subscribe(listener: (event: ChatMessageServiceEvent) => void): () => void {
         this.listeners.add(listener);
         return () => {
@@ -55,68 +52,29 @@ export class ChatMessageService {
         };
     }
 
-    // React UI へ移行中のため、既存DOM描画を止めてイベント配信だけを使うモードを用意する。
-    setDomRenderingEnabled(enabled: boolean): void {
-        this.domRenderingEnabled = enabled;
-        const chatBox = this.ensureChatBoxBound();
-        if (!chatBox) {
-            return;
-        }
-        if (!enabled) {
-            chatBox.innerHTML = "";
-            return;
-        }
-        this.renderDomSnapshot();
-    }
-
     /** React初期描画用に、描画方式を含む件数制限付き履歴を新しい順で返す。 */
     getMessageViewSnapshot(): ChatMessageViewRecord[] {
         return [...this.messages];
     }
 
+    /** 初期表示用に、現在のシステムアイコンを返す。 */
     getSystemIconUrl(): string {
         return this.systemIconUrl;
     }
 
-    private getMessageBox(messageID: string): HTMLDivElement | undefined {
-        return (
-            this.ensureChatBoxBound()?.querySelector<HTMLDivElement>(`#msg${messageID}`) ??
-            undefined
-        );
-    }
-
-    // Chat欄にメッセージを追加、もしくはメッセージを更新する。
-    // 新たにメッセージが追加された場合(ChatMessageのIDを持つMessageBoxがない)は新規にMessageBoxを作成、
-    // 既存のものがある場合はp.message要素の中身を直接書き換える。
+    /** 同じIDはその位置で更新し、新規IDは履歴の先頭へ追加して通知する。 */
     writeMessage(cMessage: ChatMessage, isHTML: boolean = false): void {
         this.upsertMessageSnapshot(cMessage, isHTML);
-        const box = this.getMessageBox(cMessage.message_id);
         frontendLogger.debug("Chat message render requested.", {
             messageId: cMessage.message_id,
             messageType: cMessage.message_type,
             renderMode: isHTML ? "trusted_html" : "text",
-            hasLegacyDomBox: box !== undefined,
         });
-        if (this.domRenderingEnabled && box) {
-            const ePara = box.querySelector<HTMLParagraphElement>("p.sincroMessage__text");
-            if (ePara) {
-                if (isHTML) {
-                    ePara.innerHTML = cMessage.message;
-                } else {
-                    ePara.innerText = cMessage.message;
-                }
-            }
-        } else if (this.domRenderingEnabled) {
-            this.createNewMessageBox(cMessage, isHTML);
-        }
         this.emitMessage(cMessage, isHTML);
     }
 
-    /*
-        誰かわからないユーザーのメッセージを出力する。主にデバッグ用。
-        生成したメッセージのdiv要素を返す。
-    */
-    writeUnknownUserMessage(message: string, isHTML: boolean = false): HTMLDivElement {
+    /** 誰かわからないユーザーのメッセージを出力する。主にデバッグ用。 */
+    writeUnknownUserMessage(message: string, isHTML: boolean = false): void {
         const chatMessage: ChatMessage = new ChatMessageBuilder({
             messageType: "user",
             speakerId: "UnknownUser",
@@ -124,16 +82,11 @@ export class ChatMessageService {
             speechId: -1,
             message,
         });
-        const box = this.createNewMessageBox(chatMessage, isHTML);
-        this.emitMessage(chatMessage, isHTML);
-        return box;
+        this.writeMessage(chatMessage, isHTML);
     }
 
-    /*
-        システムの返信としてメッセージを出力する。
-        生成したメッセージのdiv要素を返す。
-    */
-    writeSystemMessage(message: string, isHTML: boolean = false): HTMLDivElement {
+    /** システムの返信としてメッセージを出力する。 */
+    writeSystemMessage(message: string, isHTML: boolean = false): void {
         const chatMessage: ChatMessage = new ChatMessageBuilder({
             messageType: "system",
             speakerId: this.systemUserID,
@@ -141,19 +94,14 @@ export class ChatMessageService {
             speechId: -1,
             message,
         });
-        const box = this.createNewMessageBox(chatMessage, isHTML);
-        this.emitMessage(chatMessage, isHTML);
-        return box;
+        this.writeMessage(chatMessage, isHTML);
     }
 
-    /*
-        システムのエラーメッセージとしてメッセージを出力する。
-        メッセージのdiv要素を返す。
-    */
-    writeErrorMessage(message: string, force: boolean = false): HTMLDivElement | undefined {
+    /** システムのエラーメッセージとしてメッセージを出力する。 */
+    writeErrorMessage(message: string, force: boolean = false): void {
         /* 同じエラーメッセージが何度も繰り返されないようにする。 */
         if (!force && this.lastErrorMessage === message) {
-            return undefined;
+            return;
         }
         this.lastErrorMessage = message;
         const chatMessage: ChatMessage = new ChatMessageBuilder({
@@ -163,16 +111,11 @@ export class ChatMessageService {
             speechId: -1,
             message,
         });
-        const box = this.createNewMessageBox(chatMessage);
-        this.emitMessage(chatMessage, false);
-        return box;
+        this.writeMessage(chatMessage);
     }
 
-    /*
-        システムのリセットメッセージとしてメッセージを出力する。
-        メッセージのdiv要素を返す。
-    */
-    writeResetMessage(message: string): HTMLDivElement {
+    /** システムのリセットメッセージとしてメッセージを出力する。 */
+    writeResetMessage(message: string): void {
         const chatMessage: ChatMessage = new ChatMessageBuilder({
             messageType: "reset",
             speakerId: this.systemUserID,
@@ -180,142 +123,13 @@ export class ChatMessageService {
             speechId: -1,
             message,
         });
-        const box = this.createNewMessageBox(chatMessage);
-        this.emitMessage(chatMessage, false);
-        return box;
+        this.writeMessage(chatMessage);
     }
 
-    // 既存表示済みのsystemメッセージも含めてアイコンを一括更新する。
-    // (VRMロード完了が初回メッセージ表示より後になるため、後追い更新が必要)
+    /** VRM読込後のアイコンを通知し、表示済みのシステムメッセージにも反映する。 */
     setSystemIcon(iconUrl: string): void {
         this.systemIconUrl = iconUrl;
-        const chatBox = this.ensureChatBoxBound();
-        if (this.domRenderingEnabled && chatBox) {
-            const systemIcons = chatBox.querySelectorAll<HTMLImageElement>(
-                "div.sincroSystemMessage img.sincroMessage__icon",
-            );
-            systemIcons.forEach((icon) => {
-                icon.src = this.systemIconUrl;
-            });
-        }
         this.emitSystemIconChanged();
-    }
-
-    /*
-        <div id="chatBox"></div>の末尾に、下記のような要素を追記する。
-        追記したdiv要素を返す。
-    
-        <div class="sincroMessage__systemMessage">
-            <div class="sincroMessage__icon"><img src="/icon-system.png"></div>
-            <p class="sincroMessage__text">てきとうなメッセージ</p>
-        </div>
-
-        cMessage: メッセージ本体(text or html)。htmlの時はisHTMLをtrueにする。
-        isHTML: messageObjがhtmlの時はtrue、textの時はfalseを渡す。
-    */
-    private createNewMessageBox(cMessage: ChatMessage, isHTML = false): HTMLDivElement {
-        this.upsertMessageSnapshot(cMessage, isHTML);
-        const e = this.createMessageBoxElement(cMessage, isHTML);
-        const chatBox = this.ensureChatBoxBound();
-        if (this.domRenderingEnabled && chatBox) {
-            chatBox.prepend(e);
-            setTimeout(() => {
-                e.style.opacity = "1";
-            }, 200);
-            //this.autoScroll();
-            this.removeOldMessage();
-        }
-        return e;
-    }
-
-    // legacy DOM fallback を再有効化したとき、保持済み snapshot から一覧を復元する。
-    private renderDomSnapshot(): void {
-        const chatBox = this.ensureChatBoxBound();
-        if (!chatBox) {
-            return;
-        }
-        chatBox.innerHTML = "";
-        for (const record of this.messages) {
-            const messageBox = this.createMessageBoxElement(
-                record.message,
-                record.renderMode === "trusted_html",
-            );
-            // React描画時と違い CSS 初期opacity=0 を使わないため、即座に表示状態へそろえる。
-            messageBox.style.opacity = "1";
-            chatBox.appendChild(messageBox);
-        }
-    }
-
-    private createMessageBoxElement(cMessage: ChatMessage, isHTML: boolean): HTMLDivElement {
-        const eDisplayName = document.createElement("span");
-        eDisplayName.className = "display_name";
-        eDisplayName.innerText = cMessage.speaker_name;
-
-        const eUserName = document.createElement("span");
-        eUserName.className = "username";
-        eUserName.innerText = `@${cMessage.speaker_id}`;
-
-        const eIconBox = document.createElement("div");
-        eIconBox.className = "sincroMessage__iconBox";
-
-        const eIcon = document.createElement("img");
-        eIcon.className = "sincroMessage__icon";
-        // systemのみ動的アイコン、それ以外(message_type別)は従来の静的アイコンを使う。
-        if (cMessage.message_type === "system") {
-            eIcon.src = this.systemIconUrl;
-        } else {
-            eIcon.src = `../images/icon-${cMessage.message_type}.webp`;
-        }
-        eIconBox.appendChild(eIcon);
-
-        const eMesg = document.createElement("p");
-        eMesg.className = "sincroMessage__text";
-        if (isHTML) {
-            eMesg.innerHTML = cMessage.message;
-        } else {
-            eMesg.innerText = cMessage.message;
-        }
-
-        const e = document.createElement("div");
-        e.id = `msg${cMessage.message_id}`;
-        /* message_typeはsystem, user, error, resetのいずれか */
-        e.className = `${this.messageTypeToMessageClassName(cMessage.message_type)} sincroMessage`;
-        e.appendChild(eIconBox);
-        e.appendChild(eMesg);
-        return e;
-    }
-
-    private messageTypeToMessageClassName(message_type: string): string {
-        const name = message_type.charAt(0).toUpperCase() + message_type.slice(1);
-        return `sincro${name}Message`;
-    }
-
-    /* メッセージ数がmaxMessageCountを超えた場合、古いメッセージを削除する。 */
-    private removeOldMessage() {
-        const chatBox = this.ensureChatBoxBound();
-        if (!chatBox) {
-            return;
-        }
-        while (chatBox.childNodes.length >= this.maxMessageCount) {
-            chatBox.childNodes[chatBox.childNodes.length - 1].remove();
-        }
-    }
-
-    // React shell が後から mount される構成でも、旧 DOM fallback を安全に再接続する。
-    private ensureChatBoxBound(): HTMLDivElement | undefined {
-        if (this.chatBox?.isConnected) {
-            return this.chatBox;
-        }
-        const nextChatBox = document.querySelector<HTMLDivElement>("div#sincroChatBox");
-        if (!nextChatBox) {
-            return this.chatBox;
-        }
-        const shouldHydrateDom = this.chatBox !== nextChatBox && this.domRenderingEnabled;
-        this.chatBox = nextChatBox;
-        if (shouldHydrateDom) {
-            this.renderDomSnapshot();
-        }
-        return this.chatBox;
     }
 
     // React描画向けの履歴正本。message_id ベースで更新/新規挿入を行う。
@@ -331,7 +145,7 @@ export class ChatMessageService {
         this.messages = [{ message, renderMode }, ...this.messages].slice(0, this.maxMessageCount);
     }
 
-    // DOM描画を止めていても React UI が再構築できるよう、renderMode を含めて通知する。
+    // 本文と描画方式を一緒に通知し、履歴からの初期表示と追加更新を一致させる。
     private emitMessage(message: ChatMessage, isHTML: boolean): void {
         const renderMode: ChatMessageRenderMode = isHTML ? "trusted_html" : "text";
         const event: ChatMessageServiceEvent = {

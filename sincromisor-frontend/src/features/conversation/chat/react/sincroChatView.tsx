@@ -4,10 +4,6 @@ import { SincroAppController } from "../../../../app/controller";
 import { subscribeActiveSincroAppEvents } from "../../../../app/react/subscribeActiveSincroAppEvents";
 import type { ChatMessage } from "../../../rtc/rtcMessage";
 
-type SincroChatViewProps = {
-    enableReactRendering?: boolean;
-};
-
 function messageTypeToClassName(messageType: string): string {
     const name = messageType.charAt(0).toUpperCase() + messageType.slice(1);
     return `sincro${name}Message`;
@@ -24,15 +20,15 @@ function canRenderHtml(record: ChatMessageViewRecord): boolean {
     if (record.renderMode !== "trusted_html") {
         return false;
     }
-    // 移行期間の安全方針:
+    // HTMLの信頼境界:
     // - HTML描画は既存互換が必要な system / reset のみに限定
     // - user / error は text として扱い、想定外HTMLの混入リスクを下げる
     return record.message.message_type === "system" || record.message.message_type === "reset";
 }
 
-// 既存のチャットCSS(class名)を再利用して、描画だけ React へ移す。
-export function SincroChatView({ enableReactRendering = true }: SincroChatViewProps) {
-    const { messages, systemIconUrl } = useSincroChatViewState(enableReactRendering);
+/** 保持済み履歴と以後の通知から、共通チャット欄を描画する。 */
+export function SincroChatView() {
+    const { messages, systemIconUrl } = useSincroChatViewState();
 
     return (
         <>
@@ -47,7 +43,7 @@ export function SincroChatView({ enableReactRendering = true }: SincroChatViewPr
     );
 }
 
-function useSincroChatViewState(enableReactRendering: boolean) {
+function useSincroChatViewState() {
     const initialController = SincroAppController.getCurrent();
     const [messages, setMessages] = useState<ChatMessageViewRecord[]>(
         initialController?.chat.getMessageViewSnapshot() ?? [],
@@ -55,13 +51,12 @@ function useSincroChatViewState(enableReactRendering: boolean) {
     const [systemIconUrl, setSystemIconUrl] = useState<string>(
         initialController?.chat.getSystemIconUrl() ?? "../images/icon-system.webp",
     );
-    useSincroChatEventSubscription(enableReactRendering, setMessages, setSystemIconUrl);
+    useSincroChatEventSubscription(setMessages, setSystemIconUrl);
 
     return { messages, systemIconUrl };
 }
 
 function useSincroChatEventSubscription(
-    enableReactRendering: boolean,
     setMessages: (updater: (prev: ChatMessageViewRecord[]) => ChatMessageViewRecord[]) => void,
     setSystemIconUrl: (iconUrl: string) => void,
 ): void {
@@ -75,16 +70,6 @@ function useSincroChatEventSubscription(
                 }
                 setMessages(() => controller.chat.getMessageViewSnapshot());
                 setSystemIconUrl(controller.chat.getSystemIconUrl());
-            },
-            onBeforeSubscribe: (controller) => {
-                if (enableReactRendering) {
-                    controller.chat.setDomRenderingEnabled(false);
-                }
-            },
-            onCleanupController: (controller) => {
-                if (enableReactRendering) {
-                    controller.chat.setDomRenderingEnabled(true);
-                }
             },
             onEvent: (event) => {
                 if (event.type === "chat_system_icon") {
@@ -102,7 +87,7 @@ function useSincroChatEventSubscription(
         });
 
         return unsubscribe;
-    }, [enableReactRendering, setMessages, setSystemIconUrl]);
+    }, [setMessages, setSystemIconUrl]);
 }
 
 function applyChatViewRecord(
@@ -147,7 +132,7 @@ function ChatMessageItem({
                 />
             </div>
             {canRenderHtml(record) ? (
-                // 移行期間の方針: 許可した種別のみ既存互換のHTML描画を行う。
+                // 明示的に許可したシステム・リセットメッセージだけHTMLとして描画する。
                 <p
                     className="sincroMessage__text"
                     // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted_html は system/reset の既存互換HTMLだけを許可している。
