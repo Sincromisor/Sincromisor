@@ -21,7 +21,6 @@ export type SincroAppChatBridge = {
     writeUnknownUserMessage: (message: string, isHTML?: boolean) => void;
     writeSystemMessage: (message: string, isHTML?: boolean) => void;
     setSystemIcon: (iconUrl: string) => void;
-    setTelopDomRenderingEnabled: (enabled: boolean) => void;
     getMessageViewSnapshot: () => import("../controller/sincroAppTypes").ChatMessageViewRecord[];
     getSystemIconUrl: () => string;
 };

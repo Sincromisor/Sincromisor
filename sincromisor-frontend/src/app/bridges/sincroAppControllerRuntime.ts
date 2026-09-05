@@ -55,11 +55,11 @@ export function createSincroAppUiDependencyBundle(params: {
     };
 }
 
-// UI dependency bundle を元に bridge 群をまとめて作成する helper。
+/** UI用の依存から操作窓口を作る。テロップ履歴は状態窓口から読み取る。 */
 export function createSincroAppBridgeBundle(
     uiDependencies: Pick<
         SincroAppUiDependencyBundle,
-        "chatMessageService" | "debugConsoleManager" | "dialogManager" | "talkManager"
+        "chatMessageService" | "debugConsoleManager" | "dialogManager"
     >,
     callbacks: { stopRTC: () => void },
 ): SincroAppBridgeBundle {
@@ -67,10 +67,7 @@ export function createSincroAppBridgeBundle(
         dialogBridge: createSincroAppDialogBridge({
             dialogManager: uiDependencies.dialogManager,
         }),
-        chatBridge: createSincroAppChatBridge(
-            uiDependencies.chatMessageService,
-            uiDependencies.talkManager,
-        ),
+        chatBridge: createSincroAppChatBridge(uiDependencies.chatMessageService),
         debugBridge: createSincroAppDebugBridge(uiDependencies.debugConsoleManager),
         rtcBridge: createSincroAppRtcBridge({ stopRTC: callbacks.stopRTC }),
     };

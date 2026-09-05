@@ -3,18 +3,14 @@ import type { TelopTextSegment } from "../../../../app/controller";
 import { SincroAppController } from "../../../../app/controller";
 import { subscribeActiveSincroAppEvents } from "../../../../app/react/subscribeActiveSincroAppEvents";
 
-type SincroTelopViewProps = {
-    enableReactRendering?: boolean;
-};
-
-// 既存 footer CSS (`.sincroFooterBox__telopText`) を再利用し、テロップ描画を React 化する。
-export function SincroTelopView({ enableReactRendering = true }: SincroTelopViewProps) {
-    const { segments, containerRef } = useSincroTelopSegments(enableReactRendering);
+/** 発話単位の履歴と受信通知からテロップを描画し、最新文字へスクロールする。 */
+export function SincroTelopView() {
+    const { segments, containerRef } = useSincroTelopSegments();
 
     return <TelopSegmentContainer containerRef={containerRef} segments={segments} />;
 }
 
-function useSincroTelopSegments(enableReactRendering: boolean) {
+function useSincroTelopSegments() {
     const initialController = SincroAppController.getCurrent();
     const [segments, setSegments] = useState<TelopTextSegment[]>(
         initialController?.state.getTelopTextSegmentsSnapshot() ?? [],
@@ -31,16 +27,6 @@ function useSincroTelopSegments(enableReactRendering: boolean) {
                 }
                 setSegments(controller.state.getTelopTextSegmentsSnapshot());
             },
-            onBeforeSubscribe: (controller) => {
-                if (enableReactRendering) {
-                    controller.chat.setTelopDomRenderingEnabled(false);
-                }
-            },
-            onCleanupController: (controller) => {
-                if (enableReactRendering) {
-                    controller.chat.setTelopDomRenderingEnabled(true);
-                }
-            },
             onEvent: (event, controller) => {
                 if (event.type !== "telop_message" || !event.message.new_text) {
                     return;
@@ -49,7 +35,7 @@ function useSincroTelopSegments(enableReactRendering: boolean) {
             },
         });
         return unsubscribe;
-    }, [enableReactRendering]);
+    }, []);
 
     useLayoutEffect(() => {
         const node = containerRef.current;
