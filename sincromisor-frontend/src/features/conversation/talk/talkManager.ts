@@ -2,24 +2,22 @@ import { frontendLogger } from "../../../shared/logging/appLogger";
 import { DebugConsoleManager } from "../../debug/model/debugConsoleManager";
 import type { ChatMessage, TelopChannelMessage } from "../../rtc/rtcMessage";
 import { ChatMessageService } from "../chat/model/chatMessageService";
-import { TalkLegacyTelopRenderer } from "../telop/model/talkLegacyTelopRenderer";
 import type { CurrentMora, TalkManagerEvent, TelopTextSegment } from "./talkManagerTypes";
 import { TalkTelopSegmentBuffer } from "./talkTelopSegmentBuffer";
 
 export type { CurrentMora, TalkManagerEvent, TelopTextSegment } from "./talkManagerTypes";
 
-/** text_ch / telop_ch の受信結果を既存DOM描画とReact購読へ橋渡しする。 */
+/** text_ch / telop_ch の受信結果を履歴・口形同期とReact購読へ橋渡しする。 */
 export class TalkManager {
     private static instance: TalkManager;
     private readonly chatMessageService: ChatMessageService;
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly telopSegmentBuffer = new TalkTelopSegmentBuffer();
-    private readonly legacyTelopRenderer = new TalkLegacyTelopRenderer();
     private currentTelopChannelMessage: CurrentMora | undefined;
     private moraID: number = 0;
     private readonly listeners = new Set<(event: TalkManagerEvent) => void>();
-    private telopDomRenderingEnabled: boolean = true;
 
+    /** 受信側と画面側で共有する会話状態を返す。 */
     static getManager(): TalkManager {
         if (!TalkManager.instance) {
             TalkManager.instance = new TalkManager();
@@ -32,7 +30,7 @@ export class TalkManager {
         this.debugConsoleManager = DebugConsoleManager.getManager();
     }
 
-    // React/AppController 向けの購読口。text/telop を分けて通知する。
+    /** 受信後の通知を購読し、返された関数で解除する。 */
     subscribe(listener: (event: TalkManagerEvent) => void): () => void {
         this.listeners.add(listener);
         return () => {
@@ -40,24 +38,12 @@ export class TalkManager {
         };
     }
 
-    // Reactテロップ描画に切り替える際、既存 footer DOM の更新を止める。
-    // 併存期間の二重描画防止用フラグ。
-    setTelopDomRenderingEnabled(enabled: boolean): void {
-        this.telopDomRenderingEnabled = enabled;
-        if (!enabled) {
-            this.legacyTelopRenderer.clear();
-            return;
-        }
-        this.legacyTelopRenderer.renderSnapshot(this.telopSegmentBuffer.snapshot());
-    }
-
-    // React初期描画用の簡易スナップショット（件数制限あり）。
-    // DOM版の横幅切り詰めとは異なり、移行期間中は speech 単位の履歴として保持する。
+    /** React取り付け前の文字列も含め、発話単位の件数制限付き履歴を返す。 */
     getTelopTextSegmentsSnapshot(): TelopTextSegment[] {
         return this.telopSegmentBuffer.snapshot();
     }
 
-    // text_ch は既存 chat manager へ委譲しつつ、React購読向けイベントも発火する。
+    /** text_chをチャット履歴へ反映し、受信イベントを診断画面へ通知する。 */
     addTextChannelMessage(msg: ChatMessage): void {
         frontendLogger.debug("Text channel message received.", {
             messageId: msg.message_id,
@@ -108,15 +94,10 @@ export class TalkManager {
         return this.currentTelopChannelMessage;
     }
 
-    // 既存 footer DOM 向けの文字単位描画。
-    // React移行後も fallback として残し、telopDomRenderingEnabled=false で停止できる。
+    // 空文字のモーラは空白として残し、React表示用の発話単位履歴へ加える。
     private addTelopChar(speech_id: number, char: string): void {
         const normalizedChar = char === "" ? " " : char;
         this.telopSegmentBuffer.appendChar(speech_id, normalizedChar);
-        if (!this.telopDomRenderingEnabled) {
-            return;
-        }
-        this.legacyTelopRenderer.appendChar(speech_id, normalizedChar);
     }
 
     // AppController が購読し、Control Panel / Telop React UI へ再配信するための通知。

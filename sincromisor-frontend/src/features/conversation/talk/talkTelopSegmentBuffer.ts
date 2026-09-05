@@ -5,14 +5,16 @@ const MAX_TELOP_SEGMENT_COUNT = 6;
 // 長時間稼働時の保険として、React表示用の総文字数を単純上限で制御する。
 const MAX_TELOP_TOTAL_CHARS = 240;
 
-// React描画向けテロップ履歴の正本。speech単位の結合と長時間稼働時のtrimだけを担当する。
+/** React用の発話単位履歴を保持し、古い文字から件数・文字数を制限する。 */
 export class TalkTelopSegmentBuffer {
     private segments: TelopTextSegment[] = [];
 
+    /** 初期表示と受信後の表示で共有する履歴を古い順に返す。 */
     snapshot(): TelopTextSegment[] {
         return [...this.segments];
     }
 
+    /** 同一発話へ文字列を連結し、最新6発話・合計240文字以内に収める。 */
     appendChar(speechId: number, char: string): void {
         const index = this.segments.findIndex((segment) => segment.speechId === speechId);
         if (index >= 0) {

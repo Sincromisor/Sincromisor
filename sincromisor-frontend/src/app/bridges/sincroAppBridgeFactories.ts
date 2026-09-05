@@ -1,5 +1,4 @@
 import type { ChatMessageService } from "../../features/conversation/chat/model/chatMessageService";
-import type { TalkManager } from "../../features/conversation/talk/talkManager";
 import type { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import type {
     SincroAppDialogUiState,
@@ -59,7 +58,6 @@ export function createSincroAppDialogBridge(params: {
 /** 初期化処理とReactへ、チャット履歴・通知に対応する操作を公開する。 */
 export function createSincroAppChatBridge(
     chatMessageService: ChatMessageService,
-    talkManager: TalkManager,
 ): SincroAppChatBridge {
     // initializer 側で頻出する chat 操作だけを集約し、ChatMessageService の直接 import を減らす。
     return {
@@ -71,9 +69,6 @@ export function createSincroAppChatBridge(
         },
         setSystemIcon: (iconUrl) => {
             chatMessageService.setSystemIcon(iconUrl);
-        },
-        setTelopDomRenderingEnabled: (enabled) => {
-            talkManager.setTelopDomRenderingEnabled(enabled);
         },
         getMessageViewSnapshot: () => chatMessageService.getMessageViewSnapshot(),
         getSystemIconUrl: () => chatMessageService.getSystemIconUrl(),
