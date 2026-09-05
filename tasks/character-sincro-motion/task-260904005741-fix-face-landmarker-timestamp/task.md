@@ -35,3 +35,9 @@ Face ROI が有効なフレームでは、同じ `FaceLandmarker` に同一の `
 ## ドキュメント同期の要否
 
 `documents/design/frontend/character/motion.md` の時刻説明を、記録と間隔判定の正本時刻、および MediaPipe 境界の単調増加補正を区別する内容へ更新する。公開APIと通信契約への影響はない。
+
+## 完了後の記録補完
+
+利用者から指摘された記録3件の欠落を修正した。元の実装コミット `a85f2ee6` とGit履歴を根拠に、[実装記録](impl.md)、[レビュー記録](review.md)、[評価記録](eval.md)を追加した。独立レビュー・評価の実施は確認できないため、実施済みとする記録は追加していない。
+
+`npm run tasks:check`、`npm run tasks:index:check`、変更文書の整形確認は成功。本番コードと元の完了判定は変更していない。
