@@ -162,9 +162,6 @@ export default defineConfig({
                     if (id.includes("/hls.js/")) {
                         return "vendor_hls";
                     }
-                    if (id.includes("/js-yaml/")) {
-                        return "vendor_yaml";
-                    }
                     return "vendor_misc";
                 },
             },

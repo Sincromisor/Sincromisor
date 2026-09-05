@@ -33,7 +33,6 @@
         "@mediapipe/tasks-vision": "^0.10.34",
         "@pixiv/three-vrm": "^3.5.1",
         "hls.js": "^1.6.15",
-        "js-yaml": "^4.3.1",
         "onnxruntime-web": "^1.24.3",
         "react": "^19.2.5",
         "react-dom": "^19.2.5",
