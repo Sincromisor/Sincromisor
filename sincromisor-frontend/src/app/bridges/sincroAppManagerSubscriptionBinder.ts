@@ -32,12 +32,12 @@ type DialogSubscriptionParams = {
     emitSettingsRelatedSnapshots: () => void;
 };
 
-// manager / service 群の subscribe 本文を helper 側へ分離し、SincroAppController を orchestration 中心に保つ。
+/** チャット通知をアプリイベントへ変換し、この購読だけを解除する関数を返す。 */
 export function bindChatServiceSubscription(
     chatMessageService: SincroAppChatSubscriptionFacade,
     emitEvent: EmitFn,
-): void {
-    chatMessageService.subscribe((event) => {
+): () => void {
+    return chatMessageService.subscribe((event) => {
         const appEvent = mapChatMessageToAppEvent(event);
         if (!appEvent) {
             return;
@@ -46,13 +46,11 @@ export function bindChatServiceSubscription(
     });
 }
 
-export function bindDebugManagerSubscription(params: DebugSubscriptionParams): void {
-    params.debugConsoleManager.subscribe((event) => {
-        // debugイベントは単純な 1:1 変換だけでなく、
-        // 1) ICE/signaling の保持状態更新
-        // 2) rtc_state emit
-        // 3) connection_state 再計算 emit
-        // の順序制御が必要なため、helper から「次の保持状態」を返す形にしている。
+/** 診断通知を接続状態とアプリイベントへ反映し、購読解除関数を返す。 */
+export function bindDebugManagerSubscription(params: DebugSubscriptionParams): () => void {
+    return params.debugConsoleManager.subscribe((event) => {
+        // 診断通知はRTC状態の保持と接続状態の再計算も伴うため、
+        // 通知処理から返る次の保持状態を制御処理へ反映する。
         const nextRtcState = handleMappedDebugConsoleEvent({
             result: mapDebugConsoleEvent(event),
             rtcState: params.getRtcState(),
@@ -63,11 +61,12 @@ export function bindDebugManagerSubscription(params: DebugSubscriptionParams): v
     });
 }
 
+/** テロップ通知をアプリイベントへ変換し、購読解除関数を返す。 */
 export function bindTalkManagerSubscription(
     talkManager: SincroAppTalkSubscriptionFacade,
     emitEvent: EmitFn,
-): void {
-    talkManager.subscribe((event) => {
+): () => void {
+    return talkManager.subscribe((event) => {
         const appEvent = mapTalkManagerEventToAppEvent(event);
         if (appEvent) {
             emitEvent(appEvent);
@@ -75,25 +74,32 @@ export function bindTalkManagerSubscription(
     });
 }
 
+/** ダイアログの案内通知をアプリへ接続し、購読解除関数を返す。 */
 export function bindPopServiceSubscription(
     popMessageService: SincroAppPopSubscriptionFacade,
     emitEvent: EmitFn,
-): void {
-    // dialog 内 pop も AppEvent 化して、React が PopMessageService singleton を直接購読しない構成へ寄せる。
-    popMessageService.subscribeDialogPop((message) => {
+): () => void {
+    // ダイアログの案内もアプリイベントへ統合し、Reactの購読先を制御処理に揃える。
+    return popMessageService.subscribeDialogPop((message) => {
         emitEvent({ type: "dialog_pop_message", message });
     });
 }
 
-export function bindDialogManagerSubscriptions(params: DialogSubscriptionParams): void {
-    // DialogManager の個別変更通知を AppController snapshot 再通知へ変換する。
-    params.dialogManager.subscribeSettingsChange(() => {
+/** 設定・ダイアログ・VRMの通知を接続し、3件の購読をまとめて解除する関数を返す。 */
+export function bindDialogManagerSubscriptions(params: DialogSubscriptionParams): () => void {
+    // ダイアログの個別変更通知を、アプリの状態スナップショットとして再通知する。
+    const unsubscribeSettings = params.dialogManager.subscribeSettingsChange(() => {
         params.emitSettingsRelatedSnapshots();
     });
-    params.dialogManager.subscribeDialogUiState((uiState) => {
+    const unsubscribeDialog = params.dialogManager.subscribeDialogUiState((uiState) => {
         params.emitEvent({ type: "dialog_ui_state", uiState });
     });
-    params.dialogManager.subscribeVrmUiState((uiState) => {
+    const unsubscribeVrm = params.dialogManager.subscribeVrmUiState((uiState) => {
         params.emitEvent({ type: "dialog_vrm_ui_state", uiState });
     });
+    return () => {
+        unsubscribeSettings();
+        unsubscribeDialog();
+        unsubscribeVrm();
+    };
 }

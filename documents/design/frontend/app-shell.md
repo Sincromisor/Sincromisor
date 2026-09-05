@@ -98,6 +98,7 @@
 - 内部イベント:
     - React UI はアプリ制御のスナップショット / 購読 API を使う。
     - 管理処理単一インスタンスへの直接依存は段階的に縮退させる。
+    - 各 `SincroAppController` は自分が登録した管理処理と `window` の購読解除関数を保持する。有効な制御処理の差し替えでは旧購読を解除してから新しい購読を接続する。解除を再実行しても共有サービスや新制御処理には影響しない。
     - Reactの設定値・操作可否・案内は `SincroAppController.settingsStore` の1つのスナップショットを `useSyncExternalStore` で購読する。内容が変わらない間は取得結果の参照を維持する。
     - 起動・接続・ページ固有状態は既存のイベント購読を使う。描画ごとのコールバックの作り直しでは再購読しない。VRMシーン向けの `settings_snapshot` イベントは維持する。
     - ダイアログ設定は `DialogStateStore` に保持する。`DialogManager.getSetting` / `getSettings` で読み取り、`updateSettings` で部分更新する。アプリの設定適用処理は数値を正規化し、会話モードをキャラクター動作へ反映する。

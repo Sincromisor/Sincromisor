@@ -17,12 +17,11 @@ type SincroAppControllerWindowEventParams = {
     openDialog: () => void;
 };
 
-// window custom event を AppController の内部状態更新へ接続する。
-// global event 名と Looking Glass tracker の扱いを Controller 本体から分離している。
+/** ウィンドウ通知を状態更新へ接続し、呼び出し元が所有する購読の解除関数を返す。 */
 export function bindSincroAppControllerWindowEvents(
     params: SincroAppControllerWindowEventParams,
-): void {
-    bindSincroAppWindowEvents({
+): () => void {
+    return bindSincroAppWindowEvents({
         onLookingGlassState: (event) => handleLookingGlassStateEvent(params, event),
         onLookingGlassConfigUpdated: (event) => handleLookingGlassConfigUpdated(params, event),
         onLookingGlassPolyfillReinitReady: () => handleLookingGlassPolyfillReinitReady(params),
