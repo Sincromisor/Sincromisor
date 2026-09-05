@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState, useSyncExternalStore } from "react";
 import type {
     SincroAppController,
     SincroAppEvent,
@@ -17,17 +17,16 @@ import {
     createDefaultSincroAppStartupSettingsStatus,
     defaultSincroAppSettingsUiHints,
 } from "../settings/sincroAppSettingsDefaults";
-import {
-    hydrateSettingsSnapshotsFromController,
-    hydrateStartupSettingsStatusFromController,
-} from "./sincroAppStateSnapshotHydrators";
+import { hydrateStartupSettingsStatusFromController } from "./sincroAppStateSnapshotHydrators";
 import { subscribeActiveSincroAppEvents } from "./subscribeActiveSincroAppEvents";
 
+/** 接続状態の案内表示に使う直近のイベント値。 */
 export type SincroAppControllerConnectionState = {
     value: Extract<SincroAppEvent, { type: "connection_state" }>["value"];
     detail: string;
 };
 
+/** 起動前ダイアログと起動後パネルで共有する設定・接続状態。 */
 export type SincroAppControllerSettingsState = {
     hasActiveController: boolean;
     currentController: SincroAppController | undefined;
@@ -45,13 +44,6 @@ type SincroAppControllerSettingsStateSetters = {
     setCurrentController: (value: SincroAppController | undefined) => void;
     setLifecycleState: (value: SincroAppLifecycleState) => void;
     setConnectionState: (value: SincroAppControllerConnectionState) => void;
-    setSettings: (
-        value:
-            | SincroAppSettingsSnapshot
-            | ((prev: SincroAppSettingsSnapshot) => SincroAppSettingsSnapshot),
-    ) => void;
-    setSettingsUiState: (value: SincroAppSettingsUiState) => void;
-    setSettingsUiHints: (value: SincroAppSettingsUiHints) => void;
     setStartupSettingsStatus: (value: SincroAppStartupSettingsStatus) => void;
     setStartupSettingsCapabilities: (value: SincroAppStartupSettingsCapabilities) => void;
 };
@@ -69,8 +61,16 @@ const defaultConnectionState: SincroAppControllerConnectionState = {
     detail: "",
 };
 
-// AppController 由来の設定・接続 state を React UI 向け snapshot として集約する。
-// 画面固有イベントは onEvent/onControllerHydrated で合成し、購読入口はこの hook に寄せる。
+// 制御処理のない初回表示でも、外部ストアの取得結果を安定させる。
+const defaultSettingsSnapshot = {
+    settings: createDefaultSincroAppSettingsSnapshot(),
+    settingsUiState: createDefaultSincroAppSettingsUiState(),
+    settingsUiHints: defaultSincroAppSettingsUiHints,
+};
+const getDefaultSettingsSnapshot = () => defaultSettingsSnapshot;
+const subscribeEmptySettings = () => () => {};
+
+/** 設定は外部ストアから読み取り、起動・接続・ページ固有状態だけをイベントで同期する。 */
 export function useSincroAppControllerSettingsState(
     options: UseSincroAppControllerSettingsStateOptions = {},
 ): SincroAppControllerSettingsState {
@@ -82,14 +82,10 @@ export function useSincroAppControllerSettingsState(
     const [lifecycleState, setLifecycleState] = useState<SincroAppLifecycleState>("idle");
     const [connectionState, setConnectionState] =
         useState<SincroAppControllerConnectionState>(defaultConnectionState);
-    const [settings, setSettings] = useState<SincroAppSettingsSnapshot>(
-        initialController?.state.getSettingsSnapshot() ?? createDefaultSincroAppSettingsSnapshot(),
-    );
-    const [settingsUiState, setSettingsUiState] = useState<SincroAppSettingsUiState>(
-        initialController?.state.getSettingsUiState() ?? createDefaultSincroAppSettingsUiState(),
-    );
-    const [settingsUiHints, setSettingsUiHints] = useState<SincroAppSettingsUiHints>(
-        initialController?.state.getSettingsUiHints() ?? defaultSincroAppSettingsUiHints,
+    const settingsSnapshot = useSyncExternalStore(
+        currentController?.settingsStore.subscribe ?? subscribeEmptySettings,
+        currentController?.settingsStore.getSnapshot ?? getDefaultSettingsSnapshot,
+        currentController?.settingsStore.getSnapshot ?? getDefaultSettingsSnapshot,
     );
     const [startupSettingsStatus, setStartupSettingsStatus] =
         useState<SincroAppStartupSettingsStatus>(
@@ -106,48 +102,40 @@ export function useSincroAppControllerSettingsState(
             setCurrentController,
             setLifecycleState,
             setConnectionState,
-            setSettings,
-            setSettingsUiState,
-            setSettingsUiHints,
             setStartupSettingsStatus,
             setStartupSettingsCapabilities,
         }),
         [],
     );
 
-    useEffect(() => {
-        const unsubscribeActiveController = subscribeActiveSincroAppEvents({
-            onControllerChange: (controller) => {
-                syncSincroAppControllerSettingsState(controller, setters, {
-                    resetLifecycleOnControllerClear: !!options.resetLifecycleOnControllerClear,
-                    onControllerHydrated: options.onControllerHydrated,
-                    onControllerCleared: options.onControllerCleared,
-                });
-            },
-            onEvent: (event, controller) => {
-                applySincroAppControllerSettingsEvent(event, setters);
-                options.onEvent?.(event, controller);
-            },
+    // ページ固有のコールバックは最新の描画を参照するが、関数の作り直しでは再購読しない。
+    // 初期状態の再配信で再描画・再購読を繰り返すことを防ぐ。
+    const onControllerChange = useEffectEvent((controller: SincroAppController | undefined) => {
+        syncSincroAppControllerSettingsState(controller, setters, {
+            resetLifecycleOnControllerClear: !!options.resetLifecycleOnControllerClear,
+            onControllerHydrated: options.onControllerHydrated,
+            onControllerCleared: options.onControllerCleared,
         });
-        return () => {
-            unsubscribeActiveController();
-        };
-    }, [
-        options.onControllerHydrated,
-        options.onControllerCleared,
-        options.onEvent,
-        options.resetLifecycleOnControllerClear,
-        setters,
-    ]);
+    });
+    const onEvent = useEffectEvent((event: SincroAppEvent, controller: SincroAppController) => {
+        applySincroAppControllerSettingsEvent(event, setters);
+        options.onEvent?.(event, controller);
+    });
+    useEffect(
+        () =>
+            subscribeActiveSincroAppEvents({
+                onControllerChange: (controller) => onControllerChange(controller),
+                onEvent: (event, controller) => onEvent(event, controller),
+            }),
+        [],
+    );
 
     return {
         hasActiveController,
         currentController,
         lifecycleState,
         connectionState,
-        settings,
-        settingsUiState,
-        settingsUiHints,
+        ...settingsSnapshot,
         startupSettingsStatus,
         startupSettingsCapabilities,
     };
@@ -170,7 +158,6 @@ function syncSincroAppControllerSettingsState(
         options.onControllerCleared?.();
         return;
     }
-    hydrateSettingsSnapshotsFromController(controller, setters);
     hydrateStartupSettingsStatusFromController(controller, setters);
     options.onControllerHydrated?.(controller);
 }
@@ -185,15 +172,6 @@ function applySincroAppControllerSettingsEvent(
             return;
         case "connection_state":
             setters.setConnectionState({ value: event.value, detail: event.detail ?? "" });
-            return;
-        case "settings_snapshot":
-            setters.setSettings((prev) => ({ ...prev, ...event.settings }));
-            return;
-        case "settings_ui_state":
-            setters.setSettingsUiState(event.uiState);
-            return;
-        case "settings_ui_hints":
-            setters.setSettingsUiHints(event.uiHints);
             return;
         case "startup_settings_status":
             setters.setStartupSettingsStatus(event.status);

@@ -73,12 +73,11 @@ export function createSincroAppBridgeBundle(
     };
 }
 
+/** 下位サービスと操作窓口を組み立てる。設定の購読状態は組み立て後にアプリ制御が保持する。 */
 export function createSincroAppRuntimeBundle(params: {
     emitEvent: (event: import("../controller/sincroAppTypes").SincroAppEvent) => void;
     stopRTC: () => void;
     getSettingsSnapshot: () => import("../controller/sincroAppTypes").SincroAppSettingsSnapshot;
-    getSettingsUiState: () => import("../controller/sincroAppTypes").SincroAppSettingsUiState;
-    getSettingsUiHints: () => import("../controller/sincroAppTypes").SincroAppSettingsUiHints;
     getDialogUiState: () => import("../controller/sincroAppTypes").SincroAppDialogUiState;
     getDialogVrmUiState: () => import("../controller/sincroAppTypes").SincroAppDialogVrmUiState;
     getStartupSettingsStatus: () => import("../controller/sincroAppTypes").SincroAppStartupSettingsStatus;
@@ -90,8 +89,6 @@ export function createSincroAppRuntimeBundle(params: {
     const bridges = createSincroAppBridgeBundle(uiDependencies, { stopRTC: params.stopRTC });
     const stateBridge = createSincroAppStateBridge({
         getSettingsSnapshot: params.getSettingsSnapshot,
-        getSettingsUiState: params.getSettingsUiState,
-        getSettingsUiHints: params.getSettingsUiHints,
         getDialogUiState: params.getDialogUiState,
         getDialogVrmUiState: params.getDialogVrmUiState,
         getStartupSettingsStatus: params.getStartupSettingsStatus,

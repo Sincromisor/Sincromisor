@@ -4,8 +4,6 @@ import type {
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
     SincroAppSettingsSnapshot,
-    SincroAppSettingsUiHints,
-    SincroAppSettingsUiState,
     SincroAppStartupSettingsStatus,
 } from "../controller/sincroAppTypes";
 import type {
@@ -126,20 +124,17 @@ export function createSincroAppRtcBridge(params: { stopRTC: () => void }): Sincr
     };
 }
 
+/** シーンの設定反映と、ダイアログ・起動・テロップの初期状態取得を公開する。 */
 export function createSincroAppStateBridge(params: {
     getSettingsSnapshot: () => SincroAppSettingsSnapshot;
-    getSettingsUiState: () => SincroAppSettingsUiState;
-    getSettingsUiHints: () => SincroAppSettingsUiHints;
     getDialogUiState: () => SincroAppDialogUiState;
     getDialogVrmUiState: () => SincroAppDialogVrmUiState;
     getStartupSettingsStatus: () => SincroAppStartupSettingsStatus;
     getTelopTextSegmentsSnapshot: () => import("../controller/sincroAppTypes").TelopTextSegment[];
 }): SincroAppStateBridge {
-    // React hook が subscribe 前に初期値を同期取得するための読み取り専用 bridge。
+    // Reactの設定値・操作可否・案内はsettingsStoreから取得する。
     return {
         getSettingsSnapshot: params.getSettingsSnapshot,
-        getSettingsUiState: params.getSettingsUiState,
-        getSettingsUiHints: params.getSettingsUiHints,
         getDialogUiState: params.getDialogUiState,
         getDialogVrmUiState: params.getDialogVrmUiState,
         getStartupSettingsStatus: params.getStartupSettingsStatus,

@@ -24,8 +24,9 @@ import { SincroAppEventHub } from "../events/sincroAppEventHub";
 import { SincroAppLookingGlassStateTracker } from "../events/sincroAppLookingGlassStateTracker";
 import { applySincroAppControllerSettings } from "../settings/sincroAppSettingsApplyFlow";
 import { createDefaultSincroAppStartupSettingsCapabilities } from "../settings/sincroAppSettingsDefaults";
-import { SincroAppSettingsRelatedPayloadCache } from "../settings/sincroAppSettingsRelatedPayloadCache";
+import { buildSincroAppSettingsRelatedSnapshotPayload } from "../settings/sincroAppSettingsRelatedSnapshotBuilder";
 import { buildSincroAppSettingsSnapshot } from "../settings/sincroAppSettingsSnapshotBuilder";
+import { SincroAppSettingsStore } from "../settings/sincroAppSettingsStore";
 import {
     buildStartupSettingsStatus,
     type SincroAppStartupAppliedSettings,
@@ -38,8 +39,6 @@ import type {
     SincroAppEvent,
     SincroAppLifecycleState,
     SincroAppSettingsSnapshot,
-    SincroAppSettingsUiHints,
-    SincroAppSettingsUiState,
     SincroAppStartHooks,
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
@@ -67,9 +66,7 @@ export type {
     SincroAppStartupSettingsStatus,
 } from "./sincroAppTypes";
 
-// UI層（現行Initializer/将来React）から使うアプリ制御の入口。
-// 現段階では既存 SincroController / singleton manager・service 群への統一窓口。
-// 型・bridge・判定ロジック・mapper は helper へ分離し、本体は orchestration と状態遷移に集中させる。
+/** 起動処理とReactの共通窓口。下位サービスを束ね、設定購読と起動・接続イベントを公開する。 */
 export class SincroAppController {
     private static readonly activeRegistry = new SincroAppActiveControllerRegistry();
 
@@ -81,7 +78,8 @@ export class SincroAppController {
     private beforeStartHook: () => void = () => {};
     private afterStartHook: () => void = () => {};
     private suppressSettingsSnapshotEvent: boolean = false;
-    private readonly settingsRelatedPayloadCache: SincroAppSettingsRelatedPayloadCache;
+    /** 設定値・操作可否・案内の同時点スナップショットをReactへ公開する。 */
+    readonly settingsStore: SincroAppSettingsStore;
     private startupAppliedSettings: SincroAppStartupAppliedSettings | undefined;
     private startupSettingsCapabilities: SincroAppStartupSettingsCapabilities =
         createDefaultSincroAppStartupSettingsCapabilities();
@@ -103,19 +101,25 @@ export class SincroAppController {
     get rtc(): SincroAppRtcBridge {
         return this.runtime.rtcBridge;
     }
-    // snapshot getter 群をまとめた読み取り専用 bridge。呼び出し側で API の意図を揃えやすくする。
+    /** シーン設定と個別画面状態の取得窓口。Reactの設定表示はsettingsStoreを使う。 */
     get state(): SincroAppStateBridge {
         return this.runtime.stateBridge;
     }
 
+    /** 設定の初期値を確定してから、有効な制御処理として公開し通知を接続する。 */
     constructor() {
         // 依存の組み立てが終わる前に購読/イベント登録を始めないよう、初期化順を固定する。
         const runtime = this.initializeRuntime();
         this.runtime = runtime;
-        this.settingsRelatedPayloadCache = new SincroAppSettingsRelatedPayloadCache({
+        const initialSettings = buildSincroAppSettingsRelatedSnapshotPayload({
             dialogManager: runtime.dialogManager,
-            buildStartupSettingsStatus: (currentSettings) =>
-                this.buildStartupSettingsStatusFromSnapshot(currentSettings),
+            buildStartupSettingsStatus: (settings) =>
+                this.buildStartupSettingsStatusFromSnapshot(settings),
+        });
+        this.settingsStore = new SincroAppSettingsStore({
+            settings: initialSettings.settings,
+            settingsUiState: initialSettings.settingsUiState,
+            settingsUiHints: initialSettings.settingsUiHints,
         });
         SincroAppController.setCurrent(this);
         this.bindUiSubscriptions();
@@ -139,7 +143,7 @@ export class SincroAppController {
         return SincroAppController.activeRegistry.subscribe(listener);
     }
 
-    // Public runtime subscription API
+    /** アプリイベントを購読し、起動・接続・シーン設定などの初期状態も直ちに通知する。 */
     subscribe(listener: (event: SincroAppEvent) => void): () => void {
         // 購読直後にスナップショットを送ることで、React 側は初回描画時の「空状態」を減らせる。
         const unsubscribe = this.eventHub.subscribe(listener);
@@ -147,7 +151,8 @@ export class SincroAppController {
             listener,
             lifecycleState: this.lifecycleState,
             startupSettingsCapabilities: this.startupSettingsCapabilities,
-            settingsRelatedPayloadCache: this.settingsRelatedPayloadCache,
+            settings: this.settingsStore.getSnapshot().settings,
+            startupSettingsStatus: this.getStartupSettingsStatus(),
             getUiStateSnapshot: () => this.getUiStateSnapshot(),
             getLookingGlassState: () => this.lookingGlassTracker.getState(),
             getLookingGlassConfigStatus: () => this.lookingGlassTracker.getConfigStatus(),
@@ -207,23 +212,17 @@ export class SincroAppController {
         this.stopRTC();
     }
 
-    // Public state snapshot API
+    /** シーン反映と設定適用処理のため、現在のダイアログ・実行時設定を取得する。 */
     getSettingsSnapshot(): SincroAppSettingsSnapshot {
         return buildSincroAppSettingsSnapshot(this.runtime.dialogManager);
     }
 
-    getSettingsUiState(): SincroAppSettingsUiState {
-        return this.getUiStateSnapshot().settingsUiState;
-    }
-
-    getSettingsUiHints(): SincroAppSettingsUiHints {
-        return this.getUiStateSnapshot().settingsUiHints;
-    }
-
+    /** ダイアログの開閉・開始ボタンの現在状態を初期表示へ渡す。 */
     getDialogUiState(): SincroAppDialogUiState {
         return this.getUiStateSnapshot().dialogUiState;
     }
 
+    /** VRM選択と読込結果の現在状態を初期表示へ渡す。 */
     getDialogVrmUiState(): SincroAppDialogVrmUiState {
         return this.getUiStateSnapshot().dialogVrmUiState;
     }
@@ -260,11 +259,14 @@ export class SincroAppController {
         });
     }
 
+    /** 設定を正本へ一括適用し、完了後の値と操作可否を設定購読へ同時に公開する。 */
     applySettings(partial: Partial<SincroAppSettingsSnapshot>): void {
         applySincroAppControllerSettings({
             dialogManager: this.runtime.dialogManager,
             partial,
-            settingsRelatedPayloadCache: this.settingsRelatedPayloadCache,
+            settingsStore: this.settingsStore,
+            buildStartupSettingsStatus: (settings) =>
+                this.buildStartupSettingsStatusFromSnapshot(settings),
             lookingGlassTracker: this.lookingGlassTracker,
             emitEvent: (event) => this.emitEvent(event),
             getSettingsSnapshot: () => this.getSettingsSnapshot(),
@@ -300,8 +302,6 @@ export class SincroAppController {
             emitEvent: (event) => this.emitEvent(event),
             stopRTC: () => this.stopRTC(),
             getSettingsSnapshot: () => this.getSettingsSnapshot(),
-            getSettingsUiState: () => this.getSettingsUiState(),
-            getSettingsUiHints: () => this.getSettingsUiHints(),
             getDialogUiState: () => this.getDialogUiState(),
             getDialogVrmUiState: () => this.getDialogVrmUiState(),
             getStartupSettingsStatus: () => this.getStartupSettingsStatus(),
@@ -336,12 +336,15 @@ export class SincroAppController {
         if (this.suppressSettingsSnapshotEvent) {
             return;
         }
-        this.settingsRelatedPayloadCache.withCache(() => {
-            emitSincroAppSettingsRelatedSnapshots(
-                (event) => this.emitEvent(event),
-                this.settingsRelatedPayloadCache.build(),
-            );
-        });
+        emitSincroAppSettingsRelatedSnapshots(
+            (event) => this.emitEvent(event),
+            this.settingsStore,
+            buildSincroAppSettingsRelatedSnapshotPayload({
+                dialogManager: this.runtime.dialogManager,
+                buildStartupSettingsStatus: (settings) =>
+                    this.buildStartupSettingsStatusFromSnapshot(settings),
+            }),
+        );
     }
 
     // DialogManager 由来の UI状態はまとめて取得し、同一タイミングでの整合を取りやすくする。

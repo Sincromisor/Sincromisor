@@ -44,10 +44,9 @@ export type SincroAppRtcBridge = {
     stop: () => void;
 };
 
+/** シーン設定と、設定購読とは別に保持する画面状態の取得窓口。 */
 export type SincroAppStateBridge = {
     getSettingsSnapshot: () => import("../controller/sincroAppTypes").SincroAppSettingsSnapshot;
-    getSettingsUiState: () => import("../controller/sincroAppTypes").SincroAppSettingsUiState;
-    getSettingsUiHints: () => import("../controller/sincroAppTypes").SincroAppSettingsUiHints;
     getDialogUiState: () => import("../controller/sincroAppTypes").SincroAppDialogUiState;
     getDialogVrmUiState: () => import("../controller/sincroAppTypes").SincroAppDialogVrmUiState;
     getStartupSettingsStatus: () => import("../controller/sincroAppTypes").SincroAppStartupSettingsStatus;
