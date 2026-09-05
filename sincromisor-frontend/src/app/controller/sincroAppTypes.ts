@@ -175,14 +175,6 @@ export type SincroAppEvent =
           settings: SincroAppSettingsSnapshot;
       }
     | {
-          type: "settings_ui_state";
-          uiState: SincroAppSettingsUiState;
-      }
-    | {
-          type: "settings_ui_hints";
-          uiHints: SincroAppSettingsUiHints;
-      }
-    | {
           type: "dialog_ui_state";
           uiState: SincroAppDialogUiState;
       }

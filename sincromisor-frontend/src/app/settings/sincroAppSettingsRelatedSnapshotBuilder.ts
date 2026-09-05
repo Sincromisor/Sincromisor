@@ -4,8 +4,8 @@ import type {
     SincroAppStartupSettingsStatus,
 } from "../controller/sincroAppTypes";
 import { buildSincroAppSettingsSnapshot } from "./sincroAppSettingsSnapshotBuilder";
-import { buildSincroAppUiStateSnapshot } from "./sincroAppUiStateSnapshotBuilder";
 
+/** 設定の公開と再起動判定に必要な、適用完了時点の値。 */
 export type SincroAppSettingsRelatedSnapshotPayload = {
     settings: SincroAppSettingsSnapshot;
     settingsUiState: import("../controller/sincroAppTypes").SincroAppSettingsUiState;
@@ -13,8 +13,7 @@ export type SincroAppSettingsRelatedSnapshotPayload = {
     startupSettingsStatus: SincroAppStartupSettingsStatus;
 };
 
-// AppController の settings 関連イベント群で共有する snapshot payload を合成する helper。
-// applySettings 後通知 / dialog 手動変更通知の双方で再利用する。
+/** 設定適用後またはダイアログからの変更通知後に、値・操作可否・案内を一度に取得する。 */
 export function buildSincroAppSettingsRelatedSnapshotPayload(params: {
     dialogManager: SincroAppDialogFacade;
     settings?: SincroAppSettingsSnapshot;
@@ -22,12 +21,11 @@ export function buildSincroAppSettingsRelatedSnapshotPayload(params: {
         currentSettings: SincroAppSettingsSnapshot,
     ) => SincroAppStartupSettingsStatus;
 }): SincroAppSettingsRelatedSnapshotPayload {
-    const uiStateSnapshot = buildSincroAppUiStateSnapshot(params.dialogManager);
     const settings = params.settings ?? buildSincroAppSettingsSnapshot(params.dialogManager);
     return {
         settings,
-        settingsUiState: uiStateSnapshot.settingsUiState,
-        settingsUiHints: uiStateSnapshot.settingsUiHints,
+        settingsUiState: params.dialogManager.settingsUiState(),
+        settingsUiHints: params.dialogManager.settingsUiHints(),
         startupSettingsStatus: params.buildStartupSettingsStatus(settings),
     };
 }

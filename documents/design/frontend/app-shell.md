@@ -51,7 +51,7 @@
 - `src/app/bridges`
     - AppController と旧形式管理処理 / サービス単一インスタンスの接続点、橋渡し型、実行時一式生成処理を置く。
 - `src/app/settings`
-    - 設定既定値 / スナップショット / 適用 / 起動状態 / 関連する送受信データキャッシュを置く。
+    - 設定既定値 / スナップショット購読 / 適用 / 起動状態を置く。
     - `sincroAppSettingsDefaults.ts` は AppController スナップショット、React 代替処理、DialogStateStore、Looking Glass 実行時の既定値の正本を持つ。
 - `src/app/react`
     - 有効 AppController 購読フック、パネル状態補助処理、UI 調整などアプリの共通枠組みから使う React 補助処理を置く。
@@ -97,6 +97,8 @@
 - 内部イベント:
     - React UI はアプリ制御のスナップショット / 購読 API を使う。
     - 管理処理単一インスタンスへの直接依存は段階的に縮退させる。
+    - Reactの設定値・操作可否・案内は `SincroAppController.settingsStore` の1つのスナップショットを `useSyncExternalStore` で購読する。内容が変わらない間は取得結果の参照を維持する。
+    - 起動・接続・ページ固有状態は既存のイベント購読を使う。描画ごとのコールバックの作り直しでは再購読しない。VRMシーン向けの `settings_snapshot` イベントは維持する。
     - ダイアログ設定は `DialogStateStore` に保持する。`DialogManager.getSetting` / `getSettings` で読み取り、`updateSettings` で部分更新する。アプリの設定適用処理は数値を正規化し、会話モードをキャラクター動作へ反映する。
 
 ## 設定・配備

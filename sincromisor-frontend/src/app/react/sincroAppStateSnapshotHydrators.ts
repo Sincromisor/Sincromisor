@@ -2,22 +2,8 @@ import type {
     SincroAppController,
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
-    SincroAppSettingsSnapshot,
-    SincroAppSettingsUiHints,
-    SincroAppSettingsUiState,
     SincroAppStartupSettingsStatus,
 } from "../controller";
-
-type SettingsSnapshotSetters = {
-    // hook ごとの setState 実装差分を吸収するため、setter 形状だけ受け取る。
-    setSettings: (
-        value:
-            | SincroAppSettingsSnapshot
-            | ((prev: SincroAppSettingsSnapshot) => SincroAppSettingsSnapshot),
-    ) => void;
-    setSettingsUiState: (value: SincroAppSettingsUiState) => void;
-    setSettingsUiHints: (value: SincroAppSettingsUiHints) => void;
-};
 
 type DialogUiSnapshotSetters = {
     setDialogUiState: (value: SincroAppDialogUiState) => void;
@@ -28,17 +14,7 @@ type StartupSnapshotSetters = {
     setStartupSettingsStatus: (value: SincroAppStartupSettingsStatus) => void;
 };
 
-// React hook から controller.state snapshot をまとめて反映する helper。
-// active controller 差し替え時や初期化時の「空白状態」を減らす用途に使う。
-export function hydrateSettingsSnapshotsFromController(
-    controller: SincroAppController,
-    setters: SettingsSnapshotSetters,
-): void {
-    setters.setSettings(controller.state.getSettingsSnapshot());
-    setters.setSettingsUiState(controller.state.getSettingsUiState());
-    setters.setSettingsUiHints(controller.state.getSettingsUiHints());
-}
-
+/** 有効な制御処理の変更時に、ダイアログ表示とVRM選択を初期同期する。 */
 export function hydrateDialogUiSnapshotsFromController(
     controller: SincroAppController,
     setters: DialogUiSnapshotSetters,
@@ -48,6 +24,7 @@ export function hydrateDialogUiSnapshotsFromController(
     setters.setDialogVrmUiState(controller.state.getDialogVrmUiState());
 }
 
+/** 有効な制御処理の変更時に、現在の再起動案内を同期する。 */
 export function hydrateStartupSettingsStatusFromController(
     controller: SincroAppController,
     setters: StartupSnapshotSetters,
