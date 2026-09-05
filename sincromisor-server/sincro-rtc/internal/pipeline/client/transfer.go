@@ -8,6 +8,23 @@ import (
 	"github.com/coder/websocket"
 )
 
+// decodeResults はサービス固有の復号と、中断可能な結果配送を受信処理へ接続する。
+// 結果は蓄積せず消費側を待つ。復号失敗と中断はreadLoopへ返し、チャネルは閉じない。
+func decodeResults[T any](results chan<- T, decode func([]byte) (T, error)) func(context.Context, []byte) error {
+	return func(ctx context.Context, payload []byte) error {
+		value, err := decode(payload)
+		if err != nil {
+			return err
+		}
+		select {
+		case results <- value:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
 // send は1 connection内の送信を直列化し、同期writeが失敗原因を確定するまでread側の終了判定を待たせる。
 func (c *baseClient) send(ctx context.Context, payload []byte) error {
 	c.mu.Lock()
@@ -54,6 +71,7 @@ func (c *baseClient) send(ctx context.Context, payload []byte) error {
 	return nil
 }
 
+// finishWrite は送信側の失敗分類が済んだことを受信側へ通知し、原因の二重判定を防ぐ。
 func (c *baseClient) finishWrite(done chan struct{}) {
 	c.mu.Lock()
 	c.writeDone = nil

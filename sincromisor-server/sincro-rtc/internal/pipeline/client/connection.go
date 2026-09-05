@@ -15,6 +15,13 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/discovery"
 )
 
+// Connect は初期化メッセージが不要なサービスの探索と接続を一度だけ行う。
+// 受信処理はctxの中断またはCloseで停止する。再接続はせず、重複呼び出しには
+// ErrAlreadyConnected、終了済みの接続にはErrClosedを返す。
+func (c *baseClient) Connect(ctx context.Context) error {
+	return c.connect(ctx, nil)
+}
+
 // connect は new→connecting→open の一方向遷移と、connection lifetime goroutine を開始する。
 // resolver/dial 中の Close は保存した cancel と connectDone で割り込み、確立済み socket を残さない。
 func (c *baseClient) connect(ctx context.Context, initialize func() ([]byte, error)) error {
@@ -62,6 +69,8 @@ func (c *baseClient) connect(ctx context.Context, initialize func() ([]byte, err
 	return nil
 }
 
+// goWorker は接続に属する処理を開始し、panicを接続失敗として通知する。
+// 受信処理は呼び出し前にwgへ予約し、終了処理は受信処理を待ってdoneを閉じることで完了を知らせる。
 func (c *baseClient) goWorker(stage string, counted bool, run func()) {
 	go func() {
 		if counted {
@@ -168,6 +177,8 @@ func dialWebSocket(ctx context.Context, target string) (*websocket.Conn, net.Con
 	return conn, rawConn, nil
 }
 
+// failConnect は接続失敗を終了済みに確定し、受信処理が始まる前のチャネルを回収する。
+// 戻り値は明示終了が先行したかを示し、呼び出し側がErrClosedへ変換するために使う。
 func (c *baseClient) failConnect(cancel context.CancelFunc) bool {
 	cancel()
 	c.mu.Lock()

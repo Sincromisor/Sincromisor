@@ -17,20 +17,16 @@ const (
 	pcmFrameBytes            = 640
 )
 
-// Extractor は raw 16 kHz mono s16le frame を発話区間へ変換する1 WebSocket 接続を所有する。
-//
-// zero value は無効であり NewExtractor で生成する。結果 channel は unbuffered、event channel は
-// buffer 1で、clientが両方のclose ownerである。再接続と複数serviceのhealth判断は行わない。
+// Extractor は16 kHz・モノラル・s16leのPCMを発話区間へ変換する接続を所有する。
+// NewExtractorで生成し、Connectで開始する。結果は受け手を待って配送し、終了はbaseClientが管理する。
 type Extractor struct {
-	base    *baseClient
+	*baseClient
 	results chan protocol.ExtractorResult
 	now     func() time.Time
 }
 
-// NewExtractor は talk mode、timeout、dependency を検証するが network I/O は開始しない。
-//
-// now は Connect ごとの初期化時刻を1回だけ取得するため必須である。chat は1000ms、sincro は600msの
-// fixed silence queryへ写像され、その他の mode は endpoint を構築する前に拒否される。
+// NewExtractor は会話モード、期限、依存を検証し、通信前の接続を作る。
+// nowは初期化時刻の取得に必須である。無音の区切りはchatで1000 ms、sincroで600 msとし、他のモードを拒否する。
 func NewExtractor(
 	cfg Config,
 	resolver discovery.Resolver,
@@ -45,7 +41,6 @@ func NewExtractor(
 		return nil, err
 	}
 	results := make(chan protocol.ExtractorResult)
-	extractor := &Extractor{results: results, now: now}
 	base, err := newBase(
 		cfg,
 		ServiceExtractor,
@@ -56,34 +51,21 @@ func NewExtractor(
 		url.Values{"max_silence_ms": {strconv.Itoa(maxSilence)}},
 		extractorReadLimit,
 		func() { close(results) },
-		func(ctx context.Context, payload []byte) error {
-			value, err := protocol.DecodeExtractorResult(payload)
-			if err != nil {
-				return err
-			}
-			select {
-			case results <- value:
-				return nil
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		},
+		decodeResults(results, protocol.DecodeExtractorResult),
 	)
 	if err != nil {
 		return nil, err
 	}
-	extractor.base = base
-	return extractor, nil
+	return &Extractor{baseClient: base, results: results, now: now}, nil
 }
 
-// Connect は discovery、dial、初期化binary送信を行い、reader goroutineを開始する。
-//
-// 初期化は最初のapplication messageとして1件だけ送られ、StartAt は encode 直前の now の Unix秒である。
-// new以外は ErrAlreadyConnected、Closeと競合してclosedになった場合は ErrClosedを返す。
+// Connect は探索、接続、初期化メッセージの送信を済ませて受信処理を開始する。
+// 初期化は最初のメッセージとして一度だけ送り、StartAtはnowから取得するUnix秒である。
+// 重複呼び出しはErrAlreadyConnected、Closeとの競合で終了済みの場合はErrClosedを返す。
 func (c *Extractor) Connect(ctx context.Context) error {
-	return c.base.connect(ctx, func() ([]byte, error) {
+	return c.connect(ctx, func() ([]byte, error) {
 		initialize := protocol.ExtractorInitialize{
-			SessionID:         c.base.cfg.SessionID,
+			SessionID:         c.cfg.SessionID,
 			StartAt:           float64(c.now().UnixNano()) / float64(time.Second),
 			VoiceSamplingRate: 16_000,
 			VoiceSampleBytes:  2,
@@ -93,38 +75,23 @@ func (c *Extractor) Connect(ctx context.Context) error {
 	})
 }
 
-// SendPCM は20ms相当の16 kHz mono s16le raw frameを同期binary送信する。
-//
-// frameは呼び出し中だけ参照し、queueやownership transferを行わない。空、奇数長、640 byte以外は
-// connectionへ触れず拒否し、stateに応じて ErrNotConnected / ErrClosed を返す。
+// SendPCM は20 ms相当の640バイトのPCMを同期送信する。
+// 入力は呼び出し中だけ参照する。長さが異なる値は通信前に拒否し、未接続または終了済みなら
+// ErrNotConnectedまたはErrClosedを返す。
 func (c *Extractor) SendPCM(ctx context.Context, frame []byte) error {
-	if len(frame) == 0 || len(frame)%2 != 0 || len(frame) != pcmFrameBytes {
+	if len(frame) != pcmFrameBytes {
 		return errors.New("extractor PCM frame must be exactly 640 even bytes")
 	}
-	return c.base.send(ctx, frame)
+	return c.send(ctx, frame)
 }
 
-// Results は client 所有のunbuffered発話区間streamを返す。
-//
-// consumerが停止してもCloseまたはparent cancellationでreaderは解除され、cleanup時にchannelが閉じる。
+// Results は接続が所有する発話区間のチャネルを返す。
+// 配送は受け手を待ち、Closeまたは親コンテキストの中断で解除される。受信処理の終了後に閉じる。
 func (c *Extractor) Results() <-chan protocol.ExtractorResult {
 	return c.results
 }
 
-// Events は最初の予期しないterminal failureを保持するbuffer 1 channelを返す。
-//
-// 明示Closeとparent cancellationはeventを送らず、cleanup完了後にchannelだけを閉じる。
-func (c *Extractor) Events() <-chan Event {
-	return c.base.events
-}
-
-// Close は connectionを再利用不能なclosedへ遷移し、handshake、cancel、goroutine join、channel closeへ収束する。
-//
-// Close-before-Connectを含めidempotentであり、retryや新しいgenerationは開始しない。
-func (c *Extractor) Close() error {
-	return c.base.close()
-}
-
+// maxSilenceMilliseconds は会話モードを発話区間の無音期限へ変換し、未対応のモードを拒否する。
 func maxSilenceMilliseconds(talkMode string) (int, error) {
 	switch talkMode {
 	case "chat":

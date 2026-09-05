@@ -26,10 +26,10 @@ func (c *baseClient) terminal(kind EventKind, err error) {
 	cancel()
 }
 
-// close は明示 shutdown を terminal event なしで実行する。
-// close handshakeが設定時間を越えた場合はcaptured transport socketを直接中断し、
-// library Close helperの終了を待ってからreader、result/event channelの順でjoinする。
-func (c *baseClient) close() error {
+// Close は接続を再利用不能にし、明示終了のイベントを送らずに全処理の終了を待つ。
+// 接続前や重複した呼び出しでも使用できる。接続確立中は探索と接続を中断する。
+// 終了応答が設定時間を超えた場合はソケットを直接閉じ、受信処理、結果、イベントの順で回収する。
+func (c *baseClient) Close() error {
 	c.mu.Lock()
 	switch c.state {
 	case stateClosed:
@@ -103,6 +103,8 @@ func closeHandshake(conn *websocket.Conn, rawConn net.Conn, timeout time.Duratio
 	}
 }
 
+// finalizeWhenCanceled は親の中断または接続失敗を受けてソケットを閉じ、受信処理の終了を待つ。
+// その後のfinalizeがdoneを閉じるまで、Closeは終了完了を返さない。
 func (c *baseClient) finalizeWhenCanceled() {
 	<-c.lifetimeCtx.Done()
 	c.mu.Lock()
