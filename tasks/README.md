@@ -6,7 +6,7 @@
 
 - この仕組みは作業を前へ進めるために使う。趣味の個人開発として、通常変更は最小の実装、対象を絞った確認、1コミットで完了させる。
 - タスクは 1 タスク = 1 ディレクトリで管理する。
-- 作業状態は物理ディレクトリではなく `meta.yaml` の `status` を正本にする。
+- 作業状態は物理ディレクトリではなく `meta.yaml` の `status` で管理する。
 - 設計の現在仕様は `documents/design/` に置き、作業ログを設計本文へ溜め込まない。
 - 実装、設定、Docker Compose、設計文書は必要に応じて同じタスク内で同期する。
 - 実行した確認、実行できなかった確認、残リスクはコミットと最終報告に記録する。独立評価や非自明な判断がある場合だけ `impl.md` または `eval.md` を使う。
@@ -288,7 +288,7 @@ sincromisor-frontend/src` で取得した変更済み TS/TSX ファイルだけ�
 専用ワークツリーを使う場合は、独立評価も同じワークツリーのコミット済み差分を使い、評価専用ワークツリーは作らない。
 
 - レビュー担当は実装を変更しないため、専用ブランチや物理作業ツリーを作らない。
-- 必要な場合だけ実装担当用ワークツリーを `npm run eval:worktree -- add <base-sha> --branch codex/<task-id>` で作る。`codex/` 接頭辞は `package.json` の `taskBranchPrefix` を正本にする。
+- 必要な場合だけ実装担当用ワークツリーを `npm run eval:worktree -- add <base-sha> --branch codex/<task-id>` で作る。`codex/` 接頭辞は `package.json` の `taskBranchPrefix` を用いる。
 - 実装担当は渡されたワークツリーの絶対パスを作業ディレクトリとし、実装差分、テスト、実装コミットを `codex/<task-id>` ブランチへ載せる。`impl.md` はメインチェックアウト側のタスクディレクトリに追記する。
 - `npm run gate` は `.gate-cache/` をワークツリー間で共有し、同一内容・コミットの PASS をキャッシュする。
 - 評価担当は実装ワークツリーのコミット済み差分を変更せずに検証し、`eval.md` はメインチェックアウト側へ書く。
@@ -298,7 +298,7 @@ sincromisor-frontend/src` で取得した変更済み TS/TSX ファイルだけ�
 
 ## エージェント作業手順
 
-エージェント作業手順の正本は `.claude/` である。Codex 用の `.agents/skills/` と `.codex/agents/` は
+エージェント作業手順の原本は `.claude/` である。Codex 用の `.agents/skills/` と `.codex/agents/` は
 `npm run gen:codex` で生成し、直接編集しない。生成物のずれは `npm run gen:codex:check` で検出する。
 
 主な入口:

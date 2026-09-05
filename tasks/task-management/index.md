@@ -2,7 +2,7 @@
 
 Codex での作業効率化、タスク管理刷新、サブエージェントを使う作業パイプライン整備に関するタスクを管理します。
 
-現在のタスクは `tasks/<category>/task-<id>-<slug>/` で管理し、状態は各 `meta.yaml` の `status` を正本にします。新規タスクの作成、状態更新、索引再生成の詳細は `../README.md` を参照してください。
+現在のタスクは `tasks/<category>/task-<id>-<slug>/` で管理し、状態は各 `meta.yaml` の `status` で管理します。新規タスクの作成、状態更新、索引再生成の詳細は `../README.md` を参照してください。
 
 > 移行元: `documents/tasks/task_management/README.md`
 > この分類の移行済みタスク: 7件
