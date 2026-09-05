@@ -10,11 +10,9 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
 )
 
-// startOutbound はtransport connectedで予約済みのclockと3つのpipeline consumerを開始する。
-//
-// GenerationChangesはgenerationLoopだけが受信する。text/synth envelopeも同じapplyGenerationを通り、
-// より新しいgenerationを最初に観測したgoroutineがaudio/text/telopを一括purgeする。これにより
-// channel間のselect順序や複数receiverへの誤ったbroadcast期待へ正しさを依存させない。
+// startOutbound は通信接続後に予約した送信時計と、世代・文字・合成音声の受信処理を開始する。
+// 世代通知はgenerationLoopだけが受信し、文字と音声も同じapplyGenerationで世代を検査する。
+// 各処理はセッションの中断で停止し、終了処理が完了を待つ。
 func (s *Session) startOutbound() {
 	s.goReserved("outbound_clock", func(context.Context) { s.outputLoop() })
 	s.goReserved("pipeline_generation", func(context.Context) { s.generationLoop() })
@@ -22,6 +20,7 @@ func (s *Session) startOutbound() {
 	s.goReserved("pipeline_synth", func(context.Context) { s.synthOutputLoop() })
 }
 
+// outputLoop は音声の送信時計を動かし、送信失敗をセッションの終了へ集約する。
 func (s *Session) outputLoop() {
 	err := s.output.Run(s.ctx)
 	if err == nil || errors.Is(err, context.Canceled) {
@@ -31,6 +30,7 @@ func (s *Session) outputLoop() {
 	_ = s.Close("outbound_error")
 }
 
+// generationLoop は後続の出力がなくても世代更新を適用し、古い出力を破棄する。
 func (s *Session) generationLoop() {
 	for {
 		select {
@@ -43,11 +43,13 @@ func (s *Session) generationLoop() {
 				}
 				return
 			}
-			s.applyGeneration(generation, nil)
+			// 通知だけの適用はエラーを返さず、古い通知は無視する。
+			_, _ = s.applyGeneration(generation, nil)
 		}
 	}
 }
 
+// textOutputLoop は現世代の文字だけを配送し、配送待ちの上限超過ではセッションを終了する。
 func (s *Session) textOutputLoop() {
 	for {
 		select {
@@ -60,7 +62,7 @@ func (s *Session) textOutputLoop() {
 				}
 				return
 			}
-			_, err := s.applyGenerationError(output.Generation, func() error {
+			_, err := s.applyGeneration(output.Generation, func() error {
 				return s.dispatcher.EnqueueText(output.Value)
 			})
 			if err != nil {
@@ -72,6 +74,7 @@ func (s *Session) textOutputLoop() {
 	}
 }
 
+// synthOutputLoop は合成結果を発話順に復号・追加し、追加失敗ではセッションを終了する。
 func (s *Session) synthOutputLoop() {
 	for {
 		select {
@@ -94,12 +97,11 @@ func (s *Session) synthOutputLoop() {
 	}
 }
 
-// handleSynthOutput はenvelope generationをdecode前後で確認し、current resultだけをspeech queueへ渡す。
-//
-// Closeまたはresetがdecode中に勝った場合、closed-aware Enqueueまたはgeneration再検査が結果を拒否し、
-// consumer終了後に未所有queueを復活させない。
+// handleSynthOutput は復号前後の世代を検査し、現世代の結果だけを発話キューへ追加する。
+// 復号中に終了または再初期化した場合は、Enqueueの終了判定または世代の再検査で結果を拒否する。
 func (s *Session) handleSynthOutput(output pipeline.Output[protocol.SynthesizerResult]) error {
-	if !s.applyGeneration(output.Generation, nil) {
+	accepted, _ := s.applyGeneration(output.Generation, nil)
+	if !accepted {
 		return nil
 	}
 	decoded, err := s.synthDecoder.Decode(s.ctx, output.Value)
@@ -112,7 +114,7 @@ func (s *Session) handleSynthOutput(output pipeline.Output[protocol.SynthesizerR
 		}
 		return nil
 	}
-	_, err = s.applyGenerationError(output.Generation, func() error {
+	_, err = s.applyGeneration(output.Generation, func() error {
 		return s.output.Enqueue(output.Value.Message, decoded)
 	})
 	if errors.Is(err, outputmedia.ErrOutputClosed) {
@@ -139,18 +141,17 @@ func codecErrorDetails(err error) (string, string) {
 	}
 }
 
-// applyGeneration はgeneration通知とtext/synth envelopeの単調増加する単一適用点である。
-//
-// newerを観測したcritical section内でaudio、text、telopをpurgeしてからincoming actionを実行する。
-// older envelope/通知はfalseで破棄されるため、purge後のqueueへ旧generationが再混入しない。
-func (s *Session) applyGeneration(generation uint64, action func() error) bool {
+// applyGeneration は世代通知と文字・合成音声の出力を一つのロックで適用する。
+// 新しい世代では音声・文字・テロップを破棄してからactionを実行する。nilは通知のみを表す。
+// ゼロまたは古い世代はfalseで拒否する。trueは世代を受理したことを表し、actionの失敗はerrorで返す。
+func (s *Session) applyGeneration(generation uint64, action func() error) (bool, error) {
 	if generation == 0 {
-		return false
+		return false, nil
 	}
 	s.outboundMu.Lock()
 	defer s.outboundMu.Unlock()
 	if generation < s.outboundGeneration {
-		return false
+		return false, nil
 	}
 	if generation > s.outboundGeneration {
 		s.output.Purge()
@@ -158,31 +159,12 @@ func (s *Session) applyGeneration(generation uint64, action func() error) bool {
 		s.outboundGeneration = generation
 	}
 	if action != nil {
-		if err := action(); err != nil {
-			return false
-		}
+		return true, action()
 	}
-	return true
+	return true, nil
 }
 
-// applyGenerationError はapplyGenerationと同じbarrierでaction errorをcallerへ返す。
-func (s *Session) applyGenerationError(generation uint64, action func() error) (bool, error) {
-	if generation == 0 {
-		return false, nil
-	}
-	s.outboundMu.Lock()
-	defer s.outboundMu.Unlock()
-	if generation < s.outboundGeneration {
-		return false, nil
-	}
-	if generation > s.outboundGeneration {
-		s.output.Purge()
-		s.dispatcher.Purge()
-		s.outboundGeneration = generation
-	}
-	return true, action()
-}
-
+// isCurrentGeneration は復号中の世代変更を確認し、古い合成結果の失敗で現世代を終了させない。
 func (s *Session) isCurrentGeneration(generation uint64) bool {
 	s.outboundMu.Lock()
 	defer s.outboundMu.Unlock()
