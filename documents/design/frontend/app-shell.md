@@ -91,6 +91,7 @@
 - 内部イベント:
     - React UI はアプリ制御のスナップショット / 購読 API を使う。
     - 管理処理単一インスタンスへの直接依存は段階的に縮退させる。
+    - ダイアログ設定は `DialogStateStore` に保持する。`DialogManager.getSetting` / `getSettings` で読み取り、`updateSettings` で部分更新する。アプリの設定適用処理は数値を正規化し、会話モードをキャラクター動作へ反映する。
 
 ## 設定・配備
 

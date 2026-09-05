@@ -1,6 +1,6 @@
+import type { DialogBackedSincroAppSettings } from "../../../app/settings/sincroAppSettingsDefaults";
 import { HeaderTitleDomAdapter } from "../../../app/shell/headerTitleDomAdapter";
 import { frontendLogger } from "../../../shared/logging/appLogger";
-import { mapBooleanDialogSettingId } from "./dialogBooleanSettings";
 import { DialogEventHub } from "./dialogEventHub";
 import { DialogMediaDeviceUiController } from "./dialogMediaDeviceUiController";
 import { DialogSettingsChangeBatcher } from "./dialogSettingsChangeBatcher";
@@ -10,6 +10,7 @@ import {
     type DialogSettingsUiState,
 } from "./dialogSettingsPolicy";
 import {
+    type DialogSettingKey,
     DialogStateStore,
     type DialogUiStateValue,
     type DialogVrmUiStateValue,
@@ -21,9 +22,7 @@ export type { DialogSettingsUiHints, DialogSettingsUiState } from "./dialogSetti
 export type DialogVrmUiState = DialogVrmUiStateValue;
 export type DialogUiState = DialogUiStateValue;
 
-// 起動前設定 dialog の中心オーケストレータ。
-// 状態の正本は DialogStateStore、保存/復元/通知は各 Service に分離している。
-// dialog 本体の native API 呼び出しは React 側 platform adapter が担当する。
+/** 設定の正本と表示更新・通知を仲介する。ダイアログ本体のブラウザー操作はReactが担う。 */
 export class DialogManager {
     private static instance: DialogManager;
     private readonly stateStore = new DialogStateStore();
@@ -54,6 +53,7 @@ export class DialogManager {
         this.eventHub,
     );
 
+    /** ページ内で共有する設定管理を初回に生成する。 */
     static getManager(): DialogManager {
         if (!DialogManager.instance) {
             DialogManager.instance = new DialogManager();
@@ -100,112 +100,43 @@ export class DialogManager {
         return this.stateStore.getSelectedVrmUrl();
     }
 
-    // 以下の getter/setter は React UI / AppController から参照される dialog 設定の public API。
-    // bridge DOM を直接読むのではなく stateStore を正本にしている。
-    talkMode(): string {
-        return this.stateStore.get("talkMode");
+    /** 設定の正本をキーに対応する型で読み取る。 */
+    getSetting<K extends DialogSettingKey>(key: K): DialogBackedSincroAppSettings[K] {
+        return this.stateStore.get(key);
     }
 
-    titleText(): string {
-        const titleText = this.stateStore.get("titleText");
-        return titleText === "" ? "Sincromisor" : titleText;
+    /** 起動前ダイアログと開始後設定パネルへ同じ設定のコピーを返す。 */
+    getSettings(): DialogBackedSincroAppSettings {
+        return this.stateStore.getSettings();
     }
 
-    audioInputDeviceId(): string | undefined {
-        return this.stateStore.get("audioInputDeviceId");
-    }
-
-    videoInputDeviceId(): string | undefined {
-        return this.stateStore.get("videoInputDeviceId");
-    }
-
-    setTalkMode(value: string): void {
-        this.stateStore.set("talkMode", value);
+    /**
+     * 操作可能な設定をまとめて反映する。題名と機器選択の表示を更新してから一度通知する。
+     * 数値入力の正規化と会話モードの動作反映はアプリの設定適用処理が担う。
+     */
+    updateSettings(partial: Partial<DialogBackedSincroAppSettings>): void {
+        const applied = this.stateStore.updateSettings(partial);
+        if (Object.keys(applied).length === 0) {
+            return;
+        }
+        if (applied.titleText !== undefined) {
+            this.stateStore.set(
+                "titleText",
+                applied.titleText === "" ? "Sincromisor" : applied.titleText,
+            );
+            this.updateTitleText();
+        }
+        if (
+            "audioInputDeviceId" in applied ||
+            "videoInputDeviceId" in applied ||
+            applied.enableCharacterGaze !== undefined
+        ) {
+            this.mediaDeviceUiController.refreshDerivedUiState();
+        }
         this.settingsChangeBatcher.emit();
     }
 
-    setTitleText(value: string): void {
-        this.stateStore.set("titleText", value === "" ? "Sincromisor" : value);
-        this.updateTitleText();
-        this.settingsChangeBatcher.emit();
-    }
-
-    setAudioInputDeviceId(deviceId: string | undefined): void {
-        this.stateStore.set("audioInputDeviceId", deviceId);
-        this.mediaDeviceUiController.refreshDerivedUiState();
-        this.settingsChangeBatcher.emit();
-    }
-
-    setVideoInputDeviceId(deviceId: string | undefined): void {
-        this.stateStore.set("videoInputDeviceId", deviceId);
-        this.mediaDeviceUiController.refreshDerivedUiState();
-        this.settingsChangeBatcher.emit();
-    }
-
-    setEnableAutoGainControl(enabled: boolean): void {
-        this.setCheckboxValue("enableAutoGainControl", enabled);
-    }
-
-    setEnableNoiseSuppression(enabled: boolean): void {
-        this.setCheckboxValue("enableNoiseSuppression", enabled);
-    }
-
-    setEnableEchoCancellation(enabled: boolean): void {
-        this.setCheckboxValue("enableEchoCancellation", enabled);
-    }
-
-    setEnableVadGate(enabled: boolean): void {
-        this.setCheckboxValue("enableVadGate", enabled);
-    }
-
-    setEnableVenueNoiseMode(enabled: boolean): void {
-        this.setCheckboxValue("enableVenueNoiseMode", enabled);
-    }
-
-    setEnableCharacter(enabled: boolean): void {
-        this.setCheckboxValue("enableCharacter", enabled);
-    }
-
-    setEnableCharacterGaze(enabled: boolean): void {
-        this.setCheckboxValue("enableCharacterGaze", enabled);
-    }
-
-    setEnableSincroPoseTracking(enabled: boolean): void {
-        this.setCheckboxValue("enableSincroPoseTracking", enabled);
-    }
-
-    setForceSincroPoseTracking(enabled: boolean): void {
-        this.setCheckboxValue("forceSincroPoseTracking", enabled);
-    }
-
-    setEnableAutoMute(enabled: boolean): void {
-        this.setCheckboxValue("enableAutoMute", enabled);
-    }
-
-    setEnableTalk(enabled: boolean): void {
-        this.setCheckboxValue("enableTalk", enabled);
-    }
-
-    setEnableInspector(enabled: boolean): void {
-        this.setCheckboxValue("enableInspector", enabled);
-    }
-
-    setEnableVR(enabled: boolean): void {
-        this.setCheckboxValue("enableVR", enabled);
-    }
-
-    setCharacterMotionScale(value: number): void {
-        this.setNumericValue("characterMotionScale", value);
-    }
-
-    setSincroPoseRetargetScale(value: number): void {
-        this.setNumericValue("sincroPoseRetargetScale", value);
-    }
-
-    setCharacterEyeTrackingScale(value: number): void {
-        this.setNumericValue("characterEyeTrackingScale", value);
-    }
-
+    /** 設定反映後に通知する。返された関数で購読を解除する。 */
     subscribeSettingsChange(listener: () => void): () => void {
         return this.eventHub.subscribeSettingsChange(listener);
     }
@@ -237,97 +168,9 @@ export class DialogManager {
         );
     }
 
-    enableCharacter(): boolean {
-        return this.stateStore.get("enableCharacter");
-    }
-
-    enableTalk(): boolean {
-        return this.stateStore.get("enableTalk");
-    }
-
-    enableCharacterGaze(): boolean {
-        return this.stateStore.get("enableCharacterGaze");
-    }
-
-    enableSincroPoseTracking(): boolean {
-        return this.stateStore.get("enableSincroPoseTracking");
-    }
-
-    forceSincroPoseTracking(): boolean {
-        return this.stateStore.get("forceSincroPoseTracking");
-    }
-
-    enableAutoMute(): boolean {
-        return this.stateStore.get("enableAutoMute");
-    }
-
-    enableAutoGainControl(): boolean {
-        // 騒音環境での過増幅回避のため、初期値はOFFだがユーザー選択を優先する。
-        return this.stateStore.get("enableAutoGainControl");
-    }
-
-    enableNoiseSuppression(): boolean {
-        return this.stateStore.get("enableNoiseSuppression");
-    }
-
-    enableEchoCancellation(): boolean {
-        return this.stateStore.get("enableEchoCancellation");
-    }
-
-    enableVadGate(): boolean {
-        return this.stateStore.get("enableVadGate");
-    }
-
-    enableVenueNoiseMode(): boolean {
-        return this.stateStore.get("enableVenueNoiseMode");
-    }
-
-    enableInspector(): boolean {
-        return this.stateStore.get("enableInspector");
-    }
-
-    enableVR(): boolean {
-        return this.stateStore.get("enableVR");
-    }
-
-    characterMotionScale(): number {
-        return this.stateStore.get("characterMotionScale");
-    }
-
-    sincroPoseRetargetScale(): number {
-        return this.stateStore.get("sincroPoseRetargetScale");
-    }
-
-    characterEyeTrackingScale(): number {
-        return this.stateStore.get("characterEyeTrackingScale");
-    }
-
-    private setCheckboxValue(id: string, enabled: boolean): void {
-        const key = mapBooleanDialogSettingId(id);
-        if (!key) {
-            return;
-        }
-        // disabled 状態の設定は UIから操作できても state を変えない。
-        if (this.stateStore.isDisabled(key)) {
-            return;
-        }
-        this.stateStore.set(key, !!enabled);
-        if (key === "enableCharacterGaze") {
-            this.mediaDeviceUiController.refreshDerivedUiState();
-        }
-        this.settingsChangeBatcher.emit();
-    }
-
-    private setNumericValue(
-        key: "characterMotionScale" | "sincroPoseRetargetScale" | "characterEyeTrackingScale",
-        value: number,
-    ): void {
-        this.stateStore.set(key, value);
-        this.settingsChangeBatcher.emit();
-    }
-
+    /** 現在の題名をダイアログ外のヘッダーへ同期する。 */
     updateTitleText(): void {
-        this.headerDom.setHeaderTitle(this.titleText());
+        this.headerDom.setHeaderTitle(this.getSetting("titleText"));
     }
 
     updateCharacterStatus(available: boolean): void {

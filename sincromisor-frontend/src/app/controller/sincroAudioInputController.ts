@@ -11,6 +11,7 @@ import {
     UserMediaManager,
     type VadStateReport,
 } from "../../features/media/userMedia/userMediaManager";
+import type { DialogBackedSincroAppSettings } from "../settings/sincroAppSettingsDefaults";
 
 // getUserMedia と VAD/音声フィルタ設定の結線をまとめる controller。
 // DialogManager(設定入力) / UserMediaManager(実処理) / DebugConsoleManager(診断UI) の橋渡し役。
@@ -265,33 +266,30 @@ export class SincroAudioInputController {
         );
     }
 
+    /** 診断画面の個別調整時は騒音プリセット表示だけ解除し、通知による音声設定の再適用を一度抑止する。 */
     private clearVenuePresetIfEnabledWithoutResync(): void {
-        if (!this.dialogManager.enableVenueNoiseMode()) {
+        if (!this.dialogManager.getSetting("enableVenueNoiseMode")) {
             return;
         }
         // dialog state だけ更新し、settingsChange 経由の「デフォルトプロファイル再適用」を抑止する。
         this.suppressNextDialogMicSettingsSync = true;
-        this.dialogManager.setEnableVenueNoiseMode(false);
+        this.dialogManager.updateSettings({ enableVenueNoiseMode: false });
         this.dialogMicSettingsSnapshot = this.readDialogMicSettingsSnapshot();
     }
 
+    /** 設定変更通知の差分判定に使う、現在の音声設定を取得する。 */
     private readDialogMicSettingsSnapshot(): DialogMicSettingsSnapshot {
-        return {
-            enableNoiseSuppression: this.dialogManager.enableNoiseSuppression(),
-            enableEchoCancellation: this.dialogManager.enableEchoCancellation(),
-            enableAutoGainControl: this.dialogManager.enableAutoGainControl(),
-            enableVadGate: this.dialogManager.enableVadGate(),
-            enableVenueNoiseMode: this.dialogManager.enableVenueNoiseMode(),
-            audioInputDeviceId: this.dialogManager.audioInputDeviceId(),
-        };
+        return this.dialogManager.getSettings();
     }
 }
 
-type DialogMicSettingsSnapshot = {
-    enableNoiseSuppression: boolean;
-    enableEchoCancellation: boolean;
-    enableAutoGainControl: boolean;
-    enableVadGate: boolean;
-    enableVenueNoiseMode: boolean;
-    audioInputDeviceId: string | undefined;
-};
+/** 音声処理の差分判定で使う項目。値の型はダイアログ設定から取得する。 */
+type DialogMicSettingsSnapshot = Pick<
+    DialogBackedSincroAppSettings,
+    | "enableNoiseSuppression"
+    | "enableEchoCancellation"
+    | "enableAutoGainControl"
+    | "enableVadGate"
+    | "enableVenueNoiseMode"
+    | "audioInputDeviceId"
+>;

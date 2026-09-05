@@ -1,12 +1,15 @@
 import type { DialogManager } from "../../features/dialog/model/dialogManager";
+import type { DialogBackedSincroAppSettings } from "../settings/sincroAppSettingsDefaults";
 
-export type DialogGazeSettingsSnapshot = {
-    enableCharacterGaze: boolean;
-    enableSincroPoseTracking: boolean;
-    forceSincroPoseTracking: boolean;
-    videoInputDeviceId: string | undefined;
-    talkMode: string;
-};
+/** 視線設定の差分判定で使用する項目。値の型はダイアログ設定と共有する。 */
+export type DialogGazeSettingsSnapshot = Pick<
+    DialogBackedSincroAppSettings,
+    | "enableCharacterGaze"
+    | "enableSincroPoseTracking"
+    | "forceSincroPoseTracking"
+    | "videoInputDeviceId"
+    | "talkMode"
+>;
 
 export type DialogGazeSettingsChanges = {
     videoDeviceChanged: boolean;
@@ -16,16 +19,11 @@ export type DialogGazeSettingsChanges = {
     forcePoseTrackingChanged: boolean;
 };
 
+/** 通知時点の設定を複製し、追跡処理へ渡す前の差分判定に使う。 */
 export function readDialogGazeSettingsSnapshot(
     dialogManager: DialogManager,
 ): DialogGazeSettingsSnapshot {
-    return {
-        enableCharacterGaze: dialogManager.enableCharacterGaze(),
-        enableSincroPoseTracking: dialogManager.enableSincroPoseTracking(),
-        forceSincroPoseTracking: dialogManager.forceSincroPoseTracking(),
-        videoInputDeviceId: dialogManager.videoInputDeviceId(),
-        talkMode: dialogManager.talkMode(),
-    };
+    return dialogManager.getSettings();
 }
 
 export function compareDialogGazeSettings(

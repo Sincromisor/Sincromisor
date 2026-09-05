@@ -32,11 +32,5 @@ export class SincroVRM360Initializer extends SincroVRMInitializer {
         this.activeScene = vrmScene;
         this.syncSceneRuntimeSettings(this.appController.state.getSettingsSnapshot());
         return vrmScene;
-        /*
-            this.charCanvas, this.talkManager,
-            this.dialogManager.enableVR(),
-            this.dialogManager.enableCharacter(),
-            this.dialogManager.enableInspector()
-        */
     }
 }

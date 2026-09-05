@@ -7,6 +7,7 @@ export class DialogEventHub {
     private readonly vrmUiStateListeners = new Set<(state: DialogVrmUiStateValue) => void>();
     private readonly dialogUiStateListeners = new Set<(state: DialogUiStateValue) => void>();
 
+    /** 設定の反映完了を購読する。返された関数で購読を解除する。 */
     subscribeSettingsChange(listener: () => void): () => void {
         this.settingsChangeListeners.add(listener);
         return () => {
@@ -37,6 +38,7 @@ export class DialogEventHub {
         };
     }
 
+    /** 管理処理が状態と派生表示を更新した後で購読者へ同期通知する。 */
     emitSettingsChanged(): void {
         for (const listener of this.settingsChangeListeners) {
             listener();

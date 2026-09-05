@@ -66,9 +66,9 @@ export class SincroController {
         );
     }
 
-    // WebRTC接続を開始する。生成済みローカル音声トラックをRTCPeerConnectionへ渡す。
+    /** 生成済み音声トラックと接続開始時点の会話モードでWebRTC接続を開始する。 */
     startRTC(audioTrack: MediaStreamTrack): void {
-        this.rtcSessionController.start(audioTrack, this.dialogManager.talkMode());
+        this.rtcSessionController.start(audioTrack, this.dialogManager.getSetting("talkMode"));
     }
 
     // WebRTC接続を停止する。

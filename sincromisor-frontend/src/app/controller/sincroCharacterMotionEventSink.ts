@@ -173,9 +173,11 @@ export class SincroCharacterMotionEventSink {
         );
     }
 
+    /** 遅れて届いた追跡結果を、視線停止後や会話モード変更後に反映しないための判定。 */
     private isSincroTrackingEnabled(): boolean {
         return (
-            this.dialogManager.enableCharacterGaze() && this.dialogManager.talkMode() === "sincro"
+            this.dialogManager.getSetting("enableCharacterGaze") &&
+            this.dialogManager.getSetting("talkMode") === "sincro"
         );
     }
 
