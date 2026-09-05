@@ -8,15 +8,13 @@ import { TalkTelopSegmentBuffer } from "./talkTelopSegmentBuffer";
 
 export type { CurrentMora, TalkManagerEvent, TelopTextSegment } from "./talkManagerTypes";
 
-// text_ch / telop_ch の受信結果を、既存DOM描画と React購読の両方へ橋渡しする管理クラス。
-// ChatMessageService と同様、移行期間中は DOM とイベントの二重経路を持つ。
+/** text_ch / telop_ch の受信結果を既存DOM描画とReact購読へ橋渡しする。 */
 export class TalkManager {
     private static instance: TalkManager;
     private readonly chatMessageService: ChatMessageService;
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly telopSegmentBuffer = new TalkTelopSegmentBuffer();
     private readonly legacyTelopRenderer = new TalkLegacyTelopRenderer();
-    private telopChannelMessage: Array<TelopChannelMessage> = [];
     private currentTelopChannelMessage: CurrentMora | undefined;
     private moraID: number = 0;
     private readonly listeners = new Set<(event: TalkManagerEvent) => void>();
@@ -78,9 +76,8 @@ export class TalkManager {
         this.emitEvent({ type: "text_channel_message", message: msg });
     }
 
-    // telop_ch の 1 mora 分を内部状態へ反映し、必要に応じて DOM/React 両方へ通知する。
+    /** telop_chの受信から口形同期と件数制限付き文字列を更新し、全文保持せず購読者へ通知する。 */
     addTelopChannelMessage(msg: TelopChannelMessage): void {
-        this.telopChannelMessage.push(msg);
         if (msg.new_text) {
             frontendLogger.debug("Telop channel segment received.", {
                 speechId: msg.speech_id,
@@ -99,6 +96,7 @@ export class TalkManager {
         this.emitEvent({ type: "telop_channel_message", message: msg });
     }
 
+    /** 再生期限内の口形情報を返す。期限はperformance.now()と同じミリ秒基準で判定する。 */
     currentMora(): CurrentMora | undefined {
         if (!this.currentTelopChannelMessage) {
             return undefined;
