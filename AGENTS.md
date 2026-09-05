@@ -1,11 +1,12 @@
 # AGENTS.md
 
 このファイルは、LLM エージェントが **Sincromisor** を短時間で理解し、安全に変更するための初動ガイドである。
-詳細なルールや設計情報は各正本文書を参照する。
+詳細なルールや設計情報は各文書を参照する。
 
 ## プロジェクト概要
 
-Sincromisor は、ブラウザ上で 3D キャラクターと音声対話するためのサービス基盤である。
+Sincromisor は、Webブラウザ上で「好きなキャラクターと自然に話せる」「手軽にそのキャラクターになれる」を実現するためのサービス基盤である。
+ローカル/オンプレミスに閉じた環境でもサービスを提供できることを、既存サービスやプロダクトとの差異としている。
 
 ローカル／オンプレミス提供を前提とし、外部サービスのAPIを採用前提にしない。Difyと接続先LLMも管理下の環境へ配置する。
 
@@ -20,7 +21,8 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
     - 運用ガイド: `documents/design/documentation-guide.md`
 - 使用言語
     - 説明文、見出し、表の列名、ソースコード内のコメントは、一般的な日本語で書く。
-    - 英語は識別子、設定キー、原文引用、公式の固有名詞など正確な原表記が必要な箇所に限る。一般的な日本語がある語を、技術用語や検索性を理由に英語へ置き換えない。Markdownの詳細は `documents/rules/coding-md.md` を正本とする。
+    - 英語は識別子、設定キー、原文引用、公式の固有名詞など正確な原表記が必要な箇所に限る。
+    - 一般的な日本語がある語を、技術用語や検索性を理由に英語へ置き換えない。Markdownの詳細は `documents/rules/coding-md.md` を参照する。
 
 ## 最初に読む
 
@@ -33,7 +35,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 5. `documents/design/architecture/overview.md`
 6. `tasks/README.md`
 
-対象別の正本は次を優先する。
+対象別のマニュアルは次を参照する。
 
 - WebRTC 契約: `documents/design/contracts/frontend-rtc.md`
 - フロント UI / アプリの共通枠組み: `documents/design/frontend/app-shell.md`
@@ -141,29 +143,29 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 - WebRTC 接続仕様を変える場合
     - サーバー: `sincromisor-server/sincro-rtc/internal/signaling/`、`sincromisor-server/sincro-rtc/internal/rtc/`
     - フロント: `sincromisor-frontend/src/features/rtc/rtcTalkClient.ts`
-    - 契約正本: `documents/design/contracts/frontend-rtc.md`
+    - 契約資料: `documents/design/contracts/frontend-rtc.md`
 - UI / 3D 表示を変える場合
     - `sincromisor-frontend/src/pages/**`
     - `sincromisor-frontend/src/app/**`
     - `sincromisor-frontend/src/features/**`
     - `sincromisor-frontend/src/character/**`
-    - 設計正本: `documents/design/frontend/`
+    - 設計資料: `documents/design/frontend/`
 - 設定を追加する場合
     - `.env` サンプル: `examples/compose.env`
     - Docker Composeの環境変数設定: `compose/` と `compose.yml`
     - Python 側の引数・設定クラス: `sincro-config` など
-    - インフラ正本: `documents/design/infrastructure/compose.md`
+    - インフラ資料: `documents/design/infrastructure/compose.md`
 
 ## タスクとコミット
 
 - タスクは `tasks/<category>/task-<id>-<slug>/` に作る。
-- 状態は物理ディレクトリではなく `meta.yaml` の `status` を正本にする。
+- 状態は物理ディレクトリではなく `meta.yaml` の `status` で管理する。
 - `review.md` と `eval.md` は独立レビュー・評価を実行した場合だけ記録する。`impl.md` は設計判断、逸脱、未実行確認、残リスクがある場合だけ簡潔に使う。
 - 標準入口は `.claude/commands/` の `new-task`, `run-task` とする。次タスクの抽出は `npm run tasks:next` を直接使う。Codex 用の `.agents/skills/` と `.codex/agents/` は `npm run gen:codex` で生成する。
 - `/run-task` は変更リスクに応じて通常・統合・高リスクの経路を選ぶ。通常変更は現在のワークツリーで親Codexが直接実装し、対象確認とタスク状態・索引を同じコミットに含める。専用ワークツリー、実装担当、独立レビュー・評価、`tasks:close` は統合変更で必要な場合または高リスク変更だけに使う。
 - 上流ワークフローとの差分は `.agents/CUSTOMIZATIONS.md` に記録する。
-- 最低限、タスク単位でコミットする。コミットメッセージは `Conventional Commits` ベースとし、件名と本文を日本語で書く。本文は変更理由、主な変更、確認結果、残リスクを項目ラベルや不要な改行なしの一段落にまとめ、フッターには関連タスクIDの `Refs:` を含める。過去のコミットは形式の前例にしない。初回は `npm run git:hooks:install` で検査用フックを有効にする。
-- 詳細は `tasks/README.md` を正本とする。
+- 最低限、タスク単位でコミットする。コミットメッセージは [`Conventional Commits`](https://www.conventionalcommits.org/ja/v1.0.0/) ベースとし、件名と本文を日本語で書く。本文は変更理由、主な変更、確認結果、残リスクを項目ラベルや不要な改行なしの一段落にまとめ、フッターには関連タスクIDの `Refs:` を含める。過去のコミットは形式の前例にしない。初回は `npm run git:hooks:install` で検査用フックを有効にする。
+- 詳細は `tasks/README.md` を参照する。
 
 ## 通信フロー概要
 
@@ -173,11 +175,11 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 4. サーバーが Answer を返し、PeerConnection を確立する。
 5. DataChannel の `text_ch` と `telop_ch` でチャット、テロップ、口形同期情報を受ける。
 
-詳細は `documents/design/contracts/frontend-rtc.md` を正本とする。
+詳細は `documents/design/contracts/frontend-rtc.md` を参照。
 
 ## ローカル確認
 
-変更内容に応じてフロント、Python、Go、Compose、Markdown、タスク管理ツールの確認範囲を選ぶ。具体的なコマンドとタスクのクローズ前の必須確認は `tasks/README.md` を正本とする。実行できなかった確認は、理由をタスク文書と最終報告に残す。
+変更内容に応じてフロント、Python、Go、Compose、Markdown、タスク管理ツールの確認範囲を選ぶ。具体的なコマンドとタスクのクローズ前の必須確認は `tasks/README.md` を参照する。実行できなかった確認は、理由をタスク文書と最終報告に残す。
 
 ## よくある落とし穴
 

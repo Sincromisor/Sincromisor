@@ -45,11 +45,11 @@
 - 理由: `tasks:check` が全タスクについてディレクトリ構成全体を検証するため。
 - 更新時の確認: 試行用または一時的なタスクを作成し、`npm run tasks:check` を実行する。
 
-## 正本文書へのリンク
+## 原本文書へのリンク
 
 - 対象ファイル: `.claude/agents/*.md`、`.claude/commands/*.md`、`tasks/AUTHORING-CHECKLIST.md`、`AGENTS.md`、`tasks/README.md`
 - 上流との差分: 参照先を `AGENTS.md`、`README.md`、`documents/design/`、`documents/rules/`、`tasks/README.md` とする。
-- 理由: Sincromisorのプロジェクト説明、設計、コーディング規約の正本であるため。
+- 理由: Sincromisorのプロジェクト説明、設計、コーディング規約の原本であるため。
 - 更新時の確認: 生成済みスキルに、古い汎用文書のパスや複数のパッケージ管理ツールの例が残っていないか確認する。
 
 ## Codex用の生成成果物
@@ -71,7 +71,7 @@
 ## タスクの実装可能性と自律補完
 
 - 対象ファイル: `.claude/commands/new-task.md`、`.claude/commands/run-task.md`、`.claude/agents/task-reviewer.md`、`.claude/agents/task-implementer.md`、`tasks/AUTHORING-CHECKLIST.md`、`tasks/README.md`、`scripts/tasks/newTask.mjs`
-- 上流との差分: 起票時に外部入力の供給元と消費先を追跡する。既存の正本で解決できる不足は `AUTO_FIX` とする。公開契約、責務、受け入れ条件、外部入力の供給経路に影響する選択だけを `NEEDS_REVISION` とする。
+- 上流との差分: 起票時に外部入力の供給元と消費先を追跡する。既存のタスク文書で解決できる不足は `AUTO_FIX` とする。公開契約、責務、受け入れ条件、外部入力の供給経路に影響する選択だけを `NEEDS_REVISION` とする。
 - 理由: 通常の実装確認で作業が止まることを防ぎつつ、構成上の未決定事項では確実に停止するため。
 - 更新時の確認: `npm run gen:codex`、`npm run gen:codex:check`、`npm run tasks:check` を実行する。
 
