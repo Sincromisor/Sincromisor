@@ -16,11 +16,11 @@ export type SincroAppDialogBridge = {
     getSelectedVrmUrl: () => string;
 };
 
+/** チャットの書き込みとReactの初期履歴取得に使う窓口。 */
 export type SincroAppChatBridge = {
     writeUnknownUserMessage: (message: string, isHTML?: boolean) => void;
     writeSystemMessage: (message: string, isHTML?: boolean) => void;
     setSystemIcon: (iconUrl: string) => void;
-    setDomRenderingEnabled: (enabled: boolean) => void;
     setTelopDomRenderingEnabled: (enabled: boolean) => void;
     getMessageViewSnapshot: () => import("../controller/sincroAppTypes").ChatMessageViewRecord[];
     getSystemIconUrl: () => string;
