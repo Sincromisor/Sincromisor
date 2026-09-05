@@ -1,52 +1,52 @@
-# Settings And Debug UI
+# 設定と診断UI
 
-## Summary
+## 要約
 
-- 設定 UI は一般ユーザー向け、Debug Console は開発者向け診断として役割を分ける。
-- 起動前 dialog と開始後 settings panel は同じ分類軸を使い、実行時に変更できるものと再開始が必要なものを明確にする。
-- 右側 tool panel は settings と Debug Console を相互排他で表示し、外側 chrome は `RightToolFrame` が所有する。
+- 設定 UI は一般ユーザー向け、診断 Console は開発者向け診断として役割を分ける。
+- 起動前ダイアログと開始後設定パネルは同じ分類軸を使い、実行時に変更できるものと再開始が必要なものを明確にする。
+- 右側ツールパネルは設定と診断 Console を相互排他で表示し、外側装飾は `RightToolFrame` が所有する。
 
-## Scope
+## 対象範囲
 
 - 対象:
-    - 起動前設定 dialog
-    - 開始後 settings panel
-    - right tool menu / frame
-    - Debug Console
+    - 起動前設定ダイアログ
+    - 開始後設定パネル
+    - 右側ツールのメニュー・外枠
+    - 診断 Console
 - 非対象:
-    - RTC payload
-    - VRM motion algorithm
+    - RTC 送受信データ
+    - VRM 動作アルゴリズム
     - Playwright 確認ログの詳細
 
-## Responsibilities
+## 責務
 
 - `src/features/settings/react`
-    - settings field、primitive、shell を置く。
+    - 設定フィールド、基本部品、共通枠組みを置く。
     - `fields` は設定項目入力、`primitives` は表示部品、`shell` はカテゴリ構造を担当する。
 - `src/app/settings/sincroAppSettingsDefaults.ts`
-    - startup dialog と settings panel が共有する settings snapshot / UI fallback の既定値を持つ。
-    - DialogStateStore と Looking Glass runtime config も同じ既定値を参照する。
+    - 起動前ダイアログと設定パネルが共有する設定スナップショット / UI 代替処理の既定値を持つ。
+    - DialogStateStore と Looking Glass 実行時設定も同じ既定値を参照する。
 - `src/features/dialog`
-    - 起動前 dialog の model / service / React component を置く。
-    - settings field 自体は `features/settings` を参照し、dialog 固有の状態・通知・VRM workflow だけを所有する。
+    - 起動前ダイアログのモデル / サービス / React コンポーネントを置く。
+    - 設定フィールド自体は `features/settings` を参照し、ダイアログ固有の状態・通知・VRM 作業手順だけを所有する。
 - `src/features/debug`
-    - Debug Console の model / controls / React panels を置く。
-    - RTC / media / character runtime から React debug UI へ直接依存しない。
+    - 診断 Console のモデル / 操作部品 / React パネルを置く。
+    - RTC / メディア / キャラクター実行時から React デバッグ UI へ直接依存しない。
 - `src/app/shell/react/overlay`
-    - dialog / right tool の外枠 chrome を置く。
+    - ダイアログ / 右側ツールの外枠装飾を置く。
 - `SettingsShell`
     - 設定カテゴリと本文の情報設計を持つ。
-    - overlay frame や fixed position は持たない。
+    - 重ね表示フレームや固定位置は持たない。
 - `RightToolFrame`
-    - 右側 tool 領域の位置、幅、z-index、scroll、close button、外側クリック閉じを持つ。
+    - 右側ツール領域の位置、幅、z-index、スクロール、閉じるボタン、外側クリック閉じを持つ。
 - `StartupDialogFrame`
-    - 起動前 dialog の surface、backdrop、padding、scroll を持つ。
+    - 起動前ダイアログの表示面、背面、余白、スクロールを持つ。
 - `DebugConsole`
-    - diagnostics snapshot を表示する。
-    - WebRTC / MediaPipe / Audio の生制御を直接所有しない。
-    - Sincro Hand は availability、source、ROI warning、openness、confidence の summary だけを表示し、raw landmarks や crop object は持たない。
+    - 診断情報スナップショットを表示する。
+    - WebRTC / MediaPipe / 音声の生制御を直接所有しない。
+    - Sincro Hand は利用可否、由来、ROI 警告、開き具合、信頼度の要約だけを表示し、未加工のランドマークや切り抜きオブジェクトは持たない。
 
-## Information Architecture
+## 情報設計
 
 - 一般設定カテゴリ:
     - `会話`
@@ -55,7 +55,7 @@
     - `表示`
     - `接続`
     - 必要な場合のみ `詳細設定`
-- Debug Console tabs:
+- 診断 Console タブ:
     - `Status`
     - `Audio`
     - `Messages`
@@ -64,25 +64,25 @@
     - `RTC`
     - `SDP`
 
-## Interaction Rules
+## 操作規則
 
-- settings panel と Debug Console は同時に大きく重ねない。
-- close button、panel padding、scroll、responsive width は frame 側へ寄せる。
+- 設定パネルと診断 Console は同時に大きく重ねない。
+- 閉じるボタン、パネル余白、スクロール、画面幅に応じた表示幅はフレーム側へ寄せる。
 - 現在ページで有効な項目がないカテゴリは通常表示しない。
-- `Ctrl+Alt+D` は Debug Console の導線として扱う。
-- 技術用語が必要な診断情報は Debug Console に置き、通常設定には混ぜない。
+- `Ctrl+Alt+D` は診断 Console の導線として扱う。
+- 技術用語が必要な診断情報は診断 Console に置き、通常設定には混ぜない。
 - `forceSincroPoseTracking` は低性能端末での姿勢同期デバッグ用設定として扱い、通常利用では `pose_inference_too_slow` の自動降格を優先する。
-- Pose retarget 調整内に残る composer application control は `composerSemanticFingerApplicationMode` だけである。semantic / finger layer の suppression を切り分ける developer rollback flag として Debug Console に出し、通常設定 UI には出さない。arm、torso / shoulder、full normalized pose application の段階別 rollback controls は削除済みであり、unavailable frame でも Debug Console から旧 direct writer を production fallback として起動しない。
+- Pose 動作の変換調整内に残る姿勢合成処理適用制御は `composerSemanticFingerApplicationMode` だけである。意味に基づく動作 / 指層の抑制を切り分ける開発者切り戻しフラグとして診断 Console に出し、通常設定 UI には出さない。腕、体幹 / 肩、正規化済み姿勢の全面適用の段階別切り戻し操作部品は削除済みであり、利用不可フレームでも診断 Console から旧直接書き込み処理を本番代替処理として起動しない。
 
-## Change Checklist
+## 変更時の確認
 
-- 設定項目を追加したら startup dialog と settings panel の両方の扱いを決める。
-- 既定値を追加・変更したら `sincroAppSettingsDefaults.ts` を正本として更新し、DialogStateStore / runtime snapshot に重複値を増やさない。
+- 設定項目を追加したら起動前ダイアログと設定パネルの両方の扱いを決める。
+- 既定値を追加・変更したら `sincroAppSettingsDefaults.ts` を正本として更新し、DialogStateStore / 実行時スナップショットに重複値を増やさない。
 - 実行時変更可能か、再開始が必要かを文言に反映する。
-- Debug Console に診断項目を追加する場合は、どの snapshot provider が責務を持つか確認する。
-- overlay 外枠の変更は `src/app/shell/react/overlay/*` と `overlay.css` を優先する。
+- 診断 Console に診断項目を追加する場合は、どのスナップショット提供元が責務を持つか確認する。
+- 重ね表示外枠の変更は `src/app/shell/react/overlay/*` と `overlay.css` を優先する。
 
-## References
+## 参照
 
 - `documents/design/frontend/app-shell.md`
 - `documents/design/decisions/ADR-260430-overlay-frame.md`

@@ -1,47 +1,47 @@
-# Backend Service: SpeechRecognizer
+# バックエンドサービス: SpeechRecognizer
 
-## Summary
+## 要約
 
-- SpeechRecognizer は抽出済み音声区間を text へ変換する downstream service である。
-- 現行の主対象は Nemo recognizer で、Nue-ASR は廃止済み/通常導線外として扱う。
-- 固有名詞補強は initiative と辞書 contract に分離する。
+- SpeechRecognizer は抽出済み音声区間をテキストへ変換する下流サービスである。
+- 現行の主対象は Nemo 音声認識処理で、Nue-ASR は廃止済み/通常導線外として扱う。
+- 固有名詞補強は取り組み計画と辞書契約に分離する。
 
-## Scope
+## 対象範囲
 
 - 対象:
-    - SpeechRecognizer service boundary
-    - Nemo recognizer の認識結果
-    - confirmed / partial の扱い
+    - SpeechRecognizer サービス境界
+    - Nemo 音声認識処理の認識結果
+    - 確定 / 暫定の扱い
     - 固有名詞補強との接続点
 - 非対象:
-    - Audio extraction
+    - 音声抽出
     - TextProcessor の応答生成
 
-## Responsibilities
+## 責務
 
-- Go pipeline coordinator から speech segment を受け取る。
-- speech segment を partial / confirmed result へ変換する。
-- 必要に応じて confirmed result に後処理を適用する。
-- 結果を TextProcessor へ渡せる msgpack model として返す。
+- Goパイプライン調停器から音声区間を受け取る。
+- 音声区間を暫定 / 確定結果へ変換する。
+- 必要に応じて確定結果に後処理を適用する。
+- 結果を TextProcessor へ渡せる msgpack モデルとして返す。
 
-## Proper Noun Biasing
+## 固有名詞認識の補強
 
 - 辞書仕様:
     - `documents/design/contracts/proper-noun-dictionary.md`
 - 導入計画:
     - `documents/design/initiatives/proper-noun-biasing.md`
 - 基本方針:
-    - partial の低遅延経路を保つ。
-    - confirmed 時に読み一致補正、context biasing、N-best reranking を段階導入する。
-    - raw ASR result と correction trace はデバッグ可能に残す。
+    - 暫定の低遅延経路を保つ。
+    - 確定時に読み一致補正、文脈による認識候補の補強、上位N候補の再順位付けを段階導入する。
+    - 未補正の音声認識結果と補正の追跡記録はデバッグ可能に残す。
 
-## Change Checklist
+## 変更時の確認
 
-- `SpeechRecognizerResult` を変える場合は WebSocket contract と TextProcessor を同時確認する。
-- 辞書列を変える場合は proper noun dictionary contract を更新する。
-- confirmed 専用の重い処理を入れる場合は latency と fallback を確認する。
+- `SpeechRecognizerResult` を変える場合は WebSocket 契約と TextProcessor を同時確認する。
+- 辞書列を変える場合は固有名詞辞書の契約を更新する。
+- 確定専用の重い処理を入れる場合は遅延と代替処理を確認する。
 
-## References
+## 参照
 
 - `documents/design/contracts/audio-pipeline-websocket.md`
 - `documents/design/contracts/proper-noun-dictionary.md`

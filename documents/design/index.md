@@ -3,7 +3,7 @@
 ## 最初に読む
 
 - [設計ドキュメント運用ガイド](documentation-guide.md)
-    - 設計文書の種別、更新手順、分割基準、ベストプラクティス、index からの導線ルール
+    - 設計文書の種別、更新手順、分割基準、ベストプラクティス、索引からの導線ルール
 
 ## 目的別入口
 
@@ -13,104 +13,104 @@
     - 変更内容が現在設計、契約仕様、判断記録、移行計画のどれかを分類してから更新する
 - 文書が肥大化したため分割する:
     - [設計ドキュメント運用ガイド](documentation-guide.md) の「分割判断基準」と「再編ロードマップ」を確認する
-- endpoint / payload / DataChannel / env を変更する:
-    - Contract Spec と関連する frontend / backend の両方を確認する
+- エンドポイント / 送受信データ / DataChannel / 環境変数を変更する:
+    - 契約仕様と関連するフロントエンド / バックエンドの両方を確認する
 - 採用理由や棄却理由を残す:
-    - Decision Record として ADR を追加する
+    - 設計判断記録として ADR を追加する
 
-## Templates
+## テンプレート
 
 新規文書は、内容に合わせて下記テンプレートを使う。
 
-- [Current Design](templates/current-design.md)
+- [現在設計](templates/current-design.md)
     - 現在の実装構造を説明する正本
-- [Contract Spec](templates/contract-spec.md)
-    - endpoint / channel / payload / env など、互換性に関わる契約仕様
-- [Decision Record](templates/decision-record.md)
+- [契約仕様](templates/contract-spec.md)
+    - エンドポイント / チャネル / 送受信データ / 環境変数など、互換性に関わる契約仕様
+- [設計判断記録](templates/decision-record.md)
     - 採用理由、棄却理由、見直し条件を残す ADR
-- [Initiative Plan](templates/initiative-plan.md)
+- [取り組み計画](templates/initiative-plan.md)
     - 進行中の移行・大きな設計変更の計画
 
-## Legacy Template
+## 旧テンプレート
 
 - [設計ドキュメントテンプレート](template.md)
     - 旧 15 章テンプレート。既存文書の参照用として残し、新規文書は原則 `templates/` 配下を使う。
 
-## Architecture
+## 構成
 
-- [Overview](architecture/overview.md)
+- [概要](architecture/overview.md)
     - Sincromisor 全体のコンポーネント境界と責務
-- [Runtime Flow](architecture/runtime-flow.md)
+- [実行時の処理の流れ](architecture/runtime-flow.md)
     - 起動から会話成立までの代表フロー
 
-## Contracts
+## 契約
 
-互換性に関わる endpoint / channel / payload / format の正本。
+互換性に関わるエンドポイント / チャネル / 送受信データ / 形式の正本。
 
-- [Frontend RTC](contracts/frontend-rtc.md)
-    - フロントエンドと `sincro-rtc` の WebRTC signaling、ICE restart/retry、DataChannel 契約
-- [Audio Pipeline WebSocket](contracts/audio-pipeline-websocket.md)
-    - Go pipeline coordinator と下流音声処理サービス間の WebSocket / msgpack 契約
-- [Proper Noun Dictionary](contracts/proper-noun-dictionary.md)
+- [フロントエンドのRTC](contracts/frontend-rtc.md)
+    - フロントエンドと `sincro-rtc` の WebRTC シグナリング、ICE 再起動・再試行、DataChannel 契約
+- [音声パイプラインのWebSocket](contracts/audio-pipeline-websocket.md)
+    - Goパイプライン調停器と下流音声処理サービス間の WebSocket / msgpack 契約
+- [固有名詞辞書](contracts/proper-noun-dictionary.md)
     - SpeechRecognizer 固有名詞補強で使う CSV 辞書仕様
 
-## Frontend
+## フロントエンド
 
-- [App Shell](frontend/app-shell.md)
-    - Vite MPA、React app shell、controller 境界
-- [Pages](frontend/pages.md)
-    - modern / experimental ページ分類と build 対象
-- [Settings and Debug UI](frontend/settings-and-debug-ui.md)
-    - 起動前 dialog、右側 tool panel、Debug Console
+- [アプリの共通枠組み](frontend/app-shell.md)
+    - Vite MPA、Reactによるアプリの共通枠組み、制御処理境界
+- [ページ構成](frontend/pages.md)
+    - 現行 / 実験用ページ分類とビルド対象
+- [設定と診断UI](frontend/settings-and-debug-ui.md)
+    - 起動前ダイアログ、右側ツールパネル、診断 Console
 - [VAD](frontend/audio/vad.md)
-    - フロント側 VAD と Debug Console 観測項目
-- [Character Overview](frontend/character/overview.md)
-    - VRM 描画、talk mode、motion / tracking の大枠
-- [Character Motion](frontend/character/motion.md)
-    - 口形、表情、視線、idle / gesture、pose retarget 適用境界
-- [Character Tracking](frontend/character/tracking.md)
-    - CharacterGaze、Face/Pose tracker、Worker fallback
+    - フロント側 VAD と診断 Console 観測項目
+- [キャラクター概要](frontend/character/overview.md)
+    - VRM 描画、会話モード、動作 / 追跡の大枠
+- [キャラクター動作](frontend/character/motion.md)
+    - 口形、表情、視線、待機 / ジェスチャー、姿勢の変換適用境界
+- [キャラクター追跡](frontend/character/tracking.md)
+    - CharacterGaze、Face/Pose 追跡処理、Worker 代替処理
 
-## Backend Services
+## バックエンドサービス
 
 - [sincro-rtc](backend/services/sincro-rtc.md)
-    - WebRTC signaling、RTC session、pipeline coordinator
+    - WebRTC シグナリング、RTC セッション、パイプライン調停器
 - [SpeechExtractor](backend/services/speech-extractor.md)
     - 音声区間抽出
 - [SpeechRecognizer](backend/services/speech-recognizer.md)
     - 音声認識と固有名詞補強の接続点
 - [TextProcessor](backend/services/text-processor.md)
-    - 応答 text、chat message、telop 生成
+    - 応答テキスト、チャットメッセージ、テロップ生成
 - [VoiceSynthesizer](backend/services/voice-synthesizer.md)
-    - 応答 text から音声 frame への変換
+    - 応答テキストから音声フレームへの変換
 
-## Infrastructure
+## インフラ
 
 - [Docker Compose](infrastructure/compose.md)
-    - compose profile、env wiring、ローカル起動
+    - Docker Compose プロファイル、環境変数受け渡し、ローカル起動
 - [Consul](infrastructure/consul.md)
-    - service discovery と fallback 設定
-- [Storage](infrastructure/storage.md)
+    - サービス発見と代替処理設定
+- [保存領域](infrastructure/storage.md)
     - Redis、SeaweedFS、旧 MinIO の扱い
 
-## Decisions
+## 設計判断
 
-- [ADR-260726 Pion Codec PoC](decisions/ADR-260726-pion-codec-poc.md)
-- [ADR-260222 React Migration](decisions/ADR-260222-react-migration.md)
-- [ADR-260430 Overlay Frame Ownership](decisions/ADR-260430-overlay-frame.md)
-- [ADR-260412 Proper Noun Biasing Strategy](decisions/ADR-260412-proper-noun-biasing.md)
-- [ADR-260517 Sincro Arm IK Solver Adoption](decisions/ADR-260517-sincro-arm-ik-solver-adoption.md)
+- [ADR-260726 Pionコーデックの概念実証](decisions/ADR-260726-pion-codec-poc.md)
+- [ADR-260222 React移行](decisions/ADR-260222-react-migration.md)
+- [ADR-260430 重ねて表示する画面の外枠の責務](decisions/ADR-260430-overlay-frame.md)
+- [ADR-260412 固有名詞認識の補強方針](decisions/ADR-260412-proper-noun-biasing.md)
+- [ADR-260517 Sincroの腕IKソルバーの採用](decisions/ADR-260517-sincro-arm-ik-solver-adoption.md)
 
-## Migrations
+## 移行
 
-- [Pion WebRTC Migration](../migration/pion/README.md)
+- [PionへのWebRTC移行](../migration/pion/README.md)
 
-## Initiatives
+## 取り組み計画
 
-- [React Migration](initiatives/react-migration.md)
-- [Proper Noun Biasing](initiatives/proper-noun-biasing.md)
+- [React移行](initiatives/react-migration.md)
+- [固有名詞認識の補強](initiatives/proper-noun-biasing.md)
 
-## Obsoleted
+## 廃止予定
 
 下記については廃止予定であるため、ドキュメントには記載しない。
 
@@ -126,10 +126,10 @@
     - SeaweedFSに移行
     - 公式OSS版が終了見込のため
 
-## Archive
+## 保管領域
 
-再編前の肥大化したファイルは、履歴参照用として [archive/legacy-flat](archive/legacy-flat/README.md) に退避した。通常の変更では archive を更新せず、現在設計、契約、ADR、initiative のいずれかを更新する。
+再編前の肥大化したファイルは、履歴参照用として [archive/legacy-flat](archive/legacy-flat/README.md) に退避した。通常の変更ではアーカイブを更新せず、現在設計、契約、ADR、取り組み計画のいずれかを更新する。
 
-## ToDo
+## 残課題
 
 - TODO は設計本文に溜めず、必要に応じて `tasks/` に起票する。

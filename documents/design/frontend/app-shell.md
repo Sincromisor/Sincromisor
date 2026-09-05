@@ -1,104 +1,104 @@
-# Frontend App Shell
+# フロントエンドの共通枠組み
 
-## Summary
+## 要約
 
-- フロントエンドは Vite MPA を維持し、modern 3D ページは単一 React app shell へ集約している。
-- `simple-vrm`、`vrm360`、`looking-glass-vrm` は `div#sincroPageRoot` 配下で dialog / header / chat / telop / settings / debug を描画する。
-- WebRTC、UserMedia、CharacterGaze、VRM scene の起動は `SincroAppController` と下位 controller が束ねる。
+- フロントエンドは Vite MPA を維持し、現行 3D ページは単一 Reactによるアプリの共通枠組みへ集約している。
+- `simple-vrm`、`vrm360`、`looking-glass-vrm` は `div#sincroPageRoot` 配下でダイアログ / header / チャット / テロップ / 設定 / デバッグを描画する。
+- WebRTC、UserMedia、CharacterGaze、VRM シーンの起動は `SincroAppController` と下位制御処理が束ねる。
 - 物理構成は `app` / `features` / `character` / `shared` / `pages` を上位境界とし、旧 `src/ts` / `src/react` には新規実装を置かない。
 - RTC 契約の正本は `contracts/frontend-rtc.md` に置く。
 
-## Scope
+## 対象範囲
 
 - 対象:
-    - modern frontend の app shell
-    - React UI と TypeScript core の責務境界
-    - 起動前 dialog、右側 tool panel、Debug Console の所有境界
+    - 現行フロントエンドのアプリの共通枠組み
+    - React UI と TypeScript 中核処理の責務境界
+    - 起動前ダイアログ、右側ツールパネル、診断 Console の所有境界
 - 非対象:
-    - VRM bone / expression 制御
-    - WebRTC endpoint / payload の詳細
+    - VRM ボーン / 表情制御
+    - WebRTC エンドポイント / 送受信データの詳細
     - 完了済み React 移行の作業ログ
 
-## Responsibilities
+## 責務
 
 - `src/app/shell/sincroPageAppShell.tsx`
-    - modern 3D ページの React root。
-    - dialog、header、chat、telop、right tool panel、settings、debug をまとめて描画する。
+    - 現行 3D ページの React ルート。
+    - ダイアログ、header、チャット、テロップ、右側ツールパネル、設定、デバッグをまとめて描画する。
 - `src/app/shell/bootstrapSincroPageAppShell.tsx`
-    - page entry から React root を mount し、ページ別 control panel を app shell へ渡す。
+    - ページの起動処理から React ルートを取り付けし、ページ別操作パネルをアプリの共通枠組みへ渡す。
 - `SincroAppController`
-    - UI と core の facade。
-    - 起動設定、RTC、media device、debug snapshot、right tool panel state を束ねる。
+    - UI と中核処理の共通窓口。
+    - 起動設定、RTC、メディア機器、診断用スナップショット、右側ツールパネル状態を束ねる。
 - `SincroController`
-    - UserMedia 取得、RTC 開始、CharacterGaze 開始、TalkManager 連携の runtime 制御を担う。
+    - UserMedia 取得、RTC 開始、CharacterGaze 開始、TalkManager 連携の実行時制御を担う。
 - `RTCTalkClient`
-    - PeerConnection、Offer/Answer、ICE candidate、DataChannel event を扱う。
-- React settings / debug components
+    - PeerConnection、Offer/Answer、ICE 候補、DataChannel イベントを扱う。
+- React 設定 / デバッグ構成要素
     - 表示と操作に専念し、WebRTC や MediaPipe の生制御を直接持たない。
 
-## Physical Structure
+## 物理構成
 
 - `src/app/controller`
-    - `SincroAppController` / `SincroController` と、RTC・audio・gaze を束ねる app-level controller を置く。
+    - `SincroAppController` / `SincroController` と、RTC・音声・視線を束ねるアプリ全体の制御処理を置く。
 - `src/app/events`
-    - AppController の event hub、snapshot emission、active subscription wiring、window event binder を置く。
+    - AppController のイベント集約点、スナップショットの通知、有効購読受け渡し、ウィンドウイベント接続処理を置く。
 - `src/app/bridges`
-    - AppController と legacy manager / service singleton の接続点、bridge 型、runtime bundle factory を置く。
+    - AppController と旧形式管理処理 / サービス単一インスタンスの接続点、橋渡し型、実行時一式生成処理を置く。
 - `src/app/settings`
-    - settings defaults / snapshot / apply / startup status / related payload cache を置く。
-    - `sincroAppSettingsDefaults.ts` は AppController snapshot、React fallback、DialogStateStore、Looking Glass runtime の既定値の正本を持つ。
+    - 設定既定値 / スナップショット / 適用 / 起動状態 / 関連する送受信データキャッシュを置く。
+    - `sincroAppSettingsDefaults.ts` は AppController スナップショット、React 代替処理、DialogStateStore、Looking Glass 実行時の既定値の正本を持つ。
 - `src/app/react`
-    - active AppController subscription hook、panel state helper、UI tuning など app shell から使う React helper を置く。
+    - 有効 AppController 購読フック、パネル状態補助処理、UI 調整などアプリの共通枠組みから使う React 補助処理を置く。
 - `src/features`
-    - RTC、media、conversation、dialog、debug、settings、gaze などユーザー機能単位の model / React / runtime を置く。
+    - RTC、メディア、会話、ダイアログ、デバッグ、設定、視線などユーザー機能単位のモデル / React / 実行時を置く。
 - `src/character`
-    - VRM scene、behavior、retargeting、IK、page-specific VRM runtime を置く。
+    - VRM シーン、振る舞い、動作の変換、IK、ページ固有の VRM 実行時を置く。
 - `src/shared`
-    - logging と横断型など、feature 固有ではない基盤を置く。
+    - ログ出力と横断型など、機能固有ではない基盤を置く。
 - `src/pages`
-    - Vite MPA の HTML / entry / page-specific React panel / developer page runtime を置く。
+    - Vite MPA の HTML / 項目 / ページ固有の React パネル / 開発者ページ実行時を置く。
 
-## Data / State
+## データ・状態
 
 - 起動設定:
-    - audio input device
-    - gaze camera device
+    - 音声入力機器
+    - 視線カメラ機器
     - VRM URL
-    - talk mode
-    - character motion / gaze / pose options
-- Runtime state:
-    - RTC connection state
-    - media device snapshot
-    - VAD / audio meter
-    - text / telop messages
-    - gaze / tracking diagnostics
-    - `sincro` tracking 中の camera quality guide。`SincroAppEvent` の
-      `camera-quality-changed` / `camera-quality-reset` を panel-local `PanelCameraGuideState` へ還元し、
-      接続ページの diagnostics grid 直前に先頭 guide message 一件だけを表示する。`chat` mode、camera stop、
-      tracking reset、active controller clear では stale guide を残さない。
-- UI state:
-    - startup dialog open state
-    - active right tool panel
-    - settings category
-    - debug tab
-    - sincro settings の initial calibration retry state。active 中は current step、session summary、先頭 guide message、記録済み current step の「再試行」を表示する。UI は production calibration controller を購読して Pose callback の評価結果を反映する。idle / cancelled は session field と action を表示しない。
-    - simple-vrm panel は `dialog_vrm_ui_state.vrmStatusText` の初期値確定後の変化を VRM source 変更として扱い、active initial calibration を現在の sessionId で cancel する。
+    - 会話モード
+    - キャラクター動作 / 視線 / 姿勢オプション
+- Runtime 状態:
+    - RTC 接続状態
+    - メディア機器スナップショット
+    - VAD / 音声メートル
+    - テキスト / テロップメッセージ
+    - 視線 / 追跡診断情報
+    - `sincro` 追跡中のカメラ品質案内。`SincroAppEvent` の
+      `camera-quality-changed` / `camera-quality-reset` をパネル内の `PanelCameraGuideState` へ還元し、
+      接続ページの診断情報一覧直前に先頭案内文言一件だけを表示する。`chat` モード、カメラ停止、
+      追跡再初期化、有効制御処理解除では古くなった案内を残さない。
+- UI 状態:
+    - 起動前ダイアログ開く状態
+    - 有効右側ツールパネル
+    - 設定カテゴリ
+    - デバッグタブ
+    - sincro 設定の初期較正再試行状態。有効中は現在の段階、セッション要約、先頭案内文言、記録済み現在の段階の「再試行」を表示する。UI は本番較正制御処理を購読して Pose コールバックの評価結果を反映する。待機 / 中止はセッションフィールドと操作を表示しない。
+    - simple-vrm パネルは `dialog_vrm_ui_state.vrmStatusText` の初期値確定後の変化を VRM 由来変更として扱い、有効初期較正を現在の `sessionId` で中断する。
 
-## Interfaces
+## インターフェース
 
 - 外部契約:
     - `documents/design/contracts/frontend-rtc.md`
 - 内部イベント:
-    - React UI は app controller の snapshot / subscription API を使う。
-    - manager singleton への直接依存は段階的に縮退させる。
+    - React UI はアプリ制御のスナップショット / 購読 API を使う。
+    - 管理処理単一インスタンスへの直接依存は段階的に縮退させる。
 
-## Config / Deployment
+## 設定・配備
 
 - 通常確認:
     - `cd sincromisor-frontend && npm run build`
-- dev server:
+- dev サーバー:
     - `cd sincromisor-frontend && npm run dev`
-- Vite build input:
+- Vite ビルド入力:
     - `main`
     - `simple-vrm`
     - `vrm360`
@@ -106,22 +106,22 @@
     - `motion-debug`
     - `pose-landmarker-spike`
 
-## Observability / Failure Modes
+## 観測・失敗時の挙動
 
-- Debug Console は `Status` / `Audio` / `Messages` / `Gaze` / `Sincro` / `RTC` / `SDP` のタブ型診断を提供する。
-- backend 未起動時は `config.json` 取得が失敗する。
+- 診断 Console は `Status` / `Audio` / `Messages` / `Gaze` / `Sincro` / `RTC` / `SDP` のタブ型診断を提供する。
+- バックエンド未起動時は `config.json` 取得が失敗する。
 - ブラウザ権限未付与時は `getUserMedia` が失敗する。
-- `OrbitControls` の入力対象は character control layer に限定し、header / chat / telop / right tool と競合させない。
+- `OrbitControls` の入力対象はキャラクターの操作領域に限定し、header / チャット / テロップ / 右側ツールと競合させない。
 
-## Change Checklist
+## 変更時の確認
 
-- UI shell を変更したら `frontend/pages.md` と `frontend/settings-and-debug-ui.md` の影響を確認する。
-- RTC 接続仕様を変更したら `contracts/frontend-rtc.md` と backend を同時確認する。
-- media device 設定を変更したら startup dialog と settings panel の両方を確認する。
-- settings 既定値を変更したら startup dialog、settings panel、Looking Glass runtime snapshot の初期値一致を確認する。
-- modern page の layout を変えたら desktop / mobile の表示確認を行う。
+- UIの共通枠組みを変更したら `frontend/pages.md` と `frontend/settings-and-debug-ui.md` の影響を確認する。
+- RTC 接続仕様を変更したら `contracts/frontend-rtc.md` とバックエンドを同時確認する。
+- メディア機器設定を変更したら起動前ダイアログと設定パネルの両方を確認する。
+- 設定既定値を変更したら起動前ダイアログ、設定パネル、Looking Glass 実行時スナップショットの初期値一致を確認する。
+- 現行ページの配置を変えたらデスクトップ / モバイルの表示確認を行う。
 
-## References
+## 参照
 
 - `documents/design/frontend/pages.md`
 - `documents/design/frontend/settings-and-debug-ui.md`

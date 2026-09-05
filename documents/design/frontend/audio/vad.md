@@ -1,37 +1,37 @@
-# Frontend VAD
+# フロントエンド VAD
 
-## Summary
+## 要約
 
 - フロント側 VAD はマイク入力の RMS / Peak と学習 VAD を使い、送信ゲートや UI 表示に利用する。
-- VAD は UI ではなく audio / media control の一部として扱う。
-- 診断値は Debug Console の Audio / Status から確認できるようにする。
+- VAD は UI ではなく音声 / メディア制御の一部として扱う。
+- 診断値は診断 Console の音声 / 状態から確認できるようにする。
 
-## Scope
+## 対象範囲
 
 - 対象:
-    - フロント側 VAD mode
-    - VAD parameter
-    - Debug Console 観測項目
+    - フロント側 VAD モード
+    - VAD パラメータ
+    - 診断 Console 観測項目
 - 非対象:
-    - server side SpeechExtractor
-    - 音声認識 model
+    - サーバー左右 SpeechExtractor
+    - 音声認識モデル
 
-## Responsibilities
+## 責務
 
 - `src/features/media/userMedia`
-    - microphone / camera stream、device constraint、track lifecycle、audio profile を置く。
+    - マイク / カメラストリーム、機器制約、トラック生存期間、音声プロファイルを置く。
 - `src/features/media/vad`
-    - Silero VAD worker、learned VAD client、audio processing runtime、speech state を置く。
+    - Silero VAD 処理担当、学習済み VAD クライアント、音声処理実行時、発話状態を置く。
 - `src/features/media/devices`
-    - media device list service を置く。
-- UserMedia / audio processing:
-    - microphone stream から volume envelope を計算する。
-- VAD state:
-    - speaking / silence / uncertain などの状態を app controller へ渡す。
+    - メディア機器リストサービスを置く。
+- UserMedia / 音声処理:
+    - マイクストリームから音量の包絡線を計算する。
+- VAD 状態:
+    - 発話中 / 無音 / 不確実などの状態をアプリ制御へ渡す。
 - UI:
-    - VAD 状態を通常 UI と Debug Console へ表示する。
+    - VAD 状態を通常 UI と診断 Console へ表示する。
 
-## Modes
+## モード
 
 - RMS / Peak:
     - 軽量で、即時反応が必要な表示に使う。
@@ -40,13 +40,13 @@
 - 厳格判定:
     - 誤検出を抑えたい場面で使う。
 
-## Change Checklist
+## 変更時の確認
 
-- VAD parameter を変更したら Debug Console の表示と設定 UI の文言を確認する。
-- audio device 切替時に VAD 状態が古い stream を参照していないか確認する。
-- server side SpeechExtractor の仕様変更とは別文書で扱う。
+- VAD パラメータを変更したら診断 Console の表示と設定 UI の文言を確認する。
+- 音声機器切替時に VAD 状態が古いストリームを参照していないか確認する。
+- サーバー左右 SpeechExtractor の仕様変更とは別文書で扱う。
 
-## References
+## 参照
 
 - `documents/design/frontend/app-shell.md`
 - `documents/design/archive/legacy-flat/frontend_vad.md`

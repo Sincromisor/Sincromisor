@@ -7,17 +7,17 @@
 - <https://storage.googleapis.com/mediapipe-assets/MediaPipe%20BlazeFace%20Model%20Card%20(Short%20Range).pdf>
 - [Apache License Version 2.0](blaze_face_short_range.tflite.LICENSE)
 
-## face_landmarker.task (optional)
+## face_landmarker.task (任意)
 
 `sincro` モードの顔同期トラッキングを有効化する場合は、以下を配置してください。
-未配置の場合、アプリ全体は停止せず `faceMotion.fallbackReason` と Debug Console に
+未配置の場合、アプリ全体は停止せず `faceMotion.fallbackReason` と診断 Console に
 FaceLandmarker 初期化失敗として表示されます。
 
 - ソース: [https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker)
 - 配置先: `public/3rd_party/face_landmarker.task`
 - ライセンス: 配布元のモデルライセンスに従う
 
-## pose_landmarker\_\*.task (optional spike)
+## pose_landmarker\_\*.task (任意試作検証)
 
 `TASK-3105` の Pose Landmarker 検証ページで利用します。
 通常画面からは参照されないため、未配置でも本番ビルドや通常起動には影響しません。
@@ -30,7 +30,7 @@ FaceLandmarker 初期化失敗として表示されます。
 - 検証ページ: `src/pose-landmarker-spike/index.html`
 - ライセンス: 配布元のモデルライセンスに従う
 
-## silero-vad (optional)
+## silero-vad (任意)
 
 学習ベースVADを有効化する場合は、以下を配置してください。
 

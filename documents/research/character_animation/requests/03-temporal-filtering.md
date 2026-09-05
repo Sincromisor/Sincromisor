@@ -1,23 +1,23 @@
-# 時系列推定 / フィルタ / レイテンシ 調査依頼
+# 時系列推定 / フィルタ / レイテンシ調査依頼
 
 ## 目的
 
-Sincromisor の `sincro` モードで、MediaPipe 由来の jitter、欠落、外れ値、再検出時のジャンプを抑えつつ、会話中のキャラクターとして許容できる低遅延を保つための時系列推定設計を検証する。
+Sincromisor の `sincro` モードで、MediaPipe 由来の細かな揺れ、欠落、外れ値、再検出時のジャンプを抑えつつ、会話中のキャラクターとして許容できる低遅延を保つための時系列推定設計を検証する。
 
-調査では、単純な平滑化ではなく、信頼度つき観測値から body-local な canonical state と最終 VRM pose を安定させる状態推定として整理してほしい。
+調査では、単純な平滑化ではなく、信頼度つき観測値から身体のローカル座標系で表す標準状態と最終 VRM 姿勢を安定させる状態推定として整理してほしい。
 
 ## 背景
 
 Sincromisor は、ブラウザ上で 3D キャラクターと音声対話するサービスである。`sincro` モードでは、単眼 Web カメラの入力からユーザーの上半身の動きを推定し、VRM 1.0 キャラクターに反映する。
 
-既存資料では、MediaPipe landmark を直接骨へ流し込むのではなく、Reliability map、CanonicalUpperBodyState、TemporalStateEstimator、MotionIntent、AvatarMotionProfile を経由して最終姿勢へ変換する方針である。時系列処理は、この中でも品質差が早く出る領域と位置づけられている。
+既存資料では、MediaPipe 特徴点を直接骨へ流し込むのではなく、信頼性の対応表、CanonicalUpperBodyState、TemporalStateEstimator、MotionIntent、AvatarMotionProfile を経由して最終姿勢へ変換する方針である。時系列処理は、この中でも品質差が早く出る領域と位置づけられている。
 
 ## 前提技術
 
-- 入力: MediaPipe Pose / Hand / Face / Gesture の観測値と部位別 reliability
-- 中間表現: body-local canonical state
-- 出力: IK target、pole vector、finger curl、head / torso rotation、最終 VRM pose
-- 実行環境: Web browser
+- 入力: MediaPipe Pose / Hand / Face / Gesture の観測値と部位別信頼性
+- 中間表現: 身体のローカル座標系での標準状態
+- 出力: IK 目標、曲がる方向ベクトル、指の曲げ、頭部 / 体幹回転、最終 VRM 姿勢
+- 実行環境: Web ブラウザ
 - 目標: 手・頭の体感遅延は概ね 100ms 前後以内、胴体はより安定重視
 
 ## 調査してほしいこと
@@ -26,26 +26,26 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 
 既存資料では次の使い分けを候補にしている。妥当性、初期値、実装上の注意点を検証してほしい。
 
-- EMA: 品質スコア、低速 online calibration、UI 表示。
-- One Euro Filter: wrist target、head rotation、canonical scalar。
-- Kalman filter: dropout 中の予測、再検出時の復帰。
-- quaternion log-space smoothing: 最終ボーン回転。
-- hysteresis: gesture label、状態遷移、forwardness / openness 判定。
+- EMA: 品質スコア、低速継続的なキャリブレーション、UI 表示。
+- One Euro Filter: 手首目標、頭部回転、標準化したスカラー。
+- カルマンフィルタ: 一時欠損中の予測、再検出時の復帰。
+- クォータニオンの対数空間での平滑化: 最終ボーン回転。
+- ヒステリシス: ジェスチャー表示名、状態遷移、前出し具合 / 開き具合判定。
 
 ### 部位別パラメータ
 
-部位ごとに、jitter 抑制と遅延許容量が異なる。次の部位について推奨値を知りたい。
+部位ごとに、細かな揺れ抑制と遅延許容量が異なる。次の部位について推奨値を知りたい。
 
-- torso rotation
-- chest / upperChest
-- head rotation
-- wrist target
-- elbow pole
-- wrist roll
-- finger curl
-- gesture state
+- 体幹回転
+- 胸 / `upperChest`
+- 頭部回転
+- 手首目標
+- 肘の曲がる方向
+- 手首ロール
+- 指の曲げ
+- ジェスチャー状態
 
-特に、One Euro Filter の `minCutoff` / `beta`、Kalman の状態量、欠落時の速度減衰、復帰 blend 時間を整理してほしい。
+特に、One Euro Filter の `minCutoff` / `beta`、Kalman の状態量、欠落時の速度減衰、復帰合成時間を整理してほしい。
 
 ### 状態遷移
 
@@ -62,13 +62,13 @@ Tracked
 
 調査してほしい論点は次である。
 
-- 状態遷移の confidence 閾値。
+- 状態遷移の信頼度閾値。
 - `Suspect` へ入るまでのフレーム数。
 - `Predicted` と `Lost` の時間境界。
-- `Recovering` の blend 時間。
+- `Recovering` の合成時間。
 - 腕、手首、指、頭、胴体で状態遷移を分けるべきか。
 
-### dropout と再検出
+### 一時欠損と再検出
 
 手が顔の前に来る、画面外に出る、腕が交差するなどの状況で、観測値が一時的に消えることがある。
 
@@ -76,33 +76,33 @@ Tracked
 
 - 0-200ms、200-700ms、700ms 以降での部位別挙動。
 - 手が戻った瞬間の角度ジャンプを 10-15 度以下に抑える方法。
-- dropout 中に comfortable pose へ戻す速度。
-- gesture label をどれくらい保持するか。
+- 一時欠損中に無理のない自然姿勢へ戻す速度。
+- ジェスチャー表示名をどれくらい保持するか。
 - 予測が外れていると判断する条件。
 
-### latency budget
+### 遅延の配分
 
-会話中のキャラクターでは、追従が遅すぎると「ものまね」感が落ちる。一方で、遅延を減らしすぎると jitter が目立つ。
+会話中のキャラクターでは、追従が遅すぎると「ものまね」感が落ちる。一方で、遅延を減らしすぎると細かな揺れが目立つ。
 
 調査してほしい論点は次である。
 
 - 部位別に許容できる追加遅延。
-- 推論 fps、描画 fps、filter delay の関係。
-- 動きの速さに応じた adaptive smoothing。
+- 推論 fps、描画 fps、フィルタ遅延の関係。
+- 動きの速さに応じた適応的な平滑化。
 - 手・頭を速く、胴体・肩を遅くする設計の妥当性。
 
 ## 期待成果物
 
 - 部位別フィルタ設計表。
 - 状態遷移図と閾値案。
-- dropout / recovering の挙動仕様。
-- neutral jitter、recovery jump、added latency の測定方法。
-- 実装時に必要な debug log 項目。
-- Web browser 上で現実的な latency budget。
+- 一時欠損 / 復帰中の挙動仕様。
+- 中立姿勢での細かな揺れ、復帰時の急変、追加遅延の測定方法。
+- 実装時に必要なデバッグログ項目。
+- Web ブラウザ上で現実的な遅延の配分。
 
 ## 読んでほしい資料
 
-- [roadmap.md](roadmap.md)
-- [report01.md](report01.md)
-- [report02.md](report02.md)
-- [report03.md](report03.md)
+- [roadmap.md](../roadmap.md)
+- [report01.md](../report01.md)
+- [report02.md](../report02.md)
+- [report03.md](../report03.md)

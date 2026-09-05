@@ -1,143 +1,143 @@
 # 検証計画
 
-## Summary
+## 要約
 
-- Phase 1はlocal Chromeの最小縦切りでPionとcodecの採用可否を判断する。
-- Phase 3は既存repository testと、現行Frontendによる1回のend-to-end smoke testでproduction候補を判定する。
-- Phase 4は実際のcomposeとnetwork構成でPionの接続、会話、停止切替を確認する。
-- 詳細baseline、network impairment、長時間soak、網羅的な性能比較、Pion process crash自動復帰は、実害が確認された場合だけ独立taskで行う。
+- 段階 1はローカル Chromeの最小縦切りでPionとコーデックの採用可否を判断する。
+- 段階 3は既存リポジトリテストと、現行フロントエンドによる1回の端から端までの動作確認で本番候補を判定する。
+- 段階 4は実際のDocker Composeとネットワーク構成でPionの接続、会話、停止切替を確認する。
+- 詳細基準、ネットワーク障害、長時間長時間連続稼働、網羅的な性能比較、Pion プロセス異常終了自動復帰は、実害が確認された場合だけ独立タスクで行う。
 
 ## 必須検証
 
-| 分類          | Phase 1                  | Phase 3                                    | Phase 4                             | Phase 5                            |
-| ------------- | ------------------------ | ------------------------------------------ | ----------------------------------- | ---------------------------------- |
-| signaling     | initial Offer、candidate | 現行endpointのrepository test              | stable endpointのsmoke test         | 通常profileのstable endpoint smoke |
-| media         | Opus受信、test tone      | 実運用形式の合成音声を1回再生              | 会話音声の聴取                      | 非無音の合成音声                   |
-| DataChannel   | 2 channelへ固定JSON送信  | 現行Frontendで会話を1 turn                 | text / telop受信                    | text / telop受信                   |
-| pipeline      | 対象外                   | Gate 2の互換試験とproduction候補の結合試験 | 実4サービスで会話                   | session終了後の収束                |
-| lifecycle     | 通常closeとcodec error   | 正常終了と代表的な異常終了                 | Pion切替、session収束               | Pion問題の安定化観測               |
-| network       | local host candidate     | local統合環境                              | 実運用のNAT、firewall、固定UDP port | Phase 4構成を再利用                |
-| compatibility | Chrome                   | 管理対象Chromium                           | Gate 3で成立済みのChromeを1回       | aiortc診断は対象外                 |
+| 分類         | 段階 1                     | 段階 3                               | 段階 4                                        | 段階 5                                       |
+| ------------ | -------------------------- | ------------------------------------ | --------------------------------------------- | -------------------------------------------- |
+| シグナリング | 初回Offer、候補            | 現行エンドポイントのリポジトリテスト | 固定エンドポイントの動作確認                  | 通常プロファイルの固定エンドポイント動作確認 |
+| メディア     | Opus受信、テスト音         | 実運用形式の合成音声を1回再生        | 会話音声の聴取                                | 非無音の合成音声                             |
+| DataChannel  | 2 チャネルへ固定JSON送信   | 現行フロントエンドで会話を1 往復     | テキスト / テロップ受信                       | テキスト / テロップ受信                      |
+| 処理工程     | 対象外                     | Gate 2の互換試験と本番候補の結合試験 | 実4サービスで会話                             | セッション終了後の収束                       |
+| 生存期間     | 通常終了とコーデックエラー | 正常終了と代表的な異常終了           | Pion切替、セッション収束                      | Pion問題の安定化観測                         |
+| ネットワーク | ローカルホスト候補         | ローカル統合環境                     | 実運用のNAT、ファイアウォール、固定UDP ポート | 段階 4構成を再利用                           |
+| 互換性       | Chrome                     | 管理対象Chromium                     | Gate 3で成立済みのChromeを1回                 | aiortc診断は対象外                           |
 
-## Phase 1 minimal PoC
+## 段階 1 最小 PoC
 
-- 現行fieldのconfig、initial Offer、candidate、end-of-candidatesを扱う。
-- Pion側candidateを収集済みAnswerへ含め、server candidate通知APIを追加しない。
-- Chromeとlocal host candidateでICEが`connected`または`completed`になる。
-- browserから連続100 packet以上のOpus RTPを受信し、48 kHzの非無音PCMへdecodeする。
-- 1秒のtest PCMを20 ms frameでencodeし、Chromeで非無音を確認する。
-- `text_ch`と`telop_ch`へ固定test JSONを送信する。
-- 通常close 10回、codec error、SIGTERM、race testでregistryとgoroutineが収束する。
+- 現行フィールドの設定、初回Offer、候補、候補収集の完了通知を扱う。
+- Pion側候補を収集済みAnswerへ含め、サーバー候補通知APIを追加しない。
+- Chromeとローカルホスト候補でICEが`connected`または`completed`になる。
+- ブラウザから連続100 パケット以上のOpus RTPを受信し、48 kHzの非無音PCMへ復号する。
+- 1秒のテスト PCMを20 ms フレームで符号化し、Chromeで非無音を確認する。
+- `text_ch`と`telop_ch`へ固定テスト JSONを送信する。
+- 通常終了 10回、コーデックエラー、SIGTERM、競合テストで登録簿とgoroutineが収束する。
 
-Phase 1完了後に詳細baselineを作り直さない。PoCで採用した機能の回帰はrepository testへ残す。
+段階 1完了後に詳細基準を作り直さない。PoCで採用した機能の回帰はリポジトリテストへ残す。
 
-## Phase 3 production candidate
+## 段階 3 本番候補
 
-### Repository test
+### リポジトリのテスト
 
-実装時に追加済みのtestを正本とし、Gate専用の同等harnessを作らない。最低限、次を確認する。
+実装時に追加済みのテストを正本とし、Gate専用の同等検証基盤を作らない。最低限、次を確認する。
 
-- initial Offer、candidate、DataChannel、audio input / outputが現行契約どおり動く。
-- `offer_request_id`、`offer_revision`、ICE restart、late candidate拒否が既存testを通る。
-- MessagePack fixtureと4 pipeline clientのreset / generation試験が通る。
-- 合成音声decoderは実装が対応する形式のunit / integration testを通る。
-- 正常close、代表的なreadiness timeout、SIGTERMで所有resourceが収束する。
-- session上限、HTTP入力上限、panic recovery、metricsは既存testを通る。
+- 初回Offer、候補、DataChannel、音声入力 / 出力が現行契約どおり動く。
+- `offer_request_id`、`offer_revision`、ICE 再接続、遅延した候補拒否が既存テストを通る。
+- MessagePack 固定データと4 処理工程クライアントの再初期化 / 世代試験が通る。
+- 合成音声復号器は実装が対応する形式の単体・結合テストを通る。
+- 正常終了、代表的な準備状態時間切れ、SIGTERMで所有リソースが収束する。
+- セッション上限、HTTP入力上限、panic 回復、指標は既存テストを通る。
 
-同じ条件を別packageのGate専用clientやreport schemaで再実装しない。
+同じ条件を別パッケージのGate専用クライアントや報告スキーマで再実装しない。
 
-### End-to-end smoke test
+### 端から端までの動作確認
 
-現行Frontend、Pion production candidate、既存pipeline contract serviceを起動し、管理対象Chromiumで次を1回確認する。
+現行フロントエンド、Pion 本番候補、既存処理工程契約サービスを起動し、管理対象Chromiumで次を1回確認する。
 
-1. initial Offerから接続する。
-2. 固定音声で1 turnの会話を完了する。
-3. 利用者text、応答text、`telop_ch`、非無音の合成音声を確認する。
-4. sessionを終了し、active session、下流接続、goroutineが収束することを確認する。
+1. 初回Offerから接続する。
+2. 固定音声で1 往復の会話を完了する。
+3. 利用者テキスト、応答テキスト、`telop_ch`、非無音の合成音声を確認する。
+4. セッションを終了し、有効セッション、下流接続、goroutineが収束することを確認する。
 
-ICE restartのbrowser試験が既に存在する場合は実行するが、Gate 3判定用に新しい注入機構を追加しない。
+ICE 再接続のブラウザ試験が既に存在する場合は実行するが、Gate 3判定用に新しい注入機構を追加しない。
 
 ### Gate判定規則
 
 Gate条件へ追加できるのは、移行固有の不変条件であり、既存確認で代替できない理由、既存の観測方法、未達時に切替を止める理由を
-すべて記録できるものだけとする。条件は「移行必須」「既存testの証拠」「独立した運用強化」に分類し、GateのFAILは移行必須条件の
+すべて記録できるものだけとする。条件は「移行必須」「既存テストの証拠」「独立した運用強化」に分類し、GateのFAILは移行必須条件の
 未達だけで決める。
 
-新しいharness、設定、運用要件が必要になった場合はGateへ追加しない。根本原因、移行との関係、最小受け入れ条件を持つ独立taskへ
-切り出す。観測点が不足するときも、それが移行必須条件を観測できない原因なら必要な観測点と解除条件を記録してGate taskを`blocked`にする。
-未検証の追加要件はFAIL原因にせず、設計判断またはtest整備taskとして扱う。
+新しい検証基盤、設定、運用要件が必要になった場合はGateへ追加しない。根本原因、移行との関係、最小受け入れ条件を持つ独立タスクへ
+切り出す。観測点が不足するときも、それが移行必須条件を観測できない原因なら必要な観測点と解除条件を記録してGate タスクを`blocked`にする。
+未検証の追加要件はFAIL原因にせず、設計判断またはテスト整備タスクとして扱う。
 
 ### Gate 3判定
 
-- 移行必須: repository testとend-to-end smoke testがPASSする。
-- 既存testの証拠: initial Offer、candidate、DataChannel、audio、ICE restart、late candidate、pipeline reset、代表的なcloseは既存testで確認する。
-- 独立した運用強化: Gate専用harness、注入機構、性能比較は追加しない。
+- 移行必須: リポジトリテストと端から端までの動作確認がPASSする。
+- 既存テストの証拠: 初回Offer、候補、DataChannel、音声、ICE 再接続、遅延した候補、処理工程再初期化、代表的な終了は既存テストで確認する。
+- 独立した運用強化: Gate専用検証基盤、注入機構、性能比較は追加しない。
 
-## Phase 4 cutover rehearsal
+## 段階 4 切替リハーサル
 
-production相当環境で、実際に採用する構成だけを検証する。
+本番相当環境で、実際に採用する構成だけを検証する。
 
-- 固定UDP mux port、public IPv4、NAT、firewallを本番と同じ値で構成する。
-- Pion版でGate 3と同じChromeから接続し、1 turnの会話、音声、DataChannelを確認する。
-- session終了後にactive session、goroutine、WebSocket、socketが収束することを確認する。
-- aiortc停止、Pion起動、smoke testを一連の手順として実行する。
-- FrontendとPython下流serviceを再buildせずPionへ切り替えることを確認する。
+- 固定UDP mux ポート、公開IPv4、NAT、ファイアウォールを本番と同じ値で構成する。
+- Pion版でGate 3と同じChromeから接続し、1 往復の会話、音声、DataChannelを確認する。
+- セッション終了後に有効セッション、goroutine、WebSocket、ソケットが収束することを確認する。
+- aiortc停止、Pion起動、動作確認を一連の手順として実行する。
+- フロントエンドとPython下流サービスを再ビルドせずPionへ切り替えることを確認する。
 
-Gate 4では、public UDP / NAT / firewallはPion接続成立を観測する環境前提として扱う。Pion process crash自動復帰は
-Pion固有の運用強化であり、Gate 4の受け入れ条件、検証計画、runbookには含めない。
+Gate 4では、公開UDP / NAT / ファイアウォールはPion接続成立を観測する環境前提として扱う。Pion プロセス異常終了自動復帰は
+Pion固有の運用強化であり、Gate 4の受け入れ条件、検証計画、手順書には含めない。
 
 ### Gate 4判定
 
-- 移行必須: Pionで現行Frontendが接続し、1 turnの会話、利用者/応答text、telop、非無音音声が成立する。session終了後に
-  active sessionと下流接続が収束し、切替でFrontendと下流serviceをrebuildしない。
-- 既存testの証拠: 既存repository testはPhase 3で確認済みの契約・異常系の証拠として再利用する。
-- 独立した運用強化: Pion process crash自動復帰、soak、性能比較、障害注入、browser matrixの拡張は含めない。
+- 移行必須: Pionで現行フロントエンドが接続し、1 往復の会話、利用者/応答テキスト、テロップ、非無音音声が成立する。セッション終了後に
+  有効セッションと下流接続が収束し、切替でフロントエンドと下流サービスを再ビルドしない。
+- 既存テストの証拠: 既存リポジトリテストは段階 3で確認済みの契約・異常系の証拠として再利用する。
+- 独立した運用強化: Pion プロセス異常終了自動復帰、長時間連続稼働、性能比較、障害注入、ブラウザの組み合わせの拡張は含めない。
 
-現行Gate 4 taskへの適用は、この規則を反映した試行4からとする。過去artifactとPASS / FAIL / blockedの判定履歴は
-書き換えない。Pionの移行必須条件を観測できるproduction相当smoke手順で、runbookを最初から実行する。
+現行Gate 4 タスクへの適用は、この規則を反映した試行4からとする。過去成果物とPASS / FAIL / 停止中の判定履歴は
+書き換えない。Pionの移行必須条件を観測できる本番相当動作確認手順で、手順書を最初から実行する。
 
 次は必須Gateに含めない。
 
-- 1%、5%、10%など複数条件のnetwork impairment matrix
-- packet sequence wraparound、連続ICE restart、candidate順序の網羅試験
-- 50回、100回の接続反復や長時間soak
-- aiortcとPionの詳細なCPU、memory、区間別latency比較
-- 全音声形式を使ったend-to-end matrix
+- 1%、5%、10%など複数条件のネットワーク障害行列
+- パケット系列周回、連続ICE 再接続、候補順序の網羅試験
+- 50回、100回の接続反復や長時間長時間連続稼働
+- aiortcとPionの詳細なCPU、メモリ、区間別遅延比較
+- 全音声形式を使った端から端までの行列
 
-接続失敗、音声品質問題、resource増加が実運用で観測された場合だけ、該当項目を再現する独立taskを起票する。
+接続失敗、音声品質問題、リソース増加が実運用で観測された場合だけ、該当項目を再現する独立タスクを起票する。
 
 ### Gate 4の過剰化防止
 
 Gate 4は、Pionで1回の既存Chrome経路を確認した時点で判定する。aiortcの起動確認は診断情報に留め、会話成立を要求しない。実下流の応答本文は固定文と比較せず、
-利用者/応答text、telop、非無音音声の表示・再生をbrowser UIで確認する。Firefox、Docker crash、環境の網羅監査、
-新しいbrowser oracleは、browser固有の実害があり、aiortcで同じ経路が成立している場合だけ独立して扱う。
+利用者/応答テキスト、テロップ、非無音音声の表示・再生をブラウザ UIで確認する。Firefox、Docker 異常終了、環境の網羅監査、
+新しいブラウザ正否判定器は、ブラウザ固有の実害があり、aiortcで同じ経路が成立している場合だけ独立して扱う。
 
-## Phase 5 maintenance cutover
+## 段階 5 メンテナンス切替
 
-`full` / `rtc` profileでPion `sincro-rtc` だけがstable TCP 8001と固定media UDP portを公開することを確認する。
-既存Chromeで1 turnの会話、text、telop、非無音音声、session終了後の収束を1回確認して利用を再開する。
-aiortcはGate 6で削除済みであり、Gate 5の動作確認・rollback経路には含めなかった。
+`full` / `rtc` プロファイルでPion `sincro-rtc` だけが固定TCP 8001と固定メディア UDP ポートを公開することを確認する。
+既存Chromeで1 往復の会話、テキスト、テロップ、非無音音声、セッション終了後の収束を1回確認して利用を再開する。
+aiortcはGate 6で削除済みであり、Gate 5の動作確認・切り戻し経路には含めなかった。
 
 ### Gate 5判定
 
-- 移行必須: 通常profileのPion stable endpointでsmokeが成立し、利用者がPhase 6着手を判断するまでPion問題時の対応条件に該当しない。
-- 観測不能: 移行必須条件を観測できない場合はPASSにせず、必要な観測点と解除条件を記録してtaskを`blocked`にする。
-- 独立した運用強化: 日数、traffic量、成功率、soak、aiortc動作確認は追加しない。
+- 移行必須: 通常プロファイルのPion 固定エンドポイントで動作確認が成立し、利用者が段階 6着手を判断するまでPion問題時の対応条件に該当しない。
+- 観測不能: 移行必須条件を観測できない場合はPASSにせず、必要な観測点と解除条件を記録してタスクを`blocked`にする。
+- 独立した運用強化: 日数、通信量、成功率、長時間連続稼働、aiortc動作確認は追加しない。
 
-## Observability
+## 観測
 
-既に実装済みのmetricsから、切替判断に必要な値だけを記録する。
+既に実装済みの指標から、切替判断に必要な値だけを記録する。
 
-- active / closed session
-- signaling error
-- codec error
-- pipeline reconnect
-- queue overflow
-- session close duration
+- 有効 / 閉じたセッション
+- シグナリングエラー
+- コーデックエラー
+- 処理工程再接続
+- キュー容量超過
+- セッション終了継続時間
 
-新しいmetric familyやGate専用collectorは追加しない。session IDはlog correlationに使用できるが、音声内容やchat本文を通常logへ出さない。
+新しい指標系統やGate専用収集処理は追加しない。セッション IDはログ相関に使用できるが、音声内容やチャット本文を通常ログへ出さない。
 
 ## 検証成果物
 
-実行したcommit、環境、command、smoke test結果、未観測、残リスクを対応taskの`eval.md`または小さな集約artifactへ記録する。
-raw browser trace、音声、本文はGit管理外の`work/private-artifacts/`へ置く。
+実行したコミット、環境、コマンド、動作確認結果、未観測、残リスクを対応タスクの`eval.md`または小さな集約成果物へ記録する。
+ブラウザから得た未加工の追跡記録、音声、本文はGit管理外の`work/private-artifacts/`へ置く。

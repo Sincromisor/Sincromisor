@@ -1,4 +1,4 @@
-# キャラクターアニメーション / ものまねらしさ 調査依頼
+# キャラクターアニメーション / ものまねらしさ調査依頼
 
 ## 目的
 
@@ -20,15 +20,15 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 |      4 | ユーザーの意図が伝わる         |
 |      5 | 実人体の姿勢へ忠実             |
 
-単眼カメラでは、奥行き、肘方向、手首 roll、遮蔽、左右入れ替えが不安定になりやすい。そのため、検出値への完全追従ではなく、動作意図を抽出し、必要に応じて短い authored clip や style 補正でキャラクターらしい motion に変換する方針としている。
+単眼カメラでは、奥行き、肘方向、手首ロール、遮蔽、左右入れ替えが不安定になりやすい。そのため、検出値への完全追従ではなく、動作意図を抽出し、必要に応じて短い制作済みクリップや演出補正でキャラクターらしい動作に変換する方針としている。
 
-この依頼の対象は `sincro` モードの上半身同期に限る。`chat` モードの idle、会話視線、表情、AI speech gesture、長期的な personality 設計には広げない。
+この依頼の対象は `sincro` モードの上半身同期に限る。`chat` モードの待機動作、会話視線、表情、AI 発話ジェスチャー、長期的な性格設計には広げない。
 
 ## 前提技術
 
 - 入力: MediaPipe Pose / Hand / Face / Gesture の観測値
 - 中間表現: MotionIntent、GestureState、CanonicalUpperBodyState
-- 出力: VRM 1.0 normalized pose、additive pose delta
+- 出力: VRM 1.0 正規化済み姿勢、加算姿勢差分
 - 描画: Three.js + `@pixiv/three-vrm`
 - 対象キャラクター: VRoid Studio 系のアニメ調モデル
 
@@ -44,13 +44,13 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 - どの部位は省略・丸め・低振幅化しても違和感が少ないか。
 - 誇張した方がよい動きと、抑えた方がよい動き。
 - 会話中に邪魔になる動きと、存在感を高める動き。
-- かわいく見える遅れ、丸め、anticipation、follow-through。
+- かわいく見える遅れ、丸め、予備動作、動作後の余韻。
 
-### semantic motion layer
+### 意味に基づく動作動作層
 
-既存資料では、Hand / Gesture の結果から `MotionIntent` を推定し、tracking と短い additive clip を blend する案を挙げている。
+既存資料では、Hand / Gesture の結果から `MotionIntent` を推定し、追跡と短い加算クリップを合成する案を挙げている。
 
-想定している intent は次である。
+想定している動作意図は次である。
 
 - `tracking`
 - `wave`
@@ -61,23 +61,23 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 
 調査してほしい論点は次である。
 
-- 追加すべき intent。
-- intent ごとの発火条件。
-- tracking pose と semantic clip の blend 比率。
-- fade-in / fade-out / cooldown / minimum duration。
-- gesture label のちらつきを motion として見せない方法。
+- 追加すべき動作意図。
+- 動作意図ごとの発火条件。
+- 追跡姿勢と意味に基づく動作クリップの合成比率。
+- 徐々に反映 / 徐々に解除 / 待機期間 / 最小継続時間。
+- ジェスチャー表示名のちらつきを動作として見せない方法。
 
-### 上半身 clip
+### 上半身クリップ
 
-短い上半身 clip は、全身上書きではなく additive 補助として使う想定である。
+短い上半身クリップは、全身上書きではなく加算補助として使う想定である。
 
 調査してほしい論点は次である。
 
-- 手振り、指差し、サムズアップ、ピース、顔近くの手などに必要な clip。
-- clip が触るべき bone と、tracking に残すべき bone。
-- 肩・胸・頭をどこまで clip 側で動かすべきか。
-- clip の長さ、周期、blend weight。
-- `sincro` 上半身同期に閉じた style parameter。例: 動きの振幅、丸め方、gesture の控えめさ。
+- 手振り、指差し、サムズアップ、ピース、顔近くの手などに必要なクリップ。
+- クリップが触るべきボーンと、追跡に残すべきボーン。
+- 肩・胸・頭をどこまでクリップ側で動かすべきか。
+- クリップの長さ、周期、合成重み。
+- `sincro` 上半身同期に閉じた演出パラメータ。例: 動きの振幅、丸め方、ジェスチャーの控えめさ。
 
 ### 破綻時の自然な退避
 
@@ -85,23 +85,23 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 
 調査してほしい論点は次である。
 
-- confidence が低いときの motion amplitude の落とし方。
-- comfortable pose / relaxed hand / neutral head への戻し方。
+- 信頼度が低いときの動作振幅の落とし方。
+- 無理のない自然姿勢 / 力を抜いた手 / 中立姿勢頭部への戻し方。
 - 破綻しそうな観測を「意味ある動き」に丸める方法。
-- ユーザーにとって、追従していないことが目立ちにくい fallback。
+- ユーザーにとって、追従していないことが目立ちにくい代替処理。
 
 ## 期待成果物
 
-- `sincro` モードの motion design principle。
+- `sincro` モードの動作設計原則。
 - `MotionIntent` 一覧と発火条件。
-- tracking / semantic clip / fallback の blend table。
-- 最初に用意すべき authored upper-body clip のリスト。
+- 追跡 / 意味に基づく動作クリップ / 代替処理の合成表。
+- 最初に用意すべき制作済み上半身クリップのリスト。
 - 主観評価チェックリスト。
 - 「かわいいが不安定」ではなく「控えめだが破綻しない」動きにするための具体指針。
 
 ## 読んでほしい資料
 
-- [roadmap.md](roadmap.md)
-- [report02.md](report02.md)
-- [report03.md](report03.md)
-- [report04-three-vrm.md](report04-three-vrm.md)
+- [roadmap.md](../roadmap.md)
+- [report02.md](../report02.md)
+- [report03.md](../report03.md)
+- [report04-three-vrm.md](../report04-three-vrm.md)
