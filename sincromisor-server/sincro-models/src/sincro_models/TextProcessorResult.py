@@ -1,3 +1,5 @@
+"""テキスト処理からGoと音声合成へ渡す共通結果を定義し、本文増分と確定履歴を保持する。"""
+
 from typing import Any
 
 import msgpack
@@ -8,6 +10,8 @@ from .TextProcessorRequest import TextProcessorRequest
 
 
 class TextProcessorResult(BaseModel):
+    """テキスト処理の途中応答と、最後に確定する会話履歴を表す。"""
+
     # セッションのID。接続している間は同じ値となる。
     session_id: str
     # SpeechExtractorResultを送信するごとに割り振られるID。    sequence_id: int = 0
@@ -31,6 +35,7 @@ class TextProcessorResult(BaseModel):
     _response_prefix_buffer: str = PrivateAttr(default="")
 
     def append_response_message(self, text: str) -> bool:
+        """本文断片を追加し、送信可能な音声入力ができたかを返す。"""
         # 応答ストリーム先頭の ^N 感情コードをここで剥がす。
         # text_ch 表示文と voice_text(TTS入力)の両方から制御文字を除去するため、
         # TextProcessorWorker個別実装ではなく共有モデル側で一元処理する。
@@ -44,13 +49,20 @@ class TextProcessorResult(BaseModel):
         self.voice_text = visible_text
         return True
 
-    def finalize(self):
+    def finalize(self) -> None:
+        """正常終了時に保留本文と履歴を確定する。呼び出し元は一応答につき一度だけ呼ぶ。
+
+        未送信の単独「^」が残る場合は最終結果の音声入力にも載せる。
+        それ以外は音声入力を空にし、直前の増分を再送しない。
+        """
         # ^ のみで終了する等の異常系でも、本文文字を欠落させない。
         if not self._response_prefix_checked and self._response_prefix_buffer:
             self.response_message.message += self._response_prefix_buffer
+            self.voice_text = self._response_prefix_buffer
             self._response_prefix_buffer = ""
             self._response_prefix_checked = True
-        self.voice_text = None
+        else:
+            self.voice_text = None
         self.end_of_response = True
         self.history.messages.append(self.response_message)
 
@@ -98,6 +110,7 @@ class TextProcessorResult(BaseModel):
         speaker_id: str,
         speaker_name: str,
     ) -> "TextProcessorResult":
+        """要求の会話情報を引き継ぎ、空の応答結果を作る。"""
         return TextProcessorResult(
             session_id=request.session_id,
             sequence_id=request.sequence_id,
@@ -116,10 +129,15 @@ class TextProcessorResult(BaseModel):
 
     @classmethod
     def from_msgpack(cls, pack: bytes) -> "TextProcessorResult":
+        """下流へ渡されたMessagePackを復号し、モデルの型と必須項目を検証する。
+
+        不正なMessagePackやモデル検証の失敗は呼び出し元へ伝える。
+        """
         contents = msgpack.unpackb(pack)
         return TextProcessorResult(**contents)
 
     def __msgpack_pack(self, obj):
+        """入れ子の履歴・メッセージだけを既存の公開フィールド辞書へ変換する。"""
         if isinstance(obj, ChatHistory):
             return obj.model_dump()
         if isinstance(obj, ChatMessage):
@@ -127,6 +145,11 @@ class TextProcessorResult(BaseModel):
         return obj
 
     def to_msgpack(self) -> bytes:
+        """Goと音声合成が共有する既存フィールドをMessagePackへ符号化する。
+
+        感情コード解析用のPrivateAttrは内部状態であり通信には含めない。
+        呼び出した時点の本文・音声増分・履歴を固定したバイト列を返す。
+        """
         pack: Any | None = msgpack.packb(
             {
                 "session_id": self.session_id,
