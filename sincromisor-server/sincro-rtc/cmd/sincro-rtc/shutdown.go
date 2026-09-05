@@ -7,6 +7,21 @@ import (
 	"time"
 )
 
+const (
+	// shutdownCleanupTimeout はOffer登録簿と全セッションの後始末で共有する期限である。
+	// 短すぎると正常な解放も失敗と判定し、長すぎるとプロセス停止が遅れる。
+	shutdownCleanupTimeout = 5 * time.Second
+	// shutdownAdmissionWindow はdrainingと新規Offerの503を外部から観測できるよう、待受を維持する時間である。
+	// 後始末の共有期限内に収める。短縮すると外部監督が受付停止を見逃し得る。
+	shutdownAdmissionWindow = 1 * time.Second
+	// shutdownHTTPTimeout は後始末と観測窓の後にHTTPだけを停止する独立期限である。
+	// 合計6秒の終了上限を変える場合は、Pion運用文書とSIGTERM試験を併せて更新する。
+	shutdownHTTPTimeout = 1 * time.Second
+)
+
+// shutdownOperations は受付停止からHTTP終了までの操作をまとめる。
+// 本番と試験で同じ終了手順を使い、試験では観測窓を手動で進められる。
+// 個々の失敗で後続の終了操作を止めず、shutdownProcessが結果を集約する。
 type shutdownOperations struct {
 	BeginDrain          func()
 	Deregister          func(context.Context) error
@@ -88,8 +103,3 @@ func waitShutdownAdmissionWindow(ctx context.Context) error {
 		return ctx.Err()
 	}
 }
-
-// serve はHTTP受理、signal待機、process cleanup、HTTP停止の所有順序を調停する。
-//
-// signal時だけlistenerを1秒維持してdrainingを公開する。listener失敗時は観測対象がないため待機せず、
-// 同じcleanup経路でprocess ownerを収束させる。全errorはshutdownProcessと結合してrunへ返す。
