@@ -2,33 +2,13 @@ import { getLookingGlassRuntimeConfig } from "../../character/lookingGlass/looki
 import type { SincroAppDialogFacade } from "../bridges/sincroAppDialogFacade";
 import type { SincroAppSettingsSnapshot } from "../controller/sincroAppTypes";
 
-// Dialog 設定値 + Looking Glass runtime config を合成して、
-// UI/API 共通の settings snapshot を作る helper。
+/** ダイアログ設定とLooking Glass設定を合成し、起動前後のUIで共有する値を返す。 */
 export function buildSincroAppSettingsSnapshot(
     dialogManager: SincroAppDialogFacade,
 ): SincroAppSettingsSnapshot {
     const lg = getLookingGlassRuntimeConfig();
     return {
-        titleText: dialogManager.titleText(),
-        talkMode: dialogManager.talkMode(),
-        audioInputDeviceId: dialogManager.audioInputDeviceId(),
-        videoInputDeviceId: dialogManager.videoInputDeviceId(),
-        enableCharacter: dialogManager.enableCharacter(),
-        enableTalk: dialogManager.enableTalk(),
-        enableCharacterGaze: dialogManager.enableCharacterGaze(),
-        enableSincroPoseTracking: dialogManager.enableSincroPoseTracking(),
-        forceSincroPoseTracking: dialogManager.forceSincroPoseTracking(),
-        enableAutoMute: dialogManager.enableAutoMute(),
-        enableNoiseSuppression: dialogManager.enableNoiseSuppression(),
-        enableEchoCancellation: dialogManager.enableEchoCancellation(),
-        enableAutoGainControl: dialogManager.enableAutoGainControl(),
-        enableVadGate: dialogManager.enableVadGate(),
-        enableVenueNoiseMode: dialogManager.enableVenueNoiseMode(),
-        enableInspector: dialogManager.enableInspector(),
-        enableVR: dialogManager.enableVR(),
-        characterMotionScale: dialogManager.characterMotionScale(),
-        sincroPoseRetargetScale: dialogManager.sincroPoseRetargetScale(),
-        characterEyeTrackingScale: dialogManager.characterEyeTrackingScale(),
+        ...dialogManager.getSettings(),
         lgTileHeight: lg.tileHeight,
         lgNumViews: lg.numViews,
         lgTargetY: lg.targetY,

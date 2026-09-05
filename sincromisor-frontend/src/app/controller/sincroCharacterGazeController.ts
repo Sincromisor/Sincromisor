@@ -156,8 +156,12 @@ export class SincroCharacterGazeController {
             });
     }
 
+    /** 最新の機器を取得し、現在の会話モードの追跡を開始する。古い取得結果は停止して破棄する。 */
     private async refreshCharacterGazeCamera(refreshToken: number): Promise<void> {
-        if (!this.dialogManager.enableCharacterGaze() || this.onMuteChange === undefined) {
+        if (
+            !this.dialogManager.getSetting("enableCharacterGaze") ||
+            this.onMuteChange === undefined
+        ) {
             return;
         }
         this.motionEventSink.resetObserveOnlyPipeline();
@@ -177,14 +181,14 @@ export class SincroCharacterGazeController {
             const nextVideoTrack = await this.videoInputManager.reacquireVideoTrack();
             if (
                 refreshToken !== this.pendingCameraRefreshToken ||
-                !this.dialogManager.enableCharacterGaze()
+                !this.dialogManager.getSetting("enableCharacterGaze")
             ) {
                 nextVideoTrack.stop();
                 return;
             }
             this.activeTrackingVideoTrack = nextVideoTrack;
             nextVideoTrack.addEventListener("ended", () => {
-                if (!this.dialogManager.enableCharacterGaze()) {
+                if (!this.dialogManager.getSetting("enableCharacterGaze")) {
                     return;
                 }
                 this.characterBehaviorState.setErrorSource(
@@ -193,7 +197,7 @@ export class SincroCharacterGazeController {
                 );
             });
 
-            if (this.dialogManager.talkMode() === "sincro") {
+            if (this.dialogManager.getSetting("talkMode") === "sincro") {
                 await this.startSincroFaceTracking(nextVideoTrack);
             } else {
                 await this.startCharacterGazeTracking(characterGaze, nextVideoTrack);
@@ -219,6 +223,7 @@ export class SincroCharacterGazeController {
         }
     }
 
+    /** 顔同期を停止して視線追跡を開始する。各フレームで現在の設定を確認して結果の適用を決める。 */
     private async startCharacterGazeTracking(
         characterGaze: CharacterGaze,
         nextVideoTrack: MediaStreamTrack,
@@ -234,8 +239,8 @@ export class SincroCharacterGazeController {
             (detects: Detection[]) => {
                 // 設定変更後も動作が追従するよう、毎フレーム時点の設定を参照する。
                 const gazeEnabled =
-                    this.dialogManager.enableCharacterGaze() &&
-                    this.dialogManager.talkMode() !== "sincro";
+                    this.dialogManager.getSetting("enableCharacterGaze") &&
+                    this.dialogManager.getSetting("talkMode") !== "sincro";
                 // ここが Gaze 状態の主更新点。DebugConsole購読経由で React 側にも値が流れる。
                 if (gazeEnabled) {
                     this.debugConsoleManager.updateFaceXLog(characterGaze.targetX());
@@ -258,13 +263,14 @@ export class SincroCharacterGazeController {
         this.characterBehaviorState.setGazeTrackingEnabled(true);
     }
 
+    /** 視線追跡を解除し、現在の姿勢設定で顔・姿勢同期を開始する。姿勢無効時は補助追跡も起動しない。 */
     private async startSincroFaceTracking(nextVideoTrack: MediaStreamTrack): Promise<void> {
         const characterGaze = CharacterGaze.getManager();
         characterGaze.detachCamera();
         updateEyeTargetOverlay(characterGaze, false, []);
         this.motionEventSink.resetObserveOnlyPipeline();
-        const poseTrackingEnabled = this.dialogManager.enableSincroPoseTracking();
-        const forcePoseTracking = this.dialogManager.forceSincroPoseTracking();
+        const poseTrackingEnabled = this.dialogManager.getSetting("enableSincroPoseTracking");
+        const forcePoseTracking = this.dialogManager.getSetting("forceSincroPoseTracking");
         const observeOptionalPosePassEnabled = poseTrackingEnabled;
         this.characterBehaviorState.setGazeTrackingEnabled(false);
         this.characterBehaviorState.setFaceMotionTrackingEnabled(true);

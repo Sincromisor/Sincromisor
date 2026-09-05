@@ -9,7 +9,7 @@ import {
 
 type LookingGlassRuntimeConfigPatch = Parameters<typeof updateLookingGlassRuntimeConfig>[0];
 
-// UI入力値の揺れを吸収し、runtime config を安全な範囲に正規化する。
+/** UIの数値を指定範囲と刻みに正規化する。非有限値は下限へ戻す。 */
 export function clampAndRoundToStep(value: number, min: number, max: number, step: number): number {
     if (!Number.isFinite(value)) {
         return min;
@@ -20,124 +20,28 @@ export function clampAndRoundToStep(value: number, min: number, max: number, ste
     return Number(rounded.toFixed(6));
 }
 
-// AppController.applySettings(...) の実処理を分離し、
-// Dialog 設定の反映と Looking Glass runtime config 更新をまとめて扱う。
+/** UI入力の数値を正規化してダイアログへ一括反映し、会話モードとLooking Glass設定を同期する。 */
 export function applySincroAppSettingsPartial(
     dialogManager: SincroAppDialogFacade,
     partial: Partial<SincroAppSettingsSnapshot>,
 ): void {
-    applyTextAndDeviceSettings(dialogManager, partial);
-    applyAudioSettings(dialogManager, partial);
-    applyCharacterSettings(dialogManager, partial);
-    applyInspectorSettings(dialogManager, partial);
-    applyMotionScaleSettings(dialogManager, partial);
-    applyLookingGlassSettings(partial);
-}
-
-function applyTextAndDeviceSettings(
-    dialogManager: SincroAppDialogFacade,
-    partial: Partial<SincroAppSettingsSnapshot>,
-): void {
-    // Dialog 設定（UI/RTC/描画系のトグル）は DialogManager facade 経由で即時反映する。
+    const normalized = { ...partial };
+    for (const key of [
+        "characterMotionScale",
+        "sincroPoseRetargetScale",
+        "characterEyeTrackingScale",
+    ] as const) {
+        const value = partial[key];
+        if (value !== undefined) {
+            normalized[key] = clampSincroAppNumericSetting(key, value);
+        }
+    }
+    dialogManager.updateSettings(normalized);
     if (partial.talkMode !== undefined) {
-        dialogManager.setTalkMode(partial.talkMode);
-        // RTCのtalk_modeは接続開始時の契約なので、実行中の音声経路変更は再接続で反映する。
-        // ここではキャラクターのlocal motion policyだけを即時更新する。
-        CharacterBehaviorState.getManager().setTalkMode(partial.talkMode);
+        // RTCの会話モードは再接続で反映する。ここでは適用後の値をキャラクター動作へ同期する。
+        CharacterBehaviorState.getManager().setTalkMode(dialogManager.getSetting("talkMode"));
     }
-    if (partial.titleText !== undefined) {
-        dialogManager.setTitleText(partial.titleText);
-    }
-    if ("audioInputDeviceId" in partial) {
-        dialogManager.setAudioInputDeviceId(partial.audioInputDeviceId);
-    }
-    if ("videoInputDeviceId" in partial) {
-        dialogManager.setVideoInputDeviceId(partial.videoInputDeviceId);
-    }
-}
-
-function applyAudioSettings(
-    dialogManager: SincroAppDialogFacade,
-    partial: Partial<SincroAppSettingsSnapshot>,
-): void {
-    if (partial.enableAutoGainControl !== undefined) {
-        dialogManager.setEnableAutoGainControl(partial.enableAutoGainControl);
-    }
-    if (partial.enableNoiseSuppression !== undefined) {
-        dialogManager.setEnableNoiseSuppression(partial.enableNoiseSuppression);
-    }
-    if (partial.enableEchoCancellation !== undefined) {
-        dialogManager.setEnableEchoCancellation(partial.enableEchoCancellation);
-    }
-    if (partial.enableVadGate !== undefined) {
-        dialogManager.setEnableVadGate(partial.enableVadGate);
-    }
-    if (partial.enableVenueNoiseMode !== undefined) {
-        dialogManager.setEnableVenueNoiseMode(partial.enableVenueNoiseMode);
-    }
-}
-
-function applyCharacterSettings(
-    dialogManager: SincroAppDialogFacade,
-    partial: Partial<SincroAppSettingsSnapshot>,
-): void {
-    if (partial.enableCharacter !== undefined) {
-        dialogManager.setEnableCharacter(partial.enableCharacter);
-    }
-    if (partial.enableTalk !== undefined) {
-        dialogManager.setEnableTalk(partial.enableTalk);
-    }
-    if (partial.enableCharacterGaze !== undefined) {
-        dialogManager.setEnableCharacterGaze(partial.enableCharacterGaze);
-    }
-    if (partial.enableSincroPoseTracking !== undefined) {
-        dialogManager.setEnableSincroPoseTracking(partial.enableSincroPoseTracking);
-    }
-    if (partial.forceSincroPoseTracking !== undefined) {
-        dialogManager.setForceSincroPoseTracking(partial.forceSincroPoseTracking);
-    }
-    if (partial.enableAutoMute !== undefined) {
-        dialogManager.setEnableAutoMute(partial.enableAutoMute);
-    }
-}
-
-function applyInspectorSettings(
-    dialogManager: SincroAppDialogFacade,
-    partial: Partial<SincroAppSettingsSnapshot>,
-): void {
-    if (partial.enableInspector !== undefined) {
-        dialogManager.setEnableInspector(partial.enableInspector);
-    }
-    if (partial.enableVR !== undefined) {
-        dialogManager.setEnableVR(partial.enableVR);
-    }
-}
-
-function applyMotionScaleSettings(
-    dialogManager: SincroAppDialogFacade,
-    partial: Partial<SincroAppSettingsSnapshot>,
-): void {
-    if (partial.characterMotionScale !== undefined) {
-        dialogManager.setCharacterMotionScale(
-            clampSincroAppNumericSetting("characterMotionScale", partial.characterMotionScale),
-        );
-    }
-    if (partial.sincroPoseRetargetScale !== undefined) {
-        dialogManager.setSincroPoseRetargetScale(
-            clampSincroAppNumericSetting(
-                "sincroPoseRetargetScale",
-                partial.sincroPoseRetargetScale,
-            ),
-        );
-    }
-    if (partial.characterEyeTrackingScale !== undefined) {
-        dialogManager.setCharacterEyeTrackingScale(
-            clampSincroAppNumericSetting(
-                "characterEyeTrackingScale",
-                partial.characterEyeTrackingScale,
-            ),
-        );
-    }
+    applyLookingGlassSettings(partial);
 }
 
 function applyLookingGlassSettings(partial: Partial<SincroAppSettingsSnapshot>): void {

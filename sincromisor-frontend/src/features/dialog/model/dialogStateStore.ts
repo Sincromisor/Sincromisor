@@ -7,29 +7,6 @@ import {
 
 export type DialogSettingKey = DialogBackedSincroAppSettingKey;
 
-// DialogManager の generic getter/setter から key-safe に扱うために定義している。
-type DialogSettingValueMap = DialogBackedSincroAppSettings;
-
-type DialogSettingDisabledMap = {
-    titleText: boolean;
-    talkMode: boolean;
-    audioInputDeviceId: boolean;
-    videoInputDeviceId: boolean;
-    enableCharacter: boolean;
-    enableTalk: boolean;
-    enableCharacterGaze: boolean;
-    enableSincroPoseTracking: boolean;
-    forceSincroPoseTracking: boolean;
-    enableAutoMute: boolean;
-    enableNoiseSuppression: boolean;
-    enableEchoCancellation: boolean;
-    enableAutoGainControl: boolean;
-    enableVadGate: boolean;
-    enableVenueNoiseMode: boolean;
-    enableInspector: boolean;
-    enableVR: boolean;
-};
-
 // React dialog 側で直接使う UI 状態（表示/開始ボタン）を store 側でも保持する。
 export type DialogUiStateValue = {
     isOpen: boolean;
@@ -43,11 +20,10 @@ export type DialogVrmUiStateValue = {
     vrmStatusText: string;
 };
 
-// DialogManager の getter/setter を DOM 直読みに依存させすぎないための軽量 state store。
-// bridge DOM は同期先として残し、React/UI 層はこの値を間接的に使う構成へ寄せる。
+/** ダイアログ設定と表示状態を保持する。DOM同期と変更通知はDialogManagerへ委ねる。 */
 export class DialogStateStore {
-    private values: DialogSettingValueMap = createDefaultDialogBackedSettings();
-    private disabled: DialogSettingDisabledMap = { ...defaultDialogSettingsDisabledState };
+    private values: DialogBackedSincroAppSettings = createDefaultDialogBackedSettings();
+    private disabled: Record<DialogSettingKey, boolean> = { ...defaultDialogSettingsDisabledState };
     private dialogUiState: DialogUiStateValue = {
         isOpen: false,
         startButtonDisabled: false,
@@ -59,20 +35,55 @@ export class DialogStateStore {
     };
     private selectedVrmUrl: string = "/characters/default.vrm";
 
-    get<K extends DialogSettingKey>(key: K): DialogSettingValueMap[K] {
+    /** 管理処理と表示規則が共有する設定値を、キーに対応する型で返す。 */
+    get<K extends DialogSettingKey>(key: K): DialogBackedSincroAppSettings[K] {
         return this.values[key];
     }
 
-    set<K extends DialogSettingKey>(key: K, value: DialogSettingValueMap[K]): void {
+    /** 利用可否の規則による強制更新用。利用者の入力はupdateSettingsで操作可否を確認する。 */
+    set<K extends DialogSettingKey>(key: K, value: DialogBackedSincroAppSettings[K]): void {
         // store は純粋な状態保持に徹し、通知は DialogManager/EventHub 側で行う。
         this.values[key] = value;
     }
 
-    isDisabled(key: keyof DialogSettingDisabledMap): boolean {
+    /** UIへの受け渡し用に設定全体のコピーを返す。 */
+    getSettings(): DialogBackedSincroAppSettings {
+        return { ...this.values };
+    }
+
+    /**
+     * 型付きの内部入力から操作可能な設定だけを更新し、適用内容を返す。通知は管理処理が担う。
+     * 機器IDのundefinedは既定機器への復帰、それ以外のundefinedは未指定として扱う。
+     * アプリ全体の設定が渡されても、Looking Glassなど別の所有者の値は保持しない。
+     */
+    updateSettings(
+        partial: Partial<DialogBackedSincroAppSettings>,
+    ): Partial<DialogBackedSincroAppSettings> {
+        const editableKeys = new Set(
+            Object.entries(this.disabled)
+                .filter(([, disabled]) => !disabled)
+                .map(([key]) => key),
+        );
+        const applied: Partial<DialogBackedSincroAppSettings> = Object.fromEntries(
+            Object.entries(partial).filter(
+                ([key, value]) =>
+                    editableKeys.has(key) &&
+                    (value !== undefined ||
+                        key === "audioInputDeviceId" ||
+                        key === "videoInputDeviceId"),
+            ),
+        );
+        Object.assign(this.values, applied);
+        return applied;
+    }
+
+    /** 設定UIからの変更を受け付けない項目かを返す。 */
+    isDisabled(key: DialogSettingKey): boolean {
         return this.disabled[key];
     }
 
-    setDisabled(key: keyof DialogSettingDisabledMap, disabled: boolean): void {
+    /** 機器・キャラクターの利用可否に応じて操作制限を更新する。 */
+    setDisabled(key: DialogSettingKey, disabled: boolean): void {
         this.disabled[key] = disabled;
     }
 

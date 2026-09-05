@@ -6,6 +6,7 @@ export class DialogSettingsChangeBatcher {
 
     constructor(private readonly emitNow: () => void) {}
 
+    /** 一括処理中は通知を保留し、それ以外は直ちに購読者へ通知する。 */
     emit(): void {
         if (this.depth > 0) {
             // 状態更新の途中では即時 emit せず、batch 終了時に 1 回だけ通知する。
@@ -15,6 +16,7 @@ export class DialogSettingsChangeBatcher {
         this.emitNow();
     }
 
+    /** 入れ子を含む更新処理の終了時に、保留した設定変更を一度だけ通知する。 */
     run(action: () => void): void {
         this.depth += 1;
         try {

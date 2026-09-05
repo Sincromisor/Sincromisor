@@ -19,8 +19,7 @@ import type {
 import type { SincroAppDialogFacade } from "./sincroAppDialogFacade";
 import { getSincroAppRightToolPanelService } from "./sincroAppRightToolPanelService";
 
-// AppController から公開する bridge 実装を factory に分離し、
-// Controller 本体を「依存の束ね役」に寄せる。
+/** UIと起動処理に必要な操作を公開する。設定の問い合わせは呼び出し時の正本を参照する。 */
 export function createSincroAppDialogBridge(params: {
     dialogManager: SincroAppDialogFacade;
 }): SincroAppDialogBridge {
@@ -46,9 +45,9 @@ export function createSincroAppDialogBridge(params: {
         updateCharacterAvailabilityStatus: (available) => {
             dialogManager.updateCharacterStatus(available);
         },
-        isCharacterEnabled: () => dialogManager.enableCharacter(),
-        isVREnabled: () => dialogManager.enableVR(),
-        isInspectorEnabled: () => dialogManager.enableInspector(),
+        isCharacterEnabled: () => dialogManager.getSetting("enableCharacter"),
+        isVREnabled: () => dialogManager.getSetting("enableVR"),
+        isInspectorEnabled: () => dialogManager.getSetting("enableInspector"),
         loadVrmThumbnailBlob: () => dialogManager.loadVrmThumbnailBlob(),
         saveVrmThumbnailBlob: async (blob) => {
             await dialogManager.saveVrmThumbnailBlob(blob);

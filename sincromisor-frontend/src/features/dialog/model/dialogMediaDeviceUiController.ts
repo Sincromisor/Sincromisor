@@ -32,6 +32,7 @@ export class DialogMediaDeviceUiController {
         this.isUserMediaAvailable = available;
     }
 
+    /** 現在の機器IDを機器一覧と照合し、開始可否と案内文の判定材料を返す。 */
     buildUiContext() {
         return {
             isUserMediaAvailable: this.isUserMediaAvailable,
@@ -46,6 +47,7 @@ export class DialogMediaDeviceUiController {
         };
     }
 
+    /** 設定反映後の機器選択と視線設定から開始ボタンの状態を再計算する。 */
     refreshDerivedUiState(): void {
         const startButtonState = this.settingsPolicy.buildStartButtonState(
             this.stateStore,
