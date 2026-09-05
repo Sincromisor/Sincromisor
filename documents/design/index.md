@@ -110,21 +110,11 @@
 - [React移行](initiatives/react-migration.md)
 - [固有名詞認識の補強](initiatives/proper-noun-biasing.md)
 
-## 廃止予定
+## 廃止予定と削除済み
 
-下記については廃止予定であるため、ドキュメントには記載しない。
-
-- Nue-ASR
-    - sincromisor-server/speech-recognizer 以下一式
-    - 公式リポジトリ消滅のため
-- Babylon.js
-    - sincromisor-frontend以下のキャラクター描画関連のうち、VRM1.0関連でないもの
-    - Three.js + VRM1.0に移行済み。近日中に削除予定
-    - VRM 1.0サポートが現状厳しいため
-        - https://forum.babylonjs.com/t/loading-vrm-humanoid-based-model/4980/28
-- MinIO
-    - SeaweedFSに移行
-    - 公式OSS版が終了見込のため
+- Nue-ASRは廃止予定。`sincromisor-server/speech-recognizer/` の実装は残っており、現行のNeMo実装は `sincromisor-server/speech-recognizer-nemo/` にある。
+- Babylon.jsの旧ページと関連実装・依存は削除済み。現行描画はThree.js + VRM 1.0を使う。
+- MinIOはSeaweedFSへ移行済み。旧設定の `compose/minio.yml` と `Docker/minio/` は残るが、通常のCompose構成には含めない。現在の保存領域は[保存領域の設計](infrastructure/storage.md)を参照する。
 
 ## 保管領域
 

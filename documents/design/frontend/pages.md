@@ -3,7 +3,7 @@
 ## 要約
 
 - 現行フロントエンドは `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` の 6 ページを通常ビルド対象にする。
-- Babylon.js 旧形式ページは通常導線と通常ビルドから外れている。
+- Babylon.jsの旧ページと関連実装・依存は削除済み。
 - 生成元の起動処理は `sincromisor-frontend/src/pages/*` に集約し、Vite の経路別名で既存公開 URL を維持する。
 - ページ差分は項目 / 初期化処理 / シーン選択肢 / ページ固有の設定に閉じ込める。
 
@@ -19,7 +19,9 @@
 
 ## ページ一覧
 
-| Page                    | 生成元の起動処理                           | 公開 URL                  | 分類   | 役割                      | 主な確認文書                                                     |
+分類の「実験用」も通常ビルドに含まれる。ビルド入力と公開URLの正本は [Vite設定](../../../sincromisor-frontend/vite.config.js) である。
+
+| ページ                  | 生成元の起動処理                           | 公開 URL                  | 分類   | 役割                      | 主な確認文書                                                     |
 | ----------------------- | ------------------------------------------ | ------------------------- | ------ | ------------------------- | ---------------------------------------------------------------- |
 | `main`                  | `src/pages/main/index.html`                | `/`                       | 現行   | 通常導線の入口            | `frontend/app-shell.md`                                          |
 | `simple-vrm`            | `src/pages/simpleVrm/index.html`           | `/simple-vrm/`            | 現行   | 通常会話の正規ルート      | `frontend/app-shell.md`, `frontend/character/overview.md`        |

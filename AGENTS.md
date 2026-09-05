@@ -7,8 +7,10 @@
 
 Sincromisor は、ブラウザ上で 3D キャラクターと音声対話するためのサービス基盤である。
 
-- サーバー: `sincromisor-server`（Python）
-    - WebRTC シグナリング、音声抽出、音声認識、テキスト処理、音声合成を分離した構成。
+ローカル／オンプレミス提供を前提とし、外部サービスのAPIを採用前提にしない。Difyと接続先LLMも管理下の環境へ配置する。
+
+- サーバー: `sincromisor-server`（Go/Pion RTC + Python下流サービス）
+    - Go/PionがWebRTCシグナリングと音声パイプラインの調停を担い、Pythonの音声区間抽出、音声認識、テキスト処理、音声合成へ接続する。
     - サービス発見には Consul を使う。
 - クライアント: `sincromisor-frontend`（TypeScript + Vite）
     - Vite MPA + Reactによるアプリの共通枠組み + Three.js / VRM 1.0 で画面とキャラクターを描画する。
@@ -49,7 +51,7 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
 ## ディレクトリマップ
 
 - `sincromisor-server/`
-    - `sincro-rtc/`: WebRTC シグナリングサーバー。
+    - `sincro-rtc/`: Go/Pion RTC。`cmd/sincro-rtc/` が起動入口、`internal/signaling/` がシグナリング、`internal/rtc/` がセッション、`internal/pipeline/` が下流サービスの調停を担う。
     - `speech-extractor/`: 音声区間抽出。
     - `speech-recognizer/`, `speech-recognizer-nemo/`: 音声認識。
     - `text-processor/`: チャット応答生成。
@@ -61,7 +63,6 @@ Sincromisor は、ブラウザ上で 3D キャラクターと音声対話する�
     - `character/`: VRMシーン、振る舞い、リターゲティング、IK、Looking Glass / VRM360ランタイム。
     - `pages/`: Vite MPA の HTML / エントリーポイント / ページ固有のReactパネル。
     - `shared/`: ログと横断型。
-    - `ts/`, `react/`: 旧構成。新規実装は原則置かない。
 - `documents/design/`: 現在有効な設計、契約、設計上の重要な意思決定とその背景(ADR)、取り組み計画。
 - `documents/rules/`: コーディング、構造、文書運用の横断ルール。
 - `tasks/`: 作業タスク、検証ログ、サブエージェント成果物。
@@ -138,7 +139,7 @@ if (!landmarks.wrist && wristHoldFrames < MAX_WRIST_HOLD_FRAMES) {
 ## 変更時の確認先
 
 - WebRTC 接続仕様を変える場合
-    - サーバー: `sincromisor-server/sincro-rtc/RTCSignalingServer.py`
+    - サーバー: `sincromisor-server/sincro-rtc/internal/signaling/`、`sincromisor-server/sincro-rtc/internal/rtc/`
     - フロント: `sincromisor-frontend/src/features/rtc/rtcTalkClient.ts`
     - 契約正本: `documents/design/contracts/frontend-rtc.md`
 - UI / 3D 表示を変える場合

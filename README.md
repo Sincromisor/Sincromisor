@@ -77,12 +77,12 @@ $ docker compose --profile full up -d
 通常利用ではトップページから次の導線を使います。
 
 - `Simple Interface (VRM 1.0)`: 通常会話の正規導線
-- `360deg Camera (VRM 1.0)`: 360 動画/カメラ向けの experimental 導線
-- `Looking Glass (VRM 1.0 / Three.js)`: [Looking Glass](https://lookingglassfactory.com/looking-glass-portrait) 向けの experimental 導線
+- `360deg Camera (VRM 1.0)`: 360 動画/カメラ向けの 実験用の導線
+- `Looking Glass (VRM 1.0 / Three.js)`: [Looking Glass](https://lookingglassfactory.com/looking-glass-portrait) 向けの 実験用の導線
 
-`sincromisor-frontend/package.json` では、`npm run build` が `tsc -p tsconfig.modern.json && vite build` に対応しており、通常ビルドでは `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm` を出力します。
+`sincromisor-frontend/package.json` では、`npm run build` が `tsc -p tsconfig.modern.json && vite build` に対応しており、通常ビルドでは `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` の6ページを出力します。実験用ページも通常ビルドに含まれ、分類と公開URLは[ページ構成](documents/design/frontend/pages.md)を参照してください。
 
-Babylon.js ベースの旧ページ（`simple`、`glass`、`character`、`character-glass`、`area360`、`single`、`double`）と関連する legacy 実装は削除済みです。通常の開発・確認は `sincromisor-frontend` で `npm run build` を使ってください。
+Babylon.js ベースの旧ページ（`simple`、`glass`、`character`、`character-glass`、`area360`、`single`、`double`）と関連する旧実装は削除済みです。通常の開発・確認は `sincromisor-frontend` で `npm run build` を使ってください。
 
 ## キャラクターを差し替える
 
