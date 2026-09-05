@@ -11,54 +11,32 @@ import (
 
 const synthesizerReadLimit int64 = 32 << 20
 
-// Synthesizer はprocessorの元MessagePack bytesを合成音声へ変換する1 WebSocket 接続を所有する。
-//
-// ProcessorResultを再encodeせずRawを転送することでPython query fieldを保持する。音声decode後の
-// container処理や再生、retry、pipeline orchestrationはこのclientの責務ではない。
+// Synthesizer は文章処理の元MessagePackデータを合成音声へ変換する接続を所有する。
+// Rawを再符号化せず転送してPython側のqueryを保つ。音声の復号と再生はRTC側が担当する。
 type Synthesizer struct {
-	base    *baseClient
+	*baseClient
 	results chan protocol.SynthesizerResult
 }
 
-// NewSynthesizer はconfigとdependencyを検証するがnetwork I/Oを開始しない。
-//
-// endpointと32 MiB limitはservice contractとして固定され、callerから変更できない。
+// NewSynthesizer は設定と依存を検証し、通信前の接続を作る。
+// 接続先のパスと32 MiBの上限は通信契約として固定する。
 func NewSynthesizer(cfg Config, resolver discovery.Resolver, logger *slog.Logger) (*Synthesizer, error) {
 	results := make(chan protocol.SynthesizerResult)
-	synthesizer := &Synthesizer{results: results}
 	base, err := newBase(
 		cfg, ServiceSynthesizer, discovery.ServiceSynthesizer, resolver, logger,
 		"/api/v1/VoiceSynthesizer/synthesize", nil, synthesizerReadLimit,
 		func() { close(results) },
-		func(ctx context.Context, payload []byte) error {
-			value, err := protocol.DecodeSynthesizerResult(payload)
-			if err != nil {
-				return err
-			}
-			select {
-			case results <- value:
-				return nil
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		},
+		decodeResults(results, protocol.DecodeSynthesizerResult),
 	)
 	if err != nil {
 		return nil, err
 	}
-	synthesizer.base = base
-	return synthesizer, nil
+	return &Synthesizer{baseClient: base, results: results}, nil
 }
 
-// Connect はnew状態から1回だけresolve/dialし、readerをconnection lifetimeへ結び付ける。
-func (c *Synthesizer) Connect(ctx context.Context) error {
-	return c.base.connect(ctx, nil)
-}
-
-// SendResult はdecode成功済みProcessorResult.Rawを変更せず同期binary送信する。
-//
-// Raw非空だけではdecode成功を証明しないためDecodeProcessorResultを再実行し、session一致もdecoded値から
-// 検証する。invalid値はsocketへ触れず、payload sliceは呼び出し中だけ参照して保持しない。
+// SendResult はProcessorResult.Rawを再検証し、変更せず同期送信する。
+// 空でないだけでは有効な要求と判断できないため、復号結果と入力の両方でセッションの一致を確認する。
+// 不正な値は通信前に拒否し、入力は呼び出し中だけ参照する。
 func (c *Synthesizer) SendResult(ctx context.Context, value protocol.ProcessorResult) error {
 	if len(value.Raw) == 0 {
 		return errors.New("synthesizer processor result Raw must not be empty")
@@ -67,23 +45,13 @@ func (c *Synthesizer) SendResult(ctx context.Context, value protocol.ProcessorRe
 	if err != nil {
 		return errors.New("synthesizer processor result Raw was not successfully decoded")
 	}
-	if decoded.SessionID != c.base.cfg.SessionID || value.SessionID != decoded.SessionID {
+	if decoded.SessionID != c.cfg.SessionID || value.SessionID != decoded.SessionID {
 		return errors.New("synthesizer processor result session ID does not match client")
 	}
-	return c.base.send(ctx, value.Raw)
+	return c.send(ctx, value.Raw)
 }
 
-// Results はclient所有のunbuffered合成音声result streamを返す。
+// Results は接続が所有する合成音声結果のチャネルを返す。配送は受け手を待ち、受信処理の終了後に閉じる。
 func (c *Synthesizer) Results() <-chan protocol.SynthesizerResult {
 	return c.results
-}
-
-// Events は最初の予期しないterminal failureを保持するbuffer 1 channelを返す。
-func (c *Synthesizer) Events() <-chan Event {
-	return c.base.events
-}
-
-// Close はidempotentにconnectionと全goroutineをjoinし、result、eventの順でchannelを閉じる。
-func (c *Synthesizer) Close() error {
-	return c.base.close()
 }

@@ -129,7 +129,7 @@ func serviceLimitCases() []serviceLimitCase {
 				if err != nil {
 					t.Fatalf("NewExtractor() error = %v", err)
 				}
-				return limitClient{base: client.base, connect: client.Connect, close: client.Close}
+				return limitClient{base: client.baseClient, connect: client.Connect, close: client.Close}
 			},
 		},
 		{
@@ -140,7 +140,7 @@ func serviceLimitCases() []serviceLimitCase {
 				if err != nil {
 					t.Fatalf("NewRecognizer() error = %v", err)
 				}
-				return limitClient{base: client.base, connect: client.Connect, close: client.Close}
+				return limitClient{base: client.baseClient, connect: client.Connect, close: client.Close}
 			},
 		},
 		{
@@ -151,7 +151,7 @@ func serviceLimitCases() []serviceLimitCase {
 				if err != nil {
 					t.Fatalf("NewProcessor() error = %v", err)
 				}
-				return limitClient{base: client.base, connect: client.Connect, close: client.Close}
+				return limitClient{base: client.baseClient, connect: client.Connect, close: client.Close}
 			},
 		},
 		{
@@ -162,7 +162,7 @@ func serviceLimitCases() []serviceLimitCase {
 				if err != nil {
 					t.Fatalf("NewSynthesizer() error = %v", err)
 				}
-				return limitClient{base: client.base, connect: client.Connect, close: client.Close}
+				return limitClient{base: client.baseClient, connect: client.Connect, close: client.Close}
 			},
 		},
 	}

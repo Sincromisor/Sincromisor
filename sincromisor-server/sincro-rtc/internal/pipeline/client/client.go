@@ -111,6 +111,8 @@ const (
 	stateClosed
 )
 
+// baseClient は各サービスに共通の接続状態、送受信処理、終了通知を所有する。
+// サービス固有の型と入力検証は埋め込み側が持ち、結果チャネルの終了だけcloseResultへ委ねる。
 type baseClient struct {
 	cfg       Config
 	service   Service
@@ -143,6 +145,14 @@ type baseClient struct {
 	decode      func(context.Context, []byte) error
 }
 
+// Events は最初の予期しない接続失敗を1件保持する、接続所有のチャネルを返す。
+// 明示終了と親コンテキストの中断ではイベントを送らず、結果チャネルの終了後に閉じる。
+func (c *baseClient) Events() <-chan Event {
+	return c.events
+}
+
+// newBase は設定と依存を検証して未接続の値を作り、通信は開始しない。
+// decodeは受信処理から呼び、closeResultは受信処理の終了後に一度だけ呼ぶ。
 func newBase(
 	cfg Config,
 	service Service,

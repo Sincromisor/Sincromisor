@@ -11,58 +11,34 @@ import (
 
 const recognizerReadLimit int64 = 1 << 20
 
-// Recognizer は抽出済み発話を認識結果へ変換する1 WebSocket 接続を所有する。
-//
-// result deliveryはunbufferedでbackpressureを保ち、terminal eventだけをbuffer 1へ保持する。
-// queue、retry、他serviceとのgeneration同期は上位coordinatorへ委ねる。
+// Recognizer は抽出済み発話を認識結果へ変換する接続を所有する。
+// 接続と終了はbaseClient、再接続と世代の同期は上位のCoordinatorが担当する。
 type Recognizer struct {
-	base    *baseClient
+	*baseClient
 	results chan protocol.RecognizerResult
 }
 
-// NewRecognizer はconfigとdependencyを検証するがnetwork I/Oを開始しない。
-//
-// endpointと1 MiB limitはservice contractとして固定され、callerから変更できない。
+// NewRecognizer は設定と依存を検証し、通信前の接続を作る。
+// 接続先のパスと1 MiBの上限は通信契約として固定する。
 func NewRecognizer(cfg Config, resolver discovery.Resolver, logger *slog.Logger) (*Recognizer, error) {
 	results := make(chan protocol.RecognizerResult)
-	recognizer := &Recognizer{results: results}
 	base, err := newBase(
 		cfg, ServiceRecognizer, discovery.ServiceRecognizer, resolver, logger,
 		"/api/v1/SpeechRecognizer/recognize", nil, recognizerReadLimit,
 		func() { close(results) },
-		func(ctx context.Context, payload []byte) error {
-			value, err := protocol.DecodeRecognizerResult(payload)
-			if err != nil {
-				return err
-			}
-			select {
-			case results <- value:
-				return nil
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		},
+		decodeResults(results, protocol.DecodeRecognizerResult),
 	)
 	if err != nil {
 		return nil, err
 	}
-	recognizer.base = base
-	return recognizer, nil
+	return &Recognizer{baseClient: base, results: results}, nil
 }
 
-// Connect はnew状態から1回だけresolve/dialし、readerをconnection lifetimeへ結び付ける。
-//
-// 二重呼出しはErrAlreadyConnected、Closeとの競合はErrClosedで、失敗後に自動再接続しない。
-func (c *Recognizer) Connect(ctx context.Context) error {
-	return c.base.connect(ctx, nil)
-}
-
-// SendExtraction はvalidation済み発話区間をMessagePack binaryとして同期送信する。
-//
-// session、non-negative ID、16 kHz mono int16 formatを送信前に検証し、Voice sliceは保持しない。
-// state別errorとwrite terminal eventは共通lifecycleから観測できる。
+// SendExtraction は発話区間を検証し、MessagePackで同期送信する。
+// セッションの一致、非負のID、16 kHz・モノラル・int16の音声形式を要求し、入力の音声は保持しない。
+// 接続状態と送信の失敗は共通接続処理から返す。
 func (c *Recognizer) SendExtraction(ctx context.Context, value protocol.ExtractorResult) error {
-	if value.SessionID != c.base.cfg.SessionID {
+	if value.SessionID != c.cfg.SessionID {
 		return errors.New("recognizer extraction session ID does not match client")
 	}
 	if value.SpeechID < 0 || value.SequenceID < 0 {
@@ -76,20 +52,10 @@ func (c *Recognizer) SendExtraction(ctx context.Context, value protocol.Extracto
 	if err != nil {
 		return err
 	}
-	return c.base.send(ctx, payload)
+	return c.send(ctx, payload)
 }
 
-// Results はclient所有のunbuffered認識結果streamを返す。
+// Results は接続が所有する認識結果のチャネルを返す。配送は受け手を待ち、受信処理の終了後に閉じる。
 func (c *Recognizer) Results() <-chan protocol.RecognizerResult {
 	return c.results
-}
-
-// Events は最初の予期しないterminal failureを保持するbuffer 1 channelを返す。
-func (c *Recognizer) Events() <-chan Event {
-	return c.base.events
-}
-
-// Close はidempotentにconnectionと全goroutineをjoinし、result、eventの順でchannelを閉じる。
-func (c *Recognizer) Close() error {
-	return c.base.close()
 }

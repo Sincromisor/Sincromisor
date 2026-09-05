@@ -175,7 +175,7 @@ func TestTerminalEventIsOnceUnderConcurrentSources(t *testing.T) {
 		kind := kind
 		go func() {
 			defer senders.Done()
-			client.base.terminal(kind, errors.New("competing terminal source"))
+			client.terminal(kind, errors.New("competing terminal source"))
 		}()
 	}
 	senders.Wait()

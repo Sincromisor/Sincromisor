@@ -13,7 +13,27 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/discovery"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
 )
+
+func TestResultDeliveryCanCancelWithoutConsumer(t *testing.T) {
+	results := make(chan protocol.ProcessorResult)
+	deliver := decodeResults(results, protocol.DecodeProcessorResult)
+	payload := fixture(t, "text_processor_result.msgpack")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- deliver(ctx, payload) }()
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("delivery error = %v, want context.Canceled", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("result delivery did not stop without a consumer")
+	}
+}
 
 func TestLifecycleStateValidationAndParentCancellation(t *testing.T) {
 	endpoint := discovery.Endpoint{Host: "127.0.0.1", Port: 1, Source: discovery.EndpointSourceConsul}
