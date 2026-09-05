@@ -20,6 +20,11 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/signaling/offer"
 )
 
+// discoveryRequestTimeout はConsulの探索待ちが接続や終了処理を長時間妨げないための期限である。
+const discoveryRequestTimeout = 2 * time.Second
+
+// serveBoundary は検証済みの設定と資源をHTTP提供へ引き渡す境界である。
+// 起動試験ではここを差し替え、前段の検証失敗時に待受処理へ到達しないことを確認する。
 type serveBoundary func(
 	config.Config,
 	*rtc.Manager,
@@ -137,8 +142,3 @@ func newPipelineFactory(cfg config.Config, logger *slog.Logger) (pipeline.Client
 	}
 	return pipelineFactory, nil
 }
-
-// shutdownOperationsはsignal後に終了させるprocess ownerとlistener ownerを関数境界へ束ねる。
-//
-// productionと単体テストは同じ調停ロジックを使い、観測窓だけを実timerと手動channelで差し替える。
-// 各errorを返す操作は失敗しても後続ownerの終了を妨げず、shutdownProcessが全結果を集約する。

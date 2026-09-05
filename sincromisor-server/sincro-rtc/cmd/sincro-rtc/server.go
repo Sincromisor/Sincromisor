@@ -21,6 +21,9 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/signaling/offer"
 )
 
+// serve はHTTP待受、終了シグナルの待機、資源の後始末、HTTP停止を順に調停する。
+// シグナル受信時は1秒間待受を保ってdrainingを公開する。HTTP提供の失敗時は観測窓を省く。
+// 終了処理の失敗はshutdownProcessから受け取り、HTTP提供の失敗と合わせてrunへ返す。
 func serve(
 	cfg config.Config,
 	sessions *rtc.Manager,
@@ -116,7 +119,18 @@ func serve(
 	return nil
 }
 
-// 以下の3つのprocess lifecycle log helperは、運用上の段階と有限な集計値だけを公開するprivacy境界である。
-//
-// listener address、Frontend path、signal名、終了時goroutine数は環境情報を漏らすため記録しない。
-// fieldを追加する場合はstructured log allow-listとprivacy契約を先に改訂する。
+// logListenerReady は待受の開始と稼働処理数だけを記録する。
+// 待受アドレスやフロントエンドのパスなどの環境情報は記録しない。
+func logListenerReady(logger *slog.Logger, goroutineCount int) {
+	logger.Info("sincro-rtc listening", "stage", "listener_ready", "count", goroutineCount)
+}
+
+// logShutdownRequested は終了要求を固定の理由で記録し、シグナル名を公開しない。
+func logShutdownRequested(logger *slog.Logger) {
+	logger.Info("shutdown signal received", "reason", "process_shutdown")
+}
+
+// logShutdownComplete は終了完了と残るセッション数を記録し、終了時の処理数は公開しない。
+func logShutdownComplete(logger *slog.Logger, activeSessionCount int) {
+	logger.Info("sincro-rtc stopped", "stage", "shutdown_complete", "count", activeSessionCount)
+}
