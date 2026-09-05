@@ -49,7 +49,8 @@
 - `src/app/events`
     - AppController のイベント集約点、スナップショットの通知、有効購読受け渡し、ウィンドウイベント接続処理を置く。
 - `src/app/bridges`
-    - AppController と旧形式管理処理 / サービス単一インスタンスの接続点、橋渡し型、実行時一式生成処理を置く。
+    - AppController と管理処理 / サービス単一インスタンスの接続点、橋渡し型を置く。
+    - `createSincroAppRuntimeBundle` が依存取得と `dialog` / `chat` / `debug` / `rtc` / `state` の操作窓口を一度に組み立てる。アプリ制御は組み立て後に設定の初期値を確定し、有効な制御処理の公開、購読登録の順に進む。
 - `src/app/settings`
     - 設定既定値 / スナップショット購読 / 適用 / 起動状態を置く。
     - `sincroAppSettingsDefaults.ts` は AppController スナップショット、React 代替処理、DialogStateStore、Looking Glass 実行時の既定値の正本を持つ。

@@ -1,0 +1,16 @@
+id: task-260906004358-collapse-app-forwarding-layers
+title: アプリ制御の単純転送と依存組み立てを統合
+category: frontend-maintenance
+status: done
+depends_on:
+  - task-260906004357-remove-legacy-chat-rendering
+  - task-260906004357-remove-legacy-telop-rendering
+  - task-260906004358-simplify-react-settings-subscription
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-09-06
+closed_at: 2026-09-06
+legacy_ids: []

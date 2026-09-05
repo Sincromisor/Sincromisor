@@ -93,6 +93,7 @@ export class DebugConsoleManager {
         return this.snapshot;
     }
 
+    /** 診断画面の停止要求をアプリの状態遷移へ接続する。登録済みの処理は置き換える。 */
     setRTCStopButtonEventListener(stopFunction: () => void): void {
         this.rtcStopHandler = stopFunction;
     }

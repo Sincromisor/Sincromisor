@@ -76,26 +76,29 @@ export class DialogManager {
             });
     }
 
+    /** ダイアログを開く状態を通知する。ブラウザー上の表示操作はReactが担う。 */
     showDialog(): void {
         // native dialog API 呼び出しは React 側 platform adapter が担当し、
         // ここでは state の正本だけを更新する。
         this.dialogUiStateController.setOpen(true);
     }
 
+    /** ダイアログを閉じる状態をReactへ通知する。 */
     closeDialog(): void {
         this.dialogUiStateController.setOpen(false);
     }
 
-    // React dialog から選択された VRM ファイルを正式経路として適用する。
+    /** Reactで選択されたVRMファイルを適用し、選択状態を通知する。 */
     applySelectedVrmFile(file: File): void {
         this.vrmStateController.applySelectedVrmFile(file);
     }
 
-    // dragover 表示は React が担当しつつ、状態の正本は DialogStateStore に残す。
+    /** ドラッグ中の状態を保持し、表示更新をReactへ通知する。 */
     setVrmDragOver(isDragOver: boolean): void {
         this.vrmStateController.setDragOver(isDragOver);
     }
 
+    /** 現在選択中のVRMをシーンへ渡すためのURLを返す。 */
     getSelectedVrmUrl(): string {
         return this.stateStore.getSelectedVrmUrl();
     }
@@ -173,6 +176,7 @@ export class DialogManager {
         this.headerDom.setHeaderTitle(this.getSetting("titleText"));
     }
 
+    /** キャラクターの利用可否に伴う設定と操作可否を更新し、一度通知する。 */
     updateCharacterStatus(available: boolean): void {
         this.settingsChangeBatcher.run(() => {
             this.updateEnableCharacterStatus(available);
@@ -183,6 +187,7 @@ export class DialogManager {
         });
     }
 
+    /** メディアの利用可否に応じて設定と開始操作を更新し、一度通知する。 */
     updateUserMediaAvailabilityStatus(available: boolean): void {
         this.mediaDeviceUiController.setUserMediaAvailability(available);
         this.settingsChangeBatcher.run(() => {
@@ -220,12 +225,12 @@ export class DialogManager {
         await this.vrmStateController.loadInitialVrmSelection();
     }
 
-    // 変換済みサムネイル画像(Blob)を保存する。
+    /** 変換済みサムネイル画像を保存する。保存失敗は呼び出し元へ伝播する。 */
     async saveVrmThumbnailBlob(blob: Blob): Promise<void> {
         await this.vrmStateController.saveThumbnailBlob(blob);
     }
 
-    // 起動時に前回使用したサムネイルを復元する。
+    /** 起動時に前回のサムネイルを取得する。未保存ならundefinedを返す。 */
     async loadVrmThumbnailBlob(): Promise<Blob | undefined> {
         return this.vrmStateController.loadThumbnailBlob();
     }

@@ -3,14 +3,8 @@ import { TalkManager } from "../../features/conversation/talk/talkManager";
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { DialogManager } from "../../features/dialog/model/dialogManager";
 import { PopMessageService } from "../../features/dialog/model/popMessageService";
+import type { SincroAppEvent } from "../controller/sincroAppTypes";
 import { SincroController } from "../controller/sincroController";
-import {
-    createSincroAppChatBridge,
-    createSincroAppDebugBridge,
-    createSincroAppDialogBridge,
-    createSincroAppRtcBridge,
-    createSincroAppStateBridge,
-} from "./sincroAppBridgeFactories";
 import type {
     SincroAppChatBridge,
     SincroAppDebugBridge,
@@ -18,85 +12,92 @@ import type {
     SincroAppRtcBridge,
     SincroAppStateBridge,
 } from "./sincroAppBridges";
+import { getSincroAppRightToolPanelService } from "./sincroAppRightToolPanelService";
 
-// SincroAppController constructor の UI 依存組み立てを helper 側へ逃がすための bundle 型。
-export type SincroAppUiDependencyBundle = {
+/** アプリが使う下位サービスと、初期化処理・Reactへ公開する操作窓口。 */
+export type SincroAppControllerRuntimeBundle = {
     coreController: SincroController;
     chatMessageService: ChatMessageService;
     debugConsoleManager: DebugConsoleManager;
     talkManager: TalkManager;
     popMessageService: PopMessageService;
     dialogManager: DialogManager;
-};
-
-export type SincroAppBridgeBundle = {
     dialogBridge: SincroAppDialogBridge;
     chatBridge: SincroAppChatBridge;
     debugBridge: SincroAppDebugBridge;
     rtcBridge: SincroAppRtcBridge;
+    stateBridge: SincroAppStateBridge;
 };
 
-export type SincroAppControllerRuntimeBundle = SincroAppUiDependencyBundle &
-    SincroAppBridgeBundle & {
-        stateBridge: SincroAppStateBridge;
-    };
-
-// SincroAppController constructor から UI 依存の singleton / service 取得列挙を分離し、初期化ブロックの見通しを良くする。
-export function createSincroAppUiDependencyBundle(params: {
-    emitEvent: (event: import("../controller/sincroAppTypes").SincroAppEvent) => void;
-}): SincroAppUiDependencyBundle {
-    return {
-        coreController: new SincroController({ emitEvent: params.emitEvent }),
-        chatMessageService: ChatMessageService.getService(),
-        debugConsoleManager: DebugConsoleManager.getManager(),
-        talkManager: TalkManager.getManager(),
-        popMessageService: PopMessageService.getService(),
-        dialogManager: DialogManager.getManager(),
-    };
-}
-
-/** UI用の依存から操作窓口を作る。テロップ履歴は状態窓口から読み取る。 */
-export function createSincroAppBridgeBundle(
-    uiDependencies: Pick<
-        SincroAppUiDependencyBundle,
-        "chatMessageService" | "debugConsoleManager" | "dialogManager"
-    >,
-    callbacks: { stopRTC: () => void },
-): SincroAppBridgeBundle {
-    return {
-        dialogBridge: createSincroAppDialogBridge({
-            dialogManager: uiDependencies.dialogManager,
-        }),
-        chatBridge: createSincroAppChatBridge(uiDependencies.chatMessageService),
-        debugBridge: createSincroAppDebugBridge(uiDependencies.debugConsoleManager),
-        rtcBridge: createSincroAppRtcBridge({ stopRTC: callbacks.stopRTC }),
-    };
-}
-
-/** 下位サービスと操作窓口を組み立てる。設定の購読状態は組み立て後にアプリ制御が保持する。 */
+/**
+ * 下位サービスの取得と操作窓口の組み立てを一度に行う。
+ * 状態取得とRTC停止は組み立て中に呼ばず、アプリの初期化完了後の操作まで保留する。
+ * 購読の開始は呼び出し元が設定の初期値を確定してから行う。
+ */
 export function createSincroAppRuntimeBundle(params: {
-    emitEvent: (event: import("../controller/sincroAppTypes").SincroAppEvent) => void;
+    emitEvent: (event: SincroAppEvent) => void;
     stopRTC: () => void;
-    getSettingsSnapshot: () => import("../controller/sincroAppTypes").SincroAppSettingsSnapshot;
-    getDialogUiState: () => import("../controller/sincroAppTypes").SincroAppDialogUiState;
-    getDialogVrmUiState: () => import("../controller/sincroAppTypes").SincroAppDialogVrmUiState;
-    getStartupSettingsStatus: () => import("../controller/sincroAppTypes").SincroAppStartupSettingsStatus;
-    getTelopTextSegmentsSnapshot: () => import("../controller/sincroAppTypes").TelopTextSegment[];
+    state: SincroAppStateBridge;
 }): SincroAppControllerRuntimeBundle {
-    // UI 依存取得 -> bridge 生成 -> state bridge 生成を1か所にまとめる。
-    // Controller 本体では field 代入と bind 順序だけを読めるようにする。
-    const uiDependencies = createSincroAppUiDependencyBundle({ emitEvent: params.emitEvent });
-    const bridges = createSincroAppBridgeBundle(uiDependencies, { stopRTC: params.stopRTC });
-    const stateBridge = createSincroAppStateBridge({
-        getSettingsSnapshot: params.getSettingsSnapshot,
-        getDialogUiState: params.getDialogUiState,
-        getDialogVrmUiState: params.getDialogVrmUiState,
-        getStartupSettingsStatus: params.getStartupSettingsStatus,
-        getTelopTextSegmentsSnapshot: params.getTelopTextSegmentsSnapshot,
-    });
+    const coreController = new SincroController({ emitEvent: params.emitEvent });
+    const chatMessageService = ChatMessageService.getService();
+    const debugConsoleManager = DebugConsoleManager.getManager();
+    const talkManager = TalkManager.getManager();
+    const popMessageService = PopMessageService.getService();
+    const dialogManager = DialogManager.getManager();
+    const rightToolPanelService = getSincroAppRightToolPanelService();
+
+    // 公開名へ対応付け、各サービスを呼び出し時のthisとして保持し、状態や副作用は各サービスに委ねる。
     return {
-        ...uiDependencies,
-        ...bridges,
-        stateBridge,
+        coreController,
+        chatMessageService,
+        debugConsoleManager,
+        talkManager,
+        popMessageService,
+        dialogManager,
+        dialogBridge: {
+            applySelectedVrmFile: (file) => dialogManager.applySelectedVrmFile(file),
+            setVrmDragOver: (isDragOver) => dialogManager.setVrmDragOver(isDragOver),
+            close: () => dialogManager.closeDialog(),
+            open: () => dialogManager.showDialog(),
+            updateUserMediaAvailabilityStatus: (available) =>
+                dialogManager.updateUserMediaAvailabilityStatus(available),
+            updateCharacterAvailabilityStatus: (available) =>
+                dialogManager.updateCharacterStatus(available),
+            isCharacterEnabled: () => dialogManager.getSetting("enableCharacter"),
+            isVREnabled: () => dialogManager.getSetting("enableVR"),
+            isInspectorEnabled: () => dialogManager.getSetting("enableInspector"),
+            loadVrmThumbnailBlob: () => dialogManager.loadVrmThumbnailBlob(),
+            saveVrmThumbnailBlob: async (blob) => {
+                await dialogManager.saveVrmThumbnailBlob(blob);
+            },
+            getSelectedVrmUrl: () => dialogManager.getSelectedVrmUrl(),
+        },
+        chatBridge: {
+            writeUnknownUserMessage: (message, isHTML) =>
+                chatMessageService.writeUnknownUserMessage(message, isHTML),
+            writeSystemMessage: (message, isHTML) =>
+                chatMessageService.writeSystemMessage(message, isHTML),
+            setSystemIcon: (iconUrl) => chatMessageService.setSystemIcon(iconUrl),
+            getMessageViewSnapshot: () => chatMessageService.getMessageViewSnapshot(),
+            getSystemIconUrl: () => chatMessageService.getSystemIconUrl(),
+        },
+        debugBridge: {
+            setRTCStopButtonEventListener: (stopFunction) =>
+                debugConsoleManager.setRTCStopButtonEventListener(stopFunction),
+            getRightToolPanelState: () => rightToolPanelService.getState(),
+            subscribeRightToolPanelState: (listener) => rightToolPanelService.subscribe(listener),
+            openRightToolMenu: () => rightToolPanelService.openMenu(),
+            closeRightToolMenu: () => rightToolPanelService.closeMenu(),
+            toggleRightToolMenu: () => rightToolPanelService.toggleMenu(),
+            showRightToolDebugPanel: () => rightToolPanelService.showDebugPanel(),
+            hideRightToolDebugPanel: () => rightToolPanelService.hideDebugPanel(),
+            toggleRightToolDebugPanel: () => rightToolPanelService.toggleDebugPanel(),
+            showRightToolSettingsPanel: () => rightToolPanelService.showSettingsPanel(),
+            hideRightToolSettingsPanel: () => rightToolPanelService.hideSettingsPanel(),
+            toggleRightToolSettingsPanel: () => rightToolPanelService.toggleSettingsPanel(),
+        },
+        rtcBridge: { stop: params.stopRTC },
+        stateBridge: params.state,
     };
 }

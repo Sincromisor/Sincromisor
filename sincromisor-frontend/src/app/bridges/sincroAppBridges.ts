@@ -1,6 +1,6 @@
-// SincroAppController から公開する UI/運用向け bridge API の型定義。
-// 呼び出し側（initializer / React hook）で責務を読みやすくするため、実装から分離して管理する。
+/** アプリから初期化処理とReactへ公開する操作窓口。サービスの所有権は移さない。 */
 
+/** ダイアログ操作とVRM保存・現在の起動設定を取得する窓口。 */
 export type SincroAppDialogBridge = {
     applySelectedVrmFile: (file: File) => void;
     setVrmDragOver: (isDragOver: boolean) => void;
@@ -25,6 +25,7 @@ export type SincroAppChatBridge = {
     getSystemIconUrl: () => string;
 };
 
+/** 診断画面の停止操作と右側パネルの表示・購読を扱う窓口。 */
 export type SincroAppDebugBridge = {
     setRTCStopButtonEventListener: (stopFunction: () => void) => void;
     getRightToolPanelState: () => import("./sincroAppRightToolPanelService").RightToolPanelState;
@@ -40,6 +41,7 @@ export type SincroAppDebugBridge = {
     toggleRightToolSettingsPanel: () => void;
 };
 
+/** アプリが管理する状態遷移を経由してRTCを停止する窓口。 */
 export type SincroAppRtcBridge = {
     stop: () => void;
 };
