@@ -1,7 +1,6 @@
 import type { SincroAppEvent, SincroAppLifecycleState } from "../controller/sincroAppTypes";
 
-// DebugConsole 由来の ICE/signaling と App lifecycle を合成し、
-// UI向けの単純化された接続状態イベントを生成する pure helper。
+/** 診断情報のICE・シグナリング状態を起動状態より優先し、UI向け接続状態へ変換する。 */
 export function buildSincroAppConnectionStateEvent(params: {
     lifecycleState: SincroAppLifecycleState;
     iceConnectionState: string;

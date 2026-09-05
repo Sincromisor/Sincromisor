@@ -9,10 +9,7 @@ import {
     createSincroAppRuntimeBundle,
     type SincroAppControllerRuntimeBundle,
 } from "../bridges/sincroAppControllerRuntime";
-import {
-    buildSincroAppControllerConnectionStateEvent,
-    emitSincroAppControllerConnectionState,
-} from "../events/sincroAppControllerConnectionState";
+import { buildSincroAppConnectionStateEvent } from "../events/sincroAppConnectionState";
 import { emitSincroAppControllerInitialSnapshot } from "../events/sincroAppControllerInitialSnapshot";
 import { bindSincroAppControllerSubscriptions } from "../events/sincroAppControllerSubscriptions";
 import { bindSincroAppControllerWindowEvents } from "../events/sincroAppControllerWindowEvents";
@@ -84,20 +81,19 @@ export class SincroAppController {
     private startupSettingsCapabilities: SincroAppStartupSettingsCapabilities =
         createDefaultSincroAppStartupSettingsCapabilities();
     private readonly lookingGlassTracker = new SincroAppLookingGlassStateTracker();
-    // 呼び出し側では `appController.dialog.*` の方が意図が読み取りやすいため getter を用意する。
+    /** 起動前ダイアログの操作とVRM選択を公開する。 */
     get dialog(): SincroAppDialogBridge {
         return this.runtime.dialogBridge;
     }
-    // initializer/React からのチャットUI更新をまとめる軽量 bridge。
-    // ChatMessageService 直接参照を減らし、UI経路を AppController に集約する。
+    /** 初期化処理のチャット書き込みとReactの初期履歴取得を公開する。 */
     get chat(): SincroAppChatBridge {
         return this.runtime.chatBridge;
     }
-    // debug UI 側の配線も AppController 経由に寄せ、initializer の manager 直接依存を減らす。
+    /** 診断画面の停止操作登録と右側パネルの表示・購読を公開する。 */
     get debug(): SincroAppDebugBridge {
         return this.runtime.debugBridge;
     }
-    // UI層から見た RTC 操作の窓口。将来的に再接続/状態取得をここへ寄せる想定。
+    /** アプリの状態遷移を通したRTC停止操作を公開する。 */
     get rtc(): SincroAppRtcBridge {
         return this.runtime.rtcBridge;
     }
@@ -109,7 +105,17 @@ export class SincroAppController {
     /** 設定の初期値を確定してから、有効な制御処理として公開し通知を接続する。 */
     constructor() {
         // 依存の組み立てが終わる前に購読/イベント登録を始めないよう、初期化順を固定する。
-        const runtime = this.initializeRuntime();
+        const runtime = createSincroAppRuntimeBundle({
+            emitEvent: (event) => this.emitEvent(event),
+            stopRTC: () => this.stopRTC(),
+            state: {
+                getSettingsSnapshot: () => this.getSettingsSnapshot(),
+                getDialogUiState: () => this.getDialogUiState(),
+                getDialogVrmUiState: () => this.getDialogVrmUiState(),
+                getStartupSettingsStatus: () => this.getStartupSettingsStatus(),
+                getTelopTextSegmentsSnapshot: () => this.getTelopTextSegmentsSnapshot(),
+            },
+        });
         this.runtime = runtime;
         const initialSettings = buildSincroAppSettingsRelatedSnapshotPayload({
             dialogManager: runtime.dialogManager,
@@ -157,7 +163,7 @@ export class SincroAppController {
             getLookingGlassState: () => this.lookingGlassTracker.getState(),
             getLookingGlassConfigStatus: () => this.lookingGlassTracker.getConfigStatus(),
             buildConnectionStateEvent: () =>
-                buildSincroAppControllerConnectionStateEvent({
+                buildSincroAppConnectionStateEvent({
                     lifecycleState: this.lifecycleState,
                     iceConnectionState: this.iceConnectionState,
                     signalingState: this.signalingState,
@@ -193,6 +199,7 @@ export class SincroAppController {
         this.emitDerivedConnectionState();
     }
 
+    /** 起動中のRTCを停止し、停止前後の状態を順に通知する。未起動・停止済みなら何もしない。 */
     stopRTC(): void {
         if (
             this.lifecycleState === "stopping" ||
@@ -227,10 +234,12 @@ export class SincroAppController {
         return this.getUiStateSnapshot().dialogVrmUiState;
     }
 
+    /** 起動時に適用した設定と現在値を比べ、再起動の要否を取得する。 */
     getStartupSettingsStatus(): SincroAppStartupSettingsStatus {
         return this.buildStartupSettingsStatusFromSnapshot(this.getSettingsSnapshot());
     }
 
+    /** Reactの初期表示へ、TalkManagerが保持するテロップ履歴を渡す。 */
     getTelopTextSegmentsSnapshot() {
         return this.runtime.talkManager.getTelopTextSegmentsSnapshot();
     }
@@ -296,19 +305,6 @@ export class SincroAppController {
         this.eventHub.emit(event);
     }
 
-    // constructor の見通しを維持するため、singleton取得 + bridge組み立て + bind をここへ集約する。
-    private initializeRuntime(): SincroAppControllerRuntimeBundle {
-        return createSincroAppRuntimeBundle({
-            emitEvent: (event) => this.emitEvent(event),
-            stopRTC: () => this.stopRTC(),
-            getSettingsSnapshot: () => this.getSettingsSnapshot(),
-            getDialogUiState: () => this.getDialogUiState(),
-            getDialogVrmUiState: () => this.getDialogVrmUiState(),
-            getStartupSettingsStatus: () => this.getStartupSettingsStatus(),
-            getTelopTextSegmentsSnapshot: () => this.getTelopTextSegmentsSnapshot(),
-        });
-    }
-
     private bindUiSubscriptions(): void {
         // singleton manager / service 群を機能別に購読し、AppController 統一イベントへ正規化する。
         bindSincroAppControllerSubscriptions({
@@ -365,10 +361,12 @@ export class SincroAppController {
 
     // ICE/signaling/lifecycle の保持状態から UI向け connection_state を導出して通知する。
     private emitDerivedConnectionState(): void {
-        emitSincroAppControllerConnectionState((event) => this.emitEvent(event), {
-            lifecycleState: this.lifecycleState,
-            iceConnectionState: this.iceConnectionState,
-            signalingState: this.signalingState,
-        });
+        this.emitEvent(
+            buildSincroAppConnectionStateEvent({
+                lifecycleState: this.lifecycleState,
+                iceConnectionState: this.iceConnectionState,
+                signalingState: this.signalingState,
+            }),
+        );
     }
 }

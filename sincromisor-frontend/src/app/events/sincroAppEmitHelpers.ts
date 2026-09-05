@@ -57,11 +57,3 @@ export function emitSincroAppSettingsApplyEvents(
     emitSincroAppSettingsRelatedSnapshots(emit, settingsStore, payload);
     emit({ type: "looking_glass_config_status", status: payload.lookingGlassConfigStatus });
 }
-
-export function emitSincroAppConnectionState(
-    emit: (event: SincroAppEvent) => void,
-    event: SincroAppEvent,
-): void {
-    // 現状は pass-through だが、将来 connection_state emit の前後に監視ログ等を挟む余地を残している。
-    emit(event);
-}
