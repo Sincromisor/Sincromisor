@@ -43,42 +43,60 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
 
 ## とにかくローカル環境でサーバーを動かす
 
-最初に、NVIDIA DriverとContainer Toolkitが正常に動作し、
-コンテナ内で`nvidia-smi`コマンドでGPUの状態を見れるところまでをがんばってください。
+ローカル／オンプレミスでの提供を前提とする。まずNVIDIA DriverとNVIDIA Container Toolkitを準備し、コンテナ内の `nvidia-smi` でGPUを確認する。
 
-Sincromisorのシンクロモードは、[docker compose](https://docs.docker.com/compose/)を用いると、比較的簡単に実行できます。
-
-まずはソースコードを入手します。
+1. ソースコードを取得し、リポジトリのルートへ移動する。
 
 ```sh
-$ git clone https://github.com/Sincromisor/Sincromisor.git
-$ cd Sincromisor
+git clone https://github.com/Sincromisor/Sincromisor.git
+cd Sincromisor
 ```
 
-設定ファイル`.env`を、`examples/compose.env`を参考に作成します。
-とりあえず動かしたいだけであれば、そのままコピーする形でかまいません。
+2. 設定サンプルをルートの `.env` へコピーする。
 
 ```sh
-$ cp examples/compose.env .env
-$ chmod 600 .env
+cp examples/compose.env .env
+chmod 600 .env
 ```
 
-`docker compose up`で実行します。
-`--profile full`を指定すると、必要なコンテナ全てが実行されます。
+3. 起動前に `.env` を編集する。サンプルのままでは広告IPv4が例示値のため接続できない。
+
+- `SINCRO_PION_PUBLIC_IPV4`: ブラウザから到達できるサーバーホストのIPv4へ置き換える。閉じたLANではホストのLANアドレスを使い、インターネット上の公開IPは必須ではない。`203.0.113.10` は説明用の値である。
+- `SINCRO_PION_STUN`: サンプルは外部STUNを指定している。閉じたLANで直接UDP通信ができる構成では `SINCRO_PION_STUN=` と空にできる。STUNの有無にかかわらず、広告IPv4とメディアUDPポートへの到達性が必要である。
+- `SINCRO_COMPOSE_NETWORK_SUBNET`: 既存のDockerネットワークやLANと重複する場合は未使用の範囲へ変更する。
+- Difyなしで最初に試す場合、Dify設定2項目は空のままでよい。ブラウザで開始前に `sincro` を選ぶ。既定の `chat` を使う場合は、先に[チャットモードの設定](#チャットモードを利用する)を行う。
+
+4. コンテナイメージ・モデルの取得を準備する。設定したレジストリから取得する場合は次を実行する。
 
 ```sh
-$ docker compose --profile full up -d
+docker compose --profile full pull
 ```
+
+ソースからイメージを作る場合は `docker compose --profile full build` を使う。取得元のイメージやビルド時の依存パッケージ、音声認識モデルには取得先への通信が必要になる。初期化処理は起動時に `hf download` で選択した音声認識モデルを取得し、`volumes/sincro-cache` に保存する。チャット用LLMのモデルとDifyも管理下の環境へ事前に配置する。
+
+サービス実行時に外部サービスのAPIを使わない構成と、導入時に何も取得しない完全オフライン構成は区別する。キャッシュがあっても初期化処理は取得コマンドを実行するため、完全オフライン導入・起動を検証済みとはしていない。
+
+5. 全サービスを起動する。
+
+```sh
+docker compose --profile full up -d
+```
+
+ネットワークの制約と設定の受け渡しは[Compose設計](documents/design/infrastructure/compose.md)を参照する。
 
 ## クライアント側のつかいかた
 
-サーバーを実行したら、[http://localhost](http://localhost) にアクセスします。
+サーバーと同じPCのブラウザでは [http://localhost:8086](http://localhost:8086) を開く。別端末のLAN利用ではHTTPの公開先は `http://<サーバーのLANアドレス>:8086` だが、マイク・カメラの利用にはブラウザが安全な接続と認める条件が必要である。通常のブラウザでは同じPCの `localhost` はHTTPでも対象となり、利用許可を与えて使える。
+
+LANの別端末から使う場合は、管理下のHTTPS終端とブラウザが信頼する証明書を別途準備し、そのHTTPSのURLを開く。現在の `configs/Caddyfile` は `:80` のHTTPだけを提供する。Composeは `8086:80` と `8443:443` を公開するが、HTTPS・証明書は未設定であり、`8443` の公開だけでHTTPSは使えない。HTTPのLANアドレスではマイク・カメラを利用できるとは限らない。
 
 通常利用ではトップページから次の導線を使います。
 
 - `Simple Interface (VRM 1.0)`: 通常会話の正規導線
 - `360deg Camera (VRM 1.0)`: 360 動画/カメラ向けの 実験用の導線
 - `Looking Glass (VRM 1.0 / Three.js)`: [Looking Glass](https://lookingglassfactory.com/looking-glass-portrait) 向けの 実験用の導線
+
+`Simple Interface (VRM 1.0)` の起動前設定で、Dify未設定なら会話モードを `sincro`（シンクロモード）へ変更してから「開始する」を押す。`sincro` は認識文を変換して読み上げ、Difyを使わない。初回の既定値は `chat` のため、設定を空にしただけではチャットは動作しない。
 
 `sincromisor-frontend/package.json` では、`npm run build` が `tsc -p tsconfig.modern.json && vite build` に対応しており、通常ビルドでは `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` の6ページを出力します。実験用ページも通常ビルドに含まれ、分類と公開URLは[ページ構成](documents/design/frontend/pages.md)を参照してください。
 
@@ -170,16 +188,24 @@ $ docker compose logs speech-recognizer
 
 ## チャットモードを利用する
 
-チャットモードで利用したい時は、別途[Dify](https://dify.ai/jp)が必要となります。
-また、Dify上でローカルLLMを利用したい場合は、[Ollama](https://ollama.com/)や
-[fake-openai-server](https://github.com/Sincromisor/fake-openai-server)などが必要となります。
+`chat` は管理下の環境に配置したDifyとLLMを使う。Dify上でローカルLLMへ接続するチャットボットを作り、そのアプリのAPIキーを発行する。DifyとLLMの配備はSincromisorのComposeには含まれない。
 
-Difyでてきとうにチャットボットを作成したら、そのURLとAPIキーを`configs/.env`ファイルに記入し、コンテナを再起動してください。
+リポジトリのルートの `.env` に、`text-processor` コンテナから到達できるDifyのAPI URLとキーを設定する。値は `compose/text-processor.yml` の環境変数を経由してPython設定へ渡る。
+
+```dotenv
+SINCRO_PROCESSOR_DIFY_URL=http://192.168.1.20/v1
+SINCRO_PROCESSOR_DIFY_TOKEN=app-xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+上記は例示であり、Difyを配置したホストのLANアドレスや、共有Dockerネットワークで解決できるサービス名へ置き換える。ポートが異なる場合はURLへ含める。`127.0.0.1` は `text-processor` コンテナ自身を指すため、別コンテナやホスト上のDifyの接続先には使えない。
+
+設定後はリポジトリのルートでコンテナを再作成して反映する。
 
 ```sh
-SINCRO_PROCESSOR_DIFY_URL=http://127.0.0.1/v1
-SINCRO_PROCESSOR_DIFY_TOKEN=app-W3Ef43iyPCBVfz47UDwGTHKU
+docker compose --profile full up -d text-processor
 ```
+
+ブラウザの起動前設定で `chat` を選び、開始する。Difyと接続先LLMも管理下で動かし、外部サービスのAPI認証を前提にしない。
 
 ### チャットモードの表情連動を使う場合（Dify/LLM設定が必須）
 
