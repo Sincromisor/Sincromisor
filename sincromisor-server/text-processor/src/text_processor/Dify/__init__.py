@@ -1,3 +1,5 @@
-from .DifyClient import DifyClient
+"""Difyの非同期HTTPクライアントと受信イベント、異常通知の例外を公開する。"""
 
-__all__ = ["DifyClient"]
+from .DifyClient import DifyClient, DifyResponseError, DifyStreamEvent
+
+__all__ = ["DifyClient", "DifyResponseError", "DifyStreamEvent"]

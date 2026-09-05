@@ -1,31 +1,63 @@
+"""DifyのHTTP応答を検証済みSSEイベントへ変換する。応答の確定判断は処理担当へ委ねる。"""
+
 import json
 import logging
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from logging import Logger
 
-import requests
-from requests import Response
+import aiohttp
+from pydantic import BaseModel
+
+
+class DifyStreamEvent(BaseModel):
+    """DifyのSSEで通知される、必要最小限のイベント表現。"""
+
+    event: str
+    answer: str | None = None
+    conversation_id: str | None = None
+
+
+class DifyResponseError(RuntimeError):
+    """Difyが正常な応答として確定できないイベントを返したことを示す。"""
 
 
 class DifyClient:
-    def __init__(self, base_url: str, api_key: str):
+    """DifyのチャットSSEを非同期で読み、要求処理の取消時に接続を解放する。"""
+
+    # 接続不能や無応答のDifyによって会話WebSocketの終了処理が停止しないよう、
+    # 接続と各読み取りを30秒で打ち切る。応答全体の生成時間は制限しない。
+    DEFAULT_TIMEOUT_SECONDS = 30.0
+
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    ) -> None:
+        """管理下のDify接続先と認証情報、接続・無受信待ちの上限秒数を保持する。"""
         self.base_url = base_url
         self.api_key = api_key
+        self.timeout_seconds = timeout_seconds
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
 
-    def __headers(self) -> dict:
+    def __headers(self) -> dict[str, str]:
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
 
-    def chat(
+    async def chat(
         self,
-        inputs: dict,
+        inputs: dict[str, object],
         query: str,
         conversation_id: str | None,
-    ) -> Generator[dict, None, None]:
-        query_data = {
+    ) -> AsyncGenerator[DifyStreamEvent, None]:
+        """チャット応答をSSE順に返す。
+
+        セッションと応答はこの非同期生成器が所有する。呼び出し元が取消されると
+        ``async with`` を抜けて接続を閉じるため、別スレッドの待機を残さない。
+        """
+        query_data: dict[str, object] = {
             "inputs": inputs,
             "query": query,
             "user": "username",
@@ -35,38 +67,31 @@ class DifyClient:
         if conversation_id:
             query_data["conversation_id"] = conversation_id
 
-        res: Response = self.__send_request(
-            "POST", "/chat-messages", query_data, stream=True
+        timeout = aiohttp.ClientTimeout(
+            total=None,
+            connect=self.timeout_seconds,
+            sock_read=self.timeout_seconds,
         )
-
-        line: str
-        for line in res.iter_lines(decode_unicode=True):
-            response_data: str = line.split("data:", 1)[-1]
-            if response_data:
+        async with (
+            aiohttp.ClientSession(timeout=timeout) as session,
+            session.post(
+                f"{self.base_url}/chat-messages",
+                json=query_data,
+                headers=self.__headers(),
+            ) as response,
+        ):
+            response.raise_for_status()
+            async for raw_line in response.content:
+                line = raw_line.decode("utf-8").strip()
+                if not line.startswith("data:"):
+                    continue
+                response_data = line.removeprefix("data:").strip()
+                if not response_data:
+                    continue
                 try:
-                    if response_data == "event: ping":
-                        response_data = '{"event": "ping"}'
-                    yield json.loads(response_data)
-                except json.decoder.JSONDecodeError as e:
-                    self.logger.warning("JSONDecodeError: " + response_data)
-                    raise e
-
-    def __send_request(
-        self,
-        method,
-        endpoint,
-        json=None,
-        params=None,
-        stream=True,
-    ) -> Response:
-        url = f"{self.base_url}{endpoint}"
-        response: Response = requests.request(
-            method,
-            url,
-            json=json,
-            params=params,
-            headers=self.__headers(),
-            stream=stream,
-        )
-        response.raise_for_status()
-        return response
+                    event = DifyStreamEvent.model_validate(json.loads(response_data))
+                except (json.JSONDecodeError, ValueError) as error:
+                    raise ValueError("Invalid Dify stream response.") from error
+                if event.event == "error":
+                    raise DifyResponseError("Dify returned an error event.")
+                yield event
