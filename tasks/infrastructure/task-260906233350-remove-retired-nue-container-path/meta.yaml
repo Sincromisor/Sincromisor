@@ -1,0 +1,13 @@
+id: task-260906233350-remove-retired-nue-container-path
+title: 廃止済みNueのコンテナ選択導線を整理する
+category: infrastructure
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-06
+closed_at: null
+legacy_ids: []

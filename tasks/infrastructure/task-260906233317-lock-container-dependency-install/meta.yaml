@@ -1,0 +1,13 @@
+id: task-260906233317-lock-container-dependency-install
+title: コンテナの依存導入をロックファイルに従わせる
+category: infrastructure
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-06
+closed_at: null
+legacy_ids: []

@@ -6,6 +6,12 @@
 - 出力音声はGoパイプライン調停器とPion RTCを通じて WebRTC 音声トラックでフロントへ返る。
 - WebSocket / msgpack 契約は `contracts/audio-pipeline-websocket.md` を正本とする。
 
+## 合成エンジン
+
+ComposeはVOICEVOX ENGINE 0.25.2のLinux CPU/x64配布物を使う。
+Dockerビルドでは配布物の取得成功後にキャッシュを確定し、HTTPエラーや中断後の一時ファイルは再利用しない。
+既存のスタイルID、音声クエリ、WAV、口形同期用モーラ情報の契約を維持する。
+
 ## 対象範囲
 
 - 対象:

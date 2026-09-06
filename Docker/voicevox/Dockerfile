@@ -6,7 +6,7 @@ LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
 
 EXPOSE 50021
 
-ARG VOICEVOX_VERSION=0.24.1
+ARG VOICEVOX_VERSION=0.25.2
 
 ENV SINCRO_VOICEVOX_HOST=0.0.0.0
 ENV SINCRO_VOICEVOX_PORT=50021
@@ -23,16 +23,22 @@ RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get install -y curl p7zip libsndfile1 && \
     useradd -s /bin/bash -d /opt/voicevox voicevox 
 
-RUN --mount=type=cache,target=/mnt \
-    cd /opt && \
-    test -e /mnt/voicevox-${VOICEVOX_VERSION}.7z || \
-    curl -L -o /mnt/voicevox-${VOICEVOX_VERSION}.7z \
-    "https://github.com/VOICEVOX/voicevox_engine/releases/download/${VOICEVOX_VERSION}/voicevox_engine-linux-cpu-x64-${VOICEVOX_VERSION}.7z.001" && \
-    7zr x  /mnt/voicevox-${VOICEVOX_VERSION}.7z && \
-    mv linux-cpu-x64 voicevox && \
-    chmod +x /opt/voicevox/run && \
-    mkdir /opt/voicevox/.local && \
-    chown voicevox:voicevox /opt/voicevox/.local 
+# CPU/x64の配布物は1巻。取得途中のファイルを正常キャッシュとして再利用しない。
+RUN --mount=type=cache,target=/mnt,sharing=locked \
+    set -eu; \
+    archive="/mnt/voicevox_engine-linux-cpu-x64-${VOICEVOX_VERSION}.7z"; \
+    trap 'rm -f "${archive}.tmp"' EXIT; \
+    if [ ! -f "$archive" ]; then \
+        curl --fail --location --show-error -o "${archive}.tmp" \
+            "https://github.com/VOICEVOX/voicevox_engine/releases/download/${VOICEVOX_VERSION}/voicevox_engine-linux-cpu-x64-${VOICEVOX_VERSION}.7z.001"; \
+        mv "${archive}.tmp" "$archive"; \
+    fi; \
+    cd /opt; \
+    7zr x "$archive"; \
+    mv linux-cpu-x64 voicevox; \
+    chmod +x /opt/voicevox/run; \
+    mkdir /opt/voicevox/.local; \
+    chown voicevox:voicevox /opt/voicevox/.local
 
 COPY --chown=root:root --chmod=755 \
     ./Docker/common/service-register.sh \
