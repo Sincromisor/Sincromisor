@@ -1,5 +1,10 @@
 FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04 AS builder
 
+# Composeからのモデル指定を依存導入前に検証する。
+ARG SINCRO_RECOGNIZER_MODEL=nemo
+RUN test "$SINCRO_RECOGNIZER_MODEL" = nemo || \
+    { echo "未対応のSINCRO_RECOGNIZER_MODELです。nemoを指定してください。" >&2; exit 1; }
+
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
@@ -48,12 +53,6 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-server/speech-extractor/README.md \
     ./sincromisor-server/speech-extractor/.python-version \
     ${SINCRO_USER_DIR}/sincromisor-server/speech-extractor/
-
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server/speech-recognizer/pyproject.toml \
-    ./sincromisor-server/speech-recognizer/README.md \
-    ./sincromisor-server/speech-recognizer/.python-version \
-    ${SINCRO_USER_DIR}/sincromisor-server/speech-recognizer/
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-server/speech-recognizer-nemo/pyproject.toml \

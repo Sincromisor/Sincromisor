@@ -8,7 +8,9 @@ services:
             - backend
         build:
             context: ..
-            dockerfile: ./Docker/speech-recognizer-${SINCRO_RECOGNIZER_MODEL}/Dockerfile
+            dockerfile: ./Docker/speech-recognizer-nemo/Dockerfile
+            args:
+                SINCRO_RECOGNIZER_MODEL: ${SINCRO_RECOGNIZER_MODEL:?nemoを指定してください}
         image: ${SINCRO_REGISTRY_NAME}/speech-recognizer-${SINCRO_RECOGNIZER_MODEL}:latest
         ports:
             - 8003:8003/tcp

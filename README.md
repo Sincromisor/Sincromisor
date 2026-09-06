@@ -10,7 +10,7 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
 - サーバー側
     - Linuxサーバー(x86_64)
     - Transformersが動作するNVIDIA GPU
-        - シンクロモード: VRAM 4GB(nemo)、8GB(nue)。
+        - シンクロモード: VRAM 4GB程度(NeMo)。
         - チャットモード: 追加で8GB程度、合計16GB以上のVRAMが必要(Dify用)
     - [Docker Engine](https://docs.docker.com/engine/install/ubuntu/)
     - [NVIDIA Driver(nvidia-open)](https://www.nvidia.com/en-us/drivers/)
@@ -61,6 +61,7 @@ chmod 600 .env
 
 3. 起動前に `.env` を編集する。サンプルのままでは広告IPv4が例示値のため接続できない。
 
+- `SINCRO_RECOGNIZER_MODEL`: `nemo` のみ対応する。以前の `nue` 指定は非互換となり、ビルド・初期化時に失敗するため `nemo` へ変更する。
 - `SINCRO_PION_PUBLIC_IPV4`: ブラウザから到達できるサーバーホストのIPv4へ置き換える。閉じたLANではホストのLANアドレスを使い、インターネット上の公開IPは必須ではない。`203.0.113.10` は説明用の値である。
 - `SINCRO_PION_STUN`: サンプルは外部STUNを指定している。閉じたLANで直接UDP通信ができる構成では `SINCRO_PION_STUN=` と空にできる。STUNの有無にかかわらず、広告IPv4とメディアUDPポートへの到達性が必要である。
 - `SINCRO_COMPOSE_NETWORK_SUBNET`: 既存のDockerネットワークやLANと重複する場合は未使用の範囲へ変更する。
