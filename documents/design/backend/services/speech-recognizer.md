@@ -6,6 +6,8 @@
 - 現行の主対象は Nemo 音声認識処理で、Nue-ASR は廃止済みで、コンテナの `SINCRO_RECOGNIZER_MODEL` は `nemo` のみ受け付ける。
 - 固有名詞補強は取り組み計画と辞書契約に分離する。
 
+コンテナはCUDA 13.0系を使う。ホスト側の条件は[Compose設計](../../infrastructure/compose.md#nemoのgpu基盤)を参照する。
+
 ## 対象範囲
 
 - 対象:
