@@ -75,6 +75,8 @@ docker compose --profile full pull
 
 ソースからイメージを作る場合は `docker compose --profile full build` を使う。取得元のイメージやビルド時の依存パッケージ、音声認識モデルには取得先への通信が必要になる。初期化処理は起動時に `hf download` で選択した音声認識モデルを取得し、`volumes/sincro-cache` に保存する。チャット用LLMのモデルとDifyも管理下の環境へ事前に配置する。
 
+開発者向けのGHCRへの月次公開と旧イメージの整理は[コンテナイメージの公開手順](documents/design/infrastructure/image-publishing.md)を参照する。
+
 サービス実行時に外部サービスのAPIを使わない構成と、導入時に何も取得しない完全オフライン構成は区別する。キャッシュがあっても初期化処理は取得コマンドを実行するため、完全オフライン導入・起動を検証済みとはしていない。
 
 5. 全サービスを起動する。

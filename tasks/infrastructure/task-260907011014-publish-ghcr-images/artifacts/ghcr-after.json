@@ -1,0 +1,218 @@
+[
+  {
+    "name": "redis",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 1215892200,
+        "digest": "sha256:8ae527107cf19fa6328c564b587f62429eb92951d5f8c547b61e796c5ad4d2aa",
+        "tags": [
+          "20260906t161246-405ca70bc4d7",
+          "latest"
+        ]
+      },
+      {
+        "id": 1215892168,
+        "digest": "sha256:7d138525313d7efab9bcf484a32844b3d0566686181c194408d67dcca121a1a2",
+        "tags": []
+      },
+      {
+        "id": 1215892165,
+        "digest": "sha256:ceeaecee1c34cd13c4d9cec233274a0e393c33af0ab3e81a4dafb4791375b79a",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "service-initializer",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 1215891439,
+        "digest": "sha256:2bfdad35ec34a1f40df69a9af4ae8248a84b336758cbb7bdc7f59880e2fe3ecd",
+        "tags": [
+          "20260906t161246-405ca70bc4d7",
+          "latest"
+        ]
+      },
+      {
+        "id": 1215891410,
+        "digest": "sha256:d28cfd63f7db66e6400d71692ef7ca8acffc09a19b77cb9f6e6d60a68705d53b",
+        "tags": []
+      },
+      {
+        "id": 1215891407,
+        "digest": "sha256:d1f6fd6c674f9a6f309fe624b9fc898b3180f72cf04b8ed70862e54cfe45e20c",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "sincro-rtc",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 1215892592,
+        "digest": "sha256:a9e4e3955a8dab22994788a8d6a178d0e8de0e46a4cd7a6058063eae610dd591",
+        "tags": [
+          "20260906t161246-405ca70bc4d7",
+          "latest"
+        ]
+      },
+      {
+        "id": 1215892568,
+        "digest": "sha256:04e1ad3e65806772114b64023ab4957c0d4d1db6ea72d0c1ab4aec2bc04893b7",
+        "tags": []
+      },
+      {
+        "id": 1215892565,
+        "digest": "sha256:be6ccb05d08647d5d933c86688bd0e9817fd19c065dc0f80d45229663c083a6f",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "speech-extractor",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 1215896716,
+        "digest": "sha256:0bf4d72b9cd3600512fd9efe1474a64cd9a450ea89e3ff35461be3ce24f088b4",
+        "tags": [
+          "20260906t161246-405ca70bc4d7",
+          "latest"
+        ]
+      },
+      {
+        "id": 1215896687,
+        "digest": "sha256:4a0c37d2471fffcbff2ee17c90af252c641869316e4cf1118488463b483e2160",
+        "tags": []
+      },
+      {
+        "id": 1215896682,
+        "digest": "sha256:10e55f17a0178335bb3c46e42ea3d2d77e453b7e77d7fce485fa802f2dfd996b",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "speech-recognizer-nemo",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 1215902679,
+        "digest": "sha256:753bc061f6f4240aeb53f29a75b9e7910467d4837967ff4525fb302111cfab57",
+        "tags": [
+          "20260906t161246-405ca70bc4d7",
+          "latest"
+        ]
+      },
+      {
+        "id": 1215902657,
+        "digest": "sha256:fe66fb8f41876d5dc994d3ebf009ce8bc9d430f3207f3c3d805df18229342d2e",
+        "tags": []
+      },
+      {
+        "id": 1215902655,
+        "digest": "sha256:855b91031bb3776ca97da745db0eae2eb8e2aaa3f870e46275a613b179dd4e67",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "text-processor",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 1215903286,
+        "digest": "sha256:9d2868e7db019f0cab372841b3f4074d31342a08033b1d40f422ee3707b52839",
+        "tags": [
+          "20260906t161246-405ca70bc4d7",
+          "latest"
+        ]
+      },
+      {
+        "id": 1215903271,
+        "digest": "sha256:838d24567649b4b6952ca5b030ee01f625072b16d5ecf530ab8259c8c13d8f80",
+        "tags": []
+      },
+      {
+        "id": 1215903269,
+        "digest": "sha256:016ac97f99a3ac5f8da94ad6ed618e01445e6f91a199ee780fcbd289ee532792",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "voice-synthesizer",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 1215903759,
+        "digest": "sha256:a9222fc57d50ac680c5d24dccf048b5f1a70638dc364c2c69052846c8deaeb60",
+        "tags": [
+          "20260906t161246-405ca70bc4d7",
+          "latest"
+        ]
+      },
+      {
+        "id": 1215903726,
+        "digest": "sha256:5704fd809f8a2854ade1b7592a5a3ed18bc7e3c5f954396faf2f19e53b1e9f06",
+        "tags": []
+      },
+      {
+        "id": 1215903723,
+        "digest": "sha256:b404559e4555a0cd9cdfe3942270ef46efb0356dda005c9c331d8d33f9e19ee0",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "voicevox",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 1215896064,
+        "digest": "sha256:78e9122c217db906317d5faa34a10e754741cdd4fcd1f9290b0e65049b6f57f9",
+        "tags": [
+          "20260906t161246-405ca70bc4d7",
+          "latest"
+        ]
+      },
+      {
+        "id": 1215896043,
+        "digest": "sha256:539a275a1accd4cc18153c951019a480419a078dee77dbdf9ca4e0bf26837957",
+        "tags": []
+      },
+      {
+        "id": 1215896040,
+        "digest": "sha256:61c30cf8475719e41a11823e9e7dfce13e71a846431d5ff573f8c86e5a238b7a",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "sincro-frontend",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 1215891893,
+        "digest": "sha256:56dba6ea7c5cd696a982d7b5dfab3ff369b0bb032a250633fe16232a8b355eb5",
+        "tags": [
+          "20260906t161246-405ca70bc4d7",
+          "latest"
+        ]
+      },
+      {
+        "id": 1215891869,
+        "digest": "sha256:2ce6c42750dcd89f9e01161e632088fe7d967b2880b4585126cb302c632e017d",
+        "tags": []
+      },
+      {
+        "id": 1215891868,
+        "digest": "sha256:4817a303ad1fbc340cda680a1152946429e7dba2b8adbc5e2db680c384a1e60b",
+        "tags": []
+      }
+    ]
+  }
+]

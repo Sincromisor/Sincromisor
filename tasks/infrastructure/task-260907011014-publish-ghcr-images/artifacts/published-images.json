@@ -1,0 +1,51 @@
+{
+  "source": "405ca70bc4d7b0ab0df838850ea755c64fbbc37f",
+  "tag": "20260906t161246-405ca70bc4d7",
+  "images": [
+    {
+      "image": "ghcr.io/sincromisor/service-initializer",
+      "digest": "sha256:2bfdad35ec34a1f40df69a9af4ae8248a84b336758cbb7bdc7f59880e2fe3ecd",
+      "anonymous_manifest_verified": true
+    },
+    {
+      "image": "ghcr.io/sincromisor/sincro-frontend",
+      "digest": "sha256:56dba6ea7c5cd696a982d7b5dfab3ff369b0bb032a250633fe16232a8b355eb5",
+      "anonymous_manifest_verified": true
+    },
+    {
+      "image": "ghcr.io/sincromisor/redis",
+      "digest": "sha256:8ae527107cf19fa6328c564b587f62429eb92951d5f8c547b61e796c5ad4d2aa",
+      "anonymous_manifest_verified": true
+    },
+    {
+      "image": "ghcr.io/sincromisor/sincro-rtc",
+      "digest": "sha256:a9e4e3955a8dab22994788a8d6a178d0e8de0e46a4cd7a6058063eae610dd591",
+      "anonymous_manifest_verified": true
+    },
+    {
+      "image": "ghcr.io/sincromisor/voicevox",
+      "digest": "sha256:78e9122c217db906317d5faa34a10e754741cdd4fcd1f9290b0e65049b6f57f9",
+      "anonymous_manifest_verified": true
+    },
+    {
+      "image": "ghcr.io/sincromisor/speech-extractor",
+      "digest": "sha256:0bf4d72b9cd3600512fd9efe1474a64cd9a450ea89e3ff35461be3ce24f088b4",
+      "anonymous_manifest_verified": true
+    },
+    {
+      "image": "ghcr.io/sincromisor/speech-recognizer-nemo",
+      "digest": "sha256:753bc061f6f4240aeb53f29a75b9e7910467d4837967ff4525fb302111cfab57",
+      "anonymous_manifest_verified": true
+    },
+    {
+      "image": "ghcr.io/sincromisor/text-processor",
+      "digest": "sha256:9d2868e7db019f0cab372841b3f4074d31342a08033b1d40f422ee3707b52839",
+      "anonymous_manifest_verified": true
+    },
+    {
+      "image": "ghcr.io/sincromisor/voice-synthesizer",
+      "digest": "sha256:a9222fc57d50ac680c5d24dccf048b5f1a70638dc364c2c69052846c8deaeb60",
+      "anonymous_manifest_verified": true
+    }
+  ]
+}
