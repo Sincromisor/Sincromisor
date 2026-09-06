@@ -1,0 +1,13 @@
+id: task-260906104817-consul-long-offline-restart
+title: Consulの長期停止後の起動拒否を防ぐ
+category: infrastructure
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-09-06
+closed_at: 2026-09-06
+legacy_ids: []
