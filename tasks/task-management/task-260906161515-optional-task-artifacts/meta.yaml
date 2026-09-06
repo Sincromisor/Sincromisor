@@ -1,0 +1,13 @@
+id: task-260906161515-optional-task-artifacts
+title: 任意のタスク成果物を必要時だけ作成する
+category: task-management
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-09-06
+closed_at: 2026-09-06
+legacy_ids: []

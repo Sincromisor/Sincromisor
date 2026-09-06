@@ -138,12 +138,7 @@ async function main() {
 
     await writeFileEnsured(join(dir, "meta.yaml"), stringifyMeta(meta));
     await writeFileEnsured(join(dir, "task.md"), taskMd);
-    // 互換レイアウトだけ維持し、実際に使う成果物だけ担当エージェントが記入する。
-    await writeFileEnsured(join(dir, "review.md"), "");
-    await writeFileEnsured(join(dir, "impl.md"), "");
-    await writeFileEnsured(join(dir, "eval.md"), "");
-    await writeFileEnsured(join(dir, "acceptance", ".gitkeep"), "");
-    await writeFileEnsured(join(dir, "artifacts", ".gitkeep"), "");
+    // レビュー記録や補助ディレクトリは、担当者が実際の成果物を保存するときに作る。
     console.log(`作成: ${dir}/`);
     console.log("  - task.md");
     console.log(`  - meta.yaml (status=open, created_at=${meta.created_at})`);

@@ -40,10 +40,10 @@
 
 ## タスク雛形の構成
 
-- 対象ファイル: `scripts/tasks/newTask.mjs`
-- 上流との差分: 上流の `task.md` と `meta.yaml` に加え、`review.md`、`impl.md`、`eval.md`、`acceptance/.gitkeep`、`artifacts/.gitkeep` を生成する。
-- 理由: `tasks:check` が全タスクについてディレクトリ構成全体を検証するため。
-- 更新時の確認: 試行用または一時的なタスクを作成し、`npm run tasks:check` を実行する。
+- 対象ファイル: `scripts/tasks/newTask.mjs`、`scripts/tasks/checkTasks.mjs`
+- 上流との差分: 生成する必須ファイルは上流と同じ `task.md` と `meta.yaml` に揃える。Sincromisor固有の検査でも、レビュー記録や補助ディレクトリは任意とする。
+- 理由: 記録が必要なときだけ成果物を作る運用に揃え、空ファイルの生成とコミット漏れを防ぐため。
+- 更新時の確認: `node --test scripts/tasks/__tests__/optionalTaskArtifacts.test.mjs` で最小構成の生成・検査と必須ファイル欠落の検出を確認する。
 
 ## 原本文書へのリンク
 
