@@ -1,6 +1,6 @@
+/** 音声を次段へそのまま渡し、先頭チャンネルの発話判定と学習用PCMをメインスレッドへ送る。 */
 class VadProcessor extends AudioWorkletProcessor {
-    // 音声フレームごとの簡易VADを行うプロセッサ。
-    // 入力波形をそのまま出力へパススルーしつつ、RMS/Peakベースで発話有無を通知する。
+    /** 検出閾値とPCM蓄積領域を初期化し、メインスレッドからの設定変更を受け付ける。 */
     constructor() {
         super();
         // RMS閾値: 平均的なエネルギー量がこの値以上なら発話候補とみなす。
@@ -21,7 +21,7 @@ class VadProcessor extends AudioWorkletProcessor {
         this.learnedVadFrameBuffer = new Float32Array(this.learnedVadFrameSize);
         this.learnedVadFrameWriteIndex = 0;
 
-        // メインスレッドからVAD閾値を更新できるようにする。
+        // 閾値は有限の数値だけを受けて範囲を制限する。PCM送信停止時は未送信の端数を破棄する。
         this.port.onmessage = (event) => {
             const data = event.data;
             if (!data) {
@@ -34,7 +34,7 @@ class VadProcessor extends AudioWorkletProcessor {
                 }
                 return;
             }
-            if (!data || data.type !== "vad-threshold") {
+            if (data.type !== "vad-threshold") {
                 return;
             }
             if (typeof data.rmsThreshold === "number" && Number.isFinite(data.rmsThreshold)) {
@@ -46,6 +46,7 @@ class VadProcessor extends AudioWorkletProcessor {
         };
     }
 
+    /** 音声処理スレッドから呼ばれる。無入力時は状態を進めず、trueを返して処理を継続する。 */
     process(inputs, outputs) {
         const input = inputs[0];
         const output = outputs[0];
@@ -58,17 +59,7 @@ class VadProcessor extends AudioWorkletProcessor {
             return true;
         }
 
-        // 処理後音声をそのまま次段へ渡す（VAD表示のみで音声内容は変更しない）。
-        if (output && output.length > 0) {
-            for (let ch = 0; ch < output.length; ch += 1) {
-                const out = output[ch];
-                const src = input[Math.min(ch, input.length - 1)];
-                if (!src) {
-                    continue;
-                }
-                out.set(src);
-            }
-        }
+        this.copyInputToOutput(input, output);
 
         if (this.learnedVadStreamEnabled) {
             this.pushLearnedVadFrame(channelData);
@@ -110,6 +101,21 @@ class VadProcessor extends AudioWorkletProcessor {
         return true;
     }
 
+    /** 出力チャンネルが多い場合は最後の入力を複製する。発話判定では音声を加工しない。 */
+    copyInputToOutput(input, output) {
+        if (output && output.length > 0) {
+            for (let ch = 0; ch < output.length; ch += 1) {
+                const out = output[ch];
+                const src = input[Math.min(ch, input.length - 1)];
+                if (!src) {
+                    continue;
+                }
+                out.set(src);
+            }
+        }
+    }
+
+    /** 先頭チャンネルを固定長にまとめて送る。送信用コピーの移譲後も内部バッファーを再利用する。 */
     pushLearnedVadFrame(channelData) {
         let readIndex = 0;
         while (readIndex < channelData.length) {
