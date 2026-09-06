@@ -21,7 +21,7 @@ WORKDIR ${SINCRO_USER_DIR}/sincromisor-frontend
 USER $SINCRO_USER_ID
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm,uid=1001,gid=1001 \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR} && \
-    npm install
+    npm ci
 
 RUN \
     mkdir -p ${SINCRO_USER_DIR}/sincromisor-frontend/public/mediapipe-wasm && \

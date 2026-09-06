@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
 # curl: uvのインストール
-# git: nue-asrのインストール。nue-asrが不要なコンテナでも無いとsyncでコケる
+# git: ロックに含まれるReazonSpeechの取得に必要
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
     apt-get update \
@@ -73,11 +73,10 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-server/voice-synthesizer/.python-version \
     ${SINCRO_USER_DIR}/sincromisor-server/voice-synthesizer/
 
-# Sincromisorが依存している外部ライブラリをsyncする。
-# sincromisor-server配下のモジュールは、空のまま依存関係だけ解決される。
-# こうすることで、sincromisor-server配下のモジュールを書き換えた際に、外部モジュールを再syncする手間を省く。
+# ロックの整合性を検証し、外部依存だけを導入する。
+# ソース変更で外部依存を再導入しないよう、ワークスペースの導入は後段へ分ける。
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
-    uv sync --group speech-recognizer-nemo
+    uv sync --locked --no-install-workspace --group speech-recognizer-nemo
 
 #------------------------------------------------------------
 FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04 AS runner
@@ -143,10 +142,11 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ${SINCRO_USER_DIR}/sincromisor-server
 
 USER ${SINCRO_USER_ID}
-# sincromisor-serverのモジュールをビルドし直す
+# ソース配置後もロックを検証してワークスペースを導入する。
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
-    uv sync --group speech-recognizer-nemo
+    uv sync --locked --group speech-recognizer-nemo
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
-CMD ["uv", "run", "speech-recognizer-nemo/SpeechRecognizerNemoProcess.py"]
+# 起動時は対象グループを含む導入済み環境をそのまま使う。
+CMD ["uv", "run", "--no-sync", "speech-recognizer-nemo/SpeechRecognizerNemoProcess.py"]

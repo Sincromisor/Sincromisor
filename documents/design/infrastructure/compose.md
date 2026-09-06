@@ -14,6 +14,15 @@
 - `chat` は管理下に配置したDifyとLLMを使う。Dify・LLMの配備はこのComposeに含めない。ルート `.env` の `SINCRO_PROCESSOR_DIFY_URL` / `SINCRO_PROCESSOR_DIFY_TOKEN` を `compose/text-processor.yml` が環境変数へ渡し、Pythonの `TextProcessorProcessArgument` が読む。
 - DifyのURLは `text-processor` コンテナから到達できるホストのLANアドレスや共有ネットワーク上のサービス名とし、APIの `/v1` までを指定する。`127.0.0.1` はコンテナ自身であり、別のDifyへは接続できない。
 
+## コンテナの依存導入
+
+フロントエンドは `npm ci`、Pythonサービスは `uv sync --locked` で管理済みロックに従う。
+依存宣言とロックが不整合ならビルドを失敗させる。Pythonはソース配置前に
+`--no-install-workspace` で外部依存だけを導入し、配置後に同じグループのワークスペースを導入する。
+起動時は `uv run --no-sync` でビルド済み環境を使う。
+依存を変更するときは開発環境で `npm install` または `uv lock` を実行し、
+依存宣言とロックの差分を一緒に確認・コミットしてから再ビルドする。
+
 ## ブラウザの公開先
 
 - `compose/frontend.yml` はHTTPをホストの `8086` からコンテナの `80` へ公開する。同じPCでは `http://localhost:8086`、LANの別端末からのHTTP公開先は `http://<サーバーのLANアドレス>:8086` となる。
