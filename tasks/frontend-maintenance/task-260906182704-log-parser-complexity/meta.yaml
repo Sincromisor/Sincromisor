@@ -1,0 +1,13 @@
+id: task-260906182704-log-parser-complexity
+title: 動作記録の先頭行と後続行の検証を分離する
+category: frontend-maintenance
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-06
+closed_at: null
+legacy_ids: []

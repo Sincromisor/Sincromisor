@@ -137,6 +137,7 @@ function temporalArmScalarJumpDegEquivalent(
     );
 }
 
+/** 左右それぞれの連続した有効手首標本から二乗平均平方根を求める。左右間の距離は含めない。 */
 export function calculateTemporalNeutralWristJitter(
     frames: readonly SincroMotionDebugFrame[],
     fixtureId: MotionP0FixtureId | undefined,
@@ -149,25 +150,7 @@ export function calculateTemporalNeutralWristJitter(
         };
     }
 
-    const samples: Record<ArmSide, TemporalTuple3[]> = {
-        left: [],
-        right: [],
-    };
-    for (const frame of frames) {
-        const temporal = parseTemporal(frame);
-        if (temporal === undefined) {
-            continue;
-        }
-        for (const side of ARM_SIDES) {
-            const arm = temporal.arms[side];
-            if (
-                (arm.state === "tracked" || arm.state === "suspect") &&
-                arm.bodyLocalWrist !== undefined
-            ) {
-                samples[side].push(arm.bodyLocalWrist);
-            }
-        }
-    }
+    const samples = collectNeutralWristSamples(frames);
 
     const sampleCount = samples.left.length + samples.right.length;
     if (sampleCount < 2) {
@@ -205,6 +188,33 @@ export function calculateTemporalNeutralWristJitter(
         ),
         sampleCount,
     };
+}
+
+/** 静止時の揺れには観測された手首だけを使い、欠損や予測値を標本へ混ぜない。 */
+function collectNeutralWristSamples(
+    frames: readonly SincroMotionDebugFrame[],
+): Record<ArmSide, TemporalTuple3[]> {
+    const samples: Record<ArmSide, TemporalTuple3[]> = {
+        left: [],
+        right: [],
+    };
+    for (const frame of frames) {
+        const temporal = parseTemporal(frame);
+        if (temporal === undefined) {
+            continue;
+        }
+        for (const side of ARM_SIDES) {
+            const arm = temporal.arms[side];
+            if (
+                (arm.state === "tracked" || arm.state === "suspect") &&
+                arm.bodyLocalWrist !== undefined
+            ) {
+                samples[side].push(arm.bodyLocalWrist);
+            }
+        }
+    }
+
+    return samples;
 }
 
 function squaredTupleDistance(left: TemporalTuple3, right: TemporalTuple3): number {

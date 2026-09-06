@@ -154,94 +154,16 @@ export const METRIC_DEFINITIONS: Record<
 };
 
 /**
- * caller 指定 threshold override を default threshold に重ねる。
+ * 呼び出し元が指定した閾値を既定値に重ね、全指標の設定を返す。
  *
- * parser ではないため override の値域検証や unknown key reject は行わない。欠損 key だけ default で補い、
- * returned object は全 `MotionMetricKey` を必ず持つ。
+ * 値域の検証は呼び出し元に委ねる。既知のキーだけを取り込み、明示された undefined も既定値で補う。
  */
 export function resolveThresholds(
     config: MotionMetricConfig,
 ): Record<MotionMetricKey, MotionMetricThreshold> {
-    return {
-        neutralJitter:
-            config.thresholds?.neutralJitter ?? DEFAULT_MOTION_METRIC_THRESHOLDS.neutralJitter,
-        elbowFlipCount:
-            config.thresholds?.elbowFlipCount ?? DEFAULT_MOTION_METRIC_THRESHOLDS.elbowFlipCount,
-        recoveryJumpAngleDeg:
-            config.thresholds?.recoveryJumpAngleDeg ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.recoveryJumpAngleDeg,
-        angularVelocitySpikeCount:
-            config.thresholds?.angularVelocitySpikeCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.angularVelocitySpikeCount,
-        reachClampOccupancy:
-            config.thresholds?.reachClampOccupancy ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.reachClampOccupancy,
-        trackingLossDurationMs:
-            config.thresholds?.trackingLossDurationMs ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.trackingLossDurationMs,
-        sideSwapCount:
-            config.thresholds?.sideSwapCount ?? DEFAULT_MOTION_METRIC_THRESHOLDS.sideSwapCount,
-        addedLatencyMs:
-            config.thresholds?.addedLatencyMs ?? DEFAULT_MOTION_METRIC_THRESHOLDS.addedLatencyMs,
-        temporalPredictedArmFrameCount:
-            config.thresholds?.temporalPredictedArmFrameCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.temporalPredictedArmFrameCount,
-        temporalRecoveringArmFrameCount:
-            config.thresholds?.temporalRecoveringArmFrameCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.temporalRecoveringArmFrameCount,
-        temporalLostArmDurationMs:
-            config.thresholds?.temporalLostArmDurationMs ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.temporalLostArmDurationMs,
-        temporalMaxRecoveryJumpDegEquivalent:
-            config.thresholds?.temporalMaxRecoveryJumpDegEquivalent ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.temporalMaxRecoveryJumpDegEquivalent,
-        temporalNeutralWristJitter:
-            config.thresholds?.temporalNeutralWristJitter ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.temporalNeutralWristJitter,
-        solverElbowFlipRejectCount:
-            config.thresholds?.solverElbowFlipRejectCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.solverElbowFlipRejectCount,
-        solverReachClampOccupancy:
-            config.thresholds?.solverReachClampOccupancy ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.solverReachClampOccupancy,
-        solverExcessReachRatioP95:
-            config.thresholds?.solverExcessReachRatioP95 ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.solverExcessReachRatioP95,
-        solverPoleUncertainFrameCount:
-            config.thresholds?.solverPoleUncertainFrameCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.solverPoleUncertainFrameCount,
-        finalPoseAngularVelocityClampCount:
-            config.thresholds?.finalPoseAngularVelocityClampCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.finalPoseAngularVelocityClampCount,
-        finalPoseOwnedBoneConflictCount:
-            config.thresholds?.finalPoseOwnedBoneConflictCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.finalPoseOwnedBoneConflictCount,
-        gestureFlickerCount:
-            config.thresholds?.gestureFlickerCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.gestureFlickerCount,
-        semanticFallbackFrameCount:
-            config.thresholds?.semanticFallbackFrameCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.semanticFallbackFrameCount,
-        intentCooldownSuppressionCount:
-            config.thresholds?.intentCooldownSuppressionCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.intentCooldownSuppressionCount,
-        intentInvalidFrameCount:
-            config.thresholds?.intentInvalidFrameCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.intentInvalidFrameCount,
-        trackerBudgetOverrunFrameCount:
-            config.thresholds?.trackerBudgetOverrunFrameCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.trackerBudgetOverrunFrameCount,
-        trackerDroppedFrameCount:
-            config.thresholds?.trackerDroppedFrameCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.trackerDroppedFrameCount,
-        degradationStageFrameCount:
-            config.thresholds?.degradationStageFrameCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.degradationStageFrameCount,
-        degradationRecoveryFrameCount:
-            config.thresholds?.degradationRecoveryFrameCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.degradationRecoveryFrameCount,
-        roiPausedFrameCount:
-            config.thresholds?.roiPausedFrameCount ??
-            DEFAULT_MOTION_METRIC_THRESHOLDS.roiPausedFrameCount,
-    };
+    const thresholds = { ...DEFAULT_MOTION_METRIC_THRESHOLDS };
+    for (const key of MOTION_METRIC_KEYS) {
+        thresholds[key] = config.thresholds?.[key] ?? DEFAULT_MOTION_METRIC_THRESHOLDS[key];
+    }
+    return thresholds;
 }
