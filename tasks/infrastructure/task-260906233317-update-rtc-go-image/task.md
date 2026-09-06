@@ -10,9 +10,9 @@
 
 ## 完了条件（受け入れ条件）
 
-- [ ] ビルド用イメージを `golang:1.26.8-bookworm`、`go.mod` の最低版を1.26.8へ更新する。
-- [ ] GoのテストとRTCイメージのビルドが成功し、生成バイナリの `go version -m` で1.26.8を確認する。
-- [ ] 隔離した確認環境でRTCが起動し、Composeの死活確認に成功する。
+- [x] ビルド用イメージを `golang:1.26.8-bookworm`、`go.mod` の最低版を1.26.8へ更新する。
+- [x] GoのテストとRTCイメージのビルドが成功し、生成バイナリの `go version -m` で1.26.8を確認する。
+- [x] 隔離した確認環境でRTCが起動し、Composeの死活確認に成功する。
 
 ## 実装方針 / スコープ境界
 
@@ -33,3 +33,23 @@ Docker Hub公開APIで1.26.8-bookwormの存在を確認済み（2026-09-02更新
 [Compose設計](../../../documents/design/infrastructure/compose.md)と設計索引の導線を確認し、版を記載する現在文書があれば同期する。
 起票時は定義、公式情報、配布タグの読み取りのみ。更新後のビルド・起動は未実行。
 全体の調査結果は [コンテナ更新調査](artifacts/container-image-audit.md) を参照する。
+
+## 実行結果
+
+通常変更として親がDockerfileと `go.mod` を1.26.8へ更新した。
+`docker build -f Docker/sincro-rtc/Dockerfile -t sincro-task:rtc .` が成功した。
+生成バイナリを一時領域へコピーし、`go version -m` で `go1.26.8`、
+`CGO_ENABLED=1` を確認した。実行イメージ内の `ldd` に未解決の共有ライブラリはなかった。
+隔離ネットワークの一時ConsulとRTCを起動し、Composeと同じ
+`curl --fail --silent --show-error http://127.0.0.1:8001/health/ready` が終了コード0となった。
+
+`go test ./...` はホスト環境ではICE収集が時間切れになった。
+検証環境を分離する際、BookwormのFFmpeg 5.1はRTCの対応範囲外で、
+テストが子プロセスの登録通知を待ち続けることを一時コピーの出力で確認した。
+実際のUbuntu実行イメージへGo公式1.26.8のツールチェーンと `build-essential` を追加した
+一時イメージで `go test -timeout 90s ./...` を実行し、全パッケージが成功した。
+実装・テストのロジック変更は行っていない。
+
+設計文書には旧Go版の記載がなく、Compose設計・設計索引の導線を確認した。
+文書点検はPASS。Goソースは未変更、Dockerfileの変更箇所のコメント点検はPASS。
+稼働サービスの置換は行っておらず、既知の残リスクはない。
