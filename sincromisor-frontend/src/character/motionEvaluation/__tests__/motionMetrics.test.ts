@@ -759,6 +759,36 @@ describe("calculateMotionMetricSummary", () => {
         });
     });
 
+    it("回復時の回転差は欠損を飛ばし、同時刻を数えず、500ms未満だけを採用する", () => {
+        const solver = (degrees: number) => ({
+            poseRetarget: {
+                leftArm: {
+                    upperArmQuaternion: {
+                        x: 0,
+                        y: 0,
+                        z: Math.sin((degrees * Math.PI) / 360),
+                        w: Math.cos((degrees * Math.PI) / 360),
+                    },
+                },
+                rightArm: {},
+            },
+        });
+        const frames = [
+            createFrame(0, 0, {
+                poseSnapshot: createPoseSnapshot({ detected: false }),
+                solver: solver(0),
+            }),
+            createFrame(1, 100, { poseSnapshot: createPoseSnapshot(), solver: solver(60) }),
+            createFrame(2, 100, { solver: solver(90) }),
+            createFrame(3, 150),
+            createFrame(4, 200, { solver: solver(120) }),
+            createFrame(5, 600, { solver: solver(0) }),
+        ];
+        const metric = calculateMotionMetricSummary(frames, CONFIG).metrics.recoveryJumpAngleDeg;
+        expect(metric.sampleCount).toBe(2);
+        expect(metric.value).toBeCloseTo(10);
+    });
+
     it("calculates temporal arm-frame counts and recovery jump thresholds", () => {
         const summary = calculateMotionMetricSummary(
             [

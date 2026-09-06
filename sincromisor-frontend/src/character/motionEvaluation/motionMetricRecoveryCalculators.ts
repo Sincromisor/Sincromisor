@@ -1,6 +1,6 @@
 /**
- * temporal recovery / final pose の jump angle を測る calculator。
- * quaternion 差分は保存済み final pose layer から読むだけで、runtime pose や VRM object は参照しない。
+ * 追跡回復時の角度変化を、保存済みの適用角速度または姿勢変換の回転から計算する。
+ * 実行中の姿勢やVRM本体は参照しない。
  */
 import { Quaternion } from "three/src/math/Quaternion.js";
 import type { SincroMotionDebugFrame } from "./motionDebugLogSchema";
@@ -23,6 +23,7 @@ function angularVelocityValues(applied: AppliedMetricInput): number[] {
     return Object.values(applied.angularVelocityDegPerSec);
 }
 
+/** 追跡回復後500msの最大角度を返す。適用済み角速度を優先し、なければ回転差で補う。 */
 export function calculateRecoveryJumpAngleDeg(
     frames: readonly SincroMotionDebugFrame[],
 ): NumericMetricComputation {
@@ -100,6 +101,7 @@ function calculateRecoveryJumpFromApplied(
     return { ok: true, value: maxAngleDeg, sampleCount };
 }
 
+/** 有効な回転を持つ前回フレームを保持し、回復区間内かつ時間が進んだ対だけを数える。 */
 function calculateRecoveryJumpFromQuaternions(
     frames: readonly SincroMotionDebugFrame[],
     recoveryStartTimes: readonly number[],
@@ -124,20 +126,9 @@ function calculateRecoveryJumpFromQuaternions(
         ) {
             const deltaMs = frame.timestamp.mediaTimeMs - previous.mediaTimeMs;
             if (deltaMs > 0) {
-                const pairCount = Math.min(previous.quaternions.length, quaternions.length);
-                for (let index = 0; index < pairCount; index += 1) {
-                    const previousQuaternion = previous.quaternions[index];
-                    const currentQuaternion = quaternions[index];
-                    if (previousQuaternion === undefined || currentQuaternion === undefined) {
-                        continue;
-                    }
-                    const frameAngleDeg =
-                        (quaternionAngleDeg(previousQuaternion, currentQuaternion) * 1000) /
-                        deltaMs /
-                        60;
-                    maxAngleDeg = Math.max(maxAngleDeg, frameAngleDeg);
-                    sampleCount += 1;
-                }
+                const jump = quaternionPairJump(previous.quaternions, quaternions, deltaMs);
+                maxAngleDeg = Math.max(maxAngleDeg, jump.value);
+                sampleCount += jump.sampleCount;
             }
         }
         previous = {
@@ -149,12 +140,33 @@ function calculateRecoveryJumpFromQuaternions(
     return { ok: true, value: maxAngleDeg, sampleCount };
 }
 
+/** 同じ配列位置の回転差を60fps相当の角度へ換算する。時間差は呼び出し元で正と確認する。 */
+function quaternionPairJump(
+    previous: readonly QuaternionMetricInput[],
+    current: readonly QuaternionMetricInput[],
+    deltaMs: number,
+): { value: number; sampleCount: number } {
+    let value = 0;
+    let sampleCount = 0;
+    for (let index = 0; index < Math.min(previous.length, current.length); index += 1) {
+        const before = previous[index];
+        const after = current[index];
+        if (before === undefined || after === undefined) {
+            continue;
+        }
+        value = Math.max(value, (quaternionAngleDeg(before, after) * 1000) / deltaMs / 60);
+        sampleCount += 1;
+    }
+    return { value, sampleCount };
+}
+
 function isInAnyRecoveryWindow(mediaTimeMs: number, startTimes: readonly number[]): boolean {
     return startTimes.some(
         (startTimeMs) => startTimeMs <= mediaTimeMs && mediaTimeMs < startTimeMs + 500,
     );
 }
 
+/** 保存済み姿勢変換から左上腕・左前腕・右上腕・右前腕の順に取り出し、欠損を除く。 */
 function retargetQuaternions(frame: SincroMotionDebugFrame): QuaternionMetricInput[] {
     const retarget = parsePoseRetarget(frame);
     if (retarget === undefined) {
