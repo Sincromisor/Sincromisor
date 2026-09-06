@@ -43,7 +43,7 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
 
 ## とにかくローカル環境でサーバーを動かす
 
-ローカル／オンプレミスでの提供を前提とする。まずNVIDIA DriverとNVIDIA Container Toolkitを準備し、コンテナ内の `nvidia-smi` でGPUを確認する。
+ローカル／オンプレミスでの提供を前提とする。[CUDA 13系のホスト条件](documents/design/infrastructure/compose.md#nemoのgpu基盤)に従ってNVIDIA DriverとNVIDIA Container Toolkitを準備し、コンテナ内の `nvidia-smi` でGPUを確認する。
 
 1. ソースコードを取得し、リポジトリのルートへ移動する。
 

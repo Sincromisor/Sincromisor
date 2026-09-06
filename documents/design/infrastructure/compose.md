@@ -27,6 +27,16 @@
 以前の `nue` 指定は非互換となり、ビルドでは依存導入前、初期化では権限変更・S3操作・モデル取得前に拒否する。
 配布イメージを使う場合も初期化の成功が認識サービス起動の前提となる。
 
+## NeMoのGPU基盤
+
+NeMoのビルド・実行段階は `nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04` を使う。
+現在のロックに含まれるPyTorchのCUDA 13系ライブラリに合わせた構成である。
+PyTorchのTriton演算が実行時にC拡張を生成するため、実行段階にも `gcc` と `python3-dev` を導入する。
+ホストにはNVIDIA Container ToolkitとGPU対応ドライバーが必要となる。
+[NVIDIA互換表](https://docs.nvidia.com/deploy/cuda-compatibility/minor-version-compatibility.html)
+（2026-09-06確認）ではCUDA 13系の最低ドライバー系統は580である。
+PTXや新機能には追加条件があるため、最低値だけで動作を保証せず、導入先でGPU認識を確認する。
+
 ## ブラウザの公開先
 
 - `compose/frontend.yml` はHTTPをホストの `8086` からコンテナの `80` へ公開する。同じPCでは `http://localhost:8086`、LANの別端末からのHTTP公開先は `http://<サーバーのLANアドレス>:8086` となる。

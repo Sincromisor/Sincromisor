@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04 AS builder
+FROM nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04 AS builder
 
 # Composeからのモデル指定を依存導入前に検証する。
 ARG SINCRO_RECOGNIZER_MODEL=nemo
@@ -78,7 +78,7 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --locked --no-install-workspace --group speech-recognizer-nemo
 
 #------------------------------------------------------------
-FROM nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04 AS runner
+FROM nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04 AS runner
 
 LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
 
@@ -103,11 +103,12 @@ ENV SINCRO_S3_SECRET_KEY=
 # SINCRO_RECOGNIZER_VOICE_LOG_DIRが空の場合、音声認識ログを出力しない
 ENV SINCRO_RECOGNIZER_VOICE_LOG_DIR=
 
+# PyTorchのTriton演算は実行時にC拡張を生成するため、コンパイラーとPython開発用ヘッダーが必要。
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
     apt-get update && \
     apt-get install -y \
-    libsentencepiece0 libprotobuf-c1 ffmpeg opus-tools curl
+    libsentencepiece0 libprotobuf-c1 ffmpeg opus-tools curl gcc python3-dev
 
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
