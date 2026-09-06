@@ -1,7 +1,14 @@
 #!/bin/sh
 
-set -x
 set -e
+
+# 未対応モデルは権限変更・S3接続・モデル取得より前に拒否する。
+if [ "${SINCRO_RECOGNIZER_MODEL:-}" != "nemo" ]; then
+    echo "未対応のSINCRO_RECOGNIZER_MODELです。nemoを指定してください。" >&2
+    exit 1
+fi
+
+set -x
 
 chmod 644 /opt/sincromisor/configs/config.yml
 
@@ -16,8 +23,4 @@ mc alias set sincro-s3 \
     "${SINCRO_S3_SECRET_KEY}"
 
 su sincromisor -c '/opt/sincromisor/.local/bin/hf cache ls || true'
-if [ "${SINCRO_RECOGNIZER_MODEL}" = "nemo" ]; then
-    su sincromisor -c '/opt/sincromisor/.local/bin/hf download reazon-research/reazonspeech-nemo-v2'
-elif [ "${SINCRO_RECOGNIZER_MODEL}" = "nue" ]; then
-    su sincromisor -c '/opt/sincromisor/.local/bin/hf download rinna/nue-asr'
-fi
+su sincromisor -c '/opt/sincromisor/.local/bin/hf download reazon-research/reazonspeech-nemo-v2'

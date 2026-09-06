@@ -112,7 +112,7 @@
 
 ## 廃止予定と削除済み
 
-- Nue-ASRは廃止予定。`sincromisor-server/speech-recognizer/` の実装は残っており、現行のNeMo実装は `sincromisor-server/speech-recognizer-nemo/` にある。
+- Nue-ASRは廃止済みで、コンテナはNeMoのみ対応する。`sincromisor-server/speech-recognizer/` の実装は残っており、現行のNeMo実装は `sincromisor-server/speech-recognizer-nemo/` にある。
 - Babylon.jsの旧ページと関連実装・依存は削除済み。現行描画はThree.js + VRM 1.0を使う。
 - MinIOはSeaweedFSへ移行済み。旧設定の `compose/minio.yml` と `Docker/minio/` は残るが、通常のCompose構成には含めない。現在の保存領域は[保存領域の設計](infrastructure/storage.md)を参照する。
 
