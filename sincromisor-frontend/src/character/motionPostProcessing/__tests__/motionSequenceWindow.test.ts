@@ -188,6 +188,39 @@ describe("MotionSequenceWindow", () => {
         });
     });
 
+    it("欠損や微小速度を挟んでも有効な観測間の変化と同長の意図の優先順を保つ", () => {
+        const window = new MotionSequenceWindow();
+        window.add({
+            mediaTimeMs: 0,
+            intent: createIntent(0, { intent: "wave", stableDurationMs: 200 }),
+            temporal: createTemporal(0, { wristX: 0.02 }),
+            hand: createHand("open"),
+        });
+        window.add({
+            mediaTimeMs: 100,
+            temporal: createTemporal(100, { wristX: -0.01 }),
+            hand: createHand("unknown"),
+        });
+        window.add({
+            mediaTimeMs: 200,
+            intent: createIntent(200, { intent: "pointing", stableDurationMs: 200 }),
+            temporal: createTemporal(200, { wristX: -0.02 }),
+            hand: createHand("closed"),
+        });
+        window.add({ mediaTimeMs: 300, intent: createIntent(300) });
+        expect(window.snapshot().features.left).toMatchObject({
+            intentTransitions: 2,
+            semanticHoldMs: 100,
+            stableSemanticIntent: "wave",
+            gestureFlickerCount: 0,
+            wristVelocitySignChanges: 1,
+            handOpenCloseTransitions: 1,
+        });
+        window.reset();
+        expect(window.snapshot().sampleCount).toBe(0);
+        expect(window.snapshot().features.left.wristVelocitySignChanges).toBe(0);
+    });
+
     it("reports input availability per sequence input type", () => {
         const window = new MotionSequenceWindow();
 

@@ -1,8 +1,12 @@
+/** 分類器へ渡す短時間の動作履歴を保持し、特徴量計算を専用モジュールへ委ねる。 */
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { ArmMotionIntent, MotionIntentState } from "../motionIntent/motionIntentState";
 import type { ReliabilityMap } from "../reliability/reliabilityMap";
 import type { TemporalUpperBodyState } from "../temporal/temporalUpperBodyState";
 
+import { aggregateSideFeatures, createEmptySideFeatures } from "./motionSequenceFeatures";
+
+/** 分類器へ渡す履歴集計の形式を識別する。 */
 export const MOTION_SEQUENCE_WINDOW_SCHEMA_VERSION = "sincro.motion-sequence-window.v1" as const;
 
 const DEFAULT_SEQUENCE_WINDOW_CONFIG = {
@@ -10,30 +14,9 @@ const DEFAULT_SEQUENCE_WINDOW_CONFIG = {
     maxSamples: 90,
 };
 
-const SEMANTIC_ARM_INTENTS = [
-    "wave",
-    "pointing",
-    "thumbsUp",
-    "peace",
-    "nearFace",
-    "explain",
-    "clapLike",
-    "guarded",
-] as const;
-
-type MotionSide = "left" | "right";
-type ArmPartName = "leftArm" | "rightArm";
-type ArmJointName =
-    | "leftShoulder"
-    | "leftElbow"
-    | "leftWrist"
-    | "rightShoulder"
-    | "rightElbow"
-    | "rightWrist";
 type MotionSequenceWindowWarning = "non_monotonic_time_reset";
-type SemanticArmMotionIntent = (typeof SEMANTIC_ARM_INTENTS)[number];
-type HandOpenCloseState = "open" | "closed";
 
+/** 動画内の時刻に対応する低次元の観測値。未取得の層は欠損のまま保持する。 */
 export type MotionSequenceSample = {
     mediaTimeMs: number;
     temporal?: TemporalUpperBodyState;
@@ -42,11 +25,13 @@ export type MotionSequenceSample = {
     hand?: SincroHandMotionSnapshot;
 };
 
+/** 履歴を保持する時間幅（ミリ秒）と最大標本数。両方の制限を適用する。 */
 export type MotionSequenceWindowConfig = {
     maxDurationMs: number;
     maxSamples: number;
 };
 
+/** 片腕の意図継続時間（ミリ秒）と観測変化の回数。分類器の入力となる。 */
 export type MotionSequenceSideFeatures = {
     intentTransitions: number;
     semanticHoldMs: number;
@@ -58,6 +43,7 @@ export type MotionSequenceSideFeatures = {
     handOpenCloseTransitions: number;
 };
 
+/** 保持区間の時刻・利用可能な観測層・左右の特徴量をまとめた読み取り結果。 */
 export type MotionSequenceWindowSnapshot = {
     schemaVersion: typeof MOTION_SEQUENCE_WINDOW_SCHEMA_VERSION;
     startMediaTimeMs: number;
@@ -75,218 +61,6 @@ export type MotionSequenceWindowSnapshot = {
         right: MotionSequenceSideFeatures;
     };
 };
-
-type SemanticRun = {
-    intent: SemanticArmMotionIntent;
-    durationMs: number;
-};
-
-function createEmptySideFeatures(): MotionSequenceSideFeatures {
-    return {
-        intentTransitions: 0,
-        semanticHoldMs: 0,
-        gestureFlickerCount: 0,
-        trackingLossMs: 0,
-        sideSwapSuspectCount: 0,
-        wristVelocitySignChanges: 0,
-        handOpenCloseTransitions: 0,
-    };
-}
-
-function isSemanticIntent(intent: ArmMotionIntent): intent is SemanticArmMotionIntent {
-    switch (intent) {
-        case "wave":
-        case "pointing":
-        case "thumbsUp":
-        case "peace":
-        case "nearFace":
-        case "explain":
-        case "clapLike":
-        case "guarded":
-            return true;
-        case "tracking":
-        case "lost":
-        case "fallback":
-            return false;
-    }
-}
-
-function durationToNext(samples: readonly MotionSequenceSample[], index: number): number {
-    const next = samples[index + 1];
-    if (next === undefined) {
-        return 0;
-    }
-    return Math.max(0, next.mediaTimeMs - samples[index].mediaTimeMs);
-}
-
-function sidePartName(side: MotionSide): ArmPartName {
-    return side === "left" ? "leftArm" : "rightArm";
-}
-
-function sideJointNames(side: MotionSide): readonly ArmJointName[] {
-    return side === "left"
-        ? ["leftShoulder", "leftElbow", "leftWrist"]
-        : ["rightShoulder", "rightElbow", "rightWrist"];
-}
-
-function hasSideSwapWarning(sample: MotionSequenceSample, side: MotionSide): boolean {
-    const intentWarnings = sample.intent?.arms[side].warnings ?? [];
-    if (intentWarnings.includes("left_right_swap_suspect")) {
-        return true;
-    }
-
-    const reliability = sample.reliability;
-    if (reliability === undefined) {
-        return false;
-    }
-    if (reliability.warnings.includes("side_inconsistent")) {
-        return true;
-    }
-
-    const armPart = reliability.parts[sidePartName(side)];
-    if (armPart.warnings.includes("side_inconsistent")) {
-        return true;
-    }
-
-    return sideJointNames(side).some((jointName) =>
-        reliability.joints[jointName].warnings.includes("side_inconsistent"),
-    );
-}
-
-function hasTrackingLoss(sample: MotionSequenceSample, side: MotionSide): boolean {
-    if (sample.temporal?.arms[side].state === "lost") {
-        return true;
-    }
-    const intent = sample.intent?.arms[side].intent;
-    if (intent === "lost" || intent === "fallback") {
-        return true;
-    }
-    return sample.reliability?.parts[sidePartName(side)].state === "lost";
-}
-
-function updateSemanticRun(
-    currentRun: SemanticRun | undefined,
-    bestRun: SemanticRun | undefined,
-    intent: ArmMotionIntent,
-    durationMs: number,
-): { currentRun?: SemanticRun; bestRun?: SemanticRun } {
-    if (!isSemanticIntent(intent)) {
-        return { bestRun: selectBestRun(bestRun, currentRun) };
-    }
-    if (currentRun !== undefined && currentRun.intent === intent) {
-        return {
-            currentRun: {
-                intent: currentRun.intent,
-                durationMs: currentRun.durationMs + durationMs,
-            },
-            bestRun,
-        };
-    }
-    return {
-        currentRun: { intent, durationMs },
-        bestRun: selectBestRun(bestRun, currentRun),
-    };
-}
-
-function selectBestRun(
-    bestRun: SemanticRun | undefined,
-    candidate: SemanticRun | undefined,
-): SemanticRun | undefined {
-    if (candidate === undefined) {
-        return bestRun;
-    }
-    if (bestRun === undefined || candidate.durationMs > bestRun.durationMs) {
-        return candidate;
-    }
-    return bestRun;
-}
-
-function handOpenCloseState(
-    sample: MotionSequenceSample,
-    side: MotionSide,
-): HandOpenCloseState | undefined {
-    const openness =
-        side === "left"
-            ? sample.hand?.leftHand.features.openness
-            : sample.hand?.rightHand.features.openness;
-    if (openness === "open" || openness === "closed") {
-        return openness;
-    }
-    return undefined;
-}
-
-function aggregateSideFeatures(
-    samples: readonly MotionSequenceSample[],
-    side: MotionSide,
-): MotionSequenceSideFeatures {
-    const features = createEmptySideFeatures();
-    let previousIntent: ArmMotionIntent | undefined;
-    let previousFlickerIntent: ArmMotionIntent | undefined;
-    let previousFlickerStableDurationMs = 0;
-    let currentRun: SemanticRun | undefined;
-    let bestRun: SemanticRun | undefined;
-    let previousWristSign: -1 | 1 | undefined;
-    let previousHandState: HandOpenCloseState | undefined;
-
-    for (let index = 0; index < samples.length; index += 1) {
-        const sample = samples[index];
-        const durationMs = durationToNext(samples, index);
-        const sideIntent = sample.intent?.arms[side];
-
-        if (sideIntent !== undefined) {
-            if (previousIntent !== undefined && sideIntent.intent !== previousIntent) {
-                features.intentTransitions += 1;
-            }
-            if (
-                previousFlickerIntent !== undefined &&
-                isSemanticIntent(previousFlickerIntent) &&
-                previousFlickerStableDurationMs < 150 &&
-                (sideIntent.intent === "tracking" ||
-                    (isSemanticIntent(sideIntent.intent) &&
-                        sideIntent.intent !== previousFlickerIntent))
-            ) {
-                features.gestureFlickerCount += 1;
-            }
-            const runUpdate = updateSemanticRun(currentRun, bestRun, sideIntent.intent, durationMs);
-            currentRun = runUpdate.currentRun;
-            bestRun = runUpdate.bestRun;
-            previousIntent = sideIntent.intent;
-            previousFlickerIntent = sideIntent.intent;
-            previousFlickerStableDurationMs = sideIntent.stableDurationMs;
-        }
-
-        if (hasTrackingLoss(sample, side)) {
-            features.trackingLossMs += durationMs;
-        }
-        if (hasSideSwapWarning(sample, side)) {
-            features.sideSwapSuspectCount += 1;
-        }
-
-        const wristX = sample.temporal?.arms[side].velocity.wrist?.[0];
-        if (wristX !== undefined && Number.isFinite(wristX) && Math.abs(wristX) >= 0.02) {
-            const sign = wristX > 0 ? 1 : -1;
-            if (previousWristSign !== undefined && sign !== previousWristSign) {
-                features.wristVelocitySignChanges += 1;
-            }
-            previousWristSign = sign;
-        }
-
-        const handState = handOpenCloseState(sample, side);
-        if (handState !== undefined) {
-            if (previousHandState !== undefined && handState !== previousHandState) {
-                features.handOpenCloseTransitions += 1;
-            }
-            previousHandState = handState;
-        }
-    }
-
-    const selectedRun = selectBestRun(bestRun, currentRun);
-    if (selectedRun !== undefined) {
-        features.semanticHoldMs = selectedRun.durationMs;
-        features.stableSemanticIntent = selectedRun.intent;
-    }
-    return features;
-}
 
 function emptySnapshot(
     warnings: readonly MotionSequenceWindowWarning[],
@@ -310,11 +84,13 @@ function emptySnapshot(
     };
 }
 
+/** 時間幅と件数で履歴を制限し、時刻逆行時は前の系列を破棄する。 */
 export class MotionSequenceWindow {
     private readonly config: MotionSequenceWindowConfig;
     private samples: MotionSequenceSample[] = [];
     private warnings: MotionSequenceWindowWarning[] = [];
 
+    /** 既定では直近1200ms・最大90標本を保持する。 */
     constructor(config: Partial<MotionSequenceWindowConfig> = {}) {
         this.config = {
             maxDurationMs: config.maxDurationMs ?? DEFAULT_SEQUENCE_WINDOW_CONFIG.maxDurationMs,
@@ -322,6 +98,7 @@ export class MotionSequenceWindow {
         };
     }
 
+    /** 観測を追加し、保持範囲を超えた標本を除いて集計結果を返す。 */
     add(sample: MotionSequenceSample): MotionSequenceWindowSnapshot {
         const previousSample = this.samples[this.samples.length - 1];
         if (previousSample !== undefined && sample.mediaTimeMs < previousSample.mediaTimeMs) {
@@ -333,6 +110,7 @@ export class MotionSequenceWindow {
         return this.snapshot();
     }
 
+    /** 同時刻の入力順を保って集計する。内部の履歴配列は変更しない。 */
     snapshot(): MotionSequenceWindowSnapshot {
         const sortedSamples = [...this.samples].sort(
             (left, right) => left.mediaTimeMs - right.mediaTimeMs,
@@ -362,6 +140,7 @@ export class MotionSequenceWindow {
         };
     }
 
+    /** 動作系列の切り替え時に履歴と時刻逆行の警告を消す。 */
     reset(): void {
         this.samples = [];
         this.warnings = [];
