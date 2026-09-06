@@ -9,12 +9,14 @@ services:
             - external
             - rtc
         image: hashicorp/consul:latest
+        # 単一サーバーの検証環境では長期停止を許容する。複数サーバーでは標準の168hへ戻す。
         command:
             [
                 "agent",
                 "-server",
                 "-node=${SINCRO_CONSUL_SERVER_NODE_NAME}",
                 "-bootstrap-expect=1",
+                '-hcl=server_rejoin_age_max = "${SINCRO_CONSUL_SERVER_REJOIN_AGE_MAX:-87600h}"',
                 "-ui",
                 "-client=0.0.0.0",
             ]
