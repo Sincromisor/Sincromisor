@@ -4,14 +4,13 @@
 
 ## タスク一覧（自動生成 / 全 12 件）
 
-### open（未完） — 2 件
+### open（未完） — 1 件
 
-| タスク                                                                                       | タイトル                                 | 判定 | 依存 |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------- | ---- | ---- |
-| [task-260906182704-log-parser-complexity](./task-260906182704-log-parser-complexity/task.md) | 動作記録の先頭行と後続行の検証を分離する | —    | —    |
-| [task-260906182704-vad-complexity](./task-260906182704-vad-complexity/task.md)               | 音声通過処理と発話判定を分離する         | —    | —    |
+| タスク                                                                         | タイトル                         | 判定 | 依存 |
+| ------------------------------------------------------------------------------ | -------------------------------- | ---- | ---- |
+| [task-260906182704-vad-complexity](./task-260906182704-vad-complexity/task.md) | 音声通過処理と発話判定を分離する | —    | —    |
 
-### done（完了） — 10 件
+### done（完了） — 11 件
 
 | タスク                                                                                                                     | タイトル                                         | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -23,6 +22,7 @@
 | [task-260906004358-release-app-event-subscriptions](./task-260906004358-release-app-event-subscriptions/task.md)           | アプリ制御の差し替え時に旧イベント購読を解除     | ✅ PASS | `task-260906004358-collapse-app-forwarding-layers`                                                                                                            |
 | [task-260906004358-simplify-dialog-settings-access](./task-260906004358-simplify-dialog-settings-access/task.md)           | ダイアログ設定の読み書きと個別転送を整理         | ✅ PASS | —                                                                                                                                                             |
 | [task-260906004358-simplify-react-settings-subscription](./task-260906004358-simplify-react-settings-subscription/task.md) | React設定購読の状態複製と初期同期を整理          | ✅ PASS | `task-260906004358-simplify-dialog-settings-access`                                                                                                           |
+| [task-260906182704-log-parser-complexity](./task-260906182704-log-parser-complexity/task.md)                               | 動作記録の先頭行と後続行の検証を分離する         | ✅ PASS | —                                                                                                                                                             |
 | [task-260906182704-metric-complexity](./task-260906182704-metric-complexity/task.md)                                       | 動作指標の既定値と集計処理を整理する             | ✅ PASS | —                                                                                                                                                             |
 | [task-260906182704-sequence-complexity](./task-260906182704-sequence-complexity/task.md)                                   | 動作履歴の特徴量集計を責務ごとに整理する         | ✅ PASS | —                                                                                                                                                             |
 
