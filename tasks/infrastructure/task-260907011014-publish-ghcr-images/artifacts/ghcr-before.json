@@ -1,0 +1,432 @@
+[
+  {
+    "name": "minio",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 492655793,
+        "digest": "sha256:c6990c0ab04cd2b27f3a306ecfdb9bf3cd9a4d807a7c45fd75527857930fd1d2",
+        "created_at": "2025-08-21T07:53:28Z",
+        "tags": [
+          "latest"
+        ]
+      },
+      {
+        "id": 479742195,
+        "digest": "sha256:51805ca3d2678f1f815b0459d4fb7db8b43d8dbf962601416a71c8e318f33152",
+        "created_at": "2025-08-06T08:38:00Z",
+        "tags": []
+      },
+      {
+        "id": 478664596,
+        "digest": "sha256:376da4f74b096db0c820077625a0e0ed3d4f9154fbbb1333d182427a26fa15e1",
+        "created_at": "2025-08-05T08:13:24Z",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "redis",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 675812784,
+        "digest": "sha256:80435e0df472dba4bcf25b3e048a9acde0c4dab3c4fe8b737f6da1bf457f6f72",
+        "created_at": "2026-02-07T20:05:58Z",
+        "tags": [
+          "latest"
+        ]
+      },
+      {
+        "id": 675812782,
+        "digest": "sha256:e60212656c83b1ddfdea0a56c25622c0d9331ab17ea1943d07f184bcddf4e703",
+        "created_at": "2026-02-07T20:05:57Z",
+        "tags": []
+      },
+      {
+        "id": 675812781,
+        "digest": "sha256:562d0e7902c851d0497ecd4af12db930730e560cbcfac6e862cbebe202fca359",
+        "created_at": "2026-02-07T20:05:57Z",
+        "tags": []
+      },
+      {
+        "id": 492656077,
+        "digest": "sha256:e502f5b2cf4e7fa3fec44272ff889795fbedc9982b3e044476f63a5d496083f0",
+        "created_at": "2025-08-21T07:53:51Z",
+        "tags": []
+      },
+      {
+        "id": 479742361,
+        "digest": "sha256:54568eb60ba28ecc85711444c10bfb447131e80afb9d941938e21af7f5734121",
+        "created_at": "2025-08-06T08:38:10Z",
+        "tags": []
+      },
+      {
+        "id": 478665038,
+        "digest": "sha256:8d3a501833f3dfeb21c7900f92fdbc399cc44e34c78217c227fb67375451e9b8",
+        "created_at": "2025-08-05T08:13:47Z",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "service-initializer",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 675815502,
+        "digest": "sha256:f42dd278f796185d0c0ad40227a3b6b241c538dff8c4f4b53daf72056e328e8d",
+        "created_at": "2026-02-07T20:11:23Z",
+        "tags": [
+          "latest"
+        ]
+      },
+      {
+        "id": 675815496,
+        "digest": "sha256:ac8b3baa993f8f9a01e7a6f1b3ba0fa85ab22949f5123a95cabb77920ce11fd0",
+        "created_at": "2026-02-07T20:11:23Z",
+        "tags": []
+      },
+      {
+        "id": 675815495,
+        "digest": "sha256:63f901e0516f21e4274e543aa8609c5a2d809b06292d237af221d51ea9a42276",
+        "created_at": "2026-02-07T20:11:23Z",
+        "tags": []
+      },
+      {
+        "id": 492656283,
+        "digest": "sha256:5f077708dd045258c7efb1fef16132f65871b6c66be064cd187e2471df20af03",
+        "created_at": "2025-08-21T07:54:08Z",
+        "tags": []
+      },
+      {
+        "id": 479742645,
+        "digest": "sha256:f627c53e08fe22736eeadf6a7bd486cc8a87c4365eecb69e97f729fd6ac18013",
+        "created_at": "2025-08-06T08:38:26Z",
+        "tags": []
+      },
+      {
+        "id": 478665417,
+        "digest": "sha256:47d3303f520e5e6f4aa5c1cdf1240bc69af59e0a7c1ab94e1239bfd3c668f785",
+        "created_at": "2025-08-05T08:14:03Z",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "sincro-client",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 479742933,
+        "digest": "sha256:d94ef9e9f63ccb2cc03f00954bee23f2c5f861739e461d323dcc8c94e3645071",
+        "created_at": "2025-08-06T08:38:43Z",
+        "tags": [
+          "latest"
+        ]
+      },
+      {
+        "id": 478666263,
+        "digest": "sha256:101717feca9944282d26204ba8c48d99668165cb0e0f3fa1e704f89beb80224d",
+        "created_at": "2025-08-05T08:14:53Z",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "sincro-rtc",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 675815661,
+        "digest": "sha256:e7714cd19507dfa3c81006f304cfc78ef65f89b141e18207a522ad91c359d620",
+        "created_at": "2026-02-07T20:11:41Z",
+        "tags": [
+          "latest"
+        ]
+      },
+      {
+        "id": 675815659,
+        "digest": "sha256:9e9fc904d90ce31bf941a2fe0e20569641b0b448c7f0dc2c0389538bb9515873",
+        "created_at": "2026-02-07T20:11:40Z",
+        "tags": []
+      },
+      {
+        "id": 675815658,
+        "digest": "sha256:bf34402c261eb68d1c334d03d48fa33a2cddb1582835d16a75eee334e065e4ca",
+        "created_at": "2026-02-07T20:11:40Z",
+        "tags": []
+      },
+      {
+        "id": 492657651,
+        "digest": "sha256:d2e27a8f77af2710dea2adeb306e26ea88b8472c45b9a0ae4910c3d1a397bfae",
+        "created_at": "2025-08-21T07:55:32Z",
+        "tags": []
+      },
+      {
+        "id": 479743406,
+        "digest": "sha256:e69f0e53347f22fff2fdc74b138d62855e21b54ff5eb691927cecbc994a13b87",
+        "created_at": "2025-08-06T08:39:09Z",
+        "tags": []
+      },
+      {
+        "id": 478666525,
+        "digest": "sha256:87e10ade461e0860d2d6173b95b65d5d15cff79e4beeef53b4b0cae7aee81f49",
+        "created_at": "2025-08-05T08:15:13Z",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "speech-extractor",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 675815450,
+        "digest": "sha256:3f94230811ce82f4c01e79f50fb58f275a005aedb8b5d1bb7ea06eba8f9d1969",
+        "created_at": "2026-02-07T20:11:18Z",
+        "tags": [
+          "latest"
+        ]
+      },
+      {
+        "id": 675815449,
+        "digest": "sha256:beaaa6e53826407f571355ad215cd4f00569247a7e968ad228d20f07d4e52368",
+        "created_at": "2026-02-07T20:11:17Z",
+        "tags": []
+      },
+      {
+        "id": 675815448,
+        "digest": "sha256:2a5ddeff8c88a9ce4703085e3b366086c47a140ce3bf8d50a9796b5600ee2731",
+        "created_at": "2026-02-07T20:11:17Z",
+        "tags": []
+      },
+      {
+        "id": 492658849,
+        "digest": "sha256:e4ac310860ca78c30ead7cf8f239c7e4f155780a30736e7a8c14806fba5834a6",
+        "created_at": "2025-08-21T07:56:48Z",
+        "tags": []
+      },
+      {
+        "id": 479744400,
+        "digest": "sha256:bdfea945be815d310bd43f0acca5528f48e11f1a01570a40ffd9be3f6d3508c5",
+        "created_at": "2025-08-06T08:40:14Z",
+        "tags": []
+      },
+      {
+        "id": 478667216,
+        "digest": "sha256:28310201a0230a331233efa4c0d47edf93f001651e70ab15a3eb723702a0936a",
+        "created_at": "2025-08-05T08:16:03Z",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "speech-recognizer-nemo",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 675814728,
+        "digest": "sha256:a12b5b443fe1dbd71cb1bb0572db8e67b4a67ba705643655b247df54227ee101",
+        "created_at": "2026-02-07T20:09:49Z",
+        "tags": [
+          "latest"
+        ]
+      },
+      {
+        "id": 675814722,
+        "digest": "sha256:2f7f4710e9f9480894ef5610dda485fb1bc20b3fdd8c8eb4ee357e87cab69cf6",
+        "created_at": "2026-02-07T20:09:49Z",
+        "tags": []
+      },
+      {
+        "id": 675814721,
+        "digest": "sha256:e7527eb8770ded7bdac232ad6d13918ee6e0ec67d70f7b237c48aec83b1606bb",
+        "created_at": "2026-02-07T20:09:49Z",
+        "tags": []
+      },
+      {
+        "id": 492664835,
+        "digest": "sha256:7fcf96d3486d92598458d6d4c7013c612d2237a6a1ba812c5c2570a4c4cf50b0",
+        "created_at": "2025-08-21T08:03:06Z",
+        "tags": []
+      },
+      {
+        "id": 479754078,
+        "digest": "sha256:3edd1128f83fb3c592bac5d2e1bcc5cb826ba57662c9ca0d12c3589a31e3f120",
+        "created_at": "2025-08-06T08:49:31Z",
+        "tags": []
+      },
+      {
+        "id": 478673232,
+        "digest": "sha256:8b4d73f70de5a003a4bf84a4471107adc06a3fcd012fcf936c8d7b23c49b6b6c",
+        "created_at": "2025-08-05T08:22:15Z",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "text-processor",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 675812696,
+        "digest": "sha256:e700f863f9cdfc4229b0bbf2352fbd1c9ff74f07875ba544fcf70f97ea1038f0",
+        "created_at": "2026-02-07T20:05:44Z",
+        "tags": [
+          "latest"
+        ]
+      },
+      {
+        "id": 675812692,
+        "digest": "sha256:427ff9a77ffbfc0326b99776fd76ab8a3f32d6a49937408f6ac1139da596c733",
+        "created_at": "2026-02-07T20:05:43Z",
+        "tags": []
+      },
+      {
+        "id": 675812689,
+        "digest": "sha256:92bc2f30594aa8e15bba606001d14d7a50f8605d1b5a5c577fa0875d294621aa",
+        "created_at": "2026-02-07T20:05:43Z",
+        "tags": []
+      },
+      {
+        "id": 492665757,
+        "digest": "sha256:5a83af34cccf68d22f1562eb23373a4484400a67bd45b8c72ee09b5fa6bc1908",
+        "created_at": "2025-08-21T08:03:59Z",
+        "tags": []
+      },
+      {
+        "id": 479754839,
+        "digest": "sha256:1345fecd94cd532001aa6da9237567716d7a3c9dfee223f2e761bfb262190660",
+        "created_at": "2025-08-06T08:50:30Z",
+        "tags": []
+      },
+      {
+        "id": 478674392,
+        "digest": "sha256:aa6ee9b2c3d340f1ebe9ea562cc7ae0648bd709646edc26afe29a90ed30cc096",
+        "created_at": "2025-08-05T08:23:22Z",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "voice-synthesizer",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 675815577,
+        "digest": "sha256:2ba41883794f8b40ca7db1e5537840698822d0dfc93dc33a43b4b393c1904c83",
+        "created_at": "2026-02-07T20:11:31Z",
+        "tags": [
+          "latest"
+        ]
+      },
+      {
+        "id": 675815572,
+        "digest": "sha256:71eed70ece8d68ce41075788ad6a10f0fe0b04184555af7c994ee61c22fed602",
+        "created_at": "2026-02-07T20:11:31Z",
+        "tags": []
+      },
+      {
+        "id": 675815571,
+        "digest": "sha256:46d2542b7136e80b7bb0dcd1522d2aa144743ba38826a2977efc7365074b0fc0",
+        "created_at": "2026-02-07T20:11:31Z",
+        "tags": []
+      },
+      {
+        "id": 492666381,
+        "digest": "sha256:941413d538fc065b775711176bd4acca3f55b9f597e019cc769470a474205951",
+        "created_at": "2025-08-21T08:04:32Z",
+        "tags": []
+      },
+      {
+        "id": 479755082,
+        "digest": "sha256:cfb96f50cbb4ac0f0c9021702806eff90805c6f5f928c1e7b46846e48619470e",
+        "created_at": "2025-08-06T08:50:50Z",
+        "tags": []
+      },
+      {
+        "id": 478674735,
+        "digest": "sha256:7e9c89409150d1ba31e4f4e2910d3492d91b28c7b4bee7070b55eac1e3e3769f",
+        "created_at": "2025-08-05T08:23:40Z",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "voicevox",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 675815335,
+        "digest": "sha256:3d6cdea10d7d7ccf497e6b860e8606071e614c0287ae91078e315e8905aac3a7",
+        "created_at": "2026-02-07T20:11:03Z",
+        "tags": [
+          "latest"
+        ]
+      },
+      {
+        "id": 675815326,
+        "digest": "sha256:a92c9c34d9bc17c3452919d5d8bfd12cb91e1db6a8214df9424d6567061fea6f",
+        "created_at": "2026-02-07T20:11:03Z",
+        "tags": []
+      },
+      {
+        "id": 675815325,
+        "digest": "sha256:e93268a5a01bb5d1b803f4fc36646a614e5929e4c763673ab28f0db3084ee94f",
+        "created_at": "2026-02-07T20:11:03Z",
+        "tags": []
+      },
+      {
+        "id": 492670876,
+        "digest": "sha256:fa49b3c96d9424322700a0b124b48c46567057f9d6804fe3258a6e945ef93866",
+        "created_at": "2025-08-21T08:08:24Z",
+        "tags": []
+      },
+      {
+        "id": 479755138,
+        "digest": "sha256:6bb43433819029c5ba4c91acf2660ca13361a1ec868d1d52c6c911df8c64fc4a",
+        "created_at": "2025-08-06T08:50:54Z",
+        "tags": []
+      },
+      {
+        "id": 478677128,
+        "digest": "sha256:36d1f82f19b7c49d942a4cf2210cf334fb5d0b868a23eb17f21ab8daeda74d1e",
+        "created_at": "2025-08-05T08:25:53Z",
+        "tags": []
+      }
+    ]
+  },
+  {
+    "name": "sincro-frontend",
+    "visibility": "public",
+    "versions": [
+      {
+        "id": 675812744,
+        "digest": "sha256:901df6a95678b7104a5a6e183cad7cd4a4d426b08a1c22d19a0090ff1c95459f",
+        "created_at": "2026-02-07T20:05:50Z",
+        "tags": [
+          "latest"
+        ]
+      },
+      {
+        "id": 675812741,
+        "digest": "sha256:3f11c9779ca61cf1dd55d91b2c6d85d3b0f369ba5326adebb1add2f044d2e8b3",
+        "created_at": "2026-02-07T20:05:50Z",
+        "tags": []
+      },
+      {
+        "id": 675812740,
+        "digest": "sha256:1c5e53400f13807508332867fe4a7fbd4819b4a017b3f9c736206838b5a57ffc",
+        "created_at": "2026-02-07T20:05:50Z",
+        "tags": []
+      },
+      {
+        "id": 492656799,
+        "digest": "sha256:def4094ac30d0d26e997ac2720f6ca2cc6caa87ea33637d33feca334f642390f",
+        "created_at": "2025-08-21T07:54:34Z",
+        "tags": []
+      }
+    ]
+  }
+]

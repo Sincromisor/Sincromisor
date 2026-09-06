@@ -88,6 +88,8 @@
 
 - [Docker Compose](infrastructure/compose.md)
     - Docker Compose プロファイル、環境変数受け渡し、ローカル起動
+- [コンテナイメージの公開](infrastructure/image-publishing.md)
+    - GHCRへの月次更新、認証、旧構成の整理、失敗時の再開
 - [Consul](infrastructure/consul.md)
     - サービス発見と代替処理設定
 - [保存領域](infrastructure/storage.md)

@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 8 件）
+## タスク一覧（自動生成 / 全 9 件）
 
-### done（完了） — 8 件
+### done（完了） — 9 件
 
 | タスク                                                                                                               | タイトル                                           | 判定    | 依存 |
 | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------- | ---- |
@@ -16,5 +16,6 @@
 | [task-260906233317-update-rtc-go-image](./task-260906233317-update-rtc-go-image/task.md)                             | RTCのGoビルド基盤を1.26系の修正版へ更新する        | ✅ PASS | —    |
 | [task-260906233317-update-voicevox-engine-image](./task-260906233317-update-voicevox-engine-image/task.md)           | VOICEVOXを0.25.2へ更新し配布物の取得処理を修正する | ✅ PASS | —    |
 | [task-260906233350-remove-retired-nue-container-path](./task-260906233350-remove-retired-nue-container-path/task.md) | 廃止済みNueのコンテナ選択導線を整理する            | ✅ PASS | —    |
+| [task-260907011014-publish-ghcr-images](./task-260907011014-publish-ghcr-images/task.md)                             | GHCRの月次公開と旧構成イメージの整理を定型化する   | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->
