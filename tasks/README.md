@@ -109,13 +109,10 @@ tasks/<category>/
   task-<id>-<slug>/
     task.md
     meta.yaml
-    review.md
-    impl.md
-    eval.md
-    acceptance/
-    artifacts/
   index.md
 ```
+
+`tasks:new` は `task.md` と `meta.yaml` だけを生成し、`tasks:check` もこの2ファイルを必須とする。`review.md`、`impl.md`、`eval.md`、`acceptance/`、`artifacts/` は実際の記録・成果物が必要になったときに作る。空の雛形やディレクトリ保持用の `.gitkeep` は新規作成しない。
 
 - `<category>` は責務が分かる kebab-case とする。
 - `<id>` は新規タスクでは `%y%m%d%H%M%S` を使う。移行タスクでは `1006` など既存 ID を保持してよい。
@@ -226,7 +223,7 @@ TODO は新規コードでは `TODO(task-260601153000-example): ...` を推奨�
 
 旧 `done` タスクは正確な完了日が本文から機械的に取れないため、移行時の `closed_at` は `null` のまま保持する。新方式で完了処理するタスクは `tasks:set status=done` が `closed_at` を設定する。
 
-移行済みタスクの `status: done` と `verdict: PASS` は、旧 `done/` 配下にあった完了状態を `tasks:check` と新しい索引で扱うための互換メタデータである。`attempts: 0`、未記入の `review.md`、未記入の `eval.md` がある旧形式のタスクは、サブエージェントのレビュー担当・評価担当を実行済みとは限らない。新方式で完了処理するタスクでは、サブエージェント作業手順を使った場合は `review.md` / `eval.md` に成果物を残し、通常作業の場合も `impl.md` に担当 Codex の確認結果を残す。
+移行済みタスクの `status: done` と `verdict: PASS` は、旧 `done/` 配下にあった完了状態を `tasks:check` と新しい索引で扱うための互換メタデータである。`attempts: 0`、未記入の `review.md`、未記入の `eval.md` がある旧形式のタスクは、サブエージェントのレビュー担当・評価担当を実行済みとは限らない。新方式では独立レビュー・評価を行った場合だけ `review.md` / `eval.md` に成果物を残す。通常作業の確認結果は `task.md` に記録し、`impl.md` は「ファイルの役割」に記した条件で使う。
 
 ## スクリプト
 
@@ -338,6 +335,8 @@ RTC 第 3 段階で使った個別の所有権表や指標表を、無関係な�
 ### 完了報告
 
 親 Codex は差分と確認結果から簡潔に報告する。成果物ごとの重複した要約は要求しない。
+
+コミット前後に `git status --short -- <task-dir>` で対象タスクの未追跡ファイルと変更を確認する。必要な成果物はコミットに含め、自分の作業で生じた不要な空ファイルは削除する。`tasks:check` はファイルの存在と内容を検査するもので、コミット漏れは検出しない。
 
 サブエージェントを使った場合も、重複した中間報告はせず最終報告へ必要な結果だけ反映する。
 

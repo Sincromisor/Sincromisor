@@ -14,8 +14,8 @@ import {
     TERMINAL_STATUSES,
 } from "./lib.mjs";
 
-const REQUIRED_FILES = ["task.md", "review.md", "impl.md", "eval.md"];
-const REQUIRED_DIRS = ["acceptance", "artifacts"];
+// meta.yamlは個別に検証する。レビュー記録や補助ディレクトリの有無は完了条件にしない。
+const REQUIRED_FILES = ["task.md"];
 const REVIEWS = ["APPROVED", "NEEDS_REVISION"];
 const VERDICTS = ["PASS", "FAIL"];
 /** 既存の英語タイトルを履歴として残し、新規タスクだけを厳格化する境界日。 */
@@ -144,9 +144,6 @@ for (const task of taskDirs) {
 
     for (const fileName of REQUIRED_FILES) {
         if (!existsSync(join(task.dir, fileName))) addIssue(issues, taskId, `missing ${fileName}`);
-    }
-    for (const dirName of REQUIRED_DIRS) {
-        if (!existsSync(join(task.dir, dirName))) addIssue(issues, taskId, `missing ${dirName}/`);
     }
 
     if (metas.has(meta.id)) addIssue(issues, taskId, `duplicate task id also used by ${metas.get(meta.id).dir}`);
