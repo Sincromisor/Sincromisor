@@ -344,6 +344,36 @@ describe("parseMotionDebugLogLines", () => {
         );
     });
 
+    it.each([
+        ["{", "invalid_json", "Motion debug log line is not valid JSON."],
+        ["{}", "invalid_record", "Motion debug log recordType is missing."],
+        ['{"recordType":"manifest"}', "invalid_record", "Motion debug manifest must be first."],
+        ['{"recordType":"other"}', "invalid_record", "Motion debug log recordType is unsupported."],
+        [
+            '{"recordType":"frame","frame":{"frameIndex":-1}}',
+            "invalid_frame_index",
+            "Motion debug frameIndex is negative.",
+        ],
+    ])("後続行の最初のエラーの位置と文言を維持する: %s", (line, code, message) => {
+        const lines = createLogLines(createValidManifest(), [createValidFrame(7)]);
+        expect(parseMotionDebugLogLines([...lines, line, "{"])).toEqual({
+            ok: false,
+            errors: [{ code, lineIndex: 2, message }],
+        });
+    });
+
+    it("記録情報だけでも受理し、フレーム番号を並べ替えない", () => {
+        expect(parseMotionDebugLogLines(createLogLines(createValidManifest(), []))).toMatchObject({
+            ok: true,
+            frames: [],
+        });
+        const parsed = parseMotionDebugLogLines(
+            createLogLines(createValidManifest(), [createValidFrame(8), createValidFrame(2)]),
+        );
+        if (!parsed.ok) throw new Error("Valid recording must parse.");
+        expect(parsed.frames.map((frame) => frame.frameIndex)).toEqual([8, 2]);
+    });
+
     it("rejects invalid JSON without throwing", () => {
         expectErrorCode(parseMotionDebugLogLines(["{"]), "invalid_json");
     });
