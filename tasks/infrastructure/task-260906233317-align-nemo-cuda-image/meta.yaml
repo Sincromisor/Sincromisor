@@ -1,0 +1,13 @@
+id: task-260906233317-align-nemo-cuda-image
+title: NeMoコンテナのCUDA基盤を現在の依存構成に合わせる
+category: infrastructure
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-06
+closed_at: null
+legacy_ids: []

@@ -1,0 +1,13 @@
+id: task-260906233317-update-voicevox-engine-image
+title: VOICEVOXを0.25.2へ更新し配布物の取得処理を修正する
+category: infrastructure
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-09-06
+closed_at: 2026-09-06
+legacy_ids: []
