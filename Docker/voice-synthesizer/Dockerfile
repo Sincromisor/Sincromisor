@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
 # curl: uvのインストール
-# git: nue-asrのインストール。nue-asrが不要なコンテナでも無いとsyncでコケる
+# git: ロックに含まれるReazonSpeechの取得に必要
 # opus-tools: 合成した音声のキャッシュに利用
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
@@ -89,20 +89,21 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-server/voice-synthesizer/.python-version \
     ${SINCRO_USER_DIR}/sincromisor-server/voice-synthesizer/
 
-# 一旦依存ライブラリをsyncする
-# sincromisor-serverのモジュールは、空のまま依存関係だけ解決される
+# ロックの整合性を検証し、外部依存だけを導入する。
+# ソース未配置のワークスペースは後段で導入する。
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
-    uv sync --group voice-synthesizer
+    uv sync --locked --no-install-workspace --group voice-synthesizer
 
 # sincromisor-serverのソースコード一式をここでコピー
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-server \
     ${SINCRO_USER_DIR}/sincromisor-server
 
-# sincromisor-serverのモジュールをビルドし直す
+# ソース配置後もロックを検証してワークスペースを導入する。
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
-    uv sync --group voice-synthesizer
+    uv sync --locked --group voice-synthesizer
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
-CMD ["uv", "run", "voice-synthesizer/VoiceSynthesizerProcess.py"]
+# 起動時は対象グループを含む導入済み環境をそのまま使う。
+CMD ["uv", "run", "--no-sync", "voice-synthesizer/VoiceSynthesizerProcess.py"]
