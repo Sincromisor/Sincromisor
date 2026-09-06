@@ -39,6 +39,7 @@ PoC では下記 2 軸を最優先する。
 | テスト                        | `npm run test`                    |
 
 - Biome の設定は [biome.json](../../sincromisor-frontend/biome.json) を正本とする。静的検査は `recommended` を有効化し、PoC で支障が出る項目のみ明示オプトアウト
+- `noExcessiveCognitiveComplexity` は認知的複雑度を見直す目安として扱い、上限超過だけで修正必須とはしない。警告の確認・記録は [タスク管理の警告方針](../../tasks/README.md#biomeの警告の扱い) に従う。
 - Prettier は **Markdown 専用**。Biome 2.x が Markdown 未対応のため、ドキュメント整形だけ Prettier を残す。設定ファイルを導入する場合はリポジトリ直下に置き、`*.md` のみに適用する
 - コミット前の確認項目:
     1. `npm run build`(型チェック + Vite ビルド)
