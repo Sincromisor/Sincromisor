@@ -1,6 +1,3 @@
-include:
-    - initializer.yml
-
 services:
     sincro-frontend:
         profiles:
@@ -26,8 +23,6 @@ services:
                 condition: any
                 delay: 10s
         depends_on:
-            service-initializer:
-                condition: service_completed_successfully
             consul-agent-frontend:
                 condition: service_healthy
         healthcheck:

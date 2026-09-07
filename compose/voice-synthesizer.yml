@@ -26,6 +26,9 @@ services:
                 condition: any
                 delay: 10s
         depends_on:
+            # バケットと認証の準備を待つ。モデル取得の完了とは独立して扱う。
+            s3-bootstrap:
+                condition: service_completed_successfully
             consul-agent-synthesizer:
                 condition: service_healthy
             sincro-voicevox:
