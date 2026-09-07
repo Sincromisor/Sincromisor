@@ -1,6 +1,3 @@
-include:
-    - initializer.yml
-
 services:
     speech-recognizer:
         profiles:
@@ -15,7 +12,12 @@ services:
         ports:
             - 8003:8003/tcp
         volumes:
-            - ../volumes/sincro-cache:/opt/sincromisor/.cache
+            # UID 1001の既存キャッシュを再利用し、未準備ディレクトリをroot所有で作らせない。
+            - type: bind
+              source: ../volumes/sincro-cache
+              target: /opt/sincromisor/.cache
+              bind:
+                  create_host_path: false
             - ../volumes/proper-noun-dictionaries:/opt/sincromisor/proper-noun-dictionaries:ro
         networks:
             - sincromisor-net
@@ -46,7 +48,8 @@ services:
                           count: all
                           capabilities: [gpu]
         depends_on:
-            service-initializer:
+            # バケットと認証の準備を待つ。モデル取得の完了とは独立して扱う。
+            s3-bootstrap:
                 condition: service_completed_successfully
             consul-agent-recognizer:
                 condition: service_healthy

@@ -6,6 +6,8 @@
 スクリプトはGitの現在のコミットを一時展開し、Composeの自作イメージを `ghcr.io/sincromisor` へ公開する。
 対象は `linux/amd64`。公開元は `compose.yml` と `examples/compose.env` で決まり、運用中の `.env`、未追跡ファイル、辞書、キャッシュは含めない。
 
+共通初期化用の `service-initializer` は配布対象から外した。公開スクリプトはComposeの `build` 定義から対象を抽出するため、対象一覧の追加修正は不要である。
+
 ## 初回の認証
 
 Node.js、Git、tar、Docker Engine、Compose、Buildx、GitHub CLIを用意する。

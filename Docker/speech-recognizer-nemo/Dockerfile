@@ -149,4 +149,5 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
 # 起動時は対象グループを含む導入済み環境をそのまま使う。
+# モデルはNeMoが永続キャッシュを優先して読み、欠損時だけ取得する。
 CMD ["uv", "run", "--no-sync", "speech-recognizer-nemo/SpeechRecognizerNemoProcess.py"]

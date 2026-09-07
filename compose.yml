@@ -1,5 +1,4 @@
 include:
-    - compose/initializer.yml
     - compose/frontend.yml
     - compose/sincro-rtc.yml
     - compose/speech-extractor.yml

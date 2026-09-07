@@ -23,6 +23,26 @@
 - SeaweedFS:
     - 音声、ログ、評価成果物などのファイル保存用途を担う。
 
+## モデルキャッシュ
+
+認識サービスのNeMoは `load_model()` → `from_pretrained()` でモデルを解決する。
+`refresh_cache=False` の既定動作により、Hugging Faceのキャッシュ内の
+`reazon-research/reazonspeech-nemo-v2` の `reazonspeech-nemo-v2.nemo` を先に調べ、
+見つかった場合は取得APIを呼ばない。見つからない場合だけNeMoとHugging Faceの取得処理へ進む。
+取得失敗や壊れたモデルの読み込みは例外で起動失敗となり、サービス登録より前に停止する。
+途中取得の `.incomplete` ファイルを正常なモデルとして扱わず、独自の完了印やキャッシュ削除は行わない。
+
+保存先はホストの `volumes/sincro-cache`、コンテナ内は `/opt/sincromisor/.cache` であり、
+モデルはその下の `huggingface/hub/` にある。実行ユーザーはUID 1001である。
+初回のみ[READMEの起動手順](../../../README.md#とにかくローカル環境でサーバーを動かす)で空の保存先を作る。
+Composeは保存先がない場合に起動を拒否し、root所有のディレクトリを自動作成しない。
+既存の正常なキャッシュはそのまま再利用し、毎回の再帰的な所有者変更やモデル取得コマンドを実行しない。
+既存キャッシュに権限不整合がある場合は管理者が対象を確認して必要箇所だけ修正する。
+
+S3のバケット・認証準備は `s3-bootstrap` が担い、認識と音声合成がその正常終了を待つ。
+モデルキャッシュとは別の保存領域であり、旧initializerの `mc alias set` はこの準備に使われていなかった。
+旧initializerだけがマウントしていた `configs/config.yml` の権限変更も現行サービスには不要である。
+
 ## 変更時の確認
 
 - 保存領域エンドポイントや認証情報を変える場合は `examples/compose.env` と Docker Compose を同時更新する。
