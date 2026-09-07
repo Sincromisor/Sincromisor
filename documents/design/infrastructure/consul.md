@@ -26,6 +26,14 @@
 - Goパイプライン調停器は SpeechExtractor / SpeechRecognizer / TextProcessor / VoiceSynthesizer の到達先を解決する。
 - Consul が使えない場合でも代替処理ホスト / ポートで開発継続できるようにする。
 
+## フロントの再起動時の登録
+
+フロントの起動スクリプトは `frontend-template.json` を原本として保持し、
+現在のコンテナIPを埋め込んだ `frontend-configured.json` を生成して同一ホストのエージェントへ登録する。
+原本を直接書き換えると、コンテナ再起動時に古いIPが残り、死活確認に失敗して登録が消える。
+`bandog` が異常を示す場合は、監視対象ごとのConsul DNS応答と登録先IP、実際のコンテナIPを照合する。
+フロント自身のHTTP死活確認成功だけではConsul登録の正常性は保証されない。
+
 ## 長期停止後の起動
 
 Consulは保存データの最終稼働時刻が `server_rejoin_age_max` を超えると起動を拒否する。
