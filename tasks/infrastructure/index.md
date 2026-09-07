@@ -2,9 +2,18 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 9 件）
+## タスク一覧（自動生成 / 全 14 件）
 
-### done（完了） — 9 件
+### open（未完） — 4 件
+
+| タスク                                                                                                     | タイトル                                             | 判定 | 依存 |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ---- | ---- |
+| [task-260907221335-frontend-consul-registration](./task-260907221335-frontend-consul-registration/task.md) | フロント再起動時のConsul登録消失を修正する           | —    | —    |
+| [task-260907221335-monthly-image-rollout](./task-260907221335-monthly-image-rollout/task.md)               | 月次イメージ更新に各ホストへの反映と起動確認を含める | —    | —    |
+| [task-260907221335-nemo-model-preparation](./task-260907221335-nemo-model-preparation/task.md)             | 共通初期化をNeMoモデル準備へ整理する                 | —    | —    |
+| [task-260907221335-rtc-host-consul-agent](./task-260907221335-rtc-host-consul-agent/task.md)               | VPS上のRTCを同一ホストのConsulエージェントへ接続する | —    | —    |
+
+### done（完了） — 10 件
 
 | タスク                                                                                                               | タイトル                                           | 判定    | 依存 |
 | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------- | ---- |
@@ -17,5 +26,6 @@
 | [task-260906233317-update-voicevox-engine-image](./task-260906233317-update-voicevox-engine-image/task.md)           | VOICEVOXを0.25.2へ更新し配布物の取得処理を修正する | ✅ PASS | —    |
 | [task-260906233350-remove-retired-nue-container-path](./task-260906233350-remove-retired-nue-container-path/task.md) | 廃止済みNueのコンテナ選択導線を整理する            | ✅ PASS | —    |
 | [task-260907011014-publish-ghcr-images](./task-260907011014-publish-ghcr-images/task.md)                             | GHCRの月次公開と旧構成イメージの整理を定型化する   | ✅ PASS | —    |
+| [task-260907221335-compose-default-profile](./task-260907221335-compose-default-profile/task.md)                     | 通常起動のプロファイル指定を環境設定へ移す         | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->

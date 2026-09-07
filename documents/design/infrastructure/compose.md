@@ -2,7 +2,7 @@
 
 ## 要約
 
-- Docker Compose は Sincromisor のローカル/単一ホスト実行の正本である。
+- Docker Compose は各ホストのサービス配置を定義する。複数ホスト運用ではホストごとのプロファイルとConsulエージェントを維持する。
 - `.env`、Docker Compose サービス、Pion / フロントエンド設定の 3 点を常に整合させる。
 - `full` / `rtc` プロファイルはPion版 `sincro-rtc` を起動する。
 
@@ -13,6 +13,17 @@
 - `sincro` はDify設定不要。フロントの初回既定値は `chat` なので、Difyなしで試す場合は開始前に `sincro` へ変更する。
 - `chat` は管理下に配置したDifyとLLMを使う。Dify・LLMの配備はこのComposeに含めない。ルート `.env` の `SINCRO_PROCESSOR_DIFY_URL` / `SINCRO_PROCESSOR_DIFY_TOKEN` を `compose/text-processor.yml` が環境変数へ渡し、Pythonの `TextProcessorProcessArgument` が読む。
 - DifyのURLは `text-processor` コンテナから到達できるホストのLANアドレスや共有ネットワーク上のサービス名とし、APIの `/v1` までを指定する。`127.0.0.1` はコンテナ自身であり、別のDifyへは接続できない。
+
+## プロファイルの選択
+
+`examples/compose.env` は `COMPOSE_PROFILES=full` を設定する。ルートの `.env` に同じ設定を置くと、
+通常は `docker compose up -d` だけで全サービスを起動できる。既存の `.env` には必要に応じて追記する。
+この変数はCompose自身が読むため、サービスコンテナの環境変数には渡さない。
+
+複数ホスト運用では、そのホストが担当するプロファイルを `.env` に設定する。
+一時的な選択変更は `COMPOSE_PROFILES=backend docker compose config --services` のように環境変数を上書きし、
+対象を確認してから起動する。`COMPOSE_PROFILES` が空でプロファイルも指定しなければ、起動対象は0件となる。
+`--profile` と環境変数の併用時の選択範囲は、起動前に `config --services` で確認する。
 
 ## コンテナの依存導入
 
@@ -62,7 +73,7 @@ Pionは固定TCP 8001を公開し、
 `SINCRO_PION_PUBLIC_IPV4`、`SINCRO_PION_STUN`、`SINCRO_RTC_MAX_SESSIONS`、
 `SINCRO_PION_FFMPEG_PATH`はPion コマンドへ直接渡す。
 
-通常運用は `--profile full` または `--profile rtc` でPionを起動する。Pion サービスは
+通常運用は `.env` の `COMPOSE_PROFILES` に `full` または `rtc` を設定してPionを起動する。Pion サービスは
 `SINCRO_PION_CONSUL_HTTP_HOST` / `SINCRO_PION_CONSUL_HTTP_PORT` のHTTP エンドポイントを直接使い、
 `SINCRO_PION_SERVICE_BIND_HOST`をConsul サービスアドレスとして登録する。Pion専用のローカルのゴシップ用エージェントは起動しない。
 ローカル Docker Composeでは既存の`sincro-consul-server`を指定し、別ホスト ConsulではVPS コンテナから到達可能なHTTP アドレスと、

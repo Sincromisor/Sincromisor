@@ -61,6 +61,7 @@ chmod 600 .env
 
 3. 起動前に `.env` を編集する。サンプルのままでは広告IPv4が例示値のため接続できない。
 
+- `COMPOSE_PROFILES`: サンプルは `full`。既存の `.env` には `COMPOSE_PROFILES=full` を追加すると、以降のコマンドでプロファイル指定を省略できる。分散配置ではホストの担当に合わせて変更する。
 - `SINCRO_RECOGNIZER_MODEL`: `nemo` のみ対応する。以前の `nue` 指定は非互換となり、ビルド・初期化時に失敗するため `nemo` へ変更する。
 - `SINCRO_PION_PUBLIC_IPV4`: ブラウザから到達できるサーバーホストのIPv4へ置き換える。閉じたLANではホストのLANアドレスを使い、インターネット上の公開IPは必須ではない。`203.0.113.10` は説明用の値である。
 - `SINCRO_PION_STUN`: サンプルは外部STUNを指定している。閉じたLANで直接UDP通信ができる構成では `SINCRO_PION_STUN=` と空にできる。STUNの有無にかかわらず、広告IPv4とメディアUDPポートへの到達性が必要である。
@@ -70,10 +71,10 @@ chmod 600 .env
 4. コンテナイメージ・モデルの取得を準備する。設定したレジストリから取得する場合は次を実行する。
 
 ```sh
-docker compose --profile full pull
+docker compose pull
 ```
 
-ソースからイメージを作る場合は `docker compose --profile full build` を使う。取得元のイメージやビルド時の依存パッケージ、音声認識モデルには取得先への通信が必要になる。初期化処理は起動時に `hf download` で選択した音声認識モデルを取得し、`volumes/sincro-cache` に保存する。チャット用LLMのモデルとDifyも管理下の環境へ事前に配置する。
+ソースからイメージを作る場合は `docker compose build` を使う。取得元のイメージやビルド時の依存パッケージ、音声認識モデルには取得先への通信が必要になる。初期化処理は起動時に `hf download` で選択した音声認識モデルを取得し、`volumes/sincro-cache` に保存する。チャット用LLMのモデルとDifyも管理下の環境へ事前に配置する。
 
 開発者向けのGHCRへの月次公開と旧イメージの整理は[コンテナイメージの公開手順](documents/design/infrastructure/image-publishing.md)を参照する。
 
@@ -82,7 +83,7 @@ docker compose --profile full pull
 5. 全サービスを起動する。
 
 ```sh
-docker compose --profile full up -d
+docker compose up -d
 ```
 
 ネットワークの制約と設定の受け渡しは[Compose設計](documents/design/infrastructure/compose.md)を参照する。
@@ -175,7 +176,7 @@ SINCRO_RECOGNIZER_PROPER_NOUN_NBEST_ENABLE=true
 5. `speech-recognizer` コンテナを再作成して反映します。
 
 ```sh
-$ docker compose --profile full up -d speech-recognizer
+$ docker compose up -d speech-recognizer
 ```
 
 6. ログを確認し、辞書がロードされていることを確認します。
@@ -205,7 +206,7 @@ SINCRO_PROCESSOR_DIFY_TOKEN=app-xxxxxxxxxxxxxxxxxxxxxxxx
 設定後はリポジトリのルートでコンテナを再作成して反映する。
 
 ```sh
-docker compose --profile full up -d text-processor
+docker compose up -d text-processor
 ```
 
 ブラウザの起動前設定で `chat` を選び、開始する。Difyと接続先LLMも管理下で動かし、外部サービスのAPI認証を前提にしない。
