@@ -20,9 +20,8 @@
 ## 責務
 
 - 各サービスは起動時に Consul へ登録する。
-- Pion RTC は `RTCSignalingServer` として、`SINCRO_PION_CONSUL_HTTP_HOST` / `SINCRO_PION_CONSUL_HTTP_PORT`のHTTP エンドポイントへ、
+- Pion RTC は `RTCSignalingServer` として同一ホストの `consul-agent-rtc` へ、
   `SINCRO_PION_SERVICE_BIND_HOST`で解決したアドレスと`/health/ready` 確認（10秒間隔、5秒時間切れ、重大後10分登録解除）を登録する。`draining`開始直後に解除する。
-  Pionはホストをまたぐゴシップ用エージェントを必要としない。
 - Goパイプライン調停器は SpeechExtractor / SpeechRecognizer / TextProcessor / VoiceSynthesizer の到達先を解決する。
 - Consul が使えない場合でも代替処理ホスト / ポートで開発継続できるようにする。
 
@@ -33,6 +32,27 @@
 原本を直接書き換えると、コンテナ再起動時に古いIPが残り、死活確認に失敗して登録が消える。
 `bandog` が異常を示す場合は、監視対象ごとのConsul DNS応答と登録先IP、実際のコンテナIPを照合する。
 フロント自身のHTTP死活確認成功だけではConsul登録の正常性は保証されない。
+
+## 複数ホストのエージェント
+
+全メンバーは `SINCRO_CONSUL_ADVERTISE_ADDR` に相互到達可能な管理IPv4を指定する。空欄では従来どおりConsulが広告先を自動選択する。
+`SINCRO_CONSUL_PUBLISH_HOST` はサーバーの管理ポートとエージェントのLAN gossipポートを公開するホストであり、サンプルはループバック、分散配置では管理IPv4を使う。
+
+サーバーのRPC TCP 8300とLAN gossip TCP/UDP 8301は管理経路で到達可能にする。エージェントは固定のLAN gossipポートを使う。
+
+| エージェント | ポート       |
+| ------------ | ------------ |
+| RTC          | TCP/UDP 8311 |
+| フロント     | TCP/UDP 8312 |
+| 音声区間抽出 | TCP/UDP 8313 |
+| 音声認識     | TCP/UDP 8314 |
+| テキスト処理 | TCP/UDP 8315 |
+| 音声合成     | TCP/UDP 8316 |
+| Redis        | TCP/UDP 8317 |
+| S3           | TCP/UDP 8318 |
+
+各エージェントは `SINCRO_CONSUL_SERVER_HOST:8301` へ参加する。DNSの8600と参加先8301は同じサーバーを指す。
+RTCのHTTP 8500はComposeネットワーク内の `sincro-rtc` だけが使い、ホストへ公開しない。
 
 ## 長期停止後の起動
 

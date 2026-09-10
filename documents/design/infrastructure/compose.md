@@ -74,12 +74,11 @@ Pionは固定TCP 8001を公開し、
 `SINCRO_PION_PUBLIC_IPV4`、`SINCRO_PION_STUN`、`SINCRO_RTC_MAX_SESSIONS`、
 `SINCRO_PION_FFMPEG_PATH`はPion コマンドへ直接渡す。
 
-通常運用は `.env` の `COMPOSE_PROFILES` に `full` または `rtc` を設定してPionを起動する。Pion サービスは
-`SINCRO_PION_CONSUL_HTTP_HOST` / `SINCRO_PION_CONSUL_HTTP_PORT` のHTTP エンドポイントを直接使い、
-`SINCRO_PION_SERVICE_BIND_HOST`をConsul サービスアドレスとして登録する。Pion専用のローカルのゴシップ用エージェントは起動しない。
-ローカル Docker Composeでは既存の`sincro-consul-server`を指定し、別ホスト ConsulではVPS コンテナから到達可能なHTTP アドレスと、
-Consul サーバーがPionへ死活確認できるVPN アドレスをそれぞれ指定する。Pionは`depends_on`で`sincro-consul-server`の
-死活確認成功後に起動し、`/health/ready` を10秒間隔・5秒時間切れで監視する。
+通常運用は `.env` の `COMPOSE_PROFILES` に `full` または `rtc` を設定してPionを起動する。Pionは同じComposeの
+`consul-agent-rtc` のHTTP 8500を使い、`SINCRO_PION_SERVICE_BIND_HOST`をConsul サービスアドレスとして登録する。
+`rtc`は新しいConsulサーバーを起動せず、`SINCRO_CONSUL_SERVER_HOST:8301`へ参加する。`full`は既存のローカルサーバーを維持する。
+エージェントのHTTP 8500はホストへ公開せず、Pionは`depends_on`で`consul-agent-rtc`の死活確認成功後に起動し、
+`/health/ready` を10秒間隔・5秒時間切れで監視する。管理ネットワークでの広告先とポートは[Consul設計](consul.md#複数ホストのエージェント)に従う。
 
 `SINCRO_PION_STUN` のサンプルは外部STUNを指定する。閉じたLANで直接UDP通信できる場合は空指定にできる。STUNを空にしても広告IPv4とメディアUDPポートへの到達性は必要であり、STUNだけでNATやファイアウォールの制約は解決しない。現行はIPv4・UDPでの直接接続が前提でTURNは未対応。詳細は[RTC運用方針](../../migration/pion/rollout-and-operations.md)を参照する。
 

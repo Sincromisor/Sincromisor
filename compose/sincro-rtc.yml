@@ -26,9 +26,9 @@ services:
                 "--max-sessions",
                 "${SINCRO_RTC_MAX_SESSIONS}",
                 "--consul-agent-host",
-                "${SINCRO_PION_CONSUL_HTTP_HOST}",
+                "consul-agent-rtc",
                 "--consul-agent-port",
-                "${SINCRO_PION_CONSUL_HTTP_PORT}",
+                "8500",
                 "--service-bind-host",
                 "${SINCRO_PION_SERVICE_BIND_HOST}",
             ]
@@ -38,7 +38,7 @@ services:
         networks:
             - sincromisor-net
         depends_on:
-            sincro-consul-server:
+            consul-agent-rtc:
                 condition: service_healthy
         deploy:
             restart_policy:
@@ -57,6 +57,39 @@ services:
             interval: 10s
             timeout: 5s
             retries: 15
+
+    consul-agent-rtc:
+        profiles:
+            - full
+            - rtc
+        image: hashicorp/consul:latest
+        command:
+            [
+                "agent",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}:8301",
+                "-advertise=${SINCRO_CONSUL_ADVERTISE_ADDR:-}",
+                "-serf-lan-port=8311",
+                "-client=0.0.0.0",
+            ]
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8311:8311/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8311:8311/udp
+        volumes:
+            - consul-agent-rtc-data:/consul/data
+        networks:
+            - sincromisor-net
+        deploy:
+            restart_policy:
+                condition: any
+                delay: 10s
+        healthcheck:
+            test: ["CMD", "consul", "members"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    consul-agent-rtc-data:
 
 networks:
     sincromisor-net:
