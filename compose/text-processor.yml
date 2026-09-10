@@ -46,9 +46,14 @@ services:
         command:
             [
                 "agent",
-                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}",
+                "-retry-join=${SINCRO_CONSUL_SERVER_HOST}:8301",
+                "-advertise=${SINCRO_CONSUL_ADVERTISE_ADDR:-}",
+                "-serf-lan-port=8315",
                 "-client=0.0.0.0",
             ]
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8315:8315/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8315:8315/udp
         volumes:
             - consul-agent-processor-data:/consul/data
         networks:
