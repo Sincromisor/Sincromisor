@@ -4,7 +4,6 @@ services:
             - full
             - backend
             - external
-            - rtc
         image: hashicorp/consul:latest
         # 単一サーバーの検証環境では長期停止を許容する。複数サーバーでは標準の168hへ戻す。
         command:
@@ -14,22 +13,23 @@ services:
                 "-node=${SINCRO_CONSUL_SERVER_NODE_NAME}",
                 "-bootstrap-expect=1",
                 '-hcl=server_rejoin_age_max = "${SINCRO_CONSUL_SERVER_REJOIN_AGE_MAX:-87600h}"',
+                "-advertise=${SINCRO_CONSUL_ADVERTISE_ADDR:-}",
                 "-ui",
                 "-client=0.0.0.0",
             ]
         ports:
             # https://developer.hashicorp.com/consul/docs/install/ports
-            - 8300:8300
-            - 8301:8301/tcp
-            - 8301:8301/udp
-            - 8302:8302/tcp
-            - 8302:8302/udp
-            - 8500:8500
-            - 8501:8501
-            - 8502:8502
-            - 8503:8503
-            - 8600:8600/tcp
-            - 8600:8600/udp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8300:8300
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8301:8301/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8301:8301/udp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8302:8302/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8302:8302/udp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8500:8500
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8501:8501
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8502:8502
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8503:8503
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8600:8600/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8600:8600/udp
         volumes:
             - consul-server-data:/consul/data
         networks:

@@ -58,8 +58,6 @@
     - `SINCRO_PION_STUN`
     - `SINCRO_PION_FFMPEG_PATH`
     - `SINCRO_RTC_MAX_SESSIONS`
-    - `SINCRO_PION_CONSUL_HTTP_HOST`
-    - `SINCRO_PION_CONSUL_HTTP_PORT`
     - `SINCRO_PION_SERVICE_BIND_HOST`
 - Docker Compose:
     - `compose/sincro-rtc.yml`
