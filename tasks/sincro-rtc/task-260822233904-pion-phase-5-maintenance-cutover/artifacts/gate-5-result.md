@@ -1,5 +1,7 @@
 # Gate 5結果
 
+> 非公開情報保護のため、接続先は例示値へ置換している。実環境への接続には使用しない。
+
 ## 実行情報
 
 - `gate_5_result`: `PASS`
@@ -15,7 +17,7 @@
 - 切替前のPionはready、active session 0だった。
 - 旧`pion` profileの`sincro-rtc-pion`停止は2秒、メンテナンス開始から新`rtc` profileの`sincro-rtc` readinessまでは77秒だった。
 - 新service自身の起動からreadinessまでは12秒だった。
-- 新serviceはTCP 8001とUDP 3479を公開し、Consulへ`RTCSignalingServer`、`10.39.2.1:8001`としてpassing登録した。
+- 新serviceはTCP 8001とUDP 3479を公開し、Consulへ`RTCSignalingServer`、`192.0.2.10:8001`としてpassing登録した。
 - 最終状態はPion `healthy`、readiness HTTP 200、active session 0である。下流4 serviceもすべてsession 0へ収束した。
 
 主な実行command:
@@ -39,7 +41,7 @@ curl --fail --silent http://127.0.0.1:8001/api/v1/RTCSignalingServer/statuses
 ## 問題、未観測事項、残リスク
 
 - runtime imageに`ip` commandがなく、旧runbookのcontainer interface確認は実行不能だった。Pion readinessと実browser経路が同じnetwork前提を確認するため、重複するcommandをrunbookから削除した。
-- `chat` talk modeは開発hostで停止中の外部Dify `10.39.2.8:80`へ接続できず空応答になった。Pion固有問題ではなく、Gate 5はDify不要の既存`sincro` modeで確認した。
+- `chat` talk modeは開発hostで停止中の外部Dify `192.0.2.20:80`へ接続できず空応答になった。Pion固有問題ではなく、Gate 5はDify不要の既存`sincro` modeで確認した。
 - Chromeでは既存Frontend由来のReact snapshot更新errorとMediaPipe timestamp errorを観測したが、RTC会話経路は成立した。Pion固有critical issueは観測していない。
 - Chrome UI停止はPion metricsで`reason="data_channel_error"`に3回計上された。各試行でactive sessionと下流接続は0へ収束し、利用者影響や増加し続けるresourceはないため、Gate 5を止めるcritical issueとは判定しない。
 - 利用再開後の観測は2026-08-23 04:56:11 JSTから06:16:09 JSTまでの79分58秒だった。利用者がPhase 6着手を判断した時点でもPionはhealthy、active session 0で、pipeline reset、codec error、queue overflow、MessagePack errorは0だった。UI停止時の`data_channel_error`計上も3件から増えていない。

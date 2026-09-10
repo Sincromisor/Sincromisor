@@ -1,5 +1,7 @@
 # 評価: task-260823061841-pion-phase-6-python-rtc-removal
 
+> 非公開情報保護のため、接続先は例示値へ置換している。実環境への接続には使用しない。
+
 ## 判定
 
 実装checkpoint: PASS
@@ -13,7 +15,7 @@
 - 前回の指摘だった通常service本番コード・README・ConfigのPoC名称とstale commentはcommit `8e4e585`で解消された。`sincro-rtc listening` / `sincro-rtc stopped`のlogと対応test、Consul compose運用を説明するConfig comment、現行scopeを説明するREADMEを確認した。
 - commit `950741b` は現行運用文書の残存 `Pion PoC` を通常service `sincro-rtc` のnetwork設定へ更新した。current design、通常serviceのGo / Docker / compose / env、移行文書の対象範囲にcanonical renameの残存はない。歴史的なPhase / ADRのPoC記録は通常導線ではないため維持してよい。
 - VPSはcommit `c6259a5`で、`rtc` profileが`sincro-consul-server`と`sincro-rtc`だけを解決する。canonical image `ghcr.io/sincromisor/sincro-rtc:latest`（image ID `86b91c4c324e`）をrebuild / force-recreate後、containerはhealthyでTCP 8001とUDP 3479を公開している。
-- VPS localとstable public HTTPS endpointの`/statuses`はともに`ready:true`、`draining:false`、`sessions:0`だった。Consulのpassing `RTCSignalingServer`は`RTCSignalingServer_10.39.2.1_10.39.2.1:8001`の1件だけである。旧`sincro-rtc-pion` container / image、aiortc offline image、専用Consul agent / volumeは存在しない。
+- VPS localとstable public HTTPS endpointの`/statuses`はともに`ready:true`、`draining:false`、`sessions:0`だった。Consulのpassing `RTCSignalingServer`は`RTCSignalingServer_192.0.2.10_192.0.2.10:8001`の1件だけである。旧`sincro-rtc-pion` container / image、aiortc offline image、専用Consul agent / volumeは存在しない。
 
 ## 残課題
 

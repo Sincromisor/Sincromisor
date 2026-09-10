@@ -1,11 +1,13 @@
 # Gate 4 結果
 
+> 非公開情報保護のため、接続先は例示値へ置換している。実環境への接続には使用しない。
+
 ## 実行情報
 
 - commit: `9408dd6e5fca32b2e6973950d10627556182baaa`
 - 実行日時: 2026-08-09T23:11:17+09:00 から 23:14:55+09:00
 - 実行者: Codex
-- 環境: `gloria@malvales.hachune.net` の `/tmp/sincromisor-gate4-rehearsal`。public IPv4、TCP 8001、固定 UDP 3479、VPS VPN 経由の既存下流 4 service を使用した。
+- 環境: `operator@rtc.example.com` の `/tmp/sincromisor-gate4-rehearsal`。public IPv4、TCP 8001、固定 UDP 3479、VPS VPN 経由の既存下流 4 service を使用した。
 - 判定: FAIL
 
 ## 段階結果

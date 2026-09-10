@@ -82,14 +82,14 @@ func TestLoadConfiguresConsulDiscovery(t *testing.T) {
 func TestLoadConfiguresRemoteConsulOverVPN(t *testing.T) {
 	cfg, err := Load(append([]string{
 		"--frontend-dir", t.TempDir(),
-		"--consul-agent-host", "10.39.2.8",
+		"--consul-agent-host", "192.0.2.20",
 		"--consul-agent-port", "8500",
-		"--service-bind-host", "10.39.2.1",
+		"--service-bind-host", "192.0.2.10",
 	}, networkArgs(t)...))
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if cfg.ConsulAgentHost != "10.39.2.8" || cfg.ConsulAgentPort != 8500 || cfg.ServiceBindIPv4 != "10.39.2.1" {
+	if cfg.ConsulAgentHost != "192.0.2.20" || cfg.ConsulAgentPort != 8500 || cfg.ServiceBindIPv4 != "192.0.2.10" {
 		t.Fatalf("remote Consul config = %+v", cfg)
 	}
 }

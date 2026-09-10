@@ -1,5 +1,7 @@
 # レビュー: task-260809020145-pion-phase-4-cutover-rehearsal
 
+> 非公開情報保護のため、接続先は例示値へ置換している。実環境への接続には使用しない。
+
 ## 判定
 
 NEEDS_REVISION
@@ -13,7 +15,7 @@ NEEDS_REVISION
 ## リハーサル時の重点確認
 
 - `ccc4691`を含むPion imageをstagingへdeployしてから、新規browser sessionを正常終了させ、`/statuses`と`/metrics`のactive session・下流接続が0へ収束することを確認する。この条件を満たせない限りGate 4をPASSにしない。
-- deploy後に、固定container IPv4、public IPv4 `163.44.97.57`、UDP 3479、外向きinterface、NAT forward/firewallを再照合し、ChromeとFirefoxのPion/aiortc双方のsmoke、SIGKILL後のrestart/readiness、新規session、6秒shutdownを実施する。
+- deploy後に、固定container IPv4、public IPv4 `203.0.113.10`、UDP 3479、外向きinterface、NAT forward/firewallを再照合し、ChromeとFirefoxのPion/aiortc双方のsmoke、SIGKILL後のrestart/readiness、新規session、6秒shutdownを実施する。
 
 ## 試行4再レビュー（2026-08-21）
 

@@ -1,5 +1,7 @@
 # 評価: task-260822233904-pion-phase-5-maintenance-cutover
 
+> 非公開情報保護のため、接続先は例示値へ置換している。実環境への接続には使用しない。
+
 ## 判定
 
 切替・smoke checkpoint: PASS
@@ -9,7 +11,7 @@ Gate 5最終判定: PASS
 ## 根拠
 
 - 実装commit `70af22e` とVPS merge `89533d3` により、旧 `sincro-rtc-pion` を停止後、`rtc` profileの通常service `sincro-rtc` へ切り替えた。旧service停止は2秒、メンテナンス開始から新service readinessまでは77秒だった。
-- 新serviceはTCP 8001とUDP 3479を公開し、Consulへ `RTCSignalingServer` / `10.39.2.1:8001` としてpassing登録された。healthy、`/health/ready`、`/statuses`、および下流4 serviceのsession 0収束を確認した。
+- 新serviceはTCP 8001とUDP 3479を公開し、Consulへ `RTCSignalingServer` / `192.0.2.10:8001` としてpassing登録された。healthy、`/health/ready`、`/statuses`、および下流4 serviceのsession 0収束を確認した。
 - stable HTTPS endpointのChrome UIで、`sincro` modeの1 turnについてICE `connected`、signaling `stable`、DataChannel受信、利用者・応答text、telop、19%の非無音Remote Audio、Pion pipelineのrecognizer / processor / synthesizer到達、pipeline reset 0を確認した。通常終了後にPionと下流4 serviceのsessionは0へ収束した。
 - aiortc動作確認は、Pion移行を前提として不要と確定済みであり、判定対象外である。
 - runtime imageに存在しない `ip` commandをrunbookから削除した。readinessと実browser smokeがnetwork成立の確認を担うため、削除後の手順は実行可能である。
