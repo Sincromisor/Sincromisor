@@ -1,13 +1,13 @@
 id: task-260907221335-monthly-image-rollout
 title: 月次イメージ更新に各ホストへの反映と起動確認を含める
 category: infrastructure
-status: blocked
+status: done
 depends_on: []
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 2
+verdict: PASS
+attempts: 3
 created_at: 2026-09-07
-closed_at: null
+closed_at: 2026-09-10
 legacy_ids: []
