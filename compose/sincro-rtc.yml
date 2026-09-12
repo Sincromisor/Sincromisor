@@ -33,7 +33,6 @@ services:
                 "${SINCRO_PION_SERVICE_BIND_HOST}",
             ]
         ports:
-            - 8001:8001/tcp
             - ${SINCRO_PION_MEDIA_UDP_PORT}:${SINCRO_PION_MEDIA_UDP_PORT}/udp
         networks:
             - sincromisor-net
@@ -71,9 +70,6 @@ services:
                 "-serf-lan-port=8311",
                 "-client=0.0.0.0",
             ]
-        ports:
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8311:8311/tcp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8311:8311/udp
         volumes:
             - consul-agent-rtc-data:/consul/data
         networks:

@@ -68,7 +68,7 @@ chmod 600 .env
 - `SINCRO_PION_PUBLIC_IPV4`: ブラウザから到達できるサーバーホストのIPv4へ置き換える。閉じたLANではホストのLANアドレスを使い、インターネット上の公開IPは必須ではない。`203.0.113.10` は説明用の値である。
 - `SINCRO_PION_STUN`: サンプルは外部STUNを指定している。閉じたLANで直接UDP通信ができる構成では `SINCRO_PION_STUN=` と空にできる。STUNの有無にかかわらず、広告IPv4とメディアUDPポートへの到達性が必要である。
 - `SINCRO_CONSUL_ADVERTISE_ADDR`: 分散配置では、全Consulメンバーが相互に到達できる管理IPv4を指定する。空欄ではConsulが自動選択する。
-- `SINCRO_CONSUL_PUBLISH_HOST`: Consulの管理ポートとLAN gossipポートの公開先である。サンプルはループバックであり、分散配置では管理IPv4へ変更する。
+- 分散配置では `COMPOSE_FILE` で追加Composeを選択し、`SINCRO_CONSUL_PUBLISH_HOST` に管理IPv4を指定する。RTCから下流APIへの直接接続とConsulのホスト間通信を維持する。設定と既存環境の移行は[公開ポートの選択](documents/design/infrastructure/compose.md#公開ポートの選択)を参照する。
 - `SINCRO_CONSUL_SERVER_HOST`: `rtc`プロファイルでは既存サーバーのホスト名または管理IPv4を指定する。RTCは同一ホストのエージェントを通して参加する。
 - `SINCRO_COMPOSE_NETWORK_SUBNET`: 既存のDockerネットワークやLANと重複する場合は未使用の範囲へ変更する。
 - Difyなしで最初に試す場合、Dify設定2項目は空のままでよい。ブラウザで開始前に `sincro` を選ぶ。既定の `chat` を使う場合は、先に[チャットモードの設定](#チャットモードを利用する)を行う。
@@ -102,7 +102,7 @@ docker compose up -d
 
 サーバーと同じPCのブラウザでは [http://localhost:8086](http://localhost:8086) を開く。別端末のLAN利用ではHTTPの公開先は `http://<サーバーのLANアドレス>:8086` だが、マイク・カメラの利用にはブラウザが安全な接続と認める条件が必要である。通常のブラウザでは同じPCの `localhost` はHTTPでも対象となり、利用許可を与えて使える。
 
-LANの別端末から使う場合は、管理下のHTTPS終端とブラウザが信頼する証明書を別途準備し、そのHTTPSのURLを開く。現在の `configs/Caddyfile` は `:80` のHTTPだけを提供する。Composeは `8086:80` と `8443:443` を公開するが、HTTPS・証明書は未設定であり、`8443` の公開だけでHTTPSは使えない。HTTPのLANアドレスではマイク・カメラを利用できるとは限らない。
+LANの別端末から使う場合は、管理下のHTTPS終端とブラウザが信頼する証明書を別途準備し、そのHTTPSのURLを開く。現在の `configs/Caddyfile` は `:80` のHTTPだけを提供する。標準ComposeはHTTPの `8086:80` とメディアUDP（サンプルは3479）だけを公開する。HTTPS・証明書は未設定で、未使用の8443は公開しない。HTTPのLANアドレスではマイク・カメラを利用できるとは限らない。
 
 通常利用ではトップページから次の導線を使います。
 

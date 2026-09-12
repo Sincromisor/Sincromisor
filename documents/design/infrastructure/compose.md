@@ -55,7 +55,51 @@ PTXや新機能には追加条件があるため、最低値だけで動作を�
 
 - `compose/frontend.yml` はHTTPをホストの `8086` からコンテナの `80` へ公開する。同じPCでは `http://localhost:8086`、LANの別端末からのHTTP公開先は `http://<サーバーのLANアドレス>:8086` となる。
 - マイク・カメラには安全な接続条件とブラウザの利用許可が必要である。同じPCの `localhost` は通常HTTPでも利用できるが、LANの別端末では管理下のHTTPS終端とブラウザが信頼する証明書を準備し、そのHTTPSのURLを使う。
-- `8443:443` のTCP/UDPも公開するが、現在の `configs/Caddyfile` は `:80` だけでHTTPS・証明書は未設定。ポート公開だけではHTTPSを提供しない。
+- 現在の `configs/Caddyfile` は `:80` だけでHTTPS・証明書は未設定。未使用の `8443:443` は公開しない。HTTPSをコンテナで終端する場合は、証明書・待受設定と公開ポートを併せて追加する。
+
+## 公開ポートの選択
+
+標準の `compose.yml` は `8086/TCP` とメディアUDPだけをホストへ公開する。
+Redis、S3、VOICEVOX、下流4サービス、ConsulはCompose内部で通信し、`expose` の追加も不要である。
+単一ホストではConsul広告先を空欄とし、サービスの `PUBLIC_BIND_HOST` とPionの登録先はサンプルのサービス名を使う。
+コンテナ内の待受アドレスは `0.0.0.0` のままとする。
+
+追加ファイルはルートの `compose.yml` に重ねる。各サービスの既存プロファイルと依存関係を引き継ぐ。
+
+| 追加ファイル              | ホストへの公開                                           | 用途                                                         |
+| ------------------------- | -------------------------------------------------------- | ------------------------------------------------------------ |
+| `compose/distributed.yml` | 管理IPv4のTCP 8001〜8005、8300、TCP/UDP 8301・8311〜8318 | 別ホストのRTCから下流APIへ接続し、Consulメンバー間で通信する |
+| `compose/management.yml`  | `127.0.0.1:8001/TCP`、`127.0.0.1:8500/TCP`               | ホスト上のHTTPS終端・RTC保守確認・Consul管理UI/API           |
+
+分散配置では、各ホストの `.env` に以下を設定する。`COMPOSE_FILE` の区切りはLinuxの `:` である。
+管理接続が不要なら末尾の `:compose/management.yml` を省く。
+
+```dotenv
+COMPOSE_FILE=compose.yml:compose/distributed.yml:compose/management.yml
+```
+
+- `COMPOSE_PROFILES` はホストの担当に合わせて `full`、`backend`、`rtc` などを選ぶ。追加ファイルはサービスの起動範囲を増やさない。
+- `SINCRO_CONSUL_PUBLISH_HOST` はそのホストの管理IPv4にする。分散用ファイルは未設定・空欄を拒否する。全インターフェースやループバックではなく、相互到達できる管理IPを使う。
+- `SINCRO_CONSUL_ADVERTISE_ADDR` も管理IPv4にし、`SINCRO_CONSUL_SERVER_HOST` は既存サーバーの到達先を指定する。
+- 下流4サービスの `SINCRO_*_PUBLIC_BIND_HOST` は、それらを配置したホストの管理IPv4にする。TCP 8002〜8005は別ホストのRTCが直接使うため、内部サービス名に戻さない。
+- 別ホストから参照されるPionの `SINCRO_PION_SERVICE_BIND_HOST` は管理IPv4にする。ブラウザ向けの `SINCRO_PION_PUBLIC_IPV4` は別に設定する。
+- 音声合成と同居するRedis・S3・VOICEVOXは公開しない。ConsulのWAN federation、HTTPS/gRPC、ホスト向けDNSとS3メトリクスも公開しない。
+
+### 既存環境の移行
+
+これはホストへの公開範囲を変更する破壊的変更である。JSONやWebSocketの通信形式、コンテナ内ポートは変更しない。
+分散配置では再作成前に、下流側とRTC側の両方で追加ファイルの選択と管理IPを設定する。
+単一ホストへ移行する場合は、Consul広告先を空欄、サービス登録先を内部サービス名へ戻してから公開を削除する。
+サンプルのメディアUDPは3478から3479へ変更したが、既存 `.env` の指定値を自動変更しない。
+
+リポジトリのルートで `docker compose config --services` と公開ポートを確認する。
+`-f` を明示すると `.env` の `COMPOSE_FILE` による選択を置き換えるため、イメージ復旧などの一時ファイルを追加する際も必要な追加ファイルをすべて列挙する。
+設定全体の出力には秘密情報が含まれるため、そのまま公開ログへ保存しない。
+
+反映は会話終了後に `docker compose up -d --no-build --pull never` で再作成する。`restart` だけでは公開設定が変わらない。
+VPSなどのRTC専用ホストではプロファイルを `rtc` とし、ローカル・リモート両RTCの登録、下流4サービスへの到達、会話を確認する。
+管理APIは追加ファイル使用時もループバック限定となるため、遠隔保守はSSH経由で行う。
+SeaweedFS内部サービスのネットワーク分離と保存ボリュームは維持する。
 
 ## 共有橋渡しネットワーク
 
@@ -69,8 +113,8 @@ PTXや新機能には追加条件があるため、最低値だけで動作を�
 ローカル Docker Composeの既定サービスの待受ホストは`sincro-rtc`である。別ホスト Consulを使う場合はConsulから死活確認可能な
 Pion ホストのVPN アドレスを指定する。ブラウザへ広告するIPv4は別値とする。`SINCRO_PION_PUBLIC_IPV4` はブラウザから到達可能なホストのIPv4を指し、閉じたLANではLANアドレスを使う。インターネット上の公開IPを必須にしない。
 
-Pionは固定TCP 8001を公開し、
-`${SINCRO_PION_MEDIA_UDP_PORT}` をホスト・コンテナ同値のUDP ポートとして公開する。
+標準構成のPionは `${SINCRO_PION_MEDIA_UDP_PORT}`（サンプルは3479）をホスト・コンテナ同値のUDPポートとして公開する。
+TCP 8001は内部待受のみとし、ブラウザのHTTP通信はフロントのCaddyから転送する。
 `SINCRO_PION_PUBLIC_IPV4`、`SINCRO_PION_STUN`、`SINCRO_RTC_MAX_SESSIONS`、
 `SINCRO_PION_FFMPEG_PATH`はPion コマンドへ直接渡す。
 

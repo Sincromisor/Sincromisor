@@ -9,8 +9,6 @@ services:
             args:
                 SINCRO_RECOGNIZER_MODEL: ${SINCRO_RECOGNIZER_MODEL:?nemoを指定してください}
         image: ${SINCRO_REGISTRY_NAME}/speech-recognizer-${SINCRO_RECOGNIZER_MODEL}:latest
-        ports:
-            - 8003:8003/tcp
         volumes:
             # UID 1001の既存キャッシュを再利用し、未準備ディレクトリをroot所有で作らせない。
             - type: bind
@@ -78,9 +76,6 @@ services:
                 "-serf-lan-port=8314",
                 "-client=0.0.0.0",
             ]
-        ports:
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8314:8314/tcp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8314:8314/udp
         volumes:
             - consul-agent-recognizer-data:/consul/data
         networks:

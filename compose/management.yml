@@ -1,0 +1,8 @@
+# ホスト上のHTTPS終端・保守コマンド用。分散配置用の管理IPv4公開と併用できる。
+services:
+    sincro-rtc:
+        ports:
+            - 127.0.0.1:8001:8001/tcp
+    sincro-consul-server:
+        ports:
+            - 127.0.0.1:8500:8500/tcp

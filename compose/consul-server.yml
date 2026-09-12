@@ -17,19 +17,6 @@ services:
                 "-ui",
                 "-client=0.0.0.0",
             ]
-        ports:
-            # https://developer.hashicorp.com/consul/docs/install/ports
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8300:8300
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8301:8301/tcp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8301:8301/udp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8302:8302/tcp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8302:8302/udp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8500:8500
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8501:8501
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8502:8502
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8503:8503
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8600:8600/tcp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8600:8600/udp
         volumes:
             - consul-server-data:/consul/data
         networks:

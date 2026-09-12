@@ -1,0 +1,13 @@
+id: task-260913040803-compose-port-separation
+title: Composeの標準公開を絞り分散配置と管理用ポートを分離する
+category: infrastructure
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 0
+created_at: 2026-09-13
+closed_at: 2026-09-13
+legacy_ids: []

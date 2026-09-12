@@ -7,8 +7,6 @@ services:
             context: ..
             dockerfile: ./Docker/voice-synthesizer/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/voice-synthesizer:latest
-        ports:
-            - 8005:8005/tcp
         networks:
             - sincromisor-net
         environment:
@@ -54,8 +52,6 @@ services:
         build:
             context: ..
             dockerfile: ./Docker/voicevox/Dockerfile
-        ports:
-            - 50021:50021/tcp
         networks:
             - sincromisor-net
         environment:
@@ -89,9 +85,6 @@ services:
                 "-serf-lan-port=8316",
                 "-client=0.0.0.0",
             ]
-        ports:
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8316:8316/tcp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8316:8316/udp
         volumes:
             - consul-agent-synthesizer-data:/consul/data
         networks:

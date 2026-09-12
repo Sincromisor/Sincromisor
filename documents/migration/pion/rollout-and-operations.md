@@ -89,7 +89,7 @@ Docker Compose配線時はこの3引数を環境変数へ対応付け、`example
 サービス名へ解決され、別ホスト ConsulではPion ホストのVPN アドレスを登録する。コンテナ IPv4とConsul サービスアドレスは、
 SDPへ広告する公開IPv4とは別値である。
 
-Docker ComposeではPion版 `sincro-rtc` と同一ホストの `consul-agent-rtc` を`full` / `rtc` プロファイルで通常起動する。Pionは固定TCP 8001と`SINCRO_PION_MEDIA_UDP_PORT`をホスト・コンテナ同値のUDP ポートとして公開する。
+Docker ComposeではPion版 `sincro-rtc` と同一ホストの `consul-agent-rtc` を`full` / `rtc` プロファイルで通常起動する。Pionは`SINCRO_PION_MEDIA_UDP_PORT`をホスト・コンテナ同値のUDPポートとして公開する。TCP 8001は標準では内部待受のみとし、分散配置・ホスト側HTTPS終端には[追加Compose](../../design/infrastructure/compose.md#公開ポートの選択)を選択する。
 `SINCRO_PION_PUBLIC_IPV4`、`SINCRO_PION_STUN`、`SINCRO_RTC_MAX_SESSIONS`、`SINCRO_PION_FFMPEG_PATH`はPion コマンドへ渡す。
 Pionは同一ホストのエージェントを通して登録と下流探索を行う。`rtc`は既存の`SINCRO_CONSUL_SERVER_HOST:8301`へ参加し、`full`はローカルサーバーを維持する。エージェントHTTP 8500はホストへ公開しない。
 
