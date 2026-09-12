@@ -1,0 +1,13 @@
+id: task-260913021500-update-server-dependencies
+title: サーバー依存ライブラリのメジャー更新を含む調査と更新
+category: server
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-09-13
+closed_at: 2026-09-13
+legacy_ids: []
