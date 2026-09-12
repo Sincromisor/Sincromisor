@@ -1,3 +1,8 @@
+# 標準構成はHTTPとメディアUDPだけを公開する。
+# 分散配置では.envのCOMPOSE_FILEでcompose/distributed.ymlを重ねる。
+# ホスト側のHTTPS終端・保守接続にはcompose/management.ymlも重ねる。
+# 選択例: examples/compose.env / 手順: documents/design/infrastructure/compose.md
+# 追加ファイルは環境ごとの選択とするため、以下のincludeには含めない。
 include:
     - compose/frontend.yml
     - compose/sincro-rtc.yml
