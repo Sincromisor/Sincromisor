@@ -27,6 +27,9 @@ work/private-artifacts/
 !.agents/skills/next-task/**
 !.agents/skills/run-task/
 !.agents/skills/run-task/**
+!.agents/skills/playwright-cli/
+.agents/skills/playwright-cli/*
+!.agents/skills/playwright-cli/SKILL.md
 .claude/metrics/
 samples
 volumes/consul-data
