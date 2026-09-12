@@ -1,0 +1,14 @@
+id: task-260913012528-upgrade-python314
+title: Python実行環境を3.14へ切り替える
+category: infrastructure
+status: open
+depends_on:
+  - task-260913012528-prepare-python314-dependencies
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-13
+closed_at: null
+legacy_ids: []

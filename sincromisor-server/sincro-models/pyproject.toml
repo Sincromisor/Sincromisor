@@ -8,7 +8,7 @@ dependencies = [
     "sincro-config",
     "pydantic>=2.11.7",
     "msgpack>=1.1.1",
-    "numpy==1.26.4",
+    "numpy>=2.3.3,<3",
     "python-ulid>=3.1.0",
 ]
 
