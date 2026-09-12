@@ -1,5 +1,7 @@
-/* 独立モック専用。既存画面のスタイルや機器初期化を読み込まない。 */
-:root { font-family: "Noto Sans CJK JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #292d2a; background: #f8f7f3; font-synthesis: none; --accent: #c34729; --muted: #686b62; --line: #dedfd6; }
+@import "../../styles/fonts.css";
+
+/* 書体の定義だけを共用し、未導入端末では同梱のBIZ UDPGothic由来のサブセットを使う。 */
+:root { font-family: "BIZ UDPGothic", "UDPGothic", sans-serif; color: #292d2a; background: #f8f7f3; font-synthesis: none; --accent: #c34729; --muted: #686b62; --line: #dedfd6; }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 28px; }
 body { margin: 0; }
@@ -102,7 +104,7 @@ h2 { font-size: 30px; letter-spacing: -.045em; line-height: 1.6; }
 .human-outline { font-family: Arial, sans-serif; width: 76px; height: 76px; border: 1px solid #b4beaa; background: #f4f5ef; border-radius: 24px; font-size: 54px; color: #718265; display: grid; place-content: center; transform: rotate(-7deg); }
 .sync-connection { color: #708166; font-size: 29px; }
 /* 全身画像の顔だけを拡大し、小さな紹介カードでも特徴を読み取れるようにする。 */
-.avatar-crop { width: 76px; height: 76px; border-radius: 24px; background: #f6e3d3 url('/images/home-mock/character-toon.png') center 9% / 340% auto; transform: rotate(7deg); border: 3px solid #f7f8f0; }
+.avatar-crop { width: 76px; height: 76px; border-radius: 24px; background: #f6e3d3 url('/images/home-mock/character-spring-modern.png') center 9% / 340% auto; transform: rotate(7deg); border: 3px solid #f7f8f0; }
 .sync-caption { position: absolute; bottom: 15px; font-size: 10px; letter-spacing: .08em; color: #58644e; }
 .steps-section { display: grid; grid-template-columns: 1fr 1.1fr; gap: 50px; padding-block: 55px 70px; border-top: 1px solid var(--line); }
 .steps-section h2 { margin-block: 15px; }
