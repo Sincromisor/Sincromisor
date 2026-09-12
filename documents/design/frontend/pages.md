@@ -2,7 +2,7 @@
 
 ## 要約
 
-- 現行フロントエンドは `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` の 6 ページを通常ビルド対象にする。
+- 現行フロントエンドは `main`、`home-mock`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` の 7 ページを通常ビルド対象にする。
 - Babylon.jsの旧ページと関連実装・依存は削除済み。
 - 生成元の起動処理は `sincromisor-frontend/src/pages/*` に集約し、Vite の経路別名で既存公開 URL を維持する。
 - ページ差分は項目 / 初期化処理 / シーン選択肢 / ページ固有の設定に閉じ込める。
@@ -21,14 +21,21 @@
 
 分類の「実験用」も通常ビルドに含まれる。ビルド入力と公開URLの正本は [Vite設定](../../../sincromisor-frontend/vite.config.js) である。
 
-| ページ                  | 生成元の起動処理                           | 公開 URL                  | 分類   | 役割                      | 主な確認文書                                                     |
-| ----------------------- | ------------------------------------------ | ------------------------- | ------ | ------------------------- | ---------------------------------------------------------------- |
-| `main`                  | `src/pages/main/index.html`                | `/`                       | 現行   | 通常導線の入口            | `frontend/app-shell.md`                                          |
-| `simple-vrm`            | `src/pages/simpleVrm/index.html`           | `/simple-vrm/`            | 現行   | 通常会話の正規ルート      | `frontend/app-shell.md`, `frontend/character/overview.md`        |
-| `vrm360`                | `src/pages/vrm360/index.html`              | `/vrm360/`                | 実験用 | 360 表示実験              | `frontend/character/overview.md`                                 |
-| `looking-glass-vrm`     | `src/pages/lookingGlassVrm/index.html`     | `/looking-glass-vrm/`     | 実験用 | Looking Glass + VRM 1.0   | `frontend/character/overview.md`                                 |
-| `motion-debug`          | `src/pages/motionDebug/index.html`         | `/motion-debug/`          | 実験用 | Pose 動作の変換 / IK 調整 | `frontend/character/motion.md`, `frontend/character/tracking.md` |
-| `pose-landmarker-spike` | `src/pages/poseLandmarkerSpike/index.html` | `/pose-landmarker-spike/` | 実験用 | MediaPipe Pose 性能検証   | `frontend/character/tracking.md`                                 |
+| ページ                  | 生成元の起動処理                           | 公開 URL                  | 分類   | 役割                       | 主な確認文書                                                     |
+| ----------------------- | ------------------------------------------ | ------------------------- | ------ | -------------------------- | ---------------------------------------------------------------- |
+| `main`                  | `src/pages/main/index.html`                | `/`                       | 現行   | 通常導線の入口             | `frontend/app-shell.md`                                          |
+| `home-mock`             | `src/pages/homeMock/index.html`            | `/home-mock/`             | 試作   | トップページの独立UIモック | 本文「トップページのモック」                                     |
+| `simple-vrm`            | `src/pages/simpleVrm/index.html`           | `/simple-vrm/`            | 現行   | 通常会話の正規ルート       | `frontend/app-shell.md`, `frontend/character/overview.md`        |
+| `vrm360`                | `src/pages/vrm360/index.html`              | `/vrm360/`                | 実験用 | 360 表示実験               | `frontend/character/overview.md`                                 |
+| `looking-glass-vrm`     | `src/pages/lookingGlassVrm/index.html`     | `/looking-glass-vrm/`     | 実験用 | Looking Glass + VRM 1.0    | `frontend/character/overview.md`                                 |
+| `motion-debug`          | `src/pages/motionDebug/index.html`         | `/motion-debug/`          | 実験用 | Pose 動作の変換 / IK 調整  | `frontend/character/motion.md`, `frontend/character/tracking.md` |
+| `pose-landmarker-spike` | `src/pages/poseLandmarkerSpike/index.html` | `/pose-landmarker-spike/` | 実験用 | MediaPipe Pose 性能検証    | `frontend/character/tracking.md`                                 |
+
+## トップページのモック
+
+`/home-mock/` は「キャラクターと話す／キャラクターになる」を選べる独立したトップページ案である。既存の `/` は維持し、モック専用のHTML・CSS・TypeScriptと生成画像で表示する。Reactによるアプリの共通枠組み、RTC、機器取得は起動しない。画像と会話例はプレビューとして明示する。
+
+選択状態は標準ラジオボタンに保持し、CSSが会話例を切り替える。開始ボタンは標準の `dialog` を開き、既存の `/simple-vrm/` へ案内する。モックの選択や画像は実アプリへ引き継がず、会話モードを移動先で再設定する案内を表示する。FAQは標準の `details` を使い、画面幅への追従、フォーカス表示、動きを減らす設定に対応する。
 
 ## 責務
 

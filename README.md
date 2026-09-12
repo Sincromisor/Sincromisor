@@ -112,7 +112,7 @@ LANの別端末から使う場合は、管理下のHTTPS終端とブラウザが
 
 `Simple Interface (VRM 1.0)` の起動前設定で、Dify未設定なら会話モードを `sincro`（シンクロモード）へ変更してから「開始する」を押す。`sincro` は認識文を変換して読み上げ、Difyを使わない。初回の既定値は `chat` のため、設定を空にしただけではチャットは動作しない。
 
-`sincromisor-frontend/package.json` では、`npm run build` が `tsc -p tsconfig.modern.json && vite build` に対応しており、通常ビルドでは `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` の6ページを出力します。実験用ページも通常ビルドに含まれ、分類と公開URLは[ページ構成](documents/design/frontend/pages.md)を参照してください。
+`sincromisor-frontend/package.json` では、`npm run build` が `tsc -p tsconfig.modern.json && vite build` に対応しており、通常ビルドでは `main`、`home-mock`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` の7ページを出力します。トップページの独立UIモックは `/home-mock/` で確認できます。実験用ページも通常ビルドに含まれ、分類と公開URLは[ページ構成](documents/design/frontend/pages.md)を参照してください。
 
 Babylon.js ベースの旧ページ（`simple`、`glass`、`character`、`character-glass`、`area360`、`single`、`double`）と関連する旧実装は削除済みです。通常の開発・確認は `sincromisor-frontend` で `npm run build` を使ってください。
 
