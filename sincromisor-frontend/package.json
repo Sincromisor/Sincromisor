@@ -17,26 +17,27 @@
         "preview": "vite preview"
     },
     "devDependencies": {
-        "@biomejs/biome": "^2.4.15",
-        "@types/react": "^19.2.14",
-        "@types/react-dom": "^19.2.3",
-        "@types/three": "^0.182.0",
-        "@vitejs/plugin-react-swc": "^4.3.1",
-        "postcss-preset-env": "^10.6.1",
-        "prettier": "^3.8.3",
-        "typescript": "^5.9.3",
-        "vite": "^8.0.16",
-        "vitest": "^4.1.6"
+        "@biomejs/biome": "^2.5.13",
+        "@types/node": "^22.20.2",
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0",
+        "@types/three": "^0.186.0",
+        "@vitejs/plugin-react-swc": "^4.3.3",
+        "postcss-preset-env": "^11.5.2",
+        "prettier": "^3.9.6",
+        "typescript": "^7.0.2",
+        "vite": "^8.3.0",
+        "vitest": "^5.0.0"
     },
     "dependencies": {
         "@lookingglass/webxr": "^0.6.0",
-        "@mediapipe/tasks-vision": "^0.10.34",
-        "@pixiv/three-vrm": "^3.5.1",
-        "hls.js": "^1.6.15",
-        "onnxruntime-web": "^1.24.3",
-        "react": "^19.2.5",
-        "react-dom": "^19.2.5",
-        "three": "^0.182.0",
-        "zod": "^4.4.3"
+        "@mediapipe/tasks-vision": "^1.0.1",
+        "@pixiv/three-vrm": "^3.5.5",
+        "hls.js": "^1.7.3",
+        "onnxruntime-web": "^1.29.0",
+        "react": "^19.3.0",
+        "react-dom": "^19.3.0",
+        "three": "^0.186.0",
+        "zod": "^4.6.2"
     }
 }

@@ -1,3 +1,4 @@
+// reason: structure-threshold-exception 依存更新に伴うエラー分類の互換修正に限定する。既存のプロファイル生成とスキーマの分割は責務整理時に行う。
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import type { Object3D } from "three/src/core/Object3D.js";
 import { Vector3 } from "three/src/math/Vector3.js";
@@ -792,6 +793,7 @@ const schemaVersionProbeSchema = z
     })
     .passthrough();
 
+/** 保存用プロファイルを検証し、版・構造・数値範囲の失敗を呼び出し元へ返す。入力は変更しない。 */
 export function parseAvatarMotionProfile(value: unknown): AvatarMotionProfileParseResult {
     const versionProbe = schemaVersionProbeSchema.safeParse(value);
     if (
@@ -860,15 +862,17 @@ function zodPathToStrings(path: readonly PropertyKey[]): string[] {
     return path.map((segment) => String(segment));
 }
 
+// Zod の翻訳可能な文言ではなく構造化された分類を使い、非有限数を既存の範囲エラーへ揃える。
 function classifyIssue(issue: z.core.$ZodIssue): AvatarMotionProfileParseError["code"] {
     if (
         issue.code === "custom" ||
         ((issue.code === "too_small" || issue.code === "too_big") &&
             "origin" in issue &&
             issue.origin === "number") ||
-        issue.message.toLowerCase().includes("finite") ||
-        issue.message === "Invalid input: expected number, received NaN" ||
-        issue.message === "Invalid input: expected number, received number"
+        (issue.code === "invalid_type" &&
+            issue.expected === "number" &&
+            "received" in issue &&
+            ["NaN", "Infinity", "-Infinity"].includes(String(issue.received)))
     ) {
         return "out_of_range";
     }

@@ -207,18 +207,17 @@ describe("MotionDebugRecordingController manifest", () => {
         expect(manifest?.build).not.toHaveProperty("gitCommit");
     });
 
-    it.each([
-        "unknown",
-        "not-a-commit",
-        " abc123 ",
-    ])("omits an invalid build commit: %s", (gitCommit) => {
-        const harness = createControllerHarness({ activeStream: createMediaStream() });
+    it.each(["unknown", "not-a-commit", " abc123 "])(
+        "omits an invalid build commit: %s",
+        (gitCommit) => {
+            const harness = createControllerHarness({ activeStream: createMediaStream() });
 
-        // biome-ignore lint/complexity/useLiteralKeys: manifest の保存契約を公開 API にせず直接検証する。
-        const manifest = harness.controller["createManifest"](gitCommit);
+            // biome-ignore lint/complexity/useLiteralKeys: manifest の保存契約を公開 API にせず直接検証する。
+            const manifest = harness.controller["createManifest"](gitCommit);
 
-        expect(manifest?.build).not.toHaveProperty("gitCommit");
-    });
+            expect(manifest?.build).not.toHaveProperty("gitCommit");
+        },
+    );
 });
 
 function createControllerHarness(options: ControllerHarnessOptions = {}): ControllerHarness {
