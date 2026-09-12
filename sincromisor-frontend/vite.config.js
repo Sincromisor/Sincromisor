@@ -16,11 +16,17 @@ const mediapipeTasksVisionPackageJson = JSON.parse(
 const mediapipeTasksVisionVersion = mediapipeTasksVisionPackageJson.version;
 const gitCommit = process.env.SINCROMISOR_GIT_COMMIT;
 const reactRuntimePackages = ["/react/", "/react-dom/", "/scheduler/"];
+// 開発時の内部書き換えとビルド後のHTML移動で、同じ公開URLを使う。
 const pageRouteAliases = [
     {
         source: "pages/main/index.html",
         publicPath: "index.html",
         devRoutes: ["/", "/index.html"],
+    },
+    {
+        source: "pages/homeMock/index.html",
+        publicPath: "home-mock/index.html",
+        devRoutes: ["/home-mock", "/home-mock/", "/home-mock/index.html"],
     },
     {
         source: "pages/simpleVrm/index.html",
@@ -91,9 +97,11 @@ function sincroPageRouteAliasPlugin() {
     };
 }
 
+/** 独立モックと実アプリを含む、通常ビルドのHTML入口を列挙する。 */
 function buildInputMap() {
     return {
         main: resolve(contents_src, "pages/main/index.html"),
+        home_mock: resolve(contents_src, "pages/homeMock/index.html"),
         simple_vrm: resolve(contents_src, "pages/simpleVrm/index.html"),
         vrm360: resolve(contents_src, "pages/vrm360/index.html"),
         looking_glass_vrm: resolve(contents_src, "pages/lookingGlassVrm/index.html"),

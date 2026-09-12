@@ -111,6 +111,7 @@
     - `cd sincromisor-frontend && npm run dev`
 - Vite ビルド入力:
     - `main`
+    - `home-mock`（共通枠組みを起動しない独立モック）
     - `simple-vrm`
     - `vrm360`
     - `looking-glass-vrm`
