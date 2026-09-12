@@ -48,7 +48,8 @@ class SpeechExtractorResult(BaseModel):
         self.voice = np.zeros(0, dtype=self.voice_dtype)
 
     @classmethod
-    def from_msgpack(cls, pack: bytes) -> "SpeechExtractorResult":
+    def from_msgpack(cls, pack: bytes) -> SpeechExtractorResult:
+        """MessagePackの音声バイト列を指定dtypeの配列へ復元し、結果を検証する。復号・検証失敗は伝播する。"""
         contents = msgpack.unpackb(pack)
         contents["voice"] = np.frombuffer(
             contents["voice"],

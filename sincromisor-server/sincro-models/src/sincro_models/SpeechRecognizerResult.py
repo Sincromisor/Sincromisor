@@ -73,5 +73,6 @@ class SpeechRecognizerResult(BaseModel):
         return pack
 
     @classmethod
-    def from_msgpack(cls, pack: bytes) -> "SpeechRecognizerResult":
+    def from_msgpack(cls, pack: bytes) -> SpeechRecognizerResult:
+        """MessagePackの認識結果を復号して型と必須項目を検証する。不正な入力は例外を返す。"""
         return SpeechRecognizerResult(**msgpack.unpackb(pack))

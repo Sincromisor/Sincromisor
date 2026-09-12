@@ -22,7 +22,8 @@ class TextProcessorRequest(BaseModel):
     request_message: ChatMessage
 
     @classmethod
-    def from_msgpack(cls, pack: bytes) -> "TextProcessorRequest":
+    def from_msgpack(cls, pack: bytes) -> TextProcessorRequest:
+        """MessagePackの要求を履歴・メッセージごと検証する。復号・モデル検証の失敗は伝播する。"""
         contents = msgpack.unpackb(pack)
         return TextProcessorRequest(**contents)
 

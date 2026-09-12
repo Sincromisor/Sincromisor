@@ -12,7 +12,8 @@ class SincromisorConfig(BaseModel):
     WebRTC: WebRTCConfig
 
     @classmethod
-    def from_yaml(cls, filename: str | None = None) -> "SincromisorConfig":
+    def from_yaml(cls, filename: str | None = None) -> SincromisorConfig:
+        """指定先または設定済みパスのYAMLを読み、モデルとして検証する。読み込み・検証失敗は伝播する。"""
         if filename is None:
             filename = cls.config_path()
         with open(filename) as file:
@@ -32,7 +33,8 @@ class SincromisorConfig(BaseModel):
     def get_ice_servers_conf(
         self,
         server_type: str,
-    ) -> Generator[RTCIceServerConfig, None, None]:
+    ) -> Generator[RTCIceServerConfig]:
+        """URLの接頭辞が指定されたstunまたはturnに一致する設定を順に返す。"""
         for conf in self.WebRTC.RTCIceServers:
             if conf.Urls[0:5] == f"{server_type}:":
                 yield conf

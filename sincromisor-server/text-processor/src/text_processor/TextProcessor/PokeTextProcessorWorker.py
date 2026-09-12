@@ -12,7 +12,8 @@ class PokeTextProcessorWorker(TextProcessorWorker):
     def process(
         self,
         request: TextProcessorRequest,
-    ) -> Generator[TextProcessorResult, None, None]:
+    ) -> Generator[TextProcessorResult]:
+        """要求本文を変換した増分と最後の確定結果を返す。変換失敗は呼び出し元へ伝える。"""
         response: TextProcessorResult = TextProcessorResult.from_request(
             message_type=self.message_type,
             speaker_id=self.speaker_id,

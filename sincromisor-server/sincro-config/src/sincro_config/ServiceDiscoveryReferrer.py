@@ -74,9 +74,8 @@ class ServiceDiscoveryReferrer:
         )
 
     # worker_typeで指定したサービスのワーカーすべてをGeneratorとして返す。
-    def get_all_workers(
-        self, worker_type: str
-    ) -> Generator[ServiceDescription, None, None]:
+    def get_all_workers(self, worker_type: str) -> Generator[ServiceDescription]:
+        """Consulに登録された全ワーカーを返す。接続失敗は専用例外で呼び出し元へ伝える。"""
         index: int
         workers: list
         worker: dict

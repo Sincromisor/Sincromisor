@@ -34,7 +34,7 @@ export PATH="$HOME/.local/bin:$PATH"
 | `--without-gpu` | Toolkit 導入と GPU 確認を省く。GPU のない環境で静的検査・単体テストなどを行う場合に使う。Python 全サービス依存は導入する |
 | `--browser`     | Playwright CLI を `~/.local` に、Google Chrome とブラウザー用 OS 依存を追加する。ほかの指定と併用できる                  |
 
-Ubuntu 標準の Node.js / npm、Go、C/C++ ビルドツール、FFmpeg、Opus、音声処理ライブラリ、Git、ripgrep、ShellCheck を導入する。Python は uv で `.python-version` の 3.12 を用意し、`uv sync --locked --group dev --group full` を実行する。Go の必要バージョンは `go.mod` と標準の自動ツールチェーン取得に従う。
+Ubuntu 標準の Node.js / npm、Go、C/C++ ビルドツール、FFmpeg、Opus、音声処理ライブラリ、Git、ripgrep、ShellCheck を導入する。Python は uv で `.python-version` の 3.14 を用意し、`uv sync --locked --group dev --group full` を実行する。Go の必要バージョンは `go.mod` と標準の自動ツールチェーン取得に従う。
 
 ルートとフロントエンドで `npm ci` を実行し、MediaPipe の WASM を配置する。`.env` とモデルキャッシュ用ディレクトリは存在しない場合だけ作る。再実行できるが、`node_modules` と Python 仮想環境はロックに同期され、Docker の GPU 設定時はデーモンを再起動する。APT リポジトリは `sincromisor-*` 名で登録する。既存環境への移植・他方式との混在は対象外とする。
 

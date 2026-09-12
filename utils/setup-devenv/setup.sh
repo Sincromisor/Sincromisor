@@ -85,7 +85,7 @@ install_gpu() {
     sudo docker run --rm --gpus all nvidia/cuda:13.0.3-base-ubuntu24.04 nvidia-smi
 }
 
-# ロックを維持し、OS の Python と分離した 3.12 環境を作る。
+# ロックを維持し、OS の Python と分離した 3.14 環境を作る。
 # Go は標準の自動ツールチェーン選択で go.mod の指定版を取得する。
 install_project() {
     export PATH="$HOME/.local/bin:$PATH"

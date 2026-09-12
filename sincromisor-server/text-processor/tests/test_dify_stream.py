@@ -53,7 +53,7 @@ class _SSEHandler(BaseHTTPRequestHandler):
                 self.connection.settimeout(2)
                 if self.connection.recv(1) == b"":
                     self.disconnected.set()
-        except (BrokenPipeError, ConnectionResetError):
+        except BrokenPipeError, ConnectionResetError:
             self.disconnected.set()
 
     def log_message(self, format: str, *args: object) -> None:
@@ -363,7 +363,7 @@ def test_parent_cancellation_releases_child_processes() -> None:
         async def process_async(
             self,
             request: TextProcessorRequest,
-        ) -> AsyncGenerator[TextProcessorResult, None]:
+        ) -> AsyncGenerator[TextProcessorResult]:
             try:
                 await asyncio.Event().wait()
                 if request.confirmed:

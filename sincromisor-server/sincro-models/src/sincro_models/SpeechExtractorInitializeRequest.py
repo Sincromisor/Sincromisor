@@ -13,7 +13,8 @@ class SpeechExtractorInitializeRequest(BaseModel):
     voice_channels: int = 1
 
     @classmethod
-    def from_msgpack(cls, pack) -> "SpeechExtractorInitializeRequest":
+    def from_msgpack(cls, pack) -> SpeechExtractorInitializeRequest:
+        """初期化要求のMessagePackを復号して必須項目を検証する。不正な入力は例外を返す。"""
         return SpeechExtractorInitializeRequest(**msgpack.unpackb(pack))
 
     def to_msgpack(self) -> bytes:

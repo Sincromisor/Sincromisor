@@ -95,7 +95,7 @@ class SpeechExtractorWorker:
         self,
         ws: WebSocket,
         min_buffer_length: int | None = None,
-    ) -> AsyncGenerator[np.ndarray, None]:
+    ) -> AsyncGenerator[np.ndarray]:
         target_length = min_buffer_length or self.MIN_BUFFER_LENGTH_SAMPLES
         buffer: np.ndarray = np.zeros(0, dtype=self.voice_dtype)
 
@@ -115,7 +115,7 @@ class SpeechExtractorWorker:
     async def __process_audio_chunk(
         self,
         ws: WebSocket,
-        state: "SpeechExtractorWorker.ExtractState",
+        state: SpeechExtractorWorker.ExtractState,
         mic_voice: np.ndarray,
         max_silence_ms: int,
     ) -> None:
@@ -172,7 +172,7 @@ class SpeechExtractorWorker:
 
     # ===== State and result helpers =====
     # Speech判定を契機に発話状態へ遷移し、無音カウンタをリセットする。
-    def __start_speech(self, state: "SpeechExtractorWorker.ExtractState") -> None:
+    def __start_speech(self, state: SpeechExtractorWorker.ExtractState) -> None:
         assert state.result is not None
         # 既存実装と同等に、Speech判定が立つたびにstart_atを更新する。
         state.result.start_at = time.time()
@@ -180,7 +180,7 @@ class SpeechExtractorWorker:
         state.in_speech = True
 
     # 発話待機時に先行バッファ量を維持する(先頭欠け対策)。
-    def __pre_roll(self, state: "SpeechExtractorWorker.ExtractState") -> None:
+    def __pre_roll(self, state: SpeechExtractorWorker.ExtractState) -> None:
         assert state.result is not None
         # 発話待機中は最新500msのみ保持し、無音を際限なく蓄積しない。
         pre_roll_samples = int((self.voice_sampling_rate * self.PRE_ROLL_MS) / 1000)
@@ -189,7 +189,7 @@ class SpeechExtractorWorker:
     async def __emit_result(
         self,
         ws: WebSocket,
-        state: "SpeechExtractorWorker.ExtractState",
+        state: SpeechExtractorWorker.ExtractState,
         confirmed: bool,
     ) -> None:
         # 現在のresultを1パケットとして送信し、継続/終端に応じて状態を更新する。
@@ -211,7 +211,7 @@ class SpeechExtractorWorker:
         result.sequence_id += 1
 
     # 発話終端確定後に、次発話へ向けた内部状態を初期化する。
-    def __finish_speech(self, state: "SpeechExtractorWorker.ExtractState") -> None:
+    def __finish_speech(self, state: SpeechExtractorWorker.ExtractState) -> None:
         assert state.result is not None
         # confirmed送信後に、次発話へ向けて区間メタ情報を初期化する。
         state.result.speech_id += 1
