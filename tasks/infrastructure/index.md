@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 14 件）
+## タスク一覧（自動生成 / 全 15 件）
 
-### done（完了） — 14 件
+### done（完了） — 15 件
 
 | タスク                                                                                                               | タイトル                                             | 判定    | 依存 |
 | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------- | ---- |
@@ -22,5 +22,6 @@
 | [task-260907221335-monthly-image-rollout](./task-260907221335-monthly-image-rollout/task.md)                         | 配布イメージの取得・更新・復旧手順を整備する | ✅ PASS | —    |
 | [task-260907221335-nemo-model-preparation](./task-260907221335-nemo-model-preparation/task.md)                       | 共通初期化をNeMoモデル準備へ整理する                 | ✅ PASS | —    |
 | [task-260907221335-rtc-host-consul-agent](./task-260907221335-rtc-host-consul-agent/task.md)                         | RTCを同一ホストのConsulエージェントへ接続する | ✅ PASS | —    |
+| [task-260913011124-setup-wsl-devenv](./task-260913011124-setup-wsl-devenv/task.md)                                   | WSL2向け開発環境の導入スクリプトを用意する           | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->
