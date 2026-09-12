@@ -33,12 +33,15 @@ USER ${SINCRO_USER_ID}
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # MediaPipeの実行時依存
+# 音声分類器の共有ライブラリもEGL/GLESへリンクするため、GPU未使用でも必要。
+# libegl1 / libgles2: libEGL.so.1 / libGLESv2.so.2
 # libgl1: libGL.so.1
 # libglib2.0-bin: libgthread-2.0.so.0
 USER root
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
-    apt-get install -y libgl1 libglib2.0-bin
+    apt-get update \
+    && apt-get install -y libegl1 libgles2 libgl1 libglib2.0-bin
 
 USER ${SINCRO_USER_ID}
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
@@ -99,6 +102,9 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --locked --group speech-extractor
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
+
+# importだけでは検出できない共有ライブラリ不足を、分類器の初期化で検出する。
+RUN uv run --no-sync python -c "from speech_extractor.SpeechExtractor import SpeechExtractorWorker; SpeechExtractorWorker.setup_model(); SpeechExtractorWorker.classifier.close()"
 
 # 起動時は対象グループを含む導入済み環境をそのまま使う。
 CMD ["uv", "run", "--no-sync", "speech-extractor/SpeechExtractorProcess.py"]
