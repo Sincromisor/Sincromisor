@@ -84,6 +84,7 @@ class VoiceCacheManager:
     def __get_voice_s3(
         self, vs_request: VoiceSynthesizerRequest
     ) -> VoiceSynthesizerResult | None:
+        """S3の音声キャッシュを読み、取得失敗は未命中として扱う。内容の復号失敗は呼び出し元へ伝える。"""
         try:
             response = self.s3_client.get_object(
                 Bucket=self.bucket_name, Key=vs_request.s3_key()
@@ -92,7 +93,7 @@ class VoiceCacheManager:
             vpack: bytes = body.read()
             body.close()
             return VoiceSynthesizerResult.from_msgpack(vpack)
-        except (ClientError, BotoCoreError):
+        except ClientError, BotoCoreError:
             return None
 
     def __put_voice_redis(

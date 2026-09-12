@@ -20,7 +20,7 @@ PoC では下記 2 軸を最優先する。
 | `Any` 禁止。外部 I/O は `object` で受けて Pydantic 解析 | 必須   | ライブラリ都合で必要な場合は `# reason:` 必須             |
 | `cast()` 禁止                                           | 必須   | ガード節 / `isinstance` / Pydantic モデルで潰す           |
 | `# type: ignore` / `# ty: ignore` 禁止                  | 必須   | 使う場合は規則指定 + `# reason: ... / 解消条件: ...` 必須 |
-| `Optional[T]` ではなく `T \| None` を使う               | 必須   | Python 3.12 前提                                          |
+| `Optional[T]` ではなく `T \| None` を使う               | 必須   | Python 3.14 前提                                          |
 | `list` / `dict` / `tuple` は要素型まで書く              | 推奨   | 例: `list[ChatMessage]` / `dict[str, object]`             |
 | `Callable` / `Protocol` は境界が読みにくい場合だけ使う  | 推奨   | 抽象化のための抽象化を避ける                              |
 | `assert` を外部 I/O 検証に使わない                      | 必須   | `if not ...: raise ValueError(...)` または Pydantic 検証  |

@@ -63,7 +63,7 @@ class ProperNounDictionary:
     )
 
     @classmethod
-    def empty(cls) -> "ProperNounDictionary":
+    def empty(cls) -> ProperNounDictionary:
         """辞書無効時やロード失敗時に使う、安全な空辞書を返す。"""
         return cls(
             entries=(),
@@ -74,7 +74,7 @@ class ProperNounDictionary:
         )
 
     @classmethod
-    def load_from_csv(cls, csv_path: str | Path) -> "ProperNounDictionary":
+    def load_from_csv(cls, csv_path: str | Path) -> ProperNounDictionary:
         """CSV から辞書を構築し、読みごとの検索に使いやすい形へ正規化する。"""
         source_path = Path(csv_path)
         with source_path.open(encoding="utf-8", newline="") as csv_file:
@@ -187,7 +187,7 @@ class ProperNounDictionary:
         cls,
         csv_path: str | Path,
         logger: logging.Logger,
-    ) -> "ProperNounDictionary":
+    ) -> ProperNounDictionary:
         """辞書ロードと同時に警告・統計をログへ流すヘルパー。"""
         dictionary = cls.load_from_csv(csv_path=csv_path)
         for warning_message in dictionary.warnings:

@@ -101,7 +101,7 @@ class TextProcessorWorker:
     async def process_async(
         self,
         request: TextProcessorRequest,
-    ) -> AsyncGenerator[TextProcessorResult, None]:
+    ) -> AsyncGenerator[TextProcessorResult]:
         """同期実装を既存の処理契約のまま非同期WebSocket処理へ接続する。"""
         for response in self.process(request=request):
             yield response
@@ -109,7 +109,7 @@ class TextProcessorWorker:
     def process(
         self,
         request: TextProcessorRequest,
-    ) -> Generator[TextProcessorResult, None, None]:
+    ) -> Generator[TextProcessorResult]:
         """同期実装用の既定応答として、認識本文をそのまま確定する。"""
         response: TextProcessorResult = TextProcessorResult.from_request(
             message_type=self.message_type,

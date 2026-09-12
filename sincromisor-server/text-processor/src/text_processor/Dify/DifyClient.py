@@ -51,7 +51,7 @@ class DifyClient:
         inputs: dict[str, object],
         query: str,
         conversation_id: str | None,
-    ) -> AsyncGenerator[DifyStreamEvent, None]:
+    ) -> AsyncGenerator[DifyStreamEvent]:
         """チャット応答をSSE順に返す。
 
         セッションと応答はこの非同期生成器が所有する。呼び出し元が取消されると

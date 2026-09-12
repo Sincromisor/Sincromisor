@@ -109,7 +109,7 @@ class TextProcessorResult(BaseModel):
         message_type: str,
         speaker_id: str,
         speaker_name: str,
-    ) -> "TextProcessorResult":
+    ) -> TextProcessorResult:
         """要求の会話情報を引き継ぎ、空の応答結果を作る。"""
         return TextProcessorResult(
             session_id=request.session_id,
@@ -128,7 +128,7 @@ class TextProcessorResult(BaseModel):
         )
 
     @classmethod
-    def from_msgpack(cls, pack: bytes) -> "TextProcessorResult":
+    def from_msgpack(cls, pack: bytes) -> TextProcessorResult:
         """下流へ渡されたMessagePackを復号し、モデルの型と必須項目を検証する。
 
         不正なMessagePackやモデル検証の失敗は呼び出し元へ伝える。

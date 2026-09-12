@@ -80,7 +80,8 @@ class VoiceSynthesizerResult(BaseModel):
         return obj
 
     @classmethod
-    def from_msgpack(cls, vpackage: bytes) -> "VoiceSynthesizerResult":
+    def from_msgpack(cls, vpackage: bytes) -> VoiceSynthesizerResult:
+        """音声合成結果をクエリ・モーラごと復元する。省略されたspeech_idは-1とし、復号・検証失敗は伝播する。"""
         content = msgpack.unpackb(vpackage)
         mora_queue = [
             VoiceSynthesizerMora.model_validate(m) for m in content["mora_queue"]

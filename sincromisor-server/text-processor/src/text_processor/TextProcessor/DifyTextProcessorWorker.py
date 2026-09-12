@@ -21,7 +21,7 @@ class DifyTextProcessorWorker(TextProcessorWorker):
     async def process_async(
         self,
         request: TextProcessorRequest,
-    ) -> AsyncGenerator[TextProcessorResult, None]:
+    ) -> AsyncGenerator[TextProcessorResult]:
         """文末ごとに結果を送り、SSEが正常終了した時だけ応答を確定する。
 
         DifyClientの生成器をこの要求処理が所有するため、WebSocket切断による取消は
