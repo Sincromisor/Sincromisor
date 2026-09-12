@@ -54,7 +54,7 @@
 
 ## Codex用の生成成果物
 
-- 対象ファイル: `.agents/skills/**`、`.codex/agents/*.toml`、`.codex/hooks.json`
+- 対象ファイル: `.agents/skills/new-task/SKILL.md`、`.agents/skills/run-task/SKILL.md`、`.codex/agents/*.toml`、`.codex/hooks.json`
 - 上流との差分: `.claude/` から生成する成果物をGit管理する。
 - 理由: Codexのセッションで、別途生成を実行せずにローカルのスキルとエージェント定義を利用できるようにするため。
 - 更新時の確認: `.claude/` の編集後に `npm run gen:codex` と `npm run gen:codex:check` を実行する。
@@ -72,7 +72,7 @@
 ## タスクの実装可能性と自律補完
 
 - 対象ファイル: `.claude/commands/new-task.md`、`.claude/commands/run-task.md`、`.claude/agents/task-reviewer.md`、`.claude/agents/task-implementer.md`、`tasks/AUTHORING-CHECKLIST.md`、`tasks/README.md`、`scripts/tasks/newTask.mjs`
-- 上流との差分: 起票時に外部入力の供給元と消費先を追跡する。既存のタスク文書で解決できる不足は `AUTO_FIX` とする。公開契約、責務、受け入れ条件、外部入力の供給経路に影響する選択だけを `NEEDS_REVISION` とする。
+- 上流との差分: 起票時に必要な外部入力の供給元と消費先を追跡する。補完・縮小・判断待ちは [自律補完の基準](../tasks/AUTHORING-CHECKLIST.md#実行時の自律補完) に従い、明示要求された要件は削らない。
 - 理由: 通常の実装確認で作業が止まることを防ぎつつ、構成上の未決定事項では確実に停止するため。
 - 更新時の確認: `npm run gen:codex`、`npm run gen:codex:check`、`npm run tasks:check` を実行する。
 
@@ -83,3 +83,11 @@
 - 理由: Sincromisorは個人の趣味開発であり、通常は実装を届ける速さを優先するため。ただし、セキュリティ、データ損失防止、公開契約、明示要求された評価は必須条件のままとする。
 - 本番コードの変更では、ソースコメントの確認を常に必須とする。変更した全シンボルと直接の変更理解範囲を点検し、必須コメントの欠落や陳腐化があれば完了しない。簡略化するのは監査台帳であり、コメントの義務は維持する。
 - 更新時の確認: 生成済みの指示が、通常変更に専用ワークツリー、`npm run gate`、独立評価を要求しないことを確認する。
+
+## エージェントが読む範囲と判断の境界
+
+- 対象ファイル: `AGENTS.md`、`.claude/commands/`、`.claude/agents/`、`.agents/skills/playwright-cli/SKILL.md`、`tasks/README.md`、`tasks/AUTHORING-CHECKLIST.md`、`documents/rules/coding-md.md`、設計索引と文書運用ガイド。
+- 方針: AGENTS.mdは共通制約と目的別の参照先、スキルは適用場面と固有手順を持つ。起票・実行の依頼を区別し、通常の判断は担当者へ委ねる。詳細な規約や手順を入口へ複製せず、必要時に読む。
+- 採用範囲: [OpenAIの記事](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)（2026-09-13参照）を参考に、参照範囲、スキル選択、確認・停止条件を整理した。特定モデルだけの手順にはせず、コメント品質・通信契約・公開成果物の制約を維持する。
+- 生成対象: `new-task` / `run-task` とサブエージェントは原本から再生成する。`playwright-cli` は生成対象外であり、入口を直接編集する。既存の用途別参照資料は該当時だけ読む。
+- 確認: 変更したMarkdownの整形、生成物同期、タスク整合性に加え、誤字修正・起票のみ・通常実装・高リスク変更・ブラウザー確認で必要な参照先と停止条件を辿る。性能改善や自律動作の実証は文書検査だけでは断定しない。

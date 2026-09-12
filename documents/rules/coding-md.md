@@ -43,9 +43,8 @@ Markdown は「次に読む人と LLM エージェントが短時間で判断で
 - Prettier は Markdown 専用として扱う。TypeScript / JavaScript / JSON は Biome、Python は Ruff、Go は `gofmt` に任せる。
 - `.prettierrc.json` の `proseWrap: "preserve"` を前提に、本文の改行位置は書き手が意味単位で決める。
 - 箇条書きやネストのインデントは Prettier の出力に従う。手で揃えるためのスペース調整をしない。
-- コミット前の確認項目:
-    1. `cd sincromisor-frontend && npm run check:md`
-    2. TypeScript 変更を含む場合は `cd sincromisor-frontend && npm run check`
+- 通常変更はリポジトリルートから `sincromisor-frontend/node_modules/.bin/prettier --write <変更したMarkdownファイル...>` で整形し、同じ対象を `--check` で確認する。
+- 全体の `npm run check:md` やTypeScriptの検査は、[タスク管理の確認範囲](../../tasks/README.md#確認コマンド) に従って必要な場合に選ぶ。Markdownだけの変更にアプリのビルドやテストを追加しない。
 
 **理由**: Markdown は手整形の癖が差分に出やすい。Prettier の責務を Markdown に限定し、他言語のフォーマッタと衝突させない。
 
