@@ -264,51 +264,54 @@ describe("RTCTalkClient owner state machine", () => {
         ["update-offer", 410],
         ["candidate", 404],
         ["candidate", 410],
-    ] as const)("replaces the bundle for %s %i with previous session, new UUID, and live track", async (operation, status) => {
-        const audioTrack = createAudioTrack();
-        mocks.negotiation.mockResolvedValueOnce(answer("session-1", 1));
-        const client = createClient(audioTrack);
-        await client.start();
+    ] as const)(
+        "replaces the bundle for %s %i with previous session, new UUID, and live track",
+        async (operation, status) => {
+            const audioTrack = createAudioTrack();
+            mocks.negotiation.mockResolvedValueOnce(answer("session-1", 1));
+            const client = createClient(audioTrack);
+            await client.start();
 
-        if (operation === "candidate") {
-            mocks.negotiation.mockResolvedValueOnce(answer("session-2", 1));
-            mocks.candidateSend.mockRejectedValueOnce(
-                new RtcSignalingHttpError("session lost", { operation, status }),
+            if (operation === "candidate") {
+                mocks.negotiation.mockResolvedValueOnce(answer("session-2", 1));
+                mocks.candidateSend.mockRejectedValueOnce(
+                    new RtcSignalingHttpError("session lost", { operation, status }),
+                );
+                mocks.callbacks[0]?.sendIceCandidate({ candidate: "candidate-lost" });
+            } else {
+                mocks.negotiation.mockRejectedValueOnce(
+                    new RtcSignalingHttpError("session lost", { operation, status }),
+                );
+                mocks.negotiation.mockResolvedValueOnce(answer("session-2", 1));
+                mocks.callbacks[0]?.onIceConnectionStateChange("failed");
+            }
+            await vi.waitFor(() => expect(mocks.createBundle).toHaveBeenCalledTimes(2));
+            const replacementCallIndex = operation === "candidate" ? 1 : 2;
+            await vi.waitFor(() =>
+                expect(mocks.negotiation).toHaveBeenCalledTimes(replacementCallIndex + 1),
             );
-            mocks.callbacks[0]?.sendIceCandidate({ candidate: "candidate-lost" });
-        } else {
-            mocks.negotiation.mockRejectedValueOnce(
-                new RtcSignalingHttpError("session lost", { operation, status }),
-            );
-            mocks.negotiation.mockResolvedValueOnce(answer("session-2", 1));
-            mocks.callbacks[0]?.onIceConnectionStateChange("failed");
-        }
-        await vi.waitFor(() => expect(mocks.createBundle).toHaveBeenCalledTimes(2));
-        const replacementCallIndex = operation === "candidate" ? 1 : 2;
-        await vi.waitFor(() =>
-            expect(mocks.negotiation).toHaveBeenCalledTimes(replacementCallIndex + 1),
-        );
 
-        expect(mocks.closeBundle.mock.calls[0]?.[0].stopSenderTracks).toBe(false);
-        expect(mocks.createBundle.mock.calls[1]?.[0].audioTrack).toBe(audioTrack);
-        expect(mocks.bundles[1]).not.toBe(mocks.bundles[0]);
-        expect(mocks.bundles[1]?.textChannel).not.toBe(mocks.bundles[0]?.textChannel);
-        expect(mocks.bundles[1]?.telopChannel).not.toBe(mocks.bundles[0]?.telopChannel);
-        expect(audioTrack.readyState).toBe("live");
-        expect(mocks.negotiation.mock.calls[replacementCallIndex]?.[0]).toMatchObject({
-            identity: {
-                requestId: "00000000-0000-4000-8000-000000000002",
-                revision: 1,
-            },
-            previousSessionId: "session-1",
-        });
-        if (operation === "candidate") {
-            await vi.waitFor(() => expect(mocks.healthMessages).toHaveLength(2));
-            mocks.callbacks[1]?.sendIceCandidate({ candidate: "candidate-new-bundle" });
-            await vi.waitFor(() => expect(mocks.candidateSend).toHaveBeenCalledTimes(2));
-            expect(mocks.candidateSend.mock.calls[1]?.[0].sessionId).toBe("session-2");
-        }
-    });
+            expect(mocks.closeBundle.mock.calls[0]?.[0].stopSenderTracks).toBe(false);
+            expect(mocks.createBundle.mock.calls[1]?.[0].audioTrack).toBe(audioTrack);
+            expect(mocks.bundles[1]).not.toBe(mocks.bundles[0]);
+            expect(mocks.bundles[1]?.textChannel).not.toBe(mocks.bundles[0]?.textChannel);
+            expect(mocks.bundles[1]?.telopChannel).not.toBe(mocks.bundles[0]?.telopChannel);
+            expect(audioTrack.readyState).toBe("live");
+            expect(mocks.negotiation.mock.calls[replacementCallIndex]?.[0]).toMatchObject({
+                identity: {
+                    requestId: "00000000-0000-4000-8000-000000000002",
+                    revision: 1,
+                },
+                previousSessionId: "session-1",
+            });
+            if (operation === "candidate") {
+                await vi.waitFor(() => expect(mocks.healthMessages).toHaveLength(2));
+                mocks.callbacks[1]?.sendIceCandidate({ candidate: "candidate-new-bundle" });
+                await vi.waitFor(() => expect(mocks.candidateSend).toHaveBeenCalledTimes(2));
+                expect(mocks.candidateSend.mock.calls[1]?.[0].sessionId).toBe("session-2");
+            }
+        },
+    );
 
     it("replaces a disconnected legacy bundle with previous session and a new request ID", async () => {
         const audioTrack = createAudioTrack();
@@ -338,19 +341,22 @@ describe("RTCTalkClient owner state machine", () => {
         ["initial-offer", 400],
         ["update-offer", 409],
         ["update-offer", 413],
-    ] as const)("closes and reports terminal %s %i without automatic replacement", async (operation, status) => {
-        mocks.negotiation.mockRejectedValue(
-            new RtcSignalingHttpError("terminal", { operation, status }),
-        );
-        const client = createClient();
-        await client.start();
+    ] as const)(
+        "closes and reports terminal %s %i without automatic replacement",
+        async (operation, status) => {
+            mocks.negotiation.mockRejectedValue(
+                new RtcSignalingHttpError("terminal", { operation, status }),
+            );
+            const client = createClient();
+            await client.start();
 
-        expect(mocks.closeBundle).toHaveBeenCalledTimes(1);
-        expect(mocks.closeBundle.mock.calls[0]?.[0].stopSenderTracks).toBeUndefined();
-        expect(mocks.systemErrors).toHaveLength(1);
-        expect(mocks.healthMessages[mocks.healthMessages.length - 1]).toContain("terminal");
-        expect(mocks.createBundle).toHaveBeenCalledTimes(1);
-    });
+            expect(mocks.closeBundle).toHaveBeenCalledTimes(1);
+            expect(mocks.closeBundle.mock.calls[0]?.[0].stopSenderTracks).toBeUndefined();
+            expect(mocks.systemErrors).toHaveLength(1);
+            expect(mocks.healthMessages[mocks.healthMessages.length - 1]).toContain("terminal");
+            expect(mocks.createBundle).toHaveBeenCalledTimes(1);
+        },
+    );
 
     it("turns candidate retry exhaustion into terminal generation failure", async () => {
         mocks.negotiation.mockResolvedValue(answer("session-1", 1));

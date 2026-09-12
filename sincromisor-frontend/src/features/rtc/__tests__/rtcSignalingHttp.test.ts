@@ -198,33 +198,36 @@ describe("postRtcSignalingJson", () => {
     it.each([
         ["initial-offer", [0, 10_250, 20_750], [10_000, 10_000, 9_250]],
         ["candidate", [0, 5_250, 10_750, 16_750], [5_000, 5_000, 5_000, 5_000]],
-    ] as const)("applies per-attempt timeout and total-deadline clipping for %s", async (operation, expectedCalls, expectedTimeouts) => {
-        vi.useFakeTimers({ now: 0 });
-        const callTimes: number[] = [];
-        const timeoutDurations: number[] = [];
-        const fetchMock = vi.fn<typeof fetch>((_url, init) => {
-            const startedAt = Date.now();
-            callTimes.push(startedAt);
-            return new Promise((_resolve, reject) => {
-                init?.signal?.addEventListener("abort", () => {
-                    timeoutDurations.push(Date.now() - startedAt);
-                    reject(new Error("attempt timeout"));
+    ] as const)(
+        "applies per-attempt timeout and total-deadline clipping for %s",
+        async (operation, expectedCalls, expectedTimeouts) => {
+            vi.useFakeTimers({ now: 0 });
+            const callTimes: number[] = [];
+            const timeoutDurations: number[] = [];
+            const fetchMock = vi.fn<typeof fetch>((_url, init) => {
+                const startedAt = Date.now();
+                callTimes.push(startedAt);
+                return new Promise((_resolve, reject) => {
+                    init?.signal?.addEventListener("abort", () => {
+                        timeoutDurations.push(Date.now() - startedAt);
+                        reject(new Error("attempt timeout"));
+                    });
                 });
             });
-        });
-        const request = postRtcSignalingJson({
-            body: "{}",
-            fetch: fetchMock,
-            operation,
-            retryClock: fakeClock(),
-            url: "/signaling",
-        });
-        const rejection = expect(request).rejects.toBeInstanceOf(Error);
+            const request = postRtcSignalingJson({
+                body: "{}",
+                fetch: fetchMock,
+                operation,
+                retryClock: fakeClock(),
+                url: "/signaling",
+            });
+            const rejection = expect(request).rejects.toBeInstanceOf(Error);
 
-        await vi.runAllTimersAsync();
-        await rejection;
+            await vi.runAllTimersAsync();
+            await rejection;
 
-        expect(callTimes).toEqual(expectedCalls);
-        expect(timeoutDurations).toEqual(expectedTimeouts);
-    });
+            expect(callTimes).toEqual(expectedCalls);
+            expect(timeoutDurations).toEqual(expectedTimeouts);
+        },
+    );
 });

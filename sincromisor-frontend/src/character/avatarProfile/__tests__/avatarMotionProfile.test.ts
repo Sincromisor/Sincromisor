@@ -155,22 +155,20 @@ describe("AvatarMotionProfile", () => {
                 "invalid_rest_rotation:rightHand",
             ]),
         );
-        expectErrorCode(
-            parseAvatarMotionProfile({
-                ...profile,
-                metrics: { ...profile.metrics, shoulderWidth: Number.POSITIVE_INFINITY },
-            }),
-            "out_of_range",
-            ["metrics", "shoulderWidth"],
-        );
-        expectErrorCode(
-            parseAvatarMotionProfile({
-                ...profile,
-                metrics: { ...profile.metrics, shoulderWidth: Number.NaN },
-            }),
-            "out_of_range",
-            ["metrics", "shoulderWidth"],
-        );
+        for (const shoulderWidth of [
+            Number.POSITIVE_INFINITY,
+            Number.NEGATIVE_INFINITY,
+            Number.NaN,
+        ]) {
+            expectErrorCode(
+                parseAvatarMotionProfile({
+                    ...profile,
+                    metrics: { ...profile.metrics, shoulderWidth },
+                }),
+                "out_of_range",
+                ["metrics", "shoulderWidth"],
+            );
+        }
         expectErrorCode(
             parseAvatarMotionProfile({
                 ...profile,
