@@ -57,8 +57,8 @@ class SpeechExtractorWorker:
         )
         options = audio.AudioClassifierOptions(base_options=base_options, max_results=1)
         # これが実行された瞬間VSZが32TBになる。
-        SpeechExtractorWorker.classifier: AudioClassifier = (
-            audio.AudioClassifier.create_from_options(options)
+        SpeechExtractorWorker.classifier = audio.AudioClassifier.create_from_options(
+            options
         )
 
     # ===== Main flow =====

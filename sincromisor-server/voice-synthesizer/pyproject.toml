@@ -7,15 +7,15 @@ requires-python = ">=3.14,<3.15"
 dependencies = [
     "sincro-config",
     "sincro-models",
-    "redis[hiredis]>=6.4.0",
-    "boto3>=1.42.14",
-    "requests>=2.33.0",
-    "pydantic>=2.11.7",
-    "numpy>=2.3.3,<3",
-    "uvicorn>=0.35.0",
-    "fastapi>=0.116.1",
-    "websockets>=15.0.1",
-    "setproctitle>=1.3.6",
+    "redis[hiredis]>=8.1.0",
+    "boto3>=1.43.93",
+    "requests>=2.34.2",
+    "pydantic>=2.13.5",
+    "numpy>=2.5.3,<3",
+    "uvicorn>=0.52.4",
+    "fastapi>=0.141.1",
+    "websockets>=17.1",
+    "setproctitle>=1.3.7",
 ]
 
 [tool.uv.sources]
