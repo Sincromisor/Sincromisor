@@ -7,8 +7,6 @@ services:
             context: ..
             dockerfile: ./Docker/text-processor/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/text-processor:latest
-        ports:
-            - 8004:8004/tcp
         networks:
             - sincromisor-net
         environment:
@@ -51,9 +49,6 @@ services:
                 "-serf-lan-port=8315",
                 "-client=0.0.0.0",
             ]
-        ports:
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8315:8315/tcp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8315:8315/udp
         volumes:
             - consul-agent-processor-data:/consul/data
         networks:

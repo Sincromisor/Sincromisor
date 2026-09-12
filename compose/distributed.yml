@@ -1,0 +1,54 @@
+# compose.ymlに重ね、別ホストのRTC・Consulから必要な接続だけを管理IPv4へ公開する。
+services:
+    sincro-consul-server:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8300:8300/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8301:8301/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8301:8301/udp
+    sincro-rtc:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8001:8001/tcp
+    speech-extractor:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8002:8002/tcp
+    speech-recognizer:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8003:8003/tcp
+    text-processor:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8004:8004/tcp
+    voice-synthesizer:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8005:8005/tcp
+    consul-agent-rtc:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8311:8311/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8311:8311/udp
+    consul-agent-frontend:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8312:8312/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8312:8312/udp
+    consul-agent-extractor:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8313:8313/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8313:8313/udp
+    consul-agent-recognizer:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8314:8314/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8314:8314/udp
+    consul-agent-processor:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8315:8315/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8315:8315/udp
+    consul-agent-synthesizer:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8316:8316/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8316:8316/udp
+    consul-agent-redis:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8317:8317/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8317:8317/udp
+    consul-agent-s3:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8318:8318/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8318:8318/udp

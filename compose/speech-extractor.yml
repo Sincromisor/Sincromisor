@@ -7,8 +7,6 @@ services:
             context: ..
             dockerfile: ./Docker/speech-extractor/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/speech-extractor:latest
-        ports:
-            - 8002:8002/tcp
         networks:
             - sincromisor-net
         environment:
@@ -49,9 +47,6 @@ services:
                 "-serf-lan-port=8313",
                 "-client=0.0.0.0",
             ]
-        ports:
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8313:8313/tcp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8313:8313/udp
         volumes:
             - consul-agent-extractor-data:/consul/data
         networks:

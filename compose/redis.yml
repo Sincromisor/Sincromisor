@@ -8,8 +8,6 @@ services:
         build:
             context: ..
             dockerfile: ./Docker/redis/Dockerfile
-        ports:
-            - 6379:6379/tcp
         networks:
             - sincromisor-net
         environment:
@@ -43,9 +41,6 @@ services:
                 "-serf-lan-port=8317",
                 "-client=0.0.0.0",
             ]
-        ports:
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8317:8317/tcp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8317:8317/udp
         volumes:
             - consul-agent-redis-data:/consul/data
         networks:

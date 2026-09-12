@@ -36,7 +36,11 @@
 ## 複数ホストのエージェント
 
 全メンバーは `SINCRO_CONSUL_ADVERTISE_ADDR` に相互到達可能な管理IPv4を指定する。空欄では従来どおりConsulが広告先を自動選択する。
-`SINCRO_CONSUL_PUBLISH_HOST` はサーバーの管理ポートとエージェントのLAN gossipポートを公開するホストであり、サンプルはループバック、分散配置では管理IPv4を使う。
+標準構成はConsulをホストへ公開しない。分散配置では `compose/distributed.yml` を重ね、
+`SINCRO_CONSUL_PUBLISH_HOST` に管理IPv4を指定してサーバーRPCとLAN gossipだけを公開する。
+この変数は同じ追加ファイル内のRTC・下流APIの公開先にも使う。
+管理UI/APIが必要なら `compose/management.yml` でサーバーHTTP 8500をループバックへ追加する。
+選択方法と既存環境の移行は[Compose設計](compose.md#公開ポートの選択)を参照する。
 
 サーバーのRPC TCP 8300とLAN gossip TCP/UDP 8301は管理経路で到達可能にする。エージェントは固定のLAN gossipポートを使う。
 

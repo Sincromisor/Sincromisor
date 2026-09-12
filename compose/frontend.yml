@@ -9,8 +9,6 @@ services:
         image: ${SINCRO_REGISTRY_NAME}/sincro-frontend:latest
         ports:
             - 8086:80/tcp
-            - 8443:443/tcp
-            - 8443:443/udp
         volumes:
             - ../configs/Caddyfile:/etc/caddy/Caddyfile:ro
         networks:
@@ -51,9 +49,6 @@ services:
                 "-serf-lan-port=8312",
                 "-client=0.0.0.0",
             ]
-        ports:
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8312:8312/tcp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8312:8312/udp
         volumes:
             - consul-agent-frontend-data:/consul/data
         networks:

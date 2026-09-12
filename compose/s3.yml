@@ -6,10 +6,6 @@ services:
             - external
             - s3
         image: chrislusf/seaweedfs
-        ports: []
-            # - 9333:9333
-            # - 19333:19333
-            # - 9324:9324
         command: 'master -ip=seaweed-master -ip.bind=0.0.0.0 -metricsPort=9324'
         networks:
             - s3-internal-net
@@ -33,10 +29,6 @@ services:
             - external
             - s3
         image: chrislusf/seaweedfs
-        ports: []
-            # - 8080:8080
-            # - 18080:18080
-            # - 9325:9325
         command: 'volume -ip=seaweed-volume -master="seaweed-master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9325'
         volumes:
             - sincro-s3-data:/data
@@ -64,10 +56,6 @@ services:
             - external
             - s3
         image: chrislusf/seaweedfs
-        ports: []
-            # - 8888:8888
-            # - 18888:18888
-            # - 9326:9326
         command: 'filer -ip=seaweed-filer -master="seaweed-master:9333" -ip.bind=0.0.0.0 -metricsPort=9326'
         tty: true
         stdin_open: true
@@ -97,10 +85,6 @@ services:
             - external
             - s3
         image: chrislusf/seaweedfs
-        ports:
-            # default: 8333
-            - ${SINCRO_S3_PUBLIC_BIND_PORT}:${SINCRO_S3_PUBLIC_BIND_PORT}
-            - 9327:9327
         command: 's3 -filer="seaweed-filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327'
         networks:
             - s3-internal-net
@@ -137,9 +121,6 @@ services:
                 "-serf-lan-port=8318",
                 "-client=0.0.0.0",
             ]
-        ports:
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8318:8318/tcp
-            - ${SINCRO_CONSUL_PUBLISH_HOST:-127.0.0.1}:8318:8318/udp
         volumes:
             - consul-agent-s3-data:/consul/data
         networks:
