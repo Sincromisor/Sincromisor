@@ -201,3 +201,7 @@ dialog .primary { width: 100%; }
     *, *::before, *::after { transition: none !important; }
     .button:hover { transform: none; }
 }
+
+.other-displays { padding-block: 0 50px; }
+.other-displays > p { margin-top: 12px; color: var(--muted); font-size: 12px; line-height: 1.9; }
+.other-displays > div { display: flex; flex-wrap: wrap; gap: 8px 32px; margin-top: 12px; }
