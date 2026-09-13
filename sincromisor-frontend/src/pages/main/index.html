@@ -21,7 +21,7 @@
                 <a href="#how-it-works">はじめかた</a>
                 <a href="#questions">よくある質問</a>
             </nav>
-            <button class="button header-start" type="button" data-start>はじめる <span aria-hidden="true">↗</span></button>
+            <button class="button header-start" type="submit" form="experience-form">はじめる <span aria-hidden="true">↗</span></button>
         </header>
 
         <main id="main">
@@ -31,23 +31,25 @@
                     <h1 id="hero-title">好きな存在と、<br />好きな<span class="accent-word">自分に<svg viewBox="0 0 240 15" fill="none" aria-hidden="true"><path d="M3 11Q100 0 235 7" /></svg></span>。</h1>
                     <p class="hero-description">とりとめのない話も、なりたかった姿も。<br />声と表情でつながる、あなただけの時間。<br />ここから、もうひとつの日常がはじまります。</p>
 
-                    <fieldset class="mode-picker">
-                        <legend>今日は、どっちの気分？</legend>
-                        <label class="mode-choice">
-                            <input type="radio" name="experience" value="chat" checked />
-                            <span class="mode-icon" aria-hidden="true">☏</span>
-                            <span><strong>キャラクターと話す</strong><small>声でつながる、ふたりの時間</small></span>
-                            <span class="radio-mark" aria-hidden="true"></span>
-                        </label>
-                        <label class="mode-choice">
-                            <input type="radio" name="experience" value="sincro" />
-                            <span class="mode-icon" aria-hidden="true">✳</span>
-                            <span><strong>キャラクターになる</strong><small>声も、しぐさも、もうひとりの自分</small></span>
-                            <span class="radio-mark" aria-hidden="true"></span>
-                        </label>
-                    </fieldset>
+                    <form id="experience-form" action="/simple-vrm/" method="get">
+                        <fieldset class="mode-picker">
+                            <legend>今日は、どっちの気分？</legend>
+                            <label class="mode-choice">
+                                <input type="radio" name="talkMode" value="chat" checked />
+                                <span class="mode-icon" aria-hidden="true">☏</span>
+                                <span><strong>キャラクターと話す</strong><small>声でつながる、ふたりの時間</small></span>
+                                <span class="radio-mark" aria-hidden="true"></span>
+                            </label>
+                            <label class="mode-choice">
+                                <input type="radio" name="talkMode" value="sincro" />
+                                <span class="mode-icon" aria-hidden="true">✳</span>
+                                <span><strong>キャラクターになる</strong><small>声も、しぐさも、もうひとりの自分</small></span>
+                                <span class="radio-mark" aria-hidden="true"></span>
+                            </label>
+                        </fieldset>
+                    </form>
                     <div class="hero-actions">
-                        <button class="button primary" type="button" data-start>この体験をはじめる <span aria-hidden="true">↗</span></button>
+                        <button class="button primary" type="submit" form="experience-form">この体験をはじめる <span aria-hidden="true">↗</span></button>
                         <a class="text-link" href="#experience">もう少し知る <span aria-hidden="true">↓</span></a>
                     </div>
                     <p class="hero-footnote"><span aria-hidden="true">◎</span> ブラウザーから、あなたのペースで。</p>
@@ -66,7 +68,6 @@
                     </div>
                     <div class="voice-card" aria-hidden="true"><span class="voice-symbol">♩</span><span class="waveform"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span>声でつながる</span></div>
                     <span class="visual-spark" aria-hidden="true">✳</span>
-                    <span class="visual-index" aria-hidden="true">01 / 02</span>
                 </div>
             </section>
 
@@ -104,14 +105,5 @@
         </main>
 
         <footer class="site-footer wrap"><a class="brand" href="#"><span class="brand-mark" aria-hidden="true">s</span>Sincromisor<span class="brand-dot">.</span></a><p>好きな存在と、好きな自分に。</p><a class="text-link" href="https://github.com/Sincromisor/Sincromisor">GitHub <span aria-hidden="true">↗</span></a></footer>
-
-        <dialog id="start-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description">
-            <form method="dialog"><button class="dialog-close" aria-label="閉じる">×</button></form>
-            <span class="dialog-symbol" aria-hidden="true">✳</span><p class="eyebrow">あなただけの時間へ</p>
-            <h2 id="dialog-title">キャラクターと話す</h2>
-            <p id="dialog-description">選んだ楽しみかたで会話ページへ進みます。<br />キャラクターや機器を設定して、はじめましょう。</p>
-            <p class="dialog-note">楽しみかたは次のページでも変更できます。画像のキャラクターはイメージです。好きなVRMモデルを選んでご利用ください。</p>
-            <a class="button primary" id="experience-link" href="/simple-vrm/?talkMode=chat">会話ページの設定へ <span aria-hidden="true">↗</span></a>
-        </dialog>
     </body>
 </html>
