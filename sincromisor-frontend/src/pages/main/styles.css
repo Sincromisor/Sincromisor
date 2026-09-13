@@ -66,7 +66,8 @@ input:checked ~ .radio-mark { border: 5px solid var(--accent); background: #fff;
 .message-card { position: absolute; bottom: 161px; left: -49px; max-width: calc(100% + 30px); display: flex; align-items: center; gap: 10px; padding: 16px 20px 16px 14px; border: 1px solid #ffffffc9; border-radius: 12px 12px 12px 2px; background: #fffffff2; box-shadow: 0 8px 35px #533f2310; }
 .message-avatar { display: grid; place-content: center; background: #f5e4d4; color: var(--accent); width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; }
 .message-card small { color: var(--muted); font-size: 9px; }
-.message-card p { font-size: 12px; margin-top: 5px; }
+.message-card p { font-size: 12px; }
+.message-card small ~ p { margin-top: 5px; }
 .sincro-copy { display: none; }
 body:has(input[value="sincro"]:checked) .chat-copy { display: none; }
 body:has(input[value="sincro"]:checked) .sincro-copy { display: block; }
