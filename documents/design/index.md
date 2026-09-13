@@ -51,12 +51,17 @@
 - [固有名詞辞書](contracts/proper-noun-dictionary.md)
     - SpeechRecognizer 固有名詞補強で使う CSV 辞書仕様
 
+## 開発環境
+
+- [WSL2の開発・動作検証環境](../../utils/setup-devenv/README.md)
+    - Ubuntu 26.04への導入スクリプトと確認手順。一括導入は未検証。
+
 ## フロントエンド
 
 - [アプリの共通枠組み](frontend/app-shell.md)
     - Vite MPA、Reactによるアプリの共通枠組み、制御処理境界
 - [ページ構成](frontend/pages.md)
-    - 現行 / 実験用ページ分類とビルド対象
+    - 現行 / 試作 / 実験用ページの分類、ビルド、トップページモックと採用画像のプロンプト
 - [設定と診断UI](frontend/settings-and-debug-ui.md)
     - 起動前ダイアログ、右側ツールパネル、診断 Console
 - [VAD](frontend/audio/vad.md)
