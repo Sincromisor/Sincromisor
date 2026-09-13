@@ -55,7 +55,7 @@ for (const route of ["/", "/home-mock/"]) {
         await expect(
             page.getByText(
                 route === "/"
-                    ? "画像・会話はプレビューです。"
+                    ? "「はじめる」から会話ページへ進み、"
                     : "このページはデザインと操作を確認するUIモックです。",
                 { exact: false },
             ),
