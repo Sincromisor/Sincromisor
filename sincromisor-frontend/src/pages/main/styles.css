@@ -58,21 +58,17 @@ input:checked ~ .radio-mark { border: 5px solid var(--accent); background: #fff;
 .portrait-frame { height: 100%; overflow: hidden; position: relative; border-radius: 180px 180px 20px 20px; background: #f6e3d3; }
 /* 頭身とシルエットを確認できるよう、全身画像は画面幅にかかわらず切り抜かない。 */
 .character-image { display: block; width: 100%; height: 100%; object-fit: contain; }
-.image-caption { position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #644b3c; white-space: nowrap; }
 .portrait-bottom { position: absolute; bottom: 0; width: 100%; padding: 48px 20px 22px; background: linear-gradient(transparent, #352b24b3); color: white; font-size: 11px; letter-spacing: .06em; text-align: center; }
-.preview-dot { display: inline-block; width: 6px; height: 6px; background: #dcf0c4; border-radius: 50%; margin-right: 8px; }
+.portrait-dot { display: inline-block; width: 6px; height: 6px; background: #dcf0c4; border-radius: 50%; margin-right: 8px; }
 .orbit-label { position: absolute; top: 55px; left: -50px; transform: rotate(-9deg); background: #edf0e3; padding: 10px 18px; border-radius: 30px; font-size: 11px; box-shadow: 0 3px 0 #f8f7f3; }
 .orbit-label span { font-size: 19px; margin-right: 7px; }
 .message-card { position: absolute; bottom: 161px; left: -49px; max-width: calc(100% + 30px); display: flex; align-items: center; gap: 10px; padding: 16px 20px 16px 14px; border: 1px solid #ffffffc9; border-radius: 12px 12px 12px 2px; background: #fffffff2; box-shadow: 0 8px 35px #533f2310; }
 .message-avatar { display: grid; place-content: center; background: #f5e4d4; color: var(--accent); width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; }
-.message-card small { color: var(--muted); font-size: 9px; }
 .message-card p { font-size: 12px; }
-.message-card small ~ p { margin-top: 5px; }
 .sincro-copy { display: none; }
 body:has(input[value="sincro"]:checked) .chat-copy { display: none; }
 body:has(input[value="sincro"]:checked) .sincro-copy { display: block; }
 .voice-card { position: absolute; right: -18px; bottom: 88px; display: flex; gap: 14px; align-items: center; background: #313e34; border: 1px solid #ffffff60; color: #f6f7ed; padding: 12px 16px; border-radius: 10px; box-shadow: 0 8px 30px #28342b20; }
-.voice-card > span:last-child { font-size: 10px; }
 .voice-symbol { font-size: 23px; }
 .waveform { display: flex; gap: 3px; height: 24px; align-items: center; }
 .waveform i { width: 2px; height: 6px; border-radius: 3px; background: #d2dfc2; }
@@ -80,7 +76,6 @@ body:has(input[value="sincro"]:checked) .sincro-copy { display: block; }
 .waveform i:nth-child(3n + 1) { height: 12px; }
 .waveform i:nth-child(5n) { height: 24px; }
 .visual-spark { position: absolute; right: -22px; top: 26px; font-size: 76px; font-weight: 200; color: var(--accent); transform: rotate(16deg); }
-.visual-index { position: absolute; bottom: -27px; right: 0; font-size: 9px; letter-spacing: .2em; color: var(--muted); }
 .promise-strip { display: flex; justify-content: space-between; padding-block: 26px; border-block: 1px solid var(--line); max-width: 1232px; }
 .promise-strip p { font-size: 12px; display: flex; align-items: center; gap: 10px; }
 .promise-strip span { font-size: 23px; color: #657157; }
@@ -105,8 +100,7 @@ h2 { font-size: 30px; letter-spacing: -.045em; line-height: 1.6; }
 .human-outline { font-family: Arial, sans-serif; width: 76px; height: 76px; border: 1px solid #b4beaa; background: #f4f5ef; border-radius: 24px; font-size: 54px; color: #718265; display: grid; place-content: center; transform: rotate(-7deg); }
 .sync-connection { color: #708166; font-size: 29px; }
 /* 全身画像の顔だけを拡大し、小さな紹介カードでも特徴を読み取れるようにする。 */
-.avatar-crop { width: 76px; height: 76px; border-radius: 24px; background: #f6e3d3 url('/images/home-mock/character-transparent.png') center 9% / 340% auto; transform: rotate(7deg); border: 3px solid #f7f8f0; }
-.sync-caption { position: absolute; bottom: 15px; font-size: 10px; letter-spacing: .08em; color: #58644e; }
+.avatar-crop { width: 76px; height: 76px; border-radius: 24px; background: #f6e3d3 url('/images/main/character.png') center 9% / 340% auto; transform: rotate(7deg); border: 3px solid #f7f8f0; }
 .steps-section { display: grid; grid-template-columns: 1fr 1.1fr; gap: 50px; padding-block: 55px 70px; border-top: 1px solid var(--line); }
 .steps-section h2 { margin-block: 15px; }
 .steps { list-style: none; padding: 0; margin: 0; }
@@ -125,15 +119,6 @@ details p { font-size: 12px; line-height: 1.9; color: var(--muted); padding: 0 1
 .site-footer .brand { font-size: 19px; }
 .site-footer .brand-mark { width: 25px; height: 29px; font-size: 29px; border-radius: 9px 9px 9px 2px; }
 .site-footer p { font-size: 12px; }
-.site-footer > span { font-size: 10px; color: var(--muted); }
-dialog { border: 1px solid var(--line); background: #f8f7f3; color: #292d2a; padding: 40px; border-radius: 20px; width: min(510px, calc(100% - 32px)); max-height: calc(100dvh - 40px); }
-dialog::backdrop { background: #25302680; backdrop-filter: blur(5px); }
-.dialog-close { position: absolute; right: 12px; top: 10px; width: 44px; height: 44px; background: none; font-size: 28px; }
-.dialog-symbol { display: block; font-size: 45px; color: var(--accent); margin-bottom: 15px; }
-dialog h2 { font-size: 26px; margin-block: 12px; }
-#dialog-description { font-size: 13px; line-height: 2; }
-.dialog-note { background: #e9ece4; border-radius: 8px; padding: 16px; color: #535c4e; font-size: 12px; line-height: 1.9; margin-block: 20px; }
-dialog .primary { width: 100%; }
 @media (min-width: 1500px) { .hero { padding-top: 60px; padding-bottom: 78px; } }
 @media (max-width: 1050px) {
     .wrap { padding-inline: 30px; }
@@ -166,7 +151,6 @@ dialog .primary { width: 100%; }
     .hero-visual { height: 490px; margin: 5px 12px 0; }
     .portrait-frame { border-radius: 150px 150px 18px 18px; }
     .orbit-label { top: -22px; }
-    .image-caption { top: -22px; left: auto; right: 0; transform: none; }
     .message-card { bottom: 132px; left: -16px; }
     .message-card p { font-size: 11px; }
     .voice-card { bottom: 68px; right: -12px; }
@@ -184,9 +168,6 @@ dialog .primary { width: 100%; }
     .steps-section h2 br { display: none; }
     .faq-section { padding-block: 25px 50px; }
     .site-footer { flex-wrap: wrap; justify-content: flex-start; gap: 17px; padding-block: 27px; }
-    .site-footer > span { width: 100%; }
-    dialog { padding: 28px; }
-    dialog h2 { font-size: 23px; }
 }
 @media (max-width: 370px) {
     .wrap { padding-inline: 18px; }

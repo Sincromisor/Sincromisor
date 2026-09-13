@@ -24,11 +24,6 @@ const pageRouteAliases = [
         devRoutes: ["/", "/index.html"],
     },
     {
-        source: "pages/homeMock/index.html",
-        publicPath: "home-mock/index.html",
-        devRoutes: ["/home-mock", "/home-mock/", "/home-mock/index.html"],
-    },
-    {
         source: "pages/simpleVrm/index.html",
         publicPath: "simple-vrm/index.html",
         devRoutes: ["/simple-vrm", "/simple-vrm/", "/simple-vrm/index.html"],
@@ -97,11 +92,10 @@ function sincroPageRouteAliasPlugin() {
     };
 }
 
-/** 独立モックと実アプリを含む、通常ビルドのHTML入口を列挙する。 */
+/** 通常ビルドで配信するページのHTML入口を列挙する。 */
 function buildInputMap() {
     return {
         main: resolve(contents_src, "pages/main/index.html"),
-        home_mock: resolve(contents_src, "pages/homeMock/index.html"),
         simple_vrm: resolve(contents_src, "pages/simpleVrm/index.html"),
         vrm360: resolve(contents_src, "pages/vrm360/index.html"),
         looking_glass_vrm: resolve(contents_src, "pages/lookingGlassVrm/index.html"),
