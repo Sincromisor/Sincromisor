@@ -1,0 +1,13 @@
+id: task-260913232939-promote-home-mock
+title: home-mockを基に正式トップページを置き換える
+category: frontend
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-09-13
+closed_at: 2026-09-13
+legacy_ids: []
