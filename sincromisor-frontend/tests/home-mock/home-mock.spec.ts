@@ -25,28 +25,29 @@ for (const route of ["/", "/home-mock/"]) {
             await expect(sincro).toBeChecked();
             await expect(page.locator(".sincro-copy")).toBeVisible();
             await expect(page.locator(".chat-copy")).toBeHidden();
-            const start = page.getByRole("button", { name: "この体験をはじめる" });
-            await start.click();
-            await expect(page.getByRole("dialog")).toBeVisible();
-            await expect(page.locator("#dialog-title")).toHaveText("キャラクターになる");
-            if (route === "/home-mock/")
+            if (route === "/home-mock/") {
+                const start = page.getByRole("button", { name: "この体験をはじめる" });
+                await start.click();
+                await expect(page.getByRole("dialog")).toBeVisible();
+                await expect(page.locator("#dialog-title")).toHaveText("キャラクターになる");
                 await expect(page.locator("#mode-hint")).toHaveText("sincro");
-            await expect(page.getByRole("link", { name: "会話ページの設定へ" })).toHaveAttribute(
-                "href",
-                route === "/" ? "/simple-vrm/?talkMode=sincro" : "/simple-vrm/",
-            );
-            await page.keyboard.press("Escape");
-            await expect(page.getByRole("dialog")).toBeHidden();
-            await expect(start).toBeFocused();
+                await expect(
+                    page.getByRole("link", { name: "会話ページの設定へ" }),
+                ).toHaveAttribute("href", "/simple-vrm/");
+                await page.keyboard.press("Escape");
+                await expect(page.getByRole("dialog")).toBeHidden();
+                await expect(start).toBeFocused();
+                await page.locator('[data-choose="chat"]').click();
+                await start.click();
+                await expect(page.locator("#mode-hint")).toHaveText("chat");
+                await page.getByRole("button", { name: "閉じる", exact: true }).click();
+                await expect(page.getByRole("dialog")).toBeHidden();
+            } else {
+                await expect(page.locator("dialog")).toHaveCount(0);
+                await expect(page.getByText("01 / 02", { exact: true })).toHaveCount(0);
+            }
             await page.locator('[data-choose="chat"]').click();
             await expect(talk).toBeChecked();
-            await start.click();
-            await expect(page.getByRole("link", { name: "会話ページの設定へ" })).toHaveAttribute(
-                "href",
-                route === "/" ? "/simple-vrm/?talkMode=chat" : "/simple-vrm/",
-            );
-            await page.getByRole("button", { name: "閉じる", exact: true }).click();
-            await expect(page.getByRole("dialog")).toBeHidden();
             await page.locator('[data-choose="sincro"]').click();
             await expect(sincro).toBeChecked();
         }
@@ -67,32 +68,35 @@ for (const route of ["/", "/home-mock/"]) {
     });
 }
 
-test("正式トップから選んだ体験を起動前設定へ引き継ぐ", async ({ page }) => {
-    for (const mode of ["sincro", "chat"]) {
-        await page.goto("http://127.0.0.1:5173/index.html");
-        await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
-        await expect(page.getByRole("link", { name: "360度カメラ（実験的）" })).toHaveAttribute(
-            "href",
-            "/vrm360/",
-        );
-        await expect(
-            page.getByRole("link", { name: "Looking Glass（専用機器が必要）" }),
-        ).toHaveAttribute("href", "/looking-glass-vrm/");
-        await expect(page.getByRole("link", { name: "GitHub" })).toHaveAttribute(
-            "href",
-            "https://github.com/Sincromisor/Sincromisor",
-        );
-        await page.locator(`input[value="${mode}"]`).check();
-        await page.getByRole("button", { name: "はじめる", exact: false }).first().click();
-        await page.getByRole("link", { name: "会話ページの設定へ" }).click();
-        await expect(page).toHaveURL(`http://127.0.0.1:5173/simple-vrm/?talkMode=${mode}`);
-        const setting = page
-            .getByRole("dialog")
-            .getByRole("combobox")
-            .filter({ has: page.locator('option[value="sincro"]') });
-        await expect(setting).toHaveValue(mode);
-        await setting.selectOption(mode === "chat" ? "sincro" : "chat");
-        await expect(setting).toHaveValue(mode === "chat" ? "sincro" : "chat");
+test("正式トップの両開始ボタンから選んだ体験へ直接進む", async ({ page }) => {
+    for (const selector of [".header-start", ".hero-actions button"]) {
+        for (const mode of ["sincro", "chat"]) {
+            await page.goto("http://127.0.0.1:5173/index.html");
+            await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+            await expect(page.getByRole("link", { name: "360度カメラ（実験的）" })).toHaveAttribute(
+                "href",
+                "/vrm360/",
+            );
+            await expect(
+                page.getByRole("link", { name: "Looking Glass（専用機器が必要）" }),
+            ).toHaveAttribute("href", "/looking-glass-vrm/");
+            await expect(page.getByRole("link", { name: "GitHub" })).toHaveAttribute(
+                "href",
+                "https://github.com/Sincromisor/Sincromisor",
+            );
+            await page.locator(`input[value="${mode}"]`).check();
+            await expect(page.locator("dialog")).toHaveCount(0);
+            await page.locator(selector).focus();
+            await page.keyboard.press("Enter");
+            await expect(page).toHaveURL(`http://127.0.0.1:5173/simple-vrm/?talkMode=${mode}`);
+            const setting = page
+                .getByRole("dialog")
+                .getByRole("combobox")
+                .filter({ has: page.locator('option[value="sincro"]') });
+            await expect(setting).toHaveValue(mode);
+            await setting.selectOption(mode === "chat" ? "sincro" : "chat");
+            await expect(setting).toHaveValue(mode === "chat" ? "sincro" : "chat");
+        }
     }
     for (const query of ["", "?talkMode=invalid"]) {
         await page.goto(`http://127.0.0.1:5173/simple-vrm/${query}`);
