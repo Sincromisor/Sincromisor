@@ -9,7 +9,7 @@
 - [x] 独立した `/home-mock/` に、暖かな白・朱色・生成キャラクター画像を使ったトップページを新規作成する。
 - [x] 体験選択、会話プレビュー、開始案内、紹介からの再選択、FAQを操作できる。
 - [x] PC・スマートフォンの表示、キーボード操作、動きを減らす設定を確認する。
-- [x] 通常ビルドに含め、ページ構成とREADMEを同期する。
+- [x] 通常ビルドに含め、開発者向けの説明をページ構成へ集約する。
 
 ## 設計判断と範囲
 
@@ -17,9 +17,9 @@
 - 既存トップページは維持する。モックはRTC、カメラ、マイク、保存設定を起動・変更しない。
 - 画像はオリジナルの生成イラスト、会話文は固定プレビューであり、画面で説明する。選択は実アプリへ引き継がず、`/simple-vrm/` での再設定へ案内する。
 - 操作対象の大きさとフォーカス表示は[W3CのWCAG 2.2解説](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/)を参照した（2026-09-13）。全項目の適合監査は範囲外とする。
-- `README.md`、`documents/design/frontend/pages.md`、`app-shell.md` を同期した。設計索引からページ構成へ到達できる。
+- モックと採用画像の仕様・プロンプトは[ページ構成](../../../documents/design/frontend/pages.md#トップページのモック)に集約する。READMEは利用者・デプロイ担当者向けの案内に絞る。
 
-## 確認結果
+## モック実装時の確認結果
 
 - 型確認・通常ビルド: `cd sincromisor-frontend && npm run build` 成功。
 - Biome: モックのTypeScript、Playwrightテスト、Vite設定を対象に確認。
@@ -36,12 +36,12 @@ npx --no-install playwright test sincromisor-frontend/tests/home-mock/home-mock.
 - コメント点検: PASS。モックの責務、実アプリとの境界、標準dialogへの委譲、上下の選択連動を説明した。
 - 残る制約: 実際の音声会話・VRM動作は範囲外。Viteの既存の `__dirname` と大きな共通チャンクに関する警告は残る。
 
-## 画像生成記録
+## mainへの統合準備
 
-内蔵の `image_gen` を使用した。採用画像は [character.png](../../../sincromisor-frontend/public/images/home-mock/character.png) に保存した。更新するときは以下の原文プロンプトを基準に再生成し、ページ内の切り抜きと可読性を再確認する。
-
-最終プロンプト（原文）:
-
-```text
-Use case: stylized-concept. Asset type: hero artwork for a Japanese browser app where people talk to or become their favorite virtual characters. Create a premium polished anime 3D character editorial render, portrait 1024x1536 composition. A friendly young adult woman virtual avatar with short fluffy pale peach hair, amber eyes, small orange geometric hair clips, large cream and burnt-orange over-ear headphones resting around neck, oversized ivory technical hoodie with orange trim, modest charcoal bottoms. Waist-up, one relaxed hand raised waving toward viewer, expressive welcoming smile, delicate detailed face. Beautiful high-end cel-shaded 3D meets hand-painted anime, tactile soft fabric. Character centered with head in upper quarter and body extends beyond bottom edge, comfortably framed so all hair and raised hand fit. Backdrop is a plain warm light peach studio backdrop with a faint peach circular halo, warm soft daylight and subtle shadows. Cream, apricot, persimmon and muted ink palette. No text, no logo, no UI, no watermark, no extra people. This is an original concept character, not an existing franchise character.
-```
+- `codex/home-ui-mock` から `codex/home-ui-mock-merge-cleanup` を作成し、文書と素材を整理する。
+- キャラクター調整の6タスクを削除し、採用した編集プロンプトの原文・追加指示・透過条件をページ構成へ集約する。
+- 未使用の初期画像4枚を削除し、表示用の透過PNGと透過前の生成原本を保持する。
+- READMEからモック・フロントエンドのビルド・旧実装の説明をページ構成へ移す。開発環境とイメージ公開手順は設計索引から既存資料へ案内する。
+- 整理後の確認: 対象5文書のPrettier、`git diff --check`、`npm run tasks:check`（379件）、`npm run tasks:index:check` が成功した。相対リンク51件の参照先が存在し、削除したタスク・画像への参照は0件だった。
+- 画像2枚は元ブランチと完全一致し、実装・テスト・Vite設定にも差分がないため、ビルドとブラウザー確認は再実行しない。ローカルmainは整理用ブランチの祖先であり、競合なしで統合できることを確認した。mergeとpushは未実行。
+- メガネ追加時のプロンプト原文はタスク文書に保存されていないため、その箇所は採用した指示の要約として明示した。

@@ -3,7 +3,7 @@
 ## 要約
 
 - 現行フロントエンドは `main`、`home-mock`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` の 7 ページを通常ビルド対象にする。
-- Babylon.jsの旧ページと関連実装・依存は削除済み。
+- Babylon.jsの旧ページ（`simple`、`glass`、`character`、`character-glass`、`area360`、`single`、`double`）と関連実装・依存は削除済み。
 - 生成元の起動処理は `sincromisor-frontend/src/pages/*` に集約し、Vite の経路別名で既存公開 URL を維持する。
 - ページ差分は項目 / 初期化処理 / シーン選択肢 / ページ固有の設定に閉じ込める。
 
@@ -31,6 +31,20 @@
 | `motion-debug`          | `src/pages/motionDebug/index.html`         | `/motion-debug/`          | 実験用 | Pose 動作の変換 / IK 調整  | `frontend/character/motion.md`, `frontend/character/tracking.md` |
 | `pose-landmarker-spike` | `src/pages/poseLandmarkerSpike/index.html` | `/pose-landmarker-spike/` | 実験用 | MediaPipe Pose 性能検証    | `frontend/character/tracking.md`                                 |
 
+## 開発時の起動とビルド
+
+リポジトリのルートから次を実行する。開発サーバーのURLに `/home-mock/` を付けるとモックを確認できる。
+
+```sh
+npm --prefix sincromisor-frontend run dev
+```
+
+通常ビルドは次のコマンドを使う。`tsc -p tsconfig.modern.json && vite build` により型を確認し、ページ一覧の7ページを `sincromisor-frontend/dist/` に出力する。
+
+```sh
+npm --prefix sincromisor-frontend run build
+```
+
 ## トップページのモック
 
 `/home-mock/` は「キャラクターと話す／キャラクターになる」を選べる独立したトップページ案である。既存の `/` は維持し、モック専用のHTML・CSS・TypeScriptと生成画像で表示する。Reactによるアプリの共通枠組み、RTC、機器取得は起動しない。画像と会話例はプレビューとして明示する。
@@ -40,6 +54,30 @@
 UIの既定フォントはBIZ UDPGothicとする。未導入端末では共通の `fonts.css` に定義された、同梱のBIZ UDPGothic由来のサブセットを使う。
 
 キャラクター画像は5〜6頭身を目安とするトゥーン調の全身像とし、大きな目、整理された髪の形、簡潔な服と陰影で親しみやすさを表す。ダークブラウンのボブ、オレンジの三角の髪留め、赤いオーバル型アンダーリムメガネ、細身の脚を特徴とする。メガネは目を縮小せずに掛ける。画像は背景と足元の影を持たない透過PNGとし、背景色はCSSで指定する。服装は白寄りの半袖シャツ、髪留めと同じオレンジの細めのネクタイ、ダークグレーの膝丈のラップ風スカート、足首の上に少し見える白いソックス、靴ひもを残したシンプルな白い薄底スニーカーとし、ヘッドホンは付けない。ヒーロー領域は全身を収め、紹介カードだけ顔を拡大する。
+
+### 採用画像と更新方法
+
+表示用画像は [character-transparent.png](../../../sincromisor-frontend/public/images/home-mock/character-transparent.png)（1024×1536、RGBA）である。[character-glasses.png](../../../sincromisor-frontend/public/images/home-mock/character-glasses.png) は背景透過前の生成原本として保持する。原本は `image_gen` による編集、透過版はローカル画像処理で作成した。
+
+#### 採用につながった最終記録のプロンプト（原文）
+
+ダークブラウンの髪・白寄りのシャツ・細身の脚を持つ画像に、次の編集を指示した。これはネクタイとソックスの調整時に保存された原文であり、メガネ追加後の完成画像を一度に生成するプロンプトではない。
+
+```text
+Use case: precise-object-edit. Edit the supplied full-body dark-brown-haired toon character with the white short-sleeved shirt. Make ONLY two very small changes: (1) Recolor the entire necktie, both knot and hanging blade, from charcoal gray to the SAME warm orange as the existing triangular hairclip, preserving the tie shape and restrained cel-shaded highlights/shadows. Match the hairclip orange exactly in the lit base color; do not recolor the hairclip. (2) Make the plain ivory socks just a tiny bit shorter: lower their top edges by about 10–15 percent of the currently visible sock shaft height, approximately one to two centimeters in character scale. Keep a small visible cuff above each shoe, still short crew socks, not hidden/no-show socks. Preserve absolutely everything else: rich dark brown bob hairstyle and hairclip, amber eyes, expression, face, approximately six-head-tall proportions, accepted slender legs, leg lengths, stance, waving hand and pose, near-white collared short-sleeved shirt and pocket, dark gray knee-length wrap-effect skirt, white and gray low-profile sneakers, clean simple toon illustration style, plain pale-peach background and grounding shadow. Do not change body or leg thickness, do not add accessories or headphones. Full figure visible from hair to soles, identical composition and image dimensions, no text, no UI, no watermark.
+```
+
+#### 完成画像に採用した追加指示
+
+メガネ付き画像の生成指示は原文が保存されていないため、記録に残る指定内容を示す。
+
+- オレンジのネクタイ幅をわずかに狭くする。
+- 目を変えず、赤いオーバル型アンダーリムメガネを加える。
+- 靴ひもを残し、スニーカーの装飾を減らす。
+
+透過版はこの生成原本から背景と足元の影だけを取り除き、輪郭の背景色の混色を補正する。メガネの移動・補完は行わず、目とメガネ周辺の元画素を保持する。白い衣服・ソックス・靴の内部は不透明のままにする。
+
+更新時は原本と上記の外見・指示を参照し、透過PNGを同じ表示用パスへ保存する。全身像と紹介カードが同じ画像を参照すること、明暗の背景で輪郭が自然であること、PC・スマートフォンで全身と顔の切り抜きが収まることを確認する。
 
 ## 責務
 

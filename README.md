@@ -24,8 +24,6 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
 
 ## 検証済み環境
 
-Ubuntu 26.04 の WSL2 に開発・動作検証環境を用意する場合は、[導入スクリプトと手順](utils/setup-devenv/README.md)を参照する。WSL2 での一括導入は未検証であり、以下の検証済み環境とは区別する。
-
 - サーバー側(シンクロモード)
     - ubuntu 24.04
         - Core i5-12600K
@@ -81,8 +79,6 @@ docker compose pull
 
 ソースからイメージを作る場合は `docker compose build` を使う。取得元のイメージやビルド時の依存パッケージ、音声認識モデルには取得先への通信が必要になる。認識サービスは起動時にNeMoのキャッシュを読み、モデルがない場合だけ自動取得して `volumes/sincro-cache` に保存する。チャット用LLMのモデルとDifyも管理下の環境へ事前に配置する。
 
-開発者向けのGHCRへの月次公開と旧イメージの整理は[コンテナイメージの公開手順](documents/design/infrastructure/image-publishing.md)を参照する。
-
 サービス実行時に外部サービスのAPIを使わない構成と、導入時に何も取得しない完全オフライン構成は区別する。モデル取得先と再利用条件は[モデルキャッシュ](documents/design/infrastructure/storage.md#モデルキャッシュ)を参照する。完全オフライン導入にはイメージとモデルの事前搬入が必要となる。
 
 5. 初回のみモデルの保存先をUID 1001で作り、全サービスを起動する。既存キャッシュは削除せず、所有者・権限を維持する。
@@ -111,10 +107,6 @@ LANの別端末から使う場合は、管理下のHTTPS終端とブラウザが
 - `Looking Glass (VRM 1.0 / Three.js)`: [Looking Glass](https://lookingglassfactory.com/looking-glass-portrait) 向けの 実験用の導線
 
 `Simple Interface (VRM 1.0)` の起動前設定で、Dify未設定なら会話モードを `sincro`（シンクロモード）へ変更してから「開始する」を押す。`sincro` は認識文を変換して読み上げ、Difyを使わない。初回の既定値は `chat` のため、設定を空にしただけではチャットは動作しない。
-
-`sincromisor-frontend/package.json` では、`npm run build` が `tsc -p tsconfig.modern.json && vite build` に対応しており、通常ビルドでは `main`、`home-mock`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` の7ページを出力します。トップページの独立UIモックは `/home-mock/` で確認できます。実験用ページも通常ビルドに含まれ、分類と公開URLは[ページ構成](documents/design/frontend/pages.md)を参照してください。
-
-Babylon.js ベースの旧ページ（`simple`、`glass`、`character`、`character-glass`、`area360`、`single`、`double`）と関連する旧実装は削除済みです。通常の開発・確認は `sincromisor-frontend` で `npm run build` を使ってください。
 
 ## キャラクターを差し替える
 
