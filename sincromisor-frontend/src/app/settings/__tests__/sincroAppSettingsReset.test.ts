@@ -16,6 +16,16 @@ it("取消・書込み中・全ページ削除・失敗再実行を通して所�
     expect(buildResetSettingsUrl(href)).toBe("https://example.test/simple-vrm/?keep=1#here");
     const data = new Map<string, string>([["unrelated", "keep"]]);
     for (const page of sincroSettingsPages) data.set(sincroSettingsStorageKey(page), "broken-json");
+    data.set(
+        sincroSettingsStorageKey("vrm360"),
+        JSON.stringify({
+            version: 1,
+            settings: {},
+            audio: { vadRmsThreshold: 0.05 },
+            gaze: { minimumHoldMs: 1250 },
+            pose: { intensityScale: 0.9 },
+        }),
+    );
     const cacheData = new Map<string, Response>();
     for (const path of [
         "/simple-vrm/sincroVrmFile",

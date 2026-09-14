@@ -112,7 +112,8 @@ export function createSincroAppRuntimeBundle(params: {
         },
         poseBridge: {
             getConfig: () => debugConsoleManager.getSnapshot().sincroMotion.poseRetarget,
-            applyConfig: (config) => debugConsoleManager.applySincroPoseRetargetConfig(config),
+            applyConfig: (config) =>
+                debugConsoleManager.applySincroPoseRetargetConfig(config, "sync"),
             subscribe: (listener) =>
                 debugConsoleManager.setSincroPoseRetargetConfigChangeCallback(listener),
         },

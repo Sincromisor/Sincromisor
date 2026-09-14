@@ -108,29 +108,13 @@ export class SincroAppController {
         return this.runtime.poseBridge;
     }
 
-    /**
-     * シーンの姿勢設定接続をこのアプリに所有させ、差し替え時に両方の購読を外す。
-     * 通常設定の強度変更だけを診断モデルへ入力し、診断通知はシーンへ渡すだけにする。
-     */
+    /** シーン生成前の診断調整も接続先へ届け、差し替え時には旧シーンの購読を解除する。 */
     connectPoseSettings(listener: (config: Partial<SincroPoseRetargetConfig>) => void): () => void {
-        let scale = this.getSettingsSnapshot().sincroPoseRetargetScale;
-        const unsubscribePose = this.pose.subscribe(listener);
-        this.pose.applyConfig({ intensityScale: scale });
-        const unsubscribeSettings = this.subscribe((event) => {
-            if (
-                event.type !== "settings_snapshot" ||
-                event.settings.sincroPoseRetargetScale === scale
-            )
-                return;
-            scale = event.settings.sincroPoseRetargetScale;
-            this.pose.applyConfig({ intensityScale: scale });
-        });
-        const release = () => {
-            unsubscribePose();
-            unsubscribeSettings();
-        };
-        this.eventUnsubscribers.push(release);
-        return release;
+        const unsubscribe = this.pose.subscribe(listener);
+        // 通常設定と保存調整の適用はrestoreSettingsで完了済み。接続時はモデルの現在値を渡すだけにする。
+        listener(this.pose.getConfig());
+        this.eventUnsubscribers.push(unsubscribe);
+        return unsubscribe;
     }
 
     /** アプリの状態遷移を通したRTC停止操作を公開する。 */
@@ -170,6 +154,16 @@ export class SincroAppController {
         // 旧制御の外部購読を解除してReactを切り替え、登録時の即時通知を新購読へ届ける。
         SincroAppController.setCurrent(this);
         this.eventUnsubscribers.push(this.bindUiSubscriptions());
+        this.eventUnsubscribers.push(
+            runtime.dialogManager.subscribeSettingsEdit((partial) => {
+                this.persistence?.save(partial);
+                if (partial.sincroPoseRetargetScale !== undefined) {
+                    // 同値の再指定も通常設定の明示操作として優先し、古い診断強度を解除する。
+                    this.persistence?.clearPoseIntensity();
+                    this.pose.applyConfig({ intensityScale: partial.sincroPoseRetargetScale });
+                }
+            }),
+        );
         this.eventUnsubscribers.push(
             bindSincroAppControllerWindowEvents({
                 lookingGlassTracker: this.lookingGlassTracker,
@@ -326,10 +320,23 @@ export class SincroAppController {
         this.persistence = new SincroAppSettingsPersistence(page);
         this.applySettings({ ...defaults, ...this.persistence.load(), ...url }, "restore");
         this.runtime.coreController.restoreAudioTuning(this.persistence);
+        const debug = this.runtime.debugConsoleManager;
+        const gaze = this.persistence.getGazeTuning();
+        if (gaze !== undefined) debug.applyCharacterGazeTrackingTuning(gaze, "sync");
+        debug.applySincroPoseRetargetConfig(
+            {
+                intensityScale: this.getSettingsSnapshot().sincroPoseRetargetScale,
+                ...this.persistence.getPoseTuning(),
+            },
+            "sync",
+        );
         this.eventUnsubscribers.push(
-            this.runtime.dialogManager.subscribeSettingsEdit((partial) =>
-                this.persistence?.save(partial),
-            ),
+            debug.subscribe((event) => {
+                if (event.type === "gaze_tuning_edit")
+                    this.persistence?.saveGazeTuning(event.config);
+                if (event.type === "pose_tuning_edit")
+                    this.persistence?.savePoseTuning(event.config);
+            }),
         );
     }
 

@@ -15,6 +15,7 @@ import {
     cloneSincroFaceMotionSnapshot,
     cloneSincroPoseMotionSnapshot,
 } from "./debugConsoleMotionSnapshot";
+import type { DebugConsoleManagerEvent } from "./debugConsolePublicTypes";
 import {
     cloneAvatarMotionProfile,
     cloneComposerDryRun,
@@ -25,6 +26,7 @@ import {
 import type { DebugConsoleSnapshot } from "./debugConsoleSnapshot";
 
 type DebugConsoleSincroMotionControlsParams = {
+    emitEvent: (event: DebugConsoleManagerEvent) => void;
     readSnapshot: () => DebugConsoleSnapshot;
     updateSnapshot: (updater: (snapshot: DebugConsoleSnapshot) => DebugConsoleSnapshot) => void;
 };
@@ -163,10 +165,21 @@ export class DebugConsoleSincroMotionControls {
         };
     }
 
-    applySincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
+    /** 正規化済み姿勢設定をシーンへ通知する。syncは通常設定・復元の反映で、診断入力として保存しない。 */
+    applySincroPoseRetargetConfig(
+        config: Partial<SincroPoseRetargetConfig>,
+        source: "user" | "sync" = "user",
+    ): void {
         this.setSincroPoseRetargetConfig(config);
-        this.onSincroPoseRetargetConfigChange?.(
-            this.params.readSnapshot().sincroMotion.poseRetarget,
-        );
+        const current = this.params.readSnapshot().sincroMotion.poseRetarget;
+        this.onSincroPoseRetargetConfigChange?.(current);
+        // 同期は保存せず、診断入力で指定した項目だけを正規化後の値で通知する。
+        if (source === "user")
+            this.params.emitEvent({
+                type: "pose_tuning_edit",
+                config: Object.fromEntries(
+                    Object.entries(current).filter(([key]) => key in config),
+                ),
+            });
     }
 }

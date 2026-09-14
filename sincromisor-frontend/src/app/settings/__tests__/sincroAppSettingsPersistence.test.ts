@@ -115,3 +115,38 @@ it("復元と利用不可通知では保存せず、利用者変更・URL優先�
     app.applySettings({ lgTargetY: 1.35 });
     expect(saved.load().lgTargetY).toBe(1.35);
 });
+
+it("視線・姿勢の不正項目と観測値を除外し、通常強度とラジアン精度を保つ", () => {
+    const local = storage();
+    const angle = (34 * Math.PI) / 180;
+    local.setItem(
+        sincroSettingsStorageKey("simple-vrm"),
+        JSON.stringify({
+            version: 1,
+            settings: { sincroPoseRetargetScale: 0.68 },
+            gaze: { minimumHoldMs: 1250, deadband: -1, oneEuroDCutoff: 1.25, faceX: 0.2 },
+            pose: {
+                intensityScale: "bad",
+                smoothingMs: 175,
+                armIkMaxLiftRad: angle,
+                armIkMode: "invalid",
+                torsoLeanRad: 1,
+                avatarMotionProfile: {},
+            },
+        }),
+    );
+    const saved = new SincroAppSettingsPersistence("simple-vrm");
+    expect(saved.load().sincroPoseRetargetScale).toBe(0.68);
+    expect(saved.getPoseTuning()).toEqual({ smoothingMs: 175, armIkMaxLiftRad: angle });
+    expect(saved.getGazeTuning()).toMatchObject({
+        minimumHoldMs: 1250,
+        oneEuroDCutoff: 1.25,
+        deadband: 0.0025,
+    });
+    expect(saved.getGazeTuning()).not.toHaveProperty("faceX");
+    saved.save({ titleText: "通常設定変更" });
+    const restored = new SincroAppSettingsPersistence("simple-vrm");
+    restored.load();
+    expect(restored.getPoseTuning()).toEqual(saved.getPoseTuning());
+    expect(restored.getGazeTuning()).toEqual(saved.getGazeTuning());
+});

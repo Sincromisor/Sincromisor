@@ -11,7 +11,7 @@ type SincroPoseRetargetComposerControlsProps = {
  *
  * arm / torso / full application の staged rollback flags は削除済みである。残る semantic / finger flag は
  * MotionIntent / Hand observe を残したまま composer input の semantic layer だけを外すための別責務であり、
- * 通常設定や保存設定 contract へは広げない。
+ * 通常設定には含めず、他の診断入力と同じページ別の保存・初期化に従う。
  */
 export function SincroPoseRetargetComposerControls({
     poseRetarget,
@@ -37,7 +37,7 @@ function ComposerSemanticFingerApplicationSelect({
                 className="audioControlSelect"
                 value={poseRetarget.composerSemanticFingerApplicationMode}
                 onChange={(event) =>
-                    applyPoseRetargetPatch(manager, poseRetarget, {
+                    manager.applySincroPoseRetargetConfig({
                         composerSemanticFingerApplicationMode:
                             parseComposerSemanticFingerApplicationMode(event.currentTarget.value),
                     })
@@ -48,17 +48,6 @@ function ComposerSemanticFingerApplicationSelect({
             </select>
         </div>
     );
-}
-
-function applyPoseRetargetPatch(
-    manager: DebugConsoleManager,
-    poseRetarget: SincroPoseRetargetComposerControlsProps["poseRetarget"],
-    patch: Partial<SincroPoseRetargetComposerControlsProps["poseRetarget"]>,
-): void {
-    manager.applySincroPoseRetargetConfig({
-        ...poseRetarget,
-        ...patch,
-    });
 }
 
 function parseComposerSemanticFingerApplicationMode(

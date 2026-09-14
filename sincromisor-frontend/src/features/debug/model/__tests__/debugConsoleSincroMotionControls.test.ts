@@ -6,6 +6,7 @@ describe("DebugConsoleSincroMotionControls", () => {
     it("同じ通知先の再登録後も古い解除で新登録を消さない", () => {
         let snapshot = createDefaultSnapshot();
         const controls = new DebugConsoleSincroMotionControls({
+            emitEvent: () => {},
             readSnapshot: () => snapshot,
             updateSnapshot: (update) => {
                 snapshot = update(snapshot);
@@ -51,6 +52,7 @@ describe("DebugConsoleSincroMotionControls", () => {
             },
         };
         const controls = new DebugConsoleSincroMotionControls({
+            emitEvent: () => {},
             readSnapshot: () => snapshot,
             updateSnapshot: (updater: (current: DebugConsoleSnapshot) => DebugConsoleSnapshot) => {
                 snapshot = updater(snapshot);
@@ -84,6 +86,7 @@ describe("DebugConsoleSincroMotionControls", () => {
     it("applies semantic finger composer mode through the pose retarget config path", () => {
         let snapshot = createDefaultSnapshot();
         const controls = new DebugConsoleSincroMotionControls({
+            emitEvent: () => {},
             readSnapshot: () => snapshot,
             updateSnapshot: (updater: (current: DebugConsoleSnapshot) => DebugConsoleSnapshot) => {
                 snapshot = updater(snapshot);
