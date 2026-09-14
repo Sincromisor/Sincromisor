@@ -49,6 +49,7 @@ export type { DebugConsoleSnapshot } from "./debugConsoleSnapshot";
 // DOM 主導だった旧 Debug Console を、React view が購読する診断 snapshot 供給元へ縮退する。
 // 既存 public API は維持し、RTC / Audio / Gaze 側からの呼び出し先は変えずに移行を進める。
 export class DebugConsoleManager {
+    // reason: structure-threshold-exception 既存の診断公開窓口を保持し、設定状態・操作・通知の実装は各Controlsへ委ねる。
     private static instance: DebugConsoleManager;
 
     private snapshot: DebugConsoleSnapshot = createDefaultSnapshot();
@@ -59,6 +60,7 @@ export class DebugConsoleManager {
         emitEvent: (event) => this.emitEvent(event),
     });
     private readonly sincroMotionControls = new DebugConsoleSincroMotionControls({
+        emitEvent: (event) => this.emitEvent(event),
         readSnapshot: () => this.snapshot,
         updateSnapshot: (updater) => this.updateSnapshot(updater),
     });
@@ -67,6 +69,7 @@ export class DebugConsoleManager {
         emitEvent: (event) => this.emitEvent(event),
     });
     private readonly gazeControls = new DebugConsoleGazeControls({
+        readSnapshot: () => this.snapshot,
         updateSnapshot: (updater) => this.updateSnapshot(updater),
         emitEvent: (event) => this.emitEvent(event),
     });
@@ -318,8 +321,12 @@ export class DebugConsoleManager {
         return this.sincroMotionControls.setSincroPoseRetargetConfigChangeCallback(callback);
     }
 
-    applySincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
-        this.sincroMotionControls.applySincroPoseRetargetConfig(config);
+    /** 正規化済み姿勢設定をシーンへ通知する。syncは通常設定・復元の反映で、診断入力として保存しない。 */
+    applySincroPoseRetargetConfig(
+        config: Partial<SincroPoseRetargetConfig>,
+        source: "user" | "sync" = "user",
+    ): void {
+        this.sincroMotionControls.applySincroPoseRetargetConfig(config, source);
     }
 
     setCharacterGazePaused(paused: boolean): void {
@@ -336,8 +343,12 @@ export class DebugConsoleManager {
         this.gazeControls.setCharacterGazeTrackingTuningChangeCallback(callback);
     }
 
-    applyCharacterGazeTrackingTuning(config: CharacterGazeTrackingTuningUiConfig): void {
-        this.gazeControls.applyCharacterGazeTrackingTuning(config);
+    /** 視線調整を反映し、利用者操作だけを保存用イベントへ通知する。syncは復元・接続時に使う。 */
+    applyCharacterGazeTrackingTuning(
+        config: CharacterGazeTrackingTuningUiConfig,
+        source: "user" | "sync" = "user",
+    ): void {
+        this.gazeControls.applyCharacterGazeTrackingTuning(config, source);
     }
 
     private updateSnapshot(

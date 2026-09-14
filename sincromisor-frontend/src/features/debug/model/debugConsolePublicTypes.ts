@@ -1,3 +1,5 @@
+import type { SincroPoseRetargetConfig } from "../../../character/retargeting/sincroPoseRetargetTypes";
+
 export type AudioFilterControlConfig = {
     highpassHz: number;
     lowpassEnabled: boolean;
@@ -26,6 +28,8 @@ export type LearnedVadTuningUiConfig = {
 export type LearnedVadPerformanceMode = "low_cpu" | "balanced" | "high_accuracy";
 
 export type DebugConsoleManagerEvent =
+    | { type: "gaze_tuning_edit"; config: CharacterGazeTrackingTuningUiConfig }
+    | { type: "pose_tuning_edit"; config: Partial<SincroPoseRetargetConfig> }
     | { type: "local_vad_state"; isSpeech: boolean }
     | { type: "learned_vad_state"; report: LearnedVadUiReport }
     | { type: "face_x"; value: number }

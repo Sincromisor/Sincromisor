@@ -28,6 +28,7 @@ const SINCRO_POSE_TARGET_INFERENCE_FPS = 12;
 // CharacterGaze の起動と、視線検出結果 -> Debug UI / AutoMute 変換を担当する controller。
 // DOM依存（#eyeTarget 表示）は移行期間の暫定としてここに閉じ込めている。
 export class SincroCharacterGazeController {
+    // reason: structure-threshold-exception 既存のカメラ・追跡ライフサイクルを維持し、今回の変更は調整値の接続順序に限定する。
     private readonly dialogManager: DialogManager;
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly chatMessageService: ChatMessageService;
@@ -67,7 +68,7 @@ export class SincroCharacterGazeController {
         });
         this.trackerRuntime = new TrackerRuntime(this.trackingVideoElement);
         const characterGaze = CharacterGaze.getManager();
-        this.debugConsoleManager.setCharacterGazeTrackingTuning(characterGaze.getTrackingTuning());
+        // 診断モデルの初期値または復元値を接続時に受け取り、古い実行時値で上書きしない。
         this.debugConsoleManager.setCharacterGazeTrackingTuningChangeCallback((config) => {
             characterGaze.setTrackingTuning(config);
         });

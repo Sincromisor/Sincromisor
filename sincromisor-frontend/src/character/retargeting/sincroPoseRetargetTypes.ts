@@ -39,7 +39,7 @@ export type SincroPoseArmIkMode = "feature_only" | "screen_space_ik" | "world_3d
  * `"composer"` は保存済み `MotionIntentState`、低次元 Hand snapshot、完成版 `AvatarMotionProfile` が
  * valid な frame だけ semantic / finger layer を dry-run composer へ追加する。`"off"` は arm / torso
  * flag とは独立に semantic / finger layer だけを外し、既存 tracking / torso composer 検証を維持する。
- * 通常設定 UI や永続設定 contract には広げない。
+ * 通常設定UIには含めない。診断操作としてページ別に保存し、全設定初期化で解除する。
  * 所有者は motion runtime であり、semantic / finger regression の rollback 手順が不要になった時点で
  * flag と `semantic_finger_application_off` warning を同時に削除する。
  */

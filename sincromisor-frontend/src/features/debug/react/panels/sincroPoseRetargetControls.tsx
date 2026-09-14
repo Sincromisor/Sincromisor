@@ -12,8 +12,7 @@ type SincroPoseRetargetControlsProps = {
     manager: DebugConsoleManager;
 };
 
-type PoseRetargetConfig = DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
-
+/** 診断で操作した項目だけをモデルへ渡し、他の値を保存対象へ巻き込まない。 */
 export function SincroPoseRetargetControls({
     poseRetarget,
     manager,
@@ -41,7 +40,7 @@ function ArmIkModeSelect({ poseRetarget, manager }: SincroPoseRetargetControlsPr
                 className="audioControlSelect"
                 value={poseRetarget.armIkMode}
                 onChange={(event) =>
-                    applyPoseRetargetPatch(manager, poseRetarget, {
+                    manager.applySincroPoseRetargetConfig({
                         armIkMode: parseArmIkMode(event.currentTarget.value),
                     })
                 }
@@ -64,8 +63,7 @@ function PoseRetargetBaseControls({ poseRetarget, manager }: SincroPoseRetargetC
             max: 1.2,
             step: 0.05,
             value: poseRetarget.intensityScale,
-            onChange: (value) =>
-                applyPoseRetargetPatch(manager, poseRetarget, { intensityScale: value }),
+            onChange: (value) => manager.applySincroPoseRetargetConfig({ intensityScale: value }),
         },
         {
             id: "sincroPoseRetargetMinConfidence",
@@ -75,8 +73,7 @@ function PoseRetargetBaseControls({ poseRetarget, manager }: SincroPoseRetargetC
             max: 1,
             step: 0.05,
             value: poseRetarget.minConfidence,
-            onChange: (value) =>
-                applyPoseRetargetPatch(manager, poseRetarget, { minConfidence: value }),
+            onChange: (value) => manager.applySincroPoseRetargetConfig({ minConfidence: value }),
         },
         {
             id: "sincroPoseRetargetSmoothing",
@@ -86,8 +83,7 @@ function PoseRetargetBaseControls({ poseRetarget, manager }: SincroPoseRetargetC
             max: 800,
             step: 10,
             value: poseRetarget.smoothingMs,
-            onChange: (value) =>
-                applyPoseRetargetPatch(manager, poseRetarget, { smoothingMs: value }),
+            onChange: (value) => manager.applySincroPoseRetargetConfig({ smoothingMs: value }),
         },
         {
             id: "sincroPoseRetargetNeutralReturn",
@@ -98,7 +94,7 @@ function PoseRetargetBaseControls({ poseRetarget, manager }: SincroPoseRetargetC
             step: 20,
             value: poseRetarget.returnToNeutralMs,
             onChange: (value) =>
-                applyPoseRetargetPatch(manager, poseRetarget, { returnToNeutralMs: value }),
+                manager.applySincroPoseRetargetConfig({ returnToNeutralMs: value }),
         },
     ];
 
@@ -127,8 +123,7 @@ function PoseRetargetArmIkStrengthControls({
             max: 1,
             step: 0.05,
             value: poseRetarget.armIkStrength,
-            onChange: (value) =>
-                applyPoseRetargetPatch(manager, poseRetarget, { armIkStrength: value }),
+            onChange: (value) => manager.applySincroPoseRetargetConfig({ armIkStrength: value }),
         },
         {
             id: "sincroPoseRetargetIkTargetScale",
@@ -138,8 +133,7 @@ function PoseRetargetArmIkStrengthControls({
             max: 1.5,
             step: 0.05,
             value: poseRetarget.armIkTargetScale,
-            onChange: (value) =>
-                applyPoseRetargetPatch(manager, poseRetarget, { armIkTargetScale: value }),
+            onChange: (value) => manager.applySincroPoseRetargetConfig({ armIkTargetScale: value }),
         },
     ];
 
@@ -159,8 +153,7 @@ function PoseRetargetArmIkAngleControls({
             max: Math.PI / 2,
             step: 0.02,
             value: poseRetarget.armIkMaxLiftRad,
-            onChange: (value) =>
-                applyPoseRetargetPatch(manager, poseRetarget, { armIkMaxLiftRad: value }),
+            onChange: (value) => manager.applySincroPoseRetargetConfig({ armIkMaxLiftRad: value }),
         },
         {
             id: "sincroPoseRetargetIkMaxOpen",
@@ -170,8 +163,7 @@ function PoseRetargetArmIkAngleControls({
             max: Math.PI / 2,
             step: 0.02,
             value: poseRetarget.armIkMaxOpenRad,
-            onChange: (value) =>
-                applyPoseRetargetPatch(manager, poseRetarget, { armIkMaxOpenRad: value }),
+            onChange: (value) => manager.applySincroPoseRetargetConfig({ armIkMaxOpenRad: value }),
         },
         {
             id: "sincroPoseRetargetIkMaxFlex",
@@ -182,24 +174,13 @@ function PoseRetargetArmIkAngleControls({
             step: 0.02,
             value: poseRetarget.armIkMaxForearmFlexRad,
             onChange: (value) =>
-                applyPoseRetargetPatch(manager, poseRetarget, {
+                manager.applySincroPoseRetargetConfig({
                     armIkMaxForearmFlexRad: value,
                 }),
         },
     ];
 
     return <DebugRangeControlList items={ranges} />;
-}
-
-function applyPoseRetargetPatch(
-    manager: DebugConsoleManager,
-    poseRetarget: PoseRetargetConfig,
-    patch: Partial<PoseRetargetConfig>,
-): void {
-    manager.applySincroPoseRetargetConfig({
-        ...poseRetarget,
-        ...patch,
-    });
 }
 
 function parseArmIkMode(value: string): SincroPoseArmIkMode {

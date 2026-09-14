@@ -14,6 +14,7 @@ import type {
 import type { DebugConsoleSnapshot } from "./debugConsoleSnapshot";
 
 type DebugConsoleGazeControlsParams = {
+    readSnapshot: () => DebugConsoleSnapshot;
     updateSnapshot: (updater: (snapshot: DebugConsoleSnapshot) => DebugConsoleSnapshot) => void;
     emitEvent: (event: DebugConsoleManagerEvent) => void;
 };
@@ -64,10 +65,17 @@ export class DebugConsoleGazeControls {
         callback: (config: CharacterGazeTrackingTuningUiConfig) => void,
     ): void {
         this.onCharacterGazeTrackingTuningChange = callback;
+        // コールバック接続前の復元値も、接続時に追跡処理へ届ける。保存通知は発生させない。
+        callback(this.params.readSnapshot().gaze.tuning);
     }
 
-    applyCharacterGazeTrackingTuning(config: CharacterGazeTrackingTuningUiConfig): void {
+    /** 視線調整を反映し、利用者操作だけを保存用イベントへ通知する。syncは復元・接続時に使う。 */
+    applyCharacterGazeTrackingTuning(
+        config: CharacterGazeTrackingTuningUiConfig,
+        source: "user" | "sync" = "user",
+    ): void {
         this.setCharacterGazeTrackingTuning(config);
         this.onCharacterGazeTrackingTuningChange(config);
+        if (source === "user") this.params.emitEvent({ type: "gaze_tuning_edit", config });
     }
 }

@@ -6,6 +6,7 @@ import {
     sincroAppNumericSettingConstraints,
 } from "./sincroAppSettingsDefaults";
 import { type SincroAudioTuning, sincroAudioTuningSchema } from "./sincroAudioTuningSchema";
+import { sincroGazeTuningSchema, sincroPoseTuningSchema } from "./sincroTrackingTuningSchema";
 
 /** URL表記に依存しない、共通枠組みを使うページの保存単位。 */
 export type SincroSettingsPage = "simple-vrm" | "vrm360" | "looking-glass-vrm";
@@ -57,6 +58,8 @@ const documentSchema = z.object({
     version: z.literal(1),
     settings: settingsSchema,
     audio: sincroAudioTuningSchema.optional().catch(undefined),
+    gaze: sincroGazeTuningSchema.optional().catch(undefined),
+    pose: sincroPoseTuningSchema.optional().catch(undefined),
 });
 
 /** 小さなページ別JSONを保持する。初期化・環境通知は書き込まず、利用者操作の差分だけを保存する。 */
@@ -68,6 +71,8 @@ export class SincroAppSettingsPersistence {
         SincroAppSettingsPersistence.writesStopped = true;
     }
 
+    private gaze?: z.infer<typeof sincroGazeTuningSchema>;
+    private pose: z.infer<typeof sincroPoseTuningSchema> = {};
     private audio: SincroAudioTuning = {};
     private settings: z.infer<typeof settingsSchema> = {};
     constructor(private readonly page: SincroSettingsPage) {}
@@ -79,6 +84,8 @@ export class SincroAppSettingsPersistence {
             const parsed = documentSchema.safeParse(raw === null ? undefined : JSON.parse(raw));
             this.settings = parsed.success ? parsed.data.settings : {};
             this.audio = parsed.success ? (parsed.data.audio ?? {}) : {};
+            this.gaze = parsed.success ? parsed.data.gaze : undefined;
+            this.pose = parsed.success ? (parsed.data.pose ?? {}) : {};
         } catch (error) {
             frontendLogger.warn("Failed to load settings.", { error });
         }
@@ -136,12 +143,51 @@ export class SincroAppSettingsPersistence {
         this.write();
     }
 
+    /** シーン生成前でも診断モデルへ適用できる、検証済みの視線・姿勢調整を返す。 */
+    getGazeTuning() {
+        return this.gaze;
+    }
+
+    getPoseTuning(): z.infer<typeof sincroPoseTuningSchema> {
+        return Object.fromEntries(
+            Object.entries(this.pose).filter(([, value]) => value !== undefined),
+        );
+    }
+
+    saveGazeTuning(config: z.infer<typeof sincroGazeTuningSchema>): void {
+        if (SincroAppSettingsPersistence.writesStopped) return;
+        this.gaze = sincroGazeTuningSchema.parse(config);
+        this.write();
+    }
+
+    /** 入力された項目だけを保存し、他の診断操作で通常設定の強度を複製しない。 */
+    savePoseTuning(partial: z.infer<typeof sincroPoseTuningSchema>): void {
+        if (SincroAppSettingsPersistence.writesStopped) return;
+        const valid = sincroPoseTuningSchema.parse(partial);
+        Object.assign(
+            this.pose,
+            Object.fromEntries(Object.entries(valid).filter(([, value]) => value !== undefined)),
+        );
+        this.write();
+    }
+
+    clearPoseIntensity(): void {
+        delete this.pose.intensityScale;
+        this.write();
+    }
+
     private write(): void {
         if (SincroAppSettingsPersistence.writesStopped) return;
         try {
             window.localStorage.setItem(
                 sincroSettingsStorageKey(this.page),
-                JSON.stringify({ version: 1, settings: this.settings, audio: this.audio }),
+                JSON.stringify({
+                    version: 1,
+                    settings: this.settings,
+                    audio: this.audio,
+                    gaze: this.gaze,
+                    pose: this.pose,
+                }),
             );
         } catch (error) {
             frontendLogger.warn("Failed to save settings.", { error });
