@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SincroAppDialogPopMessage, SincroAppEvent } from "../../../app/controller";
 import { subscribeActiveSincroAppController } from "../../../app/controller";
-import { prependCappedItem } from "../../../app/react/panelLogHelpers";
 import { UI_TUNING } from "../../../app/react/uiTuning";
 import { DIALOG_POP_TIMING, scheduleDialogPopVisibility } from "./dialogPopAnimationHelpers";
 import { useDialogPopTimers } from "./useDialogPopTimers";
@@ -26,9 +25,7 @@ export function DialogPopMessages() {
                 }
                 const dialogPop = event.message;
                 const nextItem: DialogPopItem = { ...dialogPop, visible: false };
-                setItems((prev) =>
-                    prependCappedItem(prev, nextItem, DIALOG_POP_TIMING.renderLimit),
-                );
+                setItems((prev) => [nextItem, ...prev].slice(0, DIALOG_POP_TIMING.renderLimit));
                 // 表示/非表示/削除のタイマー手順は helper に閉じ、component は一覧更新に集中する。
                 const cleanupTimer = scheduleDialogPopVisibility(nextItem, setItems);
                 register(

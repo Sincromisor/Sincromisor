@@ -3,9 +3,6 @@
 
 export const UI_TUNING = {
     controlPanel: {
-        chatLogLimit: 5,
-        telopLogLimit: 5,
-        rtcEventLogLimit: 4,
         sectionSpacingPx: 10,
         detailsContentTopMarginPx: 8,
         styles: {
@@ -20,11 +17,7 @@ export const UI_TUNING = {
             miniCardBorderRadiusPx: 6,
             miniCardPaddingYpx: 6,
             miniCardPaddingXpx: 8,
-            miniLogBorderRadiusPx: 6,
-            miniLogPaddingYpx: 6,
-            miniLogPaddingXpx: 8,
             diagnosticsCardGapPx: 8,
-            diagnosticsSectionTitleMarginBottomPx: 4,
         },
         settings: {
             compactGapPx: 6,
@@ -37,10 +30,8 @@ export const UI_TUNING = {
             tooltipFontSizePx: 11,
         },
         diagnostics: {
-            sectionGapPx: 4,
             sectionSpacingPx: 10,
             statusGridColumns: 2,
-            messageLogMaxHeightPx: 120,
         },
     },
     dialogPop: {

@@ -1,0 +1,14 @@
+id: task-260915005054-centralize-calibration-lifecycle
+title: 較正を含む開始停止と設定変更をアプリ制御へ集約
+category: frontend-maintenance
+status: open
+depends_on:
+  - task-260915005054-relocate-shared-settings-panel
+superseded_by: null
+review: APPROVED
+reviewed_sha: f5dd6d37dbe6ddcde4a2e5fe6e9ce059222acddf
+verdict: null
+attempts: 0
+created_at: 2026-09-15
+closed_at: null
+legacy_ids: []

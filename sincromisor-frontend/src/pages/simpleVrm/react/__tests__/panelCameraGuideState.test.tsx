@@ -112,13 +112,10 @@ describe("panel camera guide state", () => {
     it("clears a visible guide through the camera-quality-reset panel handler", () => {
         let cameraGuide = createPanelCameraGuideState();
         const handlers = createSimpleVrmPanelRuntimeEventHandlers({
-            setLogs: vi.fn(),
             setVadState: vi.fn(),
             setLearnedVad: vi.fn(),
             setGaze: vi.fn(),
-            setRtcEvents: vi.fn(),
             setRtcState: vi.fn(),
-            setTelopLogs: vi.fn(),
             setLookingGlass: vi.fn(),
             setLookingGlassConfigStatus: vi.fn(),
             setVrmStatusText: vi.fn(),

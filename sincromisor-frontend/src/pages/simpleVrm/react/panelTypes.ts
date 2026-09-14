@@ -9,23 +9,8 @@ import type {
     SincroAppStartupSettingsStatus,
 } from "../../../app/controller";
 
-// Control Panel 表示専用の view-model 型。
-// AppController event/snapshot を UI 表示都合（ログ、診断カード、LG状態表示）に整形して保持する。
+// アプリのイベントとスナップショットを、診断カードとLooking Glass状態の表示へ整形する。
 export type { ApplySettingsFn, SincroAppSettingsSnapshot };
-
-export type PanelMessageLogKind = "chat_message" | "system_message" | "error_message";
-
-export type PanelMessageLog = {
-    kind: PanelMessageLogKind;
-    text: string;
-};
-
-export type PanelTelopLog = {
-    text: string;
-    message: string;
-    newText: boolean;
-    vowel: string;
-};
 
 export type PanelGazeState = {
     faceX?: number;
@@ -63,9 +48,6 @@ export type SimpleVrmPanelViewState = {
     lifecycleState: SincroAppLifecycleState;
     connectionState: PanelConnectionState;
     settings: SincroAppSettingsSnapshot;
-    logs: PanelMessageLog[];
-    telopLogs: PanelTelopLog[];
-    rtcEvents: string[];
     vadState: "unknown" | "speech" | "silence";
     learnedVad: PanelLearnedVadState;
     gaze: PanelGazeState;

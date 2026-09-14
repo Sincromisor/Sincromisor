@@ -1,0 +1,14 @@
+id: task-260915005054-relocate-shared-settings-panel
+title: 共通設定パネルをページ固有領域からアプリ層へ移動
+category: frontend-maintenance
+status: open
+depends_on:
+  - task-260915005053-remove-unused-panel-logs
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-15
+closed_at: null
+legacy_ids: []
