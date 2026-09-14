@@ -42,6 +42,21 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
         ] as const) {
             vi.resetModules();
             const win = Object.assign(new EventTarget(), {
+                localStorage: {
+                    getItem: () =>
+                        JSON.stringify({
+                            version: 1,
+                            settings: {
+                                titleText: "復元済み",
+                                characterMotionScale: 0.72,
+                                sincroPoseRetargetScale: 0.68,
+                                talkMode: "sincro",
+                            },
+                        }),
+                    setItem: vi.fn(() => {
+                        throw new Error("初期化中は保存しない");
+                    }),
+                },
                 location: {
                     search: `?talkMode=${page === "simple-chat" ? "chat" : page === "simple-invalid" ? "invalid" : "sincro"}`,
                 },
@@ -70,11 +85,14 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
             coreStart.mockImplementation(() => {
                 const app = SincroAppController.getCurrent();
                 expect(app?.getSettingsSnapshot()).toMatchObject({
+                    titleText: "復元済み",
+                    characterMotionScale: 0.72,
+                    sincroPoseRetargetScale: 0.68,
                     enableCharacter: true,
                     enableCharacterGaze: page !== "360",
                     enableAutoMute: false,
                     ...(page.startsWith("simple")
-                        ? { talkMode: page === "simple" ? "sincro" : "chat" }
+                        ? { talkMode: page === "simple-chat" ? "chat" : "sincro" }
                         : {}),
                 });
                 app?.start();
@@ -97,6 +115,7 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
             app?.start();
             app?.start();
             expect(coreStart).toHaveBeenCalledOnce();
+            expect(win.localStorage.setItem).not.toHaveBeenCalled();
             expect(sceneStart).toHaveBeenCalledOnce();
             expect(greeting).toHaveBeenCalledTimes(2);
             await vi.waitFor(() =>

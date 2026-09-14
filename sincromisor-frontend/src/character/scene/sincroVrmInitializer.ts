@@ -1,4 +1,5 @@
 import { SincroAppController, type SincroAppSettingsSnapshot } from "../../app/controller";
+import type { SincroSettingsPage } from "../../app/settings/sincroAppSettingsPersistence";
 import { UserMediaManager } from "../../features/media/userMedia/userMediaManager";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { VRMScene } from "./vrmScene";
@@ -20,6 +21,7 @@ export class SincroVRMInitializer {
     private appUiStarted = false;
     private initialized = false;
     protected activeScene?: VRMScene;
+    protected readonly settingsPage: SincroSettingsPage = "simple-vrm";
     protected readonly initialSettings: Partial<SincroAppSettingsSnapshot> = {};
 
     /** 配置済みの領域とページ設定を受け取り、初期化成功時だけOBS自動開始へ進む。 */
@@ -64,10 +66,14 @@ export class SincroVRMInitializer {
     initialize(initialSettings: Partial<SincroAppSettingsSnapshot> = {}): void {
         if (this.initialized) return;
         try {
-            // 操作可能状態を確定してから、ページ既定値と許可済みURL設定を一括適用する。
+            // 操作可能状態を確定してから、ページ既定値・保存値・許可済みURL設定を一括適用する。
             this.getUserMediaAvailabilityCheck();
             this.appController.dialog.updateCharacterAvailabilityStatus(true);
-            this.appController.applySettings({ ...this.initialSettings, ...initialSettings });
+            this.appController.restoreSettings(
+                this.settingsPage,
+                this.initialSettings,
+                initialSettings,
+            );
             this.initializePageBindings();
             this.initialized = true;
         } catch (error) {

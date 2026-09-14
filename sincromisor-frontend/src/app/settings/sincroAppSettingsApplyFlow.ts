@@ -13,6 +13,7 @@ import type { SincroAppSettingsStore } from "./sincroAppSettingsStore";
 type SincroAppSettingsApplyFlowParams = {
     dialogManager: SincroAppDialogFacade;
     partial: Partial<SincroAppSettingsSnapshot>;
+    source?: "user" | "restore";
     settingsStore: SincroAppSettingsStore;
     buildStartupSettingsStatus: (
         settings: SincroAppSettingsSnapshot,
@@ -27,7 +28,7 @@ type SincroAppSettingsApplyFlowParams = {
 export function applySincroAppControllerSettings(params: SincroAppSettingsApplyFlowParams): void {
     params.setSuppressSettingsSnapshotEvent(true);
     try {
-        applySincroAppSettingsPartial(params.dialogManager, params.partial);
+        applySincroAppSettingsPartial(params.dialogManager, params.partial, params.source);
     } finally {
         params.setSuppressSettingsSnapshotEvent(false);
     }
