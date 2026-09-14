@@ -1,12 +1,5 @@
-// reason: structure-threshold-exception 最終姿勢適用の分離は task-260914172950-extract-normalized-pose-writer で扱い、今回は未使用の上半身直接制御だけを削除する。
-import {
-    type VRM,
-    type VRMHumanBoneName,
-    VRMLoaderPlugin,
-    VRMMetaLoaderPlugin,
-    type VRMPose,
-    VRMUtils,
-} from "@pixiv/three-vrm";
+// reason: structure-threshold-exception 読込・初期化は task-260914172951-explicit-vrm-initialization、診断通知は task-260914172951-decouple-vrm-diagnostics で分離し、ここでは適用順序を維持する。
+import { type VRM, VRMLoaderPlugin, VRMMetaLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { type GLTF, GLTFLoader, type GLTFParser } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Clock } from "three/src/core/Clock.js";
 import type { Object3D } from "three/src/core/Object3D.js";
@@ -41,56 +34,15 @@ import {
     SincroVrmPoseComposerDryRunService,
 } from "../runtime/sincroVrmPoseComposerDryRun";
 import type { VRMCamera } from "../scene/vrmCamera";
-import type { VrmNormalizedLocalPose, VrmPoseQuaternion } from "../vrmPose/vrmPoseTypes";
 import { ArmBoneController } from "./armBoneController";
 import type { CharacterMotionTuning } from "./characterMotionConfig";
 import { CharacterRootStabilizer } from "./characterRootStabilizer";
 import { LegBoneController } from "./legBoneController";
+import {
+    applyFullNormalizedPoseApplication,
+    type FullNormalizedPoseApplicationResult,
+} from "./normalizedPoseWriter";
 import { applyInitialUpperBodyFraming } from "./vrmInitialUpperBodyFraming";
-
-const FULL_NORMALIZED_POSE_APPLICATION_BONES: readonly VRMHumanBoneName[] = [
-    "spine",
-    "chest",
-    "upperChest",
-    "leftShoulder",
-    "rightShoulder",
-    "leftUpperArm",
-    "leftLowerArm",
-    "leftHand",
-    "rightUpperArm",
-    "rightLowerArm",
-    "rightHand",
-    "leftThumbMetacarpal",
-    "leftThumbProximal",
-    "leftThumbDistal",
-    "leftIndexProximal",
-    "leftIndexIntermediate",
-    "leftIndexDistal",
-    "leftMiddleProximal",
-    "leftMiddleIntermediate",
-    "leftMiddleDistal",
-    "leftRingProximal",
-    "leftRingIntermediate",
-    "leftRingDistal",
-    "leftLittleProximal",
-    "leftLittleIntermediate",
-    "leftLittleDistal",
-    "rightThumbMetacarpal",
-    "rightThumbProximal",
-    "rightThumbDistal",
-    "rightIndexProximal",
-    "rightIndexIntermediate",
-    "rightIndexDistal",
-    "rightMiddleProximal",
-    "rightMiddleIntermediate",
-    "rightMiddleDistal",
-    "rightRingProximal",
-    "rightRingIntermediate",
-    "rightRingDistal",
-    "rightLittleProximal",
-    "rightLittleIntermediate",
-    "rightLittleDistal",
-];
 
 export type VRMCharacterManagerOptions = {
     scene: Scene;
@@ -104,12 +56,9 @@ export type VRMCharacterManagerOptions = {
 // import { MToonNodeMaterial } from '@pixiv/three-vrm/nodes';
 
 /**
- * 指定 URL の VRM 1.0 モデルを読み込み、骨 / 表情 controller 更新と scene 配置を担当する。
- *
- * caller は render loop から `update()` を呼ぶだけにし、VRM instance、normalized bone node、
- * expression manager、root position の副作用をこの境界へ閉じ込める。full normalized pose application は
- * dry-run が同一 frame の available result を返す場合だけここで 1 回実行する。失敗時は unavailable reason を
- * Debug Console に残すだけで、旧 arm / torso staged writer は production fallback として呼ばない。
+ * VRM 1.0 の読込と各制御処理を所有し、描画ループから毎フレーム更新する。
+ * 同一フレームの合成結果を normalizedPoseWriter へ一度渡し、適用結果を診断へ通知する。
+ * 適用不可でも旧上半身直接制御へ切り戻さず、頭部・表情、脚、VRM内部更新、腰の復元順を保つ。
  */
 export class VRMCharacterManager {
     public vrm?: VRM;
@@ -263,11 +212,7 @@ export class VRMCharacterManager {
         return this.vrm.meta.thumbnailImage ?? undefined;
     }
 
-    // 毎フレーム更新:
-    // 1) キャラクター対話状態 snapshot 更新
-    // 2) ボーン/表情 controller
-    // 3) VRM内部 update
-    // 4) hips基準の位置オフセット反映
+    /** 対話状態から姿勢を合成し、頭部・表情、最終姿勢、脚、VRM内部更新、腰の復元の順に反映する。 */
     update(nowMs: number = performance.now()): void {
         const deltaSeconds = this.clock.getDelta();
         this.motionElapsedSeconds += deltaSeconds;
@@ -389,98 +334,7 @@ export class VRMCharacterManager {
     }
 }
 
-/**
- * full normalized pose application 1 frame 分の結果。
- *
- * `applied=true` は VRM が composer-owned upper-body pose を受け取ったことを表す。`applied=false` は
- * current frame に適用可能な full finalPose が無かったことを表し、旧 arm / torso staged writer の起動条件には
- * しない。失敗条件は VRM 未ロード、dry-run 非 available、available frame の result 欠損に限定する。
- */
-export type FullNormalizedPoseApplicationResult = {
-    applied: boolean;
-    /**
-     * current frame の full application が使えない理由。Debug Console summary / metrics 用の観測値であり、
-     * staged fallback path を起動する trigger として使わない。
-     */
-    unavailableReason?: string;
-    /**
-     * Debug Console composer summary に合流する warning code。full application が使えない理由だけを追加し、
-     * semantic / finger suppression warning は dry-run service 側のまま残す。
-     */
-    warnings: string[];
-};
-
-/**
- * upper body composer finalPose を VRM humanoid へ 1 frame 1 回だけ適用する production writer。
- *
- * caller はこの helper の成否に関わらず arm / torso / shoulder の direct write を fallback として呼ばない。
- * `status !== "available"`、result 欠損、VRM 未ロードでは stale finalPose を再利用せず、unavailable reason と
- * warning だけを返す。head / neck / leg / expression / root position は composer contract 外として維持する。
- */
-export function applyFullNormalizedPoseApplication(
-    vrm: VRM | undefined,
-    composerDryRun: SincroVrmPoseComposerDryRunResult,
-): FullNormalizedPoseApplicationResult {
-    const unavailableReason = fullNormalizedPoseApplicationUnavailableReason(vrm, composerDryRun);
-    if (unavailableReason) {
-        return {
-            applied: false,
-            unavailableReason,
-            warnings: [unavailableReason],
-        };
-    }
-    const result = composerDryRun.result;
-    if (result === undefined) {
-        return {
-            applied: false,
-            unavailableReason: "full_normalized_pose_application_result_missing",
-            warnings: ["full_normalized_pose_application_result_missing"],
-        };
-    }
-    if (vrm === undefined) {
-        return {
-            applied: false,
-            unavailableReason: "full_normalized_pose_application_vrm_missing",
-            warnings: ["full_normalized_pose_application_vrm_missing"],
-        };
-    }
-    vrm.humanoid.setNormalizedPose(toVrmPose(result.finalPose));
-    return { applied: true, warnings: [] };
-}
-
-function fullNormalizedPoseApplicationUnavailableReason(
-    vrm: VRM | undefined,
-    composerDryRun: SincroVrmPoseComposerDryRunResult,
-): string | undefined {
-    if (!vrm) {
-        return "full_normalized_pose_application_vrm_missing";
-    }
-    if (composerDryRun.status !== "available") {
-        return `full_normalized_pose_application_unavailable:${composerDryRun.status}`;
-    }
-    if (composerDryRun.result === undefined) {
-        return "full_normalized_pose_application_result_missing";
-    }
-    return undefined;
-}
-
-function toVrmPose(finalPose: VrmNormalizedLocalPose): VRMPose {
-    const pose: VRMPose = {};
-    for (const bone of FULL_NORMALIZED_POSE_APPLICATION_BONES) {
-        pose[bone] = { rotation: toVrmPoseRotation(finalPose[bone]) };
-    }
-    return pose;
-}
-
-function toVrmPoseRotation(
-    quaternion: VrmPoseQuaternion | undefined,
-): [number, number, number, number] {
-    if (!quaternion) {
-        return [0, 0, 0, 1];
-    }
-    return [quaternion.x, quaternion.y, quaternion.z, quaternion.w];
-}
-
+// 合成処理自体はVRMを書き込まないため、受け取った適用結果を管理側で診断用に付与する。
 function annotateFullNormalizedPoseApplication(
     composerDryRun: SincroVrmPoseComposerDryRunResult,
     application: FullNormalizedPoseApplicationResult,
@@ -498,12 +352,7 @@ function appendComposerApplicationWarnings(
     composerDryRun: SincroVrmPoseComposerDryRunResult,
     warnings: string[],
 ): SincroVrmPoseComposerDryRunResult {
-    /*
-        Debug Console は composer dry-run summary を単一の観測口にしている。
-        full application unavailable reason だけ別 channel に分けると実行状態の判断が散るため、
-        dry-run service 自体の warning 配列に append して同じ summary へ流す。warning が無い frame は
-        object identity を保つ。
-    */
+    // 適用不可理由も合成結果の診断へまとめる。警告が無い場合は元のオブジェクトを保つ。
     if (warnings.length === 0) {
         return composerDryRun;
     }

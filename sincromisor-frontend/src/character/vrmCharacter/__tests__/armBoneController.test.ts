@@ -19,7 +19,8 @@ import { createDefaultSincroMotionPipelineState } from "../../runtime/sincroMoti
 import type { SincroVrmPoseComposerDryRunResult } from "../../runtime/sincroVrmPoseComposerDryRun";
 import type { VrmPoseQuaternion } from "../../vrmPose/vrmPoseTypes";
 import { ArmBoneController } from "../armBoneController";
-import { applyFullNormalizedPoseApplication, VRMCharacterManager } from "../vrmCharacterManager";
+import { applyFullNormalizedPoseApplication } from "../normalizedPoseWriter";
+import { VRMCharacterManager } from "../vrmCharacterManager";
 
 const FULL_NORMALIZED_POSE_APPLICATION_TEST_BONES: readonly VRMHumanBoneName[] = [
     "spine",
