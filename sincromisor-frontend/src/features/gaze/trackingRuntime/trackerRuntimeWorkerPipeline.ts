@@ -6,13 +6,13 @@
  * 適用や motion-debug recording は caller 側の責務に残す。
  */
 
-import { createSincroGestureFallbackSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerClient } from "./sincroTrackerWorkerClient";
 import type { SincroTrackerRoiStats } from "./sincroTrackerWorkerTypes";
 import type { TrackerRuntimePredictionPlan } from "./trackerRuntimePredictionPlan";
 import {
     collectTrackerRoiSkipReasons,
+    publishTrackerSkippedGestureSnapshot,
     publishTrackerSkippedHandSnapshot,
     resolveTrackerHandSkipReason,
 } from "./trackerRuntimeRoiSnapshot";
@@ -108,7 +108,7 @@ export async function runTrackerRuntimeWorkerPipeline(input: {
         if (result.gesture) {
             input.callbacks.onGestureMotion?.(result.gesture, input.timing);
         } else if (!input.plan.runGesture && input.plan.gestureSkipReason !== undefined) {
-            publishSkippedGestureSnapshot(input, input.plan.gestureSkipReason);
+            publishTrackerSkippedGestureSnapshot(input, input.plan.gestureSkipReason);
         }
         const roiStats = input.recordRoiFrame({
             handRan: input.plan.runHand,
@@ -163,26 +163,4 @@ function markWorkerCadence(input: {
     if (input.plan.runFaceRoi) {
         input.markFaceRoiInference(input.timing.mediaTimeMs);
     }
-}
-
-function publishSkippedGestureSnapshot(
-    input: {
-        callbacks?: TrackerRuntimeCallbacks;
-        gestureTrackingRequested: boolean;
-        gestureTrackingEnabled: boolean;
-        timing: TrackerVideoFrameTiming;
-    },
-    reason: NonNullable<TrackerRuntimePredictionPlan["gestureSkipReason"]>,
-): void {
-    if (!input.gestureTrackingRequested) {
-        return;
-    }
-    input.callbacks?.onGestureMotion?.(
-        createSincroGestureFallbackSnapshot({
-            reason,
-            nowMs: input.timing.mediaTimeMs,
-            trackingEnabled: input.gestureTrackingEnabled,
-        }),
-        input.timing,
-    );
 }
