@@ -1,8 +1,8 @@
 import { ChatMessageService } from "../../features/conversation/chat/model/chatMessageService";
 import { TalkManager } from "../../features/conversation/talk/talkManager";
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
-import { DialogManager } from "../../features/dialog/model/dialogManager";
 import { SincroRTCConfigManager } from "../../features/rtc/sincroRtcConfigManager";
+import type { SincroAppSettingsModel } from "../settings/sincroAppSettingsModel";
 import type { SincroAppSettingsPersistence } from "../settings/sincroAppSettingsPersistence";
 import type { SincroAppEvent } from "./sincroAppTypes";
 import { SincroAudioInputController } from "./sincroAudioInputController";
@@ -10,6 +10,7 @@ import { SincroCharacterGazeController } from "./sincroCharacterGazeController";
 import { SincroRtcSessionController } from "./sincroRtcSessionController";
 
 type SincroControllerOptions = {
+    settingsModel: SincroAppSettingsModel;
     emitEvent: (event: SincroAppEvent) => void;
 };
 
@@ -17,7 +18,7 @@ type SincroControllerOptions = {
 // 以前は巨大 constructor に UI/RTC/Media/Gaze の配線を集中させていたが、
 // React移行に合わせて各責務を App/*Controller へ分離し、ここは起動順序の統括に寄せている。
 export class SincroController {
-    private readonly dialogManager: DialogManager;
+    private readonly settingsModel: SincroAppSettingsModel;
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly chatMessageService: ChatMessageService;
     private readonly rtcConfigManager: SincroRTCConfigManager;
@@ -26,7 +27,7 @@ export class SincroController {
     private readonly characterGazeController: SincroCharacterGazeController;
 
     constructor(options: SincroControllerOptions) {
-        this.dialogManager = DialogManager.getManager();
+        this.settingsModel = options.settingsModel;
         this.debugConsoleManager = DebugConsoleManager.getManager();
         this.chatMessageService = ChatMessageService.getService();
         const talkManager = TalkManager.getManager();
@@ -36,12 +37,12 @@ export class SincroController {
             );
         });
         this.audioInputController = new SincroAudioInputController(
-            this.dialogManager,
+            this.settingsModel,
             this.debugConsoleManager,
             this.chatMessageService,
         );
         this.characterGazeController = new SincroCharacterGazeController(
-            this.dialogManager,
+            this.settingsModel,
             this.debugConsoleManager,
             this.chatMessageService,
             options.emitEvent,
@@ -74,7 +75,7 @@ export class SincroController {
 
     /** 生成済み音声トラックと接続開始時点の会話モードでWebRTC接続を開始する。 */
     startRTC(audioTrack: MediaStreamTrack): void {
-        this.rtcSessionController.start(audioTrack, this.dialogManager.getSetting("talkMode"));
+        this.rtcSessionController.start(audioTrack, this.settingsModel.getSetting("talkMode"));
     }
 
     // WebRTC接続を停止する。

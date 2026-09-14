@@ -1,6 +1,5 @@
-// 複数の dialog 設定更新を 1 回の settingsChange 通知にまとめる小さな batcher。
-// DialogManager 本体から depth/pending 管理を切り離し、状態変更の意図を読みやすくする。
-export class DialogSettingsChangeBatcher {
+/** 利用可否に伴う複数の設定更新を、完了時の一回の通知へまとめる。 */
+export class SincroAppSettingsChangeBatcher {
     private depth = 0;
     private pending = false;
 

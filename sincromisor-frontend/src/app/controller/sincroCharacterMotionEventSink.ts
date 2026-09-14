@@ -4,7 +4,6 @@ import type { SincroMotionObserveOnlyPipelineInput } from "../../character/runti
 import { SincroMotionObserveOnlyPipeline } from "../../character/runtime/sincroMotionObserveOnlyPipeline";
 import type { ChatMessageService } from "../../features/conversation/chat/model/chatMessageService";
 import type { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
-import type { DialogManager } from "../../features/dialog/model/dialogManager";
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroGestureMotionSnapshot } from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
 import { toGestureIntentObservation } from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
@@ -12,6 +11,7 @@ import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
+import type { SincroAppSettingsModel } from "../settings/sincroAppSettingsModel";
 import type { SincroAppEvent } from "./sincroAppTypes";
 import { SincroCameraQualityRuntime } from "./sincroCameraQualityRuntime";
 import {
@@ -21,7 +21,7 @@ import {
 } from "./sincroCharacterGazeDebugText";
 
 type SincroCharacterMotionEventSinkOptions = {
-    dialogManager: DialogManager;
+    settingsModel: SincroAppSettingsModel;
     debugConsoleManager: DebugConsoleManager;
     chatMessageService: ChatMessageService;
     characterBehaviorState: CharacterBehaviorState;
@@ -37,7 +37,7 @@ export function emitCameraQualityReset(emitEvent: (event: SincroAppEvent) => voi
 }
 
 export class SincroCharacterMotionEventSink {
-    private readonly dialogManager: DialogManager;
+    private readonly settingsModel: SincroAppSettingsModel;
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly chatMessageService: ChatMessageService;
     private readonly characterBehaviorState: CharacterBehaviorState;
@@ -50,7 +50,7 @@ export class SincroCharacterMotionEventSink {
     private readonly emitEvent: (event: SincroAppEvent) => void;
 
     constructor(options: SincroCharacterMotionEventSinkOptions) {
-        this.dialogManager = options.dialogManager;
+        this.settingsModel = options.settingsModel;
         this.debugConsoleManager = options.debugConsoleManager;
         this.chatMessageService = options.chatMessageService;
         this.characterBehaviorState = options.characterBehaviorState;
@@ -176,8 +176,8 @@ export class SincroCharacterMotionEventSink {
     /** 遅れて届いた追跡結果を、視線停止後や会話モード変更後に反映しないための判定。 */
     private isSincroTrackingEnabled(): boolean {
         return (
-            this.dialogManager.getSetting("enableCharacterGaze") &&
-            this.dialogManager.getSetting("talkMode") === "sincro"
+            this.settingsModel.getSetting("enableCharacterGaze") &&
+            this.settingsModel.getSetting("talkMode") === "sincro"
         );
     }
 

@@ -4,6 +4,7 @@ import {
     mapDebugConsoleEvent,
     mapTalkManagerEventToAppEvent,
 } from "../events/sincroAppEventMappers";
+import type { SincroAppSettingsModel } from "../settings/sincroAppSettingsModel";
 import {
     handleMappedDebugConsoleEvent,
     type SincroAppRtcDebugState,
@@ -27,6 +28,7 @@ type DebugSubscriptionParams = {
 };
 
 type DialogSubscriptionParams = {
+    settingsModel: Pick<SincroAppSettingsModel, "subscribeSettingsChange">;
     dialogManager: SincroAppDialogSubscriptionFacade;
     emitEvent: EmitFn;
     emitSettingsRelatedSnapshots: () => void;
@@ -86,7 +88,7 @@ export function bindPopServiceSubscription(
 /** 設定・ダイアログ・VRMの通知を接続し、3件の購読をまとめて解除する関数を返す。 */
 export function bindDialogManagerSubscriptions(params: DialogSubscriptionParams): () => void {
     // ダイアログの個別変更通知を、アプリの状態スナップショットとして再通知する。
-    const unsubscribeSettings = params.dialogManager.subscribeSettingsChange(() => {
+    const unsubscribeSettings = params.settingsModel.subscribeSettingsChange(() => {
         params.emitSettingsRelatedSnapshots();
     });
     const unsubscribeDialog = params.dialogManager.subscribeDialogUiState((uiState) => {

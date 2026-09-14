@@ -12,10 +12,10 @@
 
 ## 完了条件（受け入れ条件）
 
-- [ ] 通常設定値・操作可否・入力の適用規則・利用者編集通知の正本が app/settings にあり、DialogManager / DialogStateStore は同じ設定を別途保持しない。
-- [ ] ダイアログと共通パネル、音声・視線・シーンが同じ適用済み設定を使い、既存の settingsStore による安定した参照と一括通知、settings_snapshot のシーン通知を維持する。
-- [ ] ページ既定値→保存値→URL指定の復元優先順位、復元時の非保存、同値の明示編集、非有限数の正規化、既定機器への復帰、利用不可項目と自動ミュートの連動が維持される。
-- [ ] 保存キー・版・対象項目と、全設定初期化、破損保存値・保存失敗時の既存挙動が維持される。
+- [x] 通常設定値・操作可否・入力の適用規則・利用者編集通知の正本が app/settings にあり、DialogManager / DialogStateStore は同じ設定を別途保持しない。
+- [x] ダイアログと共通パネル、音声・視線・シーンが同じ適用済み設定を使い、既存の settingsStore による安定した参照と一括通知、settings_snapshot のシーン通知を維持する。
+- [x] ページ既定値→保存値→URL指定の復元優先順位、復元時の非保存、同値の明示編集、非有限数の正規化、既定機器への復帰、利用不可項目と自動ミュートの連動が維持される。
+- [x] 保存キー・版・対象項目と、全設定初期化、破損保存値・保存失敗時の既存挙動が維持される。
 
 ## 設計判断
 
@@ -29,8 +29,8 @@ DialogStateStore の通常設定部分、DialogManager の設定API、設定規�
 
 - [dialogStateStore.ts](../../../sincromisor-frontend/src/features/dialog/model/dialogStateStore.ts)
 - [dialogManager.ts](../../../sincromisor-frontend/src/features/dialog/model/dialogManager.ts)
-- [dialogSettingsPolicy.ts](../../../sincromisor-frontend/src/features/dialog/model/dialogSettingsPolicy.ts)
-- [dialogMediaDeviceUiController.ts](../../../sincromisor-frontend/src/features/dialog/model/dialogMediaDeviceUiController.ts)
+- [sincroAppSettingsPolicy.ts](../../../sincromisor-frontend/src/app/settings/sincroAppSettingsPolicy.ts)
+- [sincroAppSettingsMediaDevices.ts](../../../sincromisor-frontend/src/app/settings/sincroAppSettingsMediaDevices.ts)
 - [sincroAppSettingsApplyFlow.ts](../../../sincromisor-frontend/src/app/settings/sincroAppSettingsApplyFlow.ts)
 - [sincroAppSettingsStore.ts](../../../sincromisor-frontend/src/app/settings/sincroAppSettingsStore.ts)
 - [sincroAppSettingsPersistence.ts](../../../sincromisor-frontend/src/app/settings/sincroAppSettingsPersistence.ts)
@@ -49,3 +49,14 @@ dialogSettingsAccess / sincroAppSettingsStore / sincroAppSettingsPersistence / s
 
 - [app-shell.md](../../../documents/design/frontend/app-shell.md)
 - [settings-design.md](../../../documents/design/frontend/setting-and-debug-ui/settings-design.md)
+
+## 実装・確認結果
+
+通常設定の値・操作可否・規則・利用者編集通知を `SincroAppSettingsModel` と設定層の既存処理へ分離し、音声・視線・動作・スナップショット・保存購読を接続した。ダイアログは開閉・開始案内・VRMだけを保持する。機器監視は有効アプリで接続・解除する。
+
+- 対象8ファイル15テスト、ビルド、全105ファイル633テスト: PASS（既存の2テストはスキップ）。
+- ブラウザーで通常ページの題名を変更し、再読込後の保存値復元を確認した。RTCサーバーとの会話・実機機器取得は未確認。
+- 全体ゲートは既存Markdown15ファイルの整形不一致で停止した。ビルド・全テストを個別に実施し、変更Markdownは整形済み。
+- 旧アプリ購読テストのモックを実設定モデルへ置換し、差し替え・再解除・RTC停止後通知が通ることを確認した。
+- 独立評価: PASS。対象6ファイル18テストを再確認した。
+- 設計同期・コメント点検・構造検査: PASS。

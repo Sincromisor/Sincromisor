@@ -9,7 +9,8 @@ import type {
     SincroAppStartupSettingsStatus,
 } from "../controller/sincroAppTypes";
 
-export type DialogBackedSincroAppSettingKey =
+/** 通常設定モデルが所有するキー。別所有のLooking Glass実行時設定を除く。 */
+export type SincroAppSettingKey =
     | "talkMode"
     | "titleText"
     | "audioInputDeviceId"
@@ -31,10 +32,8 @@ export type DialogBackedSincroAppSettingKey =
     | "sincroPoseRetargetScale"
     | "characterEyeTrackingScale";
 
-export type DialogBackedSincroAppSettings = Pick<
-    SincroAppSettingsSnapshot,
-    DialogBackedSincroAppSettingKey
->;
+/** 通常設定モデルの値。公開スナップショットと同じキーの型を使う。 */
+export type SincroAppSettings = Pick<SincroAppSettingsSnapshot, SincroAppSettingKey>;
 
 export type SincroAppNumericSettingKey =
     | "characterMotionScale"
@@ -66,7 +65,8 @@ export const defaultSincroAppLookingGlassRuntimeConfig: LookingGlassRuntimeConfi
     fovyDeg: 24,
 };
 
-export const defaultSincroAppDialogBackedSettings: DialogBackedSincroAppSettings = {
+/** 初回起動と保存値のない設定に使う通常設定の既定値。 */
+export const defaultSincroAppSettings: SincroAppSettings = {
     talkMode: "chat",
     titleText: "Sincromisor",
     audioInputDeviceId: undefined,
@@ -91,7 +91,7 @@ export const defaultSincroAppDialogBackedSettings: DialogBackedSincroAppSettings
 };
 
 export const defaultSincroAppSettingsSnapshot: SincroAppSettingsSnapshot = {
-    ...defaultSincroAppDialogBackedSettings,
+    ...defaultSincroAppSettings,
     lgTileHeight: defaultSincroAppLookingGlassRuntimeConfig.tileHeight,
     lgNumViews: defaultSincroAppLookingGlassRuntimeConfig.numViews,
     lgTargetY: defaultSincroAppLookingGlassRuntimeConfig.targetY,
@@ -145,30 +145,30 @@ export const defaultSincroAppDialogVrmUiState: SincroAppDialogVrmUiState = {
     vrmStatusText: "既定のVRMモデルを使用中",
 };
 
-export const defaultDialogSettingsDisabledState: Record<DialogBackedSincroAppSettingKey, boolean> =
-    {
-        titleText: false,
-        talkMode: false,
-        audioInputDeviceId: false,
-        videoInputDeviceId: false,
-        // Character/Gaze/AutoMute は runtime controller から利用可否が届くまで無効として扱う。
-        enableCharacter: true,
-        enableTalk: false,
-        enableCharacterGaze: true,
-        enableSincroPoseTracking: false,
-        forceSincroPoseTracking: false,
-        enableAutoMute: true,
-        enableNoiseSuppression: false,
-        enableEchoCancellation: false,
-        enableAutoGainControl: false,
-        enableVadGate: false,
-        enableVenueNoiseMode: false,
-        enableInspector: false,
-        enableVR: false,
-        characterMotionScale: false,
-        sincroPoseRetargetScale: false,
-        characterEyeTrackingScale: false,
-    };
+/** 機器とページの利用可否が届く前の操作制限。設定モデルの初期状態に使う。 */
+export const defaultSincroAppSettingsDisabledState: Record<SincroAppSettingKey, boolean> = {
+    titleText: false,
+    talkMode: false,
+    audioInputDeviceId: false,
+    videoInputDeviceId: false,
+    // Character/Gaze/AutoMute は runtime controller から利用可否が届くまで無効として扱う。
+    enableCharacter: true,
+    enableTalk: false,
+    enableCharacterGaze: true,
+    enableSincroPoseTracking: false,
+    forceSincroPoseTracking: false,
+    enableAutoMute: true,
+    enableNoiseSuppression: false,
+    enableEchoCancellation: false,
+    enableAutoGainControl: false,
+    enableVadGate: false,
+    enableVenueNoiseMode: false,
+    enableInspector: false,
+    enableVR: false,
+    characterMotionScale: false,
+    sincroPoseRetargetScale: false,
+    characterEyeTrackingScale: false,
+};
 
 export const sincroAppNumericSettingConstraints: Record<
     SincroAppNumericSettingKey,
@@ -190,8 +190,9 @@ export function createDefaultSincroAppSettingsSnapshot(): SincroAppSettingsSnaps
     return { ...defaultSincroAppSettingsSnapshot };
 }
 
-export function createDefaultDialogBackedSettings(): DialogBackedSincroAppSettings {
-    return { ...defaultSincroAppDialogBackedSettings };
+/** 各設定モデルへ独立した既定値のコピーを渡す。 */
+export function createDefaultSincroAppSettings(): SincroAppSettings {
+    return { ...defaultSincroAppSettings };
 }
 
 export function createDefaultSincroAppSettingsUiState(): SincroAppSettingsUiState {

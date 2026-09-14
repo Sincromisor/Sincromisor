@@ -11,6 +11,7 @@ import {
     bindTalkManagerSubscription,
 } from "../bridges/sincroAppManagerSubscriptionBinder";
 import type { SincroAppEvent } from "../controller/sincroAppTypes";
+import type { SincroAppSettingsModel } from "../settings/sincroAppSettingsModel";
 
 type SincroAppControllerSubscriptionParams = {
     chatMessageService: ChatMessageService;
@@ -18,6 +19,7 @@ type SincroAppControllerSubscriptionParams = {
     talkManager: TalkManager;
     popMessageService: PopMessageService;
     dialogManager: DialogManager;
+    settingsModel: SincroAppSettingsModel;
     emitEvent: (event: SincroAppEvent) => void;
     emitDerivedConnectionState: () => void;
     emitSettingsRelatedSnapshots: () => void;

@@ -3,17 +3,8 @@ import type { DialogUiStateValue, DialogVrmUiStateValue } from "./dialogStateSto
 // DialogManager の購読/通知責務を分離する軽量 event hub。
 // 状態の正本は DialogStateStore に置き、ここは listener 管理だけを担当する。
 export class DialogEventHub {
-    private readonly settingsChangeListeners = new Set<() => void>();
     private readonly vrmUiStateListeners = new Set<(state: DialogVrmUiStateValue) => void>();
     private readonly dialogUiStateListeners = new Set<(state: DialogUiStateValue) => void>();
-
-    /** 設定の反映完了を購読する。返された関数で購読を解除する。 */
-    subscribeSettingsChange(listener: () => void): () => void {
-        this.settingsChangeListeners.add(listener);
-        return () => {
-            this.settingsChangeListeners.delete(listener);
-        };
-    }
 
     subscribeVrmUiState(
         listener: (state: DialogVrmUiStateValue) => void,
@@ -36,13 +27,6 @@ export class DialogEventHub {
         return () => {
             this.dialogUiStateListeners.delete(listener);
         };
-    }
-
-    /** 管理処理が状態と派生表示を更新した後で購読者へ同期通知する。 */
-    emitSettingsChanged(): void {
-        for (const listener of this.settingsChangeListeners) {
-            listener();
-        }
     }
 
     emitVrmUiStateChanged(state: DialogVrmUiStateValue): void {

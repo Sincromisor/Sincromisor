@@ -1,7 +1,8 @@
-import type { SincroMediaDeviceSelectionState } from "../../media/devices/sincroMediaDeviceService";
-import type { DialogStateStore } from "./dialogStateStore";
+import type { SincroMediaDeviceSelectionState } from "../../features/media/devices/sincroMediaDeviceService";
+import type { SincroAppSettingsValues } from "./sincroAppSettingsValues";
 
-export type DialogSettingsUiState = {
+/** 通常設定UIが入力部品を無効にするための現在状態。 */
+export type AppSettingsUiState = {
     titleTextDisabled: boolean;
     talkModeDisabled: boolean;
     audioInputDeviceDisabled: boolean;
@@ -20,7 +21,8 @@ export type DialogSettingsUiState = {
     enableVRDisabled: boolean;
 };
 
-export type DialogSettingsUiHints = {
+/** 操作制限と選択機器の不在を利用者へ伝える案内。 */
+export type AppSettingsUiHints = {
     audioInputDeviceReason?: string;
     videoInputDeviceReason?: string;
     enableCharacterReason?: string;
@@ -28,6 +30,7 @@ export type DialogSettingsUiHints = {
     enableAutoMuteReason?: string;
 };
 
+/** 開始条件から導出し、ダイアログへ渡す操作可否と案内。 */
 export type DialogStartButtonState = {
     startButtonDisabled: boolean;
     startButtonText: string;
@@ -40,10 +43,10 @@ type DialogMediaDeviceUiContext = {
     videoInputSelection: SincroMediaDeviceSelectionState;
 };
 
-// 起動前 dialog の「設定が有効か」「なぜ無効か」という UI ポリシーを保持する。
-// DialogManager から条件分岐を切り出し、state 更新と通知処理を薄く保つ。
-export class DialogSettingsPolicy {
-    buildUiState(stateStore: DialogStateStore): DialogSettingsUiState {
+/** 通常設定の操作可否・理由と開始条件を導出する。状態の通知はモデル、表示は各UIが担う。 */
+export class SincroAppSettingsPolicy {
+    /** 保持済みの操作制限を通常設定UIの入力項目へ対応付ける。 */
+    buildUiState(stateStore: SincroAppSettingsValues): AppSettingsUiState {
         // React UI は disabled の理由を hints で出すが、まず「押せるかどうか」はこの snapshot を正本にする。
         return {
             titleTextDisabled: stateStore.isDisabled("titleText"),
@@ -65,10 +68,11 @@ export class DialogSettingsPolicy {
         };
     }
 
+    /** 値と機器の現在状態から、操作できない理由を導出する。 */
     buildUiHints(
-        stateStore: DialogStateStore,
+        stateStore: SincroAppSettingsValues,
         context: DialogMediaDeviceUiContext,
-    ): DialogSettingsUiHints {
+    ): AppSettingsUiHints {
         // hints は disabled 理由の補足表示用。操作可否そのものは buildUiState の結果に従う。
         const characterDisabled = stateStore.isDisabled("enableCharacter");
         const gazeDisabled = stateStore.isDisabled("enableCharacterGaze");
@@ -164,8 +168,9 @@ export class DialogSettingsPolicy {
             : "AutoMute を使うには Gaze を有効にしてください。";
     }
 
+    /** マイク利用不可と明示選択した必須機器の不在だけを開始拒否にする。 */
     buildStartButtonState(
-        stateStore: DialogStateStore,
+        stateStore: SincroAppSettingsValues,
         context: DialogMediaDeviceUiContext,
     ): DialogStartButtonState {
         if (!context.isUserMediaAvailable) {
@@ -211,14 +216,8 @@ export class DialogSettingsPolicy {
         };
     }
 
-    initializeDefaultDisabledState(stateStore: DialogStateStore): void {
-        // bridge DOM 縮退後は初期値を store で持つ。必要な disabled は既存挙動に合わせて初期化する。
-        stateStore.setDisabled("enableCharacter", true);
-        stateStore.setDisabled("enableCharacterGaze", true);
-        stateStore.setDisabled("enableAutoMute", true);
-    }
-
-    applyCharacterAvailability(stateStore: DialogStateStore, available: boolean): void {
+    /** キャラクターが利用不可になった場合は選択値も解除する。 */
+    applyCharacterAvailability(stateStore: SincroAppSettingsValues, available: boolean): void {
         // 利用不可になった時は checked 状態も落として、UI と内部状態の矛盾を防ぐ。
         stateStore.setDisabled("enableCharacter", !available);
         if (!available) {
@@ -226,14 +225,16 @@ export class DialogSettingsPolicy {
         }
     }
 
-    applyCharacterGazeAvailability(stateStore: DialogStateStore, available: boolean): void {
+    /** 視線が利用不可になった場合は選択値も解除する。 */
+    applyCharacterGazeAvailability(stateStore: SincroAppSettingsValues, available: boolean): void {
         stateStore.setDisabled("enableCharacterGaze", !available);
         if (!available) {
             stateStore.set("enableCharacterGaze", false);
         }
     }
 
-    applyAutoMuteAvailability(stateStore: DialogStateStore): void {
+    /** 視線が操作可能かつ有効な場合だけ自動ミュートを許可する。 */
+    applyAutoMuteAvailability(stateStore: SincroAppSettingsValues): void {
         // AutoMute は Gaze に依存するため、Gaze 無効時は自動的に OFF に戻す。
         const enabled =
             stateStore.get("enableCharacterGaze") && !stateStore.isDisabled("enableCharacterGaze");

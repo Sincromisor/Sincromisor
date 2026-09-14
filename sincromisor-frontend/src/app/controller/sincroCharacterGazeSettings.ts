@@ -1,9 +1,9 @@
-import type { DialogManager } from "../../features/dialog/model/dialogManager";
-import type { DialogBackedSincroAppSettings } from "../settings/sincroAppSettingsDefaults";
+import type { SincroAppSettings } from "../settings/sincroAppSettingsDefaults";
+import type { SincroAppSettingsModel } from "../settings/sincroAppSettingsModel";
 
-/** 視線設定の差分判定で使用する項目。値の型はダイアログ設定と共有する。 */
-export type DialogGazeSettingsSnapshot = Pick<
-    DialogBackedSincroAppSettings,
+/** 視線設定の差分判定で使用する項目。値の型は通常設定と共有する。 */
+export type GazeSettingsSnapshot = Pick<
+    SincroAppSettings,
     | "enableCharacterGaze"
     | "enableSincroPoseTracking"
     | "forceSincroPoseTracking"
@@ -11,7 +11,8 @@ export type DialogGazeSettingsSnapshot = Pick<
     | "talkMode"
 >;
 
-export type DialogGazeSettingsChanges = {
+/** 追跡の再開始と状態初期化を判断する設定差分。 */
+export type GazeSettingsChanges = {
     videoDeviceChanged: boolean;
     gazeEnabledChanged: boolean;
     talkModeChanged: boolean;
@@ -20,17 +21,18 @@ export type DialogGazeSettingsChanges = {
 };
 
 /** 通知時点の設定を複製し、追跡処理へ渡す前の差分判定に使う。 */
-export function readDialogGazeSettingsSnapshot(
-    dialogManager: DialogManager,
-): DialogGazeSettingsSnapshot {
-    return dialogManager.getSettings();
+export function readGazeSettingsSnapshot(
+    settingsModel: SincroAppSettingsModel,
+): GazeSettingsSnapshot {
+    return settingsModel.getSettings();
 }
 
-export function compareDialogGazeSettings(
-    prev: DialogGazeSettingsSnapshot | undefined,
-    next: DialogGazeSettingsSnapshot,
+/** 初回は全項目、それ以降は値が変わった項目だけを反映対象とする。 */
+export function compareGazeSettings(
+    prev: GazeSettingsSnapshot | undefined,
+    next: GazeSettingsSnapshot,
     forceAll: boolean,
-): DialogGazeSettingsChanges {
+): GazeSettingsChanges {
     return {
         videoDeviceChanged:
             forceAll || prev === undefined || prev.videoInputDeviceId !== next.videoInputDeviceId,
@@ -55,7 +57,7 @@ export function compareDialogGazeSettings(
  * 持ち越せない境界である。Pose tuning だけの変更は camera source を切らないため対象外とする。
  */
 export function resetSincroMotionForGazeSettingsChanges(
-    changes: DialogGazeSettingsChanges,
+    changes: GazeSettingsChanges,
     reset: () => void,
 ): void {
     if (changes.gazeEnabledChanged || changes.videoDeviceChanged || changes.talkModeChanged) {

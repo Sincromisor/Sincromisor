@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { DialogManager } from "../../../features/dialog/model/dialogManager";
 import { SincroAppController } from "../../controller/sincroAppController";
+import { SincroAppSettingsModel } from "../../settings/sincroAppSettingsModel";
 import {
     SincroAppSettingsPersistence,
     sincroSettingsStorageKey,
@@ -104,7 +104,7 @@ it("復元と利用不可通知では保存せず、利用者変更・URL優先�
         audioInputDeviceId: "missing",
     });
     app.applySettings({ titleText: "編集", audioInputDeviceId: undefined });
-    DialogManager.getManager().updateSettings({ enableVenueNoiseMode: false });
+    SincroAppSettingsModel.getShared().updateSettings({ enableVenueNoiseMode: false });
     expect(saved.load()).toMatchObject({
         titleText: "編集",
         talkMode: "sincro",

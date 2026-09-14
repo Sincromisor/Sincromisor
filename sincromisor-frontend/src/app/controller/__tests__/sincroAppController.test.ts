@@ -10,6 +10,7 @@ import {
     createDefaultSincroAppSettingsUiState,
     defaultSincroAppSettingsUiHints,
 } from "../../settings/sincroAppSettingsDefaults";
+import { SincroAppSettingsModel } from "../../settings/sincroAppSettingsModel";
 import { SincroAppController } from "../sincroAppController";
 import { subscribeActiveSincroAppController } from "../subscribeActiveSincroAppController";
 
@@ -47,6 +48,8 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
     const pop = createNotifications<DialogPopEvent>();
     const dialogEvents = new DialogEventHub();
     const dialogState = new DialogStateStore();
+    const settingsModel = new SincroAppSettingsModel();
+    vi.spyOn(settingsModel, "connectMediaDevices").mockReturnValue(() => {});
     const openDialogs: ReturnType<typeof vi.fn>[] = [];
     const stopRTC = vi.fn();
     createRuntime.mockImplementation(() => {
@@ -58,13 +61,12 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
             debugConsoleManager: debug,
             talkManager: talk,
             popMessageService: { subscribeDialogPop: pop.subscribe },
+            settingsModel,
             dialogManager: {
-                getSettings: () => dialogState.getSettings(),
                 settingsUiState: createDefaultSincroAppSettingsUiState,
                 settingsUiHints: () => defaultSincroAppSettingsUiHints,
                 getDialogUiState: () => dialogState.getDialogUiState(),
                 getVrmUiState: () => dialogState.getDialogVrmUiState(),
-                subscribeSettingsChange: dialogEvents.subscribeSettingsChange.bind(dialogEvents),
                 subscribeDialogUiState: (
                     listener: Parameters<DialogEventHub["subscribeDialogUiState"]>[0],
                 ) => dialogEvents.subscribeDialogUiState(listener, dialogState.getDialogUiState()),
@@ -93,7 +95,7 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
             expect.objectContaining({ type: "lifecycle", state: "idle" }),
             old,
         );
-        dialogState.set("titleText", "差し替え前の設定");
+        settingsModel.updateSettings({ titleText: "差し替え前の設定" });
         oldEvents.mockClear();
         reactEvents.mockClear();
         current = new SincroAppController();
@@ -159,8 +161,7 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
         );
         expect(stopRTC).toHaveBeenCalledOnce();
         settingsSeen.mockClear();
-        dialogState.set("titleText", "RTC停止後の設定");
-        dialogEvents.emitSettingsChanged();
+        settingsModel.updateSettings({ titleText: "RTC停止後の設定" });
         expect(settingsSeen).toHaveBeenCalledExactlyOnceWith(
             expect.objectContaining({
                 settings: expect.objectContaining({ titleText: "RTC停止後の設定" }),

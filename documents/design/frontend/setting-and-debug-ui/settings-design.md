@@ -33,8 +33,8 @@
 | [既定値](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsDefaults.ts)                      | 設定スナップショット、UI代替値、数値範囲、Looking Glass既定値の正本                    |
 | [設定ストア](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsStore.ts)                     | 値・操作可否・案内・開始設定の状態と購読通知                                           |
 | [設定適用](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsApplyFlow.ts)                   | 数値正規化、一括反映、関連状態の再構築、完了後の通知                                   |
-| [DialogManager](../../../../sincromisor-frontend/src/features/dialog/model/dialogManager.ts)                  | 設定更新、題名・機器・視線に伴う表示更新、ダイアログの操作窓口                         |
-| [DialogSettingsPolicy](../../../../sincromisor-frontend/src/features/dialog/model/dialogSettingsPolicy.ts)    | 操作可否、利用不可の理由、開始条件                                                     |
+| [DialogManager](../../../../sincromisor-frontend/src/features/dialog/model/dialogManager.ts)                  | 開閉・開始案内・VRM操作。通常設定の状態と適用規則は持たない                            |
+| [設定モデル](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsModel.ts)                     | 通常設定の値・適用・通知、操作可否、利用不可の理由、開始条件                           |
 | [起動前画面](../../../../sincromisor-frontend/src/features/dialog/react/configurationDialogSettingsPages.tsx) | ダイアログ固有の状態、通知、VRM選択の手順                                              |
 | [開始後画面](../../../../sincromisor-frontend/src/pages/simpleVrm/react/simpleVrmControlPanelPages.tsx)       | ページ種別に応じた設定分類と状態表示の組み立て                                         |
 | [StartupDialogFrame](../../../../sincromisor-frontend/src/app/shell/react/overlay/startupDialogFrame.tsx)     | 起動前ダイアログ内側の表示面、通知層、余白とスクロール用の構造                         |
@@ -46,7 +46,7 @@
 
 1. Reactは `settingsStore` の同じスナップショットから値、操作可否、案内を取得する。
 2. 入力変更をアプリ制御の設定適用窓口へ渡す。利用者の数値入力は定義された範囲と刻みに正規化する。検証済み保存値の復元は丸め直さない。
-3. `DialogManager` は変更をまとめ、題名・機器選択・視線設定に付随する表示更新を終える。
+3. `SincroAppSettingsModel` は通常設定の変更をまとめ、題名補正・操作制限・視線と自動ミュートの連動を確定する。ダイアログは同じ通知から開始案内だけを更新する。
 4. 更新後の関連スナップショットを一度通知する。取り付け前の変更も初期取得へ反映する。
 
 操作不可の項目と、機器ID以外の `undefined` は変更しない。機器IDを明示した `undefined` はブラウザー既定への復帰を表す。空の題名は `Sincromisor` へ補正する。React側に操作可否や案内の判断を別途複製しない。
@@ -103,7 +103,7 @@ Looking Glassの値は専用の実行時設定へ反映し、設定スナップ�
 ## 変更時の確認
 
 - 設定追加時は[項目一覧](settings-items.md)を更新し、起動前、通常の開始後、Looking Glassページでの扱いを決める。
-- 既定値・制約は `sincroAppSettingsDefaults.ts` を更新し、`DialogStateStore` や表示部品へ重複した値を増やさない。
+- 既定値・制約は `sincroAppSettingsDefaults.ts` を更新し、設定モデルや表示部品へ重複した値を増やさない。
 - 実行時適用と再開始の区別を入力の案内・状態表示・利用側で確認する。
 - 外枠変更は `src/app/shell/react/overlay/` と `overlay.css`、ページの変更は[共通枠組み](../app-shell.md)と[ページ構成](../pages.md)を確認する。
 - 文書だけの変更は変更MarkdownのPrettier確認と相対リンク確認を行う。実装変更の検査範囲は[タスク管理](../../../../tasks/README.md#確認コマンド)に従う。
