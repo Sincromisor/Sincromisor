@@ -1,12 +1,16 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import { Object3D } from "three/src/core/Object3D.js";
 import { describe, expect, it } from "vitest";
-import { createAvatarMotionProfile, toMinimalAvatarMotionProfile } from "../avatarMotionProfile";
-import { cloneAvatarMotionProfile } from "../avatarMotionProfileClone";
+import { createAvatarMotionProfile } from "../avatarMotionProfile";
+import {
+    cloneAvatarMotionProfile,
+    toMinimalAvatarMotionProfile,
+} from "../avatarMotionProfileClone";
+import { measureAvatarMotionProfile } from "../avatarMotionProfileMeasurement";
 import { parseAvatarMotionProfile } from "../avatarMotionProfileSchema";
 import { AVATAR_MOTION_PROFILE_SCHEMA_VERSION } from "../avatarMotionProfileTypes";
 
-type TestVrmSource = Parameters<typeof createAvatarMotionProfile>[0];
+type TestVrmSource = Parameters<typeof measureAvatarMotionProfile>[0];
 
 type BonePosition = {
     name: VRMHumanBoneName;
@@ -64,7 +68,9 @@ const COMPLETE_BONE_POSITIONS: BonePosition[] = [
 
 describe("AvatarMotionProfile", () => {
     it("creates a plain v1 profile from a complete normalized skeleton", () => {
-        const profile = createAvatarMotionProfile(createTestVrm(COMPLETE_BONE_POSITIONS));
+        const profile = createAvatarMotionProfile(
+            measureAvatarMotionProfile(createTestVrm(COMPLETE_BONE_POSITIONS)),
+        );
 
         expect(profile.schemaVersion).toBe(AVATAR_MOTION_PROFILE_SCHEMA_VERSION);
         expect(profile.model).toEqual({ vrmVersion: "1.0", modelName: "Test Avatar" });
@@ -103,7 +109,9 @@ describe("AvatarMotionProfile", () => {
 
     it("keeps upperChest optional and switches torso distribution", () => {
         const profile = createAvatarMotionProfile(
-            createTestVrm(withoutBones(COMPLETE_BONE_POSITIONS, "upperChest")),
+            measureAvatarMotionProfile(
+                createTestVrm(withoutBones(COMPLETE_BONE_POSITIONS, "upperChest")),
+            ),
         );
 
         expect(profile.capabilities.bones.upperChest).toBe(false);
@@ -114,7 +122,11 @@ describe("AvatarMotionProfile", () => {
 
     it("marks missing shoulders without throwing", () => {
         const profile = createAvatarMotionProfile(
-            createTestVrm(withoutBones(COMPLETE_BONE_POSITIONS, "leftShoulder", "rightShoulder")),
+            measureAvatarMotionProfile(
+                createTestVrm(
+                    withoutBones(COMPLETE_BONE_POSITIONS, "leftShoulder", "rightShoulder"),
+                ),
+            ),
         );
 
         expect(profile.capabilities.bones.leftShoulder).toBe(false);
@@ -127,7 +139,9 @@ describe("AvatarMotionProfile", () => {
 
     it("marks finger chain gaps per side and finger", () => {
         const profile = createAvatarMotionProfile(
-            createTestVrm(withoutBones(COMPLETE_BONE_POSITIONS, "leftIndexIntermediate")),
+            measureAvatarMotionProfile(
+                createTestVrm(withoutBones(COMPLETE_BONE_POSITIONS, "leftIndexIntermediate")),
+            ),
         );
 
         expect(profile.capabilities.fingerChains.left.index).toEqual({
@@ -147,18 +161,16 @@ describe("AvatarMotionProfile", () => {
                 rightHand.quaternion.x = Number.POSITIVE_INFINITY;
             }
         });
-        const profile = createAvatarMotionProfile(vrm);
+        const profile = createAvatarMotionProfile(measureAvatarMotionProfile(vrm));
 
         expect(profile.metrics.shoulderWidth).toBeUndefined();
         expect(profile.metrics.upperArmLength.left).toBeUndefined();
         expect(profile.restLocalRotation.rightHand).toBeUndefined();
-        expect(profile.warnings).toEqual(
-            expect.arrayContaining([
-                "shoulder_width_unmeasured",
-                "left_upper_arm_length_unmeasured",
-                "invalid_rest_rotation:rightHand",
-            ]),
-        );
+        expect(profile.warnings).toEqual([
+            "shoulder_width_unmeasured",
+            "left_upper_arm_length_unmeasured",
+            "invalid_rest_rotation:rightHand",
+        ]);
         for (const shoulderWidth of [
             Number.POSITIVE_INFINITY,
             Number.NEGATIVE_INFINITY,
@@ -184,7 +196,9 @@ describe("AvatarMotionProfile", () => {
     });
 
     it("rejects unknown schema versions, unknown enums, and extra keys", () => {
-        const profile = createAvatarMotionProfile(createTestVrm(COMPLETE_BONE_POSITIONS));
+        const profile = createAvatarMotionProfile(
+            measureAvatarMotionProfile(createTestVrm(COMPLETE_BONE_POSITIONS)),
+        );
 
         expectErrorCode(
             parseAvatarMotionProfile({
@@ -206,7 +220,9 @@ describe("AvatarMotionProfile", () => {
     });
 
     it("deep clones nested profile state", () => {
-        const profile = createAvatarMotionProfile(createTestVrm(COMPLETE_BONE_POSITIONS));
+        const profile = createAvatarMotionProfile(
+            measureAvatarMotionProfile(createTestVrm(COMPLETE_BONE_POSITIONS)),
+        );
         const cloned = cloneAvatarMotionProfile(profile);
 
         cloned.metrics.upperArmLength.left = 9;
@@ -220,7 +236,11 @@ describe("AvatarMotionProfile", () => {
 
     it("converts to the Phase 6 minimal profile shape from v1 defaults", () => {
         const profile = createAvatarMotionProfile(
-            createTestVrm(withoutBones(COMPLETE_BONE_POSITIONS, "upperChest", "leftThumbProximal")),
+            measureAvatarMotionProfile(
+                createTestVrm(
+                    withoutBones(COMPLETE_BONE_POSITIONS, "upperChest", "leftThumbProximal"),
+                ),
+            ),
         );
         const minimal = toMinimalAvatarMotionProfile(profile);
 

@@ -1,9 +1,11 @@
-/** 生成・保存・再生が共有する純粋な複製処理。Three.jsのオブジェクトは扱わない。 */
+/** 生成・保存・再生が共有する純粋な複製・最小表現への変換処理。Three.jsのオブジェクトは扱わない。 */
 import {
     AVATAR_MOTION_PROFILE_BONE_NAMES,
     type AvatarMotionProfile,
     type AvatarMotionSide,
 } from "./avatarMotionProfileTypes";
+
+import type { MinimalAvatarMotionProfile } from "./minimalAvatarMotionProfile";
 
 /** 既知のボーン回転と入れ子のデータを複製し、呼び出し元による変更を元データへ伝えない。 */
 export function cloneAvatarMotionProfile(profile: AvatarMotionProfile): AvatarMotionProfile {
@@ -66,4 +68,44 @@ function cloneRestLocalRotation(
         }
     }
     return cloned;
+}
+
+/** 動作の変換に必要な値だけを複製し、軽量プロファイルへ変換する。 */
+export function toMinimalAvatarMotionProfile(
+    profile: AvatarMotionProfile,
+): MinimalAvatarMotionProfile {
+    return {
+        schemaVersion: "sincro.minimal-avatar-motion-profile.v1",
+        optionalBones: {
+            upperChest: profile.capabilities.bones.upperChest === true,
+            leftShoulder: profile.capabilities.bones.leftShoulder === true,
+            rightShoulder: profile.capabilities.bones.rightShoulder === true,
+            leftHand: profile.capabilities.bones.leftHand === true,
+            rightHand: profile.capabilities.bones.rightHand === true,
+            leftThumbProximal: profile.capabilities.bones.leftThumbProximal === true,
+            rightThumbProximal: profile.capabilities.bones.rightThumbProximal === true,
+            leftIndexProximal: profile.capabilities.bones.leftIndexProximal === true,
+            rightIndexProximal: profile.capabilities.bones.rightIndexProximal === true,
+        },
+        measurements: {
+            shoulderWidth: profile.metrics.shoulderWidth,
+            leftUpperArmLength: profile.metrics.upperArmLength.left,
+            leftLowerArmLength: profile.metrics.lowerArmLength.left,
+            rightUpperArmLength: profile.metrics.upperArmLength.right,
+            rightLowerArmLength: profile.metrics.lowerArmLength.right,
+            headSize: profile.metrics.headSize,
+        },
+        torso: {
+            distribution: { ...profile.torso.distribution },
+        },
+        solverDefaults: {
+            defaultReachScale: profile.arm.reachScale,
+            depthCompression: profile.arm.depthCompression,
+            lateralScale: profile.arm.lateralScale,
+            verticalScale: profile.arm.verticalScale,
+            shoulderDamping: profile.arm.shoulderDamping,
+            wristRollInfluence: profile.wrist.wristRollInfluence,
+        },
+        warnings: [...profile.warnings],
+    };
 }

@@ -3,6 +3,7 @@ import { MathUtils } from "three/src/math/MathUtils.js";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import { createAvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
 import { cloneAvatarMotionProfile } from "../avatarProfile/avatarMotionProfileClone";
+import { measureAvatarMotionProfile } from "../avatarProfile/avatarMotionProfileMeasurement";
 import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { MinimalAvatarMotionProfile } from "../avatarProfile/minimalAvatarMotionProfile";
 import type { SincroArmIkSolveResult } from "../ik/sincroArmIkSolver";
@@ -105,8 +106,9 @@ export class SincroPoseRetargeter {
         };
     }
 
+    /** 読込直後の正規化骨格を計測して動作値を組み立て、IK計測後に追跡状態を初期化する。 */
     attachVrm(vrm: VRM): void {
-        this.avatarMotionProfile = createAvatarMotionProfile(vrm);
+        this.avatarMotionProfile = createAvatarMotionProfile(measureAvatarMotionProfile(vrm));
         this.armIkSolvers = measureArmIkSolvers(vrm);
         this.ccdIkProbeResult = runSincroCcdIkProbe(vrm, "left");
         this.reset();

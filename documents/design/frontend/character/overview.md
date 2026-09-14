@@ -72,7 +72,8 @@
     - 本番試行は意味に基づく動作・指の適用段階で、保存済み `MotionIntentState`、低次元 Hand スナップショット、完成版 `AvatarMotionProfile` が有効なフレームだけ意味に基づく動作の姿勢 / 指の曲げ層を姿勢合成処理入力へ追加する。`composerSemanticFingerApplicationMode` は開発者切り戻しフラグであり、未加工のランドマーク、ジェスチャー Recognizer 未加工の結果、VRM Object3D、元のボーンノードは層生成入力にしない。
     - 正規化済み姿勢の全面適用段階は本番の常時パスであり、同一フレームの利用可能試行 `finalPose` を `VRMCharacterManager.update()` から `vrm.humanoid.setNormalizedPose(finalPose)` へ 1 回渡す。追跡フレームの `active` が `false` の場合、代替処理層は体幹 / 肩を単位回転、`upperArm` / `lowerArm` / 手を腕を下ろした `CHARACTER_ARM_REST_POSE` にする。全面段階が所有するその他の欠損ボーンは毎フレーム単位クォータニオンで埋め、前フレームの指姿勢を残さない。利用不可 / 無効 / 欠損プロファイル / 結果欠損では古くなった finalPose を使わず、腕 / 体幹 / 肩の旧段階別の切り戻し書き込み処理も本番代替処理として実行しない。利用不可理由は診断 Console 要約 / 指標用の観測情報として残す。頭部 / 首 / 脚 / 表情は姿勢合成処理所有に含めず、従来制御処理で更新する。`composerSemanticFingerApplicationMode` は意味に基づく動作 / 指抑制を切り分ける開発者切り戻しフラグとして残す。
     - 動作指標は保存済み `frame.intent` から `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount` を計算する。無効意図は `intentInvalidFrameCount` だけに数え、他の段階 9 指標では有効意図サンプルが無い場合 `not_available` にする。
-    - 保存契約は `avatarMotionProfileTypes.ts`、保存検証は `avatarMotionProfileSchema.ts`、共有複製は `avatarMotionProfileClone.ts` が担う。保存検証はVRM計測を読み込まず、既存の版・厳密なキー検証・数値範囲・エラー分類を維持する。
+    - 保存契約は `avatarMotionProfileTypes.ts`、保存検証は `avatarMotionProfileSchema.ts`、共有複製と最小プロファイルへの変換は `avatarMotionProfileClone.ts` が担う。保存検証はVRM計測を読み込まず、既存の版・厳密なキー検証・数値範囲・エラー分類を維持する。
+    - `avatarMotionProfileMeasurement.ts`がVRMのボーン・寸法・初期回転を計測し、通常データと警告を返す。`avatarMotionProfile.ts`は計測結果から既定値・対応能力・リスク値を組み立てる。`SincroPoseRetargeter.attachVrm()`で計測、組み立て、IK初期化の順に実行する。
     - 完成版 `AvatarMotionProfile` は `VRMScene.getAvatarMotionProfile()` / `VRMCharacterManager.getAvatarMotionProfile()` からデバッグ用複製として公開する。診断 Console と段階 6 スナップショットの `avatarMotionProfile` は `MinimalAvatarMotionProfile` のまま維持する。
 
 ## 本番組み込み段階
