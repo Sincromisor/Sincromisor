@@ -56,13 +56,15 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
         const open = vi.fn();
         openDialogs.push(open);
         return {
-            coreController: { start: vi.fn(), stopRTC },
+            coreController: { start: vi.fn(), stopRTC, releaseTrackingSubscriptions: vi.fn() },
             chatMessageService: chat,
             debugConsoleManager: debug,
             talkManager: talk,
             popMessageService: { subscribeDialogPop: pop.subscribe },
             settingsModel,
             dialogManager: {
+                subscribeVrmSelectionChange: (listener: () => void) =>
+                    dialogEvents.subscribeVrmSelectionChange(listener),
                 settingsUiState: createDefaultSincroAppSettingsUiState,
                 settingsUiHints: () => defaultSincroAppSettingsUiHints,
                 getDialogUiState: () => dialogState.getDialogUiState(),

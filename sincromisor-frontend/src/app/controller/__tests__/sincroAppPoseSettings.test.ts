@@ -7,6 +7,7 @@ vi.mock("../sincroController", () => ({
     SincroController: vi.fn(
         class {
             restoreAudioTuning() {}
+            releaseTrackingSubscriptions() {}
             start() {}
         },
     ),

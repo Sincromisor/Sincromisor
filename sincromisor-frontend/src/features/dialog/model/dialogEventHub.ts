@@ -6,6 +6,21 @@ export class DialogEventHub {
     private readonly vrmUiStateListeners = new Set<(state: DialogVrmUiStateValue) => void>();
     private readonly dialogUiStateListeners = new Set<(state: DialogUiStateValue) => void>();
 
+    private readonly vrmSelectionListeners = new Set<() => void>();
+
+    /** 利用者のVRM選択開始だけを購読する。初期キャッシュ復元や表示文言の変更は含めない。 */
+    subscribeVrmSelectionChange(listener: () => void): () => void {
+        this.vrmSelectionListeners.add(listener);
+        return () => {
+            this.vrmSelectionListeners.delete(listener);
+        };
+    }
+
+    /** 非同期のファイル処理より先に、現在の較正を選択変更として中断させる。 */
+    emitVrmSelectionChange(): void {
+        for (const listener of this.vrmSelectionListeners) listener();
+    }
+
     subscribeVrmUiState(
         listener: (state: DialogVrmUiStateValue) => void,
         initialState: DialogVrmUiStateValue,

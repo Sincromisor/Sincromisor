@@ -12,10 +12,10 @@ useSimpleVrmPanelState は開始時に較正を開始し、モード・カメラ
 
 ## 完了条件（受け入れ条件）
 
-- [ ] ダイアログ、設定パネル、OBSの開始が同じアプリ操作を通り、受理された sincro モードの開始だけが較正を開始する。chat モードや重複開始では較正を新設しない。
-- [ ] 既存の接続停止操作、カメラ変更・追跡停止、sincro モード離脱、VRM選択変更、有効アプリ解除で、そのアプリが所有する有効較正を中断する。
-- [ ] 設定パネルは較正状態の購読と再試行要求に専念し、VRM変更を vrmStatusText の比較で判定しない。
-- [ ] 旧アプリの購読解除・遅延結果が新しい較正を変更せず、既存の sessionId と段階別再試行の保護、Pose観測時刻による継続時間計測を維持する。
+- [x] ダイアログ、設定パネル、OBSの開始が同じアプリ操作を通り、受理された sincro モードの開始だけが較正を開始する。chat モードや重複開始では較正を新設しない。
+- [x] 既存の接続停止操作、カメラ変更・追跡停止、sincro モード離脱、VRM選択変更、有効アプリ解除で、そのアプリが所有する有効較正を中断する。
+- [x] 設定パネルは較正状態の購読と再試行要求に専念し、VRM変更を vrmStatusText の比較で判定しない。
+- [x] 旧アプリの購読解除・遅延結果が新しい較正を変更せず、既存の sessionId と段階別再試行の保護、Pose観測時刻による継続時間計測を維持する。
 
 ## 設計判断
 
@@ -34,7 +34,7 @@ useSimpleVrmPanelState は開始時に較正を開始し、モード・カメラ
 - [dialogVrmStateController.ts](../../../sincromisor-frontend/src/features/dialog/model/dialogVrmStateController.ts)
 - [initialSincroCalibrationController.ts](../../../sincromisor-frontend/src/character/calibration/initialSincroCalibrationController.ts)
 - [initialSincroCalibrationPoseBridge.ts](../../../sincromisor-frontend/src/character/calibration/initialSincroCalibrationPoseBridge.ts)
-- [sincroVrmInitializer.ts](../../../sincromisor-frontend/src/character/scene/sincroVrmInitializer.ts)
+- [sincroVrmInitializer.ts](../../../sincromisor-frontend/src/app/bootstrap/sincroVrmInitializer.ts)
 
 ## 確認方法
 
@@ -49,3 +49,16 @@ useSimpleVrmPanelState は開始時に較正を開始し、モード・カメラ
 - [app-shell.md](../../../documents/design/frontend/app-shell.md)
 - [tracking.md](../../../documents/design/frontend/character/tracking.md)
 - [settings-design.md](../../../documents/design/frontend/setting-and-debug-ui/settings-design.md)
+
+## 実装と確認結果
+
+アプリ専用の較正管理を追加し、重複抑止後の開始、既存のRTC停止、設定適用結果、利用者のVRM選択とアプリ解除を接続した。Pose評価先も同じアプリの較正へ明示的に渡す。共通パネルは状態購読と再試行だけを担い、VRM表示文言の購読を削除した。カメラ取得・追跡初期化・各観測・失敗・映像終了は開始世代で検査し、旧アプリの購読と結果反映を解除する。
+
+- ビルド: PASS。全体テスト: 638件 PASS（既存の2件スキップ）。
+- 実際のアプリ・中核・視線制御を通す結合確認: 同期失敗、音声不通、RTC単独失敗、カメラ拒否、追跡初期化・実行失敗、映像終了、既定カメラ復帰、モード離脱、追跡停止、VRM選択、再開始、旧取得・旧初期化結果、旧フレーム、旧解除を確認した。
+- 既存の3ページ起動テストで、OBSと手動開始時の較正開始、chat除外、重複開始抑止を確認した。既存のPose評価・再試行テストもPASS。
+- ブラウザー: カメラ取得だけを保留し、起動前ダイアログからsincro開始、共通パネルの事前確認表示、接続停止による表示解除を確認した。実機カメラの段階完了は未確認。
+- 全体ゲート: 既存Markdownの整形不一致で停止。今回変更したMarkdownは整形済み。Biomeの既存の複雑度等の助言は追加分を対象点検した。
+- 構造検査: failures=0。コメント点検: PASS。
+
+独立評価: PASS（対象7ファイル19テスト）。

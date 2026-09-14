@@ -1,5 +1,6 @@
 import type { Detection } from "@mediapipe/tasks-vision";
 import { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
+import type { InitialSincroCalibrationController } from "../../character/calibration/initialSincroCalibrationController";
 import type { ChatMessageService } from "../../features/conversation/chat/model/chatMessageService";
 import type { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { CharacterGaze } from "../../features/gaze/characterGaze/characterGaze";
@@ -25,10 +26,9 @@ import { SincroCharacterMotionEventSink } from "./sincroCharacterMotionEventSink
 
 const SINCRO_POSE_TARGET_INFERENCE_FPS = 12;
 
-// CharacterGaze の起動と、視線検出結果 -> Debug UI / AutoMute 変換を担当する controller。
-// DOM依存（#eyeTarget 表示）は移行期間の暫定としてここに閉じ込めている。
+/** カメラ取得と追跡世代を所有し、現在世代の観測と失敗だけをアプリ・較正へ届ける。 */
 export class SincroCharacterGazeController {
-    // reason: structure-threshold-exception 既存のカメラ・追跡ライフサイクルを維持し、今回の変更は調整値の接続順序に限定する。
+    // reason: structure-threshold-exception 既存のカメラ・追跡ライフサイクルを維持し、追跡世代ごとの結果破棄とアプリへの中断通知を同じ所有者で扱う。
     private readonly settingsModel: SincroAppSettingsModel;
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly chatMessageService: ChatMessageService;
@@ -37,6 +37,9 @@ export class SincroCharacterGazeController {
     private readonly videoInputManager = new VideoInputManager();
     private readonly trackingVideoElement: HTMLVideoElement;
     private readonly trackerRuntime: TrackerRuntime;
+    private released = false;
+    private readonly unsubscribeSettings: () => void;
+    private onTrackingStopped: (reason: string) => void = () => {};
     private onMuteChange: ((mute: boolean) => void) | undefined;
     private visionInitPromise: Promise<void> | undefined;
     private hasStarted = false;
@@ -50,6 +53,7 @@ export class SincroCharacterGazeController {
         debugConsoleManager: DebugConsoleManager,
         chatMessageService: ChatMessageService,
         emitEvent: (event: SincroAppEvent) => void,
+        calibrationController: InitialSincroCalibrationController,
     ) {
         this.settingsModel = settingsModel;
         this.debugConsoleManager = debugConsoleManager;
@@ -57,6 +61,7 @@ export class SincroCharacterGazeController {
         this.characterBehaviorState = CharacterBehaviorState.getManager();
         this.trackingVideoElement = resolveTrackingVideoElement();
         this.motionEventSink = new SincroCharacterMotionEventSink({
+            calibrationController,
             settingsModel,
             debugConsoleManager,
             chatMessageService,
@@ -73,13 +78,18 @@ export class SincroCharacterGazeController {
             characterGaze.setTrackingTuning(config);
         });
         // Gaze ON/OFF と camera selector の両方に追従できるよう、設定変更は差分監視で扱う。
-        this.settingsModel.subscribeSettingsChange(() => {
+        this.unsubscribeSettings = this.settingsModel.subscribeSettingsChange(() => {
             this.applyGazeSettings(false);
         });
     }
 
-    // 顔認識を開始し、視線・AutoMute状態をデバッグUIとRTC mute制御へ反映する。
-    start(onMuteChange: (mute: boolean) => void): void {
+    /** 開始ごとの終了通知を保持し、視線・AutoMuteと顔・姿勢追跡へ現在設定を反映する。 */
+    start(
+        onMuteChange: (mute: boolean) => void,
+        onTrackingStopped: (reason: string) => void,
+    ): void {
+        if (this.released) return;
+        this.onTrackingStopped = onTrackingStopped;
         this.onMuteChange = onMuteChange;
         this.hasStarted = true;
 
@@ -128,7 +138,10 @@ export class SincroCharacterGazeController {
         }
     }
 
+    /** 停止以後の遅延結果を無効にし、同じ開始の較正へ追跡終了を返す。 */
     private stopCharacterGazeCamera(): void {
+        ++this.pendingCameraRefreshToken;
+        this.onTrackingStopped("tracking_stopped");
         const characterGaze = CharacterGaze.getManager();
         characterGaze.detachCamera();
         this.trackerRuntime.stopFaceTracking("sincro_face_tracking_stopped");
@@ -145,24 +158,25 @@ export class SincroCharacterGazeController {
 
     private scheduleCameraRefresh(): void {
         const refreshToken = ++this.pendingCameraRefreshToken;
+        const onTrackingStopped = this.onTrackingStopped;
         this.cameraRefreshChain = this.cameraRefreshChain
             .catch(() => {
                 // 直前の切替失敗で後続チェーンが止まらないようにする。
             })
             .then(async () => {
-                if (refreshToken !== this.pendingCameraRefreshToken) {
+                if (this.released || refreshToken !== this.pendingCameraRefreshToken) {
                     return;
                 }
-                await this.refreshCharacterGazeCamera(refreshToken);
+                await this.refreshCharacterGazeCamera(refreshToken, onTrackingStopped);
             });
     }
 
     /** 最新の機器を取得し、現在の会話モードの追跡を開始する。古い取得結果は停止して破棄する。 */
-    private async refreshCharacterGazeCamera(refreshToken: number): Promise<void> {
-        if (
-            !this.settingsModel.getSetting("enableCharacterGaze") ||
-            this.onMuteChange === undefined
-        ) {
+    private async refreshCharacterGazeCamera(
+        refreshToken: number,
+        onTrackingStopped: (reason: string) => void,
+    ): Promise<void> {
+        if (!this.isCurrentTracking(refreshToken) || this.onMuteChange === undefined) {
             return;
         }
         this.motionEventSink.resetObserveOnlyPipeline();
@@ -180,18 +194,19 @@ export class SincroCharacterGazeController {
 
         try {
             const nextVideoTrack = await this.videoInputManager.reacquireVideoTrack();
-            if (
-                refreshToken !== this.pendingCameraRefreshToken ||
-                !this.settingsModel.getSetting("enableCharacterGaze")
-            ) {
+            if (!this.isCurrentTracking(refreshToken)) {
                 nextVideoTrack.stop();
                 return;
             }
             this.activeTrackingVideoTrack = nextVideoTrack;
             nextVideoTrack.addEventListener("ended", () => {
-                if (!this.settingsModel.getSetting("enableCharacterGaze")) {
+                if (
+                    !this.isCurrentTracking(refreshToken) ||
+                    this.activeTrackingVideoTrack !== nextVideoTrack
+                ) {
                     return;
                 }
+                onTrackingStopped("camera_ended");
                 this.characterBehaviorState.setErrorSource(
                     "gaze",
                     "顔トラッキング用カメラの映像トラックが停止しました。",
@@ -199,17 +214,24 @@ export class SincroCharacterGazeController {
             });
 
             if (this.settingsModel.getSetting("talkMode") === "sincro") {
-                await this.startSincroFaceTracking(nextVideoTrack);
+                await this.startSincroFaceTracking(nextVideoTrack, refreshToken, onTrackingStopped);
             } else {
-                await this.startCharacterGazeTracking(characterGaze, nextVideoTrack);
+                await this.startCharacterGazeTracking(
+                    characterGaze,
+                    nextVideoTrack,
+                    refreshToken,
+                    onTrackingStopped,
+                );
             }
+            if (!this.isCurrentTracking(refreshToken)) return;
             this.characterBehaviorState.clearErrorSource("gaze");
             this.characterBehaviorState.clearErrorSource("faceMotion");
         } catch (error) {
-            if (refreshToken !== this.pendingCameraRefreshToken) {
+            if (this.released || refreshToken !== this.pendingCameraRefreshToken) {
                 return;
             }
             frontendLogger.error("Failed to init CharacterGaze camera.", { error });
+            onTrackingStopped("tracking_failed");
             this.stopCharacterGazeCamera();
             const detail = error instanceof Error ? error.message : String(error);
             this.characterBehaviorState.setErrorSource(
@@ -228,16 +250,20 @@ export class SincroCharacterGazeController {
     private async startCharacterGazeTracking(
         characterGaze: CharacterGaze,
         nextVideoTrack: MediaStreamTrack,
+        refreshToken: number,
+        onTrackingStopped: (reason: string) => void,
     ): Promise<void> {
         this.trackerRuntime.stopFaceTracking("chat_mode_selected");
         this.motionEventSink.resetObserveOnlyPipeline();
         this.characterBehaviorState.setFaceMotionTrackingEnabled(false);
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
         await this.ensureVisionInitialized(characterGaze);
+        if (!this.isCurrentTracking(refreshToken)) return;
         frontendLogger.info("Starting CharacterGaze tracking.");
         const started = await characterGaze.initCamera(
             nextVideoTrack,
             (detects: Detection[]) => {
+                if (!this.isCurrentTracking(refreshToken)) return;
                 // 設定変更後も動作が追従するよう、毎フレーム時点の設定を参照する。
                 const gazeEnabled =
                     this.settingsModel.getSetting("enableCharacterGaze") &&
@@ -255,17 +281,24 @@ export class SincroCharacterGazeController {
                 updateEyeTargetOverlay(characterGaze, gazeEnabled, detects);
             },
             (error: unknown) => {
+                if (!this.isCurrentTracking(refreshToken)) return;
+                onTrackingStopped("tracking_failed");
                 this.handleCharacterGazeRuntimeError(error);
             },
         );
         if (!started) {
             throw new Error("CharacterGaze camera initialization returned false.");
         }
-        this.characterBehaviorState.setGazeTrackingEnabled(true);
+        if (this.isCurrentTracking(refreshToken))
+            this.characterBehaviorState.setGazeTrackingEnabled(true);
     }
 
     /** 視線追跡を解除し、現在の姿勢設定で顔・姿勢同期を開始する。姿勢無効時は補助追跡も起動しない。 */
-    private async startSincroFaceTracking(nextVideoTrack: MediaStreamTrack): Promise<void> {
+    private async startSincroFaceTracking(
+        nextVideoTrack: MediaStreamTrack,
+        refreshToken: number,
+        onTrackingStopped: (reason: string) => void,
+    ): Promise<void> {
         const characterGaze = CharacterGaze.getManager();
         characterGaze.detachCamera();
         updateEyeTargetOverlay(characterGaze, false, []);
@@ -284,24 +317,32 @@ export class SincroCharacterGazeController {
             nextVideoTrack,
             {
                 onFaceMotion: (snapshot, timing) => {
+                    if (!this.isCurrentTracking(refreshToken)) return;
                     this.motionEventSink.handleFaceMotion(snapshot, timing);
                 },
                 onPoseMotion: (snapshot, timing) => {
+                    if (!this.isCurrentTracking(refreshToken)) return;
                     this.motionEventSink.handlePoseMotion(snapshot, timing);
                 },
                 onPoseFallback: (snapshot, timing) => {
+                    if (!this.isCurrentTracking(refreshToken)) return;
                     this.motionEventSink.handlePoseFallback(snapshot, timing);
                 },
                 onHandMotion: (snapshot, timing) => {
+                    if (!this.isCurrentTracking(refreshToken)) return;
                     this.motionEventSink.handleHandMotion(snapshot, timing);
                 },
                 onGestureMotion: (snapshot, timing) => {
+                    if (!this.isCurrentTracking(refreshToken)) return;
                     this.motionEventSink.handleGestureMotion(snapshot, timing);
                 },
                 onTrackerStats: (snapshot) => {
+                    if (!this.isCurrentTracking(refreshToken)) return;
                     this.debugConsoleManager.updateSincroTrackerStats(snapshot);
                 },
                 onError: (error) => {
+                    if (!this.isCurrentTracking(refreshToken)) return;
+                    onTrackingStopped("tracking_failed");
                     this.motionEventSink.handleFaceRuntimeError(error);
                 },
             },
@@ -315,6 +356,22 @@ export class SincroCharacterGazeController {
                 gesture: { enabled: observeOptionalPosePassEnabled },
                 faceRoi: { enabled: observeOptionalPosePassEnabled },
             },
+        );
+    }
+
+    /** アプリ差し替えで購読と結果の反映を終了する。機器停止は既存の操作範囲に残す。 */
+    releaseSubscriptions(): void {
+        this.released = true;
+        ++this.pendingCameraRefreshToken;
+        this.unsubscribeSettings();
+    }
+
+    /** 機器取得・追跡初期化・毎フレーム通知を同じ開始世代で検査する。 */
+    private isCurrentTracking(refreshToken: number): boolean {
+        return (
+            !this.released &&
+            refreshToken === this.pendingCameraRefreshToken &&
+            this.settingsModel.getSetting("enableCharacterGaze")
         );
     }
 

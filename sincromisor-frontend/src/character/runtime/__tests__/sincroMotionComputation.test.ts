@@ -7,6 +7,7 @@ import { DebugConsoleManager } from "../../../features/debug/model/debugConsoleM
 import { DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT } from "../../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import { DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT } from "../../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import { CharacterBehaviorState } from "../../behavior/characterBehaviorState";
+import { InitialSincroCalibrationController } from "../../calibration/initialSincroCalibrationController";
 import { createCanonicalUpperBodyState } from "../../canonical/canonicalArmFeatureExtractor";
 import { estimateCanonicalTorsoFrame } from "../../canonical/canonicalTorsoFrameEstimator";
 import type { CanonicalUpperBodyState } from "../../canonical/canonicalUpperBodyState";
@@ -99,6 +100,7 @@ it("本番イベント窓口から振る舞い状態へ同じ計算結果を渡�
     const events: SincroAppEvent[] = [];
     const video = { width: 640, height: 480 };
     const sink = new SincroCharacterMotionEventSink({
+        calibrationController: new InitialSincroCalibrationController(),
         settingsModel,
         characterBehaviorState: behavior,
         debugConsoleManager: DebugConsoleManager.getManager(),

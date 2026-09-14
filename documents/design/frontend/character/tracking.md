@@ -372,3 +372,11 @@
 - `documents/design/frontend/character/overview.md`
 - `documents/design/frontend/character/motion.md`
 - `documents/design/archive/legacy-flat/frontend_character.md`
+
+## 初期較正の開始と中断
+
+初期較正は `SincroAppController.calibration` がアプリごとに所有する。ダイアログ・共通設定パネル・OBSは同じ `start()` を通り、重複抑止後のsincro開始だけが較正を開始する。パネルは状態購読と段階別再試行を要求し、開始・中断やVRM状態文言の比較を行わない。
+
+接続停止、カメラ変更（既定機器への復帰を含む）、追跡停止、sincro離脱、利用者のVRM選択、アプリ解除で有効較正を中断する。初期キャッシュ復元は選択変更に含めない。同期開始例外と現在の追跡世代の取得・初期化・実行失敗や映像終了も中断する。音声取得・RTCだけの失敗は中断条件に含めず、RTC停止操作の機器リソース範囲も維持する。
+
+追跡通知はアプリと開始世代で検査し、較正操作は既存のsession検査を通す。旧アプリの解除・旧開始の遅延結果は新しい較正を変更しない。Pose評価は同じアプリの評価器へ接続し、継続時間は既存どおりPose観測時刻で計測する。

@@ -1,4 +1,5 @@
 import type { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
+import type { InitialSincroCalibrationController } from "../../character/calibration/initialSincroCalibrationController";
 import { InitialSincroCalibrationPoseBridge } from "../../character/calibration/initialSincroCalibrationPoseBridge";
 import type { SincroMotionObserveOnlyPipelineInput } from "../../character/runtime/sincroMotionObserveOnlyPipeline";
 import { SincroMotionObserveOnlyPipeline } from "../../character/runtime/sincroMotionObserveOnlyPipeline";
@@ -21,6 +22,7 @@ import {
 } from "./sincroCharacterGazeDebugText";
 
 type SincroCharacterMotionEventSinkOptions = {
+    calibrationController: InitialSincroCalibrationController;
     settingsModel: SincroAppSettingsModel;
     debugConsoleManager: DebugConsoleManager;
     chatMessageService: ChatMessageService;
@@ -43,13 +45,17 @@ export class SincroCharacterMotionEventSink {
     private readonly characterBehaviorState: CharacterBehaviorState;
     private readonly observeOnlyPipeline = new SincroMotionObserveOnlyPipeline();
     private readonly cameraQualityRuntime = new SincroCameraQualityRuntime();
-    private readonly calibrationPoseBridge = new InitialSincroCalibrationPoseBridge();
+    /** このアプリの較正だけをPose観測時刻で評価する。 */
+    private readonly calibrationPoseBridge: InitialSincroCalibrationPoseBridge;
     private readonly readVideoSize: () => { width: number; height: number };
     private readonly readTrackSettings: () => MediaTrackSettings | undefined;
     private readonly readTrackReadyState: () => MediaStreamTrackState | undefined;
     private readonly emitEvent: (event: SincroAppEvent) => void;
 
     constructor(options: SincroCharacterMotionEventSinkOptions) {
+        this.calibrationPoseBridge = new InitialSincroCalibrationPoseBridge(
+            options.calibrationController,
+        );
         this.settingsModel = options.settingsModel;
         this.debugConsoleManager = options.debugConsoleManager;
         this.chatMessageService = options.chatMessageService;

@@ -27,7 +27,6 @@ export type SincroPanelRuntimeEventSetters = {
     setLookingGlass: Dispatch<SetStateAction<PanelLookingGlassState>>;
     setLookingGlassConfigStatus: Dispatch<SetStateAction<PanelLookingGlassConfigStatus>>;
     setCameraGuide: Dispatch<SetStateAction<PanelCameraGuideState>>;
-    setVrmStatusText: Dispatch<SetStateAction<string>>;
 };
 
 /** アプリ通知を接続・追跡・Looking Glassの現在表示へ振り分ける。 */
@@ -64,7 +63,6 @@ function createRuntimeStatusEventHandlers(
                 reducePanelCameraGuideState(state, event.quality, event.observedAtMs),
             ),
         "camera-quality-reset": () => setters.setCameraGuide(createPanelCameraGuideState()),
-        dialog_vrm_ui_state: (event) => setters.setVrmStatusText(event.uiState.vrmStatusText),
     };
 }
 

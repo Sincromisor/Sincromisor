@@ -9,6 +9,7 @@ import {
 vi.mock("../../controller/sincroController", () => ({
     SincroController: class {
         restoreAudioTuning() {}
+        releaseTrackingSubscriptions() {}
         start() {}
     },
 }));

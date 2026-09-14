@@ -12,6 +12,7 @@ const { coreStart, sceneStart, sceneOptions, poseSettings, motionTuning, charact
 vi.mock("../../controller/sincroController", () => ({
     SincroController: class {
         restoreAudioTuning() {}
+        releaseTrackingSubscriptions() {}
         start() {
             coreStart();
         }
@@ -113,7 +114,12 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
                         ? { talkMode: page === "simple-chat" ? "chat" : "sincro" }
                         : {}),
                 });
+                const calibration = app?.calibration.getState();
+                expect(calibration?.status).toBe(
+                    app?.getSettingsSnapshot().talkMode === "sincro" ? "active" : "idle",
+                );
                 app?.start();
+                expect(app?.calibration.getState()).toBe(calibration);
             });
             const roots = {
                 canvasRoot: Object.create(null),
@@ -188,7 +194,8 @@ it("初期化失敗を入口へ報告し、OBSも手動も部分的に開始し�
             characterControlLayer: Object.create(null),
         }),
     ).toThrow("initialization failed");
-    expect(() => SincroAppController.getCurrent()?.start()).toThrow("VRM page is not initialized.");
+    expect(() => SincroAppController.getCurrent()?.start()).not.toThrow();
+    expect(SincroAppController.getCurrent()?.calibration.getState()).toEqual({ status: "idle" });
     expect(coreStart).not.toHaveBeenCalled();
     expect(sceneStart).not.toHaveBeenCalled();
     SincroAppController.getCurrent()?.releaseEventSubscriptions();

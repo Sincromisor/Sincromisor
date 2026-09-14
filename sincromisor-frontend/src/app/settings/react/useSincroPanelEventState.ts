@@ -43,7 +43,6 @@ type SincroPanelEventState = {
     lookingGlass: PanelLookingGlassState;
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
     cameraGuide: PanelCameraGuideState;
-    vrmStatusText: string;
 };
 
 type SincroPanelRuntimeEventState = {
@@ -54,7 +53,6 @@ type SincroPanelRuntimeEventState = {
     lookingGlass: PanelLookingGlassState;
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
     cameraGuide: PanelCameraGuideState;
-    vrmStatusText: string;
 };
 
 /** 購読中のパネルで表示する現在状態と、参照が安定した更新窓口を保持する。 */
@@ -74,7 +72,6 @@ function useSincroPanelRuntimeEventState(): {
     const [cameraGuide, setCameraGuide] = useState<PanelCameraGuideState>(
         createPanelCameraGuideState,
     );
-    const [vrmStatusText, setVrmStatusText] = useState("");
     const setters = useMemo<SincroPanelRuntimeEventSetters>(
         () => ({
             setVadState,
@@ -84,7 +81,6 @@ function useSincroPanelRuntimeEventState(): {
             setLookingGlass,
             setLookingGlassConfigStatus,
             setCameraGuide,
-            setVrmStatusText,
         }),
         [],
     );
@@ -98,7 +94,6 @@ function useSincroPanelRuntimeEventState(): {
             lookingGlass,
             lookingGlassConfigStatus,
             cameraGuide,
-            vrmStatusText,
         },
         setters,
     };
