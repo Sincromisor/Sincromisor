@@ -35,6 +35,7 @@ export class MotionDebugSceneRuntime {
         const diagnostics = DebugConsoleManager.getManager();
         this.scene = new VRMScene({
             diagnostics: {
+                onEmotionLog: (message) => diagnostics.addTextChannelLog(message),
                 onAvatarMotionProfile: (profile) => diagnostics.updateAvatarMotionProfile(profile),
                 onPoseRetargetFrame: (frame) => diagnostics.updateSincroPoseRetargetFrame(frame),
                 onComposerSummary: (summary) =>

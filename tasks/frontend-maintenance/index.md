@@ -30,15 +30,14 @@
 
 ## タスク一覧（自動生成 / 全 29 件）
 
-### open（未完） — 3 件
+### open（未完） — 2 件
 
 | タスク                                                                                                   | タイトル                                          | 判定 | 依存                                            |
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---- | ----------------------------------------------- |
-| [task-260914172951-decouple-emotion-log](./task-260914172951-decouple-emotion-log/task.md)               | 表情制御のログ出力をコールバックへ分離する        | —    | `task-260914172951-decouple-vrm-diagnostics`    |
 | [task-260914172951-explicit-vrm-initialization](./task-260914172951-explicit-vrm-initialization/task.md) | VRMページの初期化と自動開始を明示的な段階へ分ける | —    | `task-260914172951-bridge-pose-settings`        |
 | [task-260914172952-mount-driven-vrm-bootstrap](./task-260914172952-mount-driven-vrm-bootstrap/task.md)   | Reactの配置完了からVRMページを初期化する          | —    | `task-260914172951-explicit-vrm-initialization` |
 
-### done（完了） — 26 件
+### done（完了） — 27 件
 
 | タスク                                                                                                                     | タイトル                                         | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -60,6 +59,7 @@
 | [task-260914172950-remove-unused-torso-writer](./task-260914172950-remove-unused-torso-writer/task.md)                     | 未使用の上半身直接制御を削除して腰の安定化を残す | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172950-share-vrm-frame-render](./task-260914172950-share-vrm-frame-render/task.md)                             | 通常・XR・単発描画のフレーム処理を集約する       | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172951-bridge-pose-settings](./task-260914172951-bridge-pose-settings/task.md)                                 | 姿勢設定とシーンの接続をアプリ側へ集約する       | ✅ PASS | `task-260914172951-decouple-vrm-diagnostics`                                                                                                                  |
+| [task-260914172951-decouple-emotion-log](./task-260914172951-decouple-emotion-log/task.md)                                 | 表情制御のログ出力をコールバックへ分離する       | ✅ PASS | `task-260914172951-decouple-vrm-diagnostics`                                                                                                                  |
 | [task-260914172951-decouple-vrm-diagnostics](./task-260914172951-decouple-vrm-diagnostics/task.md)                         | VRMの診断結果をコールバックでアプリへ返す        | ✅ PASS | `task-260914172951-rename-production-pose-composer`                                                                                                           |
 | [task-260914172951-rename-production-pose-composer](./task-260914172951-rename-production-pose-composer/task.md)           | 本番の姿勢合成サービスの名前と説明を整理する     | ✅ PASS | `task-260914172950-extract-normalized-pose-writer`                                                                                                            |
 | [task-260914172952-share-skipped-gesture-notification](./task-260914172952-share-skipped-gesture-notification/task.md)     | 追跡のジェスチャー省略通知を共通化する           | ✅ PASS | —                                                                                                                                                             |

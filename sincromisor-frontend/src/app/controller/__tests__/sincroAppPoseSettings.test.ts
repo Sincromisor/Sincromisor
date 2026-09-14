@@ -20,6 +20,10 @@ it("正規化済み設定を一度届け、アプリ差し替えと古い解除�
     vi.stubGlobal("document", { querySelector: () => ({}) });
     const debug = DebugConsoleManager.getManager();
     const old = new SincroAppController();
+    const emotionLog = vi.spyOn(debug, "addTextChannelLog");
+    old.debug.vrmDiagnostics.onEmotionLog?.("[emotion] connection test\n");
+    expect(emotionLog).toHaveBeenCalledWith("[emotion] connection test\n");
+    emotionLog.mockRestore();
     old.applySettings({ sincroPoseRetargetScale: 0.4 });
     const oldScene = vi.fn();
     const releaseOld = old.connectPoseSettings(oldScene);
