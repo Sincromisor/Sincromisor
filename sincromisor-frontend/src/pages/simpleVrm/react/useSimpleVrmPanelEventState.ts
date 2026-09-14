@@ -9,9 +9,7 @@ import type {
     PanelLearnedVadState,
     PanelLookingGlassConfigStatus,
     PanelLookingGlassState,
-    PanelMessageLog,
     PanelRtcState,
-    PanelTelopLog,
     SincroAppSettingsSnapshot,
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
@@ -37,14 +35,11 @@ type SimpleVrmPanelEventState = {
     settingsUiHints: SincroAppSettingsUiHints;
     startupSettingsStatus: SincroAppStartupSettingsStatus;
     startupSettingsCapabilities: SincroAppStartupSettingsCapabilities;
-    logs: PanelMessageLog[];
     vadState: "unknown" | "speech" | "silence";
     learnedVad: PanelLearnedVadState;
     gaze: PanelGazeState;
-    rtcEvents: string[];
     rtcState: PanelRtcState;
     connectionState: PanelConnectionState;
-    telopLogs: PanelTelopLog[];
     lookingGlass: PanelLookingGlassState;
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
     cameraGuide: PanelCameraGuideState;
@@ -52,30 +47,25 @@ type SimpleVrmPanelEventState = {
 };
 
 type SimpleVrmPanelRuntimeEventState = {
-    logs: PanelMessageLog[];
     vadState: "unknown" | "speech" | "silence";
     learnedVad: PanelLearnedVadState;
     gaze: PanelGazeState;
-    rtcEvents: string[];
     rtcState: PanelRtcState;
-    telopLogs: PanelTelopLog[];
     lookingGlass: PanelLookingGlassState;
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
     cameraGuide: PanelCameraGuideState;
     vrmStatusText: string;
 };
 
+/** 購読中のパネルで表示する現在状態と、参照が安定した更新窓口を保持する。 */
 function useSimpleVrmPanelRuntimeEventState(): {
     state: SimpleVrmPanelRuntimeEventState;
     setters: SimpleVrmPanelRuntimeEventSetters;
 } {
-    const [logs, setLogs] = useState<PanelMessageLog[]>([]);
     const [vadState, setVadState] = useState<"unknown" | "speech" | "silence">("unknown");
     const [learnedVad, setLearnedVad] = useState<PanelLearnedVadState>({ status: "idle" });
     const [gaze, setGaze] = useState<PanelGazeState>({});
-    const [rtcEvents, setRtcEvents] = useState<string[]>([]);
     const [rtcState, setRtcState] = useState<PanelRtcState>(defaultSimpleVrmPanelRtcState);
-    const [telopLogs, setTelopLogs] = useState<PanelTelopLog[]>([]);
     const [lookingGlass, setLookingGlass] = useState<PanelLookingGlassState>(
         defaultSimpleVrmPanelLookingGlassState,
     );
@@ -87,13 +77,10 @@ function useSimpleVrmPanelRuntimeEventState(): {
     const [vrmStatusText, setVrmStatusText] = useState("");
     const setters = useMemo<SimpleVrmPanelRuntimeEventSetters>(
         () => ({
-            setLogs,
             setVadState,
             setLearnedVad,
             setGaze,
-            setRtcEvents,
             setRtcState,
-            setTelopLogs,
             setLookingGlass,
             setLookingGlassConfigStatus,
             setCameraGuide,
@@ -104,13 +91,10 @@ function useSimpleVrmPanelRuntimeEventState(): {
 
     return {
         state: {
-            logs,
             vadState,
             learnedVad,
             gaze,
-            rtcEvents,
             rtcState,
-            telopLogs,
             lookingGlass,
             lookingGlassConfigStatus,
             cameraGuide,
@@ -120,7 +104,7 @@ function useSimpleVrmPanelRuntimeEventState(): {
     };
 }
 
-// AppController event を control panel 表示用 state に正規化する。
+/** 有効アプリの通知をパネル表示へ反映し、解除時に古いカメラ案内を消す。 */
 export function useSimpleVrmPanelEventState(): SimpleVrmPanelEventState {
     const initialController = SincroAppController.getCurrent();
     const runtimeEventState = useSimpleVrmPanelRuntimeEventState();

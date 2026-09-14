@@ -77,14 +77,17 @@ Pose Landmarker は face-only の本流と分けて進める。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 120 件）
+## タスク一覧（自動生成 / 全 123 件）
 
-### open（未完） — 2 件
+### open（未完） — 5 件
 
-| タスク                                                                                                                                         | タイトル                                   | 判定 | 依存                                                                     |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ---- | ------------------------------------------------------------------------ |
-| [task-260712044933-remove-semantic-finger-rollback-hook](./task-260712044933-remove-semantic-finger-rollback-hook/task.md)                     | 意味に基づく動作と指の切り戻しフックを削除 | —    | —                                                                        |
-| [task-260712171317-capture-m1-macbook-air-motion-validation-suite](./task-260712171317-capture-m1-macbook-air-motion-validation-suite/task.md) | M1 MacBook Airでジェスチャーの基準値を取得 | —    | `task-260712074348-record-per-frame-gesture-and-total-tracker-durations` |
+| タスク                                                                                                                                         | タイトル                                         | 判定 | 依存                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ---- | ------------------------------------------------------------------------ |
+| [task-260712044933-remove-semantic-finger-rollback-hook](./task-260712044933-remove-semantic-finger-rollback-hook/task.md)                     | 意味に基づく動作と指の切り戻しフックを削除       | —    | —                                                                        |
+| [task-260712171317-capture-m1-macbook-air-motion-validation-suite](./task-260712171317-capture-m1-macbook-air-motion-validation-suite/task.md) | M1 MacBook Airでジェスチャーの基準値を取得       | —    | `task-260712074348-record-per-frame-gesture-and-total-tracker-durations` |
+| [task-260915005054-extract-motion-computation-core](./task-260915005054-extract-motion-computation-core/task.md)                               | 動作状態の共通計算を抽出して本番経路へ接続       | —    | —                                                                        |
+| [task-260915005055-share-live-motion-computation](./task-260915005055-share-live-motion-computation/task.md)                                   | 動作検証のライブ計算を共通化して録画処理から分離 | —    | `task-260915005054-extract-motion-computation-core`                      |
+| [task-260915005055-share-replay-motion-computation](./task-260915005055-share-replay-motion-computation/task.md)                               | 動作再生の保存値と再計算を分離して共通計算へ接続 | —    | `task-260915005055-share-live-motion-computation`                        |
 
 ### done（完了） — 117 件
 

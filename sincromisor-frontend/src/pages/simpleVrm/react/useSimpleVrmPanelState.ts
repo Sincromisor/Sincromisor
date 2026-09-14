@@ -14,9 +14,7 @@ import type {
     PanelLearnedVadState,
     PanelLookingGlassConfigStatus,
     PanelLookingGlassState,
-    PanelMessageLog,
     PanelRtcState,
-    PanelTelopLog,
     SincroAppSettingsSnapshot,
     SincroAppSettingsUiHints,
     SincroAppSettingsUiState,
@@ -37,14 +35,11 @@ type SimpleVrmPanelState = {
     mediaDeviceSnapshot: ReturnType<typeof useSincroMediaDeviceState>["snapshot"];
     audioInputSelection: ReturnType<typeof useSincroMediaDeviceState>["audioInputSelection"];
     videoInputSelection: ReturnType<typeof useSincroMediaDeviceState>["videoInputSelection"];
-    logs: PanelMessageLog[];
     vadState: "unknown" | "speech" | "silence";
     learnedVad: PanelLearnedVadState;
     gaze: PanelGazeState;
-    rtcEvents: string[];
     rtcState: PanelRtcState;
     connectionState: PanelConnectionState;
-    telopLogs: PanelTelopLog[];
     lookingGlass: PanelLookingGlassState;
     lookingGlassConfigStatus: PanelLookingGlassConfigStatus;
     cameraGuide: PanelCameraGuideState;

@@ -5,9 +5,9 @@ type PanelStyles = {
     root: CSSProperties;
     button: CSSProperties;
     miniCard: CSSProperties;
-    miniLog: CSSProperties;
 };
 
+/** 共通設定パネルの枠・操作・診断カードの表示を揃える。 */
 export const panelStyles: PanelStyles = {
     root: {
         ...(() => {
@@ -60,18 +60,5 @@ export const panelStyles: PanelStyles = {
         })(),
         background: "rgba(255,255,255,0.05)",
         border: "1px solid rgba(255,255,255,0.08)",
-    },
-    miniLog: {
-        ...(() => {
-            const tuning = UI_TUNING.controlPanel.styles;
-            return {
-                borderRadius: `${tuning.miniLogBorderRadiusPx}px`,
-                padding: `${tuning.miniLogPaddingYpx}px ${tuning.miniLogPaddingXpx}px`,
-            };
-        })(),
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.06)",
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
     },
 };

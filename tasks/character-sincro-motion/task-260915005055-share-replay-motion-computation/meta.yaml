@@ -1,0 +1,14 @@
+id: task-260915005055-share-replay-motion-computation
+title: 動作再生の保存値と再計算を分離して共通計算へ接続
+category: character-sincro-motion
+status: open
+depends_on:
+  - task-260915005055-share-live-motion-computation
+superseded_by: null
+review: APPROVED
+reviewed_sha: f5dd6d37dbe6ddcde4a2e5fe6e9ce059222acddf
+verdict: null
+attempts: 0
+created_at: 2026-09-15
+closed_at: null
+legacy_ids: []

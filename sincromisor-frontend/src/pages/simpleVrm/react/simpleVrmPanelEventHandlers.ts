@@ -1,7 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { SincroAppEvent } from "../../../app/controller";
-import { prependPanelMessageLog } from "../../../app/react/panelLogHelpers";
-import { UI_TUNING } from "../../../app/react/uiTuning";
 import {
     createPanelCameraGuideState,
     type PanelCameraGuideState,
@@ -12,62 +10,33 @@ import type {
     PanelLearnedVadState,
     PanelLookingGlassConfigStatus,
     PanelLookingGlassState,
-    PanelMessageLog,
     PanelRtcState,
-    PanelTelopLog,
 } from "./panelTypes";
 
+/** 表示に必要なイベントだけを受け取る、イベント種別に対応した処理。 */
 export type SimpleVrmPanelEventHandlerMap = {
     [K in SincroAppEvent["type"]]?: (event: Extract<SincroAppEvent, { type: K }>) => void;
 };
 
+/** パネルの現在状態を更新する。履歴は会話・診断の各表示側が所有する。 */
 export type SimpleVrmPanelRuntimeEventSetters = {
-    setLogs: Dispatch<SetStateAction<PanelMessageLog[]>>;
     setVadState: Dispatch<SetStateAction<"unknown" | "speech" | "silence">>;
     setLearnedVad: Dispatch<SetStateAction<PanelLearnedVadState>>;
     setGaze: Dispatch<SetStateAction<PanelGazeState>>;
-    setRtcEvents: Dispatch<SetStateAction<string[]>>;
     setRtcState: Dispatch<SetStateAction<PanelRtcState>>;
-    setTelopLogs: Dispatch<SetStateAction<PanelTelopLog[]>>;
     setLookingGlass: Dispatch<SetStateAction<PanelLookingGlassState>>;
     setLookingGlassConfigStatus: Dispatch<SetStateAction<PanelLookingGlassConfigStatus>>;
     setCameraGuide: Dispatch<SetStateAction<PanelCameraGuideState>>;
     setVrmStatusText: Dispatch<SetStateAction<string>>;
 };
 
+/** アプリ通知を接続・追跡・Looking Glassの現在表示へ振り分ける。 */
 export function createSimpleVrmPanelRuntimeEventHandlers(
     runtimeSetters: SimpleVrmPanelRuntimeEventSetters,
 ): SimpleVrmPanelEventHandlerMap {
     return {
-        ...createMessageEventHandlers(runtimeSetters),
         ...createRuntimeStatusEventHandlers(runtimeSetters),
         ...createLookingGlassEventHandlers(runtimeSetters),
-    };
-}
-
-function createMessageEventHandlers(
-    setters: SimpleVrmPanelRuntimeEventSetters,
-): SimpleVrmPanelEventHandlerMap {
-    return {
-        system_message: (event) => setters.setLogs((prev) => prependPanelMessageLog(prev, event)),
-        error_message: (event) => setters.setLogs((prev) => prependPanelMessageLog(prev, event)),
-        chat_message: (event) => setters.setLogs((prev) => prependPanelMessageLog(prev, event)),
-        rtc_event_log: (event) =>
-            setters.setRtcEvents((prev) =>
-                [event.message, ...prev].slice(0, UI_TUNING.controlPanel.rtcEventLogLimit),
-            ),
-        telop_message: (event) =>
-            setters.setTelopLogs((prev) =>
-                [
-                    {
-                        text: event.message.text ?? "",
-                        message: event.message.message,
-                        newText: !!event.message.new_text,
-                        vowel: event.message.vowel ?? "",
-                    },
-                    ...prev,
-                ].slice(0, UI_TUNING.controlPanel.telopLogLimit),
-            ),
     };
 }
 

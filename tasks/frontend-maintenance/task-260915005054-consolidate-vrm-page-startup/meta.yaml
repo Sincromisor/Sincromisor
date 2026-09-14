@@ -1,0 +1,13 @@
+id: task-260915005054-consolidate-vrm-page-startup
+title: VRMページの起動処理をアプリ層へ移して共通化
+category: frontend-maintenance
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-15
+closed_at: null
+legacy_ids: []
