@@ -30,9 +30,9 @@ import {
     type SincroMotionPipelineState,
 } from "../runtime/sincroMotionPipelineState";
 import {
-    type SincroVrmPoseComposerDryRunResult,
-    SincroVrmPoseComposerDryRunService,
-} from "../runtime/sincroVrmPoseComposerDryRun";
+    type SincroVrmPoseComposerResult,
+    SincroVrmPoseComposerService,
+} from "../runtime/sincroVrmPoseComposer";
 import type { VRMCamera } from "../scene/vrmCamera";
 import { ArmBoneController } from "./armBoneController";
 import type { CharacterMotionTuning } from "./characterMotionConfig";
@@ -78,7 +78,7 @@ export class VRMCharacterManager {
     private readonly behaviorState: CharacterBehaviorState;
     private readonly sincroFaceRetargeter = new SincroFaceRetargeter();
     private readonly sincroPoseRetargeter = new SincroPoseRetargeter();
-    private readonly composerDryRun = new SincroVrmPoseComposerDryRunService();
+    private readonly poseComposer = new SincroVrmPoseComposerService();
     private composerSemanticFingerApplicationMode =
         DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerSemanticFingerApplicationMode;
     private sincroMotionPipelineState: SincroMotionPipelineState =
@@ -160,7 +160,7 @@ export class VRMCharacterManager {
         this.armBoneController = new ArmBoneController(vrm);
         this.armBoneController.update(this.motionElapsedSeconds);
         this.sincroPoseRetargeter.attachVrm(vrm);
-        this.composerDryRun.reset();
+        this.poseComposer.reset();
         const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
         DebugConsoleManager.getManager().updateAvatarMotionProfile(
             avatarMotionProfile ? toMinimalAvatarMotionProfile(avatarMotionProfile) : undefined,
@@ -243,7 +243,7 @@ export class VRMCharacterManager {
             },
         );
         DebugConsoleManager.getManager().updateSincroPoseRetargetFrame(sincroPose);
-        const composerDryRun = this.composerDryRun.compose({
+        const composerResult = this.poseComposer.compose({
             frame: sincroPose,
             profile: avatarMotionProfile,
             semanticFinger: {
@@ -257,22 +257,22 @@ export class VRMCharacterManager {
         this.eyeBehaviorController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.mouthMorphController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.emotionMorphController?.update(this.latestBehaviorSnapshot);
-        const fullApplication = applyFullNormalizedPoseApplication(this.vrm, composerDryRun);
-        const observedComposerDryRun = annotateFullNormalizedPoseApplication(
-            appendComposerApplicationWarnings(composerDryRun, fullApplication.warnings),
+        const fullApplication = applyFullNormalizedPoseApplication(this.vrm, composerResult);
+        const observedComposerResult = annotateFullNormalizedPoseApplication(
+            appendComposerApplicationWarnings(composerResult, fullApplication.warnings),
             fullApplication,
         );
         this.sincroMotionPipelineState = cloneSincroMotionPipelineState({
             ...this.sincroMotionPipelineState,
             face: this.latestBehaviorSnapshot.faceMotion,
             pose: poseMotionForRetarget,
-            composerDryRun: observedComposerDryRun,
+            composerDryRun: observedComposerResult,
             updatedAtMs: nowMs,
         });
         DebugConsoleManager.getManager().updateSincroComposerDryRunSummary(
             summarizeComposerDryRun(this.sincroMotionPipelineState.composerDryRun),
         );
-        DebugConsoleManager.getManager().updateSincroComposerDryRunResult(observedComposerDryRun);
+        DebugConsoleManager.getManager().updateSincroComposerDryRunResult(observedComposerResult);
         this.legBoneController?.update(this.motionElapsedSeconds);
         this.vrm?.update(deltaSeconds);
         if (this.rootBone) {
@@ -306,7 +306,7 @@ export class VRMCharacterManager {
     /**
      * Debug Console などから pose retarget 設定を runtime へ反映する。
      *
-     * semantic / finger rollback flag の切替時だけ production dry-run の previous final pose を reset し、
+     * 意味に基づく動作・指の切り戻しフラグ変更時だけ、合成サービスの前回姿勢を破棄し、
      * 前 mode の angular velocity clamp 基準や finger previous hold を次 frame に持ち越さない。arm、
      * torso / shoulder、full normalized pose application の staged rollback flags は削除済みである。
      * retargeter config は常に転送するが、VRM normalized pose や expression はここでは書き込まない。
@@ -323,7 +323,7 @@ export class VRMCharacterManager {
                 composer final pose を angular velocity clamp の previous として使わず、finger previous hold も
                 破棄する。full application 自体は常時 production path のため、ここで別 mode state は持たない。
             */
-            this.composerDryRun.reset();
+            this.poseComposer.reset();
             this.composerSemanticFingerApplicationMode = nextComposerSemanticFingerApplicationMode;
         }
         this.sincroPoseRetargeter.setConfig(config);
@@ -336,11 +336,11 @@ export class VRMCharacterManager {
 
 // 合成処理自体はVRMを書き込まないため、受け取った適用結果を管理側で診断用に付与する。
 function annotateFullNormalizedPoseApplication(
-    composerDryRun: SincroVrmPoseComposerDryRunResult,
+    composerResult: SincroVrmPoseComposerResult,
     application: FullNormalizedPoseApplicationResult,
-): SincroVrmPoseComposerDryRunResult {
+): SincroVrmPoseComposerResult {
     return {
-        ...composerDryRun,
+        ...composerResult,
         fullNormalizedPoseApplication: {
             applied: application.applied,
             unavailableReason: application.unavailableReason,
@@ -349,16 +349,16 @@ function annotateFullNormalizedPoseApplication(
 }
 
 function appendComposerApplicationWarnings(
-    composerDryRun: SincroVrmPoseComposerDryRunResult,
+    composerResult: SincroVrmPoseComposerResult,
     warnings: string[],
-): SincroVrmPoseComposerDryRunResult {
+): SincroVrmPoseComposerResult {
     // 適用不可理由も合成結果の診断へまとめる。警告が無い場合は元のオブジェクトを保つ。
     if (warnings.length === 0) {
-        return composerDryRun;
+        return composerResult;
     }
     return {
-        ...composerDryRun,
-        warnings: [...composerDryRun.warnings, ...warnings],
+        ...composerResult,
+        warnings: [...composerResult.warnings, ...warnings],
     };
 }
 

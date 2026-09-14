@@ -26,6 +26,8 @@
     - 顔 / 姿勢追跡スナップショットから VRM 向け動作値へ変換する処理を置く。
 - `src/character/ik`
     - 腕 IK ソルバー、幾何計算、制約、疎通確認を置く。
+- [`sincroVrmPoseComposer.ts`](../../../../sincromisor-frontend/src/character/runtime/sincroVrmPoseComposer.ts)
+    - `SincroVrmPoseComposerService` が本番へ適用する最終姿勢を計算し、前回姿勢と指の保持状態を管理する。VRMへの書き込みは `VRMCharacterManager` から `normalizedPoseWriter` へ委ねる。保存・診断キー `composerDryRun` は維持する。
 - `src/character/vrmPose`
     - VRM 正規化済みローカル姿勢、`VrmPoseComposer`、所有するボーン / 値の制限 / 警告の姿勢合成処理契約を置く。
 - `src/character/lookingGlass` / `src/character/vrm360`
@@ -68,9 +70,9 @@
     - 指の曲げ意味に基づく動作のレイヤーは腕意味に基づく動作のプリセットとは別に `finger-curl:<side>` として作る。指グループは `thumb`、`index`、`middle`、`ringLittle` に固定し、`ring` / `little` は同じグループ曲げを使う。曲げ配分は `AvatarMotionProfile.fingers.curlDistribution` を正本にし、欠損指のボーン列は存在ボーンの重みだけを正規化して代替処理する。
     - 指クォータニオンは曲げローカル `+X`、指の開きローカル `+Z`、親指の対向動作ローカル `+Y` の低次元対応付けから作り、左右の指の開き / 対向動作符号だけを反転する。未加工のランドマークから指ごとの 3D 回転を直接作らず、層 / デバッグには通常のクォータニオンオブジェクトだけを保存する。
     - 制作済み範囲制限や AnimationMixer を使う場合も準備段階に留め、姿勢合成処理へ渡す最終表現は `semantic` 姿勢差分とする。
-    - motion-debug は `frame.solver.phase6` に段階 6 ソルバースナップショット、`frame.solver.phase7` に段階 7 の完成版 `AvatarMotionProfile` / 較正スナップショット、`frame.solver.phase9` に段階 9 意味に基づく動作 / 指診断用スナップショット、`frame.finalPose` に姿勢合成処理結果を保存・表示する。本番の `VRMCharacterManager.update()` のボーン書き込み順序はまだ全面移行しない。
-    - 本番試行は意味に基づく動作・指の適用段階で、保存済み `MotionIntentState`、低次元 Hand スナップショット、完成版 `AvatarMotionProfile` が有効なフレームだけ意味に基づく動作の姿勢 / 指の曲げ層を姿勢合成処理入力へ追加する。`composerSemanticFingerApplicationMode` は開発者切り戻しフラグであり、未加工のランドマーク、ジェスチャー Recognizer 未加工の結果、VRM Object3D、元のボーンノードは層生成入力にしない。
-    - 正規化済み姿勢の全面適用段階は本番の常時パスであり、同一フレームの利用可能試行 `finalPose` を `VRMCharacterManager.update()` から `vrm.humanoid.setNormalizedPose(finalPose)` へ 1 回渡す。追跡フレームの `active` が `false` の場合、代替処理層は体幹 / 肩を単位回転、`upperArm` / `lowerArm` / 手を腕を下ろした `CHARACTER_ARM_REST_POSE` にする。全面段階が所有するその他の欠損ボーンは毎フレーム単位クォータニオンで埋め、前フレームの指姿勢を残さない。利用不可 / 無効 / 欠損プロファイル / 結果欠損では古くなった finalPose を使わず、腕 / 体幹 / 肩の旧段階別の切り戻し書き込み処理も本番代替処理として実行しない。利用不可理由は診断 Console 要約 / 指標用の観測情報として残す。頭部 / 首 / 脚 / 表情は姿勢合成処理所有に含めず、従来制御処理で更新する。`composerSemanticFingerApplicationMode` は意味に基づく動作 / 指抑制を切り分ける開発者切り戻しフラグとして残す。
+    - motion-debug は `frame.solver.phase6` に段階 6 ソルバースナップショット、`frame.solver.phase7` に段階 7 の完成版 `AvatarMotionProfile` / 較正スナップショット、`frame.solver.phase9` に段階 9 意味に基づく動作 / 指診断用スナップショット、`frame.finalPose` に姿勢合成処理結果を保存・表示する。本番では合成サービスが計算した同一フレームの最終姿勢を上半身へ一括適用する。
+    - 本番の合成サービスは、保存済み `MotionIntentState`、低次元 Hand スナップショット、完成版 `AvatarMotionProfile` が有効なフレームだけ意味に基づく動作の姿勢 / 指の曲げ層を姿勢合成処理入力へ追加する。`composerSemanticFingerApplicationMode` は開発者切り戻しフラグであり、未加工のランドマーク、ジェスチャー Recognizer 未加工の結果、VRM Object3D、元のボーンノードは層生成入力にしない。
+    - 正規化済み姿勢の全面適用段階は本番の常時パスであり、同一フレームの利用可能な合成結果 `finalPose` を `VRMCharacterManager.update()` から `normalizedPoseWriter` を介して `vrm.humanoid.setNormalizedPose()` へ 1 回渡す。追跡フレームの `active` が `false` の場合、代替処理層は体幹 / 肩を単位回転、`upperArm` / `lowerArm` / 手を腕を下ろした `CHARACTER_ARM_REST_POSE` にする。全面段階が所有するその他の欠損ボーンは毎フレーム単位クォータニオンで埋め、前フレームの指姿勢を残さない。利用不可 / 無効 / 欠損プロファイル / 結果欠損では古くなった finalPose を使わず、腕 / 体幹 / 肩の旧段階別の切り戻し書き込み処理も本番代替処理として実行しない。利用不可理由は診断 Console 要約 / 指標用の観測情報として残す。頭部 / 首 / 脚 / 表情は姿勢合成処理所有に含めず、従来制御処理で更新する。`composerSemanticFingerApplicationMode` は意味に基づく動作 / 指抑制を切り分ける開発者切り戻しフラグとして残す。
     - 動作指標は保存済み `frame.intent` から `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount` を計算する。無効意図は `intentInvalidFrameCount` だけに数え、他の段階 9 指標では有効意図サンプルが無い場合 `not_available` にする。
     - 保存契約は `avatarMotionProfileTypes.ts`、保存検証は `avatarMotionProfileSchema.ts`、共有複製と最小プロファイルへの変換は `avatarMotionProfileClone.ts` が担う。保存検証はVRM計測を読み込まず、既存の版・厳密なキー検証・数値範囲・エラー分類を維持する。
     - `avatarMotionProfileMeasurement.ts`がVRMのボーン・寸法・初期回転を計測し、通常データと警告を返す。`avatarMotionProfile.ts`は計測結果から既定値・対応能力・リスク値を組み立てる。`SincroPoseRetargeter.attachVrm()`で計測、組み立て、IK初期化の順に実行する。
@@ -83,7 +85,7 @@
 ```text
 ロードマップ / 調査
   -> 観測専用の処理工程
-  -> 本番姿勢合成の試行
+  -> 本番の姿勢合成
   -> 意味に基づく動作 / 指の適用
   -> setNormalizedPose(finalPose) による全面適用
 ```

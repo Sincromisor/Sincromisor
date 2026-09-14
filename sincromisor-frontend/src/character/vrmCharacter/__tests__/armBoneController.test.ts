@@ -16,7 +16,7 @@ import {
 import type { CharacterBehaviorSnapshot } from "../../behavior/characterBehaviorTypes";
 import { NEUTRAL_POSE_FRAME } from "../../retargeting/sincroPoseRetargetTypes";
 import { createDefaultSincroMotionPipelineState } from "../../runtime/sincroMotionPipelineState";
-import type { SincroVrmPoseComposerDryRunResult } from "../../runtime/sincroVrmPoseComposerDryRun";
+import type { SincroVrmPoseComposerResult } from "../../runtime/sincroVrmPoseComposer";
 import type { VrmPoseQuaternion } from "../../vrmPose/vrmPoseTypes";
 import { ArmBoneController } from "../armBoneController";
 import { applyFullNormalizedPoseApplication } from "../normalizedPoseWriter";
@@ -83,7 +83,10 @@ describe("VRMCharacterManager full normalized pose application", () => {
         const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
         const finalPose = { leftUpperArm: eulerQuaternion(0.8, 0.1, 0) };
 
-        const result = applyFullNormalizedPoseApplication(vrm, createAvailableDryRun(finalPose));
+        const result = applyFullNormalizedPoseApplication(
+            vrm,
+            createAvailableComposerResult(finalPose),
+        );
 
         expect(result).toEqual({ applied: true, warnings: [] });
         expect(setNormalizedPose).toHaveBeenCalledTimes(1);
@@ -116,7 +119,7 @@ describe("VRMCharacterManager full normalized pose application", () => {
         const rootStabilization = vi.fn();
         const { manager, setNormalizedPose } = createUpdateManagerDouble({
             snapshot,
-            dryRun: { status: "invalid_input", warnings: ["delta_seconds_invalid"] },
+            composerResult: { status: "invalid_input", warnings: ["delta_seconds_invalid"] },
             armUpdate,
             rootStabilization,
         });
@@ -156,7 +159,7 @@ describe("VRMCharacterManager full normalized pose application", () => {
         const rootStabilization = vi.fn();
         const { manager, setNormalizedPose } = createUpdateManagerDouble({
             snapshot,
-            dryRun: createAvailableDryRun(finalPose),
+            composerResult: createAvailableComposerResult(finalPose),
             armUpdate: vi.fn(),
             rootStabilization,
         });
@@ -195,7 +198,7 @@ describe("VRMCharacterManager semantic/finger rollback lifecycle", () => {
         ) as SemanticFingerModeManagerTestDouble;
         Object.assign(manager, {
             composerSemanticFingerApplicationMode: "composer",
-            composerDryRun: { reset },
+            poseComposer: { reset },
             sincroPoseRetargeter: { setConfig },
         });
 
@@ -214,7 +217,7 @@ describe("VRMCharacterManager semantic/finger rollback lifecycle", () => {
         ) as SemanticFingerModeManagerTestDouble;
         Object.assign(manager, {
             composerSemanticFingerApplicationMode: "composer",
-            composerDryRun: { reset },
+            poseComposer: { reset },
             sincroPoseRetargeter: { setConfig },
         });
 
@@ -229,7 +232,7 @@ describe("VRMCharacterManager semantic/finger rollback lifecycle", () => {
 type SemanticFingerModeManagerTestDouble = {
     setSincroPoseRetargetConfig: VRMCharacterManager["setSincroPoseRetargetConfig"];
     composerSemanticFingerApplicationMode: "off" | "composer";
-    composerDryRun: { reset: () => void };
+    poseComposer: { reset: () => void };
     sincroPoseRetargeter: { setConfig: (config: unknown) => void };
 };
 
@@ -334,7 +337,7 @@ function createDebugManagerDouble(): Pick<
 
 function createUpdateManagerDouble(options: {
     snapshot: CharacterBehaviorSnapshot;
-    dryRun: SincroVrmPoseComposerDryRunResult;
+    composerResult: SincroVrmPoseComposerResult;
     armUpdate: ReturnType<typeof vi.fn>;
     rootStabilization: ReturnType<typeof vi.fn>;
 }): { manager: UpdateManagerTestDouble; setNormalizedPose: ReturnType<typeof vi.fn> } {
@@ -350,7 +353,7 @@ function createUpdateManagerDouble(options: {
             retarget: vi.fn(() => NEUTRAL_POSE_FRAME),
             getAvatarMotionProfile: vi.fn(() => undefined),
         },
-        composerDryRun: { compose: vi.fn(() => options.dryRun) },
+        poseComposer: { compose: vi.fn(() => options.composerResult) },
         composerSemanticFingerApplicationMode: "composer",
         sincroMotionPipelineState: createDefaultSincroMotionPipelineState(),
         headBoneController: { update: vi.fn() },
@@ -373,9 +376,9 @@ function createUpdateManagerDouble(options: {
     return { manager, setNormalizedPose };
 }
 
-function createAvailableDryRun(
+function createAvailableComposerResult(
     finalPose: Partial<Record<VRMHumanBoneName, VrmPoseQuaternion>>,
-): SincroVrmPoseComposerDryRunResult {
+): SincroVrmPoseComposerResult {
     return {
         status: "available",
         warnings: [],

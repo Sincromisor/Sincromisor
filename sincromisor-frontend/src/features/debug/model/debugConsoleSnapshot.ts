@@ -5,7 +5,7 @@ import {
     type SincroPoseRetargetFrame,
 } from "../../../character/retargeting/sincroPoseRetargeter";
 import type { SincroMotionObserveOnlySummary } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
-import type { SincroVrmPoseComposerDryRunResult } from "../../../character/runtime/sincroVrmPoseComposerDryRun";
+import type { SincroVrmPoseComposerResult } from "../../../character/runtime/sincroVrmPoseComposer";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../gaze/trackingRuntime/sincroTrackerWorkerTypes";
@@ -91,7 +91,8 @@ type SincroMotionSnapshot = {
         | "rightArm"
     > & {
         avatarMotionProfile?: MinimalAvatarMotionProfile;
-        composerDryRun?: SincroVrmPoseComposerDryRunResult;
+        /** 本番合成結果と適用情報。保存・再生との互換性のため既存キーを維持する。 */
+        composerDryRun?: SincroVrmPoseComposerResult;
     };
 };
 

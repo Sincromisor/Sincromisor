@@ -9,7 +9,7 @@ import type {
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { GestureIntentObservation } from "../motionIntent/motionIntentEstimator";
 import type { SincroMotionPipelineState } from "./sincroMotionPipelineState";
-import type { SincroVrmPoseComposerDryRunStatus } from "./sincroVrmPoseComposerDryRun";
+import type { SincroVrmPoseComposerStatus } from "./sincroVrmPoseComposer";
 
 // reason: structure-threshold-exception 既存の observe-only summary/types module が行数上限を超えているため。本タスクでは Gesture 入力と summary 契約の追加だけに留める。
 
@@ -92,14 +92,14 @@ export type SincroMotionObserveOnlyGestureSummary = {
 };
 
 /**
- * production VrmPoseComposer dry-run の Debug Console summary。
+ * 本番へ適用する姿勢合成結果の診断要約。保存・診断キーに対応する名前は維持する。
  *
  * `status` は service result contract と同じ 4 状態をそのまま表示する。`result` 本体は大きいため
  * 常時表示では warning、suppressed layer、clamped bone の短い一覧だけに圧縮し、finalPose は
  * `SincroMotionPipelineState.composerDryRun.result` 側の inspection surface に残す。
  */
 export type SincroMotionComposerDryRunSummary = {
-    status: SincroVrmPoseComposerDryRunStatus;
+    status: SincroVrmPoseComposerStatus;
     warnings: readonly string[];
     suppressedLayers: readonly string[];
     clampedBones: readonly string[];
@@ -113,8 +113,8 @@ export type SincroMotionComposerDryRunSummary = {
  * production Debug Console に出す observe-only pipeline の最新 summary。
  *
  * 各 stage が `available` / `not_computed` / `invalid_input` のどれかを個別に示すため、
- * Face-only、pose-only、invalid timing を JSON dump なしで切り分けられる。composer dry-run は
- * VRM 適用を伴わない production manager 側の観測値として同じ summary surface に載せる。
+ * Face-only、pose-only、invalid timing を JSON dump なしで切り分けられる。姿勢合成結果は
+ * 管理側が本番への適用結果を付与し、既存の `composerDryRun` キーへ載せる。
  */
 export type SincroMotionObserveOnlySummary = {
     reliability: SincroMotionObserveOnlyStageSummary;
@@ -312,7 +312,7 @@ export function summarizeObserveOnlyGesture(
 }
 
 /**
- * dry-run result contract を Debug Console 常時表示用の小さい summary へ圧縮する。
+ * 本番の姿勢合成結果を診断の常時表示用に要約する。
  *
  * `status !== "available"` では result 詳細を読まず、warning だけを表示する。available result でも
  * finalPose 全体は返さず、suppressed layer / clamped bone の先頭だけを診断入口として返す。

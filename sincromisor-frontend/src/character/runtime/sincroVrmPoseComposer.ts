@@ -23,27 +23,23 @@ import {
 } from "./sincroVrmPoseComposerSemanticFingerLayers";
 
 /**
- * production dry-run の可用状態。
- *
- * `available` だけが composer result を持つ。`not_ready` は retarget frame 未到着、
- * `invalid_input` は deltaSeconds など dry-run 境界の値が壊れている状態、`missing_profile` は
- * VRM profile 未計測を表す。失敗状態で前回 result を流用しないことで、Debug Console が古い
- * final pose を現在 frame の結果と誤読しないようにする。
+ * 本番の姿勢合成結果の利用可否。
+ * `available` だけが結果を持つ。`not_ready` は追跡フレーム未到着、`invalid_input` は
+ * `deltaSeconds` の不正、`missing_profile` はプロファイル未計測を表す。
+ * 利用不可時は前回の結果を返さず、適用側と診断が古い姿勢を現在フレームと誤認することを防ぐ。
  */
-export type SincroVrmPoseComposerDryRunStatus =
+export type SincroVrmPoseComposerStatus =
     | "available"
     | "not_ready"
     | "invalid_input"
     | "missing_profile";
 
 /**
- * `SincroVrmPoseComposerDryRunService.compose()` の caller 入力。
- *
- * 入力境界は latest retarget frame、AvatarMotionProfile または MinimalAvatarMotionProfile、
- * optional previous final pose、deltaSeconds に限定する。VRM instance、normalized bone node、
- * expression manager、root position は受け取らず、dry-run service から runtime 表示状態へ書き戻せない形にする。
+ * 本番の姿勢合成に使う追跡フレーム、プロファイル、意味に基づく動作・指の入力。
+ * `previousFinalPose` は指定時に内部保持値より優先し、`deltaSeconds` は秒単位で渡す。
+ * VRMやボーンノードは受け取らず、返した最終姿勢の書き込みは normalizedPoseWriter が担う。
  */
-export type SincroVrmPoseComposerDryRunInput = {
+export type SincroVrmPoseComposerInput = {
     frame?: SincroPoseRetargetFrame;
     profile?: AvatarMotionProfile | MinimalAvatarMotionProfile;
     semanticFinger?: SincroVrmPoseComposerSemanticFingerInput;
@@ -52,20 +48,17 @@ export type SincroVrmPoseComposerDryRunInput = {
 };
 
 /**
- * production dry-run の結果 contract。
- *
- * `status !== "available"` では `result` を返さない。warning は service 境界の理由と composer warning
- * の短い診断入口であり、suppressed layer や clamped bone の詳細は `result` がある場合だけ参照する。
+ * 本番の適用側と診断へ渡す合成結果。`status !== "available"` では `result` を返さない。
+ * `warnings` は入力と合成の警告をまとめ、抑制層や制限ボーンの詳細は `result` に保持する。
+ * 保存・診断側の格納キーは互換性のため `composerDryRun` を維持する。
  */
-export type SincroVrmPoseComposerDryRunResult = {
-    status: SincroVrmPoseComposerDryRunStatus;
+export type SincroVrmPoseComposerResult = {
+    status: SincroVrmPoseComposerStatus;
     result?: VrmPoseComposerResult;
     warnings: string[];
     /**
-     * manager 側の full `setNormalizedPose(finalPose)` 適用結果を Debug Console へ渡す runtime metadata。
-     *
-     * dry-run service 自体は VRM を受け取らないため、この field は service では設定しない。`applied=false`
-     * でも `status !== "available"` の result 欠損契約は変えず、unavailable reason だけを表示面へ残す。
+     * 管理側が normalizedPoseWriter の適用結果を付与する診断情報。合成サービス自身は設定しない。
+     * 適用不可でも状態と結果欠損の契約を保ち、理由だけを診断へ渡す。
      */
     fullNormalizedPoseApplication?: {
         applied: boolean;
@@ -73,6 +66,7 @@ export type SincroVrmPoseComposerDryRunResult = {
     };
 };
 
+/** 追跡が無効なフレームでも代替姿勢で埋める上半身のボーン。 */
 const FALLBACK_BONES: VRMHumanBoneName[] = [
     "spine",
     "chest",
@@ -87,6 +81,7 @@ const FALLBACK_BONES: VRMHumanBoneName[] = [
     "rightHand",
 ];
 
+/** 追跡フレームが回転を供給するボーン。upperChestへの配分は合成側で行う。 */
 const TRACKING_BONES: VRMHumanBoneName[] = [
     "spine",
     "chest",
@@ -101,23 +96,20 @@ const TRACKING_BONES: VRMHumanBoneName[] = [
 ];
 
 /**
- * production `VRMCharacterManager.update()` から VrmPoseComposer を observe-only 実行する stateful service。
- *
- * `compose()` は fallback / tracking layer を常に作り、semantic / finger rollback flag が `"composer"` かつ
- * 保存済み `MotionIntentState`、低次元 Hand snapshot、完成版 `AvatarMotionProfile` が valid な場合だけ
- * semantic layer を追加する。前回 available result の final pose と finger debug は clamp / previous hold 用にだけ
- * 保持し、`reset()`、profile 未準備、invalid input では更新しない。VRM の `setNormalizedPose()`、
- * normalized bone node、expression、root position はこの service の入力にも副作用にも含まれない。
+ * VRMCharacterManager.update() から呼ばれ、本番へ適用する最終姿勢を合成する。
+ * 代替姿勢と追跡層を常に作り、意味に基づく動作・指は切り戻しフラグが `"composer"` かつ
+ * 必要なスナップショットと完成版プロファイルが有効な場合だけ追加する。
+ * 前回の利用可能な最終姿勢と指の状態を次回の制限・短時間保持に使う。入力不足・不正時は保持値を
+ * 更新せず、reset() で破棄する。VRMへの書き込みは管理側が normalizedPoseWriter に委ねる。
  */
-export class SincroVrmPoseComposerDryRunService {
+export class SincroVrmPoseComposerService {
     private previousFinalPose: VrmNormalizedLocalPose | undefined;
     private previousFinger: SincroVrmPoseComposerSemanticFingerState["previousFinger"] = {};
 
     /**
-     * previous final pose lifecycle を明示的に切る。
-     *
-     * VRM load、camera mode 切替、tracking restart などで古い avatar / frame の clamp 基準を持ち越さないための
-     * lifecycle 境界である。VRM に適用済みの姿勢や controller state は変更しない。
+     * 前回の最終姿勢と指の保持状態を破棄する。
+     * 管理側はVRM初期化と意味に基づく動作・指の切り戻しフラグ変更時に呼び、旧状態を持ち越さない。
+     * VRMに適用済みの姿勢や他の制御処理の状態は変更しない。
      */
     reset(): void {
         this.previousFinalPose = undefined;
@@ -125,12 +117,11 @@ export class SincroVrmPoseComposerDryRunService {
     }
 
     /**
-     * latest retarget frame を composer input に変換して dry-run する。
-     *
-     * result が `available` の場合だけ `previousFinalPose` を次回 clamp 用に更新する。非 available 状態では
-     * stale final pose を返さず、caller は `status` と `warnings` を Debug Console の観測点にする。
+     * 追跡と補助層から現在フレームの最終姿勢を計算し、本番の適用側へ返す。
+     * 利用可能な結果だけを次回の制限・指の短時間保持用に保存する。
+     * 入力不足・不正時は状態と警告だけを返し、前回の姿勢を再適用候補にしない。
      */
-    compose(input: SincroVrmPoseComposerDryRunInput): SincroVrmPoseComposerDryRunResult {
+    compose(input: SincroVrmPoseComposerInput): SincroVrmPoseComposerResult {
         if (!input.frame) {
             return { status: "not_ready", warnings: ["retarget_frame_not_ready"] };
         }
@@ -142,7 +133,7 @@ export class SincroVrmPoseComposerDryRunService {
         }
 
         const profile = normalizeProfile(input.profile);
-        const layerResult = createDryRunLayers(input.frame, input.profile, input.semanticFinger, {
+        const layerResult = createComposerLayers(input.frame, input.profile, input.semanticFinger, {
             previousFinger: this.previousFinger,
         });
         const previousFinalPose = input.previousFinalPose ?? this.previousFinalPose;
@@ -162,24 +153,16 @@ export class SincroVrmPoseComposerDryRunService {
     }
 }
 
-/**
- * lifecycle owner から dry-run service の previous final pose を破棄するための module-level export。
- *
- * class method と同じ処理だが、service 境界を関数 export としてテストや caller から確認できるようにする。
- */
-export function reset(service: SincroVrmPoseComposerDryRunService): void {
+/** 合成サービスの所有者が前回姿勢と指の保持状態を破棄するための関数形式の入口。 */
+export function reset(service: SincroVrmPoseComposerService): void {
     service.reset();
 }
 
-/**
- * production dry-run を実行する module-level export。
- *
- * class method と同じく VRM 適用は行わず、`status !== "available"` では result を返さない。
- */
+/** 本番の最終姿勢を計算する関数形式の入口。VRMへの書き込みは呼び出し側が担う。 */
 export function compose(
-    service: SincroVrmPoseComposerDryRunService,
-    input: SincroVrmPoseComposerDryRunInput,
-): SincroVrmPoseComposerDryRunResult {
+    service: SincroVrmPoseComposerService,
+    input: SincroVrmPoseComposerInput,
+): SincroVrmPoseComposerResult {
     return service.compose(input);
 }
 
@@ -192,21 +175,23 @@ function normalizeProfile(
     return toMinimalAvatarMotionProfile(profile);
 }
 
-function createDryRunLayers(
+// 代替・追跡層へ意味に基づく動作と指の層を追加し、警告と次回の指保持状態を返す。
+function createComposerLayers(
     frame: SincroPoseRetargetFrame,
     profile: AvatarMotionProfile | MinimalAvatarMotionProfile,
-    semanticFinger: SincroVrmPoseComposerDryRunInput["semanticFinger"],
+    semanticFinger: SincroVrmPoseComposerInput["semanticFinger"],
     state: SincroVrmPoseComposerSemanticFingerState,
 ): { layers: VrmPoseLayer[]; warnings: string[]; previousFinger: typeof state.previousFinger } {
     const semanticFingerResult = createSemanticFingerComposerLayers(profile, semanticFinger, state);
     return {
-        layers: [...createBaseDryRunLayers(frame), ...semanticFingerResult.layers],
+        layers: [...createBaseComposerLayers(frame), ...semanticFingerResult.layers],
         warnings: semanticFingerResult.warnings,
         previousFinger: semanticFingerResult.previousFinger,
     };
 }
 
-function createBaseDryRunLayers(frame: SincroPoseRetargetFrame): VrmPoseLayer[] {
+// 追跡が無効なら重みを0にし、同じフレームの代替姿勢を合成結果に残す。
+function createBaseComposerLayers(frame: SincroPoseRetargetFrame): VrmPoseLayer[] {
     return [
         {
             id: "production:fallback",

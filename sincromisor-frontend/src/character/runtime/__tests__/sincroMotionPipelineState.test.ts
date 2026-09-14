@@ -15,7 +15,7 @@ import {
     createDefaultSincroMotionPipelineState,
     type SincroMotionPipelineState,
 } from "../sincroMotionPipelineState";
-import type { SincroVrmPoseComposerDryRunResult } from "../sincroVrmPoseComposerDryRun";
+import type { SincroVrmPoseComposerResult } from "../sincroVrmPoseComposer";
 
 function expectDefined<T>(value: T | undefined): T {
     if (value === undefined) {
@@ -82,7 +82,7 @@ function createCanonicalUpperBodyState(): CanonicalUpperBodyState {
     };
 }
 
-function createComposerDryRun(): SincroVrmPoseComposerDryRunResult {
+function createComposerDryRun(): SincroVrmPoseComposerResult {
     return {
         status: "available",
         result: {

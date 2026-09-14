@@ -1,5 +1,5 @@
 /**
- * 旧 retarget runtime snapshot と composer dry-run result の差分 metric contract。
+ * 動作変換のスナップショットと本番姿勢合成結果を比較する指標の契約。
  *
  * 入力は replay / live snapshot から取り出した plain object に限定し、VRM Object3D、
  * normalized bone node、`THREE.Quaternion` instance は受け取らない。summary は
@@ -17,7 +17,7 @@ import {
     type SincroPoseRetargetedArm,
     type SincroPoseRetargetFrame,
 } from "../retargeting/sincroPoseRetargetTypes";
-import type { SincroVrmPoseComposerDryRunResult } from "../runtime/sincroVrmPoseComposerDryRun";
+import type { SincroVrmPoseComposerResult } from "../runtime/sincroVrmPoseComposer";
 import type { VrmPoseComposerResult, VrmPoseQuaternion } from "../vrmPose/vrmPoseTypes";
 import type { SincroMotionDebugFrame } from "./motionDebugLogSchema";
 import type {
@@ -59,13 +59,13 @@ export type ComposerComparisonMetricKey = (typeof COMPOSER_COMPARISON_METRIC_KEY
  * frame 単位 comparison helper の入力。
  *
  * `retarget` は `frame.solver.poseRetargetRuntime` から作った `SincroPoseRetargetFrame`、
- * `composerDryRun` は production dry-run の status 付き result だけを受ける。保存境界に
+ * `composerDryRun` は本番姿勢合成の状態付き結果だけを受ける。保存キーを維持し、保存境界に
  * VRM / Three.js runtime object を出さないため、media time と plain object snapshot 以外は持たせない。
  */
 export type ComposerComparisonMetricFrameInput = {
     mediaTimeMs: number;
     retarget?: SincroPoseRetargetFrame;
-    composerDryRun?: SincroVrmPoseComposerDryRunResult;
+    composerDryRun?: SincroVrmPoseComposerResult;
 };
 
 /**
@@ -314,7 +314,7 @@ const composerResultSchema: z.ZodType<VrmPoseComposerResult> = plainObjectSchema
     ),
     warnings: z.array(z.string()),
 });
-const dryRunResultSchema: z.ZodType<SincroVrmPoseComposerDryRunResult> = plainObjectSchema({
+const dryRunResultSchema: z.ZodType<SincroVrmPoseComposerResult> = plainObjectSchema({
     status: dryRunStatusSchema,
     result: composerResultSchema.optional(),
     warnings: z.array(z.string()),
@@ -482,11 +482,11 @@ function parsePoseRetargetRuntime(
 
 function parseComposerDryRunFromFrame(
     frame: SincroMotionDebugFrame,
-): SincroVrmPoseComposerDryRunResult | undefined {
+): SincroVrmPoseComposerResult | undefined {
     /*
-        `sincro.vrm-pose-composer-result.v1` の legacy finalPose layer は dry-run の status contract を持たない。
-        ここで available に昇格すると、dry-run 未記録の旧 log を比較済み pass と誤読するため、
-        status 付き production dry-run result snapshot だけを受理する。
+        `sincro.vrm-pose-composer-result.v1` の旧 finalPose 層は合成結果の状態を持たない。
+        ここで available に昇格すると、状態付き結果が未記録の旧ログを比較済みと誤読するため、
+        本番姿勢合成の状態付き結果だけを受理する。
     */
     const dryRun = dryRunResultSchema.safeParse(frame.finalPose);
     return dryRun.success ? dryRun.data : undefined;

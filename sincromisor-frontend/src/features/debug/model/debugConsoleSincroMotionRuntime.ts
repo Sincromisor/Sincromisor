@@ -7,7 +7,7 @@ import type {
     SincroPoseRetargetFrame,
 } from "../../../character/retargeting/sincroPoseRetargeter";
 import type { SincroMotionObserveOnlySummary } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
-import type { SincroVrmPoseComposerDryRunResult } from "../../../character/runtime/sincroVrmPoseComposerDryRun";
+import type { SincroVrmPoseComposerResult } from "../../../character/runtime/sincroVrmPoseComposer";
 import type { DebugConsoleSnapshot } from "./debugConsoleSnapshot";
 
 type PoseRetargetConfigSnapshot = DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
@@ -62,10 +62,11 @@ export function cloneObserveOnlySummary(
     };
 }
 
+/** 動作変換と本番合成結果を診断用に複製する。既存の composerDryRun キーを保存・再生用に保つ。 */
 export function clonePoseRetargetRuntime(
     frame: SincroPoseRetargetFrame,
     avatarMotionProfile?: MinimalAvatarMotionProfile,
-    composerDryRun?: SincroVrmPoseComposerDryRunResult,
+    composerDryRun?: SincroVrmPoseComposerResult,
 ): PoseRetargetRuntimeSnapshot {
     return {
         active: frame.active,
@@ -95,9 +96,10 @@ export function clonePoseRetargetRuntime(
     };
 }
 
+/** 本番合成結果を診断側の変更から切り離す。結果欠損はそのまま保つ。 */
 export function cloneComposerDryRun(
-    result: SincroVrmPoseComposerDryRunResult | undefined,
-): SincroVrmPoseComposerDryRunResult | undefined {
+    result: SincroVrmPoseComposerResult | undefined,
+): SincroVrmPoseComposerResult | undefined {
     return result === undefined ? undefined : structuredClone(result);
 }
 

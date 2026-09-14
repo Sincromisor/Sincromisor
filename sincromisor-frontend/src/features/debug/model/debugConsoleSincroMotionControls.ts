@@ -7,7 +7,7 @@ import type {
     SincroMotionComposerDryRunSummary,
     SincroMotionObserveOnlySummary,
 } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
-import type { SincroVrmPoseComposerDryRunResult } from "../../../character/runtime/sincroVrmPoseComposerDryRun";
+import type { SincroVrmPoseComposerResult } from "../../../character/runtime/sincroVrmPoseComposer";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../gaze/trackingRuntime/sincroTrackerWorkerTypes";
@@ -99,7 +99,8 @@ export class DebugConsoleSincroMotionControls {
         }));
     }
 
-    updateSincroComposerDryRunResult(result: SincroVrmPoseComposerDryRunResult): void {
+    /** 管理側で適用結果を付与した本番合成結果を、既存の診断・保存キーへ複製する。 */
+    updateSincroComposerDryRunResult(result: SincroVrmPoseComposerResult): void {
         this.params.updateSnapshot((currentSnapshot) => ({
             ...currentSnapshot,
             sincroMotion: {
