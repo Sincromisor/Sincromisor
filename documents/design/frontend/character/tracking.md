@@ -118,6 +118,7 @@
     - HandLandmarker を `/3rd_party/hand_landmarker.task` から初期化する。
     - Pose が実行されたフレームの `SincroPoseMotionSnapshot` から左 / 右手 ROI を作り、有効な左右だけ切り抜き推論する。両左右の ROI が無効の場合だけ、同一フレームで全画面代替処理を 1 回実行する。
     - ROI 切り抜き内の座標系のランドマークは `mapCropPointToFullFrame()` で全画面の正規化座標へ戻してから特徴量化し、スナップショットには切り抜きオブジェクトや未加工のランドマークを残さない。
+    - 左右割当の入口は `sincroHandAssignment.ts`、全画面代替の候補選択は `sincroHandFullFrameAssignment.ts` に置く。観測型・距離条件・結果生成は `sincroHandAssignmentSnapshot.ts` で共有し、推論・座標復元を読み込まない。
     - 左右割り当ては Hand 左右判定単独で決めず、復元後手首と Pose 手首の距離を主条件にする。距離 `> 0.18` は `side_inconsistent` として捨てる。
     - 全画面代替処理では同じ手結果を両左右に割り当てず、重複は `duplicate_assignment` 警告として未検出左右に残す。同距離同順位は前フレーム割り当て、次に手首信頼度で片側だけ採用する。
     - Hand 手首は手のひら / 指信頼性材料であり、`SincroPoseMotionSnapshot.leftArm/rightArm.targets.wrist` を上書きしない。本番腕 IK 目標の主入力は `TemporalUpperBodyState` 由来の身体のローカル座標系 / スカラーで表す腕状態であり、Hand 手首は腕目標の主入力にしない。

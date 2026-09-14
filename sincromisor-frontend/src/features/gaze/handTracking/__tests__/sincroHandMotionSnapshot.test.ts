@@ -1,5 +1,7 @@
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
 import { describe, expect, it } from "vitest";
+import { assignSincroHandObservationsToPose } from "../sincroHandAssignment";
+import type { SincroHandObservation } from "../sincroHandAssignmentSnapshot";
 import {
     DEFAULT_SINCRO_HAND_FEATURE_SNAPSHOT,
     DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
@@ -7,10 +9,8 @@ import {
     type SincroHandMotionSnapshot,
 } from "../sincroHandMotionSnapshot";
 import {
-    assignSincroHandObservationsToPose,
     determineSincroHandOpenness,
     restoreHandLandmarksToFullFrame,
-    type SincroHandObservation,
 } from "../sincroHandTrackerHelpers";
 
 function createLandmark(x: number, y: number, z = 0): NormalizedLandmark {
@@ -81,31 +81,34 @@ describe("Sincro hand motion snapshot", () => {
         expect(restored?.landmarks[0]?.z).toBeCloseTo(0.1);
     });
 
-    it("assigns full-frame hands by Pose wrist distance before handedness labels", () => {
-        const assignment = assignSincroHandObservationsToPose({
-            observations: [
-                createObservation({ handIndex: 0, wrist: [0.78, 0.5] }),
-                createObservation({ handIndex: 1, wrist: [0.22, 0.5] }),
-            ],
-            leftWrist: { side: "left", point: [0.2, 0.5], confidence: 0.9 },
-            rightWrist: { side: "right", point: [0.8, 0.5], confidence: 0.9 },
-            source: "full-frame-fallback",
-        });
+    it.each(["roi", "full-frame-fallback"] as const)(
+        "%sで左右ラベルよりPose手首との距離を優先する",
+        (source) => {
+            const assignment = assignSincroHandObservationsToPose({
+                observations: [
+                    createObservation({ handIndex: 0, wrist: [0.78, 0.5] }),
+                    createObservation({ handIndex: 1, wrist: [0.22, 0.5] }),
+                ],
+                leftWrist: { side: "left", point: [0.2, 0.5], confidence: 0.9 },
+                rightWrist: { side: "right", point: [0.8, 0.5], confidence: 0.9 },
+                source,
+            });
 
-        expect(assignment.leftHand.detected).toBe(true);
-        expect(assignment.leftHand.fullFrameWrist).toEqual([0.22, 0.5]);
-        expect(assignment.leftHand.handednessLabel).toBe("Right");
-        expect(assignment.rightHand.detected).toBe(true);
-        expect(assignment.rightHand.fullFrameWrist).toEqual([0.78, 0.5]);
-        expect(assignment.rightHand.handednessLabel).toBe("Left");
-    });
+            expect(assignment.leftHand.detected).toBe(true);
+            expect(assignment.leftHand.fullFrameWrist).toEqual([0.22, 0.5]);
+            expect(assignment.leftHand.handednessLabel).toBe("Right");
+            expect(assignment.rightHand.detected).toBe(true);
+            expect(assignment.rightHand.fullFrameWrist).toEqual([0.78, 0.5]);
+            expect(assignment.rightHand.handednessLabel).toBe("Left");
+        },
+    );
 
-    it("rejects duplicate assignment of the same hand result to both sides", () => {
+    it.each(["roi", "full-frame-fallback"] as const)("%sで同じ手の二重割当を拒否する", (source) => {
         const assignment = assignSincroHandObservationsToPose({
             observations: [createObservation({ handIndex: 0, wrist: [0.5, 0.5] })],
             leftWrist: { side: "left", point: [0.5, 0.5], confidence: 0.9 },
             rightWrist: { side: "right", point: [0.5, 0.5], confidence: 0.9 },
-            source: "full-frame-fallback",
+            source,
         });
 
         expect(assignment.leftHand.detected).toBe(true);
@@ -134,6 +137,28 @@ describe("Sincro hand motion snapshot", () => {
         expect(assignment.leftHand.detected).toBe(false);
         expect(assignment.leftHand.warnings).toContain("duplicate_assignment");
         expect(assignment.rightHand.detected).toBe(true);
+    });
+
+    it("観測なしと距離超過では両経路が同じ未検出理由を返す", () => {
+        for (const source of ["roi", "full-frame-fallback"] as const) {
+            for (const observations of [[], [createObservation({ handIndex: 0, wrist: [0, 0] })]]) {
+                const result = assignSincroHandObservationsToPose({
+                    source,
+                    observations,
+                    leftWrist: { side: "left", point: [0.5, 0.5], confidence: 1 },
+                    rightWrist: { side: "right", point: [0.8, 0.5], confidence: 1 },
+                });
+                for (const hand of [result.leftHand, result.rightHand]) {
+                    expect(hand.detected).toBe(false);
+                    expect(hand.source).toBe("lost");
+                    expect(hand.warnings).toEqual(
+                        observations.length === 0
+                            ? ["landmarks_missing"]
+                            : ["landmarks_missing", "side_inconsistent"],
+                    );
+                }
+            }
+        }
     });
 
     it("keeps default lost hands low-dimensional and unknown openness", () => {

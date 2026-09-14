@@ -32,12 +32,10 @@ import {
     uniqueGestureWarnings,
 } from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
 import { normalizeSincroGestureRecognizerResult } from "../../features/gaze/gestureTracking/sincroGestureTrackerHelpers";
+import { assignSincroHandObservationsToPose } from "../../features/gaze/handTracking/sincroHandAssignment";
+import type { SincroHandPoseWrist } from "../../features/gaze/handTracking/sincroHandAssignmentSnapshot";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
-import {
-    assignSincroHandObservationsToPose,
-    normalizeSincroHandLandmarkerResult,
-    type SincroHandPoseWrist,
-} from "../../features/gaze/handTracking/sincroHandTrackerHelpers";
+import { normalizeSincroHandLandmarkerResult } from "../../features/gaze/handTracking/sincroHandTrackerHelpers";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import {
     normalizeSincroPoseLandmarkerResult,
