@@ -90,6 +90,8 @@ Use case: precise-object-edit. Edit the supplied full-body dark-brown-haired too
 - Vite 経路別名:
     - dev では旧公開 URL を `src/pages/*` の HTML へ内部書き換えする。
     - ビルド後は `dist/pages/*/index.html` を `dist/<public-route>/index.html` へ移し、プレビュー / 配信 URL を変えない。
+- 起動元:
+    - 3つのVRMページのHTMLは `mainReact.tsx` だけを読み込む。各 `mainVrm*.ts` は配置済みDOM参照からページ固有の初期化を行う関数を公開し、独立したloadイベントは登録しない。
 - 初期化処理:
     - シーン / ページ選択肢を組み立て、アプリ制御の起動へ委譲する。
 - Reactによるアプリの共通枠組み:

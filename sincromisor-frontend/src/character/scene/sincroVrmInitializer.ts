@@ -3,8 +3,11 @@ import { UserMediaManager } from "../../features/media/userMedia/userMediaManage
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { VRMScene } from "./vrmScene";
 
-const CHARACTER_BOX_SELECTOR = "div#sincroCharacterBox";
-const CHARACTER_CONTROL_LAYER_SELECTOR = "div#sincroCharacterControlLayer";
+/** Reactが配置済みの描画領域と操作領域。初期化処理はDOM探索を行わない。 */
+export type SincroVRMRoots = {
+    canvasRoot: HTMLDivElement;
+    characterControlLayer: HTMLDivElement;
+};
 
 // VRM1.0 系ページ（simple-vrm など）の初期化入口。
 // 起動前 dialog / chat / debug / RTC 停止配線は SincroAppController 経由に寄せ、ページ差分は scene 初期化に閉じる。
@@ -19,21 +22,23 @@ export class SincroVRMInitializer {
     protected activeScene?: VRMScene;
     protected readonly initialSettings: Partial<SincroAppSettingsSnapshot> = {};
 
-    /** DOM待機後にページ設定を確定し、初期化成功時だけOBS自動開始へ進む。 */
-    public static async bootstrap<TInitializer extends SincroVRMInitializer>(
-        this: new () => TInitializer,
+    /** 配置済みの領域とページ設定を受け取り、初期化成功時だけOBS自動開始へ進む。 */
+    public static bootstrap<TInitializer extends SincroVRMInitializer>(
+        this: new (
+            roots: SincroVRMRoots,
+        ) => TInitializer,
+        roots: SincroVRMRoots,
         initialSettings: Partial<SincroAppSettingsSnapshot> = {},
-    ): Promise<TInitializer> {
-        await SincroVRMInitializer.waitForCharacterBoxRoot();
-        const initializer = new this();
+    ): TInitializer {
+        const initializer = new this(roots);
         initializer.initialize(initialSettings);
         initializer.startAutomatically();
         return initializer;
     }
 
-    constructor() {
-        this.charCanvas = this.getCharCanvasRoot();
-        this.characterControlLayer = this.getCharacterControlLayer();
+    constructor(roots: SincroVRMRoots) {
+        this.charCanvas = roots.canvasRoot;
+        this.characterControlLayer = roots.characterControlLayer;
         this.appController = new SincroAppController();
         // startup toggles のページごとの有効性を先に知らせ、React UI の「未対応項目表示」に反映する。
         // simple-vrm 現行実装では startup toggles の Talk/Inspector/VR は scene初期化へ未接続。
@@ -87,52 +92,6 @@ export class SincroVRMInitializer {
     startAutomatically(): void {
         if (!this.initialized) throw new Error("VRM page is not initialized.");
         if ("obsstudio" in window) this.appController.start();
-    }
-
-    private static waitForCharacterBoxRoot(timeoutMs = 5000): Promise<HTMLDivElement> {
-        const existingCharCanvas = document.querySelector<HTMLDivElement>(CHARACTER_BOX_SELECTOR);
-        if (existingCharCanvas) {
-            return Promise.resolve(existingCharCanvas);
-        }
-
-        const observationTarget = document.body ?? document.documentElement;
-        return new Promise((resolve, reject) => {
-            const observer = new MutationObserver(() => {
-                const charCanvas = document.querySelector<HTMLDivElement>(CHARACTER_BOX_SELECTOR);
-                if (!charCanvas) {
-                    return;
-                }
-
-                window.clearTimeout(timeoutId);
-                observer.disconnect();
-                resolve(charCanvas);
-            });
-            const timeoutId = window.setTimeout(() => {
-                observer.disconnect();
-                reject(new Error(`${CHARACTER_BOX_SELECTOR} is not found.`));
-            }, timeoutMs);
-
-            // React app shell が非同期に mount しても拾えるよう、DOM 追加を監視する。
-            observer.observe(observationTarget, { childList: true, subtree: true });
-        });
-    }
-
-    private getCharCanvasRoot(): HTMLDivElement {
-        const charCanvas = document.querySelector<HTMLDivElement>(CHARACTER_BOX_SELECTOR);
-        if (!charCanvas) {
-            throw new Error(`${CHARACTER_BOX_SELECTOR} is not found.`);
-        }
-        return charCanvas;
-    }
-
-    private getCharacterControlLayer(): HTMLDivElement {
-        const controlLayer = document.querySelector<HTMLDivElement>(
-            CHARACTER_CONTROL_LAYER_SELECTOR,
-        );
-        if (!controlLayer) {
-            throw new Error(`${CHARACTER_CONTROL_LAYER_SELECTOR} is not found.`);
-        }
-        return controlLayer;
     }
 
     private getUserMediaAvailabilityCheck(): void {

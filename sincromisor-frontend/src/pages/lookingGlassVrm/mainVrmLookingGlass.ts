@@ -1,10 +1,8 @@
 import { SincroLookingGlassVRMInitializer } from "../../character/lookingGlass/sincroLookingGlassVrmInitializer";
-import { frontendLogger } from "../../shared/logging/appLogger";
 
-// Looking Glass VRM ページ専用の最小エントリ。
-// ページ差分は initializer 側へ閉じ、ここでは HTML からの起動経路だけを示す。
-window.addEventListener("load", () => {
-    void SincroLookingGlassVRMInitializer.bootstrap().catch((error) => {
-        frontendLogger.error("Failed to bootstrap looking-glass-vrm page.", { error });
-    });
-});
+import type { SincroVRMRoots } from "../../character/scene/sincroVrmInitializer";
+
+/** Reactの配置完了からページ固有の初期化を行う。失敗は呼び出し元の共通入口へ返す。 */
+export function initializeLookingGlassVrmPage(roots: SincroVRMRoots): void {
+    SincroLookingGlassVRMInitializer.bootstrap(roots);
+}

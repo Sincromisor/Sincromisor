@@ -1,10 +1,7 @@
+import type { SincroVRMRoots } from "../../character/scene/sincroVrmInitializer";
 import { SincroVRM360Initializer } from "../../character/vrm360/sincroVrm360Initializer";
-import { frontendLogger } from "../../shared/logging/appLogger";
 
-// 360 ページ専用の薄いエントリ。
-// 360 用の既定設定は initializer 内の AppController 設定へ閉じ、entry は起動だけを担当する。
-window.addEventListener("load", () => {
-    void SincroVRM360Initializer.bootstrap().catch((error) => {
-        frontendLogger.error("Failed to bootstrap vrm360 page.", { error });
-    });
-});
+/** Reactの配置完了からページ固有の初期化を行う。失敗は呼び出し元の共通入口へ返す。 */
+export function initializeVrm360Page(roots: SincroVRMRoots): void {
+    SincroVRM360Initializer.bootstrap(roots);
+}
