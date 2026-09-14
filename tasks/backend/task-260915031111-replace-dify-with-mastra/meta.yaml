@@ -1,0 +1,15 @@
+id: task-260915031111-replace-dify-with-mastra
+title: チャット生成をMastraへ切り替えDify依存を撤去する
+category: backend
+status: open
+depends_on:
+  - task-260915031110-mastra-admin-mcp
+  - task-260915031111-mastra-text-stream-adapter
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-15
+closed_at: null
+legacy_ids: []

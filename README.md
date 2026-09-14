@@ -94,6 +94,38 @@ docker compose up -d
 
 ネットワークの制約と設定の受け渡しは[Compose設計](documents/design/infrastructure/compose.md)を参照する。
 
+## Gemma 4 E2Bを準備する
+
+同梱の `llama-server` は `chat` プロファイルで起動する。現時点の会話入口はDifyのままであり、
+この手順だけでは会話の接続先は切り替わらない。モデルは管理者が一度取得し、通常起動時はローカルファイルだけを読む。
+
+リポジトリのルートで、固定リビジョンのテキスト用Q4_0（約2.84GB）を取得する。
+画像・音声用のmmprojと投機的デコード用のmtpは不要である。
+
+```sh
+mkdir -p volumes/llama-models
+curl --fail --location --retry 2 \
+  --output volumes/llama-models/gemma-4-E2B-it-Q4_0.gguf.part \
+  https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/resolve/b4243c156154b6dca9324415f8c7ccc098b4aed1/gemma-4-E2B-it-Q4_0.gguf
+echo '8e30dff3ac4c8434c49a7036fa15564bdbb6044e42bf04550bf1a096ad7e6a52  volumes/llama-models/gemma-4-E2B-it-Q4_0.gguf.part' | sha256sum --check
+mv volumes/llama-models/gemma-4-E2B-it-Q4_0.gguf.part volumes/llama-models/gemma-4-E2B-it-Q4_0.gguf
+```
+
+既存ファイルは再取得せず再利用する。チェックサム確認に失敗した場合は改名・起動せず再取得する。取得完了後、[例示設定](examples/compose.env)の `SINCRO_LLAMA_*` を
+ルート `.env` へ追加する。イメージの取得後は `--pull never` で外部取得を避けて起動できる。
+
+```sh
+docker compose --profile chat pull llama-server
+docker compose --profile chat up -d --pull never llama-server
+docker compose --profile chat ps llama-server
+docker compose --profile chat logs llama-server
+```
+
+CPUを6スレッド、コンテキストを4096トークン、並列生成を1件としている。
+ホストへのポート公開はなく、同じCompose内では `http://llama-server:8080/v1` を使う。
+ロード完了後だけ死活確認が成功する。保存先がない場合はマウントエラー、モデルファイルがない場合は
+llama-serverのモデル読込みエラーで停止する。保存条件は[保存領域設計](documents/design/infrastructure/storage.md#チャット用gguf)を参照する。
+
 ## クライアント側のつかいかた
 
 サーバーと同じPCのブラウザでは [http://localhost:8086](http://localhost:8086) を開く。別端末のLAN利用ではHTTPの公開先は `http://<サーバーのLANアドレス>:8086` だが、マイク・カメラの利用にはブラウザが安全な接続と認める条件が必要である。通常のブラウザでは同じPCの `localhost` はHTTPでも対象となり、利用許可を与えて使える。

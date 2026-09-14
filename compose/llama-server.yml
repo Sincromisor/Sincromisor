@@ -1,0 +1,44 @@
+# 事前取得済みのテキストモデルだけを使う。chatを選んだホストで起動する。
+services:
+    llama-server:
+        profiles: [chat]
+        image: ${SINCRO_LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp@sha256:e271606125389acbd8aec0481e7ea0627f12d7edd4412c19dbc0d427227a737e}
+        command:
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8080"
+            - --model
+            - /models/${SINCRO_LLAMA_MODEL_FILE:-gemma-4-E2B-it-Q4_0.gguf}
+            - --alias
+            - gemma-4-E2B-it
+            - --ctx-size
+            - ${SINCRO_LLAMA_CTX_SIZE:-4096}
+            - --threads
+            - ${SINCRO_LLAMA_THREADS:-6}
+            - --n-gpu-layers
+            - "0"
+            - --parallel
+            - "1"
+            - --jinja
+            - --reasoning
+            - "off"
+        volumes:
+            # 未配置ディレクトリを自動作成せず、通常起動で外部取得もしない。
+            - type: bind
+              source: ${SINCRO_LLAMA_MODEL_DIR:-../volumes/llama-models}
+              target: /models
+              read_only: true
+              bind:
+                  create_host_path: false
+        networks: [sincromisor-net]
+        healthcheck:
+            # 採用イメージに含まれるcurlで、モデルのロード中は失敗させる。
+            test: [CMD, curl, --fail, --silent, http://localhost:8080/health]
+            start_period: 120s
+            interval: 10s
+            timeout: 5s
+            retries: 12
+
+networks:
+    sincromisor-net:

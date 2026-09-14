@@ -9,6 +9,7 @@ include:
     - compose/speech-extractor.yml
     - compose/speech-recognizer.yml
     - compose/text-processor.yml
+    - compose/llama-server.yml
     - compose/voice-synthesizer.yml
     - compose/consul-server.yml
     - compose/s3.yml

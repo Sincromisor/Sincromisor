@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 18 件）
+## タスク一覧（自動生成 / 全 19 件）
 
-### done（完了） — 18 件
+### done（完了） — 19 件
 
 | タスク                                                                                                               | タイトル                                                | 判定    | 依存                                               |
 | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------- | -------------------------------------------------- |
@@ -26,5 +26,6 @@
 | [task-260913012528-prepare-python314-dependencies](./task-260913012528-prepare-python314-dependencies/task.md)       | Python 3.14移行に必要な音声処理依存を更新する           | ✅ PASS | —                                                  |
 | [task-260913012528-upgrade-python314](./task-260913012528-upgrade-python314/task.md)                                 | Python実行環境を3.14へ切り替える                        | ✅ PASS | `task-260913012528-prepare-python314-dependencies` |
 | [task-260913040803-compose-port-separation](./task-260913040803-compose-port-separation/task.md)                     | Composeの標準公開を絞り分散配置と管理用ポートを分離する | ✅ PASS | —                                                  |
+| [task-260915031109-gemma4-llama-server](./task-260915031109-gemma4-llama-server/task.md)                             | Gemma 4 E2Bのllama-serverをComposeへ同梱する            | ✅ PASS | —                                                  |
 
 <!-- AUTOGEN:tasks END -->
