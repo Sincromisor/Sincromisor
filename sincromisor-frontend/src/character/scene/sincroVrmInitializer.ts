@@ -1,4 +1,4 @@
-import { SincroAppController } from "../../app/controller";
+import { SincroAppController, type SincroAppSettingsSnapshot } from "../../app/controller";
 import { UserMediaManager } from "../../features/media/userMedia/userMediaManager";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { VRMScene } from "./vrmScene";
@@ -15,13 +15,20 @@ export class SincroVRMInitializer {
     // 自前生成したblob URLのみ解放対象として保持する。
     private generatedSystemIconURL?: string;
     private appUiStarted = false;
+    private initialized = false;
     protected activeScene?: VRMScene;
+    protected readonly initialSettings: Partial<SincroAppSettingsSnapshot> = {};
 
+    /** DOM待機後にページ設定を確定し、初期化成功時だけOBS自動開始へ進む。 */
     public static async bootstrap<TInitializer extends SincroVRMInitializer>(
         this: new () => TInitializer,
+        initialSettings: Partial<SincroAppSettingsSnapshot> = {},
     ): Promise<TInitializer> {
         await SincroVRMInitializer.waitForCharacterBoxRoot();
-        return new this();
+        const initializer = new this();
+        initializer.initialize(initialSettings);
+        initializer.startAutomatically();
+        return initializer;
     }
 
     constructor() {
@@ -37,6 +44,7 @@ export class SincroVRMInitializer {
         });
         this.appController.setStartHooks({
             beforeStart: () => {
+                if (!this.initialized) throw new Error("VRM page is not initialized.");
                 // 既存 UX を崩さないよう、挨拶メッセージは初回 start 前に注入する。
                 this.writeWelcomeMessagesOnce();
             },
@@ -45,9 +53,25 @@ export class SincroVRMInitializer {
                 this.startUiSideEffectsOnce();
             },
         });
+    }
 
-        this.getUserMediaAvailabilityCheck();
-        this.appController.dialog.updateCharacterAvailabilityStatus(true);
+    /** 機器状態・アイコン復元・シーン設定購読を開始する。同期失敗時は登録済み購読を解除する。 */
+    initialize(initialSettings: Partial<SincroAppSettingsSnapshot> = {}): void {
+        if (this.initialized) return;
+        try {
+            // 操作可能状態を確定してから、ページ既定値と許可済みURL設定を一括適用する。
+            this.getUserMediaAvailabilityCheck();
+            this.appController.dialog.updateCharacterAvailabilityStatus(true);
+            this.appController.applySettings({ ...this.initialSettings, ...initialSettings });
+            this.initializePageBindings();
+            this.initialized = true;
+        } catch (error) {
+            this.appController.releaseEventSubscriptions();
+            throw error;
+        }
+    }
+
+    private initializePageBindings(): void {
         // VRMロード完了前でも、前回キャッシュ済みのアイコンを即座に表示する。
         this.loadCachedSystemIcon();
         this.appController.debug.setRTCStopButtonEventListener(() => {
@@ -57,10 +81,12 @@ export class SincroVRMInitializer {
             this.activeScene?.setSincroPoseRetargetConfig(config);
         });
         this.bindRuntimeSettingsSync();
+    }
 
-        if ("obsstudio" in window) {
-            this.start();
-        }
+    /** ページ設定と初期化が確定した後に呼ぶ。手動開始との重複はアプリが抑止する。 */
+    startAutomatically(): void {
+        if (!this.initialized) throw new Error("VRM page is not initialized.");
+        if ("obsstudio" in window) this.appController.start();
     }
 
     private static waitForCharacterBoxRoot(timeoutMs = 5000): Promise<HTMLDivElement> {
@@ -132,11 +158,6 @@ export class SincroVRMInitializer {
             });
     }
 
-    private start(): void {
-        // start の順序制御（lifecycle / hooks / RTC 起動）は AppController に集約。
-        this.appController.start();
-    }
-
     private writeWelcomeMessagesOnce(): void {
         if (this.appUiStarted) {
             return;
@@ -177,13 +198,6 @@ export class SincroVRMInitializer {
         vrmScene.setSincroPoseRetargetConfig(this.appController.pose.getConfig());
         this.syncSceneRuntimeSettings(this.appController.state.getSettingsSnapshot());
         return vrmScene;
-
-        /*
-            this.charCanvas, talkManager,
-            this.appController.dialog.isVREnabled(),
-            this.appController.dialog.isCharacterEnabled(),
-            this.appController.dialog.isInspectorEnabled()
-        */
     }
 
     protected updateSystemIconFromThumbnail(thumbnailImage: HTMLImageElement | undefined): void {
