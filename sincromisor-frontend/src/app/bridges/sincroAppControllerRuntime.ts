@@ -1,4 +1,5 @@
 import type { InitialSincroCalibrationController } from "../../character/calibration/initialSincroCalibrationController";
+import { SincroPoseSettingsModel } from "../../character/runtime/sincroPoseSettingsModel";
 import { ChatMessageService } from "../../features/conversation/chat/model/chatMessageService";
 import { TalkManager } from "../../features/conversation/talk/talkManager";
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
@@ -26,6 +27,7 @@ export type SincroAppControllerRuntimeBundle = {
     popMessageService: PopMessageService;
     dialogManager: DialogManager;
     settingsModel: SincroAppSettingsModel;
+    poseSettings: SincroPoseSettingsModel;
     dialogBridge: SincroAppDialogBridge;
     chatBridge: SincroAppChatBridge;
     debugBridge: SincroAppDebugBridge;
@@ -46,6 +48,7 @@ export function createSincroAppRuntimeBundle(params: {
     state: SincroAppStateBridge;
 }): SincroAppControllerRuntimeBundle {
     const settingsModel = SincroAppSettingsModel.getShared();
+    const poseSettings = new SincroPoseSettingsModel();
     const coreController = new SincroController({
         emitEvent: params.emitEvent,
         settingsModel,
@@ -67,6 +70,7 @@ export function createSincroAppRuntimeBundle(params: {
         popMessageService,
         dialogManager,
         settingsModel,
+        poseSettings,
         dialogBridge: {
             applySelectedVrmFile: (file) => dialogManager.applySelectedVrmFile(file),
             setVrmDragOver: (isDragOver) => dialogManager.setVrmDragOver(isDragOver),
@@ -121,11 +125,11 @@ export function createSincroAppRuntimeBundle(params: {
             toggleRightToolSettingsPanel: () => rightToolPanelService.toggleSettingsPanel(),
         },
         poseBridge: {
-            getConfig: () => debugConsoleManager.getSnapshot().sincroMotion.poseRetarget,
-            applyConfig: (config) =>
-                debugConsoleManager.applySincroPoseRetargetConfig(config, "sync"),
-            subscribe: (listener) =>
-                debugConsoleManager.setSincroPoseRetargetConfigChangeCallback(listener),
+            getConfig: () => poseSettings.getConfig(),
+            applyConfig: (config) => {
+                poseSettings.applyConfig(config);
+            },
+            subscribe: (listener) => poseSettings.subscribe(listener),
         },
         rtcBridge: { stop: params.stopRTC },
         stateBridge: params.state,

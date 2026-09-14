@@ -1,4 +1,5 @@
 import type { SincroPoseRetargetConfig } from "../../character/retargeting/sincroPoseRetargeter";
+import type { SincroPoseTuningConfig } from "../../character/runtime/sincroPoseSettingsModel";
 
 /** アプリから初期化処理とReactへ公開する操作窓口。サービスの所有権は移さない。 */
 
@@ -58,9 +59,9 @@ export type SincroAppStateBridge = {
     getTelopTextSegmentsSnapshot: () => import("../controller/sincroAppTypes").TelopTextSegment[];
 };
 
-/** 姿勢設定の正本は診断モデル。取得・正規化を伴う適用・操作通知だけを公開する。 */
+/** アプリ専用の姿勢設定モデルをシーンへ公開する。診断表示や保存には依存しない。 */
 export type SincroAppPoseBridge = {
-    getConfig: () => Partial<SincroPoseRetargetConfig>;
+    getConfig: () => SincroPoseTuningConfig;
     applyConfig: (config: Partial<SincroPoseRetargetConfig>) => void;
     subscribe: (listener: (config: Partial<SincroPoseRetargetConfig>) => void) => () => void;
 };

@@ -3,6 +3,10 @@
  * camera / tracker source は受け取るだけで、MediaStream や Worker lifecycle は扱わない。
  */
 import type { SincroPoseRetargetConfig } from "../../character/retargeting/sincroPoseRetargeter";
+import {
+    SincroPoseSettingsModel,
+    type SincroPoseTuningConfig,
+} from "../../character/runtime/sincroPoseSettingsModel";
 import { VRMScene } from "../../character/scene/vrmScene";
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
@@ -25,6 +29,7 @@ type MotionDebugSceneRuntimeParams = {
 
 export class MotionDebugSceneRuntime {
     private readonly scene: VRMScene;
+    private readonly poseSettings = new SincroPoseSettingsModel();
     private lastSnapshotRenderedAtMs = 0;
     private renderFps = 0;
     private renderFrames = 0;
@@ -48,11 +53,21 @@ export class MotionDebugSceneRuntime {
             xrMode: false,
         });
         this.scene.start();
-        this.scene.setSincroPoseRetargetConfig(params.initialRetargetConfig);
+        // この独立ページのモデルだけをシーンと診断へ接続する。保存は行わない。
+        this.poseSettings.subscribe((config) => {
+            this.scene.setSincroPoseRetargetConfig(config);
+            diagnostics.setSincroPoseRetargetConfig(config);
+        });
+        diagnostics.setSincroPoseRetargetConfigEditCallback((config) => {
+            this.poseSettings.applyConfig(config);
+        });
+        this.poseSettings.applyConfig(params.initialRetargetConfig);
     }
 
-    setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
-        this.scene.setSincroPoseRetargetConfig(config);
+    /** 通常ページと同じ規則で正規化し、描画・診断・フォームへ同じ現在値を渡す。 */
+    setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): SincroPoseTuningConfig {
+        this.poseSettings.applyConfig(config);
+        return this.poseSettings.getConfig();
     }
 
     renderOnce(mediaTimeMs: number): void {

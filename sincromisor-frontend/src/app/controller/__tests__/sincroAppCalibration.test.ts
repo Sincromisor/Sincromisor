@@ -58,16 +58,14 @@ beforeEach(() => {
     });
     vi.stubGlobal(
         "fetch",
-        vi
-            .fn()
-            .mockResolvedValue({
-                ok: true,
-                json: async () => ({
-                    offerURL: "/offer",
-                    candidateURL: "/candidate",
-                    iceServers: [],
-                }),
+        vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                offerURL: "/offer",
+                candidateURL: "/candidate",
+                iceServers: [],
             }),
+        }),
     );
     vi.stubGlobal("caches", { open: async () => ({ match: async () => undefined }) });
     vi.spyOn(SincroAppSettingsModel.prototype, "connectMediaDevices").mockReturnValue(() => {});

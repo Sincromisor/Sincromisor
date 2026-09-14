@@ -1,10 +1,10 @@
 import type { MinimalAvatarMotionProfile } from "../../../character/avatarProfile/minimalAvatarMotionProfile";
-import {
-    DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
-    type SincroPoseRetargetConfig,
-    type SincroPoseRetargetFrame,
-} from "../../../character/retargeting/sincroPoseRetargeter";
+import type { SincroPoseRetargetFrame } from "../../../character/retargeting/sincroPoseRetargeter";
 import type { SincroMotionObserveOnlySummary } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
+import {
+    createDefaultSincroPoseTuningConfig,
+    type SincroPoseTuningConfig,
+} from "../../../character/runtime/sincroPoseSettingsModel";
 import type { SincroVrmPoseComposerResult } from "../../../character/runtime/sincroVrmPoseComposer";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
@@ -12,7 +12,6 @@ import type { SincroTrackerWorkerStats } from "../../gaze/trackingRuntime/sincro
 import {
     createDefaultFaceMotionSnapshot,
     createDefaultPoseMotionSnapshot,
-    createNeutralArmIkConstraint,
 } from "./debugConsoleMotionSnapshot";
 import {
     type AudioFilterControlConfig,
@@ -25,6 +24,7 @@ import {
     type LearnedVadUiReport,
     type VadThresholdMode,
 } from "./debugConsolePublicTypes";
+import { createDefaultPoseRetargetRuntimeSnapshot } from "./debugConsoleSincroMotionRuntime";
 
 type ConstraintStatusSnapshot = {
     text: string;
@@ -65,20 +65,7 @@ type SincroMotionSnapshot = {
     pose: SincroPoseMotionSnapshot;
     tracker: SincroTrackerWorkerStats;
     observeOnly: SincroMotionObserveOnlySummary;
-    poseRetarget: Pick<
-        SincroPoseRetargetConfig,
-        | "intensityScale"
-        | "minConfidence"
-        | "returnToNeutralMs"
-        | "smoothingMs"
-        | "armIkStrength"
-        | "armIkTargetScale"
-        | "armIkMaxLiftRad"
-        | "armIkMaxOpenRad"
-        | "armIkMaxForearmFlexRad"
-        | "armIkMode"
-        | "composerSemanticFingerApplicationMode"
-    >;
+    poseRetarget: SincroPoseTuningConfig;
     poseRetargetRuntime: Pick<
         SincroPoseRetargetFrame,
         | "active"
@@ -210,7 +197,7 @@ function createDefaultSincroMotionSnapshot(): SincroMotionSnapshot {
             droppedFrames: 0,
         },
         observeOnly: createDefaultObserveOnlySummary(),
-        poseRetarget: createDefaultPoseRetargetConfigSnapshot(),
+        poseRetarget: createDefaultSincroPoseTuningConfig(),
         poseRetargetRuntime: createDefaultPoseRetargetRuntimeSnapshot(),
     };
 }
@@ -271,58 +258,6 @@ function createDefaultObserveOnlySummary(): SincroMotionObserveOnlySummary {
             fullNormalizedPoseApplication: undefined,
         },
         updatedAtMs: 0,
-    };
-}
-
-function createDefaultPoseRetargetConfigSnapshot(): SincroMotionSnapshot["poseRetarget"] {
-    return {
-        intensityScale: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.intensityScale,
-        minConfidence: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.minConfidence,
-        returnToNeutralMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.returnToNeutralMs,
-        smoothingMs: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.smoothingMs,
-        armIkStrength: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkStrength,
-        armIkTargetScale: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkTargetScale,
-        armIkMaxLiftRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxLiftRad,
-        armIkMaxOpenRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxOpenRad,
-        armIkMaxForearmFlexRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxForearmFlexRad,
-        armIkMode: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMode,
-        composerSemanticFingerApplicationMode:
-            DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerSemanticFingerApplicationMode,
-    };
-}
-
-function createDefaultPoseRetargetRuntimeSnapshot(): SincroMotionSnapshot["poseRetargetRuntime"] {
-    return {
-        active: false,
-        confidence: 0,
-        ikMode: "fallback",
-        fallbackReason: "neutral",
-        solverProbe: {},
-        anchor: {
-            active: false,
-            weight: 0,
-            reason: "neutral",
-            shoulderOffset: { x: 0, y: 0 },
-        },
-        leftArm: createDefaultPoseRetargetArmRuntimeSnapshot(),
-        rightArm: createDefaultPoseRetargetArmRuntimeSnapshot(),
-        avatarMotionProfile: undefined,
-    };
-}
-
-function createDefaultPoseRetargetArmRuntimeSnapshot(): SincroMotionSnapshot["poseRetargetRuntime"]["leftArm"] {
-    return {
-        active: false,
-        ikActive: false,
-        ikWeight: 0,
-        fallbackReason: "neutral",
-        ikSolverMode: "none",
-        constraint: createNeutralArmIkConstraint(),
-        upperArm: { x: 0, y: 0, z: 0 },
-        lowerArm: { x: 0, y: 0, z: 0 },
-        wrist: { x: 0, y: 0, z: 0 },
-        upperArmQuaternion: undefined,
-        lowerArmQuaternion: undefined,
     };
 }
 

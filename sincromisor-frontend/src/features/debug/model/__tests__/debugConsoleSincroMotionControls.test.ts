@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SincroPoseSettingsModel } from "../../../../character/runtime/sincroPoseSettingsModel";
 import { DebugConsoleSincroMotionControls } from "../debugConsoleSincroMotionControls";
 import { createDefaultSnapshot, type DebugConsoleSnapshot } from "../debugConsoleSnapshot";
 
@@ -6,8 +7,6 @@ describe("DebugConsoleSincroMotionControls", () => {
     it("同じ通知先の再登録後も古い解除で新登録を消さない", () => {
         let snapshot = createDefaultSnapshot();
         const controls = new DebugConsoleSincroMotionControls({
-            emitEvent: () => {},
-            readSnapshot: () => snapshot,
             updateSnapshot: (update) => {
                 snapshot = update(snapshot);
             },
@@ -16,8 +15,8 @@ describe("DebugConsoleSincroMotionControls", () => {
         const listener = () => {
             calls += 1;
         };
-        const old = controls.setSincroPoseRetargetConfigChangeCallback(listener);
-        const current = controls.setSincroPoseRetargetConfigChangeCallback(listener);
+        const old = controls.setSincroPoseRetargetConfigEditCallback(listener);
+        const current = controls.setSincroPoseRetargetConfigEditCallback(listener);
         old();
         old();
         controls.applySincroPoseRetargetConfig({ intensityScale: 0.5 });
@@ -52,8 +51,6 @@ describe("DebugConsoleSincroMotionControls", () => {
             },
         };
         const controls = new DebugConsoleSincroMotionControls({
-            emitEvent: () => {},
-            readSnapshot: () => snapshot,
             updateSnapshot: (updater: (current: DebugConsoleSnapshot) => DebugConsoleSnapshot) => {
                 snapshot = updater(snapshot);
             },
@@ -86,13 +83,16 @@ describe("DebugConsoleSincroMotionControls", () => {
     it("applies semantic finger composer mode through the pose retarget config path", () => {
         let snapshot = createDefaultSnapshot();
         const controls = new DebugConsoleSincroMotionControls({
-            emitEvent: () => {},
-            readSnapshot: () => snapshot,
             updateSnapshot: (updater: (current: DebugConsoleSnapshot) => DebugConsoleSnapshot) => {
                 snapshot = updater(snapshot);
             },
         });
 
+        const model = new SincroPoseSettingsModel();
+        model.subscribe((config) => controls.setSincroPoseRetargetConfig(config));
+        controls.setSincroPoseRetargetConfigEditCallback((config) => {
+            model.applyConfig(config);
+        });
         controls.applySincroPoseRetargetConfig({
             composerSemanticFingerApplicationMode: "off",
         });

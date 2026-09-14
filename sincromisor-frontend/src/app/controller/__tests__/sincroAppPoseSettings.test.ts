@@ -127,7 +127,11 @@ it("保存した視線・姿勢調整を接続前から保持し、同値の通�
     );
     expect(active.app.getSettingsSnapshot().sincroPoseRetargetScale).toBe(0.4);
     active.debug.updateFaceXLog(0.5);
-    active.debug.setSincroPoseRetargetConfig({ minConfidence: 0.5 });
+    active.debug.setSincroPoseRetargetConfig({
+        ...active.app.pose.getConfig(),
+        minConfidence: 0.5,
+    });
+    expect(active.app.pose.getConfig().minConfidence).not.toBe(0.5);
     expect(write).not.toHaveBeenCalled();
     active.app.applySettings({ sincroPoseRetargetScale: 0.4 });
     expect(scene).toHaveBeenCalledTimes(2);

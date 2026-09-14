@@ -2,15 +2,12 @@ import {
     cloneMinimalAvatarMotionProfile,
     type MinimalAvatarMotionProfile,
 } from "../../../character/avatarProfile/minimalAvatarMotionProfile";
-import type {
-    SincroPoseRetargetConfig,
-    SincroPoseRetargetFrame,
-} from "../../../character/retargeting/sincroPoseRetargeter";
+import type { SincroPoseRetargetFrame } from "../../../character/retargeting/sincroPoseRetargeter";
 import type { SincroMotionObserveOnlySummary } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
 import type { SincroVrmPoseComposerResult } from "../../../character/runtime/sincroVrmPoseComposer";
+import { createNeutralArmIkConstraint } from "./debugConsoleMotionSnapshot";
 import type { DebugConsoleSnapshot } from "./debugConsoleSnapshot";
 
-type PoseRetargetConfigSnapshot = DebugConsoleSnapshot["sincroMotion"]["poseRetarget"];
 type PoseRetargetRuntimeSnapshot = DebugConsoleSnapshot["sincroMotion"]["poseRetargetRuntime"];
 type ObserveOnlySummarySnapshot = DebugConsoleSnapshot["sincroMotion"]["observeOnly"];
 
@@ -109,48 +106,6 @@ export function cloneAvatarMotionProfile(
     return profile ? cloneMinimalAvatarMotionProfile(profile) : undefined;
 }
 
-export function updatePoseRetargetConfig(
-    current: PoseRetargetConfigSnapshot,
-    config: Partial<SincroPoseRetargetConfig>,
-): PoseRetargetConfigSnapshot {
-    return {
-        ...current,
-        intensityScale: clampNumber(config.intensityScale ?? current.intensityScale, 0, 1.2),
-        minConfidence: clampNumber(config.minConfidence ?? current.minConfidence, 0, 1),
-        returnToNeutralMs: clampNumber(
-            config.returnToNeutralMs ?? current.returnToNeutralMs,
-            80,
-            2000,
-        ),
-        smoothingMs: clampNumber(config.smoothingMs ?? current.smoothingMs, 40, 800),
-        armIkStrength: clampNumber(config.armIkStrength ?? current.armIkStrength, 0, 1),
-        armIkTargetScale: clampNumber(
-            config.armIkTargetScale ?? current.armIkTargetScale,
-            0.2,
-            1.5,
-        ),
-        armIkMaxLiftRad: clampNumber(
-            config.armIkMaxLiftRad ?? current.armIkMaxLiftRad,
-            0,
-            Math.PI / 2,
-        ),
-        armIkMaxOpenRad: clampNumber(
-            config.armIkMaxOpenRad ?? current.armIkMaxOpenRad,
-            0,
-            Math.PI / 2,
-        ),
-        armIkMaxForearmFlexRad: clampNumber(
-            config.armIkMaxForearmFlexRad ?? current.armIkMaxForearmFlexRad,
-            0,
-            Math.PI / 2,
-        ),
-        armIkMode: config.armIkMode ?? current.armIkMode,
-        composerSemanticFingerApplicationMode:
-            config.composerSemanticFingerApplicationMode ??
-            current.composerSemanticFingerApplicationMode,
-    };
-}
-
 function clonePoseRetargetArmRuntime(
     arm: SincroPoseRetargetFrame["leftArm"],
 ): PoseRetargetRuntimeSnapshot["leftArm"] {
@@ -177,9 +132,38 @@ function cloneObserveOnlyStage(
     };
 }
 
-function clampNumber(value: number, min: number, max: number): number {
-    if (!Number.isFinite(value)) {
-        return min;
-    }
-    return Math.max(min, Math.min(max, value));
+/** 診断用の姿勢適用結果は未開始・中立から表示し、設定モデルの正本とは分離する。 */
+export function createDefaultPoseRetargetRuntimeSnapshot(): PoseRetargetRuntimeSnapshot {
+    return {
+        active: false,
+        confidence: 0,
+        ikMode: "fallback",
+        fallbackReason: "neutral",
+        solverProbe: {},
+        anchor: {
+            active: false,
+            weight: 0,
+            reason: "neutral",
+            shoulderOffset: { x: 0, y: 0 },
+        },
+        leftArm: createDefaultPoseRetargetArmRuntimeSnapshot(),
+        rightArm: createDefaultPoseRetargetArmRuntimeSnapshot(),
+        avatarMotionProfile: undefined,
+    };
+}
+
+function createDefaultPoseRetargetArmRuntimeSnapshot(): PoseRetargetRuntimeSnapshot["leftArm"] {
+    return {
+        active: false,
+        ikActive: false,
+        ikWeight: 0,
+        fallbackReason: "neutral",
+        ikSolverMode: "none",
+        constraint: createNeutralArmIkConstraint(),
+        upperArm: { x: 0, y: 0, z: 0 },
+        lowerArm: { x: 0, y: 0, z: 0 },
+        wrist: { x: 0, y: 0, z: 0 },
+        upperArmQuaternion: undefined,
+        lowerArmQuaternion: undefined,
+    };
 }
