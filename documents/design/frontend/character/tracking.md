@@ -146,7 +146,7 @@
     - 構造化動作ログ記録は姿勢コールバック / 姿勢代替処理コールバック起点で標準化した上半身状態を生成してから `MotionDebugRecorder.recordFrame()` に渡し、TrackerRuntime や追跡処理処理担当には標準化した生成、DOM / ダウンロード / UI の責務を持たせない。
     - 構造化動作ログ記録は同じ姿勢コールバック / 姿勢代替処理コールバック起点で `ReliabilityMap` を生成し、`frame.reliability` へ保存する。信頼性が未計算のフレームでも格納先は省略せず、同じ `mediaTimeMs` の既定信頼性の対応表を保存する。
     - 構造化動作ログ記録は標準化した / 信頼性解決後に motion-debug ページ側の `TemporalStateEstimator.update()` を呼び、`frame.temporal` へ `TemporalUpperBodyState` を保存する。カメラ停止、映像固定データ読み込み、記録読み込み、再生停止、由来再初期化では時系列推定処理を再初期化する。
-    - 構造化動作ログ記録は時系列解決後に同じ `mediaTimeMs` で motion-debug ページ側の `MotionIntentEstimator.update()` を呼び、`frame.intent` へ `MotionIntentState` を保存する。記録中でないライブスナップショットでも最新意図を保持し、再初期化時刻情報は時系列推定処理と揃える。
+    - ライブカメラと動画固定入力は `MotionDebugTrackerBridge` が所有する共通観測パイプラインで時系列・意図まで計算し、描画と録画へ同じ結果を渡す。録画制御は推定器を持たず、録画開始停止でも履歴を保持する。入力ソースの停止・切替時にだけ共通計算と検証専用の指履歴を初期化する。
     - 本番 `sincro` の観測専用の処理工程でも `TemporalStateEstimator` と `MotionIntentEstimator` の
       再初期化時刻情報は揃える。モード切替、カメラ再取得、追跡停止、実行時エラーでは処理工程を再初期化し、
       過去フレームのフィルター / ヒステリシス / 待機期間を次のカメラ由来へ持ち越さない。
