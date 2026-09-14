@@ -1,3 +1,4 @@
+import type { AvatarMotionProfile } from "../../character/avatarProfile/avatarMotionProfileTypes";
 /**
  * TrackerRuntime callback から retarget、reliability、temporal、intent、recording を接続する bridge。
  * tracker runtime / Worker は canonical 生成や recorder を所有しないため、この module が motion-debug page 側の同期点になる。
@@ -9,7 +10,10 @@ import {
     type ReliabilityMap,
 } from "../../character/reliability/reliabilityMap";
 import type { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
-import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import {
+    DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
+    type SincroFaceMotionSnapshot,
+} from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import {
     DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT,
@@ -22,6 +26,11 @@ import type { TrackerRuntimePerformanceProfile } from "../../features/gaze/track
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import type { MotionDebugCameraRuntime } from "./motionDebugCameraRuntime";
+import {
+    createMotionDebugLiveInput,
+    MotionDebugLiveComputation,
+    type MotionDebugLiveFrame,
+} from "./motionDebugLiveComputation";
 import type { MotionDebugRecordingController } from "./motionDebugRecordingController";
 import type { MotionDebugPoseOverlayRenderer } from "./poseOverlayRenderer";
 import type { MotionDebugSnapshot } from "./types";
@@ -33,17 +42,13 @@ type MotionDebugTrackerBridgeParams = {
     debugConsole: DebugConsoleManager;
     overlayRenderer: MotionDebugPoseOverlayRenderer;
     recording: MotionDebugRecordingController;
+    getAvatarMotionProfile: () => AvatarMotionProfile | undefined;
+    onLiveFrame: (frame: MotionDebugLiveFrame) => void;
     onError: (error: unknown) => void;
 };
 
-function resolvePoseReliabilityMediaTimeMs(
-    snapshot: SincroPoseMotionSnapshot,
-    timing?: TrackerVideoFrameTiming,
-): number {
-    return timing?.mediaTimeMs ?? snapshot.lastUpdatedAtMs ?? 0;
-}
-
 export class MotionDebugTrackerBridge {
+    private readonly live = new MotionDebugLiveComputation();
     private readonly trackerRuntime: TrackerRuntime;
     private latestFaceSnapshot: SincroFaceMotionSnapshot;
     private latestHandSnapshot?: SincroHandMotionSnapshot;
@@ -66,28 +71,18 @@ export class MotionDebugTrackerBridge {
         await this.trackerRuntime.startFaceTracking(
             track,
             {
-                onFaceMotion: (snapshot, timing) => {
-                    this.handleFaceMotion(snapshot, timing);
-                },
-                onHandMotion: (snapshot, timing) => {
-                    this.handleHandMotion(snapshot, timing);
-                },
-                onPoseMotion: (snapshot, timing) => {
-                    this.handlePoseMotion(snapshot, timing, true);
-                },
-                onPoseFallback: (snapshot, timing) => {
-                    this.handlePoseMotion(snapshot, timing, false);
-                },
-                onMediaPipeRawResult: (result, timing) => {
-                    this.handleMediaPipeRawResult(result, timing);
-                },
+                onFaceMotion: (snapshot, timing) => this.handleFaceMotion(snapshot, timing),
+                onHandMotion: (snapshot, timing) => this.handleHandMotion(snapshot, timing),
+                onPoseMotion: (snapshot, timing) => this.handlePoseMotion(snapshot, timing, true),
+                onPoseFallback: (snapshot, timing) =>
+                    this.handlePoseMotion(snapshot, timing, false),
+                onMediaPipeRawResult: (result, timing) =>
+                    this.handleMediaPipeRawResult(result, timing),
                 onTrackerStats: (snapshot) => {
                     this.latestTrackerStats = snapshot;
                     this.params.debugConsole.updateSincroTrackerStats(snapshot);
                 },
-                onError: (error) => {
-                    this.params.onError(error);
-                },
+                onError: (error) => this.params.onError(error),
             },
             undefined,
             {
@@ -101,8 +96,15 @@ export class MotionDebugTrackerBridge {
         );
     }
 
+    /** 追跡停止とともにソース固有の観測・推定履歴を破棄する。 */
     stop(reason: string): void {
         this.trackerRuntime.stopFaceTracking(reason);
+        this.live.reset();
+        this.latestFaceSnapshot = DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT;
+        this.latestHandSnapshot = undefined;
+        this.latestPoseSnapshot = DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT;
+        this.latestMediaPipeRaw = undefined;
+        this.latestReliability = undefined;
     }
 
     applyReplayPoseSnapshot(
@@ -129,33 +131,6 @@ export class MotionDebugTrackerBridge {
 
     setHandSnapshot(snapshot: SincroHandMotionSnapshot | undefined): void {
         this.latestHandSnapshot = snapshot;
-    }
-
-    updateLiveReliability(
-        snapshot: SincroPoseMotionSnapshot,
-        previousPose: SincroPoseMotionSnapshot,
-        timing?: TrackerVideoFrameTiming,
-    ): void {
-        const previousReliability = this.latestValidReliability();
-        this.latestReliability = createPoseReliabilityMap({
-            pose: snapshot,
-            ...(this.latestHandSnapshot === undefined ? {} : { hand: this.latestHandSnapshot }),
-            face: this.latestFaceSnapshot,
-            cameraQuality: this.params.camera.getCameraQuality(),
-            previous:
-                previousReliability === undefined
-                    ? undefined
-                    : {
-                          pose: previousPose,
-                          mediaTimeMs: previousReliability.timestamp.mediaTimeMs,
-                          reliability: previousReliability,
-                      },
-            mediaTimeMs: resolvePoseReliabilityMediaTimeMs(snapshot, timing),
-            video: {
-                width: this.params.video.videoWidth,
-                height: this.params.video.videoHeight,
-            },
-        });
     }
 
     updateReplayReliability(
@@ -195,14 +170,7 @@ export class MotionDebugTrackerBridge {
 
     latestValidReliability(): ReliabilityMap | undefined {
         const reliability = this.latestReliability;
-        if (reliability === undefined || "parseStatus" in reliability) {
-            return undefined;
-        }
-        return reliability;
-    }
-
-    setReliabilityState(state: ReliabilityMap | undefined): void {
-        this.latestReliability = state;
+        return reliability === undefined || "parseStatus" in reliability ? undefined : reliability;
     }
 
     resetReliabilityState(): void {
@@ -221,43 +189,81 @@ export class MotionDebugTrackerBridge {
         };
     }
 
+    /** Face到着を共通観測へ渡す。状態付き推定は次のPoseを待つ。 */
     private handleFaceMotion(
         snapshot: SincroFaceMotionSnapshot,
         timing?: TrackerVideoFrameTiming,
     ): void {
         this.params.camera.updateFrameTiming(timing);
         this.latestFaceSnapshot = snapshot;
+        this.live.pipeline.updateFace(
+            snapshot,
+            createMotionDebugLiveInput(
+                this.params.video,
+                timing,
+                snapshot.lastUpdatedAtMs,
+                this.params.camera.getCameraQuality(),
+            ),
+        );
         this.params.behaviorState.applyFaceMotion(snapshot);
         this.params.debugConsole.updateSincroFaceMotion(snapshot);
     }
 
+    /** 未検出を含むHand観測を更新し、次のPoseの指計算へ渡す。 */
     private handleHandMotion(
         snapshot: SincroHandMotionSnapshot,
         timing?: TrackerVideoFrameTiming,
     ): void {
         this.params.camera.updateFrameTiming(timing);
         this.latestHandSnapshot = snapshot;
+        this.live.pipeline.updateHand(
+            snapshot,
+            createMotionDebugLiveInput(
+                this.params.video,
+                timing,
+                snapshot.lastUpdatedAtMs,
+                this.params.camera.getCameraQuality(),
+            ),
+        );
     }
 
+    /** Pose到着時だけ共通推定を進め、描画と録画へ同じ結果を渡す。 */
     private handlePoseMotion(
         snapshot: SincroPoseMotionSnapshot,
         timing: TrackerVideoFrameTiming | undefined,
         renderOverlay: boolean,
     ): void {
-        const previousPose = this.setPoseSnapshot(snapshot);
+        this.setPoseSnapshot(snapshot);
         this.params.camera.updateFrameTiming(timing);
         this.params.camera.updateCameraQuality(snapshot, timing);
-        this.updateLiveReliability(snapshot, previousPose, timing);
+        const frame = this.live.updatePose(
+            snapshot,
+            createMotionDebugLiveInput(
+                this.params.video,
+                timing,
+                snapshot.lastUpdatedAtMs,
+                this.params.camera.getCameraQuality(),
+            ),
+            this.params.camera.getCameraSource() === "fixture" ? "fixture" : "live",
+            this.params.getAvatarMotionProfile(),
+        );
+        if (frame) {
+            this.latestReliability = frame.state.reliability;
+            this.params.behaviorState.applySincroMotionPipelineState(frame.state);
+            this.params.onLiveFrame(frame);
+        }
         this.params.behaviorState.applyPoseMotion(snapshot);
         this.params.debugConsole.updateSincroPoseMotion(snapshot);
-        this.recordPoseFrame(snapshot, timing);
+        if (frame) this.recordPoseFrame(snapshot, frame, timing);
         if (renderOverlay) {
             this.params.overlayRenderer.render(snapshot, this.params.video);
         }
     }
 
+    /** 生推論値は同じ映像時刻のものだけ保存する。 */
     private recordPoseFrame(
         snapshot: SincroPoseMotionSnapshot,
+        frame: MotionDebugLiveFrame,
         timing?: TrackerVideoFrameTiming,
     ): void {
         const mediaTimeMs = timing?.mediaTimeMs ?? snapshot.lastUpdatedAtMs;
@@ -267,10 +273,9 @@ export class MotionDebugTrackerBridge {
                 : undefined;
         const result = this.params.recording.recordPoseFrame(
             snapshot,
+            frame,
             timing,
             this.params.camera.getCameraQuality(),
-            this.latestValidReliability(),
-            undefined,
             raw,
         );
         if (result !== undefined && !result.ok) {

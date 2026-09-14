@@ -5,14 +5,9 @@
 import type { AvatarMotionProfile } from "../../character/avatarProfile/avatarMotionProfileTypes";
 import type { InitialSincroCalibrationSession } from "../../character/calibration/initialSincroCalibration";
 import type { OnlineSincroCalibrationState } from "../../character/calibration/onlineSincroCalibrationTypes";
-import type { CanonicalUpperBodyState } from "../../character/canonical/canonicalUpperBodyState";
 import type { SincroMotionDebugLogManifest } from "../../character/motionEvaluation/motionDebugLogSchema";
 import { SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION } from "../../character/motionEvaluation/motionDebugLogSchema";
 import { createMotionDebugPhase7Snapshot } from "../../character/motionEvaluation/motionDebugPhase7Snapshot";
-import {
-    createMotionDebugPhase9SemanticSnapshot,
-    type MotionDebugPhase9SemanticSnapshot,
-} from "../../character/motionEvaluation/motionDebugPhase9Snapshot";
 import {
     MotionDebugRecorder,
     type MotionDebugRecorderConfig,
@@ -21,36 +16,21 @@ import {
     type MotionDebugRecorderResult,
     type MotionDebugRecorderState,
 } from "../../character/motionEvaluation/motionDebugRecorder";
-import { MotionIntentEstimator } from "../../character/motionIntent/motionIntentEstimator";
-import type { MotionIntentState } from "../../character/motionIntent/motionIntentState";
-import type { MotionPostProcessingResult } from "../../character/motionPostProcessing/motionPostProcessingState";
-import { NoopMotionPostProcessor } from "../../character/motionPostProcessing/noopMotionPostProcessor";
-import {
-    createDefaultReliabilityMap,
-    type ReliabilityMap,
-} from "../../character/reliability/reliabilityMap";
-import { TemporalStateEstimator } from "../../character/temporal/temporalStateEstimator";
-import type {
-    TemporalUpperBodyState,
-    TemporalWarningCode,
-} from "../../character/temporal/temporalUpperBodyState";
-import { uniqueWarnings } from "../../character/temporal/temporalWarnings";
+
 import type { DebugConsoleSnapshot } from "../../features/debug/model/debugConsoleManager";
-import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
-import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
+
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { TrackerRuntimeMediaPipeRawResult } from "../../features/gaze/trackingRuntime/mediaPipeRawResultSerializer";
 import type { SincroTrackerWorkerStats } from "../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
 import type { TrackerRuntimePerformanceProfile } from "../../features/gaze/trackingRuntime/trackerRuntimePerformanceProfile";
 import type { TrackerVideoFrameTiming } from "../../features/gaze/trackingRuntime/trackerRuntimeTypes";
-import { frontendLogger } from "../../shared/logging/appLogger";
-import { normalizeMotionDebugBuildGitCommit } from "./motionDebugBuildProvenance";
-import { createMotionDebugCameraConstraints } from "./motionDebugCameraStream";
 import {
-    createMotionDebugCanonicalReliabilityInput,
-    createMotionDebugCanonicalState,
-} from "./motionDebugCanonicalState";
+    createPipelineConfigHash,
+    normalizeMotionDebugBuildGitCommit,
+} from "./motionDebugBuildProvenance";
+import { createMotionDebugCameraConstraints } from "./motionDebugCameraStream";
+import type { MotionDebugLiveFrame } from "./motionDebugLiveComputation";
 import {
     createMotionDebugLiveFinalPoseSnapshot,
     createMotionDebugLivePhase6SolverSnapshot,
@@ -58,7 +38,6 @@ import {
 import { downloadMotionDebugRecording } from "./motionDebugRecordingDownload";
 import type {
     MotionDebugCameraState,
-    MotionDebugCanonicalReliabilityInput,
     MotionDebugRecordingDownloadResult,
     MotionDebugRetargetUiConfig,
 } from "./types";
@@ -71,34 +50,20 @@ type MotionDebugRecordingControllerParams = {
     getRetargetConfig: () => MotionDebugRetargetUiConfig;
     getTrackerStats: () => SincroTrackerWorkerStats;
     getDebugSnapshot: () => DebugConsoleSnapshot["sincroMotion"];
-    getFaceSnapshot: () => SincroFaceMotionSnapshot;
-    getHandSnapshot: () => SincroHandMotionSnapshot | undefined;
     getAvatarMotionProfile: () => AvatarMotionProfile | undefined;
     getInitialCalibrationSession?: () => InitialSincroCalibrationSession | undefined;
     getOnlineCalibrationState?: () => OnlineSincroCalibrationState | undefined;
     getActivePerformanceProfile: () => TrackerRuntimePerformanceProfile;
     getVrmUrl: () => string;
-    onCanonicalStateChange: (state: CanonicalUpperBodyState | undefined) => void;
-    onCanonicalReliabilityInputChange: (
-        state: MotionDebugCanonicalReliabilityInput | undefined,
-    ) => void;
-    onReliabilityStateChange: (state: ReliabilityMap | undefined) => void;
-    onTemporalStateChange: (state: TemporalUpperBodyState | undefined) => void;
-    onIntentStateChange: (state: MotionIntentState | undefined) => void;
-    onPostProcessingStateChange: (state: MotionPostProcessingResult | undefined) => void;
     onStateChange: (state: MotionDebugRecorderState) => void;
 };
 
+/** 算出済みフレームの保存と出力を所有し、追跡側の計算寿命から独立する。 */
 export class MotionDebugRecordingController {
     private recorder = new MotionDebugRecorder();
-    private readonly temporalEstimator = new TemporalStateEstimator();
-    private readonly intentEstimator = new MotionIntentEstimator();
-    private readonly postProcessor = new NoopMotionPostProcessor();
-    private latestCanonical?: CanonicalUpperBodyState;
-    private latestPhase9?: MotionDebugPhase9SemanticSnapshot;
-
     constructor(private readonly params: MotionDebugRecordingControllerParams) {}
 
+    /** 入力ソースの構成を確定し、新しい記録だけを開始する。 */
     start(config?: Partial<MotionDebugRecorderConfig>): MotionDebugRecorderResult {
         if (this.recorder.getState().status === "recording") {
             return {
@@ -128,17 +93,14 @@ export class MotionDebugRecordingController {
         return result;
     }
 
+    /** 記録を閉じる。ライブ描画と推定器の状態は保持する。 */
     stop(reason: MotionDebugRecorderState["stopReason"] = "user"): MotionDebugRecorderResult {
         const result = this.recorder.stop(reason);
-        if (result.ok) {
-            this.resetCanonicalState();
-            this.resetReliabilityState();
-            this.resetTemporalState();
-        }
         this.params.onStateChange(result.state);
         return result;
     }
 
+    /** 保持している記録をブラウザーのダウンロードへ渡す。 */
     async download(options?: {
         compression?: MotionDebugRecorderConfig["compression"];
     }): Promise<MotionDebugRecordingDownloadResult> {
@@ -154,64 +116,21 @@ export class MotionDebugRecordingController {
         };
     }
 
+    /** 同じPose更新で算出済みの値を保存する。録画操作は推定状態を変更しない。 */
     recordPoseFrame(
         snapshot: SincroPoseMotionSnapshot,
+        frame: MotionDebugLiveFrame,
         timing?: TrackerVideoFrameTiming,
         cameraQuality?: CameraQualityScore,
-        reliability?: ReliabilityMap,
-        temporal?: TemporalUpperBodyState,
         mediapipe?: TrackerRuntimeMediaPipeRawResult,
     ): MotionDebugRecorderRecordFrameResult | undefined {
-        const mediaTimeMs = timing?.mediaTimeMs ?? fallbackVideoMediaTimeMs(this.params.video);
-        const canonical = createMotionDebugCanonicalState({
-            pose: snapshot,
-            face: this.params.getFaceSnapshot(),
-            previous: this.latestCanonical,
-            mediaTimeMs,
-            reliability,
-        });
-        this.latestCanonical = canonical;
-        this.params.onCanonicalStateChange(canonical);
-        this.params.onCanonicalReliabilityInputChange(
-            createMotionDebugCanonicalReliabilityInput(reliability),
-        );
-        const frameReliability = reliability ?? createDefaultReliabilityMap(mediaTimeMs);
-        this.params.onReliabilityStateChange(frameReliability);
-        const frameTemporal = this.resolveTemporalState({
-            canonical,
-            reliability: frameReliability,
-            mediaTimeMs,
-            temporal,
-        });
-        this.params.onTemporalStateChange(frameTemporal);
-        const intent = this.intentEstimator.update({
-            temporal: frameTemporal,
-            reliability: frameReliability,
-            hand: this.params.getHandSnapshot(),
-            mediaTimeMs,
-        });
-        this.params.onIntentStateChange(intent);
-        const postProcessing = this.postProcessor.process({
-            canonical,
-            temporal: frameTemporal,
-            intent,
-            reliability: frameReliability,
-            mediaTimeMs,
-            source: this.params.getCameraSource() === "fixture" ? "fixture" : "live",
-        });
-        this.params.onPostProcessingStateChange(postProcessing);
-        const phase9 = createMotionDebugPhase9SemanticSnapshot({
-            intent,
-            profile: this.params.getAvatarMotionProfile(),
-            hand: this.params.getHandSnapshot(),
-            previousFinger: this.latestPhase9?.finger,
-        });
-        this.latestPhase9 = phase9;
-
         if (this.recorder.getState().status !== "recording") {
             return undefined;
         }
 
+        const { canonical, reliability, temporal, intent, hand } = frame.state;
+        const { postProcessing, phase9 } = frame;
+        const mediaTimeMs = canonical.timestamp.mediaTimeMs;
         const debugSnapshot = this.params.getDebugSnapshot();
         const phase6 = createMotionDebugLivePhase6SolverSnapshot(debugSnapshot.poseRetargetRuntime);
         const phase7 = createMotionDebugPhase7Snapshot({
@@ -229,10 +148,10 @@ export class MotionDebugRecordingController {
             },
             ...(mediapipe === undefined ? {} : { mediapipe }),
             poseSnapshot: snapshot,
-            hand: this.params.getHandSnapshot(),
-            reliability: frameReliability,
+            hand,
+            reliability,
             canonical,
-            temporal: frameTemporal,
+            temporal,
             intent,
             postProcessing,
             solver: {
@@ -258,42 +177,9 @@ export class MotionDebugRecordingController {
         return result;
     }
 
+    /** 録画UIへ現在の保存状態を返す。 */
     getState(): MotionDebugRecorderState {
         return this.recorder.getState();
-    }
-
-    resetCanonicalState(): void {
-        this.latestCanonical = undefined;
-        this.params.onCanonicalStateChange(undefined);
-        this.params.onCanonicalReliabilityInputChange(undefined);
-    }
-
-    resetReliabilityState(): void {
-        this.params.onReliabilityStateChange(undefined);
-    }
-
-    resetTemporalState(): void {
-        this.temporalEstimator.reset();
-        this.intentEstimator.reset();
-        this.latestPhase9 = undefined;
-        this.params.onTemporalStateChange(undefined);
-        this.params.onIntentStateChange(undefined);
-        this.params.onPostProcessingStateChange(undefined);
-    }
-
-    private resolveTemporalState(options: ResolveTemporalStateOptions): TemporalUpperBodyState {
-        if (options.temporal === undefined) {
-            return this.temporalEstimator.update({
-                canonical: options.canonical,
-                reliability: options.reliability,
-                mediaTimeMs: options.mediaTimeMs,
-            });
-        }
-        if (!hasTemporalTimestampMismatch(options.temporal, options.mediaTimeMs)) {
-            return options.temporal;
-        }
-        warnTemporalTimestampMismatch(options.temporal, options.mediaTimeMs);
-        return addTemporalWarning(options.temporal, "out_of_range");
     }
 
     /**
@@ -369,40 +255,7 @@ export class MotionDebugRecordingController {
     }
 }
 
-type ResolveTemporalStateOptions = {
-    canonical: CanonicalUpperBodyState;
-    reliability: ReliabilityMap;
-    mediaTimeMs: number;
-    temporal?: TemporalUpperBodyState;
-};
-
-function addTemporalWarning(
-    temporal: TemporalUpperBodyState,
-    warning: TemporalWarningCode,
-): TemporalUpperBodyState {
-    return {
-        ...temporal,
-        warnings: uniqueWarnings([...temporal.warnings, warning]),
-    };
-}
-
-function hasTemporalTimestampMismatch(
-    temporal: TemporalUpperBodyState,
-    mediaTimeMs: number,
-): boolean {
-    return temporal.timestamp.mediaTimeMs !== mediaTimeMs;
-}
-
-function warnTemporalTimestampMismatch(
-    temporal: TemporalUpperBodyState,
-    mediaTimeMs: number,
-): void {
-    frontendLogger.warn("Motion debug temporal timestamp differs from frame timestamp.", {
-        frameMediaTimeMs: mediaTimeMs,
-        temporalMediaTimeMs: temporal.timestamp.mediaTimeMs,
-    });
-}
-
+/** 計算済みの映像時刻へ元コールバックの提示時刻情報を添え、保存の時刻対応を保つ。 */
 function createMotionDebugFrameTimestamp(
     mediaTimeMs: number,
     timing?: TrackerVideoFrameTiming,
@@ -418,10 +271,6 @@ function createMotionDebugFrameTimestamp(
         droppedPresentedFrames: timing.droppedPresentedFrames,
         clockSource: timing.source,
     };
-}
-
-function fallbackVideoMediaTimeMs(video: HTMLVideoElement): number {
-    return Number.isFinite(video.currentTime) ? video.currentTime * 1000 : 0;
 }
 
 function scrubCameraSettings(
@@ -442,34 +291,4 @@ function scrubCameraSettings(
         actualSettings.facingMode = settings.facingMode;
     }
     return actualSettings;
-}
-
-function createPipelineConfigHash(pipeline: SincroMotionDebugLogManifest["pipeline"]): string {
-    return `fnv1a32:${fnv1a32(stableJsonStringify(pipeline))}`;
-}
-
-function stableJsonStringify(value: unknown): string {
-    if (Array.isArray(value)) {
-        return `[${value.map(stableJsonStringify).join(",")}]`;
-    }
-    if (isPlainRecord(value)) {
-        return `{${Object.keys(value)
-            .sort()
-            .map((key) => `${JSON.stringify(key)}:${stableJsonStringify(value[key])}`)
-            .join(",")}}`;
-    }
-    return JSON.stringify(value);
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function fnv1a32(value: string): string {
-    let hash = 0x811c9dc5;
-    for (let index = 0; index < value.length; index += 1) {
-        hash ^= value.charCodeAt(index);
-        hash = Math.imul(hash, 0x01000193);
-    }
-    return (hash >>> 0).toString(16).padStart(8, "0");
 }

@@ -18,8 +18,8 @@ import {
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { formatError, requireElement } from "./dom";
-import { mergeMotionDebugBehaviorPipelineFrame } from "./motionDebugBehaviorPipeline";
 import { MotionDebugCameraRuntime } from "./motionDebugCameraRuntime";
+import { createMotionDebugCanonicalReliabilityInput } from "./motionDebugCanonicalState";
 import { MotionDebugControls } from "./motionDebugControls";
 import { MotionDebugFrameCapture } from "./motionDebugFrameCapture";
 import { MotionDebugMetricsRuntime } from "./motionDebugMetricsRuntime";
@@ -96,6 +96,16 @@ export class MotionDebugApp implements MotionDebugApi {
             debugConsole: this.debugConsole,
             overlayRenderer: this.overlayRenderer,
             recording: this.recording,
+            getAvatarMotionProfile: () => this.scene.getAvatarMotionProfile(),
+            onLiveFrame: ({ state, postProcessing }) => {
+                this.replayRuntime.setCanonicalState(state.canonical);
+                this.replayRuntime.setCanonicalReliabilityInput(
+                    createMotionDebugCanonicalReliabilityInput(state.reliability),
+                );
+                this.replayRuntime.setTemporalState(state.temporal);
+                this.replayRuntime.setIntentState(state.intent);
+                this.replayRuntime.setPostProcessingState(postProcessing);
+            },
             onError: (error) => {
                 this.handleError(error);
             },
@@ -250,9 +260,7 @@ export class MotionDebugApp implements MotionDebugApi {
 
     stopRecording(): MotionDebugRecorderResult {
         const result = this.recording.stop("user");
-        this.replayRuntime.resetCanonicalState();
-        this.tracker.resetReliabilityState();
-        this.replayRuntime.resetTemporalState();
+
         this.renderSnapshot();
         return result;
     }
@@ -349,6 +357,7 @@ export class MotionDebugApp implements MotionDebugApi {
         });
     }
 
+    /** 録画には保存に必要な環境だけを渡し、計算結果は追跡接続から受け取る。 */
     private createRecordingController(): MotionDebugRecordingController {
         return new MotionDebugRecordingController({
             video: this.video,
@@ -358,44 +367,9 @@ export class MotionDebugApp implements MotionDebugApi {
             getRetargetConfig: () => this.retargetConfig,
             getTrackerStats: () => this.tracker.snapshotState().tracker,
             getDebugSnapshot: () => this.debugConsole.getSnapshot().sincroMotion,
-            getFaceSnapshot: () => this.tracker.snapshotState().face,
-            getHandSnapshot: () => this.tracker.snapshotState().hand,
             getAvatarMotionProfile: () => this.scene.getAvatarMotionProfile(),
             getActivePerformanceProfile: () => this.camera.currentPerformanceProfile(),
             getVrmUrl: () => getMotionDebugVrmUrl(),
-            onCanonicalStateChange: (state) => {
-                this.replayRuntime.setCanonicalState(state);
-            },
-            onCanonicalReliabilityInputChange: (state) => {
-                this.replayRuntime.setCanonicalReliabilityInput(state);
-            },
-            onReliabilityStateChange: (state) => {
-                this.tracker.setReliabilityState(state);
-            },
-            onTemporalStateChange: (state) => {
-                this.replayRuntime.setTemporalState(state);
-                const trackerState = this.tracker.snapshotState();
-                const updatedAtMs = state?.timestamp.mediaTimeMs ?? performance.now();
-                this.behaviorState.applySincroMotionPipelineState(
-                    mergeMotionDebugBehaviorPipelineFrame(
-                        this.behaviorState.getSnapshot(updatedAtMs).sincroMotionPipeline,
-                        {
-                            face: trackerState.face,
-                            pose: trackerState.pose,
-                            hand: trackerState.hand,
-                            reliability: this.tracker.latestValidReliability(),
-                            temporal: state,
-                            updatedAtMs,
-                        },
-                    ),
-                );
-            },
-            onIntentStateChange: (state) => {
-                this.replayRuntime.setIntentState(state);
-            },
-            onPostProcessingStateChange: (state) => {
-                this.replayRuntime.setPostProcessingState(state);
-            },
             onStateChange: (state) => {
                 this.controls.renderRecordingState(state);
             },
@@ -461,9 +435,6 @@ export class MotionDebugApp implements MotionDebugApi {
         this.replayRuntime.resetCanonicalState();
         this.tracker.resetReliabilityState();
         this.replayRuntime.resetTemporalState();
-        this.recording.resetCanonicalState();
-        this.recording.resetReliabilityState();
-        this.recording.resetTemporalState();
         this.behaviorState.setFaceMotionTrackingEnabled(false);
         this.behaviorState.setPoseMotionTrackingEnabled(false);
         this.behaviorState.applySincroMotionPipelineState(undefined);
