@@ -12,10 +12,10 @@ SincroVRMInitializer は character/scene にあるが、アプリ生成、機器
 
 ## 完了条件（受け入れ条件）
 
-- [ ] 3種類のページ初期化処理と配置済みDOM参照の契約が app 側にあり、character のシーンからアプリ起動処理を参照しない。
-- [ ] シーンの開始・保持・姿勢設定・通常設定同期の手順が共通実装にあり、派生処理はシーンの種類・ページ既定値・固有起動設定を指定する。
-- [ ] 配置完了→機器利用可否→設定復元→購読とキャッシュ復元→手動またはOBS開始の順と、初期化失敗時に開始しない挙動を維持する。
-- [ ] 通常ページの初期上半身構図、各ページのXR設定とLooking Glass導線、挨拶・シーンの重複起動抑止、サムネイル表示と自前URLの解放を維持する。
+- [x] 3種類のページ初期化処理と配置済みDOM参照の契約が app 側にあり、character のシーンからアプリ起動処理を参照しない。
+- [x] シーンの開始・保持・姿勢設定・通常設定同期の手順が共通実装にあり、派生処理はシーンの種類・ページ既定値・固有起動設定を指定する。
+- [x] 配置完了→機器利用可否→設定復元→購読とキャッシュ復元→手動またはOBS開始の順と、初期化失敗時に開始しない挙動を維持する。
+- [x] 通常ページの初期上半身構図、各ページのXR設定とLooking Glass導線、挨拶・シーンの重複起動抑止、サムネイル表示と自前URLの解放を維持する。
 
 ## 設計判断
 
@@ -27,9 +27,9 @@ app/bootstrap に既存初期化処理を移す。継承構造を利用してシ
 
 ## 実装の参照先
 
-- [sincroVrmInitializer.ts](../../../sincromisor-frontend/src/character/scene/sincroVrmInitializer.ts)
-- [sincroVrm360Initializer.ts](../../../sincromisor-frontend/src/character/vrm360/sincroVrm360Initializer.ts)
-- [sincroLookingGlassVrmInitializer.ts](../../../sincromisor-frontend/src/character/lookingGlass/sincroLookingGlassVrmInitializer.ts)
+- [sincroVrmInitializer.ts](../../../sincromisor-frontend/src/app/bootstrap/sincroVrmInitializer.ts)
+- [sincroVrm360Initializer.ts](../../../sincromisor-frontend/src/app/bootstrap/sincroVrm360Initializer.ts)
+- [sincroLookingGlassVrmInitializer.ts](../../../sincromisor-frontend/src/app/bootstrap/sincroLookingGlassVrmInitializer.ts)
 - [bootstrapSincroPageAppShell.tsx](../../../sincromisor-frontend/src/app/shell/bootstrapSincroPageAppShell.tsx)
 - [sincroPageAppShell.tsx](../../../sincromisor-frontend/src/app/shell/sincroPageAppShell.tsx)
 - [mainVrm.ts](../../../sincromisor-frontend/src/pages/simpleVrm/mainVrm.ts)
@@ -49,3 +49,13 @@ vrmInitialization と sincroAppController の既存テストで3ページの既�
 - [app-shell.md](../../../documents/design/frontend/app-shell.md)
 - [pages.md](../../../documents/design/frontend/pages.md)
 - [overview.md](../../../documents/design/frontend/character/overview.md)
+
+## 実装・確認結果
+
+初期化処理3種とDOM参照契約を `app/bootstrap` へ移動し、シーン生成後の開始・保持・姿勢設定・通常設定同期を基底へ集約した。描画とXRの所有権、サムネイル保存・URL解放は維持した。
+
+- ビルド、変更ファイルのBiome、Markdown整形: PASS。
+- `vrmInitialization` / `vrmDiagnostics`: 2ファイル3テストPASS。3ページの既定値・復元順・XR・通常ページ構図指定・姿勢と通常設定の適用・重複抑止・初期化失敗を確認した。
+- 開発サーバーの通常ページで同梱VRMを読み込み、開始後の上半身表示・挨拶・サムネイル・ダイアログ閉鎖を確認した。RTCサーバー未接続とカメラ・マイク利用不可による案内は出るがシーン表示は継続した。実機RTC会話は未確認。
+- `sincroAppController` の既存テストはモックの `subscribeSettingsEdit` 欠落で失敗する。今回このテストとアプリ本体は未変更であり、起動の結合確認は実アプリを使う `vrmInitialization` で実施した。次の通常設定モデル抽出でこのモックを新しい境界へ更新する。
+- 設計同期・コメント点検: PASS。

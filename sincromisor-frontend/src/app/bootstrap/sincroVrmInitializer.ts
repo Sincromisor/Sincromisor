@@ -1,8 +1,8 @@
-import { SincroAppController, type SincroAppSettingsSnapshot } from "../../app/controller";
-import type { SincroSettingsPage } from "../../app/settings/sincroAppSettingsPersistence";
+import { VRMScene } from "../../character/scene/vrmScene";
 import { UserMediaManager } from "../../features/media/userMedia/userMediaManager";
 import { frontendLogger } from "../../shared/logging/appLogger";
-import { VRMScene } from "./vrmScene";
+import { SincroAppController, type SincroAppSettingsSnapshot } from "../controller";
+import type { SincroSettingsPage } from "../settings/sincroAppSettingsPersistence";
 
 /** Reactが配置済みの描画領域と操作領域。初期化処理はDOM探索を行わない。 */
 export type SincroVRMRoots = {
@@ -10,8 +10,7 @@ export type SincroVRMRoots = {
     characterControlLayer: HTMLDivElement;
 };
 
-// VRM1.0 系ページ（simple-vrm など）の初期化入口。
-// 起動前 dialog / chat / debug / RTC 停止配線は SincroAppController 経由に寄せ、ページ差分は scene 初期化に閉じる。
+/** VRMページの機器確認・設定復元・アプリ開始を組み立て、描画資源はシーンへ委ねる。 */
 export class SincroVRMInitializer {
     protected readonly charCanvas: HTMLDivElement;
     protected readonly characterControlLayer: HTMLDivElement;
@@ -145,7 +144,18 @@ export class SincroVRMInitializer {
         this.appUiStarted = true;
     }
 
+    /** ページ固有のシーンを開始し、保持した現在設定を初回描画へ渡す。 */
     protected initializeSincroScene(): VRMScene {
+        const vrmScene = this.createScene();
+        vrmScene.start();
+        this.activeScene = vrmScene;
+        vrmScene.setSincroPoseRetargetConfig(this.appController.pose.getConfig());
+        this.syncSceneRuntimeSettings(this.appController.state.getSettingsSnapshot());
+        return vrmScene;
+    }
+
+    /** 通常ページはXRを無効にし、初期表示を上半身構図にする。開始と設定接続は基底が担う。 */
+    protected createScene(): VRMScene {
         // scene 初期値（VRM URL）は dialog bridge 経由で取得し、DialogManager 実装に直接依存しない。
         const vrmScene: VRMScene = new VRMScene({
             diagnostics: this.appController.debug.vrmDiagnostics,
@@ -158,13 +168,10 @@ export class SincroVRMInitializer {
             },
             enableInitialUpperBodyFraming: true,
         });
-        vrmScene.start();
-        this.activeScene = vrmScene;
-        vrmScene.setSincroPoseRetargetConfig(this.appController.pose.getConfig());
-        this.syncSceneRuntimeSettings(this.appController.state.getSettingsSnapshot());
         return vrmScene;
     }
 
+    /** サムネイルを保存し、生成したURLでチャットのアイコンを更新する。保存失敗でも表示を継続する。 */
     protected updateSystemIconFromThumbnail(thumbnailImage: HTMLImageElement | undefined): void {
         if (!thumbnailImage) {
             return;
@@ -211,6 +218,7 @@ export class SincroVRMInitializer {
         }, "image/png");
     }
 
+    /** 以前の生成URLを解放してチャットのアイコンだけを差し替える。 */
     protected applySystemIcon(iconURL: string): void {
         // 差し替えを繰り返してもblob URLがリークしないように先に解放する。
         this.revokeGeneratedSystemIconURL();
@@ -231,7 +239,7 @@ export class SincroVRMInitializer {
         this.generatedSystemIconURL = undefined;
     }
 
-    // Character ON/OFF は起動後の設定変更でも見た目に反映されるよう、scene へ追従させる。
+    /** 起動後の通常設定を生成済みシーンへ通知する。生成前の通知は初回接続時に補う。 */
     protected bindRuntimeSettingsSync(): void {
         this.appController.subscribe((event) => {
             if (event.type !== "settings_snapshot") {
@@ -241,6 +249,7 @@ export class SincroVRMInitializer {
         });
     }
 
+    /** シーン生成後の可視性・動作強度を同期する。姿勢調整は専用購読で反映する。 */
     protected syncSceneRuntimeSettings(settings: {
         enableCharacter: boolean;
         characterMotionScale: number;

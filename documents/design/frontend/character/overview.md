@@ -19,7 +19,7 @@
 ## 責務
 
 - `src/character/scene`
-    - VRM シーン、カメラ、照明、通常 VRM 初期化処理を置く。
+    - VRM シーン、カメラ、照明を置く。ページ起動処理は `src/app/bootstrap` が所有する。
 - `src/character/behavior`
     - 会話、VAD、視線、表情、視線、まばたきなどの振る舞い状態と制御処理を置く。
 - `src/character/retargeting`
@@ -31,7 +31,7 @@
 - `src/character/vrmPose`
     - VRM 正規化済みローカル姿勢、`VrmPoseComposer`、所有するボーン / 値の制限 / 警告の姿勢合成処理契約を置く。
 - `src/character/lookingGlass` / `src/character/vrm360`
-    - Looking Glass / VRM360 固有シーン実行時と初期化処理を置く。
+    - Looking Glass / VRM360 固有シーン実行時を置く。アプリ開始・設定接続は `src/app/bootstrap` の共通手順で行う。
 - `src/character/vrmCharacter`
     - VRM キャラクター管理処理と動作制御処理のうち、振る舞い / 動作の変換 / IK に属さない VRM 適用処理を置く。
 - `src/character/motionEvaluation`

@@ -28,7 +28,8 @@
 - `src/app/shell/bootstrapSincroPageAppShell.tsx`
     - 各ページの `mainReact.tsx` が単一の起動元となり、操作パネル読込後にReactルートを配置する。全体の配置完了後、描画領域と操作領域の参照をページ初期化へ渡す。
     - 初期化は一度だけ試み、配置通知の再実行でもアプリを再生成しない。パネル読込・描画準備・初期化の失敗は共通のエラーログへ報告し、開始へ進まない。DOM探索・MutationObserver・待機タイマーは使わない。
-- `SincroVRMInitializer`
+- `SincroVRMInitializer`（`src/app/bootstrap`）
+    - 基底と360度・Looking Glassの派生初期化処理、および配置済みDOM参照の契約を `app/bootstrap` に置く。シーン生成はページ別に行い、開始・保持・姿勢設定・通常設定同期は基底の共通手順で行う。
     - 生成時は依存と開始フックを組み立てる。Reactの配置完了から渡された2つのDOM参照を `bootstrap` が受け取り、ページ既定値・許可済みURL設定を `initialize` へ渡し、成功後に `startAutomatically` を呼ぶ。
     - 初期化は機器利用可否、初期設定適用、購読・キャッシュ復元の順に進める。同期失敗時は購読を解除し開始しない。キャッシュ失敗はログと既定表示で継続する。
     - OBSの内部起動順序を、派生ページ既定値やsimple-vrmのURL設定が適用済みになってから開始する順序へ是正した。重複開始はアプリが抑止する。

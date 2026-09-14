@@ -1,7 +1,15 @@
 import { afterEach, expect, it, vi } from "vitest";
 
-const { coreStart, sceneStart } = vi.hoisted(() => ({ coreStart: vi.fn(), sceneStart: vi.fn() }));
-vi.mock("../../../app/controller/sincroController", () => ({
+const { coreStart, sceneStart, sceneOptions, poseSettings, motionTuning, characterVisible } =
+    vi.hoisted(() => ({
+        coreStart: vi.fn(),
+        sceneStart: vi.fn(),
+        sceneOptions: vi.fn(),
+        poseSettings: vi.fn(),
+        motionTuning: vi.fn(),
+        characterVisible: vi.fn(),
+    }));
+vi.mock("../../controller/sincroController", () => ({
     SincroController: class {
         restoreAudioTuning() {}
         start() {
@@ -9,22 +17,31 @@ vi.mock("../../../app/controller/sincroController", () => ({
         }
     },
 }));
-vi.mock("../vrmScene", () => ({
+vi.mock("../../../character/scene/vrmScene", () => ({
     VRMScene: class {
+        constructor(options: unknown) {
+            sceneOptions(options);
+        }
         start() {
             sceneStart();
         }
         enableLookingGlassStartButton() {}
-        setSincroPoseRetargetConfig() {}
-        setCharacterVisible() {}
-        setCharacterMotionTuning() {}
+        setSincroPoseRetargetConfig(config: unknown) {
+            poseSettings(config);
+        }
+        setCharacterVisible(visible: boolean) {
+            characterVisible(visible);
+        }
+        setCharacterMotionTuning(tuning: unknown) {
+            motionTuning(tuning);
+        }
     },
 }));
-vi.mock("../../vrm360/vrm360Scene", async () => ({
-    VRM360Scene: (await import("../vrmScene")).VRMScene,
+vi.mock("../../../character/vrm360/vrm360Scene", async () => ({
+    VRM360Scene: (await import("../../../character/scene/vrmScene")).VRMScene,
 }));
-vi.mock("../../lookingGlass/lookingGlassVrmScene", async () => ({
-    LookingGlassVRMScene: (await import("../vrmScene")).VRMScene,
+vi.mock("../../../character/lookingGlass/lookingGlassVrmScene", async () => ({
+    LookingGlassVRMScene: (await import("../../../character/scene/vrmScene")).VRMScene,
 }));
 
 afterEach(() => {
@@ -78,7 +95,7 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
             vi.spyOn(frontendLogger, "debug").mockImplementation(() => {});
             vi.spyOn(frontendLogger, "error").mockImplementation(() => {});
             const cachedWarning = vi.spyOn(frontendLogger, "warn").mockImplementation(() => {});
-            const { SincroAppController } = await import("../../../app/controller");
+            const { SincroAppController } = await import("../../controller");
             const { ChatMessageService } = await import(
                 "../../../features/conversation/chat/model/chatMessageService"
             );
@@ -118,6 +135,18 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
             expect(coreStart).toHaveBeenCalledOnce();
             expect(win.localStorage.setItem).not.toHaveBeenCalled();
             expect(sceneStart).toHaveBeenCalledOnce();
+            expect(sceneOptions).toHaveBeenLastCalledWith(
+                expect.objectContaining({
+                    ...roots,
+                    xrMode: !page.startsWith("simple"),
+                    ...(page.startsWith("simple") ? { enableInitialUpperBodyFraming: true } : {}),
+                }),
+            );
+            expect(poseSettings).toHaveBeenLastCalledWith(app?.pose.getConfig());
+            expect(characterVisible).toHaveBeenLastCalledWith(true);
+            expect(motionTuning).toHaveBeenLastCalledWith(
+                expect.objectContaining({ motionScale: 0.72 }),
+            );
             expect(greeting).toHaveBeenCalledTimes(2);
             await vi.waitFor(() =>
                 expect(cachedWarning).toHaveBeenCalledWith(
@@ -148,7 +177,7 @@ it("初期化失敗を入口へ報告し、OBSも手動も部分的に開始し�
         },
     });
     const { DialogManager } = await import("../../../features/dialog/model/dialogManager");
-    const { SincroAppController } = await import("../../../app/controller");
+    const { SincroAppController } = await import("../../controller");
     vi.spyOn(DialogManager.prototype, "updateCharacterStatus").mockImplementation(() => {
         throw new Error("initialization failed");
     });

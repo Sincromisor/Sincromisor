@@ -1,6 +1,6 @@
-import { SincroLookingGlassVRMInitializer } from "../../character/lookingGlass/sincroLookingGlassVrmInitializer";
+import { SincroLookingGlassVRMInitializer } from "../../app/bootstrap/sincroLookingGlassVrmInitializer";
 
-import type { SincroVRMRoots } from "../../character/scene/sincroVrmInitializer";
+import type { SincroVRMRoots } from "../../app/bootstrap/sincroVrmInitializer";
 
 /** Reactの配置完了からページ固有の初期化を行う。失敗は呼び出し元の共通入口へ返す。 */
 export function initializeLookingGlassVrmPage(roots: SincroVRMRoots): void {

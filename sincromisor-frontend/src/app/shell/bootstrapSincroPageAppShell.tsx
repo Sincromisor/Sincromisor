@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { createRoot } from "react-dom/client";
-import type { SincroVRMRoots } from "../../character/scene/sincroVrmInitializer";
 import { frontendLogger } from "../../shared/logging/appLogger";
+import type { SincroVRMRoots } from "../bootstrap/sincroVrmInitializer";
 import { SincroPageAppShell } from "./sincroPageAppShell";
 
 /** パネル読込後にReactを配置し、配置通知からページを一度だけ初期化する。再生成は扱わない。 */
