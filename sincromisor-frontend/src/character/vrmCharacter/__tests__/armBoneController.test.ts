@@ -112,13 +112,11 @@ describe("VRMCharacterManager full normalized pose application", () => {
             .mockReturnValue(debugManager as unknown as DebugConsoleManager);
         const snapshot = createBehaviorSnapshot();
         const armUpdate = vi.fn();
-        const motionUpdate = vi.fn();
         const rootStabilization = vi.fn();
         const { manager, setNormalizedPose } = createUpdateManagerDouble({
             snapshot,
             dryRun: { status: "invalid_input", warnings: ["delta_seconds_invalid"] },
             armUpdate,
-            motionUpdate,
             rootStabilization,
         });
 
@@ -130,7 +128,6 @@ describe("VRMCharacterManager full normalized pose application", () => {
 
         expect(setNormalizedPose).not.toHaveBeenCalled();
         expect(armUpdate).not.toHaveBeenCalled();
-        expect(motionUpdate).not.toHaveBeenCalled();
         expect(rootStabilization).toHaveBeenCalledTimes(1);
         expect(manager.legBoneController.update).toHaveBeenCalledTimes(1);
         expect(manager.vrm.update).toHaveBeenCalledTimes(1);
@@ -160,7 +157,6 @@ describe("VRMCharacterManager full normalized pose application", () => {
             snapshot,
             dryRun: createAvailableDryRun(finalPose),
             armUpdate: vi.fn(),
-            motionUpdate: vi.fn(),
             rootStabilization,
         });
 
@@ -339,7 +335,6 @@ function createUpdateManagerDouble(options: {
     snapshot: CharacterBehaviorSnapshot;
     dryRun: SincroVrmPoseComposerDryRunResult;
     armUpdate: ReturnType<typeof vi.fn>;
-    motionUpdate: ReturnType<typeof vi.fn>;
     rootStabilization: ReturnType<typeof vi.fn>;
 }): { manager: UpdateManagerTestDouble; setNormalizedPose: ReturnType<typeof vi.fn> } {
     const setNormalizedPose = vi.fn();
@@ -363,9 +358,8 @@ function createUpdateManagerDouble(options: {
         emotionMorphController: { update: vi.fn() },
         armBoneController: { update: options.armUpdate },
         legBoneController: { update: vi.fn() },
-        motionOrchestrator: {
-            update: options.motionUpdate,
-            updateRootStabilization: options.rootStabilization,
+        rootStabilizer: {
+            update: options.rootStabilization,
         },
         characterPosition: new Vector3(),
         defaultPosition: new Vector3(),

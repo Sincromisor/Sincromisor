@@ -1,3 +1,4 @@
+// reason: structure-threshold-exception 最終姿勢適用の分離は task-260914172950-extract-normalized-pose-writer で扱い、今回は未使用の上半身直接制御だけを削除する。
 import {
     type VRM,
     type VRMHumanBoneName,
@@ -45,7 +46,7 @@ import type { VRMCamera } from "../scene/vrmCamera";
 import type { VrmNormalizedLocalPose, VrmPoseQuaternion } from "../vrmPose/vrmPoseTypes";
 import { ArmBoneController } from "./armBoneController";
 import type { CharacterMotionTuning } from "./characterMotionConfig";
-import { CharacterMotionOrchestrator } from "./characterMotionOrchestrator";
+import { CharacterRootStabilizer } from "./characterRootStabilizer";
 import { LegBoneController } from "./legBoneController";
 import { applyInitialUpperBodyFraming } from "./vrmInitialUpperBodyFraming";
 
@@ -120,7 +121,7 @@ export class VRMCharacterManager {
     public headBoneController?: HeadBoneController;
     public armBoneController?: ArmBoneController;
     public legBoneController?: LegBoneController;
-    public motionOrchestrator?: CharacterMotionOrchestrator;
+    public rootStabilizer?: CharacterRootStabilizer;
     public mouthMorphController?: FaceMorphController;
     public emotionMorphController?: FaceEmotionController;
     public eyeBehaviorController?: EyeBehaviorController;
@@ -219,7 +220,9 @@ export class VRMCharacterManager {
         );
         this.legBoneController = new LegBoneController(vrm);
         this.legBoneController.update(this.motionElapsedSeconds);
-        this.motionOrchestrator = new CharacterMotionOrchestrator(vrm);
+        this.rootStabilizer = new CharacterRootStabilizer(
+            vrm.humanoid.getNormalizedBoneNode("hips") ?? undefined,
+        );
         if (vrm.expressionManager) {
             this.mouthMorphController = new FaceMorphController(vrm.expressionManager);
             this.emotionMorphController = new FaceEmotionController(vrm.expressionManager);
@@ -332,7 +335,7 @@ export class VRMCharacterManager {
         if (this.rootBone) {
             const hipsBasePosition = this.defaultPosition.clone().add(this.characterPosition);
             this.rootBone.position.copy(hipsBasePosition);
-            this.motionOrchestrator?.updateRootStabilization(hipsBasePosition);
+            this.rootStabilizer?.update(hipsBasePosition);
         }
     }
 
@@ -354,7 +357,6 @@ export class VRMCharacterManager {
     }
 
     setMotionTuning(tuning: Partial<CharacterMotionTuning>): void {
-        this.motionOrchestrator?.setTuning(tuning);
         this.eyeBehaviorController?.setTuning(tuning);
     }
 

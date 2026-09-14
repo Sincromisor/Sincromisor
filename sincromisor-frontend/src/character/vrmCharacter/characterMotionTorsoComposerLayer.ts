@@ -16,10 +16,10 @@ import type { AiSpeechExpressionMotionProfile } from "./characterMotionExpressio
 type TorsoDistribution = MinimalAvatarMotionProfile["torso"]["distribution"];
 
 /**
- * torso / shoulder composer layer が読む orchestrator motion scalar。
+ * 体幹・肩の合成レイヤーが読む演出動作の値。
  *
- * `CharacterMotionOrchestrator` の authored idle / listening / AI speech motion と pose retarget frame を
- * plain data として渡す。VRM node は含めず、base rotation と capability は別 input に分離する。
+ * 呼吸・傾聴・AI発話動作と姿勢の変換結果を値として渡す。
+ * VRMノードは含めず、基準回転と利用可能なボーン情報は別の入力に分離する。
  */
 export type CharacterMotionTorsoShoulderMotionInput = {
     breathWave: number;
