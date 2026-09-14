@@ -1,0 +1,13 @@
+id: task-260914144148-rtc-event-lifecycle
+title: RTCイベントの通知順序と旧接続の購読解除を修正
+category: frontend
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-09-14
+closed_at: 2026-09-14
+legacy_ids: []

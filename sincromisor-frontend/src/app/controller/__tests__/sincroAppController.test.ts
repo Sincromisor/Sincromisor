@@ -125,7 +125,38 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
         dialogEvents.emitDialogUiStateChanged(dialogState.getDialogUiState());
         dialogEvents.emitVrmUiStateChanged(dialogState.getDialogVrmUiState());
         current.start();
+        // 次のイベントを待たず、通知されたICE状態を同じ回の接続表示へ反映する。
+        for (const [ice, value] of [
+            ["checking", "connecting"],
+            ["connected", "connected"],
+            ["completed", "connected"],
+            ["disconnected", "degraded"],
+            ["failed", "degraded"],
+            ["connected", "connected"],
+        ]) {
+            debug.emit({ type: "ice_connection_state", value: ice });
+            expect(reactEvents).toHaveBeenLastCalledWith(
+                { type: "connection_state", value, detail: `ice:${ice}` },
+                current,
+            );
+        }
+        debug.emit({ type: "ice_connection_state", value: "new" });
+        debug.emit({ type: "signaling_state", value: "have-local-offer" });
+        expect(reactEvents).toHaveBeenLastCalledWith(
+            { type: "connection_state", value: "connecting", detail: "signaling:have-local-offer" },
+            current,
+        );
+        debug.emit({ type: "ice_connection_state", value: "connected" });
+        reactEvents.mockClear();
         current.stopRTC();
+        expect(reactEvents).toHaveBeenCalledWith(
+            { type: "connection_state", value: "stopping" },
+            current,
+        );
+        expect(reactEvents).toHaveBeenLastCalledWith(
+            { type: "connection_state", value: "stopped" },
+            current,
+        );
         expect(stopRTC).toHaveBeenCalledOnce();
         settingsSeen.mockClear();
         dialogState.set("titleText", "RTC停止後の設定");

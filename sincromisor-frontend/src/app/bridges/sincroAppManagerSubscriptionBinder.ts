@@ -49,15 +49,13 @@ export function bindChatServiceSubscription(
 /** 診断通知を接続状態とアプリイベントへ反映し、購読解除関数を返す。 */
 export function bindDebugManagerSubscription(params: DebugSubscriptionParams): () => void {
     return params.debugConsoleManager.subscribe((event) => {
-        // 診断通知はRTC状態の保持と接続状態の再計算も伴うため、
-        // 通知処理から返る次の保持状態を制御処理へ反映する。
-        const nextRtcState = handleMappedDebugConsoleEvent({
+        handleMappedDebugConsoleEvent({
             result: mapDebugConsoleEvent(event),
             rtcState: params.getRtcState(),
+            setRtcState: params.setRtcState,
             emitEvent: params.emitEvent,
             emitDerivedConnectionState: params.emitDerivedConnectionState,
         });
-        params.setRtcState(nextRtcState);
     });
 }
 

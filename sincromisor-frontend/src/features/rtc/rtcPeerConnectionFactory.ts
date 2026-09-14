@@ -14,6 +14,7 @@ type RtcPeerConnectionFactoryParams = {
     onTextMessage: (msg: ChatMessage) => void;
     sendIceCandidate: (candidate: RTCIceCandidateInit | null) => void;
     sincroConfig: SincroRTCConfig;
+    signal: AbortSignal;
 };
 
 /** PeerConnectionと、このconnectionが所有する2つのDataChannelをまとめたresource bundle。 */
@@ -22,8 +23,8 @@ export type RtcPeerConnectionBundle = RtcDataChannels & {
 };
 
 /**
- * live audio trackから1 generation分のPeerConnection/DataChannel bundleを生成する。
- * cleanup ownershipは呼び出し元へ移り、replacement時のtrack stop可否もownerが決定する。
+ * 音声トラックから1接続世代分のPeerConnectionとDataChannelを生成する。
+ * 呼び出し元は世代の中断で全イベント購読を解除し、接続の終了と音声トラックの停止可否を管理する。
  */
 export function createRtcPeerConnectionBundle(
     params: RtcPeerConnectionFactoryParams,
@@ -38,17 +39,20 @@ export function createRtcPeerConnectionBundle(
         logger: params.logger,
         onIceConnectionStateChange: params.onIceConnectionStateChange,
         peerConnection,
+        signal: params.signal,
         sendIceCandidate: params.sendIceCandidate,
     });
     setupRtcRemoteTrackHandlers({
         logger: params.logger,
         peerConnection,
+        signal: params.signal,
     });
     const dataChannels = createRtcDataChannels({
         logger: params.logger,
         onTelopMessage: params.onTelopMessage,
         onTextMessage: params.onTextMessage,
         peerConnection,
+        signal: params.signal,
     });
     peerConnection.addTrack(params.audioTrack);
 

@@ -33,6 +33,9 @@
     - UserMedia 取得、RTC 開始、CharacterGaze 開始、TalkManager 連携の実行時制御を担う。
 - `RTCTalkClient`
     - PeerConnection、Offer/Answer、ICE 候補、DataChannel イベントを扱う。
+    - 停止・接続置換・回復不能な失敗では、接続世代の中断通知で診断・トラック・DataChannelの購読を解除する。旧世代の候補送信完了・失敗も状態通知へ反映しない。
+- RTCの接続表示
+    - ICE・シグナリングの保持状態を更新してから、RTC状態と接続表示を通知する。停止中・停止済みの表示は残っているICE診断値より優先する。
 - `ChatMessageService` / `SincroChatView`
     - サービスは最新30件の履歴と変更通知を保持し、Reactがチャットを描画する。取り付け前の履歴、同一IDの更新、VRM読込後のアイコン変更もこの経路で反映する。
     - 通常本文は文字列として表示し、明示的な `trusted_html` はシステム・リセットメッセージだけに許可する。

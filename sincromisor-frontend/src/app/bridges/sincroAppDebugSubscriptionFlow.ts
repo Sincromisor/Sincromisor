@@ -1,6 +1,7 @@
 import type { SincroAppEvent } from "../controller/sincroAppTypes";
 import type { DebugEventMapResult } from "../events/sincroAppEventMappers";
 
+/** 接続表示の導出と新規購読への初期通知で共有する、最新のRTC診断状態。 */
 export type SincroAppRtcDebugState = {
     iceConnectionState: string;
     signalingState: string;
@@ -9,31 +10,30 @@ export type SincroAppRtcDebugState = {
 type HandleMappedDebugEventParams = {
     result: DebugEventMapResult;
     rtcState: SincroAppRtcDebugState;
+    setRtcState: (state: SincroAppRtcDebugState) => void;
     emitEvent: (event: SincroAppEvent) => void;
     emitDerivedConnectionState: () => void;
 };
 
-// DebugConsoleManager 由来イベントのうち、RTC state 更新は AppController 側の保持状態更新と
-// 派生 connection_state 通知が必要になるため、手順を helper に分離して再利用しやすくする。
-export function handleMappedDebugConsoleEvent(
-    params: HandleMappedDebugEventParams,
-): SincroAppRtcDebugState {
+/** 診断由来のRTC状態を先に保存し、同期購読と派生接続状態が同じ最新値を参照できる順序で通知する。 */
+export function handleMappedDebugConsoleEvent(params: HandleMappedDebugEventParams): void {
     const { result, rtcState, emitEvent, emitDerivedConnectionState } = params;
     if (result.kind === "none") {
-        return rtcState;
+        return;
     }
     if (result.kind === "event") {
         emitEvent(result.event);
-        return rtcState;
+        return;
     }
     if (result.kind === "ice_state") {
         const nextState = { ...rtcState, iceConnectionState: result.value };
+        params.setRtcState(nextState);
         emitEvent({ type: "rtc_state", iceConnectionState: result.value });
         emitDerivedConnectionState();
-        return nextState;
+        return;
     }
     const nextState = { ...rtcState, signalingState: result.value };
+    params.setRtcState(nextState);
     emitEvent({ type: "rtc_state", signalingState: result.value });
     emitDerivedConnectionState();
-    return nextState;
 }
