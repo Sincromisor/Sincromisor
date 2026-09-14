@@ -1,4 +1,6 @@
-import { HandLandmarker } from "@mediapipe/tasks-vision";
+/** 手の推論モデルと時間計測を所有し、正規化→特徴量→左右割当の結果をスナップショットとして返す。 */
+// reason: structure-threshold-exception モデルの生存期間と左右ROI・全画面代替推論を同じ所有者に保ち、時刻と前回スナップショットの更新順序を維持する。
+import { HandLandmarker, type HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import {
     serializeHandLandmarkerResult,
@@ -19,31 +21,36 @@ import {
     type SincroHandWarningCode,
     uniqueHandWarnings,
 } from "./sincroHandMotionSnapshot";
+import { normalizeSincroHandLandmarkerResult } from "./sincroHandNormalization";
 import {
     createDefaultHandRoiCropFrame,
     type SincroHandRoiCropFactory,
 } from "./sincroHandRoiCropFrame";
-import {
-    calculateHandInferenceFps,
-    handRoiIsUsable,
-    normalizeSincroHandLandmarkerResult,
-    runSincroHandLandmarker,
-    type SincroHandLandmarkerLike,
-} from "./sincroHandTrackerHelpers";
 
 const HAND_LANDMARKER_MODEL_PATH = "/3rd_party/hand_landmarker.task";
 
 export type SincroHandDetectOptions = Record<never, never>;
-export type { SincroHandRoiCropFactory } from "./sincroHandRoiCropFrame";
-export type { SincroHandLandmarkerLike } from "./sincroHandTrackerHelpers";
 
+/** 手推論の実行と解放に必要なMediaPipeの窓口。モデルの生成・破棄は追跡制御が所有する。 */
+type SincroHandLandmarkerLike = {
+    detectForVideo(videoFrame: TexImageSource, timestampMs: number): HandLandmarkerResult;
+    close(): void;
+};
+
+/** 未加工の推論結果と性能計測値。所要時間・終了時刻はperformance.now基準のミリ秒。 */
+type SincroHandLandmarkerInference = {
+    result: HandLandmarkerResult;
+    inferenceTimeMs: number;
+    inferenceEndedAtMs: number;
+};
+
+/** 推論モデルと切り抜き生成の差し替え口。渡されたモデルも追跡クラスが破棄する。 */
 export type SincroHandTrackerOptions = {
     handLandmarker?: SincroHandLandmarkerLike;
     createCropFrame?: SincroHandRoiCropFactory;
 };
 
-// HandLandmarker の結果を palm / finger の低次元 snapshot へ落とす facade。
-// wrist は assignment と信頼度材料にだけ使い、腕 IK target は Pose snapshot を正本にする。
+/** 手の推論から低次元特徴を返す。手首は左右割当と信頼度にだけ使い、腕IKの目標はPoseが所有する。 */
 export class SincroHandTracker {
     private handLandmarker?: SincroHandLandmarkerLike;
     private initPromise?: Promise<void>;
@@ -87,6 +94,7 @@ export class SincroHandTracker {
         return this.handLandmarker !== undefined;
     }
 
+    /** 映像時刻で手を推論する。モデル未読込・推論失敗は理由付きの未検出スナップショットへ変換する。 */
     detect(
         videoFrame: TexImageSource,
         poseSnapshot: SincroPoseMotionSnapshot,
@@ -169,6 +177,7 @@ export class SincroHandTracker {
         return navigator.userAgent.toLowerCase().includes("firefox") ? "CPU" : "GPU";
     }
 
+    // 有効な左右ROIを順に推論し、両側とも利用不可の場合だけ全画面へ切り替える。
     private detectWithPoseRoi(
         videoFrame: TexImageSource,
         poseSnapshot: SincroPoseMotionSnapshot,
@@ -231,6 +240,7 @@ export class SincroHandTracker {
         });
     }
 
+    // 切り抜き生成後に推論・座標復元・特徴量・左右割当を行い、対象側の計測結果を返す。
     private detectRoiSide(input: {
         videoFrame: TexImageSource;
         timestampMs: number;
@@ -267,6 +277,7 @@ export class SincroHandTracker {
         };
     }
 
+    // 全画面代替では未加工結果も保存し、ROI経路と同じ正規化・割当へ渡す。
     private detectFullFrameFallback(input: {
         videoFrame: TexImageSource;
         timestampMs: number;
@@ -297,6 +308,7 @@ export class SincroHandTracker {
         });
     }
 
+    // 左右ROIでは時間の合計と最後の終了時刻、全画面では単一推論の値から頻度を計算する。
     private createMotionSnapshot(input: {
         leftHand: SincroHandSideSnapshot;
         rightHand: SincroHandSideSnapshot;
@@ -304,10 +316,11 @@ export class SincroHandTracker {
         inferenceEndedAtMs: number;
         timestampMs: number;
     }): SincroHandMotionSnapshot {
-        const inferenceFps = calculateHandInferenceFps({
-            lastInferenceEndedAtMs: this.lastInferenceEndedAtMs,
-            inferenceEndedAtMs: input.inferenceEndedAtMs,
-        });
+        // 推論終了時刻の差で頻度を出す。初回は0、同時刻は1ミリ秒として扱う。
+        const inferenceFps =
+            this.lastInferenceEndedAtMs === undefined
+                ? 0
+                : 1000 / Math.max(1, input.inferenceEndedAtMs - this.lastInferenceEndedAtMs);
         this.lastInferenceEndedAtMs = input.inferenceEndedAtMs;
         return {
             trackingEnabled: true,
@@ -320,15 +333,22 @@ export class SincroHandTracker {
         };
     }
 
+    /** 映像時刻をモデルへ渡し、推論呼び出しだけをperformance.now基準のミリ秒で計測する。 */
     private runHandLandmarker(
         videoFrame: TexImageSource,
         timestampMs: number,
-    ): ReturnType<typeof runSincroHandLandmarker> {
-        return runSincroHandLandmarker({
-            handLandmarker: this.handLandmarker,
-            videoFrame,
-            timestampMs,
-        });
+    ): SincroHandLandmarkerInference {
+        const inferenceStartedAtMs = performance.now();
+        const result = this.handLandmarker?.detectForVideo(videoFrame, timestampMs);
+        const inferenceEndedAtMs = performance.now();
+        if (result === undefined) {
+            throw new Error("HandLandmarker model is not loaded.");
+        }
+        return {
+            result,
+            inferenceTimeMs: inferenceEndedAtMs - inferenceStartedAtMs,
+            inferenceEndedAtMs,
+        };
     }
 }
 
@@ -389,4 +409,14 @@ function addWarnings<T extends SincroHandSideSnapshot>(
         ...snapshot,
         warnings: uniqueHandWarnings([...snapshot.warnings, ...warnings]),
     };
+}
+
+/** Pose手首由来で信頼度と面積を持つROIだけを切り抜き推論に使う。 */
+function handRoiIsUsable(roi: SincroRoiObservation): boolean {
+    return (
+        roi.source === "pose-wrist" &&
+        roi.confidence > 0 &&
+        roi.rect.width > 0 &&
+        roi.rect.height > 0
+    );
 }

@@ -1,7 +1,12 @@
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT } from "../../poseTracking/sincroPoseMotionSnapshot";
 import { assignSincroHandObservationsToPose } from "../sincroHandAssignment";
 import type { SincroHandObservation } from "../sincroHandAssignmentSnapshot";
+import {
+    createSincroHandFeatureSnapshot,
+    determineSincroHandOpenness,
+} from "../sincroHandFeatures";
 import {
     DEFAULT_SINCRO_HAND_FEATURE_SNAPSHOT,
     DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,
@@ -9,9 +14,10 @@ import {
     type SincroHandMotionSnapshot,
 } from "../sincroHandMotionSnapshot";
 import {
-    determineSincroHandOpenness,
+    normalizeSincroHandLandmarkerResult,
     restoreHandLandmarksToFullFrame,
-} from "../sincroHandTrackerHelpers";
+} from "../sincroHandNormalization";
+import { SincroHandTracker } from "../sincroHandTracker";
 
 function createLandmark(x: number, y: number, z = 0): NormalizedLandmark {
     return {
@@ -59,6 +65,107 @@ function curl(value: number): SincroHandFeatureSnapshot["fingerCurl"] {
 }
 
 describe("Sincro hand motion snapshot", () => {
+    it("非有限座標を補正し、点数不足の結果を捨てる", () => {
+        const landmarks = createLandmarks();
+        landmarks[0] = createLandmark(Number.NaN, 0.5, 1);
+        landmarks[1] = createLandmark(0.2, 0.3, Number.POSITIVE_INFINITY);
+        const result = normalizeSincroHandLandmarkerResult({
+            result: {
+                landmarks: [landmarks, landmarks.slice(0, 20)],
+                worldLandmarks: [],
+                handednesses: [],
+                handedness: [[{ categoryName: "Left", displayName: "", index: 0, score: 0.9 }]],
+            },
+        });
+        expect(result).toHaveLength(1);
+        expect(result[0]).toMatchObject({
+            handIndex: 0,
+            wrist: [0, 0],
+            confidence: 0.9,
+            handednessLabel: "Left",
+            warnings: ["landmarks_missing"],
+            features: { openness: "unknown" },
+        });
+        expect(restoreHandLandmarksToFullFrame({ landmarks })?.landmarks[1]).toEqual({
+            x: 0.2,
+            y: 0.3,
+            z: 0,
+        });
+    });
+
+    it("掌方向と曲げ・開き・親指の特徴量を既存の尺度で計算する", () => {
+        const landmarks = createLandmarks();
+        landmarks[0] = createLandmark(0, 0);
+        landmarks[2] = createLandmark(1, 0);
+        landmarks[4] = createLandmark(-1, 1);
+        for (const [mcp, tip, x] of [
+            [5, 8, 1],
+            [9, 12, 0],
+            [13, 16, -0.5],
+            [17, 20, -1],
+        ] as const) {
+            landmarks[mcp] = createLandmark(x, 1);
+            landmarks[tip] = createLandmark(x, 1);
+        }
+        const features = createSincroHandFeatureSnapshot({
+            landmarks,
+            confidence: 0.9,
+            landmarksMissing: false,
+        });
+        expect(features.palmNormal).toEqual([0, -0, 1]);
+        expect(features.palmDirection).toEqual([0, 1, 0]);
+        expect(features.fingerCurl).toEqual({ thumb: 0, index: 1, middle: 1, ring: 1, little: 1 });
+        expect(features.fingerSplay.indexMiddle).toBeCloseTo(0.75);
+        expect(features.fingerSplay.middleRing).toBeCloseTo(Math.atan(0.5) / (Math.PI / 3));
+        expect(features.fingerSplay.ringLittle).toBeCloseTo(
+            (Math.PI / 4 - Math.atan(0.5)) / (Math.PI / 3),
+        );
+        expect(features.thumbOppose).toBe(1);
+        expect(features.openness).toBe("closed");
+    });
+
+    it("推論時間と終了時刻間隔のFPSを保ち、停止後は初回扱いに戻す", () => {
+        const detectForVideo = vi.fn(() => ({
+            landmarks: [],
+            worldLandmarks: [],
+            handednesses: [],
+            handedness: [],
+        }));
+        const tracker = new SincroHandTracker({
+            handLandmarker: { detectForVideo, close: () => {} },
+        });
+        const clock = vi.spyOn(performance, "now");
+        const frame: TexImageSource = Object.create(null);
+        try {
+            clock.mockReturnValueOnce(100).mockReturnValueOnce(104);
+            expect(tracker.detect(frame, DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT, 1000)).toMatchObject({
+                inferenceTimeMs: 4,
+                inferenceFps: 0,
+                lastUpdatedAtMs: 1000,
+            });
+            clock.mockReturnValueOnce(200).mockReturnValueOnce(206);
+            const second = tracker.detect(frame, DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT, 2000);
+            expect(second.inferenceTimeMs).toBe(6);
+            expect(second.inferenceFps).toBeCloseTo(1000 / 102);
+            tracker.stop("test", 2500);
+            clock.mockReturnValueOnce(300).mockReturnValueOnce(307);
+            expect(tracker.detect(frame, DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT, 3000)).toMatchObject({
+                inferenceTimeMs: 7,
+                inferenceFps: 0,
+            });
+            clock.mockReturnValueOnce(307).mockReturnValueOnce(307);
+            expect(tracker.detect(frame, DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT, 4000)).toMatchObject({
+                inferenceTimeMs: 0,
+                inferenceFps: 1000,
+            });
+            expect(detectForVideo.mock.calls).toHaveLength(4);
+            expect(detectForVideo).toHaveBeenLastCalledWith(frame, 4000);
+        } finally {
+            clock.mockRestore();
+            tracker.dispose();
+        }
+    });
+
     it("restores ROI-local hand landmarks to full-frame normalized coordinates", () => {
         const landmarks = createLandmarks();
         landmarks[0] = createLandmark(0.25, 0.75, 0.1);
