@@ -7,6 +7,7 @@ import type {
     SincroMotionComposerDryRunSummary,
     SincroMotionObserveOnlySummary,
 } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
+import type { SincroPoseTuningConfig } from "../../../character/runtime/sincroPoseSettingsModel";
 import type { SincroVrmPoseComposerResult } from "../../../character/runtime/sincroVrmPoseComposer";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
@@ -60,8 +61,6 @@ export class DebugConsoleManager {
         emitEvent: (event) => this.emitEvent(event),
     });
     private readonly sincroMotionControls = new DebugConsoleSincroMotionControls({
-        emitEvent: (event) => this.emitEvent(event),
-        readSnapshot: () => this.snapshot,
         updateSnapshot: (updater) => this.updateSnapshot(updater),
     });
     private readonly rtcControls = new DebugConsoleRtcControls({
@@ -310,18 +309,19 @@ export class DebugConsoleManager {
         this.sincroMotionControls.updateAvatarMotionProfile(profile);
     }
 
-    setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
+    /** 所有モデルの現在値を診断表示へ複製する。シーン設定や保存には反映しない。 */
+    setSincroPoseRetargetConfig(config: SincroPoseTuningConfig): void {
         this.sincroMotionControls.setSincroPoseRetargetConfig(config);
     }
 
     /** 診断操作の反映先を登録し、登録自身だけを外す解除関数を返す。 */
-    setSincroPoseRetargetConfigChangeCallback(
-        callback: (config: Partial<SincroPoseRetargetConfig>) => void,
+    setSincroPoseRetargetConfigEditCallback(
+        callback: (config: Partial<SincroPoseRetargetConfig>, source: "user" | "sync") => void,
     ): () => void {
-        return this.sincroMotionControls.setSincroPoseRetargetConfigChangeCallback(callback);
+        return this.sincroMotionControls.setSincroPoseRetargetConfigEditCallback(callback);
     }
 
-    /** 正規化済み姿勢設定をシーンへ通知する。syncは通常設定・復元の反映で、診断入力として保存しない。 */
+    /** 姿勢設定の入力を現在の所有者へ渡す。syncは保存対象の診断編集に含めない。 */
     applySincroPoseRetargetConfig(
         config: Partial<SincroPoseRetargetConfig>,
         source: "user" | "sync" = "user",

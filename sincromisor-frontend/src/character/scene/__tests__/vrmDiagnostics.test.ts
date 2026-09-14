@@ -54,6 +54,7 @@ it("3ページの診断引数と独立ページの診断保存先を接続する
     const resultSpy = vi.spyOn(debug, "updateSincroComposerDryRunResult");
     // 描画資源を代替し、独立ページの本番組み立てだけを通す。
     const params: ConstructorParameters<typeof MotionDebugSceneRuntime>[0] = Object.create(null);
+    params.initialRetargetConfig = debug.getSnapshot().sincroMotion.poseRetarget;
     new MotionDebugSceneRuntime(params);
     const options = vi.mocked(VRMScene).mock.calls.at(-1)?.[0];
     const logSpy = vi.spyOn(debug, "addTextChannelLog");

@@ -164,8 +164,7 @@ export class MotionDebugApp implements MotionDebugApi {
             ...this.retargetConfig,
             ...this.controls.pickRetargetConfig(config, this.retargetConfig),
         };
-        this.scene.setSincroPoseRetargetConfig(this.retargetConfig);
-        this.debugConsole.setSincroPoseRetargetConfig(this.retargetConfig);
+        this.retargetConfig = this.scene.setSincroPoseRetargetConfig(this.retargetConfig);
         this.controls.syncConfig(this.retargetConfig);
         this.renderSnapshot();
         return this.getSnapshot();

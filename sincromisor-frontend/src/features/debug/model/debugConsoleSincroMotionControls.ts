@@ -7,6 +7,7 @@ import type {
     SincroMotionComposerDryRunSummary,
     SincroMotionObserveOnlySummary,
 } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
+import type { SincroPoseTuningConfig } from "../../../character/runtime/sincroPoseSettingsModel";
 import type { SincroVrmPoseComposerResult } from "../../../character/runtime/sincroVrmPoseComposer";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
@@ -15,26 +16,25 @@ import {
     cloneSincroFaceMotionSnapshot,
     cloneSincroPoseMotionSnapshot,
 } from "./debugConsoleMotionSnapshot";
-import type { DebugConsoleManagerEvent } from "./debugConsolePublicTypes";
 import {
     cloneAvatarMotionProfile,
     cloneComposerDryRun,
     cloneObserveOnlySummary,
     clonePoseRetargetRuntime,
-    updatePoseRetargetConfig,
 } from "./debugConsoleSincroMotionRuntime";
 import type { DebugConsoleSnapshot } from "./debugConsoleSnapshot";
 
 type DebugConsoleSincroMotionControlsParams = {
-    emitEvent: (event: DebugConsoleManagerEvent) => void;
-    readSnapshot: () => DebugConsoleSnapshot;
     updateSnapshot: (updater: (snapshot: DebugConsoleSnapshot) => DebugConsoleSnapshot) => void;
 };
 
 // Sincro motion 関連 snapshot の更新を一箇所に集める。
 // face / pose / retarget runtime の深いコピー規則を manager から隠すための責務分割。
 export class DebugConsoleSincroMotionControls {
-    private onSincroPoseRetargetConfigChange?: (config: Partial<SincroPoseRetargetConfig>) => void;
+    private onSincroPoseRetargetConfigEdit?: (
+        config: Partial<SincroPoseRetargetConfig>,
+        source: "user" | "sync",
+    ) => void;
 
     constructor(private readonly params: DebugConsoleSincroMotionControlsParams) {}
 
@@ -142,44 +142,32 @@ export class DebugConsoleSincroMotionControls {
         }));
     }
 
-    setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
+    /** 所有モデルから受け取った正規化済み設定を表示用に複製する。操作通知と保存は発生させない。 */
+    setSincroPoseRetargetConfig(config: SincroPoseTuningConfig): void {
         this.params.updateSnapshot((snapshot) => ({
             ...snapshot,
-            sincroMotion: {
-                ...snapshot.sincroMotion,
-                poseRetarget: updatePoseRetargetConfig(snapshot.sincroMotion.poseRetarget, config),
-            },
+            sincroMotion: { ...snapshot.sincroMotion, poseRetarget: { ...config } },
         }));
     }
 
-    /** 操作通知の所有者を置換する。古い解除を再実行しても、新しい登録は消さない。 */
-    setSincroPoseRetargetConfigChangeCallback(
-        callback: (config: Partial<SincroPoseRetargetConfig>) => void,
+    /** 診断操作を現在の所有者へ渡す。古い解除を再実行しても新しい登録は消さない。 */
+    setSincroPoseRetargetConfigEditCallback(
+        callback: (config: Partial<SincroPoseRetargetConfig>, source: "user" | "sync") => void,
     ): () => void {
-        const notify = (config: Partial<SincroPoseRetargetConfig>) => callback(config);
-        this.onSincroPoseRetargetConfigChange = notify;
+        const notify = (config: Partial<SincroPoseRetargetConfig>, source: "user" | "sync") =>
+            callback(config, source);
+        this.onSincroPoseRetargetConfigEdit = notify;
         return () => {
-            if (this.onSincroPoseRetargetConfigChange === notify) {
-                this.onSincroPoseRetargetConfigChange = undefined;
-            }
+            if (this.onSincroPoseRetargetConfigEdit === notify)
+                this.onSincroPoseRetargetConfigEdit = undefined;
         };
     }
 
-    /** 正規化済み姿勢設定をシーンへ通知する。syncは通常設定・復元の反映で、診断入力として保存しない。 */
+    /** 入力を所有者へ渡す。正規化と保存判断は接続先が行い、未接続なら表示値も変更しない。 */
     applySincroPoseRetargetConfig(
         config: Partial<SincroPoseRetargetConfig>,
         source: "user" | "sync" = "user",
     ): void {
-        this.setSincroPoseRetargetConfig(config);
-        const current = this.params.readSnapshot().sincroMotion.poseRetarget;
-        this.onSincroPoseRetargetConfigChange?.(current);
-        // 同期は保存せず、診断入力で指定した項目だけを正規化後の値で通知する。
-        if (source === "user")
-            this.params.emitEvent({
-                type: "pose_tuning_edit",
-                config: Object.fromEntries(
-                    Object.entries(current).filter(([key]) => key in config),
-                ),
-            });
+        this.onSincroPoseRetargetConfigEdit?.(config, source);
     }
 }

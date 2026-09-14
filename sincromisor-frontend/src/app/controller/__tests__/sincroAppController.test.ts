@@ -1,4 +1,5 @@
 import { expect, it, vi } from "vitest";
+import { SincroPoseSettingsModel } from "../../../character/runtime/sincroPoseSettingsModel";
 import type { ChatMessageServiceEvent } from "../../../features/conversation/chat/model/chatMessageService";
 import type { TalkManagerEvent } from "../../../features/conversation/talk/talkManager";
 import type { DebugConsoleManagerEvent } from "../../../features/debug/model/debugConsoleManager";
@@ -53,12 +54,25 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
     const openDialogs: ReturnType<typeof vi.fn>[] = [];
     const stopRTC = vi.fn();
     createRuntime.mockImplementation(() => {
+        const poseSettings = new SincroPoseSettingsModel();
         const open = vi.fn();
         openDialogs.push(open);
         return {
             coreController: { start: vi.fn(), stopRTC, releaseTrackingSubscriptions: vi.fn() },
             chatMessageService: chat,
-            debugConsoleManager: debug,
+            debugConsoleManager: {
+                ...debug,
+                setSincroPoseRetargetConfig: vi.fn(),
+                setSincroPoseRetargetConfigEditCallback: () => () => {},
+            },
+            poseSettings,
+            poseBridge: {
+                getConfig: () => poseSettings.getConfig(),
+                applyConfig: (config: Parameters<SincroPoseSettingsModel["applyConfig"]>[0]) =>
+                    poseSettings.applyConfig(config),
+                subscribe: (listener: Parameters<SincroPoseSettingsModel["subscribe"]>[0]) =>
+                    poseSettings.subscribe(listener),
+            },
             talkManager: talk,
             popMessageService: { subscribeDialogPop: pop.subscribe },
             settingsModel,

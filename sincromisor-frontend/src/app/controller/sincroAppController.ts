@@ -107,7 +107,7 @@ export class SincroAppController {
     get debug(): SincroAppDebugBridge {
         return this.runtime.debugBridge;
     }
-    /** 診断モデルが正規化した姿勢設定をシーンへ公開する。 */
+    /** アプリが所有する姿勢設定モデルの現在値と変更操作を公開する。 */
     get pose(): SincroAppPoseBridge {
         return this.runtime.poseBridge;
     }
@@ -159,6 +159,21 @@ export class SincroAppController {
         // 旧制御の外部購読を解除してReactを切り替え、登録時の即時通知を新購読へ届ける。
         SincroAppController.setCurrent(this);
         this.eventUnsubscribers.push(this.bindUiSubscriptions());
+        // 診断画面の有無にかかわらず、所有モデルの現在値を表示用コピーへ接続する。
+        this.eventUnsubscribers.push(
+            runtime.poseSettings.subscribe((config) =>
+                runtime.debugConsoleManager.setSincroPoseRetargetConfig(config),
+            ),
+        );
+        this.eventUnsubscribers.push(
+            runtime.debugConsoleManager.setSincroPoseRetargetConfigEditCallback(
+                (partial, source) => {
+                    const edited = runtime.poseSettings.applyConfig(partial);
+                    if (source === "user") this.persistence?.savePoseTuning(edited);
+                },
+            ),
+        );
+        this.pose.applyConfig({ intensityScale: initialSettings.settings.sincroPoseRetargetScale });
         this.eventUnsubscribers.push(this.calibration.connectSettings(runtime.settingsModel));
         this.eventUnsubscribers.push(
             runtime.dialogManager.subscribeVrmSelectionChange(() =>
@@ -353,19 +368,14 @@ export class SincroAppController {
         const debug = this.runtime.debugConsoleManager;
         const gaze = this.persistence.getGazeTuning();
         if (gaze !== undefined) debug.applyCharacterGazeTrackingTuning(gaze, "sync");
-        debug.applySincroPoseRetargetConfig(
-            {
-                intensityScale: this.getSettingsSnapshot().sincroPoseRetargetScale,
-                ...this.persistence.getPoseTuning(),
-            },
-            "sync",
-        );
+        this.pose.applyConfig({
+            intensityScale: this.getSettingsSnapshot().sincroPoseRetargetScale,
+            ...this.persistence.getPoseTuning(),
+        });
         this.eventUnsubscribers.push(
             debug.subscribe((event) => {
                 if (event.type === "gaze_tuning_edit")
                     this.persistence?.saveGazeTuning(event.config);
-                if (event.type === "pose_tuning_edit")
-                    this.persistence?.savePoseTuning(event.config);
             }),
         );
     }

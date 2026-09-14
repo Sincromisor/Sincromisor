@@ -143,7 +143,7 @@ export class SincroAppSettingsPersistence {
         this.write();
     }
 
-    /** シーン生成前でも診断モデルへ適用できる、検証済みの視線・姿勢調整を返す。 */
+    /** シーン生成前にそれぞれの所有モデルへ適用できる、検証済みの視線・姿勢調整を返す。 */
     getGazeTuning() {
         return this.gaze;
     }
