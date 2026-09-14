@@ -1,10 +1,10 @@
 import { type ReactElement, useEffect, useRef } from "react";
-import type { SincroVRMRoots } from "../../character/scene/sincroVrmInitializer";
 import { SincroChatView } from "../../features/conversation/chat/react/sincroChatView";
 import { SincroTelopView } from "../../features/conversation/telop/react/sincroTelopView";
 import { DebugConsole } from "../../features/debug/react/debugConsole";
 import { RightToolMenu } from "../../features/debug/react/rightToolMenu";
 import { ConfigurationDialog } from "../../features/dialog/react/configurationDialog";
+import type { SincroVRMRoots } from "../bootstrap/sincroVrmInitializer";
 import {
     hideRightToolDebugPanel,
     hideRightToolSettingsPanel,

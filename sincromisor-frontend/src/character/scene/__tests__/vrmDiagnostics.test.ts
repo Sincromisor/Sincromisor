@@ -1,9 +1,9 @@
 import { expect, it, vi } from "vitest";
+import { SincroLookingGlassVRMInitializer } from "../../../app/bootstrap/sincroLookingGlassVrmInitializer";
+import { SincroVRM360Initializer } from "../../../app/bootstrap/sincroVrm360Initializer";
+import { SincroVRMInitializer } from "../../../app/bootstrap/sincroVrmInitializer";
 import { DebugConsoleManager } from "../../../features/debug/model/debugConsoleManager";
 import { MotionDebugSceneRuntime } from "../../../pages/motionDebug/motionDebugSceneRuntime";
-import { SincroLookingGlassVRMInitializer } from "../../lookingGlass/sincroLookingGlassVrmInitializer";
-import { SincroVRM360Initializer } from "../../vrm360/sincroVrm360Initializer";
-import { SincroVRMInitializer } from "../sincroVrmInitializer";
 import { VRMScene } from "../vrmScene";
 
 vi.mock("../vrmScene", () => ({

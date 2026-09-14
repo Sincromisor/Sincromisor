@@ -93,7 +93,7 @@ Use case: precise-object-edit. Edit the supplied full-body dark-brown-haired too
 - 起動元:
     - 3つのVRMページのHTMLは `mainReact.tsx` だけを読み込む。各 `mainVrm*.ts` は配置済みDOM参照からページ固有の初期化を行う関数を公開し、独立したloadイベントは登録しない。
 - 初期化処理:
-    - シーン / ページ選択肢を組み立て、アプリ制御の起動へ委譲する。
+    - `app/bootstrap` の基底・派生初期化処理がページ既定値とシーンを選び、共通の開始・設定接続を行う。配置済みDOM参照の契約もアプリ層が持つ。
 - Reactによるアプリの共通枠組み:
     - 共通 UI を描画し、ページ差分はプロパティ / 制御処理選択肢へ閉じ込める。
 - 開発者向けページ:

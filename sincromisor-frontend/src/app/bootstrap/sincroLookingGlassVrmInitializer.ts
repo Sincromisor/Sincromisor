@@ -1,5 +1,5 @@
-import { SincroVRMInitializer } from "../scene/sincroVrmInitializer";
-import { LookingGlassVRMScene } from "./lookingGlassVrmScene";
+import { LookingGlassVRMScene } from "../../character/lookingGlass/lookingGlassVrmScene";
+import { SincroVRMInitializer } from "./sincroVrmInitializer";
 
 // Looking Glass VRM ページは 360 背景動画を使わず、通常VRMシーン + LG起動導線だけを有効化する。
 // 起動前設定の既定値は simple-vrm と揃え、Gaze依存のAutoMute連動も通常どおり使えるようにする。
@@ -12,7 +12,8 @@ export class SincroLookingGlassVRMInitializer extends SincroVRMInitializer {
         enableAutoMute: false,
     };
 
-    protected override initializeSincroScene(): LookingGlassVRMScene {
+    /** XRとLooking Glassの開始導線を備えたシーンを生成し、共通開始へ返す。 */
+    protected override createScene(): LookingGlassVRMScene {
         const vrmScene: LookingGlassVRMScene = new LookingGlassVRMScene({
             diagnostics: this.appController.debug.vrmDiagnostics,
             canvasRoot: this.charCanvas,
@@ -24,10 +25,6 @@ export class SincroLookingGlassVRMInitializer extends SincroVRMInitializer {
             },
         });
         vrmScene.enableLookingGlassStartButton();
-        vrmScene.start();
-        this.activeScene = vrmScene;
-        vrmScene.setSincroPoseRetargetConfig(this.appController.pose.getConfig());
-        this.syncSceneRuntimeSettings(this.appController.state.getSettingsSnapshot());
         return vrmScene;
     }
 }
