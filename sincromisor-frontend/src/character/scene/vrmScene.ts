@@ -96,12 +96,13 @@ export class VRMScene {
                 this.animate();
             });
         }
-        // フレーム更新順:
-        // 1) 派生クラスの環境更新（360照明など）
-        // 2) VRMキャラクター更新
-        // 3) render
+        this.renderFrame();
+    }
+
+    /** 環境→キャラクター→描画の順序を全入口で共有する。未指定時刻はキャラクター側で取得する。 */
+    private renderFrame(nowMs?: number): void {
         this.updateScene();
-        this.vrmCharacterManager.update();
+        this.vrmCharacterManager.update(nowMs);
         this.renderer.render(this.scene, this.vrmCamera.camera);
     }
 
@@ -178,10 +179,9 @@ export class VRMScene {
         return this.vrmCharacterManager.getAvatarMotionProfile();
     }
 
+    /** 再生・単発描画では入口で確定したミリ秒時刻を、そのままキャラクターへ渡す。 */
     renderOnce(nowMs: number = performance.now()): void {
-        this.updateScene();
-        this.vrmCharacterManager.update(nowMs);
-        this.renderer.render(this.scene, this.vrmCamera.camera);
+        this.renderFrame(nowMs);
     }
 
     /* WebXR対応チェック */
@@ -205,10 +205,8 @@ export class VRMScene {
 
     private setXRAnimationLoop(): void {
         this.renderer.setAnimationLoop(() => {
-            // XR時も通常描画と同じ順序を保つ（派生更新 -> VRM更新 -> render）。
-            this.updateScene();
-            this.vrmCharacterManager.update();
-            this.renderer.render(this.scene, this.vrmCamera.camera);
+            // XRの予約はレンダラーに任せ、時刻取得は通常描画と同じ経路を使う。
+            this.renderFrame();
         });
     }
 }
