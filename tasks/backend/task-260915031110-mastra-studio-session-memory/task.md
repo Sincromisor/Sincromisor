@@ -66,5 +66,5 @@ Difyに代わるAPIとローカル管理者用の編集画面を1サービスで
 
 ## 制限と未実行事項
 
-- 全体ゲートは変更外の既存Markdown 15件の整形不一致でlintが停止した。変更した文書は対象整形で確認した。失敗箇所は `documents/design/frontend/character/rigging/rig-binding.md`、`documents/research/character_animation/answers/09-canonical-upper-body-state.md`、既存のcharacter-sincro-motionタスク12件とsincro-rtcタスク1件である。
+- 全体ゲートは変更外の既存Markdown 15件の整形不一致でlintが停止した。変更した文書は対象整形で確認した。失敗箇所は `documents/research/character_animation/answers/06-web-realtime-performance.md`、`documents/research/character_animation/answers/09-canonical-upper-body-state.md`、既存のcharacter-sincro-motionタスク12件とsincro-rtcタスク1件である。
 - 採用libSQLはStudioのフィードバック一覧に未対応で、同APIが500を返す。指示編集・試験・公開と会話は確認済み。フィードバック管理は対象外として設計にも明記した。

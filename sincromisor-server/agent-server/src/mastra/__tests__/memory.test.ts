@@ -61,7 +61,8 @@ test("同じthreadだけに過去の発話を投入し、別会話とStudioに�
 		);
 		assert.equal(requests[3].split("赤い森781").length - 1, 1);
 	} finally {
-		await mastra.getStorage()?.close();
+		// 保存領域だけを先に閉じず、Mastra所有の処理を止めてから接続を解放する。
+		await mastra.shutdown();
 		server.closeAllConnections();
 		await new Promise<void>((resolve, reject) =>
 			server.close((error) => (error ? reject(error) : resolve())),
