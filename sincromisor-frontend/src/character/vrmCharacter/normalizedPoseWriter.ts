@@ -1,6 +1,6 @@
 /** 合成結果の検査・VRMPoseへの変換・書き込みを担う。読込と診断への注釈付与は管理側が所有する。 */
 import type { VRM, VRMHumanBoneName, VRMPose } from "@pixiv/three-vrm";
-import type { SincroVrmPoseComposerDryRunResult } from "../runtime/sincroVrmPoseComposerDryRun";
+import type { SincroVrmPoseComposerResult } from "../runtime/sincroVrmPoseComposer";
 import type { VrmNormalizedLocalPose, VrmPoseQuaternion } from "../vrmPose/vrmPoseTypes";
 
 /** 一括適用が所有する上半身と指。欠損値は単位回転で補完する。 */
@@ -63,9 +63,9 @@ export type FullNormalizedPoseApplicationResult = {
  */
 export function applyFullNormalizedPoseApplication(
     vrm: VRM | undefined,
-    composerDryRun: SincroVrmPoseComposerDryRunResult,
+    composerResult: SincroVrmPoseComposerResult,
 ): FullNormalizedPoseApplicationResult {
-    const unavailableReason = fullNormalizedPoseApplicationUnavailableReason(vrm, composerDryRun);
+    const unavailableReason = fullNormalizedPoseApplicationUnavailableReason(vrm, composerResult);
     if (unavailableReason) {
         return {
             applied: false,
@@ -73,7 +73,7 @@ export function applyFullNormalizedPoseApplication(
             warnings: [unavailableReason],
         };
     }
-    const result = composerDryRun.result;
+    const result = composerResult.result;
     if (result === undefined) {
         return {
             applied: false,
@@ -94,15 +94,15 @@ export function applyFullNormalizedPoseApplication(
 
 function fullNormalizedPoseApplicationUnavailableReason(
     vrm: VRM | undefined,
-    composerDryRun: SincroVrmPoseComposerDryRunResult,
+    composerResult: SincroVrmPoseComposerResult,
 ): string | undefined {
     if (!vrm) {
         return "full_normalized_pose_application_vrm_missing";
     }
-    if (composerDryRun.status !== "available") {
-        return `full_normalized_pose_application_unavailable:${composerDryRun.status}`;
+    if (composerResult.status !== "available") {
+        return `full_normalized_pose_application_unavailable:${composerResult.status}`;
     }
-    if (composerDryRun.result === undefined) {
+    if (composerResult.result === undefined) {
         return "full_normalized_pose_application_result_missing";
     }
     return undefined;

@@ -63,8 +63,8 @@
     - `mediaTimeMs` は TrackerRuntime の映像フレーム時刻情報を優先し、欠損時だけ制御処理 / 受け取り側側の
       コールバック受信時刻を明示的に渡す。サービス / 推定処理内部では `performance.now()` を読まない。
     - 本サービスは VRM ボーン / 表情 / ルート位置、`VRMCharacterManager.update()` の制御処理
-      呼び出し順序、`CharacterBehaviorSnapshot` 構造、`composerDryRun` を変更しない。試行姿勢合成処理と
-      実適用は後続タスクの責務に残す。
+      呼び出し順序、`CharacterBehaviorSnapshot` 構造、`composerDryRun` を変更しない。姿勢合成は `SincroVrmPoseComposerService`、
+      VRMへの実適用は `VRMCharacterManager` と `normalizedPoseWriter` が担う。
     - 顔のみのコールバックは Pose が無い間 `not_computed` 要約に留め、旧姿勢のみのフレームは Face / Hand
       信頼性を仮の値として扱う。`CameraQualityScore` 欠損、ReliabilityMap 欠損、任意 ROI 欠損を
       本番コールバックの例外にはしない。
@@ -141,9 +141,9 @@
     - 動作品質の回帰検証は `sincro.motion-qa-fixture-manifest.v1` 構成情報を入力にする開発者が確認できる検証基盤とする。構成情報固定データは P0 固定データ ID 部分集合、`logText` または呼び出し元取得処理経由の `logUrl`、任意基準、任意主観的な確認項目を持つ。部分集合実行を既定とし、P0 全件必須は `requireAllP0Fixtures: true` の場合だけ欠損固定データを不合格として補う。
     - 動作品質の回帰検証の判定は再生ログを `parseMotionDebugLogLines()` で読み、`calculateMotionMetricSummary()` と任意基準比較を固定データ単位で実行する。基準なしでは要約重大度を結果に使い、`not_available` 指標を警告以上にする。基準ありでは候補指標不合格、または `regressed` かつ重大度 changed を不合格、重大度 unchanged 回帰を警告とする。旧基準の欠損指標キーは `not_available` として補完され、固定データ警告に残す。
     - Motion 指標の外部 import 互換は `src/character/motionEvaluation/motionMetrics.ts` 共通窓口が担い、型、しきい値、フレーム解析処理、基準 / 追跡処理 / 時系列 / ソルバー / 意図計算処理、要約、比較は責務別モジュールに分ける。再生ログの保存契約と旧ログ代替処理は解析処理 / 要約側に閉じ、QA 回帰検証基盤から見える `calculateMotionMetricSummary()` / `compareMotionMetricSummaries()` の契約は変えない。
-    - Composer 比較は `sincro.composer-comparison-summary.v1` 要約成果物として旧動作の変換実行時スナップショットと本番姿勢合成の試行結果を比較する。フレーム補助処理は `calculateComposerComparisonMetrics(input)` で、入力は `{ mediaTimeMs; retarget?; composerDryRun? }` の通常のオブジェクトに限定し、VRM Object3D / 正規化済みボーンノード / `THREE.Quaternion` インスタンスは保存境界へ出さない。再生解析処理は `frame.solver.poseRetargetRuntime` だけを正本にし、旧 `frame.solver.poseRetarget` は既存指標用格納先として残すが姿勢合成処理比較では代替処理由来にしない。現行記録の `poseRetargetRuntime` は `upperBody` を保存しないため、解析処理は `NEUTRAL_POSE_FRAME` を土台に `active`、`confidence`、`ikMode`、`fallbackReason`、`solverProbe`、`anchor`、`leftArm`、`rightArm` だけを上書きし、補完した `upperBody` は角度差分の対象にしない。
+    - Composer 比較は `sincro.composer-comparison-summary.v1` 要約成果物として旧動作の変換実行時スナップショットと本番姿勢合成の結果を比較する。フレーム補助処理は `calculateComposerComparisonMetrics(input)` で、入力は `{ mediaTimeMs; retarget?; composerDryRun? }` の通常のオブジェクトに限定し、VRM Object3D / 正規化済みボーンノード / `THREE.Quaternion` インスタンスは保存境界へ出さない。再生解析処理は `frame.solver.poseRetargetRuntime` だけを正本にし、旧 `frame.solver.poseRetarget` は既存指標用格納先として残すが姿勢合成処理比較では代替処理由来にしない。現行記録の `poseRetargetRuntime` は `upperBody` を保存しないため、解析処理は `NEUTRAL_POSE_FRAME` を土台に `active`、`confidence`、`ikMode`、`fallbackReason`、`solverProbe`、`anchor`、`leftArm`、`rightArm` だけを上書きし、補完した `upperBody` は角度差分の対象にしない。
     - Composer 比較指標キーは `composerAngleDeltaDeg`、`composerAngularVelocitySpike`、`composerOwnedBoneConflictCount`、`composerSuppressionCount`、`composerMissingPoseFrameCount` に固定する。`composerAngleDeltaDeg` は旧動作変換の左右上腕・前腕のクォータニオンと姿勢合成処理 `finalPose` の `leftUpperArm`、`leftLowerArm`、`rightUpperArm`、`rightLowerArm` の測地距離最大値をフレーム値とし、要約は利用可能フレームの p95、しきい値は `{ pass: 12, warn: 25, fail: 45 }` deg とする。`composerAngularVelocitySpike` は姿勢合成処理 `clampedBones.reason === "angular_velocity"` の重複のないボーン数合計、しきい値は `{ pass: 0, warn: 2, fail: 5 }` 件数とし、フレーム間速度は再計算しない。`composerOwnedBoneConflictCount` は `owned_bone_conflict:` 警告の重複のない数合計、しきい値は `{ pass: 0, warn: 0, fail: 0 }` 件数とする。`composerSuppressionCount` は `suppressedLayers.length` 合計、しきい値は `{ pass: 0, warn: 30, fail: 120 }` 件数とする。`composerMissingPoseFrameCount` は動作の変換欠損、試行欠損、`status !== "available"`、結果欠損、比較対象ボーン 0 件を 1 フレームとして数え、しきい値は `{ pass: 0, warn: 1, fail: 3 }` 件数とする。5 指標はすべて `lower_is_better` で、要約重大度は最大重大度とする。
-    - Composer 比較要約は `fixtureId`、`baselineSource`、`status`、`severity`、`metrics`、`warnings`、`unavailableReason?`、`generatedAtIso`、`inputs` を持つ。`status` は `available` または `comparison_unavailable` だけで、`inputs` には基準構成情報パス、再生ログパスの有無、姿勢合成処理試行結果の有無を通常のオブジェクトで記録する。基準構成情報が `source: not-captured` の場合は実角度差分を捏造せず、`comparison_unavailable`、`severity: "warn"` 以上、`unavailableReason: "baseline_not_captured"` とし、5 指標すべてを `not_available` / 警告以上にする。取得済み再生でも `poseRetargetRuntime` または姿勢合成処理試行が全フレームで欠損する場合は `unavailableReason: "retarget_or_composer_not_recorded"` とし、旧ログ / 試行欠損を暗黙合格にしない。既存 `frame.finalPose.schemaVersion = "sincro.vrm-pose-composer-result.v1"` は motion-debug の finalPose 層であり、状態付き本番試行結果ではないため、姿勢合成処理比較解析処理はこれを `composerDryRun.status = "available"` へ昇格しない。比較は機能フラグ適用タスクの判断材料であり、この要約だけで実適用の合否を自動決定しない。
+    - Composer 比較要約は `fixtureId`、`baselineSource`、`status`、`severity`、`metrics`、`warnings`、`unavailableReason?`、`generatedAtIso`、`inputs` を持つ。`status` は `available` または `comparison_unavailable` だけで、`inputs` には基準構成情報パス、再生ログパスの有無、姿勢合成結果の有無を通常のオブジェクトで記録する。基準構成情報が `source: not-captured` の場合は実角度差分を捏造せず、`comparison_unavailable`、`severity: "warn"` 以上、`unavailableReason: "baseline_not_captured"` とし、5 指標すべてを `not_available` / 警告以上にする。取得済み再生でも `poseRetargetRuntime` または姿勢合成処理試行が全フレームで欠損する場合は `unavailableReason: "retarget_or_composer_not_recorded"` とし、旧ログ / 試行欠損を暗黙合格にしない。既存 `frame.finalPose.schemaVersion = "sincro.vrm-pose-composer-result.v1"` は motion-debug の finalPose 層であり、状態付き本番合成結果ではないため、姿勢合成処理比較解析処理はこれを `composerDryRun.status = "available"` へ昇格しない。比較は機能フラグ適用タスクの判断材料であり、この要約だけで実適用の合否を自動決定しない。
     - 本番 `simple-vrm` / `sincro` の再生基準は `tasks/character-sincro-motion/task-260629225919-production-sincro-motion-replay-baselines/artifacts/production-sincro-baseline-manifest.md` を索引にし、後続比較では構成情報の `source` を確認して実機基準、人工的な、not-captured を混同しない。指標要約は `calculateMotionMetricSummary()` の `sincro.motion-metrics.v1` を使い、固定データ ID は現行 `MOTION_P0_FIXTURE_IDS` に合わせる。
     - 主観的な QA は構成情報の `subjectiveChecklist` を回帰結果へそのまま出力するだけに留める。項目は `natural`、`stable`、`intentReadable`、`noBreakage` で、機械判定には使わない。
     - `window.__SINCRO_MOTION_DEBUG__.runQaRegression(config)` は読み込み済み記録 1 件を構成情報部分集合に包んで実行する。`fixtureId` は設定指定を優先し、無ければ読み込み済み記録構成情報の `source.fixtureId` が P0 固定データ ID の場合だけ採用する。解決できない場合は `fixture_id_required` を返し、`neutral-10s` への暗黙代替処理はしない。
@@ -211,13 +211,14 @@
     - 体幹代替処理補助処理は完成版 `AvatarMotionProfile.torso.distribution` を正本として体幹差分クォータニオンを `spine` / `chest` / `upperChest` に分配する。プロファイル配分が非有限、負の、または合計 `1.0 ± 0.001` から外れる場合は対応能力既定へ戻し、警告コードは `invalid_torso_distribution_profile_defaulted` だけを使う。
     - 対応能力既定配分は `spine+chest+upperChest` で `{ spine: 0.25, chest: 0.40, upperChest: 0.35 }`、`spine+chest` で `{ spine: 0.35, chest: 0.65, upperChest: 0 }`、それ以外で `{ spine: 1, chest: 0, upperChest: 0 }` とする。補助処理は存在する体幹ボーンだけを `ownedBones` に含め、姿勢合成処理は欠損 `upperChest` を `missing_optional_bone` として抑制する。
     - 最終制限 / 値の制限段階はクォータニオン正規化と角速度制限フックを持つ。角速度制限は `previousFinalPose` と `deltaSeconds > 0` がある場合だけ実行し、既定値は `720deg/sec` とする。
-    - v1 は開発者専用パスとして motion-debug / 補助処理から同じ入力で呼べる契約を固める段階であり、本番の上半身一括適用や `VRMCharacterManager.update()` の順序は変更しない。motion-debug は記録 / ライブスナップショット用に追跡層由来の姿勢合成処理結果を生成し、`finalPose`、`ownedBones`、`suppressedLayers`、`clampedBones`、`warnings` を保存・表示する。
-    - 本番 `sincro` 実行時では `src/character/runtime/sincroVrmPoseComposerDryRun.ts` の試行サービスが `VRMCharacterManager.update()` 内で `composeVrmPose()` を観測専用実行する。入力は最新 `SincroPoseRetargetFrame`、`AvatarMotionProfile` / `MinimalAvatarMotionProfile`、サービスが保持する任意前回の最終姿勢、`deltaSeconds` に限定し、生成層は代替処理と追跡だけにする。意味に基づく動作 / 指層は後続の適用機能フラグで所有境界を確定するまで混ぜない。
-    - 本番試行結果は `{ status: "available" | "not_ready" | "invalid_input" | "missing_profile"; result?: VrmPoseComposerResult; warnings: string[] }` とし、`status !== "available"` では `result` を持たない。利用可能結果の `finalPose` は次フレームの角速度制限入力としてだけ保持し、診断 Console には状態、警告、抑制済み層、制限済みボーンの要約を表示する。
+    - 姿勢合成の計算は本番と motion-debug から利用し、VRMへの書き込みは呼び出し側が担う。motion-debug は記録 / ライブスナップショット用に追跡層由来の姿勢合成処理結果を生成し、`finalPose`、`ownedBones`、`suppressedLayers`、`clampedBones`、`warnings` を保存・表示する。
+    - 本番では [`sincroVrmPoseComposer.ts`](../../../../sincromisor-frontend/src/character/runtime/sincroVrmPoseComposer.ts) の `SincroVrmPoseComposerService` が `VRMCharacterManager.update()` から呼ばれ、`composeVrmPose()` で最終姿勢を計算する。入力は最新 `SincroPoseRetargetFrame`、`AvatarMotionProfile` / `MinimalAvatarMotionProfile`、任意の前回姿勢、秒単位の `deltaSeconds` と意味に基づく動作・指のスナップショットである。代替処理と追跡層を常に生成し、切り戻しフラグと入力の検証条件を満たす場合に意味に基づく動作・指の層を追加する。
+    - `SincroVrmPoseComposerResult` は `{ status: "available" | "not_ready" | "invalid_input" | "missing_profile"; result?: VrmPoseComposerResult; warnings: string[] }` を持ち、`status !== "available"` では `result` を返さない。利用可能な最終姿勢と指の状態は次回の制限・短時間保持用に保持し、入力不足・不正時は更新せず、`reset()` で破棄する。管理側はVRM初期化と意味に基づく動作・指の切り戻しフラグ変更時に `reset()` を呼ぶ。
+    - 保存・診断キー `composerDryRun`、`schemaVersion`、警告コードは維持する。管理側は適用結果を `fullNormalizedPoseApplication` に付与し、診断には状態、警告、抑制層、制限ボーンと適用可否を渡す。
     - `face-only` / `comfortable-idle` などで最新動作の変換フレームが無いフレームは `not_ready` として扱い、前回
       `available` の `finalPose` を現在フレームの適用候補として返さない。古い `finalPose` は角速度
       値の制限の内部入力にだけ使い、実 VRM 適用や診断 Console の現在の結果には昇格させない。
-    - 試行は `vrm.humanoid.setNormalizedPose()`、正規化済みボーンノードの `rotation` / `quaternion`、表情、ルート位置を更新しない。既存制御処理呼び出し順と `vrm.update(deltaSeconds)` の位置も変更しないため、本番表示は従来の直接ボーン書き込みを正本に保つ。
+    - 合成サービス自身はVRMやボーンノードを受け取らない。管理側は同一フレームの利用可能な最終姿勢を `normalizedPoseWriter` へ渡して一括適用する。頭部・表情、最終姿勢、脚、`vrm.update(deltaSeconds)`、腰の復元の順序を保ち、利用不可時に古い結果や旧上半身直接制御へ切り戻さない。
     - 任意ボーン代替処理の検証結果はタスク成果物
       [optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)
       を参照する。`default.vrm` と `aoi-1.0.7.vrm` は全面上半身対応能力として確認済みで、欠損
@@ -245,7 +246,7 @@
     - faceMotion / poseMotion
     - 動作方針
 - `SincroMotionPipelineState`
-    - 本番 `sincro` 実行時の観測専用 / 試行用低次元動作処理工程状態として
+    - 本番の追跡・状態推定・姿勢合成結果をまとめる低次元状態として
       `src/character/runtime/sincroMotionPipelineState.ts` に置く。
     - `face`、`pose`、任意 `hand`、任意 `reliability`、任意 `canonical`、任意
       `temporal`、任意 `intent`、任意 `composerDryRun`、`updatedAtMs` を持つ通常のオブジェクトに固定する。
@@ -489,7 +490,7 @@
 | 段階                                     | 開始条件                                                                                                                                     | 完了条件                                                                                                                                                                   | 必須成果物                                                                                                                                                          | 必須指標の状態                                                                                                                                                              | 必須の手動確認                                                                                                                                    | 切り戻し条件                                                                                                                                                                        |
 | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 観測専用の処理工程                       | Face / Pose コールバックから `SincroMotionPipelineState` が例外なく更新され、VRM ボーン / 表情 / ルート位置を変更しないこと。                | ライブ / 記録 / 再生で信頼性、標準化した、時系列、意図の利用可能 / not_computed / invalid_input が説明可能で、欠損入力が本番コールバックの例外にならないこと。             | `frame.reliability`、`frame.canonical`、`frame.temporal`、`frame.intent`、`SincroMotionObserveOnlySummary`、実行時の所有権対応表。                                  | `neutralJitter`、`trackingLossDurationMs`、`sideSwapCount`、段階 5 時系列指標が `not_available` でなく、P0 固定データ基準に対して悪化がないこと。                           | `default.vrm` と `aoi-1.0.7.vrm` で通常会話、顔のみ、Pose 欠損、カメラ停止 / 再接続を確認し、従来直接書き込み表示と差が出ないこと。               | 観測専用状態更新でフレームループが止まる、顔のみのコールバックが時系列 / 意図を進める、または診断 Console が未加工のランドマーク / 切り抜きオブジェクトを保持する場合は無効化する。 |
-| 本番姿勢合成の試行                       | 観測専用の完了条件を満たし、`AvatarMotionProfile` / `MinimalAvatarMotionProfile` と最新 `SincroPoseRetargetFrame` が揃うこと。               | `sincroVrmPoseComposerDryRun` が `available` / `not_ready` / `invalid_input` / `missing_profile` を正しく返し、`status !== "available"` で `result` を持たないこと。       | `frame.finalPose`、本番試行要約、`sincro.composer-comparison-summary.v1`、任意ボーン代替処理検証。                                                                  | `composerAngleDeltaDeg` は合格または既知理由付き警告、`composerOwnedBoneConflictCount` は合格、`composerMissingPoseFrameCount` は合格、既存動作指標に不合格悪化がないこと。 | 試行中に `vrm.humanoid.setNormalizedPose()`、正規化済みボーンノード、表情、ルート位置が更新されないことを motion-debug 再生と実機で確認する。     | 試行結果が古い `available` finalPose を現在の結果へ昇格する、所有するボーン競合が出る、または直接書き込みの見た目が変わる場合は試行接続を戻す。                                     |
+| 本番の姿勢合成                           | 観測専用の完了条件を満たし、`AvatarMotionProfile` / `MinimalAvatarMotionProfile` と最新 `SincroPoseRetargetFrame` が揃うこと。               | `SincroVrmPoseComposerService` が `available` / `not_ready` / `invalid_input` / `missing_profile` を正しく返し、`status !== "available"` で `result` を持たないこと。      | `frame.finalPose`、本番合成要約、`sincro.composer-comparison-summary.v1`、任意ボーン代替処理検証。                                                                  | `composerAngleDeltaDeg` は合格または既知理由付き警告、`composerOwnedBoneConflictCount` は合格、`composerMissingPoseFrameCount` は合格、既存動作指標に不合格悪化がないこと。 | 合成サービス自身はVRMを書き込まず、管理側が同一フレームの利用可能な結果を一括適用することを確認する。                                             | 合成結果が古い `available` finalPose を現在の結果へ昇格する、所有ボーン競合が出る、または見た目が変わる場合は原因を修正する。旧直接制御は復活させない。                             |
 | 全面 `setNormalizedPose(finalPose)` 適用 | 本番姿勢合成の試行と意味に基づく動作・指の適用の完了条件を満たし、頭部 / 首 / 脚 / 表情 / ルート位置の非対象境界が明文化されていること。     | `VRMCharacterManager.update()` で上半身 finalPose の書き手が全面 `VrmPoseComposer` 適用だけになり、利用不可フレームでも腕 / 体幹段階別の書き込み処理を自動実行しないこと。 | 全面 finalPose 再生、実行時の所有権対応表、姿勢合成処理比較要約、任意ボーン代替処理検証、複数 VRM 手動確認ログ。                                                    | 全 P0 固定データの動作指標と姿勢合成処理指標が合格、`not_available` 指標は成果物欠損理由付きで検査判定から除外されていること。                                              | `default.vrm`、`aoi-1.0.7.vrm`、欠損ボーン人工的なプロファイル、カメラ機能低下 / 回復、チャット / sincro モード切替で見た目を確認する。           | 頭部 / 首 / 脚 / 表情 / ルート位置が意図せず姿勢合成処理所有になる、既存制御処理と二重書き込みする、または利用不可理由が診断 Console / 指標から消える場合。                         |
 | 意味に基づく動作・指の適用               | `MotionIntentState`、意味に基づく動作のレイヤー、指の曲げ層、完成版 `AvatarMotionProfile` が有効スナップショットとして保存・再生できること。 | 意味に基づく動作のプリセットと指の曲げが姿勢合成処理層としてだけ適用され、追跡層の所有ボーンと衝突する場合は信頼度検査 / 抑制理由で説明できること。                        | `frame.intent`、`frame.solver.phase9`、意味に基づく動作 / 指診断用スナップショット、姿勢合成処理 finalPose スナップショット、プロファイル対応能力スナップショット。 | `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount` が合格、指欠損ボーン列で姿勢合成処理競合が 0 であること。  | Hand 開く / 半開き / 閉じた、thumbs-up、peace、顔の近く、軽く拍手するような動作、手未検出 / 復帰済みを複数 VRM と低下した指のボーン列で確認する。 | 意味に基づく動作意図が短時間ちらつきする、指のボーン列欠損で例外または過伸展が出る、追跡姿勢を意味に基づく動作が不透明に上書きする場合は意味に基づく動作 / 指フラグを off に戻す。  |
 
@@ -506,10 +507,10 @@
 `SincroPoseMotionSnapshot.leftArm/rightArm.targets` の姿勢スナップショットによる代替処理を使い、Hand ROI / Hand 手首は
 手のひら / 指信頼性と ROI 観測の材料に限定する。
 
-意味に基づく動作 / 指の適用の本番適用境界は `SincroVrmPoseComposerDryRunService.compose()` の
+意味に基づく動作 / 指の適用の本番適用境界は `SincroVrmPoseComposerService.compose()` の
 姿勢合成処理入力生成位置である。`composerSemanticFingerApplicationMode` は `"composer"` / `"off"` の独立
 開発者フラグとし、既定の `"composer"` では保存済み `MotionIntentState`、低次元 Hand スナップショット、
-完成版 `AvatarMotionProfile` が有効なフレームだけ `kind: "semantic"` 層を本番試行入力へ
+完成版 `AvatarMotionProfile` が有効なフレームだけ `kind: "semantic"` 層を本番合成入力へ
 追加する。`"off"` では観測専用の意図 / Hand 推定と記録は残し、意味に基づく動作 / 指層だけを
 姿勢合成処理入力から外す。削除済みの腕 / 体幹段階別の切り戻しフラグとは独立した責務であり、
 意味に基づく動作 / 指切り戻しが全面適用の所有権を暗黙に変更しない。
@@ -518,13 +519,13 @@
 正本にし、ジェスチャー Recognizer 未加工の結果、MediaPipe 未加工のランドマーク、VRM Object3D、元のボーンノードは
 本番層生成入力にしない。`MotionIntentState` が解析処理で無効、プロファイルが
 `MinimalAvatarMotionProfile` だけ、または Hand スナップショットが欠損する場合は
-`semantic_finger_application_*` 警告を試行要約へ出し、該当層を追加しない。追跡層が
+`semantic_finger_application_*` 警告を合成要約へ出し、該当層を追加しない。追跡層が
 所有する腕ボーンと意味に基づく動作のプリセットが競合する場合は、`semantic_conflict` 抑制または
 `owned_bone_conflict:<bone>` 警告で説明する。指の曲げ層は指ボーンだけを所有し、低下した指
 ボーン列では存在ボーンへ曲げ重みを再分配するため、欠損ボーン列は姿勢合成処理競合ではなく
 `missing_finger_chain:<side>:<group>` 警告として観測する。
 
-motion-debug の `frame.finalPose` は本番試行結果が `available` の場合、その
+motion-debug の `frame.finalPose` は本番合成結果が `available` の場合、その
 `VrmPoseComposerResult` から作った `sincro.motion-debug-final-pose.v1` スナップショットを保存・表示する。これにより
 `frame.solver.phase9` の意味に基づく動作 / 指診断用スナップショットと同じ本番姿勢合成処理入力が finalPose に反映された
 証跡になる。試行結果が無い旧ライブスナップショット / 旧ログだけ、従来の診断専用追跡 finalPose 橋渡しへ
@@ -546,7 +547,7 @@ Pose 追跡無効、カメラ停止、Pose 未検出、顔のみなど最新動�
 頭部 / 首 / 脚 / 表情 / ルート位置は全面上半身 finalPose の所有対象に追加しない。Face / Eye /
 Mouth / Emotion 制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`、ルート位置処理群、
 `CharacterRootStabilizer.update()` は従来どおり更新する。診断専用の姿勢合成処理比較 /
-試行要約は引き続き残し、公開 WebRTC / バックエンド契約や DataChannel 送受信データは変更しない。
+合成要約は引き続き残し、公開 WebRTC / バックエンド契約や DataChannel 送受信データは変更しない。
 
 補助リンク: [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)、[torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)、[optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)。
 

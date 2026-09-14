@@ -13,11 +13,11 @@ import {
     eulerQuaternion,
     expectNormalizedQuaternion,
 } from "../../vrmPose/__tests__/vrmPoseComposerTestHelpers";
-import { compose, SincroVrmPoseComposerDryRunService } from "../sincroVrmPoseComposerDryRun";
+import { compose, SincroVrmPoseComposerService } from "../sincroVrmPoseComposer";
 
-describe("SincroVrmPoseComposerDryRunService", () => {
+describe("SincroVrmPoseComposerService", () => {
     it("returns status without result when input is not ready", () => {
-        const service = new SincroVrmPoseComposerDryRunService();
+        const service = new SincroVrmPoseComposerService();
 
         expect(service.compose({ profile: COMPLETE_PROFILE }).result).toBeUndefined();
         expect(service.compose({ profile: COMPLETE_PROFILE }).status).toBe("not_ready");
@@ -35,7 +35,7 @@ describe("SincroVrmPoseComposerDryRunService", () => {
     });
 
     it("uses the lowered arm rest pose when tracking is inactive", () => {
-        const result = new SincroVrmPoseComposerDryRunService().compose({
+        const result = new SincroVrmPoseComposerService().compose({
             frame: NEUTRAL_POSE_FRAME,
             profile: COMPLETE_PROFILE,
             deltaSeconds: 1 / 60,
@@ -61,7 +61,7 @@ describe("SincroVrmPoseComposerDryRunService", () => {
     });
 
     it("keeps semantic and finger layers out when the rollback flag is off", () => {
-        const service = new SincroVrmPoseComposerDryRunService();
+        const service = new SincroVrmPoseComposerService();
         const result = compose(service, {
             frame: createActiveFrame(),
             profile: FULL_PROFILE,
@@ -84,7 +84,7 @@ describe("SincroVrmPoseComposerDryRunService", () => {
     });
 
     it("adds semantic and finger layers only from valid intent, hand, and full profile snapshots", () => {
-        const service = new SincroVrmPoseComposerDryRunService();
+        const service = new SincroVrmPoseComposerService();
         const intent = createIntent("peace");
         intent.arms.left.confidence = 0.6;
         const result = compose(service, {
@@ -111,7 +111,7 @@ describe("SincroVrmPoseComposerDryRunService", () => {
     });
 
     it("rejects invalid intent and minimal profile before semantic finger layer creation", () => {
-        const service = new SincroVrmPoseComposerDryRunService();
+        const service = new SincroVrmPoseComposerService();
         const invalidIntentResult = service.compose({
             frame: createActiveFrame(),
             profile: FULL_PROFILE,
@@ -144,7 +144,7 @@ describe("SincroVrmPoseComposerDryRunService", () => {
     });
 
     it("keeps semantic layers and explains missing finger input without reading raw landmarks", () => {
-        const service = new SincroVrmPoseComposerDryRunService();
+        const service = new SincroVrmPoseComposerService();
         const intent = createIntent("thumbsUp");
         intent.arms.left.confidence = 0.6;
         const result = service.compose({
@@ -168,7 +168,7 @@ describe("SincroVrmPoseComposerDryRunService", () => {
     });
 
     it("does not create composer conflicts when the finger chain is reduced", () => {
-        const service = new SincroVrmPoseComposerDryRunService();
+        const service = new SincroVrmPoseComposerService();
         const profile = createProfile({ chains: emptyFingerChains() });
         profile.capabilities.fingerChains.left.index.proximal = true;
         const result = service.compose({
@@ -190,8 +190,8 @@ describe("SincroVrmPoseComposerDryRunService", () => {
         expect(result.warnings).toContain("missing_finger_chain:left:thumb");
     });
 
-    it("keeps missing optional bone fallback visible in the dry-run result", () => {
-        const service = new SincroVrmPoseComposerDryRunService();
+    it("keeps missing optional bone fallback visible in the composition result", () => {
+        const service = new SincroVrmPoseComposerService();
         const profile = {
             ...COMPLETE_PROFILE,
             optionalBones: {
@@ -225,7 +225,7 @@ describe("SincroVrmPoseComposerDryRunService", () => {
     });
 
     it("uses previous available final pose only for angular velocity clamp", () => {
-        const service = new SincroVrmPoseComposerDryRunService();
+        const service = new SincroVrmPoseComposerService();
         service.compose({
             frame: createActiveFrame(0),
             profile: COMPLETE_PROFILE,
@@ -248,7 +248,7 @@ describe("SincroVrmPoseComposerDryRunService", () => {
     });
 
     it("does not update previous final pose on invalid input", () => {
-        const service = new SincroVrmPoseComposerDryRunService();
+        const service = new SincroVrmPoseComposerService();
         service.compose({
             frame: createActiveFrame(0),
             profile: COMPLETE_PROFILE,

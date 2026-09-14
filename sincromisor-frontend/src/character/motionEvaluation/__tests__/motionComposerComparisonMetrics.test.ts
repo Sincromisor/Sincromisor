@@ -1,7 +1,7 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import { describe, expect, it } from "vitest";
 import { NEUTRAL_POSE_FRAME } from "../../retargeting/sincroPoseRetargetTypes";
-import type { SincroVrmPoseComposerDryRunResult } from "../../runtime/sincroVrmPoseComposerDryRun";
+import type { SincroVrmPoseComposerResult } from "../../runtime/sincroVrmPoseComposer";
 import type { VrmPoseQuaternion } from "../../vrmPose/vrmPoseTypes";
 import type { SincroMotionDebugFrame } from "../motionDebugLogSchema";
 import {
@@ -33,7 +33,7 @@ function createComposerDryRun(options?: {
     angularVelocityBones?: VRMHumanBoneName[];
     ownedBoneWarnings?: string[];
     suppressedLayerCount?: number;
-}): SincroVrmPoseComposerDryRunResult {
+}): SincroVrmPoseComposerResult {
     return {
         status: "available",
         result: {
@@ -91,11 +91,11 @@ function createRuntimeSnapshot(frame: typeof NEUTRAL_POSE_FRAME): unknown {
     };
 }
 
-function createDryRunResultSnapshot(dryRun: SincroVrmPoseComposerDryRunResult): unknown {
+function createDryRunResultSnapshot(dryRun: SincroVrmPoseComposerResult): unknown {
     return structuredClone(dryRun);
 }
 
-function createLegacyFinalPoseSnapshot(dryRun: SincroVrmPoseComposerDryRunResult): unknown {
+function createLegacyFinalPoseSnapshot(dryRun: SincroVrmPoseComposerResult): unknown {
     if (dryRun.result === undefined) {
         throw new Error("Test dry-run result should be available.");
     }

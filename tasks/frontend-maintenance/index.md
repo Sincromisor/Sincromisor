@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 23 件）
+## タスク一覧（自動生成 / 全 24 件）
 
-### done（完了） — 23 件
+### done（完了） — 24 件
 
 | タスク                                                                                                                     | タイトル                                         | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -25,6 +25,7 @@
 | [task-260914172950-react-header-title](./task-260914172950-react-header-title/task.md)                                     | ヘッダーの題名をReactの設定購読へ統一する        | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172950-remove-unused-torso-writer](./task-260914172950-remove-unused-torso-writer/task.md)                     | 未使用の上半身直接制御を削除して腰の安定化を残す | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172950-share-vrm-frame-render](./task-260914172950-share-vrm-frame-render/task.md)                             | 通常・XR・単発描画のフレーム処理を集約する       | ✅ PASS | —                                                                                                                                                             |
+| [task-260914172951-rename-production-pose-composer](./task-260914172951-rename-production-pose-composer/task.md)           | 本番の姿勢合成サービスの名前と説明を整理する     | ✅ PASS | `task-260914172950-extract-normalized-pose-writer`                                                                                                            |
 | [task-260914172952-share-skipped-gesture-notification](./task-260914172952-share-skipped-gesture-notification/task.md)     | 追跡のジェスチャー省略通知を共通化する           | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172952-share-tracker-state-callbacks](./task-260914172952-share-tracker-state-callbacks/task.md)               | 追跡経路の共通状態更新コールバックをまとめる     | ✅ PASS | `task-260914172952-share-skipped-gesture-notification`                                                                                                        |
 | [task-260914172952-split-avatar-profile-measurement](./task-260914172952-split-avatar-profile-measurement/task.md)         | アバタープロファイルの計測と値の組み立てを分ける | ✅ PASS | `task-260914172952-split-avatar-profile-schema`                                                                                                               |

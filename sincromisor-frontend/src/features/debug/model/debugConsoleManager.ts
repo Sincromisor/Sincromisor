@@ -7,7 +7,7 @@ import type {
     SincroMotionComposerDryRunSummary,
     SincroMotionObserveOnlySummary,
 } from "../../../character/runtime/sincroMotionObserveOnlyPipeline";
-import type { SincroVrmPoseComposerDryRunResult } from "../../../character/runtime/sincroVrmPoseComposerDryRun";
+import type { SincroVrmPoseComposerResult } from "../../../character/runtime/sincroVrmPoseComposer";
 import type { SincroFaceMotionSnapshot } from "../../gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroTrackerWorkerStats } from "../../gaze/trackingRuntime/sincroTrackerWorkerTypes";
@@ -294,7 +294,8 @@ export class DebugConsoleManager {
         this.sincroMotionControls.updateSincroComposerDryRunSummary(summary);
     }
 
-    updateSincroComposerDryRunResult(result: SincroVrmPoseComposerDryRunResult): void {
+    /** 本番の姿勢合成・適用結果を診断へ渡す。記録用の composerDryRun キーと対応する入口。 */
+    updateSincroComposerDryRunResult(result: SincroVrmPoseComposerResult): void {
         this.sincroMotionControls.updateSincroComposerDryRunResult(result);
     }
 

@@ -24,9 +24,9 @@ export type SincroVrmPoseComposerSemanticFingerInput = {
 };
 
 /**
- * finger previous hold だけを composer dry-run service が frame 間で保持する state。
+ * 合成サービスがフレーム間で指を短時間保持するための状態。
  *
- * profile / rollback flag / VRM lifecycle の切替時は `SincroVrmPoseComposerDryRunService.reset()` で破棄する。
+ * VRM初期化と切り戻しフラグの変更時は `SincroVrmPoseComposerService.reset()` で破棄する。
  * semantic preset は前回 state を参照せず、Hand 欠損時にも previous を layer として昇格しない。
  */
 export type SincroVrmPoseComposerSemanticFingerState = {
@@ -47,7 +47,7 @@ export type SincroVrmPoseComposerSemanticFingerLayerResult = {
 };
 
 /**
- * production dry-run 用の semantic pose / finger curl layer を保存済み snapshot だけから作る。
+ * 本番の最終姿勢へ合成する意味に基づく動作・指の層を保存済みスナップショットだけから作る。
  *
  * 入力は parsed 可能な `MotionIntentState`、低次元 Hand snapshot、完成版 `AvatarMotionProfile` に限定する。
  * Gesture Recognizer raw result、MediaPipe raw landmark、VRM Object3D、raw bone node は受け取らないため、

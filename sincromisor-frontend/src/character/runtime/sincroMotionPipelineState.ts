@@ -1,5 +1,5 @@
 /**
- * 本番 sincro runtime が observe-only / dry-run 段階の motion pipeline 値を一箇所で保持する。
+ * 本番の追跡・状態推定と、VRMへ適用する姿勢合成の現在値を一箇所で保持する。
  *
  * 入力境界は Face / Pose / Hand tracker が返した正規化済み snapshot と、既存の
  * reliability / canonical / temporal / intent / composer の plain object contract に限定する。
@@ -29,7 +29,7 @@ import type { MotionIntentState } from "../motionIntent/motionIntentState";
 import { cloneMotionIntentState } from "../motionIntent/motionIntentState";
 import type { ReliabilityMap } from "../reliability/reliabilityMap";
 import type { TemporalUpperBodyState } from "../temporal/temporalUpperBodyState";
-import type { SincroVrmPoseComposerDryRunResult } from "./sincroVrmPoseComposerDryRun";
+import type { SincroVrmPoseComposerResult } from "./sincroVrmPoseComposer";
 
 /**
  * Tracker から本番 motion pipeline へ入る正規化済み入力 snapshot。
@@ -49,8 +49,8 @@ export type SincroMotionPipelineInputSnapshot = {
  * 本番 sincro runtime の低次元 motion pipeline 現在値。
  *
  * `face` / `pose` / `hand` は tracker 入力、`reliability` / `canonical` / `temporal` / `intent`
- * は motion-debug で整備済みの JSON 保存可能 contract、`composerDryRun` は production dry-run の
- * status 付き result contract を表す。`status !== "available"` では result を持たないため、
+ * は motion-debug で整備済みの JSON 保存可能 contract、`composerDryRun` は本番姿勢合成の
+ * 状態付き結果を表す。保存・診断との互換性のため格納キーは維持する。`status !== "available"` では result を持たないため、
  * Debug Console や recorder は stale final pose を現在 frame として扱わない。`updatedAtMs` は caller
  * が選ぶ runtime clock の時刻で、module 内では `performance.now()` を読まない。
  */
@@ -59,7 +59,7 @@ export type SincroMotionPipelineState = SincroMotionPipelineInputSnapshot & {
     canonical?: CanonicalUpperBodyState;
     temporal?: TemporalUpperBodyState;
     intent?: MotionIntentState;
-    composerDryRun?: SincroVrmPoseComposerDryRunResult;
+    composerDryRun?: SincroVrmPoseComposerResult;
     updatedAtMs: number;
 };
 
@@ -82,7 +82,7 @@ export function createDefaultSincroMotionPipelineState(): SincroMotionPipelineSt
  * 本番 sincro motion pipeline state を後続変更から独立した snapshot として複製する。
  *
  * 既存 clone helper がある Face / Pose / Hand / MotionIntent はそれを使い、helper が無い
- * reliability / canonical / temporal / composer dry-run は structured clone で配列と tuple の
+ * reliability / canonical / temporal / 姿勢合成結果は structured clone で配列と tuple の
  * 参照を切る。入力値の shape 検証、schemaVersion 変換、VRM 適用、CharacterBehaviorSnapshot への
  * 合流は行わない。clone 不能な runtime object が contract 外から渡った場合は例外が送出される。
  */
