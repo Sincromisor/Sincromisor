@@ -1,12 +1,11 @@
+import type { SincroVRMRoots } from "../../character/scene/sincroVrmInitializer";
 import { SincroVRMInitializer } from "../../character/scene/sincroVrmInitializer";
-import { frontendLogger } from "../../shared/logging/appLogger";
 
-// ページ設定を初期化へ渡し、OBS自動開始より前に確定する。任意のURL入力は既知の2値だけ許可する。
-window.addEventListener("load", () => {
+/** Reactの配置完了からページ固有の初期化を行う。失敗は呼び出し元の共通入口へ返す。 */
+export function initializeSimpleVrmPage(roots: SincroVRMRoots): void {
     const talkMode = new URLSearchParams(window.location.search).get("talkMode");
-    void SincroVRMInitializer.bootstrap(
+    SincroVRMInitializer.bootstrap(
+        roots,
         talkMode === "chat" || talkMode === "sincro" ? { talkMode } : {},
-    ).catch((error) => {
-        frontendLogger.error("Failed to bootstrap simple-vrm page.", { error });
-    });
-});
+    );
+}

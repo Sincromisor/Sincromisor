@@ -1,4 +1,5 @@
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect, useRef } from "react";
+import type { SincroVRMRoots } from "../../character/scene/sincroVrmInitializer";
 import { SincroChatView } from "../../features/conversation/chat/react/sincroChatView";
 import { SincroTelopView } from "../../features/conversation/telop/react/sincroTelopView";
 import { DebugConsole } from "../../features/debug/react/debugConsole";
@@ -14,11 +15,12 @@ import { RightToolFrame } from "./react/overlay/rightToolFrame";
 
 type SincroPageAppShellProps = {
     controlPanel: ReactElement;
+    onCharacterMounted: (roots: SincroVRMRoots) => void;
 };
 
 // modern 系ページで共通利用する app shell。
 // React が UI 骨格と island 間の配置を一括で所有しつつ、既存 TS が参照する DOM id は維持する。
-export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
+export function SincroPageAppShell({ controlPanel, onCharacterMounted }: SincroPageAppShellProps) {
     const rightToolState = useRightToolPanelState();
 
     return (
@@ -28,7 +30,7 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
                 <SincroShellHeader />
                 <SincroVideoPlaceholders />
                 <SincroChatRegion />
-                <SincroCharacterRegion />
+                <SincroCharacterRegion onMounted={onCharacterMounted} />
                 <SincroBackgroundRegion />
                 <SincroFooterRegion />
                 <SincroRightToolFrames
@@ -88,12 +90,27 @@ function SincroChatRegion() {
     );
 }
 
-function SincroCharacterRegion() {
+// 同じコミットで全パネルの配置が終わった後、2つの参照をページ初期化へ渡す。
+function SincroCharacterRegion({ onMounted }: { onMounted: (roots: SincroVRMRoots) => void }) {
+    const canvasRoot = useRef<HTMLDivElement>(null);
+    const characterControlLayer = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (canvasRoot.current && characterControlLayer.current) {
+            onMounted({
+                canvasRoot: canvasRoot.current,
+                characterControlLayer: characterControlLayer.current,
+            });
+        }
+    }, [onMounted]);
     return (
         <div id="sincroCharacterContainer">
-            <div id="sincroCharacterBox">
+            <div id="sincroCharacterBox" ref={canvasRoot}>
                 <canvas id="sincroCharacterBox__canvas"></canvas>
-                <div id="sincroCharacterControlLayer" aria-hidden="true"></div>
+                <div
+                    id="sincroCharacterControlLayer"
+                    ref={characterControlLayer}
+                    aria-hidden="true"
+                ></div>
             </div>
         </div>
     );

@@ -79,10 +79,18 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
                 });
                 app?.start();
             });
-            if (page.startsWith("simple")) await import("../../../pages/simpleVrm/mainVrm");
-            else if (page === "360") await import("../../../pages/vrm360/mainVrm360");
-            else await import("../../../pages/lookingGlassVrm/mainVrmLookingGlass");
-            win.dispatchEvent(new Event("load"));
+            const roots = {
+                canvasRoot: Object.create(null),
+                characterControlLayer: Object.create(null),
+            };
+            if (page.startsWith("simple"))
+                (await import("../../../pages/simpleVrm/mainVrm")).initializeSimpleVrmPage(roots);
+            else if (page === "360")
+                (await import("../../../pages/vrm360/mainVrm360")).initializeVrm360Page(roots);
+            else
+                (
+                    await import("../../../pages/lookingGlassVrm/mainVrmLookingGlass")
+                ).initializeLookingGlassVrmPage(roots);
             await vi.waitFor(() => expect(SincroAppController.getCurrent()).toBeDefined());
             const app = SincroAppController.getCurrent();
             expect(coreStart).toHaveBeenCalledTimes(obs ? 1 : 0);
@@ -121,19 +129,16 @@ it("初期化失敗を入口へ報告し、OBSも手動も部分的に開始し�
     });
     const { DialogManager } = await import("../../../features/dialog/model/dialogManager");
     const { SincroAppController } = await import("../../../app/controller");
-    const { frontendLogger } = await import("../../../shared/logging/appLogger");
     vi.spyOn(DialogManager.prototype, "updateCharacterStatus").mockImplementation(() => {
         throw new Error("initialization failed");
     });
-    const error = vi.spyOn(frontendLogger, "error").mockImplementation(() => {});
-    await import("../../../pages/simpleVrm/mainVrm");
-    window.dispatchEvent(new Event("load"));
-    await vi.waitFor(() =>
-        expect(error).toHaveBeenCalledWith(
-            "Failed to bootstrap simple-vrm page.",
-            expect.anything(),
-        ),
-    );
+    const { initializeSimpleVrmPage } = await import("../../../pages/simpleVrm/mainVrm");
+    expect(() =>
+        initializeSimpleVrmPage({
+            canvasRoot: Object.create(null),
+            characterControlLayer: Object.create(null),
+        }),
+    ).toThrow("initialization failed");
     expect(() => SincroAppController.getCurrent()?.start()).toThrow("VRM page is not initialized.");
     expect(coreStart).not.toHaveBeenCalled();
     expect(sceneStart).not.toHaveBeenCalled();
