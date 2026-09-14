@@ -9,6 +9,7 @@ import {
     hideRightToolSettingsPanel,
     useRightToolPanelState,
 } from "../react/useRightToolPanelState";
+import { useSincroAppControllerSettingsState } from "../react/useSincroAppControllerSettingsState";
 import { RightToolFrame } from "./react/overlay/rightToolFrame";
 
 type SincroPageAppShellProps = {
@@ -40,7 +41,9 @@ export function SincroPageAppShell({ controlPanel }: SincroPageAppShellProps) {
     );
 }
 
+// 題名も設定パネルと同じ購読で描画し、有効な制御処理の差し替えに追従する。
 function SincroShellHeader() {
+    const { settings } = useSincroAppControllerSettingsState();
     return (
         <div id="sincroHeaderContainer">
             <div id="sincroHeaderBox">
@@ -53,7 +56,7 @@ function SincroShellHeader() {
                         />
                     </div>
                     <div id="sincroHeaderBox__textGroup">
-                        <div id="sincroHeaderBox__text">Sincromisor</div>
+                        <div id="sincroHeaderBox__text">{settings.titleText}</div>
                     </div>
                 </div>
                 <div id="sincroHeaderBox__toolChrome">

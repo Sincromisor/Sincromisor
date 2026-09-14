@@ -1,5 +1,4 @@
 import type { DialogBackedSincroAppSettings } from "../../../app/settings/sincroAppSettingsDefaults";
-import { HeaderTitleDomAdapter } from "../../../app/shell/headerTitleDomAdapter";
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import { DialogEventHub } from "./dialogEventHub";
 import { DialogMediaDeviceUiController } from "./dialogMediaDeviceUiController";
@@ -27,7 +26,6 @@ export class DialogManager {
     private static instance: DialogManager;
     private readonly stateStore = new DialogStateStore();
     private readonly eventHub = new DialogEventHub();
-    private readonly headerDom = new HeaderTitleDomAdapter();
     private readonly settingsPolicy = new DialogSettingsPolicy();
     private readonly settingsChangeBatcher = new DialogSettingsChangeBatcher(() => {
         this.eventHub.emitSettingsChanged();
@@ -62,10 +60,9 @@ export class DialogManager {
     }
 
     private constructor() {
-        // store 初期化 -> DOMイベント配線 -> ヘッダー同期 -> dialog 表示 -> 前回VRM復元 の順で起動する。
+        // 設定初期化 -> 機器購読 -> ダイアログ表示 -> 前回VRM復元 の順で起動する。
         this.initializeDialogStateDefaults();
         this.mediaDeviceUiController.start();
-        this.updateTitleText();
         this.showDialog();
         this.loadVrmFile()
             .then(() => {
@@ -114,7 +111,7 @@ export class DialogManager {
     }
 
     /**
-     * 操作可能な設定をまとめて反映する。題名と機器選択の表示を更新してから一度通知する。
+     * 操作可能な設定をまとめて反映する。空の題名を補正し、機器選択の表示状態を更新してから一度通知する。
      * 数値入力の正規化と会話モードの動作反映はアプリの設定適用処理が担う。
      */
     updateSettings(partial: Partial<DialogBackedSincroAppSettings>): void {
@@ -127,7 +124,6 @@ export class DialogManager {
                 "titleText",
                 applied.titleText === "" ? "Sincromisor" : applied.titleText,
             );
-            this.updateTitleText();
         }
         if (
             "audioInputDeviceId" in applied ||
@@ -169,11 +165,6 @@ export class DialogManager {
             this.stateStore,
             this.mediaDeviceUiController.buildUiContext(),
         );
-    }
-
-    /** 現在の題名をダイアログ外のヘッダーへ同期する。 */
-    updateTitleText(): void {
-        this.headerDom.setHeaderTitle(this.getSetting("titleText"));
     }
 
     /** キャラクターの利用可否に伴う設定と操作可否を更新し、一度通知する。 */
