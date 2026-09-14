@@ -1,11 +1,17 @@
 import type { SincroAppEvent, SincroAppLifecycleState } from "../controller/sincroAppTypes";
 
-/** 診断情報のICE・シグナリング状態を起動状態より優先し、UI向け接続状態へ変換する。 */
+/** 停止中・停止済みの操作状態を優先し、残った診断値で接続中へ戻さずUI向け接続状態へ変換する。 */
 export function buildSincroAppConnectionStateEvent(params: {
     lifecycleState: SincroAppLifecycleState;
     iceConnectionState: string;
     signalingState: string;
 }): SincroAppEvent {
+    if (params.lifecycleState === "stopping") {
+        return { type: "connection_state", value: "stopping" };
+    }
+    if (params.lifecycleState === "stopped") {
+        return { type: "connection_state", value: "stopped" };
+    }
     const ice = params.iceConnectionState.toLowerCase();
     const signaling = params.signalingState.toLowerCase();
 
@@ -20,12 +26,6 @@ export function buildSincroAppConnectionStateEvent(params: {
     }
     if (params.lifecycleState === "starting") {
         return { type: "connection_state", value: "starting" };
-    }
-    if (params.lifecycleState === "stopping") {
-        return { type: "connection_state", value: "stopping" };
-    }
-    if (params.lifecycleState === "stopped") {
-        return { type: "connection_state", value: "stopped" };
     }
     if (params.lifecycleState === "running") {
         return {

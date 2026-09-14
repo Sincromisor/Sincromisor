@@ -151,6 +151,7 @@ export class RTCTalkClient {
         return flight;
     }
 
+    /** 接続交渉と候補書き出しを完了し、待機中に終了した世代の結果は通知しない。 */
     private async performNegotiation(
         generation: number,
         identity: RtcOfferIdentity,
@@ -175,6 +176,7 @@ export class RTCTalkClient {
             const candidateFlush = this.flushCandidates(identity.revision);
             this.pendingIdentity = undefined;
             await candidateFlush;
+            if (!this.isCurrentGeneration(generation)) return;
             this.diagnostics.resetFailureCapture();
             this.rtcHealthCallback();
         } catch (error) {
@@ -201,6 +203,7 @@ export class RTCTalkClient {
         await this.candidateSendFlight;
     }
 
+    /** 現世代の候補をAnswer前は蓄積し、確定後は同じ送信列へ追加する。 */
     private onIceCandidate(generation: number, candidate: RTCIceCandidateInit | null): void {
         if (!this.isCurrentGeneration(generation)) {
             return;
@@ -223,7 +226,13 @@ export class RTCTalkClient {
         }
         this.candidateSendFlight = this.candidateSendFlight
             .then(() => this.sendCandidate(normalized, sessionId, revision, generation))
-            .catch((error) => this.handleGenerationFailure(error));
+            .catch((error) => {
+                // 中断された旧世代のHTTP失敗で、新接続や停止後の表示を変更しない。
+                if (this.isCurrentGeneration(generation)) {
+                    return this.handleGenerationFailure(error);
+                }
+                return undefined;
+            });
     }
 
     private async sendCandidate(
@@ -332,7 +341,10 @@ export class RTCTalkClient {
         await this.runInitialNegotiation(previousSessionId);
     }
 
+    /** 再試行できない世代を終了し、猶予・診断タイマーとイベント購読を止めて失敗を通知する。 */
     private terminalFailure(error: unknown): void {
+        this.disconnectedGrace.cancel();
+        this.diagnostics.stop();
         this.pendingIdentity = undefined;
         this.negotiationState.close();
         this.generationAbortController.abort();
@@ -344,6 +356,7 @@ export class RTCTalkClient {
         frontendLogger.error("RTC generation failed terminally.", { error });
     }
 
+    /** 接続世代の中断通知を全ブラウザー購読へ渡し、停止・置換時に一括解除する。 */
     private createBundle(): RtcPeerConnectionBundle {
         const generation = this.bundleGeneration;
         return createRtcPeerConnectionBundle({
@@ -354,6 +367,7 @@ export class RTCTalkClient {
             onTextMessage: (msg) => this.textChannelCallback(msg),
             sendIceCandidate: (candidate) => this.onIceCandidate(generation, candidate),
             sincroConfig: this.sincroConfig,
+            signal: this.generationAbortController.signal,
         });
     }
 

@@ -4,17 +4,23 @@ import type { DebugConsoleManager } from "../debug/model/debugConsoleManager";
 type RtcRemoteTrackParams = {
     logger: Pick<DebugConsoleManager, "addRtcEventLog" | "setRemoteAudioTrack">;
     peerConnection: RTCPeerConnection;
+    signal: AbortSignal;
 };
 
+/** 現接続の受信トラックを再生要素へ接続し、世代終了時は購読を解除する。 */
 export function setupRtcRemoteTrackHandlers(params: RtcRemoteTrackParams): void {
-    params.peerConnection.addEventListener("track", (evt: RTCTrackEvent) => {
-        if (evt.track.kind === "video") {
-            frontendLogger.warn("Unexpected remote video track received.");
-            attachRemoteVideoTrack(evt);
-            return;
-        }
-        attachRemoteAudioTrack(evt, params.logger);
-    });
+    params.peerConnection.addEventListener(
+        "track",
+        (evt: RTCTrackEvent) => {
+            if (evt.track.kind === "video") {
+                frontendLogger.warn("Unexpected remote video track received.");
+                attachRemoteVideoTrack(evt);
+                return;
+            }
+            attachRemoteAudioTrack(evt, params.logger);
+        },
+        { signal: params.signal },
+    );
 }
 
 function attachRemoteVideoTrack(evt: RTCTrackEvent): void {

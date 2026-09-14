@@ -4,6 +4,7 @@ import type { OfferResponse } from "../rtcBoundarySchema";
 
 type OwnerCallbacks = {
     audioTrack: MediaStreamTrack;
+    signal: AbortSignal;
     onIceConnectionStateChange: (state: RTCIceConnectionState) => void;
     sendIceCandidate: (candidate: RTCIceCandidateInit | null) => void;
 };
@@ -291,6 +292,8 @@ describe("RTCTalkClient owner state machine", () => {
                 expect(mocks.negotiation).toHaveBeenCalledTimes(replacementCallIndex + 1),
             );
 
+            expect(mocks.callbacks[0]?.signal.aborted).toBe(true);
+            expect(mocks.callbacks[1]?.signal.aborted).toBe(false);
             expect(mocks.closeBundle.mock.calls[0]?.[0].stopSenderTracks).toBe(false);
             expect(mocks.createBundle.mock.calls[1]?.[0].audioTrack).toBe(audioTrack);
             expect(mocks.bundles[1]).not.toBe(mocks.bundles[0]);
@@ -393,6 +396,7 @@ describe("RTCTalkClient owner state machine", () => {
         await client.replaceAudioTrack(replacementTrack);
         expect(mocks.replaceAudioTrack.mock.calls[0]?.[0].audioTrack).toBe(replacementTrack);
         client.stop();
+        expect(mocks.callbacks[0]?.signal.aborted).toBe(true);
         mocks.callbacks[0]?.sendIceCandidate({ candidate: "late-candidate" });
         mocks.callbacks[0]?.onIceConnectionStateChange("failed");
         await settle();
@@ -400,6 +404,53 @@ describe("RTCTalkClient owner state machine", () => {
         expect(mocks.closeBundle).toHaveBeenCalledTimes(1);
         expect(mocks.candidateSend).not.toHaveBeenCalled();
         expect(mocks.negotiation).toHaveBeenCalledTimes(1);
+    });
+
+    it("候補送信の致命的失敗時に切断猶予タイマーを解除する", async () => {
+        vi.useFakeTimers();
+        mocks.negotiation.mockResolvedValue(answer("session-1", 1));
+        mocks.candidateSend.mockRejectedValue(new Error("terminal"));
+        const client = createClient();
+        await client.start();
+        mocks.callbacks[0]?.onIceConnectionStateChange("disconnected");
+        expect(vi.getTimerCount()).toBe(1);
+        mocks.callbacks[0]?.sendIceCandidate({ candidate: "candidate-1" });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(mocks.closeBundle).toHaveBeenCalledOnce();
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it("停止後の候補送信失敗を無視する", async () => {
+        const candidate = deferred<void>();
+        mocks.negotiation.mockResolvedValue(answer("session-1", 1));
+        mocks.candidateSend.mockReturnValue(candidate.promise);
+        const client = createClient();
+        await client.start();
+        mocks.callbacks[0]?.sendIceCandidate({ candidate: "candidate-1" });
+        await settle();
+        client.stop();
+        mocks.healthMessages.length = 0;
+        candidate.reject(new Error("aborted"));
+        await settle();
+        expect(mocks.closeBundle).toHaveBeenCalledTimes(1);
+        expect(mocks.systemErrors).toHaveLength(0);
+        expect(mocks.healthMessages).toHaveLength(0);
+    });
+
+    it("停止後の候補書き出し完了で接続復帰を通知しない", async () => {
+        const initial = deferred<OfferResponse>();
+        const candidate = deferred<void>();
+        mocks.negotiation.mockReturnValue(initial.promise);
+        mocks.candidateSend.mockReturnValue(candidate.promise);
+        const client = createClient();
+        const start = client.start();
+        mocks.callbacks[0]?.sendIceCandidate({ candidate: "candidate-1" });
+        initial.resolve(answer("session-1", 1));
+        await vi.waitFor(() => expect(mocks.candidateSend).toHaveBeenCalledOnce());
+        client.stop();
+        candidate.resolve();
+        await start;
+        expect(mocks.healthMessages).toHaveLength(0);
     });
 
     it("passes the latest replacement track into a session-loss bundle", async () => {

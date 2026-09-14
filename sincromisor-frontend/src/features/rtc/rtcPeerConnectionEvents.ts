@@ -13,28 +13,37 @@ type RtcPeerConnectionEventParams = {
     >;
     onIceConnectionStateChange: (state: RTCIceConnectionState) => void;
     peerConnection: RTCPeerConnection;
+    signal: AbortSignal;
     sendIceCandidate: (candidate: RTCIceCandidateInit | null) => void;
 };
 
 /**
- * browser ICE/signaling eventを1 generation分のowner callbackとdiagnostic logへ接続する。
- * listener解除はPeerConnection closeに委ね、ownerはgeneration guardで旧callbackを無効化する。
+ * ICE・シグナリング通知を接続管理と診断へ渡す。
+ * 接続世代の中断時に全購読を解除し、旧接続から診断状態を書き戻さない。
  */
 export function setupRtcPeerConnectionEvents(params: RtcPeerConnectionEventParams): void {
-    params.peerConnection.addEventListener("icecandidate", (event) => {
-        // event.candidate === null は end-of-candidates。サーバー側にも明示する。
-        const candidate = event.candidate ? event.candidate.toJSON() : null;
-        params.sendIceCandidate(candidate);
-        if (candidate) {
-            params.logger.addRtcEventLog(`new ICE candidate: ${candidate.sdpMid ?? "audio"}`);
-            return;
-        }
-        params.logger.addRtcEventLog("ICE candidate gathering completed");
-    });
-    params.peerConnection.addEventListener("icecandidateerror", (event) => {
-        // STUN/TURN への疎通失敗をブラウザが検知した場合の詳細ログ。
-        params.logger.addRtcEventLog(formatIceCandidateError(event));
-    });
+    params.peerConnection.addEventListener(
+        "icecandidate",
+        (event) => {
+            // event.candidate === null は end-of-candidates。サーバー側にも明示する。
+            const candidate = event.candidate ? event.candidate.toJSON() : null;
+            params.sendIceCandidate(candidate);
+            if (candidate) {
+                params.logger.addRtcEventLog(`new ICE candidate: ${candidate.sdpMid ?? "audio"}`);
+                return;
+            }
+            params.logger.addRtcEventLog("ICE candidate gathering completed");
+        },
+        { signal: params.signal },
+    );
+    params.peerConnection.addEventListener(
+        "icecandidateerror",
+        (event) => {
+            // STUN/TURN への疎通失敗をブラウザが検知した場合の詳細ログ。
+            params.logger.addRtcEventLog(formatIceCandidateError(event));
+        },
+        { signal: params.signal },
+    );
 
     setupIceGatheringStateLog(params);
     setupIceConnectionStateLog(params);
@@ -56,7 +65,7 @@ function setupIceGatheringStateLog(params: RtcPeerConnectionEventParams): void {
         () => {
             params.logger.updateIceGatheringState(params.peerConnection.iceGatheringState);
         },
-        false,
+        { signal: params.signal },
     );
     params.logger.newIceGatheringState(params.peerConnection.iceGatheringState);
 }
@@ -69,7 +78,7 @@ function setupIceConnectionStateLog(params: RtcPeerConnectionEventParams): void 
             params.logger.updateIceConnectionState(state);
             params.onIceConnectionStateChange(state);
         },
-        false,
+        { signal: params.signal },
     );
     params.logger.newIceConnectionState(params.peerConnection.iceConnectionState);
 }
@@ -80,7 +89,7 @@ function setupSignalingStateLog(params: RtcPeerConnectionEventParams): void {
         () => {
             params.logger.updateSignalingState(params.peerConnection.signalingState);
         },
-        false,
+        { signal: params.signal },
     );
     params.logger.newSignalingState(params.peerConnection.signalingState);
 }
