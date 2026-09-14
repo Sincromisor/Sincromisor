@@ -25,5 +25,5 @@ export type SincroAppPopSubscriptionFacade = Pick<
 // dialog 購読は既に facade 境界を持っているため、それを再利用する。
 export type SincroAppDialogSubscriptionFacade = Pick<
     SincroAppDialogFacade,
-    "subscribeSettingsChange" | "subscribeDialogUiState" | "subscribeVrmUiState"
+    "subscribeDialogUiState" | "subscribeVrmUiState"
 >;

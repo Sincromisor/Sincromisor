@@ -1,15 +1,11 @@
 import type { LookingGlassRuntimeConfig } from "../../character/lookingGlass/lookingGlassRuntimeConfig";
 import type { ChatMessageViewRecord } from "../../features/conversation/chat/model/chatMessageService";
 import type { TelopTextSegment } from "../../features/conversation/talk/talkManager";
-import type {
-    DialogSettingsUiHints,
-    DialogSettingsUiState,
-    DialogUiState,
-    DialogVrmUiState,
-} from "../../features/dialog/model/dialogManager";
+import type { DialogUiState, DialogVrmUiState } from "../../features/dialog/model/dialogManager";
 import type { DialogPopEvent } from "../../features/dialog/model/popMessageService";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { ChatMessage, TelopChannelMessage } from "../../features/rtc/rtcMessage";
+import type { AppSettingsUiHints, AppSettingsUiState } from "../settings/sincroAppSettingsPolicy";
 
 // SincroAppController を境界にした UI 向けの共通型定義。
 // React UI / initializer / helper 群で同じ契約を共有するために Controller 本体から分離している。
@@ -50,9 +46,9 @@ export type SincroAppSettingsSnapshot = {
     lgFovyDeg: number;
 };
 
-// DialogManager 側の設定 UI 状態/ヒント型を AppController 向け名称で再公開する。
-export type SincroAppSettingsUiState = DialogSettingsUiState;
-export type SincroAppSettingsUiHints = DialogSettingsUiHints;
+// 設定モデルの操作可否と案内をアプリ窓口でも共有する。
+export type SincroAppSettingsUiState = AppSettingsUiState;
+export type SincroAppSettingsUiHints = AppSettingsUiHints;
 export type SincroAppDialogUiState = DialogUiState;
 export type SincroAppDialogVrmUiState = DialogVrmUiState;
 export type SincroAppDialogPopMessage = DialogPopEvent;

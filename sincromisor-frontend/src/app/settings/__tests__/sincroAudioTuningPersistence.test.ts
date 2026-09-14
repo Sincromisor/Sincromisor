@@ -28,7 +28,7 @@ it("実音声コールバックでプリセットと手動調整を復元し、�
             }),
         );
         vi.stubGlobal("document", { querySelector: () => ({}) });
-        const { DialogManager } = await import("../../../features/dialog/model/dialogManager");
+        const { SincroAppSettingsModel } = await import("../../settings/sincroAppSettingsModel");
         const { DebugConsoleManager } = await import(
             "../../../features/debug/model/debugConsoleManager"
         );
@@ -43,7 +43,7 @@ it("実音声コールバックでプリセットと手動調整を復元し、�
         );
         const { SincroAppSettingsPersistence } = await import("../sincroAppSettingsPersistence");
         const mediaRead = vi.spyOn(UserMediaManager.prototype, "getAudioFilterConfig");
-        const dialog = DialogManager.getManager();
+        const dialog = SincroAppSettingsModel.getShared();
         const debug = DebugConsoleManager.getManager();
         const audio = new SincroAudioInputController(
             dialog,

@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { applySincroAppSettingsPartial } from "../../../../app/settings/sincroAppSettingsApply";
+import { SincroAppSettingsModel } from "../../../../app/settings/sincroAppSettingsModel";
 import { buildSincroAppSettingsSnapshot } from "../../../../app/settings/sincroAppSettingsSnapshotBuilder";
 import { DialogManager } from "../dialogManager";
 
@@ -33,19 +34,20 @@ vi.mock("../../../media/devices/sincroMediaDeviceService", () => ({
 
 it("起動前後で設定を共有し、操作制限・補正・機器表示と一括通知を維持する", () => {
     vi.stubGlobal("window", new EventTarget());
-    const dialog = DialogManager.getManager();
+    const settings = SincroAppSettingsModel.getShared();
+    const dialog = DialogManager.getManager(settings);
     const snapshots: ReturnType<typeof buildSincroAppSettingsSnapshot>[] = [];
-    const unsubscribe = dialog.subscribeSettingsChange(() => {
-        snapshots.push(buildSincroAppSettingsSnapshot(dialog));
+    const unsubscribe = settings.subscribeSettingsChange(() => {
+        snapshots.push(buildSincroAppSettingsSnapshot(settings));
     });
 
     // 操作不可の項目だけを指定した更新では値も通知も変えない。
-    dialog.updateSettings({ enableCharacter: false, enableAutoMute: true });
-    expect(dialog.getSetting("enableCharacter")).toBe(true);
-    expect(dialog.getSetting("enableAutoMute")).toBe(false);
+    settings.updateSettings({ enableCharacter: false, enableAutoMute: true });
+    expect(settings.getSetting("enableCharacter")).toBe(true);
+    expect(settings.getSetting("enableAutoMute")).toBe(false);
     expect(snapshots).toHaveLength(0);
 
-    applySincroAppSettingsPartial(dialog, {
+    applySincroAppSettingsPartial(settings, {
         enableVadGate: true,
         enableNoiseSuppression: false,
         enableAutoMute: true,
@@ -70,11 +72,11 @@ it("起動前後で設定を共有し、操作制限・補正・機器表示と�
     });
     expect(effects.talkMode).toHaveBeenLastCalledWith("sincro");
     expect(dialog.getDialogUiState().startButtonDisabled).toBe(true);
-    expect(dialog.settingsUiHints().audioInputDeviceReason).toContain("見つからない");
+    expect(settings.settingsUiHints().audioInputDeviceReason).toContain("見つからない");
 
     // 起動前ダイアログを閉じても、開始後パネルは同じ適用処理とスナップショットを使う。
     dialog.closeDialog();
-    applySincroAppSettingsPartial(dialog, {
+    applySincroAppSettingsPartial(settings, {
         enableVadGate: false,
         enableNoiseSuppression: undefined,
         audioInputDeviceId: undefined,
@@ -82,7 +84,7 @@ it("起動前後で設定を共有し、操作制限・補正・機器表示と�
         characterMotionScale: -1,
     });
     expect(snapshots).toHaveLength(2);
-    expect(buildSincroAppSettingsSnapshot(dialog)).toMatchObject({
+    expect(buildSincroAppSettingsSnapshot(settings)).toMatchObject({
         enableVadGate: false,
         enableNoiseSuppression: false,
         audioInputDeviceId: undefined,
@@ -90,41 +92,42 @@ it("起動前後で設定を共有し、操作制限・補正・機器表示と�
         characterMotionScale: 0,
     });
     expect(dialog.getDialogUiState().startButtonDisabled).toBe(false);
-    expect(dialog.settingsUiHints().audioInputDeviceReason).toBeUndefined();
+    expect(settings.settingsUiHints().audioInputDeviceReason).toBeUndefined();
     dialog.showDialog();
-    expect(dialog.getSettings().enableVadGate).toBe(false);
+    expect(settings.getSettings().enableVadGate).toBe(false);
 
-    dialog.updateCharacterStatus(true);
-    dialog.updateSettings({ videoInputDeviceId: "missing", enableCharacterGaze: false });
+    settings.updateCharacterStatus(true);
+    settings.updateSettings({ videoInputDeviceId: "missing", enableCharacterGaze: false });
     expect(dialog.getDialogUiState().startButtonDisabled).toBe(false);
-    dialog.updateSettings({ enableCharacterGaze: true });
+    settings.updateSettings({ enableCharacterGaze: true });
     expect(dialog.getDialogUiState().startButtonDisabled).toBe(true);
 
-    const copy = dialog.getSettings();
+    const copy = settings.getSettings();
     copy.enableVadGate = true;
-    expect(dialog.getSetting("enableVadGate")).toBe(false);
+    expect(settings.getSetting("enableVadGate")).toBe(false);
     unsubscribe();
     const count = snapshots.length;
-    applySincroAppSettingsPartial(dialog, { lgNumViews: 32 });
-    expect(dialog.getSettings()).not.toHaveProperty("lgNumViews");
-    expect(buildSincroAppSettingsSnapshot(dialog).lgNumViews).toBe(32);
+    applySincroAppSettingsPartial(settings, { lgNumViews: 32 });
+    expect(settings.getSettings()).not.toHaveProperty("lgNumViews");
+    expect(buildSincroAppSettingsSnapshot(settings).lgNumViews).toBe(32);
     expect(snapshots).toHaveLength(count);
 });
 
 it("視線と自動ミュートを順序に依存せず確定し、通知時にも矛盾を残さない", () => {
     vi.stubGlobal("window", new EventTarget());
-    const dialog = DialogManager.getManager();
-    dialog.updateUserMediaAvailabilityStatus(true);
-    dialog.updateCharacterStatus(true);
-    dialog.updateSettings({ enableCharacterGaze: false, videoInputDeviceId: "missing" });
+    const settings = SincroAppSettingsModel.getShared();
+    const dialog = DialogManager.getManager(settings);
+    settings.updateUserMediaAvailabilityStatus(true);
+    settings.updateCharacterStatus(true);
+    settings.updateSettings({ enableCharacterGaze: false, videoInputDeviceId: "missing" });
     const read = () => ({
-        gaze: dialog.getSetting("enableCharacterGaze"),
-        mute: dialog.getSetting("enableAutoMute"),
-        disabled: dialog.settingsUiState().enableAutoMuteDisabled,
-        hint: dialog.settingsUiHints().enableAutoMuteReason,
+        gaze: settings.getSetting("enableCharacterGaze"),
+        mute: settings.getSetting("enableAutoMute"),
+        disabled: settings.settingsUiState().enableAutoMuteDisabled,
+        hint: settings.settingsUiHints().enableAutoMuteReason,
     });
     const notifications = vi.fn(read);
-    const unsubscribe = dialog.subscribeSettingsChange(notifications);
+    const unsubscribe = settings.subscribeSettingsChange(notifications);
     const stopUi = dialog.subscribeDialogUiState(() => {
         const state = read();
         expect(state.disabled).toBe(!state.gaze);
@@ -135,27 +138,41 @@ it("視線と自動ミュートを順序に依存せず確定し、通知時に�
         { enableAutoMute: true, enableCharacterGaze: true },
     ]) {
         notifications.mockClear();
-        dialog.updateSettings(patch);
+        settings.updateSettings(patch);
         expect(notifications).toHaveBeenCalledOnce();
         expect(read()).toEqual({ gaze: true, mute: true, disabled: false, hint: undefined });
-        dialog.updateSettings({ enableCharacterGaze: false, enableAutoMute: true });
+        settings.updateSettings({ enableCharacterGaze: false, enableAutoMute: true });
         expect(read()).toMatchObject({ gaze: false, mute: false, disabled: true });
         expect(read().hint).toContain("Gaze");
     }
-    dialog.updateSettings({ enableCharacterGaze: true });
+    settings.updateSettings({ enableCharacterGaze: true });
     expect(read()).toMatchObject({ gaze: true, mute: false, disabled: false });
     for (const unavailable of ["media", "page"]) {
         if (unavailable === "media") {
-            dialog.updateUserMediaAvailabilityStatus(false);
-            dialog.updateCharacterStatus(true);
+            settings.updateUserMediaAvailabilityStatus(false);
+            settings.updateCharacterStatus(true);
         } else {
-            dialog.updateCharacterStatus(false);
-            dialog.updateUserMediaAvailabilityStatus(true);
+            settings.updateCharacterStatus(false);
+            settings.updateUserMediaAvailabilityStatus(true);
         }
-        dialog.updateSettings({ enableAutoMute: true, enableCharacterGaze: true });
+        settings.updateSettings({ enableAutoMute: true, enableCharacterGaze: true });
         expect(read()).toMatchObject({ gaze: false, mute: false, disabled: true });
-        expect(dialog.settingsUiState().enableCharacterGazeDisabled).toBe(true);
+        expect(settings.settingsUiState().enableCharacterGazeDisabled).toBe(true);
     }
     unsubscribe();
     stopUi();
+});
+
+it("ダイアログを生成せず通常設定を適用し、復元と同値編集を区別する", () => {
+    const settings = new SincroAppSettingsModel();
+    const edited = vi.fn();
+    const unsubscribe = settings.subscribeSettingsEdit(edited);
+    settings.updateSettings({ titleText: "復元", characterMotionScale: 0.72 }, "restore");
+    expect(edited).not.toHaveBeenCalled();
+    settings.updateSettings({ titleText: "復元", characterMotionScale: Number.POSITIVE_INFINITY });
+    expect(edited).toHaveBeenCalledExactlyOnceWith({ titleText: "復元", characterMotionScale: 0 });
+    expect(settings.getSetting("characterMotionScale")).toBe(0);
+    unsubscribe();
+    settings.updateSettings({ titleText: "解除後" });
+    expect(edited).toHaveBeenCalledOnce();
 });

@@ -142,7 +142,7 @@ export class SincroAppController {
         });
         this.runtime = runtime;
         const initialSettings = buildSincroAppSettingsRelatedSnapshotPayload({
-            dialogManager: runtime.dialogManager,
+            settingsModel: runtime.settingsModel,
             buildStartupSettingsStatus: (settings) =>
                 this.buildStartupSettingsStatusFromSnapshot(settings),
         });
@@ -154,8 +154,9 @@ export class SincroAppController {
         // 旧制御の外部購読を解除してReactを切り替え、登録時の即時通知を新購読へ届ける。
         SincroAppController.setCurrent(this);
         this.eventUnsubscribers.push(this.bindUiSubscriptions());
+        this.eventUnsubscribers.push(runtime.settingsModel.connectMediaDevices());
         this.eventUnsubscribers.push(
-            runtime.dialogManager.subscribeSettingsEdit((partial) => {
+            runtime.settingsModel.subscribeSettingsEdit((partial) => {
                 this.persistence?.save(partial);
                 if (partial.sincroPoseRetargetScale !== undefined) {
                     // 同値の再指定も通常設定の明示操作として優先し、古い診断強度を解除する。
@@ -262,9 +263,9 @@ export class SincroAppController {
         this.stopRTC();
     }
 
-    /** シーン反映と設定適用処理のため、現在のダイアログ・実行時設定を取得する。 */
+    /** シーン反映と設定適用処理のため、現在の通常設定・実行時設定を取得する。 */
     getSettingsSnapshot(): SincroAppSettingsSnapshot {
-        return buildSincroAppSettingsSnapshot(this.runtime.dialogManager);
+        return buildSincroAppSettingsSnapshot(this.runtime.settingsModel);
     }
 
     /** ダイアログの開閉・開始ボタンの現在状態を初期表示へ渡す。 */
@@ -346,7 +347,7 @@ export class SincroAppController {
         source: "user" | "restore" = "user",
     ): void {
         applySincroAppControllerSettings({
-            dialogManager: this.runtime.dialogManager,
+            settingsModel: this.runtime.settingsModel,
             partial,
             source,
             settingsStore: this.settingsStore,
@@ -360,7 +361,7 @@ export class SincroAppController {
             },
         });
         if (source === "user") {
-            // 通常設定はDialogManagerが適用済み入力を通知する。別所有のLooking Glass値だけをここで保存する。
+            // 通常設定は設定モデルが適用済み入力を通知する。別所有のLooking Glass値だけをここで保存する。
             const current = this.getSettingsSnapshot();
             const lookingGlass = Object.fromEntries(
                 Object.entries(current).filter(([key]) => key.startsWith("lg") && key in partial),
@@ -397,6 +398,7 @@ export class SincroAppController {
             talkManager: this.runtime.talkManager,
             popMessageService: this.runtime.popMessageService,
             dialogManager: this.runtime.dialogManager,
+            settingsModel: this.runtime.settingsModel,
             emitEvent: (event) => this.emitEvent(event),
             emitDerivedConnectionState: () => this.emitDerivedConnectionState(),
             emitSettingsRelatedSnapshots: () => this.emitSettingsRelatedSnapshots(),
@@ -420,7 +422,7 @@ export class SincroAppController {
             (event) => this.emitEvent(event),
             this.settingsStore,
             buildSincroAppSettingsRelatedSnapshotPayload({
-                dialogManager: this.runtime.dialogManager,
+                settingsModel: this.runtime.settingsModel,
                 buildStartupSettingsStatus: (settings) =>
                     this.buildStartupSettingsStatusFromSnapshot(settings),
             }),

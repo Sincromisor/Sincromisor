@@ -176,9 +176,9 @@ it("初期化失敗を入口へ報告し、OBSも手動も部分的に開始し�
             addEventListener() {},
         },
     });
-    const { DialogManager } = await import("../../../features/dialog/model/dialogManager");
+    const { SincroAppSettingsModel } = await import("../../settings/sincroAppSettingsModel");
     const { SincroAppController } = await import("../../controller");
-    vi.spyOn(DialogManager.prototype, "updateCharacterStatus").mockImplementation(() => {
+    vi.spyOn(SincroAppSettingsModel.prototype, "updateCharacterStatus").mockImplementation(() => {
         throw new Error("initialization failed");
     });
     const { initializeSimpleVrmPage } = await import("../../../pages/simpleVrm/mainVrm");

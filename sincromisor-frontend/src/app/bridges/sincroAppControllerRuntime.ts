@@ -5,6 +5,7 @@ import { DialogManager } from "../../features/dialog/model/dialogManager";
 import { PopMessageService } from "../../features/dialog/model/popMessageService";
 import type { SincroAppEvent } from "../controller/sincroAppTypes";
 import { SincroController } from "../controller/sincroController";
+import { SincroAppSettingsModel } from "../settings/sincroAppSettingsModel";
 import type {
     SincroAppChatBridge,
     SincroAppDebugBridge,
@@ -23,6 +24,7 @@ export type SincroAppControllerRuntimeBundle = {
     talkManager: TalkManager;
     popMessageService: PopMessageService;
     dialogManager: DialogManager;
+    settingsModel: SincroAppSettingsModel;
     dialogBridge: SincroAppDialogBridge;
     chatBridge: SincroAppChatBridge;
     debugBridge: SincroAppDebugBridge;
@@ -41,12 +43,13 @@ export function createSincroAppRuntimeBundle(params: {
     stopRTC: () => void;
     state: SincroAppStateBridge;
 }): SincroAppControllerRuntimeBundle {
-    const coreController = new SincroController({ emitEvent: params.emitEvent });
+    const settingsModel = SincroAppSettingsModel.getShared();
+    const coreController = new SincroController({ emitEvent: params.emitEvent, settingsModel });
     const chatMessageService = ChatMessageService.getService();
     const debugConsoleManager = DebugConsoleManager.getManager();
     const talkManager = TalkManager.getManager();
     const popMessageService = PopMessageService.getService();
-    const dialogManager = DialogManager.getManager();
+    const dialogManager = DialogManager.getManager(settingsModel);
     const rightToolPanelService = getSincroAppRightToolPanelService();
 
     // 公開名へ対応付け、各サービスを呼び出し時のthisとして保持し、状態や副作用は各サービスに委ねる。
@@ -57,18 +60,19 @@ export function createSincroAppRuntimeBundle(params: {
         talkManager,
         popMessageService,
         dialogManager,
+        settingsModel,
         dialogBridge: {
             applySelectedVrmFile: (file) => dialogManager.applySelectedVrmFile(file),
             setVrmDragOver: (isDragOver) => dialogManager.setVrmDragOver(isDragOver),
             close: () => dialogManager.closeDialog(),
             open: () => dialogManager.showDialog(),
             updateUserMediaAvailabilityStatus: (available) =>
-                dialogManager.updateUserMediaAvailabilityStatus(available),
+                settingsModel.updateUserMediaAvailabilityStatus(available),
             updateCharacterAvailabilityStatus: (available) =>
-                dialogManager.updateCharacterStatus(available),
-            isCharacterEnabled: () => dialogManager.getSetting("enableCharacter"),
-            isVREnabled: () => dialogManager.getSetting("enableVR"),
-            isInspectorEnabled: () => dialogManager.getSetting("enableInspector"),
+                settingsModel.updateCharacterStatus(available),
+            isCharacterEnabled: () => settingsModel.getSetting("enableCharacter"),
+            isVREnabled: () => settingsModel.getSetting("enableVR"),
+            isInspectorEnabled: () => settingsModel.getSetting("enableInspector"),
             loadVrmThumbnailBlob: () => dialogManager.loadVrmThumbnailBlob(),
             saveVrmThumbnailBlob: async (blob) => {
                 await dialogManager.saveVrmThumbnailBlob(blob);

@@ -1,11 +1,11 @@
 import { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
 import { updateLookingGlassRuntimeConfig } from "../../character/lookingGlass/lookingGlassRuntimeConfig";
-import type { SincroAppDialogFacade } from "../bridges/sincroAppDialogFacade";
 import type { SincroAppSettingsSnapshot } from "../controller/sincroAppTypes";
 import {
     type SincroAppNumericSettingKey,
     sincroAppNumericSettingConstraints,
 } from "./sincroAppSettingsDefaults";
+import type { SincroAppSettingsAccess } from "./sincroAppSettingsModel";
 
 type LookingGlassRuntimeConfigPatch = Parameters<typeof updateLookingGlassRuntimeConfig>[0];
 
@@ -22,15 +22,12 @@ export function clampAndRoundToStep(value: number, min: number, max: number, ste
 
 /** 利用者入力だけ数値を正規化し、検証済み復元値は精度を保って会話・表示処理へ一括反映する。 */
 export function applySincroAppSettingsPartial(
-    dialogManager: SincroAppDialogFacade,
+    settingsModel: SincroAppSettingsAccess,
     partial: Partial<SincroAppSettingsSnapshot>,
     source: "user" | "restore" = "user",
 ): void {
     const normalized = { ...partial };
     for (const key of [
-        "characterMotionScale",
-        "sincroPoseRetargetScale",
-        "characterEyeTrackingScale",
         "lgTileHeight",
         "lgNumViews",
         "lgTargetY",
@@ -44,10 +41,10 @@ export function applySincroAppSettingsPartial(
             normalized[key] = clampSincroAppNumericSetting(key, value);
         }
     }
-    dialogManager.updateSettings(normalized, source);
+    settingsModel.updateSettings(normalized, source);
     if (partial.talkMode !== undefined) {
         // RTCの会話モードは再接続で反映する。ここでは適用後の値をキャラクター動作へ同期する。
-        CharacterBehaviorState.getManager().setTalkMode(dialogManager.getSetting("talkMode"));
+        CharacterBehaviorState.getManager().setTalkMode(settingsModel.getSetting("talkMode"));
     }
     applyLookingGlassSettings(normalized);
 }

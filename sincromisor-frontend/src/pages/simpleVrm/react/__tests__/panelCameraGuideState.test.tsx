@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { SincroAppEvent } from "../../../../app/controller/sincroAppTypes";
 import {
-    compareDialogGazeSettings,
+    compareGazeSettings,
     resetSincroMotionForGazeSettingsChanges,
 } from "../../../../app/controller/sincroCharacterGazeSettings";
 import { emitCameraQualityReset } from "../../../../app/controller/sincroCharacterMotionEventSink";
@@ -143,11 +143,7 @@ describe("panel camera guide state", () => {
             videoInputDeviceId: "camera-a",
             talkMode: "sincro",
         };
-        const changes = compareDialogGazeSettings(
-            previous,
-            { ...previous, talkMode: "chat" },
-            false,
-        );
+        const changes = compareGazeSettings(previous, { ...previous, talkMode: "chat" }, false);
         const events: SincroAppEvent[] = [];
 
         resetSincroMotionForGazeSettingsChanges(changes, () =>

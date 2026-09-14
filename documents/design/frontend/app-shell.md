@@ -65,7 +65,7 @@
     - `createSincroAppRuntimeBundle` が依存取得と `dialog` / `chat` / `debug` / `rtc` / `state` の操作窓口を一度に組み立てる。アプリ制御は組み立て後に設定の初期値を確定し、有効な制御処理の公開、購読登録の順に進む。
 - `src/app/settings`
     - 設定既定値 / スナップショット購読 / 適用 / 起動状態を置く。
-    - `sincroAppSettingsDefaults.ts` は AppController スナップショット、React 代替処理、DialogStateStore、Looking Glass 実行時の既定値の正本を持つ。
+    - `sincroAppSettingsDefaults.ts` は AppController スナップショット、React 代替処理、設定モデル、Looking Glass 実行時の既定値の正本を持つ。
 - `src/app/react`
     - 有効 AppController 購読フック、パネル状態補助処理、UI 調整などアプリの共通枠組みから使う React 補助処理を置く。
 - `src/features`
@@ -113,7 +113,7 @@
     - 各 `SincroAppController` は自分が登録した管理処理と `window` の購読解除関数を保持する。有効な制御処理の差し替えでは旧購読を解除してから新しい購読を接続する。解除を再実行しても共有サービスや新制御処理には影響しない。
     - Reactの設定値・操作可否・案内は `SincroAppController.settingsStore` の1つのスナップショットを `useSyncExternalStore` で購読する。内容が変わらない間は取得結果の参照を維持する。
     - 起動・接続・ページ固有状態は既存のイベント購読を使う。描画ごとのコールバックの作り直しでは再購読しない。VRMシーン向けの `settings_snapshot` イベントは維持する。
-    - ダイアログ設定は `DialogStateStore` に保持する。`DialogManager.getSetting` / `getSettings` で読み取り、`updateSettings` で部分更新する。アプリの設定適用処理は数値を正規化し、会話モードをキャラクター動作へ反映する。
+    - 通常設定の値・操作可否・適用規則・利用者編集通知は `app/settings/SincroAppSettingsModel` が所有する。アプリの組み立てが同じモデルを音声・視線・動作とダイアログへ渡し、ダイアログを生成せずに設定を利用できる。`DialogStateStore` は開閉・開始案内・VRM選択だけを保持する。機器通知は有効アプリが接続・解除し、ダイアログはモデルから開始案内を導出する。数値は設定モデルとLooking Glass適用処理で正規化し、会話モードの動作反映はアプリの適用処理が担う。
 
 ## 設定・配備
 
