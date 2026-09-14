@@ -4,7 +4,7 @@ import { InitialSincroCalibrationController } from "../../../../character/calibr
 import { InitialSincroCalibrationPoseBridge } from "../../../../character/calibration/initialSincroCalibrationPoseBridge";
 import { createDefaultReliabilityMap } from "../../../../character/reliability/reliabilityMap";
 import { InitialCalibrationRetryCard } from "../components/initialCalibrationRetryCard";
-import { cancelActiveCalibration } from "../useSimpleVrmPanelState";
+import { cancelActiveCalibration } from "../useSincroPanelState";
 
 function findButtonClick(node: ReactNode): (() => void) | undefined {
     if (!isValidElement<{ children?: ReactNode; onClick?: () => void }>(node)) {

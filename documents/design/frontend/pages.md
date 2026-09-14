@@ -85,7 +85,7 @@ Use case: precise-object-edit. Edit the supplied full-body dark-brown-haired too
 - 起動ファイル:
     - `src/pages/*` 配下に置き、ページ固有初期化処理を呼ぶ薄い入口に保つ。
     - 由来ディレクトリは camelCase、公開 URL は既存 kebab-case 経路を維持する。
-    - `simple-vrm` の VRM 項目は `src/pages/simpleVrm/mainVrm.ts`、React パネルは `src/pages/simpleVrm/react/*` に置く。
+    - `simple-vrm` の VRM 項目は `src/pages/simpleVrm/mainVrm.ts`、3ページ共通のReactパネルと購読フックは `src/app/settings/react/*` に置く。
     - `vrm360` / `looking-glass-vrm` の React パネルは各 `src/pages/<page>/react/*` に置き、通常アプリの共通枠組みの上へページ固有の操作パネルとして渡す。
 - Vite 経路別名:
     - dev では旧公開 URL を `src/pages/*` の HTML へ内部書き換えする。

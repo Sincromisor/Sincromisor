@@ -66,6 +66,8 @@
 - `src/app/settings`
     - 設定既定値 / スナップショット購読 / 適用 / 起動状態を置く。
     - `sincroAppSettingsDefaults.ts` は AppController スナップショット、React 代替処理、設定モデル、Looking Glass 実行時の既定値の正本を持つ。
+- `src/app/settings/react`
+    - 3ページ共通の常設設定パネルと購読フックを置く。各ページはタイトルと表示構成を指定し、入力部品と分類の枠組みは `features/settings/react` を再利用する。
 - `src/app/react`
     - 有効 AppController 購読フック、パネル状態補助処理、UI 調整などアプリの共通枠組みから使う React 補助処理を置く。
 - `src/features`

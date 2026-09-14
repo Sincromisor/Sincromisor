@@ -36,7 +36,7 @@
 | [DialogManager](../../../../sincromisor-frontend/src/features/dialog/model/dialogManager.ts)                  | 開閉・開始案内・VRM操作。通常設定の状態と適用規則は持たない                            |
 | [設定モデル](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsModel.ts)                     | 通常設定の値・適用・通知、操作可否、利用不可の理由、開始条件                           |
 | [起動前画面](../../../../sincromisor-frontend/src/features/dialog/react/configurationDialogSettingsPages.tsx) | ダイアログ固有の状態、通知、VRM選択の手順                                              |
-| [開始後画面](../../../../sincromisor-frontend/src/pages/simpleVrm/react/simpleVrmControlPanelPages.tsx)       | ページ種別に応じた設定分類と状態表示の組み立て                                         |
+| [開始後画面](../../../../sincromisor-frontend/src/app/settings/react/sincroControlPanelPages.tsx)             | ページ種別に応じた設定分類と状態表示の組み立て                                         |
 | [StartupDialogFrame](../../../../sincromisor-frontend/src/app/shell/react/overlay/startupDialogFrame.tsx)     | 起動前ダイアログ内側の表示面、通知層、余白とスクロール用の構造                         |
 | [RightToolFrame](../../../../sincromisor-frontend/src/app/shell/react/overlay/rightToolFrame.tsx)             | 開始後の右側領域の位置、幅、重なり順、スクロール、閉じるボタン、外側クリック閉じ       |
 

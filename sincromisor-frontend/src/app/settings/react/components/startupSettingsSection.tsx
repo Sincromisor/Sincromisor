@@ -17,6 +17,7 @@ type StartupSettingsSectionProps = SettingsApplyProps & {
     showSectionTitle?: boolean;
 };
 
+/** ページが対応する開始時設定と、実行中の反映待ちを共通部品で表示する。 */
 export function StartupSettingsSection({
     settings,
     uiState,

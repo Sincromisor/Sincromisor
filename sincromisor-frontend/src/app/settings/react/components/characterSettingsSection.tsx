@@ -21,6 +21,7 @@ type CharacterSettingsSectionProps = DeviceSettingsProps & {
 
 type CharacterSettingsSectionMode = "full" | "camera" | "display";
 
+/** 機器カテゴリにはカメラと較正、表示カテゴリにはキャラクター表示の共通入力を置く。 */
 export function CharacterSettingsSection({
     settings,
     uiState,

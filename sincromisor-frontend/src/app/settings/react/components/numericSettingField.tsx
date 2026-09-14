@@ -13,6 +13,7 @@ type NumericSettingFieldProps = {
     onChange: (value: number) => void;
 };
 
+/** 有限な入力値をアプリへ渡す。設定ごとの丸めと範囲制御は適用側が担う。 */
 export function NumericSettingField({
     label,
     help,

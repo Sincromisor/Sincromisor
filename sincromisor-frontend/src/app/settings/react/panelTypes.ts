@@ -7,7 +7,7 @@ import type {
     SincroAppSettingsUiState,
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
-} from "../../../app/controller";
+} from "../../controller";
 
 // アプリのイベントとスナップショットを、診断カードとLooking Glass状態の表示へ整形する。
 export type { ApplySettingsFn, SincroAppSettingsSnapshot };
@@ -43,7 +43,7 @@ export type PanelLookingGlassState = {
 // AppController が算出した「LG設定の反映タイミング」情報を表示用にそのまま受ける。
 export type PanelLookingGlassConfigStatus = SincroAppLookingGlassConfigStatus;
 
-export type SimpleVrmPanelViewState = {
+export type SincroPanelViewState = {
     // 表示コンポーネントへまとめて渡しやすいよう、頻出 state を集約した読み取り用型。
     lifecycleState: SincroAppLifecycleState;
     connectionState: PanelConnectionState;

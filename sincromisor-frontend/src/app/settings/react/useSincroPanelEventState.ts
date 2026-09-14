@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
-import type { SincroAppEvent, SincroAppLifecycleState } from "../../../app/controller";
-import { SincroAppController } from "../../../app/controller";
-import { useSincroAppControllerSettingsState } from "../../../app/react/useSincroAppControllerSettingsState";
+import type { SincroAppEvent, SincroAppLifecycleState } from "../../controller";
+import { SincroAppController } from "../../controller";
+import { useSincroAppControllerSettingsState } from "../../react/useSincroAppControllerSettingsState";
 import { createPanelCameraGuideState, type PanelCameraGuideState } from "./panelCameraGuideState";
 import type {
     PanelConnectionState,
@@ -17,16 +17,16 @@ import type {
     SincroAppStartupSettingsStatus,
 } from "./panelTypes";
 import {
-    defaultSimpleVrmPanelLookingGlassConfigStatus,
-    defaultSimpleVrmPanelLookingGlassState,
-    defaultSimpleVrmPanelRtcState,
-} from "./simpleVrmPanelDefaults";
+    defaultSincroPanelLookingGlassConfigStatus,
+    defaultSincroPanelLookingGlassState,
+    defaultSincroPanelRtcState,
+} from "./sincroPanelDefaults";
 import {
-    createSimpleVrmPanelRuntimeEventHandlers,
-    type SimpleVrmPanelRuntimeEventSetters,
-} from "./simpleVrmPanelEventHandlers";
+    createSincroPanelRuntimeEventHandlers,
+    type SincroPanelRuntimeEventSetters,
+} from "./sincroPanelEventHandlers";
 
-type SimpleVrmPanelEventState = {
+type SincroPanelEventState = {
     hasActiveController: boolean;
     currentController: SincroAppController | undefined;
     lifecycleState: SincroAppLifecycleState;
@@ -46,7 +46,7 @@ type SimpleVrmPanelEventState = {
     vrmStatusText: string;
 };
 
-type SimpleVrmPanelRuntimeEventState = {
+type SincroPanelRuntimeEventState = {
     vadState: "unknown" | "speech" | "silence";
     learnedVad: PanelLearnedVadState;
     gaze: PanelGazeState;
@@ -58,24 +58,24 @@ type SimpleVrmPanelRuntimeEventState = {
 };
 
 /** 購読中のパネルで表示する現在状態と、参照が安定した更新窓口を保持する。 */
-function useSimpleVrmPanelRuntimeEventState(): {
-    state: SimpleVrmPanelRuntimeEventState;
-    setters: SimpleVrmPanelRuntimeEventSetters;
+function useSincroPanelRuntimeEventState(): {
+    state: SincroPanelRuntimeEventState;
+    setters: SincroPanelRuntimeEventSetters;
 } {
     const [vadState, setVadState] = useState<"unknown" | "speech" | "silence">("unknown");
     const [learnedVad, setLearnedVad] = useState<PanelLearnedVadState>({ status: "idle" });
     const [gaze, setGaze] = useState<PanelGazeState>({});
-    const [rtcState, setRtcState] = useState<PanelRtcState>(defaultSimpleVrmPanelRtcState);
+    const [rtcState, setRtcState] = useState<PanelRtcState>(defaultSincroPanelRtcState);
     const [lookingGlass, setLookingGlass] = useState<PanelLookingGlassState>(
-        defaultSimpleVrmPanelLookingGlassState,
+        defaultSincroPanelLookingGlassState,
     );
     const [lookingGlassConfigStatus, setLookingGlassConfigStatus] =
-        useState<PanelLookingGlassConfigStatus>(defaultSimpleVrmPanelLookingGlassConfigStatus);
+        useState<PanelLookingGlassConfigStatus>(defaultSincroPanelLookingGlassConfigStatus);
     const [cameraGuide, setCameraGuide] = useState<PanelCameraGuideState>(
         createPanelCameraGuideState,
     );
     const [vrmStatusText, setVrmStatusText] = useState("");
-    const setters = useMemo<SimpleVrmPanelRuntimeEventSetters>(
+    const setters = useMemo<SincroPanelRuntimeEventSetters>(
         () => ({
             setVadState,
             setLearnedVad,
@@ -105,11 +105,11 @@ function useSimpleVrmPanelRuntimeEventState(): {
 }
 
 /** 有効アプリの通知をパネル表示へ反映し、解除時に古いカメラ案内を消す。 */
-export function useSimpleVrmPanelEventState(): SimpleVrmPanelEventState {
+export function useSincroPanelEventState(): SincroPanelEventState {
     const initialController = SincroAppController.getCurrent();
-    const runtimeEventState = useSimpleVrmPanelRuntimeEventState();
+    const runtimeEventState = useSincroPanelRuntimeEventState();
     const eventHandlers = useMemo(
-        () => createSimpleVrmPanelRuntimeEventHandlers(runtimeEventState.setters),
+        () => createSincroPanelRuntimeEventHandlers(runtimeEventState.setters),
         [runtimeEventState.setters],
     );
     const applyRuntimeEvent = useCallback(

@@ -1,18 +1,18 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { SincroAppEvent } from "../../../../app/controller/sincroAppTypes";
-import {
-    compareGazeSettings,
-    resetSincroMotionForGazeSettingsChanges,
-} from "../../../../app/controller/sincroCharacterGazeSettings";
-import { emitCameraQualityReset } from "../../../../app/controller/sincroCharacterMotionEventSink";
 import {
     CAMERA_QUALITY_SCHEMA_VERSION,
     type CameraQualityScore,
 } from "../../../../features/gaze/trackingRuntime/cameraQualityScore";
+import type { SincroAppEvent } from "../../../controller/sincroAppTypes";
+import {
+    compareGazeSettings,
+    resetSincroMotionForGazeSettingsChanges,
+} from "../../../controller/sincroCharacterGazeSettings";
+import { emitCameraQualityReset } from "../../../controller/sincroCharacterMotionEventSink";
 import { CameraQualityGuideCard } from "../components/diagnosticsStatusCards";
 import { createPanelCameraGuideState, reducePanelCameraGuideState } from "../panelCameraGuideState";
-import { createSimpleVrmPanelRuntimeEventHandlers } from "../simpleVrmPanelEventHandlers";
+import { createSincroPanelRuntimeEventHandlers } from "../sincroPanelEventHandlers";
 
 function createQuality(
     status: CameraQualityScore["overall"]["status"],
@@ -111,7 +111,7 @@ describe("panel camera guide state", () => {
 
     it("clears a visible guide through the camera-quality-reset panel handler", () => {
         let cameraGuide = createPanelCameraGuideState();
-        const handlers = createSimpleVrmPanelRuntimeEventHandlers({
+        const handlers = createSincroPanelRuntimeEventHandlers({
             setVadState: vi.fn(),
             setLearnedVad: vi.fn(),
             setGaze: vi.fn(),

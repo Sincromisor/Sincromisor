@@ -27,7 +27,7 @@ useSimpleVrmPanelState は開始時に較正を開始し、モード・カメラ
 
 ## 実装の参照先
 
-- [useSimpleVrmPanelState.ts](../../../sincromisor-frontend/src/pages/simpleVrm/react/useSimpleVrmPanelState.ts)
+- [useSimpleVrmPanelState.ts](../../../sincromisor-frontend/src/app/settings/react/useSincroPanelState.ts)
 - [configurationDialogActions.ts](../../../sincromisor-frontend/src/features/dialog/react/configurationDialogActions.ts)
 - [sincroAppController.ts](../../../sincromisor-frontend/src/app/controller/sincroAppController.ts)
 - [sincroCharacterGazeController.ts](../../../sincromisor-frontend/src/app/controller/sincroCharacterGazeController.ts)

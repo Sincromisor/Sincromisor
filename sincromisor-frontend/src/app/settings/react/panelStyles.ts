@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { UI_TUNING } from "../../../app/react/uiTuning";
+import { UI_TUNING } from "../../react/uiTuning";
 
 type PanelStyles = {
     root: CSSProperties;

@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import type { SincroAppEvent } from "../../../app/controller";
+import type { SincroAppEvent } from "../../controller";
 import {
     createPanelCameraGuideState,
     type PanelCameraGuideState,
@@ -14,12 +14,12 @@ import type {
 } from "./panelTypes";
 
 /** 表示に必要なイベントだけを受け取る、イベント種別に対応した処理。 */
-export type SimpleVrmPanelEventHandlerMap = {
+export type SincroPanelEventHandlerMap = {
     [K in SincroAppEvent["type"]]?: (event: Extract<SincroAppEvent, { type: K }>) => void;
 };
 
 /** パネルの現在状態を更新する。履歴は会話・診断の各表示側が所有する。 */
-export type SimpleVrmPanelRuntimeEventSetters = {
+export type SincroPanelRuntimeEventSetters = {
     setVadState: Dispatch<SetStateAction<"unknown" | "speech" | "silence">>;
     setLearnedVad: Dispatch<SetStateAction<PanelLearnedVadState>>;
     setGaze: Dispatch<SetStateAction<PanelGazeState>>;
@@ -31,9 +31,9 @@ export type SimpleVrmPanelRuntimeEventSetters = {
 };
 
 /** アプリ通知を接続・追跡・Looking Glassの現在表示へ振り分ける。 */
-export function createSimpleVrmPanelRuntimeEventHandlers(
-    runtimeSetters: SimpleVrmPanelRuntimeEventSetters,
-): SimpleVrmPanelEventHandlerMap {
+export function createSincroPanelRuntimeEventHandlers(
+    runtimeSetters: SincroPanelRuntimeEventSetters,
+): SincroPanelEventHandlerMap {
     return {
         ...createRuntimeStatusEventHandlers(runtimeSetters),
         ...createLookingGlassEventHandlers(runtimeSetters),
@@ -41,8 +41,8 @@ export function createSimpleVrmPanelRuntimeEventHandlers(
 }
 
 function createRuntimeStatusEventHandlers(
-    setters: SimpleVrmPanelRuntimeEventSetters,
-): SimpleVrmPanelEventHandlerMap {
+    setters: SincroPanelRuntimeEventSetters,
+): SincroPanelEventHandlerMap {
     return {
         local_vad_state: (event) => setters.setVadState(event.isSpeech ? "speech" : "silence"),
         gaze_status: (event) =>
@@ -69,8 +69,8 @@ function createRuntimeStatusEventHandlers(
 }
 
 function createLookingGlassEventHandlers(
-    setters: SimpleVrmPanelRuntimeEventSetters,
-): SimpleVrmPanelEventHandlerMap {
+    setters: SincroPanelRuntimeEventSetters,
+): SincroPanelEventHandlerMap {
     return {
         looking_glass_state: (event) =>
             setters.setLookingGlass({

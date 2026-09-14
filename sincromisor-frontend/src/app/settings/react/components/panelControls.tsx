@@ -1,4 +1,4 @@
-import { UI_TUNING } from "../../../../app/react/uiTuning";
+import { UI_TUNING } from "../../../react/uiTuning";
 import { panelStyles } from "../panelStyles";
 
 type PanelControlsProps = {

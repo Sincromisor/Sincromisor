@@ -2,7 +2,7 @@
 
 ## 要約
 
-起動前ダイアログと開始後の基本設定に表示される入力、操作、状態表示を列挙する。値と制約の正本は[設定既定値](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsDefaults.ts)、表示の正本は[共通フィールド](../../../../sincromisor-frontend/src/features/settings/react/fields/)と[開始後画面](../../../../sincromisor-frontend/src/pages/simpleVrm/react/simpleVrmControlPanelPages.tsx)である。画面から操作できない内部設定は末尾で区別する。
+起動前ダイアログと開始後の基本設定に表示される入力、操作、状態表示を列挙する。値と制約の正本は[設定既定値](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsDefaults.ts)、表示の正本は[共通フィールド](../../../../sincromisor-frontend/src/features/settings/react/fields/)と[開始後画面](../../../../sincromisor-frontend/src/app/settings/react/sincroControlPanelPages.tsx)である。画面から操作できない内部設定は末尾で区別する。
 
 ## 一覧の読み方
 
@@ -28,7 +28,7 @@
 | 調整ステップ・状態・案内          | `precheck`（事前確認）、`neutral`（正面姿勢）、`a_pose`（腕の姿勢）、`hand_open`（手を開く）、`face_yaw_optional`（顔の向き）。セッション状態と先頭の案内文 | 後のみ。初期調整コントローラーが `active` のとき表示                                             |
 | 再試行                            | 現在の調整ステップを指定する操作                                                                                                                            | 後のみ。現在ステップの記録があると表示。`ready` / `ready_without_hands` でも明示的に再試行できる |
 
-初期調整の表示条件は[再試行カード](../../../../sincromisor-frontend/src/pages/simpleVrm/react/components/initialCalibrationRetryCard.tsx)に従う。選択済み機器の不在などによる開始制限は[設定UIの設計](settings-design.md#失敗時の案内)を参照する。
+初期調整の表示条件は[再試行カード](../../../../sincromisor-frontend/src/app/settings/react/components/initialCalibrationRetryCard.tsx)に従う。選択済み機器の不在などによる開始制限は[設定UIの設計](settings-design.md#失敗時の案内)を参照する。
 
 ## 音声
 
@@ -88,7 +88,7 @@ VRMの入力・状態は[起動前VRM部品](../../../../sincromisor-frontend/sr
 | 分類の切り替え                      | 前後。通常は会話、デバイス、音声、表示、接続               | 設定値ではなく表示中の分類を切り替える                                                                             |
 | 基本設定を開く・閉じる              | 右上メニュー、右側外枠の閉じるボタン、外側クリック         | 開発者ツールと排他表示。詳細は[共通規則](debug-design.md#右側ツールの共通規則)                                     |
 
-状態カードの列挙元は[DiagnosticsStatusCards](../../../../sincromisor-frontend/src/pages/simpleVrm/react/components/diagnosticsStatusCards.tsx)である。これは基本設定内の状態表示であり、診断コンソールの同名項目とは配置を区別する。
+状態カードの列挙元は[DiagnosticsStatusCards](../../../../sincromisor-frontend/src/app/settings/react/components/diagnosticsStatusCards.tsx)である。これは基本設定内の状態表示であり、診断コンソールの同名項目とは配置を区別する。
 
 ## Looking Glass専用設定
 
@@ -104,7 +104,7 @@ VRMの入力・状態は[起動前VRM部品](../../../../sincromisor-frontend/sr
 | 注視奥行き `lgTargetZ`    | `-1〜2 / 0.05`   | `0.2`  |
 | 注視範囲 `lgTargetDiam`   | `0.1〜3 / 0.05`  | `1.5`  |
 
-プリセットは次の7値を一括適用する。並びはタイル高さ、ビュー数、注視高さ、注視奥行き、注視範囲、奥行き強調、縦FOVである。定義元は[Looking Glass設定部品](../../../../sincromisor-frontend/src/pages/simpleVrm/react/components/lookingGlassSettingsSection.tsx)。
+プリセットは次の7値を一括適用する。並びはタイル高さ、ビュー数、注視高さ、注視奥行き、注視範囲、奥行き強調、縦FOVである。定義元は[Looking Glass設定部品](../../../../sincromisor-frontend/src/app/settings/react/components/lookingGlassSettingsSection.tsx)。
 
 | プリセット           | 適用値                                |
 | -------------------- | ------------------------------------- |
