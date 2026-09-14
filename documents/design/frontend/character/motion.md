@@ -580,3 +580,14 @@ Mouth / Emotion 制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`�
 - `documents/design/frontend/character/overview.md`
 - `documents/design/frontend/character/tracking.md`
 - `documents/design/archive/legacy-flat/frontend_character.md`
+
+### 再生時の共通計算と保存値
+
+`MotionDebugReplayRuntime` はライブとは別の `SincroMotionComputation` を所有する。
+保存済みcanonical / temporalは再生側で解析して採用し、項目が無い場合だけ共通実装で補完する。
+無効な保存値はinvalid表示を維持し、共通計算で上書きしない。意図の再計算は有効な時系列と
+同一フレームから正規化したGesture観測だけを使い、保存済み `frame.intent` の表示と分ける。
+保存したpostProcessingは表示だけに使い、欠損時に合成しない。
+
+隣接する前進だけ推定履歴を継続し、同じフレームへの移動・飛び越し・後退・停止・読み込み・
+入力切替では既存の初期化境界で時系列と意図を同時に初期化する。ログの版や保存項目は変更しない。

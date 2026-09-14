@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { MotionReplayApplyContext } from "../../../character/motionEvaluation/motionReplayPlayer";
-import { MotionIntentEstimator } from "../../../character/motionIntent/motionIntentEstimator";
+import { SincroMotionComputation } from "../../../character/runtime/sincroMotionComputation";
 import { createDefaultTemporalUpperBodyState } from "../../../character/temporal/temporalUpperBodyState";
 import type { SincroGestureMotionSnapshot } from "../../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
 import {
@@ -53,7 +53,7 @@ function createIntentRuntime(): MotionDebugReplayRuntime {
     hand.leftHand.confidence = 0.9;
     hand.leftHand.warnings = [];
     Object.defineProperties(runtime, {
-        intentEstimator: { value: new MotionIntentEstimator() },
+        computation: { value: new SincroMotionComputation() },
         latestTemporal: { value: temporal, writable: true },
         latestIntent: { value: undefined, writable: true },
         params: {
@@ -105,6 +105,12 @@ describe("MotionDebugReplayRuntime raw gesture intent", () => {
         expect(lost.snapshotState().intent).toEqual(missing.snapshotState().intent);
         expect(readDerivedIntent(missing).arms.left.sourceGestureLabel).toBeUndefined();
         expect(readDerivedIntent(missing).arms.left.intent).not.toBe("thumbsUp");
+        // 同一フレームのGestureが欠損した後に、前フレームのラベルを再投入しない。
+        // biome-ignore lint/complexity/useLiteralKeys: 再生由来の入力境界を確認する。
+        missing["updateReplayIntent"](createContext(250), createGesture("gesture-recognizer"));
+        // biome-ignore lint/complexity/useLiteralKeys: 再生由来の入力境界を確認する。
+        missing["updateReplayIntent"](createContext(500, savedIntent), undefined);
+        expect(readDerivedIntent(missing).arms.left.sourceGestureLabel).toBeUndefined();
     });
 
     it("resets before non-contiguous seek but preserves an adjacent forward step", () => {

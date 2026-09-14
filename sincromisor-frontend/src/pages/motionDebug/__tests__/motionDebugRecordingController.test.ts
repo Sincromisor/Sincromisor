@@ -141,7 +141,7 @@ describe("MotionDebugRecordingController manifest", () => {
                 phase9: expect.any(Object),
             });
             // プロファイル未到着の従来契約ではphase6とfinalPoseを捏造しない。
-            expect(frame.solver?.phase6).toBeUndefined();
+            expect(frame.solver).not.toHaveProperty("phase6");
             expect(frame.finalPose).toBeUndefined();
             expect(frame.temporal).toMatchObject({
                 timestamp: { mediaTimeMs: frame.timestamp.mediaTimeMs },

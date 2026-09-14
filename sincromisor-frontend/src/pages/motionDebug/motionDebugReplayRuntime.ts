@@ -18,10 +18,9 @@ import type {
 import type { MotionReplayApplyContext } from "../../character/motionEvaluation/motionReplayPlayer";
 import { MotionReplayPlayer } from "../../character/motionEvaluation/motionReplayPlayer";
 import type { SincroMotionReplayRawResultFrame } from "../../character/motionEvaluation/motionReplayRawResultSchema";
-import { MotionIntentEstimator } from "../../character/motionIntent/motionIntentEstimator";
 import type { MotionIntentState } from "../../character/motionIntent/motionIntentState";
 import { parseMotionPostProcessingResult } from "../../character/motionPostProcessing/motionPostProcessingState";
-import { TemporalStateEstimator } from "../../character/temporal/temporalStateEstimator";
+import { SincroMotionComputation } from "../../character/runtime/sincroMotionComputation";
 import { parseTemporalUpperBodyState } from "../../character/temporal/temporalUpperBodyState";
 import type { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { normalizeSincroFaceLandmarkerResult } from "../../features/gaze/faceTracking/sincroFaceTrackerNormalizer";
@@ -77,10 +76,9 @@ type MotionDebugReplayRuntimeParams = {
  * temporal / intent を再計算する。
  */
 export class MotionDebugReplayRuntime {
-    // reason: structure-threshold-exception replay playback and replay-derived temporal/intent reset timing remain grouped to preserve behavior.
+    // reason: structure-threshold-exception 保存値の採用順と再生時の初期化境界を同じ所有者に維持する。計算本体は共通実装へ委譲する。
     readonly player: MotionReplayPlayer<MotionDebugSnapshot>;
-    private readonly temporalEstimator = new TemporalStateEstimator();
-    private readonly intentEstimator = new MotionIntentEstimator();
+    private readonly computation = new SincroMotionComputation();
     private readonly timer: MotionDebugReplayTimer;
     private latestCanonical?: MotionDebugSnapshot["canonical"];
     private latestTemporal?: MotionDebugSnapshot["temporal"];
@@ -210,12 +208,12 @@ export class MotionDebugReplayRuntime {
         this.latestCanonicalReliabilityInput = undefined;
     }
 
+    /** 再生専用の共通推定と表示用派生値を破棄し、ライブの推定器とは共有しない。 */
     resetTemporalState(): void {
         this.latestTemporal = undefined;
         this.latestIntent = undefined;
         this.latestPostProcessing = undefined;
-        this.temporalEstimator.reset();
-        this.intentEstimator.reset();
+        this.computation.reset();
     }
 
     setCanonicalState(state: MotionDebugSnapshot["canonical"]): void {
@@ -440,6 +438,7 @@ export class MotionDebugReplayRuntime {
         };
     }
 
+    /** 保存値を検証して採用し、項目自体が無い旧ログだけ共通計算で補完する。 */
     private updateReplayCanonical(
         snapshot: SincroPoseMotionSnapshot,
         context: MotionReplayApplyContext,
@@ -471,6 +470,7 @@ export class MotionDebugReplayRuntime {
             createMotionDebugCanonicalReliabilityInput(reliability);
     }
 
+    /** 有効な保存値は推定器を進めず採用する。無効値を再計算で隠さない。 */
     private updateReplayTemporal(context: MotionReplayApplyContext): void {
         if (context.frame.temporal !== undefined) {
             const parsed = parseTemporalUpperBodyState(context.frame.temporal);
@@ -483,7 +483,7 @@ export class MotionDebugReplayRuntime {
         this.latestTemporal =
             canonical === undefined
                 ? undefined
-                : this.temporalEstimator.update({
+                : this.computation.updateTemporal({
                       canonical,
                       reliability: this.params.tracker.latestValidReliability(),
                       mediaTimeMs: context.mediaTimeMs,
@@ -504,7 +504,7 @@ export class MotionDebugReplayRuntime {
             this.latestIntent = undefined;
             return;
         }
-        this.latestIntent = this.intentEstimator.update({
+        this.latestIntent = this.computation.updateIntent({
             temporal,
             reliability: this.params.tracker.latestValidReliability(),
             hand: this.params.tracker.snapshotState().hand,
@@ -513,6 +513,7 @@ export class MotionDebugReplayRuntime {
         });
     }
 
+    /** 後処理は保存値の表示専用とし、欠損時も新たな結果を合成しない。 */
     private updateReplayPostProcessing(context: MotionReplayApplyContext): void {
         if (context.frame.postProcessing !== undefined) {
             const parsed = parseMotionPostProcessingResult(context.frame.postProcessing);
