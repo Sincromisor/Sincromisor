@@ -1,12 +1,15 @@
 /**
- * ROI 実行可否と skipped / paused snapshot を解決する純粋 helper 群。
+ * ROIの実行可否と、省略・一時停止時のスナップショット作成・通知を担当する。
  * Pose stale、ROI pause、fallback の reason code を stats / motion-debug に残し、crop object や MediaPipe raw result は扱わない。
  */
+
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
+import { createSincroGestureFallbackSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
 import { createSincroHandFallbackSnapshot } from "../handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
 import { createFaceRoiFromPose } from "./roiTracking/roiCoordinateMapping";
 import type { SincroTrackerRoiReasonCode, SincroTrackerRoiStats } from "./sincroTrackerWorkerTypes";
+import type { TrackerRuntimePredictionPlan } from "./trackerRuntimePredictionPlan";
 import type { TrackerRuntimeCallbacks, TrackerVideoFrameTiming } from "./trackerRuntimeTypes";
 
 const POSE_STALE_FOR_ROI_THRESHOLD_MS = 250;
@@ -160,4 +163,27 @@ function cloneTrackerFaceRoiObservation(
 
 function uniqueStrings<T extends string>(values: T[]): T[] {
     return values.filter((value, index) => values.indexOf(value) === index);
+}
+
+/** 要求されたジェスチャー追跡だけに省略を通知する。理由と動画時刻、有効状態は呼び出し元の判断を保つ。 */
+export function publishTrackerSkippedGestureSnapshot(
+    input: {
+        callbacks?: Pick<TrackerRuntimeCallbacks, "onGestureMotion">;
+        gestureTrackingRequested: boolean;
+        gestureTrackingEnabled: boolean;
+        timing: TrackerVideoFrameTiming;
+    },
+    reason: NonNullable<TrackerRuntimePredictionPlan["gestureSkipReason"]>,
+): void {
+    if (!input.gestureTrackingRequested) {
+        return;
+    }
+    input.callbacks?.onGestureMotion?.(
+        createSincroGestureFallbackSnapshot({
+            reason,
+            nowMs: input.timing.mediaTimeMs,
+            trackingEnabled: input.gestureTrackingEnabled,
+        }),
+        input.timing,
+    );
 }
