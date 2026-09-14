@@ -49,3 +49,5 @@ sincromisor-frontend/public/characters/*.glb
 sincromisor-frontend/public/characters/*.png
 SincromisorCLI
 .playwright-cli
+
+sincromisor-server/agent-server/.mastra

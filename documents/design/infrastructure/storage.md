@@ -56,6 +56,14 @@ S3のバケット・認証準備は `s3-bootstrap` が担い、認識と音声�
 取得中は `.part` に保存し、成功後だけ最終ファイル名へ変更する。
 保存先を維持すれば、コンテナ再作成でも同じモデルを外部取得なしで読み込む。
 
+## Mastraの設定と会話
+
+`agent-data` 名前付きボリュームをagent-serverの `/data` へ割り当てる。
+UID 1000のnodeユーザーが権限700の領域に単一libSQL `mastra.db` を置き、Editor設定と会話履歴を保存する。
+管理者だけがバックアップを扱い、秘密を含む設定や会話をGitや公開検証資料へ保存しない。
+コンテナの再作成ではボリュームを維持し、初期指示で公開済み設定を上書きしない。
+詳細な認証・thread分離は[AgentServer](../backend/services/agent-server.md)を参照する。
+
 ## 変更時の確認
 
 - 保存領域エンドポイントや認証情報を変える場合は `examples/compose.env` と Docker Compose を同時更新する。

@@ -1,0 +1,16 @@
+data: {"type": "start", "payload": {}}
+
+data: {"type": "step-start", "payload": {}}
+
+data: {"type": "text-start", "payload": {}}
+
+data: {"type": "text-delta", "payload": {"text": "^"}}
+
+data: {"type": "text-end", "payload": {}}
+
+data: {"type": "step-finish", "payload": {"stepResult": {"reason": "length", "rawReason": "length", "isContinued": false}}}
+
+data: {"type": "finish", "payload": {"stepResult": {"reason": "length", "rawReason": "length", "isContinued": false}}}
+
+data: [DONE]
+

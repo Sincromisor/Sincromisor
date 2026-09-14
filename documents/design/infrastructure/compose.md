@@ -40,6 +40,14 @@ CPU・6スレッド・4096トークン・1スロットでGPU割当を行わな�
 モデルの取得は[README](../../../README.md#gemma-4-e2bを準備する)、固定リビジョンと保存条件は
 [チャット用GGUF](storage.md#チャット用gguf)を参照する。通常起動時のモデル取得は行わない。
 
+## 管理者用Mastra
+
+`agent-server` は `chat` プロファイルでllama-serverを待って起動する。
+Mastra APIとStudio Editorを同じ本番コンテナに置き、内部4111をホストの `127.0.0.1:4111` だけへ公開する。
+管理者トークンとLLM設定を `.env` から渡し、設定不足はサービス起動で拒否する。
+未選択のchat設定が空でも `full` / `backend` / `rtc` の構成確認は妨げない。
+死活確認は認証付きAPIを使う。認証・Editor・HTTP契約は[AgentServer](../backend/services/agent-server.md)を参照する。
+
 ## コンテナの依存導入
 
 配布イメージのビルドとGHCRへの月次更新は[コンテナイメージの公開](image-publishing.md)を参照する。

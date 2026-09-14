@@ -1,0 +1,12 @@
+data: {"type": "start", "payload": {}}
+
+data: {"type": "step-start", "payload": {}}
+
+data: {"type": "error", "payload": {"error": {"name": "AI_APICallError", "message": "Cannot connect to API: getaddrinfo ENOTFOUND llama-server"}}}
+
+data: {"type": "step-finish", "payload": {"stepResult": {"reason": "error", "warnings": [], "isContinued": false}}}
+
+data: {"type": "finish", "payload": {"stepResult": {"reason": "error", "warnings": [], "isContinued": false}}}
+
+data: [DONE]
+
