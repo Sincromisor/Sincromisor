@@ -62,8 +62,8 @@
     - Vite MPA、Reactによるアプリの共通枠組み、制御処理境界
 - [ページ構成](frontend/pages.md)
     - 現行 / 試作 / 実験用ページの分類、ビルド、トップページモックと採用画像のプロンプト
-- [設定と診断UI](frontend/settings-and-debug-ui.md)
-    - 起動前ダイアログ、右側ツールパネル、診断 Console
+- [設定UIとデバッグUI](frontend/setting-and-debug-ui/README.md)
+    - 設定UI・デバッグUIの設計と全項目一覧。既定値、入力範囲、表示条件、反映タイミング
 - [VAD](frontend/audio/vad.md)
     - フロント側 VAD と診断 Console 観測項目
 - [キャラクター概要](frontend/character/overview.md)
