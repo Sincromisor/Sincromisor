@@ -4,7 +4,6 @@ import { Euler } from "three/src/math/Euler.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import { describe, expect, it, vi } from "vitest";
-import { DebugConsoleManager } from "../../../features/debug/model/debugConsoleManager";
 import {
     buildCharacterBehaviorSnapshot,
     createDefaultBehaviorAiSpeechSnapshot,
@@ -21,6 +20,7 @@ import type { VrmPoseQuaternion } from "../../vrmPose/vrmPoseTypes";
 import { ArmBoneController } from "../armBoneController";
 import { applyFullNormalizedPoseApplication } from "../normalizedPoseWriter";
 import { VRMCharacterManager } from "../vrmCharacterManager";
+import type { VRMDiagnostics } from "../vrmDiagnostics";
 
 const FULL_NORMALIZED_POSE_APPLICATION_TEST_BONES: readonly VRMHumanBoneName[] = [
     "spine",
@@ -111,9 +111,6 @@ describe("VRMCharacterManager full normalized pose application", () => {
 
     it("keeps full application as the only upper-body writer when finalPose is unavailable", () => {
         const debugManager = createDebugManagerDouble();
-        const debugSpy = vi
-            .spyOn(DebugConsoleManager, "getManager")
-            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
         const snapshot = createBehaviorSnapshot();
         const armUpdate = vi.fn();
         const rootStabilization = vi.fn();
@@ -124,18 +121,15 @@ describe("VRMCharacterManager full normalized pose application", () => {
             rootStabilization,
         });
 
-        try {
-            manager.update(1000);
-        } finally {
-            debugSpy.mockRestore();
-        }
+        Object.assign(manager, { diagnostics: debugManager });
+        manager.update(1000);
 
         expect(setNormalizedPose).not.toHaveBeenCalled();
         expect(armUpdate).not.toHaveBeenCalled();
         expect(rootStabilization).toHaveBeenCalledTimes(1);
         expect(manager.legBoneController.update).toHaveBeenCalledTimes(1);
         expect(manager.vrm.update).toHaveBeenCalledTimes(1);
-        expect(debugManager.updateSincroComposerDryRunSummary).toHaveBeenLastCalledWith(
+        expect(debugManager.onComposerSummary).toHaveBeenLastCalledWith(
             expect.objectContaining({
                 warnings: [
                     "delta_seconds_invalid",
@@ -151,9 +145,6 @@ describe("VRMCharacterManager full normalized pose application", () => {
 
     it("keeps head, face, eye, mouth, emotion, leg, vrm update, and root updates on available frames", () => {
         const debugManager = createDebugManagerDouble();
-        const debugSpy = vi
-            .spyOn(DebugConsoleManager, "getManager")
-            .mockReturnValue(debugManager as unknown as DebugConsoleManager);
         const snapshot = createBehaviorSnapshot();
         const finalPose = { leftUpperArm: eulerQuaternion(0.8, 0.1, 0) };
         const rootStabilization = vi.fn();
@@ -164,11 +155,8 @@ describe("VRMCharacterManager full normalized pose application", () => {
             rootStabilization,
         });
 
-        try {
-            manager.update(1000);
-        } finally {
-            debugSpy.mockRestore();
-        }
+        Object.assign(manager, { diagnostics: debugManager });
+        manager.update(1000);
 
         expect(setNormalizedPose).toHaveBeenCalledWith(toVrmPose(finalPose));
         expect(manager.headBoneController.update).toHaveBeenCalledTimes(1);
@@ -178,7 +166,7 @@ describe("VRMCharacterManager full normalized pose application", () => {
         expect(manager.legBoneController.update).toHaveBeenCalledTimes(1);
         expect(manager.vrm.update).toHaveBeenCalledTimes(1);
         expect(rootStabilization).toHaveBeenCalledTimes(1);
-        expect(debugManager.updateSincroComposerDryRunSummary).toHaveBeenLastCalledWith(
+        expect(debugManager.onComposerSummary).toHaveBeenLastCalledWith(
             expect.objectContaining({
                 fullNormalizedPoseApplication: {
                     applied: true,
@@ -186,6 +174,13 @@ describe("VRMCharacterManager full normalized pose application", () => {
                 },
             }),
         );
+        expect(debugManager.onPoseRetargetFrame).toHaveBeenCalledWith(NEUTRAL_POSE_FRAME);
+        expect(debugManager.onComposerResult).toHaveBeenCalledWith(
+            expect.objectContaining({ status: "available" }),
+        );
+        Object.assign(manager, { diagnostics: undefined });
+        manager.update(1016);
+        expect(setNormalizedPose).toHaveBeenCalledTimes(2);
     });
 });
 
@@ -322,16 +317,11 @@ function createBehaviorSnapshot(): CharacterBehaviorSnapshot {
     });
 }
 
-function createDebugManagerDouble(): Pick<
-    DebugConsoleManager,
-    | "updateSincroPoseRetargetFrame"
-    | "updateSincroComposerDryRunSummary"
-    | "updateSincroComposerDryRunResult"
-> {
+function createDebugManagerDouble(): VRMDiagnostics {
     return {
-        updateSincroPoseRetargetFrame: vi.fn(),
-        updateSincroComposerDryRunSummary: vi.fn(),
-        updateSincroComposerDryRunResult: vi.fn(),
+        onPoseRetargetFrame: vi.fn(),
+        onComposerSummary: vi.fn(),
+        onComposerResult: vi.fn(),
     };
 }
 

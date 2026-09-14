@@ -4,6 +4,7 @@
  */
 import type { SincroPoseRetargetConfig } from "../../character/retargeting/sincroPoseRetargeter";
 import { VRMScene } from "../../character/scene/vrmScene";
+import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { MotionDebugFrameCapture } from "./motionDebugFrameCapture";
 import type { MotionDebugPoseOverlayRenderer } from "./poseOverlayRenderer";
@@ -30,7 +31,16 @@ export class MotionDebugSceneRuntime {
     private renderFpsStartedAtMs = performance.now();
 
     constructor(private readonly params: MotionDebugSceneRuntimeParams) {
+        // 独立ページの診断保存先はページ側で所有し、描画側へ取得処理を持ち込まない。
+        const diagnostics = DebugConsoleManager.getManager();
         this.scene = new VRMScene({
+            diagnostics: {
+                onAvatarMotionProfile: (profile) => diagnostics.updateAvatarMotionProfile(profile),
+                onPoseRetargetFrame: (frame) => diagnostics.updateSincroPoseRetargetFrame(frame),
+                onComposerSummary: (summary) =>
+                    diagnostics.updateSincroComposerDryRunSummary(summary),
+                onComposerResult: (result) => diagnostics.updateSincroComposerDryRunResult(result),
+            },
             canvasRoot: params.characterRoot,
             characterControlLayer: params.characterControlLayer,
             vrmUrl: params.vrmUrl,

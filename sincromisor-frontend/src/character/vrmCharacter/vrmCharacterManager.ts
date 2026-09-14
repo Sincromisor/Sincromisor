@@ -1,11 +1,10 @@
-// reason: structure-threshold-exception 読込・初期化は task-260914172951-explicit-vrm-initialization、診断通知は task-260914172951-decouple-vrm-diagnostics で分離し、ここでは適用順序を維持する。
+// reason: structure-threshold-exception VRM読込と毎フレーム制御の所有を保ち、今回の診断通知変更ではモデル初期化の分割へ範囲を広げない。
 import { type VRM, VRMLoaderPlugin, VRMMetaLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { type GLTF, GLTFLoader, type GLTFParser } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Clock } from "three/src/core/Clock.js";
 import type { Object3D } from "three/src/core/Object3D.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import type { Scene } from "three/src/scenes/Scene.js";
-import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { toMinimalAvatarMotionProfile } from "../avatarProfile/avatarMotionProfileClone";
 import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
@@ -42,9 +41,12 @@ import {
     applyFullNormalizedPoseApplication,
     type FullNormalizedPoseApplicationResult,
 } from "./normalizedPoseWriter";
+import type { VRMDiagnostics } from "./vrmDiagnostics";
 import { applyInitialUpperBodyFraming } from "./vrmInitialUpperBodyFraming";
 
+/** VRM読込・表示設定と、呼び出し側が所有する任意の診断通知先。 */
 export type VRMCharacterManagerOptions = {
+    diagnostics?: VRMDiagnostics;
     scene: Scene;
     vrmCamera: VRMCamera;
     vrmUrl: string;
@@ -87,10 +89,12 @@ export class VRMCharacterManager {
     private motionElapsedSeconds = 0;
     // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
     private readonly onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void;
+    private readonly diagnostics?: VRMDiagnostics;
     private readonly enableInitialUpperBodyFraming: boolean;
     private visible: boolean = true;
 
     constructor(options: VRMCharacterManagerOptions) {
+        this.diagnostics = options.diagnostics;
         this.scene = options.scene;
         this.vrmCamera = options.vrmCamera;
         this.onThumbnailLoaded = options.onThumbnailLoaded;
@@ -162,7 +166,7 @@ export class VRMCharacterManager {
         this.sincroPoseRetargeter.attachVrm(vrm);
         this.poseComposer.reset();
         const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
-        DebugConsoleManager.getManager().updateAvatarMotionProfile(
+        this.diagnostics?.onAvatarMotionProfile?.(
             avatarMotionProfile ? toMinimalAvatarMotionProfile(avatarMotionProfile) : undefined,
         );
         this.legBoneController = new LegBoneController(vrm);
@@ -242,7 +246,7 @@ export class VRMCharacterManager {
                 profile: minimalAvatarMotionProfile,
             },
         );
-        DebugConsoleManager.getManager().updateSincroPoseRetargetFrame(sincroPose);
+        this.diagnostics?.onPoseRetargetFrame?.(sincroPose);
         const composerResult = this.poseComposer.compose({
             frame: sincroPose,
             profile: avatarMotionProfile,
@@ -269,10 +273,10 @@ export class VRMCharacterManager {
             composerDryRun: observedComposerResult,
             updatedAtMs: nowMs,
         });
-        DebugConsoleManager.getManager().updateSincroComposerDryRunSummary(
+        this.diagnostics?.onComposerSummary?.(
             summarizeComposerDryRun(this.sincroMotionPipelineState.composerDryRun),
         );
-        DebugConsoleManager.getManager().updateSincroComposerDryRunResult(observedComposerResult);
+        this.diagnostics?.onComposerResult?.(observedComposerResult);
         this.legBoneController?.update(this.motionElapsedSeconds);
         this.vrm?.update(deltaSeconds);
         if (this.rootBone) {

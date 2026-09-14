@@ -8,10 +8,13 @@ import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTy
 import type { SincroPoseRetargetConfig } from "../retargeting/sincroPoseRetargeter";
 import type { CharacterMotionTuning } from "../vrmCharacter/characterMotionConfig";
 import { VRMCharacterManager } from "../vrmCharacter/vrmCharacterManager";
+import type { VRMDiagnostics } from "../vrmCharacter/vrmDiagnostics";
 import { VRMCamera } from "./vrmCamera";
 import { VRMLight } from "./vrmLight";
 
+/** ページの配置先とVRM設定。診断通知先はキャラクター管理へそのまま渡す。 */
 export type VRMSceneOptions = {
+    diagnostics?: VRMDiagnostics;
     canvasRoot: HTMLDivElement;
     characterControlLayer: HTMLElement;
     vrmUrl: string;
@@ -51,6 +54,7 @@ export class VRMScene {
         this.vrmCamera = new VRMCamera(options.characterControlLayer);
         // VRMロード完了時にサムネイル取得結果を呼び出し元へ返し、UIアイコン更新に利用する。
         this.vrmCharacterManager = new VRMCharacterManager({
+            diagnostics: options.diagnostics,
             scene: this.scene,
             vrmCamera: this.vrmCamera,
             vrmUrl: options.vrmUrl,
